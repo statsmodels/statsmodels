@@ -23,32 +23,14 @@ Tests are mostly done by comparing results with the R implementation in the
 package forecast for the datasets `oildata` (non-seasonal) and `austourists`
 (seasonal).
 
-The tests are mostly parametrized with the arguments `error`, `trend`,
-`seasonal`, `damped`, `data`. Below the pytest fixtures for data
-and R results, you will find the definitions of the parameter lists
-`SEASONAL_MODELS_AND_DATA`, and `NONSEASONAL_MODELS_AND_DATA`, and
-`ALL_MODELS_AND_DATA`.
-Normally a test should look like this:
+Therefore, a parametrized pytest fixture ``setup_model`` is provided, which
+returns a constructed model, model parameters from R in the format expected by
+ETSModel, and a dictionary of reference results. Use like this:
 
-    @pytest.mark.parametrize(*ALL_MODELS_AND_DATA)
-    def test_<testname>(error, trend, seasonal, damped, data,
-                        austourists, oildata,
-                        ets_austourists_fit_results_R,
-                        ets_oildata_fit_results_R):
-        if data == "austourists":
-            data = austourists
-            results = ets_austourists_fit_results_R[damped]
-            ...  # all settings for seasonal models
-        else:
-            data = oildata
-            results = ets_oildata_fit_results_R[damped]
-            ...  # all settings for nonseasonal models
-        # start real work
-
-
-Additonally, for tests that don't require comparison data (e.g. test for only
-constructing a model or performing some basic tasks), the parameter list
-`ALL_MODELS` is defined just below.
+    def test_<testname>(setup_model):
+        model, params, results_R = setup_model
+        # perform some tests
+        ...
 
 """
 
@@ -56,6 +38,10 @@ constructing a model or performing some basic tasks), the parameter list
 ###############################################################################
 # UTILS
 ###############################################################################
+
+# Below I define parameter lists for all possible model and data combinations
+# (for data, see below). These are used for parametrizing the pytest fixture
+# ``setup_model``, which should be used for all tests comparing to R output.
 
 def remove_invalid_models_from_list(modellist):
     # remove invalid models (no trend but damped)
@@ -67,14 +53,50 @@ ERRORS = ("add", "mul")
 TRENDS = ("add", "mul", None)
 SEASONALS = ("add", "mul", None)
 DAMPED = (True, False)
-MODELLIST_ALL = list(product(ERRORS, TRENDS, SEASONALS, DAMPED))
-remove_invalid_models_from_list(MODELLIST_ALL)
-ALL_MODELS = (["error", "trend", "seasonal", "damped"], MODELLIST_ALL)
 
+MODELS_DATA_SEASONAL = list(product(ERRORS, TRENDS, ("add", "mul"), DAMPED,
+                                  ("austourists",), ))
+MODELS_DATA_NONSEASONAL = list(product(ERRORS, TRENDS, (None,), DAMPED,
+                                  ("oildata",), ))
+remove_invalid_models_from_list(MODELS_DATA_SEASONAL)
+remove_invalid_models_from_list(MODELS_DATA_NONSEASONAL)
+
+ALL_MODELS_AND_DATA = (MODELS_DATA_NONSEASONAL + MODELS_DATA_SEASONAL)
 
 def short_model_name(error, trend, seasonal):
     short_name = {"add": "A", "mul": "M", None: "N"}
     return short_name[error] +  short_name[trend] + short_name[seasonal]
+
+
+@pytest.fixture(params=ALL_MODELS_AND_DATA)
+def setup_model(request, austourists, oildata,
+                ets_austourists_fit_results_R,
+                ets_oildata_fit_results_R):
+    params = request.param
+    error, trend, seasonal, damped = params[0:4]
+    data = params[4]
+    if data == "austourists":
+        data = austourists
+        seasonal_periods = 4
+        results = ets_austourists_fit_results_R[damped]
+    else:
+        data = oildata
+        seasonal_periods = None
+        results = ets_oildata_fit_results_R[damped]
+
+    model_name = short_model_name(error, trend, seasonal)
+    if model_name not in results:
+        pytest.skip(f"model {model_name} not implemented or not converging in R")
+
+    results_R = results[model_name]
+    params = get_params_from_R(results_R)
+
+    model = ETSModel(
+        data, seasonal_periods=seasonal_periods,
+        error=error, trend=trend, seasonal=seasonal, damped_trend=damped
+    )
+
+    return model, params, results_R
 
 
 ###############################################################################
@@ -172,10 +194,6 @@ def ets_oildata_fit_results_R():
 def fit_austourists_with_R_params(model, results_R, set_state=False):
     """
     Fit the model with params as found by R's forecast package
-
-    TODO: The original idea was to use this for testing the simulation
-    implementation, I'm not sure whether we still need this, because I aim to
-    reproduce the R code.
     """
     params = get_params_from_R(results_R)
     with model.fix_params(dict(zip(model.param_names, params))):
@@ -208,70 +226,23 @@ def get_states_from_R(results_R, k_states):
     return xhat_R
 
 
-MODELLIST_SEASONAL = list(product(ERRORS, TRENDS, ("add", "mul"), DAMPED,
-                                  ("austourists",), ))
-MODELLIST_NONSEASONAL = list(product(ERRORS, TRENDS, (None,), DAMPED,
-                                  ("oildata",), ))
-remove_invalid_models_from_list(MODELLIST_SEASONAL)
-remove_invalid_models_from_list(MODELLIST_NONSEASONAL)
-args = ["error", "trend", "seasonal", "damped", "data"]
-SEASONAL_MODELS_AND_DATA = (args, MODELLIST_SEASONAL)
-NONSEASONAL_MODELS_AND_DATA = (args, MODELLIST_NONSEASONAL)
-ALL_MODELS_AND_DATA = (args, MODELLIST_NONSEASONAL + MODELLIST_SEASONAL)
 
 ###############################################################################
 # BASIC TEST CASES
 ###############################################################################
 
-@pytest.mark.parametrize(*ALL_MODELS_AND_DATA)
-def test_fit_model_austouritsts(error, trend, seasonal, damped, data,
-                                austourists, oildata):
-    if data == "austourists":
-        data = austourists
-        seasonal_periods = 4
-    else:
-        data = oildata
-        seasonal_periods = None
-    fit = ETSModel(
-        data, seasonal_periods=seasonal_periods,
-        error=error, trend=trend, seasonal=seasonal, damped_trend=damped
-    ).fit(disp=False)
+def test_fit_model_austouritsts(setup_model):
+    model, params, results_R = setup_model
+    model.fit(disp=False)
 
 
 ###############################################################################
-# SMOOTHING EQUATIONS
+# TEST OF MODEL EQUATIONS VS R
 ###############################################################################
 
-@pytest.mark.parametrize(*ALL_MODELS_AND_DATA)
-def test_smooth_vs_R(error, trend, seasonal, damped, data,
-                     austourists, oildata,
-                     ets_austourists_fit_results_R,
-                     ets_oildata_fit_results_R):
-    if data == "austourists":
-        data = austourists
-        seasonal_periods = 4
-        results = ets_austourists_fit_results_R[damped]
-    else:
-        data = oildata
-        seasonal_periods = None
-        results = ets_oildata_fit_results_R[damped]
+def test_smooth_vs_R(setup_model):
+    model, params, results_R = setup_model
 
-    model_name = short_model_name(error, trend, seasonal)
-    if model_name not in results:
-        pytest.skip(f"model {model_name} not implemented or not converging in R")
-
-    results_R = results[model_name]
-
-    seasonal_periods = 4 if seasonal is not None else None
-    model = ETSModel(
-        data, seasonal_periods=seasonal_periods,
-        error=error, trend=trend, seasonal=seasonal, damped_trend=damped
-    )
-
-    # get params from R
-    params = get_params_from_R(results_R)
-
-    # smooth
     yhat, xhat = model.smooth(params)
 
     yhat_R = results_R['fitted']
@@ -281,62 +252,30 @@ def test_smooth_vs_R(error, trend, seasonal, damped, data,
     assert_almost_equal(xhat, xhat_R, 2)
 
 
-@pytest.mark.skip
-@pytest.mark.parametrize(*ALL_MODELS)
-def test_fit_vs_R(austourists, ets_austourists_fit_results_R,
-                       error, trend, seasonal, damped):
-    """
-    Test for :meth:``statsmodels.tsa.holtwinters.HoltWintersResults.simulate``.
+def test_residuals_vs_R(setup_model):
+    model, params, results_R = setup_model
 
-    The tests are using the implementation in the R package ``forecast`` as
-    reference, and example data is taken from ``fpp2`` (package and book).
-    """
+    yhat, xhat = model.smooth(params)
+    yhat_R = results_R['fitted']
 
-    model_name = short_model_name(error, trend, seasonal)
-    results = ets_austourists_fit_results_R[damped]
-    if model_name not in results:
-        pytest.skip(f"model {model_name} not implemented or not converging in R")
-
-    results_R = results[model_name]
-
-    model = ETSModel(
-        austourists, seasonal_periods=4,
-        error=error, trend=trend, seasonal=seasonal, damped_trend=damped
-    )
-    fit = model.fit(disp=False)
-
-    assert 0
+    residuals = model._residuals(yhat)
+    assert_almost_equal(residuals, results_R['residuals'], 2)
 
 
+def test_loglike_vs_R(setup_model):
+    model, params, results_R = setup_model
 
-###############################################################################
-# SIMULATE TESTS
-###############################################################################
+    loglike = model.loglike(params)
+    # the calculation of log likelihood in R is only up to a constant:
+    const = - model.nobs/2 * (np.log(2*np.pi/model.nobs) + 1)
+    loglike_R = results_R['loglik'] + const
 
-@pytest.mark.parametrize(*ALL_MODELS_AND_DATA)
-def test_simulate_vs_R(error, trend, seasonal, damped, data,
-                       austourists, oildata,
-                       ets_austourists_fit_results_R,
-                       ets_oildata_fit_results_R):
-    if data == "austourists":
-        data = austourists
-        seasonal_periods = 4
-        results = ets_austourists_fit_results_R[damped]
-    else:
-        data = oildata
-        seasonal_periods = None
-        results = ets_oildata_fit_results_R[damped]
+    assert_almost_equal(loglike, loglike_R, 2)
 
-    model_name = short_model_name(error, trend, seasonal)
-    if model_name not in results:
-        pytest.skip(f"model {model_name} not implemented or not converging in R")
 
-    results_R = results[model_name]
+def test_simulate_vs_R(setup_model):
+    model, params, results_R = setup_model
 
-    model = ETSModel(
-        data, seasonal_periods=seasonal_periods,
-        error=error, trend=trend, seasonal=seasonal, damped_trend=damped
-    )
     fit = fit_austourists_with_R_params(model, results_R, set_state=True)
 
     innov = np.asarray([[1.76405235, 0.40015721, 0.97873798, 2.2408932]]).T
@@ -346,6 +285,27 @@ def test_simulate_vs_R(error, trend, seasonal, damped, data,
     # should be the same up to 4 decimals
     assert_almost_equal(expected, sim.values, 3)
 
+
+def test_fit_vs_R(setup_model):
+    model, params, results_R = setup_model
+    fit = model.fit(disp=False)
+
+    # check log likelihood
+    const = - model.nobs/2 * (np.log(2*np.pi/model.nobs) + 1)
+    loglike_R = results_R['loglik'] + const
+    loglike = fit.llf
+
+    # check that we found a minimum that is at least almost as good as the one
+    # with R
+    assert loglike <= loglike_R + 1e-4
+
+    # compare parameters
+    # assert_almost_equal(params, fit.params)
+
+
+###############################################################################
+# TEST OF KEYWORD ARGUMENTS
+###############################################################################
 
 @pytest.mark.skip
 def test_simulate_keywords(austourists):

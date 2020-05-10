@@ -453,24 +453,38 @@ class ETSModel(base.StateSpaceMLEModel):
 
     @property
     def _start_params(self):
-        # Make sure starting parameters aren't beyond or right on the bounds
-        bounds = []
+        lb = []
+        ub = []
         for b in self.bounds:
-            lb = b[0] + 1e-3 if b[0] is not None else None
-            ub = b[1] + 1e-3 if b[1] is not None else None
-            bounds.append((lb, ub))
+            lb.append(b[0])
+            ub.append(b[1])
 
-        # See Hyndman p.24
-        start_params = [np.clip(0.1, *bounds[0])]
+        # See https://github.com/robjhyndman/forecast/blob/master/R/ets.R
+        # in function initparam
+        alpha = lb[0] + 0.2 * (ub[0] - lb[0])
+        if alpha > 1 or alpha < 0:
+            alpha = lb[0] + 2e-3
+        start_params = [alpha]
         idx = 1
         if self.trend:
-            start_params += [np.clip(0.01, *bounds[idx])]
+            # since this implementation uses beta_star instead of beta I use
+            # the same formula as for alpha
+            beta_star = lb[idx] + 0.2 * (ub[idx] - lb[idx])
+            if beta_star < 1 or beta_star < 0:
+                beta_star = lb[idx] + 2e-3
+            start_params += [beta_star]
             idx += 1
         if self.seasonal:
-            start_params += [np.clip(0.01, *bounds[idx])]
+            gamma = lb[idx] + 0.05 * (ub[idx] - lb[idx])
+            if gamma < 0 or gamma > 1 - alpha:
+                gamma = 1 - alpha - 1e-3
+            start_params += [gamma]
             idx += 1
         if self.damped_trend:
-            start_params += [np.clip(0.98, *bounds[idx])]
+            phi = lb[idx] + 0.99 * (ub[idx] - lb[idx])
+            if phi < 0 or phi > 1:
+                phi = ub[idx] - 1e-3
+            start_params += [phi]
             idx += 1
 
         # Initialization
@@ -495,7 +509,7 @@ class ETSModel(base.StateSpaceMLEModel):
         """
         # traditional bounds: alpha, beta*, gamma in (0, 1), phi in [0.8, 0.98]
         n = 1 + int(self.has_trend) + int(self.has_seasonal)
-        bounds = [(1e-4, 1-1e-4)] * n
+        bounds = [(1e-8, 1-1e-8)] * n
         if self.damped_trend:
             bounds += [(0.8, 0.98)]
         if self.initialization_method == 'estimated':
@@ -674,9 +688,9 @@ class ETSModel(base.StateSpaceMLEModel):
     def _residuals(self, yhat):
         """Calculates residuals of a prediction"""
         if self.error == 'mul':
-            return (yhat - self.endog) / self.endog
+            return (self.endog - yhat) / yhat
         else:
-            return yhat - self.endog
+            return self.endog - yhat
 
     def smooth(self, params):
         """

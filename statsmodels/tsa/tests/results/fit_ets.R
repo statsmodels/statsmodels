@@ -39,6 +39,7 @@ obtain_model_results <- function(models, data) {
         pars$residuals <- fit$residuals
         pars$fitted <- fit$fitted
         pars$sigma2 <- fit$sigma2
+        pars$loglik <- fit$loglik
         pars$forecast <- forecast(fit, 4, PI = FALSE)$mean
         pars$simulation <- simulate(fit, 4, innov = innov)
         return(pars)
