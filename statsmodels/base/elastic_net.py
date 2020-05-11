@@ -165,6 +165,8 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
         _gen_npfuncs(k, L1_wt, alpha, loglike_kwds, score_kwds, hess_kwds)
         for k in range(k_exog)]
 
+    converged = False
+
     for itr in range(maxiter):
 
         # Sweep through the parameters
@@ -204,6 +206,7 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
         # Check for convergence
         pchange = np.max(np.abs(params - params_save))
         if pchange < cnvrg_tol:
+            converged = True
             break
 
     # Set approximate zero coefficients to be exactly zero
@@ -211,6 +214,7 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
 
     if not refit:
         results = RegularizedResults(model, params)
+        results.converged = converged
         return RegularizedResultsWrapper(results)
 
     # Fit the reduced model to get standard errors and other
@@ -255,6 +259,7 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
     # Assuming a standard signature for creating results classes.
     refit = klass(model, params, cov, scale=scale)
     refit.regularized = True
+    refit.converged = converged
     refit.method = method
     refit.fit_history = {'iteration': itr + 1}
 
