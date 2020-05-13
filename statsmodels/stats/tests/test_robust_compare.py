@@ -14,6 +14,7 @@ from scipy import stats
 from statsmodels.stats.robust_compare import (
         TrimmedMean, anova_bfm, anova_oneway, anova_scale, anova_welch,
         scale_transform, trim_mean, trimboth)
+import statsmodels.stats.oneway as sma
 
 from statsmodels.tools.testing import Holder
 
@@ -210,11 +211,21 @@ class TestTrimmedRAnova(object):
         assert_allclose(res[1], r2s.p_value, rtol=1e-13)
         assert_allclose(res[2][1], r2s.df, rtol=1e-13)
 
+        resg = sma.anova_oneway(self.x[:2], use_var="unequal", trim_frac=1/13)
+        # assert_allclose(res.statistic, res_bfm.statistic, rtol=1e-13)
+        assert_allclose(resg.pvalue, r2s.p_value, rtol=1e-13)
+        assert_allclose(resg.df, [1, r2s.df], rtol=1e-13)  # df
+
         # no trimming bfm
         res = anova_bfm(self.x)
         assert_allclose(res[0], res_bfm.statistic, rtol=1e-13)
         assert_allclose(res[1], res_bfm.p_value, rtol=1e-13)
         assert_allclose(res[-1][:2], res_bfm.parameter, rtol=1e-13)  # df
+
+        res = sma.anova_oneway(self.x, use_var="bf")
+        assert_allclose(res[0], res_bfm.statistic, rtol=1e-13)
+        assert_allclose(res.pvalue2, res_bfm.p_value, rtol=1e-13)
+        assert_allclose(res.df2, res_bfm.parameter, rtol=1e-13)  # df
 
         # no trimming welch
         res = anova_welch(self.x)
@@ -222,11 +233,21 @@ class TestTrimmedRAnova(object):
         assert_allclose(res[1], res_wa.p_value, rtol=1e-13)
         assert_allclose(res[-1][:2], res_wa.parameter, rtol=1e-13)  # df
 
-        # no trimming bfm
+        res = sma.anova_oneway(self.x, use_var="unequal")
+        assert_allclose(res.statistic, res_wa.statistic, rtol=1e-13)
+        assert_allclose(res.pvalue, res_wa.p_value, rtol=1e-13)
+        assert_allclose(res.df, res_wa.parameter, rtol=1e-13)  # df
+
+        # no trimming standard anova
         res = anova_oneway(self.x)
         assert_allclose(res[0], res_fa.statistic, rtol=1e-13)
         assert_allclose(res[1], res_fa.p_value, rtol=1e-13)
         assert_allclose(res[-1][:2], res_fa.parameter, rtol=1e-13)  # df
+
+        res = sma.anova_oneway(self.x, use_var="equal")
+        assert_allclose(res.statistic, res_fa.statistic, rtol=1e-13)
+        assert_allclose(res.pvalue, res_fa.p_value, rtol=1e-13)
+        assert_allclose(res.df, res_fa.parameter, rtol=1e-13)  # df
 
 
 def test_example_smoke():
