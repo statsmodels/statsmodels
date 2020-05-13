@@ -9,7 +9,12 @@ import pandas as pd
 
 from statsmodels.tools.sm_exceptions import (ValueWarning,
                                              EstimationWarning)
-from statsmodels.tools.validation import string_like, array_like, bool_like, float_like, int_like
+from statsmodels.tools.validation import (string_like,
+                                          array_like,
+                                          bool_like,
+                                          float_like,
+                                          int_like,
+                                          )
 
 
 def _norm(x):
@@ -344,7 +349,8 @@ use one of the methods for adjusting data for missing-values.""")
         """
         Computes GLS weights based on percentage of data fit
         """
-        errors = self.transformed_data - np.asarray(self.project(transform=False))
+        projection = np.asarray(self.project(transform=False))
+        errors = self.transformed_data - projection
         if self._ncomp == self._nvar:
             raise ValueError('gls can only be used when ncomp < nvar '
                              'so that residuals have non-zero variance')

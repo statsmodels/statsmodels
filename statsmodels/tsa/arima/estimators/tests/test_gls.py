@@ -7,6 +7,7 @@ from numpy.testing import (
 from statsmodels.tsa.arima.datasets.brockwell_davis_2002 import lake, oshorts
 from statsmodels.tsa.arima.estimators.gls import gls
 
+
 @pytest.mark.low_precision('Test against Example 6.6.1 in Brockwell and Davis'
                            ' (2016)')
 def test_brockwell_davis_example_661():

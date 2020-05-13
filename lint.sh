@@ -131,7 +131,6 @@ if [ "$LINT" == true ]; then
         statsmodels/regression/tests/test_quantile_regression.py \
         statsmodels/regression/tests/test_rolling.py \
         statsmodels/regression/tests/test_tools.py \
-        statsmodels/resampling/ \
         statsmodels/robust/ \
         statsmodels/sandbox/__init__.py \
         statsmodels/sandbox/distributions/__init__.py \
@@ -144,7 +143,6 @@ if [ "$LINT" == true ]; then
         statsmodels/sandbox/regression/tests/results_gmm_poisson.py \
         statsmodels/sandbox/regression/tests/results_ivreg2_griliches.py \
         statsmodels/sandbox/stats/__init__.py \
-        statsmodels/sandbox/stats/ex_multicomp.py \
         statsmodels/sandbox/stats/tests/ \
         statsmodels/src/ \
         statsmodels/stats/__init__.py \
@@ -220,7 +218,6 @@ if [ "$LINT" == true ]; then
         statsmodels/tsa/tests/test_x13.py \
         statsmodels/tsa/vector_ar/__init__.py \
         statsmodels/tsa/vector_ar/api.py \
-        statsmodels/tsa/vector_ar/dynamic.py \
         statsmodels/tsa/vector_ar/hypothesis_test_results.py \
         statsmodels/tsa/vector_ar/tests/JMulTi_results/ \
         statsmodels/tsa/vector_ar/tests/Matlab_results/ \

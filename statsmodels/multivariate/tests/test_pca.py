@@ -430,8 +430,8 @@ def test_too_many_missing(reset_randomstate):
 
 
 def test_gls_warning(reset_randomstate):
-    data = np.random.standard_normal((200, 50))
-    data[:, :197] = data[:, :1] + .01 * data[:, :197]
+    data = np.random.standard_normal((400, 200))
+    data[:, 1:] = data[:, :1] + .01 * data[:, 1:]
     with pytest.warns(EstimationWarning, match="Many series are being down weighted"):
         factors = PCA(data, ncomp=2, gls=True).factors
     assert factors.shape == (data.shape[0], 2)
