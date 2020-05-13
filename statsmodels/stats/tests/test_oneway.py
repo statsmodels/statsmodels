@@ -109,10 +109,10 @@ class TestOnewayEquivalenc(object):
         n_groups = self.n_groups
 
         eps = 0.5
-        f, pv, df0, df1 = anova_generic(means, stds**2, nobs,
-                                        use_var="equal")
+        res0 = anova_generic(means, stds**2, nobs, use_var="equal")
+        f = res0.statistic
         res = oneway_equivalence_generic(f, n_groups, nobs.sum(), eps,
-                                         [df0, df1], alpha=0.05)
+                                         res0.df, alpha=0.05)
         assert_allclose(res.pvalue, 0.0083, atol=0.001)
         assert_equal(res.df, [3, 46])
 
@@ -127,11 +127,11 @@ class TestOnewayEquivalenc(object):
         n_groups = self.n_groups
 
         eps = 0.5
-        f, pv, df0, df1 = anova_generic(means, stds**2, nobs,
-                                        use_var="unequal",
-                                        welch_correction=False)
+        res0 = anova_generic(means, stds**2, nobs, use_var="unequal",
+                             welch_correction=False)
+        f = res0.statistic
         res = oneway_equivalence_generic(f, n_groups, nobs.sum(), eps,
-                                         [df0, df1], alpha=0.05)
+                                         res0.df, alpha=0.05)
         assert_allclose(res.pvalue, 0.0110, atol=0.001)
         assert_allclose(res.df, [3.0, 22.6536], atol=0.0006)
 
@@ -139,5 +139,5 @@ class TestOnewayEquivalenc(object):
         assert_allclose(f, 0.1102, atol=0.007)
 
         # check post-hoc power, JS p. 6
-        pow_ = power_oneway_equivalence(f, n_groups, nobs, eps, [df0, df1])
+        pow_ = power_oneway_equivalence(f, n_groups, nobs, eps, res0.df)
         assert_allclose(pow_, 0.1552, atol=0.007)

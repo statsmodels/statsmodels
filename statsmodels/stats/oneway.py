@@ -11,7 +11,9 @@ import numpy as np
 from scipy import stats
 from scipy.special import ncfdtrinc
 
+from statsmodels.stats.robust_compare import TrimmedMean
 from statsmodels.tools.testing import Holder
+from statsmodels.stats.base import HolderTuple
 
 
 def effectsize_oneway(means, vars_, nobs, use_var="unequal", ddof_between=0):
@@ -91,31 +93,6 @@ def effectsize_oneway(means, vars_, nobs, use_var="unequal", ddof_between=0):
 
     # f2 = np.dot(weights, (means - meanw_t)**2) / (n_groups - ddof_between)
     f2 = np.dot(weights, (means - meanw_t)**2) / (nobs_t - ddof_between)
-
-    # Not sure if I need it in this function
-    compute_df = False
-    welch_correction = False
-    if compute_df:
-        statistic = f2
-        if use_var == "unequal":
-            use_satt = True
-            tmp = ((1 - w_rel)**2 / (nobs - 1)).sum() / (n_groups**2 - 1)
-            if welch_correction:
-                statistic /= 1 + 2 * (n_groups - 2) * tmp
-            df_denom = 1. / (3. * tmp)
-
-        else:
-            use_satt = False
-            # variance of group demeaned total sample, pooled var_resid
-            tmp = ((nobs - 1) * vars_).sum() / (nobs_t - n_groups)
-            statistic /= tmp
-            df_denom = 1. / (3. * tmp)
-
-        df_num = n_groups - 1.
-        if use_satt:  # Satterthwaite/Welch degrees of freedom
-            df_denom = 1. / (3. * tmp)
-        else:
-            df_denom = nobs_t - n_groups
 
     return np.sqrt(f2)
 
@@ -242,12 +219,15 @@ def confint_effectsize_oneway(f_stat, df1, df2, alpha=0.05, nobs=None,
 
 
 def anova_generic(means, vars_, nobs, use_var="unequal",
-                  welch_correction=True):
+                  welch_correction=True, info=None):
     """oneway anova based on summary statistics
 
     incompletely verified
 
     """
+    options = {"use_var": use_var,
+               "welch_correction": welch_correction
+               }
     nobs_t = nobs.sum()
     n_groups = len(means)
     # mean_t = (nobs * means).sum() / nobs_t
@@ -262,6 +242,8 @@ def anova_generic(means, vars_, nobs, use_var="unequal",
     meanw_t = w_rel @ means
 
     statistic = np.dot(weights, (means - meanw_t)**2) / (n_groups - 1.)
+    use_satt = False
+    df_num = n_groups - 1.
 
     if use_var == "unequal":
         use_satt = True
@@ -270,21 +252,103 @@ def anova_generic(means, vars_, nobs, use_var="unequal",
             statistic /= 1 + 2 * (n_groups - 2) * tmp
         df_denom = 1. / (3. * tmp)
 
-    else:
-        use_satt = False
+    elif use_var == "equal":
         # variance of group demeaned total sample, pooled var_resid
         tmp = ((nobs - 1) * vars_).sum() / (nobs_t - n_groups)
         statistic /= tmp
-        df_denom = 1. / (3. * tmp)
-
-    df_num = n_groups - 1.
-    if use_satt:  # Satterthwaite/Welch degrees of freedom
-        df_denom = 1. / (3. * tmp)
-    else:
         df_denom = nobs_t - n_groups
+    elif use_var == "bf":
+        tmp = ((1. - nobs / nobs_t) * vars_).sum()
+        statistic = 1. * (nobs * (means - meanw_t)**2).sum()
+        statistic /= tmp
+
+        df_num2 = n_groups - 1
+        df_denom = tmp**2 / ((1. - nobs / nobs_t)**2 *
+                             vars_**2 / (nobs - 1)).sum()
+        df_num = tmp**2 / ((vars_**2).sum() +
+                           (nobs / nobs_t * vars_).sum()**2 -
+                           2 * (nobs / nobs_t * vars_**2).sum())
+        pval2 = stats.f.sf(statistic, df_num2, df_denom)
+        options["df2"] = (df_num2, df_denom)
+        options["df_num2"] = df_num2
+        options["pvalue2"] = pval2
+    else:
+        raise ValueError('use_var is to be one of "unequal", "equal" or "bf"')
+
+#     if use_satt:  # Satterthwaite/Welch degrees of freedom
+#         df_denom = 1. / (3. * tmp)
+#     else:
+#         df_denom = nobs_t - n_groups
 
     pval = stats.f.sf(statistic, df_num, df_denom)
-    return statistic, pval, df_num, df_denom
+    res = HolderTuple(statistic=statistic,
+                      pvalue=pval,
+                      df=(df_num, df_denom),
+                      df_num=df_num,
+                      df_denom=df_denom,
+                      **options
+                      )
+    return res
+
+
+def anova_oneway(data, groups=None, use_var="unequal", welch_correction=True,
+                 trim_frac=0):
+    """one-way anova
+
+    This implements standard anova, Welch and Brown-Forsythe and trimmed
+    (Yuen) variants of them.
+
+    Parameters
+    ----------
+
+    use_var : {"unequal", "equal" or "bf"}
+        `use_var` specified how to treat heteroscedasticity, uneqau variance,
+        across samples. Three approaches are available
+
+        "unequal" : Variances are not assumed to be equal across samples.
+            Heteroscedasticity is taken into account with Welch Anova and
+            Satterthwaite-Welch degrees of freedom.
+            This is the default.
+        "equal" : variances are assumed to be equal across samples. This is
+            the standard Anova.
+        "bf: Variances are not assumed to be equal across samples. The method
+            is Browne-Forsythe (1971) with the corrected degrees of freedom
+            by Merothra
+
+
+    """
+    if groups is not None:
+        uniques = np.unique(groups)
+        data = [data[groups == uni] for uni in uniques]
+        raise NotImplementedError('groups is not available yet')
+    else:
+        uniques = None
+    args = list(map(np.asarray, data))
+    if any([x.ndim != 1 for x in args]):
+        raise ValueError('data arrays have to be one-dimensional')
+
+    nobs = np.array([len(x) for x in args], float)
+    # n_groups = len(args)  # not used
+    # means = np.array([np.mean(x, axis=0) for x in args], float)
+    # vars_ = np.array([np.var(x, ddof=1, axis=0) for x in args], float)
+
+    if trim_frac == 0:
+        means = np.array([x.mean() for x in args])
+        vars_ = np.array([x.var(ddof=1) for x in args])
+    else:
+        tms = [TrimmedMean(x, trim_frac) for x in args]
+        means = np.array([tm.mean_trimmed for tm in tms])
+        # R doesn't use uncorrected var_winsorized
+        # vars_ = np.array([tm.var_winsorized for tm in tms])
+        vars_ = np.array([tm.var_winsorized * (tm.nobs - 1) /
+                          (tm.nobs_reduced - 1) for tm in tms])
+        # nobs_original = nobs  # store just in case
+        nobs = np.array([tm.nobs_reduced for tm in tms])
+
+    res = anova_generic(means, vars_, nobs, use_var=use_var,
+                        welch_correction=welch_correction)
+
+    return res
 
 
 def oneway_equivalence_generic(f, n_groups, nobs, eps, df, alpha=0.05):
@@ -339,16 +403,18 @@ def oneway_equivalence_generic(f, n_groups, nobs, eps, df, alpha=0.05):
 
     pv = stats.ncf.cdf(f, df[0], df[1], nobs_mean * eps**2)
     pwr = stats.ncf.cdf(crit_f, df[0], df[1], nobs_mean * 1e-13)
-    res = Holder(es=es,
-                 pvalue=pv,
-                 crit_f=crit_f,
-                 crit_es=crit_es,
-                 reject=reject,
-                 power_zero=pwr,
-                 df=df,
-                 # es is currently hard coded, not correct for Welch anova `f`
-                 type_effectsize="Welleks psi_squared"
-                 )
+    res = HolderTuple(statistic=es,
+                      pvalue=pv,
+                      es=es,
+                      crit_f=crit_f,
+                      crit_es=crit_es,
+                      reject=reject,
+                      power_zero=pwr,
+                      df=df,
+                      # es is currently hard coded,
+                      #     not correct for Welch anova `f`
+                      type_effectsize="Welleks psi_squared"
+                      )
     return res
 
 
