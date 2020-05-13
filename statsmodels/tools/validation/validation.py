@@ -33,7 +33,7 @@ def _right_squeeze(arr, stop_dim=0):
 
 
 def array_like(obj, name, dtype=np.double, ndim=1, maxdim=None,
-               shape=None, order='C', contiguous=False, optional=False):
+               shape=None, order=None, contiguous=False, optional=False):
     """
     Convert array-like to a ndarray and check conditions
 
@@ -57,7 +57,7 @@ def array_like(obj, name, dtype=np.double, ndim=1, maxdim=None,
     shape : {tuple[int], None}
         Required shape obj.  If None, no check is performed. Partially
         restricted shapes can be checked using None. See examples.
-    order : {'C', 'F'}
+    order : {'C', 'F', None}
         Order of the array
     contiguous : bool
         Ensure that the array's data is contiguous with order ``order``
