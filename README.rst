@@ -1,4 +1,5 @@
-|Travis Build Status| |Azure CI Build Status| |Appveyor Build Status| |Coveralls Coverage|
+|PyPI Version| |Conda Version| |License| |Travis Build Status| |Azure CI Build Status|
+|Appveyor Build Status| |Coveralls Coverage| |PyPI downloads| |Conda downloads|
 
 About statsmodels
 =================
@@ -181,3 +182,13 @@ https://github.com/statsmodels/statsmodels/issues
    :target: https://ci.appveyor.com/project/josef-pkt/statsmodels/branch/master
 .. |Coveralls Coverage| image:: https://coveralls.io/repos/github/statsmodels/statsmodels/badge.svg?branch=master
    :target: https://coveralls.io/github/statsmodels/statsmodels?branch=master
+.. |PyPI downloads| image:: https://img.shields.io/pypi/dm/statsmodels.svg?label=Pypi%20downloads
+   :target: https://pypi.org/project/statsmodels/
+.. |Conda downloads| image:: https://img.shields.io/conda/dn/conda-forge/statsmodels.svg?label=Conda%20downloads
+   :target: https://anaconda.org/conda-forge/statsmodels/
+.. |PyPI Version| image:: https://img.shields.io/pypi/v/statsmodels.svg
+   :target: https://pypi.org/project/statsmodels/
+.. |Conda Version| image:: https://anaconda.org/conda-forge/statsmodels/badges/version.svg
+   :target: https://anaconda.org/conda-forge/statsmodels/
+.. |License| image:: https://img.shields.io/pypi/l/statsmodels.svg
+   :target: https://github.com/statsmodels/statsmodels/blob/master/LICENSE.txt
