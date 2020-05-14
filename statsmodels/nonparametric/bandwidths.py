@@ -1,10 +1,11 @@
 import numpy as np
-from scipy.stats import scoreatpercentile as sap
+from scipy.stats import scoreatpercentile
 
 from statsmodels.compat.pandas import Substitution
 from statsmodels.sandbox.nonparametric import kernels
 
-def _select_sigma(X):
+
+def _select_sigma(x, percentile=25):
     """
     Returns the smaller of std(X, ddof=1) or normalized IQR(X) over axis 0.
 
@@ -12,12 +13,14 @@ def _select_sigma(X):
     ----------
     Silverman (1986) p.47
     """
-#    normalize = norm.ppf(.75) - norm.ppf(.25)
+    # normalize = norm.ppf(.75) - norm.ppf(.25)
     normalize = 1.349
-#    IQR = np.subtract.reduce(percentile(X, [75,25],
-#                             axis=axis), axis=axis)/normalize
-    IQR = (sap(X, 75) - sap(X, 25))/normalize
-    return np.minimum(np.std(X, axis=0, ddof=1), IQR)
+    IQR = (scoreatpercentile(x, 75) - scoreatpercentile(x, 25)) / normalize
+    std_dev = np.std(x, axis=0, ddof=1)
+    if IQR > 0:
+        return np.minimum(std_dev, IQR)
+    else:
+        return std_dev
 
 
 ## Univariate Rule of Thumb Bandwidths ##
@@ -170,7 +173,9 @@ def select_bandwidth(x, bw, kernel):
     bandwidth = bandwidth_funcs[bw](x, kernel)
     if np.any(bandwidth == 0):
         # eventually this can fall back on another selection criterion.
-        err = "Selected KDE bandwidth is 0. Cannot estimate density."
+        err = "Selected KDE bandwidth is 0. Cannot estimate density. " \
+              "Either provide the bandwidth during initialization or use " \
+              "an alternative method."
         raise RuntimeError(err)
     else:
         return bandwidth
