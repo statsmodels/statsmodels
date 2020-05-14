@@ -14,13 +14,13 @@ def dedent_lines(lines):
     return textwrap.dedent("\n".join(lines)).split("\n")
 
 
-def strip_blank_lines(l):
+def strip_blank_lines(line):
     """Remove leading and trailing blank lines from a list of lines"""
-    while l and not l[0].strip():
-        del l[0]
-    while l and not l[-1].strip():
-        del l[-1]
-    return l
+    while line and not line[0].strip():
+        del line[0]
+    while line and not line[-1].strip():
+        del line[-1]
+    return line
 
 
 class Reader(object):
@@ -46,34 +46,34 @@ class Reader(object):
         return self._str[n]
 
     def reset(self):
-        self._l = 0  # current line nr
+        self._line_num = 0  # current line nr
 
     def read(self):
         if not self.eof():
-            out = self[self._l]
-            self._l += 1
+            out = self[self._line_num]
+            self._line_num += 1
             return out
         else:
             return ''
 
     def seek_next_non_empty_line(self):
-        for l in self[self._l:]:
-            if l.strip():
+        for line in self[self._line_num:]:
+            if line.strip():
                 break
             else:
-                self._l += 1
+                self._line_num += 1
 
     def eof(self):
-        return self._l >= len(self._str)
+        return self._line_num >= len(self._str)
 
     def read_to_condition(self, condition_func):
-        start = self._l
+        start = self._line_num
         for line in self[start:]:
             if condition_func(line):
-                return self[start:self._l]
-            self._l += 1
+                return self[start:self._line_num]
+            self._line_num += 1
             if self.eof():
-                return self[start:self._l + 1]
+                return self[start:self._line_num + 1]
         return []
 
     def read_to_next_empty_line(self):
@@ -91,8 +91,8 @@ class Reader(object):
         return self.read_to_condition(is_unindented)
 
     def peek(self, n=0):
-        if self._l + n < len(self._str):
-            return self[self._l + n]
+        if self._line_num + n < len(self._str):
+            return self[self._line_num + n]
         else:
             return ''
 
