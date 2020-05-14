@@ -625,16 +625,26 @@ class Representation(object):
                     raise ValueError(error_ti % name)
 
                 # Otherwise, validate the shape of the given extended value
+                # Note: we do not validate the number of observations here
+                # (so we pass in updated_mat.shape[-1] as the nobs argument
+                # in the validate_* calls); instead, we check below that we
+                # at least `nobs` values were passed in and then only take the
+                # first of them as required. This can be useful when e.g. the
+                # end user knows the extension values up to some maximum
+                # endpoint, but does not know what the calling methods may
+                # specifically require.
                 updated_mat = np.asarray(kwargs[name])
                 if len(shape) == 2:
-                    validate_vector_shape(name, updated_mat.shape,
-                                          shape[0], nobs)
+                    validate_vector_shape(name, updated_mat.shape, shape[0],
+                                          updated_mat.shape[-1])
                 else:
-                    validate_matrix_shape(name, updated_mat.shape,
-                                          shape[0], shape[1], nobs)
+                    validate_matrix_shape(name, updated_mat.shape, shape[0],
+                                          shape[1], updated_mat.shape[-1])
 
-                if updated_mat.shape[-1] != nobs:
+                if updated_mat.shape[-1] < nobs:
                     raise ValueError(error_tv % name)
+                else:
+                    updated_mat = updated_mat[..., :nobs]
 
                 # Concatenate to get the new time-varying matrix
                 kwargs[name] = np.c_[mat[..., start:end], updated_mat]
