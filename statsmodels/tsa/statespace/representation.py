@@ -651,6 +651,33 @@ class Representation(object):
 
         return self.clone(endog, **kwargs)
 
+    def diff_endog(self, new_endog):
+        # TODO: move this function to tools?
+        endog = self.endog.T
+        if len(new_endog) < len(endog):
+            raise ValueError('Given data (length %d) is too short to diff'
+                             ' against model data (length %d).'
+                             % (len(new_endog), len(endog)))
+        if len(new_endog) > len(endog):
+            nobs_append = len(new_endog) - len(endog)
+            endog = np.c_[endog.T, new_endog[-nobs_append:].T * np.nan].T
+
+        new_nan = np.isnan(new_endog)
+        existing_nan = np.isnan(endog)
+
+        if np.any(new_nan & ~existing_nan):
+            raise ValueError('New data cannot have missing values for'
+                             ' observations that are non-missing in model'
+                             ' data.')
+
+        is_revision = ~existing_nan & ~(new_endog == endog)
+        revision_ix = list(zip(*np.where(is_revision)))
+
+        is_new = existing_nan & ~new_nan
+        new_ix = list(zip(*np.where(is_new)))
+
+        return revision_ix, new_ix
+
     @property
     def prefix(self):
         """
