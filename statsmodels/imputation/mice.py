@@ -1303,12 +1303,11 @@ class MICEResults(LikelihoodModelResults):
         """
 
         from statsmodels.iolib import summary2
-        from collections import OrderedDict
 
         smry = summary2.Summary()
         float_format = "%8.3f"
 
-        info = OrderedDict()
+        info = {}
         info["Method:"] = "MICE"
         info["Model:"] = self.model_class.__name__
         info["Dependent variable:"] = self.endog_names

@@ -3,7 +3,6 @@ from scipy.special import factorial
 from statsmodels.multivariate.pca import PCA
 from statsmodels.nonparametric.kernel_density import KDEMultivariate
 from statsmodels.graphics.utils import _import_mpl
-from collections import OrderedDict
 from itertools import combinations
 import numpy as np
 try:
@@ -454,7 +453,7 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
         handles.append(p)
         labels.append(label)
 
-    by_label = OrderedDict(zip(labels, handles))
+    by_label = dict(zip(labels, handles))
     if len(outliers) != 0:
         by_label.pop('Median')
         by_label.pop('50% HDR')

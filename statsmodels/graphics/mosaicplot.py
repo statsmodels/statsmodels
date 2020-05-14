@@ -10,7 +10,6 @@ see the docstring of the mosaic function for more informations.
 from statsmodels.compat.python import (iteritems, iterkeys, lrange, lzip,
                                        itervalues)
 import numpy as np
-from collections import OrderedDict
 from itertools import product
 
 from numpy import iterable, r_, cumsum, array
@@ -106,7 +105,7 @@ def _key_splitting(rect_dict, keys, values, key_subset, horizontal, gap):
     as long as the key start with the tuple key_subset.  The other keys are
     returned without modification.
     """
-    result = OrderedDict()
+    result = {}
     L = len(key_subset)
     for name, (x, y, w, h) in iteritems(rect_dict):
         if key_subset == name[:L]:
@@ -138,7 +137,7 @@ def _categories_level(keys):
     res = []
     for i in zip(*(keys)):
         tuplefied = _tuplify(i)
-        res.append(list(OrderedDict([(j, None) for j in tuplefied])))
+        res.append(list(dict([(j, None) for j in tuplefied])))
     return res
 
 
@@ -183,7 +182,7 @@ def _hierarchical_split(count_dict, horizontal=True, gap=0.05):
             3 - height of the rectangle
     """
     # this is the unit square that we are going to divide
-    base_rect = OrderedDict([(tuple(), (0, 0, 1, 1))])
+    base_rect = dict([(tuple(), (0, 0, 1, 1))])
     # get the list of each possible value for each level
     categories_levels = _categories_level(list(iterkeys(count_dict)))
     L = len(categories_levels)
@@ -199,7 +198,7 @@ def _hierarchical_split(count_dict, horizontal=True, gap=0.05):
     gap = gap[:L]
     # put the count dictionay in order for the keys
     # this will allow some code simplification
-    count_ordered = OrderedDict([(k, count_dict[k])
+    count_ordered = dict([(k, count_dict[k])
                         for k in list(product(*categories_levels))])
     for cat_idx, cat_enum in enumerate(categories_levels):
         # get the partial key up to the actual level
@@ -294,24 +293,24 @@ def _normalize_data(data, index):
         # ok, I cannot use the data as a dictionary
         # Try to convert it to a numpy array, or die trying
         data = np.asarray(data)
-        temp = OrderedDict()
+        temp = {}
         for idx in np.ndindex(data.shape):
             name = tuple(i for i in idx)
             temp[name] = data[idx]
         data = temp
         items = list(iteritems(data))
     # make all the keys a tuple, even if simple numbers
-    data = OrderedDict([_tuplify(k), v] for k, v in items)
+    data = dict([_tuplify(k), v] for k, v in items)
     categories_levels = _categories_level(list(iterkeys(data)))
     # fill the void in the counting dictionary
     indexes = product(*categories_levels)
-    contingency = OrderedDict([(k, data.get(k, 0)) for k in indexes])
+    contingency = dict([(k, data.get(k, 0)) for k in indexes])
     data = contingency
     # reorder the keys order according to the one specified by the user
     # or if the index is None convert it into a simple list
     # right now it does not do any check, but can be modified in the future
     index = lrange(len(categories_levels)) if index is None else index
-    contingency = OrderedDict()
+    contingency = {}
     for key, value in iteritems(data):
         new_key = tuple(key[i] for i in index)
         contingency[new_key] = value

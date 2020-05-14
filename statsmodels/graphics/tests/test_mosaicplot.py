@@ -1,6 +1,5 @@
 from statsmodels.compat.python import iterkeys, lrange, iteritems
 
-from collections import OrderedDict
 from io import BytesIO
 from itertools import product
 
@@ -79,7 +78,7 @@ def test_mosaic_simple(close_figures):
     # the cartesian product of all the categories is
     # the complete set of categories
     keys = list(product(*key_set))
-    data = OrderedDict(zip(keys, range(1, 1 + len(keys))))
+    data = dict(zip(keys, range(1, 1 + len(keys))))
     # which colours should I use for the various categories?
     # put it into a dict
     props = {}
@@ -144,7 +143,7 @@ def test_mosaic_very_complex(close_figures):
     key_base = (['male', 'female'], ['old', 'young'],
                 ['healty', 'ill'], ['work', 'unemployed'])
     keys = list(product(*key_base))
-    data = OrderedDict(zip(keys, range(1, 1 + len(keys))))
+    data = dict(zip(keys, range(1, 1 + len(keys))))
     props = {}
     props[('male', 'old')] = {'color': 'r'}
     props[('female',)] = {'color': 'pink'}
@@ -163,8 +162,8 @@ def test_mosaic_very_complex(close_figures):
             else:
                 ji = max(i, j)
                 ij = min(i, j)
-                temp_data = OrderedDict([((k[ij], k[ji]) + tuple(k[r] for r in m), v)
-                                            for k, v in iteritems(data)])
+                temp_data = dict([((k[ij], k[ji]) + tuple(k[r] for r in m), v)
+                                  for k, v in iteritems(data)])
 
                 keys = list(iterkeys(temp_data))
                 for k in keys:
@@ -184,7 +183,7 @@ def test_axes_labeling(close_figures):
     # the cartesian product of all the categories is
     # the complete set of categories
     keys = list(product(*key_set))
-    data = OrderedDict(zip(keys, rand(len(keys))))
+    data = dict(zip(keys, rand(len(keys))))
     lab = lambda k: ''.join(s[0] for s in k)
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 8))
     mosaic(data, ax=ax1, labelizer=lab, horizontal=True, label_rotation=45)
@@ -222,13 +221,13 @@ eq = lambda x, y: assert_(np.allclose(x, y))
 
 def test_recursive_split():
     keys = list(product('mf'))
-    data = OrderedDict(zip(keys, [1] * len(keys)))
+    data = dict(zip(keys, [1] * len(keys)))
     res = _hierarchical_split(data, gap=0)
     assert_(list(iterkeys(res)) == keys)
     res[('m',)] = (0.0, 0.0, 0.5, 1.0)
     res[('f',)] = (0.5, 0.0, 0.5, 1.0)
     keys = list(product('mf', 'yao'))
-    data = OrderedDict(zip(keys, [1] * len(keys)))
+    data = dict(zip(keys, [1] * len(keys)))
     res = _hierarchical_split(data, gap=0)
     assert_(list(iterkeys(res)) == keys)
     res[('m', 'y')] = (0.0, 0.0, 0.5, 1 / 3)
@@ -240,11 +239,11 @@ def test_recursive_split():
 
 
 def test__reduce_dict():
-    data = OrderedDict(zip(list(product('mf', 'oy', 'wn')), [1] * 8))
+    data = dict(zip(list(product('mf', 'oy', 'wn')), [1] * 8))
     eq(_reduce_dict(data, ('m',)), 4)
     eq(_reduce_dict(data, ('m', 'o')), 2)
     eq(_reduce_dict(data, ('m', 'o', 'w')), 1)
-    data = OrderedDict(zip(list(product('mf', 'oy', 'wn')), lrange(8)))
+    data = dict(zip(list(product('mf', 'oy', 'wn')), lrange(8)))
     eq(_reduce_dict(data, ('m',)), 6)
     eq(_reduce_dict(data, ('m', 'o')), 1)
     eq(_reduce_dict(data, ('m', 'o', 'w')), 0)

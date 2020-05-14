@@ -7,8 +7,6 @@ License: BSD-3
 '''
 
 
-from collections import OrderedDict
-
 import numpy as np
 
 from statsmodels.stats._knockoff import RegressionFDR
@@ -56,7 +54,7 @@ _alias_list = [['b', 'bonf', 'bonferroni'],
                ]
 
 
-multitest_alias = OrderedDict()
+multitest_alias = {}
 for m in _alias_list:
     multitest_alias[m[0]] = m[0]
     for a in m[1:]:

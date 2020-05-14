@@ -1573,11 +1573,10 @@ class PHRegResults(base.LikelihoodModelResults):
         """
 
         from statsmodels.iolib import summary2
-        from collections import OrderedDict
         smry = summary2.Summary()
         float_format = "%8.3f"
 
-        info = OrderedDict()
+        info = {}
         info["Model:"] = "PH Reg"
         if yname is None:
             yname = self.model.endog_names

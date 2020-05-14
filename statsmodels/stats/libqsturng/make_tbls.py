@@ -6,7 +6,6 @@ import scipy.stats
 from scipy.optimize import leastsq
 
 import numpy as np
-from collections import OrderedDict
 from numpy.random import random
 
 # The values for p in [.5, .75, .9, .95, .975, .99, .995, .999]
@@ -381,38 +380,36 @@ q0999 = """\
 
 # Build the T+ 'matrix'
 # T is a dict of dicts of lists
-# Building them as OrderedDicts ensures that we can
-# iterate over them in order
 
 #                 [alpha keys]        [v keys]
 #                   [table values as lists of floats]
-T = OrderedDict([(0.100, OrderedDict([(float(L.split()[0]),
-                    lmap(float, L.split()[1:])) for L in q0100.split('\n')])),
-                 (0.500, OrderedDict([(float(L.split()[0]),
-                    lmap(float, L.split()[1:])) for L in q0500.split('\n')])),
-                 (0.675, OrderedDict([(float(L.split()[0]),
-                    lmap(float, L.split()[1:])) for L in q0675.split('\n')])),
-                 (0.750, OrderedDict([(float(L.split()[0]),
-                    lmap(float, L.split()[1:])) for L in q0750.split('\n')])),
-                 (0.800, OrderedDict([(float(L.split()[0]),
-                    lmap(float, L.split()[1:])) for L in q0800.split('\n')])),
-                 (0.850, OrderedDict([(float(L.split()[0]),
-                    lmap(float, L.split()[1:])) for L in q0850.split('\n')])),
-                 (0.900, OrderedDict([(float(L.split()[0]),
-                    lmap(float, L.split()[1:])) for L in q0900.split('\n')])),
-                 (0.950, OrderedDict([(float(L.split()[0]),
-                    lmap(float, L.split()[1:])) for L in q0950.split('\n')])),
-                 (0.975, OrderedDict([(float(L.split()[0]),
-                    lmap(float, L.split()[1:])) for L in q0975.split('\n')])),
-                 (0.990, OrderedDict([(float(L.split()[0]),
-                    lmap(float, L.split()[1:])) for L in q0990.split('\n')])),
-                 (0.995, OrderedDict([(float(L.split()[0]),
-                    lmap(float, L.split()[1:])) for L in q0995.split('\n')])),
-                 (0.999, OrderedDict([(float(L.split()[0]),
-                    lmap(float, L.split()[1:])) for L in q0999.split('\n')]))])
+T = dict([(0.100, dict([(float(L.split()[0]),
+                         lmap(float, L.split()[1:])) for L in q0100.split('\n')])),
+          (0.500, dict([(float(L.split()[0]),
+                         lmap(float, L.split()[1:])) for L in q0500.split('\n')])),
+          (0.675, dict([(float(L.split()[0]),
+                         lmap(float, L.split()[1:])) for L in q0675.split('\n')])),
+          (0.750, dict([(float(L.split()[0]),
+                         lmap(float, L.split()[1:])) for L in q0750.split('\n')])),
+          (0.800, dict([(float(L.split()[0]),
+                         lmap(float, L.split()[1:])) for L in q0800.split('\n')])),
+          (0.850, dict([(float(L.split()[0]),
+                         lmap(float, L.split()[1:])) for L in q0850.split('\n')])),
+          (0.900, dict([(float(L.split()[0]),
+                         lmap(float, L.split()[1:])) for L in q0900.split('\n')])),
+          (0.950, dict([(float(L.split()[0]),
+                         lmap(float, L.split()[1:])) for L in q0950.split('\n')])),
+          (0.975, dict([(float(L.split()[0]),
+                         lmap(float, L.split()[1:])) for L in q0975.split('\n')])),
+          (0.990, dict([(float(L.split()[0]),
+                         lmap(float, L.split()[1:])) for L in q0990.split('\n')])),
+          (0.995, dict([(float(L.split()[0]),
+                         lmap(float, L.split()[1:])) for L in q0995.split('\n')])),
+          (0.999, dict([(float(L.split()[0]),
+                         lmap(float, L.split()[1:])) for L in q0999.split('\n')]))])
 
 # This dict maps r values to the correct list index
-R = OrderedDict(zip([2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,
+R = dict(zip([2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,
                      17,18,19,20,30,40,60,80,100], lrange(24)))
 
 inf = np.inf

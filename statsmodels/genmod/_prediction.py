@@ -119,21 +119,19 @@ class PredictionResults(object):
 
         return ci
 
-    def summary_frame(self, what='all', alpha=0.05):
+    def summary_frame(self, alpha=0.05):
         """Summary frame"""
         # TODO: finish and cleanup
         import pandas as pd
-        from collections import OrderedDict
         #ci_obs = self.conf_int(alpha=alpha, obs=True) # need to split
         ci_mean = self.conf_int(alpha=alpha)
-        to_include = OrderedDict()
+        to_include = {}
         to_include['mean'] = self.predicted_mean
         to_include['mean_se'] = self.se_mean
         to_include['mean_ci_lower'] = ci_mean[:, 0]
         to_include['mean_ci_upper'] = ci_mean[:, 1]
 
         self.table = to_include
-        #OrderedDict does not work to preserve sequence
         # pandas dict does not handle 2d_array
         #data = np.column_stack(list(to_include.values()))
         #names = ....

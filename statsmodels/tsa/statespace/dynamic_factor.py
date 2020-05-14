@@ -6,8 +6,6 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 
-from collections import OrderedDict
-
 import numpy as np
 from .mlemodel import MLEModel, MLEResults, MLEResultsWrapper
 from .tools import (
@@ -215,7 +213,7 @@ class DynamicFactor(MLEModel):
             self.ssm._time_invariant = False
 
         # Initialize the components
-        self.parameters = OrderedDict()
+        self.parameters = {}
         self._initialize_loadings()
         self._initialize_exog()
         self._initialize_error_cov()
