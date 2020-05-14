@@ -482,12 +482,7 @@ class TestGrangerCausality(object):
             grangercausalitytests(x, 2)
 
 
-class SetupKPSS(object):
-    data = macrodata.load_pandas()
-    x = data.data['realgdp'].values
-
-
-class TestKPSS(SetupKPSS):
+class TestKPSS:
     """
     R-code
     ------
@@ -498,6 +493,10 @@ class TestKPSS(SetupKPSS):
     In this context, x is the vector containing the
     macrodata['realgdp'] series.
     """
+    @classmethod
+    def setup(cls):
+        cls.data = macrodata.load_pandas()
+        cls.x = cls.data.data['realgdp'].values
 
     def test_fail_nonvector_input(self, reset_randomstate):
         # should be fine
