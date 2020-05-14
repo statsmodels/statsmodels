@@ -1918,7 +1918,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             lags = int(min(12 * (nobs_effective / 100) ** (1 / 4), max_lag))
         out = []
         for lag in range(1, lags + 1):
-            res = het_arch(self.resid, maxlag=lag, autolag=None)
+            res = het_arch(self.resid, nlags=lag, autolag=None)
             out.append([res[0], res[1], lag])
         index = pd.RangeIndex(1, lags + 1, name='Lag')
         cols = ['ARCH-LM', 'P-value', 'DF']
