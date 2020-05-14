@@ -1387,3 +1387,149 @@ def test_smoothed_state_autocovariances_invalid():
 
     with pytest.raises(ValueError, match='`end` must be after `start`'):
         res.smoothed_state_autocovariance(1, start=5, end=4)
+
+
+@pytest.mark.parametrize('missing', ['all', 'partial', 'mixed', None])
+@pytest.mark.parametrize('filter_univariate', [True, False])
+@pytest.mark.parametrize('tvp', [True, False])
+def test_news_basic(missing, filter_univariate, tvp):
+    # Basic tests for news
+
+    # Get the basic model
+    mod, res = get_acov_model(missing, filter_univariate, tvp)
+    params = [] if tvp else mod.start_params
+
+    # Get an expanded model with one new observation and 9 additional NaN
+    # datapoints (so that we can compute the desired value using the
+    # `smoothed_forecasts` attribute).
+    append = np.zeros((10, 2)) * np.nan
+    append[0] = [0.1, -0.2]
+    endog2 = np.concatenate((mod.endog, append), axis=0)
+    mod2 = mod.clone(endog2)
+    res2 = mod2.smooth(params, return_ssm=True)
+
+    # Get an expanded model with only 10 additional NaN datapoints, to compute
+    # the baseline `smoothed_forecasts`.
+    endog3 = endog2.copy()
+    endog3[-10:] = np.nan
+    mod3 = mod2.clone(endog3)
+    res3 = mod3.smooth(params, return_ssm=True)
+
+    # Test the news computation at the start, middle, and end of the sample, as
+    # well as out-of-sample.
+    for t in [0, 1, 150, mod.nobs - 1, mod.nobs, mod.nobs + 1, mod.nobs + 9]:
+        # Test with a time argument
+        out = res2.news(res, t=t)
+        desired = (res2.smoothed_forecasts[..., t] -
+                   res3.smoothed_forecasts[..., t])
+        # The "news" about the t=0 smoothed forecast from new data at
+        # observation t=202 is almost identically zero, so we need to set an
+        # "atol" to avoid problems with comparing floating point versions of
+        # zero.
+        assert_allclose(out.update_impacts, desired, atol=1e-14)
+        assert_equal(out.revision_impacts, None)
+
+        # Test with start/end arguments
+        out = res2.news(res, start=t, end=t + 1)
+        assert_allclose(out.update_impacts, desired[None, ...], atol=1e-14)
+
+
+@pytest.mark.parametrize('missing', ['all', 'partial', 'mixed', None])
+@pytest.mark.parametrize('filter_univariate', [True, False])
+@pytest.mark.parametrize('tvp', [True, False])
+def test_news_revisions(missing, filter_univariate, tvp):
+    # Tests for news when there are revisions in the model
+
+    # Get the basic model
+    mod, res = get_acov_model(missing, filter_univariate, tvp, oos=10)
+    params = [] if tvp else mod.start_params
+
+    endog2 = mod.endog.copy()
+    # Revise the last datapoint
+    endog2[-11] = [0.0, 0.0]
+    # Add a new datapoint
+    endog2[-10] = [-0.3, -0.4]
+    mod2 = mod.clone(endog2)
+    res2 = mod2.smooth(params, return_ssm=True)
+
+    # Test the news computation at the start, middle, and end of the sample, as
+    # well as out-of-sample.
+    nobs = mod.nobs - 10
+    for t in [0, 1, 150, nobs - 1, nobs, nobs + 1, nobs + 9]:
+        out = res2.news(res, t=t)
+
+        # Test for the news
+        desired = (res2.smoothed_forecasts[..., t] -
+                   out.revision_results.smoothed_forecasts[..., t])
+        assert_allclose(out.update_impacts, desired, atol=1e-13)
+
+        # Test for the revisions
+        desired = (out.revision_results.smoothed_forecasts[..., t] -
+                   res.smoothed_forecasts[..., t])
+        assert_allclose(out.revision_impacts, desired, atol=1e-12)
+
+
+@pytest.mark.parametrize('missing', ['all', 'partial', 'mixed', None])
+@pytest.mark.parametrize('filter_univariate', [True, False])
+@pytest.mark.parametrize('tvp', [True, False])
+def test_news_invalid(missing, filter_univariate, tvp):
+    # Tests for invalid calls to news
+
+    # (generic error message used below)
+    error_ss = ('This results object has %s and so it does not appear to'
+                ' by an extension of `previous`. Can only compute the'
+                ' news by comparing this results set to previous results'
+                ' objects.')
+
+    # Basic model / results setup
+    mod, res = get_acov_model(missing, filter_univariate, tvp, oos=1)
+    params = [] if tvp else mod.start_params
+
+    endog2 = mod.endog.copy()
+    endog2[-1] = [0.2, 0.5]
+    mod2 = mod.clone(endog2)
+    res2_filtered = mod2.filter(params, return_ssm=True)
+    res2_smoothed = mod2.smooth(params, return_ssm=True)
+
+    # Test that news works with smoothing, but not with only filtering
+    res2_smoothed.news(res, t=mod.nobs - 1)
+    msg = ('Cannot compute news without having'
+           ' applied the Kalman smoother first.')
+    with pytest.raises(ValueError, match=msg):
+        res2_filtered.news(res, t=mod.nobs - 1)
+
+    # Test that if we want to request news for an out-of-sample period in a
+    # time-varying model, then we need to provide a new design matrix
+    if tvp:
+        msg = ('Cannot compute the impacts of news on periods outside of the'
+               ' sample in time-varying models.')
+        with pytest.raises(RuntimeError, match=msg):
+            res2_smoothed.news(res, t=mod.nobs + 2)
+
+    # Test that news won't work when the calling model is is smaller
+    mod, res = get_acov_model(missing, filter_univariate, tvp)
+    params = [] if tvp else mod.start_params
+
+    endog2 = mod.endog.copy()[:mod.nobs - 1]
+    mod2 = mod.clone(endog2)
+    res2 = mod2.smooth(params, return_ssm=True)
+    msg = error_ss % 'fewer observations than `previous`'
+    with pytest.raises(ValueError, match=msg):
+        res2.news(res, t=mod.nobs - 1)
+
+    # Test that news won't work when the state dimensions are different
+    mod2 = sarimax.SARIMAX(np.zeros(mod.nobs))
+    res2 = mod2.smooth([0.5, 1.], return_ssm=True)
+    msg = error_ss % 'different state space dimensions than `previous`'
+    with pytest.raises(ValueError, match=msg):
+        res2.news(res, t=mod.nobs - 1)
+
+    # Test that news won't work when one of the models is time-varying and one
+    # is time-invariant
+    mod2, res2 = get_acov_model(missing, filter_univariate, not tvp, oos=1)
+    if tvp:
+        msg = 'time-invariant design while `previous` does not'
+    else:
+        msg = 'time-varying design while `previous` does not'
+    with pytest.raises(ValueError, match=msg):
+        res2.news(res, t=mod.nobs - 1)

@@ -6,6 +6,7 @@ License: Simplified-BSD
 """
 
 import numpy as np
+from types import SimpleNamespace
 
 from statsmodels.tsa.statespace.representation import OptionWrapper
 from statsmodels.tsa.statespace.kalman_filter import (KalmanFilter,
@@ -997,6 +998,427 @@ class SmootherResults(FilterResults):
             acov = acov.transpose(1, 2, 0)
 
         return acov
+
+    def news(self, previous, t=None, start=None, end=None,
+             revised=None, design=None):
+        r"""
+        Compute the news and impacts associated with a data release
+
+        Parameters
+        ----------
+        previous : SmootherResults
+            Prior results object relative to which to compute the news. This
+            results object must have identical state space representation for
+            the prior sample period so that the only difference is that this
+            results object has updates to the observed data.
+        t : int, optional
+            A specific period for which to compute the news. Cannot be used in
+            combination with `start` or `end`.
+        start : int, optional
+            The start of the interval (inclusive) of news to compute. Cannot be
+            used in combination with the `t` argument. Default is the last
+            period of the sample (`nobs - 1`).
+        end : int, optional
+            The end of the interval (exclusive) of news to compute. Note that
+            since it is an exclusive endpoint, the returned news do not include
+            the value at this index. Cannot be used in combination with the `t`
+            argument.
+        design : array, optional
+            Design matrix for the period `t` in time-varying models. If this
+            model has a time-varying design matrix, and the arugment `t` is out
+            of this model's sample, then a new design matrix for period `t`
+            must be provided. Unused otherwise.
+
+        Returns
+        -------
+        news_results : SimpleNamespace
+            News and impacts associated with a data release. Includes the
+            following attributes:
+
+            - `update_impacts`: update to forecasts of impacted variables from
+              the news. It is equivalent to E[y^i | post] - E[y^i | revision],
+              where y^i are the variables of interest. In [1]_, this is
+              described as "revision" in equation (17).
+            - `revision_impacts`: update to forecasts of variables impacted
+              variables from data revisions. It is
+              E[y^i | revision] - E[y^i | previous], and does not have a
+              specific notation in [1]_, since there for simplicity they assume
+              that there are no revisions.
+            - `news`: the unexpected component of the updated data. Denoted
+              I = y^u - E[y^u | previous], where y^u are the data points that
+              were newly incorporated in a data release (but not including
+              revisions to data points that already existed in the previous
+              release). In [1]_, this is described as "news" in equation (17).
+            - `gain`: the gain matrix associated with the "Kalman-like" update
+              from the news, E[y I'] E[I I']^{-1}. In [1]_, this can be found
+              in the equation For E[y_{k,t_k} \mid I_{v+1}] in the middle of
+              page 17.
+            - `update_forecasts`: forecasts of the updated periods used to
+              construct the news, E[y^u | previous].
+            - `update_realized`: realizations of the updated periods used to
+              construct the news, y^u.
+            - `prev_impacted_forecasts`: previous forecast of the periods of
+              interest, E[y^i | previous].
+            - `post_impacted_forecasts`: forecast of the periods of interest
+              after taking into account both revisions and updates,
+              E[y^i | post].
+            - `revision_results`: results object that updates the `previous`
+              results to take into account data revisions.
+            - `revisions_ix`: list of `(t, i)` positions of revisions in endog
+            - `updates_ix`: list of `(t, i)` positions of updates to endog
+
+        Notes
+        -----
+        This method computes the effect of new data (e.g. from a new data
+        release) on smoothed forecasts produced by a state space model, as
+        described in [1]_.
+
+        References
+        ----------
+        .. [1] Bańbura, Marta and Modugno, Michele. 2010.
+               "Maximum likelihood estimation of factor models on data sets
+               with arbitrary pattern of missing data."
+               No 1189, Working Paper Series, European Central Bank.
+               https://EconPapers.repec.org/RePEc:ecb:ecbwps:20101189.
+        .. [2] Bańbura, Marta, and Michele Modugno.
+               "Maximum likelihood estimation of factor models on datasets with
+               arbitrary pattern of missing data."
+               Journal of Applied Econometrics 29, no. 1 (2014): 133-160.
+
+        """
+        # Handle `t`
+        if t is not None and (start is not None or end is not None):
+            raise ValueError('Cannot specify both `t` and `start` or `end`.')
+        if t is not None:
+            start = t
+            end = t + 1
+
+        # Defaults
+        if start is None:
+            start = self.nobs - 1
+        if end is None:
+            end = self.nobs
+
+        # Sanity checks
+        if start < 0 or end < 0:
+            raise ValueError('Negative `t`, `start`, or `end` is not allowed.')
+        if end <= start:
+            raise ValueError('`end` must be after `start`')
+
+        if self.smoothed_state_cov is None:
+            raise ValueError('Cannot compute news without having applied the'
+                             ' Kalman smoother first.')
+
+        error_ss = ('This results object has %s and so it does not appear to'
+                    ' by an extension of `previous`. Can only compute the'
+                    ' news by comparing this results set to previous results'
+                    ' objects.')
+        if self.nobs < previous.nobs:
+            raise ValueError(error_ss % 'fewer observations than'
+                             ' `previous`')
+
+        if not (self.k_endog == previous.k_endog and
+                self.k_endog == previous.k_endog and
+                self.k_posdef == previous.k_posdef):
+            raise ValueError(error_ss % 'different state space dimensions than'
+                             ' `previous`')
+
+        for key in self.model.shapes.keys():
+            if key == 'obs':
+                continue
+            tv = getattr(self, key).shape[-1] > 1
+            tv_prev = getattr(previous, key).shape[-1] > 1
+            if tv and not tv_prev:
+                raise ValueError(error_ss % f'time-varying {key} while'
+                                             ' `previous` does not')
+            if not tv and tv_prev:
+                raise ValueError(error_ss % f'time-invariant {key} while'
+                                             ' `previous` does not')
+
+        # We cannot forecast out-of-sample periods in a time-varying models
+        if end > self.nobs and not self.model.time_invariant:
+            raise RuntimeError('Cannot compute the impacts of news on periods'
+                               ' outside of the sample in time-varying'
+                               ' models.')
+
+        # For time-varying case, figure out extension kwargs
+        extend_kwargs = {}
+        for key in self.model.shapes.keys():
+            if key == 'obs':
+                continue
+            mat = getattr(self, key)
+            prev_mat = getattr(previous, key)
+            if mat.shape[-1] > prev_mat.shape[-1]:
+                extend_kwargs[key] = mat[..., prev_mat.shape[-1]:]
+
+        # Figure out which indices have changed
+        revisions_ix, updates_ix = previous.model.diff_endog(self.endog.T)
+
+        # Compute prev / post impact forecasts
+        prev_impacted_forecasts = (
+            previous.smoothed_forecasts[..., start:end])
+        if end > previous.nobs:
+            predict_start = max(start, previous.nobs)
+            p = previous.predict(
+                start=predict_start, end=end, **extend_kwargs)
+            prev_impacted_forecasts = np.concatenate(
+                (prev_impacted_forecasts, p.forecasts), axis=1)
+        post_impacted_forecasts = (
+            self.smoothed_forecasts[..., start:end])
+        if end > self.nobs:
+            predict_start = max(start, self.nobs)
+            p = self.predict(start=predict_start, end=end, **extend_kwargs)
+            post_impacted_forecasts = np.concatenate(
+                (post_impacted_forecasts, p.forecasts), axis=1)
+
+        # If we have revisions to previous data, then we need to construct a
+        # new results set that only includes those revisions
+        if len(revisions_ix) > 0 and revised is None:
+            # Copy time-varying matrices (required by clone)
+            clone_kwargs = {}
+            for key in self.model.shapes.keys():
+                if key == 'obs':
+                    continue
+                prev_mat = getattr(previous, key)
+                if prev_mat.shape[-1] > 1:
+                    clone_kwargs[key] = prev_mat
+
+            rev_endog = self.endog.T[:previous.nobs].copy()
+            rev_endog[previous.missing.astype(bool).T] = np.nan
+            rev_mod = previous.model.clone(rev_endog, **clone_kwargs)
+            revised = rev_mod.smooth()
+
+        # Compute impacts from the revisions, if any
+        if len(revisions_ix) > 0:
+            # Compute the effect of revisions on forecasts of the impacted
+            # variables
+            revised_impact_forecasts = (
+                revised.smoothed_forecasts[..., start:end])
+
+            if end > revised.nobs:
+                predict_start = max(start, revised.nobs)
+                p = revised.predict(
+                    start=predict_start, end=end, **extend_kwargs)
+                revised_impact_forecasts = np.concatenate(
+                    (revised_impact_forecasts, p.forecasts), axis=1)
+
+            revision_impacts = (revised_impact_forecasts -
+                                prev_impacted_forecasts).T
+            if t is not None:
+                revision_impacts = revision_impacts[0]
+        else:
+            revised = previous
+            revision_impacts = None
+
+        # Now handle updates
+        if len(updates_ix) > 0:
+            # Figure out which time points we need forecast errors for
+            update_t, update_k = zip(*updates_ix)
+            update_start_t = np.min(update_t)
+            update_end_t = np.max(update_t)
+            update_end_insample_t = np.minimum(revised.nobs - 1, update_end_t)
+            update_nforecast = update_end_t - update_end_insample_t
+
+            # For the in-sample periods, get out the smoothed forecasts for
+            # the updated variables for each relevant time period
+            i1 = update_start_t
+            i2 = update_end_insample_t + 1
+            if i2 > i1:
+                forecasts_insample = revised.smoothed_forecasts[:, i1:i2]
+            else:
+                forecasts_insample = np.zeros((self.k_endog, 0))
+
+            # For the out-of-sample periods, predicted and smoothed forecasts
+            # for the updated variables are the same
+            if update_nforecast > 0:
+                forecast_start = previous.nobs
+                forecast_end = forecast_start + update_nforecast
+                p = revised.predict(
+                    start=forecast_start, end=forecast_end, **extend_kwargs)
+                forecasts_oos = p.forecasts
+            else:
+                forecasts_oos = np.zeros((self.k_endog, 0))
+            forecasts = np.c_[forecasts_insample, forecasts_oos].T
+
+            realized = self.endog.T[update_start_t:update_end_t + 1]
+            forecasts_error = realized - forecasts
+
+            # Now subset forecast errors to only the (time, endog) elements
+            # that are updates
+            ix_t = update_t - update_start_t
+            update_realized = realized[ix_t, update_k]
+            update_forecasts = forecasts[ix_t, update_k]
+            update_forecasts_error = forecasts_error[ix_t, update_k]
+
+            # Get the gains associated with each of the periods
+            if self.design.shape[2] == 1:
+                design = self.design[..., 0][None, ...]
+            elif end <= self.nobs:
+                design = self.design[..., start:end].transpose(2, 0, 1)
+            else:
+                if design is None:
+                    raise ValueError('Model has time-varying design matrix, so'
+                                     ' an updated time-varying matrix for'
+                                     ' period `t` is required.')
+                elif design.ndim == 2:
+                    design = design[None, ...]
+                else:
+                    design = design.transpose(2, 0, 1)
+            state_gain = revised.smoothed_state_gain(
+                updates_ix, start=start, end=end, extend_kwargs=extend_kwargs)
+            obs_gain = design @ state_gain
+
+            # Get the news
+            update_impacts = obs_gain @ update_forecasts_error
+
+            # Squeeze if `t` argument used
+            if t is not None:
+                obs_gain = obs_gain[0]
+                update_impacts = update_impacts[0]
+        else:
+            update_impacts = None
+            update_forecasts = None
+            update_realized = None
+            update_forecasts_error = None
+            obs_gain = None
+
+        # Results
+        out = SimpleNamespace(
+            # update to forecast of impacted variables from news
+            # = E[y^i | post] - E[y^i | revision] = weight @ news
+            update_impacts=update_impacts,
+            # update to forecast of variables of interest from revisions
+            # = E[y^i | revision] - E[y^i | previous]
+            revision_impacts=revision_impacts,
+            # news = A = y^u - E[y^u | previous]
+            news=update_forecasts_error,
+            # gain matrix = E[y A'] E[A A']^{-1}
+            gain=obs_gain,
+            # forecasts of the updated periods used to construct the news
+            # = E[y^u | previous]
+            update_forecasts=update_forecasts,
+            # realizations of the updated periods used to construct the news
+            # = y^u
+            update_realized=update_realized,
+            # previous forecast of the periods of interest, E[y^i | previous]
+            prev_impacted_forecasts=prev_impacted_forecasts,
+            # post. forecast of the periods of interest, E[y^i | post]
+            post_impacted_forecasts=post_impacted_forecasts,
+            # results object associated with the revision
+            revision_results=None,
+            # list of (x, y) positions of revisions to endog
+            revisions_ix=revisions_ix,
+            # list of (x, y) positions of updates to endog
+            updates_ix=updates_ix)
+        if len(revisions_ix) > 0:
+            out.revision_results = revised
+
+        return out
+
+    def smoothed_state_gain(self, updates_ix, t=None, start=None,
+                            end=None, extend_kwargs=None):
+        r"""
+        Cov(\tilde \alpha_{t}, I) Var(I, I)^{-1}
+
+        where I is a vector of forecast errors associated with
+        `update_indices`.
+
+        Parameters
+        ----------
+        updates_ix : list
+            List of indices `(t, i)`, where `t` denotes a zero-indexed time
+            location and `i` denotes a zero-indexed endog variable.
+        """
+        # Handle `t`
+        if t is not None and (start is not None or end is not None):
+            raise ValueError('Cannot specify both `t` and `start` or `end`.')
+        if t is not None:
+            start = t
+            end = t + 1
+
+        # Defaults
+        if start is None:
+            start = self.nobs - 1
+        if end is None:
+            end = self.nobs
+        if extend_kwargs is None:
+            extend_kwargs = {}
+
+        # Sanity checks
+        if start < 0 or end < 0:
+            raise ValueError('Negative `t`, `start`, or `end` is not allowed.')
+        if end <= start:
+            raise ValueError('`end` must be after `start`')
+
+        # Dimensions
+        n_periods = end - start
+        n_updates = len(updates_ix)
+
+        # Helper to get possibly matrix that is possibly time-varying
+        def get_mat(which, t):
+            mat = getattr(self, which)
+            if mat.shape[-1] > 1:
+                if t < self.nobs:
+                    out = mat[..., t]
+                else:
+                    if (which not in extend_kwargs or
+                            extend_kwargs[which].shape[-1] <= t - self.nobs):
+                        raise ValueError(f'Model has time-varying {which}'
+                                         ' matrix, so an updated time-varying'
+                                         ' matrix for the extension period is'
+                                         ' required.')
+                    out = extend_kwargs[which][..., t - self.nobs]
+            else:
+                out = mat[..., 0]
+            return out
+
+        # Helper to get Cov(\tilde \alpha_{t}, I)
+        def get_cov_state_revision(t):
+            tmp1 = np.zeros((self.k_states, n_updates))
+            for i in range(n_updates):
+                t_i, k_i = updates_ix[i]
+                acov = self.smoothed_state_autocovariance(
+                    lag=t - t_i, t=t, extend_kwargs=extend_kwargs)
+                Z_i = get_mat('design', t_i)
+                tmp1[:, i:i + 1] = acov @ Z_i[k_i:k_i + 1].T
+            return tmp1
+
+        # Compute Cov(\tilde \alpha_{t}, I)
+        tmp1 = np.zeros((n_periods, self.k_states, n_updates))
+        for s in range(start, end):
+            tmp1[s - start] = get_cov_state_revision(s)
+
+        # Compute Var(I)
+        tmp2 = np.zeros((n_updates, n_updates))
+        for i in range(n_updates):
+            t_i, k_i = updates_ix[i]
+            for j in range(i + 1):
+                t_j, k_j = updates_ix[j]
+
+                Z_i = get_mat('design', t_i)
+                Z_j = get_mat('design', t_j)
+
+                acov = self.smoothed_state_autocovariance(
+                    lag=t_i - t_j, t=t_i, extend_kwargs=extend_kwargs)
+                tmp2[i, j] = tmp2[j, i] = (
+                    Z_i[k_i:k_i + 1] @ acov @ Z_j[k_j:k_j + 1].T)
+
+                if t_i == t_j:
+                    H = get_mat('obs_cov', t_i)
+
+                    if i == j:
+                        tmp2[i, j] += H[k_i, k_j]
+                    else:
+                        tmp2[i, j] += H[k_i, k_j]
+                        tmp2[j, i] += H[k_i, k_j]
+
+        # Gain
+        gain = tmp1 @ np.linalg.inv(tmp2)
+
+        if t is not None:
+            gain = gain[0]
+
+        return gain
 
     def _get_smoothed_forecasts(self):
         if self._smoothed_forecasts is None:

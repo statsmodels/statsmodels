@@ -376,6 +376,17 @@ class TVSS(mlemodel.MLEModel):
         self['obs_cov'] = H
         self['state_cov'] = Q
 
+    def clone(self, endog, exog=None, **kwargs):
+        mod = self.__class__(endog, **kwargs)
+
+        for key in self.ssm.shapes.keys():
+            if key in ['obs', 'state_intercept']:
+                continue
+            n = min(self.nobs, mod.nobs)
+            mod[key, ..., :n] = self.ssm[key, ..., :n]
+
+        return mod
+
 
 def test_time_varying_in_sample(reset_randomstate):
     mod = TVSS(np.zeros((10, 2)))
