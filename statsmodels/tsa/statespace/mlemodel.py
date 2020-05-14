@@ -8,7 +8,6 @@ License: Simplified-BSD
 import contextlib
 import warnings
 
-from collections import OrderedDict
 from types import SimpleNamespace
 import numpy as np
 import pandas as pd
@@ -455,7 +454,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         # because param_names may not be available at that point)
         if self._fixed_params is None:
             self._fixed_params = {}
-            self._params_index = OrderedDict(
+            self._params_index = dict(
                 zip(self.param_names, np.arange(k_params)))
 
         # Cache the current fixed parameters
@@ -470,7 +469,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         # Set the new fixed parameters, keeping the order as given by
         # param_names
         self._fixed_params.update(params)
-        self._fixed_params = OrderedDict([
+        self._fixed_params = dict([
             (name, self._fixed_params[name]) for name in self.param_names
             if name in self._fixed_params])
 
@@ -4203,12 +4202,12 @@ class PredictionResults(pred.PredictionResults):
 
         return conf_int
 
-    def summary_frame(self, endog=0, what='all', alpha=0.05):
+    def summary_frame(self, endog=0, alpha=0.05):
         # TODO: finish and cleanup
         # import pandas as pd
         # ci_obs = self.conf_int(alpha=alpha, obs=True) # need to split
         ci_mean = np.asarray(self.conf_int(alpha=alpha))
-        to_include = OrderedDict()
+        to_include = {}
         if self.predicted_mean.ndim == 1:
             yname = self.model.data.ynames
             to_include['mean'] = self.predicted_mean
@@ -4222,7 +4221,6 @@ class PredictionResults(pred.PredictionResults):
         to_include['mean_ci_lower'] = ci_mean[:, endog]
         to_include['mean_ci_upper'] = ci_mean[:, k_endog + endog]
 
-        # OrderedDict does not work to preserve sequence
         # pandas dict does not handle 2d_array
         # data = np.column_stack(list(to_include.values()))
         # names = ....

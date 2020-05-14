@@ -8,7 +8,6 @@ License: Simplified-BSD
 
 import contextlib
 from warnings import warn
-from collections import OrderedDict
 
 import pandas as pd
 import numpy as np
@@ -206,7 +205,7 @@ class VARMAX(MLEModel):
             self.ssm._time_invariant = False
 
         # Initialize the parameters
-        self.parameters = OrderedDict()
+        self.parameters = {}
         self.parameters['trend'] = self.k_endog * self.k_trend
         self.parameters['ar'] = self.k_endog**2 * self.k_ar
         self.parameters['ma'] = self.k_endog**2 * self.k_ma

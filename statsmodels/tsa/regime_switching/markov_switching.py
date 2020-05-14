@@ -5,7 +5,6 @@ Author: Chad Fulton
 License: BSD-3
 """
 import warnings
-from collections import OrderedDict
 
 import numpy as np
 import pandas as pd
@@ -369,7 +368,7 @@ class MarkovSwitchingParams(object):
     That's because that is the index of the the non-switching first "exog"
     parameter, which should be selected regardless of the regime.
 
-    In addition to the getter, the `k_parameters` attribute is an OrderedDict
+    In addition to the getter, the `k_parameters` attribute is an dict
     with the named type strings as the keys. It can be used to get the total
     number of parameters of each type:
 
@@ -382,13 +381,13 @@ class MarkovSwitchingParams(object):
         self.k_regimes = k_regimes
 
         self.k_params = 0
-        self.k_parameters = OrderedDict()
-        self.switching = OrderedDict()
-        self.slices_purpose = OrderedDict()
+        self.k_parameters = {}
+        self.switching = {}
+        self.slices_purpose = {}
         self.relative_index_regime_purpose = [
-            OrderedDict() for i in range(self.k_regimes)]
+            {} for i in range(self.k_regimes)]
         self.index_regime_purpose = [
-            OrderedDict() for i in range(self.k_regimes)]
+            {} for i in range(self.k_regimes)]
         self.index_regime = [[] for i in range(self.k_regimes)]
 
     def __getitem__(self, key):

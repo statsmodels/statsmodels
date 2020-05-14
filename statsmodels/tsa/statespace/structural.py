@@ -8,7 +8,6 @@ License: Simplified-BSD
 """
 
 from warnings import warn
-from collections import OrderedDict
 
 import numpy as np
 
@@ -639,11 +638,11 @@ class UnobservedComponents(MLEModel):
         Setup the structural time series representation
         """
         # Initialize the ordered sets of parameters
-        self.parameters = OrderedDict()
-        self.parameters_obs_intercept = OrderedDict()
-        self.parameters_obs_cov = OrderedDict()
-        self.parameters_transition = OrderedDict()
-        self.parameters_state_cov = OrderedDict()
+        self.parameters = {}
+        self.parameters_obs_intercept = {}
+        self.parameters_obs_cov = {}
+        self.parameters_transition = {}
+        self.parameters_state_cov = {}
 
         # Initialize the fixed components of the state space matrices,
         i = 0  # state offset
@@ -1630,7 +1629,7 @@ class UnobservedComponentsResults(MLEResults):
             [('cycle', cycle and spec.cycle),
              ('autoregressive', autoregressive and spec.autoregressive)])
 
-        components = OrderedDict(comp)
+        components = dict(comp)
 
         llb = self.filter_results.loglikelihood_burn
 

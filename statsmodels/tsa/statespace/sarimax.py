@@ -1084,7 +1084,7 @@ class SARIMAX(MLEModel):
         """
         List of parameters actually included in the model, in sorted order.
 
-        TODO Make this an OrderedDict with slice or indices as the values.
+        TODO Make this an dict with slice or indices as the values.
         """
         model_orders = self.model_orders
         # Get basic list from model orders

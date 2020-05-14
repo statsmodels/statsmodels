@@ -41,7 +41,7 @@ class _ConditionalModel(base.LikelihoodModel):
         self.k_params = exog.shape[1]
 
         # Get the row indices for each group
-        row_ix = collections.OrderedDict()
+        row_ix = {}
         for i, g in enumerate(groups):
             if g not in row_ix:
                 row_ix[g] = []

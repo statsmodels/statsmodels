@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-from collections import OrderedDict
 from statsmodels.base.model import LikelihoodModelResults
 
 
@@ -69,7 +68,7 @@ class BayesGaussMI(object):
         # Identify all distinct missing data patterns
         z = 1 + np.log(1 + np.arange(self.mask.shape[1]))
         c = np.dot(self.mask, z)
-        rowmap = OrderedDict()
+        rowmap = {}
         for i, v in enumerate(c):
             if v == 0:
                 # No missing values
@@ -414,7 +413,7 @@ class MIResults(LikelihoodModelResults):
         smry = summary2.Summary()
         float_format = "%8.3f"
 
-        info = OrderedDict()
+        info = {}
         info["Method:"] = "MI"
         info["Model:"] = self.mi.model.__name__
         info["Dependent variable:"] = self._model.endog_names

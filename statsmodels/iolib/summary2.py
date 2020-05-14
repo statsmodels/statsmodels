@@ -1,6 +1,5 @@
 from statsmodels.compat.python import iterkeys, iteritems, lzip, itervalues
 
-from collections import OrderedDict
 import datetime
 from functools import reduce
 import re
@@ -273,7 +272,7 @@ def summary_model(results):
         now = datetime.datetime.now()
         return now.strftime('%Y-%m-%d %H:%M')
 
-    info = OrderedDict()
+    info = {}
     info['Model:'] = lambda x: x.model.__class__.__name__
     info['Model Family:'] = lambda x: x.family.__class.__name__
     info['Link Function:'] = lambda x: x.family.link.__class__.__name__
@@ -303,7 +302,7 @@ def summary_model(results):
     info['F-statistic:'] = lambda x: "%#8.4g" % x.fvalue
     info['Prob (F-statistic):'] = lambda x: "%#6.3g" % x.f_pvalue
     info['Scale:'] = lambda x: "%#8.5g" % x.scale
-    out = OrderedDict()
+    out = {}
     for key, func in iteritems(info):
         try:
             out[key] = func(results)

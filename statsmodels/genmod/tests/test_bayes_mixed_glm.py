@@ -523,8 +523,7 @@ def test_poisson_formula():
         df["z2"] = z2
 
         fml = "y ~ 0 + x1"
-        from collections import OrderedDict
-        vc_fml = OrderedDict({})
+        vc_fml = {}
         vc_fml["z1"] = "0 + C(z1)"
         vc_fml["z2"] = "0 + C(z2)"
         glmm2 = PoissonBayesMixedGLM.from_formula(fml, vc_fml, df)
