@@ -1681,10 +1681,14 @@ def kpss(x, regression='c', nlags=None, store=False):
     kpss_stat = eta / s_hat
     p_value = np.interp(kpss_stat, crit, pvals)
 
+    warn_msg = """\
+The test statistic is outside of the range of p-values available in the
+look-up table. The actual p-value is {direction} than the p-value returned.
+"""
     if p_value == pvals[-1]:
-        warn("p-value is smaller than the indicated p-value", InterpolationWarning)
+        warn(warn_msg.format(direction="smaller"), InterpolationWarning)
     elif p_value == pvals[0]:
-        warn("p-value is greater than the indicated p-value", InterpolationWarning)
+        warn(warn_msg.format(direction="greater"), InterpolationWarning)
 
     crit_dict = {'10%': crit[0], '5%': crit[1], '2.5%': crit[2], '1%': crit[3]}
 
