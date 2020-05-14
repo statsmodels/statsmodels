@@ -180,7 +180,9 @@ class SimpleTable(list):
             general formatting options
         """
         self.title = title
-        self._datatypes = datatypes or lrange(len(data[0]))
+        self._datatypes = datatypes
+        if self._datatypes is None:
+            self._datatypes = [] if len(data) == 0 else lrange(len(data[0]))
         # start with default formatting
         self._txt_fmt = default_txt_fmt.copy()
         self._latex_fmt = default_latex_fmt.copy()
