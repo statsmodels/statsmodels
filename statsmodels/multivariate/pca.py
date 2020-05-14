@@ -9,6 +9,12 @@ import pandas as pd
 
 from statsmodels.tools.sm_exceptions import (ValueWarning,
                                              EstimationWarning)
+from statsmodels.tools.validation import (string_like,
+                                          array_like,
+                                          bool_like,
+                                          float_like,
+                                          int_like,
+                                          )
 
 
 def _norm(x):
@@ -49,19 +55,22 @@ class PCA(object):
         Series weights to use after transforming data according to standardize
         or demean when computing the principal components.
     method : str, optional
-        Sets the linear algebra routine used to compute eigenvectors
-        'svd' uses a singular value decomposition (default).
-        'eig' uses an eigenvalue decomposition of a quadratic form
-        'nipals' uses the NIPALS algorithm and can be faster than SVD when
-        ncomp is small and nvars is large. See notes about additional changes
-        when using NIPALS.
-    missing : str
+        Sets the linear algebra routine used to compute eigenvectors:
+
+        * 'svd' uses a singular value decomposition (default).
+        * 'eig' uses an eigenvalue decomposition of a quadratic form
+        * 'nipals' uses the NIPALS algorithm and can be faster than SVD when
+          ncomp is small and nvars is large. See notes about additional changes
+          when using NIPALS.
+    missing : {str, None}
         Method for missing data.  Choices are:
-        'drop-row' - drop rows with missing values.
-        'drop-col' - drop columns with missing values.
-        'drop-min' - drop either rows or columns, choosing by data retention.
-        'fill-em' - use EM algorithm to fill missing value.  ncomp should be
-        set to the number of factors required.
+
+        * 'drop-row' - drop rows with missing values.
+        * 'drop-col' - drop columns with missing values.
+        * 'drop-min' - drop either rows or columns, choosing by data retention.
+        * 'fill-em' - use EM algorithm to fill missing value.  ncomp should be
+          set to the number of factors required.
+        * `None` raises if data contains NaN values.
     tol : float, optional
         Tolerance to use when checking for convergence when using NIPALS.
     max_iter : int, optional
@@ -192,22 +201,23 @@ class PCA(object):
             self._index = data.index
             self._columns = data.columns
 
-        self.data = np.asarray(data)
+        self.data = array_like(data, "data", ndim=2)
         # Store inputs
-        self._gls = gls
-        self._normalize = normalize
-        self._tol = tol
+        self._gls = bool_like(gls, "gls")
+        self._normalize = bool_like(normalize, "normalize")
+        self._tol = float_like(tol, "tol")
         if not 0 < self._tol < 1:
             raise ValueError('tol must be strictly between 0 and 1')
-        self._max_iter = max_iter
-        self._max_em_iter = max_em_iter
-        self._tol_em = tol_em
+        self._max_iter = int_like(max_iter, "int_like")
+        self._max_em_iter = int_like(max_em_iter, "max_em_iter")
+        self._tol_em = float_like(tol_em, "tol_em")
 
         # Prepare data
-        self._standardize = standardize
-        self._demean = demean
+        self._standardize = bool_like(standardize, "standardize")
+        self._demean = bool_like(demean, "demean")
 
         self._nobs, self._nvar = self.data.shape
+        weights = array_like(weights, "weights", maxdim=1, optional=True)
         if weights is None:
             weights = np.ones(self._nvar)
         else:
@@ -237,19 +247,19 @@ class PCA(object):
         self.rows = np.arange(self._nobs)
         self.cols = np.arange(self._nvar)
         # Handle missing
-        self._missing = missing
+        self._missing = string_like(missing, "missing", optional=True)
         self._adjusted_data = self.data
-        if missing is not None:
-            self._adjust_missing()
-            # Update size
-            self._nobs, self._nvar = self._adjusted_data.shape
-            if self._ncomp == np.min(self.data.shape):
-                self._ncomp = np.min(self._adjusted_data.shape)
-            elif self._ncomp > np.min(self._adjusted_data.shape):
-                raise ValueError('When adjusting for missing values, user '
-                                 'provided ncomp must be no larger than the '
-                                 'smallest dimension of the '
-                                 'missing-value-adjusted data size.')
+        self._adjust_missing()
+
+        # Update size
+        self._nobs, self._nvar = self._adjusted_data.shape
+        if self._ncomp == np.min(self.data.shape):
+            self._ncomp = np.min(self._adjusted_data.shape)
+        elif self._ncomp > np.min(self._adjusted_data.shape):
+            raise ValueError('When adjusting for missing values, user '
+                             'provided ncomp must be no larger than the '
+                             'smallest dimension of the '
+                             'missing-value-adjusted data size.')
 
         # Attributes and internal values
         self._tss = 0.0
@@ -318,6 +328,11 @@ class PCA(object):
                 self.cols = np.where(drop_col_index)[0]
         elif self._missing == 'fill-em':
             self._adjusted_data = self._fill_missing_em()
+        elif self._missing is None:
+            if not np.isfinite(self._adjusted_data).all():
+                raise ValueError("""\
+data contains non-finite values (inf, NaN). You should drop these values or
+use one of the methods for adjusting data for missing-values.""")
         else:
             raise ValueError('missing method is not known.')
 
@@ -334,7 +349,8 @@ class PCA(object):
         """
         Computes GLS weights based on percentage of data fit
         """
-        errors = self.transformed_data - np.asarray(self.projection)
+        projection = np.asarray(self.project(transform=False))
+        errors = self.transformed_data - projection
         if self._ncomp == self._nvar:
             raise ValueError('gls can only be used when ncomp < nvar '
                              'so that residuals have non-zero variance')
@@ -347,10 +363,9 @@ class PCA(object):
             eff_series = int(np.round(eff_series_perc * nvar))
             import warnings
 
-            warn = 'Many series are being down weighted by GLS. Of the ' \
-                   '{original} series, the GLS estimates are based on only ' \
-                   '{effective} (effective) ' \
-                   'series.'.format(original=nvar, effective=eff_series)
+            warn = f"""\
+Many series are being down weighted by GLS. Of the {nvar} series, the GLS
+estimates are based on only {eff_series} (effective) series."""
             warnings.warn(warn, EstimationWarning)
 
         self.weights = weights

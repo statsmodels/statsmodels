@@ -7,6 +7,7 @@ from statsmodels.genmod.qif import (QIF, QIFIndependence, QIFExchangeable,
 from statsmodels.tools.numdiff import approx_fprime
 from statsmodels.genmod import families
 
+
 @pytest.mark.parametrize("fam", [families.Gaussian(), families.Poisson(),
                          families.Binomial()])
 @pytest.mark.parametrize("cov_struct", [QIFIndependence(), QIFExchangeable(),
@@ -83,6 +84,7 @@ def test_qif_fit(fam, cov_struct):
 
     # Smoke test
     _ = rslt.summary()
+
 
 @pytest.mark.parametrize("cov_struct", [QIFIndependence(), QIFExchangeable(),
                          QIFAutoregressive()])
