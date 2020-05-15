@@ -262,7 +262,7 @@ class ETSModel(base.StateSpaceMLEModel):
             # in case the model has no seasonal component, we internally handle
             # this as if it had an additive seasonal component with
             # seasonal_periods=1, but restrict the smoothing parameter to 0 and
-            # set the initial season to 0.
+            # set the initial seasonal to 0.
             self.seasonal_periods = 1
 
         # reject invalid models
@@ -283,7 +283,7 @@ class ETSModel(base.StateSpaceMLEModel):
         # =====================
         self.initialization_method = string_like(
             initialization_method, 'initialization_method',
-            options=('estimated', 'known')
+            options=('estimated', 'known', 'heuristic')
         )
         if self.initialization_method == 'known':
             if initial_level is None:
@@ -302,8 +302,24 @@ class ETSModel(base.StateSpaceMLEModel):
                     '`initial_seasonal` argument must be provided'
                     ' for models with a seasonal component when'
                     ' initialization method is set to "known".'
-
                 )
+        elif self.initialization_method == 'heuristic':
+            initial_level, initial_trend, initial_seasonal = (
+                es_init._initialization_heuristic(
+                    self.endog, trend=self.trend, seasonal=self.seasonal,
+                    seasonal_periods=self.seasonal_periods))
+        elif self.initialization_method == 'estimated':
+            initial_level, initial_trend, initial_seasonal = (
+                es_init._initialization_simple(
+                    self.endog, trend=self.trend, seasonal=self.seasonal,
+                    seasonal_periods=self.seasonal_periods))
+        if not self.has_trend:
+            initial_trend = 0
+        if not self.has_seasonal:
+            initial_seasonal = 0
+        self.initial_level = initial_level
+        self.initial_trend = initial_trend
+        self.initial_seasonal = initial_seasonal
 
         # BOUNDS
         # ======
@@ -317,6 +333,9 @@ class ETSModel(base.StateSpaceMLEModel):
             elif (self.initialization_method == 'estimated'
                   and len(bounds) == self._k_smoothing_params):
                 self.bounds = bounds + [(None, None)] * self._k_initial_states
+            else:
+                raise ValueError('`bounds` must be a list of tuples of boundary'
+                                 ' values for each parameter')
 
         # SMOOTHER
         # ========
@@ -431,6 +450,10 @@ class ETSModel(base.StateSpaceMLEModel):
             internal[internal_idx] = params[i]
         if not self.damped_trend:
             internal[3] = 1  # phi is 4th parameter
+        if self.initialization_method != 'estimated':
+            internal[4] = self.initial_level
+            internal[5] = self.initial_trend
+            internal[6:] = self.initial_seasonal
         return internal
 
     def _model_params(self, internal):
@@ -473,17 +496,11 @@ class ETSModel(base.StateSpaceMLEModel):
 
         # Initialization
         if self.initialization_method == 'estimated':
-            initial_level, initial_trend, initial_seasonal = (
-                es_init._initialization_simple(
-                    self.endog,
-                    trend=self.trend,
-                    seasonal=self.seasonal,
-                    seasonal_periods=self.seasonal_periods))
-            start_params += [initial_level]
+            start_params += [self.initial_level]
             if self.has_trend:
-                start_params += [initial_trend]
+                start_params += [self.initial_trend]
             if self.has_seasonal:
-                start_params += initial_seasonal.tolist()
+                start_params += self.initial_seasonal.tolist()
 
         return np.array(start_params)
 
@@ -517,8 +534,20 @@ class ETSModel(base.StateSpaceMLEModel):
                 # if damping_trend is not in param_names, it is set to 1
                 bounds.append((1, 1))
             else:
-                # all other internal-only parameters are 0
-                bounds.append((0, 0))
+                # all other internal-only parameters are 0, except initial values
+                if name == 'initial_level':
+                    b = self.initial_level
+                    bounds.append((b, b))
+                elif name == 'initial_trend':
+                    b = self.initial_trend
+                    bounds.append((b, b))
+                elif name == 'initial_seasonal':
+                    for i in range(self.seasonal_periods):
+                        b = self.initial_seasonal[i]
+                        bounds.append((b, b))
+                else:
+                    bounds.append((0, 0))
+
         # set fixed parameters bounds
         if self._has_fixed_params:
             for i, name in enumerate(self._fixed_params):
@@ -527,7 +556,7 @@ class ETSModel(base.StateSpaceMLEModel):
                 bounds[idx] = (val, val)
         return bounds
 
-    def fit(self, start_params=None, maxiter=100, full_output=True,
+    def fit(self, start_params=None, maxiter=1000, full_output=True,
             disp=True, callback=None, return_params=False, **kwargs):
         r"""
         Fit an ETS model by maximizing log-likelihood.
@@ -551,16 +580,16 @@ class ETSModel(base.StateSpaceMLEModel):
             * `smoothing_level` (:math:`\alpha`)
             * `smoothing_trend` (:math:`\beta^*`)
             * `smoothing_season` (:math:`\gamma^*`)
-            * `damping_slope` (:math:`\phi`)
+            * `damping_trend` (:math:`\phi`)
 
             If ``initialization_method`` was set to ``'estimated'`` (the
             default), additionally, the parameters
 
             * `initial_level` (:math:`l_{-1}`)
             * `initial_trend` (:math:`l_{-1}`)
-            * `initial_season.0` (:math:`s_{-1}`)
+            * `initial_seasonal.0` (:math:`s_{-1}`)
             * ...
-            * `initial_season.<m-1>` (:math:`s_{-m}`)
+            * `initial_seasonal.<m-1>` (:math:`s_{-m}`)
 
             also have to be specified.
         maxiter : int, optional
@@ -706,14 +735,14 @@ class ETSModel(base.StateSpaceMLEModel):
             yhat = pd.Series(yhat, index=index)
             statenames = ['level']
             if self.has_trend:
-                statenames += ['slope']
+                statenames += ['trend']
             if self.has_seasonal:
-                statenames += ['season']
+                statenames += ['seasonal']
             states = pd.DataFrame(states, index=index, columns=statenames)
         return yhat, states
 
     @property
-    def _season_index(self):
+    def _seasonal_index(self):
         return 1 + int(self.has_trend)
 
     def _get_states(self, xhat):
@@ -726,11 +755,8 @@ class ETSModel(base.StateSpaceMLEModel):
             states[:, 1] = xhat[:, 1]
         if self.has_seasonal:
             state_names.append('season')
-            states[:, self._season_index] = xhat[:, 2]
+            states[:, self._seasonal_index] = xhat[:, 2]
             idx += 1
-        # TODO: think about if and how to integrate initial states here
-        # 1) Add something at the start, make everything invalid None
-        # 2) Don't add this here, users can get this on their own
         return states
 
     def _get_internal_states(self, states, params):
@@ -747,7 +773,8 @@ class ETSModel(base.StateSpaceMLEModel):
             internal_states[:, 1] = states[:, 1]
         if self.has_seasonal:
             for j in range(self.seasonal_periods):
-                internal_states[j:, 2+j] = states[0:self.nobs-j, self._season_index]
+                internal_states[j:, 2+j] = states[0:self.nobs-j,
+                                                  self._seasonal_index]
                 internal_states[0:j, 2+j] = internal_params[6:6+j][::-1]
         return internal_states
 
@@ -787,9 +814,9 @@ class ETSResults(base.StateSpaceMLEResults):
             self.initial_trend = internal_params[5]
             self.beta = self.params[1] * self.params[0]
         if self.has_seasonal:
-            self.season = states[:, self.model._season_index]
-            self.initial_season = internal_params[6:]
-            self.gamma = self.params[self.model._season_index] * (1 - self.alpha)
+            self.season = states[:, self.model._seasonal_index]
+            self.initial_seasonal = internal_params[6:]
+            self.gamma = self.params[self.model._seasonal_index] * (1 - self.alpha)
         if self.damped_trend:
             self.phi = internal_params[3]
 
@@ -1075,10 +1102,10 @@ class ETSResults(base.StateSpaceMLEResults):
         # x translation:
         # - x[t, 0, :] is level[t]
         # - x[t, 1, :] is trend[t]
-        # - x[t, 2, :] is season[t]
-        # - x[t, 3, :] is season[t-1]
-        # - x[t, 2+j, :] is season[t-j]
-        # - similarly: x[t-1, 2+m-1, :] is season[t-m]
+        # - x[t, 2, :] is seasonal[t]
+        # - x[t, 3, :] is seasonal[t-1]
+        # - x[t, 2+j, :] is seasonal[t-j]
+        # - similarly: x[t-1, 2+m-1, :] is seasonal[t-m]
         for t in range(nsimulations):
             B = op_d(x[t-1, 1, :], phi)
             L = op_b(x[t-1, 0, :], B)
@@ -1103,7 +1130,7 @@ class ETSResults(base.StateSpaceMLEResults):
             x[t, 0, :] = L + alpha * (mul_error * L + kappa_l) * eps[t, :]
             x[t, 1, :] = B + beta * (mul_error * B + kappa_b) * eps[t, :]
             x[t, 2, :] = S + gamma * (mul_error * S + kappa_s) * eps[t, :]
-            # update seasons by shifting previous season right
+            # update seasonals by shifting previous seasonal right
             x[t, 3:, :] = x[t-1, 2:-1, :]
 
         # Wrap data / squeeze where appropriate

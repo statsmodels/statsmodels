@@ -321,6 +321,40 @@ def test_fit_vs_R(setup_model):
 # TEST OF KEYWORD ARGUMENTS
 ###############################################################################
 
+def test_initialization_known(austourists):
+    initial_level, initial_trend = [36.46466837, 34.72584983]
+    model = ETSModel(austourists, error='add', trend='add', damped_trend=True,
+                     initialization_method='known',
+                     initial_level=initial_level, initial_trend=initial_trend)
+    internal_params = model._internal_params(model._start_params)
+    assert initial_level == internal_params[4]
+    assert initial_trend == internal_params[5]
+    assert internal_params[6] == 0
+
+    bounds = model._internal_bounds()
+    assert bounds[4][0] == initial_level
+    assert bounds[4][1] == initial_level
+    assert bounds[5][0] == initial_trend
+    assert bounds[5][1] == initial_trend
+
+
+def test_initialization_heuristic(oildata):
+    model_estimated = ETSModel(
+        oildata, error='add', trend='add', damped_trend=True,
+        initialization_method='estimated'
+    )
+    model_heuristic = ETSModel(
+        oildata, error='add', trend='add', damped_trend=True,
+        initialization_method='heuristic'
+    )
+    fit_estimated = model_estimated.fit(disp=False)
+    fit_heuristic = model_heuristic.fit(disp=False)
+    yhat_estimated = fit_estimated.fittedvalues.values
+    yhat_heuristic = fit_heuristic.fittedvalues.values
+
+    assert_allclose(yhat_estimated[10:], yhat_heuristic[10:], rtol=0.05)
+
+
 @pytest.mark.skip
 def test_simulate_keywords(austourists):
     """
