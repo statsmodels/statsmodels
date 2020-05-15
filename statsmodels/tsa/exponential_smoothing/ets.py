@@ -147,7 +147,7 @@ from scipy.stats import (
 
 from statsmodels.tools.tools import Bunch
 from statsmodels.tools.validation import (
-    array_like, bool_like, float_like, string_like, int_like
+    bool_like, string_like, int_like
 )
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tsa.exponential_smoothing import initialization as es_init
@@ -155,24 +155,22 @@ from statsmodels.tsa.tsatools import freq_to_period
 from statsmodels.tsa.exponential_smoothing import base
 import statsmodels.tsa.exponential_smoothing._ets_smooth as smooth
 
-"""
-Implementation details:
+# Implementation details:
 
-* The `smoothing_trend` parameter corresponds to \beta^*, not to \beta
-* The smoothing equations are implemented only for models having all components
-  (trend, dampening, seasonality). When using other models, the respective
-  parameters (smoothing and initial parameters) are set to values that lead to
-  the reduced model (often zero).
-  The internal model is needed for smoothing (called from fit and loglike),
-  forecasts, and simulations.
-* Somewhat related to above: There are 3 sets of parameters: free params, model
-  params, and internal params.
-  - free params are what is passed by a user into the fit method
-  - model params are all parameters necessary for a model, and are for example
-    passed as argument to the likelihood function when
-    ``internal_params=False`` is set.
-  - internal params are what is used internally in the smoothing equations
-"""
+# * The `smoothing_trend` parameter corresponds to \beta^*, not to \beta
+# * The smoothing equations are implemented only for models having all components
+#   (trend, dampening, seasonality). When using other models, the respective
+#   parameters (smoothing and initial parameters) are set to values that lead to
+#   the reduced model (often zero).
+#   The internal model is needed for smoothing (called from fit and loglike),
+#   forecasts, and simulations.
+# * Somewhat related to above: There are 3 sets of parameters: free params, model
+#   params, and internal params.
+#   - free params are what is passed by a user into the fit method
+#   - model params are all parameters necessary for a model, and are for example
+#     passed as argument to the likelihood function when
+#     ``internal_params=False`` is set.
+#   - internal params are what is used internally in the smoothing equations
 
 
 class ETSModel(base.StateSpaceMLEModel):
@@ -530,7 +528,7 @@ class ETSModel(base.StateSpaceMLEModel):
         return bounds
 
     def fit(self, start_params=None, maxiter=100, full_output=True,
-            disp=5, callback=None, return_params=False, **kwargs):
+            disp=True, callback=None, return_params=False, **kwargs):
         r"""
         Fit an ETS model by maximizing log-likelihood.
 
@@ -607,8 +605,8 @@ class ETSModel(base.StateSpaceMLEModel):
             kwargs['bounds'] = bounds
 
             mlefit = super().fit(
-                start_params, fargs=(True,), method='lbfgs',
-                maxiter=maxiter, full_output=full_output, disp=disp,
+                start_params, method='lbfgs', maxiter=maxiter,
+                full_output=full_output, disp=disp,
                 callback=callback, skip_hessian=True, **kwargs
             )
             # convert params back
@@ -625,7 +623,7 @@ class ETSModel(base.StateSpaceMLEModel):
 
             return result
 
-    def loglike(self, params, _internal_params=False):
+    def loglike(self, params):
         r"""
         Log-likelihood of model.
 
@@ -659,9 +657,9 @@ class ETSModel(base.StateSpaceMLEModel):
            Prediction for a Class of Dynamic Nonlinear Statistical Models.
            *Journal of the American Statistical Association*, 92(440), 1621-1629
         """
-        if not _internal_params:
+        if len(params) != self._k_params_internal:
             params = self._internal_params(params)
-        yhat = np.asarray(self._smoothing_func(params, self.endog)[0])
+        yhat = np.asarray(self._smoothing_func(np.asarray(params), self.endog)[0])
         res = self._residuals(yhat)
         logL =  - self.nobs/2 * (np.log(2*np.pi*np.mean(res**2)) + 1)
         if self.error == 'mul':
@@ -795,7 +793,6 @@ class ETSResults(base.StateSpaceMLEResults):
         if self.damped_trend:
             self.phi = internal_params[3]
 
-
     @cache_readonly
     def nobs_effective(self):
         return self.nobs
@@ -837,7 +834,6 @@ class ETSResults(base.StateSpaceMLEResults):
             start_state[0:4] = internal_params[0:4]
             start_state[4:] = internal_states[start_idx - 1, :]
             return start_state
-
 
     def simulate(self, nsimulations, anchor=None, repetitions=1,
                  random_errors=None, random_state=None):
@@ -1221,57 +1217,5 @@ class ETSResults(base.StateSpaceMLEResults):
             y, start, end_forecast - 1
         )
 
-
     def summary(self):
         ... # TODO
-
-
-
-
-
-
-
-# def _get_model_spec_string(self, model)
-#     # get model specification
-#     if not isinstance(model, str):
-#         raise ValueError("model must be a string.")
-
-#     # error model
-#     error = model[0]
-#     error_map = {"A": ["add"], "M": ["mul"], "Z": ["add", "mul"]}
-#     if error not in error_map:
-#         raise ValueError("Invalid model string.")
-#     errors = error_map[error]
-
-#     # trend model
-#     if model[2] == "d":
-#         trend = model[1:3]
-#     else:
-#         trend = model[1]
-#     trend_map = {
-#         "N": [(None, False)],
-#         "A": [("add", False)],
-#         "Ad": [("add", True)],
-#         "M": [("mul", False)],
-#         "Md": [("mul", True)],
-#         "Z": list(itertools.product(["add", "mul", None], [True, False])),
-#     }
-#     if trend not in trend_map:
-#         raise ValueError("Invalid model string.")
-#     trends = trend_map[trend]
-
-#     # seasonal model
-#     season = model[-1]
-#     if season != "N" and seasonal_periods is None:
-#         raise ValueError(
-#             "You must supply seasonal_periods when using a seasonal component."
-#         )
-#     season_map = {
-#         "N": [None],
-#         "A": ["add"],
-#         "M": ["mul"],
-#         "Z": ["add", "mul", None],
-#     }
-#     if season not in season_map:
-#         raise ValueError("Invalid model string.")
-#     seasons = season_map[season]

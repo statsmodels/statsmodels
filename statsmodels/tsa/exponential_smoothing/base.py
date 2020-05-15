@@ -3,6 +3,7 @@ from collections import OrderedDict
 
 import pandas as pd
 import numpy as np
+from scipy.stats import norm
 
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.eval_measures import aic, aicc, bic, hqic
@@ -192,11 +193,9 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
                 names = []
             return names
 
-    def simulate(self, params, nsimulations, *args, **kwargs):
-        raise NotImplementedError
-
     @classmethod
-    def from_formula(cls, formula, data, subset=None):
+    def from_formula(cls, formula, data, subset=None, drop_cols=None,
+                     *args, **kwargs):
         """
         Not implemented for state space models
         """
@@ -238,6 +237,7 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
     """
     def __init__(self, model, params, scale=1.):
         self.data = model.data
+        self.endog = model.data.orig_endog
 
         super().__init__(model, params, None, scale=scale)
 
@@ -360,51 +360,6 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
         """
         return self.params / self.bse
 
-    def get_prediction(self, start=None, end=None, dynamic=False,
-                       index=None, exog=None, extend_model=None,
-                       extend_kwargs=None, **kwargs):
-        # TODO: We will probably need this once the simulations are done
-        raise NotImplementedError
-
-    def predict(self, start=None, end=None, dynamic=False, **kwargs):
-        """
-        In-sample prediction and out-of-sample forecasting
-
-        Parameters
-        ----------
-        start : int, str, or datetime, optional
-            Zero-indexed observation number at which to start forecasting,
-            i.e., the first forecast is start. Can also be a date string to
-            parse or a datetime type. Default is the the zeroth observation.
-        end : int, str, or datetime, optional
-            Zero-indexed observation number at which to end forecasting, i.e.,
-            the last forecast is end. Can also be a date string to
-            parse or a datetime type. However, if the dates index does not
-            have a fixed frequency, end must be an integer index if you
-            want out of sample prediction. Default is the last observation in
-            the sample.
-        dynamic : bool, int, str, or datetime, optional
-            Integer offset relative to `start` at which to begin dynamic
-            prediction. Can also be an absolute date string to parse or a
-            datetime type (these are not interpreted as offsets).
-            Prior to this observation, true endogenous values will be used for
-            prediction; starting with this observation and continuing through
-            the end of prediction, forecasted endogenous values will be used
-            instead.
-        **kwargs
-            Additional arguments may required for forecasting beyond the end
-            of the sample. See `FilterResults.predict` for more details.
-
-        Returns
-        -------
-        forecast : array_like
-            Array of out of in-sample predictions and / or out-of-sample
-            forecasts. An (npredict x k_endog) array.
-        """
-        # Perform the prediction
-        prediction_results = self.get_prediction(start, end, dynamic, **kwargs)
-        return prediction_results.predicted_mean
-
     def _get_prediction_start_index(self, anchor):
         """Returns a valid numeric start index for predictions/simulations"""
         # TODO: once this is the base class for statespace models, use this
@@ -423,17 +378,3 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
         if iloc > self.nobs:
             raise ValueError('Cannot anchor simulation outside of the sample.')
         return iloc
-
-
-    def simulate(self, nsimulations, measurement_shocks=None,
-                 state_shocks=None, initial_state=None, anchor=None,
-                 repetitions=None, exog=None, extend_model=None,
-                 extend_kwargs=None, **kwargs):
-        # TODO
-        raise NotImplementedError
-
-
-    def summary(self, alpha=.05, start=None, title=None, model_name=None,
-                display_params=True):
-        # TODO
-        raise NotImplementedError

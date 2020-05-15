@@ -15,24 +15,22 @@ from statsmodels.tsa.exponential_smoothing.ets import (
     ETSModel,
 )
 
-"""
-This contains tests for the exponential smoothing implementation in
-tsa/exponential_smoothing/ets.py.
+# This contains tests for the exponential smoothing implementation in
+# tsa/exponential_smoothing/ets.py.
 
-Tests are mostly done by comparing results with the R implementation in the
-package forecast for the datasets `oildata` (non-seasonal) and `austourists`
-(seasonal).
+# Tests are mostly done by comparing results with the R implementation in the
+# package forecast for the datasets `oildata` (non-seasonal) and `austourists`
+# (seasonal).
 
-Therefore, a parametrized pytest fixture ``setup_model`` is provided, which
-returns a constructed model, model parameters from R in the format expected by
-ETSModel, and a dictionary of reference results. Use like this:
+# Therefore, a parametrized pytest fixture ``setup_model`` is provided, which
+# returns a constructed model, model parameters from R in the format expected by
+# ETSModel, and a dictionary of reference results. Use like this:
 
-    def test_<testname>(setup_model):
-        model, params, results_R = setup_model
-        # perform some tests
-        ...
+#     def test_<testname>(setup_model):
+#         model, params, results_R = setup_model
+#         # perform some tests
+#         ...
 
-"""
 
 
 ###############################################################################
@@ -257,7 +255,6 @@ def test_residuals_vs_R(setup_model):
     model, params, results_R = setup_model
 
     yhat, xhat = model.smooth(params)
-    yhat_R = results_R['fitted']
 
     residuals = model._residuals(yhat)
     assert_almost_equal(residuals, results_R['residuals'], 2)
@@ -269,7 +266,7 @@ def test_loglike_vs_R(setup_model):
     loglike = model.loglike(params)
     # the calculation of log likelihood in R is only up to a constant:
     const = - model.nobs/2 * (np.log(2*np.pi/model.nobs) + 1)
-    loglike_R = results_R['loglik'] + const
+    loglike_R = results_R['loglik'][0] + const
 
     assert_almost_equal(loglike, loglike_R, 2)
 
@@ -295,7 +292,7 @@ def test_simulate_vs_R(setup_model):
     sim = fit.simulate(4, anchor='end', repetitions=1, random_errors=innov)
     expected = np.asarray(results_R["simulation"])
 
-    # should be the same up to 4 decimals
+    # should be the same up to 3 decimals
     assert_almost_equal(expected, sim.values, 3)
 
 
@@ -306,7 +303,7 @@ def test_fit_vs_R(setup_model):
     # check log likelihood
     # this does not work, the fits are not that similar
     # const = - model.nobs/2 * (np.log(2*np.pi/model.nobs) + 1)
-    # loglike_R = results_R['loglik'] + const
+    # loglike_R = results_R['loglik'][0] + const
     # loglike = fit.llf
     # assert loglike <= loglike_R + 1e-4
 
@@ -331,7 +328,7 @@ def test_simulate_keywords(austourists):
     """
     fit = ETSModel(
         austourists, seasonal_periods=4,
-        error="add", trend="add", seasonal="add", damped=True
+        error="add", trend="add", seasonal="add", damped_trend=True
     ).fit()
 
     # test anchor
