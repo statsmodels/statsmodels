@@ -29,7 +29,7 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
         self._init_kwargs = kwargs
 
         # Prepared the endog array: C-ordered, shape=(nobs x k_endog)
-        self.endog, self.exog = self.prepare_data()
+        self.endog, self.exog = self.prepare_data(self.data)
         self.use_pandas = isinstance(self.data, PandasData)
 
         # Dimensions
@@ -42,7 +42,8 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
         self._fixed_params_index = None
         self._free_params_index = None
 
-    def prepare_data(self):
+    @staticmethod
+    def prepare_data(data):
         raise NotImplementedError
 
     def clone(self, endog, exog=None, **kwargs):
@@ -365,32 +366,6 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
         # TODO: We will probably need this once the simulations are done
         raise NotImplementedError
 
-    def get_forecast(self, steps=1, **kwargs):
-        """
-        Out-of-sample forecasts
-
-        Parameters
-        ----------
-        steps : int, str, or datetime, optional
-            If an integer, the number of steps to forecast from the end of the
-            sample. Can also be a date string to parse or a datetime type.
-            However, if the dates index does not have a fixed frequency, steps
-            must be an integer. Default
-        **kwargs
-            Additional arguments may required for forecasting beyond the end
-            of the sample. See `FilterResults.predict` for more details.
-
-        Returns
-        -------
-        forecast : ndarray
-            Array of out of sample forecasts. A (steps x k_endog) array.
-        """
-        if isinstance(steps, int):
-            end = self.nobs + steps - 1
-        else:
-            end = steps
-        return self.get_prediction(start=self.nobs, end=end, **kwargs)
-
     def predict(self, start=None, end=None, dynamic=False, **kwargs):
         """
         In-sample prediction and out-of-sample forecasting
@@ -429,32 +404,6 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
         # Perform the prediction
         prediction_results = self.get_prediction(start, end, dynamic, **kwargs)
         return prediction_results.predicted_mean
-
-    def forecast(self, steps=1, **kwargs):
-        """
-        Out-of-sample forecasts
-
-        Parameters
-        ----------
-        steps : int, str, or datetime, optional
-            If an integer, the number of steps to forecast from the end of the
-            sample. Can also be a date string to parse or a datetime type.
-            However, if the dates index does not have a fixed frequency, steps
-            must be an integer. Default
-        **kwargs
-            Additional arguments may required for forecasting beyond the end
-            of the sample. See `FilterResults.predict` for more details.
-
-        Returns
-        -------
-        forecast : ndarray
-            Array of out of sample forecasts. A (steps x k_endog) array.
-        """
-        if isinstance(steps, int):
-            end = self.nobs + steps - 1
-        else:
-            end = steps
-        return self.predict(start=self.nobs, end=end, **kwargs)
 
     def _get_prediction_start_index(self, anchor):
         """Returns a valid numeric start index for predictions/simulations"""

@@ -343,11 +343,12 @@ class ETSModel(base.StateSpaceMLEModel):
             zip(self.param_names, np.arange(self.k_params))
         )
 
-    def prepare_data(self):
+    @staticmethod
+    def prepare_data(data):
         """
         Prepare data for use in the state space representation
         """
-        endog = np.array(self.data.orig_endog, order='C')
+        endog = np.array(data.orig_endog, order='C')
         if endog.ndim != 1:
             raise ValueError('endog must be 1-dimensional')
         return endog, None
@@ -452,36 +453,24 @@ class ETSModel(base.StateSpaceMLEModel):
 
     @property
     def _start_params(self):
-        lb = []
-        ub = []
+        # Make sure starting parameters aren't beyond or right on the bounds
+        bounds = []
         for b in self.bounds:
-            lb.append(b[0])
-            ub.append(b[1])
+            lb = b[0] + 1e-3 if b[0] is not None else None
+            ub = b[1] + 1e-3 if b[1] is not None else None
+            bounds.append((lb, ub))
 
-        # See https://github.com/robjhyndman/forecast/blob/master/R/ets.R
-        # in function initparam
-        # this is the formula used for alpha, since we are using beta_star and
-        # gamma_star, which also are between 0 and 1, we are using the same
-        # formula for all smoothing parameters
-        def init_params(lb, ub):
-            p = lb + 0.2 * (ub - lb)
-            if p > 1 or p < 0:
-                p = lb + 2e-3
-            return p
-
-        start_params = [init_params(lb[0], ub[0])]
+        # See Hyndman p.24
+        start_params = [np.clip(0.1, *bounds[0])]
         idx = 1
         if self.trend:
-            start_params += [init_params(lb[idx], ub[idx])]
+            start_params += [np.clip(0.01, *bounds[idx])]
             idx += 1
         if self.seasonal:
-            start_params += [init_params(lb[idx], ub[idx])]
+            start_params += [np.clip(0.01, *bounds[idx])]
             idx += 1
         if self.damped_trend:
-            phi = lb[idx] + 0.99 * (ub[idx] - lb[idx])
-            if phi < 0 or phi > 1:
-                phi = ub[idx] - 1e-3
-            start_params += [phi]
+            start_params += [np.clip(0.98, *bounds[idx])]
             idx += 1
 
         # Initialization

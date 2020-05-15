@@ -310,7 +310,6 @@ def test_fit_vs_R(setup_model):
 
     # check that we found a minimum that is at least almost as good as the one
     # with R
-    assert 0
     assert loglike <= loglike_R + 1e-4
 
     # compare parameters
