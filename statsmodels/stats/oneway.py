@@ -17,7 +17,10 @@ from statsmodels.stats.base import HolderTuple
 
 
 def effectsize_oneway(means, vars_, nobs, use_var="unequal", ddof_between=0):
-    """effect size corresponding to Cohen's f^2 = nc / nobs for oneway anova
+    """effect size corresponding to Cohen's f = nc / nobs for oneway anova
+
+    This contains adjustment for Welch and Brown-Forsythe Anova so that
+    effect size can be used with FTestAnovaPower.
 
     Parameters
     ----------
@@ -33,7 +36,9 @@ def effectsize_oneway(means, vars_, nobs, use_var="unequal", ddof_between=0):
         If nobs is scalar, then it is assumed that all samples have the same
         number ``nobs`` of observation, i.e. a balanced sample case.
         Otherwise, statistics will be weighted corresponding to nobs.
-    use_var : {"unequal", "equal"}
+        Only relative sizes are relevant, any proportional change to nobs does
+        not change the effect size.
+    use_var : {"unequal", "equal", "bf"}
         If ``use_var`` is "unequal", then the variances can differe across
         samples and the effect size for Welch anova will be computed.
     ddof_between : int
@@ -43,29 +48,90 @@ def effectsize_oneway(means, vars_, nobs, use_var="unequal", ddof_between=0):
 
     Returns
     -------
-    f2 : float
+    f : float
         Effect size corresponding to squared Cohen's f, which is also equal
         to the noncentrality divided by total number of observations.
+        In contrast to other functions, this value is not squared.
 
     Notes
     -----
-    This currently handles the following 2 cases for oneway anova
+    This currently handles the following cases for oneway anova
 
     - balanced sample with homoscedastic variances
-    - samples with different number of observations and  with homoscedastic
+    - samples with different number of observations and with homoscedastic
       variances
-    - samples with different number of observations and  with heteroscedastic
+    - samples with different number of observations and with heteroscedastic
       variances. This corresponds to Welch anova
 
+    In the case of "unequal" and "bf" methods for unequal variances, the
+    effect sizes do not directly correspond to the test statistic in Anova.
+    Both have correction terms dropped or added, so the effect sizes match up
+    with using FTestAnovaPower.
+    If all variances are equal, then all three methods result in the same
+    effect size. If variances are unequal, then the three methods produce
+    small differences in effect size.
+
+    Note, the effect size and power computation for BF Anova was not found in
+    the literature. The correction terms were added so that FTestAnovaPower
+    provides a good approximation to the power.
+
     Status: experimental
-    This function will be changed to support additional cases like
-    Brown-Forsythe anova.
     We might add additional returns, if those are needed to support power
     and sample size applications.
 
+    Examples
+    --------
+    The following shows how to compute effect size and power for each of the
+    three anova methods. The null hypothesis is that the means are equal which
+    corresponds to a zero effect size. Under the alternative, means differ
+    with two sample means at a distance delta from the mean. We assume the
+    variance is the same under the null and alternative hypothesis.
+
+    ``nobs`` for the samples defines the fraction of observations in the
+    samples. ``nobs`` in the power method defines the total sample size.
+
+    In simulations, the computed power for standard anova,
+    i.e.``use_var="equal"`` overestimates the simulated power by a few percent.
+    The equal variance assumption does not hold in this example.
+
+    >>> from statsmodels.stats.oneway import effectsize_oneway
+    >>> from statsmodels.stats.power import FTestAnovaPower
+    >>>
+    >>> nobs = np.array([10, 12, 13, 15])
+    >>> delta = 0.5
+    >>> means_alt = np.array([-1, 0, 0, 1]) * delta
+    >>> vars_ = np.arange(1, len(means_alt) + 1)
+    >>>
+    >>> f_alt = effectsize_oneway(means_alt, vars_, nobs, use_var="equal")
+    >>> f_alt
+    0.21403973493274867
+    >>>
+    >>> kwds = {'effect_size': f_alt, 'nobs': 100, 'alpha': 0.05,
+    ...         'k_groups': 4}
+    >>> power = FTestAnovaPower().power(**kwds)
+    >>> power
+    0.39165892158983273
+    >>>
+    >>> f_alt = effectsize_oneway(means_alt, vars_, nobs, use_var="equal")
+    >>> f_alt
+    0.21403973493274867
+    >>>
+    >>> kwds['effect_size'] = f_alt
+    >>> power = FTestAnovaPower().power(**kwds)
+    >>> power
+    0.39165892158983273
+    >>>
+    >>> f_alt = effectsize_oneway(means_alt, vars_, nobs, use_var="bf")
+    >>> f_alt
+    0.20955486889969385
+    >>>
+    >>> kwds['effect_size'] = f_alt
+    >>> power = FTestAnovaPower().power(**kwds)
+    >>> power
+    0.3765792117047725
 
     """
-    # the code here is largely a copy of onway_generic
+    # the code here is largely a copy of onway_generic with adjustments
 
     means = np.asarray(means)
     n_groups = means.shape[0]
@@ -91,8 +157,24 @@ def effectsize_oneway(means, vars_, nobs, use_var="unequal", ddof_between=0):
     # meanw_t = (weights * means).sum() / w_total
     meanw_t = w_rel @ means
 
-    # f2 = np.dot(weights, (means - meanw_t)**2) / (n_groups - ddof_between)
     f2 = np.dot(weights, (means - meanw_t)**2) / (nobs_t - ddof_between)
+
+    if use_var.lower() == "bf":
+        weights = nobs
+        w_total = weights.sum()
+        w_rel = weights / w_total
+        meanw_t = w_rel @ means
+        # TODO: reuse general case with weights
+        tmp = ((1. - nobs / nobs_t) * vars_).sum()
+        statistic = 1. * (nobs * (means - meanw_t)**2).sum()
+        statistic /= tmp
+        f2 = statistic * (1. - nobs / nobs_t).sum() / nobs_t
+        # correction factor for df_num in BFM
+        df_num2 = n_groups - 1
+        df_num = tmp**2 / ((vars_**2).sum() +
+                           (nobs / nobs_t * vars_).sum()**2 -
+                           2 * (nobs / nobs_t * vars_**2).sum())
+        f2 *= df_num / df_num2
 
     return np.sqrt(f2)
 
