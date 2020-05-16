@@ -843,3 +843,11 @@ def test_summaries_exog(reset_randomstate):
     assert 'exog_1' in summ
     assert 'exog_2' in summ
     assert 'exog_3' in summ
+
+
+def test_whiteness_nlag(reset_randomstate):
+    # GH 6686
+    y = np.random.standard_normal((200,2))
+    res = VAR(y).fit(maxlags=1, ic=None)
+    with pytest.raises(ValueError, match="The whiteness test can only"):
+        res.test_whiteness(1)
