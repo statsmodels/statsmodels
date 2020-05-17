@@ -719,7 +719,7 @@ def test_arma_order_select_ic_failure():
 def test_acf_fft_dataframe():
     # regression test #322
 
-    result = acf(sunspots.load_pandas().data[['SUNACTIVITY']], fft=True)
+    result = acf(sunspots.load_pandas().data[['SUNACTIVITY']], fft=True, nlags=20)
     assert_equal(result.ndim, 1)
 
 
