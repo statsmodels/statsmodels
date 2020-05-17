@@ -269,3 +269,24 @@ def test_plot(default_kwargs):
     class_kwargs['endog'] = pd.Series(class_kwargs['endog'], name='CO2')
     res = STL(**class_kwargs).fit()
     res.plot()
+
+
+def test_default_trend(default_kwargs):
+    # GH 6686
+    class_kwargs, _, _ = _to_class_kwargs(default_kwargs)
+    class_kwargs["seasonal"] = 17
+    class_kwargs["trend"] = None
+    mod = STL(**class_kwargs)
+    period = class_kwargs["period"]
+    seasonal = class_kwargs["seasonal"]
+    expected = int(np.ceil(1.5 * period / (1 - 1.5 / seasonal)))
+    expected += 1 if expected % 2 == 0 else 0
+    assert mod.config["trend"] == expected
+
+    class_kwargs["seasonal"] = 7
+    mod = STL(**class_kwargs)
+    period = class_kwargs["period"]
+    seasonal = class_kwargs["seasonal"]
+    expected = int(np.ceil(1.5 * period / (1 - 1.5 / seasonal)))
+    expected += 1 if expected % 2 == 0 else 0
+    assert mod.config["trend"] == expected

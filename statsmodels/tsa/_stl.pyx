@@ -79,6 +79,8 @@ season  output, seasonal component.
 trend   output, trend component.
 work    workspace of (n+2*np)*5 locations.
 """
+from typing import Dict, Union
+
 import pandas as pd
 import numpy as np
 from libc.math cimport fabs, sqrt, isnan, NAN
@@ -120,8 +122,9 @@ cdef class STL(object):
         normally be >= 7 (default).
     trend : {int, None}, optional
         Length of the trend smoother. Must be an odd integer. If not provided
-        uses the smallest odd integer greater than 1.5 * period, following the
-        suggestion in the original implementation.
+        uses the smallest odd integer greater than
+        1.5 * period / (1 - 1.5 / seasonal), following the suggestion in
+        the original implementation.
     low_pass : {int, None}, optional
         Length of the low-pass filter. Must be an odd integer >=3. If not
         provided, uses the smallest odd integer > period.
@@ -222,7 +225,7 @@ cdef class STL(object):
             raise ValueError('seasonal must be an odd positive integer >= 3')
         self.seasonal = seasonal  # ns
         if trend is None:
-            trend = int(np.ceil(1.5 * self.period))
+            trend = int(np.ceil(1.5 * self.period / (1 - 1.5 / self.seasonal)))
             # ensure odd
             trend += ((trend % 2) == 0)
         if not _is_pos_int(trend, True) or trend < 3 or trend <= period:
@@ -256,6 +259,28 @@ cdef class STL(object):
         self._season = np.zeros(self.nobs)
         self._rw = np.ones(self.nobs)
         self._work = np.zeros((7, self.nobs + 2 * period))
+
+    @property
+    def config(self) -> Dict[str, Union[int, bool]]:
+        """
+        The parameters used in the model.
+
+        Returns
+        -------
+        dict[str, Union[int, bool]]
+            The values used in the STL decomposition.
+        """
+        return dict(period=self.period,
+                    seasonal=self.seasonal,
+                    seasonal_deg=self.seasonal_deg,
+                    seasonal_jump=self.seasonal_jump,
+                    trend=self.trend,
+                    trend_deg=self.trend_deg,
+                    trend_jump=self.trend_jump,
+                    low_pass=self.low_pass,
+                    low_pass_deg=self.low_pass_deg,
+                    low_pass_jump=self.low_pass_jump,
+                    robust=self.robust)
 
     def fit(self, inner_iter=None, outer_iter=None):
         """
