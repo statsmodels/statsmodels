@@ -1255,7 +1255,7 @@ def linear_reset(res, power=3, test_type="fitted", use_f=False,
     return res.wald_test(r_mat, use_f=use_f)
 
 
-def linear_harvey_collier(res, order_by=None):
+def linear_harvey_collier(res, order_by=None, skip=None):
     """
     Harvey Collier test for linearity
 
@@ -1269,6 +1269,9 @@ def linear_harvey_collier(res, order_by=None):
         Integer array specifying the order of the residuals. If not provided,
         the order of the residuals is not changed. If provided, must have
         the same number of observations as the endogenous variable.
+    skip : int, default None
+        The number of observations to use for initial OLS, if None then skip is
+        set equal to the number of regressors (columns in exog).
 
     Returns
     -------
@@ -1276,6 +1279,11 @@ def linear_harvey_collier(res, order_by=None):
         The test statistic, based on ttest_1sample.
     pvalue : float
         The pvalue of the test.
+
+    See Also
+    --------
+    statsmodels.stats.diadnostic.recursive_olsresiduals
+        Recursive OLS residual calculation used in the test.
 
     Notes
     -----
@@ -1285,7 +1293,7 @@ def linear_harvey_collier(res, order_by=None):
     # I think this has different ddof than
     # B.H. Baltagi, Econometrics, 2011, chapter 8
     # but it matches Gretl and R:lmtest, pvalue at decimal=13
-    rr = recursive_olsresiduals(res, skip=3, alpha=0.95, order_by=order_by)
+    rr = recursive_olsresiduals(res, skip=skip, alpha=0.95, order_by=order_by)
 
     return stats.ttest_1samp(rr[3][3:], 0)
 
@@ -1611,8 +1619,14 @@ def recursive_olsresiduals(res, skip=None, lamda=0.0, alpha=0.95,
     rvarraw = np.nan * np.zeros(nobs)
 
     x0 = x[:skip]
+    if np.linalg.matrix_rank(x0) < x0.shape[1]:
+        err_msg = """\
+"The initial regressor matrix, x[:skip], issingular. You must use a value of
+skip large enough to ensure that the first OLS estimator is well-defined.
+"""
+        raise ValueError(err_msg)
     y0 = y[:skip]
-    # add Ridge to start (not in jplv
+    # add Ridge to start (not in jplv)
     xtxi = np.linalg.inv(np.dot(x0.T, x0) + lamda * np.eye(nvars))
     xty = np.dot(x0.T, y0)  # xi * y   #np.dot(xi, y)
     beta = np.dot(xtxi, xty)
