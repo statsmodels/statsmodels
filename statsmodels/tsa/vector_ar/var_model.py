@@ -1959,12 +1959,17 @@ class VARResults(VARProcess):
         Parameters
         ----------
         nlags : int > 0
+            The number of lags tested must be larger than the number of lags
+            included in the VAR model.
         signif : float, between 0 and 1
+            The significance level of the test.
         adjusted : bool, default False
+            Flag indicating to apply small-sample adjustments.
 
         Returns
         -------
-        results : WhitenessTestResults
+        WhitenessTestResults
+            The test results.
 
         Notes
         -----
@@ -1975,6 +1980,10 @@ class VARResults(VARProcess):
         ----------
         .. [1] Lütkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
         """
+        if nlags - self.k_ar <= 0:
+            raise ValueError("The whiteness test can only be used when nlags "
+                             "is larger than the number of lags included in "
+                             f"the model ({self.k_ar}).")
         statistic = 0
         u = np.asarray(self.resid)
         acov_list = _compute_acov(u, nlags)
