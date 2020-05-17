@@ -783,6 +783,10 @@ class TestVARExtras(object):
         exf = np.arange(len(data), len(data) + h)
         fc2 = res_lin_trend1.forecast(res_lin_trend1.endog[-2:], h,
                                       exog_future=exf)
+        with pytest.raises(ValueError, match="exog_future only has"):
+            wrong_exf = np.arange(len(data), len(data) + h // 2)
+            res_lin_trend1.forecast(res_lin_trend1.endog[-2:], h,
+                                    exog_future=wrong_exf)
         exf2 = exf[:, None]**[0, 1]
         fc3 = res_lin_trend2.forecast(res_lin_trend2.endog[-2:], h,
                                       exog_future=exf2)
