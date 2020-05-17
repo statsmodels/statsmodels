@@ -423,6 +423,8 @@ class TestDiagnosticG(object):
 
         hc = smsdia.linear_harvey_collier(self.res)
         compare_to_reference(hc, harvey_collier, decimal=(12, 12))
+        hc_skip = smsdia.linear_harvey_collier(self.res, skip=20)
+        assert not np.allclose(hc[0], hc_skip[0])
 
     def test_rainbow(self):
         # rainbow test
@@ -1234,6 +1236,14 @@ def test_rainbow_exception(reset_randomstate):
     res = OLS(np.asarray(y), np.asarray(x)).fit()
     with pytest.raises(TypeError, match="order_by must contain"):
         smsdia.linear_rainbow(res, order_by=("x0",))
+
+
+def test_small_skip(reset_randomstate):
+    y = np.random.standard_normal(10)
+    x = np.random.standard_normal((10, 3))
+    x[:3] = x[:1]
+    with pytest.raises(ValueError, match="The initial regressor matrix,"):
+        smsdia.recursive_olsresiduals(OLS(y, x).fit())
 
 # R code used in testing
 # J test
