@@ -443,7 +443,7 @@ class _BayesMixedGLM(base.Model):
             mat = patsy.dmatrix(fml, data, return_type='dataframe')
             exog_vc.append(mat)
             vcp_names.append(na)
-            ident.append(j * np.ones(mat.shape[1], dtype=np.integer))
+            ident.append(j * np.ones(mat.shape[1], dtype=np.int64))
             j += 1
         exog_vc = pd.concat(exog_vc, axis=1)
         vc_names = exog_vc.columns.tolist()
