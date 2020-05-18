@@ -322,6 +322,20 @@ Interpolation
    dentonm
 
 
+Deterministic Processes
+"""""""""""""""""""""""
+
+.. currentmodule:: statsmodels.tsa.deterministic
+.. autosummary::
+   :toctree: generated/
+
+   TimeTrend
+   Seasonality
+   Fourier
+   CalendarTimeTrend
+   CalendarSeasonality
+   CalendarFourier
+
 Forecasting Models
 """"""""""""""""""
 .. module:: statsmodels.tsa.forecasting

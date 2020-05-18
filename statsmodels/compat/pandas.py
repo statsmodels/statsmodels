@@ -1,4 +1,3 @@
-
 from distutils.version import LooseVersion
 
 import numpy as np
@@ -8,9 +7,11 @@ from pandas.util._decorators import deprecate_kwarg, Appender, Substitution
 __all__ = ['assert_frame_equal', 'assert_index_equal', 'assert_series_equal',
            'data_klasses', 'frequencies', 'is_numeric_dtype', 'testing',
            'cache_readonly', 'deprecate_kwarg', 'Appender', 'Substitution',
-           'make_dataframe', 'assert_equal']
+           'make_dataframe', 'assert_equal', 'to_numpy', 'pandas_lt_1_0_0']
 
 version = LooseVersion(pd.__version__)
+
+pandas_lt_1_0_0 = version < LooseVersion('1.0.0')
 pandas_lt_25_0 = version < LooseVersion('0.25.0')
 pandas_gte_23_0 = version >= LooseVersion('0.23.0')
 
@@ -130,3 +131,22 @@ except ImportError:
                 for c in string.ascii_uppercase[:k]}
 
         return pd.DataFrame(data)
+
+
+def to_numpy(po: pd.DataFrame) -> np.ndarray:
+    """
+    Workaround legacy pandas lacking to_numpy
+
+    Parameters
+    ----------
+    po : Pandas obkect
+
+    Returns
+    -------
+    ndarray
+        A numpy array
+    """
+    try:
+        return po.to_numpy()
+    except AttributeError:
+        return po.values
