@@ -127,7 +127,7 @@
     text: Seasonal Decomposition
   - img: ../_static/images/stationarity_detrending_adf_kpss.png
     target: notebooks/generated/stationarity_detrending_adf_kpss.html
-    text: Stationarity and detrending (ADF/KPSS) 
+    text: Stationarity and detrending (ADF/KPSS)
 - header: State space models
   id: statespace
   links:
@@ -179,6 +179,12 @@
   - img: ../_static/images/statespace_chandrasekhar.png
     target: notebooks/generated/statespace_chandrasekhar.html
     text: 'State space models: Chandrasekhar recursions'
+- header: Forecasting
+  id: forecasting
+  links:
+  - img: ../_static/images/theta-model.png
+    target: notebooks/generated/theta-model.html
+    text: 'Forecasting using the Theta Model'
 - header: Multivariate Methods
   id: multivariate
   links:

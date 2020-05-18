@@ -189,7 +189,6 @@ responses, etc.).
    statespace.exponential_smoothing.ExponentialSmoothing
    statespace.exponential_smoothing.ExponentialSmoothingResults
 
-
 ARMA Process
 """"""""""""
 
@@ -321,3 +320,25 @@ Interpolation
    :toctree: generated/
 
    dentonm
+
+
+Forecasting Models
+""""""""""""""""""
+.. module:: statsmodels.tsa.forecasting
+   :synopsis: Models designed for forecasting
+
+.. currentmodule:: statsmodels.tsa.forecasting
+
+The Theta Model
+~~~~~~~~~~~~~~~
+The Theta model is a simple forecasting method that combines a linear time
+trend with a Simple Exponential Smoother (Assimakopoulos & Nikolopoulos).
+An estimator for the parameters of the Theta model and methods to forecast
+are available in:
+
+
+.. autosummary::
+   :toctree: generated/
+
+   theta.ThetaModel
+   theta.ThetaModelResults
