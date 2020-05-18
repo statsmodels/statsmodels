@@ -24,6 +24,7 @@ from statsmodels.iolib.table import SimpleTable
 from statsmodels.tools.decorators import cache_readonly, deprecated_alias
 from statsmodels.tools.linalg import logdet_symm
 from statsmodels.tools.sm_exceptions import OutputWarning
+from statsmodels.tools.validation import array_like
 from statsmodels.tsa.tsatools import vec, unvec, duplication_matrix
 from statsmodels.tsa.vector_ar import output, plotting, util
 from statsmodels.tsa.vector_ar.hypothesis_test_results import \
@@ -1030,6 +1031,15 @@ class VARProcess(object):
         if self.exog is not None and exog_future is None:
             raise ValueError("Please provide an exog_future argument to "
                              "the forecast method.")
+
+        exog_future = array_like(exog_future, "exog_future", optional=True, ndim=2)
+        if exog_future is not None:
+            if exog_future.shape[0] != steps:
+                err_msg = f"""\
+exog_future only has {exog_future.shape[0]} observations. It must have \
+steps ({steps}) observations.
+"""
+                raise ValueError(err_msg)
         trend_coefs = None if self.coefs_exog.size == 0 else self.coefs_exog.T
 
         exogs = []
