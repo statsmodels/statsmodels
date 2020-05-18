@@ -368,6 +368,8 @@ def anova_generic(means, vars_, nobs, use_var="unequal",
                       df=(df_num, df_denom),
                       df_num=df_num,
                       df_denom=df_denom,
+                      nobs_t=nobs_t,
+                      n_groups=n_groups,
                       **options
                       )
     return res
@@ -433,7 +435,8 @@ def anova_oneway(data, groups=None, use_var="unequal", welch_correction=True,
     return res
 
 
-def oneway_equivalence_generic(f, n_groups, nobs, eps, df, alpha=0.05):
+def equivalence_oneway_generic(f_stat, n_groups, nobs, eps, df, alpha=0.05,
+                               margin_type="wellek"):
     """Equivalence test for oneway anova (Wellek and extensions)
 
     Warning: eps is currently defined as in Wellek, but will change to
@@ -478,21 +481,31 @@ def oneway_equivalence_generic(f, n_groups, nobs, eps, df, alpha=0.05):
     """
     nobs_mean = nobs.sum() / n_groups
 
-    es = f * (n_groups - 1) / nobs_mean
-    crit_f = stats.ncf.ppf(alpha, df[0], df[1], nobs_mean * eps**2)
+    es = f_stat * (n_groups - 1) / nobs_mean
+
+    if margin_type == "wellek":
+        nc_null = nobs_mean * eps**2
+        type_effectsize="Welleks psi_squared"
+    elif margin_type in ["f2", "fqu", "fsquared"]:
+        nc_null = nobs.sum() * eps
+        type_effectsize="Cohen's f_squared"
+    else:
+        raise ValueError('`margin_type` should be "f2" or "wellek" ')
+    crit_f = stats.ncf.ppf(alpha, df[0], df[1], nc_null)
     crit_es = (n_groups - 1) / nobs_mean * crit_f
     reject = (es < crit_es)
 
-    pv = stats.ncf.cdf(f, df[0], df[1], nobs_mean * eps**2)
-    pwr = stats.ncf.cdf(crit_f, df[0], df[1], nobs_mean * 1e-13)
-    res = HolderTuple(statistic=es,
+    pv = stats.ncf.cdf(f_stat, df[0], df[1], nc_null)
+    pwr = stats.ncf.cdf(crit_f, df[0], df[1], 1e-13)  # scipy, cannot be 0
+    res = HolderTuple(statistic=es,   # this should be f_stat ?
                       pvalue=pv,
-                      es=es,
+                      es=es,  # match es type to margin_type
                       crit_f=crit_f,
                       crit_es=crit_es,
                       reject=reject,
                       power_zero=pwr,
                       df=df,
+                      f_stat=f_stat,
                       # es is currently hard coded,
                       #     not correct for Welch anova `f`
                       type_effectsize="Welleks psi_squared"
@@ -500,18 +513,35 @@ def oneway_equivalence_generic(f, n_groups, nobs, eps, df, alpha=0.05):
     return res
 
 
-def power_oneway_equivalence(f, n_groups, nobs, eps, df, alpha=0.05):
+def equivalence_oneway(data, equiv_margin, groups=None, use_var="unequal",
+                       welch_correction=True, trim_frac=0, margin_type="f2"):
+    """equivalence test for oneway anova (Wellek's Anova)
+    """
+
+    # use anova to compute summary statistics and f-statistic
+    res0 = anova_oneway(data, groups=groups, use_var=use_var,
+                        welch_correction=welch_correction,
+                        trim_frac=trim_frac)
+    f_stat = res0.statistic
+    res = equivalence_oneway_generic(f_stat, res0.n_groups, res0.nobs_t,
+                                     equiv_margin, res0.df, alpha=0.05,
+                                     margin_type=margin_type)
+
+    return res
+
+
+def power_equivalence_oneway0(f, n_groups, nobs, eps, df, alpha=0.05):
     """power for oneway equivalence test
 
     This is incomplete and currently only returns post-hoc, empirical power.
 
     Warning: eps is currently defined as in Wellek, but will change to
-    signal to noise ration (Cohen's f family)
+    signal to noise ratio (Cohen's f family)
 
     draft version, need specification of alternative
     """
 
-    res = oneway_equivalence_generic(f, n_groups, nobs, eps, df, alpha=0.05)
+    res = equivalence_oneway_generic(f, n_groups, nobs, eps, df, alpha=0.05)
     # at effect size at alternative
     # fn, pvn, dfn = oneway_equivalence_generic(f, n_groups, nobs, eps, df,
     #                                          alpha=0.05)
@@ -523,3 +553,86 @@ def power_oneway_equivalence(f, n_groups, nobs, eps, df, alpha=0.05):
     pow_ = stats.ncf.cdf(res.crit_f, df[0], df[1], nobs_mean * esn)
 
     return pow_
+
+
+def power_equivalence_oneway(f2_alt, equiv_margin, nobs_t, n_groups=None,
+                             df=None, alpha=0.05):
+    # one of n_groups or df has to be specified
+    if df is None:
+        df = (n_groups - 1, nobs_t - n_groups)
+
+    # fix for scipy, ncf does not allow nc == 0, fixed in scipy master
+    if f2_alt == 0:
+        f2_alt = 1e-13
+    # effect size, critical value at margin
+    f2_null = equiv_margin
+    crit_f_margin = stats.ncf.ppf(alpha, df[0], df[1], nobs_t * f2_null)
+    pwr_alt = stats.ncf.cdf(crit_f_margin, df[0], df[1],  nobs_t * f2_alt)
+    return pwr_alt
+
+
+def simulate_power_equivalence_oneway(means, nobs, equiv_margin, vars_=None,
+                                      k_mc=1000, trim_frac=0,
+                                      options_var=None, margin_type="f2"
+                                      ):  # , anova_options=None):  #TODO
+    """Simulate Power for oneway equivalence test (Wellek Anova)
+
+    This function is experimental and written to evaluate asymptotic power
+    function. This function will change without backwards compatibility
+    constraints. The only part that is stable is `pvalue` attribute in results.
+
+    Effect size for equivalence marging
+
+    """
+    if options_var is None:
+        options_var = ["unequal", "equal", "bf"]
+    if vars_ is not None:
+        stds = np.sqrt(vars_)
+    else:
+        stds = np.ones(len(means))
+
+    nobs_mean = nobs.mean()
+    n_groups = len(nobs)
+    res_mc = []
+    f_mc = []
+    reject_mc = []
+    other_mc = []
+    for _ in range(k_mc):
+        y0, y1, y2, y3 = [m + std * np.random.randn(n)
+                          for (n, m, std) in zip(nobs, means, stds)]
+
+        res_i = []
+        f_i = []
+        reject_i = []
+        other_i = []
+        for uv in options_var:
+            # for welch in options_welch:
+            # res1 = sma.anova_generic(means, vars_, nobs, use_var=uv,
+            #                          welch_correction=welch)
+            res0 = anova_oneway([y0, y1, y2, y3], use_var=uv,
+                                trim_frac=trim_frac)
+            f_stat = res0.statistic
+            res1 = equivalence_oneway_generic(f_stat, n_groups, nobs.sum(),
+                                              equiv_margin, res0.df,
+                                              alpha=0.05,
+                                              margin_type=margin_type)
+            res_i.append(res1.pvalue)
+            es_wellek = f_stat * (n_groups - 1) / nobs_mean
+            f_i.append(es_wellek)
+            reject_i.append(res1.reject)
+            other_i.extend([res1.crit_f, res1.crit_es, res1.power_zero])
+        res_mc.append(res_i)
+        f_mc.append(f_i)
+        reject_mc.append(reject_i)
+        other_mc.append(other_i)
+
+    f_mc = np.asarray(f_mc)
+    other_mc = np.asarray(other_mc)
+    res_mc = np.asarray(res_mc)
+    reject_mc = np.asarray(reject_mc)
+    res = Holder(f_stat=f_mc,
+                 other=other_mc,
+                 pvalue=res_mc,
+                 reject=reject_mc
+                 )
+    return res
