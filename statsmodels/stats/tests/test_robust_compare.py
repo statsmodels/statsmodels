@@ -21,15 +21,16 @@ from statsmodels.tools.testing import Holder
 # TODO: scipy trim1 is not compatible anymore with my old unit tests
 from scipy.stats import trim1
 
-# taken from scipy and adjusted
+
 class Test_Trim(object):
     # test trim functions
+    # taken from scipy and adjusted
     def t_est_trim1(self):
         a = np.arange(11)
         assert_equal(trim1(a, 0.1), np.arange(10))
         assert_equal(trim1(a, 0.2), np.arange(9))
-        assert_equal(trim1(a, 0.2, tail='left'), np.arange(2,11))
-        assert_equal(trim1(a, 3/11., tail='left'), np.arange(3,11))
+        assert_equal(trim1(a, 0.2, tail='left'), np.arange(2, 11))
+        assert_equal(trim1(a, 3/11., tail='left'), np.arange(3, 11))
 
     def test_trimboth(self):
         a = np.arange(11)
@@ -155,37 +156,37 @@ class TestTrimmedRAnova(object):
                                 )
 
         # > yt = yuen(y ~ g, df3[1:29, ], tr=1/13)  # WRS2
-        cls.res_2s = Holder(test = 0.161970203096559,
-                            conf_int = np.array([-116.437383793431,
-                                                 99.9568643129114]),
-                            p_value = 0.873436269777141,
-                            df = 15.3931262881751,
-                            diff = -8.24025974025983,
-                            effsize = 0.0573842557922749,
+        cls.res_2s = Holder(test=0.161970203096559,
+                            conf_int=np.array([-116.437383793431,
+                                               99.9568643129114]),
+                            p_value=0.873436269777141,
+                            df=15.3931262881751,
+                            diff=-8.24025974025983,
+                            effsize=0.0573842557922749,
                             )
 
         # from library onewaytests
         # > bft = bf.test(y ~ g, df3)
-        cls.res_bfm = Holder(statistic = 7.10900606421182,
-                             parameter = np.array([2, 31.4207256105052]),
-                             p_value = 0.00283841965791224,
-                             alpha = 0.05,
-                             method = 'Brown-Forsythe Test'
+        cls.res_bfm = Holder(statistic=7.10900606421182,
+                             parameter=np.array([2, 31.4207256105052]),
+                             p_value=0.00283841965791224,
+                             alpha=0.05,
+                             method='Brown-Forsythe Test'
                              )
 
         # > oww = oneway.test(y ~ g, df3, var.equal = FALSE)
-        cls.res_wa = Holder(statistic = 8.02355212103924,
-                            parameter = np.array([2, 24.272320628139]),
-                            p_value = 0.00211423625518082,
-                            method = 'One-way analysis of means '
-                                     '(not assuming equal variances)'
+        cls.res_wa = Holder(statistic=8.02355212103924,
+                            parameter=np.array([2, 24.272320628139]),
+                            p_value=0.00211423625518082,
+                            method=('One-way analysis of means '
+                                    '(not assuming equal variances)')
                             )
 
         # > ow = oneway.test(y ~ g, df3, var.equal = TRUE)
-        cls.res_fa = Holder(statistic = 7.47403193349076,
-                            parameter = np.array([2, 40]),
-                            p_value = 0.00174643304119871,
-                            method = 'One-way analysis of means'
+        cls.res_fa = Holder(statistic=7.47403193349076,
+                            parameter=np.array([2, 40]),
+                            p_value=0.00174643304119871,
+                            method='One-way analysis of means'
                             )
 
     def test_oneway(self):

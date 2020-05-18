@@ -10,9 +10,10 @@ License: BSD-3
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 
-from statsmodels.stats.oneway import (confint_effectsize_oneway,
-    confint_noncentrality, effectsize_oneway, anova_generic,
-    oneway_equivalence_generic, power_oneway_equivalence)
+from statsmodels.stats.oneway import (
+    confint_effectsize_oneway, confint_noncentrality, effectsize_oneway,
+    anova_generic, equivalence_oneway, equivalence_oneway_generic,
+    power_equivalence_oneway)
 
 
 def test_oneway_effectsize():
@@ -22,7 +23,8 @@ def test_oneway_effectsize():
     df2 = 76
     nobs = 80
 
-    ci = confint_noncentrality(F, df1, df2, alpha=0.05, alternative="two-sided")
+    ci = confint_noncentrality(F, df1, df2, alpha=0.05,
+                               alternative="two-sided")
 
     ci_es = confint_effectsize_oneway(F, df1, df2, alpha=0.05)
     ci_steiger = ci_es.ci_f * np.sqrt(4 / 3)
@@ -94,7 +96,7 @@ class TestOnewayEquivalenc(object):
         nobs_mean = np.mean(nobs)
         means = np.asarray([yi.mean() for yi in arrs_w])
         stds = np.asarray([yi.std(ddof=1) for yi in arrs_w])
-        cls.arrs = arrs_w
+        cls.data = arrs_w  # TODO use `data`
         cls.means = means
         cls.nobs = nobs
         cls.stds = stds
@@ -111,13 +113,18 @@ class TestOnewayEquivalenc(object):
         eps = 0.5
         res0 = anova_generic(means, stds**2, nobs, use_var="equal")
         f = res0.statistic
-        res = oneway_equivalence_generic(f, n_groups, nobs.sum(), eps,
+        res = equivalence_oneway_generic(f, n_groups, nobs.sum(), eps,
                                          res0.df, alpha=0.05)
         assert_allclose(res.pvalue, 0.0083, atol=0.001)
         assert_equal(res.df, [3, 46])
 
         # the agreement for f-stat looks too low
         assert_allclose(f, 0.0926, atol=0.0006)
+
+        res = equivalence_oneway(self.data, eps, use_var="equal",
+                                 margin_type="wellek")
+        assert_allclose(res.pvalue, 0.0083, atol=0.001)
+        assert_equal(res.df, [3, 46])
 
     def test_equivalence_welch(self):
         # reference numbers from Jan and Shieh 2019, p. 6
@@ -130,14 +137,21 @@ class TestOnewayEquivalenc(object):
         res0 = anova_generic(means, stds**2, nobs, use_var="unequal",
                              welch_correction=False)
         f = res0.statistic
-        res = oneway_equivalence_generic(f, n_groups, nobs.sum(), eps,
+        res = equivalence_oneway_generic(f, n_groups, nobs.sum(), eps,
                                          res0.df, alpha=0.05)
         assert_allclose(res.pvalue, 0.0110, atol=0.001)
         assert_allclose(res.df, [3.0, 22.6536], atol=0.0006)
 
-        # the agreement for Welch f-stat looks too low
+        # the agreement for Welch f-stat looks too low, welch_correction=False
         assert_allclose(f, 0.1102, atol=0.007)
 
+        res = equivalence_oneway(self.data, eps, use_var="unequal",
+                                 margin_type="wellek")
+        assert_allclose(res.pvalue, 0.0110, atol=0.001)
+        assert_allclose(res.df, [3.0, 22.6536], atol=0.0006)
+        assert_allclose(res.f_stat, 0.1102, atol=1e-4)  # 0.007)
+
         # check post-hoc power, JS p. 6
-        pow_ = power_oneway_equivalence(f, n_groups, nobs, eps, res0.df)
+        pow_ = power_equivalence_oneway(f, n_groups, nobs, eps, res0.df,
+                                        margin_type="wellek")
         assert_allclose(pow_, 0.1552, atol=0.007)
