@@ -341,8 +341,11 @@ def acovf(x, unbiased=False, demean=True, fft=None, missing="none", nlag=None):
         the NaNs are to be treated. "none" performs no checks. "raise" raises
         an exception if NaN values are found. "drop" removes the missing
         observations and then estimates the autocovariances treating the
-        non-missing as contiguous. "conservative" replaces missing with
-        zeros.
+        non-missing as contiguous. "conservative" computes the autocovarince
+        using nan-ops so that nans are removed when computing the mean
+        and cross-products that are used to estimate the autocovariance.
+        When using "conservative", n is set to the number of non-missing
+        observations.
     nlag : {int, None}, default None
         Limit the number of autocovariances returned.  Size of returned
         array is nlag + 1.  Setting nlag when fft is False uses a simple,
@@ -527,8 +530,11 @@ def acf(x, unbiased=False, nlags=None, qstat=False, fft=None, alpha=None,
         the NaNs are to be treated. "none" performs no checks. "raise" raises
         an exception if NaN values are found. "drop" removes the missing
         observations and then estimates the autocovariances treating the
-        non-missing as contiguous. "conservative" replaces missing with
-        zeros.
+        non-missing as contiguous. "conservative" computes the autocovarince
+        using nan-ops so that nans are removed when computing the mean
+        and cross-products that are used to estimate the autocovariance.
+        When using "conservative", n is set to the number of non-missing
+        observations.
 
     Returns
     -------
