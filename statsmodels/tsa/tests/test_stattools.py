@@ -1032,3 +1032,19 @@ class TestZivotAndrews(SetupZivotAndrews):
         res = zivot_andrews(mdl, regression='c', autolag='t-stat')
         assert_allclose([res[0], res[1], res[3], res[4]],
                         [-3.48223, 0.69111, 25, 7071], rtol=1e-3)
+
+
+def test_acf_conservate_nanops(reset_randomstate):
+    # GH 6729
+    e = np.random.standard_normal(100)
+    for i in range(1, e.shape[0]):
+        e[i] += 0.9 * e[i-1]
+    e[::7] = np.nan
+    result = acf(e, missing="conservative", nlags=10)
+    resid = e - np.nanmean(e)
+    expected = np.ones(11)
+    nobs = e.shape[0]
+    gamma0 = np.nansum(resid * resid)
+    for i in range(1, 10+1):
+        expected[i] = np.nansum(resid[i:] * resid[:nobs-i]) / gamma0
+    assert_allclose(result, expected, rtol=1e-4, atol=1e-4)
