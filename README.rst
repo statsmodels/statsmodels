@@ -148,7 +148,7 @@ Contributions in any form are welcome, including:
 * New features to existing models
 * New models
 
-https://statsmodels.github.io/dev/test_notes.html
+https://www.statsmodels.org/stable/dev/test_notes
 
 for instructions on installing statsmodels in *editable* mode.
 
