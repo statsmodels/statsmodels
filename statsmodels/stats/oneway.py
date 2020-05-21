@@ -48,7 +48,7 @@ def effectsize_oneway(means, vars_, nobs, use_var="unequal", ddof_between=0):
 
     Returns
     -------
-    f : float
+    f2 : float
         Effect size corresponding to squared Cohen's f, which is also equal
         to the noncentrality divided by total number of observations.
         In contrast to other functions, this value is not squared.
@@ -176,7 +176,7 @@ def effectsize_oneway(means, vars_, nobs, use_var="unequal", ddof_between=0):
                            2 * (nobs / nobs_t * vars_**2).sum())
         f2 *= df_num / df_num2
 
-    return np.sqrt(f2)
+    return f2
 
 
 def convert_effectsize_fsqu(f2=None, eta2=None):
@@ -228,6 +228,27 @@ def _fstat2effectsize(f_stat, df1, df2):
     eps2 = (f2 - df1 / df2) / (f2 + 1)  # rewrite
     return Holder(f2=f2, eta2=eta2, omega2=omega2, eps2=eps2, eps2_=eps2_,
                   omega2_=omega2_)
+
+
+# conversion functions for Wellek's equivalence effect size
+# these are mainly to compare with literature
+
+def wellek_to_f2(eps, n_groups):
+    """Wellek's effect size (sqrt) to Cohen's f-squared"""
+    f2 = 1 / n_groups * eps**2
+    return f2
+
+
+def f2_to_wellek(f2, n_groups):
+    """Wellek's effect size (sqrt) to Cohen's f-squared"""
+    eps = np.sqrt(n_groups * f2)
+    return eps
+
+
+def fstat_to_wellek(f_stat, n_groups, nobs_mean):
+    """F statistic to wellek's effect size eps squared"""
+    es = f_stat * (n_groups - 1) / nobs_mean
+    return es
 
 
 def confint_noncentrality(f_stat, df1, df2, alpha=0.05,
@@ -435,8 +456,8 @@ def anova_oneway(data, groups=None, use_var="unequal", welch_correction=True,
     return res
 
 
-def equivalence_oneway_generic(f_stat, n_groups, nobs, eps, df, alpha=0.05,
-                               margin_type="wellek"):
+def equivalence_oneway_generic(f_stat, n_groups, nobs, equiv_margin, df,
+                               alpha=0.05, margin_type="f2"):
     """Equivalence test for oneway anova (Wellek and extensions)
 
     Warning: eps is currently defined as in Wellek, but will change to
@@ -464,6 +485,13 @@ def equivalence_oneway_generic(f_stat, n_groups, nobs, eps, df, alpha=0.05,
     Alternative definitions for the oneway case are based on maximum difference
     between pairs of means or similar pairwise distances.
 
+    The equivalence margin is used for the noncentrality parameter in the
+    noncentral F distribution for the test statistic. In samples with unequal
+    variances estimated using Welch or Brown-Forsythe Anova, the f-statistic
+    depends on the unequal variances and corrections to the test statistic.
+    This means that the equivalence margins are not fully comparable across
+    methods for treating unequal variances.
+
     References
     ----------
     Wellek book
@@ -479,36 +507,41 @@ def equivalence_oneway_generic(f_stat, n_groups, nobs, eps, df, alpha=0.05,
     https://doi.org/10.1080/19466315.2019.1654915.
 
     """
-    nobs_mean = nobs.sum() / n_groups
-
-    es = f_stat * (n_groups - 1) / nobs_mean
+    nobs_t = nobs.sum()
+    nobs_mean = nobs_t / n_groups
 
     if margin_type == "wellek":
-        nc_null = nobs_mean * eps**2
-        type_effectsize="Welleks psi_squared"
-    elif margin_type in ["f2", "fqu", "fsquared"]:
-        nc_null = nobs.sum() * eps
-        type_effectsize="Cohen's f_squared"
+        nc_null = nobs_mean * equiv_margin**2
+        es = f_stat * (n_groups - 1) / nobs_mean
+        type_effectsize = "Wellek's psi_squared"
+    elif margin_type in ["f2", "fsqu", "fsquared"]:
+        nc_null = nobs_t * equiv_margin
+        es = f_stat / nobs_t
+        type_effectsize = "Cohen's f_squared"
     else:
-        raise ValueError('`margin_type` should be "f2" or "wellek" ')
+        raise ValueError('`margin_type` should be "f2" or "wellek"')
     crit_f = stats.ncf.ppf(alpha, df[0], df[1], nc_null)
-    crit_es = (n_groups - 1) / nobs_mean * crit_f
+
+    if margin_type == "wellek":
+        # TODO: do we need a sqrt
+        crit_es = crit_f * (n_groups - 1) / nobs_mean
+    elif margin_type in ["f2", "fsqu", "fsquared"]:
+        crit_es = crit_f / nobs_t
+
     reject = (es < crit_es)
 
     pv = stats.ncf.cdf(f_stat, df[0], df[1], nc_null)
     pwr = stats.ncf.cdf(crit_f, df[0], df[1], 1e-13)  # scipy, cannot be 0
-    res = HolderTuple(statistic=es,   # this should be f_stat ?
+    res = HolderTuple(statistic=f_stat,
                       pvalue=pv,
-                      es=es,  # match es type to margin_type
+                      effectsize=es,  # match es type to margin_type
                       crit_f=crit_f,
                       crit_es=crit_es,
                       reject=reject,
                       power_zero=pwr,
                       df=df,
                       f_stat=f_stat,
-                      # es is currently hard coded,
-                      #     not correct for Welch anova `f`
-                      type_effectsize="Welleks psi_squared"
+                      type_effectsize=type_effectsize
                       )
     return res
 
@@ -541,7 +574,8 @@ def power_equivalence_oneway0(f, n_groups, nobs, eps, df, alpha=0.05):
     draft version, need specification of alternative
     """
 
-    res = equivalence_oneway_generic(f, n_groups, nobs, eps, df, alpha=0.05)
+    res = equivalence_oneway_generic(f, n_groups, nobs, eps, df, alpha=0.05,
+                                     margin_type="wellek")
     # at effect size at alternative
     # fn, pvn, dfn = oneway_equivalence_generic(f, n_groups, nobs, eps, df,
     #                                          alpha=0.05)
@@ -556,16 +590,33 @@ def power_equivalence_oneway0(f, n_groups, nobs, eps, df, alpha=0.05):
 
 
 def power_equivalence_oneway(f2_alt, equiv_margin, nobs_t, n_groups=None,
-                             df=None, alpha=0.05):
+                             df=None, alpha=0.05, margin_type="f2"):
     # one of n_groups or df has to be specified
     if df is None:
+        if n_groups is None:
+            raise ValueError("either df or n_groups has to be provided")
         df = (n_groups - 1, nobs_t - n_groups)
+
+    # esn = fn * (n_groups - 1) / nobs_mean  # Wellek psi
 
     # fix for scipy, ncf does not allow nc == 0, fixed in scipy master
     if f2_alt == 0:
         f2_alt = 1e-13
     # effect size, critical value at margin
-    f2_null = equiv_margin
+    # f2_null = equiv_margin
+    if margin_type in ["f2", "fsqu", "fsquared"]:
+        f2_null = equiv_margin
+    elif margin_type == "wellek":
+        if n_groups is None:
+            raise ValueError("If margin_type is wellek, then n_groups has "
+                             "to be provided")
+        #  f2_null = (n_groups - 1) * n_groups / nobs_t * equiv_margin**2
+        nobs_mean = nobs_t / n_groups
+        f2_null = nobs_mean * equiv_margin**2 / nobs_t
+        f2_alt = nobs_mean * f2_alt**2 / nobs_t
+    else:
+        raise ValueError('`margin_type` should be "f2" or "wellek"')
+
     crit_f_margin = stats.ncf.ppf(alpha, df[0], df[1], nobs_t * f2_null)
     pwr_alt = stats.ncf.cdf(crit_f_margin, df[0], df[1],  nobs_t * f2_alt)
     return pwr_alt
@@ -575,13 +626,13 @@ def simulate_power_equivalence_oneway(means, nobs, equiv_margin, vars_=None,
                                       k_mc=1000, trim_frac=0,
                                       options_var=None, margin_type="f2"
                                       ):  # , anova_options=None):  #TODO
-    """Simulate Power for oneway equivalence test (Wellek Anova)
+    """Simulate Power for oneway equivalence test (Wellek's Anova)
 
     This function is experimental and written to evaluate asymptotic power
     function. This function will change without backwards compatibility
     constraints. The only part that is stable is `pvalue` attribute in results.
 
-    Effect size for equivalence marging
+    Effect size for equivalence margin
 
     """
     if options_var is None:
