@@ -13,7 +13,8 @@ from numpy.testing import assert_allclose, assert_equal
 from statsmodels.stats.oneway import (
     confint_effectsize_oneway, confint_noncentrality, effectsize_oneway,
     anova_generic, equivalence_oneway, equivalence_oneway_generic,
-    power_equivalence_oneway)
+    power_equivalence_oneway, power_equivalence_oneway0,
+    f2_to_wellek, fstat_to_wellek, wellek_to_f2)
 
 
 def test_oneway_effectsize():
@@ -45,6 +46,7 @@ def test_effectsize_power():
     vars_ = 107.4304**2
     nobs = 12
     es = effectsize_oneway(means, vars_, nobs, use_var="equal", ddof_between=0)
+    es = np.sqrt(es)
 
     alpha = 0.05
     power = 0.8
@@ -66,6 +68,7 @@ def test_effectsize_power():
     nobs = np.array([15, 9, 9])
     kwds['nobs'] = nobs
     es = effectsize_oneway(means, vars_, nobs, use_var="equal", ddof_between=0)
+    es = np.sqrt(es)
     kwds['effect_size'] = es
     p = FTestAnovaPower().power(**kwds_)
 
@@ -114,7 +117,8 @@ class TestOnewayEquivalenc(object):
         res0 = anova_generic(means, stds**2, nobs, use_var="equal")
         f = res0.statistic
         res = equivalence_oneway_generic(f, n_groups, nobs.sum(), eps,
-                                         res0.df, alpha=0.05)
+                                         res0.df, alpha=0.05,
+                                         margin_type="wellek")
         assert_allclose(res.pvalue, 0.0083, atol=0.001)
         assert_equal(res.df, [3, 46])
 
@@ -132,26 +136,50 @@ class TestOnewayEquivalenc(object):
         nobs = self.nobs
         stds = self.stds
         n_groups = self.n_groups
+        vars_ = stds**2
 
         eps = 0.5
-        res0 = anova_generic(means, stds**2, nobs, use_var="unequal",
+        res0 = anova_generic(means, vars_, nobs, use_var="unequal",
                              welch_correction=False)
-        f = res0.statistic
-        res = equivalence_oneway_generic(f, n_groups, nobs.sum(), eps,
-                                         res0.df, alpha=0.05)
+        f_stat = res0.statistic
+        res = equivalence_oneway_generic(f_stat, n_groups, nobs.sum(), eps,
+                                         res0.df, alpha=0.05,
+                                         margin_type="wellek")
         assert_allclose(res.pvalue, 0.0110, atol=0.001)
         assert_allclose(res.df, [3.0, 22.6536], atol=0.0006)
 
-        # the agreement for Welch f-stat looks too low, welch_correction=False
-        assert_allclose(f, 0.1102, atol=0.007)
+        # agreement for Welch f-stat looks too low b/c welch_correction=False
+        assert_allclose(f_stat, 0.1102, atol=0.007)
 
         res = equivalence_oneway(self.data, eps, use_var="unequal",
                                  margin_type="wellek")
-        assert_allclose(res.pvalue, 0.0110, atol=0.001)
+        assert_allclose(res.pvalue, 0.0110, atol=1e-4)
         assert_allclose(res.df, [3.0, 22.6536], atol=0.0006)
         assert_allclose(res.f_stat, 0.1102, atol=1e-4)  # 0.007)
 
         # check post-hoc power, JS p. 6
-        pow_ = power_equivalence_oneway(f, n_groups, nobs, eps, res0.df,
+        pow_ = power_equivalence_oneway0(f_stat, n_groups, nobs, eps, res0.df)
+        assert_allclose(pow_, 0.1552, atol=0.007)
+
+        pow_ = power_equivalence_oneway(eps, eps, nobs.sum(),
+                                        n_groups=n_groups, df=None, alpha=0.05,
                                         margin_type="wellek")
+        assert_allclose(pow_, 0.05, atol=1e-13)
+
+        nobs_t = nobs.sum()
+        es = effectsize_oneway(means, vars_, nobs, use_var="unequal")
+        es = np.sqrt(es)
+        es_w0 = f2_to_wellek(es**2, n_groups)
+        es_w = np.sqrt(fstat_to_wellek(f_stat, n_groups, nobs_t / n_groups))
+
+        pow_ = power_equivalence_oneway(es_w, eps, nobs_t,
+                                        n_groups=n_groups, df=None, alpha=0.05,
+                                        margin_type="wellek")
+        assert_allclose(pow_, 0.1552, atol=0.007)
+        assert_allclose(es_w0, es_w, atol=0.007)
+
+        margin = wellek_to_f2(eps, n_groups)
+        pow_ = power_equivalence_oneway(es**2, margin, nobs_t,
+                                        n_groups=n_groups, df=None, alpha=0.05,
+                                        margin_type="f2")
         assert_allclose(pow_, 0.1552, atol=0.007)
