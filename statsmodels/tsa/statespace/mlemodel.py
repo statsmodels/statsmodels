@@ -3768,7 +3768,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         # time-invariant models.
         time_varying = not (previous.filter_results.time_invariant or
                             updated.filter_results.time_invariant)
-        if time_varying and end > updated.nobs:
+        if time_varying and end >= updated.nobs:
             # If we the given `comparison` was a dataset and either `exog` or
             # `kwargs` was set, then we assume that we cannot create an updated
             # time-varying model (because then we can't tell if `kwargs` and
