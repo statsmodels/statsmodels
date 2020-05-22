@@ -532,6 +532,8 @@ class NewsResults(object):
             impacts.index = impacts.index.droplevel(1)
             impacts = impacts.applymap(
                 lambda num: '' if pd.isnull(num) else float_format % num)
+            impacts = impacts.reset_index()
+            impacts.iloc[:, 0] = impacts.iloc[:, 0].map(str)
         else:
             impacts = impacts.reset_index()
             impacts.iloc[:, :2] = impacts.iloc[:, :2].applymap(str)
@@ -815,7 +817,7 @@ class NewsResults(object):
             - `observed (prev)` : the observed value prior to the revision
             - `revised` : the new value after the revision
         """
-        data = self.data_revisions.reset_index()
+        data = self.data_revisions.sort_index().reset_index()
         data[['revision date', 'revised variable']] = (
             data[['revision date', 'revised variable']].applymap(str))
         data.iloc[:, 2:] = data.iloc[:, 2:].applymap(
@@ -837,9 +839,9 @@ class NewsResults(object):
 
         return revisions_table
 
-    def summary_updates(self, sparsify=True):
+    def summary_news(self, sparsify=True):
         """
-        Create summary table showing new datapoints since previous results
+        Create summary table showing news from new data since previous results
 
         Parameters
         ----------
@@ -865,7 +867,9 @@ class NewsResults(object):
         --------
         data_updates
         """
-        data = self.data_updates.reset_index()
+        data = pd.merge(
+            self.data_updates, self.news, left_index=True,
+            right_index=True).sort_index().reset_index()
         data[['update date', 'updated variable']] = (
             data[['update date', 'updated variable']].applymap(str))
         data.iloc[:, 2:] = data.iloc[:, 2:].applymap(
@@ -880,7 +884,7 @@ class NewsResults(object):
         params_header = data.columns.tolist()
         params_stubs = None
 
-        title = (f'New entries in dataset:')
+        title = (f'News from updated observations:')
         updates_table = SimpleTable(
             params_data, params_header, params_stubs,
             txt_fmt=fmt_params, title=title)
@@ -1020,6 +1024,12 @@ class NewsResults(object):
                                 title=title)
         table_ix = 1
 
+        # News table
+        if len(self.updates_iloc) > 0:
+            summary.tables.insert(
+                table_ix, self.summary_news(sparsify=sparsify))
+            table_ix += 1
+
         # Impact table
         summary.tables.insert(table_ix, self.summary_impacts(
             impact_date=impact_date, impacted_variable=impacted_variable,
@@ -1045,11 +1055,6 @@ class NewsResults(object):
         if include_data_updates and len(self.revisions_iloc) > 0:
             summary.tables.insert(
                 table_ix, self.summary_revisions(sparsify=sparsify))
-            table_ix += 1
-
-        if include_data_updates and len(self.updates_iloc) > 0:
-            summary.tables.insert(
-                table_ix, self.summary_updates(sparsify=sparsify))
             table_ix += 1
 
         return summary
