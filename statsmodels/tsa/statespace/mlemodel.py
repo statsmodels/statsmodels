@@ -3669,17 +3669,21 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             nobs_exog = len(exog) if exog is not None else nobs_endog
 
             if nobs_exog > nobs_endog:
-                _, _, _, ix = self._get_prediction_index(start=0,
-                                                         end=nobs_exog)
+                _, _, _, ix = self.model._get_prediction_index(
+                    start=0, end=nobs_exog - 1)
+                # TODO: check that the index of `comparison` matches the model
                 comparison = np.asarray(comparison)
                 if comparison.ndim < 2:
                     comparison = np.atleast_2d(comparison).T
-                if comparison.ndim != 2 or comparison.shape[1] != self.k_endog:
+                if (comparison.ndim != 2 or
+                        comparison.shape[1] != self.model.k_endog):
                     raise ValueError('Invalid shape for `comparison`. Must'
-                                     f' contain {self.k_endog} columns.')
+                                     f' contain {self.model.k_endog} columns.')
                 extra = np.zeros((nobs_exog - nobs_endog,
                                   self.model.k_endog)) * np.nan
-                comparison = np.concatenate([comparison, extra], axis=0)
+                comparison = pd.DataFrame(
+                    np.concatenate([comparison, extra], axis=0), index=ix,
+                    columns=self.model.endog_names)
 
             # Get the results object
             comparison = self.apply(comparison, exog=exog,
