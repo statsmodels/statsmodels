@@ -23,8 +23,8 @@ from statsmodels.tsa.exponential_smoothing.ets import (
 # (seasonal).
 
 # Therefore, a parametrized pytest fixture ``setup_model`` is provided, which
-# returns a constructed model, model parameters from R in the format expected by
-# ETSModel, and a dictionary of reference results. Use like this:
+# returns a constructed model, model parameters from R in the format expected
+# by ETSModel, and a dictionary of reference results. Use like this:
 
 #     def test_<testname>(setup_model):
 #         model, params, results_R = setup_model
@@ -164,10 +164,14 @@ def obtain_R_results(path):
     for damped in results:
         for model in results[damped]:
             for key in ["alpha", "beta", "gamma", "phi", "sigma2"]:
-                results[damped][model][key] = float(results[damped][model][key][0])
+                results[damped][model][key] = float(
+                    results[damped][model][key][0]
+                )
             for key in ["states", "initstate", "residuals", "fitted",
                         "forecast", "simulation"]:
-                results[damped][model][key] = np.asarray(results[damped][model][key])
+                results[damped][model][key] = np.asarray(
+                    results[damped][model][key]
+                )
     return results
 
 
@@ -176,7 +180,11 @@ def ets_austourists_fit_results_R():
     """
     Dictionary of ets fit results obtained with script ``results/fit_ets.R``.
     """
-    path = pathlib.Path(__file__).parent / "results" / "fit_ets_results_seasonal.json"
+    path = (
+        pathlib.Path(__file__).parent
+        / "results"
+        / "fit_ets_results_seasonal.json"
+    )
     return obtain_R_results(path)
 
 
@@ -185,7 +193,11 @@ def ets_oildata_fit_results_R():
     """
     Dictionary of ets fit results obtained with script ``results/fit_ets.R``.
     """
-    path = pathlib.Path(__file__).parent / "results" / "fit_ets_results_nonseasonal.json"
+    path = (
+        pathlib.Path(__file__).parent
+        / "results"
+        / "fit_ets_results_nonseasonal.json"
+    )
     return obtain_R_results(path)
 
 
@@ -225,7 +237,6 @@ def get_states_from_R(results_R, k_states):
     return xhat_R
 
 
-
 ###############################################################################
 # BASIC TEST CASES
 ###############################################################################
@@ -233,7 +244,6 @@ def get_states_from_R(results_R, k_states):
 def test_fit_model_austouritsts(setup_model):
     model, params, results_R = setup_model
     model.fit(disp=False)
-
 
 ###############################################################################
 # TEST OF MODEL EQUATIONS VS R
@@ -254,7 +264,7 @@ def test_smooth_vs_R(setup_model):
 def test_residuals_vs_R(setup_model):
     model, params, results_R = setup_model
 
-    yhat, xhat = model.smooth(params)
+    yhat = model.smooth(params)[0]
 
     residuals = model._residuals(yhat)
     assert_almost_equal(residuals, results_R['residuals'], 2)
@@ -300,22 +310,12 @@ def test_fit_vs_R(setup_model):
     model, params, results_R = setup_model
     fit = model.fit(disp=False)
 
-    # check log likelihood
-    # this does not work, the fits are not that similar
-    # const = - model.nobs/2 * (np.log(2*np.pi/model.nobs) + 1)
-    # loglike_R = results_R['loglik'][0] + const
-    # loglike = fit.llf
-    # assert loglike <= loglike_R + 1e-4
-
-    # test predictions
-    yhat = fit.fittedvalues.values
-    yhat_R = model.smooth(params)[0].values
-
-    # the initial predictions might be off, later they are pretty close
-    if model.trend == 'mul' and model.error == 'mul':
-        # these models do not work very well, unfortunately
-        pytest.skip()
-    assert_allclose(yhat[10:], yhat_R[10:], rtol=0.05)
+    # check log likelihood: we want to have a fit that is better, i.e. a fit
+    # that has a **higher** log-likelihood
+    const = - model.nobs/2 * (np.log(2*np.pi/model.nobs) + 1)
+    loglike_R = results_R['loglik'][0] + const
+    loglike = fit.llf
+    assert loglike >= loglike_R - 1e-4
 
 ###############################################################################
 # TEST OF KEYWORD ARGUMENTS
@@ -352,7 +352,9 @@ def test_initialization_heuristic(oildata):
     yhat_estimated = fit_estimated.fittedvalues.values
     yhat_heuristic = fit_heuristic.fittedvalues.values
 
-    assert_allclose(yhat_estimated[10:], yhat_heuristic[10:], rtol=0.05)
+    # this test is mostly just to see if it works, so we only test whether the
+    # result is not totally off
+    assert_allclose(yhat_estimated[10:], yhat_heuristic[10:], rtol=0.5)
 
 
 @pytest.mark.skip

@@ -55,6 +55,7 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
             if param_name not in self.param_names:
                 raise ValueError('Invalid parameter name passed: "%s".'
                                  % param_name)
+
     @property
     def k_params(self):
         return len(self.param_names)
