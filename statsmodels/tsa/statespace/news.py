@@ -153,7 +153,7 @@ class NewsResults(object):
                                         self.updates_ix['updated variable']])
 
         # E[y^u | post] - E[y^u | previous]
-        self.news = pd.Series(news_results.news, index=ix)
+        self.news = pd.Series(news_results.news, index=ix, name='news')
         # E[y^u | previous]
         self.update_forecasts = pd.Series(
             news_results.update_forecasts, index=ix)
