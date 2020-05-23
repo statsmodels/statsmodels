@@ -10,8 +10,11 @@ License: BSD-3
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 
+import statsmodels.stats.robust_compare as str
+import statsmodels.stats.oneway as sto
 from statsmodels.stats.oneway import (
     confint_effectsize_oneway, confint_noncentrality, effectsize_oneway,
+    anova_oneway,
     anova_generic, equivalence_oneway, equivalence_oneway_generic,
     power_equivalence_oneway, power_equivalence_oneway0,
     f2_to_wellek, fstat_to_wellek, wellek_to_f2)
@@ -183,3 +186,138 @@ class TestOnewayEquivalenc(object):
                                         n_groups=n_groups, df=None, alpha=0.05,
                                         margin_type="f2")
         assert_allclose(pow_, 0.1552, atol=0.007)
+
+
+class TestOnewayScale(object):
+
+    @classmethod
+    def setup_class(cls):
+        yt0 = np.array([102., 320., 0., 107., 198., 200., 4., 20., 110., 128.,
+                       7., 119., 309.])
+
+        yt1 = np.array([0., 1., 228., 81., 87., 119., 79., 181., 43., 12., 90.,
+                       105., 108., 119., 0., 9.])
+        yt2 = np.array([33., 294., 134., 216., 83., 105., 69., 20., 20., 63.,
+                       98., 155., 78., 75.])
+
+        y0 = np.array([452., 874., 554., 447., 356., 754., 558., 574., 664.,
+                       682., 547., 435., 245.])
+        y1 = np.array([546., 547., 774., 465., 459., 665., 467., 365., 589.,
+                       534., 456., 651., 654., 665., 546., 537.])
+        y2 = np.array([785., 458., 886., 536., 669., 857., 821., 772., 732.,
+                       689., 654., 597., 830., 827.])
+
+        n_groups = 3
+        data = [y0, y1, y2]
+        nobs = np.asarray([len(yi) for yi in data])
+        nobs_mean = np.mean(nobs)
+        means = np.asarray([yi.mean() for yi in data])
+        stds = np.asarray([yi.std(ddof=1) for yi in data])
+        cls.data = data
+        cls.data_transformed = [yt0, yt1, yt2]
+        cls.means = means
+        cls.nobs = nobs
+        cls.stds = stds
+        cls.n_groups = n_groups
+        cls.nobs_mean = nobs_mean
+
+    def test_means(self):
+
+        # library onewaystats, BF test for equality of means
+        # st = bf.test(y ~ g, df3)
+        statistic = 7.10900606421182
+        parameter = [2, 31.4207256105052]
+        p_value = 0.00283841965791224
+        # method = 'Brown-Forsythe Test'
+        res = anova_oneway(self.data, use_var="bf")
+
+        # R bf.test uses original BF df_num
+        assert_allclose(res.pvalue2, p_value, rtol=1e-13)
+        assert_allclose(res.statistic, statistic, rtol=1e-13)
+        assert_allclose([res.df_num2, res.df_denom], parameter)
+
+    def test_levene(self):
+        data = self.data
+
+        # lawstat: Test Statistic = 1.0866123063642, p-value = 0.3471072204516
+        statistic = 1.0866123063642
+        p_value = 0.3471072204516
+        res0 = sto.test_scale_oneway(data, method='equal', center='median',
+                                     transform='abs', trim_frac=0.2)
+        assert_allclose(res0.pvalue, p_value, rtol=1e-13)
+        assert_allclose(res0.statistic, statistic, rtol=1e-13)
+
+        res = str.anova_scale(data, method='foneway', center='median',
+                              transform='abs', trim_frac=0.2)
+        assert_allclose(res0.pvalue, res[0][1], rtol=1e-13)
+        assert_allclose(res[0][1], p_value, rtol=1e-13)
+
+        resa = str.anova_oneway(res0.x_transformed)
+        assert_allclose(resa[1], p_value, rtol=1e-13)
+
+        # library(onewaytests)
+        # test uses mean as center
+        # > st = homog.test(y ~ g, df3)
+        statistic = 1.07894485177512
+        parameter = [2, 40]  # df
+        p_value = 0.349641166869223
+        # method = "Levene's Homogeneity Test"
+        res0 = sto.test_scale_oneway(data, method='equal', center='mean',
+                                     transform='abs', trim_frac=0.2)
+        assert_allclose(res0.pvalue, p_value, rtol=1e-13)
+        assert_allclose(res0.statistic, statistic, rtol=1e-13)
+        assert_equal(res0.df, parameter)
+
+        # > st = homog.test(y ~ g, df3, method = "Bartlett")
+        statistic = 3.01982414477323
+        parameter = 2
+        p_value = 0.220929402900495
+        # method = "Bartlett's Homogeneity Test"
+        # Bartlett is in scipy.stats
+        from scipy import stats
+        stat, pv = stats.bartlett(*data)
+        assert_allclose(pv, p_value, rtol=1e-13)
+        assert_allclose(stat, statistic, rtol=1e-13)
+
+    def test_options(self):
+        # regression tests for options,
+        # many might not be implemented in other packages
+        data = self.data
+
+        # regression numbers from initial run
+        statistic, p_value = 1.0173464626246675, 0.3763806150460239
+        df = (2.0, 24.40374758005409)
+        res = sto.test_scale_oneway(data, method='unequal', center='median',
+                                    transform='abs', trim_frac=0.2)
+        assert_allclose(res.pvalue, p_value, rtol=1e-13)
+        assert_allclose(res.statistic, statistic, rtol=1e-13)
+        assert_equal(res.df, df)
+
+        statistic, p_value = 1.0329722145270606, 0.3622778213868562
+        df = (1.83153791573948, 30.6733640949525)
+        p_value2 = 0.3679999679787619
+        df2 = (2, 30.6733640949525)
+        res = sto.test_scale_oneway(data, method='bf', center='median',
+                                    transform='abs', trim_frac=0.2)
+        assert_allclose(res.pvalue, p_value, rtol=1e-13)
+        assert_allclose(res.statistic, statistic, rtol=1e-13)
+        assert_equal(res.df, df)
+        assert_allclose(res.pvalue2, p_value2, rtol=1e-13)
+        assert_equal(res.df2, df2)
+
+        statistic, p_value = 1.7252431333701745, 0.19112038168209514
+        df = (2.0, 40.0)
+        res = sto.test_scale_oneway(data, method='equal', center='mean',
+                                    transform='square', trim_frac=0.2)
+        assert_allclose(res.pvalue, p_value, rtol=1e-13)
+        assert_allclose(res.statistic, statistic, rtol=1e-13)
+        assert_equal(res.df, df)
+
+        # compare no transform with standard anova
+        res = sto.test_scale_oneway(data, method='unequal', center='no',
+                                    transform='identity', trim_frac=0.2)
+        res2 = anova_oneway(self.data, use_var="unequal")
+
+        assert_allclose(res.pvalue, res2.pvalue, rtol=1e-13)
+        assert_allclose(res.statistic, res2.statistic, rtol=1e-13)
+        assert_equal(res.df, res2.df)

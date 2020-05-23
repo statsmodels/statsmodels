@@ -11,7 +11,7 @@ import numpy as np
 from scipy import stats
 from scipy.special import ncfdtrinc
 
-from statsmodels.stats.robust_compare import TrimmedMean
+from statsmodels.stats.robust_compare import TrimmedMean, scale_transform
 from statsmodels.tools.testing import Holder
 from statsmodels.stats.base import HolderTuple
 
@@ -686,4 +686,19 @@ def simulate_power_equivalence_oneway(means, nobs, equiv_margin, vars_=None,
                  pvalue=res_mc,
                  reject=reject_mc
                  )
+    return res
+
+
+def test_scale_oneway(data, method='bfm', center='median', transform='abs',
+                      trim_frac=0.):
+    """Oneway Anova test for equal variance or dispersion
+
+    """
+    data = map(np.asarray, data)
+    xxd = [scale_transform(x, center=center, transform=transform,
+                           trim_frac=trim_frac) for x in data]
+
+    res = anova_oneway(xxd, groups=None, use_var=method,
+                       welch_correction=True, trim_frac=0)
+    res.x_transformed = xxd
     return res
