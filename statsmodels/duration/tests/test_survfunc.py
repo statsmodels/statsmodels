@@ -148,6 +148,7 @@ def test_survdiff():
     # used for non G-rho family tests but does not seem to support
     # stratification)
 
+    full_df = bmt.copy()
     df = bmt[bmt.Group != "ALL"].copy()
 
     # Not stratified
@@ -164,6 +165,11 @@ def test_survdiff():
                        fh_p=1)
     assert_allclose(stat, 14.84500, atol=1e-4, rtol=1e-4)
 
+    # Not stratified, >2 groups
+    stat, p = survdiff(full_df["T"], full_df.Status, full_df.Group,
+                       weight_type="fh", fh_p=1)
+    assert_allclose(stat, 15.67247, atol=1e-4, rtol=1e-4)
+
     # 5 strata
     strata = np.arange(df.shape[0]) % 5
     df["strata"] = strata
@@ -175,6 +181,13 @@ def test_survdiff():
     stat, p = survdiff(df["T"], df.Status, df.Group, strata=df.strata,
                        weight_type="fh", fh_p=1)
     assert_allclose(stat, 12.73565, atol=1e-4, rtol=1e-4)
+
+    # 5 strata, >2 groups
+    full_strata = np.arange(full_df.shape[0]) % 5
+    full_df["strata"] = full_strata
+    stat, p = survdiff(full_df["T"], full_df.Status, full_df.Group,
+                       strata=full_df.strata, weight_type="fh", fh_p=0.5)
+    assert_allclose(stat, 13.56793, atol=1e-4, rtol=1e-4)
 
     # 8 strata
     df["strata"] = np.arange(df.shape[0]) % 8

@@ -602,15 +602,11 @@ def survdiff(time, status, group, weight_type=None, strata=None,
     pvalue : The p-value for the chi^2 test
     """
 
-    # TODO: extend to handle more than two groups
-
     time = np.asarray(time)
     status = np.asarray(status)
     group = np.asarray(group)
 
     gr = np.unique(group)
-    if len(gr) != 2:
-        raise ValueError("logrank only supports two groups")
 
     if strata is None:
         obs, var = _survdiff(time, status, group, weight_type, gr,
@@ -627,11 +623,8 @@ def survdiff(time, status, group, weight_type=None, strata=None,
             obs += obs1
             var += var1
 
-    zstat = obs / np.sqrt(var)
-
-    # The chi^2 test statistic and p-value.
-    chisq = zstat**2
-    pvalue = 1 - chi2.cdf(chisq, 1)
+    chisq = obs.dot(np.linalg.solve(var, obs))  # (O - E).T * V^(-1) * (O - E)
+    pvalue = 1 - chi2.cdf(chisq, len(gr)-1)
 
     return chisq, pvalue
 
@@ -639,6 +632,8 @@ def survdiff(time, status, group, weight_type=None, strata=None,
 def _survdiff(time, status, group, weight_type, gr, entry=None,
               **kwargs):
     # logrank test for one stratum
+    # calculations based on https://web.stanford.edu/~lutian/coursepdf/unit6.pdf
+    # formula for variance better to take from https://web.stanford.edu/~lutian/coursepdf/survweek3.pdf
 
     # Get the unique times.
     if entry is None:
@@ -649,9 +644,9 @@ def _survdiff(time, status, group, weight_type, gr, entry=None,
         rtimes = rtimes[0:len(time)]
 
     # Split entry times by group if present (should use pandas groupby)
-    tse = [(gr[0], None), (gr[1], None)]
+    tse = [(gr_i, None) for gr_i in gr]
     if entry is not None:
-        for k in 0, 1:
+        for k, _ in enumerate(gr):
             ii = (group == gr[k])
             entry1 = entry[ii]
             tse[k] = (gr[k], entry1)
@@ -681,15 +676,7 @@ def _survdiff(time, status, group, weight_type, gr, entry=None,
 
     obs = sum(obsv)
     nrisk_tot = sum(nrisk)
-
-    # The variance of event counts in the first group.
-    r = nrisk[0] / np.clip(nrisk_tot, 1e-10, np.inf)
-    denom = nrisk_tot - 1
-    denom = np.clip(denom, 1e-10, np.inf)
-    var = obs * r * (1 - r) * (nrisk_tot - obs) / denom
-
-    # The expected number of events in the first group.
-    exp1 = obs * r
+    ix = np.flatnonzero(nrisk_tot > 1)
 
     weights = None
     if weight_type is not None:
@@ -715,17 +702,38 @@ def _survdiff(time, status, group, weight_type, gr, entry=None,
         else:
             raise ValueError("weight_type not implemented")
 
-    # The Z-scale test statistic (compare to normal reference
-    # distribution).
-    ix = np.flatnonzero(nrisk_tot > 1)
-    if weights is None:
-        obs = np.sum(obsv[0][ix] - exp1[ix])
-        var = np.sum(var[ix])
-    else:
-        obs = np.dot(weights[ix], obsv[0][ix] - exp1[ix])
-        var = np.dot(weights[ix]**2, var[ix])
+    dfs = len(gr) - 1
+    r = np.vstack(nrisk) / np.clip(nrisk_tot, 1e-10, np.inf)[None, :]  # each line is timeseries of r's. line per group
 
-    return obs, var
+    # The variance of event counts in each group.
+    groups_oe = []
+    groups_var = []
+
+    var_denom = nrisk_tot - 1
+    var_denom = np.clip(var_denom, 1e-10, np.inf)
+
+    # use the first group as a reference
+    for g in range(1, dfs+1):
+        # Difference between observed and  expected number of events in the group #g
+        oe = obsv[g] - r[g]*obs
+
+        # build one row of the dfs x dfs variance matrix
+        var_tensor_part = r[1:, :].T * (np.eye(1, dfs, g-1).ravel() - r[g, :, None])  # r*(1 - r) in multidim
+        var_scalar_part = obs * (nrisk_tot - obs) / var_denom
+        var = var_tensor_part * var_scalar_part[:, None]
+
+        if weights is not None:
+            oe = weights * oe
+            var = (weights**2)[:, None] * var
+
+        # sum over times and store
+        groups_oe.append(oe[ix].sum())
+        groups_var.append(var[ix].sum(axis=0))
+
+    obs_vec = np.hstack(groups_oe)
+    var_mat = np.vstack(groups_var)
+
+    return obs_vec, var_mat
 
 
 def plot_survfunc(survfuncs, ax=None):
