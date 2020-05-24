@@ -166,7 +166,7 @@ Lindstrom and Bates.
 The following two documents are written more from the perspective of
 users:
 
-* http://lme4.r-forge.r-project.org/lMMwR/lrgprt.pdf
+* https://r-forge.r-project.org/scm/viewvc.php/*checkout*/www/lMMwR/lrgprt.pdf?revision=949&root=lme4&pathrev=1781
 
 * http://lme4.r-forge.r-project.org/slides/2009-07-07-Rennes/3Longitudinal-4.pdf
 

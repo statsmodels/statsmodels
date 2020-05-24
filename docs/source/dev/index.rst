@@ -40,7 +40,7 @@ greatly helps the job of maintaining and releasing the software a shared effort.
 - Code submissions must always include tests. See our notes on :ref:`testing`.
 - Each function, class, method, and attribute needs to be documented using
   docstrings. We conform to the
-  `numpy docstring standard <https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt#docstring-standard>`_.
+  `numpy docstring standard <https://numpy.org/doc/stable/docs/howto_document.html#docstring-standard>`_.
 - If you are adding new functionality, you need to add it to the documentation
   by editing (or creating) the appropriate file in ``docs/source``.
 - Make sure your documentation changes parse correctly. Change into the
