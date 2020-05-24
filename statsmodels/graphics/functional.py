@@ -1,10 +1,9 @@
 """Module for functional boxplots."""
-from scipy.special import factorial
 from statsmodels.multivariate.pca import PCA
 from statsmodels.nonparametric.kernel_density import KDEMultivariate
 from statsmodels.graphics.utils import _import_mpl
-from itertools import combinations
 import numpy as np
+from scipy.special import comb
 try:
     from scipy.optimize import differential_evolution, brute, fmin
     have_de_optim = True
@@ -805,6 +804,8 @@ def banddepth(data, method='MBD'):
     The method 'MBD' is similar to 'BD2', but checks the fraction of the curve
     falling within the bands.  It therefore generates very few ties.
 
+    The algorithm uses the efficient implementation proposed in [3]_.
+
     References
     ----------
     .. [1] S. Lopez-Pintado and J. Romo, "On the Concept of Depth for
@@ -812,39 +813,32 @@ def banddepth(data, method='MBD'):
            vol.  104, pp. 718-734, 2009.
     .. [2] Y. Sun and M.G. Genton, "Functional Boxplots", Journal of
            Computational and Graphical Statistics, vol. 20, pp. 1-19, 2011.
+    .. [3] Y. Sun, M. G. Gentonb and D. W. Nychkac, "Exact fast computation
+           of band depth for large functional datasets: How quickly can one
+           million curves be ranked?", Journal for the Rapid Dissemination
+           of Statistics Research, vol. 1, pp. 68-74, 2012.
     """
-    def _band2(x1, x2, curve):
-        xb = np.vstack([x1, x2])
-        if np.any(curve < xb.min(axis=0)) or np.any(curve > xb.max(axis=0)):
-            res = 0
-        else:
-            res = 1
+    n, p = data.shape
+    rv = np.argsort(data, axis=0)
+    rmat = np.argsort(rv, axis=0) + 1
 
-        return res
+    # band depth
+    def _fbd2():
+        down = np.min(rmat, axis=1) - 1
+        up = n - np.max(rmat, axis=1)
+        return (up * down + n - 1) / comb(n, 2)
 
-    def _band_mod(x1, x2, curve):
-        xb = np.vstack([x1, x2])
-        res = np.logical_and(curve >= xb.min(axis=0),
-                             curve <= xb.max(axis=0))
-        return np.sum(res) / float(res.size)
+    # modified band depth
+    def _fmbd():
+        down = rmat - 1
+        up = n - rmat
+        return ((np.sum(up * down, axis=1) / p) + n - 1) / comb(n, 2)
 
     if method == 'BD2':
-        band = _band2
+        depth = _fbd2()
     elif method == 'MBD':
-        band = _band_mod
+        depth = _fmbd()
     else:
         raise ValueError("Unknown input value for parameter `method`.")
 
-    num = data.shape[0]
-    ix = np.arange(num)
-    depth = []
-    for ii in range(num):
-        res = 0
-        for ix1, ix2 in combinations(ix, 2):
-            res += band(data[ix1, :], data[ix2, :], data[ii, :])
-
-        # Normalize by number of combinations to get band depth
-        normfactor = factorial(num) / 2. / factorial(num - 2)
-        depth.append(float(res) / normfactor)
-
-    return np.asarray(depth)
+    return depth
