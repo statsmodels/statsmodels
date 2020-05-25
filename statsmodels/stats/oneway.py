@@ -690,15 +690,61 @@ def simulate_power_equivalence_oneway(means, nobs, equiv_margin, vars_=None,
 
 
 def test_scale_oneway(data, method='bfm', center='median', transform='abs',
-                      trim_frac=0.):
-    """Oneway Anova test for equal variance or dispersion
+                      trim_frac_mean=0.1, trim_frac_anova=0.):
+    """Oneway Anova test for equal scale, variance or dispersion
+
+    This hypothesis test performs a oneway anova test on transformed data and
+    includes Levene or Brown-Forsythe tests for equal variances as special
+    cases.
+
+    Parameters
+    ----------
+    data
+    method "equal", "unequal", "bfm"
+    center : "median", "mean", "trimmed" or float
+    transform : "abs", "square" or callable
+    trim_frac_mean=0.1,
+    trim_frac_anova=0.
+
+    Returns
+    -------
+    HoderTuple instance
+
+    See Also
+    --------
+    anova_oneway
+    scale_transform
 
     """
     data = map(np.asarray, data)
     xxd = [scale_transform(x, center=center, transform=transform,
-                           trim_frac=trim_frac) for x in data]
+                           trim_frac=trim_frac_mean) for x in data]
 
     res = anova_oneway(xxd, groups=None, use_var=method,
-                       welch_correction=True, trim_frac=0)
+                       welch_correction=True, trim_frac=trim_frac_anova)
+    res.data_transformed = xxd
+    return res
+
+
+def equivalence_scale_oneway(data, equiv_margin, method='bfm', center='median',
+                             transform='abs', trim_frac_mean=0.,
+                             trim_frac_anova=0.):
+    """Oneway Anova test for equivalence of scale, variance or dispersion
+
+    This hypothesis test performs a oneway equivalence anova test on
+    transformed data.
+
+    Note, the interpretation of the equivalence margin `equiv_margin` will
+    depend on the transformation of the data. Transformations like
+    absolute deviation are not scaled to correspond to the variance under
+    normal distribution.
+
+    """
+    data = map(np.asarray, data)
+    xxd = [scale_transform(x, center=center, transform=transform,
+                           trim_frac=trim_frac_mean) for x in data]
+
+    res = equivalence_oneway(xxd, equiv_margin, use_var=method,
+                             welch_correction=True, trim_frac=trim_frac_anova)
     res.x_transformed = xxd
     return res

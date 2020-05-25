@@ -243,7 +243,7 @@ class TestOnewayScale(object):
         statistic = 1.0866123063642
         p_value = 0.3471072204516
         res0 = sto.test_scale_oneway(data, method='equal', center='median',
-                                     transform='abs', trim_frac=0.2)
+                                     transform='abs', trim_frac_mean=0.2)
         assert_allclose(res0.pvalue, p_value, rtol=1e-13)
         assert_allclose(res0.statistic, statistic, rtol=1e-13)
 
@@ -252,8 +252,19 @@ class TestOnewayScale(object):
         assert_allclose(res0.pvalue, res[0][1], rtol=1e-13)
         assert_allclose(res[0][1], p_value, rtol=1e-13)
 
-        resa = str.anova_oneway(res0.x_transformed)
+        resa = str.anova_oneway(res0.data_transformed)
         assert_allclose(resa[1], p_value, rtol=1e-13)
+
+        # library car
+        # > lt = leveneTest(y ~ g, df3, center=mean, trim=0.2)
+        statistic = 1.10732113109744
+        p_value = 0.340359251994645
+        df = [2, 40]
+        res0 = sto.test_scale_oneway(data, method='equal', center='trimmed',
+                                     transform='abs', trim_frac_mean=0.2)
+        assert_allclose(res0.pvalue, p_value, rtol=1e-13)
+        assert_allclose(res0.statistic, statistic, rtol=1e-13)
+        assert_equal(res0.df, df)
 
         # library(onewaytests)
         # test uses mean as center
@@ -263,7 +274,7 @@ class TestOnewayScale(object):
         p_value = 0.349641166869223
         # method = "Levene's Homogeneity Test"
         res0 = sto.test_scale_oneway(data, method='equal', center='mean',
-                                     transform='abs', trim_frac=0.2)
+                                     transform='abs', trim_frac_mean=0.2)
         assert_allclose(res0.pvalue, p_value, rtol=1e-13)
         assert_allclose(res0.statistic, statistic, rtol=1e-13)
         assert_equal(res0.df, parameter)
@@ -288,7 +299,7 @@ class TestOnewayScale(object):
         statistic, p_value = 1.0173464626246675, 0.3763806150460239
         df = (2.0, 24.40374758005409)
         res = sto.test_scale_oneway(data, method='unequal', center='median',
-                                    transform='abs', trim_frac=0.2)
+                                    transform='abs', trim_frac_mean=0.2)
         assert_allclose(res.pvalue, p_value, rtol=1e-13)
         assert_allclose(res.statistic, statistic, rtol=1e-13)
         assert_equal(res.df, df)
@@ -298,7 +309,7 @@ class TestOnewayScale(object):
         p_value2 = 0.3679999679787619
         df2 = (2, 30.6733640949525)
         res = sto.test_scale_oneway(data, method='bf', center='median',
-                                    transform='abs', trim_frac=0.2)
+                                    transform='abs', trim_frac_mean=0.2)
         assert_allclose(res.pvalue, p_value, rtol=1e-13)
         assert_allclose(res.statistic, statistic, rtol=1e-13)
         assert_equal(res.df, df)
@@ -308,15 +319,46 @@ class TestOnewayScale(object):
         statistic, p_value = 1.7252431333701745, 0.19112038168209514
         df = (2.0, 40.0)
         res = sto.test_scale_oneway(data, method='equal', center='mean',
-                                    transform='square', trim_frac=0.2)
+                                    transform='square', trim_frac_mean=0.2)
+        assert_allclose(res.pvalue, p_value, rtol=1e-13)
+        assert_allclose(res.statistic, statistic, rtol=1e-13)
+        assert_equal(res.df, df)
+
+        statistic, p_value = 0.4129696057329463, 0.6644711582864451
+        df = (2.0, 40.0)
+        res = sto.test_scale_oneway(data, method='equal', center='mean',
+                                    transform=lambda x: np.log(x * x),  # noqa
+                                    trim_frac_mean=0.2)
         assert_allclose(res.pvalue, p_value, rtol=1e-13)
         assert_allclose(res.statistic, statistic, rtol=1e-13)
         assert_equal(res.df, df)
 
         # compare no transform with standard anova
-        res = sto.test_scale_oneway(data, method='unequal', center='no',
-                                    transform='identity', trim_frac=0.2)
+        res = sto.test_scale_oneway(data, method='unequal', center=0,
+                                    transform='identity', trim_frac_mean=0.2)
         res2 = anova_oneway(self.data, use_var="unequal")
+
+        assert_allclose(res.pvalue, res2.pvalue, rtol=1e-13)
+        assert_allclose(res.statistic, res2.statistic, rtol=1e-13)
+        assert_equal(res.df, res2.df)
+
+    def test_equivalence(self):
+        data = self.data
+
+        # compare no transform with standard anova
+        res = sto.equivalence_scale_oneway(data, 0.5, method='unequal',
+                                           center=0,
+                                           transform='identity')
+        res2 = equivalence_oneway(self.data, 0.5, use_var="unequal")
+
+        assert_allclose(res.pvalue, res2.pvalue, rtol=1e-13)
+        assert_allclose(res.statistic, res2.statistic, rtol=1e-13)
+        assert_equal(res.df, res2.df)
+
+        res = sto.equivalence_scale_oneway(data, 0.5, method='bf',
+                                           center=0,
+                                           transform='identity')
+        res2 = equivalence_oneway(self.data, 0.5, use_var="bf")
 
         assert_allclose(res.pvalue, res2.pvalue, rtol=1e-13)
         assert_allclose(res.statistic, res2.statistic, rtol=1e-13)
