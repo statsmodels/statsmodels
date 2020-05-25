@@ -116,7 +116,7 @@ class QuantReg(RegressionModel):
             - chamberlain: Chamberlain (1994)
         """
 
-        if q < 0 or q > 1:
+        if q <= 0 or q >= 1:
             raise Exception('p must be between 0 and 1')
 
         kern_names = ['biw', 'cos', 'epa', 'gau', 'par']
