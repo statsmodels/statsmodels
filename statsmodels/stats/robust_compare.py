@@ -6,6 +6,7 @@ Created on Sun Jun 09 23:51:34 2013
 Author: Josef Perktold
 """
 
+import numbers
 import numpy as np
 from scipy import stats
 
@@ -422,7 +423,7 @@ def anova_welch(args, trim_frac=0, welch_correction=True):
 
 def scale_transform(data, center='median', transform='abs', trim_frac=0.2,
                     axis=0):
-    '''transform data for variance comparison for Levene type tests
+    """Transform data for variance comparison for Levene type tests
 
     Parameters
     ----------
@@ -430,7 +431,7 @@ def scale_transform(data, center='median', transform='abs', trim_frac=0.2,
         observations for the data
     center : str in ['median', 'mean', 'trimmed']
         the statistic that is used as center for the data transformation
-    transform : str in ['abs', 'square', 'exp', 'identity']
+    transform : 'abs', 'square', 'identity' or a callable
         the transform for the centered data
     trim_frac : float in [0, 0.5)
         Fraction of observations that are trimmed on each side of the sorted
@@ -443,17 +444,17 @@ def scale_transform(data, center='median', transform='abs', trim_frac=0.2,
     res : ndarray
         transformed data in the same shape as the original data.
 
-    '''
+    """
     x = np.asarray(data)  # x is shorthand from earlier code
 
     if transform == 'abs':
         tfunc = np.abs
     elif transform == 'square':
         tfunc = lambda x: x * x  #noqa
-    elif transform == 'exp':
-        tfunc = lambda x: np.exp(np.abs(x))  #noqa
     elif transform == 'identity':
         tfunc = lambda x: x  #noqa
+    elif callable(transform):
+        tfunc = transform
     else:
         raise ValueError('transform should be abs, square or exp')
 
@@ -464,8 +465,8 @@ def scale_transform(data, center='median', transform='abs', trim_frac=0.2,
     elif center == 'trimmed':
         center = trim_mean(x, trim_frac, axis=0)
         res = tfunc(x - np.expand_dims(center, axis))
-    elif center == 'no':
-        res = tfunc(x)
+    elif isinstance(center, numbers.Number):
+        res = tfunc(x - center)
     else:
         raise ValueError('center should be median, mean or trimmed')
 
