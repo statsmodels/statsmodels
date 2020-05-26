@@ -2520,8 +2520,8 @@ def test_endog_int():
     y = np.random.randint(0, 16, size=100)
     yf = y.astype(np.float64)
 
-    res = AutoReg(y, 5).fit()
-    resf = AutoReg(yf, 5).fit()
+    res = AutoReg(y, 5, old_names=False).fit()
+    resf = AutoReg(yf, 5, old_names=False).fit()
     assert_allclose(res.params, resf.params, atol=1e-5)
     assert_allclose(res.bse, resf.bse, atol=1e-5)
 

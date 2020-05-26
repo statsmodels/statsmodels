@@ -31,7 +31,7 @@ class DeterministicTerm(ABC):
     """Abstract Base Class for all Deterministic Terms"""
 
     # Set _is_dummy if the term is a dummy variable process
-    _is_dummy = True
+    _is_dummy = False
 
     @property
     def is_dummy(self) -> bool:
@@ -233,7 +233,8 @@ class TimeTrend(TimeTrendDeterministicTerm):
     >>> trend_gen.in_sample(data.index)
     """
 
-    _is_dummy = False
+    def __init__(self, constant: bool = True, order: int = 0) -> None:
+        super().__init__(constant, order)
 
     @classmethod
     def from_string(cls, trend: str) -> "TimeTrend":
@@ -719,6 +720,8 @@ class CalendarSeasonality(CalendarDeterminsticTerm):
     >>> cal_seas_gen.in_sample(index)
     """
 
+    _is_dummy = True
+
     # out_of: freq
     _supported = {
         "W": {"H": 24 * 7, "B": 5, "D": 7},
@@ -904,7 +907,6 @@ class CalendarTimeTrend(CalendarDeterminsticTerm, TimeTrendDeterministicTerm):
     ...                                   base_period=index[0])
     >>> cal_trend_gen.in_sample(index)
     """
-    _is_dummy = False
 
     def __init__(
         self,
@@ -1091,6 +1093,47 @@ additional components using the additional_terms input."""
         self._period = period
         self._retain_cols: Optional[List[Hashable]] = None
 
+    @property
+    def index(self) -> pd.Index:
+        """The index of the process"""
+        return self._index
+
+    @property
+    def terms(self) -> List[DeterministicTerm]:
+        """The deterministic terms included in the process"""
+        return self._deterministic_terms
+
+    def _adjust_dummies(self, terms: List[pd.DataFrame]) -> List[pd.DataFrame]:
+        has_const: Optional[bool] = None
+        for dterm in self._deterministic_terms:
+            if isinstance(dterm, (TimeTrend, CalendarTimeTrend)):
+                has_const = has_const or dterm.constant
+        if has_const is None:
+            has_const = False
+            for term in terms:
+                const_col = (term == term.iloc[0]).all() & (term.iloc[0] != 0)
+                has_const = has_const or const_col.any()
+        drop_first = has_const
+        for i, dterm in enumerate(self._deterministic_terms):
+            is_dummy = dterm.is_dummy
+            if is_dummy and drop_first:
+                # drop first
+                terms[i] = terms[i].iloc[:, 1:]
+            drop_first = drop_first or is_dummy
+        return terms
+
+    def _remove_zeros_ones(self, terms: pd.DataFrame) -> pd.DataFrame:
+        all_zero = np.all(terms == 0, axis=0)
+        if np.any(all_zero):
+            terms = terms.loc[:, ~all_zero]
+        is_constant = terms.max(axis=0) == terms.min(axis=0)
+        if np.sum(is_constant) > 1:
+            # Retain first
+            const_locs = np.where(is_constant)[0]
+            is_constant[const_locs[:1]] = False
+            terms = terms.loc[:, ~is_constant]
+        return terms
+
     def in_sample(self) -> pd.DataFrame:
         if self._cached_in_sample is not None:
             return self._cached_in_sample
@@ -1100,25 +1143,17 @@ additional components using the additional_terms input."""
         raw_terms = []
         for term in self._deterministic_terms:
             raw_terms.append(term.in_sample(index))
+
+        raw_terms = self._adjust_dummies(raw_terms)
         terms: pd.DataFrame = pd.concat(raw_terms, axis=1)
+        terms = self._remove_zeros_ones(terms)
         if self._drop:
             terms_arr = to_numpy(terms)
-            all_zero = np.all(terms_arr == 0, axis=0)
-            if np.any(all_zero):
-                terms = terms.loc[:, ~all_zero]
-                terms_arr = to_numpy(terms)
-            is_constant = terms_arr.max(0) == terms_arr.min(0)
-            if np.sum(is_constant) > 1:
-                # Retain first
-                const_locs = np.where(is_constant)[0]
-                is_constant[const_locs[:1]] = False
-                terms = terms.loc[:, ~is_constant]
-                terms_arr = to_numpy(terms)
             res = qr(terms_arr, mode="r", pivoting=True)
             r = res[0]
             p = res[-1]
             abs_diag = np.abs(np.diag(r))
-            tol = abs_diag.max() * terms_arr.shape[1] * np.finfo(np.float).eps
+            tol = abs_diag[0] * terms_arr.shape[1] * np.finfo(np.float).eps
             rank = np.sum(abs_diag > tol)
             # Sort to retain in order that they appear
             terms = terms.iloc[:, np.sort(p[:rank])]

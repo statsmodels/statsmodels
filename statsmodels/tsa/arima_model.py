@@ -538,12 +538,14 @@ class ARMA(tsa_model.TimeSeriesModel):
                     maxlag = int(round(12 * (nobs / 100.) ** (1 / 4.)))
                     if maxlag >= nobs:
                         maxlag = nobs - 1
-                    mod = ar_select_order(endog, maxlag, trend='n').model
+                    mod = ar_select_order(endog, maxlag, trend='n',
+                                          old_names=False).model
                     armod = mod.fit()
                 else:
                     if start_ar_lags >= nobs:
                         start_ar_lags = nobs - 1
-                    armod = AutoReg(endog, start_ar_lags, trend='n').fit()
+                    armod = AutoReg(endog, start_ar_lags, trend='n',
+                                    old_names=False).fit()
                 arcoefs_tmp = armod.params
                 p_tmp = len(armod.ar_lags)
                 # it's possible in small samples that optimal lag-order

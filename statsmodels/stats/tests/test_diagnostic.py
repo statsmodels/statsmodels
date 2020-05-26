@@ -1079,7 +1079,7 @@ def test_outlier_test():
 
 def test_ljungbox_dof_adj():
     data = sunspots.load_pandas().data['SUNACTIVITY']
-    res = AutoReg(data, 4).fit()
+    res = AutoReg(data, 4, old_names=False).fit()
     resid = res.resid
     res1 = smsdia.acorr_ljungbox(resid, lags=10, return_df=False)
     res2 = smsdia.acorr_ljungbox(resid, lags=10, model_df=4, return_df=False)
@@ -1104,7 +1104,7 @@ def test_ljungbox_errors_warnings():
 
 def test_ljungbox_period():
     data = sunspots.load_pandas().data['SUNACTIVITY']
-    ar_res = AutoReg(data, 4).fit()
+    ar_res = AutoReg(data, 4, old_names=False).fit()
     res = smsdia.acorr_ljungbox(ar_res.resid, period=13, return_df=True)
     res2 = smsdia.acorr_ljungbox(ar_res.resid, lags=26, return_df=True)
     assert_frame_equal(res, res2)
