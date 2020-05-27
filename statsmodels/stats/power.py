@@ -148,7 +148,7 @@ def normal_power_het(diff, nobs, alpha, std_null=1., std_alternative=None,
         std_alternative = std_null
 
     if alternative in ['two-sided', '2s']:
-        alpha_ = alpha / 2.  #no inplace changes, doesn't work
+        alpha_ = alpha / 2.  #no inplace changes, does not work
     elif alternative in ['smaller', 'larger']:
         alpha_ = alpha
     else:

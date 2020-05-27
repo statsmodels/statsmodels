@@ -1715,7 +1715,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         -------
         exog : array or None
             A numpy array of shape (out_of_sample, k_exog) if the model
-            contains an `exog` component, or None if it doesn't.
+            contains an `exog` component, or None if it does not.
         """
         if out_of_sample and self.k_exog > 0:
             if exog is None:

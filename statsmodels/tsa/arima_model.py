@@ -32,6 +32,25 @@ from statsmodels.tsa.tsatools import (lagmat, add_trend,
                                       unintegrate, unintegrate_levels)
 from statsmodels.tsa.vector_ar import util
 
+ARIMA_DEPRECATION_WARN = """
+statsmodels.tsa.arima_model.ARMA and statsmodels.tsa.arima_model.ARIMA have
+been deprecated in favor of statsmodels.tsa.arima.model.ARIMA (note the .
+between arima and model) and
+statsmodels.tsa.SARIMAX.
+
+statsmodels.tsa.arima.model.ARIMA makes use of the statespace framework and
+is both well tested and maintained.
+
+To silence this warning and continue using ARMA and ARIMA until they are
+removed, use:
+
+import warnings
+warnings.filterwarnings('ignore', 'statsmodels.tsa.arima_model.ARMA',
+                        FutureWarning)
+warnings.filterwarnings('ignore', 'statsmodels.tsa.arima_model.ARIMA',
+                        FutureWarning)
+"""
+
 REPEATED_FIT_ERROR = """
 Model has been fit using trend={0} and method={1}. These cannot be changed
 in subsequent calls to `fit`. Instead, use a new instance of {mod}.
@@ -65,9 +84,17 @@ _arma_params = """endog : array_like
         An optional array of exogenous variables. This should *not* include a
         constant or trend. You can specify this in the `fit` method."""
 
-_arma_model = "Autoregressive Moving Average ARMA(p,q) Model"
+_arma_model = """\
+Autoregressive Moving Average ARMA(p,q) Model
 
-_arima_model = "Autoregressive Integrated Moving Average ARIMA(p,d,q) Model"
+    .. deprecated:: 0.12
+       Use statsmodels.tsa.arima.model.ARIMA instead"""
+
+_arima_model = """\
+Autoregressive Integrated Moving Average ARIMA(p,d,q) Model
+
+    .. deprecated:: 0.12
+       Use statsmodels.tsa.arima.model.ARIMA instead"""
 
 _arima_params = """endog : array_like
         The endogenous variable.
@@ -441,6 +468,8 @@ class ARMA(tsa_model.TimeSeriesModel):
 
     def __init__(self, endog, order, exog=None, dates=None, freq=None,
                  missing='none'):
+        import warnings
+        warnings.warn(ARIMA_DEPRECATION_WARN, FutureWarning)
         super(ARMA, self).__init__(endog, exog, dates, freq, missing=missing)
         # GH 2575
         array_like(endog, 'endog')

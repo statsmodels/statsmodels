@@ -19,6 +19,7 @@ from os.path import dirname, join
 import sys
 
 import yaml
+from numpydoc.xref import DEFAULT_LINKS
 
 import sphinx_material
 from statsmodels import __version__
@@ -370,14 +371,15 @@ epub_copyright = u'2009-2019, Josef Perktold, Skipper Seabold, ' \
 numpydoc_use_autodoc_signature = True
 numpydoc_xref_param_type = True
 numpydoc_class_members_toctree = False
-numpydoc_xref_aliases = {
+numpydoc_xref_aliases = DEFAULT_LINKS.copy()
+numpydoc_xref_aliases.update({
     'Figure': 'matplotlib.figure.Figure',
     'Axes': 'matplotlib.axes.Axes',
     'AxesSubplot': 'matplotlib.axes.Axes',
     'DataFrame': 'pandas.DataFrame',
     'Series': 'pandas.Series',
     'MLEResults': 'statsmodels.tsa.statespace.mlemodel.MLEResults'
-}
+})
 
 # Example configuration for intersphinx: refer to the Python standard library.
 # Example configuration for intersphinx: refer to the Python standard library.

@@ -774,7 +774,7 @@ cdef class {{prefix}}KalmanFilter(object):
                                        ' with missing data.')
 
                 # Note: would like to check for stationary initialization, but
-                # we can't do that here b/c self.model doesn't store the
+                # we can't do that here b/c self.model does not store the
                 # initialization object for us to inspect.
                 # TODO: however, we can set a new flag in self.model.initialize
                 # noting the type of initialization (stationary, diffuse,

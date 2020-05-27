@@ -7,7 +7,7 @@ http://www.springer.com/cda/content/document/cda_downloaddocument/ITSM2000.zip
 
 See also https://finance.yahoo.com/quote/%5EDJU/history?period1=83822400&period2=93502800&interval=1d&filter=history&frequency=1d
 
-TODO: Add the correct business days index for this data (freq='B' doesn't work)
+TODO: Add the correct business days index for this data (freq='B' does not work)
 
 References
 ----------
