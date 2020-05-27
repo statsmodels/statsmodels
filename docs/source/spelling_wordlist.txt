@@ -1686,6 +1686,10 @@ mvnormcdf
 mvsk
 mvstdnormcdf
 nan
+<<<<<<< HEAD
+=======
+nan,
+>>>>>>> DOC: Update documentation
 nans
 narlags
 nb
@@ -2347,3 +2351,4 @@ CFA
 lamda
 parallelized
 Jupyter
+Reseasonalize

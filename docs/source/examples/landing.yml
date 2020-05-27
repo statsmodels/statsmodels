@@ -104,6 +104,9 @@
   - img: ../_static/images/autoregressions.png
     target: notebooks/generated/autoregressions.html
     text: Autoregressions
+  - img: ../_static/images/deterministics.png
+    target: notebooks/generated/deterministics.html
+    text: Deterministic Terms
   - img: ../_static/images/tsa_arma0.png
     target: notebooks/generated/tsa_arma_0.html
     text: 'ARMA: Sunspots Data'

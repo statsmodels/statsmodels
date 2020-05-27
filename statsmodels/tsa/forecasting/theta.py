@@ -12,11 +12,12 @@ Journal of Forecasting, 19(2), 287-290.
 Fioruci, J. A., Pellegrini, T. R., Louzada, F., & Petropoulos, F. (2015).
 The optimized theta method. arXiv preprint arXiv:1503.03529.
 """
-from typing import Optional, Tuple, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional, Tuple
 
 import numpy as np
 import pandas as pd
 from scipy import stats
+
 from statsmodels.iolib.summary import Summary
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.tools.validation import (
@@ -26,6 +27,7 @@ from statsmodels.tools.validation import (
     int_like,
     string_like,
 )
+from statsmodels.tsa.deterministic import DeterministicTerm
 from statsmodels.tsa.seasonal import seasonal_decompose
 from statsmodels.tsa.statespace.exponential_smoothing import (
     ExponentialSmoothing,
@@ -38,36 +40,8 @@ if TYPE_CHECKING:
     import matplotlib.figure
 
 
-def extend_index(
-    steps: int, index: pd.Index
-) -> Union[pd.RangeIndex, pd.PeriodIndex, pd.DatetimeIndex, pd.Int64Index]:
-    if isinstance(index, pd.PeriodIndex):
-        return pd.period_range(index[-1] + 1, periods=steps, freq=index.freq)
-    elif isinstance(index, pd.DatetimeIndex):
-        freq = index.freq or index.inferred_freq
-        if freq is not None:
-            return pd.date_range(index[-1], periods=steps + 1, freq=freq)[1:]
-    elif isinstance(index, pd.RangeIndex):
-        try:
-            stop = index.stop
-            step = index.step
-        except AttributeError:
-            step = index[-1] - index[-2] if len(index) > 1 else 1
-            stop = index[-1] + step
-
-        return pd.RangeIndex(stop, stop + step * steps, step)
-    elif isinstance(index, pd.Int64Index) and np.all(np.diff(index) == 1):
-        return pd.Int64Index(index[-1] + 1, index[-1] + 1 + steps)
-    import warnings
-
-    warnings.warn(
-        "Only PeriodIndexes, DatetimeIndexes with a frequency set, "
-        "RangesIndexes, and Int64Indexes with a unit increment support "
-        "extending. The index is set will contain the position relative "
-        "to the data length.",
-        UserWarning,
-    )
-    return pd.RangeIndex(index.shape[0], index.shape[0] + steps)
+def extend_index(steps: int, index: pd.Index) -> pd.Index:
+    return DeterministicTerm._extend_index(index, steps)
 
 
 class ThetaModel:

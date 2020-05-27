@@ -41,7 +41,7 @@ def index(request):
         idx = pd.Int64Index(np.arange(123))
     elif param == "fib":
         fib = [0, 1]
-        for i in range(113):
+        for _ in range(113):
             fib.append(fib[-2] + fib[-1])
         idx = pd.Index(fib)
     else:
@@ -66,7 +66,11 @@ def test_time_trend_smoke(index, forecast_index):
     tt = TimeTrend(True, 2)
     tt.in_sample(index)
     steps = 83 if forecast_index is None else len(forecast_index)
-    tt.out_of_sample(steps, index, forecast_index)
+    warn = None
+    if type(index) is pd.Int64Index and np.any(np.diff(index) != 1):
+        warn = UserWarning
+    with pytest.warns(warn):
+        tt.out_of_sample(steps, index, forecast_index)
     str(tt)
     hash(tt)
     assert isinstance(tt.order, int)
@@ -86,7 +90,11 @@ def test_seasonality_smoke(index, forecast_index):
     s = Seasonality(12)
     s.in_sample(index)
     steps = 83 if forecast_index is None else len(forecast_index)
-    s.out_of_sample(steps, index, forecast_index)
+    warn = None
+    if type(index) is pd.Int64Index and np.any(np.diff(index) != 1):
+        warn = UserWarning
+    with pytest.warns(warn):
+        s.out_of_sample(steps, index, forecast_index)
     assert isinstance(s.period, int)
     str(s)
     hash(s)
@@ -102,7 +110,11 @@ def test_fourier_smoke(index, forecast_index):
     f = Fourier(12, 2)
     f.in_sample(index)
     steps = 83 if forecast_index is None else len(forecast_index)
-    f.out_of_sample(steps, index, forecast_index)
+    warn = None
+    if type(index) is pd.Int64Index and np.any(np.diff(index) != 1):
+        warn = UserWarning
+    with pytest.warns(warn):
+        f.out_of_sample(steps, index, forecast_index)
     assert isinstance(f.period, float)
     assert isinstance(f.order, int)
     str(f)
@@ -224,7 +236,11 @@ def test_time_trend(index):
     assert const.shape == (index.shape[0], 1)
     assert np.all(const == 1)
     pd.testing.assert_index_equal(const.index, index)
-    const_fcast = tt.out_of_sample(23, index)
+    warn = None
+    if type(index) is pd.Int64Index and np.any(np.diff(index) != 1):
+        warn = UserWarning
+    with pytest.warns(warn):
+        const_fcast = tt.out_of_sample(23, index)
     assert np.all(const_fcast == 1)
 
     tt = TimeTrend(constant=False)
@@ -243,10 +259,12 @@ def test_time_trend(index):
 
     tt = TimeTrend(constant=True, order=2)
     short = tt.in_sample(index[:-50])
-    remainder = tt.out_of_sample(50, index[:-50])
-    direct = tt.out_of_sample(
-        steps=50, index=index[:-50], forecast_index=index[-50:]
-    )
+    with pytest.warns(warn):
+        remainder = tt.out_of_sample(50, index[:-50])
+    with pytest.warns(warn):
+        direct = tt.out_of_sample(
+            steps=50, index=index[:-50], forecast_index=index[-50:]
+        )
     combined = pd.concat([short, remainder], axis=0)
     if isinstance(index, (pd.DatetimeIndex, pd.RangeIndex)):
         pd.testing.assert_frame_equal(combined, final)
@@ -267,7 +285,11 @@ def test_seasonality(index):
         expected[i::12, i] = 1.0
     np.testing.assert_equal(expected, np.asarray(exog))
 
-    fcast = s.out_of_sample(steps=12, index=index)
+    warn = None
+    if type(index) is pd.Int64Index and np.any(np.diff(index) != 1):
+        warn = UserWarning
+    with pytest.warns(warn):
+        fcast = s.out_of_sample(steps=12, index=index)
     assert fcast.iloc[0, len(index) % 12] == 1.0
     assert np.all(fcast.sum(1) == 1)
 
@@ -301,7 +323,7 @@ def test_fourier(index):
         j = i // 2 + 1
         fn = np.cos if (i % 2) else np.sin
         expected = fn(2 * np.pi * j * loc)
-        np.testing.assert_allclose(terms.iloc[:, i], expected, atol=1e-8)
+        np.testing.assert_allclose(terms[col], expected, atol=1e-8)
     cols = []
     for i in range(2 * f.order):
         fn = "cos" if (i % 2) else "sin"
@@ -597,18 +619,18 @@ class DummyTerm(DeterministicTerm):
         return "Dummy"
 
     columns = [
-        "const",
-        "drop1",
-        "trend",
-        "drop2",
-        "normal",
-        "drop3",
-        "dummy1",
-        "drop4",
-        "drop5",
-        "drop6",
-        "dummy2",
-        "drop7",
+        "const1",
+        "const2",
+        "trend1",
+        "trend2",
+        "normal1",
+        "normal2",
+        "dummy1_1",
+        "dummy1_2",
+        "always_drop1",
+        "always_drop2",
+        "dummy2_1",
+        "dummy2_2",
     ]
 
     def in_sample(self, index: pd.Index) -> pd.DataFrame:
@@ -649,9 +671,9 @@ def test_drop():
     dp = DeterministicProcess(index, additional_terms=[dummy], drop=True)
     in_samp = dp.in_sample()
     assert in_samp.shape == (200, 4)
-    for col in in_samp:
-        assert "drop" not in col
     oos = dp.out_of_sample(37)
     assert oos.shape == (37, 4)
-    for col in oos:
-        assert "drop" not in col
+    assert list(oos.columns) == list(in_samp.columns)
+    valid = ("const", "trend", "dummy", "normal")
+    for valid_col in valid:
+        assert sum([1 for col in oos if valid_col in col]) == 1

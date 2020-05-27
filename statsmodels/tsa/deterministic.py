@@ -142,6 +142,15 @@ class DeterministicTerm(ABC):
             idx_arr = np.arange(index[-1] + 1, index[-1] + steps + 1)
             return pd.Int64Index(idx_arr)
         # default range index
+        import warnings
+
+        warnings.warn(
+            "Only PeriodIndexes, DatetimeIndexes with a frequency set, "
+            "RangesIndexes, and Int64Indexes with a unit increment support "
+            "extending. The index is set will contain the position relative "
+            "to the data length.",
+            UserWarning,
+        )
         nobs = index.shape[0]
         return pd.RangeIndex(nobs + 1, nobs + steps + 1)
 
@@ -220,6 +229,7 @@ class TimeTrend(TimeTrendDeterministicTerm):
 
     See Also
     --------
+    DeterministicProcess
     Seasonality
     Fourier
     CalendarTimeTrend
@@ -310,6 +320,7 @@ class Seasonality(DeterministicTerm):
 
     See Also
     --------
+    DeterministicProcess
     TimeTrend
     Fourier
     CalendarSeasonality
@@ -435,7 +446,7 @@ class FourierDeterministic(DeterministicTerm, ABC):
 
     @property
     def order(self) -> int:
-        """The order fo the Fourier terms included"""
+        """The order of the Fourier terms included"""
         return self._order
 
     def _get_terms(self, locs: np.ndarray) -> np.ndarray:
@@ -460,6 +471,7 @@ class Fourier(FourierDeterministic):
 
     See Also
     --------
+    DeterministicProcess
     TimeTrend
     Seasonality
     CalendarFourier
@@ -603,6 +615,7 @@ class CalendarFourier(CalendarDeterminsticTerm, FourierDeterministic):
 
     See Also
     --------
+    DeterministicProcess
     CalendarTimeTrend
     CalendarSeasonality
     Fourier
@@ -698,6 +711,7 @@ class CalendarSeasonality(CalendarDeterminsticTerm):
 
     See Also
     --------
+    DeterministicProcess
     CalendarTimeTrend
     CalendarFourier
     Seasonality
@@ -875,6 +889,7 @@ class CalendarTimeTrend(CalendarDeterminsticTerm, TimeTrendDeterministicTerm):
 
     See Also
     --------
+    DeterministicProcess
     CalendarFourier
     CalendarSeasonality
     TimeTrend
@@ -1030,6 +1045,95 @@ class CalendarTimeTrend(CalendarDeterminsticTerm, TimeTrendDeterministicTerm):
 
 
 class DeterministicProcess:
+    """
+    Container class for deterministic terms.
+
+    Directly supports constants, time trends, and either seasonal dummies or
+    fourier terms for a single cycle. Additional deterministic terms beyond
+    the set that can be directly initialized through the constructor can be
+    added.
+
+    Parameters
+    ----------
+    index : {Sequence[Hashable], pd.Index}
+        The index of the process. Should usually be the "in-sample" index when
+        used in forecasting applications.
+    constant : bool, default False
+        Whether to include a constant.
+    order : int, default 0
+        The order of the tim trend to include. For example, 2 will include
+        both linear and quadratic terms. 0 exclude time trend terms.
+    period : {float, int}, default None
+        The period of the seasonal or fourier components. Must be an int for
+        seasonal dummies. If not provided, freq is read from index if
+        available.
+    seasonal : bool = False
+        Whether to include seasonal dummies
+    fourier : int = 0
+        The order of the fourier terms to included.
+    additional_terms : Sequence[DeterministicTerm]
+        A sequence of additional deterministic terms to include in the process.
+    drop : bool, default False
+        A flag indicating to check for perfect collinearity and to drop any
+        linearly dependent terms.
+
+    See Also
+    --------
+    TimeTrend
+    Seasonality
+    Fourier
+    CalendarTimeTrend
+    CalendarSeasonality
+    CalendarFourier
+
+    Examples
+    --------
+    >>> from statsmodels.tsa.deterministic import DeterministicProcess
+    >>> from pandas import date_range
+    >>> index = date_range("2000-1-1", freq="M", periods=240)
+
+    First a determinstic process with a constant and quadratic time trend.
+
+    >>> dp = DeterministicProcess(index, constant=True, order=2)
+    >>> dp.in_sample().head(3)
+                const  trend  trend_squared
+    2000-01-31    1.0    1.0            1.0
+    2000-02-29    1.0    2.0            4.0
+    2000-03-31    1.0    3.0            9.0
+
+    Seasonal dummies are included by setting seasonal to True.
+
+    >>> dp = DeterministicProcess(index, constant=True, seasonal=True)
+    >>> dp.in_sample().iloc[:3,:5]
+                const  s(2,12)  s(3,12)  s(4,12)  s(5,12)
+    2000-01-31    1.0      0.0      0.0      0.0      0.0
+    2000-02-29    1.0      1.0      0.0      0.0      0.0
+    2000-03-31    1.0      0.0      1.0      0.0      0.0
+
+    Fourier components can be used to alternatively capture seasonal patterns,
+
+    >>> dp = DeterministicProcess(index, constant=True, fourier=2)
+    >>> dp.in_sample().head(3)
+
+                const  sin(1,12)  cos(1,12)  sin(2,12)  cos(2,12)
+    2000-01-31    1.0   0.000000   1.000000   0.000000        1.0
+    2000-02-29    1.0   0.500000   0.866025   0.866025        0.5
+    2000-03-31    1.0   0.866025   0.500000   0.866025       -0.5
+
+    Multiple Seasonalities can be captured using additional terms.
+
+    >>> from statsmodels.tsa.deterministic import Fourier
+    >>> index = date_range("2000-1-1", freq="D", periods=5000)
+    >>> fourier = Fourier(period=365.25, order=1)
+    >>> dp = DeterministicProcess(index, period=3, constant=True,
+    ...                           seasonal=True, additional_terms=[fourier])
+    >>> dp.in_sample().head(3)
+                const  s(2,3)  s(3,3)  sin(1,365.25)  cos(1,365.25)
+    2000-01-01    1.0     0.0     0.0       0.000000       1.000000
+    2000-01-02    1.0     1.0     0.0       0.017202       0.999852
+    2000-01-03    1.0     0.0     1.0       0.034398       0.999408
+    """
+
     def __init__(
         self,
         index: Union[Sequence[Hashable], pd.Index],
@@ -1154,9 +1258,22 @@ additional components using the additional_terms input."""
             p = res[-1]
             abs_diag = np.abs(np.diag(r))
             tol = abs_diag[0] * terms_arr.shape[1] * np.finfo(np.float).eps
-            rank = np.sum(abs_diag > tol)
-            # Sort to retain in order that they appear
-            terms = terms.iloc[:, np.sort(p[:rank])]
+            rank = int(np.sum(abs_diag > tol))
+            rpx = r.T @ terms_arr
+            keep = [0]
+            last_rank = 1
+            # Find the left-most columns that produce full rank
+            for i in range(1, terms_arr.shape[1]):
+                curr_rank = np.linalg.matrix_rank(rpx[: i + 1, : i + 1])
+                if curr_rank > last_rank:
+                    keep.append(i)
+                    last_rank = curr_rank
+                if curr_rank == rank:
+                    break
+            if len(keep) == rank:
+                terms = terms.iloc[:, keep]
+            else:
+                terms = terms.iloc[:, np.sort(p[:rank])]
         self._retain_cols = terms.columns
         self._cached_in_sample = terms
         return terms

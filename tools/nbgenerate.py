@@ -242,7 +242,7 @@ parser.add_argument('--skip-existing', dest='skip_existing',
                     action='store_true',
                     help='Skip execution of an executed file exists and '
                          'is newer than the notebook.')
-parser.add_argument('--skip-execution-list', type=str, default=None,
+parser.add_argument('--execution-blacklist', type=str, default=None,
                     help='Comma separated list of notebook names to skip, e.g,'
                          'slow-notebook.ipynb,other-notebook.ipynb')
 
@@ -253,7 +253,7 @@ parser.set_defaults(parallel=True, skip_execution=False,
 
 def main():
     args = parser.parse_args()
-    skip_nb_exec = args.skip_execution_list
+    skip_nb_exec = args.execution_blacklist
     skip_specific = skip_nb_exec.split(",") if skip_nb_exec else []
     do(fp=args.fp,
        directory=args.directory,

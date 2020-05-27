@@ -216,7 +216,7 @@ def test_innovations_mle_statespace_seasonal():
     # Test that starting parameter estimation succeeds and isn't terrible
     # (i.e. leads to the same MLE)
     p2, _ = innovations_mle(endog, seasonal_order=(1, 0, 0, 4), demean=False)
-    # (doesn't need to be high-precision test since it's okay if different
+    # (does not need to be high-precision test since it's okay if different
     # starting parameters give slightly different MLE)
     assert_allclose(p.params, p2.params, atol=1e-5)
 
@@ -250,7 +250,7 @@ def test_innovations_mle_statespace_nonconsecutive():
     # Test that starting parameter estimation succeeds and isn't terrible
     # (i.e. leads to the same MLE)
     p2, _ = innovations_mle(endog, order=([0, 1], 0, [0, 1]), demean=False)
-    # (doesn't need to be high-precision test since it's okay if different
+    # (does not need to be high-precision test since it's okay if different
     # starting parameters give slightly different MLE)
     assert_allclose(p.params, p2.params, atol=1e-5)
 
@@ -286,7 +286,7 @@ def test_innovations_mle_integrated():
     # data
     p2, _ = innovations_mle(lake.copy(), order=(1, 0, 0), demean=False,
                             start_params=start_params)
-    # (doesn't need to be high-precision test since it's okay if different
+    # (does not need to be high-precision test since it's okay if different
     # starting parameters give slightly different MLE)
     assert_allclose(p.params, p2.params, atol=1e-5)
 

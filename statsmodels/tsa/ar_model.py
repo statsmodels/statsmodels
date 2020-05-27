@@ -727,8 +727,11 @@ class AutoReg(tsa_model.TimeSeriesModel):
 
 
 class AR(tsa_model.TimeSeriesModel):
-    __doc__ = tsa_model._tsa_doc % {"model": "Autoregressive AR(p) model.\n\n"
-                                             "    .. deprecated:: 0.11",
+    __doc__ = tsa_model._tsa_doc % {"model": """\
+Autoregressive AR(p) model.
+
+    .. deprecated:: 0.11
+       Use statsmodels.tsa.ar_model.AutoReg instead""",
                                     "params": """endog : array_like
         A 1-d endogenous response variable. The independent variable.""",
                                     "extra_params": base._missing_param_doc,
@@ -2027,6 +2030,48 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         return self.model.predict(self._params, start=start, end=end,
                                   dynamic=dynamic, exog=exog,
                                   exog_oos=exog_oos)
+
+    def forecast(self, steps=1, dynamic=False, exog=None):
+        """
+        Out-of-sample forecasts
+
+        Parameters
+        ----------
+        steps : {int, str, datetime}, default 1
+            If an integer, the number of steps to forecast from the end of the
+            sample. Can also be a date string to parse or a datetime type.
+            However, if the dates index does not have a fixed frequency,
+            steps must be an integer.
+        dynamic : {bool, int, str, datetime, Timestamp}, optional
+            Integer offset relative to `start` at which to begin dynamic
+            prediction. Prior to this observation, true endogenous values
+            will be used for prediction; starting with this observation and
+            continuing through the end of prediction, forecasted endogenous
+            values will be used instead. Datetime-like objects are not
+            interpreted as offsets. They are instead used to find the index
+            location of `dynamic` which is then used to to compute the offset.
+        exog : array_like
+            A replacement exogenous array.  Must have the same shape as the
+            exogenous data array used when the model was created.
+
+        Returns
+        -------
+        array_like
+            Array of out of in-sample predictions and / or out-of-sample
+            forecasts. An (npredict x k_endog) array.
+
+        See Also
+        --------
+        AutoRegResults.predict
+            In- and out-of-sample predictions
+        """
+        start = self.model.data.orig_endog.shape[0]
+        if isinstance(steps, (int, np.integer)):
+            end = start + steps - 1
+        else:
+            end = steps
+        return self.predict(start=start, end=end, dynamic=dynamic,
+                            exog_oos=exog)
 
     @Substitution(predict_params=_predict_params)
     def plot_predict(self, start=None, end=None, dynamic=False, exog=None,

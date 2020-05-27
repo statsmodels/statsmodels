@@ -1233,7 +1233,7 @@ def test_autoreg_start(start):
     assert pred.shape[0] == end - start + 1
 
 
-def test_deterministic():
+def test_deterministic(reset_randomstate):
     y = pd.Series(np.random.normal(size=200))
     terms = [TimeTrend(constant=True, order=1), Seasonality(12)]
     dp = DeterministicProcess(y.index, additional_terms=terms)
@@ -1245,3 +1245,22 @@ def test_deterministic():
     assert_almost_equal(np.asarray(res.params), np.asarray(res2.params))
     with pytest.warns(RuntimeWarning, match="When using deterministic, trend"):
         AutoReg(y, trend="ct", seasonal=False, lags=2, deterministic=dp)
+
+
+def test_autoreg_predict_forecast_equiv(reset_randomstate):
+    e = np.random.normal(size=1000)
+    nobs = e.shape[0]
+    idx = pd.date_range("2020-1-1", freq="D", periods=nobs)
+    for i in range(1, nobs):
+        e[i] = 0.95 * e[i - 1] + e[i]
+    y = pd.Series(e, index=idx)
+    m = AutoReg(y, trend="c", lags=1, old_names=False)
+    res = m.fit()
+    a = res.forecast(12)
+    b = res.predict(nobs, nobs + 11)
+    c = res.forecast("2022-10-08")
+    assert_series_equal(a, b)
+    assert_series_equal(a, c)
+    sarimax_res = SARIMAX(y, order=(1, 0, 0), trend="c").fit(disp=False)
+    d = sarimax_res.forecast(12)
+    pd.testing.assert_index_equal(a.index, d.index)
