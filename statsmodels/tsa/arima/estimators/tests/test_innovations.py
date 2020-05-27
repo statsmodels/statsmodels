@@ -182,7 +182,7 @@ def test_innovations_mle_statespace():
     # Test that starting parameter estimation succeeds and isn't terrible
     # (i.e. leads to the same MLE)
     p2, _ = innovations_mle(endog, order=(1, 0, 1), demean=False)
-    # (doesn't need to be high-precision test since it's okay if different
+    # (does not need to be high-precision test since it's okay if different
     # starting parameters give slightly different MLE)
     assert_allclose(p.params, p2.params, atol=1e-5)
 

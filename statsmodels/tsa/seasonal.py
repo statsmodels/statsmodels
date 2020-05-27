@@ -6,11 +6,11 @@ from statsmodels.compat.pandas import deprecate_kwarg
 import numpy as np
 import pandas as pd
 from pandas.core.nanops import nanmean as pd_nanmean
-from statsmodels.tsa._stl import STL
 
-from statsmodels.tools.validation import array_like, PandasWrapper
+from statsmodels.tools.validation import PandasWrapper, array_like
+from statsmodels.tsa._stl import STL
+from statsmodels.tsa.filters.filtertools import convolution_filter
 from statsmodels.tsa.tsatools import freq_to_period
-from .filters.filtertools import convolution_filter
 
 __all__ = ['STL', 'seasonal_decompose', 'seasonal_mean', 'DecomposeResult']
 
@@ -206,6 +206,7 @@ class DecomposeResult(object):
     weights : array_like, optional
         The weights used to reduce outlier influence.
     """
+
     def __init__(self, observed, seasonal, trend, resid, weights=None):
         self._seasonal = seasonal
         self._trend = trend

@@ -140,9 +140,8 @@ Univariate Time-Series Analysis
 
 .. autosummary::
 
-   ~statsmodels.tsa.ar_model.AR
-   ~statsmodels.tsa.arima_model.ARIMA
-   ~statsmodels.tsa.arima_model.ARMA
+   ~statsmodels.tsa.ar_model.AutoReg
+   ~statsmodels.tsa.arima.model.ARIMA
    ~statsmodels.tsa.statespace.sarimax.SARIMAX
    ~statsmodels.tsa.stattools.arma_order_select_ic
    ~statsmodels.tsa.arima_process.arma_generate_sample

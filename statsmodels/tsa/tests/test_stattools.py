@@ -1040,7 +1040,7 @@ def test_acf_conservate_nanops(reset_randomstate):
     for i in range(1, e.shape[0]):
         e[i] += 0.9 * e[i-1]
     e[::7] = np.nan
-    result = acf(e, missing="conservative", nlags=10)
+    result = acf(e, missing="conservative", nlags=10, fft=False)
     resid = e - np.nanmean(e)
     expected = np.ones(11)
     nobs = e.shape[0]

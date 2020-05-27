@@ -217,7 +217,7 @@ class TestMetaK1(object):
         assert_allclose(ci[1], res.ci_ub, atol=1e-10)
 
         assert_allclose(res3.q, res.QE, atol=1e-10)
-        # the following doesn't pass yet
+        # the following does not pass yet
         # assert_allclose(res3.i2, res.I2 / 100, atol=1e-10)  # percent in R
         # assert_allclose(res3.h2, res.H2, atol=1e-10)
         q, pv, df = res3.test_homogeneity()

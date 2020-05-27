@@ -565,7 +565,7 @@ class HoltWintersResults(Results):
                        0\quad\text{else}
                    \end{cases}\\
 
-        and, when using the additve error model,
+        and, when using the additive error model,
 
         .. math::
 

@@ -21,7 +21,7 @@ def test_lazy_imports():
 
 @pytest.mark.skipif(SCIPY_11, reason='SciPy raises on -OO')
 def test_docstring_optimization_compat():
-    # GH#5235 check that importing with stripped docstrings doesn't raise
+    # GH#5235 check that importing with stripped docstrings does not raise
     cmd = sys.executable + ' -OO -c "import statsmodels.api as sm"'
     p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE)

@@ -1156,7 +1156,7 @@ def test_vma1_exog():
     mod_vma.ssm.initialize_diffuse()
     res_mva = mod_vma.smooth(vma_params)
 
-    # Smoke test that start_params doesn't raise an error
+    # Smoke test that start_params does not raise an error
     sp = mod_vma.start_params
     assert_equal(len(sp), len(mod_vma.param_names))
 

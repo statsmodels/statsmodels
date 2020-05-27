@@ -51,7 +51,7 @@ def burg(endog, ar_order=0, demean=True):
     spec = SARIMAXSpecification(endog, ar_order=ar_order)
     endog = spec.endog
 
-    # Workaround for statsmodels.tsa.stattools.pacf_burg which doesn't work
+    # Workaround for statsmodels.tsa.stattools.pacf_burg which does not work
     # on integer input
     # TODO: remove when possible
     if np.issubdtype(endog.dtype, np.dtype(int)):
