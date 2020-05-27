@@ -505,7 +505,7 @@ class Fourier(FourierDeterministic):
         columns = []
         for i in range(1, self._order + 1):
             for typ in ("sin", "cos"):
-                columns.append(f"Fourier({typ},{i},{fmt_period})")
+                columns.append(f"{typ}({i},{fmt_period})")
         return columns
 
     @Appender(DeterministicTerm.in_sample.__doc__)
@@ -648,7 +648,7 @@ class CalendarFourier(CalendarDeterminsticTerm, FourierDeterministic):
         columns = []
         for i in range(1, self._order + 1):
             for typ in ("sin", "cos"):
-                columns.append(f"Fourier({typ},{i},freq={self._freq.freqstr})")
+                columns.append(f"{typ}({i},freq={self._freq.freqstr})")
         return columns
 
     @Appender(DeterministicTerm.in_sample.__doc__)

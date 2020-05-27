@@ -305,7 +305,7 @@ def test_fourier(index):
     cols = []
     for i in range(2 * f.order):
         fn = "cos" if (i % 2) else "sin"
-        cols.append(f"Fourier({fn},{(i // 2) + 1},12)")
+        cols.append(f"{fn}({(i // 2) + 1},12)")
     assert list(terms.columns) == cols
 
 
@@ -331,7 +331,7 @@ def test_calendar_fourier(reset_randomstate):
     cols = []
     for i in range(2 * cf.order):
         fn = "cos" if (i % 2) else "sin"
-        cols.append(f"Fourier({fn},{(i // 2) + 1},freq=D)")
+        cols.append(f"{fn}({(i // 2) + 1},freq=D)")
     assert list(terms.columns) == cols
 
     inc = offset / (24 * 3600)
