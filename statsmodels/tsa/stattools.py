@@ -600,7 +600,7 @@ def acf(x, unbiased=False, nlags=None, qstat=False, fft=None, alpha=None,
     if not (qstat or alpha):
         return acf
     if alpha is not None:
-        varacf = np.ones(nlags + 1) / nobs
+        varacf = np.ones(len(acf)) / nobs
         varacf[0] = 0
         varacf[1] = 1. / nobs
         varacf[2:] *= 1 + 2 * np.cumsum(acf[1:-1] ** 2)

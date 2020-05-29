@@ -3910,6 +3910,13 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         # Eliminate residuals associated with burned or diffuse likelihoods
         d = np.maximum(self.loglikelihood_burn, self.nobs_diffuse)
         resid = self.filter_results.standardized_forecasts_error[variable, d:]
+        try:
+            assert(resid.size>=d)
+        except AssertionError:
+            import sys
+            print("Residue less than or equal to maximum of burnt/diffused residuals", file=sys.stderr)
+            return None
+
 
         # Top-left: residuals vs time
         ax = fig.add_subplot(221)
