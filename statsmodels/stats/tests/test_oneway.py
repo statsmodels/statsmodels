@@ -10,6 +10,8 @@ License: BSD-3
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 
+from statsmodels.regression.linear_model import OLS
+import statsmodels.stats.power as smpwr
 import statsmodels.stats.robust_compare as str
 import statsmodels.stats.oneway as sto
 from statsmodels.stats.oneway import (
@@ -18,6 +20,8 @@ from statsmodels.stats.oneway import (
     anova_generic, equivalence_oneway, equivalence_oneway_generic,
     power_equivalence_oneway, power_equivalence_oneway0,
     f2_to_wellek, fstat_to_wellek, wellek_to_f2)
+from statsmodels.stats.contrast import (
+    wald_test_noncent_generic)
 
 
 def test_oneway_effectsize():
@@ -363,3 +367,59 @@ class TestOnewayScale(object):
         assert_allclose(res.pvalue, res2.pvalue, rtol=1e-13)
         assert_allclose(res.statistic, res2.statistic, rtol=1e-13)
         assert_equal(res.df, res2.df)
+
+
+class TestOnewayOLS(object):
+
+    @classmethod
+    def setup_class(cls):
+        y0 = [112.488, 103.738, 86.344, 101.708, 95.108, 105.931,
+              95.815, 91.864, 102.479, 102.644]
+        y1 = [100.421, 101.966, 99.636, 105.983, 88.377, 102.618,
+              105.486, 98.662, 94.137, 98.626, 89.367, 106.204]
+        y2 = [84.846, 100.488, 119.763, 103.736, 93.141, 108.254,
+              99.510, 89.005, 108.200, 82.209, 100.104, 103.706,
+              107.067]
+        y3 = [100.825, 100.255, 103.363, 93.230, 95.325, 100.288,
+              94.750, 107.129, 98.246, 96.365, 99.740, 106.049,
+              92.691, 93.111, 98.243]
+
+        cls.k_groups = k = 4
+        cls.data = data = [y0, y1, y2, y3]
+        cls.nobs = nobs = np.asarray([len(yi) for yi in data])
+        groups = np.repeat(np.arange(k), nobs)
+        cls.ex = (groups[:, None] == np.arange(k)).astype(np.int64)
+        cls.y = np.concatenate(data)
+
+    def test_ols_noncentrality(self):
+        k = self.k_groups
+
+        res_ols = OLS(self.y, self.ex).fit()
+        nobs_t = res_ols.model.nobs
+
+        # constraint
+        c_equal = -np.eye(k)[1:]
+        c_equal[:, 0] = 1
+        v = np.zeros(c_equal.shape[0])
+
+        # noncentrality at estimated parameters
+        wt = res_ols.wald_test(c_equal)
+        df_num, df_denom = wt.df_num, wt.df_denom
+
+        cov_p = res_ols.cov_params()
+
+        nc_wt = wald_test_noncent_generic(res_ols.params, c_equal, v, cov_p,
+                                          diff=None, joint=True)
+        assert_allclose(nc_wt, wt.statistic * wt.df_num, rtol=1e-13)
+
+        es_ols = nc_wt / nobs_t
+        es_oneway = sto.effectsize_oneway(res_ols.params, res_ols.scale,
+                                          self.nobs, use_var="equal")
+        assert_allclose(es_ols, es_oneway, rtol=1e-13)
+
+        alpha = 0.05
+        pow_ols = smpwr.ftest_power(np.sqrt(es_ols), df_denom, df_num, alpha,
+                                    ncc=1)
+        pow_oneway = smpwr.ftest_anova_power(np.sqrt(es_oneway), nobs_t, alpha,
+                                             k_groups=k, df=None)
+        assert_allclose(pow_ols, pow_oneway, rtol=1e-13)
