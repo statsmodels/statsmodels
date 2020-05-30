@@ -19,7 +19,7 @@ def _prepare_data_corr_plot(x, lags, zero):
         if lags ==0:
             lags = np.arange(not zero, 1)  # 1 for zero lag
         else:
-            lags = np.arange(not zero, int(lags))
+            lags = np.arange(not zero, max(int(lags), x.shape[0]))
     else:
         irregular = True
         lags = np.asanyarray(lags).astype(np.int)
