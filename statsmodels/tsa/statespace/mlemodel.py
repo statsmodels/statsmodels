@@ -3914,7 +3914,13 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             assert(resid.size>=d)
         except AssertionError:
             import sys
-            print("Residue less than or equal to maximum of burnt/diffused residuals", file=sys.stderr)
+            print("Length of endogenous variable less than or equal to maximum of burnt/diffused residuals", file=sys.stderr)
+            return None
+        try:
+            assert(resid.size>=lags)
+        except AssertionError:
+            import sys
+            print("Length of endogenous variable less than or equal to lags", file=sys.stderr)
             return None
 
 

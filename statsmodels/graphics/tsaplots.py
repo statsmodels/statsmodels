@@ -156,7 +156,6 @@ def plot_acf(x, ax=None, lags=None, *, alpha=.05, use_vlines=True,
                 missing=missing)
     if alpha is not None:
         acf_x, confint = acf_x
-
     _plot_corr(ax, title, acf_x, confint, lags, irregular, use_vlines,
                vlines_kwargs, **kwargs)
 
