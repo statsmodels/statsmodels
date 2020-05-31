@@ -494,9 +494,10 @@ def _smw_solver(s, A, AtA, Qi, di):
         d = qmat.shape[0]
         qmat.flat[m*(d+1)::d+1] += di
         qmati = np.linalg.solve(qmat, A.T)
+
         def solver(rhs):
-            # A is tall and qmati is wide, so we want A * (qmati * rhs)
-            # not (A * qmati) * rhs
+            # A is tall and qmati is wide, so we want
+            # A * (qmati * rhs) not (A * qmati) * rhs
             ql = np.dot(qmati, rhs)
             ql = np.dot(A, ql)
             return rhs / s - ql / s**2
