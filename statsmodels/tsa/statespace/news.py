@@ -11,7 +11,6 @@ import pandas as pd
 
 import statsmodels.base.wrapper as wrap
 
-from statsmodels.iolib.summary import forg
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.iolib.summary import Summary
 from statsmodels.iolib.tableformatting import fmt_params
