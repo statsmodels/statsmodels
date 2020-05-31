@@ -443,7 +443,8 @@ class DynamicFactor(MLEModel):
         endog = self.endog.copy()
         mask = ~np.any(np.isnan(endog), axis=1)
         endog = endog[mask]
-        exog = self.exog[mask]
+        if self.k_exog > 0:
+            exog = self.exog[mask]
 
         # 1. Factor loadings (estimated via PCA)
         if self.k_factors > 0:
