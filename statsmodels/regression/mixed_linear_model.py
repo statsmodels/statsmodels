@@ -473,24 +473,30 @@ def _smw_solver(s, A, AtA, Qi, di):
 
     # Use SMW identity
     qmat = AtA / s
-    if sparse.issparse(qmat):
-        qmat = qmat.todense()
     m = Qi.shape[0]
     qmat[0:m, 0:m] += Qi
-    d = qmat.shape[0]
-    qmat.flat[m*(d+1)::d+1] += di
-    if sparse.issparse(A):
-        qmati = sparse.linalg.spsolve(sparse.csc_matrix(qmat), A.T)
-    else:
-        qmati = np.linalg.solve(qmat, A.T)
 
     if sparse.issparse(A):
+        qmat[m:, m:] += sparse.diags(di)
+
         def solver(rhs):
-            ql = qmati.dot(rhs)
+            ql = A.T.dot(rhs)
+            # Based on profiling, the next line can be the
+            # majority of the entire run time of fitting the model.
+            ql = sparse.linalg.spsolve(qmat, ql)
+            if ql.ndim < rhs.ndim:
+                # spsolve squeezes nx1 rhs
+                ql = ql[:, None]
             ql = A.dot(ql)
             return rhs / s - ql / s**2
+
     else:
+        d = qmat.shape[0]
+        qmat.flat[m*(d+1)::d+1] += di
+        qmati = np.linalg.solve(qmat, A.T)
         def solver(rhs):
+            # A is tall and qmati is wide, so we want A * (qmati * rhs)
+            # not (A * qmati) * rhs
             ql = np.dot(qmati, rhs)
             ql = np.dot(A, ql)
             return rhs / s - ql / s**2
@@ -542,9 +548,22 @@ def _smw_logdet(s, A, AtA, Qi, di, B_logdet):
     qmat = AtA / s
     m = Qi.shape[0]
     qmat[0:m, 0:m] += Qi
-    d = qmat.shape[0]
-    qmat.flat[m*(d+1)::d+1] += di
-    _, ld1 = np.linalg.slogdet(qmat)
+
+    if sparse.issparse(qmat):
+        qmat[m:, m:] += sparse.diags(di)
+
+        # There are faster but much more difficult ways to do this
+        # https://stackoverflow.com/questions/19107617
+        lu = sparse.linalg.splu(qmat)
+        dl = lu.L.diagonal().astype(np.complex128)
+        du = lu.U.diagonal().astype(np.complex128)
+        ld1 = np.log(dl).sum() + np.log(du).sum()
+        ld1 = ld1.real
+    else:
+        d = qmat.shape[0]
+        qmat.flat[m*(d+1)::d+1] += di
+        _, ld1 = np.linalg.slogdet(qmat)
+
     return B_logdet + ld + ld1
 
 
@@ -801,10 +820,7 @@ class MixedLM(base.LikelihoodModel):
             a = self._augment_exog(i)
             self._aex_r.append(a)
 
-            # This matrix is not very sparse so convert it to dense.
             ma = _dot(a.T, a)
-            if sparse.issparse(ma):
-                ma = ma.todense()
             self._aex_r2.append(ma)
 
         # Precompute this
