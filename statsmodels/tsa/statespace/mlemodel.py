@@ -3690,7 +3690,6 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                                     copy_initialization=True, **kwargs)
 
         # Now, figure out the `updated` versus `previous` results objects
-        func = None
         nmissing = self.filter_results.missing.sum()
         nmissing_comparison = comparison.filter_results.missing.sum()
         if (comparison_type == 'updated' or (comparison_type is None and (

@@ -718,7 +718,6 @@ def test_dynamic_factor_time_varying(revisions, updates):
 def test_defaults(revisions, updates):
     # Construct previous and updated datasets
     endog = dta['infl'].copy()
-    comparison_type = None
     if updates:
         endog1 = endog.loc[:'2009Q2'].copy()
         endog2 = endog.loc[:'2009Q3'].copy()

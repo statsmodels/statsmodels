@@ -831,7 +831,7 @@ class NewsResults(object):
         params_header = data.columns.tolist()
         params_stubs = None
 
-        title = f'Revisions to dataset:'
+        title = 'Revisions to dataset:'
         revisions_table = SimpleTable(
             params_data, params_header, params_stubs,
             txt_fmt=fmt_params, title=title)
@@ -883,7 +883,7 @@ class NewsResults(object):
         params_header = data.columns.tolist()
         params_stubs = None
 
-        title = (f'News from updated observations:')
+        title = 'News from updated observations:'
         updates_table = SimpleTable(
             params_data, params_header, params_stubs,
             txt_fmt=fmt_params, title=title)

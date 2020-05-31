@@ -1130,10 +1130,10 @@ class SmootherResults(FilterResults):
             tv_prev = getattr(previous, key).shape[-1] > 1
             if tv and not tv_prev:
                 raise ValueError(error_ss % f'time-varying {key} while'
-                                             ' `previous` does not')
+                                 ' `previous` does not')
             if not tv and tv_prev:
                 raise ValueError(error_ss % f'time-invariant {key} while'
-                                             ' `previous` does not')
+                                 ' `previous` does not')
 
         # We cannot forecast out-of-sample periods in a time-varying models
         if end > self.nobs and not self.model.time_invariant:
