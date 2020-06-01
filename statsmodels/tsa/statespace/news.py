@@ -152,13 +152,25 @@ class NewsResults(object):
                                         self.updates_ix['updated variable']])
 
         # E[y^u | post] - E[y^u | previous]
-        self.news = pd.Series(news_results.news, index=ix, name='news')
+        if news_results.news is None:
+            self.news = pd.Series([], index=ix, name='news',
+                                  dtype=model.params.dtype)
+        else:
+            self.news = pd.Series(news_results.news, index=ix, name='news')
         # E[y^u | previous]
-        self.update_forecasts = pd.Series(
-            news_results.update_forecasts, index=ix)
+        if news_results.update_forecasts is None:
+            self.update_forecasts = pd.Series([], index=ix,
+                                              dtype=model.params.dtype)
+        else:
+            self.update_forecasts = pd.Series(
+                news_results.update_forecasts, index=ix)
         # y^u
-        self.update_realized = pd.Series(
-            news_results.update_realized, index=ix)
+        if news_results.update_realized is None:
+            self.update_realized = pd.Series([], index=ix,
+                                             dtype=model.params.dtype)
+        else:
+            self.update_realized = pd.Series(
+                news_results.update_realized, index=ix)
         cols = pd.MultiIndex.from_product([self.row_labels, columns])
         # reshaped version of gain matrix E[y A'] E[A A']^{-1}
         if len(self.updates_iloc):

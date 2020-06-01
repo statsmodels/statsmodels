@@ -368,9 +368,9 @@ def test_sarimax_time_invariant(revisions, updates):
                         for i in range(len(update_forecasts))]
         weights = pd.DataFrame(np.r_[0, 0.5**np.arange(3)]).T
     else:
-        update_forecasts = pd.Series([])
-        update_realized = pd.Series([])
-        news_desired = pd.Series([])
+        update_forecasts = pd.Series([], dtype=np.float64)
+        update_realized = pd.Series([], dtype=np.float64)
+        news_desired = pd.Series([], dtype=np.float64)
         weights = pd.DataFrame(np.zeros((0, 4)))
 
     # Run unit tests
@@ -608,9 +608,9 @@ def test_varmax_time_invariant(revisions, updates):
         weights.loc[:, '2009Q4'] = T1.T
         weights.loc[:, '2010Q1'] = T2.T
     else:
-        update_forecasts = pd.Series([])
-        update_realized = pd.Series([])
-        news_desired = pd.Series([])
+        update_forecasts = pd.Series([], dtype=np.float64)
+        update_realized = pd.Series([], dtype=np.float64)
+        news_desired = pd.Series([], dtype=np.float64)
         weights = pd.DataFrame(np.zeros((0, 8)))
 
     # Run unit tests
