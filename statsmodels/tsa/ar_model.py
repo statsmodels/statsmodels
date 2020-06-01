@@ -1,29 +1,44 @@
 # -*- coding: utf-8 -*-
+from statsmodels.compat.pandas import Appender, Substitution, to_numpy
+
+from collections.abc import Iterable
 import copy
 import datetime as dt
-from collections.abc import Iterable
 from types import SimpleNamespace
 
 import numpy as np
-import pandas as pd
 from numpy.linalg import inv, slogdet
-from scipy.stats import norm, gaussian_kde
+import pandas as pd
+from scipy.stats import gaussian_kde, norm
 
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
-from statsmodels.compat.pandas import Appender, Substitution
 from statsmodels.iolib.summary import Summary
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.decorators import cache_readonly, cache_writable
-from statsmodels.tools.docstring import (Docstring, remove_parameters)
+from statsmodels.tools.docstring import Docstring, remove_parameters
 from statsmodels.tools.numdiff import approx_fprime, approx_hess
-from statsmodels.tools.validation import array_like, string_like, bool_like, \
-    int_like
+from statsmodels.tools.validation import (
+    array_like,
+    bool_like,
+    int_like,
+    string_like,
+)
 from statsmodels.tsa.arima_process import arma2ma
 from statsmodels.tsa.base import tsa_model
+from statsmodels.tsa.deterministic import (
+    DeterministicProcess,
+    Seasonality,
+    TimeTrend,
+)
 from statsmodels.tsa.kalmanf.kalmanfilter import KalmanFilter
-from statsmodels.tsa.tsatools import (lagmat, add_trend, _ar_transparams,
-                                      _ar_invtransparams, freq_to_period)
+from statsmodels.tsa.tsatools import (
+    _ar_invtransparams,
+    _ar_transparams,
+    add_trend,
+    freq_to_period,
+    lagmat,
+)
 from statsmodels.tsa.vector_ar import util
 
 __all__ = ['AR', 'AutoReg']
@@ -126,6 +141,13 @@ class AutoReg(tsa_model.TimeSeriesModel):
         Available options are 'none', 'drop', and 'raise'. If 'none', no nan
         checking is done. If 'drop', any observations with nans are dropped.
         If 'raise', an error is raised. Default is 'none'.
+    deterministic : DeterministicProcess
+        A deterministic process.  If provided, trend and seasonal are ignored.
+        A warning is raised if trend is not "n" and seasonal is not False.
+    old_names : bool
+        Flag indicating whether to use the v0.11 names or the v0.12+ names.
+        After v0.12 is released, the default names will change to the new
+        names.
 
     See Also
     --------
@@ -160,7 +182,8 @@ class AutoReg(tsa_model.TimeSeriesModel):
     """
 
     def __init__(self, endog, lags, trend='c', seasonal=False, exog=None,
-                 hold_back=None, period=None, missing='none'):
+                 hold_back=None, period=None, missing='none', *,
+                 deterministic=None, old_names=None):
         super(AutoReg, self).__init__(endog, exog, None, None,
                                       missing=missing)
         self._trend = string_like(trend, 'trend',
@@ -176,10 +199,47 @@ class AutoReg(tsa_model.TimeSeriesModel):
                       'explicitly set when the endog\'s index does not ' \
                       'contain a frequency.'
                 raise ValueError(err)
+        terms = [TimeTrend.from_string(self._trend)]
+        if seasonal:
+            terms.append(Seasonality(self._period))
+        if hasattr(self.data.orig_endog, "index"):
+            index = self.data.orig_endog.index
+        else:
+            index = np.arange(self.data.endog.shape[0])
+        self._user_deterministic = False
+        if deterministic is not None:
+            if not isinstance(deterministic, DeterministicProcess):
+                raise TypeError(
+                    "deterministic must be a DeterministicProcess"
+                )
+            self._deterministics = deterministic
+            self._user_deterministic = True
+        else:
+            self._deterministics = DeterministicProcess(
+                index, additional_terms=terms
+            )
         self._lags = lags
         self._exog_names = []
         self._k_ar = 0
         self._hold_back = int_like(hold_back, 'hold_back', optional=True)
+        self._old_names = bool_like(old_names, "old_names", optional=True)
+        if deterministic is not None:
+            self._old_names = False
+            if self._trend != "n" or self._seasonal:
+                import warnings
+                warnings.warn(
+                    'When using deterministic, trend must be "n" and '
+                    'seasonal must be False.', RuntimeWarning
+                )
+        if self._old_names is None:
+            import warnings
+            warnings.warn(
+                "The parameter names will change after 0.12 is "
+                "released. Set old_names to False to use the new names "
+                "now. Set old_names to True to use the old names. ",
+                FutureWarning
+            )
+            self._old_names = True
         self._check_lags()
         self._setup_regressors()
         self.nobs = self._y.shape[0]
@@ -245,22 +305,24 @@ class AutoReg(tsa_model.TimeSeriesModel):
         if len(self._lags) < maxlag:
             x = x[:, self._lags - 1]
         self._k_ar = x.shape[1]
-        if self._seasonal:
-            nobs, period = self.endog.shape[0], self._period
-            season_names = ['seasonal.{0}'.format(i) for i in range(period)]
-            dummies = np.zeros((nobs, period))
-            for i in range(period):
-                dummies[i::period, i] = 1
-            if 'c' in self._trend:
-                dummies = dummies[:, 1:]
-                season_names = season_names[1:]
-            x = np.c_[dummies, x]
-            exog_names = season_names + exog_names
-        x = add_trend(x, trend=self._trend, prepend=True)
-        if 't' in self._trend:
-            exog_names.insert(0, 'trend')
-        if 'c' in self._trend:
-            exog_names.insert(0, 'intercept')
+        deterministic = self._deterministics.in_sample()
+        if deterministic.shape[1]:
+            x = np.c_[to_numpy(deterministic), x]
+            if self._old_names:
+                deterministic_names = []
+                if "c" in self._trend:
+                    deterministic_names.append("intercept")
+                if "t" in self._trend:
+                    deterministic_names.append("trend")
+                if self._seasonal:
+                    period = self._period
+                    names = ['seasonal.{0}'.format(i) for i in range(period)]
+                    if "c" in self._trend:
+                        names = names[1:]
+                    deterministic_names.extend(names)
+            else:
+                deterministic_names = list(deterministic.columns)
+            exog_names = deterministic_names + exog_names
         if self.exog is not None:
             x = np.c_[x, self.exog]
             exog_names.extend(self.data.param_names)
@@ -268,6 +330,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
         x = x[hold_back:]
         if y.shape[0] < x.shape[1]:
             reg = x.shape[1]
+            period = self._period
             trend = 0 if self._trend == 'n' else len(self._trend)
             seas = 0 if not self._seasonal else period - ('c' in self._trend)
             lags = self._lags.shape[0]
@@ -440,29 +503,12 @@ class AutoReg(tsa_model.TimeSeriesModel):
         return -self.information(params)
 
     def _setup_oos_forecast(self, add_forecasts, exog_oos):
-        full_nobs = self.data.endog.shape[0]
         x = np.zeros((add_forecasts, self._x.shape[1]))
-        loc = 0
-        if 'c' in self._trend:
-            x[:, 0] = 1
-            loc += 1
-        if 't' in self._trend:
-            x[:, loc] = np.arange(full_nobs + 1, full_nobs + add_forecasts + 1)
-            loc += 1
-        if self.seasonal:
-            seasonal = np.zeros((add_forecasts, self._period))
-            period = self._period
-            col = full_nobs % period
-            for i in range(period):
-                seasonal[i::period, (col + i) % period] = 1
-            if 'c' in self._trend:
-                x[:, loc:loc + period - 1] = seasonal[:, 1:]
-                loc += seasonal.shape[1] - 1
-            else:
-                x[:, loc:loc + period] = seasonal
-                loc += seasonal.shape[1]
+        oos_exog = self._deterministics.out_of_sample(steps=add_forecasts)
+        n_deterministic = oos_exog.shape[1]
+        x[:, :n_deterministic] = to_numpy(oos_exog)
         # skip the AR columns
-        loc += len(self._lags)
+        loc = n_deterministic + len(self._lags)
         if self.exog is not None:
             x[:, loc:] = exog_oos[:add_forecasts]
         return x
@@ -681,8 +727,11 @@ class AutoReg(tsa_model.TimeSeriesModel):
 
 
 class AR(tsa_model.TimeSeriesModel):
-    __doc__ = tsa_model._tsa_doc % {"model": "Autoregressive AR(p) model.\n\n"
-                                             "    .. deprecated:: 0.11",
+    __doc__ = tsa_model._tsa_doc % {"model": """\
+Autoregressive AR(p) model.
+
+    .. deprecated:: 0.11
+       Use statsmodels.tsa.ar_model.AutoReg instead""",
                                     "params": """endog : array_like
         A 1-d endogenous response variable. The independent variable.""",
                                     "extra_params": base._missing_param_doc,
@@ -1982,6 +2031,48 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
                                   dynamic=dynamic, exog=exog,
                                   exog_oos=exog_oos)
 
+    def forecast(self, steps=1, dynamic=False, exog=None):
+        """
+        Out-of-sample forecasts
+
+        Parameters
+        ----------
+        steps : {int, str, datetime}, default 1
+            If an integer, the number of steps to forecast from the end of the
+            sample. Can also be a date string to parse or a datetime type.
+            However, if the dates index does not have a fixed frequency,
+            steps must be an integer.
+        dynamic : {bool, int, str, datetime, Timestamp}, optional
+            Integer offset relative to `start` at which to begin dynamic
+            prediction. Prior to this observation, true endogenous values
+            will be used for prediction; starting with this observation and
+            continuing through the end of prediction, forecasted endogenous
+            values will be used instead. Datetime-like objects are not
+            interpreted as offsets. They are instead used to find the index
+            location of `dynamic` which is then used to to compute the offset.
+        exog : array_like
+            A replacement exogenous array.  Must have the same shape as the
+            exogenous data array used when the model was created.
+
+        Returns
+        -------
+        array_like
+            Array of out of in-sample predictions and / or out-of-sample
+            forecasts. An (npredict x k_endog) array.
+
+        See Also
+        --------
+        AutoRegResults.predict
+            In- and out-of-sample predictions
+        """
+        start = self.model.data.orig_endog.shape[0]
+        if isinstance(steps, (int, np.integer)):
+            end = start + steps - 1
+        else:
+            end = steps
+        return self.predict(start=start, end=end, dynamic=dynamic,
+                            exog_oos=exog)
+
     @Substitution(predict_params=_predict_params)
     def plot_predict(self, start=None, end=None, dynamic=False, exog=None,
                      exog_oos=None, alpha=.05, in_sample=True, fig=None,
@@ -2239,14 +2330,15 @@ wrap.populate_wrapper(AutoRegResultsWrapper, AutoRegResults)
 
 doc = Docstring(AutoReg.__doc__)
 _auto_reg_params = doc.extract_parameters(['trend', 'seasonal', 'exog',
-                                           'hold_back', 'period', 'missing'],
+                                           'hold_back', 'period', 'missing',
+                                           'old_names'],
                                           4)
 
 
 @Substitution(auto_reg_params=_auto_reg_params)
 def ar_select_order(endog, maxlag, ic='bic', glob=False, trend='c',
                     seasonal=False, exog=None, hold_back=None, period=None,
-                    missing='none'):
+                    missing='none', old_names=None):
     """
     Autoregressive AR-X(p) model order selection.
 
@@ -2296,7 +2388,7 @@ def ar_select_order(endog, maxlag, ic='bic', glob=False, trend='c',
     """
     full_mod = AutoReg(endog, maxlag, trend=trend, seasonal=seasonal,
                        exog=exog, hold_back=hold_back, period=period,
-                       missing=missing)
+                       missing=missing, old_names=old_names)
     nexog = full_mod.exog.shape[1] if full_mod.exog is not None else 0
     y, x = full_mod._y, full_mod._x
     base_col = x.shape[1] - nexog - maxlag
@@ -2360,7 +2452,7 @@ def ar_select_order(endog, maxlag, ic='bic', glob=False, trend='c',
     selected_model = ics[0][0]
     mod = AutoReg(endog, selected_model, trend=trend, seasonal=seasonal,
                   exog=exog, hold_back=hold_back, period=period,
-                  missing=missing)
+                  missing=missing, old_names=old_names)
     return AROrderSelectionResults(mod, ics, trend, seasonal, period)
 
 

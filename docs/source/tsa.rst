@@ -322,6 +322,30 @@ Interpolation
    dentonm
 
 
+Deterministic Processes
+"""""""""""""""""""""""
+
+.. currentmodule:: statsmodels.tsa.deterministic
+.. autosummary::
+   :toctree: generated/
+
+   DeterministicProcess
+   TimeTrend
+   Seasonality
+   Fourier
+   CalendarTimeTrend
+   CalendarSeasonality
+   CalendarFourier
+
+Users who wish to write custom deterministic terms must subclass
+:class:`~statsmodels.tsa.deterministic.DeterministicTerm`.
+
+.. currentmodule:: statsmodels.tsa.deterministic
+.. autosummary::
+   :toctree: generated/
+
+   DeterministicTerm
+
 Forecasting Models
 """"""""""""""""""
 .. module:: statsmodels.tsa.forecasting

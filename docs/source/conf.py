@@ -381,7 +381,6 @@ numpydoc_xref_aliases.update({
     'MLEResults': 'statsmodels.tsa.statespace.mlemodel.MLEResults'
 })
 
-
 # NBSphinx options
 nbsphinx_execute = "never"
 
