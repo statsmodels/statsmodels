@@ -310,14 +310,43 @@ def concat(series, axis=0, allow_mix=False):
         objects.
     """
     is_pandas = np.r_[[_is_using_pandas(s, None) for s in series]]
+    ndim = np.r_[[np.ndim(s) for s in series]]
+    max_ndim = np.max(ndim)
+
+    if max_ndim > 2:
+        raise ValueError('`tools.concat` does not support arrays with 3 or'
+                         ' more dimensions.')
+
+    # Make sure the iterable is mutable
+    if isinstance(series, tuple):
+        series = list(series)
+
+    # Standardize ndim
+    for i in range(len(series)):
+        if ndim[i] == 0 and max_ndim == 1:
+            series[i] = np.atleast_1d(series[i])
+        elif ndim[i] == 0 and max_ndim == 2:
+            series[i] = np.atleast_2d(series[i])
+        elif ndim[i] == 1 and max_ndim == 2 and is_pandas[i]:
+            name = series[i].name
+            series[i] = series[i].to_frame()
+            series[i].columns = [name]
+        elif ndim[i] == 1 and max_ndim == 2 and not is_pandas[i]:
+            series[i] = np.atleast_2d(series[i]).T
 
     if np.all(is_pandas):
         if isinstance(series[0], pd.DataFrame):
             base_columns = series[0].columns
         else:
             base_columns = pd.Index([series[0].name])
-        for s in series[1:]:
+        for i in range(1, len(series)):
+            s = series[i]
+
             if isinstance(s, pd.DataFrame):
+                # Handle case where we were passed a dataframe and a series
+                # to concatenate, and the series did not have a name.
+                if s.columns.equals(pd.Index([None])):
+                    s.columns = base_columns[:1]
                 s_columns = s.columns
             else:
                 s_columns = pd.Index([s.name])
