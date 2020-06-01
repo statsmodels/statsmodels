@@ -12,9 +12,9 @@ import pandas as pd
 import pytest
 
 from statsmodels import datasets
+from statsmodels.compat.pandas import pandas_lt_25_0
 from statsmodels.tsa.statespace import (
     sarimax, structural, varmax, dynamic_factor)
-
 
 dta = datasets.macrodata.load_pandas().data
 dta.index = pd.period_range(start='1959Q1', end='2009Q3', freq='Q')
@@ -189,7 +189,35 @@ def check_news(news, revisions, updates, impact_dates, impacted_variables,
                'update date', 'updated variable']
     assert_equal(details_by_impact.index.names, desired)
 
-    if updates:
+    # Note: Pandas < 0.24 has problems with drop_duplicates if there is a
+    # PeriodIndex (see e.g. https://github.com/pandas-dev/pandas/issues/22803)
+    # However, the test is not quite as precise with the verison that works
+    # for Pandas < 0.24, so we special case it and will remove after we no
+    # longer support Pandas 0.23
+    # See also one other case in the "details_by_update" section below
+    if updates and pandas_lt_25_0:
+        actual = (news.details_by_impact['forecast (prev)']
+                      .reset_index()
+                      .drop_duplicates('forecast (prev)'))['forecast (prev)']
+        assert_allclose(actual, news.update_forecasts, atol=1e-12)
+        actual = (news.details_by_impact['observed']
+                      .reset_index()
+                      .drop_duplicates('observed'))['observed']
+        assert_allclose(actual, news.update_realized, atol=1e-12)
+        actual = (news.details_by_impact['news']
+                      .reset_index()
+                      .drop_duplicates('news')['news'])
+        assert_allclose(actual, news.news, atol=1e-12)
+
+        # Weights
+        assert_allclose(details_by_impact['weight'].unstack([0, 1]),
+                        news.weights, atol=1e-12)
+
+        # Impact of news
+        actual = (news.details_by_impact['impact']
+                      .unstack([2, 3]).sum(axis=1).unstack(1))
+        assert_allclose(actual, news.update_impacts, atol=1e-12)
+    elif updates and not pandas_lt_25_0:
         actual = (news.details_by_impact['forecast (prev)']
                       .drop_duplicates()
                       .reset_index([0, 1])['forecast (prev)'])
@@ -220,8 +248,13 @@ def check_news(news, revisions, updates, impact_dates, impacted_variables,
 
     if updates:
         # News
-        actual = (news.details_by_update['news']
-                      .drop_duplicates().reset_index([2, 3, 4, 5])['news'])
+        # Special case for Pandas = 0.23, see above
+        if pandas_lt_25_0:
+            actual = (news.details_by_update['news']
+                          .reset_index().drop_duplicates('news')['news'])
+        else:
+            actual = (news.details_by_update['news']
+                          .drop_duplicates().reset_index([2, 3, 4, 5])['news'])
         assert_allclose(actual, news.news, atol=1e-12)
 
         # Weights
@@ -508,14 +541,17 @@ def test_varmax_time_invariant(revisions, updates):
             [endog1.index[-1:], ['realgdp', 'unemp']],
             names=['revision date', 'revised variable'])
         # If we have updates, the revision is to 2009Q2
-        tmp = endog2.iloc[-2]
+        # Note: this ".values" and all of those below are only required for
+        # Pandas = 0.23, and can be removed once that is no longer a supported
+        # dependency
+        tmp = endog2.iloc[-2].values
         revision_impacts = np.c_[T0 @ tmp, T1 @ tmp, T2 @ tmp, T3 @ tmp].T
     elif revisions:
         revisions_index = pd.MultiIndex.from_product(
             [endog1.index[-1:], ['realgdp', 'unemp']],
             names=['revision date', 'revised variable'])
         # With no updates, the revision is to 2009Q3
-        tmp = endog2.iloc[-1]
+        tmp = endog2.iloc[-1].values
         revision_impacts = np.c_[Z @ tmp, T0 @ tmp, T1 @ tmp, T2 @ tmp].T
     else:
         revisions_index = pd.MultiIndex.from_product(
@@ -525,20 +561,20 @@ def test_varmax_time_invariant(revisions, updates):
 
     # Impact forecasts
     if updates:
-        tmp = endog1.iloc[-1]
+        tmp = endog1.iloc[-1].values
         prev_impacted_forecasts = np.c_[T0 @ tmp, T1 @ tmp,
                                         T2 @ tmp, T3 @ tmp].T
-        tmp = endog2.iloc[-2]
+        tmp = endog2.iloc[-2].values
         rev_impacted_forecasts = np.c_[T0 @ tmp, T1 @ tmp,
                                        T2 @ tmp, T3 @ tmp].T
     else:
-        tmp = endog1.iloc[-1]
+        tmp = endog1.iloc[-1].values
         prev_impacted_forecasts = np.c_[
             T0 @ endog1.iloc[-2], T0 @ tmp, T1 @ tmp, T2 @ tmp].T
-        tmp = endog2.iloc[-1]
+        tmp = endog2.iloc[-1].values
         rev_impacted_forecasts = np.c_[
             T0 @ endog2.iloc[-2], T0 @ tmp, T1 @ tmp, T2 @ tmp].T
-    tmp = endog2.iloc[-1]
+    tmp = endog2.iloc[-1].values
     post_impacted_forecasts = np.c_[
         T0 @ endog2.iloc[-2], T0 @ tmp, T1 @ tmp, T2 @ tmp].T
 
@@ -558,8 +594,8 @@ def test_varmax_time_invariant(revisions, updates):
         # Note: update_forecasts is created using the endog2 dataset even if
         # there were revisions, because it should be computed after revisions
         # have already been taken into account
-        update_forecasts = T1 @ endog2.loc['2009Q2']
-        update_realized = endog2.loc['2009Q3']
+        update_forecasts = T1 @ endog2.loc['2009Q2'].values
+        update_realized = endog2.loc['2009Q3'].values
         news_desired = [update_realized[i] - update_forecasts[i]
                         for i in range(len(update_forecasts))]
         columns = pd.MultiIndex.from_product(
@@ -924,7 +960,7 @@ def test_start_end_int(which):
         endog_init = endog.iloc[:-1]
         index_plus2 = pd.Int64Index(np.arange(nobs + 2))
     elif which == 'numpy':
-        endog = endog.to_numpy()
+        endog = endog.values
         endog_init = endog[:-1]
         index_plus2 = pd.RangeIndex(nobs + 2)
     elif which == 'list':
