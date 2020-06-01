@@ -381,6 +381,10 @@ numpydoc_xref_aliases.update({
     'MLEResults': 'statsmodels.tsa.statespace.mlemodel.MLEResults'
 })
 
+
+# NBSphinx options
+nbsphinx_execute = "never"
+
 # Example configuration for intersphinx: refer to the Python standard library.
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
