@@ -3711,7 +3711,14 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         # Check that the index of `updated` is a superset of the
         # index of `previous`
-        if len(previous.model._index.difference(updated.model._index)) > 0:
+        # Note: the try/except block is for Pandas < 0.25, in which
+        # `PeriodIndex.difference` raises a ValueError if the argument is not
+        # also a `PeriodIndex`.
+        try:
+            diff = previous.model._index.difference(updated.model._index)
+        except ValueError:
+            diff = [True]
+        if len(diff) > 0:
             raise ValueError('The index associated with the updated results is'
                              ' not a superset of the index associated with the'
                              ' previous results, and so these datasets do not'
