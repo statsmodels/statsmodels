@@ -140,8 +140,8 @@ class BaseIRAnalysis(object):
         if plot_stderr is False:
             stderr = None
 
-        elif stderr_type not in ['asym', 'mc', 'sz1', 'sz2','sz3']:
-            raise ValueError("Error type must be either 'asym', 'mc','sz1','sz2', or 'sz3'")
+        elif stderr_type not in ['asym', 'mc', 'sz1', 'sz2','sz3', 'bootstrap']:
+            raise ValueError("Error type must be either 'asym', 'mc','sz1','sz2','sz3', or 'bootstrap'")
         else:
             if stderr_type == 'asym':
                 stderr = self.cov(orth=orth)
@@ -164,6 +164,10 @@ class BaseIRAnalysis(object):
                                            repl=repl, signif=signif,
                                            seed=seed,
                                            component=component)
+            if stderr_type == 'bootstrap':
+                stderr = self.err_band_bootstrap(orth=orth, svar=svar,
+                                           repl=repl, signif=signif,
+                                           seed=seed)
 
         fig = plotting.irf_grid_plot(irfs, stderr, impulse, response,
                                      self.model.names, title, signif=signif,
@@ -504,6 +508,79 @@ class IRAnalysis(BaseIRAnalysis):
                 upper[:,i,j] = irfs[:,i,j] + gamma_sort[indx[1],:,i,j]
 
         return lower, upper
+    
+    def err_band_bootstrap(self, orth=False, svar=False, repl=100, signif=0.05,
+                     seed=None):
+        """
+        IRF Sims-Zha error band method 3. Does not assume symmetric error bands around mean.
+
+        Parameters
+        ----------
+        orth : bool, default False
+            Compute orthogonalized impulse responses
+        repl : int, default 1000
+            Number of MC replications
+        signif : float (0 < signif < 1)
+            Significance level for error bars, defaults to 95% CI
+        seed : int, default None
+            np.random seed
+        burn : int, default 100
+            Number of initial simulated obs to discard
+        component : vector length neqs, default to largest for each
+            Index of column of eigenvector/value to use for each error band
+            Note: period of impulse (t=0) is not included when computing
+            principle component
+
+        References
+        ----------
+        Sims, Christopher A., and Tao Zha. 1999. "Error Bands for Impulse
+        Response". Econometrica 67: 1113-1155.
+        """
+        from statsmodels.tsa.api import VAR
+        if seed is not None:
+            np.random.seed(seed)
+        def resample(e):
+            """Resample data randomly with replacement."""
+            ind = np.random.choice(len(e), size=len(e))
+            return e[ind]
+    
+        def simulate(resid, Y, intercept, coefs, k_ar):
+            """
+            Simulate VAR model with given resuduals
+            """
+            e_hatb = resample(resid)
+            Yb = np.zeros(Y.shape)
+            for j in range(k_ar):
+                Yb[j,:] = Y[j,:]
+            for t in range(k_ar, len(Yb)):
+                Yb[t,:] += intercept
+                for k in range(k_ar):
+                    Yb[t,:] += coefs[k,:,:] @ Yb[t-k-1,:]
+                Yb[t,:] += e_hatb[t-k_ar,:]
+            return Yb
+
+        
+        
+        Psi_b = np.empty((repl, self.periods+1, self.model.neqs, self.model.neqs))
+        # bootstrap simulations
+        for b in range(repl):
+            resid = np.array(self.model.resid)
+            Y = np.array(self.model.endog)
+            intercept = np.array(self.model.intercept)
+            coefs = np.array(self.model.coefs)
+            Yb = simulate(resid, Y, intercept, coefs, self.model.k_ar)
+            # fit VAR to the bootstraped data
+            b_fit = VAR(Yb).fit(self.model.k_ar)
+            # calculate the A0 matrix
+            A0 = la.cholesky(b_fit.sigma_u)
+            # save the results of the estimation
+            Psi_b[b] = b_fit.irf(var_decomp = A0).orth_irfs
+        # calculate the percentiles of the bootstrap distribution
+        lower = np.percentile(Psi_b, signif/2, axis=0)
+        upper = np.percentile(Psi_b, 100 - signif/2, axis=0)
+        
+        return lower, upper
+        
 
     def _eigval_decomp_SZ(self, irf_resim):
         """
