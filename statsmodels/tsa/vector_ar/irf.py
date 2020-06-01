@@ -495,10 +495,10 @@ class IRAnalysis(BaseIRAnalysis):
                 for i in range(neqs):
                     gamma[p,1:,i,j] = W[j,k[j],i*periods:(i+1)*periods] * irf_resim[p,1:,i,j]
                     if i == neqs-1:
-                        gamma[p,1:,i,j] = W[j,k[j],i*periods:] * irf_resim[p,1:,i,j]
+                        gamma[p,1:,i,j] = W[j,k[j],i*pentiles
+        indx = round(signif/2*repl)-1,round((1-signif/2)*reriods:] * irf_resim[p,1:,i,j]
 
-        gamma_sort = np.sort(gamma, axis=0) #sort to get quantiles
-        indx = round(signif/2*repl)-1,round((1-signif/2)*repl)-1
+        gamma_sort = np.sort(gamma, axis=0) #sort to get quapl)-1
 
         lower = np.copy(irfs)
         upper = np.copy(irfs)
@@ -512,29 +512,24 @@ class IRAnalysis(BaseIRAnalysis):
     def err_band_bootstrap(self, orth=False, svar=False, repl=100, signif=0.05,
                      seed=None):
         """
-        IRF Sims-Zha error band method 3. Does not assume symmetric error bands around mean.
+        Bootstrap asymmetric errors 
 
         Parameters
         ----------
         orth : bool, default False
             Compute orthogonalized impulse responses
         repl : int, default 1000
-            Number of MC replications
+            Number of bootstrap replications
         signif : float (0 < signif < 1)
             Significance level for error bars, defaults to 95% CI
         seed : int, default None
             np.random seed
-        burn : int, default 100
-            Number of initial simulated obs to discard
-        component : vector length neqs, default to largest for each
-            Index of column of eigenvector/value to use for each error band
-            Note: period of impulse (t=0) is not included when computing
-            principle component
 
         References
         ----------
-        Sims, Christopher A., and Tao Zha. 1999. "Error Bands for Impulse
-        Response". Econometrica 67: 1113-1155.
+        Runkle, David E. “Vector Autoregressions and Reality.”
+        Journal of Business & Economic Statistics, vol. 5, no. 4,
+        1987, pp. 437–442.
         """
         from statsmodels.tsa.api import VAR
         if seed is not None:
