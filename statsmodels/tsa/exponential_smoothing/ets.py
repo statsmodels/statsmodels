@@ -29,13 +29,15 @@ latter are used to update the internal state.
     \hat{y}_{t|t-1} &= (l_{t-1} \circ_b (b_{t-1}\circ_d \phi))\circ_s s_{t-m}\\
     l_{t} &= \alpha (y_{t} \ominus_s s_{t-m})
              + (1 - \alpha) (l_{t-1} \circ_b (b_{t-1} \circ_d \phi))\\
-    b_{t} &= \beta^* (l_{t} \ominus_b l_{t-1}) + (1 - \beta^*) b_{t-1}\\
-    s_{t} &= \gamma^* (y_t \ominus_s l_{t}) + (1 - \gamma^*) s_{t-m}
+    b_{t} &= \beta/\alpha (l_{t} \ominus_b l_{t-1})
+             + (1 - \beta/\alpha) b_{t-1}\\
+    s_{t} &= \gamma (y_t \ominus_s (l_{t-1} \circ_b (b_{t-1}\circ_d\phi))
+             + (1 - \gamma) s_{t-m}
 
 The notation here follows [1]_; :math:`l_t` denotes the level at time
 :math:`t`, `b_t` the trend, and `s_t` the seasonal component. :math:`m` is the
 number of seasonal periods, and :math:`\phi` a trend damping factor.
-The parameters :math:`\alpha, \beta^*, \gamma^*` are the smoothing parameters,
+The parameters :math:`\alpha, \beta, \gamma` are the smoothing parameters,
 which are called ``smoothing_level``, ``smoothing_trend``, and
 ``smoothing_seasonal``, respectively.
 
@@ -139,6 +141,7 @@ References
 """
 
 from collections import OrderedDict
+import contextlib
 
 import numpy as np
 import pandas as pd
@@ -149,13 +152,15 @@ from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.tools import Bunch
 from statsmodels.tools.validation import bool_like, int_like, string_like
 import statsmodels.tsa.base.tsa_model as tsbase
-from statsmodels.tsa.exponential_smoothing import base, initialization as es_init
+from statsmodels.tsa.exponential_smoothing import base
 import statsmodels.tsa.exponential_smoothing._ets_smooth as smooth
+from statsmodels.tsa.exponential_smoothing.initialization import (
+    _initialization_heuristic,
+)
 from statsmodels.tsa.tsatools import freq_to_period
 
 # Implementation details:
 
-# * The `smoothing_trend` parameter corresponds to \beta^*, not to \beta
 # * The smoothing equations are implemented only for models having all
 #   components (trend, dampening, seasonality). When using other models, the
 #   respective parameters (smoothing and initial parameters) are set to values
@@ -407,7 +412,7 @@ class ETSModel(base.StateSpaceMLEModel):
                 initial_level,
                 initial_trend,
                 initial_seasonal,
-            ) = es_init._initialization_heuristic(
+            ) = _initialization_heuristic(
                 self.endog,
                 trend=self.trend,
                 seasonal=self.seasonal,
@@ -499,6 +504,10 @@ class ETSModel(base.StateSpaceMLEModel):
     @property
     def _k_states(self):
         return 1 + int(self.has_trend) + int(self.has_seasonal)  # level
+
+    @property
+    def _k_states_internal(self):
+        return 2 + self.seasonal_periods
 
     @property
     def _k_smoothing_params(self):
@@ -720,24 +729,27 @@ class ETSModel(base.StateSpaceMLEModel):
                 params=start_params, mle_retvals=None, mle_settings=None
             )
         else:
-            # transform parameters to internal parameters
             start_params = self._internal_params(start_params)
             bounds = self._internal_bounds()
+            yhat = np.zeros(self.nobs)
+            xhat = np.zeros((self.nobs, self._k_states_internal))
 
             # add 'approx_grad' to solver kwargs
             kwargs["approx_grad"] = True
             kwargs["bounds"] = bounds
 
-            mlefit = super().fit(
-                start_params,
-                method="lbfgs",
-                maxiter=maxiter,
-                full_output=full_output,
-                disp=disp,
-                callback=callback,
-                skip_hessian=True,
-                **kwargs,
-            )
+            with self.use_internal_loglike():
+                mlefit = super().fit(
+                    start_params,
+                    fargs=(yhat, xhat),
+                    method="lbfgs",
+                    maxiter=maxiter,
+                    full_output=full_output,
+                    disp=disp,
+                    callback=callback,
+                    skip_hessian=True,
+                    **kwargs,
+                )
             # convert params back
             final_params = self._model_params(mlefit.params)
 
@@ -750,6 +762,43 @@ class ETSModel(base.StateSpaceMLEModel):
             result.mle_retvals = mlefit.mle_retvals
             result.mle_settings = mlefit.mle_settings
             return result
+
+    def _loglike_internal(self, params, yhat, xhat):
+        """
+        Log-likelihood function to be called from fit to avoid reallocation of
+        memory.
+
+        Parameters
+        ----------
+        params : np.ndarray of np.float
+            Model parameters: (alpha, beta^*, gamma^*, phi, l[-1],
+            b[-1], s[-1], ..., s[-m]). This must be in the format of internal
+            parameters.
+        yhat : np.ndarray
+            Array of size (n,) where fitted values will be written to.
+        xhat : np.ndarray
+            Array of size (n, _k_states_internal) where fitted states will be
+            written to.
+        """
+        self._smoothing_func(params, self.endog, yhat, xhat)
+        res = self._residuals(yhat)
+        logL = -self.nobs / 2 * (np.log(2 * np.pi * np.mean(res ** 2)) + 1)
+        if self.error == "mul":
+            if np.any(yhat <= 0):
+                return np.inf
+            else:
+                return logL - np.sum(np.log(yhat))
+        else:
+            return logL
+
+    @contextlib.contextmanager
+    def use_internal_loglike(self):
+        external_loglike = self.loglike
+        self.loglike = self._loglike_internal
+        try:
+            yield
+        finally:
+            self.loglike = external_loglike
 
     def loglike(self, params):
         r"""
@@ -788,18 +837,9 @@ class ETSModel(base.StateSpaceMLEModel):
         """
         if len(params) != self._k_params_internal:
             params = self._internal_params(params)
-        yhat = np.asarray(
-            self._smoothing_func(np.asarray(params), self.endog)[0]
-        )
-        res = self._residuals(yhat)
-        logL = -self.nobs / 2 * (np.log(2 * np.pi * np.mean(res ** 2)) + 1)
-        if self.error == "mul":
-            if np.any(yhat <= 0):
-                return np.inf
-            else:
-                return logL - np.sum(np.log(yhat))
-        else:
-            return logL
+        yhat = np.zeros(self.nobs)
+        xhat = np.zeros((self.nobs, self._k_states_internal))
+        return self._loglike_internal(np.asarray(params), yhat, xhat)
 
     def _residuals(self, yhat):
         """Calculates residuals of a prediction"""
@@ -808,7 +848,7 @@ class ETSModel(base.StateSpaceMLEModel):
         else:
             return self.endog - yhat
 
-    def smooth(self, params):
+    def _smooth(self, params):
         """
         Exponential smoothing with given parameters
 
@@ -827,7 +867,9 @@ class ETSModel(base.StateSpaceMLEModel):
             ``pd.Series``, returns a ``pd.DataFrame``, else a ``np.ndarray``.
         """
         internal_params = self._internal_params(params)
-        yhat, xhat = self._smoothing_func(internal_params, self.endog)
+        yhat = np.zeros(self.nobs)
+        xhat = np.zeros((self.nobs, self._k_states_internal))
+        self._smoothing_func(internal_params, self.endog, yhat, xhat)
 
         # remove states that are only internal
         states = self._get_states(xhat)
@@ -916,7 +958,7 @@ class ETSModel(base.StateSpaceMLEModel):
 class ETSResults(base.StateSpaceMLEResults):
     def __init__(self, model, params):
         super().__init__(model, params)
-        yhat, xhat = self.model.smooth(params)
+        yhat, xhat = self.model._smooth(params)
         self._llf = self.model.loglike(params)
         self._residuals = self.model._residuals(yhat)
         self._fittedvalues = yhat
@@ -1179,14 +1221,15 @@ class ETSResults(base.StateSpaceMLEResults):
 
         # set initial values and obtain parameters
         start_params = self._get_prediction_params(start_idx)
+        x = np.zeros((nsimulations, self.model._k_states_internal))
         (
-            x,
             alpha,
             beta_star,
             gamma_star,
             phi,
             m,
-        ) = smooth._initialize_ets_smooth(start_params, nsimulations)
+            n,
+        ) = smooth._initialize_ets_smooth(start_params, x)
         beta = alpha * beta_star
         gamma = (1 - alpha) * gamma_star
         # make x a 3 dimensional matrix: first dimension is nsimulations

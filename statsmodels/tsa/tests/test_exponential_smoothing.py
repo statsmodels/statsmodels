@@ -257,7 +257,7 @@ def test_fit_model_austouritsts(setup_model):
 def test_smooth_vs_R(setup_model):
     model, params, results_R = setup_model
 
-    yhat, xhat = model.smooth(params)
+    yhat, xhat = model._smooth(params)
 
     yhat_R = results_R['fitted']
     xhat_R = get_states_from_R(results_R, model._k_states)
@@ -269,7 +269,7 @@ def test_smooth_vs_R(setup_model):
 def test_residuals_vs_R(setup_model):
     model, params, results_R = setup_model
 
-    yhat = model.smooth(params)[0]
+    yhat = model._smooth(params)[0]
 
     residuals = model._residuals(yhat)
     assert_allclose(residuals, results_R['residuals'], rtol=1e-5, atol=1e-5)
@@ -294,7 +294,7 @@ def test_forecast_vs_R(setup_model):
     fcast = fit.forecast(4)
     expected = np.asarray(results_R["forecast"])
 
-    assert_allclose(expected, fcast.values, rtol=1e-4, atol=1e-4)
+    assert_allclose(expected, fcast.values, rtol=1e-3, atol=1e-3)
 
 
 def test_simulate_vs_R(setup_model):
