@@ -219,6 +219,22 @@ def _fstat2effectsize(f_stat, df1, df2):
     res : Holder instance
         This instance contains effect size measures f2, eta2, omega2 and eps2
         as attributes.
+
+    Notes
+    -----
+    This uses the following definitions:
+
+       f2 = f_stat * df1 / df2
+       eta2 = f2 / (f2 + 1)
+       omega2 = (f2 - df1 / df2) / (f2 + 2)
+       eps2 = (f2 - df1 / df2) / (f2 + 1)
+
+    This differs from effect size measures in other function which define
+    ``f2 = f_stat * df1 / nobs``
+    or an equivalent expression for power computation. The noncentrality
+    index for the hypothesis test is in those cases given by
+    ``nc = f_stat * df1``.
+
     """
     f2 = f_stat * df1 / df2
     eta2 = f2 / (f2 + 1)
@@ -425,7 +441,6 @@ def anova_oneway(data, groups=None, use_var="unequal", welch_correction=True,
     if groups is not None:
         uniques = np.unique(groups)
         data = [data[groups == uni] for uni in uniques]
-        raise NotImplementedError('groups is not available yet')
     else:
         uniques = None
     args = list(map(np.asarray, data))
