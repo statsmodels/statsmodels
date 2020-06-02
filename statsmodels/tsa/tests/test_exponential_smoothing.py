@@ -17,21 +17,19 @@ from statsmodels.tsa.exponential_smoothing.ets import (
 
 # This contains tests for the exponential smoothing implementation in
 # tsa/exponential_smoothing/ets.py.
-
+#
 # Tests are mostly done by comparing results with the R implementation in the
 # package forecast for the datasets `oildata` (non-seasonal) and `austourists`
 # (seasonal).
-
+#
 # Therefore, a parametrized pytest fixture ``setup_model`` is provided, which
 # returns a constructed model, model parameters from R in the format expected
 # by ETSModel, and a dictionary of reference results. Use like this:
-
+#
 #     def test_<testname>(setup_model):
 #         model, params, results_R = setup_model
 #         # perform some tests
 #         ...
-
-
 
 ###############################################################################
 # UTILS
@@ -41,11 +39,13 @@ from statsmodels.tsa.exponential_smoothing.ets import (
 # (for data, see below). These are used for parametrizing the pytest fixture
 # ``setup_model``, which should be used for all tests comparing to R output.
 
+
 def remove_invalid_models_from_list(modellist):
     # remove invalid models (no trend but damped)
     for i, model in enumerate(modellist):
         if model[1] is None and model[3]:
             del modellist[i]
+
 
 ERRORS = ("add", "mul")
 TRENDS = ("add", "mul", None)
@@ -53,17 +53,18 @@ SEASONALS = ("add", "mul", None)
 DAMPED = (True, False)
 
 MODELS_DATA_SEASONAL = list(product(ERRORS, TRENDS, ("add", "mul"), DAMPED,
-                                  ("austourists",), ))
+                                    ("austourists",), ))
 MODELS_DATA_NONSEASONAL = list(product(ERRORS, TRENDS, (None,), DAMPED,
-                                  ("oildata",), ))
+                                       ("oildata",), ))
 remove_invalid_models_from_list(MODELS_DATA_SEASONAL)
 remove_invalid_models_from_list(MODELS_DATA_NONSEASONAL)
 
 ALL_MODELS_AND_DATA = (MODELS_DATA_NONSEASONAL + MODELS_DATA_SEASONAL)
 
+
 def short_model_name(error, trend, seasonal):
     short_name = {"add": "A", "mul": "M", None: "N"}
-    return short_name[error] +  short_name[trend] + short_name[seasonal]
+    return short_name[error] + short_name[trend] + short_name[seasonal]
 
 
 @pytest.fixture(params=ALL_MODELS_AND_DATA)
@@ -82,11 +83,11 @@ def setup_model(request, austourists, oildata,
         seasonal_periods = None
         results = ets_oildata_fit_results_R[damped]
 
-    model_name = short_model_name(error, trend, seasonal)
-    if model_name not in results:
-        pytest.skip(f"model {model_name} not implemented or not converging in R")
+    name = short_model_name(error, trend, seasonal)
+    if name not in results:
+        pytest.skip(f"model {name} not implemented or not converging in R")
 
-    results_R = results[model_name]
+    results_R = results[name]
     params = get_params_from_R(results_R)
 
     model = ETSModel(
@@ -105,47 +106,51 @@ def setup_model(request, austourists, oildata,
 def austourists():
     # austourists dataset from fpp2 package
     # https://cran.r-project.org/web/packages/fpp2/index.html
-    data = [30.05251, 19.14850, 25.31769, 27.59144, 32.07646,
-            23.48796, 28.47594, 35.12375, 36.83848, 25.00702,
-            30.72223, 28.69376, 36.64099, 23.82461, 29.31168,
-            31.77031, 35.17788, 19.77524, 29.60175, 34.53884,
-            41.27360, 26.65586, 28.27986, 35.19115, 42.20566,
-            24.64917, 32.66734, 37.25735, 45.24246, 29.35048,
-            36.34421, 41.78208, 49.27660, 31.27540, 37.85063,
-            38.83704, 51.23690, 31.83855, 41.32342, 42.79900,
-            55.70836, 33.40714, 42.31664, 45.15712, 59.57608,
-            34.83733, 44.84168, 46.97125, 60.01903, 38.37118,
-            46.97586, 50.73380, 61.64687, 39.29957, 52.67121,
-            54.33232, 66.83436, 40.87119, 51.82854, 57.49191,
-            65.25147, 43.06121, 54.76076, 59.83447, 73.25703,
-            47.69662, 61.09777, 66.05576,]
+    data = [
+        30.05251300, 19.14849600, 25.31769200, 27.59143700,
+        32.07645600, 23.48796100, 28.47594000, 35.12375300,
+        36.83848500, 25.00701700, 30.72223000, 28.69375900,
+        36.64098600, 23.82460900, 29.31168300, 31.77030900,
+        35.17787700, 19.77524400, 29.60175000, 34.53884200,
+        41.27359900, 26.65586200, 28.27985900, 35.19115300,
+        42.20566386, 24.64917133, 32.66733514, 37.25735401,
+        45.24246027, 29.35048127, 36.34420728, 41.78208136,
+        49.27659843, 31.27540139, 37.85062549, 38.83704413,
+        51.23690034, 31.83855162, 41.32342126, 42.79900337,
+        55.70835836, 33.40714492, 42.31663797, 45.15712257,
+        59.57607996, 34.83733016, 44.84168072, 46.97124960,
+        60.01903094, 38.37117851, 46.97586413, 50.73379646,
+        61.64687319, 39.29956937, 52.67120908, 54.33231689,
+        66.83435838, 40.87118847, 51.82853579, 57.49190993,
+        65.25146985, 43.06120822, 54.76075713, 59.83447494,
+        73.25702747, 47.69662373, 61.09776802, 66.05576122,
+    ]
     index = pd.date_range("1999-03-01", "2015-12-01", freq="3MS")
     return pd.Series(data, index)
+
 
 @pytest.fixture
 def oildata():
     # oildata dataset from fpp2 package
     # https://cran.r-project.org/web/packages/fpp2/index.html
     data = [
-        111.0091, 130.8284, 141.2871, 154.2278,
-        162.7409, 192.1665, 240.7997, 304.2174,
-        384.0046, 429.6622, 359.3169, 437.2519,
-        468.4008, 424.4353, 487.9794, 509.8284,
-        506.3473, 340.1842, 240.2589, 219.0328,
-        172.0747, 252.5901, 221.0711, 276.5188,
-        271.1480, 342.6186, 428.3558, 442.3946,
-        432.7851, 437.2497, 437.2092, 445.3641,
-        453.1950, 454.4096, 422.3789, 456.0371,
-        440.3866, 425.1944, 486.2052, 500.4291,
-        521.2759, 508.9476, 488.8889, 509.8706,
-        456.7229, 473.8166, 525.9509, 549.8338,
-        542.3405
+        111.0091346, 130.8284341, 141.2870879, 154.2277747, 162.7408654,
+        192.1664835, 240.7997253, 304.2173901, 384.0045673, 429.6621566,
+        359.3169299, 437.2518544, 468.4007898, 424.4353365, 487.9794299,
+        509.8284478, 506.3472527, 340.1842374, 240.2589210, 219.0327876,
+        172.0746632, 252.5900922, 221.0710774, 276.5187735, 271.1479517,
+        342.6186005, 428.3558357, 442.3945534, 432.7851482, 437.2497186,
+        437.2091599, 445.3640981, 453.1950104, 454.4096410, 422.3789058,
+        456.0371217, 440.3866047, 425.1943725, 486.2051735, 500.4290861,
+        521.2759092, 508.9476170, 488.8888577, 509.8705750, 456.7229123,
+        473.8166029, 525.9508706, 549.8338076, 542.3404698,
     ]
     return pd.Series(data, index=pd.date_range('1965', '2013', freq='AS'))
 
 ###############################################################################
 # REFERENCE RESULTS
 ###############################################################################
+
 
 def obtain_R_results(path):
     with path.open('r') as f:
@@ -241,6 +246,7 @@ def get_states_from_R(results_R, k_states):
 # BASIC TEST CASES
 ###############################################################################
 
+
 def test_fit_model_austouritsts(setup_model):
     model, params, results_R = setup_model
     model.fit(disp=False)
@@ -248,6 +254,7 @@ def test_fit_model_austouritsts(setup_model):
 ###############################################################################
 # TEST OF MODEL EQUATIONS VS R
 ###############################################################################
+
 
 def test_smooth_vs_R(setup_model):
     model, params, results_R = setup_model
@@ -257,8 +264,8 @@ def test_smooth_vs_R(setup_model):
     yhat_R = results_R['fitted']
     xhat_R = get_states_from_R(results_R, model._k_states)
 
-    assert_almost_equal(yhat, yhat_R, 2)
-    assert_almost_equal(xhat, xhat_R, 2)
+    assert_allclose(xhat, xhat_R, rtol=1e-5, atol=1e-5)
+    assert_allclose(yhat, yhat_R, rtol=1e-5, atol=1e-5)
 
 
 def test_residuals_vs_R(setup_model):
@@ -267,7 +274,7 @@ def test_residuals_vs_R(setup_model):
     yhat = model.smooth(params)[0]
 
     residuals = model._residuals(yhat)
-    assert_almost_equal(residuals, results_R['residuals'], 2)
+    assert_allclose(residuals, results_R['residuals'], rtol=1e-5, atol=1e-5)
 
 
 def test_loglike_vs_R(setup_model):
@@ -278,7 +285,7 @@ def test_loglike_vs_R(setup_model):
     const = - model.nobs/2 * (np.log(2*np.pi/model.nobs) + 1)
     loglike_R = results_R['loglik'][0] + const
 
-    assert_almost_equal(loglike, loglike_R, 2)
+    assert_allclose(loglike, loglike_R, rtol=1e-5, atol=1e-5)
 
 
 def test_forecast_vs_R(setup_model):
@@ -289,8 +296,7 @@ def test_forecast_vs_R(setup_model):
     fcast = fit.forecast(4)
     expected = np.asarray(results_R["forecast"])
 
-    # should be the same up to 4 decimals
-    assert_almost_equal(expected, fcast.values, 1)
+    assert_allclose(expected, fcast.values, rtol=1e-4, atol=1e-4)
 
 
 def test_simulate_vs_R(setup_model):
@@ -302,8 +308,7 @@ def test_simulate_vs_R(setup_model):
     sim = fit.simulate(4, anchor='end', repetitions=1, random_errors=innov)
     expected = np.asarray(results_R["simulation"])
 
-    # should be the same up to 3 decimals
-    assert_almost_equal(expected, sim.values, 3)
+    assert_allclose(expected, sim.values, rtol=1e-5, atol=1e-5)
 
 
 def test_fit_vs_R(setup_model):
@@ -320,6 +325,7 @@ def test_fit_vs_R(setup_model):
 ###############################################################################
 # TEST OF KEYWORD ARGUMENTS
 ###############################################################################
+
 
 def test_initialization_known(austourists):
     initial_level, initial_trend = [36.46466837, 34.72584983]
@@ -385,7 +391,7 @@ def test_simulate_keywords(austourists):
     fit.simulate(4, repetitions=10, random_errors=scipy.stats.norm)
     fit.simulate(4, repetitions=10, random_errors=scipy.stats.norm())
 
-    fit.simulate(4, repetitions=10, random_errors=np.random.randn(4,10))
+    fit.simulate(4, repetitions=10, random_errors=np.random.randn(4, 10))
     fit.simulate(4, repetitions=10, random_errors="bootstrap")
 
     # test seeding
