@@ -1,19 +1,17 @@
 """
 Author: Samuel Scherrer
 """
+from itertools import product
 import json
 import pathlib
-from itertools import product
 
 import numpy as np
+from numpy.testing import assert_allclose, assert_almost_equal
 import pandas as pd
-import scipy.stats
 import pytest
-from numpy.testing import assert_almost_equal, assert_allclose
+import scipy.stats
 
-from statsmodels.tsa.exponential_smoothing.ets import (
-    ETSModel,
-)
+from statsmodels.tsa.exponential_smoothing.ets import ETSModel
 
 # This contains tests for the exponential smoothing implementation in
 # tsa/exponential_smoothing/ets.py.

@@ -1,14 +1,13 @@
-import contextlib
 from collections import OrderedDict
+import contextlib
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 from scipy.stats import norm
 
+from statsmodels.base.data import PandasData
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.eval_measures import aic, aicc, bic, hqic
-
-from statsmodels.base.data import PandasData
 import statsmodels.tsa.base.tsa_model as tsbase
 
 

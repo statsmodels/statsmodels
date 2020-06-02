@@ -139,19 +139,19 @@ References
 """
 
 from collections import OrderedDict
+
 import numpy as np
 import pandas as pd
 from scipy.stats import _distn_infrastructure, rv_continuous, rv_discrete
 
 import statsmodels.base.wrapper as wrap
-from statsmodels.tools.tools import Bunch
-from statsmodels.tools.validation import bool_like, string_like, int_like
 from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools.tools import Bunch
+from statsmodels.tools.validation import bool_like, int_like, string_like
 import statsmodels.tsa.base.tsa_model as tsbase
-from statsmodels.tsa.exponential_smoothing import initialization as es_init
-from statsmodels.tsa.tsatools import freq_to_period
-from statsmodels.tsa.exponential_smoothing import base
+from statsmodels.tsa.exponential_smoothing import base, initialization as es_init
 import statsmodels.tsa.exponential_smoothing._ets_smooth as smooth
+from statsmodels.tsa.tsatools import freq_to_period
 
 # Implementation details:
 
