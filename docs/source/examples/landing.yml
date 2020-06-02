@@ -170,6 +170,9 @@
   - img: ../_static/images/statespace_sarimax_pymc3.png
     target: notebooks/generated/statespace_sarimax_pymc3.html
     text: SARIMAX estimation with Bayesian methods
+  - img: ../_static/images/statespace_news.png
+    target: notebooks/generated/statespace_news.html
+    text: 'Forecasting, updating datasets, and the "news"'
   - img: ../_static/images/statespace_custom_models.png
     target: notebooks/generated/statespace_custom_models.html
     text: 'Statespace: Custom Models'

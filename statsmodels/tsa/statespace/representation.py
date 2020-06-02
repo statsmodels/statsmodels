@@ -625,21 +625,58 @@ class Representation(object):
                     raise ValueError(error_ti % name)
 
                 # Otherwise, validate the shape of the given extended value
+                # Note: we do not validate the number of observations here
+                # (so we pass in updated_mat.shape[-1] as the nobs argument
+                # in the validate_* calls); instead, we check below that we
+                # at least `nobs` values were passed in and then only take the
+                # first of them as required. This can be useful when e.g. the
+                # end user knows the extension values up to some maximum
+                # endpoint, but does not know what the calling methods may
+                # specifically require.
                 updated_mat = np.asarray(kwargs[name])
                 if len(shape) == 2:
-                    validate_vector_shape(name, updated_mat.shape,
-                                          shape[0], nobs)
+                    validate_vector_shape(name, updated_mat.shape, shape[0],
+                                          updated_mat.shape[-1])
                 else:
-                    validate_matrix_shape(name, updated_mat.shape,
-                                          shape[0], shape[1], nobs)
+                    validate_matrix_shape(name, updated_mat.shape, shape[0],
+                                          shape[1], updated_mat.shape[-1])
 
-                if updated_mat.shape[-1] != nobs:
+                if updated_mat.shape[-1] < nobs:
                     raise ValueError(error_tv % name)
+                else:
+                    updated_mat = updated_mat[..., :nobs]
 
                 # Concatenate to get the new time-varying matrix
                 kwargs[name] = np.c_[mat[..., start:end], updated_mat]
 
         return self.clone(endog, **kwargs)
+
+    def diff_endog(self, new_endog):
+        # TODO: move this function to tools?
+        endog = self.endog.T
+        if len(new_endog) < len(endog):
+            raise ValueError('Given data (length %d) is too short to diff'
+                             ' against model data (length %d).'
+                             % (len(new_endog), len(endog)))
+        if len(new_endog) > len(endog):
+            nobs_append = len(new_endog) - len(endog)
+            endog = np.c_[endog.T, new_endog[-nobs_append:].T * np.nan].T
+
+        new_nan = np.isnan(new_endog)
+        existing_nan = np.isnan(endog)
+
+        if np.any(new_nan & ~existing_nan):
+            raise ValueError('New data cannot have missing values for'
+                             ' observations that are non-missing in model'
+                             ' data.')
+
+        is_revision = ~existing_nan & ~(new_endog == endog)
+        revision_ix = list(zip(*np.where(is_revision)))
+
+        is_new = existing_nan & ~new_nan
+        new_ix = list(zip(*np.where(is_new)))
+
+        return revision_ix, new_ix
 
     @property
     def prefix(self):

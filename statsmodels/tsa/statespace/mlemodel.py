@@ -28,6 +28,7 @@ from statsmodels.genmod.families.links import identity
 from statsmodels.base.data import PandasData
 import statsmodels.tsa.base.tsa_model as tsbase
 
+from .news import NewsResults, NewsResultsWrapper
 from .simulation_smoother import SimulationSmoother
 from .kalman_smoother import SmootherResults
 from .kalman_filter import INVERT_UNIVARIATE, SOLVE_LU, MEMORY_CONSERVE
@@ -249,7 +250,33 @@ class MLEModel(tsbase.TimeSeriesModel):
         return kwds
 
     def clone(self, endog, exog=None, **kwargs):
-        raise NotImplementedError
+        """
+        Clone state space model with new data and optionally new specification
+
+        Parameters
+        ----------
+        endog : array_like
+            The observed time-series process :math:`y`
+        k_states : int
+            The dimension of the unobserved state process.
+        exog : array_like, optional
+            Array of exogenous regressors, shaped nobs x k. Default is no
+            exogenous regressors.
+        kwargs
+            Keyword arguments to pass to the new model class to change the
+            model specification.
+
+        Returns
+        -------
+        model : MLEModel subclass
+
+        Notes
+        -----
+        This method must be implemented
+        """
+        raise NotImplementedError('This method is not implemented in the base'
+                                  ' class and must be set up by each specific'
+                                  ' model.')
 
     def _clone_from_init_kwds(self, endog, **kwargs):
         # Cannot make this the default, because there is extra work required
@@ -263,7 +290,8 @@ class MLEModel(tsbase.TimeSeriesModel):
                              ' requires specifying a new exogenous array using'
                              ' the `exog` argument.')
 
-        return self.__class__(endog, **use_kwargs)
+        mod = self.__class__(endog, **use_kwargs)
+        return mod
 
     def set_filter_method(self, filter_method=None, **kwargs):
         """
@@ -2219,7 +2247,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                           ' Some results objects, e.g. degrees of freedom,'
                           ' expect only one of the two to be set.')
         # This only excludes explicitly burned (usually approximate diffuse)
-        # periods but does not exclude approximate diffuse periods. This is
+        # periods but does not exclude exact diffuse periods. This is
         # because the loglikelihood remains valid for the initial periods in
         # the exact diffuse case (see DK, 2012, section 7.2) and so also do
         # e.g. information criteria (see DK, 2012, section 7.4) and the score
@@ -3565,6 +3593,227 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         return res
 
+    def _news_previous_results(self, previous, start, end, periods):
+        # Compute the news
+        out = self.smoother_results.news(previous.smoother_results,
+                                         start=start, end=end)
+        return out
+
+    def _news_updated_results(self, updated, start, end, periods):
+        return updated._news_previous_results(self, start, end, periods)
+
+    def _news_previous_data(self, endog, start, end, periods, exog):
+        previous = self.apply(endog, exog=exog, copy_initialization=True)
+        return self._news_previous_results(previous, start, end, periods)
+
+    def _news_updated_data(self, endog, start, end, periods, exog):
+        updated = self.apply(endog, exog=exog, copy_initialization=True)
+        return self._news_updated_results(updated, start, end, periods)
+
+    def news(self, comparison, start=None, end=None, periods=None, exog=None,
+             return_raw=False, comparison_type=None, **kwargs):
+        """
+        Compute impacts from updated data (news and revisions)
+
+        Parameters
+        ----------
+        comparison : array_like or MLEResults
+            An updated dataset with updated and/or revised data from which the
+            news can be computed, or an updated or previous results object
+            to use in computing the news.
+        start : int, str, or datetime, optional
+            The first period of impacts from news and revisions to compute.
+            Can also be a date string to parse or a datetime type. Default is
+            the first out-of-sample observation.
+        end : int, str, or datetime, optional
+            The last period of impacts from news and revisions to compute.
+            Can also be a date string to parse or a datetime type. Default is
+            the first out-of-sample observation.
+        periods : int, optional
+            The number of periods of impacts from news and revisions to
+            compute.
+        exog : array_like, optional
+            Array of exogenous regressors for the out-of-sample period, if
+            applicable.
+        return_raw : bool, optional
+            Whether or not to return only the specific output or a full
+            results object. Default is to return a full results object.
+        comparison_type : {None, 'previous', 'updated'}
+
+        References
+        ----------
+        .. [1] Bańbura, Marta, and Michele Modugno.
+               "Maximum likelihood estimation of factor models on datasets with
+               arbitrary pattern of missing data."
+               Journal of Applied Econometrics 29, no. 1 (2014): 133-160.
+        .. [2] Bańbura, Marta, Domenico Giannone, and Lucrezia Reichlin.
+               "Nowcasting."
+               The Oxford Handbook of Economic Forecasting. July 8, 2011.
+        .. [3] Bańbura, Marta, Domenico Giannone, Michele Modugno, and Lucrezia
+               Reichlin.
+               "Now-casting and the real-time data flow."
+               In Handbook of economic forecasting, vol. 2, pp. 195-237.
+               Elsevier, 2013.
+        """
+        # Validate input
+        if self.smoother_results is None:
+            raise ValueError('Cannot compute news without Kalman smoother'
+                             ' results.')
+
+        # If we were given data, create a new results object
+        comparison_dataset = not isinstance(
+            comparison, (MLEResults, MLEResultsWrapper))
+        if comparison_dataset:
+            # If `exog` is longer than `comparison`, then we extend it to match
+            nobs_endog = len(comparison)
+            nobs_exog = len(exog) if exog is not None else nobs_endog
+
+            if nobs_exog > nobs_endog:
+                _, _, _, ix = self.model._get_prediction_index(
+                    start=0, end=nobs_exog - 1)
+                # TODO: check that the index of `comparison` matches the model
+                comparison = np.asarray(comparison)
+                if comparison.ndim < 2:
+                    comparison = np.atleast_2d(comparison).T
+                if (comparison.ndim != 2 or
+                        comparison.shape[1] != self.model.k_endog):
+                    raise ValueError('Invalid shape for `comparison`. Must'
+                                     f' contain {self.model.k_endog} columns.')
+                extra = np.zeros((nobs_exog - nobs_endog,
+                                  self.model.k_endog)) * np.nan
+                comparison = pd.DataFrame(
+                    np.concatenate([comparison, extra], axis=0), index=ix,
+                    columns=self.model.endog_names)
+
+            # Get the results object
+            comparison = self.apply(comparison, exog=exog,
+                                    copy_initialization=True, **kwargs)
+
+        # Now, figure out the `updated` versus `previous` results objects
+        nmissing = self.filter_results.missing.sum()
+        nmissing_comparison = comparison.filter_results.missing.sum()
+        if (comparison_type == 'updated' or (comparison_type is None and (
+                comparison.nobs > self.nobs or
+                nmissing > nmissing_comparison))):
+            updated = comparison
+            previous = self
+        elif (comparison_type == 'previous' or (comparison_type is None and (
+                comparison.nobs < self.nobs or
+                nmissing < nmissing_comparison))):
+            updated = self
+            previous = comparison
+        else:
+            raise ValueError('Could not automatically determine the type'
+                             ' of comparison requested to compute the'
+                             ' News, so it must be specified as "updated"'
+                             ' or "previous", using the `comparison_type`'
+                             ' keyword argument')
+
+        # Check that the index of `updated` is a superset of the
+        # index of `previous`
+        # Note: the try/except block is for Pandas < 0.25, in which
+        # `PeriodIndex.difference` raises a ValueError if the argument is not
+        # also a `PeriodIndex`.
+        try:
+            diff = previous.model._index.difference(updated.model._index)
+        except ValueError:
+            diff = [True]
+        if len(diff) > 0:
+            raise ValueError('The index associated with the updated results is'
+                             ' not a superset of the index associated with the'
+                             ' previous results, and so these datasets do not'
+                             ' appear to be related. Can only compute the'
+                             ' news by comparing this results set to previous'
+                             ' results objects.')
+
+        # Handle start, end, periods
+        # There doesn't seem to be any universal defaults that both (a) make
+        # sense for all data update combinations, and (b) work with both
+        # time-invariant and time-varying models. So we require that the user
+        # specify exactly two of start, end, periods.
+        if start is None and end is None and periods is None:
+            start = previous.nobs - 1
+            end = previous.nobs - 1
+        if int(start is None) + int(end is None) + int(periods is None) != 1:
+            raise ValueError('Of the three parameters: start, end, and'
+                             ' periods, exactly two must be specified')
+        # If we have the `periods` object, we need to convert `start`/`end` to
+        # integers so that we can compute the other one. That's because
+        # _get_prediction_index doesn't support a `periods` argument
+        elif start is not None and periods is not None:
+            start, _, _, _ = self.model._get_prediction_index(start, start)
+            end = start + (periods - 1)
+        elif end is not None and periods is not None:
+            _, end, _, _ = self.model._get_prediction_index(end, end)
+            start = end - (periods - 1)
+        elif start is not None and end is not None:
+            pass
+
+        # Get the integer-based start, end and the prediction index
+        start, end, out_of_sample, prediction_index = (
+            updated.model._get_prediction_index(start, end))
+        end = end + out_of_sample
+
+        # News results will always use Pandas, so if the model's data was not
+        # from Pandas, we'll create an index, as if the model's data had been
+        # given a default Pandas index.
+        if prediction_index is None:
+            prediction_index = pd.RangeIndex(start=start, stop=end + 1)
+
+        # For time-varying models try to create an appended `updated` model
+        # with NaN values. Do not extend the model if this was already done
+        # above (i.e. the case that `comparison` was a new dataset), because
+        # in that case `exog` and `kwargs` should have
+        # been set with the input `comparison` dataset in mind, and so would be
+        # useless here. Ultimately, we've already extended `updated` as far
+        # as we can. So raise an  exception in that case with a useful message.
+        # However, we still want to try to accommodate extending the model here
+        # if it is possible.
+        # Note that we do not need to extend time-invariant models, because
+        # `KalmanSmoother.news` can itself handle any impact dates for
+        # time-invariant models.
+        time_varying = not (previous.filter_results.time_invariant or
+                            updated.filter_results.time_invariant)
+        if time_varying and end >= updated.nobs:
+            # If we the given `comparison` was a dataset and either `exog` or
+            # `kwargs` was set, then we assume that we cannot create an updated
+            # time-varying model (because then we can't tell if `kwargs` and
+            # `exog` arguments are meant to apply to the `comparison` dataset
+            # or to this extension)
+            if comparison_dataset and (exog is not None or len(kwargs) > 0):
+                if comparison is updated:
+                    raise ValueError('If providing an updated dataset as the'
+                                     ' `comparison` with a time-varying model,'
+                                     ' then the `end` period cannot be beyond'
+                                     ' the end of that updated dataset.')
+                else:
+                    raise ValueError('If providing an previous dataset as the'
+                                     ' `comparison` with a time-varying model,'
+                                     ' then the `end` period cannot be beyond'
+                                     ' the end of the (updated) results'
+                                     ' object.')
+
+            # Try to extend `updated`
+            updated_orig = updated
+            # TODO: `append` should fix this k_endog=1 issue for us
+            # TODO: is the + 1 necessary?
+            if self.model.k_endog > 1:
+                extra = np.zeros((end - updated.nobs + 1,
+                                  self.model.k_endog)) * np.nan
+            else:
+                extra = np.zeros((end - updated.nobs + 1,)) * np.nan
+            updated = updated_orig.append(extra, exog=exog, **kwargs)
+
+        # Compute the news
+        news_results = (
+            updated._news_previous_results(previous, start, end + 1, periods))
+
+        if not return_raw:
+            news_results = NewsResultsWrapper(
+                NewsResults(news_results, self, updated, previous,
+                            row_labels=prediction_index))
+        return news_results
+
     def append(self, endog, exog=None, refit=False, fit_kwargs=None, **kwargs):
         """
         Recreate the results object with new data appended to the original data
@@ -3785,7 +4034,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         return res
 
-    def apply(self, endog, exog=None, refit=False, fit_kwargs=None, **kwargs):
+    def apply(self, endog, exog=None, refit=False, fit_kwargs=None,
+              copy_initialization=False, **kwargs):
         """
         Apply the fitted parameters to new data unrelated to the original data
 
@@ -3804,6 +4054,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             Whether to re-fit the parameters, using the new dataset.
             Default is False (so parameters from the current results object
             are used to create the new results object).
+        copy_initialization : bool, optional
+            Whether or not to copy the current model's initialization to the
+            new model. Default is True.
         fit_kwargs : dict, optional
             Keyword arguments to pass to `fit` (if `refit=True`) or `filter` /
             `smooth`.
@@ -3865,6 +4118,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         statsmodels.tsa.statespace.mlemodel.MLEResults.apply
         """
         mod = self.model.clone(endog, exog=exog, **kwargs)
+        if copy_initialization:
+            mod.ssm.initialization = self.model.initialization
         res = self._apply(mod, refit=refit, fit_kwargs=fit_kwargs, **kwargs)
 
         return res

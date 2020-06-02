@@ -1031,6 +1031,44 @@ class VARMAXResults(MLEResults):
 
         return out
 
+    def _news_previous_results(self, previous, start, end, periods):
+        # We need to figure out the out-of-sample exog, so that we can add back
+        # in the last exog, predicted state
+        exog = None
+        out_of_sample = self.nobs - previous.nobs
+        if self.model.k_exog > 0 and out_of_sample > 0:
+            exog = self.model.exog[-out_of_sample:]
+
+        # We also need to manually compute the `revised` results,
+        rev_endog = self.model.endog[:previous.nobs].copy()
+        rev_endog[previous.filter_results.missing.astype(bool).T] = np.nan
+        has_revisions = not np.allclose(rev_endog, previous.model.endog,
+                                        equal_nan=True)
+        revised_results = None
+        if has_revisions:
+            rev_exog = None
+            if self.model.exog is not None:
+                rev_exog = self.model.exog[:previous.nobs].copy()
+            rev_mod = previous.model.clone(rev_endog, exog=rev_exog)
+            revised = rev_mod.smooth(self.params)
+
+        # Compute the news
+        with contextlib.ExitStack() as stack:
+            stack.enter_context(previous.model._set_final_exog(exog))
+            stack.enter_context(previous._set_final_predicted_state(
+                exog, out_of_sample))
+
+            if has_revisions:
+                stack.enter_context(revised.model._set_final_exog(exog))
+                stack.enter_context(revised._set_final_predicted_state(
+                    exog, out_of_sample))
+                revised_results = revised.smoother_results
+
+            out = self.smoother_results.news(
+                previous.smoother_results, start=start, end=end,
+                revised=revised_results)
+        return out
+
     @Appender(MLEResults.summary.__doc__)
     def summary(self, alpha=.05, start=None, separate_params=True):
         from statsmodels.iolib.summary import summary_params

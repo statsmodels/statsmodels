@@ -443,6 +443,8 @@ class DynamicFactor(MLEModel):
         endog = self.endog.copy()
         mask = ~np.any(np.isnan(endog), axis=1)
         endog = endog[mask]
+        if self.k_exog > 0:
+            exog = self.exog[mask]
 
         # 1. Factor loadings (estimated via PCA)
         if self.k_factors > 0:
@@ -463,7 +465,7 @@ class DynamicFactor(MLEModel):
 
         # 2. Exog (OLS on residuals)
         if self.k_exog > 0:
-            mod_ols = OLS(endog, exog=self.exog)
+            mod_ols = OLS(endog, exog=exog)
             res_ols = mod_ols.fit()
             # In the form: beta.x1.y1, beta.x2.y1, beta.x1.y2, ...
             params[self._params_exog] = res_ols.params.T.ravel()
