@@ -247,3 +247,10 @@ def test_append():
     res2 = mod2.filter(res_e.params)
 
     assert_allclose(res2.llf, res_e.llf)
+
+
+def test_cov_type_none():
+    endog = dta['infl'].iloc[:100].values
+    mod = ARIMA(endog[:50], trend='c')
+    res = mod.fit(cov_type='none')
+    assert_allclose(res.cov_params(), np.nan)

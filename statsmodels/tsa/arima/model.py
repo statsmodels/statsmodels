@@ -322,9 +322,9 @@ class ARIMA(sarimax.SARIMAX):
             else:
                 method_kwargs.setdefault('disp', 0)
 
-                res = super(ARIMA, self).fit(return_params=return_params,
-                                             low_memory=low_memory,
-                                             **method_kwargs)
+                res = super(ARIMA, self).fit(
+                    return_params=return_params, low_memory=low_memory,
+                    cov_type=cov_type, cov_kwds=cov_kwds, **method_kwargs)
                 if not return_params:
                     res.fit_details = res.mlefit
         else:
