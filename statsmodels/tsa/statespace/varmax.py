@@ -1032,8 +1032,6 @@ class VARMAXResults(MLEResults):
         return out
 
     def _news_previous_results(self, previous, start, end, periods):
-        from contextlib import ExitStack
-
         # We need to figure out the out-of-sample exog, so that we can add back
         # in the last exog, predicted state
         exog = None
@@ -1055,7 +1053,7 @@ class VARMAXResults(MLEResults):
             revised = rev_mod.smooth(self.params)
 
         # Compute the news
-        with ExitStack() as stack:
+        with contextlib.ExitStack() as stack:
             stack.enter_context(previous.model._set_final_exog(exog))
             stack.enter_context(previous._set_final_predicted_state(
                 exog, out_of_sample))
