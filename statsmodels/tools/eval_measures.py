@@ -90,8 +90,8 @@ def rmspe(y, y_hat, axis=0, zeros=np.nan):
     y_hat = np.asanyarray(y_hat)
     y = np.asanyarray(y)
     error = y - y_hat
-    percentage_error = np.divide(error, y, out=np.full_like(error,zeros), where=y!=0)
-    return np.nanmean((percentage_error)**2, axis=axis) * 100
+    percentage_error = np.divide(error, y, out=np.full_like(error, zeros), where=y!=0)
+    return np.nanmean(percentage_error**2, axis=axis) * 100
 
 def maxabs(x1, x2, axis=0):
     """maximum absolute error
