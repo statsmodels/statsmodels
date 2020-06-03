@@ -38,7 +38,7 @@ def mse(x1, x2, axis=0):
     """
     x1 = np.asanyarray(x1)
     x2 = np.asanyarray(x2)
-    return np.mean((x1-x2)**2, axis=axis)
+    return np.mean((x1 - x2) ** 2, axis=axis)
 
 
 def rmse(x1, x2, axis=0):
@@ -68,6 +68,7 @@ def rmse(x1, x2, axis=0):
     x2 = np.asanyarray(x2)
     return np.sqrt(mse(x1, x2, axis=axis))
 
+
 def rmspe(y, y_hat, axis=0, zeros=np.nan):
     """
     Root Mean Squared Percentage Error
@@ -81,7 +82,7 @@ def rmspe(y, y_hat, axis=0, zeros=np.nan):
     axis : int
        Axis along which the summary statistic is calculated
     zeros : float
-       Value to assign to error where actual value is zero
+       Value to assign to error where y is zero
 
     Returns
     -------
@@ -91,8 +92,13 @@ def rmspe(y, y_hat, axis=0, zeros=np.nan):
     y_hat = np.asarray(y_hat)
     y = np.asarray(y)
     error = y - y_hat
-    percentage_error = np.divide(error, y, out=np.full_like(error, zeros), where=y!=0)
-    return np.nanmean(percentage_error**2, axis=axis) * 100
+    loc = y != 0
+    loc = loc.ravel()
+    percentage_error = np.full_like(error, zeros)
+    percentage_error.flat[loc] = error.flat[loc] / y.flat[loc]
+    mspe = np.nanmean(percentage_error ** 2, axis=axis) * 100
+    return np.sqrt(mspe)
+
 
 def maxabs(x1, x2, axis=0):
     """maximum absolute error
@@ -118,7 +124,7 @@ def maxabs(x1, x2, axis=0):
     """
     x1 = np.asanyarray(x1)
     x2 = np.asanyarray(x2)
-    return np.max(np.abs(x1-x2), axis=axis)
+    return np.max(np.abs(x1 - x2), axis=axis)
 
 
 def meanabs(x1, x2, axis=0):
@@ -145,7 +151,7 @@ def meanabs(x1, x2, axis=0):
     """
     x1 = np.asanyarray(x1)
     x2 = np.asanyarray(x2)
-    return np.mean(np.abs(x1-x2), axis=axis)
+    return np.mean(np.abs(x1 - x2), axis=axis)
 
 
 def medianabs(x1, x2, axis=0):
@@ -172,7 +178,7 @@ def medianabs(x1, x2, axis=0):
     """
     x1 = np.asanyarray(x1)
     x2 = np.asanyarray(x2)
-    return np.median(np.abs(x1-x2), axis=axis)
+    return np.median(np.abs(x1 - x2), axis=axis)
 
 
 def bias(x1, x2, axis=0):
@@ -199,7 +205,7 @@ def bias(x1, x2, axis=0):
     """
     x1 = np.asanyarray(x1)
     x2 = np.asanyarray(x2)
-    return np.mean(x1-x2, axis=axis)
+    return np.mean(x1 - x2, axis=axis)
 
 
 def medianbias(x1, x2, axis=0):
@@ -226,7 +232,7 @@ def medianbias(x1, x2, axis=0):
     """
     x1 = np.asanyarray(x1)
     x2 = np.asanyarray(x2)
-    return np.median(x1-x2, axis=axis)
+    return np.median(x1 - x2, axis=axis)
 
 
 def vare(x1, x2, ddof=0, axis=0):
@@ -253,7 +259,7 @@ def vare(x1, x2, ddof=0, axis=0):
     """
     x1 = np.asanyarray(x1)
     x2 = np.asanyarray(x2)
-    return np.var(x1-x2, ddof=ddof, axis=axis)
+    return np.var(x1 - x2, ddof=ddof, axis=axis)
 
 
 def stde(x1, x2, ddof=0, axis=0):
@@ -280,7 +286,7 @@ def stde(x1, x2, ddof=0, axis=0):
     """
     x1 = np.asanyarray(x1)
     x2 = np.asanyarray(x2)
-    return np.std(x1-x2, ddof=ddof, axis=axis)
+    return np.std(x1 - x2, ddof=ddof, axis=axis)
 
 
 def iqr(x1, x2, axis=0):
@@ -305,15 +311,15 @@ def iqr(x1, x2, axis=0):
     -----
     If ``x1`` and ``x2`` have different shapes, then they must broadcast.
     """
-    x1 = array_like(x1, 'x1', dtype=None, ndim=None)
-    x2 = array_like(x2, 'x1', dtype=None, ndim=None)
+    x1 = array_like(x1, "x1", dtype=None, ndim=None)
+    x2 = array_like(x2, "x1", dtype=None, ndim=None)
     if axis is None:
         x1 = x1.ravel()
         x2 = x2.ravel()
         axis = 0
     xdiff = np.sort(x1 - x2, axis=axis)
     nobs = x1.shape[axis]
-    idx = np.round((nobs-1) * np.array([0.25, 0.75])).astype(int)
+    idx = np.round((nobs - 1) * np.array([0.25, 0.75])).astype(int)
     sl = [slice(None)] * xdiff.ndim
     sl[axis] = idx
     iqr = np.diff(xdiff[tuple(sl)], axis=axis)
@@ -323,6 +329,7 @@ def iqr(x1, x2, axis=0):
 
 # Information Criteria
 # ---------------------
+
 
 def aic(llf, nobs, df_modelwc):
     """
@@ -346,7 +353,7 @@ def aic(llf, nobs, df_modelwc):
     ----------
     https://en.wikipedia.org/wiki/Akaike_information_criterion
     """
-    return -2. * llf + 2. * df_modelwc
+    return -2.0 * llf + 2.0 * df_modelwc
 
 
 def aicc(llf, nobs, df_modelwc):
@@ -371,7 +378,7 @@ def aicc(llf, nobs, df_modelwc):
     ----------
     https://en.wikipedia.org/wiki/Akaike_information_criterion#AICc
     """
-    return -2. * llf + 2. * df_modelwc * nobs / (nobs - df_modelwc - 1.)
+    return -2.0 * llf + 2.0 * df_modelwc * nobs / (nobs - df_modelwc - 1.0)
 
 
 def bic(llf, nobs, df_modelwc):
@@ -396,7 +403,7 @@ def bic(llf, nobs, df_modelwc):
     ----------
     https://en.wikipedia.org/wiki/Bayesian_information_criterion
     """
-    return -2. * llf + np.log(nobs) * df_modelwc
+    return -2.0 * llf + np.log(nobs) * df_modelwc
 
 
 def hqic(llf, nobs, df_modelwc):
@@ -421,10 +428,11 @@ def hqic(llf, nobs, df_modelwc):
     ----------
     Wikipedia does not say much
     """
-    return -2. * llf + 2 * np.log(np.log(nobs)) * df_modelwc
+    return -2.0 * llf + 2 * np.log(np.log(nobs)) * df_modelwc
 
 
 # IC based on residual sigma
+
 
 def aic_sigma(sigma2, nobs, df_modelwc, islog=False):
     r"""
@@ -590,6 +598,24 @@ def hqic_sigma(sigma2, nobs, df_modelwc, islog=False):
 #     ((nobs + self.df_model) / self.df_resid) ** neqs * np.exp(ld)
 
 
-__all__ = [maxabs, meanabs, medianabs, medianbias, mse, rmse, rmspe, stde, vare,
-           aic, aic_sigma, aicc, aicc_sigma, bias, bic, bic_sigma,
-           hqic, hqic_sigma, iqr]
+__all__ = [
+    maxabs,
+    meanabs,
+    medianabs,
+    medianbias,
+    mse,
+    rmse,
+    rmspe,
+    stde,
+    vare,
+    aic,
+    aic_sigma,
+    aicc,
+    aicc_sigma,
+    bias,
+    bic,
+    bic_sigma,
+    hqic,
+    hqic_sigma,
+    iqr,
+]
