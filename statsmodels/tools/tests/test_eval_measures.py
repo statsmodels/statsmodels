@@ -35,6 +35,13 @@ def test_eval_measures():
     assert_almost_equal(rmse(x, y, axis=1),
                         np.array([  1.73205081,   6.164414,
                                    11.09053651,  16.0623784 ]))
+    
+    assert_almost_equal(rmspe(x, y),
+                        np.array([  8.5732141 ,   9.35414347,  10.17349497,
+                                   11.02270384,  11.89537725]))
+    assert_almost_equal(rmspe(x, y, zeros=0),
+                        np.array([  1.73205081,   6.164414,
+                                   11.09053651,  16.0623784 ]))
 
     assert_equal(maxabs(x, y),
                  np.array([ 14.,  15.,  16.,  17.,  18.]))
