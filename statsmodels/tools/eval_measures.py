@@ -70,25 +70,26 @@ def rmse(x1, x2, axis=0):
 
 def rmspe(y, y_hat, axis=0, zeros=np.nan):
     """
-    root mean squared percentange error
+    Root Mean Squared Percentage Error
 
     Parameters
     ----------
-    y, y_hat : array_like
-       The performance measure depends on the difference between these two
-       arrays.
+    y : array_like
+      The actual value.
+    y_hat : array_like
+       The predicted value.
     axis : int
-       axis along which the summary statistic is calculated
+       Axis along which the summary statistic is calculated
     zeros : float
-       value to assign to error where actual value is zero
+       Value to assign to error where actual value is zero
 
     Returns
     -------
-    rmse : ndarray or float
-       root mean squared error along given axis.
+    rmspe : ndarray or float
+       Root Mean Squared Percentage Error along given axis.
     """
-    y_hat = np.asanyarray(y_hat)
-    y = np.asanyarray(y)
+    y_hat = np.asarray(y_hat)
+    y = np.asarray(y)
     error = y - y_hat
     percentage_error = np.divide(error, y, out=np.full_like(error, zeros), where=y!=0)
     return np.nanmean(percentage_error**2, axis=axis) * 100
@@ -584,6 +585,6 @@ def hqic_sigma(sigma2, nobs, df_modelwc, islog=False):
 #     ((nobs + self.df_model) / self.df_resid) ** neqs * np.exp(ld)
 
 
-__all__ = [maxabs, meanabs, medianabs, medianbias, mse, rmse, stde, vare,
+__all__ = [maxabs, meanabs, medianabs, medianbias, mse, rmse, rmspe, stde, vare,
            aic, aic_sigma, aicc, aicc_sigma, bias, bic, bic_sigma,
            hqic, hqic_sigma, iqr]
