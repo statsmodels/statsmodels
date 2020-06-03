@@ -10,8 +10,8 @@ import numpy as np
 from numpy.testing import assert_equal, assert_almost_equal
 
 from statsmodels.tools.eval_measures import (
-    maxabs, meanabs, medianabs, medianbias, mse, rmse, vare,
-    aic, aic_sigma, aicc, aicc_sigma, bias, bic, bic_sigma,
+    maxabs, meanabs, medianabs, medianbias, mse, rmse, rmspe,
+    vare, aic, aic_sigma, aicc, aicc_sigma, bias, bic, bic_sigma,
     hqic, hqic_sigma, iqr)
 
 
