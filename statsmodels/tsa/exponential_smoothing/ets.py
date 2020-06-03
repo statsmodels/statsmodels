@@ -66,8 +66,8 @@ the ETS models:
 
    y_t &= Y_t + \eta \cdot e_t\\
    l_t &= L_t + \alpha \cdot (M_e \cdot L_t + \kappa_l) \cdot e_t\\
-   b_t &= B_t + \alpha \beta^* \cdot (M_e \cdot B_t + \kappa_b) \cdot e_t\\
-   s_t &= S_t + (1 - \alpha) \gamma^* \cdot (M_e \cdot S_t+\kappa_s)\cdot e_t\\
+   b_t &= B_t + \beta \cdot (M_e \cdot B_t + \kappa_b) \cdot e_t\\
+   s_t &= S_t + \gamma \cdot (M_e \cdot S_t+\kappa_s)\cdot e_t\\
 
 with
 
@@ -129,7 +129,7 @@ When using the multiplicative error model
                L_t\quad\text{else}
            \end{cases}
 
-When fitting an ETS model, the parameters :math:`\alpha, \beta^*`, \gamma^*,
+When fitting an ETS model, the parameters :math:`\alpha, \beta`, \gamma,
 \phi` and the initial states `l_{-1}, b_{-1}, s_{-1}, \ldots, s_{-m}` are
 selected as maximizers of log likelihood.
 
@@ -578,7 +578,7 @@ class ETSModel(base.StateSpaceMLEModel):
             "smoothing_level": 0.5,
             "smoothing_trend": 0.5,
             "smoothing_seasonal": 0.5,
-            "damping_trend": 0.98,
+            "damping_trend": 0.90,
         }
 
     @property
@@ -699,7 +699,7 @@ class ETSModel(base.StateSpaceMLEModel):
         Fit an ETS model by maximizing log-likelihood.
 
         Log-likelihood is a function of the model parameters :math:`\alpha,
-        \beta^*, \gamma^*, \phi` (depending on the chosen model), and, if
+        \beta, \gamma, \phi` (depending on the chosen model), and, if
         `initialization_method` was set to `'estimated'` in the constructor,
         also the initial states :math:`l_{-1}, b_{-1}, s_{-1}, \ldots, s_{-m}`.
 
@@ -715,8 +715,8 @@ class ETSModel(base.StateSpaceMLEModel):
             not exist in the chosen model.
 
             * `smoothing_level` (:math:`\alpha`)
-            * `smoothing_trend` (:math:`\beta^*`)
-            * `smoothing_seasonal` (:math:`\gamma^*`)
+            * `smoothing_trend` (:math:`\beta`)
+            * `smoothing_seasonal` (:math:`\gamma`)
             * `damping_trend` (:math:`\phi`)
 
             If ``initialization_method`` was set to ``'estimated'`` (the
@@ -756,7 +756,7 @@ class ETSModel(base.StateSpaceMLEModel):
 
         if self._has_fixed_params and len(self._free_params_index) == 0:
             final_params = np.asarray(list(self._fixed_params.values()))
-            mlefit = Bunch(
+            res = Bunch(
                 params=start_params, mle_retvals=None, mle_settings=None
             )
         else:
@@ -819,7 +819,7 @@ class ETSModel(base.StateSpaceMLEModel):
         Parameters
         ----------
         params : np.ndarray of np.float
-            Model parameters: (alpha, beta^*, gamma^*, phi, l[-1],
+            Model parameters: (alpha, beta, gamma, phi, l[-1],
             b[-1], s[-1], ..., s[-m]). This must be in the format of internal
             parameters.
         yhat : np.ndarray
@@ -853,7 +853,7 @@ class ETSModel(base.StateSpaceMLEModel):
         Parameters
         ----------
         params : np.ndarray of np.float
-            Model parameters: (alpha, beta^*, gamma^*, phi, l[-1],
+            Model parameters: (alpha, beta, gamma, phi, l[-1],
             b[-1], s[-1], ..., s[-m])
 
         Notes
@@ -1033,6 +1033,9 @@ class ETSResults(base.StateSpaceMLEResults):
         self.has_seasonal = self.model.has_seasonal
         self.seasonal_periods = self.model.seasonal_periods
         self.initialization_method = self.model.initialization_method
+        self.param_names = [
+            '%s (fixed)' % name if name in self.fixed_params else name
+            for name in (self.model.param_names or [])]
 
         # get fitted states and parameters
         internal_params = self.model._internal_params(params)
@@ -1214,9 +1217,8 @@ class ETSResults(base.StateSpaceMLEResults):
 
            y_t = Y_t + \eta \cdot e_t\\
            l_t = L_t + \alpha \cdot (M_e \cdot L_t + \kappa_l) \cdot e_t\\
-           b_t = B_t + \alpha\beta^* \cdot (M_e \cdot B_t+\kappa_b) \cdot e_t\\
-           s_t = S_t + (1-\alpha)\gamma^* \cdot (M_e \cdot S_t + \kappa_s)
-                       \cdot e_t\\
+           b_t = B_t + \beta \cdot (M_e \cdot B_t+\kappa_b) \cdot e_t\\
+           s_t = S_t + \gamma \cdot (M_e \cdot S_t + \kappa_s) \cdot e_t\\
 
         with
 

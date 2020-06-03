@@ -12,11 +12,11 @@ ctypedef fused float_t:
 
 cpdef _initialize_ets_smooth(float_t [:] params, float_t[:,:] xhat):
     """Extracts parameters and initializes states xhat"""
-    cdef float_t alpha, beta_star, gamma_star, phi
+    cdef float_t alpha, beta, gamma, phi
     cdef Py_ssize_t m, n
 
     # get params
-    alpha, beta_star, gamma_star, phi = params[0:4]
+    alpha, beta, gamma, phi = params[0:4]
     m = len(params[6:])
     n = len(xhat)
 
@@ -25,7 +25,7 @@ cpdef _initialize_ets_smooth(float_t [:] params, float_t[:,:] xhat):
     # seasons are sorted such that xhat[:,2+m-1] contains s[-m]
     xhat[n-1, :] = params[4:]
 
-    return alpha, beta_star, gamma_star, phi, m, n
+    return alpha, beta/alpha, gamma/(1-alpha), phi, m, n
 
 def _ets_smooth_add_add(float_t [:] params,
                         float_t [:] y,

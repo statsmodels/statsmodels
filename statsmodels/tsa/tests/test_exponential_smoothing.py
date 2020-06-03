@@ -329,8 +329,8 @@ def fit_austourists_with_R_params(model, results_R, set_state=False):
 def get_params_from_R(results_R):
     # get params from R
     params = [results_R[name] for name in ["alpha", "beta", "gamma", "phi"]]
-    params[1] /= params[0]  # we are using beta star
-    params[2] /= 1 - params[0]  # we are using gamma_star
+    # params[1] /= params[0]  # we are using beta star
+    # params[2] /= 1 - params[0]  # we are using gamma_star
     # in R, initial states are order l[-1], b[-1], s[-1], s[-2], ..., s[-m]
     params += list(results_R["initstate"])
     params = list(filter(np.isfinite, params))
