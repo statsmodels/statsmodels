@@ -71,7 +71,7 @@ def rmse(x1, x2, axis=0):
 def rmspe(y, y_hat, axis=0, zeros=np.nan):
     """
     root mean squared percentange error
-    
+
     Parameters
     ----------
     y, y_hat : array_like
