@@ -146,11 +146,17 @@ import contextlib
 import numpy as np
 import pandas as pd
 from scipy.stats import _distn_infrastructure, rv_continuous, rv_discrete
+from scipy.optimize import minimize, NonlinearConstraint
 
 import statsmodels.base.wrapper as wrap
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.tools import Bunch
-from statsmodels.tools.validation import bool_like, int_like, string_like
+from statsmodels.tools.validation import (
+    bool_like,
+    int_like,
+    string_like,
+    array_like,
+)
 import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.exponential_smoothing import base
 import statsmodels.tsa.exponential_smoothing._ets_smooth as smooth
@@ -167,13 +173,22 @@ from statsmodels.tsa.tsatools import freq_to_period
 #   that lead to the reduced model (often zero).
 #   The internal model is needed for smoothing (called from fit and loglike),
 #   forecasts, and simulations.
-# * Somewhat related to above: There are 3 sets of parameters: free params,
-#   model params, and internal params.
-#   - free params are what is passed by a user into the fit method
+# * Somewhat related to above: There are 2 sets of parameters: model/external
+#   params, and internal params.
 #   - model params are all parameters necessary for a model, and are for
-#     example passed as argument to the likelihood function when
-#     ``internal_params=False`` is set.
+#     example passed as argument to the likelihood function or as start_params
+#     to fit
 #   - internal params are what is used internally in the smoothing equations
+# * Regarding fitting, bounds, fixing parameters, and internal parameters, the
+#   overall workflow is the following:
+#   - get start parameters in the form of external parameters (includes fixed
+#     parameters)
+#   - transform external parameters to internal parameters, bounding all that are
+#     missing -> now we have some missing parameters, but potentially also some
+#     user-specified bounds
+#   - set bounds for fixed parameters
+#   - make sure that starting parameters are within bounds
+#   - set up the constraint bounds and function
 
 
 class ETSModel(base.StateSpaceMLEModel):
@@ -219,6 +234,7 @@ class ETSModel(base.StateSpaceMLEModel):
         The initial seasonal component. An array of length `seasonal`.  Only
         used if initialization is 'known'.
     bounds : iterable[tuple], optional
+        TODO: how can we allow user set bounds?
         An iterable containing bounds for the parameters. Must contain one
         element for every smoothing parameter, and optionally an element for
         every initial state, where each element is a tuple of the form (lower,
@@ -313,22 +329,19 @@ class ETSModel(base.StateSpaceMLEModel):
         # BOUNDS
         # ======
         if bounds is None:
-            self.bounds = self._default_param_bounds()
+            self.bounds = {}
         else:
-            # first, check whether only smoothing parameter bounds or also
-            # initial state bounds are provided
-            if len(bounds) == self.k_params:
-                self.bounds = bounds
-            elif (
-                self.initialization_method == "estimated"
-                and len(bounds) == self._k_smoothing_params
-            ):
-                self.bounds = bounds + [(None, None)] * self._k_initial_states
-            else:
-                raise ValueError(
-                    "`bounds` must be a list of tuples of boundary"
-                    " values for each parameter"
+            if not isinstance(bounds, (dict, OrderedDict)):
+                raise ValueError("bounds must be a dictionary")
+            for key in bounds:
+                if key not in self.param_names:
+                    raise ValueError(
+                        f"Invalid key: {key} in bounds dictionary"
+                    )
+                bounds[key] = array_like(
+                    bounds[key], f"bounds[{key}]", shape=(2,)
                 )
+            self.bounds = bounds
 
         # SMOOTHER
         # ========
@@ -426,26 +439,6 @@ class ETSModel(base.StateSpaceMLEModel):
         self.initial_trend = initial_trend
         self.initial_seasonal = initial_seasonal
 
-        # if this is not called from the constructor, we have to change the
-        # bounds
-        if hasattr(self, "bounds"):
-            if orig_init_method == "estimated" and initialization_method in (
-                "heuristic",
-                "known",
-            ):
-                # if we change from 'estimated' to 'known' or 'heuristic', we
-                # don't need the bounds for the initial states anymore
-                self.bounds = self.bounds[0:self.k_params]
-            elif (
-                orig_init_method in ("heuristic", "known")
-                and initialization_method == "estimated"
-            ):
-                # if it was heuristic or known and we change to estimated, we
-                # have to add the bounds for the initial states
-                self.bounds = (
-                    self.bounds + [(None, None)] * self._k_initial_states
-                )
-
         # we also have to reset the params index dictionaries
         self._internal_params_index = OrderedDict(
             zip(self._internal_param_names, np.arange(self._k_params_internal))
@@ -463,6 +456,15 @@ class ETSModel(base.StateSpaceMLEModel):
         if endog.ndim != 1:
             raise ValueError("endog must be 1-dimensional")
         return endog, None
+
+    @property
+    def short_model_name(self):
+        name = "".join([
+            str(s)[0].upper() for s in [self.error, self.trend, self.seasonal]
+        ])
+        if self.damped_trend:
+            name = name[0:2] + "d" + name[2]
+        return name
 
     @property
     def param_names(self):
@@ -487,12 +489,17 @@ class ETSModel(base.StateSpaceMLEModel):
         return param_names
 
     @property
-    def _internal_param_names(self):
-        param_names = [
+    def _smoothing_param_names(self):
+        return [
             "smoothing_level",
             "smoothing_trend",
             "smoothing_seasonal",
             "damping_trend",
+        ]
+
+    @property
+    def _initial_state_names(self):
+        param_names = [
             "initial_level",
             "initial_trend",
         ]
@@ -500,6 +507,10 @@ class ETSModel(base.StateSpaceMLEModel):
             f"initial_seasonal.{i}" for i in range(self.seasonal_periods)
         ]
         return param_names
+
+    @property
+    def _internal_param_names(self):
+        return self._smoothing_param_names + self._initial_state_names
 
     @property
     def _k_states(self):
@@ -523,10 +534,10 @@ class ETSModel(base.StateSpaceMLEModel):
 
     @property
     def k_params(self):
-        k_params = self._k_smoothing_params
+        k = self._k_smoothing_params
         if self.initialization_method == "estimated":
-            k_params += self._k_initial_states
-        return k_params
+            k += self._k_initial_states
+        return k
 
     @property
     def _k_params_internal(self):
@@ -561,96 +572,118 @@ class ETSModel(base.StateSpaceMLEModel):
             params[i] = internal[internal_idx]
         return params
 
-    def _set_fixed_params(self, params):
-        if self._has_fixed_params:
-            for i, name in enumerate(self._fixed_params):
-                idx = self._fixed_params_index[i]
-                params[idx] = self._fixed_params[name]
+    @property
+    def _default_start_params(self):
+        return {
+            "smoothing_level": 0.5,
+            "smoothing_trend": 0.5,
+            "smoothing_seasonal": 0.5,
+            "damping_trend": 0.98,
+        }
 
     @property
     def _start_params(self):
-        # Make sure starting parameters aren't beyond or right on the bounds
-        bounds = []
-        for b in self.bounds:
-            lb = b[0] + 1e-3 if b[0] is not None else None
-            ub = b[1] + 1e-3 if b[1] is not None else None
-            bounds.append((lb, ub))
+        """
+        Returns default start params in the format of external parameters.
+        This should not be called directly, but by calling
+        ``self.start_params``.
+        """
+        params = []
+        for p in self._smoothing_param_names:
+            if p in self.param_names:
+                params.append(self._default_start_params[p])
 
-        # See Hyndman p.24
-        start_params = [np.clip(0.1, *bounds[0])]
-        idx = 1
-        if self.trend:
-            start_params += [np.clip(0.01, *bounds[idx])]
-            idx += 1
-        if self.seasonal:
-            start_params += [np.clip(0.01, *bounds[idx])]
-            idx += 1
-        if self.damped_trend:
-            start_params += [np.clip(0.98, *bounds[idx])]
-            idx += 1
-
-        # Initialization
         if self.initialization_method == "estimated":
-            start_params += [self.initial_level]
+            params += [self.initial_level]
             if self.has_trend:
-                start_params += [self.initial_trend]
+                params += [self.initial_trend]
             if self.has_seasonal:
-                start_params += self.initial_seasonal.tolist()
+                params += self.initial_seasonal.tolist()
 
-        return np.array(start_params)
+        return np.array(params)
 
-    def _default_param_bounds(self):
+    def _convert_and_bound_start_params(self, params):
         """
-        Default lower and upper bounds for model parameters
+        This converts start params to internal params, sets internal-only
+        parameters as bounded, sets bounds for fixed parameters, and then makes
+        sure that all start parameters are within the specified bounds.
         """
-        # traditional bounds:
-        # alpha, beta*, gamma* in (0, 1), phi in [0.8, 0.98]
-        n = 1 + int(self.has_trend) + int(self.has_seasonal)
-        bounds = [(1e-8, 1 - 1e-8)] * n
-        if self.damped_trend:
-            bounds += [(0.8, 0.98)]
-        if self.initialization_method == "estimated":
-            n = (
-                1
-                + int(self.has_trend)
-                + int(self.has_seasonal) * self.seasonal_periods
-            )
-            bounds += [(None, None)] * n
-        return bounds
+        internal_params = self._internal_params(params)
+        # set bounds for missing and fixed
+        for p in self._internal_param_names:
+            idx = self._internal_params_index[p]
+            if p not in self.param_names:
+                # any missing parameters are set to the value they got from the
+                # call to _internal_params
+                self.bounds[p] = [internal_params[idx]] * 2
+            elif self._has_fixed_params and p in self._fixed_params:
+                self.bounds[p] = [self._fixed_params[p]] * 2
+            # make sure everything is within bounds
+            if p in self.bounds:
+                internal_params[idx] = np.clip(
+                    internal_params[idx]
+                    + 1e-3,  # try not to start on boundary
+                    *self.bounds[p],
+                )
+        return internal_params
 
-    def _internal_bounds(self):
-        """
-        Returns bounds for internal parameters
-        """
-        bounds = []
-        for name in self._internal_param_names:
-            if name in self.param_names:
-                bounds.append(self.bounds[self._params_index[name]])
-            elif name == "damping_trend":
-                # if damping_trend is not in param_names, it is set to 1
-                bounds.append((1, 1))
-            else:
-                # all other internal-only parameters are 0, except initials
-                if name == "initial_level":
-                    b = self.initial_level
-                    bounds.append((b, b))
-                elif name == "initial_trend":
-                    b = self.initial_trend
-                    bounds.append((b, b))
-                elif name == "initial_seasonal":
-                    for i in range(self.seasonal_periods):
-                        b = self.initial_seasonal[i]
-                        bounds.append((b, b))
-                else:
-                    bounds.append((0, 0))
+    def _setup_constraints(self):
+        # We are using the traditional constraints for the smoothing parameters
+        # if nothing else is specified
+        #
+        #    0 <     alpha     < 1
+        #    0 <   beta/alpha  < 1
+        #    0 < gamma + alpha < 1
+        #  0.8 <      phi      < 0.98
+        #
+        # For initial states, no bounds are the default setting.
 
-        # set fixed parameters bounds
-        if self._has_fixed_params:
-            for i, name in enumerate(self._fixed_params):
-                idx = self._fixed_params_index[i]
-                val = self._fixed_params[name]
-                bounds[idx] = (val, val)
-        return bounds
+        lb = np.zeros(self._k_params_internal)
+        ub = np.ones(self._k_params_internal)
+
+        # set lb and ub for parameters with bounds
+        for p in self._internal_param_names:
+            idx = self._internal_params_index[p]
+            if p in self.bounds:
+                lb[idx], ub[idx] = self.bounds[p]
+
+        # The constraint function is the identity for all parameters except
+        # beta and gamma. If beta or gamma are in bounds, this are also using
+        # the identity function.
+        def constraint_function(
+            internal_params,
+            lb=lb,
+            ub=ub,
+            beta_in_bounds="smoothing_trend" in self.bounds,
+            gamma_in_bounds="smoothing_seasonal" in self.bounds,
+        ):
+            # calculate f(x)
+            # for all parameters but beta and gamma, f(x) = x
+            res = internal_params
+            if not beta_in_bounds:
+                res[1] /= res[0]
+            if not gamma_in_bounds:
+                res[2] += res[0]
+            # return res
+
+            # We are constrained to a n-dimensional box. Therefore we normalize
+            # the box and then use 1 - max(abs(x)) as constraint function
+            centered = 2 * (res - lb) / (ub - lb) - 1
+            return 1 - np.max(np.abs(centered))
+
+            # use a parabola to transform the result to be positive if within bounds
+            a = 1000
+            b = (ub + lb) * a
+            c = (2 * ub + lb) * ub * a
+            transformed = -res**2 - b*res + c
+            scalar = np.abs(np.prod(transformed))
+            if np.any(transformed < 0):
+                scalar *= -1
+            return scalar
+
+        # constraints = NonlinearConstraint(constraint_function, lb, ub)
+        constraints = {'type': 'ineq', 'fun': constraint_function}
+        return constraints
 
     def fit(
         self,
@@ -683,7 +716,7 @@ class ETSModel(base.StateSpaceMLEModel):
 
             * `smoothing_level` (:math:`\alpha`)
             * `smoothing_trend` (:math:`\beta^*`)
-            * `smoothing_season` (:math:`\gamma^*`)
+            * `smoothing_seasonal` (:math:`\gamma^*`)
             * `damping_trend` (:math:`\phi`)
 
             If ``initialization_method`` was set to ``'estimated'`` (the
@@ -717,50 +750,65 @@ class ETSModel(base.StateSpaceMLEModel):
         -------
         results : ETSResults
         """
+
         if start_params is None:
             start_params = self.start_params
 
-        # set fixed params
-        self._set_fixed_params(start_params)
-
         if self._has_fixed_params and len(self._free_params_index) == 0:
-            final_params = start_params
+            final_params = np.asarray(list(self._fixed_params.values()))
             mlefit = Bunch(
                 params=start_params, mle_retvals=None, mle_settings=None
             )
         else:
-            start_params = self._internal_params(start_params)
-            bounds = self._internal_bounds()
+            # convert external params to internal
+            internal_start_params = self._convert_and_bound_start_params(
+                start_params
+            )
+            # set up the constraints
+            constraints = self._setup_constraints()
+            kwargs["constraints"] = constraints
+            # kwargs["min_method"] = "trust-constr"
+            kwargs["min_method"] = "SLSQP"
+
+            # pre-allocate memory for smoothing results
             yhat = np.zeros(self.nobs)
             xhat = np.zeros((self.nobs, self._k_states_internal))
 
-            # add 'approx_grad' to solver kwargs
-            kwargs["approx_grad"] = True
-            kwargs["bounds"] = bounds
-
-            with self.use_internal_loglike():
-                mlefit = super().fit(
-                    start_params,
-                    fargs=(yhat, xhat),
-                    method="lbfgs",
-                    maxiter=maxiter,
-                    full_output=full_output,
-                    disp=disp,
-                    callback=callback,
-                    skip_hessian=True,
-                    **kwargs,
-                )
-            # convert params back
-            final_params = self._model_params(mlefit.params)
+            def f(params, yhat, xhat):
+                return -self._loglike_internal(params, yhat, xhat)
+            res = minimize(
+                f,
+                internal_start_params,
+                args=(yhat, xhat),
+                method=kwargs["min_method"],
+                constraints=constraints,
+                callback=callback,
+                options={"disp": disp, "maxiter": maxiter}
+            )
+            final_params = self._model_params(res.x)
+            # with self.use_internal_loglike():
+            #     mlefit = super().fit(
+            #         internal_start_params,
+            #         fargs=(yhat, xhat),
+            #         method="minimize",
+            #         maxiter=maxiter,
+            #         full_output=full_output,
+            #         disp=disp,
+            #         callback=callback,
+            #         skip_hessian=True,
+            #         **kwargs,
+            #     )
+            # # convert params back
+            # final_params = self._model_params(mlefit.params)
 
         if return_params:
             return final_params
         else:
-
             result = ETSResults(self, final_params)
-            result.mlefit = mlefit
-            result.mle_retvals = mlefit.mle_retvals
-            result.mle_settings = mlefit.mle_settings
+            # result.mlefit = mlefit
+            # result.mle_retvals = mlefit.mle_retvals
+            # result.mle_settings = mlefit.mle_settings
+            result.minimize_result = res
             return result
 
     def _loglike_internal(self, params, yhat, xhat):
@@ -883,6 +931,21 @@ class ETSModel(base.StateSpaceMLEModel):
             states = pd.DataFrame(states, index=index, columns=statenames)
         return yhat, states
 
+    def smooth(self, params):
+        """
+        Exponential smoothing with given parameters
+
+        Parameters
+        ----------
+        params : array_like
+            Model parameters
+
+        Returns
+        -------
+        ETSResults object
+        """
+        return ETSResults(self, params)
+
     @property
     def _seasonal_index(self):
         return 1 + int(self.has_trend)
@@ -916,9 +979,9 @@ class ETSModel(base.StateSpaceMLEModel):
         if self.has_seasonal:
             for j in range(self.seasonal_periods):
                 internal_states[j:, 2 + j] = states[
-                    0:self.nobs - j, self._seasonal_index
+                    0 : self.nobs - j, self._seasonal_index
                 ]
-                internal_states[0:j, 2 + j] = internal_params[6:6 + j][::-1]
+                internal_states[0:j, 2 + j] = internal_params[6 : 6 + j][::-1]
         return internal_states
 
     @property

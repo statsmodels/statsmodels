@@ -95,9 +95,13 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
         # Set the new fixed parameters, keeping the order as given by
         # param_names
         self._fixed_params.update(params)
-        self._fixed_params = OrderedDict([
-            (name, self._fixed_params[name]) for name in self.param_names
-            if name in self._fixed_params])
+        self._fixed_params = OrderedDict(
+            [
+                (name, self._fixed_params[name])
+                for name in self.param_names
+                if name in self._fixed_params
+            ]
+        )
 
         # Update associated values
         self._has_fixed_params = True

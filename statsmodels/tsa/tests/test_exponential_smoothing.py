@@ -401,7 +401,7 @@ def test_forecast_vs_R(setup_model):
     fcast = fit.forecast(4)
     expected = np.asarray(results_R["forecast"])
 
-    assert_allclose(expected, fcast.values, rtol=1e-3, atol=1e-3)
+    assert_allclose(expected, fcast.values, rtol=1e-3, atol=1e-4)
 
 
 def test_simulate_vs_R(setup_model):
@@ -448,12 +448,6 @@ def test_initialization_known(austourists):
     assert initial_level == internal_params[4]
     assert initial_trend == internal_params[5]
     assert internal_params[6] == 0
-
-    bounds = model._internal_bounds()
-    assert bounds[4][0] == initial_level
-    assert bounds[4][1] == initial_level
-    assert bounds[5][0] == initial_trend
-    assert bounds[5][1] == initial_trend
 
 
 def test_initialization_heuristic(oildata):
