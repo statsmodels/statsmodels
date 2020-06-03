@@ -239,7 +239,7 @@ def _fstat2effectsize(f_stat, df1, df2):
     f2 = f_stat * df1 / df2
     eta2 = f2 / (f2 + 1)
     omega2_ = (f_stat - 1) / (f_stat + (df2 + 1) / df1)
-    omega2 = (f2 - df1 / df2) / (f2 + 2)  # rewrite
+    omega2 = (f2 - df1 / df2) / (f2 + 1 + 1 / df2)  # rewrite
     eps2_ = (f_stat - 1) / (f_stat + df2 / df1)
     eps2 = (f2 - df1 / df2) / (f2 + 1)  # rewrite
     return Holder(f2=f2, eta2=eta2, omega2=omega2, eps2=eps2, eps2_=eps2_,
@@ -301,8 +301,7 @@ def confint_noncentrality(f_stat, df1, df2, alpha=0.05,
     return ci
 
 
-def confint_effectsize_oneway(f_stat, df1, df2, alpha=0.05, nobs=None,
-                              alternative="two-sided"):
+def confint_effectsize_oneway(f_stat, df1, df2, alpha=0.05, nobs=None):
     """confidence interval for effect size in oneway anova for F distribution
 
     This does not yet handle non-negativity constraint on nc.
@@ -317,6 +316,13 @@ def confint_effectsize_oneway(f_stat, df1, df2, alpha=0.05, nobs=None,
     inverting the cdf of the noncentral F distribution. Confidence intervals
     for other effect sizes are computed by endpoint transformation.
 
+
+    R package ``effectsize`` does not compute the confidence intervals in the
+    same way. Their confidence intervals can be replicated with
+
+    >>> ci_nc = confint_noncentrality(f_stat, df1, df2, alpha=0.1)
+    >>> ci_es = smo._fstat2effectsize(ci_nc / df1, df1, df2)
+
     See Also
     --------
     `confint_noncentrality`
@@ -324,11 +330,11 @@ def confint_effectsize_oneway(f_stat, df1, df2, alpha=0.05, nobs=None,
     """
     if nobs is None:
         nobs = df1 + df2 + 1
-    ci_nc = confint_noncentrality(f_stat, df1, df2, alpha=alpha,
-                                  alternative="two-sided")
+    ci_nc = confint_noncentrality(f_stat, df1, df2, alpha=alpha)
 
     ci_f2 = ci_nc / nobs
     ci_res = convert_effectsize_fsqu(f2=ci_f2)
+    ci_res.ci_omega2 = (ci_f2 - df1 / df2) / (ci_f2 + 1 + 1 / df2)
     ci_res.ci_nc = ci_nc
     ci_res.ci_f = np.sqrt(ci_res.f2)
     ci_res.ci_eta = np.sqrt(ci_res.eta2)
@@ -361,11 +367,9 @@ def anova_generic(means, vars_, nobs, use_var="unequal",
     meanw_t = w_rel @ means
 
     statistic = np.dot(weights, (means - meanw_t)**2) / (n_groups - 1.)
-    use_satt = False
     df_num = n_groups - 1.
 
     if use_var == "unequal":
-        use_satt = True
         tmp = ((1 - w_rel)**2 / (nobs - 1)).sum() / (n_groups**2 - 1)
         if welch_correction:
             statistic /= 1 + 2 * (n_groups - 2) * tmp
@@ -393,11 +397,6 @@ def anova_generic(means, vars_, nobs, use_var="unequal",
         options["pvalue2"] = pval2
     else:
         raise ValueError('use_var is to be one of "unequal", "equal" or "bf"')
-
-#     if use_satt:  # Satterthwaite/Welch degrees of freedom
-#         df_denom = 1. / (3. * tmp)
-#     else:
-#         df_denom = nobs_t - n_groups
 
     pval = stats.f.sf(statistic, df_num, df_denom)
     res = HolderTuple(statistic=statistic,

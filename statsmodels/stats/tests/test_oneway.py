@@ -12,8 +12,8 @@ from numpy.testing import assert_allclose, assert_equal
 
 from statsmodels.regression.linear_model import OLS
 import statsmodels.stats.power as smpwr
-import statsmodels.stats.robust_compare as str
-import statsmodels.stats.oneway as sto
+import statsmodels.stats.robust_compare as smr
+import statsmodels.stats.oneway as smo
 from statsmodels.stats.oneway import (
     confint_effectsize_oneway, confint_noncentrality, effectsize_oneway,
     anova_oneway,
@@ -83,6 +83,60 @@ def test_effectsize_power():
     res_es = 0.590
     assert_allclose(p, res_pow, atol=0.005)  # lower than print precision
     assert_allclose(es, res_es, atol=0.0006)
+
+
+def test_effectsize_fstat():
+    # results from R package `effectsize`, confint is 0.9 confidence
+    # > es = F_to_eta2(45.8, 3, 35)
+    Eta_Sq_partial = 0.796983758700696
+    CI_eta2 = 0.685670133284926, 0.855981325777856  # reformated from output
+    # > es = F_to_epsilon2(45.8, 3, 35)
+    Epsilon_Sq_partial = 0.779582366589327
+    CI_eps2 = 0.658727573280777, 0.843636867987386
+    # > es = F_to_omega2(45.8, 3, 35)
+    Omega_Sq_partial = 0.775086505190311
+    CI_omega2 = 0.65286429480169, 0.840179680453464
+    # > es = F_to_f(45.8, 3, 35)
+    Cohens_f_partial = 1.98134153686695
+    CI_f = 1.47694659580859, 2.43793847155554
+
+    f_stat, df1, df2 = 45.8, 3, 35
+    nobs = df1 + df2 + 1
+    fes = smo._fstat2effectsize(f_stat, df1, df2)
+    assert_allclose(np.sqrt(fes.f2), Cohens_f_partial, rtol=1e-13)
+    assert_allclose(fes.eta2, Eta_Sq_partial, rtol=1e-13)
+    assert_allclose(fes.eps2, Epsilon_Sq_partial, rtol=1e-13)
+    assert_allclose(fes.omega2, Omega_Sq_partial, rtol=1e-13)
+
+    ci_nc = confint_noncentrality(f_stat, df1, df2, alpha=0.1)
+    # the following replicates R package effectsize
+    ci_es = smo._fstat2effectsize(ci_nc / df1, df1, df2)
+    assert_allclose(ci_es.eta2, CI_eta2, rtol=2e-4)
+    assert_allclose(ci_es.eps2, CI_eps2, rtol=2e-4)
+    assert_allclose(ci_es.omega2, CI_omega2, rtol=2e-4)
+    assert_allclose(np.sqrt(ci_es.f2), CI_f, rtol=2e-4)
+
+
+def test_effectsize_fstat_stata():
+    # reference numbers computed with Stata 14
+    # Stata 16 does not seem to have confint for omega2
+
+    # esizei 2 40 7.47403193349075, level(90)
+    eta2 = 0.2720398648288652
+    lb_eta2 = 0.0742092468714613
+    ub_eta2 = 0.4156116886974804
+    omega2 = 0.2356418580703085
+    lb_omega2 = 0.0279197092150344
+    ub_omega2 = 0.3863922731323545
+    # level = 90
+
+    f_stat, df1, df2 = 7.47403193349075, 2, 40
+    fes = smo._fstat2effectsize(f_stat, df1, df2)
+    assert_allclose(fes.eta2, eta2, rtol=1e-13)
+    assert_allclose(fes.omega2, omega2, rtol=0.02)  # low agreement
+    ci_es = smo.confint_effectsize_oneway(f_stat, df1, df2, alpha=0.1)
+    assert_allclose(ci_es.eta2, (lb_eta2, ub_eta2), rtol=1e-4)
+    assert_allclose(ci_es.ci_omega2, (lb_omega2, ub_omega2), rtol=0.025)
 
 
 class TestOnewayEquivalenc(object):
@@ -246,17 +300,17 @@ class TestOnewayScale(object):
         # lawstat: Test Statistic = 1.0866123063642, p-value = 0.3471072204516
         statistic = 1.0866123063642
         p_value = 0.3471072204516
-        res0 = sto.test_scale_oneway(data, method='equal', center='median',
+        res0 = smo.test_scale_oneway(data, method='equal', center='median',
                                      transform='abs', trim_frac_mean=0.2)
         assert_allclose(res0.pvalue, p_value, rtol=1e-13)
         assert_allclose(res0.statistic, statistic, rtol=1e-13)
 
-        res = str.anova_scale(data, method='foneway', center='median',
+        res = smr.anova_scale(data, method='foneway', center='median',
                               transform='abs', trim_frac=0.2)
         assert_allclose(res0.pvalue, res[0][1], rtol=1e-13)
         assert_allclose(res[0][1], p_value, rtol=1e-13)
 
-        resa = str.anova_oneway(res0.data_transformed)
+        resa = smr.anova_oneway(res0.data_transformed)
         assert_allclose(resa[1], p_value, rtol=1e-13)
 
         # library car
@@ -264,7 +318,7 @@ class TestOnewayScale(object):
         statistic = 1.10732113109744
         p_value = 0.340359251994645
         df = [2, 40]
-        res0 = sto.test_scale_oneway(data, method='equal', center='trimmed',
+        res0 = smo.test_scale_oneway(data, method='equal', center='trimmed',
                                      transform='abs', trim_frac_mean=0.2)
         assert_allclose(res0.pvalue, p_value, rtol=1e-13)
         assert_allclose(res0.statistic, statistic, rtol=1e-13)
@@ -277,7 +331,7 @@ class TestOnewayScale(object):
         parameter = [2, 40]  # df
         p_value = 0.349641166869223
         # method = "Levene's Homogeneity Test"
-        res0 = sto.test_scale_oneway(data, method='equal', center='mean',
+        res0 = smo.test_scale_oneway(data, method='equal', center='mean',
                                      transform='abs', trim_frac_mean=0.2)
         assert_allclose(res0.pvalue, p_value, rtol=1e-13)
         assert_allclose(res0.statistic, statistic, rtol=1e-13)
@@ -302,7 +356,7 @@ class TestOnewayScale(object):
         # regression numbers from initial run
         statistic, p_value = 1.0173464626246675, 0.3763806150460239
         df = (2.0, 24.40374758005409)
-        res = sto.test_scale_oneway(data, method='unequal', center='median',
+        res = smo.test_scale_oneway(data, method='unequal', center='median',
                                     transform='abs', trim_frac_mean=0.2)
         assert_allclose(res.pvalue, p_value, rtol=1e-13)
         assert_allclose(res.statistic, statistic, rtol=1e-13)
@@ -312,7 +366,7 @@ class TestOnewayScale(object):
         df = (1.83153791573948, 30.6733640949525)
         p_value2 = 0.3679999679787619
         df2 = (2, 30.6733640949525)
-        res = sto.test_scale_oneway(data, method='bf', center='median',
+        res = smo.test_scale_oneway(data, method='bf', center='median',
                                     transform='abs', trim_frac_mean=0.2)
         assert_allclose(res.pvalue, p_value, rtol=1e-13)
         assert_allclose(res.statistic, statistic, rtol=1e-13)
@@ -322,7 +376,7 @@ class TestOnewayScale(object):
 
         statistic, p_value = 1.7252431333701745, 0.19112038168209514
         df = (2.0, 40.0)
-        res = sto.test_scale_oneway(data, method='equal', center='mean',
+        res = smo.test_scale_oneway(data, method='equal', center='mean',
                                     transform='square', trim_frac_mean=0.2)
         assert_allclose(res.pvalue, p_value, rtol=1e-13)
         assert_allclose(res.statistic, statistic, rtol=1e-13)
@@ -330,7 +384,7 @@ class TestOnewayScale(object):
 
         statistic, p_value = 0.4129696057329463, 0.6644711582864451
         df = (2.0, 40.0)
-        res = sto.test_scale_oneway(data, method='equal', center='mean',
+        res = smo.test_scale_oneway(data, method='equal', center='mean',
                                     transform=lambda x: np.log(x * x),  # noqa
                                     trim_frac_mean=0.2)
         assert_allclose(res.pvalue, p_value, rtol=1e-13)
@@ -338,7 +392,7 @@ class TestOnewayScale(object):
         assert_equal(res.df, df)
 
         # compare no transform with standard anova
-        res = sto.test_scale_oneway(data, method='unequal', center=0,
+        res = smo.test_scale_oneway(data, method='unequal', center=0,
                                     transform='identity', trim_frac_mean=0.2)
         res2 = anova_oneway(self.data, use_var="unequal")
 
@@ -350,7 +404,7 @@ class TestOnewayScale(object):
         data = self.data
 
         # compare no transform with standard anova
-        res = sto.equivalence_scale_oneway(data, 0.5, method='unequal',
+        res = smo.equivalence_scale_oneway(data, 0.5, method='unequal',
                                            center=0,
                                            transform='identity')
         res2 = equivalence_oneway(self.data, 0.5, use_var="unequal")
@@ -359,7 +413,7 @@ class TestOnewayScale(object):
         assert_allclose(res.statistic, res2.statistic, rtol=1e-13)
         assert_equal(res.df, res2.df)
 
-        res = sto.equivalence_scale_oneway(data, 0.5, method='bf',
+        res = smo.equivalence_scale_oneway(data, 0.5, method='bf',
                                            center=0,
                                            transform='identity')
         res2 = equivalence_oneway(self.data, 0.5, use_var="bf")
@@ -413,7 +467,7 @@ class TestOnewayOLS(object):
         assert_allclose(nc_wt, wt.statistic * wt.df_num, rtol=1e-13)
 
         es_ols = nc_wt / nobs_t
-        es_oneway = sto.effectsize_oneway(res_ols.params, res_ols.scale,
+        es_oneway = smo.effectsize_oneway(res_ols.params, res_ols.scale,
                                           self.nobs, use_var="equal")
         assert_allclose(es_ols, es_oneway, rtol=1e-13)
 
@@ -439,7 +493,7 @@ def test_simulate_equivalence():
     opt_var = ["unequal", "equal", "bf"]
     k_mc = 100
     np.random.seed(987126)
-    res_mc = sto.simulate_power_equivalence_oneway(
+    res_mc = smo.simulate_power_equivalence_oneway(
         means, nobs, eps, vars_=vars_, k_mc=k_mc, trim_frac=0.1,
         options_var=opt_var, margin_type="wellek")
 
