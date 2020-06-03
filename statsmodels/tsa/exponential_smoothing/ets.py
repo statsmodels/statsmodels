@@ -784,12 +784,10 @@ class ETSModel(base.StateSpaceMLEModel):
         res = self._residuals(yhat)
         logL = -self.nobs / 2 * (np.log(2 * np.pi * np.mean(res ** 2)) + 1)
         if self.error == "mul":
-            if np.any(yhat <= 0):
-                return np.inf
-            else:
-                return logL - np.sum(np.log(yhat))
-        else:
-            return logL
+            logL -= np.sum(np.log(yhat))
+            if np.isnan(logL):
+                logL = np.inf
+        return logL
 
     @contextlib.contextmanager
     def use_internal_loglike(self):
@@ -1228,7 +1226,7 @@ class ETSResults(base.StateSpaceMLEResults):
             gamma_star,
             phi,
             m,
-            n,
+            _,
         ) = smooth._initialize_ets_smooth(start_params, x)
         beta = alpha * beta_star
         gamma = (1 - alpha) * gamma_star
