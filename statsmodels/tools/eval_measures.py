@@ -2,8 +2,9 @@
 """some measures for evaluation of prediction, tests and model selection
 
 Created on Tue Nov 08 15:23:20 2011
+Updated on Wed Jun 03 10:42:20 2020
 
-Author: Josef Perktold
+Authors: Josef Perktold & Peter Prescott
 License: BSD-3
 
 """
@@ -67,6 +68,31 @@ def rmse(x1, x2, axis=0):
     x2 = np.asanyarray(x2)
     return np.sqrt(mse(x1, x2, axis=axis))
 
+def rmspe(y, y_hat, axis=0, zeros=np.nan):
+    """
+    Root Mean Squared Percentage Error
+
+    Parameters
+    ----------
+    y : array_like
+      The actual value.
+    y_hat : array_like
+       The predicted value.
+    axis : int
+       Axis along which the summary statistic is calculated
+    zeros : float
+       Value to assign to error where actual value is zero
+
+    Returns
+    -------
+    rmspe : ndarray or float
+       Root Mean Squared Percentage Error along given axis.
+    """
+    y_hat = np.asarray(y_hat)
+    y = np.asarray(y)
+    error = y - y_hat
+    percentage_error = np.divide(error, y, out=np.full_like(error, zeros), where=y!=0)
+    return np.nanmean(percentage_error**2, axis=axis) * 100
 
 def maxabs(x1, x2, axis=0):
     """maximum absolute error
@@ -564,6 +590,6 @@ def hqic_sigma(sigma2, nobs, df_modelwc, islog=False):
 #     ((nobs + self.df_model) / self.df_resid) ** neqs * np.exp(ld)
 
 
-__all__ = [maxabs, meanabs, medianabs, medianbias, mse, rmse, stde, vare,
+__all__ = [maxabs, meanabs, medianabs, medianbias, mse, rmse, rmspe, stde, vare,
            aic, aic_sigma, aicc, aicc_sigma, bias, bic, bic_sigma,
            hqic, hqic_sigma, iqr]
