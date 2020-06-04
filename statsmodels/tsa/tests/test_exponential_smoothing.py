@@ -475,7 +475,19 @@ def test_initialization_heuristic(oildata):
     assert_allclose(yhat_estimated[10:], yhat_heuristic[10:], rtol=0.5)
 
 
-@pytest.mark.skip
+def test_bounded_fit(oildata):
+    beta = [0.99, 0.99]
+    model = ETSModel(
+        oildata,
+        error="add",
+        trend="add",
+        damped_trend=True,
+        bounds={"smoothing_trend": beta}
+    )
+    fit = model.fit(disp=False)
+    assert fit.smoothing_trend == 0.99
+
+
 def test_simulate_keywords(austourists):
     """
     check whether all keywords are accepted and work without throwing errors.
@@ -487,7 +499,7 @@ def test_simulate_keywords(austourists):
         trend="add",
         seasonal="add",
         damped_trend=True,
-    ).fit()
+    ).fit(disp=False)
 
     # test anchor
     assert_almost_equal(

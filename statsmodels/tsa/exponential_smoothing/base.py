@@ -191,7 +191,7 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
             if data.ndim < 2:
                 data = pd.Series(data, index=index, name=names)
             else:
-                data = pd.DataFrame(data, index=index, names=names)
+                data = pd.DataFrame(data, index=index, columns=names)
         return data
 
 

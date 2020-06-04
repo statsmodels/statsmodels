@@ -1,8 +1,10 @@
 #!python
 #cython: wraparound=False, boundscheck=False, cdivision=True
 
+from cpython cimport bool
 import numpy as np
 cimport numpy as np
+
 
 np.import_array()
 
@@ -10,9 +12,14 @@ ctypedef fused float_t:
     np.float32_t
     np.float64_t
 
-cpdef _initialize_ets_smooth(float_t [:] params, float_t[:,:] xhat):
+cpdef _initialize_ets_smooth(
+    float_t [:] params,
+    float_t[:,:] xhat,
+    bool use_beta_star=False,
+    bool use_gamma_star=False,
+):
     """Extracts parameters and initializes states xhat"""
-    cdef float_t alpha, beta, gamma, phi
+    cdef float_t alpha, beta, gamma, phi, beta_star, gamma_star
     cdef Py_ssize_t m, n
 
     # get params
@@ -20,24 +27,37 @@ cpdef _initialize_ets_smooth(float_t [:] params, float_t[:,:] xhat):
     m = len(params[6:])
     n = len(xhat)
 
+    # calculate beta_star and gamma_star
+    # if the use flags are true, the parameters are already the starred versions
+    if use_beta_star:
+        beta_star = beta
+    else:
+        beta_star = beta/alpha
+    if use_gamma_star:
+        gamma_star = gamma
+    else:
+        gamma_star = gamma / (1 - alpha)
+
     # initialize states
     # l = xhat[:,0], b = xhat[:,1], s = xhat[:,2:2+m]
     # seasons are sorted such that xhat[:,2+m-1] contains s[-m]
     xhat[n-1, :] = params[4:]
 
-    return alpha, beta/alpha, gamma/(1-alpha), phi, m, n
+    return alpha, beta_star, gamma_star, phi, m, n
 
 def _ets_smooth_add_add(float_t [:] params,
                         float_t [:] y,
                         float_t [:] yhat,
-                        float_t [:,:] xhat):
+                        float_t [:,:] xhat,
+                        bool use_beta_star=False,
+                        bool use_gamma_star=False):
     """Smoothing with additive trend and additive season"""
     cdef float_t alpha, beta_star, gamma_star, phi
     cdef Py_ssize_t i, n, m, prev
 
     # get params
     alpha, beta_star, gamma_star, phi, m, n = _initialize_ets_smooth(
-        params, xhat
+        params, xhat, use_beta_star, use_gamma_star
     )
 
     # smooth
@@ -61,14 +81,16 @@ def _ets_smooth_add_add(float_t [:] params,
 def _ets_smooth_add_mul(float_t [:] params,
                         float_t [:] y,
                         float_t [:] yhat,
-                        float_t [:,:] xhat):
+                        float_t [:,:] xhat,
+                        bool use_beta_star=False,
+                        bool use_gamma_star=False):
     """Smoothing with additive trend and multiplicative season"""
     cdef float_t alpha, beta_star, gamma_star, phi
     cdef Py_ssize_t i, n, m, prev
 
     # get params
     alpha, beta_star, gamma_star, phi, m, n = _initialize_ets_smooth(
-        params, xhat
+        params, xhat, use_beta_star, use_gamma_star
     )
 
     # smooth
@@ -92,14 +114,16 @@ def _ets_smooth_add_mul(float_t [:] params,
 def _ets_smooth_mul_add(float_t [:] params,
                         float_t [:] y,
                         float_t [:] yhat,
-                        float_t [:,:] xhat):
+                        float_t [:,:] xhat,
+                        bool use_beta_star=False,
+                        bool use_gamma_star=False):
     """Smoothing with multiplicative trend and additive season"""
     cdef float_t alpha, beta_star, gamma_star, phi
     cdef Py_ssize_t i, n, m, prev
 
     # get params
     alpha, beta_star, gamma_star, phi, m, n = _initialize_ets_smooth(
-        params, xhat
+        params, xhat, use_beta_star, use_gamma_star
     )
 
     # smooth
@@ -123,14 +147,16 @@ def _ets_smooth_mul_add(float_t [:] params,
 def _ets_smooth_mul_mul(float_t [:] params,
                         float_t [:] y,
                         float_t [:] yhat,
-                        float_t [:,:] xhat):
+                        float_t [:,:] xhat,
+                        bool use_beta_star=False,
+                        bool use_gamma_star=False):
     """Smoothing with multiplicative trend and multiplicative season"""
     cdef float_t alpha, beta_star, gamma_star, phi
     cdef Py_ssize_t i, n, m, prev
 
     # get params
     alpha, beta_star, gamma_star, phi, m, n = _initialize_ets_smooth(
-        params, xhat
+        params, xhat, use_beta_star, use_gamma_star
     )
 
     # smooth

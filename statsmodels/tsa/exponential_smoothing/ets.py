@@ -146,7 +146,6 @@ import contextlib
 import numpy as np
 import pandas as pd
 from scipy.stats import _distn_infrastructure, rv_continuous, rv_discrete
-from scipy.optimize import minimize, NonlinearConstraint
 
 import statsmodels.base.wrapper as wrap
 from statsmodels.tools.decorators import cache_readonly
@@ -183,12 +182,14 @@ from statsmodels.tsa.tsatools import freq_to_period
 #   overall workflow is the following:
 #   - get start parameters in the form of external parameters (includes fixed
 #     parameters)
-#   - transform external parameters to internal parameters, bounding all that are
-#     missing -> now we have some missing parameters, but potentially also some
-#     user-specified bounds
+#   - transform external parameters to internal parameters, bounding all that
+#     are missing -> now we have some missing parameters, but potentially also
+#     some user-specified bounds
 #   - set bounds for fixed parameters
 #   - make sure that starting parameters are within bounds
 #   - set up the constraint bounds and function
+# * Since the traditional bounds are nonlinear for beta and gamma, if no bounds
+#   are given, we internally use beta_star and gamma_star for fitting
 
 
 class ETSModel(base.StateSpaceMLEModel):
@@ -233,18 +234,20 @@ class ETSModel(base.StateSpaceMLEModel):
     initial_seasonal : array_like, optional
         The initial seasonal component. An array of length `seasonal`.  Only
         used if initialization is 'known'.
-    bounds : iterable[tuple], optional
-        TODO: how can we allow user set bounds?
-        An iterable containing bounds for the parameters. Must contain one
-        element for every smoothing parameter, and optionally an element for
-        every initial state, where each element is a tuple of the form (lower,
-        upper).  Default is (0.0001, 0.9999) for the level, trend, and seasonal
-        smoothing parameters and (0.8, 0.98) for the trend damping parameter,
-        and (None, None) for the initial states (if `initialization_method` is
-        'estimated').
-        If `initialization_method` is 'estimated', either no bounds for the
-        initial states should be given, or bounds for all initial states
-        (level, trend, seasonal, depending on chosen model).
+    bounds : dict or None, optional
+        A dictionary with parameter names as keys and the respective bounds
+        intervals as values (lists/tuples/arrays).
+        The availabe parameter names are, depeding on the model and
+        initialization method:
+            * "smoothing_level"
+            * "smoothing_trend"
+            * "smoothing_seasonal"
+            * "damping_trend"
+            * "initial_level"
+            * "initial_trend"
+            * "initial_seasonal.0", ..., "initial_seasonal.<m-1>"
+        The default option is ``None``, in which case the traditional
+        (nonlinear) bounds as described in [1]_ are used.
     """
 
     def __init__(
@@ -328,20 +331,7 @@ class ETSModel(base.StateSpaceMLEModel):
 
         # BOUNDS
         # ======
-        if bounds is None:
-            self.bounds = {}
-        else:
-            if not isinstance(bounds, (dict, OrderedDict)):
-                raise ValueError("bounds must be a dictionary")
-            for key in bounds:
-                if key not in self.param_names:
-                    raise ValueError(
-                        f"Invalid key: {key} in bounds dictionary"
-                    )
-                bounds[key] = array_like(
-                    bounds[key], f"bounds[{key}]", shape=(2,)
-                )
-            self.bounds = bounds
+        self.set_bounds(bounds)
 
         # SMOOTHER
         # ========
@@ -392,8 +382,6 @@ class ETSModel(base.StateSpaceMLEModel):
             The initial seasonal component. An array of length `seasonal`. Only
             used if initialization is 'known'.
         """
-        if hasattr(self, "initialization_method"):
-            orig_init_method = self.initialization_method
         self.initialization_method = string_like(
             initialization_method,
             "initialization_method",
@@ -447,6 +435,34 @@ class ETSModel(base.StateSpaceMLEModel):
             zip(self.param_names, np.arange(self.k_params))
         )
 
+    def set_bounds(self, bounds):
+        """
+        Set bounds for parameter estimation.
+
+        Parameters
+        ----------
+        bounds : dict or None, optional
+            A dictionary with parameter names as keys and the respective bounds
+            intervals as values (lists/tuples/arrays).
+            The available parameter names are in ``self.param_names``.
+            The default option is ``None``, in which case the traditional
+            (nonlinear) bounds as described in [1]_ are used.
+        """
+        if bounds is None:
+            self.bounds = {}
+        else:
+            if not isinstance(bounds, (dict, OrderedDict)):
+                raise ValueError("bounds must be a dictionary")
+            for key in bounds:
+                if key not in self.param_names:
+                    raise ValueError(
+                        f"Invalid key: {key} in bounds dictionary"
+                    )
+                bounds[key] = array_like(
+                    bounds[key], f"bounds[{key}]", shape=(2,)
+                )
+            self.bounds = bounds
+
     @staticmethod
     def prepare_data(data):
         """
@@ -458,7 +474,7 @@ class ETSModel(base.StateSpaceMLEModel):
         return endog, None
 
     @property
-    def short_model_name(self):
+    def short_name(self):
         name = "".join([
             str(s)[0].upper() for s in [self.error, self.trend, self.seasonal]
         ])
@@ -575,10 +591,10 @@ class ETSModel(base.StateSpaceMLEModel):
     @property
     def _default_start_params(self):
         return {
-            "smoothing_level": 0.5,
-            "smoothing_trend": 0.5,
-            "smoothing_seasonal": 0.5,
-            "damping_trend": 0.90,
+            "smoothing_level": 0.1,
+            "smoothing_trend": 0.01,
+            "smoothing_seasonal": 0.01,
+            "damping_trend": 0.98,
         }
 
     @property
@@ -627,9 +643,9 @@ class ETSModel(base.StateSpaceMLEModel):
                 )
         return internal_params
 
-    def _setup_constraints(self):
-        # We are using the traditional constraints for the smoothing parameters
-        # if nothing else is specified
+    def _setup_bounds(self):
+        # By default, we are using the traditional constraints for the
+        # smoothing parameters if nothing else is specified
         #
         #    0 <     alpha     < 1
         #    0 <   beta/alpha  < 1
@@ -637,9 +653,19 @@ class ETSModel(base.StateSpaceMLEModel):
         #  0.8 <      phi      < 0.98
         #
         # For initial states, no bounds are the default setting.
+        #
+        # Since the bounds for beta and gamma are not in the simple form of a
+        # constant interval, we will use the parameters beta_star=beta/alpha
+        # and gamma_star=gamma+alpha during fitting.
 
-        lb = np.zeros(self._k_params_internal)
-        ub = np.ones(self._k_params_internal)
+        lb = np.zeros(self._k_params_internal) + 1e-5
+        ub = np.ones(self._k_params_internal) - 1e-5
+
+        # other bounds for phi and initial states
+        lb[3], ub[3] = 0.8, 0.98
+        if self.initialization_method == "estimated":
+            lb[4:] = -np.inf
+            ub[4:] = np.inf
 
         # set lb and ub for parameters with bounds
         for p in self._internal_param_names:
@@ -647,43 +673,7 @@ class ETSModel(base.StateSpaceMLEModel):
             if p in self.bounds:
                 lb[idx], ub[idx] = self.bounds[p]
 
-        # The constraint function is the identity for all parameters except
-        # beta and gamma. If beta or gamma are in bounds, this are also using
-        # the identity function.
-        def constraint_function(
-            internal_params,
-            lb=lb,
-            ub=ub,
-            beta_in_bounds="smoothing_trend" in self.bounds,
-            gamma_in_bounds="smoothing_seasonal" in self.bounds,
-        ):
-            # calculate f(x)
-            # for all parameters but beta and gamma, f(x) = x
-            res = internal_params
-            if not beta_in_bounds:
-                res[1] /= res[0]
-            if not gamma_in_bounds:
-                res[2] += res[0]
-            # return res
-
-            # We are constrained to a n-dimensional box. Therefore we normalize
-            # the box and then use 1 - max(abs(x)) as constraint function
-            centered = 2 * (res - lb) / (ub - lb) - 1
-            return 1 - np.max(np.abs(centered))
-
-            # use a parabola to transform the result to be positive if within bounds
-            a = 1000
-            b = (ub + lb) * a
-            c = (2 * ub + lb) * ub * a
-            transformed = -res**2 - b*res + c
-            scalar = np.abs(np.prod(transformed))
-            if np.any(transformed < 0):
-                scalar *= -1
-            return scalar
-
-        # constraints = NonlinearConstraint(constraint_function, lb, ub)
-        constraints = {'type': 'ineq', 'fun': constraint_function}
-        return constraints
+        return [(lb[i], ub[i]) for i in range(self._k_params_internal)]
 
     def fit(
         self,
@@ -756,62 +746,62 @@ class ETSModel(base.StateSpaceMLEModel):
 
         if self._has_fixed_params and len(self._free_params_index) == 0:
             final_params = np.asarray(list(self._fixed_params.values()))
-            res = Bunch(
+            mlefit = Bunch(
                 params=start_params, mle_retvals=None, mle_settings=None
             )
         else:
-            # convert external params to internal
             internal_start_params = self._convert_and_bound_start_params(
                 start_params
             )
-            # set up the constraints
-            constraints = self._setup_constraints()
-            kwargs["constraints"] = constraints
-            # kwargs["min_method"] = "trust-constr"
-            kwargs["min_method"] = "SLSQP"
+            kwargs["bounds"] = self._setup_bounds()
+
+            # check if we need to use the starred parameters
+            use_beta_star = "smoothing_trend" not in self.bounds
+            if use_beta_star:
+                internal_start_params[1] /= internal_start_params[0]
+            use_gamma_star = "smoothing_seasonal" not in self.bounds
+            if use_gamma_star:
+                internal_start_params[2] /= (1 - internal_start_params[0])
 
             # pre-allocate memory for smoothing results
             yhat = np.zeros(self.nobs)
             xhat = np.zeros((self.nobs, self._k_states_internal))
 
-            def f(params, yhat, xhat):
-                return -self._loglike_internal(params, yhat, xhat)
-            res = minimize(
-                f,
-                internal_start_params,
-                args=(yhat, xhat),
-                method=kwargs["min_method"],
-                constraints=constraints,
-                callback=callback,
-                options={"disp": disp, "maxiter": maxiter}
-            )
-            final_params = self._model_params(res.x)
-            # with self.use_internal_loglike():
-            #     mlefit = super().fit(
-            #         internal_start_params,
-            #         fargs=(yhat, xhat),
-            #         method="minimize",
-            #         maxiter=maxiter,
-            #         full_output=full_output,
-            #         disp=disp,
-            #         callback=callback,
-            #         skip_hessian=True,
-            #         **kwargs,
-            #     )
-            # # convert params back
-            # final_params = self._model_params(mlefit.params)
+            kwargs["approx_grad"] = True
+            with self.use_internal_loglike():
+                mlefit = super().fit(
+                    internal_start_params,
+                    fargs=(yhat, xhat, use_beta_star, use_gamma_star),
+                    method="lbfgs",
+                    maxiter=maxiter,
+                    full_output=full_output,
+                    disp=disp,
+                    callback=callback,
+                    skip_hessian=True,
+                    **kwargs,
+                )
+            # convert params back
+            if use_beta_star:
+                mlefit.params[1] *= mlefit.params[0]
+            if use_gamma_star:
+                mlefit.params[2] *= (1 - mlefit.params[0])
+            final_params = self._model_params(mlefit.params)
 
         if return_params:
             return final_params
         else:
             result = ETSResults(self, final_params)
-            # result.mlefit = mlefit
-            # result.mle_retvals = mlefit.mle_retvals
-            # result.mle_settings = mlefit.mle_settings
-            result.minimize_result = res
+            result.mlefit = mlefit
+            result.mle_retvals = mlefit.mle_retvals
+            result.mle_settings = mlefit.mle_settings
             return result
 
-    def _loglike_internal(self, params, yhat, xhat):
+    def _loglike_internal(self,
+                          params,
+                          yhat,
+                          xhat,
+                          use_beta_star=False,
+                          use_gamma_star=False):
         """
         Log-likelihood function to be called from fit to avoid reallocation of
         memory.
@@ -827,8 +817,14 @@ class ETSModel(base.StateSpaceMLEModel):
         xhat : np.ndarray
             Array of size (n, _k_states_internal) where fitted states will be
             written to.
+        use_beta_star : boolean
+            Whether to internally use beta_star as parameter
+        use_gamma_star : boolean
+            Whether to internally use gamma_star as parameter
         """
-        self._smoothing_func(params, self.endog, yhat, xhat)
+        self._smoothing_func(
+            params, self.endog, yhat, xhat, use_beta_star, use_gamma_star
+        )
         res = self._residuals(yhat)
         logL = -self.nobs / 2 * (np.log(2 * np.pi * np.mean(res ** 2)) + 1)
         if self.error == "mul":
@@ -1025,6 +1021,7 @@ class ETSResults(base.StateSpaceMLEResults):
         self._fittedvalues = yhat
 
         # get model definition
+        self.short_name = model.short_name
         self.error = self.model.error
         self.trend = self.model.trend
         self.seasonal = self.model.seasonal
@@ -1048,19 +1045,21 @@ class ETSResults(base.StateSpaceMLEResults):
         self.level = states[:, 0]
         self.initial_level = internal_params[4]
         self.alpha = self.params[0]
+        self.smoothing_level = self.alpha
 
         if self.has_trend:
             self.slope = states[:, 1]
             self.initial_trend = internal_params[5]
-            self.beta = self.params[1] * self.params[0]
+            self.beta = self.params[1]
+            self.smoothing_trend = self.beta
         if self.has_seasonal:
             self.season = states[:, self.model._seasonal_index]
             self.initial_seasonal = internal_params[6:]
-            self.gamma = self.params[self.model._seasonal_index] * (
-                1 - self.alpha
-            )
+            self.gamma = self.params[self.model._seasonal_index]
+            self.smoothing_seasonal = self.gamma
         if self.damped_trend:
             self.phi = internal_params[3]
+            self.damping_trend = self.phi
 
     @cache_readonly
     def nobs_effective(self):
@@ -1388,7 +1387,7 @@ class ETSResults(base.StateSpaceMLEResults):
 
         # Wrap data / squeeze where appropriate
         if repetitions > 1:
-            names = ["simulation.%d" % num for num in repetitions]
+            names = ["simulation.%d" % num for num in range(repetitions)]
         else:
             names = "simulation"
         return self.model._wrap_data(
