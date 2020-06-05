@@ -9,6 +9,7 @@ License: BSD-3
 from collections import defaultdict
 
 import numpy as np
+import pandas as pd
 
 from statsmodels.compat.python import lzip
 from statsmodels.compat.pandas import Appender
@@ -186,7 +187,11 @@ def variance_inflation_factor(exog, exog_idx):
     https://en.wikipedia.org/wiki/Variance_inflation_factor
     """
     k_vars = exog.shape[1]
-    x_i = exog[:, exog_idx]
+    x_i = None
+    if isinstance(exog, pd.DataFrame):
+        x_i = exog.iloc[:, exog_idx]
+    else:
+        x_i = exog[:, exog_idx]
     mask = np.arange(k_vars) != exog_idx
     x_noti = exog[:, mask]
     r_squared_i = OLS(x_i, x_noti).fit().rsquared
