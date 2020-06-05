@@ -1,6 +1,6 @@
 from numpy.testing import assert_almost_equal
 
-from statsmodels.datasets import statecrime, get_rdataset
+from statsmodels.datasets import statecrime
 from statsmodels.regression.linear_model import OLS
 from statsmodels.stats.outliers_influence import reset_ramsey
 from statsmodels.stats.outliers_influence import variance_inflation_factor
