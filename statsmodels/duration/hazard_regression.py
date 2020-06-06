@@ -461,6 +461,9 @@ class PHReg(model.LikelihoodModel):
 
         if 'disp' not in args:
             args['disp'] = False
+        if 'method' not in args:
+            args['method'] = 'lbfgs'
+
         fit_rslts = super(PHReg, self).fit(**args)
 
         if self.groups is None:
@@ -1309,10 +1312,6 @@ class PHReg(model.LikelihoodModel):
         of the survivor function that puts all mass on the observed
         failure times within a stratum.
         """
-
-        # TODO: this returns a Python list of rv_discrete objects, so
-        # nothing can be vectorized.  It appears that rv_discrete does
-        # not allow vectorization.
 
         surv = self.surv
         bhaz = self.baseline_cumulative_hazard(params)
