@@ -156,8 +156,6 @@ from statsmodels.tools.sm_exceptions import PrecisionWarning
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.numdiff import (
     _get_epsilon,
-    approx_hess_cs,
-    approx_fprime_cs,
     approx_fprime,
 )
 from statsmodels.tools.tools import Bunch
@@ -520,14 +518,11 @@ class ETSModel(base.StateSpaceMLEModel):
 
     @property
     def state_names(self):
-        names = ['level']
+        names = ["level"]
         if self.has_trend:
-            names += ['trend']
+            names += ["trend"]
         if self.has_seasonal:
-            names += [
-                f"seasonal.{i}"
-                for i in range(self.seasonal_periods)
-            ]
+            names += [f"seasonal.{i}" for i in range(self.seasonal_periods)]
         return names
 
     @property
@@ -1052,17 +1047,24 @@ class ETSModel(base.StateSpaceMLEModel):
         -----
         This is a numerical approximation.
         """
-        warnings.warn('Calculation of the Hessian using finite differences'
-                      ' is usually subject to substantial approximation'
-                      ' errors.', PrecisionWarning)
+        warnings.warn(
+            "Calculation of the Hessian using finite differences"
+            " is usually subject to substantial approximation"
+            " errors.",
+            PrecisionWarning,
+        )
 
         if not approx_centered:
             epsilon = _get_epsilon(params, 3, None, len(params))
         else:
             epsilon = _get_epsilon(params, 4, None, len(params)) / 2
-        hessian = approx_fprime(params, self.score,
-                                epsilon=epsilon, kwargs=kwargs,
-                                centered=approx_centered)
+        hessian = approx_fprime(
+            params,
+            self.score,
+            epsilon=epsilon,
+            kwargs=kwargs,
+            centered=approx_centered,
+        )
 
         return hessian / self.nobs
 
@@ -1073,8 +1075,8 @@ class ETSModel(base.StateSpaceMLEModel):
         # Dummy method to make methods copied from statespace.MLEModel work
         ...
 
-class ETSResults(base.StateSpaceMLEResults):
 
+class ETSResults(base.StateSpaceMLEResults):
     def __init__(self, model, params):
         super().__init__(model, params)
         yhat, xhat = self.model._smooth(params)
@@ -1120,20 +1122,18 @@ class ETSResults(base.StateSpaceMLEResults):
         if self.has_seasonal:
             self.season = states[:, self.model._seasonal_index]
             self.initial_seasonal = internal_params[6:]
-            self.initial_state[self.model._seasonal_index:] = (
-                self.initial_seasonal
-            )
+            self.initial_state[
+                self.model._seasonal_index :
+            ] = self.initial_seasonal
             self.gamma = self.params[self.model._seasonal_index]
             self.smoothing_seasonal = self.gamma
         if self.damped_trend:
             self.phi = internal_params[3]
             self.damping_trend = self.phi
 
-
-
         # Setup covariance matrix notes dictionary
         # For now, only support "approx"
-        if not hasattr(self, 'cov_kwds'):
+        if not hasattr(self, "cov_kwds"):
             self.cov_kwds = {}
         self.cov_type = "approx"
 
@@ -1141,16 +1141,15 @@ class ETSResults(base.StateSpaceMLEResults):
         self._cache = {}
 
         # Handle covariance matrix calculation
-        cov_kwds = {}
         self._cov_approx_complex_step = True
         self._cov_approx_centered = False
-        approx_type_str = 'complex-step'
+        approx_type_str = "complex-step"
         try:
             self._rank = None
             if self.k_params == 0:
                 self.cov_params_default = np.zeros((0, 0))
                 self._rank = 0
-                self.cov_kwds['description'] = 'No parameters estimated.'
+                self.cov_kwds["description"] = "No parameters estimated."
             else:
                 self.cov_params_default = self.cov_params_approx
                 self.cov_kwds["description"] = descriptions["approx"].format(
@@ -1160,9 +1159,10 @@ class ETSResults(base.StateSpaceMLEResults):
             self._rank = 0
             k_params = len(self.params)
             self.cov_params_default = np.zeros((k_params, k_params)) * np.nan
-            self.cov_kwds['cov_type'] = (
-                'Covariance matrix could not be calculated: singular.'
-                ' information matrix.')
+            self.cov_kwds["cov_type"] = (
+                "Covariance matrix could not be calculated: singular."
+                " information matrix."
+            )
 
     @cache_readonly
     def nobs_effective(self):
@@ -1598,7 +1598,7 @@ class ETSResults(base.StateSpaceMLEResults):
         # Wrap data / squeeze where appropriate
         return self.model._wrap_data(y, start, end_forecast - 1)
 
-    def summary(self, alpha=.05, start=None):
+    def summary(self, alpha=0.05, start=None):
         """
         Summarize the fitted model
 

@@ -18,12 +18,14 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
     from statespace.mlemodel.MLEModel
     """
 
-    def __init__(self, endog, exog=None, dates=None, freq=None, missing='none',
-                 **kwargs):
+    def __init__(
+        self, endog, exog=None, dates=None, freq=None, missing="none", **kwargs
+    ):
         # TODO: this was changed from the original, requires some work when
         # using this as base class for state space and exponential smoothing
-        super().__init__(endog=endog, exog=exog, dates=dates, freq=freq,
-                         missing=missing)
+        super().__init__(
+            endog=endog, exog=exog, dates=dates, freq=freq, missing=missing
+        )
 
         # Store kwargs to recreate model
         self._init_kwargs = kwargs
@@ -52,8 +54,9 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
     def _validate_can_fix_params(self, param_names):
         for param_name in param_names:
             if param_name not in self.param_names:
-                raise ValueError('Invalid parameter name passed: "%s".'
-                                 % param_name)
+                raise ValueError(
+                    'Invalid parameter name passed: "%s".' % param_name
+                )
 
     @property
     def k_params(self):
@@ -82,7 +85,8 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
         if self._fixed_params is None:
             self._fixed_params = {}
             self._params_index = OrderedDict(
-                zip(self.param_names, np.arange(self.k_params)))
+                zip(self.param_names, np.arange(self.k_params))
+            )
 
         # Cache the current fixed parameters
         cache_fixed_params = self._fixed_params.copy()
@@ -106,8 +110,9 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
 
         # Update associated values
         self._has_fixed_params = True
-        self._fixed_params_index = [self._params_index[key]
-                                    for key in self._fixed_params.keys()]
+        self._fixed_params_index = [
+            self._params_index[key] for key in self._fixed_params.keys()
+        ]
         self._free_params_index = list(
             set(np.arange(self.k_params)).difference(self._fixed_params_index)
         )
@@ -154,7 +159,7 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
         """
         (array) Starting parameters for maximum likelihood estimation.
         """
-        if hasattr(self, '_start_params'):
+        if hasattr(self, "_start_params"):
             return self._start_params
         else:
             raise NotImplementedError
@@ -165,18 +170,19 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
         (list of str) List of human readable parameter names (for parameters
         actually included in the model).
         """
-        if hasattr(self, '_param_names'):
+        if hasattr(self, "_param_names"):
             return self._param_names
         else:
             try:
-                names = ['param.%d' % i for i in range(len(self.start_params))]
+                names = ["param.%d" % i for i in range(len(self.start_params))]
             except NotImplementedError:
                 names = []
             return names
 
     @classmethod
-    def from_formula(cls, formula, data, subset=None, drop_cols=None,
-                     *args, **kwargs):
+    def from_formula(
+        cls, formula, data, subset=None, drop_cols=None, *args, **kwargs
+    ):
         """
         Not implemented for state space models
         """
@@ -186,9 +192,7 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
         # TODO: check if this is reasonable for statespace
         data = np.squeeze(data)
         if self.use_pandas:
-            _, _, _, index = self._get_prediction_index(
-                start_idx, end_idx
-            )
+            _, _, _, index = self._get_prediction_index(start_idx, end_idx)
             if data.ndim < 2:
                 data = pd.Series(data, index=index, name=names)
             else:
@@ -216,7 +220,8 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
     params : ndarray
         The parameters of the model.
     """
-    def __init__(self, model, params, scale=1.):
+
+    def __init__(self, model, params, scale=1.0):
         self.data = model.data
         self.endog = model.data.orig_endog
 
@@ -235,8 +240,9 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
             self._fixed_params = None
             self.fixed_params = []
         self.param_names = [
-            '%s (fixed)' % name if name in self.fixed_params else name
-            for name in (self.data.param_names or [])]
+            "%s (fixed)" % name if name in self.fixed_params else name
+            for name in (self.data.param_names or [])
+        ]
 
         # Dimensions
         self.nobs = self.model.nobs
@@ -333,7 +339,7 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
         """
         (float) Sum of squared errors
         """
-        return np.sum(self.resid**2)
+        return np.sum(self.resid ** 2)
 
     @cache_readonly
     def zvalues(self):
@@ -346,9 +352,9 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
         """Returns a valid numeric start index for predictions/simulations"""
         # TODO: once this is the base class for statespace models, use this
         # method in simulate
-        if anchor is None or anchor == 'start':
+        if anchor is None or anchor == "start":
             iloc = 0
-        elif anchor == 'end':
+        elif anchor == "end":
             iloc = self.nobs
         else:
             iloc, _, _ = self.model._get_index_loc(anchor)
@@ -358,15 +364,20 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
         if iloc < 0:
             iloc = self.nobs + iloc
         if iloc > self.nobs:
-            raise ValueError('Cannot anchor simulation outside of the sample.')
+            raise ValueError("Cannot anchor simulation outside of the sample.")
         return iloc
 
-    def _cov_params_approx(self, approx_complex_step=True,
-                           approx_centered=False):
+    def _cov_params_approx(
+        self, approx_complex_step=True, approx_centered=False
+    ):
         evaluated_hessian = self.nobs_effective * self.model.hessian(
-            params=self.params, transformed=True, includes_fixed=True,
-            method='approx', approx_complex_step=approx_complex_step,
-            approx_centered=approx_centered)
+            params=self.params,
+            transformed=True,
+            includes_fixed=True,
+            method="approx",
+            approx_complex_step=approx_complex_step,
+            approx_centered=approx_centered,
+        )
         # TODO: Case with "not approx_complex_step" is not hit in
         # tests as of 2017-05-19
 
@@ -389,11 +400,18 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
         (array) The variance / covariance matrix. Computed using the numerical
         Hessian approximated by complex step or finite differences methods.
         """
-        return self._cov_params_approx(self._cov_approx_complex_step,
-                                       self._cov_approx_centered)
+        return self._cov_params_approx(
+            self._cov_approx_complex_step, self._cov_approx_centered
+        )
 
-    def summary(self, alpha=.05, start=None, title=None, model_name=None,
-                display_params=True):
+    def summary(
+        self,
+        alpha=0.05,
+        start=None,
+        title=None,
+        model_name=None,
+        display_params=True,
+    ):
         """
         Summarize the Model
 
@@ -421,18 +439,18 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
         # Model specification results
         model = self.model
         if title is None:
-            title = 'Statespace Model Results'
+            title = "Statespace Model Results"
 
         if start is None:
             start = 0
         if self.model._index_dates:
             ix = self.model._index
             d = ix[start]
-            sample = ['%02d-%02d-%02d' % (d.month, d.day, d.year)]
+            sample = ["%02d-%02d-%02d" % (d.month, d.day, d.year)]
             d = ix[-1]
-            sample += ['- ' + '%02d-%02d-%02d' % (d.month, d.day, d.year)]
+            sample += ["- " + "%02d-%02d-%02d" % (d.month, d.day, d.year)]
         else:
-            sample = [str(start), ' - ' + str(self.nobs)]
+            sample = [str(start), " - " + str(self.nobs)]
 
         # Standardize the model name as a list of str
         if model_name is None:
@@ -440,94 +458,103 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
 
         # Diagnostic tests results
         try:
-            het = self.test_heteroskedasticity(method='breakvar')
+            het = self.test_heteroskedasticity(method="breakvar")
         except Exception:  # FIXME: catch something specific
-            het = np.array([[np.nan]*2])
+            het = np.array([[np.nan] * 2])
         try:
-            lb = self.test_serial_correlation(method='ljungbox')
+            lb = self.test_serial_correlation(method="ljungbox")
         except Exception:  # FIXME: catch something specific
-            lb = np.array([[np.nan]*2]).reshape(1, 2, 1)
+            lb = np.array([[np.nan] * 2]).reshape(1, 2, 1)
         try:
-            jb = self.test_normality(method='jarquebera')
+            jb = self.test_normality(method="jarquebera")
         except Exception:  # FIXME: catch something specific
-            jb = np.array([[np.nan]*4])
+            jb = np.array([[np.nan] * 4])
 
         # Create the tables
         if not isinstance(model_name, list):
             model_name = [model_name]
 
-        top_left = [('Dep. Variable:', None)]
-        top_left.append(('Model:', [model_name[0]]))
+        top_left = [("Dep. Variable:", None)]
+        top_left.append(("Model:", [model_name[0]]))
         for i in range(1, len(model_name)):
-            top_left.append(('', ['+ ' + model_name[i]]))
+            top_left.append(("", ["+ " + model_name[i]]))
         top_left += [
-            ('Date:', None),
-            ('Time:', None),
-            ('Sample:', [sample[0]]),
-            ('', [sample[1]])
+            ("Date:", None),
+            ("Time:", None),
+            ("Sample:", [sample[0]]),
+            ("", [sample[1]]),
         ]
 
         top_right = [
-            ('No. Observations:', [self.nobs]),
-            ('Log Likelihood', ["%#5.3f" % self.llf]),
+            ("No. Observations:", [self.nobs]),
+            ("Log Likelihood", ["%#5.3f" % self.llf]),
         ]
-        if hasattr(self, 'rsquared'):
-            top_right.append(('R-squared:', ["%#8.3f" % self.rsquared]))
+        if hasattr(self, "rsquared"):
+            top_right.append(("R-squared:", ["%#8.3f" % self.rsquared]))
         top_right += [
-            ('AIC', ["%#5.3f" % self.aic]),
-            ('BIC', ["%#5.3f" % self.bic]),
-            ('HQIC', ["%#5.3f" % self.hqic])]
+            ("AIC", ["%#5.3f" % self.aic]),
+            ("BIC", ["%#5.3f" % self.bic]),
+            ("HQIC", ["%#5.3f" % self.hqic]),
+        ]
 
         if (
             hasattr(self, "filter_results")
             and self.filter_results is not None
             and self.filter_results.filter_concentrated
         ):
-            top_right.append(('Scale', ["%#5.3f" % self.scale]))
+            top_right.append(("Scale", ["%#5.3f" % self.scale]))
 
-        if hasattr(self, 'cov_type'):
-            top_left.append(('Covariance Type:', [self.cov_type]))
+        if hasattr(self, "cov_type"):
+            top_left.append(("Covariance Type:", [self.cov_type]))
 
         format_str = lambda array: [  # noqa:E731
-            ', '.join(['{0:.2f}'.format(i) for i in array])
+            ", ".join(["{0:.2f}".format(i) for i in array])
         ]
-        diagn_left = [('Ljung-Box (Q):', format_str(lb[:, 0, -1])),
-                      ('Prob(Q):', format_str(lb[:, 1, -1])),
-                      ('Heteroskedasticity (H):', format_str(het[:, 0])),
-                      ('Prob(H) (two-sided):', format_str(het[:, 1]))
-                      ]
+        diagn_left = [
+            ("Ljung-Box (Q):", format_str(lb[:, 0, -1])),
+            ("Prob(Q):", format_str(lb[:, 1, -1])),
+            ("Heteroskedasticity (H):", format_str(het[:, 0])),
+            ("Prob(H) (two-sided):", format_str(het[:, 1])),
+        ]
 
-        diagn_right = [('Jarque-Bera (JB):', format_str(jb[:, 0])),
-                       ('Prob(JB):', format_str(jb[:, 1])),
-                       ('Skew:', format_str(jb[:, 2])),
-                       ('Kurtosis:', format_str(jb[:, 3]))
-                       ]
+        diagn_right = [
+            ("Jarque-Bera (JB):", format_str(jb[:, 0])),
+            ("Prob(JB):", format_str(jb[:, 1])),
+            ("Skew:", format_str(jb[:, 2])),
+            ("Kurtosis:", format_str(jb[:, 3])),
+        ]
 
         summary = Summary()
-        summary.add_table_2cols(self, gleft=top_left, gright=top_right,
-                                title=title)
+        summary.add_table_2cols(
+            self, gleft=top_left, gright=top_right, title=title
+        )
         if len(self.params) > 0 and display_params:
-            summary.add_table_params(self, alpha=alpha,
-                                     xname=self.param_names, use_t=False)
-        summary.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
-                                title="")
+            summary.add_table_params(
+                self, alpha=alpha, xname=self.param_names, use_t=False
+            )
+        summary.add_table_2cols(
+            self, gleft=diagn_left, gright=diagn_right, title=""
+        )
 
         # Add warnings/notes, added to text format only
         etext = []
-        if hasattr(self, 'cov_type') and 'description' in self.cov_kwds:
-            etext.append(self.cov_kwds['description'])
+        if hasattr(self, "cov_type") and "description" in self.cov_kwds:
+            etext.append(self.cov_kwds["description"])
         if self._rank < (len(self.params) - len(self.fixed_params)):
             cov_params = self.cov_params()
             if len(self.fixed_params) > 0:
                 mask = np.ix_(self._free_params_index, self._free_params_index)
                 cov_params = cov_params[mask]
-            etext.append("Covariance matrix is singular or near-singular,"
-                         " with condition number %6.3g. Standard errors may be"
-                         " unstable." % np.linalg.cond(cov_params))
+            etext.append(
+                "Covariance matrix is singular or near-singular,"
+                " with condition number %6.3g. Standard errors may be"
+                " unstable." % np.linalg.cond(cov_params)
+            )
 
         if etext:
-            etext = ["[{0}] {1}".format(i + 1, text)
-                     for i, text in enumerate(etext)]
+            etext = [
+                "[{0}] {1}".format(i + 1, text) for i, text in enumerate(etext)
+            ]
             etext.insert(0, "Warnings:")
             summary.add_extra_txt(etext)
 
