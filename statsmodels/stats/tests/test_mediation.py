@@ -259,3 +259,11 @@ def test_surv():
         med = Mediation(outcome_model, mediator_model, "exp", "mtime",
                         outcome_predict_kwargs={"pred_only": True})
         med_result = med.fit(n_rep=2)
+        dr = med_result.summary()
+        pm = dr.loc["Prop. mediated (average)", "Estimate"]
+        if mt == "no":
+            assert_allclose(pm, 0, atol=0.1, rtol=0.1)
+        elif mt == "full":
+            assert_allclose(pm, 1, atol=0.1, rtol=0.1)
+        else:
+            assert_allclose(pm, 0.5, atol=0.1, rtol=0.1)
