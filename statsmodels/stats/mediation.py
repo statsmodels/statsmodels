@@ -56,6 +56,9 @@ class Mediation(object):
         Keyword arguments to use when fitting the outcome model.
     mediator_fit_kwargs : dict-like
         Keyword arguments to use when fitting the mediator model.
+    outcome_predict_kwargs : dict-like
+        Keyword arguments to use when calling predict on the outcome
+        model.
 
     Returns a ``MediationResults`` object.
 
@@ -120,7 +123,8 @@ class Mediation(object):
     """
 
     def __init__(self, outcome_model, mediator_model, exposure, mediator=None,
-                 moderators=None, outcome_fit_kwargs=None, mediator_fit_kwargs=None):
+                 moderators=None, outcome_fit_kwargs=None, mediator_fit_kwargs=None,
+                 outcome_predict_kwargs=None):
 
         self.outcome_model = outcome_model
         self.mediator_model = mediator_model
@@ -133,9 +137,11 @@ class Mediation(object):
             self.mediator = mediator
 
         self._outcome_fit_kwargs = (outcome_fit_kwargs if outcome_fit_kwargs
-                                    is not None else {})
+                is not None else {})
         self._mediator_fit_kwargs = (mediator_fit_kwargs if mediator_fit_kwargs
-                                     is not None else {})
+                is not None else {})
+        self._outcome_predict_kwargs = (outcome_predict_kwargs if
+                outcome_predict_kwargs is not None else {})
 
         # We will be changing these so need to copy.
         self._outcome_exog = outcome_model.exog.copy()
@@ -302,14 +308,17 @@ class Mediation(object):
             predicted_outcomes = [[None, None], [None, None]]
             for tm in 0, 1:
                 mex = self._get_mediator_exog(tm)
+                kwargs = {"exog": mex}
+                if hasattr(mediator_result, "scale"):
+                    kwargs["scale"] = mediator_result.scale
                 gen = self.mediator_model.get_distribution(mediation_params,
-                                                           mediator_result.scale,
-                                                           exog=mex)
+                                                           **kwargs)
                 potential_mediator = gen.rvs(mex.shape[0])
 
                 for te in 0, 1:
                     oex = self._get_outcome_exog(te, potential_mediator)
-                    po = self.outcome_model.predict(outcome_params, oex)
+                    po = self.outcome_model.predict(outcome_params, oex,
+                            **self._outcome_predict_kwargs)
                     predicted_outcomes[tm][te] = po
 
             for t in 0, 1:
