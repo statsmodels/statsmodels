@@ -8,6 +8,7 @@ from scipy.stats import norm
 from statsmodels.base.data import PandasData
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.eval_measures import aic, aicc, bic, hqic
+from statsmodels.tools.tools import pinv_extended
 import statsmodels.tsa.base.tsa_model as tsbase
 
 
@@ -239,6 +240,7 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
 
         # Dimensions
         self.nobs = self.model.nobs
+        self.k_params = self.model.k_params
 
     @cache_readonly
     def nobs_effective(self):
@@ -358,3 +360,175 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
         if iloc > self.nobs:
             raise ValueError('Cannot anchor simulation outside of the sample.')
         return iloc
+
+    def _cov_params_approx(self, approx_complex_step=True,
+                           approx_centered=False):
+        evaluated_hessian = self.nobs_effective * self.model.hessian(
+            params=self.params, transformed=True, includes_fixed=True,
+            method='approx', approx_complex_step=approx_complex_step,
+            approx_centered=approx_centered)
+        # TODO: Case with "not approx_complex_step" is not hit in
+        # tests as of 2017-05-19
+
+        if len(self.fixed_params) > 0:
+            mask = np.ix_(self._free_params_index, self._free_params_index)
+            (tmp, singular_values) = pinv_extended(evaluated_hessian[mask])
+            neg_cov = np.zeros_like(evaluated_hessian) * np.nan
+            neg_cov[mask] = tmp
+        else:
+            (neg_cov, singular_values) = pinv_extended(evaluated_hessian)
+
+        self.model.update(self.params, transformed=True, includes_fixed=True)
+        if self._rank is None:
+            self._rank = np.linalg.matrix_rank(np.diag(singular_values))
+        return -neg_cov
+
+    @cache_readonly
+    def cov_params_approx(self):
+        """
+        (array) The variance / covariance matrix. Computed using the numerical
+        Hessian approximated by complex step or finite differences methods.
+        """
+        return self._cov_params_approx(self._cov_approx_complex_step,
+                                       self._cov_approx_centered)
+
+    def summary(self, alpha=.05, start=None, title=None, model_name=None,
+                display_params=True):
+        """
+        Summarize the Model
+
+        Parameters
+        ----------
+        alpha : float, optional
+            Significance level for the confidence intervals. Default is 0.05.
+        start : int, optional
+            Integer of the start observation. Default is 0.
+        model_name : str
+            The name of the model used. Default is to use model class name.
+
+        Returns
+        -------
+        summary : Summary instance
+            This holds the summary table and text, which can be printed or
+            converted to various output formats.
+
+        See Also
+        --------
+        statsmodels.iolib.summary.Summary
+        """
+        from statsmodels.iolib.summary import Summary
+
+        # Model specification results
+        model = self.model
+        if title is None:
+            title = 'Statespace Model Results'
+
+        if start is None:
+            start = 0
+        if self.model._index_dates:
+            ix = self.model._index
+            d = ix[start]
+            sample = ['%02d-%02d-%02d' % (d.month, d.day, d.year)]
+            d = ix[-1]
+            sample += ['- ' + '%02d-%02d-%02d' % (d.month, d.day, d.year)]
+        else:
+            sample = [str(start), ' - ' + str(self.nobs)]
+
+        # Standardize the model name as a list of str
+        if model_name is None:
+            model_name = model.__class__.__name__
+
+        # Diagnostic tests results
+        try:
+            het = self.test_heteroskedasticity(method='breakvar')
+        except Exception:  # FIXME: catch something specific
+            het = np.array([[np.nan]*2])
+        try:
+            lb = self.test_serial_correlation(method='ljungbox')
+        except Exception:  # FIXME: catch something specific
+            lb = np.array([[np.nan]*2]).reshape(1, 2, 1)
+        try:
+            jb = self.test_normality(method='jarquebera')
+        except Exception:  # FIXME: catch something specific
+            jb = np.array([[np.nan]*4])
+
+        # Create the tables
+        if not isinstance(model_name, list):
+            model_name = [model_name]
+
+        top_left = [('Dep. Variable:', None)]
+        top_left.append(('Model:', [model_name[0]]))
+        for i in range(1, len(model_name)):
+            top_left.append(('', ['+ ' + model_name[i]]))
+        top_left += [
+            ('Date:', None),
+            ('Time:', None),
+            ('Sample:', [sample[0]]),
+            ('', [sample[1]])
+        ]
+
+        top_right = [
+            ('No. Observations:', [self.nobs]),
+            ('Log Likelihood', ["%#5.3f" % self.llf]),
+        ]
+        if hasattr(self, 'rsquared'):
+            top_right.append(('R-squared:', ["%#8.3f" % self.rsquared]))
+        top_right += [
+            ('AIC', ["%#5.3f" % self.aic]),
+            ('BIC', ["%#5.3f" % self.bic]),
+            ('HQIC', ["%#5.3f" % self.hqic])]
+
+        if (
+            hasattr(self, "filter_results")
+            and self.filter_results is not None
+            and self.filter_results.filter_concentrated
+        ):
+            top_right.append(('Scale', ["%#5.3f" % self.scale]))
+
+        if hasattr(self, 'cov_type'):
+            top_left.append(('Covariance Type:', [self.cov_type]))
+
+        format_str = lambda array: [  # noqa:E731
+            ', '.join(['{0:.2f}'.format(i) for i in array])
+        ]
+        diagn_left = [('Ljung-Box (Q):', format_str(lb[:, 0, -1])),
+                      ('Prob(Q):', format_str(lb[:, 1, -1])),
+                      ('Heteroskedasticity (H):', format_str(het[:, 0])),
+                      ('Prob(H) (two-sided):', format_str(het[:, 1]))
+                      ]
+
+        diagn_right = [('Jarque-Bera (JB):', format_str(jb[:, 0])),
+                       ('Prob(JB):', format_str(jb[:, 1])),
+                       ('Skew:', format_str(jb[:, 2])),
+                       ('Kurtosis:', format_str(jb[:, 3]))
+                       ]
+
+        summary = Summary()
+        summary.add_table_2cols(self, gleft=top_left, gright=top_right,
+                                title=title)
+        if len(self.params) > 0 and display_params:
+            summary.add_table_params(self, alpha=alpha,
+                                     xname=self.param_names, use_t=False)
+        summary.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
+                                title="")
+
+        # Add warnings/notes, added to text format only
+        etext = []
+        if hasattr(self, 'cov_type') and 'description' in self.cov_kwds:
+            etext.append(self.cov_kwds['description'])
+        if self._rank < (len(self.params) - len(self.fixed_params)):
+            cov_params = self.cov_params()
+            if len(self.fixed_params) > 0:
+                mask = np.ix_(self._free_params_index, self._free_params_index)
+                cov_params = cov_params[mask]
+            etext.append("Covariance matrix is singular or near-singular,"
+                         " with condition number %6.3g. Standard errors may be"
+                         " unstable." % np.linalg.cond(cov_params))
+
+        if etext:
+            etext = ["[{0}] {1}".format(i + 1, text)
+                     for i, text in enumerate(etext)]
+            etext.insert(0, "Warnings:")
+            summary.add_extra_txt(etext)
+
+        return summary

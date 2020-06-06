@@ -142,13 +142,24 @@ References
 
 from collections import OrderedDict
 import contextlib
-
+import warnings
 import numpy as np
 import pandas as pd
 from scipy.stats import _distn_infrastructure, rv_continuous, rv_discrete
 
+from statsmodels.base.covtype import descriptions
 import statsmodels.base.wrapper as wrap
+from statsmodels.iolib.table import SimpleTable
+from statsmodels.iolib.tableformatting import fmt_params
+from statsmodels.iolib.summary import forg
+from statsmodels.tools.sm_exceptions import PrecisionWarning
 from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools.numdiff import (
+    _get_epsilon,
+    approx_hess_cs,
+    approx_fprime_cs,
+    approx_fprime,
+)
 from statsmodels.tools.tools import Bunch
 from statsmodels.tools.validation import (
     bool_like,
@@ -475,15 +486,18 @@ class ETSModel(base.StateSpaceMLEModel):
 
     @property
     def short_name(self):
-        name = "".join([
-            str(s)[0].upper() for s in [self.error, self.trend, self.seasonal]
-        ])
+        name = "".join(
+            [
+                str(s)[0].upper()
+                for s in [self.error, self.trend, self.seasonal]
+            ]
+        )
         if self.damped_trend:
             name = name[0:2] + "d" + name[2]
         return name
 
     @property
-    def param_names(self):
+    def _param_names(self):
         param_names = ["smoothing_level"]
         if self.has_trend:
             param_names += ["smoothing_trend"]
@@ -503,6 +517,18 @@ class ETSModel(base.StateSpaceMLEModel):
                     for i in range(self.seasonal_periods)
                 ]
         return param_names
+
+    @property
+    def state_names(self):
+        names = ['level']
+        if self.has_trend:
+            names += ['trend']
+        if self.has_seasonal:
+            names += [
+                f"seasonal.{i}"
+                for i in range(self.seasonal_periods)
+            ]
+        return names
 
     @property
     def _smoothing_param_names(self):
@@ -761,7 +787,7 @@ class ETSModel(base.StateSpaceMLEModel):
                 internal_start_params[1] /= internal_start_params[0]
             use_gamma_star = "smoothing_seasonal" not in self.bounds
             if use_gamma_star:
-                internal_start_params[2] /= (1 - internal_start_params[0])
+                internal_start_params[2] /= 1 - internal_start_params[0]
 
             # pre-allocate memory for smoothing results
             yhat = np.zeros(self.nobs)
@@ -784,7 +810,7 @@ class ETSModel(base.StateSpaceMLEModel):
             if use_beta_star:
                 mlefit.params[1] *= mlefit.params[0]
             if use_gamma_star:
-                mlefit.params[2] *= (1 - mlefit.params[0])
+                mlefit.params[2] *= 1 - mlefit.params[0]
             final_params = self._model_params(mlefit.params)
 
         if return_params:
@@ -796,12 +822,9 @@ class ETSModel(base.StateSpaceMLEModel):
             result.mle_settings = mlefit.mle_settings
             return result
 
-    def _loglike_internal(self,
-                          params,
-                          yhat,
-                          xhat,
-                          use_beta_star=False,
-                          use_gamma_star=False):
+    def _loglike_internal(
+        self, params, yhat, xhat, use_beta_star=False, use_gamma_star=False
+    ):
         """
         Log-likelihood function to be called from fit to avoid reallocation of
         memory.
@@ -877,8 +900,7 @@ class ETSModel(base.StateSpaceMLEModel):
            *Journal of the American Statistical Association*, 92(440),
            1621-1629
         """
-        if len(params) != self._k_params_internal:
-            params = self._internal_params(params)
+        params = self._internal_params(params)
         yhat = np.zeros(self.nobs)
         xhat = np.zeros((self.nobs, self._k_states_internal))
         return self._loglike_internal(np.asarray(params), yhat, xhat)
@@ -940,7 +962,7 @@ class ETSModel(base.StateSpaceMLEModel):
         -------
         ETSResults object
         """
-        return ETSResults(self, params)
+        return ETSResults(self, np.asarray(params))
 
     @property
     def _seasonal_index(self):
@@ -1011,8 +1033,48 @@ class ETSModel(base.StateSpaceMLEModel):
             result = wrapper_class(res)
         return result
 
+    def hessian(self, params, approx_centered=False, *args, **kwargs):
+        r"""
+        Hessian matrix of the likelihood function, evaluated at the given
+        parameters
+
+        Parameters
+        ----------
+        params : array_like
+            Array of parameters at which to evaluate the hessian.
+
+        Returns
+        -------
+        hessian : ndarray
+            Hessian matrix evaluated at `params`
+
+        Notes
+        -----
+        This is a numerical approximation.
+        """
+        warnings.warn('Calculation of the Hessian using finite differences'
+                      ' is usually subject to substantial approximation'
+                      ' errors.', PrecisionWarning)
+
+        if not approx_centered:
+            epsilon = _get_epsilon(params, 3, None, len(params))
+        else:
+            epsilon = _get_epsilon(params, 4, None, len(params)) / 2
+        hessian = approx_fprime(params, self.score,
+                                epsilon=epsilon, kwargs=kwargs,
+                                centered=approx_centered)
+
+        return hessian / self.nobs
+
+    def score(self, params, approx_centered=False, **kwargs):
+        return approx_fprime(params, self.loglike, centered=approx_centered)
+
+    def update(params, *args, **kwargs):
+        # Dummy method to make methods copied from statespace.MLEModel work
+        ...
 
 class ETSResults(base.StateSpaceMLEResults):
+
     def __init__(self, model, params):
         super().__init__(model, params)
         yhat, xhat = self.model._smooth(params)
@@ -1031,8 +1093,9 @@ class ETSResults(base.StateSpaceMLEResults):
         self.seasonal_periods = self.model.seasonal_periods
         self.initialization_method = self.model.initialization_method
         self.param_names = [
-            '%s (fixed)' % name if name in self.fixed_params else name
-            for name in (self.model.param_names or [])]
+            "%s (fixed)" % name if name in self.fixed_params else name
+            for name in (self.model.param_names or [])
+        ]
 
         # get fitted states and parameters
         internal_params = self.model._internal_params(params)
@@ -1041,25 +1104,65 @@ class ETSResults(base.StateSpaceMLEResults):
             states = self.states.iloc
         else:
             states = self.states
+        self.initial_state = np.zeros(model._k_initial_states)
 
         self.level = states[:, 0]
         self.initial_level = internal_params[4]
+        self.initial_state[0] = self.initial_level
         self.alpha = self.params[0]
         self.smoothing_level = self.alpha
-
         if self.has_trend:
             self.slope = states[:, 1]
             self.initial_trend = internal_params[5]
+            self.initial_state[1] = self.initial_trend
             self.beta = self.params[1]
             self.smoothing_trend = self.beta
         if self.has_seasonal:
             self.season = states[:, self.model._seasonal_index]
             self.initial_seasonal = internal_params[6:]
+            self.initial_state[self.model._seasonal_index:] = (
+                self.initial_seasonal
+            )
             self.gamma = self.params[self.model._seasonal_index]
             self.smoothing_seasonal = self.gamma
         if self.damped_trend:
             self.phi = internal_params[3]
             self.damping_trend = self.phi
+
+
+
+        # Setup covariance matrix notes dictionary
+        # For now, only support "approx"
+        if not hasattr(self, 'cov_kwds'):
+            self.cov_kwds = {}
+        self.cov_type = "approx"
+
+        # Setup the cache
+        self._cache = {}
+
+        # Handle covariance matrix calculation
+        cov_kwds = {}
+        self._cov_approx_complex_step = True
+        self._cov_approx_centered = False
+        approx_type_str = 'complex-step'
+        try:
+            self._rank = None
+            if self.k_params == 0:
+                self.cov_params_default = np.zeros((0, 0))
+                self._rank = 0
+                self.cov_kwds['description'] = 'No parameters estimated.'
+            else:
+                self.cov_params_default = self.cov_params_approx
+                self.cov_kwds["description"] = descriptions["approx"].format(
+                    approx_type=approx_type_str
+                )
+        except np.linalg.LinAlgError:
+            self._rank = 0
+            k_params = len(self.params)
+            self.cov_params_default = np.zeros((k_params, k_params)) * np.nan
+            self.cov_kwds['cov_type'] = (
+                'Covariance matrix could not be calculated: singular.'
+                ' information matrix.')
 
     @cache_readonly
     def nobs_effective(self):
@@ -1495,8 +1598,55 @@ class ETSResults(base.StateSpaceMLEResults):
         # Wrap data / squeeze where appropriate
         return self.model._wrap_data(y, start, end_forecast - 1)
 
-    def summary(self):
-        ...  # TODO
+    def summary(self, alpha=.05, start=None):
+        """
+        Summarize the fitted model
+
+        Parameters
+        ----------
+        alpha : float, optional
+            Significance level for the confidence intervals. Default is 0.05.
+        start : int, optional
+            Integer of the start observation. Default is 0.
+
+        Returns
+        -------
+        summary : Summary instance
+            This holds the summary table and text, which can be printed or
+            converted to various output formats.
+
+        See Also
+        --------
+        statsmodels.iolib.summary.Summary
+        """
+        model_name = f"ETS({self.short_name})"
+
+        summary = super().summary(
+            alpha=alpha,
+            start=start,
+            title="ETS Results",
+            model_name=model_name,
+        )
+
+        if self.model.initialization_method != "estimated":
+            params = np.array(self.initial_state)
+            if params.ndim > 1:
+                params = params[0]
+            names = self.model.state_names
+            param_header = [
+                "initialization method: %s" % self.model.initialization_method
+            ]
+            params_stubs = names
+            params_data = [
+                [forg(params[i], prec=4)] for i in range(len(params))
+            ]
+
+            initial_state_table = SimpleTable(
+                params_data, param_header, params_stubs, txt_fmt=fmt_params
+            )
+            summary.tables.insert(-1, initial_state_table)
+
+        return summary
 
 
 class ETSResultsWrapper(wrap.ResultsWrapper):
