@@ -248,6 +248,8 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
         self.nobs = self.model.nobs
         self.k_params = self.model.k_params
 
+        self._rank = None
+
     @cache_readonly
     def nobs_effective(self):
         raise NotImplementedError
@@ -383,7 +385,10 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
 
         if len(self.fixed_params) > 0:
             mask = np.ix_(self._free_params_index, self._free_params_index)
-            (tmp, singular_values) = pinv_extended(evaluated_hessian[mask])
+            if len(self.fixed_params) < self.k_params:
+                (tmp, singular_values) = pinv_extended(evaluated_hessian[mask])
+            else:
+                tmp, singular_values = np.nan, [np.nan]
             neg_cov = np.zeros_like(evaluated_hessian) * np.nan
             neg_cov[mask] = tmp
         else:
