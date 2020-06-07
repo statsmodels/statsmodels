@@ -257,7 +257,9 @@ def test_surv():
         mediator_model = sm.PHReg.from_formula(fml, status="mstatus", data=df)
 
         med = Mediation(outcome_model, mediator_model, "exp", "mtime",
-                        outcome_predict_kwargs={"pred_only": True})
+                        outcome_predict_kwargs={"pred_only": True},
+                        outcome_fit_kwargs={"method": "lbfgs"},
+                        mediator_fit_kwargs={"method": "lbfgs"})
         med_result = med.fit(n_rep=2)
         dr = med_result.summary()
         pm = dr.loc["Prop. mediated (average)", "Estimate"]

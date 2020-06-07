@@ -461,8 +461,6 @@ class PHReg(model.LikelihoodModel):
 
         if 'disp' not in args:
             args['disp'] = False
-        if 'method' not in args:
-            args['method'] = 'lbfgs'
 
         fit_rslts = super(PHReg, self).fit(**args)
 
