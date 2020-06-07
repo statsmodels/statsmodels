@@ -550,7 +550,7 @@ def acorr_ljungbox_automatic(x, boxpierce=False, model_df=0, return_df=None):
         .. [*] Green, W. "Econometric Analysis," 5th ed., Pearson, 2003.
         """
     from statsmodels.tsa.stattools import acf
-    # Get Optimal lag value
+
     def get_optimal_length(threshold_metric, threshold, maxlag, func):
         optimal_lag = 0
         least_penalised = 0
