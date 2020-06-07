@@ -575,7 +575,7 @@ def acorr_ljungbox_automatic(x, boxpierce=False, model_df=0, return_df=None):
     nobs = x.shape[0]
     maxlag = nobs - 1
 
-    #Compute threshold metrics
+    # Compute threshold metrics
     sacf = acf(x, nlags=maxlag, fft=False)
     sacf2 = sacf[1:maxlag + 1] ** 2 / (nobs - np.arange(1, maxlag + 1))
     q = 2.4
@@ -584,11 +584,11 @@ def acorr_ljungbox_automatic(x, boxpierce=False, model_df=0, return_df=None):
 
     if not boxpierce:
         lags = get_optimal_length(threshold_metric, threshold, maxlag,
-                  lambda p: nobs * (nobs + 2) * np.cumsum(sacf2)[p - 1])
+                        lambda p: nobs * (nobs + 2) * np.cumsum(sacf2)[p - 1])
         return acorr_ljungbox(x, lags, False, model_df, None, return_df)
 
     lags = get_optimal_length(threshold_metric, threshold, maxlag,
-                  lambda p: nobs * np.cumsum(sacf[1:maxlag + 1] ** 2)[p - 1])
+                        lambda p: nobs * np.cumsum(sacf[1:maxlag + 1] ** 2)[p - 1])
     return acorr_ljungbox(x, lags, True, model_df, None, return_df)
 
 

@@ -1087,6 +1087,7 @@ def test_ljungbox_dof_adj():
     assert np.all(np.isnan(res2[1][:4]))
     assert np.all(res2[1][4:] <= res1[1][4:])
 
+
 def test_ljungbox_auto_lag_selection():
     data = sunspots.load_pandas().data['SUNACTIVITY']
     res = AutoReg(data, 4, old_names=False).fit()
