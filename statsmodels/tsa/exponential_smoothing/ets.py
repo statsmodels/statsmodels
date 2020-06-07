@@ -142,7 +142,6 @@ References
 
 from collections import OrderedDict
 import contextlib
-import warnings
 import numpy as np
 import pandas as pd
 from scipy.stats import _distn_infrastructure, rv_continuous, rv_discrete
@@ -152,12 +151,7 @@ import statsmodels.base.wrapper as wrap
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.iolib.tableformatting import fmt_params
 from statsmodels.iolib.summary import forg
-from statsmodels.tools.sm_exceptions import PrecisionWarning
 from statsmodels.tools.decorators import cache_readonly
-from statsmodels.tools.numdiff import (
-    _get_epsilon,
-    approx_fprime,
-)
 from statsmodels.tools.tools import Bunch
 from statsmodels.tools.validation import (
     bool_like,
@@ -483,6 +477,10 @@ class ETSModel(base.StateSpaceMLEModel):
         return endog, None
 
     @property
+    def nobs_effective(self):
+        return self.nobs
+
+    @property
     def short_name(self):
         name = "".join(
             [
@@ -598,7 +596,7 @@ class ETSModel(base.StateSpaceMLEModel):
         """
         # internal params that are not needed are all set to zero, except phi,
         # which is one
-        internal = np.zeros(self._k_params_internal)
+        internal = np.zeros(self._k_params_internal, dtype=params.dtype)
         for i, name in enumerate(self.param_names):
             internal_idx = self._internal_params_index[name]
             internal[internal_idx] = params[i]
@@ -883,10 +881,14 @@ class ETSModel(base.StateSpaceMLEModel):
         use_gamma_star : boolean
             Whether to internally use gamma_star as parameter
         """
+        if np.iscomplexobj(params):
+            data = np.asarray(self.endog, dtype=np.complex)
+        else:
+            data = self.endog
         self._smoothing_func(
-            params, self.endog, yhat, xhat, use_beta_star, use_gamma_star
+            params, data, yhat, xhat, use_beta_star, use_gamma_star
         )
-        res = self._residuals(yhat)
+        res = self._residuals(yhat, data=data)
         logL = -self.nobs / 2 * (np.log(2 * np.pi * np.mean(res ** 2)) + 1)
         if self.error == "mul":
             logL -= np.sum(np.log(yhat))
@@ -903,7 +905,7 @@ class ETSModel(base.StateSpaceMLEModel):
         finally:
             self.loglike = external_loglike
 
-    def loglike(self, params):
+    def loglike(self, params, **kwargs):
         r"""
         Log-likelihood of model.
 
@@ -938,17 +940,21 @@ class ETSModel(base.StateSpaceMLEModel):
            *Journal of the American Statistical Association*, 92(440),
            1621-1629
         """
-        params = self._internal_params(params)
-        yhat = np.zeros(self.nobs)
-        xhat = np.zeros((self.nobs, self._k_states_internal))
+        params = self._internal_params(np.asarray(params))
+        yhat = np.zeros(self.nobs, dtype=params.dtype)
+        xhat = np.zeros(
+            (self.nobs, self._k_states_internal), dtype=params.dtype
+        )
         return self._loglike_internal(np.asarray(params), yhat, xhat)
 
-    def _residuals(self, yhat):
+    def _residuals(self, yhat, data=None):
         """Calculates residuals of a prediction"""
+        if data is None:
+            data = self.endog
         if self.error == "mul":
-            return (self.endog - yhat) / yhat
+            return (data - yhat) / yhat
         else:
-            return self.endog - yhat
+            return data - yhat
 
     def _smooth(self, params):
         """
@@ -1006,14 +1012,17 @@ class ETSModel(base.StateSpaceMLEModel):
             object. Otherwise a tuple of arrays or pandas objects, depending on
             the format of the endog data.
         """
+        params = np.asarray(params)
         results = self._smooth(params)
-        return self._wrap_results(np.asarray(params), results, return_raw)
+        return self._wrap_results(params, results, return_raw)
 
     @property
     def _res_classes(self):
         return {"fit": (ETSResults, ETSResultsWrapper)}
 
-    def hessian(self, params, approx_centered=False, *args, **kwargs):
+    def hessian(
+        self, params, approx_centered=False, approx_complex_step=True, **kwargs
+    ):
         r"""
         Hessian matrix of the likelihood function, evaluated at the given
         parameters
@@ -1022,6 +1031,11 @@ class ETSModel(base.StateSpaceMLEModel):
         ----------
         params : array_like
             Array of parameters at which to evaluate the hessian.
+        approx_centered : bool
+            Whether to use a centered scheme for finite difference
+            approximation
+        approx_complex_step : bool
+            Whether to use complex step differentiation for approximation
 
         Returns
         -------
@@ -1032,29 +1046,36 @@ class ETSModel(base.StateSpaceMLEModel):
         -----
         This is a numerical approximation.
         """
-        warnings.warn(
-            "Calculation of the Hessian using finite differences"
-            " is usually subject to substantial approximation"
-            " errors.",
-            PrecisionWarning,
-        )
+        method = kwargs.get("method", "approx")
 
-        if not approx_centered:
-            epsilon = _get_epsilon(params, 3, None, len(params))
+        if method == "approx":
+            if approx_complex_step:
+                hessian = self._hessian_complex_step(params, **kwargs)
+            else:
+                hessian = self._hessian_finite_difference(
+                    params, approx_centered=approx_centered, **kwargs
+                )
         else:
-            epsilon = _get_epsilon(params, 4, None, len(params)) / 2
-        hessian = approx_fprime(
-            params,
-            self.score,
-            epsilon=epsilon,
-            kwargs=kwargs,
-            centered=approx_centered,
-        )
+            raise NotImplementedError("Invalid Hessian calculation method.")
 
-        return hessian / self.nobs
+        return hessian
 
-    def score(self, params, approx_centered=False, **kwargs):
-        return approx_fprime(params, self.loglike, centered=approx_centered)
+    def score(
+        self, params, approx_centered=False, approx_complex_step=True, **kwargs
+    ):
+        method = kwargs.get("method", "approx")
+
+        if method == "approx":
+            if approx_complex_step:
+                score = self._score_complex_step(params, **kwargs)
+            else:
+                score = self._score_finite_difference(
+                    params, approx_centered=approx_centered, **kwargs
+                )
+        else:
+            raise NotImplementedError("Invalid score method.")
+
+        return score
 
     def update(params, *args, **kwargs):
         # Dummy method to make methods copied from statespace.MLEModel work

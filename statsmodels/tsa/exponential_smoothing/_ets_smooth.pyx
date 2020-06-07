@@ -8,18 +8,20 @@ cimport numpy as np
 
 np.import_array()
 
-ctypedef fused float_t:
+ctypedef fused numeric:
     np.float32_t
     np.float64_t
+    np.complex64_t
+    np.complex128_t
 
 cpdef _initialize_ets_smooth(
-    float_t [:] params,
-    float_t[:,:] xhat,
+    numeric [:] params,
+    numeric[:,:] xhat,
     bool use_beta_star=False,
     bool use_gamma_star=False,
 ):
     """Extracts parameters and initializes states xhat"""
-    cdef float_t alpha, beta, gamma, phi, beta_star, gamma_star
+    cdef numeric alpha, beta, gamma, phi, beta_star, gamma_star
     cdef Py_ssize_t m, n
 
     # get params
@@ -45,14 +47,14 @@ cpdef _initialize_ets_smooth(
 
     return alpha, beta_star, gamma_star, phi, m, n
 
-def _ets_smooth_add_add(float_t [:] params,
-                        float_t [:] y,
-                        float_t [:] yhat,
-                        float_t [:,:] xhat,
+def _ets_smooth_add_add(numeric [:] params,
+                        numeric [:] y,
+                        numeric [:] yhat,
+                        numeric [:,:] xhat,
                         bool use_beta_star=False,
                         bool use_gamma_star=False):
     """Smoothing with additive trend and additive season"""
-    cdef float_t alpha, beta_star, gamma_star, phi
+    cdef numeric alpha, beta_star, gamma_star, phi
     cdef Py_ssize_t i, n, m, prev
 
     # get params
@@ -78,14 +80,14 @@ def _ets_smooth_add_add(float_t [:] params,
         xhat[i, 3:] = xhat[prev, 2:2+m-1]
 
 
-def _ets_smooth_add_mul(float_t [:] params,
-                        float_t [:] y,
-                        float_t [:] yhat,
-                        float_t [:,:] xhat,
+def _ets_smooth_add_mul(numeric [:] params,
+                        numeric [:] y,
+                        numeric [:] yhat,
+                        numeric [:,:] xhat,
                         bool use_beta_star=False,
                         bool use_gamma_star=False):
     """Smoothing with additive trend and multiplicative season"""
-    cdef float_t alpha, beta_star, gamma_star, phi
+    cdef numeric alpha, beta_star, gamma_star, phi
     cdef Py_ssize_t i, n, m, prev
 
     # get params
@@ -111,14 +113,14 @@ def _ets_smooth_add_mul(float_t [:] params,
         xhat[i, 3:] = xhat[prev, 2:2+m-1]
 
 
-def _ets_smooth_mul_add(float_t [:] params,
-                        float_t [:] y,
-                        float_t [:] yhat,
-                        float_t [:,:] xhat,
+def _ets_smooth_mul_add(numeric [:] params,
+                        numeric [:] y,
+                        numeric [:] yhat,
+                        numeric [:,:] xhat,
                         bool use_beta_star=False,
                         bool use_gamma_star=False):
     """Smoothing with multiplicative trend and additive season"""
-    cdef float_t alpha, beta_star, gamma_star, phi
+    cdef numeric alpha, beta_star, gamma_star, phi
     cdef Py_ssize_t i, n, m, prev
 
     # get params
@@ -144,14 +146,14 @@ def _ets_smooth_mul_add(float_t [:] params,
         xhat[i, 3:] = xhat[prev, 2:2+m-1]
 
 
-def _ets_smooth_mul_mul(float_t [:] params,
-                        float_t [:] y,
-                        float_t [:] yhat,
-                        float_t [:,:] xhat,
+def _ets_smooth_mul_mul(numeric [:] params,
+                        numeric [:] y,
+                        numeric [:] yhat,
+                        numeric [:,:] xhat,
                         bool use_beta_star=False,
                         bool use_gamma_star=False):
     """Smoothing with multiplicative trend and multiplicative season"""
-    cdef float_t alpha, beta_star, gamma_star, phi
+    cdef numeric alpha, beta_star, gamma_star, phi
     cdef Py_ssize_t i, n, m, prev
 
     # get params

@@ -329,8 +329,6 @@ def fit_austourists_with_R_params(model, results_R, set_state=False):
 def get_params_from_R(results_R):
     # get params from R
     params = [results_R[name] for name in ["alpha", "beta", "gamma", "phi"]]
-    # params[1] /= params[0]  # we are using beta star
-    # params[2] /= 1 - params[0]  # we are using gamma_star
     # in R, initial states are order l[-1], b[-1], s[-1], s[-2], ..., s[-m]
     params += list(results_R["initstate"])
     params = list(filter(np.isfinite, params))
@@ -364,7 +362,7 @@ def test_fit_model_austouritsts(setup_model):
 def test_smooth_vs_R(setup_model):
     model, params, results_R = setup_model
 
-    yhat, xhat = model._smooth(params)
+    yhat, xhat = model.smooth(params, return_raw=True)
 
     yhat_R = results_R["fitted"]
     xhat_R = get_states_from_R(results_R, model._k_states)
@@ -376,7 +374,7 @@ def test_smooth_vs_R(setup_model):
 def test_residuals_vs_R(setup_model):
     model, params, results_R = setup_model
 
-    yhat = model._smooth(params)[0]
+    yhat = model.smooth(params, return_raw=True)[0]
 
     residuals = model._residuals(yhat)
     assert_allclose(residuals, results_R["residuals"], rtol=1e-5, atol=1e-5)

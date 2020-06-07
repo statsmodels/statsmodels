@@ -1,5 +1,6 @@
 from collections import OrderedDict
 import contextlib
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -8,6 +9,13 @@ from scipy.stats import norm
 from statsmodels.base.data import PandasData
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.eval_measures import aic, aicc, bic, hqic
+from statsmodels.tools.sm_exceptions import PrecisionWarning
+from statsmodels.tools.numdiff import (
+    _get_epsilon,
+    approx_fprime,
+    approx_fprime_cs,
+    approx_hess_cs,
+)
 from statsmodels.tools.tools import pinv_extended
 import statsmodels.tsa.base.tsa_model as tsbase
 
@@ -225,6 +233,57 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
             res = results_class(self, params, result, **result_kwargs)
             result = wrapper_class(res)
         return result
+
+    def _score_complex_step(self, params, **kwargs):
+        # the default epsilon can be too small
+        # inversion_method = INVERT_UNIVARIATE | SOLVE_LU
+        epsilon = _get_epsilon(params, 2., None, len(params))
+        kwargs['transformed'] = True
+        kwargs['complex_step'] = True
+        return approx_fprime_cs(params, self.loglike, epsilon=epsilon,
+                                kwargs=kwargs)
+
+    def _score_finite_difference(self, params, approx_centered=False,
+                                 **kwargs):
+        kwargs['transformed'] = True
+        return approx_fprime(params, self.loglike, kwargs=kwargs,
+                             centered=approx_centered)
+
+    def _hessian_finite_difference(self, params, approx_centered=False,
+                                   **kwargs):
+        params = np.array(params, ndmin=1)
+
+        warnings.warn('Calculation of the Hessian using finite differences'
+                      ' is usually subject to substantial approximation'
+                      ' errors.', PrecisionWarning)
+
+        if not approx_centered:
+            epsilon = _get_epsilon(params, 3, None, len(params))
+        else:
+            epsilon = _get_epsilon(params, 4, None, len(params)) / 2
+        hessian = approx_fprime(params, self._score_finite_difference,
+                                epsilon=epsilon, kwargs=kwargs,
+                                centered=approx_centered)
+
+        # TODO: changed this to nobs_effective, has to be changed when merging
+        # with statespace mlemodel
+        return hessian / (self.nobs_effective)
+
+    def _hessian_complex_step(self, params, **kwargs):
+        """
+        Hessian matrix computed by second-order complex-step differentiation
+        on the `loglike` function.
+        """
+        # the default epsilon can be too small
+        epsilon = _get_epsilon(params, 3., None, len(params))
+        kwargs['transformed'] = True
+        kwargs['complex_step'] = True
+        hessian = approx_hess_cs(
+            params, self.loglike, epsilon=epsilon, kwargs=kwargs)
+
+        # TODO: changed this to nobs_effective, has to be changed when merging
+        # with statespace mlemodel
+        return hessian / (self.nobs_effective)
 
 
 class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
