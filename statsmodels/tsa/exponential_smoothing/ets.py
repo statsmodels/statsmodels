@@ -522,7 +522,18 @@ class ETSModel(base.StateSpaceMLEModel):
         if self.has_trend:
             names += ["trend"]
         if self.has_seasonal:
-            names += [f"seasonal.{i}" for i in range(self.seasonal_periods)]
+            names += ["seasonal"]
+        return names
+
+    @property
+    def initial_state_names(self):
+        names = ["initial_level"]
+        if self.has_trend:
+            names += ["initial_trend"]
+        if self.has_seasonal:
+            names += [
+                f"initial_seasonal.{i}" for i in range(self.seasonal_periods)
+            ]
         return names
 
     @property
@@ -535,7 +546,7 @@ class ETSModel(base.StateSpaceMLEModel):
         ]
 
     @property
-    def _initial_state_names(self):
+    def _internal_initial_state_names(self):
         param_names = [
             "initial_level",
             "initial_trend",
@@ -547,7 +558,7 @@ class ETSModel(base.StateSpaceMLEModel):
 
     @property
     def _internal_param_names(self):
-        return self._smoothing_param_names + self._initial_state_names
+        return self._smoothing_param_names + self._internal_initial_state_names
 
     @property
     def _k_states(self):
@@ -608,6 +619,38 @@ class ETSModel(base.StateSpaceMLEModel):
             internal_idx = self._internal_params_index[name]
             params[i] = internal[internal_idx]
         return params
+
+    @property
+    def _seasonal_index(self):
+        return 1 + int(self.has_trend)
+
+    def _get_states(self, xhat):
+        states = np.empty((self.nobs, self._k_states))
+        all_names = ["level", "trend", "seasonal"]
+        for i, name in enumerate(self.state_names):
+            idx = all_names.index(name)
+            states[:, i] = xhat[:, idx]
+        return states
+
+    def _get_internal_states(self, states, params):
+        """
+        Converts a state matrix/dataframe to the (nobs, 2+m) matrix used
+        internally
+        """
+        internal_params = self._internal_params(params)
+        if isinstance(states, (pd.Series, pd.DataFrame)):
+            states = states.values
+        internal_states = np.zeros((self.nobs, 2 + self.seasonal_periods))
+        internal_states[:, 0] = states[:, 0]
+        if self.has_trend:
+            internal_states[:, 1] = states[:, 1]
+        if self.has_seasonal:
+            for j in range(self.seasonal_periods):
+                internal_states[j:, 2 + j] = states[
+                    0 : self.nobs - j, self._seasonal_index
+                ]
+                internal_states[0:j, 2 + j] = internal_params[6 : 6 + j][::-1]
+        return internal_states
 
     @property
     def _default_start_params(self):
@@ -811,7 +854,7 @@ class ETSModel(base.StateSpaceMLEModel):
         if return_params:
             return final_params
         else:
-            result = ETSResults(self, final_params)
+            result = self.smooth(final_params)
             result.mlefit = mlefit
             result.mle_retvals = mlefit.mle_retvals
             result.mle_settings = mlefit.mle_settings
@@ -944,7 +987,7 @@ class ETSModel(base.StateSpaceMLEModel):
             states = pd.DataFrame(states, index=index, columns=statenames)
         return yhat, states
 
-    def smooth(self, params):
+    def smooth(self, params, return_raw=False):
         """
         Exponential smoothing with given parameters
 
@@ -952,81 +995,23 @@ class ETSModel(base.StateSpaceMLEModel):
         ----------
         params : array_like
             Model parameters
+        return_raw : bool, optional
+            Whether to return only the state space results or the full results
+            object. Default is ``False``.
 
         Returns
         -------
-        ETSResults object
+        result : ETSResultsWrapper or tuple
+            If ``return_raw=False``, returns a ETSResultsWrapper
+            object. Otherwise a tuple of arrays or pandas objects, depending on
+            the format of the endog data.
         """
-        return ETSResults(self, np.asarray(params))
-
-    @property
-    def _seasonal_index(self):
-        return 1 + int(self.has_trend)
-
-    def _get_states(self, xhat):
-        states = np.empty((self.nobs, self._k_states))
-        state_names = ["level"]
-        states[:, 0] = xhat[:, 0]
-        idx = 1
-        if self.has_trend:
-            state_names.append("slope")
-            states[:, 1] = xhat[:, 1]
-        if self.has_seasonal:
-            state_names.append("season")
-            states[:, self._seasonal_index] = xhat[:, 2]
-            idx += 1
-        return states
-
-    def _get_internal_states(self, states, params):
-        """
-        Converts a state matrix/dataframe to the (nobs, 2+m) matrix used
-        internally
-        """
-        internal_params = self._internal_params(params)
-        if isinstance(states, (pd.Series, pd.DataFrame)):
-            states = states.values
-        internal_states = np.zeros((self.nobs, 2 + self.seasonal_periods))
-        internal_states[:, 0] = states[:, 0]
-        if self.has_trend:
-            internal_states[:, 1] = states[:, 1]
-        if self.has_seasonal:
-            for j in range(self.seasonal_periods):
-                internal_states[j:, 2 + j] = states[
-                    0 : self.nobs - j, self._seasonal_index
-                ]
-                internal_states[0:j, 2 + j] = internal_params[6 : 6 + j][::-1]
-        return internal_states
+        results = self._smooth(params)
+        return self._wrap_results(np.asarray(params), results, return_raw)
 
     @property
     def _res_classes(self):
         return {"fit": (ETSResults, ETSResultsWrapper)}
-
-    def _wrap_results(
-        self,
-        params,
-        result,
-        return_raw,
-        cov_type=None,
-        cov_kwds=None,
-        results_class=None,
-        wrapper_class=None,
-    ):
-        if not return_raw:
-            # Wrap in a results object
-            result_kwargs = {}
-            if cov_type is not None:
-                result_kwargs["cov_type"] = cov_type
-            if cov_kwds is not None:
-                result_kwargs["cov_kwds"] = cov_kwds
-
-            if results_class is None:
-                results_class = self._res_classes["fit"][0]
-            if wrapper_class is None:
-                wrapper_class = self._res_classes["fit"][1]
-
-            res = results_class(self, params, result, **result_kwargs)
-            result = wrapper_class(res)
-        return result
 
     def hessian(self, params, approx_centered=False, *args, **kwargs):
         r"""
@@ -1077,23 +1062,27 @@ class ETSModel(base.StateSpaceMLEModel):
 
 
 class ETSResults(base.StateSpaceMLEResults):
-    def __init__(self, model, params):
+    def __init__(self, model, params, results):
         super().__init__(model, params)
-        yhat, xhat = self.model._smooth(params)
+        yhat, xhat = results
         self._llf = self.model.loglike(params)
         self._residuals = self.model._residuals(yhat)
         self._fittedvalues = yhat
 
         # get model definition
-        self.short_name = model.short_name
-        self.error = self.model.error
-        self.trend = self.model.trend
-        self.seasonal = self.model.seasonal
-        self.damped_trend = self.model.damped_trend
-        self.has_trend = self.model.has_trend
-        self.has_seasonal = self.model.has_seasonal
-        self.seasonal_periods = self.model.seasonal_periods
-        self.initialization_method = self.model.initialization_method
+        model_definition_attrs = [
+            "short_name",
+            "error",
+            "trend",
+            "seasonal",
+            "damped_trend",
+            "has_trend",
+            "has_seasonal",
+            "seasonal_periods",
+            "initialization_method",
+        ]
+        for attr in model_definition_attrs:
+            setattr(self, attr, getattr(model, attr))
         self.param_names = [
             "%s (fixed)" % name if name in self.fixed_params else name
             for name in (self.model.param_names or [])
@@ -1632,7 +1621,7 @@ class ETSResults(base.StateSpaceMLEResults):
             params = np.array(self.initial_state)
             if params.ndim > 1:
                 params = params[0]
-            names = self.model.state_names
+            names = self.model.initial_state_names
             param_header = [
                 "initialization method: %s" % self.model.initialization_method
             ]

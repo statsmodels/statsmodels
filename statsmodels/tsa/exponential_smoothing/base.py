@@ -199,6 +199,33 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
                 data = pd.DataFrame(data, index=index, columns=names)
         return data
 
+    def _wrap_results(
+        self,
+        params,
+        result,
+        return_raw,
+        cov_type=None,
+        cov_kwds=None,
+        results_class=None,
+        wrapper_class=None,
+    ):
+        if not return_raw:
+            # Wrap in a results object
+            result_kwargs = {}
+            if cov_type is not None:
+                result_kwargs["cov_type"] = cov_type
+            if cov_kwds is not None:
+                result_kwargs["cov_kwds"] = cov_kwds
+
+            if results_class is None:
+                results_class = self._res_classes["fit"][0]
+            if wrapper_class is None:
+                wrapper_class = self._res_classes["fit"][1]
+
+            res = results_class(self, params, result, **result_kwargs)
+            result = wrapper_class(res)
+        return result
+
 
 class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
     r"""
