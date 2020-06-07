@@ -539,6 +539,55 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
 
     return qljungbox, pval, qboxpierce, pvalbp
 
+def acorr_ljungbox_automatic(x, boxpierce=False, model_df=0, return_df=None):
+    """
+        A wrapper around the original Ljungbox method to automatically determine
+        the optimal lag length, based on a penalty which switches between AIC and
+        BIC based on a threshold value, as depicted in the reference below.
+
+        References
+        ----------
+        .. [*] Green, W. "Econometric Analysis," 5th ed., Pearson, 2003.
+        """
+    from statsmodels.tsa.stattools import acf
+    # Get Optimal lag value
+    def get_optimal_length(threshold_metric, threshold, maxlag, func):
+        optimal_lag = 0
+        least_penalised = 0
+
+        for lags in range(1, maxlag + 1):
+            if (threshold_metric <= threshold):
+                penalty = lags * np.log(nobs)
+            else:
+                penalty = 2 * lags
+
+            test_statistic = func(lags)
+            penalised = test_statistic - penalty
+            if (penalised > least_penalised):
+                optimal_lag = lags
+                least_penalised = penalised
+
+        return optimal_lag
+
+    x = array_like(x, "x")
+    nobs = x.shape[0]
+    maxlag = nobs - 1
+
+    #Compute threshold metrics
+    sacf = acf(x, nlags=maxlag, fft=False)
+    sacf2 = sacf[1:maxlag + 1] ** 2 / (nobs - np.arange(1, maxlag + 1))
+    q = 2.4
+    threshold = np.sqrt(q * np.log(nobs))
+    threshold_metric = max(np.abs(sacf)) * np.sqrt(nobs)
+
+    if not boxpierce:
+        lags = get_optimal_length(threshold_metric, threshold, maxlag,
+                                  lambda p: nobs * (nobs + 2) * np.cumsum(sacf2)[p - 1])
+        return acorr_ljungbox(x, lags, False, model_df, None, return_df)
+
+    lags = get_optimal_length(threshold_metric, threshold, maxlag,
+                              lambda p: nobs * np.cumsum(sacf[1:maxlag + 1] ** 2)[p - 1])
+    return acorr_ljungbox(x, lags, True, model_df, None, return_df)
 
 @deprecate_kwarg("maxlag", "nlags")
 def acorr_lm(resid, nlags=None, autolag="AIC", store=False, *, period=None,

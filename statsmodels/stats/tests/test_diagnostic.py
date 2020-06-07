@@ -1087,6 +1087,16 @@ def test_ljungbox_dof_adj():
     assert np.all(np.isnan(res2[1][:4]))
     assert np.all(res2[1][4:] <= res1[1][4:])
 
+def test_ljungbox_auto_lag_selection():
+    data = sunspots.load_pandas().data['SUNACTIVITY']
+    res = AutoReg(data, 4, old_names=False).fit()
+    resid = res.resid
+    res1 = smsdia.acorr_ljungbox_automatic(resid, return_df=False)
+    res2 = smsdia.acorr_ljungbox_automatic(resid, model_df=4, return_df=False)
+    assert_allclose(res1[0], res2[0])
+    assert np.all(np.isnan(res2[1][:4]))
+    assert np.all(res2[1][4:] <= res1[1][4:])
+
 
 def test_ljungbox_errors_warnings():
     data = sunspots.load_pandas().data['SUNACTIVITY']
