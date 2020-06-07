@@ -539,11 +539,13 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
 
     return qljungbox, pval, qboxpierce, pvalbp
 
+
 def acorr_ljungbox_automatic(x, boxpierce=False, model_df=0, return_df=None):
     """
-        A wrapper around the original Ljungbox method to automatically determine
-        the optimal lag length, based on a penalty which switches between AIC and
-        BIC based on a threshold value, as depicted in the reference below.
+        # A wrapper around the original Ljungbox method to automatically
+        determine the optimal lag length, based on a penalty which switches
+        between AIC and BIC based on a threshold value, as depicted in the
+        reference below.
 
         References
         ----------
@@ -582,12 +584,13 @@ def acorr_ljungbox_automatic(x, boxpierce=False, model_df=0, return_df=None):
 
     if not boxpierce:
         lags = get_optimal_length(threshold_metric, threshold, maxlag,
-                                  lambda p: nobs * (nobs + 2) * np.cumsum(sacf2)[p - 1])
+                  lambda p: nobs * (nobs + 2) * np.cumsum(sacf2)[p - 1])
         return acorr_ljungbox(x, lags, False, model_df, None, return_df)
 
     lags = get_optimal_length(threshold_metric, threshold, maxlag,
-                              lambda p: nobs * np.cumsum(sacf[1:maxlag + 1] ** 2)[p - 1])
+                  lambda p: nobs * np.cumsum(sacf[1:maxlag + 1] ** 2)[p - 1])
     return acorr_ljungbox(x, lags, True, model_df, None, return_df)
+
 
 @deprecate_kwarg("maxlag", "nlags")
 def acorr_lm(resid, nlags=None, autolag="AIC", store=False, *, period=None,
