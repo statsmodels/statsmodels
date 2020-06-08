@@ -521,7 +521,10 @@ class AutoReg(tsa_model.TimeSeriesModel):
         if end > self.endog.shape[0]:
             freq = getattr(index, 'freq', None)
             if freq:
-                index = pd.date_range(index[0], freq=freq, periods=end)
+                if isinstance(index[0], pd.Period):
+                    index = pd.period_range(index[0], freq=freq, periods=end)
+                else:
+                    index = pd.date_range(index[0], freq=freq, periods=end)
             else:
                 index = pd.RangeIndex(end)
         index = index[start:end]
