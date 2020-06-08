@@ -7,6 +7,10 @@ environment:
   # Undefining will run test from installation
   PYTEST_DIRECTIVES: --skip-slow
   PYTHONHASHSEED: 0 # Ensure tests are correctly gathered by xdist
+  MKL_NUM_THREADS: 1
+  NUMEXPR_NUM_THREADS: 1
+  OMP_NUM_THREADS: 1
+  OPENBLAS_NUM_THREADS: 1
   matrix:
     # Pip builds
     - PYTHON: C:\Python36
@@ -28,14 +32,11 @@ build_script:
   - ps: If ($skip_appveyor) { echo "[skip appveyor]"; Exit-AppVeyorBuild }
   # Show information about CPU running job to understand BLAS issues
   - wmic cpu get caption, name, numberofcores
-  - SET MKL_NUM_THREADS=1
-  - SET NUMEXPR_NUM_THREADS=1
-  - SET OMP_NUM_THREADS=1
-  - SET OPENBLAS_NUM_THREADS=1
   - If Defined PY_MAJOR_VER ( call tools\ci\appveyor_conda.bat ) else ( call tools\ci\appveyor_pip.bat )
   # Pin to 1.29 for now due to test discovery issues
+  - python -m pip install --upgrade pip
   - pip install pytest "pytest-xdist==1.29" pytest-randomly
-  - if Defined PYTEST_DIRECTIVES ( python setup.py develop ) else ( python setup.py install )
+  - if Defined PYTEST_DIRECTIVES ( pip install -e . --no-build-isolation ) else ( pip install . )
 
 test_script:
   - call tools\ci\run_test.bat

@@ -244,7 +244,7 @@ if [ "$LINT" == true ]; then
     if [ -n "$NEW_FILES" ]; then
         echo "Linting newly added files with strict rules"
         echo "New files: $NEW_FILES"
-        flake8 --isolated $(eval echo $NEW_FILES)
+        flake8 --isolated --ignore=W503,W504,E741,E203 $(eval echo $NEW_FILES)
         if [ $? -ne "0" ]; then
             echo "New files failed linting."
             RET=1

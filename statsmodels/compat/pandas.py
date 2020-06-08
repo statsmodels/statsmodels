@@ -38,7 +38,10 @@ assert_index_equal = testing.assert_index_equal
 assert_series_equal = testing.assert_series_equal
 
 try:
-    from pandas.testing import assert_equal
+    try:
+        from pandas._testing import assert_equal
+    except ImportError:
+        from pandas.testing import assert_equal
 except ImportError:
     def assert_equal(left, right):
         """
