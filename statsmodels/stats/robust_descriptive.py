@@ -160,7 +160,7 @@ def kurtosis(data, kind='standard', arg=None, center=True):
         frac_left = [alpha, beta]
         frac_right = [1. - alpha, 1 - beta]
         (ea_low, eb_low), (ea_upp, eb_upp) = tail_mean(data, frac_left, frac_right)
-        print ea_upp, ea_low, eb_upp, eb_low
+        # print ea_upp, ea_low, eb_upp, eb_low
         kurt = (ea_upp - ea_low) / (eb_upp - eb_low)
 
     elif kind == 'crow-siddiqui':
@@ -210,7 +210,7 @@ def kurtosis_distr(distr, kind='standard', arg=None, center=True):
         ea_upp = distr.dist.expect(func, args=dargs, lb=distr.isf(alpha), **distr.kwds) / alpha
         eb_low = distr.dist.expect(func, args=dargs, ub=distr.ppf(beta), **distr.kwds) / beta
         eb_upp = distr.dist.expect(func, args=dargs, lb=distr.isf(beta), **distr.kwds) / beta
-        print ea_upp, ea_low, eb_upp, eb_low
+        # print ea_upp, ea_low, eb_upp, eb_low
         kurt = (ea_upp - ea_low) / (eb_upp - eb_low)
 
     elif kind == 'crow-siddiqui':
@@ -238,7 +238,7 @@ class MixtureUnivariate(stats.distributions.rv_continuous):
 
     def rvs(self, size=1):
         nobs1, nobs2 = np.random.multinomial(size, self.prob)
-        print nobs1, nobs2
+        # print nobs1, nobs2
         rvs_ = np.empty(size)
         rvs_.fill(np.nan)
         kwds = {'size' : nobs1}
@@ -265,50 +265,3 @@ class MixtureUnivariate(stats.distributions.rv_continuous):
     def expect(self, func, lb=None, ub=None, **kwds):
         # Hack to work around usage of frozen distribution
         return super(MixtureUnivariate, self).expect(func, lb=lb, ub=ub)
-
-example = 't'
-
-# example lognormal
-distr = stats.lognorm(0.4, scale=np.exp(1))
-loc = distr.mean()
-distr = stats.lognorm(0.4, loc=loc, scale=np.exp(1))
-distr = stats.norm()
-distr = stats.t(5)
-
-if example == 'mixture':
-    # for examples from Kim and White 2004
-    #distr = MixtureUnivariate(distr, prob, args, kwds)
-    distr_m = stats.t
-    kwds1 = dict(loc=0, scale=1)
-    kwds2 = dict(loc=-7, scale=10)
-    df = 5
-    distr = MixtureUnivariate(distr_m, 0.9988, [(df,), (df,)], kwds=[kwds1, kwds2])
-
-    distr_m = stats.norm
-    distr = MixtureUnivariate(distr_m, 0.9988, [(), ()], kwds=[kwds1, kwds2])
-
-x_rvs = distr.rvs(size=500000)
-
-sk_kinds = ['standard', 'bowley-hinkley', 'groeneveld-meeden', 'pearson']
-kurt_kinds = ['standard', 'moore', 'hogg', 'crow-siddiqui']
-
-print '\nsample lognormal'
-for kind in sk_kinds:
-    print skew(x_rvs, kind=kind, arg=None)
-
-print '\ndistr lognormal'
-for kind in sk_kinds:
-    print skew_distr(distr, kind=kind, arg=None)
-
-print '\nsample lognormal'
-for kind in kurt_kinds:
-    print kurtosis(x_rvs, kind=kind, arg=None, center=True)
-
-print '\ndistr lognormal'
-for kind in kurt_kinds:
-    print kurtosis_distr(distr, kind=kind, arg=None, center=True)
-
-te_l = tail_expectation(distr, lb=1.-0.05, ub=1)
-print te_l, te_l[0] / 0.05
-te_u = tail_expectation(distr, lb=0, ub=0.05)
-print te_u, te_u[0] / 0.05
