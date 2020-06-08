@@ -671,8 +671,6 @@ class DiscreteMargins(object):
         params = results.params
         exog = model.exog.copy() # copy because values are changed
         effects_idx, const_idx =  _get_const_index(exog)
-        if hasattr(model, 'k_extra') and model.k_extra > 0:
-            effects_idx = np.concatenate((effects_idx, np.zeros(model.k_extra, np.bool_)))
 
         if dummy:
             _check_discrete_args(at, method)
