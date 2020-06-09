@@ -413,29 +413,100 @@ def anova_generic(means, vars_, nobs, use_var="unequal",
 
 def anova_oneway(data, groups=None, use_var="unequal", welch_correction=True,
                  trim_frac=0):
-    """one-way anova
+    """oneway anova
 
     This implements standard anova, Welch and Brown-Forsythe and trimmed
     (Yuen) variants of them.
 
     Parameters
     ----------
-
+    data : tuple of array_like or DataFrame or Series
+        Data for k independent samples, with k >= 2.
+        The data can be provided as a tuple or list of arrays or in long
+        format with outcome observations in ``data`` and group membershipt in
+        ``groups``.
+    groups : ndarray or Series
+        If data is in long format, then groups is needed as indicator to which
+        group or sample and observations belongs.
     use_var : {"unequal", "equal" or "bf"}
-        `use_var` specified how to treat heteroscedasticity, uneqau variance,
+        `use_var` specified how to treat heteroscedasticity, unequal variance,
         across samples. Three approaches are available
 
         "unequal" : Variances are not assumed to be equal across samples.
             Heteroscedasticity is taken into account with Welch Anova and
             Satterthwaite-Welch degrees of freedom.
             This is the default.
-        "equal" : variances are assumed to be equal across samples. This is
+        "equal" : Variances are assumed to be equal across samples. This is
             the standard Anova.
         "bf: Variances are not assumed to be equal across samples. The method
-            is Browne-Forsythe (1971) with the corrected degrees of freedom
-            by Merothra
+            is Browne-Forsythe (1971) for testing equality of means with the
+            corrected degrees of freedom by Merothra. The original BF degrees
+            of freedom are available as additional attributes in the results
+            instance, ``df_denom2`` and ``p_value2``.
+
+    trim_frac : float in [0, 0.5)
+        Optional trimming for Anova with trimmed mean and winsorized variances.
+        With the default trim_frac equal to zero, the oneway Anova statistics
+        are computed without trimming. If `trim_frac` is larger than zero,
+        then the largest and smallest observations in each sample are trimmed.
+        The number of trimmed observations is the fraction of number of
+        observations in the sample truncated to the next lower integer.
+        `trim_frac` has to be smaller than 0.5, however, if the fraction is
+        so large that there are not enough observations left over, then `nan`
+        will be returned.
+
+    Returns
+    -------
+    res : results instance
+        The returned HolderTuple instance has the following main attributes
+        and some additional information in other attributes.
+
+        statistic : float
+            Test statistic for k-sample mean comparison which is approximately
+            F-distributed.
+        pvalue : float
+            If f ``use_var="bf"``, then the p-value is based on corrected
+            degrees of freedom following Mehrotra 1997.
+        pvalue2 : float
+            This is the p-value based on degrees of freedom as in
+            Brown-Forsythe 1974 and is only available if ``use_var="bf"``.
+        df = (df_denom, df_num) : tuple of floats
+            Degreeds of freedom for the F-distribution depend on ``use_var``.
+            If f ``use_var="bf"``, then `df_denom` is for Mehrotra p-values
+            `df_denom2` is available for Brown-Forsythe 1974 p-values.
+            `df_num` is the same numerator degrees of freedom for both
+            p-values.
+
+    Notes
+    -----
+    Welch's anova is correctly sized (not liberal or conservative) in smaller
+    samples if the distribution of the samples is not very far away from the
+    normal distribution. The test can become liberal if the data is strongly
+    skewed. Welch's Anova can also be correctly sized for discrete
+    distributions with finite support, like Lickert scale data.
+    The trimmed version is robust to many non-normal distributions, it stays
+    correctly sized in many cases, and is more powerful in some cases with
+    skewness or heavy tails.
+
+    Trimming is currently based on the integer part of ``nobs * trim_frac``.
+    The default might change to including fractional observations as in the
+    original articles by Yuen.
 
 
+    See Also
+    --------
+    anova_generic
+
+    References
+    ----------
+    Brown, Morton B., and Alan B. Forsythe. 1974. “The Small Sample Behavior
+    of Some Statistics Which Test the Equality of Several Means.”
+    Technometrics 16 (1) (February 1): 129–132. doi:10.2307/1267501.
+
+    Mehrotra, Devan V. 1997. “Improving the Brown-Forsythe Solution to the
+    Generalized Behrens-Fisher Problem.” Communications in Statistics -
+    Simulation and Computation 26 (3): 1139–1145.
+    doi:10.1080/03610919708813431.
     """
     if groups is not None:
         uniques = np.unique(groups)

@@ -305,14 +305,6 @@ class TestOnewayScale(object):
         assert_allclose(res0.pvalue, p_value, rtol=1e-13)
         assert_allclose(res0.statistic, statistic, rtol=1e-13)
 
-        res = smr.anova_scale(data, method='foneway', center='median',
-                              transform='abs', trim_frac=0.2)
-        assert_allclose(res0.pvalue, res[0][1], rtol=1e-13)
-        assert_allclose(res[0][1], p_value, rtol=1e-13)
-
-        resa = smr.anova_oneway(res0.data_transformed)
-        assert_allclose(resa[1], p_value, rtol=1e-13)
-
         # library car
         # > lt = leveneTest(y ~ g, df3, center=mean, trim=0.2)
         statistic = 1.10732113109744
