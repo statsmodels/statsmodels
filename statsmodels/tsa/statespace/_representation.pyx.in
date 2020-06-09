@@ -527,7 +527,7 @@ cdef class {{prefix}}Statespace(object):
         else:
             self.seek(self.t+1, 0, 0)
 
-    cpdef seek(self, unsigned int t, unsigned int transform_diagonalize, unsigned int transform_generalized_collapse):
+    cpdef seek(self, unsigned int t, unsigned int transform_diagonalize, unsigned int transform_generalized_collapse, unsigned int reset=False):
         self._previous_t = self.t
 
         # Set the global time indicator, if valid
@@ -584,7 +584,7 @@ cdef class {{prefix}}Statespace(object):
         self.set_dimensions(k_endog, self.k_states, self.k_posdef)
 
         # Handle transformations
-        self.transform(t, self._previous_t, transform_diagonalize, transform_generalized_collapse)
+        self.transform(t, self._previous_t, transform_diagonalize, transform_generalized_collapse, reset)
 
     cdef void set_dimensions(self, unsigned int k_endog, unsigned int k_states, unsigned int k_posdef):
         self._k_endog = k_endog
@@ -686,18 +686,18 @@ cdef class {{prefix}}Statespace(object):
         self._design = &self.selected_design[0]
         self._obs_cov = &self.selected_obs_cov[0]
 
-    cdef void transform(self, unsigned int t, unsigned int previous_t, unsigned int transform_diagonalize, unsigned int transform_generalized_collapse) except *:
+    cdef void transform(self, unsigned int t, unsigned int previous_t, unsigned int transform_diagonalize, unsigned int transform_generalized_collapse, unsigned int reset=False) except *:
         # Reset the collapsed loglikelihood
         self.collapse_loglikelihood = 0
 
         if transform_generalized_collapse and not self._k_endog <= self._k_states:
-            k_endog = self.transform_generalized_collapse(t, previous_t)
+            k_endog = self.transform_generalized_collapse(t, previous_t, reset)
             # Reset dimensions
             self.set_dimensions(k_endog, self._k_states, self._k_posdef)
         elif transform_diagonalize and not (self.diagonal_obs_cov == 1):
-            self.transform_diagonalize(t, previous_t)
+            self.transform_diagonalize(t, previous_t, reset)
 
-    cdef void transform_diagonalize(self, unsigned int t, unsigned int previous_t) except *:
+    cdef void transform_diagonalize(self, unsigned int t, unsigned int previous_t, unsigned int reset=False) except *:
         # Note: this assumes that initialize_object_pointers has *already* been done
         # Note: this assumes that select_missing has *already* been done
         # TODO need unit tests, especially for the missing case
@@ -727,7 +727,7 @@ cdef class {{prefix}}Statespace(object):
         if diagonal_obs_cov == -1:
             # We don't need to check for a diagonal covariance matrix each t,
             # except in the following cases:
-            if self._diagonal_obs_cov == -1 or t == 0 or self.obs_cov.shape[2] > 1 or reset_missing:
+            if self._diagonal_obs_cov == -1 or t == 0 or self.obs_cov.shape[2] > 1 or reset_missing or reset:
                 diagonal_obs_cov = 1
                 for i in range(self.k_endog):
                     for j in range(self.k_endog):
@@ -745,7 +745,7 @@ cdef class {{prefix}}Statespace(object):
 
         # If we have a non-diagonal obs cov, we need to compute the cholesky
         # decomposition of *self._obs_cov
-        if t == 0 or self.obs_cov.shape[2] > 1 or reset_missing:
+        if t == 0 or self.obs_cov.shape[2] > 1 or reset_missing or reset:
             # LDL decomposition
             blas.{{prefix}}copy(&self._k_endog2, self._obs_cov, &inc, _transform_cholesky, &inc)
             info = tools._{{prefix}}ldl(_transform_cholesky, self._k_endog)
@@ -775,6 +775,7 @@ cdef class {{prefix}}Statespace(object):
 
         # Solve for y_t^*
         # (unless this is a completely missing observation)
+        # TODO: note that this can cause problems if this function is run twice
         if not self._nmissing == self.k_endog:
             # If we have some missing elements, selected_obs is already populated
             if self._nmissing == 0:
@@ -793,7 +794,7 @@ cdef class {{prefix}}Statespace(object):
             self._obs = &self.selected_obs[0]
 
         # Solve for d_t^*, if necessary
-        if t == 0 or self.obs_intercept.shape[1] > 1 or reset_missing:
+        if t == 0 or self.obs_intercept.shape[1] > 1 or reset_missing or reset:
             blas.{{prefix}}copy(&self._k_endog, self._obs_intercept, &inc, &self.transform_obs_intercept[0], &inc)
             lapack.{{prefix}}trtrs("L", "N", "U", &self._k_endog, &inc,
                         _transform_cholesky, &self.k_endog,
@@ -801,7 +802,7 @@ cdef class {{prefix}}Statespace(object):
                         &info)
 
         # Solve for Z_t^*, if necessary
-        if t == 0 or self.design.shape[2] > 1 or reset_missing:
+        if t == 0 or self.design.shape[2] > 1 or reset_missing or reset:
             blas.{{prefix}}copy(&self._k_endogstates, self._design, &inc, &self.transform_design[0,0], &inc)
             lapack.{{prefix}}trtrs("L", "N", "U", &self._k_endog, &self._k_states,
                         _transform_cholesky, &self.k_endog,
@@ -819,7 +820,7 @@ cdef class {{prefix}}Statespace(object):
         self._obs_cov = &self.transform_obs_cov[0,0]
         self._obs_intercept = &self.transform_obs_intercept[0]
 
-    cdef int transform_generalized_collapse(self, unsigned int t, unsigned int previous_t) except *:
+    cdef int transform_generalized_collapse(self, unsigned int t, unsigned int previous_t, unsigned int reset=True) except *:
         # Note: this assumes that initialize_object_pointers has *already* been done
         # Note: this assumes that select_missing has *already* been done
         # TODO need unit tests, especially for the missing case
@@ -872,7 +873,7 @@ cdef class {{prefix}}Statespace(object):
                                    ' intercept.')
 
         # Perform the Cholesky decomposition of H_t, if necessary
-        if t == 0 or self.obs_cov.shape[2] > 1 or reset_missing:
+        if t == 0 or self.obs_cov.shape[2] > 1 or reset_missing or reset:
             # Cholesky decomposition: $H = L L'$  
             blas.{{prefix}}copy(&self._k_endog2, self._obs_cov, &inc, &self.transform_cholesky[0,0], &inc)
             lapack.{{prefix}}potrf("L", &self._k_endog, &self.transform_cholesky[0,0], &self._k_endog, &info)
@@ -895,7 +896,7 @@ cdef class {{prefix}}Statespace(object):
             self.transform_determinant = self.transform_determinant**2
 
         # Get $Z_t \equiv C^{-1}$, if necessary  
-        if t == 0 or self.obs_cov.shape[2] > 1 or self.design.shape[2] > 1 or reset_missing:
+        if t == 0 or self.obs_cov.shape[2] > 1 or self.design.shape[2] > 1 or reset_missing or reset:
             # Calculate $H_t^{-1} Z_t \equiv (Z_t' H_t^{-1})'$ via Cholesky solver
             blas.{{prefix}}copy(&self._k_endogstates, self._design, &inc, &self.transform_design[0,0], &inc)
             lapack.{{prefix}}potrs("L", &self._k_endog, &k_states,

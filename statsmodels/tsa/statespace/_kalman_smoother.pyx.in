@@ -542,6 +542,23 @@ cdef class {{prefix}}KalmanSmoother(object):
         # Initialize pointers to appropriate Kalman smoothing functions
         self.initialize_function_pointers()
 
+        # Clear measurement disturbance variables` if we switched from
+        # multivariate to univariate (because we might have off-diagonal
+        # elements stored from a previous multivariate run that wouldn't have
+        # been cleared yet)
+        if self.t > 0 and self.kfilter.univariate_filter[self.t] == 0 and self.kfilter.univariate_filter[self.t - 1] == 1:
+            if self._smooth_method & SMOOTH_CLASSICAL:
+                raise NotImplementedError(
+                    'Cannot use classical smoothing when the multivariate'
+                    ' filter has fallen back to univariate filtering.')
+            if self._smooth_method & SMOOTH_ALTERNATIVE:
+                raise NotImplementedError(
+                    'Cannot use alternative smoothing when the multivariate'
+                    ' filter has fallen back to univariate filtering.')
+            self.smoothing_error[..., :self.t] = 0
+            self.smoothed_measurement_disturbance_cov[..., :self.t] = 0
+            self.innovations_transition[..., :self.t] = 0
+
         # Conventional timing of the measurement step of the scaled smoothed
         # estimator and covariance matrix, smoothing error  
         # $L_t, r_{t-1}, N_{t-1}, u_t$
@@ -560,7 +577,10 @@ cdef class {{prefix}}KalmanSmoother(object):
             self.smooth_estimators_measurement(self, self.kfilter, self.model)
 
         # Smoothed state autocovariance matrix
-        blas.{{prefix}}copy(&self.kfilter.k_states2, self._tmpL, &inc, self._innovations_transition, &inc)
+        if diffuse:
+            blas.{{prefix}}copy(&self.kfilter.k_states2, self.kfilter._tmpL0, &inc, self._innovations_transition, &inc)
+        else:
+            blas.{{prefix}}copy(&self.kfilter.k_states2, self._tmpL, &inc, self._innovations_transition, &inc)
         if self.smoother_output & SMOOTHER_STATE_AUTOCOV:
             if diffuse:
                 {{prefix}}smoothed_state_autocov_univariate_diffuse(self, self.kfilter, self.model)
@@ -579,13 +599,21 @@ cdef class {{prefix}}KalmanSmoother(object):
         # Time step of the scaled smoothed estimator and covariance matrix
         self.smooth_estimators_time(self, self.kfilter, self.model)
 
-        # Since the exact diffuse filtering and smoothing only uses the
-        # univariate method, if non-univariate filtering methods are used for
-        # the remaining filtering and smoothing, we need to run one or more
+        # When switching from the non-univariate filtering methods to the
+        # univariate filtering method, we need to run one or more
         # univariate time smoothing steps to get the appropriate values (e.g.
         # for scaled_smoothed_estimator). Moreover, the alternative and
         # classical methods have different timing.
-        if self.kfilter.nobs_diffuse > 0 and self.t == self.kfilter.nobs_diffuse:
+        # This happens in two cases:
+        # 1. Exact diffuse filtering and smoothing only uses the univariate
+        #    method, so if non-univariate filtering methods are used for
+        #    the remaining filtering and smoothing then we need to run this.
+        # 2. If the multivariate filtering method failed in a particular time
+        #    step (due to a singular forecast error covariance matrix) and
+        #    the univariate method was used as a fallback, then we need to run
+        #    this.
+        if ((self.kfilter.nobs_diffuse > 0 and self.t == self.kfilter.nobs_diffuse) or
+                (self.t > 0 and self.kfilter.univariate_filter[self.t] == 0 and self.kfilter.univariate_filter[self.t-1] == 1)):
             t = self.t
             if self._smooth_method & SMOOTH_CONVENTIONAL:
                 {{prefix}}smoothed_estimators_time_univariate(self, self.kfilter, self.model)
@@ -627,7 +655,7 @@ cdef class {{prefix}}KalmanSmoother(object):
         # Determine which transformations (would) need to be made
         transform_generalized_collapse = self.kfilter.filter_method & FILTER_COLLAPSED
         if not transform_generalized_collapse:
-            transform_diagonalize = self.kfilter.filter_method & FILTER_UNIVARIATE
+            transform_diagonalize = self.kfilter.univariate_filter[self.t]
 
         # Initialize object-level pointers to statespace arrays
         # Note: does not matter what transformations were required for the
@@ -726,6 +754,12 @@ cdef class {{prefix}}KalmanSmoother(object):
             self.smooth_estimators_time = {{prefix}}smoothed_estimators_time_univariate_diffuse
             self.smooth_state = {{prefix}}smoothed_state_univariate_diffuse
             self.smooth_disturbances = {{prefix}}smoothed_disturbances_univariate_diffuse
+        # Univariate (modified Bryson-Frazier) smoother
+        elif (self._smooth_method & SMOOTH_UNIVARIATE) or self.kfilter.univariate_filter[self.t]:
+            self.smooth_estimators_measurement = {{prefix}}smoothed_estimators_measurement_univariate
+            self.smooth_estimators_time = {{prefix}}smoothed_estimators_time_univariate
+            self.smooth_state = {{prefix}}smoothed_state_conventional
+            self.smooth_disturbances = {{prefix}}smoothed_disturbances_univariate
         # Multivariate modified Bryson-Frazier smoother
         elif self._smooth_method & SMOOTH_ALTERNATIVE:
             self.smooth_estimators_measurement = {{prefix}}smoothed_estimators_measurement_alternative
@@ -738,12 +772,6 @@ cdef class {{prefix}}KalmanSmoother(object):
             self.smooth_estimators_time = {{prefix}}smoothed_estimators_time_classical
             self.smooth_state = {{prefix}}smoothed_state_classical
             self.smooth_disturbances = {{prefix}}smoothed_disturbances_conventional
-        # Univariate (modified Bryson-Frazier) smoother
-        elif self._smooth_method & SMOOTH_UNIVARIATE:
-            self.smooth_estimators_measurement = {{prefix}}smoothed_estimators_measurement_univariate
-            self.smooth_estimators_time = {{prefix}}smoothed_estimators_time_univariate
-            self.smooth_state = {{prefix}}smoothed_state_conventional
-            self.smooth_disturbances = {{prefix}}smoothed_disturbances_univariate
         # Multivariate conventional (Durbin and Koopman) smoother
         elif self._smooth_method & SMOOTH_CONVENTIONAL:
             self.smooth_estimators_measurement = {{prefix}}smoothed_estimators_measurement_conventional
@@ -756,7 +784,7 @@ cdef class {{prefix}}KalmanSmoother(object):
         # Handle completely missing data
         # (All methods except the conventional method can use the same routines in this case)
         # This is essentially just an application of the smoothed_estimators_time_* step.
-        if self._smooth_method & SMOOTH_CONVENTIONAL and self.model._nmissing == self.model.k_endog:
+        if not diffuse and self._smooth_method & SMOOTH_CONVENTIONAL and self.model._nmissing == self.model.k_endog:
             # Change the smoothing functions to take into account a missing observation
             self.smooth_estimators_measurement = {{prefix}}smoothed_estimators_missing_conventional
             # (no need to change the state smoothing recursion)

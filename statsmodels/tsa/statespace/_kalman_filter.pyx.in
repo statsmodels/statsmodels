@@ -429,6 +429,7 @@ cdef class {{prefix}}KalmanFilter(object):
                  'forecast_error_ipiv': np.array(self.forecast_error_ipiv, copy=True, order='F'),
                  'forecast_error_work': np.array(self.forecast_error_work, copy=True, order='F'),
                  'kalman_gain': np.array(self.kalman_gain, copy=True, order='F'),
+                 'univariate_filter': np.array(self.univariate_filter, copy=True, order='F'),
                  'loglikelihood': np.array(self.loglikelihood, copy=True, order='F'),
                  'predicted_state': np.array(self.predicted_state, copy=True, order='F'),
                  'predicted_state_cov': np.array(self.predicted_state_cov, copy=True, order='F'),
@@ -472,6 +473,7 @@ cdef class {{prefix}}KalmanFilter(object):
         self.forecast_error_ipiv = state['forecast_error_ipiv']
         self.forecast_error_work = state['forecast_error_work']
         self.kalman_gain = state['kalman_gain']
+        self.univariate_filter = state['univariate_filter']
         self.loglikelihood = state['loglikelihood']
         self.predicted_state = state['predicted_state']
         self.predicted_state_cov = state['predicted_state_cov']
@@ -517,6 +519,9 @@ cdef class {{prefix}}KalmanFilter(object):
             np.npy_intp dim3[3]
         cdef int storage
         # #### Allocate arrays for calculations
+
+        dim1[0] = self.model.nobs;
+        self.univariate_filter = np.PyArray_ZEROS(1, dim1, np.NPY_INT32, FORTRAN)
 
         # Arrays for Kalman filter output
 
@@ -805,6 +810,12 @@ cdef class {{prefix}}KalmanFilter(object):
             # Reset matrices
             self.allocate_arrays()
 
+            # Reset the flag for using the univariate method
+            if filter_method & FILTER_UNIVARIATE:
+                self.univariate_filter[:] = 1
+            else:
+                self.univariate_filter[:] = 0
+
             # Seek to the beginning
             self.seek(0, True)
 
@@ -826,6 +837,11 @@ cdef class {{prefix}}KalmanFilter(object):
             self.nobs_kendog_univariate_singular = 0
             self.converged = 0
             self.period_converged = 0
+
+            if self.filter_method & FILTER_UNIVARIATE:
+                self.univariate_filter[:] = 1
+            else:
+                self.univariate_filter[:] = 0
 
     def __iter__(self):
         return self
@@ -874,6 +890,13 @@ cdef class {{prefix}}KalmanFilter(object):
             self.loglikelihood[self.t] = 0
             self.scale[self.t] = 0
 
+        # Clear convergence flag if we've just switched the filter type
+        # (this should only happen in contrived cases though, since after we've
+        # successfully converged, the inversion step won't fail anymore)
+        if (self.converged and self.univariate_filter[self.t] != self.univariate_filter[self.t - 1]):
+            self.converged = 0
+            self.period_converged = 0
+
         # Initialize pointers to current-iteration objects
         self.initialize_statespace_object_pointers()
         self.initialize_filter_object_pointers()
@@ -920,12 +943,38 @@ cdef class {{prefix}}KalmanFilter(object):
             self._filtered_state = &self.filtered_state[0, filtered_mean_t]
             self._filtered_state_cov = &self.filtered_state_cov[0, 0, filtered_cov_t]
 
+        # Clear `forecasts_error_cov` if we switched from multivariate to
+        # univariate (because we might have off-diagonal elements stored from
+        # a previous multivariate run that wouldn't have been cleared yet)
+        if self.univariate_filter[self.t] == 1 and (self.t == 0 or self.univariate_filter[self.t - 1] == 0):
+            self.forecast_error_cov[..., self.t:] = 0
+
         # Form forecasts
         self.forecasting(self, self.model)
         # self._forecasting()
 
         # Perform `forecast_error_cov` inversion (or decomposition)
-        self.determinant = self.inversion(self, self.model, self.determinant)
+        try:
+            self.determinant = self.inversion(self, self.model, self.determinant)
+        except np.linalg.LinAlgError:
+            # If the multivariate filter fails here due to a singular forecast
+            # error covariance matrix, then we can try to fall back to the
+            # univariate filter
+            # If we were already using the univariate filter, raise the
+            # exception
+            if not ((self.inversion_method & INVERT_UNIVARIATE) or
+                    (self.inversion_method & SOLVE_CHOLESKY)):
+                raise NotImplementedError(
+                    'Singular forecast error covariance matrix detected, but'
+                    ' multivariate filter cannot fall back to univariate'
+                    ' filter when the inversion method is set to anything'
+                    ' other than INVERT_UNIVARIATE or SOLVE_CHOLESKY.')
+            elif self.univariate_filter[self.t]:
+                raise
+            else:
+                self.univariate_filter[self.t] = 1
+                next(self)
+                return
         # self.determinant = self._inversion()
 
         # Updating step
@@ -986,14 +1035,17 @@ cdef class {{prefix}}KalmanFilter(object):
         cdef:
             int transform_diagonalize = 0
             int transform_generalized_collapse = 0
+            int reset = 0
 
         # Determine which transformations need to be made
         transform_generalized_collapse = self.filter_method & FILTER_COLLAPSED
-        transform_diagonalize = self.filter_method & FILTER_UNIVARIATE
+        transform_diagonalize = self.univariate_filter[self.t]
+        if self.t > 0:
+            reset = self.univariate_filter[self.t] != self.univariate_filter[self.t - 1]
 
         # Initialize object-level pointers to statespace arrays
         #self.model.initialize_object_pointers(self.t)
-        self.model.seek(self.t, transform_diagonalize, transform_generalized_collapse)
+        self.model.seek(self.t, transform_diagonalize, transform_generalized_collapse, reset)
 
         # Handle missing data
         if self.model._nmissing > 0 or (self.model.has_missing and self.filter_method & FILTER_UNIVARIATE):
@@ -1064,10 +1116,10 @@ cdef class {{prefix}}KalmanFilter(object):
             blas.{{prefix}}copy(&self.model._k_states2, self.model._initial_diffuse_state_cov, &inc, self._input_diffuse_state_cov, &inc)
 
         # Now we can check if we are in a diffuse period. If we are but we are
-        # not generally using the univariate method, then we may need to re-do
-        # the diagonalization transformation (since in diffuse periods we
-        # always use the univariate method)
-        if not (self.filter_method & FILTER_UNIVARIATE) and self.check_diffuse():
+        # not using the univariate method, then we may need to perform the
+        # diagonalization transformation (since in diffuse periods we always
+        # use the univariate method)
+        if not self.univariate_filter[self.t] and self.check_diffuse():
             self.model.transform_diagonalize(self.model.t, self.model._previous_t)
 
         # Initialize object-level pointers to output arrays
@@ -1116,7 +1168,7 @@ cdef class {{prefix}}KalmanFilter(object):
             self.calculate_scale = {{prefix}}scale_univariate
             self.prediction = {{prefix}}prediction_univariate_diffuse
         # Univariate method
-        elif self.filter_method & FILTER_UNIVARIATE:
+        elif self.univariate_filter[self.t]:
             self.forecasting = {{prefix}}forecast_univariate
             self.updating = {{prefix}}updating_univariate
             self.inversion = {{prefix}}inverse_noop_univariate
