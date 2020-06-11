@@ -645,9 +645,9 @@ class ETSModel(base.StateSpaceMLEModel):
         if self.has_seasonal:
             for j in range(self.seasonal_periods):
                 internal_states[j:, 2 + j] = states[
-                    0 : self.nobs - j, self._seasonal_index
+                    0:self.nobs - j, self._seasonal_index
                 ]
-                internal_states[0:j, 2 + j] = internal_params[6 : 6 + j][::-1]
+                internal_states[0:j, 2 + j] = internal_params[6:6 + j][::-1]
         return internal_states
 
     @property
@@ -1134,9 +1134,9 @@ class ETSResults(base.StateSpaceMLEResults):
         if self.has_seasonal:
             self.season = states[:, self.model._seasonal_index]
             self.initial_seasonal = internal_params[6:]
-            self.initial_state[
-                self.model._seasonal_index :
-            ] = self.initial_seasonal
+            self.initial_state[self.model._seasonal_index:] = (
+                self.initial_seasonal
+            )
             self.gamma = self.params[self.model._seasonal_index]
             self.smoothing_seasonal = self.gamma
         if self.damped_trend:
