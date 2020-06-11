@@ -1509,7 +1509,7 @@ class ETSResults(base.StateSpaceMLEResults):
             y, start_idx, start_idx + nsimulations - 1, names=names
         )
 
-    def forecast(self, steps=1, anchor=None):
+    def forecast(self, steps=1):
         """
         Out-of-sample forecasts
 
@@ -1520,25 +1520,18 @@ class ETSResults(base.StateSpaceMLEResults):
             sample. Can also be a date string to parse or a datetime type.
             However, if the dates index does not have a fixed frequency, steps
             must be an integer. Default
-        anchor : int, str, or datetime, optional
-            First period for forecasting. The forecast will be conditional on
-            all existing datapoints prior to the `anchor`.  Type depends on the
-            index of the given `endog` in the model. Two special cases are the
-            strings 'start' and 'end'. `start` refers to beginning the
-            simulation at the first period of the sample, and `end` refers to
-            beginning the simulation at the first period after the sample.
-            Integer values can run from 0 to `nobs`, or can be negative to
-            apply negative indexing. Finally, if a date/time index was provided
-            to the model, then this argument can be a date string to parse or a
-            datetime type. Default is 'end'.
 
         Returns
         -------
         forecast : ndarray
             Array of out of sample forecasts. A (steps x k_endog) array.
         """
-        if anchor is None:
-            anchor = "end"
+        return self._forecast(steps, "end")
+
+    def _forecast(self, steps, anchor):
+        """
+        Dynamic prediction/forecasting
+        """
         # forecast is the same as simulation without errors
         return self.simulate(
             steps, anchor=anchor, random_errors=np.zeros((steps, 1))
@@ -1605,7 +1598,7 @@ class ETSResults(base.StateSpaceMLEResults):
         y[0:nsmooth] = self.fittedvalues[start_smooth:end_smooth]
 
         # Out of sample/dynamic prediction: forecast
-        y[nsmooth:] = self.forecast(steps=nforecast, anchor=start_forecast)
+        y[nsmooth:] = self._forecast(nforecast, start_forecast)
 
         # Wrap data / squeeze where appropriate
         return self.model._wrap_data(y, start, end_forecast - 1)
