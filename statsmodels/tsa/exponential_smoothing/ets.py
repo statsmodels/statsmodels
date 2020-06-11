@@ -720,8 +720,8 @@ class ETSModel(base.StateSpaceMLEModel):
         # constant interval, we will use the parameters beta_star=beta/alpha
         # and gamma_star=gamma+alpha during fitting.
 
-        lb = np.zeros(self._k_params_internal) + 1e-5
-        ub = np.ones(self._k_params_internal) - 1e-5
+        lb = np.zeros(self._k_params_internal) + 1e-4
+        ub = np.ones(self._k_params_internal) - 1e-4
 
         # other bounds for phi and initial states
         lb[3], ub[3] = 0.8, 0.98
@@ -805,6 +805,8 @@ class ETSModel(base.StateSpaceMLEModel):
 
         if start_params is None:
             start_params = self.start_params
+        else:
+            start_params = np.asarray(start_params)
 
         if self._has_fixed_params and len(self._free_params_index) == 0:
             final_params = np.asarray(list(self._fixed_params.values()))
