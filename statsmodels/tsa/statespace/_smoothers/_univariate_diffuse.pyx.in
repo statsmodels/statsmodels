@@ -162,6 +162,9 @@ cdef int {{prefix}}smoothed_estimators_measurement_univariate_diffuse({{prefix}}
                 kfilter._tmpL0[j + j*kfilter.k_states] = kfilter._tmpL0[j + j*kfilter.k_states] + 1
         else:
             kfilter.tmpK0[:] = 0
+            kfilter.tmpL0[:] = 0
+            for j in range(kfilter.k_states):
+                kfilter._tmpL0[j + j*kfilter.k_states] = 1
 
         # Cumulate L0 and L1
         blas.{{prefix}}copy(&kfilter.k_states2, smoother._tmpL, &inc, smoother._tmp0, &inc)

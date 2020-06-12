@@ -551,7 +551,7 @@ cdef class {{prefix}}SimulationSmoother(object):
                 )
                 collapsing_model.initialized = True
                 for t in range(self.nobs):
-                    collapsing_model.seek(t, self.simulated_kfilter.filter_method & FILTER_UNIVARIATE,
+                    collapsing_model.seek(t, self.simulated_kfilter.univariate_filter[t],
                                              self.simulated_kfilter.filter_method & FILTER_COLLAPSED)
                     blas.{{prefix}}copy(&k_states, &collapsing_model.collapse_obs[0], &inc, &self.simulated_measurement_disturbance[0,t], &inc)
             else:

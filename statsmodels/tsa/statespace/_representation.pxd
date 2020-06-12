@@ -76,16 +76,16 @@ cdef class sStatespace(object):
     cdef readonly int _nmissing
 
     # Functions
-    cpdef seek(self, unsigned int t, unsigned int transform_diagonalize, unsigned int transform_generalized_collapse)
+    cpdef seek(self, unsigned int t, unsigned int transform_diagonalize, unsigned int transform_generalized_collapse, unsigned int reset=*)
 
     cdef void set_dimensions(self, unsigned int k_endog, unsigned int k_states, unsigned int k_posdef)
     cdef void select_state_cov(self, unsigned int t)
     cdef int select_missing(self, unsigned int t)
     cdef void _select_missing_entire_obs(self, unsigned int t)
     cdef void _select_missing_partial_obs(self, unsigned int t)
-    cdef void transform(self, unsigned int t, unsigned int previous_t, unsigned int transform_diagonalize, unsigned int transform_generalized_collapse) except *
-    cdef void transform_diagonalize(self, unsigned int t, unsigned int previous_t) except *
-    cdef int transform_generalized_collapse(self, unsigned int t, unsigned int previous_t) except *
+    cdef void transform(self, unsigned int t, unsigned int previous_t, unsigned int transform_diagonalize, unsigned int transform_generalized_collapse, unsigned int reset=*) except *
+    cdef void transform_diagonalize(self, unsigned int t, unsigned int previous_t, unsigned int reset=*) except *
+    cdef int transform_generalized_collapse(self, unsigned int t, unsigned int previous_t, unsigned int reset=*) except *
 
 cdef class dStatespace(object):
     # Statespace dimensions
@@ -153,16 +153,16 @@ cdef class dStatespace(object):
     cdef readonly int _nmissing
 
     # Functions
-    cpdef seek(self, unsigned int t, unsigned int transform_diagonalize, unsigned int transform_generalized_collapse)
+    cpdef seek(self, unsigned int t, unsigned int transform_diagonalize, unsigned int transform_generalized_collapse, unsigned int reset=*)
 
     cdef void set_dimensions(self, unsigned int k_endog, unsigned int k_states, unsigned int k_posdef)
     cdef void select_state_cov(self, unsigned int t)
     cdef int select_missing(self, unsigned int t)
     cdef void _select_missing_entire_obs(self, unsigned int t)
     cdef void _select_missing_partial_obs(self, unsigned int t)
-    cdef void transform(self, unsigned int t, unsigned int previous_t, unsigned int transform_diagonalize, unsigned int transform_generalized_collapse) except *
-    cdef void transform_diagonalize(self, unsigned int t, unsigned int previous_t) except *
-    cdef int transform_generalized_collapse(self, unsigned int t, unsigned int previous_t) except *
+    cdef void transform(self, unsigned int t, unsigned int previous_t, unsigned int transform_diagonalize, unsigned int transform_generalized_collapse, unsigned int reset=*) except *
+    cdef void transform_diagonalize(self, unsigned int t, unsigned int previous_t, unsigned int reset=*) except *
+    cdef int transform_generalized_collapse(self, unsigned int t, unsigned int previous_t, unsigned int reset=*) except *
 
 cdef class cStatespace(object):
     # Statespace dimensions
@@ -230,16 +230,16 @@ cdef class cStatespace(object):
     cdef readonly int _nmissing
 
     # Functions
-    cpdef seek(self, unsigned int t, unsigned int transform_diagonalize, unsigned int transform_generalized_collapse)
+    cpdef seek(self, unsigned int t, unsigned int transform_diagonalize, unsigned int transform_generalized_collapse, unsigned int reset=*)
 
     cdef void set_dimensions(self, unsigned int k_endog, unsigned int k_states, unsigned int k_posdef)
     cdef void select_state_cov(self, unsigned int t)
     cdef int select_missing(self, unsigned int t)
     cdef void _select_missing_entire_obs(self, unsigned int t)
     cdef void _select_missing_partial_obs(self, unsigned int t)
-    cdef void transform(self, unsigned int t, unsigned int previous_t, unsigned int transform_diagonalize, unsigned int transform_generalized_collapse) except *
-    cdef void transform_diagonalize(self, unsigned int t, unsigned int previous_t) except *
-    cdef int transform_generalized_collapse(self, unsigned int t, unsigned int previous_t) except *
+    cdef void transform(self, unsigned int t, unsigned int previous_t, unsigned int transform_diagonalize, unsigned int transform_generalized_collapse, unsigned int reset=*) except *
+    cdef void transform_diagonalize(self, unsigned int t, unsigned int previous_t, unsigned int reset=*) except *
+    cdef int transform_generalized_collapse(self, unsigned int t, unsigned int previous_t, unsigned int reset=*) except *
 
 cdef class zStatespace(object):
     # Statespace dimensions
@@ -307,16 +307,16 @@ cdef class zStatespace(object):
     cdef readonly int _nmissing
 
     # Functions
-    cpdef seek(self, unsigned int t, unsigned int transform_diagonalize, unsigned int transform_generalized_collapse)
+    cpdef seek(self, unsigned int t, unsigned int transform_diagonalize, unsigned int transform_generalized_collapse, unsigned int reset=*)
 
     cdef void set_dimensions(self, unsigned int k_endog, unsigned int k_states, unsigned int k_posdef)
     cdef void select_state_cov(self, unsigned int t)
     cdef int select_missing(self, unsigned int t)
     cdef void _select_missing_entire_obs(self, unsigned int t)
     cdef void _select_missing_partial_obs(self, unsigned int t)
-    cdef void transform(self, unsigned int t, unsigned int previous_t, unsigned int transform_diagonalize, unsigned int transform_generalized_collapse) except *
-    cdef void transform_diagonalize(self, unsigned int t, unsigned int previous_t) except *
-    cdef int transform_generalized_collapse(self, unsigned int t, unsigned int previous_t) except *
+    cdef void transform(self, unsigned int t, unsigned int previous_t, unsigned int transform_diagonalize, unsigned int transform_generalized_collapse, unsigned int reset=*) except *
+    cdef void transform_diagonalize(self, unsigned int t, unsigned int previous_t, unsigned int reset=*) except *
+    cdef int transform_generalized_collapse(self, unsigned int t, unsigned int previous_t, unsigned int reset=*) except *
 
 cdef int sselect_cov(int k, int k_posdef,
                            np.float32_t * tmp,
