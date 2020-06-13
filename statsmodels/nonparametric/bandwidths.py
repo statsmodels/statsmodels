@@ -90,7 +90,7 @@ def bw_silverman(x, kernel=None):
     return .9 * A * n ** (-0.2)
 
 
-def bw_normal_reference(x, kernel=kernels.Gaussian):
+def bw_normal_reference(x, kernel=None):
     """
     Plug-in bandwidth with kernel specific constant based on normal reference.
 
@@ -104,6 +104,7 @@ def bw_normal_reference(x, kernel=kernels.Gaussian):
         Array for which to get the bandwidth
     kernel : CustomKernel object
         Used to calculate the constant for the plug-in bandwidth.
+        The default is a Gaussian kernel.
 
     Returns
     -------
@@ -128,6 +129,8 @@ def bw_normal_reference(x, kernel=kernels.Gaussian):
     Silverman, B.W. (1986) `Density Estimation.`
     Hansen, B.E. (2009) `Lecture Notes on Nonparametrics.`
     """
+    if kernel is None:
+        kernel = kernels.Gaussian()
     C = kernel.normal_reference_constant
     A = _select_sigma(x)
     n = len(x)
