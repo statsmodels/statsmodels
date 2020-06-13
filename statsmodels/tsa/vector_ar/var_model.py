@@ -1608,7 +1608,8 @@ class VARResults(VARProcess):
         sigma_u = self.sigma_u
         intercept = self.intercept
         nobs = self.nobs
-
+        nobs_original = nobs + k_ar
+        
         ma_coll = np.zeros((repl, steps + 1, neqs, neqs))
 
         def fill_coll(sim):
@@ -1619,7 +1620,7 @@ class VARResults(VARProcess):
         for i in range(repl):
             # discard first burn to eliminate correct for starting bias
             sim = util.varsim(coefs, intercept, sigma_u,
-                              seed=seed, steps=nobs+burn)
+                              seed=seed, steps=nobs_original+burn)
             sim = sim[burn:]
             ma_coll[i, :, :, :] = fill_coll(sim)
 
