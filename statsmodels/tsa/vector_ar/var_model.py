@@ -1609,7 +1609,7 @@ class VARResults(VARProcess):
         intercept = self.intercept
         nobs = self.nobs
         nobs_original = nobs + k_ar
-        
+
         ma_coll = np.zeros((repl, steps + 1, neqs, neqs))
 
         def fill_coll(sim):
