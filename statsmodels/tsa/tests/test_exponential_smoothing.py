@@ -106,9 +106,31 @@ def setup_model(
     return model, params, results_R
 
 
-###############################################################################
+@pytest.fixture
+def austourists_model(austourists):
+    return ETSModel(
+        austourists,
+        seasonal_periods=4,
+        error="add",
+        trend="add",
+        seasonal="add",
+        damped_trend=True,
+    )
+
+
+@pytest.fixture
+def oildata_model(oildata):
+    return ETSModel(
+        oildata,
+        error="add",
+        trend="add",
+        damped_trend=True,
+    )
+
+
+#############################################################################
 # DATA
-###############################################################################
+#############################################################################
 
 
 @pytest.fixture
@@ -185,7 +207,7 @@ def austourists():
         61.09776802,
         66.05576122,
     ]
-    index = pd.date_range("1999-03-01", "2015-12-01", freq="3MS")
+    index = pd.date_range("1999-01-01", "2015-12-31", freq="Q")
     return pd.Series(data, index)
 
 
@@ -247,9 +269,9 @@ def oildata():
     return pd.Series(data, index=pd.date_range("1965", "2013", freq="AS"))
 
 
-###############################################################################
+#############################################################################
 # REFERENCE RESULTS
-###############################################################################
+#############################################################################
 
 
 def obtain_R_results(path):
@@ -344,9 +366,9 @@ def get_states_from_R(results_R, k_states):
     return xhat_R
 
 
-###############################################################################
+#############################################################################
 # BASIC TEST CASES
-###############################################################################
+#############################################################################
 
 
 def test_fit_model_austouritsts(setup_model):
@@ -354,9 +376,9 @@ def test_fit_model_austouritsts(setup_model):
     model.fit(disp=False)
 
 
-###############################################################################
+#############################################################################
 # TEST OF MODEL EQUATIONS VS R
-###############################################################################
+#############################################################################
 
 
 def test_smooth_vs_R(setup_model):
@@ -426,9 +448,23 @@ def test_fit_vs_R(setup_model):
     assert loglike >= loglike_R - 1e-4
 
 
-###############################################################################
-# TEST OF KEYWORD ARGUMENTS
-###############################################################################
+def test_predict_vs_R(setup_model):
+    model, params, results_R = setup_model
+    fit = fit_austourists_with_R_params(model, results_R, set_state=True)
+
+    n = fit.nobs
+    prediction = fit.predict(end=n + 3, dynamic=n)
+
+    yhat_R = results_R["fitted"]
+    assert_allclose(prediction[: n], yhat_R, rtol=1e-5, atol=1e-5)
+
+    forecast_R = results_R["forecast"]
+    assert_allclose(prediction[n:], forecast_R, rtol=1e-3, atol=1e-4)
+
+
+#############################################################################
+# OTHER TESTS
+#############################################################################
 
 
 def test_initialization_known(austourists):
@@ -475,29 +511,51 @@ def test_initialization_heuristic(oildata):
 
 def test_bounded_fit(oildata):
     beta = [0.99, 0.99]
-    model = ETSModel(
+    model1 = ETSModel(
         oildata,
         error="add",
         trend="add",
         damped_trend=True,
         bounds={"smoothing_trend": beta}
     )
-    fit = model.fit(disp=False)
-    assert fit.smoothing_trend == 0.99
+    fit1 = model1.fit(disp=False)
+    assert fit1.smoothing_trend == 0.99
+
+    # same using with fix_params semantic
+    model2 = ETSModel(
+        oildata,
+        error="add",
+        trend="add",
+        damped_trend=True,
+    )
+    with model2.fix_params({"smoothing_trend": 0.99}):
+        fit2 = model2.fit(disp=False)
+    assert fit2.smoothing_trend == 0.99
+    assert_allclose(fit1.params, fit2.params)
+
+    # using fit_constrained
+    fit3 = model2.fit_constrained({"smoothing_trend": 0.99})
+    assert fit3.smoothing_trend == 0.99
+    assert_allclose(fit1.params, fit3.params)
 
 
-def test_simulate_keywords(austourists):
+def test_seasonal_periods(austourists):
+    # test auto-deduction of period
+    model = ETSModel(austourists, error="add", trend="add", seasonal="add")
+    assert model.seasonal_periods == 4
+
+    # test if seasonal period raises error
+    try:
+        model = ETSModel(austourists, seasonal="add", seasonal_periods=0)
+    except ValueError:
+        pass
+
+
+def test_simulate_keywords(austourists_model):
     """
     check whether all keywords are accepted and work without throwing errors.
     """
-    fit = ETSModel(
-        austourists,
-        seasonal_periods=4,
-        error="add",
-        trend="add",
-        seasonal="add",
-        damped_trend=True,
-    ).fit(disp=False)
+    fit = austourists_model.fit(disp=False)
 
     # test anchor
     assert_almost_equal(
@@ -506,17 +564,17 @@ def test_simulate_keywords(austourists):
     )
     assert_almost_equal(
         fit.simulate(4, anchor=-1, random_state=0).values,
-        fit.simulate(4, anchor="2015-12-01", random_state=0).values,
+        fit.simulate(4, anchor="2015-12-31", random_state=0).values,
     )
     assert_almost_equal(
         fit.simulate(4, anchor="end", random_state=0).values,
-        fit.simulate(4, anchor="2016-03-01", random_state=0).values,
+        fit.simulate(4, anchor="2016-03-31", random_state=0).values,
     )
 
     # test different random error options
+    fit.simulate(4, repetitions=10)
     fit.simulate(4, repetitions=10, random_errors=scipy.stats.norm)
     fit.simulate(4, repetitions=10, random_errors=scipy.stats.norm())
-
     fit.simulate(4, repetitions=10, random_errors=np.random.randn(4, 10))
     fit.simulate(4, repetitions=10, random_errors="bootstrap")
 
@@ -526,3 +584,41 @@ def test_simulate_keywords(austourists):
         4, repetitions=10, random_state=np.random.RandomState(10)
     ).values
     assert np.all(res == res2)
+
+
+def test_summary(austourists_model):
+    # just try to run summary to see if it works
+    fit = austourists_model.fit(disp=False)
+    fit.summary()
+
+    # now without estimated initial states
+    austourists_model.set_initialization_method("heuristic")
+    fit = austourists_model.fit(disp=False)
+    fit.summary()
+
+    # and with fixed params
+    fit = austourists_model.fit_constrained({"smoothing_trend": 0.9})
+    fit.summary()
+
+
+def test_score(austourists_model):
+    fit = austourists_model.fit(disp=False)
+    score_cs = austourists_model.score(fit.params)
+    score_fd = austourists_model.score(
+        fit.params,
+        approx_complex_step=False,
+        approx_centered=True,
+    )
+    assert_almost_equal(score_cs, score_fd, 4)
+
+
+def test_hessian(austourists_model):
+    # The hessian approximations are not very consistent, but the test makes
+    # sure they run
+    fit = austourists_model.fit(disp=False)
+    austourists_model.hessian(fit.params)
+    austourists_model.hessian(
+        fit.params,
+        approx_complex_step=False,
+        approx_centered=True,
+    )

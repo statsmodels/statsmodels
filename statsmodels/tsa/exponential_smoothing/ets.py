@@ -1581,7 +1581,6 @@ class ETSResults(base.StateSpaceMLEResults):
         start, end, out_of_sample, _ = self.model._get_prediction_index(
             start, end, index
         )
-        y = np.empty(start, end + out_of_sample)
 
         # Handle `dynamic`
         if isinstance(dynamic, (bytes, str)):
@@ -1593,6 +1592,8 @@ class ETSResults(base.StateSpaceMLEResults):
         start_forecast = end_smooth
         end_forecast = end + out_of_sample + 1
         nforecast = end_forecast - start_forecast
+
+        y = np.empty(nsmooth + nforecast)
 
         # In sample nondynamic prediction: smoothing
         y[0:nsmooth] = self.fittedvalues[start_smooth:end_smooth]
