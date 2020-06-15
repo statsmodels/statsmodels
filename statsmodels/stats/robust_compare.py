@@ -98,13 +98,15 @@ def trim_mean(a, proportiontocut, axis=0):
 class TrimmedMean(object):
     '''class for trimmed and winsorized one sample statistics
 
+    axis is None, i.e. ravelling, is not supported
     '''
 
     def __init__(self, data, fraction, is_sorted=False, axis=0):
         self.data = np.asarray(data)
         # TODO: add pandas handling, maybe not if this stays internal
-        self.fraction = fraction
+
         self.axis = axis
+        self.fraction = fraction
         self.nobs = nobs = self.data.shape[axis]
         self.lowercut = lowercut = int(fraction * nobs)
         self.uppercut = uppercut = nobs - lowercut
@@ -121,17 +123,22 @@ class TrimmedMean(object):
         else:
             self.data_sorted = self.data
 
-        self.lowerbound = self.data_sorted[lowercut]
-        self.upperbound = self.data_sorted[uppercut - 1]
+        # this only works for axis=0
+        self.lowerbound = np.take(self.data_sorted, lowercut, axis=axis)
+        self.upperbound = np.take(self.data_sorted, uppercut - 1, axis=axis)
+        # self.lowerbound = self.data_sorted[lowercut]
+        # self.upperbound = self.data_sorted[uppercut - 1]
 
     @property
     def data_trimmed(self):
         # returns a view
-        return self.data_sorted[tuple(self.sl)]
+        return self.data_sorted[self.sl]
 
     @property  # cache
     def data_winsorized(self):
-        return np.clip(self.data_sorted, self.lowerbound, self.upperbound)
+        lb = np.expand_dims(self.lowerbound, self.axis)
+        ub = np.expand_dims(self.upperbound, self.axis)
+        return np.clip(self.data_sorted, lb, ub)
 
     @property
     def mean_trimmed(self):
@@ -144,7 +151,7 @@ class TrimmedMean(object):
     @property
     def var_winsorized(self):
         # hardcoded ddof = 1
-        return np.var(self.data_winsorized, ddof=1)
+        return np.var(self.data_winsorized, ddof=1, axis=self.axis)
         return np.var(self.data_winsorized - self.mean_winsorized,
                       ddof=1 + 2 * self.lowercut, axis=self.axis)
 

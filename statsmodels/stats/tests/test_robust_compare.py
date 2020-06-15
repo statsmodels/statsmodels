@@ -10,6 +10,8 @@ Author: Josef Perktold
 import numpy as np
 from numpy.testing import assert_equal, assert_allclose, assert_raises
 
+import pytest
+
 from statsmodels.stats.robust_compare import (
         TrimmedMean, trim_mean, trimboth)
 import statsmodels.stats.oneway as smo
@@ -112,6 +114,11 @@ class TestTrimmedR1(object):
 
     def test_basic(self):
         tm = self.tm
+        assert_equal(tm.nobs, 19)
+        assert_equal(tm.nobs_reduced, 17)
+        assert_equal(tm.fraction, self.k / 19)
+        assert_equal(tm.data_trimmed.shape[0], tm.nobs_reduced)
+
         res = [tm.mean_trimmed, tm.std_mean_trimmed, tm.mean_winsorized,
                tm.std_mean_winsorized, tm.var_winsorized]
         assert_allclose(res, self.res_basic, rtol=1e-15)
@@ -125,6 +132,58 @@ class TestTrimmedR1(object):
         assert_allclose(ttt[1], ytt1.p_value, rtol=1e-13)
         assert_equal(ttt[2], ytt1.parameter)
         assert_allclose(tm.mean_trimmed, ytt1.estimate, rtol=1e-13)
+
+        # regression test for winsorized t-test,
+        # mean, std for it are separately unit tested,
+        # df is nobs_reduced-1 in references
+        ttw_statistic, ttw_pvalue, tt_w_df = (4.090283559190728,
+                                              0.0008537789444194812, 16)
+        ttw = tm.ttest_mean(transform='winsorized')
+        assert_allclose(ttw[0], ttw_statistic, rtol=1e-13)
+        assert_allclose(ttw[1], ttw_pvalue, rtol=1e-13)
+        assert_equal(ttw[2], tt_w_df)
+
+    def test_other(self):
+        tm = self.tm
+        tm2 = tm.reset_fraction(0.)
+        assert_equal(tm2.nobs_reduced, tm2.nobs)
+
+    @pytest.mark.parametrize('axis', [0, 1])
+    def test_vectorized(self, axis):
+        tm = self.tm
+
+        x = tm.data
+        x2 = np.column_stack((x, 2 * x))
+        if axis == 0:
+            tm2d = TrimmedMean(x2, self.k / 19, axis=0)
+        else:
+            tm2d = TrimmedMean(x2.T, self.k / 19, axis=1)
+        t1 = [tm.mean_trimmed, 2 * tm.mean_trimmed]
+        assert_allclose(tm2d.mean_trimmed, t1, rtol=1e-13)
+
+        t1 = [tm.var_winsorized, 4 * tm.var_winsorized]
+        assert_allclose(tm2d.var_winsorized, t1, rtol=1e-13)
+
+        t1 = [tm.std_mean_trimmed, 2 * tm.std_mean_trimmed]
+        assert_allclose(tm2d.std_mean_trimmed, t1, rtol=1e-13)
+
+        t1 = [tm.mean_winsorized, 2 * tm.mean_winsorized]
+        assert_allclose(tm2d.mean_winsorized, t1, rtol=1e-13)
+
+        t1 = [tm.std_mean_winsorized, 2 * tm.std_mean_winsorized]
+        assert_allclose(tm2d.std_mean_winsorized, t1, rtol=1e-13)
+
+        s2, pv2, df2 = tm2d.ttest_mean()
+        s, pv, df = tm.ttest_mean()
+        assert_allclose(s2, [s, s], rtol=1e-13)
+        assert_allclose(pv2, [pv, pv], rtol=1e-13)
+        assert_allclose(df2, df, rtol=1e-13)
+
+        s2, pv2, df2 = tm2d.ttest_mean(transform='winsorized')
+        s, pv, df = tm.ttest_mean(transform='winsorized')
+        assert_allclose(s2, [s, s], rtol=1e-13)
+        assert_allclose(pv2, [pv, pv], rtol=1e-13)
+        assert_allclose(df2, df, rtol=1e-13)
 
 
 class TestTrimmedRAnova(object):
