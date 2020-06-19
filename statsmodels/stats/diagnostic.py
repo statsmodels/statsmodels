@@ -396,7 +396,7 @@ def compare_encompassing(results_x, results_z, cov_type="nonrobust",
 
 
 def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
-                   return_df=None):
+                   return_df=None, auto_lag=False):
     """
     Ljung-Box test of autocorrelation in residuals.
 
@@ -434,6 +434,9 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
         After 0.12, this will become the only return method.  Set to True
         to return the DataFrame or False to continue returning the 2 - 4
         output. If None (the default), a warning is raised.
+    auto_lag: bool, default False
+        Flag indicating whether to automatically determine the optimal lag
+        length based on threshold of maximum correlation value.
 
     Returns
     -------
@@ -467,6 +470,9 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
     References
     ----------
     .. [*] Green, W. "Econometric Analysis," 5th ed., Pearson, 2003.
+    .. [*] J. Carlos Escanciano, Ignacio N. Lobato
+          "An automatic Portmanteau test for serial correlation".,
+          Volume 151, 2009.
 
     Examples
     --------
@@ -477,6 +483,25 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
            lb_stat     lb_pvalue
     10  214.106992  1.827374e-40
     """
+    def get_optimal_length(threshold_metric, threshold, maxlag, func):
+        optimal_lag = 0
+        least_penalised = 0
+
+        for lags in range(1, maxlag + 1):
+            if (threshold_metric <= threshold):
+                penalty = lags * np.log(nobs)
+            else:
+                penalty = 2 * lags
+
+            test_statistic = func(lags)
+            penalised = test_statistic - penalty
+            if (penalised > least_penalised):
+                optimal_lag = lags
+                least_penalised = penalised
+
+        return optimal_lag
+    # Avoid cyclic import
+    from statsmodels.tsa.stattools import acf
     x = array_like(x, "x")
     period = int_like(period, "period", optional=True)
     return_df = bool_like(return_df, "return_df", optional=True)
@@ -486,7 +511,31 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
     if model_df < 0:
         raise ValueError("model_df must be >= 0")
     nobs = x.shape[0]
-    if period is not None:
+    if auto_lag:
+        maxlag = nobs - 1
+
+        # Compute threshold metrics
+        sacf = acf(x, nlags=maxlag, fft=False)
+        sacf2 = sacf[1:maxlag + 1] ** 2 / (nobs - np.arange(1, maxlag + 1))
+        q = 2.4
+        threshold = np.sqrt(q * np.log(nobs))
+        threshold_metric = max(np.abs(sacf)) * np.sqrt(nobs)
+
+        if not boxpierce:
+            lags = get_optimal_length(
+                threshold_metric,
+                threshold, maxlag,
+                lambda p: nobs * (nobs + 2) * np.cumsum(sacf2)[p - 1])
+        else:
+            lags = get_optimal_length(
+                threshold_metric,
+                threshold,
+                maxlag,
+                lambda p: nobs * np.cumsum(sacf[1:maxlag + 1] ** 2)[p - 1])
+
+        lags = int_like(lags, "lags")
+        lags = np.arange(1, lags + 1)
+    elif period is not None:
         lags = np.arange(1, min(nobs // 5, 2 * period) + 1, dtype=np.int)
     elif lags is None:
         # TODO: Switch to min(10, nobs//5) after 0.12
@@ -503,8 +552,6 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
     lags = array_like(lags, "lags", dtype="int")
     maxlag = lags.max()
 
-    # Avoid cyclic import
-    from statsmodels.tsa.stattools import acf
     # normalize by nobs not (nobs-nlags)
     # SS: unbiased=False is default now
     sacf = acf(x, nlags=maxlag, fft=False)
