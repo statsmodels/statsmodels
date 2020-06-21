@@ -59,6 +59,52 @@ def test_mvmean(data, mean_null=0, return_results=True):
     else:
         return statistic, pvalue
 
+def test_mvmean_two_sample(data_x, data_y, return_results=True):
+    """Hotellings test for multivariate mean in two samples
+
+    Parameters
+    ----------
+    data_x : array_like
+        first sample data with observations in rows and variables in columns
+    data_x : array_like
+        second sample data with observations in rows and variables in columns
+    return_results : bool
+        If true, then a results instance is returned. If False, then only
+        the test statistic and pvalue are returned.
+
+    Returns
+    -------
+    results : instance of a results class with attributes
+        statistic, pvalue, t2 and df
+    (statistic, pvalue) : tuple
+        If return_results is false, then only the test statistic and the
+        pvalue are returned.
+
+    """
+    x = np.asarray(data_x)
+    y = np.asarray(data_y)
+    nobs_x, k_vars = x.shape
+    nobs_y, k_vars = y.shape
+    mean_x = x.mean(0)
+    mean_y = y.mean(0)
+    cov_x = np.cov(x, rowvar=False, ddof=1)
+    cov_y = np.cov(y, rowvar=False, ddof=1)
+    combined_cov = ((nobs_x - 1) * cov_x + (nobs_y - 1) * cov_y) / (nobs_x - 1 + nobs_y - 1)
+    diff = mean_x - mean_y
+    t2 = (nobs_x * nobs_y) / (nobs_x + nobs_y) * diff.dot(np.linalg.solve(combined_cov, diff))
+    factor = ((nobs_x + nobs_y - 2) * k_vars) / (nobs_x + nobs_y - k_vars - 1)
+    statistic = t2 / factor
+    df = (k_vars, nobs_x + nobs_y - 1 - k_vars)
+    pvalue = stats.f.sf(statistic, df[0], df[1])
+    if return_results:
+        res = HolderTuple(statistic=statistic,
+                          pvalue=pvalue,
+                          df=df,
+                          t2=t2,
+                          distr="F")
+        return res
+    else:
+        return statistic, pvalue
 
 def confint_mvmean(data, lin_transf=None, alpha=0.5, simult=False):
     """Confidence interval for linear transformation of a multivariate mean
