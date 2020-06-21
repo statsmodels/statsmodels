@@ -66,7 +66,7 @@ def test_mvmean_two_sample(data_x, data_y, return_results=True):
     ----------
     data_x : array_like
         first sample data with observations in rows and variables in columns
-    data_x : array_like
+    data_y : array_like
         second sample data with observations in rows and variables in columns
     return_results : bool
         If true, then a results instance is returned. If False, then only
