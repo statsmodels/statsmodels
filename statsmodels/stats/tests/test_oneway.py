@@ -12,8 +12,7 @@ from numpy.testing import assert_allclose, assert_equal
 
 from statsmodels.regression.linear_model import OLS
 import statsmodels.stats.power as smpwr
-import statsmodels.stats.robust_compare as smr
-import statsmodels.stats.oneway as smo
+import statsmodels.stats.oneway as smo  # needed for function with `test`
 from statsmodels.stats.oneway import (
     confint_effectsize_oneway, confint_noncentrality, effectsize_oneway,
     anova_oneway,
@@ -21,7 +20,7 @@ from statsmodels.stats.oneway import (
     power_equivalence_oneway, power_equivalence_oneway0,
     f2_to_wellek, fstat_to_wellek, wellek_to_f2)
 from statsmodels.stats.contrast import (
-    wald_test_noncent_generic)
+    wald_test_noncent_generic, wald_test_noncent, _offset_constraint)
 
 
 def test_oneway_effectsize():
@@ -101,7 +100,7 @@ def test_effectsize_fstat():
     CI_f = 1.47694659580859, 2.43793847155554
 
     f_stat, df1, df2 = 45.8, 3, 35
-    nobs = df1 + df2 + 1
+    # nobs = df1 + df2 + 1  # not directly used in the following, only df
     fes = smo._fstat2effectsize(f_stat, df1, df2)
     assert_allclose(np.sqrt(fes.f2), Cohens_f_partial, rtol=1e-13)
     assert_allclose(fes.eta2, Eta_Sq_partial, rtol=1e-13)
@@ -331,7 +330,7 @@ class TestOnewayScale(object):
 
         # > st = homog.test(y ~ g, df3, method = "Bartlett")
         statistic = 3.01982414477323
-        parameter = 2
+        # parameter = 2  # scipy bartlett does not return df
         p_value = 0.220929402900495
         # method = "Bartlett's Homogeneity Test"
         # Bartlett is in scipy.stats
@@ -458,6 +457,10 @@ class TestOnewayOLS(object):
                                           diff=None, joint=True)
         assert_allclose(nc_wt, wt.statistic * wt.df_num, rtol=1e-13)
 
+        nc_wt2 = wald_test_noncent(res_ols.params, c_equal, v, res_ols,
+                                   diff=None, joint=True)
+        assert_allclose(nc_wt2, nc_wt, rtol=1e-13)
+
         es_ols = nc_wt / nobs_t
         es_oneway = smo.effectsize_oneway(res_ols.params, res_ols.scale,
                                           self.nobs, use_var="equal")
@@ -469,6 +472,25 @@ class TestOnewayOLS(object):
         pow_oneway = smpwr.ftest_anova_power(np.sqrt(es_oneway), nobs_t, alpha,
                                              k_groups=k, df=None)
         assert_allclose(pow_ols, pow_oneway, rtol=1e-13)
+
+        # noncentrality at other params
+        params_alt = res_ols.params * 0.75
+        # compute constraint value so we can get noncentrality from wald_test
+        v_off = _offset_constraint(c_equal, res_ols.params, params_alt)
+        wt_off = res_ols.wald_test((c_equal, v + v_off))
+        nc_wt_off = wald_test_noncent_generic(params_alt, c_equal, v,
+                                              cov_p, diff=None, joint=True)
+        assert_allclose(nc_wt_off, wt_off.statistic * wt_off.df_num,
+                        rtol=1e-13)
+
+        # check vectorized version, joint=False
+        nc_wt_vec = wald_test_noncent_generic(params_alt, c_equal, v,
+                                              cov_p, diff=None, joint=False)
+        for i in range(c_equal.shape[0]):
+            nc_wt_i = wald_test_noncent_generic(params_alt, c_equal[i : i + 1],  #noqa
+                                                v[i : i + 1], cov_p, diff=None,  #noqa
+                                                joint=False)
+            assert_allclose(nc_wt_vec[i], nc_wt_i, rtol=1e-13)
 
 
 def test_simulate_equivalence():

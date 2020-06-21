@@ -8,7 +8,6 @@ Author: Josef Perktold
 
 import numbers
 import numpy as np
-from scipy import stats
 
 # the trimboth and trim_mean are taken from scipy.stats.stats
 # and enhanced by axis
@@ -152,8 +151,6 @@ class TrimmedMean(object):
     def var_winsorized(self):
         # hardcoded ddof = 1
         return np.var(self.data_winsorized, ddof=1, axis=self.axis)
-        return np.var(self.data_winsorized - self.mean_winsorized,
-                      ddof=1 + 2 * self.lowercut, axis=self.axis)
 
     @property
     def std_mean_trimmed(self):

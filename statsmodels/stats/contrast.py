@@ -700,10 +700,9 @@ def wald_test_noncent(params, r_matrix, value, results, diff=None, joint=True):
         be estimated parameters or parameters under an alternative.
     r_matrix : ndarray
         Restriction matrix or contrasts for the Null hypothesis
-
     value : None or ndarray
         Value of the linear combination of parameters under the null
-        hypothesis. If value is None, then it will be replace by zero.
+        hypothesis. If value is None, then it will be replaced by zero.
     results : Results instance of a model
         The results instance is used to compute the covariance matrix of the
         linear constraints using `cov_params.
