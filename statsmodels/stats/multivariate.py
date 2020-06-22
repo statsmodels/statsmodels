@@ -59,14 +59,14 @@ def test_mvmean(data, mean_null=0, return_results=True):
     else:
         return statistic, pvalue
 
-def test_mvmean_two_sample(x, y, return_results=True):
+def test_mvmean_2indep(data1, data2):
     """Hotellings test for multivariate mean in two samples
 
     Parameters
     ----------
-    x : array_like
+    data1 : array_like
         first sample data with observations in rows and variables in columns
-    y : array_like
+    data2 : array_like
         second sample data with observations in rows and variables in columns
 
     Returns
@@ -74,20 +74,21 @@ def test_mvmean_two_sample(x, y, return_results=True):
     results : instance of a results class with attributes
         statistic, pvalue, t2 and df
     """
-    x = array_like(x, "x", ndim=2)
-    y = array_like(y, "x", ndim=2)
-    nobs_x, k_vars = x.shape
-    nobs_y, k_vars = y.shape
-    mean_x = x.mean(0)
-    mean_y = y.mean(0)
-    cov_x = np.cov(x, rowvar=False, ddof=1)
-    cov_y = np.cov(y, rowvar=False, ddof=1)
-    combined_cov = ((nobs_x - 1) * cov_x + (nobs_y - 1) * cov_y) / (nobs_x - 1 + nobs_y - 1)
+    x1 = array_like(data1, "x1", ndim=2)
+    x2 = array_like(data2, "x2", ndim=2)
+    nobs_x, k_vars = x1.shape
+    nobs_y, k_vars = x2.shape
+    mean_x = x1.mean(0)
+    mean_y = x2.mean(0)
+    cov_x = np.cov(x1, rowvar=False, ddof=1)
+    cov_y = np.cov(x2, rowvar=False, ddof=1)
+    nobs_t = nobs_x + nobs_y
+    combined_cov = ((nobs_x - 1) * cov_x + (nobs_y - 1) * cov_y) / (nobs_t - 2)
     diff = mean_x - mean_y
-    t2 = (nobs_x * nobs_y) / (nobs_x + nobs_y) * diff @ (np.linalg.solve(combined_cov, diff))
-    factor = ((nobs_x + nobs_y - 2) * k_vars) / (nobs_x + nobs_y - k_vars - 1)
+    t2 = (nobs_x * nobs_y) / nobs_t * diff @ (np.linalg.solve(combined_cov, diff))
+    factor = ((nobs_t - 2) * k_vars) / (nobs_t - k_vars - 1)
     statistic = t2 / factor
-    df = (k_vars, nobs_x + nobs_y - 1 - k_vars)
+    df = (k_vars, nobs_t - 1 - k_vars)
     pvalue = stats.f.sf(statistic, df[0], df[1])
     return HolderTuple(statistic=statistic,
                       pvalue=pvalue,

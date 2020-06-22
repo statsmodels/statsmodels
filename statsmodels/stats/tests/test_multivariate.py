@@ -102,7 +102,7 @@ def test_mv_mean():
     res = smmv.confint_mvmean(x, lin_transf=np.eye(4), alpha=0.05)
     assert_allclose(res, ci2, rtol=1e-13)
 
-def test_mv_mean_two_sample():
+def test_mvmean_2indep():
     x = np.asarray([[1.0, 24.0, 23.5, 1.0],
                     [2.0, 25.0, 24.5, 1.0],
                     [3.0, 21.0, 20.5, 1.0],
@@ -153,7 +153,7 @@ def test_mv_mean_two_sample():
                     [11.3, 23.3, 22.2, 0.0],
                     [11.7, 18.8, 18.1, 0.1]])
 
-    res = smmv.test_mvmean_two_sample(x, y)
+    res = smmv.test_mvmean_2indep(x, y)
 
     res_stata = Holder(p_F=0.6686659171701677,
                        df_r=43,
