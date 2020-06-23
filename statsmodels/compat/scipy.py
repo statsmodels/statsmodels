@@ -3,10 +3,12 @@ from distutils.version import LooseVersion
 import numpy as np
 import scipy
 
-SCIPY_11 = (LooseVersion(scipy.__version__) < LooseVersion('1.2.0') and
-            LooseVersion(scipy.__version__) >= LooseVersion('1.1.0'))
+SP_VERSION = LooseVersion(scipy.__version__)
+SCIPY_11 = SP_VERSION < LooseVersion("1.2.0")
+SCIPY_11 = SCIPY_11 and SP_VERSION >= LooseVersion("1.1.0")
 
-SCIPY_GT_14 = LooseVersion(scipy.__version__) >= LooseVersion('1.5')
+SCIPY_GT_14 = SP_VERSION >= LooseVersion("1.5")
+SP_LT_15 = SP_VERSION < LooseVersion("1.5")
 
 
 def _next_regular(target):
@@ -25,7 +27,7 @@ def _next_regular(target):
     if not (target & (target - 1)):
         return target
 
-    match = float('inf')  # Anything found will be smaller
+    match = float("inf")  # Anything found will be smaller
     p5 = 1
     while p5 < target:
         p35 = p5
