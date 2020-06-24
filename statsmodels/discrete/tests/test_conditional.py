@@ -172,7 +172,7 @@ def test_lasso_logistic():
     lin_pred = np.dot(x, params) + group_effects
 
     mean = 1 / (1 + np.exp(-lin_pred))
-    y = (np.random.uniform(size=n) < mean).astype(np.int)
+    y = (np.random.uniform(size=n) < mean).astype(int)
 
     model0 = ConditionalLogit(y, x, groups=groups)
     result0 = model0.fit()

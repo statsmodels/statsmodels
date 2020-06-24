@@ -536,7 +536,7 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
         lags = int_like(lags, "lags")
         lags = np.arange(1, lags + 1)
     elif period is not None:
-        lags = np.arange(1, min(nobs // 5, 2 * period) + 1, dtype=np.int)
+        lags = np.arange(1, min(nobs // 5, 2 * period) + 1, dtype=int)
     elif lags is None:
         # TODO: Switch to min(10, nobs//5) after 0.12
         import warnings
@@ -544,8 +544,8 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
                       "this value will become min(10, nobs//5). Directly set"
                       "lags to silence this warning.", FutureWarning)
         # Future
-        # lags = np.arange(1, min(nobs // 5, 10) + 1, dtype=np.int)
-        lags = np.arange(1, min((nobs // 2 - 2), 40) + 1, dtype=np.int)
+        # lags = np.arange(1, min(nobs // 5, 10) + 1, dtype=int)
+        lags = np.arange(1, min((nobs // 2 - 2), 40) + 1, dtype=int)
     elif not isinstance(lags, Iterable):
         lags = int_like(lags, "lags")
         lags = np.arange(1, lags + 1)
@@ -1261,10 +1261,10 @@ def linear_reset(res, power=3, test_type="fitted", use_f=False,
     if isinstance(power, int):
         if power < 2:
             raise ValueError("power must be >= 2")
-        power = np.arange(2, power + 1, dtype=np.int)
+        power = np.arange(2, power + 1, dtype=int)
     else:
         try:
-            power = np.array(power, dtype=np.int)
+            power = np.array(power, dtype=int)
         except Exception:
             raise ValueError("power must be an integer or list of integers")
         if power.ndim != 1 or len(set(power)) != power.shape[0] or \

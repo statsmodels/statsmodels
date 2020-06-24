@@ -397,7 +397,7 @@ class TestGlmBinomial(CheckModelResultsMixin):
         from statsmodels.datasets.star98 import load
         data = load(as_pandas=False)
         data.exog = add_constant(data.exog, prepend=False)
-        endog = data.endog.astype(np.int)
+        endog = data.endog.astype(int)
         res2 = GLM(endog, data.exog, family=sm.families.Binomial()).fit()
         assert_allclose(res2.params, self.res1.params)
         endog = data.endog.astype(np.double)

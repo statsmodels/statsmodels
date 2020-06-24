@@ -87,21 +87,22 @@ def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
     # create list of label positions
     labelPos = np.arange(0, nvars) + 0.5
 
-    if ynames is not None:
+    if isinstance(ynames, list) and len(ynames) == 0:
+        ax.set_yticks([])
+    elif ynames is not None:
         ax.set_yticks(labelPos)
         ax.set_yticks(labelPos[:-1]+0.5, minor=True)
         ax.set_yticklabels(ynames[::-1], fontsize='small',
                            horizontalalignment='right')
-    elif ynames == []:
-        ax.set_yticks([])
 
-    if xnames is not None:
+    if isinstance(xnames, list) and len(xnames) == 0:
+        ax.set_xticks([])
+    elif xnames is not None:
         ax.set_xticks(labelPos)
         ax.set_xticks(labelPos[:-1]+0.5, minor=True)
         ax.set_xticklabels(xnames, fontsize='small', rotation=45,
                            horizontalalignment='right')
-    elif xnames == []:
-        ax.set_xticks([])
+
 
     if not title == '':
         ax.set_title(title)

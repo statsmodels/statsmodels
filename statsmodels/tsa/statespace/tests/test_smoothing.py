@@ -1466,7 +1466,8 @@ def test_news_revisions(missing, filter_univariate, tvp):
         # Test for the revisions
         desired = (out.revision_results.smoothed_forecasts[..., t] -
                    res.smoothed_forecasts[..., t])
-        assert_allclose(out.revision_impacts, desired, atol=1e-12)
+        # Relaxed tolerance to 1e-10 after random failures
+        assert_allclose(out.revision_impacts, desired, atol=1e-10)
 
 
 @pytest.mark.parametrize('missing', ['all', 'partial', 'mixed', None])

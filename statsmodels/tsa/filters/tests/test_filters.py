@@ -122,7 +122,7 @@ def test_bking2d():
         [151.2402, .9644226], [163.0648, .6865934], [154.6432, .0115685]])
 
     mdata = macrodata.load_pandas()
-    X = mdata.data[['realinv', 'cpi']].values.astype(np.float)
+    X = mdata.data[['realinv', 'cpi']].values.astype(float)
     Y = bkfilter(X, 6, 32, 12)
     assert_almost_equal(Y, bking_results, 4)
 

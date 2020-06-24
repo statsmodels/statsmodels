@@ -56,7 +56,7 @@ class LeaveOneOut(object):
     def __iter__(self):
         n = self.n
         for i in range(n):
-            test_index  = np.zeros(n, dtype=np.bool)
+            test_index  = np.zeros(n, dtype=bool)
             test_index[i] = True
             train_index = np.logical_not(test_index)
             yield train_index, test_index
@@ -114,7 +114,7 @@ class LeavePOut(object):
         p = self.p
         comb = combinations(lrange(n), p)
         for idx in comb:
-            test_index = np.zeros(n, dtype=np.bool)
+            test_index = np.zeros(n, dtype=bool)
             test_index[np.array(idx)] = True
             train_index = np.logical_not(test_index)
             yield train_index, test_index
@@ -176,7 +176,7 @@ class KFold(object):
         j = int(np.ceil(n/k))
 
         for i in range(k):
-            test_index  = np.zeros(n, dtype=np.bool)
+            test_index  = np.zeros(n, dtype=bool)
             if i<k-1:
                 test_index[i*j:(i+1)*j] = True
             else:
@@ -239,7 +239,7 @@ class LeaveOneLabelOut(object):
         # We make a copy here to avoid side-effects during iteration
         labels = np.array(self.labels, copy=True)
         for i in np.unique(labels):
-            test_index  = np.zeros(len(labels), dtype=np.bool)
+            test_index  = np.zeros(len(labels), dtype=bool)
             test_index[labels==i] = True
             train_index = np.logical_not(test_index)
             yield train_index, test_index
@@ -348,9 +348,9 @@ class KStepAhead(object):
 
         else: #for compatibility with other iterators
             for i in range(start, n-k):
-                train_index  = np.zeros(n, dtype=np.bool)
+                train_index  = np.zeros(n, dtype=bool)
                 train_index[:i] = True
-                test_index  = np.zeros(n, dtype=np.bool)
+                test_index  = np.zeros(n, dtype=bool)
                 if self.kall:
                     test_index[i:i+k] = True # np.logical_not(test_index)
                 else:

@@ -199,7 +199,7 @@ class TimeTrendDeterministicTerm(DeterministicTerm, ABC):
     def _get_terms(self, locs: np.ndarray) -> np.ndarray:
         nterms = int(self._constant) + self._order
         terms = np.tile(locs, (1, nterms))
-        power = np.zeros((1, nterms), dtype=np.int)
+        power = np.zeros((1, nterms), dtype=int)
         power[0, int(self._constant) :] = np.arange(1, self._order + 1)
         terms **= power
         return terms
@@ -1257,7 +1257,7 @@ additional components using the additional_terms input."""
             r = res[0]
             p = res[-1]
             abs_diag = np.abs(np.diag(r))
-            tol = abs_diag[0] * terms_arr.shape[1] * np.finfo(np.float).eps
+            tol = abs_diag[0] * terms_arr.shape[1] * np.finfo(float).eps
             rank = int(np.sum(abs_diag > tol))
             rpx = r.T @ terms_arr
             keep = [0]

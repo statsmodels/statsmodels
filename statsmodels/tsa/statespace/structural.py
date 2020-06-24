@@ -763,7 +763,7 @@ class UnobservedComponents(MLEModel):
         # Some of the variances may be tied together (repeated parameter usage)
         # Use list() for compatibility with python 3.5
         param_keys = list(self.parameters_state_cov.keys())
-        self._var_repetitions = np.ones(self.k_state_cov, dtype=np.int)
+        self._var_repetitions = np.ones(self.k_state_cov, dtype=int)
         if self.freq_seasonal:
             for ix, is_stochastic in enumerate(self.stochastic_freq_seasonal):
                 if is_stochastic:

@@ -299,11 +299,12 @@ def iqr(x1, x2, axis=0):
 # ---------------------
 
 def aic(llf, nobs, df_modelwc):
-    """Akaike information criterion
+    """
+    Akaike information criterion
 
     Parameters
     ----------
-    llf : float
+    llf : {float, array_like}
         value of the loglikelihood
     nobs : int
         number of observations
@@ -323,11 +324,12 @@ def aic(llf, nobs, df_modelwc):
 
 
 def aicc(llf, nobs, df_modelwc):
-    """Akaike information criterion (AIC) with small sample correction
+    """
+    Akaike information criterion (AIC) with small sample correction
 
     Parameters
     ----------
-    llf : float
+    llf : {float, array_like}
         value of the loglikelihood
     nobs : int
         number of observations
@@ -347,11 +349,12 @@ def aicc(llf, nobs, df_modelwc):
 
 
 def bic(llf, nobs, df_modelwc):
-    """Bayesian information criterion (BIC) or Schwarz criterion
+    """
+    Bayesian information criterion (BIC) or Schwarz criterion
 
     Parameters
     ----------
-    llf : float
+    llf : {float, array_like}
         value of the loglikelihood
     nobs : int
         number of observations
@@ -371,11 +374,12 @@ def bic(llf, nobs, df_modelwc):
 
 
 def hqic(llf, nobs, df_modelwc):
-    """Hannan-Quinn information criterion (HQC)
+    """
+    Hannan-Quinn information criterion (HQC)
 
     Parameters
     ----------
-    llf : float
+    llf : {float, array_like}
         value of the loglikelihood
     nobs : int
         number of observations
@@ -397,7 +401,8 @@ def hqic(llf, nobs, df_modelwc):
 # IC based on residual sigma
 
 def aic_sigma(sigma2, nobs, df_modelwc, islog=False):
-    r"""Akaike information criterion
+    r"""
+    Akaike information criterion
 
     Parameters
     ----------

@@ -259,7 +259,7 @@ class VariableScreening(object):
         fit_kwds.update(fkwds)
 
         history = defaultdict(list)
-        idx_nonzero = np.arange(k_keep, dtype=np.int)
+        idx_nonzero = np.arange(k_keep, dtype=int)
         keep = np.ones(k_keep, np.bool_)
         idx_excl = np.arange(k_keep, k_vars)
         mod_pen = model_class(endog, x0, **self.init_kwds)

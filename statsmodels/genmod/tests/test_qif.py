@@ -27,7 +27,7 @@ def test_qif_numdiff(fam, cov_struct):
         y = np.random.poisson(5, size=n)
     elif isinstance(fam, families.Binomial):
         y = np.random.randint(0, 2, size=n)
-    g = np.kron(np.arange(n//q), np.ones(q)).astype(np.int)
+    g = np.kron(np.arange(n//q), np.ones(q)).astype(int)
 
     model = QIF(y, x, groups=g, family=fam, cov_struct=cov_struct)
 
@@ -73,8 +73,8 @@ def test_qif_fit(fam, cov_struct):
     elif isinstance(fam, families.Binomial):
         lpr = np.dot(x, params)
         mean = 1 / (1 + np.exp(-lpr))
-        y = (np.random.uniform(0, 1, size=n) < mean).astype(np.int)
-    g = np.kron(np.arange(n // q), np.ones(q)).astype(np.int)
+        y = (np.random.uniform(0, 1, size=n) < mean).astype(int)
+    g = np.kron(np.arange(n // q), np.ones(q)).astype(int)
 
     model = QIF(y, x, groups=g, family=fam, cov_struct=cov_struct)
     rslt = model.fit()

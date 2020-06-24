@@ -160,7 +160,7 @@ def get_lilliefors_table(dist='norm'):
     cv_data = critical_values[dist]
     acv_data = asymp_critical_values[dist]
 
-    size = np.array(sorted(cv_data), dtype=np.float)
+    size = np.array(sorted(cv_data), dtype=float)
     crit_lf = np.array([cv_data[key] for key in sorted(cv_data)])
     crit_lf = crit_lf[:, ::-1]
 

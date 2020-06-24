@@ -248,7 +248,7 @@ def multinomial_proportions_confint(counts, alpha=0.05, method='goodman'):
     '''
     if alpha <= 0 or alpha >= 1:
         raise ValueError('alpha must be in (0, 1), bounds excluded')
-    counts = np.array(counts, dtype=np.float)
+    counts = np.array(counts, dtype=float)
     if (counts < 0).any():
         raise ValueError('counts must be >= 0')
 

@@ -861,11 +861,11 @@ class TestGEE(object):
         n = 10000
 
         # Outer groups
-        groups = np.kron(np.arange(n // 100), np.ones(100)).astype(np.int)
+        groups = np.kron(np.arange(n // 100), np.ones(100)).astype(int)
 
         # Inner groups
-        groups1 = np.kron(np.arange(n // 50), np.ones(50)).astype(np.int)
-        groups2 = np.kron(np.arange(n // 10), np.ones(10)).astype(np.int)
+        groups1 = np.kron(np.arange(n // 50), np.ones(50)).astype(int)
+        groups2 = np.kron(np.arange(n // 10), np.ones(10)).astype(int)
 
         # Group effects
         groups_e = np.random.normal(size=n // 100)

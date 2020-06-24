@@ -72,7 +72,7 @@ def primes_from_2_to(n):
     ----------
     [1] `StackOverflow <https://stackoverflow.com/questions/2068372>`_.
     """
-    sieve = np.ones(n // 3 + (n % 6 == 2), dtype=np.bool)
+    sieve = np.ones(n // 3 + (n % 6 == 2), dtype=bool)
     for i in range(1, int(n ** 0.5) // 3 + 1):
         if sieve[i]:
             k = 3 * i + 1 | 1

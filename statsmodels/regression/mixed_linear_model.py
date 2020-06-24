@@ -2254,7 +2254,7 @@ class _mixedlm_distribution(object):
         self.vcomp = scale * po.vcomp
         self.scale = scale
 
-        group_idx = np.zeros(model.nobs, dtype=np.int)
+        group_idx = np.zeros(model.nobs, dtype=int)
         for k, g in enumerate(model.group_labels):
             group_idx[model.row_indices[g]] = k
         self.group_idx = group_idx

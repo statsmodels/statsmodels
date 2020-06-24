@@ -515,7 +515,7 @@ class ConditionalMNLogit(_ConditionalModel):
             endog, exog, missing=missing, **kwargs)
 
         # endog must be integers
-        self.endog = self.endog.astype(np.int)
+        self.endog = self.endog.astype(int)
 
         self.k_cat = self.endog.max() + 1
         self.df_model = (self.k_cat - 1) * self.exog.shape[1]
@@ -584,7 +584,7 @@ class ConditionalMNLogit(_ConditionalModel):
         ll = 0.0
         for ii in self._grp_ix:
             x = lpr[ii, :]
-            jj = np.arange(x.shape[0], dtype=np.int)
+            jj = np.arange(x.shape[0], dtype=int)
             y = self.endog[ii]
             denom = 0.0
             for p in itertools.permutations(y):
@@ -606,7 +606,7 @@ class ConditionalMNLogit(_ConditionalModel):
         grad = np.zeros((q, c))
         for ii in self._grp_ix:
             x = lpr[ii, :]
-            jj = np.arange(x.shape[0], dtype=np.int)
+            jj = np.arange(x.shape[0], dtype=int)
             y = self.endog[ii]
             denom = 0.0
             denomg = np.zeros((q, c))

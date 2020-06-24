@@ -323,7 +323,7 @@ def integer(request):
     return request.param
 
 
-@pytest.fixture(params=(3.2, np.float32(3.2), 3 + 2j, np.complex(2.3 + 0j),
+@pytest.fixture(params=(3.2, np.float32(3.2), 3 + 2j, complex(2.3 + 0j),
                         'apple', 1.0 + 0j, np.timedelta64(2)))
 def not_integer(request):
     return request.param

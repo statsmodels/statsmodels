@@ -648,7 +648,7 @@ def _maybe_convert_to_int_keys(convert_dates, varlist):
             new_dict.update({key : convert_dates[key]})
     return new_dict
 
-_type_converters = {253 : np.long, 252 : int}
+_type_converters = {253 : int, 252 : int}
 
 class StataWriter(object):
     """

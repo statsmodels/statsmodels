@@ -193,7 +193,7 @@ def _recode(x, levels):
         raise ValueError('The levels do not match the array values.')
 
     else:
-        out = np.empty(x.shape[0], dtype=np.int)
+        out = np.empty(x.shape[0], dtype=int)
         for level, coding in iteritems(levels):
             out[x == level] = coding
 

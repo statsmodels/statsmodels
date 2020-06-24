@@ -34,7 +34,7 @@ import statsmodels.tsa._exponential_smoothers as smoothers
 
 def _holt_init(x, xi, p, y, l, b):
     """Initialization for the Holt Models"""
-    p[xi.astype(np.bool)] = x
+    p[xi.astype(bool)] = x
     alpha, beta, _, l0, b0, phi = p[:6]
     alphac = 1 - alpha
     betac = 1 - beta
@@ -94,7 +94,7 @@ def _holt_add_dam(x, xi, p, y, l, b, s, m, n, max_seen):
 
 def _holt_win_init(x, xi, p, y, l, b, s, m):
     """Initialization for the Holt Winters Seasonal Models"""
-    p[xi.astype(np.bool)] = x
+    p[xi.astype(bool)] = x
     alpha, beta, gamma, l0, b0, phi = p[:6]
     s0 = p[6:]
     alphac = 1 - alpha
@@ -1021,7 +1021,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         max_seen = np.finfo(np.double).max
         l0, b0, s0 = self.initial_values()
 
-        xi = np.zeros_like(p, dtype=np.bool)
+        xi = np.zeros_like(p, dtype=bool)
         if optimized:
             init_alpha = alpha if alpha is not None else 0.5 / max(m, 1)
             init_beta = beta if beta is not None else 0.1 * init_alpha if trending else beta
@@ -1050,7 +1050,7 @@ class ExponentialSmoothing(TimeSeriesModel):
                 # Have a quick look in the region for a good starting place for alpha etc.
                 # using guesstimates for the levels
                 txi = xi & np.array([True, True, True, False, False, True] + [False] * m)
-                txi = txi.astype(np.bool)
+                txi = txi.astype(bool)
                 bounds = ([(0.0, 1.0), (0.0, 1.0), (0.0, 1.0), (0.0, None),
                            (0.0, None), (0.0, 1.0)] + [(None, None), ] * m)
                 args = (txi.astype(np.uint8), p, y, lvls, b, s, m, self.nobs,
@@ -1089,7 +1089,7 @@ class ExponentialSmoothing(TimeSeriesModel):
                     # Take a deeper look in the local minimum we are in to find the best
                     # solution to parameters
                     _bounds = [bnd for bnd, flag in zip(bounds, xi) if flag]
-                    lb, ub = np.asarray(_bounds).T.astype(np.float)
+                    lb, ub = np.asarray(_bounds).T.astype(float)
                     initial_p = p[xi]
 
                     # Ensure strictly inbounds
@@ -1363,9 +1363,9 @@ class ExponentialSmoothing(TimeSeriesModel):
         formatted = list(map(lambda v: np.nan if v is None else v, formatted))
         formatted = np.array(formatted)
         if is_optimized is None:
-            optimized = np.zeros(len(codes), dtype=np.bool)
+            optimized = np.zeros(len(codes), dtype=bool)
         else:
-            optimized = is_optimized.astype(np.bool)
+            optimized = is_optimized.astype(bool)
         included = [True, trending, seasoning, True, trending, damped]
         included += [True] * m
         formatted = pd.DataFrame([[c, f, o] for c, f, o in zip(codes, formatted, optimized)],
