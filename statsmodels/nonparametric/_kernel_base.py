@@ -422,7 +422,7 @@ class LeaveOneOut(object):
         nobs, k_vars = np.shape(X)
 
         for i in range(nobs):
-            index = np.ones(nobs, dtype=np.bool)
+            index = np.ones(nobs, dtype=bool)
             index[i] = False
             yield X[index, :]
 

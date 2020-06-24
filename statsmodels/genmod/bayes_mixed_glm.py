@@ -251,7 +251,7 @@ class _BayesMixedGLM(base.Model):
         if not sparse.issparse(exog_vc):
             exog_vc = sparse.csr_matrix(exog_vc)
 
-        ident = ident.astype(np.int)
+        ident = ident.astype(int)
         vcp_p = float(vcp_p)
         fe_p = float(fe_p)
 

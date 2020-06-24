@@ -944,9 +944,9 @@ class OLSInfluence(_BaseInfluenceMixin):
         endog = self.results.model.endog
         exog = self.results.model.exog
 
-        params = np.zeros(exog.shape, dtype=np.float)
-        mse_resid = np.zeros(endog.shape, dtype=np.float)
-        det_cov_params = np.zeros(endog.shape, dtype=np.float)
+        params = np.zeros(exog.shape, dtype=float)
+        mse_resid = np.zeros(endog.shape, dtype=float)
+        det_cov_params = np.zeros(endog.shape, dtype=float)
 
         cv_iter = LeaveOneOut(self.nobs)
         for inidx, outidx in cv_iter:
@@ -1342,9 +1342,9 @@ class GLMInfluence(MLEInfluence):
         else:
             is_binomial = False
 
-        params = np.zeros(exog.shape, dtype=np.float)
-        scale = np.zeros(endog.shape, dtype=np.float)
-        det_cov_params = np.zeros(endog.shape, dtype=np.float)
+        params = np.zeros(exog.shape, dtype=float)
+        scale = np.zeros(endog.shape, dtype=float)
+        det_cov_params = np.zeros(endog.shape, dtype=float)
 
         cv_iter = LeaveOneOut(self.nobs)
         for inidx, outidx in cv_iter:

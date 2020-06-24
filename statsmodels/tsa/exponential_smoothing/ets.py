@@ -884,7 +884,7 @@ class ETSModel(base.StateSpaceMLEModel):
             Whether to internally use gamma_star as parameter
         """
         if np.iscomplexobj(params):
-            data = np.asarray(self.endog, dtype=np.complex)
+            data = np.asarray(self.endog, dtype=complex)
         else:
             data = self.endog
         self._smoothing_func(

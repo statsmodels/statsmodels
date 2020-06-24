@@ -1127,7 +1127,7 @@ class GLM(base.LikelihoodModel):
         endog = self.endog
         wlsexog = self.exog
         if start_params is None:
-            start_params = np.zeros(self.exog.shape[1], np.float)
+            start_params = np.zeros(self.exog.shape[1])
             mu = self.family.starting_mu(self.endog)
             lin_pred = self.family.predict(mu)
         else:

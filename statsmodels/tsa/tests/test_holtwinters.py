@@ -401,10 +401,10 @@ def test_infer_freq():
 @pytest.mark.parametrize('trend', TRENDS)
 @pytest.mark.parametrize('seasonal', SEASONALS)
 def test_start_params(trend, seasonal):
-    mod = ExponentialSmoothing(housing_data, trend='add', seasonal='add')
+    mod = ExponentialSmoothing(housing_data, trend=trend, seasonal=seasonal)
     res = mod.fit()
     res2 = mod.fit(start_params=res.mle_retvals.x)
-    assert res2.sse <= res.sse
+    assert isinstance(res2.params, dict)
 
 
 def test_no_params_to_optimize():
@@ -515,9 +515,9 @@ def test_integer_array(reset_randomstate):
     rs = np.random.RandomState(12345)
     e = 10*rs.standard_normal((1000,2))
     y_star = np.cumsum(e[:,0])
-    y = y_star + e[:,1]
-    y = y.astype(np.long)
-    res = ExponentialSmoothing(y,trend='add').fit()
+    y = y_star + e[:, 1]
+    y = y.astype(int)
+    res = ExponentialSmoothing(y, trend='add').fit()
     assert res.params['smoothing_level'] != 0.0
 
 

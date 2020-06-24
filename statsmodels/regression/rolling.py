@@ -128,7 +128,7 @@ class RollingWLS(object):
         w12 = np.sqrt(self._weights)
         self._wy = w12 * self._y
         self._wx = w12[:, None] * self._x
-        self._is_nan = np.zeros_like(self._y, dtype=np.bool)
+        self._is_nan = np.zeros_like(self._y, dtype=bool)
         self._has_nan = self._find_nans()
         self.const_idx = self.data.const_idx
         self._skip_missing = missing == 'skip'
@@ -152,7 +152,7 @@ class RollingWLS(object):
         has_nan[w - 1:] = has_nan[w - 1:] - has_nan[:-(w - 1)]
         has_nan[:w - 1] = False
 
-        return has_nan.astype(np.bool)
+        return has_nan.astype(bool)
 
     def _get_data(self, idx):
         window = self._window
@@ -283,7 +283,7 @@ class RollingWLS(object):
         store = RollingStore(params=np.full((nobs, k), np.nan),
                              ssr=np.full(nobs, np.nan),
                              llf=np.full(nobs, np.nan),
-                             nobs=np.zeros(nobs, dtype=np.int),
+                             nobs=np.zeros(nobs, dtype=int),
                              s2=np.full(nobs, np.nan),
                              xpxi=np.full((nobs, k, k), np.nan),
                              xeex=np.full((nobs, k, k), np.nan),

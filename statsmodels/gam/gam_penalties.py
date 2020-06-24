@@ -185,7 +185,7 @@ class MultivariateGamPenalty(Penalty):
             warnings.warn('weights is currently ignored')
             self.weights = weights
 
-        self.mask = [np.zeros(self.k_params, dtype=np.bool_)
+        self.mask = [np.zeros(self.k_params, dtype=bool)
                      for _ in range(self.k_variables)]
         param_count = start_idx
         for i, smoother in enumerate(self.multivariate_smoother.smoothers):

@@ -61,7 +61,7 @@ class KFold(BaseCrossValidator):
 
         folds = np.array_split(index, self.k_folds)
         for fold in folds:
-            test_index = np.zeros(nobs, dtype=np.bool_)
+            test_index = np.zeros(nobs, dtype=bool)
             test_index[fold] = True
             train_index = np.logical_not(test_index)
             yield train_index, test_index

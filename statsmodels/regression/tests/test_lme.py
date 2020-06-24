@@ -1089,14 +1089,14 @@ def test_random_effects_getters():
         b.append(bb)
 
         # First variance component
-        vv0 = np.kron(np.r_[0, 1], np.ones(m // 2)).astype(np.int)
+        vv0 = np.kron(np.r_[0, 1], np.ones(m // 2)).astype(int)
         cc0 = np.random.normal(size=2)
         yy += cc0[vv0]
         v0.append(vv0)
         c0.append(cc0)
 
         # Second variance component
-        vv1 = np.kron(np.ones(m // 2), np.r_[0, 1]).astype(np.int)
+        vv1 = np.kron(np.ones(m // 2), np.r_[0, 1]).astype(int)
         cc1 = np.random.normal(size=2)
         yy += cc1[vv1]
         v1.append(vv1)
@@ -1251,7 +1251,7 @@ def test_get_distribution():
     exog_vca = np.random.normal(size=(n, 2))
     exog_vcb = np.random.normal(size=(n, 2))
 
-    groups = np.repeat(np.arange(n_groups, dtype=np.int),
+    groups = np.repeat(np.arange(n_groups, dtype=int),
                        n / n_groups)
 
     ey = np.dot(exog_fe, fe_params)

@@ -1222,8 +1222,8 @@ class GLSAR(GLS):
     def __init__(self, endog, exog=None, rho=1, missing='none', hasconst=None,
                  **kwargs):
         # this looks strange, interpreting rho as order if it is int
-        if isinstance(rho, np.int):
-            self.order = rho
+        if isinstance(rho, (int, np.integer)):
+            self.order = int(rho)
             self.rho = np.zeros(self.order, np.float64)
         else:
             self.rho = np.squeeze(np.asarray(rho))

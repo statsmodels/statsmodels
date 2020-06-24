@@ -77,8 +77,8 @@ ics_sig = [aic_sigma, aicc_sigma, bic_sigma, hqic_sigma]
 def test_ic_equivalence(ic, ic_sig):
     # consistency check
 
-    assert ic(np.array(2), 10, 2).dtype == np.float
-    assert ic_sig(np.array(2), 10, 2).dtype == np.float
+    assert ic(np.array(2), 10, 2).dtype == float
+    assert ic_sig(np.array(2), 10, 2).dtype == float
 
     assert_almost_equal(ic(-10./2.*np.log(2.), 10, 2)/10,
                         ic_sig(2, 10, 2),

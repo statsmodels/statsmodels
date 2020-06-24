@@ -123,9 +123,9 @@ class RLM(base.LikelihoodModel):
         self.pinv_wexog = np.linalg.pinv(self.exog)
         self.normalized_cov_params = np.dot(self.pinv_wexog,
                                             np.transpose(self.pinv_wexog))
-        self.df_resid = (np.float(self.exog.shape[0] -
-                                  np.linalg.matrix_rank(self.exog)))
-        self.df_model = np.float(np.linalg.matrix_rank(self.exog) - 1)
+        self.df_resid = (float(self.exog.shape[0] -
+                               np.linalg.matrix_rank(self.exog)))
+        self.df_model = float(np.linalg.matrix_rank(self.exog) - 1)
         self.nobs = float(self.endog.shape[0])
 
     def score(self, params):

@@ -20,9 +20,10 @@ class CheckStataResultsMixin(object):
         res, results = self.res, self.results
         assert_almost_equal(res.params, results.params, 3)
         assert_almost_equal(res.bse, results.bse, 3)
-        #assert_almost_equal(res.tvalues, results.tvalues, 3) 0.0003
+        # assert_almost_equal(res.tvalues, results.tvalues, 3) 0.0003
         assert_allclose(res.tvalues, results.tvalues, atol=0, rtol=0.004)
         assert_allclose(res.pvalues, results.pvalues, atol=1e-7, rtol=0.004)
+
 
 class CheckStataResultsPMixin(CheckStataResultsMixin):
 
@@ -31,8 +32,9 @@ class CheckStataResultsPMixin(CheckStataResultsMixin):
         assert_allclose(res.fittedvalues, results.fittedvalues, rtol=0.002)
         predicted = res.predict(res.model.exog) #should be equal
         assert_allclose(predicted, results.fittedvalues, rtol=0.0016)
-        #not yet
-        #assert_almost_equal(res.fittedvalues_se, results.fittedvalues_se, 4)
+        # not yet
+        # assert_almost_equal(res.fittedvalues_se, results.fittedvalues_se, 4)
+
 
 class TestGLSARCorc(CheckStataResultsPMixin):
 
@@ -54,7 +56,6 @@ class TestGLSARCorc(CheckStataResultsPMixin):
 
         assert_almost_equal(self.res.llf, self.results.ll, 4)
 
-
     def test_glsar_arima(self):
         from statsmodels.tsa.arima_model import ARMA
 
@@ -75,7 +76,6 @@ class TestGLSARCorc(CheckStataResultsPMixin):
         res2 = mod1.iterative_fit(4, rtol=0)
         assert_equal(len(res2.history['params']), 4)
         assert_equal(len(res2.history['rho']), 4)
-
 
     def test_glsar_iter0(self):
         endog = self.res.model.endog

@@ -227,7 +227,7 @@ def test_surv():
     mn = np.exp(exp)
     mtime0 = -mn * np.log(np.random.uniform(size=n))
     ctime = -2 * mn * np.log(np.random.uniform(size=n))
-    mstatus = (ctime >= mtime0).astype(np.int)
+    mstatus = (ctime >= mtime0).astype(int)
     mtime = np.where(mtime0 <= ctime, mtime0, ctime)
 
     for mt in "full", "partial", "no":
@@ -244,7 +244,7 @@ def test_surv():
         mn = np.exp(-lp)
         ytime0 = -mn * np.log(np.random.uniform(size=n))
         ctime = -2 * mn * np.log(np.random.uniform(size=n))
-        ystatus = (ctime >= ytime0).astype(np.int)
+        ystatus = (ctime >= ytime0).astype(int)
         ytime = np.where(ytime0 <= ctime, ytime0, ctime)
 
         df = pd.DataFrame({"ytime": ytime, "ystatus": ystatus,

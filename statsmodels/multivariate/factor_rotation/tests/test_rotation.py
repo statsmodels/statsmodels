@@ -13,7 +13,7 @@ class TestAnalyticRotation(unittest.TestCase):
     @staticmethod
     def str2matrix(A):
         A = A.lstrip().rstrip().split('\n')
-        A = np.array([row.split() for row in A]).astype(np.float)
+        A = np.array([row.split() for row in A]).astype(float)
         return A
 
     def test_target_rotation(self):
@@ -94,7 +94,7 @@ class TestGPARotation(unittest.TestCase):
     @staticmethod
     def str2matrix(A):
         A = A.lstrip().rstrip().split('\n')
-        A = np.array([row.split() for row in A]).astype(np.float)
+        A = np.array([row.split() for row in A]).astype(float)
         return A
 
     @classmethod
@@ -507,7 +507,7 @@ class TestWrappers(unittest.TestCase):
     @staticmethod
     def str2matrix(A):
         A = A.lstrip().rstrip().split('\n')
-        A = np.array([row.split() for row in A]).astype(np.float)
+        A = np.array([row.split() for row in A]).astype(float)
         return A
 
     def get_A(self):

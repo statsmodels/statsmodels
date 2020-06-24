@@ -82,7 +82,7 @@ def get_sub(x, idx, window):
 def test_has_nan(data):
     y, x, w = data
     mod = RollingWLS(y, x, window=100, weights=w)
-    has_nan = np.zeros(y.shape[0], dtype=np.bool)
+    has_nan = np.zeros(y.shape[0], dtype=bool)
     for i in range(100, y.shape[0] + 1):
         _y = get_sub(y, i, 100)
         _x = get_sub(x, i, 100)

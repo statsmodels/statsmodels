@@ -19,7 +19,7 @@ def _prepare_data_corr_plot(x, lags, zero):
         lags = np.arange(not zero, int(lags) + 1)  # +1 for zero lag
     else:
         irregular = True
-        lags = np.asanyarray(lags).astype(np.int)
+        lags = np.asanyarray(lags).astype(int)
     nlags = lags.max(0)
 
     return lags, nlags, irregular
@@ -50,7 +50,7 @@ def _plot_corr(ax, title, acf_x, confint, lags, irregular, use_vlines,
             lags = lags[1:]
             confint = confint[1:]
             acf_x = acf_x[1:]
-        lags = lags.astype(np.float)
+        lags = lags.astype(float)
         lags[0] -= 0.5
         lags[-1] += 0.5
         ax.fill_between(lags, confint[:, 0] - acf_x,

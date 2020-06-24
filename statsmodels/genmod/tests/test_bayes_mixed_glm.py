@@ -17,7 +17,7 @@ def gen_simple_logit(nc, cs, s):
     lp = np.dot(exog_fe, np.r_[1, -1]) + np.dot(exog_vc, vc)
     pr = 1 / (1 + np.exp(-lp))
     y = 1 * (np.random.uniform(size=nc * cs) < pr)
-    ident = np.zeros(nc, dtype=np.int)
+    ident = np.zeros(nc, dtype=int)
 
     return y, exog_fe, exog_vc, ident
 
@@ -32,7 +32,7 @@ def gen_simple_poisson(nc, cs, s):
     lp = np.dot(exog_fe, np.r_[0.1, -0.1]) + np.dot(exog_vc, vc)
     r = np.exp(lp)
     y = np.random.poisson(r)
-    ident = np.zeros(nc, dtype=np.int)
+    ident = np.zeros(nc, dtype=int)
 
     return y, exog_fe, exog_vc, ident
 
@@ -51,7 +51,7 @@ def gen_crossed_logit(nc, cs, s1, s2):
     lp = np.dot(exog_fe, np.r_[-0.5]) + np.dot(exog_vc, vc)
     pr = 1 / (1 + np.exp(-lp))
     y = 1 * (np.random.uniform(size=nc * cs) < pr)
-    ident = np.zeros(2 * nc, dtype=np.int)
+    ident = np.zeros(2 * nc, dtype=int)
     ident[nc:] = 1
 
     return y, exog_fe, exog_vc, ident
@@ -71,7 +71,7 @@ def gen_crossed_poisson(nc, cs, s1, s2):
     lp = np.dot(exog_fe, np.r_[-0.5]) + np.dot(exog_vc, vc)
     r = np.exp(lp)
     y = np.random.poisson(r)
-    ident = np.zeros(2 * nc, dtype=np.int)
+    ident = np.zeros(2 * nc, dtype=int)
     ident[nc:] = 1
 
     return y, exog_fe, exog_vc, ident
@@ -97,7 +97,7 @@ def gen_crossed_logit_pandas(nc, cs, s1, s2):
     pr = 1 / (1 + np.exp(-lp))
     y = 1 * (np.random.uniform(size=nc * cs) < pr)
 
-    ident = np.zeros(2 * nc, dtype=np.int)
+    ident = np.zeros(2 * nc, dtype=int)
     ident[nc:] = 1
 
     df = pd.DataFrame({"fe": fe, "a": a, "b": b, "y": y})
@@ -589,7 +589,7 @@ def test_doc_examples():
     lpr = np.random.normal(size=m)[data.Village]
     lpr += np.random.normal(size=m)[data.Village] * data.year_cen
     y = (np.random.uniform(size=n) < 1 / (1 + np.exp(-lpr)))
-    data["y"] = y.astype(np.int)
+    data["y"] = y.astype(int)
 
     # These lines should agree with the example in the class docstring.
     random = {"a": '0 + C(Village)', "b": '0 + C(Village)*year_cen'}
