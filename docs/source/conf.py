@@ -368,7 +368,6 @@ epub_copyright = u'2009-2019, Josef Perktold, Skipper Seabold, ' \
 # numpydoc_show_inherited_class_members = True
 
 # Create xrefs
-numpydoc_use_autodoc_signature = True
 numpydoc_xref_param_type = True
 numpydoc_class_members_toctree = False
 numpydoc_xref_aliases = DEFAULT_LINKS.copy()
