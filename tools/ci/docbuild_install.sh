@@ -14,5 +14,5 @@ pip install sphinx sphinx-material jupyter nbconvert numpydoc pyyaml doctr panda
 echo conda install theano pymc3 -y
 conda install theano pymc3 -y
 
-# TODO: Remove after numpydoc merger of #221
-pip install git+https://github.com/thequackdaddy/numpydoc.git@getdoc --upgrade || true
+# TODO: Remove after release of numpydoc 1.1.0
+pip install git+https://github.com/numpy/numpydoc.git --upgrade || true
