@@ -33,8 +33,17 @@ def _right_squeeze(arr, stop_dim=0):
     return arr.reshape(arr.shape[:last])
 
 
-def array_like(obj, name, dtype=np.double, ndim=1, maxdim=None,
-               shape=None, order=None, contiguous=False, optional=False):
+def array_like(
+    obj,
+    name,
+    dtype=np.double,
+    ndim=1,
+    maxdim=None,
+    shape=None,
+    order=None,
+    contiguous=False,
+    optional=False,
+):
     """
     Convert array-like to a ndarray and check conditions
 
@@ -125,7 +134,7 @@ def array_like(obj, name, dtype=np.double, ndim=1, maxdim=None,
     arr = np.asarray(obj, dtype=dtype, order=order)
     if maxdim is not None:
         if arr.ndim > maxdim:
-            msg = '{0} must have ndim <= {1}'.format(name, maxdim)
+            msg = "{0} must have ndim <= {1}".format(name, maxdim)
             raise ValueError(msg)
     elif ndim is not None:
         if arr.ndim > ndim:
@@ -133,13 +142,13 @@ def array_like(obj, name, dtype=np.double, ndim=1, maxdim=None,
         elif arr.ndim < ndim:
             arr = np.reshape(arr, arr.shape + (1,) * (ndim - arr.ndim))
         if arr.ndim != ndim:
-            msg = '{0} is required to have ndim {1} but has ndim {2}'
+            msg = "{0} is required to have ndim {1} but has ndim {2}"
             raise ValueError(msg.format(name, ndim, arr.ndim))
     if shape is not None:
         for actual, req in zip(arr.shape, shape):
             if req is not None and actual != req:
-                req_shape = str(shape).replace('None, ', '*, ')
-                msg = '{0} is required to have shape {1} but has shape {2}'
+                req_shape = str(shape).replace("None, ", "*, ")
+                msg = "{0} is required to have shape {1} but has shape {2}"
                 raise ValueError(msg.format(name, req_shape, arr.shape))
     if contiguous:
         arr = np.ascontiguousarray(arr, dtype=dtype)
@@ -193,32 +202,34 @@ class PandasWrapper(object):
             return obj
 
         if obj.shape[0] + trim_start + trim_end != self._pandas_obj.shape[0]:
-            raise ValueError('obj must have the same number of elements in '
-                             'axis 0 as orig')
+            raise ValueError(
+                "obj must have the same number of elements in "
+                "axis 0 as orig"
+            )
         index = self._pandas_obj.index
-        index = index[trim_start:index.shape[0] - trim_end]
+        index = index[trim_start: index.shape[0] - trim_end]
         if obj.ndim == 1:
             if columns is None:
-                name = getattr(self._pandas_obj, 'name', None)
+                name = getattr(self._pandas_obj, "name", None)
             elif isinstance(columns, str):
                 name = columns
             else:
                 name = columns[0]
             if append is not None:
-                name = append if name is None else name + '_' + append
+                name = append if name is None else f"{name}_{append}"
 
             return pd.Series(obj, name=name, index=index)
         elif obj.ndim == 2:
             if columns is None:
-                columns = getattr(self._pandas_obj, 'columns', None)
+                columns = getattr(self._pandas_obj, "columns", None)
             if append is not None:
                 new = []
                 for c in columns:
-                    new.append(append if c is None else str(c) + '_' + append)
+                    new.append(append if c is None else f"{c}_{append}")
                 columns = new
             return pd.DataFrame(obj, columns=columns, index=index)
         else:
-            raise ValueError('Can only wrap 1 or 2-d array_like')
+            raise ValueError("Can only wrap 1 or 2-d array_like")
 
 
 def bool_like(value, name, optional=False, strict=False):
@@ -244,24 +255,26 @@ def bool_like(value, name, optional=False, strict=False):
     """
     if optional and value is None:
         return value
-    extra_text = ' or None' if optional else ''
+    extra_text = " or None" if optional else ""
     if strict:
         if isinstance(value, bool):
             return value
         else:
-            raise TypeError('{0} must be a bool{1}'.format(name, extra_text))
+            raise TypeError("{0} must be a bool{1}".format(name, extra_text))
 
-    if hasattr(value, 'squeeze') and callable(value.squeeze):
+    if hasattr(value, "squeeze") and callable(value.squeeze):
         value = value.squeeze()
     try:
         return bool(value)
     except Exception:
-        raise TypeError('{0} must be a bool (or bool-compatible)'
-                        '{1}'.format(name, extra_text))
+        raise TypeError(
+            "{0} must be a bool (or bool-compatible)"
+            "{1}".format(name, extra_text)
+        )
 
 
 def int_like(
-        value: Any, name: str, optional: bool = False, strict: bool = False
+    value: Any, name: str, optional: bool = False, strict: bool = False
 ) -> Optional[int]:
     """
     Convert to int or raise if not int_like
@@ -287,7 +300,7 @@ def int_like(
         return None
     is_bool_timedelta = isinstance(value, (bool, np.timedelta64))
 
-    if hasattr(value, 'squeeze') and callable(value.squeeze):
+    if hasattr(value, "squeeze") and callable(value.squeeze):
         value = value.squeeze()
 
     if isinstance(value, (int, np.integer)) and not is_bool_timedelta:
@@ -298,9 +311,11 @@ def int_like(
                 return int(value)
         except Exception:
             pass
-    extra_text = ' or None' if optional else ''
-    raise TypeError('{0} must be integer_like (int or np.integer, but not bool'
-                    ' or timedelta64){1}'.format(name, extra_text))
+    extra_text = " or None" if optional else ""
+    raise TypeError(
+        "{0} must be integer_like (int or np.integer, but not bool"
+        " or timedelta64){1}".format(name, extra_text)
+    )
 
 
 def required_int_like(value: Any, name: str, strict: bool = False) -> int:
@@ -356,11 +371,12 @@ def float_like(value, name, optional=False, strict=False):
         return None
     is_bool = isinstance(value, bool)
     is_complex = isinstance(value, (complex, np.complexfloating))
-    if hasattr(value, 'squeeze') and callable(value.squeeze):
+    if hasattr(value, "squeeze") and callable(value.squeeze):
         value = value.squeeze()
 
-    if (isinstance(value, (int, np.integer, float, np.inexact)) and
-            not (is_bool or is_complex)):
+    if isinstance(value, (int, np.integer, float, np.inexact)) and not (
+        is_bool or is_complex
+    ):
         return float(value)
     elif not strict and is_complex:
         imag = np.imag(value)
@@ -371,24 +387,27 @@ def float_like(value, name, optional=False, strict=False):
             return float(value / 1.0)
         except Exception:
             pass
-    extra_text = ' or None' if optional else ''
-    raise TypeError('{0} must be float_like (float or np.inexact)'
-                    '{1}'.format(name, extra_text))
+    extra_text = " or None" if optional else ""
+    raise TypeError(
+        "{0} must be float_like (float or np.inexact)"
+        "{1}".format(name, extra_text)
+    )
 
 
 def string_like(value, name, optional=False, options=None, lower=True):
     if value is None:
         return None
     if not isinstance(value, str):
-        extra_text = ' or None' if optional else ''
-        raise TypeError('{0} must be a string{1}'.format(name, extra_text))
+        extra_text = " or None" if optional else ""
+        raise TypeError("{0} must be a string{1}".format(name, extra_text))
     if lower:
         value = value.lower()
     if options is not None and value not in options:
-        extra_text = 'If not None, ' if optional else ''
-        options_text = "'" + '\', \''.join(options) + "'"
-        msg = '{0}{1} must be one of: {2}'.format(extra_text,
-                                                  name, options_text)
+        extra_text = "If not None, " if optional else ""
+        options_text = "'" + "', '".join(options) + "'"
+        msg = "{0}{1} must be one of: {2}".format(
+            extra_text, name, options_text
+        )
         raise ValueError(msg)
     return value
 
@@ -415,10 +434,11 @@ def dict_like(value, name, optional=False, strict=True):
     """
     if optional and value is None:
         return None
-    if (not isinstance(value, Mapping) or
-            (strict and not(isinstance(value, dict)))):
-        extra_text = 'If not None, ' if optional else ''
-        strict_text = ' or dict_like (i.e., a Mapping)' if strict else ''
-        msg = '{0}{1} must be a dict{2}'.format(extra_text, name, strict_text)
+    if not isinstance(value, Mapping) or (
+        strict and not (isinstance(value, dict))
+    ):
+        extra_text = "If not None, " if optional else ""
+        strict_text = " or dict_like (i.e., a Mapping)" if strict else ""
+        msg = "{0}{1} must be a dict{2}".format(extra_text, name, strict_text)
         raise TypeError(msg)
     return value
