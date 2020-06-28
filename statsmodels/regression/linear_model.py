@@ -1782,8 +1782,8 @@ class RegressionResults(base.LikelihoodModelResults):
                     return np.nan
             ft = self.f_test(mat)
             # using backdoor to set another attribute that we already have
-            self._cache['f_pvalue'] = ft.pvalue
-            return ft.fvalue
+            self._cache['f_pvalue'] = float(ft.pvalue)
+            return float(ft.fvalue)
         else:
             # for standard homoscedastic case
             return self.mse_model/self.mse_resid

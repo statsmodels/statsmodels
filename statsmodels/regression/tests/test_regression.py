@@ -951,6 +951,8 @@ def test_fvalue_const_only():
     y = np.dot(x, [1., 2., 3.]) + np.random.normal(size=30)
     res = OLS(y, x, hasconst=True).fit(cov_type='HC1')
     assert not np.isnan(res.fvalue)
+    assert isinstance(res.fvalue, float)
+    assert isinstance(res.f_pvalue, float)
 
 
 def test_conf_int_single_regressor():
