@@ -1015,7 +1015,7 @@ def test_summary_as_latex():
 %\\caption{OLS Regression Results}
 \\end{center}
 
-Warnings: \\newline
+Notes: \\newline
  [1] Standard Errors assume that the covariance matrix of the errors is correctly specified. \\newline
  [2] The condition number is large, 4.86e+09. This might indicate that there are \\newline
  strong multicollinearity or other numerical problems."""
