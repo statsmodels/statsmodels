@@ -1264,3 +1264,14 @@ def test_autoreg_predict_forecast_equiv(reset_randomstate):
     sarimax_res = SARIMAX(y, order=(1, 0, 0), trend="c").fit(disp=False)
     d = sarimax_res.forecast(12)
     pd.testing.assert_index_equal(a.index, d.index)
+
+
+def test_autoreg_forecast_period_index():
+    pi = pd.period_range("1990-1-1", periods=524, freq="M")
+    y = np.random.RandomState(0).standard_normal(500)
+    ys = pd.Series(y, index=pi[:500], name="y")
+    mod = AutoReg(ys, 3, seasonal=True, old_names=False)
+    res = mod.fit()
+    fcast = res.forecast(24)
+    assert isinstance(fcast.index, pd.PeriodIndex)
+    pd.testing.assert_index_equal(fcast.index, pi[-24:])
