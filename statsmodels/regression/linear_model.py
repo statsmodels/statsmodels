@@ -2680,7 +2680,7 @@ class RegressionResults(base.LikelihoodModelResults):
         if etext:
             etext = ["[{0}] {1}".format(i + 1, text)
                      for i, text in enumerate(etext)]
-            etext.insert(0, "Warnings:")
+            etext.insert(0, "Notes:")
             smry.add_extra_txt(etext)
 
         return smry
