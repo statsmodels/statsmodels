@@ -366,7 +366,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
             * 'HAC' - Heteroskedasticity-autocorrelation robust covariance
               estimation. Supports cov_kwds.
 
-              - `maxlag` integer (required) : number of lags to use.
+              - `maxlags` integer (required) : number of lags to use.
               - `kernel` callable or str (optional) : kernel
                   currently available kernels are ['bartlett', 'uniform'],
                   default is Bartlett.
@@ -521,7 +521,10 @@ class AutoReg(tsa_model.TimeSeriesModel):
         if end > self.endog.shape[0]:
             freq = getattr(index, 'freq', None)
             if freq:
-                index = pd.date_range(index[0], freq=freq, periods=end)
+                if isinstance(index, pd.PeriodIndex):
+                    index = pd.period_range(index[0], freq=freq, periods=end)
+                else:
+                    index = pd.date_range(index[0], freq=freq, periods=end)
             else:
                 index = pd.RangeIndex(end)
         index = index[start:end]
