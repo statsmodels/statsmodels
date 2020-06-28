@@ -366,7 +366,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
             * 'HAC' - Heteroskedasticity-autocorrelation robust covariance
               estimation. Supports cov_kwds.
 
-              - `maxlag` integer (required) : number of lags to use.
+              - `maxlags` integer (required) : number of lags to use.
               - `kernel` callable or str (optional) : kernel
                   currently available kernels are ['bartlett', 'uniform'],
                   default is Bartlett.
