@@ -116,8 +116,20 @@ def add_trend(x, trend="c", prepend=False, has_constant='skip'):
 
         if np.any(col_const):
             if has_constant == 'raise':
-                msg = "x contains a constant. Adding a constant with " \
-                      "trend='{0}' is not allowed.".format(trend)
+                if x.ndim == 1:
+                    base_err = "x is constant."
+                else:
+                    columns = np.arange(x.shape[1])[col_const]
+                    if isinstance(x, pd.DataFrame):
+                        columns = x.columns
+                    const_cols = ", ".join([str(c) for c in columns])
+                    base_err = (
+                        "x contains one or more constant columns. Column(s) "
+                        f"{const_cols} are constant."
+                    )
+                msg = (
+                    f"{base_err} Adding a constant with trend='{trend}' is not allowed."
+                )
                 raise ValueError(msg)
             elif has_constant == 'skip':
                 columns = columns[1:]

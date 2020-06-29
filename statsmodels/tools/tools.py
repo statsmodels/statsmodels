@@ -317,7 +317,8 @@ def add_constant(data, prepend=True, has_constant='skip'):
 
     # Special case for NumPy
     x = np.asanyarray(data)
-    if x.ndim == 1:
+    ndim = x.ndim
+    if ndim == 1:
         x = x[:, None]
     elif x.ndim > 2:
         raise ValueError('Only implemented for 2-dimensional arrays')
@@ -328,7 +329,12 @@ def add_constant(data, prepend=True, has_constant='skip'):
         if has_constant == 'skip':
             return x
         elif has_constant == 'raise':
-            raise ValueError("data already contains a constant")
+            if ndim == 1:
+                raise ValueError("data is constant.")
+            else:
+                columns = np.arange(x.shape[1])
+                cols = ",".join([str(c) for c in columns[is_nonzero_const]])
+                raise ValueError(f"Column(s) {cols} are constant.")
 
     x = [np.ones(x.shape[0]), x]
     x = x if prepend else x[::-1]
