@@ -47,9 +47,9 @@ class VARMAX(MLEModel):
         Can be specified as a string where 'c' indicates a constant (i.e. a
         degree zero component of the trend polynomial), 't' indicates a
         linear trend with time, and 'ct' is both. Can also be specified as an
-        iterable defining the polynomial as in `numpy.poly1d`, where
-        `[1,1,0,1]` would denote :math:`a + bt + ct^3`. Default is a constant
-        trend component.
+        iterable defining the non-zero polynomial exponents to include, in
+        increasing order. For example, `[1,1,0,1]` denotes
+        :math:`a + bt + ct^3`. Default is a constant trend component.
     error_cov_type : {'diagonal', 'unstructured'}, optional
         The structure of the covariance matrix of the error term, where
         "unstructured" puts no restrictions on the matrix and "diagonal"
@@ -83,8 +83,9 @@ class VARMAX(MLEModel):
         Can be specified as a string where 'c' indicates a constant (i.e. a
         degree zero component of the trend polynomial), 't' indicates a
         linear trend with time, and 'ct' is both. Can also be specified as an
-        iterable defining the polynomial as in `numpy.poly1d`, where
-        `[1,1,0,1]` would denote :math:`a + bt + ct^3`.
+        iterable defining the non-zero polynomial exponents to include, in
+        increasing order. For example, `[1,1,0,1]` denotes
+        :math:`a + bt + ct^3`.
     error_cov_type : {'diagonal', 'unstructured'}, optional
         The structure of the covariance matrix of the error term, where
         "unstructured" puts no restrictions on the matrix and "diagonal"
