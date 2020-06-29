@@ -86,7 +86,7 @@ def test_concentrated_loglike_sarimax():
     # Add loglikelihood burn, trend, and exog
     kwargs['loglikelihood_burn'] = 5
     kwargs['trend'] = 'c'
-    kwargs['exog'] = np.ones(nobs)
+    kwargs['exog'] = np.arange(nobs)
     out = get_sarimax_models(endog, **kwargs)
     assert_allclose(out.res_conc.llf, out.res_orig.llf)
     assert_allclose(out.res_conc.llf_obs[2:], out.res_orig.llf_obs[2:])
@@ -120,7 +120,7 @@ def test_fixed_scale_sarimax():
     kwargs = {
         'seasonal_order': (1, 1, 1, 2),
         'trend': 'ct',
-        'exog': np.ones(nobs)
+        'exog': np.sin(np.arange(nobs))
     }
 
     # Construct a concentrated version of the given SARIMAX model
