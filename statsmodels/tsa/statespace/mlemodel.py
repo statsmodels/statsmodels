@@ -3911,18 +3911,6 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         new_endog = concat([self.model.data.orig_endog, endog], axis=0,
                            allow_mix=True)
 
-        # Create a continuous index for the combined data
-        if isinstance(self.model.data, PandasData):
-            start = 0
-            end = len(new_endog) - 1
-            _, _, _, new_index = self.model._get_prediction_index(start, end)
-            # Standardize `endog` to have the right index and columns
-            columns = self.model.endog_names
-            if not isinstance(columns, list):
-                columns = [columns]
-            new_endog = pd.DataFrame(new_endog, index=new_index,
-                                     columns=columns)
-
         # Handle `exog`
         if exog is not None:
             _, exog = prepare_exog(exog)
@@ -3932,6 +3920,24 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                               allow_mix=True)
         else:
             new_exog = None
+
+        # Create a continuous index for the combined data
+        if isinstance(self.model.data, PandasData):
+            start = 0
+            end = len(new_endog) - 1
+            _, _, _, new_index = self.model._get_prediction_index(start, end)
+
+            # Standardize `endog` to have the right index and columns
+            columns = self.model.endog_names
+            if not isinstance(columns, list):
+                columns = [columns]
+            new_endog = pd.DataFrame(new_endog, index=new_index,
+                                     columns=columns)
+
+            # Standardize `exog` to have the right index
+            if new_exog is not None:
+                new_exog = pd.DataFrame(new_exog, index=new_index,
+                                        columns=self.model.exog_names)
 
         mod = self.model.clone(new_endog, exog=new_exog, **kwargs)
         res = self._apply(mod, refit=refit, fit_kwargs=fit_kwargs, **kwargs)
