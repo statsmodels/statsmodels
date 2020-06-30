@@ -160,13 +160,13 @@ class SARIMAX(MLEModel):
         is constrained to be zero (in which case it is zero).
     polynomial_seasonal_ar : ndarray
         Array containing seasonal moving average lag
-        polynomial lafs, ordered from lowest degree
+        polynomial lags, ordered from lowest degree
         to highest. Initialized with ones, unless a
         coefficient is constrained to be zero (in which
         case it is zero).
     polynomial_seasonal_ma : ndarray
         Array containing seasonal moving average lag
-        polynomial lafs, ordered from lowest degree
+        polynomial lags, ordered from lowest degree
         to highest. Initialized with ones, unless a
         coefficient is constrained to be zero (in which
         case it is zero).

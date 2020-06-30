@@ -74,6 +74,9 @@
   - img: ../_static/images/influence_glm_logit.png
     target: notebooks/generated/influence_glm_logit.html
     text: Influence Measures for GLMs
+  - img: ../_static/images/quasibinomial.png
+    target: notebooks/generated/quasibinomial.html
+    text: Quasi-binomial regression
 - header: Robust Regression
   id: robust
   links:
@@ -98,6 +101,12 @@
   - img: ../_static/images/anova.png
     target: notebooks/generated/interactions_anova.html
     text: ANOVA
+  - img: ../_static/images/metaanalysis1.png
+    target: notebooks/generated/metaanalysis1.html
+    text: Meta-Analysis in statsmodels
+  - img: ../_static/images/mediation_survival.png
+    target: notebooks/generated/mediation_survival.html
+    text: Mediation analysis with duration data
 - header: Time Series Analysis
   id: stats
   links:
@@ -176,6 +185,9 @@
   - img: ../_static/images/statespace_custom_models.png
     target: notebooks/generated/statespace_custom_models.html
     text: 'Statespace: Custom Models'
+  - img: ../_static/images/ets.png
+    target: notebooks/generated/ets.html
+    text: 'ETS models'
 - header: State space models - Technical notes
   id: statespace_notes
   links:
