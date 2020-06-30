@@ -95,10 +95,10 @@ def trim_mean(a, proportiontocut, axis=0):
 
 
 class TrimmedMean(object):
-    '''class for trimmed and winsorized one sample statistics
+    """class for trimmed and winsorized one sample statistics
 
     axis is None, i.e. ravelling, is not supported
-    '''
+    """
 
     def __init__(self, data, fraction, is_sorted=False, axis=0):
         self.data = np.asarray(data)
@@ -135,27 +135,35 @@ class TrimmedMean(object):
 
     @property  # cache
     def data_winsorized(self):
+        """winsorized data
+        """
         lb = np.expand_dims(self.lowerbound, self.axis)
         ub = np.expand_dims(self.upperbound, self.axis)
         return np.clip(self.data_sorted, lb, ub)
 
     @property
     def mean_trimmed(self):
+        """mean of trimmed data
+        """
         return np.mean(self.data_sorted[tuple(self.sl)], self.axis)
 
     @property
     def mean_winsorized(self):
+        """mean of winsorized data
+        """
         return np.mean(self.data_winsorized, self.axis)
 
     @property
     def var_winsorized(self):
+        """variance of winsorized data
+        """
         # hardcoded ddof = 1
         return np.var(self.data_winsorized, ddof=1, axis=self.axis)
 
     @property
     def std_mean_trimmed(self):
-        '''standard error of trimmed mean
-        '''
+        """standard error of trimmed mean
+        """
         se = np.sqrt(self.var_winsorized / self.nobs_reduced)
         # trimming creates correlation across trimmed observations
         # trimming is based on order statistics of the data
@@ -165,8 +173,8 @@ class TrimmedMean(object):
 
     @property
     def std_mean_winsorized(self):
-        '''standard error of winsorized mean
-        '''
+        """standard error of winsorized mean
+        """
         # the following matches Wilcox, WRS2
         std_ = np.sqrt(self.var_winsorized / self.nobs)
         std_ *= (self.nobs - 1) / (self.nobs_reduced - 1)
@@ -179,12 +187,24 @@ class TrimmedMean(object):
 
     def ttest_mean(self, value=0, transform='trimmed',
                    alternative='two-sided'):
-        '''One sample ttest for trimmed mean
+        """One sample ttest for trimmed or winsorized mean
 
+        Parameters
+        ----------
+        value : float
+            Value of the mean under the Null hypothesis
+        transform : {'trimmed', 'winsorized'}
+            Specified whether the mean test is based on trimmed or winsorized
+            data.
+        alternative : {'two-sided', 'larger', 'smaller'}
+
+
+        Notes
+        -----
         p-value is based on the approximate t-distribution of the test
         statistic. The approximation is valid if the underlying distribution
         is symmetric.
-        '''
+        """
         import statsmodels.stats.weightstats as smws
         df = self.nobs_reduced - 1
         if transform == 'trimmed':
@@ -201,10 +221,10 @@ class TrimmedMean(object):
         return res + (df,)
 
     def reset_fraction(self, frac):
-        '''create a TrimmedMean instance with a new trimming fraction
+        """create a TrimmedMean instance with a new trimming fraction
 
         This reuses the sorted array from the current instance.
-        '''
+        """
         tm = TrimmedMean(self.data_sorted, frac, is_sorted=True,
                          axis=self.axis)
         tm.data = self.data
@@ -243,20 +263,20 @@ def scale_transform(data, center='median', transform='abs', trim_frac=0.2,
     if transform == 'abs':
         tfunc = np.abs
     elif transform == 'square':
-        tfunc = lambda x: x * x  #noqa
+        tfunc = lambda x: x * x  # noqa
     elif transform == 'identity':
-        tfunc = lambda x: x  #noqa
+        tfunc = lambda x: x  # noqa
     elif callable(transform):
         tfunc = transform
     else:
         raise ValueError('transform should be abs, square or exp')
 
     if center == 'median':
-        res = tfunc(x - np.expand_dims(np.median(x, axis=0), axis))
+        res = tfunc(x - np.expand_dims(np.median(x, axis=axis), axis))
     elif center == 'mean':
-        res = tfunc(x - np.expand_dims(np.mean(x, axis=0), axis))
+        res = tfunc(x - np.expand_dims(np.mean(x, axis=axis), axis))
     elif center == 'trimmed':
-        center = trim_mean(x, trim_frac, axis=0)
+        center = trim_mean(x, trim_frac, axis=axis)
         res = tfunc(x - np.expand_dims(center, axis))
     elif isinstance(center, numbers.Number):
         res = tfunc(x - center)

@@ -353,6 +353,8 @@ def anova_generic(means, vars_, nobs, use_var="unequal",
     options = {"use_var": use_var,
                "welch_correction": welch_correction
                }
+    if means.ndim != 1:
+        raise ValueError('data (means, ...) has to be one-dimensional')
     nobs_t = nobs.sum()
     n_groups = len(means)
     # mean_t = (nobs * means).sum() / nobs_t
@@ -406,6 +408,9 @@ def anova_generic(means, vars_, nobs, use_var="unequal",
                       df_denom=df_denom,
                       nobs_t=nobs_t,
                       n_groups=n_groups,
+                      means=means,
+                      nobs=nobs,
+                      vars_=vars_,
                       **options
                       )
     return res
@@ -512,7 +517,8 @@ def anova_oneway(data, groups=None, use_var="unequal", welch_correction=True,
         uniques = np.unique(groups)
         data = [data[groups == uni] for uni in uniques]
     else:
-        uniques = None
+        # uniques = None  # not used yet, add to info?
+        pass
     args = list(map(np.asarray, data))
     if any([x.ndim != 1 for x in args]):
         raise ValueError('data arrays have to be one-dimensional')
@@ -703,7 +709,7 @@ def power_equivalence_oneway(f2_alt, equiv_margin, nobs_t, n_groups=None,
         raise ValueError('`margin_type` should be "f2" or "wellek"')
 
     crit_f_margin = stats.ncf.ppf(alpha, df[0], df[1], nobs_t * f2_null)
-    pwr_alt = stats.ncf.cdf(crit_f_margin, df[0], df[1],  nobs_t * f2_alt)
+    pwr_alt = stats.ncf.cdf(crit_f_margin, df[0], df[1], nobs_t * f2_alt)
     return pwr_alt
 
 

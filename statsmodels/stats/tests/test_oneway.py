@@ -10,6 +10,8 @@ License: BSD-3
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 
+import pytest
+
 from statsmodels.regression.linear_model import OLS
 import statsmodels.stats.power as smpwr
 import statsmodels.stats.oneway as smo  # needed for function with `test`
@@ -19,6 +21,7 @@ from statsmodels.stats.oneway import (
     anova_generic, equivalence_oneway, equivalence_oneway_generic,
     power_equivalence_oneway, power_equivalence_oneway0,
     f2_to_wellek, fstat_to_wellek, wellek_to_f2)
+from statsmodels.stats.robust_compare import scale_transform
 from statsmodels.stats.contrast import (
     wald_test_noncent_generic, wald_test_noncent, _offset_constraint)
 
@@ -136,6 +139,20 @@ def test_effectsize_fstat_stata():
     ci_es = smo.confint_effectsize_oneway(f_stat, df1, df2, alpha=0.1)
     assert_allclose(ci_es.eta2, (lb_eta2, ub_eta2), rtol=1e-4)
     assert_allclose(ci_es.ci_omega2, (lb_omega2, ub_omega2), rtol=0.025)
+
+
+@pytest.mark.parametrize("center", ['median', 'mean', 'trimmed'])
+def test_scale_transform(center):
+    x = np.random.randn(5, 3)
+    xt = scale_transform(x, center=center, transform='abs', trim_frac=0.2,
+                         axis=0)
+    xtt = scale_transform(x.T, center=center, transform='abs', trim_frac=0.2,
+                          axis=1)
+    assert_allclose(xt.T, xtt, rtol=1e-13)
+    xt0 = scale_transform(x[:, 0], center=center, transform='abs',
+                          trim_frac=0.2)
+    assert_allclose(xt0, xt[:, 0], rtol=1e-13)
+    assert_allclose(xt0, xtt[0, :], rtol=1e-13)
 
 
 class TestOnewayEquivalenc(object):
@@ -487,8 +504,8 @@ class TestOnewayOLS(object):
         nc_wt_vec = wald_test_noncent_generic(params_alt, c_equal, v,
                                               cov_p, diff=None, joint=False)
         for i in range(c_equal.shape[0]):
-            nc_wt_i = wald_test_noncent_generic(params_alt, c_equal[i : i + 1],  #noqa
-                                                v[i : i + 1], cov_p, diff=None,  #noqa
+            nc_wt_i = wald_test_noncent_generic(params_alt, c_equal[i : i + 1],  # noqa
+                                                v[i : i + 1], cov_p, diff=None,  # noqa
                                                 joint=False)
             assert_allclose(nc_wt_vec[i], nc_wt_i, rtol=1e-13)
 
