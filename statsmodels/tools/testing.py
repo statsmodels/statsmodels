@@ -53,6 +53,14 @@ class Holder(object):
     def __init__(self, **kwds):
         self.__dict__.update(kwds)
 
+    def __str__(self):
+        ss = "\n".join(str(k) + " = " + str(v) for k, v in vars(self).items())
+        return ss
+
+    def __repr__(self):
+        ss = str(self.__class__) + "\n" + self.__str__()
+        return ss
+
 
 # adjusted functions
 
