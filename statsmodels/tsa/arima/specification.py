@@ -370,7 +370,26 @@ class SARIMAXSpecification(object):
                              % duplicate_ma_lags)
 
         # Handle trend
+        self.trend = trend
         self.trend_poly, _ = prepare_trend_spec(trend)
+
+        # Check for a constant column in the provided exog
+        exog_is_pandas = _is_using_pandas(exog, None)
+        if (exog is not None and len(self.trend_poly) > 0 and
+                self.trend_poly[0] == 1):
+            # Figure out if we have any constant columns
+            x = np.asanyarray(exog)
+            ptp0 = np.ptp(x, axis=0)
+            col_is_const = ptp0 == 0
+            nz_const = col_is_const & (x[0] != 0)
+            col_const = nz_const
+
+            # If we already have a constant column, raise an error
+            if np.any(col_const):
+                raise ValueError('A constant trend was included in the model'
+                                 ' specification, but the `exog` data already'
+                                 ' contains a column of constants.')
+
         # This contains the included exponents of the trend polynomial,
         # where e.g. the constant term has exponent 0, a linear trend has
         # exponent 1, etc.
@@ -404,10 +423,11 @@ class SARIMAXSpecification(object):
         # Add trend data into exog
         nobs = len(endog) if exog is None else len(exog)
         if self.trend_order is not None:
+            # Add in the data
             trend_data = self.construct_trend_data(nobs, trend_offset)
             if exog is None:
                 exog = trend_data
-            elif _is_using_pandas(exog, None):
+            elif exog_is_pandas:
                 trend_data = pd.DataFrame(trend_data, index=exog.index,
                                           columns=self.construct_trend_names())
                 exog = pd.concat([trend_data, exog], axis=1)

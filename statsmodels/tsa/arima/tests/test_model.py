@@ -249,6 +249,32 @@ def test_append():
     assert_allclose(res2.llf, res_e.llf)
 
 
+def test_append_with_exog():
+    # Numpy
+    endog = dta['infl'].iloc[:100].values
+    exog = np.arange(len(endog))
+    mod = ARIMA(endog[:50], exog=exog[:50], trend='c')
+    res = mod.fit()
+    res_e = res.append(endog[50:], exog=exog[50:])
+    mod2 = ARIMA(endog, exog=exog, trend='c')
+    res2 = mod2.filter(res_e.params)
+
+    assert_allclose(res2.llf, res_e.llf)
+
+
+def test_append_with_exog_pandas():
+    # Pandas
+    endog = dta['infl'].iloc[:100]
+    exog = pd.Series(np.arange(len(endog)), index=endog.index)
+    mod = ARIMA(endog.iloc[:50], exog=exog.iloc[:50], trend='c')
+    res = mod.fit()
+    res_e = res.append(endog.iloc[50:], exog=exog.iloc[50:])
+    mod2 = ARIMA(endog, exog=exog, trend='c')
+    res2 = mod2.filter(res_e.params)
+
+    assert_allclose(res2.llf, res_e.llf)
+
+
 def test_cov_type_none():
     endog = dta['infl'].iloc[:100].values
     mod = ARIMA(endog[:50], trend='c')

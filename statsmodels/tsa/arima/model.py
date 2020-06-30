@@ -8,6 +8,7 @@ from statsmodels.compat.pandas import Appender
 
 import warnings
 
+from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tsa.statespace import sarimax
 from statsmodels.tsa.statespace.kalman_filter import MEMORY_CONSERVE
 from statsmodels.tsa.statespace.tools import diff
@@ -133,6 +134,14 @@ class ARIMA(sarimax.SARIMAX):
             dates=dates, freq=freq, missing=missing)
         exog = self._spec_arima._model.data.orig_exog
 
+        # Keep the given `exog` by removing the prepended trend variables
+        input_exog = None
+        if exog is not None:
+            if _is_using_pandas(exog, None):
+                input_exog = exog.iloc[:, self._spec_arima.k_trend:]
+            else:
+                input_exog = exog[:, self._spec_arima.k_trend:]
+
         # Initialize the base SARIMAX class
         # Note: we don't pass in a trend value to the base class, since ARIMA
         # standardizes the trend to always be part of exog, while the base
@@ -145,6 +154,14 @@ class ARIMA(sarimax.SARIMAX):
             concentrate_scale=concentrate_scale, dates=dates, freq=freq,
             missing=missing)
         self.trend = trend
+
+        # Save the input exog and input exog names, so that we can refer to
+        # them later (see especially `ARIMAResults.append`)
+        self._input_exog = input_exog
+        if exog is not None:
+            self._input_exog_names = self.exog_names[self._spec_arima.k_trend:]
+        else:
+            self._input_exog_names = None
 
         # Override the public attributes for k_exog and k_trend to reflect the
         # distinction here (for the purpose of the superclass, these are both
@@ -425,7 +442,30 @@ class ARIMA(sarimax.SARIMAX):
 
 @Appender(sarimax.SARIMAXResults.__doc__)
 class ARIMAResults(sarimax.SARIMAXResults):
-    pass
+
+    @Appender(sarimax.SARIMAXResults.append.__doc__)
+    def append(self, endog, exog=None, refit=False, fit_kwargs=None, **kwargs):
+        # MLEResults.append will concatenate the given `exog` here with
+        # `data.orig_exog`. However, `data.orig_exog` already has had any
+        # trend variables prepended to it, while the `exog` given here should
+        # not. Instead, we need to temporarily replace `orig_exog` and
+        # `exog_names` with the ones that correspond to those that were input
+        # by the user.
+        if exog is not None:
+            orig_exog = self.model.data.orig_exog
+            exog_names = self.model.exog_names
+            self.model.data.orig_exog = self.model._input_exog
+            self.model.exog_names = self.model._input_exog_names
+
+        # Perform the appending procedure
+        out = super().append(endog, exog=exog, refit=refit,
+                             fit_kwargs=fit_kwargs, **kwargs)
+
+        # Now we reverse the temporary change made above
+        if exog is not None:
+            self.model.data.orig_exog = orig_exog
+            self.model.exog_names = exog_names
+        return out
 
 
 class ARIMAResultsWrapper(sarimax.SARIMAXResultsWrapper):
