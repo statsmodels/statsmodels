@@ -1,5 +1,6 @@
 """Correlation plot functions."""
 
+from statsmodels.compat.pandas import deprecate_kwarg
 
 import numpy as np
 
@@ -57,8 +58,9 @@ def _plot_corr(ax, title, acf_x, confint, lags, irregular, use_vlines,
                         confint[:, 1] - acf_x, alpha=.25)
 
 
+@deprecate_kwarg("unbiased", "adjusted")
 def plot_acf(x, ax=None, lags=None, *, alpha=.05, use_vlines=True,
-             unbiased=False, fft=False, missing='none',
+             adjusted=False, fft=False, missing='none',
              title='Autocorrelation', zero=True, vlines_kwargs=None, **kwargs):
     """
     Plot the autocorrelation function
@@ -85,7 +87,7 @@ def plot_acf(x, ax=None, lags=None, *, alpha=.05, use_vlines=True,
         If True, vertical lines and markers are plotted.
         If False, only markers are plotted.  The default marker is 'o'; it can
         be overridden with a ``marker`` kwarg.
-    unbiased : bool
+    adjusted : bool
         If True, then denominators for autocovariance are n-k, otherwise n
     fft : bool, optional
         If True, computes the ACF via FFT.
@@ -149,7 +151,7 @@ def plot_acf(x, ax=None, lags=None, *, alpha=.05, use_vlines=True,
 
     confint = None
     # acf has different return type based on alpha
-    acf_x = acf(x, nlags=nlags, alpha=alpha, fft=fft, unbiased=unbiased,
+    acf_x = acf(x, nlags=nlags, alpha=alpha, fft=fft, adjusted=adjusted,
                 missing=missing)
     if alpha is not None:
         acf_x, confint = acf_x
@@ -160,7 +162,7 @@ def plot_acf(x, ax=None, lags=None, *, alpha=.05, use_vlines=True,
     return fig
 
 
-def plot_pacf(x, ax=None, lags=None, alpha=.05, method='ywunbiased',
+def plot_pacf(x, ax=None, lags=None, alpha=.05, method='ywadjusted',
               use_vlines=True, title='Partial Autocorrelation', zero=True,
               vlines_kwargs=None, **kwargs):
     """

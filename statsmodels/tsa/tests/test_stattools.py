@@ -299,7 +299,7 @@ class TestPACF(CheckCorrGram):
         assert_almost_equal(pacfyw, pacfld, DECIMAL_8)
 
         pacfyw = pacf(self.x, nlags=40, method="yw")
-        pacfld = pacf(self.x, nlags=40, method="ldu")
+        pacfld = pacf(self.x, nlags=40, method="lda")
         assert_almost_equal(pacfyw, pacfld, DECIMAL_8)
 
 
@@ -633,13 +633,13 @@ def test_acovf2d(reset_randomstate):
 
 
 @pytest.mark.parametrize('demean', [True, False])
-@pytest.mark.parametrize('unbiased', [True, False])
-def test_acovf_fft_vs_convolution(demean, unbiased):
+@pytest.mark.parametrize('adjusted', [True, False])
+def test_acovf_fft_vs_convolution(demean, adjusted):
     np.random.seed(1)
     q = np.random.normal(size=100)
 
-    F1 = acovf(q, demean=demean, unbiased=unbiased, fft=True)
-    F2 = acovf(q, demean=demean, unbiased=unbiased, fft=False)
+    F1 = acovf(q, demean=demean, adjusted=adjusted, fft=True)
+    F2 = acovf(q, demean=demean, adjusted=adjusted, fft=False)
     assert_almost_equal(F1, F2, decimal=7)
 
 
@@ -736,11 +736,11 @@ def test_levinson_durbin_acov():
 @pytest.mark.parametrize("missing", ['conservative', 'drop', 'raise', 'none'])
 @pytest.mark.parametrize("fft", [False, True])
 @pytest.mark.parametrize("demean", [True, False])
-@pytest.mark.parametrize("unbiased", [True, False])
-def test_acovf_nlags(acovf_data, unbiased, demean, fft, missing):
-    full = acovf(acovf_data, unbiased=unbiased, demean=demean, fft=fft,
+@pytest.mark.parametrize("adjusted", [True, False])
+def test_acovf_nlags(acovf_data, adjusted, demean, fft, missing):
+    full = acovf(acovf_data, adjusted=adjusted, demean=demean, fft=fft,
                  missing=missing)
-    limited = acovf(acovf_data, unbiased=unbiased, demean=demean, fft=fft,
+    limited = acovf(acovf_data, adjusted=adjusted, demean=demean, fft=fft,
                     missing=missing, nlag=10)
     assert_allclose(full[:11], limited)
 
@@ -748,13 +748,13 @@ def test_acovf_nlags(acovf_data, unbiased, demean, fft, missing):
 @pytest.mark.parametrize("missing", ['conservative', 'drop'])
 @pytest.mark.parametrize("fft", [False, True])
 @pytest.mark.parametrize("demean", [True, False])
-@pytest.mark.parametrize("unbiased", [True, False])
-def test_acovf_nlags_missing(acovf_data, unbiased, demean, fft, missing):
+@pytest.mark.parametrize("adjusted", [True, False])
+def test_acovf_nlags_missing(acovf_data, adjusted, demean, fft, missing):
     acovf_data = acovf_data.copy()
     acovf_data[1:3] = np.nan
-    full = acovf(acovf_data, unbiased=unbiased, demean=demean, fft=fft,
+    full = acovf(acovf_data, adjusted=adjusted, demean=demean, fft=fft,
                  missing=missing)
-    limited = acovf(acovf_data, unbiased=unbiased, demean=demean, fft=fft,
+    limited = acovf(acovf_data, adjusted=adjusted, demean=demean, fft=fft,
                     missing=missing, nlag=10)
     assert_allclose(full[:11], limited)
 

@@ -16,7 +16,7 @@ from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.testing import assert_equal
 from statsmodels.tools.tools import Bunch
 from statsmodels.tsa.ar_model import AR, AutoReg, ar_select_order
-from statsmodels.tsa.arima_model import ARMA
+from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.deterministic import (
     DeterministicProcess,
     Seasonality,
@@ -305,8 +305,8 @@ class TestAROLSNoConstant(CheckARMixin):
         assert_allclose(res0.fittedvalues[-10:], res0.fittedvalues[-10:],
                         rtol=0.015)
 
-        res_arma = ARMA(endog, (9, 0)).fit(method='mle', trend='nc', disp=0)
-        assert_allclose(res0.params, res_arma.params, atol=5e-6)
+        res_arma = ARIMA(endog, order=(9, 0, 0), trend="n").fit()
+        assert_allclose(res0.params, res_arma.params[:-1], rtol=1e-2)
         assert_allclose(res0.fittedvalues[-10:], res_arma.fittedvalues[-10:],
                         rtol=1e-4)
 

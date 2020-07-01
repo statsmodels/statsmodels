@@ -48,7 +48,7 @@ import statsmodels.base.wrapper as wrap
 from statsmodels.emplike.elregress import _ELRegOpts
 import warnings
 from statsmodels.tools.sm_exceptions import InvalidTestWarning
-
+from statsmodels.tools.validation import string_like
 # need import in module instead of lazily to copy `__doc__`
 from statsmodels.regression._prediction import PredictionResults
 from . import _prediction as pred
@@ -1334,12 +1334,12 @@ class GLSAR(GLS):
         return _x[self.order:]
 
 
-def yule_walker(x, order=1, method="unbiased", df=None, inv=False,
+def yule_walker(x, order=1, method="adjusted", df=None, inv=False,
                 demean=True):
     """
     Estimate AR(p) parameters from a sequence using the Yule-Walker equations.
 
-    Unbiased or maximum-likelihood estimator (mle)
+    Adjusted or maximum-likelihood estimator (mle)
 
     Parameters
     ----------
@@ -1348,10 +1348,10 @@ def yule_walker(x, order=1, method="unbiased", df=None, inv=False,
     order : int, optional
         The order of the autoregressive process.  Default is 1.
     method : str, optional
-       Method can be 'unbiased' or 'mle' and this determines
+       Method can be 'adjusted' or 'mle' and this determines
        denominator in estimate of autocorrelation function (ACF) at
-       lag k. If 'mle', the denominator is n=X.shape[0], if 'unbiased'
-       the denominator is n-k.  The default is unbiased.
+       lag k. If 'mle', the denominator is n=X.shape[0], if 'adjusted'
+       the denominator is n-k.  The default is adjusted.
     df : int, optional
        Specifies the degrees of freedom. If `df` is supplied, then it
        is assumed the X has `df` degrees of freedom rather than `n`.
@@ -1394,16 +1394,29 @@ def yule_walker(x, order=1, method="unbiased", df=None, inv=False,
     # TODO: define R better, look back at notes and technical notes on YW.
     # First link here is useful
     # http://www-stat.wharton.upenn.edu/~steele/Courses/956/ResourceDetails/YuleWalkerAndMore.htm
-    method = str(method).lower()
-    if method not in ["unbiased", "mle"]:
-        raise ValueError("ACF estimation method must be 'unbiased' or 'MLE'")
+
+    method = string_like(
+        method, "method", options=("adjusted", "unbiased", "mle")
+    )
+    if method == "unbiased":
+        warnings.warn(
+            "unbiased is deprecated in factor of adjusted to reflect that the "
+            "term is adjusting the sample size used in the autocovariance "
+            "calculation rather than estimating an unbiased autocovariance. "
+            "In the future, using 'unbiased' will raise.",
+            FutureWarning,
+        )
+        method = "adjusted"
+
+    if method not in ("adjusted", "mle"):
+        raise ValueError("ACF estimation method must be 'adjusted' or 'MLE'")
     x = np.array(x, dtype=np.float64)
     if demean:
         x -= x.mean()
     n = df or x.shape[0]
 
     # this handles df_resid ie., n - p
-    adj_needed = method == "unbiased"
+    adj_needed = method == "adjusted"
 
     if x.ndim > 1 and x.shape[1] != 1:
         raise ValueError("expecting a vector to estimate AR parameters")
@@ -1974,9 +1987,10 @@ class RegressionResults(base.LikelihoodModelResults):
         eps = np.finfo(self.wresid.dtype).eps
         if np.sqrt(self.scale) < 10 * eps * self.model.endog.mean():
             # do not divide if scale is zero close to numerical precision
-            from warnings import warn
-            warn("All residuals are 0, cannot compute normed residuals.",
-                 RuntimeWarning)
+            warnings.warn(
+                "All residuals are 0, cannot compute normed residuals.",
+                RuntimeWarning
+            )
             return self.wresid
         else:
             return self.wresid / np.sqrt(self.scale)

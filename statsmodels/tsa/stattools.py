@@ -1,34 +1,61 @@
 """
 Statistical tools for time series analysis
 """
-from statsmodels.compat.python import iteritems, lrange, lzip
-from statsmodels.compat.pandas import deprecate_kwarg
+import warnings
+
 from statsmodels.compat.numpy import lstsq
+from statsmodels.compat.pandas import deprecate_kwarg
+from statsmodels.compat.python import iteritems, lrange, lzip
 from statsmodels.compat.scipy import _next_regular
 
 import numpy as np
 from numpy.linalg import LinAlgError
-from scipy import stats
 import pandas as pd
+from scipy import stats
 
 from statsmodels.regression.linear_model import OLS, yule_walker
-from statsmodels.tools.sm_exceptions import (InterpolationWarning,
-                                             MissingDataError,
-                                             CollinearityWarning)
-from statsmodels.tools.tools import add_constant, Bunch
-from statsmodels.tools.validation import (array_like, string_like, bool_like,
-                                          int_like, dict_like, float_like)
+from statsmodels.tools.sm_exceptions import (
+    CollinearityWarning,
+    InterpolationWarning,
+    MissingDataError,
+)
+from statsmodels.tools.tools import Bunch, add_constant
+from statsmodels.tools.validation import (
+    array_like,
+    bool_like,
+    dict_like,
+    float_like,
+    int_like,
+    string_like,
+)
 from statsmodels.tsa._bds import bds
-from statsmodels.tsa._innovations import innovations_filter, innovations_algo
-from statsmodels.tsa.adfvalues import mackinnonp, mackinnoncrit
+from statsmodels.tsa._innovations import innovations_algo, innovations_filter
+from statsmodels.tsa.adfvalues import mackinnoncrit, mackinnonp
 from statsmodels.tsa.arima_model import ARMA
-from statsmodels.tsa.tsatools import lagmat, lagmat2ds, add_trend
+from statsmodels.tsa.tsatools import add_trend, lagmat, lagmat2ds
 
-__all__ = ["acovf", "acf", "pacf", "pacf_yw", "pacf_ols", "ccovf", "ccf",
-           "periodogram", "q_stat", "coint", "arma_order_select_ic",
-           "adfuller", "kpss", "bds", "pacf_burg", "innovations_algo",
-           "innovations_filter", "levinson_durbin_pacf", "levinson_durbin",
-           "zivot_andrews"]
+__all__ = [
+    "acovf",
+    "acf",
+    "pacf",
+    "pacf_yw",
+    "pacf_ols",
+    "ccovf",
+    "ccf",
+    "periodogram",
+    "q_stat",
+    "coint",
+    "arma_order_select_ic",
+    "adfuller",
+    "kpss",
+    "bds",
+    "pacf_burg",
+    "innovations_algo",
+    "innovations_filter",
+    "levinson_durbin_pacf",
+    "levinson_durbin",
+    "zivot_andrews",
+]
 
 SQRTEPS = np.sqrt(np.finfo(np.double).eps)
 
@@ -40,8 +67,17 @@ class ResultsStore(object):
         return self._str  # pylint: disable=E1101
 
 
-def _autolag(mod, endog, exog, startlag, maxlag, method, modargs=(),
-             fitargs=(), regresults=False):
+def _autolag(
+    mod,
+    endog,
+    exog,
+    startlag,
+    maxlag,
+    method,
+    modargs=(),
+    fitargs=(),
+    regresults=False,
+):
     """
     Returns the results for the lag length that maximizes the info criterion.
 
@@ -125,8 +161,14 @@ def _autolag(mod, endog, exog, startlag, maxlag, method, modargs=(),
 # TODO: include drift keyword, only valid with regression == "c"
 # just changes the distribution of the test statistic to a t distribution
 # TODO: autolag is untested
-def adfuller(x, maxlag=None, regression="c", autolag="AIC",
-             store=False, regresults=False):
+def adfuller(
+    x,
+    maxlag=None,
+    regression="c",
+    autolag="AIC",
+    store=False,
+    regresults=False,
+):
     """
     Augmented Dickey-Fuller unit root test.
 
@@ -214,10 +256,12 @@ def adfuller(x, maxlag=None, regression="c", autolag="AIC",
     """
     x = array_like(x, "x")
     maxlag = int_like(maxlag, "maxlag", optional=True)
-    regression = string_like(regression, "regression",
-                             options=("c", "ct", "ctt", "nc"))
-    autolag = string_like(autolag, "autolag", optional=True,
-                          options=("aic", "bic", "t-stat"))
+    regression = string_like(
+        regression, "regression", options=("c", "ct", "ctt", "nc")
+    )
+    autolag = string_like(
+        autolag, "autolag", optional=True, options=("aic", "bic", "t-stat")
+    )
     store = bool_like(store, "store")
     regresults = bool_like(regresults, "regresults")
 
@@ -233,21 +277,25 @@ def adfuller(x, maxlag=None, regression="c", autolag="AIC",
     ntrend = len(regression) if regression != "nc" else 0
     if maxlag is None:
         # from Greene referencing Schwert 1989
-        maxlag = int(np.ceil(12. * np.power(nobs / 100., 1 / 4.)))
+        maxlag = int(np.ceil(12.0 * np.power(nobs / 100.0, 1 / 4.0)))
         # -1 for the diff
         maxlag = min(nobs // 2 - ntrend - 1, maxlag)
         if maxlag < 0:
-            raise ValueError("sample size is too short to use selected "
-                             "regression component")
+            raise ValueError(
+                "sample size is too short to use selected "
+                "regression component"
+            )
     elif maxlag > nobs // 2 - ntrend - 1:
-        raise ValueError("maxlag must be less than (nobs/2 - 1 - ntrend) "
-                         "where n trend is the number of included "
-                         "deterministic regressors")
+        raise ValueError(
+            "maxlag must be less than (nobs/2 - 1 - ntrend) "
+            "where n trend is the number of included "
+            "deterministic regressors"
+        )
     xdiff = np.diff(x)
     xdall = lagmat(xdiff[:, None], maxlag, trim="both", original="in")
     nobs = xdall.shape[0]
 
-    xdall[:, 0] = x[-nobs - 1:-1]  # replace 0 xdiff with level of x
+    xdall[:, 0] = x[-nobs - 1 : -1]  # replace 0 xdiff with level of x
     xdshort = xdiff[-nobs:]
 
     if store:
@@ -264,12 +312,19 @@ def adfuller(x, maxlag=None, regression="c", autolag="AIC",
         # aic and bic: smaller is better
 
         if not regresults:
-            icbest, bestlag = _autolag(OLS, xdshort, fullRHS, startlag,
-                                       maxlag, autolag)
+            icbest, bestlag = _autolag(
+                OLS, xdshort, fullRHS, startlag, maxlag, autolag
+            )
         else:
-            icbest, bestlag, alres = _autolag(OLS, xdshort, fullRHS, startlag,
-                                              maxlag, autolag,
-                                              regresults=regresults)
+            icbest, bestlag, alres = _autolag(
+                OLS,
+                xdshort,
+                fullRHS,
+                startlag,
+                maxlag,
+                autolag,
+                regresults=regresults,
+            )
             resstore.autolag_results = alres
 
         bestlag -= startlag  # convert to lag not column index
@@ -277,17 +332,18 @@ def adfuller(x, maxlag=None, regression="c", autolag="AIC",
         # rerun ols with best autolag
         xdall = lagmat(xdiff[:, None], bestlag, trim="both", original="in")
         nobs = xdall.shape[0]
-        xdall[:, 0] = x[-nobs - 1:-1]  # replace 0 xdiff with level of x
+        xdall[:, 0] = x[-nobs - 1 : -1]  # replace 0 xdiff with level of x
         xdshort = xdiff[-nobs:]
         usedlag = bestlag
     else:
         usedlag = maxlag
         icbest = None
     if regression != "nc":
-        resols = OLS(xdshort, add_trend(xdall[:, :usedlag + 1],
-                                        regression)).fit()
+        resols = OLS(
+            xdshort, add_trend(xdall[:, : usedlag + 1], regression)
+        ).fit()
     else:
-        resols = OLS(xdshort, xdall[:, :usedlag + 1]).fit()
+        resols = OLS(xdshort, xdall[:, : usedlag + 1]).fit()
 
     adfstat = resols.tvalues[0]
     #    adfstat = (resols.params[0]-1.0)/resols.bse[0]
@@ -299,8 +355,11 @@ def adfuller(x, maxlag=None, regression="c", autolag="AIC",
     # Get approx p-value and critical values
     pvalue = mackinnonp(adfstat, regression=regression, N=1)
     critvalues = mackinnoncrit(N=1, regression=regression, nobs=nobs)
-    critvalues = {"1%": critvalues[0], "5%": critvalues[1],
-                  "10%": critvalues[2]}
+    critvalues = {
+        "1%": critvalues[0],
+        "5%": critvalues[1],
+        "10%": critvalues[2],
+    }
     if store:
         resstore.resols = resols
         resstore.maxlag = maxlag
@@ -308,8 +367,9 @@ def adfuller(x, maxlag=None, regression="c", autolag="AIC",
         resstore.adfstat = adfstat
         resstore.critvalues = critvalues
         resstore.nobs = nobs
-        resstore.H0 = ("The coefficient on the lagged level equals 1 - "
-                       "unit root")
+        resstore.H0 = (
+            "The coefficient on the lagged level equals 1 - " "unit root"
+        )
         resstore.HA = "The coefficient on the lagged level < 1 - stationary"
         resstore.icbest = icbest
         resstore._str = "Augmented Dickey-Fuller Test Results"
@@ -321,7 +381,8 @@ def adfuller(x, maxlag=None, regression="c", autolag="AIC",
             return adfstat, pvalue, usedlag, nobs, critvalues, icbest
 
 
-def acovf(x, unbiased=False, demean=True, fft=None, missing="none", nlag=None):
+@deprecate_kwarg("unbiased", "adjusted")
+def acovf(x, adjusted=False, demean=True, fft=None, missing="none", nlag=None):
     """
     Estimate autocovariances.
 
@@ -329,7 +390,7 @@ def acovf(x, unbiased=False, demean=True, fft=None, missing="none", nlag=None):
     ----------
     x : array_like
         Time series data. Must be 1d.
-    unbiased : bool, default False
+    adjusted : bool, default False
         If True, then denominators is n-k, otherwise n.
     demean : bool, default True
         If True, then subtract the mean x from each element of x.
@@ -364,18 +425,20 @@ def acovf(x, unbiased=False, demean=True, fft=None, missing="none", nlag=None):
            and amplitude modulation. Sankhya: The Indian Journal of
            Statistics, Series A, pp.383-392.
     """
-    unbiased = bool_like(unbiased, "unbiased")
+    adjusted = bool_like(adjusted, "adjusted")
     demean = bool_like(demean, "demean")
     fft = bool_like(fft, "fft", optional=True)
-    missing = string_like(missing, "missing",
-                          options=("none", "raise", "conservative", "drop"))
+    missing = string_like(
+        missing, "missing", options=("none", "raise", "conservative", "drop")
+    )
     nlag = int_like(nlag, "nlag", optional=True)
 
     if fft is None:
-        import warnings
-        msg = "fft=True will become the default in a future version of " \
-              "statsmodels. To suppress this warning, explicitly set " \
-              "fft=False."
+        msg = (
+            "fft=True will become the default in a future version of "
+            "statsmodels. To suppress this warning, explicitly set "
+            "fft=False."
+        )
         warnings.warn(msg, FutureWarning)
         fft = False
 
@@ -419,31 +482,34 @@ def acovf(x, unbiased=False, demean=True, fft=None, missing="none", nlag=None):
         acov = np.empty(lag_len + 1)
         acov[0] = xo.dot(xo)
         for i in range(lag_len):
-            acov[i + 1] = xo[i + 1:].dot(xo[:-(i + 1)])
+            acov[i + 1] = xo[i + 1 :].dot(xo[: -(i + 1)])
         if not deal_with_masked or missing == "drop":
-            if unbiased:
-                acov /= (n - np.arange(lag_len + 1))
+            if adjusted:
+                acov /= n - np.arange(lag_len + 1)
             else:
                 acov /= n
         else:
-            if unbiased:
+            if adjusted:
                 divisor = np.empty(lag_len + 1, dtype=np.int64)
                 divisor[0] = notmask_int.sum()
                 for i in range(lag_len):
-                    divisor[i + 1] = notmask_int[i + 1:].dot(notmask_int[:-(i + 1)])
+                    divisor[i + 1] = notmask_int[i + 1 :].dot(
+                        notmask_int[: -(i + 1)]
+                    )
                 divisor[divisor == 0] = 1
                 acov /= divisor
             else:  # biased, missing data but npt "drop"
                 acov /= notmask_int.sum()
         return acov
 
-    if unbiased and deal_with_masked and missing == "conservative":
+    if adjusted and deal_with_masked and missing == "conservative":
         d = np.correlate(notmask_int, notmask_int, "full")
         d[d == 0] = 1
-    elif unbiased:
+    elif adjusted:
         xi = np.arange(1, n + 1)
         d = np.hstack((xi, xi[:-1][::-1]))
-    elif deal_with_masked:  # biased and NaNs given and ("drop" or "conservative")
+    elif deal_with_masked:
+        # biased and NaNs given and ("drop" or "conservative")
         d = notmask_int.sum() * np.ones(2 * n - 1)
     else:  # biased and no NaNs or missing=="none"
         d = n * np.ones(2 * n - 1)
@@ -452,14 +518,14 @@ def acovf(x, unbiased=False, demean=True, fft=None, missing="none", nlag=None):
         nobs = len(xo)
         n = _next_regular(2 * nobs + 1)
         Frf = np.fft.fft(xo, n=n)
-        acov = np.fft.ifft(Frf * np.conjugate(Frf))[:nobs] / d[nobs - 1:]
+        acov = np.fft.ifft(Frf * np.conjugate(Frf))[:nobs] / d[nobs - 1 :]
         acov = acov.real
     else:
-        acov = np.correlate(xo, xo, "full")[n - 1:] / d[n - 1:]
+        acov = np.correlate(xo, xo, "full")[n - 1 :] / d[n - 1 :]
 
     if nlag is not None:
         # Copy to allow gc of full array rather than view
-        return acov[:lag_len + 1].copy()
+        return acov[: lag_len + 1].copy()
     return acov
 
 
@@ -490,11 +556,15 @@ def q_stat(x, nobs, type=None):
     nobs = int_like(nobs, "nobs")
 
     if type is not None:
-        import warnings
-        warnings.warn("The `type` argument is deprecated and has no effect",
-                      FutureWarning)
-    ret = (nobs * (nobs + 2) *
-           np.cumsum((1. / (nobs - np.arange(1, len(x) + 1))) * x ** 2))
+        warnings.warn(
+            "The `type` argument is deprecated and has no effect",
+            FutureWarning,
+        )
+    ret = (
+        nobs
+        * (nobs + 2)
+        * np.cumsum((1.0 / (nobs - np.arange(1, len(x) + 1))) * x ** 2)
+    )
     chi2 = stats.chi2.sf(ret, np.arange(1, len(x) + 1))
     return ret, chi2
 
@@ -502,8 +572,16 @@ def q_stat(x, nobs, type=None):
 # NOTE: Changed unbiased to False
 # see for example
 # http://www.itl.nist.gov/div898/handbook/eda/section3/autocopl.htm
-def acf(x, unbiased=False, nlags=None, qstat=False, fft=None, alpha=None,
-        missing="none"):
+@deprecate_kwarg("unbiased", "adjusted")
+def acf(
+    x,
+    adjusted=False,
+    nlags=None,
+    qstat=False,
+    fft=None,
+    alpha=None,
+    missing="none",
+):
     """
     Calculate the autocorrelation function.
 
@@ -511,7 +589,7 @@ def acf(x, unbiased=False, nlags=None, qstat=False, fft=None, alpha=None,
     ----------
     x : array_like
        The time series data.
-    unbiased : bool, default False
+    adjusted : bool, default False
        If True, then denominators for autocovariance are n-k, otherwise n.
     nlags : int, default 40
         Number of lags to return autocorrelation for.
@@ -558,8 +636,8 @@ def acf(x, unbiased=False, nlags=None, qstat=False, fft=None, alpha=None,
     the time series is long and only a small number of autocovariances are
     needed.
 
-    If unbiased is true, the denominator for the autocovariance is adjusted
-    but the autocorrelation is not an unbiased estimator.
+    If adjusted is true, the denominator for the autocovariance is adjusted
+    for the loss of data.
 
     References
     ----------
@@ -567,44 +645,44 @@ def acf(x, unbiased=False, nlags=None, qstat=False, fft=None, alpha=None,
        and amplitude modulation. Sankhya: The Indian Journal of
        Statistics, Series A, pp.383-392.
     """
-    unbiased = bool_like(unbiased, "unbiased")
+    adjusted = bool_like(adjusted, "adjusted")
     nlags = int_like(nlags, "nlags", optional=True)
     qstat = bool_like(qstat, "qstat")
     fft = bool_like(fft, "fft", optional=True)
     alpha = float_like(alpha, "alpha", optional=True)
-    missing = string_like(missing, "missing",
-                          options=("none", "raise", "conservative", "drop"))
+    missing = string_like(
+        missing, "missing", options=("none", "raise", "conservative", "drop")
+    )
     if nlags is None:
-        import warnings
-
-        warnings.warn("The default number of lags is changing from 40 to"
-                      "min(int(10 * np.log10(nobs)), nobs - 1) after 0.12"
-                      "is released. Set the number of lags to an integer to "
-                      " silence this warning.",
-                      FutureWarning)
+        warnings.warn(
+            "The default number of lags is changing from 40 to"
+            "min(int(10 * np.log10(nobs)), nobs - 1) after 0.12"
+            "is released. Set the number of lags to an integer to "
+            " silence this warning.",
+            FutureWarning,
+        )
         nlags = 40
 
     if fft is None:
-        import warnings
         warnings.warn(
             "fft=True will become the default in a future version of "
             "statsmodels. To suppress this warning, explicitly set "
             "fft=False.",
-            FutureWarning
+            FutureWarning,
         )
         fft = False
     x = array_like(x, "x")
     nobs = len(x)  # TODO: should this shrink for missing="drop" and NaNs in x?
-    avf = acovf(x, unbiased=unbiased, demean=True, fft=fft, missing=missing)
-    acf = avf[:nlags + 1] / avf[0]
+    avf = acovf(x, adjusted=adjusted, demean=True, fft=fft, missing=missing)
+    acf = avf[: nlags + 1] / avf[0]
     if not (qstat or alpha):
         return acf
     if alpha is not None:
         varacf = np.ones(nlags + 1) / nobs
         varacf[0] = 0
-        varacf[1] = 1. / nobs
+        varacf[1] = 1.0 / nobs
         varacf[2:] *= 1 + 2 * np.cumsum(acf[1:-1] ** 2)
-        interval = stats.norm.ppf(1 - alpha / 2.) * np.sqrt(varacf)
+        interval = stats.norm.ppf(1 - alpha / 2.0) * np.sqrt(varacf)
         confint = np.array(lzip(acf - interval, acf + interval))
         if not qstat:
             return acf, confint
@@ -616,7 +694,7 @@ def acf(x, unbiased=False, nlags=None, qstat=False, fft=None, alpha=None,
             return acf, qstat, pvalue
 
 
-def pacf_yw(x, nlags=None, method="unbiased"):
+def pacf_yw(x, nlags=None, method="adjusted"):
     """
     Partial autocorrelation estimated with non-recursive yule_walker.
 
@@ -626,7 +704,7 @@ def pacf_yw(x, nlags=None, method="unbiased"):
         The observations of time series for which pacf is calculated.
     nlags : int, default 40
         The largest lag for which pacf is returned.
-    method : {"unbiased", "mle"}, default "unbiased"
+    method : {"adjusted", "mle"}, default "adjusted"
         The method for the autocovariance calculations in yule walker.
 
     Returns
@@ -651,18 +729,29 @@ def pacf_yw(x, nlags=None, method="unbiased"):
     x = array_like(x, "x")
     nlags = int_like(nlags, "nlags", optional=True)
     if nlags is None:
-        import warnings
-
-        warnings.warn("The default number of lags is changing from 40 to"
-                      "min(int(10 * np.log10(nobs)), nobs - 1) after 0.12"
-                      "is released. Set the number of lags to an integer to "
-                      " silence this warning.",
-                      FutureWarning)
+        warnings.warn(
+            "The default number of lags is changing from 40 to"
+            "min(int(10 * np.log10(nobs)), nobs - 1) after 0.12"
+            "is released. Set the number of lags to an integer to "
+            " silence this warning.",
+            FutureWarning,
+        )
         nlags = 40
 
-    method = string_like(method, "method", options=("unbiased", "mle"))
+    method = string_like(
+        method, "method", options=("adjusted", "unbiased", "mle")
+    )
+    if method == "unbiased":
+        warnings.warn(
+            "unbiased is deprecated in factor of adjusted to reflect that the "
+            "term is adjusting the sample size used in the autocovariance "
+            "calculation rather than estimating an unbiased autocovariance. "
+            "In the future, using 'unbiased' will raise.",
+            FutureWarning,
+        )
+        method = "adjusted"
 
-    pacf = [1.]
+    pacf = [1.0]
     for k in range(1, nlags + 1):
         pacf.append(yule_walker(x, k, method=method)[0][-1])
     return np.array(pacf)
@@ -727,14 +816,15 @@ def pacf_burg(x, nlags=None, demean=True):
         u[1:] = last_u[:-1] - pacf[i] * last_v[1:]
         v[1:] = last_v[1:] - pacf[i] * last_u[:-1]
         d[i + 1] = (1 - pacf[i] ** 2) * d[i] - v[i] ** 2 - u[-1] ** 2
-        pacf[i + 1] = 2 / d[i + 1] * v[i + 1:].dot(u[i:-1])
-    sigma2 = (1 - pacf ** 2) * d / (2. * (nobs - np.arange(0, p + 1)))
+        pacf[i + 1] = 2 / d[i + 1] * v[i + 1 :].dot(u[i:-1])
+    sigma2 = (1 - pacf ** 2) * d / (2.0 * (nobs - np.arange(0, p + 1)))
     pacf[0] = 1  # Insert the 0 lag partial autocorrel
 
     return pacf, sigma2
 
 
-def pacf_ols(x, nlags=None, efficient=True, unbiased=False):
+@deprecate_kwarg("unbiased", "adjusted")
+def pacf_ols(x, nlags=None, efficient=True, adjusted=False):
     """
     Calculate partial autocorrelations via OLS.
 
@@ -748,7 +838,7 @@ def pacf_ols(x, nlags=None, efficient=True, unbiased=False):
         If true, uses the maximum number of available observations to compute
         each partial autocorrelation. If not, uses the same number of
         observations to compute all pacf values.
-    unbiased : bool, optional
+    adjusted : bool, optional
         Adjust each partial autocorrelation by n / (n - lag).
 
     Returns
@@ -790,16 +880,16 @@ def pacf_ols(x, nlags=None, efficient=True, unbiased=False):
     x = array_like(x, "x")
     nlags = int_like(nlags, "nlags", optional=True)
     efficient = bool_like(efficient, "efficient")
-    unbiased = bool_like(unbiased, "unbiased")
+    adjusted = bool_like(adjusted, "adjusted")
 
     if nlags is None:
-        import warnings
-
-        warnings.warn("The default number of lags is changing from 40 to"
-                      "min(int(10 * np.log10(nobs)), nobs - 1) after 0.12"
-                      "is released. Set the number of lags to an integer to "
-                      " silence this warning.",
-                      FutureWarning)
+        warnings.warn(
+            "The default number of lags is changing from 40 to"
+            "min(int(10 * np.log10(nobs)), nobs - 1) after 0.12"
+            "is released. Set the number of lags to an integer to "
+            " silence this warning.",
+            FutureWarning,
+        )
         nlags = 40
 
     pacf = np.empty(nlags + 1)
@@ -808,7 +898,7 @@ def pacf_ols(x, nlags=None, efficient=True, unbiased=False):
         xlags, x0 = lagmat(x, nlags, original="sep")
         xlags = add_constant(xlags)
         for k in range(1, nlags + 1):
-            params = lstsq(xlags[k:, :k + 1], x0[k:], rcond=None)[0]
+            params = lstsq(xlags[k:, : k + 1], x0[k:], rcond=None)[0]
             pacf[k] = params[-1]
     else:
         x = x - np.mean(x)
@@ -819,14 +909,14 @@ def pacf_ols(x, nlags=None, efficient=True, unbiased=False):
             # Last coefficient corresponds to PACF value (see [1])
             pacf[k] = params[-1]
 
-    if unbiased:
+    if adjusted:
         n = len(x)
         pacf *= n / (n - np.arange(nlags + 1))
 
     return pacf
 
 
-def pacf(x, nlags=None, method="ywunbiased", alpha=None):
+def pacf(x, nlags=None, method="ywadjusted", alpha=None):
     """
     Partial autocorrelation estimate.
 
@@ -839,15 +929,15 @@ def pacf(x, nlags=None, method="ywunbiased", alpha=None):
     method : str, default "ywunbiased"
         Specifies which method for the calculations to use.
 
-        - "yw" or "ywunbiased" : Yule-Walker with bias correction in
+        - "yw" or "ywadjusted" : Yule-Walker with sample-size adjustment in
           denominator for acovf. Default.
-        - "ywm" or "ywmle" : Yule-Walker without bias correction.
+        - "ywm" or "ywmle" : Yule-Walker without adjustment.
         - "ols" : regression of time series on lags of it and on constant.
         - "ols-inefficient" : regression of time series on lags using a single
           common sample to estimate all pacf coefficients.
-        - "ols-unbiased" : regression of time series on lags with a bias
+        - "ols-adjusted" : regression of time series on lags with a bias
           adjustment.
-        - "ld" or "ldunbiased" : Levinson-Durbin recursion with bias
+        - "ld" or "ldadjusted" : Levinson-Durbin recursion with bias
           correction.
         - "ldb" or "ldbiased" : Levinson-Durbin recursion without bias
           correction.
@@ -883,50 +973,79 @@ def pacf(x, nlags=None, method="ywunbiased", alpha=None):
     Based on simulation evidence across a range of low-order ARMA models,
     the best methods based on root MSE are Yule-Walker (MLW), Levinson-Durbin
     (MLE) and Burg, respectively. The estimators with the lowest bias included
-    included these three in addition to OLS and OLS-unbiased.
+    included these three in addition to OLS and OLS-adjusted.
 
-    Yule-Walker (unbiased) and Levinson-Durbin (unbiased) performed
+    Yule-Walker (adjusted) and Levinson-Durbin (adjusted) performed
     consistently worse than the other options.
     """
     nlags = int_like(nlags, "nlags", optional=True)
-    methods = ("ols", "ols-inefficient", "ols-unbiased", "yw", "ywu", "ld",
-               "ywunbiased", "yw_unbiased", "ywm", "ywmle", "yw_mle", "ldu",
-               "ldunbiased", "ld_unbiased", "ldb", "ldbiased", "ld_biased")
+    renames = {"ydu":"yda",
+               "ywu": "ywa",
+               "ywunbiased":"ywadjusted",
+               "ldunbiased":"ldadjusted",
+               "ld_unbiased":"ld_adjusted",
+               "ldu":"lda",
+               "ols-unbiased":"ols-adjusted"}
+    if method in renames:
+        warnings.warn(
+            f"{method} has been renamed {renames[method]}. In the future, "
+            "using the old name will raise.",
+            FutureWarning)
+        method = renames[method]
+    methods = (
+        "ols",
+        "ols-inefficient",
+        "ols-adjusted",
+        "yw",
+        "ywa",
+        "ld",
+        "ywadjusted",
+        "yw_adjusted",
+        "ywm",
+        "ywmle",
+        "yw_mle",
+        "lda",
+        "ldadjusted",
+        "ld_adjusted",
+        "ldb",
+        "ldbiased",
+        "ld_biased",
+    )
     method = string_like(method, "method", options=methods)
 
     alpha = float_like(alpha, "alpha", optional=True)
 
     if nlags is None:
-        import warnings
-
-        warnings.warn("The default number of lags is changing from 40 to"
-                      "min(int(10 * np.log10(nobs)), nobs - 1) after 0.12"
-                      "is released. Set the number of lags to an integer to "
-                      " silence this warning.",
-                      FutureWarning)
+        warnings.warn(
+            "The default number of lags is changing from 40 to"
+            "min(int(10 * np.log10(nobs)), nobs - 1) after 0.12"
+            "is released. Set the number of lags to an integer to "
+            " silence this warning.",
+            FutureWarning,
+        )
         nlags = 40
 
-    if method in ("ols", "ols-inefficient", "ols-unbiased"):
+    if method in ("ols", "ols-inefficient", "ols-adjusted"):
         efficient = "inefficient" not in method
-        unbiased = "unbiased" in method
-        ret = pacf_ols(x, nlags=nlags, efficient=efficient, unbiased=unbiased)
-    elif method in ("yw", "ywu", "ywunbiased", "yw_unbiased"):
-        ret = pacf_yw(x, nlags=nlags, method="unbiased")
+        adjusted = "adjusted" in method
+        ret = pacf_ols(x, nlags=nlags, efficient=efficient, adjusted=adjusted)
+    elif method in ("yw", "ywa", "ywadjusted", "yw_adjusted"):
+        ret = pacf_yw(x, nlags=nlags, method="adjusted")
     elif method in ("ywm", "ywmle", "yw_mle"):
         ret = pacf_yw(x, nlags=nlags, method="mle")
-    elif method in ("ld", "ldu", "ldunbiased", "ld_unbiased"):
-        acv = acovf(x, unbiased=True, fft=False)
+    elif method in ("ld", "lda", "ldadjusted", "ld_adjusted"):
+        acv = acovf(x, adjusted=True, fft=False)
         ld_ = levinson_durbin(acv, nlags=nlags, isacov=True)
         ret = ld_[2]
     # inconsistent naming with ywmle
     else:  # method in ("ldb", "ldbiased", "ld_biased")
-        acv = acovf(x, unbiased=False, fft=False)
+        acv = acovf(x, adjusted=False, fft=False)
         ld_ = levinson_durbin(acv, nlags=nlags, isacov=True)
         ret = ld_[2]
 
     if alpha is not None:
-        varacf = 1. / len(x)  # for all lags >=1
-        interval = stats.norm.ppf(1. - alpha / 2.) * np.sqrt(varacf)
+        varacf = 1.0 / len(x)  # for all lags >=1
+        interval = stats.norm.ppf(1.0 - alpha / 2.0) * np.sqrt(varacf)
         confint = np.array(lzip(ret - interval, ret + interval))
         confint[0] = ret[0]  # fix confidence interval for lag 0 to varpacf=0
         return ret, confint
@@ -934,7 +1053,8 @@ def pacf(x, nlags=None, method="ywunbiased", alpha=None):
         return ret
 
 
-def ccovf(x, y, unbiased=True, demean=True):
+@deprecate_kwarg("unbiased", "adjusted")
+def ccovf(x, y, adjusted=True, demean=True):
     """
     Calculate the crosscovariance between two series.
 
@@ -942,7 +1062,7 @@ def ccovf(x, y, unbiased=True, demean=True):
     ----------
     x, y : array_like
        The time series data to use in the calculation.
-    unbiased : bool, optional
+    adjusted : bool, optional
        If True, then denominators for autocovariance is n-k, otherwise n.
     demean : bool, optional
         Flag indicating whether to demean x and y.
@@ -959,7 +1079,7 @@ def ccovf(x, y, unbiased=True, demean=True):
     """
     x = array_like(x, "x")
     y = array_like(y, "y")
-    unbiased = bool_like(unbiased, "unbiased")
+    adjusted = bool_like(adjusted, "adjusted")
     demean = bool_like(demean, "demean")
 
     n = len(x)
@@ -969,15 +1089,16 @@ def ccovf(x, y, unbiased=True, demean=True):
     else:
         xo = x
         yo = y
-    if unbiased:
+    if adjusted:
         xi = np.ones(n)
         d = np.correlate(xi, xi, "full")
     else:
         d = n
-    return (np.correlate(xo, yo, "full") / d)[n - 1:]
+    return (np.correlate(xo, yo, "full") / d)[n - 1 :]
 
 
-def ccf(x, y, unbiased=True):
+@deprecate_kwarg("unbiased", "adjusted")
+def ccf(x, y, adjusted=True):
     """
     The cross-correlation function.
 
@@ -985,7 +1106,7 @@ def ccf(x, y, unbiased=True):
     ----------
     x, y : array_like
        The time series data to use in the calculation.
-    unbiased : bool
+    adjusted : bool
        If True, then denominators for autocovariance is n-k, otherwise n.
 
     Returns
@@ -998,14 +1119,13 @@ def ccf(x, y, unbiased=True):
     This is based np.correlate which does full convolution. For very long time
     series it is recommended to use fft convolution instead.
 
-    If unbiased is true, the denominator for the autocovariance is adjusted
-    but the autocorrelation is not an unbiased estimator.
+    If adjusted is true, the denominator for the autocovariance is adjusted.
     """
     x = array_like(x, "x")
     y = array_like(y, "y")
-    unbiased = bool_like(unbiased, "unbiased")
+    adjusted = bool_like(adjusted, "adjusted")
 
-    cvf = ccovf(x, y, unbiased=unbiased, demean=True)
+    cvf = ccovf(x, y, adjusted=adjusted, demean=True)
     return cvf / (np.std(x) * np.std(y))
 
 
@@ -1032,13 +1152,15 @@ def periodogram(x):
         and forecasting. Springer.
     """
     # TODO: Remove after 0.11
-    import warnings
-    warnings.warn("periodogram is deprecated and will be removed after 0.11. "
-                  "Use scipy.signal.periodogram instead.", FutureWarning)
+    warnings.warn(
+        "periodogram is deprecated and will be removed after 0.11. "
+        "Use scipy.signal.periodogram instead.",
+        FutureWarning,
+    )
     x = array_like(x, "x")
 
-    pergr = 1. / len(x) * np.abs(np.fft.fft(x)) ** 2
-    pergr[0] = 0.  # what are the implications of this?
+    pergr = 1.0 / len(x) * np.abs(np.fft.fft(x)) ** 2
+    pergr[0] = 0.0  # what are the implications of this?
     return pergr
 
 
@@ -1093,7 +1215,7 @@ def levinson_durbin(s, nlags=10, isacov=False):
     if isacov:
         sxx_m = s
     else:
-        sxx_m = acovf(s, fft=False)[:order + 1]  # not tested
+        sxx_m = acovf(s, fft=False)[: order + 1]  # not tested
 
     phi = np.zeros((order + 1, order + 1), "d")
     sig = np.zeros(order + 1)
@@ -1101,8 +1223,9 @@ def levinson_durbin(s, nlags=10, isacov=False):
     phi[1, 1] = sxx_m[1] / sxx_m[0]
     sig[1] = sxx_m[0] - phi[1, 1] * sxx_m[1]
     for k in range(2, order + 1):
-        phi[k, k] = (sxx_m[k] - np.dot(phi[1:k, k - 1],
-                                       sxx_m[1:k][::-1])) / sig[k - 1]
+        phi[k, k] = (
+            sxx_m[k] - np.dot(phi[1:k, k - 1], sxx_m[1:k][::-1])
+        ) / sig[k - 1]
         for j in range(1, k):
             phi[j, k] = phi[j, k - 1] - phi[k, k] * phi[k - j, k - 1]
         sig[k] = sig[k - 1] * (1 - phi[k, k] ** 2)
@@ -1110,7 +1233,7 @@ def levinson_durbin(s, nlags=10, isacov=False):
     sigma_v = sig[-1]
     arcoefs = phi[1:, -1]
     pacf_ = np.diag(phi).copy()
-    pacf_[0] = 1.
+    pacf_[0] = 1.0
     return sigma_v, arcoefs, pacf_, sig, phi  # return everything
 
 
@@ -1144,14 +1267,18 @@ def levinson_durbin_pacf(pacf, nlags=None):
     pacf = np.squeeze(np.asarray(pacf))
 
     if pacf[0] != 1:
-        raise ValueError("The first entry of the pacf corresponds to lags 0 "
-                         "and so must be 1.")
+        raise ValueError(
+            "The first entry of the pacf corresponds to lags 0 "
+            "and so must be 1."
+        )
     pacf = pacf[1:]
     n = pacf.shape[0]
     if nlags is not None:
         if nlags > n:
-            raise ValueError("Must provide at least as many values from the "
-                             "pacf as the number of lags.")
+            raise ValueError(
+                "Must provide at least as many values from the "
+                "pacf as the number of lags."
+            )
         pacf = pacf[:nlags]
         n = pacf.shape[0]
 
@@ -1160,9 +1287,9 @@ def levinson_durbin_pacf(pacf, nlags=None):
     nu = np.cumprod(1 - pacf ** 2)
     arcoefs = pacf.copy()
     for i in range(1, n):
-        prev = arcoefs[:-(n - i)].copy()
-        arcoefs[:-(n - i)] = prev - arcoefs[i] * prev[::-1]
-        acf[i + 1] = arcoefs[i] * nu[i - 1] + prev.dot(acf[1:-(n - i)][::-1])
+        prev = arcoefs[: -(n - i)].copy()
+        arcoefs[: -(n - i)] = prev - arcoefs[i] * prev[::-1]
+        acf[i + 1] = arcoefs[i] * nu[i - 1] + prev.dot(acf[1 : -(n - i)][::-1])
     acf[0] = 1
     return arcoefs, acf
 
@@ -1245,8 +1372,10 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
         lags = np.array([int(lag) for lag in maxlag])
         maxlag = lags.max()
         if lags.min() <= 0 or lags.size == 0:
-            raise ValueError("maxlag must be a non-empty list containing only "
-                             "positive integers")
+            raise ValueError(
+                "maxlag must be a non-empty list containing only "
+                "positive integers"
+            )
     except Exception:
         maxlag = int_like(maxlag, "maxlag")
         if maxlag <= 0:
@@ -1254,9 +1383,10 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
         lags = np.arange(1, maxlag + 1)
 
     if x.shape[0] <= 3 * maxlag + int(addconst):
-        raise ValueError("Insufficient observations. Maximum allowable "
-                         "lag is {0}".format(int((x.shape[0] - int(addconst)) /
-                                                 3) - 1))
+        raise ValueError(
+            "Insufficient observations. Maximum allowable "
+            "lag is {0}".format(int((x.shape[0] - int(addconst)) / 3) - 1)
+        )
 
     resli = {}
 
@@ -1272,7 +1402,7 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
 
         # add constant
         if addconst:
-            dtaown = add_constant(dta[:, 1:(mxlg + 1)], prepend=False)
+            dtaown = add_constant(dta[:, 1 : (mxlg + 1)], prepend=False)
             dtajoint = add_constant(dta[:, 1:], prepend=False)
         else:
             raise NotImplementedError("Not Implemented")
@@ -1289,52 +1419,80 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
         # the other tests are made-up
 
         # Granger Causality test using ssr (F statistic)
-        fgc1 = ((res2down.ssr - res2djoint.ssr) /
-                res2djoint.ssr / mxlg * res2djoint.df_resid)
+        fgc1 = (
+            (res2down.ssr - res2djoint.ssr)
+            / res2djoint.ssr
+            / mxlg
+            * res2djoint.df_resid
+        )
         if verbose:
-            print("ssr based F test:         F=%-8.4f, p=%-8.4f, df_denom=%d,"
-                  " df_num=%d" % (fgc1,
-                                  stats.f.sf(fgc1, mxlg,
-                                             res2djoint.df_resid),
-                                  res2djoint.df_resid, mxlg))
-        result["ssr_ftest"] = (fgc1,
-                               stats.f.sf(fgc1, mxlg, res2djoint.df_resid),
-                               res2djoint.df_resid, mxlg)
+            print(
+                "ssr based F test:         F=%-8.4f, p=%-8.4f, df_denom=%d,"
+                " df_num=%d"
+                % (
+                    fgc1,
+                    stats.f.sf(fgc1, mxlg, res2djoint.df_resid),
+                    res2djoint.df_resid,
+                    mxlg,
+                )
+            )
+        result["ssr_ftest"] = (
+            fgc1,
+            stats.f.sf(fgc1, mxlg, res2djoint.df_resid),
+            res2djoint.df_resid,
+            mxlg,
+        )
 
         # Granger Causality test using ssr (ch2 statistic)
         fgc2 = res2down.nobs * (res2down.ssr - res2djoint.ssr) / res2djoint.ssr
         if verbose:
-            print("ssr based chi2 test:   chi2=%-8.4f, p=%-8.4f, "
-                  "df=%d" % (fgc2, stats.chi2.sf(fgc2, mxlg), mxlg))
+            print(
+                "ssr based chi2 test:   chi2=%-8.4f, p=%-8.4f, "
+                "df=%d" % (fgc2, stats.chi2.sf(fgc2, mxlg), mxlg)
+            )
         result["ssr_chi2test"] = (fgc2, stats.chi2.sf(fgc2, mxlg), mxlg)
 
         # likelihood ratio test pvalue:
         lr = -2 * (res2down.llf - res2djoint.llf)
         if verbose:
-            print("likelihood ratio test: chi2=%-8.4f, p=%-8.4f, df=%d" %
-                  (lr, stats.chi2.sf(lr, mxlg), mxlg))
+            print(
+                "likelihood ratio test: chi2=%-8.4f, p=%-8.4f, df=%d"
+                % (lr, stats.chi2.sf(lr, mxlg), mxlg)
+            )
         result["lrtest"] = (lr, stats.chi2.sf(lr, mxlg), mxlg)
 
         # F test that all lag coefficients of exog are zero
-        rconstr = np.column_stack((np.zeros((mxlg, mxlg)),
-                                   np.eye(mxlg, mxlg),
-                                   np.zeros((mxlg, 1))))
+        rconstr = np.column_stack(
+            (np.zeros((mxlg, mxlg)), np.eye(mxlg, mxlg), np.zeros((mxlg, 1)))
+        )
         ftres = res2djoint.f_test(rconstr)
         if verbose:
-            print("parameter F test:         F=%-8.4f, p=%-8.4f, df_denom=%d,"
-                  " df_num=%d" % (ftres.fvalue, ftres.pvalue, ftres.df_denom,
-                                  ftres.df_num))
-        result["params_ftest"] = (np.squeeze(ftres.fvalue)[()],
-                                  np.squeeze(ftres.pvalue)[()],
-                                  ftres.df_denom, ftres.df_num)
+            print(
+                "parameter F test:         F=%-8.4f, p=%-8.4f, df_denom=%d,"
+                " df_num=%d"
+                % (ftres.fvalue, ftres.pvalue, ftres.df_denom, ftres.df_num)
+            )
+        result["params_ftest"] = (
+            np.squeeze(ftres.fvalue)[()],
+            np.squeeze(ftres.pvalue)[()],
+            ftres.df_denom,
+            ftres.df_num,
+        )
 
         resli[mxlg] = (result, [res2down, res2djoint, rconstr])
 
     return resli
 
 
-def coint(y0, y1, trend="c", method="aeg", maxlag=None, autolag="aic",
-          return_results=None):
+def coint(
+    y0,
+    y1,
+    trend="c",
+    method="aeg",
+    maxlag=None,
+    autolag="aic",
+    return_results=None,
+):
     """
     Test for no-cointegration of a univariate equation.
 
@@ -1425,8 +1583,9 @@ def coint(y0, y1, trend="c", method="aeg", maxlag=None, autolag="aic",
     trend = string_like(trend, "trend", options=("c", "nc", "ct", "ctt"))
     method = string_like(method, "method", options=("aeg",))
     maxlag = int_like(maxlag, "maxlag", optional=True)
-    autolag = string_like(autolag, "autolag", optional=True,
-                          options=("aic", "bic", "t-stat"))
+    autolag = string_like(
+        autolag, "autolag", optional=True, options=("aic", "bic", "t-stat")
+    )
     return_results = bool_like(return_results, "return_results", optional=True)
 
     nobs, k_vars = y1.shape
@@ -1440,13 +1599,15 @@ def coint(y0, y1, trend="c", method="aeg", maxlag=None, autolag="aic",
     res_co = OLS(y0, xx).fit()
 
     if res_co.rsquared < 1 - 100 * SQRTEPS:
-        res_adf = adfuller(res_co.resid, maxlag=maxlag, autolag=autolag,
-                           regression="nc")
+        res_adf = adfuller(
+            res_co.resid, maxlag=maxlag, autolag=autolag, regression="nc"
+        )
     else:
-        import warnings
-        warnings.warn("y0 and y1 are (almost) perfectly colinear."
-                      "Cointegration test is not reliable in this case.",
-                      CollinearityWarning)
+        warnings.warn(
+            "y0 and y1 are (almost) perfectly colinear."
+            "Cointegration test is not reliable in this case.",
+            CollinearityWarning,
+        )
         # Edge case where series are too similar
         res_adf = (-np.inf,)
 
@@ -1464,9 +1625,9 @@ def coint(y0, y1, trend="c", method="aeg", maxlag=None, autolag="aic",
 
 def _safe_arma_fit(y, order, model_kw, trend, fit_kw, start_params=None):
     try:
-        return ARMA(y, order=order, **model_kw).fit(disp=0, trend=trend,
-                                                    start_params=start_params,
-                                                    **fit_kw)
+        return ARMA(y, order=order, **model_kw).fit(
+            disp=0, trend=trend, start_params=start_params, **fit_kw
+        )
     except LinAlgError:
         # SVD convergence failure on badly misspecified models
         return
@@ -1476,20 +1637,22 @@ def _safe_arma_fit(y, order, model_kw, trend, fit_kw, start_params=None):
             # user supplied start_params only get one chance
             return
         # try a little harder, should be handled in fit really
-        elif ("initial" not in error.args[0] or "initial" in str(error)):
-            start_params = [.1] * sum(order)
+        elif "initial" not in error.args[0] or "initial" in str(error):
+            start_params = [0.1] * sum(order)
             if trend == "c":
-                start_params = [.1] + start_params
-            return _safe_arma_fit(y, order, model_kw, trend, fit_kw,
-                                  start_params)
+                start_params = [0.1] + start_params
+            return _safe_arma_fit(
+                y, order, model_kw, trend, fit_kw, start_params
+            )
         else:
             return
     except:  # no idea what happened
         return
 
 
-def arma_order_select_ic(y, max_ar=4, max_ma=2, ic="bic", trend="c",
-                         model_kw=None, fit_kw=None):
+def arma_order_select_ic(
+    y, max_ar=4, max_ma=2, ic="bic", trend="c", model_kw=None, fit_kw=None
+):
     """
     Compute information criteria for many ARMA models.
 
@@ -1577,8 +1740,9 @@ def arma_order_select_ic(y, max_ar=4, max_ma=2, ic="bic", trend="c",
             for i, criteria in enumerate(ic):
                 results[i, ar, ma] = getattr(mod, criteria)
 
-    dfs = [pd.DataFrame(res, columns=ma_range, index=ar_range) for res in
-           results]
+    dfs = [
+        pd.DataFrame(res, columns=ma_range, index=ar_range) for res in results
+    ]
 
     res = dict(zip(ic, dfs))
 
@@ -1675,8 +1839,6 @@ def kpss(x, regression="c", nlags=None, store=False):
        investigation. Journal of Business and Economic Statistics, 7 (2):
        147-159.
     """
-    from warnings import warn
-
     x = array_like(x, "x")
     regression = string_like(regression, "regression", options=("c", "ct"))
     store = bool_like(store, "store")
@@ -1702,16 +1864,18 @@ def kpss(x, regression="c", nlags=None, store=False):
 
     if nlags is None:
         nlags = "legacy"
-        msg = "The behavior of using lags=None will change in the next " \
-              "release. Currently lags=None is the same as " \
-              "lags=\"legacy\", and so a sample-size lag length is used. " \
-              "After the next release, the default will change to be the " \
-              "same as lags=\"auto\" which uses an automatic lag length " \
-              "selection method. To silence this warning, either use " \
-              "\"auto\" or \"legacy\""
-        warn(msg, FutureWarning)
+        msg = (
+            "The behavior of using lags=None will change in the next "
+            "release. Currently lags=None is the same as "
+            'lags="legacy", and so a sample-size lag length is used. '
+            "After the next release, the default will change to be the "
+            'same as lags="auto" which uses an automatic lag length '
+            "selection method. To silence this warning, either use "
+            '"auto" or "legacy"'
+        )
+        warnings.warn(msg, FutureWarning)
     if nlags == "legacy":
-        nlags = int(np.ceil(12. * np.power(nobs / 100., 1 / 4.)))
+        nlags = int(np.ceil(12.0 * np.power(nobs / 100.0, 1 / 4.0)))
         nlags = min(nlags, nobs - 1)
     elif nlags == "auto":
         # autolag method of Hobijn et al. (1998)
@@ -1721,8 +1885,11 @@ def kpss(x, regression="c", nlags=None, store=False):
         nlags = int(nlags)
 
     if nlags >= nobs:
-        raise ValueError("lags ({}) must be < number of observations ({})"
-                         .format(nlags, nobs))
+        raise ValueError(
+            "lags ({}) must be < number of observations ({})".format(
+                nlags, nobs
+            )
+        )
 
     pvals = [0.10, 0.05, 0.025, 0.01]
 
@@ -1737,9 +1904,9 @@ The test statistic is outside of the range of p-values available in the
 look-up table. The actual p-value is {direction} than the p-value returned.
 """
     if p_value == pvals[-1]:
-        warn(warn_msg.format(direction="smaller"), InterpolationWarning)
+        warnings.warn(warn_msg.format(direction="smaller"), InterpolationWarning)
     elif p_value == pvals[0]:
-        warn(warn_msg.format(direction="greater"), InterpolationWarning)
+        warnings.warn(warn_msg.format(direction="greater"), InterpolationWarning)
 
     crit_dict = {"10%": crit[0], "5%": crit[1], "2.5%": crit[2], "1%": crit[3]}
 
@@ -1764,8 +1931,8 @@ def _sigma_est_kpss(resids, nobs, lags):
     """
     s_hat = np.sum(resids ** 2)
     for i in range(1, lags + 1):
-        resids_prod = np.dot(resids[i:], resids[:nobs - i])
-        s_hat += 2 * resids_prod * (1. - (i / (lags + 1.)))
+        resids_prod = np.dot(resids[i:], resids[: nobs - i])
+        s_hat += 2 * resids_prod * (1.0 - (i / (lags + 1.0)))
     return s_hat / nobs
 
 
@@ -1775,16 +1942,16 @@ def _kpss_autolag(resids, nobs):
     using method of Hobijn et al (1998). See also Andrews (1991), Newey & West
     (1994), and Schwert (1989). Assumes Bartlett / Newey-West kernel.
     """
-    covlags = int(np.power(nobs, 2. / 9.))
+    covlags = int(np.power(nobs, 2.0 / 9.0))
     s0 = np.sum(resids ** 2) / nobs
     s1 = 0
     for i in range(1, covlags + 1):
-        resids_prod = np.dot(resids[i:], resids[:nobs - i])
-        resids_prod /= (nobs / 2.)
+        resids_prod = np.dot(resids[i:], resids[: nobs - i])
+        resids_prod /= nobs / 2.0
         s0 += resids_prod
         s1 += i * resids_prod
     s_hat = s1 / s0
-    pwr = 1. / 3.
+    pwr = 1.0 / 3.0
     gamma_hat = 1.1447 * np.power(s_hat * s_hat, pwr)
     autolags = int(gamma_hat * np.power(nobs, pwr))
     return autolags
@@ -1808,62 +1975,158 @@ class ZivotAndrewsUnitRoot(object):
         self._za_critical_values = {}
         # constant-only model
         self._c = (
-            (0.001, -6.78442), (0.100, -5.83192), (0.200, -5.68139),
-            (0.300, -5.58461), (0.400, -5.51308), (0.500, -5.45043),
-            (0.600, -5.39924), (0.700, -5.36023), (0.800, -5.33219),
-            (0.900, -5.30294), (1.000, -5.27644), (2.500, -5.03340),
-            (5.000, -4.81067), (7.500, -4.67636), (10.000, -4.56618),
-            (12.500, -4.48130), (15.000, -4.40507), (17.500, -4.33947),
-            (20.000, -4.28155), (22.500, -4.22683), (25.000, -4.17830),
-            (27.500, -4.13101), (30.000, -4.08586), (32.500, -4.04455),
-            (35.000, -4.00380), (37.500, -3.96144), (40.000, -3.92078),
-            (42.500, -3.88178), (45.000, -3.84503), (47.500, -3.80549),
-            (50.000, -3.77031), (52.500, -3.73209), (55.000, -3.69600),
-            (57.500, -3.65985), (60.000, -3.62126), (65.000, -3.54580),
-            (70.000, -3.46848), (75.000, -3.38533), (80.000, -3.29112),
-            (85.000, -3.17832), (90.000, -3.04165), (92.500, -2.95146),
-            (95.000, -2.83179), (96.000, -2.76465), (97.000, -2.68624),
-            (98.000, -2.57884), (99.000, -2.40044), (99.900, -1.88932)
+            (0.001, -6.78442),
+            (0.100, -5.83192),
+            (0.200, -5.68139),
+            (0.300, -5.58461),
+            (0.400, -5.51308),
+            (0.500, -5.45043),
+            (0.600, -5.39924),
+            (0.700, -5.36023),
+            (0.800, -5.33219),
+            (0.900, -5.30294),
+            (1.000, -5.27644),
+            (2.500, -5.03340),
+            (5.000, -4.81067),
+            (7.500, -4.67636),
+            (10.000, -4.56618),
+            (12.500, -4.48130),
+            (15.000, -4.40507),
+            (17.500, -4.33947),
+            (20.000, -4.28155),
+            (22.500, -4.22683),
+            (25.000, -4.17830),
+            (27.500, -4.13101),
+            (30.000, -4.08586),
+            (32.500, -4.04455),
+            (35.000, -4.00380),
+            (37.500, -3.96144),
+            (40.000, -3.92078),
+            (42.500, -3.88178),
+            (45.000, -3.84503),
+            (47.500, -3.80549),
+            (50.000, -3.77031),
+            (52.500, -3.73209),
+            (55.000, -3.69600),
+            (57.500, -3.65985),
+            (60.000, -3.62126),
+            (65.000, -3.54580),
+            (70.000, -3.46848),
+            (75.000, -3.38533),
+            (80.000, -3.29112),
+            (85.000, -3.17832),
+            (90.000, -3.04165),
+            (92.500, -2.95146),
+            (95.000, -2.83179),
+            (96.000, -2.76465),
+            (97.000, -2.68624),
+            (98.000, -2.57884),
+            (99.000, -2.40044),
+            (99.900, -1.88932),
         )
         self._za_critical_values["c"] = np.asarray(self._c)
         # trend-only model
         self._t = (
-            (0.001, -83.9094), (0.100, -13.8837), (0.200, -9.13205),
-            (0.300, -6.32564), (0.400, -5.60803), (0.500, -5.38794),
-            (0.600, -5.26585), (0.700, -5.18734), (0.800, -5.12756),
-            (0.900, -5.07984), (1.000, -5.03421), (2.500, -4.65634),
-            (5.000, -4.40580), (7.500, -4.25214), (10.000, -4.13678),
-            (12.500, -4.03765), (15.000, -3.95185), (17.500, -3.87945),
-            (20.000, -3.81295), (22.500, -3.75273), (25.000, -3.69836),
-            (27.500, -3.64785), (30.000, -3.59819), (32.500, -3.55146),
-            (35.000, -3.50522), (37.500, -3.45987), (40.000, -3.41672),
-            (42.500, -3.37465), (45.000, -3.33394), (47.500, -3.29393),
-            (50.000, -3.25316), (52.500, -3.21244), (55.000, -3.17124),
-            (57.500, -3.13211), (60.000, -3.09204), (65.000, -3.01135),
-            (70.000, -2.92897), (75.000, -2.83614), (80.000, -2.73893),
-            (85.000, -2.62840), (90.000, -2.49611), (92.500, -2.41337),
-            (95.000, -2.30820), (96.000, -2.25797), (97.000, -2.19648),
-            (98.000, -2.11320), (99.000, -1.99138), (99.900, -1.67466)
+            (0.001, -83.9094),
+            (0.100, -13.8837),
+            (0.200, -9.13205),
+            (0.300, -6.32564),
+            (0.400, -5.60803),
+            (0.500, -5.38794),
+            (0.600, -5.26585),
+            (0.700, -5.18734),
+            (0.800, -5.12756),
+            (0.900, -5.07984),
+            (1.000, -5.03421),
+            (2.500, -4.65634),
+            (5.000, -4.40580),
+            (7.500, -4.25214),
+            (10.000, -4.13678),
+            (12.500, -4.03765),
+            (15.000, -3.95185),
+            (17.500, -3.87945),
+            (20.000, -3.81295),
+            (22.500, -3.75273),
+            (25.000, -3.69836),
+            (27.500, -3.64785),
+            (30.000, -3.59819),
+            (32.500, -3.55146),
+            (35.000, -3.50522),
+            (37.500, -3.45987),
+            (40.000, -3.41672),
+            (42.500, -3.37465),
+            (45.000, -3.33394),
+            (47.500, -3.29393),
+            (50.000, -3.25316),
+            (52.500, -3.21244),
+            (55.000, -3.17124),
+            (57.500, -3.13211),
+            (60.000, -3.09204),
+            (65.000, -3.01135),
+            (70.000, -2.92897),
+            (75.000, -2.83614),
+            (80.000, -2.73893),
+            (85.000, -2.62840),
+            (90.000, -2.49611),
+            (92.500, -2.41337),
+            (95.000, -2.30820),
+            (96.000, -2.25797),
+            (97.000, -2.19648),
+            (98.000, -2.11320),
+            (99.000, -1.99138),
+            (99.900, -1.67466),
         )
         self._za_critical_values["t"] = np.asarray(self._t)
         # constant + trend model
         self._ct = (
-            (0.001, -38.17800), (0.100, -6.43107), (0.200, -6.07279),
-            (0.300, -5.95496), (0.400, -5.86254), (0.500, -5.77081),
-            (0.600, -5.72541), (0.700, -5.68406), (0.800, -5.65163),
-            (0.900, -5.60419), (1.000, -5.57556), (2.500, -5.29704),
-            (5.000, -5.07332), (7.500, -4.93003), (10.000, -4.82668),
-            (12.500, -4.73711), (15.000, -4.66020), (17.500, -4.58970),
-            (20.000, -4.52855), (22.500, -4.47100), (25.000, -4.42011),
-            (27.500, -4.37387), (30.000, -4.32705), (32.500, -4.28126),
-            (35.000, -4.23793), (37.500, -4.19822), (40.000, -4.15800),
-            (42.500, -4.11946), (45.000, -4.08064), (47.500, -4.04286),
-            (50.000, -4.00489), (52.500, -3.96837), (55.000, -3.93200),
-            (57.500, -3.89496), (60.000, -3.85577), (65.000, -3.77795),
-            (70.000, -3.69794), (75.000, -3.61852), (80.000, -3.52485),
-            (85.000, -3.41665), (90.000, -3.28527), (92.500, -3.19724),
-            (95.000, -3.08769), (96.000, -3.03088), (97.000, -2.96091),
-            (98.000, -2.85581), (99.000, -2.71015), (99.900, -2.28767)
+            (0.001, -38.17800),
+            (0.100, -6.43107),
+            (0.200, -6.07279),
+            (0.300, -5.95496),
+            (0.400, -5.86254),
+            (0.500, -5.77081),
+            (0.600, -5.72541),
+            (0.700, -5.68406),
+            (0.800, -5.65163),
+            (0.900, -5.60419),
+            (1.000, -5.57556),
+            (2.500, -5.29704),
+            (5.000, -5.07332),
+            (7.500, -4.93003),
+            (10.000, -4.82668),
+            (12.500, -4.73711),
+            (15.000, -4.66020),
+            (17.500, -4.58970),
+            (20.000, -4.52855),
+            (22.500, -4.47100),
+            (25.000, -4.42011),
+            (27.500, -4.37387),
+            (30.000, -4.32705),
+            (32.500, -4.28126),
+            (35.000, -4.23793),
+            (37.500, -4.19822),
+            (40.000, -4.15800),
+            (42.500, -4.11946),
+            (45.000, -4.08064),
+            (47.500, -4.04286),
+            (50.000, -4.00489),
+            (52.500, -3.96837),
+            (55.000, -3.93200),
+            (57.500, -3.89496),
+            (60.000, -3.85577),
+            (65.000, -3.77795),
+            (70.000, -3.69794),
+            (75.000, -3.61852),
+            (80.000, -3.52485),
+            (85.000, -3.41665),
+            (90.000, -3.28527),
+            (92.500, -3.19724),
+            (95.000, -3.08769),
+            (96.000, -3.03088),
+            (97.000, -2.96091),
+            (98.000, -2.85581),
+            (99.000, -2.71015),
+            (99.900, -2.28767),
         )
         self._za_critical_values["ct"] = np.asarray(self._ct)
 
@@ -1898,8 +2161,11 @@ class ZivotAndrewsUnitRoot(object):
         pvalue = np.interp(stat, stats, pcnts) / 100.0
         cv = [1.0, 5.0, 10.0]
         crit_value = np.interp(cv, pcnts, stats)
-        cvdict = {"1%": crit_value[0], "5%": crit_value[1],
-                  "10%": crit_value[2]}
+        cvdict = {
+            "1%": crit_value[0],
+            "5%": crit_value[1],
+            "10%": crit_value[2],
+        }
         return pvalue, cvdict
 
     def _quick_ols(self, endog, exog):
@@ -1927,28 +2193,30 @@ class ZivotAndrewsUnitRoot(object):
         exog = np.zeros((endog[lags:].shape[0], cols + lags))
         exog[:, 0] = const
         # lagged y and dy
-        exog[:, cols - 1] = series[lags:(nobs - 1)]
-        exog[:, cols:] = lagmat(
-            endog, lags, trim="none")[lags:exog.shape[0] + lags]
+        exog[:, cols - 1] = series[lags : (nobs - 1)]
+        exog[:, cols:] = lagmat(endog, lags, trim="none")[
+            lags : exog.shape[0] + lags
+        ]
         return endog, exog
 
-    def _update_regression_exog(self, exog, regression, period, nobs, const,
-                                trend, cols, lags):
+    def _update_regression_exog(
+        self, exog, regression, period, nobs, const, trend, cols, lags
+    ):
         """
         Update the exog array for the next regression.
         """
-        cutoff = (period - (lags + 1))
+        cutoff = period - (lags + 1)
         if regression != "t":
             exog[:cutoff, 1] = 0
             exog[cutoff:, 1] = const
-            exog[:, 2] = trend[(lags + 2):(nobs + 1)]
+            exog[:, 2] = trend[(lags + 2) : (nobs + 1)]
             if regression == "ct":
                 exog[:cutoff, 3] = 0
-                exog[cutoff:, 3] = trend[1:(nobs - period + 1)]
+                exog[cutoff:, 3] = trend[1 : (nobs - period + 1)]
         else:
-            exog[:, 1] = trend[(lags + 2):(nobs + 1)]
-            exog[:(cutoff - 1), 2] = 0
-            exog[(cutoff - 1):, 2] = trend[0:(nobs - period + 1)]
+            exog[:, 1] = trend[(lags + 2) : (nobs + 1)]
+            exog[: (cutoff - 1), 2] = 0
+            exog[(cutoff - 1) :, 2] = trend[0 : (nobs - period + 1)]
         return exog
 
     def run(self, x, trim=0.15, maxlag=None, regression="c", autolag="AIC"):
@@ -2031,21 +2299,24 @@ class ZivotAndrewsUnitRoot(object):
         x = array_like(x, "x")
         trim = float_like(trim, "trim")
         maxlag = int_like(maxlag, "maxlag", optional=True)
-        regression = string_like(regression, "regression",
-                                 options=("c", "t", "ct"))
-        autolag = string_like(autolag, "autolag",
-                              options=("aic", "bic", "t-stat"), optional=True)
-        if trim < 0 or trim > (1. / 3.):
+        regression = string_like(
+            regression, "regression", options=("c", "t", "ct")
+        )
+        autolag = string_like(
+            autolag, "autolag", options=("aic", "bic", "t-stat"), optional=True
+        )
+        if trim < 0 or trim > (1.0 / 3.0):
             raise ValueError("trim value must be a float in range [0, 1/3)")
         nobs = x.shape[0]
         if autolag:
-            adf_res = adfuller(x, maxlag=maxlag, regression="ct",
-                               autolag=autolag)
+            adf_res = adfuller(
+                x, maxlag=maxlag, regression="ct", autolag=autolag
+            )
             baselags = adf_res[2]
         elif maxlag:
             baselags = maxlag
         else:
-            baselags = int(12. * np.power(nobs / 100., 1 / 4.))
+            baselags = int(12.0 * np.power(nobs / 100.0, 1 / 4.0))
         trimcnt = int(nobs * trim)
         start_period = trimcnt
         end_period = nobs - trimcnt
@@ -2059,14 +2330,22 @@ class ZivotAndrewsUnitRoot(object):
         t_const *= np.sqrt(3) / nobs ** (3 / 2)
         # format the auxiliary regression data
         endog, exog = self._format_regression_data(
-            x, nobs, c_const, t_const, basecols, baselags)
+            x, nobs, c_const, t_const, basecols, baselags
+        )
         # iterate through the time periods
         stats = np.full(end_period + 1, np.inf)
         for bp in range(start_period + 1, end_period + 1):
             # update intercept dummy / trend / trend dummy
-            exog = self._update_regression_exog(exog, regression, bp, nobs,
-                                                c_const, t_const, basecols,
-                                                baselags)
+            exog = self._update_regression_exog(
+                exog,
+                regression,
+                bp,
+                nobs,
+                c_const,
+                t_const,
+                basecols,
+                baselags,
+            )
             # check exog rank on first iteration
             if bp == start_period + 1:
                 o = OLS(endog[baselags:], exog, hasconst=1).fit()
@@ -2074,11 +2353,14 @@ class ZivotAndrewsUnitRoot(object):
                     raise ValueError(
                         "ZA: auxiliary exog matrix is not full rank.\n"
                         "  cols (exc intercept) = {}  rank = {}".format(
-                            exog.shape[1] - 1, o.df_model))
+                            exog.shape[1] - 1, o.df_model
+                        )
+                    )
                 stats[bp] = o.tvalues[basecols - 1]
             else:
-                stats[bp] = self._quick_ols(endog[baselags:],
-                                            exog)[basecols - 1]
+                stats[bp] = self._quick_ols(endog[baselags:], exog)[
+                    basecols - 1
+                ]
         # return best seen
         zastat = np.min(stats)
         bpidx = np.argmin(stats) - 1
@@ -2087,10 +2369,12 @@ class ZivotAndrewsUnitRoot(object):
         cvdict = crit[1]
         return zastat, pval, cvdict, baselags, bpidx
 
-    def __call__(self, x, trim=0.15, maxlag=None, regression="c",
-                 autolag="AIC"):
-        return self.run(x, trim=trim, maxlag=maxlag, regression=regression,
-                        autolag=autolag)
+    def __call__(
+        self, x, trim=0.15, maxlag=None, regression="c", autolag="AIC"
+    ):
+        return self.run(
+            x, trim=trim, maxlag=maxlag, regression=regression, autolag=autolag
+        )
 
 
 zivot_andrews = ZivotAndrewsUnitRoot()
