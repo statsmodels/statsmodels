@@ -13,6 +13,3 @@ pip install sphinx sphinx-material jupyter nbconvert numpydoc pyyaml doctr panda
 # Add pymc3 and theano for statespace_sarimax_pymc3.
 echo conda install theano pymc3 -y
 conda install theano pymc3 -y
-
-# TODO: Remove after release of numpydoc 1.1.0
-pip install git+https://github.com/numpy/numpydoc.git --upgrade || true
