@@ -4,16 +4,18 @@ Durbin-Levinson recursions for estimating AR(p) model parameters.
 Author: Chad Fulton
 License: BSD-3
 """
+from statsmodels.compat.pandas import deprecate_kwarg
+
 import numpy as np
 
 from statsmodels.tools.tools import Bunch
+from statsmodels.tsa.arima.params import SARIMAXParams
+from statsmodels.tsa.arima.specification import SARIMAXSpecification
 from statsmodels.tsa.stattools import acovf
 
-from statsmodels.tsa.arima.specification import SARIMAXSpecification
-from statsmodels.tsa.arima.params import SARIMAXParams
 
-
-def durbin_levinson(endog, ar_order=0, demean=True, unbiased=False):
+@deprecate_kwarg("unbiased", "adjusted")
+def durbin_levinson(endog, ar_order=0, demean=True, adjusted=False):
     """
     Estimate AR parameters at multiple orders using Durbin-Levinson recursions.
 
@@ -26,12 +28,10 @@ def durbin_levinson(endog, ar_order=0, demean=True, unbiased=False):
     demean : bool, optional
         Whether to estimate and remove the mean from the process prior to
         fitting the autoregressive coefficients. Default is True.
-    unbiased : bool, optional
-        Whether to use the "unbiased" autocovariance estimator, which uses
-        n - h degrees of freedom rather than n. Note that despite the name, it
-        is only truly unbiased if the process mean is known (rather than
-        estimated) and for some processes it can result in a non-positive
-        definite autocovariance matrix. Default is False.
+    adjusted : bool, optional
+        Whether to use the "adjusted" autocovariance estimator, which uses
+        n - h degrees of freedom rather than n. This option can result in
+        a non-positive definite autocovariance matrix. Default is False.
 
     Returns
     -------
@@ -63,7 +63,7 @@ def durbin_levinson(endog, ar_order=0, demean=True, unbiased=False):
                          ' with seasonal or otherwise non-consecutive AR'
                          ' orders.')
 
-    gamma = acovf(endog, unbiased=unbiased, fft=True, demean=demean,
+    gamma = acovf(endog, adjusted=adjusted, fft=True, demean=demean,
                   nlag=max_spec.ar_order)
 
     # If no AR component, just a variance computation

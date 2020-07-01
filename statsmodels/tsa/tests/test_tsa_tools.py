@@ -24,16 +24,16 @@ x1000 = xo / 1000.
 
 
 def test_acf():
-    acf_x = tsa.acf(x100, unbiased=False, fft=False, nlags=20)
+    acf_x = tsa.acf(x100, adjusted=False, fft=False, nlags=20)
     assert_array_almost_equal(mlacf.acf100.ravel(), acf_x, 8)  # why only dec=8
-    acf_x = tsa.acf(x1000, unbiased=False, fft=False, nlags=20)
+    acf_x = tsa.acf(x1000, adjusted=False, fft=False, nlags=20)
     assert_array_almost_equal(mlacf.acf1000.ravel(), acf_x, 8)  # why only dec=9
 
 
 def test_ccf():
-    ccf_x = tsa.ccf(x100[4:], x100[:-4], unbiased=False)[:21]
+    ccf_x = tsa.ccf(x100[4:], x100[:-4], adjusted=False)[:21]
     assert_array_almost_equal(mlccf.ccf100.ravel()[:21][::-1], ccf_x, 8)
-    ccf_x = tsa.ccf(x1000[4:], x1000[:-4], unbiased=False)[:21]
+    ccf_x = tsa.ccf(x1000[4:], x1000[:-4], adjusted=False)[:21]
     assert_array_almost_equal(mlccf.ccf1000.ravel()[:21][::-1], ccf_x, 8)
 
 
