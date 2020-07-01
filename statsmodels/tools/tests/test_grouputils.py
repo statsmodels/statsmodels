@@ -8,7 +8,6 @@ from scipy import sparse
 
 from statsmodels.tools.grouputils import (dummy_sparse, Grouping, Group,
                                           combine_indices, group_sums)
-from statsmodels.tools.tools import categorical
 from statsmodels.datasets import grunfeld, anes96
 
 
@@ -133,14 +132,16 @@ class CheckGrouping(object):
     def test_dummy_sparse(self):
         data = self.data
         self.grouping.dummy_sparse()
-        expected = categorical(data.index.get_level_values(0).values,
-                               drop=True)
+        values = data.index.get_level_values(0).values
+        expected = pd.get_dummies(pd.Series(values, dtype="category"),
+                                  drop_first=False)
         np.testing.assert_equal(self.grouping._dummies.toarray(), expected)
 
         if len(self.grouping.group_names) > 1:
             self.grouping.dummy_sparse(level=1)
-            expected = categorical(data.index.get_level_values(1).values,
-                    drop=True)
+            values = data.index.get_level_values(1).values
+            expected = pd.get_dummies(pd.Series(values, dtype="category"),
+                                      drop_first=False)
             np.testing.assert_equal(self.grouping._dummies.toarray(),
                                     expected)
 

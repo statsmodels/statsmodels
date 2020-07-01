@@ -150,6 +150,13 @@ def categorical(data, col=None, dictnames=False, drop=False):
 
     >>> design2 = sm.tools.categorical(struct_ar, col='str_instr', drop=True)
     """
+    import warnings
+    warnings.warn(
+        "categorical is deprecated. Use pandas Categorical to represent "
+        "categorical data and can get_dummies to construct dummy arrays. "
+        "It will be removed in a future release.",
+        FutureWarning
+    )
     # TODO: add a NameValidator function
     if isinstance(col, (list, tuple)):
         if len(col) == 1:

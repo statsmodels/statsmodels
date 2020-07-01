@@ -107,7 +107,6 @@ Tools
 
    ~statsmodels.__init__.test
    ~statsmodels.tools.tools.add_constant
-   ~statsmodels.tools.tools.categorical
    ~statsmodels.iolib.smpickle.load_pickle
    ~statsmodels.tools.print_version.show_versions
    ~statsmodels.tools.web.webdoc

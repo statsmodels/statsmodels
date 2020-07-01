@@ -4,13 +4,13 @@ Test functions for models.regression
 # TODO: Test for LM
 from statsmodels.compat.python import lrange
 import warnings
-import pandas
+import pandas as pd
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_,
                            assert_raises, assert_equal, assert_allclose)
 import pytest
 from scipy.linalg import toeplitz
-from statsmodels.tools.tools import add_constant, categorical
+from statsmodels.tools.tools import add_constant
 from statsmodels.regression.linear_model import (OLS, WLS, GLS, yule_walker,
                                                  burg)
 from statsmodels.datasets import longley
@@ -536,29 +536,30 @@ class TestLM(object):
     @classmethod
     def setup_class(cls):
         # TODO: Test HAC method
-        X = np.random.randn(100, 3)
+        rs = np.random.RandomState(1234)
+        x = rs.randn(100, 3)
         b = np.ones((3, 1))
-        e = np.random.randn(100, 1)
-        y = np.dot(X, b) + e
+        e = rs.randn(100, 1)
+        y = np.dot(x, b) + e
         # Cases?
         # Homoskedastic
         # HC0
-        cls.res1_full = OLS(y, X).fit()
-        cls.res1_restricted = OLS(y, X[:, 0]).fit()
+        cls.res1_full = OLS(y, x).fit()
+        cls.res1_restricted = OLS(y, x[:, 0]).fit()
 
         cls.res2_full = cls.res1_full.get_robustcov_results('HC0')
         cls.res2_restricted = cls.res1_restricted.get_robustcov_results('HC0')
 
-        cls.X = X
+        cls.x = x
         cls.Y = y
 
     def test_LM_homoskedastic(self):
         resid = self.res1_restricted.wresid
         n = resid.shape[0]
-        X = self.X
-        S = np.dot(resid, resid) / n * np.dot(X.T, X) / n
+        x = self.x
+        S = np.dot(resid, resid) / n * np.dot(x.T, x) / n
         Sinv = np.linalg.inv(S)
-        s = np.mean(X * resid[:, None], 0)
+        s = np.mean(x * resid[:, None], 0)
         LMstat = n * np.dot(np.dot(s, Sinv), s.T)
         LMstat_OLS = self.res1_full.compare_lm_test(self.res1_restricted)
         LMstat2 = LMstat_OLS[0]
@@ -567,8 +568,8 @@ class TestLM(object):
     def test_LM_heteroskedastic_nodemean(self):
         resid = self.res1_restricted.wresid
         n = resid.shape[0]
-        X = self.X
-        scores = X * resid[:, None]
+        x = self.x
+        scores = x * resid[:, None]
         S = np.dot(scores.T, scores) / n
         Sinv = np.linalg.inv(S)
         s = np.mean(scores, 0)
@@ -581,8 +582,8 @@ class TestLM(object):
     def test_LM_heteroskedastic_demean(self):
         resid = self.res1_restricted.wresid
         n = resid.shape[0]
-        X = self.X
-        scores = X * resid[:, None]
+        x = self.x
+        scores = x * resid[:, None]
         scores_demean = scores - scores.mean(0)
         S = np.dot(scores_demean.T, scores_demean) / n
         Sinv = np.linalg.inv(S)
@@ -596,10 +597,10 @@ class TestLM(object):
         resid = self.res1_restricted.wresid
         resid_full = self.res1_full.wresid
         n = resid.shape[0]
-        X = self.X
-        scores = X * resid[:, None]
+        x = self.x
+        scores = x * resid[:, None]
         s = np.mean(scores, 0)
-        scores = X * resid_full[:, None]
+        scores = x * resid_full[:, None]
         S = np.dot(scores.T, scores) / n
         Sinv = np.linalg.inv(S)
         LMstat = n * np.dot(np.dot(s, Sinv), s.T)
@@ -621,14 +622,14 @@ class TestOLS_GLS_WLS_equivalence(object):
         data = longley.load(as_pandas=False)
         data.exog = add_constant(data.exog, prepend=False)
         y = data.endog
-        X = data.exog
+        x = data.exog
         n = y.shape[0]
         w = np.ones(n)
         cls.results = []
-        cls.results.append(OLS(y, X).fit())
-        cls.results.append(WLS(y, X, w).fit())
-        cls.results.append(GLS(y, X, 100*w).fit())
-        cls.results.append(GLS(y, X, np.diag(0.1*w)).fit())
+        cls.results.append(OLS(y, x).fit())
+        cls.results.append(WLS(y, x, w).fit())
+        cls.results.append(GLS(y, x, 100*w).fit())
+        cls.results.append(GLS(y, x, np.diag(0.1*w)).fit())
 
     def test_ll(self):
         llf = np.array([r.llf for r in self.results])
@@ -667,16 +668,16 @@ class TestGLS_WLS_equivalence(TestOLS_GLS_WLS_equivalence):
         data = longley.load(as_pandas=False)
         data.exog = add_constant(data.exog, prepend=False)
         y = data.endog
-        X = data.exog
+        x = data.exog
         n = y.shape[0]
         np.random.seed(5)
         w = np.random.uniform(0.5, 1, n)
         w_inv = 1. / w
         cls.results = []
-        cls.results.append(WLS(y, X, w).fit())
-        cls.results.append(WLS(y, X, 0.01 * w).fit())
-        cls.results.append(GLS(y, X, 100 * w_inv).fit())
-        cls.results.append(GLS(y, X, np.diag(0.1 * w_inv)).fit())
+        cls.results.append(WLS(y, x, w).fit())
+        cls.results.append(WLS(y, x, 0.01 * w).fit())
+        cls.results.append(GLS(y, x, 100 * w_inv).fit())
+        cls.results.append(GLS(y, x, np.diag(0.1 * w_inv)).fit())
 
 
 class TestNonFit(object):
@@ -737,9 +738,9 @@ def test_wls_example():
     # example from the docstring, there was a note about a bug, should
     # be fixed now
     Y = [1, 3, 4, 5, 2, 3, 4]
-    X = lrange(1, 8)
-    X = add_constant(X, prepend=False)
-    wls_model = WLS(Y, X, weights=lrange(1, 8)).fit()
+    x = lrange(1, 8)
+    x = add_constant(x, prepend=False)
+    wls_model = WLS(Y, x, weights=lrange(1, 8)).fit()
     # taken from R lm.summary
     assert_almost_equal(wls_model.fvalue, 0.127337843215, 6)
     assert_almost_equal(wls_model.scale, 2.44608530786**2, 6)
@@ -747,9 +748,9 @@ def test_wls_example():
 
 def test_wls_tss():
     y = np.array([22, 22, 22, 23, 23, 23])
-    X = [[1, 0], [1, 0], [1, 1], [0, 1], [0, 1], [0, 1]]
+    x = [[1, 0], [1, 0], [1, 1], [0, 1], [0, 1], [0, 1]]
 
-    ols_mod = OLS(y, add_constant(X, prepend=False)).fit()
+    ols_mod = OLS(y, add_constant(x, prepend=False)).fit()
 
     yw = np.array([22, 22, 23.])
     Xw = [[1, 0], [1, 1], [0, 1]]
@@ -880,12 +881,12 @@ class TestGLS_large_data(TestDataDimensions):
         super(TestGLS_large_data, cls).setup_class()
         nobs = 1000
         y = np.random.randn(nobs, 1)
-        X = np.random.randn(nobs, 20)
+        x = np.random.randn(nobs, 20)
         sigma = np.ones_like(y)
-        cls.gls_res = GLS(y, X, sigma=sigma).fit()
-        cls.gls_res_scalar = GLS(y, X, sigma=1).fit()
-        cls.gls_res_none = GLS(y, X).fit()
-        cls.ols_res = OLS(y, X).fit()
+        cls.gls_res = GLS(y, x, sigma=sigma).fit()
+        cls.gls_res_scalar = GLS(y, x, sigma=1).fit()
+        cls.gls_res_none = GLS(y, x).fit()
+        cls.ols_res = OLS(y, x).fit()
 
     def test_large_equal_params(self):
         assert_almost_equal(self.ols_res.params, self.gls_res.params, DECIMAL_7)
@@ -932,23 +933,23 @@ def test_bad_size():
 
 
 def test_const_indicator():
-    np.random.seed(12345)
-    X = np.random.randint(0, 3, size=30)
-    X = categorical(X, drop=True)
-    y = np.dot(X, [1., 2., 3.]) + np.random.normal(size=30)
-    resc = OLS(y, add_constant(X[:, 1:], prepend=True)).fit()
-    res = OLS(y, X, hasconst=True).fit()
+    rs = np.random.RandomState(12345)
+    x = rs.randint(0, 3, size=30)
+    x = pd.get_dummies(pd.Series(x, dtype="category"),  drop_first=False)
+    y = np.dot(x, [1., 2., 3.]) + rs.normal(size=30)
+    resc = OLS(y, add_constant(x.iloc[:, 1:], prepend=True)).fit()
+    res = OLS(y, x, hasconst=True).fit()
     assert_almost_equal(resc.rsquared, res.rsquared, 12)
     assert res.model.data.k_constant == 1
     assert resc.model.data.k_constant == 1
 
 
 def test_fvalue_const_only():
-    np.random.seed(12345)
-    x = np.random.randint(0, 3, size=30)
-    x = categorical(x, drop=True)
-    x[:, 0] = 1
-    y = np.dot(x, [1., 2., 3.]) + np.random.normal(size=30)
+    rs = np.random.RandomState(12345)
+    x = rs.randint(0, 3, size=30)
+    x = pd.get_dummies(pd.Series(x, dtype="category"),  drop_first=False)
+    x.iloc[:, 0] = 1
+    y = np.dot(x, [1., 2., 3.]) + rs.normal(size=30)
     res = OLS(y, x, hasconst=True).fit(cov_type='HC1')
     assert not np.isnan(res.fvalue)
     assert isinstance(res.fvalue, float)
@@ -958,22 +959,22 @@ def test_fvalue_const_only():
 def test_conf_int_single_regressor():
     # GH#706 single-regressor model (i.e. no intercept) with 1D exog
     # should get passed to DataFrame for conf_int
-    y = pandas.Series(np.random.randn(10))
-    x = pandas.Series(np.ones(10))
+    y = pd.Series(np.random.randn(10))
+    x = pd.Series(np.ones(10))
     res = OLS(y, x).fit()
     conf_int = res.conf_int()
     np.testing.assert_equal(conf_int.shape, (1, 2))
-    np.testing.assert_(isinstance(conf_int, pandas.DataFrame))
+    np.testing.assert_(isinstance(conf_int, pd.DataFrame))
 
 
 def test_summary_as_latex():
     # GH#734
     import re
     dta = longley.load_pandas()
-    X = dta.exog
-    X["constant"] = 1
+    x = dta.exog
+    x["constant"] = 1
     y = dta.endog
-    res = OLS(y, X).fit()
+    res = OLS(y, x).fit()
     with pytest.warns(UserWarning):
         table = res.summary().as_latex()
     # replace the date and time
@@ -1173,7 +1174,7 @@ def test_missing_formula_predict():
 
     data = np.linspace(0, 10, nsample)
     null = np.array([np.nan])
-    data = pandas.DataFrame({'x': np.concatenate((data, null))})
+    data = pd.DataFrame({'x': np.concatenate((data, null))})
     beta = np.array([1, 0.1])
     e = np.random.normal(size=nsample+1)
     data['y'] = beta[0] + beta[1] * data['x'] + e
