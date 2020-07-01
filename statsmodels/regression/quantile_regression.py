@@ -91,7 +91,7 @@ class QuantReg(RegressionModel):
         Parameters
         ----------
         q : float
-            Quantile must be between 0 and 1
+            Quantile must be strictly between 0 and 1
         vcov : str, method used to calculate the variance-covariance matrix
             of the parameters. Default is ``robust``:
 
@@ -116,8 +116,8 @@ class QuantReg(RegressionModel):
             - chamberlain: Chamberlain (1994)
         """
 
-        if q < 0 or q > 1:
-            raise Exception('p must be between 0 and 1')
+        if q <= 0 or q >= 1:
+            raise Exception('p must be strictly between 0 and 1')
 
         kern_names = ['biw', 'cos', 'epa', 'gau', 'par']
         if kernel not in kern_names:
