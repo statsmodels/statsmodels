@@ -1504,7 +1504,9 @@ class GeneralizedPoisson(CountModel):
                                  'warn_convergence': False}
             optim_kwds_prelim.update(kwargs.get('optim_kwds_prelim', {}))
             mod_poi = Poisson(self.endog, self.exog, offset=offset)
-            res_poi = mod_poi.fit(**optim_kwds_prelim)
+            with warnings.catch_warnings():
+                warnings.simplefilter("always")
+                res_poi = mod_poi.fit(**optim_kwds_prelim)
             start_params = res_poi.params
             a = self._estimate_dispersion(res_poi.predict(), res_poi.resid,
                                           df_resid=res_poi.df_resid)
@@ -1556,11 +1558,14 @@ class GeneralizedPoisson(CountModel):
             if np.size(offset) == 1 and offset == 0:
                 offset = None
             mod_poi = Poisson(self.endog, self.exog, offset=offset)
-            start_params = mod_poi.fit_regularized(
-                start_params=start_params, method=method, maxiter=maxiter,
-                full_output=full_output, disp=0, callback=callback,
-                alpha=alpha_p, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
-                size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs).params
+            with warnings.catch_warnings():
+                warnings.simplefilter("always")
+                start_params = mod_poi.fit_regularized(
+                    start_params=start_params, method=method, maxiter=maxiter,
+                    full_output=full_output, disp=0, callback=callback,
+                    alpha=alpha_p, trim_mode=trim_mode,
+                    auto_trim_tol=auto_trim_tol, size_trim_tol=size_trim_tol,
+                    qc_tol=qc_tol, **kwargs).params
             start_params = np.append(start_params, 0.1)
 
         cntfit = super(CountModel, self).fit_regularized(
@@ -2908,7 +2913,9 @@ class NegativeBinomial(CountModel):
                                  'warn_convergence': False}
             optim_kwds_prelim.update(kwargs.get('optim_kwds_prelim', {}))
             mod_poi = Poisson(self.endog, self.exog, offset=offset)
-            res_poi = mod_poi.fit(**optim_kwds_prelim)
+            with warnings.catch_warnings():
+                warnings.simplefilter("always")
+                res_poi = mod_poi.fit(**optim_kwds_prelim)
             start_params = res_poi.params
             if self.loglike_method.startswith('nb'):
                 a = self._estimate_dispersion(res_poi.predict(), res_poi.resid,
@@ -2973,11 +2980,14 @@ class NegativeBinomial(CountModel):
             if np.size(offset) == 1 and offset == 0:
                 offset = None
             mod_poi = Poisson(self.endog, self.exog, offset=offset)
-            start_params = mod_poi.fit_regularized(
-                start_params=start_params, method=method, maxiter=maxiter,
-                full_output=full_output, disp=0, callback=callback,
-                alpha=alpha_p, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
-                size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs).params
+            with warnings.catch_warnings():
+                warnings.simplefilter("always")
+                start_params = mod_poi.fit_regularized(
+                    start_params=start_params, method=method, maxiter=maxiter,
+                    full_output=full_output, disp=0, callback=callback,
+                    alpha=alpha_p, trim_mode=trim_mode,
+                    auto_trim_tol=auto_trim_tol, size_trim_tol=size_trim_tol,
+                    qc_tol=qc_tol, **kwargs).params
             if self.loglike_method.startswith('nb'):
                 start_params = np.append(start_params, 0.1)
 
@@ -3284,7 +3294,9 @@ class NegativeBinomialP(CountModel):
                                  'warn_convergence': False}
             optim_kwds_prelim.update(kwargs.get('optim_kwds_prelim', {}))
             mod_poi = Poisson(self.endog, self.exog, offset=offset)
-            res_poi = mod_poi.fit(**optim_kwds_prelim)
+            with warnings.catch_warnings():
+                warnings.simplefilter("always")
+                res_poi = mod_poi.fit(**optim_kwds_prelim)
             start_params = res_poi.params
             a = self._estimate_dispersion(res_poi.predict(), res_poi.resid,
                                           df_resid=res_poi.df_resid)
@@ -3333,11 +3345,14 @@ class NegativeBinomialP(CountModel):
             if np.size(offset) == 1 and offset == 0:
                 offset = None
             mod_poi = Poisson(self.endog, self.exog, offset=offset)
-            start_params = mod_poi.fit_regularized(
-                start_params=start_params, method=method, maxiter=maxiter,
-                full_output=full_output, disp=0, callback=callback,
-                alpha=alpha_p, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
-                size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs).params
+            with warnings.catch_warnings():
+                warnings.simplefilter("always")
+                start_params = mod_poi.fit_regularized(
+                    start_params=start_params, method=method, maxiter=maxiter,
+                    full_output=full_output, disp=0, callback=callback,
+                    alpha=alpha_p, trim_mode=trim_mode,
+                    auto_trim_tol=auto_trim_tol, size_trim_tol=size_trim_tol,
+                    qc_tol=qc_tol, **kwargs).params
             start_params = np.append(start_params, 0.1)
 
         cntfit = super(CountModel, self).fit_regularized(
