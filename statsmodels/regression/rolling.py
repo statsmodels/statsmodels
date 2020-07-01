@@ -8,33 +8,45 @@ Copyright (c) 2019 Kevin Sheppard
 License: 3-clause BSD
 """
 from statsmodels.compat.numpy import lstsq
-from statsmodels.compat.pandas import Appender, Substitution
+from statsmodels.compat.pandas import Appender, Substitution, cache_readonly
 
 from collections import namedtuple
 
 import numpy as np
-from pandas import Series, DataFrame, MultiIndex
+from pandas import DataFrame, MultiIndex, Series
 from scipy import stats
 
 from statsmodels.base import model
 from statsmodels.base.model import LikelihoodModelResults, Model
-from statsmodels.compat.pandas import cache_readonly
-from statsmodels.regression.linear_model import RegressionResults, \
-    RegressionModel
+from statsmodels.regression.linear_model import (
+    RegressionModel,
+    RegressionResults,
+)
 from statsmodels.tools.validation import array_like, int_like, string_like
 
 
 def strip4(line):
-    if line.startswith(' '):
+    if line.startswith(" "):
         return line[4:]
     return line
 
 
-RollingStore = namedtuple('RollingStore', ['params', 'ssr', 'llf', 'nobs',
-                                           's2', 'xpxi', 'xeex',
-                                           'centered_tss', 'uncentered_tss'])
+RollingStore = namedtuple(
+    "RollingStore",
+    [
+        "params",
+        "ssr",
+        "llf",
+        "nobs",
+        "s2",
+        "xpxi",
+        "xeex",
+        "centered_tss",
+        "uncentered_tss",
+    ],
+)
 
-common_params = '\n'.join(map(strip4, model._model_params_doc.split('\n')))
+common_params = "\n".join(map(strip4, model._model_params_doc.split("\n")))
 window_parameters = """\
 window : int
     Length of the rolling window. Must be strictly larger than the number
@@ -53,12 +65,17 @@ min_nobs : {int, None}
     Minimum number of observations required to estimate a model when
     data are missing.  If None, the minimum depends on the number of
     regressors in the model. Must be smaller than window.
-missing : str
-    Available options are 'drop', 'skip' and 'raise'. If 'drop', any
+missing : str, default "drop"
+    Available options are "drop", "skip" and "raise". If "drop", any
     observations with nans are dropped and the estimates are computed using
     only the non-missing values in each window. If 'skip' blocks containing
     missing values are skipped and the corresponding results contains NaN.
-    If 'raise', an error is raised. Default is 'drop'."""
+    If 'raise', an error is raised. Default is 'drop'.
+expanding : bool, default False
+    If True, then the initial observations after min_nobs are filled using
+    an expanding scheme until ``window`` observations are available, after
+    which rolling is used.
+"""
 
 
 extra_base = _missing_param_doc
@@ -95,52 +112,78 @@ Examples
 Use params_only to skip all calculations except parameter estimation
 
 >>> rolling_params = mod.fit(params_only=True)
+
+Use expanding and min_nobs to fill the initial results using an
+expanding scheme until window observation, and the roll.
+
+>>> mod = Rolling%(model)s(data.endog, exog, window=60, min_nobs=12,
+... expanding=True)
+>>> rolling_res = mod.fit()
 """
 
 
-@Substitution(model_type='Weighted', model='WLS',
-              parameters=common_params,
-              extra_parameters=extra_parameters)
+@Substitution(
+    model_type="Weighted",
+    model="WLS",
+    parameters=common_params,
+    extra_parameters=extra_parameters,
+)
 @Appender(_doc)
 class RollingWLS(object):
-
-    def __init__(self, endog, exog, window=None, weights=None, min_nobs=None,
-                 missing='drop'):
+    def __init__(
+        self,
+        endog,
+        exog,
+        window=None,
+        *,
+        weights=None,
+        min_nobs=None,
+        missing="drop",
+        expanding=False
+    ):
         # Call Model.__init__ twice to use const detection in first pass
         # But to not drop in the second pass
-        missing = string_like(missing, 'missing',
-                              options=('drop', 'raise', 'skip'))
-        temp_msng = 'drop' if missing != 'raise' else 'raise'
+        missing = string_like(
+            missing, "missing", options=("drop", "raise", "skip")
+        )
+        temp_msng = "drop" if missing != "raise" else "raise"
         Model.__init__(self, endog, exog, missing=temp_msng, hasconst=None)
         k_const = self.k_constant
         const_idx = self.data.const_idx
-        Model.__init__(self, endog, exog, missing='none', hasconst=False)
+        Model.__init__(self, endog, exog, missing="none", hasconst=False)
         self.k_constant = k_const
         self.data.const_idx = const_idx
-        self._y = array_like(endog, 'endog')
+        self._y = array_like(endog, "endog")
         nobs = self._y.shape[0]
-        self._x = array_like(exog, 'endog', ndim=2, shape=(nobs, None))
-        window = int_like(window, 'window', optional=True)
-        weights = array_like(weights, 'weights', optional=True, shape=(nobs,))
+        self._x = array_like(exog, "endog", ndim=2, shape=(nobs, None))
+        window = int_like(window, "window", optional=True)
+        weights = array_like(weights, "weights", optional=True, shape=(nobs,))
         self._window = window if window is not None else self._y.shape[0]
         self._weighted = weights is not None
         self._weights = np.ones(nobs) if weights is None else weights
         w12 = np.sqrt(self._weights)
         self._wy = w12 * self._y
         self._wx = w12[:, None] * self._x
+
+        min_nobs = int_like(min_nobs, "min_nobs", optional=True)
+        self._min_nobs = min_nobs if min_nobs is not None else self._x.shape[1]
+        if self._min_nobs < self._x.shape[1] or self._min_nobs > self._window:
+            raise ValueError(
+                "min_nobs must be larger than the number of "
+                "regressors in the model and less than window"
+            )
+
+        self._expanding = expanding
+
         self._is_nan = np.zeros_like(self._y, dtype=bool)
         self._has_nan = self._find_nans()
         self.const_idx = self.data.const_idx
-        self._skip_missing = missing == 'skip'
-        min_nobs = int_like(min_nobs, 'min_nobs', optional=True)
-        self._min_nobs = min_nobs if min_nobs is not None else self._x.shape[1]
-        if self._min_nobs < self._x.shape[1] or self._min_nobs > self._window:
-            raise ValueError('min_nobs must be larger than the number of '
-                             'regressors in the model and less than window')
+        self._skip_missing = missing == "skip"
 
     def _handle_data(self, endog, exog, missing, hasconst, **kwargs):
-        return Model._handle_data(self, endog, exog, missing, hasconst,
-                                  **kwargs)
+        return Model._handle_data(
+            self, endog, exog, missing, hasconst, **kwargs
+        )
 
     def _find_nans(self):
         nans = np.isnan(self._y)
@@ -149,19 +192,25 @@ class RollingWLS(object):
         self._is_nan[:] = nans
         has_nan = np.cumsum(nans)
         w = self._window
-        has_nan[w - 1:] = has_nan[w - 1:] - has_nan[:-(w - 1)]
-        has_nan[:w - 1] = False
+        has_nan[w - 1 :] = has_nan[w - 1 :] - has_nan[: -(w - 1)]
+        if self._expanding:
+            has_nan[: self._min_nobs] = False
+        else:
+            has_nan[: w - 1] = False
 
         return has_nan.astype(bool)
 
     def _get_data(self, idx):
         window = self._window
-        # TODO: Make a helper function
-        y = self._y[idx - window:idx]
-        wy = self._wy[idx - window:idx]
-        wx = self._wx[idx - window:idx]
-        weights = self._weights[idx - window:idx]
-        missing = self._is_nan[idx - window:idx]
+        if idx >= window:
+            loc = slice(idx - window, idx)
+        else:
+            loc = slice(idx)
+        y = self._y[loc]
+        wy = self._wy[loc]
+        wx = self._wx[loc]
+        weights = self._weights[loc]
+        missing = self._is_nan[loc]
         not_missing = ~missing
         if np.any(missing):
             y = y[not_missing]
@@ -175,11 +224,11 @@ class RollingWLS(object):
             return
         try:
             wxpwxi = np.linalg.inv(wxpwx)
-            if method == 'inv':
+            if method == "inv":
                 params = wxpwxi @ wxpwy
             else:
                 _, wy, wx, _, _ = self._get_data(idx)
-                if method == 'lstsq':
+                if method == "lstsq":
                     params = lstsq(wx, wy)[0]
                 else:  # 'pinv'
                     wxpwxiwxp = np.linalg.pinv(wx)
@@ -232,8 +281,15 @@ class RollingWLS(object):
         xpy = wx.T @ wy
         return xpx, xpy, nobs
 
-    def fit(self, method='inv', cov_type='nonrobust', cov_kwds=None,
-            reset=None, use_t=False, params_only=False):
+    def fit(
+        self,
+        method="inv",
+        cov_type="nonrobust",
+        cov_kwds=None,
+        reset=None,
+        use_t=False,
+        params_only=False,
+    ):
         """
         Estimate model parameters.
 
@@ -271,82 +327,95 @@ class RollingWLS(object):
         RollingRegressionResults
             Estimation results where all pre-sample values are nan-filled.
         """
-        method = string_like(method, 'method', options=('inv', 'lstsq',
-                                                        'pinv'))
-        reset = int_like(reset, 'reset', optional=True)
+        method = string_like(
+            method, "method", options=("inv", "lstsq", "pinv")
+        )
+        reset = int_like(reset, "reset", optional=True)
         reset = self._y.shape[0] if reset is None else reset
         if reset < 1:
-            raise ValueError('reset must be a positive integer')
+            raise ValueError("reset must be a positive integer")
 
-        window = self._window
         nobs, k = self._x.shape
-        store = RollingStore(params=np.full((nobs, k), np.nan),
-                             ssr=np.full(nobs, np.nan),
-                             llf=np.full(nobs, np.nan),
-                             nobs=np.zeros(nobs, dtype=int),
-                             s2=np.full(nobs, np.nan),
-                             xpxi=np.full((nobs, k, k), np.nan),
-                             xeex=np.full((nobs, k, k), np.nan),
-                             centered_tss=np.full(nobs, np.nan),
-                             uncentered_tss=np.full(nobs, np.nan))
-        xpx, xpy, nobs = self._reset(window)
+        store = RollingStore(
+            params=np.full((nobs, k), np.nan),
+            ssr=np.full(nobs, np.nan),
+            llf=np.full(nobs, np.nan),
+            nobs=np.zeros(nobs, dtype=int),
+            s2=np.full(nobs, np.nan),
+            xpxi=np.full((nobs, k, k), np.nan),
+            xeex=np.full((nobs, k, k), np.nan),
+            centered_tss=np.full(nobs, np.nan),
+            uncentered_tss=np.full(nobs, np.nan),
+        )
         w = self._window
-        if not (self._has_nan[window - 1] and self._skip_missing):
-            self._fit_single(w, xpx, xpy, nobs, store, params_only, method)
+        first = self._min_nobs if self._expanding else w
+        xpx, xpy, nobs = self._reset(first)
+        if not (self._has_nan[first - 1] and self._skip_missing):
+            self._fit_single(first, xpx, xpy, nobs, store, params_only, method)
         wx, wy = self._wx, self._wy
-        for i in range(w + 1, self._x.shape[0] + 1):
+        for i in range(first + 1, self._x.shape[0] + 1):
             if self._has_nan[i - 1] and self._skip_missing:
                 continue
             if i % reset == 0:
                 xpx, xpy, nobs = self._reset(i)
             else:
-                if not self._is_nan[i - w - 1]:
-                    remove_x = wx[i - w - 1:i - w]
+                if not self._is_nan[i - w - 1] and i > w:
+                    remove_x = wx[i - w - 1 : i - w]
                     xpx -= remove_x.T @ remove_x
-                    xpy -= remove_x.T @ wy[i - w - 1:i - w]
+                    xpy -= remove_x.T @ wy[i - w - 1 : i - w]
                     nobs -= 1
                 if not self._is_nan[i - 1]:
-                    add_x = wx[i - 1:i]
+                    add_x = wx[i - 1 : i]
                     xpx += add_x.T @ add_x
-                    xpy += add_x.T @ wy[i - 1:i]
+                    xpy += add_x.T @ wy[i - 1 : i]
                     nobs += 1
 
             self._fit_single(i, xpx, xpy, nobs, store, params_only, method)
 
-        return RollingRegressionResults(self, store, self.k_constant, use_t,
-                                        cov_type)
+        return RollingRegressionResults(
+            self, store, self.k_constant, use_t, cov_type
+        )
 
     @classmethod
     @Appender(Model.from_formula.__doc__)
-    def from_formula(cls, formula, data, window, weights=None, subset=None,
-                     *args, **kwargs):
+    def from_formula(
+        cls, formula, data, window, weights=None, subset=None, *args, **kwargs
+    ):
         if subset is not None:
             data = data.loc[subset]
-        eval_env = kwargs.pop('eval_env', None)
+        eval_env = kwargs.pop("eval_env", None)
         if eval_env is None:
             eval_env = 2
         elif eval_env == -1:
             from patsy import EvalEnvironment
+
             eval_env = EvalEnvironment({})
         else:
             eval_env += 1  # we're going down the stack again
-        missing = kwargs.get('missing', 'skip')
+        missing = kwargs.get("missing", "skip")
         from patsy import dmatrices, NAAction
-        na_action = NAAction(on_NA='raise', NA_types=[])
-        result = dmatrices(formula, data, eval_env, return_type='dataframe',
-                           NA_action=na_action)
+
+        na_action = NAAction(on_NA="raise", NA_types=[])
+        result = dmatrices(
+            formula,
+            data,
+            eval_env,
+            return_type="dataframe",
+            NA_action=na_action,
+        )
 
         endog, exog = result
         if (endog.ndim > 1 and endog.shape[1] > 1) or endog.ndim > 2:
-            raise ValueError('endog has evaluated to an array with multiple '
-                             'columns that has shape {0}. This occurs when '
-                             'the variable converted to endog is non-numeric'
-                             ' (e.g., bool or str).'.format(endog.shape))
+            raise ValueError(
+                "endog has evaluated to an array with multiple "
+                "columns that has shape {0}. This occurs when "
+                "the variable converted to endog is non-numeric"
+                " (e.g., bool or str).".format(endog.shape)
+            )
 
-        kwargs.update({'missing': missing,
-                       'window': window})
+        kwargs.update({"missing": missing, "window": window})
         if weights is not None:
-            kwargs['weights'] = weights
+            kwargs["weights"] = weights
         mod = cls(endog, exog, *args, **kwargs)
         mod.formula = formula
         # since we got a dataframe, attach the original
@@ -357,14 +426,33 @@ class RollingWLS(object):
 extra_parameters = window_parameters + extra_base
 
 
-@Substitution(model_type='Ordinary', model='OLS',
-              parameters=common_params,
-              extra_parameters=extra_parameters)
+@Substitution(
+    model_type="Ordinary",
+    model="OLS",
+    parameters=common_params,
+    extra_parameters=extra_parameters,
+)
 @Appender(_doc)
 class RollingOLS(RollingWLS):
-    def __init__(self, endog, exog, window=None, min_nobs=None,
-                 missing='drop'):
-        super().__init__(endog, exog, window, None, min_nobs, missing)
+    def __init__(
+        self,
+        endog,
+        exog,
+        window=None,
+        *,
+        min_nobs=None,
+        missing="drop",
+        expanding=False
+    ):
+        super().__init__(
+            endog,
+            exog,
+            window,
+            weights=None,
+            min_nobs=min_nobs,
+            missing=missing,
+            expanding=expanding,
+        )
 
 
 class RollingRegressionResults(object):
@@ -386,8 +474,9 @@ class RollingRegressionResults(object):
         Name of covariance estimator
     """
 
-    def __init__(self, model, store: RollingStore, k_constant, use_t,
-                 cov_type):
+    def __init__(
+        self, model, store: RollingStore, k_constant, use_t, cov_type
+    ):
         self.model = model
         self._params = store.params
         self._ssr = store.ssr
@@ -401,7 +490,7 @@ class RollingRegressionResults(object):
         self._k_constant = k_constant
         self._nvar = self._xpxi.shape[-1]
         if use_t is None:
-            use_t = cov_type == 'nonrobust'
+            use_t = cov_type == "nonrobust"
         self._use_t = use_t
         self._cov_type = cov_type
         self._use_pandas = self.model.data.row_labels is not None
@@ -430,7 +519,7 @@ class RollingRegressionResults(object):
     @cache_readonly
     @Appender(RegressionResults.bic.func.__doc__)
     def bic(self):
-        with np.errstate(divide='ignore'):
+        with np.errstate(divide="ignore"):
             return self._wrap(RegressionResults.bic.func(self))
 
     @cache_readonly
@@ -515,7 +604,7 @@ class RollingRegressionResults(object):
 
     @cache_readonly
     def _cov_params(self):
-        if self._cov_type == 'nonrobust':
+        if self._cov_type == "nonrobust":
             return self._s2[:, None, None] * self._xpxi
         else:
             return self._xpxi @ self._xepxe @ self._xpxi
@@ -539,13 +628,13 @@ class RollingRegressionResults(object):
     @cache_readonly
     @Appender(RegressionResults.f_pvalue.func.__doc__)
     def f_pvalue(self):
-        with np.errstate(invalid='ignore'):
+        with np.errstate(invalid="ignore"):
             return self._wrap(RegressionResults.f_pvalue.func(self))
 
     @cache_readonly
     @Appender(RegressionResults.fvalue.func.__doc__)
     def fvalue(self):
-        if self._cov_type == 'nonrobust':
+        if self._cov_type == "nonrobust":
             return self.mse_model / self.mse_resid
         else:
             nobs = self._params.shape[0]
@@ -562,7 +651,7 @@ class RollingRegressionResults(object):
             rvcvr = r @ vcv @ r.T
             p = self._params
             for i in range(nobs):
-                rp = p[i:i + 1] @ r.T
+                rp = p[i : i + 1] @ r.T
                 denom = rp.shape[1]
                 inv_cov = np.linalg.inv(rvcvr[i])
                 stat[i] = (rp @ inv_cov @ rp.T) / denom
@@ -571,25 +660,25 @@ class RollingRegressionResults(object):
     @cache_readonly
     @Appender(RegressionResults.bse.func.__doc__)
     def bse(self):
-        with np.errstate(invalid='ignore'):
+        with np.errstate(invalid="ignore"):
             return self._wrap(np.sqrt(np.diagonal(self._cov_params, 0, 2)))
 
     @cache_readonly
     @Appender(LikelihoodModelResults.tvalues.func.__doc__)
     def tvalues(self):
-        with np.errstate(invalid='ignore'):
+        with np.errstate(invalid="ignore"):
             return self._wrap(LikelihoodModelResults.tvalues.func(self))
 
     @cache_readonly
     @Appender(LikelihoodModelResults.pvalues.func.__doc__)
     def pvalues(self):
         if self.use_t:
-            df_resid = getattr(self, 'df_resid_inference', self.df_resid)
+            df_resid = getattr(self, "df_resid_inference", self.df_resid)
             df_resid = np.asarray(df_resid)[:, None]
-            with np.errstate(invalid='ignore'):
+            with np.errstate(invalid="ignore"):
                 return stats.t.sf(np.abs(self.tvalues), df_resid) * 2
         else:
-            with np.errstate(invalid='ignore'):
+            with np.errstate(invalid="ignore"):
                 return stats.norm.sf(np.abs(self.tvalues)) * 2
 
     def _conf_int(self, alpha, cols):
@@ -597,7 +686,7 @@ class RollingRegressionResults(object):
 
         if self.use_t:
             dist = stats.t
-            df_resid = getattr(self, 'df_resid_inference', self.df_resid)
+            df_resid = getattr(self, "df_resid_inference", self.df_resid)
             df_resid = np.asarray(df_resid)[:, None]
             q = dist.ppf(1 - alpha / 2, df_resid)
         else:
@@ -614,11 +703,11 @@ class RollingRegressionResults(object):
         return np.asarray(list(zip(lower, upper)))
 
     @Appender(LikelihoodModelResults.conf_int.__doc__)
-    def conf_int(self, alpha=.05, cols=None):
+    def conf_int(self, alpha=0.05, cols=None):
         ci = self._conf_int(alpha, cols)
         if not self._use_pandas:
             return ci
-        ci_names = ('lower', 'upper')
+        ci_names = ("lower", "upper")
         row_names = self.model.data.row_labels
         col_names = self.model.data.param_names
         if cols is not None:
@@ -643,9 +732,14 @@ class RollingRegressionResults(object):
     def save(self, fname, remove_data=False):
         return LikelihoodModelResults.save(self, fname, remove_data)
 
-    def plot_recursive_coefficient(self, variables=None, alpha=0.05,
-                                   legend_loc='upper left', fig=None,
-                                   figsize=None):
+    def plot_recursive_coefficient(
+        self,
+        variables=None,
+        alpha=0.05,
+        legend_loc="upper left",
+        fig=None,
+        figsize=None,
+    ):
         r"""
         Plot the recursively estimated coefficients on a given variable
 
@@ -696,10 +790,13 @@ class RollingRegressionResults(object):
                 elif isinstance(variable, int):
                     variable_idx.append(variable)
                 else:
-                    msg = ('variable {0} is not an integer and was not found '
-                           'in the list of variable '
-                           'names: {1}'.format(variables[i],
-                                               ', '.join(param_names)))
+                    msg = (
+                        "variable {0} is not an integer and was not found "
+                        "in the list of variable "
+                        "names: {1}".format(
+                            variables[i], ", ".join(param_names)
+                        )
+                    )
                     raise ValueError(msg)
 
         _import_mpl()
@@ -707,6 +804,7 @@ class RollingRegressionResults(object):
 
         loc = 0
         import pandas as pd
+
         if isinstance(row_labels, pd.PeriodIndex):
             row_labels = row_labels.to_timestamp()
         row_labels = np.asarray(row_labels)
@@ -719,10 +817,12 @@ class RollingRegressionResults(object):
             if alpha is not None:
                 this_ci = np.reshape(ci[:, :, i], (-1, 2))
                 if not np.all(np.isnan(this_ci)):
-                    ax.plot(row_lbl, this_ci[:, 0][valid], 'k:',
-                            label='Lower CI')
-                    ax.plot(row_lbl, this_ci[:, 1][valid], 'k:',
-                            label='Upper CI')
+                    ax.plot(
+                        row_lbl, this_ci[:, 0][valid], "k:", label="Lower CI"
+                    )
+                    ax.plot(
+                        row_lbl, this_ci[:, 1][valid], "k:", label="Upper CI"
+                    )
                     if loc == 0:
                         ax.legend(loc=legend_loc)
             ax.set_xlim(row_lbl[0], row_lbl[-1])

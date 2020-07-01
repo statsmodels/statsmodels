@@ -16,7 +16,8 @@ if [ "$LINT" == true ]; then
     # Run with --isolated to ignore config files, the files included here
     # pass _all_ flake8 checks
     echo "Linting known clean files with strict rules"
-    flake8 --isolated \
+    # Default flake8 rules plus the additional rules from setup.cfg
+    flake8 --isolated --ignore=E121,E123,E126,E226,E24,E704,W503,W504,E741,E203 \
         examples/ \
         setup.py \
         statsmodels/__init__.py \
