@@ -50,8 +50,8 @@ class SARIMAX(MLEModel):
     seasonal_order : iterable, optional
         The (P,D,Q,s) order of the seasonal component of the model for the
         AR parameters, differences, MA parameters, and periodicity.
-        `d` must be an integer indicating the integration order of the process,
-        while `p` and `q` may either be an integers indicating the AR and MA
+        `D` must be an integer indicating the integration order of the process,
+        while `P` and `Q` may either be an integers indicating the AR and MA
         orders (so that all lags up to those orders are included) or else
         iterables giving specific AR and / or MA lags to include. `s` is an
         integer giving the periodicity (number of periods in season), often it
@@ -62,9 +62,9 @@ class SARIMAX(MLEModel):
         Can be specified as a string where 'c' indicates a constant (i.e. a
         degree zero component of the trend polynomial), 't' indicates a
         linear trend with time, and 'ct' is both. Can also be specified as an
-        iterable defining the polynomial as in `numpy.poly1d`, where
-        `[1,1,0,1]` would denote :math:`a + bt + ct^3`. Default is to not
-        include a trend component.
+        iterable defining the non-zero polynomial exponents to include, in
+        increasing order. For example, `[1,1,0,1]` denotes
+        :math:`a + bt + ct^3`. Default is to not include a trend component.
     measurement_error : bool, optional
         Whether or not to assume the endogenous observations `endog` were
         measured with error. Default is False.
@@ -150,24 +150,23 @@ class SARIMAX(MLEModel):
         trend polynomial :math:`A(t)`. See the class
         parameter documentation for more information.
     polynomial_ar : ndarray
-        Array containing autoregressive lag polynomial
-        coefficients, ordered from lowest degree to highest.
-        Initialized with ones, unless a coefficient is
-        constrained to be zero (in which case it is zero).
+        Array containing autoregressive lag polynomial lags, ordered from
+        lowest degree to highest. The polynomial begins with lag 0.
+        Initialized with ones, unless a coefficient is constrained to be
+        zero (in which case it is zero).
     polynomial_ma : ndarray
-        Array containing moving average lag polynomial
-        coefficients, ordered from lowest degree to highest.
-        Initialized with ones, unless a coefficient is
-        constrained to be zero (in which case it is zero).
+        Array containing moving average lag polynomial lags, ordered from
+        lowest degree to highest. Initialized with ones, unless a coefficient
+        is constrained to be zero (in which case it is zero).
     polynomial_seasonal_ar : ndarray
         Array containing seasonal moving average lag
-        polynomial coefficients, ordered from lowest degree
+        polynomial lags, ordered from lowest degree
         to highest. Initialized with ones, unless a
         coefficient is constrained to be zero (in which
         case it is zero).
     polynomial_seasonal_ma : ndarray
         Array containing seasonal moving average lag
-        polynomial coefficients, ordered from lowest degree
+        polynomial lags, ordered from lowest degree
         to highest. Initialized with ones, unless a
         coefficient is constrained to be zero (in which
         case it is zero).

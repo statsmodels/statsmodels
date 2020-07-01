@@ -4,6 +4,7 @@ Utility functions models code
 import numpy as np
 import numpy.lib.recfunctions as nprf
 import pandas as pd
+import scipy.linalg
 
 from statsmodels.compat.python import lzip, lmap
 
@@ -633,3 +634,47 @@ def _ensure_2d(x, ndarray=False):
         return np.asarray(x)[:, None], name
     else:
         return pd.DataFrame(x), name
+
+
+def matrix_rank(m, tol=None, method="qr"):
+    """
+    Matrix rank calculation using QR or SVD
+
+    Parameters
+    ----------
+    m : array_like
+        A 2-d array-like object to test
+    tol : float, optional
+        The tolerance to use when testing the matrix rank. If not provided
+        an appropriate value is selected.
+    method : {"ip", "qr", "svd"}
+        The method used. "ip" uses the inner-product of a normalized version
+        of m and then computes the rank using NumPy's matrix_rank.
+        "qr" uses a QR decomposition and is the default. "svd" defers to
+        NumPy's matrix_rank.
+
+    Returns
+    -------
+    int
+        The rank of m.
+
+    Notes
+    -----
+    When using a QR factorization, the rank is determined by the number of
+    elements on the leading diagonal of the R matrix that are above tol
+    in absolute value.
+    """
+    m = array_like(m, "m", ndim=2)
+    if method == "ip":
+        m = m[:, np.any(m != 0, axis=0)]
+        m = m / np.sqrt((m ** 2).sum(0))
+        m = m.T @ m
+        return np.linalg.matrix_rank(m, tol=tol, hermitian=True)
+    elif method == "qr":
+        r, = scipy.linalg.qr(m, mode="r")
+        abs_diag = np.abs(np.diag(r))
+        if tol is None:
+            tol = abs_diag[0] * m.shape[1] * np.finfo(float).eps
+        return int((abs_diag > tol).sum())
+    else:
+        return np.linalg.matrix_rank(m, tol=tol)
