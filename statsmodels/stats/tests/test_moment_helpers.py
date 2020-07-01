@@ -90,7 +90,7 @@ def test_moment_conversion(mom):
 
 
 rs = np.random.RandomState(12345)
-random_vals = np.random.randint(0, 100, 12).reshape(4, 3)
+random_vals = rs.randint(0, 100, 12).reshape(4, 3)
 multidimension_test_vals = [np.array([[5., 10., 1.],
                                       [5., 10., 1.],
                                       [5., 10., 1.],
