@@ -1396,3 +1396,11 @@ def test_ols_constant(reset_randomstate):
         assert np.isnan(res.fvalue)
         assert np.isnan(res.f_pvalue)
     assert len(recording) == 0
+
+
+def test_summary_no_constant():
+    rs = np.random.RandomState(0)
+    x = rs.standard_normal((100,2))
+    y = rs.standard_normal(100)
+    summary = OLS(y, x).fit().summary()
+    assert "R² is computed " in summary.as_text()

@@ -2671,6 +2671,11 @@ class RegressionResults(base.LikelihoodModelResults):
 
         # add warnings/notes, added to text format only
         etext = []
+        if not self.k_constant:
+            etext.append(
+                "R² is computed without centering (uncentered) since the "
+                "model does not contain a constant."
+            )
         if hasattr(self, 'cov_type'):
             etext.append(self.cov_kwds['description'])
         if self.model.exog.shape[0] < self.model.exog.shape[1]:
