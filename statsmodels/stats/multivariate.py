@@ -11,7 +11,7 @@ from scipy import stats
 
 from statsmodels.stats.moment_helpers import cov2corr
 from statsmodels.stats.base import HolderTuple
-
+from statsmodels.tools.validation import array_like
 
 # shortcut function
 logdet = lambda x: np.linalg.slogdet(x)[1]  # noqa: E731
@@ -59,6 +59,42 @@ def test_mvmean(data, mean_null=0, return_results=True):
     else:
         return statistic, pvalue
 
+def test_mvmean_2indep(data1, data2):
+    """Hotellings test for multivariate mean in two samples
+
+    Parameters
+    ----------
+    data1 : array_like
+        first sample data with observations in rows and variables in columns
+    data2 : array_like
+        second sample data with observations in rows and variables in columns
+
+    Returns
+    -------
+    results : instance of a results class with attributes
+        statistic, pvalue, t2 and df
+    """
+    x1 = array_like(data1, "x1", ndim=2)
+    x2 = array_like(data2, "x2", ndim=2)
+    nobs_x, k_vars = x1.shape
+    nobs_y, k_vars = x2.shape
+    mean_x = x1.mean(0)
+    mean_y = x2.mean(0)
+    cov_x = np.cov(x1, rowvar=False, ddof=1)
+    cov_y = np.cov(x2, rowvar=False, ddof=1)
+    nobs_t = nobs_x + nobs_y
+    combined_cov = ((nobs_x - 1) * cov_x + (nobs_y - 1) * cov_y) / (nobs_t - 2)
+    diff = mean_x - mean_y
+    t2 = (nobs_x * nobs_y) / nobs_t * diff @ (np.linalg.solve(combined_cov, diff))
+    factor = ((nobs_t - 2) * k_vars) / (nobs_t - k_vars - 1)
+    statistic = t2 / factor
+    df = (k_vars, nobs_t - 1 - k_vars)
+    pvalue = stats.f.sf(statistic, df[0], df[1])
+    return HolderTuple(statistic=statistic,
+                      pvalue=pvalue,
+                      df=df,
+                      t2=t2,
+                      distr="F")
 
 def confint_mvmean(data, lin_transf=None, alpha=0.5, simult=False):
     """Confidence interval for linear transformation of a multivariate mean
