@@ -60,13 +60,6 @@ __all__ = [
 SQRTEPS = np.sqrt(np.finfo(np.double).eps)
 
 
-# NOTE: now in two places to avoid circular import
-# TODO: I like the bunch pattern for this too.
-class ResultsStore(object):
-    def __str__(self):
-        return self._str  # pylint: disable=E1101
-
-
 def _autolag(
     mod,
     endog,
@@ -299,6 +292,8 @@ def adfuller(
     xdshort = xdiff[-nobs:]
 
     if store:
+        from statsmodels.stats.diagnostic import ResultsStore
+
         resstore = ResultsStore()
     if autolag:
         if regression != "nc":
@@ -1911,6 +1906,8 @@ look-up table. The actual p-value is {direction} than the p-value returned.
     crit_dict = {"10%": crit[0], "5%": crit[1], "2.5%": crit[2], "1%": crit[3]}
 
     if store:
+        from statsmodels.stats.diagnostic import ResultsStore
+
         rstore = ResultsStore()
         rstore.lags = nlags
         rstore.nobs = nobs
