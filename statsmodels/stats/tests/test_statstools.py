@@ -44,6 +44,11 @@ def test_durbin_watson():
     st_R = 0.921488912587806
     assert_almost_equal(durbin_watson(x[1:] + 0.9 * x[:-1]), st_R, 14)
 
+    X = np.array([x, x])
+    st_R = 1.95298958377419
+    assert_almost_equal(durbin_watson(X, axis=1), np.array([st_R, st_R]), 14)
+    assert_almost_equal(durbin_watson(X.T, axis=0), np.array([st_R, st_R]), 14)
+
 
 def test_omni_normtest():
     #tests against R fBasics
