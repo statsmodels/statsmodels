@@ -36,7 +36,6 @@ insufficiently tested.
 .. autosummary::
    :toctree: generated/
 
-   tools.categorical
    tools.clean0
    tools.fullrank
    tools.isestimable

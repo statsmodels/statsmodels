@@ -10,8 +10,8 @@ import os
 import numpy as np
 import pandas as pd
 
-from statsmodels.api import add_constant, categorical
-from . import glm_test_resids
+from statsmodels.api import add_constant
+from statsmodels.genmod.tests.results import glm_test_resids
 
 # Test Precisions
 DECIMAL_4 = 4
@@ -818,9 +818,9 @@ class Cancer(object):
                                 "stata_cancer_glm.csv")
         data = np.recfromcsv(open(filename, 'rb'))
         self.endog = data.studytime
-        design = np.column_stack((data.age, data.drug))
-        design = categorical(design, col=1, drop=True)
-        design = np.delete(design, 1, axis=1)  # drop first dummy
+        dummies = pd.get_dummies(pd.Series(data.drug, dtype="category"),
+                                 drop_first=True)
+        design = np.column_stack((data.age, dummies)).astype(float)
         self.exog = add_constant(design, prepend=False)
 
 
@@ -2224,9 +2224,8 @@ class Medpar1(object):
                                 "stata_medpar1_glm.csv")
         data = pd.read_csv(filename).to_records()
         self.endog = data.los
-        design = np.column_stack((data.admitype, data.codes))
-        design = categorical(design, col=0, drop=True)
-        design = np.delete(design, 1, axis=1)  # drop first dummy
+        dummies = pd.get_dummies(data.admitype, prefix="race", drop_first=True)
+        design = np.column_stack((data.codes, dummies)).astype(float)
         self.exog = add_constant(design, prepend=False)
 
 
