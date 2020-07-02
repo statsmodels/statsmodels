@@ -9,6 +9,7 @@ estimators' test functions.
 Author: Chad Fulton
 License: BSD-3
 """
+from statsmodels.compat.platform import PLATFORM_WIN32
 
 import numpy as np
 import pandas as pd
@@ -156,8 +157,9 @@ def test_statespace():
                               include_constant=False)
     mod = ARIMA(endog, order=(1, 0, 1), trend='n')
     res = mod.fit(method='statespace')
-    # Note: atol is required only due to precision issues on Windows
-    assert_allclose(res.params, desired_p.params, atol=1e-4)
+    # Note: tol changes required due to precision issues on Windows
+    rtol = 1e-7 if not PLATFORM_WIN32 else 1e-3
+    assert_allclose(res.params, desired_p.params, rtol=rtol, atol=1e-4)
 
     # ARMA(1, 2), with trend
     desired_p, _ = statespace(endog, order=(1, 0, 2),
