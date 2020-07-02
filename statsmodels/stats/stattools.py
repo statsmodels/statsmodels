@@ -11,14 +11,17 @@ import numpy as np
 from statsmodels.tools.sm_exceptions import ValueWarning
 
 
-# TODO: these are pretty straightforward but they should be tested
 def durbin_watson(resids, axis=0):
     r"""
-    Calculates the Durbin-Watson statistic
+    Calculates the Durbin-Watson statistic.
 
     Parameters
     ----------
     resids : array_like
+        Data for which to compute the Durbin-Watson statistic. Usually
+        regression model residuals.
+    axis : int, optional
+        Axis to use if data has more than 1 dimension. Default is 0.
 
     Returns
     -------
@@ -27,8 +30,9 @@ def durbin_watson(resids, axis=0):
 
     Notes
     -----
-    The null hypothesis of the test is that there is no serial correlation.
-    The Durbin-Watson test statistics is defined as:
+    The null hypothesis of the test is that there is no serial correlation
+    in the residuals.
+    The Durbin-Watson test statistic is defined as:
 
     .. math::
 
