@@ -924,8 +924,10 @@ def pacf(x, nlags=None, method="ywadjusted", alpha=None):
     ----------
     x : array_like
         Observations of time series for which pacf is calculated.
-    nlags : int, default 40
-        The largest lag for which the pacf is returned.
+    nlags : int
+        The largest lag for which the pacf is returned. The default
+        is currently 40, but will change to
+        min(int(10 * np.log10(nobs)), nobs // 2 - 1) in the future
     method : str, default "ywunbiased"
         Specifies which method for the calculations to use.
 
@@ -1011,19 +1013,25 @@ def pacf(x, nlags=None, method="ywadjusted", alpha=None):
         "ldbiased",
         "ld_biased",
     )
+    x = array_like(x, "x", maxdim=1)
     method = string_like(method, "method", options=methods)
-
     alpha = float_like(alpha, "alpha", optional=True)
 
     if nlags is None:
         warnings.warn(
             "The default number of lags is changing from 40 to"
-            "min(int(10 * np.log10(nobs)), nobs - 1) after 0.12"
+            "min(int(10 * np.log10(nobs)), nobs // 2 - 1) after 0.12"
             "is released. Set the number of lags to an integer to "
             " silence this warning.",
             FutureWarning,
         )
         nlags = 40
+    if nlags >= x.shape[0] // 2:
+        raise ValueError(
+            "Can only compute partial correlations for lags up to 50% of the "
+            f"sample size. The requested nlags {nlags} must be < "
+            f"{x.shape[0] // 2}."
+        )
 
     if method in ("ols", "ols-inefficient", "ols-adjusted"):
         efficient = "inefficient" not in method

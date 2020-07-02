@@ -1048,3 +1048,9 @@ def test_acf_conservate_nanops(reset_randomstate):
     for i in range(1, 10+1):
         expected[i] = np.nansum(resid[i:] * resid[:nobs-i]) / gamma0
     assert_allclose(result, expected, rtol=1e-4, atol=1e-4)
+
+
+def test_pacf_nlags_error(reset_randomstate):
+    e = np.random.standard_normal(100)
+    with pytest.raises(ValueError, match="Can only compute partial"):
+        pacf(e, 50)
