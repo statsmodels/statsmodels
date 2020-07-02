@@ -261,7 +261,8 @@ def test_plot():
         res.plot_recursive_coefficient(variables="x4")
 
     fig = plt.Figure()
-    with pytest.warns(UserWarning, match="tight_layout"):
+    with pytest.warns(Warning):
+        # Just silence the warning
         out = res.plot_recursive_coefficient(fig=fig)
     assert out is fig
     res.plot_recursive_coefficient(alpha=None, figsize=(30, 7))
