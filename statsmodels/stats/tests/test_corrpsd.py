@@ -313,9 +313,9 @@ class Test_Factor(object):
         # Generate a test matrix of factors
         X = np.zeros((d, dm), dtype=np.float64)
         x = np.linspace(0, 2 * np.pi, d)
-        np.random.seed(10)
+        rs = np.random.RandomState(10)
         for j in range(dm):
-            X[:, j] = np.sin(x * (j + 1)) + 1e-10 * np.random.randn(d)
+            X[:, j] = np.sin(x * (j + 1)) + 1e-10 * rs.randn(d)
 
         # Get the correlation matrix
         _project_correlation_factors(X)
@@ -324,7 +324,9 @@ class Test_Factor(object):
         np.fill_diagonal(mat, 1)
 
         # Threshold it
-        mat *= (np.abs(mat) >= 0.35)
+        mat.flat[np.abs(mat.flat) < 0.35] = 0.0
+        # Replace line below which left signed 0
+        # mat *= (np.abs(mat) >= 0.35)
         smat = sparse.csr_matrix(mat)
 
         try:
@@ -340,6 +342,10 @@ class Test_Factor(object):
         except AssertionError as err:
             if PLATFORM_WIN32:
                 pytest.xfail('Known to randomly fail on Win32')
+            # Some debugging information for CI runs that randomly fail
+            locs = np.where(~np.isclose(mat_dense, mat_sparse, rtol=.25, atol=1e-3))
+            print(mat_sparse[locs])
+            print(mat_dense[locs])
             raise err
 
     # Test on a quadratic function.
