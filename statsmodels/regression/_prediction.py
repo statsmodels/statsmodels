@@ -9,6 +9,7 @@ License: BSD-3
 
 import numpy as np
 from scipy import stats
+import pandas as pd
 
 
 # this is similar to ContrastResults after t_test, copied and adjusted
@@ -88,7 +89,6 @@ class PredictionResults(object):
 
     def summary_frame(self, alpha=0.05):
         # TODO: finish and cleanup
-        import pandas as pd
         ci_obs = self.conf_int(alpha=alpha, obs=True)  # need to split
         ci_mean = self.conf_int(alpha=alpha, obs=False)
         to_include = {}
@@ -145,6 +145,9 @@ def get_prediction(self, exog=None, transform=True, weights=None,
     # prepare exog and row_labels, based on base Results.predict
     if transform and hasattr(self.model, 'formula') and exog is not None:
         from patsy import dmatrix
+        if isinstance(exog, pd.Series):
+            # GH-6509
+            exog = pd.DataFrame(exog)
         exog = dmatrix(self.model.data.design_info, exog)
 
     if exog is not None:
