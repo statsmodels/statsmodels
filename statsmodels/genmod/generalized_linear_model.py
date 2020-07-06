@@ -579,7 +579,7 @@ class GLM(base.LikelihoodModel):
             else:
                 observed = True
         scale = float_like(scale, "scale", optional=True)
-        tmp = getattr(self, '_tmp_like_exog', np.empty_like(self.exog))
+        tmp = getattr(self, '_tmp_like_exog', np.empty_like(self.exog, dtype=float))
 
         factor = self.hessian_factor(params, scale=scale, observed=observed)
         np.multiply(self.exog.T, factor, out=tmp.T)
@@ -1047,7 +1047,7 @@ class GLM(base.LikelihoodModel):
                                   cov_kwds=cov_kwds, use_t=use_t, **kwargs)
         else:
             self._optim_hessian = kwargs.get('optim_hessian')
-            self._tmp_like_exog = np.empty_like(self.exog)
+            self._tmp_like_exog = np.empty_like(self.exog, dtype=float)
             fit_ = self._fit_gradient(start_params=start_params,
                                       method=method,
                                       maxiter=maxiter,
