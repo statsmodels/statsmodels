@@ -2338,7 +2338,12 @@ class RegressionResults(base.LikelihoodModelResults):
                   pvalues, f_pvalue, conf_int, and t_test and f_test, are
                   based on the number of groups minus one instead of the
                   total number of observations minus the number of explanatory
-                  variables. `df_resid` of the results instance is adjusted.
+                  variables. `df_resid` of the results instance is also
+                  adjusted. When `use_t` is also True, then pvalues are
+                  computed using the Student's t distribution using the
+                  corrected values. These may differ substantially from
+                  p-values based on the normal is the number of groups is
+                  sma...
                   If False, then `df_resid` of the results instance is not
                   adjusted.
 
