@@ -330,19 +330,22 @@ class Test_Factor(object):
         smat = sparse.csr_matrix(mat)
 
         try:
-            rslt = corr_nearest_factor(mat, dm, maxiter=10000)
-            assert rslt.Converged is True
-            mat_dense = rslt.corr.to_matrix()
+            dense_rslt = corr_nearest_factor(mat, dm, maxiter=10000)
+            sparse_rslt = corr_nearest_factor(smat, dm, maxiter=10000)
 
-            rslt = corr_nearest_factor(smat, dm, maxiter=10000)
-            assert rslt.Converged is True
-            mat_sparse = rslt.corr.to_matrix()
+            mat_dense = dense_rslt.corr.to_matrix()
+            mat_sparse = sparse_rslt.corr.to_matrix()
+
+            assert dense_rslt.Converged is True
+            assert sparse_rslt.Converged is True
 
             assert_allclose(mat_dense, mat_sparse, rtol=.25, atol=1e-3)
         except AssertionError as err:
             if PLATFORM_WIN32:
                 pytest.xfail('Known to randomly fail on Win32')
             # Some debugging information for CI runs that randomly fail
+            print(dense_rslt.objective_values)
+            print(sparse_rslt.objective_values)
             locs = np.where(~np.isclose(mat_dense, mat_sparse, rtol=.25, atol=1e-3))
             print(mat_sparse[locs])
             print(mat_dense[locs])
