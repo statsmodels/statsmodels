@@ -23,6 +23,7 @@ from . import families
 
 from statsmodels.tools.decorators import (cache_readonly,
                                           cached_data, cached_value)
+from statsmodels.tools.validation import float_like
 from statsmodels.compat.pandas import Appender
 
 import statsmodels.base.model as base
@@ -399,6 +400,7 @@ class GLM(base.LikelihoodModel):
         """
         Evaluate the log-likelihood for a generalized linear model.
         """
+        scale = float_like(scale, "scale")
         return self.family.loglike(self.endog, mu, self.var_weights,
                                    self.freq_weights, scale)
 
@@ -406,6 +408,7 @@ class GLM(base.LikelihoodModel):
         """
         Evaluate the log-likelihood for a generalized linear model.
         """
+        scale = float_like(scale, "scale", optional=True)
         lin_pred = np.dot(self.exog, params) + self._offset_exposure
         expval = self.family.link.inverse(lin_pred)
         if scale is None:
@@ -432,7 +435,7 @@ class GLM(base.LikelihoodModel):
             The first derivative of the loglikelihood function evaluated at
             params for each observation.
         """
-
+        scale = float_like(scale, "scale", optional=True)
         score_factor = self.score_factor(params, scale=scale)
         return score_factor[:, None] * self.exog
 
@@ -454,6 +457,7 @@ class GLM(base.LikelihoodModel):
             The first derivative of the loglikelihood function calculated as
             the sum of `score_obs`
         """
+        scale = float_like(scale, "scale", optional=True)
         score_factor = self.score_factor(params, scale=scale)
         return np.dot(score_factor, self.exog)
 
@@ -477,6 +481,7 @@ class GLM(base.LikelihoodModel):
             A 1d weight vector used in the calculation of the score_obs.
             The score_obs are obtained by `score_factor[:, None] * exog`
         """
+        scale = float_like(scale, "scale", optional=True)
         mu = self.predict(params)
         if scale is None:
             scale = self.estimate_scale(mu)
@@ -573,7 +578,7 @@ class GLM(base.LikelihoodModel):
                 observed = False
             else:
                 observed = True
-
+        scale = float_like(scale, "scale", optional=True)
         tmp = getattr(self, '_tmp_like_exog', np.empty_like(self.exog))
 
         factor = self.hessian_factor(params, scale=scale, observed=observed)
@@ -584,6 +589,7 @@ class GLM(base.LikelihoodModel):
         """
         Fisher information matrix.
         """
+        scale = float_like(scale, "scale", optional=True)
         return self.hessian(params, scale=scale, observed=False)
 
     def _deriv_mean_dparams(self, params):
@@ -624,6 +630,7 @@ class GLM(base.LikelihoodModel):
             can is given by `score_factor0[:, None] * exog` where
             `score_factor0` is the score_factor without the residual.
         """
+        scale = float_like(scale, "scale", optional=True)
         mu = self.predict(params)
         if scale is None:
             scale = self.estimate_scale(mu)
@@ -874,7 +881,7 @@ class GLM(base.LikelihoodModel):
         else:
             return self.family.fitted(linpred)
 
-    def get_distribution(self, params, scale=1, exog=None, exposure=None,
+    def get_distribution(self, params, scale=1., exog=None, exposure=None,
                          offset=None):
         """
         Return a random number generator for the predictive distribution.
@@ -902,7 +909,7 @@ class GLM(base.LikelihoodModel):
         to fit the model.  If any other value is used for ``n``, misleading
         results will be produced.
         """
-
+        scale = float_like(scale, "scale", optional=True)
         fit = self.predict(params, exog, exposure, offset, linear=False)
 
         import scipy.stats.distributions as dist
@@ -1016,6 +1023,20 @@ class GLM(base.LikelihoodModel):
         instance of the IRLS iteration is attached to the results instance
         as `results_wls` attribute.
         """
+        if isinstance(scale, str):
+            scale = scale.lower()
+            if scale not in ("x2", "dev"):
+                raise ValueError(
+                    "scale must be either X2 or dev when a string."
+                )
+        elif scale is not None:
+            # GH-6627
+            try:
+                scale = float(scale)
+            except Exception as exc:
+                raise type(exc)(
+                    "scale must be a float if given and no a string."
+                )
         self.scaletype = scale
 
         if method.lower() == "irls":

@@ -18,7 +18,7 @@ from statsmodels.tools.sm_exceptions import PerfectSeparationError
 from statsmodels.discrete import discrete_model as discrete
 from statsmodels.tools.sm_exceptions import DomainWarning
 from statsmodels.tools.numdiff import approx_fprime, approx_hess
-from statsmodels.datasets import cpunish
+from statsmodels.datasets import cpunish, longley
 
 # Test Precisions
 DECIMAL_4 = 4
@@ -2318,3 +2318,12 @@ def test_non_invertible_hessian_fails_summary():
         mod = sm.GLM(data.endog, data.exog, family=sm.families.Gamma())
         res = mod.fit(maxiter=1, method='bfgs', max_start_irls=0)
         res.summary()
+
+
+def test_int_scale():
+    # GH-6627, make sure it works with int scale
+    data = longley.load(as_pandas=True)
+    mod = GLM(data.endog, data.exog, family=sm.families.Gaussian())
+    res = mod.fit(scale=1)
+    assert isinstance(res.params, pd.Series)
+    assert res.scale.dtype == np.float64
