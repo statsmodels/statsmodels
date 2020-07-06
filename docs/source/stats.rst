@@ -386,7 +386,6 @@ equations.
 Proportion
 ----------
 
-
 Also available are hypothesis test, confidence intervals and effect size for
 proportions that can be used with NormalIndPower.
 
@@ -418,6 +417,130 @@ proportions that can be used with NormalIndPower.
    power_binom_tost
    power_ztost_prop
    samplesize_confint_proportion
+
+Statistics for two independent samples
+Status: experimental, API might change, added in 0.12
+
+   test_proportions_2indep
+   confint_proportions_2indep
+   power_proportions_2indep
+   tost_proportions_2indep
+   samplesize_proportions_2indep_onetail
+   score_confint_inversion
+   score_test_proportions_2indep
+
+
+Rates
+-----
+
+Statistical functions for rates. This currently includes hypothesis tests for
+two independent samples.
+
+Status: experimental, API might change, added in 0.12
+
+.. module:: statsmodels.stats.rates
+   :synopsis: Tests for Poisson rates
+
+.. currentmodule:: statsmodels.stats.rates
+
+.. autosummary::
+   :toctree: generated
+
+   test_poisson_2indep
+   etest_poisson_2indep
+   tost_poisson_2indep
+
+
+Multivariate
+------------
+
+Statistical functions for multivariate samples.
+
+This includes hypothesis test and confidence intervals for mean of sample
+of multivariate observations and hypothesis tests for the structure of a
+covariance matrix.
+
+Status: experimental, API might change, added in 0.12
+
+.. module:: statsmodels.stats.multivariate
+   :synopsis: Statistical functions for multivariate samples.
+
+.. currentmodule:: statsmodels.stats.multivariate
+
+.. autosummary::
+   :toctree: generated
+
+   confint_mvmean
+   confint_mvmean_fromstats
+   cov_test
+   cov_test_blockdiagonal
+   cov_test_diagonal
+   cov_test_oneway
+   cov_test_spherical
+   test_mvmean
+
+
+.. _oneway_stats:
+
+Onway Anova
+-----------
+
+Hypothesis test, confidence intervals and effect size for oneway analysis of
+k samples.
+
+Status: experimental, API might change, added in 0.12
+
+.. module:: statsmodels.stats.oneway
+   :synopsis: Statistical functions for oneway analysis, Anova.
+
+.. currentmodule:: statsmodels.stats.oneway
+
+.. autosummary::
+   :toctree: generated
+
+
+   anova_oneway
+   anova_generic
+   equivalence_oneway
+   equivalence_oneway_generic
+   power_equivalence_oneway
+   power_equivalence_oneway0
+
+   test_scale_oneway
+   equivalence_scale_oneway
+
+   confint_effectsize_oneway
+   confint_noncentrality
+   convert_effectsize_fsqu
+   effectsize_oneway
+   f2_to_wellek
+   fstat_to_wellek
+   wellek_to_f2
+
+   scale_transform
+   simulate_power_equivalence_oneway
+
+
+.. _robust_stats:
+
+Robust, Trimmed Statistics
+--------------------------
+
+Statistics for samples that are trimmed at a fixed fraction. This includes
+class TrimmedMean for one sample statistics. It is used in `stats.oneway`
+for trimmed "Yuen" Anova.
+
+Status: experimental, API might change, added in 0.12
+
+.. module:: statsmodels.stats.robust_compare
+   :synopsis: Trimmed sample statistics.
+
+.. currentmodule:: statsmodels.stats.robust_compare
+
+.. autosummary::
+   :toctree: generated
+
+   TrimmedMean
 
 
 Moment Helpers
@@ -497,12 +620,12 @@ to verify in an observational setting.
 
 Oaxaca-Blinder Decomposition
 ----------------------------
- 
-The Oaxaca-Blinder, or Blinder-Oaxaca as some call it, decomposition attempts to explain 
-gaps in means of groups. It uses the linear models of two given regression equations to 
-show what is explained by regression coefficients and known data and what is unexplained 
-using the same data. There are two types of Oaxaca-Blinder decompositions, the two-fold 
-and the three-fold, both of which can and are used in Economics Literature to discuss 
+
+The Oaxaca-Blinder, or Blinder-Oaxaca as some call it, decomposition attempts to explain
+gaps in means of groups. It uses the linear models of two given regression equations to
+show what is explained by regression coefficients and known data and what is unexplained
+using the same data. There are two types of Oaxaca-Blinder decompositions, the two-fold
+and the three-fold, both of which can and are used in Economics Literature to discuss
 differences in groups. This method helps classify discrimination or unobserved effects.
 This function attempts to port the functionality of the oaxaca command in STATA to Python.
 
@@ -537,3 +660,29 @@ Distance dependence measures and the Distance Covariance (dCov) test.
    distance_covariance
    distance_variance
 
+
+Meta-Analysis
+-------------
+
+Functions for basic meta-analysis of a collection of sample statistics.
+
+Status: experimental, API might change, added in 0.12
+
+.. module:: statsmodels.stats.meta_analysis
+   :synopsis: Meta-Analysis
+
+.. currentmodule:: statsmodels.stats.meta_analysis
+
+.. autosummary::
+   :toctree: generated/
+
+   combine_effects
+   effectsize_2proportions
+   effectsize_smd
+
+   The module also includes internal functions to compute random effects
+   variance
+
+   _fit_tau_iter_mm
+   _fit_tau_iterative
+   _fit_tau_mm
