@@ -18,7 +18,7 @@ from statsmodels.tools.sm_exceptions import PerfectSeparationError
 from statsmodels.discrete import discrete_model as discrete
 from statsmodels.tools.sm_exceptions import DomainWarning
 from statsmodels.tools.numdiff import approx_fprime, approx_hess
-from statsmodels.datasets import cpunish
+from statsmodels.datasets import cpunish, longley
 
 # Test Precisions
 DECIMAL_4 = 4
@@ -2318,3 +2318,24 @@ def test_non_invertible_hessian_fails_summary():
         mod = sm.GLM(data.endog, data.exog, family=sm.families.Gamma())
         res = mod.fit(maxiter=1, method='bfgs', max_start_irls=0)
         res.summary()
+
+
+def test_int_scale():
+    # GH-6627, make sure it works with int scale
+    data = longley.load(as_pandas=True)
+    mod = GLM(data.endog, data.exog, family=sm.families.Gaussian())
+    res = mod.fit(scale=1)
+    assert isinstance(res.params, pd.Series)
+    assert res.scale.dtype == np.float64
+
+
+@pytest.mark.parametrize("dtype", [np.int8, np.int16, np.int32, np.int64])
+def test_int_exog(dtype):
+    # GH-6627, make use of floats internally
+    count1, n1, count2, n2 = 60, 51477.5, 30, 54308.7
+    y = [count1, count2]
+    x = np.asarray([[1, 1], [1, 0]]).astype(dtype)
+    exposure = np.asarray([n1, n2])
+    mod = GLM(y, x, exposure=exposure, family=sm.families.Poisson())
+    res = mod.fit(method='bfgs', max_start_irls=0)
+    assert isinstance(res.params, np.ndarray)
