@@ -42,3 +42,11 @@ def test_innovations_algo_filter_kalman_filter(ar_params, ma_params, sigma2):
     # Note: the tolerance on the two gets worse as more nobs are added
     assert_allclose(score, mod.score(params), atol=1e-5)
     assert_allclose(score_obs, mod.score_obs(params), atol=1e-5)
+
+
+@pytest.mark.parametrize("ar_params", ([1.9, -0.8], [1.0], [2.0, -1.0]))
+def test_innovations_nonstationary(ar_params):
+    np.random.seed(42)
+    endog = np.random.normal(size=100)
+    with pytest.raises(ValueError, match="The model's autoregressive"):
+        arma_innovations.arma_innovations(endog, ar_params=ar_params)

@@ -6,6 +6,11 @@ from statsmodels.tools.numdiff import _get_epsilon, approx_fprime_cs
 from scipy.linalg.blas import find_best_blas_type
 from . import _arma_innovations
 
+NON_STATIONARY_ERROR = """\
+The model's autoregressive parameters (ar_params) indicate that the process
+ is non-stationary. The innovations algorithm cannot be used.
+"""
+
 
 def arma_innovations(endog, ar_params=None, ma_params=None, sigma2=1,
                      normalize=False, prefix=None):
@@ -79,16 +84,21 @@ def arma_innovations(endog, ar_params=None, ma_params=None, sigma2=1,
     theta, v = arma_innovations_algo_fast(nobs, ar_params, ma_params,
                                           acovf, acovf2)
     v = np.array(v)
-    if normalize:
-        v05 = v**0.5
+    if (np.any(v < 0) or
+            not np.isfinite(theta).all() or
+            not np.isfinite(v).all()):
+        # This is defensive code that is hard to hit
+        raise ValueError(NON_STATIONARY_ERROR)
 
     # Run the innovations filter across each series
     u = []
     for i in range(k_endog):
         u_i = np.array(arma_innovations_filter(endog[:, i], ar_params,
                                                ma_params, theta))
-        u.append(u_i / v05 if normalize else u_i)
+        u.append(u_i)
     u = np.vstack(u).T
+    if normalize:
+        u /= v[:, None]**0.5
 
     # Post-processing
     if squeezed:

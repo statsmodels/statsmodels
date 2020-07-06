@@ -240,6 +240,16 @@ def gls(endog, exog=None, order=(0, 0, 0), seasonal_order=(0, 0, 0, 0),
         # argument applies a Prais-Winsten-type normalization to the first few
         # observations to ensure homoskedasticity). Brockwell and Davis
         # mention that they also take this approach in practice.
+
+        # GH-6540: AR must be stationary
+
+        if not p_arma.is_stationary:
+            raise ValueError(
+                "Roots of the autoregressive parameters indicate that data is"
+                "non-stationary. GLS cannot be used with non-stationary "
+                "parameters. You should consider differencing the model data"
+                "or applying a nonlinear transformation (e.g., natural log)."
+            )
         tmp, _ = arma_innovations.arma_innovations(
             augmented, ar_params=ar_params, ma_params=ma_params,
             normalize=True)
