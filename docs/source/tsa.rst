@@ -75,7 +75,6 @@ Descriptive Statistics and Tests
    stattools.pacf_burg
    stattools.ccovf
    stattools.ccf
-   stattools.periodogram
    stattools.adfuller
    stattools.kpss
    stattools.zivot_andrews
@@ -360,9 +359,13 @@ trend with a Simple Exponential Smoother (Assimakopoulos & Nikolopoulos).
 An estimator for the parameters of the Theta model and methods to forecast
 are available in:
 
+.. module:: statsmodels.tsa.forecasting.theta
+   :synopsis: Models designed for forecasting
+
+.. currentmodule:: statsmodels.tsa.forecasting.theta
 
 .. autosummary::
    :toctree: generated/
 
-   theta.ThetaModel
-   theta.ThetaModelResults
+   ThetaModel
+   ThetaModelResults

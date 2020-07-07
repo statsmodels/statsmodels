@@ -131,7 +131,6 @@ Statistics and Tests
    ~statsmodels.tsa.stattools.pacf
    ~statsmodels.tsa.stattools.pacf_ols
    ~statsmodels.tsa.stattools.pacf_yw
-   ~statsmodels.tsa.stattools.periodogram
    ~statsmodels.tsa.stattools.q_stat
 
 Univariate Time-Series Analysis

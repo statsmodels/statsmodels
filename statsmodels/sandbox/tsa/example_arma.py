@@ -144,7 +144,7 @@ for c, args in cases:
     print('')
     print(c, ar, ma)
     myacovf = arma_acovf(ar, ma, nobs=10)
-    myacf = arma_acf(ar, ma, nobs=10)
+    myacf = arma_acf(ar, ma, lags=10)
     if c[:2]=='ma':
         othacovf = comparefn[c](ma)
     else:
