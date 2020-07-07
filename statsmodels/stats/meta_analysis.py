@@ -263,16 +263,17 @@ def effectsize_2proportions(count1, nobs1, count2, nobs2, statistic="diff",
     statistic : {"diff", "odds-ratio", "risk-ratio", "arcsine"}
         statistic for the comparison of two proportions
         Effect sizes for "odds-ratio" and "risk-ratio" are in logarithm.
-    zero_correction : None or float or ...
+    zero_correction : {None, float, "tac", "clip"}
         Some statistics are not finite when zero counts are in the data.
         The options to remove zeros are:
-        float : if zero_correction is a single float, then it will be added
-            to all count (cells) if the sample has any zeros.
-        "tac" : treatment arm continuity correction
-            see Ruecker et al 2009, section 3.2
-        "clip" : clip proportions without adding a value to all cells
-            The clip bounds can be set with zero_kwds["clip_bounds"]
-        ... ? not yet
+
+        * float : if zero_correction is a single float, then it will be added
+          to all count (cells) if the sample has any zeros.
+        * "tac" : treatment arm continuity correction see Ruecker et al 2009,
+          section 3.2
+        * "clip" : clip proportions without adding a value to all cells
+          The clip bounds can be set with zero_kwds["clip_bounds"]
+
     zero_kwds : dict
         additional options to handle zero counts
         "clip_bounds" tuple, default (1e-6, 1 - 1e-6) if zero_correction="clip"
@@ -307,8 +308,7 @@ def effectsize_2proportions(count1, nobs1, count2, nobs2, statistic="diff",
 
     See Also
     --------
-    Contingency_tables
-
+    statsmodels.stats.contingency_tables
     """
     if zero_correction is None:
         cc1 = cc2 = 0

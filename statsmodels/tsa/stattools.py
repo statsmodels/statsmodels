@@ -42,7 +42,6 @@ __all__ = [
     "pacf_ols",
     "ccovf",
     "ccf",
-    "periodogram",
     "q_stat",
     "coint",
     "arma_order_select_ic",
@@ -1008,7 +1007,7 @@ def pacf(x, nlags=None, method="ywadjusted", alpha=None):
         "ldbiased",
         "ld_biased",
     )
-    x = array_like(x, "x", maxdim=1)
+    x = array_like(x, "x", maxdim=2)
     method = string_like(method, "method", options=methods)
     alpha = float_like(alpha, "alpha", optional=True)
 
@@ -1130,41 +1129,6 @@ def ccf(x, y, adjusted=True):
 
     cvf = ccovf(x, y, adjusted=adjusted, demean=True)
     return cvf / (np.std(x) * np.std(y))
-
-
-def periodogram(x):
-    """
-    Compute the periodogram for the natural frequency of x.
-
-    .. deprecated::
-       Use scipy.signal.periodogram instead
-
-    Parameters
-    ----------
-    x : array_like
-        Array for which the periodogram is desired.
-
-    Returns
-    -------
-    ndarray
-        The periodogram defined as 1./len(x) * np.abs(np.fft.fft(x))**2.
-
-    References
-    ----------
-    .. [1] Brockwell, P.J. and Davis, R.A., 2016. Introduction to time series
-        and forecasting. Springer.
-    """
-    # TODO: Remove after 0.11
-    warnings.warn(
-        "periodogram is deprecated and will be removed after 0.11. "
-        "Use scipy.signal.periodogram instead.",
-        FutureWarning,
-    )
-    x = array_like(x, "x")
-
-    pergr = 1.0 / len(x) * np.abs(np.fft.fft(x)) ** 2
-    pergr[0] = 0.0  # what are the implications of this?
-    return pergr
 
 
 # moved from sandbox.tsa.examples.try_ld_nitime, via nitime

@@ -7,7 +7,7 @@ __all__ = ['AR', 'arima', 'AutoReg', 'ARMA', 'ARIMA',
            'interp',
            'stattools',
            'acovf', 'acf', 'pacf', 'pacf_yw', 'pacf_ols', 'ccovf', 'ccf',
-           'periodogram', 'q_stat', 'coint', 'arma_order_select_ic',
+           'q_stat', 'coint', 'arma_order_select_ic',
            'adfuller', 'kpss', 'bds',
            'datetools',
            'seasonal_decompose',
@@ -35,7 +35,7 @@ from . import interp
 from . import stattools
 from .stattools import (
     acovf, acf, pacf, pacf_yw, pacf_ols, ccovf, ccf,
-    periodogram, q_stat, coint, arma_order_select_ic,
+    q_stat, coint, arma_order_select_ic,
     adfuller, kpss, bds)
 from .base import datetools
 from .seasonal import seasonal_decompose

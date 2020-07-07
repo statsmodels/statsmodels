@@ -269,10 +269,25 @@ def fstat_to_wellek(f_stat, n_groups, nobs_mean):
 
 def confint_noncentrality(f_stat, df1, df2, alpha=0.05,
                           alternative="two-sided"):
-    """confidence interval for noncentality parameter in F-test
+    """
+    confidence interval for noncentality parameter in F-test
 
     This does not yet handle non-negativity constraint on nc.
     Currently only two-sided alternative is supported.
+
+    Parameters
+    ----------
+    f_stat : float
+    df1 : float
+    df2 : float
+    alpha : float, default 0.05
+    alternative : {"two-sided"}
+        Other alternatives have not been implements.
+
+    Returns
+    -------
+    float
+        The end point of the confidence interval.
 
     Notes
     -----
@@ -282,14 +297,14 @@ def confint_noncentrality(f_stat, df1, df2, alpha=0.05,
 
     References
     ----------
-    Steiger, James H. 2004. “Beyond the F Test: Effect Size Confidence
-    Intervals and Tests of Close Fit in the Analysis of Variance and Contrast
-    Analysis.” Psychological Methods 9 (2): 164–82.
-    https://doi.org/10.1037/1082-989X.9.2.164.
+    .. [1] Steiger, James H. 2004. “Beyond the F Test: Effect Size Confidence
+       Intervals and Tests of Close Fit in the Analysis of Variance and
+       Contrast Analysis.” Psychological Methods 9 (2): 164–82.
+       https://doi.org/10.1037/1082-989X.9.2.164.
 
     See Also
     --------
-    `confint_effectsize_oneway`
+    confint_effectsize_oneway
     """
 
     if alternative in ["two-sided", "2s", "ts"]:
@@ -302,13 +317,24 @@ def confint_noncentrality(f_stat, df1, df2, alpha=0.05,
 
 
 def confint_effectsize_oneway(f_stat, df1, df2, alpha=0.05, nobs=None):
-    """confidence interval for effect size in oneway anova for F distribution
+    """
+    Confidence interval for effect size in oneway anova for F distribution
 
     This does not yet handle non-negativity constraint on nc.
     Currently only two-sided alternative is supported.
 
-    returns an instance of a Holder class with effect size confidence
-    intervals as attributes.
+    Parameters
+    ----------
+    f_stat : float
+    df1 : float
+    df2 : float
+    alpha : float, default 0.05
+    nobs : int, default None
+
+    Returns
+    -------
+    Holder
+        Class with effect size and confidence attributes
 
     Notes
     -----
@@ -325,8 +351,7 @@ def confint_effectsize_oneway(f_stat, df1, df2, alpha=0.05, nobs=None):
 
     See Also
     --------
-    `confint_noncentrality`
-
+    confint_noncentrality
     """
     if nobs is None:
         nobs = df1 + df2 + 1

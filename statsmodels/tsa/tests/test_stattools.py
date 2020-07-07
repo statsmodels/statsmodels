@@ -24,7 +24,7 @@ from statsmodels.tsa.stattools import (adfuller, acf, pacf_yw, pacf_ols,
                                        arma_order_select_ic, levinson_durbin,
                                        levinson_durbin_pacf, pacf_burg,
                                        innovations_algo, innovations_filter,
-                                       periodogram, zivot_andrews)
+                                       zivot_andrews)
 
 DECIMAL_8 = 8
 DECIMAL_6 = 6
@@ -958,11 +958,6 @@ def test_adfuller_maxlag_too_large(reset_randomstate):
     y = np.random.standard_normal(100)
     with pytest.raises(ValueError, match='maxlag must be less than'):
         adfuller(y, maxlag=51)
-
-
-def test_periodogram_future_warning(reset_randomstate):
-    with pytest.warns(FutureWarning):
-        periodogram(np.random.standard_normal(100))
 
 
 class SetupZivotAndrews(object):

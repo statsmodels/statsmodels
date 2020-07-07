@@ -19,7 +19,7 @@ ar = [1, -0.6, -0.1]
 ma = [1, 0.7]
 dist = lambda n: np.random.standard_t(3, size=n)
 np.random.seed(8659567)
-x = arma_generate_sample(ar, ma, nobs, sigma=1, distrvs=dist,
+x = arma_generate_sample(ar, ma, nobs, scale=1, distrvs=dist,
                          burnin=500)
 
 mod = TArma(x)
