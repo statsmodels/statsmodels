@@ -1114,7 +1114,6 @@ class DeterministicProcess:
 
     >>> dp = DeterministicProcess(index, constant=True, fourier=2)
     >>> dp.in_sample().head(3)
-
                 const  sin(1,12)  cos(1,12)  sin(2,12)  cos(2,12)
     2000-01-31    1.0   0.000000   1.000000   0.000000        1.0
     2000-02-29    1.0   0.500000   0.866025   0.866025        0.5
