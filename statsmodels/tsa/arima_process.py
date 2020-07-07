@@ -30,6 +30,12 @@ __all__ = ['arma_acf', 'arma_acovf', 'arma_generate_sample',
            'lpol2index', 'index2lpol']
 
 
+NONSTATIONARY_ERROR = """\
+The model's autoregressive parameters (ar) indicate that the process
+ is non-stationary. arma_acovf can only be used with stationary processes.
+"""
+
+
 # Remove after 0.11
 @deprecate_kwarg('sigma', 'scale')
 def arma_generate_sample(ar, ma, nsample, scale=1, distrvs=None,
@@ -107,7 +113,7 @@ def arma_generate_sample(ar, ma, nsample, scale=1, distrvs=None,
 
 def arma_acovf(ar, ma, nobs=10, sigma2=1, dtype=None):
     """
-    Theoretical autocovariance function of ARMA process.
+    Theoretical autocovariances of stationary ARMA processes
 
     Parameters
     ----------
@@ -150,6 +156,8 @@ def arma_acovf(ar, ma, nobs=10, sigma2=1, dtype=None):
         out = np.zeros(nobs, dtype=dtype)
         out[0] = sigma2
         return out
+    elif p > 0 and np.max(np.abs(np.roots(ar))) >= 1:
+        raise ValueError(NONSTATIONARY_ERROR)
 
     # Get the moving average representation coefficients that we need
     ma_coeffs = arma2ma(ar, ma, lags=m)
@@ -166,7 +174,10 @@ def arma_acovf(ar, ma, nobs=10, sigma2=1, dtype=None):
         A[k, 1:m - k] += tmp_ar[(k + 1):m]
         b[k] = sigma2 * np.dot(ma[k:q + 1], ma_coeffs[:max((q + 1 - k), 0)])
     acovf = np.zeros(max(nobs, m), dtype=dtype)
-    acovf[:m] = np.linalg.solve(A, b)[:, 0]
+    try:
+        acovf[:m] = np.linalg.solve(A, b)[:, 0]
+    except np.linalg.LinAlgError:
+        raise ValueError(NONSTATIONARY_ERROR)
 
     # Iteratively apply (BD, eq. 3.3.9) to solve for remaining autocovariances
     if nobs > m:
