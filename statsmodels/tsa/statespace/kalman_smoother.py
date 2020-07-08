@@ -1025,7 +1025,7 @@ class SmootherResults(FilterResults):
             argument.
         design : array, optional
             Design matrix for the period `t` in time-varying models. If this
-            model has a time-varying design matrix, and the arugment `t` is out
+            model has a time-varying design matrix, and the argument `t` is out
             of this model's sample, then a new design matrix for period `t`
             must be provided. Unused otherwise.
 

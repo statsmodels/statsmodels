@@ -7,7 +7,7 @@ References
 Lütkepohl (2005) New Introduction to Multiple Time Series Analysis
 """
 from statsmodels.compat.pandas import deprecate_kwarg
-from statsmodels.compat.python import lrange, iteritems
+from statsmodels.compat.python import iteritems, lrange
 
 from collections import defaultdict
 from io import StringIO
@@ -17,21 +17,25 @@ import pandas as pd
 import scipy.stats as stats
 
 import statsmodels.base.wrapper as wrap
-from statsmodels.tsa.base.tsa_model import (TimeSeriesModel,
-                                           TimeSeriesResultsWrapper)
-import statsmodels.tsa.tsatools as tsa
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.tools.decorators import cache_readonly, deprecated_alias
 from statsmodels.tools.linalg import logdet_symm
 from statsmodels.tools.sm_exceptions import OutputWarning
 from statsmodels.tools.validation import array_like
-from statsmodels.tsa.tsatools import vec, unvec, duplication_matrix
+from statsmodels.tsa.base.tsa_model import (
+    TimeSeriesModel,
+    TimeSeriesResultsWrapper,
+)
+import statsmodels.tsa.tsatools as tsa
+from statsmodels.tsa.tsatools import duplication_matrix, unvec, vec
 from statsmodels.tsa.vector_ar import output, plotting, util
-from statsmodels.tsa.vector_ar.hypothesis_test_results import \
-    CausalityTestResults, NormalityTestResults, WhitenessTestResults
+from statsmodels.tsa.vector_ar.hypothesis_test_results import (
+    CausalityTestResults,
+    NormalityTestResults,
+    WhitenessTestResults,
+)
 from statsmodels.tsa.vector_ar.irf import IRAnalysis
 from statsmodels.tsa.vector_ar.output import VARSummary
-
 
 # -------------------------------------------------------------------------------
 # VAR process routines
@@ -735,12 +739,24 @@ class VAR(TimeSeriesModel):
         -------
         selections : LagOrderResults
         """
+        ntrend = len(trend) if trend.startswith("c") else 0
+        max_estimable = (self.n_totobs - self.neqs - ntrend) // (1 + self.neqs)
         if maxlags is None:
             maxlags = int(round(12*(len(self.endog)/100.)**(1/4.)))
             # TODO: This expression shows up in a bunch of places, but
-            # in some it is `int` and in others `np.ceil`.  Also in some
-            # it multiplies by 4 instead of 12.  Let's put these all in
-            # one place and document when to use which variant.
+            #  in some it is `int` and in others `np.ceil`.  Also in some
+            #  it multiplies by 4 instead of 12.  Let's put these all in
+            #  one place and document when to use which variant.
+
+            # Ensure enough obs to estimate model with maxlags
+            maxlags = min(maxlags, max_estimable)
+        else:
+            if maxlags > max_estimable:
+                raise ValueError(
+                    "maxlags is too large for the number of observations and "
+                    "the number of equations. The largest model cannot be "
+                    "estimated."
+                )
 
         ics = defaultdict(list)
         p_min = 0 if self.exog is not None or trend != "nc" else 1

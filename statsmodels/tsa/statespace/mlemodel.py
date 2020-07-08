@@ -110,6 +110,12 @@ class MLEModel(tsbase.TimeSeriesModel):
     ssm : statsmodels.tsa.statespace.kalman_filter.KalmanFilter
         Underlying state space representation.
 
+    See Also
+    --------
+    statsmodels.tsa.statespace.mlemodel.MLEResults
+    statsmodels.tsa.statespace.kalman_filter.KalmanFilter
+    statsmodels.tsa.statespace.representation.Representation
+
     Notes
     -----
     This class wraps the state space model with Kalman filtering to add in
@@ -122,12 +128,6 @@ class MLEModel(tsbase.TimeSeriesModel):
 
     The `start_params` `update` method must be overridden in the
     child class (and the `transform` and `untransform` methods, if needed).
-
-    See Also
-    --------
-    statsmodels.tsa.statespace.mlemodel.MLEResults
-    statsmodels.tsa.statespace.kalman_filter.KalmanFilter
-    statsmodels.tsa.statespace.representation.Representation
     """
 
     def __init__(self, endog, k_states, exog=None, dates=None, freq=None,
@@ -893,6 +893,11 @@ class MLEModel(tsbase.TimeSeriesModel):
             Additional keyword arguments to pass to the Kalman filter. See
             `KalmanFilter.filter` for more details.
 
+        See Also
+        --------
+        update : modifies the internal state of the state space model to
+                 reflect new params
+
         Notes
         -----
         [1]_ recommend maximizing the average likelihood to avoid scale issues;
@@ -903,11 +908,6 @@ class MLEModel(tsbase.TimeSeriesModel):
         .. [1] Koopman, Siem Jan, Neil Shephard, and Jurgen A. Doornik. 1999.
            Statistical Algorithms for Models in State Space Using SsfPack 2.2.
            Econometrics Journal 2 (1): 107-60. doi:10.1111/1368-423X.00023.
-
-        See Also
-        --------
-        update : modifies the internal state of the state space model to
-                 reflect new params
         """
         transformed, includes_fixed, complex_step, kwargs = _handle_args(
             MLEModel._loglike_param_names, MLEModel._loglike_param_defaults,
@@ -944,6 +944,10 @@ class MLEModel(tsbase.TimeSeriesModel):
             Additional keyword arguments to pass to the Kalman filter. See
             `KalmanFilter.filter` for more details.
 
+        See Also
+        --------
+        update : modifies the internal state of the Model to reflect new params
+
         Notes
         -----
         [1]_ recommend maximizing the average likelihood to avoid scale issues;
@@ -954,10 +958,6 @@ class MLEModel(tsbase.TimeSeriesModel):
         .. [1] Koopman, Siem Jan, Neil Shephard, and Jurgen A. Doornik. 1999.
            Statistical Algorithms for Models in State Space Using SsfPack 2.2.
            Econometrics Journal 2 (1): 107-60. doi:10.1111/1368-423X.00023.
-
-        See Also
-        --------
-        update : modifies the internal state of the Model to reflect new params
         """
         params = self.handle_params(params, transformed=transformed,
                                     includes_fixed=includes_fixed)
@@ -1608,16 +1608,16 @@ class MLEModel(tsbase.TimeSeriesModel):
         jacobian : ndarray
             Jacobian matrix of the transformation, evaluated at `unconstrained`
 
+        See Also
+        --------
+        transform_params
+
         Notes
         -----
         This is a numerical approximation using finite differences. Note that
         in general complex step methods cannot be used because it is not
         guaranteed that the `transform_params` method is a real function (e.g.
         if Cholesky decomposition is used).
-
-        See Also
-        --------
-        transform_params
         """
         return approx_fprime(unconstrained, self.transform_params,
                              centered=approx_centered)
@@ -2943,6 +2943,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             Jarque-Bera normality test. If None, an attempt is made to select
             an appropriate test.
 
+        See Also
+        --------
+        statsmodels.stats.stattools.jarque_bera
+            The Jarque-Bera test of normality.
+
         Notes
         -----
         Let `d` = max(loglikelihood_burn, nobs_diffuse); this test is
@@ -2952,11 +2957,6 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         data are missing completely at random. This test is then run on the
         standardized residuals excluding those corresponding to missing
         observations.
-
-        See Also
-        --------
-        statsmodels.stats.stattools.jarque_bera
-            The Jarque-Bera test of normality.
         """
         if method is None:
             method = 'jarquebera'
@@ -3171,17 +3171,17 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             `statsmodels.stats.diagnostic.acorr_ljungbox`) for the `i` th
             endogenous variable.
 
+        See Also
+        --------
+        statsmodels.stats.diagnostic.acorr_ljungbox
+            Ljung-Box test for serial correlation.
+
         Notes
         -----
         Let `d` = max(loglikelihood_burn, nobs_diffuse); this test is
         calculated ignoring the first `d` residuals.
 
         Output is nan for any endogenous variable which has missing values.
-
-        See Also
-        --------
-        statsmodels.stats.diagnostic.acorr_ljungbox
-            Ljung-Box test for serial correlation.
         """
         if method is None:
             method = 'ljungbox'
@@ -3860,6 +3860,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         can be much faster if the original dataset is large), see the `extend`
         method.
 
+        See Also
+        --------
+        statsmodels.tsa.statespace.mlemodel.MLEResults.extend
+        statsmodels.tsa.statespace.mlemodel.MLEResults.apply
+
         Examples
         --------
         >>> index = pd.period_range(start='2000', periods=2, freq='A')
@@ -3893,11 +3898,6 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         >>> print(updated_res.forecast(1))
         2003    0.878
         Freq: A-DEC, dtype: float64
-
-        See Also
-        --------
-        statsmodels.tsa.statespace.mlemodel.MLEResults.extend
-        statsmodels.tsa.statespace.mlemodel.MLEResults.apply
         """
         start = self.nobs
         end = self.nobs + len(endog) - 1
@@ -3970,6 +3970,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             Updated Results object, that includes results only for the new
             dataset.
 
+        See Also
+        --------
+        statsmodels.tsa.statespace.mlemodel.MLEResults.append
+        statsmodels.tsa.statespace.mlemodel.MLEResults.apply
+
         Notes
         -----
         The `endog` argument to this method should consist of new observations
@@ -4013,11 +4018,6 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         >>> print(updated_res.forecast(1))
         2003    0.878
         Freq: A-DEC, dtype: float64
-
-        See Also
-        --------
-        statsmodels.tsa.statespace.mlemodel.MLEResults.append
-        statsmodels.tsa.statespace.mlemodel.MLEResults.apply
         """
         start = self.nobs
         end = self.nobs + len(endog) - 1
@@ -4076,6 +4076,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             Updated Results object, that includes results only for the new
             dataset.
 
+        See Also
+        --------
+        statsmodels.tsa.statespace.mlemodel.MLEResults.append
+        statsmodels.tsa.statespace.mlemodel.MLEResults.apply
+
         Notes
         -----
         The `endog` argument to this method should consist of new observations
@@ -4117,11 +4122,6 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         >>> print(new_res.forecast(1))
         1983    1.1707
         Freq: A-DEC, dtype: float64
-
-        See Also
-        --------
-        statsmodels.tsa.statespace.mlemodel.MLEResults.append
-        statsmodels.tsa.statespace.mlemodel.MLEResults.apply
         """
         mod = self.model.clone(endog, exog=exog, **kwargs)
         if copy_initialization:
@@ -4149,6 +4149,16 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             If a figure is created, this argument allows specifying a size.
             The tuple is (width, height).
 
+        Returns
+        -------
+        Figure
+            Figure instance with diagnostic plots
+
+        See Also
+        --------
+        statsmodels.graphics.gofplots.qqplot
+        statsmodels.graphics.tsaplots.plot_acf
+
         Notes
         -----
         Produces a 2x2 plot grid with the following plots (ordered clockwise
@@ -4159,11 +4169,6 @@ class MLEResults(tsbase.TimeSeriesModelResults):
            with a Normal(0,1) density plotted for reference.
         3. Normal Q-Q plot, with Normal reference line.
         4. Correlogram
-
-        See Also
-        --------
-        statsmodels.graphics.gofplots.qqplot
-        statsmodels.graphics.tsaplots.plot_acf
         """
         from statsmodels.graphics.utils import _import_mpl, create_mpl_fig
         _import_mpl()
