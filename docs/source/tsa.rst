@@ -163,15 +163,15 @@ Exponential Smoothing
 
 Linear and non-linear exponential smoothing models are available:
 
-.. currentmodule:: statsmodels.tsa
+.. currentmodule:: statsmodels.tsa.holtwinters
 
 .. autosummary::
    :toctree: generated/
 
-   holtwinters.ExponentialSmoothing
-   holtwinters.SimpleExpSmoothing
-   holtwinters.Holt
-   holtwinters.HoltWintersResults
+   ExponentialSmoothing
+   SimpleExpSmoothing
+   Holt
+   HoltWintersResults
 
 Linear exponential smoothing models have also been separately implemented as a
 special case of the state space framework. Although this approach does not

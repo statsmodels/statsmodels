@@ -17,7 +17,8 @@ from statsmodels.stats.base import HolderTuple
 
 
 def effectsize_oneway(means, vars_, nobs, use_var="unequal", ddof_between=0):
-    """effect size corresponding to Cohen's f = nc / nobs for oneway anova
+    """
+    Effect size corresponding to Cohen's f = nc / nobs for oneway anova
 
     This contains adjustment for Welch and Brown-Forsythe Anova so that
     effect size can be used with FTestAnovaPower.
@@ -28,7 +29,7 @@ def effectsize_oneway(means, vars_, nobs, use_var="unequal", ddof_between=0):
         Mean of samples to be compared
     vars_ : float or array_like
         Residual (within) variance of each sample or pooled
-        If var_ is scalar, then it is interpreted as pooled variance that is
+        If ``vars_`` is scalar, then it is interpreted as pooled variance that is
         the same for all samples, ``use_var`` will be ignored.
         Otherwise, the variances are used depending on the ``use_var`` keyword.
     nobs : int or array_like
