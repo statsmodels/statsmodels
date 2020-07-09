@@ -32,6 +32,9 @@
   - img: ../_static/images/mixed_lm.png
     target: notebooks/generated/mixed_lm_example.html
     text: Linear Mixed-Effects
+  - img: ../_static/images/variance_components.png
+    target: notebooks/generated/variance_components.html
+    text: Variance Component Analysis
 - header: Plotting
   id: plotting
   links:

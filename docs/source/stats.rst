@@ -680,8 +680,11 @@ Status: experimental, API might change, added in 0.12
    effectsize_2proportions
    effectsize_smd
 
-   The module also includes internal functions to compute random effects
-   variance
+The module also includes internal functions to compute random effects
+variance
+
+.. autosummary::
+   :toctree: generated/
 
    _fit_tau_iter_mm
    _fit_tau_iterative
