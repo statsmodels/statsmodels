@@ -5,8 +5,6 @@ Created on Mon May 27 12:07:02 2013
 
 Author: Josef Perktold
 """
-from statsmodels.compat.platform import PLATFORM_WIN32
-
 import warnings
 
 import numpy as np
@@ -305,17 +303,18 @@ class Test_Factor(object):
         mat1 = rslt.corr.to_matrix()
         assert_allclose(mat, mat1, rtol=0.25, atol=1e-3, err_msg=err_msg)
 
+    @pytest.mark.slow
     @pytest.mark.parametrize('dm', [1, 2])
     def test_corr_nearest_factor_sparse(self, dm):
         # Test that result is the same if the input is dense or sparse
-        d = 100
+        d = 200
 
         # Generate a test matrix of factors
         X = np.zeros((d, dm), dtype=np.float64)
         x = np.linspace(0, 2 * np.pi, d)
         rs = np.random.RandomState(10)
         for j in range(dm):
-            X[:, j] = np.sin(x * (j + 1)) + 1e-10 * rs.randn(d)
+            X[:, j] = np.sin(x * (j + 1)) + rs.randn(d)
 
         # Get the correlation matrix
         _project_correlation_factors(X)
@@ -325,31 +324,18 @@ class Test_Factor(object):
 
         # Threshold it
         mat.flat[np.abs(mat.flat) < 0.35] = 0.0
-        # Replace line below which left signed 0
-        # mat *= (np.abs(mat) >= 0.35)
         smat = sparse.csr_matrix(mat)
 
-        try:
-            dense_rslt = corr_nearest_factor(mat, dm, maxiter=10000)
-            sparse_rslt = corr_nearest_factor(smat, dm, maxiter=10000)
+        dense_rslt = corr_nearest_factor(mat, dm, maxiter=10000)
+        sparse_rslt = corr_nearest_factor(smat, dm, maxiter=10000)
 
-            mat_dense = dense_rslt.corr.to_matrix()
-            mat_sparse = sparse_rslt.corr.to_matrix()
+        mat_dense = dense_rslt.corr.to_matrix()
+        mat_sparse = sparse_rslt.corr.to_matrix()
 
-            assert dense_rslt.Converged is True
-            assert sparse_rslt.Converged is True
+        assert dense_rslt.Converged is sparse_rslt.Converged
+        assert dense_rslt.Converged is True
 
-            assert_allclose(mat_dense, mat_sparse, rtol=.25, atol=1e-3)
-        except AssertionError as err:
-            if PLATFORM_WIN32:
-                pytest.xfail('Known to randomly fail on Win32')
-            # Some debugging information for CI runs that randomly fail
-            print(dense_rslt.objective_values)
-            print(sparse_rslt.objective_values)
-            locs = np.where(~np.isclose(mat_dense, mat_sparse, rtol=.25, atol=1e-3))
-            print(mat_sparse[locs])
-            print(mat_dense[locs])
-            raise err
+        assert_allclose(mat_dense, mat_sparse, rtol=.25, atol=1e-3)
 
     # Test on a quadratic function.
     def test_spg_optim(self, reset_randomstate):
