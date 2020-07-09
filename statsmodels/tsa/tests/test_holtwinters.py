@@ -879,3 +879,14 @@ def test_simulate_boxcox(austourists):
     mean = np.mean(res, axis=1)
 
     assert np.all(np.abs(mean - expected) < 5)
+
+
+@pytest.mark.parametrize("ix", [10, 100, 1000, 2000])
+def test_forecast_index(ix):
+    # GH 6549
+    ts_1 = pd.Series([85601, 89662, 85122, 84400, 78250, 84434, 71072, 70357, 72635, 73210],
+                     index=range(ix, ix + 10))
+    model = ExponentialSmoothing(ts_1, trend='add', damped=False).fit()
+    index = model.forecast(steps=10).index
+    assert index[0] == ix + 10
+    assert index[-1] == ix + 19

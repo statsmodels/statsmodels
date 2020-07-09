@@ -348,8 +348,12 @@ class HoltWintersResults(Results):
         """
         try:
             freq = getattr(self.model._index, 'freq', 1)
-            start = self.model._index[-1] + freq
-            end = self.model._index[-1] + steps * freq
+            if isinstance(freq, int):
+                start = self.model._index.shape[0]
+                end = start + steps - 1
+            else:
+                start = self.model._index[-1] + freq
+                end = self.model._index[-1] + steps * freq
             return self.model.predict(self.params, start=start, end=end)
         except (AttributeError, ValueError):
             # May occur when the index does not have a freq
@@ -912,7 +916,10 @@ class ExponentialSmoothing(TimeSeriesModel):
         """
         if start is None:
             freq = getattr(self._index, 'freq', 1)
-            start = self._index[-1] + freq
+            if isinstance(freq, int):
+                start = self._index.shape[0] + freq
+            else:
+                start = self._index[-1] + freq
         start, end, out_of_sample, prediction_index = self._get_prediction_index(
             start=start, end=end)
         if out_of_sample > 0:
@@ -1090,6 +1097,8 @@ class ExponentialSmoothing(TimeSeriesModel):
                     # solution to parameters
                     _bounds = [bnd for bnd, flag in zip(bounds, xi) if flag]
                     lb, ub = np.asarray(_bounds).T.astype(float)
+                    ub[np.isnan(ub)] = np.inf
+                    lb[np.isnan(lb)] = -np.inf
                     initial_p = p[xi]
 
                     # Ensure strictly inbounds
