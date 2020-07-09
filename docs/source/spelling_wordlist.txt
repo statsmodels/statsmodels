@@ -2352,3 +2352,14 @@ lamda
 parallelized
 Jupyter
 Reseasonalize
+blobbogram
+capstyle
+dotplots
+ldadjusted
+linestyle
+marginnames
+nonsymmetric
+Nowcasting
+Seasonalities
+substrings
+ywadjusted
