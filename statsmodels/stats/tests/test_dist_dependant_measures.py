@@ -1,9 +1,10 @@
 import numpy as np
 from numpy.testing import assert_almost_equal
-from pytest import raises as assert_raises, warns as assert_warns
+import pytest
 
-import statsmodels.stats.dist_dependence_measures as ddm
+from statsmodels.datasets.tests.test_utils import IGNORED_EXCEPTIONS
 from statsmodels.datasets import get_rdataset
+import statsmodels.stats.dist_dependence_measures as ddm
 
 
 class TestDistDependenceMeasures(object):
@@ -57,11 +58,11 @@ class TestDistDependenceMeasures(object):
         cls.pval_asym_exp = 0.00452
 
     def test_input_validation_nobs(self):
-        with assert_raises(ValueError, match="same number of observations"):
+        with pytest.raises(ValueError, match="same number of observations"):
             ddm.distance_covariance_test(self.x[:2, :], self.y)
 
     def test_input_validation_unknown_method(self):
-        with assert_raises(ValueError, match="Unknown 'method' parameter"):
+        with pytest.raises(ValueError, match="Unknown 'method' parameter"):
             ddm.distance_covariance_test(self.x, self.y, method="wrong_name")
 
     def test_statistic_value_asym_method(self):
@@ -82,7 +83,7 @@ class TestDistDependenceMeasures(object):
 
     def test_fallback_to_asym_method(self):
         match_text = "The asymptotic approximation will be used"
-        with assert_warns(UserWarning, match=match_text):
+        with pytest.warns(UserWarning, match=match_text):
             statistic, pval, _ = ddm.distance_covariance_test(
                 self.x, self.y, method="emp", B=200
             )
@@ -131,7 +132,11 @@ class TestDistDependenceMeasures(object):
              dCov
         0.1025087
         """
-        iris = get_rdataset("iris").data.values[:, :4]
+        try:
+            iris = get_rdataset("iris").data.values[:, :4]
+        except IGNORED_EXCEPTIONS:
+            pytest.skip('Failed with HTTPError or URLError, these are random')
+
         x = iris[:50]
         y = iris[50:100]
 
@@ -167,7 +172,11 @@ class TestDistDependenceMeasures(object):
             dCov
         30.01526
         """
-        quakes = get_rdataset("quakes").data.values[:, :3]
+        try:
+            quakes = get_rdataset("quakes").data.values[:, :3]
+        except IGNORED_EXCEPTIONS:
+            pytest.skip('Failed with HTTPError or URLError, these are random')
+
         x = quakes[:50]
         y = quakes[50:100]
 
