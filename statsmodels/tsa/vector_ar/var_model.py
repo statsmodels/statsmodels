@@ -583,7 +583,7 @@ class VAR(TimeSeriesModel):
 
         Parameters
         ----------
-        maxlags : int
+        maxlags : {int, None}, default None
             Maximum number of lags to check for order selection, defaults to
             12 * (nobs/100.)**(1./4), see select_order function
         method : {'ols'}
@@ -772,6 +772,14 @@ class VAR(TimeSeriesModel):
                                for k, v in iteritems(ics))
 
         return LagOrderResults(ics, selected_orders, vecm=False)
+
+    @classmethod
+    def from_formula(cls, formula, data, subset=None, drop_cols=None,
+                     *args, **kwargs):
+        """
+        Not implemented. Formulas are not supported for VAR models.
+        """
+        raise NotImplementedError("formulas are not supported for VAR models.")
 
 
 class VARProcess(object):

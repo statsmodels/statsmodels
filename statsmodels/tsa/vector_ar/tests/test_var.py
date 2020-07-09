@@ -871,3 +871,8 @@ def test_var_maxlag(reset_randomstate):
     VAR(y).fit(maxlags=None, ic="aic")
     with pytest.raises(ValueError, match="maxlags is too large"):
         VAR(y).fit(maxlags=8, ic="aic")
+
+
+def test_from_formula():
+    with pytest.raises(NotImplementedError):
+        VAR.from_formula("y ~ x", None)
