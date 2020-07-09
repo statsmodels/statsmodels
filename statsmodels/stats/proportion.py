@@ -1423,24 +1423,24 @@ def test_proportions_2indep(count1, nobs1, count2, nobs2, value=None,
 
     for compare = 'diff'
 
-    H0: prop1 - prop2 - value = 0
-    H1: prop1 - prop2 - value != 0  if alternative = 'two-sided'
-    H1: prop1 - prop2 - value > 0   if alternative = 'larger'
-    H1: prop1 - prop2 - value < 0   if alternative = 'smaller'
+       H0: prop1 - prop2 - value = 0
+       H1: prop1 - prop2 - value != 0  if alternative = 'two-sided'
+       H1: prop1 - prop2 - value > 0   if alternative = 'larger'
+       H1: prop1 - prop2 - value < 0   if alternative = 'smaller'
 
     for compare = 'ratio'
 
-    H0: prop1 / prop2 - value = 0
-    H1: prop1 / prop2 - value != 0  if alternative = 'two-sided'
-    H1: prop1 / prop2 - value > 0   if alternative = 'larger'
-    H1: prop1 / prop2 - value < 0   if alternative = 'smaller'
+       H0: prop1 / prop2 - value = 0
+       H1: prop1 / prop2 - value != 0  if alternative = 'two-sided'
+       H1: prop1 / prop2 - value > 0   if alternative = 'larger'
+       H1: prop1 / prop2 - value < 0   if alternative = 'smaller'
 
     for compare = 'odds-ratio'
 
-    H0: or - value = 0
-    H1: or - value != 0  if alternative = 'two-sided'
-    H1: or - value > 0   if alternative = 'larger'
-    H1: or - value < 0   if alternative = 'smaller'
+       H0: or - value = 0
+       H1: or - value != 0  if alternative = 'two-sided'
+       H1: or - value > 0   if alternative = 'larger'
+       H1: or - value < 0   if alternative = 'smaller'
 
     where odds-ratio or = prop1 / (1 - prop1) / (prop2 / (1 - prop2))
 
@@ -1678,19 +1678,19 @@ def tost_proportions_2indep(count1, nobs1, count2, nobs2, low, upp,
 
     for compare = 'diff'
 
-    H0: prop1 - prop2 <= low or upp <= prop1 - prop2
-    H1: low < prop1 - prop2 < upp
+       H0: prop1 - prop2 <= low or upp <= prop1 - prop2
+       H1: low < prop1 - prop2 < upp
 
     for compare = 'ratio'
 
-    H0: prop1 / prop2 <= low or upp <= prop1 / prop2
-    H1: low < prop1 / prop2 < upp
+       H0: prop1 / prop2 <= low or upp <= prop1 / prop2
+       H1: low < prop1 / prop2 < upp
 
 
     for compare = 'odds-ratio'
 
-    H0: or <= low or upp <= or
-    H1: low < or < upp
+       H0: or <= low or upp <= or
+       H1: low < or < upp
 
     where odds-ratio or = prop1 / (1 - prop1) / (prop2 / (1 - prop2))
 
