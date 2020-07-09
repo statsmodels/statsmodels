@@ -88,6 +88,11 @@ class KalmanFilter(Representation):
         Keyword arguments may be used to provide default values for state space
         matrices. See `Representation` for more details.
 
+    See Also
+    --------
+    FilterResults
+    statsmodels.tsa.statespace.representation.Representation
+
     Notes
     -----
     There are several types of options available for controlling the Kalman
@@ -130,11 +135,6 @@ class KalmanFilter(Representation):
     than explicit matrix inversion) is used. If only SOLVE_CHOLESKY had been
     set, then the Cholesky decomposition method would *always* be used, even in
     the case of 1-dimensional data.
-
-    See Also
-    --------
-    FilterResults
-    statsmodels.tsa.statespace.representation.Representation
     """
 
     filter_methods = [

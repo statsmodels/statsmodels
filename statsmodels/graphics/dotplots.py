@@ -64,7 +64,7 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
     styles_order : array_like
         If stacked=True, this is the order in which the point styles
         on a given line are drawn from top to bottom (if horizontal
-        is True) or from left to right (if horiontal is False).  If
+        is True) or from left to right (if horizontal is False).  If
         None (default), the order is lexical.
     striped : bool
         If True, every other line is enclosed in a shaded box.
@@ -101,6 +101,13 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
     `points`, `intervals`, `lines`, `sections`, `styles` must all have
     the same length whenever present.
 
+    References
+    ----------
+    .. [1] Cleveland, William S. (1993). "Visualizing Data". Hobart Press.
+    .. [2] Jacoby, William G. (2006) "The Dot Plot: A Graphical Display
+       for Labeled Quantitative Values." The Political Methodologist
+       14(1): 6-14.
+
     Examples
     --------
     This is a simple dotplot with one point per line:
@@ -112,13 +119,6 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
     the same line):
 
     >>> dot_plot(points=point_values, lines=label_values)
-
-    References
-    ----------
-    .. [1] Cleveland, William S. (1993). "Visualizing Data". Hobart Press.
-    .. [2] Jacoby, William G. (2006) "The Dot Plot: A Graphical Display
-       for Labeled Quantitative Values." The Political Methodologist
-       14(1): 6-14.
     """
 
     import matplotlib.transforms as transforms

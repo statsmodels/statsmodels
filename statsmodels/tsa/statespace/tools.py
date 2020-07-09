@@ -384,6 +384,10 @@ def is_invertible(polynomial, threshold=1 - 1e-10):
     threshold : number
         Allowed threshold for `is_invertible` to return True. Default is 1.
 
+    See Also
+    --------
+    companion_matrix
+
     Notes
     -----
 
@@ -424,10 +428,6 @@ def is_invertible(polynomial, threshold=1 - 1e-10):
     Finally, a companion matrix can be formed using the coefficients of the
     polynomial. Then the eigenvalues of that matrix give the roots of the
     polynomial. This last method is the one actually used.
-
-    See Also
-    --------
-    companion_matrix
     """
     # First method:
     # np.all(np.abs(np.roots(np.r_[1, params])) < 1)
