@@ -1336,18 +1336,17 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
     addconst = bool_like(addconst, "addconst")
     verbose = bool_like(verbose, "verbose")
     try:
+        maxlag = int_like(maxlag, "maxlag")
+        if maxlag <= 0:
+            raise ValueError("maxlag must a a positive integer")
+        lags = np.arange(1, maxlag + 1)
+    except TypeError:
         lags = np.array([int(lag) for lag in maxlag])
         maxlag = lags.max()
         if lags.min() <= 0 or lags.size == 0:
             raise ValueError(
                 "maxlag must be a non-empty list containing only "
-                "positive integers"
-            )
-    except Exception:
-        maxlag = int_like(maxlag, "maxlag")
-        if maxlag <= 0:
-            raise ValueError("maxlag must a a positive integer")
-        lags = np.arange(1, maxlag + 1)
+                "positive integers")
 
     if x.shape[0] <= 3 * maxlag + int(addconst):
         raise ValueError(
