@@ -421,13 +421,16 @@ proportions that can be used with NormalIndPower.
 Statistics for two independent samples
 Status: experimental, API might change, added in 0.12
 
+.. autosummary::
+   :toctree: generated
+
    test_proportions_2indep
    confint_proportions_2indep
    power_proportions_2indep
    tost_proportions_2indep
    samplesize_proportions_2indep_onetail
-   score_confint_inversion
    score_test_proportions_2indep
+   _score_confint_inversion
 
 
 Rates
@@ -470,14 +473,15 @@ Status: experimental, API might change, added in 0.12
 .. autosummary::
    :toctree: generated
 
+   test_mvmean
    confint_mvmean
    confint_mvmean_fromstats
-   cov_test
-   cov_test_blockdiagonal
-   cov_test_diagonal
-   cov_test_oneway
-   cov_test_spherical
-   test_mvmean
+   test_mvmean_2indep
+   test_cov
+   test_cov_blockdiagonal
+   test_cov_diagonal
+   test_cov_oneway
+   test_cov_spherical
 
 
 .. _oneway_stats:
@@ -516,6 +520,7 @@ Status: experimental, API might change, added in 0.12
    f2_to_wellek
    fstat_to_wellek
    wellek_to_f2
+   _fstat2effectsize
 
    scale_transform
    simulate_power_equivalence_oneway
@@ -666,6 +671,10 @@ Meta-Analysis
 
 Functions for basic meta-analysis of a collection of sample statistics.
 
+Examples can be found in the notebook
+
+ * `Meta-Analysis <examples/notebooks/generated/metaanalysis1.html>`__
+
 Status: experimental, API might change, added in 0.12
 
 .. module:: statsmodels.stats.meta_analysis
@@ -681,7 +690,8 @@ Status: experimental, API might change, added in 0.12
    effectsize_smd
 
 The module also includes internal functions to compute random effects
-variance
+variance.
+
 
 .. autosummary::
    :toctree: generated/

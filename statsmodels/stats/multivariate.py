@@ -59,8 +59,12 @@ def test_mvmean(data, mean_null=0, return_results=True):
     else:
         return statistic, pvalue
 
+
 def test_mvmean_2indep(data1, data2):
-    """Hotellings test for multivariate mean in two samples
+    """Hotellings test for multivariate mean in two independent samples
+
+    The null hypothesis is that both samples have the same mean.
+    The alternative hypothesis is that means differe.
 
     Parameters
     ----------
@@ -76,25 +80,29 @@ def test_mvmean_2indep(data1, data2):
     """
     x1 = array_like(data1, "x1", ndim=2)
     x2 = array_like(data2, "x2", ndim=2)
-    nobs_x, k_vars = x1.shape
-    nobs_y, k_vars = x2.shape
-    mean_x = x1.mean(0)
-    mean_y = x2.mean(0)
-    cov_x = np.cov(x1, rowvar=False, ddof=1)
-    cov_y = np.cov(x2, rowvar=False, ddof=1)
-    nobs_t = nobs_x + nobs_y
-    combined_cov = ((nobs_x - 1) * cov_x + (nobs_y - 1) * cov_y) / (nobs_t - 2)
-    diff = mean_x - mean_y
-    t2 = (nobs_x * nobs_y) / nobs_t * diff @ (np.linalg.solve(combined_cov, diff))
+    nobs1, k_vars = x1.shape
+    nobs2, k_vars2 = x2.shape
+    if k_vars2 != k_vars:
+        msg = "both samples need to have the same number of columns"
+        raise ValueError(msg)
+    mean1 = x1.mean(0)
+    mean2 = x2.mean(0)
+    cov1 = np.cov(x1, rowvar=False, ddof=1)
+    cov2 = np.cov(x2, rowvar=False, ddof=1)
+    nobs_t = nobs1 + nobs2
+    combined_cov = ((nobs1 - 1) * cov1 + (nobs2 - 1) * cov2) / (nobs_t - 2)
+    diff = mean1 - mean2
+    t2 = (nobs1 * nobs2) / nobs_t * diff @ np.linalg.solve(combined_cov, diff)
     factor = ((nobs_t - 2) * k_vars) / (nobs_t - k_vars - 1)
     statistic = t2 / factor
     df = (k_vars, nobs_t - 1 - k_vars)
     pvalue = stats.f.sf(statistic, df[0], df[1])
     return HolderTuple(statistic=statistic,
-                      pvalue=pvalue,
-                      df=df,
-                      t2=t2,
-                      distr="F")
+                       pvalue=pvalue,
+                       df=df,
+                       t2=t2,
+                       distr="F")
+
 
 def confint_mvmean(data, lin_transf=None, alpha=0.5, simult=False):
     """Confidence interval for linear transformation of a multivariate mean
@@ -248,7 +256,7 @@ to the formula collection in Bartlett 1954 for several of them.
 """  # pylint: disable=W0105
 
 
-def cov_test(cov, nobs, cov_null):
+def test_cov(cov, nobs, cov_null):
     """One sample hypothesis test for covariance equal to null covariance
 
     The Null hypothesis is that cov = cov_null, against the alternative that
@@ -308,15 +316,17 @@ def cov_test(cov, nobs, cov_null):
                        )
 
 
-def cov_test_spherical(cov, nobs):
+def test_cov_spherical(cov, nobs):
     r"""One sample hypothesis test that covariance matrix is spherical
 
     The Null and alternative hypotheses are
 
-      $H0 : \Sigma = \sigma I \\
-      H1 : \Sigma \neq \sigma I$
+    .. math::
 
-    where $\sigma$ is the common variances with unspecified value.
+       H0 &: \Sigma = \sigma I \\
+       H1 &: \Sigma \neq \sigma I
+
+    where :math:`\sigma_i` is the common variance with unspecified value.
 
     Parameters
     ----------
@@ -363,15 +373,17 @@ def cov_test_spherical(cov, nobs):
                        )
 
 
-def cov_test_diagonal(cov, nobs):
+def test_cov_diagonal(cov, nobs):
     r"""One sample hypothesis test that covariance matrix is diagonal matrix.
 
     The Null and alternative hypotheses are
 
-      $H0 : \Sigma = diag(\sigma_i) \\
-      H1 : \Sigma \neq diag(\sigma_i)$
+    .. math::
 
-    where $\sigma_i$ are the variances with unspecified values.
+       H0 &: \Sigma = diag(\sigma_i) \\
+       H1 &: \Sigma \neq diag(\sigma_i)
+
+    where :math:`\sigma_i` are the variances with unspecified values.
 
     Parameters
     ----------
@@ -430,15 +442,17 @@ def _get_blocks(mat, block_len):
     return blocks, idx_blocks
 
 
-def cov_test_blockdiagonal(cov, nobs, block_len):
+def test_cov_blockdiagonal(cov, nobs, block_len):
     r"""One sample hypothesis test that covariance is block diagonal.
 
     The Null and alternative hypotheses are
 
-      $H0 : \Sigma = diag(\Sigma_i) \\
-      H1 : \Sigma \neq diag(\Sigma_i)$
+    .. math::
 
-    where $\Sigma_i$ are covariance blocks with unspecified values.
+       H0 &: \Sigma = diag(\Sigma_i) \\
+       H1 &: \Sigma \neq diag(\Sigma_i)
+
+    where :math:`\Sigma_i` are covariance blocks with unspecified values.
 
     Parameters
     ----------
@@ -489,17 +503,19 @@ def cov_test_blockdiagonal(cov, nobs, block_len):
                        )
 
 
-def cov_test_oneway(cov_list, nobs_list):
+def test_cov_oneway(cov_list, nobs_list):
     r"""Multiple sample hypothesis test that covariance matrices are equal.
 
-    This is commonly known as Box-M test
+    This is commonly known as Box-M test.
 
     The Null and alternative hypotheses are
 
-      $H0 : \Sigma_i = \Sigma_j  for all i and j \\
-      H1 : \Sigma_i \neq diag(\Sigma_j) for at least one i and j$
+    .. math::
 
-    where $\Sigma_i$ is the covariance of sample $i$.
+       H0 &: \Sigma_i = \Sigma_j  \text{ for all i and j} \\
+       H1 &: \Sigma_i \neq \Sigma_j \text{ for at least one i and j}
+
+    where :math:`\Sigma_i` is the covariance of sample `i`.
 
     Parameters
     ----------
