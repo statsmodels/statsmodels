@@ -196,22 +196,23 @@ from statsmodels.tsa.tsatools import freq_to_period
 
 
 class ETSModel(base.StateSpaceMLEModel):
-    """
+    r"""
     ETS models.
 
     Parameters
     ----------
     endog : array_like
         The observed time-series process :math:`y`
-    error: str, optional
+    error : str, optional
         The error model. "add" (default) or "mul".
     trend : str or None, optional
         The trend component model. "add", "mul", or None (default).
     damped_trend : bool, optional
-        Whether or not an included trend component is damped. Default is False.
+        Whether or not an included trend component is damped. Default is
+        False.
     seasonal : str, optional
         The seasonality model. "add", "mul", or None (default).
-    seasonal_periods: int, optional
+    seasonal_periods : int, optional
         The number of periods in a complete seasonal cycle for seasonal
         (Holt-Winters) models. For example, 4 for quarterly data with an
         annual cycle or 7 for daily data with a weekly cycle. Required if
@@ -242,15 +243,157 @@ class ETSModel(base.StateSpaceMLEModel):
         intervals as values (lists/tuples/arrays).
         The availabe parameter names are, depeding on the model and
         initialization method:
-            * "smoothing_level"
-            * "smoothing_trend"
-            * "smoothing_seasonal"
-            * "damping_trend"
-            * "initial_level"
-            * "initial_trend"
-            * "initial_seasonal.0", ..., "initial_seasonal.<m-1>"
+
+        * "smoothing_level"
+        * "smoothing_trend"
+        * "smoothing_seasonal"
+        * "damping_trend"
+        * "initial_level"
+        * "initial_trend"
+        * "initial_seasonal.0", ..., "initial_seasonal.<m-1>"
+
         The default option is ``None``, in which case the traditional
         (nonlinear) bounds as described in [1]_ are used.
+
+    Notes
+    -----
+    The ETS models are a family of time series models. They can be seen as a
+    generalization of simple exponential smoothing to time series that contain
+    trends and seasonalities. Additionally, they have an underlying state
+    space model.
+
+    An ETS model is specified by an error type (E; additive or multiplicative),
+    a trend type (T; additive or multiplicative, both damped or undamped, or
+    none), and a seasonality type (S; additive or multiplicative or none).
+    The following gives a very short summary, a more thorough introduction can
+    be found in [1]_.
+
+    Denote with :math:`\circ_b` the trend operation (addition or
+    multiplication), with :math:`\circ_d` the operation linking trend and
+    dampening factor :math:`\phi` (multiplication if trend is additive, power
+    if trend is multiplicative), and with :math:`\circ_s` the seasonality
+    operation (addition or multiplication). Furthermore, let :math:`\ominus`
+    be the respective inverse operation (subtraction or division).
+
+    With this, it is possible to formulate the ETS models as a forecast
+    equation and 3 smoothing equations. The former is used to forecast
+    observations, the latter are used to update the internal state.
+
+    .. math::
+
+        \hat{y}_{t|t-1} &= (l_{t-1} \circ_b (b_{t-1}\circ_d \phi))
+                           \circ_s s_{t-m}\\
+        l_{t} &= \alpha (y_{t} \ominus_s s_{t-m})
+                 + (1 - \alpha) (l_{t-1} \circ_b (b_{t-1} \circ_d \phi))\\
+        b_{t} &= \beta/\alpha (l_{t} \ominus_b l_{t-1})
+                 + (1 - \beta/\alpha) b_{t-1}\\
+        s_{t} &= \gamma (y_t \ominus_s (l_{t-1} \circ_b (b_{t-1}\circ_d\phi))
+                 + (1 - \gamma) s_{t-m}
+
+    The notation here follows [1]_; :math:`l_t` denotes the level at time
+    :math:`t`, `b_t` the trend, and `s_t` the seasonal component. :math:`m`
+    is the number of seasonal periods, and :math:`\phi` a trend damping
+    factor. The parameters :math:`\alpha, \beta, \gamma` are the smoothing
+    parameters, which are called ``smoothing_level``, ``smoothing_trend``, and
+    ``smoothing_seasonal``, respectively.
+
+    Note that the formulation above as forecast and smoothing equation does
+    not distinguish different error models -- it is the same for additive and
+    multiplicative errors. But the different error models lead to different
+    likelihood models, and therefore will lead to different fit results.
+
+    The error models specify how the true values :math:`y_t` are
+    updated. In the additive error model,
+
+    .. math::
+
+        y_t = \hat{y}_{t|t-1} + e_t,
+
+    in the multiplicative error model,
+
+    .. math::
+
+        y_t = \hat{y}_{t|t-1}\cdot (1 + e_t).
+
+    Using these error models, it is possible to formulate state space
+    equations for the ETS models:
+
+    .. math::
+
+       y_t &= Y_t + \eta \cdot e_t\\
+       l_t &= L_t + \alpha \cdot (M_e \cdot L_t + \kappa_l) \cdot e_t\\
+       b_t &= B_t + \beta \cdot (M_e \cdot B_t + \kappa_b) \cdot e_t\\
+       s_t &= S_t + \gamma \cdot (M_e \cdot S_t+\kappa_s)\cdot e_t\\
+
+    with
+
+    .. math::
+
+       B_t &= b_{t-1} \circ_d \phi\\
+       L_t &= l_{t-1} \circ_b B_t\\
+       S_t &= s_{t-m}\\
+       Y_t &= L_t \circ_s S_t,
+
+    and
+
+    .. math::
+
+       \eta &= \begin{cases}
+                   Y_t\quad\text{if error is multiplicative}\\
+                   1\quad\text{else}
+               \end{cases}\\
+       M_e &= \begin{cases}
+                   1\quad\text{if error is multiplicative}\\
+                   0\quad\text{else}
+               \end{cases}\\
+
+    and, when using the additve error model,
+
+    .. math::
+
+       \kappa_l &= \begin{cases}
+                   \frac{1}{S_t}\quad
+                   \text{if seasonality is multiplicative}\\
+                   1\quad\text{else}
+               \end{cases}\\
+       \kappa_b &= \begin{cases}
+                   \frac{\kappa_l}{l_{t-1}}\quad
+                   \text{if trend is multiplicative}\\
+                   \kappa_l\quad\text{else}
+               \end{cases}\\
+       \kappa_s &= \begin{cases}
+                   \frac{1}{L_t}\quad\text{if seasonality is multiplicative}\\
+                   1\quad\text{else}
+               \end{cases}
+
+    When using the multiplicative error model
+
+    .. math::
+
+       \kappa_l &= \begin{cases}
+                   0\quad
+                   \text{if seasonality is multiplicative}\\
+                   S_t\quad\text{else}
+               \end{cases}\\
+       \kappa_b &= \begin{cases}
+                   \frac{\kappa_l}{l_{t-1}}\quad
+                   \text{if trend is multiplicative}\\
+                   \kappa_l + l_{t-1}\quad\text{else}
+               \end{cases}\\
+       \kappa_s &= \begin{cases}
+                   0\quad\text{if seasonality is multiplicative}\\
+                   L_t\quad\text{else}
+               \end{cases}
+
+    When fitting an ETS model, the parameters :math:`\alpha, \beta`, \gamma,
+    \phi` and the initial states `l_{-1}, b_{-1}, s_{-1}, \ldots, s_{-m}` are
+    selected as maximizers of log likelihood.
+
+    References
+    ----------
+    .. [1] Hyndman, R.J., & Athanasopoulos, G. (2019) *Forecasting:
+       principles and practice*, 3rd edition, OTexts: Melbourne,
+       Australia. OTexts.com/fpp3. Accessed on April 19th 2020.
     """
 
     def __init__(
@@ -450,6 +593,12 @@ class ETSModel(base.StateSpaceMLEModel):
             The available parameter names are in ``self.param_names``.
             The default option is ``None``, in which case the traditional
             (nonlinear) bounds as described in [1]_ are used.
+
+        References
+        ----------
+        .. [1] Hyndman, R.J., & Athanasopoulos, G. (2019) *Forecasting:
+           principles and practice*, 3rd edition, OTexts: Melbourne,
+           Australia. OTexts.com/fpp3. Accessed on April 19th 2020.
         """
         if bounds is None:
             self.bounds = {}

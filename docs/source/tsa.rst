@@ -188,6 +188,13 @@ responses, etc.).
    statespace.exponential_smoothing.ExponentialSmoothing
    statespace.exponential_smoothing.ExponentialSmoothingResults
 
+.. currentmodule:: statsmodels.tsa
+
+.. autosummary::
+   :toctree: generated/
+
+   exponential_smoothing.ets.ETSModel
+
 ARMA Process
 """"""""""""
 
