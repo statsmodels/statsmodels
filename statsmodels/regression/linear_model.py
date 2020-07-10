@@ -2570,7 +2570,7 @@ class RegressionResults(base.LikelihoodModelResults):
             self, exog=exog, transform=transform, weights=weights,
             row_labels=row_labels, **kwargs)
 
-    def summary(self, yname=None, xname=None, title=None, alpha=.05):
+    def summary(self, yname=None, xname=None, title=None, alpha=.05, slim=False):
         """
         Summarize the Regression Results.
 
@@ -2620,7 +2620,73 @@ class RegressionResults(base.LikelihoodModelResults):
         #   need more control over formatting
         # TODO: default do not work if it's not identically spelled
 
-        top_left = [('Dep. Variable:', None),
+        if slim:
+            top_left = [('Dep. Variable:', None),
+                        ('Model:', None),
+                        ('No. Observations:', None)
+                        ]
+
+            if hasattr(self, 'cov_type'):
+                top_left.append(('Covariance Type:', [self.cov_type]))
+
+            rsquared_type = '' if self.k_constant else ' (uncentered)'
+            top_right = [('R-squared' + rsquared_type + ':',
+                        ["%#8.3f" % self.rsquared]),
+                        ('Adj. R-squared' + rsquared_type + ':',
+                        ["%#8.3f" % self.rsquared_adj]),
+                        ('F-statistic:', ["%#8.4g" % self.fvalue]),
+                        ('Prob (F-statistic):', ["%#6.3g" % self.f_pvalue])
+                        ]
+
+            diagn_left = []
+
+            diagn_right = []
+
+            if title is None:
+                title = self.model.__class__.__name__ + ' ' + "Regression Results"
+
+            # create summary table instance
+            from statsmodels.iolib.summary import Summary
+            smry = Summary()
+            smry.add_table_2cols(self, gleft=top_left, gright=top_right,
+                                yname=yname, xname=xname, title=title)
+            smry.add_table_params(self, yname=yname, xname=xname, alpha=alpha,
+                                use_t=self.use_t)
+
+            # add warnings/notes, added to text format only
+            etext = []
+            if not self.k_constant:
+                etext.append(
+                    "R² is computed without centering (uncentered) since the "
+                    "model does not contain a constant."
+                )
+            if hasattr(self, 'cov_type'):
+                etext.append(self.cov_kwds['description'])
+            if self.model.exog.shape[0] < self.model.exog.shape[1]:
+                wstr = "The input rank is higher than the number of observations."
+                etext.append(wstr)
+            if eigvals[-1] < 1e-10:
+                wstr = "The smallest eigenvalue is %6.3g. This might indicate "
+                wstr += "that there are\n"
+                wstr += "strong multicollinearity problems or that the design "
+                wstr += "matrix is singular."
+                wstr = wstr % eigvals[-1]
+                etext.append(wstr)
+            elif condno > 1000:  # TODO: what is recommended?
+                wstr = "The condition number is large, %6.3g. This might "
+                wstr += "indicate that there are\n"
+                wstr += "strong multicollinearity or other numerical "
+                wstr += "problems."
+                wstr = wstr % condno
+                etext.append(wstr)
+
+            if etext:
+                etext = ["[{0}] {1}".format(i + 1, text)
+                        for i, text in enumerate(etext)]
+                etext.insert(0, "Notes:")
+                smry.add_extra_txt(etext)
+        else:
+            top_left = [('Dep. Variable:', None),
                     ('Model:', None),
                     ('Method:', ['Least Squares']),
                     ('Date:', None),
@@ -2630,82 +2696,82 @@ class RegressionResults(base.LikelihoodModelResults):
                     ('Df Model:', None),
                     ]
 
-        if hasattr(self, 'cov_type'):
-            top_left.append(('Covariance Type:', [self.cov_type]))
+            if hasattr(self, 'cov_type'):
+                top_left.append(('Covariance Type:', [self.cov_type]))
 
-        rsquared_type = '' if self.k_constant else ' (uncentered)'
-        top_right = [('R-squared' + rsquared_type + ':',
-                      ["%#8.3f" % self.rsquared]),
-                     ('Adj. R-squared' + rsquared_type + ':',
-                      ["%#8.3f" % self.rsquared_adj]),
-                     ('F-statistic:', ["%#8.4g" % self.fvalue]),
-                     ('Prob (F-statistic):', ["%#6.3g" % self.f_pvalue]),
-                     ('Log-Likelihood:', None),
-                     ('AIC:', ["%#8.4g" % self.aic]),
-                     ('BIC:', ["%#8.4g" % self.bic])
-                     ]
+            rsquared_type = '' if self.k_constant else ' (uncentered)'
+            top_right = [('R-squared' + rsquared_type + ':',
+                        ["%#8.3f" % self.rsquared]),
+                        ('Adj. R-squared' + rsquared_type + ':',
+                        ["%#8.3f" % self.rsquared_adj]),
+                        ('F-statistic:', ["%#8.4g" % self.fvalue]),
+                        ('Prob (F-statistic):', ["%#6.3g" % self.f_pvalue]),
+                        ('Log-Likelihood:', None),
+                        ('AIC:', ["%#8.4g" % self.aic]),
+                        ('BIC:', ["%#8.4g" % self.bic])
+                        ]
 
-        diagn_left = [('Omnibus:', ["%#6.3f" % omni]),
-                      ('Prob(Omnibus):', ["%#6.3f" % omnipv]),
-                      ('Skew:', ["%#6.3f" % skew]),
-                      ('Kurtosis:', ["%#6.3f" % kurtosis])
-                      ]
+            diagn_left = [('Omnibus:', ["%#6.3f" % omni]),
+                        ('Prob(Omnibus):', ["%#6.3f" % omnipv]),
+                        ('Skew:', ["%#6.3f" % skew]),
+                        ('Kurtosis:', ["%#6.3f" % kurtosis])
+                        ]
 
-        diagn_right = [('Durbin-Watson:',
-                        ["%#8.3f" % durbin_watson(self.wresid)]
-                        ),
-                       ('Jarque-Bera (JB):', ["%#8.3f" % jb]),
-                       ('Prob(JB):', ["%#8.3g" % jbpv]),
-                       ('Cond. No.', ["%#8.3g" % condno])
-                       ]
+            diagn_right = [('Durbin-Watson:',
+                            ["%#8.3f" % durbin_watson(self.wresid)]
+                            ),
+                        ('Jarque-Bera (JB):', ["%#8.3f" % jb]),
+                        ('Prob(JB):', ["%#8.3g" % jbpv]),
+                        ('Cond. No.', ["%#8.3g" % condno])
+                        ]
 
-        if title is None:
-            title = self.model.__class__.__name__ + ' ' + "Regression Results"
+            if title is None:
+                title = self.model.__class__.__name__ + ' ' + "Regression Results"
 
-        # create summary table instance
-        from statsmodels.iolib.summary import Summary
-        smry = Summary()
-        smry.add_table_2cols(self, gleft=top_left, gright=top_right,
-                             yname=yname, xname=xname, title=title)
-        smry.add_table_params(self, yname=yname, xname=xname, alpha=alpha,
-                              use_t=self.use_t)
+            # create summary table instance
+            from statsmodels.iolib.summary import Summary
+            smry = Summary()
+            smry.add_table_2cols(self, gleft=top_left, gright=top_right,
+                                yname=yname, xname=xname, title=title)
+            smry.add_table_params(self, yname=yname, xname=xname, alpha=alpha,
+                                use_t=self.use_t)
 
-        smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
-                             yname=yname, xname=xname,
-                             title="")
+            smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
+                                yname=yname, xname=xname,
+                                title="")
 
-        # add warnings/notes, added to text format only
-        etext = []
-        if not self.k_constant:
-            etext.append(
-                "R² is computed without centering (uncentered) since the "
-                "model does not contain a constant."
-            )
-        if hasattr(self, 'cov_type'):
-            etext.append(self.cov_kwds['description'])
-        if self.model.exog.shape[0] < self.model.exog.shape[1]:
-            wstr = "The input rank is higher than the number of observations."
-            etext.append(wstr)
-        if eigvals[-1] < 1e-10:
-            wstr = "The smallest eigenvalue is %6.3g. This might indicate "
-            wstr += "that there are\n"
-            wstr += "strong multicollinearity problems or that the design "
-            wstr += "matrix is singular."
-            wstr = wstr % eigvals[-1]
-            etext.append(wstr)
-        elif condno > 1000:  # TODO: what is recommended?
-            wstr = "The condition number is large, %6.3g. This might "
-            wstr += "indicate that there are\n"
-            wstr += "strong multicollinearity or other numerical "
-            wstr += "problems."
-            wstr = wstr % condno
-            etext.append(wstr)
+            # add warnings/notes, added to text format only
+            etext = []
+            if not self.k_constant:
+                etext.append(
+                    "R² is computed without centering (uncentered) since the "
+                    "model does not contain a constant."
+                )
+            if hasattr(self, 'cov_type'):
+                etext.append(self.cov_kwds['description'])
+            if self.model.exog.shape[0] < self.model.exog.shape[1]:
+                wstr = "The input rank is higher than the number of observations."
+                etext.append(wstr)
+            if eigvals[-1] < 1e-10:
+                wstr = "The smallest eigenvalue is %6.3g. This might indicate "
+                wstr += "that there are\n"
+                wstr += "strong multicollinearity problems or that the design "
+                wstr += "matrix is singular."
+                wstr = wstr % eigvals[-1]
+                etext.append(wstr)
+            elif condno > 1000:  # TODO: what is recommended?
+                wstr = "The condition number is large, %6.3g. This might "
+                wstr += "indicate that there are\n"
+                wstr += "strong multicollinearity or other numerical "
+                wstr += "problems."
+                wstr = wstr % condno
+                etext.append(wstr)
 
-        if etext:
-            etext = ["[{0}] {1}".format(i + 1, text)
-                     for i, text in enumerate(etext)]
-            etext.insert(0, "Notes:")
-            smry.add_extra_txt(etext)
+            if etext:
+                etext = ["[{0}] {1}".format(i + 1, text)
+                        for i, text in enumerate(etext)]
+                etext.insert(0, "Notes:")
+                smry.add_extra_txt(etext)
 
         return smry
 
