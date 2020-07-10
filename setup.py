@@ -6,7 +6,6 @@ pytest --cov=statsmodels statsmodels
 coverage html
 """
 from collections import defaultdict
-import distutils.log
 from distutils.command.clean import clean
 import fnmatch
 import os
@@ -20,7 +19,6 @@ from setuptools.dist import Distribution
 
 import versioneer
 
-distutils.log.set_verbosity(2)
 
 try:
     # SM_FORCE_C is a testing shim to force setup to use C source files
@@ -208,7 +206,7 @@ class DeferredBuildExt(build_ext):
         import numpy
         from numpy.distutils.misc_util import get_info
         from numpy.distutils.log import set_verbosity
-        set_verbosity(2)
+        set_verbosity(1)
 
         numpy_includes = [numpy.get_include()]
         extra_incl = pkg_resources.resource_filename('numpy', 'core/include')
