@@ -481,6 +481,13 @@ class TestGrangerCausality(object):
         with pytest.raises(ValueError, match="x contains NaN"):
             grangercausalitytests(x, 2)
 
+    def test_granger_fails_on_zero_lag(self, reset_randomstate):
+        x = np.random.rand(1000, 2)
+        with pytest.raises(
+                ValueError,
+                match="maxlag must be a non-empty list containing only positive integers"):
+            grangercausalitytests(x, [0, 1, 2])
+
 
 class TestKPSS:
     """
