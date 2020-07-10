@@ -1068,23 +1068,26 @@ def confint_proportions_2indep(count1, nobs1, count2, nobs2, method=None,
 
     Parameters
     ----------
-    count1, nobs1 :
-        count and sample size for first sample
-    count2, nobs2 :
-        count and sample size for the second sample
-    method : string
-        method for computing confidence interval. If method is None, then a
+    count1, nobs1 : float
+        Count and sample size for first sample.
+    count2, nobs2 : float
+        Count and sample size for the second sample.
+    method : str
+        Method for computing confidence interval. If method is None, then a
         default method is used. The default might change as more methods are
         added.
+
         diff:
          - 'wald',
          - 'agresti-caffo'
          - 'newcomb' (default)
          - 'score'
+
         ratio:
          - 'log'
          - 'log-adjusted' (default)
          - 'score'
+
         odds-ratio:
          - 'logit'
          - 'logit-adjusted' (default)
@@ -1095,9 +1098,9 @@ def confint_proportions_2indep(count1, nobs1, count2, nobs2, method=None,
         If compare is ratio, then the confidence interval is for the risk ratio
         defined by ratio = p1 / p2.
         If compare is odds-ratio, then the confidence interval is for the
-        odds-ratio defined by or = p1 / (1 - p1) / (p2 / (1 - p2)
+        odds-ratio defined by or = p1 / (1 - p1) / (p2 / (1 - p2).
     alpha : float
-        significance leverl for the confidence interval, default is 0.05.
+        Significance level for the confidence interval, default is 0.05.
         The nominal coverage probability is 1 - alpha.
 
     Returns
@@ -1152,9 +1155,9 @@ def confint_proportions_2indep(count1, nobs1, count2, nobs2, method=None,
             upp = diff + d_upp
 
         elif method == "score":
-            low, upp = score_confint_inversion(count1, nobs1, count2, nobs2,
-                                               compare=compare, alpha=alpha,
-                                               correction=correction)
+            low, upp = _score_confint_inversion(count1, nobs1, count2, nobs2,
+                                                compare=compare, alpha=alpha,
+                                                correction=correction)
 
         else:
             raise ValueError('method not recognized')
@@ -1206,9 +1209,9 @@ def confint_proportions_2indep(count1, nobs1, count2, nobs2, method=None,
             upp = np.exp(np.log(odds_ratio_) + d_log)
 
         elif method == "score":
-            low, upp = score_confint_inversion(count1, nobs1, count2, nobs2,
-                                               compare=compare, alpha=alpha,
-                                               correction=correction)
+            low, upp = _score_confint_inversion(count1, nobs1, count2, nobs2,
+                                                compare=compare, alpha=alpha,
+                                                correction=correction)
 
         else:
             raise ValueError('method not recognized')
@@ -1447,11 +1450,11 @@ def test_proportions_2indep(count1, nobs1, count2, nobs2, value=None,
     Parameters
     ----------
     count1, nobs1 :
-        count and sample size for first sample
+        Count and sample size for first sample.
     count2, nobs2 :
-        count and sample size for the second sample
+        Count and sample size for the second sample.
     method : string
-        method for computing confidence interval. If method is None, then a
+        Method for computing confidence interval. If method is None, then a
         default method is used. The default might change as more methods are
         added.
         diff:
@@ -1706,6 +1709,7 @@ def tost_proportions_2indep(count1, nobs1, count2, nobs2, low, upp,
         method for computing confidence interval. If method is None, then a
         default method is used. The default might change as more methods are
         added.
+
         diff:
          - 'wald',
          - 'agresti-caffo'
@@ -1819,13 +1823,10 @@ def power_proportions_2indep(diff, prop2, nobs1, ratio=1, alpha=0.05,
     ratio : float
         sample size ratio, nobs2 = ratio * nobs1
     alpha : float in interval (0,1)
-        significance level, e.g. 0.05, is the probability of a type I
+        Significance level, e.g. 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
     value : float
         currently only `value=0`, i.e. equality testing, is supported
-    ratio : float
-        ratio of the number of observations in sample 2 relative to
-        sample 1, nobs2 = ration * nobs1. see description of nobs1.
     alternative : string, 'two-sided' (default), 'larger', 'smaller'
         Alternative hypothesis whether the power is calculated for a
         two-sided (default) or one sided test. The one-sided test can be
@@ -1837,11 +1838,16 @@ def power_proportions_2indep(diff, prop2, nobs1, ratio=1, alpha=0.05,
     Returns
     -------
     results : results instance or float
+        If return_results is True, then a results instance with the
+        information in attributes is returned.
+        If return_results is False, then only the power is returned.
+
         power : float
             Power of the test, e.g. 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
-        other attributes in results instance include
+        other attributes in results instance include :
+
             p_pooled : pooled proportion, used for std_null
             std_null : standard error of difference under the null hypothesis
                 (without sqrt(nobs))
@@ -1885,6 +1891,33 @@ def samplesize_proportions_2indep_onetail(diff, prop2, power, ratio=1,
     normal distribution. This ignores the far tail in a two-sided test
     which is negligable in the common case when alternative and null are
     far apart.
+
+    Parameters
+    ----------
+    diff : float
+        Difference between proportion 1 and 2 under the alternative
+    prop2 : float
+        proportion for the reference case, prop2, proportions for the
+        first case will be computing using p2 and diff
+        p1 = p2 + diff
+    power : float
+        Power for which sample size is computed.
+    ratio : float
+        Sample size ratio, nobs2 = ratio * nobs1
+    alpha : float in interval (0,1)
+        Significance level, e.g. 0.05, is the probability of a type I
+        error, that is wrong rejections if the Null Hypothesis is true.
+    value : float
+        Currently only `value=0`, i.e. equality testing, is supported
+    alternative : string, 'two-sided' (default), 'larger', 'smaller'
+        Alternative hypothesis whether the power is calculated for a
+        two-sided (default) or one sided test. In the case of a one-sided
+        alternative, it is assumed that the test is in the appropriate tail.
+
+    Returns
+    -------
+    nobs1 : float
+        Number of observations in sample 1.
     """
     # TODO: avoid possible circular import, check if needed
     from statsmodels.stats.power import normal_sample_size_one_tail
@@ -1900,10 +1933,37 @@ def samplesize_proportions_2indep_onetail(diff, prop2, power, ratio=1,
     return nobs
 
 
-def score_confint_inversion(count1, nobs1, count2, nobs2, compare='diff',
-                            alpha=0.05, correction=True):
+def _score_confint_inversion(count1, nobs1, count2, nobs2, compare='diff',
+                             alpha=0.05, correction=True):
     """Compute score confidence interval by inverting score test
 
+    Parameters
+    ----------
+    count1, nobs1 :
+        Count and sample size for first sample.
+    count2, nobs2 :
+        Count and sample size for the second sample.
+    compare : string in ['diff', 'ratio' 'odds-ratio']
+        If compare is `diff`, then the confidence interval is for
+        diff = p1 - p2.
+        If compare is `ratio`, then the confidence interval is for the
+        risk ratio defined by ratio = p1 / p2.
+        If compare is `odds-ratio`, then the confidence interval is for the
+        odds-ratio defined by or = p1 / (1 - p1) / (p2 / (1 - p2).
+    alpha : float in interval (0,1)
+        Significance level, e.g. 0.05, is the probability of a type I
+        error, that is wrong rejections if the Null Hypothesis is true.
+    correction : bool
+        If correction is True (default), then the Miettinen and Nurminen
+        small sample correction to the variance nobs / (nobs - 1) is used.
+        Applies only if method='score'.
+
+    Returns
+    -------
+    low : float
+        Lower confidence bound.
+    upp : float
+        Upper confidence bound.
     """
 
     def func(v):

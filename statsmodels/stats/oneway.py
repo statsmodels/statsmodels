@@ -190,6 +190,20 @@ def convert_effectsize_fsqu(f2=None, eta2=None):
     uses the relationship:
     f2 = eta2 / (1 - eta2)
 
+    Parameters
+    ----------
+    f2 : None or float
+       Squared Cohen's F effect size. If f2 is not None, then eta2 will be
+       computed.
+    eta2 : None or float
+       Squared eta effect size. If f2 is None and eta2 is not None, then f2 is
+       computed.
+
+    Returns
+    -------
+    res : Holder instance
+        An instance of the Holder class with f2 and eta2 as attributes.
+
     """
     if f2 is not None:
         eta2 = 1 / (1 + 1 / f2)
@@ -251,19 +265,19 @@ def _fstat2effectsize(f_stat, df1, df2):
 # these are mainly to compare with literature
 
 def wellek_to_f2(eps, n_groups):
-    """Wellek's effect size (sqrt) to Cohen's f-squared"""
+    """Convert Wellek's effect size (sqrt) to Cohen's f-squared"""
     f2 = 1 / n_groups * eps**2
     return f2
 
 
 def f2_to_wellek(f2, n_groups):
-    """Wellek's effect size (sqrt) to Cohen's f-squared"""
+    """Convert Cohen's f-squared to Wellek's effect size (sqrt)"""
     eps = np.sqrt(n_groups * f2)
     return eps
 
 
 def fstat_to_wellek(f_stat, n_groups, nobs_mean):
-    """F statistic to wellek's effect size eps squared"""
+    """Convert F statistic to wellek's effect size eps squared"""
     es = f_stat * (n_groups - 1) / nobs_mean
     return es
 
@@ -271,7 +285,7 @@ def fstat_to_wellek(f_stat, n_groups, nobs_mean):
 def confint_noncentrality(f_stat, df1, df2, alpha=0.05,
                           alternative="two-sided"):
     """
-    confidence interval for noncentality parameter in F-test
+    Confidence interval for noncentality parameter in F-test
 
     This does not yet handle non-negativity constraint on nc.
     Currently only two-sided alternative is supported.
@@ -371,9 +385,35 @@ def confint_effectsize_oneway(f_stat, df1, df2, alpha=0.05, nobs=None):
 
 def anova_generic(means, vars_, nobs, use_var="unequal",
                   welch_correction=True, info=None):
-    """oneway anova based on summary statistics
+    """Oneway anova based on summary statistics
 
-    incompletely verified
+    Parameters
+    ----------
+    means: array_like
+        Mean of samples to be compared
+    vars_ : float or array_like
+        Residual (within) variance of each sample or pooled
+        If var_ is scalar, then it is interpreted as pooled variance that is
+        the same for all samples, ``use_var`` will be ignored.
+        Otherwise, the variances are used depending on the ``use_var`` keyword.
+    nobs : int or array_like
+        Number of observations for the samples.
+        If nobs is scalar, then it is assumed that all samples have the same
+        number ``nobs`` of observation, i.e. a balanced sample case.
+        Otherwise, statistics will be weighted corresponding to nobs.
+        Only relative sizes are relevant, any proportional change to nobs does
+        not change the effect size.
+    use_var : {"unequal", "equal", "bf"}
+        If ``use_var`` is "unequal", then the variances can differe across
+        samples and the effect size for Welch anova will be computed.
+    welch
+
+    Returns
+    -------
+    f2 : float
+        Effect size corresponding to squared Cohen's f, which is also equal
+        to the noncentrality divided by total number of observations.
+        In contrast to other functions, this value is not squared.
 
     """
     options = {"use_var": use_var,
