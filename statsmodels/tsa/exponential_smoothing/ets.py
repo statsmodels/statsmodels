@@ -151,8 +151,6 @@ import statsmodels.base.wrapper as wrap
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.iolib.tableformatting import fmt_params
 from statsmodels.iolib.summary import forg
-import statsmodels.genmod._prediction as pred
-from statsmodels.genmod.families.links import identity
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.tools import Bunch
 from statsmodels.tools.validation import (
@@ -1818,6 +1816,42 @@ class ETSResults(base.StateSpaceMLEResults):
     def get_prediction(self, start=None, end=None, dynamic=False,
                        index=None, simulate_repetitions=1000,
                        **simulate_kwargs):
+        """
+        Returns a
+        :class:`statsmodels.tsa.exponential_smoothing.ets.PreidctionResults`
+        object.
+
+        Parameters
+        ----------
+        start : int, str, or datetime, optional
+            Zero-indexed observation number at which to start forecasting,
+            i.e., the first forecast is start. Can also be a date string to
+            parse or a datetime type. Default is the the zeroth observation.
+        end : int, str, or datetime, optional
+            Zero-indexed observation number at which to end forecasting, i.e.,
+            the last forecast is end. Can also be a date string to
+            parse or a datetime type. However, if the dates index does not
+            have a fixed frequency, end must be an integer index if you
+            want out of sample prediction. Default is the last observation in
+            the sample.
+        dynamic : bool, int, str, or datetime, optional
+            Integer offset relative to `start` at which to begin dynamic
+            prediction. Can also be an absolute date string to parse or a
+            datetime type (these are not interpreted as offsets).
+            Prior to this observation, true endogenous values will be used for
+            prediction; starting with this observation and continuing through
+            the end of prediction, forecasted endogenous values will be used
+            instead.
+        index : pd.Index, optional
+            Optionally an index to associate the predicted results to. If None,
+            an attempt is made to create an index for the predicted results
+            from the model's index or model's row labels.
+        simulate_repetitions : int, optional
+            Number of simulation repetitions for calculating prediction intervals.
+            Default is 1000.
+        **simulate_kwargs :
+            Additional arguments passed to the ``simulate`` method.
+        """
         return PredictionResultsWrapper(PredictionResults(
             self, start, end, dynamic, index, simulate_repetitions,
             **simulate_kwargs))
@@ -1954,7 +1988,7 @@ class PredictionResults:
             anchor = "start"
         else:
             anchor = start - 1
-        anchor_dynamic = min(dynamic-1, end)
+        anchor_dynamic = min(dynamic - 1, end)
         end_dynamic = end + out_of_sample + 1
         ndynamic = end_dynamic - anchor_dynamic - 1
         sim_results = []
@@ -1985,22 +2019,27 @@ class PredictionResults:
         Parameters
         ----------
         alpha : float, optional
-            The significance level for the prediction interval. Default is 0.05,
-            that is, a 95% prediction interval.
+            The significance level for the prediction interval. Default is
+            0.05, that is, a 95% prediction interval.
         """
 
         simulated_upper_pi = np.quantile(
-            self.simulation_results, 1 - alpha/2, axis=1
+            self.simulation_results, 1 - alpha / 2, axis=1
         )
         simulated_lower_pi = np.quantile(
-            self.simulation_results, alpha/2, axis=1
+            self.simulation_results, alpha / 2, axis=1
         )
         pred_int = np.vstack(
             (simulated_lower_pi, simulated_upper_pi)
         ).T
         if self.use_pandas:
-            pred_int = pd.DataFrame(pred_int, index=self.simulation_results.index)
-            names = [f"lower PI (alpha={alpha:f})", f"upper PI (alpha={alpha:f})"]
+            pred_int = pd.DataFrame(
+                pred_int, index=self.simulation_results.index
+            )
+            names = [
+                f"lower PI (alpha={alpha:f})",
+                f"upper PI (alpha={alpha:f})"
+            ]
             pred_int.columns = names
         return pred_int
 
@@ -2009,8 +2048,8 @@ class PredictionResults:
         to_include = {}
         to_include['mean'] = self.predicted_mean
         to_include['mean_numerical'] = np.mean(self.simulation_results, axis=1)
-        to_include['pi_lower'] = pred_int[:,0]
-        to_include['pi_upper'] = pred_int[:,1]
+        to_include['pi_lower'] = pred_int[:, 0]
+        to_include['pi_upper'] = pred_int[:, 1]
 
         res = pd.DataFrame(to_include, index=self.row_labels,
                            columns=to_include.keys())
