@@ -120,6 +120,11 @@ def austourists_model(austourists):
 
 
 @pytest.fixture
+def austourists_model_fit(austourists_model):
+    return austourists_model.fit(disp=False)
+
+
+@pytest.fixture
 def oildata_model(oildata):
     return ETSModel(oildata, error="add", trend="add", damped_trend=True,)
 
@@ -552,16 +557,12 @@ def test_simulate_keywords(austourists_model):
 
     # test anchor
     assert_almost_equal(
-        fit.simulate(4, anchor=0, random_state=0).values,
-        fit.simulate(4, anchor="start", random_state=0).values,
-    )
-    assert_almost_equal(
         fit.simulate(4, anchor=-1, random_state=0).values,
         fit.simulate(4, anchor="2015-12-31", random_state=0).values,
     )
     assert_almost_equal(
         fit.simulate(4, anchor="end", random_state=0).values,
-        fit.simulate(4, anchor="2016-03-31", random_state=0).values,
+        fit.simulate(4, anchor="2015-12-31", random_state=0).values,
     )
 
     # test different random error options
@@ -594,22 +595,34 @@ def test_summary(austourists_model):
     fit.summary()
 
 
-def test_score(austourists_model):
-    fit = austourists_model.fit(disp=False)
-    score_cs = austourists_model.score(fit.params)
-    score_fd = austourists_model.score(
-        fit.params, approx_complex_step=False, approx_centered=True,
+def test_score(austourists_model_fit):
+    score_cs = austourists_model_fit.model.score(austourists_model_fit.params)
+    score_fd = austourists_model_fit.model.score(
+        austourists_model_fit.params, approx_complex_step=False,
+        approx_centered=True,
     )
     assert_almost_equal(score_cs, score_fd, 4)
 
 
-def test_hessian(austourists_model):
+def test_hessian(austourists_model_fit):
     # The hessian approximations are not very consistent, but the test makes
     # sure they run
-    fit = austourists_model.fit(disp=False)
-    austourists_model.hessian(fit.params)
-    austourists_model.hessian(
-        fit.params, approx_complex_step=False, approx_centered=True,
+    austourists_model_fit.model.hessian(austourists_model_fit.params)
+    austourists_model_fit.model.hessian(
+        austourists_model_fit.params, approx_complex_step=False,
+        approx_centered=True,
+    )
+
+
+def test_prediction_results(austourists_model_fit):
+    pred = austourists_model_fit.get_prediction(
+        start=0, dynamic=30, end=40,
+    )
+    summary = pred.summary_frame()
+    assert_almost_equal(
+        summary['mean'].values,
+        summary['mean_numerical'].values,
+        0
     )
 
 

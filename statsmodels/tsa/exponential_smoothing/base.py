@@ -201,6 +201,9 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
         data = np.squeeze(data)
         if self.use_pandas:
             _, _, _, index = self._get_prediction_index(start_idx, end_idx)
+            if data.shape[0] != index.shape[0]:
+                # this happens when data was (1, n)
+                data = np.reshape(data, (1, len(data)))
             if data.ndim < 2:
                 data = pd.Series(data, index=index, name=names)
             else:
@@ -438,8 +441,6 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
 
     def _get_prediction_start_index(self, anchor):
         """Returns a valid numeric start index for predictions/simulations"""
-        # TODO: once this is the base class for statespace models, use this
-        # method in simulate
         if anchor is None or anchor == "start":
             iloc = 0
         elif anchor == "end":
@@ -448,6 +449,7 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
             iloc, _, _ = self.model._get_index_loc(anchor)
             if isinstance(iloc, slice):
                 iloc = iloc.start
+            iloc += 1  # anchor is one before start of prediction/simulation
 
         if iloc < 0:
             iloc = self.nobs + iloc
