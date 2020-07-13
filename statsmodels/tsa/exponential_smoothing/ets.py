@@ -1847,8 +1847,8 @@ class ETSResults(base.StateSpaceMLEResults):
             an attempt is made to create an index for the predicted results
             from the model's index or model's row labels.
         simulate_repetitions : int, optional
-            Number of simulation repetitions for calculating prediction intervals.
-            Default is 1000.
+            Number of simulation repetitions for calculating prediction
+            intervals.  Default is 1000.
         **simulate_kwargs :
             Additional arguments passed to the ``simulate`` method.
         """
@@ -1984,23 +1984,24 @@ class PredictionResults:
         # first, perform "non-dynamic" simulations, i.e. simulations of only
         # one step, based on the previous step
         # this is not done if dynamic == start
-        if start == 0:
-            anchor = "start"
-        else:
-            anchor = start - 1
         anchor_dynamic = min(dynamic - 1, end)
         end_dynamic = end + out_of_sample + 1
         ndynamic = end_dynamic - anchor_dynamic - 1
         sim_results = []
+        # dynamic is the first index that should be simulated dynamically,
+        # start is the start index (anchor + 1), but if start == 0, then anchor
+        # must be "start" in the first iteration
+        if start == 0:
+            anchor = "start"
+        else:
+            anchor = start - 1
         for i in range(dynamic - start):
             sim_results.append(results.simulate(
                 1, anchor=anchor, repetitions=simulate_repetitions,
                 **simulate_kwargs
             ))
-            if anchor == "start":
-                anchor = 0
-            else:
-                anchor += 1
+            # anchor
+            anchor = start + i
         sim_results.append(results.simulate(
             ndynamic, anchor=anchor_dynamic, repetitions=simulate_repetitions,
             **simulate_kwargs

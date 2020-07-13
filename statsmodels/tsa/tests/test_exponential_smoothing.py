@@ -625,6 +625,15 @@ def test_prediction_results(austourists_model_fit):
         0
     )
 
+    pred = austourists_model_fit.get_prediction(
+        start=10, dynamic=30,
+    )
+    summary = pred.summary_frame()
+    assert_almost_equal(
+        summary['mean'].values,
+        summary['mean_numerical'].values,
+        0
+    )
 
 def test_convergence_simple():
     # issue 6883
