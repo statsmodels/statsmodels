@@ -12,6 +12,7 @@ import pytest
 import scipy.stats
 
 from statsmodels.tsa.exponential_smoothing.ets import ETSModel
+from statsmodels.tsa.holtwinters import ExponentialSmoothing
 
 # This contains tests for the exponential smoothing implementation in
 # tsa/exponential_smoothing/ets.py.
@@ -617,4 +618,32 @@ def test_hessian(austourists_model):
     austourists_model.hessian(fit.params)
     austourists_model.hessian(
         fit.params, approx_complex_step=False, approx_centered=True,
+    )
+
+
+def test_convergence_simple():
+    # issue 6883
+    gen = np.random.default_rng(0)
+    e = gen.standard_normal(12000)
+    y = e.copy()
+    for i in range(1, e.shape[0]):
+        y[i] = y[i - 1] - 0.2 * e[i - 1] + e[i]
+    y = y[200:]
+    res = ExponentialSmoothing(y).fit()
+    ets_res = ETSModel(y).fit()
+
+    # the smoothing level should be very similar, the initial state might be
+    # different as it doesn't influence the final result too much
+    assert_almost_equal(
+        res.params['smoothing_level'],
+        ets_res.smoothing_level,
+        3
+    )
+
+    # the first few values are influenced by differences in initial state, so
+    # we don't test them here
+    assert_almost_equal(
+        res.fittedvalues[10:],
+        ets_res.fittedvalues[10:],
+        3
     )
