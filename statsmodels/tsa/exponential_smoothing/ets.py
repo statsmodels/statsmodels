@@ -966,7 +966,7 @@ class ETSModel(base.StateSpaceMLEModel):
             internal_start_params = self._convert_and_bound_start_params(
                 start_params
             )
-            kwargs["bounds"] = self._setup_bounds()
+            bounds = self._setup_bounds()
 
             # check if we need to use the starred parameters
             use_beta_star = "smoothing_trend" not in self.bounds
@@ -976,6 +976,21 @@ class ETSModel(base.StateSpaceMLEModel):
             if use_gamma_star:
                 internal_start_params[2] /= 1 - internal_start_params[0]
 
+            # check if we have fixed parameters and remove them from the
+            # parameter vector
+            is_fixed = np.zeros(self._k_params_internal, dtype=np.uint8)
+            fixed_values = np.empty_like(internal_start_params)
+            params_without_fixed = []
+            kwargs["bounds"] = []
+            for i in range(self._k_params_internal):
+                if bounds[i][0] == bounds[i][1]:
+                    is_fixed[i] = True
+                    fixed_values[i] = bounds[i][0]
+                else:
+                    params_without_fixed.append(internal_start_params[i])
+                    kwargs["bounds"].append(bounds[i])
+            params_without_fixed = np.asarray(params_without_fixed)
+
             # pre-allocate memory for smoothing results
             yhat = np.zeros(self.nobs)
             xhat = np.zeros((self.nobs, self._k_states_internal))
@@ -983,8 +998,14 @@ class ETSModel(base.StateSpaceMLEModel):
             kwargs["approx_grad"] = True
             with self.use_internal_loglike():
                 mlefit = super().fit(
-                    internal_start_params,
-                    fargs=(yhat, xhat, use_beta_star, use_gamma_star),
+                    params_without_fixed,
+                    fargs=(
+                        yhat,
+                        xhat,
+                        is_fixed,
+                        fixed_values,
+                        use_beta_star,
+                        use_gamma_star),
                     method="lbfgs",
                     maxiter=maxiter,
                     full_output=full_output,
@@ -994,11 +1015,21 @@ class ETSModel(base.StateSpaceMLEModel):
                     **kwargs,
                 )
             # convert params back
+            # first, insert fixed params
+            fitted_params = np.empty_like(internal_start_params)
+            idx_without_fixed = 0
+            for i in range(len(fitted_params)):
+                if is_fixed[i]:
+                    fitted_params[i] = fixed_values[i]
+                else:
+                    fitted_params[i] = mlefit.params[idx_without_fixed]
+                    idx_without_fixed += 1
+
             if use_beta_star:
-                mlefit.params[1] *= mlefit.params[0]
+                fitted_params[1] *= fitted_params[0]
             if use_gamma_star:
-                mlefit.params[2] *= 1 - mlefit.params[0]
-            final_params = self._model_params(mlefit.params)
+                fitted_params[2] *= 1 - fitted_params[0]
+            final_params = self._model_params(fitted_params)
 
         if return_params:
             return final_params
@@ -1010,7 +1041,8 @@ class ETSModel(base.StateSpaceMLEModel):
             return result
 
     def _loglike_internal(
-        self, params, yhat, xhat, use_beta_star=False, use_gamma_star=False
+            self, params, yhat, xhat, is_fixed=None, fixed_values=None,
+            use_beta_star=False, use_gamma_star=False
     ):
         """
         Log-likelihood function to be called from fit to avoid reallocation of
@@ -1020,13 +1052,20 @@ class ETSModel(base.StateSpaceMLEModel):
         ----------
         params : np.ndarray of np.float
             Model parameters: (alpha, beta, gamma, phi, l[-1],
-            b[-1], s[-1], ..., s[-m]). This must be in the format of internal
-            parameters.
+            b[-1], s[-1], ..., s[-m]). If there are no fixed values this must
+            be in the format of internal parameters. Otherwise the fixed values
+            are skipped.
         yhat : np.ndarray
             Array of size (n,) where fitted values will be written to.
         xhat : np.ndarray
             Array of size (n, _k_states_internal) where fitted states will be
             written to.
+        is_fixed : np.ndarray or None
+            Boolean array indicating values which are fixed during fitting.
+            This must have the full length of internal parameters.
+        fixed_values : np.ndarray or None
+            Array of fixed values (arbitrary values for non-fixed parameters)
+            This must have the full length of internal parameters.
         use_beta_star : boolean
             Whether to internally use beta_star as parameter
         use_gamma_star : boolean
@@ -1036,8 +1075,16 @@ class ETSModel(base.StateSpaceMLEModel):
             data = np.asarray(self.endog, dtype=complex)
         else:
             data = self.endog
+
+        if is_fixed is None:
+            is_fixed = np.zeros(self._k_params_internal, dtype=np.uint8)
+            fixed_values = np.empty(
+                self._k_params_internal, dtype=params.dtype
+            )
+
         self._smoothing_func(
-            params, data, yhat, xhat, use_beta_star, use_gamma_star
+            params, data, yhat, xhat, is_fixed, fixed_values, use_beta_star,
+            use_gamma_star
         )
         res = self._residuals(yhat, data=data)
         logL = -self.nobs / 2 * (np.log(2 * np.pi * np.mean(res ** 2)) + 1)
@@ -1128,7 +1175,11 @@ class ETSModel(base.StateSpaceMLEModel):
         internal_params = self._internal_params(params)
         yhat = np.zeros(self.nobs)
         xhat = np.zeros((self.nobs, self._k_states_internal))
-        self._smoothing_func(internal_params, self.endog, yhat, xhat)
+        is_fixed = np.zeros(self._k_params_internal, dtype=np.uint8)
+        fixed_values = np.empty(self._k_params_internal, dtype=params.dtype)
+        self._smoothing_func(
+            internal_params, self.endog, yhat, xhat, is_fixed, fixed_values
+        )
 
         # remove states that are only internal
         states = self._get_states(xhat)
@@ -1548,6 +1599,9 @@ class ETSResults(base.StateSpaceMLEResults):
         # set initial values and obtain parameters
         start_params = self._get_prediction_params(start_idx)
         x = np.zeros((nsimulations, self.model._k_states_internal))
+        # is fixed and fixed values are dummy arguments
+        is_fixed = np.zeros(len(start_params), dtype=np.uint8)
+        fixed_values = np.zeros_like(start_params)
         (
             alpha,
             beta_star,
@@ -1555,7 +1609,9 @@ class ETSResults(base.StateSpaceMLEResults):
             phi,
             m,
             _,
-        ) = smooth._initialize_ets_smooth(start_params, x)
+        ) = smooth._initialize_ets_smooth(
+            start_params, x, is_fixed, fixed_values
+        )
         beta = alpha * beta_star
         gamma = (1 - alpha) * gamma_star
         # make x a 3 dimensional matrix: first dimension is nsimulations

@@ -17,16 +17,30 @@ ctypedef fused numeric:
 cpdef _initialize_ets_smooth(
     numeric [:] params,
     numeric[:,:] xhat,
+    np.uint8_t [:] is_fixed,
+    numeric [:] fixed_values,
     bool use_beta_star=False,
     bool use_gamma_star=False,
 ):
     """Extracts parameters and initializes states xhat"""
+    cdef numeric [:] full_params
     cdef numeric alpha, beta, gamma, phi, beta_star, gamma_star
-    cdef Py_ssize_t m, n
+    cdef Py_ssize_t idx_all, idx_params, n_all, m, n
+
+    n_all = len(is_fixed)
+    full_params = np.empty_like(fixed_values)
+    idx_params = 0
+    for idx_all in range(n_all):
+        if not is_fixed[idx_all]:
+            full_params[idx_all] = params[idx_params]
+            idx_params += 1
+        else:
+            full_params[idx_all] = fixed_values[idx_all]
+
 
     # get params
-    alpha, beta, gamma, phi = params[0:4]
-    m = len(params[6:])
+    alpha, beta, gamma, phi = full_params[0:4]
+    m = len(full_params[6:])
     n = len(xhat)
 
     # calculate beta_star and gamma_star
@@ -43,7 +57,7 @@ cpdef _initialize_ets_smooth(
     # initialize states
     # l = xhat[:,0], b = xhat[:,1], s = xhat[:,2:2+m]
     # seasons are sorted such that xhat[:,2+m-1] contains s[-m]
-    xhat[n-1, :] = params[4:]
+    xhat[n-1, :] = full_params[4:]
 
     return alpha, beta_star, gamma_star, phi, m, n
 
@@ -51,6 +65,8 @@ def _ets_smooth_add_add(numeric [:] params,
                         numeric [:] y,
                         numeric [:] yhat,
                         numeric [:,:] xhat,
+                        np.uint8_t [:] is_fixed,
+                        numeric [:] fixed_values,
                         bool use_beta_star=False,
                         bool use_gamma_star=False):
     """Smoothing with additive trend and additive season"""
@@ -59,7 +75,7 @@ def _ets_smooth_add_add(numeric [:] params,
 
     # get params
     alpha, beta_star, gamma_star, phi, m, n = _initialize_ets_smooth(
-        params, xhat, use_beta_star, use_gamma_star
+        params, xhat, is_fixed, fixed_values, use_beta_star, use_gamma_star
     )
 
     # smooth
@@ -84,6 +100,8 @@ def _ets_smooth_add_mul(numeric [:] params,
                         numeric [:] y,
                         numeric [:] yhat,
                         numeric [:,:] xhat,
+                        np.uint8_t [:] is_fixed,
+                        numeric [:] fixed_values,
                         bool use_beta_star=False,
                         bool use_gamma_star=False):
     """Smoothing with additive trend and multiplicative season"""
@@ -92,7 +110,7 @@ def _ets_smooth_add_mul(numeric [:] params,
 
     # get params
     alpha, beta_star, gamma_star, phi, m, n = _initialize_ets_smooth(
-        params, xhat, use_beta_star, use_gamma_star
+        params, xhat, is_fixed, fixed_values, use_beta_star, use_gamma_star
     )
 
     # smooth
@@ -117,6 +135,8 @@ def _ets_smooth_mul_add(numeric [:] params,
                         numeric [:] y,
                         numeric [:] yhat,
                         numeric [:,:] xhat,
+                        np.uint8_t [:] is_fixed,
+                        numeric [:] fixed_values,
                         bool use_beta_star=False,
                         bool use_gamma_star=False):
     """Smoothing with multiplicative trend and additive season"""
@@ -125,7 +145,7 @@ def _ets_smooth_mul_add(numeric [:] params,
 
     # get params
     alpha, beta_star, gamma_star, phi, m, n = _initialize_ets_smooth(
-        params, xhat, use_beta_star, use_gamma_star
+        params, xhat, is_fixed, fixed_values, use_beta_star, use_gamma_star
     )
 
     # smooth
@@ -150,6 +170,8 @@ def _ets_smooth_mul_mul(numeric [:] params,
                         numeric [:] y,
                         numeric [:] yhat,
                         numeric [:,:] xhat,
+                        np.uint8_t [:] is_fixed,
+                        numeric [:] fixed_values,
                         bool use_beta_star=False,
                         bool use_gamma_star=False):
     """Smoothing with multiplicative trend and multiplicative season"""
@@ -158,7 +180,7 @@ def _ets_smooth_mul_mul(numeric [:] params,
 
     # get params
     alpha, beta_star, gamma_star, phi, m, n = _initialize_ets_smooth(
-        params, xhat, use_beta_star, use_gamma_star
+        params, xhat, is_fixed, fixed_values, use_beta_star, use_gamma_star
     )
 
     # smooth
