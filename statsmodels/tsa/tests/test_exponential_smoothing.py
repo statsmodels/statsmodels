@@ -441,17 +441,7 @@ def test_fit_vs_R(setup_model, reset_randomstate):
     const = -model.nobs / 2 * (np.log(2 * np.pi / model.nobs) + 1)
     loglike_R = results_R["loglik"][0] + const
     loglike = fit.llf
-    try:
-        assert loglike >= loglike_R - 1e-4
-    except AssertionError:
-        # This is a fail safe to ensure that the model works
-        fit = model.fit(disp=True, start_params=params)
-        loglike = fit.llf
-        assert loglike >= loglike_R - 1e-4
-        pytest.xfail(
-            "Starting values did not produce an adequate fit. They should"
-            "be improved."
-        )
+    assert loglike >= loglike_R - 1e-4
 
 
 def test_predict_vs_R(setup_model):
@@ -623,7 +613,7 @@ def test_hessian(austourists_model):
 
 def test_convergence_simple():
     # issue 6883
-    gen = np.random.default_rng(0)
+    gen = np.random.RandomState(0)
     e = gen.standard_normal(12000)
     y = e.copy()
     for i in range(1, e.shape[0]):
