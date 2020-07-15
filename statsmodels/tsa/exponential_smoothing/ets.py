@@ -978,7 +978,7 @@ class ETSModel(base.StateSpaceMLEModel):
 
             # check if we have fixed parameters and remove them from the
             # parameter vector
-            is_fixed = np.zeros(self._k_params_internal, dtype=np.long)
+            is_fixed = np.zeros(self._k_params_internal, dtype=int)
             fixed_values = np.empty_like(internal_start_params)
             params_without_fixed = []
             kwargs["bounds"] = []
@@ -1077,7 +1077,7 @@ class ETSModel(base.StateSpaceMLEModel):
             data = self.endog
 
         if is_fixed is None:
-            is_fixed = np.zeros(self._k_params_internal, dtype=np.long)
+            is_fixed = np.zeros(self._k_params_internal, dtype=int)
             fixed_values = np.empty(
                 self._k_params_internal, dtype=params.dtype
             )
@@ -1175,7 +1175,7 @@ class ETSModel(base.StateSpaceMLEModel):
         internal_params = self._internal_params(params)
         yhat = np.zeros(self.nobs)
         xhat = np.zeros((self.nobs, self._k_states_internal))
-        is_fixed = np.zeros(self._k_params_internal, dtype=np.long)
+        is_fixed = np.zeros(self._k_params_internal, dtype=int)
         fixed_values = np.empty(self._k_params_internal, dtype=params.dtype)
         self._smoothing_func(
             internal_params, self.endog, yhat, xhat, is_fixed, fixed_values
@@ -1600,7 +1600,7 @@ class ETSResults(base.StateSpaceMLEResults):
         start_params = self._get_prediction_params(start_idx)
         x = np.zeros((nsimulations, self.model._k_states_internal))
         # is fixed and fixed values are dummy arguments
-        is_fixed = np.zeros(len(start_params), dtype=np.long)
+        is_fixed = np.zeros(len(start_params), dtype=int)
         fixed_values = np.zeros_like(start_params)
         (
             alpha,
