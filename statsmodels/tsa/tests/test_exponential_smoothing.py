@@ -523,11 +523,13 @@ def test_bounded_fit(oildata):
         fit2 = model2.fit(disp=False)
     assert fit2.smoothing_trend == 0.99
     assert_allclose(fit1.params, fit2.params)
+    fit2.summary()  # check if summary runs without failing
 
     # using fit_constrained
     fit3 = model2.fit_constrained({"smoothing_trend": 0.99})
     assert fit3.smoothing_trend == 0.99
     assert_allclose(fit1.params, fit3.params)
+    fit3.summary()
 
 
 def test_seasonal_periods(austourists):
