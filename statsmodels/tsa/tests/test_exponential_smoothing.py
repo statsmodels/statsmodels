@@ -12,6 +12,7 @@ import pytest
 import scipy.stats
 
 from statsmodels.tsa.exponential_smoothing.ets import ETSModel
+from statsmodels.tsa.holtwinters import ExponentialSmoothing
 
 # This contains tests for the exponential smoothing implementation in
 # tsa/exponential_smoothing/ets.py.
@@ -440,17 +441,7 @@ def test_fit_vs_R(setup_model, reset_randomstate):
     const = -model.nobs / 2 * (np.log(2 * np.pi / model.nobs) + 1)
     loglike_R = results_R["loglik"][0] + const
     loglike = fit.llf
-    try:
-        assert loglike >= loglike_R - 1e-4
-    except AssertionError:
-        # This is a fail safe to ensure that the model works
-        fit = model.fit(disp=True, start_params=params)
-        loglike = fit.llf
-        assert loglike >= loglike_R - 1e-4
-        pytest.xfail(
-            "Starting values did not produce an adequate fit. They should"
-            "be improved."
-        )
+    assert loglike >= loglike_R - 1e-4
 
 
 def test_predict_vs_R(setup_model):
@@ -532,11 +523,13 @@ def test_bounded_fit(oildata):
         fit2 = model2.fit(disp=False)
     assert fit2.smoothing_trend == 0.99
     assert_allclose(fit1.params, fit2.params)
+    fit2.summary()  # check if summary runs without failing
 
     # using fit_constrained
     fit3 = model2.fit_constrained({"smoothing_trend": 0.99})
     assert fit3.smoothing_trend == 0.99
     assert_allclose(fit1.params, fit3.params)
+    fit3.summary()
 
 
 def test_seasonal_periods(austourists):
@@ -617,4 +610,32 @@ def test_hessian(austourists_model):
     austourists_model.hessian(fit.params)
     austourists_model.hessian(
         fit.params, approx_complex_step=False, approx_centered=True,
+    )
+
+
+def test_convergence_simple():
+    # issue 6883
+    gen = np.random.RandomState(0)
+    e = gen.standard_normal(12000)
+    y = e.copy()
+    for i in range(1, e.shape[0]):
+        y[i] = y[i - 1] - 0.2 * e[i - 1] + e[i]
+    y = y[200:]
+    res = ExponentialSmoothing(y).fit()
+    ets_res = ETSModel(y).fit()
+
+    # the smoothing level should be very similar, the initial state might be
+    # different as it doesn't influence the final result too much
+    assert_almost_equal(
+        res.params['smoothing_level'],
+        ets_res.smoothing_level,
+        3
+    )
+
+    # the first few values are influenced by differences in initial state, so
+    # we don't test them here
+    assert_almost_equal(
+        res.fittedvalues[10:],
+        ets_res.fittedvalues[10:],
+        3
     )
