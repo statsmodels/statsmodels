@@ -153,6 +153,8 @@ Exponential Smoothing
    ~statsmodels.tsa.holtwinters.ExponentialSmoothing
    ~statsmodels.tsa.holtwinters.Holt
    ~statsmodels.tsa.holtwinters.SimpleExpSmoothing
+   ~statsmodels.tsa.statespace.exponential_smoothing.ExponentialSmoothing
+   ~statsmodels.tsa.exponential_smoothing.ets.ETSModel
 
 
 Multivariate Time Series Models
