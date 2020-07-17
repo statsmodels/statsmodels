@@ -8,6 +8,7 @@ author: Josef Perktold
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
+import pandas as pd
 
 from statsmodels.regression.linear_model import OLS, WLS
 from statsmodels.sandbox.regression.predstd import wls_prediction_std
@@ -132,7 +133,6 @@ class TestWLSPrediction(object):
         mod_wls = WLS(y, X, weights=1./w)
         cls.res_wls = mod_wls.fit()
 
-
     def test_ci(self):
         res_wls = self.res_wls
         prstd, iv_l, iv_u = wls_prediction_std(res_wls)
@@ -159,7 +159,7 @@ class TestWLSPrediction(object):
 
         # check that list works, issue 4437
         x = res_wls.model.exog.mean(0)
-        pred_res3 = res_wls.get_prediction(x)
+        pred_res3 = res_wls.get_prediction([x])
         ci3 = pred_res3.conf_int(obs=True)
         pred_res3b = res_wls.get_prediction(x.tolist())
         ci3b = pred_res3b.conf_int(obs=True)
@@ -258,3 +258,17 @@ class TestWLSPrediction(object):
         assert_allclose(ci3b, ci3, rtol=1e-13)
         res_df = pred_res3b.summary_frame()
         assert_equal(res_df.index.values, [0, 1])
+
+
+def test_predict_remove_data():
+    # GH6887
+    endog = [i + np.random.normal(scale=0.1) for i in range(100)]
+    exog = [i for i in range(100)]
+    model = OLS(endog, exog, weights=[1 for _ in range(100)]).fit()
+    model.remove_data()
+    scalar = model.get_prediction(1).predicted_mean
+    one_d = model.get_prediction([1]).predicted_mean
+    assert_allclose(scalar, one_d)
+
+    series = model.get_prediction(pd.Series([1])).predicted_mean
+    assert_allclose(scalar, series)
