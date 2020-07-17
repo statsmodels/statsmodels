@@ -2417,8 +2417,6 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         self._data_attr_model.extend(['ssm'])
         self._data_attr.extend(extra_arrays)
         self._data_attr.extend(['filter_results', 'smoother_results'])
-        self.data_in_cache = getattr(self, 'data_in_cache', [])
-        self.data_in_cache.extend([])
 
     def _get_robustcov_results(self, cov_type='opg', **kwargs):
         """

@@ -988,6 +988,8 @@ class Results(object):
         self.__dict__.update(kwd)
         self.initialize(model, params, **kwd)
         self._data_attr = []
+        # Variables to clear from cache
+        self._data_in_cache = ['fittedvalues', 'resid', 'wresid']
 
     def initialize(self, model, params, **kwargs):
         """
@@ -2191,8 +2193,8 @@ class LikelihoodModelResults(Results):
         model._data_attr : arrays attached to both the model instance
             and the results instance with the same attribute name.
 
-        result.data_in_cache : arrays that may exist as values in
-            result._cache (TODO : should privatize name)
+        result._data_in_cache : arrays that may exist as values in
+            result._cache
 
         result._data_attr_model : arrays attached to the model
             instance but not to the results instance
@@ -2239,9 +2241,7 @@ class LikelihoodModelResults(Results):
                 continue
             wipe(self, att)
 
-        data_in_cache = getattr(self, 'data_in_cache', [])
-        data_in_cache += ['fittedvalues', 'resid', 'wresid']
-        for key in data_in_cache:
+        for key in self._data_in_cache:
             try:
                 self._cache[key] = None
             except (AttributeError, KeyError):

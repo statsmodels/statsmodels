@@ -1463,8 +1463,7 @@ class GLMResults(base.LikelihoodModelResults):
         # for remove data and pickle without large arrays
         self._data_attr.extend(['results_constrained', '_freq_weights',
                                 '_var_weights', '_iweights'])
-        self.data_in_cache = getattr(self, 'data_in_cache', [])
-        self.data_in_cache.extend(['null', 'mu'])
+        self._data_in_cache.extend(['null', 'mu'])
         self._data_attr_model = getattr(self, '_data_attr_model', [])
         self._data_attr_model.append('mu')
 
