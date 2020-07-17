@@ -590,11 +590,13 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
             ("HQIC", ["%#5.3f" % self.hqic]),
         ]
 
-        if (
-            hasattr(self, "filter_results")
-            and self.filter_results is not None
-            and self.filter_results.filter_concentrated
-        ):
+        if hasattr(self, "filter_results"):
+            if (
+                    self.filter_results is not None
+                    and self.filter_results.filter_concentrated
+            ):
+                top_right.append(("Scale", ["%#5.3f" % self.scale]))
+        else:
             top_right.append(("Scale", ["%#5.3f" % self.scale]))
 
         if hasattr(self, "cov_type"):
