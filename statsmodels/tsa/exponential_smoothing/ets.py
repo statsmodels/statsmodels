@@ -1921,7 +1921,7 @@ class ETSResults(base.StateSpaceMLEResults):
             start_smooth,
             end_smooth,
             anchor_dynamic,
-            start_dynamic,
+            _,
             end_dynamic,
             nsmooth,
             ndynamic,
@@ -2120,7 +2120,7 @@ class PredictionResults:
         (
             start,
             start_smooth,
-            end_smooth,
+            _,
             anchor_dynamic,
             start_dynamic,
             end_dynamic,
