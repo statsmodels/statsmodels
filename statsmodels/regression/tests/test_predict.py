@@ -258,3 +258,16 @@ class TestWLSPrediction(object):
         assert_allclose(ci3b, ci3, rtol=1e-13)
         res_df = pred_res3b.summary_frame()
         assert_equal(res_df.index.values, [0, 1])
+
+
+def test_predict_remove_data():
+    # GH6887
+    endog = [i + np.random.normal(scale=0.1) for i in range(100)]
+    exog = [i for i in range(100)]
+    model = OLS(endog, exog, weights=[1 for _ in range(100)]).fit()
+    model.get_prediction(1)
+    model.remove_data()
+    # works fine
+    scalar = model.get_prediction(1).predicted_mean
+    one_d = model.get_prediction([1]).predicted_mean
+    assert_allclose(scalar, one_d)

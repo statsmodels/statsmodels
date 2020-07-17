@@ -46,7 +46,7 @@ def _initialization_heuristic(endog, trend=False, seasonal=False,
 
     # Seasonal component
     initial_seasonal = None
-    if seasonal is not None:
+    if seasonal:
         # Calculate the number of full cycles to use
         if nobs < 2 * seasonal_periods:
             raise ValueError('Cannot compute initial seasonals using'

@@ -157,7 +157,8 @@ def get_prediction(self, exog=None, transform=True, weights=None,
                 row_labels = None
 
         exog = np.asarray(exog)
-        if exog.ndim == 1 and (self.model.exog.ndim == 1 or
+        if exog.ndim == 1 and (self.model.exog is None or
+                               self.model.exog.ndim == 1 or
                                self.model.exog.shape[1] == 1):
             exog = exog[:, None]
         exog = np.atleast_2d(exog)  # needed in count model shape[1]

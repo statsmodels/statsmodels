@@ -561,14 +561,14 @@ def _constrain_sv_less_than_one_python(unconstrained, order=None,
         Partial autocorrelation matrices. Should be a list of length
         `order`, where each element is an array sized `k_endog` x `k_endog`.
 
+    See Also
+    --------
+    constrain_stationary_multivariate
+
     Notes
     -----
     Corresponds to Lemma 2.2 in Ansley and Kohn (1986). See
     `constrain_stationary_multivariate` for more details.
-
-    There is a Cython implementation of this function that can be much faster,
-    but which requires SciPy 0.14.0 or greater. See
-    `constrain_stationary_multivariate` for details.
     """
 
     from scipy import linalg
@@ -620,14 +620,14 @@ def _compute_coefficients_from_multivariate_pacf_python(
         Transformed coefficient matrices leading to a stationary VAR
         representation.
 
+    See Also
+    --------
+    constrain_stationary_multivariate
+
     Notes
     -----
     Corresponds to Lemma 2.1 in Ansley and Kohn (1986). See
     `constrain_stationary_multivariate` for more details.
-
-    There is a Cython implementation of this function that can be much faster,
-    but which requires SciPy 0.14.0 or greater. See
-    `constrain_stationary_multivariate` for details.
     """
     from scipy import linalg
 
@@ -931,6 +931,10 @@ def _unconstrain_sv_less_than_one(constrained, order=None, k_endog=None):
         Unconstrained matrices. A list of length `order`, where each element is
         an array sized `k_endog` x `k_endog`.
 
+    See Also
+    --------
+    unconstrain_stationary_multivariate
+
     Notes
     -----
     Corresponds to the inverse of Lemma 2.2 in Ansley and Kohn (1986). See
@@ -1162,6 +1166,10 @@ def _compute_multivariate_pacf_from_autocovariances(autocovariances,
     pacf : list
         List of first `order` multivariate partial autocorrelations.
 
+    See Also
+    --------
+    unconstrain_stationary_multivariate
+
     Notes
     -----
     Note that this computes multivariate partial autocorrelations.
@@ -1169,8 +1177,6 @@ def _compute_multivariate_pacf_from_autocovariances(autocovariances,
     Corresponds to the inverse of Lemma 2.1 in Ansley and Kohn (1986). See
     `unconstrain_stationary_multivariate` for more details.
 
-    Notes
-    -----
     Computes sample partial autocorrelations if sample autocovariances are
     given.
     """
@@ -1326,6 +1332,10 @@ def _compute_multivariate_pacf_from_coefficients(constrained, error_variance,
     pacf : list
         List of first `order` multivariate partial autocorrelations.
 
+    See Also
+    --------
+    unconstrain_stationary_multivariate
+
     Notes
     -----
     Note that this computes multivariate partial autocorrelations.
@@ -1335,7 +1345,6 @@ def _compute_multivariate_pacf_from_coefficients(constrained, error_variance,
 
     Notes
     -----
-
     Coefficients are assumed to be provided from the VAR model:
 
     .. math::
