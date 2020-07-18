@@ -1877,8 +1877,8 @@ class ETSResults(base.StateSpaceMLEResults):
         end_dynamic = end + out_of_sample
         ndynamic = end_dynamic - start_dynamic + 1
         return (
-            start, start_smooth, end_smooth, anchor_dynamic, start_dynamic,
-            end_dynamic, nsmooth, ndynamic, index
+            start, end, start_smooth, end_smooth, anchor_dynamic,
+            start_dynamic, end_dynamic, nsmooth, ndynamic, index
         )
 
     def predict(self, start=None, end=None, dynamic=False, index=None):
@@ -1921,6 +1921,7 @@ class ETSResults(base.StateSpaceMLEResults):
 
         (
             start,
+            end,
             start_smooth,
             end_smooth,
             anchor_dynamic,
@@ -2108,13 +2109,12 @@ class PredictionResults:
                  index=None, method=None, simulate_repetitions=1000,
                  **simulate_kwargs):
         self.use_pandas = results.model.use_pandas
-        self.model = results.model
 
         if method is None:
             exact_available = [
                 "ANN", "AAN", "AAdN", "ANA", "AAA", "AAdA"
             ]
-            if self.model.short_name in exact_available:
+            if results.model.short_name in exact_available:
                 method = 'exact'
             else:
                 method = 'simulated'
@@ -2122,6 +2122,7 @@ class PredictionResults:
 
         (
             start,
+            end,
             start_smooth,
             _,
             anchor_dynamic,
@@ -2136,6 +2137,11 @@ class PredictionResults:
             start=start, end=end_dynamic, dynamic=dynamic, index=index
         )
         self.row_labels = self.predicted_mean.index
+        self.endog = np.empty(nsmooth + ndynamic) * np.nan
+        self.endog[0:(end - start + 1)] = results.data.endog[start:(end + 1)]
+        self.model = Bunch(data=results.model.data.__class__(
+            endog=self.endog, predict_dates=self.row_labels
+        ))
 
         if self.method == "simulated":
 
@@ -2159,11 +2165,11 @@ class PredictionResults:
                 repetitions=simulate_repetitions, **simulate_kwargs
             ))
             self.simulation_results = np.concatenate(sim_results, axis=0)
-            if self.use_pandas:
-                self.simulation_results = pd.DataFrame(
-                    self.simulation_results, index=self.row_labels,
-                    columns=sim_results[0].columns
-                )
+            # if self.use_pandas:
+            #     self.simulation_results = pd.DataFrame(
+            #         self.simulation_results, index=self.row_labels,
+            #         columns=sim_results[0].columns
+            #     )
         else:  # method == 'exact'
             steps = np.ones(ndynamic + nsmooth)
             if ndynamic > 0:
@@ -2234,6 +2240,7 @@ class PredictionResultsWrapper(wrap.ResultsWrapper):
     _attrs = {
         'predicted_mean': 'dates',
         'simulation_results': 'dates',
+        'endog' : 'dates',
     }
     _wrap_attrs = wrap.union_dicts(_attrs)
 
