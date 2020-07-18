@@ -1446,16 +1446,17 @@ class ETSResults(base.StateSpaceMLEResults):
             )
         elif model == "AAdN":
             return (
-                1 + alpha ** 2 * (h - 1)
+                1
+                + alpha ** 2 * (h - 1)
                 + (
                     (beta * phi * h) / ((1 - phi) ** 2)
                     * (2 * alpha * (1 - phi) + beta * phi)
                 )
                 - (
-                    (beta * phi * (1 - phi) ** h)
+                    (beta * phi * (1 - phi ** h))
                     / ((1 - phi) ** 2 * (1 - phi ** 2))
                     * (
-                        2 * alpha * (1 - phi) ** 2
+                        2 * alpha * (1 - phi ** 2)
                         + beta * phi * (1 + 2 * phi - phi ** h)
                     )
                 )
@@ -1477,12 +1478,14 @@ class ETSResults(base.StateSpaceMLEResults):
             )
         elif model == "AAdA":
             return (
-                1 + alpha ** 2 * (h - 1) + gamma * k * (2 * alpha + gamma)
+                1
+                + alpha ** 2 * (h - 1)
+                + gamma * k * (2 * alpha + gamma)
                 + (beta * phi * h) / ((1 - phi) ** 2) * (
                     2 * alpha * (1 - phi) + beta * phi
                 )
                 - (
-                    (beta * phi * (1 - phi) ** h)
+                    (beta * phi * (1 - phi ** h))
                     / ((1 - phi) ** 2 * (1 - phi ** 2))
                     * (
                         2 * alpha * (1 - phi ** 2)

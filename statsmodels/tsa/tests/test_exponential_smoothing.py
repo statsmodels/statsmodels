@@ -825,11 +825,12 @@ def test_prediction_results_slow_AAN(oildata):
 
 
 @pytest.mark.skip
-def test_prediction_results_slow_AAA(austourists):
+def test_prediction_results_slow_AAdA(austourists):
     # slow test with high number of simulation repetitions for comparison
     # Note: succesfull with specified tolerance
     fit = ETSModel(
         austourists, error="add", trend="add", seasonal="add",
+        damped_trend=True,
         seasonal_periods=4
     ).fit(disp=False)
     pred_exact = fit.get_prediction(
@@ -866,13 +867,13 @@ def test_prediction_results_slow_AAA(austourists):
     assert_allclose(
         summary_sim["pi_lower"].values,
         summary_exact["pi_lower"].values,
-        rtol=1e-2, atol=1e-4
+        rtol=2e-2, atol=1e-4
     )
 
     assert_allclose(
         summary_sim["pi_upper"].values,
         summary_exact["pi_upper"].values,
-        rtol=1e-2, atol=1e-4
+        rtol=2e-2, atol=1e-4
     )
 
 
@@ -902,3 +903,30 @@ def test_convergence_simple():
         ets_res.fittedvalues[10:],
         rtol=1e-4, atol=1e-4
     )
+
+
+def test_exact_prediction_intervals(austourists_model_fit):
+
+    fit = austourists_model_fit._results
+
+    class DummyModel:
+        def __init__(self, short_name):
+            self.short_name = short_name
+
+    # compare AAdN with AAN
+    fit.damping_trend = 1 - 1e-3
+    fit.model = DummyModel("AAdN")
+    steps = 5
+    s_AAdN = fit._relative_forecast_variance(steps)
+    fit.model = DummyModel("AAN")
+    s_AAN = fit._relative_forecast_variance(steps)
+    assert_almost_equal(s_AAdN, s_AAN, 2)
+
+    # compare AAdA with AAA
+    fit.damping_trend = 1 - 1e-3
+    fit.model = DummyModel("AAdA")
+    steps = 5
+    s_AAdA = fit._relative_forecast_variance(steps)
+    fit.model = DummyModel("AAA")
+    s_AAA = fit._relative_forecast_variance(steps)
+    assert_almost_equal(s_AAdA, s_AAA, 3)
