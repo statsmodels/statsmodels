@@ -719,6 +719,20 @@ def test_results_vs_statespace(statespace_comparison):
         statespace_results.fittedvalues.values
     )
 
+    # compare diagnostics
+    assert_almost_equal(
+        ets_results.test_serial_correlation(method="ljungbox"),
+        statespace_results.test_serial_correlation(method="ljungbox"),
+    )
+    assert_almost_equal(
+        ets_results.test_normality(method="jarquebera"),
+        statespace_results.test_normality(method="jarquebera"),
+    )
+    assert_almost_equal(
+        ets_results.test_heteroskedasticity(method="breakvar"),
+        statespace_results.test_heteroskedasticity(method="breakvar"),
+    )
+
 
 def test_prediction_results_vs_statespace(statespace_comparison):
     ets_results, statespace_results = statespace_comparison
