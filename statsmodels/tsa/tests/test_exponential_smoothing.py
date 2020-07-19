@@ -13,6 +13,7 @@ import scipy.stats
 
 from statsmodels.tsa.exponential_smoothing.ets import ETSModel
 from statsmodels.tsa.holtwinters import ExponentialSmoothing
+import statsmodels.tsa.statespace as statespace
 
 # This contains tests for the exponential smoothing implementation in
 # tsa/exponential_smoothing/ets.py.
@@ -603,15 +604,78 @@ def test_score(austourists_model):
     assert_almost_equal(score_cs, score_fd, 4)
 
 
-def test_hessian(austourists_model):
+def test_hessian(austourists_model_fit):
     # The hessian approximations are not very consistent, but the test makes
     # sure they run
-    fit = austourists_model.fit(disp=False)
-    austourists_model.hessian(fit.params)
-    austourists_model.hessian(
-        fit.params, approx_complex_step=False, approx_centered=True,
+    austourists_model_fit.model.hessian(austourists_model_fit.params)
+    austourists_model_fit.model.hessian(
+        austourists_model_fit.params, approx_complex_step=False,
+        approx_centered=True,
     )
 
+
+@pytest.fixture
+def statespace_comparison(austourists):
+    ets_model = ETSModel(
+        austourists,
+        seasonal_periods=4,
+        error="add",
+        trend="add",
+        seasonal="add",
+        damped_trend=True,
+    )
+    ets_results = ets_model.fit(disp=False)
+
+    statespace_model = statespace.ExponentialSmoothing(
+        austourists,
+        trend=True,
+        damped_trend=True,
+        seasonal=4,
+        initialization_method="known",
+        initial_level=ets_results.initial_level,
+        initial_trend=ets_results.initial_trend,
+        initial_seasonal=ets_results.initial_seasonal,
+    )
+    with statespace_model.fix_params(
+        {
+            "smoothing_level": ets_results.smoothing_level,
+            "smoothing_trend": ets_results.smoothing_trend,
+            "smoothing_seasonal": ets_results.smoothing_seasonal,
+            "damping_trend": ets_results.damping_trend,
+        }
+    ):
+        statespace_results = statespace_model.fit()
+
+    return ets_results, statespace_results
+
+
+def test_results_vs_statespace(statespace_comparison):
+    ets_results, statespace_results = statespace_comparison
+
+    assert_almost_equal(
+        ets_results.llf, statespace_results.llf
+    )
+    assert_almost_equal(
+        ets_results.scale, statespace_results.scale
+    )
+    assert_almost_equal(
+        ets_results.fittedvalues.values,
+        statespace_results.fittedvalues.values
+    )
+
+    # compare diagnostics
+    assert_almost_equal(
+        ets_results.test_serial_correlation(method="ljungbox"),
+        statespace_results.test_serial_correlation(method="ljungbox"),
+    )
+    assert_almost_equal(
+        ets_results.test_normality(method="jarquebera"),
+        statespace_results.test_normality(method="jarquebera"),
+    )
+    assert_almost_equal(
+        ets_results.test_heteroskedasticity(method="breakvar"),
+        statespace_results.test_heteroskedasticity(method="breakvar"),
+    )
 
 def test_convergence_simple():
     # issue 6883
