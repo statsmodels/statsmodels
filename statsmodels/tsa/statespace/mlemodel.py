@@ -3156,7 +3156,10 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             If lags is a list or array, then all lags are included up to the
             largest lag in the list, however only the tests for the lags in the
             list are reported.
-            If lags is None, then the default maxlag is 12*(nobs/100)^{1/4}
+            If lags is None, then the default maxlag is 12*(nobs/100)^{1/4}.
+            After 0.12 the default maxlag will change to min(10, nobs // 5) for
+            non-seasonal models and min(2*m, nobs // 5) for seasonal time
+            series where m is the seasonal period.
 
         Returns
         -------
@@ -3200,7 +3203,19 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             # Default lags for acorr_ljungbox is 40, but may not always have
             # that many observations
             if lags is None:
-                lags = min(40, nobs_effective - 1)
+                seasonal_periods = getattr(self.model, "seasonal_periods", 0)
+                if seasonal_periods:
+                    lags = min(2 * seasonal_periods, nobs_effective // 5)
+                else:
+                    lags = min(10, nobs_effective // 5)
+
+                warnings.warn(
+                    "The default value of lags is changing.  After 0.12, "
+                    "this value will become min(10, nobs//5) for non-seasonal "
+                    "time series and min (2*m, nobs//5) for seasonal time "
+                    "series. Directly set lags to silence this warning.",
+                    FutureWarning
+                )
 
             for i in range(self.model.k_endog):
                 results = acorr_ljungbox(

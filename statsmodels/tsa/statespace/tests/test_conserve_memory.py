@@ -288,8 +288,10 @@ def test_fittedvalues_resid_predict(conserve_memory):
                     res2.test_normality('jarquebera'))
     assert_allclose(res1.test_heteroskedasticity('breakvar'),
                     res2.test_heteroskedasticity('breakvar'))
-    assert_allclose(res1.test_serial_correlation('ljungbox'),
-                    res2.test_serial_correlation('ljungbox'))
+    with pytest.warns(FutureWarning):
+        actual = res1.test_serial_correlation('ljungbox')
+        desired = res2.test_serial_correlation('ljungbox')
+    assert_allclose(actual, desired)
 
 
 def test_get_prediction_memory_conserve():

@@ -784,9 +784,11 @@ def test_parameterless_autoreg():
                     'remove_data', 'save', 't_test', 't_test_pairwise',
                     'wald_test', 'wald_test_terms'):
             continue
+        warning = None if attr != "test_serial_correlation" else FutureWarning
         attr = getattr(res, attr)
         if callable(attr):
-            attr()
+            with pytest.warns(warning):
+                attr()
         else:
             assert isinstance(attr, object)
 
