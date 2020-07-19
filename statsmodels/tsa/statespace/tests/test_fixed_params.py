@@ -462,8 +462,10 @@ def check_results(res1, res2, check_lutkepohl=False, check_params=True):
     assert_allclose(res2.test_heteroskedasticity('breakvar'),
                     res1.test_heteroskedasticity('breakvar'))
 
-    assert_allclose(res2.test_serial_correlation('ljungbox'),
-                    res1.test_serial_correlation('ljungbox'))
+    with pytest.warns(FutureWarning):
+        actual = res2.test_serial_correlation('ljungbox')
+        desired = res1.test_serial_correlation('ljungbox')
+    assert_allclose(actual, desired)
 
 
 def test_sarimax_nonconsecutive():

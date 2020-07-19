@@ -836,17 +836,19 @@ def test_diagnostics():
     with pytest.raises(NotImplementedError):
         res.test_heteroskedasticity(method='invalid')
 
-    actual = res.test_serial_correlation(method=None)
-    desired = res.test_serial_correlation(method='ljungbox')
+    with pytest.warns(FutureWarning):
+        actual = res.test_serial_correlation(method=None)
+    with pytest.warns(FutureWarning):
+        desired = res.test_serial_correlation(method='ljungbox')
     assert_allclose(actual, desired)
 
     with pytest.raises(NotImplementedError):
         res.test_serial_correlation(method='invalid')
 
     # Smoke tests for other options
-    actual = res.test_heteroskedasticity(method=None, alternative='d',
-                                         use_f=False)
-    desired = res.test_serial_correlation(method='boxpierce')
+    res.test_heteroskedasticity(method=None, alternative='d', use_f=False)
+    with pytest.warns(FutureWarning):
+        res.test_serial_correlation(method='boxpierce')
 
 
 def test_diagnostics_nile_eviews():

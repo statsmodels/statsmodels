@@ -5,6 +5,7 @@ from collections.abc import Iterable
 import copy
 import datetime as dt
 from types import SimpleNamespace
+import warnings
 
 import numpy as np
 from numpy.linalg import inv, slogdet
@@ -226,13 +227,11 @@ class AutoReg(tsa_model.TimeSeriesModel):
         if deterministic is not None:
             self._old_names = False
             if self._trend != "n" or self._seasonal:
-                import warnings
                 warnings.warn(
                     'When using deterministic, trend must be "n" and '
                     'seasonal must be False.', RuntimeWarning
                 )
         if self._old_names is None:
-            import warnings
             warnings.warn(
                 "The parameter names will change after 0.12 is "
                 "released. Set old_names to False to use the new names "
@@ -741,7 +740,6 @@ Autoregressive AR(p) model.
                                     "extra_sections": ""}
 
     def __init__(self, endog, dates=None, freq=None, missing='none'):
-        import warnings
         warnings.warn(AR_DEPRECATION_WARN, FutureWarning)
         super(AR, self).__init__(endog, None, dates, freq, missing=missing)
         endog = self.endog  # original might not have been an ndarray
@@ -1863,6 +1861,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             The maximum number of lags to use in the test. Jointly tests that
             all autocorrelations up to and including lag j are zero for
             j = 1, 2, ..., lags. If None, uses lag=12*(nobs/100)^{1/4}.
+            After 0.12 the number of lags will change to min(10, nobs // 5).
         model_df : int
             The model degree of freedom to use when adjusting computing the
             test statistic to account for parameter estimation. If None, uses
@@ -1896,6 +1895,12 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         # Default lags for acorr_ljungbox is 40, but may not always have
         # that many observations
         if lags is None:
+            # TODO: Switch to min(10, nobs//5) after 0.12
+            warnings.warn("The default value of lags is changing.  After 0.12,"
+                          " this value will become min(10, nobs//5). Directly "
+                          "set lags to silence this warning.", FutureWarning)
+            # Future
+            # lags = min(nobs // 5, 10)
             lags = int(min(12 * (nobs_effective / 100) ** (1 / 4),
                            nobs_effective - 1))
         test_stats = acorr_ljungbox(self.resid, lags=lags, boxpierce=False,
