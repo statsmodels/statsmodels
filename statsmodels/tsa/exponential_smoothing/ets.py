@@ -1314,7 +1314,6 @@ class ETSModel(base.StateSpaceMLEModel):
 
 class ETSResults(base.StateSpaceMLEResults):
     def __init__(self, model, params, results):
-        super().__init__(model, params)
         yhat, xhat = results
         self._llf = self.model.loglike(params)
         self._residuals = self.model._residuals(yhat)
