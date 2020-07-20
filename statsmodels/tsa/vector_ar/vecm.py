@@ -1,7 +1,4 @@
 # -*- coding: utf-8 -*-
-
-from statsmodels.compat.python import iteritems
-
 from collections import defaultdict
 
 import numpy as np
@@ -89,13 +86,13 @@ def select_order(data, maxlags, deterministic="nc", seasons=0, exog=None,
         # exclude some periods ==> same amount of data used for each lag order
         var_result = var_model._estimate_var(lags=p, offset=maxlags+1-p)
 
-        for k, v in iteritems(var_result.info_criteria):
+        for k, v in var_result.info_criteria.items():
             ic[k].append(v)
     # -1+1 in the following line is only here for clarification.
     # -1 because k_ar_VECM == k_ar_VAR - 1
     # +1 because p == index +1 (we start with p=1, not p=0)
     selected_orders = dict((ic_name, np.array(ic_value).argmin() - 1 + 1)
-                           for ic_name, ic_value in iteritems(ic))
+                           for ic_name, ic_value in ic.items())
 
     return LagOrderResults(ic, selected_orders, True)
 

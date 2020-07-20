@@ -37,32 +37,6 @@ def lfilter(*args, **kwargs):
     return list(filter(*args, **kwargs))
 
 
-def iteritems(obj, **kwargs):
-    """replacement for six's iteritems for Python2/3 compat
-       uses 'iteritems' if available and otherwise uses 'items'.
-
-       Passes kwargs to method.
-    """
-    func = getattr(obj, "iteritems", None)
-    if not func:
-        func = obj.items
-    return func(**kwargs)
-
-
-def iterkeys(obj, **kwargs):
-    func = getattr(obj, "iterkeys", None)
-    if not func:
-        func = obj.keys
-    return func(**kwargs)
-
-
-def itervalues(obj, **kwargs):
-    func = getattr(obj, "itervalues", None)
-    if not func:
-        func = obj.values
-    return func(**kwargs)
-
-
 def with_metaclass(meta, *bases):
     """Create a base class with a metaclass."""
     # This requires a bit of explanation: the basic idea is to make a dummy

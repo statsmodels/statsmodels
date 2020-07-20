@@ -5,7 +5,7 @@ import warnings
 
 from statsmodels.compat.numpy import lstsq
 from statsmodels.compat.pandas import deprecate_kwarg
-from statsmodels.compat.python import iteritems, lrange, lzip
+from statsmodels.compat.python import lrange, lzip
 from statsmodels.compat.scipy import _next_regular
 
 import numpy as np
@@ -124,9 +124,9 @@ def _autolag(
         results[lag] = mod_instance.fit()
 
     if method == "aic":
-        icbest, bestlag = min((v.aic, k) for k, v in iteritems(results))
+        icbest, bestlag = min((v.aic, k) for k, v in results.items())
     elif method == "bic":
-        icbest, bestlag = min((v.bic, k) for k, v in iteritems(results))
+        icbest, bestlag = min((v.bic, k) for k, v in results.items())
     elif method == "t-stat":
         # stop = stats.norm.ppf(.95)
         stop = 1.6448536269514722
@@ -1715,7 +1715,7 @@ def arma_order_select_ic(
 
     # add the minimums to the results dict
     min_res = {}
-    for i, result in iteritems(res):
+    for i, result in res.items():
         mins = np.where(result.min().min() == result)
         min_res.update({i + "_min_order": (mins[0][0], mins[1][0])})
     res.update(min_res)

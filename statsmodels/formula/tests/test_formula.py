@@ -1,4 +1,3 @@
-from statsmodels.compat.python import iteritems
 from statsmodels.compat.pandas import assert_series_equal
 
 from io import StringIO
@@ -60,7 +59,7 @@ class TestFormulaPandas(CheckFormulaOLS):
 class TestFormulaDict(CheckFormulaOLS):
     @classmethod
     def setup_class(cls):
-        data = dict((k, v.tolist()) for k, v in iteritems(load_pandas().data))
+        data = dict((k, v.tolist()) for k, v in load_pandas().data.items())
         cls.model = ols(longley_formula, data)
         super(TestFormulaDict, cls).setup_class()
 

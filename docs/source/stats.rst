@@ -174,6 +174,17 @@ Non-Parametric Tests
    cochrans_q
    Runs
 
+.. currentmodule:: statsmodels.stats.descriptivestats
+
+.. autosummary::
+   :toctree: generated/
+
+   sign_test
+
+
+Descriptive Statistics
+----------------------
+
 .. module:: statsmodels.stats.descriptivestats
    :synopsis: Descriptive statistics
 
@@ -182,7 +193,8 @@ Non-Parametric Tests
 .. autosummary::
    :toctree: generated/
 
-   sign_test
+   describe
+   Description
 
 .. _interrater:
 

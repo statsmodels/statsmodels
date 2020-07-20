@@ -1,4 +1,4 @@
-from statsmodels.compat.python import iterkeys, iteritems, lzip, itervalues
+from statsmodels.compat.python import lzip
 
 import datetime
 from functools import reduce
@@ -85,8 +85,8 @@ class Summary(object):
             Formatting to float data columns
         """
 
-        keys = [_formatter(x, float_format) for x in iterkeys(d)]
-        vals = [_formatter(x, float_format) for x in itervalues(d)]
+        keys = [_formatter(x, float_format) for x in d.keys()]
+        vals = [_formatter(x, float_format) for x in d.values()]
         data = np.array(lzip(keys, vals))
 
         if data.shape[0] % ncols != 0:
@@ -311,7 +311,7 @@ def summary_model(results):
     info['Prob (F-statistic):'] = lambda x: "%#6.3g" % x.f_pvalue
     info['Scale:'] = lambda x: "%#8.5g" % x.scale
     out = {}
-    for key, func in iteritems(info):
+    for key, func in info.items():
         try:
             out[key] = func(results)
         except (AttributeError, KeyError, NotImplementedError):

@@ -26,7 +26,6 @@ missing:
   - specification tests against nonparametric alternatives
 """
 from statsmodels.compat.pandas import deprecate_kwarg
-from statsmodels.compat.python import iteritems
 
 from collections.abc import Iterable
 
@@ -687,9 +686,9 @@ def acorr_lm(resid, nlags=None, autolag="AIC", store=False, *, period=None,
             results[mlag] = OLS(xshort, xdall[:, :mlag + 1]).fit()
 
         if autolag.lower() == "aic":
-            bestic, icbestlag = min((v.aic, k) for k, v in iteritems(results))
+            bestic, icbestlag = min((v.aic, k) for k, v in results.items())
         elif autolag.lower() == "bic":
-            icbest, icbestlag = min((v.bic, k) for k, v in iteritems(results))
+            icbest, icbestlag = min((v.bic, k) for k, v in results.items())
         else:
             raise ValueError("autolag can only be None, \"AIC\" or \"BIC\"")
 

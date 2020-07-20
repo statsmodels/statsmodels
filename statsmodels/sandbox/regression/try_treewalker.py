@@ -5,7 +5,7 @@ sum is standing for likelihood calculations
 should collect and aggregate likelihood contributions bottom up
 
 '''
-from statsmodels.compat.python import iteritems, itervalues, lrange
+from statsmodels.compat.python import lrange
 import numpy as np
 
 tree = [[0,1],[[2,3],[4,5,6]],[7]]
@@ -116,13 +116,13 @@ paramsind = {
 #unique, parameter array names,
 #sorted alphabetically, order is/should be only internal
 
-paramsnames = sorted(set([i for j in itervalues(paramsind) for i in j]))
+paramsnames = sorted(set([i for j in paramsind.values() for i in j]))
 
 #mapping coefficient names to indices to unique/parameter array
 paramsidx = dict((name, idx) for (idx,name) in enumerate(paramsnames))
 
 #mapping branch and leaf names to index in parameter array
-inddict = dict((k,[paramsidx[j] for j in v]) for k,v in iteritems(paramsind))
+inddict = dict((k,[paramsidx[j] for j in v]) for k,v in paramsind.items())
 
 '''
 >>> paramsnames

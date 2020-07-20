@@ -17,7 +17,6 @@ There are also R scripts included with most of the datasets to run
 some basic models for comparisons of results to statsmodels.
 '''
 
-from statsmodels.compat.python import iterkeys
 from rpy import r
 import statsmodels.api as sm
 
@@ -31,7 +30,7 @@ if 1 in examples:
     formula = r('y~%s-1' % '+'.join(des_cols))
     frame = r.data_frame(y=y, x=x)
     results = r.lm(formula, data=frame)
-    print(list(iterkeys(results)))
+    print(list(results.keys()))
     print(results['coefficients'])
 
 if 2 in examples:

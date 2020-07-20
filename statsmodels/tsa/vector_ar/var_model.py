@@ -7,7 +7,7 @@ References
 Lütkepohl (2005) New Introduction to Multiple Time Series Analysis
 """
 from statsmodels.compat.pandas import deprecate_kwarg
-from statsmodels.compat.python import iteritems, lrange
+from statsmodels.compat.python import lrange
 
 from collections import defaultdict
 from io import StringIO
@@ -765,11 +765,11 @@ class VAR(TimeSeriesModel):
             # order
             result = self._estimate_var(p, offset=maxlags - p, trend=trend)
 
-            for k, v in iteritems(result.info_criteria):
+            for k, v in result.info_criteria.items():
                 ics[k].append(v)
 
         selected_orders = dict((k, np.array(v).argmin() + p_min)
-                               for k, v in iteritems(ics))
+                               for k, v in ics.items())
 
         return LagOrderResults(ics, selected_orders, vecm=False)
 

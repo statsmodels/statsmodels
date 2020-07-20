@@ -57,7 +57,6 @@ import scipy
 from scipy import stats, special
 from scipy.stats import distributions
 
-from statsmodels.compat.python import iteritems
 from statsmodels.stats.moment_helpers import mvsk2mc, mc2mvsk
 
 
@@ -493,7 +492,7 @@ License: BSD
 
 def get_u_argskwargs(**kwargs):
     #Todo: What's this? wrong spacing, used in Transf_gen TransfTwo_gen
-    u_kwargs = dict((k.replace('u_','',1),v) for k,v in iteritems(kwargs)
+    u_kwargs = dict((k.replace('u_','',1),v) for k,v in kwargs.items()
                     if k.startswith('u_'))
     u_args = u_kwargs.pop('u_args',None)
     return u_args, u_kwargs

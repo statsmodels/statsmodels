@@ -4,7 +4,6 @@
 Created on Wed May 30 21:39:46 2012
 Author: Josef Perktold
 """
-from statsmodels.compat.python import iteritems
 import numpy as np
 from numpy.testing import assert_equal, assert_almost_equal
 import statsmodels.tsa.stattools as tsast
@@ -27,8 +26,8 @@ def test_adf_autolag():
         st2 = adf3[-1]
 
         assert_equal(len(st2.autolag_results), 15 + 1)  #+1 for lagged level
-        for l, res in sorted(iteritems(st2.autolag_results))[:5]:
-            lag = l-k_trend
+        for i, res in sorted(st2.autolag_results.items())[:5]:
+            lag = i - k_trend
             #assert correct design matrices in _autolag
             assert_equal(res.model.exog[-10:,k_trend], x[-11:-1])
             assert_equal(res.model.exog[-1,k_trend+1:], xd[-lag:-1][::-1])

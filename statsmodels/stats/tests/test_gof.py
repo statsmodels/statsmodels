@@ -5,8 +5,6 @@ Created on Thu Feb 28 13:24:59 2013
 
 Author: Josef Perktold
 """
-from statsmodels.compat.python import itervalues
-
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal
 
@@ -17,7 +15,7 @@ from statsmodels.tools.testing import Holder
 
 def test_chisquare_power():
     from .results.results_power import pwr_chisquare
-    for case in itervalues(pwr_chisquare):
+    for case in pwr_chisquare.values():
         power = chisquare_power(case.w, case.N, case.df + 1,
                                 alpha=case.sig_level)
         assert_almost_equal(power, case.power, decimal=6,

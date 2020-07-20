@@ -82,7 +82,7 @@ Potential problems for Python 3
 :change: 2010-05-06 add `label_cells` to `SimpleTable`
 """
 
-from statsmodels.compat.python import lmap, lrange, iteritems
+from statsmodels.compat.python import lmap, lrange
 
 from itertools import cycle, zip_longest
 import csv
@@ -329,11 +329,11 @@ class SimpleTable(list):
     def get_colwidths(self, output_format, **fmt_dict):
         """Return list, the widths of each column."""
         call_args = [output_format]
-        for k, v in sorted(iteritems(fmt_dict)):
+        for k, v in sorted(fmt_dict.items()):
             if isinstance(v, list):
                 call_args.append((k, tuple(v)))
             elif isinstance(v, dict):
-                call_args.append((k, tuple(sorted(iteritems(v)))))
+                call_args.append((k, tuple(sorted(v.items()))))
             else:
                 call_args.append((k, v))
         key = tuple(call_args)
@@ -722,7 +722,13 @@ class Cell(object):
             data_fmts = [data_fmt]
         if isinstance(datatype, int):
             datatype = datatype % len(data_fmts)  # constrain to indexes
-            content = data_fmts[datatype] % (data,)
+            data_fmt = data_fmts[datatype]
+            if isinstance(data_fmt, str):
+                content = data_fmt % (data,)
+            elif callable(data_fmt):
+                content = data_fmt(data)
+            else:
+                raise TypeError("Must be a string or a callable")
             if datatype == 0:
                 content = self._latex_escape(content, fmt, output_format)
         elif datatype in fmt:

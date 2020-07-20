@@ -5,7 +5,7 @@
 @pytest.mark..slow are empirical (test within error limits) and intended to more
 extensively ensure the stability and accuracy of the functions"""
 
-from statsmodels.compat.python import iterkeys, lzip, lmap
+from statsmodels.compat.python import lzip, lmap
 
 from numpy.testing import (
     assert_equal,
@@ -86,7 +86,7 @@ class TestQsturng(object):
         ps, rs, vs, qs = [], [], [], []
         for p in T:
             for v in T[p]:
-                for r in iterkeys(R):
+                for r in R.keys():
                     ps.append(p)
                     vs.append(v)
                     rs.append(r)

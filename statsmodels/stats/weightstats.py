@@ -201,7 +201,7 @@ class DescrStatsW(object):
         uses default ddof
         """
         cov_ = np.dot(self.weights * self.demeaned.T, self.demeaned)
-        cov_ /= (self.sum_weights - self.ddof)
+        cov_ /= self.sum_weights - self.ddof
         return cov_
 
     @cache_readonly
@@ -219,8 +219,9 @@ class DescrStatsW(object):
         std = self.std
         if self.ddof != 0:
             # ddof correction,   (need copy of std)
-            std = std * np.sqrt((self.sum_weights - self.ddof)
-                                / self.sum_weights)
+            std = std * np.sqrt(
+                (self.sum_weights - self.ddof) / self.sum_weights
+            )
 
         return std / np.sqrt(self.sum_weights - 1)
 
@@ -320,7 +321,7 @@ class DescrStatsW(object):
 
         return rslt
 
-    def tconfint_mean(self, alpha=0.05, alternative='two-sided'):
+    def tconfint_mean(self, alpha=0.05, alternative="two-sided"):
         """two-sided confidence interval for weighted mean of data
 
         If the data is 2d, then these are separate confidence intervals
@@ -352,11 +353,12 @@ class DescrStatsW(object):
         """
         # TODO: add asymmetric
         dof = self.sum_weights - 1
-        ci = _tconfint_generic(self.mean, self.std_mean, dof, alpha,
-                               alternative)
+        ci = _tconfint_generic(
+            self.mean, self.std_mean, dof, alpha, alternative
+        )
         return ci
 
-    def zconfint_mean(self, alpha=0.05, alternative='two-sided'):
+    def zconfint_mean(self, alpha=0.05, alternative="two-sided"):
         """two-sided confidence interval for weighted mean of data
 
         Confidence interval is based on normal distribution.
@@ -390,7 +392,7 @@ class DescrStatsW(object):
 
         return _zconfint_generic(self.mean, self.std_mean, alpha, alternative)
 
-    def ttest_mean(self, value=0, alternative='two-sided'):
+    def ttest_mean(self, value=0, alternative="two-sided"):
         """ttest of Null hypothesis that mean is equal to value.
 
         The alternative hypothesis H1 is defined by the following
@@ -423,11 +425,11 @@ class DescrStatsW(object):
         tstat = (self.mean - value) / self.std_mean
         dof = self.sum_weights - 1
         # TODO: use outsourced
-        if alternative == 'two-sided':
+        if alternative == "two-sided":
             pvalue = stats.t.sf(np.abs(tstat), dof) * 2
-        elif alternative == 'larger':
+        elif alternative == "larger":
             pvalue = stats.t.sf(tstat, dof)
-        elif alternative == 'smaller':
+        elif alternative == "smaller":
             pvalue = stats.t.cdf(tstat, dof)
 
         return tstat, pvalue, dof
@@ -464,11 +466,11 @@ class DescrStatsW(object):
 
         """
 
-        t1, pv1, df1 = self.ttest_mean(low, alternative='larger')
-        t2, pv2, df2 = self.ttest_mean(upp, alternative='smaller')
+        t1, pv1, df1 = self.ttest_mean(low, alternative="larger")
+        t2, pv2, df2 = self.ttest_mean(upp, alternative="smaller")
         return np.maximum(pv1, pv2), (t1, pv1, df1), (t2, pv2, df2)
 
-    def ztest_mean(self, value=0, alternative='two-sided'):
+    def ztest_mean(self, value=0, alternative="two-sided"):
         """z-test of Null hypothesis that mean is equal to value.
 
         The alternative hypothesis H1 is defined by the following
@@ -526,11 +528,11 @@ class DescrStatsW(object):
         """
         tstat = (self.mean - value) / self.std_mean
         # TODO: use outsourced
-        if alternative == 'two-sided':
+        if alternative == "two-sided":
             pvalue = stats.norm.sf(np.abs(tstat)) * 2
-        elif alternative == 'larger':
+        elif alternative == "larger":
             pvalue = stats.norm.sf(tstat)
-        elif alternative == 'smaller':
+        elif alternative == "smaller":
             pvalue = stats.norm.cdf(tstat)
 
         return tstat, pvalue
@@ -565,8 +567,8 @@ class DescrStatsW(object):
 
         """
 
-        t1, pv1 = self.ztest_mean(low, alternative='larger')
-        t2, pv2 = self.ztest_mean(upp, alternative='smaller')
+        t1, pv1 = self.ztest_mean(low, alternative="larger")
+        t2, pv2 = self.ztest_mean(upp, alternative="smaller")
         return np.maximum(pv1, pv2), (t1, pv1), (t2, pv2)
 
     def get_compare(self, other, weights=None):
@@ -607,7 +609,7 @@ class DescrStatsW(object):
 
 
 def _tstat_generic(value1, value2, std_diff, dof, alternative, diff=0):
-    '''generic ttest based on summary statistic
+    """generic ttest based on summary statistic
 
     The test statistic is :
         tstat = (value1 - value2 - diff) / std_diff
@@ -641,17 +643,17 @@ def _tstat_generic(value1, value2, std_diff, dof, alternative, diff=0):
     pvalue : float or ndarray
         P-value of the hypothesis test assuming that the test statistic is
         t-distributed with ``df`` degrees of freedom.
-    '''
+    """
 
     tstat = (value1 - value2 - diff) / std_diff
-    if alternative in ['two-sided', '2-sided', '2s']:
+    if alternative in ["two-sided", "2-sided", "2s"]:
         pvalue = stats.t.sf(np.abs(tstat), dof) * 2
-    elif alternative in ['larger', 'l']:
+    elif alternative in ["larger", "l"]:
         pvalue = stats.t.sf(tstat, dof)
-    elif alternative in ['smaller', 's']:
+    elif alternative in ["smaller", "s"]:
         pvalue = stats.t.cdf(tstat, dof)
     else:
-        raise ValueError('invalid alternative')
+        raise ValueError("invalid alternative")
     return tstat, pvalue
 
 
@@ -686,20 +688,20 @@ def _tconfint_generic(mean, std_mean, dof, alpha, alternative):
         "larger".
     """
 
-    if alternative in ['two-sided', '2-sided', '2s']:
-        tcrit = stats.t.ppf(1 - alpha / 2., dof)
+    if alternative in ["two-sided", "2-sided", "2s"]:
+        tcrit = stats.t.ppf(1 - alpha / 2.0, dof)
         lower = mean - tcrit * std_mean
         upper = mean + tcrit * std_mean
-    elif alternative in ['larger', 'l']:
+    elif alternative in ["larger", "l"]:
         tcrit = stats.t.ppf(alpha, dof)
         lower = mean + tcrit * std_mean
         upper = np.inf
-    elif alternative in ['smaller', 's']:
+    elif alternative in ["smaller", "s"]:
         tcrit = stats.t.ppf(1 - alpha, dof)
         lower = -np.inf
         upper = mean + tcrit * std_mean
     else:
-        raise ValueError('invalid alternative')
+        raise ValueError("invalid alternative")
 
     return lower, upper
 
@@ -740,14 +742,14 @@ def _zstat_generic(value1, value2, std_diff, alternative, diff=0):
     """
 
     zstat = (value1 - value2 - diff) / std_diff
-    if alternative in ['two-sided', '2-sided', '2s']:
+    if alternative in ["two-sided", "2-sided", "2s"]:
         pvalue = stats.norm.sf(np.abs(zstat)) * 2
-    elif alternative in ['larger', 'l']:
+    elif alternative in ["larger", "l"]:
         pvalue = stats.norm.sf(zstat)
-    elif alternative in ['smaller', 's']:
+    elif alternative in ["smaller", "s"]:
         pvalue = stats.norm.cdf(zstat)
     else:
-        raise ValueError('invalid alternative')
+        raise ValueError("invalid alternative")
     return zstat, pvalue
 
 
@@ -784,14 +786,14 @@ def _zstat_generic2(value, std, alternative):
     """
 
     zstat = value / std
-    if alternative in ['two-sided', '2-sided', '2s']:
+    if alternative in ["two-sided", "2-sided", "2s"]:
         pvalue = stats.norm.sf(np.abs(zstat)) * 2
-    elif alternative in ['larger', 'l']:
+    elif alternative in ["larger", "l"]:
         pvalue = stats.norm.sf(zstat)
-    elif alternative in ['smaller', 's']:
+    elif alternative in ["smaller", "s"]:
         pvalue = stats.norm.cdf(zstat)
     else:
-        raise ValueError('invalid alternative')
+        raise ValueError("invalid alternative")
     return zstat, pvalue
 
 
@@ -824,20 +826,20 @@ def _zconfint_generic(mean, std_mean, alpha, alternative):
         "larger".
     """
 
-    if alternative in ['two-sided', '2-sided', '2s']:
-        zcrit = stats.norm.ppf(1 - alpha / 2.)
+    if alternative in ["two-sided", "2-sided", "2s"]:
+        zcrit = stats.norm.ppf(1 - alpha / 2.0)
         lower = mean - zcrit * std_mean
         upper = mean + zcrit * std_mean
-    elif alternative in ['larger', 'l']:
+    elif alternative in ["larger", "l"]:
         zcrit = stats.norm.ppf(alpha)
         lower = mean + zcrit * std_mean
         upper = np.inf
-    elif alternative in ['smaller', 's']:
+    elif alternative in ["smaller", "s"]:
         zcrit = stats.norm.ppf(1 - alpha)
         lower = -np.inf
         upper = mean + zcrit * std_mean
     else:
-        raise ValueError('invalid alternative')
+        raise ValueError("invalid alternative")
 
     return lower, upper
 
@@ -876,8 +878,9 @@ class CompareMeans(object):
     #        self.nobs2 = d2.sum_weights.astype(float)
 
     @classmethod
-    def from_data(cls, data1, data2, weights1=None, weights2=None,
-                  ddof1=0, ddof2=0):
+    def from_data(
+        cls, data1, data2, weights1=None, weights2=None, ddof1=0, ddof2=0
+    ):
         """construct a CompareMeans object from data
 
         Parameters
@@ -896,10 +899,12 @@ class CompareMeans(object):
         A CompareMeans instance.
 
         """
-        return cls(DescrStatsW(data1, weights=weights1, ddof=ddof1),
-                   DescrStatsW(data2, weights=weights2, ddof=ddof2))
+        return cls(
+            DescrStatsW(data1, weights=weights1, ddof=ddof1),
+            DescrStatsW(data2, weights=weights2, ddof=ddof2),
+        )
 
-    def summary(self, use_t=True, alpha=0.05, usevar='pooled', value=0):
+    def summary(self, use_t=True, alpha=0.05, usevar="pooled", value=0):
         """summarize the results of the hypothesis test
 
         Parameters
@@ -936,7 +941,7 @@ class CompareMeans(object):
             tstat, pvalue = self.ztest_ind(usevar=usevar, value=value)
             lower, upper = self.zconfint_diff(alpha=alpha, usevar=usevar)
 
-        if usevar == 'pooled':
+        if usevar == "pooled":
             std_err = self.std_meandiff_pooledvar
         else:
             std_err = self.std_meandiff_separatevar
@@ -949,15 +954,20 @@ class CompareMeans(object):
         conf_int = np.column_stack((lower, upper))
         params = np.atleast_1d(d1.mean - d2.mean - value)
 
-        title = 'Test for equality of means'
-        yname = 'y'  # not used in params_frame
-        xname = ['subset #%d' % (ii + 1) for ii in range(tstat.shape[0])]
+        title = "Test for equality of means"
+        yname = "y"  # not used in params_frame
+        xname = ["subset #%d" % (ii + 1) for ii in range(tstat.shape[0])]
 
         from statsmodels.iolib.summary import summary_params
-        return summary_params((None, params, std_err, tstat, pvalue, conf_int),
-                              alpha=alpha, use_t=use_t, yname=yname,
-                              xname=xname,
-                              title=title)
+
+        return summary_params(
+            (None, params, std_err, tstat, pvalue, conf_int),
+            alpha=alpha,
+            use_t=use_t,
+            yname=yname,
+            xname=xname,
+            title=title,
+        )
 
     @cache_readonly
     def std_meandiff_separatevar(self):
@@ -976,10 +986,13 @@ class CompareMeans(object):
         d1 = self.d1
         d2 = self.d2
         # could make var_pooled into attribute
-        var_pooled = ((d1.sumsquares + d2.sumsquares) /
-                      # (d1.nobs - d1.ddof + d2.nobs - d2.ddof))
-                      (d1.nobs - 1 + d2.nobs - 1))
-        return np.sqrt(var_pooled * (1. / d1.nobs + 1. / d2.nobs))
+        var_pooled = (
+            (d1.sumsquares + d2.sumsquares)
+            /
+            # (d1.nobs - d1.ddof + d2.nobs - d2.ddof))
+            (d1.nobs - 1 + d2.nobs - 1)
+        )
+        return np.sqrt(var_pooled * (1.0 / d1.nobs + 1.0 / d2.nobs))
 
     def dof_satt(self):
         """degrees of freedom of Satterthwaite for unequal variance
@@ -993,10 +1006,10 @@ class CompareMeans(object):
         semsum = sem1 + sem2
         z1 = (sem1 / semsum) ** 2 / (d1.nobs - 1)
         z2 = (sem2 / semsum) ** 2 / (d2.nobs - 1)
-        dof = 1. / (z1 + z2)
+        dof = 1.0 / (z1 + z2)
         return dof
 
-    def ttest_ind(self, alternative='two-sided', usevar='pooled', value=0):
+    def ttest_ind(self, alternative="two-sided", usevar="pooled", value=0):
         """ttest for the null hypothesis of identical means
 
         this should also be the same as onewaygls, except for ddof differences
@@ -1038,21 +1051,22 @@ class CompareMeans(object):
         d1 = self.d1
         d2 = self.d2
 
-        if usevar == 'pooled':
+        if usevar == "pooled":
             stdm = self.std_meandiff_pooledvar
-            dof = (d1.nobs - 1 + d2.nobs - 1)
-        elif usevar == 'unequal':
+            dof = d1.nobs - 1 + d2.nobs - 1
+        elif usevar == "unequal":
             stdm = self.std_meandiff_separatevar
             dof = self.dof_satt()
         else:
             raise ValueError('usevar can only be "pooled" or "unequal"')
 
-        tstat, pval = _tstat_generic(d1.mean, d2.mean, stdm, dof, alternative,
-                                     diff=value)
+        tstat, pval = _tstat_generic(
+            d1.mean, d2.mean, stdm, dof, alternative, diff=value
+        )
 
         return tstat, pval, dof
 
-    def ztest_ind(self, alternative='two-sided', usevar='pooled', value=0):
+    def ztest_ind(self, alternative="two-sided", usevar="pooled", value=0):
         """z-test for the null hypothesis of identical means
 
         Parameters
@@ -1085,20 +1099,22 @@ class CompareMeans(object):
         d1 = self.d1
         d2 = self.d2
 
-        if usevar == 'pooled':
+        if usevar == "pooled":
             stdm = self.std_meandiff_pooledvar
-        elif usevar == 'unequal':
+        elif usevar == "unequal":
             stdm = self.std_meandiff_separatevar
         else:
             raise ValueError('usevar can only be "pooled" or "unequal"')
 
-        tstat, pval = _zstat_generic(d1.mean, d2.mean, stdm, alternative,
-                                     diff=value)
+        tstat, pval = _zstat_generic(
+            d1.mean, d2.mean, stdm, alternative, diff=value
+        )
 
         return tstat, pval
 
-    def tconfint_diff(self, alpha=0.05, alternative='two-sided',
-                      usevar='pooled'):
+    def tconfint_diff(
+        self, alpha=0.05, alternative="two-sided", usevar="pooled"
+    ):
         """confidence interval for the difference in means
 
         Parameters
@@ -1133,21 +1149,23 @@ class CompareMeans(object):
         d1 = self.d1
         d2 = self.d2
         diff = d1.mean - d2.mean
-        if usevar == 'pooled':
+        if usevar == "pooled":
             std_diff = self.std_meandiff_pooledvar
-            dof = (d1.nobs - 1 + d2.nobs - 1)
-        elif usevar == 'unequal':
+            dof = d1.nobs - 1 + d2.nobs - 1
+        elif usevar == "unequal":
             std_diff = self.std_meandiff_separatevar
             dof = self.dof_satt()
         else:
             raise ValueError('usevar can only be "pooled" or "unequal"')
 
-        res = _tconfint_generic(diff, std_diff, dof, alpha=alpha,
-                                alternative=alternative)
+        res = _tconfint_generic(
+            diff, std_diff, dof, alpha=alpha, alternative=alternative
+        )
         return res
 
-    def zconfint_diff(self, alpha=0.05, alternative='two-sided',
-                      usevar='pooled'):
+    def zconfint_diff(
+        self, alpha=0.05, alternative="two-sided", usevar="pooled"
+    ):
         """confidence interval for the difference in means
 
         Parameters
@@ -1182,18 +1200,19 @@ class CompareMeans(object):
         d1 = self.d1
         d2 = self.d2
         diff = d1.mean - d2.mean
-        if usevar == 'pooled':
+        if usevar == "pooled":
             std_diff = self.std_meandiff_pooledvar
-        elif usevar == 'unequal':
+        elif usevar == "unequal":
             std_diff = self.std_meandiff_separatevar
         else:
             raise ValueError('usevar can only be "pooled" or "unequal"')
 
-        res = _zconfint_generic(diff, std_diff, alpha=alpha,
-                                alternative=alternative)
+        res = _zconfint_generic(
+            diff, std_diff, alpha=alpha, alternative=alternative
+        )
         return res
 
-    def ttost_ind(self, low, upp, usevar='pooled'):
+    def ttost_ind(self, low, upp, usevar="pooled"):
         """
         test of equivalence for two independent samples, base on t-test
 
@@ -1215,12 +1234,12 @@ class CompareMeans(object):
         t2, pv2 : tuple of floats
             test statistic and pvalue for upper threshold test
         """
-        tt1 = self.ttest_ind(alternative='larger', usevar=usevar, value=low)
-        tt2 = self.ttest_ind(alternative='smaller', usevar=usevar, value=upp)
+        tt1 = self.ttest_ind(alternative="larger", usevar=usevar, value=low)
+        tt2 = self.ttest_ind(alternative="smaller", usevar=usevar, value=upp)
         # TODO: remove tuple return, use same as for function tost_ind
         return np.maximum(tt1[1], tt2[1]), (tt1, tt2)
 
-    def ztost_ind(self, low, upp, usevar='pooled'):
+    def ztost_ind(self, low, upp, usevar="pooled"):
         """
         test of equivalence for two independent samples, based on z-test
 
@@ -1242,8 +1261,8 @@ class CompareMeans(object):
         t2, pv2 : tuple of floats
             test statistic and pvalue for upper threshold test
         """
-        tt1 = self.ztest_ind(alternative='larger', usevar=usevar, value=low)
-        tt2 = self.ztest_ind(alternative='smaller', usevar=usevar, value=upp)
+        tt1 = self.ztest_ind(alternative="larger", usevar=usevar, value=low)
+        tt2 = self.ztest_ind(alternative="smaller", usevar=usevar, value=upp)
         # TODO: remove tuple return, use same as for function tost_ind
         return np.maximum(tt1[1], tt2[1]), tt1, tt2
 
@@ -1261,8 +1280,14 @@ class CompareMeans(object):
 ##        return stats.levene(d1.data, d2.data)
 
 
-def ttest_ind(x1, x2, alternative='two-sided', usevar='pooled',
-              weights=(None, None), value=0):
+def ttest_ind(
+    x1,
+    x2,
+    alternative="two-sided",
+    usevar="pooled",
+    weights=(None, None),
+    value=0,
+):
     """ttest independent sample
 
     Convenience function that uses the classes and throws away the intermediate
@@ -1304,16 +1329,20 @@ def ttest_ind(x1, x2, alternative='two-sided', usevar='pooled',
         degrees of freedom used in the t-test
 
     """
-    cm = CompareMeans(DescrStatsW(x1, weights=weights[0], ddof=0),
-                      DescrStatsW(x2, weights=weights[1], ddof=0))
-    tstat, pval, dof = cm.ttest_ind(alternative=alternative, usevar=usevar,
-                                    value=value)
+    cm = CompareMeans(
+        DescrStatsW(x1, weights=weights[0], ddof=0),
+        DescrStatsW(x2, weights=weights[1], ddof=0),
+    )
+    tstat, pval, dof = cm.ttest_ind(
+        alternative=alternative, usevar=usevar, value=value
+    )
 
     return tstat, pval, dof
 
 
-def ttost_ind(x1, x2, low, upp, usevar='pooled', weights=(None, None),
-              transform=None):
+def ttost_ind(
+    x1, x2, low, upp, usevar="pooled", weights=(None, None), transform=None
+):
     """test of (non-)equivalence for two independent samples
 
     TOST: two one-sided t tests
@@ -1379,12 +1408,14 @@ def ttost_ind(x1, x2, low, upp, usevar='pooled', weights=(None, None),
             # for transforms like rankdata that will need both datasets
             # concatenate works for stacking 1d and 2d arrays
             xx = transform(np.concatenate((x1, x2), 0))
-            x1 = xx[:len(x1)]
-            x2 = xx[len(x1):]
+            x1 = xx[: len(x1)]
+            x2 = xx[len(x1) :]
         low = transform(low)
         upp = transform(upp)
-    cm = CompareMeans(DescrStatsW(x1, weights=weights[0], ddof=0),
-                      DescrStatsW(x2, weights=weights[1], ddof=0))
+    cm = CompareMeans(
+        DescrStatsW(x1, weights=weights[0], ddof=0),
+        DescrStatsW(x2, weights=weights[1], ddof=0),
+    )
     pval, res = cm.ttost_ind(low, upp, usevar=usevar)
     return pval, res[0], res[1]
 
@@ -1439,18 +1470,19 @@ def ttost_paired(x1, x2, low, upp, transform=None, weights=None):
             # for transforms like rankdata that will need both datasets
             # concatenate works for stacking 1d and 2d arrays
             xx = transform(np.concatenate((x1, x2), 0))
-            x1 = xx[:len(x1)]
-            x2 = xx[len(x1):]
+            x1 = xx[: len(x1)]
+            x2 = xx[len(x1) :]
         low = transform(low)
         upp = transform(upp)
     dd = DescrStatsW(x1 - x2, weights=weights, ddof=0)
-    t1, pv1, df1 = dd.ttest_mean(low, alternative='larger')
-    t2, pv2, df2 = dd.ttest_mean(upp, alternative='smaller')
+    t1, pv1, df1 = dd.ttest_mean(low, alternative="larger")
+    t2, pv2, df2 = dd.ttest_mean(upp, alternative="smaller")
     return np.maximum(pv1, pv2), (t1, pv1, df1), (t2, pv2, df2)
 
 
-def ztest(x1, x2=None, value=0, alternative='two-sided', usevar='pooled',
-          ddof=1.):
+def ztest(
+    x1, x2=None, value=0, alternative="two-sided", usevar="pooled", ddof=1.0
+):
     """test for mean based on normal distribution, one or two samples
 
     In the case of two samples, the samples are assumed to be independent.
@@ -1501,7 +1533,7 @@ def ztest(x1, x2=None, value=0, alternative='two-sided', usevar='pooled',
 
     # usevar is not used, always pooled
 
-    if usevar != 'pooled':
+    if usevar != "pooled":
         raise NotImplementedError('only usevar="pooled" is implemented')
 
     x1 = np.asarray(x1)
@@ -1513,9 +1545,9 @@ def ztest(x1, x2=None, value=0, alternative='two-sided', usevar='pooled',
         nobs2 = x2.shape[0]
         x2_mean = x2.mean(0)
         x2_var = x2.var(0)
-        var_pooled = (nobs1 * x1_var + nobs2 * x2_var)
-        var_pooled /= (nobs1 + nobs2 - 2 * ddof)
-        var_pooled *= (1. / nobs1 + 1. / nobs2)
+        var_pooled = nobs1 * x1_var + nobs2 * x2_var
+        var_pooled /= nobs1 + nobs2 - 2 * ddof
+        var_pooled *= 1.0 / nobs1 + 1.0 / nobs2
     else:
         var_pooled = x1_var / (nobs1 - ddof)
         x2_mean = 0
@@ -1525,8 +1557,15 @@ def ztest(x1, x2=None, value=0, alternative='two-sided', usevar='pooled',
     return _zstat_generic(x1_mean, x2_mean, std_diff, alternative, diff=value)
 
 
-def zconfint(x1, x2=None, value=0, alpha=0.05, alternative='two-sided',
-             usevar='pooled', ddof=1.):
+def zconfint(
+    x1,
+    x2=None,
+    value=0,
+    alpha=0.05,
+    alternative="two-sided",
+    usevar="pooled",
+    ddof=1.0,
+):
     """confidence interval based on normal distribution z-test
 
     Parameters
@@ -1568,7 +1607,7 @@ def zconfint(x1, x2=None, value=0, alpha=0.05, alternative='two-sided',
     # usevar is not used, always pooled
     # mostly duplicate code from ztest
 
-    if usevar != 'pooled':
+    if usevar != "pooled":
         raise NotImplementedError('only usevar="pooled" is implemented')
     x1 = np.asarray(x1)
     nobs1 = x1.shape[0]
@@ -1579,20 +1618,21 @@ def zconfint(x1, x2=None, value=0, alpha=0.05, alternative='two-sided',
         nobs2 = x2.shape[0]
         x2_mean = x2.mean(0)
         x2_var = x2.var(0)
-        var_pooled = (nobs1 * x1_var + nobs2 * x2_var)
-        var_pooled /= (nobs1 + nobs2 - 2 * ddof)
-        var_pooled *= (1. / nobs1 + 1. / nobs2)
+        var_pooled = nobs1 * x1_var + nobs2 * x2_var
+        var_pooled /= nobs1 + nobs2 - 2 * ddof
+        var_pooled *= 1.0 / nobs1 + 1.0 / nobs2
     else:
         var_pooled = x1_var / (nobs1 - ddof)
         x2_mean = 0
 
     std_diff = np.sqrt(var_pooled)
-    ci = _zconfint_generic(x1_mean - x2_mean - value, std_diff, alpha,
-                           alternative)
+    ci = _zconfint_generic(
+        x1_mean - x2_mean - value, std_diff, alpha, alternative
+    )
     return ci
 
 
-def ztost(x1, low, upp, x2=None, usevar='pooled', ddof=1.):
+def ztost(x1, low, upp, x2=None, usevar="pooled", ddof=1.0):
     """Equivalence test based on normal distribution
 
     Parameters
@@ -1622,8 +1662,14 @@ def ztost(x1, low, upp, x2=None, usevar='pooled', ddof=1.):
     checked only for 1 sample case
 
     """
-    tt1 = ztest(x1, x2, alternative='larger', usevar=usevar, value=low,
-                ddof=ddof)
-    tt2 = ztest(x1, x2, alternative='smaller', usevar=usevar, value=upp,
-                ddof=ddof)
-    return np.maximum(tt1[1], tt2[1]), tt1, tt2,
+    tt1 = ztest(
+        x1, x2, alternative="larger", usevar=usevar, value=low, ddof=ddof
+    )
+    tt2 = ztest(
+        x1, x2, alternative="smaller", usevar=usevar, value=upp, ddof=ddof
+    )
+    return (
+        np.maximum(tt1[1], tt2[1]),
+        tt1,
+        tt2,
+    )

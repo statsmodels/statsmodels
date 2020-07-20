@@ -3,7 +3,7 @@
 Test VAR Model
 """
 from statsmodels.compat.pandas import assert_index_equal
-from statsmodels.compat.python import iteritems, lrange
+from statsmodels.compat.python import lrange
 
 from io import BytesIO, StringIO
 import os
@@ -600,7 +600,7 @@ def test_get_trendorder():
         'ctt': 3
     }
 
-    for t, trendorder in iteritems(results):
+    for t, trendorder in results.items():
         assert (util.get_trendorder(t) == trendorder)
 
 
