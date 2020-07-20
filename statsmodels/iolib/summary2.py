@@ -582,6 +582,7 @@ def _df_to_simpletable(df, align='r', float_format="%.4f", header=True,
     st = SimpleTable(np.array(dat), headers=headers, stubs=stubs,
                      ltx_fmt=fmt_latex, txt_fmt=fmt_txt)
     st.output_formats['latex']['data_aligns'] = align
+    st.output_formats['latex']['header_align'] = align
     st.output_formats['txt']['data_aligns'] = align
     st.output_formats['txt']['table_dec_above'] = table_dec_above
     st.output_formats['txt']['table_dec_below'] = table_dec_below
