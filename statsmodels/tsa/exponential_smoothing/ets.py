@@ -1849,24 +1849,24 @@ class ETSResults(base.StateSpaceMLEResults):
             dynamic, _, _ = self.model._get_index_loc(dynamic)
         elif isinstance(dynamic, bool):
             if dynamic:
-                dynamic = start
+                dynamic = 0
             else:
-                dynamic = end + 1
+                dynamic = end + 1 - start
 
         # start : index of first predicted value
-        # dynamic : index of first dynamically predicted value
-        #     -> if start = dynamic, only dynamic simulations
-        if dynamic == start:
+        # dynamic : offset to first dynamically predicted value
+        #     -> if dynamic == 0, only dynamic simulations
+        if dynamic == 0:
             start_smooth = None
             end_smooth = None
             nsmooth = 0
             start_dynamic = start
         else:
-            # dynamic simulations from start to dynamic - 1
+            # dynamic simulations from start + dynamic
             start_smooth = start
-            end_smooth = min(dynamic - 1, end)
+            end_smooth = min(start + dynamic - 1, end)
             nsmooth = end_smooth - start_smooth + 1
-            start_dynamic = end_smooth + 1
+            start_dynamic = start + dynamic
         # anchor for simulations is one before start_dynamic
         if start_dynamic == 0:
             anchor_dynamic = "start"

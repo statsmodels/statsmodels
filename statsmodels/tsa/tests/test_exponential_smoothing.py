@@ -592,7 +592,7 @@ def test_predict_ranges(austourists_model_fit):
     pred = fit.predict(start=10, end=20)
     assert len(pred) == 11
 
-    pred = fit.predict(start=10, dynamic=20, end=30)
+    pred = fit.predict(start=10, dynamic=10, end=30)
     assert len(pred) == 21
 
     # try boolean dynamic
@@ -725,17 +725,14 @@ def test_prediction_results_vs_statespace(statespace_comparison):
 
     # comparison of two predictions
     ets_pred = ets_results.get_prediction(
-        start=10, dynamic=30, end=40
+        start=10, dynamic=10, end=40
     )
     statespace_pred = statespace_results.get_prediction(
-        start=10, dynamic=30, end=40
+        start=10, dynamic=10, end=40
     )
+
     statespace_summary = statespace_pred.summary_frame()
     ets_summary = ets_pred.summary_frame()
-    assert_almost_equal(
-        ets_summary["mean"].values[:-10],
-        statespace_summary["mean"].values[:-10],
-    )
 
     # import matplotlib.pyplot as plt
     # plt.switch_backend('TkAgg')
@@ -743,18 +740,18 @@ def test_prediction_results_vs_statespace(statespace_comparison):
     # plt.grid()
     # plt.show()
 
-    # TODO: the dynamic part of the simulations is quite different!
-    try:
-        assert_almost_equal(
-            ets_summary["mean"].values[-10:],
-            statespace_summary["mean"].values[-10:],
-            4
-        )
-    except AssertionError:
-        pass
+    assert_almost_equal(
+        ets_summary["mean"].values[:-10],
+        statespace_summary["mean"].values[:-10],
+    )
+
+    assert_almost_equal(
+        ets_summary["mean"].values[-10:],
+        statespace_summary["mean"].values[-10:],
+        4
+    )
 
     # comparison of dynamic prediction at end of sample -> this works
-    ets_results, statespace_results = statespace_comparison
     ets_pred = ets_results.get_prediction(
         start=60, end=80,
     )
