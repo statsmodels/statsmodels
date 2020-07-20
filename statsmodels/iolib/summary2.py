@@ -206,6 +206,12 @@ class Summary(object):
         settings = self.settings
         title = self.title
 
+        table1 = tables[1].reset_index()
+        table1 = table1.T.reset_index().T.reset_index(drop=True)
+        table1.iloc[0, 0] = ''
+        tables[1] = table1
+        settings[1]['index'] = settings[1]['header'] = False
+
         if title is not None:
             title = '\\caption{' + title + '}'
         else:
