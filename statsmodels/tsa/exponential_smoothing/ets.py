@@ -1315,8 +1315,8 @@ class ETSModel(base.StateSpaceMLEModel):
 class ETSResults(base.StateSpaceMLEResults):
     def __init__(self, model, params, results):
         yhat, xhat = results
-        self._llf = self.model.loglike(params)
-        self._residuals = self.model._residuals(yhat)
+        self._llf = model.loglike(params)
+        self._residuals = model._residuals(yhat)
         self._fittedvalues = yhat
         # scale is concentrated in this model formulation and corresponds to
         # mean squared residuals, see docstring of model.loglike
@@ -1376,7 +1376,7 @@ class ETSResults(base.StateSpaceMLEResults):
 
         # degrees of freedom of model
         k_free_params = self.k_params - len(self.fixed_params)
-        self.df_model = k_free_params
+        self.df_model = k_free_params + 1
 
         # standardized forecasting error
         self.mean_resid = np.mean(self.resid)

@@ -13,7 +13,7 @@ import scipy.stats
 
 from statsmodels.tsa.exponential_smoothing.ets import ETSModel
 from statsmodels.tsa.holtwinters import ExponentialSmoothing
-import statsmodels.tsa.statespace as statespace
+import statsmodels.tsa.statespace.exponential_smoothing as statespace
 
 # This contains tests for the exponential smoothing implementation in
 # tsa/exponential_smoothing/ets.py.
@@ -119,6 +119,9 @@ def austourists_model(austourists):
         damped_trend=True,
     )
 
+@pytest.fixture
+def austourists_model_fit(austourists_model):
+    return austourists_model.fit(disp=False)
 
 @pytest.fixture
 def oildata_model(oildata):
