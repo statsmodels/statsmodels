@@ -557,7 +557,19 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
             # Default lags for acorr_ljungbox is 40, but may not always have
             # that many observations
             if lags is None:
-                lags = min(40, nobs_effective - 1)
+                seasonal_periods = getattr(self.model, "seasonal_periods", 0)
+                if seasonal_periods:
+                    lags = min(2 * seasonal_periods, nobs_effective // 5)
+                else:
+                    lags = min(10, nobs_effective // 5)
+
+                warnings.warn(
+                    "The default value of lags is changing.  After 0.12, "
+                    "this value will become min(10, nobs//5) for non-seasonal "
+                    "time series and min (2*m, nobs//5) for seasonal time "
+                    "series. Directly set lags to silence this warning.",
+                    FutureWarning
+                )
 
             for i in range(self.model.k_endog):
                 if hasattr(self, "filter_results"):
