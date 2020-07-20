@@ -17,6 +17,7 @@ class TestSummaryLatex(object):
         desired = r'''
 \begin{table}
 \caption{}
+\label{}
 \begin{center}
 \begin{tabular}{lll}
 \hline

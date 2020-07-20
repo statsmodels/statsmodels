@@ -199,8 +199,14 @@ class Summary(object):
 
         return tab
 
-    def as_latex(self):
+    def as_latex(self, label=''):
         """Generate LaTeX Summary Table
+
+        Parameters
+        ----------
+        label : str
+            Label of the summary table that can be referenced
+            in a latex document (optional)
         """
         tables = self.tables
         settings = self.settings
@@ -210,6 +216,8 @@ class Summary(object):
             title = '\\caption{' + title + '}'
         else:
             title = '\\caption{}'
+
+        label = '\\label{' + label + '}'
 
         simple_tables = _simple_tables(tables, settings)
         tab = [x.as_latex_tabular() for x in simple_tables]
@@ -222,7 +230,7 @@ class Summary(object):
             # create single tabular object for summary_col
             tab = re.sub(to_replace, r'\\midrule\n', tab)
 
-        out = '\\begin{table}', title, tab, '\\end{table}'
+        out = '\\begin{table}', title, label, tab, '\\end{table}'
         out = '\n'.join(out)
         return out
 
