@@ -187,7 +187,8 @@ class TrimmedMean(object):
 
     def ttest_mean(self, value=0, transform='trimmed',
                    alternative='two-sided'):
-        """One sample ttest for trimmed or winsorized mean
+        """
+        One sample ttest for trimmed or Winsorized mean
 
         Parameters
         ----------

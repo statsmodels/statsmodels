@@ -130,7 +130,7 @@ class TestTrimmedR1(object):
         assert_equal(ttt[2], ytt1.parameter)
         assert_allclose(tm.mean_trimmed, ytt1.estimate, rtol=1e-13)
 
-        # regression test for winsorized t-test,
+        # regression test for Winsorized t-test,
         # mean, std for it are separately unit tested,
         # df is nobs_reduced-1 in references
         ttw_statistic, ttw_pvalue, tt_w_df = (4.090283559190728,

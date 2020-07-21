@@ -1426,68 +1426,76 @@ def test_proportions_2indep(count1, nobs1, count2, nobs2, value=None,
 
     for compare = 'diff'
 
-       H0: prop1 - prop2 - value = 0
-       H1: prop1 - prop2 - value != 0  if alternative = 'two-sided'
-       H1: prop1 - prop2 - value > 0   if alternative = 'larger'
-       H1: prop1 - prop2 - value < 0   if alternative = 'smaller'
+    * H0: prop1 - prop2 - value = 0
+    * H1: prop1 - prop2 - value != 0  if alternative = 'two-sided'
+    * H1: prop1 - prop2 - value > 0   if alternative = 'larger'
+    * H1: prop1 - prop2 - value < 0   if alternative = 'smaller'
 
     for compare = 'ratio'
 
-       H0: prop1 / prop2 - value = 0
-       H1: prop1 / prop2 - value != 0  if alternative = 'two-sided'
-       H1: prop1 / prop2 - value > 0   if alternative = 'larger'
-       H1: prop1 / prop2 - value < 0   if alternative = 'smaller'
+    * H0: prop1 / prop2 - value = 0
+    * H1: prop1 / prop2 - value != 0  if alternative = 'two-sided'
+    * H1: prop1 / prop2 - value > 0   if alternative = 'larger'
+    * H1: prop1 / prop2 - value < 0   if alternative = 'smaller'
 
     for compare = 'odds-ratio'
 
-       H0: or - value = 0
-       H1: or - value != 0  if alternative = 'two-sided'
-       H1: or - value > 0   if alternative = 'larger'
-       H1: or - value < 0   if alternative = 'smaller'
+    * H0: or - value = 0
+    * H1: or - value != 0  if alternative = 'two-sided'
+    * H1: or - value > 0   if alternative = 'larger'
+    * H1: or - value < 0   if alternative = 'smaller'
 
     where odds-ratio or = prop1 / (1 - prop1) / (prop2 / (1 - prop2))
 
     Parameters
     ----------
-    count1, nobs1 :
-        Count and sample size for first sample.
-    count2, nobs2 :
-        Count and sample size for the second sample.
+    count1 : int
+        Count for first sample.
+    nobs1 : int
+        Sample size for first sample.
+    count2 : int
+        Count for the second sample.
+    nobs2 : int
+        Sample size for the second sample.
     method : string
         Method for computing confidence interval. If method is None, then a
         default method is used. The default might change as more methods are
         added.
+
         diff:
-         - 'wald',
-         - 'agresti-caffo'
-         - 'score' if correction is True, then this uses the degrees of freedom
+
+        - 'wald',
+        - 'agresti-caffo'
+        - 'score' if correction is True, then this uses the degrees of freedom
            correction ``nobs / (nobs - 1)`` as in Miettinen Nurminen 1985
 
         ratio:
-         - 'log': wald test using log transformation
-         - 'log-adjusted': wald test using log transformation,
-            adds 0.5 to counts
-         - 'score' if correction is True, then this uses the degrees of freedom
+
+        - 'log': wald test using log transformation
+        - 'log-adjusted': wald test using log transformation,
+           adds 0.5 to counts
+        - 'score' if correction is True, then this uses the degrees of freedom
            correction ``nobs / (nobs - 1)`` as in Miettinen Nurminen 1985
 
         odds-ratio:
-         - 'logit': wald test using logit transformation
-         - 'logit-adjusted': : wald test using logit transformation,
-            adds 0.5 to counts
-         - 'logit-smoothed': : wald test using logit transformation, biases
-            cell counts towards independence by adding two observations in
-            total.
-         - 'score' if correction is True, then this uses the degrees of freedom
-            correction ``nobs / (nobs - 1)`` as in Miettinen Nurminen 1985
 
-    compare : string in ['diff', 'ratio' 'odds-ratio']
+        - 'logit': wald test using logit transformation
+        - 'logit-adjusted': : wald test using logit transformation,
+           adds 0.5 to counts
+        - 'logit-smoothed': : wald test using logit transformation, biases
+           cell counts towards independence by adding two observations in
+           total.
+        - 'score' if correction is True, then this uses the degrees of freedom
+           correction ``nobs / (nobs - 1)`` as in Miettinen Nurminen 1985
+
+    compare : {'diff', 'ratio' 'odds-ratio'}
         If compare is `diff`, then the confidence interval is for
         diff = p1 - p2.
         If compare is `ratio`, then the confidence interval is for the
         risk ratio defined by ratio = p1 / p2.
         If compare is `odds-ratio`, then the confidence interval is for the
         odds-ratio defined by or = p1 / (1 - p1) / (p2 / (1 - p2)
-    alternative : string in ['two-sided', 'smaller', 'larger']
+    alternative : {'two-sided', 'smaller', 'larger'}
         alternative hypothesis, which can be two-sided or either one of the
         one-sided tests.
     correction : bool
@@ -1846,15 +1854,17 @@ def power_proportions_2indep(diff, prop2, nobs1, ratio=1, alpha=0.05,
             Power of the test, e.g. 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
-        other attributes in results instance include :
 
-            p_pooled : pooled proportion, used for std_null
-            std_null : standard error of difference under the null hypothesis
-                (without sqrt(nobs))
-            std_alt : standard error of difference under the alternative
-                hypothesis (without sqrt(nobs))
+        Other attributes in results instance include :
 
-
+        p_pooled
+            pooled proportion, used for std_null
+        std_null
+            standard error of difference under the null hypothesis (without
+            sqrt(nobs))
+        std_alt
+            standard error of difference under the alternative hypothesis
+            (without sqrt(nobs))
     """
     # TODO: avoid possible circular import, check if needed
     from statsmodels.stats.power import normal_power_het
@@ -1889,7 +1899,7 @@ def samplesize_proportions_2indep_onetail(diff, prop2, power, ratio=1,
     This uses an explicit computation for the sample size that is required
     to achieve a given power corresponding to the appropriate tails of the
     normal distribution. This ignores the far tail in a two-sided test
-    which is negligable in the common case when alternative and null are
+    which is negligible in the common case when alternative and null are
     far apart.
 
     Parameters

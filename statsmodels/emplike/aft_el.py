@@ -429,7 +429,7 @@ class AFTResults(OptAFT):
         maximum number of inner iterations for a specific value for the
         nuisance parameters while the resultsof the function are still valid.
         This usually occurs when the optimization over the nuisance parameters
-        selects paramater values that yield a log-likihood ratio close to
+        selects parameter values that yield a log-likihood ratio close to
         infinity.
 
         Examples

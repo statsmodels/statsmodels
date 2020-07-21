@@ -94,7 +94,7 @@ class OneWayLS(object):
       (which in turn is verified against NIST for not badly scaled problems)
     * f-test for simple structural break is the same as in original script
     * power and size of test look ok in examples
-    * not checked/verified for heteroscedastic case
+    * not checked/verified for heteroskedastic case
       - for constant only: ftest result is the same with WLS as with OLS - check?
 
     check: I might be mixing up group names (unique)

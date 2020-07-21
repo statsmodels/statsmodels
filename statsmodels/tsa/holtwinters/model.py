@@ -168,7 +168,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         are the variable names, e.g., smoothing_level or initial_slope.
         The initial seasonal variables are labeled initial_seasonal.<j>
         for j=0,...,m-1 where m is the number of period in a full season.
-        Use None to indcate a non-binding constraint, e.g., (0, None)
+        Use None to indicate a non-binding constraint, e.g., (0, None)
         constrains a parameter to be non-negative.
 
     Returns
@@ -1504,6 +1504,29 @@ class SimpleExpSmoothing(ExponentialSmoothing):
     ----------
     endog : array_like
         Time series
+    initialization_method : str, optional
+        Method for initialize the recursions. One of:
+
+        * None
+        * 'estimated'
+        * 'heuristic'
+        * 'legacy-heuristic'
+        * 'known'
+
+        None defaults to the pre-0.12 behavior where initial values
+        are passed as part of ``fit``. If any of the other values are
+        passed, then the initial values must also be set when constructing
+        the model. If 'known' initialization is used, then `initial_level`
+        must be passed, as well as `initial_trend` and `initial_seasonal` if
+        applicable. Default is 'estimated'. "legacy-heuristic" uses the same
+        values that were used in statsmodels 0.11 and earlier.
+    initial_level : float, optional
+        The initial level component. Required if estimation method is "known".
+        If set using either "estimated" or "heuristic" this value is used.
+        This allows one or more of the initial values to be set while
+        deferring to the heuristic for others or estimating the unset
+        parameters.
+
 
     Returns
     -------
@@ -1526,8 +1549,17 @@ class SimpleExpSmoothing(ExponentialSmoothing):
         and practice. OTexts, 2014.
     """
 
-    def __init__(self, endog):
-        super(SimpleExpSmoothing, self).__init__(endog)
+    def __init__(
+        self,
+        endog,
+        initialization_method=None,  # Future: 'estimated',
+        initial_level=None,
+    ):
+        super(SimpleExpSmoothing, self).__init__(
+            endog,
+            initialization_method=initialization_method,
+            initial_level=initial_level,
+        )
 
     def fit(
         self,
@@ -1537,7 +1569,7 @@ class SimpleExpSmoothing(ExponentialSmoothing):
         start_params=None,
         initial_level=None,
         use_brute=True,
-        use_boxcox=False,
+        use_boxcox=None,
         remove_bias=False,
         method=None,
         minimize_kwargs=None,
@@ -1621,6 +1653,34 @@ class Holt(ExponentialSmoothing):
         Type of trend component.
     damped_trend : bool, optional
         Should the trend component be damped.
+    initialization_method : str, optional
+        Method for initialize the recursions. One of:
+
+        * None
+        * 'estimated'
+        * 'heuristic'
+        * 'legacy-heuristic'
+        * 'known'
+
+        None defaults to the pre-0.12 behavior where initial values
+        are passed as part of ``fit``. If any of the other values are
+        passed, then the initial values must also be set when constructing
+        the model. If 'known' initialization is used, then `initial_level`
+        must be passed, as well as `initial_trend` and `initial_seasonal` if
+        applicable. Default is 'estimated'. "legacy-heuristic" uses the same
+        values that were used in statsmodels 0.11 and earlier.
+    initial_level : float, optional
+        The initial level component. Required if estimation method is "known".
+        If set using either "estimated" or "heuristic" this value is used.
+        This allows one or more of the initial values to be set while
+        deferring to the heuristic for others or estimating the unset
+        parameters.
+    initial_trend : float, optional
+        The initial trend component. Required if estimation method is "known".
+        If set using either "estimated" or "heuristic" this value is used.
+        This allows one or more of the initial values to be set while
+        deferring to the heuristic for others or estimating the unset
+        parameters.
 
     Returns
     -------
@@ -1643,10 +1703,23 @@ class Holt(ExponentialSmoothing):
     """
 
     @deprecate_kwarg("damped", "damped_trend")
-    def __init__(self, endog, exponential=False, damped_trend=False):
+    def __init__(
+        self,
+        endog,
+        exponential=False,
+        damped_trend=False,
+        initialization_method=None,  # Future: 'estimated',
+        initial_level=None,
+        initial_trend=None,
+    ):
         trend = "mul" if exponential else "add"
         super(Holt, self).__init__(
-            endog, trend=trend, damped_trend=damped_trend
+            endog,
+            trend=trend,
+            damped_trend=damped_trend,
+            initialization_method=initialization_method,
+            initial_level=initial_level,
+            initial_trend=initial_trend,
         )
 
     @deprecate_kwarg("smoothing_slope", "smoothing_trend")
@@ -1663,7 +1736,7 @@ class Holt(ExponentialSmoothing):
         initial_level=None,
         initial_trend=None,
         use_brute=True,
-        use_boxcox=False,
+        use_boxcox=None,
         remove_bias=False,
         method=None,
         minimize_kwargs=None,

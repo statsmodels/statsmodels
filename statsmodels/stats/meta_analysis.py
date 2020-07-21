@@ -421,7 +421,7 @@ def effectsize_2proportions(count1, nobs1, count2, nobs2, statistic="diff",
     where p1 and p2 are the estimated proportions in sample 1 (treatment) and
     sample 2 (control).
 
-    log-odds-ratio and log-risk-ratio can be backtransformed to ``or`` and
+    log-odds-ratio and log-risk-ratio can be transformed back to ``or`` and
     `rr` using `exp` function.
 
     See Also
@@ -670,7 +670,7 @@ def _fit_tau_mm(eff, var_eff, weights):
     var_eff : ndarray
         variance of effect sizes
     weights : ndarray
-        weights for estimating overal weighted mean
+        weights for estimating overall weighted mean
 
     Returns
     -------
