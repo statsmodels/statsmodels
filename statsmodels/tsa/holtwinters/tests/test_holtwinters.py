@@ -1851,3 +1851,16 @@ def test_forecast_index_types(ses, index_typ):
         fcast = res.forecast(36)
     assert isinstance(fcast, pd.Series)
     pd.testing.assert_index_equal(fcast.index, fcast_index)
+
+
+def test_boxcox_components(ses):
+    mod = ExponentialSmoothing(
+        ses + 1 - ses.min(), initialization_method="estimated", use_boxcox=True
+    )
+    res = mod.fit()
+    with pytest.raises(AssertionError):
+        # Must be different since level is not transformed
+        assert_allclose(res.level, res.fittedvalues)
+    assert not hasattr(res, "_untransformed_level")
+    assert not hasattr(res, "_untransformed_trend")
+    assert not hasattr(res, "_untransformed_seasonal")

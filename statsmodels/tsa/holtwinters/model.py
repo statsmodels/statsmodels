@@ -1083,7 +1083,7 @@ class ExponentialSmoothing(TimeSeriesModel):
                 )
             warnings.warn(
                 "Setting initial values during fit is deprecated and will be "
-                "removed after 0.13. These should be set during model"
+                "removed after 0.13. These should be set during model "
                 "initialization."
             )
         if use_boxcox is not None:
@@ -1405,19 +1405,7 @@ class ExponentialSmoothing(TimeSeriesModel):
             fitted = trend
         level = lvls[1 : nobs + 1].copy()
         if use_boxcox or use_boxcox == "log" or isinstance(use_boxcox, float):
-            # store untransformed values in private attribute, transforming
-            # here is probably a bug
-            self._untransformed_level = level
-            self._untransformed_trend = _trend
-            self._untransformed_season = season
-
             fitted = inv_boxcox(fitted, lamda)
-            level = inv_boxcox(level, lamda)
-            _trend = detrend(trend[:nobs], level)
-            if seasonal == "add":
-                season = (fitted - inv_boxcox(trend, lamda))[:nobs]
-            else:  # seasonal == 'mul':
-                season = (fitted / inv_boxcox(trend, lamda))[:nobs]
         err = fitted[: -h - 1] - data
         sse = err.T @ err
         # (s0 + gamma) + (b0 + beta) + (l0 + alpha) + phi
