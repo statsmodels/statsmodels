@@ -634,19 +634,19 @@ class SVARResults(SVARProcess, VARResults):
 
         Parameters
         ----------
-        orth: bool, default False
+        orth : bool, default False
             Compute orthogonalized impulse response error bands
-        repl: int
+        repl : int
             number of Monte Carlo replications to perform
-        steps: int, default 10
+        steps : int, default 10
             number of impulse response periods
-        signif: float (0 < signif <1)
+        signif : float (0 < signif <1)
             Significance level for error bars, defaults to 95% CI
-        seed: int
+        seed : int
             np.random.seed for replications
-        burn: int
+        burn : int
             number of initial observations to discard for simulation
-        cum: bool, default False
+        cum : bool, default False
             produce cumulative irf error bands
 
         Notes

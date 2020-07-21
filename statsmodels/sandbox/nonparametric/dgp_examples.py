@@ -106,7 +106,7 @@ class _UnivariateFunction(object):
 
         Parameters
         ----------
-        scatter: bool
+        scatter : bool
             If true, then add scatterpoints of sample to plot.
         ax : None or matplotlib axis instance
             If None, then a matplotlib.pyplot figure is created, otherwise

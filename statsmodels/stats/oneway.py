@@ -25,7 +25,7 @@ def effectsize_oneway(means, vars_, nobs, use_var="unequal", ddof_between=0):
 
     Parameters
     ----------
-    means: array_like
+    means : array_like
         Mean of samples to be compared
     vars_ : float or array_like
         Residual (within) variance of each sample or pooled
@@ -390,7 +390,7 @@ def anova_generic(means, variances, nobs, use_var="unequal",
 
     Parameters
     ----------
-    means: array_like
+    means : array_like
         Mean of samples to be compared
     variances : float or array_like
         Residual (within) variance of each sample or pooled
@@ -509,7 +509,7 @@ def anova_oneway(data, groups=None, use_var="unequal", welch_correction=True,
             This is the default.
         "equal" : Variances are assumed to be equal across samples. This is
             the standard Anova.
-        "bf: Variances are not assumed to be equal across samples. The method
+        "bf" : Variances are not assumed to be equal across samples. The method
             is Browne-Forsythe (1971) for testing equality of means with the
             corrected degrees of freedom by Merothra. The original BF degrees
             of freedom are available as additional attributes in the results

@@ -1559,19 +1559,19 @@ class VARResults(VARProcess):
 
         Parameters
         ----------
-        orth: bool, default False
+        orth : bool, default False
             Compute orthogonalized impulse response error bands
-        repl: int
+        repl : int
             number of Monte Carlo replications to perform
-        steps: int, default 10
+        steps : int, default 10
             number of impulse response periods
-        signif: float (0 < signif <1)
+        signif : float (0 < signif <1)
             Significance level for error bars, defaults to 95% CI
-        seed: int
+        seed : int
             np.random.seed for replications
-        burn: int
+        burn : int
             number of initial observations to discard for simulation
-        cum: bool, default False
+        cum : bool, default False
             produce cumulative irf error bands
 
         Notes
@@ -1602,19 +1602,19 @@ class VARResults(VARProcess):
 
         Parameters
         ----------
-        orth: bool, default False
+        orth : bool, default False
             Compute orthogonalized impulse response error bands
-        repl: int
+        repl : int
             number of Monte Carlo replications to perform
-        steps: int, default 10
+        steps : int, default 10
             number of impulse response periods
-        signif: float (0 < signif <1)
+        signif : float (0 < signif <1)
             Significance level for error bars, defaults to 95% CI
-        seed: int
+        seed : int
             np.random.seed for replications
-        burn: int
+        burn : int
             number of initial observations to discard for simulation
-        cum: bool, default False
+        cum : bool, default False
             produce cumulative irf error bands
 
         Notes
@@ -2048,7 +2048,7 @@ class VARResults(VARProcess):
         ----------
         nlags : int
             number of lags to display (excluding 0)
-        resid: bool
+        resid : bool
             If True, then the autocorrelation of the residuals is plotted
             If False, then the autocorrelation of endog is plotted.
         linewidth : int

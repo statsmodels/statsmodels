@@ -434,7 +434,7 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
         After 0.12, this will become the only return method.  Set to True
         to return the DataFrame or False to continue returning the 2 - 4
         output. If None (the default), a warning is raised.
-    auto_lag: bool, default False
+    auto_lag : bool, default False
         Flag indicating whether to automatically determine the optimal lag
         length based on threshold of maximum correlation value.
 

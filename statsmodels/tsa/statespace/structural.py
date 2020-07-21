@@ -1566,7 +1566,7 @@ class UnobservedComponentsResults(MLEResults):
         seasonal : bool, optional
             Whether or not to plot the seasonal component, if applicable.
             Default is True.
-        freq_seasonal: bool, optional
+        freq_seasonal : bool, optional
             Whether or not to plot the frequency domain seasonal component(s),
             if applicable. Default is True.
         cycle : bool, optional

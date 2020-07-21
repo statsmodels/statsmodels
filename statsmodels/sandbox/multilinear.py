@@ -64,7 +64,7 @@ def multiOLS(model, dataframe, column_list=None, method='fdr_bh',
     model_type : model class, optional
         The type of model to be used. The default is the linear model.
         Can be any linear model (OLS, WLS, GLS, etc..)
-    method: str, optional
+    method : str, optional
         the method used to perform the pvalue correction for multiple testing.
         default is the Benjamini/Hochberg, other available methods are:
 
@@ -77,9 +77,9 @@ def multiOLS(model, dataframe, column_list=None, method='fdr_bh',
             `fdr_bh` : Benjamini/Hochberg
             `fdr_by` : Benjamini/Yekutieli
 
-    alpha: float, optional
+    alpha : float, optional
         the significance level used for the pvalue correction (default 0.05)
-    subset: bool array
+    subset : bool array
         the selected rows to be used in the regression
 
     all the other parameters will be directed to the model creation.
@@ -232,21 +232,21 @@ def multigroup(pvals, groups, exact=True, keep_all=True, alpha=0.05):
 
     Parameters
     ----------
-    pvals: pandas series of boolean
+    pvals : pandas series of boolean
         the significativity of the variables under analysis
-    groups: dict of list
+    groups : dict of list
         the name of each category of variables under exam.
         each one is a list of the variables included
-    exact: bool, optional
+    exact : bool, optional
         If True (default) use the fisher exact test, otherwise
         use the chi squared test for contingencies tables.
         For high number of elements in the array the fisher test can
         be significantly slower than the chi squared.
-    keep_all: bool, optional
+    keep_all : bool, optional
         if False it will drop those groups where the fraction
         of positive is below the expected result. If True (default)
          it will keep all the significant results.
-    alpha: float, optional
+    alpha : float, optional
         the significativity level for the pvalue correction
         on the whole set of groups (not inside the groups themselves).
 

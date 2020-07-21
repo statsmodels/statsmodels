@@ -163,7 +163,7 @@ class SlicedInverseReg(_DimReductionRegression):
 
         Parameters
         ----------
-        ndim: int
+        ndim : int
             The number of EDR directions to estimate
         pen_mat : array-like
             A 2d array such that the squared Frobenius norm of
@@ -175,7 +175,7 @@ class SlicedInverseReg(_DimReductionRegression):
         maxiter :int
             The maximum number of iterations for estimating the EDR
             space.
-        gtol :float
+        gtol : float
             If the norm of the gradient of the objective function
             falls below this value, the algorithm has converged.
 

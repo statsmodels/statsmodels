@@ -47,7 +47,7 @@ class GenericZeroInflated(CountModel):
         A reference to the endogenous response variable
     exog : ndarray
         A reference to the exogenous design.
-    exog_infl: ndarray
+    exog_infl : ndarray
         A reference to the zero-inflated exogenous design.
     """ % {'params' : base._model_params_doc,
            'extra_params' : _doc_zi_params + base._missing_param_doc}
@@ -466,7 +466,7 @@ class ZeroInflatedPoisson(GenericZeroInflated):
         A reference to the endogenous response variable
     exog : ndarray
         A reference to the exogenous design.
-    exog_infl: ndarray
+    exog_infl : ndarray
         A reference to the zero-inflated exogenous design.
     """ % {'params' : base._model_params_doc,
            'extra_params' : _doc_zi_params + base._missing_param_doc}
@@ -554,9 +554,9 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
         A reference to the endogenous response variable
     exog : ndarray
         A reference to the exogenous design.
-    exog_infl: ndarray
+    exog_infl : ndarray
         A reference to the zero-inflated exogenous design.
-    p: scalar
+    p : scalar
         P denotes parametrizations for ZIGP regression.
     """ % {'params' : base._model_params_doc,
            'extra_params' : _doc_zi_params +
@@ -632,9 +632,9 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
         A reference to the endogenous response variable
     exog : ndarray
         A reference to the exogenous design.
-    exog_infl: ndarray
+    exog_infl : ndarray
         A reference to the zero-inflated exogenous design.
-    p: scalar
+    p : scalar
         P denotes parametrizations for ZINB regression. p=1 for ZINB-1 and
     p=2 for ZINB-2. Default is p=2
     """ % {'params' : base._model_params_doc,

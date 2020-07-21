@@ -38,9 +38,9 @@ class Summary(object):
         Parameters
         ----------
         df : DataFrame
-        header: bool
+        header : bool
             Reproduce the DataFrame column labels in summary table
-        index: bool
+        index : bool
             Reproduce the DataFrame row labels in summary table
         float_format : str
             Formatting to float data columns
@@ -77,7 +77,7 @@ class Summary(object):
         d : dict
             Keys and values are automatically coerced to strings with str().
             Users are encouraged to format them before using add_dict.
-        ncols: int
+        ncols : int
             Number of columns of the output table
         align : str
             Data alignment (l/c/r)

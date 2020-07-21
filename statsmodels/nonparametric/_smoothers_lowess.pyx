@@ -215,34 +215,34 @@ def update_neighborhood(np.ndarray[DTYPE_t, ndim = 1] x,
 
     Parameters
     ----------
-    x: 1-D numpy array
+    x : 1-D numpy array
         The input x-values
-    i: indexing integer
+    i : indexing integer
         The index of the point currently being fit.
-    n: indexing integer
+    n : indexing integer
         The length of the input vectors, x and y.
-    left_end: indexing integer
+    left_end : indexing integer
         The index of the left-most point in the neighborhood
         of x[i-1] (the previously-fit point).
-    right_end: indexing integer
+    right_end : indexing integer
         The index of the right-most point in the neighborhood
         of x[i-1]. Non-inclusive, s.t. the neighborhood is
         x[left_end] <= x < x[right_end].
-    radius: float
+    radius : float
         The radius of the current neighborhood. The larger of
         distances between x[i] and its left-most or right-most
         neighbor.
 
     Returns
     -------
-    left_end: indexing integer
+    left_end : indexing integer
         The index of the left-most point in the neighborhood
               of x[i] (the current point).
-    right_end: indexing integer
+    right_end : indexing integer
         The index of the right-most point in the neighborhood
                of x[i]. Non-inclusive, s.t. the neighborhood is
                x[left_end] <= x < x[right_end].
-    radius: float
+    radius : float
         The radius of the current neighborhood. The larger of
         distances between x[i] and its left-most or right-most
         neighbor.
@@ -285,26 +285,26 @@ cdef bool calculate_weights(np.ndarray[DTYPE_t, ndim = 1] x,
 
     Parameters
     ----------
-    x: 1-D vector
+    x : 1-D vector
         The input x-values.
-    weights: 1-D numpy array
+    weights : 1-D numpy array
         The vector of regression weights.
-    resid_weights: 1-D numpy array
+    resid_weights : 1-D numpy array
         The vector of residual weights from the last iteration.
-    i: indexing integer
+    i : indexing integer
         The index of the point currently being fit.
-    left_end: indexing integer
+    left_end : indexing integer
         The index of the left-most point in the neighborhood of
         x[i].
-    right_end: indexing integer
+    right_end : indexing integer
         The index of the right-most point in the neighborhood
         of x[i]. Non-inclusive, s.t. the neighborhood is
         x[left_end] <= x < x[right_end].
-    radius: float
+    radius : float
         The radius of the current neighborhood. The larger of
         distances between x[i] and its left-most or right-most
         neighbor.
-    use_resid_weights: bool
+    use_resid_weights : bool
         If True, multiply the x-distance weights by the residual
         weights from the last iteration of regressions. Set to
         False on the first iteration (since there are no residuals
@@ -313,7 +313,7 @@ cdef bool calculate_weights(np.ndarray[DTYPE_t, ndim = 1] x,
 
     Returns
     -------
-    reg_ok: bool
+    reg_ok : bool
         If True, at least some points have positive weight, and the
         regression will be run. If False, the regression is skipped
         and y_fit[i] is set to equal y[i].
@@ -364,24 +364,24 @@ cdef void calculate_y_fit(np.ndarray[DTYPE_t, ndim = 1] x,
 
     Parameters
     ----------
-    x: 1-D numpy array
+    x : 1-D numpy array
         The vector of input x-values.
-    y: 1-D numpy array
+    y : 1-D numpy array
         The vector of input y-values.
-    i: indexing integer
+    i : indexing integer
         The index of the point currently being fit.
-    y_fit: 1-D numpy array
+    y_fit : 1-D numpy array
         The vector of fitted y-values.
-    weights: 1-D numpy array
+    weights : 1-D numpy array
         The vector of regression weights.
-    left_end: indexing integer
+    left_end : indexing integer
         The index of the left-most point in the neighborhood of
         x[i].
-    right_end: indexing integers
+    right_end : indexing integers
         The index of the right-most point in the neighborhood
         of x[i]. Non-inclusive, s.t. the neighborhood is
         x[left_end] <= x < x[right_end].
-    reg_ok: bool
+    reg_ok : bool
         If True, at least some points have positive weight, and the
         regression will be run. If False, the regression is skipped
         and y_fit[i] is set to equal y[i].
