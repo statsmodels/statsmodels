@@ -635,14 +635,9 @@ class HoltWintersResults(Results):
             neutral_s = 0
 
         # set initial values
-        if use_boxcox:
-            level = self.model._untransformed_level
-            _trend = self.model._untransformed_trend
-            season = self.model._untransformed_season
-        else:
-            level = self.level
-            _trend = self.trend
-            season = self.season
+        level = self.level
+        _trend = self.trend
+        season = self.season
         # (notation as in https://otexts.com/fpp2/ets.html)
         y = np.empty((nsimulations, repetitions))
         # lvl instead of l because of E741
