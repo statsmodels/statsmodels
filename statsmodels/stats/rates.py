@@ -147,13 +147,13 @@ def etest_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=1,
 
     If the two Poisson rates are g1 and g2, then the Null hypothesis is
 
-    H0: g1 / g2 = ratio_null
+    - H0: g1 / g2 = ratio_null
 
     against one of the following alternatives
 
-    H1_2-sided: g1 / g2 != ratio_null
-    H1_larger: g1 / g2 > ratio_null
-    H1_smaller: g1 / g2 < ratio_null
+    - H1_2-sided: g1 / g2 != ratio_null
+    - H1_larger: g1 / g2 > ratio_null
+    - H1_smaller: g1 / g2 < ratio_null
 
     Parameters
     ----------
@@ -186,18 +186,6 @@ def etest_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=1,
     stat_sample : float
         test statistic for the sample
     pvalue : float
-
-    Notes
-    -----
-    'wald': method W1A, wald test, variance based on separate estimates
-    'score': method W2A, score test, variance based on estimate under Null
-    'wald-log': W3A
-    'score-log' W4A
-    'sqrt': W5A, based on variance stabilizing square root transformation
-    'exact-cond': exact conditional test based on binomial distribution
-    'cond-midp': midpoint-pvalue of exact conditional test
-    'etest': etest with score test statistic
-    'etest-wald': etest with wald test statistic
 
     References
     ----------
@@ -277,8 +265,8 @@ def tost_poisson_2indep(count1, exposure1, count2, exposure2, low, upp,
 
     The Null and alternative hypothesis for equivalence testing are
 
-    H0: g1 / g2 <= low or upp <= g1 / g2
-    H1: low < g1 / g2 < upp
+    - H0: g1 / g2 <= low or upp <= g1 / g2
+    - H1: low < g1 / g2 < upp
 
     where g1 and g2 are the Poisson rates.
 
@@ -312,13 +300,13 @@ def tost_poisson_2indep(count1, exposure1, count2, exposure2, low, upp,
 
     Notes
     -----
-    'wald': method W1A, wald test, variance based on separate estimates
-    'score': method W2A, score test, variance based on estimate under Null
-    'wald-log': W3A  not implemented
-    'score-log' W4A  not implemented
-    'sqrt': W5A, based on variance stabilizing square root transformation
-    'exact-cond': exact conditional test based on binomial distribution
-    'cond-midp': midpoint-pvalue of exact conditional test
+    - 'wald': method W1A, wald test, variance based on separate estimates
+    - 'score': method W2A, score test, variance based on estimate under Null
+    - 'wald-log': W3A  not implemented
+    - 'score-log' W4A  not implemented
+    - 'sqrt': W5A, based on variance stabilizing square root transformation
+    - 'exact-cond': exact conditional test based on binomial distribution
+    - 'cond-midp': midpoint-pvalue of exact conditional test
 
     The latter two are only verified for one-sided example.
 

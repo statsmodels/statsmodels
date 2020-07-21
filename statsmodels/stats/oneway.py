@@ -250,6 +250,10 @@ def _fstat2effectsize(f_stat, df1, df2):
     index for the hypothesis test is in those cases given by
     ``nc = f_stat * df1``.
 
+    Currently omega2 and eps2 are computed in two different ways. Those
+    values agree for regular cases but can show different behavior in corner
+    cases (e.g. zero division).
+
     """
     f2 = f_stat * df1 / df2
     eta2 = f2 / (f2 + 1)
