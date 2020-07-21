@@ -1013,7 +1013,7 @@ def test_nondiagonal_obs_cov(reset_randomstate):
     res2 = mod.smooth([])
 
     atol = 0.002 if PLATFORM_WIN else 1e-5
-    rtol = 0.002 if PLATFORM_WIN else 1e-6
+    rtol = 0.002 if PLATFORM_WIN else 1e-4
     # Here we'll just test a few values
     assert_allclose(res1.llf, res2.llf, rtol=rtol, atol=atol)
     assert_allclose(res1.forecasts[0], res2.forecasts[0],

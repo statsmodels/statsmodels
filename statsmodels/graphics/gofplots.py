@@ -602,7 +602,8 @@ def qqplot_2samples(data1, data2, xlabel=None, ylabel=None, line=None,
     data1 : {array_like, ProbPlot}
         Data to plot along x axis.
     data2 : {array_like, ProbPlot}
-        Data to plot along y axis.
+        Data to plot along y axis. Does not need to have the same number of
+        observations as data 1.
     xlabel : {None, str}
         User-provided labels for the x-axis. If None (default),
         other values are used.
@@ -657,7 +658,7 @@ def qqplot_2samples(data1, data2, xlabel=None, ylabel=None, line=None,
 
     .. plot:: plots/graphics_gofplots_qqplot_2samples.py
 
-    >>> fig = qqplot_2samples(pp_x, pp_y, xlabel=None, ylabel=None, \
+    >>> fig = qqplot_2samples(pp_x, pp_y, xlabel=None, ylabel=None,
     ...                       line=None, ax=None)
     """
     if not isinstance(data1, ProbPlot):
@@ -665,9 +666,12 @@ def qqplot_2samples(data1, data2, xlabel=None, ylabel=None, line=None,
 
     if not isinstance(data2, ProbPlot):
         data2 = ProbPlot(data2)
-
-    fig = data1.qqplot(xlabel=xlabel, ylabel=ylabel,
-                       line=line, other=data2, ax=ax)
+    if data2.data.shape[0] >= data1.data.shape[0]:
+        fig = data1.qqplot(xlabel=xlabel, ylabel=ylabel,
+                           line=line, other=data2, ax=ax)
+    else:
+        fig = data2.qqplot(xlabel=ylabel, ylabel=xlabel,
+                           line=line, other=data1, ax=ax)
 
     return fig
 

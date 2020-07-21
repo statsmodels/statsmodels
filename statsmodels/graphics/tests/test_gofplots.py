@@ -238,3 +238,19 @@ def test_invalid_dist_config(close_figures):
     mod_fit = sm.OLS(data.endog, data.exog).fit()
     with pytest.raises(TypeError, match=r'dist\(0, 1, 4, loc=0, scale=1\)'):
         sm.ProbPlot(mod_fit.resid, stats.t, distargs=(0, 1, 4))
+
+
+@pytest.mark.matplotlib
+def test_qqplot_unequal():
+    rs = np.random.RandomState(0)
+    data1 = rs.standard_normal(100)
+    data2 = rs.standard_normal(200)
+    fig1 = sm.qqplot_2samples(data1, data2)
+    fig2 = sm.qqplot_2samples(data2, data1)
+    x1, y1 = fig1.get_axes()[0].get_children()[0].get_data()
+    x2, y2 = fig2.get_axes()[0].get_children()[0].get_data()
+    np.testing.assert_allclose(x1, x2)
+    np.testing.assert_allclose(y1, y2)
+    numobj1 = len(fig1.get_axes()[0].get_children())
+    numobj2 = len(fig2.get_axes()[0].get_children())
+    assert numobj1 == numobj2
