@@ -213,7 +213,7 @@ class Summary(object):
 
         simple_tables = _simple_tables(tables, settings)
         tab = [x.as_latex_tabular() for x in simple_tables]
-        tab = '\n\\hline\n'.join(tab)
+        tab = '\n\n'.join(tab)
 
         to_replace = ('\\\\hline\\n\\\\hline\\n\\\\'
                       'end{tabular}\\n\\\\begin{tabular}{.*}\\n')
