@@ -394,25 +394,25 @@ class DescrStatsW(object):
 
         return _zconfint_generic(self.mean, self.std_mean, alpha, alternative)
 
-
     def ttest_mean(self, value=0, alternative='two-sided'):
         '''ttest of Null hypothesis that mean is equal to value.
 
         The alternative hypothesis H1 is defined by the following
-        'two-sided': H1: mean not equal to value
-        'larger' :   H1: mean larger than value
-        'smaller' :  H1: mean smaller than value
+
+        - 'two-sided': H1: mean not equal to value
+        - 'larger' :   H1: mean larger than value
+        - 'smaller' :  H1: mean smaller than value
 
         Parameters
         ----------
         value : float or array
             the hypothesized value for the mean
         alternative : str
-            The alternative hypothesis, H1, has to be one of the following
+            The alternative hypothesis, H1, has to be one of the following:
 
-              'two-sided': H1: mean not equal to value (default)
-              'larger' :   H1: mean larger than value
-              'smaller' :  H1: mean smaller than value
+              - 'two-sided': H1: mean not equal to value (default)
+              - 'larger' :   H1: mean larger than value
+              - 'smaller' :  H1: mean smaller than value
 
         Returns
         -------
@@ -610,9 +610,42 @@ class DescrStatsW(object):
         return np.repeat(self.data, w_int, axis=0)
 
 
-
 def _tstat_generic(value1, value2, std_diff, dof, alternative, diff=0):
-    '''generic ttest to save typing'''
+    '''generic ttest based on summary statistic
+
+    The test statisic is :
+        tstat = (value1 - value2 - diff) / std_diff
+
+    and is assumed to be t-distributed with ``dof`` degrees of freedom.
+
+    Parameters
+    ----------
+    value1 : float or ndarray
+        Value, for example mean, of the first sample.
+    value2 : float or ndarray
+        Value, for example mean, of the second sample.
+    std_diff : float or ndarray
+        Standard error of the difference value1 - value2
+    dof : int or float
+        Degrees of freedom
+    alternative : str
+        The alternative hypothesis, H1, has to be one of the following
+
+           * 'two-sided' : H1: ``value1 - value2 - diff`` not equal to 0.
+           * 'larger' :   H1: ``value1 - value2 - diff > 0``
+           * 'smaller' :  H1: ``value1 - value2 - diff < 0``
+
+    diff : float
+        value of difference ``value1 - value2`` under the null hypothesis
+
+    Returns
+    -------
+    tstat : float or ndarray
+        Test statistic.
+    pvalue : float or ndarray
+        P-value of the hypothesis test assuming that the test statistic is
+        t-distributed with ``df`` degrees of freedom.
+    '''
 
     tstat = (value1 - value2 - diff) / std_diff
     if alternative in ['two-sided', '2-sided', '2s']:
@@ -625,8 +658,37 @@ def _tstat_generic(value1, value2, std_diff, dof, alternative, diff=0):
         raise ValueError('invalid alternative')
     return tstat, pvalue
 
+
 def _tconfint_generic(mean, std_mean, dof, alpha, alternative):
-    '''generic t-confint to save typing'''
+    """generic t-confint based on summary statistic
+
+    Parameters
+    ----------
+    mean : float or ndarray
+        Value, for example mean, of the first sample.
+    std_mean : float or ndarray
+        Standard error of the difference value1 - value2
+    dof : int or float
+        Degrees of freedom
+    alpha : float
+        Significance level for the confidence interval, coverage is
+        ``1-alpha``.
+    alternative : str
+        The alternative hypothesis, H1, has to be one of the following
+
+           * 'two-sided' : H1: ``value1 - value2 - diff`` not equal to 0.
+           * 'larger' :   H1: ``value1 - value2 - diff > 0``
+           * 'smaller' :  H1: ``value1 - value2 - diff < 0``
+
+    Returns
+    -------
+    lower : float or ndarray
+        Lower confidence limit. This is -inf for the one-sided alternative
+        "smaller".
+    upper : float or ndarray
+        Upper confidence limit. This is inf for the one-sided alternative
+        "larger".
+    """
 
     if alternative in ['two-sided', '2-sided', '2s']:
         tcrit = stats.t.ppf(1 - alpha / 2., dof)
@@ -647,11 +709,40 @@ def _tconfint_generic(mean, std_mean, dof, alpha, alternative):
 
 
 def _zstat_generic(value1, value2, std_diff, alternative, diff=0):
-    '''generic (normal) z-test to save typing
+    """generic (normal) z-test based on summary statistic
 
-    can be used as ztest based on summary statistics
+    The test statisic is :
+        tstat = (value1 - value2 - diff) / std_diff
 
-    '''
+    and is assumed to be normally distributed.
+
+    Parameters
+    ----------
+    value1 : float or ndarray
+        Value, for example mean, of the first sample.
+    value2 : float or ndarray
+        Value, for example mean, of the second sample.
+    std_diff : float or ndarray
+        Standard error of the difference value1 - value2
+    alternative : str
+        The alternative hypothesis, H1, has to be one of the following
+
+           * 'two-sided' : H1: ``value1 - value2 - diff`` not equal to 0.
+           * 'larger' :   H1: ``value1 - value2 - diff > 0``
+           * 'smaller' :  H1: ``value1 - value2 - diff < 0``
+
+    diff : float
+        value of difference ``value1 - value2`` under the null hypothesis
+
+    Returns
+    -------
+    tstat : float or ndarray
+        Test statistic.
+    pvalue : float or ndarray
+        P-value of the hypothesis test assuming that the test statistic is
+        t-distributed with ``df`` degrees of freedom.
+    """
+
     zstat = (value1 - value2 - diff) / std_diff
     if alternative in ['two-sided', '2-sided', '2s']:
         pvalue = stats.norm.sf(np.abs(zstat))*2
@@ -663,12 +754,40 @@ def _zstat_generic(value1, value2, std_diff, alternative, diff=0):
         raise ValueError('invalid alternative')
     return zstat, pvalue
 
-def _zstat_generic2(value, std_diff, alternative):
-    '''generic (normal) z-test to save typing
 
-    can be used as ztest based on summary statistics
-    '''
-    zstat = value / std_diff
+def _zstat_generic2(value, std, alternative):
+    """generic (normal) z-test based on summary statistic
+
+    The test statisic is :
+        zstat = value / std
+
+    and is assumed to be normally distributed with standard deviation ``std``.
+
+    Parameters
+    ----------
+    value : float or ndarray
+        Value of a sample statistic, for example mean.
+    value2 : float or ndarray
+        Value, for example mean, of the second sample.
+    std : float or ndarray
+        Standard error of the sample statistic value.
+    alternative : str
+        The alternative hypothesis, H1, has to be one of the following
+
+           * 'two-sided' : H1: ``value1 - value2 - diff`` not equal to 0.
+           * 'larger' :   H1: ``value1 - value2 - diff > 0``
+           * 'smaller' :  H1: ``value1 - value2 - diff < 0``
+
+    Returns
+    -------
+    zstat : float or ndarray
+        Test statistic.
+    pvalue : float or ndarray
+        P-value of the hypothesis test assuming that the test statistic is
+        normally distributed.
+    """
+
+    zstat = value / std
     if alternative in ['two-sided', '2-sided', '2s']:
         pvalue = stats.norm.sf(np.abs(zstat))*2
     elif alternative in ['larger', 'l']:
@@ -679,8 +798,35 @@ def _zstat_generic2(value, std_diff, alternative):
         raise ValueError('invalid alternative')
     return zstat, pvalue
 
+
 def _zconfint_generic(mean, std_mean, alpha, alternative):
-    '''generic normal-confint to save typing'''
+    """generic normal-confint based on summary statistic
+
+    Parameters
+    ----------
+    mean : float or ndarray
+        Value, for example mean, of the first sample.
+    std_mean : float or ndarray
+        Standard error of the difference value1 - value2
+    alpha : float
+        Significance level for the confidence interval, coverage is
+        ``1-alpha``
+    alternative : str
+        The alternative hypothesis, H1, has to be one of the following
+
+           * 'two-sided' : H1: ``value1 - value2 - diff`` not equal to 0.
+           * 'larger' :   H1: ``value1 - value2 - diff > 0``
+           * 'smaller' :  H1: ``value1 - value2 - diff < 0``
+
+    Returns
+    -------
+    lower : float or ndarray
+        Lower confidence limit. This is -inf for the one-sided alternative
+        "smaller".
+    upper : float or ndarray
+        Upper confidence limit. This is inf for the one-sided alternative
+        "larger".
+    """
 
     if alternative in ['two-sided', '2-sided', '2s']:
         zcrit = stats.norm.ppf(1 - alpha / 2.)
