@@ -420,7 +420,7 @@ class MVElliptical(object):
             self.sigmainv = np.eye(nvars) / sigma
             self.cholsigmainv = np.eye(nvars) / np.sqrt(sigma)
         elif (sigma.ndim == 1) and (len(sigma) == nvars):
-            #independent heteroscedastic
+            #independent heteroskedastic
             self.sigma = np.diag(sigma)
             self.sigmainv = np.diag(1. / sigma)
             self.cholsigmainv = np.diag( 1. / np.sqrt(sigma))
@@ -708,7 +708,7 @@ class MVNormal0(object):
             self.covinv = np.eye(nvars) / cov
             self.cholcovinv = np.eye(nvars) / np.sqrt(cov)
         elif (cov.ndim == 1) and (len(cov) == nvars):
-            #independent heteroscedastic
+            #independent heteroskedastic
             self.cov = np.diag(cov)
             self.covinv = np.diag(1. / cov)
             self.cholcovinv = np.diag( 1. / np.sqrt(cov))

@@ -192,7 +192,7 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
                 p.sigma2 = np.inner(resid, resid) / len(resid)
             elif unbiased is True:
                 raise ValueError('Cannot perform third step of Hannan-Rissanen'
-                                 ' estimation to remove paramater bias,'
+                                 ' estimation to remove parameter bias,'
                                  ' because parameters estimated from the'
                                  ' second step are non-stationary or'
                                  ' non-invertible')

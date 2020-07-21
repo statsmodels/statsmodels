@@ -64,7 +64,7 @@ def test_mvmean_2indep(data1, data2):
     """Hotellings test for multivariate mean in two independent samples
 
     The null hypothesis is that both samples have the same mean.
-    The alternative hypothesis is that means differe.
+    The alternative hypothesis is that means differ.
 
     Parameters
     ----------
@@ -170,7 +170,7 @@ def confint_mvmean_fromstats(mean, cov, nobs, lin_transf=None, alpha=0.05,
                              simult=False):
     """Confidence interval for linear transformation of a multivariate mean
 
-    Either pointwise or simultaneous conficence intervals are returned.
+    Either pointwise or simultaneous confidence intervals are returned.
     Data is provided in the form of summary statistics, mean, cov, nobs.
 
     Parameters

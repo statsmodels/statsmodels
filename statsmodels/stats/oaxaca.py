@@ -102,13 +102,12 @@ class OaxacaBlinder(object):
     >>> model = sm.OaxacaBlinder(df.endog, df.exog, 3, hasconst = False)
     >>> model.two_fold().summary()
     Oaxaca-Blinder Two-fold Effects
-
     Unexplained Effect: 27.94091
     Explained Effect: 130.80954
     Gap: 158.75044
+
     >>> model.three_fold().summary()
     Oaxaca-Blinder Three-fold Effects
-
     Characteristic Effect: 321.74824
     Coefficient Effect: 75.45371
     Interaction Effect: -238.45151

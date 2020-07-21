@@ -106,6 +106,9 @@ if '+' in lv.version:
     commit = lv.version[lv.version.index('+') + 1]
     version = short_version + ' (+{0})'.format(commit)
 
+# Remove release to prevent it triggering a conf change
+del release
+
 # set inheritance_graph_attrs
 # you need graphviz installed to use this
 # see: http://sphinx.pocoo.org/ext/inheritance.html

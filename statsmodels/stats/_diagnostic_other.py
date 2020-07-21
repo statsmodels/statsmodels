@@ -327,7 +327,7 @@ def cm_test_robust(resid, resid_deriv, instruments, weights=1):
     weights : ndarray
         This is a weights function as used in WLS. The moment
         restrictions are multiplied by weights. This corresponds to the
-        inverse of the variance in a heteroscedastic model.
+        inverse of the variance in a heteroskedastic model.
 
     Returns
     -------

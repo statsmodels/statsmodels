@@ -486,8 +486,8 @@ Status: experimental, API might change, added in 0.12
 
 .. _oneway_stats:
 
-Onway Anova
------------
+Oneway Anova
+------------
 
 Hypothesis test, confidence intervals and effect size for oneway analysis of
 k samples.

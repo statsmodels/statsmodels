@@ -46,7 +46,7 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=1,
         Implemented are 'wald', 'score' and 'sqrt' based asymptotic normal
         distribution, and the exact conditional test 'exact-cond', and its
         mid-point version 'cond-midp'. method='etest' and method='etest-wald'
-        provide pvalues from `etest_poisson_2indep` usind score or wald
+        provide pvalues from `etest_poisson_2indep` using score or wald
         statistic respectively.
         see Notes
     alternative : string

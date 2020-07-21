@@ -1,6 +1,6 @@
 '''given a 1D sample of observation, find a matching distribution
 
-* estimate maximum likelihood paramater for each distribution
+* estimate maximum likelihood parameter for each distribution
 * rank estimated distribution by Kolmogorov-Smirnov and Anderson-Darling
   test statistics
 
