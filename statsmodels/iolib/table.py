@@ -404,9 +404,14 @@ class SimpleTable(list):
         formatted_rows.append('</table>')
         return '\n'.join(formatted_rows)
 
-    def as_latex_tabular(self, center=True, **fmt_dict):
+    def as_latex_tabular(self, center=True, cmidrule=True, **fmt_dict):
         '''Return string, the table as a LaTeX tabular environment.
-        Note: will require the booktabs package.'''
+        Note: will require the booktabs package.
+        Parameters
+        ----------
+        cmidrule : bool
+            bool indicating if a cmidrule is added below the row indexes
+        '''
         # fetch the text format, override with fmt_dict
         fmt = self._get_fmt('latex', **fmt_dict)
 
@@ -440,6 +445,8 @@ class SimpleTable(list):
             if row != last:
                 formatted_rows.append(
                     row.as_string(output_format='latex', **fmt))
+                if cmidrule:
+                    formatted_rows.append('\\cmidrule(l){1-1}')
             prev_aligns = aligns
         # tabular does not support caption, but make it available for
         # figure environment

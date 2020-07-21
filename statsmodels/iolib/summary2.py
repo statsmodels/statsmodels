@@ -218,7 +218,14 @@ class Summary(object):
             title = '\\caption{}'
 
         simple_tables = _simple_tables(tables, settings)
-        tab = [x.as_latex_tabular() for x in simple_tables]
+
+        tab = []
+        for i, x in enumerate(simple_tables):
+            if i == 1:
+                tab.append(x.as_latex_tabular(cmidrule=True))
+            else:
+                tab.append(x.as_latex_tabular())
+
         tab = '\n\\hline\n'.join(tab)
 
         to_replace = ('\\\\hline\\n\\\\hline\\n\\\\'
