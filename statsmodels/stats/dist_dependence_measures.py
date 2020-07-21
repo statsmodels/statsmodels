@@ -212,7 +212,7 @@ def _empirical_pvalue(x, y, B, n, stats):
     -------
     test_statistic : float
         The empirical test statistic.
-    pval: float
+    pval : float
         The empirical p-value.
 
     """
@@ -239,7 +239,7 @@ def _asymptotic_pvalue(stats):
     -------
     test_statistic : float
         The test statistic.
-    pval: float
+    pval : float
         The asymptotic p-value.
 
     """

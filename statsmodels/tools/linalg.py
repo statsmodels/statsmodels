@@ -139,7 +139,7 @@ def matrix_sqrt(mat, inverse=False, full=False, nullspace=False,
         If full is False (default, then the square root has reduce number
         of rows if the matrix is singular, i.e. has singular values below
         the threshold.
-    nullspace: bool
+    nullspace : bool
         If nullspace is true, then the matrix square root of the null space
         of the matrix is returned.
     threshold : float

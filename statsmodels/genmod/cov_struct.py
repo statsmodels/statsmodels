@@ -79,18 +79,18 @@ class CovStruct(object):
 
         Parameters
         ----------
-        endog_expval: array_like
+        endog_expval : array_like
            The expected values of endog for the cluster for which the
            covariance or correlation matrix will be returned
-        index: int
+        index : int
            The index of the cluster for which the covariance or
            correlation matrix will be returned
 
         Returns
         -------
-        M: matrix
+        M : matrix
             The covariance or correlation matrix of endog
-        is_cor: bool
+        is_cor : bool
             True if M is a correlation matrix, False if M is a
             covariance matrix
         """
@@ -104,10 +104,10 @@ class CovStruct(object):
 
         Parameters
         ----------
-        expval: array_like
+        expval : array_like
            The expected value of endog for each observed value in the
            group.
-        index: int
+        index : int
            The group index.
         stdev : array_like
             The standard deviation of endog for each observation in

@@ -217,9 +217,9 @@ class OaxacaResults:
     unexplained : float
         This is the effect that cannot be explained by the data at hand.
         This does not mean it cannot be explained with more.
-    explained: float
+    explained : float
         This is the effect that can be explained using the data.
-    gap: float
+    gap : float
         This is the gap in the mean differences of the two groups.
 
     If a three-fold model was fitted, this will
@@ -230,13 +230,13 @@ class OaxacaResults:
     characteristic effect : float
         This is the effect due to the group differences in
         predictors
-    coefficient effect: float
+    coefficient effect : float
         This is the effect due to differences of the coefficients
         of the two groups
-    interaction effect: float
+    interaction effect : float
         This is the effect due to differences in both effects
         existing at the same time between the two groups.
-    gap: float
+    gap : float
         This is the gap in the mean differences of the two groups.
 
     Attributes

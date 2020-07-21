@@ -736,7 +736,8 @@ class OLSInfluence(_BaseInfluenceMixin):
 
     @cache_readonly
     def dffits(self):
-        """dffits measure for influence of an observation
+        """
+        dffits measure for influence of an observation
 
         based on resid_studentized_external,
         uses results from leave-one-observation-out loop
@@ -747,7 +748,7 @@ class OLSInfluence(_BaseInfluenceMixin):
 
         Returns
         -------
-        dffits: float
+        dffits : float
         dffits_threshold : float
 
         References

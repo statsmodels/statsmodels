@@ -668,10 +668,16 @@ class UnivariateCubicCyclicSplines(UnivariateGamSmoother):
 
         Returns
         -------
-        b, d: ndarrays
-            arrays for mapping cyclic cubic spline values at knots to
+        b : ndarray
+            Array for mapping cyclic cubic spline values at knots to
             second derivatives.
-            penalty matrix is equal to ``s = d.T.dot(b^-1).dot(d)``
+        d : ndarray
+            Array for mapping cyclic cubic spline values at knots to
+            second derivatives.
+
+        Notes
+        -----
+        The penalty matrix is equal to ``s = d.T.dot(b^-1).dot(d)``
         """
         h = knots[1:] - knots[:-1]
         n = knots.size - 1

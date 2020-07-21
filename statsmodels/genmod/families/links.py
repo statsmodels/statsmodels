@@ -194,7 +194,7 @@ class Logit(Link):
 
         Parameters
         ----------
-        p: array_like
+        p : array_like
             Probabilities
 
         Returns
@@ -731,7 +731,7 @@ class cauchy(CDFLink):
 
         Parameters
         ----------
-        p: array_like
+        p : array_like
             Probabilities
 
         Returns

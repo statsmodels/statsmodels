@@ -48,7 +48,7 @@ def lowess(endog, exog, frac=2.0/3.0, it=3, delta=0.0, is_sorted=False,
 
     Returns
     -------
-    out: ndarray, float
+    out : {ndarray, float}
         The returned array is two-dimensional if return_sorted is True, and
         one dimensional if return_sorted is False.
         If return_sorted is True, then a numpy array with two columns. The

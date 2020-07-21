@@ -501,10 +501,10 @@ class FactorResults(object):
 
     Attributes
     ----------
-    uniqueness: ndarray
+    uniqueness : ndarray
         The uniqueness (variance of uncorrelated errors unique to
         each variable)
-    communality: ndarray
+    communality : ndarray
         1 - uniqueness
     loadings : ndarray
         Each column is the loading vector for one factor
@@ -979,7 +979,7 @@ class FactorResults(object):
 
         Parameters
         ----------
-        kurt: float
+        kurt : float
             Excess kurtosis
 
         Notes

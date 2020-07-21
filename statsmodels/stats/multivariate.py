@@ -120,7 +120,7 @@ def confint_mvmean(data, lin_transf=None, alpha=0.5, simult=False):
     alpha : float in (0, 1)
         confidence level for the confidence interval, commonly used is
         alpha=0.05.
-    simult: bool
+    simult : bool
         If ``simult`` is False (default), then the pointwise confidence
         interval is returned.
         Otherwise, a simultaneous confidence interval is returned.
@@ -185,7 +185,7 @@ def confint_mvmean_fromstats(mean, cov, nobs, lin_transf=None, alpha=0.05,
     alpha : float in (0, 1)
         confidence level for the confidence interval, commonly used is
         alpha=0.05.
-    simult: bool
+    simult : bool
         If simult is False (default), then pointwise confidence interval is
         returned.
         Otherwise, a simultaneous confidence interval is returned.
