@@ -19,7 +19,7 @@ from statsmodels.stats.oneway import (
     confint_effectsize_oneway, confint_noncentrality, effectsize_oneway,
     anova_oneway,
     anova_generic, equivalence_oneway, equivalence_oneway_generic,
-    power_equivalence_oneway, power_equivalence_oneway0,
+    power_equivalence_oneway, _power_equivalence_oneway_emp,
     f2_to_wellek, fstat_to_wellek, wellek_to_f2)
 from statsmodels.stats.robust_compare import scale_transform
 from statsmodels.stats.contrast import (
@@ -235,7 +235,8 @@ class TestOnewayEquivalenc(object):
         assert_allclose(res.f_stat, 0.1102, atol=1e-4)  # 0.007)
 
         # check post-hoc power, JS p. 6
-        pow_ = power_equivalence_oneway0(f_stat, n_groups, nobs, eps, res0.df)
+        pow_ = _power_equivalence_oneway_emp(f_stat, n_groups, nobs, eps,
+                                             res0.df)
         assert_allclose(pow_, 0.1552, atol=0.007)
 
         pow_ = power_equivalence_oneway(eps, eps, nobs.sum(),

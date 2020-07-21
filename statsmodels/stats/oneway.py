@@ -29,8 +29,8 @@ def effectsize_oneway(means, vars_, nobs, use_var="unequal", ddof_between=0):
         Mean of samples to be compared
     vars_ : float or array_like
         Residual (within) variance of each sample or pooled
-        If ``vars_`` is scalar, then it is interpreted as pooled variance that is
-        the same for all samples, ``use_var`` will be ignored.
+        If ``vars_`` is scalar, then it is interpreted as pooled variance that
+        is the same for all samples, ``use_var`` will be ignored.
         Otherwise, the variances are used depending on the ``use_var`` keyword.
     nobs : int or array_like
         Number of observations for the samples.
@@ -239,10 +239,10 @@ def _fstat2effectsize(f_stat, df1, df2):
     -----
     This uses the following definitions:
 
-       f2 = f_stat * df1 / df2
-       eta2 = f2 / (f2 + 1)
-       omega2 = (f2 - df1 / df2) / (f2 + 2)
-       eps2 = (f2 - df1 / df2) / (f2 + 1)
+    - f2 = f_stat * df1 / df2
+    - eta2 = f2 / (f2 + 1)
+    - omega2 = (f2 - df1 / df2) / (f2 + 2)
+    - eps2 = (f2 - df1 / df2) / (f2 + 1)
 
     This differs from effect size measures in other function which define
     ``f2 = f_stat * df1 / nobs``
@@ -393,7 +393,7 @@ def anova_generic(means, variances, nobs, use_var="unequal",
     means : array_like
         Mean of samples to be compared
     variances : float or array_like
-        Residual (within) variance of each sample or pooled
+        Residual (within) variance of each sample or pooled.
         If ``variances`` is scalar, then it is interpreted as pooled variance
         that is the same for all samples, ``use_var`` will be ignored.
         Otherwise, the variances are used depending on the ``use_var`` keyword.
@@ -407,14 +407,17 @@ def anova_generic(means, variances, nobs, use_var="unequal",
     use_var : {"unequal", "equal", "bf"}
         If ``use_var`` is "unequal", then the variances can differ across
         samples and the effect size for Welch anova will be computed.
-    welch : bool
+    welch_correction : bool
+        If this is false, then the Welch correction to the test statistic is
+        not included. This allows the computation of an effect size measure
+        that corresponds more closely to Cohen's f.
+    info : not used yet
 
     Returns
     -------
-    f2 : float
-        Effect size corresponding to squared Cohen's f, which is also equal
-        to the noncentrality divided by total number of observations.
-        In contrast to other functions, this value is not squared.
+    res : results instance
+        This includes `statistic` and `pvalue`.
+
     """
     options = {"use_var": use_var,
                "welch_correction": welch_correction
@@ -448,6 +451,7 @@ def anova_generic(means, variances, nobs, use_var="unequal",
         tmp = ((nobs - 1) * variances).sum() / (nobs_t - n_groups)
         statistic /= tmp
         df_denom = nobs_t - n_groups
+
     elif use_var == "bf":
         tmp = ((1. - nobs / nobs_t) * variances).sum()
         statistic = 1. * (nobs * (means - meanw_t)**2).sum()
@@ -463,6 +467,7 @@ def anova_generic(means, variances, nobs, use_var="unequal",
         options["df2"] = (df_num2, df_denom)
         options["df_num2"] = df_num2
         options["pvalue2"] = pval2
+
     else:
         raise ValueError('use_var is to be one of "unequal", "equal" or "bf"')
 
@@ -486,8 +491,8 @@ def anova_oneway(data, groups=None, use_var="unequal", welch_correction=True,
                  trim_frac=0):
     """oneway anova
 
-    This implements standard anova, Welch and Brown-Forsythe and trimmed
-    (Yuen) variants of them.
+    This implements standard anova, Welch and Brown-Forsythe, and trimmed
+    (Yuen) variants of those.
 
     Parameters
     ----------
@@ -507,14 +512,18 @@ def anova_oneway(data, groups=None, use_var="unequal", welch_correction=True,
             Heteroscedasticity is taken into account with Welch Anova and
             Satterthwaite-Welch degrees of freedom.
             This is the default.
-        "equal" : Variances are assumed to be equal across samples. This is
-            the standard Anova.
-        "bf" : Variances are not assumed to be equal across samples. The method
-            is Browne-Forsythe (1971) for testing equality of means with the
-            corrected degrees of freedom by Merothra. The original BF degrees
-            of freedom are available as additional attributes in the results
-            instance, ``df_denom2`` and ``p_value2``.
+        "equal" : Variances are assumed to be equal across samples.
+            This is the standard Anova.
+        "bf: Variances are not assumed to be equal across samples.
+            The method is Browne-Forsythe (1971) for testing equality of means
+            with the corrected degrees of freedom by Merothra. The original BF
+            degrees of freedom are available as additional attributes in the
+            results instance, ``df_denom2`` and ``p_value2``.
 
+    welch_correction : bool
+        If this is false, then the Welch correction to the test statistic is
+        not included. This allows the computation of an effect size measure
+        that corresponds more closely to Cohen's f.
     trim_frac : float in [0, 0.5)
         Optional trimming for Anova with trimmed mean and winsorized variances.
         With the default trim_frac equal to zero, the oneway Anova statistics
@@ -536,14 +545,14 @@ def anova_oneway(data, groups=None, use_var="unequal", welch_correction=True,
             Test statistic for k-sample mean comparison which is approximately
             F-distributed.
         pvalue : float
-            If f ``use_var="bf"``, then the p-value is based on corrected
+            If ``use_var="bf"``, then the p-value is based on corrected
             degrees of freedom following Mehrotra 1997.
         pvalue2 : float
             This is the p-value based on degrees of freedom as in
             Brown-Forsythe 1974 and is only available if ``use_var="bf"``.
         df = (df_denom, df_num) : tuple of floats
             Degreeds of freedom for the F-distribution depend on ``use_var``.
-            If f ``use_var="bf"``, then `df_denom` is for Mehrotra p-values
+            If ``use_var="bf"``, then `df_denom` is for Mehrotra p-values
             `df_denom2` is available for Brown-Forsythe 1974 p-values.
             `df_num` is the same numerator degrees of freedom for both
             p-values.
@@ -617,23 +626,37 @@ def equivalence_oneway_generic(f_stat, n_groups, nobs, equiv_margin, df,
                                alpha=0.05, margin_type="f2"):
     """Equivalence test for oneway anova (Wellek and extensions)
 
-    Warning: eps is currently defined as in Wellek, but will change to
-    signal to noise ration (Cohen's f family)
+    This is an helper function when summary statistics are available.
+    Use `equivalence_oneway` instead.
 
-    The null hypothesis is that the means differ by more than `eps` in the
-    anova distance measure.
+    The null hypothesis is that the means differ by more than `equiv_margin`
+    in the anova distance measure.
     If the Null is rejected, then the data supports that means are equivalent,
     i.e. within a given distance.
 
     Parameters
     ----------
-    f, n_groups, nobs, eps, df, alpha
+    f_stat : float
+        F-statistic
+    n_groups : int
+        Number of groups in oneway comparison.
+    nobs : ndarray
+        Array of number of observations in groups.
+    equiv_margin : float
+        Equivalence margin in terms of effect size. Effect size can be chosen
+        with `margin_type`. default is squared Cohen's f.
+    df : tuple
+        Degrees of freedom for F distribution.
+    alpha : float in (0, 1)
+        Significance level for the hypothesis test.
+    margin_type : "f2" or "wellek"
+        Type of effect size used for equivalence margin.
 
     Returns
     -------
-    results : instance of a Holder class
-
-
+    results : instance of HolderTuple class
+        The two main attributes are test statistic `statistic` and p-value
+        `pvalue`.
 
     Notes
     -----
@@ -651,7 +674,8 @@ def equivalence_oneway_generic(f_stat, n_groups, nobs, equiv_margin, df,
 
     References
     ----------
-    Wellek book
+    Wellek, Stefan. 2010. Testing Statistical Hypotheses of Equivalence and
+    Noninferiority. 2nd ed. Boca Raton: CRC Press.
 
     Cribbie, Robert A., Chantal A. Arpin-Cribbie, and Jamie A. Gruman. 2009.
     “Tests of Equivalence for One-Way Independent Groups Designs.” The Journal
@@ -706,6 +730,65 @@ def equivalence_oneway_generic(f_stat, n_groups, nobs, equiv_margin, df,
 def equivalence_oneway(data, equiv_margin, groups=None, use_var="unequal",
                        welch_correction=True, trim_frac=0, margin_type="f2"):
     """equivalence test for oneway anova (Wellek's Anova)
+
+    The null hypothesis is that the means differ by more than `equiv_margin`
+    in the anova distance measure.
+    If the Null is rejected, then the data supports that means are equivalent,
+    i.e. within a given distance.
+
+    Parameters
+    ----------
+    data : tuple of array_like or DataFrame or Series
+        Data for k independent samples, with k >= 2.
+        The data can be provided as a tuple or list of arrays or in long
+        format with outcome observations in ``data`` and group membershipt in
+        ``groups``.
+    equiv_margin : float
+        Equivalence margin in terms of effect size. Effect size can be chosen
+        with `margin_type`. default is squared Cohen's f.
+    groups : ndarray or Series
+        If data is in long format, then groups is needed as indicator to which
+        group or sample and observations belongs.
+    use_var : {"unequal", "equal" or "bf"}
+        `use_var` specified how to treat heteroscedasticity, unequal variance,
+        across samples. Three approaches are available
+
+        "unequal" : Variances are not assumed to be equal across samples.
+            Heteroscedasticity is taken into account with Welch Anova and
+            Satterthwaite-Welch degrees of freedom.
+            This is the default.
+        "equal" : Variances are assumed to be equal across samples.
+            This is the standard Anova.
+        "bf: Variances are not assumed to be equal across samples.
+            The method is Browne-Forsythe (1971) for testing equality of means
+            with the corrected degrees of freedom by Merothra. The original BF
+            degrees of freedom are available as additional attributes in the
+            results instance, ``df_denom2`` and ``p_value2``.
+
+    welch_correction : bool
+        If this is false, then the Welch correction to the test statistic is
+        not included. This allows the computation of an effect size measure
+        that corresponds more closely to Cohen's f.
+    trim_frac : float in [0, 0.5)
+        Optional trimming for Anova with trimmed mean and winsorized variances.
+        With the default trim_frac equal to zero, the oneway Anova statistics
+        are computed without trimming. If `trim_frac` is larger than zero,
+        then the largest and smallest observations in each sample are trimmed.
+        The number of trimmed observations is the fraction of number of
+        observations in the sample truncated to the next lower integer.
+        `trim_frac` has to be smaller than 0.5, however, if the fraction is
+        so large that there are not enough observations left over, then `nan`
+        will be returned.
+    margin_type : "f2" or "wellek"
+        Type of effect size used for equivalence margin, either squared
+        Cohen's f or Wellek's psi. Default is "f2".
+
+    Returns
+    -------
+    results : instance of HolderTuple class
+        The two main attributes are test statistic `statistic` and p-value
+        `pvalue`.
+
     """
 
     # use anova to compute summary statistics and f-statistic
@@ -720,26 +803,41 @@ def equivalence_oneway(data, equiv_margin, groups=None, use_var="unequal",
     return res
 
 
-def power_equivalence_oneway0(f, n_groups, nobs, eps, df, alpha=0.05):
-    """power for oneway equivalence test
+def _power_equivalence_oneway_emp(f_stat, n_groups, nobs, eps, df, alpha=0.05):
+    """empirical power of oneway equivalence test
 
-    This is incomplete and currently only returns post-hoc, empirical power.
+    This only returns post-hoc, empirical power.
 
     Warning: eps is currently defined as in Wellek, but will change to
     signal to noise ratio (Cohen's f family)
 
-    draft version, need specification of alternative
+    Parameters
+    ----------
+    f_stat : float
+        F-statistic from oneway anova, used to compute empirical effect size
+    n_groups : int
+        Number of groups in oneway comparison.
+    nobs : ndarray
+        Array of number of observations in groups.
+    eps : float
+        Equivalence margin in terms of effect size given by Wellek's psi.
+    df : tuple
+        Degrees of freedom for F distribution.
+    alpha : float in (0, 1)
+        Significance level for the hypothesis test.
+
+    Returns
+    -------
+    pow : float
+        Ex-post, post-hoc or empirical power at f-statistic of the equivalence
+        test.
     """
 
-    res = equivalence_oneway_generic(f, n_groups, nobs, eps, df, alpha=0.05,
-                                     margin_type="wellek")
-    # at effect size at alternative
-    # fn, pvn, dfn = oneway_equivalence_generic(f, n_groups, nobs, eps, df,
-    #                                          alpha=0.05)
-    # f, pv, df0, df1 = anova_generic(means, stds**2, nobs,
-    #                                use_var="equal")
+    res = equivalence_oneway_generic(f_stat, n_groups, nobs, eps, df,
+                                     alpha=0.05, margin_type="wellek")
+
     nobs_mean = nobs.sum() / n_groups
-    fn = f  # post-hoc power, empirical power at estimate
+    fn = f_stat  # post-hoc power, empirical power at estimate
     esn = fn * (n_groups - 1) / nobs_mean  # Wellek psi
     pow_ = stats.ncf.cdf(res.crit_f, df[0], df[1], nobs_mean * esn)
 
@@ -748,6 +846,37 @@ def power_equivalence_oneway0(f, n_groups, nobs, eps, df, alpha=0.05):
 
 def power_equivalence_oneway(f2_alt, equiv_margin, nobs_t, n_groups=None,
                              df=None, alpha=0.05, margin_type="f2"):
+    """
+    Power of  oneway equivalence test
+
+    Parameters
+    ----------
+    f2_alt : float
+        Effect size, squared Cohen's f, under the alternative.
+    equiv_margin : float
+        Equivalence margin in terms of effect size. Effect size can be chosen
+        with `margin_type`. default is squared Cohen's f.
+    nobs_t : ndarray
+        Total number of observations summed over all groups.
+    n_groups : int
+        Number of groups in oneway comparison. If margin_type is "wellek",
+        then either ``n_groups`` or ``df`` has to be given.
+    df : tuple
+        Degrees of freedom for F distribution,
+        ``df = (n_groups - 1, nobs_t - n_groups)``
+    alpha : float in (0, 1)
+        Significance level for the hypothesis test.
+    margin_type : "f2" or "wellek"
+        Type of effect size used for equivalence margin, either squared
+        Cohen's f or Wellek's psi. Default is "f2".
+
+    Returns
+    -------
+    pow_alt : float
+        Power of the equivalence test at given equivalence effect size under
+        the alternative.
+    """
+
     # one of n_groups or df has to be specified
     if df is None:
         if n_groups is None:
@@ -846,7 +975,7 @@ def simulate_power_equivalence_oneway(means, nobs, equiv_margin, vars_=None,
     return res
 
 
-def test_scale_oneway(data, method='bfm', center='median', transform='abs',
+def test_scale_oneway(data, method='bf', center='median', transform='abs',
                       trim_frac_mean=0.1, trim_frac_anova=0.):
     """Oneway Anova test for equal scale, variance or dispersion
 
@@ -856,12 +985,69 @@ def test_scale_oneway(data, method='bfm', center='median', transform='abs',
 
     Parameters
     ----------
-    data
-    method "equal", "unequal", "bfm"
+    data : tuple of array_like or DataFrame or Series
+        Data for k independent samples, with k >= 2.
+        The data can be provided as a tuple or list of arrays or in long
+        format with outcome observations in ``data`` and group membershipt in
+        ``groups``.
+    groups : ndarray or Series
+        If data is in long format, then groups is needed as indicator to which
+        group or sample and observations belongs.
+    method : {"unequal", "equal" or "bf"}
+        `use_var` specified how to treat heteroscedasticity, unequal variance,
+        across samples. Three approaches are available
+
+        "unequal" : Variances are not assumed to be equal across samples.
+            Heteroscedasticity is taken into account with Welch Anova and
+            Satterthwaite-Welch degrees of freedom.
+            This is the default.
+        "equal" : Variances are assumed to be equal across samples.
+            This is the standard Anova.
+        "bf: Variances are not assumed to be equal across samples.
+            The method is Browne-Forsythe (1971) for testing equality of means
+            with the corrected degrees of freedom by Merothra. The original BF
+            degrees of freedom are available as additional attributes in the
+            results instance, ``df_denom2`` and ``p_value2``.
+
     center : "median", "mean", "trimmed" or float
+        Statistic used for centering observations. Default is median.
     transform : "abs", "square" or callable
-    trim_frac_mean=0.1,
-    trim_frac_anova=0.
+        Transformation for the centered observations.
+        Default is absolute value.
+    trim_frac_mean=0.1 : float in [0, 0.5)
+        Trim fraction for the trimmed mean when `center` is "trimmed"
+    trim_frac_anova : float in [0, 0.5)
+        Optional trimming for Anova with trimmed mean and winsorized variances.
+        With the default trim_frac equal to zero, the oneway Anova statistics
+        are computed without trimming. If `trim_frac` is larger than zero,
+        then the largest and smallest observations in each sample are trimmed.
+        The number of trimmed observations is the fraction of number of
+        observations in the sample truncated to the next lower integer.
+        `trim_frac` has to be smaller than 0.5, however, if the fraction is
+        so large that there are not enough observations left over, then `nan`
+        will be returned.
+
+    Returns
+    -------
+    res : results instance
+        The returned HolderTuple instance has the following main attributes
+        and some additional information in other attributes.
+
+        statistic : float
+            Test statistic for k-sample mean comparison which is approximately
+            F-distributed.
+        pvalue : float
+            If ``use_var="bf"``, then the p-value is based on corrected
+            degrees of freedom following Mehrotra 1997.
+        pvalue2 : float
+            This is the p-value based on degrees of freedom as in
+            Brown-Forsythe 1974 and is only available if ``use_var="bf"``.
+        df = (df_denom, df_num) : tuple of floats
+            Degreeds of freedom for the F-distribution depend on ``use_var``.
+            If ``use_var="bf"``, then `df_denom` is for Mehrotra p-values
+            `df_denom2` is available for Brown-Forsythe 1974 p-values.
+            `df_num` is the same numerator degrees of freedom for both
+            p-values.
 
     Returns
     -------
@@ -883,7 +1069,7 @@ def test_scale_oneway(data, method='bfm', center='median', transform='abs',
     return res
 
 
-def equivalence_scale_oneway(data, equiv_margin, method='bfm', center='median',
+def equivalence_scale_oneway(data, equiv_margin, method='bf', center='median',
                              transform='abs', trim_frac_mean=0.,
                              trim_frac_anova=0.):
     """Oneway Anova test for equivalence of scale, variance or dispersion
