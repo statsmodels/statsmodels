@@ -1051,7 +1051,57 @@ def test_append_results():
                     res1.forecast(10, exog=np.ones(10)))
 
 
-def test_extend_results():
+@pytest.mark.parametrize('trend', ['n', 'c', 'ct'])
+@pytest.mark.parametrize('forecast', [True, False])
+def test_extend_results(trend, forecast):
+    endog = np.arange(200).reshape(100, 2)
+    trend_params = []
+    if trend == 'c':
+        trend_params = [0.1, 0.2]
+    if trend == 'ct':
+        trend_params = [0.1, 0.2, 1., 2.,]
+    params = np.r_[trend_params,
+              0.5, -0.1, 0.0, 0.2,
+              1., 0., 1.]
+
+    mod1 = varmax.VARMAX(endog, order=(1, 0), trend=trend)
+    res1 = mod1.smooth(params)
+    if forecast:
+        # Call `forecast` to trigger the _set_final_exog and
+        # _set_final_predicted_state context managers
+        res1.forecast()
+
+    mod2 = mod1.clone(endog[:50])
+    res2 = mod2.smooth(params)
+    if forecast:
+        # Call `forecast` to trigger the _set_final_exog and
+        # _set_final_predicted_state context managers
+        res2.forecast()
+    res3 = res2.extend(endog[50:])
+
+    assert_allclose(res3.llf_obs, res1.llf_obs[50:])
+
+    for attr in [
+            'filtered_state', 'filtered_state_cov', 'predicted_state',
+            'predicted_state_cov', 'forecasts', 'forecasts_error',
+            'forecasts_error_cov', 'standardized_forecasts_error',
+            'scaled_smoothed_estimator',
+            'scaled_smoothed_estimator_cov', 'smoothing_error',
+            'smoothed_state',
+            'smoothed_state_cov', 'smoothed_state_autocov',
+            'smoothed_measurement_disturbance',
+            'smoothed_state_disturbance',
+            'smoothed_measurement_disturbance_cov',
+            'smoothed_state_disturbance_cov']:
+        desired = getattr(res1, attr)
+        if desired is not None:
+            desired = desired[..., 50:]
+        assert_allclose(getattr(res3, attr), desired, atol=1e-12)
+
+    assert_allclose(res3.forecast(10), res1.forecast(10))
+
+
+def test_extend_results_exog():
     endog = np.arange(200).reshape(100, 2)
     exog = np.ones(100)
     params = [0.1, 0.2,
