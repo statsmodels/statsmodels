@@ -184,8 +184,8 @@ def convert_effectsize_fsqu(f2=None, eta2=None):
     """convert squared effect sizes in f family
 
     f2 is signal to noise ratio, var_explained / var_residual
+
     eta2 is proportion of explained variance, var_explained / var_total
-    omega2 is ...
 
     uses the relationship:
     f2 = eta2 / (1 - eta2)
@@ -215,7 +215,7 @@ def convert_effectsize_fsqu(f2=None, eta2=None):
     return res
 
 
-def _fstat2effectsize(f_stat, df1, df2):
+def _fstat2effectsize(f_stat, df):
     """Compute anova effect size from F-statistic
 
     This might be combined with convert_effectsize_fsqu
@@ -223,11 +223,11 @@ def _fstat2effectsize(f_stat, df1, df2):
     Parameters
     ----------
     f_stat : array_like
-        F-statistic corresponding to an F-test
-    df1 : int or float
-        numerator degrees of freedom, number of constraints
-    df2 : int or float
-        denominator degrees of freedom, df_resid
+        Test statistic of an F-test
+    df : tuple
+        degrees of freedom ``df = (df1, df2)`` where
+         - df1 : numerator degrees of freedom, number of constraints
+         - df2 : denominator degrees of freedom, df_resid
 
     Returns
     -------
@@ -255,6 +255,7 @@ def _fstat2effectsize(f_stat, df1, df2):
     cases (e.g. zero division).
 
     """
+    df1, df2 = df
     f2 = f_stat * df1 / df2
     eta2 = f2 / (f2 + 1)
     omega2_ = (f_stat - 1) / (f_stat + (df2 + 1) / df1)
@@ -269,24 +270,78 @@ def _fstat2effectsize(f_stat, df1, df2):
 # these are mainly to compare with literature
 
 def wellek_to_f2(eps, n_groups):
-    """Convert Wellek's effect size (sqrt) to Cohen's f-squared"""
+    """Convert Wellek's effect size (sqrt) to Cohen's f-squared
+
+    This computes the following effect size :
+
+       f2 = 1 / n_groups * eps**2
+
+    Parameters
+    ----------
+    eps : float or ndarray
+        Wellek's effect size used in anova equivalence test
+    n_groups : int
+        Number of groups in oneway comparison
+
+    Returns
+    -------
+    f2 : effect size Cohen's f-squared
+
+    """
     f2 = 1 / n_groups * eps**2
     return f2
 
 
 def f2_to_wellek(f2, n_groups):
-    """Convert Cohen's f-squared to Wellek's effect size (sqrt)"""
+    """Convert Cohen's f-squared to Wellek's effect size (sqrt)
+
+    This computes the following effect size :
+
+       eps = sqrt(n_groups * f2)
+
+    Parameters
+    ----------
+    f2 : float or ndarray
+        Effect size Cohen's f-squared
+    n_groups : int
+        Number of groups in oneway comparison
+
+    Returns
+    -------
+    eps : float or ndarray
+        Wellek's effect size used in anova equivalence test
+    """
     eps = np.sqrt(n_groups * f2)
     return eps
 
 
 def fstat_to_wellek(f_stat, n_groups, nobs_mean):
-    """Convert F statistic to wellek's effect size eps squared"""
+    """Convert F statistic to wellek's effect size eps squared
+
+    This computes the following effect size :
+
+       es = f_stat * (n_groups - 1) / nobs_mean
+
+    Parameters
+    ----------
+    f_stat : float or ndarray
+        Test statistic of an F-test.
+    n_groups : int
+        Number of groups in oneway comparison
+    nobs_mean : float or ndarray
+        Average number of observations across groups.
+
+    Returns
+    -------
+    eps : float or ndarray
+        Wellek's effect size used in anova equivalence test
+
+    """
     es = f_stat * (n_groups - 1) / nobs_mean
     return es
 
 
-def confint_noncentrality(f_stat, df1, df2, alpha=0.05,
+def confint_noncentrality(f_stat, df, alpha=0.05,
                           alternative="two-sided"):
     """
     Confidence interval for noncentrality parameter in F-test
@@ -297,8 +352,12 @@ def confint_noncentrality(f_stat, df1, df2, alpha=0.05,
     Parameters
     ----------
     f_stat : float
-    df1 : float
-    df2 : float
+    df : tuple
+        degrees of freedom ``df = (df1, df2)`` where
+
+        - df1 : numerator degrees of freedom, number of constraints
+        - df2 : denominator degrees of freedom, df_resid
+
     alpha : float, default 0.05
     alternative : {"two-sided"}
         Other alternatives have not been implements.
@@ -326,6 +385,7 @@ def confint_noncentrality(f_stat, df1, df2, alpha=0.05,
     confint_effectsize_oneway
     """
 
+    df1, df2 = df
     if alternative in ["two-sided", "2s", "ts"]:
         alpha1s = alpha / 2
         ci = ncfdtrinc(df1, df2, [1 - alpha1s, alpha1s], f_stat)
@@ -335,7 +395,7 @@ def confint_noncentrality(f_stat, df1, df2, alpha=0.05,
     return ci
 
 
-def confint_effectsize_oneway(f_stat, df1, df2, alpha=0.05, nobs=None):
+def confint_effectsize_oneway(f_stat, df, alpha=0.05, nobs=None):
     """
     Confidence interval for effect size in oneway anova for F distribution
 
@@ -345,8 +405,12 @@ def confint_effectsize_oneway(f_stat, df1, df2, alpha=0.05, nobs=None):
     Parameters
     ----------
     f_stat : float
-    df1 : float
-    df2 : float
+    df : tuple
+        degrees of freedom ``df = (df1, df2)`` where
+
+        - df1 : numerator degrees of freedom, number of constraints
+        - df2 : denominator degrees of freedom, df_resid
+
     alpha : float, default 0.05
     nobs : int, default None
 
@@ -372,9 +436,11 @@ def confint_effectsize_oneway(f_stat, df1, df2, alpha=0.05, nobs=None):
     --------
     confint_noncentrality
     """
+
+    df1, df2 = df
     if nobs is None:
         nobs = df1 + df2 + 1
-    ci_nc = confint_noncentrality(f_stat, df1, df2, alpha=alpha)
+    ci_nc = confint_noncentrality(f_stat, df, alpha=alpha)
 
     ci_f2 = ci_nc / nobs
     ci_res = convert_effectsize_fsqu(f2=ci_f2)
@@ -650,7 +716,11 @@ def equivalence_oneway_generic(f_stat, n_groups, nobs, equiv_margin, df,
         Equivalence margin in terms of effect size. Effect size can be chosen
         with `margin_type`. default is squared Cohen's f.
     df : tuple
-        Degrees of freedom for F distribution.
+        degrees of freedom ``df = (df1, df2)`` where
+
+        - df1 : numerator degrees of freedom, number of constraints
+        - df2 : denominator degrees of freedom, df_resid
+
     alpha : float in (0, 1)
         Significance level for the hypothesis test.
     margin_type : "f2" or "wellek"
@@ -812,8 +882,8 @@ def _power_equivalence_oneway_emp(f_stat, n_groups, nobs, eps, df, alpha=0.05):
 
     This only returns post-hoc, empirical power.
 
-    Warning: eps is currently defined as in Wellek, but will change to
-    signal to noise ratio (Cohen's f family)
+    Warning: eps is currently effect size margin as defined as in Wellek, and
+    not the signal to noise ratio (Cohen's f family).
 
     Parameters
     ----------
@@ -838,7 +908,7 @@ def _power_equivalence_oneway_emp(f_stat, n_groups, nobs, eps, df, alpha=0.05):
     """
 
     res = equivalence_oneway_generic(f_stat, n_groups, nobs, eps, df,
-                                     alpha=0.05, margin_type="wellek")
+                                     alpha=alpha, margin_type="wellek")
 
     nobs_mean = nobs.sum() / n_groups
     fn = f_stat  # post-hoc power, empirical power at estimate

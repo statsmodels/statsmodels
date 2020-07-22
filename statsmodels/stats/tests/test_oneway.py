@@ -33,10 +33,10 @@ def test_oneway_effectsize():
     df2 = 76
     nobs = 80
 
-    ci = confint_noncentrality(F, df1, df2, alpha=0.05,
+    ci = confint_noncentrality(F, (df1, df2), alpha=0.05,
                                alternative="two-sided")
 
-    ci_es = confint_effectsize_oneway(F, df1, df2, alpha=0.05)
+    ci_es = confint_effectsize_oneway(F, (df1, df2), alpha=0.05)
     ci_steiger = ci_es.ci_f * np.sqrt(4 / 3)
     res_ci_steiger = [0.1764, 0.7367]
     res_ci_nc = np.asarray([1.8666, 32.563])
@@ -104,15 +104,15 @@ def test_effectsize_fstat():
 
     f_stat, df1, df2 = 45.8, 3, 35
     # nobs = df1 + df2 + 1  # not directly used in the following, only df
-    fes = smo._fstat2effectsize(f_stat, df1, df2)
+    fes = smo._fstat2effectsize(f_stat, (df1, df2))
     assert_allclose(np.sqrt(fes.f2), Cohens_f_partial, rtol=1e-13)
     assert_allclose(fes.eta2, Eta_Sq_partial, rtol=1e-13)
     assert_allclose(fes.eps2, Epsilon_Sq_partial, rtol=1e-13)
     assert_allclose(fes.omega2, Omega_Sq_partial, rtol=1e-13)
 
-    ci_nc = confint_noncentrality(f_stat, df1, df2, alpha=0.1)
+    ci_nc = confint_noncentrality(f_stat, (df1, df2), alpha=0.1)
     # the following replicates R package effectsize
-    ci_es = smo._fstat2effectsize(ci_nc / df1, df1, df2)
+    ci_es = smo._fstat2effectsize(ci_nc / df1, (df1, df2))
     assert_allclose(ci_es.eta2, CI_eta2, rtol=2e-4)
     assert_allclose(ci_es.eps2, CI_eps2, rtol=2e-4)
     assert_allclose(ci_es.omega2, CI_omega2, rtol=2e-4)
@@ -133,10 +133,10 @@ def test_effectsize_fstat_stata():
     # level = 90
 
     f_stat, df1, df2 = 7.47403193349075, 2, 40
-    fes = smo._fstat2effectsize(f_stat, df1, df2)
+    fes = smo._fstat2effectsize(f_stat, (df1, df2))
     assert_allclose(fes.eta2, eta2, rtol=1e-13)
     assert_allclose(fes.omega2, omega2, rtol=0.02)  # low agreement
-    ci_es = smo.confint_effectsize_oneway(f_stat, df1, df2, alpha=0.1)
+    ci_es = smo.confint_effectsize_oneway(f_stat, (df1, df2), alpha=0.1)
     assert_allclose(ci_es.eta2, (lb_eta2, ub_eta2), rtol=1e-4)
     assert_allclose(ci_es.ci_omega2, (lb_omega2, ub_omega2), rtol=0.025)
 
