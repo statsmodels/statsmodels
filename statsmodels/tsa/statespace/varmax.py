@@ -936,14 +936,11 @@ class VARMAXResults(MLEResults):
 
         Notes
         -----
-        We need special handling for forecasting with `exog` or trend, because
+        We need special handling for forecasting with `exog`, because
         if we had these then the last predicted_state has been set to NaN since
-        we did not have the appropriate `exog` to create it. Since we handle
-        trend in the same way as `exog`, we still have this issue when only
-        trend is used without `exog`.
+        we did not have the appropriate `exog` to create it.
         """
-        flag = out_of_sample and (
-            self.model.k_exog > 0 or self.model.k_trend > 0)
+        flag = out_of_sample and self.model.k_exog > 0
 
         if flag:
             tmp_endog = concat([

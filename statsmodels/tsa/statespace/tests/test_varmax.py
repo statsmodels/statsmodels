@@ -1059,10 +1059,10 @@ def test_extend_results(trend, forecast):
     if trend == 'c':
         trend_params = [0.1, 0.2]
     if trend == 'ct':
-        trend_params = [0.1, 0.2, 1., 2.,]
+        trend_params = [0.1, 0.2, 1., 2.]
     params = np.r_[trend_params,
-              0.5, -0.1, 0.0, 0.2,
-              1., 0., 1.]
+                   0.5, -0.1, 0.0, 0.2,
+                   1., 0., 1.]
 
     mod1 = varmax.VARMAX(endog, order=(1, 0), trend=trend)
     res1 = mod1.smooth(params)
