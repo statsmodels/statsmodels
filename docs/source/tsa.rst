@@ -378,6 +378,26 @@ are available in:
    ThetaModel
    ThetaModelResults
 
+Forecasting after STL Decomposition
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+:class:`statsmodels.tsa.seasonal.STL` is commonly used to remove seasonal
+components from a time series. The deseasonalized time series can then
+be modeled using a any non-seasonal model, and forecasts are constructed
+by adding the forecast from the non-seasonal model to the estimates of
+the seasonal component from the final full-cycle which are forecast using
+a random-walk model.
+
+.. module:: statsmodels.tsa.forecasting.stl
+   :synopsis: Models designed for forecasting
+
+.. currentmodule:: statsmodels.tsa.forecasting.stl
+
+.. autosummary::
+   :toctree: generated/
+
+   STLForecast
+   STLForecastResults
+
 Prediction Results
 """"""""""""""""""
 Most foreasting methods support a ``get_prediction`` method that return
