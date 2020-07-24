@@ -30,6 +30,7 @@ def test_multivariate_polynomial_basis():
         uv_basis = UnivariatePolynomialSmoother(x[:, i], degree=deg).basis
         assert_allclose(mps.smoothers[i].basis, uv_basis)
 
+
 @pytest.mark.parametrize(
     "x, df, degree",
     [
