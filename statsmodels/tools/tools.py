@@ -400,7 +400,7 @@ def pinv_extended(x, rcond=1e-15):
     """
     x = np.asarray(x)
     x = x.conjugate()
-    u, s, vt = np.linalg.svd(x, False)
+    u, s, vt = scipy.linalg.svd(x, full_matrices=False)
     s_orig = np.copy(s)
     m = u.shape[0]
     n = vt.shape[1]
@@ -506,7 +506,7 @@ def fullrank(x, r=None):
     if r is None:
         r = np.linalg.matrix_rank(x)
 
-    v, d, u = np.linalg.svd(x, full_matrices=False)
+    v, d, u = scipy.linalg.svd(x, full_matrices=False)
     order = np.argsort(d)
     order = order[::-1]
     value = []
