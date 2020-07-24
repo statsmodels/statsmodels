@@ -2005,31 +2005,8 @@ class FilterResults(FrozenRepresentation):
         if dynamic is False:
             dynamic = None
 
-        ndynamic = 0
-        if dynamic is not None:
-            # Replace the relative dynamic offset with an absolute offset
-            dynamic = start + dynamic
-
-            # Validate the `dynamic` parameter
-            if dynamic < 0:
-                raise ValueError('Dynamic prediction cannot begin prior to the'
-                                 ' first observation in the sample.')
-            elif dynamic > end:
-                warn('Dynamic prediction specified to begin after the end of'
-                     ' prediction, and so has no effect.', ValueWarning)
-                dynamic = None
-            elif dynamic > self.nobs:
-                warn('Dynamic prediction specified to begin during'
-                     ' out-of-sample forecasting period, and so has no'
-                     ' effect.', ValueWarning)
-                dynamic = None
-
-            # Get the total size of the desired dynamic forecasting component
-            # Note: the first `dynamic` periods of prediction are actually
-            # *not* dynamic, because dynamic prediction begins at observation
-            # `dynamic`.
-            if dynamic is not None:
-                ndynamic = max(0, min(end, self.nobs) - dynamic)
+        # Check validity of dynamic and warn or error if issues
+        dynamic, ndynamic = _check_dynamic(dynamic, start, end, self.nobs)
 
         # Get the number of in-sample static predictions
         if dynamic is None:
@@ -2269,3 +2246,55 @@ class PredictionResults(FilterResults):
             setattr(self, _attr, value)
 
         return getattr(self, _attr)
+
+
+def _check_dynamic(dynamic, start, end, nobs):
+    """
+    Verify dynamic and warn or error if issues
+
+    Parameters
+    ----------
+    dynamic : {int, None}
+        The offset relative to start of the dynamic forecasts. None if no
+        dynamic forecasts are required.
+    start : int
+        The location of the first forecast.
+    end : int
+        The location of the final forecast (inclusive).
+    nobs : int
+        The number of observations in the time series.
+
+    Returns
+    -------
+    dynamic : {int, None}
+        The start location of the first dynamic forecast. None if there
+        are no in-sample dynamic forecasts.
+    ndynamic : int
+        The number of dynamic forecasts
+    """
+    if dynamic is None:
+        return dynamic, 0
+
+    # Replace the relative dynamic offset with an absolute offset
+    dynamic = start + dynamic
+
+    # Validate the `dynamic` parameter
+    if dynamic < 0:
+        raise ValueError('Dynamic prediction cannot begin prior to the'
+                         ' first observation in the sample.')
+    elif dynamic > end:
+        warn('Dynamic prediction specified to begin after the end of'
+             ' prediction, and so has no effect.', ValueWarning)
+        return None, 0
+    elif dynamic > nobs:
+        warn('Dynamic prediction specified to begin during'
+             ' out-of-sample forecasting period, and so has no'
+             ' effect.', ValueWarning)
+        return None, 0
+
+    # Get the total size of the desired dynamic forecasting component
+    # Note: the first `dynamic` periods of prediction are actually
+    # *not* dynamic, because dynamic prediction begins at observation
+    # `dynamic`.
+    ndynamic = max(0, min(end, nobs) - dynamic)
+    return dynamic, ndynamic
