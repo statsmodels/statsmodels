@@ -792,7 +792,6 @@ class AdditiveGamSmoother(with_metaclass(ABCMeta)):
         basis : ndarray
             design matrix for the spline basis for given ``x_new``.
         """
-        x_new = np.asarray(x_new)
         if x_new.ndim == 1:
             x_new = x_new.reshape(-1, 1)
         exog = np.hstack(list(self.smoothers[i].transform(x_new[:, i])
@@ -842,11 +841,11 @@ class BSplines(AdditiveGamSmoother):
         underlying explanatory variable for smooth terms.
         If 2-dimensional, then observations should be in rows and
         explanatory variables in columns.
-    df :  {list[int], int}
+    df :  {int, array_like[int]}
         number of basis functions or degrees of freedom; should be equal
         in length to the number of columns of `x`; may be an integer if
         `x` has one column or is 1-D.
-    degree : {list[int], int}
+    degree : {int, array_like[int]}
         degree(s) of the spline; the same length and type rules apply as
         to `df`
     include_intercept : bool
@@ -913,8 +912,14 @@ class BSplines(AdditiveGamSmoother):
     """
     def __init__(self, x, df, degree, include_intercept=False,
                  constraints=None, variable_names=None, knot_kwds=None):
-        self.degrees = [degree] if isinstance(degree, int) else degree
-        self.dfs = [df] if isinstance(df, int) else df
+        if isinstance(degree, int):
+            self.degrees = np.array([degree], dtype=int)
+        else:
+            self.degrees = degree
+        if isinstance(df, int):
+            self.dfs = np.array([df], dtype=int)
+        else:
+            self.dfs = df
         self.knot_kwds = knot_kwds
         # TODO: move attaching constraints to super call
         self.constraints = constraints

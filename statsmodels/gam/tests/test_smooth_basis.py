@@ -34,7 +34,7 @@ def test_multivariate_polynomial_basis():
     "x, df, degree",
     [
         (np.linspace((0, 1), (1, 10), 100), [5, 6], [3, 5]),
-        (np.linspace(0, 1, 100).reshape(-1, 1), 6, 3),
+        (np.linspace(0, 1, 100), 6, 3),
     ]
 )
 def test_bsplines(x, df, degree):
