@@ -570,7 +570,7 @@ class CalendarDeterminsticTerm(DeterministicTerm, ABC):
     ) -> np.ndarray:
         if isinstance(index, pd.PeriodIndex):
             index = index.to_timestamp()
-        delta = index.to_perioddelta(self._freq)
+        delta = index - index.to_period(self._freq).to_timestamp()
         pi = index.to_period(self._freq)
         gap = (pi + 1).to_timestamp() - pi.to_timestamp()
         return to_numpy(delta) / to_numpy(gap)

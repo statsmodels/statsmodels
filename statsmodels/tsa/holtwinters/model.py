@@ -403,10 +403,6 @@ class ExponentialSmoothing(TimeSeriesModel):
 
     def _initialize(self):
         if self._initialization_method is None:
-            warnings.warn(
-                "After 0.13 initialization must be handled at model creation",
-                FutureWarning,
-            )
             msg = "initial_{0} given but no initialization method specified."
             if self._initial_level is not None:
                 raise ValueError(msg.format("level"))
@@ -414,6 +410,10 @@ class ExponentialSmoothing(TimeSeriesModel):
                 raise ValueError(msg.format("trend"))
             if self._initial_seasonal is not None:
                 raise ValueError(msg.format("seasonal"))
+            warnings.warn(
+                "After 0.13 initialization must be handled at model creation",
+                FutureWarning,
+            )
             return
         if self._initialization_method == "known":
             return self._initialize_known()
