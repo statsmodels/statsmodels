@@ -792,7 +792,7 @@ class AdditiveGamSmoother(with_metaclass(ABCMeta)):
         basis : ndarray
             design matrix for the spline basis for given ``x_new``.
         """
-        if x_new.ndim == 1:
+        if x_new.ndim == 1 and self.k_variables == 1:
             x_new = x_new.reshape(-1, 1)
         exog = np.hstack(list(self.smoothers[i].transform(x_new[:, i])
                          for i in range(self.k_variables)))
