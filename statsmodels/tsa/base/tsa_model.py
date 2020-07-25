@@ -35,8 +35,229 @@ _generic_params = base._model_params_doc
 _missing_param_doc = base._missing_param_doc
 
 
-class TimeSeriesModel(base.LikelihoodModel):
+def get_index_loc(key, index):
+    """
+    Get the location of a specific key in an index
 
+    Parameters
+    ----------
+    key : label
+        The key for which to find the location if the underlying index is
+        a DateIndex or a location if the underlying index is a RangeIndex
+        or an Int64Index.
+    index : pd.Index
+        The index to search.
+
+    Returns
+    -------
+    loc : int
+        The location of the key
+    index : pd.Index
+        The index including the key; this is a copy of the original index
+        unless the index had to be expanded to accommodate `key`.
+    index_was_expanded : bool
+        Whether or not the index was expanded to accommodate `key`.
+
+    Notes
+    -----
+    If `key` is past the end of of the given index, and the index is either
+    an Int64Index or a date index, this function extends the index up to
+    and including key, and then returns the location in the new index.
+    """
+    base_index = index
+
+    index = base_index
+    date_index = isinstance(base_index, (PeriodIndex, DatetimeIndex))
+    int_index = isinstance(base_index, Int64Index)
+    range_index = isinstance(base_index, RangeIndex)
+    index_class = type(base_index)
+    nobs = len(index)
+
+    # Special handling for RangeIndex
+    if range_index and isinstance(key, (int, np.integer)):
+        # Negative indices (that lie in the Index)
+        if key < 0 and -key <= nobs:
+            key = nobs + key
+        # Out-of-sample (note that we include key itself in the new index)
+        elif key > nobs - 1:
+            # See gh5835. Remove the except after pandas 0.25 required.
+            try:
+                base_index_start = base_index.start
+                base_index_step = base_index.step
+            except AttributeError:
+                base_index_start = base_index._start
+                base_index_step = base_index._step
+            stop = base_index_start + (key + 1) * base_index_step
+            index = RangeIndex(start=base_index_start,
+                               stop=stop,
+                               step=base_index_step)
+
+    # Special handling for Int64Index
+    if (not range_index and int_index and not date_index and
+            isinstance(key, (int, np.integer))):
+        # Negative indices (that lie in the Index)
+        if key < 0 and -key <= nobs:
+            key = nobs + key
+        # Out-of-sample (note that we include key itself in the new index)
+        elif key > base_index[-1]:
+            index = Int64Index(np.arange(base_index[0], int(key + 1)))
+
+    # Special handling for date indexes
+    if date_index:
+        # Use index type to choose creation function
+        if index_class is DatetimeIndex:
+            index_fn = date_range
+        else:
+            index_fn = period_range
+        # Integer key (i.e. already given a location)
+        if isinstance(key, (int, np.integer)):
+            # Negative indices (that lie in the Index)
+            if key < 0 and -key < nobs:
+                key = index[nobs + key]
+            # Out-of-sample (note that we include key itself in the new
+            # index)
+            elif key > len(base_index) - 1:
+                index = index_fn(start=base_index[0],
+                                 periods=int(key + 1),
+                                 freq=base_index.freq)
+                key = index[-1]
+            else:
+                key = index[key]
+        # Other key types (i.e. string date or some datetime-like object)
+        else:
+            # Covert the key to the appropriate date-like object
+            if index_class is PeriodIndex:
+                date_key = Period(key, freq=base_index.freq)
+            else:
+                date_key = Timestamp(key, freq=base_index.freq)
+
+            # Out-of-sample
+            if date_key > base_index[-1]:
+                # First create an index that may not always include `key`
+                index = index_fn(start=base_index[0], end=date_key,
+                                 freq=base_index.freq)
+
+                # Now make sure we include `key`
+                if not index[-1] == date_key:
+                    index = index_fn(start=base_index[0],
+                                     periods=len(index) + 1,
+                                     freq=base_index.freq)
+
+                # To avoid possible inconsistencies with `get_loc` below,
+                # set the key directly equal to the last index location
+                key = index[-1]
+
+    # Get the location
+    if date_index:
+        # (note that get_loc will throw a KeyError if key is invalid)
+        loc = index.get_loc(key)
+    elif int_index or range_index:
+        # For Int64Index and RangeIndex, key is assumed to be the location
+        # and not an index value (this assumption is required to support
+        # RangeIndex)
+        try:
+            index[key]
+        # We want to raise a KeyError in this case, to keep the exception
+        # consistent across index types.
+        # - Attempting to index with an out-of-bound location (e.g.
+        #   index[10] on an index of length 9) will raise an IndexError
+        #   (as of Pandas 0.22)
+        # - Attemtping to index with a type that cannot be cast to integer
+        #   (e.g. a non-numeric string) will raise a ValueError if the
+        #   index is RangeIndex (otherwise will raise an IndexError)
+        #   (as of Pandas 0.22)
+        except (IndexError, ValueError) as e:
+            raise KeyError(str(e))
+        loc = key
+    else:
+        loc = index.get_loc(key)
+
+    # Check if we now have a modified index
+    index_was_expanded = index is not base_index
+
+    # Return the index through the end of the loc / slice
+    if isinstance(loc, slice):
+        end = loc.stop - 1
+    else:
+        end = loc
+
+    return loc, index[:end + 1], index_was_expanded
+
+
+def get_index_label_loc(key, index, row_labels):
+    """
+    Get the location of a specific key in an index or model row labels
+
+    Parameters
+    ----------
+    key : label
+        The key for which to find the location if the underlying index is
+        a DateIndex or is only being used as row labels, or a location if
+        the underlying index is a RangeIndex or an Int64Index.
+    index : pd.Index
+        The index to search.
+    row_labels : pd.Index
+        Row labels to search if key not found in index
+
+    Returns
+    -------
+    loc : int
+        The location of the key
+    index : pd.Index
+        The index including the key; this is a copy of the original index
+        unless the index had to be expanded to accommodate `key`.
+    index_was_expanded : bool
+        Whether or not the index was expanded to accommodate `key`.
+
+    Notes
+    -----
+    This function expands on `get_index_loc` by first trying the given
+    base index (or the model's index if the base index was not given) and
+    then falling back to try again with the model row labels as the base
+    index.
+    """
+    try:
+        loc, index, index_was_expanded = get_index_loc(key, index)
+    except KeyError as e:
+        try:
+            if not isinstance(key, (int, np.integer)):
+                loc = row_labels.get_loc(key)
+            else:
+                raise
+            # Require scalar
+            # Pandas may return a slice if there are multiple matching
+            # locations that are monotonic increasing (otherwise it may
+            # return an array of integer locations, see below).
+            if isinstance(loc, slice):
+                loc = loc.start
+            if isinstance(loc, np.ndarray):
+                # Pandas may return a mask (boolean array), for e.g.:
+                # pd.Index(list('abcb')).get_loc('b')
+                if loc.dtype == bool:
+                    # Return the first True value
+                    # (we know there is at least one True value if we're
+                    # here because otherwise the get_loc call would have
+                    # raised an exception)
+                    loc = np.argmax(loc)
+                # Finally, Pandas may return an integer array of
+                # locations that match the given value, for e.g.
+                # pd.DatetimeIndex(['2001-02', '2001-01']).get_loc('2001')
+                # (this appears to be slightly undocumented behavior, since
+                # only int, slice, and mask are mentioned in docs for
+                # pandas.Index.get_loc as of 0.23.4)
+                else:
+                    loc = loc[0]
+            if not isinstance(loc, numbers.Integral):
+                raise
+
+            index = row_labels[:loc + 1]
+            index_was_expanded = False
+        except:
+            raise e
+    return loc, index, index_was_expanded
+
+
+class TimeSeriesModel(base.LikelihoodModel):
     __doc__ = _tsa_doc % {"model": _model_doc, "params": _generic_params,
                           "extra_params": _missing_param_doc,
                           "extra_sections": ""}
@@ -273,125 +494,10 @@ class TimeSeriesModel(base.LikelihoodModel):
         an Int64Index or a date index, this function extends the index up to
         and including key, and then returns the location in the new index.
         """
+
         if base_index is None:
             base_index = self._index
-
-        index = base_index
-        date_index = isinstance(base_index, (PeriodIndex, DatetimeIndex))
-        int_index = isinstance(base_index, Int64Index)
-        range_index = isinstance(base_index, RangeIndex)
-        index_class = type(base_index)
-        nobs = len(index)
-
-        # Special handling for RangeIndex
-        if range_index and isinstance(key, (int, np.integer)):
-            # Negative indices (that lie in the Index)
-            if key < 0 and -key <= nobs:
-                key = nobs + key
-            # Out-of-sample (note that we include key itself in the new index)
-            elif key > nobs - 1:
-                # See gh5835. Remove the except after pandas 0.25 required.
-                try:
-                    base_index_start = base_index.start
-                    base_index_step = base_index.step
-                except AttributeError:
-                    base_index_start = base_index._start
-                    base_index_step = base_index._step
-                stop = base_index_start + (key + 1) * base_index_step
-                index = RangeIndex(start=base_index_start,
-                                   stop=stop,
-                                   step=base_index_step)
-
-        # Special handling for Int64Index
-        if (not range_index and int_index and not date_index and
-                isinstance(key, (int, np.integer))):
-            # Negative indices (that lie in the Index)
-            if key < 0 and -key <= nobs:
-                key = nobs + key
-            # Out-of-sample (note that we include key itself in the new index)
-            elif key > base_index[-1]:
-                index = Int64Index(np.arange(base_index[0], int(key + 1)))
-
-        # Special handling for date indexes
-        if date_index:
-            # Use index type to choose creation function
-            if index_class is DatetimeIndex:
-                index_fn = date_range
-            else:
-                index_fn = period_range
-            # Integer key (i.e. already given a location)
-            if isinstance(key, (int, np.integer)):
-                # Negative indices (that lie in the Index)
-                if key < 0 and -key < nobs:
-                    key = index[nobs + key]
-                # Out-of-sample (note that we include key itself in the new
-                # index)
-                elif key > len(base_index) - 1:
-                    index = index_fn(start=base_index[0],
-                                     periods=int(key + 1),
-                                     freq=base_index.freq)
-                    key = index[-1]
-                else:
-                    key = index[key]
-            # Other key types (i.e. string date or some datetime-like object)
-            else:
-                # Covert the key to the appropriate date-like object
-                if index_class is PeriodIndex:
-                    date_key = Period(key, freq=base_index.freq)
-                else:
-                    date_key = Timestamp(key, freq=base_index.freq)
-
-                # Out-of-sample
-                if date_key > base_index[-1]:
-                    # First create an index that may not always include `key`
-                    index = index_fn(start=base_index[0], end=date_key,
-                                     freq=base_index.freq)
-
-                    # Now make sure we include `key`
-                    if not index[-1] == date_key:
-                        index = index_fn(start=base_index[0],
-                                         periods=len(index) + 1,
-                                         freq=base_index.freq)
-
-                    # To avoid possible inconsistencies with `get_loc` below,
-                    # set the key directly equal to the last index location
-                    key = index[-1]
-
-        # Get the location
-        if date_index:
-            # (note that get_loc will throw a KeyError if key is invalid)
-            loc = index.get_loc(key)
-        elif int_index or range_index:
-            # For Int64Index and RangeIndex, key is assumed to be the location
-            # and not an index value (this assumption is required to support
-            # RangeIndex)
-            try:
-                index[key]
-            # We want to raise a KeyError in this case, to keep the exception
-            # consistent across index types.
-            # - Attempting to index with an out-of-bound location (e.g.
-            #   index[10] on an index of length 9) will raise an IndexError
-            #   (as of Pandas 0.22)
-            # - Attemtping to index with a type that cannot be cast to integer
-            #   (e.g. a non-numeric string) will raise a ValueError if the
-            #   index is RangeIndex (otherwise will raise an IndexError)
-            #   (as of Pandas 0.22)
-            except (IndexError, ValueError) as e:
-                raise KeyError(str(e))
-            loc = key
-        else:
-            loc = index.get_loc(key)
-
-        # Check if we now have a modified index
-        index_was_expanded = index is not base_index
-
-        # Return the index through the end of the loc / slice
-        if isinstance(loc, slice):
-            end = loc.stop - 1
-        else:
-            end = loc
-
-        return loc, index[:end + 1], index_was_expanded
+        return get_index_loc(key, base_index)
 
     def _get_index_label_loc(self, key, base_index=None):
         """
@@ -424,46 +530,9 @@ class TimeSeriesModel(base.LikelihoodModel):
         then falling back to try again with the model row labels as the base
         index.
         """
-        try:
-            loc, index, index_was_expanded = (
-                self._get_index_loc(key, base_index))
-        except KeyError as e:
-            try:
-                if not isinstance(key, (int, np.integer)):
-                    loc = self.data.row_labels.get_loc(key)
-                else:
-                    raise
-                # Require scalar
-                # Pandas may return a slice if there are multiple matching
-                # locations that are monotonic increasing (otherwise it may
-                # return an array of integer locations, see below).
-                if isinstance(loc, slice):
-                    loc = loc.start
-                if isinstance(loc, np.ndarray):
-                    # Pandas may return a mask (boolean array), for e.g.:
-                    # pd.Index(list('abcb')).get_loc('b')
-                    if loc.dtype == bool:
-                        # Return the first True value
-                        # (we know there is at least one True value if we're
-                        # here because otherwise the get_loc call would have
-                        # raised an exception)
-                        loc = np.argmax(loc)
-                    # Finally, Pandas may return an integer array of
-                    # locations that match the given value, for e.g.
-                    # pd.DatetimeIndex(['2001-02', '2001-01']).get_loc('2001')
-                    # (this appears to be slightly undocumented behavior, since
-                    # only int, slice, and mask are mentioned in docs for
-                    # pandas.Index.get_loc as of 0.23.4)
-                    else:
-                        loc = loc[0]
-                if not isinstance(loc, numbers.Integral):
-                    raise
-
-                index = self.data.row_labels[:loc + 1]
-                index_was_expanded = False
-            except:
-                raise e
-        return loc, index, index_was_expanded
+        if base_index is None:
+            base_index = self._index
+        return get_index_label_loc(key, base_index, self.data.row_labels)
 
     def _get_prediction_index(self, start, end, index=None, silent=False):
         """

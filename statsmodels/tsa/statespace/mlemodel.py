@@ -8,6 +8,7 @@ License: Simplified-BSD
 import contextlib
 import warnings
 
+import datetime as dt
 from types import SimpleNamespace
 import numpy as np
 import pandas as pd
@@ -3266,9 +3267,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Returns
         -------
-        forecast : ndarray
-            Array of out of in-sample predictions and / or out-of-sample
-            forecasts. An (npredict x k_endog) array.
+        forecast : PredictionResults
+            PredictionResults instance containing in-sample predictions and
+            out-of-sample forecasts.
         """
         if start is None:
             start = 0
@@ -3278,8 +3279,10 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             self.model._get_prediction_index(start, end, index))
 
         # Handle `dynamic`
-        if isinstance(dynamic, (bytes, str)):
+        if isinstance(dynamic, (str, dt.datetime, pd.Timestamp)):
             dynamic, _, _ = self.model._get_index_loc(dynamic)
+            # Convert to offset relative to start
+            dynamic = dynamic - start
 
         # If we have out-of-sample forecasting and `exog` or in general any
         # kind of time-varying state space model, then we need to create an
