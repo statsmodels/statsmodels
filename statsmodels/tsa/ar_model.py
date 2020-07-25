@@ -516,7 +516,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
         n_values = end - start
         if not isinstance(self.data.orig_endog, (pd.Series, pd.DataFrame)):
             return prediction[-n_values:]
-        index = self.data.orig_endog.index
+        index = self._index
         if end > self.endog.shape[0]:
             freq = getattr(index, 'freq', None)
             if freq:

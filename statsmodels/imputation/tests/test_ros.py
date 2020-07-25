@@ -3,6 +3,7 @@ from statsmodels.compat.pandas import assert_series_equal, assert_frame_equal
 from io import StringIO
 from textwrap import dedent
 
+import numpy as np
 import numpy.testing as npt
 
 import numpy
@@ -379,10 +380,10 @@ class CheckROSMixin(object):
             'ncen_equal', 'prob_exceedance'
         ]
         cohn = ros.cohn_numbers(self.df, self.rescol, self.cencol)
+        # Use round in place of the deprecated check_less_precise arg
         assert_frame_equal(
-            cohn[cols],
-            self.expected_cohn[cols],
-            check_less_precise=True,
+            np.round(cohn[cols], 3),
+            np.round(self.expected_cohn[cols], 3),
         )
 
 

@@ -55,7 +55,7 @@ class _MinimalWLS(object):
         if np.isscalar(weights):
             self.wexog = w_half * exog
         else:
-            self.wexog = w_half[:, None] * exog
+            self.wexog = np.asarray(w_half)[:, None] * exog
 
     def fit(self, method='pinv'):
         """
