@@ -1522,7 +1522,8 @@ class ARMAResults(tsa_model.TimeSeriesModelResults):
 
         where phi_1,phi_2,...phi_n are returned as solutions
         """
-        x = [[root**exp for exp in range(1, self.k_ar + 1)] for root in self.arroots]
+        x = [[root**exp for exp in range(1, self.k_ar + 1)]
+             for root in self.arroots]
         y = [1] * self.k_ar
         return np.linalg.lstsq(x, y)
 
@@ -1540,7 +1541,8 @@ class ARMAResults(tsa_model.TimeSeriesModelResults):
 
         where theta_1,theta_2,...theta_n are returned as solutions
         """
-        x = [[root**exp for exp in range(1, self.k_ma + 1)] for root in self.maroots]
+        x = [[root**exp for exp in range(1, self.k_ma + 1)]
+             for root in self.maroots]
         y = [-1] * self.k_ma
         return np.linalg.lstsq(x, y)
 

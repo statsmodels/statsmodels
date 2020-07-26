@@ -646,8 +646,7 @@ class Test_ARIMA101(CheckArmaResultsMixin):
         cls.res2.k_ma = 1
 
 
-class Test_ARIMA313_Coef(CheckArimaResultsMixin, CheckForecastMixin,
-                    CheckDynamicForecastMixin):
+class Test_ARIMA313_Coef(CheckArimaResultsMixin):
     @classmethod
     def setup_class(cls):
         cpi = load_macrodata_pandas().data['cpi'].values
