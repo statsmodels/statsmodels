@@ -1533,10 +1533,10 @@ class ARMAResults(tsa_model.TimeSeriesModelResults):
         With the MA roots given by z1,z2,...zn,
         and the MA coefficients given by theta_1,theta_2,...theta_n,
         This returns the solution to solving the system of linear equations,
-        z1*theta_1 + z1**2*theta_2......+z1**n*theta_n = 1
-        z2*theta_1 + z2**2*theta_2......+z2**n*theta_n = 1
+        z1*theta_1 + z1**2*theta_2......+z1**n*theta_n = -1
+        z2*theta_1 + z2**2*theta_2......+z2**n*theta_n = -1
         .....
-        zn*phi_1 + zn**2*phi_2......+zn**n*phi_n = 1
+        zn*phi_1 + zn**2*phi_2......+zn**n*phi_n = -1
 
         where theta_1,theta_2,...theta_n are returned as solutions
         """
