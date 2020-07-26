@@ -1508,6 +1508,42 @@ class ARMAResults(tsa_model.TimeSeriesModelResults):
         k_ar = self.k_ar
         return self.params[k + k_ar:]
 
+    def arcoefficients(self):
+        r"""
+        Returns the AR coefficients from the AR roots.
+
+        With the AR roots given by z1,z2,...zn,
+        and the AR coefficients given by phi_1,phi_2,...phi_n,
+        This returns the solution to solving the system of linear equations,
+        z1*phi_1 + z1**2*phi_2......+z1**n*phi_n = 1
+        z2*phi_1 + z2**2*phi_2......+z2**n*phi_n = 1
+        .....
+        zn*phi_1 + zn**2*phi_2......+zn**n*phi_n = 1
+
+        where phi_1,phi_2,...phi_n are returned as solutions
+        """
+        x = [[root**exp for exp in range(1, self.k_ar + 1)] for root in self.arroots]
+        y = [1] * self.k_ar
+        return np.linalg.lstsq(x, y)
+
+    def macoefficients(self):
+        r"""
+        Returns the MA coefficients from the MA roots.
+
+        With the MA roots given by z1,z2,...zn,
+        and the MA coefficients given by theta_1,theta_2,...theta_n,
+        This returns the solution to solving the system of linear equations,
+        z1*theta_1 + z1**2*theta_2......+z1**n*theta_n = 1
+        z2*theta_1 + z2**2*theta_2......+z2**n*theta_n = 1
+        .....
+        zn*phi_1 + zn**2*phi_2......+zn**n*phi_n = 1
+
+        where theta_1,theta_2,...theta_n are returned as solutions
+        """
+        x = [[root**exp for exp in range(1, self.k_ma + 1)] for root in self.maroots]
+        y = [-1] * self.k_ma
+        return np.linalg.lstsq(x, y)
+
     @cache_readonly
     def llf(self):
         return self.model.loglike(self.params)

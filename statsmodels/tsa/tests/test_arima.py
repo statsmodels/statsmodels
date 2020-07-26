@@ -651,6 +651,28 @@ class Test_ARIMA111(CheckArimaResultsMixin, CheckForecastMixin,
     @classmethod
     def setup_class(cls):
         cpi = load_macrodata_pandas().data['cpi'].values
+        cls.res1 = ARIMA(cpi, (3, 1, 3)).fit(disp=-1)
+
+    def test_polynomial_coef(self):
+        ar_coefficients = self.res1.arcoefficients()
+        assert_almost_equal(ar_coefficients[0][0].real, 1.2367993)
+        assert_almost_equal(ar_coefficients[0][0].imag, 0.0)
+        assert_almost_equal(ar_coefficients[0][1].real, 0.4644073)
+        assert_almost_equal(ar_coefficients[0][1].imag, 0.0)
+        assert_almost_equal(ar_coefficients[0][2].real, -0.7025687)
+        assert_almost_equal(ar_coefficients[0][2].imag, 0.0)
+
+        ma_coefficients = self.res1.macoefficients()
+        assert_almost_equal(ma_coefficients[0][0], -0.927115311390968)
+        assert_almost_equal(ma_coefficients[0][1], -0.8646311510294624)
+        assert_almost_equal(ma_coefficients[0][2], 0.7917464988578697)
+
+
+class Test_ARIMA111(CheckArimaResultsMixin, CheckForecastMixin,
+                    CheckDynamicForecastMixin):
+    @classmethod
+    def setup_class(cls):
+        cpi = load_macrodata_pandas().data['cpi'].values
         cls.res1 = ARIMA(cpi, (1, 1, 1)).fit(disp=-1)
         cls.res2 = results_arima.ARIMA111()
         # make sure endog names changes to D.cpi
