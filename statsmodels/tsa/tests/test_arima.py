@@ -646,7 +646,7 @@ class Test_ARIMA101(CheckArmaResultsMixin):
         cls.res2.k_ma = 1
 
 
-class Test_ARIMA111(CheckArimaResultsMixin, CheckForecastMixin,
+class Test_ARIMA313_Coef(CheckArimaResultsMixin, CheckForecastMixin,
                     CheckDynamicForecastMixin):
     @classmethod
     def setup_class(cls):
