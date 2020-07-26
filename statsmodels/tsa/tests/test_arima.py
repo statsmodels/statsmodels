@@ -633,38 +633,22 @@ def test_start_params_bug():
         ARMA(data, order=(4, 1)).fit(start_ar_lags=5, disp=-1)
 
 
-class Test_ARIMA101(CheckArmaResultsMixin):
-    @classmethod
-    def setup_class(cls):
-        endog = y_arma[:, 6]
-        cls.res1 = ARIMA(endog, (1, 0, 1)).fit(trend="c", disp=-1)
-        (cls.res1.forecast_res, cls.res1.forecast_err,
-         confint) = cls.res1.forecast(10)
-        cls.res2 = results_arma.Y_arma11c()
-        cls.res2.k_diff = 0
-        cls.res2.k_ar = 1
-        cls.res2.k_ma = 1
+def test_polynomial_coef():
+    cpi = load_macrodata_pandas().data['cpi'].values
+    res = ARIMA(cpi, (3, 1, 3)).fit(disp=-1)
 
+    ar_coefficients = res.arcoefficients()
+    assert_almost_equal(ar_coefficients[0][0].real, 1.2367993)
+    assert_almost_equal(ar_coefficients[0][0].imag, 0.0)
+    assert_almost_equal(ar_coefficients[0][1].real, 0.4644073)
+    assert_almost_equal(ar_coefficients[0][1].imag, 0.0)
+    assert_almost_equal(ar_coefficients[0][2].real, -0.7025687)
+    assert_almost_equal(ar_coefficients[0][2].imag, 0.0)
 
-class Test_ARIMA313_Coef(CheckArimaResultsMixin):
-    @classmethod
-    def setup_class(cls):
-        cpi = load_macrodata_pandas().data['cpi'].values
-        cls.res1 = ARIMA(cpi, (3, 1, 3)).fit(disp=-1)
-
-    def test_polynomial_coef(self):
-        ar_coefficients = self.res1.arcoefficients()
-        assert_almost_equal(ar_coefficients[0][0].real, 1.2367993)
-        assert_almost_equal(ar_coefficients[0][0].imag, 0.0)
-        assert_almost_equal(ar_coefficients[0][1].real, 0.4644073)
-        assert_almost_equal(ar_coefficients[0][1].imag, 0.0)
-        assert_almost_equal(ar_coefficients[0][2].real, -0.7025687)
-        assert_almost_equal(ar_coefficients[0][2].imag, 0.0)
-
-        ma_coefficients = self.res1.macoefficients()
-        assert_almost_equal(ma_coefficients[0][0], -0.927115311390968)
-        assert_almost_equal(ma_coefficients[0][1], -0.8646311510294624)
-        assert_almost_equal(ma_coefficients[0][2], 0.7917464988578697)
+    ma_coefficients = res.macoefficients()
+    assert_almost_equal(ma_coefficients[0][0], -0.927115311390968)
+    assert_almost_equal(ma_coefficients[0][1], -0.8646311510294624)
+    assert_almost_equal(ma_coefficients[0][2], 0.7917464988578697)
 
 
 class Test_ARIMA111(CheckArimaResultsMixin, CheckForecastMixin,
