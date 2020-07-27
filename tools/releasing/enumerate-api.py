@@ -23,8 +23,6 @@ import os
 from pkgutil import iter_modules
 import sys
 
-FILE_DIR = os.path.dirname(os.path.abspath(__file__))
-
 
 def find_modules(path):
     modules = set()
@@ -172,9 +170,8 @@ def generate_diff(api, other):
     def header(v, first=False):
         return (
             "\n\n" * (not first)
-            + "=" * len(v)
             + f"\n{v}\n"
-            + "=" * len(v)
+            + "-" * len(v)
             + "\n"
         )
 
@@ -188,7 +185,7 @@ def generate_diff(api, other):
 
         rst.write(header("New Methods"))
         for val in new_methods:
-            rst.write(f"* :method:`{val}`\n")
+            rst.write(f"* :meth:`{val}`\n")
 
         rst.write(header("Removed Methods"))
         for val in removed_methods:
@@ -197,11 +194,11 @@ def generate_diff(api, other):
         rst.write(header("Methods with New Arguments"))
         for val in expanded_methods:
             args = map(lambda v: f"``{v}``", expanded_methods[val])
-            rst.write(f"* :method:`{val}`: " + ", ".join(args) + "\n")
+            rst.write(f"* :meth:`{val}`: " + ", ".join(args) + "\n")
 
         rst.write(header("Methods with Changed Arguments"))
         for val in changed_methods:
-            rst.write(f"* :method:`{val}`\n")
+            rst.write(f"* :meth:`{val}`\n")
             name = val.split(".")[-1]
             args = ", ".join(changed_methods[val]["current"])
             if args.startswith("self"):
