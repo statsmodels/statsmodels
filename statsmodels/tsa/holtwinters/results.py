@@ -19,48 +19,46 @@ from statsmodels.base.wrapper import (
 
 class HoltWintersResults(Results):
     """
-    Holt Winter's Exponential Smoothing Results
+    Results from fitting Exponential Smoothing models.
 
     Parameters
     ----------
     model : ExponentialSmoothing instance
-        The fitted model instance
+        The fitted model instance.
     params : dict
         All the parameters for the Exponential Smoothing model.
-    params : dict
-        All the parameters for the Exponential Smoothing model.
-    params_formatted : pd.DataFrame
-        DataFrame containing all parameters, their short names and a flag
-        indicating whether the parameter's value was optimized to fit the data.
-    fittedfcast : ndarray
-        An array of both the fitted values and forecast values.
-    fittedvalues : ndarray
-        An array of the fitted values. Fitted by the Exponential Smoothing
-        model.
-    fcastvalues : ndarray
-        An array of the forecast values forecast by the Exponential Smoothing
-        model.
     sse : float
-        The sum of squared errors
+        The sum of squared errors.
+    aic : float
+        The Akaike information criterion.
+    aicc : float
+        AIC with a correction for finite sample sizes.
+    bic : float
+        The Bayesian information criterion.
+    optimized : bool
+        Flag indicating whether the model parameters were optimized to fit
+        the data.
     level : ndarray
         An array of the levels values that make up the fitted values.
     trend : ndarray
         An array of the trend values that make up the fitted values.
     season : ndarray
         An array of the seasonal values that make up the fitted values.
-    aic : float
-        The Akaike information criterion.
-    bic : float
-        The Bayesian information criterion.
-    aicc : float
-        AIC with a correction for finite sample sizes.
+    params_formatted : pd.DataFrame
+        DataFrame containing all parameters, their short names and a flag
+        indicating whether the parameter's value was optimized to fit the data.
     resid : ndarray
         An array of the residuals of the fittedvalues and actual values.
     k : int
-        the k parameter used to remove the bias in AIC, BIC etc.
-    optimized : bool
-        Flag indicating whether the model parameters were optimized to fit
-        the data.
+        The k parameter used to remove the bias in AIC, BIC etc.
+    fittedvalues : ndarray
+        An array of the fitted values. Fitted by the Exponential Smoothing
+        model.
+    fittedfcast : ndarray
+        An array of both the fitted values and forecast values.
+    fcastvalues : ndarray
+        An array of the forecast values forecast by the Exponential Smoothing
+        model.
     mle_retvals : {None, scipy.optimize.optimize.OptimizeResult}
         Optimization results if the parameters were optimized to fit the data.
     """

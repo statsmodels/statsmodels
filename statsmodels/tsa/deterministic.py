@@ -225,7 +225,7 @@ class TimeTrend(TimeTrendDeterministicTerm):
     constant : bool
         Flag indicating whether a constant should be included.
     order : int
-        non-negative int containing the powers to include (1, 2., ..., order)
+        A non-negative int containing the powers to include (1, 2, ..., order).
 
     See Also
     --------
@@ -880,7 +880,7 @@ class CalendarTimeTrend(CalendarDeterminsticTerm, TimeTrendDeterministicTerm):
     constant : bool
         Flag indicating whether a constant should be included.
     order : int
-        non-negative int containing the powers to include (1, 2., ..., order)
+        A non-negative int containing the powers to include (1, 2, ..., order).
     base_period : {str, pd.Timestamp}, default None
         The base period to use when computing the time stamps. This value is
         treated as 1 and so all other time indices are defined as the number
@@ -1058,15 +1058,15 @@ class DeterministicProcess:
     index : {Sequence[Hashable], pd.Index}
         The index of the process. Should usually be the "in-sample" index when
         used in forecasting applications.
+    period : {float, int}, default None
+        The period of the seasonal or fourier components. Must be an int for
+        seasonal dummies. If not provided, freq is read from index if
+        available.
     constant : bool, default False
         Whether to include a constant.
     order : int, default 0
         The order of the tim trend to include. For example, 2 will include
         both linear and quadratic terms. 0 exclude time trend terms.
-    period : {float, int}, default None
-        The period of the seasonal or fourier components. Must be an int for
-        seasonal dummies. If not provided, freq is read from index if
-        available.
     seasonal : bool = False
         Whether to include seasonal dummies
     fourier : int = 0
