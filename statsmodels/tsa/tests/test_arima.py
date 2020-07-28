@@ -637,9 +637,10 @@ def test_polynomial_coef():
     cpi = load_macrodata_pandas().data['cpi'].values
     res = ARIMA(cpi, (3, 1, 3)).fit(disp=-1)
 
-    ar_coefficients = res.arcoefficients([-1.374048901892876-0j,
-                                          1.0175311037121908-0.022567439870004227j,
-                                          1.0175311037121908+0.022567439870004227j])
+    ar_coefficients = res.arcoefficients([
+        -1.374048901892876-0j,
+        1.0175311037121908-0.022567439870004227j,
+        1.0175311037121908+0.022567439870004227j])
     assert_almost_equal(ar_coefficients[0][0].real, 1.2367993, 2)
     assert_almost_equal(ar_coefficients[0][0].imag, 0.0, 2)
     assert_almost_equal(ar_coefficients[0][1].real, 0.4644073, 2)
@@ -647,7 +648,10 @@ def test_polynomial_coef():
     assert_almost_equal(ar_coefficients[0][2].real, -0.7025687, 2)
     assert_almost_equal(ar_coefficients[0][2].imag, 0.0, 2)
 
-    ma_coefficients = res.macoefficients([-1.0787606815359634, 1.0000001296069885, 1.170816092782935])
+    ma_coefficients = res.macoefficients([
+        -1.0787606815359634,
+        1.0000001296069885,
+        1.170816092782935])
     assert_almost_equal(ma_coefficients[0][0], -0.927115311390968, 2)
     assert_almost_equal(ma_coefficients[0][1], -0.8646311510294624, 2)
     assert_almost_equal(ma_coefficients[0][2], 0.7917464988578697, 2)
