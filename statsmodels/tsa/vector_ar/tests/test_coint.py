@@ -13,8 +13,8 @@ from numpy.testing import assert_almost_equal, assert_equal
 import pandas as pd
 import pytest
 
-from statsmodels.tsa.vector_ar.vecm import coint_johansen
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
+from statsmodels.tsa.vector_ar.vecm import coint_johansen
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 dta_path = os.path.join(current_path, "Matlab_results", "test_coint.csv")

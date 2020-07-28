@@ -18,6 +18,7 @@ import pytest
 import statsmodels.api as sm
 import statsmodels.tools.data as data_util
 from statsmodels.tools.sm_exceptions import ValueWarning
+from statsmodels.tsa.base.datetools import dates_from_str
 import statsmodels.tsa.vector_ar.util as util
 from statsmodels.tsa.vector_ar.var_model import VAR, var_acf
 
@@ -111,8 +112,8 @@ def get_macrodata():
 
 
 def generate_var():  # FIXME: make a test?
-    from rpy2.robjects import r
     import pandas.rpy.common as prp
+    from rpy2.robjects import r
     r.source('tests/var.R')
     return prp.convert_robj(r['result'], use_pandas=False)
 
@@ -606,6 +607,7 @@ def test_get_trendorder():
 def test_var_constant():
     # see 2043
     import datetime
+
     from pandas import DataFrame, DatetimeIndex
 
     series = np.array([[2., 2.], [1, 2.], [1, 2.], [1, 2.], [1., 2.]])
@@ -876,3 +878,23 @@ def test_var_maxlag(reset_randomstate):
 def test_from_formula():
     with pytest.raises(NotImplementedError):
         VAR.from_formula("y ~ x", None)
+
+
+def test_correct_nobs():
+    # GH6748
+    mdata = sm.datasets.macrodata.load_pandas().data
+    # prepare the dates index
+    dates = mdata[['year', 'quarter']].astype(int).astype(str)
+    quarterly = dates["year"] + "Q" + dates["quarter"]
+    quarterly = dates_from_str(quarterly)
+    mdata = mdata[['realgdp', 'realcons', 'realinv']]
+    mdata.index = pd.DatetimeIndex(quarterly)
+    data = np.log(mdata).diff().dropna()
+
+    data_exog = pd.DataFrame(index=data.index)
+    data_exog['exovar1'] = np.random.normal(size=data_exog.shape[0])
+    # make a VAR model
+    model = VAR(endog=data, exog=data_exog)
+    results = model.fit(maxlags=1)
+    irf = results.irf_resim(orth=False, repl=100, steps=10, seed=1, burn=100, cum=False)
+    assert irf.shape == (100, 11, 3, 3)

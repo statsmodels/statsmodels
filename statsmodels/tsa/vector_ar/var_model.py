@@ -2307,8 +2307,8 @@ def _acovs_to_acorrs(acovs):
 
 
 if __name__ == '__main__':
-    from statsmodels.tsa.vector_ar.util import parse_lutkepohl_data
     import statsmodels.tools.data as data_util
+    from statsmodels.tsa.vector_ar.util import parse_lutkepohl_data
 
     np.set_printoptions(linewidth=140, precision=5)
 
