@@ -592,7 +592,8 @@ class PandasData(ModelData):
         if squeezed.ndim < 2:
             return Series(squeezed, index=self.predict_dates)
         else:
-            return DataFrame(result, index=self.predict_dates,
+            return DataFrame(np.asarray(result),
+                             index=self.predict_dates,
                              columns=self.ynames)
 
     def attach_mv_confint(self, result):

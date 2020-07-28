@@ -194,6 +194,7 @@ responses, etc.).
    :toctree: generated/
 
    exponential_smoothing.ets.ETSModel
+   exponential_smoothing.ets.ETSResults
 
 ARMA Process
 """"""""""""
@@ -376,3 +377,23 @@ are available in:
 
    ThetaModel
    ThetaModelResults
+
+Prediction Results
+""""""""""""""""""
+Most foreasting methods support a ``get_prediction`` method that return
+a ``PredictionResults`` object that contains both the prediction, its
+variance and can construct a prediction interval.
+
+Results Class
+^^^^^^^^^^^^^
+
+.. module:: statsmodels.tsa.base.prediction
+   :synopsis: Shared objects for predictive methods
+
+.. currentmodule:: statsmodels.tsa.base.prediction
+
+.. autosummary::
+   :toctree: generated/
+
+   PredictionResults
+

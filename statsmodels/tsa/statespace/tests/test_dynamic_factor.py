@@ -135,6 +135,7 @@ class CheckDynamicFactor(object):
 
     def test_predict(self, **kwargs):
         # Tests predict + forecast
+        self.results.predict(end='1982-10-01', **kwargs)
         assert_allclose(
             self.results.predict(end='1982-10-01', **kwargs),
             self.true['predict'],
