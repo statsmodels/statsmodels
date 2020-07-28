@@ -2,7 +2,6 @@ import numpy as np
 
 from statsmodels.tools.testing import ParamsTableTestBunch
 
-
 est = dict(
     mlag_var=3,
     fpe_var=7.47593408072e-13,

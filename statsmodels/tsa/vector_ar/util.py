@@ -2,15 +2,15 @@
 """
 Miscellaneous utility code for VAR estimation
 """
-from statsmodels.compat.python import asbytes
 from statsmodels.compat.pandas import frequencies
+from statsmodels.compat.python import asbytes
+
 import numpy as np
-import scipy.stats as stats
-import scipy.linalg.decomp as decomp
 import pandas as pd
+import scipy.linalg.decomp as decomp
+import scipy.stats as stats
 
 import statsmodels.tsa.tsatools as tsa
-
 
 #-------------------------------------------------------------------------------
 # Auxiliary functions for estimation

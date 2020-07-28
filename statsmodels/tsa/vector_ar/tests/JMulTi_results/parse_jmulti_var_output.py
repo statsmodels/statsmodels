@@ -1,11 +1,10 @@
+from io import open
 import os
 import re
-from io import open
 
 import numpy as np
 
-from statsmodels.tsa.vector_ar.tests.JMulTi_results.parse_jmulti_vecm_output \
-    import sublists, stringify_var_names
+from .parse_jmulti_vecm_output import stringify_var_names, sublists
 
 debug_mode = False
 

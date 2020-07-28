@@ -1,5 +1,6 @@
-from statsmodels.iolib.table import SimpleTable
 import numpy as np
+
+from statsmodels.iolib.table import SimpleTable
 
 
 class HypothesisTestResults(object):

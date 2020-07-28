@@ -7,19 +7,18 @@ References
 Lütkepohl (2005) New Introduction to Multiple Time Series Analysis
 """
 
+from statsmodels.compat.pandas import deprecate_kwarg
+
 import numpy as np
 import numpy.linalg as npl
 from numpy.linalg import slogdet
 
-from statsmodels.compat.pandas import deprecate_kwarg
-
 from statsmodels.tools.decorators import deprecated_alias
-from statsmodels.tools.numdiff import approx_hess, approx_fprime
-from statsmodels.tsa.vector_ar.irf import IRAnalysis
-from statsmodels.tsa.vector_ar.var_model import VARProcess, VARResults
-
-import statsmodels.tsa.vector_ar.util as util
+from statsmodels.tools.numdiff import approx_fprime, approx_hess
 import statsmodels.tsa.base.tsa_model as tsbase
+from statsmodels.tsa.vector_ar.irf import IRAnalysis
+import statsmodels.tsa.vector_ar.util as util
+from statsmodels.tsa.vector_ar.var_model import VARProcess, VARResults
 
 
 def svar_ckerr(svar_type, A, B):

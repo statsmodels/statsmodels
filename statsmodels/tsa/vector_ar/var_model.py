@@ -1632,6 +1632,7 @@ class VARResults(VARProcess):
         sigma_u = self.sigma_u
         intercept = self.intercept
         nobs = self.nobs
+        nobs_original = nobs + k_ar
 
         ma_coll = np.zeros((repl, steps + 1, neqs, neqs))
 
@@ -1643,7 +1644,7 @@ class VARResults(VARProcess):
         for i in range(repl):
             # discard first burn to eliminate correct for starting bias
             sim = util.varsim(coefs, intercept, sigma_u,
-                              seed=seed, steps=nobs+burn)
+                              seed=seed, steps=nobs_original+burn)
             sim = sim[burn:]
             ma_coll[i, :, :, :] = fill_coll(sim)
 
@@ -2306,8 +2307,8 @@ def _acovs_to_acorrs(acovs):
 
 
 if __name__ == '__main__':
-    from statsmodels.tsa.vector_ar.util import parse_lutkepohl_data
     import statsmodels.tools.data as data_util
+    from statsmodels.tsa.vector_ar.util import parse_lutkepohl_data
 
     np.set_printoptions(linewidth=140, precision=5)
 

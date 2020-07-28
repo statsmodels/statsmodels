@@ -3,8 +3,8 @@ Test SVAR estimation
 """
 from statsmodels.compat.platform import PLATFORM_WIN
 
-from numpy.testing import assert_almost_equal, assert_allclose
 import numpy as np
+from numpy.testing import assert_allclose, assert_almost_equal
 import pytest
 
 import statsmodels.datasets.macrodata
