@@ -1508,7 +1508,7 @@ class ARMAResults(tsa_model.TimeSeriesModelResults):
         k_ar = self.k_ar
         return self.params[k + k_ar:]
 
-    def arcoefficients(self):
+    def arcoefficients(self, roots):
         r"""
         Returns the AR coefficients from the AR roots.
 
@@ -1523,11 +1523,11 @@ class ARMAResults(tsa_model.TimeSeriesModelResults):
         where phi_1,phi_2,...phi_n are returned as solutions
         """
         x = [[root**exp for exp in range(1, self.k_ar + 1)]
-             for root in self.arroots]
+             for root in roots]
         y = [1] * self.k_ar
         return np.linalg.lstsq(x, y)
 
-    def macoefficients(self):
+    def macoefficients(self, roots):
         r"""
         Returns the MA coefficients from the MA roots.
 
@@ -1542,7 +1542,7 @@ class ARMAResults(tsa_model.TimeSeriesModelResults):
         where theta_1,theta_2,...theta_n are returned as solutions
         """
         x = [[root**exp for exp in range(1, self.k_ma + 1)]
-             for root in self.maroots]
+             for root in roots]
         y = [-1] * self.k_ma
         return np.linalg.lstsq(x, y)
 
