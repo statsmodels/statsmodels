@@ -4302,7 +4302,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         except Exception:  # FIXME: catch something specific
             het = np.array([[np.nan]*2])
         try:
-            lb = self.test_serial_correlation(method='ljungbox')
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=FutureWarning)
+                lb = self.test_serial_correlation(method='ljungbox')
         except Exception:  # FIXME: catch something specific
             lb = np.array([[np.nan]*2]).reshape(1, 2, 1)
         try:

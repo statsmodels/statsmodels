@@ -165,7 +165,7 @@ class SlicedInverseReg(_DimReductionRegression):
         ----------
         ndim : int
             The number of EDR directions to estimate
-        pen_mat : array-like
+        pen_mat : array_like
             A 2d array such that the squared Frobenius norm of
             `dot(pen_mat, dirs)`` is added to the objective function,
             where `dirs` is an orthogonal array whose columns span

@@ -230,7 +230,7 @@ class RLM(base.LikelihoodModel):
             If `update_scale` is False then the scale estimate for the
             weights is held constant over the iteration.  Otherwise, it
             is updated for each fit in the iteration.  Default is True.
-        start_params : array-like, optional
+        start_params : array_like, optional
             Initial guess of the solution of the optimizer. If not provided,
             the initial parameters are computed using OLS.
 
