@@ -77,7 +77,7 @@ class ARIMA(sarimax.SARIMAX):
         The offset at which to start time trend values. Default is 1, so that
         if `trend='t'` the trend is equal to 1, 2, ..., nobs. Typically is only
         set when the model created by extending a previous dataset.
-    dates : array-like of datetime, optional
+    dates : array_like of datetime, optional
         If no index is given by `endog` or `exog`, an array-like object of
         datetime objects can be provided.
     freq : str, optional

@@ -81,7 +81,7 @@ class SARIMAXSpecification(object):
         out of the likelihood. This reduces the number of parameters by one.
         This is only applicable when considering estimation by numerical
         maximum likelihood.
-    dates : array-like of datetime, optional
+    dates : array_like of datetime, optional
         If no index is given by `endog` or `exog`, an array-like object of
         datetime objects can be provided.
     freq : str, optional
