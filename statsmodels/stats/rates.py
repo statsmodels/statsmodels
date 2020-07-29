@@ -30,13 +30,13 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=1,
 
     Parameters
     ----------
-    count1: int
+    count1 : int
         Number of events in first sample.
-    exposure1: float
+    exposure1 : float
         Total exposure (time * subjects) in first sample.
-    count2: int
+    count2 : int
         Number of events in first sample.
-    exposure2: float
+    exposure2 : float
         Total exposure (time * subjects) in first sample.
     ratio: float
         ratio of the two Poisson rates under the Null hypothesis. Default is 1.
@@ -272,13 +272,13 @@ def tost_poisson_2indep(count1, exposure1, count2, exposure2, low, upp,
 
     Parameters
     ----------
-    count1: int
+    count1 : int
         Number of events in first sample
-    exposure1: float
+    exposure1 : float
         Total exposure (time * subjects) in first sample
-    count2: int
+    count2 : int
         Number of events in first sample
-    exposure2: float
+    exposure2 : float
         Total exposure (time * subjects) in first sample
     low, upp :
         equivalence margin for the ratio of Poisson rates

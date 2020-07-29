@@ -52,7 +52,6 @@ def effectsize_oneway(means, vars_, nobs, use_var="unequal", ddof_between=0):
     f2 : float
         Effect size corresponding to squared Cohen's f, which is also equal
         to the noncentrality divided by total number of observations.
-        In contrast to other functions, this value is not squared.
 
     Notes
     -----
@@ -103,30 +102,30 @@ def effectsize_oneway(means, vars_, nobs, use_var="unequal", ddof_between=0):
     >>> means_alt = np.array([-1, 0, 0, 1]) * delta
     >>> vars_ = np.arange(1, len(means_alt) + 1)
     >>>
-    >>> f_alt = effectsize_oneway(means_alt, vars_, nobs, use_var="equal")
-    >>> f_alt
-    0.21403973493274867
+    >>> f2_alt = effectsize_oneway(means_alt, vars_, nobs, use_var="equal")
+    >>> f2_alt
+    0.04581300813008131
     >>>
-    >>> kwds = {'effect_size': f_alt, 'nobs': 100, 'alpha': 0.05,
+    >>> kwds = {'effect_size': np.sqrt(f2_alt), 'nobs': 100, 'alpha': 0.05,
     ...         'k_groups': 4}
     >>> power = FTestAnovaPower().power(**kwds)
     >>> power
     0.39165892158983273
     >>>
-    >>> f_alt = effectsize_oneway(means_alt, vars_, nobs, use_var="equal")
-    >>> f_alt
-    0.21403973493274867
+    >>> f2_alt = effectsize_oneway(means_alt, vars_, nobs, use_var="unequal")
+    >>> f2_alt
+    0.060640138408304504
     >>>
-    >>> kwds['effect_size'] = f_alt
+    >>> kwds['effect_size'] = np.sqrt(f2_alt)
     >>> power = FTestAnovaPower().power(**kwds)
     >>> power
-    0.39165892158983273
+    0.5047366512800622
     >>>
-    >>> f_alt = effectsize_oneway(means_alt, vars_, nobs, use_var="bf")
-    >>> f_alt
-    0.20955486889969385
+    >>> f2_alt = effectsize_oneway(means_alt, vars_, nobs, use_var="bf")
+    >>> f2_alt
+    0.04391324307956788
     >>>
-    >>> kwds['effect_size'] = f_alt
+    >>> kwds['effect_size'] = np.sqrt(f2_alt)
     >>> power = FTestAnovaPower().power(**kwds)
     >>> power
     0.3765792117047725
@@ -1049,27 +1048,26 @@ def simulate_power_equivalence_oneway(means, nobs, equiv_margin, vars_=None,
     return res
 
 
-def test_scale_oneway(data, method='bf', center='median', transform='abs',
-                      trim_frac_mean=0.1, trim_frac_anova=0.):
+def test_scale_oneway(data, method="bf", center="median", transform="abs",
+                      trim_frac_mean=0.1, trim_frac_anova=0.0):
     """Oneway Anova test for equal scale, variance or dispersion
 
     This hypothesis test performs a oneway anova test on transformed data and
-    includes Levene or Brown-Forsythe tests for equal variances as special
+    includes Levene and Brown-Forsythe tests for equal variances as special
     cases.
 
     Parameters
     ----------
     data : tuple of array_like or DataFrame or Series
-        Data for k independent samples, with k >= 2.
-        The data can be provided as a tuple or list of arrays or in long
-        format with outcome observations in ``data`` and group membershipt in
-        ``groups``.
-    groups : ndarray or Series
-        If data is in long format, then groups is needed as indicator to which
-        group or sample and observations belongs.
+        Data for k independent samples, with k >= 2. The data can be provided
+        as a tuple or list of arrays or in long format with outcome
+        observations in ``data`` and group membership in ``groups``.
     method : {"unequal", "equal" or "bf"}
-        `use_var` specified how to treat heteroscedasticity, unequal variance,
-        across samples. Three approaches are available
+        How to treat heteroscedasticity across samples. This is used as
+        `use_var` option in `anova_oneway` and refers to the variance of the
+        transformed data, i.e. assumption is on 4th moment if squares are used
+        as transform.
+        Three approaches are available:
 
         "unequal" : Variances are not assumed to be equal across samples.
             Heteroscedasticity is taken into account with Welch Anova and
@@ -1077,29 +1075,27 @@ def test_scale_oneway(data, method='bf', center='median', transform='abs',
             This is the default.
         "equal" : Variances are assumed to be equal across samples.
             This is the standard Anova.
-        "bf: Variances are not assumed to be equal across samples.
+        "bf" : Variances are not assumed to be equal across samples.
             The method is Browne-Forsythe (1971) for testing equality of means
             with the corrected degrees of freedom by Merothra. The original BF
             degrees of freedom are available as additional attributes in the
             results instance, ``df_denom2`` and ``p_value2``.
 
     center : "median", "mean", "trimmed" or float
-        Statistic used for centering observations. Default is median.
+        Statistic used for centering observations. If a float, then this
+        value is used to center. Default is median.
     transform : "abs", "square" or callable
-        Transformation for the centered observations.
+        Transformation for the centered observations. If a callable, then this
+        function is called on the centered data.
         Default is absolute value.
     trim_frac_mean=0.1 : float in [0, 0.5)
         Trim fraction for the trimmed mean when `center` is "trimmed"
     trim_frac_anova : float in [0, 0.5)
-        Optional trimming for Anova with trimmed mean and winsorized variances.
+        Optional trimming for Anova with trimmed mean and Winsorized variances.
         With the default trim_frac equal to zero, the oneway Anova statistics
         are computed without trimming. If `trim_frac` is larger than zero,
         then the largest and smallest observations in each sample are trimmed.
-        The number of trimmed observations is the fraction of number of
-        observations in the sample truncated to the next lower integer.
-        `trim_frac` has to be smaller than 0.5, however, if the fraction is
-        so large that there are not enough observations left over, then `nan`
-        will be returned.
+        see ``trim_frac`` option in `anova_oneway`
 
     Returns
     -------
@@ -1111,28 +1107,24 @@ def test_scale_oneway(data, method='bf', center='median', transform='abs',
             Test statistic for k-sample mean comparison which is approximately
             F-distributed.
         pvalue : float
-            If ``use_var="bf"``, then the p-value is based on corrected
+            If ``method="bf"``, then the p-value is based on corrected
             degrees of freedom following Mehrotra 1997.
         pvalue2 : float
             This is the p-value based on degrees of freedom as in
-            Brown-Forsythe 1974 and is only available if ``use_var="bf"``.
-        df = (df_denom, df_num) : tuple of floats
-            Degreeds of freedom for the F-distribution depend on ``use_var``.
-            If ``use_var="bf"``, then `df_denom` is for Mehrotra p-values
-            `df_denom2` is available for Brown-Forsythe 1974 p-values.
+            Brown-Forsythe 1974 and is only available if ``method="bf"``.
+        df : (df_denom, df_num)
+            Tuple containing gegrees of freedom for the F-distribution depend
+            on ``method``. If ``method="bf"``, then `df_denom` is for Mehrotra
+            p-values `df_denom2` is available for Brown-Forsythe 1974 p-values.
             `df_num` is the same numerator degrees of freedom for both
             p-values.
-
-    Returns
-    -------
-    HoderTuple instance
 
     See Also
     --------
     anova_oneway
     scale_transform
-
     """
+
     data = map(np.asarray, data)
     xxd = [scale_transform(x, center=center, transform=transform,
                            trim_frac=trim_frac_mean) for x in data]
