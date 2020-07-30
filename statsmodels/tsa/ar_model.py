@@ -698,9 +698,9 @@ class AutoReg(tsa_model.TimeSeriesModel):
 
         Returns
         -------
-        array_like
+        predictions : {ndarray, Series}
             Array of out of in-sample predictions and / or out-of-sample
-            forecasts. An (npredict x k_endog) array.
+            forecasts.
         """
         params = array_like(params, "params")
         exog = array_like(exog, "exog", ndim=2, optional=True)
@@ -2248,7 +2248,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
 
         return PredictionResults(mean, mean_var)
 
-    def forecast(self, steps=1, dynamic=False, exog=None):
+    def forecast(self, steps=1, exog=None):
         """
         Out-of-sample forecasts
 
@@ -2259,15 +2259,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             sample. Can also be a date string to parse or a datetime type.
             However, if the dates index does not have a fixed frequency,
             steps must be an integer.
-        dynamic : {bool, int, str, datetime, Timestamp}, optional
-            Integer offset relative to `start` at which to begin dynamic
-            prediction. Prior to this observation, true endogenous values
-            will be used for prediction; starting with this observation and
-            continuing through the end of prediction, forecasted endogenous
-            values will be used instead. Datetime-like objects are not
-            interpreted as offsets. They are instead used to find the index
-            location of `dynamic` which is then used to to compute the offset.
-        exog : array_like
+        exog : {ndarray, Series}
             A replacement exogenous array.  Must have the same shape as the
             exogenous data array used when the model was created.
 
@@ -2275,7 +2267,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         -------
         array_like
             Array of out of in-sample predictions and / or out-of-sample
-            forecasts. An (npredict x k_endog) array.
+            forecasts.
 
         See Also
         --------
@@ -2288,7 +2280,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         else:
             end = steps
         return self.predict(
-            start=start, end=end, dynamic=dynamic, exog_oos=exog
+            start=start, end=end, dynamic=False, exog_oos=exog
         )
 
     @Substitution(predict_params=_predict_params)
