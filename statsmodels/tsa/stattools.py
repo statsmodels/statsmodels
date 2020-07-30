@@ -429,9 +429,9 @@ def acovf(x, adjusted=False, demean=True, fft=None, missing="none", nlag=None):
 
     if fft is None:
         msg = (
-            "fft=True will become the default in a future version of "
-            "statsmodels. To suppress this warning, explicitly set "
-            "fft=False."
+            "fft=True will become the default after the release of the 0.12 "
+            "release of statsmodels. To suppress this warning, explicitly "
+            "set fft=False."
         )
         warnings.warn(msg, FutureWarning)
         fft = False
@@ -551,7 +551,8 @@ def q_stat(x, nobs, type=None):
 
     if type is not None:
         warnings.warn(
-            "The `type` argument is deprecated and has no effect",
+            "The `type` argument is deprecated and has no effect. This "
+            "argument will be removed after the 0.12 release.",
             FutureWarning,
         )
     ret = (
@@ -659,9 +660,9 @@ def acf(
 
     if fft is None:
         warnings.warn(
-            "fft=True will become the default in a future version of "
-            "statsmodels. To suppress this warning, explicitly set "
-            "fft=False.",
+            "fft=True will become the default after the release of the 0.12 "
+            "release of statsmodels. To suppress this warning, explicitly "
+            "set fft=False.",
             FutureWarning,
         )
         fft = False
@@ -740,7 +741,7 @@ def pacf_yw(x, nlags=None, method="adjusted"):
             "unbiased is deprecated in factor of adjusted to reflect that the "
             "term is adjusting the sample size used in the autocovariance "
             "calculation rather than estimating an unbiased autocovariance. "
-            "In the future, using 'unbiased' will raise.",
+            "After release 0.13, using 'unbiased' will raise.",
             FutureWarning,
         )
         method = "adjusted"
@@ -984,7 +985,7 @@ def pacf(x, nlags=None, method="ywadjusted", alpha=None):
                "ols-unbiased":"ols-adjusted"}
     if method in renames:
         warnings.warn(
-            f"{method} has been renamed {renames[method]}. In the future, "
+            f"{method} has been renamed {renames[method]}. After release 0.13, "
             "using the old name will raise.",
             FutureWarning)
         method = renames[method]
@@ -1831,8 +1832,8 @@ def kpss(x, regression="c", nlags=None, store=False):
     if nlags is None:
         nlags = "legacy"
         msg = (
-            "The behavior of using lags=None will change in the next "
-            "release. Currently lags=None is the same as "
+            "The behavior of using lags=None will change in release 0.13."
+            "Currently lags=None is the same as "
             'lags="legacy", and so a sample-size lag length is used. '
             "After the next release, the default will change to be the "
             'same as lags="auto" which uses an automatic lag length '

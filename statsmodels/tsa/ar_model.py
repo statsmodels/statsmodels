@@ -779,7 +779,8 @@ class AR(tsa_model.TimeSeriesModel):
 Autoregressive AR(p) model.
 
     .. deprecated:: 0.11
-       Use statsmodels.tsa.ar_model.AutoReg instead""",
+       To be removed after 0.12 is released. Use
+       statsmodels.tsa.ar_model.AutoReg instead.""",
         "params": """endog : array_like
         A 1-d endogenous response variable. The independent variable.""",
         "extra_params": base._missing_param_doc,
