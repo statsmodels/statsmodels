@@ -36,7 +36,7 @@ ARIMA_DEPRECATION_WARN = """
 statsmodels.tsa.arima_model.ARMA and statsmodels.tsa.arima_model.ARIMA have
 been deprecated in favor of statsmodels.tsa.arima.model.ARIMA (note the .
 between arima and model) and
-statsmodels.tsa.SARIMAX.
+statsmodels.tsa.SARIMAX. These will be removed after the 0.12 release.
 
 statsmodels.tsa.arima.model.ARIMA makes use of the statespace framework and
 is both well tested and maintained.
