@@ -1447,4 +1447,3 @@ def test_ols_qr_pivot_with_multicollinearity():
     results_qr = OLS(y, X[:, selected_results]).fit(method='qr')
     assert_allclose(results_qr.params, results_pivot.params[selected_results])
     assert_allclose(results_qr.pvalues, results_pivot.pvalues[selected_results])
-
