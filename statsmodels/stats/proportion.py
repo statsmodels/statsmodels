@@ -1388,6 +1388,12 @@ def score_test_proportions_2indep(count1, nobs1, count2, nobs2, value=None,
             prop0 = (-b + np.sqrt(b**2 - 4 * a * c)) / (2 * a)
             prop1 = prop0 * oratio / (1 + prop0 * (oratio - 1))
 
+        # try to avoid 0 and 1 proportions,
+        # those raise Zero Division Runtime Warnings
+        eps = 1e-10
+        prop0 = np.clip(prop0, eps, 1 - eps)
+        prop1 = np.clip(prop1, eps, 1 - eps)
+
         var = (1 / (prop1 * (1 - prop1) * nobs1) +
                1 / (prop0 * (1 - prop0) * nobs0))
         if correction:
@@ -1678,8 +1684,7 @@ def test_proportions_2indep(count1, nobs1, count2, nobs2, value=None,
 
 
 def tost_proportions_2indep(count1, nobs1, count2, nobs2, low, upp,
-                            method=None, compare='diff', correction=True,
-                            return_results=True):
+                            method=None, compare='diff', correction=True):
     """
     Equivalence test based on two one-sided `test_proportions_2indep`
 
@@ -1752,9 +1757,6 @@ def tost_proportions_2indep(count1, nobs1, count2, nobs2, low, upp,
         If correction is True (default), then the Miettinen and Nurminen
         small sample correction to the variance nobs / (nobs - 1) is used.
         Applies only if method='score'.
-    return_results : bool
-        If true, then a results instance with extra information is returned,
-        otherwise a tuple with statistic and pvalue is returned.
 
     Returns
     -------
@@ -1775,14 +1777,24 @@ def tost_proportions_2indep(count1, nobs1, count2, nobs2, low, upp,
                                   method=method, compare=compare,
                                   alternative='larger',
                                   correction=correction,
-                                  return_results=return_results)
+                                  return_results=True)
     tt2 = test_proportions_2indep(count1, nobs1, count2, nobs2, value=upp,
                                   method=method, compare=compare,
                                   alternative='smaller',
                                   correction=correction,
-                                  return_results=return_results)
+                                  return_results=True)
 
-    return np.maximum(tt1.pvalue, tt2.pvalue), tt1, tt2,
+    idx_max = 0 if tt1.pvalue < tt2.pvalue else 1
+    res = HolderTuple(statistic=[tt1.statistic, tt2.statistic][idx_max],
+                      pvalue=[tt1.pvalue, tt2.pvalue][idx_max],
+                      compare=compare,
+                      method=method,
+                      results_larger=tt1,
+                      results_smaller=tt2,
+                      title="Equivalence test for 2 independent proportions"
+                      )
+
+    return res
 
 
 def _std_2prop_power(diff, p2, ratio=1, alpha=0.05, value=0):

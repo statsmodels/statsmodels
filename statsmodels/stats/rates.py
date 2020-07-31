@@ -324,4 +324,13 @@ def tost_poisson_2indep(count1, exposure1, count2, exposure2, low, upp,
                               ratio_null=upp, method=method,
                               alternative='smaller')
 
-    return np.maximum(tt1.pvalue, tt2.pvalue), tt1, tt2
+    idx_max = 0 if tt1.pvalue < tt2.pvalue else 1
+    res = HolderTuple(statistic=[tt1.statistic, tt2.statistic][idx_max],
+                      pvalue=[tt1.pvalue, tt2.pvalue][idx_max],
+                      method=method,
+                      results_larger=tt1,
+                      results_smaller=tt2,
+                      title="Equivalence test for 2 independent Poisson rates"
+                      )
+
+    return res
