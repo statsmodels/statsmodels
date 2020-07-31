@@ -882,7 +882,9 @@ def test_convergence_simple():
     for i in range(1, e.shape[0]):
         y[i] = y[i - 1] - 0.2 * e[i - 1] + e[i]
     y = y[200:]
-    res = holtwinters.ExponentialSmoothing(y).fit()
+    mod = holtwinters.ExponentialSmoothing(y,
+                                           initialization_method="estimated")
+    res = mod.fit()
     ets_res = ETSModel(y).fit()
 
     # the smoothing level should be very similar, the initial state might be
