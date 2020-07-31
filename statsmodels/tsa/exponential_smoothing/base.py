@@ -198,6 +198,13 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
 
     def _wrap_data(self, data, start_idx, end_idx, names=None):
         # TODO: check if this is reasonable for statespace
+        # squeezing data: data may be:
+        # - m x n: m dates, n simulations -> squeeze does nothing
+        # - m x 1: m dates, 1 simulation -> squeeze removes last dimension
+        # - 1 x n: don't squeeze, already fine
+        # - 1 x 1: squeeze only second axis
+        if data.ndim > 1 and data.shape[1] == 1:
+            data = np.squeeze(data, axis=1)
         data = np.squeeze(data)
         if self.use_pandas:
             _, _, _, index = self._get_prediction_index(start_idx, end_idx)
@@ -438,8 +445,6 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
 
     def _get_prediction_start_index(self, anchor):
         """Returns a valid numeric start index for predictions/simulations"""
-        # TODO: once this is the base class for statespace models, use this
-        # method in simulate
         if anchor is None or anchor == "start":
             iloc = 0
         elif anchor == "end":
@@ -448,6 +453,7 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
             iloc, _, _ = self.model._get_index_loc(anchor)
             if isinstance(iloc, slice):
                 iloc = iloc.start
+            iloc += 1  # anchor is one before start of prediction/simulation
 
         if iloc < 0:
             iloc = self.nobs + iloc
@@ -588,11 +594,13 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
             ("HQIC", ["%#5.3f" % self.hqic]),
         ]
 
-        if (
-            hasattr(self, "filter_results")
-            and self.filter_results is not None
-            and self.filter_results.filter_concentrated
-        ):
+        if hasattr(self, "filter_results"):
+            if (
+                    self.filter_results is not None
+                    and self.filter_results.filter_concentrated
+            ):
+                top_right.append(("Scale", ["%#5.3f" % self.scale]))
+        else:
             top_right.append(("Scale", ["%#5.3f" % self.scale]))
 
         if hasattr(self, "cov_type"):

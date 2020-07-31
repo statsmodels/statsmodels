@@ -144,7 +144,7 @@ from collections import OrderedDict
 import contextlib
 import numpy as np
 import pandas as pd
-from scipy.stats import _distn_infrastructure, rv_continuous, rv_discrete
+from scipy.stats import _distn_infrastructure, rv_continuous, rv_discrete, norm
 
 from statsmodels.base.covtype import descriptions
 import statsmodels.base.wrapper as wrap
@@ -1286,11 +1286,12 @@ class ETSModel(base.StateSpaceMLEModel):
 
 class ETSResults(base.StateSpaceMLEResults):
     def __init__(self, model, params, results):
-        super().__init__(model, params)
         yhat, xhat = results
-        self._llf = self.model.loglike(params)
-        self._residuals = self.model._residuals(yhat)
+        self._llf = model.loglike(params)
+        self._residuals = model._residuals(yhat)
         self._fittedvalues = yhat
+        scale = np.mean(self._residuals**2)
+        super().__init__(model, params, scale=scale)
 
         # get model definition
         model_definition_attrs = [
@@ -1417,6 +1418,88 @@ class ETSResults(base.StateSpaceMLEResults):
             start_state[4:] = internal_states[start_idx - 1, :]
             return start_state
 
+    def _relative_forecast_variance(self, steps):
+        """
+        References
+        ----------
+        .. [1] Hyndman, R.J., & Athanasopoulos, G. (2019) *Forecasting:
+           principles and practice*, 3rd edition, OTexts: Melbourne,
+           Australia. OTexts.com/fpp3. Accessed on April 19th 2020.
+        """
+        h = steps
+        alpha = self.smoothing_level
+        if self.has_trend:
+            beta = self.smoothing_trend
+        if self.has_seasonal:
+            gamma = self.smoothing_seasonal
+            m = self.seasonal_periods
+            k = np.asarray((h - 1) / m, dtype=int)
+        if self.damped_trend:
+            phi = self.damping_trend
+        model = self.model.short_name
+        if model == "ANN":
+            return 1 + alpha ** 2 * (h - 1)
+        elif model == "AAN":
+            return 1 + (h - 1) * (
+                alpha ** 2 + alpha * beta * h
+                + beta ** 2 * h / 6 * (2 * h - 1)
+            )
+        elif model == "AAdN":
+            return (
+                1
+                + alpha ** 2 * (h - 1)
+                + (
+                    (beta * phi * h) / ((1 - phi) ** 2)
+                    * (2 * alpha * (1 - phi) + beta * phi)
+                )
+                - (
+                    (beta * phi * (1 - phi ** h))
+                    / ((1 - phi) ** 2 * (1 - phi ** 2))
+                    * (
+                        2 * alpha * (1 - phi ** 2)
+                        + beta * phi * (1 + 2 * phi - phi ** h)
+                    )
+                )
+            )
+        elif model == "ANA":
+            return (
+                1 + alpha ** 2 * (h - 1)
+                + gamma * k * (2 * alpha + gamma)
+            )
+        elif model == "AAA":
+            return (
+                1 + (h - 1) * (
+                    alpha ** 2 + alpha * beta * h
+                    + (beta ** 2) / 6 * h * (2 * h - 1)
+                )
+                + gamma * k * (
+                    2 * alpha + gamma + beta * m * (k + 1)
+                )
+            )
+        elif model == "AAdA":
+            return (
+                1
+                + alpha ** 2 * (h - 1)
+                + gamma * k * (2 * alpha + gamma)
+                + (beta * phi * h) / ((1 - phi) ** 2) * (
+                    2 * alpha * (1 - phi) + beta * phi
+                )
+                - (
+                    (beta * phi * (1 - phi ** h))
+                    / ((1 - phi) ** 2 * (1 - phi ** 2))
+                    * (
+                        2 * alpha * (1 - phi ** 2)
+                        + beta * phi * (1 + 2 * phi - phi ** h)
+                    )
+                )
+                + (
+                    (2 * beta * gamma * phi) / ((1 - phi) * (1 - phi ** m))
+                    * (k * (1 - phi ** m) - phi ** m * (1 - phi ** (m * k)))
+                )
+            )
+        else:
+            raise NotImplementedError
+
     def simulate(
         self,
         nsimulations,
@@ -1437,12 +1520,15 @@ class ETSResults(base.StateSpaceMLEResults):
             all existing datapoints prior to the `anchor`.  Type depends on the
             index of the given `endog` in the model. Two special cases are the
             strings 'start' and 'end'. `start` refers to beginning the
-            simulation at the first period of the sample, and `end` refers to
+            simulation at the first period of the sample (i.e. using the
+            initial values as simulation anchor), and `end` refers to
             beginning the simulation at the first period after the sample.
             Integer values can run from 0 to `nobs`, or can be negative to
             apply negative indexing. Finally, if a date/time index was provided
             to the model, then this argument can be a date string to parse or a
             datetime type. Default is 'start'.
+            Note: `anchor` corresponds to the observation right before the
+            `start` observation in the `predict` method.
         repetitions : int, optional
             Number of simulated paths to generate. Default is 1 simulated path.
         random_errors : optional
@@ -1621,7 +1707,8 @@ class ETSResults(base.StateSpaceMLEResults):
         y = np.empty((nsimulations, repetitions))
 
         # get random error eps
-        sigma = np.sqrt(np.sum(self.resid ** 2) / self.df_resid)
+        sigma = np.sqrt(self.sse / self.df_resid)
+        # sigma = np.sqrt(self.scale)
         if isinstance(random_errors, np.ndarray):
             if random_errors.shape != (nsimulations, repetitions):
                 raise ValueError(
@@ -1742,6 +1829,58 @@ class ETSResults(base.StateSpaceMLEResults):
             steps, anchor=anchor, random_errors=np.zeros((steps, 1))
         )
 
+    def _handle_prediction_index(self, start, dynamic, end, index):
+        if start is None:
+            start = 0
+
+        # Handle start, end, dynamic
+        start, end, out_of_sample, _ = self.model._get_prediction_index(
+            start, end, index
+        )
+        # if end was outside of the sample, it is now the last point in the
+        # sample
+        if start > end:
+            raise ValueError(
+                "Prediction start cannot lie outside of the sample."
+            )
+
+        # Handle `dynamic`
+        if isinstance(dynamic, (bytes, str)):
+            dynamic, _, _ = self.model._get_index_loc(dynamic)
+        elif isinstance(dynamic, bool):
+            if dynamic:
+                dynamic = 0
+            else:
+                dynamic = end + 1 - start
+
+        # start : index of first predicted value
+        # dynamic : offset to first dynamically predicted value
+        #     -> if dynamic == 0, only dynamic simulations
+        if dynamic == 0:
+            start_smooth = None
+            end_smooth = None
+            nsmooth = 0
+            start_dynamic = start
+        else:
+            # dynamic simulations from start + dynamic
+            start_smooth = start
+            end_smooth = min(start + dynamic - 1, end)
+            nsmooth = end_smooth - start_smooth + 1
+            start_dynamic = start + dynamic
+        # anchor for simulations is one before start_dynamic
+        if start_dynamic == 0:
+            anchor_dynamic = "start"
+        else:
+            anchor_dynamic = start_dynamic - 1
+        # end is last point in sample, out_of_sample gives number of
+        # simulations out of sample
+        end_dynamic = end + out_of_sample
+        ndynamic = end_dynamic - start_dynamic + 1
+        return (
+            start, end, start_smooth, end_smooth, anchor_dynamic,
+            start_dynamic, end_dynamic, nsmooth, ndynamic, index
+        )
+
     def predict(self, start=None, end=None, dynamic=False, index=None):
         """
         In-sample prediction and out-of-sample forecasting
@@ -1779,35 +1918,81 @@ class ETSResults(base.StateSpaceMLEResults):
             forecasts. An (npredict,) array. If original data was a pd.Series
             or DataFrame, a pd.Series is returned.
         """
-        if start is None:
-            start = 0
 
-        # Handle start, end, dynamic
-        start, end, out_of_sample, _ = self.model._get_prediction_index(
-            start, end, index
-        )
+        (
+            start,
+            end,
+            start_smooth,
+            end_smooth,
+            anchor_dynamic,
+            _,
+            end_dynamic,
+            nsmooth,
+            ndynamic,
+            index
+        ) = self._handle_prediction_index(start, dynamic, end, index)
 
-        # Handle `dynamic`
-        if isinstance(dynamic, (bytes, str)):
-            dynamic, _, _ = self.model._get_index_loc(dynamic)
-
-        start_smooth = start
-        end_smooth = min(dynamic, end + 1)
-        nsmooth = end_smooth - start_smooth
-        start_forecast = end_smooth
-        end_forecast = end + out_of_sample + 1
-        nforecast = end_forecast - start_forecast
-
-        y = np.empty(nsmooth + nforecast)
+        y = np.empty(nsmooth + ndynamic)
 
         # In sample nondynamic prediction: smoothing
-        y[0:nsmooth] = self.fittedvalues[start_smooth:end_smooth]
+        if nsmooth > 0:
+            y[0:nsmooth] = self.fittedvalues[start_smooth:end_smooth + 1]
 
         # Out of sample/dynamic prediction: forecast
-        y[nsmooth:] = self._forecast(nforecast, start_forecast)
+        if ndynamic > 0:
+            y[nsmooth:] = self._forecast(ndynamic, anchor_dynamic)
 
         # Wrap data / squeeze where appropriate
-        return self.model._wrap_data(y, start, end_forecast - 1)
+        return self.model._wrap_data(y, start, end_dynamic)
+
+    def get_prediction(self, start=None, end=None, dynamic=False,
+                       index=None, method=None, simulate_repetitions=1000,
+                       **simulate_kwargs):
+        """
+        Calculates mean prediction and prediction intervals.
+
+        Parameters
+        ----------
+        start : int, str, or datetime, optional
+            Zero-indexed observation number at which to start forecasting,
+            i.e., the first forecast is start. Can also be a date string to
+            parse or a datetime type. Default is the the zeroth observation.
+        end : int, str, or datetime, optional
+            Zero-indexed observation number at which to end forecasting, i.e.,
+            the last forecast is end. Can also be a date string to
+            parse or a datetime type. However, if the dates index does not
+            have a fixed frequency, end must be an integer index if you
+            want out of sample prediction. Default is the last observation in
+            the sample.
+        dynamic : bool, int, str, or datetime, optional
+            Integer offset relative to `start` at which to begin dynamic
+            prediction. Can also be an absolute date string to parse or a
+            datetime type (these are not interpreted as offsets).
+            Prior to this observation, true endogenous values will be used for
+            prediction; starting with this observation and continuing through
+            the end of prediction, forecasted endogenous values will be used
+            instead.
+        index : pd.Index, optional
+            Optionally an index to associate the predicted results to. If None,
+            an attempt is made to create an index for the predicted results
+            from the model's index or model's row labels.
+        method : str or None, optional
+            Method to use for calculating prediction intervals. 'exact'
+            (default, if available) or 'simulated'.
+        simulate_repetitions : int, optional
+            Number of simulation repetitions for calculating prediction
+            intervals when ``method='simulated'``. Default is 1000.
+        **simulate_kwargs :
+            Additional arguments passed to the ``simulate`` method.
+
+        Returns
+        -------
+        PredictionResults
+            Predicted mean values and prediction intervals
+        """
+        return PredictionResultsWrapper(PredictionResults(
+            self, start, end, dynamic, index, method, simulate_repetitions,
+            **simulate_kwargs))
 
     def summary(self, alpha=0.05, start=None):
         """
@@ -1878,3 +2063,187 @@ class ETSResultsWrapper(wrap.ResultsWrapper):
 
 
 wrap.populate_wrapper(ETSResultsWrapper, ETSResults)
+
+
+class PredictionResults:
+    """
+    ETS prediction results, containing mean prediction and prediction
+    intervals.
+
+    Parameters
+    ----------
+    results : ETSResults
+    start : int, str, or datetime, optional
+        Zero-indexed observation number at which to start forecasting,
+        i.e., the first forecast is start. Can also be a date string to
+        parse or a datetime type. Default is the the zeroth observation.
+    end : int, str, or datetime, optional
+        Zero-indexed observation number at which to end forecasting, i.e.,
+        the last forecast is end. Can also be a date string to
+        parse or a datetime type. However, if the dates index does not
+        have a fixed frequency, end must be an integer index if you
+        want out of sample prediction. Default is the last observation in
+        the sample.
+    dynamic : bool, int, str, or datetime, optional
+        Integer offset relative to `start` at which to begin dynamic
+        prediction. Can also be an absolute date string to parse or a
+        datetime type (these are not interpreted as offsets).
+        Prior to this observation, true endogenous values will be used for
+        prediction; starting with this observation and continuing through
+        the end of prediction, forecasted endogenous values will be used
+        instead.
+    index : pd.Index, optional
+        Optionally an index to associate the predicted results to. If None,
+        an attempt is made to create an index for the predicted results
+        from the model's index or model's row labels.
+    method : str or None, optional
+        Method to use for calculating prediction intervals. 'exact' (default,
+        if available) or 'simulated'.
+    simulate_repetitions : int, optional
+        Number of simulation repetitions for calculating prediction intervals.
+        Default is 1000.
+    **simulate_kwargs :
+        Additional arguments passed to the ``simulate`` method.
+    """
+    def __init__(self, results, start=None, end=None, dynamic=False,
+                 index=None, method=None, simulate_repetitions=1000,
+                 **simulate_kwargs):
+        self.use_pandas = results.model.use_pandas
+
+        if method is None:
+            exact_available = [
+                "ANN", "AAN", "AAdN", "ANA", "AAA", "AAdA"
+            ]
+            if results.model.short_name in exact_available:
+                method = 'exact'
+            else:
+                method = 'simulated'
+        self.method = method
+
+        (
+            start,
+            end,
+            start_smooth,
+            _,
+            anchor_dynamic,
+            start_dynamic,
+            end_dynamic,
+            nsmooth,
+            ndynamic,
+            index
+        ) = results._handle_prediction_index(start, dynamic, end, index)
+
+        self.predicted_mean = results.predict(
+            start=start, end=end_dynamic, dynamic=dynamic, index=index
+        )
+        self.row_labels = self.predicted_mean.index
+        self.endog = np.empty(nsmooth + ndynamic) * np.nan
+        self.endog[0:(end - start + 1)] = results.data.endog[start:(end + 1)]
+        self.model = Bunch(data=results.model.data.__class__(
+            endog=self.endog, predict_dates=self.row_labels
+        ))
+
+        if self.method == "simulated":
+
+            sim_results = []
+            # first, perform "non-dynamic" simulations, i.e. simulations of
+            # only one step, based on the previous step
+            if nsmooth > 1:
+                if start_smooth == 0:
+                    anchor = "start"
+                else:
+                    anchor = start_smooth - 1
+                for i in range(nsmooth):
+                    sim_results.append(results.simulate(
+                        1, anchor=anchor, repetitions=simulate_repetitions,
+                        **simulate_kwargs
+                    ))
+                    # anchor
+                    anchor = start_smooth + i
+            sim_results.append(results.simulate(
+                ndynamic, anchor=anchor_dynamic,
+                repetitions=simulate_repetitions, **simulate_kwargs
+            ))
+            self.simulation_results = np.concatenate(sim_results, axis=0)
+            # if self.use_pandas:
+            #     self.simulation_results = pd.DataFrame(
+            #         self.simulation_results, index=self.row_labels,
+            #         columns=sim_results[0].columns
+            #     )
+        else:  # method == 'exact'
+            steps = np.ones(ndynamic + nsmooth)
+            if ndynamic > 0:
+                steps[(start_dynamic - start):] = range(1, ndynamic + 1)
+            self.forecast_variance = (
+                results.mse * results._relative_forecast_variance(steps)
+            )
+
+    def pred_int(self, alpha=0.05):
+        """
+        Calculates prediction intervals by performing multiple simulations.
+
+        Parameters
+        ----------
+        alpha : float, optional
+            The significance level for the prediction interval. Default is
+            0.05, that is, a 95% prediction interval.
+        """
+
+        if self.method == "simulated":
+            simulated_upper_pi = np.quantile(
+                self.simulation_results, 1 - alpha / 2, axis=1
+            )
+            simulated_lower_pi = np.quantile(
+                self.simulation_results, alpha / 2, axis=1
+            )
+            pred_int = np.vstack(
+                (simulated_lower_pi, simulated_upper_pi)
+            ).T
+        else:
+            q = norm.ppf(1 - alpha / 2)
+            half_interval_size = q * np.sqrt(self.forecast_variance)
+            pred_int = np.vstack(
+                (
+                    self.predicted_mean - half_interval_size,
+                    self.predicted_mean + half_interval_size
+                )
+            ).T
+
+        if self.use_pandas:
+            pred_int = pd.DataFrame(
+                pred_int, index=self.row_labels
+            )
+            names = [
+                f"lower PI (alpha={alpha:f})",
+                f"upper PI (alpha={alpha:f})"
+            ]
+            pred_int.columns = names
+        return pred_int
+
+    def summary_frame(self, endog=0, alpha=0.05):
+        pred_int = np.asarray(self.pred_int(alpha=alpha))
+        to_include = {}
+        to_include["mean"] = self.predicted_mean
+        if self.method == "simulated":
+            to_include["mean_numerical"] = np.mean(
+                self.simulation_results, axis=1
+            )
+        to_include["pi_lower"] = pred_int[:, 0]
+        to_include['pi_upper'] = pred_int[:, 1]
+
+        res = pd.DataFrame(to_include, index=self.row_labels,
+                           columns=to_include.keys())
+        return res
+
+
+class PredictionResultsWrapper(wrap.ResultsWrapper):
+    _attrs = {
+        'predicted_mean': 'dates',
+        'simulation_results': 'dates',
+        'endog' : 'dates',
+    }
+    _wrap_attrs = wrap.union_dicts(_attrs)
+
+    _methods = {}
+    _wrap_methods = wrap.union_dicts(_methods)
+wrap.populate_wrapper(PredictionResultsWrapper, PredictionResults)  # noqa:E305

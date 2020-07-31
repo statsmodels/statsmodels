@@ -12,7 +12,8 @@ import pytest
 import scipy.stats
 
 from statsmodels.tsa.exponential_smoothing.ets import ETSModel
-from statsmodels.tsa.holtwinters import ExponentialSmoothing
+import statsmodels.tsa.holtwinters as holtwinters
+import statsmodels.tsa.statespace.exponential_smoothing as statespace
 
 # This contains tests for the exponential smoothing implementation in
 # tsa/exponential_smoothing/ets.py.
@@ -117,6 +118,11 @@ def austourists_model(austourists):
         seasonal="add",
         damped_trend=True,
     )
+
+
+@pytest.fixture
+def austourists_model_fit(austourists_model):
+    return austourists_model.fit(disp=False)
 
 
 @pytest.fixture
@@ -544,24 +550,20 @@ def test_seasonal_periods(austourists):
         pass
 
 
-def test_simulate_keywords(austourists_model):
+def test_simulate_keywords(austourists_model_fit):
     """
     check whether all keywords are accepted and work without throwing errors.
     """
-    fit = austourists_model.fit(disp=False)
+    fit = austourists_model_fit
 
     # test anchor
-    assert_almost_equal(
-        fit.simulate(4, anchor=0, random_state=0).values,
-        fit.simulate(4, anchor="start", random_state=0).values,
-    )
     assert_almost_equal(
         fit.simulate(4, anchor=-1, random_state=0).values,
         fit.simulate(4, anchor="2015-12-31", random_state=0).values,
     )
     assert_almost_equal(
         fit.simulate(4, anchor="end", random_state=0).values,
-        fit.simulate(4, anchor="2016-03-31", random_state=0).values,
+        fit.simulate(4, anchor="2015-12-31", random_state=0).values,
     )
 
     # test different random error options
@@ -579,6 +581,27 @@ def test_simulate_keywords(austourists_model):
     assert np.all(res == res2)
 
 
+def test_predict_ranges(austourists_model_fit):
+    # in total 68 observations
+    fit = austourists_model_fit
+
+    # first prediction is 0, last is 10 -> 11 predictions
+    pred = fit.predict(start=0, end=10)
+    assert len(pred) == 11
+
+    pred = fit.predict(start=10, end=20)
+    assert len(pred) == 11
+
+    pred = fit.predict(start=10, dynamic=10, end=30)
+    assert len(pred) == 21
+
+    # try boolean dynamic
+    pred = fit.predict(start=0, dynamic=True, end=70)
+    assert len(pred) == 71
+    pred = fit.predict(start=0, dynamic=True, end=70)
+    assert len(pred) == 71
+
+
 def test_summary(austourists_model):
     # just try to run summary to see if it works
     fit = austourists_model.fit(disp=False)
@@ -594,22 +617,260 @@ def test_summary(austourists_model):
     fit.summary()
 
 
-def test_score(austourists_model):
-    fit = austourists_model.fit(disp=False)
-    score_cs = austourists_model.score(fit.params)
-    score_fd = austourists_model.score(
-        fit.params, approx_complex_step=False, approx_centered=True,
+def test_score(austourists_model_fit):
+    score_cs = austourists_model_fit.model.score(austourists_model_fit.params)
+    score_fd = austourists_model_fit.model.score(
+        austourists_model_fit.params, approx_complex_step=False,
+        approx_centered=True,
     )
     assert_almost_equal(score_cs, score_fd, 4)
 
 
-def test_hessian(austourists_model):
+def test_hessian(austourists_model_fit):
     # The hessian approximations are not very consistent, but the test makes
     # sure they run
-    fit = austourists_model.fit(disp=False)
-    austourists_model.hessian(fit.params)
-    austourists_model.hessian(
-        fit.params, approx_complex_step=False, approx_centered=True,
+    austourists_model_fit.model.hessian(austourists_model_fit.params)
+    austourists_model_fit.model.hessian(
+        austourists_model_fit.params, approx_complex_step=False,
+        approx_centered=True,
+    )
+
+
+def test_prediction_results(austourists_model_fit):
+    # simple test case starting at 0
+    pred = austourists_model_fit.get_prediction(
+        start=0, dynamic=30, end=40,
+    )
+    summary = pred.summary_frame()
+    assert len(summary['mean'].values) == 41
+    assert np.all(~np.isnan(summary['mean']))
+
+    # simple test case starting at not 0
+    pred = austourists_model_fit.get_prediction(
+        start=10, dynamic=30, end=40
+    )
+    summary = pred.summary_frame()
+    assert len(summary['mean'].values) == 31
+    assert np.all(~np.isnan(summary['mean']))
+
+    # long out of sample prediction
+    pred = austourists_model_fit.get_prediction(
+        start=0, dynamic=30, end=80
+    )
+    summary = pred.summary_frame()
+    assert len(summary['mean'].values) == 81
+    assert np.all(~np.isnan(summary['mean']))
+
+    # only out of sample prediction
+    pred = austourists_model_fit.get_prediction(
+        start=67, end=80
+    )
+    summary = pred.summary_frame()
+    assert len(summary['mean'].values) == 14
+    assert np.all(~np.isnan(summary['mean']))
+
+
+@pytest.fixture
+def statespace_comparison(austourists):
+    ets_model = ETSModel(
+        austourists,
+        seasonal_periods=4,
+        error="add",
+        trend="add",
+        seasonal="add",
+        damped_trend=True,
+    )
+    ets_results = ets_model.fit(disp=False)
+
+    statespace_model = statespace.ExponentialSmoothing(
+        austourists,
+        trend=True,
+        damped_trend=True,
+        seasonal=4,
+        initialization_method="known",
+        initial_level=ets_results.initial_level,
+        initial_trend=ets_results.initial_trend,
+        initial_seasonal=ets_results.initial_seasonal,
+    )
+    with statespace_model.fix_params(
+        {
+            "smoothing_level": ets_results.smoothing_level,
+            "smoothing_trend": ets_results.smoothing_trend,
+            "smoothing_seasonal": ets_results.smoothing_seasonal,
+            "damping_trend": ets_results.damping_trend,
+        }
+    ):
+        statespace_results = statespace_model.fit()
+
+    return ets_results, statespace_results
+
+
+def test_results_vs_statespace(statespace_comparison):
+    ets_results, statespace_results = statespace_comparison
+
+    assert_almost_equal(
+        ets_results.llf, statespace_results.llf
+    )
+    assert_almost_equal(
+        ets_results.scale, statespace_results.scale
+    )
+    assert_almost_equal(
+        ets_results.fittedvalues.values,
+        statespace_results.fittedvalues.values
+    )
+
+
+def test_prediction_results_vs_statespace(statespace_comparison):
+    ets_results, statespace_results = statespace_comparison
+
+    # comparison of two predictions
+    ets_pred = ets_results.get_prediction(
+        start=10, dynamic=10, end=40
+    )
+    statespace_pred = statespace_results.get_prediction(
+        start=10, dynamic=10, end=40
+    )
+
+    statespace_summary = statespace_pred.summary_frame()
+    ets_summary = ets_pred.summary_frame()
+
+    # import matplotlib.pyplot as plt
+    # plt.switch_backend('TkAgg')
+    # plt.plot(ets_summary["mean"] - statespace_summary["mean"])
+    # plt.grid()
+    # plt.show()
+
+    assert_almost_equal(
+        ets_summary["mean"].values[:-10],
+        statespace_summary["mean"].values[:-10],
+    )
+
+    assert_almost_equal(
+        ets_summary["mean"].values[-10:],
+        statespace_summary["mean"].values[-10:],
+        4
+    )
+
+    # comparison of dynamic prediction at end of sample -> this works
+    ets_pred = ets_results.get_prediction(
+        start=60, end=80,
+    )
+    statespace_pred = statespace_results.get_prediction(
+        start=60, end=80
+    )
+    statespace_summary = statespace_pred.summary_frame()
+    ets_summary = ets_pred.summary_frame()
+
+    assert_almost_equal(
+        ets_summary["mean"].values,
+        statespace_summary["mean"].values,
+        4
+    )
+
+
+@pytest.mark.skip
+def test_prediction_results_slow_AAN(oildata):
+    # slow test with high number of simulation repetitions for comparison
+    # Note: runs succesfull with specified tolerance
+    fit = ETSModel(
+        oildata, error="add", trend="add"
+    ).fit(disp=False)
+
+    pred_exact = fit.get_prediction(
+        start=40, end=55
+    )
+    summary_exact = pred_exact.summary_frame()
+
+    pred_sim = fit.get_prediction(
+        start=40, end=55, simulate_repetitions=int(1e6),
+        random_state=11, method="simulated"
+    )
+    summary_sim = pred_sim.summary_frame()
+    # check if mean converges to expected mean
+    assert_allclose(
+        summary_sim["mean"].values,
+        summary_sim["mean_numerical"].values,
+        rtol=1e-3, atol=1e-3
+    )
+
+    import matplotlib.pyplot as plt
+    plt.switch_backend('TkAgg')
+    for i in range(1000):
+        plt.plot(pred_sim._results.simulation_results.iloc[:, i],
+                 color='grey', alpha=0.1)
+    plt.plot(oildata[40:], '-', label='data')
+    plt.plot(summary_exact["mean"], '--', label='mean')
+    plt.plot(summary_sim["pi_lower"], ':', label='sim lower')
+    plt.plot(summary_exact["pi_lower"], '.-', label='exact lower')
+    plt.plot(summary_sim["pi_upper"], ':', label='sim upper')
+    plt.plot(summary_exact["pi_upper"], '.-', label='exact upper')
+    # plt.legend()
+    plt.show()
+
+    # check if prediction intervals are equal
+    assert_allclose(
+        summary_sim["pi_lower"].values,
+        summary_exact["pi_lower"].values,
+        rtol=1e-4, atol=1e-4
+    )
+
+    assert_allclose(
+        summary_sim["pi_upper"].values,
+        summary_exact["pi_upper"].values,
+        rtol=1e-4, atol=1e-4
+    )
+
+
+@pytest.mark.skip
+def test_prediction_results_slow_AAdA(austourists):
+    # slow test with high number of simulation repetitions for comparison
+    # Note: succesfull with specified tolerance
+    fit = ETSModel(
+        austourists, error="add", trend="add", seasonal="add",
+        damped_trend=True,
+        seasonal_periods=4
+    ).fit(disp=False)
+    pred_exact = fit.get_prediction(
+        start=60, end=75
+    )
+    summary_exact = pred_exact.summary_frame()
+
+    pred_sim = fit.get_prediction(
+        start=60, end=75, simulate_repetitions=int(1e6),
+        random_state=11, method="simulated"
+    )
+    summary_sim = pred_sim.summary_frame()
+    # check if mean converges to expected mean
+    assert_allclose(
+        summary_sim["mean"].values,
+        summary_sim["mean_numerical"].values,
+        rtol=1e-3, atol=1e-3
+    )
+
+    import matplotlib.pyplot as plt
+    plt.switch_backend('TkAgg')
+    for i in range(1000):
+        plt.plot(pred_sim._results.simulation_results.iloc[:, i],
+                 color='grey', alpha=0.1)
+    plt.plot(fit.endog[60:], '-', label='data')
+    plt.plot(summary_exact["mean"], '--', label='mean')
+    plt.plot(summary_sim["pi_lower"], ':', label='sim lower')
+    plt.plot(summary_exact["pi_lower"], '.-', label='exact lower')
+    plt.plot(summary_sim["pi_upper"], ':', label='sim upper')
+    plt.plot(summary_exact["pi_upper"], '.-', label='exact upper')
+    plt.show()
+
+    # check if prediction intervals are equal
+    assert_allclose(
+        summary_sim["pi_lower"].values,
+        summary_exact["pi_lower"].values,
+        rtol=2e-2, atol=1e-4
+    )
+
+    assert_allclose(
+        summary_sim["pi_upper"].values,
+        summary_exact["pi_upper"].values,
+        rtol=2e-2, atol=1e-4
     )
 
 
@@ -621,21 +882,48 @@ def test_convergence_simple():
     for i in range(1, e.shape[0]):
         y[i] = y[i - 1] - 0.2 * e[i - 1] + e[i]
     y = y[200:]
-    res = ExponentialSmoothing(y, initialization_method="estimated").fit()
+    res = holtwinters.ExponentialSmoothing(y).fit()
     ets_res = ETSModel(y).fit()
 
     # the smoothing level should be very similar, the initial state might be
     # different as it doesn't influence the final result too much
-    assert_almost_equal(
+    assert_allclose(
         res.params['smoothing_level'],
         ets_res.smoothing_level,
-        3
+        rtol=1e-4, atol=1e-4
     )
 
     # the first few values are influenced by differences in initial state, so
     # we don't test them here
-    assert_almost_equal(
+    assert_allclose(
         res.fittedvalues[10:],
         ets_res.fittedvalues[10:],
-        3
+        rtol=1e-4, atol=1e-4
     )
+
+
+def test_exact_prediction_intervals(austourists_model_fit):
+
+    fit = austourists_model_fit._results
+
+    class DummyModel:
+        def __init__(self, short_name):
+            self.short_name = short_name
+
+    # compare AAdN with AAN
+    fit.damping_trend = 1 - 1e-3
+    fit.model = DummyModel("AAdN")
+    steps = 5
+    s_AAdN = fit._relative_forecast_variance(steps)
+    fit.model = DummyModel("AAN")
+    s_AAN = fit._relative_forecast_variance(steps)
+    assert_almost_equal(s_AAdN, s_AAN, 2)
+
+    # compare AAdA with AAA
+    fit.damping_trend = 1 - 1e-3
+    fit.model = DummyModel("AAdA")
+    steps = 5
+    s_AAdA = fit._relative_forecast_variance(steps)
+    fit.model = DummyModel("AAA")
+    s_AAA = fit._relative_forecast_variance(steps)
+    assert_almost_equal(s_AAdA, s_AAA, 3)
