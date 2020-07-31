@@ -1635,7 +1635,7 @@ def spec_hausman(params_e, params_i, cov_params_e, cov_params_i, dof=None):
     params_e : ndarray
         efficient and consistent under Null hypothesis,
         inconsistent under alternative hypothesis
-    params_i: ndarray
+    params_i : ndarray
         consistent under Null hypothesis,
         consistent under alternative hypothesis
     cov_params_e : ndarray, 2d

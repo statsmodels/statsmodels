@@ -8,6 +8,7 @@ License: Simplified-BSD
 import contextlib
 import warnings
 
+import datetime as dt
 from types import SimpleNamespace
 import numpy as np
 import pandas as pd
@@ -22,8 +23,7 @@ from statsmodels.tools.eval_measures import aic, aicc, bic, hqic
 
 import statsmodels.base.wrapper as wrap
 
-import statsmodels.genmod._prediction as pred
-from statsmodels.genmod.families.links import identity
+import statsmodels.tsa.base.prediction as pred
 
 from statsmodels.base.data import PandasData
 import statsmodels.tsa.base.tsa_model as tsbase
@@ -2417,8 +2417,6 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         self._data_attr_model.extend(['ssm'])
         self._data_attr.extend(extra_arrays)
         self._data_attr.extend(['filter_results', 'smoother_results'])
-        self.data_in_cache = getattr(self, 'data_in_cache', [])
-        self.data_in_cache.extend([])
 
     def _get_robustcov_results(self, cov_type='opg', **kwargs):
         """
@@ -3158,7 +3156,10 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             If lags is a list or array, then all lags are included up to the
             largest lag in the list, however only the tests for the lags in the
             list are reported.
-            If lags is None, then the default maxlag is 12*(nobs/100)^{1/4}
+            If lags is None, then the default maxlag is 12*(nobs/100)^{1/4}.
+            After 0.12 the default maxlag will change to min(10, nobs // 5) for
+            non-seasonal models and min(2*m, nobs // 5) for seasonal time
+            series where m is the seasonal period.
 
         Returns
         -------
@@ -3202,7 +3203,19 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             # Default lags for acorr_ljungbox is 40, but may not always have
             # that many observations
             if lags is None:
-                lags = min(40, nobs_effective - 1)
+                seasonal_periods = getattr(self.model, "seasonal_periods", 0)
+                if seasonal_periods:
+                    lags = min(2 * seasonal_periods, nobs_effective // 5)
+                else:
+                    lags = min(10, nobs_effective // 5)
+
+                warnings.warn(
+                    "The default value of lags is changing.  After 0.12, "
+                    "this value will become min(10, nobs//5) for non-seasonal "
+                    "time series and min (2*m, nobs//5) for seasonal time "
+                    "series. Directly set lags to silence this warning.",
+                    FutureWarning
+                )
 
             for i in range(self.model.k_endog):
                 results = acorr_ljungbox(
@@ -3253,9 +3266,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Returns
         -------
-        forecast : ndarray
-            Array of out of in-sample predictions and / or out-of-sample
-            forecasts. An (npredict x k_endog) array.
+        predictions : PredictionResults
+            PredictionResults instance containing in-sample predictions and
+            out-of-sample forecasts.
         """
         if start is None:
             start = 0
@@ -3265,8 +3278,10 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             self.model._get_prediction_index(start, end, index))
 
         # Handle `dynamic`
-        if isinstance(dynamic, (bytes, str)):
+        if isinstance(dynamic, (str, dt.datetime, pd.Timestamp)):
             dynamic, _, _ = self.model._get_index_loc(dynamic)
+            # Convert to offset relative to start
+            dynamic = dynamic - start
 
         # If we have out-of-sample forecasting and `exog` or in general any
         # kind of time-varying state space model, then we need to create an
@@ -3294,7 +3309,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
     def get_forecast(self, steps=1, **kwargs):
         """
-        Out-of-sample forecasts
+        Out-of-sample forecasts and prediction intervals
 
         Parameters
         ----------
@@ -3309,8 +3324,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Returns
         -------
-        forecast : ndarray
-            Array of out of sample forecasts. A (steps x k_endog) array.
+        predictions : PredictionResults
+            PredictionResults instance containing in-sample predictions and
+            out-of-sample forecasts.
         """
         if isinstance(steps, int):
             end = self.nobs + steps - 1
@@ -3352,6 +3368,13 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         forecast : array_like
             Array of out of in-sample predictions and / or out-of-sample
             forecasts. An (npredict x k_endog) array.
+
+        See Also
+        --------
+        forecast
+            Out-of-sample forecasts
+        get_prediction
+            Prediction results and confidence intervals
         """
         # Perform the prediction
         prediction_results = self.get_prediction(start, end, dynamic, **kwargs)
@@ -3374,8 +3397,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Returns
         -------
-        forecast : ndarray
-            Array of out of sample forecasts. A (steps x k_endog) array.
+        forecast : PredictionResults
+            PredictionResults instance containing in-sample predictions and
+            out-of-sample forecasts.
         """
         if isinstance(steps, int):
             end = self.nobs + steps - 1
@@ -4278,7 +4302,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         except Exception:  # FIXME: catch something specific
             het = np.array([[np.nan]*2])
         try:
-            lb = self.test_serial_correlation(method='ljungbox')
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=FutureWarning)
+                lb = self.test_serial_correlation(method='ljungbox')
         except Exception:  # FIXME: catch something specific
             lb = np.array([[np.nan]*2]).reshape(1, 2, 1)
         try:
@@ -4436,26 +4462,16 @@ class PredictionResults(pred.PredictionResults):
         # Initialize
         super(PredictionResults, self).__init__(predicted_mean, var_pred_mean,
                                                 dist='norm',
-                                                row_labels=row_labels,
-                                                link=identity())
-
-    @property
-    def se_mean(self):
-        if self.var_pred_mean.ndim == 1:
-            se_mean = np.sqrt(self.var_pred_mean)
-        else:
-            se_mean = np.sqrt(self.var_pred_mean.T.diagonal())
-        return se_mean
+                                                row_labels=row_labels)
 
     def conf_int(self, method='endpoint', alpha=0.05, **kwds):
         # TODO: this performs metadata wrapping, and that should be handled
         #       by attach_* methods. However, they do not currently support
         #       this use case.
-        conf_int = super(PredictionResults, self).conf_int(
-            method, alpha, **kwds)
+        conf_int = super(PredictionResults, self).conf_int(alpha, **kwds)
 
         # Create a dataframe
-        if self.row_labels is not None:
+        if self._row_labels is not None:
             conf_int = pd.DataFrame(conf_int, index=self.row_labels)
 
             # Attach the endog names
@@ -4490,8 +4506,8 @@ class PredictionResults(pred.PredictionResults):
         # pandas dict does not handle 2d_array
         # data = np.column_stack(list(to_include.values()))
         # names = ....
-        res = pd.DataFrame(to_include, index=self.row_labels,
-                           columns=to_include.keys())
+        res = pd.DataFrame(to_include, index=self._row_labels,
+                           columns=list(to_include.keys()))
         res.columns.name = yname
         return res
 

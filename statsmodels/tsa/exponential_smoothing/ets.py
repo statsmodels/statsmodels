@@ -91,7 +91,7 @@ and
                0\quad\text{else}
            \end{cases}\\
 
-and, when using the additve error model,
+and, when using the additive error model,
 
 .. math::
 
@@ -241,7 +241,7 @@ class ETSModel(base.StateSpaceMLEModel):
     bounds : dict or None, optional
         A dictionary with parameter names as keys and the respective bounds
         intervals as values (lists/tuples/arrays).
-        The availabe parameter names are, depeding on the model and
+        The available parameter names are, depending on the model and
         initialization method:
 
         * "smoothing_level"
@@ -347,7 +347,7 @@ class ETSModel(base.StateSpaceMLEModel):
                    0\quad\text{else}
                \end{cases}\\
 
-    and, when using the additve error model,
+    and, when using the additive error model,
 
     .. math::
 
@@ -1633,7 +1633,7 @@ class ETSResults(base.StateSpaceMLEResults):
                        0\quad\text{else}
                    \end{cases}\\
 
-        and, when using the additve error model,
+        and, when using the additive error model,
 
         .. math::
 

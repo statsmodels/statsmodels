@@ -34,7 +34,7 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
     initial_ar_order : int, optional
         Order of long autoregressive process used for initial computation of
         residuals.
-    unbiased: bool, optional
+    unbiased : bool, optional
         Whether or not to apply the bias correction step. Default is True if
         the estimated coefficients from the previous step imply a stationary
         and invertible process and False otherwise.
@@ -192,7 +192,7 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
                 p.sigma2 = np.inner(resid, resid) / len(resid)
             elif unbiased is True:
                 raise ValueError('Cannot perform third step of Hannan-Rissanen'
-                                 ' estimation to remove paramater bias,'
+                                 ' estimation to remove parameter bias,'
                                  ' because parameters estimated from the'
                                  ' second step are non-stationary or'
                                  ' non-invertible')

@@ -1333,7 +1333,7 @@ def mcnemar(table, exact=True, correction=True):
     if exact:
         statistic = np.minimum(n1, n2)
         # binom is symmetric with p=0.5
-        # SciPy 1.7+ required int arguments
+        # SciPy 1.7+ requires int arguments
         int_sum = int(n1 + n2)
         if int_sum != (n1 + n2):
             warnings.warn("exact can only be used with tables containing "

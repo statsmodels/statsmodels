@@ -3,13 +3,14 @@ from statsmodels.compat.python import lzip
 import numpy as np
 from scipy import stats
 
-from statsmodels.regression.linear_model import OLS
-from statsmodels.tools.tools import add_constant
-from statsmodels.tools.decorators import cache_readonly
 from statsmodels.distributions import ECDF
+from statsmodels.regression.linear_model import OLS
+from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools.tools import add_constant
+
 from . import utils
 
-__all__ = ['qqplot', 'qqplot_2samples', 'qqline', 'ProbPlot']
+__all__ = ["qqplot", "qqplot_2samples", "qqline", "ProbPlot"]
 
 
 class ProbPlot(object):
@@ -25,26 +26,30 @@ class ProbPlot(object):
         A 1d data array
     dist : callable
         Compare x against dist. A scipy.stats or statsmodels distribution. The
-        default is scipy.stats.distributions.norm (a standard normal).
+        default is scipy.stats.distributions.norm (a standard normal). Can be
+        a SciPy frozen distribution.
     fit : bool
         If fit is false, loc, scale, and distargs are passed to the
-        distribution. If fit is True then the parameters for dist
-        are fit automatically using dist.fit. The quantiles are formed
-        from the standardized data, after subtracting the fitted loc
-        and dividing by the fitted scale.
+        distribution. If fit is True then the parameters for dist are fit
+        automatically using dist.fit. The quantiles are formed from the
+        standardized data, after subtracting the fitted loc and dividing by
+        the fitted scale. fit cannot be used if dist is a SciPy frozen
+        distribution.
     distargs : tuple
-        A tuple of arguments passed to dist to specify it fully
-        so dist.ppf may be called. distargs must not contain loc
-        or scale. These values must be passed using the loc or
-        scale inputs.
+        A tuple of arguments passed to dist to specify it fully so dist.ppf
+        may be called. distargs must not contain loc or scale. These values
+        must be passed using the loc or scale inputs. distargs cannot be used
+        if dist is a SciPy frozen distribution.
     a : float
-        Offset for the plotting position of an expected order
-        statistic, for example. The plotting positions are given
-        by (i - a)/(nobs - 2*a + 1) for i in range(0,nobs+1)
+        Offset for the plotting position of an expected order statistic, for
+        example. The plotting positions are given by
+        (i - a)/(nobs - 2*a + 1) for i in range(0,nobs+1)
     loc : float
-        Location parameter for dist
+        Location parameter for dist. Cannot be used if dist is a SciPy frozen
+        distribution.
     scale : float
-        Scale parameter for dist
+        Scale parameter for dist. Cannot be used if dist is a SciPy frozen
+        distribution.
 
     See Also
     --------
@@ -80,9 +85,9 @@ class ProbPlot(object):
     >>> model = sm.OLS(data.endog, data.exog)
     >>> mod_fit = model.fit()
     >>> res = mod_fit.resid # residuals
-    >>> probplot = sm.ProbPlot(res)
-    >>> fig = probplot.qqplot()
-    >>> h = plt.title('Ex. 1 - qqplot - residuals of OLS fit')
+    >>> pplot = sm.ProbPlot(res)
+    >>> fig = pplot.qqplot()
+    >>> h = plt.title("Ex. 1 - qqplot - residuals of OLS fit")
     >>> plt.show()
 
     qqplot of the residuals against quantiles of t-distribution with 4
@@ -90,26 +95,26 @@ class ProbPlot(object):
 
     >>> # example 2
     >>> import scipy.stats as stats
-    >>> probplot = sm.ProbPlot(res, stats.t, distargs=(4,))
-    >>> fig = probplot.qqplot()
-    >>> h = plt.title('Ex. 2 - qqplot - residuals against quantiles of t-dist')
+    >>> pplot = sm.ProbPlot(res, stats.t, distargs=(4,))
+    >>> fig = pplot.qqplot()
+    >>> h = plt.title("Ex. 2 - qqplot - residuals against quantiles of t-dist")
     >>> plt.show()
 
     qqplot against same as above, but with mean 3 and std 10:
 
     >>> # example 3
-    >>> probplot = sm.ProbPlot(res, stats.t, distargs=(4,), loc=3, scale=10)
-    >>> fig = probplot.qqplot()
-    >>> h = plt.title('Ex. 3 - qqplot - resids vs quantiles of t-dist')
+    >>> pplot = sm.ProbPlot(res, stats.t, distargs=(4,), loc=3, scale=10)
+    >>> fig = pplot.qqplot()
+    >>> h = plt.title("Ex. 3 - qqplot - resids vs quantiles of t-dist")
     >>> plt.show()
 
     Automatically determine parameters for t distribution including the
     loc and scale:
 
     >>> # example 4
-    >>> probplot = sm.ProbPlot(res, stats.t, fit=True)
-    >>> fig = probplot.qqplot(line='45')
-    >>> h = plt.title('Ex. 4 - qqplot - resids vs. quantiles of fitted t-dist')
+    >>> pplot = sm.ProbPlot(res, stats.t, fit=True)
+    >>> fig = pplot.qqplot(line="45")
+    >>> h = plt.title("Ex. 4 - qqplot - resids vs. quantiles of fitted t-dist")
     >>> plt.show()
 
     A second `ProbPlot` object can be used to compare two separate sample
@@ -121,8 +126,8 @@ class ProbPlot(object):
     >>> y = np.random.normal(loc=8.75, scale=3.25, size=37)
     >>> pp_x = sm.ProbPlot(x, fit=True)
     >>> pp_y = sm.ProbPlot(y, fit=True)
-    >>> fig = pp_x.qqplot(line='45', other=pp_y)
-    >>> h = plt.title('Ex. 5 - qqplot - compare two sample sets')
+    >>> fig = pp_x.qqplot(line="45", other=pp_y)
+    >>> h = plt.title("Ex. 5 - qqplot - compare two sample sets")
     >>> plt.show()
 
     In qqplot, sample size of `other` can be equal or larger than the first.
@@ -134,8 +139,8 @@ class ProbPlot(object):
     >>> y = np.random.normal(loc=8.75, scale=3.25, size=57)
     >>> pp_x = sm.ProbPlot(x, fit=True)
     >>> pp_y = sm.ProbPlot(y, fit=True)
-    >>> fig = pp_x.qqplot(line='45', other=pp_y)
-    >>> title = 'Ex. 6 - qqplot - compare different sample sizes'
+    >>> fig = pp_x.qqplot(line="45", other=pp_y)
+    >>> title = "Ex. 6 - qqplot - compare different sample sizes"
     >>> h = plt.title(title)
     >>> plt.show()
 
@@ -149,10 +154,10 @@ class ProbPlot(object):
     >>> y = np.random.normal(loc=8.75, scale=3.25, size=57)
     >>> pp_x = sm.ProbPlot(x, fit=True)
     >>> pp_y = sm.ProbPlot(y, fit=True)
-    >>> fig = pp_y.ppplot(line='45', other=pp_x)
-    >>> h = plt.title('Ex. 7A- ppplot - compare two sample sets, other=pp_x')
-    >>> fig = pp_x.ppplot(line='45', other=pp_y)
-    >>> h = plt.title('Ex. 7B- ppplot - compare two sample sets, other=pp_y')
+    >>> pp_y.ppplot(line="45", other=pp_x)
+    >>> plt.title("Ex. 7A- ppplot - compare two sample sets, other=pp_x")
+    >>> pp_x.ppplot(line="45", other=pp_y)
+    >>> plt.title("Ex. 7B- ppplot - compare two sample sets, other=pp_y")
     >>> plt.show()
 
     The following plot displays some options, follow the link to see the
@@ -161,8 +166,16 @@ class ProbPlot(object):
     .. plot:: plots/graphics_gofplots_qqplot.py
     """
 
-    def __init__(self, data, dist=stats.norm, fit=False, distargs=(), a=0,
-                 loc=0, scale=1):
+    def __init__(
+        self,
+        data,
+        dist=stats.norm,
+        fit=False,
+        distargs=(),
+        a=0,
+        loc=0,
+        scale=1,
+    ):
 
         self.data = data
         self.a = a
@@ -170,29 +183,63 @@ class ProbPlot(object):
         self.distargs = distargs
         self.fit = fit
 
-        if isinstance(dist, str):
-            dist = getattr(stats, dist)
-
-        if fit:
+        self._is_frozen = isinstance(dist, stats.distributions.rv_frozen)
+        if self._is_frozen and (
+            fit or loc != 0 or scale != 1 or distargs != ()
+        ):
+            raise ValueError(
+                "Frozen distributions cannot be combined with fit, loc, scale"
+                " or distargs."
+            )
+        # propertes
+        self._cache = {}
+        if self._is_frozen:
+            self.dist = dist
+            dist_gen = dist.dist
+            shapes = dist_gen.shapes
+            if shapes is not None:
+                shape_args = tuple(map(str.strip, shapes.split(",")))
+            else:
+                shape_args = ()
+            numargs = len(shape_args)
+            args = dist.args
+            if len(args) >= numargs + 1:
+                self.loc = args[numargs]
+            else:
+                self.loc = dist.kwds.get("loc", loc)
+            if len(args) >= numargs + 2:
+                self.scale = args[numargs + 1]
+            else:
+                self.scale = dist.kwds.get("scale", scale)
+            fit_params = []
+            for i, arg in enumerate(shape_args):
+                if arg in dist.kwds:
+                    value = dist.kwds[arg]
+                else:
+                    value = dist.args[i]
+                fit_params.append(value)
+            self.fit_params = np.r_[fit_params, self.loc, self.scale]
+        elif fit:
             self.fit_params = dist.fit(data)
             self.loc = self.fit_params[-2]
             self.scale = self.fit_params[-1]
             if len(self.fit_params) > 2:
-                self.dist = dist(*self.fit_params[:-2],
-                                 **dict(loc=0, scale=1))
+                self.dist = dist(*self.fit_params[:-2], **dict(loc=0, scale=1))
             else:
                 self.dist = dist(loc=0, scale=1)
         elif distargs or loc != 0 or scale != 1:
             try:
                 self.dist = dist(*distargs, **dict(loc=loc, scale=scale))
             except Exception:
-                distargs = ', '.join([str(da) for da in distargs])
-                cmd = 'dist({distargs}, loc={loc}, scale={scale})'
+                distargs = ", ".join([str(da) for da in distargs])
+                cmd = "dist({distargs}, loc={loc}, scale={scale})"
                 cmd = cmd.format(distargs=distargs, loc=loc, scale=scale)
-                raise TypeError('Initializing the distribution failed.  This '
-                                'can occur if distargs contains loc or scale. '
-                                'The distribution initialization command '
-                                'is:\n{cmd}'.format(cmd=cmd))
+                raise TypeError(
+                    "Initializing the distribution failed.  This "
+                    "can occur if distargs contains loc or scale. "
+                    "The distribution initialization command "
+                    "is:\n{cmd}".format(cmd=cmd)
+                )
             self.loc = loc
             self.scale = scale
             self.fit_params = np.r_[distargs, loc, scale]
@@ -201,9 +248,6 @@ class ProbPlot(object):
             self.loc = loc
             self.scale = scale
             self.fit_params = np.r_[loc, scale]
-
-        # propertes
-        self._cache = {}
 
     @cache_readonly
     def theoretical_percentiles(self):
@@ -216,12 +260,13 @@ class ProbPlot(object):
         try:
             return self.dist.ppf(self.theoretical_percentiles)
         except TypeError:
-            msg = '%s requires more parameters to ' \
-                  'compute ppf'.format(self.dist.name,)
+            msg = "%s requires more parameters to compute ppf".format(
+                self.dist.name,
+            )
             raise TypeError(msg)
-        except:
-            msg = 'failed to compute the ppf of {0}'.format(self.dist.name,)
-            raise
+        except Exception as exc:
+            msg = "failed to compute the ppf of {0}".format(self.dist.name)
+            raise type(exc)(msg)
 
     @cache_readonly
     def sorted_data(self):
@@ -234,19 +279,30 @@ class ProbPlot(object):
     def sample_quantiles(self):
         """sample quantiles"""
         if self.fit and self.loc != 0 and self.scale != 1:
-            return (self.sorted_data-self.loc)/self.scale
+            return (self.sorted_data - self.loc) / self.scale
         else:
             return self.sorted_data
 
     @cache_readonly
     def sample_percentiles(self):
         """Sample percentiles"""
-        quantiles = \
-            (self.sorted_data - self.fit_params[-2])/self.fit_params[-1]
+        _check_for(self.dist, "cdf")
+        if self._is_frozen:
+            return self.dist.cdf(self.sorted_data)
+        quantiles = (self.sorted_data - self.fit_params[-2]) / self.fit_params[
+            -1
+        ]
         return self.dist.cdf(quantiles)
 
-    def ppplot(self, xlabel=None, ylabel=None, line=None, other=None,
-               ax=None, **plotkwargs):
+    def ppplot(
+        self,
+        xlabel=None,
+        ylabel=None,
+        line=None,
+        other=None,
+        ax=None,
+        **plotkwargs,
+    ):
         """
         Plot of the percentiles of x versus the percentiles of a distribution.
 
@@ -258,16 +314,16 @@ class ProbPlot(object):
         ylabel : str or None, optional
             User-provided labels for the y-axis. If None (default),
             other values are used depending on the status of the kwarg `other`.
-        line : {None, '45', 's', 'r', q'}, optional
+        line : {None, "45", "s", "r", q"}, optional
             Options for the reference line to which the data is compared:
 
-                - '45': 45-degree line
-                - 's': standardized line, the expected order statistics are
-                  scaled by the standard deviation of the given sample and have
-                  the mean added to them
-                - 'r': A regression line is fit
-                - 'q': A line is fit through the quartiles.
-                - None: by default no reference line is added to the plot.
+            - "45": 45-degree line
+            - "s": standardized line, the expected order statistics are
+              scaled by the standard deviation of the given sample and have
+              the mean added to them
+            - "r": A regression line is fit
+            - "q": A line is fit through the quartiles.
+            - None: by default no reference line is added to the plot.
 
         other : ProbPlot, array_like, or None, optional
             If provided, ECDF(x) will be plotted against p(x) where x are
@@ -298,19 +354,24 @@ class ProbPlot(object):
             p_x = self.theoretical_percentiles
             ecdf_x = ECDF(other.sample_quantiles)(self.sample_quantiles)
 
-            fig, ax = _do_plot(p_x, ecdf_x, self.dist, ax=ax, line=line,
-                               **plotkwargs)
+            fig, ax = _do_plot(
+                p_x, ecdf_x, self.dist, ax=ax, line=line, **plotkwargs
+            )
 
             if xlabel is None:
-                xlabel = 'Probabilities of 2nd Sample'
+                xlabel = "Probabilities of 2nd Sample"
             if ylabel is None:
-                ylabel = 'Probabilities of 1st Sample'
+                ylabel = "Probabilities of 1st Sample"
 
         else:
-            fig, ax = _do_plot(self.theoretical_percentiles,
-                               self.sample_percentiles,
-                               self.dist, ax=ax, line=line,
-                               **plotkwargs)
+            fig, ax = _do_plot(
+                self.theoretical_percentiles,
+                self.sample_percentiles,
+                self.dist,
+                ax=ax,
+                line=line,
+                **plotkwargs,
+            )
             if xlabel is None:
                 xlabel = "Theoretical Probabilities"
             if ylabel is None:
@@ -324,8 +385,15 @@ class ProbPlot(object):
 
         return fig
 
-    def qqplot(self, xlabel=None, ylabel=None, line=None, other=None,
-               ax=None, **plotkwargs):
+    def qqplot(
+        self,
+        xlabel=None,
+        ylabel=None,
+        line=None,
+        other=None,
+        ax=None,
+        **plotkwargs,
+    ):
         """
         Plot of the quantiles of x versus the quantiles/ppf of a distribution.
 
@@ -340,15 +408,15 @@ class ProbPlot(object):
         ylabel : {None, str}
             User-provided labels for the y-axis. If None (default),
             other values are used depending on the status of the kwarg `other`.
-        line : {None, '45', 's', 'r', q'}, optional
+        line : {None, "45", "s", "r", q"}, optional
             Options for the reference line to which the data is compared:
 
-            - '45' - 45-degree line
-            - 's' - standardized line, the expected order statistics are scaled
+            - "45" - 45-degree line
+            - "s" - standardized line, the expected order statistics are scaled
               by the standard deviation of the given sample and have the mean
               added to them
-            - 'r' - A regression line is fit
-            - 'q' - A line is fit through the quartiles.
+            - "r" - A regression line is fit
+            - "q" - A line is fit through the quartiles.
             - None - by default no reference line is added to the plot.
 
         other : {ProbPlot, array_like, None}, optional
@@ -382,27 +450,34 @@ class ProbPlot(object):
             s_other = other.sample_quantiles
 
             if len(s_self) > len(s_other):
-                raise ValueError("Sample size of `other` must be equal or " +
-                                 "larger than this `ProbPlot` instance")
+                raise ValueError(
+                    "Sample size of `other` must be equal or "
+                    + "larger than this `ProbPlot` instance"
+                )
             elif len(s_self) < len(s_other):
                 # Use quantiles of the smaller set and interpolate quantiles of
                 # the larger data set
                 p = plotting_pos(self.nobs, self.a)
                 s_other = stats.mstats.mquantiles(s_other, p)
 
-            fig, ax = _do_plot(s_other, s_self, self.dist, ax=ax, line=line,
-                               **plotkwargs)
+            fig, ax = _do_plot(
+                s_other, s_self, self.dist, ax=ax, line=line, **plotkwargs
+            )
 
             if xlabel is None:
-                xlabel = 'Quantiles of 2nd Sample'
+                xlabel = "Quantiles of 2nd Sample"
             if ylabel is None:
-                ylabel = 'Quantiles of 1st Sample'
+                ylabel = "Quantiles of 1st Sample"
 
         else:
-            fig, ax = _do_plot(self.theoretical_quantiles,
-                               self.sample_quantiles,
-                               self.dist, ax=ax, line=line,
-                               **plotkwargs)
+            fig, ax = _do_plot(
+                self.theoretical_quantiles,
+                self.sample_quantiles,
+                self.dist,
+                ax=ax,
+                line=line,
+                **plotkwargs,
+            )
             if xlabel is None:
                 xlabel = "Theoretical Quantiles"
             if ylabel is None:
@@ -413,8 +488,15 @@ class ProbPlot(object):
 
         return fig
 
-    def probplot(self, xlabel=None, ylabel=None, line=None,
-                 exceed=False, ax=None, **plotkwargs):
+    def probplot(
+        self,
+        xlabel=None,
+        ylabel=None,
+        line=None,
+        exceed=False,
+        ax=None,
+        **plotkwargs,
+    ):
         """
         Plot of unscaled quantiles of x against the prob of a distribution.
 
@@ -429,15 +511,15 @@ class ProbPlot(object):
         ylabel : {None, str}, optional
             User-provided labels for the y-axis. If None (default),
             other values are used depending on the status of the kwarg `other`.
-        line : {None, '45', 's', 'r', q'}, optional
+        line : {None, "45", "s", "r", q"}, optional
             Options for the reference line to which the data is compared:
 
-            - '45' - 45-degree line
-            - 's' - standardized line, the expected order statistics are scaled
+            - "45" - 45-degree line
+            - "s" - standardized line, the expected order statistics are scaled
               by the standard deviation of the given sample and have the mean
               added to them
-            - 'r' - A regression line is fit
-            - 'q' - A line is fit through the quartiles.
+            - "r" - A regression line is fit
+            - "q" - A line is fit through the quartiles.
             - None - by default no reference line is added to the plot.
 
         exceed : bool, optional
@@ -459,20 +541,28 @@ class ProbPlot(object):
             `ax` is connected.
         """
         if exceed:
-            fig, ax = _do_plot(self.theoretical_quantiles[::-1],
-                               self.sorted_data,
-                               self.dist, ax=ax, line=line,
-                               **plotkwargs)
+            fig, ax = _do_plot(
+                self.theoretical_quantiles[::-1],
+                self.sorted_data,
+                self.dist,
+                ax=ax,
+                line=line,
+                **plotkwargs,
+            )
             if xlabel is None:
-                xlabel = 'Probability of Exceedance (%)'
+                xlabel = "Probability of Exceedance (%)"
 
         else:
-            fig, ax = _do_plot(self.theoretical_quantiles,
-                               self.sorted_data,
-                               self.dist, ax=ax, line=line,
-                               **plotkwargs)
+            fig, ax = _do_plot(
+                self.theoretical_quantiles,
+                self.sorted_data,
+                self.dist,
+                ax=ax,
+                line=line,
+                **plotkwargs,
+            )
             if xlabel is None:
-                xlabel = 'Non-exceedance Probability (%)'
+                xlabel = "Non-exceedance Probability (%)"
 
         if ylabel is None:
             ylabel = "Sample Quantiles"
@@ -484,8 +574,18 @@ class ProbPlot(object):
         return fig
 
 
-def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
-           line=None, ax=None, **plotkwargs):
+def qqplot(
+    data,
+    dist=stats.norm,
+    distargs=(),
+    a=0,
+    loc=0,
+    scale=1,
+    fit=False,
+    line=None,
+    ax=None,
+    **plotkwargs,
+):
     """
     Q-Q plot of the quantiles of x versus the quantiles/ppf of a distribution.
 
@@ -516,15 +616,15 @@ def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
         are fit automatically using dist.fit. The quantiles are formed
         from the standardized data, after subtracting the fitted loc
         and dividing by the fitted scale.
-    line : {None, '45', 's', 'r', q'}
+    line : {None, "45", "s", "r", "q"}
         Options for the reference line to which the data is compared:
 
-        - '45' - 45-degree line
-        - 's' - standardized line, the expected order statistics are scaled
+        - "45" - 45-degree line
+        - "s" - standardized line, the expected order statistics are scaled
           by the standard deviation of the given sample and have the mean
           added to them
-        - 'r' - A regression line is fit
-        - 'q' - A line is fit through the quartiles.
+        - "r" - A regression line is fit
+        - "q" - A line is fit through the quartiles.
         - None - by default no reference line is added to the plot.
 
     ax : AxesSubplot, optional
@@ -553,8 +653,8 @@ def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
     >>> import statsmodels.api as sm
     >>> from matplotlib import pyplot as plt
     >>> data = sm.datasets.longley.load(as_pandas=False)
-    >>> data.exog = sm.add_constant(data.exog)
-    >>> mod_fit = sm.OLS(data.endog, data.exog).fit()
+    >>> exog = sm.add_constant(data.exog)
+    >>> mod_fit = sm.OLS(data.endog, exog).fit()
     >>> res = mod_fit.resid # residuals
     >>> fig = sm.qqplot(res)
     >>> plt.show()
@@ -574,21 +674,23 @@ def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
     Automatically determine parameters for t distribution including the
     loc and scale:
 
-    >>> fig = sm.qqplot(res, stats.t, fit=True, line='45')
+    >>> fig = sm.qqplot(res, stats.t, fit=True, line="45")
     >>> plt.show()
 
     The following plot displays some options, follow the link to see the code.
 
     .. plot:: plots/graphics_gofplots_qqplot.py
     """
-    probplot = ProbPlot(data, dist=dist, distargs=distargs,
-                         fit=fit, a=a, loc=loc, scale=scale)
+    probplot = ProbPlot(
+        data, dist=dist, distargs=distargs, fit=fit, a=a, loc=loc, scale=scale
+    )
     fig = probplot.qqplot(ax=ax, line=line, **plotkwargs)
     return fig
 
 
-def qqplot_2samples(data1, data2, xlabel=None, ylabel=None, line=None,
-                    ax=None):
+def qqplot_2samples(
+    data1, data2, xlabel=None, ylabel=None, line=None, ax=None
+):
     """
     Q-Q Plot of two samples' quantiles.
 
@@ -602,22 +704,23 @@ def qqplot_2samples(data1, data2, xlabel=None, ylabel=None, line=None,
     data1 : {array_like, ProbPlot}
         Data to plot along x axis.
     data2 : {array_like, ProbPlot}
-        Data to plot along y axis.
+        Data to plot along y axis. Does not need to have the same number of
+        observations as data 1.
     xlabel : {None, str}
         User-provided labels for the x-axis. If None (default),
         other values are used.
     ylabel : {None, str}
         User-provided labels for the y-axis. If None (default),
         other values are used.
-    line : {None, '45', 's', 'r', q'}
+    line : {None, "45", "s", "r", q"}
         Options for the reference line to which the data is compared:
 
-        - '45' - 45-degree line
-        - 's' - standardized line, the expected order statistics are scaled
+        - "45" - 45-degree line
+        - "s" - standardized line, the expected order statistics are scaled
           by the standard deviation of the given sample and have the mean
           added to them
-        - 'r' - A regression line is fit
-        - 'q' - A line is fit through the quartiles.
+        - "r" - A regression line is fit
+        - "q" - A line is fit through the quartiles.
         - None - by default no reference line is added to the plot.
 
     ax : AxesSubplot, optional
@@ -657,7 +760,7 @@ def qqplot_2samples(data1, data2, xlabel=None, ylabel=None, line=None,
 
     .. plot:: plots/graphics_gofplots_qqplot_2samples.py
 
-    >>> fig = qqplot_2samples(pp_x, pp_y, xlabel=None, ylabel=None, \
+    >>> fig = qqplot_2samples(pp_x, pp_y, xlabel=None, ylabel=None,
     ...                       line=None, ax=None)
     """
     if not isinstance(data1, ProbPlot):
@@ -665,14 +768,19 @@ def qqplot_2samples(data1, data2, xlabel=None, ylabel=None, line=None,
 
     if not isinstance(data2, ProbPlot):
         data2 = ProbPlot(data2)
-
-    fig = data1.qqplot(xlabel=xlabel, ylabel=ylabel,
-                       line=line, other=data2, ax=ax)
+    if data2.data.shape[0] >= data1.data.shape[0]:
+        fig = data1.qqplot(
+            xlabel=xlabel, ylabel=ylabel, line=line, other=data2, ax=ax
+        )
+    else:
+        fig = data2.qqplot(
+            xlabel=ylabel, ylabel=xlabel, line=line, other=data1, ax=ax
+        )
 
     return fig
 
 
-def qqline(ax, line, x=None, y=None, dist=None, fmt='r-'):
+def qqline(ax, line, x=None, y=None, dist=None, fmt="r-", **lineoptions):
     """
     Plot a reference line for a qqplot.
 
@@ -680,25 +788,27 @@ def qqline(ax, line, x=None, y=None, dist=None, fmt='r-'):
     ----------
     ax : matplotlib axes instance
         The axes on which to plot the line
-    line : str {'45','r','s','q'}
+    line : str {"45","r","s","q"}
         Options for the reference line to which the data is compared.:
 
-        - '45' - 45-degree line
-        - 's'  - standardized line, the expected order statistics are scaled by
+        - "45" - 45-degree line
+        - "s"  - standardized line, the expected order statistics are scaled by
                  the standard deviation of the given sample and have the mean
                  added to them
-        - 'r'  - A regression line is fit
-        - 'q'  - A line is fit through the quartiles.
+        - "r"  - A regression line is fit
+        - "q"  - A line is fit through the quartiles.
         - None - By default no reference line is added to the plot.
 
     x : ndarray
-        X data for plot. Not needed if line is '45'.
+        X data for plot. Not needed if line is "45".
     y : ndarray
-        Y data for plot. Not needed if line is '45'.
+        Y data for plot. Not needed if line is "45".
     dist : scipy.stats.distribution
-        A scipy.stats distribution, needed if line is 'q'.
+        A scipy.stats distribution, needed if line is "q".
     fmt : str, optional
         Line format string passed to `plot`.
+    **lineoptions
+        Additional arguments to be passed to the `plot` command.
 
     Notes
     -----
@@ -722,42 +832,44 @@ def qqline(ax, line, x=None, y=None, dist=None, fmt='r-'):
     >>> plt.scatter(x, y)
     >>> ax.set_xlabel(foodexp.exog_name[0])
     >>> ax.set_ylabel(foodexp.endog_name)
-    >>> qqline(ax, 'r', x, y)
+    >>> qqline(ax, "r", x, y)
     >>> plt.show()
 
     .. plot:: plots/graphics_gofplots_qqplot_qqline.py
     """
-    if line == '45':
+    if line == "45":
         end_pts = lzip(ax.get_xlim(), ax.get_ylim())
         end_pts[0] = min(end_pts[0])
         end_pts[1] = max(end_pts[1])
-        ax.plot(end_pts, end_pts, fmt)
+        ax.plot(end_pts, end_pts, fmt, **lineoptions)
         ax.set_xlim(end_pts)
         ax.set_ylim(end_pts)
-        return # does this have any side effects?
-    if x is None and y is None:
+        return  # does this have any side effects?
+    if x is None or y is None:
         raise ValueError("If line is not 45, x and y cannot be None.")
-    elif line == 'r':
+    x = np.array(x)
+    y = np.array(y)
+    if line == "r":
         # could use ax.lines[0].get_xdata(), get_ydata(),
-        # but do not know axes are 'clean'
+        # but don't know axes are "clean"
         y = OLS(y, add_constant(x)).fit().fittedvalues
-        ax.plot(x,y,fmt)
-    elif line == 's':
-        m,b = y.std(), y.mean()
-        ref_line = x*m + b
-        ax.plot(x, ref_line, fmt)
-    elif line == 'q':
-        _check_for_ppf(dist)
+        ax.plot(x, y, fmt, **lineoptions)
+    elif line == "s":
+        m, b = np.std(y), np.mean(y)
+        ref_line = x * m + b
+        ax.plot(x, ref_line, fmt, **lineoptions)
+    elif line == "q":
+        _check_for(dist, "ppf")
         q25 = stats.scoreatpercentile(y, 25)
         q75 = stats.scoreatpercentile(y, 75)
         theoretical_quartiles = dist.ppf([0.25, 0.75])
         m = (q75 - q25) / np.diff(theoretical_quartiles)
-        b = q25 - m*theoretical_quartiles[0]
-        ax.plot(x, m*x + b, fmt)
+        b = q25 - m * theoretical_quartiles[0]
+        ax.plot(x, m * x + b, fmt, **lineoptions)
 
 
 # about 10x faster than plotting_position in sandbox and mstats
-def plotting_pos(nobs, a):
+def plotting_pos(nobs, a=0.0, b=None):
     """
     Generates sequence of plotting positions
 
@@ -765,25 +877,30 @@ def plotting_pos(nobs, a):
     ----------
     nobs : int
         Number of probability points to plot
-    a : float
-        Offset for the plotting position of an expected order statistic, for
-        example.
+    a : float, default 0.0
+        alpha parameter for the plotting position of an expected order
+        statistic
+    b : float, default None
+        beta parameter for the plotting position of an expected order
+        statistic. If None, then b is set to a.
 
     Returns
     -------
-    plotting_positions : ndarray
+    ndarray
         The plotting positions
 
     Notes
     -----
-    The plotting positions are given by (i - a)/(nobs - 2*a + 1) for i in
-    range(0,nobs+1)
+    The plotting positions are given by (i - a)/(nobs + 1 - a - b) for i in
+    range(1, nobs+1)
 
     See Also
     --------
     scipy.stats.mstats.plotting_positions
+        Additional information on alpha and beta
     """
-    return (np.arange(1., nobs + 1) - a)/(nobs - 2 * a + 1)
+    b = a if b is None else b
+    return (np.arange(1.0, nobs + 1) - a) / (nobs + 1 - a - b)
 
 
 def _fmt_probplot_axis(ax, dist, nobs):
@@ -791,53 +908,57 @@ def _fmt_probplot_axis(ax, dist, nobs):
     Formats a theoretical quantile axis to display the corresponding
     probabilities on the quantiles' scale.
 
-    Parameteters
-    ------------
+    Parameters
+    ----------
     ax : AxesSubplot, optional
         The axis to be formatted
     nobs : scalar
-        Numbero of observations in the sample
+        Number of observations in the sample
     dist : scipy.stats.distribution
-        A scipy.stats distribution sufficiently specified to impletment its
+        A scipy.stats distribution sufficiently specified to implement its
         ppf() method.
 
     Returns
     -------
     There is no return value. This operates on `ax` in place
     """
-    _check_for_ppf(dist)
-    if nobs < 50:
-        axis_probs = np.array([1, 2, 5, 10, 20, 30, 40, 50, 60,
-                               70, 80, 90, 95, 98, 99, ]) / 100.0
-    elif nobs < 500:
-        axis_probs = np.array([0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 30, 40, 50, 60,
-                               70, 80, 90, 95, 98, 99, 99.5, 99.8,
-                               99.9]) / 100.0
-    else:
-        axis_probs = np.array([0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10,
-                               20, 30, 40, 50, 60, 70, 80, 90, 95, 98, 99,
-                               99.5, 99.8, 99.9, 99.95, 99.98, 99.99]) / 100.0
+    _check_for(dist, "ppf")
+    axis_probs = np.linspace(10, 90, 9, dtype=float)
+    small = np.array([1.0, 2, 5])
+    axis_probs = np.r_[small, axis_probs, 100 - small[::-1]]
+    if nobs >= 50:
+        axis_probs = np.r_[small / 10, axis_probs, 100 - small[::-1] / 10]
+    if nobs >= 500:
+        axis_probs = np.r_[small / 100, axis_probs, 100 - small[::-1] / 100]
+    axis_probs /= 100.0
     axis_qntls = dist.ppf(axis_probs)
     ax.set_xticks(axis_qntls)
-    ax.set_xticklabels(axis_probs*100, rotation=45,
-                       rotation_mode='anchor',
-                       horizontalalignment='right',
-                       verticalalignment='center')
+    ax.set_xticklabels(
+        axis_probs * 100,
+        rotation=45,
+        rotation_mode="anchor",
+        horizontalalignment="right",
+        verticalalignment="center",
+    )
     ax.set_xlim([axis_qntls.min(), axis_qntls.max()])
 
 
-def _do_plot(x, y, dist=None, line=False, ax=None, fmt='bo', **kwargs):
+def _do_plot(
+    x, y, dist=None, line=None, ax=None, fmt="bo", step=False, **kwargs
+):
     """
     Boiler plate plotting function for the `ppplot`, `qqplot`, and
     `probplot` methods of the `ProbPlot` class
 
-    Parameteters
-    ------------
-    x, y : array_like
-        Data to be plotted
+    Parameters
+    ----------
+    x : array_like
+        X-axis data to be plotted
+    y : array_like
+        Y-axis data to be plotted
     dist : scipy.stats.distribution
-        A scipy.stats distribution, needed if `line` is 'q'.
-    line : str {'45', 's', 'r', q'} or None
+        A scipy.stats distribution, needed if `line` is "q".
+    line : {"45", "s", "r", "q", None}, default None
         Options for the reference line to which the data is compared.
     ax : AxesSubplot, optional
         If given, this subplot is used to plot in instead of a new figure being
@@ -854,11 +975,24 @@ def _do_plot(x, y, dist=None, line=False, ax=None, fmt='bo', **kwargs):
     ax : AxesSubplot
         The original axes if provided.  Otherwise a new instance.
     """
+    plot_style = {
+        "marker": "o",
+        "markerfacecolor": "blue",
+        "linestyle": "none",
+    }
+
+    plot_style.update(**kwargs)
+    where = plot_style.pop("where", "pre")
+
     fig, ax = utils.create_mpl_ax(ax)
     ax.set_xmargin(0.02)
-    ax.plot(x, y, fmt, **kwargs)
+
+    if step:
+        ax.step(x, y, where=where, **plot_style)
+    else:
+        ax.plot(x, y, fmt, **plot_style)
     if line:
-        if line not in ['r','q','45','s']:
+        if line not in ["r", "q", "45", "s"]:
             msg = "%s option for line not understood" % line
             raise ValueError(msg)
 
@@ -867,6 +1001,6 @@ def _do_plot(x, y, dist=None, line=False, ax=None, fmt='bo', **kwargs):
     return fig, ax
 
 
-def _check_for_ppf(dist):
-    if not hasattr(dist, 'ppf'):
-        raise ValueError("distribution must have a ppf method")
+def _check_for(dist, attr="ppf"):
+    if not hasattr(dist, attr):
+        raise AttributeError(f"distribution must have a {attr} method")

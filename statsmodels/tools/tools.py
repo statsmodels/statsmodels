@@ -75,6 +75,10 @@ def categorical(data, col=None, dictnames=False, drop=False):
     """
     Construct a dummy matrix from categorical variables
 
+    .. deprecated:: 0.12
+
+       Use pandas.get_dummies instead.
+
     Parameters
     ----------
     data : array_like
@@ -154,7 +158,7 @@ def categorical(data, col=None, dictnames=False, drop=False):
     warnings.warn(
         "categorical is deprecated. Use pandas Categorical to represent "
         "categorical data and can get_dummies to construct dummy arrays. "
-        "It will be removed in a future release.",
+        "It will be removed after release 0.13.",
         FutureWarning
     )
     # TODO: add a NameValidator function

@@ -25,7 +25,7 @@ def effectsize_oneway(means, vars_, nobs, use_var="unequal", ddof_between=0):
 
     Parameters
     ----------
-    means: array_like
+    means : array_like
         Mean of samples to be compared
     vars_ : float or array_like
         Residual (within) variance of each sample or pooled
@@ -40,7 +40,7 @@ def effectsize_oneway(means, vars_, nobs, use_var="unequal", ddof_between=0):
         Only relative sizes are relevant, any proportional change to nobs does
         not change the effect size.
     use_var : {"unequal", "equal", "bf"}
-        If ``use_var`` is "unequal", then the variances can differe across
+        If ``use_var`` is "unequal", then the variances can differ across
         samples and the effect size for Welch anova will be computed.
     ddof_between : int
         Degrees of freedom correction for the weighted between sum of squares.
@@ -61,7 +61,7 @@ def effectsize_oneway(means, vars_, nobs, use_var="unequal", ddof_between=0):
     - balanced sample with homoscedastic variances
     - samples with different number of observations and with homoscedastic
       variances
-    - samples with different number of observations and with heteroscedastic
+    - samples with different number of observations and with heteroskedastic
       variances. This corresponds to Welch anova
 
     In the case of "unequal" and "bf" methods for unequal variances, the
@@ -285,7 +285,7 @@ def fstat_to_wellek(f_stat, n_groups, nobs_mean):
 def confint_noncentrality(f_stat, df1, df2, alpha=0.05,
                           alternative="two-sided"):
     """
-    Confidence interval for noncentality parameter in F-test
+    Confidence interval for noncentrality parameter in F-test
 
     This does not yet handle non-negativity constraint on nc.
     Currently only two-sided alternative is supported.
@@ -383,18 +383,19 @@ def confint_effectsize_oneway(f_stat, df1, df2, alpha=0.05, nobs=None):
     return ci_res
 
 
-def anova_generic(means, vars_, nobs, use_var="unequal",
+def anova_generic(means, variances, nobs, use_var="unequal",
                   welch_correction=True, info=None):
-    """Oneway anova based on summary statistics
+    """
+    Oneway anova based on summary statistics
 
     Parameters
     ----------
-    means: array_like
+    means : array_like
         Mean of samples to be compared
-    vars_ : float or array_like
+    variances : float or array_like
         Residual (within) variance of each sample or pooled
-        If var_ is scalar, then it is interpreted as pooled variance that is
-        the same for all samples, ``use_var`` will be ignored.
+        If ``variances`` is scalar, then it is interpreted as pooled variance
+        that is the same for all samples, ``use_var`` will be ignored.
         Otherwise, the variances are used depending on the ``use_var`` keyword.
     nobs : int or array_like
         Number of observations for the samples.
@@ -404,9 +405,9 @@ def anova_generic(means, vars_, nobs, use_var="unequal",
         Only relative sizes are relevant, any proportional change to nobs does
         not change the effect size.
     use_var : {"unequal", "equal", "bf"}
-        If ``use_var`` is "unequal", then the variances can differe across
+        If ``use_var`` is "unequal", then the variances can differ across
         samples and the effect size for Welch anova will be computed.
-    welch
+    welch : bool
 
     Returns
     -------
@@ -414,7 +415,6 @@ def anova_generic(means, vars_, nobs, use_var="unequal",
         Effect size corresponding to squared Cohen's f, which is also equal
         to the noncentrality divided by total number of observations.
         In contrast to other functions, this value is not squared.
-
     """
     options = {"use_var": use_var,
                "welch_correction": welch_correction
@@ -425,7 +425,7 @@ def anova_generic(means, vars_, nobs, use_var="unequal",
     n_groups = len(means)
     # mean_t = (nobs * means).sum() / nobs_t
     if use_var == "unequal":
-        weights = nobs / vars_
+        weights = nobs / variances
     else:
         weights = nobs
 
@@ -445,20 +445,20 @@ def anova_generic(means, vars_, nobs, use_var="unequal",
 
     elif use_var == "equal":
         # variance of group demeaned total sample, pooled var_resid
-        tmp = ((nobs - 1) * vars_).sum() / (nobs_t - n_groups)
+        tmp = ((nobs - 1) * variances).sum() / (nobs_t - n_groups)
         statistic /= tmp
         df_denom = nobs_t - n_groups
     elif use_var == "bf":
-        tmp = ((1. - nobs / nobs_t) * vars_).sum()
+        tmp = ((1. - nobs / nobs_t) * variances).sum()
         statistic = 1. * (nobs * (means - meanw_t)**2).sum()
         statistic /= tmp
 
         df_num2 = n_groups - 1
-        df_denom = tmp**2 / ((1. - nobs / nobs_t)**2 *
-                             vars_**2 / (nobs - 1)).sum()
-        df_num = tmp**2 / ((vars_**2).sum() +
-                           (nobs / nobs_t * vars_).sum()**2 -
-                           2 * (nobs / nobs_t * vars_**2).sum())
+        df_denom = tmp**2 / ((1. - nobs / nobs_t) ** 2 *
+                             variances ** 2 / (nobs - 1)).sum()
+        df_num = tmp**2 / ((variances ** 2).sum() +
+                           (nobs / nobs_t * variances).sum() ** 2 -
+                           2 * (nobs / nobs_t * variances ** 2).sum())
         pval2 = stats.f.sf(statistic, df_num2, df_denom)
         options["df2"] = (df_num2, df_denom)
         options["df_num2"] = df_num2
@@ -476,7 +476,7 @@ def anova_generic(means, vars_, nobs, use_var="unequal",
                       n_groups=n_groups,
                       means=means,
                       nobs=nobs,
-                      vars_=vars_,
+                      vars_=variances,
                       **options
                       )
     return res
@@ -494,7 +494,7 @@ def anova_oneway(data, groups=None, use_var="unequal", welch_correction=True,
     data : tuple of array_like or DataFrame or Series
         Data for k independent samples, with k >= 2.
         The data can be provided as a tuple or list of arrays or in long
-        format with outcome observations in ``data`` and group membershipt in
+        format with outcome observations in ``data`` and group membership in
         ``groups``.
     groups : ndarray or Series
         If data is in long format, then groups is needed as indicator to which
@@ -509,7 +509,7 @@ def anova_oneway(data, groups=None, use_var="unequal", welch_correction=True,
             This is the default.
         "equal" : Variances are assumed to be equal across samples. This is
             the standard Anova.
-        "bf: Variances are not assumed to be equal across samples. The method
+        "bf" : Variances are not assumed to be equal across samples. The method
             is Browne-Forsythe (1971) for testing equality of means with the
             corrected degrees of freedom by Merothra. The original BF degrees
             of freedom are available as additional attributes in the results

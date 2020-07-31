@@ -55,17 +55,6 @@ that models are non-nested.
 """
 
 
-# get the old signature back so the examples work
-def unitroot_adf(x, maxlag=None, trendorder=0, autolag='AIC', store=False):
-    import warnings
-    warnings.warn("unitroot_adf is deprecated and will be removed after 0.11.",
-                  FutureWarning)
-    from statsmodels.tsa.stattools import adfuller
-    trendorder = {0: 'nc', 1: 'c', 2: 'ct', 3: 'ctt'}[trendorder]
-    return adfuller(x, maxlag=maxlag, regression=trendorder, autolag=autolag,
-                    store=store, regresults=False)
-
-
 def _check_nested_exog(small, large):
     """
     Check if a larger exog nests a smaller exog
@@ -434,7 +423,7 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
         After 0.12, this will become the only return method.  Set to True
         to return the DataFrame or False to continue returning the 2 - 4
         output. If None (the default), a warning is raised.
-    auto_lag: bool, default False
+    auto_lag : bool, default False
         Flag indicating whether to automatically determine the optimal lag
         length based on threshold of maximum correlation value.
 

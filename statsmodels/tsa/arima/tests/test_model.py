@@ -194,7 +194,7 @@ def test_low_memory():
     assert_allclose(res2.params, res1.params)
     assert_allclose(res2.llf, res1.llf)
 
-    # Check that the model's basic memory conservation option wasn't changed
+    # Check that the model's basic memory conservation option was not changed
     assert_equal(mod.ssm.memory_conserve, 0)
 
     # Check that low memory was actually used (just check a couple)

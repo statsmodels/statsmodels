@@ -30,23 +30,23 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=1,
 
     Parameters
     ----------
-    count1: int
+    count1 : int
         Number of events in first sample
-    exposure1: float
+    exposure1 : float
         Total exposure (time * subjects) in first sample
-    count2: int
+    count2 : int
         Number of events in first sample
-    exposure2: float
+    exposure2 : float
         Total exposure (time * subjects) in first sample
-    ratio: float
+    ratio : float
         ratio of the two Poisson rates under the Null hypothesis. Default is 1.
-    method: string
+    method : string
         Method for the test statistic and the p-value. Defaults to `'score'`.
         Current Methods are based on Gu et. al 2008
         Implemented are 'wald', 'score' and 'sqrt' based asymptotic normal
         distribution, and the exact conditional test 'exact-cond', and its
         mid-point version 'cond-midp'. method='etest' and method='etest-wald'
-        provide pvalues from `etest_poisson_2indep` usind score or wald
+        provide pvalues from `etest_poisson_2indep` using score or wald
         statistic respectively.
         see Notes
     alternative : string
@@ -157,17 +157,17 @@ def etest_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=1,
 
     Parameters
     ----------
-    count1: int
+    count1 : int
         Number of events in first sample
-    exposure1: float
+    exposure1 : float
         Total exposure (time * subjects) in first sample
-    count2: int
+    count2 : int
         Number of events in first sample
-    exposure2: float
+    exposure2 : float
         Total exposure (time * subjects) in first sample
-    ratio: float
+    ratio : float
         ratio of the two Poisson rates under the Null hypothesis. Default is 1.
-    method: {"score", "wald"}
+    method : {"score", "wald"}
         Method for the test statistic that defines the rejection region.
     alternative : string
         The alternative hypothesis, H1, has to be one of the following

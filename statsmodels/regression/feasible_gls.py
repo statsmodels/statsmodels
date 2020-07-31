@@ -149,7 +149,7 @@ class GLSHet(WLS):
         """
         Perform an iterative two-step procedure to estimate a WLS model.
 
-        The model is assumed to have heteroscedastic errors.
+        The model is assumed to have heteroskedastic errors.
         The variance is estimated by OLS regression of the link transformed
         squared residuals on Z, i.e.::
 

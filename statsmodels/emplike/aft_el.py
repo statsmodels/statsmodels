@@ -70,8 +70,7 @@ class OptAFT(_OptFuncts):
 
         Returns
         -------
-
-        llr: float
+        llr : float
             -2 times the log likelihood of the nuisance parameters and the
             hypothesized value of the parameter(s) of interest.
         """
@@ -95,10 +94,10 @@ class OptAFT(_OptFuncts):
         Parameters
         ----------
 
-        Nuisance Params: ndarray
+        nuisance_params : ndarray
             Vector of values to be used as nuisance params.
 
-        maxiter: int
+        maxiter : int
             Number of iterations in the EM algorithm for a parameter vector
 
         Returns
@@ -160,8 +159,7 @@ class OptAFT(_OptFuncts):
         ----------
         b0: float
             Value of a regression parameter
-
-        param_num: int
+        param_num : int
             Parameter index of b0
         """
         return self.test_beta([b0], [param_num])[0] - self.r0
@@ -187,29 +185,21 @@ class emplikeAFT(object):
 
     Attributes
     ----------
-
-    nobs: float
+    nobs : float
         Number of observations
-
-    endog: ndarray
+    endog : ndarray
         Endog attay
-
-    exog: ndarray
+    exog : ndarray
         Exogenous variable matrix
-
     censors
         Censors array but sets the max(endog) to uncensored
-
-    nvar: float
+    nvar : float
         Number of exogenous variables
-
-    uncens_nobs: float
+    uncens_nobs : float
         Number of uncensored observations
-
-    uncens_endog: ndarray
+    uncens_endog : ndarray
         Uncensored response variables
-
-    uncens_exog: ndarray
+    uncens_exog : ndarray
         Exogenous variables of the uncensored observations
 
     Methods
@@ -254,14 +244,14 @@ class emplikeAFT(object):
 
         Parameters
         ----------
-        endog: ndarray
+        endog : ndarray
             Models endogenous variable
-        censors: ndarray
+        censors : ndarray
             arrat indicating a censored array
 
         Returns
         -------
-        indic_ties: ndarray
+        indic_ties : ndarray
             ties[i]=1 if endog[i]==endog[i+1] and
             censors[i]=censors[i+1]
         """
@@ -398,20 +388,16 @@ class AFTResults(OptAFT):
 
         Parameters
         ----------
-        b0_vals: list
+        b0_vals : list
             The value of parameters to be tested
-
-        param_num: list
+        param_num : list
             Which parameters to be tested
-
-        maxiter: int, optional
+        maxiter : int, optional
             How many iterations to use in the EM algorithm.  Default is 30
-
-        ftol: float, optional
+        ftol : float, optional
             The function tolerance for the EM optimization.
             Default is 10''**''-5
-
-        print_weights: bool
+        print_weights : bool
             If true, returns the weights tate maximize the profile
             log likelihood. Default is False
 
@@ -429,7 +415,7 @@ class AFTResults(OptAFT):
         maximum number of inner iterations for a specific value for the
         nuisance parameters while the resultsof the function are still valid.
         This usually occurs when the optimization over the nuisance parameters
-        selects paramater values that yield a log-likihood ratio close to
+        selects parameter values that yield a log-likihood ratio close to
         infinity.
 
         Examples
@@ -507,17 +493,13 @@ class AFTResults(OptAFT):
 
         Parameters
         ----------
-
-        param_num: int
+        param_num : int
             Parameter number of interest
-
-        beta_high: float
+        beta_high : float
             Upper bound for the confidence interval
-
-        beta_low:
+        beta_low : float
             Lower bound for the confidence interval
-
-        sig: float, optional
+        sig : float, optional
             Significance level.  Default is .05
 
         Notes

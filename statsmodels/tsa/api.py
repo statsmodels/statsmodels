@@ -17,7 +17,7 @@ __all__ = ['AR', 'arima', 'AutoReg', 'ARMA', 'ARIMA',
            'SARIMAX', 'UnobservedComponents', 'VARMAX', 'DynamicFactor',
            'MarkovRegression', 'MarkovAutoregression',
            'ExponentialSmoothing', 'SimpleExpSmoothing', 'Holt',
-           'arma_generate_sample', 'ArmaProcess', 'STL',
+           'arma_generate_sample', 'ArmaProcess', 'STL', 'STLForecast',
            'bk_filter', 'cf_filter', 'hp_filter']
 
 from .ar_model import AR, AutoReg
@@ -52,4 +52,5 @@ from .regime_switching.markov_autoregression import MarkovAutoregression
 from .holtwinters import ExponentialSmoothing, SimpleExpSmoothing, Holt
 from .innovations import api as innovations
 from .seasonal import STL
+from .forecasting.stl import STLForecast
 from .filters import bk_filter, cf_filter, hp_filter

@@ -17,11 +17,12 @@ class TestSummaryLatex(object):
         desired = r'''
 \begin{table}
 \caption{}
+\label{}
 \begin{center}
-\begin{tabular}{lcc}
+\begin{tabular}{lll}
 \hline
-               &   y I    &   y II    \\
-\midrule
+               & y I      & y II      \\
+\hline
 const          & 7.7500   & 12.4231   \\
                & (1.1058) & (3.1872)  \\
 x1             & -0.7500  & -1.5769   \\

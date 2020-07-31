@@ -110,15 +110,16 @@ _check_rank_doc = """
 
 # helper for MNLogit (will be generally useful later)
 def _numpy_to_dummies(endog):
-    if endog.dtype.kind in ['S', 'O']:
-        endog_dummies, ynames = tools.categorical(endog, drop=True,
-                                                  dictnames=True)
-    elif endog.ndim == 2:
+    if endog.ndim == 2 and endog.dtype.kind not in ["S", "O"]:
         endog_dummies = endog
         ynames = range(endog.shape[1])
     else:
-        endog_dummies, ynames = tools.categorical(endog, drop=True,
-                                                  dictnames=True)
+        dummies = get_dummies(endog, drop_first=False)
+        ynames = {i: dummies.columns[i] for i in range(dummies.shape[1])}
+        endog_dummies = np.asarray(dummies, dtype=float)
+
+        return endog_dummies, ynames
+
     return endog_dummies, ynames
 
 

@@ -226,6 +226,10 @@ class StataReader(object):
     """
     Stata .dta file reader.
 
+    .. deprecated:: 0.11
+
+       Use pandas.read_stata or pandas.io.stata.StataReader
+
     Provides methods to return the metadata of a Stata .dta file and
     a generator for the data itself.
 
@@ -291,8 +295,8 @@ class StataReader(object):
 
     def __init__(self, fname, missing_values=False, encoding=None):
         warnings.warn(
-            "StataReader is deprecated as of 0.10.0 and will be removed in a "
-            "future version.  Use pandas.read_stata or "
+            "StataReader is deprecated as of 0.10.0 and will be removed after"
+            " the 0.12 release.  Use pandas.read_stata or "
             "pandas.io.stata.StataReader instead.",
             FutureWarning)
 
@@ -654,6 +658,10 @@ class StataWriter(object):
     """
     A class for writing Stata binary dta files from array-like objects
 
+    .. deprecated:: 0.11
+
+       Use pandas.read_stata or pandas.io.stata.StataReader
+
     Parameters
     ----------
     fname : file path or buffer
@@ -714,8 +722,8 @@ class StataWriter(object):
     def __init__(self, fname, data, convert_dates=None, encoding="latin-1",
                  byteorder=None):
         warnings.warn(
-            "StataWriter is deprecated as of 0.10.0 and will be removed in a "
-            "future version.  Use pandas.DataFrame.to_stata or "
+            "StataWriter is deprecated as of 0.10.0 and will be removed after"
+            " the 0.12 release.  Use pandas.DataFrame.to_stata or "
             "pandas.io.stata.StatWriter instead.",
             FutureWarning)
 
@@ -968,6 +976,10 @@ def genfromdta(fname, missing_flt=-999., encoding=None, pandas=False,
     """
     Returns an ndarray or DataFrame from a Stata .dta file.
 
+    .. deprecated:: 0.11
+
+       Use pandas.read_stata or pandas.io.stata.StataReader
+
     Parameters
     ----------
     fname : str or filehandle
@@ -985,8 +997,8 @@ def genfromdta(fname, missing_flt=-999., encoding=None, pandas=False,
         to datetime types according to the variable's format.
     """
     warnings.warn(
-        "genfromdta is deprecated as of 0.10.0 and will be removed in a "
-        "future version.  Use pandas.read_stata instead.",
+        "genfromdta is deprecated as of 0.10.0 and will be removed after the "
+        "0.12 release future version.  Use pandas.read_stata instead.",
         FutureWarning)
 
     if isinstance(fname, str):

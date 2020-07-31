@@ -13,8 +13,10 @@ from statsmodels.stats.moment_helpers import cov2corr
 from statsmodels.stats.base import HolderTuple
 from statsmodels.tools.validation import array_like
 
+
 # shortcut function
-logdet = lambda x: np.linalg.slogdet(x)[1]  # noqa: E731
+def _logdet(x):
+    return np.linalg.slogdet(x)[1]
 
 
 def test_mvmean(data, mean_null=0, return_results=True):
@@ -64,7 +66,7 @@ def test_mvmean_2indep(data1, data2):
     """Hotellings test for multivariate mean in two independent samples
 
     The null hypothesis is that both samples have the same mean.
-    The alternative hypothesis is that means differe.
+    The alternative hypothesis is that means differ.
 
     Parameters
     ----------
@@ -120,7 +122,7 @@ def confint_mvmean(data, lin_transf=None, alpha=0.5, simult=False):
     alpha : float in (0, 1)
         confidence level for the confidence interval, commonly used is
         alpha=0.05.
-    simult: bool
+    simult : bool
         If ``simult`` is False (default), then the pointwise confidence
         interval is returned.
         Otherwise, a simultaneous confidence interval is returned.
@@ -170,7 +172,7 @@ def confint_mvmean_fromstats(mean, cov, nobs, lin_transf=None, alpha=0.05,
                              simult=False):
     """Confidence interval for linear transformation of a multivariate mean
 
-    Either pointwise or simultaneous conficence intervals are returned.
+    Either pointwise or simultaneous confidence intervals are returned.
     Data is provided in the form of summary statistics, mean, cov, nobs.
 
     Parameters
@@ -185,7 +187,7 @@ def confint_mvmean_fromstats(mean, cov, nobs, lin_transf=None, alpha=0.05,
     alpha : float in (0, 1)
         confidence level for the confidence interval, commonly used is
         alpha=0.05.
-    simult: bool
+    simult : bool
         If simult is False (default), then pointwise confidence interval is
         returned.
         Otherwise, a simultaneous confidence interval is returned.
@@ -302,7 +304,7 @@ def test_cov(cov, nobs, cov_null):
 
     fact = nobs - 1.
     fact *= 1 - (2 * k + 1 - 2 / (k + 1)) / (6 * (n - 1) - 1)
-    fact2 = logdet(S0) - logdet(n / (n - 1) * S)
+    fact2 = _logdet(S0) - _logdet(n / (n - 1) * S)
     fact2 += np.trace(n / (n - 1) * np.linalg.solve(S0, S)) - k
     statistic = fact * fact2
     df = k * (k + 1) / 2
@@ -362,7 +364,7 @@ def test_cov_spherical(cov, nobs):
     k = cov.shape[0]
 
     statistic = nobs - 1 - (2 * k**2 + k + 2) / (6 * k)
-    statistic *= k * np.log(np.trace(cov)) - logdet(cov) - k * np.log(k)
+    statistic *= k * np.log(np.trace(cov)) - _logdet(cov) - k * np.log(k)
     df = k * (k + 1) / 2 - 1
     pvalue = stats.chi2.sf(statistic, df)
     return HolderTuple(statistic=statistic,
@@ -412,7 +414,7 @@ def test_cov_diagonal(cov, nobs):
     k = cov.shape[0]
     R = cov2corr(cov)
 
-    statistic = -(nobs - 1 - (2 * k + 5) / 6) * logdet(R)
+    statistic = -(nobs - 1 - (2 * k + 5) / 6) * _logdet(R)
     df = k * (k - 1) / 2
     pvalue = stats.chi2.sf(statistic, df)
     return HolderTuple(statistic=statistic,
@@ -486,12 +488,12 @@ def test_cov_blockdiagonal(cov, nobs, block_len):
     if k != sum(k_blocks):
         msg = "sample covariances and blocks do not have matching shape"
         raise ValueError(msg)
-    logdet_blocks = sum(logdet(c) for c in cov_blocks)
+    logdet_blocks = sum(_logdet(c) for c in cov_blocks)
     a2 = k**2 - sum(ki**2 for ki in k_blocks)
     a3 = k**3 - sum(ki**3 for ki in k_blocks)
 
     statistic = (nobs - 1 - (2 * a3 + 3 * a2) / (6. * a2))
-    statistic *= logdet_blocks - logdet(cov)
+    statistic *= logdet_blocks - _logdet(cov)
 
     df = a2 / 2
     pvalue = stats.chi2.sf(statistic, df)
@@ -556,8 +558,8 @@ def test_cov_oneway(cov_list, nobs_list):
 
     cov_pooled = sum((n - 1) * c for (n, c) in zip(nobs_list, cov_list))
     cov_pooled /= (nobs - m)
-    stat0 = (nobs - m) * logdet(cov_pooled)
-    stat0 -= sum((n - 1) * logdet(c) for (n, c) in zip(nobs_list, cov_list))
+    stat0 = (nobs - m) * _logdet(cov_pooled)
+    stat0 -= sum((n - 1) * _logdet(c) for (n, c) in zip(nobs_list, cov_list))
 
     # Box's chi2
     c1 = sum(1 / (n - 1) for n in nobs_list) - 1 / (nobs - m)

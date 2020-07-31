@@ -34,7 +34,7 @@ def load_pandas():
 
     Returns
     -------
-    Dataset instance:
+    Dataset
         See DATASET_PROPOSAL.txt for more information.
     """
     raw_data = du.load_csv(__file__, 'china_smoking.csv')
@@ -56,7 +56,7 @@ def load(as_pandas=None):
 
     Returns
     -------
-    Dataset instance:
+    Dataset
         See DATASET_PROPOSAL.txt for more information.
     """
     return du.as_numpy_dataset(load_pandas(), as_pandas=as_pandas,

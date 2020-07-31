@@ -188,7 +188,7 @@ class RegressionModel(base.LikelihoodModel):
     """
     def __init__(self, endog, exog, **kwargs):
         super(RegressionModel, self).__init__(endog, exog, **kwargs)
-        self._data_attr.extend(['pinv_wexog', 'wendog', 'wexog', 'weights'])
+        self._data_attr.extend(['pinv_wexog', 'weights'])
 
     def initialize(self):
         """Initialize model components."""
@@ -1403,7 +1403,7 @@ def yule_walker(x, order=1, method="adjusted", df=None, inv=False,
             "unbiased is deprecated in factor of adjusted to reflect that the "
             "term is adjusting the sample size used in the autocovariance "
             "calculation rather than estimating an unbiased autocovariance. "
-            "In the future, using 'unbiased' will raise.",
+            "After release 0.13, using 'unbiased' will raise.",
             FutureWarning,
         )
         method = "adjusted"
@@ -1554,6 +1554,8 @@ class RegressionResults(base.LikelihoodModelResults):
         super(RegressionResults, self).__init__(
             model, params, normalized_cov_params, scale)
 
+        # Keep wresid since needed by predict
+        self._data_in_cache.remove("wresid")
         self._cache = {}
         if hasattr(model, 'wexog_singular_values'):
             self._wexog_singular_values = model.wexog_singular_values

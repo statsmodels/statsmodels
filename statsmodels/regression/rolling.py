@@ -473,6 +473,7 @@ class RollingRegressionResults(object):
     cov_type : str
         Name of covariance estimator
     """
+    _data_in_cache = tuple()
 
     def __init__(
         self, model, store: RollingStore, k_constant, use_t, cov_type

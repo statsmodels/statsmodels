@@ -20,14 +20,14 @@ def lowess(endog, exog, frac=2./3, it=3):
 
     Parameters
     ----------
-    endog: 1-D numpy array
+    endog : 1-D numpy array
         The y-values of the observed points
-    exog: 1-D numpy array
+    exog : 1-D numpy array
         The x-values of the observed points
-    frac: float
+    frac : float
         Between 0 and 1. The fraction of the data used
         when estimating each y-value.
-    it: int
+    it : int
         The number of residual-based reweightings
         to perform.
 

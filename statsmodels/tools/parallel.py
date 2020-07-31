@@ -21,20 +21,20 @@ def parallel_func(func, n_jobs, verbose=5):
 
     Parameters
     ----------
-    func: callable
+    func : callable
         A function
-    n_jobs: int
+    n_jobs : int
         Number of jobs to run in parallel
-    verbose: int
+    verbose : int
         Verbosity level
 
     Returns
     -------
-    parallel: instance of joblib.Parallel or list
+    parallel : instance of joblib.Parallel or list
         The parallel object
-    my_func: callable
+    my_func : callable
         func if not parallel or delayed(func)
-    n_jobs: int
+    n_jobs : int
         Number of jobs >= 0
 
     Examples

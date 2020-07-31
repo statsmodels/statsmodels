@@ -111,7 +111,7 @@ cdef class STL(object):
 
     Parameters
     ----------
-    endog : array-like
+    endog : array_like
         Data to be decomposed. Must be squeezable to 1-d.
     period : {int, None}, optional
         Periodicity of the sequence. If None and endog is a pandas Series or
@@ -196,7 +196,7 @@ cdef class STL(object):
     """
     cdef object endog
     cdef Py_ssize_t nobs
-    cdef int period, seasonal, trend, low_pass, seasonal_deg, trend_deg
+    cdef int _period, seasonal, trend, low_pass, seasonal_deg, trend_deg
     cdef int low_pass_deg, low_pass_jump, trend_jump, seasonal_jump
     cdef bint robust, _use_rw
     cdef double[::1] _ya, _trend, _season, _rw
@@ -220,12 +220,12 @@ cdef class STL(object):
             period = freq_to_period(freq)
         if not _is_pos_int(period, False) or period < 2:
             raise ValueError('period must be a positive integer >= 2')
-        self.period = period  # np
+        self._period = period  # np
         if not _is_pos_int(seasonal, True) or seasonal < 3:
             raise ValueError('seasonal must be an odd positive integer >= 3')
         self.seasonal = seasonal  # ns
         if trend is None:
-            trend = int(np.ceil(1.5 * self.period / (1 - 1.5 / self.seasonal)))
+            trend = int(np.ceil(1.5 * self._period / (1 - 1.5 / self.seasonal)))
             # ensure odd
             trend += ((trend % 2) == 0)
         if not _is_pos_int(trend, True) or trend < 3 or trend <= period:
@@ -233,7 +233,7 @@ cdef class STL(object):
                              '>= 3 where trend > period')
         self.trend = trend  # nt
         if low_pass is None:
-            low_pass = self.period + 1
+            low_pass = self._period + 1
             low_pass += ((low_pass % 2) == 0)
         if not _is_pos_int(low_pass, True) or \
                 low_pass < 3 or low_pass <= period:
@@ -261,6 +261,11 @@ cdef class STL(object):
         self._work = np.zeros((7, self.nobs + 2 * period))
 
     @property
+    def period(self) -> int:
+        """The period length of the time series"""
+        return self._period
+
+    @property
     def config(self) -> Dict[str, Union[int, bool]]:
         """
         The parameters used in the model.
@@ -270,7 +275,7 @@ cdef class STL(object):
         dict[str, Union[int, bool]]
             The values used in the STL decomposition.
         """
-        return dict(period=self.period,
+        return dict(period=self._period,
                     seasonal=self.seasonal,
                     seasonal_deg=self.seasonal_deg,
                     seasonal_jump=self.seasonal_jump,
@@ -346,7 +351,7 @@ cdef class STL(object):
         y, n, np, ns, nt, nl, isdeg, itdeg, ildeg, nsjump,
                 ntjump, nljump, ni, userw, rw, season, trend, work
         ->
-        self._ya, self.nobs, self.period, self.seasonal,
+        self._ya, self.nobs, self._period, self.seasonal,
                          self.trend, self.low_pass, self.seasonal_deg,
                          self.trend_deg, self.low_pass_deg, self.seasonal_jump,
                          self.trend_jump, self.low_pass_jump, inner_iter,
@@ -364,7 +369,7 @@ cdef class STL(object):
         nl = self.low_pass
         ildeg = self.low_pass_deg
         nljump = self.low_pass_jump
-        np = self.period
+        np = self._period
         season = self._season
         nt = self.trend
         itdeg = self.trend_deg
@@ -535,8 +540,8 @@ cdef class STL(object):
         cdef int n, np
 
         x = self._work[1, :]
-        n = self.nobs + 2 * self.period
-        np = self.period
+        n = self.nobs + 2 * self._period
+        np = self._period
         trend = self._work[2, :]
         work = self._work[0, :]
         self._ma(x, n, np, trend)
@@ -559,7 +564,7 @@ cdef class STL(object):
         # Original variable names
         y = self._work[0, :]
         n = self.nobs
-        np = self.period
+        np = self._period
         ns = self.seasonal
         isdeg = self.seasonal_deg
         nsjump = self.seasonal_jump

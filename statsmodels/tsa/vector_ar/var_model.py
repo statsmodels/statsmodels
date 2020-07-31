@@ -1559,19 +1559,19 @@ class VARResults(VARProcess):
 
         Parameters
         ----------
-        orth: bool, default False
+        orth : bool, default False
             Compute orthogonalized impulse response error bands
-        repl: int
+        repl : int
             number of Monte Carlo replications to perform
-        steps: int, default 10
+        steps : int, default 10
             number of impulse response periods
-        signif: float (0 < signif <1)
+        signif : float (0 < signif <1)
             Significance level for error bars, defaults to 95% CI
-        seed: int
+        seed : int
             np.random.seed for replications
-        burn: int
+        burn : int
             number of initial observations to discard for simulation
-        cum: bool, default False
+        cum : bool, default False
             produce cumulative irf error bands
 
         Notes
@@ -1602,19 +1602,19 @@ class VARResults(VARProcess):
 
         Parameters
         ----------
-        orth: bool, default False
+        orth : bool, default False
             Compute orthogonalized impulse response error bands
-        repl: int
+        repl : int
             number of Monte Carlo replications to perform
-        steps: int, default 10
+        steps : int, default 10
             number of impulse response periods
-        signif: float (0 < signif <1)
+        signif : float (0 < signif <1)
             Significance level for error bars, defaults to 95% CI
-        seed: int
+        seed : int
             np.random.seed for replications
-        burn: int
+        burn : int
             number of initial observations to discard for simulation
-        cum: bool, default False
+        cum : bool, default False
             produce cumulative irf error bands
 
         Notes
@@ -1632,6 +1632,7 @@ class VARResults(VARProcess):
         sigma_u = self.sigma_u
         intercept = self.intercept
         nobs = self.nobs
+        nobs_original = nobs + k_ar
 
         ma_coll = np.zeros((repl, steps + 1, neqs, neqs))
 
@@ -1643,7 +1644,7 @@ class VARResults(VARProcess):
         for i in range(repl):
             # discard first burn to eliminate correct for starting bias
             sim = util.varsim(coefs, intercept, sigma_u,
-                              seed=seed, steps=nobs+burn)
+                              seed=seed, steps=nobs_original+burn)
             sim = sim[burn:]
             ma_coll[i, :, :, :] = fill_coll(sim)
 
@@ -2048,7 +2049,7 @@ class VARResults(VARProcess):
         ----------
         nlags : int
             number of lags to display (excluding 0)
-        resid: bool
+        resid : bool
             If True, then the autocorrelation of the residuals is plotted
             If False, then the autocorrelation of endog is plotted.
         linewidth : int
@@ -2306,8 +2307,8 @@ def _acovs_to_acorrs(acovs):
 
 
 if __name__ == '__main__':
-    from statsmodels.tsa.vector_ar.util import parse_lutkepohl_data
     import statsmodels.tools.data as data_util
+    from statsmodels.tsa.vector_ar.util import parse_lutkepohl_data
 
     np.set_printoptions(linewidth=140, precision=5)
 
