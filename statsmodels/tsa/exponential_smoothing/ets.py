@@ -142,22 +142,24 @@ References
 
 from collections import OrderedDict
 import contextlib
+import datetime as dt
+
 import numpy as np
 import pandas as pd
-from scipy.stats import _distn_infrastructure, rv_continuous, rv_discrete, norm
+from scipy.stats import _distn_infrastructure, norm, rv_continuous, rv_discrete
 
 from statsmodels.base.covtype import descriptions
 import statsmodels.base.wrapper as wrap
+from statsmodels.iolib.summary import forg
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.iolib.tableformatting import fmt_params
-from statsmodels.iolib.summary import forg
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.tools import Bunch
 from statsmodels.tools.validation import (
+    array_like,
     bool_like,
     int_like,
     string_like,
-    array_like,
 )
 import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.exponential_smoothing import base
@@ -794,9 +796,9 @@ class ETSModel(base.StateSpaceMLEModel):
         if self.has_seasonal:
             for j in range(self.seasonal_periods):
                 internal_states[j:, 2 + j] = states[
-                    0:self.nobs - j, self._seasonal_index
+                    0 : self.nobs - j, self._seasonal_index
                 ]
-                internal_states[0:j, 2 + j] = internal_params[6:6 + j][::-1]
+                internal_states[0:j, 2 + j] = internal_params[6 : 6 + j][::-1]
         return internal_states
 
     @property
@@ -1005,7 +1007,8 @@ class ETSModel(base.StateSpaceMLEModel):
                         is_fixed,
                         fixed_values,
                         use_beta_star,
-                        use_gamma_star),
+                        use_gamma_star,
+                    ),
                     method="lbfgs",
                     maxiter=maxiter,
                     full_output=full_output,
@@ -1041,8 +1044,14 @@ class ETSModel(base.StateSpaceMLEModel):
             return result
 
     def _loglike_internal(
-            self, params, yhat, xhat, is_fixed=None, fixed_values=None,
-            use_beta_star=False, use_gamma_star=False
+        self,
+        params,
+        yhat,
+        xhat,
+        is_fixed=None,
+        fixed_values=None,
+        use_beta_star=False,
+        use_gamma_star=False,
     ):
         """
         Log-likelihood function to be called from fit to avoid reallocation of
@@ -1083,8 +1092,14 @@ class ETSModel(base.StateSpaceMLEModel):
             )
 
         self._smoothing_func(
-            params, data, yhat, xhat, is_fixed, fixed_values, use_beta_star,
-            use_gamma_star
+            params,
+            data,
+            yhat,
+            xhat,
+            is_fixed,
+            fixed_values,
+            use_beta_star,
+            use_gamma_star,
         )
         res = self._residuals(yhat, data=data)
         logL = -self.nobs / 2 * (np.log(2 * np.pi * np.mean(res ** 2)) + 1)
@@ -1290,7 +1305,7 @@ class ETSResults(base.StateSpaceMLEResults):
         self._llf = model.loglike(params)
         self._residuals = model._residuals(yhat)
         self._fittedvalues = yhat
-        scale = np.mean(self._residuals**2)
+        scale = np.mean(self._residuals ** 2)
         super().__init__(model, params, scale=scale)
 
         # get model definition
@@ -1335,9 +1350,9 @@ class ETSResults(base.StateSpaceMLEResults):
         if self.has_seasonal:
             self.season = states[:, self.model._seasonal_index]
             self.initial_seasonal = internal_params[6:]
-            self.initial_state[self.model._seasonal_index:] = (
-                self.initial_seasonal
-            )
+            self.initial_state[
+                self.model._seasonal_index :
+            ] = self.initial_seasonal
             self.gamma = self.params[self.model._seasonal_index]
             self.smoothing_seasonal = self.gamma
         if self.damped_trend:
@@ -1441,15 +1456,15 @@ class ETSResults(base.StateSpaceMLEResults):
             return 1 + alpha ** 2 * (h - 1)
         elif model == "AAN":
             return 1 + (h - 1) * (
-                alpha ** 2 + alpha * beta * h
-                + beta ** 2 * h / 6 * (2 * h - 1)
+                alpha ** 2 + alpha * beta * h + beta ** 2 * h / 6 * (2 * h - 1)
             )
         elif model == "AAdN":
             return (
                 1
                 + alpha ** 2 * (h - 1)
                 + (
-                    (beta * phi * h) / ((1 - phi) ** 2)
+                    (beta * phi * h)
+                    / ((1 - phi) ** 2)
                     * (2 * alpha * (1 - phi) + beta * phi)
                 )
                 - (
@@ -1462,28 +1477,26 @@ class ETSResults(base.StateSpaceMLEResults):
                 )
             )
         elif model == "ANA":
-            return (
-                1 + alpha ** 2 * (h - 1)
-                + gamma * k * (2 * alpha + gamma)
-            )
+            return 1 + alpha ** 2 * (h - 1) + gamma * k * (2 * alpha + gamma)
         elif model == "AAA":
             return (
-                1 + (h - 1) * (
-                    alpha ** 2 + alpha * beta * h
+                1
+                + (h - 1)
+                * (
+                    alpha ** 2
+                    + alpha * beta * h
                     + (beta ** 2) / 6 * h * (2 * h - 1)
                 )
-                + gamma * k * (
-                    2 * alpha + gamma + beta * m * (k + 1)
-                )
+                + gamma * k * (2 * alpha + gamma + beta * m * (k + 1))
             )
         elif model == "AAdA":
             return (
                 1
                 + alpha ** 2 * (h - 1)
                 + gamma * k * (2 * alpha + gamma)
-                + (beta * phi * h) / ((1 - phi) ** 2) * (
-                    2 * alpha * (1 - phi) + beta * phi
-                )
+                + (beta * phi * h)
+                / ((1 - phi) ** 2)
+                * (2 * alpha * (1 - phi) + beta * phi)
                 - (
                     (beta * phi * (1 - phi ** h))
                     / ((1 - phi) ** 2 * (1 - phi ** 2))
@@ -1493,7 +1506,8 @@ class ETSResults(base.StateSpaceMLEResults):
                     )
                 )
                 + (
-                    (2 * beta * gamma * phi) / ((1 - phi) * (1 - phi ** m))
+                    (2 * beta * gamma * phi)
+                    / ((1 - phi) * (1 - phi ** m))
                     * (k * (1 - phi ** m) - phi ** m * (1 - phi ** (m * k)))
                 )
             )
@@ -1839,14 +1853,16 @@ class ETSResults(base.StateSpaceMLEResults):
         )
         # if end was outside of the sample, it is now the last point in the
         # sample
-        if start > end:
+        if start > end + out_of_sample + 1:
             raise ValueError(
                 "Prediction start cannot lie outside of the sample."
             )
 
         # Handle `dynamic`
-        if isinstance(dynamic, (bytes, str)):
+        if isinstance(dynamic, (str, dt.datetime, pd.Timestamp)):
             dynamic, _, _ = self.model._get_index_loc(dynamic)
+            # Convert to offset relative to start
+            dynamic = dynamic - start
         elif isinstance(dynamic, bool):
             if dynamic:
                 dynamic = 0
@@ -1877,8 +1893,16 @@ class ETSResults(base.StateSpaceMLEResults):
         end_dynamic = end + out_of_sample
         ndynamic = end_dynamic - start_dynamic + 1
         return (
-            start, end, start_smooth, end_smooth, anchor_dynamic,
-            start_dynamic, end_dynamic, nsmooth, ndynamic, index
+            start,
+            end,
+            start_smooth,
+            end_smooth,
+            anchor_dynamic,
+            start_dynamic,
+            end_dynamic,
+            nsmooth,
+            ndynamic,
+            index,
         )
 
     def predict(self, start=None, end=None, dynamic=False, index=None):
@@ -1929,14 +1953,14 @@ class ETSResults(base.StateSpaceMLEResults):
             end_dynamic,
             nsmooth,
             ndynamic,
-            index
+            index,
         ) = self._handle_prediction_index(start, dynamic, end, index)
 
         y = np.empty(nsmooth + ndynamic)
 
         # In sample nondynamic prediction: smoothing
         if nsmooth > 0:
-            y[0:nsmooth] = self.fittedvalues[start_smooth:end_smooth + 1]
+            y[0:nsmooth] = self.fittedvalues[start_smooth : end_smooth + 1]
 
         # Out of sample/dynamic prediction: forecast
         if ndynamic > 0:
@@ -1945,9 +1969,16 @@ class ETSResults(base.StateSpaceMLEResults):
         # Wrap data / squeeze where appropriate
         return self.model._wrap_data(y, start, end_dynamic)
 
-    def get_prediction(self, start=None, end=None, dynamic=False,
-                       index=None, method=None, simulate_repetitions=1000,
-                       **simulate_kwargs):
+    def get_prediction(
+        self,
+        start=None,
+        end=None,
+        dynamic=False,
+        index=None,
+        method=None,
+        simulate_repetitions=1000,
+        **simulate_kwargs,
+    ):
         """
         Calculates mean prediction and prediction intervals.
 
@@ -1990,9 +2021,18 @@ class ETSResults(base.StateSpaceMLEResults):
         PredictionResults
             Predicted mean values and prediction intervals
         """
-        return PredictionResultsWrapper(PredictionResults(
-            self, start, end, dynamic, index, method, simulate_repetitions,
-            **simulate_kwargs))
+        return PredictionResultsWrapper(
+            PredictionResults(
+                self,
+                start,
+                end,
+                dynamic,
+                index,
+                method,
+                simulate_repetitions,
+                **simulate_kwargs,
+            )
+        )
 
     def summary(self, alpha=0.05, start=None):
         """
@@ -2067,12 +2107,12 @@ wrap.populate_wrapper(ETSResultsWrapper, ETSResults)
 
 class PredictionResults:
     """
-    ETS prediction results, containing mean prediction and prediction
-    intervals.
+    ETS mean prediction and prediction intervals
 
     Parameters
     ----------
     results : ETSResults
+        Model estimation results.
     start : int, str, or datetime, optional
         Zero-indexed observation number at which to start forecasting,
         i.e., the first forecast is start. Can also be a date string to
@@ -2105,19 +2145,26 @@ class PredictionResults:
     **simulate_kwargs :
         Additional arguments passed to the ``simulate`` method.
     """
-    def __init__(self, results, start=None, end=None, dynamic=False,
-                 index=None, method=None, simulate_repetitions=1000,
-                 **simulate_kwargs):
+
+    def __init__(
+        self,
+        results,
+        start=None,
+        end=None,
+        dynamic=False,
+        index=None,
+        method=None,
+        simulate_repetitions=1000,
+        **simulate_kwargs,
+    ):
         self.use_pandas = results.model.use_pandas
 
         if method is None:
-            exact_available = [
-                "ANN", "AAN", "AAdN", "ANA", "AAA", "AAdA"
-            ]
+            exact_available = ["ANN", "AAN", "AAdN", "ANA", "AAA", "AAdA"]
             if results.model.short_name in exact_available:
-                method = 'exact'
+                method = "exact"
             else:
-                method = 'simulated'
+                method = "simulated"
         self.method = method
 
         (
@@ -2130,7 +2177,7 @@ class PredictionResults:
             end_dynamic,
             nsmooth,
             ndynamic,
-            index
+            index,
         ) = results._handle_prediction_index(start, dynamic, end, index)
 
         self.predicted_mean = results.predict(
@@ -2138,10 +2185,14 @@ class PredictionResults:
         )
         self.row_labels = self.predicted_mean.index
         self.endog = np.empty(nsmooth + ndynamic) * np.nan
-        self.endog[0:(end - start + 1)] = results.data.endog[start:(end + 1)]
-        self.model = Bunch(data=results.model.data.__class__(
-            endog=self.endog, predict_dates=self.row_labels
-        ))
+        self.endog[0 : (end - start + 1)] = results.data.endog[
+            start : (end + 1)
+        ]
+        self.model = Bunch(
+            data=results.model.data.__class__(
+                endog=self.endog, predict_dates=self.row_labels
+            )
+        )
 
         if self.method == "simulated":
 
@@ -2154,16 +2205,24 @@ class PredictionResults:
                 else:
                     anchor = start_smooth - 1
                 for i in range(nsmooth):
-                    sim_results.append(results.simulate(
-                        1, anchor=anchor, repetitions=simulate_repetitions,
-                        **simulate_kwargs
-                    ))
+                    sim_results.append(
+                        results.simulate(
+                            1,
+                            anchor=anchor,
+                            repetitions=simulate_repetitions,
+                            **simulate_kwargs,
+                        )
+                    )
                     # anchor
                     anchor = start_smooth + i
-            sim_results.append(results.simulate(
-                ndynamic, anchor=anchor_dynamic,
-                repetitions=simulate_repetitions, **simulate_kwargs
-            ))
+            sim_results.append(
+                results.simulate(
+                    ndynamic,
+                    anchor=anchor_dynamic,
+                    repetitions=simulate_repetitions,
+                    **simulate_kwargs,
+                )
+            )
             self.simulation_results = np.concatenate(sim_results, axis=0)
             # if self.use_pandas:
             #     self.simulation_results = pd.DataFrame(
@@ -2173,10 +2232,15 @@ class PredictionResults:
         else:  # method == 'exact'
             steps = np.ones(ndynamic + nsmooth)
             if ndynamic > 0:
-                steps[(start_dynamic - start):] = range(1, ndynamic + 1)
+                steps[(start_dynamic - start) :] = range(1, ndynamic + 1)
             self.forecast_variance = (
                 results.mse * results._relative_forecast_variance(steps)
             )
+
+    @property
+    def var_pred_mean(self):
+        """The variance of the predicted mean"""
+        return self.forecast_variance
 
     def pred_int(self, alpha=0.05):
         """
@@ -2196,26 +2260,22 @@ class PredictionResults:
             simulated_lower_pi = np.quantile(
                 self.simulation_results, alpha / 2, axis=1
             )
-            pred_int = np.vstack(
-                (simulated_lower_pi, simulated_upper_pi)
-            ).T
+            pred_int = np.vstack((simulated_lower_pi, simulated_upper_pi)).T
         else:
             q = norm.ppf(1 - alpha / 2)
             half_interval_size = q * np.sqrt(self.forecast_variance)
             pred_int = np.vstack(
                 (
                     self.predicted_mean - half_interval_size,
-                    self.predicted_mean + half_interval_size
+                    self.predicted_mean + half_interval_size,
                 )
             ).T
 
         if self.use_pandas:
-            pred_int = pd.DataFrame(
-                pred_int, index=self.row_labels
-            )
+            pred_int = pd.DataFrame(pred_int, index=self.row_labels)
             names = [
                 f"lower PI (alpha={alpha:f})",
-                f"upper PI (alpha={alpha:f})"
+                f"upper PI (alpha={alpha:f})",
             ]
             pred_int.columns = names
         return pred_int
@@ -2229,21 +2289,24 @@ class PredictionResults:
                 self.simulation_results, axis=1
             )
         to_include["pi_lower"] = pred_int[:, 0]
-        to_include['pi_upper'] = pred_int[:, 1]
+        to_include["pi_upper"] = pred_int[:, 1]
 
-        res = pd.DataFrame(to_include, index=self.row_labels,
-                           columns=to_include.keys())
+        res = pd.DataFrame(
+            to_include, index=self.row_labels, columns=list(to_include.keys())
+        )
         return res
 
 
 class PredictionResultsWrapper(wrap.ResultsWrapper):
     _attrs = {
-        'predicted_mean': 'dates',
-        'simulation_results': 'dates',
-        'endog' : 'dates',
+        "predicted_mean": "dates",
+        "simulation_results": "dates",
+        "endog": "dates",
     }
     _wrap_attrs = wrap.union_dicts(_attrs)
 
     _methods = {}
     _wrap_methods = wrap.union_dicts(_methods)
+
+
 wrap.populate_wrapper(PredictionResultsWrapper, PredictionResults)  # noqa:E305
