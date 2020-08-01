@@ -722,6 +722,48 @@ class ArmaProcess(object):
         self.nobs = nobs
 
     @classmethod
+    def from_roots(cls, maroots=None, arroots=None, nobs=100):
+        """
+        Create ArmaProcess from AR and MA polynomial roots.
+
+        Parameters
+        ----------
+        maroots : array_like
+            Roots for the MA polynomial
+            1 + theta_1*z + theta_2*z^2 + ..... + theta_n*z^n
+        arroots : array_like
+            Roots for the AR polynomial
+            1 - phi_1*z - phi_2*z^2 - ..... - phi_n*z^n
+        nobs : int, optional
+            Length of simulated time series. Used, for example, if a sample
+            is generated.
+
+        Returns
+        -------
+        ArmaProcess
+            Class instance initialized with arcoefs and macoefs.
+
+        Examples
+        --------
+        >>> arroots = [.75, -.25]
+        >>> maroots = [.65, .35]
+        >>> arma_process = sm.tsa.ArmaProcess.from_roots(arroots, maroots)
+        >>> arma_process.isstationary
+        True
+        >>> arma_process.isinvertible
+        True
+        """
+        arpoly = np.polynomial.polynomial.Polynomial.fromroots(arroots)
+        mapoly = np.polynomial.polynomial.Polynomial.fromroots(maroots)
+        # As from_coeffs will create a polynomial with constant 1/-1,(MA/AR)
+        # we need to scale the polynomial coefficients accordingly with a multiplier
+        armultiplier = -1.0 / arpoly.coef[0]
+        mamultiplier = 1.0 / mapoly.coef[0]
+        arcoefs = armultiplier * arpoly.coef[1:]
+        macoefs = mamultiplier * mapoly.coef[1:]
+        return cls.from_coeffs(arcoefs, macoefs, nobs)
+
+    @classmethod
     def from_coeffs(cls, arcoefs=None, macoefs=None, nobs=100):
         """
         Create ArmaProcess from an ARMA representation.

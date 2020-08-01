@@ -235,6 +235,26 @@ class TestArmaProcess(TestCase):
         assert_equal(process.arcoefs, np.array([]))
         assert_equal(process.macoefs, np.array([-0.8]))
 
+    def test_from_roots(self):
+        ar = [1.8, -0.9]
+        ma = [0.3]
+
+        ar.insert(0, -1)
+        ma.insert(0, 1)
+        ar_p = -1 * np.array(ar)
+        ma_p = ma
+        process_direct = ArmaProcess(ar_p, ma_p)
+
+        process = ArmaProcess.from_roots(np.array(process_direct.maroots), np.array(process_direct.arroots))
+
+        assert_almost_equal(process.arcoefs, process_direct.arcoefs)
+        assert_almost_equal(process.macoefs, process_direct.macoefs)
+        assert_almost_equal(process.nobs, process_direct.nobs)
+        assert_almost_equal(process.maroots, process_direct.maroots)
+        assert_almost_equal(process.arroots, process_direct.arroots)
+        assert_almost_equal(process.isinvertible, process_direct.isinvertible)
+        assert_almost_equal(process.isstationary, process_direct.isstationary)
+
     def test_from_coeff(self):
         ar = [1.8, -0.9]
         ma = [0.3]
