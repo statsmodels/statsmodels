@@ -20,41 +20,41 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=1,
 
     If the two Poisson rates are g1 and g2, then the Null hypothesis is
 
-    H0: g1 / g2 = ratio_null
+    - H0: g1 / g2 = ratio_null
 
     against one of the following alternatives
 
-    H1_2-sided: g1 / g2 != ratio_null
-    H1_larger: g1 / g2 > ratio_null
-    H1_smaller: g1 / g2 < ratio_null
+    - H1_2-sided: g1 / g2 != ratio_null
+    - H1_larger: g1 / g2 > ratio_null
+    - H1_smaller: g1 / g2 < ratio_null
 
     Parameters
     ----------
     count1 : int
-        Number of events in first sample
+        Number of events in first sample.
     exposure1 : float
-        Total exposure (time * subjects) in first sample
+        Total exposure (time * subjects) in first sample.
     count2 : int
-        Number of events in first sample
+        Number of events in first sample.
     exposure2 : float
-        Total exposure (time * subjects) in first sample
-    ratio : float
+        Total exposure (time * subjects) in first sample.
+    ratio: float
         ratio of the two Poisson rates under the Null hypothesis. Default is 1.
     method : string
         Method for the test statistic and the p-value. Defaults to `'score'`.
-        Current Methods are based on Gu et. al 2008
+        Current Methods are based on Gu et. al 2008.
         Implemented are 'wald', 'score' and 'sqrt' based asymptotic normal
         distribution, and the exact conditional test 'exact-cond', and its
         mid-point version 'cond-midp'. method='etest' and method='etest-wald'
         provide pvalues from `etest_poisson_2indep` using score or wald
         statistic respectively.
-        see Notes
+        see Notes.
     alternative : string
         The alternative hypothesis, H1, has to be one of the following
 
-           'two-sided': H1: ratio of rates is not equal to ratio_null (default)
-           'larger' :   H1: ratio of rates is larger than ratio_null
-           'smaller' :  H1: ratio of rates is smaller than ratio_null
+        - 'two-sided': H1: ratio of rates is not equal to ratio_null (default)
+        - 'larger' :   H1: ratio of rates is larger than ratio_null
+        - 'smaller' :  H1: ratio of rates is smaller than ratio_null
 
     Returns
     -------
@@ -63,15 +63,15 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=1,
 
     Notes
     -----
-    'wald': method W1A, wald test, variance based on separate estimates
-    'score': method W2A, score test, variance based on estimate under Null
-    'wald-log': W3A
-    'score-log' W4A
-    'sqrt': W5A, based on variance stabilizing square root transformation
-    'exact-cond': exact conditional test based on binomial distribution
-    'cond-midp': midpoint-pvalue of exact conditional test
-    'etest': etest with score test statistic
-    'etest-wald': etest with wald test statistic
+    - 'wald': method W1A, wald test, variance based on separate estimates
+    - 'score': method W2A, score test, variance based on estimate under Null
+    - 'wald-log': W3A
+    - 'score-log' W4A
+    - 'sqrt': W5A, based on variance stabilizing square root transformation
+    - 'exact-cond': exact conditional test based on binomial distribution
+    - 'cond-midp': midpoint-pvalue of exact conditional test
+    - 'etest': etest with score test statistic
+    - 'etest-wald': etest with wald test statistic
 
     References
     ----------
@@ -147,13 +147,13 @@ def etest_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=1,
 
     If the two Poisson rates are g1 and g2, then the Null hypothesis is
 
-    H0: g1 / g2 = ratio_null
+    - H0: g1 / g2 = ratio_null
 
     against one of the following alternatives
 
-    H1_2-sided: g1 / g2 != ratio_null
-    H1_larger: g1 / g2 > ratio_null
-    H1_smaller: g1 / g2 < ratio_null
+    - H1_2-sided: g1 / g2 != ratio_null
+    - H1_larger: g1 / g2 > ratio_null
+    - H1_smaller: g1 / g2 < ratio_null
 
     Parameters
     ----------
@@ -186,18 +186,6 @@ def etest_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=1,
     stat_sample : float
         test statistic for the sample
     pvalue : float
-
-    Notes
-    -----
-    'wald': method W1A, wald test, variance based on separate estimates
-    'score': method W2A, score test, variance based on estimate under Null
-    'wald-log': W3A
-    'score-log' W4A
-    'sqrt': W5A, based on variance stabilizing square root transformation
-    'exact-cond': exact conditional test based on binomial distribution
-    'cond-midp': midpoint-pvalue of exact conditional test
-    'etest': etest with score test statistic
-    'etest-wald': etest with wald test statistic
 
     References
     ----------
@@ -277,20 +265,20 @@ def tost_poisson_2indep(count1, exposure1, count2, exposure2, low, upp,
 
     The Null and alternative hypothesis for equivalence testing are
 
-    H0: g1 / g2 <= low or upp <= g1 / g2
-    H1: low < g1 / g2 < upp
+    - H0: g1 / g2 <= low or upp <= g1 / g2
+    - H1: low < g1 / g2 < upp
 
     where g1 and g2 are the Poisson rates.
 
     Parameters
     ----------
-    count1: int
+    count1 : int
         Number of events in first sample
-    exposure1: float
+    exposure1 : float
         Total exposure (time * subjects) in first sample
-    count2: int
+    count2 : int
         Number of events in first sample
-    exposure2: float
+    exposure2 : float
         Total exposure (time * subjects) in first sample
     low, upp :
         equivalence margin for the ratio of Poisson rates
@@ -312,13 +300,13 @@ def tost_poisson_2indep(count1, exposure1, count2, exposure2, low, upp,
 
     Notes
     -----
-    'wald': method W1A, wald test, variance based on separate estimates
-    'score': method W2A, score test, variance based on estimate under Null
-    'wald-log': W3A  not implemented
-    'score-log' W4A  not implemented
-    'sqrt': W5A, based on variance stabilizing square root transformation
-    'exact-cond': exact conditional test based on binomial distribution
-    'cond-midp': midpoint-pvalue of exact conditional test
+    - 'wald': method W1A, wald test, variance based on separate estimates
+    - 'score': method W2A, score test, variance based on estimate under Null
+    - 'wald-log': W3A  not implemented
+    - 'score-log' W4A  not implemented
+    - 'sqrt': W5A, based on variance stabilizing square root transformation
+    - 'exact-cond': exact conditional test based on binomial distribution
+    - 'cond-midp': midpoint-pvalue of exact conditional test
 
     The latter two are only verified for one-sided example.
 
@@ -336,4 +324,13 @@ def tost_poisson_2indep(count1, exposure1, count2, exposure2, low, upp,
                               ratio_null=upp, method=method,
                               alternative='smaller')
 
-    return np.maximum(tt1.pvalue, tt2.pvalue), tt1, tt2
+    idx_max = 0 if tt1.pvalue < tt2.pvalue else 1
+    res = HolderTuple(statistic=[tt1.statistic, tt2.statistic][idx_max],
+                      pvalue=[tt1.pvalue, tt2.pvalue][idx_max],
+                      method=method,
+                      results_larger=tt1,
+                      results_smaller=tt2,
+                      title="Equivalence test for 2 independent Poisson rates"
+                      )
+
+    return res

@@ -197,17 +197,17 @@ def test_tost_poisson():
     # # central conf_int from R exactci
     low, upp = 1.339735721772650, 3.388365573616252
 
-    pv, _, _ = smr.tost_poisson_2indep(count1, n1, count2, n2, low, upp,
-                                       method="exact-cond")
+    res = smr.tost_poisson_2indep(count1, n1, count2, n2, low, upp,
+                                  method="exact-cond")
 
-    assert_allclose(pv, 0.025, rtol=1e-12)
+    assert_allclose(res.pvalue, 0.025, rtol=1e-12)
     methods = ['wald', 'score', 'sqrt', 'exact-cond', 'cond-midp']
 
     # test that we are in the correct range for other methods
     for meth in methods:
-        pv, _, _ = smr.tost_poisson_2indep(count1, n1, count2, n2, low, upp,
-                                           method=meth)
-        assert_allclose(pv, 0.025, atol=0.01)
+        res = smr.tost_poisson_2indep(count1, n1, count2, n2, low, upp,
+                                      method=meth)
+        assert_allclose(res.pvalue, 0.025, atol=0.01)
 
 
 cases_alt = {
