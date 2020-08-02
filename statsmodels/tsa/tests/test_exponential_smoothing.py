@@ -119,9 +119,6 @@ def austourists_model(austourists):
         damped_trend=True,
     )
 
-@pytest.fixture
-def austourists_model_fit(austourists_model):
-    return austourists_model.fit(disp=False)
 
 @pytest.fixture
 def austourists_model_fit(austourists_model):
@@ -722,6 +719,20 @@ def test_results_vs_statespace(statespace_comparison):
         statespace_results.fittedvalues.values
     )
 
+    # compare diagnostics
+    assert_almost_equal(
+        ets_results.test_serial_correlation(method="ljungbox"),
+        statespace_results.test_serial_correlation(method="ljungbox"),
+    )
+    assert_almost_equal(
+        ets_results.test_normality(method="jarquebera"),
+        statespace_results.test_normality(method="jarquebera"),
+    )
+    assert_almost_equal(
+        ets_results.test_heteroskedasticity(method="breakvar"),
+        statespace_results.test_heteroskedasticity(method="breakvar"),
+    )
+
 
 def test_prediction_results_vs_statespace(statespace_comparison):
     ets_results, statespace_results = statespace_comparison
@@ -875,46 +886,7 @@ def test_prediction_results_slow_AAdA(austourists):
         summary_exact["pi_upper"].values,
         rtol=2e-2, atol=1e-4
     )
-    with statespace_model.fix_params(
-        {
-            "smoothing_level": ets_results.smoothing_level,
-            "smoothing_trend": ets_results.smoothing_trend,
-            "smoothing_seasonal": ets_results.smoothing_seasonal,
-            "damping_trend": ets_results.damping_trend,
-        }
-    ):
-        statespace_results = statespace_model.fit()
 
-    return ets_results, statespace_results
-
-
-def test_results_vs_statespace(statespace_comparison):
-    ets_results, statespace_results = statespace_comparison
-
-    assert_almost_equal(
-        ets_results.llf, statespace_results.llf
-    )
-    assert_almost_equal(
-        ets_results.scale, statespace_results.scale
-    )
-    assert_almost_equal(
-        ets_results.fittedvalues.values,
-        statespace_results.fittedvalues.values
-    )
-
-    # compare diagnostics
-    assert_almost_equal(
-        ets_results.test_serial_correlation(method="ljungbox"),
-        statespace_results.test_serial_correlation(method="ljungbox"),
-    )
-    assert_almost_equal(
-        ets_results.test_normality(method="jarquebera"),
-        statespace_results.test_normality(method="jarquebera"),
-    )
-    assert_almost_equal(
-        ets_results.test_heteroskedasticity(method="breakvar"),
-        statespace_results.test_heteroskedasticity(method="breakvar"),
-    )
 
 def test_convergence_simple():
     # issue 6883
