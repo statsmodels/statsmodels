@@ -327,7 +327,7 @@ def cm_test_robust(resid, resid_deriv, instruments, weights=1):
     weights : ndarray
         This is a weights function as used in WLS. The moment
         restrictions are multiplied by weights. This corresponds to the
-        inverse of the variance in a heteroscedastic model.
+        inverse of the variance in a heteroskedastic model.
 
     Returns
     -------
@@ -464,7 +464,7 @@ def lm_robust_subset(score, k_constraints, score_deriv_inv, cov_score):
     score : ndarray, 1-D
         derivative of objective function at estimated parameters
         of constrained model
-    k_constraint: int
+    k_constraint : int
         number of constraints
     score_deriv_inv : ndarray, symmetric, square
         inverse of second derivative of objective function
@@ -551,7 +551,7 @@ def lm_robust_subset_parts(score, k_constraints,
         of constrained model. These is the score component for the restricted
         part under hypothesis. The unconstrained part of the score is assumed
         to be zero.
-    k_constraint: int
+    k_constraint : int
         number of constraints
     score_deriv_uu : ndarray, symmetric, square
         first derivative of moment equation or second derivative of objective
@@ -615,9 +615,9 @@ def lm_robust_reparameterized(score, params_deriv, score_deriv, cov_score):
     score : ndarray, 1-D
         derivative of objective function at estimated parameters
         of constrained model
-    params_deriv: ndarray
+    params_deriv : ndarray
         Jacobian G of the parameter trasnformation
-    score_deriv: ndarray, symmetric, square
+    score_deriv : ndarray, symmetric, square
         second derivative of objective function
         TODO: could be OPG or any other estimator if information matrix
         equality holds

@@ -7,7 +7,6 @@ import numpy as np
 import numpy.linalg as la
 import scipy.linalg as L
 
-
 from statsmodels.tools.decorators import cache_readonly
 import statsmodels.tsa.tsatools as tsa
 import statsmodels.tsa.vector_ar.plotting as plotting
@@ -109,16 +108,16 @@ class BaseIRAnalysis(object):
             pass {'fontsize' : 8} or some number to your taste.
         plot_params : dict
 
-        figsize: (float, float), default (10, 10)
+        figsize : (float, float), default (10, 10)
             Figure size (width, height in inches)
-        plot_stderr: bool, default True
+        plot_stderr : bool, default True
             Plot standard impulse response error bands
-        stderr_type: str
+        stderr_type : str
             'asym': default, computes asymptotic standard errors
             'mc': monte carlo standard errors (use rpl)
-        repl: int, default 1000
+        repl : int, default 1000
             Number of replications for Monte Carlo and Sims-Zha standard errors
-        seed: int
+        seed : int
             np.random.seed for Monte Carlo replications
         component: array or vector of principal component indices
         """
@@ -197,14 +196,14 @@ class BaseIRAnalysis(object):
 
         figsize: (float, float), default (10, 10)
             Figure size (width, height in inches)
-        plot_stderr: bool, default True
+        plot_stderr : bool, default True
             Plot standard impulse response error bands
-        stderr_type: str
+        stderr_type : str
             'asym': default, computes asymptotic standard errors
             'mc': monte carlo standard errors (use rpl)
-        repl: int, default 1000
+        repl : int, default 1000
             Number of replications for monte carlo standard errors
-        seed: int
+        seed : int
             np.random.seed for Monte Carlo replications
         """
 

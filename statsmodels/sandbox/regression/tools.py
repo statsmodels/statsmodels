@@ -31,7 +31,7 @@ def norm_lls(y, params):
     ----------
     y : ndarray, 1d
         normally distributed random variable
-    params: ndarray, (nobs, 2)
+    params : ndarray, (nobs, 2)
         array of mean, variance (mu, sigma2) with observations in rows
 
     Returns
@@ -51,7 +51,7 @@ def norm_lls_grad(y, params):
     ----------
     y : ndarray, 1d
         normally distributed random variable
-    params: ndarray, (nobs, 2)
+    params : ndarray, (nobs, 2)
         array of mean, variance (mu, sigma2) with observations in rows
 
     Returns
@@ -86,7 +86,7 @@ def normgrad(y, x, params):
         normally distributed random variable with mean x*beta, and variance sigma2
     x : ndarray, 2d
         explanatory variables, observation in rows, variables in columns
-    params: array_like, (nvars + 1)
+    params : array_like, (nvars + 1)
         array of coefficients and variance (beta, sigma2)
 
     Returns
@@ -120,7 +120,7 @@ def tstd_lls(y, params, df):
     ----------
     y : ndarray, 1d
         normally distributed random variable
-    params: ndarray, (nobs, 2)
+    params : ndarray, (nobs, 2)
         array of mean, variance (mu, sigma2) with observations in rows
     df : int
         degrees of freedom of the t distribution
@@ -167,7 +167,7 @@ def ts_lls(y, params, df):
     ----------
     y : ndarray, 1d
         normally distributed random variable
-    params: ndarray, (nobs, 2)
+    params : ndarray, (nobs, 2)
         array of mean, variance (mu, sigma2) with observations in rows
     df : int
         degrees of freedom of the t distribution

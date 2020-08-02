@@ -618,7 +618,8 @@ class Docstring(object):
         if block_name not in self._ds:
             raise ValueError('{0} is not a block in the '
                              'docstring'.format(block_name))
-        if not isinstance(block, list):
+        if not isinstance(block, list) and \
+                isinstance(self._ds[block_name], list):
             block = [block]
         self._ds[block_name] = block
 

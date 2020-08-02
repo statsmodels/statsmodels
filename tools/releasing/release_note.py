@@ -18,11 +18,11 @@ from github import Github
 from jinja2 import Template
 
 # Full release version
-RELEASE = "0.11.0"
+RELEASE = "0.12.0"
 # The current milestone and short version
-VERSION = MILESTONE = "0.11"
+VERSION = MILESTONE = "0.12"
 # This is the final commit from the previous release
-LAST_COMMIT_SHA = "8e58e465159f26716b2b9a1396a8763c88579725"
+LAST_COMMIT_SHA = "e11c4e45037cfe931f8d3ca4df06e2ec818175b1"
 # Branch, usually master but can be a maintenance branch as well
 BRANCH = "master"
 # Provide access token using command line to keep out of repo

@@ -1403,7 +1403,7 @@ def yule_walker(x, order=1, method="adjusted", df=None, inv=False,
             "unbiased is deprecated in factor of adjusted to reflect that the "
             "term is adjusting the sample size used in the autocovariance "
             "calculation rather than estimating an unbiased autocovariance. "
-            "In the future, using 'unbiased' will raise.",
+            "After release 0.13, using 'unbiased' will raise.",
             FutureWarning,
         )
         method = "adjusted"

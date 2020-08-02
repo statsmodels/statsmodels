@@ -1297,7 +1297,7 @@ class PHReg(model.LikelihoodModel):
             The proportional hazards model parameters.
         scale : float
             Present for compatibility, not used.
-        exog : array-like
+        exog : array_like
             A design matrix, defaults to model.exog.
 
         Returns

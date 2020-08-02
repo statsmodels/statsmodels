@@ -42,7 +42,7 @@ def VAR(x,B, const=0):
         B(:,:,k) is lag polynomial matrix for variable k
         B(p,:,k) is pth lag for variable k
         B[p,:,:].T corresponds to A_p in Wikipedia
-    const: float or array (not tested)
+    const : float or array (not tested)
         constant added to autoregression
 
     Returns

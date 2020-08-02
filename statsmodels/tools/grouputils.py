@@ -130,7 +130,7 @@ def dummy_sparse(groups):
 
     Parameters
     ----------
-    groups: ndarray, int, 1d (nobs,)
+    groups : ndarray, int, 1d (nobs,)
         an array of group indicators for each observation. Group levels are
         assumed to be defined as consecutive integers, i.e. range(n_groups)
         where n_groups is the number of group levels. A group level with no
@@ -503,11 +503,12 @@ class Grouping(object):
 
         Parameters
         ----------
-        groups: ndarray, int, 1d (nobs,) an array of group indicators for each
-            observation. Group levels are assumed to be defined as consecutive
-            integers, i.e. range(n_groups) where n_groups is the number of
-            group levels. A group level with no observations for it will still
-            produce a column of zeros.
+        groups : ndarray, int, 1d (nobs,)
+            An array of group indicators for each observation. Group levels
+            are assumed to be defined as consecutive integers, i.e.
+            range(n_groups) where n_groups is the number of group levels.
+            A group level with no observations for it will still produce a
+            column of zeros.
 
         Returns
         -------

@@ -7,19 +7,18 @@ References
 Lütkepohl (2005) New Introduction to Multiple Time Series Analysis
 """
 
+from statsmodels.compat.pandas import deprecate_kwarg
+
 import numpy as np
 import numpy.linalg as npl
 from numpy.linalg import slogdet
 
-from statsmodels.compat.pandas import deprecate_kwarg
-
 from statsmodels.tools.decorators import deprecated_alias
-from statsmodels.tools.numdiff import approx_hess, approx_fprime
-from statsmodels.tsa.vector_ar.irf import IRAnalysis
-from statsmodels.tsa.vector_ar.var_model import VARProcess, VARResults
-
-import statsmodels.tsa.vector_ar.util as util
+from statsmodels.tools.numdiff import approx_fprime, approx_hess
 import statsmodels.tsa.base.tsa_model as tsbase
+from statsmodels.tsa.vector_ar.irf import IRAnalysis
+import statsmodels.tsa.vector_ar.util as util
+from statsmodels.tsa.vector_ar.var_model import VARProcess, VARResults
 
 
 def svar_ckerr(svar_type, A, B):
@@ -634,19 +633,19 @@ class SVARResults(SVARProcess, VARResults):
 
         Parameters
         ----------
-        orth: bool, default False
+        orth : bool, default False
             Compute orthogonalized impulse response error bands
-        repl: int
+        repl : int
             number of Monte Carlo replications to perform
-        steps: int, default 10
+        steps : int, default 10
             number of impulse response periods
-        signif: float (0 < signif <1)
+        signif : float (0 < signif <1)
             Significance level for error bars, defaults to 95% CI
-        seed: int
+        seed : int
             np.random.seed for replications
-        burn: int
+        burn : int
             number of initial observations to discard for simulation
-        cum: bool, default False
+        cum : bool, default False
             produce cumulative irf error bands
 
         Notes

@@ -30,9 +30,9 @@ def aitchison_aitken(h, Xi, x, num_levels=None):
         The bandwidths used to estimate the value of the kernel function.
     Xi : 2-D ndarray of ints, shape (nobs, K)
         The value of the training set.
-    x: 1-D ndarray, shape (K,)
+    x : 1-D ndarray, shape (K,)
         The value at which the kernel density is being estimated.
-    num_levels: bool, optional
+    num_levels : bool, optional
         Gives the user the option to specify the number of levels for the
         random variable.  If False, the number of levels is calculated from
         the data.

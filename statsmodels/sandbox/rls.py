@@ -13,13 +13,13 @@ class RLS(GLS):
 
     Parameters
     ----------
-    endog: array_like
+    endog : array_like
         n length array containing the dependent variable
-    exog: array_like
+    exog : array_like
         n-by-p array of independent variables
-    constr: array_like
+    constr : array_like
         k-by-p array of linear constraints
-    param (0.): array_like or scalar
+    param : array_like or scalar
         p-by-1 array (or scalar) of constraint parameters
     sigma (None): scalar or array_like
         The weighting matrix of the covariance. No scaling by default (OLS).

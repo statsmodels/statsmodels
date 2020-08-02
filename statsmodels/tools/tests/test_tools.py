@@ -17,6 +17,8 @@ from statsmodels.datasets import longley
 from statsmodels.tools import tools
 from statsmodels.tools.tools import pinv_extended
 
+# Ignore future warnings from test code
+pytestmark = pytest.mark.filterwarnings("ignore:categorical is deprecated:FutureWarning")
 
 @pytest.fixture(scope='module')
 def string_var():

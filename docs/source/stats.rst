@@ -486,8 +486,8 @@ Status: experimental, API might change, added in 0.12
 
 .. _oneway_stats:
 
-Onway Anova
------------
+Oneway Anova
+------------
 
 Hypothesis test, confidence intervals and effect size for oneway analysis of
 k samples.
@@ -508,7 +508,7 @@ Status: experimental, API might change, added in 0.12
    equivalence_oneway
    equivalence_oneway_generic
    power_equivalence_oneway
-   power_equivalence_oneway0
+   _power_equivalence_oneway_emp
 
    test_scale_oneway
    equivalence_scale_oneway

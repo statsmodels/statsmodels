@@ -1,19 +1,29 @@
 
 import numpy as np
-from numpy.testing import (assert_, assert_allclose, assert_raises,
-                           assert_array_equal, assert_raises_regex)
+from numpy.testing import (
+    assert_,
+    assert_allclose,
+    assert_array_equal,
+    assert_raises,
+    assert_raises_regex,
+)
+import pytest
 
 import statsmodels.datasets.interest_inflation.data as e6
 from statsmodels.tools.testing import assert_equal
-from statsmodels.tsa.vector_ar.tests.JMulTi_results.parse_jmulti_vecm_output import dt_s_tup_to_string
-from statsmodels.tsa.vector_ar.tests.JMulTi_results.parse_jmulti_vecm_output import load_results_jmulti
-from statsmodels.tsa.vector_ar.tests.JMulTi_results.parse_jmulti_vecm_output import\
-    sublists
+from statsmodels.tsa.vector_ar.tests.JMulTi_results.parse_jmulti_vecm_output import (
+    dt_s_tup_to_string,
+    load_results_jmulti,
+    sublists,
+)
 from statsmodels.tsa.vector_ar.util import seasonal_dummies
 from statsmodels.tsa.vector_ar.var_model import VARProcess
-from statsmodels.tsa.vector_ar.vecm import VECM, select_order, select_coint_rank
+from statsmodels.tsa.vector_ar.vecm import (
+    VECM,
+    select_coint_rank,
+    select_order,
+)
 
-import pytest
 pytestmark = pytest.mark.filterwarnings('ignore:in the future np.array_split')
 
 

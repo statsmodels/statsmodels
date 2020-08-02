@@ -828,8 +828,7 @@ def test_equivalence_2indep():
         res = smprop.tost_proportions_2indep(
                 count1, nobs1, count2, nobs2, low, upp, compare=co,
                 method=method, correction=False)
-        # assert_allclose(res.pvalue, alpha, atol=1e-10)
-        assert_allclose(res[0], alpha, atol=1e-10)
+        assert_allclose(res.pvalue, alpha, atol=1e-10)
 
 
 def test_score_confint_koopman_nam():

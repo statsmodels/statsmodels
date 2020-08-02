@@ -99,9 +99,9 @@ def multipletests(pvals, alpha=0.05, method='hs', is_sorted=False,
         true for hypothesis that can be rejected for given alpha
     pvals_corrected : ndarray
         p-values corrected for multiple tests
-    alphacSidak: float
+    alphacSidak : float
         corrected alpha for Sidak method
-    alphacBonf: float
+    alphacBonf : float
         corrected alpha for Bonferroni method
 
     Notes

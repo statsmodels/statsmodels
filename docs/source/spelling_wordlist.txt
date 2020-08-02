@@ -82,9 +82,13 @@ Bundock
 Burovski
 Bybee
 CDFLink
+CFA
 CLogLog
 CRC
 Cai
+CalendarFourier
+CalendarSeasonality
+CalendarTimeTrend
 CanCorr
 Candes
 Carljv
@@ -157,6 +161,8 @@ DescStatMV
 DescStatUV
 DescrStatsW
 DesignInfo
+DeterministicProcess
+DeterministicTerm
 Detrend
 Detrending
 Diag
@@ -317,6 +323,7 @@ José
 Jtweeder
 Ju
 Jungbacker
+Jupyter
 Justus
 Jürgen
 K'K
@@ -447,6 +454,7 @@ Nonparametric
 NormExpan
 NormalIndPower
 NormalityTestResults
+Nowcasting
 NullDistribution
 Numpy
 OLS
@@ -545,6 +553,7 @@ Replot
 Reponse
 Repot
 Rescale
+Reseasonalize
 Respnose
 ResultMixin
 Resultantly
@@ -581,6 +590,7 @@ Schoenfeld
 Schonemann
 Schwert
 Scipy
+Seasonalities
 Sebastien
 Seidel
 Sekiya
@@ -641,6 +651,7 @@ Theis
 ThetaModel
 ThetaModelResults
 Thie
+TimeTrend
 Timeseries
 Tingley
 Todo
@@ -690,6 +701,7 @@ WhitenessTestResults
 Whorf
 Wilks
 Willmer
+Winsorized
 Wolfowitz
 Workflow
 Wouda
@@ -764,6 +776,8 @@ ar
 arXiv
 arange
 arcoefs
+arcsin
+arcsine
 arfilter
 arfreq
 arg
@@ -841,6 +855,8 @@ bkfilter
 bksahu
 bky
 blas
+blobbogram
+blockdiagonal
 bofinger
 bonn
 booktabs
@@ -848,6 +864,7 @@ booktitle
 bool
 booleans
 bowker
+boxcox
 boxpierce
 boxplot
 boxplots
@@ -882,6 +899,7 @@ calc
 cancoef
 cancorr
 capita
+capstyle
 carljv
 carlo
 catdata
@@ -1020,6 +1038,7 @@ decompositions
 deconvolve
 decorrelate
 deepcopy
+definitional
 deflator
 dengemann
 denis
@@ -1041,6 +1060,7 @@ deseasonalize
 deseasonalized
 deseasonalizing
 det
+determinstic
 detomega
 detrend
 detrended
@@ -1079,6 +1099,7 @@ dof
 doi
 donbeo
 dont
+dotplots
 dougal
 downweighting
 dropdown
@@ -1132,6 +1153,7 @@ enh
 enrico
 env
 epa
+eps
 eq
 equamax
 equi
@@ -1143,6 +1165,7 @@ esciencecenter
 ess
 esss
 etext
+ets
 eval
 evaluation
 evalued
@@ -1174,6 +1197,7 @@ fargs
 fboxplot
 fc
 fcalls
+fcastvalues
 fdr
 fdrcorrection
 fe
@@ -1201,7 +1225,9 @@ fima
 fitgmm
 fititer
 fitstart
+fittedfcast
 fittedvalues
+fittted
 fixups
 fleiss
 floc
@@ -1226,8 +1252,10 @@ fprime
 frac
 freqz
 fritsch
+fromstats
 fscale
 fsolve
+fstat
 fstatistic
 ftemme
 ftest
@@ -1365,6 +1393,7 @@ hurvich
 hw
 hyp
 hypergeometric
+hyperparameters
 ianlangmore
 iasacov
 ibd
@@ -1493,6 +1522,7 @@ kwargs
 kwd
 kwds
 kyleabeauchamp
+lMMwR
 labelled
 labelmeanfilter
 labelsunique
@@ -1503,6 +1533,7 @@ lago
 lagorder
 lagpolynomial
 lambd
+lamda
 langmore
 latin
 lbfgs
@@ -1510,6 +1541,7 @@ lbllist
 lbvalue
 lc
 ld
+ldadjusted
 ldb
 ldbiased
 ldunbiased
@@ -1526,6 +1558,7 @@ likelihoodmodels
 lilliefors
 lin
 linalg
+linestyle
 linewidth
 linkcheck
 linke
@@ -1579,6 +1612,7 @@ lowess
 lp
 lpol
 lr
+lrgprt
 lrtest
 lstsq
 lu
@@ -1597,6 +1631,7 @@ manova
 manywarns
 maparams
 margeff
+marginnames
 markov
 maroots
 matiumerca
@@ -1606,6 +1641,7 @@ maxT
 maxabs
 maxfun
 maxima
+maximizers
 maxiter
 maxlag
 maxlagex
@@ -1680,16 +1716,14 @@ multithreaded
 multithreading
 musum
 mv
+mvmean
 mvn
 mvndst
 mvnormcdf
 mvsk
 mvstdnormcdf
 nan
-<<<<<<< HEAD
-=======
 nan,
->>>>>>> DOC: Update documentation
 nans
 narlags
 nb
@@ -1713,6 +1747,7 @@ neilsummers
 neqs
 ness
 neuromathdan
+newcomb
 newey
 neyman
 nfreq
@@ -1733,6 +1768,8 @@ nmoms
 nnlf
 noconstant
 noncanonical
+noncentral
+noncentrality
 nondispersive
 nonlinearity
 nonmonotone
@@ -1742,6 +1779,7 @@ nonrobust
 nonseq
 nonstationary
 nonstochastic
+nonsymmetric
 noreply
 normed
 normtest
@@ -1749,6 +1787,7 @@ norw
 nosetests
 notationally
 novikova
+nowcasting
 np
 nparray
 npos
@@ -1788,6 +1827,7 @@ olsresults
 omni
 onerussian
 onestep
+onetail
 oneway
 onewaygls
 oo
@@ -1815,6 +1855,7 @@ padarn
 padarr
 pairscontrol
 palantir
+parallelized
 param
 parameterization
 parameterizations
@@ -1827,6 +1868,7 @@ paramsmask
 paris
 parsimax
 partregress
+pathrev
 patys
 pca
 pdf
@@ -1870,6 +1912,7 @@ prepending
 prepends
 prerotated
 presample
+prev
 princomp
 prinoth
 probit
@@ -1990,6 +2033,7 @@ rst
 rtol
 runbasic
 runstest
+runtimes
 rv
 rvs
 rw
@@ -2016,6 +2060,7 @@ sdp
 se
 seasadj
 seasonalarparams
+seasonalities
 seasonalmaparams
 seasonals
 seldovia
@@ -2049,6 +2094,7 @@ snr
 socio
 sorder
 sourceforge
+sparsified
 spd
 spddirect
 spdfreq
@@ -2114,6 +2160,7 @@ subpackage
 subpackages
 subsamples
 substeps
+substrings
 subvector
 sudo
 sumsquares
@@ -2201,6 +2248,7 @@ unadjusted
 uncentered
 uncommenting
 unconstrain
+undamped
 underdispersion
 undifferenced
 unibo
@@ -2208,12 +2256,14 @@ uniq
 uniquenesses
 unitroot
 univariate
+unmodeled
 unnormalized
 unordered
 unpenalized
 unpickle
 unpickled
 unregularized
+unreplicated
 unrotated
 unscaled
 unsecure
@@ -2286,6 +2336,7 @@ wexog
 wilsonp
 windowsize
 windsize
+winsorized
 wls
 wmean
 wo
@@ -2315,6 +2366,7 @@ ynames
 ys
 ytick
 yw
+ywadjusted
 ywm
 ywmle
 ywunbiased
@@ -2333,33 +2385,3 @@ zvalues
 zveryansky
 Řehůřek
 郭飞
-CalendarFourier
-CalendarSeasonality
-CalendarTimeTrend
-DeterministicProcess
-DeterministicTerm
-TimeTrend
-determinstic
-hyperparameters
-runtimes
-arcsine
-unreplicated
-lrgprt
-lMMwR
-pathrev
-CFA
-lamda
-parallelized
-Jupyter
-Reseasonalize
-blobbogram
-capstyle
-dotplots
-ldadjusted
-linestyle
-marginnames
-nonsymmetric
-Nowcasting
-Seasonalities
-substrings
-ywadjusted

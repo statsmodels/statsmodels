@@ -115,7 +115,7 @@ class ExponentialSmoothing(TimeSeriesModel):
     Parameters
     ----------
     endog : array_like
-        Time series
+        The time series to model.
     trend : {"add", "mul", "additive", "multiplicative", None}, optional
         Type of trend component.
     damped_trend : bool, optional
@@ -162,18 +162,27 @@ class ExponentialSmoothing(TimeSeriesModel):
         This allows one or more of the initial values to be set while
         deferring to the heuristic for others or estimating the unset
         parameters.
+    use_boxcox : {True, False, 'log', float}, optional
+        Should the Box-Cox transform be applied to the data first? If 'log'
+        then apply the log. If float then use the value as lambda.
     bounds : dict[str, tuple[float, float]], optional
         An dictionary containing bounds for the parameters in the model,
         excluding the initial values if estimated. The keys of the dictionary
         are the variable names, e.g., smoothing_level or initial_slope.
         The initial seasonal variables are labeled initial_seasonal.<j>
         for j=0,...,m-1 where m is the number of period in a full season.
-        Use None to indcate a non-binding constraint, e.g., (0, None)
+        Use None to indicate a non-binding constraint, e.g., (0, None)
         constrains a parameter to be non-negative.
-
-    Returns
-    -------
-    results : ExponentialSmoothing class
+    dates : array_like of datetime, optional
+        An array-like object of datetime objects. If a Pandas object is given
+        for endog, it is assumed to have a DateIndex.
+    freq : str, optional
+        The frequency of the time-series. A Pandas offset or 'B', 'D', 'W',
+        'M', 'A', or 'Q'. This is optional if dates are given.
+    missing : str
+        Available options are 'none', 'drop', and 'raise'. If 'none', no nan
+        checking is done. If 'drop', any observations with nans are dropped.
+        If 'raise', an error is raised. Default is 'none'.
 
     Notes
     -----
@@ -338,13 +347,18 @@ class ExponentialSmoothing(TimeSeriesModel):
     @contextlib.contextmanager
     def fix_params(self, values):
         """
-        Temporarily fix parameters for estimation
+        Temporarily fix parameters for estimation.
 
         Parameters
         ----------
         values : dict
             Values to fix. The key is the parameter name and the value is the
             fixed value.
+
+        Yields
+        ------
+        None
+            No value returned.
 
         Examples
         --------
@@ -403,10 +417,6 @@ class ExponentialSmoothing(TimeSeriesModel):
 
     def _initialize(self):
         if self._initialization_method is None:
-            warnings.warn(
-                "After 0.13 initialization must be handled at model creation",
-                FutureWarning,
-            )
             msg = "initial_{0} given but no initialization method specified."
             if self._initial_level is not None:
                 raise ValueError(msg.format("level"))
@@ -414,6 +424,10 @@ class ExponentialSmoothing(TimeSeriesModel):
                 raise ValueError(msg.format("trend"))
             if self._initial_seasonal is not None:
                 raise ValueError(msg.format("seasonal"))
+            warnings.warn(
+                "After 0.13 initialization must be handled at model creation",
+                FutureWarning,
+            )
             return
         if self._initialization_method == "known":
             return self._initialize_known()
@@ -464,7 +478,7 @@ class ExponentialSmoothing(TimeSeriesModel):
 
     def predict(self, params, start=None, end=None):
         """
-        Returns in-sample and out-of-sample prediction.
+        In-sample and out-of-sample prediction.
 
         Parameters
         ----------
@@ -481,7 +495,8 @@ class ExponentialSmoothing(TimeSeriesModel):
 
         Returns
         -------
-        predicted values : ndarray
+        ndarray
+            The predicted values.
         """
         if start is None:
             freq = getattr(self._index, "freq", 1)
@@ -954,10 +969,15 @@ class ExponentialSmoothing(TimeSeriesModel):
             The phi value of the damped method, if the value is
             set then this value will be used as the value.
         optimized : bool, optional
-            Estimate model parameters by maximizing the log-likelihood
+            Estimate model parameters by maximizing the log-likelihood.
         remove_bias : bool, optional
             Remove bias from forecast values and fitted values by enforcing
             that the average residual is equal to zero.
+        start_params : array_like, optional
+            Starting values to used when optimizing the fit.  If not provided,
+            starting values are determined using a combination of grid search
+            and reasonable values based on the initial values of the data. See
+            the notes for the structure of the model parameters.
         method : str, default "L-BFGS-B"
             The minimizer used. Valid options are "L-BFGS-B" , "TNC",
             "SLSQP" (default), "Powell", "trust-constr", "basinhopping" (also
@@ -971,11 +991,6 @@ class ExponentialSmoothing(TimeSeriesModel):
             or least_squares functions. The valid keywords are optimizer
             specific. Consult SciPy's documentation for the full set of
             options.
-        start_params : array_like, optional
-            Starting values to used when optimizing the fit.  If not provided,
-            starting values are determined using a combination of grid search
-            and reasonable values based on the initial values of the data. See
-            the notes for the structure of the model parameters.
         use_brute : bool, optional
             Search for good starting values using a brute force (grid)
             optimizer. If False, a naive set of starting values is used.
@@ -1012,8 +1027,8 @@ class ExponentialSmoothing(TimeSeriesModel):
 
         Returns
         -------
-        results : HoltWintersResults class
-            See statsmodels.tsa.holtwinters.HoltWintersResults
+        HoltWintersResults
+            See statsmodels.tsa.holtwinters.HoltWintersResults.
 
         Notes
         -----
@@ -1083,7 +1098,7 @@ class ExponentialSmoothing(TimeSeriesModel):
                 )
             warnings.warn(
                 "Setting initial values during fit is deprecated and will be "
-                "removed after 0.13. These should be set during model"
+                "removed after 0.13. These should be set during model "
                 "initialization."
             )
         if use_boxcox is not None:
@@ -1182,25 +1197,25 @@ class ExponentialSmoothing(TimeSeriesModel):
         self, initial_level=None, initial_trend=None, force=False
     ):
         """
-        Compute initial values used in the exponential smoothing recursions
+        Compute initial values used in the exponential smoothing recursions.
 
         Parameters
         ----------
         initial_level : {float, None}
-            The initial value used for the level component
+            The initial value used for the level component.
         initial_trend : {float, None}
-            The initial value used for the trend component
+            The initial value used for the trend component.
         force : bool
-            Force the calculation even if initial values exist
+            Force the calculation even if initial values exist.
 
         Returns
         -------
         initial_level : float
-            The initial value used for the level component
+            The initial value used for the level component.
         initial_trend : {float, None}
-            The initial value used for the trend component
+            The initial value used for the trend component.
         initial_seasons : list
-            The initial values used for the seasonal components
+            The initial values used for the seasonal components.
 
         Notes
         -----
@@ -1405,19 +1420,7 @@ class ExponentialSmoothing(TimeSeriesModel):
             fitted = trend
         level = lvls[1 : nobs + 1].copy()
         if use_boxcox or use_boxcox == "log" or isinstance(use_boxcox, float):
-            # store untransformed values in private attribute, transforming
-            # here is probably a bug
-            self._untransformed_level = level
-            self._untransformed_trend = _trend
-            self._untransformed_season = season
-
             fitted = inv_boxcox(fitted, lamda)
-            level = inv_boxcox(level, lamda)
-            _trend = detrend(trend[:nobs], level)
-            if seasonal == "add":
-                season = (fitted - inv_boxcox(trend, lamda))[:nobs]
-            else:  # seasonal == 'mul':
-                season = (fitted / inv_boxcox(trend, lamda))[:nobs]
         err = fitted[: -h - 1] - data
         sse = err.T @ err
         # (s0 + gamma) + (b0 + beta) + (l0 + alpha) + phi
@@ -1503,11 +1506,36 @@ class SimpleExpSmoothing(ExponentialSmoothing):
     Parameters
     ----------
     endog : array_like
-        Time series
+        The time series to model.
+    initialization_method : str, optional
+        Method for initialize the recursions. One of:
 
-    Returns
-    -------
-    results : SimpleExpSmoothing class
+        * None
+        * 'estimated'
+        * 'heuristic'
+        * 'legacy-heuristic'
+        * 'known'
+
+        None defaults to the pre-0.12 behavior where initial values
+        are passed as part of ``fit``. If any of the other values are
+        passed, then the initial values must also be set when constructing
+        the model. If 'known' initialization is used, then `initial_level`
+        must be passed, as well as `initial_trend` and `initial_seasonal` if
+        applicable. Default is 'estimated'. "legacy-heuristic" uses the same
+        values that were used in statsmodels 0.11 and earlier.
+    initial_level : float, optional
+        The initial level component. Required if estimation method is "known".
+        If set using either "estimated" or "heuristic" this value is used.
+        This allows one or more of the initial values to be set while
+        deferring to the heuristic for others or estimating the unset
+        parameters.
+
+    See Also
+    --------
+    ExponentialSmoothing
+        Exponential smoothing with trend and seasonal components.
+    Holt
+        Exponential smoothing with a trend component.
 
     Notes
     -----
@@ -1515,19 +1543,23 @@ class SimpleExpSmoothing(ExponentialSmoothing):
     per [1]_.  `SimpleExpSmoothing` is a restricted version of
     :class:`ExponentialSmoothing`.
 
-    See Also
-    --------
-    ExponentialSmoothing
-    Holt
-
     References
     ----------
     .. [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles
         and practice. OTexts, 2014.
     """
 
-    def __init__(self, endog):
-        super(SimpleExpSmoothing, self).__init__(endog)
+    def __init__(
+        self,
+        endog,
+        initialization_method=None,  # Future: 'estimated',
+        initial_level=None,
+    ):
+        super(SimpleExpSmoothing, self).__init__(
+            endog,
+            initialization_method=initialization_method,
+            initial_level=initial_level,
+        )
 
     def fit(
         self,
@@ -1537,7 +1569,7 @@ class SimpleExpSmoothing(ExponentialSmoothing):
         start_params=None,
         initial_level=None,
         use_brute=True,
-        use_boxcox=False,
+        use_boxcox=None,
         remove_bias=False,
         method=None,
         minimize_kwargs=None,
@@ -1551,11 +1583,11 @@ class SimpleExpSmoothing(ExponentialSmoothing):
             The smoothing_level value of the simple exponential smoothing, if
             the value is set then this value will be used as the value.
         optimized : bool, optional
-            Estimate model parameters by maximizing the log-likelihood
+            Estimate model parameters by maximizing the log-likelihood.
         start_params : ndarray, optional
             Starting values to used when optimizing the fit.  If not provided,
             starting values are determined using a combination of grid search
-            and reasonable values based on the initial values of the data
+            and reasonable values based on the initial values of the data.
         initial_level : float, optional
             Value to use when initializing the fitted level.
         use_brute : bool, optional
@@ -1580,11 +1612,10 @@ class SimpleExpSmoothing(ExponentialSmoothing):
             or least_squares. The valid keywords are optimizer specific.
             Consult SciPy's documentation for the full set of options.
 
-
         Returns
         -------
-        results : HoltWintersResults class
-            See statsmodels.tsa.holtwinters.HoltWintersResults
+        HoltWintersResults
+            See statsmodels.tsa.holtwinters.HoltWintersResults.
 
         Notes
         -----
@@ -1616,25 +1647,51 @@ class Holt(ExponentialSmoothing):
     Parameters
     ----------
     endog : array_like
-        Time series
+        The time series to model.
     exponential : bool, optional
         Type of trend component.
     damped_trend : bool, optional
         Should the trend component be damped.
+    initialization_method : str, optional
+        Method for initialize the recursions. One of:
 
-    Returns
-    -------
-    results : Holt class
+        * None
+        * 'estimated'
+        * 'heuristic'
+        * 'legacy-heuristic'
+        * 'known'
+
+        None defaults to the pre-0.12 behavior where initial values
+        are passed as part of ``fit``. If any of the other values are
+        passed, then the initial values must also be set when constructing
+        the model. If 'known' initialization is used, then `initial_level`
+        must be passed, as well as `initial_trend` and `initial_seasonal` if
+        applicable. Default is 'estimated'. "legacy-heuristic" uses the same
+        values that were used in statsmodels 0.11 and earlier.
+    initial_level : float, optional
+        The initial level component. Required if estimation method is "known".
+        If set using either "estimated" or "heuristic" this value is used.
+        This allows one or more of the initial values to be set while
+        deferring to the heuristic for others or estimating the unset
+        parameters.
+    initial_trend : float, optional
+        The initial trend component. Required if estimation method is "known".
+        If set using either "estimated" or "heuristic" this value is used.
+        This allows one or more of the initial values to be set while
+        deferring to the heuristic for others or estimating the unset
+        parameters.
+
+    See Also
+    --------
+    ExponentialSmoothing
+        Exponential smoothing with trend and seasonal components.
+    SimpleExpSmoothing
+        Basic exponential smoothing with only a level component.
 
     Notes
     -----
     This is a full implementation of the Holt's exponential smoothing as
     per [1]_. `Holt` is a restricted version of :class:`ExponentialSmoothing`.
-
-    See Also
-    --------
-    ExponentialSmoothing
-    SimpleExpSmoothing
 
     References
     ----------
@@ -1643,10 +1700,23 @@ class Holt(ExponentialSmoothing):
     """
 
     @deprecate_kwarg("damped", "damped_trend")
-    def __init__(self, endog, exponential=False, damped_trend=False):
+    def __init__(
+        self,
+        endog,
+        exponential=False,
+        damped_trend=False,
+        initialization_method=None,  # Future: 'estimated',
+        initial_level=None,
+        initial_trend=None,
+    ):
         trend = "mul" if exponential else "add"
         super(Holt, self).__init__(
-            endog, trend=trend, damped_trend=damped_trend
+            endog,
+            trend=trend,
+            damped_trend=damped_trend,
+            initialization_method=initialization_method,
+            initial_level=initial_level,
+            initial_trend=initial_trend,
         )
 
     @deprecate_kwarg("smoothing_slope", "smoothing_trend")
@@ -1663,7 +1733,7 @@ class Holt(ExponentialSmoothing):
         initial_level=None,
         initial_trend=None,
         use_brute=True,
-        use_boxcox=False,
+        use_boxcox=None,
         remove_bias=False,
         method=None,
         minimize_kwargs=None,
@@ -1683,11 +1753,11 @@ class Holt(ExponentialSmoothing):
             The phi value of the damped method, if the value is
             set then this value will be used as the value.
         optimized : bool, optional
-            Estimate model parameters by maximizing the log-likelihood
+            Estimate model parameters by maximizing the log-likelihood.
         start_params : ndarray, optional
             Starting values to used when optimizing the fit.  If not provided,
             starting values are determined using a combination of grid search
-            and reasonable values based on the initial values of the data
+            and reasonable values based on the initial values of the data.
         initial_level : float, optional
             Value to use when initializing the fitted level.
 
@@ -1724,11 +1794,10 @@ class Holt(ExponentialSmoothing):
             or least_squares. The valid keywords are optimizer specific.
             Consult SciPy's documentation for the full set of options.
 
-
         Returns
         -------
-        results : HoltWintersResults class
-            See statsmodels.tsa.holtwinters.HoltWintersResults
+        HoltWintersResults
+            See statsmodels.tsa.holtwinters.HoltWintersResults.
 
         Notes
         -----

@@ -6,10 +6,12 @@ Author: Luca Puggini
 
 """
 
+import pytest
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 from statsmodels.gam.smooth_basis import (UnivariatePolynomialSmoother,
-                                          PolynomialSmoother)
+                                          PolynomialSmoother,
+                                          BSplines)
 
 
 def test_univariate_polynomial_smoother():
@@ -27,3 +29,19 @@ def test_multivariate_polynomial_basis():
     for i, deg in enumerate(degrees):
         uv_basis = UnivariatePolynomialSmoother(x[:, i], degree=deg).basis
         assert_allclose(mps.smoothers[i].basis, uv_basis)
+
+
+@pytest.mark.parametrize(
+    "x, df, degree",
+    [
+        (
+            np.c_[np.linspace(0, 1, 100), np.linspace(0, 10, 100)],
+            [5, 6],
+            [3, 5]
+        ),
+        (np.linspace(0, 1, 100), 6, 3),
+    ]
+)
+def test_bsplines(x, df, degree):
+    bspline = BSplines(x, df, degree)
+    bspline.transform(x)

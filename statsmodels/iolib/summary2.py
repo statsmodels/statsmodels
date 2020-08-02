@@ -38,9 +38,9 @@ class Summary(object):
         Parameters
         ----------
         df : DataFrame
-        header: bool
+        header : bool
             Reproduce the DataFrame column labels in summary table
-        index: bool
+        index : bool
             Reproduce the DataFrame row labels in summary table
         float_format : str
             Formatting to float data columns
@@ -77,7 +77,7 @@ class Summary(object):
         d : dict
             Keys and values are automatically coerced to strings with str().
             Users are encouraged to format them before using add_dict.
-        ncols: int
+        ncols : int
             Number of columns of the output table
         align : str
             Data alignment (l/c/r)
@@ -199,8 +199,14 @@ class Summary(object):
 
         return tab
 
-    def as_latex(self):
+    def as_latex(self, label=''):
         """Generate LaTeX Summary Table
+
+        Parameters
+        ----------
+        label : str
+            Label of the summary table that can be referenced
+            in a latex document (optional)
         """
         tables = self.tables
         settings = self.settings
@@ -211,9 +217,11 @@ class Summary(object):
         else:
             title = '\\caption{}'
 
+        label = '\\label{' + label + '}'
+
         simple_tables = _simple_tables(tables, settings)
         tab = [x.as_latex_tabular() for x in simple_tables]
-        tab = '\n\\hline\n'.join(tab)
+        tab = '\n\n'.join(tab)
 
         to_replace = ('\\\\hline\\n\\\\hline\\n\\\\'
                       'end{tabular}\\n\\\\begin{tabular}{.*}\\n')
@@ -222,7 +230,7 @@ class Summary(object):
             # create single tabular object for summary_col
             tab = re.sub(to_replace, r'\\midrule\n', tab)
 
-        out = '\\begin{table}', title, tab, '\\end{table}'
+        out = '\\begin{table}', title, label, tab, '\\end{table}'
         out = '\n'.join(out)
         return out
 
@@ -582,6 +590,7 @@ def _df_to_simpletable(df, align='r', float_format="%.4f", header=True,
     st = SimpleTable(np.array(dat), headers=headers, stubs=stubs,
                      ltx_fmt=fmt_latex, txt_fmt=fmt_txt)
     st.output_formats['latex']['data_aligns'] = align
+    st.output_formats['latex']['header_align'] = align
     st.output_formats['txt']['data_aligns'] = align
     st.output_formats['txt']['table_dec_above'] = table_dec_above
     st.output_formats['txt']['table_dec_below'] = table_dec_below

@@ -59,7 +59,7 @@ def load(as_pandas=None):
 
     Returns
     -------
-    Dataset instance:
+    Dataset
         See DATASET_PROPOSAL.txt for more information.
 
     Notes
@@ -76,7 +76,7 @@ def load_pandas():
 
     Returns
     -------
-    Dataset instance:
+    Dataset
         See DATASET_PROPOSAL.txt for more information.
 
     Notes
