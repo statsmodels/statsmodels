@@ -756,12 +756,10 @@ class ArmaProcess(object):
         arpoly = np.polynomial.polynomial.Polynomial.fromroots(arroots)
         mapoly = np.polynomial.polynomial.Polynomial.fromroots(maroots)
         # As from_coeffs will create a polynomial with constant 1/-1,(MA/AR)
-        # we need to scale the polynomial coefficients accordingly with a multiplier
-        armultiplier = -1.0 / arpoly.coef[0]
-        mamultiplier = 1.0 / mapoly.coef[0]
-        arcoefs = armultiplier * arpoly.coef[1:]
-        macoefs = mamultiplier * mapoly.coef[1:]
-        return cls.from_coeffs(arcoefs, macoefs, nobs)
+        # we need to scale the polynomial coefficients accordingly
+        return cls(np.r_[1, -np.asarray(-1 * arpoly.coef[1:] / arpoly.coef[0])],
+                   np.r_[1, np.asarray(mapoly.coef[1:] / mapoly.coef[0])],
+                   nobs=nobs)
 
     @classmethod
     def from_coeffs(cls, arcoefs=None, macoefs=None, nobs=100):
