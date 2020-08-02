@@ -338,19 +338,16 @@ class RegressionModel(base.LikelihoodModel):
 
             # Cache singular values from R.
             self.wexog_singular_values = np.linalg.svd(R, 0, 0)
-            if 'tol' in kwargs:
-                tol = kwargs['tol']
-            else:
-                tol = 1e-7
+            tol = kwargs.get('tol', 1e-7)
 
-            singular_preds = abs(np.diagonal(R)) < tol
-            n_singular = sum(singular_preds)
+            singular_preds = np.abs(np.diagonal(R)) < tol
+            n_singular = np.sum(singular_preds)
             n_preds = len(singular_preds)
             self.rank = n_preds - n_singular
             sortP = np.argsort(P)
 
             if n_singular > 0:
-                rng = range(self.rank)
+                rng = slice(self.rank)
                 Qq = Q[:, rng]
                 Rr = R[rng, :][:, rng]
                 effects = np.dot(Qq.T, self.wendog)
