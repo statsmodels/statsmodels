@@ -131,23 +131,24 @@ before_install:
         export COVERAGE_OPTS=""
     fi
   - pip install flake8
+  - pip list
   - export SRCDIR=$PWD
 
 # Install packages
 install:
   # Bug in NumPy < 1.16.1 that raises ValueError on size mismatch
-  - if [ ${NUMPY} != "1.15" ]; then pip install -e .; else python setup.py develop; fi
+  - if [[ ${NUMPY} != "1.15" ]]; then pip install -e .; else python setup.py develop; fi
 
 before_script:
-  - if [ ${DOCBUILD} = true ]; then source tools/ci/docbuild_install.sh; fi;
-  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then export XDIST_OPTS="-n 2"; fi
+  - if [[ ${DOCBUILD} = true ]]; then source tools/ci/docbuild_install.sh; fi;
+  - if [[ ${TRAVIS_OS_NAME} = "osx" ]]; then export XDIST_OPTS="-n 2"; fi
 
 script:
   # Show versions
   - python -c 'import statsmodels.api as sm; sm.show_versions();'
   # docbuild or run tests
   - |
-    if [ ${DOCBUILD} = true ]; then
+    if [[ ${DOCBUILD} = true ]]; then
       cd ${SRCDIR}/docs
       source ${SRCDIR}/tools/ci/docbuild.sh;
     else
@@ -158,5 +159,5 @@ script:
   - ./lint.sh
 
 after_success:
-  - if [ ${COVERAGE} = true ]; then coveralls; fi
-  - if [ ${COVERAGE} = true ]; then codecov; fi
+  - if [[ ${COVERAGE} = true ]]; then coveralls; fi
+  - if [[ ${COVERAGE} = true ]]; then codecov; fi
