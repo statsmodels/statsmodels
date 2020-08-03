@@ -195,6 +195,14 @@ from statsmodels.tsa.tsatools import freq_to_period
 #   - set up the constraint bounds and function
 # * Since the traditional bounds are nonlinear for beta and gamma, if no bounds
 #   are given, we internally use beta_star and gamma_star for fitting
+# * When estimating initial level and initial seasonal values, one of them has
+#   to be removed in order to have a well posed problem. I am solving this by
+#   fixing the last initial seasonal value to 0 (for additive seasonality) or 1
+#   (for multiplicative seasonality).
+#   For the additive models, this means I have to subtract the last initial
+#   seasonal value from all initial seasonal values and add it to the initial
+#   level; for the multiplicative models I do the same with division and
+#   multiplication
 
 
 class ETSModel(base.StateSpaceMLEModel):
@@ -238,8 +246,8 @@ class ETSModel(base.StateSpaceMLEModel):
     initial_trend : float, optional
         The initial trend component. Only used if initialization is 'known'.
     initial_seasonal : array_like, optional
-        The initial seasonal component. An array of length `seasonal`.  Only
-        used if initialization is 'known'.
+        The initial seasonal component. An array of length `seasonal_periods`.
+        Only used if initialization is 'known'.
     bounds : dict or None, optional
         A dictionary with parameter names as keys and the respective bounds
         intervals as values (lists/tuples/arrays).
@@ -527,8 +535,8 @@ class ETSModel(base.StateSpaceMLEModel):
             The initial trend component. Only used if initialization is
             'known'.
         initial_seasonal : array_like, optional
-            The initial seasonal component. An array of length `seasonal`. Only
-            used if initialization is 'known'.
+            The initial seasonal component. An array of length
+            `seasonal_periods`. Only used if initialization is 'known'.
         """
         self.initialization_method = string_like(
             initialization_method,
@@ -630,6 +638,10 @@ class ETSModel(base.StateSpaceMLEModel):
     @property
     def nobs_effective(self):
         return self.nobs
+
+    @property
+    def k_endog(self):
+        return 1
 
     @property
     def short_name(self):
@@ -813,7 +825,7 @@ class ETSModel(base.StateSpaceMLEModel):
     @property
     def _start_params(self):
         """
-        Returns default start params in the format of external parameters.
+        Default start params in the format of external parameters.
         This should not be called directly, but by calling
         ``self.start_params``.
         """
@@ -823,11 +835,21 @@ class ETSModel(base.StateSpaceMLEModel):
                 params.append(self._default_start_params[p])
 
         if self.initialization_method == "estimated":
+            lvl_idx = len(params)
             params += [self.initial_level]
             if self.has_trend:
                 params += [self.initial_trend]
             if self.has_seasonal:
-                params += self.initial_seasonal.tolist()
+                # we have to adapt the seasonal values a bit to make sure the
+                # problem is well posed (see implementation notes above)
+                initial_seasonal = self.initial_seasonal
+                if self.seasonal == "mul":
+                    params[lvl_idx] *= initial_seasonal[-1]
+                    initial_seasonal /= initial_seasonal[-1]
+                else:
+                    params[lvl_idx] += initial_seasonal[-1]
+                    initial_seasonal -= initial_seasonal[-1]
+                params += initial_seasonal.tolist()
 
         return np.array(params)
 
@@ -877,8 +899,14 @@ class ETSModel(base.StateSpaceMLEModel):
         # other bounds for phi and initial states
         lb[3], ub[3] = 0.8, 0.98
         if self.initialization_method == "estimated":
-            lb[4:] = -np.inf
-            ub[4:] = np.inf
+            lb[4:-1] = -np.inf
+            ub[4:-1] = np.inf
+            # fix the last initial_seasonal to 0 or 1, otherwise the equation
+            # is underdetermined
+            if self.seasonal == "mul":
+                lb[-1], ub[-1] = 1, 1
+            else:
+                lb[-1], ub[-1] = 0, 0
 
         # set lb and ub for parameters with bounds
         for p in self._internal_param_names:
@@ -1305,6 +1333,8 @@ class ETSResults(base.StateSpaceMLEResults):
         self._llf = model.loglike(params)
         self._residuals = model._residuals(yhat)
         self._fittedvalues = yhat
+        # scale is concentrated in this model formulation and corresponds to
+        # mean squared residuals, see docstring of model.loglike
         scale = np.mean(self._residuals ** 2)
         super().__init__(model, params, scale=scale)
 
@@ -1359,6 +1389,17 @@ class ETSResults(base.StateSpaceMLEResults):
             self.phi = internal_params[3]
             self.damping_trend = self.phi
 
+        # degrees of freedom of model
+        k_free_params = self.k_params - len(self.fixed_params)
+        self.df_model = k_free_params + 1
+
+        # standardized forecasting error
+        self.mean_resid = np.mean(self.resid)
+        self.scale_resid = np.std(self.resid, ddof=1)
+        self.standardized_forecasts_error = (
+            self.resid - self.mean_resid
+        ) / self.scale_resid
+
         # Setup covariance matrix notes dictionary
         # For now, only support "approx"
         if not hasattr(self, "cov_kwds"):
@@ -1395,10 +1436,6 @@ class ETSResults(base.StateSpaceMLEResults):
     @cache_readonly
     def nobs_effective(self):
         return self.nobs
-
-    @cache_readonly
-    def df_model(self):
-        return self.model.k_params
 
     @cache_readonly
     def fittedvalues(self):
@@ -1721,8 +1758,7 @@ class ETSResults(base.StateSpaceMLEResults):
         y = np.empty((nsimulations, repetitions))
 
         # get random error eps
-        sigma = np.sqrt(self.sse / self.df_resid)
-        # sigma = np.sqrt(self.scale)
+        sigma = np.sqrt(self.scale)
         if isinstance(random_errors, np.ndarray):
             if random_errors.shape != (nsimulations, repetitions):
                 raise ValueError(
@@ -1881,7 +1917,7 @@ class ETSResults(base.StateSpaceMLEResults):
             # dynamic simulations from start + dynamic
             start_smooth = start
             end_smooth = min(start + dynamic - 1, end)
-            nsmooth = end_smooth - start_smooth + 1
+            nsmooth = max(end_smooth - start_smooth + 1, 0)
             start_dynamic = start + dynamic
         # anchor for simulations is one before start_dynamic
         if start_dynamic == 0:
@@ -1965,6 +2001,12 @@ class ETSResults(base.StateSpaceMLEResults):
         # Out of sample/dynamic prediction: forecast
         if ndynamic > 0:
             y[nsmooth:] = self._forecast(ndynamic, anchor_dynamic)
+
+        # when we are doing out of sample only prediction, start > end + 1, and
+        # we only want to output beginning at start
+        if start > end + 1:
+            ndiscard = start - (end + 1)
+            y = y[ndiscard:]
 
         # Wrap data / squeeze where appropriate
         return self.model._wrap_data(y, start, end_dynamic)

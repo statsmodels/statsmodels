@@ -348,10 +348,6 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
         raise NotImplementedError
 
     @cache_readonly
-    def df_model(self):
-        raise NotImplementedError
-
-    @cache_readonly
     def df_resid(self):
         return self.nobs_effective - self.df_model
 
@@ -500,6 +496,333 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
         return self._cov_params_approx(
             self._cov_approx_complex_step, self._cov_approx_centered
         )
+
+    def test_serial_correlation(self, method, lags=None):
+        """
+        Ljung-Box test for no serial correlation of standardized residuals
+
+        Null hypothesis is no serial correlation.
+
+        Parameters
+        ----------
+        method : {'ljungbox','boxpierece', None}
+            The statistical test for serial correlation. If None, an attempt is
+            made to select an appropriate test.
+        lags : None, int or array_like
+            If lags is an integer then this is taken to be the largest lag
+            that is included, the test result is reported for all smaller lag
+            length.
+            If lags is a list or array, then all lags are included up to the
+            largest lag in the list, however only the tests for the lags in the
+            list are reported.
+            If lags is None, then the default maxlag is 12*(nobs/100)^{1/4}
+
+        Returns
+        -------
+        output : ndarray
+            An array with `(test_statistic, pvalue)` for each endogenous
+            variable and each lag. The array is then sized
+            `(k_endog, 2, lags)`. If the method is called as
+            `ljungbox = res.test_serial_correlation()`, then `ljungbox[i]`
+            holds the results of the Ljung-Box test (as would be returned by
+            `statsmodels.stats.diagnostic.acorr_ljungbox`) for the `i` th
+            endogenous variable.
+
+        See Also
+        --------
+        statsmodels.stats.diagnostic.acorr_ljungbox
+            Ljung-Box test for serial correlation.
+
+        Notes
+        -----
+        For statespace models: let `d` = max(loglikelihood_burn, nobs_diffuse);
+        this test is calculated ignoring the first `d` residuals.
+
+        Output is nan for any endogenous variable which has missing values.
+        """
+        if method is None:
+            method = 'ljungbox'
+
+        if self.standardized_forecasts_error is None:
+            raise ValueError('Cannot compute test statistic when standardized'
+                             ' forecast errors have not been computed.')
+
+        if method == 'ljungbox' or method == 'boxpierce':
+            from statsmodels.stats.diagnostic import acorr_ljungbox
+            if hasattr(self, "loglikelihood_burn"):
+                d = np.maximum(self.loglikelihood_burn, self.nobs_diffuse)
+                # This differs from self.nobs_effective because here we want to
+                # exclude exact diffuse periods, whereas self.nobs_effective
+                # only excludes explicitly burned (usually approximate diffuse)
+                # periods.
+                nobs_effective = self.nobs - d
+            else:
+                nobs_effective = self.nobs_effective
+            output = []
+
+            # Default lags for acorr_ljungbox is 40, but may not always have
+            # that many observations
+            if lags is None:
+                seasonal_periods = getattr(self.model, "seasonal_periods", 0)
+                if seasonal_periods:
+                    lags = min(2 * seasonal_periods, nobs_effective // 5)
+                else:
+                    lags = min(10, nobs_effective // 5)
+
+                warnings.warn(
+                    "The default value of lags is changing.  After 0.12, "
+                    "this value will become min(10, nobs//5) for non-seasonal "
+                    "time series and min (2*m, nobs//5) for seasonal time "
+                    "series. Directly set lags to silence this warning.",
+                    FutureWarning
+                )
+
+            for i in range(self.model.k_endog):
+                if hasattr(self, "filter_results"):
+                    x = self.filter_results.standardized_forecasts_error[i][d:]
+                else:
+                    x = self.standardized_forecasts_error
+                results = acorr_ljungbox(
+                    x, lags=lags, boxpierce=(method == 'boxpierce'),
+                    return_df=False)
+                if method == 'ljungbox':
+                    output.append(results[0:2])
+                else:
+                    output.append(results[2:])
+
+            output = np.c_[output]
+        else:
+            raise NotImplementedError('Invalid serial correlation test'
+                                      ' method.')
+        return output
+
+    def test_heteroskedasticity(self, method, alternative='two-sided',
+                                use_f=True):
+        r"""
+        Test for heteroskedasticity of standardized residuals
+
+        Tests whether the sum-of-squares in the first third of the sample is
+        significantly different than the sum-of-squares in the last third
+        of the sample. Analogous to a Goldfeld-Quandt test. The null hypothesis
+        is of no heteroskedasticity.
+
+        Parameters
+        ----------
+        method : {'breakvar', None}
+            The statistical test for heteroskedasticity. Must be 'breakvar'
+            for test of a break in the variance. If None, an attempt is
+            made to select an appropriate test.
+        alternative : str, 'increasing', 'decreasing' or 'two-sided'
+            This specifies the alternative for the p-value calculation. Default
+            is two-sided.
+        use_f : bool, optional
+            Whether or not to compare against the asymptotic distribution
+            (chi-squared) or the approximate small-sample distribution (F).
+            Default is True (i.e. default is to compare against an F
+            distribution).
+
+        Returns
+        -------
+        output : ndarray
+            An array with `(test_statistic, pvalue)` for each endogenous
+            variable. The array is then sized `(k_endog, 2)`. If the method is
+            called as `het = res.test_heteroskedasticity()`, then `het[0]` is
+            an array of size 2 corresponding to the first endogenous variable,
+            where `het[0][0]` is the test statistic, and `het[0][1]` is the
+            p-value.
+
+        Notes
+        -----
+        The null hypothesis is of no heteroskedasticity. That means different
+        things depending on which alternative is selected:
+
+        - Increasing: Null hypothesis is that the variance is not increasing
+          throughout the sample; that the sum-of-squares in the later
+          subsample is *not* greater than the sum-of-squares in the earlier
+          subsample.
+        - Decreasing: Null hypothesis is that the variance is not decreasing
+          throughout the sample; that the sum-of-squares in the earlier
+          subsample is *not* greater than the sum-of-squares in the later
+          subsample.
+        - Two-sided: Null hypothesis is that the variance is not changing
+          throughout the sample. Both that the sum-of-squares in the earlier
+          subsample is not greater than the sum-of-squares in the later
+          subsample *and* that the sum-of-squares in the later subsample is
+          not greater than the sum-of-squares in the earlier subsample.
+
+        For :math:`h = [T/3]`, the test statistic is:
+
+        .. math::
+
+            H(h) = \sum_{t=T-h+1}^T  \tilde v_t^2
+            \Bigg / \sum_{t=d+1}^{d+1+h} \tilde v_t^2
+
+        where :math:`d` = max(loglikelihood_burn, nobs_diffuse)` (usually
+        corresponding to diffuse initialization under either the approximate
+        or exact approach).
+
+        This statistic can be tested against an :math:`F(h,h)` distribution.
+        Alternatively, :math:`h H(h)` is asymptotically distributed according
+        to :math:`\chi_h^2`; this second test can be applied by passing
+        `asymptotic=True` as an argument.
+
+        See section 5.4 of [1]_ for the above formula and discussion, as well
+        as additional details.
+
+        TODO
+
+        - Allow specification of :math:`h`
+
+        References
+        ----------
+        .. [1] Harvey, Andrew C. 1990. *Forecasting, Structural Time Series*
+               *Models and the Kalman Filter.* Cambridge University Press.
+        """
+        if method is None:
+            method = 'breakvar'
+
+        if self.standardized_forecasts_error is None:
+            raise ValueError('Cannot compute test statistic when standardized'
+                             ' forecast errors have not been computed.')
+
+        if method == 'breakvar':
+            # Store some values
+            if hasattr(self, "filter_results"):
+                squared_resid = (
+                    self.filter_results.standardized_forecasts_error**2
+                )
+                d = np.maximum(self.loglikelihood_burn, self.nobs_diffuse)
+                # This differs from self.nobs_effective because here we want to
+                # exclude exact diffuse periods, whereas self.nobs_effective
+                # only excludes explicitly burned (usually approximate diffuse)
+                # periods.
+                nobs_effective = self.nobs - d
+            else:
+                squared_resid = self.standardized_forecasts_error**2
+                if squared_resid.ndim == 1:
+                    squared_resid = squared_resid[np.newaxis, :]
+                nobs_effective = self.nobs_effective
+                d = 0
+
+            test_statistics = []
+            p_values = []
+            for i in range(self.model.k_endog):
+                h = int(np.round(nobs_effective / 3))
+                numer_resid = squared_resid[i, -h:]
+                numer_resid = numer_resid[~np.isnan(numer_resid)]
+                numer_dof = len(numer_resid)
+
+                denom_resid = squared_resid[i, d:d + h]
+                denom_resid = denom_resid[~np.isnan(denom_resid)]
+                denom_dof = len(denom_resid)
+
+                if numer_dof < 2:
+                    warnings.warn('Early subset of data for variable %d'
+                                  '  has too few non-missing observations to'
+                                  ' calculate test statistic.' % i)
+                    numer_resid = np.nan
+                if denom_dof < 2:
+                    warnings.warn('Later subset of data for variable %d'
+                                  '  has too few non-missing observations to'
+                                  ' calculate test statistic.' % i)
+                    denom_resid = np.nan
+
+                test_statistic = np.sum(numer_resid) / np.sum(denom_resid)
+
+                # Setup functions to calculate the p-values
+                if use_f:
+                    from scipy.stats import f
+                    pval_lower = lambda test_statistics: f.cdf(  # noqa:E731
+                        test_statistics, numer_dof, denom_dof)
+                    pval_upper = lambda test_statistics: f.sf(  # noqa:E731
+                        test_statistics, numer_dof, denom_dof)
+                else:
+                    from scipy.stats import chi2
+                    pval_lower = lambda test_statistics: chi2.cdf(  # noqa:E731
+                        numer_dof * test_statistics, denom_dof)
+                    pval_upper = lambda test_statistics: chi2.sf(  # noqa:E731
+                        numer_dof * test_statistics, denom_dof)
+
+                # Calculate the one- or two-sided p-values
+                alternative = alternative.lower()
+                if alternative in ['i', 'inc', 'increasing']:
+                    p_value = pval_upper(test_statistic)
+                elif alternative in ['d', 'dec', 'decreasing']:
+                    test_statistic = 1. / test_statistic
+                    p_value = pval_upper(test_statistic)
+                elif alternative in ['2', '2-sided', 'two-sided']:
+                    p_value = 2 * np.minimum(
+                        pval_lower(test_statistic),
+                        pval_upper(test_statistic)
+                    )
+                else:
+                    raise ValueError('Invalid alternative.')
+
+                test_statistics.append(test_statistic)
+                p_values.append(p_value)
+
+            output = np.c_[test_statistics, p_values]
+        else:
+            raise NotImplementedError('Invalid heteroskedasticity test'
+                                      ' method.')
+
+        return output
+
+    def test_normality(self, method):
+        """
+        Test for normality of standardized residuals.
+
+        Null hypothesis is normality.
+
+        Parameters
+        ----------
+        method : {'jarquebera', None}
+            The statistical test for normality. Must be 'jarquebera' for
+            Jarque-Bera normality test. If None, an attempt is made to select
+            an appropriate test.
+
+        See Also
+        --------
+        statsmodels.stats.stattools.jarque_bera
+            The Jarque-Bera test of normality.
+
+        Notes
+        -----
+        For statespace models: let `d` = max(loglikelihood_burn, nobs_diffuse);
+        this test is calculated ignoring the first `d` residuals.
+
+        In the case of missing data, the maintained hypothesis is that the
+        data are missing completely at random. This test is then run on the
+        standardized residuals excluding those corresponding to missing
+        observations.
+        """
+        if method is None:
+            method = 'jarquebera'
+
+        if self.standardized_forecasts_error is None:
+            raise ValueError('Cannot compute test statistic when standardized'
+                             ' forecast errors have not been computed.')
+
+        if method == 'jarquebera':
+            from statsmodels.stats.stattools import jarque_bera
+            if hasattr(self, "loglikelihood_burn"):
+                d = np.maximum(self.loglikelihood_burn, self.nobs_diffuse)
+            else:
+                d = 0
+            output = []
+            for i in range(self.model.k_endog):
+                if hasattr(self, "fiter_results"):
+                    resid = self.filter_results.standardized_forecasts_error[
+                        i, d:
+                    ]
+                else:
+                    resid = self.standardized_forecasts_error
+                mask = ~np.isnan(resid)
+                output.append(jarque_bera(resid[mask]))
+        else:
+            raise NotImplementedError('Invalid normality test method.')
+
+        return np.array(output)
 
     def summary(
         self,

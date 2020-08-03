@@ -601,6 +601,10 @@ def test_predict_ranges(austourists_model_fit):
     pred = fit.predict(start=0, dynamic=True, end=70)
     assert len(pred) == 71
 
+    # try only out oof sample prediction
+    pred = fit.predict(start=80, end=84)
+    assert len(pred) == 5
+
 
 def test_summary(austourists_model):
     # just try to run summary to see if it works
@@ -620,7 +624,8 @@ def test_summary(austourists_model):
 def test_score(austourists_model_fit):
     score_cs = austourists_model_fit.model.score(austourists_model_fit.params)
     score_fd = austourists_model_fit.model.score(
-        austourists_model_fit.params, approx_complex_step=False,
+        austourists_model_fit.params,
+        approx_complex_step=False,
         approx_centered=True,
     )
     assert_almost_equal(score_cs, score_fd, 4)
@@ -631,43 +636,36 @@ def test_hessian(austourists_model_fit):
     # sure they run
     austourists_model_fit.model.hessian(austourists_model_fit.params)
     austourists_model_fit.model.hessian(
-        austourists_model_fit.params, approx_complex_step=False,
+        austourists_model_fit.params,
+        approx_complex_step=False,
         approx_centered=True,
     )
 
 
 def test_prediction_results(austourists_model_fit):
     # simple test case starting at 0
-    pred = austourists_model_fit.get_prediction(
-        start=0, dynamic=30, end=40,
-    )
+    pred = austourists_model_fit.get_prediction(start=0, dynamic=30, end=40,)
     summary = pred.summary_frame()
-    assert len(summary['mean'].values) == 41
-    assert np.all(~np.isnan(summary['mean']))
+    assert len(summary["mean"].values) == 41
+    assert np.all(~np.isnan(summary["mean"]))
 
     # simple test case starting at not 0
-    pred = austourists_model_fit.get_prediction(
-        start=10, dynamic=30, end=40
-    )
+    pred = austourists_model_fit.get_prediction(start=10, dynamic=30, end=40)
     summary = pred.summary_frame()
-    assert len(summary['mean'].values) == 31
-    assert np.all(~np.isnan(summary['mean']))
+    assert len(summary["mean"].values) == 31
+    assert np.all(~np.isnan(summary["mean"]))
 
     # long out of sample prediction
-    pred = austourists_model_fit.get_prediction(
-        start=0, dynamic=30, end=80
-    )
+    pred = austourists_model_fit.get_prediction(start=0, dynamic=30, end=80)
     summary = pred.summary_frame()
-    assert len(summary['mean'].values) == 81
-    assert np.all(~np.isnan(summary['mean']))
+    assert len(summary["mean"].values) == 81
+    assert np.all(~np.isnan(summary["mean"]))
 
     # only out of sample prediction
-    pred = austourists_model_fit.get_prediction(
-        start=67, end=80
-    )
+    pred = austourists_model_fit.get_prediction(start=67, end=80)
     summary = pred.summary_frame()
-    assert len(summary['mean'].values) == 14
-    assert np.all(~np.isnan(summary['mean']))
+    assert len(summary["mean"].values) == 14
+    assert np.all(~np.isnan(summary["mean"]))
 
 
 @pytest.fixture
@@ -708,25 +706,38 @@ def statespace_comparison(austourists):
 def test_results_vs_statespace(statespace_comparison):
     ets_results, statespace_results = statespace_comparison
 
+    assert_almost_equal(ets_results.llf, statespace_results.llf)
+    assert_almost_equal(ets_results.scale, statespace_results.scale)
     assert_almost_equal(
-        ets_results.llf, statespace_results.llf
+        ets_results.fittedvalues.values, statespace_results.fittedvalues.values
     )
+
+    # compare diagnostics
+    with pytest.warns(FutureWarning):
+        assert_almost_equal(
+            ets_results.test_serial_correlation(method="ljungbox"),
+            statespace_results.test_serial_correlation(method="ljungbox"),
+        )
     assert_almost_equal(
-        ets_results.scale, statespace_results.scale
+        ets_results.test_normality(method="jarquebera"),
+        statespace_results.test_normality(method="jarquebera"),
     )
-    assert_almost_equal(
-        ets_results.fittedvalues.values,
-        statespace_results.fittedvalues.values
-    )
+
+    # heteroskedasticity is somewhat different, because of burn in period?
+    ets_het = ets_results.test_heteroskedasticity(method="breakvar")[0]
+    statespace_het = statespace_results.test_heteroskedasticity(
+        method="breakvar"
+    )[0]
+    # het[0] is test statistic, het[1] p-value
+    assert_allclose(ets_het[0], statespace_het[0], rtol=0.2)
+    assert_allclose(ets_het[1], statespace_het[1], rtol=0.5)
 
 
 def test_prediction_results_vs_statespace(statespace_comparison):
     ets_results, statespace_results = statespace_comparison
 
     # comparison of two predictions
-    ets_pred = ets_results.get_prediction(
-        start=10, dynamic=10, end=40
-    )
+    ets_pred = ets_results.get_prediction(start=10, dynamic=10, end=40)
     statespace_pred = statespace_results.get_prediction(
         start=10, dynamic=10, end=40
     )
@@ -748,23 +759,17 @@ def test_prediction_results_vs_statespace(statespace_comparison):
     assert_almost_equal(
         ets_summary["mean"].values[-10:],
         statespace_summary["mean"].values[-10:],
-        4
+        4,
     )
 
     # comparison of dynamic prediction at end of sample -> this works
-    ets_pred = ets_results.get_prediction(
-        start=60, end=80,
-    )
-    statespace_pred = statespace_results.get_prediction(
-        start=60, end=80
-    )
+    ets_pred = ets_results.get_prediction(start=60, end=80,)
+    statespace_pred = statespace_results.get_prediction(start=60, end=80)
     statespace_summary = statespace_pred.summary_frame()
     ets_summary = ets_pred.summary_frame()
 
     assert_almost_equal(
-        ets_summary["mean"].values,
-        statespace_summary["mean"].values,
-        4
+        ets_summary["mean"].values, statespace_summary["mean"].values, 4
     )
 
 
@@ -772,38 +777,42 @@ def test_prediction_results_vs_statespace(statespace_comparison):
 def test_prediction_results_slow_AAN(oildata):
     # slow test with high number of simulation repetitions for comparison
     # Note: runs succesfull with specified tolerance
-    fit = ETSModel(
-        oildata, error="add", trend="add"
-    ).fit(disp=False)
+    fit = ETSModel(oildata, error="add", trend="add").fit(disp=False)
 
-    pred_exact = fit.get_prediction(
-        start=40, end=55
-    )
+    pred_exact = fit.get_prediction(start=40, end=55)
     summary_exact = pred_exact.summary_frame()
 
     pred_sim = fit.get_prediction(
-        start=40, end=55, simulate_repetitions=int(1e6),
-        random_state=11, method="simulated"
+        start=40,
+        end=55,
+        simulate_repetitions=int(1e6),
+        random_state=11,
+        method="simulated",
     )
     summary_sim = pred_sim.summary_frame()
     # check if mean converges to expected mean
     assert_allclose(
         summary_sim["mean"].values,
         summary_sim["mean_numerical"].values,
-        rtol=1e-3, atol=1e-3
+        rtol=1e-3,
+        atol=1e-3,
     )
 
     import matplotlib.pyplot as plt
-    plt.switch_backend('TkAgg')
+
+    plt.switch_backend("TkAgg")
     for i in range(1000):
-        plt.plot(pred_sim._results.simulation_results.iloc[:, i],
-                 color='grey', alpha=0.1)
-    plt.plot(oildata[40:], '-', label='data')
-    plt.plot(summary_exact["mean"], '--', label='mean')
-    plt.plot(summary_sim["pi_lower"], ':', label='sim lower')
-    plt.plot(summary_exact["pi_lower"], '.-', label='exact lower')
-    plt.plot(summary_sim["pi_upper"], ':', label='sim upper')
-    plt.plot(summary_exact["pi_upper"], '.-', label='exact upper')
+        plt.plot(
+            pred_sim._results.simulation_results.iloc[:, i],
+            color="grey",
+            alpha=0.1,
+        )
+    plt.plot(oildata[40:], "-", label="data")
+    plt.plot(summary_exact["mean"], "--", label="mean")
+    plt.plot(summary_sim["pi_lower"], ":", label="sim lower")
+    plt.plot(summary_exact["pi_lower"], ".-", label="exact lower")
+    plt.plot(summary_sim["pi_upper"], ":", label="sim upper")
+    plt.plot(summary_exact["pi_upper"], ".-", label="exact upper")
     # plt.legend()
     plt.show()
 
@@ -811,13 +820,15 @@ def test_prediction_results_slow_AAN(oildata):
     assert_allclose(
         summary_sim["pi_lower"].values,
         summary_exact["pi_lower"].values,
-        rtol=1e-4, atol=1e-4
+        rtol=1e-4,
+        atol=1e-4,
     )
 
     assert_allclose(
         summary_sim["pi_upper"].values,
         summary_exact["pi_upper"].values,
-        rtol=1e-4, atol=1e-4
+        rtol=1e-4,
+        atol=1e-4,
     )
 
 
@@ -826,51 +837,62 @@ def test_prediction_results_slow_AAdA(austourists):
     # slow test with high number of simulation repetitions for comparison
     # Note: succesfull with specified tolerance
     fit = ETSModel(
-        austourists, error="add", trend="add", seasonal="add",
+        austourists,
+        error="add",
+        trend="add",
+        seasonal="add",
         damped_trend=True,
-        seasonal_periods=4
+        seasonal_periods=4,
     ).fit(disp=False)
-    pred_exact = fit.get_prediction(
-        start=60, end=75
-    )
+    pred_exact = fit.get_prediction(start=60, end=75)
     summary_exact = pred_exact.summary_frame()
 
     pred_sim = fit.get_prediction(
-        start=60, end=75, simulate_repetitions=int(1e6),
-        random_state=11, method="simulated"
+        start=60,
+        end=75,
+        simulate_repetitions=int(1e6),
+        random_state=11,
+        method="simulated",
     )
     summary_sim = pred_sim.summary_frame()
     # check if mean converges to expected mean
     assert_allclose(
         summary_sim["mean"].values,
         summary_sim["mean_numerical"].values,
-        rtol=1e-3, atol=1e-3
+        rtol=1e-3,
+        atol=1e-3,
     )
 
     import matplotlib.pyplot as plt
-    plt.switch_backend('TkAgg')
+
+    plt.switch_backend("TkAgg")
     for i in range(1000):
-        plt.plot(pred_sim._results.simulation_results.iloc[:, i],
-                 color='grey', alpha=0.1)
-    plt.plot(fit.endog[60:], '-', label='data')
-    plt.plot(summary_exact["mean"], '--', label='mean')
-    plt.plot(summary_sim["pi_lower"], ':', label='sim lower')
-    plt.plot(summary_exact["pi_lower"], '.-', label='exact lower')
-    plt.plot(summary_sim["pi_upper"], ':', label='sim upper')
-    plt.plot(summary_exact["pi_upper"], '.-', label='exact upper')
+        plt.plot(
+            pred_sim._results.simulation_results.iloc[:, i],
+            color="grey",
+            alpha=0.1,
+        )
+    plt.plot(fit.endog[60:], "-", label="data")
+    plt.plot(summary_exact["mean"], "--", label="mean")
+    plt.plot(summary_sim["pi_lower"], ":", label="sim lower")
+    plt.plot(summary_exact["pi_lower"], ".-", label="exact lower")
+    plt.plot(summary_sim["pi_upper"], ":", label="sim upper")
+    plt.plot(summary_exact["pi_upper"], ".-", label="exact upper")
     plt.show()
 
     # check if prediction intervals are equal
     assert_allclose(
         summary_sim["pi_lower"].values,
         summary_exact["pi_lower"].values,
-        rtol=2e-2, atol=1e-4
+        rtol=2e-2,
+        atol=1e-4,
     )
 
     assert_allclose(
         summary_sim["pi_upper"].values,
         summary_exact["pi_upper"].values,
-        rtol=2e-2, atol=1e-4
+        rtol=2e-2,
+        atol=1e-4,
     )
 
 
@@ -882,25 +904,25 @@ def test_convergence_simple():
     for i in range(1, e.shape[0]):
         y[i] = y[i - 1] - 0.2 * e[i - 1] + e[i]
     y = y[200:]
-    mod = holtwinters.ExponentialSmoothing(y,
-                                           initialization_method="estimated")
+    mod = holtwinters.ExponentialSmoothing(
+        y, initialization_method="estimated"
+    )
     res = mod.fit()
     ets_res = ETSModel(y).fit()
 
     # the smoothing level should be very similar, the initial state might be
     # different as it doesn't influence the final result too much
     assert_allclose(
-        res.params['smoothing_level'],
+        res.params["smoothing_level"],
         ets_res.smoothing_level,
-        rtol=1e-4, atol=1e-4
+        rtol=1e-4,
+        atol=1e-4,
     )
 
     # the first few values are influenced by differences in initial state, so
     # we don't test them here
     assert_allclose(
-        res.fittedvalues[10:],
-        ets_res.fittedvalues[10:],
-        rtol=1e-4, atol=1e-4
+        res.fittedvalues[10:], ets_res.fittedvalues[10:], rtol=1e-4, atol=1e-4
     )
 
 
