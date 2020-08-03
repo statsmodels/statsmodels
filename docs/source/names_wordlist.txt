@@ -14,6 +14,7 @@ Azzalini
 Bai
 Bakirov
 Balazs
+Baran
 Bańbura
 Behrens
 Benjamini
@@ -23,6 +24,7 @@ Billah
 Biometrical
 Biopharmaceutical
 Biostatistics
+Blunck
 Borenstein
 Breslow
 Breusch
@@ -31,9 +33,13 @@ Bronwyn
 Broyden
 Chantal
 Charlier
+Chaudhuri
 Chichester
+Cinthia
 Clauss
 Commandeur
+Conaway
+Coster
 Cribbie
 Degreeds
 Denton
@@ -58,6 +64,7 @@ Finney
 Fioruci
 Fleiss
 Forsythe
+Galuzio
 Gangat
 Gelman
 Geng
@@ -78,6 +85,7 @@ Hamdi
 Hampel
 Hannan
 Hanszel
+Haoyu
 Hartung
 Hassan
 Hastie
@@ -85,6 +93,7 @@ Hauck
 Hausman
 Helmert
 Helmut
+Henning
 Herbst
 Hertzprung
 Hobson
@@ -107,6 +116,7 @@ Josef
 Jurgen
 Kacker
 Kaplan
+Karakus
 Kerby
 Kibirige
 Knotek
@@ -116,8 +126,10 @@ Kolmogorov
 Koopman
 Kotz
 Kraay
+Kumar
 Kwiatkowski
 Lakhotia
+Larralde
 Levene
 Levinson
 Liang
@@ -128,10 +140,14 @@ Lobato
 Longley
 Louzada
 Lucrezia
+Lyttle
+Löning
 Lütkepohl
 MacKinnon
 Mahalanobis
 Mandel
+Manmeet
+Markus
 Mazon
 Mehrotra
 Merothra
@@ -151,6 +167,7 @@ Oneway
 Ord
 Ozen
 Paule
+Paulo
 Pellegrini
 Pelletier
 Penrose
@@ -158,6 +175,8 @@ Perktold
 Petropoulos
 Piet
 Ploberger
+Pölsterl
+Qi
 Qingqing
 Quackenbush
 Raphson
@@ -172,6 +191,7 @@ Saggiorato
 Samesh
 Sandu
 Satterthwait
+Scherrer
 Scholl
 Schucany
 Schwarz
@@ -196,6 +216,7 @@ Stata
 Steiger
 Surico
 Szekely
+Tanaka
 Theano
 Tibshirani
 Tukey
@@ -208,6 +229,7 @@ Wellek
 Wes
 Wichern
 Wishart
+Wouter
 Yao
 Yasine
 Yichuan
@@ -224,3 +246,10 @@ luxiform
 oaxaca
 partev
 seabold
+zveryansky
+Řehůřek
+郭飞
+Ananyev
+Zhiqing
+adrienpacifico
+aeturrell

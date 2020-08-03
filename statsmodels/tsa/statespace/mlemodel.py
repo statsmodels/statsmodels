@@ -3664,6 +3664,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             results object. Default is to return a full results object.
         comparison_type : {None, 'previous', 'updated'}
 
+        Returns
+        -------
+        NewsResults
+            Impacts of data revisions and news on estimates
+
         References
         ----------
         .. [1] Bańbura, Marta, and Michele Modugno.

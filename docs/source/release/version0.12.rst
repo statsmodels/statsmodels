@@ -46,7 +46,7 @@ Submodules
 ~~~~~~~~~~~~~~~~~
 - Fix the version that appears in the documentaion  (:pr:`6452`)
 - Send log to dev/null/  (:pr:`6456`)
-- Variuos -> various  (:pr:`6518`)
+- Various -> various  (:pr:`6518`)
 - Fix typos  (:pr:`6531`)
 - Update interactions_anova.ipynb  (:pr:`6601`)
 - Fix `true` type on statespace docs page  (:pr:`6616`)
@@ -64,7 +64,7 @@ Submodules
 - Fix broken links with 404 error  (:pr:`6746`)
 - Demontrate variance components analysis  (:pr:`6758`)
 - Make deprecations more visible  (:pr:`6775`)
-- Numpydoc sigantures  (:pr:`6825`)
+- Numpydoc signatures  (:pr:`6825`)
 - Correct reference in docs  (:pr:`6837`)
 - Include dot_plot  (:pr:`6841`)
 - Updated durbin_watson Docstring and Tests  (:pr:`6848`)
@@ -123,7 +123,7 @@ Submodules
 
 ``duration``
 ~~~~~~~~~~~~
-- Allow more than 2 groups for survdiff in statmodels.duration  (:pr:`6626`)
+- Allow more than 2 groups for survdiff in statsmodels.duration  (:pr:`6626`)
 
 
 
@@ -206,7 +206,7 @@ Submodules
 - Change default lag in serial correlation tests  (:pr:`6893`)
 - Ensure setuptools is imported first  (:pr:`6894`)
 - Remove FutureWarnings  (:pr:`6920`)
-- Add tool to simpligy documenting API in release notes  (:pr:`6922`)
+- Add tool to simplify documenting API in release notes  (:pr:`6922`)
 
 
 
@@ -468,7 +468,7 @@ The following Pull Requests were merged since the last release:
 - :pr:`6616`: DOC: Fix `true` type on statespace docs page
 - :pr:`6621`: ENH: Calculate AR covariance parameters for gridded data
 - :pr:`6622`: ENH Allow optional regularization in local fdr
-- :pr:`6626`: ENH: allow more than 2 groups for survdiff in statmodels.duration
+- :pr:`6626`: ENH: allow more than 2 groups for survdiff in statsmodels.duration
 - :pr:`6628`: BUG: Ensure text comparrison is lower
 - :pr:`6631`: DOC/TST: minor fixes for holtwinters simulate
 - :pr:`6632`: ENH: add meta-analysis (basic methods)
@@ -531,7 +531,7 @@ The following Pull Requests were merged since the last release:
 - :pr:`6811`: MAINT: Remove error on FutureWarning
 - :pr:`6817`: MAINT: Fix failing tests
 - :pr:`6818`: BUG: Fix logic in labeling corr plot
-- :pr:`6825`: DOC: numpydoc sigantures
+- :pr:`6825`: DOC: numpydoc signatures
 - :pr:`6827`: BUG: Fix missing str
 - :pr:`6828`: MAINT: Replace Warnings with Notes in regression summary
 - :pr:`6829`: ENH: Add support for PeriodIndex to AutoReg
@@ -588,10 +588,11 @@ The following Pull Requests were merged since the last release:
 - :pr:`6915`: BUG: Fixed BSplines to match existing docs
 - :pr:`6917`: BUG: dynamic is incorrect when not an int in statespace get_prediction
 - :pr:`6920`: MAINT: Remove FutureWarnings
-- :pr:`6922`: ENH: Add tool to simpligy documenting API in release notes
+- :pr:`6922`: ENH: Add tool to simplify documenting API in release notes
 
 API Changes
 ===========
+
 
 
 New Classes
@@ -600,6 +601,8 @@ New Classes
 * :class:`statsmodels.stats.base.HolderTuple`
 * :class:`statsmodels.stats.meta_analysis.CombineResults`
 * :class:`statsmodels.stats.robust_compare.TrimmedMean`
+* :class:`statsmodels.tools.sm_exceptions.ParseError`
+* :class:`statsmodels.tsa.base.prediction.PredictionResults`
 * :class:`statsmodels.tsa.deterministic.CalendarDeterminsticTerm`
 * :class:`statsmodels.tsa.deterministic.CalendarFourier`
 * :class:`statsmodels.tsa.deterministic.CalendarSeasonality`
@@ -616,6 +619,10 @@ New Classes
 * :class:`statsmodels.tsa.exponential_smoothing.ets.ETSModel`
 * :class:`statsmodels.tsa.exponential_smoothing.ets.ETSResults`
 * :class:`statsmodels.tsa.exponential_smoothing.ets.ETSResultsWrapper`
+* :class:`statsmodels.tsa.exponential_smoothing.ets.PredictionResults`
+* :class:`statsmodels.tsa.exponential_smoothing.ets.PredictionResultsWrapper`
+* :class:`statsmodels.tsa.forecasting.stl.STLForecast`
+* :class:`statsmodels.tsa.forecasting.stl.STLForecastResults`
 * :class:`statsmodels.tsa.forecasting.theta.ThetaModel`
 * :class:`statsmodels.tsa.forecasting.theta.ThetaModelResults`
 * :class:`statsmodels.tsa.holtwinters._exponential_smoothers.HoltWintersArgs`
@@ -637,6 +644,7 @@ New Classes
 
 Removed Classes
 ---------------
+* ``statsmodels.tools.docstring.ParseError``
 * ``statsmodels.tsa.holtwinters.ExponentialSmoothing``
 * ``statsmodels.tsa.holtwinters.Holt``
 * ``statsmodels.tsa.holtwinters.HoltWintersResults``
@@ -648,142 +656,153 @@ Removed Classes
 
 New Methods
 -----------
-* :meth:`statsmodels.tsa.ar_model.AutoRegResults.forecast`
-* :meth:`statsmodels.genmod.generalized_linear_model.NominalGEE.loglike`
-* :meth:`statsmodels.genmod.generalized_linear_model.NominalGEE.hessian_factor`
-* :meth:`statsmodels.genmod.generalized_linear_model.NominalGEE.score_obs`
-* :meth:`statsmodels.genmod.generalized_linear_model.NominalGEE.initialize`
-* :meth:`statsmodels.genmod.generalized_linear_model.NominalGEE.score_factor`
-* :meth:`statsmodels.genmod.generalized_linear_model.NominalGEE.information`
-* :meth:`statsmodels.genmod.generalized_linear_model.NominalGEE.estimate_tweedie_power`
-* :meth:`statsmodels.genmod.generalized_linear_model.NominalGEE.loglike_mu`
-* :meth:`statsmodels.genmod.generalized_linear_model.NominalGEE.score`
-* :meth:`statsmodels.genmod.generalized_linear_model.NominalGEE.predict`
-* :meth:`statsmodels.genmod.generalized_linear_model.NominalGEE.fit_constrained`
-* :meth:`statsmodels.genmod.generalized_linear_model.NominalGEE.get_distribution`
-* :meth:`statsmodels.genmod.generalized_linear_model.NominalGEE.hessian`
 * :meth:`statsmodels.genmod.generalized_linear_model.NominalGEE.score_test`
-* :meth:`statsmodels.tsa.statespace.kalman_smoother.SmootherResults.news`
-* :meth:`statsmodels.tsa.statespace.kalman_smoother.SmootherResults.smoothed_state_autocovariance`
-* :meth:`statsmodels.tsa.statespace.kalman_smoother.SmootherResults.smoothed_state_gain`
-* :meth:`statsmodels.tsa.arima.model.ARIMAResults.append`
-* :meth:`statsmodels.tsa.statespace.mlemodel.ARIMAResults.news`
-* :meth:`statsmodels.genmod.generalized_linear_model.NominalGEEResults.get_hat_matrix_diag`
-* :meth:`statsmodels.genmod.generalized_linear_model.NominalGEEResults.summary2`
-* :meth:`statsmodels.genmod.generalized_linear_model.NominalGEEResults.remove_data`
-* :meth:`statsmodels.genmod.generalized_linear_model.NominalGEEResults.get_prediction`
-* :meth:`statsmodels.genmod.generalized_linear_model.NominalGEEResults.get_influence`
-* :meth:`statsmodels.tsa.vector_ar.var_model.VAR.from_formula`
-* :meth:`statsmodels.tsa.statespace.mlemodel.MLEResults.news`
-* :meth:`statsmodels.tsa.statespace.mlemodel.RecursiveLSResults.news`
-* :meth:`statsmodels.genmod.generalized_linear_model.GEEResults.summary2`
-* :meth:`statsmodels.genmod.generalized_linear_model.GEEResults.remove_data`
-* :meth:`statsmodels.genmod.generalized_linear_model.GEEResults.get_prediction`
-* :meth:`statsmodels.genmod.generalized_linear_model.GEEResults.get_hat_matrix_diag`
-* :meth:`statsmodels.genmod.generalized_linear_model.GEEResults.get_influence`
-* :meth:`statsmodels.tsa.statespace.mlemodel.ExponentialSmoothingResults.news`
-* :meth:`statsmodels.tsa.statespace.mlemodel.UnobservedComponentsResults.news`
-* :meth:`statsmodels.genmod.generalized_linear_model.GEE.score`
-* :meth:`statsmodels.genmod.generalized_linear_model.GEE.information`
-* :meth:`statsmodels.genmod.generalized_linear_model.GEE.predict`
-* :meth:`statsmodels.genmod.generalized_linear_model.GEE.fit_constrained`
-* :meth:`statsmodels.genmod.generalized_linear_model.GEE.hessian_factor`
-* :meth:`statsmodels.genmod.generalized_linear_model.GEE.hessian`
-* :meth:`statsmodels.genmod.generalized_linear_model.GEE.loglike`
-* :meth:`statsmodels.genmod.generalized_linear_model.GEE.loglike_mu`
-* :meth:`statsmodels.genmod.generalized_linear_model.GEE.score_factor`
-* :meth:`statsmodels.genmod.generalized_linear_model.GEE.score_obs`
-* :meth:`statsmodels.genmod.generalized_linear_model.GEE.initialize`
-* :meth:`statsmodels.genmod.generalized_linear_model.GEE.estimate_tweedie_power`
-* :meth:`statsmodels.genmod.generalized_linear_model.GEE.get_distribution`
-* :meth:`statsmodels.genmod.generalized_linear_model.GEE.score_test`
-* :meth:`statsmodels.tsa.statespace.mlemodel.DynamicFactorResults.news`
-* :meth:`statsmodels.tsa.statespace.representation.SimulationSmoother.diff_endog`
-* :meth:`statsmodels.tsa.statespace.mlemodel.VARMAXResults.news`
-* :meth:`statsmodels.genmod.generalized_linear_model.OrdinalGEE.information`
-* :meth:`statsmodels.genmod.generalized_linear_model.OrdinalGEE.score_factor`
-* :meth:`statsmodels.genmod.generalized_linear_model.OrdinalGEE.get_distribution`
-* :meth:`statsmodels.genmod.generalized_linear_model.OrdinalGEE.initialize`
-* :meth:`statsmodels.genmod.generalized_linear_model.OrdinalGEE.hessian`
-* :meth:`statsmodels.genmod.generalized_linear_model.OrdinalGEE.score_test`
+* :meth:`statsmodels.genmod.generalized_linear_model.NominalGEE.information`
+* :meth:`statsmodels.genmod.generalized_linear_model.NominalGEE.initialize`
+* :meth:`statsmodels.genmod.generalized_linear_model.NominalGEE.score_obs`
+* :meth:`statsmodels.genmod.generalized_linear_model.NominalGEE.score`
+* :meth:`statsmodels.genmod.generalized_linear_model.NominalGEE.hessian`
+* :meth:`statsmodels.genmod.generalized_linear_model.NominalGEE.loglike_mu`
+* :meth:`statsmodels.genmod.generalized_linear_model.NominalGEE.hessian_factor`
+* :meth:`statsmodels.genmod.generalized_linear_model.NominalGEE.score_factor`
+* :meth:`statsmodels.genmod.generalized_linear_model.NominalGEE.loglike`
+* :meth:`statsmodels.genmod.generalized_linear_model.NominalGEE.fit_constrained`
+* :meth:`statsmodels.genmod.generalized_linear_model.NominalGEE.predict`
+* :meth:`statsmodels.genmod.generalized_linear_model.NominalGEE.estimate_tweedie_power`
+* :meth:`statsmodels.genmod.generalized_linear_model.NominalGEE.get_distribution`
 * :meth:`statsmodels.genmod.generalized_linear_model.OrdinalGEE.predict`
 * :meth:`statsmodels.genmod.generalized_linear_model.OrdinalGEE.fit_constrained`
-* :meth:`statsmodels.genmod.generalized_linear_model.OrdinalGEE.loglike`
-* :meth:`statsmodels.genmod.generalized_linear_model.OrdinalGEE.score_obs`
-* :meth:`statsmodels.genmod.generalized_linear_model.OrdinalGEE.hessian_factor`
-* :meth:`statsmodels.genmod.generalized_linear_model.OrdinalGEE.loglike_mu`
 * :meth:`statsmodels.genmod.generalized_linear_model.OrdinalGEE.score`
+* :meth:`statsmodels.genmod.generalized_linear_model.OrdinalGEE.loglike`
+* :meth:`statsmodels.genmod.generalized_linear_model.OrdinalGEE.hessian_factor`
+* :meth:`statsmodels.genmod.generalized_linear_model.OrdinalGEE.get_distribution`
+* :meth:`statsmodels.genmod.generalized_linear_model.OrdinalGEE.score_obs`
+* :meth:`statsmodels.genmod.generalized_linear_model.OrdinalGEE.loglike_mu`
+* :meth:`statsmodels.genmod.generalized_linear_model.OrdinalGEE.hessian`
+* :meth:`statsmodels.genmod.generalized_linear_model.OrdinalGEE.information`
+* :meth:`statsmodels.genmod.generalized_linear_model.OrdinalGEE.initialize`
+* :meth:`statsmodels.genmod.generalized_linear_model.OrdinalGEE.score_test`
 * :meth:`statsmodels.genmod.generalized_linear_model.OrdinalGEE.estimate_tweedie_power`
+* :meth:`statsmodels.genmod.generalized_linear_model.OrdinalGEE.score_factor`
+* :meth:`statsmodels.genmod.generalized_linear_model.GEE.hessian_factor`
+* :meth:`statsmodels.genmod.generalized_linear_model.GEE.fit_constrained`
+* :meth:`statsmodels.genmod.generalized_linear_model.GEE.score`
+* :meth:`statsmodels.genmod.generalized_linear_model.GEE.loglike_mu`
+* :meth:`statsmodels.genmod.generalized_linear_model.GEE.initialize`
+* :meth:`statsmodels.genmod.generalized_linear_model.GEE.estimate_tweedie_power`
+* :meth:`statsmodels.genmod.generalized_linear_model.GEE.score_factor`
+* :meth:`statsmodels.genmod.generalized_linear_model.GEE.information`
+* :meth:`statsmodels.genmod.generalized_linear_model.GEE.get_distribution`
+* :meth:`statsmodels.genmod.generalized_linear_model.GEE.score_test`
+* :meth:`statsmodels.genmod.generalized_linear_model.GEE.hessian`
+* :meth:`statsmodels.genmod.generalized_linear_model.GEE.loglike`
+* :meth:`statsmodels.genmod.generalized_linear_model.GEE.score_obs`
+* :meth:`statsmodels.genmod.generalized_linear_model.GEE.predict`
+* :meth:`statsmodels.genmod.generalized_linear_model.GEEResults.get_influence`
+* :meth:`statsmodels.genmod.generalized_linear_model.GEEResults.get_prediction`
+* :meth:`statsmodels.genmod.generalized_linear_model.GEEResults.remove_data`
+* :meth:`statsmodels.genmod.generalized_linear_model.GEEResults.get_hat_matrix_diag`
+* :meth:`statsmodels.genmod.generalized_linear_model.GEEResults.summary2`
+* :meth:`statsmodels.tsa.statespace.mlemodel.VARMAXResults.news`
+* :meth:`statsmodels.tsa.vector_ar.var_model.VAR.from_formula`
+* :meth:`statsmodels.tsa.statespace.mlemodel.ExponentialSmoothingResults.news`
 * :meth:`statsmodels.tsa.statespace.representation.KalmanFilter.diff_endog`
-* :meth:`statsmodels.tsa.statespace.mlemodel.SARIMAXResults.news`
 * :meth:`statsmodels.tsa.statespace.representation.Representation.diff_endog`
+* :meth:`statsmodels.tsa.statespace.mlemodel.RecursiveLSResults.news`
+* :meth:`statsmodels.tsa.ar_model.AutoRegResults.forecast`
+* :meth:`statsmodels.tsa.ar_model.AutoRegResults.get_prediction`
+* :meth:`statsmodels.tsa.statespace.mlemodel.UnobservedComponentsResults.news`
+* :meth:`statsmodels.tsa.statespace.representation.SimulationSmoother.diff_endog`
+* :meth:`statsmodels.tsa.statespace.mlemodel.DynamicFactorResults.news`
+* :meth:`statsmodels.genmod.generalized_linear_model.NominalGEEResults.get_influence`
+* :meth:`statsmodels.genmod.generalized_linear_model.NominalGEEResults.get_hat_matrix_diag`
+* :meth:`statsmodels.genmod.generalized_linear_model.NominalGEEResults.summary2`
+* :meth:`statsmodels.genmod.generalized_linear_model.NominalGEEResults.get_prediction`
+* :meth:`statsmodels.genmod.generalized_linear_model.NominalGEEResults.remove_data`
+* :meth:`statsmodels.tsa.statespace.mlemodel.SARIMAXResults.news`
+* :meth:`statsmodels.tsa.arima.model.ARIMAResults.append`
+* :meth:`statsmodels.tsa.statespace.mlemodel.ARIMAResults.news`
+* :meth:`statsmodels.tsa.statespace.kalman_smoother.SmootherResults.smoothed_state_autocovariance`
+* :meth:`statsmodels.tsa.statespace.kalman_smoother.SmootherResults.smoothed_state_gain`
+* :meth:`statsmodels.tsa.statespace.kalman_smoother.SmootherResults.news`
+* :meth:`statsmodels.tsa.base.prediction.PredictionResults.predicted_mean`
+* :meth:`statsmodels.tsa.base.prediction.PredictionResults.tvalues`
+* :meth:`statsmodels.tsa.base.prediction.PredictionResults.row_labels`
+* :meth:`statsmodels.tsa.base.prediction.PredictionResults.se_mean`
+* :meth:`statsmodels.tsa.base.prediction.PredictionResults.t_test`
+* :meth:`statsmodels.tsa.base.prediction.PredictionResults.var_pred_mean`
 * :meth:`statsmodels.tsa.statespace.representation.KalmanSmoother.diff_endog`
+* :meth:`statsmodels.genmod.generalized_linear_model.OrdinalGEEResults.get_prediction`
+* :meth:`statsmodels.genmod.generalized_linear_model.OrdinalGEEResults.summary2`
+* :meth:`statsmodels.genmod.generalized_linear_model.OrdinalGEEResults.remove_data`
 * :meth:`statsmodels.genmod.generalized_linear_model.OrdinalGEEResults.get_influence`
 * :meth:`statsmodels.genmod.generalized_linear_model.OrdinalGEEResults.get_hat_matrix_diag`
-* :meth:`statsmodels.genmod.generalized_linear_model.OrdinalGEEResults.get_prediction`
-* :meth:`statsmodels.genmod.generalized_linear_model.OrdinalGEEResults.remove_data`
-* :meth:`statsmodels.genmod.generalized_linear_model.OrdinalGEEResults.summary2`
+* :meth:`statsmodels.tsa.statespace.mlemodel.MLEResults.news`
 
 
 
 Removed Methods
 ---------------
 * ``statsmodels.genmod.generalized_estimating_equations.NominalGEE.predict``
-* ``statsmodels.tsa.statespace.mlemodel.ARIMAResults.append``
-* ``statsmodels.base.model.NominalGEEResults.remove_data``
-* ``statsmodels.base.model.VAR.from_formula``
-* ``statsmodels.base.model.GEEResults.remove_data``
-* ``statsmodels.genmod.generalized_estimating_equations.GEE.predict``
 * ``statsmodels.genmod.generalized_estimating_equations.OrdinalGEE.predict``
+* ``statsmodels.genmod.generalized_estimating_equations.GEE.predict``
+* ``statsmodels.base.model.GEEResults.remove_data``
+* ``statsmodels.base.model.VAR.from_formula``
+* ``statsmodels.base.model.NominalGEEResults.remove_data``
+* ``statsmodels.tsa.statespace.mlemodel.ARIMAResults.append``
+* ``statsmodels.tsa.statespace.mlemodel.PredictionResults.se_mean``
+* ``statsmodels.genmod._prediction.PredictionResults.t_test``
+* ``statsmodels.genmod._prediction.PredictionResults.tvalues``
+* ``statsmodels.genmod._prediction.PredictionResults.se_obs``
 * ``statsmodels.base.model.OrdinalGEEResults.remove_data``
 
 
 
 Methods with New Arguments
 --------------------------
-* :meth:`statsmodels.duration.hazard_regression.rv_discrete_float`: ``n``
-* :meth:`statsmodels.tsa.vector_ar.irf.IRAnalysis`: ``figsize``
-* :meth:`statsmodels.discrete.discrete_model.Logit`: ``check_rank``
-* :meth:`statsmodels.discrete.discrete_model.Poisson`: ``check_rank``
-* :meth:`statsmodels.regression.rolling.RollingWLS`: ``expanding``
-* :meth:`statsmodels.tsa.arima.model.ARIMAResults`: ``copy_initialization``
-* :meth:`statsmodels.discrete.discrete_model.DiscreteModel`: ``check_rank``
-* :meth:`statsmodels.genmod.cov_struct.Autoregressive`: ``grid``
-* :meth:`statsmodels.tsa.statespace.mlemodel.MLEResults`: ``copy_initialization``
-* :meth:`statsmodels.regression.recursive_ls.RecursiveLSResults`: ``copy_initialization``
-* :meth:`statsmodels.tsa.ar_model.AutoReg`: ``deterministic``, ``old_names``
-* :meth:`statsmodels.discrete.discrete_model.CountModel`: ``check_rank``
-* :meth:`statsmodels.tsa.vector_ar.irf.BaseIRAnalysis`: ``figsize``
-* :meth:`statsmodels.tsa.statespace.exponential_smoothing.ExponentialSmoothingResults`: ``copy_initialization``
-* :meth:`statsmodels.tsa.statespace.structural.UnobservedComponentsResults`: ``copy_initialization``
-* :meth:`statsmodels.tsa.statespace.dynamic_factor.DynamicFactorResults`: ``copy_initialization``
-* :meth:`statsmodels.discrete.discrete_model.MultinomialModel`: ``check_rank``
-* :meth:`statsmodels.discrete.discrete_model.OrderedModel`: ``check_rank``
-* :meth:`statsmodels.discrete.discrete_model.NegativeBinomial`: ``check_rank``
-* :meth:`statsmodels.tsa.statespace.simulation_smoother.SimulationSmoother`: ``method``
-* :meth:`statsmodels.tsa.statespace.varmax.VARMAXResults`: ``copy_initialization``
 * :meth:`statsmodels.regression.rolling.RollingOLS`: ``expanding``
-* :meth:`statsmodels.tsa.statespace.sarimax.SARIMAXResults`: ``copy_initialization``
-* :meth:`statsmodels.discrete.discrete_model.BinaryModel`: ``check_rank``
-* :meth:`statsmodels.discrete.discrete_model.MNLogit`: ``check_rank``
-* :meth:`statsmodels.discrete.discrete_model.NegativeBinomialP`: ``check_rank``
-* :meth:`statsmodels.discrete.discrete_model.GeneralizedPoisson`: ``check_rank``
-* :meth:`statsmodels.discrete.discrete_model.Probit`: ``check_rank``
-* :meth:`statsmodels.duration.hazard_regression.PHReg`: ``exog``, ``scale``
+* :meth:`statsmodels.tsa.vector_ar.irf.IRAnalysis`: ``figsize``
 * :meth:`statsmodels.stats.mediation.Mediation`: ``outcome_predict_kwargs``
+* :meth:`statsmodels.duration.hazard_regression.rv_discrete_float`: ``n``
+* :meth:`statsmodels.discrete.discrete_model.BinaryModel`: ``check_rank``
+* :meth:`statsmodels.genmod.cov_struct.Autoregressive`: ``grid``
+* :meth:`statsmodels.discrete.discrete_model.OrderedModel`: ``check_rank``
+* :meth:`statsmodels.duration.hazard_regression.PHReg`: ``pred_only``
+* :meth:`statsmodels.discrete.discrete_model.Probit`: ``check_rank``
+* :meth:`statsmodels.tsa.statespace.varmax.VARMAXResults`: ``copy_initialization``
+* :meth:`statsmodels.tsa.statespace.exponential_smoothing.ExponentialSmoothingResults`: ``copy_initialization``
+* :meth:`statsmodels.regression.recursive_ls.RecursiveLSResults`: ``copy_initialization``
+* :meth:`statsmodels.tsa.ar_model.AutoReg`: ``old_names``, ``deterministic``
+* :meth:`statsmodels.discrete.discrete_model.NegativeBinomial`: ``check_rank``
+* :meth:`statsmodels.tsa.statespace.structural.UnobservedComponentsResults`: ``copy_initialization``
+* :meth:`statsmodels.discrete.discrete_model.NegativeBinomialP`: ``check_rank``
+* :meth:`statsmodels.tsa.statespace.simulation_smoother.SimulationSmoother`: ``method``
+* :meth:`statsmodels.regression.rolling.RollingWLS`: ``expanding``
+* :meth:`statsmodels.discrete.discrete_model.GeneralizedPoisson`: ``check_rank``
+* :meth:`statsmodels.tsa.statespace.dynamic_factor.DynamicFactorResults`: ``copy_initialization``
+* :meth:`statsmodels.discrete.discrete_model.CountModel`: ``check_rank``
+* :meth:`statsmodels.tsa.statespace.sarimax.SARIMAXResults`: ``copy_initialization``
+* :meth:`statsmodels.tsa.arima.model.ARIMAResults`: ``copy_initialization``
+* :meth:`statsmodels.discrete.discrete_model.MultinomialModel`: ``check_rank``
+* :meth:`statsmodels.discrete.discrete_model.MNLogit`: ``check_rank``
+* :meth:`statsmodels.tsa.vector_ar.irf.BaseIRAnalysis`: ``figsize``
+* :meth:`statsmodels.discrete.discrete_model.DiscreteModel`: ``check_rank``
+* :meth:`statsmodels.discrete.discrete_model.Poisson`: ``check_rank``
+* :meth:`statsmodels.discrete.discrete_model.Logit`: ``check_rank``
 * :meth:`statsmodels.iolib.summary2.Summary`: ``label``
+* :meth:`statsmodels.tsa.statespace.mlemodel.MLEResults`: ``copy_initialization``
 
 
 
 Methods with Changed Arguments
 ------------------------------
+* :meth:`statsmodels.regression._prediction.PredictionResults`
+   * New: ``PredictionResults(alpha)``
+   * Old: ``PredictionResults(what, alpha)``
 * :meth:`statsmodels.tsa.statespace.mlemodel.PredictionResults`
    * New: ``PredictionResults(endog, alpha)``
    * Old: ``PredictionResults(endog, what, alpha)``
 * :meth:`statsmodels.genmod._prediction.PredictionResults`
-   * New: ``PredictionResults(alpha)``
-   * Old: ``PredictionResults(what, alpha)``
-* :meth:`statsmodels.regression._prediction.PredictionResults`
    * New: ``PredictionResults(alpha)``
    * Old: ``PredictionResults(what, alpha)``
 
@@ -821,7 +840,6 @@ New Functions
 * :func:`statsmodels.stats.oneway.f2_to_wellek`
 * :func:`statsmodels.stats.oneway.fstat_to_wellek`
 * :func:`statsmodels.stats.oneway.power_equivalence_oneway`
-* :func:`statsmodels.stats.oneway.power_equivalence_oneway0`
 * :func:`statsmodels.stats.oneway.simulate_power_equivalence_oneway`
 * :func:`statsmodels.stats.oneway.test_scale_oneway`
 * :func:`statsmodels.stats.oneway.wellek_to_f2`
@@ -839,10 +857,12 @@ New Functions
 * :func:`statsmodels.stats.robust_compare.scale_transform`
 * :func:`statsmodels.stats.robust_compare.trim_mean`
 * :func:`statsmodels.stats.robust_compare.trimboth`
+* :func:`statsmodels.tools.eval_measures.rmspe`
 * :func:`statsmodels.tools.tools.matrix_rank`
 * :func:`statsmodels.tools.validation.validation.required_int_like`
 * :func:`statsmodels.tsa.base.tsa_model.get_index_label_loc`
 * :func:`statsmodels.tsa.base.tsa_model.get_index_loc`
+* :func:`statsmodels.tsa.base.tsa_model.get_prediction_index`
 * :func:`statsmodels.tsa.forecasting.theta.extend_index`
 * :func:`statsmodels.tsa.holtwinters._smoothers.holt__`
 * :func:`statsmodels.tsa.holtwinters._smoothers.holt_add_dam`
@@ -863,18 +883,19 @@ New Functions
 
 Removed Functions
 -----------------
+* ``statsmodels.stats.diagnostic.unitroot_adf``
 * ``statsmodels.tsa.stattools.periodogram``
 
 
 
 Functions with New Arguments
 ----------------------------
-* :func:`statsmodels.stats.diagnostic.linear_harvey_collier`: ``skip``
 * :func:`statsmodels.graphics.gofplots.qqline`: ``lineoptions``
-* :func:`statsmodels.stats.diagnostic.acorr_ljungbox`: ``auto_lag``
 * :func:`statsmodels.nonparametric.smoothers_lowess.lowess`: ``xvals``
 * :func:`statsmodels.tsa.ar_model.ar_select_order`: ``old_names``
+* :func:`statsmodels.stats.diagnostic.acorr_ljungbox`: ``auto_lag``
 * :func:`statsmodels.stats.diagnostic.het_breuschpagan`: ``robust``
+* :func:`statsmodels.stats.diagnostic.linear_harvey_collier`: ``skip``
 * :func:`statsmodels.stats.multitest.local_fdr`: ``alpha``
 * :func:`statsmodels.graphics.gofplots.plotting_pos`: ``b``
 
@@ -882,33 +903,33 @@ Functions with New Arguments
 
 Functions with Changed Arguments
 --------------------------------
-* :func:`statsmodels.tsa.arima.estimators.durbin_levinson.durbin_levinson`
-   * New: ``durbin_levinson(endog, ar_order, demean, adjusted)``
-   * Old: ``durbin_levinson(endog, ar_order, demean, unbiased)``
-* :func:`statsmodels.graphics.tsaplots.plot_acf`
-   * New: ``plot_acf(x, ax, lags, alpha, use_vlines, adjusted, fft, missing, title, zero, vlines_kwargs, kwargs)``
-   * Old: ``plot_acf(x, ax, lags, alpha, use_vlines, unbiased, fft, missing, title, zero, vlines_kwargs, kwargs)``
-* :func:`statsmodels.tsa.stattools.ccf`
-   * New: ``ccf(x, y, adjusted)``
-   * Old: ``ccf(x, y, unbiased)``
 * :func:`statsmodels.tsa.stattools.pacf_ols`
    * New: ``pacf_ols(x, nlags, efficient, adjusted)``
    * Old: ``pacf_ols(x, nlags, efficient, unbiased)``
-* :func:`statsmodels.tools.tools.pinv_extended`
-   * New: ``pinv_extended(x, rcond)``
-   * Old: ``pinv_extended(X, rcond)``
-* :func:`statsmodels.tools.docstring.strip_blank_lines`
-   * New: ``strip_blank_lines(line)``
-   * Old: ``strip_blank_lines(l)``
+* :func:`statsmodels.tsa.stattools.ccovf`
+   * New: ``ccovf(x, y, adjusted, demean)``
+   * Old: ``ccovf(x, y, unbiased, demean)``
 * :func:`statsmodels.tsa.stattools.acf`
    * New: ``acf(x, adjusted, nlags, qstat, fft, alpha, missing)``
    * Old: ``acf(x, unbiased, nlags, qstat, fft, alpha, missing)``
 * :func:`statsmodels.tsa.arima.estimators.yule_walker.yule_walker`
    * New: ``yule_walker(endog, ar_order, demean, adjusted)``
    * Old: ``yule_walker(endog, ar_order, demean, unbiased)``
+* :func:`statsmodels.tools.tools.pinv_extended`
+   * New: ``pinv_extended(x, rcond)``
+   * Old: ``pinv_extended(X, rcond)``
+* :func:`statsmodels.tools.docstring.strip_blank_lines`
+   * New: ``strip_blank_lines(line)``
+   * Old: ``strip_blank_lines(l)``
 * :func:`statsmodels.tsa.stattools.acovf`
    * New: ``acovf(x, adjusted, demean, fft, missing, nlag)``
    * Old: ``acovf(x, unbiased, demean, fft, missing, nlag)``
-* :func:`statsmodels.tsa.stattools.ccovf`
-   * New: ``ccovf(x, y, adjusted, demean)``
-   * Old: ``ccovf(x, y, unbiased, demean)``
+* :func:`statsmodels.tsa.stattools.ccf`
+   * New: ``ccf(x, y, adjusted)``
+   * Old: ``ccf(x, y, unbiased)``
+* :func:`statsmodels.graphics.tsaplots.plot_acf`
+   * New: ``plot_acf(x, ax, lags, alpha, use_vlines, adjusted, fft, missing, title, zero, vlines_kwargs, kwargs)``
+   * Old: ``plot_acf(x, ax, lags, alpha, use_vlines, unbiased, fft, missing, title, zero, vlines_kwargs, kwargs)``
+* :func:`statsmodels.tsa.arima.estimators.durbin_levinson.durbin_levinson`
+   * New: ``durbin_levinson(endog, ar_order, demean, adjusted)``
+   * Old: ``durbin_levinson(endog, ar_order, demean, unbiased)``

@@ -613,7 +613,7 @@ class DescrStatsW(object):
 def _tstat_generic(value1, value2, std_diff, dof, alternative, diff=0):
     '''generic ttest based on summary statistic
 
-    The test statisic is :
+    The test statistic is :
         tstat = (value1 - value2 - diff) / std_diff
 
     and is assumed to be t-distributed with ``dof`` degrees of freedom.
@@ -711,7 +711,7 @@ def _tconfint_generic(mean, std_mean, dof, alpha, alternative):
 def _zstat_generic(value1, value2, std_diff, alternative, diff=0):
     """generic (normal) z-test based on summary statistic
 
-    The test statisic is :
+    The test statistic is :
         tstat = (value1 - value2 - diff) / std_diff
 
     and is assumed to be normally distributed.
@@ -758,7 +758,7 @@ def _zstat_generic(value1, value2, std_diff, alternative, diff=0):
 def _zstat_generic2(value, std, alternative):
     """generic (normal) z-test based on summary statistic
 
-    The test statisic is :
+    The test statistic is :
         zstat = value / std
 
     and is assumed to be normally distributed with standard deviation ``std``.

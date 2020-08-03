@@ -81,7 +81,7 @@ class STLForecast:
     statsmodels.tsa.arima.model.ARIMA
         ARIMA modeling.
     statsmodels.tsa.ar_model.AutoReg
-        Autoregressive modeling supporting complext deterministics.
+        Autoregressive modeling supporting complex deterministics.
     statsmodels.tsa.exponential_smoothing.ets.ETSModel
         Additive and multiplicative exponential smoothing with trend.
     statsmodels.tsa.statespace.exponential_smoothing.ExponentialSmoothing
@@ -97,7 +97,7 @@ class STLForecast:
         Y_t - \hat{S}_t
 
     The trend component is not removed, and so the time series model should
-    be capable of adequately fitting and foreasting the trend if present. The
+    be capable of adequately fitting and forecasting the trend if present. The
     out-of-sample forecasts of the seasonal component are produced as
 
     .. math::

@@ -814,7 +814,7 @@ def equivalence_oneway(data, equiv_margin, groups=None, use_var="unequal",
     data : tuple of array_like or DataFrame or Series
         Data for k independent samples, with k >= 2.
         The data can be provided as a tuple or list of arrays or in long
-        format with outcome observations in ``data`` and group membershipt in
+        format with outcome observations in ``data`` and group membership in
         ``groups``.
     equiv_margin : float
         Equivalence margin in terms of effect size. Effect size can be chosen
@@ -1113,7 +1113,7 @@ def test_scale_oneway(data, method="bf", center="median", transform="abs",
             This is the p-value based on degrees of freedom as in
             Brown-Forsythe 1974 and is only available if ``method="bf"``.
         df : (df_denom, df_num)
-            Tuple containing gegrees of freedom for the F-distribution depend
+            Tuple containing degrees of freedom for the F-distribution depend
             on ``method``. If ``method="bf"``, then `df_denom` is for Mehrotra
             p-values `df_denom2` is available for Brown-Forsythe 1974 p-values.
             `df_num` is the same numerator degrees of freedom for both
