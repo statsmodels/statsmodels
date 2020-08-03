@@ -601,6 +601,10 @@ def test_predict_ranges(austourists_model_fit):
     pred = fit.predict(start=0, dynamic=True, end=70)
     assert len(pred) == 71
 
+    # try only out oof sample prediction
+    pred = fit.predict(start=80, end=84)
+    assert len(pred) == 5
+
 
 def test_summary(austourists_model):
     # just try to run summary to see if it works

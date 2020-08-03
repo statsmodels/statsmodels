@@ -1397,8 +1397,8 @@ class ETSResults(base.StateSpaceMLEResults):
         self.mean_resid = np.mean(self.resid)
         self.scale_resid = np.std(self.resid, ddof=1)
         self.standardized_forecasts_error = (
-            (self.resid - self.mean_resid) / self.scale_resid
-        )
+            self.resid - self.mean_resid
+        ) / self.scale_resid
 
         # Setup covariance matrix notes dictionary
         # For now, only support "approx"
@@ -1917,7 +1917,7 @@ class ETSResults(base.StateSpaceMLEResults):
             # dynamic simulations from start + dynamic
             start_smooth = start
             end_smooth = min(start + dynamic - 1, end)
-            nsmooth = end_smooth - start_smooth + 1
+            nsmooth = max(end_smooth - start_smooth + 1, 0)
             start_dynamic = start + dynamic
         # anchor for simulations is one before start_dynamic
         if start_dynamic == 0:
@@ -2001,6 +2001,12 @@ class ETSResults(base.StateSpaceMLEResults):
         # Out of sample/dynamic prediction: forecast
         if ndynamic > 0:
             y[nsmooth:] = self._forecast(ndynamic, anchor_dynamic)
+
+        # when we are doing out of sample only prediction, start > end + 1, and
+        # we only want to output beginning at start
+        if start > end + 1:
+            ndiscard = start - (end + 1)
+            y = y[ndiscard:]
 
         # Wrap data / squeeze where appropriate
         return self.model._wrap_data(y, start, end_dynamic)
