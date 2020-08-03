@@ -844,6 +844,12 @@ class TestGlmPoissonOffset(CheckModelResultsMixin):
         pred2 = mod3.predict(exog=exog1, offset=2*offset, linear=True)
         assert_almost_equal(pred2, pred1+offset)
 
+        # Passing exposure as a pandas series should not effect output type
+        assert isinstance(
+            mod1.predict(exog=exog1, exposure=pd.Series(exposure1)),
+            np.ndarray
+        )
+
 
 def test_perfect_pred():
     cur_dir = os.path.dirname(os.path.abspath(__file__))
