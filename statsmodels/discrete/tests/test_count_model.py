@@ -211,8 +211,8 @@ class TestZeroInflatedPoisson_predict(object):
     @classmethod
     def setup_class(cls):
         expected_params = [1, 0.5]
-        np.random.seed(123)
-        nobs = 200
+        np.random.seed(999)
+        nobs = 2000
         exog = np.ones((nobs, 2))
         exog[:nobs//2, 1] = 2
         mu_true = exog.dot(expected_params)
@@ -221,23 +221,53 @@ class TestZeroInflatedPoisson_predict(object):
         model = sm.ZeroInflatedPoisson(cls.endog, exog)
         cls.res = model.fit(method='bfgs', maxiter=5000, maxfun=5000, disp=0)
 
+        cls.params_true = [mu_true,  0.05, nobs]
+
     def test_mean(self):
+        def compute_conf_interval_95(mu, prob_infl, nobs):
+            dispersion_factor = 1 + prob_infl * mu
+
+            # scalar variance of the mixture of zip
+            var = (dispersion_factor*(1-prob_infl)*mu).mean()
+            var += (((1-prob_infl)*mu)**2).mean()
+            var -= (((1-prob_infl)*mu).mean())**2
+            std = np.sqrt(var)
+            # Central limit theorem
+            conf_intv_95 = 2 * std / np.sqrt(nobs)
+            return conf_intv_95
+
+        conf_interval_95 = compute_conf_interval_95(*self.params_true)
         assert_allclose(self.res.predict().mean(), self.endog.mean(),
-                        atol=1e-2, rtol=1e-2)
+                        atol=conf_interval_95, rtol=0)
 
     def test_var(self):
-        assert_allclose((self.res.predict().mean() *
-                        self.res._dispersion_factor.mean()),
+        def compute_mixture_var(dispersion_factor, prob_main, mu):
+            # the variance of the mixture is the mixture of the variances plus
+            # a non-negative term accounting for the (weighted)
+            # dispersion of the means, see stats.stackexchange #16609 and
+            #  Casella & Berger's Statistical Inference (Example 10.2.1)
+            prob_infl = 1-prob_main
+            var = (dispersion_factor*(1-prob_infl)*mu).mean()
+            var += (((1-prob_infl)*mu)**2).mean()
+            var -= (((1-prob_infl)*mu).mean())**2
+            return var
+
+        res = self.res
+        var_fitted = compute_mixture_var(res._dispersion_factor,
+                                         res.predict(which='prob-main'),
+                                         res.predict(which='mean-main'))
+
+        assert_allclose(var_fitted.mean(),
                         self.endog.var(), atol=5e-2, rtol=5e-2)
 
     def test_predict_prob(self):
         res = self.res
-        endog = res.model.endog
 
         pr = res.predict(which='prob')
-        pr2 = sm.distributions.zipoisson.pmf(np.arange(7)[:,None],
-            res.predict(), 0.05).T
+        pr2 = sm.distributions.zipoisson.pmf(np.arange(pr.shape[1])[:, None],
+                                             res.predict(), 0.05).T
         assert_allclose(pr, pr2, rtol=0.05, atol=0.05)
+
 
 @pytest.mark.slow
 class TestZeroInflatedGeneralizedPoisson(CheckGeneric):
@@ -314,8 +344,8 @@ class TestZeroInflatedGeneralizedPoisson_predict(object):
     @classmethod
     def setup_class(cls):
         expected_params = [1, 0.5, 0.5]
-        np.random.seed(1234)
-        nobs = 200
+        np.random.seed(999)
+        nobs = 2000
         exog = np.ones((nobs, 2))
         exog[:nobs//2, 1] = 2
         mu_true = exog.dot(expected_params[:-1])
@@ -324,23 +354,50 @@ class TestZeroInflatedGeneralizedPoisson_predict(object):
         model = sm.ZeroInflatedGeneralizedPoisson(cls.endog, exog, p=2)
         cls.res = model.fit(method='bfgs', maxiter=5000, maxfun=5000, disp=0)
 
+        cls.params_true = [mu_true, expected_params[-1], 2,  0.5, nobs]
+
     def test_mean(self):
+        def compute_conf_interval_95(mu, alpha, p, prob_infl, nobs):
+            p = p-1
+            dispersion_factor = (1 + alpha * mu**p)**2 + prob_infl * mu
+
+            # scalar variance of the mixture of zip
+            var = (dispersion_factor*(1-prob_infl)*mu).mean()
+            var += (((1-prob_infl)*mu)**2).mean()
+            var -= (((1-prob_infl)*mu).mean())**2
+            std = np.sqrt(var)
+            # Central limit theorem
+            conf_intv_95 = 2 * std / np.sqrt(nobs)
+            return conf_intv_95
+
+        conf_interval_95 = compute_conf_interval_95(*self.params_true)
         assert_allclose(self.res.predict().mean(), self.endog.mean(),
-                        atol=1e-4, rtol=1e-4)
+                        atol=conf_interval_95, rtol=0)
 
     def test_var(self):
-        assert_allclose((self.res.predict().mean() *
-                        self.res._dispersion_factor.mean()),
+        def compute_mixture_var(dispersion_factor, prob_main, mu):
+            prob_infl = 1-prob_main
+            var = (dispersion_factor*(1-prob_infl)*mu).mean()
+            var += (((1-prob_infl)*mu)**2).mean()
+            var -= (((1-prob_infl)*mu).mean())**2
+            return var
+
+        res = self.res
+        var_fitted = compute_mixture_var(res._dispersion_factor,
+                                         res.predict(which='prob-main'),
+                                         res.predict(which='mean-main'))
+
+        assert_allclose(var_fitted.mean(),
                         self.endog.var(), atol=0.05, rtol=0.1)
 
     def test_predict_prob(self):
         res = self.res
-        endog = res.model.endog
 
         pr = res.predict(which='prob')
-        pr2 = sm.distributions.zinegbin.pmf(np.arange(12)[:,None],
-            res.predict(), 0.5, 2, 0.5).T
+        pr2 = sm.distributions.zinegbin.pmf(np.arange(pr.shape[1])[:, None],
+                                            res.predict(), 0.5, 2, 0.5).T
         assert_allclose(pr, pr2, rtol=0.08, atol=0.05)
+
 
 class TestZeroInflatedNegativeBinomialP(CheckGeneric):
     @classmethod
@@ -426,8 +483,8 @@ class TestZeroInflatedNegativeBinomialP_predict(object):
     def setup_class(cls):
 
         expected_params = [1, 1, 0.5]
-        np.random.seed(987123)
-        nobs = 500
+        np.random.seed(999)
+        nobs = 5000
         exog = np.ones((nobs, 2))
         exog[:nobs//2, 1] = 0
 
@@ -440,15 +497,41 @@ class TestZeroInflatedNegativeBinomialP_predict(object):
 
         # attach others
         cls.prob_infl = prob_infl
+        cls.params_true = [mu_true, expected_params[-1], 2,  prob_infl, nobs]
 
     def test_mean(self):
-        assert_allclose(self.res.predict().mean(), self.endog.mean(),
-                        rtol=0.01)
+        def compute_conf_interval_95(mu, alpha, p, prob_infl, nobs):
+            dispersion_factor = 1 + alpha * mu**(p-1) + prob_infl * mu
+
+            # scalar variance of the mixture of zip
+            var = (dispersion_factor*(1-prob_infl)*mu).mean()
+            var += (((1-prob_infl)*mu)**2).mean()
+            var -= (((1-prob_infl)*mu).mean())**2
+            std = np.sqrt(var)
+            # Central limit theorem
+            conf_intv_95 = 2 * std / np.sqrt(nobs)
+            return conf_intv_95
+
+        conf_interval_95 = compute_conf_interval_95(*self.params_true)
+        mean_true = ((1-self.prob_infl)*self.params_true[0]).mean()
+        assert_allclose(self.res.predict().mean(),
+                        mean_true, atol=conf_interval_95, rtol=0)
 
     def test_var(self):
         # todo check precision
-        assert_allclose((self.res.predict().mean() *
-                        self.res._dispersion_factor.mean()),
+        def compute_mixture_var(dispersion_factor, prob_main, mu):
+            prob_infl = 1 - prob_main
+            var = (dispersion_factor * (1 - prob_infl) * mu).mean()
+            var += (((1 - prob_infl) * mu) ** 2).mean()
+            var -= (((1 - prob_infl) * mu).mean()) ** 2
+            return var
+
+        res = self.res
+        var_fitted = compute_mixture_var(res._dispersion_factor,
+                                         res.predict(which='prob-main'),
+                                         res.predict(which='mean-main'))
+
+        assert_allclose(var_fitted.mean(),
                         self.endog.var(), rtol=0.2)
 
     def test_predict_prob(self):
