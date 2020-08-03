@@ -870,7 +870,7 @@ class GLM(base.LikelihoodModel):
         elif exposure is None:
             exposure = 0.
         else:
-            exposure = np.log(exposure)
+            exposure = np.log(np.asarray(exposure))
 
         if exog is None:
             exog = self.exog
