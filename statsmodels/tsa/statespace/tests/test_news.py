@@ -6,7 +6,10 @@ License: BSD-3
 """
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal, assert_
-from pandas.testing import assert_frame_equal, assert_series_equal
+try:
+    from pandas.util.testing import assert_frame_equal, assert_series_equal
+except ImportError:
+    from pandas.testing import assert_frame_equal, assert_series_equal
 import pandas as pd
 
 import pytest
@@ -117,6 +120,11 @@ def check_news(news, revisions, updates, impact_dates, impacted_variables,
     # zero, but numerical precision of the Kalman filter procedures gives an
     # answer of e.g. 1e-16.
 
+    # Note: Here we set the tolerance to be slightly negative, since some of
+    # the tests have weights or impacts exactly equal to zero, while we still
+    # want to include those in tests.
+    news.tolerance = -1e-10
+
     # - Indexes --------------------------------------------------------------
     # Index of impacts
     check_impact_indices(news, impact_dates, impacted_variables)
@@ -172,7 +180,7 @@ def check_news(news, revisions, updates, impact_dates, impacted_variables,
 
     # - Table: data updates --------------------------------------------------
     assert_equal(news.data_updates.columns.tolist(),
-                 ['forecast (prev)', 'observed'])
+                 ['observed', 'forecast (prev)'])
     assert_equal(news.data_updates.index.names,
                  ['update date', 'updated variable'])
     assert_(news.data_updates.index.equals(news.news.index))
@@ -183,7 +191,7 @@ def check_news(news, revisions, updates, impact_dates, impacted_variables,
 
     # - Table: details_by_impact ---------------------------------------------
     details_by_impact = news.details_by_impact
-    desired = ['forecast (prev)', 'observed', 'news', 'weight', 'impact']
+    desired = ['observed', 'forecast (prev)', 'news', 'weight', 'impact']
     assert_equal(details_by_impact.columns.tolist(), desired)
     desired = ['impact date', 'impacted variable',
                'update date', 'updated variable']
@@ -242,8 +250,8 @@ def check_news(news, revisions, updates, impact_dates, impacted_variables,
     details_by_update = news.details_by_update
     desired = ['news', 'weight', 'impact']
     assert_equal(details_by_update.columns.tolist(), desired)
-    desired = ['update date', 'updated variable', 'forecast (prev)',
-               'observed', 'impact date', 'impacted variable']
+    desired = ['update date', 'updated variable', 'observed',
+               'forecast (prev)', 'impact date', 'impacted variable']
     assert_equal(details_by_update.index.names, desired)
 
     if updates:
@@ -799,7 +807,6 @@ def test_defaults(revisions, updates):
 def test_comparison_types():
     endog = dta['infl'].copy()
     endog.iloc[-1] = np.nan
-    endog2 = dta['infl'].copy()
     msg = 'Could not automatically determine the type of comparison'
 
     mod = sarimax.SARIMAX(endog)
@@ -823,15 +830,6 @@ def test_comparison_types():
     assert_allclose(news.total_impacts, 0)
     news = res.news(res, comparison_type='updated')
     assert_allclose(news.total_impacts, 0)
-
-    # Test that the default works for a dataset with additional data, we cannot
-    # set it as "previous"
-    res2 = res.apply(endog2)
-    msg = ('New data cannot have missing values for observations that are'
-           ' non-missing in model data.')
-    res.news(res2)  # This is just run to make sure it doesn't raise an error
-    with pytest.raises(ValueError, match=msg):
-        res.news(res2, comparison_type='previous')
 
 
 @pytest.mark.parametrize('use_periods', [True, False])

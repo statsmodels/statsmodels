@@ -1319,7 +1319,7 @@ class KalmanFilter(Representation):
         # Note: we don't even need selection after the first point, because
         # the state shocks will be zeros in every period except the first.
         sim_model = self.clone(
-            endog=np.empty((steps, self.k_endog), dtype=self.dtype),
+            endog=np.zeros((steps, self.k_endog), dtype=self.dtype),
             obs_intercept=np.zeros(self.k_endog),
             design=self['design', :, :, :steps],
             obs_cov=np.zeros((self.k_endog, self.k_endog)),
@@ -2083,7 +2083,7 @@ class FilterResults(FrozenRepresentation):
                            'stationary_cov': stationary_cov})
 
             # Construct the new endogenous array.
-            endog = np.empty((nforecast, self.k_endog)) * np.nan
+            endog = np.zeros((nforecast, self.k_endog)) * np.nan
             model = self.model.extend(
                 endog, start=kf_start, end=kf_end - nforecast, **kwargs)
             # Have to retroactively modify the model's endog

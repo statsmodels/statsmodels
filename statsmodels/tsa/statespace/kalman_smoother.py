@@ -363,7 +363,8 @@ class KalmanSmoother(KalmanFilter):
 
     def smooth(self, smoother_output=None, smooth_method=None, results=None,
                run_filter=True, prefix=None, complex_step=False,
-               **kwargs):
+               update_representation=True, update_filter=True,
+               update_smoother=True, **kwargs):
         """
         Apply the Kalman smoother to the statespace model.
 
@@ -394,8 +395,14 @@ class KalmanSmoother(KalmanFilter):
 
         # Create the results object
         results = self.results_class(self)
-        results.update_representation(self)
-        results.update_filter(kfilter)
+        if update_representation:
+            results.update_representation(self)
+        if update_filter:
+            results.update_filter(kfilter)
+        else:
+            # (even if we don't update all filter results, still need to
+            # update this)
+            results.nobs_diffuse = kfilter.nobs_diffuse
 
         # Run the smoother
         if smoother_output is None:
@@ -403,7 +410,8 @@ class KalmanSmoother(KalmanFilter):
         smoother = self._smooth(smoother_output, results=results, **kwargs)
 
         # Update the results
-        results.update_smoother(smoother)
+        if update_smoother:
+            results.update_smoother(smoother)
 
         return results
 
@@ -710,6 +718,9 @@ class SmootherResults(FilterResults):
             self.scaled_smoothed_estimator_cov /= self.scale
             self.smoothing_error /= self.scale
 
+        # Cache
+        self.__smoothed_state_autocovariance = {}
+
     def _smoothed_state_autocovariance(self, shift, start, end,
                                        extend_kwargs=None):
         """
@@ -766,11 +777,17 @@ class SmootherResults(FilterResults):
             res = mod.smooth()
 
             if shift != 0:
-                L = np.concatenate((L, res.innovations_transition), axis=2)
-                P = np.concatenate((P, res.predicted_state_cov[..., 1:]),
+                start_insample = max(0, start)
+                L = np.concatenate((L[..., start_insample:],
+                                    res.innovations_transition), axis=2)
+                P = np.concatenate((P[..., start_insample:],
+                                    res.predicted_state_cov[..., 1:]),
                                    axis=2)
-                N = np.concatenate((N, res.scaled_smoothed_estimator_cov),
+                N = np.concatenate((N[..., start_insample:],
+                                    res.scaled_smoothed_estimator_cov),
                                    axis=2)
+                end -= start_insample
+                start -= start_insample
             else:
                 acov = np.concatenate((acov, res.predicted_state_cov), axis=2)
 
@@ -920,6 +937,17 @@ class SmootherResults(FilterResults):
                Time Series Analysis by State Space Methods: Second Edition.
                Oxford University Press.
         """
+        # We can cache the results for time-invariant models
+        cache_key = None
+        if extend_kwargs is None or len(extend_kwargs) == 0:
+            cache_key = (lag, t, start, end)
+
+        # Short-circuit for a cache-hit
+        if (cache_key is not None and
+                cache_key in self.__smoothed_state_autocovariance):
+            return self.__smoothed_state_autocovariance[cache_key]
+
+        # Switch to only positive values for `lag`
         forward_autocovariances = False
         if lag < 0:
             lag = -lag
@@ -958,8 +986,10 @@ class SmootherResults(FilterResults):
             acov = self.smoothed_state_cov
             if end == self.nobs + 1:
                 acov = np.concatenate(
-                    (acov, self.predicted_state_cov[..., -1:]), axis=2)
-            acov = acov.T[start:end]
+                    (acov[..., start:], self.predicted_state_cov[..., -1:]),
+                    axis=2).T
+            else:
+                acov = acov.T[start:end]
         # In-sample, we can compute up to Cov(T, T+1) or Cov(T+1, T) and down
         # to Cov(1, 2) or Cov(2, 1). So:
         # - For lag=1 we set Cov(1, 0) = np.nan and then can compute up to T-1
@@ -967,9 +997,17 @@ class SmootherResults(FilterResults):
         #   out-of-sample value Cov(T+1, T)
         elif (lag == 1 and self.smoothed_state_autocov is not None and
                 not forward_autocovariances and end <= self.nobs + 1):
-            nans = np.zeros((self.k_states, self.k_states, lag)) * np.nan
-            acov = np.concatenate((nans, self.smoothed_state_autocov),
-                                  axis=2).transpose(2, 0, 1)[start:end]
+            # nans = np.zeros((self.k_states, self.k_states, lag)) * np.nan
+            # acov = np.concatenate((nans, self.smoothed_state_autocov),
+            #                       axis=2).transpose(2, 0, 1)[start:end]
+            if start == 0:
+                nans = np.zeros((self.k_states, self.k_states, lag)) * np.nan
+                acov = np.concatenate(
+                    (nans, self.smoothed_state_autocov[..., :end - 1]),
+                    axis=2)
+            else:
+                acov = self.smoothed_state_autocov[..., start - 1:end - 1]
+            acov = acov.transpose(2, 0, 1)
         # - For lag=-1 we can compute T in-sample values, Cov(1, 2), ...,
         #   Cov(T, T+1) but we cannot compute the first out-of-sample value
         #   Cov(T+1, T+2).
@@ -996,6 +1034,10 @@ class SmootherResults(FilterResults):
             acov = acov[0]
         else:
             acov = acov.transpose(1, 2, 0)
+
+        # Fill in the cache, if applicable
+        if cache_key is not None:
+            self.__smoothed_state_autocovariance[cache_key] = acov
 
         return acov
 
@@ -1118,7 +1160,7 @@ class SmootherResults(FilterResults):
                              ' `previous`')
 
         if not (self.k_endog == previous.k_endog and
-                self.k_endog == previous.k_endog and
+                self.k_states == previous.k_states and
                 self.k_posdef == previous.k_posdef):
             raise ValueError(error_ss % 'different state space dimensions than'
                              ' `previous`')
@@ -1186,6 +1228,14 @@ class SmootherResults(FilterResults):
             rev_endog = self.endog.T[:previous.nobs].copy()
             rev_endog[previous.missing.astype(bool).T] = np.nan
             rev_mod = previous.model.clone(rev_endog, **clone_kwargs)
+            # TODO: performance: can get a performance improvement for large
+            #       models with `update_filter=False, update_smoother=False`,
+            #       but then will need to manually populate the fields that we
+            #       need for what we do below (i.e. we call
+            #       `smoothed_forecasts` and `predict`)
+            # TODO: performance: we don't need to smooth back through the
+            #       entire sample for what we're doing, since we only need
+            #       smoothed_forecasts for the impact period
             revised = rev_mod.smooth()
 
         # Compute impacts from the revisions, if any

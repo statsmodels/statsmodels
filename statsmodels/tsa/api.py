@@ -15,7 +15,7 @@ __all__ = ['AR', 'arima', 'AutoReg', 'ARMA', 'ARIMA',
            'x13_arima_select_order', 'x13_arima_analysis',
            'statespace',
            'SARIMAX', 'UnobservedComponents', 'VARMAX', 'DynamicFactor',
-           'MarkovRegression', 'MarkovAutoregression',
+           'DynamicFactorMQ', 'MarkovRegression', 'MarkovAutoregression',
            'ExponentialSmoothing', 'SimpleExpSmoothing', 'Holt',
            'arma_generate_sample', 'ArmaProcess', 'STL', 'STLForecast',
            'bk_filter', 'cf_filter', 'hp_filter']
@@ -47,6 +47,7 @@ from .statespace.sarimax import SARIMAX
 from .statespace.structural import UnobservedComponents
 from .statespace.varmax import VARMAX
 from .statespace.dynamic_factor import DynamicFactor
+from .statespace.dynamic_factor_mq import DynamicFactorMQ
 from .regime_switching.markov_regression import MarkovRegression
 from .regime_switching.markov_autoregression import MarkovAutoregression
 from .holtwinters import ExponentialSmoothing, SimpleExpSmoothing, Holt
