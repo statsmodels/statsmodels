@@ -30,7 +30,7 @@ import statsmodels.base.model as base
 import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
 import statsmodels.regression._tools as reg_tools
-from warnings import warn
+import warnings
 
 from statsmodels.graphics._regressionplots_doc import (
     _plot_added_variable_doc,
@@ -53,6 +53,24 @@ __all__ = ['GLM', 'PredictionResults']
 def _check_convergence(criterion, iteration, atol, rtol):
     return np.allclose(criterion[iteration], criterion[iteration + 1],
                        atol=atol, rtol=rtol)
+
+
+# Remove after 0.13 when bic changes to bic llf
+class _ModuleVariable:
+    _value = None
+
+    @property
+    def use_bic_llf(self):
+        return self._value
+
+    def set_use_bic_llf(self, val):
+        if val not in (True, False, None):
+            raise ValueError("Must be True, False or None")
+        self._value = bool(val) if val is not None else val
+
+
+_use_bic_helper = _ModuleVariable()
+SET_USE_BIC_LLF = _use_bic_helper.set_use_bic_llf
 
 
 class GLM(base.LikelihoodModel):
@@ -272,10 +290,10 @@ class GLM(base.LikelihoodModel):
         if (family is not None) and not isinstance(family.link,
                                                    tuple(family.safe_links)):
 
-            warn(("The %s link function does not respect the domain "
-                  "of the %s family.") %
-                  (family.link.__class__.__name__,
-                  family.__class__.__name__), DomainWarning)
+            warnings.warn((f"The {type(family.link).__name__} link function "
+                           "does not respect the domain of the "
+                           f"{type(family).__name__} family."),
+                          DomainWarning)
 
         if exposure is not None:
             exposure = np.log(exposure)
@@ -870,7 +888,7 @@ class GLM(base.LikelihoodModel):
         elif exposure is None:
             exposure = 0.
         else:
-            exposure = np.log(exposure)
+            exposure = np.log(np.asarray(exposure))
 
         if exog is None:
             exog = self.exog
@@ -1108,8 +1126,8 @@ class GLM(base.LikelihoodModel):
         try:
             cov_p = np.linalg.inv(-self.hessian(rslt.params, observed=oim)) / scale
         except LinAlgError:
-            warn('Inverting hessian failed, no bse or cov_params '
-                 'available', HessianInversionWarning)
+            warnings.warn('Inverting hessian failed, no bse or cov_params '
+                          'available', HessianInversionWarning)
             cov_p = None
 
         results_class = getattr(self, '_results_class', GLMResults)
@@ -1302,8 +1320,7 @@ class GLM(base.LikelihoodModel):
         self.scale = self.estimate_scale(self.mu)
 
         if not result.converged:
-            msg = "Elastic net fitting did not converge"
-            warn(msg)
+            warnings.warn("Elastic net fitting did not converge")
 
         return result
 
@@ -1678,19 +1695,69 @@ class GLMResults(base.LikelihoodModelResults):
     def aic(self):
         """
         Akaike Information Criterion
-        -2 * `llf` + 2*(`df_model` + 1)
+        -2 * `llf` + 2 * (`df_model` + 1)
         """
         return -2 * self.llf + 2 * (self.df_model + 1)
 
-    @cached_value
+    @property
     def bic(self):
         """
         Bayes Information Criterion
+
+        `deviance` - `df_resid` * log(`nobs`)
+
+        .. warning::
+
+            The current definition is base don the deviance rather than the
+            log-likelihood. This is not consistent with the AIC definition,
+            and after 0.13 both will make use of the log-likelihood definition.
+
+        Notes
+        -----
+        The log-likelihood version is defined
+        -2 * `llf` + (`df_model` + 1)*log(n)
+        """
+        if _use_bic_helper.use_bic_llf not in (True, False):
+            warnings.warn(
+                "The bic value is computed using the deviance formula. After "
+                "0.13 this will change to the log-likelihood based formula. "
+                "This change has no impact on the relative rank of models "
+                "compared using BIC. You can directly access the "
+                "log-likelihood version using the `bic_llf` attribute. You "
+                "can suppress this message by calling "
+                "statsmodels.genmod.generalized_linear_model.SET_USE_BIC_LLF "
+                "with True to get the LLF-based version now or False to retain"
+                "the deviance version.",
+                FutureWarning
+            )
+        if bool(_use_bic_helper.use_bic_llf):
+            return self.bic_llf
+
+        return self.bic_deviance
+
+    @cached_value
+    def bic_deviance(self):
+        """
+        Bayes Information Criterion
+
+        Based on the deviance,
         `deviance` - `df_resid` * log(`nobs`)
         """
         return (self.deviance -
                 (self.model.wnobs - self.df_model - 1) *
                 np.log(self.model.wnobs))
+
+    @cached_value
+    def bic_llf(self):
+        """
+        Bayes Information Criterion
+
+        Based on the log-likelihood,
+        -2 * `llf` + log(n) * (`df_model` + 1)
+        """
+        return -2*self.llf + (self.df_model+1)*np.log(
+            self.df_model+self.df_resid+1
+        )
 
     @Appender(pred.get_prediction_glm.__doc__)
     def get_prediction(self, exog=None, exposure=None, offset=None,
@@ -1919,8 +1986,10 @@ class GLMResults(base.LikelihoodModelResults):
         self.method = 'IRLS'
         from statsmodels.iolib import summary2
         smry = summary2.Summary()
-        smry.add_base(results=self, alpha=alpha, float_format=float_format,
-                      xname=xname, yname=yname, title=title)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", FutureWarning)
+            smry.add_base(results=self, alpha=alpha, float_format=float_format,
+                          xname=xname, yname=yname, title=title)
         if hasattr(self, 'constraints'):
             smry.add_text('Model has been estimated subject to linear '
                           'equality constraints.')

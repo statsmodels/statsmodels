@@ -609,7 +609,7 @@ cdef void {{prefix}}companion_predicted_state_cov({{prefix}}KalmanFilter kfilter
                 )
 
 cdef {{cython_type}} {{prefix}}inverse_noop_univariate({{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model, {{cython_type}} determinant) except *:
-    return 0
+    return -np.inf
 
 cdef {{cython_type}} {{prefix}}loglikelihood_univariate({{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model, {{cython_type}} determinant):
     return 0
