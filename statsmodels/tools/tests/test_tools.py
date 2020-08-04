@@ -329,22 +329,14 @@ class TestCategoricalNumerical(object):
         assert_array_equal(test_dum, self.dummy)
         assert_equal(len(dum.dtype.names), 5)
 
-    @pytest.mark.xfail(reason="Call to tools.categorical raises "
-                              "AttributeError.  Previously this was "
-                              "commented-out with the comment "
-                              "'comment out until we have type coercion'.",
-                       strict=True, raises=AttributeError)
+    @pytest.mark.skip(reason="categorical is deprecated")
     def test_arraylike2d(self):
         des = tools.categorical(self.structdes.tolist(), col=2)
         test_des = des[:,-5:]
         assert_array_equal(test_des, self.dummy)
         assert_equal(des.shape[1], 9)
 
-    @pytest.mark.xfail(reason="Call to tools.categorical raises "
-                              "AttributeError.  Previously this was "
-                              "commented-out with the comment "
-                              "'comment out until we have type coercion'.",
-                       strict=True, raises=AttributeError)
+    @pytest.mark.skip(reason="categorical is deprecated")
     def test_arraylike1d(self):
         instr = self.structdes['instrument'].tolist()
         dum = tools.categorical(instr)
@@ -352,22 +344,14 @@ class TestCategoricalNumerical(object):
         assert_array_equal(test_dum, self.dummy)
         assert_equal(dum.shape[1], 6)
 
-    @pytest.mark.xfail(reason="Call to tools.categorical raises "
-                              "AttributeError.  Previously this was "
-                              "commented-out with the comment "
-                              "'comment out until we have type coercion'.",
-                       strict=True, raises=AttributeError)
+    @pytest.mark.skip(reason="categorical is deprecated")
     def test_arraylike2d_drop(self):
         des = tools.categorical(self.structdes.tolist(), col=2, drop=True)
         test_des = des[:,-5:]
         assert_array_equal(test_des, self.dummy)
         assert_equal(des.shape[1], 8)
 
-    @pytest.mark.xfail(reason="Call to tools.categorical raises "
-                              "AttributeError.  Previously this was "
-                              "commented-out with the comment "
-                              "'comment out until we have type coercion'.",
-                       strict=True, raises=AttributeError)
+    @pytest.mark.skip(reason="categorical is deprecated")
     def test_arraylike1d_drop(self):
         instr = self.structdes['instrument'].tolist()
         dum = tools.categorical(instr, drop=True)
@@ -377,29 +361,20 @@ class TestCategoricalNumerical(object):
 
 class TestCategoricalString(TestCategoricalNumerical):
 
-    @pytest.mark.xfail(reason="No idea!  But xfailing instead of leaving "
-                              "this commented out with the comment "
-                              "'comment out until we have type coercion'",
-                              strict=False)
+    @pytest.mark.skip(reason="categorical is deprecated")
     def test_array2d(self):
         des = np.column_stack((self.des, self.instr, self.des))
         des = tools.categorical(des, col=2)
         assert_array_equal(des[:, -5:], self.dummy)
         assert_equal(des.shape[1], 10)
 
-    @pytest.mark.xfail(reason="No idea!  But xfailing instead of leaving "
-                              "this commented out with the comment "
-                              "'comment out until we have type coercion'",
-                              strict=False)
+    @pytest.mark.skip(reason="categorical is deprecated")
     def test_array1d(self):
         des = tools.categorical(self.instr)
         assert_array_equal(des[:, -5:], self.dummy)
         assert_equal(des.shape[1], 6)
 
-    @pytest.mark.xfail(reason="No idea!  But xfailing instead of leaving "
-                              "this commented out with the comment "
-                              "'comment out until we have type coercion'",
-                              strict=False)
+    @pytest.mark.skip(reason="categorical is deprecated")
     def test_array2d_drop(self):
         des = np.column_stack((self.des, self.instr, self.des))
         des = tools.categorical(des, col=2, drop=True)
@@ -486,23 +461,19 @@ class TestCategoricalString(TestCategoricalNumerical):
         assert_array_equal(test_dum, self.dummy)
         assert_equal(len(dum.dtype.names), 5)
 
-    @pytest.mark.xfail(reason="Test has not been implemented for this class.",
-                       strict=True, raises=NotImplementedError)
+    @pytest.mark.skip(reason="categorical is deprecated")
     def test_arraylike2d(self):
         raise NotImplementedError
 
-    @pytest.mark.xfail(reason="Test has not been implemented for this class.",
-                       strict=True, raises=NotImplementedError)
+    @pytest.mark.skip(reason="categorical is deprecated")
     def test_arraylike1d(self):
         raise NotImplementedError
 
-    @pytest.mark.xfail(reason="Test has not been implemented for this class.",
-                       strict=True, raises=NotImplementedError)
+    @pytest.mark.skip(reason="categorical is deprecated")
     def test_arraylike2d_drop(self):
         raise NotImplementedError
 
-    @pytest.mark.xfail(reason="Test has not been implemented for this class.",
-                       strict=True, raises=NotImplementedError)
+    @pytest.mark.skip(reason="categorical is deprecated")
     def test_arraylike1d_drop(self):
         raise NotImplementedError
 

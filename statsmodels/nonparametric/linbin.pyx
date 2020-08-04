@@ -20,7 +20,7 @@ def fast_linbin(np.ndarray[DOUBLE] X, double a, double b, int M, int trunc=1):
         Py_ssize_t i, li_i
         int nobs = X.shape[0]
         double delta = (b - a)/(M - 1)
-        np.ndarray[DOUBLE] gcnts = np.zeros(M, np.float)
+        np.ndarray[DOUBLE] gcnts = np.zeros(M, float)
         np.ndarray[DOUBLE] lxi = (X - a)/delta
         np.ndarray[INT] li = lxi.astype(int)
         np.ndarray[DOUBLE] rem = lxi - li

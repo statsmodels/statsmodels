@@ -109,19 +109,14 @@ class CheckGenericMixin(object):
         assert_equal(res1.bse[drop_index], 0)
         # OSX has many slight failures on this test
         tol = 1e-8 if PLATFORM_OSX else 1e-10
-        with pytest.warns(RuntimeWarning, match="invalid value encountered"):
-            # division by zero in bse
-            tvals1 = res1.tvalues[keep_index_p]
+        tvals1 = res1.tvalues[keep_index_p]
         assert_allclose(tvals1, res2.tvalues, rtol=tol, atol=tol)
 
         # See gh5993
         if PLATFORM_LINUX32 or SCIPY_GT_14:
             pvals1 = res1.pvalues[keep_index_p]
         else:
-            with pytest.warns(RuntimeWarning,
-                              match="invalid value encountered"):
-                # passing NaN into scipy.stats functions
-                pvals1 = res1.pvalues[keep_index_p]
+            pvals1 = res1.pvalues[keep_index_p]
         assert_allclose(pvals1, res2.pvalues, rtol=tol, atol=tol)
 
         if hasattr(res1, 'resid'):
@@ -259,19 +254,14 @@ class CheckGenericMixin(object):
             assert_allclose(res1.params[drop_index], 0, rtol=1e-10)
             assert_allclose(res1.bse[keep_index_p], res2.bse, rtol=1e-8)
             assert_allclose(res1.bse[drop_index], 0, rtol=1e-10)
-            with pytest.warns(RuntimeWarning, match="invalid value"):
-                # zero in bse, so division by zero warning
-                tvals1 = res1.tvalues[keep_index_p]
+            tvals1 = res1.tvalues[keep_index_p]
             assert_allclose(tvals1, res2.tvalues, rtol=5e-8)
 
             # See gh5993
             if PLATFORM_LINUX32 or SCIPY_GT_14:
                 pvals1 = res1.pvalues[keep_index_p]
             else:
-                with pytest.warns(RuntimeWarning,
-                                  match="invalid value encountered"):
-                    # passing NaN into scipy.stats functions
-                    pvals1 = res1.pvalues[keep_index_p]
+                pvals1 = res1.pvalues[keep_index_p]
             assert_allclose(pvals1, res2.pvalues, rtol=1e-6, atol=1e-30)
 
             if hasattr(res1, 'resid'):

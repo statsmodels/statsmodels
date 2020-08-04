@@ -44,7 +44,7 @@ def diagnostic_data():
     return data
 
 
-def compare_to_reference(sp, sp_dict, decimal=(14, 14)):
+def compare_to_reference(sp, sp_dict, decimal=(12, 12)):
     assert_allclose(sp[0], sp_dict['statistic'], atol=10 ** -decimal[0],
                     rtol=10 ** -decimal[0])
     assert_allclose(sp[1], sp_dict['pvalue'], atol=10 ** -decimal[1],
@@ -65,7 +65,7 @@ def test_gq():
                           pvalue=1.246141976112324e-30, distr='f')
 
     gq = smsdia.het_goldfeldquandt(endog, exog, split=0.5)
-    compare_to_reference(gq, het_gq_greater, decimal=(13, 14))
+    compare_to_reference(gq, het_gq_greater, decimal=(12, 12))
     assert_equal(gq[-1], 'increasing')
 
 
@@ -127,13 +127,13 @@ class TestDiagnosticG(object):
 
         cov = sw.cov_hac_simple(res, nlags=4, use_correction=False)
         bse_hac = sw.se_cov(cov)
-        assert_almost_equal(cov, cov_hac_4, decimal=14)
-        assert_almost_equal(bse_hac, np.sqrt(np.diag(cov)), decimal=14)
+        assert_almost_equal(cov, cov_hac_4, decimal=12)
+        assert_almost_equal(bse_hac, np.sqrt(np.diag(cov)), decimal=12)
 
         cov = sw.cov_hac_simple(res, nlags=10, use_correction=False)
         bse_hac = sw.se_cov(cov)
-        assert_almost_equal(cov, cov_hac_10, decimal=14)
-        assert_almost_equal(bse_hac, np.sqrt(np.diag(cov)), decimal=14)
+        assert_almost_equal(cov, cov_hac_10, decimal=12)
+        assert_almost_equal(bse_hac, np.sqrt(np.diag(cov)), decimal=12)
 
     def test_het_goldfeldquandt(self):
         # TODO: test options missing
@@ -165,23 +165,23 @@ class TestDiagnosticG(object):
         endogg, exogg = self.endog, self.exog
         # tests
         gq = smsdia.het_goldfeldquandt(endogg, exogg, split=0.5)
-        compare_to_reference(gq, het_gq_greater, decimal=(14, 14))
+        compare_to_reference(gq, het_gq_greater, decimal=(12, 12))
         assert_equal(gq[-1], 'increasing')
 
         gq = smsdia.het_goldfeldquandt(endogg, exogg, split=0.5,
                                        alternative='decreasing')
-        compare_to_reference(gq, het_gq_less, decimal=(14, 14))
+        compare_to_reference(gq, het_gq_less, decimal=(12, 12))
         assert_equal(gq[-1], 'decreasing')
 
         gq = smsdia.het_goldfeldquandt(endogg, exogg, split=0.5,
                                        alternative='two-sided')
-        compare_to_reference(gq, het_gq_two_sided, decimal=(14, 14))
+        compare_to_reference(gq, het_gq_two_sided, decimal=(12, 12))
         assert_equal(gq[-1], 'two-sided')
 
         # TODO: forcing the same split as R 202-90-90-1=21
         gq = smsdia.het_goldfeldquandt(endogg, exogg, split=90, drop=21,
                                        alternative='two-sided')
-        compare_to_reference(gq, het_gq_two_sided_01, decimal=(14, 14))
+        compare_to_reference(gq, het_gq_two_sided_01, decimal=(12, 12))
         assert_equal(gq[-1], 'two-sided')
         # TODO other options ???
 
@@ -249,13 +249,13 @@ class TestDiagnosticG(object):
             res2 = smsdia.het_arch(resid, nlags=5, autolag='aic', store=True)
         rs2 = res2[-1]
 
-        assert_almost_equal(rs2.resols.params, rs1.resols.params, decimal=13)
-        assert_almost_equal(res2[:4], res1[:4], decimal=13)
+        assert_almost_equal(rs2.resols.params, rs1.resols.params, decimal=12)
+        assert_almost_equal(res2[:4], res1[:4], decimal=12)
 
         # test that smallest lag, nlags=1 works
         with pytest.warns(FutureWarning, match="autolag is deprecated and"):
             res3 = smsdia.het_arch(resid, nlags=1, autolag='aic')
-        assert_almost_equal(res3[:4], res1[:4], decimal=13)
+        assert_almost_equal(res3[:4], res1[:4], decimal=12)
 
     def test_acorr_breusch_godfrey(self):
         res = self.res
@@ -274,13 +274,13 @@ class TestDiagnosticG(object):
         bg = smsdia.acorr_breusch_godfrey(res, nlags=4)
         bg_r = [breuschgodfrey_c['statistic'], breuschgodfrey_c['pvalue'],
                 breuschgodfrey_f['statistic'], breuschgodfrey_f['pvalue']]
-        assert_almost_equal(bg, bg_r, decimal=13)
+        assert_almost_equal(bg, bg_r, decimal=11)
 
         # check that lag choice works
         with pytest.warns(FutureWarning, match="The default value of nlags"):
             bg2 = smsdia.acorr_breusch_godfrey(res, nlags=None)
         bg3 = smsdia.acorr_breusch_godfrey(res, nlags=14)
-        assert_almost_equal(bg2, bg3, decimal=13)
+        assert_almost_equal(bg2, bg3, decimal=12)
 
     def test_acorr_breusch_godfrey_multidim(self):
         res = Bunch(resid=np.empty((100, 2)))
@@ -321,9 +321,9 @@ class TestDiagnosticG(object):
                                                        boxpierce=True,
                                                        return_df=False)
         compare_to_reference([lb[-1], lbpval[-1]], ljung_box_4,
-                             decimal=(13, 13))
+                             decimal=(12, 12))
         compare_to_reference([bp[-1], bppval[-1]], ljung_box_bp_4,
-                             decimal=(13, 13))
+                             decimal=(12, 12))
 
     def test_acorr_ljung_box_big_default(self):
         res = self.res
@@ -345,9 +345,9 @@ class TestDiagnosticG(object):
                                                        lags=lags,
                                                        return_df=False)
         compare_to_reference([lb[-1], lbpval[-1]], ljung_box_none,
-                             decimal=(13, 13))
+                             decimal=(12, 12))
         compare_to_reference([bp[-1], bppval[-1]], ljung_box_bp_none,
-                             decimal=(13, 13))
+                             decimal=(12, 12))
 
     def test_acorr_ljung_box_small_default(self):
         res = self.res
@@ -370,9 +370,9 @@ class TestDiagnosticG(object):
                                                        lags=13,
                                                        return_df=False)
         compare_to_reference([lb[-1], lbpval[-1]], ljung_box_small,
-                             decimal=(13, 13))
+                             decimal=(12, 12))
         compare_to_reference([bp[-1], bppval[-1]], ljung_box_bp_small,
-                             decimal=(13, 13))
+                             decimal=(12, 12))
 
     def test_acorr_ljung_box_against_r(self, reset_randomstate):
         rs = np.random.RandomState(9876543)
@@ -440,9 +440,9 @@ class TestDiagnosticG(object):
                                     parameters=(122, 77), distr='f')
 
         rb = smsdia.linear_rainbow(self.res)
-        compare_to_reference(rb, raintest, decimal=(13, 14))
+        compare_to_reference(rb, raintest, decimal=(12, 12))
         rb = smsdia.linear_rainbow(self.res, frac=0.4)
-        compare_to_reference(rb, raintest_fraction_04, decimal=(13, 14))
+        compare_to_reference(rb, raintest_fraction_04, decimal=(12, 12))
 
     def test_compare_lr(self):
         res = self.res
@@ -477,10 +477,10 @@ class TestDiagnosticG(object):
                   2.715438978051544, 0.007203854534057954, '**')]
 
         jt1 = smsdia.compare_j(res2, res)
-        assert_almost_equal(jt1, jtest[0][3:5], decimal=13)
+        assert_almost_equal(jt1, jtest[0][3:5], decimal=12)
 
         jt2 = smsdia.compare_j(res, res2)
-        assert_almost_equal(jt2, jtest[1][3:5], decimal=13)
+        assert_almost_equal(jt2, jtest[1][3:5], decimal=12)
 
     def test_compare_j_class(self, diagnostic_data):
         # Only to verify not broken, deprecated
@@ -561,7 +561,7 @@ class TestDiagnosticG(object):
 
         bh = smsdia.breaks_hansen(self.res)
         assert_almost_equal(bh[0], breaks_nyblom_hansen['statistic'],
-                            decimal=13)
+                            decimal=12)
         # TODO: breaks_hansen does not return pvalues
 
     def test_recursive_residuals(self):
@@ -682,11 +682,11 @@ class TestDiagnosticG(object):
         lf2 = smsdia.lilliefors(res.resid ** 2, pvalmethod='approx')
         lf3 = smsdia.lilliefors(res.resid[:20], pvalmethod='approx')
 
-        compare_to_reference(lf1, lilliefors1, decimal=(14, 14))
+        compare_to_reference(lf1, lilliefors1, decimal=(12, 12))
         compare_to_reference(lf2, lilliefors2,
-                             decimal=(14, 14))  # pvalue very small
+                             decimal=(12, 12))  # pvalue very small
         assert_allclose(lf2[1], lilliefors2['pvalue'], rtol=1e-10)
-        compare_to_reference(lf3, lilliefors3, decimal=(14, 1))
+        compare_to_reference(lf3, lilliefors3, decimal=(12, 1))
         # R uses different approximation for pvalue in last case
 
         # > ad = ad.test(residuals(fm))
@@ -721,23 +721,23 @@ class TestDiagnosticG(object):
 
         # basic
         assert_almost_equal(np.array(lsdiag['cov.scaled']).reshape(3, 3),
-                            res.cov_params(), decimal=14)
+                            res.cov_params(), decimal=12)
         assert_almost_equal(np.array(lsdiag['cov.unscaled']).reshape(3, 3),
-                            res.normalized_cov_params, decimal=14)
+                            res.normalized_cov_params, decimal=12)
 
         c0, c1 = infl.cooks_distance  # TODO: what's c1
 
-        assert_almost_equal(c0, lsdiag['cooks'], decimal=14)
-        assert_almost_equal(infl.hat_matrix_diag, lsdiag['hat'], decimal=14)
+        assert_almost_equal(c0, lsdiag['cooks'], decimal=12)
+        assert_almost_equal(infl.hat_matrix_diag, lsdiag['hat'], decimal=12)
         assert_almost_equal(infl.resid_studentized_internal,
-                            lsdiag['std.res'], decimal=14)
+                            lsdiag['std.res'], decimal=12)
 
         # slow:
         # infl._get_all_obs()  #slow, nobs estimation loop, called implicitly
         dffits, dffth = infl.dffits
-        assert_almost_equal(dffits, lsdiag['dfits'], decimal=14)
+        assert_almost_equal(dffits, lsdiag['dfits'], decimal=12)
         assert_almost_equal(infl.resid_studentized_external,
-                            lsdiag['stud.res'], decimal=14)
+                            lsdiag['stud.res'], decimal=12)
 
         fn = os.path.join(cur_dir, "results/influence_measures_R.csv")
         infl_r = pd.read_csv(fn, index_col=0)
@@ -745,12 +745,12 @@ class TestDiagnosticG(object):
         # infl_bool_r  = pandas.read_csv(fn, index_col=0,
         #                                converters=dict(zip(lrange(7),[conv]*7)))
         infl_r2 = np.asarray(infl_r)
-        assert_almost_equal(infl.dfbetas, infl_r2[:, :3], decimal=13)
-        assert_almost_equal(infl.cov_ratio, infl_r2[:, 4], decimal=14)
+        assert_almost_equal(infl.dfbetas, infl_r2[:, :3], decimal=12)
+        assert_almost_equal(infl.cov_ratio, infl_r2[:, 4], decimal=12)
         # duplicates
-        assert_almost_equal(dffits, infl_r2[:, 3], decimal=14)
-        assert_almost_equal(c0, infl_r2[:, 5], decimal=14)
-        assert_almost_equal(infl.hat_matrix_diag, infl_r2[:, 6], decimal=14)
+        assert_almost_equal(dffits, infl_r2[:, 3], decimal=12)
+        assert_almost_equal(c0, infl_r2[:, 5], decimal=12)
+        assert_almost_equal(infl.hat_matrix_diag, infl_r2[:, 6], decimal=12)
 
         # TODO: finish and check thresholds and pvalues
         # Note: for dffits, R uses a threshold around 0.36,
@@ -894,9 +894,9 @@ def test_influence_wrapped():
     # basic
     # already tested
     # assert_almost_equal(lsdiag['cov.scaled'],
-    #                    res.cov_params().values.ravel(), decimal=14)
+    #                    res.cov_params().values.ravel(), decimal=12)
     # assert_almost_equal(lsdiag['cov.unscaled'],
-    #                    res.normalized_cov_params.values.ravel(), decimal=14)
+    #                    res.normalized_cov_params.values.ravel(), decimal=12)
 
     infl = oi.OLSInfluence(res)
 
@@ -912,16 +912,16 @@ def test_influence_wrapped():
     c0, c1 = infl.cooks_distance  # TODO: what's c1, it's pvalues? -ss
 
     # NOTE: we get a hard-cored 5 decimals with pandas testing
-    assert_almost_equal(c0, lsdiag['cooks'], 14)
-    assert_almost_equal(infl.hat_matrix_diag, (lsdiag['hat']), 14)
+    assert_almost_equal(c0, lsdiag['cooks'], 12)
+    assert_almost_equal(infl.hat_matrix_diag, (lsdiag['hat']), 12)
     assert_almost_equal(infl.resid_studentized_internal,
-                        lsdiag['std.res'], 14)
+                        lsdiag['std.res'], 12)
 
     # slow:
     dffits, dffth = infl.dffits
-    assert_almost_equal(dffits, lsdiag['dfits'], 14)
+    assert_almost_equal(dffits, lsdiag['dfits'], 12)
     assert_almost_equal(infl.resid_studentized_external,
-                        lsdiag['stud.res'], 14)
+                        lsdiag['stud.res'], 12)
 
     fn = os.path.join(cur_dir, "results/influence_measures_R.csv")
     infl_r = pd.read_csv(fn, index_col=0)
@@ -930,8 +930,8 @@ def test_influence_wrapped():
     #                                converters=dict(zip(lrange(7),[conv]*7)))
     infl_r2 = np.asarray(infl_r)
     # TODO: finish wrapping this stuff
-    assert_almost_equal(infl.dfbetas, infl_r2[:, :3], decimal=13)
-    assert_almost_equal(infl.cov_ratio, infl_r2[:, 4], decimal=14)
+    assert_almost_equal(infl.dfbetas, infl_r2[:, :3], decimal=12)
+    assert_almost_equal(infl.cov_ratio, infl_r2[:, 4], decimal=12)
 
 
 def test_influence_dtype():

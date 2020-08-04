@@ -4,20 +4,24 @@ Tests for news results
 Author: Chad Fulton
 License: BSD-3
 """
-import numpy as np
-from numpy.testing import assert_allclose, assert_equal, assert_
-try:
-    from pandas.util.testing import assert_frame_equal, assert_series_equal
-except ImportError:
-    from pandas.testing import assert_frame_equal, assert_series_equal
-import pandas as pd
+from statsmodels.compat.pandas import (
+    assert_frame_equal,
+    assert_series_equal,
+    pandas_lt_25_0,
+)
 
+import numpy as np
+from numpy.testing import assert_, assert_allclose, assert_equal
+import pandas as pd
 import pytest
 
 from statsmodels import datasets
-from statsmodels.compat.pandas import pandas_lt_25_0
 from statsmodels.tsa.statespace import (
-    sarimax, structural, varmax, dynamic_factor)
+    dynamic_factor,
+    sarimax,
+    structural,
+    varmax,
+)
 
 dta = datasets.macrodata.load_pandas().data
 dta.index = pd.period_range(start='1959Q1', end='2009Q3', freq='Q')

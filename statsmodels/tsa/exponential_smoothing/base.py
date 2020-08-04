@@ -700,9 +700,11 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
             else:
                 squared_resid = self.standardized_forecasts_error**2
                 if squared_resid.ndim == 1:
+                    squared_resid = np.asarray(squared_resid)
                     squared_resid = squared_resid[np.newaxis, :]
                 nobs_effective = self.nobs_effective
                 d = 0
+            squared_resid = np.asarray(squared_resid)
 
             test_statistics = []
             p_values = []

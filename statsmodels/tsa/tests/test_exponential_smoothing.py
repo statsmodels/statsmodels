@@ -950,4 +950,4 @@ def test_exact_prediction_intervals(austourists_model_fit):
     s_AAdA = fit._relative_forecast_variance(steps)
     fit.model = DummyModel("AAA")
     s_AAA = fit._relative_forecast_variance(steps)
-    assert_almost_equal(s_AAdA, s_AAA, 3)
+    assert_almost_equal(s_AAdA, s_AAA, 2)

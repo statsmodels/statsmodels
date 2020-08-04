@@ -4,21 +4,20 @@ Basic tests for the BM model
 These test standard that the state space model is set up as desired, that
 expected exceptions are raised, etc.
 """
-import numpy as np
-import pandas as pd
+from statsmodels.compat.pandas import assert_frame_equal, assert_series_equal
 
+import numpy as np
+from numpy.testing import assert_, assert_allclose, assert_equal
+import pandas as pd
 import pytest
 
-from numpy.testing import assert_allclose, assert_equal, assert_
-try:
-    from pandas.testing import assert_frame_equal, assert_series_equal
-except ImportError:
-    from pandas.util.testing import assert_frame_equal, assert_series_equal
-
-from statsmodels.tools import add_constant
 from statsmodels.regression.linear_model import OLS
+from statsmodels.tools import add_constant
 from statsmodels.tsa.statespace import (
-    sarimax, dynamic_factor_mq, dynamic_factor)
+    dynamic_factor,
+    dynamic_factor_mq,
+    sarimax,
+)
 from statsmodels.tsa.statespace.tests import test_dynamic_factor_mq_monte_carlo
 
 
