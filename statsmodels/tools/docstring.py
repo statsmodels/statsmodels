@@ -8,6 +8,8 @@ import textwrap
 from collections import namedtuple
 from collections.abc import Mapping
 
+from statsmodels.tools.sm_exceptions import ParseError
+
 
 def dedent_lines(lines):
     """Deindent a list of lines maximally"""
@@ -98,14 +100,6 @@ class Reader(object):
 
     def is_empty(self):
         return not ''.join(self._str).strip()
-
-
-class ParseError(Exception):
-    def __str__(self):
-        message = self.args[0]
-        if hasattr(self, 'docstring'):
-            message = "%s in %r" % (message, self.docstring)
-        return message
 
 
 Parameter = namedtuple('Parameter', ['name', 'type', 'desc'])
@@ -288,7 +282,7 @@ class NumpyDocString(Mapping):
             """Match ':role:`name`' or 'name'."""
             m = self._func_rgx.match(text)
             if not m:
-                raise ParseError("%s is not a item name" % text)
+                raise ParseError(f"{text} is not a item name")
             role = m.group('role')
             name = m.group('name') if role else m.group('name2')
             return name, role, m.end()
@@ -323,7 +317,7 @@ class NumpyDocString(Mapping):
                 rest = list(filter(None, [description]))
                 items.append((funcs, rest))
             else:
-                raise ParseError("%s is not a item name" % line)
+                raise ParseError(f"{line} is not a item name")
         return items
 
     def _parse_index(self, section, content):

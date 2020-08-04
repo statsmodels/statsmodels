@@ -701,6 +701,20 @@ the example below, we use the `extend` method.
   # based on parameters computed using only the training sample
   print(test_results.sse)
 
+
+Understanding the Impact of Data Revisions
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Statespace model results expose a :meth:`~mlemodel.MLEModel.news` method that
+can be used to understand the impact of data revisions -- news -- on model
+parameters.
+
+.. autosummary::
+   :toctree: generated/
+
+   news.NewsResults
+
+
 Additional options and tools
 ----------------------------
 

@@ -515,7 +515,7 @@ class NewsResults(object):
             or dates. Note that this argument is passed to the Pandas `loc`
             accessor, and so it should correspond to the labels of the model's
             index. If the model was created with data in a list or numpy array,
-            then these lables will be zero-indexes observation integers.
+            then these labels will be zero-indexes observation integers.
         impacted_variable : str, list, array, or slice, optional
             Observation variable label or slice of labels specifying particular
             impacted variables to display. The impacted variable(s) describe
@@ -534,7 +534,7 @@ class NewsResults(object):
             Set to False for the table to include every one of the multiindex
             keys at each row.
         float_format : str, optional
-            Formatter format string syntax for convering numbers to strings.
+            Formatter format string syntax for converting numbers to strings.
             Default is '%.2f'.
 
         Returns
@@ -638,7 +638,7 @@ class NewsResults(object):
             or dates. Note that this argument is passed to the Pandas `loc`
             accessor, and so it should correspond to the labels of the model's
             index. If the model was created with data in a list or numpy array,
-            then these lables will be zero-indexes observation integers.
+            then these labels will be zero-indexes observation integers.
         impacted_variable : str, list, array, or slice, optional
             Observation variable label or slice of labels specifying particular
             impacted variables to display. The impacted variable(s) describe
@@ -664,7 +664,7 @@ class NewsResults(object):
             Set to False for the table to include every one of the multiindex
             keys at each row.
         float_format : str, optional
-            Formatter format string syntax for convering numbers to strings.
+            Formatter format string syntax for converting numbers to strings.
             Default is '%.2f'.
         multiple_tables : bool, optional
             If set to True, this function will return a list of tables, one
@@ -696,7 +696,7 @@ class NewsResults(object):
               previous model for the given updated variable and date.
             - `observed` : The observed value of the new datapoint.
             - `news` : The news is the difference between the observed value
-              and the previously forecast value for a given udpated variable
+              and the previously forecast value for a given updated variable
               and date.
 
             The data contained in this table that refer to impacts are:
@@ -967,7 +967,7 @@ class NewsResults(object):
             this impact date or dates. Note that this argument is passed to the
             Pandas `loc` accessor, and so it should correspond to the labels of
             the model's index. If the model was created with data in a list or
-            numpy array, then these lables will be zero-indexes observation
+            numpy array, then these labels will be zero-indexes observation
             integers.
         impacted_variable : str, list, array, or slice, optional
             Observation variable label or slice of labels specifying particular
@@ -990,11 +990,11 @@ class NewsResults(object):
         impacts_groupby : {impact date, impacted date}
             The primary variable for grouping results in the impacts table. The
             default is to group by update date.
-        details_groupby : {update date, updated date, impact date,
-                          impacted date}
-            The primary variable for grouping results in the details table.
-            Only used if the details tables are included. The default is to
-            group by update date.
+        details_groupby : str
+            One of "update date", "updated date", "impact date", or
+            "impacted date". The primary variable for grouping results in the
+            details table. Only used if the details tables are included. The
+            default is to group by update date.
         show_revisions_columns : bool, optional
             If set to False, the impacts table will not show the impacts from
             data revisions or the total impacts. Default is to show the
@@ -1014,7 +1014,7 @@ class NewsResults(object):
             revisions and updates that lead to impacts on variables of
             interest.
         float_format : str, optional
-            Formatter format string syntax for convering numbers to strings.
+            Formatter format string syntax for converting numbers to strings.
             Default is '%.2f'.
 
         Returns

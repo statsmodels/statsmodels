@@ -400,12 +400,12 @@ a random-walk model.
 
 Prediction Results
 """"""""""""""""""
-Most foreasting methods support a ``get_prediction`` method that return
+Most forecasting methods support a ``get_prediction`` method that return
 a ``PredictionResults`` object that contains both the prediction, its
 variance and can construct a prediction interval.
 
 Results Class
-^^^^^^^^^^^^^
+~~~~~~~~~~~~~
 
 .. module:: statsmodels.tsa.base.prediction
    :synopsis: Shared objects for predictive methods

@@ -99,6 +99,7 @@ Contents
    maintainer_notes
    test_notes
    naming_conventions
+   warnings-and-exceptions
    dataset_notes
    examples
    get_involved

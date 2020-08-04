@@ -3698,6 +3698,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             The numerical threshold for determining zero impact. Default is
             that any impact less than 1e-10 is assumed to be zero.
 
+        Returns
+        -------
+        NewsResults
+            Impacts of data revisions and news on estimates
+
         References
         ----------
         .. [1] Bańbura, Marta, and Michele Modugno.
