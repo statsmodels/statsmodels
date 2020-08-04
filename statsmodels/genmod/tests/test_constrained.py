@@ -213,10 +213,14 @@ class TestGLMBinomialCountConstrained(ConstrainedCompareMixin):
         assert_allclose(res1.resid_response, res2.resid_response, rtol=1e-8)
 
     def test_glm_attr(self):
-        for attr in ['llf', 'null_deviance', 'aic', 'bic', 'df_resid',
+        for attr in ['llf', 'null_deviance', 'aic', 'df_resid',
                      'df_model', 'pearson_chi2', 'scale']:
             assert_allclose(getattr(self.res1, attr),
                             getattr(self.res2, attr), rtol=1e-10)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", FutureWarning)
+            # FutureWarning to silence BIC warning
+            assert_allclose(self.res1.bic, self.res2.bic, rtol=1e-10)
 
     def test_wald(self):
         res1 = self.res1
@@ -246,8 +250,10 @@ class TestGLMBinomialCountConstrained(ConstrainedCompareMixin):
 
         # smoke
         with warnings.catch_warnings():
-            warnings.simplefilter('ignore', ValueWarning)
             # RuntimeWarnings because of truedivide and scipy distributions
+            # Future to silence BIC warning
+            warnings.simplefilter("ignore", FutureWarning)
+            warnings.simplefilter('ignore', ValueWarning)
             warnings.simplefilter('ignore', RuntimeWarning)
             self.res1.summary()
             self.res1.summary2()
