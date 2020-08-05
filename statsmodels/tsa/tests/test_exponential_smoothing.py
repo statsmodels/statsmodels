@@ -61,15 +61,24 @@ MODELS_DATA_NONSEASONAL = list(
 remove_invalid_models_from_list(MODELS_DATA_SEASONAL)
 remove_invalid_models_from_list(MODELS_DATA_NONSEASONAL)
 
+
+def short_model_name(error, trend, seasonal, damped=False):
+    short_name = {"add": "A", "mul": "M", None: "N", True: "d", False: ""}
+    return (
+        short_name[error]
+        + short_name[trend]
+        + short_name[damped]
+        + short_name[seasonal]
+    )
+
+
 ALL_MODELS_AND_DATA = MODELS_DATA_NONSEASONAL + MODELS_DATA_SEASONAL
+ALL_MODEL_IDS = [
+    short_model_name(*mod[:3], mod[3]) for mod in ALL_MODELS_AND_DATA
+]
 
 
-def short_model_name(error, trend, seasonal):
-    short_name = {"add": "A", "mul": "M", None: "N"}
-    return short_name[error] + short_name[trend] + short_name[seasonal]
-
-
-@pytest.fixture(params=ALL_MODELS_AND_DATA)
+@pytest.fixture(params=ALL_MODELS_AND_DATA, ids=ALL_MODEL_IDS)
 def setup_model(
     request,
     austourists,
