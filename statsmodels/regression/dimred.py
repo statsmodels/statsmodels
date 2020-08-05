@@ -1,8 +1,11 @@
 import warnings
+
 import numpy as np
 import pandas as pd
+
 from statsmodels.base import model
 import statsmodels.base.wrapper as wrap
+from statsmodels.tools.sm_exceptions import ConvergenceWarning
 
 
 class _DimReductionRegression(model.Model):
@@ -688,7 +691,7 @@ class CovarianceReduction(_DimReductionRegression):
             g = self.score(params.ravel())
             gn = np.sqrt(np.sum(g * g))
             msg = "CovReduce optimization did not converge, |g|=%f" % gn
-            warnings.warn(msg)
+            warnings.warn(msg, ConvergenceWarning)
 
         results = DimReductionResults(self, params, eigs=None)
         results.llf = llf

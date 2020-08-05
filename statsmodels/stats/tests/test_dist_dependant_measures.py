@@ -2,9 +2,10 @@ import numpy as np
 from numpy.testing import assert_almost_equal
 import pytest
 
-from statsmodels.datasets.tests.test_utils import IGNORED_EXCEPTIONS
 from statsmodels.datasets import get_rdataset
+from statsmodels.datasets.tests.test_utils import IGNORED_EXCEPTIONS
 import statsmodels.stats.dist_dependence_measures as ddm
+from statsmodels.tools.sm_exceptions import HypothesisTestWarning
 
 
 class TestDistDependenceMeasures(object):
@@ -74,10 +75,13 @@ class TestDistDependenceMeasures(object):
         assert_almost_equal(pval, self.pval_asym_exp, 3)
 
     def test_statistic_value_emp_method(self):
-        statistic, pval, method = ddm.distance_covariance_test(
-            self.x, self.y, method="emp")
+        with pytest.warns(HypothesisTestWarning):
+            statistic, pval, method = ddm.distance_covariance_test(
+                self.x, self.y, method="emp"
+            )
 
         assert method == "emp"
+
         assert_almost_equal(statistic, self.test_stat_emp_exp, 0)
         assert_almost_equal(pval, self.pval_emp_exp, 3)
 

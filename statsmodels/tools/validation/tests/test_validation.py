@@ -352,7 +352,7 @@ def integer(request):
         3.2,
         np.float32(3.2),
         3 + 2j,
-        np.complex(2.3 + 0j),
+        complex(2.3 + 0j),
         "apple",
         1.0 + 0j,
         np.timedelta64(2),

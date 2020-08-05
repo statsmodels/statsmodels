@@ -1,6 +1,7 @@
 from statsmodels.compat.python import lzip
 
 from functools import reduce
+import warnings
 
 import numpy as np
 from scipy import stats
@@ -543,9 +544,8 @@ class LikelihoodModel(Model):
                 Hinv = eigvecs.dot(np.diag(1.0 / eigvals)).dot(eigvecs.T)
                 Hinv = np.asfortranarray((Hinv + Hinv.T) / 2.0)
             else:
-                from warnings import warn
-                warn('Inverting hessian failed, no bse or cov_params '
-                     'available', HessianInversionWarning)
+                warnings.warn('Inverting hessian failed, no bse or cov_params '
+                              'available', HessianInversionWarning)
                 Hinv = None
 
         if 'cov_type' in kwargs:
@@ -562,10 +562,10 @@ class LikelihoodModel(Model):
         mlefit.mle_retvals = retvals
         if isinstance(retvals, dict):
             if warn_convergence and not retvals['converged']:
-                from warnings import warn
                 from statsmodels.tools.sm_exceptions import ConvergenceWarning
-                warn("Maximum Likelihood optimization failed to converge. "
-                     "Check mle_retvals", ConvergenceWarning)
+                warnings.warn("Maximum Likelihood optimization failed to "
+                              "converge. Check mle_retvals",
+                              ConvergenceWarning)
 
         mlefit.mle_settings = optim_settings
         return mlefit
@@ -967,7 +967,6 @@ class GenericLikelihoodModel(LikelihoodModel):
                                               for i in range(-k_miss)])
             else:
                 # I do not want to raise after we have already fit()
-                import warnings
                 warnings.warn('more exog_names than parameters', ValueWarning)
 
         return genericmlefit
@@ -1084,7 +1083,6 @@ class Results(object):
                        '{0}'.format(str(str(exc))))
                 raise exc.__class__(msg)
             if orig_exog_len > len(exog) and not is_dict:
-                import warnings
                 if exog_index is None:
                     warnings.warn('nan values have been dropped', ValueWarning)
                 else:
@@ -1353,7 +1351,9 @@ class LikelihoodModelResults(Results):
             bse_ = np.empty(len(self.params))
             bse_[:] = np.nan
         else:
-            bse_ = np.sqrt(np.diag(self.cov_params()))
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", RuntimeWarning)
+                bse_ = np.sqrt(np.diag(self.cov_params()))
         return bse_
 
     @cached_value
@@ -1361,16 +1361,20 @@ class LikelihoodModelResults(Results):
         """
         Return the t-statistic for a given parameter estimate.
         """
-        return self.params / self.bse
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            return self.params / self.bse
 
     @cached_value
     def pvalues(self):
         """The two-tailed p values for the t-stats of the params."""
-        if self.use_t:
-            df_resid = getattr(self, 'df_resid_inference', self.df_resid)
-            return stats.t.sf(np.abs(self.tvalues), df_resid) * 2
-        else:
-            return stats.norm.sf(np.abs(self.tvalues)) * 2
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            if self.use_t:
+                df_resid = getattr(self, 'df_resid_inference', self.df_resid)
+                return stats.t.sf(np.abs(self.tvalues), df_resid) * 2
+            else:
+                return stats.norm.sf(np.abs(self.tvalues)) * 2
 
     def cov_params(self, r_matrix=None, column=None, scale=None, cov_p=None,
                    other=None):
@@ -1563,7 +1567,6 @@ class LikelihoodModelResults(Results):
         ==============================================================================
         """
         if scale is not None:
-            import warnings
             warnings.warn('scale is has no effect and is deprecated. It will'
                           'be removed in the next version.',
                           DeprecationWarning)
@@ -1715,7 +1718,6 @@ class LikelihoodModelResults(Results):
         <F test: F=array([[ 144.17976065]]), p=6.322026217355609e-08, df_denom=9, df_num=3>
         """
         if scale != 1.0:
-            import warnings
             warnings.warn('scale is has no effect and is deprecated. It will'
                           'be removed in the next version.',
                           DeprecationWarning)
@@ -1786,7 +1788,6 @@ class LikelihoodModelResults(Results):
         where the rank of the covariance of the noise is not full.
         """
         if scale != 1.0:
-            import warnings
             warnings.warn('scale is has no effect and is deprecated. It will'
                           'be removed in the next version.',
                           DeprecationWarning)
@@ -1828,7 +1829,6 @@ class LikelihoodModelResults(Results):
             invcov = np.linalg.pinv(cov_p)
             J_ = np.linalg.matrix_rank(cov_p)
             if J_ < J:
-                import warnings
                 warnings.warn('covariance of constraints does not have full '
                               'rank. The number of constraints is %d, but '
                               'rank is %d' % (J, J_), ValueWarning)
