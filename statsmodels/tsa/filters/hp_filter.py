@@ -70,7 +70,7 @@ def hpfilter(x, lamb=1600):
     >>> import statsmodels.api as sm
     >>> import pandas as pd
     >>> dta = sm.datasets.macrodata.load_pandas().data
-    >>> index = pd.DatetimeIndex(start='1959Q1', end='2009Q4', freq='Q')
+    >>> index = pd.period_range('1959Q1', '2009Q3', freq='Q')
     >>> dta.set_index(index, inplace=True)
 
     >>> cycle, trend = sm.tsa.filters.hpfilter(dta.realgdp, 1600)
