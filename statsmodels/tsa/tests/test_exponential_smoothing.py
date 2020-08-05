@@ -1,6 +1,8 @@
 """
 Author: Samuel Scherrer
 """
+from statsmodels.compat.platform import PLATFORM_WIN
+
 from itertools import product
 import json
 import pathlib
@@ -449,7 +451,12 @@ def test_simulate_vs_R(setup_model):
 
 def test_fit_vs_R(setup_model, reset_randomstate):
     model, params, results_R = setup_model
-    fit = model.fit(disp=True, tol=1e-8)
+
+    if PLATFORM_WIN and model.short_name == "AAdA":
+        start = params
+    else:
+        start = None
+    fit = model.fit(disp=True, tol=1e-8, start_params=start)
 
     # check log likelihood: we want to have a fit that is better, i.e. a fit
     # that has a **higher** log-likelihood
