@@ -121,6 +121,8 @@ for filename in FILES_TO_INCLUDE_IN_PACKAGE:
         shutil.copy2(filename, dest)
         FILES_COPIED_TO_PACKAGE.append(dest)
 
+STATESPACE_RESULTS = "statsmodels.tsa.statespace.tests.results"
+
 ADDITIONAL_PACKAGE_DATA = {
     'statsmodels': FILES_TO_INCLUDE_IN_PACKAGE,
     'statsmodels.datasets.tests': ['*.zip'],
@@ -131,7 +133,9 @@ ADDITIONAL_PACKAGE_DATA = {
     'statsmodels.stats.libqsturng': ['*.r', '*.txt', '*.dat'],
     'statsmodels.stats.libqsturng.tests': ['*.csv', '*.dat'],
     'statsmodels.sandbox.regression.tests': ['*.dta', '*.csv'],
-    'statsmodels.tsa.statespace.tests.results': ['*.pkl']
+    STATESPACE_RESULTS: ['*.pkl', '*.csv'],
+    STATESPACE_RESULTS + '.frbny_nowcast': ['test*.mat'],
+    STATESPACE_RESULTS + '.frbny_nowcast.Nowcasting.data.US': ['*.csv']
 }
 
 ##############################################################################
