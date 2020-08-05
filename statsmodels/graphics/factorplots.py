@@ -2,7 +2,7 @@
 """
 Authors:    Josef Perktold, Skipper Seabold, Denis A. Engemann
 """
-from statsmodels.compat.python import iterkeys, lrange, iteritems
+from statsmodels.compat.python import lrange
 import numpy as np
 
 from statsmodels.graphics.plottools import rainbow
@@ -189,12 +189,12 @@ def _recode(x, levels):
         raise ValueError('This is not a valid value for levels.'
                          ' Dict required.')
 
-    elif not (np.unique(x) == np.unique(list(iterkeys(levels)))).all():
+    elif not (np.unique(x) == np.unique(list(levels.keys()))).all():
         raise ValueError('The levels do not match the array values.')
 
     else:
         out = np.empty(x.shape[0], dtype=int)
-        for level, coding in iteritems(levels):
+        for level, coding in levels.items():
             out[x == level] = coding
 
         if name:

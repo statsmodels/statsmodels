@@ -101,7 +101,7 @@ still todo:
 Author: Josef Perktold
 License : BSD (3-clause)
 '''
-from statsmodels.compat.python import iteritems, itervalues, lrange
+from statsmodels.compat.python import lrange
 import numpy as np
 from pprint import pprint
 
@@ -266,7 +266,7 @@ class RU2NMNL(object):
         #unique, parameter array names,
         #sorted alphabetically, order is/should be only internal
 
-        self.paramsnames = (sorted(set([i for j in itervalues(paramsind)
+        self.paramsnames = (sorted(set([i for j in paramsind.values()
                                        for i in j])) +
                             ['tau_%s' % bname for bname in self.branches])
 
@@ -278,7 +278,7 @@ class RU2NMNL(object):
 
         #mapping branch and leaf names to index in parameter array
         self.parinddict = dict((k, [self.paramsidx[j] for j in v])
-                               for k,v in iteritems(self.paramsind))
+                               for k,v in self.paramsind.items())
 
         self.recursionparams = 1. + np.arange(len(self.paramsnames))
         #for testing that individual parameters are used in the right place
@@ -591,7 +591,7 @@ if __name__ == '__main__':
     pprint(modru2.probs)
 
 
-    print('sum of probs', sum(list(itervalues(modru2.probs))))
+    print('sum of probs', sum(list(modru2.probs.values())))
     print('branchvalues')
     print(modru2.branchvalues)
     print(modru.branchvalues)

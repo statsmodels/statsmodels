@@ -10,8 +10,6 @@ multigroup:
     rest. It allows to test if the variables in the group are significantly
     more significant than outside the group.
 """
-
-from statsmodels.compat.python import iteritems
 from patsy import dmatrix
 import pandas as pd
 from statsmodels.api import OLS
@@ -308,7 +306,7 @@ def multigroup(pvals, groups, exact=True, keep_all=True, alpha=0.05):
         '_in_non': {},
         '_out_sign': {},
         '_out_non': {}}
-    for group_name, group_list in iteritems(groups):
+    for group_name, group_list in groups.items():
         res = _test_group(pvals, group_name, group_list, exact)
         results['pvals'][group_name] = res[0]
         results['increase'][group_name] = res[1]

@@ -1,5 +1,3 @@
-from statsmodels.compat.python import iteritems
-
 import functools
 import inspect
 from textwrap import dedent
@@ -125,7 +123,7 @@ def make_wrapper(func, how):
 
 
 def populate_wrapper(klass, wrapping):
-    for meth, how in iteritems(klass._wrap_methods):
+    for meth, how in klass._wrap_methods.items():
         if not hasattr(wrapping, meth):
             continue
 

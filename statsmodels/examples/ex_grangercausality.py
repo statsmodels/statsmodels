@@ -5,8 +5,6 @@ Created on Sat Jul 06 15:44:57 2013
 
 Author: Josef Perktold
 """
-
-from statsmodels.compat.python import iteritems
 import numpy as np
 from numpy.testing import assert_almost_equal
 from statsmodels.datasets import macrodata
@@ -30,7 +28,7 @@ lag = 2
 print('\nTest Results for %d lags' % lag)
 print()
 print('\n'.join(['%-20s statistic: %f6.4   p-value: %f6.4' % (k, res[0], res[1])
-                 for k, res in iteritems(gr[lag][0]) ]))
+                 for k, res in gr[lag][0].items()]))
 
 print('\n Results for auxiliary restricted regression with two lags')
 print()

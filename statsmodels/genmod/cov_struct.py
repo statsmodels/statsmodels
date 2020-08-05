@@ -6,7 +6,6 @@ docs:
 
 http://www.stata.com/manuals13/xtxtgee.pdf
 """
-from statsmodels.compat.python import iterkeys, itervalues
 from statsmodels.compat.pandas import Appender
 
 from statsmodels.stats.correlation_tools import cov_nearest
@@ -1032,7 +1031,7 @@ class GlobalOddsRatio(CategoricalCovStruct):
 
         # Storage for the contingency tables for each (c,c')
         tables = {}
-        for ii in iterkeys(cpp[0]):
+        for ii in cpp[0].keys():
             tables[ii] = np.zeros((2, 2), dtype=np.float64)
 
         # Get the observed crude OR
@@ -1046,14 +1045,14 @@ class GlobalOddsRatio(CategoricalCovStruct):
             endog_00 = np.outer(1. - yvec, 1. - yvec)
 
             cpp1 = cpp[i]
-            for ky in iterkeys(cpp1):
+            for ky in cpp1.keys():
                 ix = cpp1[ky]
                 tables[ky][1, 1] += endog_11[ix[:, 0], ix[:, 1]].sum()
                 tables[ky][1, 0] += endog_10[ix[:, 0], ix[:, 1]].sum()
                 tables[ky][0, 1] += endog_01[ix[:, 0], ix[:, 1]].sum()
                 tables[ky][0, 0] += endog_00[ix[:, 0], ix[:, 1]].sum()
 
-        return self.pooled_odds_ratio(list(itervalues(tables)))
+        return self.pooled_odds_ratio(list(tables.values()))
 
     def get_eyy(self, endog_expval, index):
         """
@@ -1116,14 +1115,14 @@ class GlobalOddsRatio(CategoricalCovStruct):
             emat_00 = 1. - (emat_11 + emat_10 + emat_01)
 
             cpp1 = cpp[i]
-            for ky in iterkeys(cpp1):
+            for ky in cpp1.keys():
                 ix = cpp1[ky]
                 tables[ky][1, 1] += emat_11[ix[:, 0], ix[:, 1]].sum()
                 tables[ky][1, 0] += emat_10[ix[:, 0], ix[:, 1]].sum()
                 tables[ky][0, 1] += emat_01[ix[:, 0], ix[:, 1]].sum()
                 tables[ky][0, 0] += emat_00[ix[:, 0], ix[:, 1]].sum()
 
-        cor_expval = self.pooled_odds_ratio(list(itervalues(tables)))
+        cor_expval = self.pooled_odds_ratio(list(tables.values()))
 
         self.dep_params *= self.crude_or / cor_expval
         if not np.isfinite(self.dep_params):

@@ -4,7 +4,6 @@ not written as a test, prints results, renamed to prevent test runner from runni
 
 
 '''
-from statsmodels.compat.python import iteritems
 import numpy as np
 from scipy import stats
 #from statsmodels.stats.moment_helpers import mnc2mvsk
@@ -136,15 +135,15 @@ def nct_kurt_bug():
 if __name__ == '__main__':
 
     check_cont_basic()
-    #print [(k, v[0]) for k,v in iteritems(res) if np.abs(v[0]-1)>1e-3]
-    #print [(k, v[2][0], 1+2*v[2][0]) for k,v in iteritems(res) if np.abs(v[-1]-(1+2*v[2][0]))>1e-3]
-    mean_ = [(k, v[1][0], v[2][0]) for k,v in iteritems(res)
+    #print [(k, v[0]) for k,v in res.items() if np.abs(v[0]-1)>1e-3]
+    #print [(k, v[2][0], 1+2*v[2][0]) for k,v in res.items() if np.abs(v[-1]-(1+2*v[2][0]))>1e-3]
+    mean_ = [(k, v[1][0], v[2][0]) for k,v in res.items()
              if np.abs(v[1][0] - v[2][0])>1e-6 and np.isfinite(v[1][0])]
-    var_ = [(k, v[1][1], v[2][1]) for k,v in iteritems(res)
+    var_ = [(k, v[1][1], v[2][1]) for k,v in res.items()
             if np.abs(v[1][1] - v[2][1])>1e-2 and np.isfinite(v[1][1])]
-    skew = [(k, v[1][2], v[2][2]) for k,v in iteritems(res)
+    skew = [(k, v[1][2], v[2][2]) for k,v in res.items()
             if np.abs(v[1][2] - v[2][2])>1e-2 and np.isfinite(v[1][1])]
-    kurt = [(k, v[1][3], v[2][3]) for k,v in iteritems(res)
+    kurt = [(k, v[1][3], v[2][3]) for k,v in res.items()
             if np.abs(v[1][3] - v[2][3])>1e-2 and np.isfinite(v[1][1])]
 
     from statsmodels.iolib import SimpleTable

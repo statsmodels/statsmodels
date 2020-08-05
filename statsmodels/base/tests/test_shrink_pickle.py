@@ -19,7 +19,6 @@ from numpy import log  # noqa:F401
 
 import statsmodels.api as sm
 import statsmodels.genmod.generalized_linear_model as glm
-from statsmodels.compat.python import iterkeys
 
 
 def check_pickle(obj):
@@ -118,20 +117,20 @@ class RemoveDataPickle(object):
         fh.close()
         assert type(res_unpickled) is type(self.results)  # noqa: E721
 
-        before = sorted(iterkeys(self.results.__dict__))
-        after = sorted(iterkeys(res_unpickled.__dict__))
+        before = sorted(self.results.__dict__.keys())
+        after = sorted(res_unpickled.__dict__.keys())
         assert_(before == after, msg='not equal %r and %r' % (before, after))
 
-        before = sorted(iterkeys(self.results._results.__dict__))
-        after = sorted(iterkeys(res_unpickled._results.__dict__))
+        before = sorted(self.results._results.__dict__.keys())
+        after = sorted(res_unpickled._results.__dict__.keys())
         assert_(before == after, msg='not equal %r and %r' % (before, after))
 
-        before = sorted(iterkeys(self.results.model.__dict__))
-        after = sorted(iterkeys(res_unpickled.model.__dict__))
+        before = sorted(self.results.model.__dict__.keys())
+        after = sorted(res_unpickled.model.__dict__.keys())
         assert_(before == after, msg='not equal %r and %r' % (before, after))
 
-        before = sorted(iterkeys(self.results._cache))
-        after = sorted(iterkeys(res_unpickled._cache))
+        before = sorted(self.results._cache.keys())
+        after = sorted(res_unpickled._cache.keys())
         assert_(before == after, msg='not equal %r and %r' % (before, after))
 
 

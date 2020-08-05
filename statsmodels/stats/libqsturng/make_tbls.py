@@ -1,6 +1,6 @@
 """this script builds the T table and A table for the upper
    quantile stundentized range algorithm"""
-from statsmodels.compat.python import iterkeys, lrange, lmap
+from statsmodels.compat.python import lrange, lmap
 import math
 import scipy.stats
 from scipy.optimize import leastsq
@@ -450,7 +450,7 @@ for p in T:
         #eq. 2.4
         a0 = random(4)
         a1, success = leastsq(errfunc, a0,
-                              args=(p, np.array(list(iterkeys(R))),
+                              args=(p, np.array(list(R.keys())),
                                     v, np.array(T[p][v])))
 
         if v == 1e38:

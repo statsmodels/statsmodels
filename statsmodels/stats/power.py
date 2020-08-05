@@ -30,7 +30,6 @@ refactoring
 
 
 """
-from statsmodels.compat.python import iteritems
 import numpy as np
 from scipy import stats, optimize
 from statsmodels.tools.rootfinding import brentq_expanding
@@ -324,7 +323,7 @@ class Power(object):
         #TODO: maybe use explicit kwds,
         #    nicer but requires inspect? and not generic across tests
         #    I'm duplicating this in the subclass to get informative docstring
-        key = [k for k,v in iteritems(kwds) if v is None]
+        key = [k for k,v in kwds.items() if v is None]
         #print kwds, key
         if len(key) != 1:
             raise ValueError('need exactly one keyword that is None')
