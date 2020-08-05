@@ -169,6 +169,7 @@ class DeterministicTerm(ABC):
 
 
 class TimeTrendDeterministicTerm(DeterministicTerm, ABC):
+    """Abstract Base Class for all Time Trend Deterministic Terms"""
     def __init__(self, constant: bool = True, order: int = 0) -> None:
         self._constant = bool_like(constant, "constant")
         self._order = required_int_like(order, "order")
@@ -440,7 +441,8 @@ class Seasonality(DeterministicTerm):
         return pd.DataFrame(term, columns=self._columns, index=fcast_index)
 
 
-class FourierDeterministic(DeterministicTerm, ABC):
+class FourierDeterministicTerm(DeterministicTerm, ABC):
+    """Abstract Base Class for all Fourier Deterministic Terms"""
     def __init__(self, order: int) -> None:
         self._order = required_int_like(order, "terms")
 
@@ -458,7 +460,7 @@ class FourierDeterministic(DeterministicTerm, ABC):
         return terms
 
 
-class Fourier(FourierDeterministic):
+class Fourier(FourierDeterministicTerm):
     r"""
     Fourier series deterministic terms
 
@@ -602,7 +604,7 @@ class CalendarDeterminsticTerm(DeterministicTerm, ABC):
         return index
 
 
-class CalendarFourier(CalendarDeterminsticTerm, FourierDeterministic):
+class CalendarFourier(CalendarDeterminsticTerm, FourierDeterministicTerm):
     r"""
     Fourier series deterministic terms based on calendar time
 
@@ -653,7 +655,7 @@ class CalendarFourier(CalendarDeterminsticTerm, FourierDeterministic):
 
     def __init__(self, freq: str, order: int) -> None:
         super().__init__(freq)
-        FourierDeterministic.__init__(self, order)
+        FourierDeterministicTerm.__init__(self, order)
         self._order = required_int_like(order, "terms")
 
     @property

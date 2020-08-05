@@ -227,3 +227,10 @@ The proportional hazards regression result class is:
    :toctree: generated/
 
    PHRegResults
+
+The primary helper class is:
+
+.. autosummary::
+   :toctree: generated/
+
+   rv_discrete_float

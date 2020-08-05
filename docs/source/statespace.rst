@@ -250,6 +250,10 @@ model.
 
    dynamic_factor.DynamicFactor
    dynamic_factor.DynamicFactorResults
+   dynamic_factor_mq.DynamicFactorMQ
+   dynamic_factor_mq.DynamicFactorMQResults
+   dynamic_factor_mq.DynamicFactorMQStates
+   dynamic_factor_mq.FactorBlock
 
 For an example of the use of this model, see the `Dynamic Factor example notebook <examples/notebooks/generated/statespace_dfm_coincident.html>`__ or the very brief code snippet below:
 
@@ -852,7 +856,7 @@ sampling.
 
    simulation_smoother.SimulationSmoother
    simulation_smoother.SimulationSmoothResults
-
+   cfa_simulation_smoother.CFASimulationSmoother
 
 Statespace Tools
 ----------------

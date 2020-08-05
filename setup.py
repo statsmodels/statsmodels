@@ -131,7 +131,7 @@ ADDITIONAL_PACKAGE_DATA = {
     'statsmodels.stats.libqsturng': ['*.r', '*.txt', '*.dat'],
     'statsmodels.stats.libqsturng.tests': ['*.csv', '*.dat'],
     'statsmodels.sandbox.regression.tests': ['*.dta', '*.csv'],
-    'statsmodels.tsa.statespace.tests.results': ['*.pkl']
+    'statsmodels.tsa.statespace.tests.results': ['*.pkl', '*.csv']
 }
 
 ##############################################################################

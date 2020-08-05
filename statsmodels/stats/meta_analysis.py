@@ -18,7 +18,6 @@ class CombineResults(object):
     """Results from combined estimate of means or effect sizes
 
     This currently includes intermediate results that might be removed
-
     """
 
     def __init__(self, **kwds):
@@ -513,7 +512,7 @@ def combine_effects(effect, variance, method_re="iterated", row_names=None,
 
     Returns
     -------
-    results : instance of CombineResults
+    results : CombineResults
         Contains estimation results and intermediate statistics, and includes
         a method to return a summary table.
         Statistics from intermediate calculations might be removed at a later

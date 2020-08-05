@@ -700,6 +700,7 @@ Status: experimental, API might change, added in 0.12
    combine_effects
    effectsize_2proportions
    effectsize_smd
+   CombineResults
 
 The module also includes internal functions to compute random effects
 variance.
