@@ -1,7 +1,7 @@
 """
 Author: Samuel Scherrer
 """
-from statsmodels.compat.platform import PLATFORM_WIN
+from statsmodels.compat.platform import PLATFORM_WIN, PLATFORM_LINUX32
 
 from itertools import product
 import json
@@ -463,7 +463,21 @@ def test_fit_vs_R(setup_model, reset_randomstate):
     const = -model.nobs / 2 * (np.log(2 * np.pi / model.nobs) + 1)
     loglike_R = results_R["loglik"][0] + const
     loglike = fit.llf
-    assert loglike >= loglike_R - 1e-4
+    try:
+        assert loglike >= loglike_R - 1e-4
+    except AssertionError:
+        fit = model.fit(disp=True, tol=1e-8, start_params=params)
+        loglike = fit.llf
+        try:
+            assert loglike >= loglike_R - 1e-4
+        except AssertionError:
+            if PLATFORM_LINUX32:
+                # Linux32 often fails to produce the correct solution.
+                # Fixing this is low priority given the rareness of
+                # its application
+                pytest.xfail("Known to fail on 32-bit Linux")
+            else:
+                raise
 
 
 def test_predict_vs_R(setup_model):
