@@ -16,7 +16,7 @@ __all__ = ['AR', 'arima', 'AutoReg', 'ARMA', 'ARIMA',
            'statespace',
            'SARIMAX', 'UnobservedComponents', 'VARMAX', 'DynamicFactor',
            'DynamicFactorMQ', 'MarkovRegression', 'MarkovAutoregression',
-           'ExponentialSmoothing', 'SimpleExpSmoothing', 'Holt',
+           'ETSModel', 'ExponentialSmoothing', 'SimpleExpSmoothing', 'Holt',
            'arma_generate_sample', 'ArmaProcess', 'STL', 'STLForecast',
            'bk_filter', 'cf_filter', 'hp_filter']
 
@@ -50,6 +50,7 @@ from .statespace.dynamic_factor import DynamicFactor
 from .statespace.dynamic_factor_mq import DynamicFactorMQ
 from .regime_switching.markov_regression import MarkovRegression
 from .regime_switching.markov_autoregression import MarkovAutoregression
+from .exponential_smoothing.ets import ETSModel
 from .holtwinters import ExponentialSmoothing, SimpleExpSmoothing, Holt
 from .innovations import api as innovations
 from .seasonal import STL
