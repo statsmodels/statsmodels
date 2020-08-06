@@ -99,8 +99,7 @@ statsmodels.tsa.api and their result classes
 Univariate Autoregressive Processes (AR)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Beginning in version 0.11, Statsmodels has introduced a new class dedicated to
-autoregressive models.
+The basic autoregressive model in Statsmodels is:
 
 .. currentmodule:: statsmodels.tsa
 
@@ -131,18 +130,6 @@ Autoregressive Moving-Average Processes (ARMA) and Kalman Filter
 
 Basic ARIMA model and results classes are as follows:
 
-.. autosummary::
-   :toctree: generated/
-
-   arima_model.ARMA
-   arima_model.ARMAResults
-   arima_model.ARIMA
-   arima_model.ARIMAResults
-
-However, beginning in version 0.11, Statsmodels has introduced a new class
-dedicated to ARIMA models. While this class is still in a testing phase, it
-should be the starting point for for most users going forwards:
-
 .. currentmodule:: statsmodels.tsa
 
 .. autosummary::
@@ -151,12 +138,25 @@ should be the starting point for for most users going forwards:
    arima.model.ARIMA
    arima.model.ARIMAResults
 
-The `arima.model.ARIMA` model allows estimating parameters by various methods
-(including conditional MLE via the Hannan-Rissanen method and full MLE via the
-Kalman filter). Since it is a special case of the `SARIMAX` model, it includes
-all features of :ref:`state space <statespace>` models (including
-prediction / forecasting, residual diagnostics, simulation and impulse
-responses, etc.).
+This model allows estimating parameters by various methods (including
+conditional MLE via the Hannan-Rissanen method and full MLE via the Kalman
+filter). It is a special case of the `SARIMAX` model, and it includes a large
+number of inherited features from the :ref:`state space <statespace>` models
+(including prediction / forecasting, residual diagnostics, simulation and
+impulse responses, etc.).
+
+Prior to version 0.11, the basic ARIMA model and results classes were the
+following:
+
+.. autosummary::
+   :toctree: generated/
+
+   arima_model.ARMA
+   arima_model.ARMAResults
+   arima_model.ARIMA
+   arima_model.ARIMAResults
+
+These classes are still available, but they are no longer recommended.
 
 Exponential Smoothing
 ~~~~~~~~~~~~~~~~~~~~~
@@ -173,20 +173,11 @@ Linear and non-linear exponential smoothing models are available:
    Holt
    HoltWintersResults
 
-Linear exponential smoothing models have also been separately implemented as a
-special case of the state space framework. Although this approach does not
-allow for the non-linear (multiplicative) exponential smoothing models, it
-includes all features of :ref:`state space <statespace>` models (including
-prediction / forecasting, residual diagnostics, simulation and impulse
-responses, etc.).
-
-.. currentmodule:: statsmodels.tsa
-
-.. autosummary::
-   :toctree: generated/
-
-   statespace.exponential_smoothing.ExponentialSmoothing
-   statespace.exponential_smoothing.ExponentialSmoothingResults
+Separately, linear and non-linear exponential smoothing models have also been
+implemented based on the "innovations" state space approach. In addition to the
+usual support for parameter fitting, in-sample prediction, and out-of-sample
+forecasting, these models also support prediction intervals, simulation, and
+more.
 
 .. currentmodule:: statsmodels.tsa
 
@@ -195,6 +186,22 @@ responses, etc.).
 
    exponential_smoothing.ets.ETSModel
    exponential_smoothing.ets.ETSResults
+
+Finally, linear exponential smoothing models have also been separately
+implemented as a special case of the general state space framework (this is
+separate from the "innovations" state space approach described above). Although
+this approach does not allow for the non-linear (multiplicative) exponential
+smoothing models, it includes all features of :ref:`state space <statespace>`
+models (including prediction / forecasting, residual diagnostics, simulation
+and impulse responses, etc.).
+
+.. currentmodule:: statsmodels.tsa
+
+.. autosummary::
+   :toctree: generated/
+
+   statespace.exponential_smoothing.ExponentialSmoothing
+   statespace.exponential_smoothing.ExponentialSmoothingResults
 
 ARMA Process
 """"""""""""
@@ -233,7 +240,7 @@ process for given lag-polynomials.
 
 Statespace Models
 """""""""""""""""
-See the :ref:`statespace documentation. <statespace>`
+See the :ref:`statespace documentation <statespace>`.
 
 
 Vector ARs and Vector Error Correction Models

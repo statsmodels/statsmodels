@@ -826,7 +826,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
        independent from the other blocks of factors. Different blocks can be
        set to load on different subsets of the observed variables, and can be
        specified with different lag orders.
-    2. Following [4] and [2]_, we allow mixed frequency models in which both
+    2. Following [4]_ and [2]_, we allow mixed frequency models in which both
        monthly and quarterly data are used. See the section on "Mixed frequency
        models", below, for more details.
 
@@ -834,8 +834,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
 
     - The observed data may contain arbitrary patterns of missing entries.
 
-    EM algorithm
-    ~~~~~~~~~~~~
+    **EM algorithm**
 
     This model contains a potentially very large number of parameters, and it
     can be difficult and take a prohibitively long time to numerically optimize
@@ -844,8 +843,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
     As a result, the model can accommodate datasets with hundreds of
     observed variables.
 
-    Mixed frequency data
-    ~~~~~~~~~~~~~~~~~~~~
+    **Mixed frequency data**
 
     This model can handle mixed frequency data in two ways. In this section,
     we only briefly describe this, and refer readers to [2]_ and [4]_ for all
@@ -892,8 +890,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
     Flow." for discussion about other types of mixed frequency data that are
     not supported by this framework.
 
-    Nowcasting and the news
-    ~~~~~~~~~~~~~~~~~~~~~~~
+    **Nowcasting and the news**
 
     Through its support for monthly/quarterly mixed frequency data, this model
     can allow for the nowcasting of quarterly variables based on monthly
@@ -902,8 +899,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
     incoming data on a real-time basis. This latter functionality can be
     accessed through the `news` method of the results object.
 
-    Standardizing data
-    ~~~~~~~~~~~~~~~~~~
+    **Standardizing data**
 
     As is often the case in formulating a dynamic factor model, we do not
     explicitly account for the mean of each observed variable. Instead, the
@@ -927,8 +923,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
     Standardization can be disabled by passing `standardization=False` to the
     model constructor.
 
-    Identification of factors and loadings
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    **Identification of factors and loadings**
 
     The estimated factors and the factor loadings in this model are only
     identified up to an invertible transformation. As described in (the working
@@ -938,8 +933,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
     required. This model does not impose any normalization to identify the
     factors and the factor loadings.
 
-    Miscellaneous
-    ~~~~~~~~~~~~~
+    **Miscellaneous**
 
     There are two arguments available in the model constructor that are rarely
     used but which deserve a brief mention: `init_t0` and `obs_cov_diag`. These
@@ -965,8 +959,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
     >>> endog = data[['infl', 'tbilrate']].resample('M').last()
     >>> endog_Q = np.log(data[['realgdp', 'realcons']]).diff().iloc[1:] * 400
 
-    Basic usage
-    ~~~~~~~~~~~
+    **Basic usage**
 
     In the simplest case, passing only the `endog` argument results in a model
     with a single factor that follows an AR(1) process. Note that because we
@@ -977,7 +970,6 @@ class DynamicFactorMQ(mlemodel.MLEModel):
 
     >>> mod = sm.tsa.DynamicFactorMQ(endog)
     >>> print(mod.summary())
-
                         Model Specification: Dynamic Factor Model
     ==========================================================================
     Model:         Dynamic Factor Model   # of monthly variables:          2
@@ -998,14 +990,13 @@ class DynamicFactorMQ(mlemodel.MLEModel):
              0          1
     =====================
 
-    **Factors**
+    *Factors*
 
     With `factors=2`, there will be two independent factors that will each
     evolve according to separate AR(1) processes.
 
     >>> mod = sm.tsa.DynamicFactorMQ(endog, factors=2)
     >>> print(mod.summary())
-
                         Model Specification: Dynamic Factor Model
     ==========================================================================
     Model:         Dynamic Factor Model   # of monthly variables:          2
@@ -1027,7 +1018,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
              1          1
     =====================
 
-    **Factor multiplicities**
+    *Factor multiplicities*
 
     By instead specifying `factor_multiplicities=2`, we would still have two
     factors, but they would be dependent and would evolve jointly according
@@ -1035,7 +1026,6 @@ class DynamicFactorMQ(mlemodel.MLEModel):
 
     >>> mod = sm.tsa.DynamicFactorMQ(endog, factor_multiplicities=2)
     >>> print(mod.summary())
-
                         Model Specification: Dynamic Factor Model
     ==========================================================================
     Model:         Dynamic Factor Model   # of monthly variables:          2
@@ -1056,7 +1046,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
       0.1, 0.2          1
     =====================
 
-    **Factor orders**
+    *Factor orders*
 
     In either of the above cases, we could extend the order of the (vector)
     autoregressions by using the `factor_orders` argument. For example, the
@@ -1065,7 +1055,6 @@ class DynamicFactorMQ(mlemodel.MLEModel):
 
     >>> mod = sm.tsa.DynamicFactorMQ(endog, factors=2, factor_orders=2)
     >>> print(mod.summary())
-
                         Model Specification: Dynamic Factor Model
     ==========================================================================
     Model:         Dynamic Factor Model   # of monthly variables:          2
@@ -1087,7 +1076,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
              1          2
     =====================
 
-    **Serial correlation in the idiosyncratic disturbances**
+    *Serial correlation in the idiosyncratic disturbances*
 
     By default, the model allows each idiosyncratic disturbance terms to evolve
     according to an AR(1) process. If preferred, they can instead be specified
@@ -1115,7 +1104,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
              0          1
     =====================
 
-    **Monthly / Quarterly mixed frequency**
+    *Monthly / Quarterly mixed frequency*
 
     To specify a monthly / quarterly mixed frequency model see the (Notes
     section for more details about these models):
@@ -1145,7 +1134,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
              0          1
     =====================
 
-    **Customize observed variable / factor loadings**
+    *Customize observed variable / factor loadings*
 
     To specify that certain that certain observed variables only load on
     certain factors, it is possible to pass a dictionary to the `factors`
@@ -1157,7 +1146,6 @@ class DynamicFactorMQ(mlemodel.MLEModel):
     ...            'realcons': ['global', 'real']}
     >>> mod = sm.tsa.DynamicFactorMQ(endog, endog_quarterly=endog_Q)
     >>> print(mod.summary())
-
                         Model Specification: Dynamic Factor Model
     ==========================================================================
     Model:         Dynamic Factor Model   # of monthly variables:          2
@@ -1182,8 +1170,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
           real          1
     =====================
 
-    Fitting parameters
-    ~~~~~~~~~~~~~~~~~~
+    **Fitting parameters**
 
     To fit the model, use the `fit` method. This method uses the EM algorithm
     by default.
@@ -1191,7 +1178,6 @@ class DynamicFactorMQ(mlemodel.MLEModel):
     >>> mod = sm.tsa.DynamicFactorMQ(endog)
     >>> res = mod.fit()
     >>> print(res.summary())
-
                               Dynamic Factor Results
     ==========================================================================
     Dep. Variable:      ['infl', 'tbilrate']   No. Observations:         300
@@ -1209,18 +1195,16 @@ class DynamicFactorMQ(mlemodel.MLEModel):
     --------------------------------------------------------------
                 infl      -0.67                    0.39       0.73
             tbilrate      -0.63                    0.99       0.01
-
            Transition: Factor block 0
     =======================================
                      L1.0    error variance
     ---------------------------------------
              0       0.98              0.01
     =======================================
-
     Warnings:
     [1] Covariance matrix not calculated.
 
-    **Displaying iteration progress**
+    *Displaying iteration progress*
 
     To display information about the EM iterations, use the `disp` argument.
 
@@ -1239,13 +1223,12 @@ class DynamicFactorMQ(mlemodel.MLEModel):
     EM converged at iteration 83, llf=-127.91,
        convergence criterion=9.9004e-07 < tolerance=1e-06
 
-    Results: forecasting, impulse responses, and more
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    **Results: forecasting, impulse responses, and more**
 
     One the model is fitted, there are a number of methods available from the
     results object. Some examples include:
 
-    **Forecasting**
+    *Forecasting*
 
     >>> mod = sm.tsa.DynamicFactorMQ(endog)
     >>> res = mod.fit()
@@ -1258,7 +1241,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
     2010-01  1.742110  0.395369
     2010-02  1.759786  0.439194
 
-    **Impulse responses**
+    *Impulse responses*
 
     >>> mod = sm.tsa.DynamicFactorMQ(endog)
     >>> res = mod.fit()
@@ -3326,6 +3309,9 @@ class DynamicFactorMQ(mlemodel.MLEModel):
 
 
 class DynamicFactorMQResults(mlemodel.MLEResults):
+    """
+    Results from fitting a dynamic factor model
+    """
     def __init__(self, model, params, filter_results, cov_type=None, **kwargs):
         super(DynamicFactorMQResults, self).__init__(
             model, params, filter_results, cov_type, **kwargs)

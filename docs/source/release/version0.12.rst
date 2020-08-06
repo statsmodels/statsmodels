@@ -31,6 +31,52 @@ Stats
 The Highlights
 ==============
 
+Time-Series Analysis
+--------------------
+
+New exponential smoothing model: ETS (Error, Trend, Seasonal)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- Class implementing ETS models :class:`~statsmodels.tsa.ETSModel`.
+- Includes linear and non-linear exponential smoothing models
+- Supports parameter fitting, in-sample prediction and out-of-sample
+  forecasting, prediction intervals, simulation, and more.
+- Based on the innovations state space approach.
+
+Statespace Models
+-----------------
+
+New dynamic factor model for large datasets and monthly / quarterly mixed frequency models
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- New dynamic factor model :class:`~statsmodels.tsa.DynamicFactorMQ`.
+- Allows for hundreds of observed variables, by fitting with the EM algorithm
+- Allows specifying factors that load only on a specific group of variables
+- Allows for monthly / quarterly mixed frequency models. For example, this
+  supports one popular approach to "Nowcasting" GDP
+
+Decomposition of forecast updates based on the "news"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- New `news` method for state space model results objects
+- Links updated data to changes in forecasts
+- Supports "nowcasting" exercises that progressively incorporate more and more
+  information as time goes on
+
+Sparse Cholesky Simulation Smoother
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- New option for simulation smoothing in state space models via the
+  "Cholesky factor algorithm" (CFA) approach
+- Takes advantage of algorithms for sparse Cholesky factorization, rather than
+  using the typical simulation smoother based on Kalman filtering and smoothing
+
+Option to use Chadrasekhar recursions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- New option for state space models to use Chandrasekhar recursions rather than
+  than the typical Kalman filtering recursions
+- Improved performance for some models with large state vectors
 
 What's new - an overview
 ========================
