@@ -1328,6 +1328,9 @@ class ETSModel(base.StateSpaceMLEModel):
 
 
 class ETSResults(base.StateSpaceMLEResults):
+    """
+    Results from an error, trend, seasonal (ETS) exponential smoothing model
+    """
     def __init__(self, model, params, results):
         yhat, xhat = results
         self._llf = model.loglike(params)
