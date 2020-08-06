@@ -552,7 +552,7 @@ class Fourier(FourierDeterministicTerm):
         return f"Fourier(period={self._period}, order={self._order})"
 
 
-class CalendarDeterminsticTerm(DeterministicTerm, ABC):
+class CalendarDeterministicTerm(DeterministicTerm, ABC):
     """Abstract Base Class for calendar deterministic terms"""
 
     def __init__(self, freq: str) -> None:
@@ -604,7 +604,7 @@ class CalendarDeterminsticTerm(DeterministicTerm, ABC):
         return index
 
 
-class CalendarFourier(CalendarDeterminsticTerm, FourierDeterministicTerm):
+class CalendarFourier(CalendarDeterministicTerm, FourierDeterministicTerm):
     r"""
     Fourier series deterministic terms based on calendar time
 
@@ -700,7 +700,7 @@ class CalendarFourier(CalendarDeterminsticTerm, FourierDeterministicTerm):
         return f"Fourier(freq={self._freq.freqstr}, order={self._order})"
 
 
-class CalendarSeasonality(CalendarDeterminsticTerm):
+class CalendarSeasonality(CalendarDeterministicTerm):
     """
     Seasonal dummy deterministic terms based on calendar time
 
@@ -871,7 +871,7 @@ class CalendarSeasonality(CalendarDeterminsticTerm):
         return f"Seasonal(freq={self._freq_str})"
 
 
-class CalendarTimeTrend(CalendarDeterminsticTerm, TimeTrendDeterministicTerm):
+class CalendarTimeTrend(CalendarDeterministicTerm, TimeTrendDeterministicTerm):
     r"""
     Constant and time trend determinstic terms based on calendar time
 

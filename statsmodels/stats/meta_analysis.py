@@ -61,7 +61,7 @@ class CombineResults(object):
             Number of observations used for degrees of freedom computation.
             Only used if use_t is true.
         ci_func : None or callable
-            User provided function to compute confidende intervals.
+            User provided function to compute confidence intervals.
             This is not used yet and will allow using non-standard confidence
             intervals.
 

@@ -97,5 +97,6 @@ while the second array would be the true or observed values.
    eval_measures.medianbias
    eval_measures.mse
    eval_measures.rmse
+   eval_measures.rmspe
    eval_measures.stde
    eval_measures.vare

@@ -47,7 +47,7 @@ class TestL2Constraints0(CheckPenalty):
     def setup_class(cls):
         x0 = np.linspace(-0.2, 0.2, 11)
         cls.params = np.column_stack((x0, x0))
-        cls.pen = smpen.L2ContraintsPenalty()
+        cls.pen = smpen.L2ConstraintsPenalty()
 
     def test_equivalence(self):
         # compare plain penalty with included weights or restriction
@@ -55,8 +55,8 @@ class TestL2Constraints0(CheckPenalty):
         x = self.params
         k = x.shape[1]
 
-        pen2 = smpen.L2ContraintsPenalty(weights=np.ones(k))
-        pen3 = smpen.L2ContraintsPenalty(restriction=np.eye(k))
+        pen2 = smpen.L2ConstraintsPenalty(weights=np.ones(k))
+        pen3 = smpen.L2ConstraintsPenalty(restriction=np.eye(k))
         f = pen.func(x.T)
         d = pen.deriv(x.T)
         d2 =  np.array([pen.deriv2(np.atleast_1d(xi)) for xi in x])
@@ -73,7 +73,7 @@ class TestL2Constraints1(CheckPenalty):
     def setup_class(cls):
         x0 = np.linspace(-0.2, 0.2, 11)
         cls.params = np.column_stack((x0, x0))
-        cls.pen = smpen.L2ContraintsPenalty(restriction=[[1,0], [1, 1]])
+        cls.pen = smpen.L2ConstraintsPenalty(restriction=[[1,0], [1, 1]])
 
     def test_values(self):
         pen = self.pen

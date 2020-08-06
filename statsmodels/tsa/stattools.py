@@ -1832,11 +1832,11 @@ def kpss(x, regression="c", nlags=None, store=False):
     if nlags is None:
         nlags = "legacy"
         msg = (
-            "The behavior of using lags=None will change in release 0.13."
-            "Currently lags=None is the same as "
-            'lags="legacy", and so a sample-size lag length is used. '
+            "The behavior of using nlags=None will change in release 0.13."
+            "Currently nlags=None is the same as "
+            'nlags="legacy", and so a sample-size lag length is used. '
             "After the next release, the default will change to be the "
-            'same as lags="auto" which uses an automatic lag length '
+            'same as nlags="auto" which uses an automatic lag length '
             "selection method. To silence this warning, either use "
             '"auto" or "legacy"'
         )

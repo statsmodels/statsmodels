@@ -388,6 +388,8 @@ equations.
    NormalIndPower
    FTestAnovaPower
    FTestPower
+   normal_power_het
+   normal_sample_size_one_tail
    tt_solve_power
    tt_ind_solve_power
    zt_ind_solve_power
@@ -558,6 +560,9 @@ Status: experimental, API might change, added in 0.12
    :toctree: generated
 
    TrimmedMean
+   scale_transform
+   trim_mean
+   trimboth
 
 
 Moment Helpers

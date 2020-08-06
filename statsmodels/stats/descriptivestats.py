@@ -221,7 +221,7 @@ class Description:
         A distinct sequence of floating point values all between 0 and 100.
         The default percentiles are 1, 5, 10, 25, 50, 75, 90, 95, 99.
     ntop : int, default 5
-        The number of top cotagorical labels to report. Default is
+        The number of top categorical labels to report. Default is
 
     Attributes
     ----------
@@ -264,13 +264,13 @@ class Description:
       the skewness and kurtosis. This option creates two entries, jarque_bera
       and jarque_beta_pval.
     * "mode" - The mode of the data. This option creates two entries in all tables,
-      mode and mode_freq which is the empricial frequency of the modal value.
+      mode and mode_freq which is the empirical frequency of the modal value.
     * "median" - The median of the data.
     * "percentiles" - The percentiles. Values included depend on the input value of
       ``percentiles``.
     * "distinct" - The number of distinct categories in a categorical.
     * "top" - The mode common categories. Labeled top_n for n in 1, 2, ..., ``ntop``.
-    * "freq" - The frequence of the common categories. Labled freq_n for n in 1,
+    * "freq" - The frequency of the common categories. Labeled freq_n for n in 1,
       2, ..., ``ntop``.
     """
 
@@ -614,7 +614,7 @@ ds.replace_block(
     [
         (
             [("pandas.DataFrame.describe", None)],
-            ["Basic sescriptive statistics"],
+            ["Basic descriptive statistics"],
         ),
         (
             [("Description", None)],

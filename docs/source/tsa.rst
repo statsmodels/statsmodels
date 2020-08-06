@@ -339,9 +339,9 @@ Interpolation
 Deterministic Processes
 """""""""""""""""""""""
 
-Deterministic processes simplify creating deterministi sequences with time
-trend or seasonal patterns. They also provide methods to simpligy generating
-determinstic terms for out-of-sample forecasting. A
+Deterministic processes simplify creating deterministic sequences with time
+trend or seasonal patterns. They also provide methods to simplify generating
+deterministic terms for out-of-sample forecasting. A
 :class:`~statsmodels.tsa.deterministic.DeterministicProcess` can be directly
 used with :class:`~statsmodels.tsa.ar_model.AutoReg` to construct complex
 deterministic dynamics and to forecast without constructing exogenous trends.
@@ -357,9 +357,9 @@ deterministic dynamics and to forecast without constructing exogenous trends.
    CalendarTimeTrend
    CalendarSeasonality
    CalendarFourier
-   DeterminsticTerm
-   CalendarDeterminsticTerm
-   FourierDeterminsticTerm
+   DeterministicTerm
+   CalendarDeterministicTerm
+   FourierDeterministicTerm
    TimeTrendDeterministicTerm
 
 Users who wish to write custom deterministic terms must subclass

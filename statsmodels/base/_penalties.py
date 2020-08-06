@@ -518,7 +518,7 @@ class ConstraintsPenalty(object):
         return value
 
 
-class L2ContraintsPenalty(ConstraintsPenalty):
+class L2ConstraintsPenalty(ConstraintsPenalty):
     """convenience class of ConstraintsPenalty with L2 penalization
     """
 
@@ -529,7 +529,7 @@ class L2ContraintsPenalty(ConstraintsPenalty):
 
         penalty = L2Univariate()
 
-        super(L2ContraintsPenalty, self).__init__(penalty, weights=weights,
+        super(L2ConstraintsPenalty, self).__init__(penalty, weights=weights,
                                                   restriction=restriction)
 
 

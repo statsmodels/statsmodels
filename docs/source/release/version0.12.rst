@@ -37,7 +37,7 @@ Time-Series Analysis
 New exponential smoothing model: ETS (Error, Trend, Seasonal)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-- Class implementing ETS models :class:`~statsmodels.tsa.ETSModel`.
+- Class implementing ETS models :class:`~statsmodels.tsa.exponential_smoothing.ets.ETSModel`.
 - Includes linear and non-linear exponential smoothing models
 - Supports parameter fitting, in-sample prediction and out-of-sample
   forecasting, prediction intervals, simulation, and more.
@@ -49,7 +49,7 @@ Statespace Models
 New dynamic factor model for large datasets and monthly / quarterly mixed frequency models
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-- New dynamic factor model :class:`~statsmodels.tsa.DynamicFactorMQ`.
+- New dynamic factor model :class:`~statsmodels.tsa.statespace.dynamic_factor_mq.DynamicFactorMQ`.
 - Allows for hundreds of observed variables, by fitting with the EM algorithm
 - Allows specifying factors that load only on a specific group of variables
 - Allows for monthly / quarterly mixed frequency models. For example, this
@@ -58,7 +58,7 @@ New dynamic factor model for large datasets and monthly / quarterly mixed freque
 Decomposition of forecast updates based on the "news"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-- New `news` method for state space model results objects
+- New :meth:`~statsmodels.tsa.statespace.mlemodel.MLEResults.news` method for state space model results objects
 - Links updated data to changes in forecasts
 - Supports "nowcasting" exercises that progressively incorporate more and more
   information as time goes on
@@ -67,7 +67,8 @@ Sparse Cholesky Simulation Smoother
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 - New option for simulation smoothing in state space models via the
-  "Cholesky factor algorithm" (CFA) approach
+  "Cholesky factor algorithm" (CFA) approach in
+  :class:`~statsmodels.tsa.statespace.cfa_simulation_smoother.CFASimulationSmoother`
 - Takes advantage of algorithms for sparse Cholesky factorization, rather than
   using the typical simulation smoother based on Kalman filtering and smoothing
 
@@ -75,14 +76,29 @@ Option to use Chadrasekhar recursions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 - New option for state space models to use Chandrasekhar recursions rather than
-  than the typical Kalman filtering recursions
+  than the typical Kalman filtering recursions by setting ``filter_chandrasekhar=True``.
 - Improved performance for some models with large state vectors
+
+Forecasting Methods
+~~~~~~~~~~~~~~~~~~~
+Two popular method for forecasting time series, forecasting after STL decomposition
+(:class:`~statsmodels.tsa.forecasting.stl.STLForecast`)
+and the Theta model (:class:`~statsmodels.tsa.forecasting.theta.ThetaModel`) have
+been added.
+
+Complex Deterministic Terms
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+:class:`~statsmodels.tsa.deterministic.DeterministicProcess` can be used to generate
+deterministic processes containing time trends, seasonal dummies and Fourier components.
+A :class:`~statsmodels.tsa.deterministic.DeterministicProcess` can be used to produce
+in-sample regressors or out-of-sample values suitable for forecasting.
+
 
 What's new - an overview
 ========================
 
-The following lists the main new features of statsmodels 0.10. In addition,
-release 0.10 includes bug fixes, refactorings and improvements in many areas.
+The following lists the main new features of statsmodels 0.12. In addition,
+release 0.12 includes bug fixes, refactorings and improvements in many areas.
 
 Submodules
 ----------
@@ -92,7 +108,7 @@ Submodules
 ~~~~~~~~~~~~~~~~~
 - Fix the version that appears in the documentation  (:pr:`6452`)
 - Send log to dev/null/  (:pr:`6456`)
-- Variuos -> various  (:pr:`6518`)
+- Correct spelling of   various  (:pr:`6518`)
 - Fix typos  (:pr:`6531`)
 - Update interactions_anova.ipynb  (:pr:`6601`)
 - Fix `true` type on statespace docs page  (:pr:`6616`)
@@ -169,7 +185,7 @@ Submodules
 
 ``duration``
 ~~~~~~~~~~~~
-- Allow more than 2 groups for survdiff in statmodels.duration  (:pr:`6626`)
+- Allow more than 2 groups for survdiff in statsmodels.duration  (:pr:`6626`)
 
 ``gam``
 ~~~~~~~
@@ -405,7 +421,7 @@ and the general maintainer and code reviewer
 Additionally, many users contributed by participation in github issues and
 providing feedback.
 
-Thanks to all of the contributors for the 0.10 release (based on git log):
+Thanks to all of the contributors for the 0.12 release (based on git log):
 
 - Alex Lyttle
 - Amund Vedal
@@ -485,7 +501,7 @@ The following Pull Requests were merged since the last release:
 - :pr:`6508`: ENH: Add option for original Breusch-Pagan heteroscedasticity test
 - :pr:`6514`: ENH: use GLM starting values for QIF
 - :pr:`6515`: BUG: fix #6511
-- :pr:`6518`: Fix simple typo: variuos -> various
+- :pr:`6518`: Fix simple typo: various
 - :pr:`6520`: BUG: fix GAM for 1-dim exog_linear 
 - :pr:`6521`: REF/BUG: don't attach patsy constraint instance 
 - :pr:`6528`: DOC: Bayesian estimation of SARIMAX using PyMC3 NUTS
@@ -508,7 +524,7 @@ The following Pull Requests were merged since the last release:
 - :pr:`6616`: DOC: Fix `true` type on statespace docs page
 - :pr:`6621`: ENH: Calculate AR covariance parameters for gridded data
 - :pr:`6622`: ENH Allow optional regularization in local fdr
-- :pr:`6626`: ENH: allow more than 2 groups for survdiff in statmodels.duration
+- :pr:`6626`: ENH: allow more than 2 groups for survdiff in statsmodels.duration
 - :pr:`6628`: BUG: Ensure text comparison is lower
 - :pr:`6631`: DOC/TST: minor fixes for holtwinters simulate
 - :pr:`6632`: ENH: add meta-analysis (basic methods)
@@ -662,14 +678,14 @@ Notable New Classes
 * :class:`statsmodels.stats.robust_compare.TrimmedMean`
 * :class:`statsmodels.tools.sm_exceptions.ParseError`
 * :class:`statsmodels.tsa.base.prediction.PredictionResults`
-* :class:`statsmodels.tsa.deterministic.CalendarDeterminsticTerm`
+* :class:`statsmodels.tsa.deterministic.CalendarDeterministicTerm`
 * :class:`statsmodels.tsa.deterministic.CalendarFourier`
 * :class:`statsmodels.tsa.deterministic.CalendarSeasonality`
 * :class:`statsmodels.tsa.deterministic.CalendarTimeTrend`
 * :class:`statsmodels.tsa.deterministic.DeterministicProcess`
 * :class:`statsmodels.tsa.deterministic.DeterministicTerm`
 * :class:`statsmodels.tsa.deterministic.Fourier`
-* :class:`statsmodels.tsa.deterministic.FourierDeterministic`
+* :class:`statsmodels.tsa.deterministic.FourierDeterministicTerm`
 * :class:`statsmodels.tsa.deterministic.Seasonality`
 * :class:`statsmodels.tsa.deterministic.TimeTrend`
 * :class:`statsmodels.tsa.deterministic.TimeTrendDeterministicTerm`
@@ -766,21 +782,12 @@ Classes with Removed Arguments
 
 New Functions
 -------------
-* :func:`statsmodels.compat.pandas.to_numpy`
 * :func:`statsmodels.graphics.tukeyplot.tukeyplot`
 * :func:`statsmodels.multivariate.plots.plot_loadings`
 * :func:`statsmodels.multivariate.plots.plot_scree`
 * :func:`statsmodels.stats.contrast.wald_test_noncent`
 * :func:`statsmodels.stats.contrast.wald_test_noncent_generic`
 * :func:`statsmodels.stats.descriptivestats.describe`
-* :func:`statsmodels.stats.descriptivestats.nancount`
-* :func:`statsmodels.stats.descriptivestats.nankurtosis`
-* :func:`statsmodels.stats.descriptivestats.nanpercentile`
-* :func:`statsmodels.stats.descriptivestats.nanptp`
-* :func:`statsmodels.stats.descriptivestats.nanskewness`
-* :func:`statsmodels.stats.descriptivestats.nanuss`
-* :func:`statsmodels.stats.descriptivestats.pd_percentiles`
-* :func:`statsmodels.stats.descriptivestats.pd_ptp`
 * :func:`statsmodels.stats.meta_analysis.combine_effects`
 * :func:`statsmodels.stats.meta_analysis.effectsize_2proportions`
 * :func:`statsmodels.stats.meta_analysis.effectsize_smd`
@@ -823,11 +830,6 @@ New Functions
 * :func:`statsmodels.stats.robust_compare.trim_mean`
 * :func:`statsmodels.stats.robust_compare.trimboth`
 * :func:`statsmodels.tools.eval_measures.rmspe`
-* :func:`statsmodels.tools.tools.matrix_rank`
-* :func:`statsmodels.tools.validation.validation.required_int_like`
-* :func:`statsmodels.tsa.base.tsa_model.get_index_label_loc`
-* :func:`statsmodels.tsa.base.tsa_model.get_index_loc`
-* :func:`statsmodels.tsa.base.tsa_model.get_prediction_index`
 
 Notable Removed Functions
 -------------------------
@@ -856,9 +858,6 @@ Functions with Keyword Name Changes
 * :func:`statsmodels.graphics.tsaplots.plot_acf`
    * New: ``plot_acf(x, ax, lags, alpha, use_vlines, adjusted, fft, missing, title, zero, vlines_kwargs, kwargs)``
    * Old: ``plot_acf(x, ax, lags, alpha, use_vlines, unbiased, fft, missing, title, zero, vlines_kwargs, kwargs)``
-* :func:`statsmodels.tools.docstring.strip_blank_lines`
-   * New: ``strip_blank_lines(line)``
-   * Old: ``strip_blank_lines(l)``
 * :func:`statsmodels.tsa.stattools.ccovf`
    * New: ``ccovf(x, y, adjusted, demean)``
    * Old: ``ccovf(x, y, unbiased, demean)``
