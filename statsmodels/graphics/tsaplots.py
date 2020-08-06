@@ -405,9 +405,7 @@ def month_plot(x, dates=None, ylabel=None, ax=None):
 
         _check_period_index(x, freq="M")
     else:
-        from pandas import PeriodIndex, Series
-
-        x = Series(x, index=PeriodIndex(dates, freq="M"))
+        x = pd.Series(x, index=pd.PeriodIndex(dates, freq="M"))
 
     xticklabels = ["j", "f", "m", "a", "m", "j", "j", "a", "s", "o", "n", "d"]
     return seasonal_plot(
@@ -459,9 +457,7 @@ def quarter_plot(x, dates=None, ylabel=None, ax=None):
 
         _check_period_index(x, freq="Q")
     else:
-        from pandas import PeriodIndex, Series
-
-        x = Series(x, index=PeriodIndex(dates, freq="Q"))
+        x = pd.Series(x, index=pd.PeriodIndex(dates, freq="Q"))
 
     xticklabels = ["q1", "q2", "q3", "q4"]
     return seasonal_plot(

@@ -331,7 +331,7 @@ class TestOnewayScale(object):
                                      transform='abs', trim_frac_mean=0.2)
         assert_allclose(res0.pvalue, p_value, rtol=1e-13)
         assert_allclose(res0.statistic, statistic, rtol=1e-13)
-        assert_equal(res0.df, df)
+        assert_allclose(res0.df, df)
 
         # library(onewaytests)
         # test uses mean as center
@@ -344,7 +344,7 @@ class TestOnewayScale(object):
                                      transform='abs', trim_frac_mean=0.2)
         assert_allclose(res0.pvalue, p_value, rtol=1e-13)
         assert_allclose(res0.statistic, statistic, rtol=1e-13)
-        assert_equal(res0.df, parameter)
+        assert_allclose(res0.df, parameter)
 
         # > st = homog.test(y ~ g, df3, method = "Bartlett")
         statistic = 3.01982414477323
@@ -369,7 +369,7 @@ class TestOnewayScale(object):
                                     transform='abs', trim_frac_mean=0.2)
         assert_allclose(res.pvalue, p_value, rtol=1e-13)
         assert_allclose(res.statistic, statistic, rtol=1e-13)
-        assert_equal(res.df, df)
+        assert_allclose(res.df, df)
 
         statistic, p_value = 1.0329722145270606, 0.3622778213868562
         df = (1.83153791573948, 30.6733640949525)
@@ -379,9 +379,9 @@ class TestOnewayScale(object):
                                     transform='abs', trim_frac_mean=0.2)
         assert_allclose(res.pvalue, p_value, rtol=1e-13)
         assert_allclose(res.statistic, statistic, rtol=1e-13)
-        assert_equal(res.df, df)
+        assert_allclose(res.df, df)
         assert_allclose(res.pvalue2, p_value2, rtol=1e-13)
-        assert_equal(res.df2, df2)
+        assert_allclose(res.df2, df2)
 
         statistic, p_value = 1.7252431333701745, 0.19112038168209514
         df = (2.0, 40.0)
@@ -398,7 +398,7 @@ class TestOnewayScale(object):
                                     trim_frac_mean=0.2)
         assert_allclose(res.pvalue, p_value, rtol=1e-13)
         assert_allclose(res.statistic, statistic, rtol=1e-13)
-        assert_equal(res.df, df)
+        assert_allclose(res.df, df)
 
         # compare no transform with standard anova
         res = smo.test_scale_oneway(data, method='unequal', center=0,
@@ -407,7 +407,7 @@ class TestOnewayScale(object):
 
         assert_allclose(res.pvalue, res2.pvalue, rtol=1e-13)
         assert_allclose(res.statistic, res2.statistic, rtol=1e-13)
-        assert_equal(res.df, res2.df)
+        assert_allclose(res.df, res2.df)
 
     def test_equivalence(self):
         data = self.data
@@ -420,7 +420,7 @@ class TestOnewayScale(object):
 
         assert_allclose(res.pvalue, res2.pvalue, rtol=1e-13)
         assert_allclose(res.statistic, res2.statistic, rtol=1e-13)
-        assert_equal(res.df, res2.df)
+        assert_allclose(res.df, res2.df)
 
         res = smo.equivalence_scale_oneway(data, 0.5, method='bf',
                                            center=0,
@@ -429,7 +429,7 @@ class TestOnewayScale(object):
 
         assert_allclose(res.pvalue, res2.pvalue, rtol=1e-13)
         assert_allclose(res.statistic, res2.statistic, rtol=1e-13)
-        assert_equal(res.df, res2.df)
+        assert_allclose(res.df, res2.df)
 
 
 class TestOnewayOLS(object):
