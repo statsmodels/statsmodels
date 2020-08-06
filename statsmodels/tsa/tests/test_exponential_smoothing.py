@@ -746,7 +746,7 @@ def test_results_vs_statespace(statespace_comparison):
     )[0]
     # het[0] is test statistic, het[1] p-value
     assert_allclose(ets_het[0], statespace_het[0], rtol=0.2)
-    assert_allclose(ets_het[1], statespace_het[1], rtol=0.5)
+    assert_allclose(ets_het[1], statespace_het[1], rtol=0.7)
 
 
 def test_prediction_results_vs_statespace(statespace_comparison):
