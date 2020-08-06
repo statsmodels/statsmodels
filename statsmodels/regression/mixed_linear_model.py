@@ -1128,7 +1128,7 @@ class MixedLM(base.LikelihoodModel):
             `ptol`.
         maxit : int
             The maximum number of iterations.
-        fit_kwargs : keywords
+        **fit_kwargs
             Additional keyword arguments passed to fit.
 
         Returns
@@ -2012,7 +2012,7 @@ class MixedLM(base.LikelihoodModel):
 
     def fit(self, start_params=None, reml=True, niter_sa=0,
             do_cg=True, fe_pen=None, cov_pen=None, free=None,
-            full_output=False, method=None, **kwargs):
+            full_output=False, method=None, **fit_kwargs):
         """
         Fit a linear mixed model to the data.
 
@@ -2052,6 +2052,8 @@ class MixedLM(base.LikelihoodModel):
         method : str
             Optimization method.  Can be a scipy.optimize method name,
             or a list of such names to be tried in sequence.
+        **fit_kwargs
+            Additional keyword arguments passed to fit.
 
         Returns
         -------
@@ -2060,7 +2062,7 @@ class MixedLM(base.LikelihoodModel):
 
         _allowed_kwargs = ['gtol', 'maxiter', 'eps', 'maxcor', 'ftol',
                            'tol', 'disp', 'maxls']
-        for x in kwargs.keys():
+        for x in fit_kwargs.keys():
             if x not in _allowed_kwargs:
                 warnings.warn("Argument %s not used by MixedLM.fit" % x)
 
@@ -2107,9 +2109,9 @@ class MixedLM(base.LikelihoodModel):
                     raise ValueError("invalid start_params")
 
         if do_cg:
-            kwargs["retall"] = hist is not None
-            if "disp" not in kwargs:
-                kwargs["disp"] = False
+            fit_kwargs["retall"] = hist is not None
+            if "disp" not in fit_kwargs:
+                fit_kwargs["disp"] = False
             packed = params.get_packed(use_sqrt=self.use_sqrt, has_fe=False)
 
             if niter_sa > 0:
@@ -2120,7 +2122,7 @@ class MixedLM(base.LikelihoodModel):
                 rslt = super(MixedLM, self).fit(start_params=packed,
                                                 skip_hessian=True,
                                                 method=method[j],
-                                                **kwargs)
+                                                **fit_kwargs)
                 if rslt.mle_retvals['converged']:
                     break
                 packed = rslt.params
@@ -2699,7 +2701,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         return -2 * self.llf + np.log(self.nobs) * df
 
     def profile_re(self, re_ix, vtype, num_low=5, dist_low=1., num_high=5,
-                   dist_high=1.):
+                   dist_high=1., **fit_kwargs):
         """
         Profile-likelihood inference for variance parameters.
 
@@ -2725,6 +2727,8 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         dist_high : float
             The distance above the MLE of the parameter of interest to
             begin calculating points on the profile likelihood.
+        **fit_kwargs
+            Additional keyword arguments passed to fit.
 
         Returns
         -------
@@ -2822,7 +2826,8 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
 
             # TODO should use fit_kwargs
             rslt = model.fit(start_params=params, free=free,
-                             reml=self.reml, cov_pen=self.cov_pen)._results
+                             reml=self.reml, cov_pen=self.cov_pen,
+                             **fit_kwargs)._results
             likev.append([x * rslt.scale, rslt.llf])
 
         likev = np.asarray(likev)

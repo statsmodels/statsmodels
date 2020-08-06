@@ -129,7 +129,7 @@ class TestGLMPenalizedPLS5(CheckGAMMixin):
     def setup_class(cls):
         exog, penalty_matrix, restriction = cls._init()
         endog = data_mcycle['accel']
-        pen = smpen.L2ContraintsPenalty(restriction=restriction)
+        pen = smpen.L2ConstraintsPenalty(restriction=restriction)
         mod = GLMPenalized(endog, exog, family=family.Gaussian(),
                            penal=pen)
         # scaling of penweight in R mgcv

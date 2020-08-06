@@ -203,7 +203,7 @@ def check_news(news, revisions, updates, impact_dates, impacted_variables,
 
     # Note: Pandas < 0.24 has problems with drop_duplicates if there is a
     # PeriodIndex (see e.g. https://github.com/pandas-dev/pandas/issues/22803)
-    # However, the test is not quite as precise with the verison that works
+    # However, the test is not quite as precise with the version that works
     # for Pandas < 0.24, so we special case it and will remove after we no
     # longer support Pandas 0.23
     # See also one other case in the "details_by_update" section below

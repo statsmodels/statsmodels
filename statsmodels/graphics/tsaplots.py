@@ -3,6 +3,7 @@
 from statsmodels.compat.pandas import deprecate_kwarg
 
 import numpy as np
+import pandas as pd
 
 from statsmodels.graphics import utils
 from statsmodels.tsa.stattools import acf, pacf
@@ -26,8 +27,17 @@ def _prepare_data_corr_plot(x, lags, zero):
     return lags, nlags, irregular
 
 
-def _plot_corr(ax, title, acf_x, confint, lags, irregular, use_vlines,
-               vlines_kwargs, **kwargs):
+def _plot_corr(
+    ax,
+    title,
+    acf_x,
+    confint,
+    lags,
+    irregular,
+    use_vlines,
+    vlines_kwargs,
+    **kwargs,
+):
     if irregular:
         acf_x = acf_x[lags]
         if confint is not None:
@@ -37,12 +47,12 @@ def _plot_corr(ax, title, acf_x, confint, lags, irregular, use_vlines,
         ax.vlines(lags, [0], acf_x, **vlines_kwargs)
         ax.axhline(**kwargs)
 
-    kwargs.setdefault('marker', 'o')
-    kwargs.setdefault('markersize', 5)
-    if 'ls' not in kwargs:
+    kwargs.setdefault("marker", "o")
+    kwargs.setdefault("markersize", 5)
+    if "ls" not in kwargs:
         # gh-2369
-        kwargs.setdefault('linestyle', 'None')
-    ax.margins(.05)
+        kwargs.setdefault("linestyle", "None")
+    ax.margins(0.05)
     ax.plot(lags, acf_x, **kwargs)
     ax.set_title(title)
 
@@ -54,14 +64,27 @@ def _plot_corr(ax, title, acf_x, confint, lags, irregular, use_vlines,
         lags = lags.astype(float)
         lags[0] -= 0.5
         lags[-1] += 0.5
-        ax.fill_between(lags, confint[:, 0] - acf_x,
-                        confint[:, 1] - acf_x, alpha=.25)
+        ax.fill_between(
+            lags, confint[:, 0] - acf_x, confint[:, 1] - acf_x, alpha=0.25
+        )
 
 
 @deprecate_kwarg("unbiased", "adjusted")
-def plot_acf(x, ax=None, lags=None, *, alpha=.05, use_vlines=True,
-             adjusted=False, fft=False, missing='none',
-             title='Autocorrelation', zero=True, vlines_kwargs=None, **kwargs):
+def plot_acf(
+    x,
+    ax=None,
+    lags=None,
+    *,
+    alpha=0.05,
+    use_vlines=True,
+    adjusted=False,
+    fft=False,
+    missing="none",
+    title="Autocorrelation",
+    zero=True,
+    vlines_kwargs=None,
+    **kwargs,
+):
     """
     Plot the autocorrelation function
 
@@ -151,20 +174,44 @@ def plot_acf(x, ax=None, lags=None, *, alpha=.05, use_vlines=True,
 
     confint = None
     # acf has different return type based on alpha
-    acf_x = acf(x, nlags=nlags, alpha=alpha, fft=fft, adjusted=adjusted,
-                missing=missing)
+    acf_x = acf(
+        x,
+        nlags=nlags,
+        alpha=alpha,
+        fft=fft,
+        adjusted=adjusted,
+        missing=missing,
+    )
     if alpha is not None:
         acf_x, confint = acf_x
 
-    _plot_corr(ax, title, acf_x, confint, lags, irregular, use_vlines,
-               vlines_kwargs, **kwargs)
+    _plot_corr(
+        ax,
+        title,
+        acf_x,
+        confint,
+        lags,
+        irregular,
+        use_vlines,
+        vlines_kwargs,
+        **kwargs,
+    )
 
     return fig
 
 
-def plot_pacf(x, ax=None, lags=None, alpha=.05, method='ywadjusted',
-              use_vlines=True, title='Partial Autocorrelation', zero=True,
-              vlines_kwargs=None, **kwargs):
+def plot_pacf(
+    x,
+    ax=None,
+    lags=None,
+    alpha=0.05,
+    method="ywadjusted",
+    use_vlines=True,
+    title="Partial Autocorrelation",
+    zero=True,
+    vlines_kwargs=None,
+    **kwargs,
+):
     """
     Plot the partial autocorrelation function
 
@@ -259,8 +306,17 @@ def plot_pacf(x, ax=None, lags=None, alpha=.05, method='ywadjusted',
     else:
         acf_x, confint = pacf(x, nlags=nlags, alpha=alpha, method=method)
 
-    _plot_corr(ax, title, acf_x, confint, lags, irregular, use_vlines,
-               vlines_kwargs, **kwargs)
+    _plot_corr(
+        ax,
+        title,
+        acf_x,
+        confint,
+        lags,
+        irregular,
+        use_vlines,
+        vlines_kwargs,
+        **kwargs,
+    )
 
     return fig
 
@@ -292,15 +348,16 @@ def seasonal_plot(grouped_x, xticklabels, ylabel=None, ax=None):
         nobs = len(df)
         x_plot = np.arange(start, start + nobs)
         ticks.append(x_plot.mean())
-        ax.plot(x_plot, df.values, 'k')
-        ax.hlines(df.values.mean(), x_plot[0], x_plot[-1], colors='r',
-                  linewidth=3)
+        ax.plot(x_plot, df.values, "k")
+        ax.hlines(
+            df.values.mean(), x_plot[0], x_plot[-1], colors="r", linewidth=3
+        )
         start += nobs
 
     ax.set_xticks(ticks)
     ax.set_xticklabels(xticklabels)
     ax.set_ylabel(ylabel)
-    ax.margins(.1, .05)
+    ax.margins(0.1, 0.05)
     return fig
 
 
@@ -345,14 +402,17 @@ def month_plot(x, dates=None, ylabel=None, ax=None):
 
     if dates is None:
         from statsmodels.tools.data import _check_period_index
+
         _check_period_index(x, freq="M")
     else:
-        from pandas import Series, PeriodIndex
+        from pandas import PeriodIndex, Series
+
         x = Series(x, index=PeriodIndex(dates, freq="M"))
 
-    xticklabels = ['j', 'f', 'm', 'a', 'm', 'j', 'j', 'a', 's', 'o', 'n', 'd']
-    return seasonal_plot(x.groupby(lambda y: y.month), xticklabels,
-                         ylabel=ylabel, ax=ax)
+    xticklabels = ["j", "f", "m", "a", "m", "j", "j", "a", "s", "o", "n", "d"]
+    return seasonal_plot(
+        x.groupby(lambda y: y.month), xticklabels, ylabel=ylabel, ax=ax
+    )
 
 
 def quarter_plot(x, dates=None, ylabel=None, ax=None):
@@ -396,11 +456,100 @@ def quarter_plot(x, dates=None, ylabel=None, ax=None):
 
     if dates is None:
         from statsmodels.tools.data import _check_period_index
+
         _check_period_index(x, freq="Q")
     else:
-        from pandas import Series, PeriodIndex
+        from pandas import PeriodIndex, Series
+
         x = Series(x, index=PeriodIndex(dates, freq="Q"))
 
-    xticklabels = ['q1', 'q2', 'q3', 'q4']
-    return seasonal_plot(x.groupby(lambda y: y.quarter), xticklabels,
-                         ylabel=ylabel, ax=ax)
+    xticklabels = ["q1", "q2", "q3", "q4"]
+    return seasonal_plot(
+        x.groupby(lambda y: y.quarter), xticklabels, ylabel=ylabel, ax=ax
+    )
+
+
+def plot_predict(
+    result,
+    start=None,
+    end=None,
+    dynamic=False,
+    alpha=0.05,
+    ax=None,
+    **predict_kwargs,
+):
+    """
+
+    Parameters
+    ----------
+    result : Result
+        Any model result supporting ``get_prediction``.
+    start : int, str, or datetime, optional
+        Zero-indexed observation number at which to start forecasting,
+        i.e., the first forecast is start. Can also be a date string to
+        parse or a datetime type. Default is the the zeroth observation.
+    end : int, str, or datetime, optional
+        Zero-indexed observation number at which to end forecasting, i.e.,
+        the last forecast is end. Can also be a date string to
+        parse or a datetime type. However, if the dates index does not
+        have a fixed frequency, end must be an integer index if you
+        want out of sample prediction. Default is the last observation in
+        the sample.
+    dynamic : bool, int, str, or datetime, optional
+        Integer offset relative to `start` at which to begin dynamic
+        prediction. Can also be an absolute date string to parse or a
+        datetime type (these are not interpreted as offsets).
+        Prior to this observation, true endogenous values will be used for
+        prediction; starting with this observation and continuing through
+        the end of prediction, forecasted endogenous values will be used
+        instead.
+    alpha : {float, None}
+        The tail probability not covered by the confidence interval. Must
+        be in (0, 1). Confidence interval is constructed assuming normally
+        distributed shocks. If None, figure will not show the confidence
+        interval.
+    ax : AxesSubplot
+        matplotlib Axes instance to use
+    **predict_kwargs
+        Any additional keyword arguments to pass to ``result.get_prediction``.
+
+    Returns
+    -------
+    Figure
+        matplotlib Figure containing the prediction plot
+    """
+    from statsmodels.graphics.utils import _import_mpl, create_mpl_ax
+
+    _ = _import_mpl()
+    fig, ax = create_mpl_ax(ax)
+    from statsmodels.tsa.base.prediction import PredictionResults
+
+    # use predict so you set dates
+    pred: PredictionResults = result.get_prediction(
+        start=start, end=end, dynamic=dynamic, **predict_kwargs
+    )
+    mean = pred.predicted_mean
+    if isinstance(mean, (pd.Series, pd.DataFrame)):
+        x = mean.index
+        mean.plot(ax=ax, label="forecast")
+    else:
+        x = np.arange(mean.shape[0])
+        ax.plot(x, mean)
+
+    if alpha is not None:
+        label = f"{1-alpha:.0%} confidence interval"
+        ci = pred.conf_int(alpha)
+        conf_int = np.asarray(ci)
+
+        ax.fill_between(
+            x,
+            conf_int[:, 0],
+            conf_int[:, 1],
+            color="gray",
+            alpha=0.5,
+            label=label,
+        )
+
+    ax.legend(loc="best")
+
+    return fig

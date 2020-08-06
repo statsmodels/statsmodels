@@ -671,7 +671,7 @@ class TestPenalizedGLMGaussianL2(CheckPenalizedGaussian):
 
         weights = (np.arange(x.shape[1]) >= 4).astype(float)
         mod = GLMPenalized(y, x, family=family.Gaussian(),
-                           penal=smpen.L2ContraintsPenalty(weights=weights))
+                           penal=smpen.L2ConstraintsPenalty(weights=weights))
         # make pen_weight large to force redundant to close to zero
         mod.pen_weight *= 500
         cls.res1 = mod.fit(cov_type=cov_type, method='bfgs', maxiter=100,
@@ -698,7 +698,7 @@ class TestPenalizedGLMGaussianL2Theil(CheckPenalizedGaussian):
         # the corresponding Theil penweight seems to be 2 * nobs / sigma2_e
         cls.res2 = modp.fit(pen_weight=120.74564413221599 * 1000, use_t=False)
 
-        pen = smpen.L2ContraintsPenalty(restriction=restriction)
+        pen = smpen.L2ConstraintsPenalty(restriction=restriction)
         mod = GLMPenalized(y, x, family=family.Gaussian(),
                            penal=pen)
         # use default weight for GLMPenalized

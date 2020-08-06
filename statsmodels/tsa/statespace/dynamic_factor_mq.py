@@ -161,7 +161,7 @@ class DynamicFactorMQStates(dict):
         governing all factor block dynamics or dictionary with:
 
         - keys : factor name or tuples of factor names in a block
-        - values : integer decribing the VAR order for that factor block
+        - values : integer describing the VAR order for that factor block
 
         If a dictionary, this defines the order of the factor blocks in the
         state vector. Otherwise, factors are ordered so that factors that load
@@ -176,7 +176,7 @@ class DynamicFactorMQStates(dict):
         factor in the `factors` argument, and set the order in the
         `factor_orders` argument, and then set the factor multiplicity to 2.
 
-        This argument must be an integer decribing the factor multiplicity for
+        This argument must be an integer describing the factor multiplicity for
         all factors or dictionary with:
 
         - keys : factor name
@@ -712,7 +712,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         details on how to set up a model with monthly/quarterly mixed frequency
         data.
     k_endog_monthly : int, optional
-        If specifying a monthly/quarterly mixed freqency model in which the
+        If specifying a monthly/quarterly mixed frequency model in which the
         provided `endog` dataset contains both the monthly and quarterly data,
         this variable should be used to indicate how many of the variables
         are monthly. Note that when using the `k_endog_monthly` argument, the
@@ -735,7 +735,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         governing all factor block dynamics or dictionary with:
 
         - keys : factor name or tuples of factor names in a block
-        - values : integer decribing the VAR order for that factor block
+        - values : integer describing the VAR order for that factor block
 
         If a dictionary, this defines the order of the factor blocks in the
         state vector. Otherwise, factors are ordered so that factors that load
@@ -750,7 +750,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         factor in the `factors` argument, and set the order in the
         `factor_orders` argument, and then set the factor multiplicity to 2.
 
-        This argument must be an integer decribing the factor multiplicity for
+        This argument must be an integer describing the factor multiplicity for
         all factors or dictionary with:
 
         - keys : factor name
@@ -864,7 +864,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
     which is measured at a quarterly frequency. If the basic factor model is
     specified at a monthly frequency, then the quarterly growth rate in the
     third month of each quarter -- which is what we actually observe -- is
-    approximated by a particular weighted average of uonbserved monthly growth
+    approximated by a particular weighted average of unobserved monthly growth
     rates. We need to take this particular weight moving average into account
     in constructing our model, and this is what the second approach does.
 
@@ -927,7 +927,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
 
     The estimated factors and the factor loadings in this model are only
     identified up to an invertible transformation. As described in (the working
-    paper verison of) [2]_, while it is possible to impose normalizations to
+    paper version of) [2]_, while it is possible to impose normalizations to
     achieve identification, the EM algorithm does will converge regardless.
     Moreover, for nowcasting and forecasting purposes, identification is not
     required. This model does not impose any normalization to identify the
@@ -990,7 +990,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
              0          1
     =====================
 
-    *Factors*
+    **Factors**
 
     With `factors=2`, there will be two independent factors that will each
     evolve according to separate AR(1) processes.
@@ -1018,7 +1018,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
              1          1
     =====================
 
-    *Factor multiplicities*
+    **Factor multiplicities**
 
     By instead specifying `factor_multiplicities=2`, we would still have two
     factors, but they would be dependent and would evolve jointly according
@@ -1046,7 +1046,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
       0.1, 0.2          1
     =====================
 
-    *Factor orders*
+    **Factor orders**
 
     In either of the above cases, we could extend the order of the (vector)
     autoregressions by using the `factor_orders` argument. For example, the
@@ -1076,7 +1076,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
              1          2
     =====================
 
-    *Serial correlation in the idiosyncratic disturbances*
+    **Serial correlation in the idiosyncratic disturbances**
 
     By default, the model allows each idiosyncratic disturbance terms to evolve
     according to an AR(1) process. If preferred, they can instead be specified
@@ -1210,7 +1210,6 @@ class DynamicFactorMQ(mlemodel.MLEModel):
 
     >>> mod = sm.tsa.DynamicFactorMQ(endog)
     >>> res = mod.fit(disp=10)
-
     EM start iterations, llf=-291.21
     EM iteration 10, llf=-157.17, convergence criterion=0.053801
     EM iteration 20, llf=-128.99, convergence criterion=0.0035545
@@ -1233,7 +1232,6 @@ class DynamicFactorMQ(mlemodel.MLEModel):
     >>> mod = sm.tsa.DynamicFactorMQ(endog)
     >>> res = mod.fit()
     >>> print(res.forecast(steps=5))
-
                  infl  tbilrate
     2009-10  1.784169  0.260401
     2009-11  1.735848  0.305981
@@ -1246,7 +1244,6 @@ class DynamicFactorMQ(mlemodel.MLEModel):
     >>> mod = sm.tsa.DynamicFactorMQ(endog)
     >>> res = mod.fit()
     >>> print(res.impulse_responses(steps=5))
-
            infl  tbilrate
     0 -1.511956 -1.341498
     1 -1.483172 -1.315960
@@ -1596,10 +1593,10 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         endog : array_like
             The observed time-series process :math:`y`
         k_endog_monthly : int, optional
-            If specifying a monthly/quarterly mixed freqency model in which the
-            provided `endog` dataset contains both the monthly and quarterly
-            data, this variable should be used to indicate how many of the
-            variables are monthly.
+            If specifying a monthly/quarterly mixed frequency model in which
+            the provided `endog` dataset contains both the monthly and
+            quarterly data, this variable should be used to indicate how many
+            of the variables are monthly.
         endog_quarterly : array_like, optional
             Observations of quarterly variables. If provided, must be a
             Pandas Series or DataFrame with a DatetimeIndex or PeriodIndex at
@@ -2211,7 +2208,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         - 2 A_{i,l} - D_{i,l} = 0
         - A_{i,l} - E_{i,l} = 0
 
-        So that k_constraints = 4 * k_i. In matrix form the contraints are:
+        So that k_constraints = 4 * k_i. In matrix form the constraints are:
 
         .. math::
 
@@ -3927,10 +3924,10 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
         endog : array_like
             New observations from the modeled time-series process.
         k_endog_monthly : int, optional
-            If specifying a monthly/quarterly mixed freqency model in which the
-            provided `endog` dataset contains both the monthly and quarterly
-            data, this variable should be used to indicate how many of the
-            variables are monthly.
+            If specifying a monthly/quarterly mixed frequency model in which
+            the provided `endog` dataset contains both the monthly and
+            quarterly data, this variable should be used to indicate how many
+            of the variables are monthly.
         endog_quarterly : array_like, optional
             New observations of quarterly variables. If provided, must be a
             Pandas Series or DataFrame with a DatetimeIndex or PeriodIndex at

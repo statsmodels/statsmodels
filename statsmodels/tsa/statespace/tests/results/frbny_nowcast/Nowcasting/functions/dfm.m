@@ -81,7 +81,7 @@ blocks = Par.blocks;
 
 i_idio = logical([ones(N-nQ,1);zeros(nQ,1)]);
 
-%R*Lambda = q; Contraints on the loadings of the quartrly variables
+%R*Lambda = q; Constraints on the loadings of the quartrly variables
 
 R_mat = [  2 -1  0  0  0;...
            3  0 -1  0  0;...

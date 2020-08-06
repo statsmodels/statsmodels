@@ -83,10 +83,12 @@ Burovski
 Bybee
 CDFLink
 CFA
+CFASimulationSmoother
 CLogLog
 CRC
 CacheWriteWarning
 Cai
+CalendarDeterministicTerm
 CalendarFourier
 CalendarSeasonality
 CalendarTimeTrend
@@ -117,6 +119,7 @@ Cointegration
 Cokelaer
 CollinearityWarning
 Colormap
+CombineResults
 CompareCox
 CompareJ
 CompareMeans
@@ -187,6 +190,8 @@ Dror
 Duffield
 Dunnet
 DynamicFactor
+DynamicFactorMQ
+DynamicFactorMQResults
 DynamicFactorResults
 ECDF
 ENH
@@ -230,6 +235,7 @@ Formatter
 Fortin
 Fortran
 ForwardEffects
+FourierDeterministicTerm
 Frobenius
 FrozenRepresentation
 Fuglede
@@ -681,6 +687,7 @@ ThetaModel
 ThetaModelResults
 Thie
 TimeTrend
+TimeTrendDeterministicTerm
 Timeseries
 Tingley
 Todo
@@ -945,8 +952,10 @@ ccf
 ccols
 ccovf
 ccpr
+cd
 cdf
 ceres
+cfa
 cffilter
 cfg
 chadfulton
@@ -956,6 +965,7 @@ chebee
 chiang
 chisq
 chisquare
+chol
 cholesky
 cholsigmainv
 cholsimgainv
@@ -1048,6 +1058,7 @@ cz
 dCov
 dask
 dat
+dataframe
 datamlw
 dataname
 datapoints
@@ -1532,6 +1543,7 @@ jsphon
 jsseabold
 jstor
 jtest
+jth
 jtweeder
 jval
 kalman
@@ -1817,6 +1829,7 @@ noncentrality
 nondispersive
 noninvertible
 nonlinearity
+nonmissing
 nonmonotone
 nonnormality
 nonparametric
@@ -1826,6 +1839,7 @@ nonstationary
 nonstochastic
 nonsymmetric
 noreply
+normalizations
 normed
 normtest
 norw
@@ -1833,6 +1847,7 @@ nosetests
 notationally
 novikova
 nowcasting
+nowcasts
 np
 nparray
 npos
@@ -1970,6 +1985,7 @@ procrustes
 proddummy
 programatically
 promax
+proportiontocut
 prsquared
 pseudoinverse
 ptp
@@ -2071,6 +2087,7 @@ rkt
 rlan
 rlm
 rmse
+rmspe
 rng
 robustcov
 rodrigues
@@ -2115,6 +2132,7 @@ seasonalities
 seasonalmaparams
 seasonals
 seldovia
+selectable
 semeilasticity
 semidefinite
 semielasticity
@@ -2266,11 +2284,13 @@ tost
 totobs
 tq
 tranformations
+transf
 transparams
 trendorder
 trent
 tri
 tricube
+trimboth
 triw
 triweight
 tsa
@@ -2446,5 +2466,3 @@ zt
 ztest
 ztost
 zvalues
-cd
-dataframe

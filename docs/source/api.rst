@@ -101,6 +101,13 @@ Graphics
    ~statsmodels.graphics.gofplots.qqplot
    ~statsmodels.graphics.gofplots.qqplot_2samples
 
+Statistics
+~~~~~~~~~~
+.. autosummary::
+
+   ~statsmodels.stats.descriptivestats.Description
+   ~statsmodels.stats.descriptivestats.describe
+
 Tools
 ~~~~~
 .. autosummary::
@@ -163,6 +170,7 @@ Multivariate Time Series Models
 .. autosummary::
 
    ~statsmodels.tsa.statespace.dynamic_factor.DynamicFactor
+   ~statsmodels.tsa.statespace.dynamic_factor_mq.DynamicFactorMQ
    ~statsmodels.tsa.vector_ar.var_model.VAR
    ~statsmodels.tsa.statespace.varmax.VARMAX
    ~statsmodels.tsa.vector_ar.svar_model.SVAR
@@ -188,6 +196,14 @@ Markov Regime Switching Models
    ~statsmodels.tsa.regime_switching.markov_autoregression.MarkovAutoregression
    ~statsmodels.tsa.regime_switching.markov_regression.MarkovRegression
 
+Forecasting
+~~~~~~~~~~~
+
+.. autosummary::
+
+   ~statsmodels.tsa.forecasting.stl.STLForecast
+   ~statsmodels.tsa.forecasting.theta.ThetaModel
+
 Time-Series Tools
 ~~~~~~~~~~~~~~~~~
 
@@ -198,6 +214,7 @@ Time-Series Tools
    ~statsmodels.tsa.tsatools.detrend
    ~statsmodels.tsa.tsatools.lagmat
    ~statsmodels.tsa.tsatools.lagmat2ds
+   ~statsmodels.tsa.deterministic.DeterministicProcess
 
 X12/X13 Interface
 ~~~~~~~~~~~~~~~~~

@@ -28,7 +28,7 @@ The following Pull Requests were merged since the last release:
 
 * :pr:`6433`: TST/BUG: use reset_randomstate
 * :pr:`6438`: BUG: Change default optimizer for glm/ridge and make it user-settable
-* :pr:`6453`: DOC: Fix the version that appears in the documentaion
+* :pr:`6453`: DOC: Fix the version that appears in the documentation
 * :pr:`6456`: DOC: Send log to dev/null/
 * :pr:`6461`: MAINT: correcting typo
 * :pr:`6465`: MAINT: Avoid noise in f-pvalue

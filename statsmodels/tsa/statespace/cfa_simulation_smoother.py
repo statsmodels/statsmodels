@@ -70,11 +70,11 @@ class CFASimulationSmoother(object):
 
     References
     ----------
-    .. [*] McCausland, William J., Shirley Miller, and Denis Pelletier.
+    .. [1] McCausland, William J., Shirley Miller, and Denis Pelletier.
            "Simulation smoothing for state-space models: A computational
            efficiency analysis."
            Computational Statistics & Data Analysis 55, no. 1 (2011): 199-212.
-    .. [*] Chan, Joshua CC, and Ivan Jeliazkov.
+    .. [2] Chan, Joshua CC, and Ivan Jeliazkov.
            "Efficient simulation and integrated likelihood estimation in
            state space models."
            International Journal of Mathematical Modelling and Numerical
@@ -132,7 +132,7 @@ class CFASimulationSmoother(object):
         Notes
         -----
         This attribute holds in sparse diagonal banded storage the Cholesky
-        factor of the inverse of the posterior covariance matrix. If we deonte
+        factor of the inverse of the posterior covariance matrix. If we denote
         :math:`P = Var[\alpha \mid Y^n ]`, then the this attribute holds the
         lower Cholesky factor :math:`L`, defined from :math:`L L' = P^{-1}`.
         This attribute uses the sparse diagonal banded storage described in the

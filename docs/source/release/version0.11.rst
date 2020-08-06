@@ -144,8 +144,8 @@ More robust regime switching models
 What's new - an overview
 ========================
 
-The following lists the main new features of statsmodels 0.10. In addition,
-release 0.10 includes bug fixes, refactorings and improvements in many areas.
+The following lists the main new features of statsmodels 0.11. In addition,
+release 0.11 includes bug fixes, refactorings and improvements in many areas.
 
 Major Feature
 -------------
