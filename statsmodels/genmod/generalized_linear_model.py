@@ -1635,7 +1635,7 @@ class GLMResults(base.LikelihoodModelResults):
 
         kwargs = model._get_init_kwds()
         kwargs.pop('family')
-        if hasattr(self, '_offset_exposure'):
+        if hasattr(self.model, '_offset_exposure'):
             return GLM(endog, exog, family=self.family,
                        **kwargs).fit().fittedvalues
         else:
