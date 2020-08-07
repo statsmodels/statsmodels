@@ -2377,3 +2377,27 @@ def test_glm_bic_warning(iris):
     model = GLM(y, X, family=sm.families.Binomial()).fit()
     with pytest.warns(FutureWarning, match="The bic"):
         assert isinstance(model.bic, float)
+
+
+def test_output_exposure_null(reset_randomstate):
+    # GH 6953
+
+    x0 = [np.sin(i / 20) + 2 for i in range(1000)]
+    rs = np.random.RandomState(0)
+    # Variable exposures for each observation
+    exposure = rs.randint(100, 200, size=1000)
+    y = [np.sum(rs.poisson(x, size=e)) for x, e in zip(x0, exposure)]
+    x = add_constant(x0)
+
+    model = GLM(
+        endog=y, exog=x, exposure=exposure, family=sm.families.Poisson()
+    ).fit()
+    null_model = GLM(
+        endog=y, exog=x[:, 0], exposure=exposure, family=sm.families.Poisson()
+    ).fit()
+    null_model_without_exposure = GLM(
+        endog=y, exog=x[:, 0], family=sm.families.Poisson()
+    ).fit()
+    assert_allclose(model.llnull, null_model.llf)
+    # Check that they are different
+    assert np.abs(null_model_without_exposure.llf - model.llnull) > 1
