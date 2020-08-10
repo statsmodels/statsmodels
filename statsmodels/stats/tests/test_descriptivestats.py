@@ -11,6 +11,10 @@ from statsmodels.stats.descriptivestats import (
     sign_test,
 )
 
+pytestmark = pytest.mark.filterwarnings(
+    "ignore:``Describe`` has been deprecated:DeprecationWarning"
+)
+
 
 @pytest.fixture(scope="function")
 def df():

@@ -521,7 +521,8 @@ class TestHoltWinters(object):
             "initial_level": 252.59039965,
             "initial_trend": 6.90265918,
         }
-        fit = mod.fit(optimized=False, **params)
+        with mod.fix_params(params):
+            fit = mod.fit(optimized=False)
 
         # Check that we captured the parameters correctly
         for key in params.keys():
@@ -674,23 +675,28 @@ class TestHoltWinters(object):
             trend="additive",
             seasonal="additive",
             initialization_method="estimated",
+            use_boxcox=True,
         )
-        fit1 = mod.fit(use_boxcox=True)
-        fit2 = ExponentialSmoothing(
+        fit1 = mod.fit()
+        assert_almost_equal(
+            fit1.forecast(8),
+            [59.96, 38.63, 47.48, 51.89, 62.81, 41.0, 50.06, 54.57],
+            2,
+        )
+
+    def test_hw_seasonal_add_mul(self):
+        mod2 = ExponentialSmoothing(
             self.aust,
             seasonal_periods=4,
             trend="add",
             seasonal="mul",
             initialization_method="estimated",
-        ).fit(use_boxcox=True)
-        assert_almost_equal(
-            fit1.forecast(8),
-            [61.34, 37.24, 46.84, 51.01, 64.47, 39.78, 49.64, 53.90],
-            2,
+            use_boxcox=True,
         )
+        fit2 = mod2.fit()
         assert_almost_equal(
             fit2.forecast(8),
-            [60.97, 36.99, 46.71, 51.48, 64.46, 39.02, 49.29, 54.32],
+            [61.69, 37.37, 47.22, 52.03, 65.08, 39.34, 49.72, 54.79],
             2,
         )
         ExponentialSmoothing(
@@ -699,27 +705,28 @@ class TestHoltWinters(object):
             trend="mul",
             seasonal="add",
             initialization_method="estimated",
-        ).fit(use_boxcox="log")
+            use_boxcox=0.0,
+        ).fit()
         ExponentialSmoothing(
             self.aust,
             seasonal_periods=4,
             trend="multiplicative",
             seasonal="multiplicative",
             initialization_method="estimated",
-        ).fit(use_boxcox="log")
+            use_boxcox=0.0,
+        ).fit()
         # Skip since estimator is unstable
         # assert_almost_equal(fit5.forecast(1), [60.60], 2)
         # assert_almost_equal(fit6.forecast(1), [61.47], 2)
 
-    # FIXME: this is passing 2019-05-22; what has changed?
-    # @pytest.mark.xfail(reason='Optimizer does not converge')
     def test_hw_seasonal_buggy(self):
         fit3 = ExponentialSmoothing(
             self.aust,
             seasonal_periods=4,
             seasonal="add",
             initialization_method="estimated",
-        ).fit(use_boxcox=True)
+            use_boxcox=True,
+        ).fit()
         assert_almost_equal(
             fit3.forecast(8),
             [
@@ -739,7 +746,8 @@ class TestHoltWinters(object):
             seasonal_periods=4,
             seasonal="mul",
             initialization_method="estimated",
-        ).fit(use_boxcox=True)
+            use_boxcox=True,
+        ).fit()
         assert_almost_equal(
             fit4.forecast(8),
             [
@@ -877,7 +885,7 @@ def test_float_boxcox(trend, seasonal):
     with pytest.warns(FutureWarning):
         res = ExponentialSmoothing(
             housing_data, trend=trend, seasonal=seasonal
-        ).fit(use_boxcox=0.5)
+        ).fit(use_boxcox = 0.5)
     assert_allclose(res.params["use_boxcox"], 0.5)
 
 
@@ -1544,7 +1552,8 @@ def test_simulate_boxcox(austourists):
         seasonal="mul",
         damped_trend=False,
         initialization_method="estimated",
-    ).fit(use_boxcox=True)
+        use_boxcox=True,
+    ).fit()
     expected = fit.forecast(4).values
 
     res = fit.simulate(4, repetitions=10, random_state=0).values

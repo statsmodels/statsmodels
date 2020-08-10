@@ -1178,6 +1178,15 @@ class ExponentialSmoothing(TimeSeriesModel):
             res.level = l0
             res.trend = b0
             res.seasonal = s0
+            if self._fixed_parameters:
+                fp = self._fixed_parameters
+                res.alpha = fp.get("smoothing_level", res.alpha)
+                res.beta = fp.get("smoothing_trend", res.beta)
+                res.gamma = fp.get("smoothing_seasonal", res.gamma)
+                res.phi = fp.get("damping_trend", res.phi)
+                res.level = fp.get("initial_level", res.level)
+                res.trend = fp.get("initial_trend", res.trend)
+                res.seasonal = fp.get("initial_seasonal", res.seasonal)
 
         hwfit = self._predict(
             h=0,
