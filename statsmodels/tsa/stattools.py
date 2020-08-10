@@ -673,7 +673,7 @@ def acf(
     if not (qstat or alpha):
         return acf
     if alpha is not None:
-        varacf = np.ones(nlags + 1) / nobs
+        varacf = np.ones_like(acf) / nobs
         varacf[0] = 0
         varacf[1] = 1.0 / nobs
         varacf[2:] *= 1 + 2 * np.cumsum(acf[1:-1] ** 2)

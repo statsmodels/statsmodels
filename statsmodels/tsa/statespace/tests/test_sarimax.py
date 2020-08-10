@@ -2726,3 +2726,27 @@ def test_dynamic_str():
     actual = res.get_prediction(index[-24],
                                 dynamic=dynamic.strftime("%Y-%m-%d"))
     assert_allclose(actual.predicted_mean, desired.predicted_mean)
+
+
+@pytest.mark.matplotlib
+def test_plot_too_few_obs(reset_randomstate):
+    # GH 6173
+    # SO https://stackoverflow.com/questions/55930880/
+    #    arima-models-plot-diagnostics-share-error/58051895#58051895
+    mod = sarimax.SARIMAX(
+        np.random.normal(size=10), order=(10, 0, 0), enforce_stationarity=False
+    )
+    results = mod.fit()
+    with pytest.raises(ValueError, match="Length of endogenous"):
+        results.plot_diagnostics(figsize=(15, 5))
+    y = np.random.standard_normal(9)
+    mod = sarimax.SARIMAX(
+        y,
+        order=(1, 1, 1),
+        seasonal_order=(1, 1, 0, 12),
+        enforce_stationarity=False,
+        enforce_invertibility=False,
+    )
+    results = mod.fit()
+    with pytest.raises(ValueError, match="Length of endogenous"):
+        results.plot_diagnostics(figsize=(30, 15))

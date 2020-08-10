@@ -4280,6 +4280,13 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             self.filter_results.standardized_forecasts_error[variable, d:],
             index=ix)
 
+        if resid.shape[0] < max(d, lags):
+            raise ValueError(
+                "Length of endogenous variable must be larger the the number "
+                "of lags used in the model and the number of observations "
+                "burned in the log-likelihood calculation."
+            )
+
         # Top-left: residuals vs time
         ax = fig.add_subplot(221)
         resid.dropna().plot(ax=ax)
