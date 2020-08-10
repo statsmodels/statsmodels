@@ -897,7 +897,10 @@ class SARIMAX(MLEModel):
             params_ma = params[offset:k_params_ma + offset]
             offset += k_params_ma
         if residuals is not None:
-            params_variance = (residuals[k_params_ma:]**2).mean()
+            if len(residuals) > 1:
+                params_variance = (residuals[k_params_ma:] ** 2).mean()
+            else:
+                params_variance = np.var(endog)
 
         return (params_trend, params_ar, params_ma,
                 params_variance)

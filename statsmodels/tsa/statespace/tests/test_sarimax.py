@@ -2750,3 +2750,16 @@ def test_plot_too_few_obs(reset_randomstate):
     results = mod.fit()
     with pytest.raises(ValueError, match="Length of endogenous"):
         results.plot_diagnostics(figsize=(30, 15))
+
+
+def test_sarimax_starting_values_few_obsevations(reset_randomstate):
+    # GH 6396, 6801
+    y = np.random.standard_normal(17)
+
+    sarimax_model = sarimax.SARIMAX(
+        endog=y, order=(1, 1, 1), seasonal_order=(0, 1, 0, 12), trend="n"
+    ).fit(disp=False)
+
+    assert np.all(
+        np.isfinite(sarimax_model.predict(start=len(y), end=len(y) + 11))
+    )
