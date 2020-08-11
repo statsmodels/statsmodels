@@ -23,9 +23,9 @@ are mentioned in the docstrings.
 
 Stats
 -----
-**Issues Closed**: 215
+**Issues Closed**: 223
 
-**Pull Requests Merged**: 194
+**Pull Requests Merged**: 208
 
 
 The Highlights
@@ -97,8 +97,8 @@ in-sample regressors or out-of-sample values suitable for forecasting.
 What's new - an overview
 ========================
 
-The following lists the main new features of statsmodels 0.12. In addition,
-release 0.12 includes bug fixes, refactorings and improvements in many areas.
+The following lists the main new features of statsmodels 0.12.0. In addition,
+release 0.12.0 includes bug fixes, refactorings and improvements in many areas.
 
 Submodules
 ----------
@@ -108,7 +108,7 @@ Submodules
 ~~~~~~~~~~~~~~~~~
 - Fix the version that appears in the documentation  (:pr:`6452`)
 - Send log to dev/null/  (:pr:`6456`)
-- Correct spelling of   various  (:pr:`6518`)
+- Correct spelling of various  (:pr:`6518`)
 - Fix typos  (:pr:`6531`)
 - Update interactions_anova.ipynb  (:pr:`6601`)
 - Fix `true` type on statespace docs page  (:pr:`6616`)
@@ -141,6 +141,8 @@ Submodules
 - Clarify deprecations  (:pr:`6932`)
 - Document exceptions and warnings  (:pr:`6943`)
 - Update pandas function in hp_filter example  (:pr:`6946`)
+- Prepare docs  (:pr:`6948`)
+- Fix final issues in release note  (:pr:`6951`)
 
 ``Performance``
 ~~~~~~~~~~~~~~~
@@ -182,10 +184,11 @@ Submodules
 ``docs``
 ~~~~~~~~
 - Fix doc errors and silence warning  (:pr:`6931`)
+- Prepare docs  (:pr:`6948`)
 
 ``duration``
 ~~~~~~~~~~~~
-- Allow more than 2 groups for survdiff in statsmodels.duration  (:pr:`6626`)
+- Allow more than 2 groups for survdiff in statmodels.duration  (:pr:`6626`)
 
 ``gam``
 ~~~~~~~
@@ -204,6 +207,8 @@ Submodules
 - Gh 6627  (:pr:`6852`)
 - Change of BIC formula in GLM  (:pr:`6941`)
 - Make glm's predict function return numpy array even if exposure is a pandas series  (:pr:`6942`)
+- Fix check for offset_exposure in null  (:pr:`6957`)
+- Add test for offset exposure null  (:pr:`6959`)
 
 ``graphics``
 ~~~~~~~~~~~~
@@ -261,6 +266,9 @@ Submodules
 - Ensure setuptools is imported first  (:pr:`6894`)
 - Remove FutureWarnings  (:pr:`6920`)
 - Add tool to simplify documenting API in release notes  (:pr:`6922`)
+- Relax test tolerance for future compat  (:pr:`6945`)
+- Fixes for failures in wheel building  (:pr:`6952`)
+- Fixes for wheel building  (:pr:`6954`)
 
 ``multivariate``
 ~~~~~~~~~~~~~~~~
@@ -306,6 +314,7 @@ Submodules
 - REF/DOC docs and refactor of recent stats  (:pr:`6872`)
 - Api cleanup and improve docstrings in stats, round 3  (:pr:`6897`)
 - Improve descriptivestats  (:pr:`6944`)
+- Catch warning  (:pr:`6964`)
 
 ``tools``
 ~~~~~~~~~
@@ -352,6 +361,9 @@ Submodules
 - Add get_prediction to AutoReg  (:pr:`6927`)
 - Standardize forecast API  (:pr:`6933`)
 - Fix small issues post ETS get_prediction merge  (:pr:`6934`)
+- Modify failing test on Windows  (:pr:`6949`)
+- Improve ETS / statespace documentation and higlights for v0.12   (:pr:`6950`)
+- Remove FutureWarnings  (:pr:`6958`)
 
 ``tsa.statespace``
 ~~~~~~~~~~~~~~~~~~
@@ -374,14 +386,16 @@ Submodules
 - Fix extend in VARMAX with trend  (:pr:`6909`)
 - Dynamic is incorrect when not an int in statespace get_prediction  (:pr:`6917`)
 - Add dynamic factor model with EM algorithm, option for monthly/quarterly mixed frequency model  (:pr:`6937`)
+- Improve ETS / statespace documentation and higlights for v0.12   (:pr:`6950`)
+- SARIMAX throwing different errors when length of endogenous var is too low  (:pr:`6961`)
+- Fix start params computation with few nobs  (:pr:`6962`)
+- Relax tolerance on random failure  (:pr:`6963`)
 
 ``tsa.vector.ar``
 ~~~~~~~~~~~~~~~~~
 - Include figsize as parameter for IRF plot  (:pr:`6590`)
 - Raise on incorrectly sized exog  (:pr:`6730`)
 - Correct IRF nobs with exog  (:pr:`6925`)
-
-
 
 bug-wrong
 ---------
