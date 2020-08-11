@@ -21,9 +21,9 @@ from statsmodels.tools.validation import (
 )
 
 DEPRECATION_MSG = """/
-``Describe`` has been deprecated in favor of
-``Description`` and it's simplified functional version, ``describe``.
-These will be removed after 0.13.
+``Describe`` has been deprecated in favor of ``Description`` and it's
+simplified functional version, ``describe``. ``Describe`` will be removed
+after 0.13.
 """
 
 PERCENTILES = (1, 5, 10, 25, 50, 75, 90, 95, 99)
