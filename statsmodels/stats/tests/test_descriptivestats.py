@@ -12,7 +12,7 @@ from statsmodels.stats.descriptivestats import (
 )
 
 pytestmark = pytest.mark.filterwarnings(
-    "ignore:``Describe`` has been deprecated:DeprecationWarning"
+    "ignore::DeprecationWarning:statsmodels.stats.descriptivestats"
 )
 
 
