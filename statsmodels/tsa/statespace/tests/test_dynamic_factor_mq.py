@@ -1061,8 +1061,8 @@ def test_quasi_newton_fitting(reset_randomstate):
     res_em = mod_dfm.fit(start_params, em_initialization=False)
     params_em = res_em.params.copy()
 
-    assert_allclose(res_lbfgs.llf, res_em.llf, atol=1e-2)
-    assert_allclose(params_lbfgs, params_em, atol=1e-2)
+    assert_allclose(res_lbfgs.llf, res_em.llf, atol=5e-2, rtol=1e-5)
+    assert_allclose(params_lbfgs, params_em, atol=5e-2, rtol=1e-5)
 
     # Check lbfgs and em converge to the same thing: idiosyncratic_ar1=True
     res_lbfgs = mod_dfm_ar1.fit(method='lbfgs')
@@ -1074,8 +1074,8 @@ def test_quasi_newton_fitting(reset_randomstate):
     res_em = mod_dfm_ar1.fit(params_lbfgs, em_initialization=False)
     params_em = res_em.params.copy()
 
-    assert_allclose(res_lbfgs.llf, res_em.llf, atol=1e-2)
-    assert_allclose(params_lbfgs, params_em, atol=1e-2)
+    assert_allclose(res_lbfgs.llf, res_em.llf, atol=5e-2, rtol=1e-5)
+    assert_allclose(params_lbfgs, params_em, atol=5e-2, rtol=1e-5)
 
 
 def test_summary(reset_randomstate):
