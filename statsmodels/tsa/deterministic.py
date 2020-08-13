@@ -1239,6 +1239,7 @@ additional components using the additional_terms input."""
             terms = terms.loc[:, ~is_constant]
         return terms
 
+    @Appender(DeterministicTerm.in_sample.__doc__)
     def in_sample(self) -> pd.DataFrame:
         if self._cached_in_sample is not None:
             return self._cached_in_sample
@@ -1279,6 +1280,7 @@ additional components using the additional_terms input."""
         self._cached_in_sample = terms
         return terms
 
+    @Appender(DeterministicTerm.out_of_sample.__doc__)
     def out_of_sample(
         self,
         steps: int,
@@ -1397,6 +1399,22 @@ additional components using the additional_terms input."""
         start: Union[IntLike, DateLike, str],
         stop: Union[IntLike, DateLike, str],
     ) -> pd.DataFrame:
+        """
+        Deterministic terms spanning a range of observations
+
+        Parameters
+        ----------
+        start : {int, str, dt.datetime, pd.Timestamp, np.datetime64}
+            The first observation.
+        stop : {int, str, dt.datetime, pd.Timestamp, np.datetime64}
+            The final observation. Inclusive to match most prediction
+            function in statsmodels.
+
+        Returns
+        -------
+        DataFrame
+            A data frame of deterministic terms
+        """
         if not self._extendable:
             raise TypeError(
                 """The index in the deterministic process does not \
