@@ -50,9 +50,8 @@ def mad(a, c=Gaussian.ppf(3/4.), axis=0, center=np.median):
 
 
 def iqr(a, c=Gaussian.ppf(3/4) - Gaussian.ppf(1/4), axis=0, center=np.median):
-    # c \approx 1.349
     """
-    The Interquartile range along given axis of an array
+    The normalized interquartile range along given axis of an array
 
     Parameters
     ----------
@@ -72,8 +71,7 @@ def iqr(a, c=Gaussian.ppf(3/4) - Gaussian.ppf(1/4), axis=0, center=np.median):
 
     Returns
     -------
-    iqr : float
-        `mad` = median(abs(`a` - center))/`c`
+    The normalized interquartile range
     """
     a = array_like(a, 'a', ndim=None)
     c = float_like(c, 'c')
