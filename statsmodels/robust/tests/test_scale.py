@@ -31,6 +31,9 @@ class TestChem(object):
     def test_mad(self):
         assert_almost_equal(scale.mad(self.chem), 0.52632, DECIMAL)
 
+    def test_iqr(self):
+        assert_almost_equal(scale.iqr(self.chem), 0.68570, DECIMAL)
+
     def test_huber_scale(self):
         assert_almost_equal(scale.huber(self.chem)[0], 3.20549, DECIMAL)
 
@@ -95,6 +98,52 @@ class TestMadAxes(object):
 
     def test_axisneg1(self):
         m = scale.mad(self.X, axis=-1)
+        assert_equal(m.shape, (40, 10))
+
+
+class TestIqr(object):
+    @classmethod
+    def setup_class(cls):
+        np.random.seed(54321)
+        cls.X = standard_normal((40, 10))
+
+    def test_iqr(self):
+        m = scale.iqr(self.X)
+        assert_equal(m.shape, (10,))
+
+    def test_iqr_empty(self):
+        empty = np.empty(0)
+        assert np.isnan(scale.iqr(empty))
+        empty = np.empty((10, 100, 0))
+        assert_equal(scale.iqr(empty, axis=1), np.empty((10, 0)))
+        empty = np.empty((100, 100, 0, 0))
+        assert_equal(scale.iqr(empty, axis=-1), np.empty((100, 100, 0)))
+
+    def test_iqr_center(self):
+        n = scale.iqr(self.X, center=0)
+        assert_equal(n.shape, (10,))
+
+
+class TestIqrAxes(object):
+    @classmethod
+    def setup_class(cls):
+        np.random.seed(54321)
+        cls.X = standard_normal((40, 10, 30))
+
+    def test_axis0(self):
+        m = scale.iqr(self.X, axis=0)
+        assert_equal(m.shape, (10, 30))
+
+    def test_axis1(self):
+        m = scale.iqr(self.X, axis=1)
+        assert_equal(m.shape, (40, 30))
+
+    def test_axis2(self):
+        m = scale.iqr(self.X, axis=2)
+        assert_equal(m.shape, (40, 10))
+
+    def test_axisneg1(self):
+        m = scale.iqr(self.X, axis=-1)
         assert_equal(m.shape, (40, 10))
 
 
