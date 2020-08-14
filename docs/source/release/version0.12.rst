@@ -799,6 +799,7 @@ New Functions
 * :func:`statsmodels.graphics.tukeyplot.tukeyplot`
 * :func:`statsmodels.multivariate.plots.plot_loadings`
 * :func:`statsmodels.multivariate.plots.plot_scree`
+* :func:`statsmodels.robust.scale.iqr`
 * :func:`statsmodels.stats.contrast.wald_test_noncent`
 * :func:`statsmodels.stats.contrast.wald_test_noncent_generic`
 * :func:`statsmodels.stats.descriptivestats.describe`
