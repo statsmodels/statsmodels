@@ -49,7 +49,7 @@ def mad(a, c=Gaussian.ppf(3/4.), axis=0, center=np.median):
     return np.median((np.abs(a-center)) / c, axis=axis)
 
 
-def iqr(a, c=Gaussian.ppf(3/4.) - Gaussian.ppf(1/4.), axis=0, center=np.median):
+def iqr(a, c=Gaussian.ppf(3/4) - Gaussian.ppf(1/4), axis=0, center=np.median):
     # c \approx 1.349
     """
     The Interquartile range along given axis of an array
@@ -59,8 +59,10 @@ def iqr(a, c=Gaussian.ppf(3/4.) - Gaussian.ppf(1/4.), axis=0, center=np.median):
     a : array_like
         Input array.
     c : float, optional
-        The normalization constant, used to get consistent estimates of the standard deviation at the normal
-        distribution.  Defined as scipy.stats.norm.ppf(3/4.) - scipy.stats.norm.ppf(1/4.), which is approximately 1.349.
+        The normalization constant, used to get consistent estimates of the
+        standard deviation at the normal distribution.  Defined as
+        scipy.stats.norm.ppf(3/4.) - scipy.stats.norm.ppf(1/4.), which is
+        approximately 1.349.
     axis : int, optional
         The default is 0. Can also be None.
     center : callable or float
