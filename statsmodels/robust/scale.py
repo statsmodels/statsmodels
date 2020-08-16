@@ -49,6 +49,44 @@ def mad(a, c=Gaussian.ppf(3/4.), axis=0, center=np.median):
     return np.median((np.abs(a-center)) / c, axis=axis)
 
 
+def iqr(a, c=Gaussian.ppf(3/4) - Gaussian.ppf(1/4), axis=0, center=np.median):
+    """
+    The normalized interquartile range along given axis of an array
+
+    Parameters
+    ----------
+    a : array_like
+        Input array.
+    c : float, optional
+        The normalization constant, used to get consistent estimates of the
+        standard deviation at the normal distribution.  Defined as
+        scipy.stats.norm.ppf(3/4.) - scipy.stats.norm.ppf(1/4.), which is
+        approximately 1.349.
+    axis : int, optional
+        The default is 0. Can also be None.
+    center : callable or float
+        If a callable is provided, such as the default `np.median` then it
+        is expected to be called center(a). The axis argument will be applied
+        via np.apply_over_axes. Otherwise, provide a float.
+
+    Returns
+    -------
+    The normalized interquartile range
+    """
+    a = array_like(a, 'a', ndim=None)
+    c = float_like(c, 'c')
+
+    if a.size == 0:
+        return np.nan
+    else:
+        if callable(center) and a.size:
+            center = np.apply_over_axes(center, a, axis)
+        else:
+            center = 0.0
+        quantiles = np.quantile(a - center, [0.25, 0.75], axis=axis)
+        return np.squeeze(np.diff(quantiles, axis=0) / c)
+
+
 class Huber(object):
     """
     Huber's proposal 2 for estimating location and scale jointly.
