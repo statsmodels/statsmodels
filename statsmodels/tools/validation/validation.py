@@ -16,7 +16,7 @@ def _right_squeeze(arr, stop_dim=0):
     stop_dim : int
         Dimension where checking should stop so that shape[i] is not checked
         for i < stop_dim
-    
+        
     Returns
     -------
     squeezed : ndarray
@@ -73,12 +73,12 @@ def array_like(
         Ensure that the array's data is contiguous with order ``order``
     optional : bool
         Flag indicating whether None is allowed
-    
+        
     Returns
     -------
     ndarray
         The converted input.
-    
+        
     Examples
     --------
     Convert a list or pandas series to an array
@@ -163,7 +163,7 @@ class PandasWrapper(object):
     ----------
     pandas_obj : {Series, DataFrame}
         Object to extract the index from for wrapping
-    
+        
     Notes
     -----
     Raises if ``orig`` is a pandas type but obj and and ``orig`` have
@@ -191,7 +191,7 @@ class PandasWrapper(object):
         trim_end : int
             The number of observations to drop from the end of the index , so
             that the index applied is index[:nobs - trim_end].
-        
+            
         Returns
         -------
         array_like
@@ -247,7 +247,7 @@ def bool_like(value, name, optional=False, strict=False):
     strict : bool
         If True, then only allow bool. If False, allow types that support
         casting to bool.
-    
+        
     Returns
     -------
     converted : bool
@@ -290,7 +290,7 @@ def int_like(
     strict : bool
         If True, then only allow int or np.integer that are not bool. If False,
         allow types that support integer division by 1 and conversion to int.
-    
+        
     Returns
     -------
     converted : int
@@ -333,7 +333,7 @@ def required_int_like(value: Any, name: str, strict: bool = False) -> int:
     strict : bool
         If True, then only allow int or np.integer that are not bool. If False,
         allow types that support integer division by 1 and conversion to int.
-    
+        
     Returns
     -------
     converted : int
@@ -361,7 +361,7 @@ def float_like(value, name, optional=False, strict=False):
         not bool or complex. If False, allow complex types with 0 imag part or
         any other type that is float like in the sense that it support
         multiplication by 1.0 and conversion to float.
-    
+        
     Returns
     -------
     converted : float
@@ -392,8 +392,8 @@ def float_like(value, name, optional=False, strict=False):
         "{0} must be float_like (float or np.inexact)"
         "{1}".format(name, extra_text)
     )
-
-
+    
+    
 def string_like(value, name, optional=False, options=None, lower=True):
     """
     Check if object is string-like and raise if not
@@ -410,7 +410,7 @@ def string_like(value, name, optional=False, options=None, lower=True):
         Allowed values for input parameter `value`
     lower : bool
         Convert all case-based characters in `value` into lowercase
-
+        
     Returns
     -------
     validated : str
