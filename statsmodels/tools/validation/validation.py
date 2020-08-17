@@ -8,6 +8,7 @@ import pandas as pd
 def _right_squeeze(arr, stop_dim=0):
     """
     Remove trailing singleton dimensions
+    
     Parameters
     ----------
     arr : ndarray
@@ -15,6 +16,7 @@ def _right_squeeze(arr, stop_dim=0):
     stop_dim : int
         Dimension where checking should stop so that shape[i] is not checked
         for i < stop_dim
+    
     Returns
     -------
     squeezed : ndarray
@@ -44,6 +46,7 @@ def array_like(
 ):
     """
     Convert array-like to a ndarray and check conditions
+    
     Parameters
     ----------
     obj : array_like
@@ -70,10 +73,12 @@ def array_like(
         Ensure that the array's data is contiguous with order ``order``
     optional : bool
         Flag indicating whether None is allowed
+    
     Returns
     -------
     ndarray
         The converted input.
+    
     Examples
     --------
     Convert a list or pandas series to an array
@@ -82,9 +87,11 @@ def array_like(
     >>> a = array_like(x, 'x', ndim=1)
     >>> a.shape
     (4,)
+    
     >>> a = array_like(pd.Series(x), 'x', ndim=1)
     >>> a.shape
     (4,)
+    
     >>> type(a.orig)
     pandas.core.series.Series
     Squeezes singleton dimensions when required
@@ -92,25 +99,31 @@ def array_like(
     >>> a = array_like(x, 'x', ndim=1)
     >>> a.shape
     (4,)
+    
     Right-appends when required size is larger than actual
     >>> x = [0, 1, 2, 3]
     >>> a = array_like(x, 'x', ndim=2)
     >>> a.shape
     (4, 1)
+    
     Check only the first and last dimension of the input
     >>> x = np.arange(4*10*4).reshape((4, 10, 4))
     >>> y = array_like(x, 'x', ndim=3, shape=(4, None, 4))
+    
     Check only the first two dimensions
     >>> z = array_like(x, 'x', ndim=3, shape=(4, 10))
+    
     Raises ValueError if constraints are not satisfied
     >>> z = array_like(x, 'x', ndim=2)
     Traceback (most recent call last):
      ...
     ValueError: x is required to have ndim 2 but has ndim 3
+    
     >>> z = array_like(x, 'x', shape=(10, 4, 4))
     Traceback (most recent call last):
      ...
     ValueError: x is required to have shape (10, 4, 4) but has shape (4, 10, 4)
+    
     >>> z = array_like(x, 'x', shape=(None, 4, 4))
     Traceback (most recent call last):
      ...
@@ -145,10 +158,12 @@ def array_like(
 class PandasWrapper(object):
     """
     Wrap array_like using the index from the original input, if pandas
+    
     Parameters
     ----------
     pandas_obj : {Series, DataFrame}
         Object to extract the index from for wrapping
+    
     Notes
     -----
     Raises if ``orig`` is a pandas type but obj and and ``orig`` have
@@ -176,6 +191,7 @@ class PandasWrapper(object):
         trim_end : int
             The number of observations to drop from the end of the index , so
             that the index applied is index[:nobs - trim_end].
+        
         Returns
         -------
         array_like
@@ -219,6 +235,7 @@ class PandasWrapper(object):
 def bool_like(value, name, optional=False, strict=False):
     """
     Convert to bool or raise if not bool_like
+    
     Parameters
     ----------
     value : object
@@ -230,6 +247,7 @@ def bool_like(value, name, optional=False, strict=False):
     strict : bool
         If True, then only allow bool. If False, allow types that support
         casting to bool.
+    
     Returns
     -------
     converted : bool
@@ -260,6 +278,7 @@ def int_like(
 ) -> Optional[int]:
     """
     Convert to int or raise if not int_like
+    
     Parameters
     ----------
     value : object
@@ -271,6 +290,7 @@ def int_like(
     strict : bool
         If True, then only allow int or np.integer that are not bool. If False,
         allow types that support integer division by 1 and conversion to int.
+    
     Returns
     -------
     converted : int
@@ -301,6 +321,7 @@ def int_like(
 def required_int_like(value: Any, name: str, strict: bool = False) -> int:
     """
     Convert to int or raise if not int_like
+    
     Parameters
     ----------
     value : object
@@ -312,6 +333,7 @@ def required_int_like(value: Any, name: str, strict: bool = False) -> int:
     strict : bool
         If True, then only allow int or np.integer that are not bool. If False,
         allow types that support integer division by 1 and conversion to int.
+    
     Returns
     -------
     converted : int
@@ -325,6 +347,7 @@ def required_int_like(value: Any, name: str, strict: bool = False) -> int:
 def float_like(value, name, optional=False, strict=False):
     """
     Convert to float or raise if not float_like
+    
     Parameters
     ----------
     value : object
@@ -338,6 +361,7 @@ def float_like(value, name, optional=False, strict=False):
         not bool or complex. If False, allow complex types with 0 imag part or
         any other type that is float like in the sense that it support
         multiplication by 1.0 and conversion to float.
+    
     Returns
     -------
     converted : float
@@ -372,7 +396,7 @@ def float_like(value, name, optional=False, strict=False):
 
 def string_like(value, name, optional=False, options=None, lower=True):
     """
-    Check if of type string and raise not string_like if not
+    Check if object is string-like and raise if not
 
     Parameters
     ----------
@@ -382,7 +406,7 @@ def string_like(value, name, optional=False, options=None, lower=True):
         Variable name for exceptions
     optional : bool
         Flag indicating whether None is allowed
-    options : string
+    options : Sequence[str] or tuple[str]
         Allowed values for input parameter `value`
     lower : bool
         Convert all case-based characters in `value` into lowercase
@@ -412,6 +436,7 @@ def string_like(value, name, optional=False, options=None, lower=True):
 def dict_like(value, name, optional=False, strict=True):
     """
     Check if dict_like (dict, Mapping) or raise if not
+    
     Parameters
     ----------
     value : object
@@ -422,6 +447,7 @@ def dict_like(value, name, optional=False, strict=True):
         Flag indicating whether None is allowed
     strict : bool
         If True, then only allow dict. If False, allow any Mapping-like object.
+    
     Returns
     -------
     converted : dict_like
