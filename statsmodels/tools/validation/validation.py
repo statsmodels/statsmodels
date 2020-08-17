@@ -392,8 +392,8 @@ def float_like(value, name, optional=False, strict=False):
         "{0} must be float_like (float or np.inexact)"
         "{1}".format(name, extra_text)
     )
-  
- 
+
+
 def string_like(value, name, optional=False, options=None, lower=True):
     """
     Check if object is string-like and raise if not
