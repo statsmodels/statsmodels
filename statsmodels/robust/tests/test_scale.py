@@ -35,6 +35,9 @@ class TestChem(object):
     def test_iqr(self):
         assert_almost_equal(scale.iqr(self.chem), 0.68570, DECIMAL)
 
+    def test_qn(self):
+        assert_almost_equal(scale.qn(self.chem), 0.73231, DECIMAL)
+
     def test_huber_scale(self):
         assert_almost_equal(scale.huber(self.chem)[0], 3.20549, DECIMAL)
 
@@ -144,6 +147,53 @@ class TestIqrAxes(object):
 
     def test_axisneg1(self):
         m = scale.iqr(self.X, axis=-1)
+        assert_equal(m.shape, (40, 10))
+
+
+class TestQn(object):
+    @classmethod
+    def setup_class(cls):
+        np.random.seed(54321)
+        cls.normal = standard_normal(size=40)
+        cls.range = np.arange(0, 40)
+        cls.exponential = np.random.exponential(size=40)
+
+    def test_qn(self):
+        assert_almost_equal(scale.qn(self.normal), scale._qn_naive(self.normal), DECIMAL)
+        assert_almost_equal(scale.qn(self.range), scale._qn_naive(self.range), DECIMAL)
+        # from R's robustbase with finite.corr = FALSE
+        assert_almost_equal(scale.qn(self.range), 13.3148, DECIMAL)
+        assert_almost_equal(scale.qn(self.exponential), scale._qn_naive(self.exponential), DECIMAL)
+
+    def test_qn_empty(self):
+        empty = np.empty(0)
+        assert np.isnan(scale.qn(empty))
+        empty = np.empty((10, 100, 0))
+        assert_equal(scale.qn(empty, axis=1), np.empty((10, 0)))
+        empty = np.empty((100, 100, 0, 0))
+        assert_equal(scale.qn(empty, axis=-1), np.empty((100, 100, 0)))
+
+
+class TestQnAxes(object):
+    @classmethod
+    def setup_class(cls):
+        np.random.seed(54321)
+        cls.X = standard_normal((40, 10, 30))
+
+    def test_axis0(self):
+        m = scale.qn(self.X, axis=0)
+        assert_equal(m.shape, (10, 30))
+
+    def test_axis1(self):
+        m = scale.qn(self.X, axis=1)
+        assert_equal(m.shape, (40, 30))
+
+    def test_axis2(self):
+        m = scale.qn(self.X, axis=2)
+        assert_equal(m.shape, (40, 10))
+
+    def test_axisneg1(self):
+        m = scale.qn(self.X, axis=-1)
         assert_equal(m.shape, (40, 10))
 
 

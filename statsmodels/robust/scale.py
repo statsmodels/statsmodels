@@ -7,13 +7,16 @@ PJ Huber.  'Robust Statistics' John Wiley and Sons, Inc., New York, 1981.
 
 R Venables, B Ripley. 'Modern Applied Statistics in S'
     Springer, New York, 2002.
+
+C Croux, PJ Rousseeuw, 'Time-efficient algorithms for two highly robust
+estimators of scale' Computational statistics. Physica, Heidelberg, 1992.
 """
 import numpy as np
 from scipy.stats import norm as Gaussian
 from . import norms
 from statsmodels.tools import tools
 from statsmodels.tools.validation import array_like, float_like
-
+from ._qn import _qn
 
 def mad(a, c=Gaussian.ppf(3/4.), axis=0, center=np.median):
     # c \approx .6745
@@ -80,6 +83,71 @@ def iqr(a, c=Gaussian.ppf(3/4) - Gaussian.ppf(1/4), axis=0):
         quantiles = np.quantile(a, [0.25, 0.75], axis=axis)
         return np.squeeze(np.diff(quantiles, axis=0) / c)
 
+
+def qn(a, c=1/(np.sqrt(2) * Gaussian.ppf(5/8)), axis=0):
+    """
+    Computes the Qn robust estimator of scale, a more efficient alternative
+    to the MAD. The implementation follows the algorithm described in Croux
+    and Rousseeuw (1992).
+
+    Parameters
+    ----------
+    a : array_like
+        Input array.
+    c : float, optional
+        The normalization constant, used to get consistent estimates of the
+        standard deviation at the normal distribution.  Defined as
+        1/(np.sqrt(2) * scipy.stats.norm.ppf(5/8)), which is 2.219144.
+    axis : int, optional
+        The default is 0. Can also be None.
+
+    Returns
+    -------
+    The Qn robust estimator of scale
+    """
+    a = array_like(a, 'a', ndim=None)
+    c = float_like(c, 'c')
+    a = a.astype(np.float64)
+    if a.ndim == 0:
+        raise ValueError("a should have at least one dimension")
+    elif a.size == 0:
+        return np.nan
+    else:
+        return np.apply_along_axis(_qn, axis=axis, arr=a, c=c)
+
+
+def _qn_naive(a, c=1 / (np.sqrt(2) * Gaussian.ppf(5 / 8))):
+    """
+    A naive implementation of the Qn robust estimator of scale, used solely to test
+    the faster, more involved one
+
+    Parameters
+    ----------
+    a : array_like
+        Input array.
+    c : float, optional
+        The normalization constant, used to get consistent estimates of the
+        standard deviation at the normal distribution.  Defined as
+        1/(np.sqrt(2) * scipy.stats.norm.ppf(5/8)), which is 2.219144.
+
+    Returns
+    -------
+    The Qn robust estimator of scale
+    """
+    a = np.squeeze(a)
+    n = a.shape[0]
+    if a.size == 0:
+        return np.nan
+    else:
+        h = int(n // 2 + 1)
+        k = int(h * (h - 1) / 2)
+        diffs = []
+        for i in range(n):
+            for j in range(i+1, n):
+                diffs.append(np.abs(a[i] - a[j]))
+        output = np.partition(np.array(diffs), kth=k - 1)[k - 1]
+        output = c * output
+        return output
 
 class Huber(object):
     """
