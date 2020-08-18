@@ -180,6 +180,39 @@ def _high_weighted_median(a, weights):
     return w_median
 
 
+def _qn_naive(a, c=1 / (np.sqrt(2) * Gaussian.ppf(5 / 8))):
+    """
+    A naive implementation of the Qn robust estimator of scale, used solely to test
+    the faster, more involved one
+
+    Parameters
+    ----------
+    a : array_like
+        Input array.
+    c : float, optional
+        The normalization constant, used to get consistent estimates of the
+        standard deviation at the normal distribution.  Defined as
+        1/(np.sqrt(2) * scipy.stats.norm.ppf(5/8)), which is 2.219144.
+
+    Returns
+    -------
+    The Qn robust estimator of scale
+    """
+    a = np.squeeze(a)
+    n = a.shape[0]
+    if a.size == 0:
+        return np.nan
+    else:
+        h = int(n // 2 + 1)
+        k = int(h * (h - 1) / 2)
+        diffs = []
+        for i in range(n):
+            for j in range(i+1, n):
+                diffs.append(np.abs(a[i] - a[j]))
+        output = np.partition(np.array(diffs), kth=k - 1)[k - 1]
+        output = c * output
+        return output
+
 class Huber(object):
     """
     Huber's proposal 2 for estimating location and scale jointly.
