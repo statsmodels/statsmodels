@@ -119,10 +119,6 @@ class TestIqr(object):
         empty = np.empty((100, 100, 0, 0))
         assert_equal(scale.iqr(empty, axis=-1), np.empty((100, 100, 0)))
 
-    def test_iqr_center(self):
-        n = scale.iqr(self.X, center=0)
-        assert_equal(n.shape, (10,))
-
 
 class TestIqrAxes(object):
     @classmethod

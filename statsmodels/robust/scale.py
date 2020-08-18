@@ -49,7 +49,7 @@ def mad(a, c=Gaussian.ppf(3/4.), axis=0, center=np.median):
     return np.median((np.abs(a-center)) / c, axis=axis)
 
 
-def iqr(a, c=Gaussian.ppf(3/4) - Gaussian.ppf(1/4), axis=0, center=np.median):
+def iqr(a, c=Gaussian.ppf(3/4) - Gaussian.ppf(1/4), axis=0):
     """
     The normalized interquartile range along given axis of an array
 
@@ -64,10 +64,6 @@ def iqr(a, c=Gaussian.ppf(3/4) - Gaussian.ppf(1/4), axis=0, center=np.median):
         approximately 1.349.
     axis : int, optional
         The default is 0. Can also be None.
-    center : callable or float
-        If a callable is provided, such as the default `np.median` then it
-        is expected to be called center(a). The axis argument will be applied
-        via np.apply_over_axes. Otherwise, provide a float.
 
     Returns
     -------
@@ -79,11 +75,7 @@ def iqr(a, c=Gaussian.ppf(3/4) - Gaussian.ppf(1/4), axis=0, center=np.median):
     if a.size == 0:
         return np.nan
     else:
-        if callable(center) and a.size:
-            center = np.apply_over_axes(center, a, axis)
-        else:
-            center = 0.0
-        quantiles = np.quantile(a - center, [0.25, 0.75], axis=axis)
+        quantiles = np.quantile(a, [0.25, 0.75], axis=axis)
         return np.squeeze(np.diff(quantiles, axis=0) / c)
 
 
