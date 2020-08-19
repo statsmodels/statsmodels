@@ -5,6 +5,7 @@ Test functions for models.robust.scale
 import numpy as np
 from numpy.random import standard_normal
 from numpy.testing import assert_almost_equal, assert_equal
+import pytest
 # Example from Section 5.5, Venables & Ripley (2002)
 
 import statsmodels.robust.scale as scale
@@ -118,7 +119,9 @@ class TestIqr(object):
         assert_equal(scale.iqr(empty, axis=1), np.empty((10, 0)))
         empty = np.empty((100, 100, 0, 0))
         assert_equal(scale.iqr(empty, axis=-1), np.empty((100, 100, 0)))
-
+        empty = np.empty(shape=())
+        with pytest.raises(ValueError):
+            scale.iqr(empty)
 
 class TestIqrAxes(object):
     @classmethod

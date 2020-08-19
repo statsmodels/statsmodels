@@ -72,7 +72,9 @@ def iqr(a, c=Gaussian.ppf(3/4) - Gaussian.ppf(1/4), axis=0):
     a = array_like(a, 'a', ndim=None)
     c = float_like(c, 'c')
 
-    if a.size == 0:
+    if a.ndim == 0:
+        raise ValueError("a should have at least one dimension")
+    elif a.size == 0:
         return np.nan
     else:
         quantiles = np.quantile(a, [0.25, 0.75], axis=axis)
