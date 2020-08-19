@@ -123,6 +123,7 @@ class TestIqr(object):
         with pytest.raises(ValueError):
             scale.iqr(empty)
 
+
 class TestIqrAxes(object):
     @classmethod
     def setup_class(cls):
