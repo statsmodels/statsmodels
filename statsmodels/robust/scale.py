@@ -13,7 +13,6 @@ from scipy.stats import norm as Gaussian
 from . import norms
 from statsmodels.tools import tools
 from statsmodels.tools.validation import array_like, float_like
-from ._qn import _high_weighted_median
 
 
 def mad(a, c=Gaussian.ppf(3/4.), axis=0, center=np.median):
@@ -162,6 +161,22 @@ def qn(a, c=1/(np.sqrt(2) * Gaussian.ppf(5/8))):
         k_new = k_new - (n_left + 1)
         output = c * np.sort(work[:j])[k_new]
         return output
+
+
+def _high_weighted_median(a, weights):
+    """	
+    Computes a weighted high median of a. This is defined as the	
+    smallest a[j] such that the sum over all a[i]<=a[j] is strictly	
+    greater than half the total sum of the weights	
+    """
+    arg_sort = np.argsort(a)
+    sorted_a = a[arg_sort]
+    sorted_weights = weights[arg_sort]
+    midpoint = 0.5 * sum(weights)
+    cs_weights = np.cumsum(sorted_weights)
+    idx = np.where(cs_weights > midpoint)[0][0]
+    w_median = sorted_a[idx]
+    return w_median
 
 
 def _qn_naive(a, c=1 / (np.sqrt(2) * Gaussian.ppf(5 / 8))):
