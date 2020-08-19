@@ -19,11 +19,11 @@ def _high_weighted_median(np.ndarray[DTYPE_DOUBLE_t] a, np.ndarray[DTYPE_INT_t] 
     greater than half the total sum of the weights
     """
     cdef:
-        np.ndarray sorted_a = np.copy(a)
-        np.ndarray a_cand = np.copy(a)
-        np.ndarray weights_cand = np.copy(weights)
-        Py_ssize_t i= 0
         DTYPE_INT_t n = a.shape[0]
+        np.ndarray[DTYPE_DOUBLE_t] sorted_a = np.zeros((n,), dtype=DTYPE_DOUBLE)
+        np.ndarray[DTYPE_DOUBLE_t] a_cand = np.zeros((n,), dtype=DTYPE_DOUBLE)
+        np.ndarray[DTYPE_INT_t] weights_cand = np.zeros((n,), dtype=DTYPE_INT)
+        Py_ssize_t i= 0
         DTYPE_INT_t kcand = 0
         DTYPE_INT_t wleft, wright, wmid, wtot, wrest = 0
         DTYPE_DOUBLE_t trial = 0
@@ -68,7 +68,8 @@ def _high_weighted_median(np.ndarray[DTYPE_DOUBLE_t] a, np.ndarray[DTYPE_INT_t] 
 def _qn(np.ndarray[DTYPE_DOUBLE_t] a, DTYPE_DOUBLE_t c):
     """
     Computes the Qn robust estimator of scale, a more efficient alternative
-    to the MAD.
+    to the MAD. The implementation follows the algorithm described in Croux
+    and Rousseeuw (1992).
 
     Parameters
     ----------
@@ -94,12 +95,12 @@ def _qn(np.ndarray[DTYPE_DOUBLE_t] a, DTYPE_DOUBLE_t c):
         DTYPE_INT_t sump, sumq = 0
         DTYPE_DOUBLE_t trial, output = 0
         np.ndarray[DTYPE_DOUBLE_t] a_sorted = np.sort(a)
-        np.ndarray left = np.array([n - i + 1 for i in range(0, n)], dtype=DTYPE_INT)
-        np.ndarray right = np.array([n if i <= h else n - (i - h) for i in range(0, n)], dtype=DTYPE_INT)
-        np.ndarray weights = np.zeros((n,), dtype=DTYPE_INT)
-        np.ndarray work = np.zeros((n,), dtype=DTYPE_DOUBLE)
-        np.ndarray p = np.zeros((n,), dtype=DTYPE_INT)
-        np.ndarray q = np.zeros((n,), dtype=DTYPE_INT)
+        np.ndarray[DTYPE_INT_t] left = np.array([n - i + 1 for i in range(0, n)], dtype=DTYPE_INT)
+        np.ndarray[DTYPE_INT_t] right = np.array([n if i <= h else n - (i - h) for i in range(0, n)], dtype=DTYPE_INT)
+        np.ndarray[DTYPE_INT_t] weights = np.zeros((n,), dtype=DTYPE_INT)
+        np.ndarray[DTYPE_DOUBLE_t] work = np.zeros((n,), dtype=DTYPE_DOUBLE)
+        np.ndarray[DTYPE_INT_t] p = np.zeros((n,), dtype=DTYPE_INT)
+        np.ndarray[DTYPE_INT_t] q = np.zeros((n,), dtype=DTYPE_INT)
     while n_right - n_left > n:
         j = 0
         for i in range(1, n):
@@ -130,7 +131,6 @@ def _qn(np.ndarray[DTYPE_DOUBLE_t] a, DTYPE_DOUBLE_t c):
         else:
             output = c * trial
             return output
-
     j = 0
     for i in range(1, n):
         for l in range(left[i], right[i] + 1):
