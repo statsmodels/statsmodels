@@ -159,6 +159,7 @@ exts = dict(
     _kim_smoother={'source': 'statsmodels/tsa/regime_switching/_kim_smoother.pyx.in'},  # noqa: E501
     _arma_innovations={'source': 'statsmodels/tsa/innovations/_arma_innovations.pyx.in'},  # noqa: E501
     linbin={'source': 'statsmodels/nonparametric/linbin.pyx'},
+    _qn={'source': 'statsmodels/robust/_qn.pyx'},
     _smoothers_lowess={'source': 'statsmodels/nonparametric/_smoothers_lowess.pyx'},  # noqa: E501
     kalman_loglike={'source': 'statsmodels/tsa/kalmanf/kalman_loglike.pyx',
                     'include_dirs': ['statsmodels/src'],

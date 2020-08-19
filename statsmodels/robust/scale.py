@@ -13,7 +13,7 @@ from scipy.stats import norm as Gaussian
 from . import norms
 from statsmodels.tools import tools
 from statsmodels.tools.validation import array_like, float_like
-
+from ._qn import _qn
 
 def mad(a, c=Gaussian.ppf(3/4.), axis=0, center=np.median):
     # c \approx .6745
@@ -106,77 +106,10 @@ def qn(a, c=1/(np.sqrt(2) * Gaussian.ppf(5/8))):
     The Qn robust estimator of scale
     """
     a = np.squeeze(a)
-    n = a.shape[0]
     if a.size == 0:
         return np.nan
     else:
-        h = int(n//2 + 1)
-        k = int(h * (h - 1) / 2)
-        a_sorted = np.sort(a)
-        left = np.array([n - i + 1 for i in range(0, n)], dtype=int)
-        right = np.array([n if i <= h else n - (i - h) for i in range(0, n)], dtype=int)
-        weights = np.zeros((n,), dtype=int)
-        work = np.zeros((n,), dtype=float)
-        p = np.zeros((n,), dtype=int)
-        q = np.zeros((n,), dtype=int)
-        n_left = int(n * (n + 1) / 2)
-        n_right = int(n * n)
-        k_new = int(k + n_left)
-        while n_right - n_left > n:
-            j = 0
-            for i in range(1, n):
-                if left[i] <= right[i]:
-                    weights[j] = right[i] - left[i] + 1
-                    jh = left[i] + weights[j] // 2
-                    work[j] = a_sorted[i] - a_sorted[n - jh]
-                    j = j + 1
-            trial = _high_weighted_median(work[:j], weights[:j])
-            j = 0
-            for i in range(n - 1, -1, -1):
-                while j < n and (a_sorted[i] - a_sorted[n - j - 1]) < trial:
-                    j = j + 1
-                p[i] = j
-            j = n + 1
-            for i in range(n):
-                while (a_sorted[i] - a_sorted[n - j + 1]) > trial:
-                    j = j - 1
-                q[i] = j
-            sump = np.sum(p)
-            sumq = np.sum(q - 1)
-            if k_new <= sump:
-                right = np.copy(p)
-                n_right = sump
-            elif k_new > sumq:
-                left = np.copy(q)
-                n_left = sumq
-            else:
-                output = c * trial
-                return output
-
-        j = 0
-        for i in range(1, n):
-            for h in range(left[i], right[i] + 1):
-                work[j] = a_sorted[i] - a_sorted[n - h]
-                j = j + 1
-        k_new = k_new - (n_left + 1)
-        output = c * np.sort(work[:j])[k_new]
-        return output
-
-
-def _high_weighted_median(a, weights):
-    """	
-    Computes a weighted high median of a. This is defined as the	
-    smallest a[j] such that the sum over all a[i]<=a[j] is strictly	
-    greater than half the total sum of the weights	
-    """
-    arg_sort = np.argsort(a)
-    sorted_a = a[arg_sort]
-    sorted_weights = weights[arg_sort]
-    midpoint = 0.5 * sum(weights)
-    cs_weights = np.cumsum(sorted_weights)
-    idx = np.where(cs_weights > midpoint)[0][0]
-    w_median = sorted_a[idx]
-    return w_median
+        return _qn(a.astype(np.float64), c)
 
 
 def _qn_naive(a, c=1 / (np.sqrt(2) * Gaussian.ppf(5 / 8))):
