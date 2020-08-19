@@ -2,18 +2,23 @@
 """
 
 Created on Fri Jul 05 14:05:24 2013
+Aug 15 2020: add brunnermunzel, rank_compare_2indep
 
 Author: Josef Perktold
 """
 from statsmodels.compat.python import lzip
 import numpy as np
-from numpy.testing import assert_allclose, assert_almost_equal
+from numpy.testing import (assert_allclose, assert_almost_equal,
+                           assert_approx_equal, assert_)
 import pytest
 
-from statsmodels.stats.contingency_tables import mcnemar, cochrans_q, SquareTable
+from statsmodels.stats.contingency_tables import (
+    mcnemar, cochrans_q, SquareTable)
 from statsmodels.sandbox.stats.runs import (Runs,
                                             runstest_1samp, runstest_2samp)
 from statsmodels.sandbox.stats.runs import mcnemar as sbmcnemar
+from statsmodels.stats.nonparametric import brunnermunzel
+from statsmodels.tools.testing import Holder
 
 
 def _expand_table(table):
@@ -274,3 +279,118 @@ def test_runstest_2sample():
     # check cutoff
     res2_1s = runstest_1samp(xy, xy.mean())
     assert_allclose(res2_1s, res_1s, rtol=1e-6)
+
+
+def test_brunnermunzel_one_sided():
+    # copied from scipy with adjustment
+    x = [1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 4, 1, 1]
+    y = [3, 3, 4, 3, 1, 2, 3, 1, 1, 5, 4]
+    significant = 13
+
+    # Results are compared with R's lawstat package.
+    u1, p1 = brunnermunzel(x, y, alternative='less')
+    u2, p2 = brunnermunzel(y, x, alternative='greater')
+    u3, p3 = brunnermunzel(x, y, alternative='greater')
+    u4, p4 = brunnermunzel(y, x, alternative='less')
+
+    assert_approx_equal(p1, p2, significant=significant)
+    assert_approx_equal(p3, p4, significant=significant)
+    assert_(p1 != p3)
+    assert_approx_equal(u1, 3.1374674823029505,
+                        significant=significant)
+    assert_approx_equal(u2, -3.1374674823029505,
+                        significant=significant)
+    assert_approx_equal(u3, 3.1374674823029505,
+                        significant=significant)
+    assert_approx_equal(u4, -3.1374674823029505,
+                        significant=significant)
+    assert_approx_equal(p1, 0.0028931043330757342,
+                        significant=significant)
+    assert_approx_equal(p3, 0.99710689566692423,
+                        significant=significant)
+
+
+def test_brunnermunzel_two_sided():
+    # copied from scipy with adjustment
+    x = [1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 4, 1, 1]
+    y = [3, 3, 4, 3, 1, 2, 3, 1, 1, 5, 4]
+    significant = 13
+
+    # Results are compared with R's lawstat package.
+    u1, p1 = brunnermunzel(x, y, alternative='two-sided')
+    u2, p2 = brunnermunzel(y, x, alternative='two-sided')
+
+    assert_approx_equal(p1, p2, significant=significant)
+    assert_approx_equal(u1, 3.1374674823029505,
+                        significant=significant)
+    assert_approx_equal(u2, -3.1374674823029505,
+                        significant=significant)
+    assert_approx_equal(p1, 0.0057862086661515377,
+                        significant=significant)
+
+
+def test_rank_compare1():
+    # Example from Munzel and Hauschke 2003
+    # data is given by counts, expand to observations
+    levels = [-2, -1, 0, 1, 2]
+    new = [24, 37, 21, 19, 6]
+    active = [11, 51, 22, 21, 7]
+    x1 = np.repeat(levels, new)
+    x2 = np.repeat(levels, active)
+
+    # using lawstat
+    # > brunner.munzel.test(xn, xa) #brunnermunzel.test(x, y)
+    res2_t = Holder(statistic=1.1757561456582,
+                    df=204.2984239868,
+                    pvalue=0.2410606649547,
+                    ci=[0.4700629827705593, 0.6183882855872511],
+                    prob=0.5442256341789052)
+
+    res = brunnermunzel(x1, x2, distribution="normal")
+    assert_allclose(res.statistic, res2_t.statistic, rtol=1e-13)
+    assert_allclose(res.prob1, 1 - res2_t.prob, rtol=1e-13)
+    assert_allclose(res.prob2, res2_t.prob, rtol=1e-13)
+    tt = res.test_prob_superior()
+    # TODO: return HolderTuple
+    # assert_allclose(tt.statistic, res2_t.statistic)
+    # TODO: check sign/direction in lawstat
+    assert_allclose(tt[0], -res2_t.statistic, rtol=1e-13)
+
+    ci = res.conf_int(alpha=0.05)
+    # we compare normal confint with t confint, lower rtol
+    assert_allclose(ci, 1 - np.array(res2_t.ci)[::-1], rtol=0.005)
+    # test consistency of test and confint
+    res_lb = res.test_prob_superior(value=ci[0])
+    assert_allclose(res_lb[1], 0.05, rtol=1e-13)
+    res_ub = res.test_prob_superior(value=ci[1])
+    assert_allclose(res_ub[1], 0.05, rtol=1e-13)
+
+    # test consistency of tost and confint
+    res_tost = res.tost_prob_superior(*ci)
+    assert_allclose(res_tost[1][1], 0.025, rtol=1e-13)
+    assert_allclose(res_tost[2][1], 0.025, rtol=1e-13)
+
+    res = brunnermunzel(x1, x2, distribution="t")
+    assert_allclose(res.statistic, res2_t.statistic, rtol=1e-13)
+    tt = res.test_prob_superior()
+    # TODO: return HolderTuple
+    # assert_allclose(tt.statistic, res2_t.statistic)
+    # TODO: check sign/direction in lawstat, reversed from ours
+    assert_allclose(tt[0], -res2_t.statistic, rtol=1e-13)
+    assert_allclose(tt[1], res2_t.pvalue, rtol=1e-13)
+    assert_allclose(res.pvalue, res2_t.pvalue, rtol=1e-13)
+    assert_allclose(res.df, res2_t.df, rtol=1e-13)
+
+    ci = res.conf_int(alpha=0.05)
+    # our ranking is defined as reversed from lawstat, and BM article
+    assert_allclose(ci, 1 - np.array(res2_t.ci)[::-1], rtol=1e-11)
+    # test consistency of test and confint
+    res_lb = res.test_prob_superior(value=ci[0])
+    assert_allclose(res_lb[1], 0.05, rtol=1e-11)
+    res_ub = res.test_prob_superior(value=ci[1])
+    assert_allclose(res_ub[1], 0.05, rtol=1e-11)
+
+    # test consistency of tost and confint
+    res_tost = res.tost_prob_superior(*ci)
+    assert_allclose(res_tost[1][1], 0.025, rtol=1e-11)
+    assert_allclose(res_tost[2][1], 0.025, rtol=1e-11)
