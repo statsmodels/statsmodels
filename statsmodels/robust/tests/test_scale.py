@@ -168,6 +168,33 @@ class TestQn(object):
     def test_qn_empty(self):
         empty = np.empty(0)
         assert np.isnan(scale.qn(empty))
+        empty = np.empty((10, 100, 0))
+        assert_equal(scale.qn(empty, axis=1), np.empty((10, 0)))
+        empty = np.empty((100, 100, 0, 0))
+        assert_equal(scale.qn(empty, axis=-1), np.empty((100, 100, 0)))
+
+
+class TestQnAxes(object):
+    @classmethod
+    def setup_class(cls):
+        np.random.seed(54321)
+        cls.X = standard_normal((40, 10, 30))
+
+    def test_axis0(self):
+        m = scale.qn(self.X, axis=0)
+        assert_equal(m.shape, (10, 30))
+
+    def test_axis1(self):
+        m = scale.qn(self.X, axis=1)
+        assert_equal(m.shape, (40, 30))
+
+    def test_axis2(self):
+        m = scale.qn(self.X, axis=2)
+        assert_equal(m.shape, (40, 10))
+
+    def test_axisneg1(self):
+        m = scale.qn(self.X, axis=-1)
+        assert_equal(m.shape, (40, 10))
 
 
 class TestHuber(object):
