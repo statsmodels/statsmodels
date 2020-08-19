@@ -159,10 +159,10 @@ class TestQn(object):
         cls.exponential = np.random.exponential(size=40)
 
     def test_qn(self):
-        #assert_almost_equal(scale.qn(self.normal), scale._qn_naive(self.normal), DECIMAL)
-        #assert_almost_equal(scale.qn(self.range), scale._qn_naive(self.range), DECIMAL)
+        assert_almost_equal(scale.qn(self.normal), scale._qn_naive(self.normal), DECIMAL)
+        assert_almost_equal(scale.qn(self.range), scale._qn_naive(self.range), DECIMAL)
         # from R's robustbase with finite.corr = FALSE
-        #assert_almost_equal(scale.qn(self.range), 13.3148, DECIMAL)
+        assert_almost_equal(scale.qn(self.range), 13.3148, DECIMAL)
         assert_almost_equal(scale.qn(self.exponential), scale._qn_naive(self.exponential), DECIMAL)
 
     def test_qn_empty(self):
