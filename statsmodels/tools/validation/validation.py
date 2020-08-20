@@ -91,6 +91,7 @@ def array_like(
     >>> a = array_like(pd.Series(x), 'x', ndim=1)
     >>> a.shape
     (4,)
+
     >>> type(a.orig)
     pandas.core.series.Series
 
@@ -395,6 +396,34 @@ def float_like(value, name, optional=False, strict=False):
 
 
 def string_like(value, name, optional=False, options=None, lower=True):
+    """
+    Check if object is string-like and raise if not
+
+    Parameters
+    ----------
+    value : object
+        Value to verify.
+    name : str
+        Variable name for exceptions.
+    optional : bool
+        Flag indicating whether None is allowed.
+    options : tuple[str]
+        Allowed values for input parameter `value`.
+    lower : bool
+        Convert all case-based characters in `value` into lowercase.
+
+    Returns
+    -------
+    str
+        The validated input
+
+    Raises
+    ------
+    TypeError
+        If the value is not a string or None when optional is True.
+    ValueError
+        If the input is not in ``options`` when ``options`` is set.
+    """
     if value is None:
         return None
     if not isinstance(value, str):
