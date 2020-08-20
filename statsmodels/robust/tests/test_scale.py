@@ -8,6 +8,7 @@ from numpy.testing import assert_almost_equal, assert_equal
 # Example from Section 5.5, Venables & Ripley (2002)
 
 import statsmodels.robust.scale as scale
+import statsmodels.api as sm
 
 DECIMAL = 4
 # TODO: Can replicate these tests using stackloss data and R if this
@@ -157,13 +158,20 @@ class TestQn(object):
         cls.normal = standard_normal(size=40)
         cls.range = np.arange(0, 40)
         cls.exponential = np.random.exponential(size=40)
+        cls.stackloss = sm.datasets.stackloss.load_pandas().data
+        cls.sunspot = sm.datasets.sunspots.load_pandas().data.SUNACTIVITY
+
 
     def test_qn(self):
         assert_almost_equal(scale.qn(self.normal), scale._qn_naive(self.normal), DECIMAL)
         assert_almost_equal(scale.qn(self.range), scale._qn_naive(self.range), DECIMAL)
+        assert_almost_equal(scale.qn(self.exponential), scale._qn_naive(self.exponential), DECIMAL)
         # from R's robustbase with finite.corr = FALSE
         assert_almost_equal(scale.qn(self.range), 13.3148, DECIMAL)
-        assert_almost_equal(scale.qn(self.exponential), scale._qn_naive(self.exponential), DECIMAL)
+        assert_almost_equal(scale.qn(self.stackloss), np.array([8.87656, 8.87656, 2.21914, 4.43828]), DECIMAL)
+        # sunspot.year from datasets in R only goes up to 289
+        assert_almost_equal(scale.qn(self.sunspot[0:289]), 33.50901, DECIMAL)
+
 
     def test_qn_empty(self):
         empty = np.empty(0)
