@@ -44,6 +44,7 @@ References
 * PJ Huber. ‘Robust Statistics’ John Wiley and Sons, Inc., New York. 1981.
 * PJ Huber. 1973, ‘The 1972 Wald Memorial Lectures: Robust Regression: Asymptotics, Conjectures, and Monte Carlo.’ The Annals of Statistics, 1.5, 799-821.
 * R Venables, B Ripley. ‘Modern Applied Statistics in S’ Springer, New York,
+* C Croux, PJ Rousseeuw, 'Time-efficient algorithms for two highly robust estimators of scale' Computational statistics. Physica, Heidelberg, 1992.
 
 Module Reference
 ----------------
@@ -105,3 +106,4 @@ Scale
     mad
     hubers_scale
     iqr
+    qn
