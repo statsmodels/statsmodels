@@ -20,7 +20,7 @@ from statsmodels.stats.weightstats import (
     _zconfint_generic, _tconfint_generic, _zstat_generic, _tstat_generic)
 
 
-class BrunnerMunzelResult(HolderTuple):
+class RankCompareResult(HolderTuple):
     """Results for rank comparison
     """
 
@@ -100,53 +100,76 @@ class BrunnerMunzelResult(HolderTuple):
         return np.maximum(pv1, pv2), (t1, pv1, df1), (t2, pv2, df2)
 
 
-def brunnermunzel(x, y, alternative="two-sided", distribution="t",
-                  nan_policy='propagate'):
+def rank_compare(x1, x2, alternative="two-sided", use_t=True):
     """
-    Compute the Brunner-Munzel test on samples x and y.
-    The Brunner-Munzel test is a nonparametric test of the null hypothesis that
-    when values are taken one by one from each group, the probabilities of
-    getting large values in both groups are equal.
-    Unlike the Wilcoxon-Mann-Whitney's U test, this does not require the
-    assumption of equivariance of two groups. Note that this does not assume
-    the distributions are same. This test works on two independent samples,
-    which may have different sizes.
+    Statistics and tests for the probability that x1 has larger values than x2.
+
+    p is the probability that a random draw from the population of
+    the first sample has a larger value than a random draw from the
+    population of the second sample, specifically
+
+            p = P(x1 > x2) + 0.5 * P(x1 = x2)
+
+    This is a measure underlying Wilcoxon-Mann-Whitney's U test,
+    Fligner-Policello test and Brunner-Munzel test, and
+    Inference is based on the asymptotic distribution of the Brunner-Munzel
+    test.
+
+    The Null hypothesis for stochastic equality is p = 0.5, which corresponds
+    to the Brunner-Munzel test.
+
     Parameters
     ----------
-    x, y : array_like
+    x1, x2 : array_like
         Array of samples, should be one-dimensional.
     alternative : {'two-sided', 'less', 'greater'}, optional
         Defines the alternative hypothesis.
         The following options are available (default is 'two-sided'):
           * 'two-sided'
-          * 'less': one-sided
-          * 'greater': one-sided
-    distribution : {'t', 'normal'}, optional
-        Defines how to get the p-value.
-        The following options are available (default is 't'):
-          * 't': get the p-value by t-distribution
-          * 'normal': get the p-value by standard normal distribution.
-    nan_policy : {'propagate', 'raise', 'omit'}, optional
-        Defines how to handle when input contains nan.
-        The following options are available (default is 'propagate'):
-          * 'propagate': returns nan
-          * 'raise': throws an error
-          * 'omit': performs the calculations ignoring nan values
+          * 'smaller': one-sided
+          * 'larger': one-sided
+    use_t : poolean
+        If use_t is true, the t distribution with Welch-Satterthwaite type
+        degrees of freedom is used for p-value and confidence interval.
+        If use_t is false, then the normal distribution is used.
+
     Returns
     -------
-    statistic : float
-        The Brunner-Munzer W statistic.
-    pvalue : float
-        p-value assuming an t distribution. One-sided or
-        two-sided, depending on the choice of `alternative` and `distribution`.
+    res : RankCompareResult
+
+        statistic : float
+            The Brunner-Munzer W statistic.
+        pvalue : float
+            p-value assuming an t distribution. One-sided or
+            two-sided, depending on the choice of `alternative` and `use_t`.
+
+
     See Also
     --------
-    mannwhitneyu : Mann-Whitney rank test on two samples.
+    scipy.stats.brunnermunzel : Brunner-Munzel test for stochastic equality
+    scipy.stats.mannwhitneyu : Mann-Whitney rank test on two samples.
+
     Notes
     -----
+    Wilcoxon-Mann-Whitney assumes equal variance or equal distribution under
+    the Null hypothesis. Fligner-Policello test allows for unequal variances
+    but assumes continuous distribution, i.e. no ties.
+    Brunner-Munzel extend the test to allow for unequal variance and discrete
+    or ordered categorical random variables.
+
     Brunner and Munzel recommended to estimate the p-value by t-distribution
     when the size of data is 50 or less. If the size is lower than 10, it would
     be better to use permuted Brunner Munzel test (see [2]_).
+
+    This measure has been introduced in the literature under many different
+    names relying on a variety of assumptions.
+    In psychology, ... introduced it as Common Language effect size for the
+    continuous, normal distribution case, ... extended it to the nonparameteric
+    continuous distribution case as in Fligner-Policello.
+
+    Note: Brunner-Munzel define the probability for x1 to be stochastically
+    smaller than x2, while here we use stochastically larger.
+
     References
     ----------
     .. [1] Brunner, E. and Munzel, U. "The nonparametric Benhrens-Fisher
@@ -166,87 +189,70 @@ def brunnermunzel(x, y, alternative="two-sided", distribution="t",
     >>> p_value
     0.0057862086661515377
     """
-    x = np.asarray(x)
-    y = np.asarray(y)
+    x1 = np.asarray(x1)
+    x2 = np.asarray(x2)
 
-#    # check both x and y
-#    cnx, npx = _contains_nan(x, nan_policy)
-#    cny, npy = _contains_nan(y, nan_policy)
-#    contains_nan = cnx or cny
-#    if npx == "omit" or npy == "omit":
-#        nan_policy = "omit"
-
-#    if contains_nan and nan_policy == "propagate":
-#        return BrunnerMunzelResult(np.nan, np.nan)
-#    elif contains_nan and nan_policy == "omit":
-#        x = ma.masked_invalid(x)
-#        y = ma.masked_invalid(y)
-#        return mstats_basic.brunnermunzel(x, y, alternative, distribution)
-
-    nx = len(x)
-    ny = len(y)
-    nobs = nx + ny
-    if nx == 0 or ny == 0:
-        return BrunnerMunzelResult(np.nan, np.nan)
-    rankc = rankdata(np.concatenate((x, y)))
-    rankcx = rankc[0:nx]
-    rankcy = rankc[nx:nx+ny]
+    nobs1 = len(x1)
+    nobs2 = len(x2)
+    nobs = nobs1 + nobs2
+    if nobs1 == 0 or nobs2 == 0:
+        return RankCompareResult(statistic=np.nan, pvalue=np.nan)
+    rankc = rankdata(np.concatenate((x1, x2)))
+    rankcx = rankc[0:nobs1]
+    rankcy = rankc[nobs1:nobs1+nobs2]
     rankcx_mean = np.mean(rankcx)
     rankcy_mean = np.mean(rankcy)
-    rankx = rankdata(x)
-    ranky = rankdata(y)
+    rankx = rankdata(x1)
+    ranky = rankdata(x2)
     rankx_mean = np.mean(rankx)
     ranky_mean = np.mean(ranky)
 
-    Sx = np.sum(np.power(rankcx - rankx - rankcx_mean + rankx_mean, 2.0))
-    Sx /= nx - 1
-    Sy = np.sum(np.power(rankcy - ranky - rankcy_mean + ranky_mean, 2.0))
-    Sy /= ny - 1
+    S1 = np.sum(np.power(rankcx - rankx - rankcx_mean + rankx_mean, 2.0))
+    S1 /= nobs1 - 1
+    S2 = np.sum(np.power(rankcy - ranky - rankcy_mean + ranky_mean, 2.0))
+    S2 /= nobs2 - 1
 
-    wbfn = nx * ny * (rankcy_mean - rankcx_mean)
-    wbfn /= (nx + ny) * np.sqrt(nx * Sx + ny * Sy)
+    wbfn = nobs1 * nobs2 * (rankcx_mean - rankcy_mean)
+    wbfn /= (nobs1 + nobs2) * np.sqrt(nobs1 * S1 + nobs2 * S2)
 
-    if distribution == "t":
-        df_numer = np.power(nx * Sx + ny * Sy, 2.0)
-        df_denom = np.power(nx * Sx, 2.0) / (nx - 1)
-        df_denom += np.power(ny * Sy, 2.0) / (ny - 1)
+    if use_t:
+        df_numer = np.power(nobs1 * S1 + nobs2 * S2, 2.0)
+        df_denom = np.power(nobs1 * S1, 2.0) / (nobs1 - 1)
+        df_denom += np.power(nobs2 * S2, 2.0) / (nobs2 - 1)
         df = df_numer / df_denom
-        p = stats.t.cdf(wbfn, df)
-    elif distribution == "normal":
-        p = stats.norm.cdf(wbfn)
-        df = None
+        pvalue = stats.t.cdf(wbfn, df)
     else:
-        raise ValueError(
-            "distribution should be 't' or 'normal'")
+        pvalue = stats.norm.cdf(wbfn)
+        df = None
 
-    if alternative == "greater":
+    if alternative == "larger":
         pass
-    elif alternative == "less":
-        p = 1 - p
+    elif alternative == "smaller":
+        pvalue = 1 - pvalue
     elif alternative == "two-sided":
-        p = 2 * np.min([p, 1-p])
+        pvalue = 2 * np.min([pvalue, 1-pvalue])
     else:
         raise ValueError(
             "alternative should be 'less', 'greater' or 'two-sided'")
 
     # other info
-    nobs1, nobs2 = nx, ny   # rename
+    nobs1, nobs2 = nobs1, nobs2   # rename
     mean1 = rankcx_mean
     mean2 = rankcy_mean
 
-    var1 = Sx / (nobs - nx)**2
-    var2 = Sy / (nobs - ny)**2
+    var1 = S1 / (nobs - nobs1)**2
+    var2 = S2 / (nobs - nobs2)**2
     var_prob = (var1 / nobs1 + var2 / nobs2)
     var = nobs * (var1 / nobs1 + var2 / nobs2)
     prob1 = (mean1 - (nobs1 + 1) / 2) / nobs2
     prob2 = (mean2 - (nobs2 + 1) / 2) / nobs1
 
-    return BrunnerMunzelResult(statistic=wbfn, pvalue=p, x1=Sx, s2=Sy,
-                               var1=var1, var2=var2, var=var,
-                               var_prob=var_prob,
-                               nobs1=nx, nobs2=ny, nobs=nobs,
-                               mean1=mean1, mean2=mean2,
-                               prob1=prob1, prob2=prob2,
-                               somersd1=prob1 * 2 - 1, somersd2=prob2 * 2 - 1,
-                               df=df
-                               )
+    return RankCompareResult(statistic=wbfn, pvalue=pvalue, s1=S1, s2=S2,
+                             var1=var1, var2=var2, var=var,
+                             var_prob=var_prob,
+                             nobs1=nobs1, nobs2=nobs2, nobs=nobs,
+                             mean1=mean1, mean2=mean2,
+                             prob1=prob1, prob2=prob2,
+                             somersd1=prob1 * 2 - 1, somersd2=prob2 * 2 - 1,
+                             df=df
+                             )
