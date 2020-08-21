@@ -176,7 +176,8 @@ class TestQn(object):
                             np.array([8.87656, 8.87656, 2.21914, 4.43828]),
                             DECIMAL)
         # sunspot.year from datasets in R only goes up to 289
-        assert_almost_equal(scale.qn_scale(self.sunspot[0:289]), 33.50901, DECIMAL)
+        assert_almost_equal(scale.qn_scale(self.sunspot[0:289]), 33.50901,
+                            DECIMAL)
 
     def test_qn_empty(self):
         empty = np.empty(0)
