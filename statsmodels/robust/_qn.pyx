@@ -52,11 +52,12 @@ def _high_weighted_median(double[::1] a, int[::1] weights):
                     kcand = kcand + 1
             wrest = wrest + wleft + wmid
         else:
-            return trial
+            break
         n = kcand
         for i in range(n):
             a[i] = a_cand[i]
             weights[i] = weights_cand[i]
+    return trial
 
 
 def _qn(double[::1] a, double c):
