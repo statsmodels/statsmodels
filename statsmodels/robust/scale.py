@@ -85,7 +85,7 @@ def iqr(a, c=Gaussian.ppf(3/4) - Gaussian.ppf(1/4), axis=0):
         return np.squeeze(np.diff(quantiles, axis=0) / c)
 
 
-def qn(a, c=1/(np.sqrt(2) * Gaussian.ppf(5/8)), axis=0):
+def qn_scale(a, c=1 / (np.sqrt(2) * Gaussian.ppf(5 / 8)), axis=0):
     """
     Computes the Qn robust estimator of scale, a more efficient alternative
     to the MAD. The implementation follows the algorithm described in Croux
