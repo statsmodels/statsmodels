@@ -85,11 +85,15 @@ def iqr(a, c=Gaussian.ppf(3/4) - Gaussian.ppf(1/4), axis=0):
         return np.squeeze(np.diff(quantiles, axis=0) / c)
 
 
-def qn(a, c=1/(np.sqrt(2) * Gaussian.ppf(5/8)), axis=0):
+def qn_scale(a, c=1 / (np.sqrt(2) * Gaussian.ppf(5 / 8)), axis=0):
     """
     Computes the Qn robust estimator of scale, a more efficient alternative
-    to the MAD. The implementation follows the algorithm described in Croux
-    and Rousseeuw (1992).
+    to the MAD. The Qn estimator of the array a of length n is defined as
+    c * {abs(a[i] - a[j]): i<j}_(k), for k equal to [n/2] + 1 choose 2. Thus,
+    the Qn estimator is the k-th order statistic of the absolute differences
+    of the array. The optional constant is used to normalize the estimate
+    as explained below. The implementation follows the algorithm described
+    in Croux and Rousseeuw (1992).
 
     Parameters
     ----------
