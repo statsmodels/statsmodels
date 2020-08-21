@@ -13,50 +13,52 @@ def _high_weighted_median(double[::1] a, int[::1] weights):
     greater than half the total sum of the weights
     """
     cdef:
-        int n = a.shape[0]
+        double[::1] a_cp = np.copy(a)
+        int[::1] weights_cp = np.copy(weights)
+        int n = a_cp.shape[0]
         double[::1] sorted_a = np.zeros((n,), dtype=np.double)
         double[::1] a_cand = np.zeros((n,), dtype=np.double)
-        int[::1] weights_cand = np.zeros((n,), dtype=np.int)
+        int[::1] weights_cand = np.zeros((n,), dtype=np.intc)
         Py_ssize_t i= 0
         int kcand = 0
         int wleft, wright, wmid, wtot, wrest = 0
         double trial = 0
-    wtot = np.sum(weights)
+    wtot = np.sum(weights_cp)
     while True:
         wleft = 0
         wmid = 0
         wright = 0
         for i in range(n):
-            sorted_a[i] = a[i]
-        sorted_a.partition(n//2)
+            sorted_a[i] = a_cp[i]
+        sorted_a = np.partition(sorted_a, kth=n//2)
         trial = sorted_a[n//2]
         for i in range(n):
-            if a[i] < trial:
-                wleft = wleft + weights[i]
-            elif a[i] > trial:
-                wright = wright + weights[i]
+            if a_cp[i] < trial:
+                wleft = wleft + weights_cp[i]
+            elif a_cp[i] > trial:
+                wright = wright + weights_cp[i]
             else:
-                wmid = wmid + weights[i]
+                wmid = wmid + weights_cp[i]
         kcand = 0
         if 2 * (wrest + wleft) > wtot:
             for i in range(n):
-                if a[i] < trial:
-                    a_cand[kcand] = a[i]
-                    weights_cand[kcand] = weights[i]
+                if a_cp[i] < trial:
+                    a_cand[kcand] = a_cp[i]
+                    weights_cand[kcand] = weights_cp[i]
                     kcand = kcand + 1
         elif 2 * (wrest + wleft + wmid) <= wtot:
             for i in range(n):
-                if a[i] > trial:
-                    a_cand[kcand] = a[i]
-                    weights_cand[kcand] = weights[i]
+                if a_cp[i] > trial:
+                    a_cand[kcand] = a_cp[i]
+                    weights_cand[kcand] = weights_cp[i]
                     kcand = kcand + 1
             wrest = wrest + wleft + wmid
         else:
             break
         n = kcand
         for i in range(n):
-            a[i] = a_cand[i]
-            weights[i] = weights_cand[i]
+            a_cp[i] = a_cand[i]
+            weights_cp[i] = weights_cand[i]
     return trial
 
 
@@ -90,12 +92,12 @@ def _qn(double[::1] a, double c):
         int sump, sumq = 0
         double trial, output = 0
         double[::1] a_sorted = np.sort(a)
-        int[::1] left = np.array([n - i + 1 for i in range(0, n)], dtype=np.int)
-        int[::1] right = np.array([n if i <= h else n - (i - h) for i in range(0, n)], dtype=np.int)
-        int[::1] weights = np.zeros((n,), dtype=np.int)
+        int[::1] left = np.array([n - i + 1 for i in range(0, n)], dtype=np.intc)
+        int[::1] right = np.array([n if i <= h else n - (i - h) for i in range(0, n)], dtype=np.intc)
+        int[::1] weights = np.zeros((n,), dtype=np.intc)
         double[::1] work = np.zeros((n,), dtype=np.double)
-        int[::1] p = np.zeros((n,), dtype=np.int)
-        int[::1] q = np.zeros((n,), dtype=np.int)
+        int[::1] p = np.zeros((n,), dtype=np.intc)
+        int[::1] q = np.zeros((n,), dtype=np.intc)
     while n_right - n_left > n:
         j = 0
         for i in range(1, n):
