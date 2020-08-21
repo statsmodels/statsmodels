@@ -100,19 +100,17 @@ def qn_scale(a, c=1 / (np.sqrt(2) * Gaussian.ppf(5 / 8)), axis=0):
     a : array_like
         Input array.
     c : float, optional
-        The normalization constant, used to get consistent estimates of the
-        standard deviation at the normal distribution.  Defined as
-        1/(np.sqrt(2) * scipy.stats.norm.ppf(5/8)), which is 2.219144.
+        The normalization constant. The default value is used to get consistent
+        estimates of the standard deviation at the normal distribution.
     axis : int, optional
-        The default is 0. Can also be None.
+        The default is 0.
 
     Returns
     -------
     The Qn robust estimator of scale
     """
-    a = array_like(a, 'a', ndim=None)
+    a = array_like(a, 'a', ndim=None, dtype=np.float64, contiguous=True, order='C')
     c = float_like(c, 'c')
-    a = a.astype(np.float64)
     if a.ndim == 0:
         raise ValueError("a should have at least one dimension")
     elif a.size == 0:
