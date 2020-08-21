@@ -162,14 +162,19 @@ class TestQn(object):
         cls.sunspot = sm.datasets.sunspots.load_pandas().data.SUNACTIVITY
 
     def test_qn_naive(self):
-        assert_almost_equal(scale.qn(self.normal), scale._qn_naive(self.normal), DECIMAL)
-        assert_almost_equal(scale.qn(self.range), scale._qn_naive(self.range), DECIMAL)
-        assert_almost_equal(scale.qn(self.exponential), scale._qn_naive(self.exponential), DECIMAL)
+        assert_almost_equal(scale.qn(self.normal),
+                            scale._qn_naive(self.normal), DECIMAL)
+        assert_almost_equal(scale.qn(self.range),
+                            scale._qn_naive(self.range), DECIMAL)
+        assert_almost_equal(scale.qn(self.exponential),
+                            scale._qn_naive(self.exponential), DECIMAL)
 
     def test_qn_robustbase(self):
         # from R's robustbase with finite.corr = FALSE
         assert_almost_equal(scale.qn(self.range), 13.3148, DECIMAL)
-        assert_almost_equal(scale.qn(self.stackloss), np.array([8.87656, 8.87656, 2.21914, 4.43828]), DECIMAL)
+        assert_almost_equal(scale.qn(self.stackloss),
+                            np.array([8.87656, 8.87656, 2.21914, 4.43828]),
+                            DECIMAL)
         # sunspot.year from datasets in R only goes up to 289
         assert_almost_equal(scale.qn(self.sunspot[0:289]), 33.50901, DECIMAL)
 

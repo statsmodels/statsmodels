@@ -18,6 +18,7 @@ from statsmodels.tools import tools
 from statsmodels.tools.validation import array_like, float_like
 from ._qn import _qn
 
+
 def mad(a, c=Gaussian.ppf(3/4.), axis=0, center=np.median):
     # c \approx .6745
     """
@@ -118,8 +119,8 @@ def qn(a, c=1/(np.sqrt(2) * Gaussian.ppf(5/8)), axis=0):
 
 def _qn_naive(a, c=1 / (np.sqrt(2) * Gaussian.ppf(5 / 8))):
     """
-    A naive implementation of the Qn robust estimator of scale, used solely to test
-    the faster, more involved one
+    A naive implementation of the Qn robust estimator of scale, used solely
+    to test the faster, more involved one
 
     Parameters
     ----------
@@ -148,6 +149,7 @@ def _qn_naive(a, c=1 / (np.sqrt(2) * Gaussian.ppf(5 / 8))):
         output = np.partition(np.array(diffs), kth=k - 1)[k - 1]
         output = c * output
         return output
+
 
 class Huber(object):
     """
