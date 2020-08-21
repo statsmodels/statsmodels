@@ -109,7 +109,8 @@ def qn_scale(a, c=1 / (np.sqrt(2) * Gaussian.ppf(5 / 8)), axis=0):
     -------
     The Qn robust estimator of scale
     """
-    a = array_like(a, 'a', ndim=None, dtype=np.float64, contiguous=True, order='C')
+    a = array_like(a, 'a', ndim=None, dtype=np.float64, contiguous=True,
+                   order='C')
     c = float_like(c, 'c')
     if a.ndim == 0:
         raise ValueError("a should have at least one dimension")
