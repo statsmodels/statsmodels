@@ -146,11 +146,9 @@ def _qn_naive(a, c=1 / (np.sqrt(2) * Gaussian.ppf(5 / 8))):
     else:
         h = int(n // 2 + 1)
         k = int(h * (h - 1) / 2)
-        diffs = []
-        for i in range(n):
-            for j in range(i+1, n):
-                diffs.append(np.abs(a[i] - a[j]))
-        output = np.partition(np.array(diffs), kth=k - 1)[k - 1]
+        idx = np.triu_indices(n, k=1)
+        diffs = np.abs(a[idx[0]] - a[idx[1]])
+        output = np.partition(diffs, kth=k - 1)[k - 1]
         output = c * output
         return output
 
