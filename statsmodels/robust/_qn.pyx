@@ -62,7 +62,7 @@ def _high_weighted_median(double[::1] a, int[::1] weights):
     return trial
 
 
-def _qn(double[::1] a, double c):
+def _qn(np.ndarray[double] a, double c):
     """
     Computes the Qn robust estimator of scale, a more efficient alternative
     to the MAD. The implementation follows the algorithm described in Croux
