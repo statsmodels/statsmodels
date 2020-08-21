@@ -87,8 +87,10 @@ def iqr(a, c=Gaussian.ppf(3/4) - Gaussian.ppf(1/4), axis=0):
 
 def qn_scale(a, c=1 / (np.sqrt(2) * Gaussian.ppf(5 / 8)), axis=0):
     """
-    Computes the Qn robust estimator of scale, a more efficient alternative
-    to the MAD. The Qn estimator of the array a of length n is defined as
+    Computes the Qn robust estimator of scale
+
+    The Qn scale estimator is a more efficient alternative to the MAD.
+    The Qn scale estimator of an array a of length n is defined as
     c * {abs(a[i] - a[j]): i<j}_(k), for k equal to [n/2] + 1 choose 2. Thus,
     the Qn estimator is the k-th order statistic of the absolute differences
     of the array. The optional constant is used to normalize the estimate
@@ -100,25 +102,28 @@ def qn_scale(a, c=1 / (np.sqrt(2) * Gaussian.ppf(5 / 8)), axis=0):
     a : array_like
         Input array.
     c : float, optional
-        The normalization constant, used to get consistent estimates of the
-        standard deviation at the normal distribution.  Defined as
-        1/(np.sqrt(2) * scipy.stats.norm.ppf(5/8)), which is 2.219144.
+        The normalization constant. The default value is used to get consistent
+        estimates of the standard deviation at the normal distribution.
     axis : int, optional
-        The default is 0. Can also be None.
+        The default is 0.
 
     Returns
     -------
-    The Qn robust estimator of scale
+    {float, ndarray}
+        The Qn robust estimator of scale
     """
-    a = array_like(a, 'a', ndim=None)
+    a = array_like(a, 'a', ndim=None, dtype=np.float64, contiguous=True,
+                   order='C')
     c = float_like(c, 'c')
-    a = a.astype(np.float64)
     if a.ndim == 0:
         raise ValueError("a should have at least one dimension")
     elif a.size == 0:
         return np.nan
     else:
-        return np.apply_along_axis(_qn, axis=axis, arr=a, c=c)
+        out = np.apply_along_axis(_qn, axis=axis, arr=a, c=c)
+        if out.ndim == 0:
+            return float(out)
+        return out
 
 
 def _qn_naive(a, c=1 / (np.sqrt(2) * Gaussian.ppf(5 / 8))):
