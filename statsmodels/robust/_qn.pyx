@@ -5,28 +5,22 @@ cimport cython
 import numpy as np
 cimport numpy as np
 
-DTYPE_INT = np.int
-DTYPE_DOUBLE = np.float64
 
-ctypedef np.float64_t DTYPE_DOUBLE_t
-ctypedef np.int_t DTYPE_INT_t
-
-
-def _high_weighted_median(np.ndarray[DTYPE_DOUBLE_t] a, np.ndarray[DTYPE_INT_t] weights):
+def _high_weighted_median(double[::1] a, int[::1] weights):
     """
     Computes a weighted high median of a. This is defined as the
     smallest a[j] such that the sum over all a[i]<=a[j] is strictly
     greater than half the total sum of the weights
     """
     cdef:
-        DTYPE_INT_t n = a.shape[0]
-        np.ndarray[DTYPE_DOUBLE_t] sorted_a = np.zeros((n,), dtype=DTYPE_DOUBLE)
-        np.ndarray[DTYPE_DOUBLE_t] a_cand = np.zeros((n,), dtype=DTYPE_DOUBLE)
-        np.ndarray[DTYPE_INT_t] weights_cand = np.zeros((n,), dtype=DTYPE_INT)
+        int n = a.shape[0]
+        double[::1] sorted_a = np.zeros((n,), dtype=np.double)
+        double[::1] a_cand = np.zeros((n,), dtype=np.double)
+        int[::1] weights_cand = np.zeros((n,), dtype=np.int)
         Py_ssize_t i= 0
-        DTYPE_INT_t kcand = 0
-        DTYPE_INT_t wleft, wright, wmid, wtot, wrest = 0
-        DTYPE_DOUBLE_t trial = 0
+        int kcand = 0
+        int wleft, wright, wmid, wtot, wrest = 0
+        double trial = 0
     wtot = np.sum(weights)
     while True:
         wleft = 0
@@ -65,7 +59,7 @@ def _high_weighted_median(np.ndarray[DTYPE_DOUBLE_t] a, np.ndarray[DTYPE_INT_t] 
             weights[i] = weights_cand[i]
 
 
-def _qn(np.ndarray[DTYPE_DOUBLE_t] a, DTYPE_DOUBLE_t c):
+def _qn(double[::1] a, double c):
     """
     Computes the Qn robust estimator of scale, a more efficient alternative
     to the MAD. The implementation follows the algorithm described in Croux
@@ -85,22 +79,22 @@ def _qn(np.ndarray[DTYPE_DOUBLE_t] a, DTYPE_DOUBLE_t c):
     The Qn robust estimator of scale
     """
     cdef:
-        DTYPE_INT_t n = a.shape[0]
-        DTYPE_INT_t h = n/2 + 1
-        DTYPE_INT_t k = h * (h - 1) / 2
-        DTYPE_INT_t n_left = n * (n + 1) / 2
-        DTYPE_INT_t n_right = n * n
-        DTYPE_INT_t k_new = k + n_left
+        int n = a.shape[0]
+        int h = n/2 + 1
+        int k = h * (h - 1) / 2
+        int n_left = n * (n + 1) / 2
+        int n_right = n * n
+        int k_new = k + n_left
         Py_ssize_t i, j, jh, l = 0
-        DTYPE_INT_t sump, sumq = 0
-        DTYPE_DOUBLE_t trial, output = 0
-        np.ndarray[DTYPE_DOUBLE_t] a_sorted = np.sort(a)
-        np.ndarray[DTYPE_INT_t] left = np.array([n - i + 1 for i in range(0, n)], dtype=DTYPE_INT)
-        np.ndarray[DTYPE_INT_t] right = np.array([n if i <= h else n - (i - h) for i in range(0, n)], dtype=DTYPE_INT)
-        np.ndarray[DTYPE_INT_t] weights = np.zeros((n,), dtype=DTYPE_INT)
-        np.ndarray[DTYPE_DOUBLE_t] work = np.zeros((n,), dtype=DTYPE_DOUBLE)
-        np.ndarray[DTYPE_INT_t] p = np.zeros((n,), dtype=DTYPE_INT)
-        np.ndarray[DTYPE_INT_t] q = np.zeros((n,), dtype=DTYPE_INT)
+        int sump, sumq = 0
+        double trial, output = 0
+        double[::1] a_sorted = np.sort(a)
+        int[::1] left = np.array([n - i + 1 for i in range(0, n)], dtype=np.int)
+        int[::1] right = np.array([n if i <= h else n - (i - h) for i in range(0, n)], dtype=np.int)
+        int[::1] weights = np.zeros((n,), dtype=np.int)
+        double[::1] work = np.zeros((n,), dtype=np.double)
+        int[::1] p = np.zeros((n,), dtype=np.int)
+        np.ndarray[int] q = np.zeros((n,), dtype=np.int)
     while n_right - n_left > n:
         j = 0
         for i in range(1, n):
