@@ -95,7 +95,7 @@ def _qn(double[::1] a, double c):
         int[::1] weights = np.zeros((n,), dtype=np.int)
         double[::1] work = np.zeros((n,), dtype=np.double)
         int[::1] p = np.zeros((n,), dtype=np.int)
-        np.ndarray[int] q = np.zeros((n,), dtype=np.int)
+        int[::1] q = np.zeros((n,), dtype=np.int)
     while n_right - n_left > n:
         j = 0
         for i in range(1, n):
@@ -116,7 +116,7 @@ def _qn(double[::1] a, double c):
                 j = j - 1
             q[i] = j
         sump = np.sum(p)
-        sumq = np.sum(q - 1)
+        sumq = np.sum(q) - n
         if k_new <= sump:
             right = np.copy(p)
             n_right = sump
