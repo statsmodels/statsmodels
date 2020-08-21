@@ -19,7 +19,6 @@ def _high_weighted_median(double[::1] a, int[::1] weights):
         double[::1] sorted_a = np.zeros((n,), dtype=np.double)
         double[::1] a_cand = np.zeros((n,), dtype=np.double)
         int[::1] weights_cand = np.zeros((n,), dtype=np.intc)
-        Py_ssize_t i= 0
         int kcand = 0
         int wleft, wright, wmid, wtot, wrest = 0
         double trial = 0
