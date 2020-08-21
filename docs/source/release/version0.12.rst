@@ -295,7 +295,7 @@ Submodules
 
 ``robust``
 ~~~~~~~~~~~~~~
-- Add an implementation of the Qn robust scale estimator
+- Add an implementation of the Qn robust scale estimator (:pr:`6977`)
 
 ``stats``
 ~~~~~~~~~
