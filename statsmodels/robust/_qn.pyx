@@ -1,9 +1,7 @@
 #!python
 #cython: wraparound=False, boundscheck=False, cdivision=True
 
-cimport cython
 import numpy as np
-cimport numpy as np
 
 
 def _high_weighted_median(double[::1] a, int[::1] weights):
@@ -61,7 +59,7 @@ def _high_weighted_median(double[::1] a, int[::1] weights):
     return trial
 
 
-def _qn(np.ndarray[double] a, double c):
+def _qn(double[:] a, double c):
     """
     Computes the Qn robust estimator of scale, a more efficient alternative
     to the MAD. The implementation follows the algorithm described in Croux
