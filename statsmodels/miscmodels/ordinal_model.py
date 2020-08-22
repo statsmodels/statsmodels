@@ -8,6 +8,7 @@ License: BSD-3
 
 import numpy as np
 import pandas as pd
+from pandas.api.types import CategoricalDtype
 from scipy import stats
 from statsmodels.base.model import GenericLikelihoodModel, GenericLikelihoodModelResults
 
@@ -107,7 +108,7 @@ class OrderedModel(GenericLikelihoodModel):
             exog = np.asarray(exog)
 
         if isinstance(endog, pd.Series):
-            if isinstance(endog.dtypes, pd.CategoricalDtype):
+            if isinstance(endog.dtypes, CategoricalDtype):
                 if not endog.dtype.ordered:
                     import warnings
                     warnings.warn("the endog has ordered == False, risk of capturing a wrong order"
