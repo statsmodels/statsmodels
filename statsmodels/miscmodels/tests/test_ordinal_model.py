@@ -13,6 +13,7 @@ from statsmodels.miscmodels.ordinal_model import OrderedModel
 class CheckOrdinalModelMixin(object):
 
     def test_basic(self):
+        # checks basic results againt R MASS package
         n_cat = ds.n_ordinal_cat
         res1 = self.res1
         res2 = self.res2
@@ -28,7 +29,7 @@ class CheckOrdinalModelMixin(object):
         assert_allclose(res1.predict()[:7, :],
                         res2.prob_pred, atol=5e-5)
 
-    def test_Pandas(self):
+    def test_pandas(self):
         # makes sure that the Pandas ecosystem is supported
         res1 = self.res1
         resp = self.resp
@@ -40,6 +41,7 @@ class CheckOrdinalModelMixin(object):
         assert_allclose(res1.model.exog, resp.model.exog, rtol=1e-10)
 
     def test_formula(self):
+        # makes sure the "R-way" of writing models is supported
         res1 = self.res1
         resf = self.resf
         # converges slightly differently why? yet e-5 is ok
@@ -137,6 +139,7 @@ class TestProbitModel(CheckOrdinalModelMixin):
         cls.resp = resp
         cls.resf = resf
         cls.resu = resu
+
 
 class TestCLogLogModel(CheckOrdinalModelMixin):
 
