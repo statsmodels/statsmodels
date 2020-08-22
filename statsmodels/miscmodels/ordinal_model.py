@@ -7,6 +7,7 @@ License: BSD-3
 """
 
 import numpy as np
+import pandas as pd
 from scipy import stats
 from statsmodels.base.model import GenericLikelihoodModel, GenericLikelihoodModelResults
 
@@ -49,9 +50,12 @@ class OrderedModel(GenericLikelihoodModel):
         endogenous or dependent ordered categorical variable with k levels.
         Labels or values of endog will internally transformed to consecutive
         integers, 0, 1, 2, ...
+        pd.Series with Categorical as dtype should be preferred as it gives
+        the order relation between the levels.
     exog : array_like
         exogenous explanatory variables. This should not include an intercept.
         (TODO: verify)
+        pd.DataFrame are also accepted.
     distr : string 'probit' or 'logit', or a distribution instance
         The default is currently 'probit' which uses the normal distribution
         and corresponds to an ordered Probit model. The distribution is
@@ -64,11 +68,7 @@ class OrderedModel(GenericLikelihoodModel):
     """
 
     def __init__(self, endog, exog, distr='probit', **kwds):
-        super(OrderedModel, self).__init__(endog, exog, **kwds)
-        unique, index = np.unique(self.endog, return_inverse=True)
-        self.k_levels = len(unique)
-        self.endog = index
-        self.labels = unique
+
         if distr == 'probit':
             self.distr = stats.norm
         elif distr == 'logit':
@@ -76,8 +76,56 @@ class OrderedModel(GenericLikelihoodModel):
         else:
             self.distr = distr
 
+        self.names, endog, exog = self._check_inputs(endog, exog)
+
+        super(OrderedModel, self).__init__(endog, exog, **kwds)
+
+        unique, index = np.unique(self.endog, return_inverse=True)
+        self.k_levels = len(unique)
+        self.endog = index
+        self.labels = unique
+
         self.k_vars = self.exog.shape[1]
-        self.results_class = OrderedResults  #TODO: doesn't work
+        self.results_class = OrderedResults
+
+    def _check_inputs(self, endog, exog):
+        """
+        checks if self.distrib is legal and does the Pandas support for endog and exog.
+        Also retrieves columns & categories names for .summary() of the results class.
+        """
+        names = {}
+        if not isinstance(self.distr, stats.rv_continuous):
+            msg = (
+                f"{self.distr.name} must be a scipy.stats distribution."
+            )
+            raise ValueError(msg)
+
+        # Pandas' support
+        if (isinstance(exog, pd.DataFrame)) or (isinstance(exog, pd.Series)):
+            exog_name = (exog.name if isinstance(exog, pd.Series) else exog.columns.tolist())
+            names['xname'] = exog_name
+            exog = np.asarray(exog)
+
+        if isinstance(endog, pd.Series):
+            if isinstance(endog.dtypes, pd.CategoricalDtype):
+                if not endog.dtype.ordered:
+                    import warnings
+                    warnings.warn("the endog has ordered == False, risk of capturing a wrong order"
+                                  " for the categories. ordered == True preferred.", Warning)
+                endog_name = endog.name
+                thresholds_name = [str(x) + '/' + str(y)
+                                   for x, y in zip(endog.values.categories[:-1], endog.values.categories[1:])]
+                names['yname'] = endog_name
+                names['xname'] = names['xname'] + thresholds_name
+                endog = np.asarray(endog.values.codes)
+            else:
+                msg = (
+                    f"If the endog is a pandas.Serie it must be of categoricalDtype."
+                )
+                raise ValueError(msg)
+
+        return names, endog, exog
+
 
 
     def cdf(self, x):
