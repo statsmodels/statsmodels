@@ -3,6 +3,7 @@ Test  for ordinal models
 """
 
 import numpy as np
+import scipy.stats as stats
 
 from numpy.testing import assert_allclose
 from .results.results_ordinal_model import data_store as ds
@@ -131,6 +132,53 @@ class TestProbitModel(CheckOrdinalModelMixin):
         resu = modu.fit(method='bfgs', disp=False)
 
         from .results.results_ordinal_model import res_ord_probit as res2
+        cls.res2 = res2
+        cls.res1 = res
+        cls.resp = resp
+        cls.resf = resf
+        cls.resu = resu
+
+class TestCLogLogModel(CheckOrdinalModelMixin):
+
+    @classmethod
+    def setup_class(cls):
+        data = ds.df
+        data_unordered = ds.df_unordered
+
+        # a Scipy distribution defined minimally
+        class CLogLog(stats.rv_continuous):
+            def _ppf(self, q):
+                return np.log(-np.log(1 - q))
+
+            def _cdf(self, x):
+                return 1 - np.exp(-np.exp(x))
+
+        cloglog = CLogLog()
+
+        mod = OrderedModel(data['apply'].values.codes,
+                           np.asarray(data[['pared', 'public', 'gpa']], float),
+                           distr=cloglog)
+        res = mod.fit(method='bfgs', disp=False)
+
+        modp = OrderedModel(data['apply'],
+                            data[['pared', 'public', 'gpa']],
+                            distr=cloglog)
+        resp = modp.fit(method='bfgs', disp=False)
+
+        modf = OrderedModel.from_formula("apply ~ pared + public + gpa - 1",
+                                         data={"apply": data['apply'].values.codes,
+                                               "pared": data['pared'],
+                                               "public": data['public'],
+                                               "gpa": data['gpa']},
+                                         distr=cloglog)
+        resf = modf.fit(method='bfgs', disp=False)
+
+        modu = OrderedModel(data_unordered['apply'].values.codes,
+                            np.asarray(data_unordered[['pared', 'public', 'gpa']], float),
+                            distr=cloglog)
+        resu = modu.fit(method='bfgs', disp=False)
+
+        from .results.results_ordinal_model import res_ord_cloglog as res2
         cls.res2 = res2
         cls.res1 = res
         cls.resp = resp
