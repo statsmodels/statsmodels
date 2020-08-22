@@ -11,7 +11,7 @@ import pandas as pd
 from pandas.api.types import CategoricalDtype
 from scipy import stats
 from statsmodels.base.model import GenericLikelihoodModel, GenericLikelihoodModelResults
-
+from statsmodels.compat.pandas import Appender
 
 class OrderedModel(GenericLikelihoodModel):
     """Ordinal Model based on logistic or normal distribution
@@ -217,7 +217,23 @@ class OrderedModel(GenericLikelihoodModel):
         start_params = np.concatenate((np.zeros(self.k_vars), start_threshold))
         return start_params
 
+    @Appender(GenericLikelihoodModel.fit.__doc__)
+    def fit(self, start_params=None, method='nm', maxiter=500, full_output=1,
+            disp=1, callback=None, retall=0, **kwargs):
+
+        fit_method = super(OrderedModel, self).fit
+        mlefit = fit_method(start_params=start_params,
+                            method=method, maxiter=maxiter,
+                            full_output=full_output,
+                            disp=disp, callback=callback, **kwargs)
+        # use the proper result class
+        ordmlefit = OrderedResults(self, mlefit)
+
+        return ordmlefit
 
 class OrderedResults(GenericLikelihoodModelResults):
-
-    pass
+    @Appender(GenericLikelihoodModelResults.summary.__doc__)
+    def summary(self, yname=None, xname=None, title=None, alpha=.05, **kwargs):
+        names = self.model.names
+        print(names)
+        return super(OrderedResults, self).summary(**names, **kwargs)
