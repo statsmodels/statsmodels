@@ -8,6 +8,7 @@ License: BSD-3
 
 import numpy as np
 from scipy import stats
+import pandas
 
 from statsmodels.miscmodels.ordinal_model import OrderedModel
 
@@ -48,12 +49,11 @@ print(np.bincount(res.model.endog))
 res_log = OrderedModel(y, x, distr='logit').fit(method='bfgs')
 pred_choice_log = res_log.predict().argmax(1)
 print((y == pred_choice_log).mean())
-
+print(res_log.summary())
 
 # example form UCLA Stats pages http://www.ats.ucla.edu/stat/stata/dae/ologit.htm
 # requires downloaded dataset ologit.dta
 
-import pandas
 dataf = pandas.read_stata(r"M:\josef_new\scripts\ologit_ucla.dta")
 
 # this works but sorts category levels alphabetically
@@ -69,4 +69,24 @@ res_log3 = OrderedModel(dataf['apply'].values.codes,
 print(res_log3.summary())
 
 # with ordered probit - not on UCLA page
-print(OrderedModel(dataf['apply'].values.codes, np.asarray(dataf[['pared', 'public', 'gpa']], float), distr='probit').fit(method='bfgs').summary())
+print(
+    OrderedModel(dataf['apply'].values.codes, np.asarray(dataf[['pared', 'public', 'gpa']], float), distr='probit').fit(
+        method='bfgs').summary())
+
+
+# example with a custom distribution - not on UCLA page
+# definition of the SciPy dist
+class CLogLog(stats.rv_continuous):
+    def _ppf(self, q):
+        return np.log(-np.log(1 - q))
+
+    def _cdf(self, x):
+        return 1 - np.exp(-np.exp(x))
+
+
+cloglog = CLogLog()
+
+res_cloglog = OrderedModel(dataf['apply'],
+                           dataf[['pared', 'public', 'gpa']],
+                           distr=cloglog).fit(method='bfgs', disp=False)
+print(res_cloglog.summary())
