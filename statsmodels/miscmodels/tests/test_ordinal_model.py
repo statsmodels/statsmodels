@@ -18,12 +18,19 @@ class CheckOrdinalModelMixin(object):
         res1 = self.res1
         res2 = self.res2
         # coefficients values, standard errors, t & p values
-        assert_allclose(res1.params[:-n_cat + 1], res2.coefficients_val, atol=2e-4)
-        assert_allclose(res1.bse[:-n_cat + 1], res2.coefficients_stdE, rtol=0.003, atol=1e-5)
-        assert_allclose(res1.tvalues[:-n_cat + 1], res2.coefficients_tval, rtol=0.003, atol=7e-4)
-        assert_allclose(res1.pvalues[:-n_cat + 1], res2.coefficients_pval, rtol=0.009, atol=1e-5)
-        # thresholds are given with exponentiated increments from the first threshold
-        assert_allclose(res1.model.transform_threshold_params(res1.params)[1:-1], res2.thresholds, atol=4e-4)
+        assert_allclose(res1.params[:-n_cat + 1],
+                        res2.coefficients_val, atol=2e-4)
+        assert_allclose(res1.bse[:-n_cat + 1],
+                        res2.coefficients_stdE, rtol=0.003, atol=1e-5)
+        assert_allclose(res1.tvalues[:-n_cat + 1],
+                        res2.coefficients_tval, rtol=0.003, atol=7e-4)
+        assert_allclose(res1.pvalues[:-n_cat + 1],
+                        res2.coefficients_pval, rtol=0.009, atol=1e-5)
+        # thresholds are given with exponentiated increments
+        # from the first threshold
+        assert_allclose(
+            res1.model.transform_threshold_params(res1.params)[1:-1],
+            res2.thresholds, atol=4e-4)
 
         # probabilities
         assert_allclose(res1.predict()[:7, :],
@@ -82,17 +89,19 @@ class TestLogitModel(CheckOrdinalModelMixin):
                             distr='logit')
         resp = modp.fit(method='bfgs', disp=False)
         # fit with formula
-        modf = OrderedModel.from_formula("apply ~ pared + public + gpa - 1",
-                                         data={"apply": data['apply'].values.codes,
-                                               "pared": data['pared'],
-                                               "public": data['public'],
-                                               "gpa": data['gpa']},
-                                         distr='logit')
+        modf = OrderedModel.from_formula(
+            "apply ~ pared + public + gpa - 1",
+            data={"apply": data['apply'].values.codes,
+                  "pared": data['pared'],
+                  "public": data['public'],
+                  "gpa": data['gpa']},
+            distr='logit')
         resf = modf.fit(method='bfgs', disp=False)
         # fit on data with ordered=False
-        modu = OrderedModel(data_unordered['apply'].values.codes,
-                            np.asarray(data_unordered[['pared', 'public', 'gpa']], float),
-                            distr='logit')
+        modu = OrderedModel(
+            data_unordered['apply'].values.codes,
+            np.asarray(data_unordered[['pared', 'public', 'gpa']], float),
+            distr='logit')
         resu = modu.fit(method='bfgs', disp=False)
 
         from .results.results_ordinal_model import res_ord_logit as res2
@@ -120,17 +129,19 @@ class TestProbitModel(CheckOrdinalModelMixin):
                             distr='probit')
         resp = modp.fit(method='bfgs', disp=False)
 
-        modf = OrderedModel.from_formula("apply ~ pared + public + gpa - 1",
-                                         data={"apply": data['apply'].values.codes,
-                                               "pared": data['pared'],
-                                               "public": data['public'],
-                                               "gpa": data['gpa']},
-                                         distr='probit')
+        modf = OrderedModel.from_formula(
+            "apply ~ pared + public + gpa - 1",
+            data={"apply": data['apply'].values.codes,
+                  "pared": data['pared'],
+                  "public": data['public'],
+                  "gpa": data['gpa']},
+            distr='probit')
         resf = modf.fit(method='bfgs', disp=False)
 
-        modu = OrderedModel(data_unordered['apply'].values.codes,
-                            np.asarray(data_unordered[['pared', 'public', 'gpa']], float),
-                            distr='probit')
+        modu = OrderedModel(
+            data_unordered['apply'].values.codes,
+            np.asarray(data_unordered[['pared', 'public', 'gpa']], float),
+            distr='probit')
         resu = modu.fit(method='bfgs', disp=False)
 
         from .results.results_ordinal_model import res_ord_probit as res2
@@ -168,17 +179,19 @@ class TestCLogLogModel(CheckOrdinalModelMixin):
                             distr=cloglog)
         resp = modp.fit(method='bfgs', disp=False)
 
-        modf = OrderedModel.from_formula("apply ~ pared + public + gpa - 1",
-                                         data={"apply": data['apply'].values.codes,
-                                               "pared": data['pared'],
-                                               "public": data['public'],
-                                               "gpa": data['gpa']},
-                                         distr=cloglog)
+        modf = OrderedModel.from_formula(
+            "apply ~ pared + public + gpa - 1",
+            data={"apply": data['apply'].values.codes,
+                  "pared": data['pared'],
+                  "public": data['public'],
+                  "gpa": data['gpa']},
+            distr=cloglog)
         resf = modf.fit(method='bfgs', disp=False)
 
-        modu = OrderedModel(data_unordered['apply'].values.codes,
-                            np.asarray(data_unordered[['pared', 'public', 'gpa']], float),
-                            distr=cloglog)
+        modu = OrderedModel(
+            data_unordered['apply'].values.codes,
+            np.asarray(data_unordered[['pared', 'public', 'gpa']], float),
+            distr=cloglog)
         resu = modu.fit(method='bfgs', disp=False)
 
         from .results.results_ordinal_model import res_ord_cloglog as res2

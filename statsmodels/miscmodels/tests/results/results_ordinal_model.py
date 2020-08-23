@@ -7,14 +7,17 @@ import os
 import pandas as pd
 from statsmodels.tools.testing import Holder
 
-# R (v3.4.4) code inspired from https://stats.idre.ucla.edu/r/dae/ordinal-logistic-regression/
+# R (v3.4.4) code inspired from
+# https://stats.idre.ucla.edu/r/dae/ordinal-logistic-regression/
 # library(readr) # to open the file
 # library(MASS) # to perform ordinal regression
 #
-# ## load the data, 400 rows with 3 exogs(2 binaries, 1 float) and target 3-ordinal variable
+# ## load the data, 400 rows with 3 exogs(2 binaries, 1 float)
+# ##and target 3-ordinal variable
 # ologit_ucla <- read_csv("ologit_ucla.csv")
 # ologit_ucla$apply <- as.factor(ologit_ucla$apply)
-# ologit_ucla$apply <- factor(ologit_ucla$apply, levels=c("unlikely", "somewhat likely", "very likely"))
+# ologit_ucla$apply <- factor(ologit_ucla$apply,
+#               levels=c("unlikely", "somewhat likely", "very likely"))
 #
 # ## fit ordered logit model
 # r_logit <- polr(apply ~ pared + public + gpa,
@@ -40,7 +43,8 @@ from statsmodels.tools.testing import Holder
 # p <- pnorm(abs(ctable[, "t value"]), lower.tail = FALSE) * 2
 # (ctable <- cbind(ctable, "p value" = p))
 # ## show 7 first predictions
-# head(predict(r, subset(ologit_ucla, select=c("pared", "public","gpa")), type='prob'),7)
+# head(predict(r, subset(ologit_ucla,
+#                        select=c("pared", "public","gpa")), type='prob'),7)
 
 data_store = Holder()
 cur_dir = os.path.dirname(os.path.abspath(__file__))
@@ -50,11 +54,13 @@ df = pd.read_csv(os.path.join(cur_dir, "ologit_ucla.csv"))
 df_unordered = df.copy()
 df_unordered['apply'] = pd.Categorical(df['apply'], ordered=False)
 # but categories are set in order
-df_unordered['apply'].cat.set_categories(['unlikely', 'somewhat likely', 'very likely'], inplace=True)
+df_unordered['apply'].cat.set_categories(
+    ['unlikely', 'somewhat likely', 'very likely'], inplace=True)
 
 # df['apply'] is pd.Categorical with ordered = True
 df['apply'] = pd.Categorical(df['apply'], ordered=True)
-df['apply'].cat.set_categories(['unlikely', 'somewhat likely', 'very likely'], inplace=True)
+df['apply'].cat.set_categories(
+    ['unlikely', 'somewhat likely', 'very likely'], inplace=True)
 
 data_store.df_unordered = df_unordered
 data_store.df = df
@@ -62,10 +68,12 @@ data_store.nobs = 400
 data_store.n_ordinal_cat = 3
 
 res_ord_logit = Holder()
-res_ord_logit.coefficients_val = np.array([1.04769011, -0.05878572, 0.61594057])
+res_ord_logit.coefficients_val = \
+    np.array([1.04769011, -0.05878572, 0.61594057])
 res_ord_logit.coefficients_stdE = np.array([0.2658, 0.2979, 0.2606])
 res_ord_logit.coefficients_tval = np.array([3.9418, -0.1974, 2.3632])
-res_ord_logit.coefficients_pval = np.array([8.087070e-05, 8.435464e-01, 1.811594e-02])
+res_ord_logit.coefficients_pval = \
+    np.array([8.087070e-05, 8.435464e-01, 1.811594e-02])
 res_ord_logit.thresholds = np.array([2.203915, 4.299363])
 res_ord_logit.prob_pred = np.array([[0.5488310, 0.3593310, 0.09183798],
                                     [0.3055632, 0.4759496, 0.21848725],
@@ -79,7 +87,8 @@ res_ord_probit = Holder()
 res_ord_probit.coefficients_val = np.array([0.59811, 0.01016, 0.35815])
 res_ord_probit.coefficients_stdE = np.array([0.1579, 0.1728, 0.1568])
 res_ord_probit.coefficients_tval = np.array([3.78881, 0.05878, 2.28479])
-res_ord_probit.coefficients_pval = np.array([1.513681e-04, 9.531256e-01, 2.232519e-02])
+res_ord_probit.coefficients_pval = \
+    np.array([1.513681e-04, 9.531256e-01, 2.232519e-02])
 res_ord_probit.thresholds = np.array([1.2968, 2.5028])
 res_ord_probit.prob_pred = np.array([[0.5514181, 0.3576848, 0.09089707],
                                      [0.3260107, 0.4488799, 0.22510933],
@@ -93,7 +102,8 @@ res_ord_cloglog = Holder()
 res_ord_cloglog.coefficients_val = np.array([0.5166455, 0.1081131, 0.3343895])
 res_ord_cloglog.coefficients_stdE = np.array([0.1613525, 0.1680675, 0.1542065])
 res_ord_cloglog.coefficients_tval = np.array([3.2019668, 0.6432721, 2.1684534])
-res_ord_cloglog.coefficients_pval = np.array([1.364927e-03, 5.200475e-01, 3.012421e-02])
+res_ord_cloglog.coefficients_pval = \
+    np.array([1.364927e-03, 5.200475e-01, 3.012421e-02])
 res_ord_cloglog.thresholds = np.array([0.8705304, 1.9744660])
 res_ord_cloglog.prob_pred = np.array([[0.5519526, 0.3592524, 0.08879500],
                                       [0.3855287, 0.3842645, 0.23020682],
