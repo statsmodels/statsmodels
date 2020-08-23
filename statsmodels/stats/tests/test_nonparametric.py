@@ -17,7 +17,7 @@ from statsmodels.stats.contingency_tables import (
 from statsmodels.sandbox.stats.runs import (Runs,
                                             runstest_1samp, runstest_2samp)
 from statsmodels.sandbox.stats.runs import mcnemar as sbmcnemar
-from statsmodels.stats.nonparametric import rank_compare
+from statsmodels.stats.nonparametric import rank_compare_2indep
 from statsmodels.tools.testing import Holder
 
 
@@ -291,10 +291,10 @@ def test_brunnermunzel_one_sided():
     x, y = y, x
 
     # Results are compared with R's lawstat package.
-    u1, p1 = rank_compare(x, y, alternative='smaller')
-    u2, p2 = rank_compare(y, x, alternative='larger')
-    u3, p3 = rank_compare(x, y, alternative='larger')
-    u4, p4 = rank_compare(y, x, alternative='smaller')
+    u1, p1 = rank_compare_2indep(x, y).test_prob_superior(alternative='smaller')
+    u2, p2 = rank_compare_2indep(y, x).test_prob_superior(alternative='larger')
+    u3, p3 = rank_compare_2indep(x, y).test_prob_superior(alternative='larger')
+    u4, p4 = rank_compare_2indep(y, x).test_prob_superior(alternative='smaller')
 
     assert_approx_equal(p1, p2, significant=significant)
     assert_approx_equal(p3, p4, significant=significant)
@@ -307,9 +307,11 @@ def test_brunnermunzel_one_sided():
                         significant=significant)
     assert_approx_equal(u4, -3.1374674823029505,
                         significant=significant)
-    assert_approx_equal(p1, 0.0028931043330757342,
+
+    # Note: scipy and lawstat tail is reversed compared to test statistic
+    assert_approx_equal(p3, 0.0028931043330757342,
                         significant=significant)
-    assert_approx_equal(p3, 0.99710689566692423,
+    assert_approx_equal(p1, 0.99710689566692423,
                         significant=significant)
 
 
@@ -323,19 +325,28 @@ def test_brunnermunzel_two_sided():
     x, y = y, x
 
     # Results are compared with R's lawstat package.
-    u1, p1 = rank_compare(x, y, alternative='two-sided')
-    u2, p2 = rank_compare(y, x, alternative='two-sided')
+    res1 = rank_compare_2indep(x, y)
+    u1, p1 = res1
+    t1 = res1.test_prob_superior(alternative='two-sided')
+    res2 = rank_compare_2indep(y, x)
+    u2, p2 = res2
+    t2 = res2.test_prob_superior(alternative='two-sided')
 
     assert_approx_equal(p1, p2, significant=significant)
     assert_approx_equal(u1, 3.1374674823029505,
                         significant=significant)
     assert_approx_equal(u2, -3.1374674823029505,
                         significant=significant)
-    assert_approx_equal(p1, 0.0057862086661515377,
+    assert_approx_equal(p2, 0.0057862086661515377,
                         significant=significant)
 
+    assert_allclose(t1[0], u1, rtol=1e-13)
+    assert_allclose(t2[0], u2, rtol=1e-13)
+    assert_allclose(t1[1], p1, rtol=1e-13)
+    assert_allclose(t2[1], p2, rtol=1e-13)
 
-def test_rank_compare1():
+
+def test_rank_compare_2indep1():
     # Example from Munzel and Hauschke 2003
     # data is given by counts, expand to observations
     levels = [-2, -1, 0, 1, 2]
@@ -352,7 +363,7 @@ def test_rank_compare1():
                     ci=[0.4700629827705593, 0.6183882855872511],
                     prob=0.5442256341789052)
 
-    res = rank_compare(x1, x2, use_t=False)
+    res = rank_compare_2indep(x1, x2, use_t=False)
     assert_allclose(res.statistic, -res2_t.statistic, rtol=1e-13)
     assert_allclose(res.prob1, 1 - res2_t.prob, rtol=1e-13)
     assert_allclose(res.prob2, res2_t.prob, rtol=1e-13)
@@ -380,7 +391,7 @@ def test_rank_compare1():
     # our ranking is defined as reversed from lawstat, and BM article
     # revere direction to match our definition
     x1, x2 = x2, x1
-    res = rank_compare(x1, x2, use_t=True)
+    res = rank_compare_2indep(x1, x2, use_t=True)
     assert_allclose(res.statistic, res2_t.statistic, rtol=1e-13)
     tt = res.test_prob_superior()
     # TODO: return HolderTuple

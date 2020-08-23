@@ -20,6 +20,23 @@ from statsmodels.stats.weightstats import (
     _zconfint_generic, _tconfint_generic, _zstat_generic, _tstat_generic)
 
 
+def rankdata_2samp(x1, x2):
+    x1 = np.asarray(x1)
+    x2 = np.asarray(x2)
+
+    nobs1 = len(x1)
+    nobs2 = len(x2)
+    if nobs1 == 0 or nobs2 == 0:
+        raise ValueError("one sample has zero length")
+
+    rank = rankdata(np.concatenate((x1, x2)))
+    rank1 = rank[:nobs1]
+    rank2 = rank[nobs1:]
+    ranki1 = rankdata(x1)
+    ranki2 = rankdata(x2)
+    return rank1, rank2, ranki1, ranki2
+
+
 class RankCompareResult(HolderTuple):
     """Results for rank comparison
     """
@@ -99,8 +116,30 @@ class RankCompareResult(HolderTuple):
         # TODO: return HolderTuple
         return np.maximum(pv1, pv2), (t1, pv1, df1), (t2, pv2, df2)
 
+    def summary(self, alpha=0.05):
 
-def rank_compare(x1, x2, alternative="two-sided", use_t=True):
+        xname = ["prob(x1>x2)"]
+        yname = "None"
+        effect = np.atleast_1d(self.prob1)
+        pvalues = np.atleast_1d(self.pvalue)
+        ci = np.array(self.conf_int(alpha))[None, :]
+        use_t = (self.df is not None)
+        sd = np.atleast_1d(np.sqrt(self.var_prob))
+        statistic = np.atleast_1d(self.statistic)
+        if xname is None:
+            xname = ['c%d' % ii for ii in range(len(self.effect))]
+
+        title = "Probability sample 1 is stochastically larger"
+        from statsmodels.iolib.summary import summary_params
+
+        summ = summary_params((self, effect, sd, statistic,
+                               pvalues, ci),
+                              yname=yname, xname=xname, use_t=use_t,
+                              title=title, alpha=alpha)
+        return summ
+
+
+def rank_compare_2indep(x1, x2, use_t=True):
     """
     Statistics and tests for the probability that x1 has larger values than x2.
 
@@ -122,12 +161,6 @@ def rank_compare(x1, x2, alternative="two-sided", use_t=True):
     ----------
     x1, x2 : array_like
         Array of samples, should be one-dimensional.
-    alternative : {'two-sided', 'less', 'greater'}, optional
-        Defines the alternative hypothesis.
-        The following options are available (default is 'two-sided'):
-          * 'two-sided'
-          * 'smaller': one-sided
-          * 'larger': one-sided
     use_t : poolean
         If use_t is true, the t distribution with Welch-Satterthwaite type
         degrees of freedom is used for p-value and confidence interval.
@@ -196,62 +229,47 @@ def rank_compare(x1, x2, alternative="two-sided", use_t=True):
     nobs2 = len(x2)
     nobs = nobs1 + nobs2
     if nobs1 == 0 or nobs2 == 0:
-        return RankCompareResult(statistic=np.nan, pvalue=np.nan)
-    rankc = rankdata(np.concatenate((x1, x2)))
-    rankcx = rankc[0:nobs1]
-    rankcy = rankc[nobs1:nobs1+nobs2]
-    rankcx_mean = np.mean(rankcx)
-    rankcy_mean = np.mean(rankcy)
-    rankx = rankdata(x1)
-    ranky = rankdata(x2)
-    rankx_mean = np.mean(rankx)
-    ranky_mean = np.mean(ranky)
+        raise ValueError("one sample has zero length")
 
-    S1 = np.sum(np.power(rankcx - rankx - rankcx_mean + rankx_mean, 2.0))
+    rank1, rank2, ranki1, ranki2 = rankdata_2samp(x1, x2)
+
+    meanr1 = np.mean(rank1)
+    meanr2 = np.mean(rank2)
+    meanri1 = np.mean(ranki1)
+    meanri2 = np.mean(ranki2)
+
+    S1 = np.sum(np.power(rank1 - ranki1 - meanr1 + meanri1, 2.0))
     S1 /= nobs1 - 1
-    S2 = np.sum(np.power(rankcy - ranky - rankcy_mean + ranky_mean, 2.0))
+    S2 = np.sum(np.power(rank2 - ranki2 - meanr2 + meanri2, 2.0))
     S2 /= nobs2 - 1
 
-    wbfn = nobs1 * nobs2 * (rankcx_mean - rankcy_mean)
+    wbfn = nobs1 * nobs2 * (meanr1 - meanr2)
     wbfn /= (nobs1 + nobs2) * np.sqrt(nobs1 * S1 + nobs2 * S2)
 
+    # Here we only use alternative == "two-sided"
     if use_t:
         df_numer = np.power(nobs1 * S1 + nobs2 * S2, 2.0)
         df_denom = np.power(nobs1 * S1, 2.0) / (nobs1 - 1)
         df_denom += np.power(nobs2 * S2, 2.0) / (nobs2 - 1)
         df = df_numer / df_denom
-        pvalue = stats.t.cdf(wbfn, df)
+        pvalue = 2 * stats.t.sf(np.abs(wbfn), df)
     else:
-        pvalue = stats.norm.cdf(wbfn)
+        pvalue = 2 * stats.norm.sf(np.abs(wbfn))
         df = None
 
-    if alternative == "larger":
-        pass
-    elif alternative == "smaller":
-        pvalue = 1 - pvalue
-    elif alternative == "two-sided":
-        pvalue = 2 * np.min([pvalue, 1-pvalue])
-    else:
-        raise ValueError(
-            "alternative should be 'less', 'greater' or 'two-sided'")
-
     # other info
-    nobs1, nobs2 = nobs1, nobs2   # rename
-    mean1 = rankcx_mean
-    mean2 = rankcy_mean
-
     var1 = S1 / (nobs - nobs1)**2
     var2 = S2 / (nobs - nobs2)**2
     var_prob = (var1 / nobs1 + var2 / nobs2)
     var = nobs * (var1 / nobs1 + var2 / nobs2)
-    prob1 = (mean1 - (nobs1 + 1) / 2) / nobs2
-    prob2 = (mean2 - (nobs2 + 1) / 2) / nobs1
+    prob1 = (meanr1 - (nobs1 + 1) / 2) / nobs2
+    prob2 = (meanr2 - (nobs2 + 1) / 2) / nobs1
 
     return RankCompareResult(statistic=wbfn, pvalue=pvalue, s1=S1, s2=S2,
                              var1=var1, var2=var2, var=var,
                              var_prob=var_prob,
                              nobs1=nobs1, nobs2=nobs2, nobs=nobs,
-                             mean1=mean1, mean2=mean2,
+                             mean1=meanr1, mean2=meanr2,
                              prob1=prob1, prob2=prob2,
                              somersd1=prob1 * 2 - 1, somersd2=prob2 * 2 - 1,
                              df=df
