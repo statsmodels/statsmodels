@@ -579,7 +579,6 @@ def test_cov_oneway(cov_list, nobs_list):
     else:
         tmp = b2 * stat0
         statistic_f = a2 / a1 * tmp / (1 + tmp)
-        print("in branch 2")
     df_f = (a1, a2)
     pvalue_f = stats.f.sf(statistic_f, *df_f)
     return HolderTuple(statistic=statistic_f,  # name convention, using F here

@@ -137,18 +137,3 @@ def normal_ad(x, axis=0):
             pval[mask] = pvalli[i](ad2a[mask])
 
     return ad2, pval
-
-
-if __name__ == '__main__':
-    x = np.array([-0.1184, -1.3403, 0.0063, -0.612, -0.3869, -0.2313,
-                  -2.8485, -0.2167, 0.4153, 1.8492, -0.3706, 0.9726,
-                  -0.1501, -0.0337, -1.4423, 1.2489, 0.9182, -0.2331,
-                  -0.6182, 0.1830])
-    r_res = np.array([0.58672353588821502, 0.1115380760041617])
-    ad2, pval = normal_ad(x)
-    print(ad2, pval)
-    print(r_res - [ad2, pval])
-
-    print(anderson_statistic((x - x.mean()) / x.std(), dist=stats.norm,
-                             fit=False))
-    print(anderson_statistic(x, dist=stats.norm, fit=True))

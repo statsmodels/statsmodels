@@ -130,8 +130,6 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
             sl = 1e-8
             f_low = func(sl, *args)
             increasing = (f_low < f_upp)
-            if DEBUG:
-                print('symm', sl, su, f_low, f_upp)
 
         # possibly func returns nan
         delta = su - sl
@@ -161,11 +159,6 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
                                  'bounds')
 
         increasing = (f_low < f_upp)
-
-    if DEBUG:
-        print('low, upp', low, upp, func(sl, *args), func(su, *args))
-        print('increasing', increasing)
-        print('sl, su', sl, su)
 
     if not increasing:
         sl, su = su, sl

@@ -499,7 +499,6 @@ class Description:
             while dupe:
                 scale *= 10
                 idx = np.floor(scale * perc.index)
-                print(np.diff(idx))
                 if np.all(np.diff(idx) > 0):
                     dupe = False
             index = np.floor(scale * index) / (scale / 100)

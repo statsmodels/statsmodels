@@ -85,19 +85,10 @@ class CheckKernelMixin(object):
             se_n_diff = self.se_n_diff
         assert_array_less(mask.sum(), se_n_diff + 1)  # at most 5 large diffs
 
-        if DEBUG:
-            # raises: RuntimeWarning: invalid value encountered in divide
-            print(fitted / res_fitted - 1)
-            print(se / res_se - 1)
         # Stata only displays ci, does not save it
         res_upp = res_fitted + crit * res_se
         res_low = res_fitted - crit * res_se
         self.res_fittedg = np.column_stack((res_low, res_fitted, res_upp))
-        if DEBUG:
-            print(fittedg[:, 2] / res_upp - 1)
-            print(fittedg[:, 2] - res_upp)
-            print(fittedg[:, 0] - res_low)
-            print(np.max(np.abs(fittedg[:, 2] / res_upp - 1)))
         assert_allclose(fittedg[se_valid, 2], res_upp[se_valid],
                         rtol=self.upp_rtol, atol=0.2)
         assert_allclose(fittedg[se_valid, 0], res_low[se_valid],
@@ -112,8 +103,6 @@ class CheckKernelMixin(object):
         crit = 1.9599639845400545  # norm.isf(0.05 / 2)
         # no reference results saved to csv yet
         fitted_x = np.array([kern.smoothconf(x, y, xi) for xi in x])
-        if DEBUG:
-            print(fitted_x[:, 2] - fitted_x[:, 1]) / crit
 
 
 class TestEpan(CheckKernelMixin):
