@@ -10,8 +10,10 @@ import numpy as np
 import pandas as pd
 from pandas.api.types import CategoricalDtype
 from scipy import stats
-from statsmodels.base.model import GenericLikelihoodModel, GenericLikelihoodModelResults
+from statsmodels.base.model import GenericLikelihoodModel, \
+    GenericLikelihoodModelResults
 from statsmodels.compat.pandas import Appender
+
 
 class OrderedModel(GenericLikelihoodModel):
     """Ordinal Model based on logistic or normal distribution
@@ -91,8 +93,9 @@ class OrderedModel(GenericLikelihoodModel):
 
     def _check_inputs(self, endog, exog):
         """
-        checks if self.distrib is legal and does the Pandas support for endog and exog.
-        Also retrieves columns & categories names for .summary() of the results class.
+        checks if self.distrib is legal and does the Pandas
+        support for endog and exog. Also retrieves columns & categories
+        names for .summary() of the results class.
         """
         names = {}
         if not isinstance(self.distr, stats.rv_continuous):
@@ -103,7 +106,8 @@ class OrderedModel(GenericLikelihoodModel):
 
         # Pandas' support
         if (isinstance(exog, pd.DataFrame)) or (isinstance(exog, pd.Series)):
-            exog_name = (exog.name if isinstance(exog, pd.Series) else exog.columns.tolist())
+            exog_name = (exog.name if isinstance(exog, pd.Series)
+                         else exog.columns.tolist())
             names['xname'] = exog_name
             exog = np.asarray(exog)
 
@@ -111,23 +115,25 @@ class OrderedModel(GenericLikelihoodModel):
             if isinstance(endog.dtypes, CategoricalDtype):
                 if not endog.dtype.ordered:
                     import warnings
-                    warnings.warn("the endog has ordered == False, risk of capturing a wrong order"
-                                  " for the categories. ordered == True preferred.", Warning)
+                    warnings.warn("the endog has ordered == False, "
+                                  "risk of capturing a wrong order for the "
+                                  "categories. ordered == True preferred.",
+                                  Warning)
                 endog_name = endog.name
-                thresholds_name = [str(x) + '/' + str(y)
-                                   for x, y in zip(endog.values.categories[:-1], endog.values.categories[1:])]
+                threshold_name = [str(x) + '/' + str(y)
+                                  for x, y in zip(endog.values.categories[:-1],
+                                                  endog.values.categories[1:])]
                 names['yname'] = endog_name
-                names['xname'] = names['xname'] + thresholds_name
+                names['xname'] = names['xname'] + threshold_name
                 endog = np.asarray(endog.values.codes)
             else:
                 msg = (
-                    f"If the endog is a pandas.Serie it must be of categoricalDtype."
+                    "If the endog is a pandas.Serie "
+                    "it must be of categoricalDtype."
                 )
                 raise ValueError(msg)
 
         return names, endog, exog
-
-
 
     def cdf(self, x):
         """cdf evaluated at x
@@ -158,7 +164,8 @@ class OrderedModel(GenericLikelihoodModel):
 
         """
         th_params = params[-(self.k_levels - 1):]
-        thresh = np.concatenate((th_params[:1], np.exp(th_params[1:]))).cumsum()
+        thresh = np.concatenate((th_params[:1],
+                                 np.exp(th_params[1:]))).cumsum()
         thresh = np.concatenate(([-np.inf], thresh, [np.inf]))
         return thresh
 
@@ -168,37 +175,39 @@ class OrderedModel(GenericLikelihoodModel):
 
         """
         start_ppf = params
-        thresh_params = np.concatenate((start_ppf[:1], np.log(np.diff(start_ppf[:-1]))))
+        thresh_params = np.concatenate((start_ppf[:1],
+                                        np.log(np.diff(start_ppf[:-1]))))
         return thresh_params
-
 
     def predict(self, params, exog=None):
         """predicted probabilities for each level of the ordinal endog.
 
 
         """
-        #structure of params = [beta, constants_or_thresholds]
+        # structure of params = [beta, constants_or_thresholds]
 
         # explicit in several steps to avoid bugs
         th_params = params[-(self.k_levels - 1):]
-        thresh = np.concatenate((th_params[:1], np.exp(th_params[1:]))).cumsum()
+        thresh = np.concatenate((th_params[:1],
+                                 np.exp(th_params[1:]))).cumsum()
         thresh = np.concatenate(([-np.inf], thresh, [np.inf]))
-        xb = self.exog.dot(params[:-(self.k_levels - 1)])[:,None]
+        xb = self.exog.dot(params[:-(self.k_levels - 1)])[:, None]
         low = thresh[:-1] - xb
         upp = thresh[1:] - xb
         prob = self.prob(low, upp)
         return prob
 
-
     def loglike(self, params):
 
-        #structure of params = [beta, constants_or_thresholds]
+        # structure of params = [beta, constants_or_thresholds]
 
-        thresh = np.concatenate(([-np.inf], params[-(self.k_levels - 1):], [np.inf]))
+        thresh = np.concatenate(([-np.inf],
+                                 params[-(self.k_levels - 1):], [np.inf]))
 
         # explicit in several steps to avoid bugs
         th_params = params[-(self.k_levels - 1):]
-        thresh = np.concatenate((th_params[:1], np.exp(th_params[1:]))).cumsum()
+        thresh = np.concatenate((th_params[:1],
+                                 np.exp(th_params[1:]))).cumsum()
         thresh = np.concatenate(([-np.inf], thresh, [np.inf]))
         thresh_i_low = thresh[self.endog]
         thresh_i_upp = thresh[self.endog + 1]
@@ -230,6 +239,7 @@ class OrderedModel(GenericLikelihoodModel):
         ordmlefit = OrderedResults(self, mlefit)
 
         return ordmlefit
+
 
 class OrderedResults(GenericLikelihoodModelResults):
     @Appender(GenericLikelihoodModelResults.summary.__doc__)
