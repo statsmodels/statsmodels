@@ -553,12 +553,9 @@ def junk():  # FIXME: make this into a test, or move/remove
     # example without offset
     formula1a = 'deaths ~ logpyears + smokes + C(agecat)'
     mod1a = Poisson.from_formula(formula1a, data=data)
-    print(mod1a.exog.shape)
 
     mod1a.fit()
     lc_1a = patsy.DesignInfo(mod1a.exog_names).linear_constraint(
         'C(agecat)[T.4] = C(agecat)[T.5]')
-    resc1a = mod1a.fit_constrained(lc_1a.coefs, lc_1a.constants,
-                                   fit_kwds={'method': 'newton'})
-    print(resc1a[0])
-    print(resc1a[1])
+    mod1a.fit_constrained(lc_1a.coefs, lc_1a.constants,
+                          fit_kwds={'method': 'newton'})

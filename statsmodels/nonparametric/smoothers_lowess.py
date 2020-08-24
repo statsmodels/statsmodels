@@ -211,14 +211,12 @@ def lowess(endog, exog, frac=2.0/3.0, it=3, delta=0.0, xvals=None, is_sorted=Fal
 
     if not given_xvals:
         # Run LOWESS on the data points
-        print("Not giving xvalues")
         res, _ = _lowess(y, x, x, np.ones_like(x),
                         frac=frac, it=it, delta=delta, given_xvals=False)
     else:
         # First run LOWESS on the data points to get the weights of the data points
         # using it-1 iterations, last iter done next
         if it > 0:
-            print("Not giving xvalues")
             _, weights = _lowess(y, x, x, np.ones_like(x),
                                 frac=frac, it=it-1, delta=delta, given_xvals=False)
         else:
@@ -226,7 +224,6 @@ def lowess(endog, exog, frac=2.0/3.0, it=3, delta=0.0, xvals=None, is_sorted=Fal
 
         # Then run once more using those supplied weights at the points provided by xvals
         # No extra iterations are performed here since weights are fixed
-        print("giving xvalues")
         res, _ = _lowess(y, x, xvalues, weights,
                         frac=frac, it=0, delta=delta, given_xvals=True)
 
