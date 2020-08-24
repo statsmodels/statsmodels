@@ -87,8 +87,10 @@ def iqr(a, c=Gaussian.ppf(3/4) - Gaussian.ppf(1/4), axis=0):
 
 def qn_scale(a, c=1 / (np.sqrt(2) * Gaussian.ppf(5 / 8)), axis=0):
     """
-    Computes the Qn robust estimator of scale, a more efficient alternative
-    to the MAD. The Qn estimator of the array a of length n is defined as
+    Computes the Qn robust estimator of scale
+
+    The Qn scale estimator is a more efficient alternative to the MAD.
+    The Qn scale estimator of an array a of length n is defined as
     c * {abs(a[i] - a[j]): i<j}_(k), for k equal to [n/2] + 1 choose 2. Thus,
     the Qn estimator is the k-th order statistic of the absolute differences
     of the array. The optional constant is used to normalize the estimate
@@ -107,7 +109,8 @@ def qn_scale(a, c=1 / (np.sqrt(2) * Gaussian.ppf(5 / 8)), axis=0):
 
     Returns
     -------
-    The Qn robust estimator of scale
+    {float, ndarray}
+        The Qn robust estimator of scale
     """
     a = array_like(a, 'a', ndim=None, dtype=np.float64, contiguous=True,
                    order='C')
@@ -117,7 +120,10 @@ def qn_scale(a, c=1 / (np.sqrt(2) * Gaussian.ppf(5 / 8)), axis=0):
     elif a.size == 0:
         return np.nan
     else:
-        return np.apply_along_axis(_qn, axis=axis, arr=a, c=c)
+        out = np.apply_along_axis(_qn, axis=axis, arr=a, c=c)
+        if out.ndim == 0:
+            return float(out)
+        return out
 
 
 def _qn_naive(a, c=1 / (np.sqrt(2) * Gaussian.ppf(5 / 8))):
