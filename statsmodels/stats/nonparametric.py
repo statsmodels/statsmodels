@@ -29,11 +29,19 @@ def rankdata_2samp(x1, x2):
     if nobs1 == 0 or nobs2 == 0:
         raise ValueError("one sample has zero length")
 
-    rank = rankdata(np.concatenate((x1, x2)))
+    x_combined = np.concatenate((x1, x2))
+    if x_combined.ndim > 1:
+        rank = np.apply_along_axis(rankdata, 0, x_combined)
+    else:
+        rank = rankdata(x_combined)  # no axis in older scipy
     rank1 = rank[:nobs1]
     rank2 = rank[nobs1:]
-    ranki1 = rankdata(x1)
-    ranki2 = rankdata(x2)
+    if x_combined.ndim > 1:
+        ranki1 = np.apply_along_axis(rankdata, 0, x1)
+        ranki2 = np.apply_along_axis(rankdata, 0, x2)
+    else:
+        ranki1 = rankdata(x1)
+        ranki2 = rankdata(x2)
     return rank1, rank2, ranki1, ranki2
 
 
@@ -69,11 +77,20 @@ class RankCompareResult(HolderTuple):
         # TODO: return HolderTuple
         # corresponds to a one-sample test and either p0 or diff could be used
         if self.df is None:
-            return _zstat_generic(self.prob1, p0, std_diff, alternative,
-                                  diff=0)
+            stat, pv = _zstat_generic(self.prob1, p0, std_diff, alternative,
+                                      diff=0)
+            distr = "normal"
         else:
-            return _tstat_generic(self.prob1, p0, std_diff, self.df,
-                                  alternative, diff=0)
+            stat, pv = _tstat_generic(self.prob1, p0, std_diff, self.df,
+                                      alternative, diff=0)
+            distr = "t"
+
+        res = HolderTuple(statistic=stat,
+                          pvalue=pv,
+                          df=self.df,
+                          distribution=distr
+                          )
+        return res
 
     def tost_prob_superior(self, low, upp):
         '''test of stochastic (non-)equivalence of p = P(x1 > x2)
@@ -110,31 +127,45 @@ class RankCompareResult(HolderTuple):
 
         '''
 
-        t1, pv1 = self.test_prob_superior(low, alternative='larger')
-        t2, pv2 = self.test_prob_superior(upp, alternative='smaller')
-        df1 = df2 = None
-        # TODO: return HolderTuple
-        return np.maximum(pv1, pv2), (t1, pv1, df1), (t2, pv2, df2)
+        t1 = self.test_prob_superior(low, alternative='larger')
+        t2 = self.test_prob_superior(upp, alternative='smaller')
 
-    def summary(self, alpha=0.05):
+        # idx_max = 0 if t1.pvalue < t2.pvalue else 1
+        idx_max = np.asarray(t1.pvalue < t2.pvalue, int)
+        title = "Equivalence test for Prob(x1 > x2) + 0.5 Prob(x1 = x2) "
+        res = HolderTuple(statistic=np.choose(idx_max,
+                                              [t1.statistic, t2.statistic]),
+                          # pvalue=[t1.pvalue, t2.pvalue][idx_max], # python
+                          # use np.choose for vectorized selection
+                          pvalue=np.choose(idx_max, [t1.pvalue, t2.pvalue]),
+                          results_larger=t1,
+                          results_smaller=t2,
+                          title=title
+                          )
+        return res
 
-        xname = ["prob(x1>x2)"]
+    def summary(self, alpha=0.05, xname=None):
+
         yname = "None"
         effect = np.atleast_1d(self.prob1)
         pvalues = np.atleast_1d(self.pvalue)
-        ci = np.array(self.conf_int(alpha))[None, :]
+        ci = np.atleast_2d(self.conf_int(alpha))
+        if ci.shape[0] > 1:
+            ci = ci.T
         use_t = (self.df is not None)
         sd = np.atleast_1d(np.sqrt(self.var_prob))
         statistic = np.atleast_1d(self.statistic)
         if xname is None:
-            xname = ['c%d' % ii for ii in range(len(self.effect))]
+            xname = ['c%d' % ii for ii in range(len(effect))]
+
+        xname2 = ['prob(x1>x2) %s' % ii for ii in xname]
 
         title = "Probability sample 1 is stochastically larger"
         from statsmodels.iolib.summary import summary_params
 
         summ = summary_params((self, effect, sd, statistic,
                                pvalues, ci),
-                              yname=yname, xname=xname, use_t=use_t,
+                              yname=yname, xname=xname2, use_t=use_t,
                               title=title, alpha=alpha)
         return summ
 
@@ -233,14 +264,14 @@ def rank_compare_2indep(x1, x2, use_t=True):
 
     rank1, rank2, ranki1, ranki2 = rankdata_2samp(x1, x2)
 
-    meanr1 = np.mean(rank1)
-    meanr2 = np.mean(rank2)
-    meanri1 = np.mean(ranki1)
-    meanri2 = np.mean(ranki2)
+    meanr1 = np.mean(rank1, axis=0)
+    meanr2 = np.mean(rank2, axis=0)
+    meanri1 = np.mean(ranki1, axis=0)
+    meanri2 = np.mean(ranki2, axis=0)
 
-    S1 = np.sum(np.power(rank1 - ranki1 - meanr1 + meanri1, 2.0))
+    S1 = np.sum(np.power(rank1 - ranki1 - meanr1 + meanri1, 2.0), axis=0)
     S1 /= nobs1 - 1
-    S2 = np.sum(np.power(rank2 - ranki2 - meanr2 + meanri2, 2.0))
+    S2 = np.sum(np.power(rank2 - ranki2 - meanr2 + meanri2, 2.0), axis=0)
     S2 /= nobs2 - 1
 
     wbfn = nobs1 * nobs2 * (meanr1 - meanr2)
