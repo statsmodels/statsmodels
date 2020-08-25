@@ -120,6 +120,11 @@ class KDEUnivariate(object):
             -/+ cut*bw*{min(X) or max(X)}
         adjust : float
             An adjustment factor for the bw. Bandwidth becomes bw * adjust.
+
+        Returns
+        -------
+        KDEUnivariate
+            The instance fit,
         """
         try:
             bw = float(bw)
@@ -152,6 +157,7 @@ class KDEUnivariate(object):
         if weights is not None:
             self.kernel.weights /= weights.sum()
         self._cache = {}
+        return self
 
     @cache_readonly
     def cdf(self):
