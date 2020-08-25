@@ -41,7 +41,7 @@ jobs:
     displayName: 'Build Cython Extensions'
 
   - script: |
-      pytest statsmodels --junitxml=junit/test-results.xml --skip-examples -n 2
+      pytest statsmodels --junitxml=junit/test-results.xml --skip-examples -n 2 --durations=25
     displayName: 'pytest'
 
   - ${{ if eq(parameters.name, 'Linux') }}:
