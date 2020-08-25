@@ -106,7 +106,7 @@ class OrderedModel(GenericLikelihoodModel):
 
         # Pandas' support
         if (isinstance(exog, pd.DataFrame)) or (isinstance(exog, pd.Series)):
-            exog_name = (exog.name if isinstance(exog, pd.Series)
+            exog_name = ([exog.name] if isinstance(exog, pd.Series)
                          else exog.columns.tolist())
             names['xname'] = exog_name
             exog = np.asarray(exog)
@@ -243,7 +243,6 @@ class OrderedModel(GenericLikelihoodModel):
 
 class OrderedResults(GenericLikelihoodModelResults):
     @Appender(GenericLikelihoodModelResults.summary.__doc__)
-    def summary(self, yname=None, xname=None, title=None, alpha=.05, **kwargs):
+    def summary(self, yname=None, xname=None, title=None, alpha=.05):
         names = self.model.names
-        print(names)
-        return super(OrderedResults, self).summary(**names, **kwargs)
+        return super(OrderedResults, self).summary(**names)
