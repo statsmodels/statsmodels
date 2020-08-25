@@ -293,6 +293,10 @@ Submodules
 - Add expanding initialization to RollingOLS/WLS  (:pr:`6838`)
 - Add  a note when R2 is uncentered  (:pr:`6844`)
 
+``robust``
+~~~~~~~~~~~~~~
+- Add an implementation of the Qn robust scale estimator (:pr:`6977`)
+
 ``stats``
 ~~~~~~~~~
 - Multivariate mean tests and confint  (:pr:`4107`)
@@ -800,6 +804,7 @@ New Functions
 * :func:`statsmodels.multivariate.plots.plot_loadings`
 * :func:`statsmodels.multivariate.plots.plot_scree`
 * :func:`statsmodels.robust.scale.iqr`
+* :func:`statsmodels.robust.scale.qn`
 * :func:`statsmodels.stats.contrast.wald_test_noncent`
 * :func:`statsmodels.stats.contrast.wald_test_noncent_generic`
 * :func:`statsmodels.stats.descriptivestats.describe`
