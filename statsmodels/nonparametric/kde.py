@@ -344,7 +344,10 @@ def kdensity(X, kernel="gau", bw="normal_reference", weights=None, gridsize=None
 
     # if bw is None, select optimal bandwidth for kernel
     try:
-        bw = float(bw)
+        if callable(bw):
+            bw = float(bw(X, kern))
+        else:
+            bw = float(bw)
     except:
         bw = bandwidths.select_bandwidth(X, bw, kern)
     bw *= adjust
@@ -454,7 +457,10 @@ def kdensityfft(X, kernel="gau", bw="normal_reference", weights=None, gridsize=N
     kern = kernel_switch[kernel]()
 
     try:
-        bw = float(bw)
+        if callable(bw):
+            bw = bw(X, kern) # user passed a callable custom bandwidth function
+        else:
+            bw = float(bw)
     except:
         bw = bandwidths.select_bandwidth(X, bw, kern) # will cross-val fit this pattern?
     bw *= adjust

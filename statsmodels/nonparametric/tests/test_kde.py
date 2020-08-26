@@ -348,3 +348,19 @@ def test_fit_self(reset_randomstate):
     kde = KDE(x)
     assert isinstance(kde, KDE)
     assert isinstance(kde.fit(), KDE)
+
+
+class TestKDECustomBandwidth(object):
+
+    @classmethod
+    def setup_class(cls):
+        cls.kde = KDE(Xi)
+        cls.weights_200 = np.linspace(1, 100, 200)
+        cls.weights_100 = np.linspace(1, 100, 100)
+
+    def test_check_is_fit_ok_with_custom_bandwidth(self):
+        def custom_bw(X, kern):
+            return np.std(X) * len(X)
+        kde = self.kde.fit(bw=custom_bw)
+        assert isinstance(kde, KDE)
+
