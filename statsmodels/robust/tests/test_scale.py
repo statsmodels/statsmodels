@@ -5,6 +5,7 @@ Test functions for models.robust.scale
 import numpy as np
 from numpy.random import standard_normal
 from numpy.testing import assert_almost_equal, assert_equal
+from scipy.stats import norm as Gaussian
 import pytest
 # Example from Section 5.5, Venables & Ripley (2002)
 
@@ -81,6 +82,12 @@ class TestMad(object):
     def test_mad_center(self):
         n = scale.mad(self.X, center=0)
         assert_equal(n.shape, (10,))
+        with pytest.raises(TypeError):
+            scale.mad(self.X, center=None)
+        assert_almost_equal(scale.mad(self.X, center=1),
+                            np.median(np.abs(self.X - 1),
+                                      axis=0)/Gaussian.ppf(3/4.),
+                            DECIMAL)
 
 
 class TestMadAxes(object):

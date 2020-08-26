@@ -45,8 +45,11 @@ def mad(a, c=Gaussian.ppf(3/4.), axis=0, center=np.median):
     """
     a = array_like(a, 'a', ndim=None)
     c = float_like(c, 'c')
-    if callable(center) and a.size:
-        center = np.apply_over_axes(center, a, axis)
+    if a.size:
+        if callable(center):
+            center = np.apply_over_axes(center, a, axis)
+        else:
+            center = float_like(center, 'center')
     else:
         center = 0.0
 
