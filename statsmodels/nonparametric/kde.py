@@ -95,7 +95,7 @@ class KDEUnivariate(object):
             - "triw" for triweight
             - "uni" for uniform
 
-        bw : str, float
+        bw : str, float, callable
             The bandwidth to use. Choices are:
 
             - "scott" - 1.059 * A * nobs ** (-1/5.), where A is
@@ -106,6 +106,10 @@ class KDEUnivariate(object):
               calculated from the kernel. Equivalent (up to 2 dp) to the
               "scott" bandwidth for gaussian kernels. See bandwidths.py
             - If a float is given, it is the bandwidth.
+            - If a callable is given, it's return value is used.
+              The callable should take exactly two parameters ie. fn(X, kern)
+                X    - the clipped input data
+                kern - the kernel instance used
 
         fft : bool
             Whether or not to use FFT. FFT implementation is more
@@ -281,10 +285,14 @@ def kdensity(X, kernel="gau", bw="normal_reference", weights=None, gridsize=None
         - "tri" for triangular
         - "triw" for triweight
         - "uni" for uniform
-    bw : str, float
+    bw : str, float, callable
         "scott" - 1.059 * A * nobs ** (-1/5.), where A is min(std(X),IQR/1.34)
         "silverman" - .9 * A * nobs ** (-1/5.), where A is min(std(X),IQR/1.34)
         If a float is given, it is the bandwidth.
+        If a callable is given, it's return value is used.
+        The callable should take exactly two parameters ie. fn(X, kern)
+          X    - the clipped input data
+          kern - the kernel instance used
     weights : array or None
         Optional  weights. If the X value is clipped, then this weight is
         also dropped.
@@ -342,11 +350,14 @@ def kdensity(X, kernel="gau", bw="normal_reference", weights=None, gridsize=None
     # Get kernel object corresponding to selection
     kern = kernel_switch[kernel]()
 
-    # if bw is None, select optimal bandwidth for kernel
-    try:
-        bw = float(bw)
-    except:
-        bw = bandwidths.select_bandwidth(X, bw, kern)
+    if callable(bw):
+        bw = float(bw(X, kern)) # user passed a callable custom bandwidth function
+    else:
+        # if bw is None, select optimal bandwidth for kernel
+        try:
+            bw = float(bw)
+        except:
+            bw = bandwidths.select_bandwidth(X, bw, kern) # will cross-val fit this pattern?
     bw *= adjust
 
     a = np.min(X, axis=0) - cut * bw
@@ -395,10 +406,14 @@ def kdensityfft(X, kernel="gau", bw="normal_reference", weights=None, gridsize=N
         "par" for Parzen
         "rect" for rectangular
         "tri" for triangular
-    bw : str, float
+    bw : str, float, callable
         "scott" - 1.059 * A * nobs ** (-1/5.), where A is min(std(X),IQR/1.34)
         "silverman" - .9 * A * nobs ** (-1/5.), where A is min(std(X),IQR/1.34)
         If a float is given, it is the bandwidth.
+        If a callable is given, it's return value is used.
+        The callable should take exactly two parameters ie. fn(X, kern)
+          X    - the clipped input data
+          kern - the kernel instance used
     weights : array or None
         WEIGHTS ARE NOT CURRENTLY IMPLEMENTED.
         Optional  weights. If the X value is clipped, then this weight is
@@ -453,10 +468,14 @@ def kdensityfft(X, kernel="gau", bw="normal_reference", weights=None, gridsize=N
     # Get kernel object corresponding to selection
     kern = kernel_switch[kernel]()
 
-    try:
-        bw = float(bw)
-    except:
-        bw = bandwidths.select_bandwidth(X, bw, kern) # will cross-val fit this pattern?
+    if callable(bw):
+        bw = float(bw(X, kern)) # user passed a callable custom bandwidth function
+    else:
+        # if bw is None, select optimal bandwidth for kernel
+        try:
+            bw = float(bw)
+        except:
+            bw = bandwidths.select_bandwidth(X, bw, kern) # will cross-val fit this pattern?
     bw *= adjust
 
     nobs = len(X) # after trim
