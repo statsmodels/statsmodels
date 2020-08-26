@@ -31,6 +31,66 @@ Stats
 The Highlights
 ==============
 
+Statistics
+----------
+
+New functions for hypothesis tests return a `HolderTuple` instance which
+allows tuple indexing and unpacking for ``(statistic, pvalue)``, but also has
+attribute access for those and for additional results statistics.
+
+Meta-Analysis
+~~~~~~~~~~~~~
+
+Functions for Meta-Analysis have been added in `stats.meta_analysis`.
+The function :func:`statsmodels.stats.meta_analysis.combine_effects` performs
+fixed effects and random effects analysis. Several methods such as Paule-Mandel
+and DerSimonian-Laird are available to estimate the random effects variance.
+The module also includes effect size functions for standardized mean difference
+and for proportions that can be used with `combine_effects`.
+A notebook illustrates the usage of the new features for meta-analysis.
+
+New hypothesis test for 2 samples
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Hypothesis tests, confidence intervals and power functions have been added
+for proportions from two independent samples. Inferential statistics are
+available for difference, ratio and odds-ratio of the two proportions.
+Equivalence testing for two independent proportions is available based on
+two one-sided tests TOST.
+
+Hypothesis tests including equivalence test, for the ratio of two
+independent Poisson rates are now available in
+:func:`statsmodels.stats.rates.test_poisson_2indep` and
+:func:`statsmodels.stats.rates.tost_poisson_2indep`
+
+Oneway ANOVA-type analysis
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Several statistical methods for ANOVA-type analysis of k independent samples
+have been added in module :module:`~statsmodels.stats.oneway`. This includes
+standard Anova, Anova for unequal variances (Welch, Brown-Forsythe for mean),
+Anova based on trimmed samples (Yuen anova) and equivalence testing using
+the method of Wellek.
+Anova for equality of variances or dispersion are available for several
+transformations. This includes Levene test and Browne-Forsythe test for equal
+variances as special cases. It uses the `anova_oneway` function, so unequal
+variance and trimming options are also available for tests on variances.
+Several functions for effect size measures have been added, that can be used
+for reporting or for power and sample size computation.
+
+Multivariate statistics
+~~~~~~~~~~~~~~~~~~~~~~~
+
+The new module :module:`~statsmodels.stats.multivariate` includes one and
+two sample tests for multivariate means, Hotelling's t-tests',
+:func:`statsmodels.stats.multivariate.test_mvmean`,
+:func:`statsmodels.stats.multivariate.test_mvmean_2indep` and confidence
+intervals for one-sample multivariate mean
+:func:`statsmodels.stats.multivariate.confint_mvmean`
+Additionally, hypothesis tests for covariance patterns, and for oneway equality
+of covariances are now available in several ``test_cov`` functions.
+
+
 Time-Series Analysis
 --------------------
 
@@ -504,7 +564,7 @@ The following Pull Requests were merged since the last release:
 - :pr:`6466`: MAINT: Replace Python 3.5 with 3.8 on Azure
 - :pr:`6467`: MAINT: Update supported versions
 - :pr:`6469`: MAINT: Fix future warnings
-- :pr:`6470`: BUG: fix tukey-hsd for 1 pvalue 
+- :pr:`6470`: BUG: fix tukey-hsd for 1 pvalue
 - :pr:`6471`: MAINT: Fix issue with ragged array
 - :pr:`6473`: MAINT: Avoid future error
 - :pr:`6474`: BLD: Use pip on Azure
@@ -520,8 +580,8 @@ The following Pull Requests were merged since the last release:
 - :pr:`6514`: ENH: use GLM starting values for QIF
 - :pr:`6515`: BUG: fix #6511
 - :pr:`6518`: Fix simple typo: various
-- :pr:`6520`: BUG: fix GAM for 1-dim exog_linear 
-- :pr:`6521`: REF/BUG: don't attach patsy constraint instance 
+- :pr:`6520`: BUG: fix GAM for 1-dim exog_linear
+- :pr:`6521`: REF/BUG: don't attach patsy constraint instance
 - :pr:`6528`: DOC: Bayesian estimation of SARIMAX using PyMC3 NUTS
 - :pr:`6531`: DOC: fix typos
 - :pr:`6534`: MAINT: Relax tolerance on test that occasionally fails
