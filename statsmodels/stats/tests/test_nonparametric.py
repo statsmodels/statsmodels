@@ -10,6 +10,8 @@ from statsmodels.compat.python import lzip
 import numpy as np
 from numpy.testing import (assert_allclose, assert_almost_equal,
                            assert_approx_equal, assert_)
+
+from scipy import stats
 import pytest
 
 from statsmodels.stats.contingency_tables import (
@@ -17,7 +19,8 @@ from statsmodels.stats.contingency_tables import (
 from statsmodels.sandbox.stats.runs import (Runs,
                                             runstest_1samp, runstest_2samp)
 from statsmodels.sandbox.stats.runs import mcnemar as sbmcnemar
-from statsmodels.stats.nonparametric import rank_compare_2indep
+from statsmodels.stats.nonparametric import (
+    rank_compare_2indep, rank_compare_2ordinal, prob_larger_continuous)
 from statsmodels.tools.testing import Holder
 
 
@@ -414,6 +417,33 @@ def test_rank_compare_2indep1():
     res_tost = res.tost_prob_superior(*ci)
     assert_allclose(res_tost.results_smaller.pvalue, 0.025, rtol=1e-11)
     assert_allclose(res_tost.results_larger.pvalue, 0.025, rtol=1e-11)
+
+    # extras
+    # cohen's d
+    esd = res.effectsize_normal()
+    p = prob_larger_continuous(stats.norm(loc=esd), stats.norm)
+    # round trip
+    assert_allclose(p, res.prob1, rtol=1e-13)
+
+
+def test_rank_compare_ord():
+    # compare ordinal count version with full version
+    # Example from Munzel and Hauschke 2003
+    # data is given by counts, expand to observations
+    levels = [-2, -1, 0, 1, 2]
+    new = [24, 37, 21, 19, 6]
+    active = [11, 51, 22, 21, 7]
+    x1 = np.repeat(levels, new)
+    x2 = np.repeat(levels, active)
+
+    for use_t in [False, True]:
+        res2 = rank_compare_2indep(x1, x2, use_t=use_t)
+        res1 = rank_compare_2ordinal(new, active, use_t=use_t)
+        assert_allclose(res2.prob1, res1.prob1, rtol=1e-13)
+        assert_allclose(res2.var_prob, res1.var_prob, rtol=1e-13)
+        s1 = str(res1.summary())
+        s2 = str(res2.summary())
+        assert s1 == s2
 
 
 def test_rank_compare_vectorized():

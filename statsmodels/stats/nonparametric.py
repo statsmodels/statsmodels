@@ -57,7 +57,7 @@ class RankCompareResult(HolderTuple):
         diff = self.prob1 - p0
         std_diff = np.sqrt(self.var / self.nobs)
 
-        if self.df is None:
+        if self.use_t is False:
             return _zconfint_generic(diff, std_diff, alpha, alternative)
         else:
             return _tconfint_generic(diff, std_diff, self.df, alpha,
@@ -76,7 +76,7 @@ class RankCompareResult(HolderTuple):
 
         # TODO: return HolderTuple
         # corresponds to a one-sample test and either p0 or diff could be used
-        if self.df is None:
+        if not self.use_t:
             stat, pv = _zstat_generic(self.prob1, p0, std_diff, alternative,
                                       diff=0)
             distr = "normal"
@@ -144,17 +144,63 @@ class RankCompareResult(HolderTuple):
                           )
         return res
 
+    def confint_lintransf(self, const=-1, slope=2, alpha=0.05,
+                          alternative="two-sided"):
+        """confidence interval of a linear transformation of prob1
+
+        This computes the confidence interval for
+
+            d = const + slope * prob1
+
+        Default values correspond to Somers' d.
+
+        Parameters
+        ----------
+        const, slope : float
+            Constant and slope for linear transformation.
+        alpha : float in [0, 1]
+        alternative :
+
+        """
+
+        low_p, upp_p = self.conf_int(alpha=alpha, alternative=alternative)
+        low = const + slope * low_p
+        upp = const + slope * upp_p
+        if slope < 0:
+            low, upp = upp, low
+        return low, upp
+
+    def effectsize_normal(self):
+        """
+        Cohen's d, standardized mean difference under normality assumption.
+
+        This computes the standardized mean difference effect size that is
+        equivalent to the rank based probability of superiority estimate,
+        if we assume that the data is normally distributed.
+
+        Returns
+        -------
+        equivalent smd effect size
+
+        """
+        return stats.norm.ppf(self.prob1) * np.sqrt(2)
+
     def summary(self, alpha=0.05, xname=None):
 
         yname = "None"
         effect = np.atleast_1d(self.prob1)
-        pvalues = np.atleast_1d(self.pvalue)
+        if self.pvalue is None:
+            statistic, pvalue = self.test_prob_superior()
+        else:
+            pvalue = self.pvalue
+            statistic = self.statistic
+        pvalues = np.atleast_1d(pvalue)
         ci = np.atleast_2d(self.conf_int(alpha))
         if ci.shape[0] > 1:
             ci = ci.T
-        use_t = (self.df is not None)
+        use_t = self.use_t
         sd = np.atleast_1d(np.sqrt(self.var_prob))
-        statistic = np.atleast_1d(self.statistic)
+        statistic = np.atleast_1d(statistic)
         if xname is None:
             xname = ['c%d' % ii for ii in range(len(effect))]
 
@@ -303,5 +349,118 @@ def rank_compare_2indep(x1, x2, use_t=True):
                              mean1=meanr1, mean2=meanr2,
                              prob1=prob1, prob2=prob2,
                              somersd1=prob1 * 2 - 1, somersd2=prob2 * 2 - 1,
-                             df=df
+                             df=df, use_t=use_t
                              )
+
+
+def rank_compare_2ordinal(count1, count2, ddof=1, use_t=True):
+    """stochastically larger probability for 2 independend ordinal sample
+
+    This is a special case of `rank_compare_2indep` when the data are given as
+    counts of two independent ordinal, i.e. ordered multinomial samples.
+
+    The statistic of interest is the probability that a random draw from the
+    population of the first sample has a larger value than a random draw from
+    the population of the second sample, specifically
+
+        p = P(x1 > x2) + 0.5 * P(x1 = x2)
+
+    Parameters
+    ----------
+    count1 : array_like
+        counts of the first sample, categories are assumed to be ordered.
+    count1 : array_like
+        counts of the second sample, number of categories and ordering needs
+        to be the same as for sample 1
+    ddof : scalar
+        Degrees of freedom correction for variance estimation. The default
+        ddof=1 corresponds to `rank_compare_2indep`.
+    use_t : bool
+        If use_t is true, the t distribution with Welch-Satterthwaite type
+        degrees of freedom is used for p-value and confidence interval.
+        If use_t is false, then the normal distribution is used.
+
+    Returns
+    -------
+    res : RankCompareResult
+        This includes methods for hypothesis tests and confidence intervals
+        for the probability that sample 1 is stochastically larger than
+        sample 2.
+    """
+
+    count1 = np.asarray(count1)
+    count2 = np.asarray(count2)
+    nobs1, nobs2 = count1.sum(), count2.sum()
+    freq1 = count1 / nobs1
+    freq2 = count2 / nobs2
+    cdf1 = np.concatenate(([0], freq1)).cumsum(axis=0)
+    cdf2 = np.concatenate(([0], freq2)).cumsum(axis=0)
+
+    # mid rank cdf
+    cdfm1 = (cdf1[1:] + cdf1[:-1]) / 2
+    cdfm2 = (cdf2[1:] + cdf2[:-1]) / 2
+    prob1 = (cdfm2 * freq1).sum()
+    prob2 = (cdfm1 * freq2).sum()
+
+    var1 = (cdfm2**2 * freq1).sum() - prob1**2
+    var2 = (cdfm1**2 * freq2).sum() - prob2**2
+
+    var_prob = (var1 / (nobs1 - ddof) + var2 / (nobs2 - ddof))
+    nobs = nobs1 + nobs2
+    var = nobs * var_prob
+    vn1 = var1 * nobs2 * nobs1 / (nobs1 - ddof)
+    vn2 = var2 * nobs1 * nobs2 / (nobs2 - ddof)
+    df = (vn1 + vn2)**2 / (vn1**2 / (nobs1 - 1) + vn2**2 / (nobs2 - 1))
+    res = RankCompareResult(statistic=None, pvalue=None, s1=None, s2=None,
+                            var1=var1, var2=var2, var=var,
+                            var_prob=var_prob,
+                            nobs1=nobs1, nobs2=nobs2, nobs=nobs,
+                            mean1=None, mean2=None,
+                            prob1=prob1, prob2=prob2,
+                            somersd1=prob1 * 2 - 1, somersd2=prob2 * 2 - 1,
+                            df=df, use_t=use_t
+                            )
+
+    return res
+
+
+def prob_larger_continuous(distr1, distr2):
+    """probability that distr1 is stochastically larger than distr2
+
+    This computes
+
+        p = P(x1 > x2)
+
+    for two distributions.
+
+    Parameters
+    ----------
+    distr1, distr2 : distributions
+        Two instances of scipy.stats.distributions. Methods that are required
+        are cdf, pdf and expect.
+
+    Returns
+    -------
+    p : probability x1 is larger than xw
+
+
+    Notes
+    -----
+    This is a one-liner that is added mainly as reference.
+
+    Examples
+    --------
+    >>> from scipy import stats
+    >>> prob_larger_continuous(stats.norm, stats.t(5))
+    0.4999999999999999
+
+    # which is the same as
+    >>> stats.norm.expect(stats.t(5).cdf)
+    0.4999999999999999
+
+    >>> prob_larger_continuous(stats.norm, stats.norm(loc=1))
+    0.23975006109347669
+
+    """
+
+    return distr1.expect(distr2.cdf)
