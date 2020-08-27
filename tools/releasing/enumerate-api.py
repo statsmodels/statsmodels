@@ -184,20 +184,20 @@ def generate_diff(api, other):
             rst.write(f"* ``{val}``\n")
 
         rst.write(header("New Methods"))
-        for val in new_methods:
+        for val in sorted(new_methods):
             rst.write(f"* :meth:`{val}`\n")
 
         rst.write(header("Removed Methods"))
-        for val in removed_methods:
+        for val in sorted(removed_methods):
             rst.write(f"* ``{val}``\n")
 
         rst.write(header("Methods with New Arguments"))
-        for val in expanded_methods:
+        for val in sorted(expanded_methods):
             args = map(lambda v: f"``{v}``", expanded_methods[val])
             rst.write(f"* :meth:`{val}`: " + ", ".join(args) + "\n")
 
         rst.write(header("Methods with Changed Arguments"))
-        for val in changed_methods:
+        for val in sorted(changed_methods):
             rst.write(f"* :meth:`{val}`\n")
             name = val.split(".")[-1]
             args = ", ".join(changed_methods[val]["current"])
@@ -221,12 +221,12 @@ def generate_diff(api, other):
             rst.write(f"* ``{val}``\n")
 
         rst.write(header("Functions with New Arguments"))
-        for val in expanded_funcs:
+        for val in sorted(expanded_funcs):
             args = map(lambda v: f"``{v}``", expanded_funcs[val])
             rst.write(f"* :func:`{val}`: " + ", ".join(args) + "\n")
 
         rst.write(header("Functions with Changed Arguments"))
-        for val in changed_funcs:
+        for val in sorted(changed_funcs):
             rst.write(f"* :func:`{val}`\n")
             name = val.split(".")[-1]
             args = ", ".join(changed_funcs[val]["current"])

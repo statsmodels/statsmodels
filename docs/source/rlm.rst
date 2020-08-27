@@ -106,4 +106,4 @@ Scale
     mad
     hubers_scale
     iqr
-    qn
+    qn_scale

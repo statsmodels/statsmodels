@@ -40,12 +40,12 @@ attribute access for those and for additional results statistics.
 Meta-Analysis
 ~~~~~~~~~~~~~
 
-Functions for Meta-Analysis have been added in `stats.meta_analysis`.
-The function :func:`statsmodels.stats.meta_analysis.combine_effects` performs
+Functions for Meta-Analysis have been added in :mod:`~statsmodels.stats.meta_analysis`.
+The function :func:`~statsmodels.stats.meta_analysis.combine_effects` performs
 fixed effects and random effects analysis. Several methods such as Paule-Mandel
 and DerSimonian-Laird are available to estimate the random effects variance.
 The module also includes effect size functions for standardized mean difference
-and for proportions that can be used with `combine_effects`.
+and for proportions that can be used with :func:`~statsmodels.stats.meta_analysis.combine_effects`.
 A notebook illustrates the usage of the new features for meta-analysis.
 
 New hypothesis test for 2 samples
@@ -59,14 +59,14 @@ two one-sided tests TOST.
 
 Hypothesis tests including equivalence test, for the ratio of two
 independent Poisson rates are now available in
-:func:`statsmodels.stats.rates.test_poisson_2indep` and
-:func:`statsmodels.stats.rates.tost_poisson_2indep`
+:func:`~statsmodels.stats.rates.test_poisson_2indep` and
+:func:`~statsmodels.stats.rates.tost_poisson_2indep`
 
 Oneway ANOVA-type analysis
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Several statistical methods for ANOVA-type analysis of k independent samples
-have been added in module :module:`~statsmodels.stats.oneway`. This includes
+have been added in module :mod:`~statsmodels.stats.oneway`. This includes
 standard Anova, Anova for unequal variances (Welch, Brown-Forsythe for mean),
 Anova based on trimmed samples (Yuen anova) and equivalence testing using
 the method of Wellek.
@@ -80,12 +80,12 @@ for reporting or for power and sample size computation.
 Multivariate statistics
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-The new module :module:`~statsmodels.stats.multivariate` includes one and
+The new module :mod:`~statsmodels.stats.multivariate` includes one and
 two sample tests for multivariate means, Hotelling's t-tests',
-:func:`statsmodels.stats.multivariate.test_mvmean`,
-:func:`statsmodels.stats.multivariate.test_mvmean_2indep` and confidence
+:func:`~statsmodels.stats.multivariate.test_mvmean`,
+:func:`~statsmodels.stats.multivariate.test_mvmean_2indep` and confidence
 intervals for one-sample multivariate mean
-:func:`statsmodels.stats.multivariate.confint_mvmean`
+:func:`~statsmodels.stats.multivariate.confint_mvmean`
 Additionally, hypothesis tests for covariance patterns, and for oneway equality
 of covariances are now available in several ``test_cov`` functions.
 
@@ -252,7 +252,7 @@ Submodules
 
 ``duration``
 ~~~~~~~~~~~~
-- Allow more than 2 groups for survdiff in statmodels.duration  (:pr:`6626`)
+- Allow more than 2 groups for survdiff in statsmodels.duration  (:pr:`6626`)
 
 ``gam``
 ~~~~~~~
@@ -363,7 +363,7 @@ Submodules
 
 ``robust``
 ~~~~~~~~~~
-- ENH add normalized iqr to robust.scales  (:pr:`6969`)
+- Add normalized iqr to robust.scales  (:pr:`6969`)
 - Robust.scale.iqr does need centering, since quantiles are translation equivariant  (:pr:`6973`)
 - Add robust qn scale  (:pr:`6990`)
 - Fix bug where mad ignores center if center is not callable  (:pr:`7000`)
@@ -437,7 +437,7 @@ Submodules
 - Standardize forecast API  (:pr:`6933`)
 - Fix small issues post ETS get_prediction merge  (:pr:`6934`)
 - Modify failing test on Windows  (:pr:`6949`)
-- Improve ETS / statespace documentation and higlights for v0.12   (:pr:`6950`)
+- Improve ETS / statespace documentation and highlights for v0.12   (:pr:`6950`)
 - Remove FutureWarnings  (:pr:`6958`)
 
 ``tsa.statespace``
@@ -461,7 +461,7 @@ Submodules
 - Fix extend in VARMAX with trend  (:pr:`6909`)
 - Dynamic is incorrect when not an int in statespace get_prediction  (:pr:`6917`)
 - Add dynamic factor model with EM algorithm, option for monthly/quarterly mixed frequency model  (:pr:`6937`)
-- Improve ETS / statespace documentation and higlights for v0.12   (:pr:`6950`)
+- Improve ETS / statespace documentation and highlights for v0.12   (:pr:`6950`)
 - SARIMAX throwing different errors when length of endogenous var is too low  (:pr:`6961`)
 - Fix start params computation with few nobs  (:pr:`6962`)
 - Relax tolerance on random failure  (:pr:`6963`)
@@ -596,9 +596,9 @@ The following Pull Requests were merged since the last release:
 - :pr:`6508`: ENH: Add option for original Breusch-Pagan heteroscedasticity test
 - :pr:`6514`: ENH: use GLM starting values for QIF
 - :pr:`6515`: BUG: fix #6511
-- :pr:`6518`: Fix simple typo: variuos -> various
-- :pr:`6520`: BUG: fix GAM for 1-dim exog_linear 
-- :pr:`6521`: REF/BUG: don't attach patsy constraint instance 
+- :pr:`6518`: DOC: Fix simple typo: various
+- :pr:`6520`: BUG: fix GAM for 1-dim exog_linear
+- :pr:`6521`: REF/BUG: don't attach patsy constraint instance
 - :pr:`6528`: DOC: Bayesian estimation of SARIMAX using PyMC3 NUTS
 - :pr:`6531`: DOC: fix typos
 - :pr:`6534`: MAINT: Relax tolerance on test that occasionally fails
@@ -619,7 +619,7 @@ The following Pull Requests were merged since the last release:
 - :pr:`6616`: DOC: Fix `true` type on statespace docs page
 - :pr:`6621`: ENH: Calculate AR covariance parameters for gridded data
 - :pr:`6622`: ENH Allow optional regularization in local fdr
-- :pr:`6626`: ENH: allow more than 2 groups for survdiff in statmodels.duration
+- :pr:`6626`: ENH: allow more than 2 groups for survdiff in statsmodels.duration
 - :pr:`6628`: BUG: Ensure text comparison is lower
 - :pr:`6631`: DOC/TST: minor fixes for holtwinters simulate
 - :pr:`6632`: ENH: add meta-analysis (basic methods)
@@ -758,21 +758,21 @@ The following Pull Requests were merged since the last release:
 - :pr:`6939`: BUG: remove k_extra from effects_idx
 - :pr:`6940`: TST: Improve count model tests
 - :pr:`6941`: REF: Change of BIC formula in GLM
-- :pr:`6942`: Make glm's predict function return numpy array even if exposure is a pandas series
+- :pr:`6942`: BUG: Make glm's predict function return numpy array even if exposure is a pandas series
 - :pr:`6943`: DOC: Document exceptions and warnings
 - :pr:`6944`: ENH: improve descriptivestats
 - :pr:`6945`: MAINT: Relax test tolerance for future compat
-- :pr:`6946`: update pandas function in hp_filter example
+- :pr:`6946`: DOC: update pandas function in hp_filter example
 - :pr:`6948`: Prepare docs
 - :pr:`6949`: TST: Modify failing test on Windows
-- :pr:`6950`: DOC: improve ETS / statespace documentation and higlights for v0.12 
+- :pr:`6950`: DOC: improve ETS / statespace documentation and highlights for v0.12
 - :pr:`6951`: DOC: Fix final issues in release note
 - :pr:`6952`: MAINT: Fixes for failures in wheel building
 - :pr:`6954`: MAINT: Fixes for wheel building
 - :pr:`6957`: BUG: Fix check for offset_exposure in null
 - :pr:`6958`: MAINT: Remove FutureWarnings
 - :pr:`6959`: TST: Add test for offset exposure null
-- :pr:`6961`:     BUG: SARIMAX throwing different errors when length of endogenous var is too low
+- :pr:`6961`: BUG: SARIMAX throwing different errors when length of endogenous var is too low
 - :pr:`6962`: BUG: Fix start params computation with few nobs
 - :pr:`6963`: TST: Relax tolerance on random failure
 - :pr:`6964`: MAINT: Catch warning
@@ -814,7 +814,6 @@ Notable New Classes
 * :class:`statsmodels.tsa.deterministic.TimeTrendDeterministicTerm`
 * :class:`statsmodels.tsa.exponential_smoothing.ets.ETSModel`
 * :class:`statsmodels.tsa.exponential_smoothing.ets.ETSResults`
-* :class:`statsmodels.tsa.exponential_smoothing.ets.PredictionResults`
 * :class:`statsmodels.tsa.forecasting.stl.STLForecast`
 * :class:`statsmodels.tsa.forecasting.stl.STLForecastResults`
 * :class:`statsmodels.tsa.forecasting.theta.ThetaModel`
@@ -822,94 +821,95 @@ Notable New Classes
 * :class:`statsmodels.tsa.statespace.cfa_simulation_smoother.CFASimulationSmoother`
 * :class:`statsmodels.tsa.statespace.dynamic_factor_mq.DynamicFactorMQ`
 * :class:`statsmodels.tsa.statespace.dynamic_factor_mq.DynamicFactorMQResults`
-* :class:`statsmodels.tsa.statespace.dynamic_factor_mq.DynamicFactorMQStates`
-* :class:`statsmodels.tsa.statespace.dynamic_factor_mq.FactorBlock`
 * :class:`statsmodels.tsa.statespace.news.NewsResults`
+
+Moved or Removed Classes
+------------------------
+* ``statsmodels.base._penalties.L2ContraintsPenalty``
+* ``statsmodels.tools.docstring.ParseError``
+* ``statsmodels.tsa.holtwinters.ExponentialSmoothing``
+* ``statsmodels.tsa.holtwinters.Holt``
+* ``statsmodels.tsa.holtwinters.HoltWintersResults``
+* ``statsmodels.tsa.holtwinters.HoltWintersResultsWrapper``
+* ``statsmodels.tsa.holtwinters.SimpleExpSmoothing``
+* ``statsmodels.tsa.stattools.ResultsStore``
 
 New Methods
 -----------
-* :meth:`statsmodels.tsa.statespace.mlemodel.MLEResults.news`
-* :meth:`statsmodels.tsa.statespace.mlemodel.ExponentialSmoothingResults.news`
-* :meth:`statsmodels.tsa.statespace.mlemodel.DynamicFactorResults.news`
-* :meth:`statsmodels.tsa.statespace.representation.KalmanSmoother.diff_endog`
-* :meth:`statsmodels.tsa.statespace.mlemodel.UnobservedComponentsResults.news`
-* :meth:`statsmodels.tsa.statespace.mlemodel.RecursiveLSResults.news`
-* :meth:`statsmodels.tsa.vector_ar.var_model.VAR.from_formula`
-* :meth:`statsmodels.tsa.statespace.mlemodel.SARIMAXResults.news`
-* :meth:`statsmodels.genmod.generalized_linear_model.GLMGamResults.bic`
+* :meth:`statsmodels.genmod.generalized_linear_model.GLMResults.bic`
 * :meth:`statsmodels.tsa.ar_model.AutoRegResults.forecast`
 * :meth:`statsmodels.tsa.ar_model.AutoRegResults.get_prediction`
-* :meth:`statsmodels.tsa.statespace.representation.Representation.diff_endog`
-* :meth:`statsmodels.genmod.generalized_linear_model.GLMResults.bic`
-* :meth:`statsmodels.tsa.statespace.representation.KalmanFilter.diff_endog`
+* :meth:`statsmodels.tsa.arima.model.ARIMAResults.append`
+* :meth:`statsmodels.tsa.base.prediction.PredictionResults.predicted_mean`
+* :meth:`statsmodels.tsa.base.prediction.PredictionResults.row_labels`
+* :meth:`statsmodels.tsa.base.prediction.PredictionResults.t_test`
+* :meth:`statsmodels.tsa.base.prediction.PredictionResults.tvalues`
+* :meth:`statsmodels.tsa.base.prediction.PredictionResults.var_pred_mean`
+* :meth:`statsmodels.tsa.statespace.kalman_smoother.SmootherResults.news`
 * :meth:`statsmodels.tsa.statespace.kalman_smoother.SmootherResults.smoothed_state_autocovariance`
 * :meth:`statsmodels.tsa.statespace.kalman_smoother.SmootherResults.smoothed_state_gain`
-* :meth:`statsmodels.tsa.statespace.kalman_smoother.SmootherResults.news`
-* :meth:`statsmodels.tsa.statespace.representation.SimulationSmoother.diff_endog`
-* :meth:`statsmodels.tsa.statespace.mlemodel.ARIMAResults.news`
-* :meth:`statsmodels.tsa.arima.model.ARIMAResults.append`
-* :meth:`statsmodels.tsa.statespace.mlemodel.VARMAXResults.news`
+* :meth:`statsmodels.tsa.statespace.mlemodel.MLEResults.news`
+* :meth:`statsmodels.tsa.statespace.representation.Representation.diff_endog`
+* :meth:`statsmodels.tsa.vector_ar.var_model.VAR.from_formula`
 
 Removed Methods
 ---------------
+* ``statsmodels.base.model.GEEResults.remove_data``
+* ``statsmodels.base.model.NominalGEEResults.remove_data``
+* ``statsmodels.base.model.OrdinalGEEResults.remove_data``
+* ``statsmodels.base.model.VAR.from_formula``
 * ``statsmodels.genmod._prediction.PredictionResults.se_obs``
 * ``statsmodels.genmod._prediction.PredictionResults.t_test``
 * ``statsmodels.genmod._prediction.PredictionResults.tvalues``
-* ``statsmodels.base.model.VAR.from_formula``
+* ``statsmodels.genmod.generalized_estimating_equations.GEE.predict``
+* ``statsmodels.genmod.generalized_estimating_equations.NominalGEE.predict``
+* ``statsmodels.genmod.generalized_estimating_equations.OrdinalGEE.predict``
 * ``statsmodels.tsa.statespace.mlemodel.ARIMAResults.append``
 
-Classes and Methods with New Arguments
---------------------------------------
-* :meth:`statsmodels.tsa.statespace.mlemodel.MLEResults`: ``copy_initialization``
-* :meth:`statsmodels.tsa.statespace.exponential_smoothing.ExponentialSmoothingResults`: ``truncate_endog_names``
-* :meth:`statsmodels.tsa.statespace.dynamic_factor.DynamicFactorResults`: ``copy_initialization``
-* :meth:`statsmodels.tsa.statespace.kalman_smoother.KalmanSmoother`: ``update_smoother``, ``update_filter``, ``update_representation``
-* :meth:`statsmodels.tsa.statespace.structural.UnobservedComponentsResults`: ``truncate_endog_names``
-* :meth:`statsmodels.iolib.summary2.Summary`: ``label``
-* :meth:`statsmodels.regression.recursive_ls.RecursiveLSResults`: ``copy_initialization``
+Methods with New Arguments
+--------------------------
+* :meth:`statsmodels.discrete.discrete_model.BinaryModel`: ``check_rank``
+* :meth:`statsmodels.discrete.discrete_model.CountModel`: ``check_rank``
+* :meth:`statsmodels.discrete.discrete_model.DiscreteModel`: ``check_rank``
 * :meth:`statsmodels.discrete.discrete_model.GeneralizedPoisson`: ``check_rank``
 * :meth:`statsmodels.discrete.discrete_model.Logit`: ``check_rank``
-* :meth:`statsmodels.tsa.statespace.sarimax.SARIMAXResults`: ``copy_initialization``
-* :meth:`statsmodels.discrete.discrete_model.DiscreteModel`: ``check_rank``
-* :meth:`statsmodels.discrete.discrete_model.CountModel`: ``check_rank``
-* :meth:`statsmodels.regression.rolling.RollingWLS`: ``expanding``
-* :meth:`statsmodels.genmod.cov_struct.Autoregressive`: ``grid``
-* :meth:`statsmodels.discrete.discrete_model.NegativeBinomial`: ``check_rank``
-* :meth:`statsmodels.stats.mediation.Mediation`: ``outcome_predict_kwargs``
+* :meth:`statsmodels.discrete.discrete_model.MNLogit`: ``check_rank``
 * :meth:`statsmodels.discrete.discrete_model.MultinomialModel`: ``check_rank``
-* :meth:`statsmodels.tsa.ar_model.AutoReg`: ``old_names``, ``deterministic``
-* :meth:`statsmodels.discrete.discrete_model.Poisson`: ``check_rank``
-* :meth:`statsmodels.discrete.discrete_model.BinaryModel`: ``check_rank``
-* :meth:`statsmodels.tsa.statespace.simulation_smoother.SimulationSmoother`: ``update_smoother``, ``update_filter``, ``update_representation``
-* :meth:`statsmodels.tsa.arima.model.ARIMAResults`: ``copy_initialization``
-* :meth:`statsmodels.tsa.vector_ar.irf.IRAnalysis`: ``figsize``
-* :meth:`statsmodels.tsa.statespace.varmax.VARMAXResults`: ``truncate_endog_names``
+* :meth:`statsmodels.discrete.discrete_model.NegativeBinomial`: ``check_rank``
 * :meth:`statsmodels.discrete.discrete_model.NegativeBinomialP`: ``check_rank``
+* :meth:`statsmodels.discrete.discrete_model.Poisson`: ``check_rank``
+* :meth:`statsmodels.discrete.discrete_model.Probit`: ``check_rank``
 * :meth:`statsmodels.duration.hazard_regression.PHReg`: ``pred_only``
 * :meth:`statsmodels.duration.hazard_regression.rv_discrete_float`: ``n``
-* :meth:`statsmodels.discrete.discrete_model.MNLogit`: ``check_rank``
+* :meth:`statsmodels.genmod.cov_struct.Autoregressive`: ``grid``
+* :meth:`statsmodels.iolib.summary2.Summary`: ``label``
+* :meth:`statsmodels.regression.mixed_linear_model.MixedLMResults`: ``fit_kwargs``
+* :meth:`statsmodels.regression.recursive_ls.RecursiveLSResults`: ``copy_initialization``
 * :meth:`statsmodels.regression.rolling.RollingOLS`: ``expanding``
-* :meth:`statsmodels.discrete.discrete_model.Probit`: ``check_rank``
+* :meth:`statsmodels.regression.rolling.RollingWLS`: ``expanding``
+* :meth:`statsmodels.stats.mediation.Mediation`: ``outcome_predict_kwargs``
+* :meth:`statsmodels.tsa.ar_model.AutoReg`: ``deterministic``, ``old_names``
+* :meth:`statsmodels.tsa.arima.model.ARIMAResults`: ``copy_initialization``
+* :meth:`statsmodels.tsa.statespace.dynamic_factor.DynamicFactorResults`: ``copy_initialization``
+* :meth:`statsmodels.tsa.statespace.exponential_smoothing.ExponentialSmoothingResults`: ``copy_initialization``
+* :meth:`statsmodels.tsa.statespace.kalman_smoother.KalmanSmoother`: ``update_smoother``, ``update_filter``, ``update_representation``
+* :meth:`statsmodels.tsa.statespace.mlemodel.MLEResults`: ``copy_initialization``
+* :meth:`statsmodels.tsa.statespace.sarimax.SARIMAXResults`: ``copy_initialization``
+* :meth:`statsmodels.tsa.statespace.simulation_smoother.SimulationSmoother`: ``update_smoother``, ``update_filter``, ``update_representation``
+* :meth:`statsmodels.tsa.statespace.structural.UnobservedComponentsResults`: ``copy_initialization``
+* :meth:`statsmodels.tsa.statespace.varmax.VARMAXResults`: ``truncate_endog_names``
+* :meth:`statsmodels.tsa.vector_ar.irf.IRAnalysis`: ``figsize``
 
-Classes with Removed Arguments
+Methods with Changed Arguments
 ------------------------------
-* :class:`statsmodels.tsa.statespace.mlemodel.PredictionResults`
-   * New: ``PredictionResults(endog, alpha)``
-   * Old: ``PredictionResults(endog, what, alpha)``
-* :class:`statsmodels.regression._prediction.PredictionResults`
-   * New: ``PredictionResults(alpha)``
-   * Old: ``PredictionResults(what, alpha)``
-* :class:`statsmodels.genmod._prediction.PredictionResults`
-   * New: ``PredictionResults(alpha)``
-   * Old: ``PredictionResults(what, alpha)``
+* :meth:`statsmodels.regression.mixed_linear_model.MixedLM`
+   * New: ``MixedLM(start_params, reml, niter_sa, do_cg, fe_pen, cov_pen, free, full_output, method, fit_kwargs)``
+   * Old: ``MixedLM(start_params, reml, niter_sa, do_cg, fe_pen, cov_pen, free, full_output, method, kwargs)``
 
 New Functions
 -------------
-* :func:`statsmodels.graphics.tukeyplot.tukeyplot`
-* :func:`statsmodels.multivariate.plots.plot_loadings`
-* :func:`statsmodels.multivariate.plots.plot_scree`
 * :func:`statsmodels.robust.scale.iqr`
-* :func:`statsmodels.robust.scale.qn`
+* :func:`statsmodels.robust.scale.qn_scale`
 * :func:`statsmodels.stats.contrast.wald_test_noncent`
 * :func:`statsmodels.stats.contrast.wald_test_noncent_generic`
 * :func:`statsmodels.stats.descriptivestats.describe`
@@ -956,48 +956,43 @@ New Functions
 * :func:`statsmodels.stats.robust_compare.trimboth`
 * :func:`statsmodels.tools.eval_measures.rmspe`
 
-Notable Removed Functions
--------------------------
+
+Removed Functions
+-----------------
+* ``statsmodels.compat.python.iteritems``
+* ``statsmodels.compat.python.iterkeys``
+* ``statsmodels.compat.python.itervalues``
 * ``statsmodels.stats.diagnostic.unitroot_adf``
+* ``statsmodels.tools.decorators.nottest``
 * ``statsmodels.tsa.stattools.periodogram``
 
 Functions with New Arguments
 ----------------------------
-* :func:`statsmodels.tsa.ar_model.ar_select_order`: ``old_names``
-* :func:`statsmodels.stats.diagnostic.het_breuschpagan`: ``robust``
+* :func:`statsmodels.graphics.gofplots.qqline`: ``lineoptions``
 * :func:`statsmodels.nonparametric.smoothers_lowess.lowess`: ``xvals``
 * :func:`statsmodels.stats.diagnostic.acorr_ljungbox`: ``auto_lag``
+* :func:`statsmodels.stats.diagnostic.het_breuschpagan`: ``robust``
 * :func:`statsmodels.stats.diagnostic.linear_harvey_collier`: ``skip``
 * :func:`statsmodels.stats.multitest.local_fdr`: ``alpha``
-* :func:`statsmodels.graphics.gofplots.plotting_pos`: ``b``
-* :func:`statsmodels.graphics.gofplots.qqline`: ``lineoptions``
+* :func:`statsmodels.tsa.ar_model.ar_select_order`: ``old_names``
 
-Functions with Keyword Name Changes
------------------------------------
-* :func:`statsmodels.tsa.arima.estimators.durbin_levinson.durbin_levinson`
-   * New: ``durbin_levinson(endog, ar_order, demean, adjusted)``
-   * Old: ``durbin_levinson(endog, ar_order, demean, unbiased)``
-* :func:`statsmodels.tsa.stattools.pacf_ols`
-   * New: ``pacf_ols(x, nlags, efficient, adjusted)``
-   * Old: ``pacf_ols(x, nlags, efficient, unbiased)``
+Functions with Changed Arguments
+--------------------------------
 * :func:`statsmodels.graphics.tsaplots.plot_acf`
    * New: ``plot_acf(x, ax, lags, alpha, use_vlines, adjusted, fft, missing, title, zero, vlines_kwargs, kwargs)``
    * Old: ``plot_acf(x, ax, lags, alpha, use_vlines, unbiased, fft, missing, title, zero, vlines_kwargs, kwargs)``
-* :func:`statsmodels.tsa.stattools.ccovf`
-   * New: ``ccovf(x, y, adjusted, demean)``
-   * Old: ``ccovf(x, y, unbiased, demean)``
-* :func:`statsmodels.tools.tools.pinv_extended`
-   * New: ``pinv_extended(x, rcond)``
-   * Old: ``pinv_extended(X, rcond)``
-* :func:`statsmodels.tsa.stattools.ccf`
-   * New: ``ccf(x, y, adjusted)``
-   * Old: ``ccf(x, y, unbiased)``
 * :func:`statsmodels.tsa.stattools.acf`
    * New: ``acf(x, adjusted, nlags, qstat, fft, alpha, missing)``
    * Old: ``acf(x, unbiased, nlags, qstat, fft, alpha, missing)``
 * :func:`statsmodels.tsa.stattools.acovf`
    * New: ``acovf(x, adjusted, demean, fft, missing, nlag)``
    * Old: ``acovf(x, unbiased, demean, fft, missing, nlag)``
-* :func:`statsmodels.tsa.arima.estimators.yule_walker.yule_walker`
-   * New: ``yule_walker(endog, ar_order, demean, adjusted)``
-   * Old: ``yule_walker(endog, ar_order, demean, unbiased)``
+* :func:`statsmodels.tsa.stattools.ccf`
+   * New: ``ccf(x, y, adjusted)``
+   * Old: ``ccf(x, y, unbiased)``
+* :func:`statsmodels.tsa.stattools.ccovf`
+   * New: ``ccovf(x, y, adjusted, demean)``
+   * Old: ``ccovf(x, y, unbiased, demean)``
+* :func:`statsmodels.tsa.stattools.pacf_ols`
+   * New: ``pacf_ols(x, nlags, efficient, adjusted)``
+   * Old: ``pacf_ols(x, nlags, efficient, unbiased)``
