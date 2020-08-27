@@ -23,10 +23,9 @@ are mentioned in the docstrings.
 
 Stats
 -----
-**Issues Closed**: 223
+**Issues Closed**: 239
 
-**Pull Requests Merged**: 208
-
+**Pull Requests Merged**: 221
 
 The Highlights
 ==============
@@ -203,6 +202,11 @@ Submodules
 - Update pandas function in hp_filter example  (:pr:`6946`)
 - Prepare docs  (:pr:`6948`)
 - Fix final issues in release note  (:pr:`6951`)
+- Final doc fixed for 0.12.0rc0  (:pr:`6965`)
+- Update DeterministicProcess docs  (:pr:`6968`)
+- Add docstring to string_like method  (:pr:`6972`)
+- Fix LaTeX in seasonal notebook  (:pr:`6976`)
+- Add new stats to release notes for 0.12  (:pr:`7001`)
 
 ``Performance``
 ~~~~~~~~~~~~~~~
@@ -329,6 +333,8 @@ Submodules
 - Relax test tolerance for future compat  (:pr:`6945`)
 - Fixes for failures in wheel building  (:pr:`6952`)
 - Fixes for wheel building  (:pr:`6954`)
+- Remove print statements  (:pr:`6985`)
+- Update Azure images  (:pr:`6992`)
 
 ``multivariate``
 ~~~~~~~~~~~~~~~~
@@ -342,6 +348,8 @@ Submodules
 - Ensure sigma estimate is positive in KDE  (:pr:`6713`)
 - Fix access to normal_reference_constant  (:pr:`6806`)
 - Add xvals param to lowess smoother  (:pr:`6908`)
+- Return self from KDEUnivariate fit  (:pr:`6991`)
+- Allow custom bandwidth functions in KDEUnivariate fit  (:pr:`7002`)
 
 ``regression``
 ~~~~~~~~~~~~~~
@@ -354,8 +362,11 @@ Submodules
 - Add  a note when R2 is uncentered  (:pr:`6844`)
 
 ``robust``
-~~~~~~~~~~~~~~
-- Add an implementation of the Qn robust scale estimator (:pr:`6977`)
+~~~~~~~~~~
+- ENH add normalized iqr to robust.scales  (:pr:`6969`)
+- Robust.scale.iqr does need centering, since quantiles are translation equivariant  (:pr:`6973`)
+- Add robust qn scale  (:pr:`6990`)
+- Fix bug where mad ignores center if center is not callable  (:pr:`7000`)
 
 ``stats``
 ~~~~~~~~~
@@ -499,7 +510,7 @@ and the general maintainer and code reviewer
 Additionally, many users contributed by participation in github issues and
 providing feedback.
 
-Thanks to all of the contributors for the 0.12 release (based on git log):
+Thanks to all of the contributors for the 0.12.0 release (based on git log):
 
 - Alex Lyttle
 - Amund Vedal
@@ -507,6 +518,9 @@ Thanks to all of the contributors for the 0.12 release (based on git log):
 - Batakrishna Sahu
 - Chad Fulton
 - Cinthia M. Tanaka
+- Dorian Bivolaru
+- Ezequiel Smucler
+- Giulio Beseghi
 - Haoyu Qi
 - Hassan Kibirige
 - He Yang
@@ -530,6 +544,7 @@ Thanks to all of the contributors for the 0.12 release (based on git log):
 - Sebastian Pölsterl
 - Skipper Seabold
 - Thomas Brooks
+- Thomas Marchand
 - Tim Gates
 - Victor Ananyev
 - Wouter De Coster
@@ -537,9 +552,11 @@ Thanks to all of the contributors for the 0.12 release (based on git log):
 - adrienpacifico
 - aeturrell
 - cd
+- das-soham
 - eirki
 - pag
 - partev
+- tagoma
 - w31ha0
 
 
@@ -564,7 +581,7 @@ The following Pull Requests were merged since the last release:
 - :pr:`6466`: MAINT: Replace Python 3.5 with 3.8 on Azure
 - :pr:`6467`: MAINT: Update supported versions
 - :pr:`6469`: MAINT: Fix future warnings
-- :pr:`6470`: BUG: fix tukey-hsd for 1 pvalue
+- :pr:`6470`: BUG: fix tukey-hsd for 1 pvalue 
 - :pr:`6471`: MAINT: Fix issue with ragged array
 - :pr:`6473`: MAINT: Avoid future error
 - :pr:`6474`: BLD: Use pip on Azure
@@ -579,9 +596,9 @@ The following Pull Requests were merged since the last release:
 - :pr:`6508`: ENH: Add option for original Breusch-Pagan heteroscedasticity test
 - :pr:`6514`: ENH: use GLM starting values for QIF
 - :pr:`6515`: BUG: fix #6511
-- :pr:`6518`: Fix simple typo: various
-- :pr:`6520`: BUG: fix GAM for 1-dim exog_linear
-- :pr:`6521`: REF/BUG: don't attach patsy constraint instance
+- :pr:`6518`: Fix simple typo: variuos -> various
+- :pr:`6520`: BUG: fix GAM for 1-dim exog_linear 
+- :pr:`6521`: REF/BUG: don't attach patsy constraint instance 
 - :pr:`6528`: DOC: Bayesian estimation of SARIMAX using PyMC3 NUTS
 - :pr:`6531`: DOC: fix typos
 - :pr:`6534`: MAINT: Relax tolerance on test that occasionally fails
@@ -602,7 +619,7 @@ The following Pull Requests were merged since the last release:
 - :pr:`6616`: DOC: Fix `true` type on statespace docs page
 - :pr:`6621`: ENH: Calculate AR covariance parameters for gridded data
 - :pr:`6622`: ENH Allow optional regularization in local fdr
-- :pr:`6626`: ENH: allow more than 2 groups for survdiff in statsmodels.duration
+- :pr:`6626`: ENH: allow more than 2 groups for survdiff in statmodels.duration
 - :pr:`6628`: BUG: Ensure text comparison is lower
 - :pr:`6631`: DOC/TST: minor fixes for holtwinters simulate
 - :pr:`6632`: ENH: add meta-analysis (basic methods)
@@ -744,7 +761,35 @@ The following Pull Requests were merged since the last release:
 - :pr:`6942`: Make glm's predict function return numpy array even if exposure is a pandas series
 - :pr:`6943`: DOC: Document exceptions and warnings
 - :pr:`6944`: ENH: improve descriptivestats
+- :pr:`6945`: MAINT: Relax test tolerance for future compat
 - :pr:`6946`: update pandas function in hp_filter example
+- :pr:`6948`: Prepare docs
+- :pr:`6949`: TST: Modify failing test on Windows
+- :pr:`6950`: DOC: improve ETS / statespace documentation and higlights for v0.12 
+- :pr:`6951`: DOC: Fix final issues in release note
+- :pr:`6952`: MAINT: Fixes for failures in wheel building
+- :pr:`6954`: MAINT: Fixes for wheel building
+- :pr:`6957`: BUG: Fix check for offset_exposure in null
+- :pr:`6958`: MAINT: Remove FutureWarnings
+- :pr:`6959`: TST: Add test for offset exposure null
+- :pr:`6961`:     BUG: SARIMAX throwing different errors when length of endogenous var is too low
+- :pr:`6962`: BUG: Fix start params computation with few nobs
+- :pr:`6963`: TST: Relax tolerance on random failure
+- :pr:`6964`: MAINT: Catch warning
+- :pr:`6965`: DOC: Final doc fixed for 0.12.0rc0
+- :pr:`6968`: DOC: Update DeterministicProcess docs
+- :pr:`6969`: ENH add normalized iqr to robust.scales
+- :pr:`6972`: DOC: Add docstring to string_like method
+- :pr:`6973`: ENH/BUG: robust.scale.iqr does need centering, since quantiles are translation equivariant
+- :pr:`6976`: DOC: Fix LaTeX in seasonal notebook
+- :pr:`6985`: MAINT: Remove print statements
+- :pr:`6990`: ENH: Add robust qn scale
+- :pr:`6991`: ENH: Return self from KDEUnivariate fit
+- :pr:`6992`: MAINT: Update Azure images
+- :pr:`7000`: BUG: fix bug where mad ignores center if center is not callable
+- :pr:`7001`: DOC: add new stats to release notes for 0.12
+- :pr:`7002`: ENH: Allow custom bandwidth functions in KDEUnivariate fit
+
 
 API Changes
 ===========
