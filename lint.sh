@@ -116,6 +116,7 @@ if [ "$LINT" == true ]; then
         statsmodels/multivariate/tests/results/ \
         statsmodels/nonparametric/__init__.py \
         statsmodels/nonparametric/api.py \
+        statsmodels/nonparametric/kde.py \
         statsmodels/nonparametric/tests/results/ \
         statsmodels/regression/__init__.py \
         statsmodels/regression/_prediction.py \
