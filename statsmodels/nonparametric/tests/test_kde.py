@@ -8,6 +8,7 @@ from scipy import stats
 from statsmodels.distributions.mixture_rvs import mixture_rvs
 from statsmodels.nonparametric.kde import KDEUnivariate as KDE
 import statsmodels.sandbox.nonparametric.kernels as kernels
+import statsmodels.nonparametric.bandwidths as bandwidths
 
 # get results from Stata
 
@@ -351,6 +352,7 @@ def test_fit_self(reset_randomstate):
 
 
 class TestKDECustomBandwidth(object):
+    decimal_density = 7
 
     @classmethod
     def setup_class(cls):
@@ -364,3 +366,13 @@ class TestKDECustomBandwidth(object):
         kde = self.kde.fit(bw=custom_bw)
         assert isinstance(kde, KDE)
 
+    def test_check_is_fit_ok_with_standard_custom_bandwidth(self):
+        # Note, we are passing the function, not the string - this is intended
+        kde = self.kde.fit(bw=bandwidths.bw_silverman)
+        s1 = kde.support.copy()
+        d1 = kde.density.copy()
+
+        kde = self.kde.fit(bw='silverman')
+
+        npt.assert_almost_equal(s1, kde.support, self.decimal_density)
+        npt.assert_almost_equal(d1, kde.density, self.decimal_density)
