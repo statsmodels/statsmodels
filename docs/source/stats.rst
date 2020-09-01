@@ -181,6 +181,17 @@ Non-Parametric Tests
 
    sign_test
 
+.. currentmodule:: statsmodels.stats.nonparametric
+
+.. autosummary::
+   :toctree: generated/
+
+   rank_compare_2indep
+   rank_compare_2ordinal
+   cohensd2problarger
+   prob_larger_continuous
+   rankdata_2samp
+
 
 Descriptive Statistics
 ----------------------

@@ -20,7 +20,8 @@ from statsmodels.sandbox.stats.runs import (Runs,
                                             runstest_1samp, runstest_2samp)
 from statsmodels.sandbox.stats.runs import mcnemar as sbmcnemar
 from statsmodels.stats.nonparametric import (
-    rank_compare_2indep, rank_compare_2ordinal, prob_larger_continuous)
+    rank_compare_2indep, rank_compare_2ordinal, prob_larger_continuous,
+    cohensd2problarger)
 from statsmodels.tools.testing import Holder
 
 
@@ -294,10 +295,14 @@ def test_brunnermunzel_one_sided():
     x, y = y, x
 
     # Results are compared with R's lawstat package.
-    u1, p1 = rank_compare_2indep(x, y).test_prob_superior(alternative='smaller')
-    u2, p2 = rank_compare_2indep(y, x).test_prob_superior(alternative='larger')
-    u3, p3 = rank_compare_2indep(x, y).test_prob_superior(alternative='larger')
-    u4, p4 = rank_compare_2indep(y, x).test_prob_superior(alternative='smaller')
+    u1, p1 = rank_compare_2indep(x, y
+                                 ).test_prob_superior(alternative='smaller')
+    u2, p2 = rank_compare_2indep(y, x
+                                 ).test_prob_superior(alternative='larger')
+    u3, p3 = rank_compare_2indep(x, y
+                                 ).test_prob_superior(alternative='larger')
+    u4, p4 = rank_compare_2indep(y, x
+                                 ).test_prob_superior(alternative='smaller')
 
     assert_approx_equal(p1, p2, significant=significant)
     assert_approx_equal(p3, p4, significant=significant)
@@ -424,6 +429,13 @@ def test_rank_compare_2indep1():
     p = prob_larger_continuous(stats.norm(loc=esd), stats.norm)
     # round trip
     assert_allclose(p, res.prob1, rtol=1e-13)
+
+    # round trip with cohen's d
+    pc = cohensd2problarger(esd)
+    assert_allclose(pc, res.prob1, rtol=1e-13)
+
+    ci_tr = res.confint_lintransf(1, -1)
+    assert_allclose(ci_tr, 1 - np.array(res2_t.ci)[::-1], rtol=0.005)
 
 
 def test_rank_compare_ord():
