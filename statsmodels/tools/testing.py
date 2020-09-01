@@ -54,11 +54,15 @@ class Holder(object):
         self.__dict__.update(kwds)
 
     def __str__(self):
-        ss = "\n".join(str(k) + " = " + str(v) for k, v in vars(self).items())
+        ss = "\n".join(str(k) + " = " + str(v).replace('\n', '\n    ')
+                       for k, v in vars(self).items())
         return ss
 
     def __repr__(self):
-        ss = str(self.__class__) + "\n" + self.__str__()
+        # use repr for values including nested cases as in tost
+        ss = "\n".join(str(k) + " = " + repr(v).replace('\n', '\n    ')
+                       for k, v in vars(self).items())
+        ss = str(self.__class__) + "\n" + ss
         return ss
 
 

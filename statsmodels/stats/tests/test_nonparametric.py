@@ -2,18 +2,27 @@
 """
 
 Created on Fri Jul 05 14:05:24 2013
+Aug 15 2020: add brunnermunzel, rank_compare_2indep
 
 Author: Josef Perktold
 """
 from statsmodels.compat.python import lzip
 import numpy as np
-from numpy.testing import assert_allclose, assert_almost_equal
+from numpy.testing import (assert_allclose, assert_almost_equal,
+                           assert_approx_equal, assert_)
+
+from scipy import stats
 import pytest
 
-from statsmodels.stats.contingency_tables import mcnemar, cochrans_q, SquareTable
+from statsmodels.stats.contingency_tables import (
+    mcnemar, cochrans_q, SquareTable)
 from statsmodels.sandbox.stats.runs import (Runs,
                                             runstest_1samp, runstest_2samp)
 from statsmodels.sandbox.stats.runs import mcnemar as sbmcnemar
+from statsmodels.stats.nonparametric import (
+    rank_compare_2indep, rank_compare_2ordinal, prob_larger_continuous,
+    cohensd2problarger)
+from statsmodels.tools.testing import Holder
 
 
 def _expand_table(table):
@@ -274,3 +283,202 @@ def test_runstest_2sample():
     # check cutoff
     res2_1s = runstest_1samp(xy, xy.mean())
     assert_allclose(res2_1s, res_1s, rtol=1e-6)
+
+
+def test_brunnermunzel_one_sided():
+    # copied from scipy with adjustment
+    x = [1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 4, 1, 1]
+    y = [3, 3, 4, 3, 1, 2, 3, 1, 1, 5, 4]
+    significant = 13
+
+    # revere direction to match our definition
+    x, y = y, x
+
+    # Results are compared with R's lawstat package.
+    u1, p1 = rank_compare_2indep(x, y
+                                 ).test_prob_superior(alternative='smaller')
+    u2, p2 = rank_compare_2indep(y, x
+                                 ).test_prob_superior(alternative='larger')
+    u3, p3 = rank_compare_2indep(x, y
+                                 ).test_prob_superior(alternative='larger')
+    u4, p4 = rank_compare_2indep(y, x
+                                 ).test_prob_superior(alternative='smaller')
+
+    assert_approx_equal(p1, p2, significant=significant)
+    assert_approx_equal(p3, p4, significant=significant)
+    assert_(p1 != p3)
+    assert_approx_equal(u1, 3.1374674823029505,
+                        significant=significant)
+    assert_approx_equal(u2, -3.1374674823029505,
+                        significant=significant)
+    assert_approx_equal(u3, 3.1374674823029505,
+                        significant=significant)
+    assert_approx_equal(u4, -3.1374674823029505,
+                        significant=significant)
+
+    # Note: scipy and lawstat tail is reversed compared to test statistic
+    assert_approx_equal(p3, 0.0028931043330757342,
+                        significant=significant)
+    assert_approx_equal(p1, 0.99710689566692423,
+                        significant=significant)
+
+
+def test_brunnermunzel_two_sided():
+    # copied from scipy with adjustment
+    x = [1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 4, 1, 1]
+    y = [3, 3, 4, 3, 1, 2, 3, 1, 1, 5, 4]
+    significant = 13
+
+    # revere direction to match our definition
+    x, y = y, x
+
+    # Results are compared with R's lawstat package.
+    res1 = rank_compare_2indep(x, y)
+    u1, p1 = res1
+    t1 = res1.test_prob_superior(alternative='two-sided')
+    res2 = rank_compare_2indep(y, x)
+    u2, p2 = res2
+    t2 = res2.test_prob_superior(alternative='two-sided')
+
+    assert_approx_equal(p1, p2, significant=significant)
+    assert_approx_equal(u1, 3.1374674823029505,
+                        significant=significant)
+    assert_approx_equal(u2, -3.1374674823029505,
+                        significant=significant)
+    assert_approx_equal(p2, 0.0057862086661515377,
+                        significant=significant)
+
+    assert_allclose(t1[0], u1, rtol=1e-13)
+    assert_allclose(t2[0], u2, rtol=1e-13)
+    assert_allclose(t1[1], p1, rtol=1e-13)
+    assert_allclose(t2[1], p2, rtol=1e-13)
+
+
+def test_rank_compare_2indep1():
+    # Example from Munzel and Hauschke 2003
+    # data is given by counts, expand to observations
+    levels = [-2, -1, 0, 1, 2]
+    new = [24, 37, 21, 19, 6]
+    active = [11, 51, 22, 21, 7]
+    x1 = np.repeat(levels, new)
+    x2 = np.repeat(levels, active)
+
+    # using lawstat
+    # > brunner.munzel.test(xn, xa) #brunnermunzel.test(x, y)
+    res2_t = Holder(statistic=1.1757561456582,
+                    df=204.2984239868,
+                    pvalue=0.2410606649547,
+                    ci=[0.4700629827705593, 0.6183882855872511],
+                    prob=0.5442256341789052)
+
+    res = rank_compare_2indep(x1, x2, use_t=False)
+    assert_allclose(res.statistic, -res2_t.statistic, rtol=1e-13)
+    assert_allclose(res.prob1, 1 - res2_t.prob, rtol=1e-13)
+    assert_allclose(res.prob2, res2_t.prob, rtol=1e-13)
+    tt = res.test_prob_superior()
+    # TODO: return HolderTuple
+    # assert_allclose(tt.statistic, res2_t.statistic)
+    # TODO: check sign/direction in lawstat
+    assert_allclose(tt[0], -res2_t.statistic, rtol=1e-13)
+
+    ci = res.conf_int(alpha=0.05)
+    # we compare normal confint with t confint, lower rtol
+    assert_allclose(ci, 1 - np.array(res2_t.ci)[::-1], rtol=0.005)
+    # test consistency of test and confint
+    res_lb = res.test_prob_superior(value=ci[0])
+    assert_allclose(res_lb[1], 0.05, rtol=1e-13)
+    res_ub = res.test_prob_superior(value=ci[1])
+    assert_allclose(res_ub[1], 0.05, rtol=1e-13)
+
+    # test consistency of tost and confint
+    res_tost = res.tost_prob_superior(*ci)
+    assert_allclose(res_tost.results_smaller.pvalue, 0.025, rtol=1e-13)
+    assert_allclose(res_tost.results_larger.pvalue, 0.025, rtol=1e-13)
+
+    # use t-distribution
+    # our ranking is defined as reversed from lawstat, and BM article
+    # revere direction to match our definition
+    x1, x2 = x2, x1
+    res = rank_compare_2indep(x1, x2, use_t=True)
+    assert_allclose(res.statistic, res2_t.statistic, rtol=1e-13)
+    tt = res.test_prob_superior()
+    # TODO: return HolderTuple
+    # assert_allclose(tt.statistic, res2_t.statistic)
+    # TODO: check sign/direction in lawstat, reversed from ours
+    assert_allclose(tt[0], res2_t.statistic, rtol=1e-13)
+    assert_allclose(tt[1], res2_t.pvalue, rtol=1e-13)
+    assert_allclose(res.pvalue, res2_t.pvalue, rtol=1e-13)
+    assert_allclose(res.df, res2_t.df, rtol=1e-13)
+
+    ci = res.conf_int(alpha=0.05)
+    assert_allclose(ci, res2_t.ci, rtol=1e-11)
+    # test consistency of test and confint
+    res_lb = res.test_prob_superior(value=ci[0])
+    assert_allclose(res_lb[1], 0.05, rtol=1e-11)
+    res_ub = res.test_prob_superior(value=ci[1])
+    assert_allclose(res_ub[1], 0.05, rtol=1e-11)
+
+    # test consistency of tost and confint
+    res_tost = res.tost_prob_superior(*ci)
+    assert_allclose(res_tost.results_smaller.pvalue, 0.025, rtol=1e-11)
+    assert_allclose(res_tost.results_larger.pvalue, 0.025, rtol=1e-11)
+
+    # extras
+    # cohen's d
+    esd = res.effectsize_normal()
+    p = prob_larger_continuous(stats.norm(loc=esd), stats.norm)
+    # round trip
+    assert_allclose(p, res.prob1, rtol=1e-13)
+
+    # round trip with cohen's d
+    pc = cohensd2problarger(esd)
+    assert_allclose(pc, res.prob1, rtol=1e-13)
+
+    ci_tr = res.confint_lintransf(1, -1)
+    assert_allclose(ci_tr, 1 - np.array(res2_t.ci)[::-1], rtol=0.005)
+
+
+def test_rank_compare_ord():
+    # compare ordinal count version with full version
+    # Example from Munzel and Hauschke 2003
+    # data is given by counts, expand to observations
+    levels = [-2, -1, 0, 1, 2]
+    new = [24, 37, 21, 19, 6]
+    active = [11, 51, 22, 21, 7]
+    x1 = np.repeat(levels, new)
+    x2 = np.repeat(levels, active)
+
+    for use_t in [False, True]:
+        res2 = rank_compare_2indep(x1, x2, use_t=use_t)
+        res1 = rank_compare_2ordinal(new, active, use_t=use_t)
+        assert_allclose(res2.prob1, res1.prob1, rtol=1e-13)
+        assert_allclose(res2.var_prob, res1.var_prob, rtol=1e-13)
+        s1 = str(res1.summary())
+        s2 = str(res2.summary())
+        assert s1 == s2
+
+
+def test_rank_compare_vectorized():
+    np.random.seed(987126)
+    x1 = np.random.randint(0, 20, (50, 3))
+    x2 = np.random.randint(5, 25, (50, 3))
+    res = rank_compare_2indep(x1, x2)
+    tst = res.test_prob_superior(0.5)
+    tost = res.tost_prob_superior(0.4, 0.6)
+
+    # smoke test for summary
+    res.summary()
+
+    for i in range(3):
+        res_i = rank_compare_2indep(x1[:, i], x2[:, i])
+        assert_allclose(res.statistic[i], res_i.statistic, rtol=1e-14)
+        assert_allclose(res.pvalue[i], res_i.pvalue, rtol=1e-14)
+        assert_allclose(res.prob1[i], res_i.prob1, rtol=1e-14)
+
+        tst_i = res_i.test_prob_superior(0.5)
+        assert_allclose(tst.statistic[i], tst_i.statistic, rtol=1e-14)
+        assert_allclose(tst.pvalue[i], tst_i.pvalue, rtol=1e-14)
+
+        tost_i = res_i.tost_prob_superior(0.4, 0.6)
+        assert_allclose(tost.statistic[i], tost_i.statistic, rtol=1e-14)
+        assert_allclose(tost.pvalue[i], tost_i.pvalue, rtol=1e-14)
