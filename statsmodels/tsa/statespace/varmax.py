@@ -454,16 +454,14 @@ class VARMAX(MLEModel):
 
         # 1. Intercept terms
         if self.k_trend > 0:
-            for i in self.polynomial_trend.nonzero()[0]:
-                if i == 0:
-                    param_names += ['intercept.%s' % endog_names[j]
-                                    for j in range(self.k_endog)]
-                elif i == 1:
-                    param_names += ['drift.%s' % endog_names[j]
-                                    for j in range(self.k_endog)]
-                else:
-                    param_names += ['trend.%d.%s' % (i, endog_names[j])
-                                    for j in range(self.k_endog)]
+            for j in range(self.k_endog):
+                for i in self.polynomial_trend.nonzero()[0]:
+                    if i == 0:
+                        param_names += ['intercept.%s' % endog_names[j]]
+                    elif i == 1:
+                        param_names += ['drift.%s' % endog_names[j]]
+                    else:
+                        param_names += ['trend.%d.%s' % (i, endog_names[j])]
 
         # 2. AR terms
         param_names += [
@@ -724,7 +722,7 @@ class VARMAX(MLEModel):
             # just += later
             if not self.mle_regression:
                 zero = np.array(0, dtype=params.dtype)
-                self.ssm[self._idx_state_intercept] = zero
+                self.ssm['state_intercept', :] = zero
 
             trend_params = params[self._params_trend].reshape(
                 self.k_endog, self.k_trend).T
