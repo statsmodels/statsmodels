@@ -10,6 +10,7 @@ variables:
   VML_NUM_THREADS: 1
   OPENBLAS_NUM_THREADS: 1
   PYTHONHASHSEED: 0 # Ensure tests are correctly gathered by xdist
+  SETUPTOOLS_USE_DISTUTILS: "stdlib"
 
 jobs:
 - template: tools/ci/azure_template.yml
