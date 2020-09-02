@@ -11,6 +11,7 @@ environment:
   NUMEXPR_NUM_THREADS: 1
   OMP_NUM_THREADS: 1
   OPENBLAS_NUM_THREADS: 1
+  SETUPTOOLS_USE_DISTUTILS: "stdlib"
   matrix:
     # Pip builds
     - PYTHON: C:\Python38
