@@ -151,6 +151,27 @@ class TestProbitModel(CheckOrdinalModelMixin):
         cls.resf = resf
         cls.resu = resu
 
+    def test_loglikerelated(self):
+
+        res1 = self.res1
+        # res2 = self.res2
+
+        mod = res1.model
+        fact = 1.1  # evaluate away from optimum
+        score1 = mod.score(res1.params * fact)
+        score_obs_numdiff = mod.score_obs(res1.params * fact)
+        score_obs_exog = mod.score_obs_(res1.params * fact)
+        assert_allclose(score_obs_numdiff.sum(0), score1, rtol=1e-8)
+        assert_allclose(score_obs_exog.sum(0), score1[:mod.k_vars], rtol=1e-7)
+
+        # null model
+        mod_null = OrderedModel(mod.endog, None,
+                                offset=np.zeros(mod.nobs),
+                                distr='probit')
+        null_params = mod.start_params
+        res_null = mod_null.fit(method='bfgs', disp=False)
+        assert_allclose(res_null.params, null_params[mod.k_vars:], rtol=1e-8)
+
 
 class TestCLogLogModel(CheckOrdinalModelMixin):
 

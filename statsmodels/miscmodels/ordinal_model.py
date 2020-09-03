@@ -70,7 +70,7 @@ class OrderedModel(GenericLikelihoodModel):
 
     """
 
-    def __init__(self, endog, exog, distr='probit', **kwds):
+    def __init__(self, endog, exog, offset=None, distr='probit', **kwds):
 
         if distr == 'probit':
             self.distr = stats.norm
@@ -78,6 +78,12 @@ class OrderedModel(GenericLikelihoodModel):
             self.distr = stats.logistic
         else:
             self.distr = distr
+
+        if offset is not None:
+            offset = np.asarray(offset)
+
+        # TODO: check if super can handle offset
+        self.offset = offset
 
         self.names, endog, exog = self._check_inputs(endog, exog)
 
@@ -88,7 +94,10 @@ class OrderedModel(GenericLikelihoodModel):
         self.endog = index
         self.labels = unique
 
-        self.k_vars = self.exog.shape[1]
+        if self.exog is not None:
+            self.nobs, self.k_vars = self.exog.shape
+        else:  # no exog in model
+            self.nobs, self.k_vars = self.endog.shape[0], 0
         self.results_class = OrderedResults
 
     def _check_inputs(self, endog, exog):
@@ -140,6 +149,11 @@ class OrderedModel(GenericLikelihoodModel):
         """
         return self.distr.cdf(x)
 
+    def pdf(self, x):
+        """pdf evaluated at x
+        """
+        return self.distr.pdf(x)
+
     def prob(self, low, upp):
         """interval probability
         """
@@ -184,6 +198,8 @@ class OrderedModel(GenericLikelihoodModel):
 
 
         """
+        if exog is None:
+            exog = self.exog
         # structure of params = [beta, constants_or_thresholds]
 
         # explicit in several steps to avoid bugs
@@ -191,31 +207,88 @@ class OrderedModel(GenericLikelihoodModel):
         thresh = np.concatenate((th_params[:1],
                                  np.exp(th_params[1:]))).cumsum()
         thresh = np.concatenate(([-np.inf], thresh, [np.inf]))
-        xb = self.exog.dot(params[:-(self.k_levels - 1)])[:, None]
+        xb = exog.dot(params[:-(self.k_levels - 1)])[:, None]
         low = thresh[:-1] - xb
         upp = thresh[1:] - xb
         prob = self.prob(low, upp)
         return prob
 
-    def loglike(self, params):
+    def _linpred(self, params, exog=None, offset=None):
+        """linear prediction of latent variable `x b`
 
-        # structure of params = [beta, constants_or_thresholds]
+        currently only for exog from estimation sample (in-sample)
+        """
+        if exog is None:
+            exog = self.exog
+        if offset is None:
+            offset = self.offset
+        if exog is not None:
+            linpred = self.exog.dot(params[:-(self.k_levels - 1)])
+        else:  # means self.exog is also None
+            linpred = np.zeros(self.nobs)
+        if offset is not None:
+            linpred += offset
+        return linpred
 
-        thresh = np.concatenate(([-np.inf],
-                                 params[-(self.k_levels - 1):], [np.inf]))
+    def _bounds(self, params):
+        thresh = self.transform_threshold_params(params)
 
-        # explicit in several steps to avoid bugs
-        th_params = params[-(self.k_levels - 1):]
-        thresh = np.concatenate((th_params[:1],
-                                 np.exp(th_params[1:]))).cumsum()
-        thresh = np.concatenate(([-np.inf], thresh, [np.inf]))
         thresh_i_low = thresh[self.endog]
         thresh_i_upp = thresh[self.endog + 1]
-        xb = self.exog.dot(params[:-(self.k_levels - 1)])
+        xb = self._linpred(params)
+        low = thresh_i_low - xb
+        upp = thresh_i_upp - xb
+        return low, upp
+
+    def loglike(self, params):
+
+        thresh = self.transform_threshold_params(params)
+
+        thresh_i_low = thresh[self.endog]
+        thresh_i_upp = thresh[self.endog + 1]
+        xb = self._linpred(params)
         low = thresh_i_low - xb
         upp = thresh_i_upp - xb
         prob = self.prob(low, upp)
         return np.log(prob + 1e-20).sum()
+
+    def loglikeobs(self, params):
+
+        low, upp = self._bounds(params)
+        prob = self.prob(low, upp)
+        return np.log(prob + 1e-20)
+
+    def score_obs_(self, params):
+        """score, first derivative of loglike for each observations
+
+        This currently only implements the derivative with respect to the
+        exog parameters, but not with respect to threshold-constant parameters.
+
+        """
+        low, upp = self._bounds(params)
+
+        prob = self.prob(low, upp)
+        pdf_upp = self.pdf(upp)
+        pdf_low = self.pdf(low)
+
+        # TODO the following doesn't work yet because of the incremental exp
+        # parameterization. The following was written base on Greene for the
+        # simple non-incremental parameterization.
+        # k = self.k_levels - 1
+        # idx = self.endog
+        # score_factor = np.zeros((self.nobs, k + 1 + 2)) #+2 avoids idx bounds
+        #
+        # rows = np.arange(self.nobs)
+        # shift = 1
+        # score_factor[rows, shift + idx-1] = -pdf_low
+        # score_factor[rows, shift + idx] = pdf_upp
+        # score_factor[:, 0] = pdf_upp - pdf_low
+        score_factor = (pdf_upp - pdf_low)[:, None]
+        score_factor /= prob[:, None]
+
+        so = np.column_stack((-score_factor[:, :1] * self.exog,
+                              score_factor[:, 1:]))
+        return so
 
     @property
     def start_params(self):
