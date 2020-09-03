@@ -322,13 +322,14 @@ class SARIMAX(MLEModel):
                  enforce_stationarity=True, enforce_invertibility=True,
                  hamilton_representation=False, concentrate_scale=False,
                  trend_offset=1, use_exact_diffuse=False, dates=None,
-                 freq=None, missing='none', **kwargs):
+                 freq=None, missing='none', validate_specification=True,
+                 **kwargs):
 
         self._spec = SARIMAXSpecification(
             endog, exog=exog, order=order, seasonal_order=seasonal_order,
             trend=trend, enforce_stationarity=None, enforce_invertibility=None,
             concentrate_scale=concentrate_scale, dates=dates, freq=freq,
-            missing=missing)
+            missing=missing, validate_specification=validate_specification)
         self._params = SARIMAXParams(self._spec)
 
         # Save given orders
@@ -1734,10 +1735,11 @@ class SARIMAX(MLEModel):
         if not self.simple_differencing and self._k_trend > 0:
             extend_kwargs.setdefault(
                 'trend_offset', self.trend_offset + self.nobs)
+        extend_kwargs.setdefault('validate_specification', False)
         mod_extend = self.clone(
             endog=tmp_endog, exog=tmp_exog, **extend_kwargs)
         mod_extend.update(params, transformed=transformed,
-                          includes_fixed=includes_fixed)
+                          includes_fixed=includes_fixed,)
 
         # Retrieve the extensions to the time-varying system matrices
         # and put them in kwargs
