@@ -110,7 +110,7 @@ class ARIMA(sarimax.SARIMAX):
                  seasonal_order=(0, 0, 0, 0), trend=None,
                  enforce_stationarity=True, enforce_invertibility=True,
                  concentrate_scale=False, trend_offset=1, dates=None,
-                 freq=None, missing='none'):
+                 freq=None, missing='none', validate_specification=True):
         # Default for trend
         # 'c' if there is no integration and 'n' otherwise
         # TODO: if trend='c', then we could alternatively use `demean=True` in
@@ -131,7 +131,8 @@ class ARIMA(sarimax.SARIMAX):
             endog, exog=exog, order=order, seasonal_order=seasonal_order,
             trend=trend, enforce_stationarity=None, enforce_invertibility=None,
             concentrate_scale=concentrate_scale, trend_offset=trend_offset,
-            dates=dates, freq=freq, missing=missing)
+            dates=dates, freq=freq, missing=missing,
+            validate_specification=validate_specification)
         exog = self._spec_arima._model.data.orig_exog
 
         # Keep the given `exog` by removing the prepended trend variables
@@ -152,7 +153,7 @@ class ARIMA(sarimax.SARIMAX):
             enforce_stationarity=enforce_stationarity,
             enforce_invertibility=enforce_invertibility,
             concentrate_scale=concentrate_scale, dates=dates, freq=freq,
-            missing=missing)
+            missing=missing, validate_specification=validate_specification)
         self.trend = trend
 
         # Save the input exog and input exog names, so that we can refer to
