@@ -2763,3 +2763,20 @@ def test_sarimax_starting_values_few_obsevations(reset_randomstate):
     assert np.all(
         np.isfinite(sarimax_model.predict(start=len(y), end=len(y) + 11))
     )
+
+
+def test_sarimax_forecast_exog_trend(reset_randomstate):
+    # Test that an error is not raised that the given `exog` for the forecast
+    # period is a constant when forecating with an intercept
+    # GH 7019
+    y = np.zeros(10)
+    x = np.zeros(10)
+
+    mod = sarimax.SARIMAX(endog=y, exog=x, order=(1, 0, 0), trend='c')
+    res = mod.smooth([0.2, 0.4, 0.5, 1.0])
+
+    # Test for h=1
+    assert_allclose(res.forecast(1, exog=1), 0.2 + 0.4)
+
+    # Test for h=2
+    assert_allclose(res.forecast(2, exog=[1., 1.]), 0.2 + 0.4, 0.2 + 0.4 + 0.5)
