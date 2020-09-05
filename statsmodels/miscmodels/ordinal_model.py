@@ -85,19 +85,32 @@ class OrderedModel(GenericLikelihoodModel):
         # TODO: check if super can handle offset
         self.offset = offset
 
-        self.names, endog, exog = self._check_inputs(endog, exog)
+        endog, labels, is_pandas = self._check_inputs(endog, exog)
 
         super(OrderedModel, self).__init__(endog, exog, **kwds)
 
-        unique, index = np.unique(self.endog, return_inverse=True)
-        self.k_levels = len(unique)
-        self.endog = index
-        self.labels = unique
+        if not is_pandas:
+            unique, index = np.unique(self.endog, return_inverse=True)
+            self.endog = index
+            labels = unique
+
+        self.labels = labels
+        self.k_levels = len(labels)
 
         if self.exog is not None:
             self.nobs, self.k_vars = self.exog.shape
         else:  # no exog in model
             self.nobs, self.k_vars = self.endog.shape[0], 0
+
+        threshold_names = [str(x) + '/' + str(y)
+                           for x, y in zip(labels[:-1], labels[1:])]
+
+        # from GenericLikelihoodModel.fit
+        if self.exog is not None:
+            self.exog_names.extend(threshold_names)
+        else:
+            self.data.xnames = threshold_names
+
         self.results_class = OrderedResults
 
     def _check_inputs(self, endog, exog):
@@ -106,20 +119,14 @@ class OrderedModel(GenericLikelihoodModel):
         support for endog and exog. Also retrieves columns & categories
         names for .summary() of the results class.
         """
-        names = {}
         if not isinstance(self.distr, stats.rv_continuous):
             msg = (
                 f"{self.distr.name} must be a scipy.stats distribution."
             )
             raise ValueError(msg)
 
-        # Pandas' support
-        if (isinstance(exog, pd.DataFrame)) or (isinstance(exog, pd.Series)):
-            exog_name = ([exog.name] if isinstance(exog, pd.Series)
-                         else exog.columns.tolist())
-            names['xname'] = exog_name
-            # exog = np.asarray(exog)
-
+        labels = None
+        is_pandas = False
         if isinstance(endog, pd.Series):
             if isinstance(endog.dtypes, CategoricalDtype):
                 if not endog.dtype.ordered:
@@ -129,20 +136,19 @@ class OrderedModel(GenericLikelihoodModel):
                                   "categories. ordered == True preferred.",
                                   Warning)
                 endog_name = endog.name
-                threshold_name = [str(x) + '/' + str(y)
-                                  for x, y in zip(endog.values.categories[:-1],
-                                                  endog.values.categories[1:])]
-                names['yname'] = endog_name
-                names['xname'] = names['xname'] + threshold_name
-                endog = np.asarray(endog.values.codes)
+                labels = endog.values.categories
+                endog = endog.cat.codes
+                if endog.min() == -1:  # means there is a missing value
+                    raise ValueError("missing values in categorical endog are "
+                                     "not supported")
+                endog.name = endog_name
+                is_pandas = True
             else:
-                msg = (
-                    "If the endog is a pandas.Serie "
-                    "it must be of categoricalDtype."
-                )
+                msg = ("If endog is a pandas.Series, "
+                       "it must be of CategoricalDtype.")
                 raise ValueError(msg)
 
-        return names, endog, exog
+        return endog, labels, is_pandas
 
     def cdf(self, x):
         """cdf evaluated at x
@@ -330,8 +336,3 @@ class OrderedResults(GenericLikelihoodModelResults):
                                    categories=categories, ordered=True)
         table = pd.crosstab(observed, predicted, margins=True, dropna=False)
         return table
-
-    @Appender(GenericLikelihoodModelResults.summary.__doc__)
-    def summary(self, yname=None, xname=None, title=None, alpha=.05):
-        names = self.model.names
-        return super(OrderedResults, self).summary(**names)

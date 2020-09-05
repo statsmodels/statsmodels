@@ -72,7 +72,16 @@ class CheckOrdinalModelMixin(object):
 
     def test_results_other(self):
 
-        res1 = self.res1
+        res1 = self.res1  # numpy
+        resp = self.resp  # pandas
+
+        param_names_np = ['x1', 'x2', 'x3', '0/1', '1/2']
+        param_names_pd = ['pared', 'public', 'gpa', 'unlikely/somewhat likely',
+                          'somewhat likely/very likely']
+
+        assert res1.model.data.param_names == param_names_np
+        assert self.resp.model.data.param_names == param_names_pd
+        assert self.resp.model.endog_names == "apply"
 
         # results
         if hasattr(self, "pred_table"):
@@ -85,7 +94,9 @@ class CheckOrdinalModelMixin(object):
         # inherited
         tt = res1.t_test(np.eye(len(res1.params)))
         assert_allclose(tt.pvalue, res1.pvalues, rtol=1e-13)
-        # TODO: test using string definition of constraints
+
+        tt = resp.t_test(['pared', 'public', 'gpa'])  # pandas names
+        assert_allclose(tt.pvalue, res1.pvalues[:3], rtol=1e-13)
 
         pred = res1.predict(exog=res1.model.exog[-5:])
         fitted = res1.predict()
@@ -194,7 +205,7 @@ class TestProbitModel(CheckOrdinalModelMixin):
         # null model
         mod_null = OrderedModel(mod.endog, None,
                                 offset=np.zeros(mod.nobs),
-                                distr='probit')
+                                distr=mod.distr)
         null_params = mod.start_params
         res_null = mod_null.fit(method='bfgs', disp=False)
         assert_allclose(res_null.params, null_params[mod.k_vars:], rtol=1e-8)
