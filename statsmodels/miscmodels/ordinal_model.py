@@ -118,7 +118,7 @@ class OrderedModel(GenericLikelihoodModel):
             exog_name = ([exog.name] if isinstance(exog, pd.Series)
                          else exog.columns.tolist())
             names['xname'] = exog_name
-            exog = np.asarray(exog)
+            # exog = np.asarray(exog)
 
         if isinstance(endog, pd.Series):
             if isinstance(endog.dtypes, CategoricalDtype):
@@ -315,6 +315,22 @@ class OrderedModel(GenericLikelihoodModel):
 
 
 class OrderedResults(GenericLikelihoodModelResults):
+
+    def pred_table(self):
+        """prediction table
+
+        returns pandas DataFrame
+
+        """
+        # todo: add category labels
+        categories = np.arange(self.model.k_levels)
+        observed = pd.Categorical(self.model.endog,
+                                  categories=categories, ordered=True)
+        predicted = pd.Categorical(self.predict().argmax(1),
+                                   categories=categories, ordered=True)
+        table = pd.crosstab(observed, predicted, margins=True, dropna=False)
+        return table
+
     @Appender(GenericLikelihoodModelResults.summary.__doc__)
     def summary(self, yname=None, xname=None, title=None, alpha=.05):
         names = self.model.names

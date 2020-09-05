@@ -5,7 +5,7 @@ Test  for ordinal models
 import numpy as np
 import scipy.stats as stats
 
-from numpy.testing import assert_allclose
+from numpy.testing import assert_allclose, assert_equal
 from .results.results_ordinal_model import data_store as ds
 from statsmodels.miscmodels.ordinal_model import OrderedModel
 
@@ -69,6 +69,27 @@ class CheckOrdinalModelMixin(object):
 
         assert_allclose(res1.model.endog, resf.model.endog, rtol=1e-10)
         assert_allclose(res1.model.exog, resf.model.exog, rtol=1e-10)
+
+    def test_results_other(self):
+
+        res1 = self.res1
+
+        # results
+        if hasattr(self, "pred_table"):
+            table = res1.pred_table()
+            assert_equal(table.values, self.pred_table)
+
+        # smoke test
+        res1.summary()
+
+        # inherited
+        tt = res1.t_test(np.eye(len(res1.params)))
+        assert_allclose(tt.pvalue, res1.pvalues, rtol=1e-13)
+        # TODO: test using string definition of constraints
+
+        pred = res1.predict(exog=res1.model.exog[-5:])
+        fitted = res1.predict()
+        assert_allclose(pred, fitted[-5:], rtol=1e-13)
 
 
 class TestLogitModel(CheckOrdinalModelMixin):
@@ -151,6 +172,12 @@ class TestProbitModel(CheckOrdinalModelMixin):
         cls.resf = resf
         cls.resu = resu
 
+        # regression numbers
+        cls.pred_table = np.array([[202,  18,   0, 220],
+                                   [112,  28,   0, 140],
+                                   [ 27,  13,   0,  40],  # noqa
+                                   [341,  59,   0, 400]], dtype=np.int64)
+
     def test_loglikerelated(self):
 
         res1 = self.res1
@@ -161,8 +188,8 @@ class TestProbitModel(CheckOrdinalModelMixin):
         score1 = mod.score(res1.params * fact)
         score_obs_numdiff = mod.score_obs(res1.params * fact)
         score_obs_exog = mod.score_obs_(res1.params * fact)
-        assert_allclose(score_obs_numdiff.sum(0), score1, rtol=1e-8)
-        assert_allclose(score_obs_exog.sum(0), score1[:mod.k_vars], rtol=1e-7)
+        assert_allclose(score_obs_numdiff.sum(0), score1, atol=1e-7)
+        assert_allclose(score_obs_exog.sum(0), score1[:mod.k_vars], atol=1e-7)
 
         # null model
         mod_null = OrderedModel(mod.endog, None,

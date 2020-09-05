@@ -24,8 +24,8 @@ print(np.unique(y))
 print(np.bincount(y))
 
 mod = OrderedModel(y, x)
-start_params = np.ones(k_vars + 4)
-start_params = np.concatenate((np.ones(k_vars), np.arange(4)))
+# start_params = np.ones(k_vars + 4)
+# start_params = np.concatenate((np.ones(k_vars), np.arange(4)))
 start_ppf = stats.norm.ppf((np.bincount(y) / len(y)).cumsum())
 start_threshold = np.concatenate((start_ppf[:1],
                                   np.log(np.diff(start_ppf[:-1]))))
