@@ -225,7 +225,7 @@ class ProcessMLE(base.LikelihoodModel):
     exog_smooth : array_like
         The design matrix for the smoothness structure
     exog_noise : array_like
-        The design matrix for the white noise structure. The
+        The design matrix for the additive white noise. The
         linear predictor is the log of the white noise standard
         deviation.  If None, there is no additive noise (the
         process is observed directly).
@@ -281,8 +281,10 @@ class ProcessMLE(base.LikelihoodModel):
 
         if self._has_noise:
             if hasattr(exog_noise, "columns"):
+                # If pandas-like, get the actual column names
                 xnames += list(exog_noise.columns)
             else:
+                # If numpy-like, create default names
                 xnames += ["Noise%d" % j for j in range(exog_noise.shape[1])]
 
         self.data.param_names = xnames
@@ -402,7 +404,10 @@ class ProcessMLE(base.LikelihoodModel):
 
         mod.data.scale_design_info = scale_design_info
         mod.data.smooth_design_info = smooth_design_info
-        mod.data.noise_design_info = noise_design_info
+
+        if mod._has_noise:
+            mod.data.noise_design_info = noise_design_info
+
         mod.data.param_names = (mod.exog_names + scale_names +
                                 smooth_names + noise_names)
 
@@ -425,7 +430,8 @@ class ProcessMLE(base.LikelihoodModel):
         ps = self.exog_smooth.shape[1]
         smpar = z[pm + pv:pm + pv + ps]
 
-        # Observation white noise standard deviation
+        # Observation white noise standard deviation.
+        # Empty if has_noise = False.
         nopar = z[pm + pv + ps:]
 
         return mnpar, scpar, smpar, nopar
@@ -438,7 +444,7 @@ class ProcessMLE(base.LikelihoodModel):
 
         m = self.exog_scale.shape[1] + self.exog_smooth.shape[1]
 
-        if self.exog_noise is not None:
+        if self._has_noise:
             m += self.exog_noise.shape[1]
 
         return np.concatenate((result.params, np.zeros(m)))
@@ -474,7 +480,7 @@ class ProcessMLE(base.LikelihoodModel):
         sm = np.exp(np.dot(self.exog_smooth, smpar))
 
         # White noise standard deviation
-        if self.exog_noise is not None:
+        if self._has_noise:
             no = np.exp(np.dot(self.exog_noise, nopar))
 
         # Get the log-likelihood
@@ -485,7 +491,7 @@ class ProcessMLE(base.LikelihoodModel):
             cm = self.cov.get_cov(self.time[ix], sc[ix], sm[ix])
 
             # The variance of the additive noise, if present.
-            if self.exog_noise is not None:
+            if self._has_noise:
                 cm.flat[::cm.shape[0] + 1] += no[ix]**2
 
             re = resid[ix]
@@ -529,7 +535,7 @@ class ProcessMLE(base.LikelihoodModel):
         sm = np.exp(np.dot(self.exog_smooth, smpar))
 
         # White noise standard deviation
-        if self.exog_noise is not None:
+        if self._has_noise:
             no = np.exp(np.dot(self.exog_noise, nopar))
 
         # Get the log-likelihood
@@ -547,7 +553,7 @@ class ProcessMLE(base.LikelihoodModel):
             # Get the covariance matrix for this person.
             cm = self.cov.get_cov(time_i, sc_i, sm_i)
 
-            if self.exog_noise is not None:
+            if self._has_noise:
                 no_i = no[ix]
                 exog_noise_i = self.exog_noise[ix, :]
                 cm.flat[::cm.shape[0] + 1] += no[ix]**2
@@ -579,7 +585,7 @@ class ProcessMLE(base.LikelihoodModel):
                          0.5 * np.sum(jacs[i] * cmi) * smx[i, :])
 
             # The derivatives with respect to the standard deviation parameters
-            if self.exog_noise is not None:
+            if self._has_noise:
                 sno = no_i[:, None]**2 * exog_noise_i
                 score[pm + pv + ps:] -= np.dot(cmi.flat[::cm.shape[0] + 1], sno)
                 bm = np.dot(cmi, np.dot(rx, cmi))
