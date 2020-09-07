@@ -11,6 +11,7 @@ import collections
 import statsmodels.tools.numdiff as nd
 from numpy.testing import assert_allclose, assert_equal
 
+
 # Parameters for a test model, with or without additive
 # noise.
 def model1(noise):

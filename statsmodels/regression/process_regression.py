@@ -587,7 +587,8 @@ class ProcessMLE(base.LikelihoodModel):
             # The derivatives with respect to the standard deviation parameters
             if self._has_noise:
                 sno = no_i[:, None]**2 * exog_noise_i
-                score[pm + pv + ps:] -= np.dot(cmi.flat[::cm.shape[0] + 1], sno)
+                score[pm + pv + ps:] -= np.dot(cmi.flat[::cm.shape[0] + 1],
+                    sno)
                 bm = np.dot(cmi, np.dot(rx, cmi))
                 score[pm + pv + ps:] += np.dot(bm.flat[::bm.shape[0] + 1], sno)
 
@@ -860,7 +861,7 @@ class ProcessMLEResults(base.GenericLikelihoodModelResults):
         df = pd.DataFrame()
 
         typ = (["Mean"] * self.k_exog + ["Scale"] * self.k_scale +
-                      ["Smooth"] * self.k_smooth)
+            ["Smooth"] * self.k_smooth)
         if self._has_noise:
             typ += ["SD"] * self.k_noise
         df["Type"] = typ
