@@ -103,6 +103,9 @@ class Model(object):
         for key in kwargs:
             if key in ['design_info', 'formula']:  # leave attached to data
                 continue
+            if key == 'frame':
+                data.frame = kwargs["frame"]
+                continue
             # pop so we do not start keeping all these twice or references
             try:
                 setattr(self, key, data.__dict__.pop(key))
@@ -191,12 +194,14 @@ class Model(object):
         kwargs.update({'missing_idx': missing_idx,
                        'missing': missing,
                        'formula': formula,  # attach formula for unpckling
-                       'design_info': design_info})
+                       'design_info': design_info,
+                       'frame': data
+                       })
         mod = cls(endog, exog, *args, **kwargs)
         mod.formula = formula
 
         # since we got a dataframe, attach the original
-        mod.data.frame = data
+        # mod.data.frame = data
         return mod
 
     @property

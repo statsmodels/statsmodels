@@ -10,8 +10,8 @@ import numpy as np
 import pandas as pd
 from pandas.api.types import CategoricalDtype
 from scipy import stats
-from statsmodels.base.model import GenericLikelihoodModel, \
-    GenericLikelihoodModelResults
+from statsmodels.base.model import (
+    GenericLikelihoodModel, GenericLikelihoodModelResults, LikelihoodModel)
 from statsmodels.compat.pandas import Appender
 
 
@@ -23,7 +23,8 @@ class OrderedModel(GenericLikelihoodModel):
     The mode assumes that the endogenous variable is ordered but that the
     labels have no numeric interpretation besides the ordering.
 
-    The model is based on a latent linear variable, where we observe only
+    The model is based on a latent linear variable, where we observe only a
+    discretization.
 
     y_latent = X beta + u
 
@@ -46,18 +47,18 @@ class OrderedModel(GenericLikelihoodModel):
     distribution. We use standardized distributions to avoid identifiability
     problems.
 
-
     Parameters
     ----------
     endog : array_like
-        endogenous or dependent ordered categorical variable with k levels.
+        Endogenous or dependent ordered categorical variable with k levels.
         Labels or values of endog will internally transformed to consecutive
         integers, 0, 1, 2, ...
         pd.Series with Categorical as dtype should be preferred as it gives
         the order relation between the levels.
+        If endog is not a pandas Categorical, then categories are
+        sorted in lexicographic order (by numpy.unique).
     exog : array_like
-        exogenous explanatory variables. This should not include an intercept.
-        (TODO: verify)
+        Exogenous, explanatory variables. This should not include an intercept.
         pd.DataFrame are also accepted.
     distr : string 'probit' or 'logit', or a distribution instance
         The default is currently 'probit' which uses the normal distribution
@@ -69,6 +70,7 @@ class OrderedModel(GenericLikelihoodModel):
     Status: initial version, subclasses `GenericLikelihoodModel`
 
     """
+    _formula_max_endog = np.inf
 
     def __init__(self, endog, exog, offset=None, distr='probit', **kwds):
 
@@ -87,12 +89,24 @@ class OrderedModel(GenericLikelihoodModel):
 
         endog, labels, is_pandas = self._check_inputs(endog, exog)
 
+        frame = kwds.pop("frame", None)
         super(OrderedModel, self).__init__(endog, exog, **kwds)
 
+        if frame is not None:
+            self.data.frame = frame
+
         if not is_pandas:
-            unique, index = np.unique(self.endog, return_inverse=True)
-            self.endog = index
-            labels = unique
+            # TODO: maybe handle 2-dim endog obtained from formula
+            if self.endog.ndim == 1:
+                unique, index = np.unique(self.endog, return_inverse=True)
+                self.endog = index
+                labels = unique
+            elif self.endog.ndim == 2:
+                endog_, labels, ynames = self._handle_formula_categorical()
+                # replace endog with categorical
+                self.endog = endog_
+                # fix yname
+                self.data.ynames = ynames
 
         self.labels = labels
         self.k_levels = len(labels)
@@ -114,11 +128,13 @@ class OrderedModel(GenericLikelihoodModel):
         self.results_class = OrderedResults
 
     def _check_inputs(self, endog, exog):
+        """handle endog that is pandas Categorical
+
+        checks if self.distrib is legal and does the Pandas Categorical
+        support for endog.
         """
-        checks if self.distrib is legal and does the Pandas
-        support for endog and exog. Also retrieves columns & categories
-        names for .summary() of the results class.
-        """
+
+        # TOCO: maybe remove this if we want to have duck distributions
         if not isinstance(self.distr, stats.rv_continuous):
             msg = (
                 f"{self.distr.name} must be a scipy.stats distribution."
@@ -135,6 +151,7 @@ class OrderedModel(GenericLikelihoodModel):
                                   "risk of capturing a wrong order for the "
                                   "categories. ordered == True preferred.",
                                   Warning)
+
                 endog_name = endog.name
                 labels = endog.values.categories
                 endog = endog.cat.codes
@@ -143,12 +160,44 @@ class OrderedModel(GenericLikelihoodModel):
                                      "not supported")
                 endog.name = endog_name
                 is_pandas = True
-            else:
-                msg = ("If endog is a pandas.Series, "
-                       "it must be of CategoricalDtype.")
-                raise ValueError(msg)
+#             else:
+#                 msg = ("If endog is a pandas.Series, "
+#                        "it must be of CategoricalDtype.")
+#                 raise ValueError(msg)
 
         return endog, labels, is_pandas
+
+    def _handle_formula_categorical(self):
+        """handle 2dim endog,
+
+        raise if not from formula with pandas ordered Categorical endog
+
+        """
+        # get info about formula and original data
+        if not hasattr(self.data.orig_endog, "design_info"):
+            msg = "2-dim endog are not supported"
+            raise ValueError(msg)
+
+        di_endog = self.data.orig_endog.design_info
+        if len(di_endog.terms) > 1:
+            raise ValueError("more than one term in endog")
+
+        factor = list(di_endog.factor_infos.values())[0]
+        labels = factor.categories
+        name = factor.state["eval_code"]
+        original_endog = self.data.frame[name]
+        if not (isinstance(original_endog.dtype, CategoricalDtype)
+                and original_endog.dtype.ordered):
+            msg = ("Only ordered pandas Categorical are supported as endog "
+                   "in formulas")
+            raise ValueError(msg)
+
+        # Now we should only have an ordered pandas Categorical
+
+        endog = self.endog.argmax(1)
+        # fix yname
+        ynames = name
+        return endog, labels, ynames
 
     def cdf(self, x):
         """cdf evaluated at x
@@ -268,7 +317,7 @@ class OrderedModel(GenericLikelihoodModel):
         """score, first derivative of loglike for each observations
 
         This currently only implements the derivative with respect to the
-        exog parameters, but not with respect to threshold-constant parameters.
+        exog parameters, but not with respect to threshold parameters.
 
         """
         low, upp = self._bounds(params)
