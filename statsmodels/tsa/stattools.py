@@ -1,12 +1,12 @@
 """
 Statistical tools for time series analysis
 """
-import warnings
-
 from statsmodels.compat.numpy import lstsq
 from statsmodels.compat.pandas import deprecate_kwarg
 from statsmodels.compat.python import lrange, lzip
 from statsmodels.compat.scipy import _next_regular
+
+import warnings
 
 import numpy as np
 from numpy.linalg import LinAlgError
@@ -130,14 +130,17 @@ def _autolag(
     elif method == "t-stat":
         # stop = stats.norm.ppf(.95)
         stop = 1.6448536269514722
+        # Default values to ensure that always set
+        bestlag = startlag + maxlag
+        icbest = 0.0
         for lag in range(startlag + maxlag, startlag - 1, -1):
             icbest = np.abs(results[lag].tvalues[-1])
+            bestlag = lag
             if np.abs(icbest) >= stop:
-                bestlag = lag
-                icbest = icbest
+                # Break for first lag with a significant t-stat
                 break
     else:
-        raise ValueError("Information Criterion %s not understood.") % method
+        raise ValueError(f"Information Criterion {method} not understood.")
 
     if not regresults:
         return icbest, bestlag
@@ -976,18 +979,21 @@ def pacf(x, nlags=None, method="ywadjusted", alpha=None):
     consistently worse than the other options.
     """
     nlags = int_like(nlags, "nlags", optional=True)
-    renames = {"ydu":"yda",
-               "ywu": "ywa",
-               "ywunbiased":"ywadjusted",
-               "ldunbiased":"ldadjusted",
-               "ld_unbiased":"ld_adjusted",
-               "ldu":"lda",
-               "ols-unbiased":"ols-adjusted"}
+    renames = {
+        "ydu": "yda",
+        "ywu": "ywa",
+        "ywunbiased": "ywadjusted",
+        "ldunbiased": "ldadjusted",
+        "ld_unbiased": "ld_adjusted",
+        "ldu": "lda",
+        "ols-unbiased": "ols-adjusted",
+    }
     if method in renames:
         warnings.warn(
             f"{method} has been renamed {renames[method]}. After release 0.13, "
             "using the old name will raise.",
-            FutureWarning)
+            FutureWarning,
+        )
         method = renames[method]
     methods = (
         "ols",
@@ -1347,7 +1353,8 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
         if lags.min() <= 0 or lags.size == 0:
             raise ValueError(
                 "maxlag must be a non-empty list containing only "
-                "positive integers")
+                "positive integers"
+            )
 
     if x.shape[0] <= 3 * maxlag + int(addconst):
         raise ValueError(
@@ -1871,9 +1878,13 @@ The test statistic is outside of the range of p-values available in the
 look-up table. The actual p-value is {direction} than the p-value returned.
 """
     if p_value == pvals[-1]:
-        warnings.warn(warn_msg.format(direction="smaller"), InterpolationWarning)
+        warnings.warn(
+            warn_msg.format(direction="smaller"), InterpolationWarning
+        )
     elif p_value == pvals[0]:
-        warnings.warn(warn_msg.format(direction="greater"), InterpolationWarning)
+        warnings.warn(
+            warn_msg.format(direction="greater"), InterpolationWarning
+        )
 
     crit_dict = {"10%": crit[0], "5%": crit[1], "2.5%": crit[2], "1%": crit[3]}
 
