@@ -693,7 +693,7 @@ class MixedLM(base.LikelihoodModel):
                  exog_vc=None, use_sqrt=True, missing='none',
                  **kwargs):
 
-        _allowed_kwargs = ["missing_idx", "design_info", "formula"]
+        _allowed_kwargs = ["missing_idx", "design_info", "formula", "frame"]
         for x in kwargs.keys():
             if x not in _allowed_kwargs:
                 raise ValueError(

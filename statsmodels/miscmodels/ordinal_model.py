@@ -89,11 +89,12 @@ class OrderedModel(GenericLikelihoodModel):
 
         endog, labels, is_pandas = self._check_inputs(endog, exog)
 
-        frame = kwds.pop("frame", None)
+        # frame = kwds.pop("frame", None)
         super(OrderedModel, self).__init__(endog, exog, **kwds)
 
-        if frame is not None:
-            self.data.frame = frame
+        # now handled by super, i.e. base.Model
+        # if frame is not None:
+        #     self.data.frame = frame.item()["data"]
 
         if not is_pandas:
             # TODO: maybe handle 2-dim endog obtained from formula
@@ -363,6 +364,7 @@ class OrderedModel(GenericLikelihoodModel):
                             method=method, maxiter=maxiter,
                             full_output=full_output,
                             disp=disp, callback=callback, **kwargs)
+
         # use the proper result class
         ordmlefit = OrderedResults(self, mlefit)
 
