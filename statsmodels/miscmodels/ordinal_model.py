@@ -89,11 +89,7 @@ class OrderedModel(GenericLikelihoodModel):
 
         endog, labels, is_pandas = self._check_inputs(endog, exog)
 
-        frame = kwds.pop("frame", None)
         super(OrderedModel, self).__init__(endog, exog, **kwds)
-
-        if frame is not None:
-            self.data.frame = frame
 
         if not is_pandas:
             # TODO: maybe handle 2-dim endog obtained from formula
@@ -102,28 +98,17 @@ class OrderedModel(GenericLikelihoodModel):
                 self.endog = index
                 labels = unique
             elif self.endog.ndim == 2:
-                endog_, labels, ynames = self._handle_formula_categorical()
-                # replace endog with categorical
-                self.endog = endog_
-                # fix yname
-                self.data.ynames = ynames
+                labels = [str(i) for i in range(self.endog.shape[1])]
+                labels = []
+                #self.endog = self.endog.argmax(1)
+                # endog_ = self.endog.argmax(1)
+#                 endog_, labels, ynames = self._handle_formula_categorical()
+#                 # replace endog with categorical
+#                 self.endog = endog_
+#                 # fix yname
+#                 self.data.ynames = ynames
 
-        self.labels = labels
-        self.k_levels = len(labels)
-
-        if self.exog is not None:
-            self.nobs, self.k_vars = self.exog.shape
-        else:  # no exog in model
-            self.nobs, self.k_vars = self.endog.shape[0], 0
-
-        threshold_names = [str(x) + '/' + str(y)
-                           for x, y in zip(labels[:-1], labels[1:])]
-
-        # from GenericLikelihoodModel.fit
-        if self.exog is not None:
-            self.exog_names.extend(threshold_names)
-        else:
-            self.data.xnames = threshold_names
+        self._initialize_labels(labels)
 
         self.results_class = OrderedResults
 
@@ -167,6 +152,25 @@ class OrderedModel(GenericLikelihoodModel):
 
         return endog, labels, is_pandas
 
+    def _initialize_labels(self, labels):
+        self.labels = labels
+        self.k_levels = len(labels)
+
+        if self.exog is not None:
+            self.nobs, self.k_vars = self.exog.shape
+        else:  # no exog in model
+            self.nobs, self.k_vars = self.endog.shape[0], 0
+
+        threshold_names = [str(x) + '/' + str(y)
+                           for x, y in zip(labels[:-1], labels[1:])]
+
+        # from GenericLikelihoodModel.fit
+        if self.exog is not None:
+            # avoid extending several times
+            self.exog_names.extend(threshold_names)
+        else:
+            self.data.xnames = threshold_names
+
     def _handle_formula_categorical(self):
         """handle 2dim endog,
 
@@ -198,6 +202,34 @@ class OrderedModel(GenericLikelihoodModel):
         # fix yname
         ynames = name
         return endog, labels, ynames
+
+    @classmethod
+    def from_formula(cls, formula, data, subset=None, drop_cols=None,
+                     *args, **kwargs):
+
+        if "0+" not in formula.replace(" ", ""):
+            import warnings
+            warnings.warn("Ordinal models should not include an intercept")
+
+        endog_name = formula.split("~")[0].strip()
+        original_endog = data[endog_name]
+
+        model = super(OrderedModel, cls).from_formula(
+            formula, data=data, *args, **kwargs)
+
+        if model.endog.ndim == 2:
+            if not (isinstance(original_endog.dtype, CategoricalDtype)
+                    and original_endog.dtype.ordered):
+                msg = ("Only ordered pandas Categorical are supported as endog"
+                       " in formulas")
+                raise ValueError(msg)
+
+            labels = original_endog.values.categories
+            model._initialize_labels(labels)
+            model.endog = model.endog.argmax(1)
+            model.data.ynames = endog_name
+
+        return model
 
     def cdf(self, x):
         """cdf evaluated at x
