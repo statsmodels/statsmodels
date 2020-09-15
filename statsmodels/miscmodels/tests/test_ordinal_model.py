@@ -4,6 +4,7 @@ Test  for ordinal models
 
 import numpy as np
 import scipy.stats as stats
+import pytest
 
 from numpy.testing import assert_allclose, assert_equal
 from .results.results_ordinal_model import data_store as ds
@@ -209,6 +210,30 @@ class TestProbitModel(CheckOrdinalModelMixin):
         null_params = mod.start_params
         res_null = mod_null.fit(method='bfgs', disp=False)
         assert_allclose(res_null.params, null_params[mod.k_vars:], rtol=1e-8)
+
+    def test_formula_categorical(self):
+
+        resp = self.resp
+        data = ds.df
+
+        "apply ~ pared + public + gpa - 1"
+        modf2 = OrderedModel.from_formula("apply ~ pared + public + gpa - 1",
+                                          data, distr='probit')
+        resf2 = modf2.fit(method='bfgs', disp=False)
+        assert_allclose(resf2.params, resp.params, atol=1e-8)
+        assert modf2.exog_names == resp.model.exog_names
+        assert modf2.data.ynames == resp.model.data.ynames
+        assert hasattr(modf2.data, "frame")
+        assert not hasattr(modf2, "frame")
+
+        with pytest.raises(ValueError):
+            OrderedModel.from_formula(
+                "apply ~ pared + public + gpa - 1",
+                data={"apply": np.asarray(data['apply']),
+                      "pared": data['pared'],
+                      "public": data['public'],
+                      "gpa": data['gpa']},
+                distr='probit')
 
 
 class TestCLogLogModel(CheckOrdinalModelMixin):
