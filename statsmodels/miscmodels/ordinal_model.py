@@ -11,7 +11,7 @@ import pandas as pd
 from pandas.api.types import CategoricalDtype
 from scipy import stats
 from statsmodels.base.model import (
-    GenericLikelihoodModel, GenericLikelihoodModelResults, LikelihoodModel)
+    GenericLikelihoodModel, GenericLikelihoodModelResults)
 from statsmodels.compat.pandas import Appender
 
 
@@ -84,7 +84,6 @@ class OrderedModel(GenericLikelihoodModel):
         if offset is not None:
             offset = np.asarray(offset)
 
-        # TODO: check if super can handle offset
         self.offset = offset
 
         endog, labels, is_pandas = self._check_inputs(endog, exog)
@@ -92,21 +91,19 @@ class OrderedModel(GenericLikelihoodModel):
         super(OrderedModel, self).__init__(endog, exog, **kwds)
 
         if not is_pandas:
-            # TODO: maybe handle 2-dim endog obtained from formula
             if self.endog.ndim == 1:
                 unique, index = np.unique(self.endog, return_inverse=True)
                 self.endog = index
                 labels = unique
             elif self.endog.ndim == 2:
+                if not hasattr(self, "design_info"):
+                    raise ValueError("2-dim endog not supported")
+                # this branch is currently only in support of from_formula
+                # labels here are only needed to choose k_levels in initialize
                 labels = [str(i) for i in range(self.endog.shape[1])]
                 labels = []
-                #self.endog = self.endog.argmax(1)
-                # endog_ = self.endog.argmax(1)
-#                 endog_, labels, ynames = self._handle_formula_categorical()
-#                 # replace endog with categorical
-#                 self.endog = endog_
-#                 # fix yname
-#                 self.data.ynames = ynames
+                # Note: Doing the following here would break from_formula
+                # self.endog = self.endog.argmax(1)
 
         self._initialize_labels(labels)
 
@@ -119,19 +116,18 @@ class OrderedModel(GenericLikelihoodModel):
         support for endog.
         """
 
-        # TOCO: maybe remove this if we want to have duck distributions
         if not isinstance(self.distr, stats.rv_continuous):
+            import warnings
             msg = (
-                f"{self.distr.name} must be a scipy.stats distribution."
+                f"{self.distr.name} is not a scipy.stats distribution."
             )
-            raise ValueError(msg)
+            raise warnings.warn(msg)
 
         labels = None
         is_pandas = False
         if isinstance(endog, pd.Series):
             if isinstance(endog.dtypes, CategoricalDtype):
                 if not endog.dtype.ordered:
-                    import warnings
                     warnings.warn("the endog has ordered == False, "
                                   "risk of capturing a wrong order for the "
                                   "categories. ordered == True preferred.",
@@ -145,10 +141,6 @@ class OrderedModel(GenericLikelihoodModel):
                                      "not supported")
                 endog.name = endog_name
                 is_pandas = True
-#             else:
-#                 msg = ("If endog is a pandas.Series, "
-#                        "it must be of CategoricalDtype.")
-#                 raise ValueError(msg)
 
         return endog, labels, is_pandas
 
@@ -167,41 +159,11 @@ class OrderedModel(GenericLikelihoodModel):
         # from GenericLikelihoodModel.fit
         if self.exog is not None:
             # avoid extending several times
+            if len(self.exog_names) > self.k_vars:
+                raise RuntimeError("something wrong with exog_names, too long")
             self.exog_names.extend(threshold_names)
         else:
             self.data.xnames = threshold_names
-
-    def _handle_formula_categorical(self):
-        """handle 2dim endog,
-
-        raise if not from formula with pandas ordered Categorical endog
-
-        """
-        # get info about formula and original data
-        if not hasattr(self.data.orig_endog, "design_info"):
-            msg = "2-dim endog are not supported"
-            raise ValueError(msg)
-
-        di_endog = self.data.orig_endog.design_info
-        if len(di_endog.terms) > 1:
-            raise ValueError("more than one term in endog")
-
-        factor = list(di_endog.factor_infos.values())[0]
-        labels = factor.categories
-        name = factor.state["eval_code"]
-        original_endog = self.data.frame[name]
-        if not (isinstance(original_endog.dtype, CategoricalDtype)
-                and original_endog.dtype.ordered):
-            msg = ("Only ordered pandas Categorical are supported as endog "
-                   "in formulas")
-            raise ValueError(msg)
-
-        # Now we should only have an ordered pandas Categorical
-
-        endog = self.endog.argmax(1)
-        # fix yname
-        ynames = name
-        return endog, labels, ynames
 
     @classmethod
     def from_formula(cls, formula, data, subset=None, drop_cols=None,
@@ -220,8 +182,8 @@ class OrderedModel(GenericLikelihoodModel):
         if model.endog.ndim == 2:
             if not (isinstance(original_endog.dtype, CategoricalDtype)
                     and original_endog.dtype.ordered):
-                msg = ("Only ordered pandas Categorical are supported as endog"
-                       " in formulas")
+                msg = ("Only ordered pandas Categorical are supported as "
+                       "endog in formulas")
                 raise ValueError(msg)
 
             labels = original_endog.values.categories
