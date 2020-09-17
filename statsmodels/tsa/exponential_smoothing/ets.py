@@ -1892,7 +1892,7 @@ class ETSResults(base.StateSpaceMLEResults):
         )
         # if end was outside of the sample, it is now the last point in the
         # sample
-        if start > end + out_of_sample + 1:
+        if start > end:
             raise ValueError(
                 "Prediction start cannot lie outside of the sample."
             )
