@@ -692,9 +692,9 @@ def test_prediction_results(austourists_model_fit):
     assert np.all(~np.isnan(summary["mean"]))
 
     # only out of sample prediction
-    pred = austourists_model_fit.get_prediction(start=67, end=80)
+    pred = austourists_model_fit.get_prediction(start=69, end=80)
     summary = pred.summary_frame()
-    assert len(summary["mean"].values) == 14
+    assert len(summary["mean"].values) == 12
     assert np.all(~np.isnan(summary["mean"]))
 
 
