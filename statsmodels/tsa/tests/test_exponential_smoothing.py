@@ -691,10 +691,34 @@ def test_prediction_results(austourists_model_fit):
     assert len(summary["mean"].values) == 81
     assert np.all(~np.isnan(summary["mean"]))
 
-    # only out of sample prediction
+    # long out of sample, starting in-sample
+    pred = austourists_model_fit.get_prediction(start=67, end=80)
+    summary = pred.summary_frame()
+    assert len(summary["mean"].values) == 14
+    assert np.all(~np.isnan(summary["mean"]))
+
+    # long out of sample, starting at end of sample
+    pred = austourists_model_fit.get_prediction(start=68, end=80)
+    summary = pred.summary_frame()
+    assert len(summary["mean"].values) == 13
+    assert np.all(~np.isnan(summary["mean"]))
+
+    # long out of sample, starting just out of sample
     pred = austourists_model_fit.get_prediction(start=69, end=80)
     summary = pred.summary_frame()
     assert len(summary["mean"].values) == 12
+    assert np.all(~np.isnan(summary["mean"]))
+
+    # long out of sample, starting long out of sample
+    pred = austourists_model_fit.get_prediction(start=79, end=80)
+    summary = pred.summary_frame()
+    assert len(summary["mean"].values) == 2
+    assert np.all(~np.isnan(summary["mean"]))
+
+    # long out of sample, `start`== `end`
+    pred = austourists_model_fit.get_prediction(start=80, end=80)
+    summary = pred.summary_frame()
+    assert len(summary["mean"].values) == 1
     assert np.all(~np.isnan(summary["mean"]))
 
 
