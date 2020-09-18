@@ -437,7 +437,7 @@ estimates are based on only {eff_series} (effective) series."""
     def _compute_using_svd(self):
         """SVD method to compute eigenvalues and eigenvecs"""
         x = self.transformed_data
-        u, s, v = np.linalg.svd(x)
+        u, s, v = np.linalg.svd(x, full_matrices=False)
         self.eigenvals = s ** 2.0
         self.eigenvecs = v.T
 
