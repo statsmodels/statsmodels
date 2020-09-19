@@ -109,7 +109,7 @@ class DescrStatsW(object):
         else:
             self.weights = np.asarray(weights).astype(float)
             # TODO: why squeeze?
-            if len(self.weights.shape) > 1:
+            if len(self.weights.shape) > 1 and len(self.weights) > 1:
                 self.weights = self.weights.squeeze()
         self.ddof = ddof
 
