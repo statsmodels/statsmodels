@@ -760,3 +760,10 @@ class TestZTest(object):
 
             ci = d1.zconfint_mean(alternative=alternatives[tc.alternative])
             assert_allclose(ci, tc_conf_int, rtol=1e-10)
+
+
+def test_weightstats_len_1():
+    x1 = [1]
+    w1 = [1]
+    d1 = DescrStatsW(x1, w1)
+    assert (d1.quantile([0.0, 0.5, 1.0]) == 1).all()
