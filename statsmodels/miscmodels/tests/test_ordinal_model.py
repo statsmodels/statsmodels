@@ -2,12 +2,15 @@
 Test  for ordinal models
 """
 
+import warnings
 import numpy as np
 import scipy.stats as stats
-import pytest
 import pandas as pd
+import pytest
 
 from numpy.testing import assert_allclose, assert_equal
+from statsmodels.tools.sm_exceptions import (
+    HessianInversionWarning, SpecificationWarning)
 from .results.results_ordinal_model import data_store as ds
 from statsmodels.miscmodels.ordinal_model import OrderedModel
 
@@ -133,13 +136,15 @@ class TestLogitModel(CheckOrdinalModelMixin):
                             distr='logit')
         resp = modp.fit(method='bfgs', disp=False)
         # fit with formula
-        modf = OrderedModel.from_formula(
-            "apply ~ pared + public + gpa - 1",
-            data={"apply": data['apply'].values.codes,
-                  "pared": data['pared'],
-                  "public": data['public'],
-                  "gpa": data['gpa']},
-            distr='logit')
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", SpecificationWarning)
+            modf = OrderedModel.from_formula(
+                "apply ~ pared + public + gpa - 1",
+                data={"apply": data['apply'].values.codes,
+                      "pared": data['pared'],
+                      "public": data['public'],
+                      "gpa": data['gpa']},
+                distr='logit')
         resf = modf.fit(method='bfgs', disp=False)
         # fit on data with ordered=False
         modu = OrderedModel(
@@ -173,13 +178,15 @@ class TestProbitModel(CheckOrdinalModelMixin):
                             distr='probit')
         resp = modp.fit(method='bfgs', disp=False)
 
-        modf = OrderedModel.from_formula(
-            "apply ~ pared + public + gpa - 1",
-            data={"apply": data['apply'].values.codes,
-                  "pared": data['pared'],
-                  "public": data['public'],
-                  "gpa": data['gpa']},
-            distr='probit')
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", SpecificationWarning)
+            modf = OrderedModel.from_formula(
+                "apply ~ pared + public + gpa - 1",
+                data={"apply": data['apply'].values.codes,
+                      "pared": data['pared'],
+                      "public": data['public'],
+                      "gpa": data['gpa']},
+                distr='probit')
         resf = modf.fit(method='bfgs', disp=False)
 
         modu = OrderedModel(
@@ -227,8 +234,11 @@ class TestProbitModel(CheckOrdinalModelMixin):
         resp = self.resp
         data = ds.df
 
-        modf2 = OrderedModel.from_formula("apply ~ pared + public + gpa - 1",
-                                          data, distr='probit')
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", SpecificationWarning)
+            formula = "apply ~ pared + public + gpa - 1"
+            modf2 = OrderedModel.from_formula(formula,
+                                              data, distr='probit')
         resf2 = modf2.fit(method='bfgs', disp=False)
         assert_allclose(resf2.params, resp.params, atol=1e-8)
         assert modf2.exog_names == resp.model.exog_names
@@ -237,19 +247,22 @@ class TestProbitModel(CheckOrdinalModelMixin):
         assert not hasattr(modf2, "frame")
 
         with pytest.raises(ValueError):
-            OrderedModel.from_formula(
-                "apply ~ pared + public + gpa - 1",
-                data={"apply": np.asarray(data['apply']),
-                      "pared": data['pared'],
-                      "public": data['public'],
-                      "gpa": data['gpa']},
-                distr='probit')
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", SpecificationWarning)
+                OrderedModel.from_formula(
+                    "apply ~ pared + public + gpa - 1",
+                    data={"apply": np.asarray(data['apply']),
+                          "pared": data['pared'],
+                          "public": data['public'],
+                          "gpa": data['gpa']},
+                    distr='probit')
 
 
 class TestLogitModelFormula():
 
     @classmethod
     def setup_class(cls):
+        warnings.simplefilter("ignore", SpecificationWarning)
         data = ds.df
         nobs = len(data)
         data["dummy"] = (np.arange(nobs) < (nobs / 2)).astype(float)
@@ -291,12 +304,13 @@ class TestLogitModelFormula():
         # warns but doesn't raise
         formula = "apply ~ 0 + pared + public + gpa + C(dummy)"
 
-        with pytest.warns(UserWarning):
+        with pytest.warns(SpecificationWarning):
             modf2 = OrderedModel.from_formula(formula, data, distr='logit')
 
-        with pytest.warns(UserWarning):
+        with pytest.warns(HessianInversionWarning):
             resf2 = modf2.fit(method='bfgs')
-            assert np.isnan(resf2.bse).all()
+        assert resf2.converged is False
+        # assert np.isnan(resf2.bse).all()
 
         assert_allclose(resf2.predict(data[:5]), fittedvalues[:5], rtol=1e-4)
 

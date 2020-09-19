@@ -10,6 +10,8 @@ import numpy as np
 import pandas as pd
 from pandas.api.types import CategoricalDtype
 from scipy import stats
+from statsmodels.tools.sm_exceptions import (
+    SpecificationWarning)
 from statsmodels.base.model import (
     GenericLikelihoodModel, GenericLikelihoodModelResults)
 from statsmodels.compat.pandas import Appender
@@ -180,7 +182,7 @@ class OrderedModel(GenericLikelihoodModel):
                 import warnings
                 msg = ("OrderedModel formulas should not include any '0' or "
                        "'1' terms if those create an implicit constant.")
-                warnings.warn(msg)
+                warnings.warn(msg, SpecificationWarning)
 
         endog_name = formula.split("~")[0].strip()
         original_endog = data[endog_name]
