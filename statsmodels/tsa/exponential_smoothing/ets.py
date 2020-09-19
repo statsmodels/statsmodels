@@ -2230,9 +2230,10 @@ class PredictionResults:
         )
         self.row_labels = self.predicted_mean.index
         self.endog = np.empty(nsmooth + ndynamic) * np.nan
-        self.endog[0 : (end - start + 1)] = results.data.endog[
-            start : (end + 1)
-        ]
+        if nsmooth > 0:
+            self.endog[0: (end - start + 1)] = results.data.endog[
+                start: (end + 1)
+            ]
         self.model = Bunch(
             data=results.model.data.__class__(
                 endog=self.endog, predict_dates=self.row_labels
@@ -2277,7 +2278,15 @@ class PredictionResults:
         else:  # method == 'exact'
             steps = np.ones(ndynamic + nsmooth)
             if ndynamic > 0:
-                steps[(start_dynamic - start) :] = range(1, ndynamic + 1)
+                steps[
+                    (start_dynamic - min(start_dynamic, start)):
+                    ] = range(1, ndynamic + 1)
+            # when we are doing out of sample only prediction,
+            # start > end + 1, and
+            # we only want to output beginning at start
+            if start > end + 1:
+                ndiscard = start - (end + 1)
+                steps = steps[ndiscard:]
             self.forecast_variance = (
                 results.mse * results._relative_forecast_variance(steps)
             )
