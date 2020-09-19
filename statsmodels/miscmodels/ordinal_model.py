@@ -169,15 +169,24 @@ class OrderedModel(GenericLikelihoodModel):
     def from_formula(cls, formula, data, subset=None, drop_cols=None,
                      *args, **kwargs):
 
-        if "0+" not in formula.replace(" ", ""):
-            import warnings
-            warnings.warn("Ordinal models should not include an intercept")
+        # we want an explicit Intercept in the model that we can remove
+        # Removing constant with "0 +" or "- 1" does not work for categ. exog
+        # copied from PHReg
+        import re
+        terms = re.split(r"[+\-~]", formula)
+        for term in terms:
+            term = term.strip()
+            if term in ("0", "1"):
+                import warnings
+                msg = ("OrderedModel formulas should not include any '0' or "
+                       "'1' terms if those create an implicit constant.")
+                warnings.warn(msg)
 
         endog_name = formula.split("~")[0].strip()
         original_endog = data[endog_name]
 
         model = super(OrderedModel, cls).from_formula(
-            formula, data=data, *args, **kwargs)
+            formula, data=data, drop_cols=["Intercept"], *args, **kwargs)
 
         if model.endog.ndim == 2:
             if not (isinstance(original_endog.dtype, CategoricalDtype)

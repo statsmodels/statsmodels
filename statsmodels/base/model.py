@@ -1060,7 +1060,9 @@ class Results(object):
         exog_index = exog.index if is_pandas else None
 
         if transform and hasattr(self.model, 'formula') and (exog is not None):
-            design_info = self.model.data.design_info
+            # allow both location of design_info, see #7043
+            design_info = (getattr(self.model, "design_info", None) or
+                           self.model.data.design_info)
             from patsy import dmatrix
             if isinstance(exog, pd.Series):
                 # we are guessing whether it should be column or row

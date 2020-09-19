@@ -5,6 +5,7 @@ Test  for ordinal models
 import numpy as np
 import scipy.stats as stats
 import pytest
+import pandas as pd
 
 from numpy.testing import assert_allclose, assert_equal
 from .results.results_ordinal_model import data_store as ds
@@ -101,6 +102,16 @@ class CheckOrdinalModelMixin(object):
 
         pred = res1.predict(exog=res1.model.exog[-5:])
         fitted = res1.predict()
+        assert_allclose(pred, fitted[-5:], rtol=1e-13)
+
+        pred = resp.predict(exog=resp.model.data.orig_exog.iloc[-5:])
+        fitted = resp.predict()
+        assert_allclose(pred, fitted[-5:], rtol=1e-13)
+
+        dataf = self.resf.model.data.frame  # is a dict
+        dataf_df = pd.DataFrame.from_dict(dataf)
+        pred = self.resf.predict(exog=dataf_df.iloc[-5:])
+        fitted = self.resf.predict()
         assert_allclose(pred, fitted[-5:], rtol=1e-13)
 
 
@@ -216,7 +227,6 @@ class TestProbitModel(CheckOrdinalModelMixin):
         resp = self.resp
         data = ds.df
 
-        "apply ~ pared + public + gpa - 1"
         modf2 = OrderedModel.from_formula("apply ~ pared + public + gpa - 1",
                                           data, distr='probit')
         resf2 = modf2.fit(method='bfgs', disp=False)
@@ -234,6 +244,61 @@ class TestProbitModel(CheckOrdinalModelMixin):
                       "public": data['public'],
                       "gpa": data['gpa']},
                 distr='probit')
+
+
+class TestLogitModelFormula():
+
+    @classmethod
+    def setup_class(cls):
+        data = ds.df
+        nobs = len(data)
+        data["dummy"] = (np.arange(nobs) < (nobs / 2)).astype(float)
+        # alias to correspond to patsy name
+        data["C(dummy)[T.1.0]"] = data["dummy"]
+        cls.data = data
+
+        columns = ['C(dummy)[T.1.0]', 'pared', 'public', 'gpa']
+        # standard fit
+        mod = OrderedModel(data['apply'].values.codes,
+                           np.asarray(data[columns], float),
+                           distr='logit')
+        cls.res = mod.fit(method='bfgs', disp=False)
+        # standard fit with pandas input
+        modp = OrderedModel(data['apply'],
+                            data[columns],
+                            distr='logit')
+        cls.resp = modp.fit(method='bfgs', disp=False)
+
+    def test_setup(self):
+        data = self.data
+        resp = self.resp
+        fittedvalues = resp.predict()
+
+        formulas = ["apply ~ 1 + pared + public + gpa + C(dummy)",
+                    "apply ~ pared + public + gpa + C(dummy)"]
+        for formula in formulas:
+            modf1 = OrderedModel.from_formula(formula, data, distr='logit')
+            resf1 = modf1.fit(method='bfgs')
+            summf1 = resf1.summary()
+            summf1_str = str(summf1)
+            assert resf1.model.exog_names == resp.model.exog_names
+            assert resf1.model.data.param_names == resp.model.exog_names
+            assert all(name in summf1_str for name in
+                       resp.model.data.param_names)
+            assert_allclose(resf1.predict(data[:5]), fittedvalues[:5])
+
+        # test over parameterized model with implicit constant
+        # warns but doesn't raise
+        formula = "apply ~ 0 + pared + public + gpa + C(dummy)"
+
+        with pytest.warns(UserWarning):
+            modf2 = OrderedModel.from_formula(formula, data, distr='logit')
+
+        with pytest.warns(UserWarning):
+            resf2 = modf2.fit(method='bfgs')
+            assert np.isnan(resf2.bse).all()
+
+        assert_allclose(resf2.predict(data[:5]), fittedvalues[:5], rtol=1e-4)
 
 
 class TestCLogLogModel(CheckOrdinalModelMixin):
@@ -263,13 +328,14 @@ class TestCLogLogModel(CheckOrdinalModelMixin):
                             distr=cloglog)
         resp = modp.fit(method='bfgs', disp=False)
 
-        modf = OrderedModel.from_formula(
-            "apply ~ pared + public + gpa - 1",
-            data={"apply": data['apply'].values.codes,
-                  "pared": data['pared'],
-                  "public": data['public'],
-                  "gpa": data['gpa']},
-            distr=cloglog)
+        with pytest.warns(UserWarning):
+            modf = OrderedModel.from_formula(
+                "apply ~ pared + public + gpa - 1",
+                data={"apply": data['apply'].values.codes,
+                      "pared": data['pared'],
+                      "public": data['public'],
+                      "gpa": data['gpa']},
+                distr=cloglog)
         resf = modf.fit(method='bfgs', disp=False)
 
         modu = OrderedModel(
