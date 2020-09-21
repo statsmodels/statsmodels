@@ -292,6 +292,9 @@ class OrderedModel(GenericLikelihoodModel):
         return linpred
 
     def _bounds(self, params):
+        """integration bounds for the observation specific interval
+
+        """
         thresh = self.transform_threshold_params(params)
 
         thresh_i_low = thresh[self.endog]
@@ -303,15 +306,7 @@ class OrderedModel(GenericLikelihoodModel):
 
     def loglike(self, params):
 
-        thresh = self.transform_threshold_params(params)
-
-        thresh_i_low = thresh[self.endog]
-        thresh_i_upp = thresh[self.endog + 1]
-        xb = self._linpred(params)
-        low = thresh_i_low - xb
-        upp = thresh_i_upp - xb
-        prob = self.prob(low, upp)
-        return np.log(prob + 1e-20).sum()
+        return self.loglikeobs(params).sum()
 
     def loglikeobs(self, params):
 

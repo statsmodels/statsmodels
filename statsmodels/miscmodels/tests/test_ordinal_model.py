@@ -283,7 +283,8 @@ class TestProbitModel(CheckOrdinalModelMixin):
         assert_allclose(pred_zero1, pred_zero2, atol=2e-4)
 
         # compare with equivalent results frp, no-offset model
-        pred_zero = resp.predict(data.iloc[:6, 1:], offset=-np.ones(6))
+        pred_zero = resp.predict(data[['pared', 'public', 'gpa']].iloc[:6],
+                                 offset=-np.ones(6))
         assert_allclose(pred_zero1, pred_zero, atol=2e-4)
 
         params_adj = resp.params.copy()
