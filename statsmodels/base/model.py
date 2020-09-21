@@ -2492,6 +2492,13 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
         self._cache = {}
         self.__dict__.update(mlefit.__dict__)
 
+        k_params = len(mlefit.params)
+        # checks mainly for adding new models or subclassing
+        if self.df_model + self.model.k_constant != k_params:
+            warnings.warn("df_model + k_constant differs from nparams")
+        if self.df_resid != self.nobs - k_params:
+            warnings.warn("df_resid differs from nobs - nparams")
+
     def summary(self, yname=None, xname=None, title=None, alpha=.05):
         """Summarize the Regression Results
 

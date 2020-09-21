@@ -90,7 +90,7 @@ class OrderedModel(GenericLikelihoodModel):
         endog, labels, is_pandas = self._check_inputs(endog, exog)
 
         super(OrderedModel, self).__init__(endog, exog, **kwds)
-
+        k_levels = None  # initialize
         if not is_pandas:
             if self.endog.ndim == 1:
                 unique, index = np.unique(self.endog, return_inverse=True)
@@ -100,8 +100,8 @@ class OrderedModel(GenericLikelihoodModel):
                 if not hasattr(self, "design_info"):
                     raise ValueError("2-dim endog not supported")
                 # this branch is currently only in support of from_formula
-                # labels here are only needed to choose k_levels in initialize
-                labels = [str(i) for i in range(self.endog.shape[1])]
+                # we need to initialize k_levels correctly for df_resid
+                k_levels = self.endog.shape[1]
                 labels = []
                 # Note: Doing the following here would break from_formula
                 # self.endog = self.endog.argmax(1)
@@ -109,7 +109,12 @@ class OrderedModel(GenericLikelihoodModel):
         if self.k_constant > 0:
             raise ValueError("there should not be a constant in the model")
 
-        self._initialize_labels(labels)
+        self._initialize_labels(labels, k_levels=k_levels)
+
+        # adjust df
+        self.k_extra = self.k_levels - 1
+        self.df_model = self.k_vars + self.k_extra
+        self.df_resid = self.nobs - self.df_model
 
         self.results_class = OrderedResults
 
@@ -148,9 +153,12 @@ class OrderedModel(GenericLikelihoodModel):
 
         return endog, labels, is_pandas
 
-    def _initialize_labels(self, labels):
+    def _initialize_labels(self, labels, k_levels=None):
         self.labels = labels
-        self.k_levels = len(labels)
+        if k_levels is None:
+            self.k_levels = len(labels)
+        else:
+            self.k_levels = k_levels
 
         if self.exog is not None:
             self.nobs, self.k_vars = self.exog.shape
@@ -363,6 +371,9 @@ class OrderedModel(GenericLikelihoodModel):
                             disp=disp, callback=callback, **kwargs)
         # use the proper result class
         ordmlefit = OrderedResults(self, mlefit)
+
+        # TODO: temporary, needs better fix, modelwc adds 1 by default
+        ordmlefit.hasconst = 0
 
         return ordmlefit
 

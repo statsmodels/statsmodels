@@ -13,6 +13,9 @@ from statsmodels.tools.sm_exceptions import HessianInversionWarning
 from .results.results_ordinal_model import data_store as ds
 from statsmodels.miscmodels.ordinal_model import OrderedModel
 
+from statsmodels.discrete.discrete_model import Logit
+from statsmodels.tools.tools import add_constant
+
 
 class CheckOrdinalModelMixin(object):
 
@@ -115,6 +118,9 @@ class CheckOrdinalModelMixin(object):
         pred = self.resf.predict(exog=dataf_df.iloc[-5:])
         fitted = self.resf.predict()
         assert_allclose(pred, fitted[-5:], rtol=1e-13)
+
+        n, k = res1.model.exog.shape
+        assert_equal(self.resf.df_resid, n - (k + 2))
 
 
 class TestLogitModel(CheckOrdinalModelMixin):
@@ -393,3 +399,46 @@ class TestCLogLogModel(CheckOrdinalModelMixin):
         cls.resp = resp
         cls.resf = resf
         cls.resu = resu
+
+
+class TestLogitBinary():
+    # compare OrderedModel with discrete Logit for binary case
+    def test_attributes(self):
+        data = ds.df
+
+        mask_drop = data['apply'] == "somewhat likely"
+        data2 = data.loc[~mask_drop, :]
+        # we need to remove the category also from the Categorical Index
+        data2['apply'].cat.remove_categories("somewhat likely", inplace=True)
+
+        # standard fit with pandas input
+        modp = OrderedModel(data2['apply'],
+                            data2[['pared', 'public', 'gpa']],
+                            distr='logit')
+        resp = modp.fit(method='bfgs', disp=False)
+
+        exog = add_constant(data2[['pared', 'public', 'gpa']], prepend=False)
+        mod_logit = Logit(data2['apply'].cat.codes, exog)
+        res_logit = mod_logit.fit()
+
+        attributes = "bse df_resid llf aic bic".split()
+        assert_allclose(resp.params[:3], res_logit.params[:3], rtol=1e-5)
+        assert_allclose(resp.params[3], -res_logit.params[3], rtol=1e-5)
+        for attr in attributes:
+            assert_allclose(getattr(resp, attr), getattr(res_logit, attr),
+                            rtol=1e-4)
+
+        resp = modp.fit(method='bfgs', disp=False,
+                        cov_type="hac", cov_kwds={"maxlags": 2})
+        res_logit = mod_logit.fit(method='bfgs', disp=False,
+                                  cov_type="hac", cov_kwds={"maxlags": 2})
+        for attr in attributes:
+            assert_allclose(getattr(resp, attr), getattr(res_logit, attr),
+                            rtol=1e-4)
+
+        resp = modp.fit(method='bfgs', disp=False, cov_type="hc1")
+        res_logit = mod_logit.fit(method='bfgs', disp=False,
+                                  cov_type="hc1")
+        for attr in attributes:
+            assert_allclose(getattr(resp, attr), getattr(res_logit, attr),
+                            rtol=1e-4)
