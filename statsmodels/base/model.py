@@ -789,6 +789,7 @@ class GenericLikelihoodModel(LikelihoodModel):
         if hessian is not None:
             self.hessian = hessian
 
+        hasconst = kwds.pop("hasconst", None)
         self.__dict__.update(kwds)
 
         # TODO: data structures?
@@ -797,7 +798,8 @@ class GenericLikelihoodModel(LikelihoodModel):
         # self.df_model = 9999
         # somewhere: CacheWriteWarning: 'df_model' cannot be overwritten
         super(GenericLikelihoodModel, self).__init__(endog, exog,
-                                                     missing=missing)
+                                                     missing=missing,
+                                                     hasconst=hasconst)
 
         # this will not work for ru2nmnl, maybe np.ndim of a dict?
         if exog is not None:
