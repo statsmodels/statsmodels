@@ -240,6 +240,8 @@ class TestProbitModel(CheckOrdinalModelMixin):
         assert not hasattr(modf2, "frame")
 
         with pytest.raises(ValueError):
+            # only ordered categorical or numerical endog are allowed
+            # string endog raises ValueError
             OrderedModel.from_formula(
                 "apply ~ pared + public + gpa - 1",
                 data={"apply": np.asarray(data['apply']),
@@ -247,6 +249,41 @@ class TestProbitModel(CheckOrdinalModelMixin):
                       "public": data['public'],
                       "gpa": data['gpa']},
                 distr='probit')
+
+    def test_offset(self):
+
+        resp = self.resp
+        data = ds.df
+        offset = np.ones(len(data))
+
+        formula = "apply ~ pared + public + gpa - 1"
+        modf2 = OrderedModel.from_formula(formula, data, offset=offset,
+                                          distr='probit')
+        resf2 = modf2.fit(method='bfgs', disp=False)
+
+        assert_allclose(resf2.params[:3], resp.params[:3], atol=2e-4)
+        assert_allclose(resf2.params[3], resp.params[3] + 1, atol=2e-4)
+
+        fitted = resp.predict()
+        fitted2 = resf2.predict()
+        assert_allclose(fitted2, fitted, atol=2e-4)
+
+        pred_ones = resf2.predict(data[:6], offset=np.ones(6))
+        assert_allclose(pred_ones, fitted[:6], atol=2e-4)
+
+        # check default is 0. if exog provided
+        pred_zero1 = resf2.predict(data[:6])
+        pred_zero2 = resf2.predict(data[:6], offset=0)
+        assert_allclose(pred_zero1, pred_zero2, atol=2e-4)
+
+        # compare with equivalent results frp, no-offset model
+        pred_zero = resp.predict(data.iloc[:6, 1:], offset=-np.ones(6))
+        assert_allclose(pred_zero1, pred_zero, atol=2e-4)
+
+        params_adj = resp.params.copy()
+        params_adj[3] += 1
+        fitted_zero = resp.model.predict(params_adj)
+        assert_allclose(pred_zero1, fitted_zero[:6], atol=2e-4)
 
 
 class TestLogitModelFormula():

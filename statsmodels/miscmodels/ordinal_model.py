@@ -245,21 +245,15 @@ class OrderedModel(GenericLikelihoodModel):
                                         np.log(np.diff(start_ppf[:-1]))))
         return thresh_params
 
-    def predict(self, params, exog=None):
+    def predict(self, params, exog=None, offset=None):
         """predicted probabilities for each level of the ordinal endog.
 
 
         """
-        if exog is None:
-            exog = self.exog
-        # structure of params = [beta, constants_or_thresholds]
+        # note, exog and offset handling is in linpred
 
-        # explicit in several steps to avoid bugs
-        th_params = params[-(self.k_levels - 1):]
-        thresh = np.concatenate((th_params[:1],
-                                 np.exp(th_params[1:]))).cumsum()
-        thresh = np.concatenate(([-np.inf], thresh, [np.inf]))
-        xb = exog.dot(params[:-(self.k_levels - 1)])[:, None]
+        thresh = self.transform_threshold_params(params)
+        xb = self._linpred(params, exog=exog, offset=offset)[:, None]
         low = thresh[:-1] - xb
         upp = thresh[1:] - xb
         prob = self.prob(low, upp)
@@ -272,10 +266,17 @@ class OrderedModel(GenericLikelihoodModel):
         """
         if exog is None:
             exog = self.exog
-        if offset is None:
-            offset = self.offset
+            if offset is None:
+                offset = self.offset
+        else:
+            if offset is None:
+                offset = 0
+
+        if offset is not None:
+            offset = np.asarray(offset)
+
         if exog is not None:
-            linpred = self.exog.dot(params[:-(self.k_levels - 1)])
+            linpred = exog.dot(params[:-(self.k_levels - 1)])
         else:  # means self.exog is also None
             linpred = np.zeros(self.nobs)
         if offset is not None:
