@@ -10,8 +10,7 @@ import numpy as np
 import pandas as pd
 from pandas.api.types import CategoricalDtype
 from scipy import stats
-from statsmodels.tools.sm_exceptions import (
-    SpecificationWarning)
+
 from statsmodels.base.model import (
     GenericLikelihoodModel, GenericLikelihoodModelResults)
 from statsmodels.compat.pandas import Appender
@@ -107,6 +106,9 @@ class OrderedModel(GenericLikelihoodModel):
                 # Note: Doing the following here would break from_formula
                 # self.endog = self.endog.argmax(1)
 
+        if self.k_constant > 0:
+            raise ValueError("there should not be a constant in the model")
+
         self._initialize_labels(labels)
 
         self.results_class = OrderedResults
@@ -173,16 +175,6 @@ class OrderedModel(GenericLikelihoodModel):
 
         # we want an explicit Intercept in the model that we can remove
         # Removing constant with "0 +" or "- 1" does not work for categ. exog
-        # copied from PHReg
-        import re
-        terms = re.split(r"[+\-~]", formula)
-        for term in terms:
-            term = term.strip()
-            if term in ("0", "1"):
-                import warnings
-                msg = ("OrderedModel formulas should not include any '0' or "
-                       "'1' terms if those create an implicit constant.")
-                warnings.warn(msg, SpecificationWarning)
 
         endog_name = formula.split("~")[0].strip()
         original_endog = data[endog_name]
