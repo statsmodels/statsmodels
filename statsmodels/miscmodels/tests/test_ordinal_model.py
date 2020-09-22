@@ -229,6 +229,7 @@ class TestProbitModel(CheckOrdinalModelMixin):
         null_params = mod.start_params
         res_null = mod_null.fit(method='bfgs', disp=False)
         assert_allclose(res_null.params, null_params[mod.k_vars:], rtol=1e-8)
+        assert_allclose(res1.llnull, res_null.llf, rtol=1e-8)
 
     def test_formula_categorical(self):
 
@@ -422,7 +423,8 @@ class TestLogitBinary():
         mod_logit = Logit(data2['apply'].cat.codes, exog)
         res_logit = mod_logit.fit()
 
-        attributes = "bse df_resid llf aic bic".split()
+        attributes = "bse df_resid llf aic bic llnull".split()
+        attributes += "llnull llr llr_pvalue prsquared".split()
         assert_allclose(resp.params[:3], res_logit.params[:3], rtol=1e-5)
         assert_allclose(resp.params[3], -res_logit.params[3], rtol=1e-5)
         for attr in attributes:

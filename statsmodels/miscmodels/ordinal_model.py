@@ -11,6 +11,7 @@ import pandas as pd
 from pandas.api.types import CategoricalDtype
 from scipy import stats
 
+from statsmodels.tools.decorators import cache_readonly
 from statsmodels.base.model import (
     GenericLikelihoodModel, GenericLikelihoodModelResults)
 from statsmodels.compat.pandas import Appender
@@ -130,7 +131,7 @@ class OrderedModel(GenericLikelihoodModel):
             msg = (
                 f"{self.distr.name} is not a scipy.stats distribution."
             )
-            raise warnings.warn(msg)
+            warnings.warn(msg)
 
         labels = None
         is_pandas = False
@@ -389,3 +390,36 @@ class OrderedResults(GenericLikelihoodModelResults):
                                    categories=categories, ordered=True)
         table = pd.crosstab(observed, predicted, margins=True, dropna=False)
         return table
+
+    @cache_readonly
+    def llnull(self):
+        """
+        Value of the loglikelihood of model without explanatory variables
+        """
+        params_null = self.model.start_params
+        return self.model.loglike(params_null)
+
+    # next 3 are copied from discrete
+    @cache_readonly
+    def prsquared(self):
+        """
+        McFadden's pseudo-R-squared. `1 - (llf / llnull)`
+        """
+        return 1 - self.llf/self.llnull
+
+    @cache_readonly
+    def llr(self):
+        """
+        Likelihood ratio chi-squared statistic; `-2*(llnull - llf)`
+        """
+        return -2*(self.llnull - self.llf)
+
+    @cache_readonly
+    def llr_pvalue(self):
+        """
+        The chi-squared probability of getting a log-likelihood ratio
+        statistic greater than llr.  llr has a chi-squared distribution
+        with degrees of freedom `df_model`.
+        """
+        # number of restrictions is number of exog
+        return stats.distributions.chi2.sf(self.llr, self.model.k_vars)
