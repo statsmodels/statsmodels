@@ -122,6 +122,10 @@ class CheckOrdinalModelMixin(object):
         n, k = res1.model.exog.shape
         assert_equal(self.resf.df_resid, n - (k + 2))
 
+        # check wrapper
+        assert resp.params.index.tolist() == resp.model.exog_names
+        assert resp.bse.index.tolist() == resp.model.exog_names
+
 
 class TestLogitModel(CheckOrdinalModelMixin):
 

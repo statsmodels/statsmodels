@@ -15,6 +15,9 @@ from statsmodels.tools.decorators import cache_readonly
 from statsmodels.base.model import (
     GenericLikelihoodModel, GenericLikelihoodModelResults)
 from statsmodels.compat.pandas import Appender
+# for results wrapper:
+import statsmodels.regression.linear_model as lm
+import statsmodels.base.wrapper as wrap
 
 
 class OrderedModel(GenericLikelihoodModel):
@@ -371,7 +374,9 @@ class OrderedModel(GenericLikelihoodModel):
         # TODO: temporary, needs better fix, modelwc adds 1 by default
         ordmlefit.hasconst = 0
 
-        return ordmlefit
+        result = OrderedResultsWrapper(ordmlefit)
+
+        return result
 
 
 class OrderedResults(GenericLikelihoodModelResults):
@@ -423,3 +428,10 @@ class OrderedResults(GenericLikelihoodModelResults):
         """
         # number of restrictions is number of exog
         return stats.distributions.chi2.sf(self.llr, self.model.k_vars)
+
+
+class OrderedResultsWrapper(lm.RegressionResultsWrapper):
+    pass
+
+
+wrap.populate_wrapper(OrderedResultsWrapper, OrderedResults)
