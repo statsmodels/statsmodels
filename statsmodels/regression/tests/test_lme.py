@@ -157,7 +157,10 @@ class TestMixedLM(object):
             # about the Hessian for the square root
             # transformed parameter).
             if (profile_fe is False) and (use_sqrt is False):
-                hess = -model.hessian(rslt.params_object)
+                hess, sing = model.hessian(rslt.params_object)
+                if sing:
+                    pytest.fail("hessian should not be singular")
+                hess *= -1
                 params_vec = rslt.params_object.get_packed(
                     use_sqrt=False, has_fe=True)
                 loglike_h = loglike_function(
