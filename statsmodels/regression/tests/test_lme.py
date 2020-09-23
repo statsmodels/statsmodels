@@ -1239,7 +1239,7 @@ class TestSMWLogdet(object):
 
 
 def test_singular():
-    #7051
+    # Issue #7051
 
     np.random.seed(3423)
     n = 100
