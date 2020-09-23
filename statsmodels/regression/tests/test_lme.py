@@ -469,7 +469,7 @@ class TestMixedLM(object):
         data = pd.read_csv(fname)
         model = MixedLM.from_formula(
             "Weight ~ Time", groups="Pig", re_formula="1 + Time", data=data)
-        result = model.fit(method='powell')
+        result = model.fit(method="cg")
 
         # fixef(r)
         assert_allclose(
@@ -496,7 +496,7 @@ class TestMixedLM(object):
         data = pd.read_csv(fname)
         model = MixedLM.from_formula(
             "Weight ~ Time", groups="Pig", re_formula="1 + Time", data=data)
-        result = model.fit(method='powell', reml=False)
+        result = model.fit(method='cg', reml=False)
 
         # fixef(r)
         assert_allclose(result.fe_params, np.r_[15.73863, 6.93902], rtol=1e-5)
@@ -1233,6 +1233,24 @@ class TestSMWLogdet(object):
     @pytest.mark.parametrize("s", [0, 0.5])
     def test_smw_logdet(self, p, q, r, s):
         check_smw_logdet(p, q, r, s)
+
+
+def test_singular():
+    #7051
+
+    np.random.seed(3423)
+    n = 100
+
+    data = np.random.randn(n, 2)
+    df = pd.DataFrame(data, columns=['Y', 'X'])
+    df['class'] = pd.Series([i % 3 for i in df.index], index=df.index)
+
+    with pytest.warns(Warning) as wrn:
+        md = MixedLM.from_formula("Y ~ X", df, groups=df['class'])
+        mdf = md.fit()
+        mdf.summary()
+        if not wrn:
+            pytest.fail("warning expected")
 
 
 def test_get_distribution():
