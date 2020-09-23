@@ -1237,7 +1237,10 @@ class MixedLM(base.LikelihoodModel):
 
         # Get the Hessian including only the nonzero fixed effects,
         # then blow back up to the full size after inverting.
-        hess = self.hessian(params_prof)
+        hess, sing = self.hessian(params_prof)
+        if sing:
+            warnings.warn(_warn_cov_sing)
+
         pcov = np.nan * np.ones_like(hess)
         ii = np.abs(params_prof) > ceps
         ii[self.k_fe:] = True
@@ -1494,7 +1497,7 @@ class MixedLM(base.LikelihoodModel):
         if profile_fe:
             fe_params, sing = self.get_fe_params(cov_re, vcomp)
             if sing:
-                warnings.warn(_warn_cov_sing)
+                self._cov_sing += 1
         else:
             fe_params = params.fe_params
 
@@ -1503,7 +1506,7 @@ class MixedLM(base.LikelihoodModel):
                 cov_re_inv = np.linalg.inv(cov_re)
             except np.linalg.LinAlgError:
                 cov_re_inv = np.linalg.pinv(cov_re)
-                warnings.warn(_warn_cov_sing)
+                self._cov_sing += 1
             _, cov_re_logdet = np.linalg.slogdet(cov_re)
         else:
             cov_re_inv = np.zeros((0, 0))
@@ -1694,7 +1697,7 @@ class MixedLM(base.LikelihoodModel):
             cov_re_inv = np.linalg.inv(cov_re)
         except np.linalg.LinAlgError:
             cov_re_inv = np.linalg.pinv(cov_re)
-            warnings.warn(_warn_cov_sing)
+            self._cov_sing += 1
 
         score_fe = np.zeros(self.k_fe)
         score_re = np.zeros(self.k_re2)
@@ -1868,6 +1871,9 @@ class MixedLM(base.LikelihoodModel):
         -------
         hess : 2d ndarray
             The Hessian matrix, evaluated at `params`.
+        sing : boolean
+            If True, the covariance matrix is singular and a
+            pseudo-inverse is returned.
         """
 
         if type(params) is not MixedLMParams:
@@ -1878,12 +1884,14 @@ class MixedLM(base.LikelihoodModel):
         fe_params = params.fe_params
         vcomp = params.vcomp
         cov_re = params.cov_re
+        sing = False
+
         if self.k_re > 0:
             try:
                 cov_re_inv = np.linalg.inv(cov_re)
             except np.linalg.LinAlgError:
                 cov_re_inv = np.linalg.pinv(cov_re)
-                warnings.warn(_warn_cov_sing)
+                sing = True
         else:
             cov_re_inv = np.empty((0, 0))
 
@@ -1906,10 +1914,16 @@ class MixedLM(base.LikelihoodModel):
         for group_ix, group in enumerate(self.group_labels):
 
             vc_var = self._expand_vcomp(vcomp, group_ix)
+            vc_vari = np.zeros_like(vc_var)
+            ii = np.flatnonzero(vc_var >= 1e-10)
+            if len(ii) > 0:
+                vc_vari[ii] = 1 / vc_var[ii]
+            if len(ii) < len(vc_var):
+                sing = True
 
             exog = self.exog_li[group_ix]
             ex_r, ex2_r = self._aex_r[group_ix], self._aex_r2[group_ix]
-            solver = _smw_solver(1., ex_r, ex2_r, cov_re_inv, 1 / vc_var)
+            solver = _smw_solver(1., ex_r, ex2_r, cov_re_inv, vc_vari)
 
             # The residuals
             resid = self.endog_li[group_ix]
@@ -2011,7 +2025,7 @@ class MixedLM(base.LikelihoodModel):
         hess[self.k_fe:, 0:self.k_fe] = hess_fere
         hess[self.k_fe:, self.k_fe:] = hess_re
 
-        return hess
+        return hess, sing
 
     def get_scale(self, fe_params, cov_re, vcomp):
         """
@@ -2134,7 +2148,7 @@ class MixedLM(base.LikelihoodModel):
         self.reml = reml
         self.cov_pen = cov_pen
         self.fe_pen = fe_pen
-
+        self._cov_sing = 0
         self._freepat = free
 
         if full_output:
@@ -2226,7 +2240,10 @@ class MixedLM(base.LikelihoodModel):
         # Hessian with respect to the random effects covariance matrix
         # (not its square root).  It is used for obtaining standard
         # errors, not for optimization.
-        hess = self.hessian(params)
+        hess, sing = self.hessian(params)
+        if sing:
+            warnings.warn(_warn_cov_sing)
+
         hess_diag = np.diag(hess)
         if free is not None:
             pcov = np.zeros_like(hess)
