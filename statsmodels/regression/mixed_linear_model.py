@@ -156,6 +156,8 @@ from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools import data as data_tools
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
 
+_warn_cov_sing = "The random effects covariance matrix is singular."
+
 
 def _dot(x, y):
     """
@@ -413,7 +415,10 @@ class MixedLMParams(object):
 
         if self.k_re > 0:
             if use_sqrt:
-                L = np.linalg.cholesky(self.cov_re)
+                try:
+                    L = np.linalg.cholesky(self.cov_re)
+                except np.linalg.LinAlgError:
+                    L = np.diag(np.sqrt(np.diag(self.cov_re)))
                 cpa = L[self._ix]
             else:
                 cpa = self.cov_re[self._ix]
@@ -1258,27 +1263,49 @@ class MixedLM(base.LikelihoodModel):
 
         return MixedLMResultsWrapper(results)
 
-    def get_fe_params(self, cov_re, vcomp):
+    def get_fe_params(self, cov_re, vcomp, tol=1e-10):
         """
         Use GLS to update the fixed effects parameter estimates.
 
         Parameters
         ----------
-        cov_re : array_like
+        cov_re : array_like (2d)
             The covariance matrix of the random effects.
+        vcomp : array_like (1d)
+            The variance components.
+        tol : float
+            A tolerance parameter to determine when covariances
+            are singular.
 
         Returns
         -------
-        The GLS estimates of the fixed effects parameters.
+        params : ndarray
+            The GLS estimates of the fixed effects parameters.
+        singular : bool
+            True if the covariance is singular
         """
 
         if self.k_fe == 0:
-            return np.array([])
+            return np.array([]), False
+
+        sing = False
 
         if self.k_re == 0:
             cov_re_inv = np.empty((0, 0))
         else:
-            cov_re_inv = np.linalg.inv(cov_re)
+            w, v = np.linalg.eigh(cov_re)
+            if w.min() < tol:
+                # Singular, use pseudo-inverse
+                sing = True
+                ii = np.flatnonzero(w >= tol)
+                if len(ii) == 0:
+                    cov_re_inv = np.zeros_like(cov_re)
+                else:
+                    vi = v[:, ii]
+                    wi = w[ii]
+                    cov_re_inv = np.dot(vi / wi, vi.T)
+            else:
+                cov_re_inv = np.linalg.inv(cov_re)
 
         # Cache these quantities that do not change.
         if not hasattr(self, "_endex_li"):
@@ -1292,15 +1319,29 @@ class MixedLM(base.LikelihoodModel):
         xtxy = 0.
         for group_ix, group in enumerate(self.group_labels):
             vc_var = self._expand_vcomp(vcomp, group_ix)
+            if vc_var.size > 0:
+                if vc_var.min() < tol:
+                    # Pseudo-inverse
+                    sing = True
+                    ii = np.flatnonzero(vc_var >= tol)
+                    vc_vari = np.zeros_like(vc_var)
+                    vc_vari[ii] = 1 / vc_var[ii]
+                else:
+                    vc_vari = 1 / vc_var
+            else:
+                vc_vari = np.empty(0)
             exog = self.exog_li[group_ix]
             ex_r, ex2_r = self._aex_r[group_ix], self._aex_r2[group_ix]
-            solver = _smw_solver(1., ex_r, ex2_r, cov_re_inv, 1 / vc_var)
+            solver = _smw_solver(1., ex_r, ex2_r, cov_re_inv, vc_vari)
             u = solver(self._endex_li[group_ix])
             xtxy += np.dot(exog.T, u)
 
-        fe_params = np.linalg.solve(xtxy[:, 0:-1], xtxy[:, -1])
+        if sing:
+            fe_params = np.dot(np.linalg.pinv(xtxy[:, 0:-1]), xtxy[:, -1])
+        else:
+            fe_params = np.linalg.solve(xtxy[:, 0:-1], xtxy[:, -1])
 
-        return fe_params
+        return fe_params, sing
 
     def _reparam(self):
         """
@@ -1451,7 +1492,9 @@ class MixedLM(base.LikelihoodModel):
 
         # Move to the profile set
         if profile_fe:
-            fe_params = self.get_fe_params(cov_re, vcomp)
+            fe_params, sing = self.get_fe_params(cov_re, vcomp)
+            if sing:
+                warnings.warn(_warn_cov_sing)
         else:
             fe_params = params.fe_params
 
@@ -1459,7 +1502,8 @@ class MixedLM(base.LikelihoodModel):
             try:
                 cov_re_inv = np.linalg.inv(cov_re)
             except np.linalg.LinAlgError:
-                cov_re_inv = None
+                cov_re_inv = np.linalg.pinv(cov_re)
+                warnings.warn(_warn_cov_sing)
             _, cov_re_logdet = np.linalg.slogdet(cov_re)
         else:
             cov_re_inv = np.zeros((0, 0))
@@ -1579,7 +1623,12 @@ class MixedLM(base.LikelihoodModel):
                 has_fe=False)
 
         if profile_fe:
-            params.fe_params = self.get_fe_params(params.cov_re, params.vcomp)
+            params.fe_params, sing = \
+                self.get_fe_params(params.cov_re, params.vcomp)
+
+            if sing:
+                msg = "Random effects covariance is singular"
+                warnings.warn(msg)
 
         if self.use_sqrt:
             score_fe, score_re, score_vc = self.score_sqrt(
@@ -1644,7 +1693,8 @@ class MixedLM(base.LikelihoodModel):
         try:
             cov_re_inv = np.linalg.inv(cov_re)
         except np.linalg.LinAlgError:
-            cov_re_inv = None
+            cov_re_inv = np.linalg.pinv(cov_re)
+            warnings.warn(_warn_cov_sing)
 
         score_fe = np.zeros(self.k_fe)
         score_re = np.zeros(self.k_re2)
@@ -1829,7 +1879,11 @@ class MixedLM(base.LikelihoodModel):
         vcomp = params.vcomp
         cov_re = params.cov_re
         if self.k_re > 0:
-            cov_re_inv = np.linalg.inv(cov_re)
+            try:
+                cov_re_inv = np.linalg.inv(cov_re)
+            except np.linalg.LinAlgError:
+                cov_re_inv = np.linalg.pinv(cov_re)
+                warnings.warn(_warn_cov_sing)
         else:
             cov_re_inv = np.empty((0, 0))
 
@@ -1982,7 +2036,8 @@ class MixedLM(base.LikelihoodModel):
         try:
             cov_re_inv = np.linalg.inv(cov_re)
         except np.linalg.LinAlgError:
-            cov_re_inv = None
+            cov_re_inv = np.linalg.pinv(cov_re)
+            warnings.warn(_warn_cov_sing)
 
         qf = 0.
         for group_ix, group in enumerate(self.group_labels):
@@ -2155,7 +2210,7 @@ class MixedLM(base.LikelihoodModel):
             params, self.k_fe, self.k_re, use_sqrt=self.use_sqrt, has_fe=False)
         cov_re_unscaled = params.cov_re
         vcomp_unscaled = params.vcomp
-        fe_params = self.get_fe_params(cov_re_unscaled, vcomp_unscaled)
+        fe_params, sing = self.get_fe_params(cov_re_unscaled, vcomp_unscaled)
         params.fe_params = fe_params
         scale = self.get_scale(fe_params, cov_re_unscaled, vcomp_unscaled)
         cov_re = scale * cov_re_unscaled
