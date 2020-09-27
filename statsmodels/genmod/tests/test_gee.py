@@ -2053,7 +2053,7 @@ def test_unstructured_complete():
 
     np.random.seed(43)
     ngrp = 400
-    cov = np.asarray([[1, 0.7, 0.2],[0.7, 1, 0.5], [0.2, 0.5, 1]])
+    cov = np.asarray([[1, 0.7, 0.2], [0.7, 1, 0.5], [0.2, 0.5, 1]])
     covr = np.linalg.cholesky(cov)
     e = np.random.normal(size=(ngrp, 3))
     e = np.dot(e, covr.T)
@@ -2076,7 +2076,7 @@ def test_unstructured_incomplete():
 
     np.random.seed(43)
     ngrp = 400
-    cov = np.asarray([[1, 0.7, 0.2],[0.7, 1, 0.5], [0.2, 0.5, 1]])
+    cov = np.asarray([[1, 0.7, 0.2], [0.7, 1, 0.5], [0.2, 0.5, 1]])
     covr = np.linalg.cholesky(cov)
     e = np.random.normal(size=(ngrp, 3))
     e = np.dot(e, covr.T)
