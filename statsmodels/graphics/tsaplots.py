@@ -444,7 +444,8 @@ def month_plot(x, dates=None, ylabel=None, ax=None):
     else:
         x = pd.Series(x, index=pd.PeriodIndex(dates, freq="M"))
 
-    xticklabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sept", "Oct", "Nov", "Dec"]
+    xticklabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                   "Jul", "Aug", "Sept", "Oct", "Nov", "Dec"]
     return seasonal_plot(
         x.groupby(lambda y: y.month), xticklabels, ylabel=ylabel, ax=ax
     )
