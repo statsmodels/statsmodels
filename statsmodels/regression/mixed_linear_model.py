@@ -123,14 +123,14 @@ All three parameterizations can be packed into a vector by
 triangle or Cholesky square root of the dependence structure, followed
 by the variance parameters for the variance components.  The are
 stored as square roots if (and only if) the random effects covariance
-matrix is stored as its Choleky factor.  Note that when unpacking, it
+matrix is stored as its Cholesky factor.  Note that when unpacking, it
 is important to either square or reflect the dependence structure
 depending on which parameterization is being used.
 
 Two score methods are implemented.  One takes the score with respect
 to the elements of the random effects covariance matrix (used for
 inference once the MLE is reached), and the other takes the score with
-respect to the parameters of the Choleky square root of the random
+respect to the parameters of the Cholesky square root of the random
 effects covariance matrix (used for optimization).
 
 The numerical optimization uses GLS to avoid explicitly optimizing
