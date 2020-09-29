@@ -421,7 +421,8 @@ class TestKDEMultivariateConditional(KDETestBase):
                                     "tri", "triw", "uni"])
 def test_all_kernels(kernel, reset_randomstate):
     data = np.random.normal(size=200)
-    x_grid = np.linspace(min(data), max(data), 200)
+    x_grid = np.linspace(-0.2, 0.2, 200)
     density = sm.nonparametric.KDEUnivariate(data)
     density.fit(kernel=kernel, fft=False)
-    assert isinstance(density.evaluate(x_grid), np.ndarray)
+    result = density.evaluate(x_grid)
+    assert isinstance(result, np.ndarray)
