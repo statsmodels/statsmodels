@@ -58,13 +58,16 @@ class OrderedModel(GenericLikelihoodModel):
         Endogenous or dependent ordered categorical variable with k levels.
         Labels or values of endog will internally transformed to consecutive
         integers, 0, 1, 2, ...
-        pd.Series with Categorical as dtype should be preferred as it gives
-        the order relation between the levels.
+        pd.Series with ordered Categorical as dtype should be preferred as it
+        gives the order relation between the levels.
         If endog is not a pandas Categorical, then categories are
         sorted in lexicographic order (by numpy.unique).
     exog : array_like
         Exogenous, explanatory variables. This should not include an intercept.
         pd.DataFrame are also accepted.
+        see Notes about constant when using formulas
+    offset : array_like
+        Offset is added to the linear prediction with coefficient equal to 1.
     distr : string 'probit' or 'logit', or a distribution instance
         The default is currently 'probit' which uses the normal distribution
         and corresponds to an ordered Probit model. The distribution is
@@ -72,7 +75,34 @@ class OrderedModel(GenericLikelihoodModel):
         cdf, pdf and ppf. The inverse cdf, ppf, is only use to calculate
         starting values.
 
-    Status: initial version, subclasses `GenericLikelihoodModel`
+    Notes
+    -----
+    Status: experimental, core results are verified, still subclasses
+        `GenericLikelihoodModel` which will change in future versions.
+
+    The parameterization of OrderedModel requires that there is no constant in
+    the model, neither explicit nor implicit. The constant is equivalent to
+    shifting all thresholds and is therefore not separately identified.
+
+    Patsy's formula specification does not allow a design matrix without
+    explicit or implicit constant if there are categorical variables (or maybe
+    splines) among explanatory variables. As workaround, statsmodels removes an
+    explit intercept.
+
+    Consequently, there are two valid cases to get a design matrix without
+    intercept when using formulas:
+
+    - specify a model without explicit and implicit intercept which is possible
+      if there are only numerical variables in the model.
+    - specify a model with an explicit intercept which statsmodels will remove.
+
+    Models with an implicit intercept will be overparameterized, the parameter
+    estimates will not be fully identified, cov_params will not be invertible
+    and standard errors might contain nans. The computed results will be
+    dominated by numerical imprecision coming mainly from convergence tolerance
+    and numerical derivatives.
+
+    The model will raise a ValueError if a remaining constant is detected.
 
     """
     _formula_max_endog = np.inf
@@ -125,8 +155,30 @@ class OrderedModel(GenericLikelihoodModel):
     def _check_inputs(self, endog, exog):
         """handle endog that is pandas Categorical
 
-        checks if self.distrib is legal and does the Pandas Categorical
+        checks if self.distrib is legal and provides Pandas ordered Categorical
         support for endog.
+
+        Parameters
+        ----------
+        endog : array_like
+            Endogenous, dependent variable, 1-D.
+        exog : array_like
+            Exogenous, explanatory variables.
+            Currently not used.
+
+        Returns
+        -------
+        endog : array_like or pandas Series
+            If the original endog is a pandas ordered Categorical Series,
+            then the returned endog are the ``codes``, i.e. integer
+            representation of ordere categorical variable
+        labels : None or list
+            If original endog is pandas ordered Categorical Series, then the
+            categories are returned. Otherwise ``labels`` is None.
+        is_pandas : bool
+            This is True if original endog is a pandas ordered Categorical
+            Series and False otherwise.
+
         """
 
         if not isinstance(self.distr, stats.rv_continuous):
@@ -220,6 +272,23 @@ class OrderedModel(GenericLikelihoodModel):
 
     def prob(self, low, upp):
         """interval probability
+
+        Probability that value is in interval (low, upp], computed as
+
+            prob = cdf(upp) - cdf(low)
+
+        Parameters
+        ----------
+        low : array_like
+            lower bound for interval
+        upp : array_like
+            upper bound for interval
+
+        Returns
+        -------
+        float or ndarray
+            Probability that value falls in interval (low, upp]
+
         """
         return np.maximum(self.cdf(upp) - self.cdf(low), 0)
 
@@ -229,16 +298,16 @@ class OrderedModel(GenericLikelihoodModel):
         Parameters
         ----------
         params : nd_array
-            contains (exog_coef, transformed_thresholds) where exog_coef are
+            Contains (exog_coef, transformed_thresholds) where exog_coef are
             the coefficient for the explanatory variables in the linear term,
             transformed threshold or cutoff points. The first, lowest threshold
             is unchanged, all other thresholds are in terms of exponentiated
-            increments
+            increments.
 
         Returns
         -------
         thresh : nd_array
-            thresh are the thresholds or cutoff constants for the intervals.
+            Thresh are the thresholds or cutoff constants for the intervals.
 
         """
         th_params = params[-(self.k_levels - 1):]
@@ -248,33 +317,100 @@ class OrderedModel(GenericLikelihoodModel):
         return thresh
 
     def transform_reverse_threshold_params(self, params):
-        """obtain transformed thresholds from original thresholds, cutoff
-        constants.
+        """obtain transformed thresholds from original thresholds or cutoffs
+
+        Parameters
+        ----------
+        params : ndarray
+            Threshold values, cutoff constants for choice intervals, which
+            need to be monotonically increasing.
+
+        Returns
+        -------
+        thresh_params : ndarrray
+            Transformed threshold parameter.
+            The first, lowest threshold is unchanged, all other thresholds are
+            in terms of exponentiated increments.
+            Transformed parameters can be any real number without restrictions.
 
         """
-        start_ppf = params
-        thresh_params = np.concatenate((start_ppf[:1],
-                                        np.log(np.diff(start_ppf[:-1]))))
+        thresh_params = np.concatenate((params[:1],
+                                        np.log(np.diff(params[:-1]))))
         return thresh_params
 
-    def predict(self, params, exog=None, offset=None):
+    def predict(self, params, exog=None, offset=None, which="prob"):
         """predicted probabilities for each level of the ordinal endog.
 
+        Parameters
+        ----------
+        params : ndarray
+            Parameters for the Model, (exog_coef, transformed_thresholds)
+        exog : array_like, optional
+            Design / exogenous data. Is exog is None, model exog is used.
+        offset : array_like, optional
+            Offset is added to the linear prediction with coefficient
+            equal to 1. If offset is not provided and exog
+            is None, uses the model's offset if present.  If not, uses
+            0 as the default value.
+        which : {"prob", "linpred", "cumprob"}
+            Determines which statistic is predicted
 
+            - prob : predicted probabilities to be in c
+            - linear : 1-dim linear prediction of the latent variable
+            ``x b + offset``
+            - cumprob : predicted cumulative propability to be in choice k or
+              lower
+
+        Returns
+        -------
+        predicted probabilities : ndarray
+            2-dim predicted probabilites with observations in rows and one
+            column for each category or level of the categorical dependent
+            variable.
         """
         # note, exog and offset handling is in linpred
 
         thresh = self.transform_threshold_params(params)
-        xb = self._linpred(params, exog=exog, offset=offset)[:, None]
+        xb = self._linpred(params, exog=exog, offset=offset)
+        if which == "linpred":
+            return xb
+
+        xb = xb[:, None]
         low = thresh[:-1] - xb
         upp = thresh[1:] - xb
-        prob = self.prob(low, upp)
-        return prob
+        if which == "prob":
+            prob = self.prob(low, upp)
+            return prob
+        elif which in ["cum", "cumprob"]:
+            cumprob = self.cdf(upp)
+            return cumprob
+        else:
+            raise ValueError("`which` is not available")
 
     def _linpred(self, params, exog=None, offset=None):
         """linear prediction of latent variable `x b`
 
         currently only for exog from estimation sample (in-sample)
+
+        Parameters
+        ----------
+        params : ndarray
+            Parameters for the model, (exog_coef, transformed_thresholds)
+        exog : array_like, optional
+            Design / exogenous data. Is exog is None, model exog is used.
+        offset : array_like, optional
+            Offset is added to the linear prediction with coefficient
+            equal to 1. If offset is not provided and exog
+            is None, uses the model's offset if present.  If not, uses
+            0 as the default value.
+
+        Returns
+        -------
+        linear : ndarray
+            1-dim linear prediction given by exog times linear params plus
+            offset. This is the prediction for the underlying latent variable.
+            If exog and offset are None, then the predicted values are zero.
+
         """
         if exog is None:
             exog = self.exog
@@ -298,6 +434,32 @@ class OrderedModel(GenericLikelihoodModel):
     def _bounds(self, params):
         """integration bounds for the observation specific interval
 
+        This defines the lower and upper bounds for the intervals of the
+        choices of all observations.
+
+        The bounds for observation are given by
+
+            a_{k_i-1} - linpred_i, a_k_i - linpred_i
+
+        where
+        - k_i is the choice in observation i.
+        - a_{k_i-1} and a_k_i are thresholds (cutoffs) for choice k_i
+        - linpred_i is the linear prediction for observation i
+
+        Parameters
+        ----------
+        params : ndarray
+            Parameters for the model, (exog_coef, transformed_thresholds)
+
+        Return
+        ------
+        low : ndarray
+            Lower bounds for choice intervals of each observation,
+            1-dim with length nobs
+        upp : ndarray
+            Upper bounds for choice intervals of each observation,
+            1-dim with length nobs.
+
         """
         thresh = self.transform_threshold_params(params)
 
@@ -308,10 +470,12 @@ class OrderedModel(GenericLikelihoodModel):
         upp = thresh_i_upp - xb
         return low, upp
 
+    @Appender(GenericLikelihoodModel.fit.__doc__)
     def loglike(self, params):
 
         return self.loglikeobs(params).sum()
 
+    @Appender(GenericLikelihoodModel.fit.__doc__)
     def loglikeobs(self, params):
 
         low, upp = self._bounds(params)
@@ -352,6 +516,12 @@ class OrderedModel(GenericLikelihoodModel):
 
     @property
     def start_params(self):
+        """start parameters for the optimization corresponding to null model
+
+        The threshold are computed from the observed frequencies and
+        transformed to the exponential increments parameterization.
+        The parameters for explanatory variables are set to zero.
+        """
         # start params based on model without exog
         freq = np.bincount(self.endog) / len(self.endog)
         start_ppf = self.distr.ppf(np.clip(freq.cumsum(), 0, 1))
