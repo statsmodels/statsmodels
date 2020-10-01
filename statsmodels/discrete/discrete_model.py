@@ -936,9 +936,6 @@ class CountModel(DiscreteModel):
         return L1CountResultsWrapper(discretefit)
 
 
-class OrderedModel(DiscreteModel):
-    pass
-
 # Public Model Classes
 
 
