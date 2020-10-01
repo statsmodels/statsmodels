@@ -789,6 +789,7 @@ class GenericLikelihoodModel(LikelihoodModel):
         if hessian is not None:
             self.hessian = hessian
 
+        hasconst = kwds.pop("hasconst", None)
         self.__dict__.update(kwds)
 
         # TODO: data structures?
@@ -797,7 +798,8 @@ class GenericLikelihoodModel(LikelihoodModel):
         # self.df_model = 9999
         # somewhere: CacheWriteWarning: 'df_model' cannot be overwritten
         super(GenericLikelihoodModel, self).__init__(endog, exog,
-                                                     missing=missing)
+                                                     missing=missing,
+                                                     hasconst=hasconst)
 
         # this will not work for ru2nmnl, maybe np.ndim of a dict?
         if exog is not None:
@@ -1060,7 +1062,9 @@ class Results(object):
         exog_index = exog.index if is_pandas else None
 
         if transform and hasattr(self.model, 'formula') and (exog is not None):
-            design_info = self.model.data.design_info
+            # allow both location of design_info, see #7043
+            design_info = (getattr(self.model, "design_info", None) or
+                           self.model.data.design_info)
             from patsy import dmatrix
             if isinstance(exog, pd.Series):
                 # we are guessing whether it should be column or row
@@ -2487,6 +2491,13 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
 
         self._cache = {}
         self.__dict__.update(mlefit.__dict__)
+
+        k_params = len(mlefit.params)
+        # checks mainly for adding new models or subclassing
+        if self.df_model + self.model.k_constant != k_params:
+            warnings.warn("df_model + k_constant differs from nparams")
+        if self.df_resid != self.nobs - k_params:
+            warnings.warn("df_resid differs from nobs - nparams")
 
     def summary(self, yname=None, xname=None, title=None, alpha=.05):
         """Summarize the Regression Results
