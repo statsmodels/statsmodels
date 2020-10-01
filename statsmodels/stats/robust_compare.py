@@ -66,7 +66,7 @@ def trimboth(a, proportiontocut, axis=0):
 
 def trim_mean(a, proportiontocut, axis=0):
     """
-    Return mean of array after trimming distribution from both lower and upper
+    Return mean of array after trimming observations from both lower and upper
     tails.
 
     If `proportiontocut` = 0.1, slices off 'leftmost' and 'rightmost' 10% of
@@ -78,7 +78,7 @@ def trim_mean(a, proportiontocut, axis=0):
     a : array_like
         Input array
     proportiontocut : float
-        Fraction to cut off of both tails of the distribution
+        Fraction to cut off of both tails of the observations
     axis : int or None
         Axis along which the trimmed means are computed. The default is axis=0.
         If axis is None then the trimmed mean will be computed for the
@@ -95,7 +95,8 @@ def trim_mean(a, proportiontocut, axis=0):
 
 
 class TrimmedMean(object):
-    """class for trimmed and winsorized one sample statistics
+    """
+    class for trimmed and winsorized one sample statistics
 
     axis is None, i.e. ravelling, is not supported
     """
@@ -242,16 +243,17 @@ def scale_transform(data, center='median', transform='abs', trim_frac=0.2,
     Parameters
     ----------
     data : array_like
-        observations for the data
-    center : str in ['median', 'mean', 'trimmed']
-        the statistic that is used as center for the data transformation
+        Observations for the data.
+    center : "median", "mean", "trimmed" or float
+        Statistic used for centering observations. If a float, then this
+        value is used to center. Default is median.
     transform : 'abs', 'square', 'identity' or a callable
-        the transform for the centered data
+        The transform for the centered data.
     trim_frac : float in [0, 0.5)
         Fraction of observations that are trimmed on each side of the sorted
         observations. This is only used if center is `trimmed`.
     axis : int
-        axis along which the data are transformed when centering.
+        Axis along which the data are transformed when centering.
 
     Returns
     -------
