@@ -72,6 +72,8 @@ class Model(object):
     _formula_max_endog = 1
 
     def __init__(self, endog, exog=None, **kwargs):
+#         if "frame" in kwargs:
+#             raise
         missing = kwargs.pop('missing', 'none')
         hasconst = kwargs.pop('hasconst', None)
         self.data = self._handle_data(endog, exog, missing, hasconst,
@@ -102,6 +104,12 @@ class Model(object):
         # kwargs arrays could have changed, easier to just attach here
         for key in kwargs:
             if key in ['design_info', 'formula']:  # leave attached to data
+                continue
+            if key == 'frame':
+                import pandas as pd
+                data.frame = kwargs["frame"].item()["data"]
+                if not isinstance(data.frame, pd.DataFrame):
+                    raise
                 continue
             # pop so we do not start keeping all these twice or references
             try:
@@ -191,12 +199,14 @@ class Model(object):
         kwargs.update({'missing_idx': missing_idx,
                        'missing': missing,
                        'formula': formula,  # attach formula for unpckling
-                       'design_info': design_info})
+                       'design_info': design_info,
+                       'frame': np.array({"data": data})  # try dict to avoid missing
+                       })
         mod = cls(endog, exog, *args, **kwargs)
         mod.formula = formula
 
         # since we got a dataframe, attach the original
-        mod.data.frame = data
+        # mod.data.frame = data
         return mod
 
     @property
