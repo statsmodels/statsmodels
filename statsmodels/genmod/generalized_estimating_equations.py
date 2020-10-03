@@ -230,7 +230,7 @@ _gee_init_doc = """
       Gaussian     |   x    x                        x
       inv Gaussian |   x    x                        x
       binomial     |   x    x    x     x       x     x    x           x      x
-      Poisson     |   x    x                        x
+      Poisson      |   x    x                        x
       neg binomial |   x    x                        x          x
       gamma        |   x    x                        x
 
@@ -252,10 +252,16 @@ _gee_init_doc = """
     and agrees with R's gee implementation.  To obtain the robust
     standard errors reported in Stata, multiply by sqrt(N / (N - g)),
     where N is the total sample size, and g is the average group size.
-
+    %(notes)s
     Examples
     --------
     %(example)s
+"""
+
+_gee_nointercept = """
+    The nominal and ordinal GEE models should not have an intercept
+    (either implicit or explicit).  Use "0 + " in a formula to
+    suppress the intercept.
 """
 
 _gee_family_doc = """\
@@ -390,7 +396,7 @@ _gee_example = """
     >>> import statsmodels.api as sm
     >>> fam = sm.families.Poisson()
     >>> ind = sm.cov_struct.Independence()
-    >>> model = sm.GEE.from_formula("y ~ age + trt + base", "subject", \
+    >>> model = sm.GEE.from_formula("y ~ age + trt + base", "subject",
                                  data, cov_struct=ind, family=fam)
     >>> result = model.fit()
     >>> print(result.summary())
@@ -401,7 +407,7 @@ _gee_example = """
     >>> import statsmodels.formula.api as smf
     >>> fam = sm.families.Poisson()
     >>> ind = sm.cov_struct.Independence()
-    >>> model = smf.gee("y ~ age + trt + base", "subject", \
+    >>> model = smf.gee("y ~ age + trt + base", "subject",
                     data, cov_struct=ind, family=fam)
     >>> result = model.fit()
     >>> print(result.summary())
@@ -420,7 +426,7 @@ _gee_ordinal_example = """
     Using formulas:
 
     >>> import statsmodels.formula.api as smf
-    >>> model = smf.ordinal_gee("y ~ x1 + x2", groups, data,
+    >>> model = smf.ordinal_gee("y ~ 0 + x1 + x2", groups, data,
                                     cov_struct=gor)
     >>> result = model.fit()
     >>> print(result.summary())
@@ -439,7 +445,7 @@ _gee_nominal_example = """
     Using formulas:
 
     >>> import statsmodels.api as sm
-    >>> model = sm.NominalGEE.from_formula("y ~ x1 + x2", groups,
+    >>> model = sm.NominalGEE.from_formula("y ~ 0 + x1 + x2", groups,
                      data, cov_struct=gor)
     >>> result = model.fit()
     >>> print(result.summary())
@@ -447,7 +453,7 @@ _gee_nominal_example = """
     Using the formula API:
 
     >>> import statsmodels.formula.api as smf
-    >>> model = smf.nominal_gee("y ~ x1 + x2", groups, data,
+    >>> model = smf.nominal_gee("y ~ 0 + x1 + x2", groups, data,
                                 cov_struct=gor)
     >>> result = model.fit()
     >>> print(result.summary())
@@ -480,7 +486,8 @@ class GEE(GLM):
         "Equations.\n" + _gee_init_doc %
         {'extra_params': base._missing_param_doc,
          'family_doc': _gee_family_doc,
-         'example': _gee_example})
+         'example': _gee_example,
+         'notes': ""})
 
     cached_means = None
 
@@ -596,7 +603,6 @@ class GEE(GLM):
 
         # Time defaults to a 1d grid with equal spacing
         if self.time is not None:
-            self.time = np.asarray(self.time, np.float64)
             if self.time.ndim == 1:
                 self.time = self.time[:, None]
             self.time_li = self.cluster_list(self.time)
@@ -2265,7 +2271,8 @@ class OrdinalGEE(GEE):
         "    Ordinal Response Marginal Regression Model using GEE\n" +
         _gee_init_doc % {'extra_params': base._missing_param_doc,
                          'family_doc': _gee_ordinal_family_doc,
-                         'example': _gee_ordinal_example})
+                         'example': _gee_ordinal_example,
+                         'notes': _gee_nointercept})
 
     def __init__(self, endog, exog, groups, time=None, family=None,
                  cov_struct=None, missing='none', offset=None,
@@ -2547,7 +2554,8 @@ class NominalGEE(GEE):
         "    Nominal Response Marginal Regression Model using GEE.\n" +
         _gee_init_doc % {'extra_params': base._missing_param_doc,
                          'family_doc': _gee_nominal_family_doc,
-                         'example': _gee_nominal_example})
+                         'example': _gee_nominal_example,
+                         'notes': _gee_nointercept})
 
     def __init__(self, endog, exog, groups, time=None, family=None,
                  cov_struct=None, missing='none', offset=None,

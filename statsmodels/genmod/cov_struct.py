@@ -28,7 +28,7 @@ class CovStruct(object):
     random errors in the model.
 
     The current state of the covariance structure is represented
-    through the value of the `dep_params`  attribute.
+    through the value of the `dep_params` attribute.
 
     The default state of a newly-created instance should always be
     the identity correlation matrix.
@@ -215,6 +215,90 @@ class Independence(CovStruct):
     def summary(self):
         return ("Observations within a cluster are modeled "
                 "as being independent.")
+
+class Unstructured(CovStruct):
+    """
+    An unstructured dependence structure.
+
+    To use the unstructured dependence structure, a `time`
+    argument must be provided when creating the GEE.  The
+    time argument must be of integer dtype, and indicates
+    which position in a complete data vector is occupied
+    by each observed value.
+    """
+
+    def __init__(self, cov_nearest_method="clipped"):
+
+        super(Unstructured, self).__init__(cov_nearest_method)
+
+    def initialize(self, model):
+
+        self.model = model
+
+        import numbers
+        if not issubclass(self.model.time.dtype.type, numbers.Integral):
+            msg = "time must be provided and must have integer dtype"
+            raise ValueError(msg)
+
+        q = self.model.time[:, 0].max() + 1
+
+        self.dep_params = np.eye(q)
+
+    @Appender(CovStruct.covariance_matrix.__doc__)
+    def covariance_matrix(self, endog_expval, index):
+
+        if hasattr(self.model, "time"):
+            time_li = self.model.time_li
+            ix = time_li[index][:, 0]
+            return self.dep_params[np.ix_(ix, ix)],True
+
+        return self.dep_params, True
+
+    @Appender(CovStruct.update.__doc__)
+    def update(self, params):
+
+        endog = self.model.endog_li
+        nobs = self.model.nobs
+        varfunc = self.model.family.variance
+        cached_means = self.model.cached_means
+        has_weights = self.model.weights is not None
+        weights_li = self.model.weights
+
+        time_li = self.model.time_li
+        q = self.model.time.max() + 1
+        csum = np.zeros((q, q))
+        wsum = 0.
+        cov = np.zeros((q, q))
+
+        scale = 0.
+        for i in range(self.model.num_group):
+
+            # Get the Pearson residuals
+            expval, _ = cached_means[i]
+            stdev = np.sqrt(varfunc(expval))
+            resid = (endog[i] - expval) / stdev
+
+            ix = time_li[i][:, 0]
+            m = np.outer(resid, resid)
+            ssr = np.sum(np.diag(m))
+
+            w = weights_li[i] if has_weights else 1.
+            csum[np.ix_(ix, ix)] += w
+            wsum += w * len(ix)
+            cov[np.ix_(ix, ix)] += w * m
+            scale += w * ssr
+        ddof = self.model.ddof_scale
+        scale /= wsum * (nobs - ddof) / float(nobs)
+        cov /= (csum - ddof)
+
+        sd = np.sqrt(np.diag(cov))
+        cov /= np.outer(sd, sd)
+
+        self.dep_params = cov
+
+    def summary(self):
+        print("Estimated covariance structure:")
+        print(self.dep_params)
 
 
 class Exchangeable(CovStruct):
