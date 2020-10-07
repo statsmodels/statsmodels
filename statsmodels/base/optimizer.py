@@ -656,7 +656,7 @@ def _fit_nm(f, score, start_params, fargs, kwargs, disp=True,
             maxiter=100, callback=None, retall=False,
             full_output=True, hess=None):
     """
-    Fit using Newton-Raphson algorithm.
+    Fit using Nelder-Mead algorithm.
 
     Parameters
     ----------
