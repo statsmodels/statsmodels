@@ -574,11 +574,13 @@ class ThetaModelResults:
         -----
         The variance of the h-step forecast is assumed to follow from the
         integrated Moving Average structure of the Theta model, and so is
-        :math:`\sigma^2(\alpha^2 + (h-1))`. The prediction interval assumes
-        that innovations are normally distributed.
+        :math:`\sigma^2(1 + (h-1)(1 + (\alpha-1)^2)`. The prediction interval
+        assumes that innovations are normally distributed.
         """
-        model_alpha = self.params[0]
-        sigma2_h = model_alpha ** 2 + np.arange(steps) * self.sigma2
+        model_alpha = self.params[1]
+        sigma2_h = (
+            1 + np.arange(steps) * (1 + (model_alpha - 1) ** 2)
+        ) * self.sigma2
         sigma_h = np.sqrt(sigma2_h)
         quantile = stats.norm.ppf(alpha / 2)
         predictions = self.forecast(steps, theta)
