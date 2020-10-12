@@ -933,6 +933,31 @@ class TestLogitNewton(CheckBinaryResults, CheckMargEff):
         assert_almost_equal(me.margeff_se,
                 self.res2.margeff_dummy_atexog2_se, DECIMAL_4)
 
+    def test_diagnostic(self):
+        # Hosmer-Lemeshow
+        # Stata 14: `estat gof, group(5) table`
+        n_groups = 5
+        chi2 = 1.630883318257913
+        pvalue = 0.6524
+        df = 3
+
+        import statsmodels.stats.diagnostic_gen as dia
+
+        fitted = self.res1.predict()
+        en = self.res1.model.endog
+        counts = np.column_stack((en, 1 - en))
+        expected = np.column_stack((fitted, 1 - fitted))
+        # replicate splits in Stata estat gof
+        group_sizes = [7, 6, 7, 6, 6]
+        indices = np.cumsum(group_sizes)[:-1]
+        res = dia.test_chisquare_binning(counts, expected, sort_var=fitted,
+                                         bins=indices, df=None)
+        assert_allclose(res.statistic, chi2, rtol=1e-11)
+        assert_equal(res.df, df)
+        assert_allclose(res.pvalue, pvalue, atol=6e-5)
+        assert_equal(res.freqs.shape, (n_groups, 2))
+        assert_equal(res.freqs.sum(1), group_sizes)
+
 
 class TestLogitNewtonPrepend(CheckMargEff):
     # same as previous version but adjusted for add_constant prepend=True
