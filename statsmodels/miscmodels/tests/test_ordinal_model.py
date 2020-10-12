@@ -167,6 +167,17 @@ class TestLogitModel(CheckOrdinalModelMixin):
         cls.resf = resf
         cls.resu = resu
 
+    def test_postestimation(self):
+        res1 = self.res1
+        res2 = self.res2
+        resid_prob = res1.resid_prob
+
+        assert_allclose(resid_prob[:len(res2.resid_prob)], res2.resid_prob,
+                        atol=1e-4)
+        stats_prob = [resid_prob.mean(), resid_prob.min(), resid_prob.max(),
+                      resid_prob.var(ddof=1)]
+        assert_allclose(stats_prob, res2.resid_prob_stats, atol=1e-5)
+
 
 class TestProbitModel(CheckOrdinalModelMixin):
 
