@@ -11,8 +11,9 @@ import numpy as np
 from scipy import stats
 from statsmodels.stats.base import HolderTuple
 
+
 def test_chisquare_binning(counts, expected, sort_var=None, bins=10,
-                           df=None, ordered=False):
+                           df=None, ordered=False, sort_method="quicksort"):
     """chisquare gof test with binning of data, Hosmer-Lemeshow type
 
     ``observed`` and ``expected`` are observation specific and should have
@@ -56,6 +57,8 @@ def test_chisquare_binning(counts, expected, sort_var=None, bins=10,
     - ordinal: `df = (g - 2) * (c - 1) + (c - 2)`, reduces to (g-2) for c=2,
          (Hosmer, ... ?)
 
+    Note: If there are ties in the ``sort_var`` array, then the split of
+    observations into groups will depend on the sort algorithm.
     """
 
     observed = np.asarray(counts)
@@ -75,10 +78,10 @@ def test_chisquare_binning(counts, expected, sort_var=None, bins=10,
 
     # k = 1 if observed.ndim == 1 else observed.shape[1]
     if sort_var is not None:
-        argsort = np.argsort(sort_var)
+        argsort = np.argsort(sort_var, kind=sort_method)
     else:
         argsort = np.arange(observed.shape[0])
-    #indices = [arr for arr in np.array_split(argsort, bins, axis=0)]
+    # indices = [arr for arr in np.array_split(argsort, bins, axis=0)]
     indices = np.array_split(argsort, bins, axis=0)
     # in one loop, observed expected in last dimension, too messy,
     # freqs_probs = np.array([np.vstack([observed[idx].mean(0),
@@ -190,8 +193,10 @@ def prob_larger_2ordinal(probs1, probs2):
     freq1 = np.asarray(probs1)
     freq2 = np.asarray(probs2)
     # add zero at beginning of choices for cdf computation
-    freq1_ = np.concatenate((np.zeros(freq1.shape[:-1] + (1,)), freq1), axis=-1)
-    freq2_ = np.concatenate((np.zeros(freq2.shape[:-1] + (1,)), freq2), axis=-1)
+    freq1_ = np.concatenate((np.zeros(freq1.shape[:-1] + (1,)), freq1),
+                            axis=-1)
+    freq2_ = np.concatenate((np.zeros(freq2.shape[:-1] + (1,)), freq2),
+                            axis=-1)
 
     cdf1 = freq1_.cumsum(axis=-1)
     cdf2 = freq2_.cumsum(axis=-1)

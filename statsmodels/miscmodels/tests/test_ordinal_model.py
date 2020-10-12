@@ -178,6 +178,26 @@ class TestLogitModel(CheckOrdinalModelMixin):
                       resid_prob.var(ddof=1)]
         assert_allclose(stats_prob, res2.resid_prob_stats, atol=1e-5)
 
+        # from R generalhoslem
+        # > logitgof(ologit_ucla$apply2, fitted(r_logit), g = 10, ord = TRUE)
+        chi2 = 20.958760713111
+        df = 17
+        p_value = 0.2281403796588
+        # values in Stata using ologitgof are a bit different,
+        # I guess different sort algorithm and because of ties, see #7095
+
+        import statsmodels.stats.diagnostic_gen as dia
+        # TODO: add more properties or methods to Results class
+        fitted = res1.predict()
+        y_dummy = (res1.model.endog[:, None] == np.arange(3)).astype(int)
+        sv = (fitted * np.arange(1, 3+1)).sum(1)
+        dt = dia.test_chisquare_binning(
+            y_dummy, fitted, sort_var=sv, bins=10, df=None, ordered=True,
+            sort_method="stable")
+        assert_allclose(dt.statistic, chi2, rtol=5e-5)
+        assert_allclose(dt.pvalue, p_value, rtol=1e-4)
+        assert_equal(dt.df, df)
+
 
 class TestProbitModel(CheckOrdinalModelMixin):
 
