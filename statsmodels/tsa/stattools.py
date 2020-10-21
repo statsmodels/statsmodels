@@ -1313,9 +1313,9 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
     The null hypothesis for all four test is that the coefficients
     corresponding to past values of the second time series are zero.
 
-    "params_ftest", "ssr_ftest" are based on F distribution
+    `params_ftest`, `ssr_ftest` are based on F distribution
 
-    "ssr_chi2test", "lrtest" are based on chi-square distribution
+    `ssr_chi2test`, `lrtest` are based on chi-square distribution
 
     References
     ----------
@@ -1330,10 +1330,10 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
     >>> import numpy as np
     >>> data = sm.datasets.macrodata.load_pandas()
     >>> data = data.data[["realgdp", "realcons"]].pct_change().dropna()
-
+    >>>
     # All lags up to 4
     >>> gc_res = grangercausalitytests(data, 4)
-
+    >>>
     # Only lag 4
     >>> gc_res = grangercausalitytests(data, [4])
     """
