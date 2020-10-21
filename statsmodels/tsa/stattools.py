@@ -1330,11 +1330,11 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
     >>> import numpy as np
     >>> data = sm.datasets.macrodata.load_pandas()
     >>> data = data.data[["realgdp", "realcons"]].pct_change().dropna()
-    >>>
-    # All lags up to 4
+
+    All lags up to 4
     >>> gc_res = grangercausalitytests(data, 4)
-    >>>
-    # Only lag 4
+ 
+    Only lag 4
     >>> gc_res = grangercausalitytests(data, [4])
     """
     x = array_like(x, "x", ndim=2)
