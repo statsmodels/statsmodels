@@ -563,7 +563,10 @@ class OrderedResults(GenericLikelihoodModelResults):
                                   categories=categories, ordered=True)
         predicted = pd.Categorical(self.predict().argmax(1),
                                    categories=categories, ordered=True)
-        table = pd.crosstab(observed, predicted, margins=True, dropna=False)
+        table = pd.crosstab(predicted,
+                            observed.astype(int),
+                            margins=True,
+                            dropna=False).T.fillna(0)
         return table
 
     @cache_readonly

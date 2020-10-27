@@ -1100,7 +1100,7 @@ class ExponentialSmoothing(TimeSeriesModel):
                 "Setting initial values during fit is deprecated and will be "
                 "removed after 0.13. These should be set during model "
                 "initialization.",
-                FutureWarning
+                FutureWarning,
             )
         if use_boxcox is not None:
             if self._use_boxcox is not None:
@@ -1113,7 +1113,7 @@ class ExponentialSmoothing(TimeSeriesModel):
                 "Setting use_boxcox during fit has been deprecated and will "
                 "be removed after 0.13. It must be set during model "
                 "initialization.",
-                FutureWarning
+                FutureWarning,
             )
         elif self._use_boxcox is None:
             use_boxcox = False

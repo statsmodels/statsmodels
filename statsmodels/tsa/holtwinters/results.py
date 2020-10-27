@@ -652,12 +652,12 @@ class HoltWintersResults(Results):
         if 0 <= start_idx and start_idx <= m:
             initial_seasons = self.params["initial_seasons"]
             _s = np.concatenate(
-                (initial_seasons[start_idx:], season[:start_idx],)
+                (initial_seasons[start_idx:], season[:start_idx])
             )
             s[-m:, :] = np.tile(_s, (repetitions, 1)).T
         else:
             s[-m:, :] = np.tile(
-                season[start_idx - m : start_idx], (repetitions, 1),
+                season[start_idx - m : start_idx], (repetitions, 1)
             ).T
 
         # set neutral values for unused features
