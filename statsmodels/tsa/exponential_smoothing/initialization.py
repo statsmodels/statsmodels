@@ -99,7 +99,9 @@ def _initialization_heuristic(endog, trend=False, seasonal=False,
 
     # Trend / Level
     exog = np.c_[np.ones(10), np.arange(10) + 1]
-    beta = np.linalg.pinv(exog).dot(endog[:10])
+    if endog.ndim == 1:
+        endog = np.atleast_2d(endog).T
+    beta = np.squeeze(np.linalg.pinv(exog).dot(endog[:10]))
     initial_level = beta[0]
 
     initial_trend = None
