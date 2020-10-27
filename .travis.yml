@@ -57,7 +57,7 @@ jobs:
         - LINT=true
     - python: 3.9
       env:
-        - PYTHON=3.7
+        - PYTHON=3.9
         - DOCBUILD=true
     # Python 3.7 + fixed pandas
     - python: 3.7
@@ -88,6 +88,10 @@ jobs:
         - MATPLOTLIB=2
         - LINT=true
     # Latest pre-release packages
+    - python: 3.9
+      env:
+        - PIP_PRE=true
+        - BUILD_INIT=tools/ci/travis_pip.sh
     - python: 3.8
       env:
         - PIP_PRE=true
@@ -99,8 +103,7 @@ jobs:
 
   allow_failures:
     # pre-testing is a little fragile. Make it an FYI.
-    - python: 3.8
-      env:
+    - env:
         - PIP_PRE=true
         - BUILD_INIT=tools/ci/travis_pip.sh
 
