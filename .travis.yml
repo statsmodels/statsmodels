@@ -2,13 +2,15 @@
 # versions.  Allows substantial flexibility for choosing versions of
 # required packages and is simpler to use to test up-to-date scientific Python
 # stack
+os: linux
 dist: bionic
 language: python
 cache:
   - directories:
     - $HOME/.cache/pip
     - $TRAVIS_BUILD_DIR/docs/source/examples/notebooks
-
+services:
+  - xvfb
 
 git:
   depth: 10000
@@ -37,17 +39,23 @@ env:
     - PYTEST_OPTIONS=--skip-slow  # skip slow on travis since tested on azure
     - XDIST_OPTS=""
 
-matrix:
+jobs:
   fast_finish: true
   include:
-    # Documentation build (on Python 3.7 + cutting edge packages). Slowest build
+    # Documentation build (on Python 3.9 + cutting edge packages). Slowest build
+    - python: 3.9
+      env:
+        - BUILD_INIT=tools/ci/travis_pip.sh
+        - USE_MATPLOTLIB=false
+        - USE_CVXOPT=false
+        - LINT=true
     - python: 3.8
       env:
         - BUILD_INIT=tools/ci/travis_pip.sh
         - USE_MATPLOTLIB=false
         - USE_CVXOPT=false
         - LINT=true
-    - python: 3.7
+    - python: 3.9
       env:
         - PYTHON=3.7
         - DOCBUILD=true
@@ -109,9 +117,9 @@ before_install:
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then sudo lshw -class processor; fi
   - if [ "$TRAVIS_OS_NAME" = "osx" ]; then sysctl -a | grep machdep.cpu; fi
   # Fix for headless TravisCI
-  - "export DISPLAY=:99.0"
-  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then ( sh -e /etc/init.d/xvfb start )& fi
-  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then ( sudo Xvfb :99 -ac -screen 0 1024x768x8; echo ok )& fi
+  # - "export DISPLAY=:99.0"
+  # - if [ "$TRAVIS_OS_NAME" = "linux" ]; then ( sh -e /etc/init.d/xvfb start )& fi
+  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then ( DISPLAY=:99.0 sudo Xvfb :99 -ac -screen 0 1024x768x8; echo ok )& fi
   # Avoid noise from matplotlib
   - mkdir -p $HOME/.config/matplotlib
   - SRCDIR=$PWD
