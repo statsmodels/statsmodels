@@ -35,8 +35,11 @@ from statsmodels.tsa.holtwinters._smoothers import (
 )
 
 base, _ = os.path.split(os.path.abspath(__file__))
-housing_data = pd.read_csv(os.path.join(base, "results", "housing-data.csv"))
-housing_data = housing_data.set_index("DATE")
+housing_data = pd.read_csv(
+    os.path.join(base, "results", "housing-data.csv"),
+    index_col="DATE",
+    parse_dates=True,
+)
 housing_data = housing_data.asfreq("MS")
 
 SEASONALS = ("add", "mul", None)
