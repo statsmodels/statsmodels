@@ -35,9 +35,9 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=1,
     exposure1 : float
         Total exposure (time * subjects) in first sample.
     count2 : int
-        Number of events in first sample.
+        Number of events in second sample.
     exposure2 : float
-        Total exposure (time * subjects) in first sample.
+        Total exposure (time * subjects) in second sample.
     ratio: float
         ratio of the two Poisson rates under the Null hypothesis. Default is 1.
     method : string
@@ -55,11 +55,15 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=1,
         - 'two-sided': H1: ratio of rates is not equal to ratio_null (default)
         - 'larger' :   H1: ratio of rates is larger than ratio_null
         - 'smaller' :  H1: ratio of rates is smaller than ratio_null
+    etest_kwds: dictionary
+        Additional parameters to be passed to the etest_poisson_2indep
+        funtcion, namely ygrid.
 
     Returns
     -------
-    results : Results instance
-        The resulting test statistics and p-values are available as attributes.
+    results : instance of HolderTuple class
+        The two main attributes are test statistic `statistic` and p-value
+        `pvalue`.
 
     Notes
     -----
@@ -78,6 +82,10 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=1,
     Gu, Ng, Tang, Schucany 2008: Testing the Ratio of Two Poisson Rates,
     Biometrical Journal 50 (2008) 2, 2008
 
+    See Also
+    --------
+    tost_poisson_2indep
+    etest_poisson_2indep
     '''
 
     # shortcut names
@@ -277,9 +285,9 @@ def tost_poisson_2indep(count1, exposure1, count2, exposure2, low, upp,
     exposure1 : float
         Total exposure (time * subjects) in first sample
     count2 : int
-        Number of events in first sample
+        Number of events in second sample
     exposure2 : float
-        Total exposure (time * subjects) in first sample
+        Total exposure (time * subjects) in second sample
     low, upp :
         equivalence margin for the ratio of Poisson rates
     method: string
@@ -291,12 +299,9 @@ def tost_poisson_2indep(count1, exposure1, count2, exposure2, low, upp,
 
     Returns
     -------
-    pvalue : float
-        p-value is the max of the pvalues of the two one-sided tests
-    t1 : test results
-        results instance for one-sided hypothesis at the lower margin
-    t1 : test results
-        results instance for one-sided hypothesis at the upper margin
+    results : instance of HolderTuple class
+        The two main attributes are test statistic `statistic` and p-value
+        `pvalue`.
 
     Notes
     -----
@@ -315,6 +320,9 @@ def tost_poisson_2indep(count1, exposure1, count2, exposure2, low, upp,
     Gu, Ng, Tang, Schucany 2008: Testing the Ratio of Two Poisson Rates,
     Biometrical Journal 50 (2008) 2, 2008
 
+    See Also
+    --------
+    test_poisson_2indep
     '''
 
     tt1 = test_poisson_2indep(count1, exposure1, count2, exposure2,

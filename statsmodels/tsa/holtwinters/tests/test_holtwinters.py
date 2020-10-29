@@ -35,8 +35,11 @@ from statsmodels.tsa.holtwinters._smoothers import (
 )
 
 base, _ = os.path.split(os.path.abspath(__file__))
-housing_data = pd.read_csv(os.path.join(base, "results", "housing-data.csv"))
-housing_data = housing_data.set_index("DATE")
+housing_data = pd.read_csv(
+    os.path.join(base, "results", "housing-data.csv"),
+    index_col="DATE",
+    parse_dates=True,
+)
 housing_data = housing_data.asfreq("MS")
 
 SEASONALS = ("add", "mul", None)
@@ -358,7 +361,10 @@ class TestHoltWinters(object):
     @pytest.mark.xfail(reason="Optimizer does not converge", strict=False)
     def test_forecast(self):
         fit1 = ExponentialSmoothing(
-            self.aust, seasonal_periods=4, trend="add", seasonal="add",
+            self.aust,
+            seasonal_periods=4,
+            trend="add",
+            seasonal="add",
         ).fit(method="bh", use_brute=True)
         assert_almost_equal(
             fit1.forecast(steps=4), [60.9542, 36.8505, 46.1628, 50.1272], 3
@@ -884,8 +890,10 @@ def test_float_boxcox(trend, seasonal):
     assert_allclose(res.params["use_boxcox"], 0.5)
     with pytest.warns(FutureWarning):
         res = ExponentialSmoothing(
-            housing_data, trend=trend, seasonal=seasonal
-        ).fit(use_boxcox = 0.5)
+            housing_data,
+            trend=trend,
+            seasonal=seasonal,
+        ).fit(use_boxcox=0.5)
     assert_allclose(res.params["use_boxcox"], 0.5)
 
 
@@ -1624,7 +1632,10 @@ def test_error_initialization(ses):
         ExponentialSmoothing(ses, initial_seasonal=[1.0, 0.2, 0.05, 4])
     with pytest.raises(ValueError):
         ExponentialSmoothing(
-            ses, trend="add", initialization_method="known", initial_level=1.0,
+            ses,
+            trend="add",
+            initialization_method="known",
+            initial_level=1.0,
         )
     with pytest.raises(ValueError):
         ExponentialSmoothing(
@@ -1963,3 +1974,28 @@ def test_boxcox_components(ses):
     assert not hasattr(res, "_untransformed_level")
     assert not hasattr(res, "_untransformed_trend")
     assert not hasattr(res, "_untransformed_seasonal")
+
+
+@pytest.mark.parametrize("repetitions", [1, 10])
+@pytest.mark.parametrize("random_errors", [None, "bootstrap"])
+def test_forecast_1_simulation(austourists, random_errors, repetitions):
+    # GH 7053
+    fit = ExponentialSmoothing(
+        austourists,
+        seasonal_periods=4,
+        trend="add",
+        seasonal="add",
+        damped_trend=True,
+        initialization_method="estimated",
+    ).fit()
+
+    sim = fit.simulate(
+        1, anchor=0, random_errors=random_errors, repetitions=repetitions
+    )
+    expected_shape = (1,) if repetitions == 1 else (1, repetitions)
+    assert sim.shape == expected_shape
+    sim = fit.simulate(
+        10, anchor=0, random_errors=random_errors, repetitions=repetitions
+    )
+    expected_shape = (10,) if repetitions == 1 else (10, repetitions)
+    assert sim.shape == expected_shape

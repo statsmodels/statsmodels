@@ -180,7 +180,7 @@ def effectsize_oneway(means, vars_, nobs, use_var="unequal", ddof_between=0):
 
 
 def convert_effectsize_fsqu(f2=None, eta2=None):
-    """convert squared effect sizes in f family
+    """Convert squared effect sizes in f family
 
     f2 is signal to noise ratio, var_explained / var_residual
 
@@ -455,7 +455,7 @@ def confint_effectsize_oneway(f_stat, df, alpha=0.05, nobs=None):
 def anova_generic(means, variances, nobs, use_var="unequal",
                   welch_correction=True, info=None):
     """
-    Oneway anova based on summary statistics
+    Oneway Anova based on summary statistics
 
     Parameters
     ----------
@@ -558,7 +558,7 @@ def anova_generic(means, variances, nobs, use_var="unequal",
 
 def anova_oneway(data, groups=None, use_var="unequal", welch_correction=True,
                  trim_frac=0):
-    """oneway anova
+    """Oneway Anova
 
     This implements standard anova, Welch and Brown-Forsythe, and trimmed
     (Yuen) variants of those.
@@ -862,6 +862,10 @@ def equivalence_oneway(data, equiv_margin, groups=None, use_var="unequal",
         The two main attributes are test statistic `statistic` and p-value
         `pvalue`.
 
+    See Also
+    --------
+    anova_oneway
+    equivalence_scale_oneway
     """
 
     # use anova to compute summary statistics and f-statistic
@@ -877,7 +881,7 @@ def equivalence_oneway(data, equiv_margin, groups=None, use_var="unequal",
 
 
 def _power_equivalence_oneway_emp(f_stat, n_groups, nobs, eps, df, alpha=0.05):
-    """empirical power of oneway equivalence test
+    """Empirical power of oneway equivalence test
 
     This only returns post-hoc, empirical power.
 
@@ -1148,6 +1152,60 @@ def equivalence_scale_oneway(data, equiv_margin, method='bf', center='median',
     absolute deviation are not scaled to correspond to the variance under
     normal distribution.
 
+    Parameters
+    ----------
+    data : tuple of array_like or DataFrame or Series
+        Data for k independent samples, with k >= 2. The data can be provided
+        as a tuple or list of arrays or in long format with outcome
+        observations in ``data`` and group membership in ``groups``.
+    equiv_margin : float
+        Equivalence margin in terms of effect size. Effect size can be chosen
+        with `margin_type`. default is squared Cohen's f.
+    method : {"unequal", "equal" or "bf"}
+        How to treat heteroscedasticity across samples. This is used as
+        `use_var` option in `anova_oneway` and refers to the variance of the
+        transformed data, i.e. assumption is on 4th moment if squares are used
+        as transform.
+        Three approaches are available:
+
+        "unequal" : Variances are not assumed to be equal across samples.
+            Heteroscedasticity is taken into account with Welch Anova and
+            Satterthwaite-Welch degrees of freedom.
+            This is the default.
+        "equal" : Variances are assumed to be equal across samples.
+            This is the standard Anova.
+        "bf" : Variances are not assumed to be equal across samples.
+            The method is Browne-Forsythe (1971) for testing equality of means
+            with the corrected degrees of freedom by Merothra. The original BF
+            degrees of freedom are available as additional attributes in the
+            results instance, ``df_denom2`` and ``p_value2``.
+    center : "median", "mean", "trimmed" or float
+        Statistic used for centering observations. If a float, then this
+        value is used to center. Default is median.
+    transform : "abs", "square" or callable
+        Transformation for the centered observations. If a callable, then this
+        function is called on the centered data.
+        Default is absolute value.
+    trim_frac_mean : float in [0, 0.5)
+        Trim fraction for the trimmed mean when `center` is "trimmed"
+    trim_frac_anova : float in [0, 0.5)
+        Optional trimming for Anova with trimmed mean and Winsorized variances.
+        With the default trim_frac equal to zero, the oneway Anova statistics
+        are computed without trimming. If `trim_frac` is larger than zero,
+        then the largest and smallest observations in each sample are trimmed.
+        see ``trim_frac`` option in `anova_oneway`
+
+    Returns
+    -------
+    results : instance of HolderTuple class
+        The two main attributes are test statistic `statistic` and p-value
+        `pvalue`.
+
+    See Also
+    --------
+    anova_oneway
+    scale_transform
+    equivalence_oneway
     """
     data = map(np.asarray, data)
     xxd = [scale_transform(x, center=center, transform=transform,

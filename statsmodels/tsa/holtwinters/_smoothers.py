@@ -4,9 +4,7 @@ LOWER_BOUND = np.sqrt(np.finfo(float).eps)
 
 
 class HoltWintersArgs:
-    def __init__(
-        self, xi, p, bounds, y, m, n, transform=False,
-    ):
+    def __init__(self, xi, p, bounds, y, m, n, transform=False):
         self._xi = xi
         self._p = p
         self._bounds = bounds
@@ -244,7 +242,7 @@ def holt_win__mul(x, hw_args: HoltWintersArgs):
     Minimization Function
     (,M)
     """
-    (_, _, _, _, alphac, _, gammac, y_alpha, y_gamma,) = holt_win_init(
+    (_, _, _, _, alphac, _, gammac, y_alpha, y_gamma) = holt_win_init(
         x, hw_args
     )
     lvl = hw_args.lvl
@@ -262,7 +260,7 @@ def holt_win__add(x, hw_args: HoltWintersArgs):
     Minimization Function
     (,A)
     """
-    (alpha, _, gamma, _, alphac, _, gammac, y_alpha, y_gamma,) = holt_win_init(
+    (alpha, _, gamma, _, alphac, _, gammac, y_alpha, y_gamma) = holt_win_init(
         x, hw_args
     )
     lvl = hw_args.lvl
