@@ -94,7 +94,7 @@ class DynamicFactor(MLEModel):
 
         y_t & = \Lambda f_t + B x_t + u_t \\
         f_t & = A_1 f_{t-1} + \dots + A_p f_{t-p} + \eta_t \\
-        u_t & = C_1 u_{t-1} + \dots + C_1 f_{t-q} + \varepsilon_t
+        u_t & = C_1 u_{t-1} + \dots + C_q u_{t-q} + \varepsilon_t
 
     where there are `k_endog` observed series and `k_factors` unobserved
     factors. Thus :math:`y_t` is a `k_endog` x 1 vector and :math:`f_t` is a
