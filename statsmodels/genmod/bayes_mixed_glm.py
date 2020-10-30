@@ -142,7 +142,8 @@ _init_doc = r"""
     a value.  Setting `vcp_p` to 0.5 seems to work well.
 
     The prior for the fixed effects parameters is Gaussian with mean 0
-    and standard deviation `fe_p`.
+    and standard deviation `fe_p`.  It is recommended that quantitative
+    covariates be standardized.
 
     Examples
     --------{example}
