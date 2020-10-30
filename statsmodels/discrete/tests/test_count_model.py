@@ -657,4 +657,3 @@ class TestPandasOffset:
         for inflation in inflations:
             sm.ZeroInflatedPoisson(endog=endog, exog=exog, exposure=exposure, exog_infl=exog,
                                    inflation=inflation).fit()
-
