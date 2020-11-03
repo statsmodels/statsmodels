@@ -223,7 +223,8 @@ class RollingWLS(object):
         if nobs < self._min_nobs:
             return
         try:
-            wxpwxi = np.linalg.inv(wxpwx)
+            if (method == "inv") or not params_only:
+                wxpwxi = np.linalg.inv(wxpwx)
             if method == "inv":
                 params = wxpwxi @ wxpwy
             else:
