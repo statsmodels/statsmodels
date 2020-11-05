@@ -856,7 +856,7 @@ def proportions_ztest(count, nobs, value=None, alternative='two-sided',
     nobs_fact = np.sum(1. / nobs)
     if prop_var:
         p_pooled = prop_var
-    var_ = p_pooled * (1 - p_pooled) * nobs_fact
+    var_ = abs(p_pooled * (1 - p_pooled) * nobs_fact)
     std_diff = np.sqrt(var_)
     from statsmodels.stats.weightstats import _zstat_generic2
     return _zstat_generic2(diff, std_diff, alternative)
