@@ -268,12 +268,13 @@ def test_plot():
     res.plot_recursive_coefficient(alpha=None, figsize=(30, 7))
 
 
-def test_methods(basic_data):
+@pytest.mark.parametrize("params_only", [True, False])
+def test_methods(basic_data, params_only):
     y, x, _ = basic_data
     mod = RollingOLS(y, x, 150)
-    res_inv = mod.fit(method="inv")
-    res_lstsq = mod.fit(method="lstsq")
-    res_pinv = mod.fit(method="pinv")
+    res_inv = mod.fit(method="inv", params_only=params_only)
+    res_lstsq = mod.fit(method="lstsq", params_only=params_only)
+    res_pinv = mod.fit(method="pinv", params_only=params_only)
     assert_allclose(res_inv.params, res_lstsq.params)
     assert_allclose(res_inv.params, res_pinv.params)
 
