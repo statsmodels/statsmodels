@@ -91,6 +91,13 @@ jobs:
       env:
         - PYTHON=3.7
 
+  allow_failures:
+    # pre-testing is a little fragile. Make it an FYI.
+    - python: 3.8
+      env:
+        - PIP_PRE=true
+        - BUILD_INIT=tools/ci/travis_pip.sh
+
 notifications:
   email:
     on_success: always
