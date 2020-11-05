@@ -279,6 +279,15 @@ def test_methods(basic_data, params_only):
     assert_allclose(res_inv.params, res_pinv.params)
 
 
+@pytest.mark.parametrize("method", ["inv", "lstsq", "pinv"])
+def test_params_only(basic_data, method):
+    y, x, _ = basic_data
+    mod = RollingOLS(y, x, 150)
+    res = mod.fit(method=method, params_only=False)
+    res_params_only = mod.fit(method=method, params_only=True)
+    assert_array_equal(res_params_only.params, res.params)
+    
+
 def test_min_nobs(basic_data):
     y, x, w = basic_data
     if not np.any(np.isnan(np.asarray(x))):
