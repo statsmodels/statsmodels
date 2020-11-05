@@ -42,20 +42,14 @@ env:
 jobs:
   fast_finish: true
   include:
-    # Documentation build (on Python 3.9 + cutting edge packages). Slowest build
-    - python: 3.9
-      env:
-        - BUILD_INIT=tools/ci/travis_pip.sh
-        - USE_MATPLOTLIB=false
-        - USE_CVXOPT=false
-        - LINT=true
+    # Documentation build (on Python 3.7 + cutting edge packages). Slowest build
     - python: 3.8
       env:
         - BUILD_INIT=tools/ci/travis_pip.sh
         - USE_MATPLOTLIB=false
         - USE_CVXOPT=false
         - LINT=true
-    - python: 3.8
+    - python: 3.7
       env:
         - PYTHON=${TRAVIS_PYTHON_VERSION}
         - DOCBUILD=true
@@ -88,11 +82,6 @@ jobs:
         - MATPLOTLIB=2
         - LINT=true
     # Latest pre-release packages
-    - python: 3.9
-      env:
-        - SCIPY=1.5.4
-        - PIP_PRE=true
-        - BUILD_INIT=tools/ci/travis_pip.sh
     - python: 3.8
       env:
         - PIP_PRE=true
