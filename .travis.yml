@@ -2,13 +2,15 @@
 # versions.  Allows substantial flexibility for choosing versions of
 # required packages and is simpler to use to test up-to-date scientific Python
 # stack
+os: linux
 dist: bionic
 language: python
 cache:
   - directories:
     - $HOME/.cache/pip
     - $TRAVIS_BUILD_DIR/docs/source/examples/notebooks
-
+services:
+  - xvfb
 
 git:
   depth: 10000
@@ -37,7 +39,7 @@ env:
     - PYTEST_OPTIONS=--skip-slow  # skip slow on travis since tested on azure
     - XDIST_OPTS=""
 
-matrix:
+jobs:
   fast_finish: true
   include:
     # Documentation build (on Python 3.7 + cutting edge packages). Slowest build
@@ -49,12 +51,12 @@ matrix:
         - LINT=true
     - python: 3.7
       env:
-        - PYTHON=3.7
+        - PYTHON=${TRAVIS_PYTHON_VERSION}
         - DOCBUILD=true
     # Python 3.7 + fixed pandas
     - python: 3.7
       env:
-        - PYTHON=3.7
+        - PYTHON=${TRAVIS_PYTHON_VERSION}
         - PANDAS=0.25
         - NUMPY=1.17
         - SCIPY=1.4
@@ -63,7 +65,7 @@ matrix:
     # Python 3.6 + legacy blas + older pandas
     - python: 3.6
       env:
-        - PYTHON=3.6
+        - PYTHON=${TRAVIS_PYTHON_VERSION}
         - NUMPY=1.16
         - PANDAS=0.24
         - SCIPY=1.3
@@ -73,7 +75,7 @@ matrix:
     # Python 3.6 + oldest packages
     - python: 3.6
       env:
-        - PYTHON=3.6
+        - PYTHON=${TRAVIS_PYTHON_VERSION}
         - NUMPY=1.15
         - SCIPY=1.2
         - PANDAS=0.23
@@ -109,9 +111,7 @@ before_install:
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then sudo lshw -class processor; fi
   - if [ "$TRAVIS_OS_NAME" = "osx" ]; then sysctl -a | grep machdep.cpu; fi
   # Fix for headless TravisCI
-  - "export DISPLAY=:99.0"
-  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then ( sh -e /etc/init.d/xvfb start )& fi
-  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then ( sudo Xvfb :99 -ac -screen 0 1024x768x8; echo ok )& fi
+  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then ( DISPLAY=:99.0 sudo Xvfb :99 -ac -screen 0 1024x768x8; echo ok )& fi
   # Avoid noise from matplotlib
   - mkdir -p $HOME/.config/matplotlib
   - SRCDIR=$PWD
