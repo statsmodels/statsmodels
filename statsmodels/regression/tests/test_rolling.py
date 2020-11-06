@@ -285,7 +285,8 @@ def test_params_only(basic_data, method):
     mod = RollingOLS(y, x, 150)
     res = mod.fit(method=method, params_only=False)
     res_params_only = mod.fit(method=method, params_only=True)
-    assert_array_equal(res_params_only.params, res.params)
+    # use assert_allclose to incorporate for numerical errors on x86 platforms
+    assert_allclose(res_params_only.params, res.params)
 
 
 def test_min_nobs(basic_data):
