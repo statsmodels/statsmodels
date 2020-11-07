@@ -510,7 +510,7 @@ class TestHoltWinters(object):
         assert_almost_equal(fit5.params["damping_trend"], 0.98, 2)
         assert_almost_equal(fit5.params["initial_level"], 258.95, 1)
         assert_almost_equal(fit5.params["initial_trend"], 1.04, 2)
-        assert_almost_equal(fit5.sse, 6082.00, 1)  # 6100.11
+        assert_almost_equal(fit5.sse, 6082.00, 0)  # 6100.11
 
     def test_holt_damp_r(self):
         # Test the damping parameters against the R forecast packages `ets`
