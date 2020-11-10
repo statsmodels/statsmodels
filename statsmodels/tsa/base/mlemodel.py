@@ -39,7 +39,7 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
         self._init_kwargs = kwargs
 
         # Prepared the endog array: C-ordered, shape=(nobs x k_endog)
-        self.endog, self.exog = self.prepare_data(self.data)
+        self.endog, self.exog = self.prepare_data()
         self.use_pandas = isinstance(self.data, PandasData)
 
         # Dimensions
@@ -52,7 +52,6 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
         self._fixed_params_index = None
         self._free_params_index = None
 
-    @staticmethod
     def prepare_data(data):
         raise NotImplementedError
 
@@ -65,10 +64,6 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
                 raise ValueError(
                     'Invalid parameter name passed: "%s".' % param_name
                 )
-
-    @property
-    def k_params(self):
-        return len(self.param_names)
 
     @contextlib.contextmanager
     def fix_params(self, params):
@@ -90,10 +85,11 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
         """
         # Initialization (this is done here rather than in the constructor
         # because param_names may not be available at that point)
+        k_params = len(self.param_names)
         if self._fixed_params is None:
             self._fixed_params = {}
             self._params_index = OrderedDict(
-                zip(self.param_names, np.arange(self.k_params))
+                zip(self.param_names, np.arange(k_params))
             )
 
         # Cache the current fixed parameters
@@ -197,7 +193,6 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
         raise NotImplementedError
 
     def _wrap_data(self, data, start_idx, end_idx, names=None):
-        # TODO: check if this is reasonable for statespace
         # squeezing data: data may be:
         # - m x n: m dates, n simulations -> squeeze does nothing
         # - m x 1: m dates, 1 simulation -> squeeze removes last dimension
@@ -272,8 +267,6 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
                                 epsilon=epsilon, kwargs=kwargs,
                                 centered=approx_centered)
 
-        # TODO: changed this to nobs_effective, has to be changed when merging
-        # with statespace mlemodel
         return hessian / (self.nobs_effective)
 
     def _hessian_complex_step(self, params, **kwargs):
@@ -288,8 +281,6 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
         hessian = approx_hess_cs(
             params, self.loglike, epsilon=epsilon, kwargs=kwargs)
 
-        # TODO: changed this to nobs_effective, has to be changed when merging
-        # with statespace mlemodel
         return hessian / (self.nobs_effective)
 
 
@@ -314,11 +305,11 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
         The parameters of the model.
     """
 
-    def __init__(self, model, params, scale=1.0):
+    def __init__(self, model, params, normalized_cov_params=None, scale=1.0):
         self.data = model.data
         self.endog = model.data.orig_endog
 
-        super().__init__(model, params, None, scale=scale)
+        super().__init__(model, params, normalized_cov_params, scale=scale)
 
         # Save the fixed parameters
         self._has_fixed_params = self.model._has_fixed_params
@@ -374,7 +365,6 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
 
     @cache_readonly
     def fittedvalues(self):
-        # TODO
         raise NotImplementedError
 
     @cache_readonly
@@ -497,104 +487,61 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
             self._cov_approx_complex_step, self._cov_approx_centered
         )
 
-    def test_serial_correlation(self, method, lags=None):
+    def test_normality(self, method):
         """
-        Ljung-Box test for no serial correlation of standardized residuals
+        Test for normality of standardized residuals.
 
-        Null hypothesis is no serial correlation.
+        Null hypothesis is normality.
 
         Parameters
         ----------
-        method : {'ljungbox','boxpierece', None}
-            The statistical test for serial correlation. If None, an attempt is
-            made to select an appropriate test.
-        lags : None, int or array_like
-            If lags is an integer then this is taken to be the largest lag
-            that is included, the test result is reported for all smaller lag
-            length.
-            If lags is a list or array, then all lags are included up to the
-            largest lag in the list, however only the tests for the lags in the
-            list are reported.
-            If lags is None, then the default maxlag is 12*(nobs/100)^{1/4}
-
-        Returns
-        -------
-        output : ndarray
-            An array with `(test_statistic, pvalue)` for each endogenous
-            variable and each lag. The array is then sized
-            `(k_endog, 2, lags)`. If the method is called as
-            `ljungbox = res.test_serial_correlation()`, then `ljungbox[i]`
-            holds the results of the Ljung-Box test (as would be returned by
-            `statsmodels.stats.diagnostic.acorr_ljungbox`) for the `i` th
-            endogenous variable.
+        method : {'jarquebera', None}
+            The statistical test for normality. Must be 'jarquebera' for
+            Jarque-Bera normality test. If None, an attempt is made to select
+            an appropriate test.
 
         See Also
         --------
-        statsmodels.stats.diagnostic.acorr_ljungbox
-            Ljung-Box test for serial correlation.
+        statsmodels.stats.stattools.jarque_bera
+            The Jarque-Bera test of normality.
 
         Notes
         -----
         For statespace models: let `d` = max(loglikelihood_burn, nobs_diffuse);
         this test is calculated ignoring the first `d` residuals.
 
-        Output is nan for any endogenous variable which has missing values.
+        In the case of missing data, the maintained hypothesis is that the
+        data are missing completely at random. This test is then run on the
+        standardized residuals excluding those corresponding to missing
+        observations.
         """
         if method is None:
-            method = 'ljungbox'
+            method = 'jarquebera'
 
         if self.standardized_forecasts_error is None:
             raise ValueError('Cannot compute test statistic when standardized'
                              ' forecast errors have not been computed.')
 
-        if method == 'ljungbox' or method == 'boxpierce':
-            from statsmodels.stats.diagnostic import acorr_ljungbox
+        if method == 'jarquebera':
+            from statsmodels.stats.stattools import jarque_bera
             if hasattr(self, "loglikelihood_burn"):
                 d = np.maximum(self.loglikelihood_burn, self.nobs_diffuse)
-                # This differs from self.nobs_effective because here we want to
-                # exclude exact diffuse periods, whereas self.nobs_effective
-                # only excludes explicitly burned (usually approximate diffuse)
-                # periods.
-                nobs_effective = self.nobs - d
             else:
-                nobs_effective = self.nobs_effective
+                d = 0
             output = []
-
-            # Default lags for acorr_ljungbox is 40, but may not always have
-            # that many observations
-            if lags is None:
-                seasonal_periods = getattr(self.model, "seasonal_periods", 0)
-                if seasonal_periods:
-                    lags = min(2 * seasonal_periods, nobs_effective // 5)
-                else:
-                    lags = min(10, nobs_effective // 5)
-
-                warnings.warn(
-                    "The default value of lags is changing.  After 0.12, "
-                    "this value will become min(10, nobs//5) for non-seasonal "
-                    "time series and min (2*m, nobs//5) for seasonal time "
-                    "series. Directly set lags to silence this warning.",
-                    FutureWarning
-                )
-
             for i in range(self.model.k_endog):
-                if hasattr(self, "filter_results"):
-                    x = self.filter_results.standardized_forecasts_error[i][d:]
+                if hasattr(self, "fiter_results"):
+                    resid = self.filter_results.standardized_forecasts_error[
+                        i, d:
+                    ]
                 else:
-                    x = self.standardized_forecasts_error
-                results = acorr_ljungbox(
-                    x, lags=lags, boxpierce=(method == 'boxpierce'),
-                    return_df=False)
-                if method == 'ljungbox':
-                    output.append(results[0:2])
-                else:
-                    output.append(results[2:])
-
-            output = np.c_[output]
+                    resid = self.standardized_forecasts_error
+                mask = ~np.isnan(resid)
+                output.append(jarque_bera(resid[mask]))
         else:
-            raise NotImplementedError('Invalid serial correlation test'
-                                      ' method.')
-        return output
+            raise NotImplementedError('Invalid normality test method.')
+
+        return np.array(output)
 
     def test_heteroskedasticity(self, method, alternative='two-sided',
                                 use_f=True):
@@ -770,61 +717,108 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
 
         return output
 
-    def test_normality(self, method):
+    def test_serial_correlation(self, method, lags=None):
         """
-        Test for normality of standardized residuals.
+        Ljung-Box test for no serial correlation of standardized residuals
 
-        Null hypothesis is normality.
+        Null hypothesis is no serial correlation.
 
         Parameters
         ----------
-        method : {'jarquebera', None}
-            The statistical test for normality. Must be 'jarquebera' for
-            Jarque-Bera normality test. If None, an attempt is made to select
-            an appropriate test.
+        method : {'ljungbox','boxpierece', None}
+            The statistical test for serial correlation. If None, an attempt is
+            made to select an appropriate test.
+        lags : None, int or array_like
+            If lags is an integer then this is taken to be the largest lag
+            that is included, the test result is reported for all smaller lag
+            length.
+            If lags is a list or array, then all lags are included up to the
+            largest lag in the list, however only the tests for the lags in the
+            list are reported.
+            If lags is None, then the default maxlag is 12*(nobs/100)^{1/4}
+            After 0.12 the default maxlag will change to min(10, nobs // 5) for
+            non-seasonal models and min(2*m, nobs // 5) for seasonal time
+            series where m is the seasonal period.
+
+        Returns
+        -------
+        output : ndarray
+            An array with `(test_statistic, pvalue)` for each endogenous
+            variable and each lag. The array is then sized
+            `(k_endog, 2, lags)`. If the method is called as
+            `ljungbox = res.test_serial_correlation()`, then `ljungbox[i]`
+            holds the results of the Ljung-Box test (as would be returned by
+            `statsmodels.stats.diagnostic.acorr_ljungbox`) for the `i` th
+            endogenous variable.
 
         See Also
         --------
-        statsmodels.stats.stattools.jarque_bera
-            The Jarque-Bera test of normality.
+        statsmodels.stats.diagnostic.acorr_ljungbox
+            Ljung-Box test for serial correlation.
 
         Notes
         -----
         For statespace models: let `d` = max(loglikelihood_burn, nobs_diffuse);
         this test is calculated ignoring the first `d` residuals.
 
-        In the case of missing data, the maintained hypothesis is that the
-        data are missing completely at random. This test is then run on the
-        standardized residuals excluding those corresponding to missing
-        observations.
+        Output is nan for any endogenous variable which has missing values.
         """
         if method is None:
-            method = 'jarquebera'
+            method = 'ljungbox'
 
         if self.standardized_forecasts_error is None:
             raise ValueError('Cannot compute test statistic when standardized'
                              ' forecast errors have not been computed.')
 
-        if method == 'jarquebera':
-            from statsmodels.stats.stattools import jarque_bera
+        if method == 'ljungbox' or method == 'boxpierce':
+            from statsmodels.stats.diagnostic import acorr_ljungbox
             if hasattr(self, "loglikelihood_burn"):
                 d = np.maximum(self.loglikelihood_burn, self.nobs_diffuse)
+                # This differs from self.nobs_effective because here we want to
+                # exclude exact diffuse periods, whereas self.nobs_effective
+                # only excludes explicitly burned (usually approximate diffuse)
+                # periods.
+                nobs_effective = self.nobs - d
             else:
-                d = 0
+                nobs_effective = self.nobs_effective
             output = []
-            for i in range(self.model.k_endog):
-                if hasattr(self, "fiter_results"):
-                    resid = self.filter_results.standardized_forecasts_error[
-                        i, d:
-                    ]
-                else:
-                    resid = self.standardized_forecasts_error
-                mask = ~np.isnan(resid)
-                output.append(jarque_bera(resid[mask]))
-        else:
-            raise NotImplementedError('Invalid normality test method.')
 
-        return np.array(output)
+            # Default lags for acorr_ljungbox is 40, but may not always have
+            # that many observations
+            if lags is None:
+                seasonal_periods = getattr(self.model, "seasonal_periods", 0)
+                if seasonal_periods:
+                    lags = min(2 * seasonal_periods, nobs_effective // 5)
+                else:
+                    lags = min(10, nobs_effective // 5)
+
+                warnings.warn(
+                    "The default value of lags is changing.  After 0.12, "
+                    "this value will become min(10, nobs//5) for non-seasonal "
+                    "time series and min (2*m, nobs//5) for seasonal time "
+                    "series. Directly set lags to silence this warning.",
+                    FutureWarning
+                )
+
+            for i in range(self.model.k_endog):
+                if hasattr(self, "filter_results"):
+                    x = self.filter_results.standardized_forecasts_error[i][d:]
+                else:
+                    x = self.standardized_forecasts_error
+                results = acorr_ljungbox(
+                    x, lags=lags, boxpierce=(method == 'boxpierce'),
+                    return_df=False)
+                if method == 'ljungbox':
+                    output.append(results[0:2])
+                else:
+                    output.append(results[2:])
+
+            output = np.c_[output]
+        else:
+            raise NotImplementedError('Invalid serial correlation test'
+                                      ' method.')
+        return output
+
 
     def summary(
         self,

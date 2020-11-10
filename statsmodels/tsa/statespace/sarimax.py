@@ -1801,8 +1801,6 @@ class SARIMAXResults(MLEResults):
         super(SARIMAXResults, self).__init__(model, params, filter_results,
                                              cov_type, **kwargs)
 
-        self.df_resid = np.inf  # attribute required for wald tests
-
         # Save _init_kwds
         self._init_kwds = self.model._get_init_kwds()
 
@@ -1877,6 +1875,10 @@ class SARIMAXResults(MLEResults):
 
         # Handle removing data
         self._data_attr_model.extend(['orig_endog', 'orig_exog'])
+
+    @cache_readonly
+    def df_resid(self):
+        return np.inf  # attribute required for wald tests
 
     def extend(self, endog, exog=None, **kwargs):
         kwargs.setdefault('trend_offset', self.nobs + 1)

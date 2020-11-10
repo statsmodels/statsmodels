@@ -162,7 +162,9 @@ from statsmodels.tools.validation import (
     string_like,
 )
 import statsmodels.tsa.base.tsa_model as tsbase
-from statsmodels.tsa.exponential_smoothing import base
+from statsmodels.tsa.base.mlemodel import (
+    StateSpaceMLEModel, StateSpaceMLEResults
+)
 import statsmodels.tsa.exponential_smoothing._ets_smooth as smooth
 from statsmodels.tsa.exponential_smoothing.initialization import (
     _initialization_heuristic,
@@ -205,7 +207,7 @@ from statsmodels.tsa.tsatools import freq_to_period
 #   multiplication
 
 
-class ETSModel(base.StateSpaceMLEModel):
+class ETSModel(StateSpaceMLEModel):
     r"""
     ETS models.
 
@@ -425,7 +427,7 @@ class ETSModel(base.StateSpaceMLEModel):
     ):
 
         super().__init__(
-            endog, exog=None, dates=dates, freq=freq, missing=missing
+            endog, exog=None, dates=dates, freq=freq, missing=missing,
         )
 
         # MODEL DEFINITION
@@ -625,12 +627,11 @@ class ETSModel(base.StateSpaceMLEModel):
                 )
             self.bounds = bounds
 
-    @staticmethod
-    def prepare_data(data):
+    def prepare_data(self):
         """
         Prepare data for use in the state space representation
         """
-        endog = np.array(data.orig_endog, order="C")
+        endog = np.array(self.data.orig_endog, order="C")
         if endog.ndim != 1:
             raise ValueError("endog must be 1-dimensional")
         return endog, None
@@ -1327,7 +1328,7 @@ class ETSModel(base.StateSpaceMLEModel):
         ...
 
 
-class ETSResults(base.StateSpaceMLEResults):
+class ETSResults(StateSpaceMLEResults):
     """
     Results from an error, trend, seasonal (ETS) exponential smoothing model
     """
