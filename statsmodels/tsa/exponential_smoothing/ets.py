@@ -1396,6 +1396,8 @@ class ETSResults(StateSpaceMLEResults):
         # degrees of freedom of model
         k_free_params = self.k_params - len(self.fixed_params)
         self.df_model = k_free_params + 1
+        self.df_resid = self.nobs_effective - self.df_model
+
 
         # standardized forecasting error
         self.mean_resid = np.mean(self.resid)

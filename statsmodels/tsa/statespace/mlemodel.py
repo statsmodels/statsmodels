@@ -24,9 +24,9 @@ import statsmodels.base.wrapper as wrap
 import statsmodels.tsa.base.prediction as pred
 
 from statsmodels.base.data import PandasData
-import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.base.mlemodel import (StateSpaceMLEModel,
                                            StateSpaceMLEResults)
+import statsmodels.tsa.base.tsa_model as tsbase
 
 from .news import NewsResults
 from .simulation_smoother import SimulationSmoother
@@ -182,9 +182,6 @@ class MLEModel(StateSpaceMLEModel):
 
         # Other dimensions, now that `ssm` is available
         self.k_endog = self.ssm.k_endog
-
-        # Effective number of observations
-        self.nobs_effective = self.nobs - self.ssm.loglikelihood_burn
 
     def _get_index_with_final_state(self):
         # The index we inherit from `TimeSeriesModel` will only cover the
@@ -1981,6 +1978,13 @@ class MLEModel(StateSpaceMLEModel):
                 irfs = pd.DataFrame(irfs, columns=self.endog_names)
         return irfs
 
+    @classmethod
+    def from_formula(cls, formula, data, subset=None):
+        """
+        Not implemented for state space models
+        """
+        raise NotImplementedError
+
 
 class MLEResults(StateSpaceMLEResults):
     r"""
@@ -2045,6 +2049,7 @@ class MLEResults(StateSpaceMLEResults):
         k_free_params = self.params.size - len(self.fixed_params)
         self.df_model = (k_free_params + self.k_diffuse_states
                          + self.filter_results.filter_concentrated)
+        self.df_resid = self.nobs_effective - self.df_model
 
         # Setup covariance matrix notes dictionary
         if not hasattr(self, 'cov_kwds'):

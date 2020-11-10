@@ -52,7 +52,7 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
         self._fixed_params_index = None
         self._free_params_index = None
 
-    def prepare_data(data):
+    def prepare_data(self, data):
         raise NotImplementedError
 
     def clone(self, endog, exog=None, **kwargs):
@@ -118,7 +118,7 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
             self._params_index[key] for key in self._fixed_params.keys()
         ]
         self._free_params_index = list(
-            set(np.arange(self.k_params)).difference(self._fixed_params_index)
+            set(np.arange(k_params)).difference(self._fixed_params_index)
         )
 
         try:
@@ -182,15 +182,6 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
             except NotImplementedError:
                 names = []
             return names
-
-    @classmethod
-    def from_formula(
-        cls, formula, data, subset=None, drop_cols=None, *args, **kwargs
-    ):
-        """
-        Not implemented for state space models
-        """
-        raise NotImplementedError
 
     def _wrap_data(self, data, start_idx, end_idx, names=None):
         # squeezing data: data may be:
@@ -267,7 +258,11 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
                                 epsilon=epsilon, kwargs=kwargs,
                                 centered=approx_centered)
 
-        return hessian / (self.nobs_effective)
+        if hasattr(self, "ssm"):
+            nobs_effective = self.nobs - self.ssm.loglikelihood_burn
+        else:
+            nobs_effective = self.nobs
+        return hessian / nobs_effective
 
     def _hessian_complex_step(self, params, **kwargs):
         """
@@ -281,7 +276,11 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
         hessian = approx_hess_cs(
             params, self.loglike, epsilon=epsilon, kwargs=kwargs)
 
-        return hessian / (self.nobs_effective)
+        if hasattr(self, "ssm"):
+            nobs_effective = self.nobs - self.ssm.loglikelihood_burn
+        else:
+            nobs_effective = self.nobs
+        return hessian / nobs_effective
 
 
 class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
@@ -330,7 +329,8 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
 
         # Dimensions
         self.nobs = self.model.nobs
-        self.k_params = self.model.k_params
+        if hasattr(model, "k_params"):
+            self.k_params = self.model.k_params
 
         self._rank = None
 
@@ -338,9 +338,6 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
     def nobs_effective(self):
         raise NotImplementedError
 
-    @cache_readonly
-    def df_resid(self):
-        return self.nobs_effective - self.df_model
 
     @cache_readonly
     def aic(self):
@@ -530,7 +527,7 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
                 d = 0
             output = []
             for i in range(self.model.k_endog):
-                if hasattr(self, "fiter_results"):
+                if hasattr(self, "filter_results"):
                     resid = self.filter_results.standardized_forecasts_error[
                         i, d:
                     ]
