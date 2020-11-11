@@ -163,7 +163,8 @@ from statsmodels.tools.validation import (
 )
 import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.base.mlemodel import (
-    StateSpaceMLEModel, StateSpaceMLEResults
+    StateSpaceMLEModel,
+    StateSpaceMLEResults,
 )
 import statsmodels.tsa.exponential_smoothing._ets_smooth as smooth
 from statsmodels.tsa.exponential_smoothing.initialization import (
@@ -427,7 +428,11 @@ class ETSModel(StateSpaceMLEModel):
     ):
 
         super().__init__(
-            endog, exog=None, dates=dates, freq=freq, missing=missing,
+            endog,
+            exog=None,
+            dates=dates,
+            freq=freq,
+            missing=missing,
         )
 
         # MODEL DEFINITION
@@ -1332,6 +1337,7 @@ class ETSResults(StateSpaceMLEResults):
     """
     Results from an error, trend, seasonal (ETS) exponential smoothing model
     """
+
     def __init__(self, model, params, results):
         yhat, xhat = results
         self._llf = model.loglike(params)
@@ -1397,7 +1403,6 @@ class ETSResults(StateSpaceMLEResults):
         k_free_params = self.k_params - len(self.fixed_params)
         self.df_model = k_free_params + 1
         self.df_resid = self.nobs_effective - self.df_model
-
 
         # standardized forecasting error
         self.mean_resid = np.mean(self.resid)
@@ -2234,8 +2239,8 @@ class PredictionResults:
         self.row_labels = self.predicted_mean.index
         self.endog = np.empty(nsmooth + ndynamic) * np.nan
         if nsmooth > 0:
-            self.endog[0: (end - start + 1)] = results.data.endog[
-                start: (end + 1)
+            self.endog[0 : (end - start + 1)] = results.data.endog[
+                start : (end + 1)
             ]
         self.model = Bunch(
             data=results.model.data.__class__(
@@ -2281,9 +2286,9 @@ class PredictionResults:
         else:  # method == 'exact'
             steps = np.ones(ndynamic + nsmooth)
             if ndynamic > 0:
-                steps[
-                    (start_dynamic - min(start_dynamic, start)):
-                    ] = range(1, ndynamic + 1)
+                steps[(start_dynamic - min(start_dynamic, start)) :] = range(
+                    1, ndynamic + 1
+                )
             # when we are doing out of sample only prediction,
             # start > end + 1, and
             # we only want to output beginning at start
