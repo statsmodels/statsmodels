@@ -10,10 +10,12 @@ License: BSD-3
 import numpy as np
 from scipy import stats
 from statsmodels.stats.base import HolderTuple
+from statsmodels.stats.effect_size import _noncentrality_chisquare
 
 
 def test_chisquare_binning(counts, expected, sort_var=None, bins=10,
-                           df=None, ordered=False, sort_method="quicksort"):
+                           df=None, ordered=False, sort_method="quicksort",
+                           alpha_nc=0.05):
     """chisquare gof test with binning of data, Hosmer-Lemeshow type
 
     ``observed`` and ``expected`` are observation specific and should have
@@ -91,22 +93,26 @@ def test_chisquare_binning(counts, expected, sort_var=None, bins=10,
     probs = np.array([expected[idx].sum(0) for idx in indices])
 
     # chisquare test
-    stat_chi2 = ((freqs - probs)**2 / probs).sum()
+    resid_pearson = (freqs - probs) / np.sqrt(probs)
+    chi2_stat_groups = ((freqs - probs)**2 / probs).sum(1)
+    chi2_stat = chi2_stat_groups.sum()
     if df is None:
         g, c = freqs.shape
         if ordered is True:
             df = (g - 2) * (c - 1) + (c - 2)
         else:
             df = (g - 2) * (c - 1)
-    pvalue = stats.chi2.sf(stat_chi2, df)
-    noncent = np.maximum(stat_chi2 - df, 0)
+    pvalue = stats.chi2.sf(chi2_stat, df)
+    noncentrality = _noncentrality_chisquare(chi2_stat, df, alpha=alpha_nc)
 
-    res = HolderTuple(statistic=stat_chi2,
+    res = HolderTuple(statistic=chi2_stat,
                       pvalue=pvalue,
                       df=df,
                       freqs=freqs,
                       probs=probs,
-                      noncent=noncent,
+                      noncentrality=noncentrality,
+                      resid_pearson=resid_pearson,
+                      chi2_stat_groups=chi2_stat_groups,
                       indices=indices
                       )
     return res
