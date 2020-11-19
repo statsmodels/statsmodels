@@ -602,6 +602,31 @@ class OrderedResults(GenericLikelihoodModelResults):
         # number of restrictions is number of exog
         return stats.distributions.chi2.sf(self.llr, self.model.k_vars)
 
+    @cache_readonly
+    def resid_prob(self):
+        """probability residual
+
+        Probability-scale residual is ``P(Y < y) − P(Y > y)`` where `Y` is the
+        observed choice and ``y`` is a random variable corresponding to the
+        predicted distribution.
+
+        References
+        ----------
+        Shepherd BE, Li C, Liu Q (2016) Probability-scale residuals for
+        continuous, discrete, and censored data.
+        The Canadian Jouranl of Statistics. 44:463–476.
+
+        Li C and Shepherd BE (2012) A new residual for ordinal outcomes.
+        Biometrika. 99: 473–480
+
+        """
+        from statsmodels.stats.diagnostic_gen import prob_larger_ordinal_choice
+        endog = self.model.endog
+        fitted = self.predict()
+        r = prob_larger_ordinal_choice(fitted)[1]
+        resid_prob = r[np.arange(endog.shape[0]), endog]
+        return resid_prob
+
 
 class OrderedResultsWrapper(lm.RegressionResultsWrapper):
     pass
