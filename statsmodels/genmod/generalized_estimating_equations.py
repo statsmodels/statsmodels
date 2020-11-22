@@ -860,7 +860,10 @@ class GEE(GLM):
         cmat = cmat / scale ** 2
         score2 = np.dot(qc.T, score) / scale
 
-        amat = np.linalg.inv(ncov1)
+        try:
+            amat = np.linalg.inv(ncov1)
+        except np.linalg.LinAlgError:
+            amat = np.linalg.pinv(ncov1)
 
         bmat_11 = np.dot(qm.T, np.dot(cmat, qm))
         bmat_22 = np.dot(qc.T, np.dot(cmat, qc))
@@ -869,21 +872,42 @@ class GEE(GLM):
         amat_11 = np.dot(qm.T, np.dot(amat, qm))
         amat_12 = np.dot(qm.T, np.dot(amat, qc))
 
-        score_cov = bmat_22 - np.dot(amat_12.T,
-                                     np.linalg.solve(amat_11, bmat_12))
-        score_cov -= np.dot(bmat_12.T,
-                            np.linalg.solve(amat_11, amat_12))
-        score_cov += np.dot(amat_12.T,
-                            np.dot(np.linalg.solve(amat_11, bmat_11),
-                                   np.linalg.solve(amat_11, amat_12)))
+        try:
+            ab = np.linalg.solve(amat_11, bmat_12)
+        except np.linalg.LinAlgError:
+            ab = np.dot(np.linalg.pinv(amat_11), bmat_12)
+
+        score_cov = bmat_22 - np.dot(amat_12.T, ab)
+
+        try:
+            aa = np.linalg.solve(amat_11, amat_12)
+        except np.linalg.LinAlgError:
+            aa = np.dot(np.linalg.pinv(amat_11), amat_12)
+
+        score_cov -= np.dot(bmat_12.T, aa)
+
+        try:
+            ab = np.linalg.solve(amat_11, bmat_11)
+        except np.linalg.LinAlgError:
+            ab = np.dot(np.linalg.pinv(amat_11), bmat_11)
+
+        try:
+            aa = np.linalg.solve(amat_11, amat_12)
+        except np.linalg.LinAlgError:
+            aa = np.dot(np.linalg.pinv(amat_11), amat_12)
+
+        score_cov += np.dot(amat_12.T, np.dot(ab, aa))
 
         # Attempt to restore state
         self.cov_struct = cov_struct_save
         self.cached_means = cached_means_save
 
         from scipy.stats.distributions import chi2
-        score_statistic = np.dot(score2,
-                                 np.linalg.solve(score_cov, score2))
+        try:
+            sc2 = np.linalg.solve(score_cov, score2)
+        except np.linalg.LinAlgError:
+            sc2 = np.dot(np.linalg.pinv(score_cov), score2)
+        score_statistic = np.dot(score2, sc2)
         score_df = len(score2)
         score_pvalue = 1 - chi2.cdf(score_statistic, score_df)
         return {"statistic": score_statistic,
@@ -1031,7 +1055,10 @@ class GEE(GLM):
             bmat += np.dot(dmat.T, vinv_d)
             score += np.dot(dmat.T, vinv_resid)
 
-        update = np.linalg.solve(bmat, score)
+        try:
+            update = np.linalg.solve(bmat, score)
+        except np.linalg.LinAlgError:
+            update = np.dot(np.linalg.pinv(bmat), score)
 
         self._fit_history["cov_adjust"].append(
             self.cov_struct.cov_adjust)
@@ -1122,7 +1149,11 @@ class GEE(GLM):
 
         scale = self.estimate_scale()
 
-        bmati = np.linalg.inv(bmat)
+        try:
+            bmati = np.linalg.inv(bmat)
+        except np.linalg.LinAlgError:
+            bmati = np.linalg.pinv(bmat)
+
         cov_naive = bmati * scale
         cov_robust = np.dot(bmati, np.dot(cmat, bmati))
 
@@ -2523,22 +2554,24 @@ def _score_test_submodel(par, sub):
     x2 = sub.exog
 
     u, s, vt = np.linalg.svd(x1, 0)
+    v = vt.T
 
     # Get the orthogonal complement of col(x2) in col(x1).
-    a, _, _ = np.linalg.svd(x2, 0)
+    a, _ = np.linalg.qr(x2)
     a = u - np.dot(a, np.dot(a.T, u))
     x2c, sb, _ = np.linalg.svd(a, 0)
     x2c = x2c[:, sb > 1e-12]
 
     # x1 * qm = x2
-    qm = np.dot(vt.T, np.dot(u.T, x2) / s[:, None])
+    ii = np.flatnonzero(np.abs(s) > 1e-12)
+    qm = np.dot(v[:, ii], np.dot(u[:, ii].T, x2) / s[ii, None])
 
     e = np.max(np.abs(x2 - np.dot(x1, qm)))
     if e > 1e-8:
         return None, None
 
     # x1 * qc = x2c
-    qc = np.dot(vt.T, np.dot(u.T, x2c) / s[:, None])
+    qc = np.dot(v[:, ii], np.dot(u[:, ii].T, x2c) / s[ii, None])
 
     return qm, qc
 
