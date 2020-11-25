@@ -39,7 +39,7 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
         self._init_kwargs = kwargs
 
         # Prepared the endog array: C-ordered, shape=(nobs x k_endog)
-        self.endog, self.exog = self.prepare_data(self.data)
+        self.endog, self.exog = self.prepare_data()
         self.use_pandas = isinstance(self.data, PandasData)
 
         # Dimensions
@@ -52,8 +52,7 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
         self._fixed_params_index = None
         self._free_params_index = None
 
-    @staticmethod
-    def prepare_data(data):
+    def prepare_data(self, data):
         raise NotImplementedError
 
     def clone(self, endog, exog=None, **kwargs):
@@ -65,10 +64,6 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
                 raise ValueError(
                     'Invalid parameter name passed: "%s".' % param_name
                 )
-
-    @property
-    def k_params(self):
-        return len(self.param_names)
 
     @contextlib.contextmanager
     def fix_params(self, params):
@@ -90,10 +85,11 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
         """
         # Initialization (this is done here rather than in the constructor
         # because param_names may not be available at that point)
+        k_params = len(self.param_names)
         if self._fixed_params is None:
             self._fixed_params = {}
             self._params_index = OrderedDict(
-                zip(self.param_names, np.arange(self.k_params))
+                zip(self.param_names, np.arange(k_params))
             )
 
         # Cache the current fixed parameters
@@ -122,7 +118,7 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
             self._params_index[key] for key in self._fixed_params.keys()
         ]
         self._free_params_index = list(
-            set(np.arange(self.k_params)).difference(self._fixed_params_index)
+            set(np.arange(k_params)).difference(self._fixed_params_index)
         )
 
         try:
@@ -187,17 +183,7 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
                 names = []
             return names
 
-    @classmethod
-    def from_formula(
-        cls, formula, data, subset=None, drop_cols=None, *args, **kwargs
-    ):
-        """
-        Not implemented for state space models
-        """
-        raise NotImplementedError
-
     def _wrap_data(self, data, start_idx, end_idx, names=None):
-        # TODO: check if this is reasonable for statespace
         # squeezing data: data may be:
         # - m x n: m dates, n simulations -> squeeze does nothing
         # - m x 1: m dates, 1 simulation -> squeeze removes last dimension
@@ -244,37 +230,50 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
     def _score_complex_step(self, params, **kwargs):
         # the default epsilon can be too small
         # inversion_method = INVERT_UNIVARIATE | SOLVE_LU
-        epsilon = _get_epsilon(params, 2., None, len(params))
-        kwargs['transformed'] = True
-        kwargs['complex_step'] = True
-        return approx_fprime_cs(params, self.loglike, epsilon=epsilon,
-                                kwargs=kwargs)
+        epsilon = _get_epsilon(params, 2.0, None, len(params))
+        kwargs["transformed"] = True
+        kwargs["complex_step"] = True
+        return approx_fprime_cs(
+            params, self.loglike, epsilon=epsilon, kwargs=kwargs
+        )
 
-    def _score_finite_difference(self, params, approx_centered=False,
-                                 **kwargs):
-        kwargs['transformed'] = True
-        return approx_fprime(params, self.loglike, kwargs=kwargs,
-                             centered=approx_centered)
+    def _score_finite_difference(
+        self, params, approx_centered=False, **kwargs
+    ):
+        kwargs["transformed"] = True
+        return approx_fprime(
+            params, self.loglike, kwargs=kwargs, centered=approx_centered
+        )
 
-    def _hessian_finite_difference(self, params, approx_centered=False,
-                                   **kwargs):
+    def _hessian_finite_difference(
+        self, params, approx_centered=False, **kwargs
+    ):
         params = np.array(params, ndmin=1)
 
-        warnings.warn('Calculation of the Hessian using finite differences'
-                      ' is usually subject to substantial approximation'
-                      ' errors.', PrecisionWarning)
+        warnings.warn(
+            "Calculation of the Hessian using finite differences"
+            " is usually subject to substantial approximation"
+            " errors.",
+            PrecisionWarning,
+        )
 
         if not approx_centered:
             epsilon = _get_epsilon(params, 3, None, len(params))
         else:
             epsilon = _get_epsilon(params, 4, None, len(params)) / 2
-        hessian = approx_fprime(params, self._score_finite_difference,
-                                epsilon=epsilon, kwargs=kwargs,
-                                centered=approx_centered)
+        hessian = approx_fprime(
+            params,
+            self._score_finite_difference,
+            epsilon=epsilon,
+            kwargs=kwargs,
+            centered=approx_centered,
+        )
 
-        # TODO: changed this to nobs_effective, has to be changed when merging
-        # with statespace mlemodel
-        return hessian / (self.nobs_effective)
+        if hasattr(self, "ssm"):
+            nobs_effective = self.nobs - self.ssm.loglikelihood_burn
+        else:
+            nobs_effective = self.nobs
+        return hessian / nobs_effective
 
     def _hessian_complex_step(self, params, **kwargs):
         """
@@ -282,15 +281,18 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
         on the `loglike` function.
         """
         # the default epsilon can be too small
-        epsilon = _get_epsilon(params, 3., None, len(params))
-        kwargs['transformed'] = True
-        kwargs['complex_step'] = True
+        epsilon = _get_epsilon(params, 3.0, None, len(params))
+        kwargs["transformed"] = True
+        kwargs["complex_step"] = True
         hessian = approx_hess_cs(
-            params, self.loglike, epsilon=epsilon, kwargs=kwargs)
+            params, self.loglike, epsilon=epsilon, kwargs=kwargs
+        )
 
-        # TODO: changed this to nobs_effective, has to be changed when merging
-        # with statespace mlemodel
-        return hessian / (self.nobs_effective)
+        if hasattr(self, "ssm"):
+            nobs_effective = self.nobs - self.ssm.loglikelihood_burn
+        else:
+            nobs_effective = self.nobs
+        return hessian / nobs_effective
 
 
 class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
@@ -314,11 +316,11 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
         The parameters of the model.
     """
 
-    def __init__(self, model, params, scale=1.0):
+    def __init__(self, model, params, normalized_cov_params=None, scale=1.0):
         self.data = model.data
         self.endog = model.data.orig_endog
 
-        super().__init__(model, params, None, scale=scale)
+        super().__init__(model, params, normalized_cov_params, scale=scale)
 
         # Save the fixed parameters
         self._has_fixed_params = self.model._has_fixed_params
@@ -339,17 +341,14 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
 
         # Dimensions
         self.nobs = self.model.nobs
-        self.k_params = self.model.k_params
+        if hasattr(model, "k_params"):
+            self.k_params = self.model.k_params
 
         self._rank = None
 
     @cache_readonly
     def nobs_effective(self):
         raise NotImplementedError
-
-    @cache_readonly
-    def df_resid(self):
-        return self.nobs_effective - self.df_model
 
     @cache_readonly
     def aic(self):
@@ -374,7 +373,6 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
 
     @cache_readonly
     def fittedvalues(self):
-        # TODO
         raise NotImplementedError
 
     @cache_readonly
@@ -497,107 +495,68 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
             self._cov_approx_complex_step, self._cov_approx_centered
         )
 
-    def test_serial_correlation(self, method, lags=None):
+    def test_normality(self, method):
         """
-        Ljung-Box test for no serial correlation of standardized residuals
+        Test for normality of standardized residuals.
 
-        Null hypothesis is no serial correlation.
+        Null hypothesis is normality.
 
         Parameters
         ----------
-        method : {'ljungbox','boxpierece', None}
-            The statistical test for serial correlation. If None, an attempt is
-            made to select an appropriate test.
-        lags : None, int or array_like
-            If lags is an integer then this is taken to be the largest lag
-            that is included, the test result is reported for all smaller lag
-            length.
-            If lags is a list or array, then all lags are included up to the
-            largest lag in the list, however only the tests for the lags in the
-            list are reported.
-            If lags is None, then the default maxlag is 12*(nobs/100)^{1/4}
-
-        Returns
-        -------
-        output : ndarray
-            An array with `(test_statistic, pvalue)` for each endogenous
-            variable and each lag. The array is then sized
-            `(k_endog, 2, lags)`. If the method is called as
-            `ljungbox = res.test_serial_correlation()`, then `ljungbox[i]`
-            holds the results of the Ljung-Box test (as would be returned by
-            `statsmodels.stats.diagnostic.acorr_ljungbox`) for the `i` th
-            endogenous variable.
+        method : {'jarquebera', None}
+            The statistical test for normality. Must be 'jarquebera' for
+            Jarque-Bera normality test. If None, an attempt is made to select
+            an appropriate test.
 
         See Also
         --------
-        statsmodels.stats.diagnostic.acorr_ljungbox
-            Ljung-Box test for serial correlation.
+        statsmodels.stats.stattools.jarque_bera
+            The Jarque-Bera test of normality.
 
         Notes
         -----
         For statespace models: let `d` = max(loglikelihood_burn, nobs_diffuse);
         this test is calculated ignoring the first `d` residuals.
 
-        Output is nan for any endogenous variable which has missing values.
+        In the case of missing data, the maintained hypothesis is that the
+        data are missing completely at random. This test is then run on the
+        standardized residuals excluding those corresponding to missing
+        observations.
         """
         if method is None:
-            method = 'ljungbox'
+            method = "jarquebera"
 
         if self.standardized_forecasts_error is None:
-            raise ValueError('Cannot compute test statistic when standardized'
-                             ' forecast errors have not been computed.')
+            raise ValueError(
+                "Cannot compute test statistic when standardized"
+                " forecast errors have not been computed."
+            )
 
-        if method == 'ljungbox' or method == 'boxpierce':
-            from statsmodels.stats.diagnostic import acorr_ljungbox
+        if method == "jarquebera":
+            from statsmodels.stats.stattools import jarque_bera
+
             if hasattr(self, "loglikelihood_burn"):
                 d = np.maximum(self.loglikelihood_burn, self.nobs_diffuse)
-                # This differs from self.nobs_effective because here we want to
-                # exclude exact diffuse periods, whereas self.nobs_effective
-                # only excludes explicitly burned (usually approximate diffuse)
-                # periods.
-                nobs_effective = self.nobs - d
             else:
-                nobs_effective = self.nobs_effective
+                d = 0
             output = []
-
-            # Default lags for acorr_ljungbox is 40, but may not always have
-            # that many observations
-            if lags is None:
-                seasonal_periods = getattr(self.model, "seasonal_periods", 0)
-                if seasonal_periods:
-                    lags = min(2 * seasonal_periods, nobs_effective // 5)
-                else:
-                    lags = min(10, nobs_effective // 5)
-
-                warnings.warn(
-                    "The default value of lags is changing.  After 0.12, "
-                    "this value will become min(10, nobs//5) for non-seasonal "
-                    "time series and min (2*m, nobs//5) for seasonal time "
-                    "series. Directly set lags to silence this warning.",
-                    FutureWarning
-                )
-
             for i in range(self.model.k_endog):
                 if hasattr(self, "filter_results"):
-                    x = self.filter_results.standardized_forecasts_error[i][d:]
+                    resid = self.filter_results.standardized_forecasts_error[
+                        i, d:
+                    ]
                 else:
-                    x = self.standardized_forecasts_error
-                results = acorr_ljungbox(
-                    x, lags=lags, boxpierce=(method == 'boxpierce'),
-                    return_df=False)
-                if method == 'ljungbox':
-                    output.append(results[0:2])
-                else:
-                    output.append(results[2:])
-
-            output = np.c_[output]
+                    resid = self.standardized_forecasts_error
+                mask = ~np.isnan(resid)
+                output.append(jarque_bera(resid[mask]))
         else:
-            raise NotImplementedError('Invalid serial correlation test'
-                                      ' method.')
-        return output
+            raise NotImplementedError("Invalid normality test method.")
 
-    def test_heteroskedasticity(self, method, alternative='two-sided',
-                                use_f=True):
+        return np.array(output)
+
+    def test_heteroskedasticity(
+        self, method, alternative="two-sided", use_f=True
+    ):
         r"""
         Test for heteroskedasticity of standardized residuals
 
@@ -679,17 +638,19 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
                *Models and the Kalman Filter.* Cambridge University Press.
         """
         if method is None:
-            method = 'breakvar'
+            method = "breakvar"
 
         if self.standardized_forecasts_error is None:
-            raise ValueError('Cannot compute test statistic when standardized'
-                             ' forecast errors have not been computed.')
+            raise ValueError(
+                "Cannot compute test statistic when standardized"
+                " forecast errors have not been computed."
+            )
 
-        if method == 'breakvar':
+        if method == "breakvar":
             # Store some values
             if hasattr(self, "filter_results"):
                 squared_resid = (
-                    self.filter_results.standardized_forecasts_error**2
+                    self.filter_results.standardized_forecasts_error ** 2
                 )
                 d = np.maximum(self.loglikelihood_burn, self.nobs_diffuse)
                 # This differs from self.nobs_effective because here we want to
@@ -698,7 +659,7 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
                 # periods.
                 nobs_effective = self.nobs - d
             else:
-                squared_resid = self.standardized_forecasts_error**2
+                squared_resid = self.standardized_forecasts_error ** 2
                 if squared_resid.ndim == 1:
                     squared_resid = np.asarray(squared_resid)
                     squared_resid = squared_resid[np.newaxis, :]
@@ -714,19 +675,23 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
                 numer_resid = numer_resid[~np.isnan(numer_resid)]
                 numer_dof = len(numer_resid)
 
-                denom_resid = squared_resid[i, d:d + h]
+                denom_resid = squared_resid[i, d : d + h]
                 denom_resid = denom_resid[~np.isnan(denom_resid)]
                 denom_dof = len(denom_resid)
 
                 if numer_dof < 2:
-                    warnings.warn('Early subset of data for variable %d'
-                                  '  has too few non-missing observations to'
-                                  ' calculate test statistic.' % i)
+                    warnings.warn(
+                        "Early subset of data for variable %d"
+                        "  has too few non-missing observations to"
+                        " calculate test statistic." % i
+                    )
                     numer_resid = np.nan
                 if denom_dof < 2:
-                    warnings.warn('Later subset of data for variable %d'
-                                  '  has too few non-missing observations to'
-                                  ' calculate test statistic.' % i)
+                    warnings.warn(
+                        "Later subset of data for variable %d"
+                        "  has too few non-missing observations to"
+                        " calculate test statistic." % i
+                    )
                     denom_resid = np.nan
 
                 test_statistic = np.sum(numer_resid) / np.sum(denom_resid)
@@ -734,97 +699,156 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
                 # Setup functions to calculate the p-values
                 if use_f:
                     from scipy.stats import f
+
                     pval_lower = lambda test_statistics: f.cdf(  # noqa:E731
-                        test_statistics, numer_dof, denom_dof)
+                        test_statistics, numer_dof, denom_dof
+                    )
                     pval_upper = lambda test_statistics: f.sf(  # noqa:E731
-                        test_statistics, numer_dof, denom_dof)
+                        test_statistics, numer_dof, denom_dof
+                    )
                 else:
                     from scipy.stats import chi2
+
                     pval_lower = lambda test_statistics: chi2.cdf(  # noqa:E731
-                        numer_dof * test_statistics, denom_dof)
+                        numer_dof * test_statistics, denom_dof
+                    )
                     pval_upper = lambda test_statistics: chi2.sf(  # noqa:E731
-                        numer_dof * test_statistics, denom_dof)
+                        numer_dof * test_statistics, denom_dof
+                    )
 
                 # Calculate the one- or two-sided p-values
                 alternative = alternative.lower()
-                if alternative in ['i', 'inc', 'increasing']:
+                if alternative in ["i", "inc", "increasing"]:
                     p_value = pval_upper(test_statistic)
-                elif alternative in ['d', 'dec', 'decreasing']:
-                    test_statistic = 1. / test_statistic
+                elif alternative in ["d", "dec", "decreasing"]:
+                    test_statistic = 1.0 / test_statistic
                     p_value = pval_upper(test_statistic)
-                elif alternative in ['2', '2-sided', 'two-sided']:
+                elif alternative in ["2", "2-sided", "two-sided"]:
                     p_value = 2 * np.minimum(
-                        pval_lower(test_statistic),
-                        pval_upper(test_statistic)
+                        pval_lower(test_statistic), pval_upper(test_statistic)
                     )
                 else:
-                    raise ValueError('Invalid alternative.')
+                    raise ValueError("Invalid alternative.")
 
                 test_statistics.append(test_statistic)
                 p_values.append(p_value)
 
             output = np.c_[test_statistics, p_values]
         else:
-            raise NotImplementedError('Invalid heteroskedasticity test'
-                                      ' method.')
+            raise NotImplementedError(
+                "Invalid heteroskedasticity test" " method."
+            )
 
         return output
 
-    def test_normality(self, method):
+    def test_serial_correlation(self, method, lags=None):
         """
-        Test for normality of standardized residuals.
+        Ljung-Box test for no serial correlation of standardized residuals
 
-        Null hypothesis is normality.
+        Null hypothesis is no serial correlation.
 
         Parameters
         ----------
-        method : {'jarquebera', None}
-            The statistical test for normality. Must be 'jarquebera' for
-            Jarque-Bera normality test. If None, an attempt is made to select
-            an appropriate test.
+        method : {'ljungbox','boxpierece', None}
+            The statistical test for serial correlation. If None, an attempt is
+            made to select an appropriate test.
+        lags : None, int or array_like
+            If lags is an integer then this is taken to be the largest lag
+            that is included, the test result is reported for all smaller lag
+            length.
+            If lags is a list or array, then all lags are included up to the
+            largest lag in the list, however only the tests for the lags in the
+            list are reported.
+            If lags is None, then the default maxlag is 12*(nobs/100)^{1/4}
+            After 0.12 the default maxlag will change to min(10, nobs // 5) for
+            non-seasonal models and min(2*m, nobs // 5) for seasonal time
+            series where m is the seasonal period.
+
+        Returns
+        -------
+        output : ndarray
+            An array with `(test_statistic, pvalue)` for each endogenous
+            variable and each lag. The array is then sized
+            `(k_endog, 2, lags)`. If the method is called as
+            `ljungbox = res.test_serial_correlation()`, then `ljungbox[i]`
+            holds the results of the Ljung-Box test (as would be returned by
+            `statsmodels.stats.diagnostic.acorr_ljungbox`) for the `i` th
+            endogenous variable.
 
         See Also
         --------
-        statsmodels.stats.stattools.jarque_bera
-            The Jarque-Bera test of normality.
+        statsmodels.stats.diagnostic.acorr_ljungbox
+            Ljung-Box test for serial correlation.
 
         Notes
         -----
         For statespace models: let `d` = max(loglikelihood_burn, nobs_diffuse);
         this test is calculated ignoring the first `d` residuals.
 
-        In the case of missing data, the maintained hypothesis is that the
-        data are missing completely at random. This test is then run on the
-        standardized residuals excluding those corresponding to missing
-        observations.
+        Output is nan for any endogenous variable which has missing values.
         """
         if method is None:
-            method = 'jarquebera'
+            method = "ljungbox"
 
         if self.standardized_forecasts_error is None:
-            raise ValueError('Cannot compute test statistic when standardized'
-                             ' forecast errors have not been computed.')
+            raise ValueError(
+                "Cannot compute test statistic when standardized"
+                " forecast errors have not been computed."
+            )
 
-        if method == 'jarquebera':
-            from statsmodels.stats.stattools import jarque_bera
+        if method == "ljungbox" or method == "boxpierce":
+            from statsmodels.stats.diagnostic import acorr_ljungbox
+
             if hasattr(self, "loglikelihood_burn"):
                 d = np.maximum(self.loglikelihood_burn, self.nobs_diffuse)
+                # This differs from self.nobs_effective because here we want to
+                # exclude exact diffuse periods, whereas self.nobs_effective
+                # only excludes explicitly burned (usually approximate diffuse)
+                # periods.
+                nobs_effective = self.nobs - d
             else:
-                d = 0
+                nobs_effective = self.nobs_effective
             output = []
-            for i in range(self.model.k_endog):
-                if hasattr(self, "fiter_results"):
-                    resid = self.filter_results.standardized_forecasts_error[
-                        i, d:
-                    ]
-                else:
-                    resid = self.standardized_forecasts_error
-                mask = ~np.isnan(resid)
-                output.append(jarque_bera(resid[mask]))
-        else:
-            raise NotImplementedError('Invalid normality test method.')
 
-        return np.array(output)
+            # Default lags for acorr_ljungbox is 40, but may not always have
+            # that many observations
+            if lags is None:
+                seasonal_periods = getattr(self.model, "seasonal_periods", 0)
+                if seasonal_periods:
+                    lags = min(2 * seasonal_periods, nobs_effective // 5)
+                else:
+                    lags = min(10, nobs_effective // 5)
+
+                warnings.warn(
+                    "The default value of lags is changing.  After 0.12, "
+                    "this value will become min(10, nobs//5) for non-seasonal "
+                    "time series and min (2*m, nobs//5) for seasonal time "
+                    "series. Directly set lags to silence this warning.",
+                    FutureWarning,
+                )
+
+            for i in range(self.model.k_endog):
+                if hasattr(self, "filter_results"):
+                    x = self.filter_results.standardized_forecasts_error[i][d:]
+                else:
+                    x = self.standardized_forecasts_error
+                results = acorr_ljungbox(
+                    x,
+                    lags=lags,
+                    boxpierce=(method == "boxpierce"),
+                    return_df=False,
+                )
+                if method == "ljungbox":
+                    output.append(results[0:2])
+                else:
+                    output.append(results[2:])
+
+            output = np.c_[output]
+        else:
+            raise NotImplementedError(
+                "Invalid serial correlation test" " method."
+            )
+        return output
 
     def summary(
         self,
@@ -923,8 +947,8 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
 
         if hasattr(self, "filter_results"):
             if (
-                    self.filter_results is not None
-                    and self.filter_results.filter_concentrated
+                self.filter_results is not None
+                and self.filter_results.filter_concentrated
             ):
                 top_right.append(("Scale", ["%#5.3f" % self.scale]))
         else:

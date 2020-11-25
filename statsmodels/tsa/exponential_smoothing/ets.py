@@ -162,7 +162,10 @@ from statsmodels.tools.validation import (
     string_like,
 )
 import statsmodels.tsa.base.tsa_model as tsbase
-from statsmodels.tsa.exponential_smoothing import base
+from statsmodels.tsa.base.mlemodel import (
+    StateSpaceMLEModel,
+    StateSpaceMLEResults,
+)
 import statsmodels.tsa.exponential_smoothing._ets_smooth as smooth
 from statsmodels.tsa.exponential_smoothing.initialization import (
     _initialization_heuristic,
@@ -205,7 +208,7 @@ from statsmodels.tsa.tsatools import freq_to_period
 #   multiplication
 
 
-class ETSModel(base.StateSpaceMLEModel):
+class ETSModel(StateSpaceMLEModel):
     r"""
     ETS models.
 
@@ -425,7 +428,11 @@ class ETSModel(base.StateSpaceMLEModel):
     ):
 
         super().__init__(
-            endog, exog=None, dates=dates, freq=freq, missing=missing
+            endog,
+            exog=None,
+            dates=dates,
+            freq=freq,
+            missing=missing,
         )
 
         # MODEL DEFINITION
@@ -625,12 +632,11 @@ class ETSModel(base.StateSpaceMLEModel):
                 )
             self.bounds = bounds
 
-    @staticmethod
-    def prepare_data(data):
+    def prepare_data(self):
         """
         Prepare data for use in the state space representation
         """
-        endog = np.array(data.orig_endog, order="C")
+        endog = np.array(self.data.orig_endog, order="C")
         if endog.ndim != 1:
             raise ValueError("endog must be 1-dimensional")
         return endog, None
@@ -1327,10 +1333,11 @@ class ETSModel(base.StateSpaceMLEModel):
         ...
 
 
-class ETSResults(base.StateSpaceMLEResults):
+class ETSResults(StateSpaceMLEResults):
     """
     Results from an error, trend, seasonal (ETS) exponential smoothing model
     """
+
     def __init__(self, model, params, results):
         yhat, xhat = results
         self._llf = model.loglike(params)
@@ -1395,6 +1402,7 @@ class ETSResults(base.StateSpaceMLEResults):
         # degrees of freedom of model
         k_free_params = self.k_params - len(self.fixed_params)
         self.df_model = k_free_params + 1
+        self.df_resid = self.nobs_effective - self.df_model
 
         # standardized forecasting error
         self.mean_resid = np.mean(self.resid)
@@ -2231,8 +2239,8 @@ class PredictionResults:
         self.row_labels = self.predicted_mean.index
         self.endog = np.empty(nsmooth + ndynamic) * np.nan
         if nsmooth > 0:
-            self.endog[0: (end - start + 1)] = results.data.endog[
-                start: (end + 1)
+            self.endog[0 : (end - start + 1)] = results.data.endog[
+                start : (end + 1)
             ]
         self.model = Bunch(
             data=results.model.data.__class__(
@@ -2278,9 +2286,9 @@ class PredictionResults:
         else:  # method == 'exact'
             steps = np.ones(ndynamic + nsmooth)
             if ndynamic > 0:
-                steps[
-                    (start_dynamic - min(start_dynamic, start)):
-                    ] = range(1, ndynamic + 1)
+                steps[(start_dynamic - min(start_dynamic, start)) :] = range(
+                    1, ndynamic + 1
+                )
             # when we are doing out of sample only prediction,
             # start > end + 1, and
             # we only want to output beginning at start
