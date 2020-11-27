@@ -1390,7 +1390,12 @@ class GEE(GLM):
 
         hm.flat[::hm.shape[0] + 1] += self.num_group * en
         sn -= self.num_group * en * params
-        update = np.linalg.solve(hm, sn)
+        try:
+            update = np.linalg.solve(hm, sn)
+        except np.linalg.LinAlgError:
+            update = np.dot(np.linalg.pinv(hm), sn)
+            msg = "Encountered singularity in regularized GEE update"
+            warnings.warn(msg)
         hm *= self.estimate_scale()
 
         return update, hm
