@@ -701,9 +701,9 @@ def dispersion_poisson(results):
     dean_b = var_resid_endog_sum / std1
     dean_c = (var_resid_endog / fitted).sum() / np.sqrt(2 * nobs)
 
-    pval_dean_a = stats.norm.sf(np.abs(dean_a))
-    pval_dean_b = stats.norm.sf(np.abs(dean_b))
-    pval_dean_c = stats.norm.sf(np.abs(dean_c))
+    pval_dean_a = 2 * stats.norm.sf(np.abs(dean_a))
+    pval_dean_b = 2 * stats.norm.sf(np.abs(dean_b))
+    pval_dean_c = 2 * stats.norm.sf(np.abs(dean_c))
 
     results_all = [[dean_a, pval_dean_a],
                    [dean_b, pval_dean_b],
