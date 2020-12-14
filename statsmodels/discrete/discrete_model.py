@@ -565,6 +565,27 @@ class BinaryModel(DiscreteModel):
         return self._derivative_exog_helper(margeff, params, exog,
                                             dummy_idx, count_idx, transform)
 
+    def _deriv_mean_dparams(self, params):
+        """
+        Derivative of the expected endog with respect to the parameters.
+
+        Parameters
+        ----------
+        params : ndarray
+            parameter at which score is evaluated
+
+        Returns
+        -------
+        The value of the derivative of the expected endog with respect
+        to the parameter vector.
+        """
+        from statsmodels.genmod.families import links
+        link = links.Log()
+        lin_pred = self.predict(params, linear=True)
+        idl = link.inverse_deriv(lin_pred)
+        dmat = self.exog * idl[:, None]
+        return dmat
+
 
 class MultinomialModel(BinaryModel):
 
@@ -1885,6 +1906,11 @@ class Logit(BinaryModel):
         X = np.asarray(X)
         return np.exp(-X)/(1+np.exp(-X))**2
 
+    @cache_readonly
+    def family(self):
+        from statsmodels.genmod import families
+        return families.Binomial()
+
     def loglike(self, params):
         """
         Log-likelihood of logit model.
@@ -1997,6 +2023,35 @@ class Logit(BinaryModel):
         L = self.cdf(np.dot(X, params))
         return (y - L)[:,None] * X
 
+    def score_factor(self, params):
+        """
+        Poisson model score_factor for each observation
+
+        Parameters
+        ----------
+        params : array_like
+            The parameters of the model
+
+        Returns
+        -------
+        score : array_like
+            The score factor (nobs, ) of the model evaluated at `params`
+
+        Notes
+        -----
+        .. math:: \\frac{\\partial\\ln L_{i}}{\\partial\\beta}=\\left(y_{i}-\\lambda_{i}\\right)
+
+        for observations :math:`i=1,...,n`
+
+        where the loglinear model is assumed
+
+        .. math:: \\ln\\lambda_{i}=x_{i}\\beta
+        """
+        y = self.endog
+        X = self.exog
+        L = self.cdf(np.dot(X, params))
+        return (y - L)
+
     def hessian(self, params):
         """
         Logit model Hessian matrix of the log-likelihood
@@ -2020,6 +2075,26 @@ class Logit(BinaryModel):
         L = self.cdf(np.dot(X,params))
         return -np.dot(L*(1-L)*X.T,X)
 
+    def hessian_factor(self, params):
+        """
+        Logit model Hessian factor
+
+        Parameters
+        ----------
+        params : array_like
+            The parameters of the model
+
+        Returns
+        -------
+        hess : ndarray, (nobs,)
+            The Hessian factor, second derivative of loglikelihood function
+            with respect to the linear predictor evaluated at `params`
+
+        """
+        X = self.exog
+        L = self.cdf(np.dot(X, params))
+        return L * (1 - L)
+
     @Appender(DiscreteModel.fit.__doc__)
     def fit(self, start_params=None, method='newton', maxiter=35,
             full_output=1, disp=1, callback=None, **kwargs):
@@ -2033,6 +2108,27 @@ class Logit(BinaryModel):
 
         discretefit = LogitResults(self, bnryfit)
         return BinaryResultsWrapper(discretefit)
+
+    def _deriv_score_obs_dendog(self, params, scale=None):
+        """derivative of score_obs w.r.t. endog
+
+        Parameters
+        ----------
+        params : ndarray
+            parameter at which score is evaluated
+        scale : None or float
+            If scale is None, then the default scale will be calculated.
+            Default scale is defined by `self.scaletype` and set in fit.
+            If scale is not None, then it is used as a fixed scale.
+
+        Returns
+        -------
+        derivative : ndarray_2d
+            The derivative of the score_obs with respect to endog. This
+            can is given by `score_factor0[:, None] * exog` where
+            `score_factor0` is the score_factor without the residual.
+        """
+        return self.exog
 
 
 class Probit(BinaryModel):
@@ -4215,6 +4311,30 @@ class LogitResults(BinaryResults):
         """
         # Generalized residuals
         return self.model.endog - self.predict()
+
+    def get_prediction(self, exog=None, exposure=None, offset=None,
+                       transform=True, linear=False,
+                       row_labels=None):
+
+        import statsmodels.genmod._prediction as pred
+        import statsmodels.regression._prediction as linpred
+
+        pred_kwds = {'linear': True}
+
+        # two calls to a get_prediction duplicates exog generation if patsy
+        res_linpred = linpred.get_prediction(self, exog=exog,
+                                             transform=transform,
+                                             row_labels=row_labels,
+                                             pred_kwds=pred_kwds)
+
+        pred_kwds['linear'] = False
+        res = pred.get_prediction_glm(self, exog=exog, transform=transform,
+                                      row_labels=row_labels,
+                                      linpred=res_linpred,
+                                      link=self.model.family.link,
+                                      pred_kwds=pred_kwds)
+
+        return res
 
 
 class ProbitResults(BinaryResults):

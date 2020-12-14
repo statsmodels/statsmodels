@@ -246,6 +246,24 @@ class TestInfluenceGaussianGLMOLS(InfluenceCompareExact):
         cols = ['cooks_d', 'standard_resid', 'hat_diag', 'dffits_internal']
         assert_allclose(df0[cols].values, df1[cols].values, rtol=1e-5)
         pdt.assert_index_equal(df0.index, df1.index)
+
+
+class TestInfluenceLogitCompare(InfluenceCompareExact):
+
+    @classmethod
+    def setup_class(cls):
+        df = data_bin
+        mod = GLM(df['constrict'], df[['const', 'log_rate', 'log_volumne']],
+                  family=families.Binomial())
+        res = mod.fit(attach_wls=True, atol=1e-10)
+        from statsmodels.discrete.discrete_model import Logit
+        mod2 = Logit(df['constrict'], df[['const', 'log_rate', 'log_volumne']])
+        res2 = mod2.fit(attach_wls=True, atol=1e-10)
+
+        cls.infl1 = res.get_influence()
+        cls.infl0 = MLEInfluence(res2)
+
+
 class TestInfluencePoissonCompare(InfluenceCompareExact):
 
     @classmethod
