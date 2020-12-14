@@ -984,7 +984,7 @@ class Poisson(CountModel):
         equal to 1.
         """ + base._missing_param_doc + _check_rank_doc}
 
-    @property
+    @cache_readonly
     def family(self):
         from statsmodels.genmod import families
         return families.Poisson()
@@ -1307,7 +1307,6 @@ class Poisson(CountModel):
         X = self.exog
         L = np.exp(np.dot(X,params) + offset + exposure)
         return (self.endog - L)
-
 
     def hessian(self, params):
         """
