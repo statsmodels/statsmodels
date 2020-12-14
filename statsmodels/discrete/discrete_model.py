@@ -32,6 +32,7 @@ from statsmodels.base.data import handle_data  # for mnlogit
 from statsmodels.base.l1_slsqp import fit_l1_slsqp
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
+import statsmodels.base._parameter_inference as pinf
 from statsmodels.distributions import genpoisson_p
 import statsmodels.regression.linear_model as lm
 from statsmodels.tools import data as data_tools, tools
@@ -3686,6 +3687,18 @@ class DiscreteResults(base.LikelihoodModelResults):
         number of regressors including the intercept.
         """
         return -2*self.llf + np.log(self.nobs)*(self.df_model+1)
+
+    @cache_readonly
+    def im_ratio(self):
+        return pinf.im_ratio(self)
+
+    @cache_readonly
+    def tic(self):
+        return pinf.gbic(self)
+
+    @cache_readonly
+    def gbic(self):
+        return pinf.gbic(self)
 
     def _get_endog_name(self, yname, yname_list):
         if yname is None:
