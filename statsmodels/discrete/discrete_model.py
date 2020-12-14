@@ -913,6 +913,28 @@ class CountModel(DiscreteModel):
         return self._derivative_exog_helper(margeff, params, exog,
                                             dummy_idx, count_idx, transform)
 
+    def _deriv_mean_dparams(self, params):
+        """
+        Derivative of the expected endog with respect to the parameters.
+
+        Parameters
+        ----------
+        params : ndarray
+            parameter at which score is evaluated
+
+        Returns
+        -------
+        The value of the derivative of the expected endog with respect
+        to the parameter vector.
+        """
+        from statsmodels.genmod.families import links
+        link = links.Log()
+        lin_pred = self.predict(params, linear=True)
+        idl = link.inverse_deriv(lin_pred)
+        dmat = self.exog * idl[:, None]
+        return dmat
+
+
     @Appender(DiscreteModel.fit.__doc__)
     def fit(self, start_params=None, method='newton', maxiter=35,
             full_output=1, disp=1, callback=None, **kwargs):
@@ -1361,6 +1383,27 @@ class Poisson(CountModel):
         X = self.exog
         L = np.exp(np.dot(X,params) + exposure + offset)
         return L
+
+    def _deriv_score_obs_dendog(self, params, scale=None):
+        """derivative of score_obs w.r.t. endog
+
+        Parameters
+        ----------
+        params : ndarray
+            parameter at which score is evaluated
+        scale : None or float
+            If scale is None, then the default scale will be calculated.
+            Default scale is defined by `self.scaletype` and set in fit.
+            If scale is not None, then it is used as a fixed scale.
+
+        Returns
+        -------
+        derivative : ndarray_2d
+            The derivative of the score_obs with respect to endog. This
+            can is given by `score_factor0[:, None] * exog` where
+            `score_factor0` is the score_factor without the residual.
+        """
+        return self.exog
 
 
 class GeneralizedPoisson(CountModel):
@@ -3921,6 +3964,30 @@ class L1CountResults(DiscreteResults):
         self.df_resid = float(self.model.endog.shape[0] - self.nnz_params) + k_extra
 
 class PoissonResults(CountResults):
+
+    def get_prediction(self, exog=None, exposure=None, offset=None,
+                       transform=True, linear=False,
+                       row_labels=None):
+
+        import statsmodels.genmod._prediction as pred
+        import statsmodels.regression._prediction as linpred
+
+        pred_kwds = {'exposure': exposure, 'offset': offset, 'linear': True}
+
+        # two calls to a get_prediction duplicates exog generation if patsy
+        res_linpred = linpred.get_prediction(self, exog=exog,
+                                             transform=transform,
+                                             row_labels=row_labels,
+                                             pred_kwds=pred_kwds)
+
+        pred_kwds['linear'] = False
+        res = pred.get_prediction_glm(self, exog=exog, transform=transform,
+                                      row_labels=row_labels,
+                                      linpred=res_linpred,
+                                      link=self.model.family.link,
+                                      pred_kwds=pred_kwds)
+
+        return res
 
     def predict_prob(self, n=None, exog=None, exposure=None, offset=None,
                      transform=True):
