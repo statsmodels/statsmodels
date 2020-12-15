@@ -579,8 +579,7 @@ class BinaryModel(DiscreteModel):
         The value of the derivative of the expected endog with respect
         to the parameter vector.
         """
-        from statsmodels.genmod.families import links
-        link = links.Log()
+        link = self.family.link
         lin_pred = self.predict(params, linear=True)
         idl = link.inverse_deriv(lin_pred)
         dmat = self.exog * idl[:, None]

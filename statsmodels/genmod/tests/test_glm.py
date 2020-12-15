@@ -296,6 +296,14 @@ class CheckComparisonMixin(object):
         assert_array_less(0.1, pv)
         assert_equal(df, 1)
 
+    def test_get_prediction(self):
+        pred1 = self.res1.get_prediction()
+        predd = self.resd.get_prediction()
+        assert_allclose(predd.predicted_mean, pred1.predicted_mean, rtol=1e-11)
+        assert_allclose(predd.se_mean, pred1.se_mean, rtol=1e-6)
+        assert_allclose(predd.summary_frame().values,
+                        pred1.summary_frame().values, rtol=1e-6)
+
 
 class TestGlmGaussian(CheckModelResultsMixin):
     @classmethod
