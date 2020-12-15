@@ -255,10 +255,10 @@ class TestInfluenceLogitCompare(InfluenceCompareExact):
         df = data_bin
         mod = GLM(df['constrict'], df[['const', 'log_rate', 'log_volumne']],
                   family=families.Binomial())
-        res = mod.fit(attach_wls=True, atol=1e-10)
+        res = mod.fit(method="newton", attach_wls=True, atol=1e-10)
         from statsmodels.discrete.discrete_model import Logit
         mod2 = Logit(df['constrict'], df[['const', 'log_rate', 'log_volumne']])
-        res2 = mod2.fit(attach_wls=True, atol=1e-10)
+        res2 = mod2.fit(method="newton", tol=1e-10)
 
         cls.infl1 = res.get_influence()
         cls.infl0 = MLEInfluence(res2)
