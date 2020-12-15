@@ -25,9 +25,9 @@ class TestScoreTest(object):
     # regression numbers
     res_pvalue = [0.31786373532550893, 0.32654081685271297]
     skip_wooldridge = False
-    res_disptest = np.array([[ 0.13927919,  0.44461477],
-                             [ 0.13927919,  0.44461477],
-                             [ 0.21295545,  0.41568086],
+    res_disptest = np.array([[ 0.13927919,  0.88922953],
+                             [ 0.13927919,  0.88922953],
+                             [ 0.21295545,  0.83136171],
                              [ 0.14935018,  0.88127732],
                              [ 0.14935018,  0.88127732],
                              [ 0.14841761,  0.8820132 ],
@@ -132,6 +132,7 @@ class TestScoreTestDispersed(TestScoreTest):
 
 
 class TestScoreTestPoisson(TestScoreTest):
+    # same as GLM above but for discrete Poisson
     # compares score to wald, and regression test for pvalues
     rtol_ws = 5e-3
     atol_ws = 0
@@ -140,9 +141,9 @@ class TestScoreTestPoisson(TestScoreTest):
     # regression numbers
     res_pvalue = [0.31786373532550893, 0.32654081685271297]
     skip_wooldridge = False
-    res_disptest = np.array([[ 0.13927919,  0.44461477],
-                             [ 0.13927919,  0.44461477],
-                             [ 0.21295545,  0.41568086],
+    res_disptest = np.array([[ 0.13927919,  0.88922953],
+                             [ 0.13927919,  0.88922953],
+                             [ 0.21295545,  0.83136171],
                              [ 0.14935018,  0.88127732],
                              [ 0.14935018,  0.88127732],
                              [ 0.14841761,  0.8820132 ],
@@ -176,6 +177,7 @@ class TestScoreTestPoisson(TestScoreTest):
 
 
 class TestScoreTestPoissonDispersed(TestScoreTestPoisson):
+    # same as GLM above but for discrete Poisson
     rtol_ws = 0.11
     atol_ws = 0.015
     rtol_wooldridge = 0.03
