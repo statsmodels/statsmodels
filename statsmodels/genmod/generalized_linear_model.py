@@ -1636,13 +1636,17 @@ class GLMResults(base.LikelihoodModelResults):
         kwargs = model._get_init_kwds()
         kwargs.pop('family')
         if hasattr(self.model, '_offset_exposure'):
-            return GLM(endog, exog, family=self.family,
-                       **kwargs).fit().fittedvalues
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", DomainWarning)
+                fitted = GLM(endog, exog, family=self.family,
+                             **kwargs).fit().fittedvalues
         else:
             # correct if fitted is identical across observations
             wls_model = lm.WLS(endog, exog,
                                weights=self._iweights * self._n_trials)
-            return wls_model.fit().fittedvalues
+            fitted = wls_model.fit().fittedvalues
+
+        return fitted
 
     @cache_readonly
     def deviance(self):
