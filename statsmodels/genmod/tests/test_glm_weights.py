@@ -136,6 +136,10 @@ class CheckWeight(object):
             assert_allclose(self.res1.pearson_chi2, self.res2.deviance_p,
                             atol=1e-6, rtol=1e-6)
 
+    def test_getprediction(self):
+        pred = self.res1.get_prediction()
+        assert_allclose(pred.linpred.se_mean, pred.linpred.se_mean, rtol=1e-10)
+
 
 class TestGlmPoissonPlain(CheckWeight):
     @classmethod
