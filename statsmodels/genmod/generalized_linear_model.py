@@ -1661,18 +1661,23 @@ class GLMResults(base.LikelihoodModelResults):
 
         kwargs = model._get_init_kwds().copy()
         kwargs.pop('family')
+
         for key in getattr(model, '_null_drop_keys', []):
             del kwargs[key]
         start_params = np.atleast_1d(self.family.link(endog.mean()))
         oe = self.model._offset_exposure
         if not (np.size(oe) == 1 and oe == 0):
-            return GLM(endog, exog, family=self.family,
-                       **kwargs).fit(start_params=start_params).fittedvalues
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", DomainWarning)
+                mod = GLM(endog, exog, family=self.family, **kwargs)
+                fitted = mod.fit(start_params=start_params).fittedvalues
         else:
             # correct if fitted is identical across observations
             wls_model = lm.WLS(endog, exog,
                                weights=self._iweights * self._n_trials)
-            return wls_model.fit().fittedvalues
+            fitted = wls_model.fit().fittedvalues
+
+        return fitted
 
     @cache_readonly
     def deviance(self):

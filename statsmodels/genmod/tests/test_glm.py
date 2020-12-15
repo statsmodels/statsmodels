@@ -370,7 +370,7 @@ class TestGlmGaussianGradient(TestGlmGaussian):
         cls.data.exog = np.asarray(cls.data.exog)
         cls.data.exog = add_constant(cls.data.exog, prepend=False)
         cls.res1 = GLM(cls.data.endog, cls.data.exog,
-                        family=sm.families.Gaussian()).fit(method='bfgs')
+                       family=sm.families.Gaussian()).fit(method='newton')
         from .results.results_glm import Longley
         cls.res2 = Longley()
 
