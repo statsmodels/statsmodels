@@ -117,7 +117,7 @@ class QuantReg(RegressionModel):
         """
 
         if q <= 0 or q >= 1:
-            raise Exception('p must be strictly between 0 and 1')
+            raise Exception('q must be strictly between 0 and 1')
 
         kern_names = ['biw', 'cos', 'epa', 'gau', 'par']
         if kernel not in kern_names:
