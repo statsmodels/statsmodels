@@ -11,19 +11,21 @@ variables:
   OPENBLAS_NUM_THREADS: 1
   PYTHONHASHSEED: 0 # Ensure tests are correctly gathered by xdist
   SETUPTOOLS_USE_DISTUTILS: "stdlib"
+  USE_MATPLOTLIB: true
 
 jobs:
-- template: tools/ci/azure_template.yml
-  parameters:
-    name: Linux
-    vmImage: ubuntu-20.04
 
-- template: tools/ci/azure_template.yml
+- template: tools/ci/azure/azure_template_windows.yml
+  parameters:
+    name: Windows
+    vmImage: windows-2019
+
+- template: tools/ci/azure/azure_template_posix.yml
   parameters:
     name: macOS
     vmImage: macOS-10.15
 
-- template: tools/ci/azure_template.yml
+- template: tools/ci/azure/azure_template_posix.yml
   parameters:
-    name: Windows
-    vmImage: windows-2019
+    name: Linux
+    vmImage: ubuntu-20.04

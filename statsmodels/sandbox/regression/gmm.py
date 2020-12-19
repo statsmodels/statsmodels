@@ -1721,7 +1721,7 @@ class DistQuantilesGMM(GMM):
 
     def fitstart(self):
         #todo: replace with or add call to distfn._fitstart
-        #      added but not used during testing, avoid Travis
+        #      added but not used during testing
         distfn = self.distfn
         if hasattr(distfn, '_fitstart'):
             start = distfn._fitstart(self.endog)

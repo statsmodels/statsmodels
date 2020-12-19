@@ -135,7 +135,7 @@ class TestPoissonConstrained1a(CheckPoissonConstrainedMixin):
         # example without offset
         formula = 'deaths ~ logpyears + smokes + C(agecat)'
         mod = Poisson.from_formula(formula, data=data)
-        # get start_params, example fails to converge on one py TravisCI
+        # get start_params, example fails to converge on one CI run
         k_vars = len(mod.exog_names)
         start_params = np.zeros(k_vars)
         start_params[0] = np.log(mod.endog.mean())
@@ -248,7 +248,7 @@ class TestPoissonConstrained2a(CheckPoissonConstrainedMixin):
         formula = 'deaths ~ logpyears + smokes + C(agecat)'
         mod = Poisson.from_formula(formula, data=data)
 
-        # get start_params, example fails to converge on one py TravisCI
+        # get start_params, example fails to converge on one CI run
         k_vars = len(mod.exog_names)
         start_params = np.zeros(k_vars)
         start_params[0] = np.log(mod.endog.mean())

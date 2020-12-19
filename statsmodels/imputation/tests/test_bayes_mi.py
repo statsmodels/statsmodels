@@ -84,7 +84,7 @@ def test_MI():
         r = mi.fit()
         r.summary()  # smoke test
         # TODO: why does the test tolerance need to be so slack?
-        # There is unexpected variation across versions on travis.
+        # There is unexpected variation across versions
         assert_allclose(r.params, np.r_[
             -0.05347919, -0.02479701, 0.10075517], 0.25, 0)
 
@@ -163,7 +163,7 @@ def test_mi_formula():
     r = mi.fit(results_cb=results_cb)
     r.summary()  # smoke test
     # TODO: why does the test tolerance need to be so slack?
-    # There is unexpected variation across versions on travis.
+    # There is unexpected variation across versions
     assert_allclose(r.params, np.r_[
             -0.05347919, -0.02479701, 0.10075517], 0.25, 0)
 
