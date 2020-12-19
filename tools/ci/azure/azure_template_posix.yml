@@ -17,6 +17,8 @@ jobs:
   strategy:
     matrix:
       ${{ if eq(parameters.name, 'Linux') }}:
+        python_39:
+          python.version: '3.9'
         python_38:
           python.version: '3.8'
           USE_MATPLOTLIB: false
@@ -45,8 +47,6 @@ jobs:
           PANDAS: 0.23.4
           MATPLOTLIB: 2.2.5
           LINT: true
-        python_39:
-          python.version: '3.9'
         python_39_pre:
           python.version: '3.9'
           pip.pre: true
