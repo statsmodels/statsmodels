@@ -145,3 +145,9 @@ jobs:
   - bash: bash <(curl -s https://codecov.io/bash)
     displayName: 'CodeCov upload'
     condition: and(eq(variables['coverage'], 'true'), ne(variables['test.install'], 'true'))
+    continueOnError: true
+
+  - script: coveralls
+    displayName: 'coveralls upload'
+    condition: and(eq(variables['coverage'], 'true'), ne(variables['test.install'], 'true'))
+    continueOnError: true

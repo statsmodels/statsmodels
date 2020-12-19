@@ -50,7 +50,7 @@ So you want to submit a patch to `statsmodels` but are not too familiar with git
 
 1. `Fork <https://help.github.com/articles/fork-a-repo>`_ the `statsmodels repository <https://github.com/statsmodels/statsmodels>`_ on Github.
 2. `Create a new feature branch <https://git-scm.com/book/en/Git-Branching-Basic-Branching-and-Merging>`_. Each branch must be self-contained, with a single new feature or bugfix.
-3. Make sure the test suite passes. This includes testing on Python 3. The easiest way to do this is to either enable `Travis-CI <https://travis-ci.org/>`_ on your fork, or to make a pull request and check there.
+3. Make sure the test suite passes. This includes testing on Python 3. The easiest way to do this is to make a pull request and let the bot check for you. This can be slow, and if you are unsure about the fix or enhancement, it is best to run pytest locally.
 4. Document your changes by editing the appropriate file in ``docs/source/``. If it is a big, new feature add a note and an example to the latest ``docs/source/release/versionX.X.rst`` file. See older versions for examples. If it's a minor change, it will be included automatically in our release notes.
 5. Add an example. If it is a big, new feature please submit an example notebook by following `these instructions <https://www.statsmodels.org/devel/dev/examples.html>`_.
 6. `Submit a pull request <https://help.github.com/articles/using-pull-requests>`_

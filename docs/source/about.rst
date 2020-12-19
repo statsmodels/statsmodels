@@ -73,7 +73,7 @@ We would also like to thank our hosting providers, `github
 and `python.org <https://www.python.org/>`_ for making our downloads available
 on PyPi.
 
-We also thank our continuous integration providers,
+We also thank our current and previous continuous integration providers, `Azure <https://azure.microsoft.com/>`_,
 `Travis CI <https://travis-ci.org/>`_ and `AppVeyor <https://ci.appveyor.com>`_ for
 unit testing, and `Codecov <https://codecov.io>`_ and `Coveralls <https://coveralls.io>`_ for
 code coverage.
