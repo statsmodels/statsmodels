@@ -18,17 +18,20 @@ jobs:
     matrix:
       python37_win_latest:
         python.version: '3.7'
-      python38_win_latest:
+        python.architecture: 'x64'
+      python38_win_32_bit_latest:
         python.version: '3.8'
-      # python39_win_latest:
-      #   python.version: '3.9'
+        python.architecture: 'x86'
+      python39_win_latest:
+        python.version: '3.9'
+        python.architecture: 'x64'
     maxParallel: 10
 
   steps:
   - task: UsePythonVersion@0
     inputs:
       versionSpec: '$(python.version)'
-      architecture: 'x64'
+      architecture: '$(python.architecture)'
     displayName: 'Use Python $(python.version)'
 
   - script: |
@@ -46,7 +49,7 @@ jobs:
     displayName: 'Build Cython Extensions'
 
   - script: |
-      pytest statsmodels --junitxml=junit/test-results.xml -n 2 --durations=50
+      pytest statsmodels --skip-examples --junitxml=junit/test-results.xml -n 2 --durations=50
     displayName: 'pytest'
 
   - task: PublishTestResults@2
