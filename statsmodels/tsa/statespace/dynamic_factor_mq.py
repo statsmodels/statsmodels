@@ -1525,7 +1525,8 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             if not isinstance(endog_monthly, (pd.Series, pd.DataFrame)):
                 raise ValueError('Given monthly dataset is not a'
                                  ' Pandas object. ' + base_msg)
-            elif not endog_monthly.index.is_all_dates:
+            elif endog_monthly.index.inferred_type not in ("datetime64",
+                                                           "period"):
                 raise ValueError('Given monthly dataset has an'
                                  ' index with non-date values. ' + base_msg)
             elif not getattr(endog_monthly.index, 'freqstr', 'N')[0] == 'M':
@@ -1544,7 +1545,8 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             if not isinstance(endog_quarterly, (pd.Series, pd.DataFrame)):
                 raise ValueError('Given quarterly dataset is not a'
                                  ' Pandas object. ' + base_msg)
-            elif not endog_quarterly.index.is_all_dates:
+            elif endog_quarterly.index.inferred_type not in ("datetime64",
+                                                             "period"):
                 raise ValueError('Given quarterly dataset has an'
                                  ' index with non-date values. ' + base_msg)
             elif not getattr(endog_quarterly.index, 'freqstr', 'N')[0] == 'Q':
@@ -1569,13 +1571,16 @@ class DynamicFactorMQ(mlemodel.MLEModel):
                 axis=1)
 
             # Make sure we didn't accidentally get duplicate column names
-            columns = endog.columns.values
-            for name, count in endog.columns.value_counts().items():
-                if count == 1:
-                    continue
-                mask = columns == name
-                columns[mask] = [f'{name}{i + 1}' for i in range(count)]
-            endog.columns = columns
+            column_counts = endog.columns.value_counts()
+            if column_counts.max() > 1:
+                columns = endog.columns.values.astype(object)
+                for name in column_counts.index:
+                    count = column_counts.loc[name]
+                    if count == 1:
+                        continue
+                    mask = columns == name
+                    columns[mask] = [f'{name}{i + 1}' for i in range(count)]
+                endog.columns = columns
         else:
             endog = endog_monthly.copy()
         shape = endog_monthly.shape
