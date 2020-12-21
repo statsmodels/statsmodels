@@ -2062,7 +2062,7 @@ def test_unstructured_complete():
     ey = np.dot(xmat, par)
     y = ey + e.ravel()
     g = np.kron(np.arange(ngrp), np.ones(3))
-    t = np.kron(np.ones(ngrp), np.r_[0, 1, 2]).astype(np.int)
+    t = np.kron(np.ones(ngrp), np.r_[0, 1, 2]).astype(int)
 
     m = gee.GEE(y, xmat, time=t, cov_struct=cov_struct.Unstructured(),
                 groups=g)
@@ -2101,7 +2101,7 @@ def test_unstructured_incomplete():
     y = np.concatenate(yl)
     x = np.concatenate(xl, axis=0)
     t = np.concatenate(tl)
-    t = np.asarray(t, dtype=np.int)
+    t = np.asarray(t, dtype=int)
     g = np.concatenate(gl)
 
     m = gee.GEE(y, x, time=t[:, None], cov_struct=cov_struct.Unstructured(),
