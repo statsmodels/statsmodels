@@ -315,7 +315,7 @@ class GLMGamResults(GLMResults):
         ----------
         smooth_index : int
             index of the smooth term within list of smooth terms
-        plot_se : book
+        plot_se : bool
             If plot_se is true, then the confidence interval for the linear
             prediction will be added to the plot.
         cpr : bool
