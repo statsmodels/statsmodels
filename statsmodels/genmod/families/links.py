@@ -676,6 +676,16 @@ class CDFLink(Logit):
 
         implemented through numerical differentiation
         """
+        p = self._clean(p)
+        linpred = self.dbn.ppf(p)
+        return - self.inverse_deriv2(linpred) / self.dbn.pdf(linpred)**3
+
+    def deriv2_numdiff(self, p):
+        """
+        Second derivative of the link function g''(p)
+
+        implemented through numerical differentiation
+        """
         from statsmodels.tools.numdiff import approx_fprime
         p = np.atleast_1d(p)
         # Note: special function for norm.ppf does not support complex
@@ -693,9 +703,31 @@ class CDFLink(Logit):
         Returns
         -------
         g^(-1)'(z) : ndarray
-            The value of the derivative of the inverse of the logit function
+            The value of the derivative of the inverse of the logit function.
+            This is just the pdf in a CDFLink,
         """
-        return 1/self.deriv(self.inverse(z))
+        return self.dbn.pdf(z)
+
+    def inverse_deriv2(self, z):
+        """
+        Second derivative of the inverse link function g^(-1)(z).
+
+        Parameters
+        ----------
+        z : array_like
+            `z` is usually the linear predictor for a GLM or GEE model.
+
+        Returns
+        -------
+        g'^(-1)(z) : ndarray
+            The value of the second derivative of the inverse of the link
+            function
+
+        Notes
+        -----
+        This method needs to be overwritten by subclasses
+        """
+        raise NotImplementedError
 
 
 class probit(CDFLink):
@@ -708,7 +740,24 @@ class probit(CDFLink):
 
     probit is an alias of CDFLink.
     """
-    pass
+
+    def inverse_deriv2(self, z):
+        """
+        Second derivative of the inverse link function
+
+        This is the derivative of the pdf in a CDFLink
+
+        """
+        return - z * self.dbn.pdf(z)
+
+    def deriv2_(self, p):
+        """
+        Second derivative of the link function g''(p)
+
+        """
+        p = self._clean(p)
+        linpred = self.dbn.ppf(p)
+        return linpred / self.dbn.pdf(linpred)**2
 
 
 class cauchy(CDFLink):
@@ -739,9 +788,14 @@ class cauchy(CDFLink):
         g''(p) : ndarray
             Value of the second derivative of Cauchy link function at `p`
         """
+        p = self._clean(p)
         a = np.pi * (p - 0.5)
         d2 = 2 * np.pi**2 * np.sin(a) / np.cos(a)**3
         return d2
+
+    def inverse_deriv2(self, z):
+
+        return - 2 * z / (np.pi * (z**2 + 1)**2)
 
 
 class CLogLog(Logit):
