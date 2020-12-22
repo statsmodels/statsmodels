@@ -649,11 +649,13 @@ class TestPandasOffset:
 
     def test_pd_offset_exposure(self):
         endog = pd.DataFrame({'F': [0.0, 0.0, 0.0, 0.0, 1.0]})
-        exog = pd.DataFrame({'I': [1.0, 1.0, 1.0, 1.0, 1.0], 'C': [0.0, 1.0, 0.0, 1.0, 0.0]})
-        exposure = pd.Series([1, 1, 1, 2, 1])
+        exog = pd.DataFrame({'I': [1.0, 1.0, 1.0, 1.0, 1.0],
+                             'C': [0.0, 1.0, 0.0, 1.0, 0.0]})
+        exposure = pd.Series([1., 1, 1, 2, 1])
         offset = pd.Series([1, 1, 1, 2, 1])
         sm.Poisson(endog=endog, exog=exog, offset=offset).fit()
         inflations = ['logit', 'probit']
         for inflation in inflations:
-            sm.ZeroInflatedPoisson(endog=endog, exog=exog, exposure=exposure, exog_infl=exog,
+            sm.ZeroInflatedPoisson(endog=endog, exog=exog["I"],
+                                   exposure=exposure,
                                    inflation=inflation).fit()
