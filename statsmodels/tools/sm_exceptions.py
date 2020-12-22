@@ -231,6 +231,14 @@ class CollinearityWarning(ModelWarning):
     pass
 
 
+class InfeasibleTestError(RuntimeError):
+    """
+    Test statistic cannot be computed
+    """
+
+    pass
+
+
 recarray_warning = """\
 recarray support has been deprecated and will be removed after 0.12.  Please \
 use pandas DataFrames and Series for structured data.

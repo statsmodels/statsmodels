@@ -16,6 +16,7 @@ from scipy import stats
 from statsmodels.regression.linear_model import OLS, yule_walker
 from statsmodels.tools.sm_exceptions import (
     CollinearityWarning,
+    InfeasibleTestError,
     InterpolationWarning,
     MissingDataError,
 )
@@ -1378,6 +1379,14 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
         if addconst:
             dtaown = add_constant(dta[:, 1 : (mxlg + 1)], prepend=False)
             dtajoint = add_constant(dta[:, 1:], prepend=False)
+            if (
+                    dtajoint.shape[1] == (dta.shape[1] - 1)
+                    or (dtajoint.max(0) == dtajoint.min(0)).sum() != 1
+            ):
+                raise InfeasibleTestError(
+                    "The x values include a column with constant values and so"
+                    " the test statistic cannot be computed."
+                )
         else:
             raise NotImplementedError("Not Implemented")
             # dtaown = dta[:, 1:mxlg]
@@ -1393,6 +1402,21 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
         # the other tests are made-up
 
         # Granger Causality test using ssr (F statistic)
+        if res2djoint.model.k_constant:
+            tss = res2djoint.centered_tss
+        else:
+            tss =res2djoint.centered_tss
+        if (
+                tss == 0
+                or res2djoint.ssr == 0
+                or np.isnan(res2djoint.rsquared)
+                or (res2djoint.ssr / tss) < np.finfo(float).eps
+                or res2djoint.params.shape[0] != dtajoint.shape[1]
+        ):
+            raise InfeasibleTestError(
+                "The Granger causality test statistic cannot be compute "
+                "because the VAR has a perfect fit of the data."
+            )
         fgc1 = (
             (res2down.ssr - res2djoint.ssr)
             / res2djoint.ssr
