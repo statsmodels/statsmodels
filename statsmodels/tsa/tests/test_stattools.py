@@ -21,8 +21,9 @@ import pytest
 from statsmodels.datasets import macrodata, modechoice, nile, randhie, sunspots
 from statsmodels.tools.sm_exceptions import (
     CollinearityWarning,
+    InfeasibleTestError,
     InterpolationWarning,
-    MissingDataError,
+    MissingDataError
 )
 from statsmodels.tsa.arima_process import arma_acovf
 from statsmodels.tsa.statespace.sarimax import SARIMAX
@@ -1214,3 +1215,21 @@ def test_coint_auto_tstat():
         return_results=False,
     )
     assert np.abs(res[0]) < 1.65
+
+
+rs = np.random.RandomState(1)
+a = rs.random_sample(120)
+b = np.zeros_like(a)
+df1 = pd.DataFrame({'b': b, 'a': a})
+df2 = pd.DataFrame({'a': a, 'b': b})
+
+b = np.ones_like(a)
+df3 = pd.DataFrame({'b': b, 'a': a})
+df4 = pd.DataFrame({'a': a, 'b': b})
+
+gc_data_sets = [df1, df2, df3, df4]
+
+@pytest.mark.parametrize("dataset",gc_data_sets)
+def test_granger_causality_exceptions(dataset):
+    with pytest.raises(InfeasibleTestError):
+        grangercausalitytests(dataset, 4)
