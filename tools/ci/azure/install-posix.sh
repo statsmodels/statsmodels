@@ -30,7 +30,7 @@ if [[ ${USE_MATPLOTLIB} == true ]]; then
   fi
 fi
 
-CMD="${CMD} ${BLAS}"
+CMD="${CMD} patsy ${BLAS}"
 echo $CMD
 eval $CMD
 
