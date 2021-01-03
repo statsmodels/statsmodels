@@ -187,14 +187,14 @@ class TestWeightstats(object):
         w2_ = 2. * np.ones(len(x2))
 
         d1 = DescrStatsW(x1)
-#        print ttest_ind(x1, x2)
-#        print ttest_ind(x1, x2, usevar='unequal')
-#        #print ttest_ind(x1, x2, usevar='unequal')
-#        print stats.ttest_ind(x1, x2)
-#        print ttest_ind(x1, x2, usevar='unequal', alternative='larger')
-#        print ttest_ind(x1, x2, usevar='unequal', alternative='smaller')
-#        print ttest_ind(x1, x2, usevar='unequal', weights=(w1_, w2_))
-#        print stats.ttest_ind(np.r_[x1, x1], np.r_[x2,x2])
+        #        print ttest_ind(x1, x2)
+        #        print ttest_ind(x1, x2, usevar='unequal')
+        #        #print ttest_ind(x1, x2, usevar='unequal')
+        #        print stats.ttest_ind(x1, x2)
+        #        print ttest_ind(x1, x2, usevar='unequal', alternative='larger')
+        #        print ttest_ind(x1, x2, usevar='unequal', alternative='smaller')
+        #        print ttest_ind(x1, x2, usevar='unequal', weights=(w1_, w2_))
+        #        print stats.ttest_ind(np.r_[x1, x1], np.r_[x2,x2])
         assert_almost_equal(ttest_ind(x1, x2, weights=(w1_, w2_))[:2],
                             stats.ttest_ind(np.r_[x1, x1], np.r_[x2, x2]))
 
@@ -207,14 +207,14 @@ class TestWeightstats(object):
         d2w = DescrStatsW(x2, weights=w2)
         x1r = d1w.asrepeats()
         x2r = d2w.asrepeats()
-#        print 'random weights'
-#        print ttest_ind(x1, x2, weights=(w1, w2))
-#        print stats.ttest_ind(x1r, x2r)
+        #        print 'random weights'
+        #        print ttest_ind(x1, x2, weights=(w1, w2))
+        #        print stats.ttest_ind(x1r, x2r)
         assert_almost_equal(ttest_ind(x1, x2, weights=(w1, w2))[:2],
                             stats.ttest_ind(x1r, x2r), 14)
         # not the same as new version with random weights/replication
-#        assert x1r.shape[0] == d1w.sum_weights
-#        assert x2r.shape[0] == d2w.sum_weights
+        #        assert x1r.shape[0] == d1w.sum_weights
+        #        assert x2r.shape[0] == d2w.sum_weights
 
         assert_almost_equal(x2r.mean(0), d2w.mean, 14)
         assert_almost_equal(x2r.var(), d2w.var, 14)
@@ -225,10 +225,10 @@ class TestWeightstats(object):
         # TODO: exception in corrcoef (scalar case)
 
         # one-sample tests
-#        print d1.ttest_mean(3)
-#        print stats.ttest_1samp(x1, 3)
-#        print d1w.ttest_mean(3)
-#        print stats.ttest_1samp(x1r, 3)
+        #        print d1.ttest_mean(3)
+        #        print stats.ttest_1samp(x1, 3)
+        #        print d1w.ttest_mean(3)
+        #        print stats.ttest_1samp(x1r, 3)
         assert_almost_equal(d1.ttest_mean(3)[:2], stats.ttest_1samp(x1, 3), 11)
         assert_almost_equal(d1w.ttest_mean(3)[:2],
                             stats.ttest_1samp(x1r, 3), 11)
@@ -248,9 +248,9 @@ class TestWeightstats(object):
         assert_almost_equal(np.cov(x2r_2d.T, bias=1), d2w_2d.cov, 14)
         assert_almost_equal(np.corrcoef(x2r_2d.T), d2w_2d.corrcoef, 14)
 
-#        print d1w_2d.ttest_mean(3)
-#        #scipy.stats.ttest is also vectorized
-#        print stats.ttest_1samp(x1r_2d, 3)
+        #        print d1w_2d.ttest_mean(3)
+        #        #scipy.stats.ttest is also vectorized
+        #        print stats.ttest_1samp(x1r_2d, 3)
         t, p, d = d1w_2d.ttest_mean(3)
         assert_almost_equal([t, p], stats.ttest_1samp(x1r_2d, 3), 11)
         # print [stats.ttest_1samp(xi, 3) for xi in x1r_2d.T]
@@ -760,3 +760,25 @@ class TestZTest(object):
 
             ci = d1.zconfint_mean(alternative=alternatives[tc.alternative])
             assert_allclose(ci, tc_conf_int, rtol=1e-10)
+
+
+def test_weightstats_len_1():
+    x1 = [1]
+    w1 = [1]
+    d1 = DescrStatsW(x1, w1)
+    assert (d1.quantile([0.0, 0.5, 1.0]) == 1).all()
+
+
+def test_weightstats_2d_w1():
+    x1 = [[1], [2]]
+    w1 = [[1], [2]]
+    d1 = DescrStatsW(x1, w1)
+    print(len(np.array(w1).shape))
+    assert (d1.quantile([0.5, 1.0]) == 2).all().all()
+
+
+def test_weightstats_2d_w2():
+    x1 = [[1]]
+    w1 = [[1]]
+    d1 = DescrStatsW(x1, w1)
+    assert (d1.quantile([0, 0.5, 1.0]) == 1).all().all()
