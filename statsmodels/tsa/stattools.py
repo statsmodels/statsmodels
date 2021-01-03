@@ -186,14 +186,15 @@ def adfuller(
         * "nc" : no constant, no trend.
 
     autolag : {"AIC", "BIC", "t-stat", None}
-        Method to use when automatically determining the lag.
+        Method to use when automatically determining the lag length among the
+        values 0, 1, ..., maxlag.
 
-        * if None, then maxlag lags are used.
-        * if "AIC" (default) or "BIC", then the number of lags is chosen
+        * If "AIC" (default) or "BIC", then the number of lags is chosen
           to minimize the corresponding information criterion.
         * "t-stat" based choice of maxlag.  Starts with maxlag and drops a
           lag until the t-statistic on the last lag length is significant
           using a 5%-sized test.
+        * If None, then the number of included lags is set to maxlag.
     store : bool
         If True, then a result instance is returned additionally to
         the adf statistic. Default is False.
