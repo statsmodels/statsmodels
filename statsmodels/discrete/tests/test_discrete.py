@@ -1526,7 +1526,9 @@ def test_isdummy():
 def test_non_binary():
     y = [1, 2, 1, 2, 1, 2]
     X = np.random.randn(6, 2)
-    np.testing.assert_raises(ValueError, Logit, y, X)
+    assert_raises(ValueError, Logit, y, X)
+    y = [0, 1, 0, 0, 1, 0.5]
+    assert_raises(ValueError, Probit, y, X)
 
 
 def test_mnlogit_factor():
