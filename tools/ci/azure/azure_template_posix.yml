@@ -76,16 +76,6 @@ jobs:
       source tools/ci/azure/install-posix.sh
     displayName: 'Install dependencies'
 
-  - script: python -m pip list
-    displayName: 'List Configuration (PyPI)'
-    condition: ne(variables['use.conda'], 'true')
-
-  - script: |
-      source activate statsmodels-test
-      conda list
-    displayName: 'List Configuration (conda)'
-    condition: eq(variables['use.conda'], 'true')
-
   - script: |
       echo "Installing to site packages"
       python setup.py bdist_wheel
@@ -98,6 +88,16 @@ jobs:
       python -m pip install -e . -v --no-build-isolation
     displayName: 'Install statsmodels (editable)'
     condition: ne(variables['test.install'], 'true')
+
+  - script: python -m pip list
+    displayName: 'List Configuration (PyPI)'
+    condition: ne(variables['use.conda'], 'true')
+
+  - script: |
+      source activate statsmodels-test
+      conda list
+    displayName: 'List Configuration (conda)'
+    condition: eq(variables['use.conda'], 'true')
 
   - script: |
       echo "Testing site packages"
@@ -147,10 +147,5 @@ jobs:
 
   - bash: bash <(curl -s https://codecov.io/bash)
     displayName: 'CodeCov upload'
-    condition: and(eq(variables['coverage'], 'true'), ne(variables['test.install'], 'true'))
-    continueOnError: true
-
-  - script: coveralls
-    displayName: 'coveralls upload'
     condition: and(eq(variables['coverage'], 'true'), ne(variables['test.install'], 'true'))
     continueOnError: true
