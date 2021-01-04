@@ -115,9 +115,10 @@ def seasonal_decompose(x, model="additive", filt=None, period=None,
 
     The multiplicative model is Y[t] = T[t] * S[t] * e[t]
 
-    The seasonal component is first removed by applying a convolution
-    filter to the data. The average of this smoothed series for each
-    period is the returned seasonal component.
+    The results are obtained by first estimating the trend by applying
+    a convolution filter to the data. The trend is then removed from the
+    series and the average of this de-trended series for each period is
+    the returned seasonal component.
     """
     pfreq = period
     pw = PandasWrapper(x)
