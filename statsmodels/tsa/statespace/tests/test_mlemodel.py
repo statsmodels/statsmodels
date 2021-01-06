@@ -851,6 +851,27 @@ def test_diagnostics():
         res.test_serial_correlation(method='boxpierce')
 
 
+def test_small_sample_serial_correlation_test():
+    # Test the Ljung Box serial correlation test for small samples with df
+    # adjustment using the Nile dataset. Ljung-Box statistic and p-value
+    # are compared to R's Arima() and checkresiduals() functions in forecast
+    # package:
+    # library(forecast)
+    # fit <- Arima(y, order=c(1,0,1), include.constant=FALSE)
+    # checkresiduals(fit, lag=10)
+    from statsmodels.tsa.statespace.sarimax import SARIMAX
+    niledata = nile.data.load_pandas().data
+    niledata.index = pd.date_range('1871-01-01', '1970-01-01', freq='AS')
+    mod = SARIMAX(
+        endog=niledata['volume'], order=(1, 0, 1), trend='n',
+        freq=niledata.index.freq)
+    res = mod.fit()
+
+    actual = res.test_serial_correlation(
+        method='ljungbox', lags=10, df_adjust=True)[0, :, -1]
+    assert_allclose(actual, [14.116, 0.0788], atol=1e-3)
+
+
 def test_diagnostics_nile_eviews():
     # Test the diagnostic tests using the Nile dataset. Results are from
     # "Fitting State Space Models with EViews" (Van den Bossche 2011,
