@@ -260,6 +260,23 @@ cdef class STL(object):
         self._rw = np.ones(self.nobs)
         self._work = np.zeros((7, self.nobs + 2 * period))
 
+    def __reduce__(self):
+        args = (
+            self.endog,
+            self._period,
+            self.seasonal,
+            self.trend,
+            self.low_pass,
+            self.seasonal_deg,
+            self.trend_deg,
+            self.low_pass_deg,
+            self.robust,
+            self.seasonal_jump,
+            self.trend_jump,
+            self.low_pass_jump,
+        )
+        return (STL, args)
+
     @property
     def period(self) -> int:
         """The period length of the time series"""
