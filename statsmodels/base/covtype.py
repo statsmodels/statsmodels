@@ -103,84 +103,95 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
     The following covariance types and required or optional arguments are
     currently available:
 
-    - 'HC0', 'HC1', 'HC2', 'HC3' and no keyword arguments:
-        heteroscedasticity robust covariance
-    - 'HAC' and keywords
+    - 'HC0', 'HC1', 'HC2', 'HC3': heteroscedasticity robust covariance
 
-        - `maxlag` integer (required) : number of lags to use
-        - `kernel` callable or str (optional) : kernel
-              currently available kernels are ['bartlett', 'uniform'],
-              default is Bartlett
-        - `use_correction` bool (optional) : If true, use small sample
-              correction
+      - no keyword arguments
 
-    - 'cluster' and required keyword `groups`, integer group indicator
+    - 'HAC': heteroskedasticity-autocorrelation robust covariance
 
-        - `groups` array_like, integer (required) :
-              index of clusters or groups
-        - `use_correction` bool (optional) :
-              If True the sandwich covariance is calculated with a small
-              sample correction.
-              If False the the sandwich covariance is calculated without
-              small sample correction.
-        - `df_correction` bool (optional)
-              If True (default), then the degrees of freedom for the
-              inferential statistics and hypothesis tests, such as
-              pvalues, f_pvalue, conf_int, and t_test and f_test, are
-              based on the number of groups minus one instead of the
-              total number of observations minus the number of explanatory
-              variables. `df_resid` of the results instance is adjusted.
-              If False, then `df_resid` of the results instance is not
-              adjusted.
+      ``maxlag`` :  integer, required
+        number of lags to use
 
-    - 'hac-groupsum' Driscoll and Kraay, heteroscedasticity and
-        autocorrelation robust standard errors in panel data
-        keywords
+      ``kernel`` : {callable, str}, optional
+        kernels currently available kernels are ['bartlett', 'uniform'],
+        default is Bartlett
 
-        - `time` array_like (required) : index of time periods
-        - `maxlag` integer (required) : number of lags to use
-        - `kernel` callable or str (optional) : kernel
-              currently available kernels are ['bartlett', 'uniform'],
-              default is Bartlett
-        - `use_correction` False or string in ['hac', 'cluster'] (optional) :
-              If False the the sandwich covariance is calculated without
-              small sample correction.
-              If `use_correction = 'cluster'` (default), then the same
-              small sample correction as in the case of 'covtype='cluster''
-              is used.
-        - `df_correction` bool (optional)
-              adjustment to df_resid, see cov_type 'cluster' above
-              #TODO: we need more options here
+      ``use_correction``: bool, optional
+        If true, use small sample correction
 
-    - 'hac-panel' heteroscedasticity and autocorrelation robust standard
-        errors in panel data.
-        The data needs to be sorted in this case, the time series for
-        each panel unit or cluster need to be stacked. The membership to
-        a timeseries of an individual or group can be either specified by
-        group indicators or by increasing time periods.
+    - 'cluster': clustered covariance estimator
 
-        keywords
+      ``groups`` : array_like[int], required :
+        Integer-valued index of clusters or groups.
 
-        - either `groups` or `time` : array_like (required)
-          `groups` : indicator for groups
-          `time` : index of time periods
-        - `maxlag` integer (required) : number of lags to use
-        - `kernel` callable or str (optional) : kernel
-              currently available kernels are ['bartlett', 'uniform'],
-              default is Bartlett
-        - `use_correction` False or string in ['hac', 'cluster'] (optional) :
-              If False the the sandwich covariance is calculated without
-              small sample correction.
-        - `df_correction` bool (optional)
-              adjustment to df_resid, see cov_type 'cluster' above
-              #TODO: we need more options here
+      ``use_correction``: bool, optional
+        If True the sandwich covariance is calculated with a small
+        sample correction.
+        If False the sandwich covariance is calculated without
+        small sample correction.
 
-    Reminder:
-    `use_correction` in "hac-groupsum" and "hac-panel" is not bool,
-    needs to be in [False, 'hac', 'cluster']
+      ``df_correction``: bool, optional
+        If True (default), then the degrees of freedom for the
+        inferential statistics and hypothesis tests, such as
+        pvalues, f_pvalue, conf_int, and t_test and f_test, are
+        based on the number of groups minus one instead of the
+        total number of observations minus the number of explanatory
+        variables. `df_resid` of the results instance is also
+        adjusted. When `use_t` is also True, then pvalues are
+        computed using the Student's t distribution using the
+        corrected values. These may differ substantially from
+        p-values based on the normal is the number of groups is
+        small.
+        If False, then `df_resid` of the results instance is not
+        adjusted.
 
-    TODO: Currently there is no check for extra or misspelled keywords,
-    except in the case of cov_type `HCx`
+
+    - 'hac-groupsum': Driscoll and Kraay, heteroscedasticity and
+      autocorrelation robust covariance for panel data
+      # TODO: more options needed here
+
+      ``time`` : array_like, required
+        index of time periods
+      ``maxlag`` : integer, required
+        number of lags to use
+      ``kernel`` : {callable, str}, optional
+        The available kernels are ['bartlett', 'uniform']. The default is
+        Bartlett.
+      ``use_correction`` : {False, 'hac', 'cluster'}, optional
+        If False the the sandwich covariance is calculated without small
+        sample correction. If `use_correction = 'cluster'` (default),
+        then the same small sample correction as in the case of
+        `covtype='cluster'` is used.
+      ``df_correction`` : bool, optional
+        The adjustment to df_resid, see cov_type 'cluster' above
+
+    - 'hac-panel': heteroscedasticity and autocorrelation robust standard
+      errors in panel data. The data needs to be sorted in this case, the
+      time series for each panel unit or cluster need to be stacked. The
+      membership to a time series of an individual or group can be either
+      specified by group indicators or by increasing time periods. One of
+      ``groups`` or ``time`` is required. # TODO: we need more options here
+
+      ``groups`` : array_like[int]
+        indicator for groups
+      ``time`` : array_like[int]
+        index of time periods
+      ``maxlag`` : int, required
+        number of lags to use
+      ``kernel`` : {callable, str}, optional
+        Available kernels are ['bartlett', 'uniform'], default
+        is Bartlett
+      ``use_correction`` : {False, 'hac', 'cluster'}, optional
+        If False the sandwich covariance is calculated without
+        small sample correction.
+      ``df_correction`` : bool, optional
+        Adjustment to df_resid, see cov_type 'cluster' above
+
+    **Reminder**: ``use_correction`` in "hac-groupsum" and "hac-panel" is
+    not bool, needs to be in {False, 'hac', 'cluster'}.
+
+    .. todo:: Currently there is no check for extra or misspelled keywords,
+         except in the case of cov_type `HCx`
     """
 
     import statsmodels.stats.sandwich_covariance as sw

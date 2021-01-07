@@ -103,9 +103,9 @@ The specific model classes are:
    ConditionalMNLogit
    ConditionalPoisson
 
-   The cumulative link model for an ordinal dependent variable is currently
-   in miscmodels as it subclasses GenericLikelihoodModel. This will change
-   in future versions.
+The cumulative link model for an ordinal dependent variable is currently
+in miscmodels as it subclasses GenericLikelihoodModel. This will change
+in future versions.
 
 .. currentmodule:: statsmodels.miscmodels.ordinal_model
 .. module:: statsmodels.miscmodels.ordinal_model
