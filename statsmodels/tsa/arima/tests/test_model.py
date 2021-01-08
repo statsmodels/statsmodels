@@ -239,9 +239,24 @@ def test_clone():
     endog = dta['realgdp'].iloc[:100]
     exog = np.arange(endog.shape[0])
     check_cloned(ARIMA(endog, order=(2, 1, 1), seasonal_order=(1, 1, 2, 4),
-                       exog=exog, trend='c', concentrate_scale=True),
+                       exog=exog, trend=[0, 0, 1], concentrate_scale=True),
                  endog, exog=exog)
 
+
+def test_constant_integrated_model_error():
+    with pytest.raises(ValueError, match="In models with integration"):
+        ARIMA(np.ones(100), order=(1, 1, 0), trend='c')
+
+    with pytest.raises(ValueError, match="In models with integration"):
+        ARIMA(np.ones(100), order=(1, 0, 0), seasonal_order=(1, 1, 0, 6),
+              trend='c')
+
+    with pytest.raises(ValueError, match="In models with integration"):
+        ARIMA(np.ones(100), order=(1, 2, 0), trend='t')
+
+    with pytest.raises(ValueError, match="In models with integration"):
+        ARIMA(np.ones(100), order=(1, 1, 0), seasonal_order=(1, 1, 0, 6),
+              trend='t')
 
 def test_append():
     endog = dta['infl'].iloc[:100].values
