@@ -1732,7 +1732,7 @@ class SARIMAX(MLEModel):
         # Create extended model
         if extend_kwargs is None:
             extend_kwargs = {}
-        if not self.simple_differencing and self._k_trend > 0:
+        if not self.simple_differencing and self.k_trend > 0:
             extend_kwargs.setdefault(
                 'trend_offset', self.trend_offset + self.nobs)
         extend_kwargs.setdefault('validate_specification', False)
