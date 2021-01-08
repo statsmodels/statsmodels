@@ -258,6 +258,40 @@ def test_constant_integrated_model_error():
         ARIMA(np.ones(100), order=(1, 1, 0), seasonal_order=(1, 1, 0, 6),
               trend='t')
 
+
+def test_forecast():
+    # Numpy
+    endog = dta['infl'].iloc[:100].values
+
+    mod = ARIMA(endog[:50], order=(1, 1, 0), trend='t')
+    res = mod.filter([0.2, 0.3, 1.0])
+
+    endog2 = endog.copy()
+    endog2[50:] = np.nan
+    mod2 = mod.clone(endog2)
+    res2 = mod2.filter(res.params)
+
+    assert_allclose(res.forecast(50), res2.fittedvalues[-50:])
+
+
+def test_forecast_with_exog():
+    # Numpy
+    endog = dta['infl'].iloc[:100].values
+    exog = np.arange(len(endog))**2
+
+    mod = ARIMA(endog[:50], order=(1, 1, 0), exog=exog[:50], trend='t')
+    res = mod.filter([0.2, 0.05, 0.3, 1.0])
+
+    endog2 = endog.copy()
+    endog2[50:] = np.nan
+    mod2 = mod.clone(endog2, exog=exog)
+    print(mod.param_names)
+    print(mod2.param_names)
+    res2 = mod2.filter(res.params)
+
+    assert_allclose(res.forecast(50, exog=exog[50:]), res2.fittedvalues[-50:])
+
+
 def test_append():
     endog = dta['infl'].iloc[:100].values
     mod = ARIMA(endog[:50], trend='c')
@@ -277,6 +311,19 @@ def test_append_with_exog():
     res = mod.fit()
     res_e = res.append(endog[50:], exog=exog[50:])
     mod2 = ARIMA(endog, exog=exog, trend='c')
+    res2 = mod2.filter(res_e.params)
+
+    assert_allclose(res2.llf, res_e.llf)
+
+
+def test_append_with_exog_and_trend():
+    # Numpy
+    endog = dta['infl'].iloc[:100].values
+    exog = np.arange(len(endog))**2
+    mod = ARIMA(endog[:50], exog=exog[:50], trend='ct')
+    res = mod.fit()
+    res_e = res.append(endog[50:], exog=exog[50:])
+    mod2 = ARIMA(endog, exog=exog, trend='ct')
     res2 = mod2.filter(res_e.params)
 
     assert_allclose(res2.llf, res_e.llf)
