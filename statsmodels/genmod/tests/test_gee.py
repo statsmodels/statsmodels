@@ -2132,8 +2132,10 @@ def test_ar_covsolve():
                 z = np.random.normal(size=(d, q))
 
             sm = np.diag(sd)
-            z1 = np.linalg.solve(sm, np.linalg.solve(mat, np.linalg.solve(sm, z)))
-            z2 = c.covariance_matrix_solve(np.zeros_like(sd), np.zeros_like(sd),
+            z1 = np.linalg.solve(sm,
+                                 np.linalg.solve(mat, np.linalg.solve(sm, z)))
+            z2 = c.covariance_matrix_solve(np.zeros_like(sd),
+                                           np.zeros_like(sd),
                                            sd, [z])
 
             assert_allclose(z1, z2[0], rtol=1e-5, atol=1e-5)
@@ -2158,7 +2160,8 @@ def test_ex_covsolve():
                 z = np.random.normal(size=(d, q))
 
             sm = np.diag(sd)
-            z1 = np.linalg.solve(sm, np.linalg.solve(mat, np.linalg.solve(sm, z)))
+            z1 = np.linalg.solve(sm,
+                                 np.linalg.solve(mat, np.linalg.solve(sm, z)))
             z2 = c.covariance_matrix_solve(np.zeros_like(sd),
                                            np.arange(d, dtype=np.int),
                                            sd, [z])
@@ -2188,7 +2191,8 @@ def test_stationary_covsolve():
                 z = np.random.normal(size=(d, q))
 
             sm = np.diag(sd)
-            z1 = np.linalg.solve(sm, np.linalg.solve(mat, np.linalg.solve(sm, z)))
+            z1 = np.linalg.solve(sm,
+                                 np.linalg.solve(mat, np.linalg.solve(sm, z)))
             z2 = c.covariance_matrix_solve(np.zeros_like(sd),
                                            np.arange(d, dtype=np.int),
                                            sd, [z])
