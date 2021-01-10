@@ -856,9 +856,7 @@ class GEE(GLM):
             self.scaling_factor = 1
 
         _, ncov1, cmat = self._covmat()
-        scale = self.estimate_scale()
-        cmat = cmat / scale ** 2
-        score2 = np.dot(qc.T, score) / scale
+        score2 = np.dot(qc.T, score)
 
         try:
             amat = np.linalg.inv(ncov1)
