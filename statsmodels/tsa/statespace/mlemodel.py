@@ -3146,7 +3146,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         return output
 
-    def test_serial_correlation(self, method, lags=None):
+    def test_serial_correlation(self, method, df_adjust=False, lags=None):
         """
         Ljung-Box test for no serial correlation of standardized residuals
 
@@ -3168,7 +3168,13 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             After 0.12 the default maxlag will change to min(10, nobs // 5) for
             non-seasonal models and min(2*m, nobs // 5) for seasonal time
             series where m is the seasonal period.
-
+        df_adjust : bool, optional
+            If True, the degrees of freedom consumed by the model is subtracted
+            from the degrees-of-freedom used in the test so that the adjusted
+            dof for the statistics are lags - model_df. In an ARMA model, this
+            value is usually p+q where p is the AR order and q is the MA order.
+            When using df_adjust, it is not possible to use tests based on
+            fewer than model_df lags.
         Returns
         -------
         output : ndarray
@@ -3225,11 +3231,15 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                     FutureWarning
                 )
 
+            model_df = 0
+            if df_adjust:
+                model_df = max(0, self.df_model - self.k_diffuse_states - 1)
+
             for i in range(self.model.k_endog):
                 results = acorr_ljungbox(
                     self.filter_results.standardized_forecasts_error[i][d:],
                     lags=lags, boxpierce=(method == 'boxpierce'),
-                    return_df=False)
+                    model_df=model_df, return_df=False)
                 if method == 'ljungbox':
                     output.append(results[0:2])
                 else:
