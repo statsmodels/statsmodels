@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 import numpy as np
 from scipy import stats
 from scipy._lib._util import check_random_state
+from statsmodels.graphics import utils
 
 
 class Copula(ABC):
@@ -76,6 +77,41 @@ class Copula(ABC):
             Sample from the copula.
 
         """
+
+    def plot(self, n, random_state=None, ax=None):
+        """Sample the copula and plot.
+
+        Parameters
+        ----------
+        n : int, optional
+            Number of samples to generate from the copula. Default is 1.
+        random_state : {None, int, `numpy.random.Generator`}, optional
+            If `seed` is None the `numpy.random.Generator` singleton is used.
+            If `seed` is an int, a new ``Generator`` instance is used,
+            seeded with `seed`.
+            If `seed` is already a ``Generator`` instance then that instance is
+            used.
+        ax : AxesSubplot, optional
+            If given, this subplot is used to plot in instead of a new figure
+            being created.
+
+        Returns
+        -------
+        fig : Figure
+            If `ax` is None, the created figure.  Otherwise the figure to which
+            `ax` is connected.
+        sample : array_like (n, d)
+            Sample from the copula.
+
+        """
+        sample = self.random(n=n, random_state=random_state)
+
+        fig, ax = utils.create_mpl_ax(ax)
+        ax.plot(sample[:, 0], sample[:, 1])
+        ax.set_xlabel('u')
+        ax.set_ylabel('v')
+
+        return fig, sample
 
 
 class IndependentCopula(Copula):
