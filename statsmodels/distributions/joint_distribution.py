@@ -121,7 +121,7 @@ class Copula(ABC):
         sample = self.random(n=n, random_state=random_state)
 
         fig, ax = utils.create_mpl_ax(ax)
-        ax.plot(sample[:, 0], sample[:, 1])
+        ax.scatter(sample[:, 0], sample[:, 1])
         ax.set_xlabel('u')
         ax.set_ylabel('v')
 
@@ -214,7 +214,7 @@ class ClaytonCopula(Copula):
 
 
 class FrankCopula(Copula):
-    """Frank copula.
+    r"""Frank copula.
 
     Dependence is symmetric.
 

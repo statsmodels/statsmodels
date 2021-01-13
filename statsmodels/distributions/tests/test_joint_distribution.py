@@ -11,8 +11,8 @@ from statsmodels.distributions.joint_distribution import (
 
 class CopulaTests:
     """Generic tests for copula."""
-    copula = NotImplemented
-    dim = NotImplemented
+    copula = None
+    dim = None
 
     def test_visualization(self):
         sample = self.copula.random(10000)
