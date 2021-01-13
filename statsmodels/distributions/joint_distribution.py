@@ -79,7 +79,13 @@ class Copula(ABC):
 
 
 class IndependentCopula(Copula):
-    """Independent copula."""
+    """Independent copula.
+
+    .. math::
+
+        C_\theta(u,v) = uv
+
+    """
 
     def random(self, n=1, random_state=None):
         rng = check_random_state(random_state)
@@ -89,7 +95,27 @@ class IndependentCopula(Copula):
 
 
 class GaussianCopula(Copula):
-    """Gaussian copula."""
+    r"""Gaussian copula.
+
+    It is constructed from a multivariate normal distribution over
+    :math:`\mathbb{R}^d` by using the probability integral transform.
+
+    For a given correlation matrix :math:`R \in[-1, 1]^{d \times d}`,
+    the Gaussian copula with parameter matrix :math:`R` can be written
+    as:
+
+    .. math::
+
+        C_R^{\text{Gauss}}(u) = \Phi_R\left(\Phi^{-1}(u_1),\dots,
+        \Phi^{-1}(u_d) \right),
+
+    where :math:`\Phi^{-1}` is the inverse cumulative distribution function
+    of a standard normal and :math:`\Phi_R` is the joint cumulative
+    distribution function of a multivariate normal distribution with mean
+    vector zero and covariance matrix equal to the correlation
+    matrix :math:`R`.
+
+    """
 
     def __init__(self, cov=1):
         self.density = stats.norm()
@@ -113,9 +139,16 @@ class StudentCopula(Copula):
 
 
 class ClaytonCopula(Copula):
-    """Clayton copula.
+    r"""Clayton copula.
 
     Dependence is greater in the negative tail than in the positive.
+
+    .. math::
+
+        C_\theta(u,v) = \left[ \max\left\{ u^{-\theta} + v^{-\theta} -1 ;
+        0 \right\} \right]^{-1/\theta}
+
+    with :math:`\theta\in[-1,\infty)\backslash\{0\}`.
 
     """
     def __init__(self, theta=1):
@@ -135,6 +168,13 @@ class FrankCopula(Copula):
 
     Dependence is symmetric.
 
+    .. math::
+
+        C_\theta(u,v) = -\frac{1}{\theta} \log\!\left[ 1+
+        \frac{(\exp(-\theta u)-1)(\exp(-\theta v)-1)}{\exp(-\theta)-1} \right]
+
+    with :math:`\theta\in \mathbb{R}\backslash\{0\}`.
+
     """
     def __init__(self, theta=2):
         if theta == 0:
@@ -153,9 +193,16 @@ class FrankCopula(Copula):
 
 
 class GumbelCopula(Copula):
-    """Gumbel copula.
+    r"""Gumbel copula.
 
     Dependence is greater in the positive tail than in the negative.
+
+    .. math::
+
+        C_\theta(u,v) = \exp\!\left[ -\left( (-\log(u))^\theta +
+        (-\log(v))^\theta \right)^{1/\theta} \right]
+
+    with :math:`\theta\in[1,\infty)`.
 
     """
     def __init__(self, theta=2):
