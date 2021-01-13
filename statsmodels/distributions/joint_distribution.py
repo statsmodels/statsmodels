@@ -62,8 +62,7 @@ class Copula(ABC):
         Parameters
         ----------
         n : int, optional
-            Number of samples to generate in the parameter space.
-            Default is 1.
+            Number of samples to generate from the copula. Default is 1.
         random_state : {None, int, `numpy.random.Generator`}, optional
             If `seed` is None the `numpy.random.Generator` singleton is used.
             If `seed` is an int, a new ``Generator`` instance is used,
@@ -77,6 +76,21 @@ class Copula(ABC):
             Sample from the copula.
 
         """
+
+    def pdf(self, x):
+        """Evaluation of the copula."""
+        raise NotImplemented
+
+    def logpdf(self, x):
+        """Log of the copula."""
+        return np.log(self.pdf(x))
+
+    def _inverse(self, x):
+        raise NotImplemented
+
+    def cdf(self, x):
+        """Cumulative density function."""
+        return self._inverse(self.pdf(x).sum(axis=-1))
 
     def plot(self, n, random_state=None, ax=None):
         """Sample the copula and plot.
