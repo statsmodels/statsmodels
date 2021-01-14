@@ -4,6 +4,7 @@ import numpy as np
 from scipy import stats
 from scipy._lib._util import check_random_state
 from statsmodels.graphics import utils
+import matplotlib.pyplot as plt
 
 
 class Copula(ABC):
@@ -78,19 +79,16 @@ class Copula(ABC):
         """
 
     def pdf(self, x):
-        """Evaluation of the copula."""
-        raise NotImplemented
+        """Probability density function."""
+        raise NotImplementedError
 
     def logpdf(self, x):
-        """Log of the copula."""
+        """Log of the PDF."""
         return np.log(self.pdf(x))
-
-    def _inverse(self, x):
-        raise NotImplemented
 
     def cdf(self, x):
         """Cumulative density function."""
-        return self._inverse(self.pdf(x).sum(axis=-1))
+        raise NotImplementedError
 
     def plot(self, n, random_state=None, ax=None):
         """Sample the copula and plot.
@@ -126,6 +124,51 @@ class Copula(ABC):
         ax.set_ylabel('v')
 
         return fig, sample
+
+    def plot_pdf(self, ticks_nbr=10, ax=None):
+        """Plot the PDF.
+
+        Parameters
+        ----------
+        ticks_nbr : int, optional
+            Number of color isolines for the PDF. Default is 10.
+        ax : AxesSubplot, optional
+            If given, this subplot is used to plot in instead of a new figure
+            being created.
+
+        Returns
+        -------
+        fig : Figure
+            If `ax` is None, the created figure.  Otherwise the figure to which
+            `ax` is connected.
+
+        """
+        n_samples = 100
+
+        xx, yy = np.meshgrid(np.linspace(0.0001, 1, n_samples),
+                             np.linspace(0.0001, 1, n_samples))
+        points = np.vstack([xx.ravel(), yy.ravel()]).T
+
+        data = self.pdf(points).T.reshape(xx.shape)
+        min_ = np.percentile(data, 5)
+        max_ = np.percentile(data, 95)
+
+        fig, ax = utils.create_mpl_ax(ax)
+
+        vticks = np.linspace(min_, max_, num=ticks_nbr)
+        range_cbar = [min_, max_]
+        cs = ax.contourf(xx, yy, data, vticks,
+                         antialiased=True, vmin=range_cbar[0], vmax=range_cbar[1])
+
+        ax.set_xlabel("u")
+        ax.set_ylabel("v")
+        ax.set_xlim(0, 1)
+        ax.set_ylim(0, 1)
+        ax.set_aspect('equal')
+        cbar = plt.colorbar(cs, ticks=vticks)
+        cbar.set_label('p')
+
+        return fig
 
 
 class IndependentCopula(Copula):
@@ -201,6 +244,7 @@ class ClaytonCopula(Copula):
     with :math:`\theta\in[-1,\infty)\backslash\{0\}`.
 
     """
+
     def __init__(self, theta=1):
         if theta <= -1 or theta == 0:
             raise ValueError('Theta must be > -1 and !=0')
@@ -226,6 +270,7 @@ class FrankCopula(Copula):
     with :math:`\theta\in \mathbb{R}\backslash\{0\}`.
 
     """
+
     def __init__(self, theta=2):
         if theta == 0:
             raise ValueError('Theta must be !=0')
@@ -255,6 +300,7 @@ class GumbelCopula(Copula):
     with :math:`\theta\in[1,\infty)`.
 
     """
+
     def __init__(self, theta=2):
         if theta <= 1:
             raise ValueError('Theta must be > 1')
@@ -263,10 +309,10 @@ class GumbelCopula(Copula):
     def random(self, n=1, random_state=None):
         rng = check_random_state(random_state)
         x = rng.random((n, 2))
-        v = stats.levy_stable.rvs(1./self.theta, 1., 0,
-                                  np.cos(np.pi / (2 * self.theta))**self.theta,
+        v = stats.levy_stable.rvs(1. / self.theta, 1., 0,
+                                  np.cos(np.pi / (2 * self.theta)) ** self.theta,
                                   size=(n, 1), random_state=rng)
-        return np.exp(-(-np.log(x) / v)**(1. / self.theta))
+        return np.exp(-(-np.log(x) / v) ** (1. / self.theta))
 
 
 class JointDistribution:
@@ -283,6 +329,7 @@ class JointDistribution:
         the copula/distribution.
 
     """
+
     def __init__(self, dists, copula=None):
         self.dists = dists
         self.copula = copula
