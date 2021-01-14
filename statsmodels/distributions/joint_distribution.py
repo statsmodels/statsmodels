@@ -78,17 +78,17 @@ class Copula(ABC):
 
         """
 
+    @abstractmethod
     def pdf(self, x):
         """Probability density function."""
-        raise NotImplementedError
 
     def logpdf(self, x):
         """Log of the PDF."""
         return np.log(self.pdf(x))
 
+    @abstractmethod
     def cdf(self, x):
         """Cumulative density function."""
-        raise NotImplementedError
 
     def plot(self, n, random_state=None, ax=None):
         """Sample the copula and plot.
@@ -158,7 +158,8 @@ class Copula(ABC):
         vticks = np.linspace(min_, max_, num=ticks_nbr)
         range_cbar = [min_, max_]
         cs = ax.contourf(xx, yy, data, vticks,
-                         antialiased=True, vmin=range_cbar[0], vmax=range_cbar[1])
+                         antialiased=True, vmin=range_cbar[0],
+                         vmax=range_cbar[1])
 
         ax.set_xlabel("u")
         ax.set_ylabel("v")
@@ -179,12 +180,13 @@ class IndependentCopula(Copula):
         C_\theta(u,v) = uv
 
     """
+    def __init__(self, d=2):
+        self.d = d
 
     def random(self, n=1, random_state=None):
         rng = check_random_state(random_state)
-        x = rng.random((n, 2))
-        # v = ...
-        return x  # np.exp(- (-np.log(x) / v))
+        x = rng.random((n, self.d))
+        return x
 
     def pdf(self, x):
         return np.ones((len(x), 1))
@@ -355,9 +357,11 @@ class GumbelCopula(Copula):
     def random(self, n=1, random_state=None):
         rng = check_random_state(random_state)
         x = rng.random((n, 2))
-        v = stats.levy_stable.rvs(1. / self.theta, 1., 0,
-                                  np.cos(np.pi / (2 * self.theta)) ** self.theta,
-                                  size=(n, 1), random_state=rng)
+        v = stats.levy_stable.rvs(
+            1. / self.theta, 1., 0,
+            np.cos(np.pi / (2 * self.theta)) ** self.theta,
+            size=(n, 1), random_state=rng
+        )
         return np.exp(-(-np.log(x) / v) ** (1. / self.theta))
 
     def pdf(self, x):
