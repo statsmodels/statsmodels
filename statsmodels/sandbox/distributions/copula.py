@@ -254,8 +254,8 @@ def transform_tawn(t, a1, a2, theta):
     if not np.all(_check_args(a1, a2, theta)):
         raise ValueError('invalid args')
 
-    transf = (1 - a1) * (1-t)
-    transf += (1 - a2) * t
+    transf = (1 - a2) * (1-t)
+    transf += (1 - a1) * t
     transf += ((a1 * t)**(1./theta) + (a2 * (1-t))**(1./theta))**theta
 
     return transf
@@ -330,10 +330,10 @@ def transform_bilogistic(t, beta, delta):
     def _integrant(w):
         term1 = (1 - beta) * np.power(w, -beta) * (1-t)
         term2 = (1 - delta) * np.power(1-w, -delta) * t
-        np.maximum(term1, term2)
+        return np.maximum(term1, term2)
 
     from scipy.integrate import quad
-    transf = quad(_integrant, 0, 1)
+    transf = quad(_integrant, 0, 1)[0]
     return transf
 
 
