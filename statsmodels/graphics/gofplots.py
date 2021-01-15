@@ -977,7 +977,8 @@ def _do_plot(
     """
     plot_style = {
         "marker": "o",
-        "markerfacecolor": "blue",
+        "markerfacecolor": "C0",
+        "markeredgecolor": "C0",
         "linestyle": "none",
     }
 

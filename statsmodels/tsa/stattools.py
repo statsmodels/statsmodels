@@ -580,6 +580,7 @@ def acf(
     qstat=False,
     fft=None,
     alpha=None,
+    bartlett_confint=True,
     missing="none",
 ):
     """
@@ -603,6 +604,24 @@ def acf(
         returned. For instance if alpha=.05, 95 % confidence intervals are
         returned where the standard deviation is computed according to
         Bartlett"s formula.
+    bartlett_confint : bool, default True
+        Confidence intervals for ACF values are generally placed at 2
+        standard errors around r_k. The formula used for standard error
+        depends upon the situation. If the autocorrelations are being used
+        to test for randomness of residuals as part of the ARIMA routine,
+        the standard errors are determined assuming the residuals are white
+        noise. The approximate formula for any lag is that standard error
+        of each r_k = 1/sqrt(N). See section 9.4 of [2] for more details on
+        the 1/sqrt(N) result. For more elementary discussion, see section 5.3.2
+        in [3].
+        For the ACF of raw data, the standard error at a lag k is
+        found as if the right model was an MA(k-1). This allows the possible
+        interpretation that if all autocorrelations past a certain lag are
+        within the limits, the model might be an MA of order defined by the
+        last significant autocorrelation. In this case, a moving average
+        model is assumed for the data and the standard errors for the
+        confidence intervals should be generated using Bartlett's formula.
+        For more details on Bartlett formula result, see section 7.2 in [2].
     missing : str, default "none"
         A string in ["none", "raise", "conservative", "drop"] specifying how
         the NaNs are to be treated. "none" performs no checks. "raise" raises
@@ -644,6 +663,9 @@ def acf(
     .. [1] Parzen, E., 1963. On spectral analysis with missing observations
        and amplitude modulation. Sankhya: The Indian Journal of
        Statistics, Series A, pp.383-392.
+       [2] Brockwell and Davis, 1987. Time Series Theory and Methods
+       [3] Brockwell and Davis, 2010. Introduction to Time Series and
+       Forecasting, 2nd edition.
     """
     adjusted = bool_like(adjusted, "adjusted")
     nlags = int_like(nlags, "nlags", optional=True)
@@ -678,10 +700,13 @@ def acf(
     if not (qstat or alpha):
         return acf
     if alpha is not None:
-        varacf = np.ones_like(acf) / nobs
-        varacf[0] = 0
-        varacf[1] = 1.0 / nobs
-        varacf[2:] *= 1 + 2 * np.cumsum(acf[1:-1] ** 2)
+        if bartlett_confint:
+            varacf = np.ones_like(acf) / nobs
+            varacf[0] = 0
+            varacf[1] = 1.0 / nobs
+            varacf[2:] *= 1 + 2 * np.cumsum(acf[1:-1] ** 2)
+        else:
+            varacf = 1.0 / len(x)
         interval = stats.norm.ppf(1 - alpha / 2.0) * np.sqrt(varacf)
         confint = np.array(lzip(acf - interval, acf + interval))
         if not qstat:
