@@ -1,10 +1,22 @@
+"""Joint Distribution using Copula.
+
+PDF, CDF and theta formulas looked, and re-wrote, from `sdv-dev/Copulas
+<https://github.com/sdv-dev/Copulas>`_ by
+P.T. Roy, licensed under
+    `MIT <https://github.com/sdv-dev/Copulas/blob/master/LICENSE>`_.
+
+"""
+import sys
 from abc import ABC, abstractmethod
 
 import numpy as np
 from scipy import stats
 from scipy._lib._util import check_random_state
-from statsmodels.graphics import utils
+import scipy.integrate as integrate
+from scipy.optimize import least_squares
 import matplotlib.pyplot as plt
+
+from statsmodels.graphics import utils
 
 
 class Copula(ABC):
@@ -39,9 +51,11 @@ class Copula(ABC):
     When subclassing `Copula` to create a new copula, ``__init__`` and
     ``random`` must be redefined.
 
-    * ``__init__(seed=None)``: If the sampler
-      does not take advantage of a ``seed``, this parameter can be omitted.
+    * ``__init__(theta)``: If the copula
+      does not take advantage of a ``theta``, this parameter can be omitted.
     * ``random(n, random_state)``: draw ``n`` from the copula.
+    * ``pdf(x)``: PDF from the copula.
+    * ``cdf(x)``: CDF from the copula.
 
     References
     ----------
@@ -53,6 +67,10 @@ class Copula(ABC):
       Statistics and Applied Probability 134, 2015.
 
     """
+
+    @abstractmethod
+    def __init__(self, theta):
+        self.theta = theta
 
     @abstractmethod
     def random(self, n=1, random_state=None):
@@ -171,6 +189,53 @@ class Copula(ABC):
 
         return fig
 
+    @property
+    def tau(self):
+        """Empirical Kendall's tau.
+
+        Returns
+        -------
+        tau : float
+            Kendall's tau.
+
+        """
+        x = self.random(1024, random_state=0)
+        return stats.kendalltau(x[:, 0], x[:, 1])[0]
+
+    def fit_theta(self, x):
+        """Compute ``theta`` using empirical Kendall's tau on sample data.
+
+        Parameters
+        ----------
+        x : array_like
+            Sample data used to fit `theta` using Kendall's tau.
+
+        Returns
+        -------
+        theta : float
+            Theta.
+
+        """
+        tau = stats.kendalltau(x[:, 0], x[:, 1])[0]
+        self.theta = self._theta_from_tau(tau)
+        return self.theta
+
+    def _theta_from_tau(self, tau):
+        """Compute ``theta`` from tau.
+
+        Parameters
+        ----------
+        tau : float
+            Kendall's tau.
+
+        Returns
+        -------
+        theta : float
+            Theta.
+
+        """
+        raise NotImplementedError
+
 
 class IndependentCopula(Copula):
     """Independent copula.
@@ -193,6 +258,9 @@ class IndependentCopula(Copula):
 
     def cdf(self, x):
         return np.prod(x, axis=1)
+
+    def plot_pdf(self, *args):
+        raise NotImplementedError("PDF is constant over the domain.")
 
 
 class GaussianCopula(Copula):
@@ -289,6 +357,9 @@ class ClaytonCopula(Copula):
     def cdf(self, x):
         return (np.sum(x ** -self.theta, axis=1) - 1) ** -1.0 / self.theta
 
+    def _theta_from_tau(self, tau):
+        return 2 * tau / (1 - tau)
+
 
 class FrankCopula(Copula):
     r"""Frank copula.
@@ -334,6 +405,23 @@ class FrankCopula(Copula):
 
         return -1.0 / self.theta * np.log(1 + num / den)
 
+    def _theta_from_tau(self, tau):
+        MIN_FLOAT_LOG = np.log(sys.float_info.min)
+        MAX_FLOAT_LOG = np.log(sys.float_info.max)
+        EPSILON = np.finfo(np.float32).eps
+
+        def _theta_from_tau(alpha):
+            def debye(t):
+                return t / (np.exp(t) - 1)
+
+            debye_value = integrate.quad(debye, EPSILON, alpha)[0] / alpha
+            return 4 * (debye_value - 1) / alpha + 1 - tau
+
+        result = least_squares(_theta_from_tau, 1, bounds=(MIN_FLOAT_LOG,
+                                                           MAX_FLOAT_LOG))
+        self.theta = result.x[0]
+        return self.theta
+
 
 class GumbelCopula(Copula):
     r"""Gumbel copula.
@@ -378,6 +466,9 @@ class GumbelCopula(Copula):
         h = - np.sum(-np.log(x) ** self.theta, axis=1)
         cdf = np.exp(h ** (1.0 / self.theta))
         return cdf
+
+    def _theta_from_tau(self, tau):
+        return 1 / (1 - tau)
 
 
 class JointDistribution:
