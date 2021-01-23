@@ -219,7 +219,7 @@ class UnobservedComponents(MLEModel):
     time series is available in the results class in the `seasonal`
     attribute.
 
-    ** Frequency-domain Seasonal**
+    **Frequency-domain Seasonal**
 
     Each frequency-domain seasonal component is modeled as:
 
