@@ -155,11 +155,11 @@ class UnobservedComponents(MLEModel):
     +----------------------------------+--------------------------------------+--------------------+--------------------------------------------------+
     | Model name                       | Full string syntax                   | Abbreviated syntax | Model                                            |
     +==================================+======================================+====================+==================================================+
-    | No trend                         | `'irregular'`                        | `'ntrend'`         | .. math:: y_t &= \varepsilon_t                   |
+    | No trend                         | `'irregular'`                        | `'ntrend'`         | .. math:: y_t = \varepsilon_t                    |
     +----------------------------------+--------------------------------------+--------------------+--------------------------------------------------+
-    | Fixed intercept                  | `'fixed intercept'`                  |                    | .. math:: y_t &= \mu                             |
+    | Fixed intercept                  | `'fixed intercept'`                  |                    | .. math:: y_t = \mu                              |
     +----------------------------------+--------------------------------------+--------------------+--------------------------------------------------+
-    | Deterministic constant           | `'deterministic constant'`           | `'dconstant'`      | .. math:: y_t &= \mu + \varepsilon_t             |
+    | Deterministic constant           | `'deterministic constant'`           | `'dconstant'`      | .. math:: y_t = \mu + \varepsilon_t              |
     +----------------------------------+--------------------------------------+--------------------+--------------------------------------------------+
     | Local level                      | `'local level'`                      | `'llevel'`         | .. math:: y_t &= \mu_t + \varepsilon_t \\        |
     |                                  |                                      |                    |     \mu_t &= \mu_{t-1} + \eta_t                  |
@@ -219,7 +219,7 @@ class UnobservedComponents(MLEModel):
     time series is available in the results class in the `seasonal`
     attribute.
 
-    ** Frequency-domain Seasonal**
+    **Frequency-domain Seasonal**
 
     Each frequency-domain seasonal component is modeled as:
 
@@ -248,7 +248,7 @@ class UnobservedComponents(MLEModel):
     This component results in one parameter to be fitted using maximum
     likelihood: :math:`\sigma_{\omega^2}`, and up to two parameters to be
     chosen, the number of seasons s and optionally the number of harmonics
-    h, with :math:`1 \leq h \leq \floor(s/2)`.
+    h, with :math:`1 \leq h \leq \lfloor s/2 \rfloor`.
 
     After fitting the model, each unobserved seasonal component modeled in the
     frequency domain is available in the results class in the `freq_seasonal`
