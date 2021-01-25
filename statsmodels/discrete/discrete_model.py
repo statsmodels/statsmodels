@@ -774,7 +774,10 @@ class CountModel(DiscreteModel):
         super().__init__(endog, exog, check_rank, missing=missing,
                          offset=offset, exposure=exposure, **kwargs)
         if exposure is not None:
+            self.exposure = np.asarray(self.exposure)
             self.exposure = np.log(self.exposure)
+        if offset is not None:
+            self.offset = np.asarray(self.offset)
         self._check_inputs(self.offset, self.exposure, self.endog)
         if offset is None:
             delattr(self, 'offset')
