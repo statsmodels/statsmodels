@@ -1866,9 +1866,16 @@ class TestGeneralizedPoisson_underdispersion(object):
                                         res.predict(), res.params[-1], 1).T
         assert_allclose(pr, pr2, rtol=1e-10, atol=1e-10)
 
+        expected = pr.sum(0)
+        # add expected obs from right tail to last bin
+        expected[-1] += pr.shape[0] - expected.sum()
+        # scipy requires observed and expected add to the same at rtol=1e-8
+        assert_allclose(freq.sum(), expected.sum(), rtol=1e-13)
+
         from scipy import stats
-        chi2 = stats.chisquare(freq, pr.sum(0))
-        assert_allclose(chi2[:], (0.64628806058715882, 0.98578597726324468),
+        chi2 = stats.chisquare(freq, expected)
+        # numbers are regression test, we should not reject
+        assert_allclose(chi2[:], (0.5511787456691261, 0.9901293016678583),
                         rtol=0.01)
 
 
