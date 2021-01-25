@@ -939,7 +939,7 @@ class StratifiedTable(object):
             sp = tables.shape
             if (len(sp) != 3) or (sp[0] != 2) or (sp[1] != 2):
                 raise ValueError("If an ndarray, argument must be 2x2xn")
-            table = tables
+            table = tables * 1.  # use atleast float dtype
         else:
             if any([np.asarray(x).shape != (2, 2) for x in tables]):
                 m = "If `tables` is a list, all of its elements should be 2x2"
