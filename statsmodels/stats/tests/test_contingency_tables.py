@@ -2,11 +2,13 @@
 Tests for contingency table analyses.
 """
 
+import os
+import warnings
+
 import numpy as np
 import statsmodels.stats.contingency_tables as ctab
 import pandas as pd
 from numpy.testing import assert_allclose, assert_equal
-import os
 import statsmodels.api as sm
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
@@ -324,8 +326,9 @@ def test_cochranq():
 class CheckStratifiedMixin(object):
 
     @classmethod
-    def initialize(cls, tables):
-        cls.rslt = ctab.StratifiedTable(tables)
+    def initialize(cls, tables, use_arr=False):
+        tables1 = tables if not use_arr else np.dstack(tables)
+        cls.rslt = ctab.StratifiedTable(tables1)
         cls.rslt_0 = ctab.StratifiedTable(tables, shift_zeros=True)
         tables_pandas = [pd.DataFrame(x) for x in tables]
         cls.rslt_pandas = ctab.StratifiedTable(tables_pandas)
@@ -377,8 +380,10 @@ class CheckStratifiedMixin(object):
 
     def test_pandas(self):
 
-        assert_equal(self.rslt.summary().as_text(),
-                     self.rslt_pandas.summary().as_text())
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            assert_equal(self.rslt.summary().as_text(),
+                         self.rslt_pandas.summary().as_text())
 
 
     def test_from_data(self):
@@ -453,7 +458,8 @@ class TestStratified2(CheckStratifiedMixin):
         tables[3] = np.array([[12, 3], [7, 5]])
         tables[4] = np.array([[1, 0], [3, 2]])
 
-        cls.initialize(tables)
+        # check array of int
+        cls.initialize(tables, use_arr=True)
 
         cls.oddsratio_pooled = 3.5912
         cls.logodds_pooled = np.log(3.5912)
