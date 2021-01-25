@@ -1,12 +1,13 @@
+
+
+import numpy as np
 import statsmodels.api as sm
 from scipy.stats import poisson, nbinom
 from numpy.testing import assert_allclose
 
 
 class TestGenpoisson_p(object):
-    """
-    Test Generalized Poisson Destribution
-    """
+    # Test Generalized Poisson Destribution
 
     def test_pmf_p1(self):
         poisson_pmf = poisson.pmf(1, 1)
@@ -33,9 +34,9 @@ class TestGenpoisson_p(object):
         genpoisson_pmf = sm.distributions.genpoisson_p.logpmf(6, 1, 0, 2)
         assert_allclose(poisson_pmf, genpoisson_pmf, rtol=1e-15)
 
+
 class TestZIPoisson(object):
-    """
-    """
+
     def test_pmf_zero(self):
         poisson_pmf = poisson.pmf(3, 2)
         zipoisson_pmf = sm.distributions.zipoisson.pmf(3, 2, 0)
@@ -69,7 +70,14 @@ class TestZIPoisson(object):
     def test_mean_var(self):
         poisson_mean, poisson_var = poisson.mean(12), poisson.var(12)
         zipoisson_mean = sm.distributions.zipoisson.mean(12, 0)
-        zipoisson_var = sm.distributions.zipoisson.mean(12, 0)
+        zipoisson_var = sm.distributions.zipoisson.var(12, 0)
+        assert_allclose(poisson_mean, zipoisson_mean, rtol=1e-10)
+        assert_allclose(poisson_var, zipoisson_var, rtol=1e-10)
+
+        m = np.array([1, 5, 10])
+        poisson_mean, poisson_var = poisson.mean(m), poisson.var(m)
+        zipoisson_mean = sm.distributions.zipoisson._mean(m, 0)
+        zipoisson_var = sm.distributions.zipoisson._var(m, 0.0)
         assert_allclose(poisson_mean, zipoisson_mean, rtol=1e-10)
         assert_allclose(poisson_var, zipoisson_var, rtol=1e-10)
 
@@ -104,11 +112,19 @@ class TestZIGeneralizedPoisson(object):
         zigp_logpmf = sm.distributions.zigenpoisson.logpmf(2, 3, 0, 2, 0.1)
         assert_allclose(gp_logpmf, zigp_logpmf, rtol=5e-2, atol=5e-2)
 
+    def test_mean_var(self):
+
+        # compare with Poisson special case
+        m = np.array([1, 5, 10])
+        poisson_mean, poisson_var = poisson.mean(m), poisson.var(m)
+        zigenpoisson_mean = sm.distributions.zigenpoisson._mean(m, 0, 1, 0)
+        zigenpoisson_var = sm.distributions.zigenpoisson._var(m, 0.0, 1, 0)
+        assert_allclose(poisson_mean, zigenpoisson_mean, rtol=1e-10)
+        assert_allclose(poisson_var, zigenpoisson_var, rtol=1e-10)
+
 
 class TestZiNBP(object):
-    """
-    Test Truncated Poisson distribution
-    """
+
     def test_pmf_p2(self):
         n, p = sm.distributions.zinegbin.convert_params(30, 0.1, 2)
         nb_pmf = nbinom.pmf(100, n, p)
@@ -187,12 +203,13 @@ class TestZiNBP(object):
         assert_allclose(p, p_true, rtol=1e-12, atol=1e-12)
 
     def test_mean_var(self):
-        n, p = sm.distributions.zinegbin.convert_params(9, 1, 1)
-        nbinom_mean, nbinom_var = nbinom.mean(n, p), nbinom.var(n, p)
-        zinb_mean = sm.distributions.zinegbin.mean(9, 1, 1, 0)
-        zinb_var = sm.distributions.zinegbin.var(9, 1, 1, 0)
-        assert_allclose(nbinom_mean, zinb_mean, rtol=1e-10)
-        assert_allclose(nbinom_var, zinb_var, rtol=1e-10)
+        for m in [9, np.array([1, 5, 10])]:
+            n, p = sm.distributions.zinegbin.convert_params(m, 1, 1)
+            nbinom_mean, nbinom_var = nbinom.mean(n, p), nbinom.var(n, p)
+            zinb_mean = sm.distributions.zinegbin._mean(m, 1, 1, 0)
+            zinb_var = sm.distributions.zinegbin._var(m, 1, 1, 0)
+            assert_allclose(nbinom_mean, zinb_mean, rtol=1e-10)
+            assert_allclose(nbinom_var, zinb_var, rtol=1e-10)
 
     def test_moments(self):
         n, p = sm.distributions.zinegbin.convert_params(9, 1, 1)
