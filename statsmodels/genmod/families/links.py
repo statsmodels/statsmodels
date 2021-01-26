@@ -676,6 +676,16 @@ class CDFLink(Logit):
 
         implemented through numerical differentiation
         """
+        p = self._clean(p)
+        linpred = self.dbn.ppf(p)
+        return - self.inverse_deriv2(linpred) / self.dbn.pdf(linpred)**3
+
+    def deriv2_numdiff(self, p):
+        """
+        Second derivative of the link function g''(p)
+
+        implemented through numerical differentiation
+        """
         from statsmodels.tools.numdiff import approx_fprime
         p = np.atleast_1d(p)
         # Note: special function for norm.ppf does not support complex
@@ -693,9 +703,31 @@ class CDFLink(Logit):
         Returns
         -------
         g^(-1)'(z) : ndarray
-            The value of the derivative of the inverse of the logit function
+            The value of the derivative of the inverse of the logit function.
+            This is just the pdf in a CDFLink,
         """
-        return 1/self.deriv(self.inverse(z))
+        return self.dbn.pdf(z)
+
+    def inverse_deriv2(self, z):
+        """
+        Second derivative of the inverse link function g^(-1)(z).
+
+        Parameters
+        ----------
+        z : array_like
+            `z` is usually the linear predictor for a GLM or GEE model.
+
+        Returns
+        -------
+        g'^(-1)(z) : ndarray
+            The value of the second derivative of the inverse of the link
+            function
+
+        Notes
+        -----
+        This method needs to be overwritten by subclasses
+        """
+        raise NotImplementedError
 
 
 class probit(CDFLink):
