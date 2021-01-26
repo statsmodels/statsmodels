@@ -491,7 +491,7 @@ class TestGLMProbit(CheckDiscreteGLM):
 
         hess1 = res1.model.hessian(res1.params)
         hess2 = res2.model.hessian(res1.params)
-        assert_allclose(hess1, hess2, rtol=1e-10)
+        assert_allclose(hess1, hess2, rtol=1e-13)
 
 
 class TestGLMGaussNonRobust(CheckDiscreteGLM):
