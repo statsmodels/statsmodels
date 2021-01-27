@@ -451,12 +451,18 @@ class DiscreteModel(base.LikelihoodModel):
 
 
 class BinaryModel(DiscreteModel):
+    _continuous_ok = False
 
     def __init__(self, endog, exog, check_rank=True, **kwargs):
         super().__init__(endog, exog, check_rank, **kwargs)
-        if (not issubclass(self.__class__, MultinomialModel) and
-                not np.all((self.endog >= 0) & (self.endog <= 1))):
-            raise ValueError("endog must be in the unit interval.")
+
+        if not issubclass(self.__class__, MultinomialModel):
+            if not np.all((self.endog >= 0) & (self.endog <= 1)):
+                raise ValueError("endog must be in the unit interval.")
+
+            if (not self._continuous_ok and
+                    np.any(self.endog != np.round(self.endog))):
+                raise ValueError("endog must be binary, either 0 or 1")
 
     def predict(self, params, exog=None, linear=False):
         """
@@ -768,7 +774,10 @@ class CountModel(DiscreteModel):
         super().__init__(endog, exog, check_rank, missing=missing,
                          offset=offset, exposure=exposure, **kwargs)
         if exposure is not None:
+            self.exposure = np.asarray(self.exposure)
             self.exposure = np.log(self.exposure)
+        if offset is not None:
+            self.offset = np.asarray(self.offset)
         self._check_inputs(self.offset, self.exposure, self.endog)
         if offset is None:
             delattr(self, 'offset')
@@ -1773,6 +1782,8 @@ class Logit(BinaryModel):
         A reference to the exogenous design.
     """ % {'params': base._model_params_doc,
            'extra_params': base._missing_param_doc + _check_rank_doc}
+
+    _continuous_ok = True
 
     def cdf(self, X):
         """

@@ -8,6 +8,8 @@ from statsmodels.compat.pandas import Appender
 
 import warnings
 
+import numpy as np
+
 from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tsa.statespace import sarimax
 from statsmodels.tsa.statespace.kalman_filter import MEMORY_CONSERVE
@@ -134,6 +136,22 @@ class ARIMA(sarimax.SARIMAX):
             dates=dates, freq=freq, missing=missing,
             validate_specification=validate_specification)
         exog = self._spec_arima._model.data.orig_exog
+
+        # Raise an error if we have a constant in an integrated model
+
+        has_trend = len(self._spec_arima.trend_terms) > 0
+        if has_trend:
+            lowest_trend = np.min(self._spec_arima.trend_terms)
+            if lowest_trend < order[1] + seasonal_order[1]:
+                raise ValueError(
+                    'In models with integration (`d > 0`) or seasonal'
+                    ' integration (`D > 0`), trend terms of lower order than'
+                    ' `d + D` cannot be (as they would be eliminated due to'
+                    ' the differencing operation). For example, a constant'
+                    ' cannot be included in an ARIMA(1, 1, 1) model, but'
+                    ' including a linear trend, which would have the same'
+                    ' effect as fitting a constant to the differenced data,'
+                    ' is allowed.')
 
         # Keep the given `exog` by removing the prepended trend variables
         input_exog = None

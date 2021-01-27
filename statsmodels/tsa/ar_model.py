@@ -1526,7 +1526,7 @@ class ARResults(tsa_model.TimeSeriesModelResults):
     @cache_readonly
     def aic(self):
         """
-        Akaike Information Criterion using Lutkephol's definition.
+        Akaike Information Criterion using Lutkepohl's definition.
 
         :math:`log(sigma) + 2*(1 + k_ar + k_trend)/nobs`
         """
@@ -1541,7 +1541,11 @@ class ARResults(tsa_model.TimeSeriesModelResults):
 
     @cache_readonly
     def hqic(self):
-        """Hannan-Quinn Information Criterion."""
+        r"""
+        Hannan-Quinn Information Criterion using Lutkepohl's definition.
+
+        :math:`\ln(\sigma) + (1 + df_{model}) 2 \ln(\ln(nobs))/nobs`
+        """
         nobs = self.nobs
         # Lutkepohl
         # return np.log(self.sigma2)+ 2 * np.log(np.log(nobs))/nobs * self.k_ar
@@ -1568,10 +1572,10 @@ class ARResults(tsa_model.TimeSeriesModelResults):
 
     @cache_readonly
     def bic(self):
-        """
-         Bayes Information Criterion
+        r"""
+        Bayes Information Criterion
 
-        :math:`\\log(\\sigma) + (1 + k_ar + k_trend)*\\log(nobs)/nobs`
+        :math:`\ln(\sigma) + (1 + df_{model}) \ln(nobs)/nobs`
         """
         nobs = self.nobs
         # Lutkepohl
@@ -1857,7 +1861,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
     @cache_readonly
     def aic(self):
         """
-        Akaike Information Criterion using Lutkephol's definition.
+        Akaike Information Criterion using Lutkepohl's definition.
 
         :math:`log(sigma) + 2*(1 + df_model) / nobs`
         """
@@ -1872,7 +1876,11 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
 
     @cache_readonly
     def hqic(self):
-        """Hannan-Quinn Information Criterion."""
+        r"""
+        Hannan-Quinn Information Criterion using Lutkepohl's definition.
+
+        :math:`\ln(\sigma) + (1 + df_{model}) 2 \ln(\ln(nobs))/nobs`
+        """
         # Lutkepohl
         # return np.log(self.sigma2)+ 2 * np.log(np.log(nobs))/nobs * self.k_ar
         # R uses all estimated parameters rather than just lags
@@ -1902,7 +1910,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         r"""
         Bayes Information Criterion
 
-        :math:`\ln(\sigma) + df_{model} \ln(nobs)/nobs`
+        :math:`\ln(\sigma) + (1 + df_{model}) \ln(nobs)/nobs`
         """
         # Lutkepohl
         # np.log(self.sigma2) + np.log(nobs)/nobs * self.k_ar
