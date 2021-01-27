@@ -890,8 +890,8 @@ class Binomial(Family):
            resid\_dev_i = 2 * n * (endog_i * \ln(endog_i /\mu_i) +
            (1 - endog_i) * \ln((1 - endog_i) / (1 - \mu_i)))
         """
-        endog_mu = self._clean(endog / mu)
-        n_endog_mu = self._clean((1. - endog) / (1. - mu))
+        endog_mu = self._clean(endog / (mu + 1e-20))
+        n_endog_mu = self._clean((1. - endog) / (1. - mu + 1e-20))
         resid_dev = endog * np.log(endog_mu) + (1 - endog) * np.log(n_endog_mu)
         return 2 * self.n * resid_dev
 
@@ -943,8 +943,8 @@ class Binomial(Family):
 
         # note that mu is still in (0,1), i.e. not converted back
         return (special.gammaln(n + 1) - special.gammaln(y + 1) -
-                special.gammaln(n - y + 1) + y * np.log(mu / (1 - mu)) +
-                n * np.log(1 - mu)) * var_weights
+                special.gammaln(n - y + 1) + y * np.log(mu / (1 - mu + 1e-20)) +
+                n * np.log(1 - mu + 1e-20)) * var_weights
 
     def resid_anscombe(self, endog, mu, var_weights=1., scale=1.):
         r'''
