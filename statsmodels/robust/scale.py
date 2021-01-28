@@ -11,6 +11,8 @@ R Venables, B Ripley. 'Modern Applied Statistics in S'
 C Croux, PJ Rousseeuw, 'Time-efficient algorithms for two highly robust
 estimators of scale' Computational statistics. Physica, Heidelberg, 1992.
 """
+from statsmodels.compat.pandas import Appender
+
 import numpy as np
 from scipy.stats import norm as Gaussian
 
@@ -131,6 +133,17 @@ def qn_scale(a, c=1 / (np.sqrt(2) * Gaussian.ppf(5 / 8)), axis=0):
         if out.ndim == 0:
             return float(out)
         return out
+
+
+@Appender(qn_scale.__doc__)
+def qn(a, c=1 / (np.sqrt(2) * Gaussian.ppf(5 / 8)), axis=0):
+    import warnings
+    warnings.warn(
+        "qn has changed to qn_scale. qn will be remvoed after 0.13 is "
+        "released.",
+        FutureWarning
+    )
+    return qn_scale(a, c=c, axis=axis)
 
 
 def _qn_naive(a, c=1 / (np.sqrt(2) * Gaussian.ppf(5 / 8))):
