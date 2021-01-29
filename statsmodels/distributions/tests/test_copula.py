@@ -11,7 +11,7 @@ License: BSD-3
 from numpy.testing import assert_allclose
 import pytest
 
-import statsmodels.sandbox.distributions.copula as cop
+import statsmodels.distributions.copula.copulas as cop
 
 
 ev_list = [
