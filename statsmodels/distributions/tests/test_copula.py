@@ -119,6 +119,11 @@ def test_copulas_distr(case):
     assert_allclose(cdfd, cdf1, rtol=1e-13)
     assert cdfd.shape == ()
 
+    # check pdf
+    pdfd = cad.pdf(np.array(u), args=args)
+    assert_allclose(pdfd, pdf1, rtol=1e-13)
+    assert cdfd.shape == ()
+
     # using list u
     cdfd = cad.cdf(u, args=args)
     assert_allclose(cdfd, cdf1, rtol=1e-13)

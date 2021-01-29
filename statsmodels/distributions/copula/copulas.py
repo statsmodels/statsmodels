@@ -116,6 +116,9 @@ class CopulaArchimedean(object):
         phi = self.transform.evaluate
         phi_inv = self.transform.inverse
         cdfv = phi_inv(phi(u, *args).sum(axis), *args)
+        # clip numerical noise
+        out = cdfv if isinstance(cdfv, np.ndarray) else None
+        cdfv = np.clip(cdfv, 0., 1., out=out)  # inplace if possible
         return cdfv
 
     def pdf(self, u, args=()):
@@ -138,6 +141,12 @@ class CopulaArchimedean(object):
         pdfv /= phi_d1(cdfv, *args)**3
 
         return pdfv
+
+    def logpdf(self, u, args=()):
+        '''evaluate cdf of multivariate Archimedean copula
+        '''
+        # TODO: replace by formulas, and exp in pdf
+        return np.log(self.pdf(u, args=args))
 
 
 # Extreme Value Copulas
@@ -238,3 +247,28 @@ class CopulaDistribution(object):
         if y.ndim == 1:
             u = u.squeeze()
         return self.copula.cdf(u, args)
+
+    def pdf(self, y, args=None):
+        ''' log pdf of copula distribution
+        '''
+        return np.exp(self.logpdf(y, args=args))
+
+    def logpdf(self, y, args=None):
+        ''' log pdf of copula distribution
+        '''
+        y = np.asarray(y)
+        if args is None:
+            args = self.copargs
+
+        lpdf = 0.0
+        cdf_marg = []
+        for i in range(self.k_vars):
+            lpdf += self.marginals[i].logpdf(y[..., i])
+            cdf_marg.append(self.marginals[i].cdf(y[..., i]))
+
+        u = np.column_stack(cdf_marg)
+        if y.ndim == 1:
+            u = u.squeeze()
+
+        lpdf += self.copula.logpdf(u, args)
+        return lpdf
