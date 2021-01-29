@@ -11,7 +11,9 @@ License: BSD-3
 from numpy.testing import assert_allclose
 import pytest
 
-import statsmodels.distributions.copula.copulas as cop
+from statsmodels.distributions.copula.copulas import (
+    CopulaArchimedean, copula_bv_ev)
+import statsmodels.distributions.copula.transforms as cop
 
 
 ev_list = [
@@ -48,7 +50,7 @@ cop_list = [
 def test_ev_copula(case):
     # check ev copulas, cdf and transform against R `evt` package
     ev_tr, v1, v2, args, res1 = case
-    res = cop.copula_bv_ev(v1, v2, ev_tr, args=args)
+    res = copula_bv_ev(v1, v2, ev_tr, args=args)
     assert_allclose(res, res1, rtol=1e-13)
 
 
@@ -56,7 +58,7 @@ def test_ev_copula(case):
 def test_copulas(case):
     # check ev copulas, cdf and transform against R `copula` package
     cop_tr, v1, v2, args, cdf2, pdf2 = case
-    ca = cop.CopulaArchimedean(cop_tr())
+    ca = CopulaArchimedean(cop_tr())
     cdf1 = ca.cdf([v1, v2], args=args)
     pdf1 = ca.pdf([v1, v2], args=args)
     assert_allclose(cdf1, cdf2, rtol=1e-13)
