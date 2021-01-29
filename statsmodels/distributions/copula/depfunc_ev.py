@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
-"""
+""" Pickand's dependence functions as generators for EV-copulas
+
+
 Created on Wed Jan 27 14:33:40 2021
 
 Author: Josef Perktold

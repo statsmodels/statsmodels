@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
-"""
+""" Transformation Classes as generators for Archimedean copulas
+
+
 Created on Wed Jan 27 14:33:40 2021
 
 Author: Josef Perktold
@@ -9,16 +11,16 @@ License: BSD-3
 
 import numpy as np
 from scipy.special import expm1
-from statsmodels.distributions.copula.depfunc_ev import *  # compat
 
 
 # not used yet
 class Transforms(object):
+
     def __init__(self):
         pass
 
 
-class TransfFrank(object):
+class TransfFrank(Transforms):
 
     def evaluate(self, t, theta):
         t = np.asarray(t)
@@ -45,7 +47,7 @@ class TransfFrank(object):
         return theta > 0 & theta < 1
 
 
-class TransfClayton(object):
+class TransfClayton(Transforms):
 
     def _checkargs(self, theta):
         return theta > 0
@@ -66,7 +68,7 @@ class TransfClayton(object):
         return theta > 0
 
 
-class TransfGumbel(object):
+class TransfGumbel(Transforms):
     '''
     requires theta >=1
     '''
@@ -96,7 +98,8 @@ class TransfGumbel(object):
         return theta > 1
 
 
-class TransfIndep(object):
+class TransfIndep(Transforms):
+
     def evaluate(self, t):
         t = np.asarray(t)
         return -np.log(t)

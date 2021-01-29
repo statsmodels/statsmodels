@@ -9,18 +9,11 @@ References
 Genest, C., 2009. Rank-based inference for bivariate extreme-value
 copulas. The Annals of Statistics, 37(5), pp.2990-3022.
 
-
-
 '''
 
 
 import numpy as np
 from scipy.special import expm1
-
-from statsmodels.distributions.copula.depfunc_ev import (
-    transform_bilogistic, transform_hr, transform_joe, transform_tawn,
-    transform_tawn2, transform_tev
-    )
 
 
 def copula_bv_indep(u, v):
@@ -116,17 +109,19 @@ class CopulaArchimedean(object):
     def __init__(self, transform):
         self.transform = transform
 
-    def cdf(self, u, args=(), axis=-1):
+    def cdf(self, u, args=()):
         '''evaluate cdf of multivariate Archimedean copula
         '''
+        axis = -1
         phi = self.transform.evaluate
         phi_inv = self.transform.inverse
         cdfv = phi_inv(phi(u, *args).sum(axis), *args)
         return cdfv
 
-    def pdf(self, u, args=(), axis=-1):
+    def pdf(self, u, args=()):
         '''evaluate cdf of multivariate Archimedean copula
         '''
+        axis = -1
         u = np.asarray(u)
         if u.shape[-1] > 2:
             msg = "pdf is currently only available for bivariate copula"
@@ -136,7 +131,7 @@ class CopulaArchimedean(object):
         phi_d1 = self.transform.deriv
         phi_d2 = self.transform.deriv2
 
-        cdfv = self.cdf(u, args=args, axis=axis)
+        cdfv = self.cdf(u, args=args)
 
         pdfv = - np.product(phi_d1(u, *args), axis)
         pdfv *= phi_d2(cdfv, *args)
@@ -160,7 +155,7 @@ class ExtremeValueCopula(object):
     def __init__(self, transform):
         self.transform = transform
 
-    def cdf(self, u, args=(), axis=-1):
+    def cdf(self, u, args=()):
         '''evaluate cdf of multivariate Archimedean copula
         '''
         # currently only Bivariate
@@ -195,12 +190,6 @@ class CopulaDistributionBivariate(object):
         if copula in copulanamesbv:
             self.copula = copulanamesbv[copula]
         else:
-            # see if we can call it as a copula function
-            try:
-                tmp = copula(0.5, 0.5, *copargs)
-            except Exception:  # blanket since we throw again
-                msg = 'copula needs to be a copula name or callable'
-                raise ValueError(msg)
             self.copula = copula
 
         # no checking done on marginals
@@ -232,15 +221,20 @@ class CopulaDistribution(object):
         # no checking done on marginals
         self.marginals = marginals
         self.copargs = copargs
+        self.k_vars = len(marginals)
 
-    def cdf(self, xy, args=None):
+    def cdf(self, y, args=None):
         '''xx needs to be iterable, instead of x,y for extension to multivariate
         '''
-        x, y = xy
+        y = np.asarray(y)
         if args is None:
             args = self.copargs
 
-        u = np.column_stack([self.marginals[0].cdf(x),
-                             self.marginals[1].cdf(y)])
-        u = u.squeeze()
+        cdf_marg = []
+        for i in range(self.k_vars):
+            cdf_marg.append(self.marginals[i].cdf(y[..., i]))
+
+        u = np.column_stack(cdf_marg)
+        if y.ndim == 1:
+            u = u.squeeze()
         return self.copula.cdf(u, args)

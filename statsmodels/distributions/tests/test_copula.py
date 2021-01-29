@@ -14,22 +14,23 @@ import pytest
 
 from statsmodels.distributions.copula.copulas import (
     CopulaArchimedean, ExtremeValueCopula, copula_bv_ev, CopulaDistribution)
-import statsmodels.distributions.copula.transforms as cop
+import statsmodels.distributions.copula.transforms as tra
+import statsmodels.distributions.copula.depfunc_ev as trev
 
 uniform = stats.uniform
 
 
 ev_list = [
-    [cop.transform_bilogistic, 0.5, 0.9, (0.25, 0.05), 0.5],
-    [cop.transform_tawn, 0.5, 0.9, (0.5, 0.5, 0.5), 0.4724570876035117],
+    [trev.transform_bilogistic, 0.5, 0.9, (0.25, 0.05), 0.5],
+    [trev.transform_tawn, 0.5, 0.9, (0.5, 0.5, 0.5), 0.4724570876035117],
     # note evd has asymmetry reversed, interchange variables
-    [cop.transform_tawn2, 0.9, 0.5, (0.25, 0.05), 0.464357480263932],
-    [cop.transform_tawn2, 0.9, 0.5, (0.5, 0.25), 0.4916117128670654],
-    [cop.transform_tawn2, 0.5, 0.9, (0.5, 0.25), 0.48340673415789],
+    [trev.transform_tawn2, 0.9, 0.5, (0.25, 0.05), 0.464357480263932],
+    [trev.transform_tawn2, 0.9, 0.5, (0.5, 0.25), 0.4916117128670654],
+    [trev.transform_tawn2, 0.5, 0.9, (0.5, 0.25), 0.48340673415789],
     # note evd has parameter for hr 1/lmbda (inverse of our parameter)
-    [cop.transform_hr, 0.5, 0.9, (2,), 0.4551235014298542],
-    [cop.transform_joe, 0.5, 0.9, (0.5, 0.75, 1/0.25), 0.4543698299835434],
-    [cop.transform_joe, 0.9, 0.5, (0.5, 0.75, 1/0.25), 0.4539773435983587],
+    [trev.transform_hr, 0.5, 0.9, (2,), 0.4551235014298542],
+    [trev.transform_joe, 0.5, 0.9, (0.5, 0.75, 1/0.25), 0.4543698299835434],
+    [trev.transform_joe, 0.9, 0.5, (0.5, 0.75, 1/0.25), 0.4539773435983587],
 
     # tev is against R `copula` package
     # > cop = tevCopula(0.8, df = 4)
@@ -37,21 +38,21 @@ ev_list = [
     # [1] 0.456807960674953
     # > pCopula(c(0.5, 0.9), cop)
     # [1] 0.4911039761533587
-    [cop.transform_tev, 0.5, 0.75, (0.8, 4), 0.456807960674953],
-    [cop.transform_tev, 0.5, 0.9, (0.8, 4), 0.4911039761533587],
+    [trev.transform_tev, 0.5, 0.75, (0.8, 4), 0.456807960674953],
+    [trev.transform_tev, 0.5, 0.9, (0.8, 4), 0.4911039761533587],
     ]
 
 cop_list = [
-    [cop.TransfFrank, 0.5, 0.9, (2,), 0.4710805107852225, 0.9257812360337806],
-    [cop.TransfGumbel, 0.5, 0.9, (2,), 0.4960348880595387, 0.3973548776136501],
-    [cop.TransfClayton, 0.5, 0.9, (2,), 0.485954322440435, 0.8921974147432954],
-    [cop.TransfIndep, 0.5, 0.5, (), 0.25, 1],
+    [tra.TransfFrank, 0.5, 0.9, (2,), 0.4710805107852225, 0.9257812360337806],
+    [tra.TransfGumbel, 0.5, 0.9, (2,), 0.4960348880595387, 0.3973548776136501],
+    [tra.TransfClayton, 0.5, 0.9, (2,), 0.485954322440435, 0.8921974147432954],
+    [tra.TransfIndep, 0.5, 0.5, (), 0.25, 1],
     ]
 
 gev_list = [
     # [cop.transform_tawn, 0.5, 0.9, (0.5, 0.5, 0.5), 0.4724570876035117],
     # > pbvevd(c(0.5,0.9), dep = 0.25, asy = c(0.5, 0.5), model = "alog")
-    [cop.transform_tawn, 0.5, 0.9, (0.5, 0.5, 0.25), 0.4386367545837274],
+    [trev.transform_tawn, 0.5, 0.9, (0.5, 0.5, 0.25), 0.4386367545837274],
     ]
 
 
@@ -89,6 +90,19 @@ def test_ev_copula_distr(case):
     cev = CopulaDistribution([uniform, uniform], cev, copargs=args)
     cdfd = cev.cdf(np.array(u), args=args)
     assert_allclose(cdfd, res1, rtol=1e-13)
+    assert cdfd.shape == ()
+
+    # using list u
+    cdfd = cev.cdf(u, args=args)
+    assert_allclose(cdfd, res1, rtol=1e-13)
+    assert cdfd.shape == ()
+
+    # check vector values for u
+    # bilogistic is not vectorized, uses integrate.quad
+    if ev_tr != trev.transform_bilogistic:
+        cdfd = cev.cdf(np.array(u) * np.ones((3, 1)), args=args)
+        assert_allclose(cdfd, res1, rtol=1e-13)
+        assert cdfd.shape == (3, )
 
 
 @pytest.mark.parametrize("case", cop_list)
@@ -103,9 +117,25 @@ def test_copulas_distr(case):
     cad = CopulaDistribution([uniform, uniform], ca, copargs=args)
     cdfd = cad.cdf(np.array(u), args=args)
     assert_allclose(cdfd, cdf1, rtol=1e-13)
+    assert cdfd.shape == ()
+
+    # using list u
+    cdfd = cad.cdf(u, args=args)
+    assert_allclose(cdfd, cdf1, rtol=1e-13)
+    assert cdfd.shape == ()
 
     assert_allclose(cdf1, cdf2, rtol=1e-13)
     assert_allclose(pdf1, pdf2, rtol=1e-13)
+
+    # check vector values for u
+    cdfd = cad.cdf(np.array(u) * np.ones((3, 1)), args=args)
+    assert_allclose(cdfd, cdf2, rtol=1e-13)
+    assert cdfd.shape == (3, )
+
+    # check mv, check at marginal cdf
+    cdfmv = ca.cdf([v1, v2, 1], args=args)
+    assert_allclose(cdfmv, cdf1, rtol=1e-13)
+    assert cdfd.shape == (3, )
 
 
 @pytest.mark.parametrize("case", gev_list)
