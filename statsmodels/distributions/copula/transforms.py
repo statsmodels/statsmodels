@@ -12,7 +12,7 @@ from scipy.special import expm1
 from statsmodels.distributions.copula.depfunc_ev import *  # compat
 
 
-#not used yet
+# not used yet
 class Transforms(object):
     def __init__(self):
         pass
@@ -23,7 +23,7 @@ class TransfFrank(object):
     def evaluate(self, t, theta):
         t = np.asarray(t)
         return - (np.log(-expm1(-theta*t)) - np.log(-expm1(-theta)))
-        #return - np.log(expm1(-theta*t) / expm1(-theta))
+        # return - np.log(expm1(-theta*t) / expm1(-theta))
 
     def inverse(self, phi, theta):
         phi = np.asarray(phi)
@@ -41,7 +41,7 @@ class TransfFrank(object):
         return d2
 
     def is_completly_monotonic(self, theta):
-        #range of theta for which it is copula for d>2 (more than 2 rvs)
+        # range of theta for which it is copula for d>2 (more than 2 rvs)
         return theta > 0 & theta < 1
 
 
@@ -87,8 +87,8 @@ class TransfGumbel(object):
         tmp1 = np.log(t)
         d2 = (theta*(-1)**(1 + theta) * tmp1**(theta-1) * (1 - theta) +
               theta*(-1)**(1 + theta)*tmp1**theta)/(t**2*tmp1)
-        #d2 = (theta * tmp1**(-1 + theta) * (1 - theta) + theta * tmp1**theta
-        #      ) / (t**2 * tmp1)
+        # d2 = (theta * tmp1**(-1 + theta) * (1 - theta) + theta * tmp1**theta
+        #       ) / (t**2 * tmp1)
 
         return d2
 

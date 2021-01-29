@@ -8,7 +8,6 @@ License: BSD-3
 """
 
 import numpy as np
-from scipy.special import expm1
 
 
 def transform_tawn(t, a1, a2, theta):
@@ -164,4 +163,3 @@ def transform_tev(t, rho, df):
     z2 = term0 * term2
     transf = t * stats_t._cdf(z1, x+1) + (1 - t) * stats_t._cdf(z2, x+1)
     return transf
-

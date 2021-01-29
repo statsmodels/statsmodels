@@ -23,20 +23,23 @@ from statsmodels.distributions.copula.depfunc_ev import (
     )
 
 
-def copula_bv_indep(u,v):
+def copula_bv_indep(u, v):
     '''independent bivariate copula
     '''
     return u*v
 
-def copula_bv_min(u,v):
+
+def copula_bv_min(u, v):
     '''comonotonic bivariate copula
     '''
     return np.minimum(u, v)
+
 
 def copula_bv_max(u, v):
     '''countermonotonic bivariate copula
     '''
     return np.maximum(u + v - 1, 0)
+
 
 def copula_bv_clayton(u, v, theta):
     '''Clayton or Cook, Johnson bivariate copula
@@ -52,7 +55,7 @@ def copula_bv_frank(u, v, theta):
     if not theta > 0:
         raise ValueError('theta needs to be strictly positive')
     cdfv = -np.log(1 + expm1(-theta*u) * expm1(-theta*v) / expm1(-theta))/theta
-    cdfv = np.minimum(cdfv, 1)  #necessary for example if theta=100
+    cdfv = np.minimum(cdfv, 1)  # necessary for example if theta=100
     return cdfv
 
 
@@ -64,9 +67,8 @@ def copula_bv_t(u, v, rho, df):
     raise NotImplementedError
 
 
-#Archimedean Copulas through generator functions
-#===============================================
-
+# Archimedean Copulas through generator functions
+# ===============================================
 
 
 def copula_bv_archimedean(u, v, transform, args=()):
@@ -97,7 +99,8 @@ def copula_power_mv_archimedean(u, transform, alpha, beta, args=(), axis=-1):
         return np.power(transform.evaluate(np.power(u, alpha), *args), beta)
 
     def phi_inv(t, alpha, beta, args=()):
-        return np.power(transform.evaluate(np.power(t, 1./beta), *args), 1./alpha)
+        return np.power(transform.evaluate(np.power(t, 1. / beta), *args),
+                        1. / alpha)
 
     cdfv = phi_inv(phi(u, *args).sum(axis), *args)
     return cdfv
@@ -128,7 +131,6 @@ class CopulaArchimedean(object):
         phi_d1 = self.transform.deriv
         phi_d2 = self.transform.deriv2
 
-
         cdfv = self.cdf(u, args=args, axis=axis)
 
         pdfv = - np.product(phi_d1(u, *args), axis)
@@ -138,30 +140,29 @@ class CopulaArchimedean(object):
         return pdfv
 
 
-
-
-#Extreme Value Copulas
-#=====================
+# Extreme Value Copulas
+# =====================
 
 def copula_bv_ev(u, v, transform, args=()):
     '''generic bivariate extreme value copula
     '''
     return np.exp(np.log(u * v) * (transform(np.log(v)/np.log(u*v), *args)))
 
-#==========================================================================
 
-#define dictionary of copulas by names and aliases
-copulanamesbv = {'indep' : copula_bv_indep,
-               'i' : copula_bv_indep,
-               'min' : copula_bv_min,
-               'max' : copula_bv_max,
-               'clayton' : copula_bv_clayton,
-               'cookjohnson' : copula_bv_clayton,
-               'cj' : copula_bv_clayton,
-               'frank' : copula_bv_frank,
-               'gauss' : copula_bv_gauss,
-               'normal' : copula_bv_gauss,
-               't' : copula_bv_t}
+# ==========================================================================
+
+# define dictionary of copulas by names and aliases
+copulanamesbv = {'indep': copula_bv_indep,
+                 'i': copula_bv_indep,
+                 'min': copula_bv_min,
+                 'max': copula_bv_max,
+                 'clayton': copula_bv_clayton,
+                 'cookjohnson': copula_bv_clayton,
+                 'cj': copula_bv_clayton,
+                 'frank': copula_bv_frank,
+                 'gauss': copula_bv_gauss,
+                 'normal': copula_bv_gauss,
+                 't': copula_bv_t}
 
 
 class CopulaDistributionBivariate(object):
@@ -173,14 +174,15 @@ class CopulaDistributionBivariate(object):
         if copula in copulanamesbv:
             self.copula = copulanamesbv[copula]
         else:
-            #see if we can call it as a copula function
+            # see if we can call it as a copula function
             try:
                 tmp = copula(0.5, 0.5, *copargs)
-            except: #blanket since we throw again
-                raise ValueError('copula needs to be a copula name or callable')
+            except Exception:  # blanket since we throw again
+                msg = 'copula needs to be a copula name or callable'
+                raise ValueError(msg)
             self.copula = copula
 
-        #no checking done on marginals
+        # no checking done on marginals
         self.marginalcdfs = marginalcdfs
         self.copargs = copargs
 
@@ -203,15 +205,15 @@ class CopulaDistribution(object):
         if copula in copulanamesbv:
             self.copula = copulanamesbv[copula]
         else:
-            #see if we can call it as a copula function
+            # see if we can call it as a copula function
             try:
                 tmp = copula(0.5, 0.5, *copargs)
-            except: #blanket since we throw again
-                raise ValueError('copula needs to be a copula name or callable')
+            except Exception:  # blanket since we throw again
+                msg = 'copula needs to be a copula name or callable'
+                raise ValueError(msg)
             self.copula = copula
 
-
-        #no checking done on marginals
+        # no checking done on marginals
         self.marginalcdfs = marginalcdfs
         self.copargs = copargs
 
