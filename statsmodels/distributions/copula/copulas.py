@@ -41,11 +41,16 @@ def copula_bv_max(u, v):
     return np.maximum(u + v - 1, 0)
 
 
-def copula_bv_clayton(u, v, theta):
+def copula_bv_clayton(u, theta):
     '''Clayton or Cook, Johnson bivariate copula
     '''
+    u, v = u
+    if isinstance(theta, tuple) and len(theta) == 1:
+        theta = theta[0]
+
     if not theta > 0:
         raise ValueError('theta needs to be strictly positive')
+
     return np.power(np.power(u, -theta) + np.power(v, -theta) - 1, -theta)
 
 
@@ -143,10 +148,26 @@ class CopulaArchimedean(object):
 # Extreme Value Copulas
 # =====================
 
-def copula_bv_ev(u, v, transform, args=()):
+def copula_bv_ev(u, transform, args=()):
     '''generic bivariate extreme value copula
     '''
+    u, v = u
     return np.exp(np.log(u * v) * (transform(np.log(v)/np.log(u*v), *args)))
+
+
+class ExtremeValueCopula(object):
+
+    def __init__(self, transform):
+        self.transform = transform
+
+    def cdf(self, u, args=(), axis=-1):
+        '''evaluate cdf of multivariate Archimedean copula
+        '''
+        # currently only Bivariate
+        u, v = np.asarray(u).T
+        cdfv = np.exp(np.log(u * v) *
+                      (self.transform(np.log(v)/np.log(u*v), *args)))
+        return cdfv
 
 
 # ==========================================================================
@@ -201,20 +222,15 @@ class CopulaDistribution(object):
 
     Instantiation needs the arguments, cop_args, that are required for copula
     '''
-    def __init__(self, marginalcdfs, copula, copargs=()):
+    def __init__(self, marginals, copula, copargs=()):
         if copula in copulanamesbv:
             self.copula = copulanamesbv[copula]
         else:
-            # see if we can call it as a copula function
-            try:
-                tmp = copula(0.5, 0.5, *copargs)
-            except Exception:  # blanket since we throw again
-                msg = 'copula needs to be a copula name or callable'
-                raise ValueError(msg)
+            # assume it's an appropriate copula class
             self.copula = copula
 
         # no checking done on marginals
-        self.marginalcdfs = marginalcdfs
+        self.marginals = marginals
         self.copargs = copargs
 
     def cdf(self, xy, args=None):
@@ -223,5 +239,8 @@ class CopulaDistribution(object):
         x, y = xy
         if args is None:
             args = self.copargs
-        return self.copula(self.marginalcdfs[0](x), self.marginalcdfs[1](y),
-                           *args)
+
+        u = np.column_stack([self.marginals[0].cdf(x),
+                             self.marginals[1].cdf(y)])
+        u = u.squeeze()
+        return self.copula.cdf(u, args)
