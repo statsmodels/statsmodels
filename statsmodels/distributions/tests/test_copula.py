@@ -12,8 +12,10 @@ from numpy.testing import assert_allclose
 from scipy import stats
 import pytest
 
-from statsmodels.distributions.copula.copulas import (
-    CopulaArchimedean, ExtremeValueCopula, copula_bv_ev, CopulaDistribution)
+from statsmodels.distributions.copula.copulas import CopulaDistribution
+from statsmodels.distributions.copula.archimedean import CopulaArchimedean
+from statsmodels.distributions.copula.extreme_value import (
+    ExtremeValueCopula, copula_bv_ev)
 import statsmodels.distributions.copula.transforms as tra
 import statsmodels.distributions.copula.depfunc_ev as trev
 
