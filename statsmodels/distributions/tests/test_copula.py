@@ -13,7 +13,8 @@ from scipy import stats
 import pytest
 
 from statsmodels.distributions.copula.copulas import CopulaDistribution
-from statsmodels.distributions.copula.archimedean import CopulaArchimedean
+from statsmodels.distributions.copula.archimedean import (
+    ArchimedeanCopula, FrankCopula)
 from statsmodels.distributions.copula.extreme_value import (
     ExtremeValueCopula, copula_bv_ev)
 import statsmodels.distributions.copula.transforms as tra
@@ -70,7 +71,7 @@ def test_ev_copula(case):
 def test_copulas(case):
     # check ev copulas, cdf and transform against R `copula` package
     cop_tr, v1, v2, args, cdf2, pdf2 = case
-    ca = CopulaArchimedean(cop_tr())
+    ca = ArchimedeanCopula(cop_tr())
     cdf1 = ca.cdf([v1, v2], args=args)
     pdf1 = ca.pdf([v1, v2], args=args)
     assert_allclose(cdf1, cdf2, rtol=1e-13)
@@ -112,7 +113,7 @@ def test_copulas_distr(case):
     # check ev copulas, cdf and transform against R `copula` package
     cop_tr, v1, v2, args, cdf2, pdf2 = case
     u = [v1, v2]
-    ca = CopulaArchimedean(cop_tr())
+    ca = ArchimedeanCopula(cop_tr())
     cdf1 = ca.cdf(u, args=args)
     pdf1 = ca.pdf(u, args=args)
 
@@ -162,3 +163,22 @@ def test_gev_genextreme(case):
     cev = CopulaDistribution([gev, gev], cev, copargs=args)
     cdfd = cev.cdf(np.array(y), args=args)
     assert_allclose(cdfd, res1, rtol=1e-13)
+
+
+class TestFrank(object):
+
+    def test_basic(self):
+        case = [tra.TransfFrank, 0.5, 0.9, (2,), 0.4710805107852225,
+                0.9257812360337806]
+        cop_tr, v1, v2, args, cdf2, pdf2 = case
+        cop = FrankCopula()
+
+        pdf1 = cop.pdf([v1, v2], args=args)
+        assert_allclose(pdf1, pdf2, rtol=1e-13)
+        logpdf1 = cop.logpdf([v1, v2], args=args)
+        assert_allclose(logpdf1, np.log(pdf2), rtol=1e-13)
+
+        cdf1 = cop.cdf([v1, v2], args=args)
+        assert_allclose(cdf1, cdf2, rtol=1e-13)
+
+        assert isinstance(cop.transform, cop_tr)

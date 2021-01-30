@@ -8,9 +8,10 @@ License: BSD-3
 """
 
 import numpy as np
+from . import transforms
 
 
-class CopulaArchimedean(object):
+class ArchimedeanCopula(object):
 
     def __init__(self, transform):
         self.transform = transform
@@ -53,3 +54,51 @@ class CopulaArchimedean(object):
         '''
         # TODO: replace by formulas, and exp in pdf
         return np.log(self.pdf(u, args=args))
+
+
+class FrankCopula(ArchimedeanCopula):
+
+    # explicit BV formulas copied from Joe 1997 p. 141
+    # todo: check expm1 and log1p for improved numerical precision
+    def __init__(self):
+        super(FrankCopula, self).__init__(transforms.TransfFrank())
+
+    def cdf(self, u, args=()):
+        u = np.asarray(u)
+        th = args[0]
+        if u.shape[-1] == 2:
+            # bivariate case
+            u1, u2 = u[..., 0], u[..., 1]
+            b = 1 - np.exp(-th)
+            cdf = - np.log(1 - (1 - np.exp(- th * u1)) *
+                           (1 - np.exp(- th * u2)) / b) / th
+            return cdf
+        else:
+            super(FrankCopula, self).pdf(u, args=args)
+
+    def pdf(self, u, args=()):
+        u = np.asarray(u)
+        th = args[0]
+        if u.shape[-1] == 2:
+            # bivariate case
+            u1, u2 = u[..., 0], u[..., 1]
+            b = 1 - np.exp(-th)
+            pdf = th * b * np.exp(- th * (u1 + u2))
+            pdf /= (b - (1 - np.exp(- th * u1)) * (1 - np.exp(- th * u2)))**2
+            return pdf
+        else:
+            super(FrankCopula, self).pdf(u, args=args)
+
+    def logpdf(self, u, args=()):
+        u = np.asarray(u)
+        th = args[0]
+        if u.shape[-1] == 2:
+            # bivariate case
+            u1, u2 = u[..., 0], u[..., 1]
+            b = 1 - np.exp(-th)
+            pdf = np.log(th * b) - th * (u1 + u2)
+            pdf -= 2 * np.log(b - (1 - np.exp(- th * u1)) *
+                              (1 - np.exp(- th * u2)))
+            return pdf
+        else:
+            super(FrankCopula, self).pdf(u, args=args)
