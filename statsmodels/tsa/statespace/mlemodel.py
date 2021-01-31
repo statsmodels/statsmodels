@@ -632,12 +632,14 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         Returns
         -------
-        MLEResults
+        results
+            Results object holding results from fitting a state space model.
 
         See Also
         --------
         statsmodels.base.model.LikelihoodModel.fit
         statsmodels.tsa.statespace.mlemodel.MLEResults
+        statsmodels.tsa.statespace.structural.UnobservedComponentsResults
         """
         if start_params is None:
             start_params = self.start_params
