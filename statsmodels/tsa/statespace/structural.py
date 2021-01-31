@@ -1557,6 +1557,10 @@ class UnobservedComponentsResults(MLEResults):
             results are available otherwise 'filtered'.
         alpha : float, optional
             The confidence intervals for the components are (1 - alpha) %
+        observed : bool, optional
+            Whether or not to plot the observed series against
+            one-step-ahead predictions.
+            Default is True.
         level : bool, optional
             Whether or not to plot the level component, if applicable.
             Default is True.
