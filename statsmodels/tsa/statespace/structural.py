@@ -105,6 +105,11 @@ class UnobservedComponents(MLEModel):
         states. Default is False (in which case approximate diffuse
         initialization is used).
 
+    See Also
+    --------
+    statsmodels.tsa.statespace.structural.UnobservedComponentsResults
+    statsmodels.tsa.statespace.mlemodel.MLEModel
+
     Notes
     -----
 
