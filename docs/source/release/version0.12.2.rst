@@ -7,19 +7,18 @@ Release 0.12.2
 Release summary
 ===============
 
-statsmodels is using github to store the updated documentation. Two version are available:
+Statsmodels 0.12.2 is a bug-fix release with no new features
+compared to 0.12.1. Notable changes include fixes for a bug that could lead
+to incorrect results in forecasts with the new ARIMA model (when `d > 0` and
+`trend='t'`) and a bug in the LM test for autocorrelation.
+
+Documentation
+-------------
+
+Documentation for the current release and for ongoing development are available at:
 
 - `Stable <https://www.statsmodels.org/>`_, the latest release
 - `Development <https://www.statsmodels.org/devel/>`_, the latest build of the master branch
-
-**Warning**
-
-API stability is not guaranteed for new features, although even in
-this case changes will be made in a backwards compatible way if
-possible. The stability of a new feature depends on how much time it
-was already in statsmodels master and how much usage it has already
-seen.  If there are specific known problems or limitations, then they
-are mentioned in the docstrings.
 
 Stats
 -----
@@ -27,29 +26,18 @@ Stats
 
 **Pull Requests Merged**: 4
 
-
-The Highlights
-==============
-This is a bug fix release that improves future compatibility.
-
-
-bug-wrong
----------
-
-A new issue label `type-bug-wrong` indicates bugs that cause that incorrect
-numbers are returned without warnings.
-(Regular bugs are mostly usability bugs or bugs that raise an exception for
-unsupported use cases.)
-`see tagged issues <https://github.com/statsmodels/statsmodels/issues?q=is%3Aissue+label%3Atype-bug-wrong+is%3Aclosed+milestone%3A0.12/>`_
-
-
 Major Bugs Fixed
 ================
 
-See github issues for a list of bug fixes included in this release
+The primary bugs fixed include:
 
-- `Closed bugs <https://github.com/statsmodels/statsmodels/pulls?utf8=%E2%9C%93&q=is%3Apr+is%3Amerged+milestone%3A0.12+label%3Atype-bug/>`_
-- `Closed bugs (wrong result) <https://github.com/statsmodels/statsmodels/pulls?q=is%3Apr+is%3Amerged+milestone%3A0.12+label%3Atype-bug-wrong/>`_
+- :pr:`7250`: Bug in forecasting with new ARIMA model when `d > 0` and `trend='t'`.
+- :pr:`7259`: Bug in LM test for autocorrelation
+
+See github issues for a list of all bug fixes included in this release
+
+- `Closed bugs <https://github.com/statsmodels/statsmodels/pulls?utf8=%E2%9C%93&q=is%3Apr+is%3Amerged+milestone%3A0.12.2+label%3Atype-bug/>`_
+- `Closed bugs (wrong result) <https://github.com/statsmodels/statsmodels/pulls?q=is%3Apr+is%3Amerged+milestone%3A0.12.2+label%3Atype-bug-wrong/>`_
 
 
 Development summary and credits
