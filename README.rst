@@ -66,7 +66,7 @@ Main Features
   - Markov switching models (MSAR), also known as Hidden Markov Models (HMM)
   - Univariate time series analysis: AR, ARIMA
   - Vector autoregressive models, VAR and structural VAR
-  - Vector error correction modle, VECM
+  - Vector error correction model, VECM
   - exponential smoothing, Holt-Winters
   - Hypothesis tests for time series: unit root, cointegration and others
   - Descriptive statistics and process models for time series analysis
