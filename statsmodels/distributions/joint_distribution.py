@@ -168,8 +168,8 @@ class Copula(ABC):
         points = np.vstack([xx.ravel(), yy.ravel()]).T
 
         data = self.pdf(points).T.reshape(xx.shape)
-        min_ = np.percentile(data, 5)
-        max_ = np.percentile(data, 95)
+        min_ = np.nanpercentile(data, 5)
+        max_ = np.nanpercentile(data, 95)
 
         fig, ax = utils.create_mpl_ax(ax)
 
@@ -297,10 +297,14 @@ class GaussianCopula(Copula):
         return self.density.cdf(x)
 
     def pdf(self, x):
-        return self.mv_density.pdf(x)
+        u = self.density.ppf(x)
+        mv_pdf_ppf = self.mv_density.pdf(u)
+
+        return mv_pdf_ppf / np.prod(self.density.pdf(u), axis=1)
 
     def cdf(self, x):
-        return self.mv_density.cdf(x)
+        u = self.density.ppf(x)
+        return self.mv_density.cdf(u)
 
 
 class StudentCopula(Copula):
