@@ -97,15 +97,15 @@ class Copula(ABC):
         """
 
     @abstractmethod
-    def pdf(self, x):
+    def pdf(self, u):
         """Probability density function."""
 
-    def logpdf(self, x):
+    def logpdf(self, u):
         """Log of the PDF."""
-        return np.log(self.pdf(x))
+        return np.log(self.pdf(u))
 
     @abstractmethod
-    def cdf(self, x):
+    def cdf(self, u):
         """Cumulative density function."""
 
     def plot(self, n, random_state=None, ax=None):
@@ -163,11 +163,11 @@ class Copula(ABC):
         """
         n_samples = 100
 
-        xx, yy = np.meshgrid(np.linspace(0.0001, 1, n_samples),
+        uu, vv = np.meshgrid(np.linspace(0.0001, 1, n_samples),
                              np.linspace(0.0001, 1, n_samples))
-        points = np.vstack([xx.ravel(), yy.ravel()]).T
+        points = np.vstack([uu.ravel(), vv.ravel()]).T
 
-        data = self.pdf(points).T.reshape(xx.shape)
+        data = self.pdf(points).T.reshape(uu.shape)
         min_ = np.nanpercentile(data, 5)
         max_ = np.nanpercentile(data, 95)
 
@@ -175,7 +175,7 @@ class Copula(ABC):
 
         vticks = np.linspace(min_, max_, num=ticks_nbr)
         range_cbar = [min_, max_]
-        cs = ax.contourf(xx, yy, data, vticks,
+        cs = ax.contourf(uu, vv, data, vticks,
                          antialiased=True, vmin=range_cbar[0],
                          vmax=range_cbar[1])
 
@@ -253,11 +253,11 @@ class IndependentCopula(Copula):
         x = rng.random((n, self.d))
         return x
 
-    def pdf(self, x):
-        return np.ones((len(x), 1))
+    def pdf(self, u):
+        return np.ones((len(u), 1))
 
-    def cdf(self, x):
-        return np.prod(x, axis=1)
+    def cdf(self, u):
+        return np.prod(u, axis=1)
 
     def plot_pdf(self, *args):
         raise NotImplementedError("PDF is constant over the domain.")
@@ -296,15 +296,15 @@ class GaussianCopula(Copula):
         x = self.mv_density.rvs(size=n, random_state=random_state)
         return self.density.cdf(x)
 
-    def pdf(self, x):
-        u = self.density.ppf(x)
-        mv_pdf_ppf = self.mv_density.pdf(u)
+    def pdf(self, u):
+        ppf = self.density.ppf(u)
+        mv_pdf_ppf = self.mv_density.pdf(ppf)
 
-        return mv_pdf_ppf / np.prod(self.density.pdf(u), axis=1)
+        return mv_pdf_ppf / np.prod(self.density.pdf(ppf), axis=1)
 
-    def cdf(self, x):
-        u = self.density.ppf(x)
-        return self.mv_density.cdf(u)
+    def cdf(self, u):
+        ppf = self.density.ppf(u)
+        return self.mv_density.cdf(ppf)
 
 
 class StudentCopula(Copula):
@@ -320,15 +320,15 @@ class StudentCopula(Copula):
         x = self.mv_density.rvs(size=n, random_state=random_state)
         return self.density.cdf(x)
 
-    def pdf(self, x):
-        u = self.density.ppf(x)
-        mv_pdf_ppf = self.mv_density.pdf(u)
+    def pdf(self, u):
+        ppf = self.density.ppf(u)
+        mv_pdf_ppf = self.mv_density.pdf(ppf)
 
-        return mv_pdf_ppf / np.prod(self.density.pdf(u), axis=1)
+        return mv_pdf_ppf / np.prod(self.density.pdf(ppf), axis=1)
 
-    def cdf(self, x):
-        u = self.density.ppf(x)
-        return self.mv_density.cdf(u)
+    def cdf(self, u):
+        ppf = self.density.ppf(u)
+        return self.mv_density.cdf(ppf)
 
 
 class ClaytonCopula(Copula):
@@ -356,14 +356,14 @@ class ClaytonCopula(Copula):
         v = stats.gamma(1. / self.theta).rvs(size=(n, 1), random_state=rng)
         return (1 - np.log(x) / v) ** (-1. / self.theta)
 
-    def pdf(self, x):
-        a = (self.theta + 1) * np.prod(x, axis=1) ** -(self.theta + 1)
-        b = np.sum(x ** -self.theta, axis=1) - 1
+    def pdf(self, u):
+        a = (self.theta + 1) * np.prod(u, axis=1) ** -(self.theta + 1)
+        b = np.sum(u ** -self.theta, axis=1) - 1
         c = -(2 * self.theta + 1) / self.theta
         return a * b ** c
 
-    def cdf(self, x):
-        return (np.sum(x ** -self.theta, axis=1) - 1) ** -1.0 / self.theta
+    def cdf(self, u):
+        return (np.sum(u ** -self.theta, axis=1) - 1) ** -1.0 / self.theta
 
     def _theta_from_tau(self, tau):
         return 2 * tau / (1 - tau)
@@ -398,17 +398,17 @@ class FrankCopula(Copula):
                                          + np.exp(-(-np.log(x) / v))
                                          * (np.exp(-self.theta) - 1.))
 
-    def pdf(self, x):
-        g_ = np.exp(-self.theta * np.sum(x, axis=1)) - 1
+    def pdf(self, u):
+        g_ = np.exp(-self.theta * np.sum(u, axis=1)) - 1
         g1 = np.exp(-self.theta) - 1
 
         num = -self.theta * g1 * (1 + g_)
-        aux = np.prod(np.exp(-self.theta * x) - 1, axis=1) + g1
+        aux = np.prod(np.exp(-self.theta * u) - 1, axis=1) + g1
         den = aux ** 2
         return num / den
 
-    def cdf(self, x):
-        num = np.prod(np.exp(np.prod(-self.theta * x, axis=1)) - 1, axis=1)
+    def cdf(self, u):
+        num = np.prod(np.exp(np.prod(-self.theta * u, axis=1)) - 1, axis=1)
         den = np.exp(-self.theta) - 1
 
         return -1.0 / self.theta * np.log(1 + num / den)
@@ -460,18 +460,18 @@ class GumbelCopula(Copula):
         )
         return np.exp(-(-np.log(x) / v) ** (1. / self.theta))
 
-    def pdf(self, x):
-        prod_ = np.prod(x, axis=1)
+    def pdf(self, u):
+        prod_ = np.prod(u, axis=1)
         a = prod_ ** -1
-        tmp = np.sum((-np.log(x)) ** self.theta, axis=1)
+        tmp = np.sum((-np.log(u)) ** self.theta, axis=1)
         b = tmp ** (-2 + 2.0 / self.theta)
         c = prod_ ** (self.theta - 1)
         d = 1 + (self.theta - 1) * tmp ** (-1.0 / self.theta)
 
-        return self.cdf(x) * a * b * c * d
+        return self.cdf(u) * a * b * c * d
 
-    def cdf(self, x):
-        h = - np.sum(-np.log(x) ** self.theta, axis=1)
+    def cdf(self, u):
+        h = - np.sum(-np.log(u) ** self.theta, axis=1)
         cdf = np.exp(h ** (1.0 / self.theta))
         return cdf
 
