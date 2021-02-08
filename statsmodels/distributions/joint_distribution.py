@@ -321,10 +321,14 @@ class StudentCopula(Copula):
         return self.density.cdf(x)
 
     def pdf(self, x):
-        return self.mv_density.pdf(x)
+        u = self.density.ppf(x)
+        mv_pdf_ppf = self.mv_density.pdf(u)
+
+        return mv_pdf_ppf / np.prod(self.density.pdf(u), axis=1)
 
     def cdf(self, x):
-        return self.mv_density.cdf(x)
+        u = self.density.ppf(x)
+        return self.mv_density.cdf(u)
 
 
 class ClaytonCopula(Copula):
