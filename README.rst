@@ -189,4 +189,4 @@ https://github.com/statsmodels/statsmodels/issues
 .. |Conda Version| image:: https://anaconda.org/conda-forge/statsmodels/badges/version.svg
    :target: https://anaconda.org/conda-forge/statsmodels/
 .. |License| image:: https://img.shields.io/pypi/l/statsmodels.svg
-   :9target: https://github.com/statsmodels/statsmodels/blob/master/LICENSE.txt
+   :target: https://github.com/statsmodels/statsmodels/blob/master/LICENSE.txt
