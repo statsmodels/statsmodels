@@ -1,5 +1,5 @@
 |PyPI Version| |Conda Version| |License| |Azure CI Build Status|
-|Coveralls Coverage| |PyPI downloads| |Conda downloads|
+|Codecov Coverage| |Coveralls Coverage| |PyPI downloads| |Conda downloads|
 
 About statsmodels
 =================
@@ -176,6 +176,8 @@ https://github.com/statsmodels/statsmodels/issues
 
 .. |Azure CI Build Status| image:: https://dev.azure.com/statsmodels/statsmodels-testing/_apis/build/status/statsmodels.statsmodels?branch=master
    :target: https://dev.azure.com/statsmodels/statsmodels-testing/_build/latest?definitionId=1&branch=master
+.. |Codecov Coverage| image:: https://codecov.io/gh/statsmodels/statsmodels/branch/master/graph/badge.svg
+   :target: https://codecov.io/gh/statsmodels/statsmodels
 .. |Coveralls Coverage| image:: https://coveralls.io/repos/github/statsmodels/statsmodels/badge.svg?branch=master
    :target: https://coveralls.io/github/statsmodels/statsmodels?branch=master
 .. |PyPI downloads| image:: https://img.shields.io/pypi/dm/statsmodels.svg?label=Pypi%20downloads
