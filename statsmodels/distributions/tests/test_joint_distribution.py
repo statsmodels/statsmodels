@@ -130,6 +130,7 @@ Which produces the following output:
 
 """
 import numpy as np
+import pytest
 from numpy.testing import assert_array_almost_equal
 from scipy import stats
 
@@ -188,6 +189,9 @@ class CopulaTests:
     def test_validate_params(self):
         pass
 
+    def test_random_follow_pdf(self):
+        pass
+
 
 class TestIndependentCopula(CopulaTests):
     copula = IndependentCopula()
@@ -212,6 +216,9 @@ class TestStudentCopula(CopulaTests):
              0.3070661, 0.1349173, 0.1597064, 0.3303230, 1.0482301]
     cdf_u = [0.31140349, 0.05942746, 0.18548601, 0.39143974, 0.98347259,
              0.24894028, 0.05653947, 0.09210693, 0.34447385, 0.20429882]
+
+    def test_cdf(self, *args):
+        pytest.skip("Not implemented.")
 
 
 class TestClaytonCopula(CopulaTests):
