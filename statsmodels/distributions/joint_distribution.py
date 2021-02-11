@@ -461,18 +461,23 @@ class GumbelCopula(Copula):
         return np.exp(-(-np.log(x) / v) ** (1. / self.theta))
 
     def pdf(self, u):
-        prod_ = np.prod(u, axis=1)
-        a = prod_ ** -1
-        tmp = np.sum((-np.log(u)) ** self.theta, axis=1)
-        b = tmp ** (-2 + 2.0 / self.theta)
-        c = prod_ ** (self.theta - 1)
-        d = 1 + (self.theta - 1) * tmp ** (-1.0 / self.theta)
+        xy = -np.log(u)
+        xy_theta = xy ** self.theta
 
-        return self.cdf(u) * a * b * c * d
+        sum_xy_theta = np.sum(xy_theta, axis=1)
+        sum_xy_theta_theta = sum_xy_theta ** (1.0 / self.theta)
+
+        a = np.exp(-sum_xy_theta_theta)
+        b = sum_xy_theta_theta + self.theta - 1.0
+        c = sum_xy_theta ** (1.0 / self.theta - 2)
+        d = np.prod(xy, axis=1) ** (self.theta - 1.0)
+        e = np.prod(u, axis=1) ** (- 1.0)
+
+        return a * b * c * d * e
 
     def cdf(self, u):
-        h = - np.sum(-np.log(u) ** self.theta, axis=1)
-        cdf = np.exp(h ** (1.0 / self.theta))
+        h = np.sum((-np.log(u)) ** self.theta, axis=1)
+        cdf = np.exp(-h ** (1.0 / self.theta))
         return cdf
 
     def _theta_from_tau(self, tau):
