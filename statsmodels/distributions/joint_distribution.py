@@ -17,6 +17,7 @@ from scipy.optimize import least_squares
 import matplotlib.pyplot as plt
 
 from statsmodels.graphics import utils
+from statsmodels.sandbox.distributions.mv_normal import MVT
 
 
 class Copula(ABC):
@@ -327,8 +328,10 @@ class StudentCopula(Copula):
         return mv_pdf_ppf / np.prod(self.density.pdf(ppf), axis=1)
 
     def cdf(self, u):
-        ppf = self.density.ppf(u)
-        return self.mv_density.cdf(ppf)
+        raise NotImplementedError("CDF not available in closed form.")
+        # ppf = self.density.ppf(u)
+        # mvt = MVT([0, 0], self.cov, self.df)
+        # return mvt.cdf(ppf)
 
 
 class ClaytonCopula(Copula):
@@ -376,10 +379,11 @@ class FrankCopula(Copula):
 
     .. math::
 
-        C_\theta(u,v) = -\frac{1}{\theta} \log\!\left[ 1+
-        \frac{(\exp(-\theta u)-1)(\exp(-\theta v)-1)}{\exp(-\theta)-1} \right]
+        C_\theta(\mathbf{u}) = -\frac{1}{\theta} \log \left[ 1-
+        \frac{ \prod_j (1-\exp(- \theta u_j)) }{ (1 - \exp(-\theta)-1)^{d -
+        1} } \right]
 
-    with :math:`\theta\in \mathbb{R}\backslash\{0\}`.
+    with :math:`\theta\in \mathbb{R}\backslash\{0\}, \mathbf{u} \in [0, 1]^d`.
 
     """
 
