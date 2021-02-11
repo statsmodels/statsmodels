@@ -363,7 +363,7 @@ class ClaytonCopula(Copula):
         return a * b ** c
 
     def cdf(self, u):
-        return (np.sum(u ** -self.theta, axis=1) - 1) ** -1.0 / self.theta
+        return (np.sum(u ** (-self.theta), axis=1) - 1) ** (-1.0 / self.theta)
 
     def _theta_from_tau(self, tau):
         return 2 * tau / (1 - tau)
@@ -408,10 +408,11 @@ class FrankCopula(Copula):
         return num / den
 
     def cdf(self, u):
-        num = np.prod(np.exp(np.prod(-self.theta * u, axis=1)) - 1, axis=1)
-        den = np.exp(-self.theta) - 1
+        dim = u.shape[1]
+        num = np.prod(1 - np.exp(- self.theta * u), axis=1)
+        den = (1 - np.exp(-self.theta)) ** (dim - 1)
 
-        return -1.0 / self.theta * np.log(1 + num / den)
+        return -1.0 / self.theta * np.log(1 - num / den)
 
     def _theta_from_tau(self, tau):
         MIN_FLOAT_LOG = np.log(sys.float_info.min)
