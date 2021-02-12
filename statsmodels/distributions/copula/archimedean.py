@@ -53,7 +53,23 @@ class ArchimedeanCopula(object):
         '''evaluate cdf of multivariate Archimedean copula
         '''
         # TODO: replace by formulas, and exp in pdf
-        return np.log(self.pdf(u, args=args))
+        axis = -1
+        u = np.asarray(u)
+        if u.shape[-1] > 2:
+            msg = "pdf is currently only available for bivariate copula"
+            raise ValueError(msg)
+
+        phi_d1 = self.transform.deriv
+        phi_d2 = self.transform.deriv2
+
+        cdfv = self.cdf(u, args=args)
+
+        # I need np.abs because derivatives are negative,
+        # is this correct for mv?
+        logpdfv = np.sum(np.log(np.abs(phi_d1(u, *args))), axis)
+        logpdfv += np.log(np.abs(phi_d2(cdfv, *args) / phi_d1(cdfv, *args)**3))
+
+        return logpdfv
 
 
 class FrankCopula(ArchimedeanCopula):
@@ -102,3 +118,27 @@ class FrankCopula(ArchimedeanCopula):
             return pdf
         else:
             super(FrankCopula, self).pdf(u, args=args)
+
+    def cdfcond_2g1(self, u, args=()):
+        u = np.asarray(u)
+        th = args[0]
+        if u.shape[-1] == 2:
+            # bivariate case
+            u1, u2 = u[..., 0], u[..., 1]
+            cdfc = np.exp(- th * u1)
+            cdfc /= np.expm1(-th) / np.expm1(- th * u2) + np.expm1(- th * u1)
+            return cdfc
+        else:
+            raise NotImplementedError
+
+    def ppfcond_2g1(self, q, u1, args=()):
+        u1 = np.asarray(u1)
+        th = args[0]
+        if u1.shape[-1] == 1:
+            # bivariate case, conditional on value of first variable
+            ppfc = - np.log(1 + np.expm1(- th) /
+                            ((1 / q - 1) * np.exp(-th * u1) + 1)) / th
+
+            return ppfc
+        else:
+            raise NotImplementedError

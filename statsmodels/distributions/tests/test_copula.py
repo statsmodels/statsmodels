@@ -77,6 +77,9 @@ def test_copulas(case):
     assert_allclose(cdf1, cdf2, rtol=1e-13)
     assert_allclose(pdf1, pdf2, rtol=1e-13)
 
+    logpdf1 = ca.logpdf([v1, v2], args=args)
+    assert_allclose(logpdf1, np.log(pdf2), rtol=1e-13)
+
 
 @pytest.mark.parametrize("case", ev_list)
 def test_ev_copula_distr(case):
@@ -182,3 +185,9 @@ class TestFrank(object):
         assert_allclose(cdf1, cdf2, rtol=1e-13)
 
         assert isinstance(cop.transform, cop_tr)
+
+        # round trip conditional, no verification
+        u = [0.6, 0.5]
+        cdfc = cop.cdfcond_2g1(u, args=args)
+        ppfc = cop.ppfcond_2g1(cdfc, [0.6], args=args)
+        assert_allclose(ppfc, u[1], rtol=1e-13)
