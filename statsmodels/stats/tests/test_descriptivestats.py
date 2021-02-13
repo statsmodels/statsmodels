@@ -164,7 +164,15 @@ def test_description_basic(df):
 def test_odd_percentiles(df):
     percentiles = np.linspace(7.0, 93.0, 13)
     res = Description(df, percentiles=percentiles)
-    print(res.frame.index)
+    stats = [
+        'nobs', 'missing', 'mean', 'std_err', 'upper_ci', 'lower_ci', 'std',
+        'iqr', 'iqr_normal', 'mad', 'mad_normal', 'coef_var', 'range', 'max',
+        'min', 'skew', 'kurtosis', 'jarque_bera', 'jarque_bera_pval', 'mode',
+        'mode_freq', 'median', 'distinct', 'top_1', 'top_2', 'top_3', 'top_4',
+        'top_5', 'freq_1', 'freq_2', 'freq_3', 'freq_4', 'freq_5', '7.0%',
+        '14.1%', '21.3%', '28.5%', '35.6%', '42.8%', '50.0%', '57.1%', '64.3%',
+        '71.5%', '78.6%', '85.8%', '93.0%']
+    assert_equal(res.frame.index.tolist(), stats)
 
 
 def test_large_ntop(df):
