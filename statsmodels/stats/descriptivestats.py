@@ -525,6 +525,9 @@ class Description:
             output = f"{{0:{fmt}}}%"
             perc.index = [output.format(val) for val in index]
 
+        # Add in the names of the percentiles to the output
+        self._stats = self._stats + perc.index.tolist()
+
         return self._reorder(pd.concat([results_df, perc], axis=0))
 
     @cache_readonly
