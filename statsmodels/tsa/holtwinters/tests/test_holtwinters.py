@@ -1999,3 +1999,18 @@ def test_forecast_1_simulation(austourists, random_errors, repetitions):
     )
     expected_shape = (10,) if repetitions == 1 else (10, repetitions)
     assert sim.shape == expected_shape
+
+
+@pytest.mark.parametrize("trend", [None, "add"])
+@pytest.mark.parametrize("seasonal", [None, "add"])
+@pytest.mark.parametrize("nobs", [9, 10])
+def test_estimated_initialization_short_data(ses, trend, seasonal, nobs):
+    # GH 7319
+    res = ExponentialSmoothing(
+        ses[:nobs],
+        trend=trend,
+        seasonal=seasonal,
+        seasonal_periods=4,
+        initialization_method='estimated'
+    ).fit()
+    assert res.mle_retvals.success

@@ -165,6 +165,7 @@ import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.exponential_smoothing import base
 import statsmodels.tsa.exponential_smoothing._ets_smooth as smooth
 from statsmodels.tsa.exponential_smoothing.initialization import (
+    _initialization_simple,
     _initialization_heuristic,
 )
 from statsmodels.tsa.tsatools import freq_to_period
@@ -561,10 +562,7 @@ class ETSModel(base.StateSpaceMLEModel):
                     " for models with a seasonal component when"
                     ' initialization method is set to "known".'
                 )
-        elif (
-            self.initialization_method == "heuristic"
-            or self.initialization_method == "estimated"
-        ):
+        elif self.initialization_method == "heuristic":
             (
                 initial_level,
                 initial_trend,
@@ -575,6 +573,29 @@ class ETSModel(base.StateSpaceMLEModel):
                 seasonal=self.seasonal,
                 seasonal_periods=self.seasonal_periods,
             )
+        elif self.initialization_method == "estimated":
+            if self.nobs < 10 + 2 * (self.seasonal_periods // 2):
+                (
+                    initial_level,
+                    initial_trend,
+                    initial_seasonal,
+                ) = _initialization_simple(
+                    self.endog,
+                    trend=self.trend,
+                    seasonal=self.seasonal,
+                    seasonal_periods=self.seasonal_periods,
+                )
+            else:
+                (
+                    initial_level,
+                    initial_trend,
+                    initial_seasonal,
+                ) = _initialization_heuristic(
+                    self.endog,
+                    trend=self.trend,
+                    seasonal=self.seasonal,
+                    seasonal_periods=self.seasonal_periods,
+                )
         if not self.has_trend:
             initial_trend = 0
         if not self.has_seasonal:
