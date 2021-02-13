@@ -32,7 +32,10 @@ from statsmodels.tools.validation import (
     string_like,
 )
 from statsmodels.tsa.base.tsa_model import TimeSeriesModel
-from statsmodels.tsa.exponential_smoothing.ets import _initialization_heuristic
+from statsmodels.tsa.exponential_smoothing.ets import (
+    _initialization_simple,
+    _initialization_heuristic
+)
 from statsmodels.tsa.holtwinters import (
     _exponential_smoothers as smoothers,
     _smoothers as py_smoothers,
@@ -443,8 +446,23 @@ class ExponentialSmoothing(TimeSeriesModel):
             raise ValueError(msg.format("seasonal"))
         if self._initialization_method == "legacy-heuristic":
             return self._initialize_legacy()
-        elif self._initialization_method in ("heuristic", "estimated"):
+        elif self._initialization_method == "heuristic":
             return self._initialize_heuristic()
+        elif self._initialization_method == "estimated":
+            if self.nobs < 10 + 2 * (self.seasonal_periods // 2):
+                return self._initialize_simple()
+            else:
+                return self._initialize_heuristic()
+
+    def _initialize_simple(self):
+        trend = self.trend if self.has_trend else False
+        seasonal = self.seasonal if self.has_seasonal else False
+        lvl, trend, seas = _initialization_simple(
+            self._y, trend, seasonal, self.seasonal_periods
+        )
+        self._initial_level = lvl
+        self._initial_trend = trend
+        self._initial_seasonal = seas
 
     def _initialize_heuristic(self):
         trend = self.trend if self.has_trend else False
