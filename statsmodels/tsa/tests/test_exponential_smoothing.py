@@ -1033,3 +1033,18 @@ def test_one_step_ahead(setup_model):
     df1 = pred1.summary_frame(alpha=0.05)
     df2 = pred1.summary_frame(alpha=0.05)
     assert_allclose(df1.iloc[0, 0], df2.iloc[0, 0])
+
+
+@pytest.mark.parametrize("trend", [None, "add"])
+@pytest.mark.parametrize("seasonal", [None, "add"])
+@pytest.mark.parametrize("nobs", [9, 10])
+def test_estimated_initialization_short_data(oildata, trend, seasonal, nobs):
+    # GH 7319
+    res = ETSModel(
+        oildata[:nobs],
+        trend=trend,
+        seasonal=seasonal,
+        seasonal_periods=4,
+        initialization_method='estimated'
+    ).fit()
+    assert ~np.any(np.isnan(res.params))
