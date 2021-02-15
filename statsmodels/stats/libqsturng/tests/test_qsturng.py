@@ -184,6 +184,9 @@ class TestPsturng(object):
         for p,r,v,q in cases:
             assert_almost_equal(1.-p, psturng(q,r,v), 5)
 
+    def test_pstrung_boundary(self):
+        assert 0.07 < psturng(12, 12, 2.02) < 0.08
+
     @pytest.mark.slow
     def test_100_random_values(self, reset_randomstate):
         n = 100

@@ -27,6 +27,3 @@ def test_qstrung(alpha, k):
     assert_almost_equal(psturng(qsturng(1 - alpha, k, rows), k, rows),
                         alpha,
                         5)
-
-def test_pstrung_boundary():
-    assert 0.07 < psturng(12.5872, 24, 2.02) < 0.08
