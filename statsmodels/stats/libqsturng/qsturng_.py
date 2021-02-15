@@ -824,7 +824,7 @@ def _psturng(q, r, v):
     def opt_func(p, r, v):
         return np.squeeze(abs(_qsturng(p, r, v) - q))
 
-    if 1 <= v < 2:
+    if v == 1:
         if q < _qsturng(.9, r, 1):
             return .1
         elif q > _qsturng(.999, r, 1):
