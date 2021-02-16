@@ -1,0 +1,59 @@
+# Python package
+# Create and test a Python package on multiple Python versions.
+# Add steps that analyze code, save the dist with the build record, publish to a PyPI-compatible index, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/python
+
+parameters:
+  # defaults for any parameters that are not specified
+  name: ''
+  vmImage: ''
+
+
+jobs:
+
+- job: ${{ parameters.name }}Test
+  pool:
+    vmImage: ${{ parameters.vmImage }}
+  strategy:
+    matrix:
+      python37_win_latest:
+        python.version: '3.7'
+        python.architecture: 'x64'
+      python38_win_32_bit_latest:
+        python.version: '3.8'
+        python.architecture: 'x86'
+      python39_win_latest:
+        python.version: '3.9'
+        python.architecture: 'x64'
+    maxParallel: 10
+
+  steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '$(python.version)'
+      architecture: '$(python.architecture)'
+    displayName: 'Use Python $(python.version)'
+
+  - script: |
+      python -m pip install --upgrade pip setuptools wheel
+      python -m pip install -r requirements.txt
+      python -m pip install -r requirements-dev.txt
+    displayName: 'Install dependencies'
+
+  - script: |
+      python -m pip list
+    displayName: 'List Configuration'
+
+  - script: |
+      python -m pip install -e . -v --no-build-isolation
+    displayName: 'Build Cython Extensions'
+
+  - script: |
+      pytest statsmodels --skip-examples --junitxml=junit/test-results.xml -n 2 --durations=50
+    displayName: 'pytest'
+
+  - task: PublishTestResults@2
+    inputs:
+      testResultsFiles: '**/test-results.xml'
+      testRunTitle: 'Python $(python.version)'
+    condition: succeededOrFailed()

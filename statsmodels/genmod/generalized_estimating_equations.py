@@ -230,7 +230,7 @@ _gee_init_doc = """
       Gaussian     |   x    x                        x
       inv Gaussian |   x    x                        x
       binomial     |   x    x    x     x       x     x    x           x      x
-      Poisson     |   x    x                        x
+      Poisson      |   x    x                        x
       neg binomial |   x    x                        x          x
       gamma        |   x    x                        x
 
@@ -252,10 +252,16 @@ _gee_init_doc = """
     and agrees with R's gee implementation.  To obtain the robust
     standard errors reported in Stata, multiply by sqrt(N / (N - g)),
     where N is the total sample size, and g is the average group size.
-
+    %(notes)s
     Examples
     --------
     %(example)s
+"""
+
+_gee_nointercept = """
+    The nominal and ordinal GEE models should not have an intercept
+    (either implicit or explicit).  Use "0 + " in a formula to
+    suppress the intercept.
 """
 
 _gee_family_doc = """\
@@ -390,7 +396,7 @@ _gee_example = """
     >>> import statsmodels.api as sm
     >>> fam = sm.families.Poisson()
     >>> ind = sm.cov_struct.Independence()
-    >>> model = sm.GEE.from_formula("y ~ age + trt + base", "subject", \
+    >>> model = sm.GEE.from_formula("y ~ age + trt + base", "subject",
                                  data, cov_struct=ind, family=fam)
     >>> result = model.fit()
     >>> print(result.summary())
@@ -401,7 +407,7 @@ _gee_example = """
     >>> import statsmodels.formula.api as smf
     >>> fam = sm.families.Poisson()
     >>> ind = sm.cov_struct.Independence()
-    >>> model = smf.gee("y ~ age + trt + base", "subject", \
+    >>> model = smf.gee("y ~ age + trt + base", "subject",
                     data, cov_struct=ind, family=fam)
     >>> result = model.fit()
     >>> print(result.summary())
@@ -420,7 +426,7 @@ _gee_ordinal_example = """
     Using formulas:
 
     >>> import statsmodels.formula.api as smf
-    >>> model = smf.ordinal_gee("y ~ x1 + x2", groups, data,
+    >>> model = smf.ordinal_gee("y ~ 0 + x1 + x2", groups, data,
                                     cov_struct=gor)
     >>> result = model.fit()
     >>> print(result.summary())
@@ -439,7 +445,7 @@ _gee_nominal_example = """
     Using formulas:
 
     >>> import statsmodels.api as sm
-    >>> model = sm.NominalGEE.from_formula("y ~ x1 + x2", groups,
+    >>> model = sm.NominalGEE.from_formula("y ~ 0 + x1 + x2", groups,
                      data, cov_struct=gor)
     >>> result = model.fit()
     >>> print(result.summary())
@@ -447,7 +453,7 @@ _gee_nominal_example = """
     Using the formula API:
 
     >>> import statsmodels.formula.api as smf
-    >>> model = smf.nominal_gee("y ~ x1 + x2", groups, data,
+    >>> model = smf.nominal_gee("y ~ 0 + x1 + x2", groups, data,
                                 cov_struct=gor)
     >>> result = model.fit()
     >>> print(result.summary())
@@ -480,7 +486,8 @@ class GEE(GLM):
         "Equations.\n" + _gee_init_doc %
         {'extra_params': base._missing_param_doc,
          'family_doc': _gee_family_doc,
-         'example': _gee_example})
+         'example': _gee_example,
+         'notes': ""})
 
     cached_means = None
 
@@ -596,7 +603,6 @@ class GEE(GLM):
 
         # Time defaults to a 1d grid with equal spacing
         if self.time is not None:
-            self.time = np.asarray(self.time, np.float64)
             if self.time.ndim == 1:
                 self.time = self.time[:, None]
             self.time_li = self.cluster_list(self.time)
@@ -850,11 +856,12 @@ class GEE(GLM):
             self.scaling_factor = 1
 
         _, ncov1, cmat = self._covmat()
-        scale = self.estimate_scale()
-        cmat = cmat / scale ** 2
-        score2 = np.dot(qc.T, score) / scale
+        score2 = np.dot(qc.T, score)
 
-        amat = np.linalg.inv(ncov1)
+        try:
+            amat = np.linalg.inv(ncov1)
+        except np.linalg.LinAlgError:
+            amat = np.linalg.pinv(ncov1)
 
         bmat_11 = np.dot(qm.T, np.dot(cmat, qm))
         bmat_22 = np.dot(qc.T, np.dot(cmat, qc))
@@ -863,21 +870,42 @@ class GEE(GLM):
         amat_11 = np.dot(qm.T, np.dot(amat, qm))
         amat_12 = np.dot(qm.T, np.dot(amat, qc))
 
-        score_cov = bmat_22 - np.dot(amat_12.T,
-                                     np.linalg.solve(amat_11, bmat_12))
-        score_cov -= np.dot(bmat_12.T,
-                            np.linalg.solve(amat_11, amat_12))
-        score_cov += np.dot(amat_12.T,
-                            np.dot(np.linalg.solve(amat_11, bmat_11),
-                                   np.linalg.solve(amat_11, amat_12)))
+        try:
+            ab = np.linalg.solve(amat_11, bmat_12)
+        except np.linalg.LinAlgError:
+            ab = np.dot(np.linalg.pinv(amat_11), bmat_12)
+
+        score_cov = bmat_22 - np.dot(amat_12.T, ab)
+
+        try:
+            aa = np.linalg.solve(amat_11, amat_12)
+        except np.linalg.LinAlgError:
+            aa = np.dot(np.linalg.pinv(amat_11), amat_12)
+
+        score_cov -= np.dot(bmat_12.T, aa)
+
+        try:
+            ab = np.linalg.solve(amat_11, bmat_11)
+        except np.linalg.LinAlgError:
+            ab = np.dot(np.linalg.pinv(amat_11), bmat_11)
+
+        try:
+            aa = np.linalg.solve(amat_11, amat_12)
+        except np.linalg.LinAlgError:
+            aa = np.dot(np.linalg.pinv(amat_11), amat_12)
+
+        score_cov += np.dot(amat_12.T, np.dot(ab, aa))
 
         # Attempt to restore state
         self.cov_struct = cov_struct_save
         self.cached_means = cached_means_save
 
         from scipy.stats.distributions import chi2
-        score_statistic = np.dot(score2,
-                                 np.linalg.solve(score_cov, score2))
+        try:
+            sc2 = np.linalg.solve(score_cov, score2)
+        except np.linalg.LinAlgError:
+            sc2 = np.dot(np.linalg.pinv(score_cov), score2)
+        score_statistic = np.dot(score2, sc2)
         score_df = len(score2)
         score_pvalue = 1 - chi2.cdf(score_statistic, score_df)
         return {"statistic": score_statistic,
@@ -1025,7 +1053,10 @@ class GEE(GLM):
             bmat += np.dot(dmat.T, vinv_d)
             score += np.dot(dmat.T, vinv_resid)
 
-        update = np.linalg.solve(bmat, score)
+        try:
+            update = np.linalg.solve(bmat, score)
+        except np.linalg.LinAlgError:
+            update = np.dot(np.linalg.pinv(bmat), score)
 
         self._fit_history["cov_adjust"].append(
             self.cov_struct.cov_adjust)
@@ -1116,7 +1147,11 @@ class GEE(GLM):
 
         scale = self.estimate_scale()
 
-        bmati = np.linalg.inv(bmat)
+        try:
+            bmati = np.linalg.inv(bmat)
+        except np.linalg.LinAlgError:
+            bmati = np.linalg.pinv(bmat)
+
         cov_naive = bmati * scale
         cov_robust = np.dot(bmati, np.dot(cmat, bmati))
 
@@ -1353,7 +1388,12 @@ class GEE(GLM):
 
         hm.flat[::hm.shape[0] + 1] += self.num_group * en
         sn -= self.num_group * en * params
-        update = np.linalg.solve(hm, sn)
+        try:
+            update = np.linalg.solve(hm, sn)
+        except np.linalg.LinAlgError:
+            update = np.dot(np.linalg.pinv(hm), sn)
+            msg = "Encountered singularity in regularized GEE update"
+            warnings.warn(msg)
         hm *= self.estimate_scale()
 
         return update, hm
@@ -2265,7 +2305,8 @@ class OrdinalGEE(GEE):
         "    Ordinal Response Marginal Regression Model using GEE\n" +
         _gee_init_doc % {'extra_params': base._missing_param_doc,
                          'family_doc': _gee_ordinal_family_doc,
-                         'example': _gee_ordinal_example})
+                         'example': _gee_ordinal_example,
+                         'notes': _gee_nointercept})
 
     def __init__(self, endog, exog, groups, time=None, family=None,
                  cov_struct=None, missing='none', offset=None,
@@ -2516,22 +2557,24 @@ def _score_test_submodel(par, sub):
     x2 = sub.exog
 
     u, s, vt = np.linalg.svd(x1, 0)
+    v = vt.T
 
     # Get the orthogonal complement of col(x2) in col(x1).
-    a, _, _ = np.linalg.svd(x2, 0)
+    a, _ = np.linalg.qr(x2)
     a = u - np.dot(a, np.dot(a.T, u))
     x2c, sb, _ = np.linalg.svd(a, 0)
     x2c = x2c[:, sb > 1e-12]
 
     # x1 * qm = x2
-    qm = np.dot(vt.T, np.dot(u.T, x2) / s[:, None])
+    ii = np.flatnonzero(np.abs(s) > 1e-12)
+    qm = np.dot(v[:, ii], np.dot(u[:, ii].T, x2) / s[ii, None])
 
     e = np.max(np.abs(x2 - np.dot(x1, qm)))
     if e > 1e-8:
         return None, None
 
     # x1 * qc = x2c
-    qc = np.dot(vt.T, np.dot(u.T, x2c) / s[:, None])
+    qc = np.dot(v[:, ii], np.dot(u[:, ii].T, x2c) / s[ii, None])
 
     return qm, qc
 
@@ -2547,7 +2590,8 @@ class NominalGEE(GEE):
         "    Nominal Response Marginal Regression Model using GEE.\n" +
         _gee_init_doc % {'extra_params': base._missing_param_doc,
                          'family_doc': _gee_nominal_family_doc,
-                         'example': _gee_nominal_example})
+                         'example': _gee_nominal_example,
+                         'notes': _gee_nointercept})
 
     def __init__(self, endog, exog, groups, time=None, family=None,
                  cov_struct=None, missing='none', offset=None,

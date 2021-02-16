@@ -407,7 +407,7 @@ Lorentzen
 Lotze
 Lowess
 Lumley
-Lutkephol
+Lutkepohl
 MANOVA
 MICEData
 MLEInfluence

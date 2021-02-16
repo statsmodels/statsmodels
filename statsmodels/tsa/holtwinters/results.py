@@ -652,12 +652,12 @@ class HoltWintersResults(Results):
         if 0 <= start_idx and start_idx <= m:
             initial_seasons = self.params["initial_seasons"]
             _s = np.concatenate(
-                (initial_seasons[start_idx:], season[:start_idx],)
+                (initial_seasons[start_idx:], season[:start_idx])
             )
             s[-m:, :] = np.tile(_s, (repetitions, 1)).T
         else:
             s[-m:, :] = np.tile(
-                season[start_idx - m : start_idx], (repetitions, 1),
+                season[start_idx - m : start_idx], (repetitions, 1)
             ).T
 
         # set neutral values for unused features
@@ -743,10 +743,11 @@ class HoltWintersResults(Results):
         if use_boxcox:
             y = inv_boxcox(y, lamda)
 
-        sim = np.squeeze(y)
+        sim = np.atleast_1d(np.squeeze(y))
+        if y.shape[0] == 1 and y.size > 1:
+            sim = sim[None, :]
         # Wrap data / squeeze where appropriate
-        use_pandas = isinstance(self.model.data, PandasData)
-        if not use_pandas:
+        if not isinstance(self.model.data, PandasData):
             return sim
 
         _, _, _, index = self.model._get_prediction_index(

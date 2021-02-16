@@ -708,7 +708,24 @@ class probit(CDFLink):
 
     probit is an alias of CDFLink.
     """
-    pass
+
+    def inverse_deriv2(self, z):
+        """
+        Second derivative of the inverse link function
+
+        This is the derivative of the pdf in a CDFLink
+
+        """
+        return - z * self.dbn.pdf(z)
+
+    def deriv2(self, p):
+        """
+        Second derivative of the link function g''(p)
+
+        """
+        p = self._clean(p)
+        linpred = self.dbn.ppf(p)
+        return linpred / self.dbn.pdf(linpred)**2
 
 
 class cauchy(CDFLink):
@@ -739,9 +756,14 @@ class cauchy(CDFLink):
         g''(p) : ndarray
             Value of the second derivative of Cauchy link function at `p`
         """
+        p = self._clean(p)
         a = np.pi * (p - 0.5)
         d2 = 2 * np.pi**2 * np.sin(a) / np.cos(a)**3
         return d2
+
+    def inverse_deriv2(self, z):
+
+        return - 2 * z / (np.pi * (z**2 + 1)**2)
 
 
 class CLogLog(Logit):

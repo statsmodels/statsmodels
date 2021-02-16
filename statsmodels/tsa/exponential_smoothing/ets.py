@@ -165,6 +165,7 @@ import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.exponential_smoothing import base
 import statsmodels.tsa.exponential_smoothing._ets_smooth as smooth
 from statsmodels.tsa.exponential_smoothing.initialization import (
+    _initialization_simple,
     _initialization_heuristic,
 )
 from statsmodels.tsa.tsatools import freq_to_period
@@ -561,10 +562,7 @@ class ETSModel(base.StateSpaceMLEModel):
                     " for models with a seasonal component when"
                     ' initialization method is set to "known".'
                 )
-        elif (
-            self.initialization_method == "heuristic"
-            or self.initialization_method == "estimated"
-        ):
+        elif self.initialization_method == "heuristic":
             (
                 initial_level,
                 initial_trend,
@@ -575,6 +573,29 @@ class ETSModel(base.StateSpaceMLEModel):
                 seasonal=self.seasonal,
                 seasonal_periods=self.seasonal_periods,
             )
+        elif self.initialization_method == "estimated":
+            if self.nobs < 10 + 2 * (self.seasonal_periods // 2):
+                (
+                    initial_level,
+                    initial_trend,
+                    initial_seasonal,
+                ) = _initialization_simple(
+                    self.endog,
+                    trend=self.trend,
+                    seasonal=self.seasonal,
+                    seasonal_periods=self.seasonal_periods,
+                )
+            else:
+                (
+                    initial_level,
+                    initial_trend,
+                    initial_seasonal,
+                ) = _initialization_heuristic(
+                    self.endog,
+                    trend=self.trend,
+                    seasonal=self.seasonal,
+                    seasonal_periods=self.seasonal_periods,
+                )
         if not self.has_trend:
             initial_trend = 0
         if not self.has_seasonal:
@@ -2230,9 +2251,10 @@ class PredictionResults:
         )
         self.row_labels = self.predicted_mean.index
         self.endog = np.empty(nsmooth + ndynamic) * np.nan
-        self.endog[0 : (end - start + 1)] = results.data.endog[
-            start : (end + 1)
-        ]
+        if nsmooth > 0:
+            self.endog[0: (end - start + 1)] = results.data.endog[
+                start: (end + 1)
+            ]
         self.model = Bunch(
             data=results.model.data.__class__(
                 endog=self.endog, predict_dates=self.row_labels
@@ -2277,7 +2299,15 @@ class PredictionResults:
         else:  # method == 'exact'
             steps = np.ones(ndynamic + nsmooth)
             if ndynamic > 0:
-                steps[(start_dynamic - start) :] = range(1, ndynamic + 1)
+                steps[
+                    (start_dynamic - min(start_dynamic, start)):
+                    ] = range(1, ndynamic + 1)
+            # when we are doing out of sample only prediction,
+            # start > end + 1, and
+            # we only want to output beginning at start
+            if start > end + 1:
+                ndiscard = start - (end + 1)
+                steps = steps[ndiscard:]
             self.forecast_variance = (
                 results.mse * results._relative_forecast_variance(steps)
             )

@@ -343,7 +343,7 @@ class NewsResults(object):
         df = df[['observed', 'forecast (prev)', 'news', 'weight', 'impact']]
         df = df.reorder_levels([2, 3, 0, 1]).sort_index()
 
-        if self.impacted_variable is not None:
+        if self.impacted_variable is not None and len(df) > 0:
             df = df.loc[np.s_[:, self.impacted_variable], :]
 
         mask = np.abs(df['weight']) > self.tolerance
@@ -425,7 +425,7 @@ class NewsResults(object):
         df.index = pd.MultiIndex.from_arrays([df[key] for key in keys])
         details = df.drop(keys, axis=1).sort_index()
 
-        if self.impacted_variable is not None:
+        if self.impacted_variable is not None and len(df) > 0:
             details = details.loc[
                 np.s_[:, :, :, :, :, self.impacted_variable], :]
 

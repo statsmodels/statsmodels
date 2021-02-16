@@ -632,12 +632,14 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         Returns
         -------
-        MLEResults
+        results
+            Results object holding results from fitting a state space model.
 
         See Also
         --------
         statsmodels.base.model.LikelihoodModel.fit
         statsmodels.tsa.statespace.mlemodel.MLEResults
+        statsmodels.tsa.statespace.structural.UnobservedComponentsResults
         """
         if start_params is None:
             start_params = self.start_params
@@ -3146,7 +3148,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         return output
 
-    def test_serial_correlation(self, method, lags=None):
+    def test_serial_correlation(self, method, df_adjust=False, lags=None):
         """
         Ljung-Box test for no serial correlation of standardized residuals
 
@@ -3168,7 +3170,13 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             After 0.12 the default maxlag will change to min(10, nobs // 5) for
             non-seasonal models and min(2*m, nobs // 5) for seasonal time
             series where m is the seasonal period.
-
+        df_adjust : bool, optional
+            If True, the degrees of freedom consumed by the model is subtracted
+            from the degrees-of-freedom used in the test so that the adjusted
+            dof for the statistics are lags - model_df. In an ARMA model, this
+            value is usually p+q where p is the AR order and q is the MA order.
+            When using df_adjust, it is not possible to use tests based on
+            fewer than model_df lags.
         Returns
         -------
         output : ndarray
@@ -3225,11 +3233,15 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                     FutureWarning
                 )
 
+            model_df = 0
+            if df_adjust:
+                model_df = max(0, self.df_model - self.k_diffuse_states - 1)
+
             for i in range(self.model.k_endog):
                 results = acorr_ljungbox(
                     self.filter_results.standardized_forecasts_error[i][d:],
                     lags=lags, boxpierce=(method == 'boxpierce'),
-                    return_df=False)
+                    model_df=model_df, return_df=False)
                 if method == 'ljungbox':
                     output.append(results[0:2])
                 else:
@@ -4221,7 +4233,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         return res
 
     def plot_diagnostics(self, variable=0, lags=10, fig=None, figsize=None,
-                         truncate_endog_names=24):
+                         truncate_endog_names=24, auto_ylims=False,
+                         bartlett_confint=False, acf_kwargs=None):
         """
         Diagnostic plots for standardized residuals of one endogenous variable
 
@@ -4239,6 +4252,30 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         figsize : tuple, optional
             If a figure is created, this argument allows specifying a size.
             The tuple is (width, height).
+        auto_ylims : bool, optional
+            If True, adjusts automatically the y-axis limits to ACF values.
+        bartlett_confint : bool, default True
+            Confidence intervals for ACF values are generally placed at 2
+            standard errors around r_k. The formula used for standard error
+            depends upon the situation. If the autocorrelations are being used
+            to test for randomness of residuals as part of the ARIMA routine,
+            the standard errors are determined assuming the residuals are white
+            noise. The approximate formula for any lag is that standard error
+            of each r_k = 1/sqrt(N). See section 9.4 of [1] for more details on
+            the 1/sqrt(N) result. For more elementary discussion, see section
+            5.3.2 in [2].
+            For the ACF of raw data, the standard error at a lag k is
+            found as if the right model was an MA(k-1). This allows the
+            possible interpretation that if all autocorrelations past a
+            certain lag are within the limits, the model might be an MA of
+            order defined by the last significant autocorrelation. In this
+            case, a moving average model is assumed for the data and the
+            standard errors for the confidence intervals should be
+            generated using Bartlett's formula. For more details on
+            Bartlett formula result, see section 7.2 in [1].+
+        acf_kwargs : dict, optional
+            Optional dictionary of keyword arguments that are directly passed
+            on to the correlogram Matplotlib plot produced by plot_acf().
 
         Returns
         -------
@@ -4260,6 +4297,12 @@ class MLEResults(tsbase.TimeSeriesModelResults):
            with a Normal(0,1) density plotted for reference.
         3. Normal Q-Q plot, with Normal reference line.
         4. Correlogram
+
+        References
+        ----------
+        [1] Brockwell and Davis, 1987. Time Series Theory and Methods
+        [2] Brockwell and Davis, 2010. Introduction to Time Series and
+        Forecasting, 2nd edition.
         """
         from statsmodels.graphics.utils import _import_mpl, create_mpl_fig
         _import_mpl()
@@ -4305,9 +4348,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         # gh5792: Remove  except after support for matplotlib>2.1 required
         try:
-            ax.hist(resid_nonmissing, density=True, label='Hist')
+            ax.hist(resid_nonmissing, density=True, label='Hist',
+                    edgecolor='#FFFFFF')
         except AttributeError:
-            ax.hist(resid_nonmissing, normed=True, label='Hist')
+            ax.hist(resid_nonmissing, normed=True, label='Hist',
+                    edgecolor='#FFFFFF')
 
         from scipy.stats import gaussian_kde, norm
         kde = gaussian_kde(resid_nonmissing)
@@ -4328,10 +4373,12 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         # Bottom-right: Correlogram
         ax = fig.add_subplot(224)
         from statsmodels.graphics.tsaplots import plot_acf
-        plot_acf(resid, ax=ax, lags=lags)
-        ax.set_title('Correlogram')
 
-        ax.set_ylim(-1, 1)
+        if acf_kwargs is None:
+            acf_kwargs = {}
+        plot_acf(resid, ax=ax, lags=lags, auto_ylims=auto_ylims,
+                 bartlett_confint=bartlett_confint, **acf_kwargs)
+        ax.set_title('Correlogram')
 
         return fig
 

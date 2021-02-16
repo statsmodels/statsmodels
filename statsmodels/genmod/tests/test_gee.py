@@ -2047,3 +2047,154 @@ def test_grid_ar():
                     rtol=0.05)
     assert_allclose(result1.cov_struct.dep_params,
                     result3.cov_struct.dep_params[1], rtol=0.05)
+
+
+def test_unstructured_complete():
+
+    np.random.seed(43)
+    ngrp = 400
+    cov = np.asarray([[1, 0.7, 0.2], [0.7, 1, 0.5], [0.2, 0.5, 1]])
+    covr = np.linalg.cholesky(cov)
+    e = np.random.normal(size=(ngrp, 3))
+    e = np.dot(e, covr.T)
+    xmat = np.random.normal(size=(3*ngrp, 3))
+    par = np.r_[1, -2, 0.1]
+    ey = np.dot(xmat, par)
+    y = ey + e.ravel()
+    g = np.kron(np.arange(ngrp), np.ones(3))
+    t = np.kron(np.ones(ngrp), np.r_[0, 1, 2]).astype(int)
+
+    m = gee.GEE(y, xmat, time=t, cov_struct=cov_struct.Unstructured(),
+                groups=g)
+    r = m.fit()
+
+    assert_allclose(r.params, par, 0.05, 0.5)
+    assert_allclose(m.cov_struct.dep_params, cov, 0.05, 0.5)
+
+
+def test_unstructured_incomplete():
+
+    np.random.seed(43)
+    ngrp = 400
+    cov = np.asarray([[1, 0.7, 0.2], [0.7, 1, 0.5], [0.2, 0.5, 1]])
+    covr = np.linalg.cholesky(cov)
+    e = np.random.normal(size=(ngrp, 3))
+    e = np.dot(e, covr.T)
+    xmat = np.random.normal(size=(3*ngrp, 3))
+    par = np.r_[1, -2, 0.1]
+    ey = np.dot(xmat, par)
+
+    yl, xl, tl, gl = [], [], [], []
+    for i in range(ngrp):
+
+        # Omit one observation from each group of 3
+        ix = [0, 1, 2]
+        ix.pop(i % 3)
+        ix = np.asarray(ix)
+        tl.append(ix)
+
+        yl.append(ey[3*i + ix] + e[i, ix])
+        x = xmat[3*i + ix, :]
+        xl.append(x)
+        gl.append(i * np.ones(2))
+
+    y = np.concatenate(yl)
+    x = np.concatenate(xl, axis=0)
+    t = np.concatenate(tl)
+    t = np.asarray(t, dtype=int)
+    g = np.concatenate(gl)
+
+    m = gee.GEE(y, x, time=t[:, None], cov_struct=cov_struct.Unstructured(),
+                groups=g)
+    r = m.fit()
+
+    assert_allclose(r.params, par, 0.05, 0.5)
+    assert_allclose(m.cov_struct.dep_params, cov, 0.05, 0.5)
+
+
+def test_ar_covsolve():
+
+    np.random.seed(123)
+
+    c = cov_struct.Autoregressive(grid=True)
+    c.dep_params = 0.4
+
+    for d in 1, 2, 4:
+        for q in 1, 4:
+
+            ii = np.arange(d)
+            mat = 0.4 ** np.abs(np.subtract.outer(ii, ii))
+            sd = np.random.uniform(size=d)
+
+            if q == 1:
+                z = np.random.normal(size=d)
+            else:
+                z = np.random.normal(size=(d, q))
+
+            sm = np.diag(sd)
+            z1 = np.linalg.solve(sm,
+                                 np.linalg.solve(mat, np.linalg.solve(sm, z)))
+            z2 = c.covariance_matrix_solve(np.zeros_like(sd),
+                                           np.zeros_like(sd),
+                                           sd, [z])
+
+            assert_allclose(z1, z2[0], rtol=1e-5, atol=1e-5)
+
+
+def test_ex_covsolve():
+
+    np.random.seed(123)
+
+    c = cov_struct.Exchangeable()
+    c.dep_params = 0.4
+
+    for d in 1, 2, 4:
+        for q in 1, 4:
+
+            mat = 0.4 * np.ones((d, d)) + 0.6 * np.eye(d)
+            sd = np.random.uniform(size=d)
+
+            if q == 1:
+                z = np.random.normal(size=d)
+            else:
+                z = np.random.normal(size=(d, q))
+
+            sm = np.diag(sd)
+            z1 = np.linalg.solve(sm,
+                                 np.linalg.solve(mat, np.linalg.solve(sm, z)))
+            z2 = c.covariance_matrix_solve(np.zeros_like(sd),
+                                           np.arange(d, dtype=np.int),
+                                           sd, [z])
+
+            assert_allclose(z1, z2[0], rtol=1e-5, atol=1e-5)
+
+
+def test_stationary_covsolve():
+
+    np.random.seed(123)
+
+    c = cov_struct.Stationary(grid=True)
+    c.time = np.arange(10, dtype=np.int)
+
+    for d in 1, 2, 4:
+        for q in 1, 4:
+
+            c.dep_params = (2.0 ** (-np.arange(d)))
+            c.max_lag = d - 1
+            mat, _ = c.covariance_matrix(np.zeros(d),
+                                         np.arange(d, dtype=np.int))
+            sd = np.random.uniform(size=d)
+
+            if q == 1:
+                z = np.random.normal(size=d)
+            else:
+                z = np.random.normal(size=(d, q))
+
+            sm = np.diag(sd)
+            z1 = np.linalg.solve(sm,
+                                 np.linalg.solve(mat, np.linalg.solve(sm, z)))
+            z2 = c.covariance_matrix_solve(np.zeros_like(sd),
+                                           np.arange(d, dtype=np.int),
+                                           sd, [z])
+
+            assert_allclose(z1, z2[0], rtol=1e-5, atol=1e-5)

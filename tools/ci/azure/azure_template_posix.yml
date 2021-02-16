@@ -1,0 +1,151 @@
+# Python package
+# Create and test a Python package on multiple Python versions.
+# Add steps that analyze code, save the dist with the build record, publish to a PyPI-compatible index, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/python
+
+parameters:
+  # defaults for any parameters that are not specified
+  name: ''
+  vmImage: ''
+
+
+jobs:
+
+- job: ${{ parameters.name }}Test
+  pool:
+    vmImage: ${{ parameters.vmImage }}
+  strategy:
+    matrix:
+      ${{ if eq(parameters.name, 'Linux') }}:
+        python_39:
+          python.version: '3.9'
+          lint: true
+        python_38:
+          python.version: '3.8'
+          USE_MATPLOTLIB: false
+          USE_CVXOPT: false
+          lint: true
+        python37:
+          python.version: '3.7'
+          use.conda: true
+          PANDAS: 0.25.3
+          NUMPY: 1.17.4
+          SCIPY: 1.4.1
+          coverage: true
+          PYTEST_OPTIONS: ''
+        python_37_legacy_blas:
+          python.version: '3.7'
+          use.conda: true
+          coverage: true
+          NUMPY: 1.16.6
+          PANDAS: 0.24.2
+          SCIPY: 1.3.2
+          BLAS: "nomkl blas=*=openblas"
+          PYTEST_OPTIONS: ''
+        python37_numpy117:
+          python.version: '3.7'
+          NUMPY: 1.16.6
+          SCIPY: 1.2.3
+          PANDAS: 0.23.4
+          MATPLOTLIB: 2.2.5
+          lint: true
+        python_39_pre:
+          python.version: '3.9'
+          pip.pre: true
+      ${{ if eq(parameters.name, 'macOS') }}:
+        python39_macos_latest:
+          python.version: '3.9'
+    maxParallel: 10
+
+  steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '$(python.version)'
+      architecture: 'x64'
+    displayName: 'Use Python $(python.version)'
+
+  - bash: |
+      echo "##vso[task.prependpath]$CONDA/bin"
+      echo "##vso[task.prependpath]$CONDA/envs/statsmodels-test"
+      echo "##vso[task.prependpath]$CONDA/envs/statsmodels-test/condabin"
+      echo "##vso[task.prependpath]$CONDA/envs/statsmodels-test/bin"
+    displayName: 'Add conda and env to PATH'
+    condition: eq(variables['use.conda'], 'true')
+
+  - script: |
+      source tools/ci/azure/install-posix.sh
+    displayName: 'Install dependencies'
+
+  - script: |
+      echo "Installing to site packages"
+      python setup.py bdist_wheel
+      WHL=$(ls -t dist)
+      pip install ./dist/${WHL}
+    displayName: 'Install statsmodels (site-packages)'
+    condition: eq(variables['test.install'], 'true')
+
+  - script: |
+      python -m pip install -e . -v --no-build-isolation
+    displayName: 'Install statsmodels (editable)'
+    condition: ne(variables['test.install'], 'true')
+
+  - script: python -m pip list
+    displayName: 'List Configuration (PyPI)'
+    condition: ne(variables['use.conda'], 'true')
+
+  - script: |
+      source activate statsmodels-test
+      conda list
+    displayName: 'List Configuration (conda)'
+    condition: eq(variables['use.conda'], 'true')
+
+  - script: |
+      echo "Testing site packages"
+      mkdir test_run_dir
+      pushd test_run_dir
+      python -c "import statsmodels; statsmodels.test(['-n', 'auto', '--junitxml=../junit/test-results.xml', '--skip-examples'])"
+      popd
+    displayName: 'Run tests (site-packages)'
+    condition: eq(variables['test.install'], 'true')
+
+  - script: |
+      echo "Testing editable install"
+      if [[ ${COVERAGE} == "true" ]]; then
+        export COVERAGE_OPTS="--cov-config .coveragerc --cov=statsmodels --cov-report xml:coverage.xml --cov-report term"
+      fi
+      echo pytest -m "${PYTEST_PATTERN}" --skip-examples --junitxml=junit/test-results.xml -n auto --durations=25 ${COVERAGE_OPTS} statsmodels
+      pytest -m "${PYTEST_PATTERN}" --skip-examples --junitxml=junit/test-results.xml -n auto --durations=25 ${COVERAGE_OPTS} statsmodels
+    displayName: 'Run tests (editable)'
+    condition: and(ne(variables['test.install'], 'true'), ne(variables['pip.pre'], 'true'))
+
+  - script: |
+      echo "Testing pip-pre"
+      if [[ ${COVERAGE} == "true" ]]; then
+        export COVERAGE_OPTS="--cov-config .coveragerc --cov=statsmodels --cov-report xml:coverage.xml --cov-report term"
+      fi
+      echo pytest -m "${PYTEST_PATTERN}" --skip-examples --junitxml=junit/test-results.xml -n auto --durations=25 ${COVERAGE_OPTS} statsmodels
+      pytest -m "${PYTEST_PATTERN}" --skip-examples --junitxml=junit/test-results.xml -n auto --durations=25 ${COVERAGE_OPTS} statsmodels
+    displayName: 'Run tests (pip pre)'
+    condition: and(ne(variables['test.install'], 'true'), eq(variables['pip.pre'], 'true'))
+    continueOnError: true
+
+  - task: PublishTestResults@2
+    inputs:
+      testResultsFiles: '**/test-results.xml'
+      testRunTitle: 'Python $(python.version)'
+    condition: succeededOrFailed()
+
+  - script: ./lint.sh
+    displayName: 'Check style'
+    condition: eq(variables['lint'], 'true')
+
+  - task: PublishCodeCoverageResults@1
+    inputs:
+      codeCoverageTool: Cobertura
+      summaryFileLocation: '$(System.DefaultWorkingDirectory)/**/coverage.xml'
+    condition: and(eq(variables['coverage'], 'true'), ne(variables['test.install'], 'true'))
+
+  - bash: bash <(curl -s https://codecov.io/bash)
+    displayName: 'CodeCov upload'
+    condition: and(eq(variables['coverage'], 'true'), ne(variables['test.install'], 'true'))
+    continueOnError: true

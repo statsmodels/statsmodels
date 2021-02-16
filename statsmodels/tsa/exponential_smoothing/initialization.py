@@ -9,11 +9,12 @@ import pandas as pd
 def _initialization_simple(endog, trend=False, seasonal=False,
                            seasonal_periods=None):
     # See Section 7.6 of Hyndman and Athanasopoulos
+    nobs = len(endog)
     initial_trend = None
     initial_seasonal = None
 
     # Non-seasonal
-    if seasonal is None:
+    if seasonal is None or not seasonal:
         initial_level = endog[0]
         if trend == 'add':
             initial_trend = endog[1] - endog[0]
@@ -21,8 +22,14 @@ def _initialization_simple(endog, trend=False, seasonal=False,
             initial_trend = endog[1] / endog[0]
     # Seasonal
     else:
+        if nobs < 2 * seasonal_periods:
+            raise ValueError('Cannot compute initial seasonals using'
+                             ' heuristic method with less than two full'
+                             ' seasonal cycles in the data.')
+
         initial_level = np.mean(endog[:seasonal_periods])
         m = seasonal_periods
+
         if trend is not None:
             initial_trend = (pd.Series(endog).diff(m)[m:2 * m] / m).mean()
 
@@ -99,7 +106,9 @@ def _initialization_heuristic(endog, trend=False, seasonal=False,
 
     # Trend / Level
     exog = np.c_[np.ones(10), np.arange(10) + 1]
-    beta = np.linalg.pinv(exog).dot(endog[:10])
+    if endog.ndim == 1:
+        endog = np.atleast_2d(endog).T
+    beta = np.squeeze(np.linalg.pinv(exog).dot(endog[:10]))
     initial_level = beta[0]
 
     initial_trend = None

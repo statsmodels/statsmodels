@@ -705,17 +705,17 @@ def acorr_lm(resid, nlags=None, autolag="AIC", store=False, *, period=None,
 
     resols = OLS(xshort, xdall[:, :usedlag + 1]).fit(cov_type=cov_type,
                                                      cov_kwargs=cov_kwargs)
-    fval = resols.fvalue
-    fpval = resols.f_pvalue
+    fval = float(resols.fvalue)
+    fpval = float(resols.f_pvalue)
     if cov_type == "nonrobust":
         lm = (nobs - ddof) * resols.rsquared
         lmpval = stats.chi2.sf(lm, usedlag)
         # Note: deg of freedom for LM test: nvars - constant = lags used
     else:
-        r_matrix = np.hstack((np.ones((usedlag, 1)), np.eye(usedlag)))
+        r_matrix = np.hstack((np.zeros((usedlag, 1)), np.eye(usedlag)))
         test_stat = resols.wald_test(r_matrix, use_f=False)
         lm = float(test_stat.statistic)
-        lmpval = test_stat.pvalue
+        lmpval = float(test_stat.pvalue)
 
     if store:
         res_store.resols = resols

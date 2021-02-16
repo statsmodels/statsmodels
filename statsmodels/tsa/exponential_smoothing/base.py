@@ -205,7 +205,6 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
         # - 1 x 1: squeeze only second axis
         if data.ndim > 1 and data.shape[1] == 1:
             data = np.squeeze(data, axis=1)
-        data = np.squeeze(data)
         if self.use_pandas:
             _, _, _, index = self._get_prediction_index(start_idx, end_idx)
             if data.ndim < 2:

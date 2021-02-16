@@ -104,3 +104,15 @@ def test_forecast_errors(data):
         res.forecast(7, theta=0.99)
     with pytest.raises(ValueError, match="steps must be a positive integer"):
         res.forecast_components(0)
+
+
+def test_pi_width():
+    # GH 7075
+    rs = np.random.RandomState(1233091)
+    y = np.arange(100) + rs.standard_normal(100)
+
+    th = ThetaModel(y, period=12, deseasonalize=False)
+    res = th.fit()
+    pi = res.prediction_intervals(24)
+    d = np.squeeze(np.diff(np.asarray(pi), axis=1))
+    assert np.all(np.diff(d) > 0)

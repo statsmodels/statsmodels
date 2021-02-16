@@ -16,6 +16,7 @@ from scipy import stats
 from statsmodels.regression.linear_model import OLS, yule_walker
 from statsmodels.tools.sm_exceptions import (
     CollinearityWarning,
+    InfeasibleTestError,
     InterpolationWarning,
     MissingDataError,
 )
@@ -185,14 +186,15 @@ def adfuller(
         * "nc" : no constant, no trend.
 
     autolag : {"AIC", "BIC", "t-stat", None}
-        Method to use when automatically determining the lag.
+        Method to use when automatically determining the lag length among the
+        values 0, 1, ..., maxlag.
 
-        * if None, then maxlag lags are used.
-        * if "AIC" (default) or "BIC", then the number of lags is chosen
+        * If "AIC" (default) or "BIC", then the number of lags is chosen
           to minimize the corresponding information criterion.
         * "t-stat" based choice of maxlag.  Starts with maxlag and drops a
           lag until the t-statistic on the last lag length is significant
           using a 5%-sized test.
+        * If None, then the number of included lags is set to maxlag.
     store : bool
         If True, then a result instance is returned additionally to
         the adf statistic. Default is False.
@@ -578,6 +580,7 @@ def acf(
     qstat=False,
     fft=None,
     alpha=None,
+    bartlett_confint=True,
     missing="none",
 ):
     """
@@ -601,6 +604,24 @@ def acf(
         returned. For instance if alpha=.05, 95 % confidence intervals are
         returned where the standard deviation is computed according to
         Bartlett"s formula.
+    bartlett_confint : bool, default True
+        Confidence intervals for ACF values are generally placed at 2
+        standard errors around r_k. The formula used for standard error
+        depends upon the situation. If the autocorrelations are being used
+        to test for randomness of residuals as part of the ARIMA routine,
+        the standard errors are determined assuming the residuals are white
+        noise. The approximate formula for any lag is that standard error
+        of each r_k = 1/sqrt(N). See section 9.4 of [2] for more details on
+        the 1/sqrt(N) result. For more elementary discussion, see section 5.3.2
+        in [3].
+        For the ACF of raw data, the standard error at a lag k is
+        found as if the right model was an MA(k-1). This allows the possible
+        interpretation that if all autocorrelations past a certain lag are
+        within the limits, the model might be an MA of order defined by the
+        last significant autocorrelation. In this case, a moving average
+        model is assumed for the data and the standard errors for the
+        confidence intervals should be generated using Bartlett's formula.
+        For more details on Bartlett formula result, see section 7.2 in [2].
     missing : str, default "none"
         A string in ["none", "raise", "conservative", "drop"] specifying how
         the NaNs are to be treated. "none" performs no checks. "raise" raises
@@ -642,6 +663,9 @@ def acf(
     .. [1] Parzen, E., 1963. On spectral analysis with missing observations
        and amplitude modulation. Sankhya: The Indian Journal of
        Statistics, Series A, pp.383-392.
+       [2] Brockwell and Davis, 1987. Time Series Theory and Methods
+       [3] Brockwell and Davis, 2010. Introduction to Time Series and
+       Forecasting, 2nd edition.
     """
     adjusted = bool_like(adjusted, "adjusted")
     nlags = int_like(nlags, "nlags", optional=True)
@@ -676,10 +700,13 @@ def acf(
     if not (qstat or alpha):
         return acf
     if alpha is not None:
-        varacf = np.ones_like(acf) / nobs
-        varacf[0] = 0
-        varacf[1] = 1.0 / nobs
-        varacf[2:] *= 1 + 2 * np.cumsum(acf[1:-1] ** 2)
+        if bartlett_confint:
+            varacf = np.ones_like(acf) / nobs
+            varacf[0] = 0
+            varacf[1] = 1.0 / nobs
+            varacf[2:] *= 1 + 2 * np.cumsum(acf[1:-1] ** 2)
+        else:
+            varacf = 1.0 / len(x)
         interval = stats.norm.ppf(1 - alpha / 2.0) * np.sqrt(varacf)
         confint = np.array(lzip(acf - interval, acf + interval))
         if not qstat:
@@ -1313,9 +1340,9 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
     The null hypothesis for all four test is that the coefficients
     corresponding to past values of the second time series are zero.
 
-    "params_ftest", "ssr_ftest" are based on F distribution
+    `params_ftest`, `ssr_ftest` are based on F distribution
 
-    "ssr_chi2test", "lrtest" are based on chi-square distribution
+    `ssr_chi2test`, `lrtest` are based on chi-square distribution
 
     References
     ----------
@@ -1331,10 +1358,10 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
     >>> data = sm.datasets.macrodata.load_pandas()
     >>> data = data.data[["realgdp", "realcons"]].pct_change().dropna()
 
-    # All lags up to 4
+    All lags up to 4
     >>> gc_res = grangercausalitytests(data, 4)
 
-    # Only lag 4
+    Only lag 4
     >>> gc_res = grangercausalitytests(data, [4])
     """
     x = array_like(x, "x", ndim=2)
@@ -1378,6 +1405,14 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
         if addconst:
             dtaown = add_constant(dta[:, 1 : (mxlg + 1)], prepend=False)
             dtajoint = add_constant(dta[:, 1:], prepend=False)
+            if (
+                    dtajoint.shape[1] == (dta.shape[1] - 1)
+                    or (dtajoint.max(0) == dtajoint.min(0)).sum() != 1
+            ):
+                raise InfeasibleTestError(
+                    "The x values include a column with constant values and so"
+                    " the test statistic cannot be computed."
+                )
         else:
             raise NotImplementedError("Not Implemented")
             # dtaown = dta[:, 1:mxlg]
@@ -1393,6 +1428,21 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
         # the other tests are made-up
 
         # Granger Causality test using ssr (F statistic)
+        if res2djoint.model.k_constant:
+            tss = res2djoint.centered_tss
+        else:
+            tss =res2djoint.centered_tss
+        if (
+                tss == 0
+                or res2djoint.ssr == 0
+                or np.isnan(res2djoint.rsquared)
+                or (res2djoint.ssr / tss) < np.finfo(float).eps
+                or res2djoint.params.shape[0] != dtajoint.shape[1]
+        ):
+            raise InfeasibleTestError(
+                "The Granger causality test statistic cannot be compute "
+                "because the VAR has a perfect fit of the data."
+            )
         fgc1 = (
             (res2down.ssr - res2djoint.ssr)
             / res2djoint.ssr

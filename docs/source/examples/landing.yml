@@ -56,6 +56,9 @@
   - img: ../_static/images/fairs_data.png
     target: notebooks/generated/discrete_choice_example.html
     text: Fair's Affairs Data
+  - img: ../_static/images/ordered_model.png
+    target: notebooks/generated/ordinal_regression.html
+    text: Ordinal Regression
 - header: Nonparametric Statistics
   id: nonparametric
   links:

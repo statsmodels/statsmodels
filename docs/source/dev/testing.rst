@@ -6,8 +6,8 @@ tested against different dependency and Python versions and architectures.
 Check these logs periodically, make sure everything looks okay, and fix any
 failures:
 
-* `Travis CI <https://travis-ci.org/statsmodels/statsmodels/builds>`_
-* `Appveyor <https://ci.appveyor.com/project/josef-pkt/statsmodels/branch/master>`_
+* `Azure Pipelines <https://dev.azure.com/statsmodels/statsmodels-testing/_build?definitionId=1&_a=summary>`_
+
 
 The test coverage pages are here:
 

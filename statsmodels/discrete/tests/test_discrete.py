@@ -933,6 +933,31 @@ class TestLogitNewton(CheckBinaryResults, CheckMargEff):
         assert_almost_equal(me.margeff_se,
                 self.res2.margeff_dummy_atexog2_se, DECIMAL_4)
 
+    def test_diagnostic(self):
+        # Hosmer-Lemeshow
+        # Stata 14: `estat gof, group(5) table`
+        n_groups = 5
+        chi2 = 1.630883318257913
+        pvalue = 0.6524
+        df = 3
+
+        import statsmodels.stats.diagnostic_gen as dia
+
+        fitted = self.res1.predict()
+        en = self.res1.model.endog
+        counts = np.column_stack((en, 1 - en))
+        expected = np.column_stack((fitted, 1 - fitted))
+        # replicate splits in Stata estat gof
+        group_sizes = [7, 6, 7, 6, 6]
+        indices = np.cumsum(group_sizes)[:-1]
+        res = dia.test_chisquare_binning(counts, expected, sort_var=fitted,
+                                         bins=indices, df=None)
+        assert_allclose(res.statistic, chi2, rtol=1e-11)
+        assert_equal(res.df, df)
+        assert_allclose(res.pvalue, pvalue, atol=6e-5)
+        assert_equal(res.freqs.shape, (n_groups, 2))
+        assert_equal(res.freqs.sum(1), group_sizes)
+
 
 class TestLogitNewtonPrepend(CheckMargEff):
     # same as previous version but adjusted for add_constant prepend=True
@@ -1526,7 +1551,9 @@ def test_isdummy():
 def test_non_binary():
     y = [1, 2, 1, 2, 1, 2]
     X = np.random.randn(6, 2)
-    np.testing.assert_raises(ValueError, Logit, y, X)
+    assert_raises(ValueError, Logit, y, X)
+    y = [0, 1, 0, 0, 1, 0.5]
+    assert_raises(ValueError, Probit, y, X)
 
 
 def test_mnlogit_factor():
@@ -1839,9 +1866,16 @@ class TestGeneralizedPoisson_underdispersion(object):
                                         res.predict(), res.params[-1], 1).T
         assert_allclose(pr, pr2, rtol=1e-10, atol=1e-10)
 
+        expected = pr.sum(0)
+        # add expected obs from right tail to last bin
+        expected[-1] += pr.shape[0] - expected.sum()
+        # scipy requires observed and expected add to the same at rtol=1e-8
+        assert_allclose(freq.sum(), expected.sum(), rtol=1e-13)
+
         from scipy import stats
-        chi2 = stats.chisquare(freq, pr.sum(0))
-        assert_allclose(chi2[:], (0.64628806058715882, 0.98578597726324468),
+        chi2 = stats.chisquare(freq, expected)
+        # numbers are regression test, we should not reject
+        assert_allclose(chi2[:], (0.5511787456691261, 0.9901293016678583),
                         rtol=0.01)
 
 
