@@ -6,4 +6,3 @@ Author: Josef Perktold
 License: BSD-3
 
 """
-
