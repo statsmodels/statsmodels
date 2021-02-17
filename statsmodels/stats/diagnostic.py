@@ -837,7 +837,10 @@ def acorr_breusch_godfrey(res, nlags=None, store=False):
     nobs = xdall.shape[0]
     xdall = np.c_[np.ones((nobs, 1)), xdall]
     xshort = x[-nobs:]
-    exog = np.column_stack((exog_old, xdall))
+    if exog_old is None:
+        exog = xdall
+    else:
+        exog = np.column_stack((exog_old, xdall))
     k_vars = exog.shape[1]
 
     resols = OLS(xshort, exog).fit()
