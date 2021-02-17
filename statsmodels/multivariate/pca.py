@@ -79,6 +79,10 @@ class PCA(object):
         Tolerance to use when checking for convergence of the EM algorithm.
     max_em_iter : int
         Maximum iterations for the EM algorithm.
+    svd_full_matrices : bool, optional
+        If the 'svd' method is selected, this flag is used to set the parameter
+        'full_matrices' in the singular value decomposition method. Is set to
+        False by default.
 
     Attributes
     ----------
@@ -194,7 +198,7 @@ class PCA(object):
     def __init__(self, data, ncomp=None, standardize=True, demean=True,
                  normalize=True, gls=False, weights=None, method='svd',
                  missing=None, tol=5e-8, max_iter=1000, tol_em=5e-8,
-                 max_em_iter=100):
+                 max_em_iter=100, svd_full_matrices=False):
         self._index = None
         self._columns = []
         if isinstance(data, pd.DataFrame):
@@ -205,6 +209,7 @@ class PCA(object):
         # Store inputs
         self._gls = bool_like(gls, "gls")
         self._normalize = bool_like(normalize, "normalize")
+        self._svd_full_matrices = bool_like(svd_full_matrices, "svd_fm")
         self._tol = float_like(tol, "tol")
         if not 0 < self._tol < 1:
             raise ValueError('tol must be strictly between 0 and 1')
@@ -243,6 +248,8 @@ class PCA(object):
         # Workaround to avoid instance methods in __dict__
         if self._method not in ('eig', 'svd', 'nipals'):
             raise ValueError('method {0} is not known.'.format(method))
+        if self._method == 'svd':
+            self._svd_full_matrices = True
 
         self.rows = np.arange(self._nobs)
         self.cols = np.arange(self._nvar)
@@ -437,7 +444,7 @@ estimates are based on only {eff_series} (effective) series."""
     def _compute_using_svd(self):
         """SVD method to compute eigenvalues and eigenvecs"""
         x = self.transformed_data
-        u, s, v = np.linalg.svd(x)
+        u, s, v = np.linalg.svd(x, full_matrices=self._svd_full_matrices)
         self.eigenvals = s ** 2.0
         self.eigenvecs = v.T
 
