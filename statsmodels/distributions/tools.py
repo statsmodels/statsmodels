@@ -13,6 +13,53 @@ from scipy import stats, interpolate
 
 # helper functions to work on a grid of cdf and pdf, histogram
 
+class _Grid(object):
+    """Create Grid values and indices, grid in [0, 1]^d
+
+    This class creates a regular grid in a d dimensional hyper cube.
+
+    Intended for internal use, implementation might change without warning.
+
+
+    Parameters
+    ----------
+    k_grid : tuple or array_like
+        number of elements for axes, this defines k_grid - 1 equal sized
+        intervals of [0, 1] for each axis.
+    eps : float
+        If eps is not zero, then x values will be clipped to [eps, 1 - eps],
+        i.e. to the interior of the unit interval or hyper cube.
+
+
+    Attributes
+    ----------
+    k_grid : list of number of grid points
+    x_marginal: list of 1-dimensional marginal values
+    idx_flat: integer array with indices
+    x_flat: flattened grid values,
+        rows are grid points, columns represent variables or axis.
+        ``x_flat`` is currently also 2-dim in the univariate 1-dim grid case.
+
+    """
+
+    def __init__(self, k_grid, eps=0):
+        self.k_grid = k_grid
+
+        x_marginal = [np.arange(ki) / (ki - 1) for ki in k_grid]
+
+        idx_flat = np.column_stack(
+                np.unravel_index(np.arange(np.product(k_grid)), k_grid)
+                ).astype(float)
+        x_flat = idx_flat / idx_flat.max(0)
+        if eps != 0:
+            x_marginal = [np.clip(xi, eps, 1 - eps) for xi in x_marginal]
+            x_flat = np.clip(x_flat, eps, 1 - eps)
+
+        self.x_marginal = x_marginal
+        self.idx_flat = idx_flat
+        self.x_flat = x_flat
+
+
 def prob2cdf_grid(x):
     """cumulative counts from cell provabilites on a grid
     """
@@ -24,15 +71,64 @@ def prob2cdf_grid(x):
     return cdf
 
 
-def cdf2prob_grid(x):
+def cdf2prob_grid(x, prepend=0):
     """cell provabilites from cumulative counts on a grid
     """
+    if prepend is None:
+        prepend = np._NoValue
     pdf = np.asarray(x).copy()
     k = pdf.ndim
     for i in range(k):
-        pdf = np.diff(pdf, prepend=0, axis=i)
+        pdf = np.diff(pdf, prepend=prepend, axis=i)
 
     return pdf
+
+
+def average_grid(values, coords=None, _method="slicing"):
+    """compute average for each cell in grid using endpoints
+
+    Parameters
+    ----------
+    values : array_like
+        Values on a grid that will average over corner points of each cell.
+    coords : None or list of array_like
+        Grid coordinates for each axis use to compute volumne of cell.
+        If None, then averaged values are not rescaled.
+    _method : {"slicing", "convolve"}
+        Grid averaging is implemented using numpy "slicing" or using
+        scipy.signal "convolve".
+
+
+    """
+
+    k_dim = values.ndim
+    if _method == "slicing":
+        p = values.copy()
+
+        for d in range(k_dim):
+            # average (p[:-1] + p[1:]) / 2 over each axis
+            sl1 = [slice(None, None, None)] * k_dim
+            sl2 = [slice(None, None, None)] * k_dim
+            sl1[d] = slice(None, -1, None)
+            sl2[d] = slice(1, None, None)
+            sl1 = tuple(sl1)
+            sl2 = tuple(sl2)
+
+            p = (p[sl1] + p[sl2]) / 2
+
+    elif _method == "convolve":
+        from scipy import signal
+        p = signal.convolve(values, 0.5**k_dim * np.ones([2] * k_dim),
+                            mode="valid")
+
+    if coords is not None:
+        dx = np.array(1)
+        for d in range(k_dim):
+            dx = dx[..., None] * np.diff(coords[d])
+
+        p = p * dx
+
+    return p
 
 
 # functions to evaluate bernstein polynomials

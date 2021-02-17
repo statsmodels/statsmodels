@@ -8,7 +8,7 @@ License: BSD-3
 """
 
 import numpy as np
-from numpy.testing import assert_allclose
+from numpy.testing import assert_allclose, assert_equal
 from scipy import stats
 import statsmodels.distributions.tools as dt
 
@@ -41,6 +41,82 @@ def test_grid():
     rvs = np.column_stack([distr1.rvs(size=nobs), distr2.rvs(size=nobs)])
     hist = np.histogramdd(rvs, [xg1, xg2])
     assert_allclose(probs[1:, 1:], hist[0] / len(rvs), atol=0.02)
+
+
+def test_average_grid():
+    x1 = np.arange(1, 4)
+    x2 = np.arange(4)
+    y = x1[:, None] * x2
+
+    res1 = np.array([[0.75, 2.25, 3.75],
+                     [1.25, 3.75, 6.25]])
+
+    res0 = dt.average_grid(y, coords=[x1, x2])
+    assert_allclose(res0, res1, rtol=1e-13)
+    res0 = dt.average_grid(y, coords=[x1, x2], _method="slicing")
+    assert_allclose(res0, res1, rtol=1e-13)
+    res0 = dt.average_grid(y, coords=[x1, x2], _method="convolve")
+    assert_allclose(res0, res1, rtol=1e-13)
+
+    res0 = dt.average_grid(y, coords=[x1 / x1.max(), x2 / x2.max()])
+    assert_allclose(res0, res1 / x1.max() / x2.max(), rtol=1e-13)
+    res0 = dt.average_grid(y, coords=[x1 / x1.max(), x2 / x2.max()],
+                           _method="convolve")
+    assert_allclose(res0, res1 / x1.max() / x2.max(), rtol=1e-13)
+
+
+def test_grid_class():
+
+    res = {'k_grid': [3, 5],
+           'x_marginal': [np.array([0., 0.5, 1.]),
+                          np.array([0., 0.25, 0.5, 0.75, 1.])],
+           'idx_flat.T': np.array([
+               [0., 0., 0., 0., 0., 1., 1., 1., 1., 1., 2., 2., 2., 2., 2.],
+               [0., 1., 2., 3., 4., 0., 1., 2., 3., 4., 0., 1., 2., 3., 4.]])
+           }
+    gg = dt._Grid([3, 5])
+    assert_equal(gg.k_grid, res["k_grid"])
+    assert gg.x_marginal, res["x_marginal"]
+    assert_allclose(gg.idx_flat, res["idx_flat.T"].T, atol=1e-12)
+    assert_allclose(gg.x_flat, res["idx_flat.T"].T / [2, 4], atol=1e-12)
+
+    gg = dt._Grid([3, 5], eps=0.001)
+    assert_allclose(gg.x_flat.min(), 0.001, atol=1e-12)
+    assert_allclose(gg.x_flat.max(), 0.999, atol=1e-12)
+    xmf = np.concatenate(gg.x_marginal)
+    assert_allclose(xmf.min(), 0.001, atol=1e-12)
+    assert_allclose(xmf.max(), 0.999, atol=1e-12)
+
+    # 1-dim
+    gg = dt._Grid([5], eps=0.001)
+    res = {'k_grid': [5],
+           'x_marginal': [np.array([0.001, 0.25, 0.5, 0.75, 0.999])],
+           'idx_flat.T': np.array([[0., 1., 2., 3., 4.]])
+           }
+    assert_equal(gg.k_grid, res["k_grid"])
+    assert gg.x_marginal, res["x_marginal"]
+    assert_allclose(gg.idx_flat, res["idx_flat.T"].T, atol=1e-12)
+    # x_flat is 2-dim even if grid is 1-dim, TODO: maybe change
+    assert_allclose(gg.x_flat, res["x_marginal"][0][:, None], atol=1e-12)
+
+    # 3-dim
+    gg = dt._Grid([3, 3, 2], eps=0.)
+    res = {'k_grid': [3, 3, 2],
+           'x_marginal': [np.array([0., 0.5, 1.]),
+                          np.array([0., 0.5, 1.]),
+                          np.array([0., 1.])],
+           'idx_flat.T': np.array([
+               [0., 0., 0., 0., 0., 0., 1., 1., 1., 1., 1., 1., 2., 2., 2., 2.,
+                2., 2.],
+               [0., 0., 1., 1., 2., 2., 0., 0., 1., 1., 2., 2., 0., 0., 1., 1.,
+                2., 2.],
+               [0., 1., 0., 1., 0., 1., 0., 1., 0., 1., 0., 1., 0., 1., 0., 1.,
+                0., 1.]])
+           }
+    assert_equal(gg.k_grid, res["k_grid"])
+    assert gg.x_marginal, res["x_marginal"]
+    assert_allclose(gg.idx_flat, res["idx_flat.T"].T, atol=1e-12)
+    assert_allclose(gg.x_flat, res["idx_flat.T"].T / [2, 2, 1], atol=1e-12)
 
 
 def test_bernstein_1d():
