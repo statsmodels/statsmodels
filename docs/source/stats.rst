@@ -209,8 +209,11 @@ Multiple Tests and Multiple Comparison Procedures
 
 `multipletests` is a function for p-value correction, which also includes p-value
 correction based on fdr in `fdrcorrection`.
-`tukeyhsd` performs simultaneous testing for the comparison of (independent) means.
-These three functions are verified.
+`tukeyhsd` performs simultaneous testing for the comparison of (independent)
+means assuming equal variance and samples sizes.
+`gameshowell` like tukeyhsd performs simultaneous testing for the comparison of
+(independent) means but does not assume equal variance nor equal sample sizes.
+These four functions are verified.
 GroupsStats and MultiComparison are convenience classes to multiple comparisons similar
 to one way ANOVA, but still in development
 
@@ -234,6 +237,7 @@ to one way ANOVA, but still in development
    GroupsStats
    MultiComparison
    TukeyHSDResults
+   GamesHowellResults
 
 .. module:: statsmodels.stats.multicomp
    :synopsis: Methods for controlling size while performing multiple comparisons
@@ -244,6 +248,7 @@ to one way ANOVA, but still in development
    :toctree: generated/
 
    pairwise_tukeyhsd
+   pariwise_games_howell
 
 .. module:: statsmodels.stats.multitest
    :synopsis: Multiple testing p-value and FDR adjustments

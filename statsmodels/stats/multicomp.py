@@ -6,9 +6,9 @@ Author: Josef Perktold
 """
 
 from statsmodels.sandbox.stats.multicomp import (  # noqa:F401
-    tukeyhsd, MultiComparison)
+    tukeyhsd, games_howell, MultiComparison)
 
-__all__ = ['tukeyhsd', 'MultiComparison']
+__all__ = ["tukeyhsd", "games_howell", "MultiComparison"]
 
 
 def pairwise_tukeyhsd(endog, groups, alpha=0.05):

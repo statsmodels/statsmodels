@@ -52,7 +52,8 @@ new book "multiple comparison in R"
 Hsu is a good reference but I do not have it.
 
 
-Author: Josef Pktd and example from H Raja and rewrite from Vincent Davis
+Author: Josef Pktd, example from H Raja, rewrite from Vincent Davis and
+Games Howell test from Amelia Taylor.
 
 
 TODO
@@ -785,7 +786,36 @@ class TukeyHSDResults(object):
         ax1.set_ylabel(ylabel if ylabel is not None else '')
         return fig
 
-class GamesHowellResults():
+class GamesHowellResults(object):
+    """Results from Games Howell test, with additional
+
+    Can also compute and plot additional post-hoc evaluations using this
+    results class.
+
+    Parameters
+    ----------
+    mc_object : MultiComparison instance
+    gh_results : np.array
+        nine dimensional array with columns group 1, group 2, mean differences,
+        standard errors, q statistic, degrees of freedom, adjusted p value,
+        lower limit of confidence interval, upper limit of confidence interval.
+
+    Attributes
+    ----------
+    data : ndarray
+        independent data samples
+    groups: ndarray
+        group labels corresponding to each data point
+    groupsunqiue: ndarray
+        group labels with no repetition
+    groupmeans: ndarray
+        mean of data by group
+
+    Notes
+    -----
+    These attributes contain information about the data from the
+    MultiComparison instance: data, groups, groupsunique, groupmeans.
+    """
     def __init__(self, mc_object, gh_results):
 
         self._multicomp = mc_object
@@ -796,57 +826,57 @@ class GamesHowellResults():
         self.groupsunique = self._multicomp.groupsunique
         self.groupmeans = self._multicomp.groupstats.groupmean
 
-    def summary(self):
+    def summary(self, alpha=0.05):
+        """Summary table that can be printed
         """
+        results_table = SimpleTable(self._results, headers=self._results.dtype.names)
+        results_table.title = f"Multiple Comparison of Means - Games Howell, FWER={alpha}"
+        return results_table
 
-        :return:
+    def summary_df(self):
+        """Summary table as a dataframe
         """
         return pd.DataFrame(self._results)
 
-    def summary_stats_table(self):
-            """Summary table that can be printed
-            """
-            results_table = SimpleTable(self._results, headers=results.dtype.names)
-            results_table.title = f"Multiple Comparison of Means - Games Howell, FWER={alpha}"
-            return str(self._results_table)
-
     def connecting_letters(self, sig_level = 0.05):
-        """
+        """ Illustrate significant and non-signficant comparisons.
+
         Table that illustrates significant and non-significant comparisons with connecting numbers.
         Levels not connected by the same number are significantly different. Levels connected by the
-        same number are not significantly different. JMP uses letters rather than numbers and we follow
-        that naming convention.
-        Args:
-            df (pd.DataFrame: data frame containg grp_col and obs_col which is the comparison data.
-            grp_col (str): the name of the column of df with the levels or group names.
-            obs_col (str): the column of df with the observations.
-            posthoc_df (pd.DataFrame): the dataframe returned by games_howell or a tukeyHSD function.
-            sig_level (float): The significance cut-off.
+        same number are not significantly different. JMP uses letters rather than numbers, and
+        otherwise we follow their conventions.
 
-        Returns (pd.DataFrame): The numbered are such that if strains in the grp_col do not share a
+        Returns
+        -------
+        pd.DataFrame
+            The numbers are such that if strains in the grp_col do not share a
             number they are significantly different.
 
+        Notes
+        -----
+        The summary dataframe from a posthoc test (like Games Howell or Tukey HSD) defines
+        a graph where nodes are group names and an edge connects two groups if they are not
+        statistically significantly different. Then each connecting letters group is equivalent
+        to a maximal clique in this graph.
+
         """
-        posthoc_df = self.summary()
+        posthoc_df = self.summary_df()
         not_different = posthoc_df[posthoc_df[ADJ_P_VALUE_COL] > sig_level]
         not_diff_pairs = not_different[[GROUP_1_COL, GROUP_2_COL]].drop_duplicates()
         letters_graph = nx.Graph()
 
-        # The posthoc df defines a graph where nodes are group names (strains) and an edge connects two groups
-        # if they are not statistically significantly different.
-        # First add nodes (necessary in case there are nodes without any edges)
+        # First add nodes (necessary in case there are nodes without any edges).
         for group in self.groupsunique:
             letters_graph.add_node(group)
         # Then add edges
         for _, pair_row in not_diff_pairs.iterrows():
             letters_graph.add_edge(pair_row[GROUP_1_COL], pair_row[GROUP_2_COL])
 
-        # Each connecting letters group is equivalent to a maximal clique in this graph.
-        # Finding these cliques returns quickly for the scale of data we're looking at currently.
-        # However, if this changes, we could
-        # try to leverage the structure of the graph to make this search smarter (since labels are associated with
-        # one-dimensional observations there is some kind of linear ordering structure that could help determine which
-        # edges are possible or not in this graph)
+        # Finding the cliques (see notes) returns quickly for the scale of data we've
+        # found to be common. However, if this changes, there may be other algorithms
+        # to investigate which search smarter (since labels are associated with
+        # one-dimensional observations there is some kind of linear ordering structure
+        # that could help determine which edges are possible or not in this graph).
         cliques = sorted(list(nx.find_cliques(letters_graph)))
         label_to_connecting_letters = defaultdict(list)
         for i, clique in enumerate(cliques):
@@ -865,7 +895,7 @@ class GamesHowellResults():
 
         letter_frame = pd.DataFrame(connecting_letters_df_rows).sort_values(["group"])
         letter_frame.replace(np.NaN, "", inplace=True)
-        return letter_frame
+        return letter_frame.reset_index(drop=True)
 
 
 class MultiComparison(object):
@@ -1097,11 +1127,24 @@ class MultiComparison(object):
                                res[3], res[4], res[6], res[7], var_, res[8])
 
     def games_howell(self, alpha=0.05):
+        """
+        Games Howell test to compare means of all pairs of groups
+
+        Parameters
+        ----------
+        alpha : float, optional
+            Value of FWER at which to calculate HSD.
+
+        Returns
+        -------
+        results : GamesHowellResults instance
+            A results class containing relevant data and some post-hoc
+            calculations
+        """
         self.groupstats = GroupsStats(
             np.column_stack([self.data, self.groupintlab]), useranks=False
         )
 
-        # These return the right values and we should revisit the groupstats class to clean up.
         groupmeans = self.groupstats.groupmean
         groupvars = self.groupstats.groupvarwithin()
         groupnobs = self.groupstats.groupnobs
@@ -1115,7 +1158,7 @@ class MultiComparison(object):
             p_values,
             ci_lower_limits,
             ci_upper_limits,
-        )= games_howell(groupmeans, groupvars, groupnobs)
+        ) = games_howell(groupmeans, groupvars, groupnobs, alpha)
 
 
         results = np.array(
@@ -1128,7 +1171,7 @@ class MultiComparison(object):
                 np.round(degrees_freedom_pairs, 4),
                 np.round(p_values, 4),
                 np.round(ci_lower_limits, 4),
-                np.round(ci_upper_limits, 4)
+                np.round(ci_upper_limits, 4),
             ),
             dtype=[
                 (GROUP_1_COL, object),
@@ -1564,33 +1607,50 @@ def distance_st_range(mean_all, nobs_all, var_all, df=None, triu=False):
 
     return st_range, meandiffs, std_pairs, (idx1,idx2)  #return square arrays
 
-def stderr_pairs_unequal(std_all, nobs_all):
-    """
-
-    :param std_all:
-    :param nobs_all:
-    :return:
-    """
-    std_1, std_2 = np.meshgrid(std_all, std_all)
-    n_1, n_2 = np.meshgrid(nobs_all, nobs_all)
-    return np.sqrt(0.5 * ((std_1 ** 2) / n_1 + (std_2 ** 2) / n_2))
 
 def games_howell(mean_all, var_all, nobs_all, alpha=0.05):
-    """
+    """core computation for Games Howell pairwise test
+
     Parameters
     ----------
+    mean_all: np.array
+        means for all groups
+    var_all: np.array
+        variances for all groups
+    nobs_all:
+        number of observations for all groups
+    alpha: float, optional
+        1-alpha is the size of the confidence intervals
+
+    Returns
+    -------
+    tuple
+        the pair compared,
+        their difference in means,
+        standard error of the difference in means,
+        the q statistic,
+        degrees of freedom,
+        p-value,
+        lower limit of confidence interval,
+        upper limit of confidence interval
+
+    Notes
+    -----
+    This test is detailed in [1]_.
+
+    .. [1] M. C. Shingala and A. Rajyaguru. "Comparison of Post Hoc Tests for
+       Unequal Variance," International Journal of New Technologies in Science
+       and Engineering Vol. 2, Issue 5, Nov 2015.
     """
     n_means = len(mean_all)
-    df_all = 1./(nobs_all - 1)
+    df_all = 1.0 / (nobs_all - 1)
     var_pairs, degrees_freedom = varcorrection_pairs_unequal(var_all, nobs_all, df_all)
-
-    std_all = np.sqrt(var_all)
-    stderrs = stderr_pairs_unequal(std_all, nobs_all)
+    stderrs = np.sqrt(0.5 * var_pairs)
 
     m_1, m_2 = np.meshgrid(mean_all, mean_all)
     differences = m_1 - m_2
 
-    q_stats = abs(differences)/stderrs
+    q_stats = abs(differences) / stderrs
 
     idx1, idx2 = np.triu_indices(n_means, 1)
     difference_pairs = differences[idx1, idx2]
@@ -1598,20 +1658,13 @@ def games_howell(mean_all, var_all, nobs_all, alpha=0.05):
     q_stat_pairs = q_stats[idx1, idx2]
     stderr_pairs = stderrs[idx1, idx2]
 
-    print(q_stat_pairs)
-    print(degrees_freedom_pairs)
 
-    num_groups = len(difference_pairs)
-
-    # psturng takes in q value, number of groups, and degrees of freedom and returns p(X > q)
-    # qsturng takes in probability, number of groups and degrees of freedom and returns q st.
-    # P(X < q) = p
-    psturng_vec = np.vectorize(psturng)
-    qsturng_vec = np.vectorize(qsturng)
-
-    # This might be where my troubles are since qsturng is already vectorized on degrees_freedom_pairs.
-    q_crit_values = qsturng_vec(1 - alpha, num_groups, degrees_freedom_pairs)
-    p_values = psturng_vec(q_stat_pairs, num_groups, degrees_freedom_pairs)
+    # qsturng takes in probability, number of groups and degrees of freedom
+    # and returns q st. P(X < q) = p
+    # psturng takes in q value, number of groups, and degrees of freedom and
+    # returns p(X > q)
+    q_crit_values = qsturng(1 - alpha, n_means, degrees_freedom_pairs)
+    p_values = psturng(q_stat_pairs, n_means, degrees_freedom_pairs)
 
     ci_lower_limits = difference_pairs - stderr_pairs * q_crit_values
     ci_upper_limits = difference_pairs + stderr_pairs * q_crit_values
@@ -1624,9 +1677,8 @@ def games_howell(mean_all, var_all, nobs_all, alpha=0.05):
         degrees_freedom_pairs,
         p_values,
         ci_lower_limits,
-        ci_upper_limits
+        ci_upper_limits,
     )
-
 
 
 def contrast_allpairs(nm):
