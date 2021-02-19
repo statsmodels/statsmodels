@@ -11,7 +11,7 @@ import numpy as np
 
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.distributions.tools import (
-        _Grid, cdf2prob_grid, _eval_bernstein_dd)
+        _Grid, cdf2prob_grid, _eval_bernstein_dd, _eval_bernstein_2d)
 
 
 class BernsteinDistribution(object):
@@ -69,3 +69,15 @@ class BernsteinDistribution(object):
         cdf_m = self.cdf(x_m)
         bpd_marginal = BernsteinDistribution(cdf_m)
         return bpd_marginal
+
+
+class BernsteinDistributionBV(BernsteinDistribution):
+
+    def cdf(self, x):
+        cdf_ = _eval_bernstein_2d(x, self.cdf_grid)
+        return cdf_
+
+    def pdf(self, x):
+        # TODO: check usage of k_grid_product. Should this go into eval?
+        pdf_ = self.k_grid_product * _eval_bernstein_2d(x, self.prob_grid)
+        return pdf_

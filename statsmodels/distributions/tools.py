@@ -205,14 +205,15 @@ def _eval_bernstein_dd(x, fvals):
 
     poly_base = np.zeros(x.shape[0])
     for i in range(k_dim):
-        # ki = np.arange(k_terms[i]).astype(float)
-        ki = ki[..., None]
+        ki = np.arange(k_terms[i]).astype(float)
+        for j in range(i+1):
+            ki = ki[..., None]
         ni = k_terms[i] - 1
         xi = xx[:, i]
         poly_base = poly_base[None, ...] + stats.binom._logpmf(ki, ni, xi)
 
     poly_base = np.exp(poly_base)
-    bp_values = fvals[..., None] * poly_base
+    bp_values = fvals.T[..., None] * poly_base
 
     for i in range(k_dim):
         bp_values = bp_values.sum(0)

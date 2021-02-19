@@ -15,7 +15,8 @@ from statsmodels.distributions.copula.api import (
         CopulaDistribution, ArchimedeanCopula)
 from statsmodels.distributions.copula.api import transforms as tra
 import statsmodels.distributions.tools as dt
-from statsmodels.distributions.bernstein import BernsteinDistribution
+from statsmodels.distributions.bernstein import (
+    BernsteinDistribution, BernsteinDistributionBV)
 
 
 def test_bernstein_distribution_1d():
@@ -81,3 +82,67 @@ def test_bernstein_distribution_2d():
     assert_allclose(cdf_m, xx_, atol=1e-13)
     pdf_m = bpd_m.pdf(xx)
     assert_allclose(pdf_m, np.ones(len(xx)), atol=1e-13)
+
+
+class TestBernsteinBeta2d(object):
+
+    @classmethod
+    def setup_class(cls):
+        grid = dt._Grid([91, 101])
+
+        cop_tr = tra.TransfFrank
+        args = (2,)
+        ca = ArchimedeanCopula(cop_tr())
+        distr1 = stats.beta(4, 3)
+        distr2 = stats.beta(4, 4)  # (5, 2)
+        cad = CopulaDistribution([distr1, distr2], ca, copargs=args)
+        cdfv = cad.cdf(grid.x_flat, args)
+        cdf_g = cdfv.reshape(grid.k_grid)
+
+        cls.grid = grid
+        cls.cdfv = cdfv
+        cls.distr = cad
+        cls.bpd = BernsteinDistributionBV(cdf_g)
+
+    def test_basic(self):
+        bpd = self.bpd
+        grid = self.grid
+        cdfv = self.cdfv
+        distr = self.distr
+
+        if grid.x_flat.shape[0] < 51**2:
+            cdf_bp = bpd.cdf(grid.x_flat)
+            assert_allclose(cdf_bp, cdfv, atol=0.05)
+            assert_array_less(np.median(np.abs(cdf_bp - cdfv)), 0.01)
+
+        grid_eps = dt._Grid([51, 51], eps=1e-2)
+        cdfv = distr.cdf(grid_eps.x_flat)
+        cdf_bp = bpd.cdf(grid_eps.x_flat)
+        assert_allclose(cdf_bp, cdfv, atol=0.01, rtol=0.01)
+        assert_array_less(np.median(np.abs(cdf_bp - cdfv)), 0.05)
+
+        pdfv = distr.pdf(grid_eps.x_flat)
+        pdf_bp = bpd.pdf(grid_eps.x_flat)
+        assert_allclose(pdf_bp, pdfv, atol=0.06, rtol=0.1)
+        assert_array_less(np.median(np.abs(pdf_bp - pdfv)), 0.05)
+
+
+class TestBernsteinBeta2dd(TestBernsteinBeta2d):
+
+    @classmethod
+    def setup_class(cls):
+        grid = dt._Grid([91, 101])
+
+        cop_tr = tra.TransfFrank
+        args = (2,)
+        ca = ArchimedeanCopula(cop_tr())
+        distr1 = stats.beta(4, 3)
+        distr2 = stats.beta(4, 4)  # (5, 2)
+        cad = CopulaDistribution([distr1, distr2], ca, copargs=args)
+        cdfv = cad.cdf(grid.x_flat, args)
+        cdf_g = cdfv.reshape(grid.k_grid)
+
+        cls.grid = grid
+        cls.cdfv = cdfv
+        cls.distr = cad
+        cls.bpd = BernsteinDistribution(cdf_g)
