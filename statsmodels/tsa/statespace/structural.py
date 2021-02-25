@@ -52,6 +52,8 @@ class UnobservedComponents(MLEModel):
     Parameters
     ----------
 
+    endog : array_like
+        The observed time-series process :math:`y`
     level : {bool, str}, optional
         Whether or not to include a level component. Default is False. Can also
         be a string specification of the level / trend component; see Notes
