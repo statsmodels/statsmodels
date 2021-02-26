@@ -102,6 +102,11 @@ class UnobservedComponents(MLEModel):
         allow the cyclical component to be between 1.5 and 12 years; depending
         on the frequency of the endogenous variable, this will imply different
         specific bounds.
+    mle_regression : bool, optional
+        Whether or not to estimate regression coefficients by maximum likelihood
+        as one of hyperparameters. Default is True.
+        If False, the regression coefficients are estimated by recursive OLS,
+        included in the state vector.
     use_exact_diffuse : bool, optional
         Whether or not to use exact diffuse initialization for non-stationary
         states. Default is False (in which case approximate diffuse
