@@ -167,6 +167,27 @@ class TestLogitModel(CheckOrdinalModelMixin):
         cls.resf = resf
         cls.resu = resu
 
+    def test_missing_values(self):
+        endog = np.ones(3, dtype=float)
+        endog[2] = np.nan
+        exog = [1, 2, 3]
+
+        with pytest.raises(ValueError):
+            OrderedModel(endog, exog)
+
+    def test_missing_values_pandas(self):
+        df = pd.DataFrame(
+            {
+                "endog": pd.Series(
+                    [1, 2, np.nan],
+                    dtype=pd.CategoricalDtype([1, 2], ordered=True),
+                ),
+                "exog": [1, 2, 3],
+            },
+        )
+        with pytest.raises(ValueError):
+            OrderedModel(df["endog"], df[["exog"]])
+
     def test_postestimation(self):
         res1 = self.res1
         res2 = self.res2
