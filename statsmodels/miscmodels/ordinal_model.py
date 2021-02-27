@@ -128,6 +128,11 @@ class OrderedModel(GenericLikelihoodModel):
         if not is_pandas:
             if self.endog.ndim == 1:
                 unique, index = np.unique(self.endog, return_inverse=True)
+                # check for missing values
+                if np.isnan(unique).any():
+                    raise ValueError(
+                        "missing values in endog are not supported"
+                    )
                 self.endog = index
                 labels = unique
             elif self.endog.ndim == 2:
