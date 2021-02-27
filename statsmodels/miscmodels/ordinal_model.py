@@ -193,6 +193,7 @@ class OrderedModel(GenericLikelihoodModel):
         if isinstance(endog, pd.Series):
             if isinstance(endog.dtypes, CategoricalDtype):
                 if not endog.dtype.ordered:
+                    import warnings
                     warnings.warn("the endog has ordered == False, "
                                   "risk of capturing a wrong order for the "
                                   "categories. ordered == True preferred.",
