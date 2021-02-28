@@ -1295,6 +1295,149 @@ def levinson_durbin_pacf(pacf, nlags=None):
     return arcoefs, acf
 
 
+def breakvar_heteroskedasticity_test(resid, subset_length=1/3,
+                                     alternative='two-sided', use_f=True):
+    r"""
+    Test for heteroskedasticity of residuals
+
+    Tests whether the sum-of-squares in the first subset of the sample is
+    significantly different than the sum-of-squares in the last subset
+    of the sample. Analogous to a Goldfeld-Quandt test. The null hypothesis
+    is of no heteroskedasticity.
+
+    Parameters
+    ----------
+    resid : array_like
+        Residuals of a time series model.
+    subset_length : {int, float}
+        Length of the subsets to test (h in Notes below).
+        If a float in 0 < subset_length < 1, it is interpreted as fraction.
+        Default is 1/3.
+    alternative : str, 'increasing', 'decreasing' or 'two-sided'
+        This specifies the alternative for the p-value calculation. Default
+        is two-sided.
+    use_f : bool, optional
+        Whether or not to compare against the asymptotic distribution
+        (chi-squared) or the approximate small-sample distribution (F).
+        Default is True (i.e. default is to compare against an F
+        distribution).
+
+    Returns
+    -------
+    output : ndarray
+        An array with `(test_statistic, pvalue)` for each endogenous
+        variable. The array is then sized `(k_endog, 2)`. If the function is
+        called as `het = breakvar_heteroskedasticity_test(resid)`,
+        then `het[0]` is an array of size 2 corresponding to the first
+        endogenous variable, where `het[0][0]` is the test statistic,
+        and `het[0][1]` is the p-value.
+
+    Notes
+    -----
+    The null hypothesis is of no heteroskedasticity. That means different
+    things depending on which alternative is selected:
+
+    - Increasing: Null hypothesis is that the variance is not increasing
+        throughout the sample; that the sum-of-squares in the later
+        subsample is *not* greater than the sum-of-squares in the earlier
+        subsample.
+    - Decreasing: Null hypothesis is that the variance is not decreasing
+        throughout the sample; that the sum-of-squares in the earlier
+        subsample is *not* greater than the sum-of-squares in the later
+        subsample.
+    - Two-sided: Null hypothesis is that the variance is not changing
+        throughout the sample. Both that the sum-of-squares in the earlier
+        subsample is not greater than the sum-of-squares in the later
+        subsample *and* that the sum-of-squares in the later subsample is
+        not greater than the sum-of-squares in the earlier subsample.
+
+    For :math:`h = [T/3]`, the test statistic is:
+
+    .. math::
+
+        H(h) = \sum_{t=T-h+1}^T  \tilde v_t^2
+        \Bigg / \sum_{t=1}^{h} \tilde v_t^2
+
+    This statistic can be tested against an :math:`F(h,h)` distribution.
+    Alternatively, :math:`h H(h)` is asymptotically distributed according
+    to :math:`\chi_h^2`; this second test can be applied by passing
+    `use_f=False` as an argument.
+
+    See section 5.4 of [1]_ for the above formula and discussion, as well
+    as additional details.
+
+    References
+    ----------
+    .. [1] Harvey, Andrew C. 1990. *Forecasting, Structural Time Series*
+            *Models and the Kalman Filter.* Cambridge University Press.
+    """
+    squared_resid = np.atleast_2d(resid) ** 2
+    nvars, nobs = squared_resid.shape
+
+    if 0 < subset_length < 1:
+        h = int(np.round(nobs * subset_length))
+    elif type(subset_length) is int and subset_length >= 1:
+        h = subset_length
+
+    test_statistics = []
+    p_values = []
+    for i in range(nvars):
+        numer_resid = squared_resid[i, -h:]
+        numer_resid = numer_resid[~np.isnan(numer_resid)]
+        numer_dof = len(numer_resid)
+
+        denom_resid = squared_resid[i, 0:h]
+        denom_resid = denom_resid[~np.isnan(denom_resid)]
+        denom_dof = len(denom_resid)
+
+        if numer_dof < 2:
+            warnings.warn('Early subset of data for variable %d'
+                            '  has too few non-missing observations to'
+                            ' calculate test statistic.' % i)
+            numer_resid = np.nan
+        if denom_dof < 2:
+            warnings.warn('Later subset of data for variable %d'
+                            '  has too few non-missing observations to'
+                            ' calculate test statistic.' % i)
+            denom_resid = np.nan
+
+        test_statistic = np.sum(numer_resid) / np.sum(denom_resid)
+
+        # Setup functions to calculate the p-values
+        if use_f:
+            from scipy.stats import f
+            pval_lower = lambda test_statistics: f.cdf(  # noqa:E731
+                test_statistics, numer_dof, denom_dof)
+            pval_upper = lambda test_statistics: f.sf(  # noqa:E731
+                test_statistics, numer_dof, denom_dof)
+        else:
+            from scipy.stats import chi2
+            pval_lower = lambda test_statistics: chi2.cdf(  # noqa:E731
+                numer_dof * test_statistics, denom_dof)
+            pval_upper = lambda test_statistics: chi2.sf(  # noqa:E731
+                numer_dof * test_statistics, denom_dof)
+
+        # Calculate the one- or two-sided p-values
+        alternative = alternative.lower()
+        if alternative in ['i', 'inc', 'increasing']:
+            p_value = pval_upper(test_statistic)
+        elif alternative in ['d', 'dec', 'decreasing']:
+            test_statistic = 1. / test_statistic
+            p_value = pval_upper(test_statistic)
+        elif alternative in ['2', '2-sided', 'two-sided']:
+            p_value = 2 * np.minimum(
+                pval_lower(test_statistic),
+                pval_upper(test_statistic)
+            )
+        else:
+            raise ValueError('Invalid alternative.')
+
+        test_statistics.append(test_statistic)
+        p_values.append(p_value)
+
+    return np.c_[test_statistics, p_values]
+
+
 def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
     """
     Four tests for granger non causality of 2 time series.

@@ -32,6 +32,7 @@ from statsmodels.tsa.stattools import (
     acovf,
     adfuller,
     arma_order_select_ic,
+    breakvar_heteroskedasticity_test,
     coint,
     grangercausalitytests,
     innovations_algo,
@@ -334,6 +335,23 @@ class TestPACF(CheckCorrGram):
         pacfyw = pacf(self.x, nlags=40, method="yw")
         pacfld = pacf(self.x, nlags=40, method="lda")
         assert_almost_equal(pacfyw, pacfld, DECIMAL_8)
+
+
+class TestBreakvarHeteroskedasticity(object):
+    from scipy.stats import f, chi2
+
+    def test_default_args(self):
+        input_residuals = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]
+        expected_statistic = (4.0**2 + 5.0**2) / (0.0**2 + 1.0**2)
+        # ~ F(2, 2), two-sided test
+        expected_pvalue = 2 * min(
+            self.f.cdf(expected_statistic, 2, 2),
+            self.f.sf(expected_statistic, 2, 2)
+            )
+        actual_result = breakvar_heteroskedasticity_test(input_residuals)
+
+        assert actual_result[0][0] == expected_statistic
+        assert actual_result[0][1] == expected_pvalue
 
 
 class CheckCoint(object):
