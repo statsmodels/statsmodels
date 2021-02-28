@@ -1392,13 +1392,13 @@ def breakvar_heteroskedasticity_test(resid, subset_length=1/3,
 
         if numer_dof < 2:
             warnings.warn('Early subset of data for variable %d'
-                            '  has too few non-missing observations to'
-                            ' calculate test statistic.' % i)
+                          '  has too few non-missing observations to'
+                          ' calculate test statistic.' % i)
             numer_resid = np.nan
         if denom_dof < 2:
             warnings.warn('Later subset of data for variable %d'
-                            '  has too few non-missing observations to'
-                            ' calculate test statistic.' % i)
+                          '  has too few non-missing observations to'
+                          ' calculate test statistic.' % i)
             denom_resid = np.nan
 
         test_statistic = np.sum(numer_resid) / np.sum(denom_resid)
