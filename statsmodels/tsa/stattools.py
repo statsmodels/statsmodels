@@ -1371,71 +1371,65 @@ def breakvar_heteroskedasticity_test(resid, subset_length=1/3,
     .. [1] Harvey, Andrew C. 1990. *Forecasting, Structural Time Series*
             *Models and the Kalman Filter.* Cambridge University Press.
     """
-    squared_resid = np.atleast_2d(resid) ** 2
-    nvars, nobs = squared_resid.shape
+    squared_resid = np.asarray(resid)**2
+    nobs = len(resid)
 
     if 0 < subset_length < 1:
         h = int(np.round(nobs * subset_length))
     elif type(subset_length) is int and subset_length >= 1:
         h = subset_length
 
-    test_statistics = []
-    p_values = []
-    for i in range(nvars):
-        numer_resid = squared_resid[i, -h:]
-        numer_resid = numer_resid[~np.isnan(numer_resid)]
-        numer_dof = len(numer_resid)
+    numer_resid = squared_resid[-h:]
+    numer_resid = numer_resid[~np.isnan(numer_resid)]
+    numer_dof = len(numer_resid)
 
-        denom_resid = squared_resid[i, 0:h]
-        denom_resid = denom_resid[~np.isnan(denom_resid)]
-        denom_dof = len(denom_resid)
+    denom_resid = squared_resid[:h]
+    denom_resid = denom_resid[~np.isnan(denom_resid)]
+    denom_dof = len(denom_resid)
 
-        if numer_dof < 2:
-            warnings.warn('Early subset of data for variable %d'
-                          '  has too few non-missing observations to'
-                          ' calculate test statistic.' % i)
-            numer_resid = np.nan
-        if denom_dof < 2:
-            warnings.warn('Later subset of data for variable %d'
-                          '  has too few non-missing observations to'
-                          ' calculate test statistic.' % i)
-            denom_resid = np.nan
+    if numer_dof < 2:
+        warnings.warn('Early subset of data'
+                      '  has too few non-missing observations to'
+                      ' calculate test statistic.')
+        numer_resid = np.nan
+    if denom_dof < 2:
+        warnings.warn('Later subset of data'
+                      '  has too few non-missing observations to'
+                      ' calculate test statistic.')
+        denom_resid = np.nan
 
-        test_statistic = np.sum(numer_resid) / np.sum(denom_resid)
+    test_statistic = np.sum(numer_resid) / np.sum(denom_resid)
 
-        # Setup functions to calculate the p-values
-        if use_f:
-            from scipy.stats import f
-            pval_lower = lambda test_statistics: f.cdf(  # noqa:E731
-                test_statistics, numer_dof, denom_dof)
-            pval_upper = lambda test_statistics: f.sf(  # noqa:E731
-                test_statistics, numer_dof, denom_dof)
-        else:
-            from scipy.stats import chi2
-            pval_lower = lambda test_statistics: chi2.cdf(  # noqa:E731
-                numer_dof * test_statistics, denom_dof)
-            pval_upper = lambda test_statistics: chi2.sf(  # noqa:E731
-                numer_dof * test_statistics, denom_dof)
+    # Setup functions to calculate the p-values
+    if use_f:
+        from scipy.stats import f
+        pval_lower = lambda test_statistics: f.cdf(  # noqa:E731
+            test_statistics, numer_dof, denom_dof)
+        pval_upper = lambda test_statistics: f.sf(  # noqa:E731
+            test_statistics, numer_dof, denom_dof)
+    else:
+        from scipy.stats import chi2
+        pval_lower = lambda test_statistics: chi2.cdf(  # noqa:E731
+            numer_dof * test_statistics, denom_dof)
+        pval_upper = lambda test_statistics: chi2.sf(  # noqa:E731
+            numer_dof * test_statistics, denom_dof)
 
-        # Calculate the one- or two-sided p-values
-        alternative = alternative.lower()
-        if alternative in ['i', 'inc', 'increasing']:
-            p_value = pval_upper(test_statistic)
-        elif alternative in ['d', 'dec', 'decreasing']:
-            test_statistic = 1. / test_statistic
-            p_value = pval_upper(test_statistic)
-        elif alternative in ['2', '2-sided', 'two-sided']:
-            p_value = 2 * np.minimum(
-                pval_lower(test_statistic),
-                pval_upper(test_statistic)
-            )
-        else:
-            raise ValueError('Invalid alternative.')
+    # Calculate the one- or two-sided p-values
+    alternative = alternative.lower()
+    if alternative in ['i', 'inc', 'increasing']:
+        p_value = pval_upper(test_statistic)
+    elif alternative in ['d', 'dec', 'decreasing']:
+        test_statistic = 1. / test_statistic
+        p_value = pval_upper(test_statistic)
+    elif alternative in ['2', '2-sided', 'two-sided']:
+        p_value = 2 * np.minimum(
+            pval_lower(test_statistic),
+            pval_upper(test_statistic)
+        )
+    else:
+        raise ValueError('Invalid alternative.')
 
-        test_statistics.append(test_statistic)
-        p_values.append(p_value)
-
-    return np.c_[test_statistics, p_values]
+    return test_statistic, p_value
 
 
 def grangercausalitytests(x, maxlag, addconst=True, verbose=True):

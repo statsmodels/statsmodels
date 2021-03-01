@@ -3086,12 +3086,19 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             nobs_effective = self.nobs - d
             h = int(np.round(nobs_effective / 3))
 
-            output = breakvar_heteroskedasticity_test(
-                resid[:, d:],
-                subset_length=h,
-                alternative=alternative,
-                use_f=use_f
-                )
+            test_statistics = []
+            p_values = []
+            for i in range(self.model.k_endog):
+                test_statistic, pvalue = breakvar_heteroskedasticity_test(
+                    resid[i, d:],
+                    subset_length=h,
+                    alternative=alternative,
+                    use_f=use_f
+                    )
+                test_statistics.append(test_statistic)
+                p_values.append(pvalue)
+
+            output = np.c_[test_statistics, p_values]
         else:
             raise NotImplementedError('Invalid heteroskedasticity test'
                                       ' method.')
