@@ -175,6 +175,10 @@ class TestLogitModel(CheckOrdinalModelMixin):
         with pytest.raises(ValueError):
             OrderedModel(endog, exog)
 
+    @pytest.mark.skipif(
+        not hasattr(pd, "CategoricalDtype"),
+        reason="requires pd.CategoricalDtype",
+    )
     def test_missing_values_pandas(self):
         df = pd.DataFrame(
             {
