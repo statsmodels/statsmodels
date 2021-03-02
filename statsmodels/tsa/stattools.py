@@ -1371,7 +1371,9 @@ def breakvar_heteroskedasticity_test(resid, subset_length=1/3,
     .. [1] Harvey, Andrew C. 1990. *Forecasting, Structural Time Series*
             *Models and the Kalman Filter.* Cambridge University Press.
     """
-    squared_resid = np.asarray(resid)**2
+    squared_resid = np.asarray(resid, dtype=float)**2
+    if squared_resid.ndim == 1:
+        squared_resid = squared_resid.reshape(-1,1)
     nobs = len(resid)
 
     if 0 < subset_length < 1:
@@ -1380,25 +1382,26 @@ def breakvar_heteroskedasticity_test(resid, subset_length=1/3,
         h = subset_length
 
     numer_resid = squared_resid[-h:]
-    numer_resid = numer_resid[~np.isnan(numer_resid)]
-    numer_dof = len(numer_resid)
+    numer_dof = (~np.isnan(numer_resid)).sum(axis=0)
+    numer_squared_sum = np.nansum(numer_resid, axis=0)
+    for i, dof in enumerate(numer_dof):
+        if dof < 2:
+            warnings.warn('Early subset of data for variable %d'
+                          ' has too few non-missing observations to'
+                          ' calculate test statistic.' % i)
+            numer_squared_sum[i] = np.nan
 
     denom_resid = squared_resid[:h]
-    denom_resid = denom_resid[~np.isnan(denom_resid)]
-    denom_dof = len(denom_resid)
+    denom_dof = (~np.isnan(denom_resid)).sum(axis=0)
+    denom_squared_sum = np.nansum(denom_resid, axis=0)
+    for i, dof in enumerate(denom_dof):
+        if dof < 2:
+            warnings.warn('Later subset of data for variable %d'
+                          ' has too few non-missing observations to'
+                          ' calculate test statistic.' % i)
+            denom_squared_sum[i] = np.nan
 
-    if numer_dof < 2:
-        warnings.warn('Early subset of data'
-                      '  has too few non-missing observations to'
-                      ' calculate test statistic.')
-        numer_resid = np.nan
-    if denom_dof < 2:
-        warnings.warn('Later subset of data'
-                      '  has too few non-missing observations to'
-                      ' calculate test statistic.')
-        denom_resid = np.nan
-
-    test_statistic = np.sum(numer_resid) / np.sum(denom_resid)
+    test_statistic = numer_squared_sum / denom_squared_sum
 
     # Setup functions to calculate the p-values
     if use_f:
@@ -1428,6 +1431,9 @@ def breakvar_heteroskedasticity_test(resid, subset_length=1/3,
         )
     else:
         raise ValueError('Invalid alternative.')
+
+    if len(test_statistic) == 1:
+        return test_statistic[0], p_value[0]
 
     return test_statistic, p_value
 

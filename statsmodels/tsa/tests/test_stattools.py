@@ -337,20 +337,63 @@ class TestPACF(CheckCorrGram):
         assert_almost_equal(pacfyw, pacfld, DECIMAL_8)
 
 
-def test_breakvar_heteroskedasticity_test():
-
-    input_residuals = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]
-    expected_statistic = (4.0**2 + 5.0**2) / (0.0**2 + 1.0**2)
-    # ~ F(2, 2), two-sided test
+class TestBreakvarHeteroskedasticityTest(object):
     from scipy.stats import f
-    expected_pvalue = 2 * min(
-        f.cdf(expected_statistic, 2, 2),
-        f.sf(expected_statistic, 2, 2)
-        )
-    actual_statistic, actual_pvalue = breakvar_heteroskedasticity_test(input_residuals)
 
-    assert actual_statistic == expected_statistic
-    assert actual_pvalue == expected_pvalue
+    def test_1d_input(self):
+
+        input_residuals = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]
+        expected_statistic = (4.0**2 + 5.0**2) / (0.0**2 + 1.0**2)
+        # ~ F(2, 2), two-sided test
+        expected_pvalue = 2 * min(
+            self.f.cdf(expected_statistic, 2, 2),
+            self.f.sf(expected_statistic, 2, 2)
+            )
+        actual_statistic, actual_pvalue = breakvar_heteroskedasticity_test(input_residuals)
+
+        assert actual_statistic == expected_statistic
+        assert actual_pvalue == expected_pvalue
+
+
+    def test_2d_input_with_missing_values(self):
+
+        input_residuals = np.array(
+            [
+                [0.0, 0.0, np.nan],
+                [1.0, np.nan, 1.0],
+                [2.0, 2.0, np.nan],
+                [3.0, 3.0, 3.0],
+                [4.0, 4.0, 4.0],
+                [5.0, 5.0, 5.0],
+                [6.0, 6.0, 6.0],
+                [7.0, 7.0, 7.0],
+                [8.0, 8.0, 8.0],
+            ]
+        )
+        expected_statistic = np.array(
+            [
+                (8.0**2 + 7.0**2 + 6.0**2) / (0.0**2 + 1.0**2 + 2.0**2),
+                (8.0**2 + 7.0**2 + 6.0**2) / (0.0**2 + 2.0**2),
+                np.nan,
+            ]
+        )
+        expected_pvalue = np.array(
+            [
+                2 * min(
+                    self.f.cdf(expected_statistic[0], 3, 3),
+                    self.f.sf(expected_statistic[0], 3, 3)
+                ),
+                2 * min(
+                    self.f.cdf(expected_statistic[1], 3, 2),
+                    self.f.sf(expected_statistic[1], 3, 2)
+                ),
+                np.nan,
+            ]
+        )
+        actual_statistic, actual_pvalue = breakvar_heteroskedasticity_test(input_residuals)
+
+        assert_equal(actual_statistic, expected_statistic)
+        assert_equal(actual_pvalue, expected_pvalue)
 
 
 class CheckCoint(object):
