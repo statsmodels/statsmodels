@@ -3021,24 +3021,13 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             where `het[0][0]` is the test statistic, and `het[0][1]` is the
             p-value.
 
+        See Also
+        --------
+        statsmodels.tsa.stattools.breakvar_heteroskedasticity_test
+
         Notes
         -----
-        The null hypothesis is of no heteroskedasticity. That means different
-        things depending on which alternative is selected:
-
-        - Increasing: Null hypothesis is that the variance is not increasing
-          throughout the sample; that the sum-of-squares in the later
-          subsample is *not* greater than the sum-of-squares in the earlier
-          subsample.
-        - Decreasing: Null hypothesis is that the variance is not decreasing
-          throughout the sample; that the sum-of-squares in the earlier
-          subsample is *not* greater than the sum-of-squares in the later
-          subsample.
-        - Two-sided: Null hypothesis is that the variance is not changing
-          throughout the sample. Both that the sum-of-squares in the earlier
-          subsample is not greater than the sum-of-squares in the later
-          subsample *and* that the sum-of-squares in the later subsample is
-          not greater than the sum-of-squares in the earlier subsample.
+        The null hypothesis is of no heteroskedasticity.
 
         For :math:`h = [T/3]`, the test statistic is:
 
@@ -3054,7 +3043,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         This statistic can be tested against an :math:`F(h,h)` distribution.
         Alternatively, :math:`h H(h)` is asymptotically distributed according
         to :math:`\chi_h^2`; this second test can be applied by passing
-        `asymptotic=True` as an argument.
+        `use_f=True` as an argument.
 
         See section 5.4 of [1]_ for the above formula and discussion, as well
         as additional details.
