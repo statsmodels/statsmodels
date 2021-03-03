@@ -364,7 +364,9 @@ class STLForecastResults:
             Array containing the seasibak predictions.
         """
         data = PandasData(pd.Series(self._endog), index=self._index)
-        (start, end, out_of_sample, prediction_index,) = get_prediction_index(
+        if start is None:
+            start = 0
+        (start, end, out_of_sample, prediction_index) = get_prediction_index(
             start, end, self._nobs, self._index, data=data
         )
 
@@ -496,10 +498,8 @@ class STLForecastResults:
         pred = self._model_result.get_prediction(
             start=start, end=end, dynamic=dynamic, **kwargs
         )
-        seasonal_prediction = self._get_seasonal_prediction(
-            start, end, dynamic
-        )
+        seasonal_prediction = self._get_seasonal_prediction(start, end, dynamic)
         mean = pred.predicted_mean + seasonal_prediction
         return PredictionResults(
-            mean, pred.var_pred_mean, dist="norm", row_labels=pred.row_labels,
+            mean, pred.var_pred_mean, dist="norm", row_labels=pred.row_labels
         )
