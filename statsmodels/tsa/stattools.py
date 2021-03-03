@@ -1309,6 +1309,7 @@ def breakvar_heteroskedasticity_test(resid, subset_length=1/3,
     ----------
     resid : array_like
         Residuals of a time series model.
+        The shape is 1d (nobs,) or 2d (nobs, nvars).
     subset_length : {int, float}
         Length of the subsets to test (h in Notes below).
         If a float in 0 < subset_length < 1, it is interpreted as fraction.
@@ -1324,13 +1325,10 @@ def breakvar_heteroskedasticity_test(resid, subset_length=1/3,
 
     Returns
     -------
-    output : ndarray
-        An array with `(test_statistic, pvalue)` for each endogenous
-        variable. The array is then sized `(k_endog, 2)`. If the function is
-        called as `het = breakvar_heteroskedasticity_test(resid)`,
-        then `het[0]` is an array of size 2 corresponding to the first
-        endogenous variable, where `het[0][0]` is the test statistic,
-        and `het[0][1]` is the p-value.
+    test_statistic : {float, ndarray}
+        Test statistic(s) H(h).
+    p_value : {float, ndarray}
+        p-value(s) of test statistic(s).
 
     Notes
     -----
