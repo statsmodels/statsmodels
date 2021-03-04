@@ -3,6 +3,7 @@ from numpy.testing import assert_allclose
 import pandas as pd
 import pytest
 
+from statsmodels.datasets import sunspots
 from statsmodels.tsa.ar_model import AutoReg
 from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.base.prediction import PredictionResults
@@ -62,7 +63,9 @@ def test_equivalence_forecast(data, config, horizon):
     if model is ETSModel:
         fit_kwarg["disp"] = False
     res = mod.fit(**fit_kwarg)
-    stlf = STLForecast(data, model, model_kwargs=kwargs).fit(fit_kwargs=fit_kwarg)
+    stlf = STLForecast(data, model, model_kwargs=kwargs).fit(
+        fit_kwargs=fit_kwarg
+    )
 
     seasonal = np.asarray(stl_fit.seasonal)[-12:]
     seasonal = np.tile(seasonal, 1 + horizon // 12)
@@ -128,3 +131,17 @@ def test_exceptions(data):
 
     with pytest.raises(TypeError, match="The model result's summary"):
         STLForecast(data, FakeModelSummary).fit().summary()
+
+
+def test_get_prediction():
+    # GH7309
+    df = sunspots.load_pandas().data
+    df.index = np.arange(df.shape[0])
+    y = df.iloc[:, 0]
+    stlf_model = STLForecast(
+        y, model=ARIMA, model_kwargs={"order": (2, 2, 0)}, period=11
+    )
+    stlf_res = stlf_model.fit()
+    pred = stlf_res.get_prediction()
+    assert pred.predicted_mean.shape == (309,)
+    assert pred.var_pred_mean.shape == (309,)
