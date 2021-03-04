@@ -750,7 +750,7 @@ class TukeyHSDResults(object):
                     sigidx.append(i)
                 else:
                     nsigidx.append(i)
-            #Plot the master comparison
+            #Plot the main comparison
             ax1.errorbar(means[midx], midx, xerr=self.halfwidths[midx],
                          marker='o', linestyle='None', color='b', ecolor='b')
             ax1.plot([minrange[midx]]*2, [-1, self._multicomp.ngroups],

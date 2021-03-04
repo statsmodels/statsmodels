@@ -527,7 +527,7 @@ Pull Requests (276):
 * :pr:`1214`: Compare lr test rebased
 * :pr:`1200`: BLD: do not install \*.pyx \*.c  MANIFEST.in
 * :pr:`1202`: MAINT: Sort backports to make applying easier.
-* :pr:`1157`: Tst precision master
+* :pr:`1157`: Tst precision
 * :pr:`1161`: add a fitting interface for simultaneous log likelihood and score, for lbfgs, tested with MNLogit
 * :pr:`1160`: DOC: update scipy version from 0.7 to 0.9.0
 * :pr:`1147`: ENH: add lbfgs for fitting
@@ -734,7 +734,7 @@ Issues (252):
 * :issue:`1462`: qqplot line kwarg is broken/docstring is wrong
 * :issue:`1457`: BUG/BLD: Failed build if "sandbox" anywhere in statsmodels path
 * :issue:`1441`: wls function: syntax error "unexpected EOF while parsing" occurs when name of dependent variable starts with digits
-* :issue:`1428`: ipython_directive does not work with ipython master
+* :issue:`1428`: ipython_directive does not work with ipython
 * :issue:`1385`: SimpleTable in Summary (e.g. OLS) is slow for large models
 * :issue:`1399`: UnboundLocalError: local variable 'fittedvalues' referenced before assignment
 * :issue:`1377`: TestAnova2.test_results fails with pandas 0.13.1
@@ -767,7 +767,7 @@ Issues (252):
 * :issue:`1229`: precision problems in degenerate case
 * :issue:`1219`: select_order
 * :issue:`1206`: REF: RegressionResults cov-HCx into cached attributes
-* :issue:`1152`: statsmodels failing tests with pandas master
+* :issue:`1152`: statsmodels failing tests with pandas
 * :issue:`1195`: pyximport.install() before import api crash
 * :issue:`1066`: gmm.IV2SLS has wrong predict signature
 * :issue:`1186`: OLS when exog is 1d
@@ -778,7 +778,7 @@ Issues (252):
 * :issue:`1123`: BUG : arima_model._get_predict_out_of_sample, ignores exogenous of there is no trend ?
 * :issue:`1155`: ARIMA - The computed initial AR coefficients are not stationary
 * :issue:`979`: Win64 binary cannot find Python installation
-* :issue:`1046`: TST: test_arima_small_data_bug on current master
+* :issue:`1046`: TST: test_arima_small_data_bug on current main
 * :issue:`1146`: ARIMA fit failing for small set of data due to invalid maxlag
 * :issue:`1081`: streamline linear algebra for linear model
 * :issue:`1138`: BUG: pacf_yw does not demean
@@ -796,7 +796,7 @@ Issues (252):
 * :issue:`96`: deepcopy breaks on ResettableCache
 * :issue:`1055`: datasets.get_rdataset   string decode error on python 3
 * :issue:`46`: tsa.stattools.acf confint needs checking and tests
-* :issue:`957`: ARMA start estimate with numpy master
+* :issue:`957`: ARMA start estimate with numpy main
 * :issue:`62`: GLSAR incorrect initial condition in whiten
 * :issue:`1021`: from_formula() throws error - problem installing
 * :issue:`911`: noise in stats.power tests

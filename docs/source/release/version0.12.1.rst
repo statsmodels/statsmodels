@@ -39,4 +39,4 @@ The following Pull Requests were merged since the last release:
 * :pr:`7093`: BUG: Correct prediction intervals for ThetaModel
 * :pr:`7109`: some fixes in the doc of grangercausalitytests
 * :pr:`7116`: BUG: don't raise error in impacts table if no news.
-* :pr:`7118`: MAINT: Fix issues in master branches of dependencies
+* :pr:`7118`: MAINT: Fix issues in main branches of dependencies

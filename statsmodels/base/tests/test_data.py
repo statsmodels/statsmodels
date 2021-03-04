@@ -65,7 +65,7 @@ class TestArrays(object):
         np.testing.assert_equal(data.ynames, self.ynames)
 
     def test_labels(self):
-        # HACK: because numpy master after NA stuff assert_equal fails on
+        # HACK: because numpy main after NA stuff assert_equal fails on
         # pandas indices
         # FIXME: see if this can be de-hacked
         np.testing.assert_(np.all(self.data.row_labels == self.row_labels))

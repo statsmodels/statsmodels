@@ -77,7 +77,7 @@ Tests can be run at different levels of granularity:
 
 How To Write A Test
 -------------------
-NumPy provides a good introduction to unit testing with pytest and NumPy extensions `here <https://github.com/numpy/numpy/blob/master/doc/TESTS.rst.txt>`__. It is worth a read for some more details.
+NumPy provides a good introduction to unit testing with pytest and NumPy extensions `here <https://github.com/numpy/numpy/blob/main/doc/TESTS.rst.txt>`__. It is worth a read for some more details.
 Here, we will document a few conventions we follow that are worth mentioning. Often we want to test
 a whole model at once rather than just one function, for example. The following is a pared down
 version test_discrete.py. In this case, several different models with different options need to be

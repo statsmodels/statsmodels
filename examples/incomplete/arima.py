@@ -43,7 +43,7 @@ ax.plot(range(41), pacf, 'bo', markersize=5)
 ax.fill_between(range(41), -confint_pacf, confint_pacf, alpha=.25)
 
 
-# TODO: you'll be able to just to this when tsa-plots is in master
+# TODO: you'll be able to just to this when tsa-plots is in main
 # sm.graphics.acf_plot(x, nlags=40)
 # sm.graphics.pacf_plot(x, nlags=40)
 

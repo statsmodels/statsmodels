@@ -54,7 +54,7 @@ def test_webuse():
     # test copied and adjusted from iolib/tests/test_foreign
     from statsmodels.iolib.tests.results.macrodata import macrodata_result
     res2 = np.array([list(row) for row in macrodata_result])
-    base_gh = "https://github.com/statsmodels/statsmodels/raw/master/" \
+    base_gh = "https://github.com/statsmodels/statsmodels/raw/main/" \
               "statsmodels/datasets/macrodata/"
     internet_available = check_internet(base_gh)
     if not internet_available:  # pragma: no cover
@@ -71,7 +71,7 @@ def test_webuse_pandas():
     from statsmodels.compat.pandas import assert_frame_equal
     from statsmodels.datasets import macrodata
     dta = macrodata.load_pandas().data
-    base_gh = "https://github.com/statsmodels/statsmodels/raw/master/" \
+    base_gh = "https://github.com/statsmodels/statsmodels/raw/main/" \
               "statsmodels/datasets/macrodata/"
     internet_available = check_internet(base_gh)
     if not internet_available:  # pragma: no cover

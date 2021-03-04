@@ -182,7 +182,7 @@ The coefficients taken on by polynomial coding for `k=4` levels are the linear, 
 .. ipython:: python
 
    _, bins = np.histogram(hsb2.read, 3)
-   try: # requires numpy master
+   try: # requires numpy main
        readcat = np.digitize(hsb2.read, bins, True)
    except:
        readcat = np.digitize(hsb2.read, bins)

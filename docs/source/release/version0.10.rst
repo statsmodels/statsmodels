@@ -10,14 +10,14 @@ Release summary
 statsmodels is using github to store the updated documentation. Two version are available:
 
 * `Stable <https://www.statsmodels.org/stable/>`_, the latest release
-* `Development <https://www.statsmodels.org/devel/>`_, the latest build of the master branch
+* `Development <https://www.statsmodels.org/devel/>`_, the latest build of the main branch
 
 **Warning**
 
 API stability is not guaranteed for new features, although even in
 this case changes will be made in a backwards compatible way if
 possible. The stability of a new feature depends on how much time it
-was already in statsmodels master and how much usage it has already
+was already in statsmodels main and how much usage it has already
 seen.  If there are specific known problems or limitations, then they
 are mentioned in the docstrings.
 
@@ -625,7 +625,7 @@ Thie following Pull Requests were merged since the last release:
 * :pr:`5204`: MAINT: Avoid/Fix FutureWarnings
 * :pr:`5207`: TST: Ensure random numbers are reproducible
 * :pr:`5208`: TST/CLN: Tighten tol to reduce spurious test failure
-* :pr:`5210`: BLD: Ensure master is available when linting
+* :pr:`5210`: BLD: Ensure main is available when linting
 * :pr:`5211`: MAINT: Import instead of copy/pasting utils
 * :pr:`5213`: MAINT: Move misplaced duration results files
 * :pr:`5214`: MAINT: remove example-like file that could never run
@@ -735,7 +735,7 @@ Thie following Pull Requests were merged since the last release:
 * :pr:`5600`: TST: Relax tolerance for OpenBlas issue
 * :pr:`5601`: Update mixed_linear.rst
 * :pr:`5602`: ENH: White spec test (clean commit for PR 4721)
-* :pr:`5604`: MAINT: Update template to encourage master check
+* :pr:`5604`: MAINT: Update template to encourage main check
 * :pr:`5605`: Guofei9987 modify comments proportion confint
 * :pr:`5606`: Mattwigway mice setting with copy warning
 * :pr:`5607`: Jtweeder graphics addgraphics

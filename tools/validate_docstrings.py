@@ -401,7 +401,7 @@ class Docstring(object):
 
     @property
     def github_url(self):
-        url = 'https://github.com/statsmodels/statsmodels/master/'
+        url = 'https://github.com/statsmodels/statsmodels/main/'
         url += '{}#L{}'.format(self.source_file_name,
                                self.source_file_def_line)
         return url

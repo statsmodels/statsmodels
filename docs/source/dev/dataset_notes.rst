@@ -64,5 +64,5 @@ used.
 **Step 6:** Edit the `datasets/__init__.py` to import the directory.
 
 That's it! The result can be found `here
-<https://github.com/statsmodels/statsmodels/tree/master/statsmodels/datasets/nile>`_
+<https://github.com/statsmodels/statsmodels/tree/main/statsmodels/datasets/nile>`_
 for reference.
