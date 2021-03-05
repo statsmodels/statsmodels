@@ -206,7 +206,7 @@ def adfuller(
     adf : float
         The test statistic.
     pvalue : float
-        MacKinnon"s approximate p-value based on MacKinnon (1994, 2010).
+        MacKinnon's approximate p-value based on MacKinnon (1994, 2010).
     usedlag : int
         The number of lags used.
     nobs : int
