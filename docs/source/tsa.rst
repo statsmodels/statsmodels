@@ -81,6 +81,7 @@ Descriptive Statistics and Tests
    stattools.coint
    stattools.bds
    stattools.q_stat
+   stattools.breakvar_heteroskedasticity_test
    stattools.grangercausalitytests
    stattools.levinson_durbin
    stattools.innovations_algo
