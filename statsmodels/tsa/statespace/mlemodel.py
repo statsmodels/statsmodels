@@ -3065,7 +3065,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                              ' forecast errors have not been computed.')
 
         if method == 'breakvar':
-            from statsmodels.tsa.stattools import breakvar_heteroskedasticity_test
+            from statsmodels.tsa.stattools import (
+                breakvar_heteroskedasticity_test
+                )
             # Store some values
             resid = self.filter_results.standardized_forecasts_error
             d = np.maximum(self.loglikelihood_burn, self.nobs_diffuse)
