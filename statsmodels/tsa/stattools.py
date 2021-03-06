@@ -1371,7 +1371,7 @@ def breakvar_heteroskedasticity_test(resid, subset_length=1/3,
     """
     squared_resid = np.asarray(resid, dtype=float)**2
     if squared_resid.ndim == 1:
-        squared_resid = squared_resid.reshape(-1,1)
+        squared_resid = squared_resid.reshape(-1, 1)
     nobs = len(resid)
 
     if 0 < subset_length < 1:

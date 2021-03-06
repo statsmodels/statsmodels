@@ -349,11 +349,12 @@ class TestBreakvarHeteroskedasticityTest(object):
             self.f.cdf(expected_statistic, 2, 2),
             self.f.sf(expected_statistic, 2, 2)
             )
-        actual_statistic, actual_pvalue = breakvar_heteroskedasticity_test(input_residuals)
+        actual_statistic, actual_pvalue = breakvar_heteroskedasticity_test(
+            input_residuals
+            )
 
         assert actual_statistic == expected_statistic
         assert actual_pvalue == expected_pvalue
-
 
     def test_2d_input_with_missing_values(self):
 
@@ -390,11 +391,12 @@ class TestBreakvarHeteroskedasticityTest(object):
                 np.nan,
             ]
         )
-        actual_statistic, actual_pvalue = breakvar_heteroskedasticity_test(input_residuals)
+        actual_statistic, actual_pvalue = breakvar_heteroskedasticity_test(
+            input_residuals
+            )
 
         assert_equal(actual_statistic, expected_statistic)
         assert_equal(actual_pvalue, expected_pvalue)
-
 
     @pytest.mark.parametrize(
         "subset_length,expected_statistic,expected_pvalue",
@@ -403,7 +405,11 @@ class TestBreakvarHeteroskedasticityTest(object):
             (0.5, 10, 2 * min(f.cdf(10, 3, 3), f.sf(10, 3, 3))),
         ]
     )
-    def test_subset_length(self, subset_length, expected_statistic, expected_pvalue):
+    def test_subset_length(self,
+                           subset_length,
+                           expected_statistic,
+                           expected_pvalue
+                           ):
 
         input_residuals = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]
         actual_statistic, actual_pvalue = breakvar_heteroskedasticity_test(
@@ -414,16 +420,19 @@ class TestBreakvarHeteroskedasticityTest(object):
         assert actual_statistic == expected_statistic
         assert actual_pvalue == expected_pvalue
 
-
     @pytest.mark.parametrize(
         "alternative,expected_statistic,expected_pvalue",
         [
             ("two-sided", 41, 2 * min(f.cdf(41, 2, 2), f.sf(41, 2, 2))),
-            ("decreasing", 1/41, f.sf(1/41, 2, 2)),
-            ("increasing", 41, f.sf(41,2,2)),
+            ("decreasing", 1 / 41, f.sf(1 / 41, 2, 2)),
+            ("increasing", 41, f.sf(41, 2, 2)),
         ]
     )
-    def test_alternative(self, alternative, expected_statistic, expected_pvalue):
+    def test_alternative(self,
+                         alternative,
+                         expected_statistic,
+                         expected_pvalue
+                         ):
 
         input_residuals = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]
         actual_statistic, actual_pvalue = breakvar_heteroskedasticity_test(
@@ -432,7 +441,6 @@ class TestBreakvarHeteroskedasticityTest(object):
             )
         assert actual_statistic == expected_statistic
         assert actual_pvalue == expected_pvalue
-
 
     def test_use_chi2(self):
 
