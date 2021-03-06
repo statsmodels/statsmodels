@@ -338,7 +338,7 @@ class TestPACF(CheckCorrGram):
 
 
 class TestBreakvarHeteroskedasticityTest(object):
-    from scipy.stats import f
+    from scipy.stats import f, chi2
 
     def test_1d_input(self):
 
@@ -394,6 +394,60 @@ class TestBreakvarHeteroskedasticityTest(object):
 
         assert_equal(actual_statistic, expected_statistic)
         assert_equal(actual_pvalue, expected_pvalue)
+
+
+    @pytest.mark.parametrize(
+        "subset_length,expected_statistic,expected_pvalue",
+        [
+            (2, 41, 2 * min(f.cdf(41, 2, 2), f.sf(41, 2, 2))),
+            (0.5, 10, 2 * min(f.cdf(10, 3, 3), f.sf(10, 3, 3))),
+        ]
+    )
+    def test_subset_length(self, subset_length, expected_statistic, expected_pvalue):
+
+        input_residuals = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]
+        actual_statistic, actual_pvalue = breakvar_heteroskedasticity_test(
+            input_residuals,
+            subset_length=subset_length,
+            )
+
+        assert actual_statistic == expected_statistic
+        assert actual_pvalue == expected_pvalue
+
+
+    @pytest.mark.parametrize(
+        "alternative,expected_statistic,expected_pvalue",
+        [
+            ("two-sided", 41, 2 * min(f.cdf(41, 2, 2), f.sf(41, 2, 2))),
+            ("decreasing", 1/41, f.sf(1/41, 2, 2)),
+            ("increasing", 41, f.sf(41,2,2)),
+        ]
+    )
+    def test_alternative(self, alternative, expected_statistic, expected_pvalue):
+
+        input_residuals = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]
+        actual_statistic, actual_pvalue = breakvar_heteroskedasticity_test(
+            input_residuals,
+            alternative=alternative,
+            )
+        assert actual_statistic == expected_statistic
+        assert actual_pvalue == expected_pvalue
+
+
+    def test_use_chi2(self):
+
+        input_residuals = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]
+        expected_statistic = (4.0**2 + 5.0**2) / (0.0**2 + 1.0**2)
+        expected_pvalue = 2 * min(
+            self.chi2.cdf(2 * expected_statistic, 2),
+            self.chi2.sf(2 * expected_statistic, 2)
+            )
+        actual_statistic, actual_pvalue = breakvar_heteroskedasticity_test(
+            input_residuals,
+            use_f=False,
+            )
+        assert actual_statistic == expected_statistic
+        assert actual_pvalue == expected_pvalue
 
 
 class CheckCoint(object):
