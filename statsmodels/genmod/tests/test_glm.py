@@ -208,6 +208,14 @@ class CheckModelResultsMixin(object):
             assert_allclose(self.res1.pearson_chi2, self.res2.pearson_chi2,
                             atol=1e-6, rtol=1e-6)
 
+    def test_prsquared(self):
+        if hasattr(self.res2, 'prsquared'):
+            assert_allclose(self.res1.prsquared, self.res2.prsquared, rtol=0.05)
+
+    def test_prsquared_cox_snell(self):
+        if hasattr(self.res2, 'prsquared_cox_snell'):
+            assert_allclose(float(self.res1.prsquared_cox_snell), self.res2.prsquared_cox_snell, rtol=0.05)
+
     @pytest.mark.smoke
     def test_summary(self):
         self.res1.summary()

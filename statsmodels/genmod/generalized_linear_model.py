@@ -1731,6 +1731,20 @@ class GLMResults(base.LikelihoodModelResults):
         """
         return self.llf_scaled()
 
+    @cache_readonly
+    def prsquared(self):
+        """
+        McFadden's pseudo-R-squared. `1 - (llf / llnull)`
+        """
+        return 1 - ( self.llf / self.llnull )
+
+    @cache_readonly
+    def prsquared_cox_snell(self):
+        """
+        Cox & Snell's pseudo-R-squared.  `1 - exp( (llnull - llf)*(2/nobs) )`
+        """
+        return 1 - np.exp( (self.llnull - self.llf)*(2/self.nobs) )
+
     @cached_value
     def aic(self):
         """
@@ -2019,7 +2033,8 @@ class GLMResults(base.LikelihoodModelResults):
                      ('Scale:', ["%#8.5g" % self.scale]),
                      ('Log-Likelihood:', None),
                      ('Deviance:', ["%#8.5g" % self.deviance]),
-                     ('Pearson chi2:', ["%#6.3g" % self.pearson_chi2])
+                     ('Pearson chi2:', ["%#6.3g" % self.pearson_chi2]),
+                     ('Pseudo R-squ.:', ["%#6.4g" % self.prsquared])
                      ]
 
         if hasattr(self, 'cov_type'):
