@@ -47,6 +47,9 @@ from statsmodels.tools.sm_exceptions import (PerfectSeparationError,
 
 from numpy.linalg.linalg import LinAlgError
 
+from math import exp  # need this for calculating Pseudo-Rsquare value
+from decimal import Decimal  # need this for calculating Pseudo-Rsquare value
+
 __all__ = ['GLM', 'PredictionResults']
 
 
@@ -1708,6 +1711,25 @@ class GLMResults(base.LikelihoodModelResults):
         """
         return self.llf_scaled()
 
+    @cache_readonly
+    def prsquared(self):
+        """
+        McFadden's pseudo-R-squared. `1 - (llf / llnull)`
+        """
+        return 1 - ( self.llf / self.llnull )
+
+    @cache_readonly
+    def prsquared_cox_snell(self):
+        """
+        Lnull:  value of the likelihood function for a model with no predictors
+        Lf:  value of the likelihood for the model being estimated
+        nobs:  The number of observations n
+        Cox & Snell's pseudo-R-squared.  `1 - (Lnull / Lf)^(2/nobs)`
+        """
+        Lnull = Decimal(exp(1))**Decimal(self.llnull)
+        Lf = Decimal(exp(1))**Decimal(self.llf)
+        return round( 1 - pow( (Lnull/Lf) , Decimal(2/self.nobs) ) , 5)
+
     @cached_value
     def aic(self):
         """
@@ -1996,7 +2018,8 @@ class GLMResults(base.LikelihoodModelResults):
                      ('Scale:', ["%#8.5g" % self.scale]),
                      ('Log-Likelihood:', None),
                      ('Deviance:', ["%#8.5g" % self.deviance]),
-                     ('Pearson chi2:', ["%#6.3g" % self.pearson_chi2])
+                     ('Pearson chi2:', ["%#6.3g" % self.pearson_chi2]),
+                     ('Pseudo R-squ.:', ["%#6.4g" % self.prsquared])
                      ]
 
         if hasattr(self, 'cov_type'):
