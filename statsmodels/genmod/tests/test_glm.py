@@ -191,6 +191,16 @@ class CheckModelResultsMixin(object):
             assert_allclose(self.res1.pearson_chi2, self.res2.pearson_chi2,
                             atol=1e-6, rtol=1e-6)
 
+    decimal_prsquared = DECIMAL_2
+    def test_prsquared(self):
+        if hasattr(self.res2, 'prsquared'):
+            assert_almost_equal(self.res1.prsquared, self.res2.prsquared, self.decimal_prsquared)
+
+    decimal_prsquared_cox_snell = DECIMAL_2
+    def test_prsquared_cox_snell(self):
+        if hasattr(self.res2, 'prsquared_cox_snell'):
+            assert_almost_equal(float(self.res1.prsquared_cox_snell), self.res2.prsquared_cox_snell, self.decimal_prsquared_cox_snell)
+
     @pytest.mark.smoke
     def test_summary(self):
         self.res1.summary()

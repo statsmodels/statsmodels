@@ -85,6 +85,9 @@ class Longley(object):
         # TODO: taken from Stata; not available in sm yet
         self.chi2 = 1981.711859508729
 
+        self.prsquared = 0.90
+        self.prsquared_cox_snell = 1.00
+
         # self.pearson_chi2 = 836424.1293162981   # from Stata (?)
         self.fittedvalues = np.array([
             60055.659970240202, 61216.013942398131,
@@ -626,6 +629,8 @@ class Star98(object):
         self.llf_Stata = -2998.612927807218
         self.scale = 1.
         self.pearson_chi2 = 4051.921614
+        self.prsquared = 0.8346
+        self.prsquared_cox_snell = 1.0000
         self.resids = glm_test_resids.star98_resids
         self.fittedvalues = np.array([
             0.5833118,   0.75144661,  0.50058272, 0.68534524,  0.32251021,
@@ -795,6 +800,8 @@ class Scotvote(object):
         # self.llf = -82.47352  # Very close to ours as is
         self.scale = 0.003584283
         self.pearson_chi2 = .0860228056
+        self.prsquared = 0.429
+        self.prsquared_cox_snell = 0.97971
         self.resids = glm_test_resids.scotvote_resids
         self.fittedvalues = np.array([
             57.80431482,  53.2733447, 50.56347993, 58.33003783,
