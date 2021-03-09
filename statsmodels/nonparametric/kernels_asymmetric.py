@@ -11,17 +11,45 @@ import numpy as np
 from scipy import stats, special
 
 
-def kernel_pdf_gamma(x, sample, bw):
+def pdf_kernel_asym(x, sample, bw, kernel_type, weights=None):
+
+    kfunc = kernel_dict_pdf[kernel_type]
+    pdfi = kfunc(x, sample, bw, return_comp=True)
+
+    if weights is None:
+        return pdfi.mean(-1)
+    else:
+        return pdfi @ weights
+
+
+def cdf_kernel_asym(x, sample, bw, kernel_type, weights=None):
+
+    kfunc = kernel_dict_cdf[kernel_type]
+    cdfi = kfunc(x, sample, bw, return_comp=True)
+
+    if weights is None:
+        return cdfi.mean(-1)
+    else:
+        return cdfi @ weights
+
+
+def kernel_pdf_gamma(x, sample, bw, return_comp=False):
     """gamma kernel for pdf
 
     Reference
     Chen 2000
     Bouezmarni and Scaillet 2205
     """
-    return stats.gamma.pdf(sample, x / bw + 1, scale=bw).mean(-1)
+
+    pdfi = stats.gamma.pdf(sample, x / bw + 1, scale=bw)
+
+    if return_comp:
+        return pdfi
+    else:
+        return pdfi.mean(-1)
 
 
-def kernel_cdf_gamma(x, sample, bw):
+def kernel_cdf_gamma(x, sample, bw, return_comp=False):
     """gamma kernel for cdf
 
     Reference
@@ -29,7 +57,12 @@ def kernel_cdf_gamma(x, sample, bw):
     Bouezmarni and Scaillet 2205
     """
     # it uses the survival function, but I don't know why.
-    return stats.gamma.sf(sample, x / bw + 1, scale=bw).mean(-1)
+    cdfi = stats.gamma.sf(sample, x / bw + 1, scale=bw)
+
+    if return_comp:
+        return cdfi
+    else:
+        return cdfi.mean(-1)
 
 
 def _kernel_pdf_gamma(x, sample, bw):
@@ -349,3 +382,33 @@ def kernel_cdf_weibull(x, sample, bw):
     # references use m, lambda parameterization
     return stats.weibull_min.sf(sample, 1 / bw,
                                 scale=x / special.gamma(1 + bw)).mean(-1)
+
+
+# produced wth
+# print("\n".join(['"%s": %s,' % (i.split("_")[-1], i) for i in dir(kern)
+#                  if "kernel" in i and not i.endswith("_")]))
+kernel_dict_cdf = {
+    "beta": kernel_cdf_beta,
+    "beta2": kernel_cdf_beta2,
+    "bs": kernel_cdf_bs,
+    "gamma": kernel_cdf_gamma,
+    "gamma2": kernel_cdf_gamma2,
+    "invgamma": kernel_cdf_invgamma,
+    "invgauss": kernel_cdf_invgauss,
+    "lognorm": kernel_cdf_lognorm,
+    "recipinvgauss": kernel_cdf_recipinvgauss,
+    "weibull": kernel_cdf_weibull,
+    }
+
+kernel_dict_pdf = {
+    "beta": kernel_pdf_beta,
+    "beta2": kernel_pdf_beta2,
+    "bs": kernel_pdf_bs,
+    "gamma": kernel_pdf_gamma,
+    "gamma2": kernel_pdf_gamma2,
+    "invgamma": kernel_pdf_invgamma,
+    "invgauss": kernel_pdf_invgauss,
+    "lognorm": kernel_pdf_lognorm,
+    "recipinvgauss": kernel_pdf_recipinvgauss,
+    "weibull": kernel_pdf_weibull,
+    }

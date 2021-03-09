@@ -98,6 +98,60 @@ class TestKernelsRplus(object):
         assert_allclose(kde1, kde, rtol=1e-12)
         assert_allclose(kce1, kce, rtol=1e-12)
 
+    @pytest.mark.parametrize('case', kernels_rplus[:1])
+    def _test_kernels_weights(self, case):
+        name, bw = case
+        rvs = self.rvs
+        x = self.x_plot
+        func_pdf = getattr(kern, "kernel_pdf_" + name)
+        func_cdf = getattr(kern, "kernel_cdf_" + name)
+
+        kde2 = func_pdf(x[:, None], rvs, bw)
+        kce2 = func_cdf(x[:, None], rvs, bw)
+
+        n = len(rvs)
+        w = np.ones(n) / n
+        kde1 = func_pdf(x[:, None], rvs, bw, weights=w)
+        kce1 = func_cdf(x[:, None], rvs, bw, weights=w)
+
+        assert_allclose(kde1, kde2, rtol=1e-12)
+        assert_allclose(kce1, kce2, rtol=1e-12)
+
+        # weights that do not add to 1 are valid, but do not produce pdf, cdf
+        n = len(rvs)
+        w = np.ones(n) / n * 2
+        kde1 = func_pdf(x[:, None], rvs, bw, weights=w)
+        kce1 = func_cdf(x[:, None], rvs, bw, weights=w)
+
+        assert_allclose(kde1, kde2 * 2, rtol=1e-12)
+        assert_allclose(kce1, kce2 * 2, rtol=1e-12)
+
+    @pytest.mark.parametrize('case', kernels_rplus[:1])
+    def test_kernels_weights(self, case):
+        name, bw = case
+        rvs = self.rvs
+        x = self.x_plot
+
+        kde2 = kern.pdf_kernel_asym(x[:, None], rvs, bw, name)
+        kce2 = kern.cdf_kernel_asym(x[:, None], rvs, bw, name)
+
+        n = len(rvs)
+        w = np.ones(n) / n
+        kde1 = kern.pdf_kernel_asym(x[:, None], rvs, bw, name, weights=w)
+        kce1 = kern.cdf_kernel_asym(x[:, None], rvs, bw, name, weights=w)
+
+        assert_allclose(kde1, kde2, rtol=1e-12)
+        assert_allclose(kce1, kce2, rtol=1e-12)
+
+        # weights that do not add to 1 are valid, but do not produce pdf, cdf
+        n = len(rvs)
+        w = np.ones(n) / n * 2
+        kde1 = kern.pdf_kernel_asym(x[:, None], rvs, bw, name, weights=w)
+        kce1 = kern.cdf_kernel_asym(x[:, None], rvs, bw, name, weights=w)
+
+        assert_allclose(kde1, kde2 * 2, rtol=1e-12)
+        assert_allclose(kce1, kce2 * 2, rtol=1e-12)
+
 
 class TestKernelsUnit(TestKernelsRplus):
 
