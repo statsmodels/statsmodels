@@ -47,9 +47,6 @@ from statsmodels.tools.sm_exceptions import (PerfectSeparationError,
 
 from numpy.linalg.linalg import LinAlgError
 
-from math import exp  # need this for calculating Pseudo-Rsquare value
-from decimal import Decimal  # need this for calculating Pseudo-Rsquare value
-
 __all__ = ['GLM', 'PredictionResults']
 
 
@@ -1721,14 +1718,9 @@ class GLMResults(base.LikelihoodModelResults):
     @cache_readonly
     def prsquared_cox_snell(self):
         """
-        Lnull:  value of the likelihood function for a model with no predictors
-        Lf:  value of the likelihood for the model being estimated
-        nobs:  The number of observations n
-        Cox & Snell's pseudo-R-squared.  `1 - (Lnull / Lf)^(2/nobs)`
+        Cox & Snell's pseudo-R-squared.  `1 - exp( (llnull - llf)*(2/nobs) )`
         """
-        Lnull = Decimal(exp(1))**Decimal(self.llnull)
-        Lf = Decimal(exp(1))**Decimal(self.llf)
-        return round( 1 - pow( (Lnull/Lf) , Decimal(2/self.nobs) ) , 5)
+        return 1 - np.exp( (self.llnull - self.llf)*(2/self.nobs) )
 
     @cached_value
     def aic(self):
