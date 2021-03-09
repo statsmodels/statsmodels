@@ -9,7 +9,7 @@ License: BSD-3
 
 
 import numpy as np
-from numpy.testing import assert_array_less
+from numpy.testing import assert_allclose, assert_array_less
 from scipy import stats
 import pytest
 
@@ -74,6 +74,30 @@ class TestKernelsRplus(object):
         amse = ((kce - self.cdf_dgp)**2).mean()
         assert_array_less(amse, self.amse_cdf)
 
+    @pytest.mark.parametrize('case', kernels_rplus[:])
+    def test_kernels_vectorized(self, case):
+        name, bw = case
+
+        rvs = self.rvs
+        x_plot = self.x_plot
+
+        kde = []
+        kce = []
+        func_pdf = getattr(kern, "kernel_pdf_" + name)
+        func_cdf = getattr(kern, "kernel_cdf_" + name)
+        for xi in x_plot:
+            kde.append(func_pdf(xi, rvs, bw))
+            kce.append(func_cdf(xi, rvs, bw))
+
+        kde = np.asarray(kde)
+        kce = np.asarray(kce)
+
+        kde1 = func_pdf(x_plot[:, None], rvs, bw)
+        kce1 = func_cdf(x_plot[:, None], rvs, bw)
+
+        assert_allclose(kde1, kde, rtol=1e-12)
+        assert_allclose(kce1, kce, rtol=1e-12)
+
 
 class TestKernelsUnit(TestKernelsRplus):
 
@@ -95,3 +119,7 @@ class TestKernelsUnit(TestKernelsRplus):
     @pytest.mark.parametrize('case', kernels_unit)
     def test_kernels(self, case):
         super(TestKernelsUnit, self).test_kernels(case)
+
+    @pytest.mark.parametrize('case', kernels_unit)
+    def test_kernels_vectorized(self, case):
+        super(TestKernelsUnit, self).test_kernels_vectorized(case)
