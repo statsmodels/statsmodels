@@ -12,9 +12,11 @@ from scipy import stats, special
 
 
 def pdf_kernel_asym(x, sample, bw, kernel_type, weights=None):
+    if np.size(x) > 1:
+        x = np.asarray(x)[:, None]
 
     kfunc = kernel_dict_pdf[kernel_type]
-    pdfi = kfunc(x, sample, bw, return_comp=True)
+    pdfi = kfunc(x, sample, bw)
 
     if weights is None:
         return pdfi.mean(-1)
@@ -23,9 +25,11 @@ def pdf_kernel_asym(x, sample, bw, kernel_type, weights=None):
 
 
 def cdf_kernel_asym(x, sample, bw, kernel_type, weights=None):
+    if np.size(x) > 1:
+        x = np.asarray(x)[:, None]
 
     kfunc = kernel_dict_cdf[kernel_type]
-    cdfi = kfunc(x, sample, bw, return_comp=True)
+    cdfi = kfunc(x, sample, bw)
 
     if weights is None:
         return cdfi.mean(-1)
@@ -33,7 +37,7 @@ def cdf_kernel_asym(x, sample, bw, kernel_type, weights=None):
         return cdfi @ weights
 
 
-def kernel_pdf_gamma(x, sample, bw, return_comp=False):
+def kernel_pdf_gamma(x, sample, bw):
     """gamma kernel for pdf
 
     Reference
@@ -42,14 +46,10 @@ def kernel_pdf_gamma(x, sample, bw, return_comp=False):
     """
 
     pdfi = stats.gamma.pdf(sample, x / bw + 1, scale=bw)
-
-    if return_comp:
-        return pdfi
-    else:
-        return pdfi.mean(-1)
+    return pdfi
 
 
-def kernel_cdf_gamma(x, sample, bw, return_comp=False):
+def kernel_cdf_gamma(x, sample, bw):
     """gamma kernel for cdf
 
     Reference
@@ -58,11 +58,7 @@ def kernel_cdf_gamma(x, sample, bw, return_comp=False):
     """
     # it uses the survival function, but I don't know why.
     cdfi = stats.gamma.sf(sample, x / bw + 1, scale=bw)
-
-    if return_comp:
-        return cdfi
-    else:
-        return cdfi.mean(-1)
+    return cdfi
 
 
 def _kernel_pdf_gamma(x, sample, bw):
@@ -74,7 +70,7 @@ def _kernel_pdf_gamma(x, sample, bw):
     neighborhood of zero boundary is small.
 
     """
-    return stats.gamma.pdf(sample, x / bw, scale=bw).mean(-1)
+    return stats.gamma.pdf(sample, x / bw, scale=bw)
 
 
 def _kernel_cdf_gamma(x, sample, bw):
@@ -86,7 +82,7 @@ def _kernel_cdf_gamma(x, sample, bw):
     neighborhood of zero boundary is small.
 
     """
-    return stats.gamma.sf(sample, x / bw, scale=bw).mean(-1)
+    return stats.gamma.sf(sample, x / bw, scale=bw)
 
 
 def kernel_pdf_gamma2(x, sample, bw):
@@ -104,7 +100,7 @@ def kernel_pdf_gamma2(x, sample, bw):
         a = x / bw
         mask = x < 2 * bw
         a[mask] = a[mask]**2 + 1
-    pdf = stats.gamma.pdf(sample, a, scale=bw).mean(-1)
+    pdf = stats.gamma.pdf(sample, a, scale=bw)
 
     return pdf
 
@@ -124,7 +120,7 @@ def kernel_cdf_gamma2(x, sample, bw):
         a = x / bw
         mask = x < 2 * bw
         a[mask] = a[mask]**2 + 1
-    pdf = stats.gamma.sf(sample, a, scale=bw).mean(-1)
+    pdf = stats.gamma.sf(sample, a, scale=bw)
 
     return pdf
 
@@ -134,7 +130,7 @@ def kernel_pdf_invgamma(x, sample, bw):
 
     de Micheaux, Ouimet (arxiv Nov 2020) for cdf kernel
     """
-    return stats.invgamma.pdf(sample, 1 / bw + 1, scale=x / bw).mean(-1)
+    return stats.invgamma.pdf(sample, 1 / bw + 1, scale=x / bw)
 
 
 def kernel_cdf_invgamma(x, sample, bw):
@@ -142,15 +138,15 @@ def kernel_cdf_invgamma(x, sample, bw):
 
     de Micheaux, Ouimet (arxiv Nov 2020) for cdf kernel
     """
-    return stats.invgamma.sf(sample, 1 / bw + 1, scale=x / bw).mean(-1)
+    return stats.invgamma.sf(sample, 1 / bw + 1, scale=x / bw)
 
 
 def kernel_pdf_beta(x, sample, bw):
-    return stats.beta.pdf(sample, x / bw + 1, (1 - x) / bw + 1).mean(-1)
+    return stats.beta.pdf(sample, x / bw + 1, (1 - x) / bw + 1)
 
 
 def kernel_cdf_beta(x, sample, bw):
-    return stats.beta.sf(sample, x / bw + 1, (1 - x) / bw + 1).mean(-1)
+    return stats.beta.sf(sample, x / bw + 1, (1 - x) / bw + 1)
 
 
 def kernel_pdf_beta2(x, sample, bw):
@@ -170,13 +166,13 @@ def kernel_pdf_beta2(x, sample, bw):
         # without vectorizing:
         if x < 2 * bw:
             a = a1 - np.sqrt(a2 - x**2 - x / bw)
-            pdf = stats.beta.pdf(sample, a, (1 - x) / bw).mean(-1)
+            pdf = stats.beta.pdf(sample, a, (1 - x) / bw)
         elif x > (1 - 2 * bw):
             x_ = 1 - x
             a = a1 - np.sqrt(a2 - x_**2 - x_ / bw)
-            pdf = stats.beta.pdf(sample, x / bw, a).mean(-1)
+            pdf = stats.beta.pdf(sample, x / bw, a)
         else:
-            pdf = stats.beta.pdf(sample, x / bw, (1 - x) / bw).mean(-1)
+            pdf = stats.beta.pdf(sample, x / bw, (1 - x) / bw)
     else:
         alpha = x / bw
         beta = (1 - x) / bw
@@ -189,7 +185,7 @@ def kernel_pdf_beta2(x, sample, bw):
         x_ = 1 - x[mask_upp]
         beta[mask_upp] = a1 - np.sqrt(a2 - x_**2 - x_ / bw)
 
-        pdf = stats.beta.pdf(sample, alpha, beta).mean(-1)
+        pdf = stats.beta.pdf(sample, alpha, beta)
 
     return pdf
 
@@ -211,13 +207,13 @@ def kernel_cdf_beta2(x, sample, bw):
         # without vectorizing:
         if x < 2 * bw:
             a = a1 - np.sqrt(a2 - x**2 - x / bw)
-            pdf = stats.beta.sf(sample, a, (1 - x) / bw).mean(-1)
+            pdf = stats.beta.sf(sample, a, (1 - x) / bw)
         elif x > (1 - 2 * bw):
             x_ = 1 - x
             a = a1 - np.sqrt(a2 - x_**2 - x_ / bw)
-            pdf = stats.beta.sf(sample, x / bw, a).mean(-1)
+            pdf = stats.beta.sf(sample, x / bw, a)
         else:
-            pdf = stats.beta.sf(sample, x / bw, (1 - x) / bw).mean(-1)
+            pdf = stats.beta.sf(sample, x / bw, (1 - x) / bw)
     else:
         alpha = x / bw
         beta = (1 - x) / bw
@@ -230,7 +226,7 @@ def kernel_cdf_beta2(x, sample, bw):
         x_ = 1 - x[mask_upp]
         beta[mask_upp] = a1 - np.sqrt(a2 - x_**2 - x_ / bw)
 
-        pdf = stats.beta.sf(sample, alpha, beta).mean(-1)
+        pdf = stats.beta.sf(sample, alpha, beta)
 
     return pdf
 
@@ -242,7 +238,7 @@ def kernel_pdf_invgauss(x, sample, bw):
     """
     m = x
     lam = 1 / bw
-    return stats.invgauss.pdf(sample, m / lam, scale=lam).mean(-1)
+    return stats.invgauss.pdf(sample, m / lam, scale=lam)
 
 
 def kernel_pdf_invgauss_(x, sample, bw):
@@ -262,7 +258,7 @@ def kernel_cdf_invgauss(x, sample, bw):
     """
     m = x
     lam = 1 / bw
-    return stats.invgauss.sf(sample, m / lam, scale=lam).mean(-1)
+    return stats.invgauss.sf(sample, m / lam, scale=lam)
 
 
 def kernel_pdf_recipinvgauss(x, sample, bw):
@@ -274,7 +270,7 @@ def kernel_pdf_recipinvgauss(x, sample, bw):
     # references use m, lambda parameterization
     m = 1 / (x - bw)
     lam = 1 / bw
-    return stats.recipinvgauss.pdf(sample, m / lam, scale=1 / lam).mean(-1)
+    return stats.recipinvgauss.pdf(sample, m / lam, scale=1 / lam)
 
 
 def kernel_pdf_recipinvgauss_(x, sample, bw):
@@ -286,7 +282,7 @@ def kernel_pdf_recipinvgauss_(x, sample, bw):
     pdf = (1 / np.sqrt(2 * np.pi * bw * sample) *
            np.exp(- (x - bw) / (2 * bw) * sample / (x - bw) - 2 +
                   (x - bw) / sample))
-    return pdf.mean(-1)
+    return pdf
 
 
 def kernel_cdf_recipinvgauss(x, sample, bw):
@@ -298,7 +294,7 @@ def kernel_cdf_recipinvgauss(x, sample, bw):
     # references use m, lambda parameterization
     m = 1 / (x - bw)
     lam = 1 / bw
-    return stats.recipinvgauss.sf(sample, m / lam, scale=1 / lam).mean(-1)
+    return stats.recipinvgauss.sf(sample, m / lam, scale=1 / lam)
 
 
 def kernel_pdf_bs(x, sample, bw):
@@ -307,7 +303,7 @@ def kernel_pdf_bs(x, sample, bw):
     Jin, Kawczak 2003
     """
     # need shape-scale parameterization for scipy
-    return stats.fatiguelife.pdf(sample, bw, scale=x).mean(-1)
+    return stats.fatiguelife.pdf(sample, bw, scale=x)
 
 
 def kernel_cdf_bs(x, sample, bw):
@@ -316,7 +312,7 @@ def kernel_cdf_bs(x, sample, bw):
     Jin, Kawczak 2003
     """
     # need shape-scale parameterization for scipy
-    return stats.fatiguelife.sf(sample, bw, scale=x).mean(-1)
+    return stats.fatiguelife.sf(sample, bw, scale=x)
 
 
 def kernel_pdf_lognorm(x, sample, bw):
@@ -332,7 +328,7 @@ def kernel_pdf_lognorm(x, sample, bw):
     #    variance of normal pdf
     # bw = np.exp(bw_**2 / 4) - 1  # this is inverse transformation
     bw_ = np.sqrt(4*np.log(1+bw))
-    return stats.lognorm.pdf(sample, bw_, scale=x).mean(-1)
+    return stats.lognorm.pdf(sample, bw_, scale=x)
 
 
 def kernel_cdf_lognorm(x, sample, bw):
@@ -348,7 +344,7 @@ def kernel_cdf_lognorm(x, sample, bw):
     #    variance of normal pdf
     # bw = np.exp(bw_**2 / 4) - 1  # this is inverse transformation
     bw_ = np.sqrt(4*np.log(1+bw))
-    return stats.lognorm.sf(sample, bw_, scale=x).mean(-1)
+    return stats.lognorm.sf(sample, bw_, scale=x)
 
 
 def kernel_pdf_lognorm_(x, sample, bw):
@@ -370,7 +366,7 @@ def kernel_pdf_weibull(x, sample, bw):
     # need shape-scale parameterization for scipy
     # references use m, lambda parameterization
     return stats.weibull_min.pdf(sample, 1 / bw,
-                                 scale=x / special.gamma(1 + bw)).mean(-1)
+                                 scale=x / special.gamma(1 + bw))
 
 
 def kernel_cdf_weibull(x, sample, bw):
@@ -381,7 +377,7 @@ def kernel_cdf_weibull(x, sample, bw):
     # need shape-scale parameterization for scipy
     # references use m, lambda parameterization
     return stats.weibull_min.sf(sample, 1 / bw,
-                                scale=x / special.gamma(1 + bw)).mean(-1)
+                                scale=x / special.gamma(1 + bw))
 
 
 # produced wth

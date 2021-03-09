@@ -59,11 +59,9 @@ class TestKernelsRplus(object):
 
         kde = []
         kce = []
-        func_pdf = getattr(kern, "kernel_pdf_" + name)
-        func_cdf = getattr(kern, "kernel_cdf_" + name)
         for xi in x_plot:
-            kde.append(func_pdf(xi, rvs, bw))
-            kce.append(func_cdf(xi, rvs, bw))
+            kde.append(kern.pdf_kernel_asym(xi, rvs, bw, name))
+            kce.append(kern.cdf_kernel_asym(xi, rvs, bw, name))
 
         kde = np.asarray(kde)
         kce = np.asarray(kce)
@@ -83,62 +81,32 @@ class TestKernelsRplus(object):
 
         kde = []
         kce = []
-        func_pdf = getattr(kern, "kernel_pdf_" + name)
-        func_cdf = getattr(kern, "kernel_cdf_" + name)
         for xi in x_plot:
-            kde.append(func_pdf(xi, rvs, bw))
-            kce.append(func_cdf(xi, rvs, bw))
+            kde.append(kern.pdf_kernel_asym(xi, rvs, bw, name))
+            kce.append(kern.cdf_kernel_asym(xi, rvs, bw, name))
 
         kde = np.asarray(kde)
         kce = np.asarray(kce)
 
-        kde1 = func_pdf(x_plot[:, None], rvs, bw)
-        kce1 = func_cdf(x_plot[:, None], rvs, bw)
+        kde1 = kern.pdf_kernel_asym(x_plot, rvs, bw, name)
+        kce1 = kern.cdf_kernel_asym(x_plot, rvs, bw, name)
 
         assert_allclose(kde1, kde, rtol=1e-12)
         assert_allclose(kce1, kce, rtol=1e-12)
 
-    @pytest.mark.parametrize('case', kernels_rplus[:1])
-    def _test_kernels_weights(self, case):
-        name, bw = case
-        rvs = self.rvs
-        x = self.x_plot
-        func_pdf = getattr(kern, "kernel_pdf_" + name)
-        func_cdf = getattr(kern, "kernel_cdf_" + name)
-
-        kde2 = func_pdf(x[:, None], rvs, bw)
-        kce2 = func_cdf(x[:, None], rvs, bw)
-
-        n = len(rvs)
-        w = np.ones(n) / n
-        kde1 = func_pdf(x[:, None], rvs, bw, weights=w)
-        kce1 = func_cdf(x[:, None], rvs, bw, weights=w)
-
-        assert_allclose(kde1, kde2, rtol=1e-12)
-        assert_allclose(kce1, kce2, rtol=1e-12)
-
-        # weights that do not add to 1 are valid, but do not produce pdf, cdf
-        n = len(rvs)
-        w = np.ones(n) / n * 2
-        kde1 = func_pdf(x[:, None], rvs, bw, weights=w)
-        kce1 = func_cdf(x[:, None], rvs, bw, weights=w)
-
-        assert_allclose(kde1, kde2 * 2, rtol=1e-12)
-        assert_allclose(kce1, kce2 * 2, rtol=1e-12)
-
-    @pytest.mark.parametrize('case', kernels_rplus[:1])
+    @pytest.mark.parametrize('case', kernels_rplus)
     def test_kernels_weights(self, case):
         name, bw = case
         rvs = self.rvs
         x = self.x_plot
 
-        kde2 = kern.pdf_kernel_asym(x[:, None], rvs, bw, name)
-        kce2 = kern.cdf_kernel_asym(x[:, None], rvs, bw, name)
+        kde2 = kern.pdf_kernel_asym(x, rvs, bw, name)
+        kce2 = kern.cdf_kernel_asym(x, rvs, bw, name)
 
         n = len(rvs)
         w = np.ones(n) / n
-        kde1 = kern.pdf_kernel_asym(x[:, None], rvs, bw, name, weights=w)
-        kce1 = kern.cdf_kernel_asym(x[:, None], rvs, bw, name, weights=w)
+        kde1 = kern.pdf_kernel_asym(x, rvs, bw, name, weights=w)
+        kce1 = kern.cdf_kernel_asym(x, rvs, bw, name, weights=w)
 
         assert_allclose(kde1, kde2, rtol=1e-12)
         assert_allclose(kce1, kce2, rtol=1e-12)
@@ -146,8 +114,8 @@ class TestKernelsRplus(object):
         # weights that do not add to 1 are valid, but do not produce pdf, cdf
         n = len(rvs)
         w = np.ones(n) / n * 2
-        kde1 = kern.pdf_kernel_asym(x[:, None], rvs, bw, name, weights=w)
-        kce1 = kern.cdf_kernel_asym(x[:, None], rvs, bw, name, weights=w)
+        kde1 = kern.pdf_kernel_asym(x, rvs, bw, name, weights=w)
+        kce1 = kern.cdf_kernel_asym(x, rvs, bw, name, weights=w)
 
         assert_allclose(kde1, kde2 * 2, rtol=1e-12)
         assert_allclose(kce1, kce2 * 2, rtol=1e-12)
@@ -161,7 +129,8 @@ class TestKernelsUnit(TestKernelsRplus):
         nobs = 1000
         distr0 = stats.beta(2, 3)
         rvs = distr0.rvs(size=nobs)
-        x_plot = np.linspace(0, 1, 51)
+        # Runtime warning if x_plot includes 0
+        x_plot = np.linspace(1e-10, 1, 51)
 
         cls.rvs = rvs
         cls.x_plot = x_plot
