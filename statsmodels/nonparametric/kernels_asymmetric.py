@@ -11,30 +11,136 @@ import numpy as np
 from scipy import stats, special
 
 
-def pdf_kernel_asym(x, sample, bw, kernel_type, weights=None):
-    if np.size(x) > 1:
-        x = np.asarray(x)[:, None]
+def pdf_kernel_asym(x, sample, bw, kernel_type, weights=None, batch_size=10):
+    """density estimate based on asymmetric kernel
 
-    kfunc = kernel_dict_pdf[kernel_type]
-    pdfi = kfunc(x, sample, bw)
+    Parameters
+    ----------
+    x : array_like, float
+        points for which density is evaluated. ``x`` can be scalar or 1-dim.
+    sample : ndarray, 1-d
+        sample from which kde is computed
+    bw : float
+        bandwidth parameter, there is currently no default value for it
+    kernel_type : str or callable
+        kernel name or kernel function
+        currently supported kernel names are ...
+     weights : None or ndarray
+        If weights is not None, then kernel for sample points are weighted
+        by it. No weights corresponds to uniform weighting of each component
+        with 1 / nobs, where nobs is the size of `sample`
+     batch_size : float
+         If x is an 1-dim array, then points can be evaluated in vectorized
+         for. To limit the amount of memory, a loop can work in batches.
+         The number of batches is determined so that the intermediate array
+         sizes are limited by
 
-    if weights is None:
-        return pdfi.mean(-1)
+         ``np.size(batch) * len(sample) < batch_size * 1000``
+
+         Default is to have at most 10000 elements in intermediate arrays.
+
+    Returns
+    -------
+    pdf : float or ndarray
+        estimate pdf at points x. ``pdf`` has the same size or shape as x.
+
+    """
+
+    if callable(kernel_type):
+        kfunc = kernel_type
     else:
-        return pdfi @ weights
+        kfunc = kernel_dict_pdf[kernel_type]
 
+    batch_size = batch_size * 1000
 
-def cdf_kernel_asym(x, sample, bw, kernel_type, weights=None):
-    if np.size(x) > 1:
-        x = np.asarray(x)[:, None]
+    if np.size(x) * len(sample) < batch_size:
+        # no batch-loop
+        if np.size(x) > 1:
+            x = np.asarray(x)[:, None]
 
-    kfunc = kernel_dict_cdf[kernel_type]
-    cdfi = kfunc(x, sample, bw)
-
-    if weights is None:
-        return cdfi.mean(-1)
+        pdfi = kfunc(x, sample, bw)
+        if weights is None:
+            pdf = pdfi.mean(-1)
+        else:
+            pdf = pdfi @ weights
     else:
-        return cdfi @ weights
+        # batch, designed for 1-d x
+        if weights is None:
+            weights = np.ones(len(sample)) / len(sample)
+
+        k = batch_size // len(sample)
+        n = len(x) // k
+        x_split = np.array_split(x, n)
+        pdf = np.concatenate([(kfunc(xi[:, None], sample, bw) @ weights)
+                              for xi in x_split])
+
+    return pdf
+
+
+def cdf_kernel_asym(x, sample, bw, kernel_type, weights=None, batch_size=10):
+    """estimate of cumulative distribution based on asymmetric kernel
+
+    Parameters
+    ----------
+    x : array_like, float
+        points for which density is evaluated. ``x`` can be scalar or 1-dim.
+    sample : ndarray, 1-d
+        sample from which kde is computed
+    bw : float
+        bandwidth parameter, there is currently no default value for it
+    kernel_type : str or callable
+        kernel name or kernel function
+        currently supported kernel names are ...
+     weights : None or ndarray
+        If weights is not None, then kernel for sample points are weighted
+        by it. No weights corresponds to uniform weighting of each component
+        with 1 / nobs, where nobs is the size of `sample`
+     batch_size : float
+         If x is an 1-dim array, then points can be evaluated in vectorized
+         for. To limit the amount of memory, a loop can work in batches.
+         The number of batches is determined so that the intermediate array
+         sizes are limited by
+
+         ``np.size(batch) * len(sample) < batch_size * 1000``
+
+         Default is to have at most 10000 elements in intermediate arrays.
+
+    Returns
+    -------
+    cdf : float or ndarray
+        estimate cdf at points x. ``cdf`` has the same size or shape as x.
+
+    """
+
+    if callable(kernel_type):
+        kfunc = kernel_type
+    else:
+        kfunc = kernel_dict_cdf[kernel_type]
+
+    batch_size = batch_size * 1000
+
+    if np.size(x) * len(sample) < batch_size:
+        # no batch-loop
+        if np.size(x) > 1:
+            x = np.asarray(x)[:, None]
+
+        cdfi = kfunc(x, sample, bw)
+        if weights is None:
+            cdf = cdfi.mean(-1)
+        else:
+            cdf = cdfi @ weights
+    else:
+        # batch, designed for 1-d x
+        if weights is None:
+            weights = np.ones(len(sample)) / len(sample)
+
+        k = batch_size // len(sample)
+        n = len(x) // k
+        x_split = np.array_split(x, n)
+        cdf = np.concatenate([(kfunc(xi[:, None], sample, bw) @ weights)
+                              for xi in x_split])
+
+    return cdf
 
 
 def kernel_pdf_gamma(x, sample, bw):

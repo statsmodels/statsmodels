@@ -31,26 +31,8 @@ kernels_unit = [("beta", 0.005),
                 ]
 
 
-class TestKernelsRplus(object):
+class CheckKernels(object):
 
-    @classmethod
-    def setup_class(cls):
-        b = 2
-        scale = 1.5
-        np.random.seed(1)
-        nobs = 1000
-        distr0 = stats.gamma(b, scale=scale)
-        rvs = distr0.rvs(size=nobs)
-        x_plot = np.linspace(0.5, 16, 51) + 1e-13
-
-        cls.rvs = rvs
-        cls.x_plot = x_plot
-        cls.pdf_dgp = distr0.pdf(x_plot)
-        cls.cdf_dgp = distr0.cdf(x_plot)
-        cls.amse_pdf = 1e-4  # tol for average mean squared error
-        cls.amse_cdf = 5e-4
-
-    @pytest.mark.parametrize('case', kernels_rplus)
     def test_kernels(self, case):
         name, bw = case
 
@@ -72,7 +54,6 @@ class TestKernelsRplus(object):
         amse = ((kce - self.cdf_dgp)**2).mean()
         assert_array_less(amse, self.amse_cdf)
 
-    @pytest.mark.parametrize('case', kernels_rplus[:])
     def test_kernels_vectorized(self, case):
         name, bw = case
 
@@ -94,7 +75,6 @@ class TestKernelsRplus(object):
         assert_allclose(kde1, kde, rtol=1e-12)
         assert_allclose(kce1, kce, rtol=1e-12)
 
-    @pytest.mark.parametrize('case', kernels_rplus)
     def test_kernels_weights(self, case):
         name, bw = case
         rvs = self.rvs
@@ -121,7 +101,39 @@ class TestKernelsRplus(object):
         assert_allclose(kce1, kce2 * 2, rtol=1e-12)
 
 
-class TestKernelsUnit(TestKernelsRplus):
+class TestKernelsRplus(CheckKernels):
+
+    @classmethod
+    def setup_class(cls):
+        b = 2
+        scale = 1.5
+        np.random.seed(1)
+        nobs = 1000
+        distr0 = stats.gamma(b, scale=scale)
+        rvs = distr0.rvs(size=nobs)
+        x_plot = np.linspace(0.5, 16, 51) + 1e-13
+
+        cls.rvs = rvs
+        cls.x_plot = x_plot
+        cls.pdf_dgp = distr0.pdf(x_plot)
+        cls.cdf_dgp = distr0.cdf(x_plot)
+        cls.amse_pdf = 1e-4  # tol for average mean squared error
+        cls.amse_cdf = 5e-4
+
+    @pytest.mark.parametrize('case', kernels_rplus)
+    def test_kernels(self, case):
+        super(TestKernelsRplus, self).test_kernels(case)
+
+    @pytest.mark.parametrize('case', kernels_rplus)
+    def test_kernels_vectorized(self, case):
+        super(TestKernelsRplus, self).test_kernels_vectorized(case)
+
+    @pytest.mark.parametrize('case', kernels_rplus)
+    def test_kernels_weights(self, case):
+        super(TestKernelsRplus, self).test_kernels_weights(case)
+
+
+class TestKernelsUnit(CheckKernels):
 
     @classmethod
     def setup_class(cls):
@@ -146,3 +158,7 @@ class TestKernelsUnit(TestKernelsRplus):
     @pytest.mark.parametrize('case', kernels_unit)
     def test_kernels_vectorized(self, case):
         super(TestKernelsUnit, self).test_kernels_vectorized(case)
+
+    @pytest.mark.parametrize('case', kernels_unit)
+    def test_kernels_weights(self, case):
+        super(TestKernelsUnit, self).test_kernels_weights(case)
