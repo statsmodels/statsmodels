@@ -78,7 +78,7 @@ def test_exact_em():
             s = np.sqrt(np.diag(c))
             c /= np.outer(s, s)
             fa = Factor(corr=c, n_factor=n_factor, method='ml')
-            load_e, uniq_e = fa._fit_ml_em(200)
+            load_e, uniq_e = fa._fit_ml_em(2000)
             c_e = np.dot(load_e, load_e.T)
             c_e.flat[::c_e.shape[0]+1] += uniq_e
             assert_allclose(c_e, c, rtol=1e-4, atol=1e-4)
