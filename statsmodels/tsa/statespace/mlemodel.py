@@ -3021,24 +3021,13 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             where `het[0][0]` is the test statistic, and `het[0][1]` is the
             p-value.
 
+        See Also
+        --------
+        statsmodels.tsa.stattools.breakvar_heteroskedasticity_test
+
         Notes
         -----
-        The null hypothesis is of no heteroskedasticity. That means different
-        things depending on which alternative is selected:
-
-        - Increasing: Null hypothesis is that the variance is not increasing
-          throughout the sample; that the sum-of-squares in the later
-          subsample is *not* greater than the sum-of-squares in the earlier
-          subsample.
-        - Decreasing: Null hypothesis is that the variance is not decreasing
-          throughout the sample; that the sum-of-squares in the earlier
-          subsample is *not* greater than the sum-of-squares in the later
-          subsample.
-        - Two-sided: Null hypothesis is that the variance is not changing
-          throughout the sample. Both that the sum-of-squares in the earlier
-          subsample is not greater than the sum-of-squares in the later
-          subsample *and* that the sum-of-squares in the later subsample is
-          not greater than the sum-of-squares in the earlier subsample.
+        The null hypothesis is of no heteroskedasticity.
 
         For :math:`h = [T/3]`, the test statistic is:
 
@@ -3054,7 +3043,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         This statistic can be tested against an :math:`F(h,h)` distribution.
         Alternatively, :math:`h H(h)` is asymptotically distributed according
         to :math:`\chi_h^2`; this second test can be applied by passing
-        `asymptotic=True` as an argument.
+        `use_f=True` as an argument.
 
         See section 5.4 of [1]_ for the above formula and discussion, as well
         as additional details.
@@ -3076,68 +3065,27 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                              ' forecast errors have not been computed.')
 
         if method == 'breakvar':
+            from statsmodels.tsa.stattools import (
+                breakvar_heteroskedasticity_test
+                )
             # Store some values
-            squared_resid = self.filter_results.standardized_forecasts_error**2
+            resid = self.filter_results.standardized_forecasts_error
             d = np.maximum(self.loglikelihood_burn, self.nobs_diffuse)
             # This differs from self.nobs_effective because here we want to
             # exclude exact diffuse periods, whereas self.nobs_effective only
             # excludes explicitly burned (usually approximate diffuse) periods.
             nobs_effective = self.nobs - d
+            h = int(np.round(nobs_effective / 3))
 
             test_statistics = []
             p_values = []
             for i in range(self.model.k_endog):
-                h = int(np.round(nobs_effective / 3))
-                numer_resid = squared_resid[i, -h:]
-                numer_resid = numer_resid[~np.isnan(numer_resid)]
-                numer_dof = len(numer_resid)
-
-                denom_resid = squared_resid[i, d:d+h]
-                denom_resid = denom_resid[~np.isnan(denom_resid)]
-                denom_dof = len(denom_resid)
-
-                if numer_dof < 2:
-                    warnings.warn('Early subset of data for variable %d'
-                                  '  has too few non-missing observations to'
-                                  ' calculate test statistic.' % i)
-                    numer_resid = np.nan
-                if denom_dof < 2:
-                    warnings.warn('Later subset of data for variable %d'
-                                  '  has too few non-missing observations to'
-                                  ' calculate test statistic.' % i)
-                    denom_resid = np.nan
-
-                test_statistic = np.sum(numer_resid) / np.sum(denom_resid)
-
-                # Setup functions to calculate the p-values
-                if use_f:
-                    from scipy.stats import f
-                    pval_lower = lambda test_statistics: f.cdf(  # noqa:E731
-                        test_statistics, numer_dof, denom_dof)
-                    pval_upper = lambda test_statistics: f.sf(  # noqa:E731
-                        test_statistics, numer_dof, denom_dof)
-                else:
-                    from scipy.stats import chi2
-                    pval_lower = lambda test_statistics: chi2.cdf(  # noqa:E731
-                        numer_dof * test_statistics, denom_dof)
-                    pval_upper = lambda test_statistics: chi2.sf(  # noqa:E731
-                        numer_dof * test_statistics, denom_dof)
-
-                # Calculate the one- or two-sided p-values
-                alternative = alternative.lower()
-                if alternative in ['i', 'inc', 'increasing']:
-                    p_value = pval_upper(test_statistic)
-                elif alternative in ['d', 'dec', 'decreasing']:
-                    test_statistic = 1. / test_statistic
-                    p_value = pval_upper(test_statistic)
-                elif alternative in ['2', '2-sided', 'two-sided']:
-                    p_value = 2 * np.minimum(
-                        pval_lower(test_statistic),
-                        pval_upper(test_statistic)
+                test_statistic, p_value = breakvar_heteroskedasticity_test(
+                    resid[i, d:],
+                    subset_length=h,
+                    alternative=alternative,
+                    use_f=use_f
                     )
-                else:
-                    raise ValueError('Invalid alternative.')
-
                 test_statistics.append(test_statistic)
                 p_values.append(p_value)
 
