@@ -118,7 +118,9 @@ def jarque_bera(resids, axis=0):
     where n is the number of data points, S is the sample skewness, and K is
     the sample kurtosis of the data.
     """
-    resids = np.asarray(resids)
+    resids = np.atleast_1d(np.asarray(resids, dtype=float))
+    if resids.size < 2:
+        raise ValueError("resids must contain at least 2 elements")
     # Calculate residual skewness and kurtosis
     skew = stats.skew(resids, axis=axis)
     kurtosis = 3 + stats.kurtosis(resids, axis=axis)
