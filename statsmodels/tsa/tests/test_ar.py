@@ -14,6 +14,7 @@ import pytest
 import statsmodels.api as sm
 from statsmodels.iolib.summary import Summary
 from statsmodels.regression.linear_model import OLS
+from statsmodels.tools.sm_exceptions import ValueWarning
 from statsmodels.tools.testing import assert_equal
 from statsmodels.tools.tools import Bunch
 from statsmodels.tsa.ar_model import AR, AutoReg, ar_select_order
@@ -1553,3 +1554,18 @@ def test_autoreg_plot_err():
     res = mod.fit()
     with pytest.raises(ValueError):
         res.plot_predict(0, end=50, in_sample=False)
+
+
+def test_autoreg_resids():
+    idx = pd.date_range("1900-01-01", periods=250, freq="M")
+    rs = np.random.RandomState(0)
+    idx_dates = sorted(rs.choice(idx, size=100, replace=False))
+    e = rs.standard_normal(250)
+    y = np.zeros(250)
+    y[:2] = e[:2]
+    for i in range(2, 250):
+        y[i] = 2 + 1.8 * y[i - 1] - 0.95 * y[i - 2] + e[i]
+    ys = pd.Series(y[-100:], index=idx_dates, name="y")
+    with pytest.warns(ValueWarning):
+        res = AutoReg(ys, lags=2, old_names=False).fit()
+    assert np.all(np.isfinite(res.resid))
