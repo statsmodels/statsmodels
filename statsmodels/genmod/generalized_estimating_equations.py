@@ -1721,12 +1721,13 @@ class GEE(GLM):
 
         # The quasi-likelihood, use change of variables so the integration is
         # from -1 to 1.
-        du = means - self.endog
+        endog_li = np.concatenate(self.endog_li)
+        du = means - endog_li
         nstep = 10000
         qv = np.empty(nstep)
         xv = np.linspace(-0.99999, 1, nstep)
         for i, g in enumerate(xv):
-            u = self.endog + (g + 1) * du / 2.0
+            u = endog_li + (g + 1) * du / 2.0
             vu = varfunc(u)
             qv[i] = -np.sum(du**2 * (g + 1) / vu)
         qv /= (4 * scale)
