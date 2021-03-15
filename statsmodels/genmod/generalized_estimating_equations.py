@@ -1718,16 +1718,16 @@ class GEE(GLM):
             omega += np.dot(dmat.T, dmat) / scale
 
         means = np.concatenate(means)
+        endog = np.concatenate(self.endog_li)
 
         # The quasi-likelihood, use change of variables so the integration is
         # from -1 to 1.
-        endog_li = np.concatenate(self.endog_li)
-        du = means - endog_li
+        du = means - endog
         nstep = 10000
         qv = np.empty(nstep)
         xv = np.linspace(-0.99999, 1, nstep)
         for i, g in enumerate(xv):
-            u = endog_li + (g + 1) * du / 2.0
+            u = endog + (g + 1) * du / 2.0
             vu = varfunc(u)
             qv[i] = -np.sum(du**2 * (g + 1) / vu)
         qv /= (4 * scale)

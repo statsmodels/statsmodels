@@ -2198,3 +2198,30 @@ def test_stationary_covsolve():
                                            sd, [z])
 
             assert_allclose(z1, z2[0], rtol=1e-5, atol=1e-5)
+
+# gh 7379, make sure that the results are the same regardless
+# of whether the data are ordered by group.
+def test_groups_order():
+
+    np.random.seed(3424)
+    n = 200
+    p = 5
+
+    exog = np.random.normal(size=(n, p))
+    ey = exog[:, 0] - exog[:, 1]
+    y = ey + np.random.normal(size=n)
+    groups = np.kron(np.arange(n // 10), np.ones(10))
+    m1 = gee.GEE(y, exog, groups=groups)
+    r1 = m1.fit()
+    qic1 = r1.qic(scale=1)
+
+    ii = np.random.permutation(n)
+    exog = exog[ii, :]
+    y = y[ii]
+    groups = groups[ii]
+    m2 = gee.GEE(y, exog, groups=groups)
+    r2 = m2.fit()
+    qic2 = r2.qic(scale=1)
+
+    assert_allclose(r1.params, r2.params)
+    assert_allclose(qic1, qic2)
