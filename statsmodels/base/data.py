@@ -578,10 +578,12 @@ class PandasData(ModelData):
             squeezed = squeezed[None, :]
         # May be zero-dim, for example in the case of forecast one step in tsa
         if squeezed.ndim < 2:
-            return Series(squeezed, index=self.row_labels[-len(result):])
+            out = Series(squeezed)
         else:
-            return DataFrame(result, index=self.row_labels[-len(result):],
-                             columns=self.ynames)
+            out = DataFrame(result)
+            out.columns = self.ynames
+        out.index = self.row_labels[-len(result):]
+        return out
 
     def attach_dates(self, result):
         squeezed = result.squeeze()
