@@ -16,7 +16,7 @@ from statsmodels.distributions.copula.api import (
 from statsmodels.distributions.copula.api import transforms as tra
 import statsmodels.distributions.tools as dt
 from statsmodels.distributions.bernstein import (
-    BernsteinDistribution, BernsteinDistributionBV)
+    BernsteinDistribution, BernsteinDistributionBV, BernsteinDistributionUV)
 
 
 def test_bernstein_distribution_1d():
@@ -34,6 +34,29 @@ def test_bernstein_distribution_1d():
     pdf_bp = bpd.pdf(grid.x_flat)
     assert_allclose(pdf_bp, pdfv, atol=0.02)
     assert_array_less(np.median(np.abs(pdf_bp - pdfv)), 0.01)
+
+    # compare with UV class
+    xf = np.squeeze(grid.x_flat)  # UV returns column if x is column
+    bpd1 = BernsteinDistributionUV(cdf_g)
+    cdf_bp1 = bpd1.cdf(xf)
+    assert_allclose(cdf_bp1, cdf_bp, atol=1e-13)
+    pdf_bp1 = bpd1.pdf(xf)
+    assert_allclose(pdf_bp1, pdf_bp, atol=1e-13)
+
+    cdf_bp1 = bpd1.cdf(xf, method="beta")
+    assert_allclose(cdf_bp1, cdf_bp, atol=1e-13)
+    pdf_bp1 = bpd1.pdf(xf, method="beta")
+    assert_allclose(pdf_bp1, pdf_bp, atol=1e-13)
+
+    cdf_bp1 = bpd1.cdf(xf, method="bpoly")
+    assert_allclose(cdf_bp1, cdf_bp, atol=1e-13)
+    pdf_bp1 = bpd1.pdf(xf, method="bpoly")
+    assert_allclose(pdf_bp1, pdf_bp, atol=1e-13)
+
+    # check rvs
+    # currently smoke test
+    rvs = bpd.rvs(100)
+    assert len(rvs) == 100
 
 
 def test_bernstein_distribution_2d():
@@ -125,6 +148,11 @@ class TestBernsteinBeta2d(object):
         pdf_bp = bpd.pdf(grid_eps.x_flat)
         assert_allclose(pdf_bp, pdfv, atol=0.06, rtol=0.1)
         assert_array_less(np.median(np.abs(pdf_bp - pdfv)), 0.05)
+
+    def test_rvs(self):
+        # currently smoke test
+        rvs = self.bpd.rvs(100)
+        assert len(rvs) == 100
 
 
 class TestBernsteinBeta2dd(TestBernsteinBeta2d):
