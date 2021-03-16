@@ -73,24 +73,29 @@ class BernsteinDistribution(object):
         return pdf_
 
     def get_marginal(self, idx):
-        """get marginal BernsteinDistribution
+        """Get marginal BernsteinDistribution
 
-        currently only 1-dim margins, `idx` is int
+        Parameters
+        ----------
+        idx : int or list of int
+            Index or indices of the component for which the marginal
+            distribution is returned.
 
-        Status: not verified yet except for uniform margins.
-        This uses the smoothed cdf values in the new marginal distribution and
-        not the grid values corresponding to the margin of the multivariate
-        grid. This might change.
-
+        Returns
+        -------
+        BernsteinDistribution instance for the marginal distribution.
         """
 
         # univariate
         if self.k_dim == 1:
             return self
 
-        x_m = np.ones((self.k_grid[idx], self.k_dim))
-        x_m[:, idx] = self._grid.x_marginal[idx]
-        cdf_m = self.cdf(x_m)
+        sl = [-1] * self.k_dim
+        if np.shape(idx) == ():
+            idx = [idx]
+        for ii in idx:
+            sl[ii] = slice(None, None, None)
+        cdf_m = self.cdf_grid[tuple(sl)]
         bpd_marginal = BernsteinDistribution(cdf_m)
         return bpd_marginal
 
