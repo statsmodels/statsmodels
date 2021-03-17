@@ -17,8 +17,7 @@ from statsmodels.distributions.tools import (
 
 
 class BernsteinDistribution(object):
-    """Distribution based on Bernstein Polynomials on unit hypercube
-
+    """Distribution based on Bernstein Polynomials on unit hypercube.
 
     Parameters
     ----------
@@ -27,7 +26,14 @@ class BernsteinDistribution(object):
         The dimension of the arrays define how many random variables are
         included in the multivariate distribution.
 
-
+    Attributes
+    ----------
+    cdf_grid : grid of cdf values
+    prob_grid : grid of cell or bin probabilities
+    k_dim : (int) number of components, dimension of random variable
+    k_grid : (tuple) shape of cdf_grid
+    k_grid_product : (int) total number of bins in grid
+    _grid : Grid instance with helper methods and attributes
     """
 
     def __init__(self, cdf_grid):
@@ -39,12 +45,30 @@ class BernsteinDistribution(object):
 
     @classmethod
     def from_data(cls, data, k_bins):
-        """create distribution instance from data using histogram binning
+        """Create distribution instance from data using histogram binning.
 
+        Classmethod to construct a distribution instance.
+
+        Parameters
+        ----------
+        data : array_like
+            Data with observation in rows and random variables in columns.
+            Data can be 1-dimensional in the univariate case.
+        k_bins : int or list
+            Number or edges of bins to be used in numpy histogramdd.
+            If k_bins is a scalar int, then the number of bins of each
+            component will be equal to it.
+
+        Returns
+        -------
+        Instance of a Bernstein distribution
         """
         data = np.asarray(data)
         if np.any(data < 0) or np.any(data > 1):
             raise ValueError("data needs to be in [0, 1]")
+
+        if data.ndim == 1:
+            data = data[:, None]
 
         k_dim = data.shape[1]
         if np.size(k_bins) == 1:
@@ -64,16 +88,66 @@ class BernsteinDistribution(object):
         return cdf2prob_grid(self.cdf_grid, prepend=None)
 
     def cdf(self, x):
+        """cdf values evaluated at x.
+
+        Parameters
+        ----------
+        x : array_like
+            Points of multivariate random variable at which cdf is evaluated.
+            This can be a single point with length equal to the dimension of
+            the random variable, or two dimensional with points (observations)
+            in rows and random variables in columns.
+            In the univariate case, a 1-dimensional x will be interpreted as
+            different points for evaluation.
+
+        Returns
+        -------
+        pdf values
+
+        Notes
+        -----
+        Warning: 2-dim x with many points can be memory intensive because
+        currently the bernstein polynomials will be evaluated in a fully
+        vectorized computation.
+        """
+        x = np.asarray(x)
+        if x.ndim == 1 and self.k_dim == 1:
+            x = x[:, None]
         cdf_ = _eval_bernstein_dd(x, self.cdf_grid)
         return cdf_
 
     def pdf(self, x):
+        """pdf values evaluated at x.
+
+        Parameters
+        ----------
+        x : array_like
+            Points of multivariate random variable at which pdf is evaluated.
+            This can be a single point with length equal to the dimension of
+            the random variable, or two dimensional with points (observations)
+            in rows and random variables in columns.
+            In the univariate case, a 1-dimensional x will be interpreted as
+            different points for evaluation.
+
+        Returns
+        -------
+        cdf values
+
+        Notes
+        -----
+        Warning: 2-dim x with many points can be memory intensive because
+        currently the bernstein polynomials will be evaluated in a fully
+        vectorized computation.
+        """
+        x = np.asarray(x)
+        if x.ndim == 1 and self.k_dim == 1:
+            x = x[:, None]
         # TODO: check usage of k_grid_product. Should this go into eval?
         pdf_ = self.k_grid_product * _eval_bernstein_dd(x, self.prob_grid)
         return pdf_
 
     def get_marginal(self, idx):
-        """Get marginal BernsteinDistribution
+        """Get marginal BernsteinDistribution.
 
         Parameters
         ----------
@@ -100,8 +174,12 @@ class BernsteinDistribution(object):
         return bpd_marginal
 
     def rvs(self, nobs):
-        """generate random numbers from distribution
+        """Generate random numbers from distribution.
 
+        Parameters
+        ----------
+        nobs : int
+            Number of random observations to generate.
         """
         rvs_mnl = np.random.multinomial(nobs, self.prob_grid.flatten())
         k_comp = self.k_dim
@@ -138,6 +216,7 @@ class BernsteinDistributionBV(BernsteinDistribution):
 class BernsteinDistributionUV(BernsteinDistribution):
 
     def cdf(self, x, method="binom"):
+
         cdf_ = _eval_bernstein_1d(x, self.cdf_grid, method=method)
         return cdf_
 
