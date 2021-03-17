@@ -245,6 +245,5 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
         'initial_ar_order': initial_ar_order,
         'resid': resid
     })
-    print(p.to_dict())
-    return p, other_results
 
+    return p, other_results

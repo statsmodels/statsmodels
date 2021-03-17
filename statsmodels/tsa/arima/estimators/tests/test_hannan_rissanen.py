@@ -21,8 +21,8 @@ def test_brockwell_davis_example_517():
     hr, _ = hannan_rissanen(endog, ar_order=1, ma_order=1, demean=True,
                             initial_ar_order=22, unbiased=False, fixed_params={"ar":0.695})
 
-    # assert_allclose(hr.ar_params, [0.6961], atol=1e-4)
-    # assert_allclose(hr.ma_params, [0.3788], atol=1e-4)
+    assert_allclose(hr.ar_params, [0.6961], atol=1e-4)
+    assert_allclose(hr.ma_params, [0.3788], atol=1e-4)
 
     # Because our fast implementation of the innovations algorithm does not
     # allow for non-stationary processes, the estimate of the variance returned
@@ -45,8 +45,8 @@ def test_itsmr():
     hr, _ = hannan_rissanen(endog, ar_order=1, ma_order=1, demean=True,
                             initial_ar_order=22, unbiased=False, fixed_params={"ma": 0.378})
 
-    # assert_allclose(hr.ar_params, [0.69607715], atol=1e-4)
-    # assert_allclose(hr.ma_params, [0.3787969217], atol=1e-4)
+    assert_allclose(hr.ar_params, [0.69607715], atol=1e-4)
+    assert_allclose(hr.ma_params, [0.3787969217], atol=1e-4)
 
     # Because our fast implementation of the innovations algorithm does not
     # allow for non-stationary processes, the estimate of the variance returned
@@ -99,5 +99,3 @@ def test_unbiased_error():
     endog = (np.arange(1000) * 1.0)
     with pytest.raises(ValueError, match='Cannot perform third step'):
         hannan_rissanen(endog, ar_order=1, ma_order=1, unbiased=True, fixed_params={"ar":2})
-
-test_initial_order()
