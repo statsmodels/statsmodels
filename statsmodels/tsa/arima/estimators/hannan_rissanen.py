@@ -247,5 +247,3 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
     })
 
     return p, other_results
-
-
