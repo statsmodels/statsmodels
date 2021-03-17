@@ -206,7 +206,10 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
         if data.ndim > 1 and data.shape[1] == 1:
             data = np.squeeze(data, axis=1)
         if self.use_pandas:
-            _, _, _, index = self._get_prediction_index(start_idx, end_idx)
+            if data.shape[0]:
+                _, _, _, index = self._get_prediction_index(start_idx, end_idx)
+            else:
+                index = None
             if data.ndim < 2:
                 data = pd.Series(data, index=index, name=names)
             else:

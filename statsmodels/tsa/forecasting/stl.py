@@ -498,8 +498,22 @@ class STLForecastResults:
         pred = self._model_result.get_prediction(
             start=start, end=end, dynamic=dynamic, **kwargs
         )
-        seasonal_prediction = self._get_seasonal_prediction(start, end, dynamic)
+        seasonal_prediction = self._get_seasonal_prediction(
+            start, end, dynamic
+        )
         mean = pred.predicted_mean + seasonal_prediction
+        try:
+            var_pred_mean = pred.var_pred_mean
+        except (AttributeError, NotImplementedError):
+            # Allow models that do not return var_pred_mean
+            import warnings
+
+            warnings.warn(
+                f"The variance of the predicted mean is not available using "
+                f"the {self.model.__class__.__name__} model class.",
+                UserWarning,
+            )
+            var_pred_mean = np.nan + mean.copy()
         return PredictionResults(
-            mean, pred.var_pred_mean, dist="norm", row_labels=pred.row_labels
+            mean, var_pred_mean, dist="norm", row_labels=pred.row_labels
         )

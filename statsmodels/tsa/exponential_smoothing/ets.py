@@ -1757,7 +1757,6 @@ class ETSResults(base.StateSpaceMLEResults):
            principles and practice*, 2nd edition, OTexts: Melbourne,
            Australia. OTexts.com/fpp2. Accessed on February 28th 2020.
         """
-
         # Get the starting location
         start_idx = self._get_prediction_start_index(anchor)
 
@@ -2286,20 +2285,20 @@ class PredictionResults:
                     )
                     # anchor
                     anchor = start_smooth + i
-            sim_results.append(
-                results.simulate(
-                    ndynamic,
-                    anchor=anchor_dynamic,
-                    repetitions=simulate_repetitions,
-                    **simulate_kwargs,
+            if ndynamic:
+                sim_results.append(
+                    results.simulate(
+                        ndynamic,
+                        anchor=anchor_dynamic,
+                        repetitions=simulate_repetitions,
+                        **simulate_kwargs,
+                    )
                 )
-            )
-            self.simulation_results = np.concatenate(sim_results, axis=0)
-            # if self.use_pandas:
-            #     self.simulation_results = pd.DataFrame(
-            #         self.simulation_results, index=self.row_labels,
-            #         columns=sim_results[0].columns
-            #     )
+            if sim_results and isinstance(sim_results[0], pd.DataFrame):
+                self.simulation_results = pd.concat(sim_results, 0)
+            else:
+                self.simulation_results = np.concatenate(sim_results, axis=0)
+            self.forecast_variance = self.simulation_results.var(1)
         else:  # method == 'exact'
             steps = np.ones(ndynamic + nsmooth)
             if ndynamic > 0:
