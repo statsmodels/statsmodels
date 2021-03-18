@@ -276,7 +276,9 @@ def _multivariate_test(hypotheses, exog_names, endog_names, fn):
         T = L*inv(X'X)*L'
         H = M'B'L'*inv(T)*LBM
         E =  M'(Y'Y - B'X'XB)M
-    And then finding the eigenvalues of inv(H + E)*H
+    where H and E correspond to the numerator and denominator of a univariate F test.
+    Then find the eigenvalues of inv(H + E)*H from which the multivariate test
+    statistics are calculated.
 
     .. [*] https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_introreg_sect012.htm
 
@@ -480,6 +482,16 @@ class MultivariateTestResults(object):
            results[key]['contrast_L'] contains the contrast_L matrix
            results[key]['transform_M'] contains the transform_M matrix
            results[key]['constant_C'] contains the constant_C matrix
+           results[key]['H'] contains an intermediate Hypothesis matrix,
+            or the between groups sums of squares and cross-products matrix,
+            corresponding to the numerator of the univariate F test.
+           results[key]['E'] contains an intermediate Error matrix,
+            corresponding to the denominator of the univariate F test.
+            The Hypotheses and Error matrices can be used to calculate
+            the same test statistics in 'stat', as well as to calculate
+            the discriminant function (canonical correlates) from the
+            eigenvectors of inv(E)H.
+
     endog_names : str
     exog_names : str
     summary_frame : multiindex dataframe
