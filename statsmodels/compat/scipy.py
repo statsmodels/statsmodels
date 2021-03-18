@@ -4,9 +4,6 @@ import numpy as np
 import scipy
 
 SP_VERSION = LooseVersion(scipy.__version__)
-SCIPY_11 = SP_VERSION < LooseVersion("1.2.0")
-SCIPY_11 = SCIPY_11 and SP_VERSION >= LooseVersion("1.1.0")
-
 SCIPY_GT_14 = SP_VERSION >= LooseVersion("1.5")
 SP_LT_15 = SP_VERSION < LooseVersion("1.5")
 

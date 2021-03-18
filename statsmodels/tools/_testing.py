@@ -8,7 +8,7 @@ during refactoring arises.
 The first group of functions provide consistency checks
 
 """
-from statsmodels.compat.pandas import assert_equal
+from statsmodels.compat.pandas import assert_frame_equal, assert_series_equal
 
 import os
 import sys
@@ -189,4 +189,7 @@ def check_predict_types(results):
         #  if p_exog has only one column
         cls = pd.Series if predicted.ndim == 1 else pd.DataFrame
         predicted_expected = cls(predicted, index=exog_index)
-        assert_equal(predicted_expected, predicted_pandas)
+        if isinstance(predicted_expected, pd.Series):
+            assert_series_equal(predicted_expected, predicted_pandas)
+        else:
+            assert_frame_equal(predicted_expected, predicted_pandas)

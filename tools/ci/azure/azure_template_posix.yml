@@ -41,9 +41,9 @@ jobs:
           python.version: '3.7'
           use.conda: true
           coverage: true
-          NUMPY: 1.17.5
+          NUMPY: 1.17.4
           PANDAS: 0.25.3
-          SCIPY: 1.3.3
+          SCIPY: 1.3.2
           BLAS: "nomkl blas=*=openblas"
           PYTEST_OPTIONS: ''
         python38_numpy118:
@@ -51,7 +51,6 @@ jobs:
           NUMPY: 1.18.5
           SCIPY: 1.3.3
           PANDAS: 1.0.5
-          MATPLOTLIB: 3.0.3
           lint: true
         python_39_pre:
           python.version: '3.9'

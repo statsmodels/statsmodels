@@ -2431,11 +2431,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         std_resid_nonmissing = std_resid[~(np.isnan(resid))]
         ax = fig.add_subplot(222)
 
-        # gh5792: Remove except after support for matplotlib>2.1 required
-        try:
-            ax.hist(std_resid_nonmissing, density=True, label="Hist")
-        except AttributeError:
-            ax.hist(std_resid_nonmissing, normed=True, label="Hist")
+        ax.hist(std_resid_nonmissing, density=True, label="Hist")
 
         kde = gaussian_kde(std_resid)
         xlim = (-1.96 * 2, 1.96 * 2)
