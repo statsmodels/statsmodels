@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.stats import rv_discrete, nbinom, poisson
 from scipy.special import gammaln
-from statsmodels.compat.scipy import _lazywhere
+from scipy._lib._util import _lazywhere
 
 
 class genpoisson_p_gen(rv_discrete):
