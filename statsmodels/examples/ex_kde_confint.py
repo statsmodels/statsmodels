@@ -27,11 +27,7 @@ ci = kde.kernel.density_confint(kde.density, len(x))
 fig = plt.figure()
 ax = fig.add_subplot(1, 1, 1)
 
-# gh5792. Remove except after matplotlib>2.1 required
-try:
-    ax.hist(x, bins=15, density=True, alpha=0.25)
-except AttributeError:
-    ax.hist(x, bins=15, normed=True, alpha=0.25)
+ax.hist(x, bins=15, density=True, alpha=0.25)
 
 ax.plot(kde.support, kde.density, lw=2, color='red')
 ax.fill_between(kde.support, ci[:,0], ci[:,1],
@@ -52,11 +48,7 @@ fig = plt.figure()
 for ii, kn in enumerate(kernel_names):
     ax = fig.add_subplot(2, 3, ii+1)   # without uniform
 
-    # gh5792. Remove except after matplotlib>2.1 required
-    try:
-        ax.hist(x, bins=10, density=True, alpha=0.25)
-    except AttributeError:
-        ax.hist(x, bins=10, normed=True, alpha=0.25)
+    ax.hist(x, bins=10, density=True, alpha=0.25)
 
     #reduce bandwidth for Gaussian and Uniform which are to large in example
     if kn in ['Gaussian', 'Uniform']:

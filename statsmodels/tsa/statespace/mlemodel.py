@@ -3739,10 +3739,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         # Note: the try/except block is for Pandas < 0.25, in which
         # `PeriodIndex.difference` raises a ValueError if the argument is not
         # also a `PeriodIndex`.
-        try:
-            diff = previous.model._index.difference(updated.model._index)
-        except ValueError:
-            diff = [True]
+        diff = previous.model._index.difference(updated.model._index)
         if len(diff) > 0:
             raise ValueError('The index associated with the updated results is'
                              ' not a superset of the index associated with the'
@@ -4294,13 +4291,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         resid_nonmissing = resid.dropna()
         ax = fig.add_subplot(222)
 
-        # gh5792: Remove  except after support for matplotlib>2.1 required
-        try:
-            ax.hist(resid_nonmissing, density=True, label='Hist',
-                    edgecolor='#FFFFFF')
-        except AttributeError:
-            ax.hist(resid_nonmissing, normed=True, label='Hist',
-                    edgecolor='#FFFFFF')
+        ax.hist(resid_nonmissing, density=True, label='Hist',
+                edgecolor='#FFFFFF')
 
         from scipy.stats import gaussian_kde, norm
         kde = gaussian_kde(resid_nonmissing)

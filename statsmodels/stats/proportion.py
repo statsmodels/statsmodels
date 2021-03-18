@@ -268,9 +268,6 @@ def multinomial_proportions_confint(counts, alpha=0.05, method='goodman'):
             `interval = (b, a)`."""
             b, a = interval
             prob = stats.poisson.cdf(a, p) - stats.poisson.cdf(b - 1, p)
-            if p == 0 and np.isnan(prob):
-                # hack for older scipy <=0.16.1
-                return int(b - 1 < 0)
             return prob
 
         def truncated_poisson_factorial_moment(interval, r, p):

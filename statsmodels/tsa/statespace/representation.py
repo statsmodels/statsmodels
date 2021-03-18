@@ -794,9 +794,7 @@ class Representation(object):
             raise ValueError('Invalid endogenous array; must be ordered in'
                              ' contiguous memory.')
 
-        # In some corner cases (e.g. np.array(1., ndmin=2) with numpy < 1.8)
-        # we may still have a non-fortran contiguous array, so double-check
-        # that now
+        # We may still have a non-fortran contiguous array, so double-check
         if not endog.flags['F_CONTIGUOUS']:
             endog = np.asfortranarray(endog)
 

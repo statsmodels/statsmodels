@@ -39,8 +39,8 @@ except ImportError:
 ###############################################################################
 # Key Values that Change Each Release
 ###############################################################################
-SETUP_REQUIREMENTS = {'numpy': '1.15',  # released June 2018
-                      'scipy': '1.1',  # released May 2018
+SETUP_REQUIREMENTS = {'numpy': '1.17',  # released July 2019
+                      'scipy': '1.3',  # released May 2019
                       }
 
 REQ_NOT_MET_MSG = """
@@ -62,11 +62,11 @@ for key in SETUP_REQUIREMENTS:
         raise RuntimeError(REQ_NOT_MET_MSG.format(key, ver, req_ver))
 
 INSTALL_REQUIREMENTS = SETUP_REQUIREMENTS.copy()
-INSTALL_REQUIREMENTS.update({'pandas': '0.21',  # released October 2017
-                             'patsy': '0.5',  # released January 2018
+INSTALL_REQUIREMENTS.update({'pandas': '0.25',  # released July 2019
+                             'patsy': '0.5.1',  # released January 2018
                              })
 
-CYTHON_MIN_VER = '0.29'  # released November 2018
+CYTHON_MIN_VER = '0.29.22'  # released 2020
 
 SETUP_REQUIRES = [k + '>=' + v for k, v in SETUP_REQUIREMENTS.items()]
 INSTALL_REQUIRES = [k + '>=' + v for k, v in INSTALL_REQUIREMENTS.items()]

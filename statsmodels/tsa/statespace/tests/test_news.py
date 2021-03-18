@@ -7,7 +7,6 @@ License: BSD-3
 from statsmodels.compat.pandas import (
     assert_frame_equal,
     assert_series_equal,
-    pandas_lt_25_0,
 )
 
 import numpy as np
@@ -201,35 +200,7 @@ def check_news(news, revisions, updates, impact_dates, impacted_variables,
                'update date', 'updated variable']
     assert_equal(details_by_impact.index.names, desired)
 
-    # Note: Pandas < 0.24 has problems with drop_duplicates if there is a
-    # PeriodIndex (see e.g. https://github.com/pandas-dev/pandas/issues/22803)
-    # However, the test is not quite as precise with the version that works
-    # for Pandas < 0.24, so we special case it and will remove after we no
-    # longer support Pandas 0.23
-    # See also one other case in the "details_by_update" section below
-    if updates and pandas_lt_25_0:
-        actual = (news.details_by_impact['forecast (prev)']
-                      .reset_index()
-                      .drop_duplicates('forecast (prev)'))['forecast (prev)']
-        assert_allclose(actual, news.update_forecasts, atol=1e-12)
-        actual = (news.details_by_impact['observed']
-                      .reset_index()
-                      .drop_duplicates('observed'))['observed']
-        assert_allclose(actual, news.update_realized, atol=1e-12)
-        actual = (news.details_by_impact['news']
-                      .reset_index()
-                      .drop_duplicates('news')['news'])
-        assert_allclose(actual, news.news, atol=1e-12)
-
-        # Weights
-        assert_allclose(details_by_impact['weight'].unstack([0, 1]),
-                        news.weights, atol=1e-12)
-
-        # Impact of news
-        actual = (news.details_by_impact['impact']
-                      .unstack([2, 3]).sum(axis=1).unstack(1))
-        assert_allclose(actual, news.update_impacts, atol=1e-12)
-    elif updates and not pandas_lt_25_0:
+    if updates:
         actual = (news.details_by_impact['forecast (prev)']
                       .drop_duplicates()
                       .reset_index([0, 1])['forecast (prev)'])
@@ -261,12 +232,8 @@ def check_news(news, revisions, updates, impact_dates, impacted_variables,
     if updates:
         # News
         # Special case for Pandas = 0.23, see above
-        if pandas_lt_25_0:
-            actual = (news.details_by_update['news']
-                          .reset_index().drop_duplicates('news')['news'])
-        else:
-            actual = (news.details_by_update['news']
-                          .drop_duplicates().reset_index([2, 3, 4, 5])['news'])
+        actual = (news.details_by_update['news']
+                      .drop_duplicates().reset_index([2, 3, 4, 5])['news'])
         assert_allclose(actual, news.news, atol=1e-12)
 
         # Weights
