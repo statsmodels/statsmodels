@@ -497,6 +497,7 @@ class TestHoltWinters(object):
         assert_almost_equal(fit1.params["initial_level"], 263.96, 1)
         assert_almost_equal(fit1.params["initial_trend"], np.NaN, 2)
         assert_almost_equal(fit1.sse, 6761.35, 2)  # 6080.26
+        assert isinstance(fit1.summary().as_text(), str)
 
         assert_almost_equal(fit4.params["smoothing_level"], 0.98, 2)
         assert_almost_equal(fit4.params["smoothing_trend"], 0.00, 2)
@@ -504,6 +505,7 @@ class TestHoltWinters(object):
         assert_almost_equal(fit4.params["initial_level"], 257.36, 2)
         assert_almost_equal(fit4.params["initial_trend"], 6.64, 2)
         assert_almost_equal(fit4.sse, 6036.56, 2)  # 6080.26
+        assert isinstance(fit4.summary().as_text(), str)
 
         assert_almost_equal(fit5.params["smoothing_level"], 0.97, 2)
         assert_almost_equal(fit5.params["smoothing_trend"], 0.00, 2)
@@ -511,6 +513,7 @@ class TestHoltWinters(object):
         assert_almost_equal(fit5.params["initial_level"], 258.95, 1)
         assert_almost_equal(fit5.params["initial_trend"], 1.04, 2)
         assert_almost_equal(fit5.sse, 6082.00, 0)  # 6100.11
+        assert isinstance(fit5.summary().as_text(), str)
 
     def test_holt_damp_r(self):
         # Test the damping parameters against the R forecast packages `ets`
@@ -834,6 +837,7 @@ def test_start_params(trend, seasonal):
         method="basinhopping",
         minimize_kwargs={"minimizer_kwargs": {"method": "SLSQP"}},
     )
+    assert isinstance(res.summary().as_text(), str)
     assert res2.sse < 1.01 * res.sse
     assert isinstance(res2.params, dict)
 
@@ -858,6 +862,8 @@ def test_basin_hopping(reset_randomstate):
     res = mod.fit()
     with pytest.warns(FutureWarning):
         res2 = mod.fit(use_basinhopping=True)
+    assert isinstance(res.summary().as_text(), str)
+    assert isinstance(res2.summary().as_text(), str)
     # Basin hopping occasionally produces a slightly larger objective
     tol = 1e-5
     assert res2.sse <= res.sse + tol
@@ -874,6 +880,8 @@ def test_debiased():
     assert np.any(res.fittedvalues != res2.fittedvalues)
     err2 = housing_data.iloc[:, 0] - res2.fittedvalues
     assert_almost_equal(err2.mean(), 0.0)
+    assert isinstance(res.summary().as_text(), str)
+    assert isinstance(res2.summary().as_text(), str)
 
 
 @pytest.mark.smoke
@@ -910,8 +918,8 @@ def test_equivalence_cython_python(trend, seasonal):
     with pytest.warns(None):
         # Overflow in mul-mul case fixed
         res = mod.fit()
+    assert isinstance(res.summary().as_text(), str)
 
-    res.summary()  # Smoke test
     params = res.params
     nobs = housing_data.shape[0]
     y = np.squeeze(np.asarray(housing_data))
@@ -947,6 +955,7 @@ def test_equivalence_cython_python(trend, seasonal):
 def test_direct_holt_add():
     mod = SimpleExpSmoothing(housing_data, initialization_method="estimated")
     res = mod.fit()
+    assert isinstance(res.summary().as_text(), str)
     x = np.squeeze(np.asarray(mod.endog))
     alpha = res.params["smoothing_level"]
     l, b, f, _, xhat = _simple_dbl_exp_smoother(
@@ -981,6 +990,7 @@ def test_direct_holt_add():
         f, res.level.iloc[-1] + res.trend.iloc[-1] * np.array([1, 2, 3, 4, 5])
     )
     assert_allclose(f, res.forecast(5))
+    assert isinstance(res.summary().as_text(), str)
 
 
 def test_integer_array(reset_randomstate):
@@ -1676,6 +1686,7 @@ def test_alternative_minimizers(method, ses):
     )
     assert_allclose(res.params["smoothing_level"], 0.77232545, rtol=1e-3)
     assert_allclose(res.params["initial_level"], 11.00359693, rtol=1e-3)
+    assert isinstance(res.summary().as_text(), str)
 
 
 def test_minimizer_kwargs_error(ses):
@@ -1691,6 +1702,7 @@ def test_minimizer_kwargs_error(ses):
     kwargs = {"minimizer_kwargs": {"method": "SLSQP"}}
     res = mod.fit(method="basinhopping", minimize_kwargs=kwargs)
     assert isinstance(res.params, dict)
+    assert isinstance(res.summary().as_text(), str)
 
 
 @pytest.mark.parametrize(
@@ -1757,6 +1769,7 @@ def test_fixed_basic(ses):
     with mod.fix_params({"smoothing_level": 0.3}):
         res = mod.fit()
     assert res.params["smoothing_level"] == 0.3
+    assert isinstance(res.summary().as_text(), str)
 
     mod = ExponentialSmoothing(
         ses, trend="add", damped_trend=True, initialization_method="estimated"
@@ -1764,6 +1777,7 @@ def test_fixed_basic(ses):
     with mod.fix_params({"damping_trend": 0.98}):
         res = mod.fit()
     assert res.params["damping_trend"] == 0.98
+    assert isinstance(res.summary().as_text(), str)
 
     mod = ExponentialSmoothing(
         ses, trend="add", seasonal="add", initialization_method="estimated"
@@ -1772,6 +1786,7 @@ def test_fixed_basic(ses):
         res = mod.fit()
     assert res.params["smoothing_seasonal"] == 0.1
     assert res.params["smoothing_level"] == 0.2
+    assert isinstance(res.summary().as_text(), str)
 
 
 def test_fixed_errors(ses):
@@ -1824,6 +1839,7 @@ def test_brute(ses, trend, seasonal):
     with mod.fix_params({"smoothing_level": 0.1}):
         res = mod.fit(use_brute=True)
     assert res.mle_retvals.success
+    assert isinstance(res.summary().as_text(), str)
 
 
 def test_fix_set_parameters(ses):
@@ -1881,6 +1897,7 @@ def test_initialization_methods(ses, method, trend, seasonal):
     )
     res = mod.fit()
     assert res.mle_retvals.success
+    assert isinstance(res.summary().as_text(), str)
 
 
 def test_attributes(ses):
@@ -1901,6 +1918,7 @@ def test_summary_boxcox(ses):
     res = mod.fit()
     summ = str(res.summary())
     assert re.findall(r"Box-Cox:[\s]*True", summ)
+    assert isinstance(res.summary().as_text(), str)
 
 
 def test_simulate(ses):
@@ -1908,6 +1926,7 @@ def test_simulate(ses):
         np.asarray(ses), initialization_method="heuristic"
     )
     res = mod.fit()
+    assert isinstance(res.summary().as_text(), str)
     with pytest.raises(ValueError, match="error must be"):
         res.simulate(10, error="unknown")
     with pytest.raises(ValueError, match="If random"):
@@ -1968,6 +1987,7 @@ def test_boxcox_components(ses):
         ses + 1 - ses.min(), initialization_method="estimated", use_boxcox=True
     )
     res = mod.fit()
+    assert isinstance(res.summary().as_text(), str)
     with pytest.raises(AssertionError):
         # Must be different since level is not transformed
         assert_allclose(res.level, res.fittedvalues)
@@ -2011,6 +2031,6 @@ def test_estimated_initialization_short_data(ses, trend, seasonal, nobs):
         trend=trend,
         seasonal=seasonal,
         seasonal_periods=4,
-        initialization_method='estimated'
+        initialization_method="estimated",
     ).fit()
     assert res.mle_retvals.success

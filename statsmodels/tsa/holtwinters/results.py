@@ -369,6 +369,8 @@ class HoltWintersResults(Results):
         def _fmt(x):
             abs_x = np.abs(x)
             scale = 1
+            if np.isnan(x):
+                return f"{str(x):>20}"
             if abs_x != 0:
                 scale = int(np.log10(abs_x))
             if scale > 4 or scale < -3:
