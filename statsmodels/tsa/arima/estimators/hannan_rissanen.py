@@ -38,6 +38,8 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
         Whether or not to apply the bias correction step. Default is True if
         the estimated coefficients from the previous step imply a stationary
         and invertible process and False otherwise.
+    fixed_params: dict, optional
+         if given a fixed value for a parameter then do not estimate that.
 
     Returns
     -------
