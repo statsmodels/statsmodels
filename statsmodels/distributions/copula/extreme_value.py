@@ -14,7 +14,7 @@ def copula_bv_ev(u, transform, args=()):
     '''generic bivariate extreme value copula
     '''
     u, v = u
-    return np.exp(np.log(u * v) * (transform(np.log(v)/np.log(u*v), *args)))
+    return np.exp(np.log(u * v) * (transform(np.log(u)/np.log(u*v), *args)))
 
 
 class ExtremeValueCopula(object):
@@ -28,15 +28,12 @@ class ExtremeValueCopula(object):
         # currently only Bivariate
         u, v = np.asarray(u).T
         cdfv = np.exp(np.log(u * v) *
-                      (self.transform(np.log(v)/np.log(u*v), *args)))
+                      self.transform(np.log(u)/np.log(u*v), *args))
         return cdfv
 
     def pdf(self, u, args=()):
-        """
-        c(u1, u2) = C(u1, u2) / u1 u2 * (A(t)**2 + (1 − 2 t) A'(t) A(t) −
-                    (1 − t) t (A'(t)**2 - A''(t) / log(u1 u2)) )
+        """pdf of copula
 
-        where t = np.log(v)/np.log(u*v)
         """
         tr = self.transform
         u1, u2 = np.asarray(u).T
@@ -44,13 +41,16 @@ class ExtremeValueCopula(object):
         log_u12 = np.log(u1 * u2)
         t = np.log(u1) / log_u12
         cdf = self.cdf(u, args)
-        dep = tr(t)
-        d1 = tr.deriv(t)
-        d2 = tr.deriv2(t)
-        pdf_ = cdf / (u1 * u2) * (dep**2 +
-                                  (1 - 2 * t) * d1 * dep -
-                                  (1 - t) * t * (d1**2 - d2 / log_u12))
+        dep = tr(t, *args)
+        d1 = tr.deriv(t, *args)
+        d2 = tr.deriv2(t, *args)
+        pdf_ = cdf / (u1 * u2) * ((dep + (1 - t) * d1) * (dep - t * d1) -
+                                  d2 * (1 - t) * t / log_u12)
+
         return pdf_
+
+    def logpdf(self, u, args=()):
+        return np.log(self.pdf(u, args=args))
 
     def conditional_2g1(self, u, args=()):
         """

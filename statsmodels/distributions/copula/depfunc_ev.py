@@ -75,8 +75,9 @@ class AsymLogistic(PickandDependence):
 
     def deriv(self, t, a1, a2, theta):
         b = theta
-        d1 = (a1 * (a1 * t)**(1/b - 1) - a2 * (a2 * (1 - t))**(1/b - 1))
-        d1 *= ((a1 * t)**(1/b) + (a2 * (1 - t))**(1/b))**(b - 1) - a1 + a2
+
+        d1 = ((a1 * (a1 * t)**(1/b - 1) - a2 * (a2 * (1 - t))**(1/b - 1)) *
+              ((a1 * t)**(1/b) + (a2 * (1 - t))**(1/b))**(b - 1) - a1 + a2)
         return d1
 
     def deriv2(self, t, a1, a2, theta):
@@ -110,11 +111,13 @@ class AsymNegLogistic(PickandDependence):
         # if not np.all(self._check_args(a1, a2, theta)):
         #     raise ValueError('invalid args')
 
+        a1, a2 = a2, a1
         transf = 1 - ((a1 * (1-t))**(-1./theta) +
                       (a2 * t)**(-1./theta))**(-theta)
         return transf
 
     def deriv(self, t, a1, a2, theta):
+        a1, a2 = a2, a1
         m1 = -1 / theta
         m2 = m1 - 1
 
@@ -127,6 +130,7 @@ class AsymNegLogistic(PickandDependence):
 
     def deriv2(self, t, a1, a2, theta):
         b = theta
+        a1, a2 = a2, a1
         a1tp = (a1 * (1 - t))**(1/b)
         a2tp = (a2 * t)**(1/b)
         a1tn = (a1 * (1 - t))**(-1/b)
