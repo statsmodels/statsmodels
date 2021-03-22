@@ -36,8 +36,8 @@ class ArchimedeanCopula(object):
         if u.shape[-1] > 2:
             msg = "pdf is currently only available for bivariate copula"
             raise ValueError(msg)
-        phi = self.transform.evaluate
-        phi_inv = self.transform.inverse
+        # phi = self.transform.evaluate
+        # phi_inv = self.transform.inverse
         phi_d1 = self.transform.deriv
         phi_d2 = self.transform.deriv2
 

@@ -60,10 +60,20 @@ class _Grid(object):
         self.x_flat = x_flat
 
 
-def prob2cdf_grid(x):
-    """cumulative counts from cell provabilites on a grid
+def prob2cdf_grid(probs):
+    """Cumulative probabilites from cell provabilites on a grid
+
+    Parameters
+    ----------
+    probs : array_like
+        Rectangular grid of cell probabilites.
+
+    Returns
+    -------
+    cdf : ndarray
+        Grid of cumulative probabilities with same shape as probs.
     """
-    cdf = np.asarray(x).copy()
+    cdf = np.asarray(probs).copy()
     k = cdf.ndim
     for i in range(k):
         cdf = cdf.cumsum(axis=i)
@@ -71,21 +81,32 @@ def prob2cdf_grid(x):
     return cdf
 
 
-def cdf2prob_grid(x, prepend=0):
-    """cell provabilites from cumulative counts on a grid
+def cdf2prob_grid(cdf, prepend=0):
+    """Cell probabilites from cumulative probabilities on a grid.
+
+    Parameters
+    ----------
+    cdf : array_like
+        Grid of cumulative probabilities with same shape as probs.
+
+    Returns
+    -------
+    probs : ndarray
+        Rectangular grid of cell probabilites.
+
     """
     if prepend is None:
         prepend = np._NoValue
-    pdf = np.asarray(x).copy()
-    k = pdf.ndim
+    prob = np.asarray(cdf).copy()
+    k = prob.ndim
     for i in range(k):
-        pdf = np.diff(pdf, prepend=prepend, axis=i)
+        prob = np.diff(prob, prepend=prepend, axis=i)
 
-    return pdf
+    return prob
 
 
 def average_grid(values, coords=None, _method="slicing"):
-    """compute average for each cell in grid using endpoints
+    """Compute average for each cell in grid using endpoints
 
     Parameters
     ----------
@@ -98,9 +119,10 @@ def average_grid(values, coords=None, _method="slicing"):
         Grid averaging is implemented using numpy "slicing" or using
         scipy.signal "convolve".
 
-
+    Returns
+    -------
+    Grid with averaged cell values.
     """
-
     k_dim = values.ndim
     if _method == "slicing":
         p = values.copy()
@@ -134,10 +156,29 @@ def average_grid(values, coords=None, _method="slicing"):
 # functions to evaluate bernstein polynomials
 
 def _eval_bernstein_1d(x, fvals, method="binom"):
-    """evaluate 1-dimensional bernstein polynomial given grid of values
+    """Evaluate 1-dimensional bernstein polynomial given grid of values.
 
     experimental, comparing methods
 
+    Parameters
+    ----------
+    x : array_like
+        Values at which to evaluate the Bernstein polynomial.
+    fvals : ndarray
+        Grid values of coefficients for Bernstein polynomial basis in the
+        weighted sum.
+    method: "binom", "beta" or "bpoly"
+        Method to construct Bernstein polynomial basis, used for comparison
+        of parameterizations.
+
+        - "binom" uses pmf of Binomial distribution
+        - "beta" uses pdf of Beta distribution
+        - "bpoly" uses one interval in scipy.interpolate.BPoly
+
+    Returns
+    -------
+    Bernstein polynomial at evaluation points, weighted sum of Bernstein
+    polynomial basis.
     """
     k_terms = fvals.shape[-1]
     xx = np.asarray(x)
@@ -160,10 +201,22 @@ def _eval_bernstein_1d(x, fvals, method="binom"):
 
 
 def _eval_bernstein_2d(x, fvals):
-    """evaluate 2-dimensional bernstein polynomial given grid of values
+    """Evaluate 2-dimensional bernstein polynomial given grid of values
 
     experimental
 
+    Parameters
+    ----------
+    x : array_like
+        Values at which to evaluate the Bernstein polynomial.
+    fvals : ndarray
+        Grid values of coefficients for Bernstein polynomial basis in the
+        weighted sum.
+
+    Returns
+    -------
+    Bernstein polynomial at evaluation points, weighted sum of Bernstein
+    polynomial basis.
     """
     k_terms = fvals.shape
     k_dim = fvals.ndim
@@ -179,7 +232,6 @@ def _eval_bernstein_2d(x, fvals):
     k2 = np.arange(k_terms[1]).astype(float)
 
     # we are building a nobs x n1 x n2 array
-    poly_base = np.zeros(x.shape[0])
     poly_base = (stats.binom.pmf(k1[None, :, None], n1, x1[:, None, None]) *
                  stats.binom.pmf(k2[None, None, :], n2, x2[:, None, None]))
     bp_values = (fvals * poly_base).sum(-1).sum(-1)
@@ -188,16 +240,26 @@ def _eval_bernstein_2d(x, fvals):
 
 
 def _eval_bernstein_dd(x, fvals):
-    """evaluate d-dimensional bernstein polynomial given grid of values
+    """Evaluate d-dimensional bernstein polynomial given grid of valuesv
 
-    experimental, currently requires square grid.
+    experimental
 
+    Parameters
+    ----------
+    x : array_like
+        Values at which to evaluate the Bernstein polynomial.
+    fvals : ndarray
+        Grid values of coefficients for Bernstein polynomial basis in the
+        weighted sum.
+
+    Returns
+    -------
+    Bernstein polynomial at evaluation points, weighted sum of Bernstein
+    polynomial basis.
     """
     k_terms = fvals.shape
     k_dim = fvals.ndim
     xx = np.atleast_2d(x)
-    # assuming square grid, same ki in all dimensions
-    ki = np.arange(k_terms[0]).astype(float)
 
     # The following loop is a tricky
     # we add terms for each x and expand dimension of poly base in each
@@ -206,7 +268,7 @@ def _eval_bernstein_dd(x, fvals):
     poly_base = np.zeros(x.shape[0])
     for i in range(k_dim):
         ki = np.arange(k_terms[i]).astype(float)
-        for j in range(i+1):
+        for _ in range(i+1):
             ki = ki[..., None]
         ni = k_terms[i] - 1
         xi = xx[:, i]

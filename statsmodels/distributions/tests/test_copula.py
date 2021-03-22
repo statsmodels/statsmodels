@@ -65,7 +65,7 @@ ev_dep_list = [
      [0.7774638908611127, 0.6914624612740130, 0.7774638908611127]],
     # [trev.transform_joe, 0.5, 0.9, (0.5, 0.75, 1/0.25), 0.4543698299835434],
     # [trev.transform_joe, 0.9, 0.5, (0.5, 0.75, 1/0.25), 0.4539773435983587],
-    #> abvevd(c(0.25, 0.5, 0.75), dep = 0.75, asy = c(0.5, 0.75), model = "aneglog")
+    # > abvevd(c(0.25, 0.5, 0.75), dep=0.75, asy=c(0.5, 0.75), model="aneglog")
     # [1] 0.9139915932031195 0.8803412942173715 0.8993537417026507
     [trev.transform_joe, 0.5, 0.9, (0.5, 0.75, 1/0.75), 0.,
      [0.9139915932031195, 0.8803412942173715, 0.8993537417026507]]
@@ -88,14 +88,14 @@ gev_list = [
      0.4868879662205026, 0.4646154226541540, 0.1897142141905908],
     [trev.transform_tawn2, 0.4, 0.9, (0.3, 0.2),
      0.3838690483829361, 0.3989785485000293, 0.1084278364284748],
-    #[trev.transform_tawn2, 0.5, 0.5, (0.5, 0.25), 0.387629940606913,
+    # [trev.transform_tawn2, 0.5, 0.5, (0.5, 0.25), 0.387629940606913,
     # 0.1383277275273335],
-    #[trev.transform_tawn2, 0.9, 0.5, (0.5, 0.25), 0.4519820720233402,
+    # [trev.transform_tawn2, 0.9, 0.5, (0.5, 0.25), 0.4519820720233402,
     # 0.1162545305128522],  # fails in pdf
     # note evd has parameter for hr 1/lmbda (inverse of our parameter)
     [trev.transform_hr, 0.4, 0.9, (2,),
      0.36459381872178737, 0.34879372499897571, 0.09305880295825367],
-    #[trev.transform_joe, 0.5, 0.9, (0.5, 0.75, 1/0.25), 0.3700584213780548,
+    # [trev.transform_joe, 0.5, 0.9, (0.5, 0.75, 1/0.25), 0.3700584213780548,
     # 0.08992436735088952],
     [trev.transform_joe, 0.4, 0.9, (0.5, 0.75, 1/0.25),
      0.36391125216656162, 0.34752631779552950, 0.09316705199822513],
@@ -147,15 +147,15 @@ def test_copulas(case):
 
 @pytest.mark.parametrize("case", ev_list)
 def test_ev_copula_distr(case):
-    # check ev copulas, cdf and transform against R `evt` package
+    # check ev copulas, cdf and transform against R `evd` package
     ev_tr, v1, v2, args, res1 = case
     u = [v1, v2]
     res = copula_bv_ev(u, ev_tr, args=args)
-    #assert_allclose(res, res1, rtol=1e-13)
+    assert_allclose(res, res1, rtol=1e-13)
 
     ev = ExtremeValueCopula(ev_tr)
     cdf1 = ev.cdf(u, args)
-    #assert_allclose(cdf1, res1, rtol=1e-13)
+    assert_allclose(cdf1, res1, rtol=1e-13)
 
     cev = CopulaDistribution([uniform, uniform], ev, copargs=args)
     cdfd = cev.cdf(np.array(u), args=args)

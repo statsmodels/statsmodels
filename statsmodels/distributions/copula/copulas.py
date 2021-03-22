@@ -123,6 +123,9 @@ copulanamesbv = {'indep': copula_bv_indep,
 class CopulaDistributionBivariate(object):
     '''bivariate copula class
 
+    might be obsolete,
+    see CopulaDistribution for multivariate distribution class
+
     Instantiation needs the arguments, cop_args, that are required for copula
     '''
     def __init__(self, marginalcdfs, copula, copargs=()):
@@ -146,10 +149,22 @@ class CopulaDistributionBivariate(object):
 
 
 class CopulaDistribution(object):
-    '''bivariate copula class
+    """Multivariate copula class
 
     Instantiation needs the arguments, cop_args, that are required for copula
-    '''
+
+    Parameters
+    ----------
+    marginals : list of distribution instances
+        Marginal distributions.
+    copula : instance of copula class
+    copargs : tuple
+        Parameters for copula
+
+    Notes
+    -----
+    experimental, argument handling not yet finalized
+    """
     def __init__(self, marginals, copula, copargs=()):
         if copula in copulanamesbv:
             self.copula = copulanamesbv[copula]
@@ -163,8 +178,23 @@ class CopulaDistribution(object):
         self.k_vars = len(marginals)
 
     def cdf(self, y, args=None):
-        '''xx needs to be iterable, instead of x,y for extension to multivariate
-        '''
+        """CDF of copula distribution.
+
+        Parameters
+        ----------
+        y : array_like
+            Values of random variable at which to evaluate cdf.
+            If 2-dimensional, then components of multivariate random variable
+            need to be in columns
+        args : tuple
+            Copula parameters.
+            Warning: interface for parameters will still change.
+
+        Returns
+        -------
+        cdf values
+
+        """
         y = np.asarray(y)
         if args is None:
             args = self.copargs
@@ -179,13 +209,42 @@ class CopulaDistribution(object):
         return self.copula.cdf(u, args)
 
     def pdf(self, y, args=None):
-        ''' log pdf of copula distribution
-        '''
+        """PDF of copula distribution.
+
+        Parameters
+        ----------
+        y : array_like
+            Values of random variable at which to evaluate cdf.
+            If 2-dimensional, then components of multivariate random variable
+            need to be in columns
+        args : tuple
+            Copula parameters.
+            Warning: interface for parameters will still change.
+
+        Returns
+        -------
+        pdf values
+        """
         return np.exp(self.logpdf(y, args=args))
 
     def logpdf(self, y, args=None):
-        ''' log pdf of copula distribution
-        '''
+        """Log-pdf of copula distribution.
+
+        Parameters
+        ----------
+        y : array_like
+            Values of random variable at which to evaluate cdf.
+            If 2-dimensional, then components of multivariate random variable
+            need to be in columns
+        args : tuple
+            Copula parameters.
+            Warning: interface for parameters will still change.
+
+        Returns
+        -------
+        log-pdf values
+
+        """
         y = np.asarray(y)
         if args is None:
             args = self.copargs
