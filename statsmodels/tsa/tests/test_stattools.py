@@ -23,7 +23,7 @@ from statsmodels.tools.sm_exceptions import (
     CollinearityWarning,
     InfeasibleTestError,
     InterpolationWarning,
-    MissingDataError
+    MissingDataError,
 )
 from statsmodels.tsa.arima_process import arma_acovf
 from statsmodels.tsa.statespace.sarimax import SARIMAX
@@ -338,20 +338,20 @@ class TestPACF(CheckCorrGram):
 
 
 class TestBreakvarHeteroskedasticityTest(object):
-    from scipy.stats import f, chi2
+    from scipy.stats import chi2, f
 
     def test_1d_input(self):
 
         input_residuals = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]
-        expected_statistic = (4.0**2 + 5.0**2) / (0.0**2 + 1.0**2)
+        expected_statistic = (4.0 ** 2 + 5.0 ** 2) / (0.0 ** 2 + 1.0 ** 2)
         # ~ F(2, 2), two-sided test
         expected_pvalue = 2 * min(
             self.f.cdf(expected_statistic, 2, 2),
-            self.f.sf(expected_statistic, 2, 2)
-            )
+            self.f.sf(expected_statistic, 2, 2),
+        )
         actual_statistic, actual_pvalue = breakvar_heteroskedasticity_test(
             input_residuals
-            )
+        )
 
         assert actual_statistic == expected_statistic
         assert actual_pvalue == expected_pvalue
@@ -373,27 +373,30 @@ class TestBreakvarHeteroskedasticityTest(object):
         )
         expected_statistic = np.array(
             [
-                (8.0**2 + 7.0**2 + 6.0**2) / (0.0**2 + 1.0**2 + 2.0**2),
-                (8.0**2 + 7.0**2 + 6.0**2) / (0.0**2 + 2.0**2),
+                (8.0 ** 2 + 7.0 ** 2 + 6.0 ** 2)
+                / (0.0 ** 2 + 1.0 ** 2 + 2.0 ** 2),
+                (8.0 ** 2 + 7.0 ** 2 + 6.0 ** 2) / (0.0 ** 2 + 2.0 ** 2),
                 np.nan,
             ]
         )
         expected_pvalue = np.array(
             [
-                2 * min(
+                2
+                * min(
                     self.f.cdf(expected_statistic[0], 3, 3),
-                    self.f.sf(expected_statistic[0], 3, 3)
+                    self.f.sf(expected_statistic[0], 3, 3),
                 ),
-                2 * min(
+                2
+                * min(
                     self.f.cdf(expected_statistic[1], 3, 2),
-                    self.f.sf(expected_statistic[1], 3, 2)
+                    self.f.sf(expected_statistic[1], 3, 2),
                 ),
                 np.nan,
             ]
         )
         actual_statistic, actual_pvalue = breakvar_heteroskedasticity_test(
             input_residuals
-            )
+        )
 
         assert_equal(actual_statistic, expected_statistic)
         assert_equal(actual_pvalue, expected_pvalue)
@@ -403,19 +406,17 @@ class TestBreakvarHeteroskedasticityTest(object):
         [
             (2, 41, 2 * min(f.cdf(41, 2, 2), f.sf(41, 2, 2))),
             (0.5, 10, 2 * min(f.cdf(10, 3, 3), f.sf(10, 3, 3))),
-        ]
+        ],
     )
-    def test_subset_length(self,
-                           subset_length,
-                           expected_statistic,
-                           expected_pvalue
-                           ):
+    def test_subset_length(
+        self, subset_length, expected_statistic, expected_pvalue
+    ):
 
         input_residuals = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]
         actual_statistic, actual_pvalue = breakvar_heteroskedasticity_test(
             input_residuals,
             subset_length=subset_length,
-            )
+        )
 
         assert actual_statistic == expected_statistic
         assert actual_pvalue == expected_pvalue
@@ -426,34 +427,32 @@ class TestBreakvarHeteroskedasticityTest(object):
             ("two-sided", 41, 2 * min(f.cdf(41, 2, 2), f.sf(41, 2, 2))),
             ("decreasing", 1 / 41, f.sf(1 / 41, 2, 2)),
             ("increasing", 41, f.sf(41, 2, 2)),
-        ]
+        ],
     )
-    def test_alternative(self,
-                         alternative,
-                         expected_statistic,
-                         expected_pvalue
-                         ):
+    def test_alternative(
+        self, alternative, expected_statistic, expected_pvalue
+    ):
 
         input_residuals = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]
         actual_statistic, actual_pvalue = breakvar_heteroskedasticity_test(
             input_residuals,
             alternative=alternative,
-            )
+        )
         assert actual_statistic == expected_statistic
         assert actual_pvalue == expected_pvalue
 
     def test_use_chi2(self):
 
         input_residuals = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]
-        expected_statistic = (4.0**2 + 5.0**2) / (0.0**2 + 1.0**2)
+        expected_statistic = (4.0 ** 2 + 5.0 ** 2) / (0.0 ** 2 + 1.0 ** 2)
         expected_pvalue = 2 * min(
             self.chi2.cdf(2 * expected_statistic, 2),
-            self.chi2.sf(2 * expected_statistic, 2)
-            )
+            self.chi2.sf(2 * expected_statistic, 2),
+        )
         actual_statistic, actual_pvalue = breakvar_heteroskedasticity_test(
             input_residuals,
             use_f=False,
-            )
+        )
         assert actual_statistic == expected_statistic
         assert actual_pvalue == expected_pvalue
 
@@ -863,11 +862,11 @@ def test_arma_order_select_ic():
     nobs = 250
     np.random.seed(2014)
     y = arma_generate_sample(arparams, maparams, nobs)
-    res = arma_order_select_ic(y, ic=["aic", "bic"], trend="nc")
+    res = arma_order_select_ic(y, ic=["aic", "bic"], trend="n")
     # regression tests in case we change algorithm to minic in sas
     aic_x = np.array(
         [
-            [np.nan, 552.7342255, 484.29687843],
+            [764.36517643, 552.7342255, 484.29687843],
             [562.10924262, 485.5197969, 480.32858497],
             [507.04581344, 482.91065829, 481.91926034],
             [484.03995962, 482.14868032, 483.86378955],
@@ -876,7 +875,7 @@ def test_arma_order_select_ic():
     )
     bic_x = np.array(
         [
-            [np.nan, 559.77714733, 494.86126118],
+            [767.88663735, 559.77714733, 494.86126118],
             [569.15216446, 496.08417966, 494.41442864],
             [517.61019619, 496.99650196, 499.52656493],
             [498.12580329, 499.75598491, 504.99255506],
@@ -897,14 +896,14 @@ def test_arma_order_select_ic():
     index = pd.date_range("2000-1-1", freq="M", periods=len(y))
     y_series = pd.Series(y, index=index)
     res_pd = arma_order_select_ic(
-        y_series, max_ar=2, max_ma=1, ic=["aic", "bic"], trend="nc"
+        y_series, max_ar=2, max_ma=1, ic=["aic", "bic"], trend="n"
     )
     assert_almost_equal(res_pd.aic.values, aic.values[:3, :2], 5)
     assert_almost_equal(res_pd.bic.values, bic.values[:3, :2], 5)
     assert_equal(res_pd.aic_min_order, (2, 1))
     assert_equal(res_pd.bic_min_order, (1, 1))
 
-    res = arma_order_select_ic(y, ic="aic", trend="nc")
+    res = arma_order_select_ic(y, ic="aic", trend="n")
     assert_almost_equal(res.aic.values, aic.values, 5)
     assert_(res.aic.index.equals(aic.index))
     assert_(res.aic.columns.equals(aic.columns))
@@ -1342,16 +1341,17 @@ def test_coint_auto_tstat():
 rs = np.random.RandomState(1)
 a = rs.random_sample(120)
 b = np.zeros_like(a)
-df1 = pd.DataFrame({'b': b, 'a': a})
-df2 = pd.DataFrame({'a': a, 'b': b})
+df1 = pd.DataFrame({"b": b, "a": a})
+df2 = pd.DataFrame({"a": a, "b": b})
 
 b = np.ones_like(a)
-df3 = pd.DataFrame({'b': b, 'a': a})
-df4 = pd.DataFrame({'a': a, 'b': b})
+df3 = pd.DataFrame({"b": b, "a": a})
+df4 = pd.DataFrame({"a": a, "b": b})
 
 gc_data_sets = [df1, df2, df3, df4]
 
-@pytest.mark.parametrize("dataset",gc_data_sets)
+
+@pytest.mark.parametrize("dataset", gc_data_sets)
 def test_granger_causality_exceptions(dataset):
     with pytest.raises(InfeasibleTestError):
         grangercausalitytests(dataset, 4)

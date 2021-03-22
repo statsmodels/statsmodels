@@ -3,7 +3,7 @@ Statistical tools for time series analysis
 """
 from statsmodels.compat.numpy import lstsq
 from statsmodels.compat.pandas import deprecate_kwarg
-from statsmodels.compat.python import lrange, lzip
+from statsmodels.compat.python import lzip
 from statsmodels.compat.scipy import _next_regular
 
 import warnings
@@ -32,7 +32,6 @@ from statsmodels.tools.validation import (
 from statsmodels.tsa._bds import bds
 from statsmodels.tsa._innovations import innovations_algo, innovations_filter
 from statsmodels.tsa.adfvalues import mackinnoncrit, mackinnonp
-from statsmodels.tsa.arima_model import ARMA
 from statsmodels.tsa.tsatools import add_trend, lagmat, lagmat2ds
 
 __all__ = [
@@ -1295,8 +1294,9 @@ def levinson_durbin_pacf(pacf, nlags=None):
     return arcoefs, acf
 
 
-def breakvar_heteroskedasticity_test(resid, subset_length=1/3,
-                                     alternative='two-sided', use_f=True):
+def breakvar_heteroskedasticity_test(
+    resid, subset_length=1 / 3, alternative="two-sided", use_f=True
+):
     r"""
     Test for heteroskedasticity of residuals
 
@@ -1369,7 +1369,7 @@ def breakvar_heteroskedasticity_test(resid, subset_length=1/3,
     .. [1] Harvey, Andrew C. 1990. *Forecasting, Structural Time Series*
             *Models and the Kalman Filter.* Cambridge University Press.
     """
-    squared_resid = np.asarray(resid, dtype=float)**2
+    squared_resid = np.asarray(resid, dtype=float) ** 2
     if squared_resid.ndim == 1:
         squared_resid = squared_resid.reshape(-1, 1)
     nobs = len(resid)
@@ -1384,9 +1384,11 @@ def breakvar_heteroskedasticity_test(resid, subset_length=1/3,
     numer_squared_sum = np.nansum(numer_resid, axis=0)
     for i, dof in enumerate(numer_dof):
         if dof < 2:
-            warnings.warn('Early subset of data for variable %d'
-                          ' has too few non-missing observations to'
-                          ' calculate test statistic.' % i)
+            warnings.warn(
+                "Early subset of data for variable %d"
+                " has too few non-missing observations to"
+                " calculate test statistic." % i
+            )
             numer_squared_sum[i] = np.nan
 
     denom_resid = squared_resid[:h]
@@ -1394,9 +1396,11 @@ def breakvar_heteroskedasticity_test(resid, subset_length=1/3,
     denom_squared_sum = np.nansum(denom_resid, axis=0)
     for i, dof in enumerate(denom_dof):
         if dof < 2:
-            warnings.warn('Later subset of data for variable %d'
-                          ' has too few non-missing observations to'
-                          ' calculate test statistic.' % i)
+            warnings.warn(
+                "Later subset of data for variable %d"
+                " has too few non-missing observations to"
+                " calculate test statistic." % i
+            )
             denom_squared_sum[i] = np.nan
 
     test_statistic = numer_squared_sum / denom_squared_sum
@@ -1404,31 +1408,36 @@ def breakvar_heteroskedasticity_test(resid, subset_length=1/3,
     # Setup functions to calculate the p-values
     if use_f:
         from scipy.stats import f
+
         pval_lower = lambda test_statistics: f.cdf(  # noqa:E731
-            test_statistics, numer_dof, denom_dof)
+            test_statistics, numer_dof, denom_dof
+        )
         pval_upper = lambda test_statistics: f.sf(  # noqa:E731
-            test_statistics, numer_dof, denom_dof)
+            test_statistics, numer_dof, denom_dof
+        )
     else:
         from scipy.stats import chi2
+
         pval_lower = lambda test_statistics: chi2.cdf(  # noqa:E731
-            numer_dof * test_statistics, denom_dof)
+            numer_dof * test_statistics, denom_dof
+        )
         pval_upper = lambda test_statistics: chi2.sf(  # noqa:E731
-            numer_dof * test_statistics, denom_dof)
+            numer_dof * test_statistics, denom_dof
+        )
 
     # Calculate the one- or two-sided p-values
     alternative = alternative.lower()
-    if alternative in ['i', 'inc', 'increasing']:
+    if alternative in ["i", "inc", "increasing"]:
         p_value = pval_upper(test_statistic)
-    elif alternative in ['d', 'dec', 'decreasing']:
-        test_statistic = 1. / test_statistic
+    elif alternative in ["d", "dec", "decreasing"]:
+        test_statistic = 1.0 / test_statistic
         p_value = pval_upper(test_statistic)
-    elif alternative in ['2', '2-sided', 'two-sided']:
+    elif alternative in ["2", "2-sided", "two-sided"]:
         p_value = 2 * np.minimum(
-            pval_lower(test_statistic),
-            pval_upper(test_statistic)
+            pval_lower(test_statistic), pval_upper(test_statistic)
         )
     else:
-        raise ValueError('Invalid alternative.')
+        raise ValueError("Invalid alternative.")
 
     if len(test_statistic) == 1:
         return test_statistic[0], p_value[0]
@@ -1547,8 +1556,8 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
             dtaown = add_constant(dta[:, 1 : (mxlg + 1)], prepend=False)
             dtajoint = add_constant(dta[:, 1:], prepend=False)
             if (
-                    dtajoint.shape[1] == (dta.shape[1] - 1)
-                    or (dtajoint.max(0) == dtajoint.min(0)).sum() != 1
+                dtajoint.shape[1] == (dta.shape[1] - 1)
+                or (dtajoint.max(0) == dtajoint.min(0)).sum() != 1
             ):
                 raise InfeasibleTestError(
                     "The x values include a column with constant values and so"
@@ -1572,13 +1581,13 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
         if res2djoint.model.k_constant:
             tss = res2djoint.centered_tss
         else:
-            tss =res2djoint.centered_tss
+            tss = res2djoint.centered_tss
         if (
-                tss == 0
-                or res2djoint.ssr == 0
-                or np.isnan(res2djoint.rsquared)
-                or (res2djoint.ssr / tss) < np.finfo(float).eps
-                or res2djoint.params.shape[0] != dtajoint.shape[1]
+            tss == 0
+            or res2djoint.ssr == 0
+            or np.isnan(res2djoint.rsquared)
+            or (res2djoint.ssr / tss) < np.finfo(float).eps
+            or res2djoint.params.shape[0] != dtajoint.shape[1]
         ):
             raise InfeasibleTestError(
                 "The Granger causality test statistic cannot be compute "
@@ -1789,9 +1798,11 @@ def coint(
 
 
 def _safe_arma_fit(y, order, model_kw, trend, fit_kw, start_params=None):
+    from statsmodels.tsa.arima.model import ARIMA
+
     try:
-        return ARMA(y, order=order, **model_kw).fit(
-            disp=0, trend=trend, start_params=start_params, **fit_kw
+        return ARIMA(y, order=order, **model_kw, trend=trend).fit(
+            start_params=start_params, **fit_kw
         )
     except LinAlgError:
         # SVD convergence failure on badly misspecified models
@@ -1870,18 +1881,18 @@ def arma_order_select_ic(
     >>> nobs = 250
     >>> np.random.seed(2014)
     >>> y = arma_generate_sample(arparams, maparams, nobs)
-    >>> res = sm.tsa.arma_order_select_ic(y, ic=["aic", "bic"], trend="nc")
+    >>> res = sm.tsa.arma_order_select_ic(y, ic=["aic", "bic"], trend="n")
     >>> res.aic_min_order
     >>> res.bic_min_order
     """
     max_ar = int_like(max_ar, "max_ar")
     max_ma = int_like(max_ma, "max_ma")
-    trend = string_like(trend, "trend", options=("nc", "c"))
+    trend = string_like(trend, "trend", options=("n", "c"))
     model_kw = dict_like(model_kw, "model_kw", optional=True)
     fit_kw = dict_like(fit_kw, "fit_kw", optional=True)
 
-    ar_range = lrange(0, max_ar + 1)
-    ma_range = lrange(0, max_ma + 1)
+    ar_range = [i for i in range(max_ar + 1)]
+    ma_range = [i for i in range(max_ma + 1)]
     if isinstance(ic, str):
         ic = [ic]
     elif not isinstance(ic, (list, tuple)):
@@ -1893,11 +1904,7 @@ def arma_order_select_ic(
     y_arr = array_like(y, "y", contiguous=True)
     for ar in ar_range:
         for ma in ma_range:
-            if ar == 0 and ma == 0 and trend == "nc":
-                results[:, ar, ma] = np.nan
-                continue
-
-            mod = _safe_arma_fit(y_arr, (ar, ma), model_kw, trend, fit_kw)
+            mod = _safe_arma_fit(y_arr, (ar, 0, ma), model_kw, trend, fit_kw)
             if mod is None:
                 results[:, ar, ma] = np.nan
                 continue

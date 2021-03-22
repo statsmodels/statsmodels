@@ -38,8 +38,6 @@ structure is within statsmodels.tsa is
 - vector_ar, var : vector autoregressive process (VAR) and vector error correction
   models, estimation, impulse response analysis, forecast error variance decompositions,
   and data visualization tools. See the :ref:`vector_ar documentation <var>`.
-- kalmanf : estimation classes for ARMA and other models with exact MLE using
-  Kalman Filter
 - arma_process : properties of arma processes with given parameters, this
   includes tools to convert between ARMA, MA and AR representation as well as
   acf, pacf, spectral density, impulse response function and similar
@@ -117,14 +115,6 @@ and supports exogenous regressors (an AR-X model) and seasonal effects.
 AR-X and related models can also be fitted with the `arima.ARIMA` class and the
 `SARIMAX` class (using full MLE via the Kalman Filter).
 
-Finally, the old class, `ar_model.AR`, is still available but it has been
-deprecated.
-
-.. autosummary::
-   :toctree: generated/
-
-   ar_model.AR
-   ar_model.ARResults
 
 Autoregressive Moving-Average Processes (ARMA) and Kalman Filter
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -145,19 +135,6 @@ filter). It is a special case of the `SARIMAX` model, and it includes a large
 number of inherited features from the :ref:`state space <statespace>` models
 (including prediction / forecasting, residual diagnostics, simulation and
 impulse responses, etc.).
-
-Prior to version 0.11, the basic ARIMA model and results classes were the
-following:
-
-.. autosummary::
-   :toctree: generated/
-
-   arima_model.ARMA
-   arima_model.ARMAResults
-   arima_model.ARIMA
-   arima_model.ARIMAResults
-
-These classes are still available, but they are no longer recommended.
 
 Exponential Smoothing
 ~~~~~~~~~~~~~~~~~~~~~
