@@ -165,6 +165,7 @@ import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.exponential_smoothing import base
 import statsmodels.tsa.exponential_smoothing._ets_smooth as smooth
 from statsmodels.tsa.exponential_smoothing.initialization import (
+    _initialization_simple,
     _initialization_heuristic,
 )
 from statsmodels.tsa.tsatools import freq_to_period
@@ -561,10 +562,7 @@ class ETSModel(base.StateSpaceMLEModel):
                     " for models with a seasonal component when"
                     ' initialization method is set to "known".'
                 )
-        elif (
-            self.initialization_method == "heuristic"
-            or self.initialization_method == "estimated"
-        ):
+        elif self.initialization_method == "heuristic":
             (
                 initial_level,
                 initial_trend,
@@ -575,6 +573,29 @@ class ETSModel(base.StateSpaceMLEModel):
                 seasonal=self.seasonal,
                 seasonal_periods=self.seasonal_periods,
             )
+        elif self.initialization_method == "estimated":
+            if self.nobs < 10 + 2 * (self.seasonal_periods // 2):
+                (
+                    initial_level,
+                    initial_trend,
+                    initial_seasonal,
+                ) = _initialization_simple(
+                    self.endog,
+                    trend=self.trend,
+                    seasonal=self.seasonal,
+                    seasonal_periods=self.seasonal_periods,
+                )
+            else:
+                (
+                    initial_level,
+                    initial_trend,
+                    initial_seasonal,
+                ) = _initialization_heuristic(
+                    self.endog,
+                    trend=self.trend,
+                    seasonal=self.seasonal,
+                    seasonal_periods=self.seasonal_periods,
+                )
         if not self.has_trend:
             initial_trend = 0
         if not self.has_seasonal:
@@ -1132,9 +1153,13 @@ class ETSModel(base.StateSpaceMLEModel):
         res = self._residuals(yhat, data=data)
         logL = -self.nobs / 2 * (np.log(2 * np.pi * np.mean(res ** 2)) + 1)
         if self.error == "mul":
+            # GH-7331: in some cases, yhat can become negative, so that a
+            # multiplicative model is no longer well-defined. To avoid these
+            # parameterizations, we clip negative values to very small positive
+            # values so that the log-transformation yields very large negative
+            # values.
+            yhat[yhat <= 0] = 1 / (1e-8 * (1 + np.abs(yhat[yhat < 0])))
             logL -= np.sum(np.log(yhat))
-            if np.isnan(logL):
-                logL = np.inf
         return logL
 
     @contextlib.contextmanager
@@ -1732,7 +1757,6 @@ class ETSResults(base.StateSpaceMLEResults):
            principles and practice*, 2nd edition, OTexts: Melbourne,
            Australia. OTexts.com/fpp2. Accessed on February 28th 2020.
         """
-
         # Get the starting location
         start_idx = self._get_prediction_start_index(anchor)
 
@@ -2261,20 +2285,20 @@ class PredictionResults:
                     )
                     # anchor
                     anchor = start_smooth + i
-            sim_results.append(
-                results.simulate(
-                    ndynamic,
-                    anchor=anchor_dynamic,
-                    repetitions=simulate_repetitions,
-                    **simulate_kwargs,
+            if ndynamic:
+                sim_results.append(
+                    results.simulate(
+                        ndynamic,
+                        anchor=anchor_dynamic,
+                        repetitions=simulate_repetitions,
+                        **simulate_kwargs,
+                    )
                 )
-            )
-            self.simulation_results = np.concatenate(sim_results, axis=0)
-            # if self.use_pandas:
-            #     self.simulation_results = pd.DataFrame(
-            #         self.simulation_results, index=self.row_labels,
-            #         columns=sim_results[0].columns
-            #     )
+            if sim_results and isinstance(sim_results[0], pd.DataFrame):
+                self.simulation_results = pd.concat(sim_results, 0)
+            else:
+                self.simulation_results = np.concatenate(sim_results, axis=0)
+            self.forecast_variance = self.simulation_results.var(1)
         else:  # method == 'exact'
             steps = np.ones(ndynamic + nsmooth)
             if ndynamic > 0:

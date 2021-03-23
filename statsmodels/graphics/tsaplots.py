@@ -36,6 +36,7 @@ def _plot_corr(
     irregular,
     use_vlines,
     vlines_kwargs,
+    auto_ylims=False,
     **kwargs,
 ):
     if irregular:
@@ -55,6 +56,11 @@ def _plot_corr(
     ax.margins(0.05)
     ax.plot(lags, acf_x, **kwargs)
     ax.set_title(title)
+
+    ax.set_ylim(-1, 1)
+    if auto_ylims:
+        ax.set_ylim(1.25*np.minimum(min(acf_x), min(confint[:, 0] - acf_x)),
+                    1.25*np.maximum(max(acf_x), max(confint[:, 1] - acf_x)))
 
     if confint is not None:
         if lags[0] == 0:
@@ -82,6 +88,8 @@ def plot_acf(
     missing="none",
     title="Autocorrelation",
     zero=True,
+    auto_ylims=False,
+    bartlett_confint=True,
     vlines_kwargs=None,
     **kwargs,
 ):
@@ -122,6 +130,27 @@ def plot_acf(
     zero : bool, optional
         Flag indicating whether to include the 0-lag autocorrelation.
         Default is True.
+    auto_ylims : bool, optional
+        If True, adjusts automatically the y-axis limits to ACF values.
+    bartlett_confint : bool, default True
+        Confidence intervals for ACF values are generally placed at 2
+        standard errors around r_k. The formula used for standard error
+        depends upon the situation. If the autocorrelations are being used
+        to test for randomness of residuals as part of the ARIMA routine,
+        the standard errors are determined assuming the residuals are white
+        noise. The approximate formula for any lag is that standard error
+        of each r_k = 1/sqrt(N). See section 9.4 of [1] for more details on
+        the 1/sqrt(N) result. For more elementary discussion, see section
+        5.3.2 in [2].
+        For the ACF of raw data, the standard error at a lag k is
+        found as if the right model was an MA(k-1). This allows the
+        possible interpretation that if all autocorrelations past a
+        certain lag are within the limits, the model might be an MA of
+        order defined by the last significant autocorrelation. In this
+        case, a moving average model is assumed for the data and the
+        standard errors for the confidence intervals should be
+        generated using Bartlett's formula. For more details on
+        Bartlett formula result, see section 7.2 in [1].
     vlines_kwargs : dict, optional
         Optional dictionary of keyword arguments that are passed to vlines.
     **kwargs : kwargs, optional
@@ -153,6 +182,12 @@ def plot_acf(
     vertical lines connecting each autocorrelation to the axis.  These options
     must be valid for a LineCollection object.
 
+    References
+    ----------
+    [1] Brockwell and Davis, 1987. Time Series Theory and Methods
+    [2] Brockwell and Davis, 2010. Introduction to Time Series and
+    Forecasting, 2nd edition.
+
     Examples
     --------
     >>> import pandas as pd
@@ -179,6 +214,7 @@ def plot_acf(
         nlags=nlags,
         alpha=alpha,
         fft=fft,
+        bartlett_confint=bartlett_confint,
         adjusted=adjusted,
         missing=missing,
     )
@@ -194,6 +230,7 @@ def plot_acf(
         irregular,
         use_vlines,
         vlines_kwargs,
+        auto_ylims=auto_ylims,
         **kwargs,
     )
 

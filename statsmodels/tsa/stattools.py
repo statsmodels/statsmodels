@@ -3,7 +3,7 @@ Statistical tools for time series analysis
 """
 from statsmodels.compat.numpy import lstsq
 from statsmodels.compat.pandas import deprecate_kwarg
-from statsmodels.compat.python import lrange, lzip
+from statsmodels.compat.python import lzip
 from statsmodels.compat.scipy import _next_regular
 
 import warnings
@@ -32,7 +32,6 @@ from statsmodels.tools.validation import (
 from statsmodels.tsa._bds import bds
 from statsmodels.tsa._innovations import innovations_algo, innovations_filter
 from statsmodels.tsa.adfvalues import mackinnoncrit, mackinnonp
-from statsmodels.tsa.arima_model import ARMA
 from statsmodels.tsa.tsatools import add_trend, lagmat, lagmat2ds
 
 __all__ = [
@@ -206,7 +205,7 @@ def adfuller(
     adf : float
         The test statistic.
     pvalue : float
-        MacKinnon"s approximate p-value based on MacKinnon (1994, 2010).
+        MacKinnon's approximate p-value based on MacKinnon (1994, 2010).
     usedlag : int
         The number of lags used.
     nobs : int
@@ -580,6 +579,7 @@ def acf(
     qstat=False,
     fft=None,
     alpha=None,
+    bartlett_confint=True,
     missing="none",
 ):
     """
@@ -603,6 +603,24 @@ def acf(
         returned. For instance if alpha=.05, 95 % confidence intervals are
         returned where the standard deviation is computed according to
         Bartlett"s formula.
+    bartlett_confint : bool, default True
+        Confidence intervals for ACF values are generally placed at 2
+        standard errors around r_k. The formula used for standard error
+        depends upon the situation. If the autocorrelations are being used
+        to test for randomness of residuals as part of the ARIMA routine,
+        the standard errors are determined assuming the residuals are white
+        noise. The approximate formula for any lag is that standard error
+        of each r_k = 1/sqrt(N). See section 9.4 of [2] for more details on
+        the 1/sqrt(N) result. For more elementary discussion, see section 5.3.2
+        in [3].
+        For the ACF of raw data, the standard error at a lag k is
+        found as if the right model was an MA(k-1). This allows the possible
+        interpretation that if all autocorrelations past a certain lag are
+        within the limits, the model might be an MA of order defined by the
+        last significant autocorrelation. In this case, a moving average
+        model is assumed for the data and the standard errors for the
+        confidence intervals should be generated using Bartlett's formula.
+        For more details on Bartlett formula result, see section 7.2 in [2].
     missing : str, default "none"
         A string in ["none", "raise", "conservative", "drop"] specifying how
         the NaNs are to be treated. "none" performs no checks. "raise" raises
@@ -644,6 +662,9 @@ def acf(
     .. [1] Parzen, E., 1963. On spectral analysis with missing observations
        and amplitude modulation. Sankhya: The Indian Journal of
        Statistics, Series A, pp.383-392.
+       [2] Brockwell and Davis, 1987. Time Series Theory and Methods
+       [3] Brockwell and Davis, 2010. Introduction to Time Series and
+       Forecasting, 2nd edition.
     """
     adjusted = bool_like(adjusted, "adjusted")
     nlags = int_like(nlags, "nlags", optional=True)
@@ -678,10 +699,13 @@ def acf(
     if not (qstat or alpha):
         return acf
     if alpha is not None:
-        varacf = np.ones_like(acf) / nobs
-        varacf[0] = 0
-        varacf[1] = 1.0 / nobs
-        varacf[2:] *= 1 + 2 * np.cumsum(acf[1:-1] ** 2)
+        if bartlett_confint:
+            varacf = np.ones_like(acf) / nobs
+            varacf[0] = 0
+            varacf[1] = 1.0 / nobs
+            varacf[2:] *= 1 + 2 * np.cumsum(acf[1:-1] ** 2)
+        else:
+            varacf = 1.0 / len(x)
         interval = stats.norm.ppf(1 - alpha / 2.0) * np.sqrt(varacf)
         confint = np.array(lzip(acf - interval, acf + interval))
         if not qstat:
@@ -1270,6 +1294,157 @@ def levinson_durbin_pacf(pacf, nlags=None):
     return arcoefs, acf
 
 
+def breakvar_heteroskedasticity_test(
+    resid, subset_length=1 / 3, alternative="two-sided", use_f=True
+):
+    r"""
+    Test for heteroskedasticity of residuals
+
+    Tests whether the sum-of-squares in the first subset of the sample is
+    significantly different than the sum-of-squares in the last subset
+    of the sample. Analogous to a Goldfeld-Quandt test. The null hypothesis
+    is of no heteroskedasticity.
+
+    Parameters
+    ----------
+    resid : array_like
+        Residuals of a time series model.
+        The shape is 1d (nobs,) or 2d (nobs, nvars).
+    subset_length : {int, float}
+        Length of the subsets to test (h in Notes below).
+        If a float in 0 < subset_length < 1, it is interpreted as fraction.
+        Default is 1/3.
+    alternative : str, 'increasing', 'decreasing' or 'two-sided'
+        This specifies the alternative for the p-value calculation. Default
+        is two-sided.
+    use_f : bool, optional
+        Whether or not to compare against the asymptotic distribution
+        (chi-squared) or the approximate small-sample distribution (F).
+        Default is True (i.e. default is to compare against an F
+        distribution).
+
+    Returns
+    -------
+    test_statistic : {float, ndarray}
+        Test statistic(s) H(h).
+    p_value : {float, ndarray}
+        p-value(s) of test statistic(s).
+
+    Notes
+    -----
+    The null hypothesis is of no heteroskedasticity. That means different
+    things depending on which alternative is selected:
+
+    - Increasing: Null hypothesis is that the variance is not increasing
+        throughout the sample; that the sum-of-squares in the later
+        subsample is *not* greater than the sum-of-squares in the earlier
+        subsample.
+    - Decreasing: Null hypothesis is that the variance is not decreasing
+        throughout the sample; that the sum-of-squares in the earlier
+        subsample is *not* greater than the sum-of-squares in the later
+        subsample.
+    - Two-sided: Null hypothesis is that the variance is not changing
+        throughout the sample. Both that the sum-of-squares in the earlier
+        subsample is not greater than the sum-of-squares in the later
+        subsample *and* that the sum-of-squares in the later subsample is
+        not greater than the sum-of-squares in the earlier subsample.
+
+    For :math:`h = [T/3]`, the test statistic is:
+
+    .. math::
+
+        H(h) = \sum_{t=T-h+1}^T  \tilde v_t^2
+        \Bigg / \sum_{t=1}^{h} \tilde v_t^2
+
+    This statistic can be tested against an :math:`F(h,h)` distribution.
+    Alternatively, :math:`h H(h)` is asymptotically distributed according
+    to :math:`\chi_h^2`; this second test can be applied by passing
+    `use_f=False` as an argument.
+
+    See section 5.4 of [1]_ for the above formula and discussion, as well
+    as additional details.
+
+    References
+    ----------
+    .. [1] Harvey, Andrew C. 1990. *Forecasting, Structural Time Series*
+            *Models and the Kalman Filter.* Cambridge University Press.
+    """
+    squared_resid = np.asarray(resid, dtype=float) ** 2
+    if squared_resid.ndim == 1:
+        squared_resid = squared_resid.reshape(-1, 1)
+    nobs = len(resid)
+
+    if 0 < subset_length < 1:
+        h = int(np.round(nobs * subset_length))
+    elif type(subset_length) is int and subset_length >= 1:
+        h = subset_length
+
+    numer_resid = squared_resid[-h:]
+    numer_dof = (~np.isnan(numer_resid)).sum(axis=0)
+    numer_squared_sum = np.nansum(numer_resid, axis=0)
+    for i, dof in enumerate(numer_dof):
+        if dof < 2:
+            warnings.warn(
+                "Early subset of data for variable %d"
+                " has too few non-missing observations to"
+                " calculate test statistic." % i
+            )
+            numer_squared_sum[i] = np.nan
+
+    denom_resid = squared_resid[:h]
+    denom_dof = (~np.isnan(denom_resid)).sum(axis=0)
+    denom_squared_sum = np.nansum(denom_resid, axis=0)
+    for i, dof in enumerate(denom_dof):
+        if dof < 2:
+            warnings.warn(
+                "Later subset of data for variable %d"
+                " has too few non-missing observations to"
+                " calculate test statistic." % i
+            )
+            denom_squared_sum[i] = np.nan
+
+    test_statistic = numer_squared_sum / denom_squared_sum
+
+    # Setup functions to calculate the p-values
+    if use_f:
+        from scipy.stats import f
+
+        pval_lower = lambda test_statistics: f.cdf(  # noqa:E731
+            test_statistics, numer_dof, denom_dof
+        )
+        pval_upper = lambda test_statistics: f.sf(  # noqa:E731
+            test_statistics, numer_dof, denom_dof
+        )
+    else:
+        from scipy.stats import chi2
+
+        pval_lower = lambda test_statistics: chi2.cdf(  # noqa:E731
+            numer_dof * test_statistics, denom_dof
+        )
+        pval_upper = lambda test_statistics: chi2.sf(  # noqa:E731
+            numer_dof * test_statistics, denom_dof
+        )
+
+    # Calculate the one- or two-sided p-values
+    alternative = alternative.lower()
+    if alternative in ["i", "inc", "increasing"]:
+        p_value = pval_upper(test_statistic)
+    elif alternative in ["d", "dec", "decreasing"]:
+        test_statistic = 1.0 / test_statistic
+        p_value = pval_upper(test_statistic)
+    elif alternative in ["2", "2-sided", "two-sided"]:
+        p_value = 2 * np.minimum(
+            pval_lower(test_statistic), pval_upper(test_statistic)
+        )
+    else:
+        raise ValueError("Invalid alternative.")
+
+    if len(test_statistic) == 1:
+        return test_statistic[0], p_value[0]
+
+    return test_statistic, p_value
+
+
 def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
     """
     Four tests for granger non causality of 2 time series.
@@ -1381,8 +1556,8 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
             dtaown = add_constant(dta[:, 1 : (mxlg + 1)], prepend=False)
             dtajoint = add_constant(dta[:, 1:], prepend=False)
             if (
-                    dtajoint.shape[1] == (dta.shape[1] - 1)
-                    or (dtajoint.max(0) == dtajoint.min(0)).sum() != 1
+                dtajoint.shape[1] == (dta.shape[1] - 1)
+                or (dtajoint.max(0) == dtajoint.min(0)).sum() != 1
             ):
                 raise InfeasibleTestError(
                     "The x values include a column with constant values and so"
@@ -1406,13 +1581,13 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
         if res2djoint.model.k_constant:
             tss = res2djoint.centered_tss
         else:
-            tss =res2djoint.centered_tss
+            tss = res2djoint.centered_tss
         if (
-                tss == 0
-                or res2djoint.ssr == 0
-                or np.isnan(res2djoint.rsquared)
-                or (res2djoint.ssr / tss) < np.finfo(float).eps
-                or res2djoint.params.shape[0] != dtajoint.shape[1]
+            tss == 0
+            or res2djoint.ssr == 0
+            or np.isnan(res2djoint.rsquared)
+            or (res2djoint.ssr / tss) < np.finfo(float).eps
+            or res2djoint.params.shape[0] != dtajoint.shape[1]
         ):
             raise InfeasibleTestError(
                 "The Granger causality test statistic cannot be compute "
@@ -1623,9 +1798,11 @@ def coint(
 
 
 def _safe_arma_fit(y, order, model_kw, trend, fit_kw, start_params=None):
+    from statsmodels.tsa.arima.model import ARIMA
+
     try:
-        return ARMA(y, order=order, **model_kw).fit(
-            disp=0, trend=trend, start_params=start_params, **fit_kw
+        return ARIMA(y, order=order, **model_kw, trend=trend).fit(
+            start_params=start_params, **fit_kw
         )
     except LinAlgError:
         # SVD convergence failure on badly misspecified models
@@ -1704,18 +1881,18 @@ def arma_order_select_ic(
     >>> nobs = 250
     >>> np.random.seed(2014)
     >>> y = arma_generate_sample(arparams, maparams, nobs)
-    >>> res = sm.tsa.arma_order_select_ic(y, ic=["aic", "bic"], trend="nc")
+    >>> res = sm.tsa.arma_order_select_ic(y, ic=["aic", "bic"], trend="n")
     >>> res.aic_min_order
     >>> res.bic_min_order
     """
     max_ar = int_like(max_ar, "max_ar")
     max_ma = int_like(max_ma, "max_ma")
-    trend = string_like(trend, "trend", options=("nc", "c"))
+    trend = string_like(trend, "trend", options=("n", "c"))
     model_kw = dict_like(model_kw, "model_kw", optional=True)
     fit_kw = dict_like(fit_kw, "fit_kw", optional=True)
 
-    ar_range = lrange(0, max_ar + 1)
-    ma_range = lrange(0, max_ma + 1)
+    ar_range = [i for i in range(max_ar + 1)]
+    ma_range = [i for i in range(max_ma + 1)]
     if isinstance(ic, str):
         ic = [ic]
     elif not isinstance(ic, (list, tuple)):
@@ -1727,11 +1904,7 @@ def arma_order_select_ic(
     y_arr = array_like(y, "y", contiguous=True)
     for ar in ar_range:
         for ma in ma_range:
-            if ar == 0 and ma == 0 and trend == "nc":
-                results[:, ar, ma] = np.nan
-                continue
-
-            mod = _safe_arma_fit(y_arr, (ar, ma), model_kw, trend, fit_kw)
+            mod = _safe_arma_fit(y_arr, (ar, 0, ma), model_kw, trend, fit_kw)
             if mod is None:
                 results[:, ar, ma] = np.nan
                 continue

@@ -704,8 +704,6 @@ class WLS(RegressionModel):
                                   weights=weights, hasconst=hasconst, **kwargs)
         nobs = self.exog.shape[0]
         weights = self.weights
-        # Experimental normalization of weights
-        weights = weights / np.sum(weights) * nobs
         if weights.size != nobs and weights.shape[0] != nobs:
             raise ValueError('Weights must be scalar or same length as design')
 

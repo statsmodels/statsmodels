@@ -2401,3 +2401,27 @@ def test_output_exposure_null(reset_randomstate):
     assert_allclose(model.llnull, null_model.llf)
     # Check that they are different
     assert np.abs(null_model_without_exposure.llf - model.llnull) > 1
+
+def test_qaic():
+
+    # Example from documentation of R package MuMIn
+    import patsy
+    ldose = np.concatenate((np.arange(6), np.arange(6)))
+    sex = ["M"]*6 + ["F"]*6
+    numdead = [10, 4, 9, 12, 18, 20, 0, 2, 6, 10, 12, 16]
+    df = pd.DataFrame({"ldose": ldose, "sex": sex, "numdead": numdead})
+    df["numalive"] = 20 - df["numdead"]
+    df["SF"] = df["numdead"]
+
+    y = df[["numalive", "numdead"]].values
+    x = patsy.dmatrix("sex*ldose", data=df, return_type='dataframe')
+    m = GLM(y, x, family=sm.families.Binomial())
+    r = m.fit()
+    scale = 2.412699
+    qaic = r.info_criteria(crit="qaic", scale=scale)
+
+    # R gives 31.13266 because it uses a df that is 1 greater,
+    # presumably because they count the scale parameter in df.
+    # This won't matter when comparing models by differencing
+    # QAICs.
+    assert_allclose(qaic, 29.13266, rtol=1e-5, atol=1e-5)

@@ -2,7 +2,7 @@
 cython>=0.29
 
 # run
-matplotlib>=2.2
+matplotlib>=3
 # Remove due to failures on azure CI
 # cvxopt; os_name != "win32"
 

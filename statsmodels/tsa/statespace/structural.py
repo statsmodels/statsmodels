@@ -52,6 +52,8 @@ class UnobservedComponents(MLEModel):
     Parameters
     ----------
 
+    endog : array_like
+        The observed time-series process :math:`y`
     level : {bool, str}, optional
         Whether or not to include a level component. Default is False. Can also
         be a string specification of the level / trend component; see Notes
@@ -100,10 +102,20 @@ class UnobservedComponents(MLEModel):
         allow the cyclical component to be between 1.5 and 12 years; depending
         on the frequency of the endogenous variable, this will imply different
         specific bounds.
+    mle_regression : bool, optional
+        Whether or not to estimate regression coefficients by maximum likelihood
+        as one of hyperparameters. Default is True.
+        If False, the regression coefficients are estimated by recursive OLS,
+        included in the state vector.
     use_exact_diffuse : bool, optional
         Whether or not to use exact diffuse initialization for non-stationary
         states. Default is False (in which case approximate diffuse
         initialization is used).
+
+    See Also
+    --------
+    statsmodels.tsa.statespace.structural.UnobservedComponentsResults
+    statsmodels.tsa.statespace.mlemodel.MLEModel
 
     Notes
     -----
@@ -155,11 +167,11 @@ class UnobservedComponents(MLEModel):
     +----------------------------------+--------------------------------------+--------------------+--------------------------------------------------+
     | Model name                       | Full string syntax                   | Abbreviated syntax | Model                                            |
     +==================================+======================================+====================+==================================================+
-    | No trend                         | `'irregular'`                        | `'ntrend'`         | .. math:: y_t &= \varepsilon_t                   |
+    | No trend                         | `'irregular'`                        | `'ntrend'`         | .. math:: y_t = \varepsilon_t                    |
     +----------------------------------+--------------------------------------+--------------------+--------------------------------------------------+
-    | Fixed intercept                  | `'fixed intercept'`                  |                    | .. math:: y_t &= \mu                             |
+    | Fixed intercept                  | `'fixed intercept'`                  |                    | .. math:: y_t = \mu                              |
     +----------------------------------+--------------------------------------+--------------------+--------------------------------------------------+
-    | Deterministic constant           | `'deterministic constant'`           | `'dconstant'`      | .. math:: y_t &= \mu + \varepsilon_t             |
+    | Deterministic constant           | `'deterministic constant'`           | `'dconstant'`      | .. math:: y_t = \mu + \varepsilon_t              |
     +----------------------------------+--------------------------------------+--------------------+--------------------------------------------------+
     | Local level                      | `'local level'`                      | `'llevel'`         | .. math:: y_t &= \mu_t + \varepsilon_t \\        |
     |                                  |                                      |                    |     \mu_t &= \mu_{t-1} + \eta_t                  |
@@ -219,7 +231,7 @@ class UnobservedComponents(MLEModel):
     time series is available in the results class in the `seasonal`
     attribute.
 
-    ** Frequency-domain Seasonal**
+    **Frequency-domain Seasonal**
 
     Each frequency-domain seasonal component is modeled as:
 
@@ -248,7 +260,7 @@ class UnobservedComponents(MLEModel):
     This component results in one parameter to be fitted using maximum
     likelihood: :math:`\sigma_{\omega^2}`, and up to two parameters to be
     chosen, the number of seasons s and optionally the number of harmonics
-    h, with :math:`1 \leq h \leq \floor(s/2)`.
+    h, with :math:`1 \leq h \leq \lfloor s/2 \rfloor`.
 
     After fitting the model, each unobserved seasonal component modeled in the
     frequency domain is available in the results class in the `freq_seasonal`
@@ -1557,6 +1569,10 @@ class UnobservedComponentsResults(MLEResults):
             results are available otherwise 'filtered'.
         alpha : float, optional
             The confidence intervals for the components are (1 - alpha) %
+        observed : bool, optional
+            Whether or not to plot the observed series against
+            one-step-ahead predictions.
+            Default is True.
         level : bool, optional
             Whether or not to plot the level component, if applicable.
             Default is True.

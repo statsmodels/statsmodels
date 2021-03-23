@@ -1,5 +1,6 @@
 from io import BytesIO
 from itertools import product
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -261,8 +262,9 @@ def test_plot():
         res.plot_recursive_coefficient(variables="x4")
 
     fig = plt.Figure()
-    with pytest.warns(Warning):
-        # Just silence the warning
+    # Just silence the warning
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
         out = res.plot_recursive_coefficient(fig=fig)
     assert out is fig
     res.plot_recursive_coefficient(alpha=None, figsize=(30, 7))

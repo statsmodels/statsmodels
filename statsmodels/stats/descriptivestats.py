@@ -446,8 +446,14 @@ class Description:
         else:
             iqr = mean
 
+        def _safe_jarque_bera(c):
+            a = np.asarray(c)
+            if a.shape[0] < 2:
+                return (np.nan,) * 4
+            return jarque_bera(a)
+
         jb = df.apply(
-            lambda x: list(jarque_bera(x.dropna())), result_type="expand"
+            lambda x: list(_safe_jarque_bera(x.dropna())), result_type="expand"
         ).T
         nan_mean = mean.copy()
         nan_mean.loc[nan_mean == 0] = np.nan

@@ -68,7 +68,7 @@ References
 * Racine, J. Li, Q. "Kernel Estimation of Multivariate Conditional
   Distributions Annals of Economics and Finance 5, 211-235 (2004)
 * Liu, R., Yang, L. "Kernel estimation of multivariate
-  cumulative distribution function." Journal of Nonparametric Statistics 
+  cumulative distribution function." Journal of Nonparametric Statistics
   (2008)
 * Li, R., Ju, G. "Nonparametric Estimation of Multivariate CDF
   with Categorical and Continuous Data." Working Paper
@@ -128,6 +128,61 @@ helper functions for kernel bandwidths
 
 There are some examples for nonlinear functions in
 :mod:`statsmodels.nonparametric.dgp_examples`
+
+
+Asymmetric Kernels
+------------------
+
+Asymmetric kernels like beta for the unit interval and gamma for positive
+valued random variables avoid problems at the boundary of the support of the
+distribution.
+
+Statsmodels has preliminary support for estimating density and cumulative
+distribution function using kernels for the unit interval, ``beta`` or the
+positive real line, all other kernels.
+
+Several of the kernels for the positive real line assume that the density at
+the zero boundary is zero. The gamma kernel also allows the case of positive
+or unbound density at the zero boundary.
+
+There are currently no defaults and no support for choosing the bandwidth. the
+user has to provide the bandwidth.
+
+The functions to compute kernel density and kernel cdf are
+
+.. currentmodule:: statsmodels.nonparametric.kernels_asymmetric
+.. autosummary::
+   :toctree: generated/
+
+   pdf_kernel_asym
+   cdf_kernel_asym
+
+The available kernel functions for pdf and cdf are
+
+.. autosummary::
+   :toctree: generated/
+
+   kernel_pdf_beta
+   kernel_pdf_beta2
+   kernel_pdf_bs
+   kernel_pdf_gamma
+   kernel_pdf_gamma2
+   kernel_pdf_invgamma
+   kernel_pdf_invgauss
+   kernel_pdf_lognorm
+   kernel_pdf_recipinvgauss
+   kernel_pdf_weibull
+   kernel_cdf_beta
+   kernel_cdf_beta2
+   kernel_cdf_bs
+   kernel_cdf_gamma
+   kernel_cdf_gamma2
+   kernel_cdf_invgamma
+   kernel_cdf_invgauss
+   kernel_cdf_lognorm
+   kernel_cdf_recipinvgauss
+   kernel_cdf_weibull
+
 
 The sandbox.nonparametric contains additional insufficiently tested classes
 for testing functional form and for semi-linear and single index models.

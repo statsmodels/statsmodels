@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.stats import rv_discrete, nbinom, poisson
 from scipy.special import gammaln
-from statsmodels.compat.scipy import _lazywhere
+from scipy._lib._util import _lazywhere
 
 
 class genpoisson_p_gen(rv_discrete):
@@ -56,11 +56,11 @@ class zipoisson_gen(rv_discrete):
 
     def _var(self, mu, w):
         dispersion_factor = 1 + w * mu
-        var = (dispersion_factor * self._mean(mu, w)).mean()
+        var = (dispersion_factor * self._mean(mu, w))
         return var
 
     def _moment(self, n, mu, w):
-        return (1 - w) * poisson(mu).moment(n)
+        return (1 - w) * poisson.moment(n, mu)
 
 
 zipoisson = zipoisson_gen(name='zipoisson',
@@ -88,7 +88,7 @@ class zigeneralizedpoisson_gen(rv_discrete):
     def _var(self, mu, alpha, p, w):
         p = p - 1
         dispersion_factor = (1 + alpha * mu ** p) ** 2 + w * mu
-        var = (dispersion_factor * self._mean(mu, alpha, p, w)).mean()
+        var = (dispersion_factor * self._mean(mu, alpha, p, w))
         return var
 
 
@@ -134,7 +134,7 @@ class zinegativebinomial_gen(rv_discrete):
 
     def _var(self, mu, alpha, p, w):
         dispersion_factor = 1 + alpha * mu ** (p - 1) + w * mu
-        var = (dispersion_factor * self._mean(mu, alpha, p, w)).mean()
+        var = (dispersion_factor * self._mean(mu, alpha, p, w))
         return var
 
     def _moment(self, n, mu, alpha, p, w):

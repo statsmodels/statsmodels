@@ -364,7 +364,9 @@ class STLForecastResults:
             Array containing the seasibak predictions.
         """
         data = PandasData(pd.Series(self._endog), index=self._index)
-        (start, end, out_of_sample, prediction_index,) = get_prediction_index(
+        if start is None:
+            start = 0
+        (start, end, out_of_sample, prediction_index) = get_prediction_index(
             start, end, self._nobs, self._index, data=data
         )
 
@@ -500,6 +502,18 @@ class STLForecastResults:
             start, end, dynamic
         )
         mean = pred.predicted_mean + seasonal_prediction
+        try:
+            var_pred_mean = pred.var_pred_mean
+        except (AttributeError, NotImplementedError):
+            # Allow models that do not return var_pred_mean
+            import warnings
+
+            warnings.warn(
+                f"The variance of the predicted mean is not available using "
+                f"the {self.model.__class__.__name__} model class.",
+                UserWarning,
+            )
+            var_pred_mean = np.nan + mean.copy()
         return PredictionResults(
-            mean, pred.var_pred_mean, dist="norm", row_labels=pred.row_labels,
+            mean, var_pred_mean, dist="norm", row_labels=pred.row_labels
         )

@@ -1670,26 +1670,43 @@ class GLMResults(base.LikelihoodModelResults):
                                    freq_weights=self._freq_weights,
                                    scale=self.scale)
 
-    @cached_value
-    def llf(self):
+    def llf_scaled(self, scale=None):
         """
-        Value of the loglikelihood function evalued at params.
-        See statsmodels.families.family for distribution-specific
-        loglikelihoods.
+        Return the log-likelihood at the given scale, using the
+        estimated scale if the provided scale is None.  In the Gaussian
+        case with linear link, the concentrated log-likelihood is
+        returned.
         """
+
         _modelfamily = self.family
-        if (isinstance(self.family, families.Gaussian) and
-                isinstance(self.family.link, families.links.Power) and
-                (self.family.link.power == 1.)):
-            scale = (np.power(self._endog - self.mu, 2) * self._iweights).sum()
-            scale /= self.model.wnobs
-        else:
-            scale = self.scale
+        if scale is None:
+            if (isinstance(self.family, families.Gaussian) and
+                    isinstance(self.family.link, families.links.Power) and
+                    (self.family.link.power == 1.)):
+                # Scale for the concentrated Gaussian log likelihood
+                # (profile log likelihood with the scale parameter
+                # profiled out).
+                scale = (np.power(self._endog - self.mu, 2) * self._iweights).sum()
+                scale /= self.model.wnobs
+            else:
+                scale = self.scale
         val = _modelfamily.loglike(self._endog, self.mu,
                                    var_weights=self._var_weights,
                                    freq_weights=self._freq_weights,
                                    scale=scale)
         return val
+
+    @cached_value
+    def llf(self):
+        """
+        Value of the loglikelihood function evalued at params.
+        See statsmodels.families.family for distribution-specific
+        loglikelihoods.  The result uses the concentrated
+        log-likelihood if the family is Gaussian and the link is linear,
+        otherwise it uses the non-concentrated log-likelihood evaluated
+        at the estimated scale.
+        """
+        return self.llf_scaled()
 
     @cached_value
     def aic(self):
@@ -1758,6 +1775,54 @@ class GLMResults(base.LikelihoodModelResults):
         return -2*self.llf + (self.df_model+1)*np.log(
             self.df_model+self.df_resid+1
         )
+
+    def info_criteria(self, crit, scale=None):
+        """Return an information criterion for the model.
+
+        Parameters
+        ----------
+        crit : string
+            One of 'aic', 'bic', or 'qaic'.
+        scale : float
+            The scale parameter estimated using the parent model,
+            used only for qaic.
+
+        Returns the given information criterion value.
+
+        Notes
+        -----
+        The quasi-Akaike Information criterion (qaic) is -2 *
+        `llf`/`scale` + 2 * (`df_model` + 1).  It may not give
+        meaningful results except for Poisson and related models.
+
+        The QAIC (ic_type='qaic') must be evaluated with a provided
+        scale parameter.  Two QAIC values are only comparable if they
+        are calculated using the same scale parameter.  The scale
+        parameter should be estimated using the largest model among
+        all models being compared.
+
+        References
+        ----------
+        Burnham KP, Anderson KR (2002). Model Selection and Multimodel
+        Inference; Springer New York.
+        """
+
+        crit = crit.lower()
+
+        if crit == "aic":
+            return self.aic
+        elif crit == "bic":
+            return self.bic
+        elif crit == "qaic":
+            f = self.model.family
+            fl = (families.Poisson, families.NegativeBinomial,
+                  families.Binomial)
+            if not isinstance(f, fl):
+                msg = "QAIC is only valid for Binomial, Poisson and "
+                msg += "Negative Binomial families."
+                warnings.warn(msg)
+            llf = self.llf_scaled(scale=1)
+            return -2 * llf/scale + 2 * (self.df_model + 1)
 
     @Appender(pred.get_prediction_glm.__doc__)
     def get_prediction(self, exog=None, exposure=None, offset=None,
