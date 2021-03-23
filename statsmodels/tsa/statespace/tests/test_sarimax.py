@@ -15,9 +15,9 @@ import pandas as pd
 import pytest
 
 from statsmodels.tsa.statespace import sarimax, tools
-from statsmodels.tsa import arima_model as arima
 from .results import results_sarimax
 from statsmodels.tools import add_constant
+from statsmodels.tools.tools import Bunch
 from numpy.testing import (
     assert_, assert_equal, assert_almost_equal, assert_raises, assert_allclose
 )
@@ -45,10 +45,17 @@ class TestSARIMAXStatsmodels(object):
     def setup_class(cls):
         cls.true = results_sarimax.wpi1_stationary
         endog = cls.true['data']
-
-        cls.model_a = arima.ARIMA(endog, order=(1, 1, 1))
-        cls.result_a = cls.model_a.fit(disp=-1)
-
+        # Old results from statsmodels.arima.ARIMA taken before it was removed
+        # to let test continue to run. On old statsmodels, can run
+        # result_a = arima.ARIMA(endog, order=(1, 1, 1)).fit(disp=-1)
+        result_a = Bunch()
+        result_a.llf = -135.3513139733829
+        result_a.aic = 278.7026279467658
+        result_a.bic = 289.9513653682555
+        result_a.hqic = 283.27183681851653
+        result_a.params = np.array([0.74982449, 0.87421135, -0.41202195])
+        result_a.bse = np.array([0.29207409, 0.06377779, 0.12208469])
+        cls.result_a = result_a
         cls.model_b = sarimax.SARIMAX(endog, order=(1, 1, 1), trend='c',
                                       simple_differencing=True,
                                       hamilton_representation=True)

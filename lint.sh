@@ -207,13 +207,11 @@ if [ "$LINT" == true ]; then
         statsmodels/tsa/filters/tests/ \
         statsmodels/tsa/innovations/ \
         statsmodels/tsa/interp/__init__.py \
-        statsmodels/tsa/kalmanf/ \
         statsmodels/tsa/regime_switching/ \
         statsmodels/tsa/seasonal.py \
         statsmodels/tsa/statespace/ \
         statsmodels/tsa/tests/results/ \
         statsmodels/tsa/tests/test_ar.py \
-        statsmodels/tsa/tests/test_arima.py \
         statsmodels/tsa/tests/test_bds.py \
         statsmodels/tsa/tests/test_seasonal.py \
         statsmodels/tsa/tests/test_stl.py \

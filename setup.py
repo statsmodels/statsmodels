@@ -161,9 +161,7 @@ exts = dict(
     linbin={'source': 'statsmodels/nonparametric/linbin.pyx'},
     _qn={'source': 'statsmodels/robust/_qn.pyx'},
     _smoothers_lowess={'source': 'statsmodels/nonparametric/_smoothers_lowess.pyx'},  # noqa: E501
-    kalman_loglike={'source': 'statsmodels/tsa/kalmanf/kalman_loglike.pyx',
-                    'include_dirs': ['statsmodels/src'],
-                    'depends': ['statsmodels/src/capsule.h']})
+    )
 
 statespace_exts = [
     'statsmodels/tsa/statespace/_initialization.pyx.in',

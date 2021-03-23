@@ -28,7 +28,7 @@ from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.tools import Bunch
 from statsmodels.tools.tools import add_constant
 from statsmodels.tsa.ar_model import AutoReg
-from statsmodels.tsa.arima_model import ARMA
+from statsmodels.tsa.arima.model import ARIMA
 
 cur_dir = os.path.abspath(os.path.dirname(__file__))
 
@@ -290,7 +290,7 @@ class TestDiagnosticG(object):
 
     def test_acorr_breusch_godfrey_exogs(self):
         data = sunspots.load_pandas().data['SUNACTIVITY']
-        res = ARMA(data, (1, 0)).fit(disp=False, trend='nc')
+        res = ARIMA(data, order=(1, 0, 0), trend="n").fit()
         smsdia.acorr_breusch_godfrey(res, nlags=1)
 
     def test_acorr_ljung_box(self):
