@@ -319,7 +319,6 @@ class Copula(ABC):
     def __init__(self, d):
         self.d = d
 
-    @abstractmethod
     def random(self, n=1, random_state=None):
         """Draw `n` in the half-open interval ``[0, 1)``.
 
@@ -342,6 +341,7 @@ class Copula(ABC):
             Sample from the copula.
 
         """
+        raise NotImplementedError
 
     @abstractmethod
     def pdf(self, u):
