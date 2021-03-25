@@ -135,10 +135,13 @@ from numpy.testing import assert_array_almost_equal
 from scipy import stats
 
 from statsmodels.distributions.joint_distribution import (
-    IndependentCopula, GaussianCopula, StudentCopula,
-    ClaytonCopula, FrankCopula, GumbelCopula,
     JointDistribution
 )
+from statsmodels.distributions.copula.other_copulas import IndependentCopula
+from statsmodels.distributions.copula.elliptical import GaussianCopula, \
+    StudentCopula
+from statsmodels.distributions.copula.archimedean import ClaytonCopula, \
+    FrankCopula, GumbelCopula
 
 
 class CopulaTests:
