@@ -31,7 +31,7 @@ Rebasing
 If there are only a few commits, you can rebase to keep a linear history::
 
     git fetch upstream-rw
-    git rebase upstream-rw/master
+    git rebase upstream-rw/main
 
 Rebasing will not automatically close the pull request however, if there is one,
 so do not forget to do this.
@@ -46,7 +46,7 @@ may ask yourself, :ref:`ff-no-ff`? See below for more on this choice. Once
 decided you can do::
 
     git fetch upstream-rw
-    git merge --no-ff upstream-rw/master
+    git merge --no-ff upstream-rw/main
 
 Merging will automatically close the pull request on github.
 
@@ -60,11 +60,11 @@ pushing to the repository::
 
 This shows the history in a compact way of the current branch. This::
 
-    git log -p upstream-rw/master..
+    git log -p upstream-rw/main..
 
 shows the log of commits excluding those that can be reached from
-upstream-rw/master, and including those that can be reached from current HEAD.
-That is, those changes unique to this branch versus upstream-rw/master. See
+upstream-rw/main, and including those that can be reached from current HEAD.
+That is, those changes unique to this branch versus upstream-rw/main. See
 :ref:`Pydagogue <pydagogue:git-log-dots>` for more on using dots with log and
 also for using :ref:`dots with diff <pydagogue:git-diff-dots>`.
 
@@ -74,7 +74,7 @@ Push Your Feature Branch
 All the changes look good? You can push your feature branch after
 :ref:`merging` or :ref:`rebasing` by::
 
-    git push upstream-rw shiny-new-feature:master
+    git push upstream-rw shiny-new-feature:main
 
 Cherry-Picking
 ^^^^^^^^^^^^^^
@@ -82,13 +82,13 @@ Cherry-Picking
 Say you are interested in some commit in another branch, but want to leave the
 other ones for now. You can do this with a cherry-pick. Use `git log --oneline`
 to find the commit that you want to cherry-pick. Say you want commit `dd9ff35`
-from the `shiny-new-feature` branch. You want to apply this commit to master.
+from the `shiny-new-feature` branch. You want to apply this commit to main.
 You simply do::
 
-    git checkout master
+    git checkout main
     git cherry-pick dd9ff35
 
-And that's all. This commit is now applied as a new commit in master.
+And that's all. This commit is now applied as a new commit in main.
 
 .. _ff-no-ff:
 
@@ -109,7 +109,7 @@ The fast-forward merge does not create a merge commit. This means that the
 existence of the feature branch is lost in the history. The fast-forward is the
 default for Git basically because branches are cheap and, therefore, *usually*
 short-lived. If on the other hand, you have a long-lived feature branch or are
-following an iterative workflow on the feature branch (i.e. merge into master,
+following an iterative workflow on the feature branch (i.e. merge into main,
 then go back to feature branch and add more commits), then it makes sense to
 include only the merge in the main branch, rather than all the intermediate
 commits of the feature branch, so you should use::
@@ -123,7 +123,7 @@ You can apply a pull request through `fetch <https://www.kernel.org/pub/software
 and `merge <https://www.kernel.org/pub/software/scm/git/docs/git-merge.html>`__.
 In your local copy of the main repo::
 
-    git checkout master
+    git checkout main
     git remote add contrib-name git://github.com/contrib-name/statsmodels.git
     git fetch contrib-name
     git merge contrib-name/shiny-new-feature
@@ -141,14 +141,14 @@ of::
 in the commit message. Any and all problems need to be taken care of locally
 before doing::
 
-    git push origin master
+    git push origin main
 
 Releasing
 ---------
 
-1. Checkout master::
+1. Checkout main::
 
-    git checkout statsmodels/master
+    git checkout statsmodels/main
 
 2. Clean the working tree with::
 
@@ -166,7 +166,7 @@ Releasing
 
     git tag -a v0.10.0rc1 -m "Version 0.10.0 Release Candidate 1"
 
-   to use the last commit in master.
+   to use the last commit in main.
 
 4. Checkout the tag::
 
@@ -183,8 +183,8 @@ Releasing
     git checkout -b maintenance/0.10.x
 
    Any bug fixes and maintenance commits intended for the next micro release should be made
-   against master as usual, but tagged with the milestone for the micro release it is intended
-   for. Then merge into master as usual. When ready to do the backports, use the file
+   against main as usual, but tagged with the milestone for the micro release it is intended
+   for. Then merge into main as usual. When ready to do the backports, use the file
    ``tools/backport_pr.py`` to identify which PRs need to be backported and to apply them to the
    maintenance branch. The tag for the release should be made in the maintenance branch.
 
@@ -196,9 +196,9 @@ Releasing
 
     twine upload --repository-url https://test.pypi.org/legacy/ dist/*
 
-8. Go back to the master branch, and add an empty commit::
+8. Go back to the main branch, and add an empty commit::
 
-    git checkout statsmodels/master
+    git checkout statsmodels/main
     git commit --allow-empty -m "Start of 0.11.0 development"
     git tag -a v0.11.0.dev0 -m "Start of 0.11.0 development"
 
@@ -261,7 +261,7 @@ Once any patches have been backported to a maintenance branch, the release steps
 
 Commit Comments
 ---------------
-Prefix commit messages in the master branch of the main shared repository with
+Prefix commit messages in the main branch of the main shared repository with
 the following::
 
     ENH: Feature implementation

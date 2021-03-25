@@ -23,9 +23,9 @@ assignees: ''
 
 **Note**: As you can see, there are many issues on our GitHub tracker, so it is very possible that your issue has been posted before. Please check first before submitting so that we do not have to handle and close duplicates.
 
-**Note**: Please be sure you are using the latest released version of `statsmodels`, or a recent build of `master`. If your problem has been fixed in an unreleased version, you might be able to use `master` until a new release occurs. 
+**Note**: Please be sure you are using the latest released version of `statsmodels`, or a recent build of `main`. If your problem has been fixed in an unreleased version, you might be able to use `main` until a new release occurs. 
 
-**Note**: If you are using a released version, have you verified that the bug exists in the master branch of this repository? It helps the limited resources if we know problems exist in the current master so that they do not need to check whether the code sample produces a bug in the next release.
+**Note**: If you are using a released version, have you verified that the bug exists in the main branch of this repository? It helps the limited resources if we know problems exist in the current main branch so that they do not need to check whether the code sample produces a bug in the next release.
 
 </details>
 

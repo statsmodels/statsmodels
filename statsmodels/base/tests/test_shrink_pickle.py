@@ -171,7 +171,7 @@ class TestRemoveDataPicklePoisson(RemoveDataPickle):
         self.results = model.fit(start_params=start_params, method='bfgs',
                                  disp=0)
 
-        # TODO: temporary, fixed in master
+        # TODO: temporary, fixed in main
         self.predict_kwds = dict(exposure=1, offset=0)
 
 

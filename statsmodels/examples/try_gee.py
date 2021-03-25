@@ -37,7 +37,7 @@ print(mdf2.summary())
 mdf2.use_t = False
 mdf2.df_resid = np.diff(mdf2.model.exog.shape)
 tt2 = mdf2.t_test(np.eye(len(mdf2.params)))
-# need master to get wald_test
+# need main to get wald_test
 #print mdf2.wald_test(np.eye(len(mdf2.params))[1:])
 
 mdf2.predict(da.exog.mean(0), offset=0)

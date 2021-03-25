@@ -64,8 +64,7 @@ could also reset git to a prior version by:
 
     git reset --hard
     git clean -xdf
-    git checkout master
-    python setup.py clean
+    git checkout main
 
 I'd like to contribute. Where do I start?
 -----------------------------------------

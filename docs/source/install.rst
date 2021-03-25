@@ -45,7 +45,7 @@ available `here <https://www.lfd.uci.edu/~gohlke/pythonlibs/#statsmodels>`__.
 Obtaining the Source
 --------------------
 
-We do not release very often but the master branch of our source code is
+We do not release very often but the main branch of our source code is
 usually fine for everyday use. You can get the latest source from our
 `github repository <https://github.com/statsmodels/statsmodels>`__. Or if you
 have git installed:

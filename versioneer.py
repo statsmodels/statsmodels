@@ -176,7 +176,7 @@ two common reasons why `setup.py` might not be in the root:
 
 * Source trees which contain multiple subprojects, such as
   [Buildbot](https://github.com/buildbot/buildbot), which contains both
-  "master" and "slave" subprojects, each with their own `setup.py`,
+  "main" and "slave" subprojects, each with their own `setup.py`,
   `setup.cfg`, and `tox.ini`. Projects like these produce multiple PyPI
   distributions (and upload multiple independently-installable tarballs).
 * Source trees whose main purpose is to contain a C library, but which also
@@ -609,7 +609,7 @@ def git_versions_from_keywords(keywords, tag_prefix, verbose):
         # refs/heads/ and refs/tags/ prefixes that would let us distinguish
         # between branches and tags. By ignoring refnames without digits, we
         # filter out many common branch names like "release" and
-        # "stabilization", as well as "HEAD" and "master".
+        # "stabilization", as well as "HEAD" and "main".
         tags = set([r for r in refs if re.search(r'\d', r)])
         if verbose:
             print("discarding '%%s', no digits" %% ",".join(refs - tags))
@@ -1001,7 +1001,7 @@ def git_versions_from_keywords(keywords, tag_prefix, verbose):
         # refs/heads/ and refs/tags/ prefixes that would let us distinguish
         # between branches and tags. By ignoring refnames without digits, we
         # filter out many common branch names like "release" and
-        # "stabilization", as well as "HEAD" and "master".
+        # "stabilization", as well as "HEAD" and "main".
         tags = set([r for r in refs if re.search(r'\d', r)])
         if verbose:
             print("discarding '%s', no digits" % ",".join(refs - tags))
