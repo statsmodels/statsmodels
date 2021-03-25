@@ -10,10 +10,14 @@ Genest, C., 2009. Rank-based inference for bivariate extreme-value
 copulas. The Annals of Statistics, 37(5), pp.2990-3022.
 
 '''
-
+from abc import ABC, abstractmethod
 
 import numpy as np
+from matplotlib import pyplot as plt
+from scipy import stats
 from scipy.special import expm1
+
+from statsmodels.graphics import utils
 
 
 def copula_bv_indep(u, v):
@@ -261,3 +265,226 @@ class CopulaDistribution(object):
 
         lpdf += self.copula.logpdf(u, args)
         return lpdf
+
+
+class Copula(ABC):
+    r"""A generic Copula class meant for subclassing.
+
+    Notes
+    -----
+    A function :math:`\phi` on :math:`[0, \infty]` is the Laplace-Stieltjes
+    transform of a distribution function if and only if :math:`\phi` is
+    completely monotone and :math:`\phi(0) = 1` [2]_.
+
+    The following algorithm for sampling a ``d``-dimensional exchangeable
+    Archimedean copula with generator :math:`\phi` is due to Marshall, Olkin
+    (1988) [1]_, where :math:`LS^{−1}(\phi)` denotes the inverse
+    Laplace-Stieltjes transform of :math:`\phi`.
+
+    From a mixture representation with respect to :math:`F`, the following
+    algorithm may be derived for sampling Archimedean copulas, see [1]_.
+
+    1. Sample :math:`V \sim F = LS^{−1}(\phi)`.
+    2. Sample i.i.d. :math:`X_i \sim U[0,1], i \in \{1,...,d\}`.
+    3. Return:math:`(U_1,..., U_d)`, where :math:`U_i = \phi(−\log(X_i)/V), i
+       \in \{1, ...,d\}`.
+
+    Detailed properties of each copula can be found in [3]_.
+
+    Instances of the class can access the attributes: ``rng`` for the random
+    number generator (used for the ``seed``).
+
+    **Subclassing**
+
+    When subclassing `Copula` to create a new copula, ``__init__`` and
+    ``random`` must be redefined.
+
+    * ``__init__(theta)``: If the copula
+      does not take advantage of a ``theta``, this parameter can be omitted.
+    * ``random(n, random_state)``: draw ``n`` from the copula.
+    * ``pdf(x)``: PDF from the copula.
+    * ``cdf(x)``: CDF from the copula.
+
+    References
+    ----------
+    .. [1] Marshall AW, Olkin I. “Families of Multivariate Distributions”,
+      Journal of the American Statistical Association, 83, 834–841, 1988.
+    .. [2] Marius Hofert. "Sampling Archimedean copulas",
+      Universität Ulm, 2008.
+    .. [3] Harry Joe. "Dependence Modeling with Copulas", Monographs on
+      Statistics and Applied Probability 134, 2015.
+
+    """
+
+    def __init__(self, d):
+        self.d = d
+
+    @abstractmethod
+    def random(self, n=1, random_state=None):
+        """Draw `n` in the half-open interval ``[0, 1)``.
+
+        Marginals are uniformly distributed.
+
+        Parameters
+        ----------
+        n : int, optional
+            Number of samples to generate from the copula. Default is 1.
+        random_state : {None, int, `numpy.random.Generator`}, optional
+            If `seed` is None the `numpy.random.Generator` singleton is used.
+            If `seed` is an int, a new ``Generator`` instance is used,
+            seeded with `seed`.
+            If `seed` is already a ``Generator`` instance then that instance is
+            used.
+
+        Returns
+        -------
+        sample : array_like (n, d)
+            Sample from the copula.
+
+        """
+
+    @abstractmethod
+    def pdf(self, u):
+        """Probability density function."""
+
+    def logpdf(self, u):
+        """Log of the PDF."""
+        return np.log(self.pdf(u))
+
+    @abstractmethod
+    def cdf(self, u):
+        """Cumulative density function."""
+
+    def plot(self, n, random_state=None, ax=None):
+        """Sample the copula and plot.
+
+        Parameters
+        ----------
+        n : int, optional
+            Number of samples to generate from the copula. Default is 1.
+        random_state : {None, int, `numpy.random.Generator`}, optional
+            If `seed` is None the `numpy.random.Generator` singleton is used.
+            If `seed` is an int, a new ``Generator`` instance is used,
+            seeded with `seed`.
+            If `seed` is already a ``Generator`` instance then that instance is
+            used.
+        ax : AxesSubplot, optional
+            If given, this subplot is used to plot in instead of a new figure
+            being created.
+
+        Returns
+        -------
+        fig : Figure
+            If `ax` is None, the created figure.  Otherwise the figure to which
+            `ax` is connected.
+        sample : array_like (n, d)
+            Sample from the copula.
+
+        """
+        if self.d != 2:
+            raise ValueError("Can only plot 2-dimensional Copula.")
+
+        sample = self.random(n=n, random_state=random_state)
+
+        fig, ax = utils.create_mpl_ax(ax)
+        ax.scatter(sample[:, 0], sample[:, 1])
+        ax.set_xlabel('u')
+        ax.set_ylabel('v')
+
+        return fig, sample
+
+    def plot_pdf(self, ticks_nbr=10, ax=None):
+        """Plot the PDF.
+
+        Parameters
+        ----------
+        ticks_nbr : int, optional
+            Number of color isolines for the PDF. Default is 10.
+        ax : AxesSubplot, optional
+            If given, this subplot is used to plot in instead of a new figure
+            being created.
+
+        Returns
+        -------
+        fig : Figure
+            If `ax` is None, the created figure.  Otherwise the figure to which
+            `ax` is connected.
+
+        """
+        if self.d != 2:
+            raise ValueError("Can only plot 2-dimensional Copula.")
+
+        n_samples = 100
+
+        uu, vv = np.meshgrid(np.linspace(0.0001, 1, n_samples),
+                             np.linspace(0.0001, 1, n_samples))
+        points = np.vstack([uu.ravel(), vv.ravel()]).T
+
+        data = self.pdf(points).T.reshape(uu.shape)
+        min_ = np.nanpercentile(data, 5)
+        max_ = np.nanpercentile(data, 95)
+
+        fig, ax = utils.create_mpl_ax(ax)
+
+        vticks = np.linspace(min_, max_, num=ticks_nbr)
+        range_cbar = [min_, max_]
+        cs = ax.contourf(uu, vv, data, vticks,
+                         antialiased=True, vmin=range_cbar[0],
+                         vmax=range_cbar[1])
+
+        ax.set_xlabel("u")
+        ax.set_ylabel("v")
+        ax.set_xlim(0, 1)
+        ax.set_ylim(0, 1)
+        ax.set_aspect('equal')
+        cbar = plt.colorbar(cs, ticks=vticks)
+        cbar.set_label('p')
+
+        return fig
+
+    @property
+    def tau(self):
+        """Empirical Kendall's tau.
+
+        Returns
+        -------
+        tau : float
+            Kendall's tau.
+
+        """
+        x = self.random(1024, random_state=0)
+        return stats.kendalltau(x[:, 0], x[:, 1])[0]
+
+    def fit_theta(self, x):
+        """Compute ``theta`` using empirical Kendall's tau on sample data.
+
+        Parameters
+        ----------
+        x : array_like
+            Sample data used to fit `theta` using Kendall's tau.
+
+        Returns
+        -------
+        theta : float
+            Theta.
+
+        """
+        tau = stats.kendalltau(x[:, 0], x[:, 1])[0]
+        self.theta = self._theta_from_tau(tau)
+        return self.theta
+
+    def _theta_from_tau(self, tau):
+        """Compute ``theta`` from tau.
+
+        Parameters
+        ----------
+        tau : float
+            Kendall's tau.
+
+        Returns
+        -------
+        theta : float
+            Theta.
+
+        """
+        raise NotImplementedError
