@@ -22,17 +22,18 @@ class Inverted(Transformation):
 
     This creates a Transformation instance with reverted direction of
     transformation, i.e. the `transform` becomes the `inverse` transformation
-    and vise-versa.
+    and vice versa.
 
-    This does not create a new class. And instance of the original transform
-    class is attached to the inverted instance and use for delegation.
+    This does not create a new class. An instance of the original transform
+    class is attached to the inverted instance and used for delegation.
 
     """
 
     def __init__(self, kls):
         self.original = kls()
 
-        self.direction = self.original.direction
+        ss = self.original.direction.split(" ")
+        self.direction = "%s to %s" % (ss[-1], ss[0])
         self.name = "Inverted " + kls.__name__
 
     def transform(self, x, params):
@@ -60,6 +61,16 @@ class SinhArcsinh(Transformation):
     Transformation is from R to R, changing skewness and kurtosis.
 
     `params` contains two parameters controlling skew and kurtosis
+
+    The transform is
+
+    z = sinh(d * arcsinh(x) - e)
+
+    The inverse transform is
+
+    x = sinh(1 / d * (arcsinh(z) + e))
+
+    where ``d, e = params``
 
     """
 
@@ -109,6 +120,17 @@ class Sinh(Transformation):
 
     Transformation has two `params` which are loc and scale of the base
     distribution
+
+    The transformation is
+
+    z = sinh((x - m)/s)
+
+    The inverse transformation is
+
+    x = m + s * arcsinh(z)
+
+    where ``m, s = params``
+
     """
     # Note: we could use static methods, without self,
     # currently self is not used, but we might want to store something in an
@@ -162,6 +184,15 @@ class BirnbaumSaunders(Transformation):
     The `loc` of the base distribution is fixed at zero, or more precisely,
     outside of the transformation.
 
+    The inverse transformation is
+
+    x =  1 / a * (sqrt(z / b) - sqrt(b / z))
+
+    The transformation is
+
+    z = b * (a / 2 * x + sqrt((a / 2 * x)**2 + 1))**2
+
+    where ``a, b = params``
     """
 
     direction = "R to R+"
@@ -213,6 +244,13 @@ class _TMI1(Transformation):
     This is same transformation as TMI except for a different scaling
     coefficient.
 
+    The transformation is
+
+    z = 1/2 * (x - sqrt(x**2 + 4))
+
+    The inverse transformation is
+
+    x = t - 1 / t
     """
     # Note: we could use static methods, without self,
     # currently self is not used, but we might want to store something in an
@@ -249,7 +287,7 @@ class _TMI1(Transformation):
 
 
 class TMI(Transformation):
-    """inverse of T minus inverse transform `0.5 * (t - 1 / t)`,
+    """inverse of `T minus inverse` transform `0.5 * (t - 1 / t)`,
 
     mapping from R to R+
 
@@ -258,6 +296,15 @@ class TMI(Transformation):
     `TMI1`.
 
     Reference jones 2007
+
+    The transformation is
+
+    z = x - sqrt(x**2 + 1)
+
+    The inverse transformation is
+
+    x = 1/2 * (t - 1 / t)
+
     """
 
     direction = "R to R+"
@@ -304,6 +351,14 @@ class RtoInterval(Transformation):
     This might need an additional loc-scale of base distribution specified by
     params.
 
+    The transformation is
+
+    z = (x - 1 + sqrt(x**2 + 1)) / (2 * x)
+
+    The inverse transformation is
+
+    x = 1/2 * (1 / (1 - t) - 1 / t)
+
     Reference Jones 2007
     """
 
@@ -318,7 +373,7 @@ class RtoInterval(Transformation):
         z = (xnz - 1 + np.sqrt(xnz**2 + 1)) / (2 * xnz)
         z[x == 0] = 0.5
         # Taylor series expansion around 0
-        # maybe use this for a neighborhood or 0
+        # maybe use this for a neighborhood of 0
         # z = 1 / 2 + x / 4 - x**3 / 16 + x**5 / 32
         return z
 
