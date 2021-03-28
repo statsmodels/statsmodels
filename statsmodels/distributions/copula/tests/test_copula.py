@@ -18,7 +18,7 @@ from statsmodels.distributions.copula.other_copulas import IndependentCopula
 from statsmodels.tools.numdiff import approx_fprime_cs, approx_hess
 from statsmodels.distributions.copula.copulas import CopulaDistribution
 from statsmodels.distributions.copula.archimedean import (
-    ArchimedeanCopula, FrankCopulaGeneratorBased, ClaytonCopula, FrankCopula,
+    ArchimedeanCopula, FrankCopula, ClaytonCopula, FrankCopula,
     GumbelCopula)
 from statsmodels.distributions.copula.extreme_value import (
     ExtremeValueCopula, copula_bv_ev)
@@ -77,10 +77,10 @@ ev_dep_list = [
 
 
 cop_list = [
-    [tra.TransfFrank, 0.5, 0.9, (2,), 0.4710805107852225, 0.9257812360337806],
-    [tra.TransfGumbel, 0.5, 0.9, (2,), 0.4960348880595387, 0.3973548776136501],
-    [tra.TransfClayton, 0.5, 0.9, (2,), 0.485954322440435, 0.8921974147432954],
-    [tra.TransfIndep, 0.5, 0.5, (), 0.25, 1],
+    [tra.TransfFrank, 0.5, 0.9, 2, 0.4710805107852225, 0.9257812360337806],
+    [tra.TransfGumbel, 0.5, 0.9, 2, 0.4960348880595387, 0.3973548776136501],
+    [tra.TransfClayton, 0.5, 0.9, 2, 0.485954322440435, 0.8921974147432954],
+    [tra.TransfIndep, 0.5, 0.5, 1, 0.25, 1],
     ]
 
 gev_list = [
@@ -139,13 +139,13 @@ def test_ev_dep(case):
 def test_copulas(case):
     # check ev copulas, cdf and transform against R `copula` package
     cop_tr, v1, v2, args, cdf2, pdf2 = case
-    ca = ArchimedeanCopula(cop_tr())
-    cdf1 = ca.cdf([v1, v2], args=args)
-    pdf1 = ca.pdf([v1, v2], args=args)
+    ca = ArchimedeanCopula(cop_tr(), theta=args)
+    cdf1 = ca.cdf([v1, v2])
+    pdf1 = ca.pdf([v1, v2])
     assert_allclose(cdf1, cdf2, rtol=1e-13)
     assert_allclose(pdf1, pdf2, rtol=1e-13)
 
-    logpdf1 = ca.logpdf([v1, v2], args=args)
+    logpdf1 = ca.logpdf([v1, v2])
     assert_allclose(logpdf1, np.log(pdf2), rtol=1e-13)
 
 
@@ -184,22 +184,22 @@ def test_copulas_distr(case):
     # check ev copulas, cdf and transform against R `copula` package
     cop_tr, v1, v2, args, cdf2, pdf2 = case
     u = [v1, v2]
-    ca = ArchimedeanCopula(cop_tr())
-    cdf1 = ca.cdf(u, args=args)
-    pdf1 = ca.pdf(u, args=args)
+    ca = ArchimedeanCopula(cop_tr(), theta=args)
+    cdf1 = ca.cdf(u)
+    pdf1 = ca.pdf(u)
 
     cad = CopulaDistribution([uniform, uniform], ca, copargs=args)
-    cdfd = cad.cdf(np.array(u), args=args)
+    cdfd = cad.cdf(np.array(u))
     assert_allclose(cdfd, cdf1, rtol=1e-13)
     assert cdfd.shape == ()
 
     # check pdf
-    pdfd = cad.pdf(np.array(u), args=args)
+    pdfd = cad.pdf(np.array(u))
     assert_allclose(pdfd, pdf1, rtol=1e-13)
     assert cdfd.shape == ()
 
     # using list u
-    cdfd = cad.cdf(u, args=args)
+    cdfd = cad.cdf(u)
     assert_allclose(cdfd, cdf1, rtol=1e-13)
     assert cdfd.shape == ()
 
@@ -207,12 +207,12 @@ def test_copulas_distr(case):
     assert_allclose(pdf1, pdf2, rtol=1e-13)
 
     # check vector values for u
-    cdfd = cad.cdf(np.array(u) * np.ones((3, 1)), args=args)
+    cdfd = cad.cdf(np.array(u) * np.ones((3, 1)))
     assert_allclose(cdfd, cdf2, rtol=1e-13)
     assert cdfd.shape == (3, )
 
     # check mv, check at marginal cdf
-    cdfmv = ca.cdf([v1, v2, 1], args=args)
+    cdfmv = ca.cdf([v1, v2, 1])
     assert_allclose(cdfmv, cdf1, rtol=1e-13)
     assert cdfd.shape == (3, )
 
@@ -249,22 +249,22 @@ class TestFrank:
         case = [tra.TransfFrank, 0.5, 0.9, (2,), 0.4710805107852225,
                 0.9257812360337806]
         cop_tr, v1, v2, args, cdf2, pdf2 = case
-        cop = FrankCopulaGeneratorBased()
+        cop = FrankCopula(theta=args)
 
-        pdf1 = cop.pdf([v1, v2], args=args)
+        pdf1 = cop.pdf([v1, v2])
         assert_allclose(pdf1, pdf2, rtol=1e-13)
-        logpdf1 = cop.logpdf([v1, v2], args=args)
+        logpdf1 = cop.logpdf([v1, v2])
         assert_allclose(logpdf1, np.log(pdf2), rtol=1e-13)
 
-        cdf1 = cop.cdf([v1, v2], args=args)
+        cdf1 = cop.cdf([v1, v2])
         assert_allclose(cdf1, cdf2, rtol=1e-13)
 
         assert isinstance(cop.transform, cop_tr)
 
         # round trip conditional, no verification
         u = [0.6, 0.5]
-        cdfc = cop.cdfcond_2g1(u, args=args)
-        ppfc = cop.ppfcond_2g1(cdfc, [0.6], args=args)
+        cdfc = cop.cdfcond_2g1(u)
+        ppfc = cop.ppfcond_2g1(cdfc, [0.6])
         assert_allclose(ppfc, u[1], rtol=1e-13)
 
 

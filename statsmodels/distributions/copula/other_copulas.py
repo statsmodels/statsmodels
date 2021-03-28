@@ -7,6 +7,7 @@ License: BSD-3
 
 """
 import numpy as np
+from scipy._lib._util import check_random_state  # noqa
 
 from statsmodels.distributions.copula.copulas import Copula
 

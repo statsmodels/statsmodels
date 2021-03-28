@@ -9,7 +9,11 @@ License: BSD-3
 import sys
 
 import numpy as np
-from scipy import stats, integrate as integrate
+
+import scipy.optimize as optimize
+import scipy.stats as stats
+import scipy.integrate as integrate
+from scipy._lib._util import check_random_state  # noqa
 
 from . import transforms
 from .copulas import Copula
@@ -17,25 +21,24 @@ from .copulas import Copula
 
 class ArchimedeanCopula(Copula):
 
-    def __init__(self, transform):
+    def __init__(self, transform, theta):
         super().__init__(d=2)
         self.transform = transform
+        self.theta = theta
 
-    def cdf(self, u, args=()):
-        '''evaluate cdf of multivariate Archimedean copula
-        '''
+    def cdf(self, u):
+        """Evaluate CDF of multivariate Archimedean copula."""
         axis = -1
         phi = self.transform.evaluate
         phi_inv = self.transform.inverse
-        cdfv = phi_inv(phi(u, *args).sum(axis), *args)
+        cdfv = phi_inv(phi(u, self.theta).sum(axis), self.theta)
         # clip numerical noise
         out = cdfv if isinstance(cdfv, np.ndarray) else None
         cdfv = np.clip(cdfv, 0., 1., out=out)  # inplace if possible
         return cdfv
 
-    def pdf(self, u, args=()):
-        '''evaluate cdf of multivariate Archimedean copula
-        '''
+    def pdf(self, u):
+        """Evaluate PDF of multivariate Archimedean copula."""
         axis = -1
         u = np.asarray(u)
         if u.shape[-1] > 2:
@@ -46,17 +49,16 @@ class ArchimedeanCopula(Copula):
         phi_d1 = self.transform.deriv
         phi_d2 = self.transform.deriv2
 
-        cdfv = self.cdf(u, args=args)
+        cdfv = self.cdf(u)
 
-        pdfv = - np.product(phi_d1(u, *args), axis)
-        pdfv *= phi_d2(cdfv, *args)
-        pdfv /= phi_d1(cdfv, *args)**3
+        pdfv = - np.product(phi_d1(u, self.theta), axis)
+        pdfv *= phi_d2(cdfv, self.theta)
+        pdfv /= phi_d1(cdfv, self.theta)**3
 
         return pdfv
 
-    def logpdf(self, u, args=()):
-        '''evaluate cdf of multivariate Archimedean copula
-        '''
+    def logpdf(self, u):
+        """Evaluate log PDF of multivariate Archimedean copula."""
         # TODO: replace by formulas, and exp in pdf
         axis = -1
         u = np.asarray(u)
@@ -67,86 +69,16 @@ class ArchimedeanCopula(Copula):
         phi_d1 = self.transform.deriv
         phi_d2 = self.transform.deriv2
 
-        cdfv = self.cdf(u, args=args)
+        cdfv = self.cdf(u)
 
         # I need np.abs because derivatives are negative,
         # is this correct for mv?
-        logpdfv = np.sum(np.log(np.abs(phi_d1(u, *args))), axis)
-        logpdfv += np.log(np.abs(phi_d2(cdfv, *args) / phi_d1(cdfv, *args)**3))
+        logpdfv = np.sum(np.log(np.abs(phi_d1(u, self.theta))), axis)
+        logpdfv += np.log(
+            np.abs(phi_d2(cdfv, self.theta) / phi_d1(cdfv, self.theta)**3)
+        )
 
         return logpdfv
-
-
-class FrankCopulaGeneratorBased(ArchimedeanCopula):
-
-    # explicit BV formulas copied from Joe 1997 p. 141
-    # todo: check expm1 and log1p for improved numerical precision
-    def __init__(self):
-        super().__init__(transforms.TransfFrank())
-
-    def cdf(self, u, args=()):
-        u = np.asarray(u)
-        th = args[0]
-        if u.shape[-1] == 2:
-            # bivariate case
-            u1, u2 = u[..., 0], u[..., 1]
-            b = 1 - np.exp(-th)
-            cdf = - np.log(1 - (1 - np.exp(- th * u1)) *
-                           (1 - np.exp(- th * u2)) / b) / th
-            return cdf
-        else:
-            super(FrankCopula, self).pdf(u, args=args)
-
-    def pdf(self, u, args=()):
-        u = np.asarray(u)
-        th = args[0]
-        if u.shape[-1] == 2:
-            # bivariate case
-            u1, u2 = u[..., 0], u[..., 1]
-            b = 1 - np.exp(-th)
-            pdf = th * b * np.exp(- th * (u1 + u2))
-            pdf /= (b - (1 - np.exp(- th * u1)) * (1 - np.exp(- th * u2)))**2
-            return pdf
-        else:
-            super(FrankCopula, self).pdf(u, args=args)
-
-    def logpdf(self, u, args=()):
-        u = np.asarray(u)
-        th = args[0]
-        if u.shape[-1] == 2:
-            # bivariate case
-            u1, u2 = u[..., 0], u[..., 1]
-            b = 1 - np.exp(-th)
-            pdf = np.log(th * b) - th * (u1 + u2)
-            pdf -= 2 * np.log(b - (1 - np.exp(- th * u1)) *
-                              (1 - np.exp(- th * u2)))
-            return pdf
-        else:
-            super(FrankCopula, self).pdf(u, args=args)
-
-    def cdfcond_2g1(self, u, args=()):
-        u = np.asarray(u)
-        th = args[0]
-        if u.shape[-1] == 2:
-            # bivariate case
-            u1, u2 = u[..., 0], u[..., 1]
-            cdfc = np.exp(- th * u1)
-            cdfc /= np.expm1(-th) / np.expm1(- th * u2) + np.expm1(- th * u1)
-            return cdfc
-        else:
-            raise NotImplementedError
-
-    def ppfcond_2g1(self, q, u1, args=()):
-        u1 = np.asarray(u1)
-        th = args[0]
-        if u1.shape[-1] == 1:
-            # bivariate case, conditional on value of first variable
-            ppfc = - np.log(1 + np.expm1(- th) /
-                            ((1 / q - 1) * np.exp(-th * u1) + 1)) / th
-
-            return ppfc
-        else:
-            raise NotImplementedError
 
 
 class ClaytonCopula(ArchimedeanCopula):
@@ -164,6 +96,8 @@ class ClaytonCopula(ArchimedeanCopula):
     """
 
     def __init__(self, theta=1):
+        super().__init__(transforms.TransfClayton(), theta=theta)
+
         if theta <= -1 or theta == 0:
             raise ValueError('Theta must be > -1 and !=0')
         self.theta = theta
@@ -203,6 +137,8 @@ class FrankCopula(ArchimedeanCopula):
     """
 
     def __init__(self, theta=2):
+        super().__init__(transforms.TransfFrank(), theta=theta)
+
         if theta == 0:
             raise ValueError('Theta must be !=0')
         self.theta = theta
@@ -217,7 +153,14 @@ class FrankCopula(ArchimedeanCopula):
                                          + np.exp(-(-np.log(x) / v))
                                          * (np.exp(-self.theta) - 1.))
 
+    # explicit BV formulas copied from Joe 1997 p. 141
+    # todo: check expm1 and log1p for improved numerical precision
+
     def pdf(self, u):
+        u = np.asarray(u)
+        if u.shape[1] != 2:
+            return super().pdf(u)
+
         g_ = np.exp(-self.theta * np.sum(u, axis=1)) - 1
         g1 = np.exp(-self.theta) - 1
 
@@ -227,11 +170,54 @@ class FrankCopula(ArchimedeanCopula):
         return num / den
 
     def cdf(self, u):
+        u = np.asarray(u)
         dim = u.shape[1]
+        if dim != 2:
+            return super().cdf(u)
+
         num = np.prod(1 - np.exp(- self.theta * u), axis=1)
         den = (1 - np.exp(-self.theta)) ** (dim - 1)
 
         return -1.0 / self.theta * np.log(1 - num / den)
+
+    def logpdf(self, u):
+        u = np.asarray(u)
+        th = self.theta
+        if u.shape[-1] == 2:
+            # bivariate case
+            u1, u2 = u[..., 0], u[..., 1]
+            b = 1 - np.exp(-th)
+            pdf = np.log(th * b) - th * (u1 + u2)
+            pdf -= 2 * np.log(b - (1 - np.exp(- th * u1)) *
+                              (1 - np.exp(- th * u2)))
+            return pdf
+        else:
+            super().logpdf(u)
+
+    def cdfcond_2g1(self, u):
+        u = np.asarray(u)
+        th = self.theta
+        if u.shape[-1] == 2:
+            # bivariate case
+            u1, u2 = u[..., 0], u[..., 1]
+            cdfc = np.exp(- th * u1)
+            cdfc /= np.expm1(-th) / np.expm1(- th * u2) + np.expm1(- th * u1)
+            return cdfc
+        else:
+            raise NotImplementedError
+
+    def ppfcond_2g1(self, q, u1):
+        u1 = np.asarray(u1)
+        th = self.theta
+        if u1.shape[-1] == 1:
+            # bivariate case, conditional on value of first variable
+            ppfc = - np.log(1 + np.expm1(- th) /
+                            ((1 / q - 1) * np.exp(-th * u1) + 1)) / th
+
+            return ppfc
+        else:
+            raise NotImplementedError
+
 
     def _theta_from_tau(self, tau):
         MIN_FLOAT_LOG = np.log(sys.float_info.min)
@@ -245,7 +231,8 @@ class FrankCopula(ArchimedeanCopula):
             debye_value = integrate.quad(debye, EPSILON, alpha)[0] / alpha
             return 4 * (debye_value - 1) / alpha + 1 - tau
 
-        result = least_squares(_theta_from_tau, 1, bounds=(MIN_FLOAT_LOG,
+        result = optimize.least_squares(_theta_from_tau, 1, bounds=(
+            MIN_FLOAT_LOG,
                                                            MAX_FLOAT_LOG))
         self.theta = result.x[0]
         return self.theta
@@ -266,6 +253,8 @@ class GumbelCopula(ArchimedeanCopula):
     """
 
     def __init__(self, theta=2):
+        super().__init__(transforms.TransfGumbel(), theta=theta)
+
         if theta <= 1:
             raise ValueError('Theta must be > 1')
         self.theta = theta
