@@ -1339,7 +1339,7 @@ class Tweedie(Family):
     ----------
     link : a link instance, optional
         The default link for the Tweedie family is the log link.
-        Available links are log and Power.
+        Available links are log, Power and any aliases of power.
         See statsmodels.genmod.families.links for more information.
     var_power : float, optional
         The variance power. The default is 1.
