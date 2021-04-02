@@ -3,26 +3,25 @@ from statsmodels.compat.python import lmap
 from io import BytesIO
 
 import numpy as np
+from numpy.testing import assert_, assert_equal
 import pandas as pd
-from numpy.testing import assert_equal, assert_
 import pytest
 
-import statsmodels.api as sm
+from statsmodels import api as sm
 from statsmodels.graphics.tsaplots import (
+    month_plot,
     plot_acf,
     plot_pacf,
-    month_plot,
+    plot_predict,
     quarter_plot,
     seasonal_plot,
-    plot_predict,
 )
-import statsmodels.tsa.arima_process as tsp
+from statsmodels.tsa import arima_process as tsp
 from statsmodels.tsa.ar_model import AutoReg
 from statsmodels.tsa.arima.model import ARIMA
 
-
 try:
-    import matplotlib.pyplot as plt
+    from matplotlib import pyplot as plt
 except ImportError:
     pass
 
