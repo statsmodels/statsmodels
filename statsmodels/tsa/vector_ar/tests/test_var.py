@@ -898,3 +898,16 @@ def test_correct_nobs():
     results = model.fit(maxlags=1)
     irf = results.irf_resim(orth=False, repl=100, steps=10, seed=1, burn=100, cum=False)
     assert irf.shape == (100, 11, 3, 3)
+
+
+@pytest.mark.slow
+def test_irf_err_bands():
+    # smoke tests
+    data = get_macrodata()
+    model = VAR(data)
+    results = model.fit(maxlags=2)
+    irf = results.irf()
+    bands_sz1 = irf.err_band_sz1()
+    bands_sz2 = irf.err_band_sz2()
+    bands_sz3 = irf.err_band_sz3()
+    bands_mc = irf.errband_mc()
