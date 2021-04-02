@@ -468,7 +468,7 @@ class IRAnalysis(BaseIRAnalysis):
         stack_cov=np.zeros((neqs, periods*neqs, periods*neqs))
         W = np.zeros((neqs, periods*neqs, periods*neqs))
         eigva = np.zeros((neqs, periods*neqs))
-        k = np.zeros((neqs))
+        k = np.zeros(neqs, dtype=int)
 
         if component is not None:
             if np.size(component) != (neqs):
@@ -522,7 +522,7 @@ class IRAnalysis(BaseIRAnalysis):
 
         W = np.zeros((neqs, neqs, periods, periods))
         eigva = np.zeros((neqs, neqs, periods, 1))
-        k = np.zeros((neqs, neqs))
+        k = np.zeros((neqs, neqs), dtype=int)
 
         for i in range(neqs):
             for j in range(neqs):
