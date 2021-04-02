@@ -392,7 +392,7 @@ class IRAnalysis(BaseIRAnalysis):
         periods = self.periods
         irfs = self._choose_irfs(orth, svar)
         neqs = self.neqs
-        irf_resim = model.irf_resim(orth=orth, repl=repl, T=periods, seed=seed,
+        irf_resim = model.irf_resim(orth=orth, repl=repl, steps=periods, seed=seed,
                                     burn=100)
 
         W, eigva, k = self._eigval_decomp_SZ(irf_resim)
@@ -455,8 +455,8 @@ class IRAnalysis(BaseIRAnalysis):
         periods = self.periods
         irfs = self._choose_irfs(orth, svar)
         neqs = self.neqs
-        irf_resim = model.irf_resim(orth=orth, repl=repl, T=periods, seed=seed,
-                                    burn=100)
+        irf_resim = model.irf_resim(orth=orth, repl=repl, steps=periods,
+                                    seed=seed, burn=100)
         stack = np.zeros((neqs, repl, periods*neqs))
 
         #stack left to right, up and down
@@ -636,7 +636,8 @@ class IRAnalysis(BaseIRAnalysis):
         model = self.model
         periods = self.periods
         return model.irf_errband_mc(orth=orth, repl=repl,
-                                    T=periods, signif=signif, seed=seed, burn=burn, cum=True)
+                                    steps=periods, signif=signif,
+                                    seed=seed, burn=burn, cum=True)
 
     def lr_effect_cov(self, orth=False):
         """
