@@ -1,5 +1,6 @@
 from statsmodels.compat.python import lmap
 
+import calendar
 from io import BytesIO
 
 import numpy as np
@@ -209,6 +210,15 @@ def test_plot_month(close_figures):
     # test with a TimeSeries PeriodIndex
     dta.index = pd.PeriodIndex(dates, freq="M")
     fig = month_plot(dta)
+
+    # test localized xlabels
+    with calendar.different_locale("DE_de"):
+        fig = month_plot(dta)
+        labels = [_.get_text() for _ in fig.axes[0].get_xticklabels()]
+        expected = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul',
+                    'Aug', 'Sep', 'Okt', 'Nov', 'Dez']
+        for x, y in zip(labels, expected):
+            assert x == y
 
 
 @pytest.mark.matplotlib
