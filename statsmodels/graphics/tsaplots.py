@@ -1,6 +1,7 @@
 """Correlation plot functions."""
-
 from statsmodels.compat.pandas import deprecate_kwarg
+
+import calendar
 
 import numpy as np
 import pandas as pd
@@ -444,8 +445,8 @@ def month_plot(x, dates=None, ylabel=None, ax=None):
     else:
         x = pd.Series(x, index=pd.PeriodIndex(dates, freq="M"))
 
-    xticklabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                   "Jul", "Aug", "Sept", "Oct", "Nov", "Dec"]
+    # there's no zero month
+    xticklabels = list(calendar.month_abbr)[1:]
     return seasonal_plot(
         x.groupby(lambda y: y.month), xticklabels, ylabel=ylabel, ax=ax
     )
