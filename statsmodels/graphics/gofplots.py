@@ -774,7 +774,7 @@ def qqplot_2samples(
         )
     else:
         fig = data2.qqplot(
-            xlabel=ylabel, ylabel=xlabel, line=line, other=data1, ax=ax
+            xlabel=xlabel, ylabel=ylabel, line=line, other=data1, ax=ax
         )
 
     return fig
