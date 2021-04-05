@@ -944,7 +944,7 @@ def _fmt_probplot_axis(ax, dist, nobs):
 
 
 def _do_plot(
-    x, y, dist=None, line=None, ax=None, fmt="bo", step=False, **kwargs
+    x, y, dist=None, line=None, ax=None, fmt="b", step=False, **kwargs
 ):
     """
     Boiler plate plotting function for the `ppplot`, `qqplot`, and
@@ -989,7 +989,7 @@ def _do_plot(
     ax.set_xmargin(0.02)
 
     if step:
-        ax.step(x, y, where=where, **plot_style)
+        ax.step(x, y, fmt, where=where, **plot_style)
     else:
         ax.plot(x, y, fmt, **plot_style)
     if line:
