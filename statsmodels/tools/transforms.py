@@ -14,7 +14,27 @@ import numpy as np
 
 
 class Transformation(object):
-    pass
+
+    def __call__(self, x, params):
+        return self.trsansform(x, params)
+
+    def transform(self, x, params):
+        raise NotImplementedError
+
+    def inverse(self, z, params):
+        raise NotImplementedError
+
+    def deriv(self, x, params):
+        raise NotImplementedError
+
+    def deriv_inverse(self, z, params):
+        raise NotImplementedError
+
+    def deriv2(self, x, params):
+        raise NotImplementedError
+
+    def deriv2_inverse(self, z, params):
+        raise NotImplementedError
 
 
 class Inverted(Transformation):
