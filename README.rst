@@ -22,7 +22,7 @@ https://www.statsmodels.org/dev/
 
 Recent improvements are highlighted in the release notes
 
-https://www.statsmodels.org/stable/release/version0.9.html
+https://www.statsmodels.org/stable/release/
 
 Backups of documentation are available at https://statsmodels.github.io/stable/
 and https://statsmodels.github.io/dev/.
