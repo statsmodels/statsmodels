@@ -239,7 +239,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
                 "seasonal must be False.",
                 RuntimeWarning,
             )
-        if not self._old_names:
+        if self._old_names:
             warnings.warn(
                 "old_names will be removed after the 0.14 release. You should "
                 "stop setting this parameter and use the new names.",

@@ -102,7 +102,7 @@ def ols_autoreg_result(request):
     ar, seasonal, trend, exog, cov_type = request.param
     y, x, endog, exog = gen_ols_regressors(ar, seasonal, trend, exog)
     ar_mod = AutoReg(
-        y, ar, seasonal=seasonal, trend=trend, exog=x, old_names=False
+        y, ar, seasonal=seasonal, trend=trend, exog=x
     )
     ar_res = ar_mod.fit(cov_type=cov_type)
     ols = OLS(endog, exog)
@@ -352,8 +352,7 @@ def test_autoreg_smoke_plots(plot_data, close_figures):
         exog=plot_data.exog,
         hold_back=plot_data.hold_back,
         period=plot_data.period,
-        missing=plot_data.missing,
-        old_names=False,
+        missing=plot_data.missing
     )
     res = mod.fit()
     fig = res.plot_diagnostics()
@@ -376,8 +375,7 @@ def test_autoreg_predict_smoke(ar_data):
         exog=ar_data.exog,
         hold_back=ar_data.hold_back,
         period=ar_data.period,
-        missing=ar_data.missing,
-        old_names=False,
+        missing=ar_data.missing
     )
     res = mod.fit()
     exog_oos = None
@@ -399,8 +397,7 @@ def test_autoreg_predict_smoke(ar_data):
             seasonal=ar_data.seasonal,
             exog=ar_data.exog,
             period=ar_data.period,
-            missing=ar_data.missing,
-            old_names=False,
+            missing=ar_data.missing
         )
         mod.predict(res.params, 0, 250, exog_oos=exog_oos)
 
@@ -409,7 +406,7 @@ def test_autoreg_predict_smoke(ar_data):
 def test_parameterless_autoreg():
     data = gen_data(250, 0, False)
     mod = AutoReg(
-        data.endog, 0, trend="n", seasonal=False, exog=None, old_names=False
+        data.endog, 0, trend="n", seasonal=False, exog=None
     )
     res = mod.fit()
     for attr in dir(res):
@@ -442,18 +439,18 @@ def test_parameterless_autoreg():
 
 def test_predict_errors():
     data = gen_data(250, 2, True)
-    mod = AutoReg(data.endog, 3, old_names=False)
+    mod = AutoReg(data.endog, 3)
     res = mod.fit()
     with pytest.raises(ValueError, match="exog and exog_oos cannot be used"):
         mod.predict(res.params, exog=data.exog)
     with pytest.raises(ValueError, match="exog and exog_oos cannot be used"):
         mod.predict(res.params, exog_oos=data.exog)
     with pytest.raises(ValueError, match="hold_back must be >= lags"):
-        AutoReg(data.endog, 3, hold_back=1, old_names=False)
+        AutoReg(data.endog, 3, hold_back=1)
     with pytest.raises(ValueError, match="freq cannot be inferred"):
-        AutoReg(data.endog.values, 3, seasonal=True, old_names=False)
+        AutoReg(data.endog.values, 3, seasonal=True)
 
-    mod = AutoReg(data.endog, 3, exog=data.exog, old_names=False)
+    mod = AutoReg(data.endog, 3, exog=data.exog)
     res = mod.fit()
     with pytest.raises(ValueError, match=r"The shape of exog \(200, 2\)"):
         mod.predict(res.params, exog=data.exog.iloc[:200])
@@ -464,7 +461,7 @@ def test_predict_errors():
     with pytest.raises(ValueError, match="exog_oos must be provided"):
         mod.predict(res.params, end=250, exog_oos=None)
 
-    mod = AutoReg(data.endog, 0, exog=data.exog, old_names=False)
+    mod = AutoReg(data.endog, 0, exog=data.exog)
     res = mod.fit()
     with pytest.raises(ValueError, match="start and end indicate that 10"):
         mod.predict(res.params, end=259, exog_oos=data.exog.iloc[:5])
@@ -473,11 +470,11 @@ def test_predict_errors():
 def test_spec_errors():
     data = gen_data(250, 2, True)
     with pytest.raises(ValueError, match="lags must be a positive scalar"):
-        AutoReg(data.endog, -1, old_names=False)
+        AutoReg(data.endog, -1)
     with pytest.raises(ValueError, match="All values in lags must be pos"):
-        AutoReg(data.endog, [1, 1, 1], old_names=False)
+        AutoReg(data.endog, [1, 1, 1])
     with pytest.raises(ValueError, match="All values in lags must be pos"):
-        AutoReg(data.endog, [1, -2, 3], old_names=False)
+        AutoReg(data.endog, [1, -2, 3])
 
 
 @pytest.mark.smoke
@@ -490,8 +487,7 @@ def test_dynamic_forecast_smoke(ar_data):
         exog=ar_data.exog,
         hold_back=ar_data.hold_back,
         period=ar_data.period,
-        missing=ar_data.missing,
-        old_names=False,
+        missing=ar_data.missing
     )
     res = mod.fit()
     res.predict(dynamic=True)
@@ -502,13 +498,13 @@ def test_dynamic_forecast_smoke(ar_data):
 @pytest.mark.smoke
 def test_ar_select_order_smoke():
     data = sm.datasets.sunspots.load(as_pandas=True).data["SUNACTIVITY"]
-    ar_select_order(data, 4, glob=True, trend="n", old_names=False)
-    ar_select_order(data, 4, glob=False, trend="n", old_names=False)
-    ar_select_order(data, 4, seasonal=True, period=12, old_names=False)
-    ar_select_order(data, 4, seasonal=False, old_names=False)
-    ar_select_order(data, 4, glob=True, old_names=False)
+    ar_select_order(data, 4, glob=True, trend="n")
+    ar_select_order(data, 4, glob=False, trend="n")
+    ar_select_order(data, 4, seasonal=True, period=12)
+    ar_select_order(data, 4, seasonal=False)
+    ar_select_order(data, 4, glob=True)
     ar_select_order(
-        data, 4, glob=True, seasonal=True, period=12, old_names=False
+        data, 4, glob=True, seasonal=True, period=12
     )
 
 
@@ -526,7 +522,7 @@ class TestAutoRegOLSConstant(CheckAutoRegMixin):
     def setup_class(cls):
         data = sm.datasets.sunspots.load(as_pandas=True)
         data.endog.index = list(range(len(data.endog)))
-        cls.res1 = AutoReg(data.endog, lags=9, old_names=False).fit()
+        cls.res1 = AutoReg(data.endog, lags=9).fit()
         cls.res2 = results_ar.ARResultsOLS(constant=True)
 
     def test_predict(self):
@@ -587,7 +583,7 @@ class TestAutoRegOLSNoConstant(CheckAutoRegMixin):
     def setup_class(cls):
         data = sm.datasets.sunspots.load(as_pandas=False)
         cls.res1 = AutoReg(
-            data.endog, lags=9, trend="n", old_names=False
+            data.endog, lags=9, trend="n"
         ).fit()
         cls.res2 = results_ar.ARResultsOLS(constant=False)
 
@@ -645,7 +641,7 @@ def test_autoreg_info_criterion(lag):
     data = sm.datasets.sunspots.load(as_pandas=False)
     endog = data.endog
     endog_tmp = endog[16 - lag :]
-    r = AutoReg(endog_tmp, lags=lag, old_names=False).fit()
+    r = AutoReg(endog_tmp, lags=lag).fit()
     # See issue #324 for the corrections vs. R
     k_ar = len(r.model.ar_lags)
     k_trend = 1
@@ -668,7 +664,7 @@ def test_autoreg_info_criterion(lag):
 
     assert_almost_equal(res1, res2[lag - 1, :], DECIMAL_6)
 
-    r2 = AutoReg(endog, lags=lag, hold_back=16, old_names=False).fit()
+    r2 = AutoReg(endog, lags=lag, hold_back=16).fit()
     assert_allclose(r.aic, r2.aic)
     assert_allclose(r.bic, r2.bic)
     assert_allclose(r.hqic, r2.hqic)
@@ -677,9 +673,12 @@ def test_autoreg_info_criterion(lag):
 
 @pytest.mark.parametrize("old_names", [True, False])
 def test_autoreg_named_series(reset_randomstate, old_names):
+    warning = FutureWarning if old_names else None
     dates = period_range(start="2011-1", periods=72, freq="M")
     y = Series(np.random.randn(72), name="foobar", index=dates)
-    results = AutoReg(y, lags=2, old_names=old_names).fit()
+    with pytest.warns(warning):
+        results = AutoReg(y, lags=2, old_names=old_names).fit()
+
     if old_names:
         idx = Index(["intercept", "foobar.L1", "foobar.L2"])
     else:
@@ -693,7 +692,7 @@ def test_autoreg_series():
     dta = sm.datasets.macrodata.load_pandas().data["cpi"].diff().dropna()
     dates = period_range(start="1959Q1", periods=len(dta), freq="Q")
     dta.index = dates
-    ar = AutoReg(dta, lags=15, old_names=False).fit()
+    ar = AutoReg(dta, lags=15).fit()
     ar.bse
 
 
@@ -702,7 +701,7 @@ def test_ar_order_select():
     np.random.seed(12345)
     y = sm.tsa.arma_generate_sample([1, -0.75, 0.3], [1], 100)
     ts = Series(y, index=date_range(start="1/1/1990", periods=100, freq="M"))
-    res = ar_select_order(ts, maxlag=12, ic="aic", old_names=False)
+    res = ar_select_order(ts, maxlag=12, ic="aic")
     assert tuple(res.ar_lags) == (1, 2)
     assert isinstance(res.aic, dict)
     assert isinstance(res.bic, dict)
@@ -730,9 +729,9 @@ def test_autoreg_constant_column_trend():
     )
 
     with pytest.raises(ValueError, match="The model specification cannot"):
-        AutoReg(sample, lags=7, old_names=False)
+        AutoReg(sample, lags=7)
     with pytest.raises(ValueError, match="The model specification cannot"):
-        AutoReg(sample, lags=7, trend="n", old_names=False)
+        AutoReg(sample, lags=7, trend="n")
 
 
 @pytest.mark.parametrize("old_names", [True, False])
@@ -740,12 +739,15 @@ def test_autoreg_summary_corner(old_names):
     data = sm.datasets.macrodata.load_pandas().data["cpi"].diff().dropna()
     dates = period_range(start="1959Q1", periods=len(data), freq="Q")
     data.index = dates
-    res = AutoReg(data, lags=4, old_names=old_names).fit()
+    warning = FutureWarning if old_names else None
+    with pytest.warns(warning):
+        res = AutoReg(data, lags=4, old_names=old_names).fit()
     summ = res.summary().as_text()
     assert "AutoReg(4)" in summ
     assert "cpi.L4" in summ
     assert "03-31-1960" in summ
-    res = AutoReg(data, lags=0, old_names=old_names).fit()
+    with pytest.warns(warning):
+        res = AutoReg(data, lags=0, old_names=old_names).fit()
     summ = res.summary().as_text()
     if old_names:
         assert "intercept" in summ
@@ -757,7 +759,7 @@ def test_autoreg_summary_corner(old_names):
 @pytest.mark.smoke
 def test_autoreg_score():
     data = sm.datasets.sunspots.load_pandas()
-    ar = AutoReg(np.asarray(data.endog), 3, old_names=False)
+    ar = AutoReg(np.asarray(data.endog), 3)
     res = ar.fit()
     score = ar.score(res.params)
     assert isinstance(score, np.ndarray)
@@ -767,7 +769,7 @@ def test_autoreg_score():
 
 def test_autoreg_roots():
     data = sm.datasets.sunspots.load_pandas()
-    ar = AutoReg(np.asarray(data.endog), lags=1, old_names=False)
+    ar = AutoReg(np.asarray(data.endog), lags=1)
     res = ar.fit()
     assert_almost_equal(res.roots, np.array([1.0 / res.params[-1]]))
 
@@ -778,13 +780,13 @@ def test_equiv_dynamic(reset_randomstate):
     y[0] = e[0] * np.sqrt(1.0 / (1 - 0.9 ** 2))
     for i in range(1, 1001):
         y[i] = 0.9 * y[i - 1] + e[i]
-    mod = AutoReg(y, 1, old_names=False)
+    mod = AutoReg(y, 1)
     res = mod.fit()
     pred0 = res.predict(500, 800, dynamic=0)
     pred1 = res.predict(500, 800, dynamic=True)
     idx = pd.date_range("31-01-2000", periods=1001, freq="M")
     y = pd.Series(y, index=idx)
-    mod = AutoReg(y, 1, old_names=False)
+    mod = AutoReg(y, 1)
     res = mod.fit()
     pred2 = res.predict(idx[500], idx[800], dynamic=idx[500])
     pred3 = res.predict(idx[500], idx[800], dynamic=0)
@@ -804,7 +806,7 @@ def test_dynamic_against_sarimax():
         y[i] = 0.9 * y[i - 1] + e[i]
     smod = SARIMAX(y, order=(1, 0, 0), trend="c")
     sres = smod.fit(disp=False)
-    mod = AutoReg(y, 1, old_names=False)
+    mod = AutoReg(y, 1)
     spred = sres.predict(900, 1100)
     pred = mod.predict(sres.params[:2], 900, 1100)
     assert_allclose(spred, pred)
@@ -827,7 +829,7 @@ def test_predict_seasonal():
     for i in range(1, 1001):
         y[i] = 10 + 0.9 * y[i - 1] + e[i] + effects[i % 12]
     ys = pd.Series(y, index=pd.date_range("1-1-1950", periods=1001, freq="M"))
-    mod = AutoReg(ys, 1, seasonal=True, old_names=False)
+    mod = AutoReg(ys, 1, seasonal=True)
     res = mod.fit()
     c = res.params.iloc[0]
     seasons = np.zeros(12)
@@ -861,7 +863,7 @@ def test_predict_exog():
         y[i] = 10 + 0.9 * y[i - 1] - 0.5 * y[i - 3] + e[i] + x[i].sum()
     ys = pd.Series(y, index=pd.date_range("1-1-1950", periods=1001, freq="M"))
     xdf = pd.DataFrame(x, columns=["x0", "x1"], index=ys.index)
-    mod = AutoReg(ys, [1, 3], trend="c", exog=xdf, old_names=False)
+    mod = AutoReg(ys, [1, 3], trend="c", exog=xdf)
     res = mod.fit()
 
     pred = res.predict(900)
@@ -901,7 +903,7 @@ def test_predict_irregular_ar():
     for i in range(3, 1001):
         y[i] = 10 + 0.9 * y[i - 1] - 0.5 * y[i - 3] + e[i]
     ys = pd.Series(y, index=pd.date_range("1-1-1950", periods=1001, freq="M"))
-    mod = AutoReg(ys, [1, 3], trend="ct", old_names=False)
+    mod = AutoReg(ys, [1, 3], trend="ct")
     res = mod.fit()
     c = res.params.iloc[0]
     t = res.params.iloc[1]
@@ -943,7 +945,7 @@ def test_forecast_start_end_equiv(dynamic):
     for i in range(1, 1001):
         y[i] = 10 + 0.9 * y[i - 1] + e[i] + effects[i % 12]
     ys = pd.Series(y, index=pd.date_range("1-1-1950", periods=1001, freq="M"))
-    mod = AutoReg(ys, 1, seasonal=True, old_names=False)
+    mod = AutoReg(ys, 1, seasonal=True)
     res = mod.fit()
     pred_int = res.predict(1000, 1020, dynamic=dynamic)
     dates = pd.date_range("1-1-1950", periods=1021, freq="M")
@@ -954,7 +956,7 @@ def test_forecast_start_end_equiv(dynamic):
 @pytest.mark.parametrize("start", [21, 25])
 def test_autoreg_start(start):
     y_train = pd.Series(np.random.normal(size=20))
-    m = AutoReg(y_train, lags=2, old_names=False)
+    m = AutoReg(y_train, lags=2)
     mf = m.fit()
     end = start + 5
     pred = mf.predict(start=start, end=end)
@@ -968,7 +970,7 @@ def test_deterministic(reset_randomstate):
     m = AutoReg(y, trend="n", seasonal=False, lags=2, deterministic=dp)
     res = m.fit()
     m2 = AutoReg(
-        y, trend="ct", seasonal=True, lags=2, period=12, old_names=False
+        y, trend="ct", seasonal=True, lags=2, period=12
     )
     res2 = m2.fit()
     assert_almost_equal(np.asarray(res.params), np.asarray(res2.params))
@@ -983,7 +985,7 @@ def test_autoreg_predict_forecast_equiv(reset_randomstate):
     for i in range(1, nobs):
         e[i] = 0.95 * e[i - 1] + e[i]
     y = pd.Series(e, index=idx)
-    m = AutoReg(y, trend="c", lags=1, old_names=False)
+    m = AutoReg(y, trend="c", lags=1)
     res = m.fit()
     a = res.forecast(12)
     b = res.predict(nobs, nobs + 11)
@@ -999,7 +1001,7 @@ def test_autoreg_forecast_period_index():
     pi = pd.period_range("1990-1-1", periods=524, freq="M")
     y = np.random.RandomState(0).standard_normal(500)
     ys = pd.Series(y, index=pi[:500], name="y")
-    mod = AutoReg(ys, 3, seasonal=True, old_names=False)
+    mod = AutoReg(ys, 3, seasonal=True)
     res = mod.fit()
     fcast = res.forecast(24)
     assert isinstance(fcast.index, pd.PeriodIndex)
@@ -1009,7 +1011,7 @@ def test_autoreg_forecast_period_index():
 @pytest.mark.matplotlib
 def test_autoreg_plot_err():
     y = np.random.standard_normal(100)
-    mod = AutoReg(y, lags=[1, 3], old_names=False)
+    mod = AutoReg(y, lags=[1, 3])
     res = mod.fit()
     with pytest.raises(ValueError):
         res.plot_predict(0, end=50, in_sample=False)
@@ -1026,5 +1028,5 @@ def test_autoreg_resids():
         y[i] = 2 + 1.8 * y[i - 1] - 0.95 * y[i - 2] + e[i]
     ys = pd.Series(y[-100:], index=idx_dates, name="y")
     with pytest.warns(ValueWarning):
-        res = AutoReg(ys, lags=2, old_names=False).fit()
+        res = AutoReg(ys, lags=2).fit()
     assert np.all(np.isfinite(res.resid))

@@ -290,7 +290,7 @@ def test_no_period(default_kwargs):
 
 
 @pytest.mark.matplotlib
-def test_plot(default_kwargs):
+def test_plot(default_kwargs, close_figures):
     class_kwargs, outer, inner = _to_class_kwargs(default_kwargs)
     res = STL(**class_kwargs).fit(outer_iter=outer, inner_iter=inner)
     res.plot()
