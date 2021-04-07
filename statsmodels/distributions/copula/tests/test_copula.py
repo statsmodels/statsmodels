@@ -77,10 +77,10 @@ ev_dep_list = [
 
 
 cop_list = [
-    [tra.TransfFrank, 0.5, 0.9, 2, 0.4710805107852225, 0.9257812360337806],
-    [tra.TransfGumbel, 0.5, 0.9, 2, 0.4960348880595387, 0.3973548776136501],
-    [tra.TransfClayton, 0.5, 0.9, 2, 0.485954322440435, 0.8921974147432954],
-    [tra.TransfIndep, 0.5, 0.5, 1, 0.25, 1],
+    [tra.TransfFrank, 0.5, 0.9, (2,), 0.4710805107852225, 0.9257812360337806],
+    [tra.TransfGumbel, 0.5, 0.9, (2,), 0.4960348880595387, 0.3973548776136501],
+    [tra.TransfClayton, 0.5, 0.9, (2,), 0.485954322440435, 0.8921974147432954],
+    [tra.TransfIndep, 0.5, 0.5, (1,), 0.25, 1],
     ]
 
 gev_list = [
@@ -139,13 +139,15 @@ def test_ev_dep(case):
 def test_copulas(case):
     # check ev copulas, cdf and transform against R `copula` package
     cop_tr, v1, v2, args, cdf2, pdf2 = case
-    ca = ArchimedeanCopula(cop_tr(), theta=args)
+    ca = ArchimedeanCopula(cop_tr(), args=args)
+    cdf1 = ca.cdf([v1, v2], args=args)
+    pdf1 = ca.pdf([v1, v2], args=args)
     cdf1 = ca.cdf([v1, v2])
     pdf1 = ca.pdf([v1, v2])
     assert_allclose(cdf1, cdf2, rtol=1e-13)
     assert_allclose(pdf1, pdf2, rtol=1e-13)
 
-    logpdf1 = ca.logpdf([v1, v2])
+    logpdf1 = ca.logpdf([v1, v2], args=args)
     assert_allclose(logpdf1, np.log(pdf2), rtol=1e-13)
 
 
@@ -161,7 +163,7 @@ def test_ev_copula_distr(case):
     cdf1 = ev.cdf(u, args)
     assert_allclose(cdf1, res1, rtol=1e-13)
 
-    cev = CopulaDistribution([uniform, uniform], ev, copargs=args)
+    cev = CopulaDistribution([uniform, uniform], ev, args=args)
     cdfd = cev.cdf(np.array(u), args=args)
     assert_allclose(cdfd, res1, rtol=1e-13)
     assert cdfd.shape == ()
@@ -184,22 +186,24 @@ def test_copulas_distr(case):
     # check ev copulas, cdf and transform against R `copula` package
     cop_tr, v1, v2, args, cdf2, pdf2 = case
     u = [v1, v2]
-    ca = ArchimedeanCopula(cop_tr(), theta=args)
+    ca = ArchimedeanCopula(cop_tr(), args=args)
+    cdf1 = ca.cdf(u, args=args)
+    pdf1 = ca.pdf(u, args=args)
     cdf1 = ca.cdf(u)
     pdf1 = ca.pdf(u)
 
-    cad = CopulaDistribution([uniform, uniform], ca, copargs=args)
-    cdfd = cad.cdf(np.array(u))
+    cad = CopulaDistribution([uniform, uniform], ca, args=args)
+    cdfd = cad.cdf(np.array(u), args=args)
     assert_allclose(cdfd, cdf1, rtol=1e-13)
     assert cdfd.shape == ()
 
     # check pdf
-    pdfd = cad.pdf(np.array(u))
+    pdfd = cad.pdf(np.array(u), args=args)
     assert_allclose(pdfd, pdf1, rtol=1e-13)
     assert cdfd.shape == ()
 
     # using list u
-    cdfd = cad.cdf(u)
+    cdfd = cad.cdf(u, args=args)
     assert_allclose(cdfd, cdf1, rtol=1e-13)
     assert cdfd.shape == ()
 
@@ -207,12 +211,12 @@ def test_copulas_distr(case):
     assert_allclose(pdf1, pdf2, rtol=1e-13)
 
     # check vector values for u
-    cdfd = cad.cdf(np.array(u) * np.ones((3, 1)))
+    cdfd = cad.cdf(np.array(u) * np.ones((3, 1)), args=args)
     assert_allclose(cdfd, cdf2, rtol=1e-13)
     assert cdfd.shape == (3, )
 
     # check mv, check at marginal cdf
-    cdfmv = ca.cdf([v1, v2, 1])
+    cdfmv = ca.cdf([v1, v2, 1], args=args)
     assert_allclose(cdfmv, cdf1, rtol=1e-13)
     assert cdfd.shape == (3, )
 
@@ -236,7 +240,7 @@ def test_gev_genextreme(case):
     cdf1 = ev.cdf(u, args)
     assert_allclose(cdf1, res1, rtol=1e-13)
 
-    cev = CopulaDistribution([gev, gev], ev, copargs=args)
+    cev = CopulaDistribution([gev, gev], ev, args=args)
     cdfd = cev.cdf(np.array(y), args=args)
     assert_allclose(cdfd, res1, rtol=1e-13)
     pdfd = cev.pdf(np.array(y), args=args)
@@ -249,21 +253,22 @@ class TestFrank:
         case = [tra.TransfFrank, 0.5, 0.9, (2,), 0.4710805107852225,
                 0.9257812360337806]
         cop_tr, v1, v2, args, cdf2, pdf2 = case
-        cop = FrankCopula(theta=args)
+        cop = FrankCopula(args=args)
 
-        pdf1 = cop.pdf([v1, v2])
+        pdf1 = cop.pdf([v1, v2], args=args)
         assert_allclose(pdf1, pdf2, rtol=1e-13)
-        logpdf1 = cop.logpdf([v1, v2])
+        logpdf1 = cop.logpdf([v1, v2], args=args)
         assert_allclose(logpdf1, np.log(pdf2), rtol=1e-13)
 
-        cdf1 = cop.cdf([v1, v2])
+        cdf1 = cop.cdf([v1, v2], args=args)
         assert_allclose(cdf1, cdf2, rtol=1e-13)
 
         assert isinstance(cop.transform, cop_tr)
 
         # round trip conditional, no verification
         u = [0.6, 0.5]
-        cdfc = cop.cdfcond_2g1(u)
+        cdfc = cop.cdfcond_2g1(u, args=args)
+        ppfc = cop.ppfcond_2g1(cdfc, [0.6], args=args)
         ppfc = cop.ppfcond_2g1(cdfc, [0.6])
         assert_allclose(ppfc, u[1], rtol=1e-13)
 
@@ -353,7 +358,7 @@ class TestStudentCopula(CopulaTests):
 
 
 class TestClaytonCopula(CopulaTests):
-    copula = ClaytonCopula(theta=1.2)
+    copula = ClaytonCopula(args=1.2)
     dim = 2
     pdf_u = [1.0119836, 0.2072728, 0.8148839, 0.9481976, 2.1419659,
              0.6828507, 0.2040454, 0.2838497, 0.8197787, 1.1096360]
@@ -362,7 +367,7 @@ class TestClaytonCopula(CopulaTests):
 
 
 class TestFrankCopula(CopulaTests):
-    copula = FrankCopula(theta=3)
+    copula = FrankCopula(args=3)
     dim = 2
     pdf_u = [0.9646599, 0.5627195, 0.8941964, 0.8364614, 2.9570945,
              0.6665601, 0.5779906, 0.5241333, 0.7156741, 1.1074024]
@@ -371,7 +376,7 @@ class TestFrankCopula(CopulaTests):
 
 
 class TestGumbelCopula(CopulaTests):
-    copula = GumbelCopula(theta=1.5)
+    copula = GumbelCopula(args=1.5)
     dim = 2
     pdf_u = [1.0391696, 0.6539579, 0.9878446, 0.8679504, 16.6030932,
              0.7542073, 0.6668307, 0.6275887, 0.7477991, 1.1564864]

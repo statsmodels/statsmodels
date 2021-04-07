@@ -1,4 +1,4 @@
-'''
+"""
 
 Which Archimedean is Best?
 Extreme Value copulas formulas are based on Genest 2009
@@ -9,38 +9,34 @@ References
 Genest, C., 2009. Rank-based inference for bivariate extreme-value
 copulas. The Annals of Statistics, 37(5), pp.2990-3022.
 
-'''
+"""
 from abc import ABC, abstractmethod
 
 import numpy as np
-from matplotlib import pyplot as plt
 from scipy import stats
 from scipy.special import expm1
 
 from statsmodels.graphics import utils
+from statsmodels.graphics.utils import _import_mpl
 
 
 def copula_bv_indep(u, v):
-    '''independent bivariate copula
-    '''
+    """Independent bivariate copula."""
     return u*v
 
 
 def copula_bv_min(u, v):
-    '''comonotonic bivariate copula
-    '''
+    """Comonotonic bivariate copula."""
     return np.minimum(u, v)
 
 
 def copula_bv_max(u, v):
-    '''countermonotonic bivariate copula
-    '''
+    """Countermonotonic bivariate copula."""
     return np.maximum(u + v - 1, 0)
 
 
 def copula_bv_clayton(u, theta):
-    '''Clayton or Cook, Johnson bivariate copula
-    '''
+    """Clayton or Cook, Johnson bivariate copula."""
     u, v = u
     if isinstance(theta, tuple) and len(theta) == 1:
         theta = theta[0]
@@ -52,8 +48,7 @@ def copula_bv_clayton(u, theta):
 
 
 def copula_bv_frank(u, v, theta):
-    '''Cook, Johnson bivariate copula
-    '''
+    """Cook, Johnson bivariate copula."""
     if not theta > 0:
         raise ValueError('theta needs to be strictly positive')
     cdfv = -np.log(1 + expm1(-theta*u) * expm1(-theta*v) / expm1(-theta))/theta
@@ -74,8 +69,7 @@ def copula_bv_t(u, v, rho, df):
 
 
 def copula_bv_archimedean(u, v, transform, args=()):
-    '''
-    '''
+    """Generic bivariate Archimedean copula."""
     phi = transform.evaluate
     phi_inv = transform.inverse
     cdfv = phi_inv(phi(u, *args) + phi(v, *args), *args)
@@ -83,8 +77,7 @@ def copula_bv_archimedean(u, v, transform, args=()):
 
 
 def copula_mv_archimedean(u, transform, args=(), axis=-1):
-    '''generic multivariate Archimedean copula
-    '''
+    """Generic multivariate Archimedean copula."""
     phi = transform.evaluate
     phi_inv = transform.inverse
     cdfv = phi_inv(phi(u, *args).sum(axis), *args)
@@ -92,11 +85,12 @@ def copula_mv_archimedean(u, transform, args=(), axis=-1):
 
 
 def copula_power_mv_archimedean(u, transform, alpha, beta, args=(), axis=-1):
-    '''generic multivariate Archimedean copula with additional power transforms
+    """
+    Generic multivariate Archimedean copula with additional power
+    transforms.
 
     Nelson p.144, equ. 4.5.2
-    '''
-
+    """
     def phi(u, alpha, beta, args=()):
         return np.power(transform.evaluate(np.power(u, alpha), *args), beta)
 
@@ -132,6 +126,7 @@ class CopulaDistributionBivariate:
 
     Instantiation needs the arguments, cop_args, that are required for copula
     """
+
     def __init__(self, marginalcdfs, copula, copargs=()):
         if copula in copulanamesbv:
             self.copula = copulanamesbv[copula]
@@ -143,8 +138,11 @@ class CopulaDistributionBivariate:
         self.copargs = copargs
 
     def cdf(self, xy, args=None):
-        '''xx needs to be iterable, instead of x,y for extension to multivariate
-        '''
+        """CDF.
+
+        xx needs to be iterable, instead of x,y for extension to
+        multivariate.
+        """
         x, y = xy
         if args is None:
             args = self.copargs
@@ -162,7 +160,7 @@ class CopulaDistribution:
     marginals : list of distribution instances
         Marginal distributions.
     copula : instance of copula class
-    copargs : tuple
+    args : tuple
         Parameters for copula
 
     Notes
@@ -170,7 +168,8 @@ class CopulaDistribution:
     experimental, argument handling not yet finalized
 
     """
-    def __init__(self, marginals, copula, copargs=()):
+
+    def __init__(self, marginals, copula, args=None):
         if copula in copulanamesbv:
             self.copula = copulanamesbv[copula]
         else:
@@ -179,8 +178,15 @@ class CopulaDistribution:
 
         # no checking done on marginals
         self.marginals = marginals
-        self.copargs = copargs
+        self.args = args
         self.k_vars = len(marginals)
+
+    def _validate_args(self, args):
+        if args is None and self.args is not None:
+            args = self.args
+        if not isinstance(args, tuple):
+            args = (args,)
+        return args
 
     def cdf(self, y, args=None):
         """CDF of copula distribution.
@@ -201,8 +207,7 @@ class CopulaDistribution:
 
         """
         y = np.asarray(y)
-        if args is None:
-            args = self.copargs
+        args = self._validate_args(args)
 
         cdf_marg = []
         for i in range(self.k_vars):
@@ -230,6 +235,7 @@ class CopulaDistribution:
         -------
         pdf values
         """
+        args = self._validate_args(args)
         return np.exp(self.logpdf(y, args=args))
 
     def logpdf(self, y, args=None):
@@ -251,8 +257,7 @@ class CopulaDistribution:
 
         """
         y = np.asarray(y)
-        if args is None:
-            args = self.copargs
+        args = self._validate_args(args)
 
         lpdf = 0.0
         cdf_marg = []
@@ -317,8 +322,16 @@ class Copula(ABC):
 
     """
 
-    def __init__(self, d):
+    def __init__(self, d, args=None):
         self.d = d
+        self.args = args
+
+    def _validate_args(self, args):
+        if args is None and self.args is not None:
+            args = self.args
+        if not isinstance(args, tuple):
+            args = (args,)
+        return args
 
     def random(self, n=1, random_state=None):
         """Draw `n` in the half-open interval ``[0, 1)``.
@@ -345,16 +358,19 @@ class Copula(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def pdf(self, u):
+    def pdf(self, u, args=None):
         """Probability density function."""
+        # args = self._validate_args(args)
 
-    def logpdf(self, u):
+    def logpdf(self, u, args=None):
         """Log of the PDF."""
-        return np.log(self.pdf(u))
+        args = self._validate_args(args)
+        return np.log(self.pdf(u, args))
 
     @abstractmethod
-    def cdf(self, u):
+    def cdf(self, u, args=None):
         """Cumulative density function."""
+        # args = self._validate_args(args)
 
     def plot(self, n, random_state=None, ax=None):
         """Sample the copula and plot.
@@ -412,6 +428,8 @@ class Copula(ABC):
             `ax` is connected.
 
         """
+        plt = _import_mpl()
+
         if self.d != 2:
             raise ValueError("Can only plot 2-dimensional Copula.")
 

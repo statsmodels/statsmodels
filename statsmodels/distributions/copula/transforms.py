@@ -8,13 +8,12 @@ Author: Josef Perktold
 License: BSD-3
 
 """
-
 import numpy as np
 from scipy.special import expm1
 
 
 # not used yet
-class Transforms(object):
+class Transforms:
 
     def __init__(self):
         pass
@@ -69,9 +68,10 @@ class TransfClayton(Transforms):
 
 
 class TransfGumbel(Transforms):
-    '''
-    requires theta >=1
-    '''
+    """Gumbel transformation.
+
+    Requires theta >=1.
+    """
 
     def _checkargs(self, theta):
         return theta >= 1
