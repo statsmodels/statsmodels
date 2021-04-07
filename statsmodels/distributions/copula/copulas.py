@@ -13,7 +13,6 @@ copulas. The Annals of Statistics, 37(5), pp.2990-3022.
 from abc import ABC, abstractmethod
 
 import numpy as np
-from matplotlib import pyplot as plt
 from scipy import stats
 from scipy.special import expm1
 
@@ -124,14 +123,14 @@ copulanamesbv = {'indep': copula_bv_indep,
                  't': copula_bv_t}
 
 
-class CopulaDistributionBivariate(object):
-    '''bivariate copula class
+class CopulaDistributionBivariate:
+    """Bivariate copula.
 
     might be obsolete,
     see CopulaDistribution for multivariate distribution class
 
     Instantiation needs the arguments, cop_args, that are required for copula
-    '''
+    """
     def __init__(self, marginalcdfs, copula, copargs=()):
         if copula in copulanamesbv:
             self.copula = copulanamesbv[copula]
@@ -152,8 +151,8 @@ class CopulaDistributionBivariate(object):
                            *args)
 
 
-class CopulaDistribution(object):
-    """Multivariate copula class
+class CopulaDistribution:
+    """Multivariate copula.
 
     Instantiation needs the arguments, cop_args, that are required for copula
 
@@ -168,6 +167,7 @@ class CopulaDistribution(object):
     Notes
     -----
     experimental, argument handling not yet finalized
+
     """
     def __init__(self, marginals, copula, copargs=()):
         if copula in copulanamesbv:
@@ -411,6 +411,7 @@ class Copula(ABC):
             `ax` is connected.
 
         """
+        from matplotlib import pyplot as plt
         if self.d != 2:
             raise ValueError("Can only plot 2-dimensional Copula.")
 

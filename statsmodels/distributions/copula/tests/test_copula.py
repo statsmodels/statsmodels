@@ -18,7 +18,7 @@ from statsmodels.distributions.copula.other_copulas import IndependentCopula
 from statsmodels.tools.numdiff import approx_fprime_cs, approx_hess
 from statsmodels.distributions.copula.copulas import CopulaDistribution
 from statsmodels.distributions.copula.archimedean import (
-    ArchimedeanCopula, FrankCopulaGeneratorBased, ClaytonCopula, FrankCopula,
+    ArchimedeanCopula, FrankCopula, ClaytonCopula, FrankCopula,
     GumbelCopula)
 from statsmodels.distributions.copula.extreme_value import (
     ExtremeValueCopula, copula_bv_ev)
@@ -249,7 +249,7 @@ class TestFrank:
         case = [tra.TransfFrank, 0.5, 0.9, (2,), 0.4710805107852225,
                 0.9257812360337806]
         cop_tr, v1, v2, args, cdf2, pdf2 = case
-        cop = FrankCopulaGeneratorBased()
+        cop = FrankCopula()
 
         pdf1 = cop.pdf([v1, v2], args=args)
         assert_allclose(pdf1, pdf2, rtol=1e-13)
