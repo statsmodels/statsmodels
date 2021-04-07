@@ -174,13 +174,14 @@ Bug reports can be submitted to the issue tracker at
 
 https://github.com/statsmodels/statsmodels/issues
 
-.. |Azure CI Build Status| image:: https://dev.azure.com/statsmodels/statsmodels-testing/_apis/build/status/statsmodels.statsmodels?branch=main
-   :target: https://dev.azure.com/statsmodels/statsmodels-testing/_build/latest?definitionId=1&branch=main
+.. |Azure CI Build Status| image:: https://dev.azure.com/statsmodels/statsmodels-testing/_apis/build/status/statsmodels.statsmodels?branchName=main
+   :target: https://dev.azure.com/statsmodels/statsmodels-testing/_build/latest?definitionId=1&branchName=main
 .. |Codecov Coverage| image:: https://codecov.io/gh/statsmodels/statsmodels/branch/main/graph/badge.svg
    :target: https://codecov.io/gh/statsmodels/statsmodels
 .. |Coveralls Coverage| image:: https://coveralls.io/repos/github/statsmodels/statsmodels/badge.svg?branch=main
    :target: https://coveralls.io/github/statsmodels/statsmodels?branch=main
-.. |PyPI downloads| image:: https://img.shields.io/pypi/dm/statsmodels.svg?label=Pypi%20downloads
+.. |PyPI downloads| image:: https://img.shields.io/pypi/dm/statsmodels?label=PyPI%20Downloads
+   :alt: PyPI - Downloads
    :target: https://pypi.org/project/statsmodels/
 .. |Conda downloads| image:: https://img.shields.io/conda/dn/conda-forge/statsmodels.svg?label=Conda%20downloads
    :target: https://anaconda.org/conda-forge/statsmodels/
