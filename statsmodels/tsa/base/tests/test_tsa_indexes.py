@@ -375,6 +375,7 @@ def test_instantiation_valid():
         # warnings
         message = ('No frequency information was provided,'
                    ' so inferred frequency %s will be used.')
+        last_len = 0
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter('always')
 
@@ -402,8 +403,11 @@ def test_instantiation_valid():
                 # of the freq, and just test that the right message is given
                 # (even though it will not have the actual freq of the data in
                 # it).
+                if len(w) == last_len:
+                    continue
                 assert_equal(mod.data.freq.split('-')[0], freq.split('-')[0])
                 assert_equal(str(w[-1].message), message % mod.data.freq)
+                last_len = len(w)
 
         # Unsupported (but valid) indexes, should all give warnings
         message = ('An unsupported index was provided and will be'

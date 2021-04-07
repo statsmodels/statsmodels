@@ -359,7 +359,10 @@ class DynamicFactorMQStates(dict):
             else:
                 factor_names = [f'{i}' for i in range(factors)]
             factors = {name: factor_names[:] for name in endog_names}
-        factor_names = set(np.concatenate(list(factors.values())))
+        _factor_names = []
+        for val in factors.values():
+            _factor_names.extend(val)
+        factor_names = set(_factor_names)
         if orders_is_int:
             factor_orders = {factor_name: factor_orders
                              for factor_name in factor_names}
@@ -367,7 +370,7 @@ class DynamicFactorMQStates(dict):
             factor_multiplicities = {factor_name: factor_multiplicities
                                      for factor_name in factor_names}
 
-        # Apply the factor multiplities
+        # Apply the factor multiplicities
         factors, factor_orders = self._apply_factor_multiplicities(
             factors, factor_orders, factor_multiplicities)
 
