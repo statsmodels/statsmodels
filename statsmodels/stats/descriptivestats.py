@@ -441,8 +441,20 @@ class Description:
         loc = count > 0
         mode_freq = np.full(mode.shape[0], np.nan)
         mode_freq[loc] = mode_counts[loc] / count.loc[loc]
+        # TODO: Workaround for pandas AbstractMethodError in extension
+        #  types. Remove when quantile is supported for these
+        _df = df
+        try:
+            from pandas.api.types import is_extension_array_dtype
+            _df = df.copy()
+            for col in df:
+                if is_extension_array_dtype(df[col].dtype):
+                    _df[col] = _df[col].astype(object).fillna(np.nan)
+        except ImportError:
+            pass
+
         if df.shape[1] > 0:
-            iqr = df.quantile(0.75) - df.quantile(0.25)
+            iqr = _df.quantile(0.75) - _df.quantile(0.25)
         else:
             iqr = mean
 
@@ -493,7 +505,8 @@ class Description:
             return results_df
         # Pandas before 1.0 cannot handle empty DF
         if df.shape[1] > 0:
-            perc = df.quantile(self._percentiles / 100).astype(float)
+            # TODO: Remove when extension types support quantile
+            perc = _df.quantile(self._percentiles / 100).astype(float)
         else:
             perc = pd.DataFrame(index=self._percentiles / 100, dtype=float)
         if np.all(np.floor(100 * perc.index) == (100 * perc.index)):
