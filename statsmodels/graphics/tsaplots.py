@@ -60,8 +60,10 @@ def _plot_corr(
 
     ax.set_ylim(-1, 1)
     if auto_ylims:
-        ax.set_ylim(1.25*np.minimum(min(acf_x), min(confint[:, 0] - acf_x)),
-                    1.25*np.maximum(max(acf_x), max(confint[:, 1] - acf_x)))
+        ax.set_ylim(
+            1.25 * np.minimum(min(acf_x), min(confint[:, 0] - acf_x)),
+            1.25 * np.maximum(max(acf_x), max(confint[:, 1] - acf_x)),
+        )
 
     if confint is not None:
         if lags[0] == 0:

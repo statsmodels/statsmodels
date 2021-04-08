@@ -2,13 +2,14 @@ from statsmodels.compat.python import lmap
 
 import calendar
 from io import BytesIO
+import locale
 
 import numpy as np
 from numpy.testing import assert_, assert_equal
 import pandas as pd
 import pytest
 
-from statsmodels import api as sm
+from statsmodels.datasets import elnino, macrodata
 from statsmodels.graphics.tsaplots import (
     month_plot,
     plot_acf,
@@ -191,7 +192,7 @@ def test_plot_pacf_irregular(close_figures):
 
 @pytest.mark.matplotlib
 def test_plot_month(close_figures):
-    dta = sm.datasets.elnino.load_pandas().data
+    dta = elnino.load_pandas().data
     dta["YEAR"] = dta.YEAR.astype(int).apply(str)
     dta = dta.set_index("YEAR").T.unstack()
     dates = pd.to_datetime(["-".join([x[1], x[0]]) for x in dta.index.values])
@@ -212,18 +213,36 @@ def test_plot_month(close_figures):
     fig = month_plot(dta)
 
     # test localized xlabels
-    with calendar.different_locale("DE_de"):
-        fig = month_plot(dta)
-        labels = [_.get_text() for _ in fig.axes[0].get_xticklabels()]
-        expected = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul',
-                    'Aug', 'Sep', 'Okt', 'Nov', 'Dez']
-        for x, y in zip(labels, expected):
-            assert x == y
+    try:
+        with calendar.different_locale("DE_de"):
+            fig = month_plot(dta)
+            labels = [_.get_text() for _ in fig.axes[0].get_xticklabels()]
+            expected = [
+                "Jan",
+                "Feb",
+                ("Mär", "Mrz"),
+                "Apr",
+                "Mai",
+                "Jun",
+                "Jul",
+                "Aug",
+                "Sep",
+                "Okt",
+                "Nov",
+                "Dez",
+            ]
+            for lbl, exp in zip(labels, expected):
+                if isinstance(exp, tuple):
+                    assert lbl in exp
+                else:
+                    assert lbl == exp
+    except locale.Error:
+        pytest.xfail(reason="Failure due to unsupported locale")
 
 
 @pytest.mark.matplotlib
 def test_plot_quarter(close_figures):
-    dta = sm.datasets.macrodata.load_pandas().data
+    dta = macrodata.load_pandas().data
     dates = lmap(
         "Q".join,
         zip(
