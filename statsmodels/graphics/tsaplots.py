@@ -1,6 +1,7 @@
 """Correlation plot functions."""
-
 from statsmodels.compat.pandas import deprecate_kwarg
+
+import calendar
 
 import numpy as np
 import pandas as pd
@@ -59,8 +60,10 @@ def _plot_corr(
 
     ax.set_ylim(-1, 1)
     if auto_ylims:
-        ax.set_ylim(1.25*np.minimum(min(acf_x), min(confint[:, 0] - acf_x)),
-                    1.25*np.maximum(max(acf_x), max(confint[:, 1] - acf_x)))
+        ax.set_ylim(
+            1.25 * np.minimum(min(acf_x), min(confint[:, 0] - acf_x)),
+            1.25 * np.maximum(max(acf_x), max(confint[:, 1] - acf_x)),
+        )
 
     if confint is not None:
         if lags[0] == 0:
@@ -444,7 +447,8 @@ def month_plot(x, dates=None, ylabel=None, ax=None):
     else:
         x = pd.Series(x, index=pd.PeriodIndex(dates, freq="M"))
 
-    xticklabels = ["j", "f", "m", "a", "m", "j", "j", "a", "s", "o", "n", "d"]
+    # there's no zero month
+    xticklabels = list(calendar.month_abbr)[1:]
     return seasonal_plot(
         x.groupby(lambda y: y.month), xticklabels, ylabel=ylabel, ax=ax
     )
