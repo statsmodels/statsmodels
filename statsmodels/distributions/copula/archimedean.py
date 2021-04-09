@@ -227,7 +227,6 @@ class FrankCopula(ArchimedeanCopula):
         else:
             raise NotImplementedError
 
-
     def _theta_from_tau(self, tau):
         MIN_FLOAT_LOG = np.log(sys.float_info.min)
         MAX_FLOAT_LOG = np.log(sys.float_info.max)
@@ -241,8 +240,7 @@ class FrankCopula(ArchimedeanCopula):
             return 4 * (debye_value - 1) / alpha + 1 - tau
 
         result = optimize.least_squares(_theta_from_tau, 1, bounds=(
-            MIN_FLOAT_LOG,
-                                                           MAX_FLOAT_LOG))
+            MIN_FLOAT_LOG, MAX_FLOAT_LOG))
         self.theta = result.x[0]
         return self.theta
 

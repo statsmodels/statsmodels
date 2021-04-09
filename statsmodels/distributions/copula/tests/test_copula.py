@@ -18,8 +18,7 @@ from statsmodels.distributions.copula.other_copulas import IndependentCopula
 from statsmodels.tools.numdiff import approx_fprime_cs, approx_hess
 from statsmodels.distributions.copula.copulas import CopulaDistribution
 from statsmodels.distributions.copula.archimedean import (
-    ArchimedeanCopula, FrankCopula, ClaytonCopula, FrankCopula,
-    GumbelCopula)
+    ArchimedeanCopula, ClaytonCopula, FrankCopula, GumbelCopula)
 from statsmodels.distributions.copula.extreme_value import (
     ExtremeValueCopula, copula_bv_ev)
 import statsmodels.distributions.copula.transforms as tra
@@ -272,7 +271,7 @@ class TestFrank:
 # See ``copula_r_tests.rst`` for more details.
 
 
-class CopulaTests:
+class CheckCopula:
     """Generic tests for copula."""
     copula = None
     dim = None
@@ -324,14 +323,14 @@ class CopulaTests:
         pass
 
 
-class TestIndependentCopula(CopulaTests):
+class TestIndependentCopula(CheckCopula):
     copula = IndependentCopula()
     dim = 2
     pdf_u = np.ones((10, 1))
-    cdf_u = np.prod(CopulaTests.u, axis=1)
+    cdf_u = np.prod(CheckCopula.u, axis=1)
 
 
-class TestGaussianCopula(CopulaTests):
+class TestGaussianCopula(CheckCopula):
     copula = GaussianCopula(cov=[[1., 0.8], [0.8, 1.]])
     dim = 2
     pdf_u = [1.03308741, 0.06507279, 0.72896012, 0.65389439, 16.45012399,
@@ -340,19 +339,19 @@ class TestGaussianCopula(CopulaTests):
              0.25677003, 0.05932818, 0.09605404, 0.35211017, 0.20885480]
 
 
-class TestStudentCopula(CopulaTests):
-    copula = StudentCopula(cov=[[1., 0.8], [0.8, 1.]], df=2)
-    dim = 2
-    pdf_u = [0.8303065, 0.1359839, 0.5157746, 0.4776421, 26.2173959,
-             0.3070661, 0.1349173, 0.1597064, 0.3303230, 1.0482301]
-    cdf_u = [0.31140349, 0.05942746, 0.18548601, 0.39143974, 0.98347259,
-             0.24894028, 0.05653947, 0.09210693, 0.34447385, 0.20429882]
+# class _estStudentCopula(CheckCopula):
+#     copula = StudentCopula(cov=[[1., 0.8], [0.8, 1.]], df=2)
+#     dim = 2
+#     pdf_u = [0.8303065, 0.1359839, 0.5157746, 0.4776421, 26.2173959,
+#              0.3070661, 0.1349173, 0.1597064, 0.3303230, 1.0482301]
+#     cdf_u = [0.31140349, 0.05942746, 0.18548601, 0.39143974, 0.98347259,
+#              0.24894028, 0.05653947, 0.09210693, 0.34447385, 0.20429882]
+#
+#     def test_cdf(self, *args):
+#         pytest.skip("Not implemented.")
 
-    def test_cdf(self, *args):
-        pytest.skip("Not implemented.")
 
-
-class TestClaytonCopula(CopulaTests):
+class TestClaytonCopula(CheckCopula):
     copula = ClaytonCopula(theta=1.2)
     dim = 2
     pdf_u = [1.0119836, 0.2072728, 0.8148839, 0.9481976, 2.1419659,
@@ -361,7 +360,7 @@ class TestClaytonCopula(CopulaTests):
              0.24082057, 0.05811908, 0.09343934, 0.33012582, 0.18738753]
 
 
-class TestFrankCopula(CopulaTests):
+class TestFrankCopula(CheckCopula):
     copula = FrankCopula(theta=3)
     dim = 2
     pdf_u = [0.9646599, 0.5627195, 0.8941964, 0.8364614, 2.9570945,
@@ -370,7 +369,7 @@ class TestFrankCopula(CopulaTests):
              0.23412757, 0.05196265, 0.08676979, 0.32803721, 0.16320730]
 
 
-class TestGumbelCopula(CopulaTests):
+class TestGumbelCopula(CheckCopula):
     copula = GumbelCopula(theta=1.5)
     dim = 2
     pdf_u = [1.0391696, 0.6539579, 0.9878446, 0.8679504, 16.6030932,
