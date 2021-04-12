@@ -392,6 +392,7 @@ class ProbPlot(object):
         line=None,
         other=None,
         ax=None,
+        swap: bool = False,
         **plotkwargs,
     ):
         """
@@ -432,6 +433,8 @@ class ProbPlot(object):
         ax : AxesSubplot, optional
             If given, this subplot is used to plot in instead of a new figure
             being created.
+        swap : bool, optional
+            Flag indicating to swap the x and y labels.
         **plotkwargs
             Additional arguments to be passed to the `plot` command.
 
@@ -459,7 +462,6 @@ class ProbPlot(object):
                 # the larger data set
                 p = plotting_pos(self.nobs, self.a)
                 s_other = stats.mstats.mquantiles(s_other, p)
-
             fig, ax = _do_plot(
                 s_other, s_self, self.dist, ax=ax, line=line, **plotkwargs
             )
@@ -468,6 +470,8 @@ class ProbPlot(object):
                 xlabel = "Quantiles of 2nd Sample"
             if ylabel is None:
                 ylabel = "Quantiles of 1st Sample"
+            if swap:
+                xlabel, ylabel = ylabel, xlabel
 
         else:
             fig, ax = _do_plot(
@@ -770,11 +774,16 @@ def qqplot_2samples(
         data2 = ProbPlot(data2)
     if data2.data.shape[0] >= data1.data.shape[0]:
         fig = data1.qqplot(
-            xlabel=xlabel, ylabel=ylabel, line=line, other=data2, ax=ax
+            xlabel=ylabel, ylabel=xlabel, line=line, other=data2, ax=ax
         )
     else:
         fig = data2.qqplot(
-            xlabel=ylabel, ylabel=xlabel, line=line, other=data1, ax=ax
+            xlabel=ylabel,
+            ylabel=xlabel,
+            line=line,
+            other=data1,
+            ax=ax,
+            swap=True,
         )
 
     return fig

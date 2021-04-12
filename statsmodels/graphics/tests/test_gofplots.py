@@ -423,19 +423,31 @@ class TestDoPlot:
     @pytest.mark.matplotlib
     def test_plot_full_options(self, close_figures):
         gofplots._do_plot(
-            self.x, self.y, ax=self.ax, step=False, **self.full_options,
+            self.x,
+            self.y,
+            ax=self.ax,
+            step=False,
+            **self.full_options,
         )
 
     @pytest.mark.matplotlib
     def test_step_baseline(self, close_figures):
         gofplots._do_plot(
-            self.x, self.y, ax=self.ax, step=True, **self.step_options,
+            self.x,
+            self.y,
+            ax=self.ax,
+            step=True,
+            **self.step_options,
         )
 
     @pytest.mark.matplotlib
     def test_step_full_options(self, close_figures):
         gofplots._do_plot(
-            self.x, self.y, ax=self.ax, step=True, **self.full_options,
+            self.x,
+            self.y,
+            ax=self.ax,
+            step=True,
+            **self.full_options,
         )
 
     @pytest.mark.matplotlib
@@ -616,3 +628,34 @@ def test_param_unpacking():
     assert_equal(pp.fit_params, expected)
     pp = ProbPlot(np.empty(100), stats.beta(a=2, b=3, loc=4, scale=5))
     assert_equal(pp.fit_params, expected)
+
+
+@pytest.mark.matplotlib
+@pytest.mark.parametrize("labels", [{}, {"xlabel": "X", "ylabel": "Y"}])
+@pytest.mark.parametrize("x_size", [30, 50])
+@pytest.mark.parametrize("y_size", [30, 50])
+@pytest.mark.parametrize("line", [None, "45", "s", "r", "q"])
+def test_correct_labels(reset_randomstate, line, x_size, y_size, labels):
+    rs = np.random.RandomState(9876554)
+    x = rs.normal(loc=0, scale=0.1, size=x_size)
+    y = rs.standard_t(3, size=y_size)
+    pp_x = sm.ProbPlot(x)
+    pp_y = sm.ProbPlot(y)
+    fig = qqplot_2samples(pp_x, pp_y, line=line, **labels)
+    ax = fig.get_axes()[0]
+    x_label = ax.get_xlabel()
+    y_label = ax.get_ylabel()
+    if x_size <= y_size:
+        if not labels:
+            assert "2nd" in x_label
+            assert "1st" in y_label
+        else:
+            assert "Y" in x_label
+            assert "X" in y_label
+    else:
+        if not labels:
+            assert "1st" in x_label
+            assert "2nd" in y_label
+        else:
+            assert "X" in x_label
+            assert "Y" in y_label
