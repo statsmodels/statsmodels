@@ -300,7 +300,7 @@ def pandas_to_series_spec(x):
     if period == 12:
         year, stperiod = start_date.year, start_date.month
     elif period == 4:
-        year, stperiod = start_date.year, start_date.quarter
+        year, stperiod = start_date.year, start_date.month//3
     else:  # pragma: no cover
         raise ValueError("Only monthly and quarterly periods are supported."
                          " Please report or send a pull request if you want "
