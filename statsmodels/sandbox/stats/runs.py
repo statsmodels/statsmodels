@@ -132,6 +132,8 @@ def runstest_1samp(x, cutoff='mean', correction=True):
         cutoff = np.mean(x)
     elif cutoff == 'median':
         cutoff = np.median(x)
+    else:
+        cutoff = np.float64(cutoff)
     xindicator = (x >= cutoff).astype(int)
     return Runs(xindicator).runs_test(correction=correction)
 
