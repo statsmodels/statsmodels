@@ -23,6 +23,7 @@ import numpy as np
 from scipy import stats
 from scipy.special import comb
 import warnings
+from statsmodels.tools.validation import array_like
 
 class Runs(object):
     '''class for runs in a binary sequence
@@ -128,12 +129,13 @@ def runstest_1samp(x, cutoff='mean', correction=True):
 
     '''
 
+    x = array_like(x, "x")
     if cutoff == 'mean':
         cutoff = np.mean(x)
     elif cutoff == 'median':
         cutoff = np.median(x)
     else:
-        cutoff = np.float64(cutoff)
+        cutoff = float(cutoff)
     xindicator = (x >= cutoff).astype(int)
     return Runs(xindicator).runs_test(correction=correction)
 
