@@ -496,9 +496,9 @@ class IRAnalysis(BaseIRAnalysis):
                     gamma[p,1:,i,j] = W[j,k[j],i*periods:(i+1)*periods] * irf_resim[p,1:,i,j]
                     if i == neqs-1:
                         gamma[p,1:,i,j] = W[j,k[j],i*pentiles
-        indx = round(signif/2*repl)-1,round((1-signif/2)*reriods:] * irf_resim[p,1:,i,j]
-
-        gamma_sort = np.sort(gamma, axis=0) #sort to get quapl)-1
+        
+        gamma_sort = np.sort(gamma, axis=0) #sort to get quantiles
+        indx = round(signif/2*repl)-1,round((1-signif/2)*repl)-1
 
         lower = np.copy(irfs)
         upper = np.copy(irfs)
@@ -527,6 +527,8 @@ class IRAnalysis(BaseIRAnalysis):
 
         References
         ----------
+        Hamilton, J. D. (1994). Time series analysis.
+        Princeton university press. Chapter 11
         Runkle, David E. “Vector Autoregressions and Reality.”
         Journal of Business & Economic Statistics, vol. 5, no. 4,
         1987, pp. 437–442.
@@ -534,6 +536,7 @@ class IRAnalysis(BaseIRAnalysis):
         from statsmodels.tsa.api import VAR
         if seed is not None:
             np.random.seed(seed)
+        
         def resample(e):
             """Resample data randomly with replacement."""
             ind = np.random.choice(len(e), size=len(e))
@@ -541,35 +544,30 @@ class IRAnalysis(BaseIRAnalysis):
     
         def simulate(resid, Y, intercept, coefs, k_ar):
             """
-            Simulate VAR model with given resuduals
+            Simulate VAR model with given residuals
             """
             e_hatb = resample(resid)
             Yb = np.zeros(Y.shape)
-            for j in range(k_ar):
-                Yb[j,:] = Y[j,:]
+            Yb[:k_ar] = Y[:k_ar]
             for t in range(k_ar, len(Yb)):
-                Yb[t,:] += intercept
+                Yb[t,] = intercept
                 for k in range(k_ar):
-                    Yb[t,:] += coefs[k,:,:] @ Yb[t-k-1,:]
-                Yb[t,:] += e_hatb[t-k_ar,:]
+                    Yb[t,] += coefs[k] @ Yb[t-k-1,]
+                Yb[t,] += e_hatb[t-k_ar,]
             return Yb
 
-        
-        
         Psi_b = np.empty((repl, self.periods+1, self.model.neqs, self.model.neqs))
+        resid = self.model.resid
+        Y = self.model.endog
+        intercept = self.model.intercept
+        coefs = self.model.coefs
         # bootstrap simulations
         for b in range(repl):
-            resid = np.array(self.model.resid)
-            Y = np.array(self.model.endog)
-            intercept = np.array(self.model.intercept)
-            coefs = np.array(self.model.coefs)
             Yb = simulate(resid, Y, intercept, coefs, self.model.k_ar)
             # fit VAR to the bootstraped data
             b_fit = VAR(Yb).fit(self.model.k_ar)
-            # calculate the A0 matrix
-            A0 = la.cholesky(b_fit.sigma_u)
-            # save the results of the estimation
-            Psi_b[b] = b_fit.irf(var_decomp = A0).orth_irfs
+            # save the results of the estimation with Cholesky decomposition
+            Psi_b[b] = b_fit.irf().orth_irfs
         # calculate the percentiles of the bootstrap distribution
         lower = np.percentile(Psi_b, signif/2, axis=0)
         upper = np.percentile(Psi_b, 100 - signif/2, axis=0)
