@@ -83,14 +83,14 @@ class PCA(object):
     Attributes
     ----------
     factors : array or DataFrame
-        nobs by ncomp array of of principal components (scores)
+        nobs by ncomp array of principal components (scores)
     scores :  array or DataFrame
-        nobs by ncomp array of of principal components - identical to factors
+        nobs by ncomp array of principal components - identical to factors
     loadings : array or DataFrame
-        ncomp by nvar array of  principal component loadings for constructing
+        ncomp by nvar array of principal component loadings for constructing
         the factors
     coeff : array or DataFrame
-        nvar by ncomp array of  principal component loadings for constructing
+        nvar by ncomp array of principal component loadings for constructing
         the projections
     projection : array or DataFrame
         nobs by var array containing the projection of the data onto the ncomp
@@ -834,9 +834,9 @@ def pca(data, ncomp=None, standardize=True, demean=True, normalize=True,
     Returns
     -------
     factors : {ndarray, DataFrame}
-        Array (nobs, ncomp)of of principal components (also known as scores).
+        Array (nobs, ncomp) of principal components (also known as scores).
     loadings : {ndarray, DataFrame}
-        Array (ncomp, nvar) of  principal component loadings for constructing
+        Array (ncomp, nvar) of principal component loadings for constructing
         the factors.
     projection : {ndarray, DataFrame}
         Array (nobs, nvar) containing the projection of the data onto the ncomp
