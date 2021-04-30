@@ -890,7 +890,7 @@ def test_correct_nobs():
     mdata = mdata[['realgdp', 'realcons', 'realinv']]
     mdata.index = pd.DatetimeIndex(quarterly)
     data = np.log(mdata).diff().dropna()
-
+    data.index.freq = data.index.inferred_freq
     data_exog = pd.DataFrame(index=data.index)
     data_exog['exovar1'] = np.random.normal(size=data_exog.shape[0])
     # make a VAR model

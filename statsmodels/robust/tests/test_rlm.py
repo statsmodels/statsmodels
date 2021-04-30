@@ -1,13 +1,16 @@
 """
 Test functions for sm.rlm
 """
+import warnings
+
 import numpy as np
-from numpy.testing import assert_almost_equal, assert_allclose
+from numpy.testing import assert_allclose, assert_almost_equal
 import pytest
 from scipy import stats
+
 import statsmodels.api as sm
-from statsmodels.robust.robust_linear_model import RLM
 from statsmodels.robust import norms
+from statsmodels.robust.robust_linear_model import RLM
 from statsmodels.robust.scale import HuberScale
 
 DECIMAL_4 = 4
@@ -348,12 +351,16 @@ def perfect_fit_data(request):
 
 
 def test_perfect_fit(perfect_fit_data, norm):
-    res = RLM(perfect_fit_data.endog, perfect_fit_data.exog, M=norm).fit()
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        res = RLM(perfect_fit_data.endog, perfect_fit_data.exog, M=norm).fit()
     assert_allclose(res.params, np.array([0, 1, 1]), atol=1e-8)
 
 
 def test_perfect_const(perfect_fit_data, norm):
-    res = RLM(perfect_fit_data.const, perfect_fit_data.exog, M=norm).fit()
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        res = RLM(perfect_fit_data.const, perfect_fit_data.exog, M=norm).fit()
     assert_allclose(res.params, np.array([3.2, 0, 0]), atol=1e-8)
 
 

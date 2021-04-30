@@ -1763,7 +1763,7 @@ class MLEModel(tsbase.TimeSeriesModel):
                                  ' appropriate shape. Required %s, got %s.'
                                  % (str(required_exog_shape),
                                     str(exog.shape)))
-        elif self.k_exog > 0:
+        elif self.k_exog > 0 and exog is not None:
             exog = None
             warnings.warn('Exogenous array provided, but additional data'
                           ' is not required. `exog` argument ignored.',

@@ -55,8 +55,15 @@ def mad(a, c=Gaussian.ppf(3 / 4.0), axis=0, center=np.median):
             center_val = center(a.ravel())
     else:
         center_val = float_like(center, "center")
-
-    return np.median((np.abs(a - center_val)) / c, axis=axis)
+    err = (np.abs(a - center_val)) / c
+    if not err.size:
+        if axis is None or err.ndim == 1:
+            return np.nan
+        else:
+            shape = list(err.shape)
+            shape.pop(axis)
+            return np.empty(shape)
+    return np.median(err, axis=axis)
 
 
 def iqr(a, c=Gaussian.ppf(3 / 4) - Gaussian.ppf(1 / 4), axis=0):

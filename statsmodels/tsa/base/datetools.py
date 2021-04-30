@@ -142,7 +142,7 @@ def date_range_str(start, end=None, length=None):
         date_arr_range = [''.join([i, split, asstr(j)])
                           for i, j in zip(years, offset)]
     else:
-        date_arr_range = years.tolist()
+        date_arr_range = years
     return date_arr_range
 
 

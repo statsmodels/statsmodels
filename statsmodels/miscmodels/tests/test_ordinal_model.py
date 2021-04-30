@@ -3,18 +3,19 @@ Test  for ordinal models
 """
 
 import warnings
+
 import numpy as np
-import scipy.stats as stats
+from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 import pytest
-
-from numpy.testing import assert_allclose, assert_equal
-from statsmodels.tools.sm_exceptions import HessianInversionWarning
-from .results.results_ordinal_model import data_store as ds
-from statsmodels.miscmodels.ordinal_model import OrderedModel
+import scipy.stats as stats
 
 from statsmodels.discrete.discrete_model import Logit
+from statsmodels.miscmodels.ordinal_model import OrderedModel
+from statsmodels.tools.sm_exceptions import HessianInversionWarning
 from statsmodels.tools.tools import add_constant
+
+from .results.results_ordinal_model import data_store as ds
 
 
 class CheckOrdinalModelMixin(object):
@@ -187,6 +188,7 @@ class TestLogitModel(CheckOrdinalModelMixin):
         # I guess different sort algorithm and because of ties, see #7095
 
         import statsmodels.stats.diagnostic_gen as dia
+
         # TODO: add more properties or methods to Results class
         fitted = res1.predict()
         y_dummy = (res1.model.endog[:, None] == np.arange(3)).astype(int)
@@ -444,9 +446,9 @@ class TestLogitBinary():
         data = ds.df
 
         mask_drop = data['apply'] == "somewhat likely"
-        data2 = data.loc[~mask_drop, :]
+        data2 = data.loc[~mask_drop, :].copy()
         # we need to remove the category also from the Categorical Index
-        data2['apply'].cat.remove_categories("somewhat likely", inplace=True)
+        data2['apply'] = data2['apply'].cat.remove_categories("somewhat likely")
 
         # standard fit with pandas input
         modp = OrderedModel(data2['apply'],

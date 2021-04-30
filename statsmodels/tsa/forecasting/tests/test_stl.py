@@ -186,5 +186,6 @@ def test_no_var_pred(sunspots, not_implemented):
 
     stl_mod = STLForecast(sunspots, model=DummyMod, period=11)
     stl_res = stl_mod.fit()
-    pred = stl_res.get_prediction()
+    with pytest.warns(UserWarning, match="The variance of"):
+        pred = stl_res.get_prediction()
     assert np.all(np.isnan(pred.var_pred_mean))

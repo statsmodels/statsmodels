@@ -53,6 +53,9 @@ except ImportError:
 #       this
 FLOAT_EPS = np.finfo(float).eps
 
+# Limit for exponentials to avoid overflow
+EXP_UPPER_LIMIT = np.log(np.finfo(np.float64).max) - 1.0
+
 # TODO: add options for the parameter covariance/variance
 #       ie., OIM, EIM, and BHHH see Green 21.4
 
@@ -1056,7 +1059,11 @@ class Poisson(CountModel):
         exposure = getattr(self, "exposure", 0)
         XB = np.dot(self.exog, params) + offset + exposure
         endog = self.endog
-        return np.sum(-np.exp(XB) +  endog*XB - gammaln(endog+1))
+        return np.sum(
+            -np.exp(np.clip(XB, None, EXP_UPPER_LIMIT))
+            + endog * XB
+            - gammaln(endog + 1)
+        )
 
     def loglikeobs(self, params):
         """
