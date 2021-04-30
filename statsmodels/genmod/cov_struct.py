@@ -8,14 +8,20 @@ http://www.stata.com/manuals13/xtxtgee.pdf
 """
 from statsmodels.compat.pandas import Appender
 
-from statsmodels.stats.correlation_tools import cov_nearest
+from collections import defaultdict
+import warnings
+
 import numpy as np
 import pandas as pd
 from scipy import linalg as spl
-from collections import defaultdict
-from statsmodels.tools.sm_exceptions import (ConvergenceWarning, OutputWarning,
-                                             NotImplementedWarning)
-import warnings
+
+from statsmodels.stats.correlation_tools import cov_nearest
+from statsmodels.tools.sm_exceptions import (
+    ConvergenceWarning,
+    NotImplementedWarning,
+    OutputWarning,
+)
+from statsmodels.tools.validation import bool_like
 
 
 class CovStruct(object):
@@ -592,15 +598,18 @@ class Stationary(CovStruct):
         ignored.
     """
 
-    def __init__(self, max_lag=1, grid=False):
+    def __init__(self, max_lag=1, grid=None):
 
         super(Stationary, self).__init__()
-
-        if not grid:
-            warnings.warn("grid=True will become default in a future version")
+        grid = bool_like(grid, "grid", optional=True)
+        if grid is None:
+            warnings.warn(
+                "grid=True will become default in a future version",
+                FutureWarning
+            )
 
         self.max_lag = max_lag
-        self.grid = grid
+        self.grid = bool(grid)
         self.dep_params = np.zeros(max_lag + 1)
 
     def initialize(self, model):
@@ -773,20 +782,23 @@ class Autoregressive(CovStruct):
     in medicine. Vol 7, 59-71, 1988.
     """
 
-    def __init__(self, dist_func=None, grid=False):
+    def __init__(self, dist_func=None, grid=None):
 
         super(Autoregressive, self).__init__()
-
+        grid = bool_like(grid, "grid", optional=True)
         # The function for determining distances based on time
         if dist_func is None:
             self.dist_func = lambda x, y: np.abs(x - y).sum()
         else:
             self.dist_func = dist_func
 
-        self.grid = grid
-
-        if not grid:
-            warnings.warn("grid=True will become default in a future version")
+        if grid is None:
+            warnings.warn(
+                "grid=True will become default in a future version",
+                FutureWarning
+            )
+        self.grid = bool(grid)
+        if not self.grid:
             self.designx = None
 
         # The autocorrelation parameter

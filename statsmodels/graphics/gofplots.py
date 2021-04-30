@@ -846,11 +846,51 @@ def qqline(ax, line, x=None, y=None, dist=None, fmt="r-", **lineoptions):
 
     .. plot:: plots/graphics_gofplots_qqplot_qqline.py
     """
+    lineoptions = lineoptions.copy()
+    for ls in ("-", "--", "-.", ":"):
+        if ls in fmt:
+            lineoptions.setdefault("linestyle", ls)
+            fmt = fmt.replace(ls, "")
+            break
+    for marker in (
+        ".",
+        ",",
+        "o",
+        "v",
+        "^",
+        "<",
+        ">",
+        "1",
+        "2",
+        "3",
+        "4",
+        "8",
+        "s",
+        "p",
+        "P",
+        "*",
+        "h",
+        "H",
+        "+",
+        "x",
+        "X",
+        "D",
+        "d",
+        "|",
+        "_",
+    ):
+        if marker in fmt:
+            lineoptions.setdefault("marker", marker)
+            fmt = fmt.replace(marker, "")
+            break
+    if fmt:
+        lineoptions.setdefault("color", fmt)
+
     if line == "45":
         end_pts = lzip(ax.get_xlim(), ax.get_ylim())
         end_pts[0] = min(end_pts[0])
         end_pts[1] = max(end_pts[1])
-        ax.plot(end_pts, end_pts, fmt, **lineoptions)
+        ax.plot(end_pts, end_pts, **lineoptions)
         ax.set_xlim(end_pts)
         ax.set_ylim(end_pts)
         return  # does this have any side effects?
@@ -862,11 +902,11 @@ def qqline(ax, line, x=None, y=None, dist=None, fmt="r-", **lineoptions):
         # could use ax.lines[0].get_xdata(), get_ydata(),
         # but don't know axes are "clean"
         y = OLS(y, add_constant(x)).fit().fittedvalues
-        ax.plot(x, y, fmt, **lineoptions)
+        ax.plot(x, y, **lineoptions)
     elif line == "s":
         m, b = np.std(y), np.mean(y)
         ref_line = x * m + b
-        ax.plot(x, ref_line, fmt, **lineoptions)
+        ax.plot(x, ref_line, **lineoptions)
     elif line == "q":
         _check_for(dist, "ppf")
         q25 = stats.scoreatpercentile(y, 25)
@@ -874,7 +914,7 @@ def qqline(ax, line, x=None, y=None, dist=None, fmt="r-", **lineoptions):
         theoretical_quartiles = dist.ppf([0.25, 0.75])
         m = (q75 - q25) / np.diff(theoretical_quartiles)
         b = q25 - m * theoretical_quartiles[0]
-        ax.plot(x, m * x + b, fmt, **lineoptions)
+        ax.plot(x, m * x + b, **lineoptions)
 
 
 # about 10x faster than plotting_position in sandbox and mstats

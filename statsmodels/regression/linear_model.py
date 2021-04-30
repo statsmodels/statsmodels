@@ -32,25 +32,25 @@ W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
 """
 
 
-from statsmodels.compat.python import lrange, lzip
 from statsmodels.compat.pandas import Appender
+from statsmodels.compat.python import lrange, lzip
+
+import warnings
 
 import numpy as np
+from scipy import optimize, stats
 from scipy.linalg import toeplitz
-from scipy import stats
-from scipy import optimize
 
-from statsmodels.tools.tools import pinv_extended
-from statsmodels.tools.decorators import (cache_readonly,
-                                          cache_writable)
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
 from statsmodels.emplike.elregress import _ELRegOpts
-import warnings
-from statsmodels.tools.sm_exceptions import InvalidTestWarning
-from statsmodels.tools.validation import string_like
 # need import in module instead of lazily to copy `__doc__`
 from statsmodels.regression._prediction import PredictionResults
+from statsmodels.tools.decorators import cache_readonly, cache_writable
+from statsmodels.tools.sm_exceptions import InvalidTestWarning
+from statsmodels.tools.tools import pinv_extended
+from statsmodels.tools.validation import string_like
+
 from . import _prediction as pred
 
 __docformat__ = 'restructuredtext en'
@@ -630,7 +630,9 @@ class GLS(RegressionModel):
             refit=refit, **kwargs)
 
         from statsmodels.base.elastic_net import (
-            RegularizedResults, RegularizedResultsWrapper)
+            RegularizedResults,
+            RegularizedResultsWrapper,
+        )
         rrslt = RegularizedResults(self, rslt.params)
         return RegularizedResultsWrapper(rrslt)
 
@@ -806,7 +808,9 @@ class WLS(RegressionModel):
             refit=refit, **kwargs)
 
         from statsmodels.base.elastic_net import (
-            RegularizedResults, RegularizedResultsWrapper)
+            RegularizedResults,
+            RegularizedResultsWrapper,
+        )
         rrslt = RegularizedResults(self, rslt.params)
         return RegularizedResultsWrapper(rrslt)
 
@@ -1046,7 +1050,8 @@ class OLS(WLS):
 
         if method == "sqrt_lasso":
             from statsmodels.base.elastic_net import (
-                RegularizedResults, RegularizedResultsWrapper
+                RegularizedResults,
+                RegularizedResultsWrapper,
             )
             params = self._sqrt_lasso(alpha, refit, defaults["zero_tol"])
             results = RegularizedResults(self, params)
@@ -1426,10 +1431,11 @@ def yule_walker(x, order=1, method="adjusted", df=None, inv=False,
 
     rho = np.linalg.solve(R, r[1:])
     sigmasq = r[0] - (r[1:]*rho).sum()
+    sigma = np.sqrt(sigmasq) if not np.isnan(sigmasq) and sigmasq > 0 else np.nan
     if inv:
-        return rho, np.sqrt(sigmasq), np.linalg.inv(R)
+        return rho, sigma, np.linalg.inv(R)
     else:
-        return rho, np.sqrt(sigmasq)
+        return rho, sigma
 
 
 def burg(endog, order=1, demean=True):
@@ -2073,8 +2079,9 @@ class RegressionResults(base.LikelihoodModelResults):
         the sum of squared errors, and so the scores should be close to zero,
         on average.
         """
-        import statsmodels.stats.sandwich_covariance as sw
         from numpy.linalg import inv
+
+        import statsmodels.stats.sandwich_covariance as sw
 
         if not self._is_nested(restricted):
             raise ValueError("Restricted model is not nested by full model.")
@@ -2404,8 +2411,8 @@ class RegressionResults(base.LikelihoodModelResults):
         .. todo:: Currently there is no check for extra or misspelled keywords,
              except in the case of cov_type `HCx`
         """
+        from statsmodels.base.covtype import descriptions, normalize_cov_type
         import statsmodels.stats.sandwich_covariance as sw
-        from statsmodels.base.covtype import normalize_cov_type, descriptions
 
         cov_type = normalize_cov_type(cov_type)
 
@@ -2608,7 +2615,10 @@ class RegressionResults(base.LikelihoodModelResults):
         statsmodels.iolib.summary.Summary : A class that holds summary results.
         """
         from statsmodels.stats.stattools import (
-            jarque_bera, omni_normtest, durbin_watson)
+            durbin_watson,
+            jarque_bera,
+            omni_normtest,
+        )
 
         jb, jbpv, skew, kurtosis = jarque_bera(self.wresid)
         omni, omnipv = omni_normtest(self.wresid)
@@ -2751,9 +2761,11 @@ class RegressionResults(base.LikelihoodModelResults):
             A class that holds summary results.
         """
         # Diagnostics
-        from statsmodels.stats.stattools import (jarque_bera,
-                                                 omni_normtest,
-                                                 durbin_watson)
+        from statsmodels.stats.stattools import (
+            durbin_watson,
+            jarque_bera,
+            omni_normtest,
+        )
 
         jb, jbpv, skew, kurtosis = jarque_bera(self.wresid)
         omni, omnipv = omni_normtest(self.wresid)

@@ -2743,7 +2743,8 @@ def test_plot_too_few_obs(reset_randomstate):
     mod = sarimax.SARIMAX(
         np.random.normal(size=10), order=(10, 0, 0), enforce_stationarity=False
     )
-    results = mod.fit()
+    with pytest.warns(UserWarning, match="Too few"):
+        results = mod.fit()
     with pytest.raises(ValueError, match="Length of endogenous"):
         results.plot_diagnostics(figsize=(15, 5))
     y = np.random.standard_normal(9)
@@ -2754,7 +2755,8 @@ def test_plot_too_few_obs(reset_randomstate):
         enforce_stationarity=False,
         enforce_invertibility=False,
     )
-    results = mod.fit()
+    with pytest.warns(UserWarning, match="Too few"):
+        results = mod.fit()
     with pytest.raises(ValueError, match="Length of endogenous"):
         results.plot_diagnostics(figsize=(30, 15))
 

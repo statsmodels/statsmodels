@@ -396,7 +396,7 @@ class TestGEE(object):
             T[jj] = lrange(len(jj))
 
         family = families.Binomial()
-        va = cov_struct.Autoregressive()
+        va = cov_struct.Autoregressive(grid=False)
 
         md1 = gee.GEE(endog, exog, group, family=family, cov_struct=va)
         mdf1 = md1.fit()
@@ -456,7 +456,7 @@ class TestGEE(object):
         family = families.Binomial()
         ve = cov_struct.Exchangeable()
         vi = cov_struct.Independence()
-        va = cov_struct.Autoregressive()
+        va = cov_struct.Autoregressive(grid=False)
 
         # From R gee
         cf = [[0.0167272965285882, 1.13038654425893,
@@ -536,7 +536,7 @@ class TestGEE(object):
             groups = np.concatenate(groups)
             exog = np.concatenate(exog, axis=0)
 
-            ar = cov_struct.Autoregressive()
+            ar = cov_struct.Autoregressive(grid=False)
             md = gee.GEE(endog, exog, groups, family=ga, cov_struct=ar)
             mdf = md.fit()
             assert_almost_equal(ar.dep_params, dep_params_true[gsize - 1])
@@ -1175,7 +1175,7 @@ class TestGEE(object):
 
         data = pd.DataFrame({"Y": Y, "X1": X1, "Time": Time, "groups": groups})
 
-        va = cov_struct.Autoregressive()
+        va = cov_struct.Autoregressive(grid=False)
         family = families.Gaussian()
 
         mod1 = gee.GEE(Y, mat, groups, time=Time, family=family,
@@ -2031,7 +2031,7 @@ def test_grid_ar():
     y = np.dot(x, np.r_[1, -1, 0]) + e
 
     model1 = gee.GEE(y, x, groups=grps,
-                     cov_struct=cov_struct.Autoregressive())
+                     cov_struct=cov_struct.Autoregressive(grid=False))
     result1 = model1.fit()
 
     model2 = gee.GEE(y, x, groups=grps,
@@ -2039,7 +2039,7 @@ def test_grid_ar():
     result2 = model2.fit()
 
     model3 = gee.GEE(y, x, groups=grps,
-                     cov_struct=cov_struct.Stationary(max_lag=1))
+                     cov_struct=cov_struct.Stationary(max_lag=1, grid=False))
     result3 = model3.fit()
 
     assert_allclose(result1.cov_struct.dep_params,
