@@ -418,8 +418,7 @@ def _fit_newton(f, score, start_params, fargs, kwargs, disp=True,
         if not np.all(ridge_factor == 0):
             H[np.diag_indices(H.shape[0])] += ridge_factor
         oldparams = newparams
-        newparams = oldparams - np.dot(np.linalg.inv(H),
-                score(oldparams))
+        newparams = oldparams - np.linalg.solve(H, score(oldparams))
         if retall:
             history.append(newparams)
         if callback is not None:
