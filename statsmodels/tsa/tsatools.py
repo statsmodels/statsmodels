@@ -1,4 +1,6 @@
-from statsmodels.compat.python import lrange
+from __future__ import annotations
+
+from statsmodels.compat.python import lrange, Literal
 
 import warnings
 
@@ -291,7 +293,12 @@ def detrend(x, order=1, axis=0):
     return resid
 
 
-def lagmat(x, maxlag, trim="forward", original="ex", use_pandas=False):
+def lagmat(x,
+           maxlag: int,
+           trim: Literal["forward", "backward", "both", "none"]='forward',
+           original: Literal["ex", "sep", "in"]="ex",
+           use_pandas: bool=False
+           ):
     """
     Create 2d array of lags.
 
