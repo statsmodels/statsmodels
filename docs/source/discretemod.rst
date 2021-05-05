@@ -139,7 +139,6 @@ The specific result classes are:
    ZeroInflatedGeneralizedPoissonResults
    
 .. currentmodule:: statsmodels.miscmodels.ordinal_model
-.. module:: statsmodels.miscmodels.ordinal_model
 
 .. autosummary::
    :toctree: generated/

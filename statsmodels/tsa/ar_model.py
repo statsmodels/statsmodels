@@ -90,7 +90,7 @@ def _ar_predict_out_of_sample(y, params, k_ar, k_trend, steps, start=0):
 
 class AutoReg(tsa_model.TimeSeriesModel):
     """
-    Autoregressive AR-X(p) model.
+    Autoregressive AR-X(p) model
 
     Estimate an AR-X model using Conditional Maximum Likelihood (OLS).
 

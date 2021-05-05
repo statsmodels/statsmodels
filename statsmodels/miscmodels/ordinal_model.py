@@ -339,7 +339,8 @@ class OrderedModel(GenericLikelihoodModel):
         return thresh_params
 
     def predict(self, params, exog=None, offset=None, which="prob"):
-        """predicted probabilities for each level of the ordinal endog.
+        """
+        Predicted probabilities for each level of the ordinal endog.
 
         Parameters
         ----------
@@ -357,7 +358,7 @@ class OrderedModel(GenericLikelihoodModel):
 
             - prob : predicted probabilities to be in c
             - linear : 1-dim linear prediction of the latent variable
-            ``x b + offset``
+              ``x b + offset``
             - cumprob : predicted cumulative propability to be in choice k or
               lower
 

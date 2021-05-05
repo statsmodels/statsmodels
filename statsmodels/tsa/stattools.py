@@ -662,8 +662,8 @@ def acf(
     .. [1] Parzen, E., 1963. On spectral analysis with missing observations
        and amplitude modulation. Sankhya: The Indian Journal of
        Statistics, Series A, pp.383-392.
-       [2] Brockwell and Davis, 1987. Time Series Theory and Methods
-       [3] Brockwell and Davis, 2010. Introduction to Time Series and
+    .. [2] Brockwell and Davis, 1987. Time Series Theory and Methods
+    .. [3] Brockwell and Davis, 2010. Introduction to Time Series and
        Forecasting, 2nd edition.
     """
     adjusted = bool_like(adjusted, "adjusted")
