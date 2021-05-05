@@ -195,6 +195,9 @@ html_theme_options = {
 language = 'en'
 html_last_updated_fmt = ''
 
+# Disable typehints
+autodoc_typehints = "none"
+
 # html_theme = 'default'
 
 
