@@ -471,7 +471,7 @@ class ETSModel(base.StateSpaceMLEModel):
             or self.seasonal == "mul"
         ):
             raise ValueError(
-                "endog must be strictly positive when using"
+                "endog must be strictly positive when using "
                 "multiplicative error, trend or seasonal components."
             )
         if self.damped_trend and not self.has_trend:
