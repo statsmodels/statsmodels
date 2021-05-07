@@ -1824,9 +1824,14 @@ class MLEModel(tsbase.TimeSeriesModel):
         for name in self.ssm.shapes.keys():
             if name == 'obs' or name in kwargs:
                 continue
-            if getattr(self.ssm, name).shape[-1] > 1:
-                mat = getattr(mod_extend.ssm, name)
-                kwargs[name] = mat[..., -out_of_sample:]
+            original = getattr(self.ssm, name)
+            extended = getattr(mod_extend.ssm, name)
+            so = original.shape[-1]
+            se = extended.shape[-1]
+            if ((so > 1 or se > 1) or (
+                    so == 1 and self.nobs == 1 and
+                    np.any(original[..., 0] != extended[..., 0]))):
+                kwargs[name] = extended[..., -out_of_sample:]
 
         return kwargs
 
