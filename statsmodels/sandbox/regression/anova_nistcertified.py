@@ -6,8 +6,8 @@ from statsmodels.compat.python import lmap
 import os
 import numpy as np
 from scipy import stats
-
-import statsmodels.api as sm
+from statsmodels.tools.tools import add_constant
+from statsmodels.regression.linear_model import OLS
 from .try_ols_anova import data2dummy
 
 filenameli = ['SiRstv.dat', 'SmLs01.dat', 'SmLs02.dat', 'SmLs03.dat', 'AtmWtAg.dat',
@@ -82,8 +82,8 @@ def anova_oneway(y, x, seq=0):
 
 
 def anova_ols(y, x):
-    X = sm.add_constant(data2dummy(x), prepend=False)
-    res = sm.OLS(y, X).fit()
+    X = add_constant(data2dummy(x), prepend=False)
+    res = OLS(y, X).fit()
     return res.fvalue, res.f_pvalue, res.rsquared, np.sqrt(res.mse_resid)
 
 

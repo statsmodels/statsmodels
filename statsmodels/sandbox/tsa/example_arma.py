@@ -8,11 +8,12 @@ import numpy as np
 from numpy.testing import assert_array_almost_equal
 import matplotlib.pyplot as plt
 
-import statsmodels.api as sm
+from statsmodels import regression
 from statsmodels.tsa.arima_process import arma_generate_sample, arma_impulse_response
-from statsmodels.tsa.arima_process import arma_acovf, arma_acf, ARIMA
+from statsmodels.tsa.arima_process import arma_acovf, arma_acf
+from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.stattools import acf, acovf
-from statsmodels.graphics.tsaplots import plotacf
+from statsmodels.graphics.tsaplots import plot_acf
 
 ar = [1., -0.6]
 #ar = [1., 0.]
@@ -384,7 +385,7 @@ print(acf2m[:10])
 
 x = arma_generate_sample([1.0, -0.8], [1.0], 500)
 print(acf(x)[:20])
-print(sm.regression.yule_walker(x, 10))
+print(regression.yule_walker(x, 10))
 
 #ax = plt.axes()
 plt.plot(x)
@@ -396,11 +397,11 @@ plt.figure()
 pltxcorr(plt,x,x, usevlines=False)
 plt.figure()
 #FIXME: plotacf was moved to graphics/tsaplots.py, and interface changed
-plotacf(plt, acf1[:20], np.arange(len(acf1[:20])), usevlines=True)
+plot_acf(plt, acf1[:20], np.arange(len(acf1[:20])), usevlines=True)
 plt.figure()
 ax = plt.subplot(211)
-plotacf(ax, acf1[:20], usevlines=True)
+plot_acf(ax, acf1[:20], usevlines=True)
 ax = plt.subplot(212)
-plotacf(ax, acf1[:20], np.arange(len(acf1[:20])), usevlines=False)
+plot_acf(ax, acf1[:20], np.arange(len(acf1[:20])), usevlines=False)
 
 #plt.show()

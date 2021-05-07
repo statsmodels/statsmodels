@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 import patsy
 import statsmodels.base.model as base
-import statsmodels.api as sm
+from statsmodels.regression.linear_model import OLS
 import collections
 from scipy.optimize import minimize
 from statsmodels.iolib import summary2
@@ -439,7 +439,7 @@ class ProcessMLE(base.LikelihoodModel):
     def _get_start(self):
 
         # Use OLS to get starting values for mean structure parameters
-        model = sm.OLS(self.endog, self.exog)
+        model = OLS(self.endog, self.exog)
         result = model.fit()
 
         m = self.exog_scale.shape[1] + self.exog_smooth.shape[1]

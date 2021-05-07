@@ -1,5 +1,4 @@
 import numpy as np
-import statsmodels.api as sm
 
 
 class RegressionEffects(object):
@@ -119,7 +118,9 @@ class OLSEffects(RegressionEffects):
     """
 
     def stats(self, parent):
-        model = sm.OLS(parent.endog, parent.exog)
+        from statsmodels.regression.linear_model import OLS
+
+        model = OLS(parent.endog, parent.exog)
         result = model.fit()
         q = len(result.params) // 2
         stats = np.abs(result.params[0:q]) - np.abs(result.params[q:])

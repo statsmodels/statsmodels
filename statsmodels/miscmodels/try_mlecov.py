@@ -8,8 +8,7 @@ Author: josef-pktd
 import numpy as np
 from scipy import linalg
 from scipy.linalg import toeplitz
-
-import statsmodels.api as sm
+from statsmodels.datasets import sunspots
 from statsmodels.base.model import GenericLikelihoodModel
 from statsmodels.tsa.arima_process import (
     arma_acovf, arma_generate_sample, ArmaProcess
@@ -199,7 +198,7 @@ if __name__ == '__main__':
 
     arpoly, mapoly = getpoly(mod, res.params[:-1])
 
-    data = sm.datasets.sunspots.load(as_pandas=False)
+    data = sunspots.load(as_pandas=False)
     #ys = data.endog[-100:]
 ##    ys = data.endog[12:]-data.endog[:-12]
 ##    ys -= ys.mean()
