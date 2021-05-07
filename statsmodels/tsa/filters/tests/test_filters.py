@@ -1,16 +1,27 @@
 from statsmodels.compat.pandas import assert_frame_equal, make_dataframe
 
 from datetime import datetime
-import numpy as np
-from numpy.testing import (assert_almost_equal, assert_equal, assert_allclose,
-                           assert_raises, assert_)
-from numpy import array, column_stack
 
-from statsmodels.tsa.filters._utils import pandas_wrapper
+import numpy as np
+from numpy import array, column_stack
+from numpy.testing import (
+    assert_,
+    assert_allclose,
+    assert_almost_equal,
+    assert_equal,
+    assert_raises,
+)
+from pandas import DataFrame, concat, date_range
+
 from statsmodels.datasets import macrodata
-from pandas import DataFrame, date_range, concat
-from statsmodels.tsa.filters.api import (bkfilter, hpfilter, cffilter,
-                                         convolution_filter, recursive_filter)
+from statsmodels.tsa.filters._utils import pandas_wrapper
+from statsmodels.tsa.filters.bk_filter import bkfilter
+from statsmodels.tsa.filters.cf_filter import cffilter
+from statsmodels.tsa.filters.filtertools import (
+    convolution_filter,
+    recursive_filter,
+)
+from statsmodels.tsa.filters.hp_filter import hpfilter
 
 
 def test_bking1d():

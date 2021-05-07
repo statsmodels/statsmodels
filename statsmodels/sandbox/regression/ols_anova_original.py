@@ -10,7 +10,7 @@ import numpy as np
 import numpy.lib.recfunctions
 
 from statsmodels.compat.python import lmap
-import statsmodels.api as sm
+from statsmodels.regression.linear_model import OLS
 
 
 dt_b = np.dtype([('breed', int), ('sex', int), ('litter', int),
@@ -108,7 +108,7 @@ for k in products:
 
 X_b0 = np.c_[sexdummy, dta_used[:,2], np.ones((dta_used.shape[0],1))]
 y_b0 = dta_used[:,0]
-res_b0 = sm.OLS(y_b0, X_b0).results
+res_b0 = OLS(y_b0, X_b0).results
 print(res_b0.params)
 print(res_b0.ssr)
 
@@ -159,14 +159,14 @@ print(anova_str % anovadict(res_b0))
 
 print('using sex only')
 X2 = np.c_[sexdummy, np.ones((dta_used.shape[0],1))]
-res2 = sm.OLS(y_b0, X2).results
+res2 = OLS(y_b0, X2).results
 print(res2.params)
 print(res2.ssr)
 print(anova_str % anovadict(res2))
 
 print('using age only')
 X3 = np.c_[ dta_used[:,2], np.ones((dta_used.shape[0],1))]
-res3 = sm.OLS(y_b0, X3).results
+res3 = OLS(y_b0, X3).results
 print(res3.params)
 print(res3.ssr)
 print(anova_str % anovadict(res3))
@@ -263,7 +263,7 @@ xx, names = form2design('I a F:b P:c*d G:a*e f', testdata)
 X = np.column_stack([xx[nn] for nn in names])
 # simple test version: all coefficients equal to one
 y = X.sum(1) + 0.01*np.random.normal(size=(nobs))
-rest1 = sm.OLS(y,X).results
+rest1 = OLS(y,X).results
 print(rest1.params)
 print(anova_str % anovadict(rest1))
 
@@ -280,7 +280,7 @@ def dropname(ss, li):
 X = np.column_stack([xx[nn] for nn in dropname('ae f', names)])
 # simple test version: all coefficients equal to one
 y = X.sum(1) + 0.01*np.random.normal(size=(nobs))
-rest1 = sm.OLS(y,X).results
+rest1 = OLS(y,X).results
 print(rest1.params)
 print(anova_str % anovadict(rest1))
 
@@ -307,7 +307,7 @@ xx_b1, names_b1 = form2design('I F:sex age', dta_use_b1)
 X_b1 = np.column_stack([xx_b1[nn] for nn in dropname('', names_b1)])
 y_b1 = dta_use_b1['y']
 # estimate using OLS
-rest_b1 = sm.OLS(y_b1, X_b1).results
+rest_b1 = OLS(y_b1, X_b1).results
 # print(results)
 print(rest_b1.params)
 print(anova_str % anovadict(rest_b1))
@@ -322,7 +322,7 @@ allexog = ' '.join(dta.dtype.names[:-1])
 xx_b1a, names_b1a = form2design('I F:breed F:sex F:litter F:pen age bage', dta_use_b1)
 X_b1a = np.column_stack([xx_b1a[nn] for nn in dropname('', names_b1a)])
 y_b1a = dta_use_b1['y']
-rest_b1a = sm.OLS(y_b1a, X_b1a).results
+rest_b1a = OLS(y_b1a, X_b1a).results
 print(rest_b1a.params)
 print(anova_str % anovadict(rest_b1a))
 
@@ -330,6 +330,6 @@ for dropn in names_b1a:
     print('\nResults dropping', dropn)
     X_b1a_ = np.column_stack([xx_b1a[nn] for nn in dropname(dropn, names_b1a)])
     y_b1a_ = dta_use_b1['y']
-    rest_b1a_ = sm.OLS(y_b1a_, X_b1a_).results
+    rest_b1a_ = OLS(y_b1a_, X_b1a_).results
     #print(rest_b1a_.params
     print(anova_str % anovadict(rest_b1a_))

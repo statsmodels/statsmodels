@@ -2077,8 +2077,8 @@ class GLMResultsWrapper(lm.RegressionResultsWrapper):
 wrap.populate_wrapper(GLMResultsWrapper, GLMResults)
 
 if __name__ == "__main__":
-    import statsmodels.api as sm
-    data = sm.datasets.longley.load(as_pandas=False)
+    from statsmodels.datasets import longley
+    data = longley.load(as_pandas=False)
     # data.exog = add_constant(data.exog)
     GLMmod = GLM(data.endog, data.exog).fit()
     GLMT = GLMmod.summary(returns='tables')

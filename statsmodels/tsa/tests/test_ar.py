@@ -10,12 +10,13 @@ from pandas import Index, Series, date_range, period_range
 from pandas.testing import assert_series_equal
 import pytest
 
-import statsmodels.api as sm
+from statsmodels.datasets import macrodata, sunspots
 from statsmodels.iolib.summary import Summary
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.sm_exceptions import ValueWarning
 from statsmodels.tools.tools import Bunch
 from statsmodels.tsa.ar_model import AutoReg, ar_select_order
+from statsmodels.tsa.arima_process import arma_generate_sample
 from statsmodels.tsa.deterministic import (
     DeterministicProcess,
     Seasonality,
@@ -101,9 +102,7 @@ ids = [
 def ols_autoreg_result(request):
     ar, seasonal, trend, exog, cov_type = request.param
     y, x, endog, exog = gen_ols_regressors(ar, seasonal, trend, exog)
-    ar_mod = AutoReg(
-        y, ar, seasonal=seasonal, trend=trend, exog=x
-    )
+    ar_mod = AutoReg(y, ar, seasonal=seasonal, trend=trend, exog=x)
     ar_res = ar_mod.fit(cov_type=cov_type)
     ols = OLS(endog, exog)
     ols_res = ols.fit(cov_type=cov_type, use_t=False)
@@ -352,7 +351,7 @@ def test_autoreg_smoke_plots(plot_data, close_figures):
         exog=plot_data.exog,
         hold_back=plot_data.hold_back,
         period=plot_data.period,
-        missing=plot_data.missing
+        missing=plot_data.missing,
     )
     res = mod.fit()
     fig = res.plot_diagnostics()
@@ -375,7 +374,7 @@ def test_autoreg_predict_smoke(ar_data):
         exog=ar_data.exog,
         hold_back=ar_data.hold_back,
         period=ar_data.period,
-        missing=ar_data.missing
+        missing=ar_data.missing,
     )
     res = mod.fit()
     exog_oos = None
@@ -397,7 +396,7 @@ def test_autoreg_predict_smoke(ar_data):
             seasonal=ar_data.seasonal,
             exog=ar_data.exog,
             period=ar_data.period,
-            missing=ar_data.missing
+            missing=ar_data.missing,
         )
         mod.predict(res.params, 0, 250, exog_oos=exog_oos)
 
@@ -405,9 +404,7 @@ def test_autoreg_predict_smoke(ar_data):
 @pytest.mark.matplotlib
 def test_parameterless_autoreg():
     data = gen_data(250, 0, False)
-    mod = AutoReg(
-        data.endog, 0, trend="n", seasonal=False, exog=None
-    )
+    mod = AutoReg(data.endog, 0, trend="n", seasonal=False, exog=None)
     res = mod.fit()
     for attr in dir(res):
         if attr.startswith("_"):
@@ -487,7 +484,7 @@ def test_dynamic_forecast_smoke(ar_data):
         exog=ar_data.exog,
         hold_back=ar_data.hold_back,
         period=ar_data.period,
-        missing=ar_data.missing
+        missing=ar_data.missing,
     )
     res = mod.fit()
     res.predict(dynamic=True)
@@ -497,15 +494,13 @@ def test_dynamic_forecast_smoke(ar_data):
 
 @pytest.mark.smoke
 def test_ar_select_order_smoke():
-    data = sm.datasets.sunspots.load(as_pandas=True).data["SUNACTIVITY"]
+    data = sunspots.load(as_pandas=True).data["SUNACTIVITY"]
     ar_select_order(data, 4, glob=True, trend="n")
     ar_select_order(data, 4, glob=False, trend="n")
     ar_select_order(data, 4, seasonal=True, period=12)
     ar_select_order(data, 4, seasonal=False)
     ar_select_order(data, 4, glob=True)
-    ar_select_order(
-        data, 4, glob=True, seasonal=True, period=12
-    )
+    ar_select_order(data, 4, glob=True, seasonal=True, period=12)
 
 
 class CheckAutoRegMixin(CheckARMixin):
@@ -520,7 +515,7 @@ class TestAutoRegOLSConstant(CheckAutoRegMixin):
 
     @classmethod
     def setup_class(cls):
-        data = sm.datasets.sunspots.load(as_pandas=True)
+        data = sunspots.load(as_pandas=True)
         data.endog.index = list(range(len(data.endog)))
         cls.res1 = AutoReg(data.endog, lags=9).fit()
         cls.res2 = results_ar.ARResultsOLS(constant=True)
@@ -581,10 +576,8 @@ class TestAutoRegOLSNoConstant(CheckAutoRegMixin):
 
     @classmethod
     def setup_class(cls):
-        data = sm.datasets.sunspots.load(as_pandas=False)
-        cls.res1 = AutoReg(
-            data.endog, lags=9, trend="n"
-        ).fit()
+        data = sunspots.load(as_pandas=False)
+        cls.res1 = AutoReg(data.endog, lags=9, trend="n").fit()
         cls.res2 = results_ar.ARResultsOLS(constant=False)
 
     def test_predict(self):
@@ -638,7 +631,7 @@ class TestAutoRegOLSNoConstant(CheckAutoRegMixin):
 
 @pytest.mark.parametrize("lag", list(np.arange(1, 16 + 1)))
 def test_autoreg_info_criterion(lag):
-    data = sm.datasets.sunspots.load(as_pandas=False)
+    data = sunspots.load(as_pandas=False)
     endog = data.endog
     endog_tmp = endog[16 - lag :]
     r = AutoReg(endog_tmp, lags=lag).fit()
@@ -689,7 +682,7 @@ def test_autoreg_named_series(reset_randomstate, old_names):
 @pytest.mark.smoke
 def test_autoreg_series():
     # GH#773
-    dta = sm.datasets.macrodata.load_pandas().data["cpi"].diff().dropna()
+    dta = macrodata.load_pandas().data["cpi"].diff().dropna()
     dates = period_range(start="1959Q1", periods=len(dta), freq="Q")
     dta.index = dates
     ar = AutoReg(dta, lags=15).fit()
@@ -699,7 +692,7 @@ def test_autoreg_series():
 def test_ar_order_select():
     # GH#2118
     np.random.seed(12345)
-    y = sm.tsa.arma_generate_sample([1, -0.75, 0.3], [1], 100)
+    y = arma_generate_sample([1, -0.75, 0.3], [1], 100)
     ts = Series(y, index=date_range(start="1/1/1990", periods=100, freq="M"))
     res = ar_select_order(ts, maxlag=12, ic="aic")
     assert tuple(res.ar_lags) == (1, 2)
@@ -736,7 +729,7 @@ def test_autoreg_constant_column_trend():
 
 @pytest.mark.parametrize("old_names", [True, False])
 def test_autoreg_summary_corner(old_names):
-    data = sm.datasets.macrodata.load_pandas().data["cpi"].diff().dropna()
+    data = macrodata.load_pandas().data["cpi"].diff().dropna()
     dates = period_range(start="1959Q1", periods=len(data), freq="Q")
     data.index = dates
     warning = FutureWarning if old_names else None
@@ -758,7 +751,7 @@ def test_autoreg_summary_corner(old_names):
 
 @pytest.mark.smoke
 def test_autoreg_score():
-    data = sm.datasets.sunspots.load_pandas()
+    data = sunspots.load_pandas()
     ar = AutoReg(np.asarray(data.endog), 3)
     res = ar.fit()
     score = ar.score(res.params)
@@ -768,7 +761,7 @@ def test_autoreg_score():
 
 
 def test_autoreg_roots():
-    data = sm.datasets.sunspots.load_pandas()
+    data = sunspots.load_pandas()
     ar = AutoReg(np.asarray(data.endog), lags=1)
     res = ar.fit()
     assert_almost_equal(res.roots, np.array([1.0 / res.params[-1]]))
@@ -969,9 +962,7 @@ def test_deterministic(reset_randomstate):
     dp = DeterministicProcess(y.index, additional_terms=terms)
     m = AutoReg(y, trend="n", seasonal=False, lags=2, deterministic=dp)
     res = m.fit()
-    m2 = AutoReg(
-        y, trend="ct", seasonal=True, lags=2, period=12
-    )
+    m2 = AutoReg(y, trend="ct", seasonal=True, lags=2, period=12)
     res2 = m2.fit()
     assert_almost_equal(np.asarray(res.params), np.asarray(res2.params))
     with pytest.warns(RuntimeWarning, match="When using deterministic, trend"):

@@ -1,12 +1,23 @@
 from statsmodels.compat.pandas import is_numeric_dtype
 
 import numbers
-
 import warnings
+
 import numpy as np
-from pandas import (to_datetime, Int64Index, DatetimeIndex, Period,
-                    PeriodIndex, RangeIndex, Timestamp, Series, Index,
-                    Float64Index, date_range, period_range)
+from pandas import (
+    DatetimeIndex,
+    Float64Index,
+    Index,
+    Int64Index,
+    Period,
+    PeriodIndex,
+    RangeIndex,
+    Series,
+    Timestamp,
+    date_range,
+    period_range,
+    to_datetime,
+)
 from pandas.tseries.frequencies import to_offset
 
 from statsmodels.base.data import PandasData
@@ -774,18 +785,3 @@ class TimeSeriesResultsWrapper(wrap.ResultsWrapper):
                                      _methods)
 wrap.populate_wrapper(TimeSeriesResultsWrapper,  # noqa:E305
                       TimeSeriesModelResults)
-
-
-if __name__ == "__main__":
-    import statsmodels.api as sm
-    import pandas
-
-    mdata = sm.datasets.macrodata.load(as_pandas=False)
-
-    #make a DataFrame
-    #TODO: attach a DataFrame to some of the datasets, for quicker use
-    dates = [str(int(x[0])) +':'+ str(int(x[1])) \
-             for x in mdata.data[['year','quarter']]]
-
-    df = pandas.DataFrame(mdata.data[['realgdp','realinv','realcons']], index=dates)
-    ex_mod = TimeSeriesModel(df)
