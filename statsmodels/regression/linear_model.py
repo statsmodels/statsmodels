@@ -2803,7 +2803,24 @@ class RegressionResults(base.LikelihoodModelResults):
             smry.add_text(warn)
 
         return smry
-
+    
+def summary_df(self, table_index = 1):
+    """
+    Returns only a selected table of summary as a Pandas DataFrame. 
+    
+    By default it selects the coefficient and SD criteria table.
+    """
+    df_results = pd.DataFrame(self.summary().tables[table_index])
+    
+    # setting the header and index
+    index_col = df_results.iloc[:,0].rename('Variable')
+    df_results.set_index(index_col, inplace=True)
+    
+    header = list(df_results.iloc[0])
+    df_results = df_results.iloc[1:,1:]
+    df_results.columns = header[1:]
+    
+    return df_results
 
 class OLSResults(RegressionResults):
     """
