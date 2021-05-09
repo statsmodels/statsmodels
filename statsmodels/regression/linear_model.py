@@ -38,6 +38,7 @@ from statsmodels.compat.python import lrange, lzip
 import warnings
 
 import numpy as np
+import pandas as pd
 from scipy import optimize, stats
 from scipy.linalg import toeplitz
 
@@ -2804,23 +2805,27 @@ class RegressionResults(base.LikelihoodModelResults):
 
         return smry
     
+    
 def summary_df(self, table_index = 1):
     """
     Returns only a selected table of summary as a Pandas DataFrame. 
     
-    By default it selects the coefficient and SD criteria table.
+    By default it selects the table of the coefficients and their significance.
     """
+    # Getting .summary() table as a pandas DataFrame
     df_results = pd.DataFrame(self.summary().tables[table_index])
     
-    # setting the header and index
+    # Setting the df index
     index_col = df_results.iloc[:,0].rename('Variable')
     df_results.set_index(index_col, inplace=True)
     
+    # Setting the df header
     header = list(df_results.iloc[0])
     df_results = df_results.iloc[1:,1:]
     df_results.columns = header[1:]
     
     return df_results
+
 
 class OLSResults(RegressionResults):
     """
