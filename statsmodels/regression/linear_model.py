@@ -2806,16 +2806,17 @@ class RegressionResults(base.LikelihoodModelResults):
         return smry
 
     def summary_frame(self, table_index = 1):
-    """
-    Summary function that returns the regular summary table as a Pandas dataframe.
-    """
-        if table_index == 1:
-            # Using first row as a header
-            return pd.read_html(self.summary().tables[table_index].as_html(), header=0, index_col=0)[0]
-        else:
-            # Not using first row as a header
-            return pd.read_html(self.summary().tables[table_index].as_html(), index_col=0)[0]
+        """
+        Summary function that returns the regular summary table as a Pandas dataframe.
+        """
+    if table_index == 1:
+        # Using first row as a header
+        return pd.read_html(self.summary().tables[table_index].as_html(), header=0, index_col=0)[0]
+    else:
+        # Not using first row as a header
+        return pd.read_html(self.summary().tables[table_index].as_html(), index_col=0)[0]
 
+        
 class OLSResults(RegressionResults):
     """
     Results class for for an OLS model.
