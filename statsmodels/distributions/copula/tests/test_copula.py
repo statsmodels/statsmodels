@@ -339,16 +339,16 @@ class TestGaussianCopula(CheckCopula):
              0.25677003, 0.05932818, 0.09605404, 0.35211017, 0.20885480]
 
 
-# class _estStudentCopula(CheckCopula):
-#     copula = StudentCopula(cov=[[1., 0.8], [0.8, 1.]], df=2)
-#     dim = 2
-#     pdf_u = [0.8303065, 0.1359839, 0.5157746, 0.4776421, 26.2173959,
-#              0.3070661, 0.1349173, 0.1597064, 0.3303230, 1.0482301]
-#     cdf_u = [0.31140349, 0.05942746, 0.18548601, 0.39143974, 0.98347259,
-#              0.24894028, 0.05653947, 0.09210693, 0.34447385, 0.20429882]
-#
-#     def test_cdf(self, *args):
-#         pytest.skip("Not implemented.")
+class TestStudentCopula(CheckCopula):
+    copula = StudentCopula(cov=[[1., 0.8], [0.8, 1.]], df=2)
+    dim = 2
+    pdf_u = [0.8303065, 0.1359839, 0.5157746, 0.4776421, 26.2173959,
+             0.3070661, 0.1349173, 0.1597064, 0.3303230, 1.0482301]
+    cdf_u = [0.31140349, 0.05942746, 0.18548601, 0.39143974, 0.98347259,
+             0.24894028, 0.05653947, 0.09210693, 0.34447385, 0.20429882]
+
+    def test_cdf(self, *args):
+        pytest.skip("Not implemented.")
 
 
 class TestClaytonCopula(CheckCopula):

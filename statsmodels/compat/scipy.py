@@ -6,6 +6,7 @@ import scipy
 SP_VERSION = LooseVersion(scipy.__version__)
 SCIPY_GT_14 = SP_VERSION >= LooseVersion("1.5")
 SP_LT_15 = SP_VERSION < LooseVersion("1.5")
+SP_LT_16 = SP_VERSION < LooseVersion("1.6")
 
 
 def _next_regular(target):
@@ -62,3 +63,10 @@ def _valarray(shape, value=np.nan, typecode=None):
     if not isinstance(out, np.ndarray):
         out = np.asarray(out)
     return out
+
+
+if SP_LT_16:
+    # copied from scipy, added to scipy in 1.6.0
+    from ._scipy_multivariate_t import multivariate_t  # noqa: F401
+else:
+    from scipy.stats import multivariate_t  # noqa: F401

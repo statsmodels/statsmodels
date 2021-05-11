@@ -8,6 +8,8 @@ License: BSD-3
 """
 import numpy as np
 from scipy import stats
+# scipy compat:
+from statsmodels.compat.scipy import multivariate_t
 
 from statsmodels.distributions.copula.copulas import Copula
 
@@ -65,7 +67,7 @@ class StudentCopula(Copula):
         if cov is None:
             cov = [[1., 0.], [0., 1.]]
         self.density = stats.t(df=df)
-        self.mv_density = stats.multivariate_t(shape=cov, df=df)
+        self.mv_density = multivariate_t(shape=cov, df=df)
 
     def random(self, n=1, random_state=None):
         x = self.mv_density.rvs(size=n, random_state=random_state)
