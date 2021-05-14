@@ -264,14 +264,15 @@ def multipletests(pvals, alpha=0.05, method='hs', is_sorted=False,
 
 
 def fdrcorrection(pvals, alpha=0.05, method='indep', is_sorted=False):
-    '''pvalue correction for false discovery rate.
+    '''
+    pvalue correction for false discovery rate.
 
     This covers Benjamini/Hochberg for independent or positively correlated and
     Benjamini/Yekutieli for general or negatively correlated tests.
 
     Parameters
     ----------
-    pvals : array_like, must be 1 dimensional
+    pvals : array_like, 1d
         Set of p-values of the individual tests.
     alpha : float, optional
         Family-wise error rate. Defaults to ``0.05``.
@@ -289,7 +290,7 @@ def fdrcorrection(pvals, alpha=0.05, method='indep', is_sorted=False):
 
     Returns
     -------
-    rejected : ndarray of bools
+    rejected : ndarray, bool
         True if a hypothesis is rejected, False if not
     pvalue-corrected : ndarray
         pvalues adjusted for multiple hypothesis testing to limit FDR
