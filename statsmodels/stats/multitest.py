@@ -264,20 +264,26 @@ def multipletests(pvals, alpha=0.05, method='hs', is_sorted=False,
 
 
 def fdrcorrection(pvals, alpha=0.05, method='indep', is_sorted=False):
-    '''pvalue correction for false discovery rate
+    '''
+    pvalue correction for false discovery rate.
 
     This covers Benjamini/Hochberg for independent or positively correlated and
-    Benjamini/Yekutieli for general or negatively correlated tests. Both are
-    available in the function multipletests, as method=`fdr_bh`, resp. `fdr_by`.
+    Benjamini/Yekutieli for general or negatively correlated tests.
 
     Parameters
     ----------
-    pvals : array_like
-        set of p-values of the individual tests.
-    alpha : float
-        error rate
-    method : {'indep', 'negcorr'}
-    is_sorted : bool
+    pvals : array_like, 1d
+        Set of p-values of the individual tests.
+    alpha : float, optional
+        Family-wise error rate. Defaults to ``0.05``.
+    method : {'i', 'indep', 'p', 'poscorr', 'n', 'negcorr'}, optional
+        Which method to use for FDR correction.
+        ``{'i', 'indep', 'p', 'poscorr'}`` all refer to ``fdr_bh``
+        (Benjamini/Hochberg for independent or positively
+        correlated tests). ``{'n', 'negcorr'}`` both refer to ``fdr_by``
+        (Benjamini/Yekutieli for general or negatively correlated tests).
+        Defaults to ``'indep'``.
+    is_sorted : bool, optional
         If False (default), the p_values will be sorted, but the corrected
         pvalues are in the original order. If True, then it assumed that the
         pvalues are already sorted in ascending order.
@@ -291,22 +297,25 @@ def fdrcorrection(pvals, alpha=0.05, method='indep', is_sorted=False):
 
     Notes
     -----
-
     If there is prior information on the fraction of true hypothesis, then alpha
-    should be set to alpha * m/m_0 where m is the number of tests,
+    should be set to ``alpha * m/m_0`` where m is the number of tests,
     given by the p-values, and m_0 is an estimate of the true hypothesis.
     (see Benjamini, Krieger and Yekuteli)
 
     The two-step method of Benjamini, Krieger and Yekutiel that estimates the number
     of false hypotheses will be available (soon).
 
-    Method names can be abbreviated to first letter, 'i' or 'p' for fdr_bh and 'n' for
-    fdr_by.
+    Both methods exposed via this function (Benjamini/Hochberg, Benjamini/Yekutieli)
+    are also available in the function ``multipletests``, as ``method="fdr_bh"`` and
+    ``method="fdr_by"``, respectively.
 
-
+    See also
+    --------
+    multipletests
 
     '''
     pvals = np.asarray(pvals)
+    assert pvals.ndim == 1, "pvals must be 1-dimensional, that is of shape (n,)"
 
     if not is_sorted:
         pvals_sortind = np.argsort(pvals)
