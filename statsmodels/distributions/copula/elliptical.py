@@ -3,6 +3,7 @@
 Created on Fri Jan 29 19:19:45 2021
 
 Author: Josef Perktold
+Author: Pamphile Roy
 License: BSD-3
 
 """
@@ -37,12 +38,13 @@ class GaussianCopula(Copula):
 
     """
 
-    def __init__(self, cov=None):
+    def __init__(self, corr=None):
         super().__init__(d=np.inf)
-        if cov is None:
-            cov = [[1., 0.], [0., 1.]]
+        if corr is None:
+            corr = [[1., 0.], [0., 1.]]
+        self.corr = np.asarray(corr)
         self.density = stats.norm()
-        self.mv_density = stats.multivariate_normal(cov=cov)
+        self.mv_density = stats.multivariate_normal(cov=corr)
 
     def random(self, n=1, random_state=None):
         x = self.mv_density.rvs(size=n, random_state=random_state)
@@ -58,16 +60,43 @@ class GaussianCopula(Copula):
         ppf = self.density.ppf(u)
         return self.mv_density.cdf(ppf)
 
+    def tau(self, pearson_corr=None):
 
-class StudentCopula(Copula):
+        if pearson_corr is None:
+            if self.corr.shape == (2, 2):
+                corr = self.corr[0, 1]
+            else:
+                corr = self.corr
+        else:
+            corr = pearson_corr
+        tau = 2 * np.arcsin(corr) / np.pi
+        return tau
+
+    def dependence_tail(self, pearson_corr=None):
+
+        return 0, 0
+
+    def corr_from_tau(self, tau):
+        """pearson correlation from kendall's tau
+
+        Joe (2014) p. 164
+        """
+        corr = np.sin(tau * np.pi / 2)
+        return corr
+
+
+class StudentTCopula(Copula):
     """Student copula."""
 
-    def __init__(self, df=1, cov=None):
+    def __init__(self, df=1, corr=None):
         super().__init__(d=np.inf)
-        if cov is None:
-            cov = [[1., 0.], [0., 1.]]
+        if corr is None:
+            corr = [[1., 0.], [0., 1.]]
+
+        self.df = df
+        self.corr = np.asarray(corr)
         self.density = stats.t(df=df)
-        self.mv_density = multivariate_t(shape=cov, df=df)
+        self.mv_density = multivariate_t(shape=corr, df=df)
 
     def random(self, n=1, random_state=None):
         x = self.mv_density.rvs(size=n, random_state=random_state)
@@ -82,5 +111,62 @@ class StudentCopula(Copula):
     def cdf(self, u):
         raise NotImplementedError("CDF not available in closed form.")
         # ppf = self.density.ppf(u)
-        # mvt = MVT([0, 0], self.cov, self.df)
+        # mvt = MVT([0, 0], self.corr, self.df)
         # return mvt.cdf(ppf)
+
+    def tau(self, pearson_corr=None):
+        """bivariate kendall's tau
+
+        Joe (2014) p. 182
+        """
+        if pearson_corr is None:
+            if self.corr.shape == (2, 2):
+                corr = self.corr[0, 1]
+            else:
+                corr = self.corr
+        else:
+            corr = pearson_corr
+        rho = 2 * np.arcsin(corr) / np.pi
+        return rho
+
+    def spearmans_rho(self, pearson_corr=None):
+        """bivariate spearman's rho
+
+        Joe (2014) p. 182
+        """
+        if pearson_corr is None:
+            if self.corr.shape == (2, 2):
+                corr = self.corr[0, 1]
+            else:
+                corr = self.corr
+        else:
+            corr = pearson_corr
+        tau = 6 * np.arcsin(corr / 2) / np.pi
+        return tau
+
+    def dependence_tail(self, pearson_corr=None):
+        """bivariate tail dependence parameter
+
+        Joe (2014) p. 182
+        """
+        if pearson_corr is None:
+            if self.corr.shape == (2, 2):
+                corr = self.corr[0, 1]
+            else:
+                corr = self.corr
+        else:
+            corr = pearson_corr
+
+        df = self.df
+        t = - np.sqrt((df + 1) * (1 - corr) / 1 + corr)
+        # Note self.density is frozen, df cannot change, use stats.t instead
+        lam = 2 * stats.t.cdf(t, df + 1)
+        return lam, lam
+
+    def corr_from_tau(self, tau):
+        """pearson correlation from kendall's tau
+
+        Joe (2014) p. 164
+        """
+        corr = np.sin(tau * np.pi / 2)
+        return corr

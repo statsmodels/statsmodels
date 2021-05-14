@@ -12,7 +12,7 @@ from scipy import stats
 import pytest
 
 from statsmodels.distributions.copula.elliptical import GaussianCopula, \
-    StudentCopula
+    StudentTCopula
 from statsmodels.distributions.copula.other_copulas import IndependentCopula
 
 from statsmodels.tools.numdiff import approx_fprime_cs, approx_hess
@@ -331,7 +331,7 @@ class TestIndependentCopula(CheckCopula):
 
 
 class TestGaussianCopula(CheckCopula):
-    copula = GaussianCopula(cov=[[1., 0.8], [0.8, 1.]])
+    copula = GaussianCopula(corr=[[1., 0.8], [0.8, 1.]])
     dim = 2
     pdf_u = [1.03308741, 0.06507279, 0.72896012, 0.65389439, 16.45012399,
              0.34813218, 0.06768115, 0.08168840, 0.40521741, 1.26723470]
@@ -339,8 +339,8 @@ class TestGaussianCopula(CheckCopula):
              0.25677003, 0.05932818, 0.09605404, 0.35211017, 0.20885480]
 
 
-class TestStudentCopula(CheckCopula):
-    copula = StudentCopula(cov=[[1., 0.8], [0.8, 1.]], df=2)
+class TestStudentTCopula(CheckCopula):
+    copula = StudentTCopula(corr=[[1., 0.8], [0.8, 1.]], df=2)
     dim = 2
     pdf_u = [0.8303065, 0.1359839, 0.5157746, 0.4776421, 26.2173959,
              0.3070661, 0.1349173, 0.1597064, 0.3303230, 1.0482301]

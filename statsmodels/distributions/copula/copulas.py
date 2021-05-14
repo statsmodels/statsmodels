@@ -15,6 +15,7 @@ from abc import ABC, abstractmethod
 import numpy as np
 from scipy import stats
 from scipy.special import expm1
+from scipy._lib._util import check_random_state
 
 from statsmodels.graphics import utils
 
@@ -180,6 +181,40 @@ class CopulaDistribution:
         self.marginals = marginals
         self.copargs = copargs
         self.k_vars = len(marginals)
+
+    def random(self, n=1, random_state=None):
+        """Draw `n` in the half-open interval ``[0, 1)``.
+
+        Sample the joint distribution.
+
+        Parameters
+        ----------
+        n : int, optional
+            Number of samples to generate in the parameter space.
+            Default is 1.
+        random_state : {None, int, `numpy.random.Generator`}, optional
+            If `seed` is None the `numpy.random.Generator` singleton is used.
+            If `seed` is an int, a new ``Generator`` instance is used,
+            seeded with `seed`.
+            If `seed` is already a ``Generator`` instance then that instance is
+            used.
+
+        Returns
+        -------
+        sample : array_like (n, d)
+            Sample from the joint distribution.
+
+        """
+        rng = check_random_state(random_state)
+        if self.copula is None:
+            # this means marginals are independents
+            sample = rng.random((n, self.d))
+        else:
+            sample = self.copula.random(n, random_state=random_state)
+
+        for i, dist in enumerate(self.marginals):
+            sample[:, i] = dist.ppf(0.5 + (1 - 1e-10) * (sample[:, i] - 0.5))
+        return sample
 
     def cdf(self, y, args=None):
         """CDF of copula distribution.
@@ -413,12 +448,14 @@ class Copula(ABC):
         """
         from matplotlib import pyplot as plt
         if self.d != 2:
-            raise ValueError("Can only plot 2-dimensional Copula.")
+            import warnings
+            warnings.warn("Plotting 2-dimensional Copula.")
 
         n_samples = 100
 
-        uu, vv = np.meshgrid(np.linspace(0.0001, 1, n_samples),
-                             np.linspace(0.0001, 1, n_samples))
+        eps = 1e-4
+        uu, vv = np.meshgrid(np.linspace(eps, 1 - eps, n_samples),
+                             np.linspace(eps, 1 - eps, n_samples))
         points = np.vstack([uu.ravel(), vv.ravel()]).T
 
         data = self.pdf(points).T.reshape(uu.shape)
