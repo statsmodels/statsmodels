@@ -152,6 +152,145 @@ def average_grid(values, coords=None, _method="slicing"):
     return p
 
 
+def nearest_matrix_margins(mat, maxiter=100, tol=1e-8):
+    """nearest matrix with uniform margins
+
+    Parameters
+    ----------
+    mat : array_like, 2-D
+        Matrix that will be converted to have uniform margins.
+        Currently, `mat` has to be two dimensional.
+    maxiter : in
+        Maximum number of iterations.
+    tol : float
+        Tolerance for convergence, defined for difference between largest and
+        smallest margin in each dimension.
+
+    Returns
+    -------
+    ndarray, nearest matrix with uniform margins.
+
+    Notes
+    -----
+    This function is intended for internal use and will be generalized in
+    future. API will change.
+    """
+    pc = np.asarray(mat)
+    converged = False
+    for _ in range(maxiter):
+        pc = pc / pc.sum(0) / pc.sum(1)[:, None]
+        pc /= pc.sum()
+        if np.ptp(pc.sum(0)) < tol:
+            if np.ptp(pc.sum(1)) < tol:
+                converged = True
+                break
+    if not converged:
+        import warnings
+        from statsmodels.tools.sm_exceptions import ConvergenceWarning
+        warnings.warn("Iterations did not converge, maxiter reached",
+                      ConvergenceWarning)
+    return pc
+
+
+def _rankdata_no_ties(x):
+    """rankdata without ties for 2-d array
+
+    This is a simplified version for ranking data if there are no ties.
+    Works vectorized across columns.
+
+    See Also
+    --------
+    scipy.stats.rankdata
+
+    """
+    nobs, k_vars = x.shape
+    ranks = np.ones((nobs, k_vars))
+    sidx = np.argsort(x, axis=0)
+    ranks[sidx, np.arange(k_vars)] = np.arange(nobs)[:, None]
+    return ranks
+
+
+def frequencies_fromdata(data, k_bins, use_ranks=True):
+    """count of observations in bins (histogram)
+
+    currently only for bivariate data
+
+    Parameters
+    ----------
+    data : array_like
+        Bivariate data with observations in rows and two columns. Binning is
+        in unit rectangle [0, 1]^2. If use_rank is False, then data should be
+        in unit interval.
+    k_bins : int
+        Number of bins along each dimension in the histogram
+    use_ranks : bool
+        If use_rank is True, then data will be converted to ranks without
+        tie handling.
+
+    Returns
+    -------
+    bin counts : ndarray
+        Frequencies are the number of observations in a given bin.
+        Bin counts are a 2-dim array with k_bins rows and k_bins columns.
+
+    Notes
+    -----
+    This function is intended for internal use and will be generalized in
+    future. API will change.
+    """
+    data = np.asarray(data)
+    k = k_bins + 1
+    g2 = _Grid([k, k], eps=0)
+    if use_ranks:
+        data = _rankdata_no_ties(data) / (data.shape[0] + 1)
+        # alternatives: scipy handles ties, but uses np.apply_along_axis
+        # rvs = stats.rankdata(rvs, axis=0) / (rvs.shape[0] + 1)
+        # rvs = (np.argsort(np.argsort(rvs, axis=0), axis=0) + 1
+        #                              ) / (rvs.shape[0] + 1)
+    freqr, _ = np.histogramdd(data, bins=g2.x_marginal)
+    return freqr
+
+
+def approx_copula_pdf(copula, k_bins=10, force_uniform=True):
+    """Histogram probabilities as approximation to a copula density.
+
+    Parameters
+    ----------
+    copula : instance
+        Instance of a copula class. Only the ``pdf`` method is used.
+    k_bins : int
+        Number of bins along each dimension in the approximating histogram.
+    use_ranks : bool
+        If use_rank is True, then data will be converted to ranks without
+        tie handling.
+
+    Returns
+    -------
+    bin probabilites : ndarray
+        Probability that random variable falls in given bin. This corresponds
+        to a discrete distribution, and is not scaled to bin size to form a
+        piecewise uniform, histogram density.
+        Bin probabilities are a 2-dim array with k_bins rows and k_bins
+        columns with first random variable in rows and second in columns.
+
+    Notes
+    -----
+    This function is intended for internal use and will be generalized in
+    future. API will change.
+    """
+    k = k_bins + 1
+    g = _Grid([k, k], eps=0.1 / k_bins)
+    pdfg = copula.pdf(g.x_flat).reshape(k, k, order="F")
+    # correct for bin size
+    pdfg *= 1 / k**2
+    ag = average_grid(pdfg)
+    if force_uniform:
+        pdf_grid = nearest_matrix_margins(ag, maxiter=100, tol=1e-8)
+    else:
+        pdf_grid = ag / ag.sum()
+    return pdf_grid
+
+
 # functions to evaluate bernstein polynomials
 
 def _eval_bernstein_1d(x, fvals, method="binom"):
