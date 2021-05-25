@@ -95,7 +95,10 @@ class TestDistDependenceMeasures(object):
             assert_almost_equal(pval, self.pval_asym_exp, 3)
 
     def test_statistics_for_2d_input(self):
-        stats = ddm.distance_statistics(self.x, self.y)
+        stats = ddm.distance_statistics(
+            np.asarray(self.x, dtype=float),
+            np.asarray(self.y, dtype=float)
+        )
 
         assert_almost_equal(stats.test_statistic, self.test_stat_emp_exp, 0)
         assert_almost_equal(stats.distance_correlation, self.dcor_exp, 4)
@@ -105,7 +108,7 @@ class TestDistDependenceMeasures(object):
         assert_almost_equal(stats.S, self.S_exp, 4)
 
     def test_statistics_for_1d_input(self):
-        x = np.array(range(1, 21))
+        x = np.array(range(1, 21), dtype=float)
         y = x + np.log(x)
 
         stats = ddm.distance_statistics(x, y)
@@ -141,8 +144,8 @@ class TestDistDependenceMeasures(object):
         except IGNORED_EXCEPTIONS:
             pytest.skip('Failed with HTTPError or URLError, these are random')
 
-        x = iris[:50]
-        y = iris[50:100]
+        x = np.asarray(iris[:50], dtype=float)
+        y = np.asarray(iris[50:100], dtype=float)
 
         stats = ddm.distance_statistics(x, y)
 
@@ -181,8 +184,8 @@ class TestDistDependenceMeasures(object):
         except IGNORED_EXCEPTIONS:
             pytest.skip('Failed with HTTPError or URLError, these are random')
 
-        x = quakes[:50]
-        y = quakes[50:100]
+        x = np.asarray(quakes[:50], dtype=float)
+        y = np.asarray(quakes[50:100], dtype=float)
 
         stats = ddm.distance_statistics(x, y)
 

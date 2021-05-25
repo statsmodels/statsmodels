@@ -22,8 +22,8 @@ class TestSVAR(object):
         mdata = mdata[['realgdp', 'realcons', 'realinv']]
         data = mdata.values
         data = np.diff(np.log(data), axis=0)
-        A = np.asarray([[1, 0, 0], ['E', 1, 0], ['E', 'E', 1]])
-        B = np.asarray([['E', 0, 0], [0, 'E', 0], [0, 0, 'E']])
+        A = np.asarray([[1, 0, 0], ['E', 1, 0], ['E', 'E', 1]], dtype="U")
+        B = np.asarray([['E', 0, 0], [0, 'E', 0], [0, 0, 'E']], dtype="U")
         results = SVAR(data, svar_type='AB', A=A, B=B).fit(maxlags=3)
         cls.res1 = results
         #cls.res2 = results_svar.SVARdataResults()
