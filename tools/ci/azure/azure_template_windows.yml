@@ -39,14 +39,18 @@ jobs:
     displayName: 'Update essentials'
 
   - script: |
-      python -m pip install "pywinpty<1.0"
-    displayName: 'Install pywinpty (x86)'
+      python -m pip install -r requirements.txt
+    displayName: 'Install requirements'
+
+  - script: |
+      python -m pip install pytest pytest-xdist "matplotlib>=3" "pywinpty<1.0"
+    displayName: 'Install dev requirements'
     condition: eq(variables['python.architecture'], 'x86')
 
   - script: |
-      python -m pip install -r requirements.txt
       python -m pip install -r requirements-dev.txt
-    displayName: 'Install dependencies'
+    displayName: 'Install dev requirements'
+    condition: ne(variables['python.architecture'], 'x86')
 
   - script: |
       python -m pip list

@@ -9,8 +9,11 @@ matplotlib>=3
 # test
 pytest
 pytest-randomly
-# Pin to 1.29 due to test discovery issues
-pytest-xdist==1.29
+pytest-xdist
+
+# Pin on Win32
+pywinpty<1.0; os_name == "win32"
+pywinpty; os_name != "win32"
 
 # code quality
 flake8
