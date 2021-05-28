@@ -343,6 +343,13 @@ def test_issorted(method):
     assert_allclose(res2[0][sortrevind], res1[0], rtol=1e-10)
 
 
+def test_floating_precision():
+    # issue #7465
+    pvals = np.full(6000, 0.99)
+    pvals[0] = 1.138569e-56
+    assert multipletests(pvals, method='hs')[1][0] != 0
+
+
 def test_tukeyhsd():
     # example multicomp in R p 83
 

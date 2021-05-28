@@ -170,8 +170,10 @@ def multipletests(pvals, alpha=0.05, method='hs', is_sorted=False,
         reject = ~notreject
         del notreject
 
-        pvals_corrected_raw = 1 - np.power((1. - pvals),
-                                           np.arange(ntests, 0, -1))
+        # It's eqivalent to 1 - np.power((1. - pvals),
+        #                           np.arange(ntests, 0, -1))
+        # but prevents the issue of the floating point precision
+        pvals_corrected_raw = -np.expm1(np.arange(ntests, 0, -1)*np.log1p(-pvals))
         pvals_corrected = np.maximum.accumulate(pvals_corrected_raw)
         del pvals_corrected_raw
 
