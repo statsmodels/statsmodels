@@ -1907,7 +1907,7 @@ class GEEResults(GLMResults):
         """
         Returns the QIC and QICu information criteria.
 
-        See GEE.QIC for documentation.
+        See GEE.qic for documentation.
         """
 
         # It is easy to forget to set the scale parameter.  Sometimes
