@@ -1924,8 +1924,8 @@ def test_ql_known(family):
         warnings.simplefilter("ignore")
         qler1 = result1.qic()
         qler2 = result2.qic()
-    assert_equal(qler1, qle1[1:])
-    assert_equal(qler2, qle2[1:])
+    assert_allclose(qler1, qle1[1:], rtol=1e-5)
+    assert_allclose(qler2, qle2[1:], rtol=1e-5)
 
 
 # Compare differences of QL values computed by numerical integration.

@@ -1656,7 +1656,7 @@ class GEE(GLM):
                                          self, params)
         return margeff
 
-    def qic(self, params, scale, cov_params):
+    def qic(self, params, scale, cov_params, nstep=1000):
         """
         Returns quasi-information criteria and quasi-likelihood values.
 
@@ -1670,6 +1670,9 @@ class GEE(GLM):
             An estimate of the covariance matrix for the
             model parameters.  Conventionally this is the robust
             covariance matrix.
+        nstep : integer
+            The number of points in the trapezoidal approximation
+            to the quasi-likelihood function.
 
         Returns
         -------
@@ -1723,7 +1726,6 @@ class GEE(GLM):
         # from -1 to 1.
         endog_li = np.concatenate(self.endog_li)
         du = means - endog_li
-        nstep = 10000
         qv = np.empty(nstep)
         xv = np.linspace(-0.99999, 1, nstep)
         for i, g in enumerate(xv):
@@ -1901,17 +1903,11 @@ class GEEResults(GLMResults):
             sresid.append(self.centered_resid[ii])
         return sresid
 
-    def qic(self, scale=None):
+    def qic(self, scale=None, nstep=10000):
         """
         Returns the QIC and QICu information criteria.
 
-        For families with a scale parameter (e.g. Gaussian), provide
-        as the scale argument the estimated scale from the largest
-        model under consideration.
-
-        If the scale parameter is not provided, the estimated scale
-        parameter is used.  Doing this does not allow comparisons of
-        QIC values between models.
+        See GEE.QIC for documentation.
         """
 
         # It is easy to forget to set the scale parameter.  Sometimes
@@ -1924,7 +1920,8 @@ class GEEResults(GLMResults):
             scale = self.scale
 
         _, qic, qicu = self.model.qic(self.params, scale,
-                                      self.cov_params())
+                                      self.cov_params(),
+                                      nstep=nstep)
 
         return qic, qicu
 
