@@ -218,6 +218,83 @@ def lowess(np.ndarray[DTYPE_t, ndim = 1] endog,
     return (np.array([xvals, y_fit]).T, resid_weights)
 
 
+def _lowess_win(np.ndarray[DTYPE_t, ndim = 1] endog,
+           np.ndarray[DTYPE_t, ndim = 1] exog,
+           np.ndarray[Py_ssize_t, ndim = 2] windows,
+           Py_ssize_t it = 3):
+    cdef:
+        Py_ssize_t n
+        int k
+        Py_ssize_t robiter, i, left_end, right_end
+        int last_fit_i,
+        np.ndarray[DTYPE_t, ndim = 1] x, y, xvals
+        np.ndarray[DTYPE_t, ndim = 1] y_fit
+        np.ndarray[DTYPE_t, ndim = 1] weights
+        DTYPE_t xval
+    
+    y = endog   # now just alias
+    x = exog
+
+    n = x.shape[0]
+
+    given_xvals = False
+    xvals = x
+    out_n = n
+    delta = 0.
+    
+    y_fit = np.zeros(out_n, dtype = DTYPE)
+    resid_weights = np.ones_like(exog)
+
+
+    it += 1 # Add one to it for initial run.
+    for robiter in range(it):
+        i = 0
+        last_fit_i = -1
+        left_end = 0
+        right_end = 0
+        y_fit = np.zeros(n, dtype = DTYPE)
+
+        # 'do' Fit y[i]'s 'until' the end of the regression
+        while True:
+            # The x value at which we will fit this time
+            xval = xvals[i]
+
+            # Re-initialize the weights for each point xval.
+            weights = np.zeros(n, dtype = DTYPE)
+
+            # Describe the neighborhood around the current xval.
+            left_end, right_end = windows[i]
+            radius = fmax(xval - x[left_end], x[right_end-1] - xval)
+
+            # Calculate the weights for the regression in this neighborhood.
+            # Determine if at least some weights are positive, so a regression
+            # is ok.
+            reg_ok = calculate_weights(x, weights, resid_weights, xval, left_end,
+                                       right_end, radius)
+
+            # If ok, run the regression
+            calculate_y_fit(x, y, i, xval, y_fit, weights, left_end, right_end,
+                            reg_ok, fill_with_nans=given_xvals)
+
+            # If we skipped some points (because of how delta was set), go back
+            # and fit them by linear interpolation.
+            if last_fit_i < (i - 1):
+                interpolate_skipped_fits(xvals, y_fit, i, last_fit_i)
+
+            # Update the last fit counter to indicate we've now fit this point.
+            # Find the next i for which we'll run a regression.
+            i, last_fit_i = update_indices(xvals, y_fit, delta, i, out_n, last_fit_i)
+
+            if last_fit_i >= out_n-1:
+                break
+
+        # Calculate residual weights
+        if not given_xvals:
+            resid_weights = calculate_residual_weights(y, y_fit)
+
+    return (np.array([xvals, y_fit]).T, resid_weights)
+
+
 def update_neighborhood(np.ndarray[DTYPE_t, ndim = 1] x,
                         DTYPE_t xval,
                         Py_ssize_t n,
