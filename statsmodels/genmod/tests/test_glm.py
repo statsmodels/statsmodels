@@ -152,8 +152,12 @@ class CheckModelResultsMixin(object):
 
     decimal_null_deviance = DECIMAL_4
     def test_null_deviance(self):
-        assert_almost_equal(self.res1.null_deviance, self.res2.null_deviance,
-                    self.decimal_null_deviance)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DomainWarning)
+
+            assert_almost_equal(self.res1.null_deviance,
+                                self.res2.null_deviance,
+                                self.decimal_null_deviance)
 
     decimal_bic = DECIMAL_4
     def test_bic(self):
@@ -197,7 +201,9 @@ class CheckModelResultsMixin(object):
 
     @pytest.mark.smoke
     def test_summary2(self):
-        self.res1.summary2()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DomainWarning)
+            self.res1.summary2()
 
 
 class CheckComparisonMixin(object):
@@ -1410,8 +1416,13 @@ class CheckWtdDuplicationMixin(object):
     decimal_null_deviance = DECIMAL_4
 
     def test_null_deviance(self):
-        assert_allclose(self.res1.null_deviance, self.res2.null_deviance,
-                        atol=1e-6, rtol=1e-6)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DomainWarning)
+
+            assert_allclose(self.res1.null_deviance,
+                            self.res2.null_deviance,
+                            atol=1e-6,
+                            rtol=1e-6)
 
     decimal_bic = DECIMAL_4
 
