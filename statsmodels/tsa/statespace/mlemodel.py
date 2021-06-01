@@ -3494,6 +3494,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             If an integer, the state innovation to pulse; must be between 0
             and `k_posdef-1`. Alternatively, a custom impulse vector may be
             provided; must be shaped `k_posdef x 1`.
+
+            e.g. 
         orthogonalized : bool, optional
             Whether or not to perform impulse using orthogonalized innovations.
             Note that this will also affect custum `impulse` vectors. Default
