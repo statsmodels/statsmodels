@@ -64,8 +64,10 @@ class CheckGrouping(object):
                                             self.data,
                                             lambda x : x.mean(),
                                             level=0)
-        grouped = self.data.reset_index().groupby(names[0])
-        expected = grouped.apply(lambda x : x.mean())[self.data.columns]
+        cols = [names[0]] + list(self.data.columns)
+        df = self.data.reset_index()[cols].set_index(names[0])
+        grouped = df[self.data.columns].groupby(level=0)
+        expected = grouped.apply(lambda x : x.mean())
         np.testing.assert_allclose(transformed_dataframe,
                                    expected.values)
 
@@ -73,7 +75,9 @@ class CheckGrouping(object):
             transformed_dataframe = self.grouping.transform_dataframe(
                                             self.data, lambda x : x.mean(),
                                             level=1)
-            grouped = self.data.reset_index().groupby(names[1])
+            cols = [names[1]] + list(self.data.columns)
+            df = self.data.reset_index()[cols].set_index(names[1])
+            grouped = df.groupby(level=0)
             expected = grouped.apply(lambda x: x.mean())[self.data.columns]
             np.testing.assert_allclose(transformed_dataframe,
                                        expected.values)
@@ -84,8 +88,10 @@ class CheckGrouping(object):
                                             self.data.values,
                                             lambda x : x.mean(),
                                             level=0)
-        grouped = self.data.reset_index().groupby(names[0])
-        expected = grouped.apply(lambda x: x.mean())[self.data.columns]
+        cols = [names[0]] + list(self.data.columns)
+        df = self.data.reset_index()[cols].set_index(names[0])
+        grouped = df[self.data.columns].groupby(level=0)
+        expected = grouped.apply(lambda x: x.mean())
         np.testing.assert_allclose(transformed_array,
                                    expected.values)
 
@@ -93,7 +99,9 @@ class CheckGrouping(object):
             transformed_array = self.grouping.transform_array(
                                             self.data.values,
                                             lambda x : x.mean(), level=1)
-            grouped = self.data.reset_index().groupby(names[1])
+            cols = [names[1]] + list(self.data.columns)
+            df = self.data.reset_index()[cols].set_index(names[1])
+            grouped = df[self.data.columns].groupby(level=0)
             expected = grouped.apply(lambda x: x.mean())[self.data.columns]
             np.testing.assert_allclose(transformed_array,
                                        expected.values)

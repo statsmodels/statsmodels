@@ -457,7 +457,7 @@ def lagmat(x, maxlag, trim='forward', original='ex', use_pandas=False):
         lags = lm.iloc[startobs:]
         if original in ('sep', 'ex'):
             leads = lags[x_columns]
-            lags = lags.drop(x_columns, 1)
+            lags = lags.drop(x_columns, axis=   1)
     else:
         lags = lm[startobs:stopobs, dropidx:]
         if original == 'sep':

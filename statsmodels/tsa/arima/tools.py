@@ -140,8 +140,7 @@ def validate_basic(params, length, allow_infnan=False, title=None):
     # Check for invalid type and coerce to non-integer
     try:
         params = np.array(params, dtype=object)
-        complex_types = (complex, np.complex)
-        is_complex = [isinstance(p, complex_types) for p in params.ravel()]
+        is_complex = [isinstance(p, complex) for p in params.ravel()]
         dtype = complex if any(is_complex) else float
         params = np.array(params, dtype=dtype)
     except TypeError:
