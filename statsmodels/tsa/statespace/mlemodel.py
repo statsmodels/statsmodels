@@ -2165,7 +2165,7 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         # Compute the impulse responses
 
-        # convert endog name to indexes
+        # Convert endog name to index
         use_pandas = isinstance(self.data, PandasData)
         if type(impulse) == str:
             if not use_pandas:
