@@ -314,3 +314,90 @@ class TestDiscretizedExponential():
         p[k - 1] += 1 - p[:k].sum()
         tchi2 = stats.chisquare(freq, p[:k] * nobs)
         assert tchi2.pvalue > 0.01
+
+
+class CheckDiscretized():
+
+    def convert_params(self, params):
+        args = params.tolist()
+        args.insert(-1, 0)
+        return args
+
+    def test_basic(self):
+        d_offset = self.d_offset
+        ddistr = self.ddistr
+        paramg = self.paramg
+        paramd = self.paramd
+        shapes = self.shapes
+        start_params = self.start_params
+
+        np.random.seed(987146)
+
+        dp = DiscretizedCount(ddistr, d_offset)
+        assert dp.shapes == shapes
+        xi = np.arange(5)
+        p = dp._pmf(xi, *paramd)
+
+        cdf1 = ddistr.cdf(xi, *paramg)
+        p1 = np.diff(cdf1)
+        assert_allclose(p[: len(p1)], p1, rtol=1e-13)
+        cdf = dp._cdf(xi, *paramd)
+        assert_allclose(cdf[: len(cdf1) - 1], cdf1[1:], rtol=1e-13)
+
+        # check that scipy dispatch methods work
+        p2 = dp.pmf(xi, *paramd)
+        assert_allclose(p2, p, rtol=1e-13)
+        cdf2 = dp.cdf(xi, *paramd)
+        assert_allclose(cdf2, cdf, rtol=1e-13)
+
+        nobs = 2000
+
+        xx = dp.rvs(*paramd, size=nobs)
+        mod = _DiscretizedModel(xx, distr=dp)
+        res = mod.fit(start_params=start_params)
+        p = mod.predict(res.params)
+        args = self.convert_params(res.params)
+        p1 = -np.diff(ddistr.sf(np.arange(21), *args))
+        assert_allclose(p, p1, rtol=1e-13)
+
+        # using cdf limits precision to computation around 1
+        p1 = np.diff(ddistr.cdf(np.arange(21), *args))
+        assert_allclose(p, p1, rtol=1e-13, atol=1e-15)
+        freq = np.bincount(xx.astype(int))
+        # truncate at last observed
+        k = len(freq)
+        if k > 10:
+            # reduce low count bins for heavy tailed distributions
+            k = 10
+            freq[k - 1] += freq[k:].sum()
+            freq = freq[:k]
+        p = mod.predict(res.params, k_max=k)
+        p[k - 1] += 1 - p[:k].sum()
+        tchi2 = stats.chisquare(freq, p[:k] * nobs)
+        assert tchi2.pvalue > 0.01
+
+
+class TestDiscretizedLomax(CheckDiscretized):
+
+    @classmethod
+    def setup_class(cls):
+        cls.d_offset = 0
+        cls.ddistr = stats.lomax  # instead of pareto to avoid p(y=0) = 0
+        cls.paramg = (2, 0, 1.5)  # include constant so we can use args
+        cls.paramd = (2, 1.5,)
+        cls.shapes = "c, s"
+
+        cls.start_params = (0.5, 0.5)
+
+
+class TestDiscretizedBurr12(CheckDiscretized):
+
+    @classmethod
+    def setup_class(cls):
+        cls.d_offset = 0
+        cls.ddistr = stats.burr12  # should be lomax as special case of burr12
+        cls.paramg = (2, 1, 0, 1.5)
+        cls.paramd = (2, 1, 1.5)
+        cls.shapes = "c, d, s"
+
+        cls.start_params = (0.5, 1, 0.5)
