@@ -154,6 +154,8 @@ zinegbin = zinegativebinomial_gen(name='zinegbin',
 
 class DiscretizedCount(rv_discrete):
     """Count distribution based on discretized distribution
+
+    `loc` argument is not supported, shape is disallowed by scipy for discrete
     """
 
     def __new__(cls, *args, **kwds):
@@ -161,34 +163,54 @@ class DiscretizedCount(rv_discrete):
         # only does dispatch to multinomial
         return super(rv_discrete, cls).__new__(cls)
 
-    def __init__(self, distr, d_offset=0, **kwds):
+    def __init__(self, distr, d_offset=0, add_scale=True, **kwds):
         # kwds are extras in rv_discrete
         self.distr = distr
         self.d_offset = d_offset
         self._ctor_param = distr._ctor_param
-        super().__init__(shapes=distr.shapes + ", s")
+        self.add_scale = add_scale
+        self.k_shapes = len(distr.shapes.split(","))
+        if add_scale:
+            kwds.update({"shapes": distr.shapes + ", s"})
+            self.k_shapes += 1
+        super().__init__(**kwds)
 
     def _updated_ctor_param(self):
         dic = super()._updated_ctor_param()
         dic["distr"] = self.distr
         return dic
 
+    def _unpack_args(self, args):
+        if self.add_scale:
+            scale = args[-1]
+            args = args[:-1]
+        else:
+            scale = 1
+        return args, scale
+
     def rvs(self, *args, size=1):
-        rv = np.trunc(self.distr.rvs(*args, size=size) + self.d_offset)
+        args, scale = self._unpack_args(args)
+        rv = np.trunc(self.distr.rvs(*args, scale=scale, size=size) +
+                      self.d_offset)
         return rv
 
     def _pmf(self, x, *args):
         distr = self.distr
         if self.d_offset != 0:
             x = x + self.d_offset
-        p = distr.cdf(x + 1, *args) - distr.cdf(x, *args)
+
+        args, scale = self._unpack_args(args)
+
+        p = (distr.sf(x, *args, scale=scale) -
+             distr.sf(x + 1, *args, scale=scale))
         return p
 
     def _cdf(self, x, *args):
         distr = self.distr
+        args, scale = self._unpack_args(args)
         if self.d_offset != 0:
             x = x + self.d_offset
-        p = distr.cdf(x + 1, *args)
+        p = distr.cdf(x + 1, *args, scale=scale)
         return p
 
 
@@ -199,20 +221,22 @@ class _DiscretizedModel(GenericLikelihoodModel):
     def __init__(self, endog, exog=None, distr=None):
         self.distr = distr
         super().__init__(endog, exog)
-        self.df_resid = len(endog) - 2
-        self.df_model = 2
+        self.df_resid = len(endog) - distr.k_shapes
+        self.df_model = distr.k_shapes  # no constant subtracted
 
     def loglike(self, params):
-        args = (params[0], 0, params[1])
+        # this does not allow exog yet,
+        # model `params` are also distribution `args`
+        args = (params[0], params[1])
         ll = np.log(self.distr._pmf(self.endog, *args))
         return ll.sum()
 
     def predict(self, params, which="probs", k_max=20):
-        args = (params[0], 0, params[1])
-        pr = self.distr._pmf(np.arange(k_max), *args)
+        args = (params[0], params[1])
+        pr = self.distr.pmf(np.arange(k_max), *args)
         return pr
 
     def get_distr(self, params):
-        args = (params[0], 0, params[1])
+        args = (params[0], params[1])
         distr = self.distr(*args)
         return distr
