@@ -226,7 +226,7 @@ class TestZiNBP(object):
         assert_allclose(nb_m2, zinb_m2, rtol=1e-10)
 
 
-class TestDiscretized():
+class TestDiscretizedGamma():
 
     def test_basic(self):
         np.random.seed(987146)
@@ -266,6 +266,51 @@ class TestDiscretized():
         freq = np.bincount(xx.astype(int))
         # truncate at last observed
         k = len(freq)
+        p[k - 1] += 1 - p[:k].sum()
+        tchi2 = stats.chisquare(freq, p[:k] * nobs)
+        assert tchi2.pvalue > 0.01
+
+
+class TestDiscretizedExponential():
+
+    def test_basic(self):
+        np.random.seed(987146)
+        d_offset = 0
+        paramg = (0, 5)  # include constant so we can use args in gamma
+        paramd = (5,)
+        dp = DiscretizedCount(stats.expon, d_offset)
+        assert dp.shapes == "s"
+        xi = np.arange(5)
+        p = dp._pmf(xi, *paramd)
+
+        cdf1 = stats.expon.cdf(xi, *paramg)
+        p1 = np.diff(cdf1)
+        assert_allclose(p[: len(p1)], p1, rtol=1e-13)
+        cdf = dp._cdf(xi, *paramd)
+        assert_allclose(cdf[: len(cdf1) - 1], cdf1[1:], rtol=1e-13)
+
+        # check that scipy dispatch methods work
+        p2 = dp.pmf(xi, *paramd)
+        assert_allclose(p2, p, rtol=1e-13)
+        cdf2 = dp.cdf(xi, *paramd)
+        assert_allclose(cdf2, cdf, rtol=1e-13)
+
+        nobs = 2000
+
+        xx = dp.rvs(*paramd, size=nobs)
+        mod = _DiscretizedModel(xx, distr=dp)
+        res = mod.fit(start_params=[5])
+        p = mod.predict(res.params)
+        p1 = -np.diff(stats.expon.sf(np.arange(21), *(0, res.params[0],)))
+        assert_allclose(p, p1, rtol=1e-13)
+
+        # using cdf limits precision to computation around 1
+        p1 = np.diff(stats.expon.cdf(np.arange(21), *(0, res.params[0])))
+        assert_allclose(p, p1, rtol=1e-13, atol=1e-15)
+        freq = np.bincount(xx.astype(int))
+        # truncate at last observed
+        k = len(freq)
+        p = mod.predict(res.params, k_max=k)
         p[k - 1] += 1 - p[:k].sum()
         tchi2 = stats.chisquare(freq, p[:k] * nobs)
         assert tchi2.pvalue > 0.01

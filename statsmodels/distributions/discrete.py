@@ -169,10 +169,19 @@ class DiscretizedCount(rv_discrete):
         self.d_offset = d_offset
         self._ctor_param = distr._ctor_param
         self.add_scale = add_scale
-        self.k_shapes = len(distr.shapes.split(","))
-        if add_scale:
-            kwds.update({"shapes": distr.shapes + ", s"})
-            self.k_shapes += 1
+        if distr.shapes is not None:
+            self.k_shapes = len(distr.shapes.split(","))
+            if add_scale:
+                kwds.update({"shapes": distr.shapes + ", s"})
+                self.k_shapes += 1
+        else:
+            # no shape parameters in underlying distribution
+            if add_scale:
+                kwds.update({"shapes": "s"})
+                self.k_shapes = 1
+            else:
+                self.k_shapes = 0
+
         super().__init__(**kwds)
 
     def _updated_ctor_param(self):
@@ -227,16 +236,16 @@ class _DiscretizedModel(GenericLikelihoodModel):
     def loglike(self, params):
         # this does not allow exog yet,
         # model `params` are also distribution `args`
-        args = (params[0], params[1])
+        args = params
         ll = np.log(self.distr._pmf(self.endog, *args))
         return ll.sum()
 
     def predict(self, params, which="probs", k_max=20):
-        args = (params[0], params[1])
+        args = params
         pr = self.distr.pmf(np.arange(k_max), *args)
         return pr
 
     def get_distr(self, params):
-        args = (params[0], params[1])
+        args = params
         distr = self.distr(*args)
         return distr
