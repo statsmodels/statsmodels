@@ -18,6 +18,7 @@ from statsmodels.tools.sm_exceptions import PerfectSeparationError
 from statsmodels.discrete import discrete_model as discrete
 from statsmodels.tools.sm_exceptions import DomainWarning
 from statsmodels.tools.numdiff import approx_fprime, approx_hess
+from statsmodels.tools.numdiff import approx_fprime_cs, approx_hess_cs
 from statsmodels.datasets import cpunish, longley
 
 # Test Precisions
@@ -2038,13 +2039,19 @@ def test_tweedie_EQL():
     for i in range(n):
         y[i] = np.random.gamma(alp, 1 / bet[i], N[i]).sum()
 
-    # Un-regularized fit using gradients not IRLS
+    # Un-regularized fit using gradients
     fam = sm.families.Tweedie(var_power=p, eql=True)
     model1 = sm.GLM(y, x, family=fam)
     result1 = model1.fit(method="newton")
     assert_allclose(result1.params,
        np.array([1.00350497, -0.99656954, 0.00802702, 0.50713209]),
        rtol=1e-5, atol=1e-5)
+
+    # Un-regularized fit using IRLS
+    model1x = sm.GLM(y, x, family=fam)
+    result1x = model1x.fit(method="irls")
+    assert_allclose(result1.params, result1x.params)
+    assert_allclose(result1.bse, result1x.bse, rtol=1e-2)
 
     # Lasso fit using coordinate-wise descent
     # TODO: The search gets trapped in an infinite oscillation, so use
@@ -2060,7 +2067,7 @@ def test_tweedie_EQL():
 
     # Series of ridge fits using gradients
     ev = (np.array([1.001778, -0.99388, 0.00797, 0.506183]),
-          np.array([0.985841, -0.969124, 0.007319, 0.497649]),
+          np.array([0.98586638, -0.96953481, 0.00749983, 0.4975267]),
           np.array([0.206429, -0.164547, 0.000235, 0.102489]))
     for j, alpha in enumerate([0.05, 0.5, 0.7]):
         model3 = sm.GLM(y, x, family=fam)
@@ -2071,7 +2078,7 @@ def test_tweedie_EQL():
         alpha = alpha * np.ones(x.shape[1])
         alpha[0] = 0
         result5 = model3.fit_regularized(L1_wt=0, alpha=alpha)
-        assert not np.allclose(result5.params, result4.params, rtol=rtol, atol=atol)
+        assert not np.allclose(result5.params, result4.params)
 
 
 def test_tweedie_EQL_poisson_limit():
@@ -2487,3 +2494,36 @@ def test_qaic():
     # This won't matter when comparing models by differencing
     # QAICs.
     assert_allclose(qaic, 29.13266, rtol=1e-5, atol=1e-5)
+
+def test_tweedie_score():
+
+    np.random.seed(3242)
+    n = 500
+    x = np.random.normal(size=(n, 4))
+    lpr = np.dot(x, np.r_[1, -1, 0, 0.5])
+    mu = np.exp(lpr)
+
+    p0 = 1.5
+    lam = 10 * mu**(2 - p0) / (2 - p0)
+    alp = (2 - p0) / (p0 - 1)
+    bet = 10 * mu**(1 - p0) / (p0 - 1)
+    y = np.empty(n)
+    N = np.random.poisson(lam)
+    for i in range(n):
+        y[i] = np.random.gamma(alp, 1 / bet[i], N[i]).sum()
+
+    for p in [1, 1.5, 2]:
+
+        fam = sm.families.Tweedie(var_power=p, eql=True)
+        model = GLM(y, x, family=fam)
+        result = model.fit()
+
+        pa = result.params + 0.2*np.random.normal(size=result.params.size)
+
+        ngrad = approx_fprime_cs(pa, lambda x: model.loglike(x, scale=1))
+        agrad = model.score(pa, scale=1)
+        assert_allclose(ngrad, agrad, atol=1e-8, rtol=1e-8)
+
+        nhess = approx_hess_cs(pa, lambda x: model.loglike(x, scale=1))
+        ahess = model.hessian(pa, scale=1)
+        assert_allclose(nhess, ahess, atol=1e-8, rtol=1e-8)
