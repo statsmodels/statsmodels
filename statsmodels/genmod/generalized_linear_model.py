@@ -504,8 +504,17 @@ class GLM(base.LikelihoodModel):
         if scale is None:
             scale = self.estimate_scale(mu)
 
-        score_factor = (self.endog - mu) / self.family.link.deriv(mu)
-        score_factor /= self.family.variance(mu)
+        if hasattr(self.family, "loglike_obs_deriv"):
+            # Families with approximate or improper log-likelihoods
+            # should implement derivatives directly.
+            lp = self.family.link(mu)
+            dldmu = self.family.loglike_obs_deriv(self.endog, mu)
+            dl = self.family.link.inverse_deriv(lp)
+            score_factor = dldmu*dl
+        else:
+            score_factor = (self.endog - mu) / self.family.link.deriv(mu)
+            score_factor /= self.family.variance(mu)
+
         score_factor *= self.iweights * self.n_trials
 
         if not scale == 1:

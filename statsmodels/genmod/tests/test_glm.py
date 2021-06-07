@@ -18,6 +18,7 @@ from statsmodels.tools.sm_exceptions import PerfectSeparationError
 from statsmodels.discrete import discrete_model as discrete
 from statsmodels.tools.sm_exceptions import DomainWarning
 from statsmodels.tools.numdiff import approx_fprime, approx_hess
+from statsmodels.tools.numdiff import approx_fprime_cs, approx_hess_cs
 from statsmodels.datasets import cpunish, longley
 
 # Test Precisions
@@ -2436,3 +2437,36 @@ def test_qaic():
     # This won't matter when comparing models by differencing
     # QAICs.
     assert_allclose(qaic, 29.13266, rtol=1e-5, atol=1e-5)
+
+def test_tweedie_score():
+
+    np.random.seed(3242)
+    n = 500
+    x = np.random.normal(size=(n, 4))
+    lpr = np.dot(x, np.r_[1, -1, 0, 0.5])
+    mu = np.exp(lpr)
+
+    p0 = 1.5
+    lam = 10 * mu**(2 - p0) / (2 - p0)
+    alp = (2 - p0) / (p0 - 1)
+    bet = 10 * mu**(1 - p0) / (p0 - 1)
+    y = np.empty(n)
+    N = np.random.poisson(lam)
+    for i in range(n):
+        y[i] = np.random.gamma(alp, 1 / bet[i], N[i]).sum()
+
+    for p in [1, 1.5, 2]:
+
+        fam = sm.families.Tweedie(var_power=p, eql=True)
+        model = GLM(y, x, family=fam)
+        result = model.fit()
+
+        pa = result.params + 0.2*np.random.normal(size=result.params.size)
+
+        ngrad = approx_fprime_cs(pa, lambda x: model.loglike(x, scale=1))
+        agrad = model.score(pa, scale=1)
+        assert_allclose(ngrad, agrad, atol=1e-8, rtol=1e-8)
+
+        nhess = approx_hess_cs(pa, lambda x: model.loglike(x, scale=1))
+        ahess = model.hessian(pa, scale=1)
+        #assert_allclose(nhess, ahess, atol=1e-8, rtol=1e-8)

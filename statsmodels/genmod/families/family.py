@@ -1487,7 +1487,7 @@ class Tweedie(Family):
             # We have not yet implemented the actual likelihood
             return np.nan
 
-        # Equations 9-10 or Nelder and Pregibon
+        # Equations 9-10 of Nelder and Pregibon
         p = self.var_power
         llf = np.log(2 * np.pi * scale) + p * np.log(mu) - np.log(var_weights)
         llf /= -2
@@ -1507,6 +1507,26 @@ class Tweedie(Family):
         llf -= u
 
         return llf
+
+    def loglike_obs_deriv(self, endog, mu, var_weights=1., scale=1.):
+
+        # Equations 9-10 of Nelder and Pregibon
+        p = self.var_power
+        dmu = -p / (2 * mu)
+
+        if p == 1:
+            du = 1 - endog / mu
+            du *= var_weights / scale
+        elif p == 2:
+            du = -endog / mu**2 + 1 / mu
+            du *= var_weights / scale
+        else:
+            du = -(2 - p) * (1 - p) * endog / mu ** p
+            du += (1 - p) * (2 - p) * mu ** (1 - p)
+            du *= var_weights / (scale * (1 - p) * (2 - p))
+        dmu -= du
+
+        return dmu
 
     def resid_anscombe(self, endog, mu, var_weights=1., scale=1.):
         r"""
