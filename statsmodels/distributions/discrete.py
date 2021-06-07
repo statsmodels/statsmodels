@@ -3,6 +3,8 @@ from scipy.stats import rv_discrete, nbinom, poisson
 from scipy.special import gammaln
 from scipy._lib._util import _lazywhere
 
+from statsmodels.base.model import GenericLikelihoodModel
+
 
 class genpoisson_p_gen(rv_discrete):
     '''Generalized Poisson distribution
@@ -148,3 +150,69 @@ class zinegativebinomial_gen(rv_discrete):
 
 zinegbin = zinegativebinomial_gen(name='zinegbin',
     longname='Zero Inflated Generalized Negative Binomial')
+
+
+class DiscretizedCount(rv_discrete):
+    """Count distribution based on discretized distribution
+    """
+
+    def __new__(cls, *args, **kwds):
+        # rv_discrete.__new__ does not allow `kwds`, skip it
+        # only does dispatch to multinomial
+        return super(rv_discrete, cls).__new__(cls)
+
+    def __init__(self, distr, d_offset=0, **kwds):
+        # kwds are extras in rv_discrete
+        self.distr = distr
+        self.d_offset = d_offset
+        self._ctor_param = distr._ctor_param
+        super().__init__(shapes=distr.shapes + ", s")
+
+    def _updated_ctor_param(self):
+        dic = super()._updated_ctor_param()
+        dic["distr"] = self.distr
+        return dic
+
+    def rvs(self, *args, size=1):
+        rv = np.trunc(self.distr.rvs(*args, size=size) + self.d_offset)
+        return rv
+
+    def _pmf(self, x, *args):
+        distr = self.distr
+        if self.d_offset != 0:
+            x = x + self.d_offset
+        p = distr.cdf(x + 1, *args) - distr.cdf(x, *args)
+        return p
+
+    def _cdf(self, x, *args):
+        distr = self.distr
+        if self.d_offset != 0:
+            x = x + self.d_offset
+        p = distr.cdf(x + 1, *args)
+        return p
+
+
+class _DiscretizedModel(GenericLikelihoodModel):
+    """experimental model to fit discretized distribution
+
+    """
+    def __init__(self, endog, exog=None, distr=None):
+        self.distr = distr
+        super().__init__(endog, exog)
+        self.df_resid = len(endog) - 2
+        self.df_model = 2
+
+    def loglike(self, params):
+        args = (params[0], 0, params[1])
+        ll = np.log(self.distr._pmf(self.endog, *args))
+        return ll.sum()
+
+    def predict(self, params, which="probs", k_max=20):
+        args = (params[0], 0, params[1])
+        pr = self.distr._pmf(np.arange(k_max), *args)
+        return pr
+
+    def get_distr(self, params):
+        args = (params[0], 0, params[1])
+        distr = self.distr(*args)
+        return distr

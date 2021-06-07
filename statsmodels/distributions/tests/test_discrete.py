@@ -2,8 +2,12 @@
 
 import numpy as np
 import statsmodels.api as sm
+from scipy import stats
 from scipy.stats import poisson, nbinom
 from numpy.testing import assert_allclose
+
+from statsmodels.distributions.discrete import (
+    DiscretizedCount, _DiscretizedModel)
 
 
 class TestGenpoisson_p(object):
@@ -220,3 +224,29 @@ class TestZiNBP(object):
         assert_allclose(1, zinb_m0, rtol=1e-10)
         assert_allclose(nb_m1, zinb_m1, rtol=1e-10)
         assert_allclose(nb_m2, zinb_m2, rtol=1e-10)
+
+
+class TestDiscretized():
+
+    def test_basic(self):
+        d_offset = 0
+        param = (5, 0, 0.5)
+        dp = DiscretizedCount(stats.gamma, d_offset)
+        xi = np.arange(5)
+        p = dp._pmf(xi, *param)
+
+        cdf1 = stats.gamma.cdf(xi, *param)
+        p1 = np.diff(cdf1)
+        assert_allclose(p[:len(p1)], p1, rtol=1e-13)
+        cdf = dp._cdf(xi, *param)
+        assert_allclose(cdf[: len(cdf1) - 1], cdf1[1:], rtol=1e-13)
+
+        nobs = 10000
+
+        xx = dp.rvs(*param, size=nobs)
+        mod = _DiscretizedModel(xx[:2000], distr=dp)
+        res = mod.fit(start_params=[5, 1])
+        p = mod.predict(res.params)
+        p1 = np.diff(stats.gamma.cdf(np.arange(21), *(res.params[0], 0, 
+                                                      res.params[1])))
+        assert_allclose(p, p1, rtol=1e-13)
