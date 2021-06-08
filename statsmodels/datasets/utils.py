@@ -182,6 +182,11 @@ def _get_dataset_meta(dataname, package, cache):
     data = data.decode('utf-8', 'strict')
     index = read_csv(StringIO(data))
     idx = np.logical_and(index.Item == dataname, index.Package == package)
+    if not idx.any():
+        raise ValueError(
+            f"Item {dataname} from Package {package} was not found. Check "
+            f"the CSV file at {index_url} to verify the Item and Package."
+        )
     dataset_meta = index.loc[idx]
     return dataset_meta["Title"].iloc[0]
 
