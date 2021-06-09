@@ -20,6 +20,7 @@ def test_brockwell_davis_example_517():
     # that they do this), but it is the value that allows the test to pass.
     hr, _ = hannan_rissanen(endog, ar_order=1, ma_order=1, demean=True,
                             initial_ar_order=22, unbiased=False)
+
     assert_allclose(hr.ar_params, [0.6961], atol=1e-4)
     assert_allclose(hr.ma_params, [0.3788], atol=1e-4)
 
@@ -86,9 +87,7 @@ def test_nonconsecutive_lags():
     endog = np.arange(20) * 1.0
     hannan_rissanen(endog, ar_order=[1, 4])
     hannan_rissanen(endog, ma_order=[1, 3])
-    hannan_rissanen(endog, ar_order=[1, 4], ma_order=[1, 3])
     hannan_rissanen(endog, ar_order=[0, 0, 1])
-    hannan_rissanen(endog, ma_order=[0, 0, 1])
     hannan_rissanen(endog, ar_order=[0, 0, 1], ma_order=[0, 0, 1])
 
     hannan_rissanen(endog, ar_order=0, ma_order=0)

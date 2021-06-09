@@ -16,7 +16,7 @@ from statsmodels.tsa.arima.params import SARIMAXParams
 
 
 def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
-                    initial_ar_order=None, unbiased=None):
+                    initial_ar_order=None, unbiased=None, fixed_params={}):
     """
     Estimate ARMA parameters using Hannan-Rissanen procedure.
 
@@ -38,6 +38,8 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
         Whether or not to apply the bias correction step. Default is True if
         the estimated coefficients from the previous step imply a stationary
         and invertible process and False otherwise.
+    fixed_params: dict, optional
+         if given a fixed value for a parameter then do not estimate that.
 
     Returns
     -------
@@ -101,7 +103,7 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
 
     # Default initial_ar_order is as suggested by Gomez and Maravall (2001)
     if initial_ar_order is None:
-        initial_ar_order = max(np.floor(np.log(nobs)**2).astype(int),
+        initial_ar_order = max(np.floor(np.log(nobs) ** 2).astype(int),
                                2 * max(max_ar_order, max_ma_order))
     # Create a spec, just to validate the initial autoregressive order
     _ = SARIMAXSpecification(endog, ar_order=initial_ar_order)
@@ -121,8 +123,16 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
         mod = OLS(endog[max_ar_order:], lagged_endog)
         res = mod.fit()
         resid = res.resid
-        p.ar_params = res.params
+        if len(fixed_params) != 0:
+            if any("ar" in key for key in fixed_params) & len(fixed_params) == 1:
+                p.ar_params = (list(fixed_params.values()))[0]
+            else:
+                raise ValueError("No MA component")
+        else:
+            p.ar_params = res.params
+
         p.sigma2 = res.scale
+
     # Otherwise ARMA model
     else:
         # Step 1: Compute long AR model via Yule-Walker, get residuals
@@ -138,13 +148,41 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
 
         # Step 2: estimate ARMA model via least squares
         ix = initial_ar_order + max_ma_order - max_ar_order
-        mod = OLS(endog[initial_ar_order + max_ma_order:],
-                  np.c_[lagged_endog[ix:], lagged_resid])
-        res = mod.fit()
-        p.ar_params = res.params[:spec.k_ar_params]
-        p.ma_params = res.params[spec.k_ar_params:]
-        resid = res.resid
-        p.sigma2 = res.scale
+        exog = np.c_[lagged_endog[ix:], lagged_resid]
+
+        # if given fixed params
+        if len(fixed_params) != 0:
+            if any("ar" in key for key in fixed_params) & len(fixed_params) == 1:
+                fix_p = exog[:, 0] * (list(fixed_params.values()))[0]
+                exog_with_fixed = exog[:, 1]
+                endog_with_fixed = endog[initial_ar_order + max_ma_order:] - fix_p
+                mod = OLS(endog_with_fixed, exog_with_fixed)
+                res = mod.fit()
+                p.ar_params = (list(fixed_params.values()))[0]
+                p.ma_params = res.params[:spec.k_ar_params]
+                resid = res.resid
+                p.sigma2 = res.scale
+
+            elif any("ma" in key for key in fixed_params) & len(fixed_params) == 1:
+                fix_p = exog[:, 1] * (list(fixed_params.values()))[0]
+                exog_with_fixed = exog[:, 0]
+                endog_with_fixed = endog[initial_ar_order + max_ma_order:] - fix_p
+                mod = OLS(endog_with_fixed, exog_with_fixed)
+                res = mod.fit()
+                p.ar_params = res.params[:spec.k_ar_params]
+                p.ma_params = (list(fixed_params.values()))[0]
+                resid = res.resid
+                p.sigma2 = res.scale
+
+        else:
+
+            mod = OLS(endog[initial_ar_order + max_ma_order:],
+                      exog)
+            res = mod.fit()
+            p.ar_params = res.params[:spec.k_ar_params]
+            p.ma_params = res.params[spec.k_ar_params:]
+            resid = res.resid
+            p.sigma2 = res.scale
 
         # Step 3: bias correction (if requested)
         if unbiased is True or unbiased is None:
@@ -178,13 +216,16 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
                     lagged_V[max(max_ma_order - max_ar_order, 0):, ar_ix],
                     lagged_W[max(max_ar_order - max_ma_order, 0):, ma_ix]]
 
+                if fixed_params:
+                    raise NotImplementedError
+
                 mod_unbias = OLS(Z[max(max_ar_order, max_ma_order):], exog)
                 res_unbias = mod_unbias.fit()
 
                 p.ar_params = (
-                    p.ar_params + res_unbias.params[:spec.k_ar_params])
+                        p.ar_params + res_unbias.params[:spec.k_ar_params])
                 p.ma_params = (
-                    p.ma_params + res_unbias.params[spec.k_ar_params:])
+                        p.ma_params + res_unbias.params[spec.k_ar_params:])
 
                 # Recompute sigma2
                 resid = mod.endog - mod.exog.dot(
