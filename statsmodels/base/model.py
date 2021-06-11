@@ -2281,7 +2281,9 @@ class ResultMixin(object):
         # collect different ways of defining the number of parameters, used for
         # aic, bic
         if hasattr(self, 'df_model'):
-            if hasattr(self, 'hasconst'):
+            if hasattr(self, 'k_constant'):
+                hasconst = self.k_constant
+            elif hasattr(self, 'hasconst'):
                 hasconst = self.hasconst
             else:
                 # default assumption

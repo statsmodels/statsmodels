@@ -155,7 +155,13 @@ zinegbin = zinegativebinomial_gen(name='zinegbin',
 class DiscretizedCount(rv_discrete):
     """Count distribution based on discretized distribution
 
-    `loc` argument is not supported, shape is disallowed by scipy for discrete
+    Notes
+    -----
+    `loc` argument is currently not supported, scale is not available for
+    discrete distributions in scipy. The scale parameter of the underlying
+    continuous distribution is the last shape parameter in this
+    DiscretizedCount distribution.
+
     """
 
     def __new__(cls, *args, **kwds):
@@ -228,14 +234,19 @@ class _DiscretizedModel(GenericLikelihoodModel):
 
     """
     def __init__(self, endog, exog=None, distr=None):
+        if exog is not None:
+            raise ValueError("exog is not supported")
         self.distr = distr
         super().__init__(endog, exog)
         self.df_resid = len(endog) - distr.k_shapes
         self.df_model = distr.k_shapes  # no constant subtracted
+        self.k_constant = 0
 
     def loglike(self, params):
+
         # this does not allow exog yet,
         # model `params` are also distribution `args`
+        # For regression model this needs to be replaced by a conversion method
         args = params
         ll = np.log(self.distr._pmf(self.endog, *args))
         return ll.sum()
@@ -246,6 +257,8 @@ class _DiscretizedModel(GenericLikelihoodModel):
         return pr
 
     def get_distr(self, params):
+        """frozen distribution instance of the discrete distribution.
+        """
         args = params
         distr = self.distr(*args)
         return distr
