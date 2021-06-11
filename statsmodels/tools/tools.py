@@ -192,7 +192,7 @@ def categorical(data, col=None, dictnames=False, drop=False):
                    cat in dummies}
         if not drop:
             dummies.columns = list(dummies.columns)
-            dummies = pd.concat([dummies, data], 1)
+            dummies = pd.concat([dummies, data], axis=1)
         if dictnames:
             return dummies, col_map
         return dummies

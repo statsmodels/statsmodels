@@ -74,7 +74,7 @@ def gen_ols_regressors(ar, seasonal, trend, exog):
     else:
         x = None
     reg.insert(0, y)
-    df = pd.concat(reg, 1).dropna()
+    df = pd.concat(reg, axis=1).dropna()
     endog = df.iloc[:, 0]
     exog = df.iloc[:, 1:]
     return y, x, endog, exog

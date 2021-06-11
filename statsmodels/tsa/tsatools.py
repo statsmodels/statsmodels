@@ -139,7 +139,7 @@ def add_trend(x, trend="c", prepend=False, has_constant='skip'):
     if is_recarray or is_pandas:
         trendarr = pd.DataFrame(trendarr, index=x.index, columns=columns)
         x = [trendarr, x]
-        x = pd.concat(x[::order], 1)
+        x = pd.concat(x[::order], axis=1)
     else:
         x = [trendarr, x]
         x = np.column_stack(x[::order])

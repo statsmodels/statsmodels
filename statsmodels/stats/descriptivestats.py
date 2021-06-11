@@ -525,7 +525,7 @@ class Description:
             output = f"{{0:{fmt}}}%"
             perc.index = [output.format(val) for val in index]
 
-        return self._reorder(pd.concat([results_df, perc], 0))
+        return self._reorder(pd.concat([results_df, perc], axis=0))
 
     @cache_readonly
     def categorical(self) -> pd.DataFrame:

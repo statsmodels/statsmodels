@@ -704,7 +704,7 @@ class Lbw(object):
 
         data = pd.read_csv(filename)
         dummies = pd.get_dummies(data.race, prefix="race", drop_first=False)
-        data = pd.concat([data, dummies], 1)
+        data = pd.concat([data, dummies], axis=1)
         self.endog = data.low
         design = data[["age", "lwt", "race_black", "race_other", "smoke",
                        "ptl", "ht", "ui"]]
