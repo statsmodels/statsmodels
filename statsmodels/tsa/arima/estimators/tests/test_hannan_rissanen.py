@@ -108,6 +108,31 @@ def test_unbiased_error():
         hannan_rissanen(endog, ar_order=1, ma_order=1, unbiased=True)
 
 
+def test_set_default_unbiased():
+    # setting unbiased=None with stationary and invertible parameters should
+    # yield the exact same results as setting unbiased=True
+    endog = lake.copy()
+    p_1, other_results_2 = hannan_rissanen(
+        endog, ar_order=1, ma_order=1, unbiased=None
+    )
+
+    # unbiased=True
+    p_2, other_results_1 = hannan_rissanen(
+        endog, ar_order=1, ma_order=1, unbiased=True
+    )
+
+    np.testing.assert_array_equal(p_1.ar_params, p_2.ar_params)
+    np.testing.assert_array_equal(p_1.ma_params, p_2.ma_params)
+    assert p_1.sigma2 == p_2.sigma2
+    np.testing.assert_array_equal(other_results_1.resid, other_results_2.resid)
+
+    # unbiased=False
+    p_3, _ = hannan_rissanen(
+        endog, ar_order=1, ma_order=1, unbiased=False
+    )
+    assert not np.array_equal(p_1.ar_params, p_3.ar_params)
+
+
 @pytest.mark.parametrize(
     "ar_order, ma_order, fixed_params, invalid_fixed_params",
     [
@@ -143,8 +168,10 @@ def test_validate_fixed_params(ar_order, ma_order, fixed_params,
         )
     else:
         valid_params = sorted(list(set(spec.param_names) - {'sigma2'}))
-        msg = f"Invalid fixed parameter(s): {invalid_fixed_params}. " \
-              f"Please select among {valid_params}."
+        msg = (
+            f"Invalid fixed parameter(s): {invalid_fixed_params}. "
+            f"Please select among {valid_params}."
+        )
         # using direct `assert` to test error message instead of `match` since
         # the error message contains regex characters
         with pytest.raises(ValueError) as e:
@@ -247,18 +274,6 @@ def test_stitch_fixed_and_free_params(fixed_lags, free_lags, fixed_params,
     assert actual_all_params == expected_all_params
 
 
-def test_unbiased_error_with_fixed_params():
-    # unbiased=True or unbiased=None with fixed params should throw
-    # NotImplementedError for now
-    endog = np.random.normal(size=1000)
-    with pytest.raises(NotImplementedError):
-        hannan_rissanen(endog, ar_order=1, ma_order=1, unbiased=True,
-                        fixed_params={"ar.L1": 0})
-    with pytest.raises(NotImplementedError):
-        hannan_rissanen(endog, ar_order=1, ma_order=1, unbiased=None,
-                        fixed_params={"ar.L1": 0})
-
-
 @pytest.mark.parametrize(
     "fixed_params",
     [
@@ -293,3 +308,36 @@ def test_itsmr_with_fixed_params(fixed_params):
                             sigma2=1)
     tmp = u / v**0.5
     assert_allclose(np.inner(tmp, tmp) / len(u), 0.4773580109, atol=1e-4)
+
+
+def test_unbiased_error_with_fixed_params():
+    # unbiased=True with fixed params should throw NotImplementedError for now
+    endog = np.random.normal(size=1000)
+    msg = (
+        "Third step of Hannan-Rissanen estimation to remove parameter bias"
+        " is not yet implemented for the case with fixed parameters."
+    )
+    with pytest.raises(NotImplementedError, match=msg):
+        hannan_rissanen(endog, ar_order=1, ma_order=1, unbiased=True,
+                        fixed_params={"ar.L1": 0})
+
+
+def test_set_default_unbiased_with_fixed_params():
+    # setting unbiased=None with fixed params should yield the exact same
+    # results as setting unbiased=False
+    endog = np.random.normal(size=1000)
+    # unbiased=None
+    p_1, other_results_2 = hannan_rissanen(
+        endog, ar_order=1, ma_order=1, unbiased=None,
+        fixed_params={"ar.L1": 0.69607715}
+    )
+    # unbiased=False
+    p_2, other_results_1 = hannan_rissanen(
+        endog, ar_order=1, ma_order=1, unbiased=False,
+        fixed_params={"ar.L1": 0.69607715}
+    )
+
+    np.testing.assert_array_equal(p_1.ar_params, p_2.ar_params)
+    np.testing.assert_array_equal(p_1.ma_params, p_2.ma_params)
+    assert p_1.sigma2 == p_2.sigma2
+    np.testing.assert_array_equal(other_results_1.resid, other_results_2.resid)

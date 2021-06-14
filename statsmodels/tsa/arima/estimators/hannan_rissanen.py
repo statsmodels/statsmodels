@@ -211,64 +211,78 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
             p.sigma2 = res.scale
 
         # Step 3: bias correction (if requested)
-        if unbiased is True or unbiased is None:
+
+        # Step 3.1: validate `unbiased` argument and handle setting the default
+        if unbiased is True:
             if len(fixed_params) != 0:
-                raise NotImplementedError
-            elif p.is_stationary and p.is_invertible:
-                Z = np.zeros_like(endog)
-                V = np.zeros_like(endog)
-                W = np.zeros_like(endog)
+                raise NotImplementedError(
+                    "Third step of Hannan-Rissanen estimation to remove "
+                    "parameter bias is not yet implemented for the case "
+                    "with fixed parameters."
+                )
+            elif not (p.is_stationary and p.is_invertible):
+                raise ValueError(
+                    "Cannot perform third step of Hannan-Rissanen estimation "
+                    "to remove parameter bias, because parameters estimated "
+                    "from the second step are non-stationary or "
+                    "non-invertible."
+                )
+        elif unbiased is None:
+            if len(fixed_params) != 0:
+                unbiased = False
+            else:
+                unbiased = p.is_stationary and p.is_invertible
 
-                ar_coef = p.ar_poly.coef
-                ma_coef = p.ma_poly.coef
+        # Step 3.2: bias correction
+        if unbiased is True:
+            Z = np.zeros_like(endog)
+            V = np.zeros_like(endog)
+            W = np.zeros_like(endog)
 
-                for t in range(nobs):
-                    if t >= max(max_ar_order, max_ma_order):
-                        # Note: in the case of non-consecutive lag orders, the
-                        # polynomials have the appropriate zeros so we don't
-                        # need to subset `endog[t - max_ar_order:t]` or
-                        # Z[t - max_ma_order:t]
-                        tmp_ar = np.dot(
-                            -ar_coef[1:], endog[t - max_ar_order:t][::-1])
-                        tmp_ma = np.dot(ma_coef[1:],
-                                        Z[t - max_ma_order:t][::-1])
-                        Z[t] = endog[t] - tmp_ar - tmp_ma
+            ar_coef = p.ar_poly.coef
+            ma_coef = p.ma_poly.coef
 
-                V = lfilter([1], ar_coef, Z)
-                W = lfilter(np.r_[1, -ma_coef[1:]], [1], Z)
+            for t in range(nobs):
+                if t >= max(max_ar_order, max_ma_order):
+                    # Note: in the case of non-consecutive lag orders, the
+                    # polynomials have the appropriate zeros so we don't
+                    # need to subset `endog[t - max_ar_order:t]` or
+                    # Z[t - max_ma_order:t]
+                    tmp_ar = np.dot(
+                        -ar_coef[1:], endog[t - max_ar_order:t][::-1])
+                    tmp_ma = np.dot(ma_coef[1:],
+                                    Z[t - max_ma_order:t][::-1])
+                    Z[t] = endog[t] - tmp_ar - tmp_ma
 
-                lagged_V = lagmat(V, max_ar_order, trim='both')
-                lagged_W = lagmat(W, max_ma_order, trim='both')
+            V = lfilter([1], ar_coef, Z)
+            W = lfilter(np.r_[1, -ma_coef[1:]], [1], Z)
 
-                exog = np.c_[
-                    lagged_V[
-                        max(max_ma_order - max_ar_order, 0):,
-                        params_info.free_ar_ix
-                    ],
-                    lagged_W[
-                        max(max_ar_order - max_ma_order, 0):,
-                        params_info.free_ma_ix
-                    ]
+            lagged_V = lagmat(V, max_ar_order, trim='both')
+            lagged_W = lagmat(W, max_ma_order, trim='both')
+
+            exog = np.c_[
+                lagged_V[
+                    max(max_ma_order - max_ar_order, 0):,
+                    params_info.free_ar_ix
+                ],
+                lagged_W[
+                    max(max_ar_order - max_ma_order, 0):,
+                    params_info.free_ma_ix
                 ]
+            ]
 
-                mod_unbias = OLS(Z[max(max_ar_order, max_ma_order):], exog)
-                res_unbias = mod_unbias.fit()
+            mod_unbias = OLS(Z[max(max_ar_order, max_ma_order):], exog)
+            res_unbias = mod_unbias.fit()
 
-                p.ar_params = (
-                    p.ar_params + res_unbias.params[:spec.k_ar_params])
-                p.ma_params = (
-                    p.ma_params + res_unbias.params[spec.k_ar_params:])
+            p.ar_params = (
+                p.ar_params + res_unbias.params[:spec.k_ar_params])
+            p.ma_params = (
+                p.ma_params + res_unbias.params[spec.k_ar_params:])
 
-                # Recompute sigma2
-                resid = mod.endog - mod.exog.dot(
-                    np.r_[p.ar_params, p.ma_params])
-                p.sigma2 = np.inner(resid, resid) / len(resid)
-            elif unbiased is True:
-                raise ValueError('Cannot perform third step of Hannan-Rissanen'
-                                 ' estimation to remove parameter bias,'
-                                 ' because parameters estimated from the'
-                                 ' second step are non-stationary or'
-                                 ' non-invertible')
+            # Recompute sigma2
+            resid = mod.endog - mod.exog.dot(
+                np.r_[p.ar_params, p.ma_params])
+            p.sigma2 = np.inner(resid, resid) / len(resid)
 
     # TODO: Gomez and Maravall (2001) or Gomez (1998)
     # propose one more step here to further improve MA estimates
