@@ -4,10 +4,12 @@ import numpy as np
 import statsmodels.api as sm
 from scipy import stats
 from scipy.stats import poisson, nbinom
-from numpy.testing import assert_allclose
+from numpy.testing import assert_allclose, assert_equal
 
 from statsmodels.distributions.discrete import (
     DiscretizedCount, _DiscretizedModel)
+
+from statsmodels.tools.tools import Bunch
 
 
 class TestGenpoisson_p(object):
@@ -337,3 +339,51 @@ class TestDiscretizedBurr12(CheckDiscretized):
         cls.shapes = "c, d, s"
 
         cls.start_params = (0.5, 1, 0.5)
+
+
+class TestDiscretizedGammaEx():
+    # strike outbreaks example from Ch... 2012
+
+    # expand frequencies to observations, (no freq_weights yet)
+    freq = [46, 76, 24, 9, 1]
+    y = np.repeat(np.arange(5), freq)
+    # results from article table 7
+    res1 = Bunch(
+        params=[3.52636, 0.425617],
+        llf=-187.469,
+        chi2=1.701208,  # chisquare test
+        df_model=2,
+        p=0.4272,  # p-value for chi2
+        aic=378.938,
+        probs=[46.48, 73.72, 27.88, 6.5, 1.42])
+
+    dp = DiscretizedCount(stats.gamma)
+    mod = _DiscretizedModel(y, distr=dp)
+    res = mod.fit(start_params=[1, 1])
+    nobs = len(y)
+
+    assert_allclose(res.params, res1.params, rtol=1e-5)
+    assert_allclose(res.llf, res1.llf, atol=6e-3)
+    assert_allclose(res.aic, res1.aic, atol=6e-3)
+    assert_equal(res.df_model, res1.df_model)
+
+    probs = mod.predict(res.params)
+    probs_trunc = probs[:len(res1.probs)]
+    probs_trunc[-1] += 1 - probs_trunc.sum()
+    assert_allclose(probs_trunc * nobs, res1.probs, atol=6e-2)
+
+    assert_allclose(np.sum(freq), (probs_trunc * nobs).sum(), rtol=1e-10)
+    res_chi2 = stats.chisquare(freq, probs_trunc * nobs, ddof=len(res.params))
+    # regression test, numbers from running test
+    # close but not identical to article
+    assert_allclose(res_chi2.statistic, 1.70409356, rtol=1e-7)
+    assert_allclose(res_chi2.pvalue, 0.42654100, rtol=1e-7)
+
+    # smoke test for summary
+    res.summary()
+
+    np.random.seed(987146)
+    res_boots = res.bootstrap()
+    # only loose check, small default n_rep=100, agreement at around 3%
+    assert_allclose(res.params, res_boots[0], rtol=0.05)
+    assert_allclose(res.bse, res_boots[1], rtol=0.05)

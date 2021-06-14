@@ -162,6 +162,10 @@ class DiscretizedCount(rv_discrete):
     continuous distribution is the last shape parameter in this
     DiscretizedCount distribution.
 
+    References
+    ----------
+
+
     """
 
     def __new__(cls, *args, **kwds):
@@ -236,11 +240,13 @@ class _DiscretizedModel(GenericLikelihoodModel):
     def __init__(self, endog, exog=None, distr=None):
         if exog is not None:
             raise ValueError("exog is not supported")
-        self.distr = distr
-        super().__init__(endog, exog)
+
+        super().__init__(endog, exog, distr=distr)
+        self._init_keys.append('distr')
         self.df_resid = len(endog) - distr.k_shapes
         self.df_model = distr.k_shapes  # no constant subtracted
         self.k_constant = 0
+        self.nparams = distr.k_shapes  # needed for start_params
 
     def loglike(self, params):
 
