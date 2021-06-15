@@ -2281,7 +2281,9 @@ class ResultMixin(object):
         # collect different ways of defining the number of parameters, used for
         # aic, bic
         if hasattr(self, 'df_model'):
-            if hasattr(self, 'hasconst'):
+            if hasattr(self, 'k_constant'):
+                hasconst = self.k_constant
+            elif hasattr(self, 'hasconst'):
                 hasconst = self.hasconst
             else:
                 # default assumption
@@ -2396,8 +2398,10 @@ class ResultMixin(object):
                 exog_resamp = self.exog[rvsind, :]
             else:
                 exog_resamp = None
+            # build auxiliary model and fit
+            init_kwds = self.model._get_init_kwds()
             fitmod = self.model.__class__(self.endog[rvsind],
-                                          exog=exog_resamp)
+                                          exog=exog_resamp, **init_kwds)
             if hascloneattr:
                 for attr in self.model.cloneattr:
                     setattr(fitmod, attr, getattr(self.model, attr))
