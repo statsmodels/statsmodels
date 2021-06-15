@@ -48,11 +48,13 @@ release 0.13.0 includes bug fixes, refactorings and improvements in many areas.
 
 Major Feature
 -------------
-- Allow fixing parameters in ARIMA estimator Hannan-Rissanen (:pr:`7497`)
+- Allow fixing parameters in ARIMA estimator Hannan-Rissanen
+  (:pr:`7497`, :pr:`7501`)
 
 Submodules
 ----------
 
 ``tsa``
 ~~~~~~~
-- Allow fixing parameters in ARIMA estimator Hannan-Rissanen (:pr:`7497`)
+- Allow fixing parameters in ARIMA estimator Hannan-Rissanen
+  (:pr:`7497`, :pr:`7501`)
