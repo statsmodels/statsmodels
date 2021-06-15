@@ -2021,10 +2021,12 @@ class MLEModel(tsbase.TimeSeriesModel):
             Default is 1. Note that for time-invariant models, the initial
             impulse is not counted as a step, so if `steps=1`, the output will
             have 2 entries.
-        impulse : int or array_like
+        impulse : int, str or array_like
             If an integer, the state innovation to pulse; must be between 0
-            and `k_posdef-1`. Alternatively, a custom impulse vector may be
-            provided; must be shaped `k_posdef x 1`.
+            and `k_posdef-1`. If a str, it indicates which column of df
+            the unit (1) impulse is given.
+            Alternatively, a custom impulse vector may be provided; must be
+            shaped `k_posdef x 1`.
         orthogonalized : bool, optional
             Whether or not to perform impulse using orthogonalized innovations.
             Note that this will also affect custum `impulse` vectors. Default
@@ -3499,8 +3501,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             have 2 entries.
         impulse : int, str or array_like
             If an integer, the state innovation to pulse; must be between 0
-            and `k_posdef-1`. If an str, type of endog must be `pd.DataFrame`.
-            Alternatively, a custom impulse vector may be provided; must be 
+            and `k_posdef-1`. If a str, it indicates which column of df
+            the unit (1) impulse is given.
+            Alternatively, a custom impulse vector may be provided; must be
             shaped `k_posdef x 1`.
         orthogonalized : bool, optional
             Whether or not to perform impulse using orthogonalized innovations.
