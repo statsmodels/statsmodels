@@ -255,21 +255,28 @@ def test_package_fixed_and_free_params_info(fixed_params, spec_ar_lags,
 
 
 @pytest.mark.parametrize(
-    "fixed_lags, free_lags, fixed_params, free_params, expected_all_params",
+    "fixed_lags, free_lags, fixed_params, free_params, "
+    "spec_lags, expected_all_params",
     [
-        ([], [], [], [], []),
-        ([2], [], [0.2], [], [0.2]),
-        ([], [1], [], [0.2], [0.2]),
-        ([1], [3], [0.2], [-0.2], [0.2, -0.2]),
-        ([3], [1, 2], [0.2], [0.3, -0.2], [0.3, -0.2, 0.2]),
-        ([3, 1], [2, 4], [0.3, 0.1], [0.5, 0.], [0.1, 0.5, 0.3, 0.]),
-        ([3, 10], [1, 2], [0.2, 0.5], [0.3, -0.2], [0.3, -0.2, 0.2, 0.5]),
+        ([], [], [], [], [], []),
+        ([2], [], [0.2], [], [2], [0.2]),
+        ([], [1], [], [0.2], [1], [0.2]),
+        ([1], [3], [0.2], [-0.2], [1, 3],  [0.2, -0.2]),
+        ([3], [1, 2], [0.2], [0.3, -0.2], [1, 2, 3], [0.3, -0.2, 0.2]),
+        ([3, 1], [2, 4], [0.3, 0.1], [0.5, 0.],
+         [1, 2, 3, 4], [0.1, 0.5, 0.3, 0.]),
+        ([3, 10], [1, 2], [0.2, 0.5], [0.3, -0.2],
+         [1, 2, 3, 10], [0.3, -0.2, 0.2, 0.5]),
+        # edge case where 'spec_lags' is somehow not sorted
+        ([3, 10], [1, 2], [0.2, 0.5], [0.3, -0.2],
+         [3, 1, 10, 2], [0.2, 0.3, 0.5, -0.2]),
     ]
 )
 def test_stitch_fixed_and_free_params(fixed_lags, free_lags, fixed_params,
-                                      free_params, expected_all_params):
+                                      free_params, spec_lags,
+                                      expected_all_params):
     actual_all_params = _stitch_fixed_and_free_params(
-        fixed_lags, fixed_params, free_lags, free_params
+        fixed_lags, fixed_params, free_lags, free_params, spec_lags
     )
     assert actual_all_params == expected_all_params
 
