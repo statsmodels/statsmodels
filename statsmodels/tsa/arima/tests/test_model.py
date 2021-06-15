@@ -60,7 +60,8 @@ def test_invalid():
     # Need valid method
     assert_raises(ValueError, mod.fit, method='not_a_method')
 
-    # Can only use 'statespace' with fixed parameters
+    # Can only use certain methods with fixed parameters
+    # (e.g. 'statespace' and 'hannan-rissanen')
     with mod.fix_params({'ar.L1': 0.5}):
         assert_raises(ValueError, mod.fit, method='yule_walker')
 
@@ -385,3 +386,30 @@ data\n
     )
     with pytest.raises(ValueError, match="Roots of the autoregressive"):
         mod.fit(method="hannan_rissanen", low_memory=True, cov_type="none")
+
+
+@pytest.mark.parametrize(
+    "ar_order, ma_order, fixed_params",
+    [
+        (1, 1, {}),
+        (1, 1, {'ar.L1': 0}),
+        (2, 3, {'ar.L2': -1, 'ma.L1': 2}),
+        ([0, 1], 0, {'ar.L2': 0}),
+        ([1, 5], [0, 0, 1], {'ar.L5': -10, 'ma.L3': 5}),
+    ]
+)
+def test_hannan_rissanen_with_fixed_params(ar_order, ma_order, fixed_params):
+    # Test for basic uses of Hannan-Rissanen estimation with fixed parameters
+    endog = dta['infl'].diff().iloc[1:101]
+
+    desired_p, _ = hannan_rissanen(
+        endog, ar_order=ar_order, ma_order=ma_order,
+        demean=False, fixed_params=fixed_params
+    )
+    # no constant or trend (since trend would imply GLS estimation)
+    mod = ARIMA(endog, order=(ar_order, 0, ma_order), trend='n',
+                enforce_stationarity=False, enforce_invertibility=False)
+    with mod.fix_params(fixed_params):
+        res = mod.fit(method='hannan_rissanen')
+
+    assert_allclose(res.params, desired_p.params)
