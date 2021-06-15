@@ -207,9 +207,12 @@ class DiscretizedCount(rv_discrete):
             scale = 1
         return args, scale
 
-    def rvs(self, *args, size=1):
+    def _rvs(self, *args, size=None, random_state=None):
         args, scale = self._unpack_args(args)
-        rv = np.trunc(self.distr.rvs(*args, scale=scale, size=size) +
+        if size is None:
+            size = getattr(self, "_size", 1)
+        rv = np.trunc(self.distr.rvs(*args, scale=scale, size=size,
+                                     random_state=random_state) +
                       self.d_offset)
         return rv
 
@@ -232,6 +235,34 @@ class DiscretizedCount(rv_discrete):
         p = distr.cdf(x + 1, *args, scale=scale)
         return p
 
+    def _sf(self, x, *args):
+        distr = self.distr
+        args, scale = self._unpack_args(args)
+        if self.d_offset != 0:
+            x = x + self.d_offset
+        p = distr.sf(x + 1, *args, scale=scale)
+        return p
+
+    def _ppf(self, p, *args):
+        distr = self.distr
+        args, scale = self._unpack_args(args)
+
+        qc = distr.ppf(p, *args, scale=scale)
+        if self.d_offset != 0:
+            qc = qc + self.d_offset
+        q = np.floor(qc * (1 - 1e-15))
+        return q
+
+    def _isf(self, p, *args):
+        distr = self.distr
+        args, scale = self._unpack_args(args)
+
+        qc = distr.isf(p, *args, scale=scale)
+        if self.d_offset != 0:
+            qc = qc + self.d_offset
+        q = np.floor(qc * (1 - 1e-15))
+        return q
+
 
 class _DiscretizedModel(GenericLikelihoodModel):
     """experimental model to fit discretized distribution
@@ -247,6 +278,7 @@ class _DiscretizedModel(GenericLikelihoodModel):
         self.df_model = distr.k_shapes  # no constant subtracted
         self.k_constant = 0
         self.nparams = distr.k_shapes  # needed for start_params
+        self.start_params = 0.5 * np.ones(self.nparams)
 
     def loglike(self, params):
 
@@ -257,10 +289,17 @@ class _DiscretizedModel(GenericLikelihoodModel):
         ll = np.log(self.distr._pmf(self.endog, *args))
         return ll.sum()
 
-    def predict(self, params, which="probs", k_max=20):
+    def predict(self, params, exog=None, which=None, k_max=20):
+
+        if exog is not None:
+            raise ValueError("exog is not supported")
+
         args = params
-        pr = self.distr.pmf(np.arange(k_max), *args)
-        return pr
+        if which == "probs":
+            pr = self.distr.pmf(np.arange(k_max), *args)
+            return pr
+        else:
+            raise ValueError('only which="probs" is currently implemented')
 
     def get_distr(self, params):
         """frozen distribution instance of the discrete distribution.
