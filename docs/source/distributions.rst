@@ -27,6 +27,34 @@ Empirical Distributions
    StepFunction
    monotone_fn_inverter
 
+Count Distributions
+-------------------
+
+The `discrete` module contains classes for count distributions that are based
+on discretizing a continouus distribution, and specific count distributions
+that are not available in scipy.distributions like generalized poisson and
+zero-inflated count models.
+
+The latter are mainly in support of the corresponding models in
+`statsmodels.discrete`. Some methods are not specifically implemented and will
+use potentially slow inherited generic methods.
+
+.. module:: statsmodels.distributions.discrete
+   :synopsis: Support for count distributions
+
+.. currentmodule:: statsmodels.distributions.discrete
+
+.. autosummary::
+   :toctree: generated/
+
+   DiscretizedCount
+   DiscretizedModel
+   genpoisson_p
+   zigenpoisson
+   zinegbin
+   zipoisson
+
+
 Distribution Extras
 -------------------
 

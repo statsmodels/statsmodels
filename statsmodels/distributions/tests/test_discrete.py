@@ -7,7 +7,7 @@ from scipy.stats import poisson, nbinom
 from numpy.testing import assert_allclose, assert_equal
 
 from statsmodels.distributions.discrete import (
-    DiscretizedCount, _DiscretizedModel)
+    DiscretizedCount, DiscretizedModel)
 
 from statsmodels.tools.tools import Bunch
 
@@ -270,7 +270,7 @@ class CheckDiscretized():
         # check that we go a non-trivial rvs
         assert len(xx) == nobs
         assert xx.var() > 0.001
-        mod = _DiscretizedModel(xx, distr=dp)
+        mod = DiscretizedModel(xx, distr=dp)
         res = mod.fit(start_params=start_params)
         p = mod.predict(res.params, which="probs")
         args = self.convert_params(res.params)
@@ -392,7 +392,7 @@ class TestDiscretizedGammaEx():
             probs=[46.48, 73.72, 27.88, 6.5, 1.42])
 
         dp = DiscretizedCount(stats.gamma)
-        mod = _DiscretizedModel(y, distr=dp)
+        mod = DiscretizedModel(y, distr=dp)
         res = mod.fit(start_params=[1, 1])
         nobs = len(y)
 
