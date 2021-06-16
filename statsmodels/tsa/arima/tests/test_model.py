@@ -406,7 +406,7 @@ def test_hannan_rissanen_with_fixed_params(ar_order, ma_order, fixed_params):
         endog, ar_order=ar_order, ma_order=ma_order,
         demean=False, fixed_params=fixed_params
     )
-    # no constant or trend (since trend would imply GLS estimation)
+    # no constant or trend (since constant or trend would imply GLS estimation)
     mod = ARIMA(endog, order=(ar_order, 0, ma_order), trend='n',
                 enforce_stationarity=False, enforce_invertibility=False)
     with mod.fix_params(fixed_params):

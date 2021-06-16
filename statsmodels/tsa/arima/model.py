@@ -301,8 +301,8 @@ class ARIMA(sarimax.SARIMAX):
         methods_with_fixed_params = ['statespace', 'hannan_rissanen']
         if self._has_fixed_params and method not in methods_with_fixed_params:
             raise ValueError(
-                f'When parameters have been fixed, only the method '
-                f'{methods_with_fixed_params} can be used; got {method}.'
+                f"When parameters have been fixed, only the methods "
+                f"{methods_with_fixed_params} can be used; got '{method}'."
             )
 
         # Handle kwargs related to the fit method
