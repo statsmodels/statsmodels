@@ -32,6 +32,21 @@ def test_fix_params():
     assert_equal(mod._free_params_index, None)
 
 
+def test_nested_fix_params():
+    mod = mlemodel.MLEModel([], 1)
+    mod._param_names = ['a', 'b', 'c']
+    with mod.fix_params({'a': 2, 'b': 0}):
+        with mod.fix_params({'b': 1.}):
+            assert_(mod._has_fixed_params)
+            assert_equal(mod._fixed_params, {'a': 2, 'b': 1.})
+            assert_equal(mod._fixed_params_index, [0, 1])
+            assert_equal(mod._free_params_index, [2])
+    assert_(not mod._has_fixed_params)
+    assert_equal(mod._fixed_params, {})
+    assert_equal(mod._fixed_params_index, None)
+    assert_equal(mod._free_params_index, None)
+
+
 def test_results_append():
     endog = macrodata['infl']
     endog1 = endog.iloc[:100]
@@ -117,7 +132,17 @@ def test_results_apply():
     assert_allclose(res2_fit.llf_obs, res_fit.llf_obs)
 
 
-def test_sarimax_invalid():
+def test_mle_validate():
+    mod = mlemodel.MLEModel([], 1)
+    mod._param_names = ['a', 'b', 'c']
+    msg = 'Invalid parameter name passed: "d"'
+
+    with pytest.raises(ValueError, match=msg):
+        with mod.fix_params({'d': 1}):
+            pass
+
+
+def test_sarimax_validate():
     # Test for invalid uses of parameter fixing
     endog = macrodata['infl']
     mod1 = sarimax.SARIMAX(endog, order=(2, 0, 0))
@@ -139,6 +164,7 @@ def test_sarimax_invalid():
         assert_equal(mod1._fixed_params, {'ar.L1': 0.5, 'ar.L2': 0.2})
         assert_equal(mod1._fixed_params_index, [0, 1])
         assert_equal(mod1._free_params_index, [2])
+
     res = mod1.fit_constrained({'ar.L1': 0.5, 'ar.L2': 0.2},
                                start_params=[7.0], disp=False)
     assert_(res._has_fixed_params)
@@ -146,11 +172,19 @@ def test_sarimax_invalid():
     assert_equal(res._fixed_params_index, [0, 1])
     assert_equal(res._free_params_index, [2])
 
+    with mod1.fix_params({'ar.L1': 0.5, 'ar.L2': 0.}):
+        # overwrite ar.L2 with nested fix_params
+        with mod1.fix_params({'ar.L2': 0.2}):
+            assert_(mod1._has_fixed_params)
+            assert_equal(mod1._fixed_params, {'ar.L1': 0.5, 'ar.L2': 0.2})
+            assert_equal(mod1._fixed_params_index, [0, 1])
+            assert_equal(mod1._free_params_index, [2])
 
-def test_structural_invalid():
+
+def test_structural_validate():
     # Test for invalid uses of parameter fixing
     endog = macrodata['infl']
-    mod1 = structural.UnobservedComponents(endog, 'rwalk', ar=2)
+    mod1 = structural.UnobservedComponents(endog, 'rwalk', autoregressive=2)
 
     # Try to fix invalid parameter
     assert_raises(ValueError, mod1.fit_constrained, {'AR.L1': 0.5})
@@ -161,8 +195,31 @@ def test_structural_invalid():
             pass
     assert_raises(ValueError, mod1.fit_constrained, {'ar.L1': 0.5})
 
+    # But can fix the entire set of parameters that are part of a multivariate
+    # transformation
+    with mod1.fix_params({'ar.L1': 0.5, 'ar.L2': 0.2}):
+        assert_(mod1._has_fixed_params)
+        assert_equal(mod1._fixed_params, {'ar.L1': 0.5, 'ar.L2': 0.2})
+        assert_equal(mod1._fixed_params_index, [2, 3])
+        assert_equal(mod1._free_params_index, [0, 1])
 
-def test_dynamic_factor_invalid():
+    res = mod1.fit_constrained({'ar.L1': 0.5, 'ar.L2': 0.2},
+                               start_params=[7.0], disp=False)
+    assert_(res._has_fixed_params)
+    assert_equal(res._fixed_params, {'ar.L1': 0.5, 'ar.L2': 0.2})
+    assert_equal(res._fixed_params_index, [2, 3])
+    assert_equal(res._free_params_index, [0, 1])
+
+    with mod1.fix_params({'ar.L1': 0.5, 'ar.L2': 0.}):
+        # overwrite ar.L2 with nested fix_params
+        with mod1.fix_params({'ar.L2': 0.2}):
+            assert_(mod1._has_fixed_params)
+            assert_equal(mod1._fixed_params, {'ar.L1': 0.5, 'ar.L2': 0.2})
+            assert_equal(mod1._fixed_params_index, [2, 3])
+            assert_equal(mod1._free_params_index, [0, 1])
+
+
+def test_dynamic_factor_validate():
     # Test for invalid uses of parameter fixing
     endog = np.log(macrodata[['cpi', 'realgdp', 'realinv']]).diff().iloc[1:]
     endog = (endog - endog.mean()) / endog.std()
@@ -200,17 +257,29 @@ def test_dynamic_factor_invalid():
     with pytest.raises(ValueError):
         with mod2.fix_params({'L1.f1.f1': 0.5}):
             pass
+
     constraints = {'L1.f1.f1': 0.3, 'L2.f1.f1': 0.1}
     with mod2.fix_params(constraints):
         assert_(mod2._has_fixed_params)
         assert_equal(mod2._fixed_params, constraints)
         assert_equal(mod2._fixed_params_index, [6, 7])
         assert_equal(mod2._free_params_index, [0, 1, 2, 3, 4, 5])
+
     res2 = mod2.fit_constrained(constraints, disp=False)
     assert_(res2._has_fixed_params)
     assert_equal(res2._fixed_params, constraints)
     assert_equal(res2._fixed_params_index, [6, 7])
     assert_equal(res2._free_params_index, [0, 1, 2, 3, 4, 5])
+
+    with mod2.fix_params(constraints):
+        # overwrite L1.f1.f1 with nested fix_params
+        with mod2.fix_params({'L1.f1.f1': -0.3}):
+            assert_(mod2._has_fixed_params)
+            assert_equal(
+                mod2._fixed_params, {'L1.f1.f1': -0.3, 'L2.f1.f1': 0.1}
+            )
+            assert_equal(mod2._fixed_params_index, [6, 7])
+            assert_equal(mod2._free_params_index, [0, 1, 2, 3, 4, 5])
 
     # (same as previous, now k_factors=2)
     mod3 = dynamic_factor.DynamicFactor(
@@ -218,6 +287,7 @@ def test_dynamic_factor_invalid():
     with pytest.raises(ValueError):
         with mod3.fix_params({'L1.f1.f1': 0.3}):
             pass
+
     constraints = dict([('L1.f1.f1', 0.3), ('L1.f2.f1', 0.1),
                         ('L1.f1.f2', -0.05), ('L1.f2.f2', 0.1)])
     with mod3.fix_params(constraints):
@@ -225,11 +295,24 @@ def test_dynamic_factor_invalid():
         assert_equal(mod3._fixed_params, constraints)
         assert_equal(mod3._fixed_params_index, [9, 10, 11, 12])
         assert_equal(mod3._free_params_index, [0, 1, 2, 3, 4, 5, 6, 7, 8])
+
     res3 = mod3.fit_constrained(constraints, disp=False)
     assert_(res3._has_fixed_params)
     assert_equal(res3._fixed_params, constraints)
     assert_equal(res3._fixed_params_index, [9, 10, 11, 12])
     assert_equal(res3._free_params_index, [0, 1, 2, 3, 4, 5, 6, 7, 8])
+
+    with mod3.fix_params(constraints):
+        # overwrite L1.f1.f1 and L1.f2.f2 with nested fix_params
+        with mod3.fix_params({'L1.f1.f1': -0.3, 'L1.f2.f2': -0.1}):
+            assert_(mod3._has_fixed_params)
+            assert_equal(
+                mod3._fixed_params,
+                dict([('L1.f1.f1', -0.3), ('L1.f2.f1', 0.1),
+                      ('L1.f1.f2', -0.05), ('L1.f2.f2', -0.1)])
+            )
+            assert_equal(mod3._fixed_params_index, [9, 10, 11, 12])
+            assert_equal(mod3._free_params_index, [0, 1, 2, 3, 4, 5, 6, 7, 8])
 
     # Now, with enforce_stationarity=False, we can fix any of the factor AR
     # coefficients
@@ -286,7 +369,7 @@ def test_dynamic_factor_invalid():
     assert_equal(res6._free_params_index, [4, 5])
 
 
-def test_varmax_invalid():
+def test_varmax_validate():
     # Test for invalid uses of parameter fixing
     endog = np.log(macrodata[['cpi', 'realgdp']]).diff().iloc[1:]
     exog = np.log(macrodata[['realinv']]).diff().iloc[1:]
@@ -330,17 +413,29 @@ def test_varmax_invalid():
     with pytest.raises(ValueError):
         with mod3.fix_params({'L1.cpi.cpi': 0.5}):
             pass
+
     constraints = {'L1.cpi.cpi': 0.3, 'L2.cpi.cpi': 0.1}
     with mod3.fix_params(constraints):
         assert_(mod3._has_fixed_params)
         assert_equal(mod3._fixed_params, constraints)
         assert_equal(mod3._fixed_params_index, [1, 2])
         assert_equal(mod3._free_params_index, [0, 3])
+
     res3 = mod3.fit_constrained(constraints, start_params=[0, 1.], disp=False)
     assert_(res3._has_fixed_params)
     assert_equal(res3._fixed_params, constraints)
     assert_equal(res3._fixed_params_index, [1, 2])
     assert_equal(res3._free_params_index, [0, 3])
+
+    with mod3.fix_params(constraints):
+        # overwrite L1.cpi.cpi with nested fix_params
+        with mod3.fix_params({'L1.cpi.cpi': -0.3}):
+            assert_(mod3._has_fixed_params)
+            assert_equal(
+                mod3._fixed_params, {'L1.cpi.cpi': -0.3, 'L2.cpi.cpi': 0.1}
+            )
+            assert_equal(mod3._fixed_params_index, [1, 2])
+            assert_equal(mod3._free_params_index, [0, 3])
 
     # With k_endog > 1, we can only fix the entire set of AR coefficients when
     # `enforce_stationarity=True`.
