@@ -492,7 +492,10 @@ class MLEModel(tsbase.TimeSeriesModel):
         cache_free_params_index = self._free_params_index
 
         # Validate parameter names and values
-        self._validate_can_fix_params(set(params.keys()))
+        all_fixed_param_names = (
+            set(params.keys()) | set(self._fixed_params.keys())
+        )
+        self._validate_can_fix_params(all_fixed_param_names)
 
         # Set the new fixed parameters, keeping the order as given by
         # param_names

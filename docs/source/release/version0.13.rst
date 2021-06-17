@@ -58,3 +58,6 @@ Submodules
 ~~~~~~~
 - Allow fixing parameters in ARIMA estimator Hannan-Rissanen
   (:pr:`7497`, :pr:`7501`)
+- Fix a false validation error in a rare edge case of nested ``fix_params`` for
+  the following subclasses of ``MLEModel``: ``SARIMAX``, ``VARMAX``,
+  ``DynamicFactor``, ``UnobservedComponents`` (:pr:`7508`)
