@@ -2021,10 +2021,12 @@ class MLEModel(tsbase.TimeSeriesModel):
             Default is 1. Note that for time-invariant models, the initial
             impulse is not counted as a step, so if `steps=1`, the output will
             have 2 entries.
-        impulse : int or array_like
+        impulse : int, str or array_like
             If an integer, the state innovation to pulse; must be between 0
-            and `k_posdef-1`. Alternatively, a custom impulse vector may be
-            provided; must be shaped `k_posdef x 1`.
+            and `k_posdef-1`. If a str, it indicates which column of df
+            the unit (1) impulse is given.
+            Alternatively, a custom impulse vector may be provided; must be
+            shaped `k_posdef x 1`.
         orthogonalized : bool, optional
             Whether or not to perform impulse using orthogonalized innovations.
             Note that this will also affect custum `impulse` vectors. Default
@@ -2164,6 +2166,14 @@ class MLEModel(tsbase.TimeSeriesModel):
                                     start=iloc, end=end, **kwargs)
 
         # Compute the impulse responses
+
+        # Convert endog name to index
+        use_pandas = isinstance(self.data, PandasData)
+        if type(impulse) == str:
+            if not use_pandas:
+                raise ValueError('Endog must be pd.DataFrame.')
+            impulse = self.endog_names.index(impulse)
+
         irfs = sim_model.impulse_responses(
             steps, impulse, orthogonalized, cumulative)
 
@@ -2172,7 +2182,6 @@ class MLEModel(tsbase.TimeSeriesModel):
             irfs = irfs[:, 0]
 
         # Wrap data / squeeze where appropriate
-        use_pandas = isinstance(self.data, PandasData)
         if use_pandas:
             if self.k_endog == 1:
                 irfs = pd.Series(irfs, name=self.endog_names)
@@ -3490,10 +3499,12 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             Default is 1. Note that for time-invariant models, the initial
             impulse is not counted as a step, so if `steps=1`, the output will
             have 2 entries.
-        impulse : int or array_like
+        impulse : int, str or array_like
             If an integer, the state innovation to pulse; must be between 0
-            and `k_posdef-1`. Alternatively, a custom impulse vector may be
-            provided; must be shaped `k_posdef x 1`.
+            and `k_posdef-1`. If a str, it indicates which column of df
+            the unit (1) impulse is given.
+            Alternatively, a custom impulse vector may be provided; must be
+            shaped `k_posdef x 1`.
         orthogonalized : bool, optional
             Whether or not to perform impulse using orthogonalized innovations.
             Note that this will also affect custum `impulse` vectors. Default

@@ -15,6 +15,7 @@ from numpy.testing import assert_, assert_allclose
 from statsmodels.tools.sm_exceptions import EstimationWarning
 from statsmodels.tsa.statespace import (mlemodel, sarimax, structural, varmax,
                                         dynamic_factor)
+from statsmodels.tsa.vector_ar.tests.test_var import get_macrodata
 
 
 def test_sarimax():
@@ -268,6 +269,26 @@ def test_varmax():
     actual = mod.impulse_responses(params, steps, impulse=1,
                                    orthogonalized=True)
     assert_allclose(actual, np.c_[oirf_10, oirf_11], atol=1e-6)
+
+    # Impulse response passing column name
+    data = get_macrodata().view((float, 3), type=np.ndarray)
+
+    df = pd.DataFrame({
+        "a": data[:, 0],
+        "b": data[:, 1],
+        "c": data[:, 2]})
+
+    mod1 = varmax.VARMAX(df, order=(1, 0), trend='c')
+    mod1_result = mod1.fit()
+    mod2 = varmax.VARMAX(data, order=(1, 0), trend='c')
+    mod2_result = mod2.fit()
+
+    with pytest.raises(ValueError, match='Endog must be pd.DataFrame.'):
+        mod2_result.impulse_responses(6, impulse="b")
+
+    response1 = mod1_result.impulse_responses(6, impulse="b")
+    response2 = mod1_result.impulse_responses(6, impulse=[0, 1, 0])
+    assert_allclose(response1, response2)
 
     # VARMA(2, 2) + trend + exog
     # TODO: This is just a smoke test
