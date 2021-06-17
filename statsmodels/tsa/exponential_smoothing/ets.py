@@ -2295,7 +2295,7 @@ class PredictionResults:
                     )
                 )
             if sim_results and isinstance(sim_results[0], pd.DataFrame):
-                self.simulation_results = pd.concat(sim_results, 0)
+                self.simulation_results = pd.concat(sim_results, axis=0)
             else:
                 self.simulation_results = np.concatenate(sim_results, axis=0)
             self.forecast_variance = self.simulation_results.var(1)

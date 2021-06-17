@@ -140,7 +140,7 @@ def get_index_loc(key, index):
             if index_class is PeriodIndex:
                 date_key = Period(key, freq=base_index.freq)
             else:
-                date_key = Timestamp(key, freq=base_index.freq)
+                date_key = Timestamp(key)
 
             # Out-of-sample
             if date_key > base_index[-1]:

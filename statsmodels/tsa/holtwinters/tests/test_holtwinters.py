@@ -808,7 +808,7 @@ def test_invalid_seasonal(seasonal):
 
 def test_2d_data():
     with pytest.raises(ValueError):
-        ExponentialSmoothing(pd.concat([housing_data, housing_data], 1)).fit()
+        ExponentialSmoothing(pd.concat([housing_data, housing_data], axis=1)).fit()
 
 
 def test_infer_freq():
