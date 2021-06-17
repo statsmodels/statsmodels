@@ -134,7 +134,7 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
         X_with_fixed_params = lagged_endog[:, params_info.fixed_ar_ix]
         y = endog[max_ar_order:]
         if X_with_fixed_params.shape[1] != 0:
-            y -= X_with_fixed_params.dot(params_info.fixed_ar_params)
+            y = y - X_with_fixed_params.dot(params_info.fixed_ar_params)
 
         # no free ar params -> variance computation on the endog residual
         if X_with_free_params.shape[1] == 0:
@@ -152,7 +152,8 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
                 fixed_ar_or_ma_lags=params_info.fixed_ar_lags,
                 fixed_ar_or_ma_params=params_info.fixed_ar_params,
                 free_ar_or_ma_lags=params_info.free_ar_lags,
-                free_ar_or_ma_params=res.params
+                free_ar_or_ma_params=res.params,
+                spec_ar_or_ma_lags=spec.ar_lags
             )
     # Otherwise ARMA model
     else:
@@ -178,7 +179,7 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
         ]
         y = endog[initial_ar_order + max_ma_order:]
         if X_with_fixed_params.shape[1] != 0:
-            y -= X_with_fixed_params.dot(
+            y = y - X_with_fixed_params.dot(
                 np.r_[params_info.fixed_ar_params, params_info.fixed_ma_params]
             )
 
@@ -199,13 +200,15 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
                 fixed_ar_or_ma_lags=params_info.fixed_ar_lags,
                 fixed_ar_or_ma_params=params_info.fixed_ar_params,
                 free_ar_or_ma_lags=params_info.free_ar_lags,
-                free_ar_or_ma_params=res.params[:k_free_ar_params]
+                free_ar_or_ma_params=res.params[:k_free_ar_params],
+                spec_ar_or_ma_lags=spec.ar_lags
             )
             p.ma_params = _stitch_fixed_and_free_params(
                 fixed_ar_or_ma_lags=params_info.fixed_ma_lags,
                 fixed_ar_or_ma_params=params_info.fixed_ma_params,
                 free_ar_or_ma_lags=params_info.free_ma_lags,
-                free_ar_or_ma_params=res.params[k_free_ar_params:]
+                free_ar_or_ma_params=res.params[k_free_ar_params:],
+                spec_ar_or_ma_lags=spec.ma_lags
             )
             resid = res.resid
             p.sigma2 = res.scale
@@ -389,7 +392,8 @@ def _package_fixed_and_free_params_info(fixed_params, spec_ar_lags,
 
 
 def _stitch_fixed_and_free_params(fixed_ar_or_ma_lags, fixed_ar_or_ma_params,
-                                  free_ar_or_ma_lags, free_ar_or_ma_params):
+                                  free_ar_or_ma_lags, free_ar_or_ma_params,
+                                  spec_ar_or_ma_lags):
     """
     Stitch together fixed and free params, by the order of lags, for setting
     SARIMAXParams.ma_params or SARIMAXParams.ar_params
@@ -402,6 +406,8 @@ def _stitch_fixed_and_free_params(fixed_ar_or_ma_lags, fixed_ar_or_ma_params,
     free_ar_or_ma_lags : list or np.array
     free_ar_or_ma_params : list or np.array
         free_ar_or_ma_params corresponds with free_ar_or_ma_lags
+    spec_ar_or_ma_lags : list
+        SARIMAXSpecification.ar_lags or SARIMAXSpecification.ma_lags
 
     Returns
     -------
@@ -412,6 +418,12 @@ def _stitch_fixed_and_free_params(fixed_ar_or_ma_lags, fixed_ar_or_ma_params,
 
     all_lags = np.r_[fixed_ar_or_ma_lags, free_ar_or_ma_lags]
     all_params = np.r_[fixed_ar_or_ma_params, free_ar_or_ma_params]
+    assert set(all_lags) == set(spec_ar_or_ma_lags)
 
-    sorted_idx = all_lags.argsort()
-    return list(all_params[sorted_idx])
+    lag_to_param_map = dict(zip(all_lags, all_params))
+
+    # Sort params by the order of their corresponding lags in
+    # spec_ar_or_ma_lags (e.g. SARIMAXSpecification.ar_lags or
+    # SARIMAXSpecification.ma_lags)
+    all_params_sorted = [lag_to_param_map[lag] for lag in spec_ar_or_ma_lags]
+    return all_params_sorted

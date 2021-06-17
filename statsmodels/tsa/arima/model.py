@@ -297,10 +297,13 @@ class ARIMA(sarimax.SARIMAX):
         else:
             method = 'statespace'
 
-        # Can only use fixed parameters with method='statespace'
-        if self._has_fixed_params and method != 'statespace':
-            raise ValueError('When parameters have been fixed, only the method'
-                             ' "statespace" can be used; got "%s".' % method)
+        # Can only use fixed parameters with the following methods
+        methods_with_fixed_params = ['statespace', 'hannan_rissanen']
+        if self._has_fixed_params and method not in methods_with_fixed_params:
+            raise ValueError(
+                f"When parameters have been fixed, only the methods "
+                f"{methods_with_fixed_params} can be used; got '{method}'."
+            )
 
         # Handle kwargs related to the fit method
         if method_kwargs is None:
@@ -345,6 +348,11 @@ class ARIMA(sarimax.SARIMAX):
             # Note: both GLS and statespace are able to handle models with
             # integration, so we don't need to difference endog or exog here.
             if has_exog and (gls or (gls is None and method != 'statespace')):
+                if self._has_fixed_params:
+                    raise NotImplementedError(
+                        'GLS estimation is not yet implemented for the case '
+                        'with fixed parameters.'
+                    )
                 p, fit_details = estimate_gls(
                     self.endog, exog=self.exog, order=self.order,
                     seasonal_order=self.seasonal_order, include_constant=False,
@@ -383,6 +391,8 @@ class ARIMA(sarimax.SARIMAX):
                 if seasonal_order[1] > 0:
                     seasonal_order = (seasonal_order[0], 0, seasonal_order[2],
                                       seasonal_order[3])
+            if self._has_fixed_params:
+                method_kwargs['fixed_params'] = self._fixed_params.copy()
 
             # Now, estimate parameters
             if method == 'yule_walker':
