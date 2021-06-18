@@ -2221,7 +2221,10 @@ class LikelihoodModelResults(Results):
         # make sure the cached for value_attrs are evaluated; this needs to
         # occur _before_ any other attributes are removed.
         for name in value_attrs:
-            getattr(self, name)
+            try:
+                getattr(self, name)
+            except NotImplementedError:
+                pass
         for name in data_attrs:
             self._cache[name] = None
 
