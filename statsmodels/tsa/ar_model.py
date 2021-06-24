@@ -10,12 +10,12 @@ import numpy as np
 import pandas as pd
 from scipy.stats import gaussian_kde, norm
 
-from statsmodels.tsa.base.prediction import PredictionResults
 import statsmodels.base.wrapper as wrap
 from statsmodels.iolib.summary import Summary
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.decorators import cache_readonly, cache_writable
 from statsmodels.tools.docstring import Docstring, remove_parameters
+from statsmodels.tools.sm_exceptions import SpecificationWarning
 from statsmodels.tools.validation import (
     array_like,
     bool_like,
@@ -24,15 +24,13 @@ from statsmodels.tools.validation import (
 )
 from statsmodels.tsa.arima_process import arma2ma
 from statsmodels.tsa.base import tsa_model
+from statsmodels.tsa.base.prediction import PredictionResults
 from statsmodels.tsa.deterministic import (
     DeterministicProcess,
     Seasonality,
     TimeTrend,
 )
-from statsmodels.tsa.tsatools import (
-    freq_to_period,
-    lagmat,
-)
+from statsmodels.tsa.tsatools import freq_to_period, lagmat
 
 __all__ = ["AR", "AutoReg"]
 
@@ -68,24 +66,15 @@ def sumofsq(x, axis=0):
     return np.sum(x ** 2, axis=axis)
 
 
-def _ar_predict_out_of_sample(y, params, k_ar, k_trend, steps, start=0):
-    mu = params[:k_trend] if k_trend else 0  # only have to worry constant
-    arparams = params[k_trend:][::-1]  # reverse for dot
-
-    # dynamic endogenous variable
-    endog = np.zeros(k_ar + steps)  # this is one too big but does not matter
-    if start:
-        endog[:k_ar] = y[start - k_ar : start]
-    else:
-        endog[:k_ar] = y[-k_ar:]
-
-    forecast = np.zeros(steps)
-    for i in range(steps):
-        fcast = mu + np.dot(arparams, endog[i : i + k_ar])
-        forecast[i] = fcast
-        endog[i + k_ar] = fcast
-
-    return forecast
+def _get_period(data, index_freq):
+    """Shared helper to get period from frequenc or raise"""
+    if data.freq:
+        return freq_to_period(index_freq)
+    raise ValueError(
+        "freq cannot be inferred from endog and model includes seasonal "
+        "terms.  The number of periods must be explicitly set when the "
+        "endog's index does not contain a frequency."
+    )
 
 
 class AutoReg(tsa_model.TimeSeriesModel):
@@ -98,10 +87,11 @@ class AutoReg(tsa_model.TimeSeriesModel):
     ----------
     endog : array_like
         A 1-d endogenous response variable. The dependent variable.
-    lags : {int, list[int]}
+    lags : {None, int, list[int]}
         The number of lags to include in the model if an integer or the
         list of lag indices to include.  For example, [1, 4] will only
         include lags 1 and 4 while lags=4 will include lags 1, 2, 3, and 4.
+        None excludes all AR lags, and behave identically to 0.
     trend : {'n', 'c', 't', 'ct'}
         The trend to include in the model:
 
@@ -192,23 +182,14 @@ class AutoReg(tsa_model.TimeSeriesModel):
         deterministic=None,
         old_names=False
     ):
-        super(AutoReg, self).__init__(endog, exog, None, None, missing=missing)
+        super().__init__(endog, exog, None, None, missing=missing)
         self._trend = string_like(
-            trend, "trend", options=("n", "c", "t", "ct")
+            trend, "trend", options=("n", "c", "t", "ct"), optional=False
         )
         self._seasonal = bool_like(seasonal, "seasonal")
         self._period = int_like(period, "period", optional=True)
         if self._period is None and self._seasonal:
-            if self.data.freq:
-                self._period = freq_to_period(self._index_freq)
-            else:
-                err = (
-                    "freq cannot be inferred from endog and model includes"
-                    " seasonal terms.  The number of periods must be "
-                    "explicitly set when the endog's index does not "
-                    "contain a frequency."
-                )
-                raise ValueError(err)
+            self._period = _get_period(self.data, self._index_freq)
         terms = [TimeTrend.from_string(self._trend)]
         if seasonal:
             terms.append(Seasonality(self._period))
@@ -226,7 +207,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
             self._deterministics = DeterministicProcess(
                 index, additional_terms=terms
             )
-        self._lags = lags
+        self._lags = lags if lags is not None else 0
         self._exog_names = []
         self._k_ar = 0
         self._hold_back = int_like(hold_back, "hold_back", optional=True)
@@ -237,7 +218,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
             warnings.warn(
                 'When using deterministic, trend must be "n" and '
                 "seasonal must be False.",
-                RuntimeWarning,
+                SpecificationWarning,
             )
         if self._old_names:
             warnings.warn(
@@ -253,7 +234,8 @@ class AutoReg(tsa_model.TimeSeriesModel):
     @property
     def ar_lags(self):
         """The autoregressive lags included in the model"""
-        return self._lags
+        lags = list(self._lags)
+        return None if not lags else lags
 
     @property
     def hold_back(self):
@@ -261,9 +243,19 @@ class AutoReg(tsa_model.TimeSeriesModel):
         return self._hold_back
 
     @property
+    def trend(self):
+        """The trend used in the model."""
+        return self._trend
+
+    @property
     def seasonal(self):
         """Flag indicating that the model contains a seasonal component."""
         return self._seasonal
+
+    @property
+    def period(self):
+        """The period of the seasonal component."""
+        return self._period
 
     @property
     def df_model(self):
@@ -292,7 +284,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
         else:
             self._maxlag = int_like(lags, "lags")
             if self._maxlag < 0:
-                raise ValueError("lags must be a positive scalar.")
+                raise ValueError("lags must be a non-negative scalar.")
             self._lags = np.arange(1, self._maxlag + 1)
         if self._hold_back is None:
             self._hold_back = self._maxlag
@@ -436,8 +428,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
 
     def _resid(self, params):
         params = array_like(params, "params", ndim=2)
-        resid = self._y - self._x @ params
-        return resid.squeeze()
+        return self._y.squeeze() - (self._x @ params).squeeze()
 
     def loglike(self, params):
         """
@@ -496,7 +487,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
         """
         resid = self._resid(params)
         sigma2 = resid @ resid / self.nobs
-        return sigma2 * (self._x.T @ self._x)
+        return (self._x.T @ self._x) * (1 / sigma2)
 
     def hessian(self, params):
         """
@@ -525,8 +516,9 @@ class AutoReg(tsa_model.TimeSeriesModel):
             x[:, loc:] = exog_oos[:add_forecasts]
         return x
 
-    def _wrap_prediction(self, prediction, start, end):
-        n_values = end - start
+    def _wrap_prediction(self, prediction, start, end, pad):
+        prediction = np.hstack([np.full(pad, np.nan), prediction])
+        n_values = end - start + pad
         if not isinstance(self.data.orig_endog, (pd.Series, pd.DataFrame)):
             return prediction[-n_values:]
         index = self._index
@@ -539,7 +531,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
                     index = pd.date_range(index[0], freq=freq, periods=end)
             else:
                 index = pd.RangeIndex(end)
-        index = index[start:end]
+        index = index[start-pad:end]
         prediction = prediction[-n_values:]
         return pd.Series(prediction, index=index)
 
@@ -559,7 +551,17 @@ class AutoReg(tsa_model.TimeSeriesModel):
         """
         reg = []
         hold_back = self._hold_back
+        adj = 0
+        if start < hold_back:
+            # Adjust start and dynamic
+            adj = hold_back - start
+        start += adj
+        # New offset shifts, but must remain non-negative
+        dynamic = max(dynamic - adj, 0)
+
         if (start - hold_back) <= self.nobs:
+            # _x is missing hold_back observations, which is why
+            # it is shifted by this amount
             is_loc = slice(start - hold_back, end + 1 - hold_back)
             x = self._x[is_loc]
             if exog is not None:
@@ -572,22 +574,21 @@ class AutoReg(tsa_model.TimeSeriesModel):
         reg = np.vstack(reg)
         det_col_idx = self._x.shape[1] - len(self._lags)
         det_col_idx -= 0 if self.exog is None else self.exog.shape[1]
-        # + 1 is due t0 inclusiveness of predict functions
-        adj_dynamic = dynamic - start + 1
+        # Simple 1-step static forecasts for dynamic observations
         forecasts = np.empty(reg.shape[0])
-        forecasts[:adj_dynamic] = reg[:adj_dynamic] @ params
-        for h in range(adj_dynamic, reg.shape[0]):
+        forecasts[:dynamic] = reg[:dynamic] @ params
+        for h in range(dynamic, reg.shape[0]):
             # Fill in regressor matrix
             for j, lag in enumerate(self._lags):
                 fcast_loc = h - lag
-                if fcast_loc >= 0:
+                if fcast_loc >= dynamic:
                     val = forecasts[fcast_loc]
                 else:
                     # If before the start of the forecasts, use actual values
-                    val = self.endog[start + fcast_loc]
+                    val = self.endog[fcast_loc + start]
                 reg[h, det_col_idx + j] = val
             forecasts[h] = reg[h : h + 1] @ params
-        return self._wrap_prediction(forecasts, start, end + 1 + num_oos)
+        return self._wrap_prediction(forecasts, start, end + 1 + num_oos, adj)
 
     def _static_oos_predict(self, params, num_oos, exog_oos):
         new_x = self._setup_oos_forecast(num_oos, exog_oos)
@@ -627,7 +628,12 @@ class AutoReg(tsa_model.TimeSeriesModel):
         nobs = self.endog.shape[0]
 
         x = np.empty((0, self._x.shape[1]))
+
+        # Adjust start to reflect observations lost
+        adj = max(0, hold_back - start)
+        start += adj
         if start <= nobs:
+            # Use existing regressors
             is_loc = slice(start - hold_back, end + 1 - hold_back)
             x = self._x[is_loc]
             if exog is not None:
@@ -636,12 +642,11 @@ class AutoReg(tsa_model.TimeSeriesModel):
                 x[:, -exog.shape[1] :] = exog[start : end + 1]
         in_sample = x @ params
         if num_oos == 0:  # No out of sample
-            return self._wrap_prediction(in_sample, start, end + 1)
+            return self._wrap_prediction(in_sample, start, end + 1, adj)
 
         out_of_sample = self._static_oos_predict(params, num_oos, exog_oos)
-
         prediction = np.hstack((in_sample, out_of_sample))
-        return self._wrap_prediction(prediction, start, end + 1 + num_oos)
+        return self._wrap_prediction(prediction, start, end + 1 + num_oos, adj)
 
     def predict(
         self,
@@ -702,7 +707,6 @@ class AutoReg(tsa_model.TimeSeriesModel):
         start = 0 if start is None else start
         end = self._index[-1] if end is None else end
         start, end, num_oos, _ = self._get_prediction_index(start, end)
-        start = max(start, self._hold_back)
         if self.exog is None and (exog is not None or exog_oos is not None):
             raise ValueError(
                 "exog and exog_oos cannot be used when the model "
@@ -746,19 +750,23 @@ class AutoReg(tsa_model.TimeSeriesModel):
                 params, start, end, num_oos, exog, exog_oos
             )
 
-        if isinstance(dynamic, (str, bytes, pd.Timestamp, dt.datetime)):
+        if isinstance(
+            dynamic, (str, bytes, pd.Timestamp, dt.datetime, pd.Period)
+        ):
             dynamic, _, _ = self._get_index_loc(dynamic)
-            offset = dynamic - start
+            # Adjust since relative to start
+            dynamic -= start
         elif dynamic is True:
-            # if True, all forecasts are dynamic, except start
-            offset = 0
+            # if True, all forecasts are dynamic
+            dynamic = 0
         else:
-            offset = int(dynamic)
-        dynamic = start + offset
+            dynamic = int(dynamic)
+        # At this point dynamic is an offset relative to start
+        # and it must be non-negative
         if dynamic < 0:
             raise ValueError(
-                "Dynamic prediction cannot begin prior to the"
-                " first observation in the sample."
+                "Dynamic prediction cannot begin prior to the "
+                "first observation in the sample."
             )
 
         return self._dynamic_predict(
@@ -838,9 +846,10 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         self._n_totobs = model.endog.shape[0]
         self._df_model = model.df_model
         self._ar_lags = model.ar_lags
-        self._max_lag = 0
-        if self._ar_lags.shape[0] > 0:
-            self._max_lag = self._ar_lags.max()
+        if self._ar_lags is not None:
+            self._max_lag = max(self._ar_lags)
+        else:
+            self._max_lag = 0
         self._hold_back = self.model.hold_back
         self.cov_params_default = cov_params
 
@@ -979,14 +988,15 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
 
     def _lag_repr(self):
         """Returns poly repr of an AR, (1  -phi1 L -phi2 L^2-...)"""
-        k_ar = len(self.ar_lags)
+        ar_lags = self._ar_lags if self._ar_lags is not None else []
+        k_ar = len(ar_lags)
         ar_params = np.zeros(self._max_lag + 1)
         ar_params[0] = 1
         df_model = self._df_model
         exog = self.model.exog
         k_exog = exog.shape[1] if exog is not None else 0
         params = self._params[df_model - k_ar - k_exog : df_model - k_exog]
-        for i, lag in enumerate(self._ar_lags):
+        for i, lag in enumerate(ar_lags):
             ar_params[lag] = -params[i]
         return ar_params
 
@@ -1000,6 +1010,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         Stability requires that the roots in modulus lie outside the unit
         circle.
         """
+        # TODO: Specific to AR
         lag_repr = self._lag_repr()
         if lag_repr.shape[0] == 1:
             return np.empty(0)
@@ -1014,6 +1025,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         This is the solution, x, to z = abs(z)*exp(2j*np.pi*x) where z are the
         roots.
         """
+        # TODO: Specific to AR
         z = self.roots
         return np.arctan2(z.imag, z.real) / (2 * np.pi)
 
@@ -1025,7 +1037,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         The `k_ar` initial values are computed via the Kalman Filter if the
         model is fit by `mle`.
         """
-        return self.model.predict(self.params)
+        return self.model.predict(self.params)[self._hold_back:]
 
     def test_serial_correlation(self, lags=None, model_df=None):
         """
@@ -1066,23 +1078,10 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
 
         lags = int_like(lags, "lags", optional=True)
         model_df = int_like(model_df, "df_model", optional=True)
-        model_df = len(self.ar_lags) if model_df is None else model_df
+        model_df = self.df_model if model_df is None else model_df
         nobs_effective = self.resid.shape[0]
-        # Default lags for acorr_ljungbox is 40, but may not always have
-        # that many observations
         if lags is None:
-            # TODO: Switch to min(10, nobs//5) after 0.12
-            warnings.warn(
-                "The default value of lags is changing.  After 0.12,"
-                " this value will become min(10, nobs//5). Directly "
-                "set lags to silence this warning.",
-                FutureWarning,
-            )
-            # Future
-            # lags = min(nobs // 5, 10)
-            lags = int(
-                min(12 * (nobs_effective / 100) ** (1 / 4), nobs_effective - 1)
-            )
+            lags = min(nobs_effective // 5, 10)
         test_stats = acorr_ljungbox(
             self.resid,
             lags=lags,
@@ -1095,7 +1094,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             test_stats = [list(test_stats) + [max(0, 1 - model_df)]]
         else:
             df = np.clip(np.arange(1, lags + 1) - model_df, 0, np.inf).astype(
-                np.int
+                int
             )
             test_stats = list(test_stats) + [df]
             test_stats = [
@@ -1157,8 +1156,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         lags = int_like(lags, "lags", optional=True)
         nobs_effective = self.resid.shape[0]
         if lags is None:
-            max_lag = (nobs_effective - 1) // 2
-            lags = int(min(12 * (nobs_effective / 100) ** (1 / 4), max_lag))
+            lags = min(nobs_effective // 5, 10)
         out = []
         for lag in range(1, lags + 1):
             res = het_arch(self.resid, nlags=lag, autolag=None)
@@ -1540,7 +1538,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         model = model.__class__.__name__
         if self.model.seasonal:
             model = "Seas. " + model
-        if len(self.ar_lags) < self._max_lag:
+        if self.ar_lags is not None and len(self.ar_lags) < self._max_lag:
             model = "Restr. " + model
         if self.model.exog is not None:
             model += "-X"
@@ -1654,7 +1652,7 @@ def ar_select_order(
     Parameters
     ----------
     endog : array_like
-        A 1-d endogenous response variable. The independent variable.
+         A 1-d endogenous response variable. The independent variable.
     maxlag : int
         The maximum lag to consider.
     ic : {'aic', 'hqic', 'bic'}

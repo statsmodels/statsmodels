@@ -13,7 +13,7 @@ import pytest
 from statsmodels.datasets import macrodata, sunspots
 from statsmodels.iolib.summary import Summary
 from statsmodels.regression.linear_model import OLS
-from statsmodels.tools.sm_exceptions import ValueWarning
+from statsmodels.tools.sm_exceptions import SpecificationWarning, ValueWarning
 from statsmodels.tools.tools import Bunch
 from statsmodels.tsa.ar_model import AutoReg, ar_select_order
 from statsmodels.tsa.arima_process import arma_generate_sample
@@ -292,6 +292,17 @@ def ar_data(request):
     )
 
 
+@pytest.fixture(scope="module")
+def ar2(request):
+    gen = np.random.RandomState(20210623)
+    e = gen.standard_normal(52)
+    y = 10 * np.ones_like(e)
+    for i in range(2, y.shape[0]):
+        y[i] = 1 + 0.5 * y[i - 1] + 0.4 * y[i - 2] + e[i]
+    index = pd.period_range("2000-01-01", periods=e.shape[0] - 2, freq="M")
+    return pd.Series(y[2:], index=index)
+
+
 params = product(
     [0, 3, [1, 3]],
     ["c"],
@@ -425,11 +436,9 @@ def test_parameterless_autoreg():
             "wald_test_terms",
         ):
             continue
-        warning = None if attr != "test_serial_correlation" else FutureWarning
         attr = getattr(res, attr)
         if callable(attr):
-            with pytest.warns(warning):
-                attr()
+            attr()
         else:
             assert isinstance(attr, object)
 
@@ -466,7 +475,7 @@ def test_predict_errors():
 
 def test_spec_errors():
     data = gen_data(250, 2, True)
-    with pytest.raises(ValueError, match="lags must be a positive scalar"):
+    with pytest.raises(ValueError, match="lags must be a non-negative scalar"):
         AutoReg(data.endog, -1)
     with pytest.raises(ValueError, match="All values in lags must be pos"):
         AutoReg(data.endog, [1, 1, 1])
@@ -524,10 +533,14 @@ class TestAutoRegOLSConstant(CheckAutoRegMixin):
         model = self.res1.model
         params = self.res1.params
         assert_almost_equal(
-            model.predict(params), self.res2.FVOLSnneg1start0, DECIMAL_4
+            model.predict(params)[model.hold_back :],
+            self.res2.FVOLSnneg1start0,
+            DECIMAL_4,
         )
         assert_almost_equal(
-            model.predict(params), self.res2.FVOLSnneg1start9, DECIMAL_4
+            model.predict(params)[model.hold_back :],
+            self.res2.FVOLSnneg1start9,
+            DECIMAL_4,
         )
         assert_almost_equal(
             model.predict(params, start=100),
@@ -540,7 +553,9 @@ class TestAutoRegOLSConstant(CheckAutoRegMixin):
             DECIMAL_4,
         )
         assert_almost_equal(
-            model.predict(params), self.res2.FVOLSdefault, DECIMAL_4
+            model.predict(params)[model.hold_back :],
+            self.res2.FVOLSdefault,
+            DECIMAL_4,
         )
         assert_almost_equal(
             model.predict(params, start=200, end=400),
@@ -584,10 +599,14 @@ class TestAutoRegOLSNoConstant(CheckAutoRegMixin):
         model = self.res1.model
         params = self.res1.params
         assert_almost_equal(
-            model.predict(params), self.res2.FVOLSnneg1start0, DECIMAL_4
+            model.predict(params)[model.hold_back :],
+            self.res2.FVOLSnneg1start0,
+            DECIMAL_4,
         )
         assert_almost_equal(
-            model.predict(params), self.res2.FVOLSnneg1start9, DECIMAL_4
+            model.predict(params)[model.hold_back :],
+            self.res2.FVOLSnneg1start9,
+            DECIMAL_4,
         )
         assert_almost_equal(
             model.predict(params, start=100),
@@ -600,7 +619,9 @@ class TestAutoRegOLSNoConstant(CheckAutoRegMixin):
             DECIMAL_4,
         )
         assert_almost_equal(
-            model.predict(params), self.res2.FVOLSdefault, DECIMAL_4
+            model.predict(params)[model.hold_back :],
+            self.res2.FVOLSdefault,
+            DECIMAL_4,
         )
         assert_almost_equal(
             model.predict(params, start=200, end=400),
@@ -758,6 +779,7 @@ def test_autoreg_score():
     assert isinstance(score, np.ndarray)
     assert score.shape == (4,)
     assert ar.information(res.params).shape == (4, 4)
+    assert_allclose(-ar.hessian(res.params), ar.information(res.params))
 
 
 def test_autoreg_roots():
@@ -858,6 +880,7 @@ def test_predict_exog():
     xdf = pd.DataFrame(x, columns=["x0", "x1"], index=ys.index)
     mod = AutoReg(ys, [1, 3], trend="c", exog=xdf)
     res = mod.fit()
+    assert "-X" in str(res.summary())
 
     pred = res.predict(900)
     c = res.params.iloc[0]
@@ -965,8 +988,12 @@ def test_deterministic(reset_randomstate):
     m2 = AutoReg(y, trend="ct", seasonal=True, lags=2, period=12)
     res2 = m2.fit()
     assert_almost_equal(np.asarray(res.params), np.asarray(res2.params))
-    with pytest.warns(RuntimeWarning, match="When using deterministic, trend"):
+    with pytest.warns(
+        SpecificationWarning, match="When using deterministic, trend"
+    ):
         AutoReg(y, trend="ct", seasonal=False, lags=2, deterministic=dp)
+    with pytest.raises(TypeError, match="deterministic must be"):
+        AutoReg(y, 2, deterministic="ct")
 
 
 def test_autoreg_predict_forecast_equiv(reset_randomstate):
@@ -1021,3 +1048,113 @@ def test_autoreg_resids():
     with pytest.warns(ValueWarning):
         res = AutoReg(ys, lags=2).fit()
     assert np.all(np.isfinite(res.resid))
+
+
+def test_dynamic_predictions(ar2):
+    mod = AutoReg(ar2, 2, trend="c")
+    res = mod.fit()
+
+    d25 = res.predict(dynamic=25)
+    s10_d15 = res.predict(start=10, dynamic=15)
+    sd_index = res.predict(start=ar2.index[10], dynamic=ar2.index[25])
+    reference = [np.nan, np.nan]
+    p = np.asarray(res.params)
+    for i in range(2, ar2.shape[0]):
+        lag1 = ar2[i - 1]
+        lag2 = ar2[i - 2]
+        if i > 25:
+            lag1 = reference[i - 1]
+        if i > 26:
+            lag2 = reference[i - 2]
+        reference.append(p[0] + p[1] * lag1 + p[2] * lag2)
+    expected = pd.Series(reference, index=ar2.index)
+    assert_allclose(expected, d25)
+
+    assert_allclose(s10_d15, sd_index)
+    assert_allclose(d25[25:], sd_index[15:])
+
+    full = res.predict()
+    assert_allclose(d25[:25], full[:25])
+
+
+def test_dynamic_predictions_oos(ar2):
+    mod = AutoReg(ar2, 2, trend="c")
+    res = mod.fit()
+
+    d25_end = res.predict(dynamic=25, end=61)
+    s10_d15_end = res.predict(start=10, dynamic=15, end=61)
+    end = ar2.index[-1] + 12 * (ar2.index[-1] - ar2.index[-2])
+    sd_index_end = res.predict(
+        start=ar2.index[10], dynamic=ar2.index[25], end=end
+    )
+    assert_allclose(s10_d15_end, sd_index_end)
+    assert_allclose(d25_end[25:], sd_index_end[15:])
+
+    reference = [np.nan, np.nan]
+    p = np.asarray(res.params)
+    for i in range(2, d25_end.shape[0]):
+        if i < ar2.shape[0]:
+            lag1 = ar2[i - 1]
+            lag2 = ar2[i - 2]
+        if i > 25:
+            lag1 = reference[i - 1]
+        if i > 26:
+            lag2 = reference[i - 2]
+        reference.append(p[0] + p[1] * lag1 + p[2] * lag2)
+    expected = pd.Series(reference, index=d25_end.index)
+    assert_allclose(expected, d25_end)
+
+
+def test_invalid_dynamic(ar2):
+    mod = AutoReg(ar2, 2, trend="c")
+    res = mod.fit()
+    with pytest.raises(ValueError, match="Dynamic prediction cannot"):
+        res.predict(dynamic=-1)
+    with pytest.raises(ValueError, match="Dynamic prediction cannot"):
+        res.predict(start=ar2.index[10], dynamic=ar2.index[5])
+
+
+def test_exog_prediction(ar2):
+    gen = np.random.RandomState(20210623)
+    exog = pd.DataFrame(
+        gen.standard_normal((ar2.shape[0], 2)),
+        columns=["x1", "x2"],
+        index=ar2.index,
+    )
+    mod = AutoReg(ar2, 2, trend="c", exog=exog)
+    res = mod.fit()
+    pred_base = res.predict()
+    pred_repl = res.predict(exog=exog)
+    assert_allclose(pred_base, pred_repl)
+
+    dyn_base = res.predict(dynamic=25)
+    dyn_repl = res.predict(dynamic=25, exog=exog)
+    assert_allclose(dyn_base, dyn_repl)
+
+
+def test_old_names(ar2):
+    with pytest.warns(FutureWarning):
+        mod = AutoReg(ar2, 2, trend="ct", seasonal=True, old_names=True)
+    new = AutoReg(ar2, 2, trend="ct", seasonal=True, old_names=False)
+
+    assert new.trend == "ct"
+    assert new.period == 12
+
+    assert "intercept" in mod.exog_names
+    assert "seasonal.1" in mod.exog_names
+
+    assert "const" in new.exog_names
+    assert "s(2,12)" in new.exog_names
+
+
+def test_diagnostic_summary_short(ar2):
+    res = AutoReg(ar2[:10], 2).fit()
+    assert isinstance(res.diagnostic_summary(), Summary)
+
+
+def test_ar_model_predict(ar2):
+    mod = AutoReg(ar2[:10], 2)
+    res = mod.fit()
+    res_pred = res.predict()
+    mod_pred = mod.predict(res.params)
+    assert_allclose(res_pred, mod_pred)
