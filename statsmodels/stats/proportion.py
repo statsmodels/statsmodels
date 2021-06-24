@@ -76,7 +76,6 @@ def proportion_confint(count, nobs, alpha=0.05, method='normal'):
     Brown, Lawrence D.; Cai, T. Tony; DasGupta, Anirban (2001). "Interval
         Estimation for a Binomial Proportion",
         Statistical Science 16 (2): 101–133. doi:10.1214/ss/1009213286.
-        TODO: Is this the correct one ?
 
     '''
 
