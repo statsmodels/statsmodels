@@ -185,6 +185,7 @@ available link functions can be obtained by
    Power
    cauchy
    cloglog
+   loglog
    identity
    inverse_power
    inverse_squared
