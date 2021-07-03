@@ -17,11 +17,12 @@ log = links.log()
 probit = links.probit()
 cauchy = links.cauchy()
 cloglog = links.CLogLog()
+loglog = links.LogLog()
 negbinom = links.NegativeBinomial()
 
 # TODO: parametrize all these tess
 Links = [logit, inverse_power, sqrt, inverse_squared, identity,
-         log, probit, cauchy, cloglog, negbinom]
+         log, probit, cauchy, cloglog, loglog, negbinom]
 
 
 def get_domainvalue(link):
@@ -31,6 +32,8 @@ def get_domainvalue(link):
     z = -np.log(np.random.uniform(0, 1))
     if isinstance(link, links.CLogLog):  # prone to overflow
         z = min(z, 3)
+    elif isinstance(link, links.CLogLog):
+        z = max(z, -3)
     elif isinstance(link, links.NegativeBinomial):
         # domain is negative numbers
         z = -z
