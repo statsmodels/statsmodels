@@ -1091,7 +1091,7 @@ class Binomial(Family):
         var_weights : array_like
             1d array of variance (analytic) weights. The default is 1.
             var_weights are ignored for Poisson.
-        n_trials : int or float
+        n_trials : int
             Number of trials for the binomial distribution. The default is 1
             which corresponds to a Bernoulli random variable.
 

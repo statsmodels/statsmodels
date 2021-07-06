@@ -222,6 +222,10 @@ class CheckModelResultsMixin(object):
         m, v = distr.stats()
         assert_allclose(res1.fittedvalues, m, rtol=1e-13)
         assert_allclose(var_endog, v, rtol=1e-13)
+        # check model method
+        distr2 = res1.model.get_distribution(res1.params, res_scale)
+        for k in distr2.kwds:
+            assert_allclose(distr.kwds[k], distr2.kwds[k], rtol=1e-13)
 
 
 class CheckComparisonMixin(object):
@@ -469,6 +473,12 @@ class TestGlmBinomial(CheckModelResultsMixin):
         m, v = distr.stats()
         assert_allclose(mu_prob * n, m, rtol=1e-13)
         assert_allclose(var_endog * n, v, rtol=1e-13)
+
+        # check model method
+        distr2 = res1.model.get_distribution(res1.params, res_scale,
+                                             n_trials=n)
+        for k in distr2.kwds:
+            assert_allclose(distr.kwds[k], distr2.kwds[k], rtol=1e-13)
 
 
 # FIXME: enable/xfail/skip or delete
