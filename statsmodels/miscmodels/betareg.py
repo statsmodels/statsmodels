@@ -16,12 +16,11 @@ Psychological methods 11.1 (2006): 54.
 from __future__ import print_function
 import numpy as np
 import pandas as pd
-import statsmodels.api as sm
-from statsmodels.tools.decorators import cache_readonly
+from scipy.special import gammaln as lgamma
 import patsy
 
-from scipy.special import gammaln as lgamma
-
+import statsmodels.api as sm
+from statsmodels.tools.decorators import cache_readonly
 from statsmodels.base.model import (GenericLikelihoodModel,
                                     GenericLikelihoodModelResults)
 from statsmodels.genmod.families import Binomial
@@ -43,17 +42,20 @@ _init_example = """
     >>> from sm.families.links import identity
     >>> Z = patsy.dmatrix('~ temp', dat, return_type='dataframe')
     >>> mod = Beta.from_formula('iyield ~ C(batch, Treatment(10)) + temp',
-    ...                         dat, exog_precision=Z, link_precision=identity())
+    ...                         dat, exog_precision=Z,
+    ...                         link_precision=identity())
 
     In the case of proportion-data, we may think that the precision depends on
     the number of measurements. E.g for sequence data, on the number of
     sequence reads covering a site:
 
     >>> Z = patsy.dmatrix('~ coverage', df)
-    >>> mod = Beta.from_formula('methylation ~ disease + age + gender + coverage', df, Z)
+    >>> formula = 'methylation ~ disease + age + gender + coverage'
+    >>> mod = Beta.from_formula(formula, df, Z)
     >>> rslt = mod.fit()
 
 """
+
 
 class Beta(GenericLikelihoodModel):
 
@@ -63,7 +65,7 @@ class Beta(GenericLikelihoodModel):
     """
 
     def __init__(self, endog, exog, exog_precision=None, link=Logit(),
-            link_precision=sm.families.links.Log(), **kwds):
+                 link_precision=sm.families.links.Log(), **kwds):
         """
         Parameters
         ----------
@@ -99,10 +101,10 @@ class Beta(GenericLikelihoodModel):
             extra_names = ['precision']
             exog_precision = np.ones((len(endog), 1), dtype='f')
         else:
-            extra_names = ['precision-%s' % zc for zc in \
-                    (exog_precision.columns \
-                    if hasattr(exog_precision, 'columns')
-                    else range(1, exog_precision.shape[1] + 1))]
+            extra_names = ['precision-%s' % zc for zc in
+                           (exog_precision.columns
+                            if hasattr(exog_precision, 'columns')
+                            else range(1, exog_precision.shape[1] + 1))]
 
         kwds['extra_params_names'] = extra_names
 
@@ -125,8 +127,7 @@ class Beta(GenericLikelihoodModel):
             kwargs['exog_precision'] = Z
 
         return super(Beta, cls).from_formula(formula, data, *args,
-                                      **kwargs)
-
+                                             **kwargs)
 
     def predict(self, params, exog=None):
         """predict values for mean, conditional expectation E(endog | exog)
@@ -137,10 +138,9 @@ class Beta(GenericLikelihoodModel):
         k_mean = self.exog.shape[1]
 
         params_mean = params[:k_mean]
-        Zparams = params[k_mean:]
+        # Zparams = params[k_mean:]
         mu = self.link.inverse(np.dot(exog, params_mean))
         return mu
-
 
     def predict_precision(self, params, exog_precision=None):
         """predict values for precision parameter for given exog_precision
@@ -156,7 +156,6 @@ class Beta(GenericLikelihoodModel):
 
         return phi
 
-
     def predict_var(self, params, exog=None, exog_precision=None):
         """predict values for conditional variance V(endog | exog)
 
@@ -167,7 +166,6 @@ class Beta(GenericLikelihoodModel):
 
         var_endog = mean * (1 - mean) / (1 + precision)
         return var_endog
-
 
     def nloglikeobs(self, params):
         """
@@ -196,12 +194,11 @@ class Beta(GenericLikelihoodModel):
         if np.any(alpha <= np.finfo(float).eps): return np.array(-np.inf)
         if np.any(beta <= np.finfo(float).eps): return np.array(-np.inf)
 
-        ll = lgamma(phi) - lgamma(mu * phi) - lgamma((1 - mu) * phi) \
-                + (mu * phi - 1) * np.log(y) + (((1 - mu) * phi) - 1) \
-                * np.log(1 - y)
+        ll = (lgamma(phi) - lgamma(mu * phi) - lgamma((1 - mu) * phi)
+              + (mu * phi - 1) * np.log(y)
+              + (((1 - mu) * phi) - 1) * np.log(1 - y))
 
         return ll
-
 
     def score(self, params):
         """
@@ -215,12 +212,10 @@ class Beta(GenericLikelihoodModel):
         d2 = np.dot(sf[:, 1], self.exog_precision)
         return np.concatenate((d1, d2))
 
-
     def score_check(self, params):
         """inherited score with finite differences
         """
         return super(Beta, self).score(params)
-
 
     def score_factor(self, params):
         """derivative of loglikelihood function without the exog
@@ -239,7 +234,7 @@ class Beta(GenericLikelihoodModel):
         mu = self.link.inverse(np.dot(X, Xparams))
         phi = self.link_precision.inverse(np.dot(Z, Zparams))
 
-        ystar = np.log( y / (1. - y))
+        ystar = np.log(y / (1. - y))
         mustar = digamma(mu * phi) - digamma((1 - mu) * phi)
         yt = np.log(1 - y)
         mut = digamma((1 - mu) * phi) - digamma(phi)
@@ -248,12 +243,12 @@ class Beta(GenericLikelihoodModel):
         h = 1. / self.link_precision.deriv(phi)
         #
         sf1 = phi * t * (ystar - mustar)
-        sf2 = h * ( mu * (ystar - mustar) + yt - mut)
+        sf2 = h * (mu * (ystar - mustar) + yt - mut)
 
         return np.column_stack((sf1, sf2))
 
-
-    def score_hessian_factor(self, params, return_hessian=False, observed=True):
+    def score_hessian_factor(self, params, return_hessian=False,
+                             observed=True):
         """derivatives of loglikelihood function without the exog
 
         This needs to be multiplied with the exog to obtain the score_obs
@@ -273,7 +268,7 @@ class Beta(GenericLikelihoodModel):
         mu = self.link.inverse(np.dot(X, Xparams))
         phi = self.link_precision.inverse(np.dot(Z, Zparams))
 
-        ystar = np.log( y / (1. - y))
+        ystar = np.log(y / (1. - y))
         mustar = digamma(mu * phi) - digamma((1 - mu) * phi)
         yt = np.log(1 - y)
         mut = digamma((1 - mu) * phi) - digamma(phi)
@@ -283,17 +278,16 @@ class Beta(GenericLikelihoodModel):
 
         ymu_star = (ystar - mustar)
         sf1 = phi * t * ymu_star
-        sf2 = h * ( mu * ymu_star + yt - mut)
+        sf2 = h * (mu * ymu_star + yt - mut)
 
         if return_hessian:
-            trigamma = lambda x: special.polygamma(1, x)
+            trigamma = lambda x: special.polygamma(1, x)  # noqa
             var_star = trigamma(mu * phi) + trigamma((1 - mu) * phi)
             var_t = trigamma((1 - mu) * phi) - trigamma(phi)
 
             c = - trigamma((1 - mu) * phi)
             s = self.link.deriv2(mu)
             q = self.link_precision.deriv2(phi)
-
 
             jbb = (phi * t) * var_star
             if observed:
@@ -311,7 +305,6 @@ class Beta(GenericLikelihoodModel):
 
         return np.column_stack((sf1, sf2)), (-jbb, -jbg, -jgg)
 
-
     def score_obs(self, params):
         sf = self.score_factor(params)
 
@@ -319,7 +312,6 @@ class Beta(GenericLikelihoodModel):
         d1 = sf[:, :1] * self.exog
         d2 = sf[:, 1:2] * self.exog_precision
         return np.column_stack((d1, d2))
-
 
     def hessian_1(self, params, observed=True):
         _, hf = self.score_hessian_factor(params, return_hessian=True,
@@ -332,7 +324,6 @@ class Beta(GenericLikelihoodModel):
         d12 = (self.exog.T * hf12).dot(self.exog_precision)
         d22 = (self.exog_precision.T * hf22).dot(self.exog_precision)
         return np.bmat([[d11, d12], [d12.T, d22]]).A
-
 
     def _start_params(self, niter=2, return_intermediate=False):
         """find starting values
@@ -359,11 +350,11 @@ class Beta(GenericLikelihoodModel):
         prec_i = fitted * (1 - fitted) / np.maximum(np.abs(resid), 1e-2)**2 - 1
         res_p = OLS(self.link_precision(prec_i), self.exog_precision).fit()
         prec_fitted = self.link_precision.inverse(res_p.fittedvalues)
-        #sp = np.concatenate((res_m.params, res_p.params))
+        # sp = np.concatenate((res_m.params, res_p.params))
 
         for _ in range(niter):
             y_var_inv = (1 + prec_fitted) / (fitted * (1 - fitted))
-            #y_var = fitted * (1 - fitted) / (1 + prec_fitted)
+            # y_var = fitted * (1 - fitted) / (1 + prec_fitted)
 
             ylink_var_inv = y_var_inv / self.link.deriv(fitted)**2
             res_m2 = WLS(self.link(self.endog), self.exog,
@@ -383,7 +374,6 @@ class Beta(GenericLikelihoodModel):
             return sp2, res_m2, res_p2
 
         return sp2
-
 
     def fit(self, start_params=None, maxiter=100000, maxfun=5000, disp=False,
             method='bfgs', **kwds):
@@ -410,8 +400,8 @@ class Beta(GenericLikelihoodModel):
 
         self.results_class = BetaRegressionResults
         return super(Beta, self).fit(start_params=start_params,
-                                        maxiter=maxiter, maxfun=maxfun,
-                                        method=method, disp=disp, **kwds)
+                                     maxiter=maxiter, maxfun=maxfun,
+                                     method=method, disp=disp, **kwds)
 
 
 class BetaRegressionResults(GenericLikelihoodModelResults):
@@ -425,22 +415,18 @@ class BetaRegressionResults(GenericLikelihoodModelResults):
     def fitted_precision(self):
         return self.model.predict_precision(self.params)
 
-
     @cache_readonly
     def resid(self):
         return self.model.endog - self.fittedvalues
-
 
     @cache_readonly
     def resid_pearson(self):
         return self.resid / np.sqrt(self.model.predict_var(self.params))
 
-
     def get_distribution_params(self):
         mean = self.fittedvalues
         precision = self.fitted_precision
         return precision * mean, precision * (1 - mean)
-
 
     def get_distribution(self):
         from scipy import stats
@@ -455,11 +441,11 @@ if __name__ == "__main__":
     fex = pd.read_csv('tests/foodexpenditure.csv')
     m = Beta.from_formula(' I(food/income) ~ income + persons', fex)
     print(m.fit().summary())
-    #print GLM.from_formula('iyield ~ C(batch) + temp', dat, family=Binomial()).fit().summary()
+    # print GLM.from_formula('iyield ~ C(batch) + temp', dat, family=Binomial()).fit().summary()
 
     dev = pd.read_csv('tests/methylation-test.csv')
     Z = patsy.dmatrix('~ age', dev, return_type='dataframe')
     m = Beta.from_formula('methylation ~ gender + CpG', dev,
-            exog_precision=Z,
-            link_precision=sm.families.links.identity())
+                          exog_precision=Z,
+                          link_precision=sm.families.links.identity())
     print(m.fit().summary())

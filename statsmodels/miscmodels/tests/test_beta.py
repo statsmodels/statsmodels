@@ -1,14 +1,16 @@
 from __future__ import print_function
 import io
 import os.path as op
-import sys
-from statsmodels.api import families
-links = families.links
-import pandas as pd
-import patsy
-from statsmodels.miscmodels.betareg import Beta
+
 import numpy as np
 from numpy.testing import assert_allclose
+import pandas as pd
+import patsy
+from statsmodels.api import families
+from statsmodels.miscmodels.betareg import Beta
+
+
+links = families.links
 
 HERE = op.abspath(op.dirname(__file__))
 
@@ -37,33 +39,41 @@ varname Estimate StdError zvalue Pr(>|z|)
 age         -0.03471    0.03276  -1.059    0.289"""
 
 
-expected_income_mean = pd.read_table(io.StringIO(_income_estimates_mean), sep="\s+")
-expected_income_precision = pd.read_table(io.StringIO(_income_estimates_precision), sep="\s+")
+expected_income_mean = pd.read_table(
+    io.StringIO(_income_estimates_mean), sep=r"\s+")
+expected_income_precision = pd.read_table(
+    io.StringIO(_income_estimates_precision), sep=r"\s+")
 
-expected_methylation_mean = pd.read_table(io.StringIO(_methylation_estimates_mean), sep="\s+")
-expected_methylation_precision = pd.read_table(io.StringIO(_methylation_estimates_precision), sep="\s+")
+expected_methylation_mean = pd.read_table(
+    io.StringIO(_methylation_estimates_mean), sep=r"\s+")
+expected_methylation_precision = pd.read_table(
+    io.StringIO(_methylation_estimates_precision), sep=r"\s+")
 
 income = pd.read_csv(op.join(HERE, 'foodexpenditure.csv'))
 methylation = pd.read_csv(op.join(HERE, 'methylation-test.csv'))
+
 
 def check_same(a, b, eps, name):
     assert np.allclose(a, b, rtol=0.01, atol=eps), \
             ("different from expected", name, list(a), list(b))
 
+
 def assert_close(a, b, eps):
     assert np.allclose(a, b, rtol=0.01, atol=eps), (list(a), list(b))
+
 
 class TestBeta(object):
 
     @classmethod
     def setup_class(self):
         model = "I(food/income) ~ income + persons"
-        self.income_fit =Beta.from_formula(model, income).fit()
+        self.income_fit = Beta.from_formula(model, income).fit()
 
         model = self.model = "methylation ~ gender + CpG"
         Z = self.Z = patsy.dmatrix("~ age", methylation)
-        self.meth_fit = Beta.from_formula(model, methylation, exog_precision=Z,
-                                          link_precision=links.identity()).fit()
+        mod = Beta.from_formula(model, methylation, exog_precision=Z,
+                                link_precision=links.identity())
+        self.meth_fit = mod.fit()
 
     def test_income_coefficients(self):
         rslt = self.income_fit
@@ -71,34 +81,40 @@ class TestBeta(object):
         assert_close(rslt.tvalues[:-1], expected_income_mean['zvalue'], 0.1)
         assert_close(rslt.pvalues[:-1], expected_income_mean['Pr(>|z|)'], 1e-3)
 
-
     def test_income_precision(self):
 
         rslt = self.income_fit
         # note that we have to exp the phi results for now.
-        assert_close(np.exp(rslt.params[-1:]), expected_income_precision['Estimate'], 1e-3)
-        #yield check_same, rslt.tvalues[-1:], expected_income_precision['zvalue'], 0.1, "z-score"
-        assert_close(rslt.pvalues[-1:], expected_income_precision['Pr(>|z|)'], 1e-3)
-
+        assert_close(np.exp(rslt.params[-1:]),
+                     expected_income_precision['Estimate'], 1e-3)
+        # yield check_same, rslt.tvalues[-1:],
+        #                   expected_income_precision['zvalue'], 0.1, "z-score"
+        assert_close(rslt.pvalues[-1:],
+                     expected_income_precision['Pr(>|z|)'], 1e-3)
 
     def test_methylation_coefficients(self):
         rslt = self.meth_fit
-        assert_close(rslt.params[:-2], expected_methylation_mean['Estimate'], 1e-2)
-        assert_close(rslt.tvalues[:-2], expected_methylation_mean['zvalue'], 0.1)
-        assert_close(rslt.pvalues[:-2], expected_methylation_mean['Pr(>|z|)'], 1e-2)
+        assert_close(rslt.params[:-2],
+                     expected_methylation_mean['Estimate'], 1e-2)
+        assert_close(rslt.tvalues[:-2],
+                     expected_methylation_mean['zvalue'], 0.1)
+        assert_close(rslt.pvalues[:-2],
+                     expected_methylation_mean['Pr(>|z|)'], 1e-2)
 
     def test_methylation_precision(self):
         rslt = self.meth_fit
 
-        #yield check_same, links.logit()(rslt.params[-2:]), expected_methylation_precision['Estimate'], 1e-3, "estimate"
-        #yield check_same, rslt.tvalues[-2:], expected_methylation_precision['zvalue'], 0.1, "z-score"
+        # yield check_same, links.logit()(rslt.params[-2:]),
+        #     expected_methylation_precision['Estimate'], 1e-3, "estimate"
+        # yield check_same, rslt.tvalues[-2:],
+        #     expected_methylation_precision['zvalue'], 0.1, "z-score"
 
     def test_precision_formula(self):
-        m = Beta.from_formula(self.model, methylation, exog_precision_formula='~ age',
-                                          link_precision=links.identity())
+        m = Beta.from_formula(self.model, methylation,
+                              exog_precision_formula='~ age',
+                              link_precision=links.identity())
         rslt = m.fit()
         assert_close(rslt.params, self.meth_fit.params, 1e-10)
-
 
     def test_scores(self):
         model, Z = self.model, self.Z
