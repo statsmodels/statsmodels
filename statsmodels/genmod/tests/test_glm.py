@@ -208,6 +208,7 @@ class CheckModelResultsMixin(object):
     def test_get_distribution(self):
         res1 = self.res1
         if not hasattr(res1.model.family, "get_distribution"):
+            # only Tweedie has not get_distribution
             pytest.skip("get_distribution not available")
 
         if isinstance(res1.model.family, sm.families.NegativeBinomial):
@@ -454,6 +455,20 @@ class TestGlmBinomial(CheckModelResultsMixin):
         with pytest.raises(ValueError, match='array with multiple columns'):
             sm.GLM.from_formula("y ~ x1 + x2", data,
                                 family=sm.families.Binomial())
+
+    def test_get_distribution_binom_count(self):
+        # test for binomial counts with n_trials > 1
+        res1 = self.res1
+        res_scale = 1  # QMLE scale can differ from 1
+
+        mu_prob = res1.fittedvalues
+        n = res1.model.n_trials
+        distr = res1.model.family.get_distribution(mu_prob, res_scale,
+                                                   n_trials=n)
+        var_endog = res1.model.family.variance(mu_prob) * res_scale
+        m, v = distr.stats()
+        assert_allclose(mu_prob * n, m, rtol=1e-13)
+        assert_allclose(var_endog * n, v, rtol=1e-13)
 
 
 # FIXME: enable/xfail/skip or delete

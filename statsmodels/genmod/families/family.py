@@ -1078,6 +1078,31 @@ class Binomial(Family):
         resid *= np.sqrt(var_weights)
         return resid
 
+    def get_distribution(self, mu, scale=1., var_weights=1., n_trials=1):
+        r"""
+        Frozen Binomial distribution instance for given parameters
+
+        Parameters
+        ----------
+        mu : ndarray
+            Usually but not always the fitted mean response variable.
+        scale : float
+            The scale parameter is ignored.
+        var_weights : array_like
+            1d array of variance (analytic) weights. The default is 1.
+            var_weights are ignored for Poisson.
+        n_trials : int or float
+            Number of trials for the binomial distribution. The default is 1
+            which corresponds to a Bernoulli random variable.
+
+        Returns
+        -------
+        distribution instance
+
+        """
+
+        return stats.binom(n=n_trials, p=mu)
+
 
 class InverseGaussian(Family):
     """
