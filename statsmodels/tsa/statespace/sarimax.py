@@ -1879,6 +1879,10 @@ class SARIMAXResults(MLEResults):
             end += k
             setattr(self, '_params_%s' % name, self.params[start:end])
             start += k
+        # GH7527, all terms must be defined
+        all_terms = ['ar', 'ma', 'seasonal_ar', 'seasonal_ma', 'variance']
+        for name in set(all_terms).difference(self.param_terms):
+            setattr(self, '_params_%s' % name, np.empty(0))
 
         # Handle removing data
         self._data_attr_model.extend(['orig_endog', 'orig_exog'])
