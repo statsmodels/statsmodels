@@ -900,7 +900,7 @@ class GLM(base.LikelihoodModel):
             return self.family.fitted(linpred)
 
     def get_distribution(self, params, scale=1., exog=None, exposure=None,
-                         offset=None):
+                         offset=None, var_weights=1.):
         """
         Return a random number generator for the predictive distribution.
 
@@ -942,8 +942,14 @@ class GLM(base.LikelihoodModel):
             return dist.poisson(mu=fit)
 
         elif isinstance(self.family, families.Gamma):
-            alpha = fit / float(scale)
-            return dist.gamma(alpha, scale=scale)
+            scale_ = scale / var_weights
+            shape = 1 / scale_
+            scale_g = fit * scale_
+            return dist.gamma(shape, scale=scale_g)
+
+        elif isinstance(self.family, families.InverseGaussian):
+            mu = fit * float(scale)
+            return dist.invgauss(mu, scale=1 / scale)
 
         else:
             raise ValueError("get_distribution not implemented for %s" %

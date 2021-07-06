@@ -10,7 +10,7 @@ The one parameter exponential family distributions used by GLM.
 import warnings
 import inspect
 import numpy as np
-from scipy import special
+from scipy import special, stats
 from . import links as L
 from . import varfuncs as V
 
@@ -493,6 +493,28 @@ class Poisson(Family):
         resid *= np.sqrt(var_weights)
         return resid
 
+    def get_distribution(self, mu, scale=1., var_weights=1.):
+        r"""
+        Frozen Poisson distribution instance for given parameters
+
+        Parameters
+        ----------
+        mu : ndarray
+            Usually but not always the fitted mean response variable.
+        scale : float
+            The scale parameter is ignored.
+        var_weights : array_like
+            1d array of variance (analytic) weights. The default is 1.
+            var_weights are ignored for Poisson.
+
+        Returns
+        -------
+        distribution instance
+
+        """
+
+        return stats.poisson(mu)
+
 
 class Gaussian(Family):
     """
@@ -637,6 +659,28 @@ class Gaussian(Family):
         resid *= np.sqrt(var_weights)
         return resid
 
+    def get_distribution(self, mu, scale, var_weights=1.):
+        r"""
+        Frozen Gaussian distribution instance for given parameters
+
+        Parameters
+        ----------
+        mu : ndarray
+            Usually but not always the fitted mean response variable.
+        scale : float
+            The scale parameter is required argument for get_distribution.
+        var_weights : array_like
+            1d array of variance (analytic) weights. The default is 1.
+
+        Returns
+        -------
+        distribution instance
+
+        """
+
+        scale_n = scale / var_weights
+        return stats.norm(loc=mu, scale=np.sqrt(scale_n))
+
 
 class Gamma(Family):
     """
@@ -770,6 +814,30 @@ class Gamma(Family):
         resid = 3 * (endog**(1/3.) - mu**(1/3.)) / mu**(1/3.) / scale ** 0.5
         resid *= np.sqrt(var_weights)
         return resid
+
+    def get_distribution(self, mu, scale, var_weights=1.):
+        r"""
+        Frozen Gamma distribution instance for given parameters
+
+        Parameters
+        ----------
+        mu : ndarray
+            Usually but not always the fitted mean response variable.
+        scale : float
+            The scale parameter is required argument for get_distribution.
+        var_weights : array_like
+            1d array of variance (analytic) weights. The default is 1.
+
+        Returns
+        -------
+        distribution instance
+
+        """
+        # combine var_weights with scale
+        scale_ = scale / var_weights
+        shape = 1 / scale_
+        scale_g = mu * scale_
+        return stats.gamma(shape, scale=scale_g)
 
 
 class Binomial(Family):
@@ -1144,10 +1212,33 @@ class InverseGaussian(Family):
         resid *= np.sqrt(var_weights)
         return resid
 
+    def get_distribution(self, mu, scale, var_weights=1.):
+        r"""
+        Frozen Inverse Gaussian distribution instance for given parameters
+
+        Parameters
+        ----------
+        mu : ndarray
+            Usually but not always the fitted mean response variable.
+        scale : float
+            The scale parameter is required argument for get_distribution.
+        var_weights : array_like
+            1d array of variance (analytic) weights. The default is 1.
+
+        Returns
+        -------
+        distribution instance
+
+        """
+        # combine var_weights with scale
+        scale_ = scale / var_weights
+        mu_ig = mu * scale_
+        return stats.invgauss(mu_ig, scale=1 / scale_)
+
 
 class NegativeBinomial(Family):
     r"""
-    Negative Binomial exponential family.
+    Negative Binomial exponential family (corresponds to NB2).
 
     Parameters
     ----------
@@ -1330,6 +1421,29 @@ class NegativeBinomial(Family):
         resid *= np.sqrt(var_weights)
         return resid
 
+    def get_distribution(self, mu, scale=1., var_weights=1.):
+        r"""
+        Frozen NegativeBinomial distribution instance for given parameters
+
+        Parameters
+        ----------
+        mu : ndarray
+            Usually but not always the fitted mean response variable.
+        scale : float
+            The scale parameter is ignored.
+        var_weights : array_like
+            1d array of variance (analytic) weights. The default is 1.
+            var_weights are ignored for NegativeBinomial.
+
+        Returns
+        -------
+        distribution instance
+
+        """
+        size = 1. / self.alpha
+        prob = size / (size + mu)
+        return stats.nbinom(size, prob)
+
 
 class Tweedie(Family):
     """
@@ -1356,7 +1470,7 @@ class Tweedie(Family):
         ``variance`` is an instance of
         statsmodels.genmod.families.varfuncs.Power
     Tweedie.var_power : float
-        The power of the variance function.
+        The power parameter of the variance function.
 
     See Also
     --------

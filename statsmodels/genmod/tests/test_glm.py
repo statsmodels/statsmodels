@@ -205,6 +205,23 @@ class CheckModelResultsMixin(object):
             warnings.simplefilter("ignore", DomainWarning)
             self.res1.summary2()
 
+    def test_get_distribution(self):
+        res1 = self.res1
+        if not hasattr(res1.model.family, "get_distribution"):
+            pytest.skip("get_distribution not available")
+
+        if isinstance(res1.model.family, sm.families.NegativeBinomial):
+            res_scale = 1  # QMLE scale can differ from 1
+        else:
+            res_scale = res1.scale
+
+        distr = res1.model.family.get_distribution(res1.fittedvalues,
+                                                   res_scale)
+        var_endog = res1.model.family.variance(res1.fittedvalues) * res_scale
+        m, v = distr.stats()
+        assert_allclose(res1.fittedvalues, m, rtol=1e-13)
+        assert_allclose(var_endog, v, rtol=1e-13)
+
 
 class CheckComparisonMixin(object):
 
@@ -658,10 +675,19 @@ class TestGlmInvgauss(CheckModelResultsMixin):
 
         from .results.results_glm import InvGauss
         res2 = InvGauss()
-        res1 = GLM(res2.endog, res2.exog, \
-                family=sm.families.InverseGaussian()).fit()
+        res1 = GLM(res2.endog, res2.exog,
+                   family=sm.families.InverseGaussian()).fit()
         cls.res1 = res1
         cls.res2 = res2
+
+    def test_get_distribution(self):
+        res1 = self.res1
+        distr = res1.model.family.get_distribution(res1.fittedvalues,
+                                                   res1.scale)
+        var_endog = res1.model.family.variance(res1.fittedvalues) * res1.scale
+        m, v = distr.stats()
+        assert_allclose(res1.fittedvalues, m, rtol=1e-13)
+        assert_allclose(var_endog, v, rtol=1e-13)
 
 
 class TestGlmInvgaussLog(CheckModelResultsMixin):
