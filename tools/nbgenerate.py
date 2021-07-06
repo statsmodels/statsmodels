@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import argparse
+import asyncio
 from functools import partial
 import hashlib
 import io
@@ -21,6 +22,10 @@ try:
 except ImportError:
     has_futures = False
 
+if sys.platform == 'win32':
+    # Set the policy to prevent "Event loop is closed" error on Windows
+    # https://github.com/encode/httpx/issues/914
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 init()
 

@@ -19,9 +19,9 @@ jobs:
       python37_win_latest:
         python.version: '3.7'
         python.architecture: 'x64'
-      python38_win_32_bit_latest:
+      python38_win_latest:
         python.version: '3.8'
-        python.architecture: 'x86'
+        python.architecture: 'x64'
       python39_win_latest:
         python.version: '3.9'
         python.architecture: 'x64'
