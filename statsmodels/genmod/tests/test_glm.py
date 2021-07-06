@@ -205,6 +205,28 @@ class CheckModelResultsMixin(object):
             warnings.simplefilter("ignore", DomainWarning)
             self.res1.summary2()
 
+    def test_get_distribution(self):
+        res1 = self.res1
+        if not hasattr(res1.model.family, "get_distribution"):
+            # only Tweedie has not get_distribution
+            pytest.skip("get_distribution not available")
+
+        if isinstance(res1.model.family, sm.families.NegativeBinomial):
+            res_scale = 1  # QMLE scale can differ from 1
+        else:
+            res_scale = res1.scale
+
+        distr = res1.model.family.get_distribution(res1.fittedvalues,
+                                                   res_scale)
+        var_endog = res1.model.family.variance(res1.fittedvalues) * res_scale
+        m, v = distr.stats()
+        assert_allclose(res1.fittedvalues, m, rtol=1e-13)
+        assert_allclose(var_endog, v, rtol=1e-13)
+        # check model method
+        distr2 = res1.model.get_distribution(res1.params, res_scale)
+        for k in distr2.kwds:
+            assert_allclose(distr.kwds[k], distr2.kwds[k], rtol=1e-13)
+
 
 class CheckComparisonMixin(object):
 
@@ -438,6 +460,26 @@ class TestGlmBinomial(CheckModelResultsMixin):
             sm.GLM.from_formula("y ~ x1 + x2", data,
                                 family=sm.families.Binomial())
 
+    def test_get_distribution_binom_count(self):
+        # test for binomial counts with n_trials > 1
+        res1 = self.res1
+        res_scale = 1  # QMLE scale can differ from 1
+
+        mu_prob = res1.fittedvalues
+        n = res1.model.n_trials
+        distr = res1.model.family.get_distribution(mu_prob, res_scale,
+                                                   n_trials=n)
+        var_endog = res1.model.family.variance(mu_prob) * res_scale
+        m, v = distr.stats()
+        assert_allclose(mu_prob * n, m, rtol=1e-13)
+        assert_allclose(var_endog * n, v, rtol=1e-13)
+
+        # check model method
+        distr2 = res1.model.get_distribution(res1.params, res_scale,
+                                             n_trials=n)
+        for k in distr2.kwds:
+            assert_allclose(distr.kwds[k], distr2.kwds[k], rtol=1e-13)
+
 
 # FIXME: enable/xfail/skip or delete
 # TODO:
@@ -658,10 +700,19 @@ class TestGlmInvgauss(CheckModelResultsMixin):
 
         from .results.results_glm import InvGauss
         res2 = InvGauss()
-        res1 = GLM(res2.endog, res2.exog, \
-                family=sm.families.InverseGaussian()).fit()
+        res1 = GLM(res2.endog, res2.exog,
+                   family=sm.families.InverseGaussian()).fit()
         cls.res1 = res1
         cls.res2 = res2
+
+    def test_get_distribution(self):
+        res1 = self.res1
+        distr = res1.model.family.get_distribution(res1.fittedvalues,
+                                                   res1.scale)
+        var_endog = res1.model.family.variance(res1.fittedvalues) * res1.scale
+        m, v = distr.stats()
+        assert_allclose(res1.fittedvalues, m, rtol=1e-13)
+        assert_allclose(var_endog, v, rtol=1e-13)
 
 
 class TestGlmInvgaussLog(CheckModelResultsMixin):

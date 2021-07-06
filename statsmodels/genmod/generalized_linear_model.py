@@ -899,10 +899,10 @@ class GLM(base.LikelihoodModel):
         else:
             return self.family.fitted(linpred)
 
-    def get_distribution(self, params, scale=1., exog=None, exposure=None,
-                         offset=None):
+    def get_distribution(self, params, scale=None, exog=None, exposure=None,
+                         offset=None, var_weights=1., n_trials=1.):
         """
-        Return a random number generator for the predictive distribution.
+        Return a instance of the predictive distribution.
 
         Parameters
         ----------
@@ -912,12 +912,22 @@ class GLM(base.LikelihoodModel):
             The scale parameter.
         exog : array_like
             The predictor variable matrix.
+        offset : array_like or None
+            Offset variable for predicted mean.
+        exposure : array_like or None
+            Log(exposure) will be added to the linear prediction.
+        var_weights : array_like
+            1d array of variance (analytic) weights. The default is None.
+        n_trials : int
+            Number of trials for the binomial distribution. The default is 1
+            which corresponds to a Bernoulli random variable.
 
         Returns
         -------
         gen
-            Frozen random number generator object.  Use the ``rvs`` method to
-            generate random values.
+            Instance of a scipy frozen distribution based on estimated
+            parameters.
+            Use the ``rvs`` method to generate random values.
 
         Notes
         -----
@@ -928,26 +938,22 @@ class GLM(base.LikelihoodModel):
         results will be produced.
         """
         scale = float_like(scale, "scale", optional=True)
-        fit = self.predict(params, exog, exposure, offset, linear=False)
+        # use scale=1, independent of QMLE scale for discrete
+        if isinstance(self.family, (families.Binomial, families.Poisson,
+                                    families.NegativeBinomial)):
+            scale = 1.
 
-        import scipy.stats.distributions as dist
+        mu = self.predict(params, exog, exposure, offset, linear=False)
 
-        if isinstance(self.family, families.Gaussian):
-            return dist.norm(loc=fit, scale=np.sqrt(scale))
+        kwds = {}
+        if (np.any(n_trials != 1) and
+                isinstance(self.family, families.Binomial)):
 
-        elif isinstance(self.family, families.Binomial):
-            return dist.binom(n=1, p=fit)
+            kwds["n_trials"] = n_trials
 
-        elif isinstance(self.family, families.Poisson):
-            return dist.poisson(mu=fit)
-
-        elif isinstance(self.family, families.Gamma):
-            alpha = fit / float(scale)
-            return dist.gamma(alpha, scale=scale)
-
-        else:
-            raise ValueError("get_distribution not implemented for %s" %
-                             self.family.name)
+        distr = self.family.get_distribution(mu, scale,
+                                             var_weights=var_weights, **kwds)
+        return distr
 
     def _setup_binomial(self):
         # this checks what kind of data is given for Binomial.
