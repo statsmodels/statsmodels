@@ -1,0 +1,49 @@
+name: Generate Documentation
+
+on:
+  release:
+    types: [published]
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [3.8]
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: Install pandoc
+      uses: r-lib/actions/setup-pandoc@v1
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip wheel setuptools
+        python -m pip install -r requirements.txt
+        python -m pip install -r requirements-dev.txt
+        python -m pip list
+    - name: Install statsmodels
+      run: python -m pip install -e . --no-build-isolation -v
+    - name: Build documentation
+      run: |
+        pushd doc
+        make html
+        popd
+# TODO: Enable document push
+#    - name: Deploy documentation
+#      env:
+#        GIT_TAG: ${{ github.event.release.tag_name }}
+#      run: source ci/push-docs-gh-pages.sh

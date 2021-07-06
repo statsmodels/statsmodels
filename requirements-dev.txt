@@ -3,6 +3,7 @@ cython>=0.29
 
 # run
 matplotlib>=3
+colorama
 # Remove due to failures on azure CI
 # cvxopt; os_name != "win32"
 
@@ -12,8 +13,7 @@ pytest-randomly
 pytest-xdist
 
 # Pin on Win32
-pywinpty<1.0; os_name == "win32"
-pywinpty; os_name != "win32"
+pywinpty; os_name == "nt"
 
 # code quality
 flake8
@@ -21,7 +21,7 @@ isort
 
 # doc
 sphinx
-sphinx-material; python_version > '3.5'
+sphinx-material
 jupyter
 notebook
 nbsphinx
@@ -31,3 +31,6 @@ pandas-datareader
 simplegeneric
 seaborn
 numpydoc
+theano-pymc
+pymc3
+arviz
