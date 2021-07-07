@@ -56,7 +56,7 @@ jobs:
         echo ${PWD}
         ls
         # TODO: Remove
-        date +"%T" > statsmodels/statsmodels.github.io/test.html
+        date +"%T" > statsmodels.github.io/test.html
         source tools/ci/commit-docs.sh
     - name: Push changes
       uses: ad-m/github-push-action@master
