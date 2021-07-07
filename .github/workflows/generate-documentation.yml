@@ -29,6 +29,7 @@ jobs:
         fetch-depth: 1
         repository: statsmodels/statsmodels.github.io
         path: statsmodels.github.io
+        token: ${{ secrets.DOCBUILD_TOKEN }}
     - name: Event type
       run: echo $EVENT_TYPE
       env:
