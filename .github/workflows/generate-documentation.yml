@@ -23,6 +23,12 @@ jobs:
       uses: actions/checkout@v2
       with:
         fetch-depth: 0
+    - name: Checkout statsmodels.github.io
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 1
+        repository: statsmodels/statsmodels.github.io
+        path: statsmodels.github.io
     - name: Install pandoc
       uses: r-lib/actions/setup-pandoc@v1
     - name: Set up Python ${{ matrix.python-version }}
@@ -39,11 +45,20 @@ jobs:
       run: python -m pip install -e . --no-build-isolation -v
     - name: Build documentation
       run: |
-        pushd doc
-        make html
+        pushd docs
+        O="-j auto" make html
         popd
-# TODO: Enable document push
-#    - name: Deploy documentation
-#      env:
-#        GIT_TAG: ${{ github.event.release.tag_name }}
-#      run: source ci/push-docs-gh-pages.sh
+    - name: Move and commit documentation
+      env:
+        GIT_TAG: ${{ github.event.release.tag_name }}
+      run: |
+        echo ${PWD}
+        source tools/ci/commit-docs.sh
+#    - name: Push changes
+#      uses: ad-m/github-push-action@master
+#      with:
+#        branch: master
+#        directory: statsmodels.github.io
+#        repository: statsmodels/statsmodels.github.io
+#        github_token: ${{ secrets.GITHUB_DOCBUILD_TOKEN }}
+#        # TODO: Create an appropriate token to push to statsmodels.github.io
