@@ -46,6 +46,7 @@ jobs:
     - name: Build documentation
       run: |
         pushd docs
+        O="-j auto" make html
         popd
     - name: Move and commit documentation
       env:
