@@ -23,13 +23,21 @@ jobs:
       uses: actions/checkout@v2
       with:
         fetch-depth: 0
-    - name: Checkout statsmodels.github.io
+    - name: Checkout statsmodels.github.io without token
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 1
+        repository: statsmodels/statsmodels.github.io
+        path: statsmodels.github.io
+      if: ${{ github.event_name == 'pull_request' }}
+    - name: Checkout statsmodels.github.io with token
       uses: actions/checkout@v2
       with:
         fetch-depth: 1
         repository: statsmodels/statsmodels.github.io
         path: statsmodels.github.io
         token: ${{ secrets.DOCBUILD_TOKEN }}
+      if: ${{ github.event_name == 'release' || github.event_name == 'push' }}
     - name: Event type
       run: echo $EVENT_TYPE
       env:
