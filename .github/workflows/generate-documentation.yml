@@ -54,11 +54,11 @@ jobs:
       run: |
         echo ${PWD}
         source tools/ci/commit-docs.sh
-#    - name: Push changes
-#      uses: ad-m/github-push-action@master
-#      with:
-#        branch: master
-#        directory: statsmodels.github.io
-#        repository: statsmodels/statsmodels.github.io
-#        github_token: ${{ secrets.GITHUB_DOCBUILD_TOKEN }}
-#        # TODO: Create an appropriate token to push to statsmodels.github.io
+    - name: Push changes
+      uses: ad-m/github-push-action@master
+      with:
+        branch: master
+        directory: statsmodels.github.io
+        repository: statsmodels/statsmodels.github.io
+        github_token: ${{ secrets.DOCBUILD_TOKEN }}
+        # TODO: Create an appropriate token to push to statsmodels.github.io
