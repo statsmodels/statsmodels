@@ -46,17 +46,16 @@ jobs:
         python -m pip install -r requirements-dev.txt
         python -m pip list
     - name: Install statsmodels
-      run: echo python -m pip install -e . --no-build-isolation -v
+      run: python -m pip install -e . --no-build-isolation -v
     - name: Build documentation
       run: |
         pushd docs
-        # O="-j auto" make html
+        O="-j auto" make html
         popd
     - name: Move and commit documentation
       env:
         GIT_TAG: ${{ github.event.release.tag_name }}
       run: |
-        date > statsmodels.github.io/temp.html
         source tools/ci/docbuild-commit.sh
     - name: Push changes
       env:
