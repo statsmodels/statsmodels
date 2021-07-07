@@ -64,5 +64,5 @@ jobs:
         branch: master
         directory: statsmodels.github.io
         repository: statsmodels/statsmodels.github.io
-        github_token: ${{ secrets.GITHUB_DOCBUILD_TOKEN }}
+        github_token: ${{ secrets.DOCBUILD_TOKEN }}
 
