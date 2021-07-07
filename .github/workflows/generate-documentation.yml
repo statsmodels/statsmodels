@@ -42,23 +42,26 @@ jobs:
         python -m pip install -r requirements-dev.txt
         python -m pip list
     - name: Install statsmodels
-      run: python -m pip install -e . --no-build-isolation -v
+      run: echo python -m pip install -e . --no-build-isolation -v
     - name: Build documentation
       run: |
         pushd docs
-        O="-j auto" make html
+        # TODO: Enable
+        # O="-j auto" make html
         popd
     - name: Move and commit documentation
       env:
         GIT_TAG: ${{ github.event.release.tag_name }}
       run: |
         echo ${PWD}
+        # TODO: Remove
+        date +"%T" > statsmodels/statsmodels.github.io/test.html
         source tools/ci/commit-docs.sh
-#    - name: Push changes
-#      uses: ad-m/github-push-action@master
-#      with:
-#        branch: master
-#        directory: statsmodels.github.io
-#        repository: statsmodels/statsmodels.github.io
-#        github_token: ${{ secrets.GITHUB_DOCBUILD_TOKEN }}
-#        # TODO: Create an appropriate token to push to statsmodels.github.io
+    - name: Push changes
+      uses: ad-m/github-push-action@master
+      with:
+        branch: master
+        directory: statsmodels.github.io
+        repository: statsmodels/statsmodels.github.io
+        github_token: ${{ secrets.GITHUB_DOCBUILD_TOKEN }}
+
