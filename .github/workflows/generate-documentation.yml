@@ -54,6 +54,7 @@ jobs:
         GIT_TAG: ${{ github.event.release.tag_name }}
       run: |
         echo ${PWD}
+        ls
         # TODO: Remove
         date +"%T" > statsmodels/statsmodels.github.io/test.html
         source tools/ci/commit-docs.sh
