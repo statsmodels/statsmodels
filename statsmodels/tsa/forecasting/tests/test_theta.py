@@ -116,3 +116,20 @@ def test_pi_width():
     pi = res.prediction_intervals(24)
     d = np.squeeze(np.diff(np.asarray(pi), axis=1))
     assert np.all(np.diff(d) > 0)
+
+
+# GH7544
+@pytest.mark.parametrize("period", [4, 12])
+def test_forecast_seasonal_alignment(data, period):
+    res = ThetaModel(
+        data,
+        period=period,
+        deseasonalize=True,
+        use_test=False,
+        difference=False,
+    ).fit(use_mle=False)
+    seasonal = res._seasonal
+    comp = res.forecast_components(32)
+    index = np.arange(data.shape[0], data.shape[0] + comp.shape[0])
+    expected = seasonal[index % period]
+    np.testing.assert_allclose(comp.seasonal, expected)

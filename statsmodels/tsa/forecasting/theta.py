@@ -462,7 +462,7 @@ class ThetaModelResults:
         if self.model.deseasonalize:
             seasonal = self._seasonal
             period = self.model.period
-            oos_idx = nobs + np.arange(1, steps + 1)
+            oos_idx = nobs + np.arange(steps)
             seasonal_locs = oos_idx % period
             if seasonal.shape[0]:
                 season[:] = seasonal[seasonal_locs]
