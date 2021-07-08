@@ -412,6 +412,12 @@ class TestPCA(object):
         x = self.x.copy()
         assert_allclose(PCA(x).factors, pca(x)[0])
 
+    def test_equivalence_full_matrices(self):
+        x = self.x.copy()
+        svd_full_matrices_true = PCA(x, svd_full_matrices=True).factors
+        svd_full_matrices_false = PCA(x).factors
+        assert_allclose(svd_full_matrices_true, svd_full_matrices_false)
+
 
 def test_missing():
     data = np.empty((200, 50))
