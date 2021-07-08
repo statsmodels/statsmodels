@@ -27,6 +27,7 @@ from statsmodels.genmod.families import Binomial
 
 Logit = sm.families.links.logit
 
+
 _init_example = """
 
     Beta regression with default of logit-link for exog and log-link
@@ -108,11 +109,16 @@ class Beta(GenericLikelihoodModel):
 
         kwds['extra_params_names'] = extra_names
 
-        super(Beta, self).__init__(endog, exog, **kwds)
+        super(Beta, self).__init__(endog, exog, exog_precision=exog_precision,
+                                   **kwds)
         self.link = link
         self.link_precision = link_precision
-
-        self.exog_precision = exog_precision
+        # not needed, handled by super:
+        # self.exog_precision = exog_precision
+        # inherited df do not account for precision params
+        self.nobs = self.endog.shape[0]
+        self.df_model = self.nparams - 1
+        self.df_resid = self.nobs - self.nparams
         assert len(self.exog_precision) == len(self.endog)
 
     @classmethod
@@ -167,7 +173,7 @@ class Beta(GenericLikelihoodModel):
         var_endog = mean * (1 - mean) / (1 + precision)
         return var_endog
 
-    def nloglikeobs(self, params):
+    def loglikeobs(self, params):
         """
         Negative log-likelihood.
 
@@ -177,7 +183,7 @@ class Beta(GenericLikelihoodModel):
         params : np.ndarray
             Parameter estimates
         """
-        return -self._ll_br(self.endog, self.exog, self.exog_precision, params)
+        return self._ll_br(self.endog, self.exog, self.exog_precision, params)
 
     def _ll_br(self, y, X, Z, params):
         nz = Z.shape[1]
@@ -234,10 +240,11 @@ class Beta(GenericLikelihoodModel):
         mu = self.link.inverse(np.dot(X, Xparams))
         phi = self.link_precision.inverse(np.dot(Z, Zparams))
 
+        eps_lb = 1e-20  # lower bound for evaluating digamma, avoids -inf
         ystar = np.log(y / (1. - y))
-        mustar = digamma(mu * phi) - digamma((1 - mu) * phi)
+        mustar = digamma(eps_lb + mu * phi) - digamma(eps_lb + (1 - mu) * phi)
         yt = np.log(1 - y)
-        mut = digamma((1 - mu) * phi) - digamma(phi)
+        mut = digamma(eps_lb + (1 - mu) * phi) - digamma(phi)
 
         t = 1. / self.link.deriv(mu)
         h = 1. / self.link_precision.deriv(phi)
@@ -267,6 +274,9 @@ class Beta(GenericLikelihoodModel):
         # NO LINKS
         mu = self.link.inverse(np.dot(X, Xparams))
         phi = self.link_precision.inverse(np.dot(Z, Zparams))
+
+        # TODO: need to prevent mu = 0 and (1-mu) = 0 in digamma call
+        #       add temp variable for (1 - mu)
 
         ystar = np.log(y / (1. - y))
         mustar = digamma(mu * phi) - digamma((1 - mu) * phi)
