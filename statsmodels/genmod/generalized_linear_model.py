@@ -91,10 +91,10 @@ class GLM(base.LikelihoodModel):
         and should be added by the user (models specified using a formula
         include an intercept by default). See `statsmodels.tools.add_constant`.
     family : family class instance
-        The default is Gaussian.  To specify the binomial distribution
-        family = sm.family.Binomial()
+        The default is Gaussian.  To specify the binomial distribution, use 
+        family = sm.families.Binomial(). 
         Each family can take a link instance as an argument.  See
-        statsmodels.family.family for more information.
+        statsmodels.families.family for more information.
     offset : array_like or None
         An offset to be included in the model.  If provided, must be
         an array whose length is the number of rows in exog.
