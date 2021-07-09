@@ -115,6 +115,7 @@ class TestBeta(object):
                               link_precision=links.identity())
         rslt = m.fit()
         assert_close(rslt.params, self.meth_fit.params, 1e-10)
+        assert isinstance(rslt.params, pd.Series)
 
     def test_scores(self):
         model, Z = self.model, self.Z

@@ -19,13 +19,13 @@ import pandas as pd
 from scipy.special import gammaln as lgamma
 import patsy
 
-import statsmodels.api as sm
+import statsmodels.base.wrapper as wrap
+import statsmodels.regression.linear_model as lm
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.base.model import (GenericLikelihoodModel,
                                     GenericLikelihoodModelResults)
-from statsmodels.genmod.families import Binomial
+from statsmodels.genmod import families
 
-Logit = sm.families.links.logit
 
 
 _init_example = """
@@ -65,8 +65,9 @@ class Beta(GenericLikelihoodModel):
     This implementation uses a `precision` parameter
     """
 
-    def __init__(self, endog, exog, exog_precision=None, link=Logit(),
-                 link_precision=sm.families.links.Log(), **kwds):
+    def __init__(self, endog, exog, exog_precision=None,
+                 link=families.links.Logit(),
+                 link_precision=families.links.Log(), **kwds):
         """
         Parameters
         ----------
@@ -145,7 +146,8 @@ class Beta(GenericLikelihoodModel):
 
         params_mean = params[:k_mean]
         # Zparams = params[k_mean:]
-        mu = self.link.inverse(np.dot(exog, params_mean))
+        linpred = np.dot(exog, params_mean)
+        mu = self.link.inverse(linpred)
         return mu
 
     def predict_precision(self, params, exog_precision=None):
@@ -157,8 +159,8 @@ class Beta(GenericLikelihoodModel):
 
         k_mean = self.exog.shape[1]
         params_precision = params[k_mean:]
-        linpred = np.dot(exog_precision, params_precision)
-        phi = self.link_precision.inverse(linpred)
+        linpred_prec = np.dot(exog_precision, params_precision)
+        phi = self.link_precision.inverse(linpred_prec)
 
         return phi
 
@@ -188,19 +190,20 @@ class Beta(GenericLikelihoodModel):
     def _ll_br(self, y, X, Z, params):
         nz = Z.shape[1]
 
-        Xparams = params[:-nz]
-        Zparams = params[-nz:]
+        params_mean = params[:-nz]
+        params_prec = params[-nz:]
+        linpred = np.dot(X, params_mean)
+        linpred_prec = np.dot(Z, params_prec)
 
-        mu = self.link.inverse(np.dot(X, Xparams))
-        phi = self.link_precision.inverse(np.dot(Z, Zparams))
+        mu = self.link.inverse(linpred)
+        phi = self.link_precision.inverse(linpred_prec)
 
-        alpha = mu * phi
-        beta = (1 - mu) * phi
+        eps_lb = 1e-200
+        alpha = np.clip(mu * phi, eps_lb, np.inf)
+        beta = np.clip((1 - mu) * phi, eps_lb, np.inf)
 
-        if np.any(alpha <= np.finfo(float).eps): return np.array(-np.inf)
-        if np.any(beta <= np.finfo(float).eps): return np.array(-np.inf)
-
-        ll = (lgamma(phi) - lgamma(mu * phi) - lgamma((1 - mu) * phi)
+        ll = (lgamma(phi) - lgamma(alpha)
+              - lgamma(beta)
               + (mu * phi - 1) * np.log(y)
               + (((1 - mu) * phi) - 1) * np.log(1 - y))
 
@@ -240,11 +243,15 @@ class Beta(GenericLikelihoodModel):
         mu = self.link.inverse(np.dot(X, Xparams))
         phi = self.link_precision.inverse(np.dot(Z, Zparams))
 
-        eps_lb = 1e-20  # lower bound for evaluating digamma, avoids -inf
+        eps_lb = 1e-200  # lower bound for evaluating digamma, avoids -inf
+        alpha = np.clip(mu * phi, eps_lb, np.inf)
+        beta = np.clip((1 - mu) * phi, eps_lb, np.inf)
+
         ystar = np.log(y / (1. - y))
-        mustar = digamma(eps_lb + mu * phi) - digamma(eps_lb + (1 - mu) * phi)
+        dig_beta = digamma(beta)
+        mustar = digamma(alpha) - dig_beta
         yt = np.log(1 - y)
-        mut = digamma(eps_lb + (1 - mu) * phi) - digamma(phi)
+        mut = dig_beta - digamma(phi)
 
         t = 1. / self.link.deriv(mu)
         h = 1. / self.link_precision.deriv(phi)
@@ -275,13 +282,16 @@ class Beta(GenericLikelihoodModel):
         mu = self.link.inverse(np.dot(X, Xparams))
         phi = self.link_precision.inverse(np.dot(Z, Zparams))
 
-        # TODO: need to prevent mu = 0 and (1-mu) = 0 in digamma call
-        #       add temp variable for (1 - mu)
+        # We need to prevent mu = 0 and (1-mu) = 0 in digamma call
+        eps_lb = 1e-200  # lower bound for evaluating digamma, avoids -inf
+        alpha = np.clip(mu * phi, eps_lb, np.inf)
+        beta = np.clip((1 - mu) * phi, eps_lb, np.inf)
 
         ystar = np.log(y / (1. - y))
-        mustar = digamma(mu * phi) - digamma((1 - mu) * phi)
+        dig_beta = digamma(beta)
+        mustar = digamma(alpha) - dig_beta
         yt = np.log(1 - y)
-        mut = digamma((1 - mu) * phi) - digamma(phi)
+        mut = dig_beta - digamma(phi)
 
         t = 1. / self.link.deriv(mu)
         h = 1. / self.link_precision.deriv(phi)
@@ -292,10 +302,11 @@ class Beta(GenericLikelihoodModel):
 
         if return_hessian:
             trigamma = lambda x: special.polygamma(1, x)  # noqa
-            var_star = trigamma(mu * phi) + trigamma((1 - mu) * phi)
-            var_t = trigamma((1 - mu) * phi) - trigamma(phi)
+            trig_beta = trigamma(beta)
+            var_star = trigamma(alpha) + trig_beta
+            var_t = trig_beta - trigamma(phi)
 
-            c = - trigamma((1 - mu) * phi)
+            c = - trig_beta
             s = self.link.deriv2(mu)
             q = self.link_precision.deriv2(phi)
 
@@ -409,9 +420,15 @@ class Beta(GenericLikelihoodModel):
 #           # on page 8
 
         self.results_class = BetaRegressionResults
-        return super(Beta, self).fit(start_params=start_params,
-                                     maxiter=maxiter, maxfun=maxfun,
-                                     method=method, disp=disp, **kwds)
+        self.results_class_wrapper = BetaRegressionResultsWrapper
+
+        res = super(Beta, self).fit(start_params=start_params,
+                                    maxiter=maxiter, maxfun=maxfun,
+                                    method=method, disp=disp, **kwds)
+        if not isinstance(res, BetaRegressionResultsWrapper):
+            # currently GenericLikelihoodModel doe not add wrapper
+            res = BetaRegressionResultsWrapper(res)
+        return res
 
 
 class BetaRegressionResults(GenericLikelihoodModelResults):
@@ -444,6 +461,14 @@ class BetaRegressionResults(GenericLikelihoodModelResults):
         return distr
 
 
+class BetaRegressionResultsWrapper(lm.RegressionResultsWrapper):
+    pass
+
+
+wrap.populate_wrapper(BetaRegressionResultsWrapper,
+                      BetaRegressionResults)
+
+
 if __name__ == "__main__":
 
     import patsy
@@ -457,5 +482,5 @@ if __name__ == "__main__":
     Z = patsy.dmatrix('~ age', dev, return_type='dataframe')
     m = Beta.from_formula('methylation ~ gender + CpG', dev,
                           exog_precision=Z,
-                          link_precision=sm.families.links.identity())
+                          link_precision=families.links.identity())
     print(m.fit().summary())
