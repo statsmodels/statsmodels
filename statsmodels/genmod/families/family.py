@@ -1482,6 +1482,10 @@ class Tweedie(Family):
         ----------
         JA Nelder, D Pregibon (1987).  An extended quasi-likelihood function.
         Biometrika 74:2, pp 221-232.  https://www.jstor.org/stable/2336136
+
+        R Kaas (2005).  Compound Poisson Distributions and GLM's -- Tweedie's
+        Distribution.
+        https://core.ac.uk/download/pdf/6347266.pdf#page=11
         """
         if not self.eql:
             # We have not yet implemented the actual likelihood
@@ -1489,7 +1493,7 @@ class Tweedie(Family):
 
         # Equations 9-10 of Nelder and Pregibon
         p = self.var_power
-        llf = np.log(2 * np.pi * scale) + p * np.log(mu) - np.log(var_weights)
+        llf = np.log(2 * np.pi * scale) + p * np.log(endog) - np.log(var_weights)
         llf /= -2
 
         if p == 1:
@@ -1504,15 +1508,13 @@ class Tweedie(Family):
                  - (2 - p) * endog * mu ** (1 - p)
                  + (1 - p) * mu ** (2 - p))
             u *= var_weights / (scale * (1 - p) * (2 - p))
-        llf -= u
 
-        return llf
+        return llf - u
 
     def loglike_obs_deriv(self, endog, mu, var_weights=1., scale=1.):
 
         # Equations 9-10 of Nelder and Pregibon
         p = self.var_power
-        dmu = -p / (2 * mu)
 
         if p == 1:
             du = 1 - endog / mu
@@ -1524,9 +1526,8 @@ class Tweedie(Family):
             du = -(2 - p) * (1 - p) * endog / mu ** p
             du += (1 - p) * (2 - p) * mu ** (1 - p)
             du *= var_weights / (scale * (1 - p) * (2 - p))
-        dmu -= du
 
-        return dmu
+        return -du
 
     def resid_anscombe(self, endog, mu, var_weights=1., scale=1.):
         r"""

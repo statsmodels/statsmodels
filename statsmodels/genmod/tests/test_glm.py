@@ -2010,7 +2010,7 @@ def test_tweedie_EQL():
 
     # Series of ridge fits using gradients
     ev = (np.array([1.001778, -0.99388, 0.00797, 0.506183]),
-          np.array([0.985841, -0.969124, 0.007319, 0.497649]),
+          np.array([0.98586638, -0.96953481, 0.00749983, 0.4975267]),
           np.array([0.206429, -0.164547, 0.000235, 0.102489]))
     for j, alpha in enumerate([0.05, 0.5, 0.7]):
         model3 = sm.GLM(y, x, family=fam)
@@ -2021,7 +2021,7 @@ def test_tweedie_EQL():
         alpha = alpha * np.ones(x.shape[1])
         alpha[0] = 0
         result5 = model3.fit_regularized(L1_wt=0, alpha=alpha)
-        assert not np.allclose(result5.params, result4.params, rtol=rtol, atol=atol)
+        assert not np.allclose(result5.params, result4.params)
 
 
 def test_tweedie_EQL_poisson_limit():
