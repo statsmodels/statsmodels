@@ -506,7 +506,6 @@ class GLM(base.LikelihoodModel):
 
         score_factor = (self.endog - mu) / self.family.link.deriv(mu)
         score_factor /= self.family.variance(mu)
-
         score_factor *= self.iweights * self.n_trials
 
         if not scale == 1:
