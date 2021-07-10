@@ -24,6 +24,10 @@ negbinom = links.NegativeBinomial()
 Links = [logit, inverse_power, sqrt, inverse_squared, identity,
          log, probit, cauchy, cloglog, loglog, negbinom]
 
+# links with defined second derivative of inverse link.
+LinksISD = [inverse_power, sqrt, inverse_squared, identity, 
+            cauchy, probit, loglog]
+
 
 def get_domainvalue(link):
     """
@@ -32,7 +36,7 @@ def get_domainvalue(link):
     z = -np.log(np.random.uniform(0, 1))
     if isinstance(link, links.CLogLog):  # prone to overflow
         z = min(z, 3)
-    elif isinstance(link, links.CLogLog):
+    elif isinstance(link, links.LogLog):
         z = max(z, -3)
     elif isinstance(link, links.NegativeBinomial):
         # domain is negative numbers
@@ -100,6 +104,20 @@ def test_inverse_deriv():
             assert_allclose(d, f, rtol=1e-8, atol=1e-10,
                             err_msg=str(link))
 
+
+def test_inverse_deriv2():
+    # Check second derivative of inverse link using numeric differentiation.
+
+    np.random.seed(24235)
+
+    for link in LinksISD:
+        for k in range(10):
+            z = get_domainvalue(link)
+            d2 = link.inverse_deriv2(z)
+            d2a = nd.approx_fprime(np.r_[z], link.inverse_deriv)
+            assert_allclose(d2, d2a, rtol=5e-6, atol=1e-6,
+                            err_msg=str(link))
+      
 
 def test_invlogit_stability():
     z = [1123.4910007309222, 1483.952316802719, 1344.86033748641,
