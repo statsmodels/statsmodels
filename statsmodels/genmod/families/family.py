@@ -809,7 +809,8 @@ class Binomial(Family):
     number of trials for each row.
     """
 
-    links = [L.logit, L.probit, L.cauchy, L.log, L.cloglog, L.loglog, L.identity]
+    links = [L.logit, L.probit, L.cauchy, L.log, L.cloglog, L.loglog,
+             L.identity]
     variance = V.binary  # this is not used below in an effort to include n
 
     # Other safe links, e.g. cloglog and probit are subclasses

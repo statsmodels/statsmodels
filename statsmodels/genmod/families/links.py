@@ -1009,7 +1009,7 @@ class LogLog(Logit):
         g^(-1)''(z) : ndarray
             The second derivative of the inverse of the LogLog link function
         """
-        return self.inverse_deriv(z) * ( np.exp(-z) - 1)
+        return self.inverse_deriv(z) * (np.exp(-z) - 1)
 
 
 class loglog(LogLog):
