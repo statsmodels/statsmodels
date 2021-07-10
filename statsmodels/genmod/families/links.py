@@ -994,7 +994,7 @@ class LogLog(Logit):
             The derivative of the inverse of the LogLog link function
         """
         return np.exp(-np.exp(-z) - z)
-    
+
     def inverse_deriv2(self, z):
         """
         Second derivative of the inverse of the Log-Log transform link function
@@ -1010,8 +1010,8 @@ class LogLog(Logit):
             The second derivative of the inverse of the LogLog link function
         """
         return self.inverse_deriv(z) * ( np.exp(-z) - 1)
-    
-    
+
+
 class loglog(LogLog):
     """
     The LogLog transform link function.

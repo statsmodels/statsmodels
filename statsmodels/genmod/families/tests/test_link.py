@@ -25,7 +25,7 @@ Links = [logit, inverse_power, sqrt, inverse_squared, identity,
          log, probit, cauchy, cloglog, loglog, negbinom]
 
 # links with defined second derivative of inverse link.
-LinksISD = [inverse_power, sqrt, inverse_squared, identity, 
+LinksISD = [inverse_power, sqrt, inverse_squared, identity,
             cauchy, probit, loglog]
 
 
@@ -117,7 +117,7 @@ def test_inverse_deriv2():
             d2a = nd.approx_fprime(np.r_[z], link.inverse_deriv)
             assert_allclose(d2, d2a, rtol=5e-6, atol=1e-6,
                             err_msg=str(link))
-      
+
 
 def test_invlogit_stability():
     z = [1123.4910007309222, 1483.952316802719, 1344.86033748641,
