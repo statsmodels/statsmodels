@@ -2062,7 +2062,7 @@ def test_tweedie_EQL():
 
     rtol, atol = 1e-2, 1e-4
     assert_allclose(result2.params,
-        np.array([1.00281192, -0.99182638, 0., 0.50448516]),
+        np.array([0.999191, -0.943134, 0., 0.468717]),
         rtol=rtol, atol=atol)
 
     # Series of ridge fits using gradients

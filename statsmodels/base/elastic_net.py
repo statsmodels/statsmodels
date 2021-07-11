@@ -38,6 +38,12 @@ def _gen_npfuncs(k, L1_wt, alpha, loglike_kwds, score_kwds, hess_kwds):
     arbitrary statsmodels regression model.
     """
 
+    # A scale parameter, if present, should be held fixed during the
+    # coordinate descent iterations.
+    loglike_kwds["scale"] = 1
+    score_kwds["scale"] = 1
+    hess_kwds["scale"] = 1
+
     def nploglike(params, model):
         nobs = model.nobs
         pen_llf = alpha[k] * (1 - L1_wt) * np.sum(params**2) / 2
