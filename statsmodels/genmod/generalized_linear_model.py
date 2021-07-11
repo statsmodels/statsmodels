@@ -1316,6 +1316,16 @@ class GLM(base.LikelihoodModel):
                     "zero_tol": 1e-10}
         defaults.update(kwargs)
 
+        llkw = kwargs.get("loglike_kwds", {})
+        sckw = kwargs.get("score_kwds", {})
+        hekw = kwargs.get("hess_kwds", {})
+        llkw["scale"] = 1
+        sckw["scale"] = 1
+        hekw["scale"] = 1
+        defaults["loglike_kwds"] = llkw
+        defaults["score_kwds"] = sckw
+        defaults["hess_kwds"] = hekw
+
         result = fit_elasticnet(self, method=method,
                                 alpha=alpha,
                                 start_params=start_params,
