@@ -1619,6 +1619,10 @@ class Tweedie(Family):
 
         References
         ----------
+        R Kaas (2005).  Compound Poisson Distributions and GLM's -- Tweedie's
+        Distribution.
+        https://core.ac.uk/download/pdf/6347266.pdf#page=11
+
         JA Nelder, D Pregibon (1987).  An extended quasi-likelihood function.
         Biometrika 74:2, pp 221-232.  https://www.jstor.org/stable/2336136
         """
@@ -1626,9 +1630,10 @@ class Tweedie(Family):
             # We have not yet implemented the actual likelihood
             return np.nan
 
-        # Equations 9-10 or Nelder and Pregibon
+        # Equations 4 of Kaas
         p = self.var_power
-        llf = np.log(2 * np.pi * scale) + p * np.log(mu) - np.log(var_weights)
+        llf = np.log(2 * np.pi * scale) + p * np.log(endog)
+        llf -= np.log(var_weights)
         llf /= -2
 
         if p == 1:
@@ -1643,9 +1648,8 @@ class Tweedie(Family):
                  - (2 - p) * endog * mu ** (1 - p)
                  + (1 - p) * mu ** (2 - p))
             u *= var_weights / (scale * (1 - p) * (2 - p))
-        llf -= u
 
-        return llf
+        return llf - u
 
     def resid_anscombe(self, endog, mu, var_weights=1., scale=1.):
         r"""
