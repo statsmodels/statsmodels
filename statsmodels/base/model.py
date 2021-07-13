@@ -194,7 +194,6 @@ class Model(object):
                        'design_info': design_info})
         mod = cls(endog, exog, *args, **kwargs)
         mod.formula = formula
-
         # since we got a dataframe, attach the original
         mod.data.frame = data
         return mod
@@ -799,7 +798,9 @@ class GenericLikelihoodModel(LikelihoodModel):
         # somewhere: CacheWriteWarning: 'df_model' cannot be overwritten
         super(GenericLikelihoodModel, self).__init__(endog, exog,
                                                      missing=missing,
-                                                     hasconst=hasconst)
+                                                     hasconst=hasconst,
+                                                     **kwds
+                                                     )
 
         # this will not work for ru2nmnl, maybe np.ndim of a dict?
         if exog is not None:
@@ -2425,6 +2426,128 @@ class ResultMixin(object):
         # I think this is supposed to get the delta method that is currently
         # in miscmodels count (as part of Poisson example)
         raise NotImplementedError
+
+
+class _LLRMixin():
+    """Mixin class for Null model and likelihood ratio
+    """
+    # methods copied from DiscreteResults, adjusted pseudo R2
+
+    def pseudo_rsquared(self, kind="mcf"):
+        """
+        McFadden's pseudo-R-squared. `1 - (llf / llnull)`
+        """
+        kind = kind.lower()
+        if kind.startswith("mcf"):
+            prsq = 1 - self.llf / self.llnull
+        elif kind.startswith("cox") or kind in ["cs", "lr"]:
+            prsq = 1 - np.exp((self.llnull - self.llf) * (2 / self.nobs))
+        else:
+            raise ValueError("only McFadden and Cox-Snell are available")
+        return prsq
+
+    @cache_readonly
+    def llr(self):
+        """
+        Likelihood ratio chi-squared statistic; `-2*(llnull - llf)`
+        """
+        return -2*(self.llnull - self.llf)
+
+    @cache_readonly
+    def llr_pvalue(self):
+        """
+        The chi-squared probability of getting a log-likelihood ratio
+        statistic greater than llr.  llr has a chi-squared distribution
+        with degrees of freedom `df_model`.
+        """
+        return stats.distributions.chi2.sf(self.llr, self.df_model)
+
+    def set_null_options(self, llnull=None, attach_results=True, **kwargs):
+        """
+        Set the fit options for the Null (constant-only) model.
+
+        This resets the cache for related attributes which is potentially
+        fragile. This only sets the option, the null model is estimated
+        when llnull is accessed, if llnull is not yet in cache.
+
+        Parameters
+        ----------
+        llnull : {None, float}
+            If llnull is not None, then the value will be directly assigned to
+            the cached attribute "llnull".
+        attach_results : bool
+            Sets an internal flag whether the results instance of the null
+            model should be attached. By default without calling this method,
+            thenull model results are not attached and only the loglikelihood
+            value llnull is stored.
+        **kwargs
+            Additional keyword arguments used as fit keyword arguments for the
+            null model. The override and model default values.
+
+        Notes
+        -----
+        Modifies attributes of this instance, and so has no return.
+        """
+        # reset cache, note we need to add here anything that depends on
+        # llnullor the null model. If something is missing, then the attribute
+        # might be incorrect.
+        self._cache.pop('llnull', None)
+        self._cache.pop('llr', None)
+        self._cache.pop('llr_pvalue', None)
+        self._cache.pop('prsquared', None)
+        if hasattr(self, 'res_null'):
+            del self.res_null
+
+        if llnull is not None:
+            self._cache['llnull'] = llnull
+        self._attach_nullmodel = attach_results
+        self._optim_kwds_null = kwargs
+
+    @cache_readonly
+    def llnull(self):
+        """
+        Value of the constant-only loglikelihood
+        """
+        model = self.model
+        kwds = model._get_init_kwds().copy()
+        for key in getattr(model, '_null_drop_keys', []):
+            del kwds[key]
+        # TODO: what parameters to pass to fit?
+        mod_null = model.__class__(model.endog, np.ones(self.nobs), **kwds)
+        # TODO: consider catching and warning on convergence failure?
+        # in the meantime, try hard to converge. see
+        # TestPoissonConstrained1a.test_smoke
+
+        optim_kwds = getattr(self, '_optim_kwds_null', {}).copy()
+
+        if 'start_params' in optim_kwds:
+            # user provided
+            sp_null = optim_kwds.pop('start_params')
+        elif hasattr(model, '_get_start_params_null'):
+            # get moment estimates if available
+            sp_null = model._get_start_params_null()
+        else:
+            sp_null = None
+
+        opt_kwds = dict(method='bfgs', warn_convergence=False, maxiter=10000,
+                        disp=0)
+        opt_kwds.update(optim_kwds)
+
+        if optim_kwds:
+            res_null = mod_null.fit(start_params=sp_null, **opt_kwds)
+        else:
+            # this should be a reasonably method case across versions
+            res_null = mod_null.fit(start_params=sp_null, method='nm',
+                                    warn_convergence=False,
+                                    maxiter=10000, disp=0)
+            res_null = mod_null.fit(start_params=res_null.params, method='bfgs',
+                                    warn_convergence=False,
+                                    maxiter=10000, disp=0)
+
+        if getattr(self, '_attach_nullmodel', False) is not False:
+            self.res_null = res_null
+
+        return res_null.llf
 
 
 class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):

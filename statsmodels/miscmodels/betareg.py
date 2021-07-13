@@ -22,8 +22,8 @@ import patsy
 import statsmodels.base.wrapper as wrap
 import statsmodels.regression.linear_model as lm
 from statsmodels.tools.decorators import cache_readonly
-from statsmodels.base.model import (GenericLikelihoodModel,
-                                    GenericLikelihoodModelResults)
+from statsmodels.base.model import (
+    GenericLikelihoodModel, GenericLikelihoodModelResults, _LLRMixin)
 from statsmodels.genmod import families
 
 
@@ -121,6 +121,11 @@ class Beta(GenericLikelihoodModel):
         self.df_model = self.nparams - 1
         self.df_resid = self.nobs - self.nparams
         assert len(self.exog_precision) == len(self.endog)
+        self.hess_type = "oim"
+        if 'exog_precision' not in self._init_keys:
+            self._init_keys.extend(['exog_precision'])
+        self._init_keys.extend(['link', 'link_precision'])
+        self._null_drop_keys = ['exog_precision']
 
     @classmethod
     def from_formula(cls, formula, data, exog_precision_formula=None,
@@ -334,7 +339,11 @@ class Beta(GenericLikelihoodModel):
         d2 = sf[:, 1:2] * self.exog_precision
         return np.column_stack((d1, d2))
 
-    def hessian_1(self, params, observed=True):
+    def hessian(self, params, observed=None):
+        if self.hess_type == "eim":
+            observed = False
+        else:
+            observed = True
         _, hf = self.score_hessian_factor(params, return_hessian=True,
                                           observed=observed)
 
@@ -419,6 +428,14 @@ class Beta(GenericLikelihoodModel):
 #           # http://www.ime.usp.br/~sferrari/beta.pdf suggests starting phi
 #           # on page 8
 
+        if "cov_type" in kwds:
+            # this is a workaround because we cannot tell super to use eim
+            if kwds["cov_type"].lower() == "eim":
+                self.hess_type = "eim"
+                del kwds["cov_type"]
+            else:
+                self.hess_type = "oim"
+
         self.results_class = BetaRegressionResults
         self.results_class_wrapper = BetaRegressionResultsWrapper
 
@@ -431,7 +448,7 @@ class Beta(GenericLikelihoodModel):
         return res
 
 
-class BetaRegressionResults(GenericLikelihoodModelResults):
+class BetaRegressionResults(GenericLikelihoodModelResults, _LLRMixin):
 
     # GenericLikeihoodmodel doesn't define fittedvalues, residuals and similar
     @cache_readonly
@@ -450,6 +467,14 @@ class BetaRegressionResults(GenericLikelihoodModelResults):
     def resid_pearson(self):
         return self.resid / np.sqrt(self.model.predict_var(self.params))
 
+    @cache_readonly
+    def prsquared(self):
+        """
+        Cox-Snell, Likelihood-Ratio pseudo-R-squared.
+        1 - exp((llnull - .llf) * (2 / nobs))
+        """
+        return self.pseudo_rsquared(kind="lr")
+
     def get_distribution_params(self):
         mean = self.fittedvalues
         precision = self.fitted_precision
@@ -459,6 +484,9 @@ class BetaRegressionResults(GenericLikelihoodModelResults):
         from scipy import stats
         distr = stats.beta(*self.get_distribution_params())
         return distr
+
+    def bootstrap(self, *args, **kwargs):
+        raise NotImplementedError
 
 
 class BetaRegressionResultsWrapper(lm.RegressionResultsWrapper):
