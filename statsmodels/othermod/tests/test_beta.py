@@ -3,11 +3,12 @@ import io
 import os
 
 import numpy as np
-from numpy.testing import assert_allclose
+from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 import patsy
 from statsmodels.api import families
 from statsmodels.othermod.betareg import Beta
+from .results import results_betareg as resultsb
 
 links = families.links
 
@@ -149,3 +150,67 @@ class TestBeta(object):
         resid = rslt.model.endog - mean
         assert_allclose(rslt.resid, resid, rtol=1e-12)
         assert_allclose(rslt.resid_pearson, resid / np.sqrt(var), rtol=1e-12)
+
+
+class TestBetaMeth():
+
+    @classmethod
+    def setup_class(cls):
+        formula = "methylation ~ gender + CpG"
+        mod = Beta.from_formula(formula, methylation,
+                                exog_precision_formula="~ age",
+                                link_precision=links.Log())
+        cls.res1 = mod.fit(cov_type="eim")
+        cls.res2 = resultsb.results_meth
+
+    def test_basic(self):
+        res1 = self.res1
+        res2 = self.res2
+
+        k_mean = 4
+        p, se, zv, pv = res2.table_mean.T
+        assert_allclose(res1.params[:k_mean], p, rtol=1e-6)
+        assert_allclose(res1.bse[:k_mean], se, rtol=1e-6)
+        assert_allclose(res1.tvalues[:k_mean], zv, rtol=1e-6)
+        assert_allclose(res1.pvalues[:k_mean], pv, rtol=1e-5)
+
+        p, se, zv, pv = res2.table_precision.T
+        assert_allclose(res1.params[k_mean:], p, rtol=1e-6)
+        assert_allclose(res1.bse[k_mean:], se, rtol=1e-6)
+        assert_allclose(res1.tvalues[k_mean:], zv, rtol=1e-6)
+        assert_allclose(res1.pvalues[k_mean:], pv, rtol=1e-5)
+
+        assert_allclose(res1.llf, res2.loglik, rtol=1e-10)
+        assert_allclose(res1.aic, res2.aic, rtol=1e-10)
+        assert_allclose(res1.bic, res2.bic, rtol=1e-10)
+        # dofferent definitions for prsquared
+        assert_allclose(res1.prsquared, res2.pseudo_r_squared, atol=0.01)
+        assert_equal(res1.df_resid, res2.df_residual)
+        assert_equal(res1.nobs, res2.nobs)
+
+    def test_resid(self):
+        res1 = self.res1
+        res2 = self.res2
+        assert_allclose(res1.fittedvalues, res2.resid['fittedvalues'],
+                        rtol=1e-8)
+        assert_allclose(res1.resid, res2.resid['response'],
+                        atol=1e-8, rtol=1e-8)
+
+    def test_oim(self):
+        # estimate with default oim, cov_type nonrobust
+        res1 = self.res1.model.fit()
+        res2 = self.res2
+
+        k_mean = 4
+        # R betareg uses numerical derivatives from bfgs, has lower precision
+        p, se, zv, pv = res2.table_mean_oim.T
+        assert_allclose(res1.params[:k_mean], p, rtol=1e-6)
+        assert_allclose(res1.bse[:k_mean], se, rtol=1e-5)
+        assert_allclose(res1.tvalues[:k_mean], zv, rtol=1e-5)
+        assert_allclose(res1.pvalues[:k_mean], pv, atol=1e-6, rtol=1e-5)
+
+        p, se, zv, pv = res2.table_precision_oim.T
+        assert_allclose(res1.params[k_mean:], p, rtol=1e-6)
+        assert_allclose(res1.bse[k_mean:], se, rtol=1e-3)
+        assert_allclose(res1.tvalues[k_mean:], zv, rtol=1e-3)
+        assert_allclose(res1.pvalues[k_mean:], pv, rtol=1e-2)

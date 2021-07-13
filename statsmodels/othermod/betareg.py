@@ -431,8 +431,8 @@ class Beta(GenericLikelihoodModel):
             if kwds["cov_type"].lower() == "eim":
                 self.hess_type = "eim"
                 del kwds["cov_type"]
-            else:
-                self.hess_type = "oim"
+        else:
+            self.hess_type = "oim"
 
         self.results_class = BetaRegressionResults
         self.results_class_wrapper = BetaRegressionResultsWrapper
