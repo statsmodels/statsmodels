@@ -1,18 +1,19 @@
 from __future__ import print_function
 import io
-import os.path as op
+import os
 
 import numpy as np
 from numpy.testing import assert_allclose
 import pandas as pd
 import patsy
 from statsmodels.api import families
-from statsmodels.miscmodels.betareg import Beta
-
+from statsmodels.othermod.betareg import Beta
 
 links = families.links
 
-HERE = op.abspath(op.dirname(__file__))
+cur_dir = os.path.dirname(os.path.abspath(__file__))
+res_dir = os.path.join(cur_dir, "results")
+
 
 # betareg(I(food/income) ~ income + persons, data = FoodExpenditure)
 _income_estimates_mean = u"""\
@@ -49,8 +50,8 @@ expected_methylation_mean = pd.read_table(
 expected_methylation_precision = pd.read_table(
     io.StringIO(_methylation_estimates_precision), sep=r"\s+")
 
-income = pd.read_csv(op.join(HERE, 'foodexpenditure.csv'))
-methylation = pd.read_csv(op.join(HERE, 'methylation-test.csv'))
+income = pd.read_csv(os.path.join(res_dir, 'foodexpenditure.csv'))
+methylation = pd.read_csv(os.path.join(res_dir, 'methylation-test.csv'))
 
 
 def check_same(a, b, eps, name):
@@ -74,6 +75,9 @@ class TestBeta(object):
         mod = Beta.from_formula(model, methylation, exog_precision=Z,
                                 link_precision=links.identity())
         self.meth_fit = mod.fit()
+        mod = Beta.from_formula(model, methylation, exog_precision=Z,
+                                link_precision=links.Log())
+        self.meth_log_fit = mod.fit()
 
     def test_income_coefficients(self):
         rslt = self.income_fit
@@ -102,8 +106,12 @@ class TestBeta(object):
                      expected_methylation_mean['Pr(>|z|)'], 1e-2)
 
     def test_methylation_precision(self):
-        rslt = self.meth_fit
-
+        # R results are from log link_precision
+        rslt = self.meth_log_fit
+        assert_allclose(rslt.params[-2:],
+                        expected_methylation_precision['Estimate'],
+                        atol=1e-5, rtol=1e-10)
+        #     expected_methylation_precision['Estimate']
         # yield check_same, links.logit()(rslt.params[-2:]),
         #     expected_methylation_precision['Estimate'], 1e-3, "estimate"
         # yield check_same, rslt.tvalues[-2:],

@@ -13,9 +13,8 @@ Smithson, Michael, and Jay Verkuilen. "A better lemon squeezer?
 Maximum-likelihood regression with beta-distributed dependent variables."
 Psychological methods 11.1 (2006): 54.
 """
-from __future__ import print_function
+
 import numpy as np
-import pandas as pd
 from scipy.special import gammaln as lgamma
 import patsy
 
@@ -25,7 +24,6 @@ from statsmodels.tools.decorators import cache_readonly
 from statsmodels.base.model import (
     GenericLikelihoodModel, GenericLikelihoodModelResults, _LLRMixin)
 from statsmodels.genmod import families
-
 
 
 _init_example = """
@@ -495,20 +493,3 @@ class BetaRegressionResultsWrapper(lm.RegressionResultsWrapper):
 
 wrap.populate_wrapper(BetaRegressionResultsWrapper,
                       BetaRegressionResults)
-
-
-if __name__ == "__main__":
-
-    import patsy
-
-    fex = pd.read_csv('tests/foodexpenditure.csv')
-    m = Beta.from_formula(' I(food/income) ~ income + persons', fex)
-    print(m.fit().summary())
-    # print GLM.from_formula('iyield ~ C(batch) + temp', dat, family=Binomial()).fit().summary()
-
-    dev = pd.read_csv('tests/methylation-test.csv')
-    Z = patsy.dmatrix('~ age', dev, return_type='dataframe')
-    m = Beta.from_formula('methylation ~ gender + CpG', dev,
-                          exog_precision=Z,
-                          link_precision=families.links.identity())
-    print(m.fit().summary())
