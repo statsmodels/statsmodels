@@ -220,7 +220,7 @@ class ModelData(object):
         combined_2d_names = []
         if len(kwargs):
             for key, value_array in kwargs.items():
-                if value_array is None or value_array.ndim == 0:
+                if value_array is None or np.ndim(value_array) == 0:
                     none_array_names += [key]
                     continue
                 # grab 1d arrays
@@ -271,8 +271,8 @@ class ModelData(object):
             if combined_2d:
                 combined.update(dict(zip(combined_2d_names, combined_2d)))
             if none_array_names:
-                combined.update(dict(zip(none_array_names,
-                                         [None] * len(none_array_names))))
+                combined.update({k: kwargs.get(k, None)
+                                 for k in none_array_names})
 
             if missing_idx is not None:
                 combined.update({'endog': endog})
@@ -306,8 +306,8 @@ class ModelData(object):
                 combined.update(dict(zip(combined_2d_names,
                                          lmap(drop_nans_2d, combined_2d))))
             if none_array_names:
-                combined.update(dict(zip(none_array_names,
-                                         [None] * len(none_array_names))))
+                combined.update({k: kwargs.get(k, None)
+                                 for k in none_array_names})
 
             return combined, np.where(~nan_mask)[0].tolist()
         else:
