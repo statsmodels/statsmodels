@@ -1,8 +1,12 @@
 import numpy as np
+from numpy.testing import (
+    assert_allclose,
+    assert_almost_equal,
+    assert_equal,
+    assert_raises,
+)
 import pandas as pd
 import pytest
-from numpy.testing import (assert_almost_equal, assert_equal, assert_raises,
-                           assert_allclose)
 
 from statsmodels.tsa.seasonal import seasonal_decompose
 

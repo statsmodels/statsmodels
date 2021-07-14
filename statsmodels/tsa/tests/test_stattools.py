@@ -817,10 +817,6 @@ class TestKPSS:
         with pytest.raises(ValueError):
             kpss(self.x, "c", nlags="unknown")
 
-    def test_deprecation(self):
-        with pytest.warns(FutureWarning):
-            kpss(self.x, "c")
-
 
 def test_pandasacovf():
     s = Series(lrange(1, 11))
@@ -1008,16 +1004,6 @@ def test_acovf_nlags_missing(acovf_data, adjusted, demean, fft, missing):
 def test_acovf_error(acovf_data):
     with pytest.raises(ValueError):
         acovf(acovf_data, nlag=250, fft=False)
-
-
-def test_acovf_warns(acovf_data):
-    with pytest.warns(FutureWarning):
-        acovf(acovf_data)
-
-
-def test_acf_warns(acovf_data):
-    with pytest.warns(FutureWarning):
-        acf(acovf_data, nlags=40)
 
 
 def test_pacf2acf_ar():

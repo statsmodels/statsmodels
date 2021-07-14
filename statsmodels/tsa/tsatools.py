@@ -74,18 +74,13 @@ def add_trend(x, trend="c", prepend=False, has_constant='skip'):
     elif trend == "ctt":
         trendorder = 2
 
-    is_recarray = _is_recarray(x)
-    is_pandas = _is_using_pandas(x, None) or is_recarray
-    if is_pandas or is_recarray:
-        if is_recarray:
-            # deprecated: remove recarray support after 0.12
-            import warnings
-            from statsmodels.tools.sm_exceptions import recarray_warning
-            warnings.warn(recarray_warning, FutureWarning)
+    if _is_recarray(x):
+        from statsmodels.tools.sm_exceptions import recarray_exception
+        raise NotImplementedError(recarray_exception)
 
-            descr = x.dtype.descr
-            x = pd.DataFrame.from_records(x)
-        elif isinstance(x, pd.Series):
+    is_pandas = _is_using_pandas(x, None)
+    if is_pandas:
+        if isinstance(x, pd.Series):
             x = pd.DataFrame(x)
         else:
             x = x.copy()
@@ -100,7 +95,7 @@ def add_trend(x, trend="c", prepend=False, has_constant='skip'):
         trendarr = trendarr[:, 1]
 
     if "c" in trend:
-        if is_pandas or is_recarray:
+        if is_pandas:
             # Mixed type protection
             def safe_is_const(s):
                 try:
@@ -136,24 +131,13 @@ def add_trend(x, trend="c", prepend=False, has_constant='skip'):
                 trendarr = trendarr[:, 1:]
 
     order = 1 if prepend else -1
-    if is_recarray or is_pandas:
+    if is_pandas:
         trendarr = pd.DataFrame(trendarr, index=x.index, columns=columns)
         x = [trendarr, x]
         x = pd.concat(x[::order], axis=1)
     else:
         x = [trendarr, x]
         x = np.column_stack(x[::order])
-
-    if is_recarray:
-        x = x.to_records(index=False)
-        new_descr = x.dtype.descr
-        extra_col = len(new_descr) - len(descr)
-        if prepend:
-            descr = new_descr[:extra_col] + descr
-        else:
-            descr = descr + new_descr[-extra_col:]
-
-        x = x.astype(np.dtype(descr))
 
     return x
 

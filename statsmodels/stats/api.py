@@ -4,8 +4,8 @@
 from . import diagnostic
 from .diagnostic import (
     acorr_ljungbox, acorr_breusch_godfrey, acorr_lm,
-    CompareCox, compare_cox, CompareJ, compare_j, compare_encompassing,
-    HetGoldfeldQuandt, het_goldfeldquandt,
+    compare_cox, compare_j, compare_encompassing,
+    het_goldfeldquandt,
     het_breuschpagan, het_white, het_arch,
     linear_harvey_collier, linear_rainbow, linear_lm, linear_reset,
     breaks_cusumolsresid, breaks_hansen, recursive_olsresiduals,
@@ -83,8 +83,8 @@ __all__ = ["acorr_lm", "acorr_breusch_godfrey", "acorr_ljungbox", "anova_lm", "b
            "NormalIndPower", "FTestAnovaPower", "FTestPower", "tt_solve_power",
            "tt_ind_solve_power", "zt_ind_solve_power", "cov_cluster", "cov_cluster_2groups",
            "cov_nw_panel", "cov_hac", "cov_white_simple", "cov_hc0", "cov_hc1", "cov_hc2",
-           "cov_hc3", "se_cov", "CompareCox", "compare_cox", "CompareJ", "compare_j",
-           "compare_encompassing", "HetGoldfeldQuandt", "het_goldfeldquandt", "het_breuschpagan",
+           "cov_hc3", "se_cov", "compare_cox", "compare_j",
+           "compare_encompassing", "het_goldfeldquandt", "het_breuschpagan",
            "het_white", "het_arch", "linear_harvey_collier", "linear_rainbow", "linear_lm",
            "linear_reset", "breaks_cusumolsresid", "breaks_hansen", "recursive_olsresiduals",
            "spec_white", "diagnostic", "normal_ad", "lilliefors", "RegressionFDR", "multicomp",

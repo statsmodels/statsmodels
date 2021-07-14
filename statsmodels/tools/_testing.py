@@ -8,7 +8,6 @@ during refactoring arises.
 The first group of functions provide consistency checks
 
 """
-from statsmodels.compat.pandas import assert_frame_equal, assert_series_equal
 
 import os
 import sys
@@ -157,6 +156,7 @@ def check_predict_types(results):
     # ignore wrapper for isinstance check
     from statsmodels.genmod.generalized_linear_model import GLMResults
     from statsmodels.discrete.discrete_model import DiscreteResults
+    from statsmodels.compat.pandas import assert_frame_equal, assert_series_equal
 
     # possibly unwrap -- GEE has no wrapper
     results = getattr(results, '_results', results)

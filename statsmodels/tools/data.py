@@ -48,15 +48,7 @@ def interpret_data(data, colnames=None, rownames=None):
     (values, colnames, rownames) : (homogeneous ndarray, list)
     """
     if isinstance(data, np.ndarray):
-        if _is_structured_ndarray(data):
-            import warnings
-            from statsmodels.tools.sm_exceptions import recarray_warning
-            warnings.warn(recarray_warning, FutureWarning)
-            if colnames is None:
-                colnames = data.dtype.names
-            values = struct_to_ndarray(data)
-        else:
-            values = data
+        values = np.asarray(data)
 
         if colnames is None:
             colnames = ['Y_%d' % i for i in range(values.shape[1])]

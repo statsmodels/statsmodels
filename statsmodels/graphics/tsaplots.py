@@ -222,7 +222,7 @@ def plot_acf(
         missing=missing,
     )
     if alpha is not None:
-        acf_x, confint = acf_x
+        acf_x, confint = acf_x[:2]
 
     _plot_corr(
         ax,

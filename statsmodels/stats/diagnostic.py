@@ -14,8 +14,6 @@ statistic. Some alternative test statistic results have not been verified.
 
 TODO
 * refactor to store intermediate results
-* how easy is it to attach a test that is a class to a result instance,
-  for example CompareCox as a method compare_cox(self, other) ?
 
 missing:
 
@@ -173,41 +171,6 @@ def compare_cox(results_x, results_z, store=False):
     return q, pval
 
 
-class CompareCox(object):
-    """
-    Cox Test for non-nested models
-
-    .. deprecated:: 0.11
-
-       CompareCox is deprecated in favor of compare_cox.
-       CompareCox will be removed after 0.12.
-    """
-
-    def __init__(self):
-        import warnings
-        warnings.warn("CompareCox is deprecated in favor of compare_cox and "
-                      "will be removed after 0.12.", FutureWarning)
-        self.res_dx = self.res_xzx = self.c01 = None
-        self.v01 = self.q = self.pvalue = self.dist = None
-
-    def run(self, results_x, results_z, attach=False):
-        results = compare_cox(results_x, results_z, store=attach)
-        if attach:
-            res = results[-1]
-            self.res_dx = res.res_dx
-            self.res_xzx = res.res_xzx
-            self.c01 = res.c01
-            self.v01 = res.v01
-            self.q = res.q
-            self.pvalue = res.pvalue
-            self.dist = res.dist
-
-        return results
-
-    def __call__(self, results_x, results_z):
-        return self.run(results_x, results_z, attach=False)
-
-
 def compare_j(results_x, results_z, store=False):
     """
     Compute the J-test for non-nested models
@@ -263,37 +226,6 @@ def compare_j(results_x, results_z, store=False):
         return tstat, pval, res
 
     return tstat, pval
-
-
-class CompareJ(object):
-    """
-    J-Test for comparing non-nested models
-
-    .. deprecated:: 0.11
-
-       CompareJ is deprecated in favor of compare_j.
-       CompareJ will be removed after 0.12.
-    """
-
-    def __init__(self):
-        import warnings
-        warnings.warn("CompareJ is deprecated in favor of compare_j and will "
-                      "be removed after 0.12.", FutureWarning)
-        self.res_zx = self.dist = self.teststat = self.pvalue = None
-
-    def run(self, results_x, results_z, attach=True):
-        res = compare_j(results_x, results_z, store=attach)
-        tstat, pval = res[:2]
-        if attach:
-            self.res_zx = res[-1].res_zx
-            self.dist = res[-1].dist
-            self.teststat = res[-1].teststat
-            self.pvalue = res[-1].pvalue
-
-        return tstat, pval
-
-    def __call__(self, results_x, results_z):
-        return self.run(results_x, results_z, attach=False)
 
 
 def compare_encompassing(results_x, results_z, cov_type="nonrobust",
@@ -384,7 +316,7 @@ def compare_encompassing(results_x, results_z, cov_type="nonrobust",
 
 
 def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
-                   return_df=None, auto_lag=False):
+                   return_df=True, auto_lag=False):
     """
     Ljung-Box test of autocorrelation in residuals.
 
@@ -416,7 +348,7 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
         for seasonal data which uses min(2*period, nobs // 5) if set. If None,
         then the default rule is used to set the number of lags. When set, must
         be >= 2.
-    return_df : bool, default None
+    return_df : bool, default True
         Flag indicating whether to return the result as a single DataFrame
         with columns lb_stat, lb_pvalue, and optionally bp_stat and bp_pvalue.
         After 0.12, this will become the only return method.  Set to True
@@ -492,7 +424,7 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
     from statsmodels.tsa.stattools import acf
     x = array_like(x, "x")
     period = int_like(period, "period", optional=True)
-    return_df = bool_like(return_df, "return_df", optional=True)
+    return_df = bool_like(return_df, "return_df", optional=False)
     model_df = int_like(model_df, "model_df", optional=False)
     if period is not None and period <= 1:
         raise ValueError("period must be >= 2")
@@ -549,14 +481,6 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
     pval = np.full_like(qljungbox, np.nan)
     loc = adj_lags > 0
     pval[loc] = stats.chi2.sf(qljungbox[loc], adj_lags[loc])
-
-    if return_df is None:
-        msg = ("The value returned will change to a single DataFrame after "
-               "0.12 is released.  Set return_df to True to use to return a "
-               "DataFrame now.  Set return_df to False to silence this "
-               "warning.")
-        import warnings
-        warnings.warn(msg, FutureWarning)
 
     if not boxpierce:
         if return_df:
@@ -652,16 +576,7 @@ def acorr_lm(resid, nlags=None, autolag="AIC", store=False, *, period=None,
     if period is not None and nlags is None:
         maxlag = min(nobs // 5, 2 * period)
     elif nlags is None:
-        # TODO: Switch to min(10, nobs//5) after 0.12
-        import warnings
-        warnings.warn("The default value of nlags is changing.  After 0.12, "
-                      "this value will become min(10, nobs//5). Directly set"
-                      "maxlags or period to silence this warning.",
-                      FutureWarning)
-        # Future
-        # maxlag = min(nobs // 5, 10)
-        # Old: for adf from Greene referencing Schwert 1989
-        maxlag = int(np.ceil(12. * np.power(nobs / 100., 1 / 4.)))
+        maxlag = min(10, nobs // 5)
     else:
         maxlag = nlags
 
@@ -781,7 +696,7 @@ def acorr_breusch_godfrey(res, nlags=None, store=False):
     res : RegressionResults
         Estimation results for which the residuals are tested for serial
         correlation.
-    nlags : int, default None
+    nlags : int, optional
         Number of lags to include in the auxiliary regression. (nlags is
         highest lag).
     store : bool, default False
@@ -821,15 +736,7 @@ def acorr_breusch_godfrey(res, nlags=None, store=False):
     exog_old = res.model.exog
     nobs = x.shape[0]
     if nlags is None:
-        # TODO: Switch to min(10, nobs//5) after 0.12
-        import warnings
-        warnings.warn("The default value of nlags is changing.  After 0.12, "
-                      "this value will become min(10, nobs//5). Directly set"
-                      "nlags or period to silence this warning.",
-                      FutureWarning)
-
-        nlags = np.trunc(12. * np.power(nobs / 100., 1 / 4.))
-        nlags = int(nlags)
+        nlags = min(10, nobs // 5)
 
     x = np.concatenate((np.zeros(nlags), x))
 
@@ -1118,63 +1025,6 @@ F-statistic =%8.4f and p-value =%8.4f""" % (ordering, fval, fpval)
         return fval, fpval, ordering, res
 
     return fval, fpval, ordering
-
-
-class HetGoldfeldQuandt(object):
-    """
-    Test whether variance is the same in 2 subsamples
-
-    .. deprecated:: 0.11
-
-       HetGoldfeldQuandt is deprecated in favor of het_goldfeldquandt.
-       HetGoldfeldQuandt will be removed after 0.12.
-
-    See Also
-    --------
-    het_goldfeldquant
-        Goldfeld-Quant heteroskedasticity test.
-    """
-
-    def __init__(self):
-        import warnings
-        warnings.warn("HetGoldfeldQuandt is deprecated in favor of"
-                      "het_goldfeldquandt. HetGoldfeldQuandt will be removed"
-                      "after 0.12.",
-                      FutureWarning)
-        self.fval = self.fpval = self.df_fval = self.resols1 = None
-        self.resols2 = self.ordering = self.split = self._str = None
-
-    def run(self, y, x, idx=None, split=None, drop=None,
-            alternative="increasing", attach=True):
-        """
-        .. deprecated:: 0.11
-
-           Use het_goldfeldquant instead.
-
-        See Also
-        --------
-        het_goldfeldquant
-            Goldfeld-Quant heteroskedasticity test.
-        """
-        res = het_goldfeldquandt(y, x, idx=idx, split=split, drop=drop,
-                                 alternative=alternative, store=attach)
-        if attach:
-            store = res[-1]
-            self.__doc__ = store.__doc__
-            self.fval = store.fval
-            self.fpval = store.fpval
-            self.df_fval = store.df_fval
-            self.resols1 = store.resols1
-            self.resols2 = store.resols2
-            self.ordering = store.ordering
-            self.split = store.split
-
-        return res[:3]
-
-    def __call__(self, y, x, idx=None, split=None, drop=None,
-                 alternative="increasing"):
-        return self.run(y, x, idx=idx, split=split, drop=drop,
-                        attach=False, alternative=alternative)
 
 
 @deprecate_kwarg("result", "res")

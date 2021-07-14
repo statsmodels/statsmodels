@@ -14,7 +14,6 @@ import scipy.stats
 
 from statsmodels.tools.sm_exceptions import (
     ConvergenceWarning,
-    EstimationWarning,
     ValueWarning,
 )
 from statsmodels.tsa.holtwinters import (
@@ -521,8 +520,7 @@ class TestHoltWinters(object):
         # livestock2_livestock <- c(...)
         # res <- ets(livestock2_livestock, model='AAN', damped_trend=TRUE,
         #            phi=0.98)
-        with pytest.warns(FutureWarning):
-            mod = Holt(self.livestock2_livestock, damped_trend=True)
+        mod = Holt(self.livestock2_livestock, damped_trend=True)
         params = {
             "smoothing_level": 0.97402626,
             "smoothing_trend": 0.00010006,
@@ -845,10 +843,12 @@ def test_start_params(trend, seasonal):
 
 
 def test_no_params_to_optimize():
-    with pytest.warns(FutureWarning):
-        mod = ExponentialSmoothing(housing_data)
-    with pytest.warns(EstimationWarning):
-        mod.fit(smoothing_level=0.5, initial_level=housing_data.iloc[0])
+    mod = ExponentialSmoothing(
+        housing_data,
+        initial_level=housing_data.iloc[0],
+        initialization_method="known",
+    )
+    mod.fit(smoothing_level=0.5)
 
 
 def test_invalid_start_param_length():
@@ -862,8 +862,7 @@ def test_basin_hopping(reset_randomstate):
         housing_data, trend="add", initialization_method="estimated"
     )
     res = mod.fit()
-    with pytest.warns(FutureWarning):
-        res2 = mod.fit(use_basinhopping=True)
+    res2 = mod.fit(method="basinhopping")
     assert isinstance(res.summary().as_text(), str)
     assert isinstance(res2.summary().as_text(), str)
     # Basin hopping occasionally produces a slightly larger objective
@@ -898,12 +897,12 @@ def test_float_boxcox(trend, seasonal):
         use_boxcox=0.5,
     ).fit()
     assert_allclose(res.params["use_boxcox"], 0.5)
-    with pytest.warns(FutureWarning):
-        res = ExponentialSmoothing(
-            housing_data,
-            trend=trend,
-            seasonal=seasonal,
-        ).fit(use_boxcox=0.5)
+    res = ExponentialSmoothing(
+        housing_data,
+        trend=trend,
+        seasonal=seasonal,
+        use_boxcox=0.5,
+    ).fit()
     assert_allclose(res.params["use_boxcox"], 0.5)
 
 
@@ -1486,20 +1485,19 @@ def test_simulate_expected_r(
         return
 
     # create HoltWintersResults object with same parameters as in R
-    with pytest.warns(FutureWarning):
-        fit = ExponentialSmoothing(
-            austourists,
-            seasonal_periods=4,
-            trend=trend,
-            seasonal=seasonal,
-            damped_trend=damped,
-        ).fit(
-            smoothing_level=state["alpha"],
-            smoothing_trend=state["beta"],
-            smoothing_seasonal=state["gamma"],
-            damping_trend=state["phi"],
-            optimized=False,
-        )
+    fit = ExponentialSmoothing(
+        austourists,
+        seasonal_periods=4,
+        trend=trend,
+        seasonal=seasonal,
+        damped_trend=damped,
+    ).fit(
+        smoothing_level=state["alpha"],
+        smoothing_trend=state["beta"],
+        smoothing_seasonal=state["gamma"],
+        damping_trend=state["phi"],
+        optimized=False,
+    )
 
     # set the same final state as in R
     fit.level[-1] = state["l"]
@@ -1607,8 +1605,9 @@ def test_error_boxcox():
     y = np.random.standard_normal(100)
     with pytest.raises(TypeError, match="use_boxcox must be True"):
         ExponentialSmoothing(y, use_boxcox="a", initialization_method="known")
-    with pytest.raises(ValueError, match="initialization_method must be set"):
-        ExponentialSmoothing(y, use_boxcox=True)
+
+    mod = ExponentialSmoothing(y ** 2, use_boxcox=True)
+    assert isinstance(mod, ExponentialSmoothing)
 
     mod = ExponentialSmoothing(
         y ** 2, use_boxcox=True, initialization_method="legacy-heuristic"
@@ -1904,8 +1903,6 @@ def test_initialization_methods(ses, method, trend, seasonal):
 
 def test_attributes(ses):
     res = ExponentialSmoothing(ses, initialization_method="estimated").fit()
-    with pytest.warns(FutureWarning):
-        assert_allclose(res.trend, res.slope)
     assert res.k > 0
     assert res.resid.shape[0] == ses.shape[0]
     assert_allclose(res.fcastvalues, res.fittedfcast[-1:])

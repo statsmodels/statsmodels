@@ -380,7 +380,7 @@ def adfuller(
 
 
 @deprecate_kwarg("unbiased", "adjusted")
-def acovf(x, adjusted=False, demean=True, fft=None, missing="none", nlag=None):
+def acovf(x, adjusted=False, demean=True, fft=True, missing="none", nlag=None):
     """
     Estimate autocovariances.
 
@@ -425,20 +425,11 @@ def acovf(x, adjusted=False, demean=True, fft=None, missing="none", nlag=None):
     """
     adjusted = bool_like(adjusted, "adjusted")
     demean = bool_like(demean, "demean")
-    fft = bool_like(fft, "fft", optional=True)
+    fft = bool_like(fft, "fft", optional=False)
     missing = string_like(
         missing, "missing", options=("none", "raise", "conservative", "drop")
     )
     nlag = int_like(nlag, "nlag", optional=True)
-
-    if fft is None:
-        msg = (
-            "fft=True will become the default after the release of the 0.12 "
-            "release of statsmodels. To suppress this warning, explicitly "
-            "set fft=False."
-        )
-        warnings.warn(msg, FutureWarning)
-        fft = False
 
     x = array_like(x, "x", ndim=1)
 
@@ -527,7 +518,7 @@ def acovf(x, adjusted=False, demean=True, fft=None, missing="none", nlag=None):
     return acov
 
 
-def q_stat(x, nobs, type=None):
+def q_stat(x, nobs):
     """
     Compute Ljung-Box Q Statistic.
 
@@ -553,12 +544,6 @@ def q_stat(x, nobs, type=None):
     x = array_like(x, "x")
     nobs = int_like(nobs, "nobs")
 
-    if type is not None:
-        warnings.warn(
-            "The `type` argument is deprecated and has no effect. This "
-            "argument will be removed after the 0.12 release.",
-            FutureWarning,
-        )
     ret = (
         nobs
         * (nobs + 2)
@@ -571,13 +556,12 @@ def q_stat(x, nobs, type=None):
 # NOTE: Changed unbiased to False
 # see for example
 # http://www.itl.nist.gov/div898/handbook/eda/section3/autocopl.htm
-@deprecate_kwarg("unbiased", "adjusted")
 def acf(
     x,
     adjusted=False,
     nlags=None,
     qstat=False,
-    fft=None,
+    fft=True,
     alpha=None,
     bartlett_confint=True,
     missing="none",
@@ -591,8 +575,9 @@ def acf(
        The time series data.
     adjusted : bool, default False
        If True, then denominators for autocovariance are n-k, otherwise n.
-    nlags : int, default 40
-        Number of lags to return autocorrelation for.
+    nlags : int, optional
+        Number of lags to return autocorrelation for. If not provided,
+        uses min(10 * np.log10(nobs), nobs - 1).
     qstat : bool, default False
         If True, returns the Ljung-Box q statistic for each autocorrelation
         coefficient.  See q_stat for more information.
@@ -669,31 +654,17 @@ def acf(
     adjusted = bool_like(adjusted, "adjusted")
     nlags = int_like(nlags, "nlags", optional=True)
     qstat = bool_like(qstat, "qstat")
-    fft = bool_like(fft, "fft", optional=True)
+    fft = bool_like(fft, "fft", optional=False)
     alpha = float_like(alpha, "alpha", optional=True)
     missing = string_like(
         missing, "missing", options=("none", "raise", "conservative", "drop")
     )
-    if nlags is None:
-        warnings.warn(
-            "The default number of lags is changing from 40 to"
-            "min(int(10 * np.log10(nobs)), nobs - 1) after 0.12"
-            "is released. Set the number of lags to an integer to "
-            " silence this warning.",
-            FutureWarning,
-        )
-        nlags = 40
-
-    if fft is None:
-        warnings.warn(
-            "fft=True will become the default after the release of the 0.12 "
-            "release of statsmodels. To suppress this warning, explicitly "
-            "set fft=False.",
-            FutureWarning,
-        )
-        fft = False
     x = array_like(x, "x")
-    nobs = len(x)  # TODO: should this shrink for missing="drop" and NaNs in x?
+    # TODO: should this shrink for missing="drop" and NaNs in x?
+    nobs = x.shape[0]
+    if nlags is None:
+        nlags = min(int(10 * np.log10(nobs)), nobs - 1)
+
     avf = acovf(x, adjusted=adjusted, demean=True, fft=fft, missing=missing)
     acf = avf[: nlags + 1] / avf[0]
     if not (qstat or alpha):
@@ -726,8 +697,9 @@ def pacf_yw(x, nlags=None, method="adjusted"):
     ----------
     x : array_like
         The observations of time series for which pacf is calculated.
-    nlags : int, default 40
-        The largest lag for which pacf is returned.
+    nlags : int, optional
+        Number of lags to return autocorrelation for. If not provided,
+        uses min(10 * np.log10(nobs), nobs - 1).
     method : {"adjusted", "mle"}, default "adjusted"
         The method for the autocovariance calculations in yule walker.
 
@@ -752,29 +724,12 @@ def pacf_yw(x, nlags=None, method="adjusted"):
     """
     x = array_like(x, "x")
     nlags = int_like(nlags, "nlags", optional=True)
+    nobs = x.shape[0]
     if nlags is None:
-        warnings.warn(
-            "The default number of lags is changing from 40 to"
-            "min(int(10 * np.log10(nobs)), nobs - 1) after 0.12"
-            "is released. Set the number of lags to an integer to "
-            " silence this warning.",
-            FutureWarning,
-        )
-        nlags = 40
+        if nlags is None:
+            nlags = min(int(10 * np.log10(nobs)), nobs - 1)
 
-    method = string_like(
-        method, "method", options=("adjusted", "unbiased", "mle")
-    )
-    if method == "unbiased":
-        warnings.warn(
-            "unbiased is deprecated in factor of adjusted to reflect that the "
-            "term is adjusting the sample size used in the autocovariance "
-            "calculation rather than estimating an unbiased autocovariance. "
-            "After release 0.13, using 'unbiased' will raise.",
-            FutureWarning,
-        )
-        method = "adjusted"
-
+    method = string_like(method, "method", options=("adjusted", "mle"))
     pacf = [1.0]
     for k in range(1, nlags + 1):
         pacf.append(yule_walker(x, k, method=method)[0][-1])
@@ -790,8 +745,8 @@ def pacf_burg(x, nlags=None, demean=True):
     x : array_like
         Observations of time series for which pacf is calculated.
     nlags : int, optional
-        Number of lags to compute the partial autocorrelations.  If omitted,
-        uses the smaller of 10(log10(nobs)) or nobs - 1.
+        Number of lags to return autocorrelation for. If not provided,
+        uses min(10 * np.log10(nobs), nobs - 1).
     demean : bool, optional
         Flag indicating to demean that data. Set to False if x has been
         previously demeaned.
@@ -856,8 +811,9 @@ def pacf_ols(x, nlags=None, efficient=True, adjusted=False):
     ----------
     x : array_like
         Observations of time series for which pacf is calculated.
-    nlags : int
-        Number of lags for which pacf is returned.  Lag 0 is not returned.
+    nlags : int, optional
+        Number of lags to return autocorrelation for. If not provided,
+        uses min(10 * np.log10(nobs), nobs - 1).
     efficient : bool, optional
         If true, uses the maximum number of available observations to compute
         each partial autocorrelation. If not, uses the same number of
@@ -905,16 +861,9 @@ def pacf_ols(x, nlags=None, efficient=True, adjusted=False):
     nlags = int_like(nlags, "nlags", optional=True)
     efficient = bool_like(efficient, "efficient")
     adjusted = bool_like(adjusted, "adjusted")
-
+    nobs = x.shape[0]
     if nlags is None:
-        warnings.warn(
-            "The default number of lags is changing from 40 to"
-            "min(int(10 * np.log10(nobs)), nobs - 1) after 0.12"
-            "is released. Set the number of lags to an integer to "
-            " silence this warning.",
-            FutureWarning,
-        )
-        nlags = 40
+        nlags = min(int(10 * np.log10(nobs)), nobs - 1)
 
     pacf = np.empty(nlags + 1)
     pacf[0] = 1.0
@@ -934,8 +883,7 @@ def pacf_ols(x, nlags=None, efficient=True, adjusted=False):
             pacf[k] = params[-1]
 
     if adjusted:
-        n = len(x)
-        pacf *= n / (n - np.arange(nlags + 1))
+        pacf *= nobs / (nobs - np.arange(nlags + 1))
 
     return pacf
 
@@ -948,10 +896,9 @@ def pacf(x, nlags=None, method="ywadjusted", alpha=None):
     ----------
     x : array_like
         Observations of time series for which pacf is calculated.
-    nlags : int
-        The largest lag for which the pacf is returned. The default
-        is currently 40, but will change to
-        min(int(10 * np.log10(nobs)), nobs // 2 - 1) in the future
+    nlags : int, optional
+        Number of lags to return autocorrelation for. If not provided,
+        uses min(10 * np.log10(nobs), nobs // 2 - 1).
     method : str, default "ywunbiased"
         Specifies which method for the calculations to use.
 
@@ -1005,22 +952,6 @@ def pacf(x, nlags=None, method="ywadjusted", alpha=None):
     consistently worse than the other options.
     """
     nlags = int_like(nlags, "nlags", optional=True)
-    renames = {
-        "ydu": "yda",
-        "ywu": "ywa",
-        "ywunbiased": "ywadjusted",
-        "ldunbiased": "ldadjusted",
-        "ld_unbiased": "ld_adjusted",
-        "ldu": "lda",
-        "ols-unbiased": "ols-adjusted",
-    }
-    if method in renames:
-        warnings.warn(
-            f"{method} has been renamed {renames[method]}. After release 0.13, "
-            "using the old name will raise.",
-            FutureWarning,
-        )
-        method = renames[method]
     methods = (
         "ols",
         "ols-inefficient",
@@ -1044,15 +975,9 @@ def pacf(x, nlags=None, method="ywadjusted", alpha=None):
     method = string_like(method, "method", options=methods)
     alpha = float_like(alpha, "alpha", optional=True)
 
+    nobs = x.shape[0]
     if nlags is None:
-        warnings.warn(
-            "The default number of lags is changing from 40 to"
-            "min(int(10 * np.log10(nobs)), nobs // 2 - 1) after 0.12"
-            "is released. Set the number of lags to an integer to "
-            " silence this warning.",
-            FutureWarning,
-        )
-        nlags = 40
+        nlags = min(int(10 * np.log10(nobs)), nobs // 2 - 1)
     if nlags >= x.shape[0] // 2:
         raise ValueError(
             "Can only compute partial correlations for lags up to 50% of the "
@@ -1935,8 +1860,7 @@ def has_missing(data):
     return np.isnan(np.sum(data))
 
 
-@deprecate_kwarg("lags", "nlags")
-def kpss(x, regression="c", nlags=None, store=False):
+def kpss(x, regression="c", nlags="auto", store=False):
     """
     Kwiatkowski-Phillips-Schmidt-Shin test for stationarity.
 
@@ -2028,24 +1952,12 @@ def kpss(x, regression="c", nlags=None, store=False):
         # error term.
         resids = OLS(x, add_constant(np.arange(1, nobs + 1))).fit().resid
         crit = [0.119, 0.146, 0.176, 0.216]
-    elif hypo == "c":
+    else:  # hypo == "c"
         # special case of the model above, where beta = 0 (so the null
         # hypothesis is that the data is stationary around r_0).
         resids = x - x.mean()
         crit = [0.347, 0.463, 0.574, 0.739]
 
-    if nlags is None:
-        nlags = "legacy"
-        msg = (
-            "The behavior of using nlags=None will change in release 0.13."
-            "Currently nlags=None is the same as "
-            'nlags="legacy", and so a sample-size lag length is used. '
-            "After the next release, the default will change to be the "
-            'same as nlags="auto" which uses an automatic lag length '
-            "selection method. To silence this warning, either use "
-            '"auto" or "legacy"'
-        )
-        warnings.warn(msg, FutureWarning)
     if nlags == "legacy":
         nlags = int(np.ceil(12.0 * np.power(nobs / 100.0, 1 / 4.0)))
         nlags = min(nlags, nobs - 1)

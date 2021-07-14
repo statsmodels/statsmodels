@@ -23,7 +23,7 @@ cpi.diff().plot()
 log_cpi = np.log(cpi)
 
 # check the ACF and PCF plots
-acf, confint_acf = sm.tsa.acf(log_cpi.diff().values[1:], confint=95)
+acf, confint_acf = sm.tsa.acf(log_cpi.diff().values[1:], alpha=0.05)[:2]
 # center the confidence intervals about zero
 # TODO: demean? --> confint_acf -= confint_acf.mean(1)[:, None]
 pacf = sm.tsa.pacf(log_cpi.diff().values[1:], method='ols')
