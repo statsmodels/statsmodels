@@ -1,9 +1,12 @@
 import pandas as pd
 import pytest
 
-from statsmodels.datasets import macrodata, co2
-from statsmodels.tsa.x13 import (_find_x12, x13_arima_select_order,
-                                 x13_arima_analysis)
+from statsmodels.datasets import co2, macrodata
+from statsmodels.tsa.x13 import (
+    _find_x12,
+    x13_arima_analysis,
+    x13_arima_select_order,
+)
 
 x13path = _find_x12()
 

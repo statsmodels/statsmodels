@@ -2,6 +2,7 @@
 Results for ARMA models.  Produced by gretl.
 """
 import os
+
 from numpy import genfromtxt
 
 current_path = os.path.dirname(os.path.abspath(__file__))

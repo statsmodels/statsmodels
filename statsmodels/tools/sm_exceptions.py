@@ -250,6 +250,12 @@ filterwarnings("ignore", message="recarray support", category=FutureWarning)
 """
 
 
+recarray_exception = """
+recarray support has been removed from statsmodels. Use pandas DataFrames
+for structured data.
+"""
+
+
 warnings.simplefilter("always", ModelWarning)
 warnings.simplefilter("always", ConvergenceWarning)
 warnings.simplefilter("always", CacheWriteWarning)

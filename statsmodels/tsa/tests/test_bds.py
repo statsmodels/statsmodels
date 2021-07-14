@@ -13,10 +13,12 @@ http://ideas.repec.org/c/boc/bocode/t871803.html.
 """
 
 import os
+
 import numpy as np
-import pandas as pd
-from statsmodels.tsa.stattools import bds
 from numpy.testing import assert_almost_equal
+import pandas as pd
+
+from statsmodels.tsa.stattools import bds
 
 DECIMAL_8 = 8
 DECIMAL_6 = 6

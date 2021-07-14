@@ -1,5 +1,6 @@
-import numpy as np
 import os
+
+import numpy as np
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 

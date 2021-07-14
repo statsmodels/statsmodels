@@ -156,22 +156,6 @@ class HoltWintersResults(Results):
         return self._optimized
 
     @property
-    def slope(self):
-        """
-        An array of the slope values that make up the fitted values.
-
-        .. deprecated:: 0.12
-
-           Use the trend property instead.
-        """
-        import warnings
-
-        warnings.warn(
-            "slope is deprecated and will be removed after 0.13", FutureWarning
-        )
-        return self._trend
-
-    @property
     def trend(self):
         """
         An array of the trend values that make up the fitted values.

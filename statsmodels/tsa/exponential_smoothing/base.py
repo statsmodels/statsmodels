@@ -520,7 +520,9 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
             If lags is a list or array, then all lags are included up to the
             largest lag in the list, however only the tests for the lags in the
             list are reported.
-            If lags is None, then the default maxlag is 12*(nobs/100)^{1/4}
+            If lags is None, then the default maxlag is min(10, nobs//5) for
+            non-seasonal time series and min (2*m, nobs//5) for seasonal time
+            series.
 
         Returns
         -------
@@ -573,14 +575,6 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
                     lags = min(2 * seasonal_periods, nobs_effective // 5)
                 else:
                     lags = min(10, nobs_effective // 5)
-
-                warnings.warn(
-                    "The default value of lags is changing.  After 0.12, "
-                    "this value will become min(10, nobs//5) for non-seasonal "
-                    "time series and min (2*m, nobs//5) for seasonal time "
-                    "series. Directly set lags to silence this warning.",
-                    FutureWarning
-                )
 
             for i in range(self.model.k_endog):
                 if hasattr(self, "filter_results"):
@@ -889,9 +883,7 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
         except Exception:  # FIXME: catch something specific
             het = np.array([[np.nan] * 2])
         try:
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", FutureWarning)
-                lb = self.test_serial_correlation(method="ljungbox")
+            lb = self.test_serial_correlation(method="ljungbox")
         except Exception:  # FIXME: catch something specific
             lb = np.array([[np.nan] * 2]).reshape(1, 2, 1)
         try:

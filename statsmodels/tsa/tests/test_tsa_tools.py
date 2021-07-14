@@ -589,30 +589,6 @@ class TestAddTrend(object):
         expected["trend_squared"] = self.t ** 2
         assert_frame_equal(expected, appended)
 
-    def test_recarray(self):
-        recarray = pd.DataFrame(self.arr_2d).to_records(index=False)
-        with pytest.warns(FutureWarning, match="recarray support"):
-            appended = tools.add_trend(recarray)
-        expected = pd.DataFrame(self.arr_2d)
-        expected["const"] = self.c
-        expected = expected.to_records(index=False)
-        assert_equal(expected, appended)
-        with pytest.warns(FutureWarning, match="recarray support"):
-            prepended = tools.add_trend(recarray, prepend=True)
-        expected = pd.DataFrame(self.arr_2d)
-        expected.insert(0, "const", self.c)
-        expected = expected.to_records(index=False)
-        assert_equal(expected, prepended)
-
-        with pytest.warns(FutureWarning, match="recarray support"):
-            appended = tools.add_trend(recarray, trend="ctt")
-        expected = pd.DataFrame(self.arr_2d)
-        expected["const"] = self.c
-        expected["trend"] = self.t
-        expected["trend_squared"] = self.t ** 2
-        expected = expected.to_records(index=False)
-        assert_equal(expected, appended)
-
     def test_duplicate_const(self):
         assert_raises(
             ValueError,
@@ -651,27 +627,6 @@ class TestAddTrend(object):
 
         added = tools.add_trend(self.c, trend="ct", has_constant="add")
         expected = np.vstack((self.c, self.c, self.t)).T
-        assert_equal(added, expected)
-
-    def test_mixed_recarray(self):
-        dt = np.dtype([("c0", np.float64), ("c1", np.int8), ("c2", "S4")])
-        ra = np.array([(1.0, 1, "aaaa"), (1.1, 2, "bbbb")], dtype=dt).view(
-            np.recarray
-        )
-        with pytest.warns(FutureWarning, match="recarray support"):
-            added = tools.add_trend(ra, trend="ct")
-        dt = np.dtype(
-            [
-                ("c0", np.float64),
-                ("c1", np.int8),
-                ("c2", "S4"),
-                ("const", np.float64),
-                ("trend", np.float64),
-            ]
-        )
-        expected = np.array(
-            [(1.0, 1, "aaaa", 1.0, 1.0), (1.1, 2, "bbbb", 1.0, 2.0)], dtype=dt
-        ).view(np.recarray)
         assert_equal(added, expected)
 
     def test_dataframe_duplicate(self):

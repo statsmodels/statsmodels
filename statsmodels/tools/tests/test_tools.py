@@ -69,18 +69,6 @@ class TestTools(object):
         assert_equal(tools.add_constant(x, has_constant='add'),
                      np.column_stack((np.ones(4), x)))
 
-    def test_add_constant_recarray(self):
-        dt = np.dtype([('', int), ('', '<S4'), ('', np.float32), ('', np.float64)])
-        x = np.array([(1, 'abcd', 1.0, 2.0),
-                      (7, 'abcd', 2.0, 4.0),
-                      (21, 'abcd', 2.0, 8.0)], dt)
-        x = x.view(np.recarray)
-        with pytest.warns(FutureWarning, match="recarray support"):
-            y = tools.add_constant(x)
-        assert_equal(y['const'],np.array([1.0,1.0,1.0]))
-        for f in x.dtype.fields:
-            assert y[f].dtype == x[f].dtype
-
     def test_add_constant_series(self):
         s = pd.Series([1.0,2.0,3.0])
         output = tools.add_constant(s)

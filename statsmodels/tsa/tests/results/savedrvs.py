@@ -8,7 +8,6 @@ from numpy import array
 
 from statsmodels.tools.testing import Holder
 
-
 rvsdata = Holder()
 rvsdata.comment = 'generated data, divide by 1000, see savervs'
 rvsdata.xarma32 = array([

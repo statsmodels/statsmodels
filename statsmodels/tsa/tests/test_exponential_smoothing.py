@@ -1,7 +1,7 @@
 """
 Author: Samuel Scherrer
 """
-from statsmodels.compat.platform import PLATFORM_WIN, PLATFORM_LINUX32
+from statsmodels.compat.platform import PLATFORM_LINUX32, PLATFORM_WIN
 
 from itertools import product
 import json

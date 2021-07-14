@@ -33,8 +33,8 @@ from statsmodels.tools.validation import (
 )
 from statsmodels.tsa.base.tsa_model import TimeSeriesModel
 from statsmodels.tsa.exponential_smoothing.ets import (
+    _initialization_heuristic,
     _initialization_simple,
-    _initialization_heuristic
 )
 from statsmodels.tsa.holtwinters import (
     _exponential_smoothers as smoothers,
@@ -209,11 +209,11 @@ class ExponentialSmoothing(TimeSeriesModel):
         seasonal=None,
         *,
         seasonal_periods=None,
-        initialization_method=None,  # Future: 'estimated',
+        initialization_method="estimated",
         initial_level=None,
         initial_trend=None,
         initial_seasonal=None,
-        use_boxcox=None,
+        use_boxcox=False,
         bounds=None,
         dates=None,
         freq=None,
@@ -271,7 +271,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         self._initialization_method = string_like(
             initialization_method,
             "initialization_method",
-            optional=True,
+            optional=False,
             options=options,
         )
         self._initial_level = float_like(
@@ -283,7 +283,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         self._initial_seasonal = array_like(
             initial_seasonal, "initial_seasonal", optional=True
         )
-        estimated = self._initialization_method in (None, "estimated")
+        estimated = self._initialization_method == "estimated"
         self._estimate_level = estimated
         self._estimate_trend = estimated and self.trend
         self._estimate_seasonal = estimated and self.seasonal
@@ -327,14 +327,6 @@ class ExponentialSmoothing(TimeSeriesModel):
         return bounds
 
     def _boxcox(self):
-        if (
-            self._use_boxcox is not None
-            and self._initialization_method is None
-        ):
-            raise ValueError(
-                "initialization_method must be set when use_boxcox has"
-                "been set."
-            )
         if self._use_boxcox is None or self._use_boxcox is False:
             self._lambda = np.nan
             return self._y
@@ -419,19 +411,6 @@ class ExponentialSmoothing(TimeSeriesModel):
             self._fixed_parameters = {}
 
     def _initialize(self):
-        if self._initialization_method is None:
-            msg = "initial_{0} given but no initialization method specified."
-            if self._initial_level is not None:
-                raise ValueError(msg.format("level"))
-            if self._initial_trend is not None:
-                raise ValueError(msg.format("trend"))
-            if self._initial_seasonal is not None:
-                raise ValueError(msg.format("seasonal"))
-            warnings.warn(
-                "After 0.13 initialization must be handled at model creation",
-                FutureWarning,
-            )
-            return
         if self._initialization_method == "known":
             return self._initialize_known()
         msg = (
@@ -1107,31 +1086,16 @@ class ExponentialSmoothing(TimeSeriesModel):
             lower=False,
             optional=True,
         )
-
+        # TODO: Deprecate initial_level and related parameters from fit
         if initial_level is not None or initial_trend is not None:
-            if self._initialization_method is not None:
-                raise ValueError(
-                    "Initial values were set during model construction. These "
-                    "cannot be changed during fit."
-                )
-            warnings.warn(
-                "Setting initial values during fit is deprecated and will be "
-                "removed after 0.13. These should be set during model "
-                "initialization.",
-                FutureWarning,
+            raise ValueError(
+                "Initial values were set during model construction. These "
+                "cannot be changed during fit."
             )
         if use_boxcox is not None:
-            if self._use_boxcox is not None:
-                raise ValueError(
-                    "use_boxcox was set at model initialization and cannot "
-                    "be changed"
-                )
-
-            warnings.warn(
-                "Setting use_boxcox during fit has been deprecated and will "
-                "be removed after 0.13. It must be set during model "
-                "initialization.",
-                FutureWarning,
+            raise ValueError(
+                "use_boxcox was set at model initialization and cannot "
+                "be changed"
             )
         elif self._use_boxcox is None:
             use_boxcox = False
@@ -1139,19 +1103,9 @@ class ExponentialSmoothing(TimeSeriesModel):
             use_boxcox = self._use_boxcox
 
         if use_basinhopping is not None:
-            if method is not None:
-                raise ValueError(
-                    "use_basinhopping has been deprecated and method has "
-                    "also been set. These both cannot be used.  Use only "
-                    "method instead."
-                )
-            if use_basinhopping:
-                method = "basinhopping"
-            warnings.warn(
+            raise ValueError(
                 "use_basinhopping is deprecated. Set optimization method "
-                "using 'method'. This option will be removed after 0.13 "
-                "is released.",
-                FutureWarning,
+                "using 'method'."
             )
 
         data = self._data

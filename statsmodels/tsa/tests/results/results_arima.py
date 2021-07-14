@@ -2,6 +2,7 @@ import os
 
 import numpy as np
 from numpy import genfromtxt
+
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 
 path = os.path.join(cur_dir, "results_arima_forecasts.csv")
@@ -278,6 +279,7 @@ class ARIMA112(object):
         self.k_diff = 1
         if method == "mle":
             from .arima112_results import results
+
             # from gretl
             self.arroots = [1.0324 + 0j]
             self.maroots = [1.1447 + 0j, -4.8613+0j]
