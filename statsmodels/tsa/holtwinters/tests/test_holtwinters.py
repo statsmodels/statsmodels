@@ -808,7 +808,9 @@ def test_invalid_seasonal(seasonal):
 
 def test_2d_data():
     with pytest.raises(ValueError):
-        ExponentialSmoothing(pd.concat([housing_data, housing_data], axis=1)).fit()
+        ExponentialSmoothing(
+            pd.concat([housing_data, housing_data], axis=1)
+        ).fit()
 
 
 def test_infer_freq():
@@ -2034,3 +2036,41 @@ def test_estimated_initialization_short_data(ses, trend, seasonal, nobs):
         initialization_method="estimated",
     ).fit()
     assert res.mle_retvals.success
+
+
+def test_invalid_index(reset_randomstate):
+    y = np.random.standard_normal(12 * 200)
+    df_y = pd.DataFrame(data=y)
+    # Can't have a freq here
+    df_y.index.freq = "d"
+
+    model = ExponentialSmoothing(
+        df_y,
+        seasonal_periods=12,
+        trend="add",
+        seasonal="add",
+        initialization_method="heuristic",
+    )
+    fitted = model.fit(optimized=True, use_brute=True)
+
+    fcast = fitted.forecast(steps=157200)
+    assert fcast.shape[0] == 157200
+
+    index = pd.date_range("2020-01-01", periods=2 * y.shape[0])
+    index = np.random.choice(index, size=df_y.shape[0], replace=False)
+    index = sorted(index)
+    df_y.index = index
+    assert isinstance(df_y.index, pd.DatetimeIndex)
+    assert df_y.index.freq is None
+    assert df_y.index.inferred_freq is None
+    with pytest.warns(ValueWarning, match="A date index has been provided"):
+        model = ExponentialSmoothing(
+            df_y,
+            seasonal_periods=12,
+            trend="add",
+            seasonal="add",
+            initialization_method="heuristic",
+        )
+    fitted = model.fit(optimized=True, use_brute=True)
+    with pytest.warns(ValueWarning, match="No supported"):
+        fitted.forecast(steps=157200)

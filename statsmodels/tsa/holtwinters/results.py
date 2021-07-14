@@ -283,14 +283,16 @@ class HoltWintersResults(Results):
         """
         try:
             freq = getattr(self.model._index, "freq", 1)
-            if isinstance(freq, int):
-                start = self.model._index.shape[0]
-                end = start + steps - 1
-            else:
+            if not isinstance(freq, int) and isinstance(
+                self.model._index, (pd.DatetimeIndex, pd.PeriodIndex)
+            ):
                 start = self.model._index[-1] + freq
                 end = self.model._index[-1] + steps * freq
+            else:
+                start = self.model._index.shape[0]
+                end = start + steps - 1
             return self.model.predict(self.params, start=start, end=end)
-        except (AttributeError, ValueError):
+        except AttributeError:
             # May occur when the index does not have a freq
             return self.model._predict(h=steps, **self.params).fcastvalues
 
