@@ -2,13 +2,10 @@
 Utility functions models code
 """
 import numpy as np
-import numpy.lib.recfunctions as nprf
 import pandas as pd
 import scipy.linalg
 
-from statsmodels.compat.python import lzip, lmap
-
-from statsmodels.tools.data import _is_using_pandas, _is_recarray
+from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tools.validation import array_like
 
 
@@ -196,63 +193,6 @@ def categorical(data, col=None, dictnames=False, drop=False):
         if dictnames:
             return dummies, col_map
         return dummies
-    # catch recarrays and structured arrays
-    elif data.dtype.names or data.__class__ is np.recarray:
-        # deprecated: remove path after 0.12
-        import warnings
-        from statsmodels.tools.sm_exceptions import recarray_warning
-        warnings.warn(recarray_warning, FutureWarning)
-        if not col and np.squeeze(data).ndim > 1:
-            raise IndexError("col is None and the input array is not 1d")
-        if isinstance(col, int):
-            col = data.dtype.names[col]
-        if col is None and data.dtype.names and len(data.dtype.names) == 1:
-            col = data.dtype.names[0]
-
-        tmp_arr = np.unique(data[col])
-
-        # if the cols are shape (#,) vs (#,1) need to add an axis and flip
-        _swap = True
-        if data[col].ndim == 1:
-            tmp_arr = tmp_arr[:, None]
-            _swap = False
-        tmp_dummy = (tmp_arr == data[col]).astype(float)
-        if _swap:
-            tmp_dummy = np.squeeze(tmp_dummy).swapaxes(1, 0)
-
-        if not tmp_arr.dtype.names:  # how do we get to this code path?
-            tmp_arr = [asstr2(item) for item in np.squeeze(tmp_arr)]
-        elif tmp_arr.dtype.names:
-            tmp_arr = [asstr2(item) for item in np.squeeze(tmp_arr.tolist())]
-
-        # prepend the varname and underscore, if col is numeric attribute
-        # lookup is lost for recarrays...
-        if col is None:
-            try:
-                col = data.dtype.names[0]
-            except:
-                col = 'var'
-        # TODO: the above needs to be made robust because there could be many
-        # var_yes, var_no varaibles for instance.
-        tmp_arr = [col + '_' + item for item in tmp_arr]
-        # TODO: test this for rec and structured arrays!!!
-
-        if drop is True:
-            if len(data.dtype) <= 1:
-                if tmp_dummy.shape[0] < tmp_dummy.shape[1]:
-                    tmp_dummy = np.squeeze(tmp_dummy).swapaxes(1, 0)
-                dt = lzip(tmp_arr, [tmp_dummy.dtype.str]*len(tmp_arr))
-                # preserve array type
-                return np.array(lmap(tuple, tmp_dummy.tolist()),
-                                dtype=dt).view(type(data))
-
-            data = nprf.drop_fields(data, col, usemask=False,
-                                    asrecarray=type(data) is np.recarray)
-        data = nprf.append_fields(data, tmp_arr, data=tmp_dummy,
-                                  usemask=False,
-                                  asrecarray=type(data) is np.recarray)
-        return data
-
     # Catch array_like for an error
     elif not isinstance(data, np.ndarray):
         raise NotImplementedError("array_like objects are not supported")
@@ -318,17 +258,12 @@ def add_constant(data, prepend=True, has_constant='skip'):
     When the input is recarray or a pandas Series or DataFrame, the added
     column's name is 'const'.
     """
-    if _is_using_pandas(data, None) or _is_recarray(data):
-        if _is_recarray(data):
-            # deprecated: remove recarray support after 0.12
-            import warnings
-            from statsmodels.tools.sm_exceptions import recarray_warning
-            warnings.warn(recarray_warning, FutureWarning)
+    if _is_using_pandas(data, None):
         from statsmodels.tsa.tsatools import add_trend
         return add_trend(data, trend='c', prepend=prepend, has_constant=has_constant)
 
     # Special case for NumPy
-    x = np.asanyarray(data)
+    x = np.asarray(data)
     ndim = x.ndim
     if ndim == 1:
         x = x[:, None]

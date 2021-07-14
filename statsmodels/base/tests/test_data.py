@@ -179,48 +179,6 @@ class TestLists(TestArrays):
         cls.data = sm_data.handle_data(cls.endog, cls.exog)
 
 
-class TestRecarrays(TestArrays):
-    @classmethod
-    def setup_class(cls):
-        super(TestRecarrays, cls).setup_class()
-        cls.endog = np.random.random(9).view([('y_1', 'f8')]).view(np.recarray)
-        exog = np.random.random(9*3).view([('const', 'f8'), ('x_1', 'f8'),
-                                           ('x_2', 'f8')]).view(np.recarray)
-        exog['const'] = 1
-        cls.exog = exog
-        with pytest.warns(FutureWarning, match="recarray support"):
-            cls.data = sm_data.handle_data(cls.endog, cls.exog)
-        cls.xnames = ['const', 'x_1', 'x_2']
-        cls.ynames = 'y_1'
-
-    def test_endogexog(self):
-        np.testing.assert_equal(self.data.endog,
-                                self.endog.view(float, type=np.ndarray))
-        np.testing.assert_equal(self.data.exog,
-                                self.exog.view((float, 3), type=np.ndarray))
-
-
-class TestStructarrays(TestArrays):
-    @classmethod
-    def setup_class(cls):
-        super(TestStructarrays, cls).setup_class()
-        cls.endog = np.random.random(9).view([('y_1', 'f8')]).view(np.recarray)
-        exog = np.random.random(9*3).view([('const', 'f8'), ('x_1', 'f8'),
-                                           ('x_2', 'f8')]).view(np.recarray)
-        exog['const'] = 1
-        cls.exog = exog
-        with pytest.warns(FutureWarning, match="recarray support"):
-            cls.data = sm_data.handle_data(cls.endog, cls.exog)
-        cls.xnames = ['const', 'x_1', 'x_2']
-        cls.ynames = 'y_1'
-
-    def test_endogexog(self):
-        np.testing.assert_equal(self.data.endog,
-                                self.endog.view(float, type=np.ndarray))
-        np.testing.assert_equal(self.data.exog,
-                                self.exog.view((float, 3), type=np.ndarray))
-
-
 class TestListDataFrame(TestDataFrames):
     @classmethod
     def setup_class(cls):

@@ -14,7 +14,6 @@ import scipy.stats
 
 from statsmodels.tools.sm_exceptions import (
     ConvergenceWarning,
-    EstimationWarning,
     ValueWarning,
 )
 from statsmodels.tsa.holtwinters import (
