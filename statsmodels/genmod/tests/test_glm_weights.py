@@ -103,9 +103,7 @@ class CheckWeight(object):
             return None
         # Stata does not use var_weights in anscombe residuals, it seems.
         # Adjust residuals to match our approach.
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=FutureWarning)
-            resid_a = res1.resid_anscombe
+        resid_a = res1.resid_anscombe
 
         assert_allclose(resid_a, resid_all['resid_anscombe'] * np.sqrt(res1._var_weights), atol= 1e-6, rtol=2e-6)
 
@@ -903,8 +901,6 @@ def test_poisson_residuals():
                     res_poi_w.resid_response)
     assert_allclose(res_poi_e.resid_pearson, res_poi_w.resid_pearson)
     assert_allclose(res_poi_e.resid_deviance, res_poi_w.resid_deviance)
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", category=FutureWarning)
-        assert_allclose(res_poi_e.resid_anscombe, res_poi_w.resid_anscombe)
+    assert_allclose(res_poi_e.resid_anscombe, res_poi_w.resid_anscombe)
     assert_allclose(res_poi_e.resid_anscombe_unscaled,
                     res_poi_w.resid_anscombe)

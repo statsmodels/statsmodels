@@ -3,7 +3,7 @@ Compatibility tools for differences between Python 2 and 3
 """
 import sys
 
-PY37 = (sys.version_info[:2] == (3, 7))
+PY37 = sys.version_info[:2] == (3, 7)
 
 asunicode = lambda x, _: str(x)  # noqa:E731
 
@@ -11,13 +11,13 @@ asunicode = lambda x, _: str(x)  # noqa:E731
 def asbytes(s):
     if isinstance(s, bytes):
         return s
-    return s.encode('latin1')
+    return s.encode("latin1")
 
 
 def asstr(s):
     if isinstance(s, str):
         return s
-    return s.decode('latin1')
+    return s.decode("latin1")
 
 
 # list-producing versions of the major Python iterating functions
@@ -45,4 +45,5 @@ def with_metaclass(meta, *bases):
     class metaclass(meta):
         def __new__(cls, name, this_bases, d):
             return meta(name, bases, d)
-    return type.__new__(metaclass, 'temporary_class', (), {})
+
+    return type.__new__(metaclass, "temporary_class", (), {})

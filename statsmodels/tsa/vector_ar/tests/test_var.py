@@ -875,12 +875,6 @@ class TestVARExtras(object):
         assert_allclose(fci3, fci2, rtol=1e-12)
 
 
-@pytest.mark.parametrize("attr", ["y", "ys_lagged"])
-def test_deprecated_attributes_varresults(bivariate_var_result, attr):
-    with pytest.warns(FutureWarning):
-        getattr(bivariate_var_result, attr)
-
-
 def test_var_cov_params_pandas(bivariate_var_data):
     df = pd.DataFrame(bivariate_var_data, columns=["x", "y"])
     mod = VAR(df)

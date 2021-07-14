@@ -557,9 +557,8 @@ def check_results(res1, res2, check_lutkepohl=False, check_params=True):
     assert_allclose(res2.test_heteroskedasticity('breakvar'),
                     res1.test_heteroskedasticity('breakvar'))
 
-    with pytest.warns(FutureWarning):
-        actual = res2.test_serial_correlation('ljungbox')
-        desired = res1.test_serial_correlation('ljungbox')
+    actual = res2.test_serial_correlation('ljungbox')
+    desired = res1.test_serial_correlation('ljungbox')
     assert_allclose(actual, desired)
 
 

@@ -223,7 +223,7 @@ class ExponentialSmoothing(TimeSeriesModel):
             endog, None, dates, freq, missing=missing
         )
         self._y = self._data = array_like(
-            endog, "endog", contiguous=True, order="C"
+            endog, "endog", ndim=1, contiguous=True, order="C"
         )
         options = ("add", "mul", "additive", "multiplicative")
         trend = string_like(trend, "trend", options=options, optional=True)

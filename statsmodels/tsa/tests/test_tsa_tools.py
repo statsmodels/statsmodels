@@ -235,14 +235,14 @@ class TestLagmat(object):
         data["variable"] = nddata
 
         lagmat = stattools.lagmat(nddata, 3, trim="Both", original="in")
-        lag_data = tools.add_lag(data, "variable", lags=3, insert=True)
-        assert_equal(lagmat, lag_data.view((float, 4)))
+        lag_data = tools.add_lag(data, 0, lags=3, insert=True)
+        assert_equal(lagmat, lag_data)
 
-        lag_data = tools.add_lag(data, "variable", lags=3, insert=False)
-        assert_equal(lagmat, lag_data.view((float, 4)))
+        lag_data = tools.add_lag(data, 0, lags=3, insert=False)
+        assert_equal(lagmat, lag_data)
 
         lag_data = tools.add_lag(data, lags=3, insert=True)
-        assert_equal(lagmat, lag_data.view((float, 4)))
+        assert_equal(lagmat, lag_data)
 
     def test_add_lag_1d_drop_struct(self):
         data = np.zeros(100, dtype=[("variable", float)])
@@ -251,7 +251,7 @@ class TestLagmat(object):
 
         lagmat = stattools.lagmat(nddata, 3, trim="Both")
         lag_data = tools.add_lag(data, lags=3, drop=True)
-        assert_equal(lagmat, lag_data.view((float, 3)))
+        assert_equal(lagmat, lag_data)
 
     def test_add_lag_drop_insert(self):
         data = self.macro_df.values

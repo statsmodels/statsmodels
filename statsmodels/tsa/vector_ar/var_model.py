@@ -1229,10 +1229,6 @@ class VARResults(VARProcess):
     ys_lagged
     """
     _model_type = 'VAR'
-    y = deprecated_alias("y", "endog", remove_version="0.11.0")
-    ys_lagged = deprecated_alias("ys_lagged", "endog_lagged",
-                                 remove_version="0.11.0")
-
     def __init__(self, endog, endog_lagged, params, sigma_u, lag_order,
                  model=None, trend='c', names=None, dates=None, exog=None):
 
