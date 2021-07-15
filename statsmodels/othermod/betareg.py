@@ -139,19 +139,35 @@ class Beta(GenericLikelihoodModel):
         return super(Beta, cls).from_formula(formula, data, *args,
                                              **kwargs)
 
-    def predict(self, params, exog=None):
+    def predict(self, params, exog=None, exog_precision=None, which="mean"):
         """predict values for mean, conditional expectation E(endog | exog)
 
         """
-        if exog is None:
-            exog = self.exog
-        k_mean = self.exog.shape[1]
 
-        params_mean = params[:k_mean]
-        # Zparams = params[k_mean:]
-        linpred = np.dot(exog, params_mean)
-        mu = self.link.inverse(linpred)
-        return mu
+        k_mean = self.exog.shape[1]
+        if which in ["mean",  "linpred"]:
+            if exog is None:
+                exog = self.exog
+            params_mean = params[:k_mean]
+            # Zparams = params[k_mean:]
+            linpred = np.dot(exog, params_mean)
+            if which == "mean":
+                mu = self.link.inverse(linpred)
+                return mu
+            else:
+                return linpred
+
+        elif which in ["precision", "linpred_precision"]:
+            if exog_precision is None:
+                exog_precision = self.exog_precision
+            params_prec = params[k_mean:]
+            linpred_prec = np.dot(exog_precision, params_prec)
+
+            if which == "precision":
+                phi = self.link_precision.inverse(linpred_prec)
+                return phi
+            else:
+                return linpred_prec
 
     def predict_precision(self, params, exog_precision=None):
         """predict values for precision parameter for given exog_precision
@@ -445,6 +461,20 @@ class Beta(GenericLikelihoodModel):
             res = BetaRegressionResultsWrapper(res)
         return res
 
+    # code duplication with results class
+    def get_distribution_params(self, params, exog=None, exog_precision=None):
+        mean = self.predict(params, exog=exog)
+        precision = self.predict(params, exog_precision=exog_precision,
+                                 which="precision")
+        return precision * mean, precision * (1 - mean)
+
+    def get_distribution(self, params, exog=None, exog_precision=None):
+        from scipy import stats
+        args = self.get_distribution_params(params, exog=exog,
+                                            exog_precision=exog_precision)
+        distr = stats.beta(*args)
+        return distr
+
 
 class BetaRegressionResults(GenericLikelihoodModelResults, _LLRMixin):
 
@@ -473,14 +503,19 @@ class BetaRegressionResults(GenericLikelihoodModelResults, _LLRMixin):
         """
         return self.pseudo_rsquared(kind="lr")
 
-    def get_distribution_params(self):
-        mean = self.fittedvalues
-        precision = self.fitted_precision
+    def get_distribution_params(self, exog=None, exog_precision=None,
+                                transform=True):
+        mean = self.predict(exog=exog, transform=transform)
+        precision = self.predict(exog_precision=exog_precision,
+                                 which="precision", transform=transform)
         return precision * mean, precision * (1 - mean)
 
-    def get_distribution(self):
+    def get_distribution(self, exog=None, exog_precision=None, transform=True):
         from scipy import stats
-        distr = stats.beta(*self.get_distribution_params())
+        args = self.get_distribution_params(exog=exog,
+                                            exog_precision=exog_precision,
+                                            transform=transform)
+        distr = stats.beta(*args)
         return distr
 
     def bootstrap(self, *args, **kwargs):

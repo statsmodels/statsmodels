@@ -214,3 +214,60 @@ class TestBetaMeth():
         assert_allclose(res1.bse[k_mean:], se, rtol=1e-3)
         assert_allclose(res1.tvalues[k_mean:], zv, rtol=1e-3)
         assert_allclose(res1.pvalues[k_mean:], pv, rtol=1e-2)
+
+    def test_predict_distribution(self):
+        res1 = self.res1
+        mean = res1.predict()
+        var_ = res1.model.predict_var(res1.params)
+        distr = res1.get_distribution()
+        m2, v2 = distr.stats()
+        assert_allclose(mean, m2, rtol=1e-13)
+        assert_allclose(var_, v2, rtol=1e-13)
+
+        # from R: > predict(res_meth, type="variance")
+        var_r6 = [
+            3.1090848852102e-04, 2.4509604000073e-04, 3.7199753140565e-04,
+            2.8088261358738e-04, 2.7561111800350e-04, 3.3929220526847e-04]
+        n = 6
+        assert_allclose(v2[:n], var_r6, rtol=1e-7)
+
+        ex = res1.model.exog[:n]
+        ex_prec = res1.model.exog_precision[:n]
+        mean6 = res1.predict(ex, transform=False)
+        prec = res1.predict(which="precision")
+        # todo: prec6 wrong exog if not used as keyword, no exception raised
+        prec6 = res1.predict(exog_precision=ex_prec, which="precision",
+                             transform=False)
+        var6 = res1.model.predict_var(res1.params, exog=ex,
+                                      exog_precision=ex_prec)
+
+        assert_allclose(mean6, mean[:n], rtol=1e-13)
+        assert_allclose(prec6, prec[:n], rtol=1e-13)
+        assert_allclose(var6, var_[:n], rtol=1e-13)
+        assert_allclose(var6, var_r6, rtol=1e-7)
+
+        distr6 = res1.model.get_distribution(res1.params,
+                                             exog=ex, exog_precision=ex_prec)
+        m26, v26 = distr6.stats()
+        assert_allclose(m26, m2[:n], rtol=1e-13)
+        assert_allclose(v26, v2[:n], rtol=1e-13)
+
+        distr6f = res1.get_distribution(exog=ex, exog_precision=ex_prec,
+                                        transform=False)
+        m26, v26 = distr6f.stats()
+        assert_allclose(m26, m2[:n], rtol=1e-13)
+        assert_allclose(v26, v2[:n], rtol=1e-13)
+
+        # check formula transform works for predict, currently mean only
+        df6 = methylation.iloc[:6]
+        mean6f = res1.predict(df6)
+        # todo: prec6 wrong exog if not used as keyword, no exception raised
+        #       formula not supported for exog_precision in predict
+        # prec6f = res1.predict(exog_precision=ex_prec, which="precision")
+        assert_allclose(mean6f, mean[:n], rtol=1e-13)
+        # assert_allclose(prec6f, prec[:n], rtol=1e-13)
+
+        distr6f = res1.get_distribution(exog=df6, exog_precision=ex_prec)
+        m26, v26 = distr6f.stats()
+        assert_allclose(m26, m2[:n], rtol=1e-13)
+        assert_allclose(v26, v2[:n], rtol=1e-13)
