@@ -10,21 +10,28 @@ Created on Wed Oct 30 14:01:27 2013
 
 Author: Josef Perktold
 """
-from statsmodels.compat.pandas import assert_series_equal, assert_index_equal
-from statsmodels.compat.platform import (PLATFORM_OSX, PLATFORM_LINUX32,
-                                         PLATFORM_WIN32)
+from statsmodels.compat.pandas import assert_index_equal, assert_series_equal
+from statsmodels.compat.platform import (
+    PLATFORM_LINUX32,
+    PLATFORM_OSX,
+    PLATFORM_WIN32,
+)
 from statsmodels.compat.scipy import SCIPY_GT_14
 
 import numpy as np
+from numpy.testing import (
+    assert_,
+    assert_allclose,
+    assert_array_equal,
+    assert_equal,
+)
 import pandas as pd
 import pytest
-import statsmodels.api as sm
-from statsmodels.tools.sm_exceptions import HessianInversionWarning
-import statsmodels.tools._testing as smt
-from statsmodels.formula.api import ols, glm
 
-from numpy.testing import (assert_, assert_allclose, assert_equal,
-                           assert_array_equal)
+import statsmodels.api as sm
+from statsmodels.formula.api import glm, ols
+import statsmodels.tools._testing as smt
+from statsmodels.tools.sm_exceptions import HessianInversionWarning
 
 
 class CheckGenericMixin(object):

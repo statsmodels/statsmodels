@@ -3,8 +3,9 @@ from numpy.testing import assert_almost_equal
 import pytest
 
 from statsmodels.datasets import heart
-from statsmodels.tools import add_constant
 from statsmodels.emplike.aft_el import emplikeAFT
+from statsmodels.tools import add_constant
+
 from .results.el_results import AFTRes
 
 

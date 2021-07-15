@@ -3,7 +3,6 @@ import numpy as np
 
 from statsmodels.sandbox.tools import cross_val
 
-
 if __name__ == '__main__':
     #A: josef-pktd
 
@@ -35,8 +34,8 @@ if __name__ == '__main__':
 
     doplots = 1
     if doplots:
-        import matplotlib.pyplot as plt
         from matplotlib.font_manager import FontProperties
+        import matplotlib.pyplot as plt
 
         plt.figure()
         figtitle = 'Leave2out parameter estimates'

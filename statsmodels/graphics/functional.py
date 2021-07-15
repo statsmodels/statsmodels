@@ -1,19 +1,21 @@
 """Module for functional boxplots."""
-from statsmodels.multivariate.pca import PCA
-from statsmodels.nonparametric.kernel_density import KDEMultivariate
-from statsmodels.graphics.utils import _import_mpl
 import numpy as np
 from scipy.special import comb
+
+from statsmodels.graphics.utils import _import_mpl
+from statsmodels.multivariate.pca import PCA
+from statsmodels.nonparametric.kernel_density import KDEMultivariate
+
 try:
-    from scipy.optimize import differential_evolution, brute, fmin
+    from scipy.optimize import brute, differential_evolution, fmin
     have_de_optim = True
 except ImportError:
     from scipy.optimize import brute, fmin
     have_de_optim = False
-from multiprocessing import Pool
 import itertools
-from . import utils
+from multiprocessing import Pool
 
+from . import utils
 
 __all__ = ['hdrboxplot', 'fboxplot', 'rainbowplot', 'banddepth']
 

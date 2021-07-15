@@ -3,12 +3,11 @@
 TODO: compare standard error of parameter estimates
 '''
 
-from scipy import optimize
 import numpy as np
+from scipy import optimize
 
 import statsmodels.api as sm
 from statsmodels.datasets.longley import load
-
 
 print('\nExample 1: Artificial Data')
 print('--------------------------\n')

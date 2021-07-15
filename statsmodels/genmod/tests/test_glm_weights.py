@@ -29,21 +29,22 @@ TestGlmGaussianWLS                statsmodels.WLS        X      X               
 import warnings
 
 import numpy as np
-from numpy.testing import (assert_raises, assert_allclose)
+from numpy.testing import assert_allclose, assert_raises
 import pandas as pd
 import pytest
 
 import statsmodels.api as sm
-from statsmodels.genmod.generalized_linear_model import GLM
-from statsmodels.tools.tools import add_constant
-from statsmodels.discrete import discrete_model as discrete
-from statsmodels.tools.sm_exceptions import SpecificationWarning
-
-from .results import results_glm_poisson_weights as res_stata
-from .results import res_R_var_weight as res_r
-
 # load data into module namespace
 from statsmodels.datasets.cpunish import load
+from statsmodels.discrete import discrete_model as discrete
+from statsmodels.genmod.generalized_linear_model import GLM
+from statsmodels.tools.sm_exceptions import SpecificationWarning
+from statsmodels.tools.tools import add_constant
+
+from .results import (
+    res_R_var_weight as res_r,
+    results_glm_poisson_weights as res_stata,
+)
 
 cpunish_data = load()
 cpunish_data.exog = np.asarray(cpunish_data.exog)

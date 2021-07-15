@@ -208,18 +208,10 @@ class TestCategoricalNumerical(object):
         x[15:20, 3] = 1
         x[20:25, 4] = 1
         cls.dummy = x
-        structdes = np.zeros(
-            (25, 1),
-            dtype=[
-                ("var1", "f4"),
-                ("var2", "f4"),
-                ("instrument", "f4"),
-                ("str_instr", "a10"),
-            ],
-        )
-        structdes["var1"] = cls.des[:, 0][:, None]
-        structdes["var2"] = cls.des[:, 1][:, None]
-        structdes["instrument"] = cls.instr[:, None]
+        structdes = pd.DataFrame(index=np.arange(25))
+        structdes["var1"] = cls.des[:, 0]
+        structdes["var2"] = cls.des[:, 1]
+        structdes["instrument"] = cls.instr
         string_var = [
             stringabc[0:5],
             stringabc[5:10],
@@ -229,9 +221,8 @@ class TestCategoricalNumerical(object):
         ]
         string_var *= 5
         cls.string_var = np.array(sorted(string_var))
-        structdes["str_instr"] = cls.string_var[:, None]
-        cls.structdes = structdes
-        cls.recdes = structdes.view(np.recarray)
+        structdes["str_instr"] = cls.string_var
+        cls.recdes = cls.structdes = structdes
 
     def test_array2d(self):
         des = np.column_stack((self.des, self.instr, self.des))

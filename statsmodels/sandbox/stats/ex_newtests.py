@@ -1,5 +1,5 @@
-from statsmodels.tsa.stattools import adfuller
 import statsmodels.datasets.macrodata.data as macro
+from statsmodels.tsa.stattools import adfuller
 
 macrod = macro.load().data
 

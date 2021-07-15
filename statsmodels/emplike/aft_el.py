@@ -27,15 +27,19 @@ Statistics. 14:3, 643-656.
 
 
 """
+import warnings
+
 import numpy as np
-from statsmodels.regression.linear_model import OLS, WLS
-from statsmodels.tools import add_constant
 #from elregress import ElReg
 from scipy import optimize
 from scipy.stats import chi2
-from .descriptive import _OptFuncts
-import warnings
+
+from statsmodels.regression.linear_model import OLS, WLS
+from statsmodels.tools import add_constant
 from statsmodels.tools.sm_exceptions import IterationLimitWarning
+
+from .descriptive import _OptFuncts
+
 
 class OptAFT(_OptFuncts):
     """

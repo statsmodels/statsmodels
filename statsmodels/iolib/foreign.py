@@ -26,9 +26,7 @@ def savetxt(fname, X, names=None, fmt='%.18e', delimiter=' '):
     X : array_like
         Data to be saved to a text file.
     names : list, optional
-        If given names will be the column header in the text file.  If None and
-        X is a structured or recarray then the names are taken from
-        X.dtype.names.
+        If given names will be the column header in the text file.
     fmt : str or sequence of strs
         A single format (%10.5f), a sequence of formats, or a
         multi-format string, e.g. 'Iteration %d -- %10.5f', in which

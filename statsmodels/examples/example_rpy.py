@@ -18,8 +18,8 @@ some basic models for comparisons of results to statsmodels.
 '''
 
 from rpy import r
-import statsmodels.api as sm
 
+import statsmodels.api as sm
 
 examples = [1, 2]
 

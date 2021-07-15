@@ -3,10 +3,10 @@ from functools import partial
 
 import numpy as np
 from scipy import stats
+
 import statsmodels.api as sm
 from statsmodels.base.model import GenericLikelihoodModel
 from statsmodels.tools.numdiff import approx_fprime, approx_hess
-
 
 data = sm.datasets.spector.load()
 data.exog = sm.add_constant(data.exog, prepend=False)

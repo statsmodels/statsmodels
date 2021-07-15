@@ -17,10 +17,10 @@ The standard l1 solver is fmin_slsqp and is included with scipy.  It
 The l1_cvxopt_cp solver is part of CVXOPT and this package needs to be
     installed separately.  It works well even for larger data sizes.
 """
-import statsmodels.api as sm
 import matplotlib.pyplot as plt
 import numpy as np
 
+import statsmodels.api as sm
 
 ## Load the data from Spector and Mazzeo (1980)
 spector_data = sm.datasets.spector.load()

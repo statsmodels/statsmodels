@@ -5,20 +5,28 @@ import warnings
 
 import numpy as np
 from scipy import stats
-from statsmodels.base.data import handle_data
-from statsmodels.tools.data import _is_using_pandas
-from statsmodels.tools.tools import recipr, nan_dot
-from statsmodels.stats.contrast import (ContrastResults, WaldTestResults,
-                                        t_test_pairwise)
-from statsmodels.tools.decorators import (cache_readonly,
-                                          cached_value, cached_data)
-import statsmodels.base.wrapper as wrap
-from statsmodels.tools.numdiff import approx_fprime
-from statsmodels.tools.sm_exceptions import ValueWarning, \
-    HessianInversionWarning
-from statsmodels.formula import handle_formula_data
-from statsmodels.base.optimizer import Optimizer
 
+from statsmodels.base.data import handle_data
+from statsmodels.base.optimizer import Optimizer
+import statsmodels.base.wrapper as wrap
+from statsmodels.formula import handle_formula_data
+from statsmodels.stats.contrast import (
+    ContrastResults,
+    WaldTestResults,
+    t_test_pairwise,
+)
+from statsmodels.tools.data import _is_using_pandas
+from statsmodels.tools.decorators import (
+    cache_readonly,
+    cached_data,
+    cached_value,
+)
+from statsmodels.tools.numdiff import approx_fprime
+from statsmodels.tools.sm_exceptions import (
+    HessianInversionWarning,
+    ValueWarning,
+)
+from statsmodels.tools.tools import nan_dot, recipr
 
 _model_params_doc = """Parameters
     ----------
@@ -913,6 +921,7 @@ class GenericLikelihoodModel(LikelihoodModel):
         Hessian of log-likelihood evaluated at params
         """
         from statsmodels.tools.numdiff import approx_hess
+
         # need options for hess (epsilon)
         return approx_hess(params, self.loglike)
 

@@ -17,10 +17,12 @@ The results "prove" that the regularization paths are the same.  Note that
     are NOT monotonic.  As a result, the paths do not match up perfectly.
 """
 from statsmodels.compat.python import lrange
-from sklearn import linear_model
-import statsmodels.api as sm
-import numpy as np
+
 import matplotlib.pyplot as plt
+import numpy as np
+from sklearn import linear_model
+
+import statsmodels.api as sm
 
 ## Decide which dataset to use
 # Use either spector or anes96

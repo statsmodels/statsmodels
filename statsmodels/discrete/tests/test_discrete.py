@@ -14,26 +14,40 @@ import os
 import warnings
 
 import numpy as np
-from numpy.testing import (assert_, assert_raises, assert_almost_equal,
-                           assert_equal, assert_array_equal, assert_allclose,
-                           assert_array_less)
+from numpy.testing import (
+    assert_,
+    assert_allclose,
+    assert_almost_equal,
+    assert_array_equal,
+    assert_array_less,
+    assert_equal,
+    assert_raises,
+)
 import pandas as pd
 import pytest
 from scipy import stats
-
-from statsmodels.discrete.discrete_model import (Logit, Probit, MNLogit,
-                                                 Poisson, NegativeBinomial,
-                                                 CountModel,
-                                                 GeneralizedPoisson,
-                                                 NegativeBinomialP)
-from statsmodels.discrete.discrete_margins import _iscount, _isdummy
-import statsmodels.api as sm
-import statsmodels.formula.api as smf
-from .results.results_discrete import Spector, DiscreteL1, RandHIE, Anes
-from statsmodels.tools.sm_exceptions import (PerfectSeparationError,
-                                             SpecificationWarning,
-                                             ConvergenceWarning)
 from scipy.stats import nbinom
+
+import statsmodels.api as sm
+from statsmodels.discrete.discrete_margins import _iscount, _isdummy
+from statsmodels.discrete.discrete_model import (
+    CountModel,
+    GeneralizedPoisson,
+    Logit,
+    MNLogit,
+    NegativeBinomial,
+    NegativeBinomialP,
+    Poisson,
+    Probit,
+)
+import statsmodels.formula.api as smf
+from statsmodels.tools.sm_exceptions import (
+    ConvergenceWarning,
+    PerfectSeparationError,
+    SpecificationWarning,
+)
+
+from .results.results_discrete import Anes, DiscreteL1, RandHIE, Spector
 
 try:
     import cvxopt  # noqa:F401

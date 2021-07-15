@@ -3,9 +3,10 @@ Look at some macro plots, then do some VARs and IRFs.
 """
 
 import numpy as np
-import statsmodels.api as sm
 import scikits.timeseries as ts
 import scikits.timeseries.lib.plotlib as tplt
+
+import statsmodels.api as sm
 
 data = sm.datasets.macrodata.load()
 data = data.data

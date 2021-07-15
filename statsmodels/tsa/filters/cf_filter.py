@@ -1,7 +1,6 @@
 import numpy as np
 
-from statsmodels.tools.validation import array_like, PandasWrapper
-
+from statsmodels.tools.validation import PandasWrapper, array_like
 
 # the data is sampled quarterly, so cut-off frequency of 18
 

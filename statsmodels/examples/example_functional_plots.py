@@ -7,8 +7,9 @@ Author: Ralf Gommers
 
 '''
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+
 import statsmodels.api as sm
 
 #Load the El Nino dataset.  Consists of 60 years worth of Pacific Ocean sea

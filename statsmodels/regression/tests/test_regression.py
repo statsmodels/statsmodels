@@ -3,28 +3,31 @@ Test functions for models.regression
 """
 # TODO: Test for LM
 from statsmodels.compat.python import lrange
+
 import warnings
-import pandas as pd
+
 import numpy as np
 from numpy.testing import (
-    assert_almost_equal,
     assert_,
-    assert_raises,
-    assert_equal,
     assert_allclose,
+    assert_almost_equal,
+    assert_equal,
+    assert_raises,
 )
+import pandas as pd
 import pytest
 from scipy.linalg import toeplitz
-from statsmodels.tools.tools import add_constant
+from scipy.stats import t as student_t
+
+from statsmodels.datasets import longley
 from statsmodels.regression.linear_model import (
+    GLS,
     OLS,
     WLS,
-    GLS,
-    yule_walker,
     burg,
+    yule_walker,
 )
-from statsmodels.datasets import longley
-from scipy.stats import t as student_t
+from statsmodels.tools.tools import add_constant
 
 DECIMAL_4 = 4
 DECIMAL_3 = 3
@@ -819,8 +822,9 @@ class TestWLSExogWeights(CheckRegressionResults):
     # reg avgexp age income incomesq ownrent [aw=1/incomesq]
     @classmethod
     def setup_class(cls):
-        from .results.results_regression import CCardWLS
         from statsmodels.datasets.ccard import load
+
+        from .results.results_regression import CCardWLS
 
         dta = load()
         endog = np.asarray(dta.endog)
@@ -1179,6 +1183,7 @@ class TestRegularizedFit(object):
     def test_regularized(self):
 
         import os
+
         from .results import glmnet_r_results
 
         cur_dir = os.path.dirname(os.path.abspath(__file__))
@@ -1286,9 +1291,10 @@ class TestRegularizedFit(object):
 def test_formula_missing_cat():
     # gh-805
 
+    from patsy import PatsyError
+
     import statsmodels.api as sm
     from statsmodels.formula.api import ols
-    from patsy import PatsyError
 
     dta = sm.datasets.grunfeld.load_pandas().data
     dta.loc[dta.index[0], "firm"] = np.nan

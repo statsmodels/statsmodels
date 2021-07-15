@@ -1,11 +1,11 @@
 from numpy.testing import assert_almost_equal
-
 import pytest
 
+from statsmodels.datasets import stackloss
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools import add_constant
+
 from .results.el_results import RegressionResults
-from statsmodels.datasets import stackloss
 
 
 class GenRes(object):

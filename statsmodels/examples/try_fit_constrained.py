@@ -10,9 +10,11 @@ License: BSD-3
 import numpy as np
 from numpy.testing import assert_allclose, assert_raises
 
-from statsmodels.base._constraints import (TransformRestriction,
-                   transform_params_constraint, fit_constrained)
-
+from statsmodels.base._constraints import (
+    TransformRestriction,
+    fit_constrained,
+    transform_params_constraint,
+)
 
 if __name__ == '__main__':
 

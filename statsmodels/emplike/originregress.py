@@ -17,11 +17,12 @@ Owen, A.B. (2001). Empirical Likelihood.  Chapman and Hall. p. 82.
 
 """
 import numpy as np
-from scipy.stats import chi2
 from scipy import optimize
+from scipy.stats import chi2
+
+from statsmodels.regression.linear_model import OLS, RegressionResults
 # When descriptive merged, this will be changed
 from statsmodels.tools.tools import add_constant
-from statsmodels.regression.linear_model import OLS, RegressionResults
 
 
 class ELOriginRegress(object):

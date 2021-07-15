@@ -1,11 +1,13 @@
 """Example: statsmodels.sandbox.sysreg
 """
 #TODO: this is going to change significantly once we have a panel data structure
-from statsmodels.compat.python import lmap, asbytes
+from statsmodels.compat.python import asbytes, lmap
+
 import numpy as np
+
 import statsmodels.api as sm
-from statsmodels.sandbox.sysreg import SUR, Sem2SLS
 from statsmodels.sandbox.regression.gmm import IV2SLS
+from statsmodels.sandbox.sysreg import SUR, Sem2SLS
 
 #for Python 3 compatibility
 

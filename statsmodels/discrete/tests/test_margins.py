@@ -7,14 +7,17 @@ Author: Josef Perktold
 
 import numpy as np
 from numpy.testing import assert_allclose
-from statsmodels.discrete.discrete_model import (Poisson, NegativeBinomial,
-                                                 NegativeBinomialP)
-from statsmodels.tools.tools import add_constant
-
-import statsmodels.discrete.tests.results.results_count_margins as res_stata
 
 # load data into module namespace
 from statsmodels.datasets.cpunish import load
+from statsmodels.discrete.discrete_model import (
+    NegativeBinomial,
+    NegativeBinomialP,
+    Poisson,
+)
+import statsmodels.discrete.tests.results.results_count_margins as res_stata
+from statsmodels.tools.tools import add_constant
+
 cpunish_data = load()
 cpunish_data.exog = np.asarray(cpunish_data.exog)
 cpunish_data.endog = np.asarray(cpunish_data.endog)

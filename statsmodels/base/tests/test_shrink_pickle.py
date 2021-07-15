@@ -7,10 +7,12 @@ Author: Josef Perktold
 """
 from statsmodels.compat.pandas import assert_series_equal
 
-import pickle
 from io import BytesIO
+import pickle
 
 import numpy as np
+# we need log in module namespace for TestPickleFormula5
+from numpy import log  # noqa:F401
 import pandas as pd
 
 import statsmodels.api as sm

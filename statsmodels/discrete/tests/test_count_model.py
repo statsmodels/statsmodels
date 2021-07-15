@@ -1,12 +1,17 @@
 from statsmodels.compat.platform import PLATFORM_LINUX32
 
 import numpy as np
-from numpy.testing import (assert_,
-                           assert_equal, assert_array_equal, assert_allclose)
-import pytest
+from numpy.testing import (
+    assert_,
+    assert_allclose,
+    assert_array_equal,
+    assert_equal,
+)
 import pandas as pd
+import pytest
 
 import statsmodels.api as sm
+
 from .results.results_discrete import RandHIE
 from .test_discrete import CheckModelMixin
 

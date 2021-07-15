@@ -394,7 +394,7 @@ class RollingWLS(object):
         else:
             eval_env += 1  # we're going down the stack again
         missing = kwargs.get("missing", "skip")
-        from patsy import dmatrices, NAAction
+        from patsy import NAAction, dmatrices
 
         na_action = NAAction(on_NA="raise", NA_types=[])
         result = dmatrices(

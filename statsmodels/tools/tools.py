@@ -79,16 +79,13 @@ def categorical(data, col=None, dictnames=False, drop=False):
     Parameters
     ----------
     data : array_like
-        A structured array, recarray, array, Series or DataFrame.  This can be
-        either a 1d vector of the categorical variable or a 2d array with
-        the column specifying the categorical variable specified by the col
-        argument.
+        An array, Series or DataFrame.  This can be either a 1d vector of
+        the categorical variable or a 2d array with the column specifying
+        the categorical variable specified by the col argument.
     col : {str, int, None}
         If data is a DataFrame col must in a column of data. If data is a
-        Series, col must be either the name of the Series or None. If data is a
-        structured array or a recarray, `col` can be a string that is the name
-        of the column that contains the variable.  For all other
-        arrays `col` can be an int that is the (zero-based) column index
+        Series, col must be either the name of the Series or None. For arrays,
+        `col` can be an int that is the (zero-based) column index
         number.  `col` can only be None for a 1d array.  The default is None.
     dictnames : bool, optional
         If True, a dictionary mapping the column number to the categorical
@@ -107,7 +104,7 @@ def categorical(data, col=None, dictnames=False, drop=False):
     Notes
     -----
     This returns a dummy variable for *each* distinct variable.  If a
-    a structured or recarray is provided, the names for the new variable is the
+    a DaataFrame is provided, the names for the new variable is the
     old variable name - underscore - category name.  So if the a variable
     'vote' had answers as 'yes' or 'no' then the returned array would have to
     new variables-- 'vote_yes' and 'vote_no'.  There is currently
@@ -255,8 +252,8 @@ def add_constant(data, prepend=True, has_constant='skip'):
 
     Notes
     -----
-    When the input is recarray or a pandas Series or DataFrame, the added
-    column's name is 'const'.
+    When the input is a pandas Series or DataFrame, the added column's name
+    is 'const'.
     """
     if _is_using_pandas(data, None):
         from statsmodels.tsa.tsatools import add_trend

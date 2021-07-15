@@ -332,10 +332,11 @@ class DynamicPanel(PanelModel):
     pass
 
 if __name__ == "__main__":
+    import numpy.lib.recfunctions as nprf
     import pandas
     from pandas import Panel
+
     import statsmodels.api as sm
-    import numpy.lib.recfunctions as nprf
 
     data = sm.datasets.grunfeld.load()
     # Baltagi does not include American Steel

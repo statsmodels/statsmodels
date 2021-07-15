@@ -1,11 +1,15 @@
 
 import numpy as np
-from numpy.testing import assert_equal, assert_almost_equal
+from numpy.testing import assert_almost_equal, assert_equal
 import pytest
 
 from statsmodels.datasets import elnino
-from statsmodels.graphics.functional import \
-            hdrboxplot, banddepth, fboxplot, rainbowplot
+from statsmodels.graphics.functional import (
+    banddepth,
+    fboxplot,
+    hdrboxplot,
+    rainbowplot,
+)
 
 try:
     import matplotlib.pyplot as plt

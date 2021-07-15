@@ -1,25 +1,38 @@
 """
 Test functions for models.GLM
 """
-import warnings
 import os
+import warnings
+
 import numpy as np
-from numpy.testing import (assert_almost_equal, assert_equal, assert_raises,
-                           assert_allclose, assert_, assert_array_less)
+from numpy.testing import (
+    assert_,
+    assert_allclose,
+    assert_almost_equal,
+    assert_array_less,
+    assert_equal,
+    assert_raises,
+)
 import pandas as pd
 from pandas.testing import assert_series_equal
 import pytest
 from scipy import stats
 
 import statsmodels.api as sm
-from statsmodels.genmod.generalized_linear_model import GLM, SET_USE_BIC_LLF
-from statsmodels.tools.tools import add_constant
-from statsmodels.tools.sm_exceptions import PerfectSeparationError
-from statsmodels.discrete import discrete_model as discrete
-from statsmodels.tools.sm_exceptions import DomainWarning
-from statsmodels.tools.numdiff import approx_fprime, approx_hess
-from statsmodels.tools.numdiff import approx_fprime_cs, approx_hess_cs
 from statsmodels.datasets import cpunish, longley
+from statsmodels.discrete import discrete_model as discrete
+from statsmodels.genmod.generalized_linear_model import GLM, SET_USE_BIC_LLF
+from statsmodels.tools.numdiff import (
+    approx_fprime,
+    approx_fprime_cs,
+    approx_hess,
+    approx_hess_cs,
+)
+from statsmodels.tools.sm_exceptions import (
+    DomainWarning,
+    PerfectSeparationError,
+)
+from statsmodels.tools.tools import add_constant
 
 # Test Precisions
 DECIMAL_4 = 4
@@ -75,6 +88,7 @@ class CheckModelResultsMixin(object):
         # fix incorrect numbers in resid_working results
         # residuals for Poisson are also tested in test_glm_weights.py
         import copy
+
         # new numpy would have copy method
         resid2 = copy.copy(self.res2.resids)
         resid2[:, 2] *= self.res1.family.link.deriv(self.res1.mu)**2
@@ -423,6 +437,7 @@ class TestGlmBinomial(CheckModelResultsMixin):
         cls.decimal_bic = DECIMAL_2
 
         from statsmodels.datasets.star98 import load
+
         from .results.results_glm import Star98
         data = load()
         data.endog = np.asarray(data.endog)
@@ -598,6 +613,7 @@ class TestGlmGamma(CheckModelResultsMixin):
         cls.decimal_resids = DECIMAL_2
 
         from statsmodels.datasets.scotland import load
+
         from .results.results_glm import Scotvote
         data = load()
         data.exog = add_constant(data.exog, prepend=False)
@@ -1062,6 +1078,7 @@ def test_plots(close_figures):
     result = model.fit()
 
     import pandas as pd
+
     from statsmodels.graphics.regressionplots import add_lowess
 
     # array interface
@@ -1938,8 +1955,9 @@ class TestTweedieLog1(CheckTweedie):
 class TestTweedieLog15Fair(CheckTweedie):
     @classmethod
     def setup_class(cls):
-        from .results.results_glm import FairTweedieLog15
         from statsmodels.datasets.fair import load_pandas
+
+        from .results.results_glm import FairTweedieLog15
         data = load_pandas()
         family_link = sm.families.Tweedie(link=sm.families.links.log(),
                                           var_power=1.5)
@@ -2226,6 +2244,7 @@ class TestRegularized(object):
     def test_regularized(self):
 
         import os
+
         from .results import glmnet_r_results
 
         for dtype in "binomial", "poisson":
