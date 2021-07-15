@@ -15,13 +15,13 @@ import numpy as np
 
 import statsmodels.api as sm
 
-data = sm.datasets.elnino.load(as_pandas=False)
+data = sm.datasets.elnino.load()
 
 #Create a rainbow plot:
 
 fig = plt.figure()
 ax = fig.add_subplot(111)
-res = sm.graphics.rainbowplot(data.raw_data[:, 1:], ax=ax)
+res = sm.graphics.rainbowplot(data.raw_data.iloc[:, 1:], ax=ax)
 
 ax.set_xlabel("Month of the year")
 ax.set_ylabel("Sea surface temperature (C)")

@@ -17,7 +17,7 @@ Examples
 
     # Load modules and data
     import statsmodels.api as sm
-    data = sm.datasets.stackloss.load(as_pandas=False)
+    data = sm.datasets.stackloss.load()
     data.exog = sm.add_constant(data.exog)
 
     # Fit model and print summary

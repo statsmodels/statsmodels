@@ -1,7 +1,7 @@
+from load_macrodata import dta
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from load_macrodata import dta
 import statsmodels.api as sm
 
 cycle, trend = sm.tsa.filters.hpfilter(dta.realgdp, 1600)

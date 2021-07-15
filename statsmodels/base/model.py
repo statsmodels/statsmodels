@@ -1068,8 +1068,13 @@ class Results(object):
         import pandas as pd
 
         is_pandas = _is_using_pandas(exog, None)
+        exog_index = None
+        if is_pandas:
+            if exog.ndim == 2 or self.params.size == 1:
+                exog_index = exog.index
+            else:
+                exog_index = [exog.index.name]
 
-        exog_index = exog.index if is_pandas else None
 
         if transform and hasattr(self.model, 'formula') and (exog is not None):
             # allow both location of design_info, see #7043

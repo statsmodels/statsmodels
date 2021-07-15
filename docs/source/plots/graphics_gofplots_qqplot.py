@@ -13,7 +13,7 @@ from scipy import stats
 import statsmodels.api as sm
 
 #example from docstring
-data = sm.datasets.longley.load(as_pandas=False)
+data = sm.datasets.longley.load()
 data.exog = sm.add_constant(data.exog, prepend=True)
 mod_fit = sm.OLS(data.endog, data.exog).fit()
 res = mod_fit.resid

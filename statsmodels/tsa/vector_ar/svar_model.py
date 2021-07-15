@@ -553,8 +553,6 @@ class SVARResults(SVARProcess, VARResults):
     stderr
     trenorder
     tvalues
-    y :
-    ys_lagged
     """
 
     _model_type = 'SVAR'
