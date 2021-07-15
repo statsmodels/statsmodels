@@ -3,12 +3,11 @@
 TODO: compare standard error of parameter estimates
 '''
 
-from scipy import optimize
 import numpy as np
+from scipy import optimize
 
 import statsmodels.api as sm
 from statsmodels.datasets.longley import load
-
 
 print('\nExample 1: Artificial Data')
 print('--------------------------\n')
@@ -32,7 +31,7 @@ print(resfmin)
 print('\nExample 2: Longley Data, high multicollinearity')
 print('-----------------------------------------------\n')
 
-data = load(as_pandas=False)
+data = load()
 data.exog = sm.add_constant(data.exog, prepend=False)
 mod = sm.OLS(data.endog, data.exog)
 f = lambda params: -1*mod.loglike(params)

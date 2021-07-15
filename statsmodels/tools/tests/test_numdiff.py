@@ -7,11 +7,15 @@ Should Hessian also work per observation, if fun returns 2d
 
 '''
 import numpy as np
-from numpy.testing import assert_almost_equal, assert_allclose
+from numpy.testing import assert_allclose, assert_almost_equal
+
 import statsmodels.api as sm
 from statsmodels.tools import numdiff
-from statsmodels.tools.numdiff import (approx_fprime, approx_fprime_cs,
-                                       approx_hess_cs)
+from statsmodels.tools.numdiff import (
+    approx_fprime,
+    approx_fprime_cs,
+    approx_hess_cs,
+)
 
 DEC3 = 3
 DEC4 = 4
@@ -92,7 +96,9 @@ class TestGradMNLogit(CheckGradLoglikeMixin):
     @classmethod
     def setup_class(cls):
         #from .results.results_discrete import Anes
-        data = sm.datasets.anes96.load(as_pandas=False)
+        data = sm.datasets.anes96.load()
+        data.exog = np.asarray(data.exog)
+        data.endog = np.asarray(data.endog)
         exog = data.exog
         exog = sm.add_constant(exog, prepend=False)
         cls.mod = sm.MNLogit(data.endog, exog)
@@ -139,7 +145,7 @@ class TestGradMNLogit(CheckGradLoglikeMixin):
 class TestGradLogit(CheckGradLoglikeMixin):
     @classmethod
     def setup_class(cls):
-        data = sm.datasets.spector.load(as_pandas=False)
+        data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=False)
         #mod = sm.Probit(data.endog, data.exog)
         cls.mod = sm.Logit(data.endog, data.exog)
@@ -335,7 +341,7 @@ if __name__ == '__main__':  # FIXME: turn into tests or move/remove
     print(maxabs(g, gt))
     print(maxabs(gd, gt))
 
-    data = sm.datasets.spector.load(as_pandas=False)
+    data = sm.datasets.spector.load()
     data.exog = sm.add_constant(data.exog, prepend=False)
     #mod = sm.Probit(data.endog, data.exog)
     mod = sm.Logit(data.endog, data.exog)
@@ -359,12 +365,12 @@ if __name__ == '__main__':  # FIXME: turn into tests or move/remove
     print('cs', hesscs)
     print(maxabs(hess(test_params), hesscs))
 
-    data = sm.datasets.anes96.load(as_pandas=False)
+    data = sm.datasets.anes96.load()
     exog = data.exog
     exog = sm.add_constant(exog, prepend=False)
     res1 = sm.MNLogit(data.endog, exog).fit(method="newton", disp=0)
 
-    datap = sm.datasets.randhie.load(as_pandas=False)
+    datap = sm.datasets.randhie.load()
     nobs = len(datap.endog)
     exogp = sm.add_constant(datap.exog.view(float).reshape(nobs,-1),
                             prepend=False)

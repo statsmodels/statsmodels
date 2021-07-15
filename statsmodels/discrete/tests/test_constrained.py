@@ -9,25 +9,26 @@ License: BSD-3
 from io import StringIO
 
 import numpy as np
-from numpy.testing import assert_allclose, assert_equal, assert_
-
+from numpy.testing import assert_, assert_allclose, assert_equal
 import pandas as pd
 import patsy
 import pytest
 
-from statsmodels.discrete.discrete_model import Poisson
-from statsmodels.genmod.generalized_linear_model import GLM
-from statsmodels.genmod import families
-from statsmodels.base._constraints import fit_constrained
-
-from statsmodels.tools.tools import add_constant
 from statsmodels import datasets
+from statsmodels.base._constraints import fit_constrained
+from statsmodels.discrete.discrete_model import Poisson
+from statsmodels.genmod import families
+from statsmodels.genmod.generalized_linear_model import GLM
+from statsmodels.tools.tools import add_constant
 
-from .results import results_poisson_constrained as results
-from .results import results_glm_logit_constrained as reslogit
+from .results import (
+    results_glm_logit_constrained as reslogit,
+    results_poisson_constrained as results,
+)
 
-
-spector_data = datasets.spector.load(as_pandas=False)
+spector_data = datasets.spector.load()
+spector_data.endog = np.asarray(spector_data.endog)
+spector_data.exog = np.asarray(spector_data.exog)
 spector_data.exog = add_constant(spector_data.exog, prepend=False)
 
 
@@ -346,9 +347,9 @@ class TestGLMPoissonConstrained1b(CheckPoissonConstrainedMixin):
 
     @classmethod
     def setup_class(cls):
-        from statsmodels.genmod.generalized_linear_model import GLM
-        from statsmodels.genmod import families
         from statsmodels.base._constraints import fit_constrained
+        from statsmodels.genmod import families
+        from statsmodels.genmod.generalized_linear_model import GLM
 
         cls.res2 = results.results_exposure_constraint
         cls.idx = [6, 2, 3, 4, 5, 0]  # 2 is dropped baseline for categorical

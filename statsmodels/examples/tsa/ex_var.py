@@ -1,10 +1,11 @@
 
 import numpy as np
+
 import statsmodels.api as sm
 from statsmodels.tsa.api import VAR
 
 # some example data
-mdata = sm.datasets.macrodata.load(as_pandas=False).data
+mdata = sm.datasets.macrodata.load().data
 mdata = mdata[['realgdp','realcons','realinv']]
 names = mdata.dtype.names
 data = mdata.view((float,3))

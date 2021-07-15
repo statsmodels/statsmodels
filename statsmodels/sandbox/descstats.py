@@ -1,9 +1,11 @@
 '''
 Glue for returning descriptive statistics.
 '''
+import os
+
 import numpy as np
 from scipy import stats
-import os
+
 from statsmodels.stats.descriptivestats import sign_test
 
 #############################################
@@ -23,7 +25,7 @@ def descstats(data, cols=None, axis=0):
         `x` is the data
 
     v: list, optional
-        A list of the column number or field names (for a recarray) of variables.
+        A list of the column number of variables.
         Default is all columns.
 
     axis: 1 or 0
@@ -37,6 +39,8 @@ def descstats(data, cols=None, axis=0):
     x = np.array(data)  # or rather, the data we're interested in
     if cols is None:
         x = x[:, None]
+    if cols is None and x.ndim == 1:
+        x = x[:,None]
 
     if x.shape[1] == 1:
         desc = '''
@@ -106,14 +110,6 @@ def descstats(data, cols=None, axis=0):
     ------------+--------------------------------------------------------'''+\
             os.linesep
 
-# for recarrays with columns passed as names
-#        if isinstance(cols[0],str):
-#            for var in cols:
-#                desc += "%(name)15s %(obs)9i %(mean)12.4g %(stddev)12.4g \
-#%(range)20s" %  {'name': var, 'obs': len(x[var]), 'mean': x[var].mean(),
-#        'stddev': x[var].std(), 'range': '('+str(x[var].min())+', '\
-#                +str(x[var].max())+')'+os.linesep}
-#        else:
         for var in range(x.shape[1]):
             xv = x[:, var]
             kwargs = {
@@ -161,7 +157,7 @@ def descstats(data, cols=None, axis=0):
 
 if __name__ == '__main__':
     import statsmodels.api as sm
-    data = sm.datasets.longley.load(as_pandas=False)
+    data = sm.datasets.longley.load()
     data.exog = sm.add_constant(data.exog, prepend=False)
     sum1 = descstats(data.exog)
     sum1a = descstats(data.exog[:,:1])

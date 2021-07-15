@@ -17,11 +17,12 @@ Owen, A.B. (2001). Empirical Likelihood.  Chapman and Hall. p. 82.
 
 """
 import numpy as np
-from scipy.stats import chi2
 from scipy import optimize
+from scipy.stats import chi2
+
+from statsmodels.regression.linear_model import OLS, RegressionResults
 # When descriptive merged, this will be changed
 from statsmodels.tools.tools import add_constant
-from statsmodels.regression.linear_model import OLS, RegressionResults
 
 
 class ELOriginRegress(object):
@@ -134,7 +135,7 @@ class OriginResults(RegressionResults):
     Examples
     --------
     >>> import statsmodels.api as sm
-    >>> data = sm.datasets.bc.load(as_pandas=False)
+    >>> data = sm.datasets.bc.load()
     >>> model = sm.emplike.ELOriginRegress(data.endog, data.exog)
     >>> fitted = model.fit()
     >>> fitted.params #  0 is the intercept term.

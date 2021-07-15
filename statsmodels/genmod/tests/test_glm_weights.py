@@ -29,23 +29,26 @@ TestGlmGaussianWLS                statsmodels.WLS        X      X               
 import warnings
 
 import numpy as np
-from numpy.testing import (assert_raises, assert_allclose)
+from numpy.testing import assert_allclose, assert_raises
 import pandas as pd
 import pytest
 
 import statsmodels.api as sm
-from statsmodels.genmod.generalized_linear_model import GLM
-from statsmodels.tools.tools import add_constant
-from statsmodels.discrete import discrete_model as discrete
-from statsmodels.tools.sm_exceptions import SpecificationWarning
-
-from .results import results_glm_poisson_weights as res_stata
-from .results import res_R_var_weight as res_r
-
 # load data into module namespace
 from statsmodels.datasets.cpunish import load
+from statsmodels.discrete import discrete_model as discrete
+from statsmodels.genmod.generalized_linear_model import GLM
+from statsmodels.tools.sm_exceptions import SpecificationWarning
+from statsmodels.tools.tools import add_constant
 
-cpunish_data = load(as_pandas=False)
+from .results import (
+    res_R_var_weight as res_r,
+    results_glm_poisson_weights as res_stata,
+)
+
+cpunish_data = load()
+cpunish_data.exog = np.asarray(cpunish_data.exog)
+cpunish_data.endog = np.asarray(cpunish_data.endog)
 cpunish_data.exog[:, 3] = np.log(cpunish_data.exog[:, 3])
 cpunish_data.exog = add_constant(cpunish_data.exog, prepend=False)
 
@@ -815,7 +818,9 @@ class TestBinomialVsVarWeights(CheckWeight):
     @classmethod
     def setup_class(cls):
         from statsmodels.datasets.star98 import load
-        data = load(as_pandas=False)
+        data = load()
+        data.exog = np.asarray(data.exog)
+        data.endog = np.asarray(data.endog)
         data.exog /= data.exog.std(0)
         data.exog = add_constant(data.exog, prepend=False)
 

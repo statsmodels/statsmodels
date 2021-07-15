@@ -1,7 +1,7 @@
-from statsmodels.tsa.stattools import adfuller
 import statsmodels.datasets.macrodata.data as macro
+from statsmodels.tsa.stattools import adfuller
 
-macrod = macro.load(as_pandas=False).data
+macrod = macro.load().data
 
 print(macro.NOTE)
 

@@ -1,15 +1,15 @@
 from statsmodels.compat.python import lrange
 
 from io import StringIO
-import shutil
 from os import environ, makedirs
-from os.path import expanduser, exists, dirname, abspath, join
+from os.path import abspath, dirname, exists, expanduser, join
+import shutil
 from urllib.error import HTTPError, URLError
-from urllib.request import urlopen
 from urllib.parse import urljoin
+from urllib.request import urlopen
 
 import numpy as np
-from pandas import read_stata, read_csv, DataFrame, Series, Index
+from pandas import Index, read_csv, read_stata
 
 
 def webuse(data, baseurl='https://www.stata-press.com/data/r11/', as_df=True):
@@ -329,18 +329,3 @@ def load_csv(base_file, csv_name, sep=',', convert_float=False):
     if convert_float:
         data = data.astype(float)
     return data
-
-
-def as_numpy_dataset(ds, as_pandas=True, retain_index=False):
-    """Convert a pandas dataset to a NumPy dataset"""
-    if as_pandas:
-        return ds
-    ds.data = ds.data.to_records(index=retain_index)
-    for d in dir(ds):
-        if d.startswith('_'):
-            continue
-        attr = getattr(ds, d)
-        if isinstance(attr, (Series, DataFrame)):
-            setattr(ds, d, np.asarray(attr))
-
-    return ds

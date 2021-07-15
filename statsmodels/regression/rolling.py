@@ -104,7 +104,7 @@ Examples
 --------
 >>> from statsmodels.regression.rolling import Rolling%(model)s
 >>> from statsmodels.datasets import longley
->>> data = longley.load(as_pandas=False)
+>>> data = longley.load()
 >>> exog = add_constant(data.exog, prepend=False)
 >>> mod = Rolling%(model)s(data.endog, exog)
 >>> rolling_res = mod.fit(reset=50)
@@ -394,7 +394,7 @@ class RollingWLS(object):
         else:
             eval_env += 1  # we're going down the stack again
         missing = kwargs.get("missing", "skip")
-        from patsy import dmatrices, NAAction
+        from patsy import NAAction, dmatrices
 
         na_action = NAAction(on_NA="raise", NA_types=[])
         result = dmatrices(

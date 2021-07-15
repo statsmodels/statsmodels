@@ -3,12 +3,12 @@ from functools import partial
 
 import numpy as np
 from scipy import stats
+
 import statsmodels.api as sm
 from statsmodels.base.model import GenericLikelihoodModel
 from statsmodels.tools.numdiff import approx_fprime, approx_hess
 
-
-data = sm.datasets.spector.load(as_pandas=False)
+data = sm.datasets.spector.load()
 data.exog = sm.add_constant(data.exog, prepend=False)
 # in this dir
 
@@ -37,8 +37,8 @@ print(res)
 np.allclose(res.params, probit_res.params, rtol=1e-4)
 print(res.params, probit_res.params)
 
-#datal = sm.datasets.longley.load(as_pandas=False)
-datal = sm.datasets.ccard.load(as_pandas=False)
+#datal = sm.datasets.longley.load()
+datal = sm.datasets.ccard.load()
 datal.exog = sm.add_constant(datal.exog, prepend=False)
 # Instance of GenericLikelihood model does not work directly, because loglike
 # cannot get access to data in self.endog, self.exog

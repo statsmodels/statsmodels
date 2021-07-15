@@ -6,10 +6,11 @@ We will be using the Stanford Heart Transplant data
 
 """
 
-import statsmodels.api as sm
 import numpy as np
 
-data = sm.datasets.heart.load(as_pandas=False)
+import statsmodels.api as sm
+
+data = sm.datasets.heart.load()
 # Note this data has endog, exog and censors
 # We will take the log (base 10) of the endogenous survival times
 

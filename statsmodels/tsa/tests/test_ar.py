@@ -503,7 +503,7 @@ def test_dynamic_forecast_smoke(ar_data):
 
 @pytest.mark.smoke
 def test_ar_select_order_smoke():
-    data = sunspots.load(as_pandas=True).data["SUNACTIVITY"]
+    data = sunspots.load().data["SUNACTIVITY"]
     ar_select_order(data, 4, glob=True, trend="n")
     ar_select_order(data, 4, glob=False, trend="n")
     ar_select_order(data, 4, seasonal=True, period=12)
@@ -524,7 +524,7 @@ class TestAutoRegOLSConstant(CheckAutoRegMixin):
 
     @classmethod
     def setup_class(cls):
-        data = sunspots.load(as_pandas=True)
+        data = sunspots.load()
         data.endog.index = list(range(len(data.endog)))
         cls.res1 = AutoReg(data.endog, lags=9).fit()
         cls.res2 = results_ar.ARResultsOLS(constant=True)
@@ -591,8 +591,8 @@ class TestAutoRegOLSNoConstant(CheckAutoRegMixin):
 
     @classmethod
     def setup_class(cls):
-        data = sunspots.load(as_pandas=False)
-        cls.res1 = AutoReg(data.endog, lags=9, trend="n").fit()
+        data = sunspots.load()
+        cls.res1 = AutoReg(np.asarray(data.endog), lags=9, trend="n").fit()
         cls.res2 = results_ar.ARResultsOLS(constant=False)
 
     def test_predict(self):
@@ -652,8 +652,8 @@ class TestAutoRegOLSNoConstant(CheckAutoRegMixin):
 
 @pytest.mark.parametrize("lag", list(np.arange(1, 16 + 1)))
 def test_autoreg_info_criterion(lag):
-    data = sunspots.load(as_pandas=False)
-    endog = data.endog
+    data = sunspots.load()
+    endog = np.asarray(data.endog)
     endog_tmp = endog[16 - lag :]
     r = AutoReg(endog_tmp, lags=lag).fit()
     # See issue #324 for the corrections vs. R

@@ -1,25 +1,38 @@
 """
 Test functions for models.GLM
 """
-import warnings
 import os
+import warnings
+
 import numpy as np
-from numpy.testing import (assert_almost_equal, assert_equal, assert_raises,
-                           assert_allclose, assert_, assert_array_less)
+from numpy.testing import (
+    assert_,
+    assert_allclose,
+    assert_almost_equal,
+    assert_array_less,
+    assert_equal,
+    assert_raises,
+)
 import pandas as pd
 from pandas.testing import assert_series_equal
 import pytest
 from scipy import stats
 
 import statsmodels.api as sm
-from statsmodels.genmod.generalized_linear_model import GLM, SET_USE_BIC_LLF
-from statsmodels.tools.tools import add_constant
-from statsmodels.tools.sm_exceptions import PerfectSeparationError
-from statsmodels.discrete import discrete_model as discrete
-from statsmodels.tools.sm_exceptions import DomainWarning
-from statsmodels.tools.numdiff import approx_fprime, approx_hess
-from statsmodels.tools.numdiff import approx_fprime_cs, approx_hess_cs
 from statsmodels.datasets import cpunish, longley
+from statsmodels.discrete import discrete_model as discrete
+from statsmodels.genmod.generalized_linear_model import GLM, SET_USE_BIC_LLF
+from statsmodels.tools.numdiff import (
+    approx_fprime,
+    approx_fprime_cs,
+    approx_hess,
+    approx_hess_cs,
+)
+from statsmodels.tools.sm_exceptions import (
+    DomainWarning,
+    PerfectSeparationError,
+)
+from statsmodels.tools.tools import add_constant
 
 # Test Precisions
 DECIMAL_4 = 4
@@ -75,6 +88,7 @@ class CheckModelResultsMixin(object):
         # fix incorrect numbers in resid_working results
         # residuals for Poisson are also tested in test_glm_weights.py
         import copy
+
         # new numpy would have copy method
         resid2 = copy.copy(self.res2.resids)
         resid2[:, 2] *= self.res1.family.link.deriv(self.res1.mu)**2
@@ -286,7 +300,9 @@ class TestGlmGaussian(CheckModelResultsMixin):
         cls.decimal_bse = DECIMAL_3
 
         from statsmodels.datasets.longley import load
-        cls.data = load(as_pandas=False)
+        cls.data = load()
+        cls.data.endog = np.asarray(cls.data.endog)
+        cls.data.exog = np.asarray(cls.data.exog)
         cls.data.exog = add_constant(cls.data.exog, prepend=False)
         cls.res1 = GLM(cls.data.endog, cls.data.exog,
                         family=sm.families.Gaussian()).fit()
@@ -339,7 +355,9 @@ class TestGlmGaussianGradient(TestGlmGaussian):
         cls.decimal_bse = DECIMAL_2
 
         from statsmodels.datasets.longley import load
-        cls.data = load(as_pandas=False)
+        cls.data = load()
+        cls.data.endog = np.asarray(cls.data.endog)
+        cls.data.exog = np.asarray(cls.data.exog)
         cls.data.exog = add_constant(cls.data.exog, prepend=False)
         cls.res1 = GLM(cls.data.endog, cls.data.exog,
                         family=sm.families.Gaussian()).fit(method='bfgs')
@@ -419,8 +437,11 @@ class TestGlmBinomial(CheckModelResultsMixin):
         cls.decimal_bic = DECIMAL_2
 
         from statsmodels.datasets.star98 import load
+
         from .results.results_glm import Star98
-        data = load(as_pandas=False)
+        data = load()
+        data.endog = np.asarray(data.endog)
+        data.exog = np.asarray(data.exog)
         data.exog = add_constant(data.exog, prepend=False)
         cls.res1 = GLM(data.endog, data.exog,
                        family=sm.families.Binomial()).fit()
@@ -432,7 +453,7 @@ class TestGlmBinomial(CheckModelResultsMixin):
 
     def test_endog_dtype(self):
         from statsmodels.datasets.star98 import load
-        data = load(as_pandas=False)
+        data = load()
         data.exog = add_constant(data.exog, prepend=False)
         endog = data.endog.astype(int)
         res2 = GLM(endog, data.exog, family=sm.families.Binomial()).fit()
@@ -592,8 +613,9 @@ class TestGlmGamma(CheckModelResultsMixin):
         cls.decimal_resids = DECIMAL_2
 
         from statsmodels.datasets.scotland import load
+
         from .results.results_glm import Scotvote
-        data = load(as_pandas=False)
+        data = load()
         data.exog = add_constant(data.exog, prepend=False)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -664,7 +686,9 @@ class TestGlmPoisson(CheckModelResultsMixin, CheckComparisonMixin):
         Test results were obtained by R.
         '''
         from .results.results_glm import Cpunish
-        cls.data = cpunish.load(as_pandas=False)
+        cls.data = cpunish.load()
+        cls.data.endog = np.asarray(cls.data.endog)
+        cls.data.exog = np.asarray(cls.data.exog)
         cls.data.exog[:, 3] = np.log(cls.data.exog[:, 3])
         cls.data.exog = add_constant(cls.data.exog, prepend=False)
         cls.res1 = GLM(cls.data.endog, cls.data.exog,
@@ -779,7 +803,9 @@ class TestGlmNegbinomial(CheckModelResultsMixin):
         cls.decimal_fittedvalues = DECIMAL_1
 
         from statsmodels.datasets.committee import load
-        cls.data = load(as_pandas=False)
+        cls.data = load()
+        cls.data.endog = np.asarray(cls.data.endog)
+        cls.data.exog = np.asarray(cls.data.exog)
         cls.data.exog[:,2] = np.log(cls.data.exog[:,2])
         interaction = cls.data.exog[:,2]*cls.data.exog[:,1]
         cls.data.exog = np.column_stack((cls.data.exog,interaction))
@@ -824,7 +850,9 @@ class TestGlmPoissonOffset(CheckModelResultsMixin):
         cls.decimal_params = DECIMAL_4
         cls.decimal_bse = DECIMAL_4
         cls.decimal_aic_R = 3
-        data = cpunish.load(as_pandas=False)
+        data = cpunish.load()
+        data.endog = np.asarray(data.endog)
+        data.exog = np.asarray(data.exog)
         data.exog[:, 3] = np.log(data.exog[:, 3])
         data.exog = add_constant(data.exog, prepend=True)
         exposure = [100] * len(data.endog)
@@ -952,7 +980,7 @@ def test_score_test_ols():
 
 def test_attribute_writable_resettable():
     # Regression test for mutables and class constructors.
-    data = sm.datasets.longley.load(as_pandas=False)
+    data = sm.datasets.longley.load()
     endog, exog = data.endog, data.exog
     glm_model = sm.GLM(endog, exog)
     assert_equal(glm_model.family.link.power, 1.0)
@@ -975,7 +1003,7 @@ class TestStartParams(CheckModelResultsMixin):
         cls.decimal_bse = DECIMAL_3
 
         from statsmodels.datasets.longley import load
-        cls.data = load(as_pandas=False)
+        cls.data = load()
         cls.data.exog = add_constant(cls.data.exog, prepend=False)
         params = sm.OLS(cls.data.endog, cls.data.exog).fit().params
         cls.res1 = GLM(cls.data.endog, cls.data.exog,
@@ -1050,6 +1078,7 @@ def test_plots(close_figures):
     result = model.fit()
 
     import pandas as pd
+
     from statsmodels.graphics.regressionplots import add_lowess
 
     # array interface
@@ -1410,7 +1439,9 @@ class CheckWtdDuplicationMixin(object):
 
     @classmethod
     def setup_class(cls):
-        cls.data = cpunish.load(as_pandas=False)
+        cls.data = cpunish.load()
+        cls.data.endog = np.asarray(cls.data.endog)
+        cls.data.exog = np.asarray(cls.data.exog)
         cls.endog = cls.data.endog
         cls.exog = cls.data.exog
         np.random.seed(1234)
@@ -1509,6 +1540,9 @@ class TestWtdGlmPoisson(CheckWtdDuplicationMixin):
         Tests Poisson family with canonical log link.
         '''
         super(TestWtdGlmPoisson, cls).setup_class()
+        cls.endog = np.asarray(cls.endog)
+        cls.exog = np.asarray(cls.exog)
+
         cls.res1 = GLM(cls.endog, cls.exog,
                         freq_weights=cls.weight,
                         family=sm.families.Poisson()).fit()
@@ -1796,7 +1830,9 @@ class TestWtdTweediePower15(CheckWtdDuplicationMixin):
 
 def test_wtd_patsy_missing():
     import pandas as pd
-    data = cpunish.load(as_pandas=False)
+    data = cpunish.load()
+    data.endog = np.asarray(data.endog)
+    data.exog = np.asarray(data.exog)
     data.exog[0, 0] = np.nan
     data.endog[[2, 4, 6, 8]] = np.nan
     data.pandas = pd.DataFrame(data.exog, columns=data.exog_name)
@@ -1919,8 +1955,9 @@ class TestTweedieLog1(CheckTweedie):
 class TestTweedieLog15Fair(CheckTweedie):
     @classmethod
     def setup_class(cls):
-        from .results.results_glm import FairTweedieLog15
         from statsmodels.datasets.fair import load_pandas
+
+        from .results.results_glm import FairTweedieLog15
         data = load_pandas()
         family_link = sm.families.Tweedie(link=sm.families.links.log(),
                                           var_power=1.5)
@@ -2207,6 +2244,7 @@ class TestRegularized(object):
     def test_regularized(self):
 
         import os
+
         from .results import glmnet_r_results
 
         for dtype in "binomial", "poisson":
@@ -2254,7 +2292,7 @@ class TestConvergence(object):
         Test Binomial family with canonical logit link using star98 dataset.
         '''
         from statsmodels.datasets.star98 import load
-        data = load(as_pandas=False)
+        data = load()
         data.exog = add_constant(data.exog, prepend=False)
         cls.model = GLM(data.endog, data.exog,
                          family=sm.families.Binomial())
@@ -2404,7 +2442,7 @@ def test_non_invertible_hessian_fails_summary():
 
 def test_int_scale():
     # GH-6627, make sure it works with int scale
-    data = longley.load(as_pandas=True)
+    data = longley.load()
     mod = GLM(data.endog, data.exog, family=sm.families.Gaussian())
     res = mod.fit(scale=1)
     assert isinstance(res.params, pd.Series)

@@ -2,13 +2,17 @@
 """
 
 from statsmodels.compat.python import lrange
+
 import numpy as np
+
 import statsmodels.api as sm
 from statsmodels.iolib.summary import (
-    table_extend, summary_params_2d, summary_params_2dflat)
+    summary_params_2d,
+    summary_params_2dflat,
+    table_extend,
+)
 
-
-anes_data = sm.datasets.anes96.load(as_pandas=False)
+anes_data = sm.datasets.anes96.load()
 anes_exog = anes_data.exog
 anes_exog = sm.add_constant(anes_exog, prepend=False)
 mlogit_mod = sm.MNLogit(anes_data.endog, anes_exog)

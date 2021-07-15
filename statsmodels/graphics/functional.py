@@ -1,19 +1,21 @@
 """Module for functional boxplots."""
-from statsmodels.multivariate.pca import PCA
-from statsmodels.nonparametric.kernel_density import KDEMultivariate
-from statsmodels.graphics.utils import _import_mpl
 import numpy as np
 from scipy.special import comb
+
+from statsmodels.graphics.utils import _import_mpl
+from statsmodels.multivariate.pca import PCA
+from statsmodels.nonparametric.kernel_density import KDEMultivariate
+
 try:
-    from scipy.optimize import differential_evolution, brute, fmin
+    from scipy.optimize import brute, differential_evolution, fmin
     have_de_optim = True
 except ImportError:
     from scipy.optimize import brute, fmin
     have_de_optim = False
-from multiprocessing import Pool
 import itertools
-from . import utils
+from multiprocessing import Pool
 
+from . import utils
 
 __all__ = ['hdrboxplot', 'fboxplot', 'rainbowplot', 'banddepth']
 
@@ -268,7 +270,7 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
 
     >>> import matplotlib.pyplot as plt
     >>> import statsmodels.api as sm
-    >>> data = sm.datasets.elnino.load(as_pandas=False)
+    >>> data = sm.datasets.elnino.load()
 
     Create a functional boxplot.  We see that the years 1982-83 and 1997-98 are
     outliers; these are the years where El Nino (a climate pattern
@@ -558,7 +560,7 @@ def fboxplot(data, xdata=None, labels=None, depth=None, method='MBD',
 
     >>> import matplotlib.pyplot as plt
     >>> import statsmodels.api as sm
-    >>> data = sm.datasets.elnino.load(as_pandas=False)
+    >>> data = sm.datasets.elnino.load()
 
     Create a functional boxplot.  We see that the years 1982-83 and 1997-98 are
     outliers; these are the years where El Nino (a climate pattern
@@ -713,7 +715,7 @@ def rainbowplot(data, xdata=None, depth=None, method='MBD', ax=None,
 
     >>> import matplotlib.pyplot as plt
     >>> import statsmodels.api as sm
-    >>> data = sm.datasets.elnino.load(as_pandas=False)
+    >>> data = sm.datasets.elnino.load()
 
     Create a rainbow plot:
 

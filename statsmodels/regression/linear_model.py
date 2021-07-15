@@ -473,7 +473,7 @@ class GLS(RegressionModel):
     Examples
     --------
     >>> import statsmodels.api as sm
-    >>> data = sm.datasets.longley.load(as_pandas=False)
+    >>> data = sm.datasets.longley.load()
     >>> data.exog = sm.add_constant(data.exog)
     >>> ols_resid = sm.OLS(data.endog, data.exog).fit().resid
     >>> res_fit = sm.OLS(ols_resid[1:], ols_resid[:-1]).fit()
@@ -1385,7 +1385,7 @@ def yule_walker(x, order=1, method="adjusted", df=None, inv=False,
     --------
     >>> import statsmodels.api as sm
     >>> from statsmodels.datasets.sunspots import load
-    >>> data = load(as_pandas=False)
+    >>> data = load()
     >>> rho, sigma = sm.regression.yule_walker(data.endog, order=4,
     ...                                        method="mle")
 
@@ -1476,7 +1476,7 @@ def burg(endog, order=1, demean=True):
     --------
     >>> import statsmodels.api as sm
     >>> from statsmodels.datasets.sunspots import load
-    >>> data = load(as_pandas=True)
+    >>> data = load()
     >>> rho, sigma2 = sm.regression.linear_model.burg(data.endog, order=4)
 
     >>> rho
@@ -2950,7 +2950,7 @@ class OLSResults(RegressionResults):
         Examples
         --------
         >>> import statsmodels.api as sm
-        >>> data = sm.datasets.stackloss.load(as_pandas=False)
+        >>> data = sm.datasets.stackloss.load()
         >>> endog = data.endog
         >>> exog = sm.add_constant(data.exog)
         >>> model = sm.OLS(endog, exog)

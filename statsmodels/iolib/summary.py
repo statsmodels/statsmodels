@@ -1,12 +1,19 @@
+from statsmodels.compat.python import lmap, lrange, lzip
+
 import copy
 from itertools import zip_longest
 import time
 
-from statsmodels.compat.python import lrange, lmap, lzip
 import numpy as np
+
 from statsmodels.iolib.table import SimpleTable
-from statsmodels.iolib.tableformatting import (gen_fmt, fmt_2,
-                                               fmt_params, fmt_2cols)
+from statsmodels.iolib.tableformatting import (
+    fmt_2,
+    fmt_2cols,
+    fmt_params,
+    gen_fmt,
+)
+
 from .summary2 import _model_types
 
 
@@ -98,7 +105,7 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
     Examples (needs updating)
     --------
     >>> import statsmodels as sm
-    >>> data = sm.datasets.longley.load(as_pandas=False)
+    >>> data = sm.datasets.longley.load()
     >>> data.exog = sm.add_constant(data.exog)
     >>> ols_results = sm.OLS(data.endog, data.exog).results
     >>> print ols_results.summary()

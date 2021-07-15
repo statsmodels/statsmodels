@@ -190,7 +190,7 @@ class TestProbPlotLongelyNoFit(BaseProbplotMixin):
 class TestProbPlotLongelyWithFit(BaseProbplotMixin):
     def setup(self):
         np.random.seed(5)
-        self.data = sm.datasets.longley.load(as_pandas=False)
+        self.data = sm.datasets.longley.load()
         self.data.exog = sm.add_constant(self.data.exog, prepend=False)
         self.mod_fit = sm.OLS(self.data.endog, self.data.exog).fit()
         self.prbplt = ProbPlot(
@@ -288,7 +288,7 @@ class TestProbPlotRandomNormalLocScaleDist(BaseProbplotMixin):
 
 class TestTopLevel:
     def setup(self):
-        self.data = sm.datasets.longley.load(as_pandas=False)
+        self.data = sm.datasets.longley.load()
         self.data.exog = sm.add_constant(self.data.exog, prepend=False)
         self.mod_fit = sm.OLS(self.data.endog, self.data.exog).fit()
         self.res = self.mod_fit.resid
@@ -329,7 +329,7 @@ class TestTopLevel:
 def test_invalid_dist_config(close_figures):
     # GH 4226
     np.random.seed(5)
-    data = sm.datasets.longley.load(as_pandas=False)
+    data = sm.datasets.longley.load()
     data.exog = sm.add_constant(data.exog, prepend=False)
     mod_fit = sm.OLS(data.endog, data.exog).fit()
     with pytest.raises(TypeError, match=r"dist\(0, 1, 4, loc=0, scale=1\)"):

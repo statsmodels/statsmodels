@@ -6,10 +6,14 @@ from pandas import DataFrame
 from pandas.tseries import offsets
 from pandas.tseries.frequencies import to_offset
 
-from statsmodels.tools.validation import int_like, bool_like, string_like
+from statsmodels.tools.data import _is_recarray, _is_using_pandas
 from statsmodels.tools.sm_exceptions import ValueWarning
-from statsmodels.tools.data import _is_using_pandas, _is_recarray
-from statsmodels.tools.validation import array_like
+from statsmodels.tools.validation import (
+    array_like,
+    bool_like,
+    int_like,
+    string_like,
+)
 
 
 def add_trend(x, trend="c", prepend=False, has_constant='skip'):
@@ -39,8 +43,8 @@ def add_trend(x, trend="c", prepend=False, has_constant='skip'):
     -------
     array_like
         The original data with the additional trend columns.  If x is a
-        recarray or pandas Series or DataFrame, then the trend column names
-        are 'const', 'trend' and 'trend_squared'.
+        pandas Series or DataFrame, then the trend column names are 'const',
+        'trend' and 'trend_squared'.
 
     See Also
     --------
@@ -169,7 +173,7 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
     --------
 
     >>> import statsmodels.api as sm
-    >>> data = sm.datasets.macrodata.load(as_pandas=False)
+    >>> data = sm.datasets.macrodata.load()
     >>> data = data.data[['year','quarter','realgdp','cpi']]
     >>> data = sm.tsa.add_lag(data, 'realgdp', lags=2)
 
@@ -181,7 +185,7 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
     """
     lags = int_like(lags, 'lags')
     drop = bool_like(drop, 'drop')
-    x = array_like(x, "x", maxdim=2, ndim=2)
+    x = array_like(x, "x", ndim=2)
     if col is None:
         col = 0
 

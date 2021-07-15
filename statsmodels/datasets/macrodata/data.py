@@ -60,15 +60,9 @@ def load_pandas():
     return du.Dataset(data=data, names=list(data.columns))
 
 
-def load(as_pandas=None):
+def load():
     """
     Load the US macro data and return a Dataset class.
-
-    Parameters
-    ----------
-    as_pandas : bool
-        Flag indicating whether to return pandas DataFrames and Series
-        or numpy recarrays and arrays.  If True, returns pandas.
 
     Returns
     -------
@@ -79,7 +73,7 @@ def load(as_pandas=None):
     -----
     The macrodata Dataset instance does not contain endog and exog attributes.
     """
-    return du.as_numpy_dataset(load_pandas(), as_pandas=as_pandas)
+    return load_pandas()
 
 
 def _get_data():

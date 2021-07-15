@@ -1,8 +1,10 @@
-from numpy.testing import assert_almost_equal
-from statsmodels.emplike.originregress import ELOriginRegress
-from statsmodels.datasets import cancer
-from .results.el_results import OriginResults
 import numpy as np
+from numpy.testing import assert_almost_equal
+
+from statsmodels.datasets import cancer
+from statsmodels.emplike.originregress import ELOriginRegress
+
+from .results.el_results import OriginResults
 
 
 class GenRes(object):
@@ -11,7 +13,7 @@ class GenRes(object):
     """
     @classmethod
     def setup_class(cls):
-        data = cancer.load(as_pandas=False)
+        data = cancer.load()
         cls.res1 = ELOriginRegress(data.endog, data.exog).fit()
         cls.res2 = OriginResults()
 

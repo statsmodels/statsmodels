@@ -1,11 +1,13 @@
 """Example: statsmodels.sandbox.sysreg
 """
 #TODO: this is going to change significantly once we have a panel data structure
-from statsmodels.compat.python import lmap, asbytes
+from statsmodels.compat.python import asbytes, lmap
+
 import numpy as np
+
 import statsmodels.api as sm
-from statsmodels.sandbox.sysreg import SUR, Sem2SLS
 from statsmodels.sandbox.regression.gmm import IV2SLS
+from statsmodels.sandbox.sysreg import SUR, Sem2SLS
 
 #for Python 3 compatibility
 
@@ -14,7 +16,7 @@ from statsmodels.sandbox.regression.gmm import IV2SLS
 # This example uses the subset of the Grunfeld data in Greene's Econometric
 # Analysis Chapter 14 (5th Edition)
 
-grun_data = sm.datasets.grunfeld.load(as_pandas=False)
+grun_data = sm.datasets.grunfeld.load()
 
 firms = ['General Motors', 'Chrysler', 'General Electric', 'Westinghouse',
         'US Steel']
@@ -75,7 +77,7 @@ print(grun_ires.params)
 # See Greene's Econometric Analysis for more information
 
 # Load the data
-macrodata = sm.datasets.macrodata.load(as_pandas=False).data
+macrodata = sm.datasets.macrodata.load().data
 
 # Not needed, but make sure the data is sorted
 macrodata = np.sort(macrodata, order=['year','quarter'])

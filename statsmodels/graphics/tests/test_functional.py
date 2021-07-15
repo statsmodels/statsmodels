@@ -1,11 +1,15 @@
 
 import numpy as np
-from numpy.testing import assert_equal, assert_almost_equal
+from numpy.testing import assert_almost_equal, assert_equal
 import pytest
 
 from statsmodels.datasets import elnino
-from statsmodels.graphics.functional import \
-            hdrboxplot, banddepth, fboxplot, rainbowplot
+from statsmodels.graphics.functional import (
+    banddepth,
+    fboxplot,
+    hdrboxplot,
+    rainbowplot,
+)
 
 try:
     import matplotlib.pyplot as plt
@@ -13,7 +17,8 @@ except ImportError:
     pass
 
 
-data = elnino.load(as_pandas=False)
+data = elnino.load()
+data.raw_data = np.asarray(data.raw_data)
 labels = data.raw_data[:, 0].astype(int)
 data = data.raw_data[:, 1:]
 

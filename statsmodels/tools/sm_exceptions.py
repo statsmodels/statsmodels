@@ -239,17 +239,6 @@ class InfeasibleTestError(RuntimeError):
     pass
 
 
-recarray_warning = """\
-recarray support has been deprecated and will be removed after 0.12.  Please \
-use pandas DataFrames and Series for structured data.
-
-You can suppress this warning using
-
-from warnings import filterwarnings
-filterwarnings("ignore", message="recarray support", category=FutureWarning)
-"""
-
-
 recarray_exception = """
 recarray support has been removed from statsmodels. Use pandas DataFrames
 for structured data.

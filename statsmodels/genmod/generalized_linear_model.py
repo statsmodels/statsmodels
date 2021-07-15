@@ -17,35 +17,37 @@ Hardin, J.W. and Hilbe, J.M. 2007.  "Generalized Linear Models and
 McCullagh, P. and Nelder, J.A.  1989.  "Generalized Linear Models." 2nd ed.
     Chapman & Hall, Boca Rotan.
 """
-import numpy as np
-
-from . import families
-
-from statsmodels.tools.decorators import (cache_readonly,
-                                          cached_data, cached_value)
-from statsmodels.tools.validation import float_like
 from statsmodels.compat.pandas import Appender
 
-import statsmodels.base.model as base
-import statsmodels.regression.linear_model as lm
-import statsmodels.base.wrapper as wrap
-import statsmodels.regression._tools as reg_tools
 import warnings
 
+import numpy as np
+from numpy.linalg.linalg import LinAlgError
+
+import statsmodels.base.model as base
+import statsmodels.base.wrapper as wrap
+from statsmodels.genmod._prediction import PredictionResults
 from statsmodels.graphics._regressionplots_doc import (
     _plot_added_variable_doc,
+    _plot_ceres_residuals_doc,
     _plot_partial_residuals_doc,
-    _plot_ceres_residuals_doc)
+)
+import statsmodels.regression._tools as reg_tools
+import statsmodels.regression.linear_model as lm
+from statsmodels.tools.decorators import (
+    cache_readonly,
+    cached_data,
+    cached_value,
+)
+from statsmodels.tools.sm_exceptions import (
+    DomainWarning,
+    HessianInversionWarning,
+    PerfectSeparationError,
+)
+from statsmodels.tools.validation import float_like
 
 # need import in module instead of lazily to copy `__doc__`
-from . import _prediction as pred
-from statsmodels.genmod._prediction import PredictionResults
-
-from statsmodels.tools.sm_exceptions import (PerfectSeparationError,
-                                             DomainWarning,
-                                             HessianInversionWarning)
-
-from numpy.linalg.linalg import LinAlgError
+from . import _prediction as pred, families
 
 __all__ = ['GLM', 'PredictionResults']
 
@@ -182,7 +184,7 @@ class GLM(base.LikelihoodModel):
     Examples
     --------
     >>> import statsmodels.api as sm
-    >>> data = sm.datasets.scotland.load(as_pandas=False)
+    >>> data = sm.datasets.scotland.load()
     >>> data.exog = sm.add_constant(data.exog)
 
     Instantiate a gamma family model with the default link function.
@@ -727,6 +729,7 @@ class GLM(base.LikelihoodModel):
             hessian = -np.dot(ex.T * hessian_factor, ex)
 
         from scipy import stats
+
         # TODO check sign, why minus?
         chi2stat = -score.dot(np.linalg.solve(hessian, score[:, None]))
         pval = stats.chi2.sf(chi2stat, k_constraints)
@@ -1342,8 +1345,11 @@ class GLM(base.LikelihoodModel):
             return -(self.score(x) / self.nobs - alpha * x)
 
         from scipy.optimize import minimize
-        from statsmodels.base.elastic_net import (RegularizedResults,
-            RegularizedResultsWrapper)
+
+        from statsmodels.base.elastic_net import (
+            RegularizedResults,
+            RegularizedResultsWrapper,
+        )
 
         mr = minimize(fun, start_params, jac=grad, method=method)
         params = mr.x
@@ -1391,8 +1397,11 @@ class GLM(base.LikelihoodModel):
         """
 
         from patsy import DesignInfo
-        from statsmodels.base._constraints import (fit_constrained,
-                                                   LinearConstraints)
+
+        from statsmodels.base._constraints import (
+            LinearConstraints,
+            fit_constrained,
+        )
 
         # same pattern as in base.LikelihoodModel.t_test
         lc = DesignInfo(self.exog_names).linear_constraint(constraints)
@@ -1501,12 +1510,14 @@ class GLMResults(base.LikelihoodModelResults):
         ct = (cov_type == 'nonrobust') or (cov_type.upper().startswith('HC'))
         if self.model._has_freq_weights and not ct:
             import warnings
+
             from statsmodels.tools.sm_exceptions import SpecificationWarning
             warnings.warn('cov_type not fully supported with freq_weights',
                           SpecificationWarning)
 
         if self.model._has_var_weights and not ct:
             import warnings
+
             from statsmodels.tools.sm_exceptions import SpecificationWarning
             warnings.warn('cov_type not fully supported with var_weights',
                           SpecificationWarning)
@@ -2079,7 +2090,7 @@ wrap.populate_wrapper(GLMResultsWrapper, GLMResults)
 
 if __name__ == "__main__":
     from statsmodels.datasets import longley
-    data = longley.load(as_pandas=False)
+    data = longley.load()
     # data.exog = add_constant(data.exog)
     GLMmod = GLM(data.endog, data.exog).fit()
     GLMT = GLMmod.summary(returns='tables')

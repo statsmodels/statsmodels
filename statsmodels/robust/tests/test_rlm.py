@@ -19,6 +19,14 @@ DECIMAL_2 = 2
 DECIMAL_1 = 1
 
 
+def load_stackloss():
+    from statsmodels.datasets.stackloss import load
+    data = load()
+    data.endog = np.asarray(data.endog)
+    data.exog = np.asarray(data.exog)
+    return data
+
+
 class CheckRlmResultsMixin(object):
     '''
     res2 contains  results from Rmodelwrap or were obtained from a statistical
@@ -102,8 +110,7 @@ class CheckRlmResultsMixin(object):
 class TestRlm(CheckRlmResultsMixin):
     @classmethod
     def setup_class(cls):
-        from statsmodels.datasets.stackloss import load
-        cls.data = load(as_pandas=False)  # class attributes for subclasses
+        cls.data = load_stackloss()  # class attributes for subclasses
         cls.data.exog = sm.add_constant(cls.data.exog, prepend=False)
         # Test precisions
         cls.decimal_standarderrors = DECIMAL_1
@@ -205,8 +212,7 @@ class TestRlmAndrews(TestRlm):
 class TestRlmHuber(CheckRlmResultsMixin):
     @classmethod
     def setup_class(cls):
-        from statsmodels.datasets.stackloss import load
-        cls.data = load(as_pandas=False)
+        cls.data = load_stackloss()
         cls.data.exog = sm.add_constant(cls.data.exog, prepend=False)
 
         model = RLM(cls.data.endog, cls.data.exog, M=norms.HuberT())
@@ -280,8 +286,7 @@ class TestRlmSresid(CheckRlmResultsMixin):
     # Check GH#187
     @classmethod
     def setup_class(cls):
-        from statsmodels.datasets.stackloss import load
-        cls.data = load(as_pandas=False)  # class attributes for subclasses
+        cls.data = load_stackloss()  # class attributes for subclasses
         cls.data.exog = sm.add_constant(cls.data.exog, prepend=False)
         # Test precisions
         cls.decimal_standarderrors = DECIMAL_1
@@ -366,7 +371,7 @@ def test_perfect_const(perfect_fit_data, norm):
 
 @pytest.mark.parametrize('conv', ('weights', 'coefs', 'sresid'))
 def test_alt_criterion(conv):
-    data = sm.datasets.stackloss.load(as_pandas=True)
+    data = load_stackloss()
     data.exog = sm.add_constant(data.exog, prepend=False)
     base = RLM(data.endog, data.exog, M=norms.HuberT()).fit()
     alt = RLM(data.endog, data.exog, M=norms.HuberT()).fit(conv=conv)
@@ -374,7 +379,9 @@ def test_alt_criterion(conv):
 
 
 def test_bad_criterion():
-    data = sm.datasets.stackloss.load(as_pandas=True)
+    data = load_stackloss()
+    data.exog = np.asarray(data.exog)
+    data.endog = np.asarray(data.endog)
     data.exog = sm.add_constant(data.exog, prepend=False)
     mod = RLM(data.endog, data.exog, M=norms.HuberT())
     with pytest.raises(ValueError, match='Convergence argument unknown'):

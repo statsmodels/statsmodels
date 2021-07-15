@@ -10,21 +10,28 @@ Created on Wed Oct 30 14:01:27 2013
 
 Author: Josef Perktold
 """
-from statsmodels.compat.pandas import assert_series_equal, assert_index_equal
-from statsmodels.compat.platform import (PLATFORM_OSX, PLATFORM_LINUX32,
-                                         PLATFORM_WIN32)
+from statsmodels.compat.pandas import assert_index_equal, assert_series_equal
+from statsmodels.compat.platform import (
+    PLATFORM_LINUX32,
+    PLATFORM_OSX,
+    PLATFORM_WIN32,
+)
 from statsmodels.compat.scipy import SCIPY_GT_14
 
 import numpy as np
+from numpy.testing import (
+    assert_,
+    assert_allclose,
+    assert_array_equal,
+    assert_equal,
+)
 import pandas as pd
 import pytest
-import statsmodels.api as sm
-from statsmodels.tools.sm_exceptions import HessianInversionWarning
-import statsmodels.tools._testing as smt
-from statsmodels.formula.api import ols, glm
 
-from numpy.testing import (assert_, assert_allclose, assert_equal,
-                           assert_array_equal)
+import statsmodels.api as sm
+from statsmodels.formula.api import glm, ols
+import statsmodels.tools._testing as smt
+from statsmodels.tools.sm_exceptions import HessianInversionWarning
 
 
 class CheckGenericMixin(object):
@@ -358,7 +365,9 @@ class TestGenericNegativeBinomial(CheckGenericMixin):
     def setup(self):
         #fit for each test, because results will be changed by test
         np.random.seed(987689)
-        data = sm.datasets.randhie.load(as_pandas=False)
+        data = sm.datasets.randhie.load()
+        data.exog = np.asarray(data.exog)
+        data.endog = np.asarray(data.endog)
         exog = sm.add_constant(data.exog, prepend=False)
         mod = sm.NegativeBinomial(data.endog, exog)
         start_params = np.array([-0.05783623, -0.26655806,  0.04109148, -0.03815837,

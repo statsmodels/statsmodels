@@ -27,15 +27,19 @@ Statistics. 14:3, 643-656.
 
 
 """
+import warnings
+
 import numpy as np
-from statsmodels.regression.linear_model import OLS, WLS
-from statsmodels.tools import add_constant
 #from elregress import ElReg
 from scipy import optimize
 from scipy.stats import chi2
-from .descriptive import _OptFuncts
-import warnings
+
+from statsmodels.regression.linear_model import OLS, WLS
+from statsmodels.tools import add_constant
 from statsmodels.tools.sm_exceptions import IterationLimitWarning
+
+from .descriptive import _OptFuncts
+
 
 class OptAFT(_OptFuncts):
     """
@@ -224,7 +228,7 @@ class emplikeAFT(object):
         self.nobs = np.shape(exog)[0]
         self.endog = endog.reshape(self.nobs, 1)
         self.exog = exog.reshape(self.nobs, -1)
-        self.censors = censors.reshape(self.nobs, 1)
+        self.censors = np.asarray(censors).reshape(self.nobs, 1)
         self.nvar = self.exog.shape[1]
         idx = np.lexsort((-self.censors[:, 0], self.endog[:, 0]))
         self.endog = self.endog[idx]
@@ -425,7 +429,7 @@ class AFTResults(OptAFT):
         >>> import numpy as np
 
         # Test parameter is .05 in one regressor no intercept model
-        >>> data=sm.datasets.heart.load(as_pandas=False)
+        >>> data=sm.datasets.heart.load()
         >>> y = np.log10(data.endog)
         >>> x = data.exog
         >>> cens = data.censors
@@ -436,7 +440,7 @@ class AFTResults(OptAFT):
 
         #Test slope is 0 in  model with intercept
 
-        >>> data=sm.datasets.heart.load(as_pandas=False)
+        >>> data=sm.datasets.heart.load()
         >>> y = np.log10(data.endog)
         >>> x = data.exog
         >>> cens = data.censors

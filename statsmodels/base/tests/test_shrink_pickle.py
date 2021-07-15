@@ -7,10 +7,12 @@ Author: Josef Perktold
 """
 from statsmodels.compat.pandas import assert_series_equal
 
-import pickle
 from io import BytesIO
+import pickle
 
 import numpy as np
+# we need log in module namespace for TestPickleFormula5
+from numpy import log  # noqa:F401
 import pandas as pd
 
 import statsmodels.api as sm
@@ -171,7 +173,7 @@ class TestRemoveDataPickleNegativeBinomial(RemoveDataPickle):
     def setup(self):
         # fit for each test, because results will be changed by test
         np.random.seed(987689)
-        data = sm.datasets.randhie.load(as_pandas=False)
+        data = sm.datasets.randhie.load()
         mod = sm.NegativeBinomial(data.endog, data.exog)
         self.results = mod.fit(disp=0)
 

@@ -1,6 +1,5 @@
 import importlib
 
-import numpy as np
 import pandas as pd
 import pytest
 
@@ -20,14 +19,6 @@ for dataset_name in dir(statsmodels.datasets):
 def test_dataset(dataset_name):
     dataset = importlib.import_module('statsmodels.datasets.' + dataset_name)
     ds = dataset.load()
-    assert isinstance(ds, Dataset)
-    assert isinstance(ds.data, np.recarray)
-    if hasattr(ds, 'exog'):
-        assert isinstance(ds.exog, np.ndarray)
-    if hasattr(ds, 'endog'):
-        assert isinstance(ds.endog, np.ndarray)
-
-    ds = dataset.load(as_pandas=True)
     assert isinstance(ds, Dataset)
     assert isinstance(ds.data, pd.DataFrame)
     if hasattr(ds, 'exog'):

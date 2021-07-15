@@ -3,7 +3,6 @@ import numpy as np
 
 from statsmodels.sandbox.tools import cross_val
 
-
 if __name__ == '__main__':
     #A: josef-pktd
 
@@ -11,7 +10,7 @@ if __name__ == '__main__':
     #from statsmodels.datasets.longley import load
     from statsmodels.datasets.stackloss import load
 
-    data = load(as_pandas=False)
+    data = load()
     data.exog = sm.tools.add_constant(data.exog, prepend=False)
 
     resols = sm.OLS(data.endog, data.exog).fit()
@@ -35,8 +34,8 @@ if __name__ == '__main__':
 
     doplots = 1
     if doplots:
-        import matplotlib.pyplot as plt
         from matplotlib.font_manager import FontProperties
+        import matplotlib.pyplot as plt
 
         plt.figure()
         figtitle = 'Leave2out parameter estimates'

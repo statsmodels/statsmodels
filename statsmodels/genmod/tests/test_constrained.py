@@ -13,11 +13,12 @@ import warnings
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
-from statsmodels.tools.tools import add_constant
-from statsmodels.regression.linear_model import OLS, WLS
-from statsmodels.genmod.generalized_linear_model import GLM
+
 from statsmodels.genmod.families import family
+from statsmodels.genmod.generalized_linear_model import GLM
+from statsmodels.regression.linear_model import OLS, WLS
 from statsmodels.tools.sm_exceptions import ValueWarning
+from statsmodels.tools.tools import add_constant
 
 
 class ConstrainedCompareMixin(object):
@@ -186,8 +187,11 @@ class TestGLMBinomialCountConstrained(ConstrainedCompareMixin):
     @classmethod
     def setup_class(cls):
         from statsmodels.datasets.star98 import load
+
         #from statsmodels.genmod.tests.results.results_glm import Star98
-        data = load(as_pandas=False)
+        data = load()
+        data.exog = np.asarray(data.exog)
+        data.endog = np.asarray(data.endog)
         exog = add_constant(data.exog, prepend=True)
         offset = np.ones(len(data.endog))
         exog_keep = exog[:, :-5]

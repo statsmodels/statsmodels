@@ -16,14 +16,14 @@ R Venables, B Ripley. 'Modern Applied Statistics in S'  Springer, New York,
 import numpy as np
 import scipy.stats as stats
 
-from statsmodels.tools.decorators import cache_readonly
-from statsmodels.tools.sm_exceptions import ConvergenceWarning
-import statsmodels.regression.linear_model as lm
-import statsmodels.regression._tools as reg_tools
-import statsmodels.robust.norms as norms
-import statsmodels.robust.scale as scale
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
+import statsmodels.regression._tools as reg_tools
+import statsmodels.regression.linear_model as lm
+import statsmodels.robust.norms as norms
+import statsmodels.robust.scale as scale
+from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools.sm_exceptions import ConvergenceWarning
 
 __all__ = ['RLM']
 
@@ -83,7 +83,7 @@ class RLM(base.LikelihoodModel):
     Examples
     --------
     >>> import statsmodels.api as sm
-    >>> data = sm.datasets.stackloss.load(as_pandas=False)
+    >>> data = sm.datasets.stackloss.load()
     >>> data.exog = sm.add_constant(data.exog)
     >>> rlm_model = sm.RLM(data.endog, data.exog, \
                            M=sm.robust.norms.HuberT())

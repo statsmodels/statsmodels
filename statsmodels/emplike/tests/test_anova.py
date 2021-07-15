@@ -1,6 +1,9 @@
+import numpy as np
 from numpy.testing import assert_almost_equal
+
 from statsmodels.datasets import star98
 from statsmodels.emplike.elanova import ANOVA
+
 from .results.el_results import ANOVAResults
 
 
@@ -11,7 +14,7 @@ class TestANOVA(object):
 
     @classmethod
     def setup_class(cls):
-        cls.data = star98.load(as_pandas=False).exog[:30, 1:3]
+        cls.data = np.asarray(star98.load().exog)[:30, 1:3]
         cls.res1 = ANOVA([cls.data[:, 0], cls.data[:, 1]])
         cls.res2 = ANOVAResults()
 
