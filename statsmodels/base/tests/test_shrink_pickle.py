@@ -11,12 +11,11 @@ from io import BytesIO
 import pickle
 
 import numpy as np
-# we need log in module namespace for TestPickleFormula5
-from numpy import log  # noqa:F401
 import pandas as pd
 
 import statsmodels.api as sm
 
+# log used in TestPickleFormula5
 log = np.log  # noqa: F841
 
 

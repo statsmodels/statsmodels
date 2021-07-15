@@ -684,7 +684,7 @@ class Describe(object):
     """
 
     def __init__(self, dataset):
-        warnings.warn(DEPRECATION_MSG, DeprecationWarning)
+        warnings.warn(DEPRECATION_MSG, FutureWarning)
         self.dataset = dataset
 
         # better if this is initially a list to define order, or use an

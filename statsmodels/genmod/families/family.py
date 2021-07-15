@@ -7,12 +7,12 @@ The one parameter exponential family distributions used by GLM.
 # for comparison to R, and McCullagh and Nelder
 
 
-import warnings
 import inspect
+
 import numpy as np
 from scipy import special, stats
-from . import links as L
-from . import varfuncs as V
+
+from . import links as L, varfuncs as V
 
 FLOAT_EPS = np.finfo(float).eps
 
@@ -76,13 +76,11 @@ class Family(object):
 
     def __init__(self, link, variance):
         if inspect.isclass(link):
-            warnmssg = "Calling Family(..) with a link class as argument "
-            warnmssg += "is deprecated.\n"
-            warnmssg += "Use an instance of a link class instead."
-            lvl = 2 if type(self) is Family else 3
-            warnings.warn(warnmssg,
-                          category=DeprecationWarning, stacklevel=lvl)
-            self.link = link()
+            warnmssg = (
+                "Calling Family(..) with a link class is not allowed. Use an "
+                "instance of a link class instead."
+            )
+            raise TypeError(warnmssg)
         else:
             self.link = link
         self.variance = variance

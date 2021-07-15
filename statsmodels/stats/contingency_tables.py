@@ -25,13 +25,15 @@ sampled.  In general the observed units are independent and
 identically distributed.
 """
 
-from statsmodels.tools.decorators import cache_readonly
-import numpy as np
-from scipy import stats
-import pandas as pd
 import warnings
+
+import numpy as np
+import pandas as pd
+from scipy import stats
+
 from statsmodels import iolib
 from statsmodels.tools import sm_exceptions
+from statsmodels.tools.decorators import cache_readonly
 
 
 def _make_df_square(table):
@@ -1088,13 +1090,6 @@ class StratifiedTable(object):
 
         rr = np.sum(acd / self._n) / np.sum(cab / self._n)
         return rr
-
-    @cache_readonly
-    def risk_pooled(self):
-        # Deprecated due to name being misleading
-        msg = "'risk_pooled' is deprecated, use 'riskratio_pooled' instead"
-        warnings.warn(msg, DeprecationWarning)
-        return self.riskratio_pooled
 
     @cache_readonly
     def logodds_pooled_se(self):

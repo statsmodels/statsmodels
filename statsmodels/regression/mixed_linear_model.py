@@ -145,15 +145,15 @@ the Newton-Raphson algorithm cannot be used for model fitting.
 import warnings
 
 import numpy as np
-from scipy.stats.distributions import norm
-from scipy import sparse
 import pandas as pd
 import patsy
+from scipy import sparse
+from scipy.stats.distributions import norm
 
 from statsmodels.base._penalties import Penalty
 import statsmodels.base.model as base
-from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools import data as data_tools
+from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
 
 _warn_cov_sing = "The random effects covariance matrix is singular."
@@ -2587,7 +2587,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
 
     # Need to override since t-tests are only used for fixed effects
     # parameters.
-    def t_test(self, r_matrix, scale=None, use_t=None):
+    def t_test(self, r_matrix, use_t=None):
         """
         Compute a t-test for a each linear hypothesis of the form Rb = q
 
@@ -2614,12 +2614,6 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
             The available results have the same elements as the parameter table
             in `summary()`.
         """
-        if scale is not None:
-            import warnings
-            warnings.warn('scale is has no effect and is deprecated. It will'
-                          'be removed in the next version.',
-                          DeprecationWarning)
-
         if r_matrix.shape[1] != self.k_fe:
             raise ValueError("r_matrix for t-test should have %d columns"
                              % self.k_fe)
@@ -2932,9 +2926,10 @@ def _handle_missing(data, groups, formula, re_formula, vc_formula):
     if vc_formula is not None:
         forms.extend(vc_formula.values())
 
-    import tokenize
-    from io import StringIO
     from statsmodels.compat.python import asunicode
+
+    from io import StringIO
+    import tokenize
     skiptoks = {"(", ")", "*", ":", "+", "-", "**", "/"}
 
     for fml in forms:
