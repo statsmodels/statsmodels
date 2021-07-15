@@ -71,8 +71,9 @@ class CheckGeneric(CheckModelMixin):
 class TestZeroInflatedModel_logit(CheckGeneric):
     @classmethod
     def setup_class(cls):
-        data = sm.datasets.randhie.load(as_pandas=False)
-        cls.endog = data.endog
+        data = sm.datasets.randhie.load()
+        cls.endog = np.asarray(data.endog)
+        data.exog = np.asarray(data.exog)
         exog = sm.add_constant(data.exog[:,1:4], prepend=False)
         exog_infl = sm.add_constant(data.exog[:,0], prepend=False)
         cls.res1 = sm.ZeroInflatedPoisson(data.endog, exog,
@@ -88,8 +89,9 @@ class TestZeroInflatedModel_logit(CheckGeneric):
 class TestZeroInflatedModel_probit(CheckGeneric):
     @classmethod
     def setup_class(cls):
-        data = sm.datasets.randhie.load(as_pandas=False)
-        cls.endog = data.endog
+        data = sm.datasets.randhie.load()
+        cls.endog = np.asarray(data.endog)
+        data.exog = np.asarray(data.exog)
         exog = sm.add_constant(data.exog[:,1:4], prepend=False)
         exog_infl = sm.add_constant(data.exog[:,0], prepend=False)
         cls.res1 = sm.ZeroInflatedPoisson(data.endog, exog,
@@ -109,8 +111,9 @@ class TestZeroInflatedModel_probit(CheckGeneric):
 class TestZeroInflatedModel_offset(CheckGeneric):
     @classmethod
     def setup_class(cls):
-        data = sm.datasets.randhie.load(as_pandas=False)
-        cls.endog = data.endog
+        data = sm.datasets.randhie.load()
+        cls.endog = np.asarray(data.endog)
+        data.exog = np.asarray(data.exog)
         exog = sm.add_constant(data.exog[:,1:4], prepend=False)
         exog_infl = sm.add_constant(data.exog[:,0], prepend=False)
         cls.res1 = sm.ZeroInflatedPoisson(data.endog, exog,
@@ -273,8 +276,9 @@ class TestZeroInflatedPoisson_predict(object):
 class TestZeroInflatedGeneralizedPoisson(CheckGeneric):
     @classmethod
     def setup_class(cls):
-        data = sm.datasets.randhie.load(as_pandas=False)
-        cls.endog = data.endog
+        data = sm.datasets.randhie.load()
+        cls.endog = np.asarray(data.endog)
+        data.exog = np.asarray(data.exog)
         exog = sm.add_constant(data.exog[:,1:4], prepend=False)
         exog_infl = sm.add_constant(data.exog[:,0], prepend=False)
         cls.res1 = sm.ZeroInflatedGeneralizedPoisson(data.endog, exog,
@@ -402,8 +406,9 @@ class TestZeroInflatedGeneralizedPoisson_predict(object):
 class TestZeroInflatedNegativeBinomialP(CheckGeneric):
     @classmethod
     def setup_class(cls):
-        data = sm.datasets.randhie.load(as_pandas=False)
-        cls.endog = data.endog
+        data = sm.datasets.randhie.load()
+        cls.endog = np.asarray(data.endog)
+        data.exog = np.asarray(data.exog)
         exog = sm.add_constant(data.exog[:,1], prepend=False)
         exog_infl = sm.add_constant(data.exog[:,0], prepend=False)
         # cheating for now, parameters are not well identified in this dataset
@@ -618,9 +623,10 @@ class TestZeroInflatedNegativeBinomialP_predict(object):
 class TestZeroInflatedNegativeBinomialP_predict2(object):
     @classmethod
     def setup_class(cls):
-        data = sm.datasets.randhie.load(as_pandas=False)
+        data = sm.datasets.randhie.load()
 
-        cls.endog = data.endog
+        cls.endog = np.asarray(data.endog)
+        data.exog = np.asarray(data.exog)
         exog = data.exog
         start_params = np.array([
             -2.83983767, -2.31595924, -3.9263248,  -4.01816431, -5.52251843,

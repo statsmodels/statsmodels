@@ -13,7 +13,7 @@ except ImportError:
     pass
 
 
-data = elnino.load(as_pandas=False)
+data = elnino.load()
 labels = data.raw_data[:, 0].astype(int)
 data = data.raw_data[:, 1:]
 

@@ -7,7 +7,7 @@ import statsmodels.api as sm
 import scikits.timeseries as ts
 import scikits.timeseries.lib.plotlib as tplt
 
-data = sm.datasets.macrodata.load(as_pandas=False)
+data = sm.datasets.macrodata.load()
 data = data.data
 
 

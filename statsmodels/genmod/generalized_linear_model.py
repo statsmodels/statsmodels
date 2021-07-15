@@ -182,7 +182,7 @@ class GLM(base.LikelihoodModel):
     Examples
     --------
     >>> import statsmodels.api as sm
-    >>> data = sm.datasets.scotland.load(as_pandas=False)
+    >>> data = sm.datasets.scotland.load()
     >>> data.exog = sm.add_constant(data.exog)
 
     Instantiate a gamma family model with the default link function.
@@ -2079,7 +2079,7 @@ wrap.populate_wrapper(GLMResultsWrapper, GLMResults)
 
 if __name__ == "__main__":
     from statsmodels.datasets import longley
-    data = longley.load(as_pandas=False)
+    data = longley.load()
     # data.exog = add_constant(data.exog)
     GLMmod = GLM(data.endog, data.exog).fit()
     GLMT = GLMmod.summary(returns='tables')

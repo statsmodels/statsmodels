@@ -131,7 +131,7 @@ if __name__ == '__main__':
     tp = transform_params_constraint(res2.params, res2.cov_params(), transf3.R, transf3.q)
 
     import statsmodels.api as sm
-    rand_data = sm.datasets.randhie.load(as_pandas=False)
+    rand_data = sm.datasets.randhie.load()
     rand_exog = rand_data.exog.view(float).reshape(len(rand_data.exog), -1)
     rand_exog = sm.add_constant(rand_exog, prepend=False)
 

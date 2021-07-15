@@ -18,7 +18,7 @@ import statsmodels.tsa.api as tsa
 from statsmodels.tsa.arima_process import arma_generate_sample
 
 
-data = sm.datasets.stackloss.load(as_pandas=False)
+data = sm.datasets.stackloss.load()
 X = DataFrame(data.exog, columns=data.exog_name)
 X['intercept'] = 1.
 Y = Series(data.endog)
@@ -72,7 +72,7 @@ def plot_acf_multiple(ys, lags=20):
 
 #Example TSA descriptive
 
-data = sm.datasets.macrodata.load(as_pandas=False)
+data = sm.datasets.macrodata.load()
 mdata = data.data
 df = DataFrame.from_records(mdata)
 quarter_end = frequencies.BQuarterEnd()

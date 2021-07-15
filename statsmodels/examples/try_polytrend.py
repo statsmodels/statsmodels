@@ -8,7 +8,7 @@ from scipy import special
 
 import statsmodels.api as sm
 from statsmodels.datasets.macrodata import data
-dta = data.load(as_pandas=False)
+dta = data.load()
 gdp = np.log(dta.data['realgdp'])
 
 

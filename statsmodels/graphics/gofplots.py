@@ -80,7 +80,7 @@ class ProbPlot(object):
     >>> # example 1
     >>> import statsmodels.api as sm
     >>> from matplotlib import pyplot as plt
-    >>> data = sm.datasets.longley.load(as_pandas=False)
+    >>> data = sm.datasets.longley.load()
     >>> data.exog = sm.add_constant(data.exog)
     >>> model = sm.OLS(data.endog, data.exog)
     >>> mod_fit = model.fit()
@@ -656,7 +656,7 @@ def qqplot(
     --------
     >>> import statsmodels.api as sm
     >>> from matplotlib import pyplot as plt
-    >>> data = sm.datasets.longley.load(as_pandas=False)
+    >>> data = sm.datasets.longley.load()
     >>> exog = sm.add_constant(data.exog)
     >>> mod_fit = sm.OLS(data.endog, exog).fit()
     >>> res = mod_fit.resid # residuals
@@ -834,7 +834,7 @@ def qqline(ax, line, x=None, y=None, dist=None, fmt="r-", **lineoptions):
     >>> import matplotlib.pyplot as plt
     >>> from statsmodels.graphics.gofplots import qqline
 
-    >>> foodexp = sm.datasets.engel.load(as_pandas=False)
+    >>> foodexp = sm.datasets.engel.load()
     >>> x = foodexp.exog
     >>> y = foodexp.endog
     >>> ax = plt.subplot(111)

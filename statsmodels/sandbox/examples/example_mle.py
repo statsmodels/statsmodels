@@ -32,7 +32,7 @@ print(resfmin)
 print('\nExample 2: Longley Data, high multicollinearity')
 print('-----------------------------------------------\n')
 
-data = load(as_pandas=False)
+data = load()
 data.exog = sm.add_constant(data.exog, prepend=False)
 mod = sm.OLS(data.endog, data.exog)
 f = lambda params: -1*mod.loglike(params)

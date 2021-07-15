@@ -8,7 +8,7 @@ from statsmodels.iolib.summary import (
     table_extend, summary_params_2d, summary_params_2dflat)
 
 
-anes_data = sm.datasets.anes96.load(as_pandas=False)
+anes_data = sm.datasets.anes96.load()
 anes_exog = anes_data.exog
 anes_exog = sm.add_constant(anes_exog, prepend=False)
 mlogit_mod = sm.MNLogit(anes_data.endog, anes_exog)

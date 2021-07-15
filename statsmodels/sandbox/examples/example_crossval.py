@@ -11,7 +11,7 @@ if __name__ == '__main__':
     #from statsmodels.datasets.longley import load
     from statsmodels.datasets.stackloss import load
 
-    data = load(as_pandas=False)
+    data = load()
     data.exog = sm.tools.add_constant(data.exog, prepend=False)
 
     resols = sm.OLS(data.endog, data.exog).fit()

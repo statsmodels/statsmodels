@@ -161,7 +161,7 @@ def descstats(data, cols=None, axis=0):
 
 if __name__ == '__main__':
     import statsmodels.api as sm
-    data = sm.datasets.longley.load(as_pandas=False)
+    data = sm.datasets.longley.load()
     data.exog = sm.add_constant(data.exog, prepend=False)
     sum1 = descstats(data.exog)
     sum1a = descstats(data.exog[:,:1])

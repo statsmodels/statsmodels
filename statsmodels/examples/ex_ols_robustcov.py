@@ -5,7 +5,7 @@ from statsmodels.tools.tools import add_constant
 from statsmodels.datasets import macrodata
 
 
-d2 = macrodata.load(as_pandas=False).data
+d2 = macrodata.load().data
 g_gdp = 400*np.diff(np.log(d2['realgdp']))
 g_inv = 400*np.diff(np.log(d2['realinv']))
 exogg = add_constant(np.c_[g_gdp, d2['realint'][:-1]], prepend=False)

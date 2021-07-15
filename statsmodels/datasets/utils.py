@@ -329,18 +329,3 @@ def load_csv(base_file, csv_name, sep=',', convert_float=False):
     if convert_float:
         data = data.astype(float)
     return data
-
-
-def as_numpy_dataset(ds, as_pandas=True, retain_index=False):
-    """Convert a pandas dataset to a NumPy dataset"""
-    if as_pandas:
-        return ds
-    ds.data = ds.data.to_records(index=retain_index)
-    for d in dir(ds):
-        if d.startswith('_'):
-            continue
-        attr = getattr(ds, d)
-        if isinstance(attr, (Series, DataFrame)):
-            setattr(ds, d, np.asarray(attr))
-
-    return ds

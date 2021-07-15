@@ -134,7 +134,7 @@ class OriginResults(RegressionResults):
     Examples
     --------
     >>> import statsmodels.api as sm
-    >>> data = sm.datasets.bc.load(as_pandas=False)
+    >>> data = sm.datasets.bc.load()
     >>> model = sm.emplike.ELOriginRegress(data.endog, data.exog)
     >>> fitted = model.fit()
     >>> fitted.params #  0 is the intercept term.

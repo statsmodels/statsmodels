@@ -14,7 +14,7 @@ class GenRes(object):
     """
     @classmethod
     def setup_class(cls):
-        data = stackloss.load(as_pandas=False)
+        data = stackloss.load()
         data.exog = add_constant(data.exog)
         cls.res1 = OLS(data.endog, data.exog).fit()
         cls.res2 = RegressionResults()

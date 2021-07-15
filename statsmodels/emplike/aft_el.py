@@ -425,7 +425,7 @@ class AFTResults(OptAFT):
         >>> import numpy as np
 
         # Test parameter is .05 in one regressor no intercept model
-        >>> data=sm.datasets.heart.load(as_pandas=False)
+        >>> data=sm.datasets.heart.load()
         >>> y = np.log10(data.endog)
         >>> x = data.exog
         >>> cens = data.censors
@@ -436,7 +436,7 @@ class AFTResults(OptAFT):
 
         #Test slope is 0 in  model with intercept
 
-        >>> data=sm.datasets.heart.load(as_pandas=False)
+        >>> data=sm.datasets.heart.load()
         >>> y = np.log10(data.endog)
         >>> x = data.exog
         >>> cens = data.censors

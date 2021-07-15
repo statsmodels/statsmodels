@@ -198,7 +198,7 @@ if __name__ == '__main__':
 
     arpoly, mapoly = getpoly(mod, res.params[:-1])
 
-    data = sunspots.load(as_pandas=False)
+    data = sunspots.load()
     #ys = data.endog[-100:]
 ##    ys = data.endog[12:]-data.endog[:-12]
 ##    ys -= ys.mean()

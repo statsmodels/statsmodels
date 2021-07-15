@@ -104,7 +104,7 @@ Examples
 --------
 >>> from statsmodels.regression.rolling import Rolling%(model)s
 >>> from statsmodels.datasets import longley
->>> data = longley.load(as_pandas=False)
+>>> data = longley.load()
 >>> exog = add_constant(data.exog, prepend=False)
 >>> mod = Rolling%(model)s(data.endog, exog)
 >>> rolling_res = mod.fit(reset=50)

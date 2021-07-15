@@ -14,7 +14,7 @@ import statsmodels.api as sm
 #Load the El Nino dataset.  Consists of 60 years worth of Pacific Ocean sea
 #surface temperature data.
 
-data = sm.datasets.elnino.load(as_pandas=False)
+data = sm.datasets.elnino.load()
 
 #Create a functional boxplot:
 

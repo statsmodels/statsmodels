@@ -11,7 +11,7 @@ class GenRes(object):
     """
     @classmethod
     def setup_class(cls):
-        data = cancer.load(as_pandas=False)
+        data = cancer.load()
         cls.res1 = ELOriginRegress(data.endog, data.exog).fit()
         cls.res2 = OriginResults()
 

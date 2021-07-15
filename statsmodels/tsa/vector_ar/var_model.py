@@ -2333,7 +2333,7 @@ if __name__ == '__main__':
     """
 
     '''
-    mdata = sm.datasets.macrodata.load(as_pandas=False).data
+    mdata = sm.datasets.macrodata.load().data
     mdata2 = mdata[['realgdp','realcons','realinv']]
     names = mdata2.dtype.names
     data = mdata2.view((float,3))

@@ -64,7 +64,7 @@ def compare_to_reference(sp, sp_dict, decimal=(12, 12)):
 
 
 def test_gq():
-    d = macrodata.load(as_pandas=False).data
+    d = macrodata.load().data
 
     realinv = d["realinv"]
     realgdp = d["realgdp"]

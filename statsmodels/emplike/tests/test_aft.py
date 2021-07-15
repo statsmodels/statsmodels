@@ -11,7 +11,7 @@ from .results.el_results import AFTRes
 class GenRes(object):
     @classmethod
     def setup_class(cls):
-        data = heart.load(as_pandas=False)
+        data = heart.load()
         endog = np.log10(data.endog)
         exog = add_constant(data.exog)
         cls.mod1 = emplikeAFT(endog, exog, data.censors)

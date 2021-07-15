@@ -38,15 +38,9 @@ def load_pandas():
     return dataset
 
 
-def load(as_pandas=None):
+def load():
     """
     Load the yearly sunspot data and returns a data class.
-
-    Parameters
-    ----------
-    as_pandas : bool
-        Flag indicating whether to return pandas DataFrames and Series
-        or numpy recarrays and arrays.  If True, returns pandas.
 
     Returns
     -------
@@ -59,7 +53,7 @@ def load(as_pandas=None):
     data, raw_data, and endog are all the same variable.  There is no exog
     attribute defined.
     """
-    return du.as_numpy_dataset(load_pandas(), as_pandas=as_pandas)
+    return load_pandas()
 
 
 def _get_data():
