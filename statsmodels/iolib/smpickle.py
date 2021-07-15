@@ -8,12 +8,12 @@ def save_pickle(obj, fname):
 
     Parameters
     ----------
-    fname : str
+    fname : {str, pathlib.Path}
         Filename to pickle to
     """
     import pickle
 
-    with get_file_obj(fname, 'wb') as fout:
+    with get_file_obj(fname, "wb") as fout:
         pickle.dump(obj, fout, protocol=-1)
 
 
@@ -29,7 +29,7 @@ def load_pickle(fname):
 
     Parameters
     ----------
-    fname : str
+    fname : {str, pathlib.Path}
         Filename to unpickle
 
     Notes
@@ -38,5 +38,5 @@ def load_pickle(fname):
     """
     import pickle
 
-    with get_file_obj(fname, 'rb') as fin:
+    with get_file_obj(fname, "rb") as fin:
         return pickle.load(fin)

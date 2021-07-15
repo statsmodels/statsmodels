@@ -1075,7 +1075,6 @@ class Results(object):
             else:
                 exog_index = [exog.index.name]
 
-
         if transform and hasattr(self.model, 'formula') and (exog is not None):
             # allow both location of design_info, see #7043
             design_info = (getattr(self.model, "design_info", None) or
@@ -2144,7 +2143,7 @@ class LikelihoodModelResults(Results):
 
         Parameters
         ----------
-        fname : {str, handle}
+        fname : {str, handle, pathlib.Path}
             A string filename or a file handle.
 
         Returns
