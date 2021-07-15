@@ -15,7 +15,7 @@ import numpy as np
 
 import statsmodels.api as sm
 
-data = sm.datasets.elnino.load(as_pandas=False)
+data = sm.datasets.elnino.load()
 
 #Create a functional boxplot.  We see that the years 1982-83 and 1997-98 are
 #outliers; these are the years where El Nino (a climate pattern
@@ -24,8 +24,8 @@ data = sm.datasets.elnino.load(as_pandas=False)
 
 fig = plt.figure()
 ax = fig.add_subplot(111)
-res = sm.graphics.fboxplot(data.raw_data[:, 1:], wfactor=2.58,
-                           labels=data.raw_data[:, 0].astype(int),
+res = sm.graphics.fboxplot(data.raw_data.iloc[:, 1:], wfactor=2.58,
+                           labels=data.raw_data.iloc[:, 0].astype(int),
                            ax=ax)
 
 ax.set_xlabel("Month of the year")

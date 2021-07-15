@@ -1225,8 +1225,6 @@ class VARResults(VARProcess):
     sigma_u : ndarray (K x K)
         Estimate of white noise process variance Var[u_t]
     tvalues
-    y :
-    ys_lagged
     """
     _model_type = 'VAR'
     def __init__(self, endog, endog_lagged, params, sigma_u, lag_order,

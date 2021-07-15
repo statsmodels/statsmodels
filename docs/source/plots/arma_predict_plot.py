@@ -1,6 +1,7 @@
+import warnings
+
 import matplotlib.pyplot as plt
 import pandas as pd
-import warnings
 
 import statsmodels.api as sm
 

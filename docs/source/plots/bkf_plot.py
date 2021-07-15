@@ -1,6 +1,6 @@
+from load_macrodata import dta
 import matplotlib.pyplot as plt
 
-from load_macrodata import dta
 import statsmodels.api as sm
 
 cycles = sm.tsa.filters.bkfilter(dta[['realinv']], 6, 24, 12)
