@@ -73,12 +73,6 @@ class Penalty(object):
         """
         raise NotImplementedError
 
-    def grad(self, params):
-        import warnings
-        warnings.warn('grad method is deprecated. Use `deriv` instead',
-                      DeprecationWarning)
-        return self.deriv(params)
-
     def _null_weights(self, params):
         """work around for Null model
 
@@ -570,12 +564,6 @@ class CovariancePenalty(object):
         of `mat`.
         """
         raise NotImplementedError
-
-    def grad(self, mat, mat_inv):
-        import warnings
-        warnings.warn('grad method is deprecated. Use `deriv` instead',
-                      DeprecationWarning)
-        return self.deriv(mat, mat_inv)
 
 
 class PSD(CovariancePenalty):

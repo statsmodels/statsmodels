@@ -27,6 +27,7 @@ from statsmodels.tools.sm_exceptions import (
     ValueWarning,
 )
 from statsmodels.tools.tools import nan_dot, recipr
+from statsmodels.tools.validation import bool_like
 
 _model_params_doc = """Parameters
     ----------
@@ -1484,7 +1485,7 @@ class LikelihoodModelResults(Results):
             return cov_p
 
     # TODO: make sure this works as needed for GLMs
-    def t_test(self, r_matrix, cov_p=None, scale=None, use_t=None):
+    def t_test(self, r_matrix, cov_p=None, use_t=None):
         """
         Compute a t-test for a each linear hypothesis of the form Rb = q.
 
@@ -1504,12 +1505,6 @@ class LikelihoodModelResults(Results):
         cov_p : array_like, optional
             An alternative estimate for the parameter covariance matrix.
             If None is given, self.normalized_cov_params is used.
-        scale : float, optional
-            An optional `scale` to use.  Default is the scale specified
-            by the model fit.
-
-            .. deprecated:: 0.10.0
-
         use_t : bool, optional
             If use_t is None, then the default of the model is used. If use_t
             is True, then the p-values are based on the t distribution. If
@@ -1579,12 +1574,8 @@ class LikelihoodModelResults(Results):
         c2             1.0001      0.249      0.000      1.000       0.437       1.563
         ==============================================================================
         """
-        if scale is not None:
-            warnings.warn('scale is has no effect and is deprecated. It will'
-                          'be removed in the next version.',
-                          DeprecationWarning)
-
         from patsy import DesignInfo
+        use_t = bool_like(use_t, "use_t", strict=True, optional=True)
         names = self.model.data.cov_names
         LC = DesignInfo(names).linear_constraint(r_matrix)
         r_matrix, q_matrix = LC.coefs, LC.constants
@@ -1632,7 +1623,7 @@ class LikelihoodModelResults(Results):
                                    df_denom=df_resid,
                                    distribution='norm')
 
-    def f_test(self, r_matrix, cov_p=None, scale=1.0, invcov=None):
+    def f_test(self, r_matrix, cov_p=None, invcov=None):
         """
         Compute the F-test for a joint linear hypothesis.
 
@@ -1655,11 +1646,6 @@ class LikelihoodModelResults(Results):
         cov_p : array_like, optional
             An alternative estimate for the parameter covariance matrix.
             If None is given, self.normalized_cov_params is used.
-        scale : float, optional
-            Default is 1.0 for no scaling.
-
-            .. deprecated:: 0.10.0
-
         invcov : array_like, optional
             A q x q array to specify an inverse covariance matrix based on a
             restrictions matrix.
@@ -1730,16 +1716,11 @@ class LikelihoodModelResults(Results):
         >>> print(f_test)
         <F test: F=array([[ 144.17976065]]), p=6.322026217355609e-08, df_denom=9, df_num=3>
         """
-        if scale != 1.0:
-            warnings.warn('scale is has no effect and is deprecated. It will'
-                          'be removed in the next version.',
-                          DeprecationWarning)
-
         res = self.wald_test(r_matrix, cov_p=cov_p, invcov=invcov, use_f=True)
         return res
 
     # TODO: untested for GLMs?
-    def wald_test(self, r_matrix, cov_p=None, scale=1.0, invcov=None,
+    def wald_test(self, r_matrix, cov_p=None, invcov=None,
                   use_f=None, df_constraints=None):
         """
         Compute a Wald-test for a joint linear hypothesis.
@@ -1760,11 +1741,6 @@ class LikelihoodModelResults(Results):
         cov_p : array_like, optional
             An alternative estimate for the parameter covariance matrix.
             If None is given, self.normalized_cov_params is used.
-        scale : float, optional
-            Default is 1.0 for no scaling.
-
-            .. deprecated:: 0.10.0
-
         invcov : array_like, optional
             A q x q array to specify an inverse covariance matrix based on a
             restrictions matrix.
@@ -1800,11 +1776,7 @@ class LikelihoodModelResults(Results):
         design matrix of the model. There can be problems in non-OLS models
         where the rank of the covariance of the noise is not full.
         """
-        if scale != 1.0:
-            warnings.warn('scale is has no effect and is deprecated. It will'
-                          'be removed in the next version.',
-                          DeprecationWarning)
-
+        use_f = bool_like(use_f, "use_f", strict=True, optional=True)
         if use_f is None:
             # switch to use_t false if undefined
             use_f = (hasattr(self, 'use_t') and self.use_t)
