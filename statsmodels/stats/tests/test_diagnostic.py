@@ -307,18 +307,16 @@ class TestDiagnosticG(object):
         # unfortunately optimal lag=1 for this data
         resid = self.res.resid
 
-        res1 = smsdia.het_arch(resid, nlags=1, autolag=None, store=True)
+        res1 = smsdia.het_arch(resid, nlags=5, store=True)
         rs1 = res1[-1]
-        with pytest.warns(FutureWarning, match="autolag is deprecated and"):
-            res2 = smsdia.het_arch(resid, nlags=5, autolag="aic", store=True)
+        res2 = smsdia.het_arch(resid, nlags=5, store=True)
         rs2 = res2[-1]
 
         assert_almost_equal(rs2.resols.params, rs1.resols.params, decimal=12)
         assert_almost_equal(res2[:4], res1[:4], decimal=12)
 
         # test that smallest lag, nlags=1 works
-        with pytest.warns(FutureWarning, match="autolag is deprecated and"):
-            res3 = smsdia.het_arch(resid, nlags=1, autolag="aic")
+        res3 = smsdia.het_arch(resid, nlags=5)
         assert_almost_equal(res3[:4], res1[:4], decimal=12)
 
     def test_acorr_breusch_godfrey(self):
@@ -1696,8 +1694,7 @@ def test_ljungbox_errors_warnings():
         smsdia.acorr_ljungbox(data, model_df=-1, period=1)
     with pytest.raises(ValueError, match="period must"):
         smsdia.acorr_ljungbox(data, model_df=-1, period=-2)
-    with pytest.warns(FutureWarning, match="The default value of lags"):
-        smsdia.acorr_ljungbox(data, return_df=False)
+    smsdia.acorr_ljungbox(data, return_df=False)
     ret = smsdia.acorr_ljungbox(data, lags=10)
     assert isinstance(ret, pd.DataFrame)
 
@@ -1787,7 +1784,6 @@ def test_reset_smoke(power, test_type, use_f, cov, reset_randomstate):
 
 
 @pytest.mark.smoke
-@pytest.mark.parametrize("autolag", ["AIC", "BIC"])
 @pytest.mark.parametrize("store", [True, False])
 @pytest.mark.parametrize("ddof", [0, 2])
 @pytest.mark.parametrize(
@@ -1797,23 +1793,11 @@ def test_reset_smoke(power, test_type, use_f, cov, reset_randomstate):
         dict(cov_type="HC0", cov_kwargs={}),
     ],
 )
-def test_acorr_lm_smoke(autolag, store, ddof, cov, reset_randomstate):
+def test_acorr_lm_smoke(store, ddof, cov, reset_randomstate):
     e = np.random.standard_normal(250)
-    with pytest.warns(FutureWarning):
-        smsdia.acorr_lm(
-            e, nlags=6, autolag=autolag, store=store, ddof=ddof, **cov
-        )
+    smsdia.acorr_lm(e, nlags=6, store=store, ddof=ddof, **cov)
 
-    with pytest.warns(FutureWarning):
-        smsdia.acorr_lm(
-            e,
-            nlags=None,
-            autolag=autolag,
-            store=store,
-            period=12,
-            ddof=ddof,
-            **cov
-        )
+    smsdia.acorr_lm(e, nlags=None, store=store, period=12, ddof=ddof, **cov)
 
 
 def test_acorr_lm_smoke_no_autolag(reset_randomstate):

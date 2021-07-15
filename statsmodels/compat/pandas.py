@@ -3,16 +3,32 @@ from distutils.version import LooseVersion
 import numpy as np
 import pandas as pd
 from pandas.util._decorators import (
-    deprecate_kwarg, Appender, Substitution, cache_readonly
+    deprecate_kwarg,
+    Appender,
+    Substitution,
+    cache_readonly,
 )
-__all__ = ['assert_frame_equal', 'assert_index_equal', 'assert_series_equal',
-           'data_klasses', 'frequencies', 'is_numeric_dtype', 'testing',
-           'cache_readonly', 'deprecate_kwarg', 'Appender', 'Substitution',
-           'make_dataframe', 'to_numpy', 'pandas_lt_1_0_0']
+
+__all__ = [
+    "assert_frame_equal",
+    "assert_index_equal",
+    "assert_series_equal",
+    "data_klasses",
+    "frequencies",
+    "is_numeric_dtype",
+    "testing",
+    "cache_readonly",
+    "deprecate_kwarg",
+    "Appender",
+    "Substitution",
+    "make_dataframe",
+    "to_numpy",
+    "pandas_lt_1_0_0",
+]
 
 version = LooseVersion(pd.__version__)
 
-pandas_lt_1_0_0 = version < LooseVersion('1.0.0')
+pandas_lt_1_0_0 = version < LooseVersion("1.0.0")
 
 try:
     from pandas.api.types import is_numeric_dtype
@@ -44,11 +60,14 @@ except ImportError:
         """
         Generate an array of byte strings.
         """
-        rands_chars = np.array(list(string.ascii_letters + string.digits),
-                               dtype=(np.str_, 1))
-        retval = (np.random.choice(rands_chars, size=nchars * np.prod(size))
-                  .view((np.str_, nchars))
-                  .reshape(size))
+        rands_chars = np.array(
+            list(string.ascii_letters + string.digits), dtype=(np.str_, 1)
+        )
+        retval = (
+            np.random.choice(rands_chars, size=nchars * np.prod(size))
+            .view((np.str_, nchars))
+            .reshape(size)
+        )
         if dtype is None:
             return retval
         else:
@@ -61,8 +80,10 @@ except ImportError:
         n = 30
         k = 4
         index = pd.Index(rands_array(nchars=10, size=n), name=None)
-        data = {c: pd.Series(np.random.randn(n), index=index)
-                for c in string.ascii_uppercase[:k]}
+        data = {
+            c: pd.Series(np.random.randn(n), index=index)
+            for c in string.ascii_uppercase[:k]
+        }
 
         return pd.DataFrame(data)
 

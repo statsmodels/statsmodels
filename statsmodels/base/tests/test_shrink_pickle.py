@@ -12,13 +12,10 @@ from io import BytesIO
 
 import numpy as np
 import pandas as pd
-import pytest
-from numpy.testing import assert_
-# we need log in module namespace for TestPickleFormula5
-from numpy import log  # noqa:F401
 
 import statsmodels.api as sm
-import statsmodels.genmod.generalized_linear_model as glm
+
+log = np.log  # noqa: F841
 
 
 def check_pickle(obj):
@@ -61,11 +58,7 @@ class RemoveDataPickle(object):
         res, orig_nbytes = check_pickle(results._results)
 
         # remove data arrays, check predict still works
-        if isinstance(results, glm.GLMResultsWrapper):
-            with pytest.warns(FutureWarning, match="Anscombe residuals"):
-                results.remove_data()
-        else:
-            results.remove_data()
+        results.remove_data()
 
         pred2 = results.predict(xf, **pred_kwds)
 
@@ -73,7 +66,7 @@ class RemoveDataPickle(object):
             assert_series_equal(pred1, pred2)
         elif isinstance(pred1, pd.DataFrame) and isinstance(pred2,
                                                             pd.DataFrame):
-            assert_(pred1.equals(pred2))
+            assert pred1.equals(pred2)
         else:
             np.testing.assert_equal(pred2, pred1)
 
@@ -82,22 +75,20 @@ class RemoveDataPickle(object):
 
         # for testing attach res
         self.res = res
-
-        assert_(nbytes < orig_nbytes,
-                msg='pickle length not %d < %d' % (nbytes, orig_nbytes))
-
+        msg = 'pickle length not %d < %d' % (nbytes, orig_nbytes)
+        assert nbytes < orig_nbytes, msg
         pred3 = results.predict(xf, **pred_kwds)
 
         if isinstance(pred1, pd.Series) and isinstance(pred3, pd.Series):
             assert_series_equal(pred1, pred3)
         elif isinstance(pred1, pd.DataFrame) and isinstance(pred3,
                                                             pd.DataFrame):
-            assert_(pred1.equals(pred3))
+            assert pred1.equals(pred3)
         else:
             np.testing.assert_equal(pred3, pred1)
 
     def test_remove_data_docstring(self):
-        assert_(self.results.remove_data.__doc__ is not None)
+        assert self.results.remove_data.__doc__ is not None
 
     def test_pickle_wrapper(self):
 
@@ -119,19 +110,19 @@ class RemoveDataPickle(object):
 
         before = sorted(self.results.__dict__.keys())
         after = sorted(res_unpickled.__dict__.keys())
-        assert_(before == after, msg='not equal %r and %r' % (before, after))
+        assert before == after, 'not equal %r and %r' % (before, after)
 
         before = sorted(self.results._results.__dict__.keys())
         after = sorted(res_unpickled._results.__dict__.keys())
-        assert_(before == after, msg='not equal %r and %r' % (before, after))
+        assert before == after, 'not equal %r and %r' % (before, after)
 
         before = sorted(self.results.model.__dict__.keys())
         after = sorted(res_unpickled.model.__dict__.keys())
-        assert_(before == after, msg='not equal %r and %r' % (before, after))
+        assert before == after, 'not equal %r and %r' % (before, after)
 
         before = sorted(self.results._cache.keys())
         after = sorted(res_unpickled._cache.keys())
-        assert_(before == after, msg='not equal %r and %r' % (before, after))
+        assert before == after, 'not equal %r and %r' % (before, after)
 
 
 class TestRemoveDataPickleOLS(RemoveDataPickle):
@@ -229,9 +220,8 @@ class TestRemoveDataPickleGLM(RemoveDataPickle):
         # fill data-like members of the cache
         names = ['resid_response', 'resid_deviance',
                  'resid_pearson', 'resid_anscombe']
-        with pytest.warns(FutureWarning, match="Anscombe residuals"):
-            for name in names:
-                getattr(res, name)
+        for name in names:
+            getattr(res, name)
         # check that the attributes are present before calling remove_data
         for name in names:
             assert name in res._cache
@@ -251,8 +241,7 @@ class TestRemoveDataPickleGLM(RemoveDataPickle):
         # is removed
         res = self.results
         assert res._cache == {}
-        with pytest.warns(FutureWarning, match="Anscombe residuals"):
-            res.remove_data()
+        res.remove_data()
         assert 'aic' in res._cache
 
 

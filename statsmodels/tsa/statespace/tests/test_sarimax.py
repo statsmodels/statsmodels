@@ -2371,10 +2371,8 @@ def check_concentrated_scale(filter_univariate=False):
         desired = res_orig.test_heteroskedasticity(method='breakvar')
         assert_allclose(actual, desired, rtol=1e-5, atol=atol)
 
-        with pytest.warns(FutureWarning):
-            actual = res_conc.test_serial_correlation(method='ljungbox')
-        with pytest.warns(FutureWarning):
-            desired = res_orig.test_serial_correlation(method='ljungbox')
+        actual = res_conc.test_serial_correlation(method='ljungbox')
+        desired = res_orig.test_serial_correlation(method='ljungbox')
         assert_allclose(actual, desired, rtol=1e-5, atol=atol)
 
         # Test predict

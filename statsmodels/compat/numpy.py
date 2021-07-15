@@ -43,26 +43,10 @@ from distutils.version import LooseVersion
 
 import numpy as np
 
-NP_LT_114 = LooseVersion(np.__version__) < LooseVersion('1.14')
+NP_LT_114 = LooseVersion(np.__version__) < LooseVersion("1.14")
 
 np_matrix_rank = np.linalg.matrix_rank
 np_new_unique = np.unique
-
-
-def recarray_select(recarray, fields):
-    """"
-    Work-around for changes in NumPy 1.13 that return views for recarray
-    multiple column selection
-    """
-    from pandas import DataFrame
-    fields = [fields] if not isinstance(fields, (tuple, list)) else fields
-    if len(fields) == len(recarray.dtype):
-        selection = recarray
-    else:
-        recarray = DataFrame.from_records(recarray)
-        selection = recarray[fields].to_records(index=False)
-
-    return selection
 
 
 def lstsq(a, b, rcond=None):

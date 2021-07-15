@@ -458,14 +458,7 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
     elif period is not None:
         lags = np.arange(1, min(nobs // 5, 2 * period) + 1, dtype=int)
     elif lags is None:
-        # TODO: Switch to min(10, nobs//5) after 0.12
-        import warnings
-        warnings.warn("The default value of lags is changing.  After 0.12, "
-                      "this value will become min(10, nobs//5). Directly set"
-                      "lags to silence this warning.", FutureWarning)
-        # Future
-        # lags = np.arange(1, min(nobs // 5, 10) + 1, dtype=int)
-        lags = np.arange(1, min((nobs // 2 - 2), 40) + 1, dtype=int)
+        lags = np.arange(1, min(nobs // 5, 10) + 1, dtype=int)
     elif not isinstance(lags, Iterable):
         lags = int_like(lags, "lags")
         lags = np.arange(1, lags + 1)
@@ -500,7 +493,7 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
 
 
 @deprecate_kwarg("maxlag", "nlags")
-def acorr_lm(resid, nlags=None, autolag="AIC", store=False, *, period=None,
+def acorr_lm(resid, nlags=None, autolag=None, store=False, *, period=None,
              ddof=0, cov_type="nonrobust", cov_kwargs=None):
     """
     Lagrange Multiplier tests for autocorrelation.
@@ -586,37 +579,9 @@ def acorr_lm(resid, nlags=None, autolag="AIC", store=False, *, period=None,
     xshort = resid[-nobs:]
     res_store = ResultsStore()
 
-    if autolag:
-        # TODO: Deprecate this
-        #   Use same rules as autocorr
-        # search for lag length with highest information criteria
-        # Note: I use the same number of observations to have comparable IC
-        import warnings
-        warnings.warn("autolag is deprecated and will be removed after 0.12. "
-                      "Model selection before testing fails to control test "
-                      "size. Set autolag to False to silence this warning.",
-                      FutureWarning)
-        results = {}
-        for mlag in range(1, maxlag + 1):
-            results[mlag] = OLS(xshort, xdall[:, :mlag + 1]).fit()
-
-        if autolag.lower() == "aic":
-            bestic, icbestlag = min((v.aic, k) for k, v in results.items())
-        elif autolag.lower() == "bic":
-            icbest, icbestlag = min((v.bic, k) for k, v in results.items())
-        else:
-            raise ValueError("autolag can only be None, \"AIC\" or \"BIC\"")
-
-        # rerun ols with best ic
-        xdall = lagmat(resid[:, None], icbestlag, trim="both")
-        nobs = xdall.shape[0]
-        xdall = np.c_[np.ones((nobs, 1)), xdall]
-        xshort = resid[-nobs:]
-        usedlag = icbestlag
-        if store:
-            res_store.results = results
-    else:
-        usedlag = maxlag
+    if autolag is not None:
+        raise NotImplementedError("autolag has been removed")
+    usedlag = maxlag
 
     resols = OLS(xshort, xdall[:, :usedlag + 1]).fit(cov_type=cov_type,
                                                      cov_kwargs=cov_kwargs)

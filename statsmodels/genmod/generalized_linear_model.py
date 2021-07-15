@@ -1562,12 +1562,7 @@ class GLMResults(base.LikelihoodModelResults):
         specific Anscombe residuals. Currently, the unscaled residuals are
         provided. In a future version, the scaled residuals will be provided.
         """
-        import warnings
-        warnings.warn('Anscombe residuals currently unscaled. After the 0.12 '
-                      'release, they will be scaled.', category=FutureWarning)
-        return self.family.resid_anscombe(self._endog, self.fittedvalues,
-                                          var_weights=self._var_weights,
-                                          scale=1.)
+        return self.resid_anscombe_scaled
 
     @cached_data
     def resid_anscombe_scaled(self):

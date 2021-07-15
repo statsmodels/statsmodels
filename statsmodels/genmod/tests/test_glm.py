@@ -80,9 +80,7 @@ class CheckModelResultsMixin(object):
         resid2[:, 2] *= self.res1.family.link.deriv(self.res1.mu)**2
 
         atol = 10**(-self.decimal_resids)
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=FutureWarning)
-            resid_a = self.res1.resid_anscombe
+        resid_a = self.res1.resid_anscombe_unscaled
         resids = np.column_stack((self.res1.resid_pearson,
                 self.res1.resid_deviance, self.res1.resid_working,
                 resid_a, self.res1.resid_response))

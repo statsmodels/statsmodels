@@ -3190,14 +3190,6 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                 else:
                     lags = min(10, nobs_effective // 5)
 
-                warnings.warn(
-                    "The default value of lags is changing.  After 0.12, "
-                    "this value will become min(10, nobs//5) for non-seasonal "
-                    "time series and min (2*m, nobs//5) for seasonal time "
-                    "series. Directly set lags to silence this warning.",
-                    FutureWarning
-                )
-
             model_df = 0
             if df_adjust:
                 model_df = max(0, self.df_model - self.k_diffuse_states - 1)

@@ -767,11 +767,10 @@ def test_results_vs_statespace(statespace_comparison):
     )
 
     # compare diagnostics
-    with pytest.warns(FutureWarning):
-        assert_almost_equal(
-            ets_results.test_serial_correlation(method="ljungbox"),
-            statespace_results.test_serial_correlation(method="ljungbox"),
-        )
+    assert_almost_equal(
+        ets_results.test_serial_correlation(method="ljungbox"),
+        statespace_results.test_serial_correlation(method="ljungbox"),
+    )
     assert_almost_equal(
         ets_results.test_normality(method="jarquebera"),
         statespace_results.test_normality(method="jarquebera"),

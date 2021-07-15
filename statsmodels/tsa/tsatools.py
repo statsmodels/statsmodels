@@ -1,8 +1,6 @@
-from statsmodels.compat.python import lrange, lzip
-from statsmodels.compat.numpy import recarray_select
+from statsmodels.compat.python import lrange
 
 import numpy as np
-import numpy.lib.recfunctions as nprf
 import pandas as pd
 from pandas import DataFrame
 from pandas.tseries import offsets
@@ -151,11 +149,9 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
     x : array_like
         An array or NumPy ndarray subclass. Can be either a 1d or 2d array with
         observations in columns.
-    col : 'string', int, or None
-        If data is a structured array or a recarray, `col` can be a string
-        that is the name of the column containing the variable. Or `col` can
-        be an int of the zero-based column index. If it's a 1d array `col`
-        can be None.
+    col : int or None
+        `col` can be an int of the zero-based column index. If it's a
+        1d array `col` can be None.
     lags : int
         The number of lags desired.
     drop : bool
@@ -185,97 +181,41 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
     """
     lags = int_like(lags, 'lags')
     drop = bool_like(drop, 'drop')
+    x = array_like(x, "x", maxdim=2, ndim=2)
+    if col is None:
+        col = 0
 
-    if x.dtype.names:
-        names = x.dtype.names
-        if not col and np.squeeze(x).ndim > 1:
-            raise IndexError("col is None and the input array is not 1d")
-        elif len(names) == 1:
-            col = names[0]
-        if isinstance(col, int):
-            col = x.dtype.names[col]
+    # handle negative index
+    if col < 0:
+        col = x.shape[1] + col
+    if x.ndim == 1:
+        x = x[:, None]
+    contemp = x[:,col]
 
-        contemp = x[col]
+    if insert is True:
+        ins_idx = col + 1
+    elif insert is False:
+        ins_idx = x.shape[1]
+    else:
+        if insert < 0: # handle negative index
+            insert = x.shape[1] + insert + 1
+        if insert > x.shape[1]:
+            insert = x.shape[1]
+            import warnings
+            warnings.warn("insert > number of variables, inserting at the"
+                          " last position", ValueWarning)
+        ins_idx = insert
 
-        # make names for lags
-        tmp_names = [col + '_'+'L(%i)' % i for i in range(1, lags+1)]
-        ndlags = lagmat(contemp, maxlag=lags, trim='Both')
-
-        # get index for return
-        if insert is True:
-            ins_idx = list(names).index(col) + 1
-        elif insert is False:
-            ins_idx = len(names) + 1
-        else: # insert is an int
-            if insert > len(names):
-                import warnings
-                warnings.warn("insert > number of variables, inserting at the"
-                              " last position", ValueWarning)
-            ins_idx = insert
-
-        first_names = list(names[:ins_idx])
-        last_names = list(names[ins_idx:])
-
-        if drop:
-            if col in first_names:
-                first_names.pop(first_names.index(col))
-            else:
-                last_names.pop(last_names.index(col))
-
-        if first_names:  # only do this if x is not "empty"
-            # Workaround to avoid NumPy FutureWarning
-            _x = recarray_select(x, first_names)
-            first_arr = nprf.append_fields(_x[lags:], tmp_names, ndlags.T,
-                                           usemask=False)
-
+    ndlags = lagmat(contemp, lags, trim='Both')
+    first_cols = lrange(ins_idx)
+    last_cols = lrange(ins_idx,x.shape[1])
+    if drop:
+        if col in first_cols:
+            first_cols.pop(first_cols.index(col))
         else:
-            first_arr = np.zeros(len(x)-lags, dtype=lzip(tmp_names,
-                (x[col].dtype,)*lags))
-            for i,name in enumerate(tmp_names):
-                first_arr[name] = ndlags[:,i]
-        if last_names:
-            return nprf.append_fields(first_arr, last_names,
-                    [x[name][lags:] for name in last_names], usemask=False)
-        else: # lags for last variable
-            return first_arr
-
-    else: # we have an ndarray
-
-        if x.ndim == 1: # make 2d if 1d
-            x = x[:,None]
-        if col is None:
-            col = 0
-
-        # handle negative index
-        if col < 0:
-            col = x.shape[1] + col
-
-        contemp = x[:,col]
-
-        if insert is True:
-            ins_idx = col + 1
-        elif insert is False:
-            ins_idx = x.shape[1]
-        else:
-            if insert < 0: # handle negative index
-                insert = x.shape[1] + insert + 1
-            if insert > x.shape[1]:
-                insert = x.shape[1]
-                import warnings
-                warnings.warn("insert > number of variables, inserting at the"
-                              " last position", ValueWarning)
-            ins_idx = insert
-
-        ndlags = lagmat(contemp, lags, trim='Both')
-        first_cols = lrange(ins_idx)
-        last_cols = lrange(ins_idx,x.shape[1])
-        if drop:
-            if col in first_cols:
-                first_cols.pop(first_cols.index(col))
-            else:
-                last_cols.pop(last_cols.index(col))
-        return np.column_stack((x[lags:,first_cols],ndlags,
-                    x[lags:,last_cols]))
+            last_cols.pop(last_cols.index(col))
+    return np.column_stack((x[lags:,first_cols],ndlags,
+                x[lags:,last_cols]))
 
 
 def detrend(x, order=1, axis=0):
