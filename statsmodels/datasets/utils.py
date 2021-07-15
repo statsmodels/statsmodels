@@ -9,7 +9,7 @@ from urllib.request import urlopen
 from urllib.parse import urljoin
 
 import numpy as np
-from pandas import read_stata, read_csv, DataFrame, Series, Index
+from pandas import read_stata, read_csv, Index
 
 
 def webuse(data, baseurl='https://www.stata-press.com/data/r11/', as_df=True):

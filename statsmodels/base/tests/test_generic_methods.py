@@ -359,6 +359,8 @@ class TestGenericNegativeBinomial(CheckGenericMixin):
         #fit for each test, because results will be changed by test
         np.random.seed(987689)
         data = sm.datasets.randhie.load()
+        data.exog = np.asarray(data.exog)
+        data.endog = np.asarray(data.endog)
         exog = sm.add_constant(data.exog, prepend=False)
         mod = sm.NegativeBinomial(data.endog, exog)
         start_params = np.array([-0.05783623, -0.26655806,  0.04109148, -0.03815837,

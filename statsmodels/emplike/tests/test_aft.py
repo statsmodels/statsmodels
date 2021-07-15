@@ -12,6 +12,8 @@ class GenRes(object):
     @classmethod
     def setup_class(cls):
         data = heart.load()
+        data.endog = np.asarray(data.endog)
+        data.exog = np.asarray(data.exog)
         endog = np.log10(data.endog)
         exog = add_constant(data.exog)
         cls.mod1 = emplikeAFT(endog, exog, data.censors)

@@ -12,7 +12,7 @@ from statsmodels.regression.linear_model import OLS
 
 def test_escaped_variable_name():
     # Rename 'cpi' column to 'CPI_'
-    data = macrodata.load(True).data
+    data = macrodata.load().data
     data.rename(columns={'cpi': 'CPI_'}, inplace=True)
 
     mod = OLS.from_formula('CPI_ ~ 1 + np.log(realgdp)', data=data)

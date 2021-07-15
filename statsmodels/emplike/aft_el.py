@@ -224,7 +224,7 @@ class emplikeAFT(object):
         self.nobs = np.shape(exog)[0]
         self.endog = endog.reshape(self.nobs, 1)
         self.exog = exog.reshape(self.nobs, -1)
-        self.censors = censors.reshape(self.nobs, 1)
+        self.censors = np.asarray(censors).reshape(self.nobs, 1)
         self.nvar = self.exog.shape[1]
         idx = np.lexsort((-self.censors[:, 0], self.endog[:, 0]))
         self.endog = self.endog[idx]

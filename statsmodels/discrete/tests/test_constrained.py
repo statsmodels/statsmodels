@@ -28,6 +28,8 @@ from .results import results_glm_logit_constrained as reslogit
 
 
 spector_data = datasets.spector.load()
+spector_data.endog = np.asarray(spector_data.endog)
+spector_data.exog = np.asarray(spector_data.exog)
 spector_data.exog = add_constant(spector_data.exog, prepend=False)
 
 

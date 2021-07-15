@@ -16,6 +16,8 @@ import statsmodels.discrete.tests.results.results_count_margins as res_stata
 # load data into module namespace
 from statsmodels.datasets.cpunish import load
 cpunish_data = load()
+cpunish_data.exog = np.asarray(cpunish_data.exog)
+cpunish_data.endog = np.asarray(cpunish_data.endog)
 cpunish_data.exog[:,3] = np.log(cpunish_data.exog[:,3])
 exog = add_constant(cpunish_data.exog, prepend=False)
 endog = cpunish_data.endog - 1 # avoid zero-truncation

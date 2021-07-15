@@ -14,6 +14,7 @@ except ImportError:
 
 
 data = elnino.load()
+data.raw_data = np.asarray(data.raw_data)
 labels = data.raw_data[:, 0].astype(int)
 data = data.raw_data[:, 1:]
 

@@ -12,6 +12,7 @@ class GenRes(object):
     @classmethod
     def setup_class(cls):
         data = star98.load()
+        data.exog = np.asarray(data.exog)
         desc_stat_data = data.exog[:50, 5]
         mv_desc_stat_data = data.exog[:50, 5:7]  # mv = multivariate
         cls.res1 = DescStat(desc_stat_data)

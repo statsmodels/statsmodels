@@ -93,6 +93,8 @@ class TestGradMNLogit(CheckGradLoglikeMixin):
     def setup_class(cls):
         #from .results.results_discrete import Anes
         data = sm.datasets.anes96.load()
+        data.exog = np.asarray(data.exog)
+        data.endog = np.asarray(data.endog)
         exog = data.exog
         exog = sm.add_constant(exog, prepend=False)
         cls.mod = sm.MNLogit(data.endog, exog)

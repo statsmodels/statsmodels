@@ -772,19 +772,19 @@ class TestKPSS:
             res = kpss(self.x, "c", nlags="auto")
         assert_equal(res[2], 9)
         # real interest rates from macrodata data set
-        res = kpss(sunspots.load(True).data["SUNACTIVITY"], "c", nlags="auto")
+        res = kpss(sunspots.load().data["SUNACTIVITY"], "c", nlags="auto")
         assert_equal(res[2], 7)
         # volumes from nile data set
         with pytest.warns(InterpolationWarning):
-            res = kpss(nile.load(True).data["volume"], "c", nlags="auto")
+            res = kpss(nile.load().data["volume"], "c", nlags="auto")
         assert_equal(res[2], 5)
         # log-coinsurance from randhie data set
         with pytest.warns(InterpolationWarning):
-            res = kpss(randhie.load(True).data["lncoins"], "ct", nlags="auto")
+            res = kpss(randhie.load().data["lncoins"], "ct", nlags="auto")
         assert_equal(res[2], 75)
         # in-vehicle time from modechoice data set
         with pytest.warns(InterpolationWarning):
-            res = kpss(modechoice.load(True).data["invt"], "ct", nlags="auto")
+            res = kpss(modechoice.load().data["invt"], "ct", nlags="auto")
         assert_equal(res[2], 18)
 
     def test_kpss_fails_on_nobs_check(self):
