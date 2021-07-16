@@ -2053,14 +2053,10 @@ class TestTweedieSpecialLog3(CheckTweedieSpecial):
                           exog=cls.data.exog[['INCOME', 'SOUTH']],
                           family=family2).fit()
 
-@pytest.mark.filterwarnings("ignore:GLM ridge optimization")
-def test_tweedie_EQL():
-    # All tests below are regression tests, but the results
-    # are very close to the population values.
+def gen_tweedie(p):
 
     np.random.seed(3242)
     n = 500
-    p = 1.5 # Tweedie variance power
     x = np.random.normal(size=(n, 4))
     lpr = np.dot(x, np.r_[1, -1, 0, 0.5])
     mu = np.exp(lpr)
@@ -2073,6 +2069,16 @@ def test_tweedie_EQL():
     N = np.random.poisson(lam)
     for i in range(n):
         y[i] = np.random.gamma(alp, 1 / bet[i], N[i]).sum()
+
+    return y, x
+
+@pytest.mark.filterwarnings("ignore:GLM ridge optimization")
+def test_tweedie_EQL():
+    # All tests below are regression tests, but the results
+    # are very close to the population values.
+
+    p = 1.5
+    y, x = gen_tweedie(p)
 
     # Un-regularized fit using gradients
     fam = sm.families.Tweedie(var_power=p, eql=True)
@@ -2097,7 +2103,7 @@ def test_tweedie_EQL():
 
     rtol, atol = 1e-2, 1e-4
     assert_allclose(result2.params,
-        np.array([1.00281192, -0.99182638, 0., 0.50448516]),
+        np.array([0.976831, -0.952854, 0., 0.470171]),
         rtol=rtol, atol=atol)
 
     # Series of ridge fits using gradients
@@ -2114,6 +2120,24 @@ def test_tweedie_EQL():
         alpha[0] = 0
         result5 = model3.fit_regularized(L1_wt=0, alpha=alpha)
         assert not np.allclose(result5.params, result4.params)
+
+def test_tweedie_elastic_net():
+    # Check that the coefficients vanish one-by-one
+    # when using the elastic net.
+
+    p = 1.5 # Tweedie variance exponent
+    y, x = gen_tweedie(p)
+
+    # Un-regularized fit using gradients
+    fam = sm.families.Tweedie(var_power=p, eql=True)
+    model1 = sm.GLM(y, x, family=fam)
+
+    nnz = []
+    for alpha in np.linspace(0, 10, 20):
+        result1 = model1.fit_regularized(L1_wt=0.5, alpha=alpha)
+        nnz.append((np.abs(result1.params) > 0).sum())
+    nnz = np.unique(nnz)
+    assert len(nnz) == 5
 
 
 def test_tweedie_EQL_poisson_limit():
