@@ -584,7 +584,7 @@ class GLM(base.LikelihoodModel):
             If scale is not None, then it is used as a fixed scale.
         observed : bool
             If True, then the observed Hessian is returned (default).
-            If false then the expected information matrix is returned.
+            If False, then the expected information matrix is returned.
 
         Returns
         -------

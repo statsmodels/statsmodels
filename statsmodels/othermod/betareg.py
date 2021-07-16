@@ -31,7 +31,7 @@ _init_example = """
     Beta regression with default of logit-link for exog and log-link
     for precision.
 
-    >>> mod = Beta(endog, exog)
+    >>> mod = BetaModel(endog, exog)
     >>> rslt = mod.fit()
     >>> print(rslt.summary())
 
@@ -40,9 +40,9 @@ _init_example = """
 
     >>> from sm.families.links import identity
     >>> Z = patsy.dmatrix('~ temp', dat, return_type='dataframe')
-    >>> mod = Beta.from_formula('iyield ~ C(batch, Treatment(10)) + temp',
-    ...                         dat, exog_precision=Z,
-    ...                         link_precision=identity())
+    >>> mod = BetaModel.from_formula('iyield ~ C(batch, Treatment(10)) + temp',
+    ...                              dat, exog_precision=Z,
+    ...                              link_precision=identity())
 
     In the case of proportion-data, we may think that the precision depends on
     the number of measurements. E.g for sequence data, on the number of
@@ -50,17 +50,17 @@ _init_example = """
 
     >>> Z = patsy.dmatrix('~ coverage', df)
     >>> formula = 'methylation ~ disease + age + gender + coverage'
-    >>> mod = Beta.from_formula(formula, df, Z)
+    >>> mod = BetaModel.from_formula(formula, df, Z)
     >>> rslt = mod.fit()
 
 """
 
 
-class Beta(GenericLikelihoodModel):
-
+class BetaModel(GenericLikelihoodModel):
     """Beta Regression.
 
-    This implementation uses a `precision` parameter
+    The Model is parameterized by mean and precision. Both can depend on
+    explanatory variables through link functions.
     """
 
     def __init__(self, endog, exog, exog_precision=None,
@@ -82,9 +82,11 @@ class Beta(GenericLikelihoodModel):
         exog_precision : array-like
             2d array of variables for the precision.
         link : link
-            Any link in sm.families.links for `exog`
+            Any link in sm.families.links for mean, should have range in
+            interval [0, 1]. Default is logit-link.
         link_precision : link
-            Any link in sm.families.links for `exog_precision`
+            Any link in sm.families.links for precision, should have
+            range in positive line. Default is log-link.
 
         Examples
         --------
@@ -108,8 +110,9 @@ class Beta(GenericLikelihoodModel):
 
         kwds['extra_params_names'] = extra_names
 
-        super(Beta, self).__init__(endog, exog, exog_precision=exog_precision,
-                                   **kwds)
+        super(BetaModel, self).__init__(endog, exog,
+                                        exog_precision=exog_precision,
+                                        **kwds)
         self.link = link
         self.link_precision = link_precision
         # not needed, handled by super:
@@ -124,6 +127,8 @@ class Beta(GenericLikelihoodModel):
             self._init_keys.extend(['exog_precision'])
         self._init_keys.extend(['link', 'link_precision'])
         self._null_drop_keys = ['exog_precision']
+        self.results_class = BetaResults
+        self.results_class_wrapper = BetaResultsWrapper
 
     @classmethod
     def from_formula(cls, formula, data, exog_precision_formula=None,
@@ -136,12 +141,30 @@ class Beta(GenericLikelihoodModel):
                 Z = patsy.dmatrix(exog_precision_formula, data)
             kwargs['exog_precision'] = Z
 
-        return super(Beta, cls).from_formula(formula, data, *args,
-                                             **kwargs)
+        return super(BetaModel, cls).from_formula(formula, data, *args,
+                                                  **kwargs)
 
     def predict(self, params, exog=None, exog_precision=None, which="mean"):
-        """predict values for mean, conditional expectation E(endog | exog)
+        """predict values for mean or precision
 
+        Parameters
+        ----------
+        params : ndarray
+            Parameters for the model, will be split into coefficients for the
+            linear prediction of the mean, and the linear prediction of the
+            precision.
+        exog : ndarray or None
+        exog_precision : ndarray or None
+        which : str
+
+            - "mean" : mean, conditional expectation E(endog | exog)
+            - "precision" : predicted precision
+            - "linpred" : linear predictor for the mean function
+            - "linpred_precision" : linear predictor for the precision function
+
+        Returns
+        -------
+        ndarray, predicted values
         """
 
         k_mean = self.exog.shape[1]
@@ -170,7 +193,7 @@ class Beta(GenericLikelihoodModel):
                 return linpred_prec
 
     def predict_precision(self, params, exog_precision=None):
-        """predict values for precision parameter for given exog_precision
+        """predict values for precision function for given exog_precision
 
         """
         if exog_precision is None:
@@ -196,17 +219,45 @@ class Beta(GenericLikelihoodModel):
 
     def loglikeobs(self, params):
         """
-        Negative log-likelihood.
+        Loglikelihood for observations of the Beta regressionmodel.
 
         Parameters
         ----------
+        params : ndarray
+            The parameters of the model, coefficients for linear predictors
+            of the mean and of the precision function.
 
-        params : np.ndarray
-            Parameter estimates
+        Returns
+        -------
+        loglike : ndarray
+            The log likelihood for each observation of the model evaluated
+            at `params`.
         """
-        return self._ll_br(self.endog, self.exog, self.exog_precision, params)
+        return self._llobs(self.endog, self.exog, self.exog_precision, params)
 
-    def _ll_br(self, y, X, Z, params):
+    def _llobs(self, endog, exog, exog_precision, params):
+        """
+        Loglikelihood for observations with data arguments.
+
+        Parameters
+        ----------
+        endog : ndarray
+            1d array of endogenous variable.
+        exog : ndarray
+            2d array of explanatory variables.
+        exog_precision : ndarray
+            2d array of explanatory variables for precision.
+        params : ndarray
+            The parameters of the model, coefficients for linear predictors
+            of the mean and of the precision function.
+
+        Returns
+        -------
+        loglike : ndarray
+            The log likelihood for each observation of the model evaluated
+            at `params`.
+        """
+        y, X, Z = endog, exog, exog_precision
         nz = Z.shape[1]
 
         params_mean = params[:-nz]
@@ -240,15 +291,33 @@ class Beta(GenericLikelihoodModel):
         d2 = np.dot(sf[:, 1], self.exog_precision)
         return np.concatenate((d1, d2))
 
-    def score_check(self, params):
+    def _score_check(self, params):
         """inherited score with finite differences
         """
-        return super(Beta, self).score(params)
+        return super(BetaModel, self).score(params)
 
     def score_factor(self, params):
-        """derivative of loglikelihood function without the exog
+        """derivative of loglikelihood function w.r.t. linear predictors
 
-        This needs to be multiplied with the exog to obtain the score_obs
+        This needs to be multiplied with the exog to obtain the score_obs.
+
+        Parameters
+        ----------
+        params : ndarray
+            Parameter at which score is evaluated.
+
+        Returns
+        -------
+        score_factor : ndarray, 2-D
+            A 2d weight vector used in the calculation of the score_obs.
+
+        Notes
+        -----
+        The score_obs can be obtained from score_factor ``sf`` using
+
+            - d1 = sf[:, :1] * exog
+            - d2 = sf[:, 1:2] * exog_precision
+
         """
         from scipy import special
         digamma = special.psi
@@ -282,12 +351,30 @@ class Beta(GenericLikelihoodModel):
 
     def score_hessian_factor(self, params, return_hessian=False,
                              observed=True):
-        """derivatives of loglikelihood function without the exog
+        """derivatives of loglikelihood function w.r.t. linear predictors
 
-        This needs to be multiplied with the exog to obtain the score_obs
+        This calculates score and hessian factors at the same time, because
+        there is a large overlap in calculations
 
-        This calculates score and hessian factors at the same time, since there
-        is a large overlap in calculations
+        Parameters
+        ----------
+        params : ndarray
+            Parameter at which score is evaluated.
+        return_hessian : bool
+            If False, then only score_factors are returned
+            If True, the both score and hessian factors are returned
+        observed : bool
+            If True, then the observed Hessian is returned (default).
+            If False, then the expected information matrix is returned.
+
+        Returns
+        -------
+        score_factor : ndarray, 2-D
+            A 2d weight vector used in the calculation of the score_obs.
+        (-jbb, -jbg, -jgg) : tuple
+            A tuple with 3 hessian factors, corresponding to the upper
+            triangle of the Hessian matrix.
+            TODO: check why there are minus
         """
         from scipy import special
         digamma = special.psi
@@ -343,9 +430,25 @@ class Beta(GenericLikelihoodModel):
             if observed:
                 jgg += (mu * ymu_star + yt - mut) * q * h**3    # **3 ?
 
-        return np.column_stack((sf1, sf2)), (-jbb, -jbg, -jgg)
+            return np.column_stack((sf1, sf2)), (-jbb, -jbg, -jgg)
+        else:
+            return np.column_stack((sf1, sf2))
 
     def score_obs(self, params):
+        """
+        Score, first derivative of the loglikelihood for each observation.
+
+        Parameters
+        ----------
+        params : ndarray
+            parameter at which score is evaluated
+
+        Returns
+        -------
+        score_obs : ndarray, 2d
+            The first derivative of the loglikelihood function evaluated at
+            params for each observation.
+        """
         sf = self.score_factor(params)
 
         # elementwise product for each row (observation)
@@ -354,6 +457,21 @@ class Beta(GenericLikelihoodModel):
         return np.column_stack((d1, d2))
 
     def hessian(self, params, observed=None):
+        """Hessian, second derivative of loglikelihood function
+
+        Parameters
+        ----------
+        params : ndarray
+            parameter at which Hessian is evaluated
+        observed : bool
+            If True, then the observed Hessian is returned (default).
+            If False, then the expected information matrix is returned.
+
+        Returns
+        -------
+        hessian : ndarray
+            Hessian, i.e. observed information, or expected information matrix.
+        """
         if self.hess_type == "eim":
             observed = False
         else:
@@ -372,6 +490,11 @@ class Beta(GenericLikelihoodModel):
     def _start_params(self, niter=2, return_intermediate=False):
         """find starting values
 
+        Parameters
+        ----------
+        niter : int
+            Number of iterations of WLS approximation
+
         Returns
         -------
         sp : ndarray
@@ -381,7 +504,6 @@ class Beta(GenericLikelihoodModel):
         -----
         This calculates a few iteration of weighted least squares. This is not
         a full scoring algorithm.
-
         """
         # WLS of the mean equation uses the implied weights (inverse variance),
         # WLS for the precision equations uses weights that only take
@@ -419,7 +541,7 @@ class Beta(GenericLikelihoodModel):
 
         return sp2
 
-    def fit(self, start_params=None, maxiter=100000, maxfun=5000, disp=False,
+    def fit(self, start_params=None, maxiter=1000, maxfun=5000, disp=False,
             method='bfgs', **kwds):
         """
         Fit the model.
@@ -450,15 +572,12 @@ class Beta(GenericLikelihoodModel):
         else:
             self.hess_type = "oim"
 
-        self.results_class = BetaRegressionResults
-        self.results_class_wrapper = BetaRegressionResultsWrapper
-
-        res = super(Beta, self).fit(start_params=start_params,
-                                    maxiter=maxiter, maxfun=maxfun,
-                                    method=method, disp=disp, **kwds)
-        if not isinstance(res, BetaRegressionResultsWrapper):
+        res = super(BetaModel, self).fit(start_params=start_params,
+                                         maxiter=maxiter, maxfun=maxfun,
+                                         method=method, disp=disp, **kwds)
+        if not isinstance(res, BetaResultsWrapper):
             # currently GenericLikelihoodModel doe not add wrapper
-            res = BetaRegressionResultsWrapper(res)
+            res = BetaResultsWrapper(res)
         return res
 
     # code duplication with results class
@@ -476,7 +595,7 @@ class Beta(GenericLikelihoodModel):
         return distr
 
 
-class BetaRegressionResults(GenericLikelihoodModelResults, _LLRMixin):
+class BetaResults(GenericLikelihoodModelResults, _LLRMixin):
 
     # GenericLikeihoodmodel doesn't define fittedvalues, residuals and similar
     @cache_readonly
@@ -515,6 +634,7 @@ class BetaRegressionResults(GenericLikelihoodModelResults, _LLRMixin):
         args = self.get_distribution_params(exog=exog,
                                             exog_precision=exog_precision,
                                             transform=transform)
+        args = (np.asarray(arg) for arg in args)
         distr = stats.beta(*args)
         return distr
 
@@ -522,9 +642,9 @@ class BetaRegressionResults(GenericLikelihoodModelResults, _LLRMixin):
         raise NotImplementedError
 
 
-class BetaRegressionResultsWrapper(lm.RegressionResultsWrapper):
+class BetaResultsWrapper(lm.RegressionResultsWrapper):
     pass
 
 
-wrap.populate_wrapper(BetaRegressionResultsWrapper,
-                      BetaRegressionResults)
+wrap.populate_wrapper(BetaResultsWrapper,
+                      BetaResults)

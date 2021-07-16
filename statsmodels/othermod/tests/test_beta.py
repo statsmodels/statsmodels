@@ -7,7 +7,7 @@ from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 import patsy
 from statsmodels.api import families
-from statsmodels.othermod.betareg import Beta
+from statsmodels.othermod.betareg import BetaModel
 from .results import results_betareg as resultsb
 
 links = families.links
@@ -64,20 +64,20 @@ def assert_close(a, b, eps):
     assert np.allclose(a, b, rtol=0.01, atol=eps), (list(a), list(b))
 
 
-class TestBeta(object):
+class TestBetaModel(object):
 
     @classmethod
     def setup_class(self):
         model = "I(food/income) ~ income + persons"
-        self.income_fit = Beta.from_formula(model, income).fit()
+        self.income_fit = BetaModel.from_formula(model, income).fit()
 
         model = self.model = "methylation ~ gender + CpG"
         Z = self.Z = patsy.dmatrix("~ age", methylation)
-        mod = Beta.from_formula(model, methylation, exog_precision=Z,
-                                link_precision=links.identity())
+        mod = BetaModel.from_formula(model, methylation, exog_precision=Z,
+                                     link_precision=links.identity())
         self.meth_fit = mod.fit()
-        mod = Beta.from_formula(model, methylation, exog_precision=Z,
-                                link_precision=links.Log())
+        mod = BetaModel.from_formula(model, methylation, exog_precision=Z,
+                                     link_precision=links.Log())
         self.meth_log_fit = mod.fit()
 
     def test_income_coefficients(self):
@@ -119,9 +119,9 @@ class TestBeta(object):
         #     expected_methylation_precision['zvalue'], 0.1, "z-score"
 
     def test_precision_formula(self):
-        m = Beta.from_formula(self.model, methylation,
-                              exog_precision_formula='~ age',
-                              link_precision=links.identity())
+        m = BetaModel.from_formula(self.model, methylation,
+                                   exog_precision_formula='~ age',
+                                   link_precision=links.identity())
         rslt = m.fit()
         assert_close(rslt.params, self.meth_fit.params, 1e-10)
         assert isinstance(rslt.params, pd.Series)
@@ -129,13 +129,13 @@ class TestBeta(object):
     def test_scores(self):
         model, Z = self.model, self.Z
         for link in (links.identity(), links.log()):
-            mod2 = Beta.from_formula(model, methylation, exog_precision=Z,
-                                     link_precision=link)
+            mod2 = BetaModel.from_formula(model, methylation, exog_precision=Z,
+                                          link_precision=link)
             rslt_m = mod2.fit()
 
             # evaluate away from optimum to get larger score
             analytical = rslt_m.model.score(rslt_m.params * 1.01)
-            numerical = rslt_m.model.score_check(rslt_m.params * 1.01)
+            numerical = rslt_m.model._score_check(rslt_m.params * 1.01)
             assert_allclose(analytical, numerical, rtol=1e-6, atol=1e-6)
             assert_allclose(link.inverse(analytical[3:]),
                             link.inverse(numerical[3:]), rtol=5e-7, atol=5e-6)
@@ -157,9 +157,9 @@ class TestBetaMeth():
     @classmethod
     def setup_class(cls):
         formula = "methylation ~ gender + CpG"
-        mod = Beta.from_formula(formula, methylation,
-                                exog_precision_formula="~ age",
-                                link_precision=links.Log())
+        mod = BetaModel.from_formula(formula, methylation,
+                                     exog_precision_formula="~ age",
+                                     link_precision=links.Log())
         cls.res1 = mod.fit(cov_type="eim")
         cls.res2 = resultsb.results_meth
 
@@ -271,3 +271,5 @@ class TestBetaMeth():
         m26, v26 = distr6f.stats()
         assert_allclose(m26, m2[:n], rtol=1e-13)
         assert_allclose(v26, v2[:n], rtol=1e-13)
+        # check that we don't have pandas in distr
+        assert isinstance(distr6f.args[0], np.ndarray)
