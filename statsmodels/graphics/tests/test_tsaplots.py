@@ -71,8 +71,10 @@ def test_plot_pacf(close_figures):
     armaprocess = tsp.ArmaProcess(ar, ma)
     rs = np.random.RandomState(1234)
     pacf = armaprocess.generate_sample(100, distrvs=rs.standard_normal)
-    plot_pacf(pacf, ax=ax)
-    plot_pacf(pacf, ax=ax, alpha=None)
+    with pytest.warns(FutureWarning):
+        plot_pacf(pacf, ax=ax)
+    with pytest.warns(FutureWarning, match="The default"):
+        plot_pacf(pacf, ax=ax, alpha=None)
 
 
 @pytest.mark.matplotlib
@@ -88,20 +90,23 @@ def test_plot_pacf_kwargs(close_figures):
     pacf = armaprocess.generate_sample(100, distrvs=rs.standard_normal)
 
     buff = BytesIO()
-    plot_pacf(pacf, ax=ax)
+    with pytest.warns(FutureWarning, match="The default"):
+        plot_pacf(pacf, ax=ax)
     fig.savefig(buff, format="rgba")
 
     buff_linestyle = BytesIO()
     fig_linestyle = plt.figure()
     ax = fig_linestyle.add_subplot(111)
-    plot_pacf(pacf, ax=ax, ls="-")
+    with pytest.warns(FutureWarning, match="The default"):
+        plot_pacf(pacf, ax=ax, ls="-")
     fig_linestyle.savefig(buff_linestyle, format="rgba")
 
     buff_with_vlines = BytesIO()
     fig_with_vlines = plt.figure()
     ax = fig_with_vlines.add_subplot(111)
     vlines_kwargs = {"linestyles": "dashdot"}
-    plot_pacf(pacf, ax=ax, vlines_kwargs=vlines_kwargs)
+    with pytest.warns(FutureWarning, match="The default"):
+        plot_pacf(pacf, ax=ax, vlines_kwargs=vlines_kwargs)
     fig_with_vlines.savefig(buff_with_vlines, format="rgba")
 
     buff.seek(0)
@@ -185,9 +190,12 @@ def test_plot_pacf_irregular(close_figures):
     armaprocess = tsp.ArmaProcess(ar, ma)
     rs = np.random.RandomState(1234)
     pacf = armaprocess.generate_sample(100, distrvs=rs.standard_normal)
-    plot_pacf(pacf, ax=ax, lags=np.arange(1, 11))
-    plot_pacf(pacf, ax=ax, lags=10, zero=False)
-    plot_pacf(pacf, ax=ax, alpha=None, zero=False)
+    with pytest.warns(FutureWarning, match="The default"):
+        plot_pacf(pacf, ax=ax, lags=np.arange(1, 11))
+    with pytest.warns(FutureWarning, match="The default"):
+        plot_pacf(pacf, ax=ax, lags=10, zero=False)
+    with pytest.warns(FutureWarning, match="The default"):
+        plot_pacf(pacf, ax=ax, alpha=None, zero=False)
 
 
 @pytest.mark.matplotlib

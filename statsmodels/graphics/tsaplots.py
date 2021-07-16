@@ -2,6 +2,7 @@
 from statsmodels.compat.pandas import deprecate_kwarg
 
 import calendar
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -245,7 +246,7 @@ def plot_pacf(
     ax=None,
     lags=None,
     alpha=0.05,
-    method="ywadjusted",
+    method=None,
     use_vlines=True,
     title="Partial Autocorrelation",
     zero=True,
@@ -271,15 +272,21 @@ def plot_pacf(
         returned. For instance if alpha=.05, 95 % confidence intervals are
         returned where the standard deviation is computed according to
         1/sqrt(len(x))
-    method : {'ywunbiased', 'ywmle', 'ols'}
+    method : str
         Specifies which method for the calculations to use:
 
-        - yw or ywunbiased : yule walker with bias correction in denominator
-          for acovf. Default.
-        - ywm or ywmle : yule walker without bias correction
-        - ols - regression of time series on lags of it and on constant
-        - ld or ldunbiased : Levinson-Durbin recursion with bias correction
-        - ldb or ldbiased : Levinson-Durbin recursion without bias correction
+        - "ywm" or "ywmle" : Yule-Walker without adjustment. Default.
+        - "yw" or "ywadjusted" : Yule-Walker with sample-size adjustment in
+          denominator for acovf. Default.
+        - "ols" : regression of time series on lags of it and on constant.
+        - "ols-inefficient" : regression of time series on lags using a single
+          common sample to estimate all pacf coefficients.
+        - "ols-adjusted" : regression of time series on lags with a bias
+          adjustment.
+        - "ld" or "ldadjusted" : Levinson-Durbin recursion with bias
+          correction.
+        - "ldb" or "ldbiased" : Levinson-Durbin recursion without bias
+          correction.
 
     use_vlines : bool, optional
         If True, vertical lines and markers are plotted.
@@ -336,6 +343,15 @@ def plot_pacf(
 
     .. plot:: plots/graphics_tsa_plot_pacf.py
     """
+    if method is None:
+        method = "yw"
+        warnings.warn(
+            "The default method 'yw' can produce PACF values outside of "
+            "the [-1,1] interval. After 0.13, the default will change to"
+            "unadjusted Yule-Walker ('ywm'). You can use this method now "
+            "by setting method='ywm'.",
+            FutureWarning,
+        )
     fig, ax = utils.create_mpl_ax(ax)
     vlines_kwargs = {} if vlines_kwargs is None else vlines_kwargs
     lags, nlags, irregular = _prepare_data_corr_plot(x, lags, zero)
