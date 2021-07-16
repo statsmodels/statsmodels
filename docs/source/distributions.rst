@@ -31,7 +31,7 @@ Count Distributions
 -------------------
 
 The `discrete` module contains classes for count distributions that are based
-on discretizing a continouus distribution, and specific count distributions
+on discretizing a continuous distribution, and specific count distributions
 that are not available in scipy.distributions like generalized poisson and
 zero-inflated count models.
 

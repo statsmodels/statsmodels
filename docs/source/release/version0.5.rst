@@ -48,7 +48,7 @@ Multivariate Kernel Density Estimators (GSoC 2012 project)
 
 Kernel density estimation has been extended to handle multivariate estimation as well via product kernels. It is available as :class:`sm.nonparametric.KDEMultivariate <kernel_density.KDEMultivariate>`. It supports least squares and maximum likelihood cross-validation for bandwidth estimation, as well as mixed continuous, ordered, and unordered categorical data. Conditional density estimation is also available via :class:`sm.nonparametric.KDEMUltivariateConditional <kernel_density.KDEMultivariateConditional>`.
 
-Nonparameteric Regression (GSoC 2012 project)
+nonparametric Regression (GSoC 2012 project)
 ---------------------------------------------
 Kernel regression models are now available via :class:`sm.nonparametric.KernelReg <kernel_regression.KernelReg>`. It is based on the product kernel mentioned above, so it also has the same set of features including support for cross-validation as well as support for estimation mixed continuous and categorical variables. Censored kernel regression is also provided by `kernel_regression.KernelCensoredReg`.
 

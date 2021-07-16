@@ -102,8 +102,11 @@ Author: Josef Perktold
 License : BSD (3-clause)
 '''
 from statsmodels.compat.python import lrange
-import numpy as np
+
 from pprint import pprint
+
+import numpy as np
+
 
 def randintw(w, size=1):
     '''generate integer random variables given probabilties
@@ -113,7 +116,7 @@ def randintw(w, size=1):
     Parameters
     ----------
     w : 1d array_like
-        sequence of weights, probabilites. The weights are normalized to add
+        sequence of weights, probabilities. The weights are normalized to add
         to one.
     size : int or tuple of ints
         shape of output array
@@ -305,7 +308,7 @@ class RU2NMNL(object):
         Returns
         -------
         probs : ndarray, (nobs, nchoices)
-            probabilites for all choices for each observation. The order
+            probabilities for all choices for each observation. The order
             is available by attribute leaves. See note in docstring of class
 
 

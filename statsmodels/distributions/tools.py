@@ -8,8 +8,7 @@ License: BSD-3
 """
 
 import numpy as np
-from scipy import stats, interpolate
-
+from scipy import interpolate, stats
 
 # helper functions to work on a grid of cdf and pdf, histogram
 
@@ -61,12 +60,12 @@ class _Grid(object):
 
 
 def prob2cdf_grid(probs):
-    """Cumulative probabilites from cell provabilites on a grid
+    """Cumulative probabilities from cell provabilites on a grid
 
     Parameters
     ----------
     probs : array_like
-        Rectangular grid of cell probabilites.
+        Rectangular grid of cell probabilities.
 
     Returns
     -------
@@ -82,7 +81,7 @@ def prob2cdf_grid(probs):
 
 
 def cdf2prob_grid(cdf, prepend=0):
-    """Cell probabilites from cumulative probabilities on a grid.
+    """Cell probabilities from cumulative probabilities on a grid.
 
     Parameters
     ----------
@@ -92,7 +91,7 @@ def cdf2prob_grid(cdf, prepend=0):
     Returns
     -------
     probs : ndarray
-        Rectangular grid of cell probabilites.
+        Rectangular grid of cell probabilities.
 
     """
     if prepend is None:

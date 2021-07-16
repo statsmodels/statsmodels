@@ -178,6 +178,8 @@ DimReductionResults
 Dippelsman
 DiscreteModel
 DiscreteResults
+DiscretizedCount
+DiscretizedModel
 DistributedModel
 DistributedResults
 Docstring
@@ -189,6 +191,7 @@ Dougal
 Dror
 Duffield
 Dunnet
+Durations
 DynamicFactor
 DynamicFactorMQ
 DynamicFactorMQResults
@@ -426,6 +429,7 @@ Mauna
 Mazzeo
 MediationResults
 Microarrays
+Midranks
 Millman
 MinimalWLS
 Miroslav
@@ -443,6 +447,7 @@ Moy
 Multi
 MultiComparison
 Multicomparison
+Multimodel
 Multinomial
 MultinomialModel
 MultinomialResults
@@ -451,7 +456,6 @@ MultivariateOLS
 MultivariateOLSResults
 MultivariateTestResults
 Mönck
-NaN
 Nadaraya
 Namespaces
 Navarra
@@ -473,7 +477,6 @@ Nobuhiro
 NominalGEE
 Noninferiority
 NonlinearIVGMM
-Nonparameteric
 Nonparametric
 NormExpan
 NormalIndPower
@@ -493,6 +496,8 @@ OaxacaResults
 Odland
 Ooms
 Openblas
+OrderedModel
+OrderedResults
 OrdinalGEE
 Origintests
 Orthogonalization
@@ -548,6 +553,7 @@ Pytest
 QIF
 QIFResults
 QQ
+Qn
 Qu
 Quandt
 QuantReg
@@ -874,6 +880,7 @@ beanplot
 benchmarked
 bera
 bertrandhaut
+bestlag
 betainc
 bfgs
 bh
@@ -919,6 +926,7 @@ breusch
 breuschpagan
 breush
 bruno
+bs
 bse
 bsejac
 bsejhj
@@ -985,6 +993,7 @@ coeff
 coeffs
 coefs
 cohens
+cohensd
 coint
 cointegrated
 cointegrating
@@ -1005,6 +1014,7 @@ confint
 confounders
 const
 constr
+continouus
 contribs
 convertlabels
 convolve
@@ -1043,6 +1053,7 @@ ctt
 cumhaz
 cumhazard
 cummulants
+cumprob
 cumsum
 cumulants
 custum
@@ -1132,9 +1143,12 @@ direc
 dirs
 discreteResults
 discretemod
+discretization
 discretized
+discretizing
 distargs
 distfn
+distr
 distrvs
 dl
 docbuild
@@ -1334,6 +1348,7 @@ gcv
 genericMLE
 genfromdta
 genmod
+genpoisson
 geostatics
 getdefaultencoding
 geterrors
@@ -1452,6 +1467,7 @@ ibd
 ic
 icdf
 ident
+identifiability
 idx
 igls
 iid
@@ -1490,6 +1506,8 @@ inverter
 invertibility
 invertible
 invertroots
+invgamma
+invgauss
 invpowerspd
 invtransparams
 invweights
@@ -1551,6 +1569,7 @@ kalmanf
 kalmanfilter
 kde
 kdes
+kern
 kernc
 kevin
 kfold
@@ -1651,6 +1670,7 @@ loglikeobs
 loglikeratio
 loglinear
 loglog
+lognorm
 lognormalg
 logodds
 logpdf
@@ -1722,6 +1742,7 @@ meth
 methhod
 mgcv
 midp
+midranks
 midrule
 minabs
 miniconda
@@ -1832,6 +1853,7 @@ nonlinearity
 nonmissing
 nonmonotone
 nonnormality
+nonparameteric
 nonparametric
 nonrobust
 nonseq
@@ -1857,6 +1879,7 @@ nrows
 ns
 nsample
 nsides
+nsimulation
 nsimulations
 nsupp
 ntc
@@ -1906,6 +1929,7 @@ outliers
 overdispersion
 overfitting
 overidentification
+overparameterized
 overriden
 overwritable
 pW
@@ -1948,6 +1972,7 @@ pktd
 plotcorr
 plotsim
 plt
+pmf
 pmhobson
 pmm
 pobox
@@ -1978,6 +2003,7 @@ prev
 princomp
 prinoth
 probit
+problarger
 probplot
 probs
 processreg
@@ -2002,9 +2028,11 @@ py
 pyplot
 pytest
 pyximport
+qaic
 qcrit
 qic
 qif
+qn
 qqline
 qqplot
 quant
@@ -2039,6 +2067,7 @@ rebased
 rebasing
 recarray
 recarrays
+recipinvgauss
 recipr
 recoded
 recoding
@@ -2214,6 +2243,7 @@ stepdown
 stepsize
 stl
 stlf
+stochastically
 str
 strucchange
 struct
@@ -2381,6 +2411,7 @@ varname
 varnames
 vbench
 vc
+vcomp
 vcov
 vcp
 vec
@@ -2409,6 +2440,7 @@ watson
 waynenilsen
 webdoc
 webuse
+weibull
 weightmatrix
 weightstats
 weigths
@@ -2443,6 +2475,7 @@ xtol
 xtscc
 xvals
 ybar
+ygrid
 ylabel
 ylimit
 yname
@@ -2459,6 +2492,9 @@ zconfint
 zcu
 zero'd
 zeroinflated
+zigenpoisson
+zinegbin
+zipoisson
 zivot
 zscores
 zstat
@@ -2466,5 +2502,3 @@ zt
 ztest
 ztost
 zvalues
-qn
-Qn

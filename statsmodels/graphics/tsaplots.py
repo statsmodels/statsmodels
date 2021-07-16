@@ -338,7 +338,7 @@ def plot_pacf(
     >>> dta = sm.datasets.sunspots.load_pandas().data
     >>> dta.index = pd.Index(sm.tsa.datetools.dates_from_range('1700', '2008'))
     >>> del dta["YEAR"]
-    >>> sm.graphics.tsa.plot_pacf(dta.values.squeeze(), lags=40)
+    >>> sm.graphics.tsa.plot_pacf(dta.values.squeeze(), lags=40, method="ywm")
     >>> plt.show()
 
     .. plot:: plots/graphics_tsa_plot_pacf.py

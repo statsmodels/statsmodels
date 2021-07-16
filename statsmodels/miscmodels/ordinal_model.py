@@ -6,18 +6,21 @@ Author: Josef Perktold
 License: BSD-3
 """
 
+from statsmodels.compat.pandas import Appender
+
 import numpy as np
 import pandas as pd
 from pandas.api.types import CategoricalDtype
 from scipy import stats
 
-from statsmodels.tools.decorators import cache_readonly
 from statsmodels.base.model import (
-    GenericLikelihoodModel, GenericLikelihoodModelResults)
-from statsmodels.compat.pandas import Appender
+    GenericLikelihoodModel,
+    GenericLikelihoodModelResults,
+)
+import statsmodels.base.wrapper as wrap
 # for results wrapper:
 import statsmodels.regression.linear_model as lm
-import statsmodels.base.wrapper as wrap
+from statsmodels.tools.decorators import cache_readonly
 
 
 class OrderedModel(GenericLikelihoodModel):
@@ -87,7 +90,7 @@ class OrderedModel(GenericLikelihoodModel):
     Patsy's formula specification does not allow a design matrix without
     explicit or implicit constant if there are categorical variables (or maybe
     splines) among explanatory variables. As workaround, statsmodels removes an
-    explit intercept.
+    explicit intercept.
 
     Consequently, there are two valid cases to get a design matrix without
     intercept when using formulas:
@@ -359,13 +362,13 @@ class OrderedModel(GenericLikelihoodModel):
             - prob : predicted probabilities to be in c
             - linear : 1-dim linear prediction of the latent variable
               ``x b + offset``
-            - cumprob : predicted cumulative propability to be in choice k or
+            - cumprob : predicted cumulative probability to be in choice k or
               lower
 
         Returns
         -------
         predicted probabilities : ndarray
-            2-dim predicted probabilites with observations in rows and one
+            2-dim predicted probabilities with observations in rows and one
             column for each category or level of the categorical dependent
             variable.
         """
@@ -615,7 +618,7 @@ class OrderedResults(GenericLikelihoodModelResults):
         ----------
         Shepherd BE, Li C, Liu Q (2016) Probability-scale residuals for
         continuous, discrete, and censored data.
-        The Canadian Jouranl of Statistics. 44:463–476.
+        The Canadian Journal of Statistics. 44:463–476.
 
         Li C and Shepherd BE (2012) A new residual for ordinal outcomes.
         Biometrika. 99: 473–480

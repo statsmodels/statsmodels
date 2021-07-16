@@ -11,13 +11,16 @@ License: BSD-3
 
 
 import numpy as np
-
 from scipy import stats
 from scipy.stats import rankdata
 
 from statsmodels.stats.base import HolderTuple
 from statsmodels.stats.weightstats import (
-    _zconfint_generic, _tconfint_generic, _zstat_generic, _tstat_generic)
+    _tconfint_generic,
+    _tstat_generic,
+    _zconfint_generic,
+    _zstat_generic,
+)
 
 
 def rankdata_2samp(x1, x2):
@@ -409,7 +412,7 @@ def rank_compare_2indep(x1, x2, use_t=True):
     names relying on a variety of assumptions.
     In psychology, McGraw and Wong (1992) introduced it as Common Language
     effect size for the continuous, normal distribution case,
-    Vargha and Delaney (2000) [3]_ extended it to the nonparameteric
+    Vargha and Delaney (2000) [3]_ extended it to the nonparametric
     continuous distribution case as in Fligner-Policello.
 
     WMW and related tests can only be interpreted as test of medians or tests
@@ -502,7 +505,7 @@ def rank_compare_2indep(x1, x2, use_t=True):
 
 
 def rank_compare_2ordinal(count1, count2, ddof=1, use_t=True):
-    """stochastically larger probability for 2 independend ordinal samples
+    """stochastically larger probability for 2 independent ordinal samples
 
     This is a special case of `rank_compare_2indep` when the data are given as
     counts of two independent ordinal, i.e. ordered multinomial, samples.
