@@ -10,24 +10,27 @@ import numpy as np
 import pandas as pd
 from scipy.special import logsumexp
 
-from statsmodels.tools.tools import Bunch
-from statsmodels.tools.numdiff import approx_fprime_cs, approx_hess_cs
+from statsmodels.base.data import PandasData
+import statsmodels.base.wrapper as wrap
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.eval_measures import aic, bic, hqic
-from statsmodels.tools.tools import pinv_extended
+from statsmodels.tools.numdiff import approx_fprime_cs, approx_hess_cs
 from statsmodels.tools.sm_exceptions import EstimationWarning
-
-import statsmodels.base.wrapper as wrap
-from statsmodels.base.data import PandasData
-
+from statsmodels.tools.tools import Bunch, pinv_extended
 import statsmodels.tsa.base.tsa_model as tsbase
-from statsmodels.tsa.statespace.tools import find_best_blas_type, prepare_exog
-
 from statsmodels.tsa.regime_switching._hamilton_filter import (
-    shamilton_filter_log, dhamilton_filter_log, chamilton_filter_log,
-    zhamilton_filter_log)
+    chamilton_filter_log,
+    dhamilton_filter_log,
+    shamilton_filter_log,
+    zhamilton_filter_log,
+)
 from statsmodels.tsa.regime_switching._kim_smoother import (
-    skim_smoother_log, dkim_smoother_log, ckim_smoother_log, zkim_smoother_log)
+    ckim_smoother_log,
+    dkim_smoother_log,
+    skim_smoother_log,
+    zkim_smoother_log,
+)
+from statsmodels.tsa.statespace.tools import find_best_blas_type, prepare_exog
 
 prefix_hamilton_filter_log_map = {
     's': shamilton_filter_log, 'd': dhamilton_filter_log,
@@ -1259,7 +1262,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         EM step for regime transition probabilities
         """
 
-        # Marginalize the smoothed joint probabilites to just S_t, S_{t-1} | T
+        # Marginalize the smoothed joint probabilities to just S_t, S_{t-1} | T
         tmp = result.smoothed_joint_probabilities
         for i in range(tmp.ndim - 3):
             tmp = np.sum(tmp, -2)
@@ -2052,8 +2055,9 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
                                 title=title)
 
         # Make parameters tables for each regime
-        from statsmodels.iolib.summary import summary_params
         import re
+
+        from statsmodels.iolib.summary import summary_params
 
         def make_table(self, mask, title, strip_end=True):
             res = (self, self.params[mask], self.bse[mask],

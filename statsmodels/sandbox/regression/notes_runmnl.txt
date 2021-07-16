@@ -18,7 +18,7 @@ access to data and parameters by branch and leaves
 global/outer-scope variables
 ----------------------------
 
-* for nested logit I need to access params and store, change probabilites from the branch
+* for nested logit I need to access params and store, change probabilities from the branch
 * need variables in a scope outside of the recursion
 * nested function or save params and probs in instance attribute
 

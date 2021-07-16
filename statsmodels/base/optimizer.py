@@ -33,7 +33,7 @@ class Optimizer(object):
             Extra arguments passed to the objective function, i.e.
             objective(x,*args)
         kwargs : tuple
-            Extra keyworded arguments passed to the objective function, i.e.
+            Extra keyword arguments passed to the objective function, i.e.
             objective(x,**kwargs)
         hessian : str, optional
             Method for computing the Hessian matrix, if applicable.
@@ -280,7 +280,7 @@ def _fit_minimize(f, score, start_params, fargs, kwargs, disp=True,
         Extra arguments passed to the objective function, i.e.
         objective(x,*args)
     kwargs : tuple
-        Extra keyworded arguments passed to the objective function, i.e.
+        Extra keyword arguments passed to the objective function, i.e.
         objective(x,**kwargs)
     disp : bool
         Set to True to print convergence messages.
@@ -374,7 +374,7 @@ def _fit_newton(f, score, start_params, fargs, kwargs, disp=True,
         Extra arguments passed to the objective function, i.e.
         objective(x,*args)
     kwargs : tuple
-        Extra keyworded arguments passed to the objective function, i.e.
+        Extra keyword arguments passed to the objective function, i.e.
         objective(x,**kwargs)
     disp : bool
         Set to True to print convergence messages.
@@ -476,7 +476,7 @@ def _fit_bfgs(f, score, start_params, fargs, kwargs, disp=True,
         Extra arguments passed to the objective function, i.e.
         objective(x,*args)
     kwargs : tuple
-        Extra keyworded arguments passed to the objective function, i.e.
+        Extra keyword arguments passed to the objective function, i.e.
         objective(x,**kwargs)
     disp : bool
         Set to True to print convergence messages.
@@ -548,7 +548,7 @@ def _fit_lbfgs(f, score, start_params, fargs, kwargs, disp=True, maxiter=100,
         Extra arguments passed to the objective function, i.e.
         objective(x,*args)
     kwargs : tuple
-        Extra keyworded arguments passed to the objective function, i.e.
+        Extra keyword arguments passed to the objective function, i.e.
         objective(x,**kwargs)
     disp : bool
         Set to True to print convergence messages.
@@ -670,7 +670,7 @@ def _fit_nm(f, score, start_params, fargs, kwargs, disp=True,
         Extra arguments passed to the objective function, i.e.
         objective(x,*args)
     kwargs : tuple
-        Extra keyworded arguments passed to the objective function, i.e.
+        Extra keyword arguments passed to the objective function, i.e.
         objective(x,**kwargs)
     disp : bool
         Set to True to print convergence messages.
@@ -742,7 +742,7 @@ def _fit_cg(f, score, start_params, fargs, kwargs, disp=True,
         Extra arguments passed to the objective function, i.e.
         objective(x,*args)
     kwargs : tuple
-        Extra keyworded arguments passed to the objective function, i.e.
+        Extra keyword arguments passed to the objective function, i.e.
         objective(x,**kwargs)
     disp : bool
         Set to True to print convergence messages.
@@ -814,7 +814,7 @@ def _fit_ncg(f, score, start_params, fargs, kwargs, disp=True,
         Extra arguments passed to the objective function, i.e.
         objective(x,*args)
     kwargs : tuple
-        Extra keyworded arguments passed to the objective function, i.e.
+        Extra keyword arguments passed to the objective function, i.e.
         objective(x,**kwargs)
     disp : bool
         Set to True to print convergence messages.
@@ -888,7 +888,7 @@ def _fit_powell(f, score, start_params, fargs, kwargs, disp=True,
         Extra arguments passed to the objective function, i.e.
         objective(x,*args)
     kwargs : tuple
-        Extra keyworded arguments passed to the objective function, i.e.
+        Extra keyword arguments passed to the objective function, i.e.
         objective(x,**kwargs)
     disp : bool
         Set to True to print convergence messages.
@@ -963,7 +963,7 @@ def _fit_basinhopping(f, score, start_params, fargs, kwargs, disp=True,
         Extra arguments passed to the objective function, i.e.
         objective(x,*args)
     kwargs : tuple
-        Extra keyworded arguments passed to the objective function, i.e.
+        Extra keyword arguments passed to the objective function, i.e.
         objective(x,**kwargs)
     disp : bool
         Set to True to print convergence messages.

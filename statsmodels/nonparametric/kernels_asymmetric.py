@@ -43,8 +43,7 @@ License: BSD-3
 """
 
 import numpy as np
-from scipy import stats, special
-
+from scipy import special, stats
 
 doc_params = """\
 Parameters
@@ -641,12 +640,12 @@ kernel_cdf_recipinvgauss.__doc__ = """\
 
 
 def kernel_pdf_bs(x, sample, bw):
-    # Birnbaum saunders (normal) kernel for density, pdf, estimation
+    # Birnbaum Saunders (normal) kernel for density, pdf, estimation
     return stats.fatiguelife.pdf(sample, bw, scale=x)
 
 
 kernel_pdf_bs.__doc__ = """\
-    Birnbaum saunders (normal) kernel for density, pdf, estimation.
+    Birnbaum Saunders (normal) kernel for density, pdf, estimation.
 
     {doc_params}
 
@@ -659,12 +658,12 @@ kernel_pdf_bs.__doc__ = """\
 
 
 def kernel_cdf_bs(x, sample, bw):
-    # Birnbaum saunders (normal) kernel for cdf estimation
+    # Birnbaum Saunders (normal) kernel for cdf estimation
     return stats.fatiguelife.sf(sample, bw, scale=x)
 
 
 kernel_cdf_bs.__doc__ = """\
-    Birnbaum saunders (normal) kernel for cdf estimation.
+    Birnbaum Saunders (normal) kernel for cdf estimation.
 
     {doc_params}
 

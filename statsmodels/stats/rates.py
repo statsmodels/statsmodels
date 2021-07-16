@@ -9,8 +9,8 @@ License: BSD-3
 import numpy as np
 from scipy import stats
 
-from statsmodels.stats.weightstats import _zstat_generic2
 from statsmodels.stats.base import HolderTuple
+from statsmodels.stats.weightstats import _zstat_generic2
 
 
 def test_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=1,
@@ -57,7 +57,7 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=1,
         - 'smaller' :  H1: ratio of rates is smaller than ratio_null
     etest_kwds: dictionary
         Additional parameters to be passed to the etest_poisson_2indep
-        funtcion, namely ygrid.
+        function, namely ygrid.
 
     Returns
     -------

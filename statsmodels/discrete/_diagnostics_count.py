@@ -8,8 +8,8 @@ Author: Josef Perktold
 import numpy as np
 from scipy import stats
 
-from statsmodels.regression.linear_model import OLS
 from statsmodels.discrete.discrete_model import Poisson
+from statsmodels.regression.linear_model import OLS
 
 
 def _combine_bins(edge_index, x):
@@ -77,7 +77,7 @@ def plot_probs(freq, probs_predicted, label='predicted', upp_xlim=None,
     Parameters
     ----------
     freq, probs_predicted : nd_arrays
-        two arrays of probabilites, this can be any probabilities for
+        two arrays of probabilities, this can be any probabilities for
         the same events, default is designed for comparing predicted
         and observed probabilities
     label : str or tuple
