@@ -2445,7 +2445,13 @@ class _LLRMixin():
         statistic greater than llr.  llr has a chi-squared distribution
         with degrees of freedom `df_model`.
         """
-        return stats.distributions.chi2.sf(self.llr, self.df_model)
+        # see also RegressionModel compare_lr_test
+        llr = self.llr
+        df_full = self.df_resid
+        df_restr = self.df_resid_null
+        lrdf = (df_restr - df_full)
+        self.df_lr_null = lrdf
+        return stats.distributions.chi2.sf(llr, lrdf)
 
     def set_null_options(self, llnull=None, attach_results=True, **kwargs):
         """
@@ -2532,6 +2538,8 @@ class _LLRMixin():
         if getattr(self, '_attach_nullmodel', False) is not False:
             self.res_null = res_null
 
+        self.k_null = len(res_null.params)
+        self.df_resid_null = res_null.df_resid
         return res_null.llf
 
 
