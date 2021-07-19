@@ -18,6 +18,7 @@ from statsmodels.tools.numdiff import (
 )
 from statsmodels.tools.tools import pinv_extended
 import statsmodels.tsa.base.tsa_model as tsbase
+from statsmodels.tsa.statespace.tools import _safe_cond
 
 
 class StateSpaceMLEModel(tsbase.TimeSeriesModel):
@@ -971,7 +972,7 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
             etext.append(
                 "Covariance matrix is singular or near-singular,"
                 " with condition number %6.3g. Standard errors may be"
-                " unstable." % np.linalg.cond(cov_params)
+                " unstable." % _safe_cond(cov_params)
             )
 
         if etext:

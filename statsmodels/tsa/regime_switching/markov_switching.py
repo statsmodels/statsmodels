@@ -30,7 +30,11 @@ from statsmodels.tsa.regime_switching._kim_smoother import (
     skim_smoother_log,
     zkim_smoother_log,
 )
-from statsmodels.tsa.statespace.tools import find_best_blas_type, prepare_exog
+from statsmodels.tsa.statespace.tools import (
+    find_best_blas_type,
+    prepare_exog,
+    _safe_cond
+)
 
 prefix_hamilton_filter_log_map = {
     's': shamilton_filter_log, 'd': dhamilton_filter_log,
@@ -2110,10 +2114,11 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
         etext = []
         if hasattr(self, 'cov_type') and 'description' in self.cov_kwds:
             etext.append(self.cov_kwds['description'])
+
         if self._rank < len(self.params):
             etext.append("Covariance matrix is singular or near-singular,"
                          " with condition number %6.3g. Standard errors may be"
-                         " unstable." % np.linalg.cond(self.cov_params()))
+                         " unstable." % _safe_cond(self.cov_params()))
 
         if etext:
             etext = ["[{0}] {1}".format(i + 1, text)

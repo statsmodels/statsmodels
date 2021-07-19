@@ -1881,3 +1881,14 @@ def prepare_trend_data(polynomial_trend, k_trend, nobs, offset=1):
         i += 1
 
     return trend_data
+
+
+def _safe_cond(a):
+    """Compute condition while protecting from LinAlgError"""
+    try:
+        return np.linalg.cond(a)
+    except np.linalg.LinAlgError:
+        if np.any(np.isnan(a)):
+            return np.nan
+        else:
+            return np.inf

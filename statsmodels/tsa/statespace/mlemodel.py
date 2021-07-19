@@ -33,7 +33,7 @@ from .simulation_smoother import SimulationSmoother
 from .kalman_smoother import SmootherResults
 from .kalman_filter import INVERT_UNIVARIATE, SOLVE_LU, MEMORY_CONSERVE
 from .initialization import Initialization
-from .tools import prepare_exog, concat
+from .tools import prepare_exog, concat, _safe_cond
 
 
 def _handle_args(names, defaults, *args, **kwargs):
@@ -4517,7 +4517,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                 cov_params = cov_params[mask]
             etext.append("Covariance matrix is singular or near-singular,"
                          " with condition number %6.3g. Standard errors may be"
-                         " unstable." % np.linalg.cond(cov_params))
+                         " unstable." % _safe_cond(cov_params))
 
         if etext:
             etext = ["[{0}] {1}".format(i + 1, text)
