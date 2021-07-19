@@ -188,6 +188,23 @@ class TestBetaMeth():
         assert_equal(res1.df_resid, res2.df_residual)
         assert_equal(res1.nobs, res2.nobs)
 
+        # null model compared to R betareg and lmtest
+        df_c = res1.df_resid_null - res1.df_resid
+        assert_equal(res1.k_null, 2)
+
+        # > lrt = lrtest(res_meth_null, res_meth)  # results from R
+        pv = 7.21872953868659e-18
+        lln = 60.88809589492269
+        llf = 104.14802840534323
+        chisq = 86.51986502084107
+        dfc = 4
+        # stats.chi2.sf(86.51986502093865, 4)
+        assert_equal(df_c, dfc)
+        assert_allclose(res1.llf, llf, rtol=1e-10)
+        assert_allclose(res1.llnull, lln, rtol=1e-10)
+        assert_allclose(res1.llr, chisq, rtol=1e-10)
+        assert_allclose(res1.llr_pvalue, pv, rtol=1e-6)
+
     def test_resid(self):
         res1 = self.res1
         res2 = self.res2
