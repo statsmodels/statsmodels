@@ -494,7 +494,7 @@ class Fourier(FourierDeterministicTerm):
     Solar data has an 11-year cycle
 
     >>> from statsmodels.datasets import sunspots
-    >>> from statsmodels.tsa.deterministic import Seasonality
+    >>> from statsmodels.tsa.deterministic import Fourier
     >>> data = sunspots.load_pandas().data
     >>> fourier_gen = Fourier(11, order=2)
     >>> fourier_gen.in_sample(data.index)
