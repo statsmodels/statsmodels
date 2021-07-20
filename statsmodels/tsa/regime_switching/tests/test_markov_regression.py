@@ -1183,7 +1183,7 @@ class TestMumpspcNoconstL1Variance(MarkovRegression):
             'llf_fit_em': 131.7175
         }
         super(TestMumpspcNoconstL1Variance, cls).setup_class(
-            true, mumpspc[1:], k_regimes=2, trend='nc', exog=mumpspc[:-1],
+            true, mumpspc[1:], k_regimes=2, trend='n', exog=mumpspc[:-1],
             switching_variance=True, atol=1e-4)
 
 

@@ -65,8 +65,15 @@ rec = [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 def test_predict():
     # AR(1) without mean, k_regimes=2
     endog = np.ones(10)
+    with pytest.warns(FutureWarning):
+        markov_autoregression.MarkovAutoregression(
+            endog,
+            k_regimes=2,
+            order=1,
+            trend='nc'
+        )
     mod = markov_autoregression.MarkovAutoregression(
-        endog, k_regimes=2, order=1, trend='nc')
+        endog, k_regimes=2, order=1, trend='n')
     assert_equal(mod.nobs, 9)
     assert_equal(mod.endog, np.ones(9))
 

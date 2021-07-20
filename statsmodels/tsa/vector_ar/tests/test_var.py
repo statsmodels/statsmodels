@@ -641,7 +641,7 @@ class TestVARResultsLutkepohl(object):
 
 
 def test_get_trendorder():
-    results = {"c": 1, "nc": 0, "ct": 2, "ctt": 3}
+    results = {"c": 1, "n": 0, "ct": 2, "ctt": 3}
 
     for t, trendorder in results.items():
         assert util.get_trendorder(t) == trendorder
@@ -683,7 +683,7 @@ def test_var_trend():
 
     data_nc = data - data.mean(0)
     model_nc = VAR(data_nc)
-    results_nc = model_nc.fit(4, trend="nc")
+    results_nc = model_nc.fit(4, trend="n")
     with pytest.raises(ValueError):
         model.fit(4, trend="t")
 
@@ -700,7 +700,7 @@ def test_irf_trend():
 
     data_nc = data - data.mean(0)
     model_nc = VAR(data_nc)
-    results_nc = model_nc.fit(4, trend="nc")
+    results_nc = model_nc.fit(4, trend="n")
     irf_nc = results_nc.irf(10)
 
     assert_allclose(irf_nc.stderr()[1:4], irf.stderr()[1:4], rtol=0.01)
@@ -827,7 +827,7 @@ class TestVARExtras(object):
         ex = np.arange(len(data))
         res_lin_trend1 = VAR(data, exog=ex).fit(maxlags=2)
         ex2 = np.arange(len(data))[:, None] ** [0, 1]
-        res_lin_trend2 = VAR(data, exog=ex2).fit(maxlags=2, trend="nc")
+        res_lin_trend2 = VAR(data, exog=ex2).fit(maxlags=2, trend="n")
         # TODO: intercept differs by 4e-3, others are < 1e-12
         assert_allclose(res_lin_trend.params, res_lin_trend1.params, rtol=5e-3)
         assert_allclose(res_lin_trend.params, res_lin_trend2.params, rtol=5e-3)

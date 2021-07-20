@@ -13,6 +13,7 @@ import numpy as np
 import numpy.linalg as npl
 from numpy.linalg import slogdet
 
+from statsmodels.tsa.tsatools import rename_trend
 from statsmodels.tools.decorators import deprecated_alias
 from statsmodels.tools.numdiff import approx_fprime, approx_hess
 import statsmodels.tsa.base.tsa_model as tsbase
@@ -135,11 +136,11 @@ class SVAR(tsbase.TimeSeriesModel):
             bic : Bayesian a.k.a. Schwarz
         verbose : bool, default False
             Print order selection output to the screen
-        trend, str {"c", "ct", "ctt", "nc"}
+        trend, str {"c", "ct", "ctt", "n"}
             "c" - add constant
             "ct" - constant and trend
             "ctt" - constant, linear and quadratic trend
-            "nc" - co constant, no trend
+            "n" - co constant, no trend
             Note that these are prepended to the columns of the dataset.
         s_method : {'mle'}
             Estimation method for structural parameters
@@ -164,7 +165,7 @@ class SVAR(tsbase.TimeSeriesModel):
         est : SVARResults
         """
         lags = maxlags
-
+        trend = rename_trend(trend)
         if ic is not None:
             selections = self.select_order(maxlags=maxlags, verbose=verbose)
             if ic not in selections:
@@ -506,7 +507,7 @@ class SVARResults(SVARProcess, VARResults):
     sigma_u : ndarray
     lag_order : int
     model : VAR model instance
-    trend : str {'nc', 'c', 'ct'}
+    trend : str {'n', 'c', 'ct'}
     names : array_like
         List of names of the endogenous variables in order of appearance in `endog`.
     dates

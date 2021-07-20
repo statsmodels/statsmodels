@@ -28,10 +28,10 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         The number of regimes.
     order : int
         The order of the autoregressive lag polynomial.
-    trend : {'nc', 'c', 't', 'ct'}
+    trend : {'n', 'c', 't', 'ct'}
         Whether or not to include a trend. To include an constant, time trend,
         or both, set `trend='c'`, `trend='t'`, or `trend='ct'`. For no trend,
-        set `trend='nc'`. Default is a constant.
+        set `trend='n'`. Default is a constant.
     exog : array_like, optional
         Array of exogenous regressors, shaped nobs x k.
     exog_tvtp : array_like, optional
@@ -108,7 +108,7 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
             raise ValueError('Invalid iterable passed to `switching_ar`.')
 
         # Initialize the base model
-        super(MarkovAutoregression, self).__init__(
+        super().__init__(
             endog, k_regimes, trend=trend, exog=exog, order=order,
             exog_tvtp=exog_tvtp, switching_trend=switching_trend,
             switching_exog=switching_exog,

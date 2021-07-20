@@ -84,7 +84,7 @@ def arma_generate_sample(ar, ma, nsample, scale=1, distrvs=None,
     >>> ar = np.r_[1, -arparams] # add zero-lag and negate
     >>> ma = np.r_[1, maparams] # add zero-lag
     >>> y = sm.tsa.arma_generate_sample(ar, ma, 250)
-    >>> model = sm.tsa.ARMA(y, (2, 2)).fit(trend='nc', disp=0)
+    >>> model = sm.tsa.ARIMA(y, (2, 0, 2), trend='n').fit(disp=0)
     >>> model.params
     array([ 0.79044189, -0.23140636,  0.70072904,  0.40608028])
     """
@@ -696,7 +696,7 @@ class ArmaProcess(object):
     >>> arma_process.arroots
     array([1.5-1.32287566j, 1.5+1.32287566j])
     >>> y = arma_process.generate_sample(250)
-    >>> model = sm.tsa.ARMA(y, (2, 2)).fit(trend='nc', disp=0)
+    >>> model = sm.tsa.ARIMA(y, (2, 0, 2), trend='n').fit(disp=0)
     >>> model.params
     array([ 0.79044189, -0.23140636,  0.70072904,  0.40608028])
 

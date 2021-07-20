@@ -477,7 +477,7 @@ class DynamicFactor(MLEModel):
             # 3a. VAR transition (OLS on factors estimated via PCA)
             mod_factors = VAR(res_pca.factors)
             res_factors = mod_factors.fit(maxlags=self.factor_order, ic=None,
-                                          trend='nc')
+                                          trend='n')
             # Save the parameters
             params[self._params_factor_transition] = (
                 res_factors.params.T.ravel())
@@ -517,7 +517,7 @@ class DynamicFactor(MLEModel):
         elif self.error_var:
             mod_errors = VAR(endog)
             res_errors = mod_errors.fit(maxlags=self.error_order, ic=None,
-                                        trend='nc')
+                                        trend='n')
 
             # Test for stationarity
             coefficient_matrices = (

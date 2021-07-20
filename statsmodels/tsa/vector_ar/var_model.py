@@ -636,11 +636,11 @@ class VAR(TimeSeriesModel):
             bic : Bayesian a.k.a. Schwarz
         verbose : bool, default False
             Print order selection output to the screen
-        trend : str {"c", "ct", "ctt", "nc", "n"}
+        trend : str {"c", "ct", "ctt", "n"}
             "c" - add constant
             "ct" - constant and trend
             "ctt" - constant, linear and quadratic trend
-            "n", "nc" - co constant, no trend
+            "n" - co constant, no trend
             Note that these are prepended to the columns of the dataset.
 
         Returns
@@ -653,8 +653,8 @@ class VAR(TimeSeriesModel):
         See Lütkepohl pp. 146-153 for implementation details.
         """
         lags = maxlags
-
-        if trend not in ["c", "ct", "ctt", "nc", "n"]:
+        trend = tsa.rename_trend(trend)
+        if trend not in ["c", "ct", "ctt", "n"]:
             raise ValueError("trend '{}' not supported for VAR".format(trend))
 
         if ic is not None:
@@ -787,8 +787,8 @@ class VAR(TimeSeriesModel):
         ----------
         maxlags : int
             if None, defaults to 12 * (nobs/100.)**(1./4)
-        trend : str {"nc", "c", "ct", "ctt"}
-            * "nc" - no deterministic terms
+        trend : str {"n", "c", "ct", "ctt"}
+            * "n" - no deterministic terms
             * "c" - constant term
             * "ct" - constant and linear term
             * "ctt" - constant, linear, and quadratic term
@@ -797,6 +797,7 @@ class VAR(TimeSeriesModel):
         -------
         selections : LagOrderResults
         """
+        trend = tsa.rename_trend(trend)
         ntrend = len(trend) if trend.startswith("c") else 0
         max_estimable = (self.n_totobs - self.neqs - ntrend) // (1 + self.neqs)
         if maxlags is None:
@@ -817,7 +818,7 @@ class VAR(TimeSeriesModel):
                 )
 
         ics = defaultdict(list)
-        p_min = 0 if self.exog is not None or trend != "nc" else 1
+        p_min = 0 if self.exog is not None or trend != "n" else 1
         for p in range(p_min, maxlags + 1):
             # exclude some periods to same amount of data used for each lag
             # order
@@ -1274,7 +1275,7 @@ class VARResults(VARProcess):
     sigma_u : ndarray
     lag_order : int
     model : VAR model instance
-    trend : str {'nc', 'c', 'ct'}
+    trend : str {'n', 'c', 'ct'}
     names : array_like
         List of names of the endogenous variables in order of appearance in
         `endog`.
@@ -1642,7 +1643,7 @@ class VARResults(VARProcess):
             pass
         elif method == "auto":
             if self.k_exog == 1 and self.k_trend < 2:
-                # currently only supported if no exog and trend in ['nc', 'c']
+                # currently only supported if no exog and trend in ['n', 'c']
                 fc_cov += self._omega_forc_cov(steps) / self.nobs
                 import warnings
 
