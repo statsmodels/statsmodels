@@ -15,7 +15,7 @@ Instructions for installing from PyPI, source or a development version are also 
 Python Support
 --------------
 
-statsmodels supports Python 3.6, 3.7 and 3.8.
+statsmodels supports Python 3.7, 3.8, and 3.9.
 
 Anaconda
 --------
@@ -130,10 +130,10 @@ Dependencies
 
 The current minimum dependencies are:
 
-* `Python <https://www.python.org>`__ >= 3.6
-* `NumPy <https://www.scipy.org/>`__ >= 1.15
-* `SciPy <https://www.scipy.org/>`__ >= 1.2
-* `Pandas <https://pandas.pydata.org/>`__ >= 0.23
+* `Python <https://www.python.org>`__ >= 3.7
+* `NumPy <https://www.scipy.org/>`__ >= 1.17
+* `SciPy <https://www.scipy.org/>`__ >= 1.3
+* `Pandas <https://pandas.pydata.org/>`__ >= 1.0
 * `Patsy <https://patsy.readthedocs.io/en/latest/>`__ >= 0.5.1
 
 Cython is required to build from a git checkout but not to run or install from PyPI:
@@ -151,15 +151,15 @@ Optional Dependencies
 
 * `cvxopt <https://cvxopt.org/>`__ is required for regularized fitting of
   some models.
-* `Matplotlib <https://matplotlib.org/>`__ >= 2.2 is needed for plotting
+* `Matplotlib <https://matplotlib.org/>`__ >= 3 is needed for plotting
   functions and running many of the examples.
 * If installed, `X-12-ARIMA <https://www.census.gov/srd/www/x13as/>`__ or
   `X-13ARIMA-SEATS <https://www.census.gov/srd/www/x13as/>`__ can be used
   for time-series analysis.
 * `pytest <https://docs.pytest.org/en/latest/>`__ is required to run
   the test suite.
-* `IPython <https://ipython.org>`__ >= 5.0 is required to build the
+* `IPython <https://ipython.org>`__ >= 6.0 is required to build the
   docs locally or to use the notebooks.
-* `joblib <https://joblib.readthedocs.io/>`__ >= 0.9 can be used to accelerate distributed
+* `joblib <https://joblib.readthedocs.io/>`__ >= 1.0can be used to accelerate distributed
   estimation for certain models.
 * `jupyter <https://jupyter.org/>`__ is needed to run the notebooks.
