@@ -2,7 +2,7 @@
 Test functions for genmod.families.links
 """
 import numpy as np
-from numpy.testing import assert_allclose, assert_equal
+from numpy.testing import assert_allclose, assert_equal, assert_array_less
 import statsmodels.genmod.families as families
 from statsmodels.tools import numdiff as nd
 
@@ -72,6 +72,10 @@ def test_deriv():
             da = nd.approx_fprime(np.r_[p], link)
             assert_allclose(d, da, rtol=1e-6, atol=1e-6,
                             err_msg=str(link))
+            if not isinstance(link, (type(inverse_power),
+                                     type(inverse_squared))):
+                # check monotonically increasing
+                assert_array_less(-d, 0)
 
 
 def test_deriv2():
