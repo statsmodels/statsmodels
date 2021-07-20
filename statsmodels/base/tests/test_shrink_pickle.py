@@ -40,6 +40,7 @@ class RemoveDataPickle(object):
         cls.exog = x
         cls.xf = 0.25 * np.ones((2, 4))
         cls.predict_kwds = {}
+        cls.reduction_factor = 0.1
 
     def test_remove_data_pickle(self):
 
@@ -77,7 +78,7 @@ class RemoveDataPickle(object):
         # for testing attach res
         self.res = res
         msg = 'pickle length not %d < %d' % (nbytes, orig_nbytes)
-        assert nbytes < orig_nbytes, msg
+        assert nbytes < orig_nbytes * self.reduction_factor, msg
         pred3 = results.predict(xf, **pred_kwds)
 
         if isinstance(pred1, pd.Series) and isinstance(pred3, pd.Series):
@@ -266,6 +267,7 @@ class TestPickleFormula(RemoveDataPickle):
         cls.exog = pd.DataFrame(x, columns=["A", "B", "C"])
         cls.xf = pd.DataFrame(0.25 * np.ones((2, 3)),
                               columns=cls.exog.columns)
+        cls.reduction_factor = 0.5
 
     def setup(self):
         x = self.exog
@@ -288,6 +290,7 @@ class TestPickleFormula2(RemoveDataPickle):
         cls.data = pd.DataFrame(data, columns=["Y", "A", "B", "C"])
         cls.xf = pd.DataFrame(0.25 * np.ones((2, 3)),
                               columns=cls.data.columns[1:])
+        cls.reduction_factor = 0.5
 
     def setup(self):
         self.results = sm.OLS.from_formula("Y ~ A + B + C",
