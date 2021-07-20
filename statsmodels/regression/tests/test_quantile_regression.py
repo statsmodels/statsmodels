@@ -281,3 +281,11 @@ def test_alpha_summary():
     summ_20 = res.summary(alpha=.2)
     assert '[0.025      0.975]' not in str(summ_20)
     assert '[0.1        0.9]' in str(summ_20)
+
+
+def test_remove_data():
+    X = np.array([[1, 0], [0, 1], [0, 2.1], [0, 3.1]], dtype=np.float64)
+    y = np.array([0, 1, 2, 3], dtype=np.float64)
+
+    res = QuantReg(y, X).fit(0.5)
+    res.remove_data()
