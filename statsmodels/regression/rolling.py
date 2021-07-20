@@ -497,6 +497,7 @@ class RollingRegressionResults(object):
         self._cov_type = cov_type
         self._use_pandas = self.model.data.row_labels is not None
         self._data_attr = []
+        self._cache = {}
 
     def _wrap(self, val):
         """Wrap output as pandas Series or DataFrames as needed"""

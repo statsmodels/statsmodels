@@ -2216,15 +2216,6 @@ class LikelihoodModelResults(Results):
                 cls_attrs[name] = attr
         data_attrs = [x for x in cls_attrs
                       if isinstance(cls_attrs[x], cached_data)]
-        value_attrs = [x for x in cls_attrs
-                       if isinstance(cls_attrs[x], cached_value)]
-        # make sure the cached for value_attrs are evaluated; this needs to
-        # occur _before_ any other attributes are removed.
-        for name in value_attrs:
-            try:
-                getattr(self, name)
-            except NotImplementedError:
-                pass
         for name in data_attrs:
             self._cache[name] = None
 
