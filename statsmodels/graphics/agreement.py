@@ -129,13 +129,13 @@ def mean_diff_plot(m1, m2, sd_limit=1.96, ax=None, scatter_kwds=None,
         upper = mean_diff + limit_of_agreement
         for j, lim in enumerate([lower, upper]):
             ax.axhline(lim, **limit_lines_kwds)
-        ax.annotate('-SD{}: {}'.format(sd_limit, np.round(lower, 2)),
+        ax.annotate(f'-SD{sd_limit}: {lower:0.2g}',
                     xy=(0.99, 0.07),
                     horizontalalignment='right',
                     verticalalignment='bottom',
                     fontsize=14,
                     xycoords='axes fraction')
-        ax.annotate('+SD{}: {}'.format(sd_limit, np.round(upper, 2)),
+        ax.annotate(f'+SD{sd_limit}: {lower:0.2g}',
                     xy=(0.99, 0.92),
                     horizontalalignment='right',
                     fontsize=14,
