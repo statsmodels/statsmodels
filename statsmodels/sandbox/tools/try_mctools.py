@@ -42,7 +42,7 @@ def randwalksim(nobs=500, drift=0.0):
 
 
 def adf20(x):
-    return adfuller(x, 2, regression="nc", autolag=None)
+    return adfuller(x, 2, regression="n", autolag=None)
 
 print(adf20(np.random.randn(100)))
 

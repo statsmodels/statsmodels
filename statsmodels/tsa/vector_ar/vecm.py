@@ -13,7 +13,12 @@ from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
 import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.coint_tables import c_sja, c_sjt
-from statsmodels.tsa.tsatools import duplication_matrix, lagmat, vec
+from statsmodels.tsa.tsatools import (
+    duplication_matrix,
+    lagmat,
+    rename_trend,
+    vec,
+)
 from statsmodels.tsa.vector_ar.hypothesis_test_results import (
     CausalityTestResults,
     WhitenessTestResults,
@@ -33,8 +38,9 @@ from statsmodels.tsa.vector_ar.var_model import (
 )
 
 
-def select_order(data, maxlags, deterministic="nc", seasons=0, exog=None,
-                 exog_coint=None):
+def select_order(
+    data, maxlags, deterministic="n", seasons=0, exog=None, exog_coint=None
+):
     """
     Compute lag order selections based on each of the available information
     criteria.
@@ -46,8 +52,8 @@ def select_order(data, maxlags, deterministic="nc", seasons=0, exog=None,
     maxlags : int
         All orders until maxlag will be compared according to the information
         criteria listed in the Results-section of this docstring.
-    deterministic : str {``"nc"``, ``"co"``, ``"ci"``, ``"lo"``, ``"li"``}
-        * ``"nc"`` - no deterministic terms
+    deterministic : str {"n", "co", "ci", "lo", "li"}
+        * ``"n"`` - no deterministic terms
         * ``"co"`` - constant outside the cointegration relation
         * ``"ci"`` - constant within the cointegration relation
         * ``"lo"`` - linear trend outside the cointegration relation
@@ -67,6 +73,7 @@ def select_order(data, maxlags, deterministic="nc", seasons=0, exog=None,
     -------
     selected_orders : :class:`statsmodels.tsa.vector_ar.var_model.LagOrderResults`
     """
+    deterministic = rename_trend(deterministic)
     ic = defaultdict(list)
     for p in range(1, maxlags + 2):  # +2 because k_ar_VECM == k_ar_VAR - 1
         exogs = []
@@ -77,22 +84,25 @@ def select_order(data, maxlags, deterministic="nc", seasons=0, exog=None,
         if exog_coint is not None:
             exogs.append(exog_coint)
         if seasons > 0:
-            exogs.append(seasonal_dummies(seasons, len(data)
-                                          ).reshape(-1, seasons-1))
+            exogs.append(
+                seasonal_dummies(seasons, len(data)).reshape(-1, seasons - 1)
+            )
         if exog is not None:
             exogs.append(exog)
         exogs = hstack(exogs) if exogs else None
         var_model = VAR(data, exogs)
         # exclude some periods ==> same amount of data used for each lag order
-        var_result = var_model._estimate_var(lags=p, offset=maxlags+1-p)
+        var_result = var_model._estimate_var(lags=p, offset=maxlags + 1 - p)
 
         for k, v in var_result.info_criteria.items():
             ic[k].append(v)
     # -1+1 in the following line is only here for clarification.
     # -1 because k_ar_VECM == k_ar_VAR - 1
     # +1 because p == index +1 (we start with p=1, not p=0)
-    selected_orders = dict((ic_name, np.array(ic_value).argmin() - 1 + 1)
-                           for ic_name, ic_value in ic.items())
+    selected_orders = dict(
+        (ic_name, np.array(ic_value).argmin() - 1 + 1)
+        for ic_name, ic_value in ic.items()
+    )
 
     return LagOrderResults(ic, selected_orders, True)
 
@@ -133,8 +143,8 @@ def _num_det_vars(det_string, seasons=0):
 
     Parameters
     ----------
-    det_string : str {"nc", "co", "ci", "lo", "li"}
-        * "nc" - no deterministic terms
+    det_string : str {"n", "co", "ci", "lo", "li"}
+        * "n" - no deterministic terms
         * "co" - constant outside the cointegration relation
         * "ci" - constant within the cointegration relation
         * "lo" - linear trend outside the cointegration relation
@@ -162,8 +172,15 @@ def _num_det_vars(det_string, seasons=0):
     return num
 
 
-def _deterministic_to_exog(deterministic, seasons, nobs_tot, first_season=0,
-                           seasons_centered=False, exog=None, exog_coint=None):
+def _deterministic_to_exog(
+    deterministic,
+    seasons,
+    nobs_tot,
+    first_season=0,
+    seasons_centered=False,
+    exog=None,
+    exog_coint=None,
+):
     """
     Translate all information about deterministic terms into a single array.
 
@@ -206,9 +223,14 @@ def _deterministic_to_exog(deterministic, seasons, nobs_tot, first_season=0,
     if "lo" in deterministic or "li" in deterministic:
         exogs.append(np.arange(nobs_tot))
     if seasons > 0:
-        exogs.append(seasonal_dummies(seasons, nobs_tot,
-                                      first_period=first_season,
-                                      centered=seasons_centered))
+        exogs.append(
+            seasonal_dummies(
+                seasons,
+                nobs_tot,
+                first_period=first_season,
+                centered=seasons_centered,
+            )
+        )
     if exog is not None:
         exogs.append(exog)
     return np.column_stack(exogs) if exogs else None
@@ -232,8 +254,15 @@ def _mat_sqrt(_2darray):
     return u_.dot(s_[:, None] * v_)
 
 
-def _endog_matrices(endog, exog, exog_coint, diff_lags, deterministic,
-                    seasons=0, first_season=0):
+def _endog_matrices(
+    endog,
+    exog,
+    exog_coint,
+    diff_lags,
+    deterministic,
+    seasons=0,
+    first_season=0,
+):
     """
     Returns different matrices needed for parameter estimation.
 
@@ -251,8 +280,8 @@ def _endog_matrices(endog, exog, exog_coint, diff_lags, deterministic,
         Deterministic terms inside the cointegration relation.
     diff_lags : int
         Number of lags in the VEC representation.
-    deterministic : str {``"nc"``, ``"co"``, ``"ci"``, ``"lo"``, ``"li"``}
-        * ``"nc"`` - no deterministic terms
+    deterministic : str {``"n"``, ``"co"``, ``"ci"``, ``"lo"``, ``"li"``}
+        * ``"n"`` - no deterministic terms
         * ``"co"`` - constant outside the cointegration relation
         * ``"ci"`` - constant within the cointegration relation
         * ``"lo"`` - linear trend outside the cointegration relation
@@ -289,41 +318,50 @@ def _endog_matrices(endog, exog, exog_coint, diff_lags, deterministic,
     .. [1] Lütkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
     """
     # p. 286:
-    p = diff_lags+1
+    p = diff_lags + 1
     y = endog
     K = y.shape[0]
     y_1_T = y[:, p:]
     T = y_1_T.shape[1]
     delta_y = np.diff(y)
-    delta_y_1_T = delta_y[:, p-1:]
+    delta_y_1_T = delta_y[:, p - 1 :]
 
-    y_lag1 = y[:, p-1:-1]
+    y_lag1 = y[:, p - 1 : -1]
+    deterministic = rename_trend(deterministic)
     if "co" in deterministic and "ci" in deterministic:
-        raise ValueError("Both 'co' and 'ci' as deterministic terms given. " +
-                         "Please choose one of the two.")
+        raise ValueError(
+            "Both 'co' and 'ci' as deterministic terms given. "
+            + "Please choose one of the two."
+        )
     y_lag1_stack = [y_lag1]
     if "ci" in deterministic:  # pp. 257, 299, 306, 307
         y_lag1_stack.append(np.ones(T))
     if "li" in deterministic:  # p. 299
         y_lag1_stack.append(_linear_trend(T, p, coint=True))
     if exog_coint is not None:
-        y_lag1_stack.append(exog_coint[-T-1:-1].T)
+        y_lag1_stack.append(exog_coint[-T - 1 : -1].T)
     y_lag1 = np.row_stack(y_lag1_stack)
 
     # p. 286:
-    delta_x = np.zeros((diff_lags*K, T))
+    delta_x = np.zeros((diff_lags * K, T))
     if diff_lags > 0:
         for j in range(delta_x.shape[1]):
-            delta_x[:, j] = (delta_y[:, j+p-2:None if j-1 < 0 else j-1:-1]
-                             .T.reshape(K*(p-1)))
+            delta_x[:, j] = delta_y[
+                :, j + p - 2 : None if j - 1 < 0 else j - 1 : -1
+            ].T.reshape(K * (p - 1))
     delta_x_stack = [delta_x]
     # p. 299, p. 303:
     if "co" in deterministic:
         delta_x_stack.append(np.ones(T))
     if seasons > 0:
-        delta_x_stack.append(seasonal_dummies(seasons, delta_x.shape[1],
-                                              first_period=first_season + diff_lags + 1,
-                                              centered=True).T)
+        delta_x_stack.append(
+            seasonal_dummies(
+                seasons,
+                delta_x.shape[1],
+                first_period=first_season + diff_lags + 1,
+                centered=True,
+            ).T
+        )
     if "lo" in deterministic:
         delta_x_stack.append(_linear_trend(T, p))
     if exog is not None:
@@ -365,7 +403,8 @@ def _r_matrices(delta_y_1_T, y_lag1, delta_x):
     # todo: rewrite m such that a big (TxT) matrix is avoided
     nobs = y_lag1.shape[1]
     m = np.identity(nobs) - (
-        delta_x.T.dot(inv(delta_x.dot(delta_x.T))).dot(delta_x))  # p. 291
+        delta_x.T.dot(inv(delta_x.dot(delta_x.T))).dot(delta_x)
+    )  # p. 291
     r0 = delta_y_1_T.dot(m)  # p. 292
     r1 = y_lag1.dot(m)
     return r0, r1
@@ -439,12 +478,16 @@ class CointRankResults:
     signif : float, {0.1, 0.05, 0.01}, default: 0.05
         The test's significance level.
     """
-    def __init__(self, rank, neqs, test_stats, crit_vals, method="trace",
-                 signif=0.05):
+
+    def __init__(
+        self, rank, neqs, test_stats, crit_vals, method="trace", signif=0.05
+    ):
         self.rank = rank
         self.neqs = neqs
-        self.r_1 = [neqs if method == "trace" else i+1
-                    for i in range(min(rank+1, neqs))]
+        self.r_1 = [
+            neqs if method == "trace" else i + 1
+            for i in range(min(rank + 1, neqs))
+        ]
         self.test_stats = test_stats
         self.crit_vals = crit_vals
         self.method = method
@@ -452,28 +495,41 @@ class CointRankResults:
 
     def summary(self):
         headers = ["r_0", "r_1", "test statistic", "critical value"]
-        title = "Johansen cointegration test using " + \
-            ("trace" if self.method == "trace" else "maximum eigenvalue") + \
-            " test statistic with {:.0%}".format(self.signif) + \
-            " significance level"
-        num_tests = min(self.rank, self.neqs-1)
-        data = [[i, self.r_1[i], self.test_stats[i], self.crit_vals[i]]
-                for i in range(num_tests + 1)]
-        data_fmt = {"data_fmts": ["%s", "%s", "%#0.4g", "%#0.4g"],
-                    "data_aligns": "r"}
+        title = (
+            "Johansen cointegration test using "
+            + ("trace" if self.method == "trace" else "maximum eigenvalue")
+            + " test statistic with {:.0%}".format(self.signif)
+            + " significance level"
+        )
+        num_tests = min(self.rank, self.neqs - 1)
+        data = [
+            [i, self.r_1[i], self.test_stats[i], self.crit_vals[i]]
+            for i in range(num_tests + 1)
+        ]
+        data_fmt = {
+            "data_fmts": ["%s", "%s", "%#0.4g", "%#0.4g"],
+            "data_aligns": "r",
+        }
         html_data_fmt = dict(data_fmt)
-        html_data_fmt["data_fmts"] = ["<td>" + i + "</td>"
-                                      for i in html_data_fmt["data_fmts"]]
-        return SimpleTable(data=data, headers=headers, title=title,
-                           txt_fmt=data_fmt, html_fmt=html_data_fmt,
-                           ltx_fmt=data_fmt)
+        html_data_fmt["data_fmts"] = [
+            "<td>" + i + "</td>" for i in html_data_fmt["data_fmts"]
+        ]
+        return SimpleTable(
+            data=data,
+            headers=headers,
+            title=title,
+            txt_fmt=data_fmt,
+            html_fmt=html_data_fmt,
+            ltx_fmt=data_fmt,
+        )
 
     def __str__(self):
         return self.summary().as_text()
 
 
-def select_coint_rank(endog, det_order, k_ar_diff, method="trace",
-                      signif=0.05):
+def select_coint_rank(
+    endog, det_order, k_ar_diff, method="trace", signif=0.05
+):
     """Calculate the cointegration rank of a VECM.
 
     Parameters
@@ -499,20 +555,25 @@ def select_coint_rank(endog, det_order, k_ar_diff, method="trace",
         by the test and allowing a summary to be printed.
     """
     if method not in ["trace", "maxeig"]:
-        raise ValueError("The method argument has to be either 'trace' or"
-                         "'maximum eigenvalue'.")
+        raise ValueError(
+            "The method argument has to be either 'trace' or"
+            "'maximum eigenvalue'."
+        )
 
     if det_order not in [-1, 0, 1]:
         if type(det_order) == int and det_order > 1:
-            raise ValueError("A det_order greather than 1 is not supported."
-                             "Use a value of -1, 0, or 1.")
+            raise ValueError(
+                "A det_order greather than 1 is not supported."
+                "Use a value of -1, 0, or 1."
+            )
         else:
             raise ValueError("det_order must be -1, 0, or 1.")
 
     possible_signif_values = [0.1, 0.05, 0.01]
     if signif not in possible_signif_values:
-        raise ValueError("Please choose a significance level from {0.1, 0.05,"
-                         "0.01}")
+        raise ValueError(
+            "Please choose a significance level from {0.1, 0.05," "0.01}"
+        )
 
     coint_result = coint_johansen(endog, det_order, k_ar_diff)
     test_stat = coint_result.lr1 if method == "trace" else coint_result.lr2
@@ -527,8 +588,14 @@ def select_coint_rank(endog, det_order, k_ar_diff, method="trace",
         else:
             r_0 += 1  # we reject current rank and test next possible rank
 
-    return CointRankResults(r_0, neqs, test_stat[:r_0 + 1],
-                            crit_vals[:r_0 + 1, signif_index], method, signif)
+    return CointRankResults(
+        r_0,
+        neqs,
+        test_stat[: r_0 + 1],
+        crit_vals[: r_0 + 1, signif_index],
+        method,
+        signif,
+    )
 
 
 def coint_johansen(endog, det_order, k_ar_diff):
@@ -570,21 +637,30 @@ def coint_johansen(endog, det_order, k_ar_diff):
         Analysis. Springer.
     """
     import warnings
+
     if det_order not in [-1, 0, 1]:
-        warnings.warn("Critical values are only available for a det_order of "
-                      "-1, 0, or 1.", category=HypothesisTestWarning)
+        warnings.warn(
+            "Critical values are only available for a det_order of "
+            "-1, 0, or 1.",
+            category=HypothesisTestWarning,
+        )
     if endog.shape[1] > 12:  # todo: test with a time series of 13 variables
-        warnings.warn("Critical values are only available for time series "
-                      "with 12 variables at most.",
-                      category=HypothesisTestWarning)
+        warnings.warn(
+            "Critical values are only available for time series "
+            "with 12 variables at most.",
+            category=HypothesisTestWarning,
+        )
 
     from statsmodels.regression.linear_model import OLS
 
     def detrend(y, order):
         if order == -1:
             return y
-        return OLS(y, np.vander(np.linspace(-1, 1, len(y)),
-                                order+1)).fit().resid
+        return (
+            OLS(y, np.vander(np.linspace(-1, 1, len(y)), order + 1))
+            .fit()
+            .resid
+        )
 
     def resid(y, x):
         if x.size == 0:
@@ -612,7 +688,7 @@ def coint_johansen(endog, det_order, k_ar_diff):
     dx = detrend(dx, f)
     r0t = resid(dx, z)
     # GH 5731, [:-0] does not work, need [:t-0]
-    lx = endog[:(endog.shape[0]-k_ar_diff)]
+    lx = endog[: (endog.shape[0] - k_ar_diff)]
     lx = lx[1:]
     dx = detrend(lx, f)
     rkt = resid(dx, z)  # level on lagged diffs
@@ -649,7 +725,7 @@ def coint_johansen(endog, det_order, k_ar_diff):
     for i in range(0, neqs):
         tmp = np.log(iota - a)[i:]
         lr1[i] = -t * np.sum(tmp, 0)
-        lr2[i] = -t * np.log(1-a[i])
+        lr2[i] = -t * np.log(1 - a[i])
         cvm[i, :] = c_sja(neqs - i, det_order)
         cvt[i, :] = c_sjt(neqs - i, det_order)
         aind[i] = i
@@ -670,8 +746,9 @@ class JohansenTestResult(object):
     .. [1] Lütkepohl, H. 2005. New Introduction to Multiple Time Series
         Analysis. Springer.
     """
+
     def __init__(self, rkt, r0t, eig, evec, lr1, lr2, cvt, cvm, ind):
-        self._meth = 'johansen'
+        self._meth = "johansen"
         self._rkt = rkt
         self._r0t = r0t
         self._eig = eig
@@ -789,8 +866,8 @@ class VECM(tsbase.TimeSeriesModel):
     coint_rank : int
         Cointegration rank, equals the rank of the matrix :math:`\\Pi` and the
         number of columns of :math:`\\alpha` and :math:`\\beta`.
-    deterministic : str {``"nc"``, ``"co"``, ``"ci"``, ``"lo"``, ``"li"``}
-        * ``"nc"`` - no deterministic terms
+    deterministic : str {``"n"``, ``"co"``, ``"ci"``, ``"lo"``, ``"li"``}
+        * ``"n"`` - no deterministic terms
         * ``"co"`` - constant outside the cointegration relation
         * ``"ci"`` - constant within the cointegration relation
         * ``"lo"`` - linear trend outside the cointegration relation
@@ -842,7 +919,7 @@ class VECM(tsbase.TimeSeriesModel):
     ====  ===============================  ===================================  =============
     Case  Intercept                        Slope of the linear trend            `deterministic`
     ====  ===============================  ===================================  =============
-    I     0                                0                                    ``"nc"``
+    I     0                                0                                    ``"n"``
     II    :math:`- \\alpha \\beta^T \\mu`     0                                    ``"ci"``
     III   :math:`\\neq 0`                   0                                    ``"co"``
     IV    :math:`\\neq 0`                   :math:`- \\alpha \\beta^T \\gamma`      ``"coli"``
@@ -857,13 +934,25 @@ class VECM(tsbase.TimeSeriesModel):
            *Vector Autoregressive Models*. Oxford University Press.
     """
 
-    def __init__(self, endog, exog=None, exog_coint=None, dates=None,
-                 freq=None, missing="none", k_ar_diff=1, coint_rank=1,
-                 deterministic="nc", seasons=0, first_season=0):
-        super(VECM, self).__init__(endog, exog, dates, freq,
-                                   missing=missing)
-        if exog_coint is not None and \
-                not exog_coint.shape[0] == endog.shape[0]:
+    def __init__(
+        self,
+        endog,
+        exog=None,
+        exog_coint=None,
+        dates=None,
+        freq=None,
+        missing="none",
+        k_ar_diff=1,
+        coint_rank=1,
+        deterministic="n",
+        seasons=0,
+        first_season=0,
+    ):
+        super().__init__(endog, exog, dates, freq, missing=missing)
+        if (
+            exog_coint is not None
+            and not exog_coint.shape[0] == endog.shape[0]
+        ):
             raise ValueError("exog_coint must have as many rows as enodg_tot!")
         if self.endog.ndim == 1:
             raise ValueError("Only gave one variable to VECM")
@@ -873,7 +962,7 @@ class VECM(tsbase.TimeSeriesModel):
         self.k_ar = k_ar_diff + 1
         self.k_ar_diff = k_ar_diff
         self.coint_rank = coint_rank
-        self.deterministic = deterministic
+        self.deterministic = rename_trend(deterministic)
         self.seasons = seasons
         self.first_season = first_season
         self.load_coef_repr = "ec"  # name for loading coef. (alpha) in summary
@@ -900,37 +989,63 @@ class VECM(tsbase.TimeSeriesModel):
         if method == "ml":
             return self._estimate_vecm_ml()
         else:
-            raise ValueError("%s not recognized, must be among %s"
-                             % (method, "ml"))
+            raise ValueError(
+                "%s not recognized, must be among %s" % (method, "ml")
+            )
 
     def _estimate_vecm_ml(self):
         y_1_T, delta_y_1_T, y_lag1, delta_x = _endog_matrices(
-                self.y, self.exog, self.exog_coint, self.k_ar_diff,
-                self.deterministic, self.seasons, self.first_season)
+            self.y,
+            self.exog,
+            self.exog_coint,
+            self.k_ar_diff,
+            self.deterministic,
+            self.seasons,
+            self.first_season,
+        )
         T = y_1_T.shape[1]
 
         s00, s01, s10, s11, s11_, _, v = _sij(delta_x, delta_y_1_T, y_lag1)
 
-        beta_tilde = (v[:, :self.coint_rank].T.dot(s11_)).T
+        beta_tilde = (v[:, : self.coint_rank].T.dot(s11_)).T
         beta_tilde = np.real_if_close(beta_tilde)
         # normalize beta tilde such that eye(r) forms the first r rows of it:
-        beta_tilde = np.dot(beta_tilde, inv(beta_tilde[:self.coint_rank]))
+        beta_tilde = np.dot(beta_tilde, inv(beta_tilde[: self.coint_rank]))
         alpha_tilde = s01.dot(beta_tilde).dot(
-                inv(beta_tilde.T.dot(s11).dot(beta_tilde)))
-        gamma_tilde = (delta_y_1_T - alpha_tilde.dot(beta_tilde.T).dot(y_lag1)
-                       ).dot(delta_x.T).dot(inv(np.dot(delta_x, delta_x.T)))
-        temp = (delta_y_1_T - alpha_tilde.dot(beta_tilde.T).dot(y_lag1) -
-                gamma_tilde.dot(delta_x))
+            inv(beta_tilde.T.dot(s11).dot(beta_tilde))
+        )
+        gamma_tilde = (
+            (delta_y_1_T - alpha_tilde.dot(beta_tilde.T).dot(y_lag1))
+            .dot(delta_x.T)
+            .dot(inv(np.dot(delta_x, delta_x.T)))
+        )
+        temp = (
+            delta_y_1_T
+            - alpha_tilde.dot(beta_tilde.T).dot(y_lag1)
+            - gamma_tilde.dot(delta_x)
+        )
         sigma_u_tilde = temp.dot(temp.T) / T
 
-        return VECMResults(self.y, self.exog, self.exog_coint, self.k_ar,
-                           self.coint_rank, alpha_tilde, beta_tilde,
-                           gamma_tilde, sigma_u_tilde,
-                           deterministic=self.deterministic,
-                           seasons=self.seasons, delta_y_1_T=delta_y_1_T,
-                           y_lag1=y_lag1, delta_x=delta_x, model=self,
-                           names=self.endog_names, dates=self.data.dates,
-                           first_season=self.first_season)
+        return VECMResults(
+            self.y,
+            self.exog,
+            self.exog_coint,
+            self.k_ar,
+            self.coint_rank,
+            alpha_tilde,
+            beta_tilde,
+            gamma_tilde,
+            sigma_u_tilde,
+            deterministic=self.deterministic,
+            seasons=self.seasons,
+            delta_y_1_T=delta_y_1_T,
+            y_lag1=y_lag1,
+            delta_x=delta_x,
+            model=self,
+            names=self.endog_names,
+            dates=self.data.dates,
+            first_season=self.first_season,
+        )
 
     @property
     def _lagged_param_names(self):
@@ -958,24 +1073,29 @@ class VECM(tsbase.TimeSeriesModel):
             param_names += ["const.%s" % n for n in self.endog_names]
 
         if self.seasons > 0:
-            param_names += ["season%d.%s" % (s, n)
-                            for s in range(1, self.seasons)
-                            for n in self.endog_names]
+            param_names += [
+                "season%d.%s" % (s, n)
+                for s in range(1, self.seasons)
+                for n in self.endog_names
+            ]
 
         if "lo" in self.deterministic:
             param_names += ["lin_trend.%s" % n for n in self.endog_names]
 
         if self.exog is not None:
-            param_names += ["exog%d.%s" % (exog_no, n)
-                            for exog_no in range(1, self.exog.shape[1] + 1)
-                            for n in self.endog_names]
+            param_names += [
+                "exog%d.%s" % (exog_no, n)
+                for exog_no in range(1, self.exog.shape[1] + 1)
+                for n in self.endog_names
+            ]
 
         # 2. lagged endogenous terms
         param_names += [
-            "L%d.%s.%s" % (i+1, n1, n2)
+            "L%d.%s.%s" % (i + 1, n1, n2)
             for n2 in self.endog_names
             for i in range(self.k_ar_diff)
-            for n1 in self.endog_names]
+            for n1 in self.endog_names
+        ]
 
         return param_names
 
@@ -1000,8 +1120,8 @@ class VECM(tsbase.TimeSeriesModel):
             return None
 
         # loading coefficients (alpha) # called "ec" in JMulTi, "ECT" in tsDyn,
-        param_names += [               # and "_ce" in Stata
-            self.load_coef_repr + "%d.%s" % (i+1, self.endog_names[j])
+        param_names += [  # and "_ce" in Stata
+            self.load_coef_repr + "%d.%s" % (i + 1, self.endog_names[j])
             for j in range(self.neqs)
             for i in range(self.coint_rank)
         ]
@@ -1023,23 +1143,31 @@ class VECM(tsbase.TimeSeriesModel):
         # 1. cointegration matrix/vector
         param_names = []
 
-        param_names += [("beta.%d." + self.load_coef_repr + "%d") % (j+1, i+1)
-                        for i in range(self.coint_rank)
-                        for j in range(self.neqs)]
+        param_names += [
+            ("beta.%d." + self.load_coef_repr + "%d") % (j + 1, i + 1)
+            for i in range(self.coint_rank)
+            for j in range(self.neqs)
+        ]
 
         # 2. deterministic terms inside cointegration relation
         if "ci" in self.deterministic:
-            param_names += ["const." + self.load_coef_repr + "%d" % (i+1)
-                            for i in range(self.coint_rank)]
+            param_names += [
+                "const." + self.load_coef_repr + "%d" % (i + 1)
+                for i in range(self.coint_rank)
+            ]
 
         if "li" in self.deterministic:
-            param_names += ["lin_trend." + self.load_coef_repr + "%d" % (i+1)
-                            for i in range(self.coint_rank)]
+            param_names += [
+                "lin_trend." + self.load_coef_repr + "%d" % (i + 1)
+                for i in range(self.coint_rank)
+            ]
 
         if self.exog_coint is not None:
-            param_names += ["exog_coint%d.%s" % (n+1, exog_no)
-                            for exog_no in range(1, self.exog_coint.shape[1]+1)
-                            for n in range(self.neqs)]
+            param_names += [
+                "exog_coint%d.%s" % (n + 1, exog_no)
+                for exog_no in range(1, self.exog_coint.shape[1] + 1)
+                for n in range(self.neqs)
+            ]
 
         return param_names
 
@@ -1073,8 +1201,8 @@ class VECMResults(object):
         left to right.
     sigma_u : ndarray (neqs x neqs)
         Estimate of white noise process covariance matrix :math:`\\Sigma_u`.
-    deterministic : str {``"nc"``, ``"co"``, ``"ci"``, ``"lo"``, ``"li"``}
-        * ``"nc"`` - no deterministic terms
+    deterministic : str {``"n"``, ``"co"``, ``"ci"``, ``"lo"``, ``"li"``}
+        * ``"n"`` - no deterministic terms
         * ``"co"`` - constant outside the cointegration relation
         * ``"ci"`` - constant within the cointegration relation
         * ``"lo"`` - linear trend outside the cointegration relation
@@ -1240,10 +1368,27 @@ class VECMResults(object):
     .. [1] Lütkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
     """
 
-    def __init__(self, endog, exog, exog_coint, k_ar,
-                 coint_rank, alpha, beta, gamma, sigma_u, deterministic='nc',
-                 seasons=0, first_season=0, delta_y_1_T=None, y_lag1=None,
-                 delta_x=None, model=None, names=None, dates=None):
+    def __init__(
+        self,
+        endog,
+        exog,
+        exog_coint,
+        k_ar,
+        coint_rank,
+        alpha,
+        beta,
+        gamma,
+        sigma_u,
+        deterministic="n",
+        seasons=0,
+        first_season=0,
+        delta_y_1_T=None,
+        y_lag1=None,
+        delta_x=None,
+        model=None,
+        names=None,
+        dates=None,
+    ):
         self.model = model
         self.y_all = endog
         self.exog = exog
@@ -1252,7 +1397,7 @@ class VECMResults(object):
         self.dates = dates
         self.neqs = endog.shape[0]
         self.k_ar = k_ar
-        self.deterministic = deterministic
+        self.deterministic = rename_trend(deterministic)
         self.seasons = seasons
         self.first_season = first_season
 
@@ -1266,8 +1411,9 @@ class VECMResults(object):
 
         self.alpha = alpha
         self.beta, self.det_coef_coint = np.vsplit(beta, [self.neqs])
-        self.gamma, self.det_coef = np.hsplit(gamma,
-                                              [self.neqs * (self.k_ar - 1)])
+        self.gamma, self.det_coef = np.hsplit(
+            gamma, [self.neqs * (self.k_ar - 1)]
+        )
 
         if "ci" in deterministic:
             self.const_coint = self.det_coef_coint[:1, :]
@@ -1275,7 +1421,7 @@ class VECMResults(object):
             self.const_coint = np.zeros(coint_rank).reshape((1, -1))
         if "li" in deterministic:
             start = 1 if "ci" in deterministic else 0
-            self.lin_trend_coint = self.det_coef_coint[start:start+1, :]
+            self.lin_trend_coint = self.det_coef_coint[start : start + 1, :]
         else:
             self.lin_trend_coint = np.zeros(coint_rank).reshape(1, -1)
         if self.exog_coint is not None:
@@ -1285,26 +1431,35 @@ class VECMResults(object):
             self.exog_coint_coefs = None
 
         split_const_season = 1 if "co" in deterministic else 0
-        split_season_lin = split_const_season + ((seasons-1) if seasons else 0)
+        split_season_lin = split_const_season + (
+            (seasons - 1) if seasons else 0
+        )
         if "lo" in deterministic:
             split_lin_exog = split_season_lin + 1
         else:
             split_lin_exog = split_season_lin
-        self.const, self.seasonal, self.lin_trend, self.exog_coefs = \
-            np.hsplit(self.det_coef,
-                      [split_const_season, split_season_lin, split_lin_exog])
+        self.const, self.seasonal, self.lin_trend, self.exog_coefs = np.hsplit(
+            self.det_coef,
+            [split_const_season, split_season_lin, split_lin_exog],
+        )
 
         self.sigma_u = sigma_u
 
-        if y_lag1 is not None and delta_x is not None \
-                and delta_y_1_T is not None:
+        if (
+            y_lag1 is not None
+            and delta_x is not None
+            and delta_y_1_T is not None
+        ):
             self._delta_y_1_T = delta_y_1_T
             self._y_lag1 = y_lag1
             self._delta_x = delta_x
         else:
-            _y_1_T, self._delta_y_1_T, self._y_lag1, self._delta_x = \
-                _endog_matrices(endog, self.exog, k_ar,
-                                deterministic, seasons)
+            (
+                _y_1_T,
+                self._delta_y_1_T,
+                self._y_lag1,
+                self._delta_x,
+            ) = _endog_matrices(endog, self.exog, k_ar, deterministic, seasons)
         self.nobs = self._y_lag1.shape[1]
 
     @cache_readonly
@@ -1315,11 +1470,14 @@ class VECMResults(object):
         K = self.neqs
         T = self.nobs
         r = self.coint_rank
-        s00, _, _, _, _, lambd, _ = _sij(self._delta_x, self._delta_y_1_T,
-                                         self._y_lag1)
-        return - K * T * np.log(2*np.pi) / 2  \
-            - T * (np.log(np.linalg.det(s00)) + sum(np.log(1-lambd)[:r])) / 2  \
+        s00, _, _, _, _, lambd, _ = _sij(
+            self._delta_x, self._delta_y_1_T, self._y_lag1
+        )
+        return (
+            -K * T * np.log(2 * np.pi) / 2
+            - T * (np.log(np.linalg.det(s00)) + sum(np.log(1 - lambd)[:r])) / 2
             - K * T / 2
+        )
 
     @cache_readonly
     def _cov_sigma(self):
@@ -1337,12 +1495,12 @@ class VECMResults(object):
             beta = vstack((beta, self.det_coef_coint))
         dt = self.deterministic
         num_det = ("co" in dt) + ("lo" in dt)
-        num_det += (self.seasons-1) if self.seasons else 0
+        num_det += (self.seasons - 1) if self.seasons else 0
         if self.exog is not None:
             num_det += self.exog.shape[1]
-        b_id = scipy.linalg.block_diag(beta,
-                                       np.identity(self.neqs * (self.k_ar-1) +
-                                                   num_det))
+        b_id = scipy.linalg.block_diag(
+            beta, np.identity(self.neqs * (self.k_ar - 1) + num_det)
+        )
 
         y_lag1 = self._y_lag1
         b_y = beta.T.dot(y_lag1)
@@ -1350,8 +1508,7 @@ class VECMResults(object):
         omega12 = b_y.dot(self._delta_x.T)
         omega21 = omega12.T
         omega22 = self._delta_x.dot(self._delta_x.T)
-        omega = np.bmat([[omega11, omega12],
-                         [omega21, omega22]]).A
+        omega = np.bmat([[omega11, omega12], [omega21, omega22]]).A
 
         mat1 = b_id.dot(inv(omega)).dot(b_id.T)
         return np.kron(mat1, self.sigma_u)
@@ -1360,7 +1517,7 @@ class VECMResults(object):
     def cov_params_wo_det(self):
         # rows & cols to be dropped (related to deterministic terms inside the
         # cointegration relation)
-        start_i = self.neqs**2  # first elements belong to alpha @ beta.T
+        start_i = self.neqs ** 2  # first elements belong to alpha @ beta.T
         end_i = start_i + self.neqs * self.det_coef_coint.shape[0]
         to_drop_i = np.arange(start_i, end_i)
 
@@ -1368,7 +1525,7 @@ class VECMResults(object):
         # the cointegration relation)
         cov = self.cov_params_default
         cov_size = len(cov)
-        to_drop_o = np.arange(cov_size-self.det_coef.size, cov_size)
+        to_drop_o = np.arange(cov_size - self.det_coef.size, cov_size)
 
         to_drop = np.union1d(to_drop_i, to_drop_o)
 
@@ -1412,44 +1569,45 @@ class VECMResults(object):
         mat1 = inv(r12.dot(r12.T))
         mat1 = np.kron(mat1.T, np.identity(r))
         det = self.det_coef_coint.shape[0]
-        mat2 = np.kron(np.identity(self.neqs-r+det),
-                       inv(self.alpha.T @ inv(self.sigma_u) @ self.alpha))
+        mat2 = np.kron(
+            np.identity(self.neqs - r + det),
+            inv(self.alpha.T @ inv(self.sigma_u) @ self.alpha),
+        )
         first_rows = np.zeros((r, r))
         last_rows_1d = np.sqrt(np.diag(mat1.dot(mat2)))
-        last_rows = last_rows_1d.reshape((self.neqs-r+det, r),
-                                         order="F")
-        return vstack((first_rows,
-                       last_rows))
+        last_rows = last_rows_1d.reshape((self.neqs - r + det, r), order="F")
+        return vstack((first_rows, last_rows))
 
     @cache_readonly
     def stderr_alpha(self):
-        ret_1dim = self.stderr_params[:self.alpha.size]
+        ret_1dim = self.stderr_params[: self.alpha.size]
         return ret_1dim.reshape(self.alpha.shape, order="F")
 
     @cache_readonly
     def stderr_beta(self):
-        ret_1dim = self.stderr_coint[:self.beta.shape[0]]
+        ret_1dim = self.stderr_coint[: self.beta.shape[0]]
         return ret_1dim.reshape(self.beta.shape, order="F")
 
     @cache_readonly
     def stderr_det_coef_coint(self):
         if self.det_coef_coint.size == 0:
             return self.det_coef_coint  # 0-size array
-        ret_1dim = self.stderr_coint[self.beta.shape[0]:]
+        ret_1dim = self.stderr_coint[self.beta.shape[0] :]
         return ret_1dim.reshape(self.det_coef_coint.shape, order="F")
 
     @cache_readonly
     def stderr_gamma(self):
-        start = self.alpha.shape[0] * (self.beta.shape[0] +
-                                       self.det_coef_coint.shape[0])
-        ret_1dim = self.stderr_params[start:start+self.gamma.size]
+        start = self.alpha.shape[0] * (
+            self.beta.shape[0] + self.det_coef_coint.shape[0]
+        )
+        ret_1dim = self.stderr_params[start : start + self.gamma.size]
         return ret_1dim.reshape(self.gamma.shape, order="F")
 
     @cache_readonly
     def stderr_det_coef(self):
         if self.det_coef.size == 0:
             return self.det_coef  # 0-size array
-        ret1_1dim = self.stderr_params[-self.det_coef.size:]
+        ret1_1dim = self.stderr_params[-self.det_coef.size :]
         return ret1_1dim.reshape(self.det_coef.shape, order="F")
 
     # t-values:
@@ -1462,8 +1620,7 @@ class VECMResults(object):
         r = self.coint_rank
         first_rows = np.zeros((r, r))
         last_rows = self.beta[r:] / self.stderr_beta[r:]
-        return vstack((first_rows,
-                       last_rows))
+        return vstack((first_rows, last_rows))
 
     @cache_readonly
     def tvalues_det_coef_coint(self):
@@ -1484,38 +1641,42 @@ class VECMResults(object):
     # p-values:
     @cache_readonly
     def pvalues_alpha(self):
-        return (1-scipy.stats.norm.cdf(abs(self.tvalues_alpha))) * 2
+        return (1 - scipy.stats.norm.cdf(abs(self.tvalues_alpha))) * 2
 
     @cache_readonly
     def pvalues_beta(self):
         first_rows = np.zeros((self.coint_rank, self.coint_rank))
-        tval_last = self.tvalues_beta[self.coint_rank:]
-        last_rows = (1-scipy.stats.norm.cdf(abs(tval_last))) * 2  # student-t
-        return vstack((first_rows,
-                       last_rows))
+        tval_last = self.tvalues_beta[self.coint_rank :]
+        last_rows = (1 - scipy.stats.norm.cdf(abs(tval_last))) * 2  # student-t
+        return vstack((first_rows, last_rows))
 
     @cache_readonly
     def pvalues_det_coef_coint(self):
         if self.det_coef_coint.size == 0:
             return self.det_coef_coint  # 0-size array
-        return (1-scipy.stats.norm.cdf(abs(self.tvalues_det_coef_coint))) * 2
+        return (1 - scipy.stats.norm.cdf(abs(self.tvalues_det_coef_coint))) * 2
 
     @cache_readonly
     def pvalues_gamma(self):
-        return (1-scipy.stats.norm.cdf(abs(self.tvalues_gamma))) * 2
+        return (1 - scipy.stats.norm.cdf(abs(self.tvalues_gamma))) * 2
 
     @cache_readonly
     def pvalues_det_coef(self):
         if self.det_coef.size == 0:
             return self.det_coef  # 0-size array
-        return (1-scipy.stats.norm.cdf(abs(self.tvalues_det_coef))) * 2
+        return (1 - scipy.stats.norm.cdf(abs(self.tvalues_det_coef))) * 2
 
     # confidence intervals
     def _make_conf_int(self, est, stderr, alpha):
-        struct_arr = np.zeros(est.shape, dtype=[("lower", float),
-                                                ("upper", float)])
-        struct_arr["lower"] = est - scipy.stats.norm.ppf(1 - alpha/2) * stderr
-        struct_arr["upper"] = est + scipy.stats.norm.ppf(1 - alpha/2) * stderr
+        struct_arr = np.zeros(
+            est.shape, dtype=[("lower", float), ("upper", float)]
+        )
+        struct_arr["lower"] = (
+            est - scipy.stats.norm.ppf(1 - alpha / 2) * stderr
+        )
+        struct_arr["upper"] = (
+            est + scipy.stats.norm.ppf(1 - alpha / 2) * stderr
+        )
         return struct_arr
 
     def conf_int_alpha(self, alpha=0.05):
@@ -1525,8 +1686,9 @@ class VECMResults(object):
         return self._make_conf_int(self.beta, self.stderr_beta, alpha)
 
     def conf_int_det_coef_coint(self, alpha=0.05):
-        return self._make_conf_int(self.det_coef_coint,
-                                   self.stderr_det_coef_coint, alpha)
+        return self._make_conf_int(
+            self.det_coef_coint, self.stderr_det_coef_coint, alpha
+        )
 
     def conf_int_gamma(self, alpha=0.05):
         return self._make_conf_int(self.gamma, self.stderr_gamma, alpha)
@@ -1543,9 +1705,12 @@ class VECMResults(object):
         A[0] = pi + np.identity(K)
         if self.gamma.size > 0:
             A[0] += gamma[:, :K]
-            A[self.k_ar-1] = - gamma[:, K*(self.k_ar-2):]
-            for i in range(1, self.k_ar-1):
-                A[i] = gamma[:, K*i:K*(i+1)] - gamma[:, K*(i-1):K*i]
+            A[self.k_ar - 1] = -gamma[:, K * (self.k_ar - 2) :]
+            for i in range(1, self.k_ar - 1):
+                A[i] = (
+                    gamma[:, K * i : K * (i + 1)]
+                    - gamma[:, K * (i - 1) : K * i]
+                )
         return A
 
     @cache_readonly
@@ -1582,20 +1747,24 @@ class VECMResults(object):
         if self.k_ar - 1 == 0:
             return self.cov_params_wo_det
 
-        vecm_var_transformation = np.zeros((self.neqs**2 * self.k_ar,
-                                            self.neqs**2 * self.k_ar))
-        eye = np.identity(self.neqs**2)
+        vecm_var_transformation = np.zeros(
+            (self.neqs ** 2 * self.k_ar, self.neqs ** 2 * self.k_ar)
+        )
+        eye = np.identity(self.neqs ** 2)
         # for A_1:
-        vecm_var_transformation[:self.neqs**2, :2*self.neqs**2] = hstack(
-                (eye, eye))
+        vecm_var_transformation[
+            : self.neqs ** 2, : 2 * self.neqs ** 2
+        ] = hstack((eye, eye))
         # for A_i, where i = 2, ..., k_ar-1
         for i in range(2, self.k_ar):
-            start_row = self.neqs**2 + (i-2) * self.neqs**2
-            start_col = self.neqs**2 + (i-2) * self.neqs**2
-            vecm_var_transformation[start_row:start_row+self.neqs**2,
-                                    start_col:start_col+2*self.neqs**2] = hstack((-eye, eye))
+            start_row = self.neqs ** 2 + (i - 2) * self.neqs ** 2
+            start_col = self.neqs ** 2 + (i - 2) * self.neqs ** 2
+            vecm_var_transformation[
+                start_row : start_row + self.neqs ** 2,
+                start_col : start_col + 2 * self.neqs ** 2,
+            ] = hstack((-eye, eye))
         # for A_p:
-        vecm_var_transformation[-self.neqs**2:, -self.neqs**2:] = -eye
+        vecm_var_transformation[-self.neqs ** 2 :, -self.neqs ** 2 :] = -eye
         vvt = vecm_var_transformation
         return vvt @ self.cov_params_wo_det @ vvt.T
 
@@ -1655,30 +1824,42 @@ class VECMResults(object):
             forecast.
         """
         if self.exog is not None and exog_fc is None:
-            raise ValueError("exog_fc is None: Please pass the future values "
-                             "of the VECM's exog terms via the exog_fc "
-                             "argument!")
+            raise ValueError(
+                "exog_fc is None: Please pass the future values "
+                "of the VECM's exog terms via the exog_fc "
+                "argument!"
+            )
         if self.exog is None and exog_fc is not None:
-            raise ValueError("This VECMResult-instance's exog attribute is "
-                             "None. Please do not pass a non-None value as the "
-                             "method's exog_fc-argument.")
+            raise ValueError(
+                "This VECMResult-instance's exog attribute is "
+                "None. Please do not pass a non-None value as the "
+                "method's exog_fc-argument."
+            )
         if exog_fc is not None and exog_fc.shape[0] < steps:
-            raise ValueError("The argument exog_fc must have at least steps "
-                             "elements in its first dimension")
+            raise ValueError(
+                "The argument exog_fc must have at least steps "
+                "elements in its first dimension"
+            )
 
         if self.exog_coint is not None and exog_coint_fc is None:
-            raise ValueError("exog_coint_fc is None: Please pass the future "
-                             "values of the VECM's exog_coint terms via the "
-                             "exog_coint_fc argument!")
+            raise ValueError(
+                "exog_coint_fc is None: Please pass the future "
+                "values of the VECM's exog_coint terms via the "
+                "exog_coint_fc argument!"
+            )
         if self.exog_coint is None and exog_coint_fc is not None:
-            raise ValueError("This VECMResult-instance's exog_coint attribute "
-                             "is None. Please do not pass a non-None value as "
-                             "the method's exog_coint_fc-argument.")
+            raise ValueError(
+                "This VECMResult-instance's exog_coint attribute "
+                "is None. Please do not pass a non-None value as "
+                "the method's exog_coint_fc-argument."
+            )
         if exog_coint_fc is not None and exog_coint_fc.shape[0] < steps - 1:
-            raise ValueError("The argument exog_coint_fc must have at least "
-                             "steps elements in its first dimension")
+            raise ValueError(
+                "The argument exog_coint_fc must have at least "
+                "steps elements in its first dimension"
+            )
 
-        last_observations = self.y_all.T[-self.k_ar:]
+        last_observations = self.y_all.T[-self.k_ar :]
         exog = []
         trend_coefs = []
 
@@ -1691,8 +1872,9 @@ class VECMResults(object):
 
         if self.seasons > 0:
             first_future_season = (self.first_season + nobs_tot) % self.seasons
-            exog_seasonal = seasonal_dummies(self.seasons, steps,
-                                             first_future_season, True)
+            exog_seasonal = seasonal_dummies(
+                self.seasons, steps, first_future_season, True
+            )
             exog.append(exog_seasonal)
             trend_coefs.append(self.seasonal.T)
 
@@ -1719,8 +1901,9 @@ class VECMResults(object):
         if exog_coint_fc is not None:
             if exog_coint_fc.ndim == 1:
                 exog_coint_fc = exog_coint_fc[:, None]  # make 2-D
-            exog_coint_fc = np.vstack((self.exog_coint[-1:],
-                                       exog_coint_fc[:steps-1]))
+            exog_coint_fc = np.vstack(
+                (self.exog_coint[-1:], exog_coint_fc[: steps - 1])
+            )
             exog.append(exog_coint_fc)
             trend_coefs.append(self.alpha.dot(self.exog_coint_coefs.T).T)
 
@@ -1733,16 +1916,23 @@ class VECMResults(object):
 
         # call the forecasting function of the VAR-module
         if alpha is not None:
-            return forecast_interval(last_observations, self.var_rep,
-                                     trend_coefs, self.sigma_u, steps,
-                                     alpha=alpha,
-                                     exog=exog)
+            return forecast_interval(
+                last_observations,
+                self.var_rep,
+                trend_coefs,
+                self.sigma_u,
+                steps,
+                alpha=alpha,
+                exog=exog,
+            )
         else:
-            return forecast(last_observations, self.var_rep, trend_coefs,
-                            steps, exog)
+            return forecast(
+                last_observations, self.var_rep, trend_coefs, steps, exog
+            )
 
-    def plot_forecast(self, steps, alpha=0.05, plot_conf_int=True,
-                      n_last_obs=None):
+    def plot_forecast(
+        self, steps, alpha=0.05, plot_conf_int=True, n_last_obs=None
+    ):
         """
         Plot the forecast.
 
@@ -1761,10 +1951,16 @@ class VECMResults(object):
         mid, lower, upper = self.predict(steps, alpha=alpha)
 
         y = self.y_all.T
-        y = y[self.k_ar:] if n_last_obs is None else y[-n_last_obs:]
-        plot.plot_var_forc(y, mid, lower, upper, names=self.names,
-                           plot_stderr=plot_conf_int,
-                           legend_options={"loc": "lower left"})
+        y = y[self.k_ar :] if n_last_obs is None else y[-n_last_obs:]
+        plot.plot_var_forc(
+            y,
+            mid,
+            lower,
+            upper,
+            names=self.names,
+            plot_stderr=plot_conf_int,
+            legend_options={"loc": "lower left"},
+        )
 
     def test_granger_causality(self, caused, causing=None, signif=0.05):
         r"""
@@ -1817,8 +2013,10 @@ class VECMResults(object):
         if isinstance(caused, allowed_types):
             caused = [caused]
         if not all(isinstance(c, allowed_types) for c in caused):
-            raise TypeError("caused has to be of type string or int (or a "
-                            "sequence of these types).")
+            raise TypeError(
+                "caused has to be of type string or int (or a "
+                "sequence of these types)."
+            )
         caused = [self.names[c] if type(c) == int else c for c in caused]
         caused_ind = [get_index(self.names, c) for c in caused]
 
@@ -1827,8 +2025,10 @@ class VECMResults(object):
             if isinstance(causing, allowed_types):
                 causing = [causing]
             if not all(isinstance(c, allowed_types) for c in causing):
-                raise TypeError("causing has to be of type string or int (or "
-                                "a sequence of these types) or None.")
+                raise TypeError(
+                    "causing has to be of type string or int (or "
+                    "a sequence of these types) or None."
+                )
             causing = [self.names[c] if type(c) == int else c for c in causing]
             causing_ind = [get_index(self.names, c) for c in causing]
 
@@ -1837,11 +2037,15 @@ class VECMResults(object):
             causing = [self.names[c] for c in causing_ind]
 
         y, k, t, p = self.y_all, self.neqs, self.nobs - 1, self.k_ar + 1
-        exog = _deterministic_to_exog(self.deterministic, self.seasons,
-                                      nobs_tot=self.nobs + self.k_ar,
-                                      first_season=self.first_season,
-                                      seasons_centered=True, exog=self.exog,
-                                      exog_coint=self.exog_coint)
+        exog = _deterministic_to_exog(
+            self.deterministic,
+            self.seasons,
+            nobs_tot=self.nobs + self.k_ar,
+            first_season=self.first_season,
+            seasons_centered=True,
+            exog=self.exog,
+            exog_coint=self.exog_coint,
+        )
         var_results = VAR(y.T, exog).fit(maxlags=p, trend="n")
 
         # num_restr is called N in Lutkepohl
@@ -1853,13 +2057,15 @@ class VECMResults(object):
             num_det_terms += self.exog_coint.shape[1]
 
         # Make restriction matrix
-        C = np.zeros((num_restr, k*num_det_terms + k**2 * (p-1)), dtype=float)
+        C = np.zeros(
+            (num_restr, k * num_det_terms + k ** 2 * (p - 1)), dtype=float
+        )
         cols_det = k * num_det_terms
         row = 0
-        for j in range(p-1):
+        for j in range(p - 1):
             for ing_ind in causing_ind:
                 for ed_ind in caused_ind:
-                    C[row, cols_det + ed_ind + k * ing_ind + k**2 * j] = 1
+                    C[row, cols_det + ed_ind + k * ing_ind + k ** 2 * j] = 1
                     row += 1
         Ca = np.dot(C, vec(var_results.params[:-k].T))
 
@@ -1868,15 +2074,18 @@ class VECMResults(object):
             x_min_p_components.append(exog[-t:].T)
 
         x_min_p = np.zeros((k * p, t))
-        for i in range(p-1):  # fll first k * k_ar rows of x_min_p
-            x_min_p[i*k:(i+1)*k, :] = y[:, p-1-i:-1-i] - y[:, :-p]
+        for i in range(p - 1):  # fll first k * k_ar rows of x_min_p
+            x_min_p[i * k : (i + 1) * k, :] = (
+                y[:, p - 1 - i : -1 - i] - y[:, :-p]
+            )
         x_min_p[-k:, :] = y[:, :-p]  # fill last rows of x_min_p
         x_min_p_components.append(x_min_p)
 
         x_min_p = np.row_stack(x_min_p_components)
         x_x = np.dot(x_min_p, x_min_p.T)  # k*k_ar x k*k_ar
-        x_x_11 = inv(x_x)[:k*(p-1) + num_det_terms,
-                          :k*(p-1) + num_det_terms]  # k*(k_ar-1) x k*(k_ar-1)
+        x_x_11 = inv(x_x)[
+            : k * (p - 1) + num_det_terms, : k * (p - 1) + num_det_terms
+        ]  # k*(k_ar-1) x k*(k_ar-1)
         # For VAR-models with parameter restrictions the denominator in the
         # calculation of sigma_u is nobs and not (nobs-k*k_ar-num_det_terms).
         # Testing for Granger-causality means testing for restricted
@@ -1885,7 +2094,7 @@ class VECMResults(object):
         # possible. (see Lutkepohl, p.198)
         # The choice of the denominator T has also the advantage of getting the
         # same results as the reference software JMulTi.
-        sigma_u = var_results.sigma_u * (t-k*p-num_det_terms) / t
+        sigma_u = var_results.sigma_u * (t - k * p - num_det_terms) / t
         sig_alpha_min_p = t * np.kron(x_x_11, sigma_u)  # k**2*(p-1)xk**2*(p-1)
         middle = inv(C @ sig_alpha_min_p @ C.T)
 
@@ -1896,9 +2105,17 @@ class VECMResults(object):
 
         pvalue = f_distribution.sf(f_statistic)
         crit_value = f_distribution.ppf(1 - signif)
-        return CausalityTestResults(causing, caused, f_statistic, crit_value,
-                                    pvalue, df, signif, test="granger",
-                                    method="f")
+        return CausalityTestResults(
+            causing,
+            caused,
+            f_statistic,
+            crit_value,
+            pvalue,
+            df,
+            signif,
+            test="granger",
+            method="f",
+        )
 
     def test_inst_causality(self, causing, signif=0.05):
         r"""
@@ -1945,15 +2162,19 @@ class VECMResults(object):
 
         .. |H1| replace:: H\ :sub:`1`
         """
-        exog = _deterministic_to_exog(self.deterministic, self.seasons,
-                                      nobs_tot=self.nobs + self.k_ar,
-                                      first_season=self.first_season,
-                                      seasons_centered=True, exog=self.exog,
-                                      exog_coint=self.exog_coint)
+        exog = _deterministic_to_exog(
+            self.deterministic,
+            self.seasons,
+            nobs_tot=self.nobs + self.k_ar,
+            first_season=self.first_season,
+            seasons_centered=True,
+            exog=self.exog,
+            exog_coint=self.exog_coint,
+        )
 
         # Note: JMulTi seems to be using k_ar+1 instead of k_ar
         k, t, p = self.neqs, self.nobs, self.k_ar
-        # fit with trend "nc" because all trend information is already in exog
+        # fit with trend "n" because all trend information is already in exog
         var_results = VAR(self.y_all.T, exog).fit(maxlags=p, trend="n")
         var_results._results.names = self.names
         return var_results.test_inst_causality(causing=causing, signif=signif)
@@ -1980,7 +2201,7 @@ class VECMResults(object):
         if self.det_coef.size > 0:
             gamma = hstack((gamma, self.det_coef))
         delta_y = np.dot(pi, self._y_lag1) + np.dot(gamma, self._delta_x)
-        return (delta_y + self._y_lag1[:self.neqs]).T
+        return (delta_y + self._y_lag1[: self.neqs]).T
 
     @cache_readonly
     def resid(self):
@@ -1992,7 +2213,7 @@ class VECMResults(object):
         resid : array (nobs x neqs)
             The residuals.
         """
-        return self.y_all.T[self.k_ar:] - self.fittedvalues
+        return self.y_all.T[self.k_ar :] - self.fittedvalues
 
     def test_normality(self, signif=0.05):
         r"""
@@ -2050,21 +2271,25 @@ class VECMResults(object):
         c0_inv = inv(self.sigma_u)  # instead of inv(cov(0))
         if c0_inv.dtype == np.complex128 and np.all(np.imag(c0_inv) == 0):
             c0_inv = np.real(c0_inv)
-        for t in range(1, nlags+1):
+        for t in range(1, nlags + 1):
             ct = acov_list[t]
             to_add = np.trace(ct.T @ c0_inv @ ct @ c0_inv)
             if adjusted:
-                to_add /= (self.nobs - t)
+                to_add /= self.nobs - t
             statistic += to_add
-        statistic *= self.nobs**2 if adjusted else self.nobs
+        statistic *= self.nobs ** 2 if adjusted else self.nobs
 
-        df = self.neqs**2 * (nlags - self.k_ar + 1) - self.neqs*self.coint_rank
+        df = (
+            self.neqs ** 2 * (nlags - self.k_ar + 1)
+            - self.neqs * self.coint_rank
+        )
         dist = scipy.stats.chi2(df)
         pvalue = dist.sf(statistic)
         crit_value = dist.ppf(1 - signif)
 
-        return WhitenessTestResults(statistic, crit_value, pvalue, df, signif,
-                                    nlags, adjusted)
+        return WhitenessTestResults(
+            statistic, crit_value, pvalue, df, signif, nlags, adjusted
+        )
 
     def plot_data(self, with_presample=False):
         """
@@ -2076,12 +2301,12 @@ class VECMResults(object):
             If `False`, the pre-sample data (the first `k_ar` values) will
             not be plotted.
         """
-        y = self.y_all if with_presample else self.y_all[:, self.k_ar:]
+        y = self.y_all if with_presample else self.y_all[:, self.k_ar :]
         names = self.names
-        dates = self.dates if with_presample else self.dates[self.k_ar:]
+        dates = self.dates if with_presample else self.dates[self.k_ar :]
         plot.plot_mts(y.T, names=names, index=dates)
 
-    def summary(self, alpha=.05):
+    def summary(self, alpha=0.05):
         """
         Return a summary of the estimation results.
 
@@ -2099,20 +2324,38 @@ class VECMResults(object):
 
         summary = Summary()
 
-        def make_table(self, params, std_err, t_values, p_values, conf_int,
-                       mask, names, title, strip_end=True):
-            res = (self,
-                   params[mask],
-                   std_err[mask],
-                   t_values[mask],
-                   p_values[mask],
-                   conf_int[mask]
-                   )
+        def make_table(
+            self,
+            params,
+            std_err,
+            t_values,
+            p_values,
+            conf_int,
+            mask,
+            names,
+            title,
+            strip_end=True,
+        ):
+            res = (
+                self,
+                params[mask],
+                std_err[mask],
+                t_values[mask],
+                p_values[mask],
+                conf_int[mask],
+            )
             param_names = [
-                '.'.join(name.split('.')[:-1]) if strip_end else name
-                for name in np.array(names)[mask].tolist()]
-            return summary_params(res, yname=None, xname=param_names,
-                                  alpha=alpha, use_t=False, title=title)
+                ".".join(name.split(".")[:-1]) if strip_end else name
+                for name in np.array(names)[mask].tolist()
+            ]
+            return summary_params(
+                res,
+                yname=None,
+                xname=param_names,
+                alpha=alpha,
+                use_t=False,
+                title=title,
+            )
 
         # ---------------------------------------------------------------------
         # Add tables with gamma and det_coef for each endogenous variable:
@@ -2124,28 +2367,35 @@ class VECMResults(object):
         if self.det_coef.size > 0:
             lagged_params_components.append(self.det_coef.flatten(order="F"))
             stderr_lagged_params_components.append(
-                    self.stderr_det_coef.flatten(order="F"))
+                self.stderr_det_coef.flatten(order="F")
+            )
             tvalues_lagged_params_components.append(
-                    self.tvalues_det_coef.flatten(order="F"))
+                self.tvalues_det_coef.flatten(order="F")
+            )
             pvalues_lagged_params_components.append(
-                    self.pvalues_det_coef.flatten(order="F"))
+                self.pvalues_det_coef.flatten(order="F")
+            )
             conf_int = self.conf_int_det_coef(alpha=alpha)
             lower = conf_int["lower"].flatten(order="F")
             upper = conf_int["upper"].flatten(order="F")
-            conf_int_lagged_params_components.append(np.column_stack(
-                    (lower, upper)))
+            conf_int_lagged_params_components.append(
+                np.column_stack((lower, upper))
+            )
         if self.k_ar - 1 > 0:
             lagged_params_components.append(self.gamma.flatten())
             stderr_lagged_params_components.append(self.stderr_gamma.flatten())
             tvalues_lagged_params_components.append(
-                    self.tvalues_gamma.flatten())
+                self.tvalues_gamma.flatten()
+            )
             pvalues_lagged_params_components.append(
-                    self.pvalues_gamma.flatten())
+                self.pvalues_gamma.flatten()
+            )
             conf_int = self.conf_int_gamma(alpha=alpha)
             lower = conf_int["lower"].flatten()
             upper = conf_int["upper"].flatten()
-            conf_int_lagged_params_components.append(np.column_stack(
-                    (lower, upper)))
+            conf_int_lagged_params_components.append(
+                np.column_stack((lower, upper))
+            )
 
         # if gamma or det_coef exists, then make a summary-table for them:
         if len(lagged_params_components) != 0:
@@ -2163,7 +2413,7 @@ class VECMResults(object):
                     masks.append(offset + np.array(i, ndmin=1))
                     offset += self.neqs
                 if self.seasons > 0:
-                    for _ in range(self.seasons-1):
+                    for _ in range(self.seasons - 1):
                         masks.append(offset + np.array(i, ndmin=1))
                         offset += self.neqs
                 if "lo" in self.deterministic:
@@ -2175,21 +2425,29 @@ class VECMResults(object):
                         offset += self.neqs
                 # 2. Lagged endogenous terms
                 if self.k_ar - 1 > 0:
-                    start = i * self.neqs * (self.k_ar-1)
-                    end = (i+1) * self.neqs * (self.k_ar-1)
+                    start = i * self.neqs * (self.k_ar - 1)
+                    end = (i + 1) * self.neqs * (self.k_ar - 1)
                     masks.append(offset + np.arange(start, end))
                     # offset += self.neqs**2 * (self.k_ar-1)
 
                 # Create the table
                 mask = np.concatenate(masks)
                 eq_name = self.model.endog_names[i]
-                title = "Det. terms outside the coint. relation " + \
-                        "& lagged endog. parameters for equation %s" % eq_name
-                table = make_table(self, lagged_params, stderr_lagged_params,
-                                   tvalues_lagged_params,
-                                   pvalues_lagged_params,
-                                   conf_int_lagged_params, mask,
-                                   self.model._lagged_param_names, title)
+                title = (
+                    "Det. terms outside the coint. relation "
+                    + "& lagged endog. parameters for equation %s" % eq_name
+                )
+                table = make_table(
+                    self,
+                    lagged_params,
+                    stderr_lagged_params,
+                    tvalues_lagged_params,
+                    pvalues_lagged_params,
+                    conf_int_lagged_params,
+                    mask,
+                    self.model._lagged_param_names,
+                    title,
+                )
                 summary.tables.append(table)
 
         # ---------------------------------------------------------------------
@@ -2215,8 +2473,9 @@ class VECMResults(object):
 
             eq_name = self.model.endog_names[i]
             title = "Loading coefficients (alpha) for equation %s" % eq_name
-            table = make_table(self, a, se_a, t_a, p_a, ci_a, mask, a_names,
-                               title)
+            table = make_table(
+                self, a, se_a, t_a, p_a, ci_a, mask, a_names, title
+            )
             summary.tables.append(table)
 
         # ---------------------------------------------------------------------
@@ -2234,16 +2493,18 @@ class VECMResults(object):
             conf_int = self.conf_int_beta(alpha=alpha)
             lower = conf_int["lower"].T.flatten()
             upper = conf_int["upper"].T.flatten()
-            conf_int_coint_components.append(np.column_stack(
-                    (lower, upper)))
+            conf_int_coint_components.append(np.column_stack((lower, upper)))
         if self.det_coef_coint.size > 0:
             coint_components.append(self.det_coef_coint.flatten())
             stderr_coint_components.append(
-                    self.stderr_det_coef_coint.flatten())
+                self.stderr_det_coef_coint.flatten()
+            )
             tvalues_coint_components.append(
-                    self.tvalues_det_coef_coint.flatten())
+                self.tvalues_det_coef_coint.flatten()
+            )
             pvalues_coint_components.append(
-                    self.pvalues_det_coef_coint.flatten())
+                self.pvalues_det_coef_coint.flatten()
+            )
             conf_int = self.conf_int_det_coef_coint(alpha=alpha)
             lower = conf_int["lower"].flatten()
             upper = conf_int["upper"].flatten()
@@ -2280,11 +2541,21 @@ class VECMResults(object):
 
             # Create the table
             mask = np.concatenate(masks)
-            title = "Cointegration relations for " + \
-                    "loading-coefficients-column %d" % (i+1)
-            table = make_table(self, coint, stderr_coint, tvalues_coint,
-                               pvalues_coint, conf_int_coint, mask,
-                               coint_names, title)
+            title = (
+                "Cointegration relations for "
+                + "loading-coefficients-column %d" % (i + 1)
+            )
+            table = make_table(
+                self,
+                coint,
+                stderr_coint,
+                tvalues_coint,
+                pvalues_coint,
+                conf_int_coint,
+                mask,
+                coint_names,
+                title,
+            )
             summary.tables.append(table)
 
         return summary

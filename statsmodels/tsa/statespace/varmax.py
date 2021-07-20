@@ -355,7 +355,7 @@ class VARMAX(MLEModel):
         ar_params = []
         k_ar = self.k_ar if self.k_ar > 0 else 1
         mod_ar = var_model.VAR(endog)
-        res_ar = mod_ar.fit(maxlags=k_ar, ic=None, trend='nc')
+        res_ar = mod_ar.fit(maxlags=k_ar, ic=None, trend='n')
         if self.k_ar > 0:
             ar_params = np.array(res_ar.params).T.ravel()
         endog = res_ar.resid
@@ -379,7 +379,7 @@ class VARMAX(MLEModel):
         ma_params = []
         if self.k_ma > 0:
             mod_ma = var_model.VAR(endog)
-            res_ma = mod_ma.fit(maxlags=self.k_ma, ic=None, trend='nc')
+            res_ma = mod_ma.fit(maxlags=self.k_ma, ic=None, trend='n')
             ma_params = np.array(res_ma.params.T).ravel()
 
             # Test for invertibility

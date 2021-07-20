@@ -55,9 +55,9 @@ print(rkf.params)
 np.random.seed(12345)
 y_arma22 = arma_generate_sample([1.,-.85,.35, -0.1],[1,.25,-.7], nsample=1000)
 ##arma22 = ARMA(y_arma22)
-##res22 = arma22.fit(trend = 'nc', order=(2,2))
+##res22 = arma22.fit(trend = 'n', order=(2,2))
 ##print 'kf ',res22.params
-##res22css = arma22.fit(method='css',trend = 'nc', order=(2,2))
+##res22css = arma22.fit(method='css',trend = 'n', order=(2,2))
 ##print 'css', res22css.params
 mod22 = Arma(y_arma22)
 resls22 = mod22.fit(order=(2,2))

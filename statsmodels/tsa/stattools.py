@@ -1,6 +1,8 @@
 """
 Statistical tools for time series analysis
 """
+from __future__ import annotations
+
 from statsmodels.compat.numpy import lstsq
 from statsmodels.compat.pandas import deprecate_kwarg
 from statsmodels.compat.python import lzip
@@ -32,7 +34,7 @@ from statsmodels.tools.validation import (
 from statsmodels.tsa._bds import bds
 from statsmodels.tsa._innovations import innovations_algo, innovations_filter
 from statsmodels.tsa.adfvalues import mackinnoncrit, mackinnonp
-from statsmodels.tsa.tsatools import add_trend, lagmat, lagmat2ds
+from statsmodels.tsa.tsatools import add_trend, lagmat, lagmat2ds, rename_trend
 
 __all__ = [
     "acovf",
@@ -158,7 +160,7 @@ def _autolag(
 # TODO: autolag is untested
 def adfuller(
     x,
-    maxlag=None,
+    maxlag: int | None = None,
     regression="c",
     autolag="AIC",
     store=False,
@@ -176,13 +178,13 @@ def adfuller(
         The data series to test.
     maxlag : int
         Maximum lag which is included in test, default 12*(nobs/100)^{1/4}.
-    regression : {"c","ct","ctt","nc"}
+    regression : {"c","ct","ctt","n"}
         Constant and trend order to include in regression.
 
         * "c" : constant only (default).
         * "ct" : constant and trend.
         * "ctt" : constant, and linear and quadratic trend.
-        * "nc" : no constant, no trend.
+        * "n" : no constant, no trend.
 
     autolag : {"AIC", "BIC", "t-stat", None}
         Method to use when automatically determining the lag length among the
@@ -252,8 +254,9 @@ def adfuller(
     """
     x = array_like(x, "x")
     maxlag = int_like(maxlag, "maxlag", optional=True)
+    regression = rename_trend(regression)
     regression = string_like(
-        regression, "regression", options=("c", "ct", "ctt", "nc")
+        regression, "regression", options=("c", "ct", "ctt", "n")
     )
     autolag = string_like(
         autolag, "autolag", optional=True, options=("aic", "bic", "t-stat")
@@ -264,13 +267,13 @@ def adfuller(
     if regresults:
         store = True
 
-    trenddict = {None: "nc", 0: "c", 1: "ct", 2: "ctt"}
+    trenddict = {None: "n", 0: "c", 1: "ct", 2: "ctt"}
     if regression is None or isinstance(regression, int):
         regression = trenddict[regression]
     regression = regression.lower()
     nobs = x.shape[0]
 
-    ntrend = len(regression) if regression != "nc" else 0
+    ntrend = len(regression) if regression != "n" else 0
     if maxlag is None:
         # from Greene referencing Schwert 1989
         maxlag = int(np.ceil(12.0 * np.power(nobs / 100.0, 1 / 4.0)))
@@ -299,7 +302,7 @@ def adfuller(
 
         resstore = ResultsStore()
     if autolag:
-        if regression != "nc":
+        if regression != "n":
             fullRHS = add_trend(xdall, regression, prepend=True)
         else:
             fullRHS = xdall
@@ -336,7 +339,7 @@ def adfuller(
     else:
         usedlag = maxlag
         icbest = None
-    if regression != "nc":
+    if regression != "n":
         resols = OLS(
             xdshort, add_trend(xdall[:, : usedlag + 1], regression)
         ).fit()
@@ -1589,7 +1592,7 @@ def coint(
     trend="c",
     method="aeg",
     maxlag=None,
-    autolag="aic",
+    autolag: str | None = "aic",
     return_results=None,
 ):
     """
@@ -1617,7 +1620,7 @@ def coint(
 
         * "c" : constant.
         * "ct" : constant and linear trend.
-        * also available quadratic trend "ctt", and no constant "nc".
+        * also available quadratic trend "ctt", and no constant "n".
 
     method : {"aeg"}
         Only "aeg" (augmented Engle-Granger) is available.
@@ -1679,8 +1682,9 @@ def coint(
     """
     y0 = array_like(y0, "y0")
     y1 = array_like(y1, "y1", ndim=2)
-    trend = string_like(trend, "trend", options=("c", "nc", "ct", "ctt"))
-    method = string_like(method, "method", options=("aeg",))
+    trend = rename_trend(trend)
+    trend = string_like(trend, "trend", options=("c", "n", "ct", "ctt"))
+    string_like(method, "method", options=("aeg",))
     maxlag = int_like(maxlag, "maxlag", optional=True)
     autolag = string_like(
         autolag, "autolag", optional=True, options=("aic", "bic", "t-stat")
@@ -1690,7 +1694,7 @@ def coint(
     nobs, k_vars = y1.shape
     k_vars += 1  # add 1 for y0
 
-    if trend == "nc":
+    if trend == "n":
         xx = y1
     else:
         xx = add_trend(y1, trend=trend, prepend=False)
@@ -1699,7 +1703,7 @@ def coint(
 
     if res_co.rsquared < 1 - 100 * SQRTEPS:
         res_adf = adfuller(
-            res_co.resid, maxlag=maxlag, autolag=autolag, regression="nc"
+            res_co.resid, maxlag=maxlag, autolag=autolag, regression="n"
         )
     else:
         warnings.warn(
@@ -1711,7 +1715,7 @@ def coint(
         res_adf = (-np.inf,)
 
     # no constant or trend, see egranger in Stata and MacKinnon
-    if trend == "nc":
+    if trend == "n":
         crit = [np.nan] * 3  # 2010 critical values not available
     else:
         crit = mackinnoncrit(N=k_vars, regression=trend, nobs=nobs - 1)

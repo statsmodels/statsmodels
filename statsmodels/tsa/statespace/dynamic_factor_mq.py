@@ -1923,7 +1923,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             elif block.k_factors > 1:
                 mod_factors = VAR(factors_endog)
                 res_factors = mod_factors.fit(
-                    maxlags=block.factor_order, ic=None, trend='nc')
+                    maxlags=block.factor_order, ic=None, trend='n')
 
                 block_factor_ar = res_factors.params.T.ravel()
                 L = np.linalg.cholesky(res_factors.sigma_u)

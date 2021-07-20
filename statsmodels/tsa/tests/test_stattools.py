@@ -124,7 +124,9 @@ class TestADFNoConstant(CheckADF):
 
     @classmethod
     def setup_class(cls):
-        cls.res1 = adfuller(cls.x, regression="nc", autolag=None, maxlag=4)
+        with pytest.warns(FutureWarning):
+            adfuller(cls.x, regression="nc", autolag=None, maxlag=4)
+        cls.res1 = adfuller(cls.x, regression="n", autolag=None, maxlag=4)
         cls.teststat = 3.5227498
 
         cls.pvalue = 0.99999
@@ -159,14 +161,14 @@ class TestADFConstantTrend2(CheckADF):
 class TestADFNoConstant2(CheckADF):
     @classmethod
     def setup_class(cls):
-        cls.res1 = adfuller(cls.y, regression="nc", autolag=None, maxlag=1)
+        cls.res1 = adfuller(cls.y, regression="n", autolag=None, maxlag=1)
         cls.teststat = -2.4511596
         cls.pvalue = 0.013747
         # Stata does not return a p-value for noconstant
         # this value is just taken from our results
         cls.critvalues = [-2.587, -1.950, -1.617]
         _, _1, _2, cls.store = adfuller(
-            cls.y, regression="nc", autolag=None, maxlag=1, store=True
+            cls.y, regression="n", autolag=None, maxlag=1, store=True
         )
 
     def test_store_str(self):
@@ -501,7 +503,7 @@ def test_coint():
     y = np.round(y, 4)
 
     # FIXME: enable/xfail/skip or delete
-    for trend in []:  # ['c', 'ct', 'ctt', 'nc']:
+    for trend in []:  # ['c', 'ct', 'ctt', 'n']:
         print("\n", trend)
         print(coint(y[:, 0], y[:, 1], trend=trend, maxlag=4, autolag=None))
         print(coint(y[:, 0], y[:, 1:3], trend=trend, maxlag=4, autolag=None))
@@ -579,17 +581,21 @@ def test_coint():
         -4.527090164875,
     ]
 
-    # The following for 'nc' are only regression test numbers
-    # trend = 'nc' not allowed in egranger
-    # trend = 'nc'
-    res = res_egranger["nc"] = {}
+    # The following for 'n' are only regression test numbers
+    # trend = 'n' not allowed in egranger
+    # trend = 'n'
+    res = res_egranger["n"] = {}
     nan = np.nan  # shortcut for table
     res[0] = [-3.7146175989071137, nan, nan, nan]
     res[1] = [-3.8199323012888384, nan, nan, nan]
     res[2] = [-1.6865000791270679, nan, nan, nan]
     res[3] = [-3.7991270451873675, nan, nan, nan]
 
-    for trend in ["c", "ct", "ctt", "nc"]:
+    with pytest.warns(FutureWarning):
+        # Ensure warning raised for nc rather than n
+        coint(y[:, 0], y[:, 1], trend="nc", maxlag=4, autolag=None)
+
+    for trend in ["c", "ct", "ctt", "n"]:
         res1 = {}
         res1[0] = coint(y[:, 0], y[:, 1], trend=trend, maxlag=4, autolag=None)
         res1[1] = coint(

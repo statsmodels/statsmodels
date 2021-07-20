@@ -1,5 +1,7 @@
 from statsmodels.compat.python import lrange
 
+import warnings
+
 import numpy as np
 import pandas as pd
 from pandas import DataFrame
@@ -15,8 +17,23 @@ from statsmodels.tools.validation import (
     string_like,
 )
 
+__all__ = [
+    "lagmat",
+    "lagmat2ds",
+    "add_trend",
+    "duplication_matrix",
+    "elimination_matrix",
+    "commutation_matrix",
+    "vec",
+    "vech",
+    "unvec",
+    "unvech",
+    "freq_to_period",
+    "rename_trend",
+]
 
-def add_trend(x, trend="c", prepend=False, has_constant='skip'):
+
+def add_trend(x, trend="c", prepend=False, has_constant="skip"):
     """
     Add a trend and/or constant to an array.
 
@@ -56,14 +73,15 @@ def add_trend(x, trend="c", prepend=False, has_constant='skip'):
     Returns columns as ['ctt','ct','c'] whenever applicable. There is currently
     no checking for an existing trend.
     """
-    prepend = bool_like(prepend, 'prepend')
-    trend = string_like(trend, 'trend', options=('n', 'c', 't', 'ct', 'ctt'))
-    has_constant = string_like(has_constant, 'has_constant',
-                               options=('raise', 'add', 'skip'))
+    prepend = bool_like(prepend, "prepend")
+    trend = string_like(trend, "trend", options=("n", "c", "t", "ct", "ctt"))
+    has_constant = string_like(
+        has_constant, "has_constant", options=("raise", "add", "skip")
+    )
 
     # TODO: could be generalized for trend of aribitrary order
-    columns = ['const', 'trend', 'trend_squared']
-    if trend == 'n':
+    columns = ["const", "trend", "trend_squared"]
+    if trend == "n":
         return x.copy()
     elif trend == "c":  # handles structured arrays
         columns = columns[:1]
@@ -78,6 +96,7 @@ def add_trend(x, trend="c", prepend=False, has_constant='skip'):
 
     if _is_recarray(x):
         from statsmodels.tools.sm_exceptions import recarray_exception
+
         raise NotImplementedError(recarray_exception)
 
     is_pandas = _is_using_pandas(x, None)
@@ -90,7 +109,9 @@ def add_trend(x, trend="c", prepend=False, has_constant='skip'):
         x = np.asanyarray(x)
 
     nobs = len(x)
-    trendarr = np.vander(np.arange(1, nobs + 1, dtype=np.float64), trendorder + 1)
+    trendarr = np.vander(
+        np.arange(1, nobs + 1, dtype=np.float64), trendorder + 1
+    )
     # put in order ctt
     trendarr = np.fliplr(trendarr)
     if trend == "t":
@@ -104,6 +125,7 @@ def add_trend(x, trend="c", prepend=False, has_constant='skip'):
                     return np.ptp(s) == 0.0 and np.any(s != 0.0)
                 except:
                     return False
+
             col_const = x.apply(safe_is_const, 0)
         else:
             ptp0 = np.ptp(np.asanyarray(x), axis=0)
@@ -112,7 +134,7 @@ def add_trend(x, trend="c", prepend=False, has_constant='skip'):
             col_const = nz_const
 
         if np.any(col_const):
-            if has_constant == 'raise':
+            if has_constant == "raise":
                 if x.ndim == 1:
                     base_err = "x is constant."
                 else:
@@ -124,11 +146,9 @@ def add_trend(x, trend="c", prepend=False, has_constant='skip'):
                         "x contains one or more constant columns. Column(s) "
                         f"{const_cols} are constant."
                     )
-                msg = (
-                    f"{base_err} Adding a constant with trend='{trend}' is not allowed."
-                )
+                msg = f"{base_err} Adding a constant with trend='{trend}' is not allowed."
                 raise ValueError(msg)
-            elif has_constant == 'skip':
+            elif has_constant == "skip":
                 columns = columns[1:]
                 trendarr = trendarr[:, 1:]
 
@@ -183,8 +203,8 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
     so that the length of the returned array is len(`X`) - lags. The lags are
     returned in increasing order, ie., t-1,t-2,...,t-lags
     """
-    lags = int_like(lags, 'lags')
-    drop = bool_like(drop, 'drop')
+    lags = int_like(lags, "lags")
+    drop = bool_like(drop, "drop")
     x = array_like(x, "x", ndim=2)
     if col is None:
         col = 0
@@ -194,32 +214,34 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
         col = x.shape[1] + col
     if x.ndim == 1:
         x = x[:, None]
-    contemp = x[:,col]
+    contemp = x[:, col]
 
     if insert is True:
         ins_idx = col + 1
     elif insert is False:
         ins_idx = x.shape[1]
     else:
-        if insert < 0: # handle negative index
+        if insert < 0:  # handle negative index
             insert = x.shape[1] + insert + 1
         if insert > x.shape[1]:
             insert = x.shape[1]
-            import warnings
-            warnings.warn("insert > number of variables, inserting at the"
-                          " last position", ValueWarning)
+
+            warnings.warn(
+                "insert > number of variables, inserting at the"
+                " last position",
+                ValueWarning,
+            )
         ins_idx = insert
 
-    ndlags = lagmat(contemp, lags, trim='Both')
+    ndlags = lagmat(contemp, lags, trim="Both")
     first_cols = lrange(ins_idx)
-    last_cols = lrange(ins_idx,x.shape[1])
+    last_cols = lrange(ins_idx, x.shape[1])
     if drop:
         if col in first_cols:
             first_cols.pop(first_cols.index(col))
         else:
             last_cols.pop(last_cols.index(col))
-    return np.column_stack((x[lags:,first_cols],ndlags,
-                x[lags:,last_cols]))
+    return np.column_stack((x[lags:, first_cols], ndlags, x[lags:, last_cols]))
 
 
 def detrend(x, order=1, axis=0):
@@ -244,13 +266,15 @@ def detrend(x, order=1, axis=0):
         The detrended series is the residual of the linear regression of the
         data on the trend of given order.
     """
-    order = int_like(order, 'order')
-    axis = int_like(axis, 'axis')
+    order = int_like(order, "order")
+    axis = int_like(axis, "axis")
 
     if x.ndim == 2 and int(axis) == 1:
         x = x.T
     elif x.ndim > 2:
-        raise NotImplementedError('x.ndim > 2 is not implemented until it is needed')
+        raise NotImplementedError(
+            "x.ndim > 2 is not implemented until it is needed"
+        )
 
     nobs = x.shape[0]
     if order == 0:
@@ -267,7 +291,7 @@ def detrend(x, order=1, axis=0):
     return resid
 
 
-def lagmat(x, maxlag, trim='forward', original='ex', use_pandas=False):
+def lagmat(x, maxlag, trim="forward", original="ex", use_pandas=False):
     """
     Create 2d array of lags.
 
@@ -335,41 +359,49 @@ def lagmat(x, maxlag, trim='forward', original='ex', use_pandas=False):
        [ 0.,  0.,  5.,  6.,  3.,  4.],
        [ 0.,  0.,  0.,  0.,  5.,  6.]])
     """
-    maxlag = int_like(maxlag, 'maxlag')
-    use_pandas = bool_like(use_pandas, 'use_pandas')
-    trim = string_like(trim, 'trim', optional=True,
-                       options=('forward', 'backward', 'both', 'none'))
-    original = string_like(original, 'original', options=('ex', 'sep', 'in'))
+    maxlag = int_like(maxlag, "maxlag")
+    use_pandas = bool_like(use_pandas, "use_pandas")
+    trim = string_like(
+        trim,
+        "trim",
+        optional=True,
+        options=("forward", "backward", "both", "none"),
+    )
+    original = string_like(original, "original", options=("ex", "sep", "in"))
 
     # TODO:  allow list of lags additional to maxlag
     orig = x
-    x = array_like(x, 'x', ndim=2, dtype=None)
+    x = array_like(x, "x", ndim=2, dtype=None)
     is_pandas = _is_using_pandas(orig, None) and use_pandas
-    trim = 'none' if trim is None else trim
+    trim = "none" if trim is None else trim
     trim = trim.lower()
-    if is_pandas and trim in ('none', 'backward'):
-        raise ValueError("trim cannot be 'none' or 'forward' when used on "
-                         "Series or DataFrames")
+    if is_pandas and trim in ("none", "backward"):
+        raise ValueError(
+            "trim cannot be 'none' or 'forward' when used on "
+            "Series or DataFrames"
+        )
 
     dropidx = 0
     nobs, nvar = x.shape
-    if original in ['ex', 'sep']:
+    if original in ["ex", "sep"]:
         dropidx = nvar
     if maxlag >= nobs:
         raise ValueError("maxlag should be < nobs")
     lm = np.zeros((nobs + maxlag, nvar * (maxlag + 1)))
     for k in range(0, int(maxlag + 1)):
-        lm[maxlag - k:nobs + maxlag - k,
-        nvar * (maxlag - k):nvar * (maxlag - k + 1)] = x
+        lm[
+            maxlag - k : nobs + maxlag - k,
+            nvar * (maxlag - k) : nvar * (maxlag - k + 1),
+        ] = x
 
-    if trim in ('none', 'forward'):
+    if trim in ("none", "forward"):
         startobs = 0
-    elif trim in ('backward', 'both'):
+    elif trim in ("backward", "both"):
         startobs = maxlag
     else:
-        raise ValueError('trim option not valid')
+        raise ValueError("trim option not valid")
 
-    if trim in ('none', 'backward'):
+    if trim in ("none", "backward"):
         stopobs = len(lm)
     else:
         stopobs = nobs
@@ -380,25 +412,26 @@ def lagmat(x, maxlag, trim='forward', original='ex', use_pandas=False):
         columns = [str(col) for col in x_columns]
         for lag in range(maxlag):
             lag_str = str(lag + 1)
-            columns.extend([str(col) + '.L.' + lag_str for col in x_columns])
+            columns.extend([str(col) + ".L." + lag_str for col in x_columns])
         lm = DataFrame(lm[:stopobs], index=x.index, columns=columns)
         lags = lm.iloc[startobs:]
-        if original in ('sep', 'ex'):
+        if original in ("sep", "ex"):
             leads = lags[x_columns]
-            lags = lags.drop(x_columns, axis=   1)
+            lags = lags.drop(x_columns, axis=1)
     else:
         lags = lm[startobs:stopobs, dropidx:]
-        if original == 'sep':
+        if original == "sep":
             leads = lm[startobs:stopobs, :dropidx]
 
-    if original == 'sep':
+    if original == "sep":
         return lags, leads
     else:
         return lags
 
 
-def lagmat2ds(x, maxlag0, maxlagex=None, dropex=0, trim='forward',
-              use_pandas=False):
+def lagmat2ds(
+    x, maxlag0, maxlagex=None, dropex=0, trim="forward", use_pandas=False
+):
     """
     Generate lagmatrix for 2d array, columns arranged by variables.
 
@@ -434,10 +467,14 @@ def lagmat2ds(x, maxlag0, maxlagex=None, dropex=0, trim='forward',
     -----
     Inefficient implementation for unequal lags, implemented for convenience.
     """
-    maxlag0 = int_like(maxlag0, 'maxlag0')
-    maxlagex = int_like(maxlagex, 'maxlagex', optional=True)
-    trim = string_like(trim, 'trim', optional=True,
-                       options=('forward', 'backward', 'both', 'none'))
+    maxlag0 = int_like(maxlag0, "maxlag0")
+    maxlagex = int_like(maxlagex, "maxlagex", optional=True)
+    trim = string_like(
+        trim,
+        "trim",
+        optional=True,
+        options=("forward", "backward", "both", "none"),
+    )
     if maxlagex is None:
         maxlagex = maxlag0
     maxlag = max(maxlag0, maxlagex)
@@ -449,30 +486,38 @@ def lagmat2ds(x, maxlag0, maxlagex=None, dropex=0, trim='forward',
         else:
             x = x[:, None]
     elif x.ndim == 0 or x.ndim > 2:
-        raise ValueError('Only supports 1 and 2-dimensional data.')
+        raise ValueError("Only supports 1 and 2-dimensional data.")
 
     nobs, nvar = x.shape
 
     if is_pandas and use_pandas:
-        lags = lagmat(x.iloc[:, 0], maxlag, trim=trim,
-                      original='in', use_pandas=True)
-        lagsli = [lags.iloc[:, :maxlag0 + 1]]
+        lags = lagmat(
+            x.iloc[:, 0], maxlag, trim=trim, original="in", use_pandas=True
+        )
+        lagsli = [lags.iloc[:, : maxlag0 + 1]]
         for k in range(1, nvar):
-            lags = lagmat(x.iloc[:, k], maxlag, trim=trim,
-                          original='in', use_pandas=True)
-            lagsli.append(lags.iloc[:, dropex:maxlagex + 1])
+            lags = lagmat(
+                x.iloc[:, k], maxlag, trim=trim, original="in", use_pandas=True
+            )
+            lagsli.append(lags.iloc[:, dropex : maxlagex + 1])
         return pd.concat(lagsli, axis=1)
     elif is_pandas:
         x = np.asanyarray(x)
 
-    lagsli = [lagmat(x[:, 0], maxlag, trim=trim, original='in')[:, :maxlag0 + 1]]
+    lagsli = [
+        lagmat(x[:, 0], maxlag, trim=trim, original="in")[:, : maxlag0 + 1]
+    ]
     for k in range(1, nvar):
-        lagsli.append(lagmat(x[:, k], maxlag, trim=trim, original='in')[:, dropex:maxlagex + 1])
+        lagsli.append(
+            lagmat(x[:, k], maxlag, trim=trim, original="in")[
+                :, dropex : maxlagex + 1
+            ]
+        )
     return np.column_stack(lagsli)
 
 
 def vec(mat):
-    return mat.ravel('F')
+    return mat.ravel("F")
 
 
 def vech(mat):
@@ -481,6 +526,7 @@ def vech(mat):
 
 
 # tril/triu/diag, suitable for ndarray.take
+
 
 def _tril_indices(n):
     rows, cols = np.tril_indices(n)
@@ -499,13 +545,13 @@ def _diag_indices(n):
 
 def unvec(v):
     k = int(np.sqrt(len(v)))
-    assert(k * k == len(v))
-    return v.reshape((k, k), order='F')
+    assert k * k == len(v)
+    return v.reshape((k, k), order="F")
 
 
 def unvech(v):
     # quadratic formula, correct fp error
-    rows = .5 * (-1 + np.sqrt(1 + 8 * len(v)))
+    rows = 0.5 * (-1 + np.sqrt(1 + 8 * len(v)))
     rows = int(np.round(rows))
 
     result = np.zeros((rows, rows))
@@ -527,7 +573,7 @@ def duplication_matrix(n):
     -------
     D_n : ndarray
     """
-    n = int_like(n, 'n')
+    n = int_like(n, "n")
     tmp = np.eye(n * (n + 1) // 2)
     return np.array([unvech(x).ravel() for x in tmp]).T
 
@@ -543,7 +589,7 @@ def elimination_matrix(n):
     Returns
     -------
     """
-    n = int_like(n, 'n')
+    n = int_like(n, "n")
     vech_indices = vec(np.tril(np.ones((n, n))))
     return np.eye(n * n)[vech_indices != 0]
 
@@ -561,11 +607,11 @@ def commutation_matrix(p, q):
     -------
     K : ndarray (pq x pq)
     """
-    p = int_like(p, 'p')
-    q = int_like(q, 'q')
+    p = int_like(p, "p")
+    q = int_like(q, "q")
 
     K = np.eye(p * q)
-    indices = np.arange(p * q).reshape((p, q), order='F')
+    indices = np.arange(p * q).reshape((p, q), order="F")
     return K.take(indices.ravel(), axis=0)
 
 
@@ -582,12 +628,12 @@ def _ar_transparams(params):
     ---------
     Jones(1980)
     """
-    newparams = np.tanh(params/2)
-    tmp = np.tanh(params/2)
-    for j in range(1,len(params)):
+    newparams = np.tanh(params / 2)
+    tmp = np.tanh(params / 2)
+    for j in range(1, len(params)):
         a = newparams[j]
         for kiter in range(j):
-            tmp[kiter] -= a * newparams[j-kiter-1]
+            tmp[kiter] -= a * newparams[j - kiter - 1]
         newparams[:j] = tmp[:j]
     return newparams
 
@@ -603,13 +649,14 @@ def _ar_invtransparams(params):
     """
     params = params.copy()
     tmp = params.copy()
-    for j in range(len(params)-1,0,-1):
+    for j in range(len(params) - 1, 0, -1):
         a = params[j]
         for kiter in range(j):
-            tmp[kiter] = (params[kiter] + a * params[j-kiter-1])/\
-                    (1-a**2)
+            tmp[kiter] = (params[kiter] + a * params[j - kiter - 1]) / (
+                1 - a ** 2
+            )
         params[:j] = tmp[:j]
-    invarcoefs = 2*np.arctanh(params)
+    invarcoefs = 2 * np.arctanh(params)
     return invarcoefs
 
 
@@ -626,14 +673,14 @@ def _ma_transparams(params):
     ---------
     Jones(1980)
     """
-    newparams = ((1-np.exp(-params))/(1+np.exp(-params))).copy()
-    tmp = ((1-np.exp(-params))/(1+np.exp(-params))).copy()
+    newparams = ((1 - np.exp(-params)) / (1 + np.exp(-params))).copy()
+    tmp = ((1 - np.exp(-params)) / (1 + np.exp(-params))).copy()
 
     # levinson-durbin to get macf
-    for j in range(1,len(params)):
+    for j in range(1, len(params)):
         b = newparams[j]
         for kiter in range(j):
-            tmp[kiter] += b * newparams[j-kiter-1]
+            tmp[kiter] += b * newparams[j - kiter - 1]
         newparams[:j] = tmp[:j]
     return newparams
 
@@ -648,12 +695,14 @@ def _ma_invtransparams(macoefs):
         The transformed MA coefficients
     """
     tmp = macoefs.copy()
-    for j in range(len(macoefs)-1,0,-1):
+    for j in range(len(macoefs) - 1, 0, -1):
         b = macoefs[j]
         for kiter in range(j):
-            tmp[kiter] = (macoefs[kiter]-b *macoefs[j-kiter-1])/(1-b**2)
+            tmp[kiter] = (macoefs[kiter] - b * macoefs[j - kiter - 1]) / (
+                1 - b ** 2
+            )
         macoefs[:j] = tmp[:j]
-    invmacoefs = -np.log((1-macoefs)/(1+macoefs))
+    invmacoefs = -np.log((1 - macoefs) / (1 + macoefs))
     return invmacoefs
 
 
@@ -678,7 +727,7 @@ def unintegrate_levels(x, d):
     --------
     unintegrate
     """
-    d = int_like(d, 'd')
+    d = int_like(d, "d")
     x = x[:d]
     return np.asarray([np.diff(x, d - i)[0] for i in range(d, 0, -1)])
 
@@ -709,7 +758,7 @@ def unintegrate(x, levels):
     >>> unintegrate(np.diff(x, 2), levels)
     array([  1.,   3.,   9.,  19.,   8.])
     """
-    levels = list(levels)[:] # copy
+    levels = list(levels)[:]  # copy
     if len(levels) > 1:
         x0 = levels.pop(-1)
         return unintegrate(np.cumsum(np.r_[x0, x]), levels)
@@ -739,25 +788,33 @@ def freq_to_period(freq):
         freq = to_offset(freq)  # go ahead and standardize
     freq = freq.rule_code.upper()
 
-    if freq == 'A' or freq.startswith(('A-', 'AS-')):
+    if freq == "A" or freq.startswith(("A-", "AS-")):
         return 1
-    elif freq == 'Q' or freq.startswith(('Q-', 'QS-')):
+    elif freq == "Q" or freq.startswith(("Q-", "QS-")):
         return 4
-    elif freq == 'M' or freq.startswith(('M-', 'MS')):
+    elif freq == "M" or freq.startswith(("M-", "MS")):
         return 12
-    elif freq == 'W' or freq.startswith('W-'):
+    elif freq == "W" or freq.startswith("W-"):
         return 52
-    elif freq == 'D':
+    elif freq == "D":
         return 7
-    elif freq == 'B':
+    elif freq == "B":
         return 5
-    elif freq == 'H':
+    elif freq == "H":
         return 24
     else:  # pragma : no cover
-        raise ValueError("freq {} not understood. Please report if you "
-                         "think this is in error.".format(freq))
+        raise ValueError(
+            "freq {} not understood. Please report if you "
+            "think this is in error.".format(freq)
+        )
 
 
-__all__ = ['lagmat', 'lagmat2ds','add_trend', 'duplication_matrix',
-           'elimination_matrix', 'commutation_matrix',
-           'vec', 'vech', 'unvec', 'unvech', 'freq_to_period']
+def rename_trend(trend: str):
+    if trend == "nc":
+        warnings.warn(
+            "trend 'nc' has been renamed to 'n' after 0.14 is released. Use "
+            "'n' now to avoid this warning.",
+            FutureWarning,
+        )
+        return "n"
+    return trend

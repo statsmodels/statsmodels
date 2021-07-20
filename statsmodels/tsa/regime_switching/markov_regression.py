@@ -4,12 +4,11 @@ Markov switching regression models
 Author: Chad Fulton
 License: BSD-3
 """
-
-
 import numpy as np
 import statsmodels.base.wrapper as wrap
 
 from statsmodels.tsa.regime_switching import markov_switching
+from statsmodels.tsa.tsatools import rename_trend
 
 
 class MarkovRegression(markov_switching.MarkovSwitching):
@@ -22,10 +21,10 @@ class MarkovRegression(markov_switching.MarkovSwitching):
         The endogenous variable.
     k_regimes : int
         The number of regimes.
-    trend : {'nc', 'c', 't', 'ct'}
+    trend : {'n', 'c', 't', 'ct'}
         Whether or not to include a trend. To include an intercept, time trend,
         or both, set `trend='c'`, `trend='t'`, or `trend='ct'`. For no trend,
-        set `trend='nc'`. Default is an intercept.
+        set `trend='n'`. Default is an intercept.
     exog : array_like, optional
         Array of exogenous regressors, shaped nobs x k.
     order : int, optional
@@ -87,7 +86,7 @@ class MarkovRegression(markov_switching.MarkovSwitching):
                  missing='none'):
 
         # Properties
-        self.trend = trend
+        self.trend = rename_trend(trend)
         self.switching_trend = switching_trend
         self.switching_exog = switching_exog
         self.switching_variance = switching_variance
