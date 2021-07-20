@@ -265,10 +265,15 @@ def test_predict_remove_data():
     endog = [i + np.random.normal(scale=0.1) for i in range(100)]
     exog = [i for i in range(100)]
     model = OLS(endog, exog, weights=[1 for _ in range(100)]).fit()
+    # we need to compute scale before we remove wendog, wexog
+    model.scale
     model.remove_data()
     scalar = model.get_prediction(1).predicted_mean
-    one_d = model.get_prediction([1]).predicted_mean
+    pred = model.get_prediction([1])
+    one_d = pred.predicted_mean
     assert_allclose(scalar, one_d)
+    # smoke test for inferenctial part
+    pred.summary_frame()
 
     series = model.get_prediction(pd.Series([1])).predicted_mean
     assert_allclose(scalar, series)
