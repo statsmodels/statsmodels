@@ -2,7 +2,7 @@
 Test functions for genmod.families.links
 """
 import numpy as np
-from numpy.testing import assert_allclose, assert_equal
+from numpy.testing import assert_allclose, assert_equal, assert_array_less
 import statsmodels.genmod.families as families
 from statsmodels.tools import numdiff as nd
 
@@ -17,11 +17,16 @@ log = links.log()
 probit = links.probit()
 cauchy = links.cauchy()
 cloglog = links.CLogLog()
+loglog = links.LogLog()
 negbinom = links.NegativeBinomial()
 
 # TODO: parametrize all these tess
 Links = [logit, inverse_power, sqrt, inverse_squared, identity,
-         log, probit, cauchy, cloglog, negbinom]
+         log, probit, cauchy, cloglog, loglog, negbinom]
+
+# links with defined second derivative of inverse link.
+LinksISD = [inverse_power, sqrt, inverse_squared, identity,
+            cauchy, probit, loglog]
 
 
 def get_domainvalue(link):
@@ -31,6 +36,8 @@ def get_domainvalue(link):
     z = -np.log(np.random.uniform(0, 1))
     if isinstance(link, links.CLogLog):  # prone to overflow
         z = min(z, 3)
+    elif isinstance(link, links.LogLog):
+        z = max(z, -3)
     elif isinstance(link, links.NegativeBinomial):
         # domain is negative numbers
         z = -z
@@ -65,6 +72,10 @@ def test_deriv():
             da = nd.approx_fprime(np.r_[p], link)
             assert_allclose(d, da, rtol=1e-6, atol=1e-6,
                             err_msg=str(link))
+            if not isinstance(link, (type(inverse_power),
+                                     type(inverse_squared))):
+                # check monotonically increasing
+                assert_array_less(-d, 0)
 
 
 def test_deriv2():
@@ -95,6 +106,20 @@ def test_inverse_deriv():
             d = link.inverse_deriv(z)
             f = 1 / link.deriv(link.inverse(z))
             assert_allclose(d, f, rtol=1e-8, atol=1e-10,
+                            err_msg=str(link))
+
+
+def test_inverse_deriv2():
+    # Check second derivative of inverse link using numeric differentiation.
+
+    np.random.seed(24235)
+
+    for link in LinksISD:
+        for k in range(10):
+            z = get_domainvalue(link)
+            d2 = link.inverse_deriv2(z)
+            d2a = nd.approx_fprime(np.r_[z], link.inverse_deriv)
+            assert_allclose(d2, d2a, rtol=5e-6, atol=1e-6,
                             err_msg=str(link))
 
 

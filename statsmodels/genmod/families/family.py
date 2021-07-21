@@ -846,7 +846,7 @@ class Binomial(Family):
     ----------
     link : a link instance, optional
         The default link for the Binomial family is the logit link.
-        Available links are logit, probit, cauchy, log, and cloglog.
+        Available links are logit, probit, cauchy, log, loglog, and cloglog.
         See statsmodels.genmod.families.links for more information.
 
     Attributes
@@ -875,7 +875,8 @@ class Binomial(Family):
     number of trials for each row.
     """
 
-    links = [L.logit, L.probit, L.cauchy, L.log, L.cloglog, L.identity]
+    links = [L.logit, L.probit, L.cauchy, L.log, L.cloglog, L.loglog,
+             L.identity]
     variance = V.binary  # this is not used below in an effort to include n
 
     # Other safe links, e.g. cloglog and probit are subclasses
