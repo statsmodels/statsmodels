@@ -192,8 +192,11 @@ class PenalizedMixin(object):
         # TODO: temporary hack, need extra fit kwds
         # we need to rule out fit methods in a model that will not work with
         # penalization
-        if hasattr(self, 'family'):  # assume this identifies GLM
-            kwds.update({'max_start_irls' : 0})
+        from statsmodels.gam.generalized_additive_model import GLMGam
+        from statsmodels.genmod.generalized_linear_model import GLM
+        # Only for fit methods supporting max_start_irls
+        if isinstance(self, (GLM, GLMGam)):
+            kwds.update({'max_start_irls': 0})
 
         # currently we use `bfgs` by default
         if method is None:

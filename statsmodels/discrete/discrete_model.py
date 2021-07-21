@@ -1110,6 +1110,11 @@ class Poisson(CountModel):
             start_params = 0.001 * np.ones(self.exog.shape[1])
             start_params[self.data.const_idx] = self._get_start_params_null()[0]
 
+        kwds = {}
+        if kwargs.get('cov_type') is not None:
+            kwds['cov_type'] = kwargs.get('cov_type')
+            kwds['cov_kwds'] = kwargs.get('cov_kwds', {})
+
         cntfit = super(CountModel, self).fit(start_params=start_params,
                                              method=method,
                                              maxiter=maxiter,
@@ -1118,11 +1123,6 @@ class Poisson(CountModel):
                                              callback=callback,
                                              **kwargs)
 
-        if 'cov_type' in kwargs:
-            cov_kwds = kwargs.get('cov_kwds', {})
-            kwds = {'cov_type':kwargs['cov_type'], 'cov_kwds':cov_kwds}
-        else:
-            kwds = {}
         discretefit = PoissonResults(self, cntfit, **kwds)
         return PoissonResultsWrapper(discretefit)
 
@@ -1501,7 +1501,8 @@ class GeneralizedPoisson(CountModel):
     @Appender(DiscreteModel.fit.__doc__)
     def fit(self, start_params=None, method='bfgs', maxiter=35,
             full_output=1, disp=1, callback=None, use_transparams=False,
-            cov_type='nonrobust', cov_kwds=None, use_t=None, **kwargs):
+            cov_type='nonrobust', cov_kwds=None, use_t=None, optim_kwds_prelim=None,
+            **kwargs):
         if use_transparams and method not in ['newton', 'ncg']:
             self._transparams = True
         else:
@@ -1514,13 +1515,14 @@ class GeneralizedPoisson(CountModel):
             offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
             if np.size(offset) == 1 and offset == 0:
                 offset = None
-            optim_kwds_prelim = {'disp': 0, 'skip_hessian': True,
-                                 'warn_convergence': False}
-            optim_kwds_prelim.update(kwargs.get('optim_kwds_prelim', {}))
+            kwds_prelim = {'disp': 0, 'skip_hessian': True,
+                           'warn_convergence': False}
+            if optim_kwds_prelim is not None:
+                kwds_prelim.update(optim_kwds_prelim)
             mod_poi = Poisson(self.endog, self.exog, offset=offset)
             with warnings.catch_warnings():
                 warnings.simplefilter("always")
-                res_poi = mod_poi.fit(**optim_kwds_prelim)
+                res_poi = mod_poi.fit(**kwds_prelim)
             start_params = res_poi.params
             a = self._estimate_dispersion(res_poi.predict(), res_poi.resid,
                                           df_resid=res_poi.df_resid)
@@ -1537,7 +1539,8 @@ class GeneralizedPoisson(CountModel):
                              full_output=full_output,
                              callback=callback,
                              **kwargs)
-
+        if optim_kwds_prelim is not None:
+            mlefit.mle_settings["optim_kwds_prelim"] = optim_kwds_prelim
         if use_transparams and method not in ["newton", "ncg"]:
             self._transparams = False
             mlefit._results.params[-1] = np.exp(mlefit._results.params[-1])
@@ -2908,7 +2911,8 @@ class NegativeBinomial(CountModel):
 
     def fit(self, start_params=None, method='bfgs', maxiter=35,
             full_output=1, disp=1, callback=None,
-            cov_type='nonrobust', cov_kwds=None, use_t=None, **kwargs):
+            cov_type='nonrobust', cov_kwds=None, use_t=None,
+            optim_kwds_prelim=None, **kwargs):
 
         # Note: do not let super handle robust covariance because it has
         # transformed params
@@ -2925,13 +2929,13 @@ class NegativeBinomial(CountModel):
             offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
             if np.size(offset) == 1 and offset == 0:
                 offset = None
-            optim_kwds_prelim = {'disp': 0, 'skip_hessian': True,
-                                 'warn_convergence': False}
-            optim_kwds_prelim.update(kwargs.get('optim_kwds_prelim', {}))
+            kwds_prelim = {'disp': 0, 'skip_hessian': True, 'warn_convergence': False}
+            if optim_kwds_prelim is not None:
+                kwds_prelim.update(optim_kwds_prelim)
             mod_poi = Poisson(self.endog, self.exog, offset=offset)
             with warnings.catch_warnings():
                 warnings.simplefilter("always")
-                res_poi = mod_poi.fit(**optim_kwds_prelim)
+                res_poi = mod_poi.fit(**kwds_prelim)
             start_params = res_poi.params
             if self.loglike_method.startswith('nb'):
                 a = self._estimate_dispersion(res_poi.predict(), res_poi.resid,
@@ -2951,7 +2955,9 @@ class NegativeBinomial(CountModel):
                              maxiter=maxiter, method=method, disp=disp,
                              full_output=full_output, callback=callback,
                              **kwargs)
-                        # TODO: Fix NBin _check_perfect_pred
+        if optim_kwds_prelim is not None:
+            mlefit.mle_settings["optim_kwds_prelim"] = optim_kwds_prelim
+        # TODO: Fix NBin _check_perfect_pred
         if self.loglike_method.startswith('nb'):
             # mlefit is a wrapped counts results
             self._transparams = False # do not need to transform anymore now
@@ -2966,8 +2972,7 @@ class NegativeBinomial(CountModel):
 
         if cov_kwds is None:
             cov_kwds = {}  #TODO: make this unnecessary ?
-        result._get_robustcov_results(cov_type=cov_type,
-                                    use_self=True, use_t=use_t, **cov_kwds)
+        result._get_robustcov_results(cov_type=cov_type, use_self=True, use_t=use_t, **cov_kwds)
         return result
 
 
@@ -3283,7 +3288,8 @@ class NegativeBinomialP(CountModel):
     @Appender(DiscreteModel.fit.__doc__)
     def fit(self, start_params=None, method='bfgs', maxiter=35,
             full_output=1, disp=1, callback=None, use_transparams=False,
-            cov_type='nonrobust', cov_kwds=None, use_t=None, **kwargs):
+            cov_type='nonrobust', cov_kwds=None, use_t=None,
+            optim_kwds_prelim=None, **kwargs):
         # TODO: Fix doc string
         """
         use_transparams : bool
@@ -3300,19 +3306,17 @@ class NegativeBinomialP(CountModel):
                 warnings.warn('Parameter "use_transparams" is ignored',
                               RuntimeWarning)
             self._transparams = False
-
         if start_params is None:
             offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
             if np.size(offset) == 1 and offset == 0:
                 offset = None
-
-            optim_kwds_prelim = {'disp': 0, 'skip_hessian': True,
-                                 'warn_convergence': False}
-            optim_kwds_prelim.update(kwargs.get('optim_kwds_prelim', {}))
+            kwds_prelim = {'disp': 0, 'skip_hessian': True, 'warn_convergence': False}
+            if optim_kwds_prelim is not None:
+                kwds_prelim.update(optim_kwds_prelim)
             mod_poi = Poisson(self.endog, self.exog, offset=offset)
             with warnings.catch_warnings():
                 warnings.simplefilter("always")
-                res_poi = mod_poi.fit(**optim_kwds_prelim)
+                res_poi = mod_poi.fit(**kwds_prelim)
             start_params = res_poi.params
             a = self._estimate_dispersion(res_poi.predict(), res_poi.resid,
                                           df_resid=res_poi.df_resid)
@@ -3326,7 +3330,8 @@ class NegativeBinomialP(CountModel):
                         maxiter=maxiter, method=method, disp=disp,
                         full_output=full_output, callback=callback,
                         **kwargs)
-
+        if optim_kwds_prelim is not None:
+            mlefit.mle_settings["optim_kwds_prelim"] = optim_kwds_prelim
         if use_transparams and method not in ["newton", "ncg"]:
             self._transparams = False
             mlefit._results.params[-1] = np.exp(mlefit._results.params[-1])

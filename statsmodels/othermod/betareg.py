@@ -541,7 +541,7 @@ class BetaModel(GenericLikelihoodModel):
 
         return sp2
 
-    def fit(self, start_params=None, maxiter=1000, maxfun=5000, disp=False,
+    def fit(self, start_params=None, maxiter=1000, disp=False,
             method='bfgs', **kwds):
         """
         Fit the model.
@@ -573,8 +573,8 @@ class BetaModel(GenericLikelihoodModel):
             self.hess_type = "oim"
 
         res = super(BetaModel, self).fit(start_params=start_params,
-                                         maxiter=maxiter, maxfun=maxfun,
-                                         method=method, disp=disp, **kwds)
+                                         maxiter=maxiter, method=method,
+                                         disp=disp, **kwds)
         if not isinstance(res, BetaResultsWrapper):
             # currently GenericLikelihoodModel doe not add wrapper
             res = BetaResultsWrapper(res)
