@@ -2337,6 +2337,10 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             basin-hopping solver supports.
         maxiter : int, optional
             The maximum number of iterations to perform.
+        tolerance : float, optional
+            Tolerance to use for convergence checking when using the EM
+            algorithm. To set the tolerance for other methods, pass
+            the optimizer-specific keyword argument(s).
         full_output : bool, optional
             Set to True to have all available output in the Results object's
             mle_retvals attribute. The output is dependent on the solver.
@@ -2411,7 +2415,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
                 start_params=start_params, transformed=transformed,
                 includes_fixed=includes_fixed, cov_type=cov_type,
                 cov_kwds=cov_kwds, method=method, maxiter=maxiter,
-                tolerance=tolerance, full_output=full_output, disp=disp,
+                full_output=full_output, disp=disp,
                 callback=callback, return_params=return_params,
                 optim_score=optim_score,
                 optim_complex_step=optim_complex_step,

@@ -253,8 +253,7 @@ class SVAR(tsbase.TimeSeriesModel):
 
         A, B = self._solve_AB(start_params, override=override,
                               solver=solver,
-                              maxiter=maxiter,
-                              maxfun=maxfun)
+                              maxiter=maxiter)
         A_mask = self.A_mask
         B_mask = self.B_mask
 
@@ -324,8 +323,7 @@ class SVAR(tsbase.TimeSeriesModel):
         loglike = self.loglike
         return approx_hess(AB_mask, loglike)
 
-    def _solve_AB(self, start_params, maxiter, maxfun, override=False,
-                  solver='bfgs'):
+    def _solve_AB(self, start_params, maxiter, override=False, solver='bfgs'):
         """
         Solves for MLE estimate of structural parameters
 
@@ -341,8 +339,6 @@ class SVAR(tsbase.TimeSeriesModel):
             conjugate, 'ncg' (non-conjugate gradient), and 'powell'.
         maxiter : int, optional
             The maximum number of iterations. Default is 500.
-        maxfun : int, optional
-            The maximum number of function evalutions.
 
         Returns
         -------
@@ -367,8 +363,7 @@ class SVAR(tsbase.TimeSeriesModel):
 
         retvals = super(SVAR, self).fit(start_params=start_params,
                                         method=solver, maxiter=maxiter,
-                                        maxfun=maxfun, ftol=1e-20,
-                                        disp=0).params
+                                        gtol=1e-20, disp=False).params
 
         A[A_mask] = retvals[:A_len]
         B[B_mask] = retvals[A_len:]

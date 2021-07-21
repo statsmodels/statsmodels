@@ -523,6 +523,20 @@ class LikelihoodModel(Model):
                 return -self.hessian(params, *args) / nobs
 
         warn_convergence = kwargs.pop('warn_convergence', True)
+
+        # Remove covariance args before calling fir to allow strict checking
+        if 'cov_type' in kwargs:
+            cov_kwds = kwargs.get('cov_kwds', {})
+            kwds = {'cov_type': kwargs['cov_type'], 'cov_kwds': cov_kwds}
+            if cov_kwds:
+                del kwargs["cov_kwds"]
+            del kwargs["cov_type"]
+        else:
+            kwds = {}
+        if 'use_t' in kwargs:
+            kwds['use_t'] = kwargs['use_t']
+            del kwargs["use_t"]
+
         optimizer = Optimizer()
         xopt, retvals, optim_settings = optimizer._fit(f, score, start_params,
                                                        fargs, kwargs,
@@ -533,7 +547,8 @@ class LikelihoodModel(Model):
                                                        callback=callback,
                                                        retall=retall,
                                                        full_output=full_output)
-
+        # Restore cov_type, cov_kwds and use_t
+        optim_settings.update(kwds)
         # NOTE: this is for fit_regularized and should be generalized
         cov_params_func = kwargs.setdefault('cov_params_func', None)
         if cov_params_func:
@@ -556,13 +571,6 @@ class LikelihoodModel(Model):
                               'available', HessianInversionWarning)
                 Hinv = None
 
-        if 'cov_type' in kwargs:
-            cov_kwds = kwargs.get('cov_kwds', {})
-            kwds = {'cov_type': kwargs['cov_type'], 'cov_kwds': cov_kwds}
-        else:
-            kwds = {}
-        if 'use_t' in kwargs:
-            kwds['use_t'] = kwargs['use_t']
         # TODO: add Hessian approximation and change the above if needed
         mlefit = LikelihoodModelResults(self, xopt, Hinv, scale=1., **kwds)
 

@@ -807,7 +807,7 @@ class TestMNLogitL1Compatability(CheckL1Compatability):
         # Actually drop the last columnand do an unregularized fit
         exog_no_PSI = data.exog[:, :cls.m]
         cls.res_unreg = MNLogit(data.endog, exog_no_PSI).fit(
-            disp=0, tol=1e-15, method='bfgs', maxiter=1000)
+            disp=0, gtol=1e-15, method='bfgs', maxiter=1000)
 
     def test_t_test(self):
         m = self.m
@@ -919,7 +919,7 @@ class TestL1AlphaZeroMNLogit(CompareL1):
         cls.res1 = MNLogit(data.endog, data.exog).fit_regularized(
                 method="l1", alpha=0, disp=0, acc=1e-15, maxiter=1000,
                 trim_mode='auto', auto_trim_tol=0.01)
-        cls.res2 = MNLogit(data.endog, data.exog).fit(disp=0, tol=1e-15,
+        cls.res2 = MNLogit(data.endog, data.exog).fit(disp=0, gtol=1e-15,
                                                       method='bfgs',
                                                       maxiter=1000)
 
@@ -2395,7 +2395,7 @@ def test_optim_kwds_prelim():
     # GPP with p=1.5 converges correctly,
     # GPP fails when p=2 even with good start_params
     model = GeneralizedPoisson(y, exog, offset=offset, p=1.5)
-    res = model.fit(disp=0, maxiter=200, optim_kwds_prelim=optim_kwds_prelim )
+    res = model.fit(disp=0, maxiter=200, optim_kwds_prelim=optim_kwds_prelim)
 
     assert_allclose(res.mle_settings['start_params'][:-1], res_poi.params,
                     rtol=1e-4)

@@ -2,10 +2,22 @@
 Functions that are general enough to use for any model fitting. The idea is
 to untie these from LikelihoodModel so that they may be re-used generally.
 """
+from __future__ import annotations
 
+from typing import Any, Sequence
 import numpy as np
 from scipy import optimize
 
+
+def check_kwargs(kwargs:dict[str, Any], allowed:Sequence[str]):
+    extra = set(list(kwargs.keys())).difference(list(allowed))
+    if extra:
+        raise ValueError(
+            f"Keyword arguments passed to the optimizer are not allowed. "
+            f"The list of allowed keywoard arguments is: "
+            f"{', '.join(allowed)}. The list of extraneous keyword "
+            f"arguments is: {', '.join(extra)}."
+        )
 
 def _check_method(method, methods):
     if method not in methods:
@@ -32,7 +44,7 @@ class Optimizer(object):
         fargs : tuple
             Extra arguments passed to the objective function, i.e.
             objective(x,*args)
-        kwargs : tuple
+        kwargs : dict[str, Any]
             Extra keyword arguments passed to the objective function, i.e.
             objective(x,**kwargs)
         hessian : str, optional
@@ -195,10 +207,10 @@ class Optimizer(object):
         """
         #TODO: generalize the regularization stuff
         # Extract kwargs specific to fit_regularized calling fit
-        extra_fit_funcs = kwargs.setdefault('extra_fit_funcs', dict())
+        extra_fit_funcs = kwargs.get('extra_fit_funcs', dict())
 
         methods = ['newton', 'nm', 'bfgs', 'lbfgs', 'powell', 'cg', 'ncg',
-                'basinhopping', 'minimize']
+                   'basinhopping', 'minimize']
         methods += extra_fit_funcs.keys()
         method = method.lower()
         _check_method(method, methods)
@@ -229,7 +241,7 @@ class Optimizer(object):
         optim_settings = {'optimizer': method, 'start_params': start_params,
                         'maxiter': maxiter, 'full_output': full_output,
                         'disp': disp, 'fargs': fargs, 'callback': callback,
-                        'retall': retall}
+                        'retall': retall, "extra_fit_funcs": extra_fit_funcs}
         optim_settings.update(kwargs)
         # set as attributes or return?
         return xopt, retvals, optim_settings
@@ -279,7 +291,7 @@ def _fit_minimize(f, score, start_params, fargs, kwargs, disp=True,
     fargs : tuple
         Extra arguments passed to the objective function, i.e.
         objective(x,*args)
-    kwargs : tuple
+    kwargs : dict[str, Any]
         Extra keyword arguments passed to the objective function, i.e.
         objective(x,**kwargs)
     disp : bool
@@ -373,7 +385,7 @@ def _fit_newton(f, score, start_params, fargs, kwargs, disp=True,
     fargs : tuple
         Extra arguments passed to the objective function, i.e.
         objective(x,*args)
-    kwargs : tuple
+    kwargs : dict[str, Any]
         Extra keyword arguments passed to the objective function, i.e.
         objective(x,**kwargs)
     disp : bool
@@ -404,6 +416,7 @@ def _fit_newton(f, score, start_params, fargs, kwargs, disp=True,
         information returned from the solver used. If it is False, this is
         None.
     """
+    check_kwargs(kwargs, ("tol",))
     tol = kwargs.setdefault('tol', 1e-8)
     iterations = 0
     oldparams = np.inf
@@ -475,7 +488,7 @@ def _fit_bfgs(f, score, start_params, fargs, kwargs, disp=True,
     fargs : tuple
         Extra arguments passed to the objective function, i.e.
         objective(x,*args)
-    kwargs : tuple
+    kwargs : dict[str, Any]
         Extra keyword arguments passed to the objective function, i.e.
         objective(x,**kwargs)
     disp : bool
@@ -504,6 +517,7 @@ def _fit_bfgs(f, score, start_params, fargs, kwargs, disp=True,
         information returned from the solver used. If it is False, this is
         None.
     """
+    check_kwargs(kwargs, ("gtol", "norm", "epsilon"))
     gtol = kwargs.setdefault('gtol', 1.0000000000000001e-05)
     norm = kwargs.setdefault('norm', np.Inf)
     epsilon = kwargs.setdefault('epsilon', 1.4901161193847656e-08)
@@ -547,7 +561,7 @@ def _fit_lbfgs(f, score, start_params, fargs, kwargs, disp=True, maxiter=100,
     fargs : tuple
         Extra arguments passed to the objective function, i.e.
         objective(x,*args)
-    kwargs : tuple
+    kwargs : dict[str, Any]
         Extra keyword arguments passed to the objective function, i.e.
         objective(x,**kwargs)
     disp : bool
@@ -582,7 +596,10 @@ def _fit_lbfgs(f, score, start_params, fargs, kwargs, disp=True, maxiter=100,
     its gradient with respect to the parameters do not have notationally
     consistent sign.
     """
-
+    check_kwargs(
+        kwargs,
+        ("m", "pgtol", "factr", "maxfun", "epsilon", "approx_grad", "bounds" ,"loglike_and_score")
+    )
     # Use unconstrained optimization by default.
     bounds = kwargs.setdefault('bounds', [(None, None)] * len(start_params))
     kwargs.setdefault('iprint', 0)
@@ -669,7 +686,7 @@ def _fit_nm(f, score, start_params, fargs, kwargs, disp=True,
     fargs : tuple
         Extra arguments passed to the objective function, i.e.
         objective(x,*args)
-    kwargs : tuple
+    kwargs : dict[str, Any]
         Extra keyword arguments passed to the objective function, i.e.
         objective(x,**kwargs)
     disp : bool
@@ -698,6 +715,7 @@ def _fit_nm(f, score, start_params, fargs, kwargs, disp=True,
         information returned from the solver used. If it is False, this is
         None.
     """
+    check_kwargs(kwargs, ("xtol", "ftol", "maxfun"))
     xtol = kwargs.setdefault('xtol', 0.0001)
     ftol = kwargs.setdefault('ftol', 0.0001)
     maxfun = kwargs.setdefault('maxfun', None)
@@ -741,7 +759,7 @@ def _fit_cg(f, score, start_params, fargs, kwargs, disp=True,
     fargs : tuple
         Extra arguments passed to the objective function, i.e.
         objective(x,*args)
-    kwargs : tuple
+    kwargs : dict[str, Any]
         Extra keyword arguments passed to the objective function, i.e.
         objective(x,**kwargs)
     disp : bool
@@ -770,6 +788,7 @@ def _fit_cg(f, score, start_params, fargs, kwargs, disp=True,
         information returned from the solver used. If it is False, this is
         None.
     """
+    check_kwargs(kwargs, ("gtol", "norm", "epsilon"))
     gtol = kwargs.setdefault('gtol', 1.0000000000000001e-05)
     norm = kwargs.setdefault('norm', np.Inf)
     epsilon = kwargs.setdefault('epsilon', 1.4901161193847656e-08)
@@ -813,7 +832,7 @@ def _fit_ncg(f, score, start_params, fargs, kwargs, disp=True,
     fargs : tuple
         Extra arguments passed to the objective function, i.e.
         objective(x,*args)
-    kwargs : tuple
+    kwargs : dict[str, Any]
         Extra keyword arguments passed to the objective function, i.e.
         objective(x,**kwargs)
     disp : bool
@@ -842,6 +861,7 @@ def _fit_ncg(f, score, start_params, fargs, kwargs, disp=True,
         information returned from the solver used. If it is False, this is
         None.
     """
+    check_kwargs(kwargs, ("fhess_p", "avextol", "epsilon"))
     fhess_p = kwargs.setdefault('fhess_p', None)
     avextol = kwargs.setdefault('avextol', 1.0000000000000001e-05)
     epsilon = kwargs.setdefault('epsilon', 1.4901161193847656e-08)
@@ -887,7 +907,7 @@ def _fit_powell(f, score, start_params, fargs, kwargs, disp=True,
     fargs : tuple
         Extra arguments passed to the objective function, i.e.
         objective(x,*args)
-    kwargs : tuple
+    kwargs : dict[str, Any]
         Extra keyword arguments passed to the objective function, i.e.
         objective(x,**kwargs)
     disp : bool
@@ -916,6 +936,7 @@ def _fit_powell(f, score, start_params, fargs, kwargs, disp=True,
         information returned from the solver used. If it is False, this is
         None.
     """
+    check_kwargs(kwargs, ("xtol", "ftol", "maxfun", "start_direc"))
     xtol = kwargs.setdefault('xtol', 0.0001)
     ftol = kwargs.setdefault('ftol', 0.0001)
     maxfun = kwargs.setdefault('maxfun', None)
@@ -962,7 +983,7 @@ def _fit_basinhopping(f, score, start_params, fargs, kwargs, disp=True,
     fargs : tuple
         Extra arguments passed to the objective function, i.e.
         objective(x,*args)
-    kwargs : tuple
+    kwargs : dict[str, Any]
         Extra keyword arguments passed to the objective function, i.e.
         objective(x,**kwargs)
     disp : bool
@@ -991,13 +1012,17 @@ def _fit_basinhopping(f, score, start_params, fargs, kwargs, disp=True,
         information returned from the solver used. If it is False, this is
         None.
     """
-    from copy import copy
-    kwargs = copy(kwargs)
+    check_kwargs(
+        kwargs,
+        ("niter", "niter_success", "T", "stepsize", "interval", "minimizer", "seed")
+    )
+    kwargs = {k: v for k,v in kwargs.items()}
     niter = kwargs.setdefault('niter', 100)
     niter_success = kwargs.setdefault('niter_success', None)
     T = kwargs.setdefault('T', 1.0)
     stepsize = kwargs.setdefault('stepsize', 0.5)
     interval = kwargs.setdefault('interval', 50)
+    seed = kwargs.get("seed")
     minimizer_kwargs = kwargs.get('minimizer', {})
     minimizer_kwargs['args'] = fargs
     minimizer_kwargs['jac'] = score
@@ -1009,7 +1034,8 @@ def _fit_basinhopping(f, score, start_params, fargs, kwargs, disp=True,
                                     minimizer_kwargs=minimizer_kwargs,
                                     niter=niter, niter_success=niter_success,
                                     T=T, stepsize=stepsize, disp=disp,
-                                    callback=callback, interval=interval)
+                                    callback=callback, interval=interval,
+                                    seed=seed)
     if full_output:
         xopt, fopt, niter, fcalls = map(lambda x : getattr(retvals, x),
                                         ['x', 'fun', 'nit', 'nfev'])

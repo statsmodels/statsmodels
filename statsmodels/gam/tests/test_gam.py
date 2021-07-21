@@ -181,7 +181,7 @@ def test_gam_glm():
 
     glm_gam = GLMGam(y, smoother=bsplines, alpha=alpha)
     res_glm_gam = glm_gam.fit(method='bfgs', max_start_irls=0,
-                              disp=1, maxiter=10000, maxfun=5000)
+                              disp=1, maxiter=10000)
     y_gam0 = np.dot(bsplines.basis, res_glm_gam.params)
     y_gam = np.asarray(res_glm_gam.fittedvalues)
     assert_allclose(y_gam, y_gam0, rtol=1e-10)
@@ -615,10 +615,10 @@ def test_glm_pirls_compatibility():
     gam_glm = GLMGam(y, smoother=cs, alpha=alphas)
 
     gam_res_glm = gam_glm.fit(method='nm', max_start_irls=0,
-                              disp=1, maxiter=20000, maxfun=10000)
+                              disp=1, maxiter=20000)
     gam_res_glm = gam_glm.fit(start_params=gam_res_glm.params,
                               method='bfgs', max_start_irls=0,
-                              disp=1, maxiter=20000, maxfun=10000)
+                              disp=1, maxiter=20000)
     gam_res_pirls = gam_pirls.fit()
 
     y_est_glm = np.dot(cs.basis, gam_res_glm.params)
@@ -800,7 +800,7 @@ def test_cov_params():
                     atol=1e-10)
 
     res_glm_gam = glm_gam.fit(method='bfgs', max_start_irls=0,
-                              disp=0, maxiter=5000, maxfun=5000)
+                              disp=0, maxiter=5000)
 
     assert_allclose(res_glm.cov_params(), res_glm_gam.cov_params(),
                     rtol=1e-4, atol=1e-8)

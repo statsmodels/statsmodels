@@ -680,6 +680,13 @@ class MLEModel(tsbase.TimeSeriesModel):
             mlefit = Bunch(params=[], mle_retvals=None,
                            mle_settings=None)
         else:
+            # Remove disallowed kwargs
+            disallow = (
+                "concentrate_scale",
+                "enforce_stationarity",
+                "enforce_invertibility"
+            )
+            kwargs = {k: v for k, v in kwargs.items() if k not in disallow}
             # Maximum likelihood estimation
             if flags is None:
                 flags = {}

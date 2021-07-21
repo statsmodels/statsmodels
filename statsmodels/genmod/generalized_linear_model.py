@@ -1074,6 +1074,8 @@ class GLM(base.LikelihoodModel):
                                   cov_kwds=cov_kwds, use_t=use_t, **kwargs)
         else:
             self._optim_hessian = kwargs.get('optim_hessian')
+            if self._optim_hessian is not None:
+                del kwargs['optim_hessian']
             self._tmp_like_exog = np.empty_like(self.exog, dtype=float)
             fit_ = self._fit_gradient(start_params=start_params,
                                       method=method,
@@ -1110,8 +1112,7 @@ class GLM(base.LikelihoodModel):
                                        **kwargs)
             start_params = irls_rslt.params
             del irls_rslt
-
-        rslt = super(GLM, self).fit(start_params=start_params, tol=tol,
+        rslt = super(GLM, self).fit(start_params=start_params,
                                     maxiter=maxiter, full_output=full_output,
                                     method=method, disp=disp, **kwargs)
 

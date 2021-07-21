@@ -456,7 +456,7 @@ def test_fit_vs_R(setup_model, reset_randomstate):
         start = params
     else:
         start = None
-    fit = model.fit(disp=True, tol=1e-8, start_params=start)
+    fit = model.fit(disp=True, pgtol=1e-8, start_params=start)
 
     # check log likelihood: we want to have a fit that is better, i.e. a fit
     # that has a **higher** log-likelihood
