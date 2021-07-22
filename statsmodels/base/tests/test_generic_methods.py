@@ -209,9 +209,9 @@ class CheckGenericMixin(object):
 
             if use_start_params:
                 start_params = np.zeros(k_vars + k_extra)
-                method =  self.results.mle_settings['optimizer']
+                method = self.results.mle_settings['optimizer']
                 # string in `method` is not mutable, so no need for copy
-                sp =  self.results.mle_settings['start_params'].copy()
+                sp = self.results.mle_settings['start_params'].copy()
                 if self.transform_index is not None:
                     # work around internal transform_params, currently in NB
                     sp[self.transform_index] = np.exp(sp[self.transform_index])
@@ -388,7 +388,10 @@ class TestGenericLogit(CheckGenericMixin):
         model = sm.Logit(y_bin, x)  #, exposure=np.ones(nobs), offset=np.zeros(nobs)) #bug with default
         # use start_params to converge faster
         start_params = np.array([-0.73403806, -1.00901514, -0.97754543, -0.95648212])
-        self.results = model.fit(start_params=start_params, method='bfgs', disp=0)
+        with pytest.warns(FutureWarning,
+                          match="Keyword arguments have been passed"):
+            self.results = model.fit(start_params=start_params,
+                                     method='bfgs', disp=0, tol=1e-5)
 
 
 class TestGenericRLM(CheckGenericMixin):
