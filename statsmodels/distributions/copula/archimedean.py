@@ -117,6 +117,13 @@ class ClaytonCopula(ArchimedeanCopula):
     def cdf(self, u):
         return (np.sum(u ** (-self.theta), axis=1) - 1) ** (-1.0 / self.theta)
 
+    def tau(self, theta=None):
+        # Joe 2014 p. 168
+        if theta is None:
+            theta = self.theta
+
+        return theta / (theta + 2)
+
     def _theta_from_tau(self, tau):
         return 2 * tau / (1 - tau)
 
@@ -295,6 +302,13 @@ class GumbelCopula(ArchimedeanCopula):
         h = np.sum((-np.log(u)) ** self.theta, axis=1)
         cdf = np.exp(-h ** (1.0 / self.theta))
         return cdf
+
+    def tau(self, theta=None):
+        # Joe 2014 p. 172
+        if theta is None:
+            theta = self.theta
+
+        return (theta - 1) / theta
 
     def _theta_from_tau(self, tau):
         return 1 / (1 - tau)

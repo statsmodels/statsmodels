@@ -182,7 +182,7 @@ class CopulaDistribution:
         self.copargs = copargs
         self.k_vars = len(marginals)
 
-    def random(self, n=1, random_state=None):
+    def random(self, nobs=1, random_state=None):
         """Draw `n` in the half-open interval ``[0, 1)``.
 
         Sample the joint distribution.
@@ -208,9 +208,9 @@ class CopulaDistribution:
         rng = check_random_state(random_state)
         if self.copula is None:
             # this means marginals are independents
-            sample = rng.random((n, self.d))
+            sample = rng.random((nobs, self.d))
         else:
-            sample = self.copula.random(n, random_state=random_state)
+            sample = self.copula.random(nobs, random_state=random_state)
 
         for i, dist in enumerate(self.marginals):
             sample[:, i] = dist.ppf(0.5 + (1 - 1e-10) * (sample[:, i] - 0.5))
@@ -354,7 +354,7 @@ class Copula(ABC):
     def __init__(self, d):
         self.d = d
 
-    def random(self, n=1, random_state=None):
+    def random(self, nobs=1, random_state=None):
         """Draw `n` in the half-open interval ``[0, 1)``.
 
         Marginals are uniformly distributed.
@@ -372,7 +372,7 @@ class Copula(ABC):
 
         Returns
         -------
-        sample : array_like (n, d)
+        sample : array_like (nobs, d)
             Sample from the copula.
 
         """
@@ -390,7 +390,7 @@ class Copula(ABC):
     def cdf(self, u):
         """Cumulative density function."""
 
-    def plot(self, n, random_state=None, ax=None):
+    def plot_scatter(self, sample=None, nobs=None, random_state=None, ax=None):
         """Sample the copula and plot.
 
         Parameters
@@ -419,7 +419,8 @@ class Copula(ABC):
         if self.d != 2:
             raise ValueError("Can only plot 2-dimensional Copula.")
 
-        sample = self.random(n=n, random_state=random_state)
+        if sample is None:
+            sample = self.random(nobs=nobs, random_state=random_state)
 
         fig, ax = utils.create_mpl_ax(ax)
         ax.scatter(sample[:, 0], sample[:, 1])
@@ -480,8 +481,7 @@ class Copula(ABC):
 
         return fig
 
-    @property
-    def tau(self):
+    def tau_simulated(self, nobs=1024, random_state=None):
         """Empirical Kendall's tau.
 
         Returns
@@ -490,7 +490,7 @@ class Copula(ABC):
             Kendall's tau.
 
         """
-        x = self.random(1024, random_state=0)
+        x = self.random(nobs, random_state=random_state)
         return stats.kendalltau(x[:, 0], x[:, 1])[0]
 
     def fit_theta(self, x):
