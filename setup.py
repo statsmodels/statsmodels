@@ -40,7 +40,7 @@ except ImportError:
 # Key Values that Change Each Release
 ###############################################################################
 SETUP_REQUIREMENTS = {'numpy': '1.17',  # released July 2019
-                      'scipy': '1.3',  # released May 2019
+                      'scipy': '1.6',  # released Dec 2020
                       }
 
 REQ_NOT_MET_MSG = """
