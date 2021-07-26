@@ -12,6 +12,7 @@ from . import (
     committee,
     copper,
     cpunish,
+    danish_data,
     elnino,
     engel,
     fair,
@@ -74,6 +75,7 @@ __all__ = [
     "webuse",
     "check_internet",
     "test",
+    "danish_data",
 ]
 
 test = PytestTester()

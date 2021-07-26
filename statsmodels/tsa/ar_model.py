@@ -278,7 +278,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
             self._lags = lags
             if np.any(lags < 1) or np.unique(lags).shape[0] != lags.shape[0]:
                 raise ValueError(
-                    "All values in lags must be positive and " "distinct."
+                    "All values in lags must be positive and distinct."
                 )
             self._maxlag = np.max(lags)
         else:
@@ -338,11 +338,11 @@ class AutoReg(tsa_model.TimeSeriesModel):
             nobs = y.shape[0]
             raise ValueError(
                 "The model specification cannot be estimated. "
-                "The model contains {0} regressors ({1} trend, "
-                "{2} seasonal, {3} lags) but after adjustment "
+                f"The model contains {reg} regressors ({trend} trend, "
+                f"{seas} seasonal, {lags} lags) but after adjustment "
                 "for hold_back and creation of the lags, there "
-                "are only {4} data points available to estimate "
-                "parameters.".format(reg, trend, seas, lags, nobs)
+                f"are only {nobs} data points available to estimate "
+                "parameters."
             )
         self._y, self._x = y, x
         self._exog_names = exog_names
@@ -648,6 +648,39 @@ class AutoReg(tsa_model.TimeSeriesModel):
         prediction = np.hstack((in_sample, out_of_sample))
         return self._wrap_prediction(prediction, start, end + 1 + num_oos, adj)
 
+    def _prepare_prediction(self, params, exog, exog_oos, start, end):
+        params = array_like(params, "params")
+        if not isinstance(exog, pd.DataFrame):
+            exog = array_like(exog, "exog", ndim=2, optional=True)
+        if not isinstance(exog_oos, pd.DataFrame):
+            exog_oos = array_like(exog_oos, "exog_oos", ndim=2, optional=True)
+
+        start = 0 if start is None else start
+        end = self._index[-1] if end is None else end
+        start, end, num_oos, _ = self._get_prediction_index(start, end)
+        return params, exog, exog_oos, start, end, num_oos
+
+    def _parse_dynamic(self, dynamic, start):
+        if isinstance(
+            dynamic, (str, bytes, pd.Timestamp, dt.datetime, pd.Period)
+        ):
+            dynamic_loc, _, _ = self._get_index_loc(dynamic)
+            # Adjust since relative to start
+            dynamic_loc -= start
+        elif dynamic is True:
+            # if True, all forecasts are dynamic
+            dynamic_loc = 0
+        else:
+            dynamic_loc = int(dynamic)
+        # At this point dynamic is an offset relative to start
+        # and it must be non-negative
+        if dynamic_loc < 0:
+            raise ValueError(
+                "Dynamic prediction cannot begin prior to the "
+                "first observation in the sample."
+            )
+        return dynamic_loc
+
     def predict(
         self,
         params,
@@ -700,13 +733,10 @@ class AutoReg(tsa_model.TimeSeriesModel):
             Array of out of in-sample predictions and / or out-of-sample
             forecasts.
         """
-        params = array_like(params, "params")
-        exog = array_like(exog, "exog", ndim=2, optional=True)
-        exog_oos = array_like(exog_oos, "exog_oos", ndim=2, optional=True)
 
-        start = 0 if start is None else start
-        end = self._index[-1] if end is None else end
-        start, end, num_oos, _ = self._get_prediction_index(start, end)
+        params, exog, exog_oos, start, end, num_oos = self._prepare_prediction(
+            params, exog, exog_oos, start, end
+        )
         if self.exog is None and (exog is not None or exog_oos is not None):
             raise ValueError(
                 "exog and exog_oos cannot be used when the model "
@@ -749,25 +779,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
             return self._static_predict(
                 params, start, end, num_oos, exog, exog_oos
             )
-
-        if isinstance(
-            dynamic, (str, bytes, pd.Timestamp, dt.datetime, pd.Period)
-        ):
-            dynamic, _, _ = self._get_index_loc(dynamic)
-            # Adjust since relative to start
-            dynamic -= start
-        elif dynamic is True:
-            # if True, all forecasts are dynamic
-            dynamic = 0
-        else:
-            dynamic = int(dynamic)
-        # At this point dynamic is an offset relative to start
-        # and it must be non-negative
-        if dynamic < 0:
-            raise ValueError(
-                "Dynamic prediction cannot begin prior to the "
-                "first observation in the sample."
-            )
+        dynamic = self._parse_dynamic(dynamic, start)
 
         return self._dynamic_predict(
             params, start, end, dynamic, num_oos, exog, exog_oos
@@ -1249,8 +1261,6 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
 
         Parameters
         ----------
-        params : array_like
-            The fitted model parameters.
         start : int, str, or datetime, optional
             Zero-indexed observation number at which to start forecasting,
             i.e., the first forecast is start. Can also be a date string to
@@ -1289,7 +1299,8 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         mean = self.predict(
             start=start, end=end, dynamic=dynamic, exog=exog, exog_oos=exog_oos
         )
-        mean_var = np.zeros_like(mean)
+        mean_var = np.full_like(mean, self.sigma2)
+        mean_var[np.isnan(mean)] = np.nan
         start = 0 if start is None else start
         end = self.model._index[-1] if end is None else end
         _, _, oos, _ = self.model._get_prediction_index(start, end)
@@ -1313,9 +1324,9 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             sample. Can also be a date string to parse or a datetime type.
             However, if the dates index does not have a fixed frequency,
             steps must be an integer.
-        exog : {ndarray, Series}
-            A replacement exogenous array.  Must have the same shape as the
-            exogenous data array used when the model was created.
+        exog : {ndarray, DataFrame}
+            Exogenous values to use out-of-sample. Must have same number of
+            columns as original exog data and at least `steps` rows
 
         Returns
         -------
@@ -1327,6 +1338,8 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         --------
         AutoRegResults.predict
             In- and out-of-sample predictions
+        AutoRegResults.get_prediction
+            In- and out-of-sample predictions and confidence intervals
         """
         start = self.model.data.orig_endog.shape[0]
         if isinstance(steps, (int, np.integer)):
@@ -1334,6 +1347,55 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         else:
             end = steps
         return self.predict(start=start, end=end, dynamic=False, exog_oos=exog)
+
+    def _plot_predictions(
+            self,
+            predictions,
+            start,
+            end,
+            alpha,
+            in_sample,
+            fig,
+            figsize,
+    ):
+        """Shared helper for plotting predictions"""
+        from statsmodels.graphics.utils import _import_mpl, create_mpl_fig
+
+        _import_mpl()
+        fig = create_mpl_fig(fig, figsize)
+        start = 0 if start is None else start
+        end = self.model._index[-1] if end is None else end
+        _, _, oos, _ = self.model._get_prediction_index(start, end)
+
+        ax = fig.add_subplot(111)
+        mean = predictions.predicted_mean
+        if not in_sample and oos:
+            if isinstance(mean, pd.Series):
+                mean = mean.iloc[-oos:]
+        elif not in_sample:
+            raise ValueError(
+                "in_sample is False but there are no"
+                "out-of-sample forecasts to plot."
+            )
+        ax.plot(mean, zorder=2)
+
+        if oos and alpha is not None:
+            ci = np.asarray(predictions.conf_int(alpha))
+            lower, upper = ci[-oos:, 0], ci[-oos:, 1]
+            label = "{0:.0%} confidence interval".format(1 - alpha)
+            x = ax.get_lines()[-1].get_xdata()
+            ax.fill_between(
+                x[-oos:],
+                lower,
+                upper,
+                color="gray",
+                alpha=0.5,
+                label=label,
+                zorder=1,
+            )
+        ax.legend(loc="best")
+
+        return fig
 
     @Substitution(predict_params=_predict_params)
     def plot_predict(
@@ -1373,48 +1435,12 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         Figure
             Figure handle containing the plot.
         """
-        from statsmodels.graphics.utils import _import_mpl, create_mpl_fig
-
-        _import_mpl()
-        fig = create_mpl_fig(fig, figsize)
         predictions = self.get_prediction(
             start=start, end=end, dynamic=dynamic, exog=exog, exog_oos=exog_oos
         )
-
-        start = 0 if start is None else start
-        end = self.model._index[-1] if end is None else end
-        _, _, oos, _ = self.model._get_prediction_index(start, end)
-
-        ax = fig.add_subplot(111)
-        mean = predictions.predicted_mean
-        if not in_sample and oos:
-            if isinstance(mean, pd.Series):
-                mean = mean.iloc[-oos:]
-        elif not in_sample:
-            raise ValueError(
-                "in_sample is False but there are no"
-                "out-of-sample forecasts to plot."
-            )
-        ax.plot(mean, zorder=2)
-
-        if oos and alpha is not None:
-            ci = np.asarray(predictions.conf_int(alpha))
-            lower, upper = ci[-oos:, 0], ci[-oos:, 1]
-            label = "{0:.0%} confidence interval".format(1 - alpha)
-            x = ax.get_lines()[-1].get_xdata()
-            ax.fill_between(
-                x[-oos:],
-                lower,
-                upper,
-                color="gray",
-                alpha=0.5,
-                label=label,
-                zorder=1,
-            )
-
-        ax.legend(loc="best")
-
-        return fig
+        return self._plot_predictions(
+            predictions, start, end, alpha, in_sample, fig, figsize
+        )
 
     def plot_diagnostics(self, lags=10, fig=None, figsize=None):
         """

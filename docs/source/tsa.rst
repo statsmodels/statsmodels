@@ -216,6 +216,30 @@ process for given lag-polynomials.
 
 .. currentmodule:: statsmodels.tsa
 
+Autoregressive Distributed Lag (ARDL) Models
+""""""""""""""""""""""""""""""""""""""""""""
+Autoregressive Distributed Lag models span the space between
+autoregressive models (:class:`~statsmodels.tsa.ar_model.AutoReg`)
+and vector autoregressive models (:class:`~statsmodels.tsa.vector_ar.VAR`).
+
+.. currentmodule:: statsmodels.tsa
+
+.. autosummary::
+   :toctree: generated/
+
+   ardl.ARDL
+   ardl.ARDLResults
+   ardl.ardl_select_order
+
+The `ardl.ARDL` model estimates parameters using conditional MLE (OLS)
+and allows for both simple deterministic terms (trends and seasonal
+dummies) as well as complex deterministics using a
+:class:`~statsmodels.tsa.deterministic.DeterministicProcess`.
+
+AR-X and related models can also be fitted with
+:class:`~statsmodels.tsa.statespace.sarimax.SARIMAX` class (using full MLE via
+the Kalman Filter).
+
 Statespace Models
 """""""""""""""""
 See the :ref:`statespace documentation <statespace>`.

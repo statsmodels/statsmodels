@@ -779,7 +779,8 @@ def test_autoreg_score():
     assert isinstance(score, np.ndarray)
     assert score.shape == (4,)
     assert ar.information(res.params).shape == (4, 4)
-    assert_allclose(-ar.hessian(res.params), ar.information(res.params))
+    assert_allclose(-ar.hessian(res.params),
+                    ar.information(res.params))
 
 
 def test_autoreg_roots():
