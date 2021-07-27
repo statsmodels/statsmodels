@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
+from __future__ import annotations
+
 from statsmodels.compat.pandas import Appender, Substitution, to_numpy
 
 from collections.abc import Iterable
 import datetime as dt
 from types import SimpleNamespace
+from typing import List, Tuple
 import warnings
 
 import numpy as np
@@ -13,6 +16,7 @@ from scipy.stats import gaussian_kde, norm
 import statsmodels.base.wrapper as wrap
 from statsmodels.iolib.summary import Summary
 from statsmodels.regression.linear_model import OLS
+from statsmodels.tools import eval_measures
 from statsmodels.tools.decorators import cache_readonly, cache_writable
 from statsmodels.tools.docstring import Docstring, remove_parameters
 from statsmodels.tools.sm_exceptions import SpecificationWarning
@@ -180,7 +184,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
         missing="none",
         *,
         deterministic=None,
-        old_names=False
+        old_names=False,
     ):
         super().__init__(endog, exog, None, None, missing=missing)
         self._trend = string_like(
@@ -207,7 +211,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
             self._deterministics = DeterministicProcess(
                 index, additional_terms=terms
             )
-        self._lags = lags if lags is not None else 0
+        self._lags = lags
         self._exog_names = []
         self._k_ar = 0
         self._hold_back = int_like(hold_back, "hold_back", optional=True)
@@ -226,7 +230,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
                 "stop setting this parameter and use the new names.",
                 FutureWarning,
             )
-        self._check_lags()
+        self._lags, self._hold_back = self._check_lags()
         self._setup_regressors()
         self.nobs = self._y.shape[0]
         self.data.xnames = self.exog_names
@@ -253,6 +257,11 @@ class AutoReg(tsa_model.TimeSeriesModel):
         return self._seasonal
 
     @property
+    def deterministic(self):
+        """The deterministic used to construct the model"""
+        return self._deterministics if self._user_deterministic else None
+
+    @property
     def period(self):
         """The period of the seasonal component."""
         return self._period
@@ -271,11 +280,13 @@ class AutoReg(tsa_model.TimeSeriesModel):
         """Initialize the model (no-op)."""
         pass
 
-    def _check_lags(self):
+    def _check_lags(self) -> Tuple[List[int], int]:
         lags = self._lags
-        if isinstance(lags, Iterable):
+        if lags is None:
+            lags = []
+            self._maxlag = 0
+        elif isinstance(lags, Iterable):
             lags = np.array(sorted([int_like(lag, "lags") for lag in lags]))
-            self._lags = lags
             if np.any(lags < 1) or np.unique(lags).shape[0] != lags.shape[0]:
                 raise ValueError(
                     "All values in lags must be positive and distinct."
@@ -285,14 +296,16 @@ class AutoReg(tsa_model.TimeSeriesModel):
             self._maxlag = int_like(lags, "lags")
             if self._maxlag < 0:
                 raise ValueError("lags must be a non-negative scalar.")
-            self._lags = np.arange(1, self._maxlag + 1)
-        if self._hold_back is None:
-            self._hold_back = self._maxlag
-        if self._hold_back < self._maxlag:
+            lags = np.arange(1, self._maxlag + 1)
+        hold_back = self._hold_back
+        if hold_back is None:
+            hold_back = self._maxlag
+        if hold_back < self._maxlag:
             raise ValueError(
                 "hold_back must be >= lags if lags is an int or"
                 "max(lags) if lags is array_like."
             )
+        return list(lags), int(hold_back)
 
     def _setup_regressors(self):
         maxlag = self._maxlag
@@ -304,7 +317,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
             [endog_names + ".L{0}".format(lag) for lag in self._lags]
         )
         if len(self._lags) < maxlag:
-            x = x[:, self._lags - 1]
+            x = x[:, np.asarray(self._lags) - 1]
         self._k_ar = x.shape[1]
         deterministic = self._deterministics.in_sample()
         if deterministic.shape[1]:
@@ -334,7 +347,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
             period = self._period
             trend = 0 if self._trend == "n" else len(self._trend)
             seas = 0 if not self._seasonal else period - ("c" in self._trend)
-            lags = self._lags.shape[0]
+            lags = len(self._lags)
             nobs = y.shape[0]
             raise ValueError(
                 "The model specification cannot be estimated. "
@@ -531,7 +544,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
                     index = pd.date_range(index[0], freq=freq, periods=end)
             else:
                 index = pd.RangeIndex(end)
-        index = index[start-pad:end]
+        index = index[start - pad : end]
         prediction = prediction[-n_values:]
         return pd.Series(prediction, index=index)
 
@@ -596,7 +609,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
             return new_x @ params
         forecasts = np.empty(num_oos)
         nexog = 0 if self.exog is None else self.exog.shape[1]
-        ar_offset = self._x.shape[1] - nexog - self._lags.shape[0]
+        ar_offset = self._x.shape[1] - nexog - len(self._lags)
         for i in range(num_oos):
             for j, lag in enumerate(self._lags):
                 loc = i - lag
@@ -849,9 +862,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
     def __init__(
         self, model, params, cov_params, normalized_cov_params=None, scale=1.0
     ):
-        super(AutoRegResults, self).__init__(
-            model, params, normalized_cov_params, scale
-        )
+        super().__init__(model, params, normalized_cov_params, scale)
         self._cache = {}
         self._params = params
         self._nobs = model.nobs
@@ -929,10 +940,10 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
 
     @cache_readonly
     def aic(self):
-        """
+        r"""
         Akaike Information Criterion using Lutkepohl's definition.
 
-        :math:`log(sigma) + 2*(1 + df_model) / nobs`
+        :math:`-2 llf + \ln(nobs) (1 + df_{model})`
         """
         # This is based on loglike with dropped constant terms ?
         # Lutkepohl
@@ -941,14 +952,14 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         # Stata defintion
         # nobs = self.nobs
         # return -2 * self.llf/nobs + 2 * (self.k_ar+self.k_trend)/nobs
-        return np.log(self.sigma2) + 2 * (1 + self.df_model) / self.nobs
+        return eval_measures.aic(self.llf, self.nobs, self.df_model + 1)
 
     @cache_readonly
     def hqic(self):
         r"""
         Hannan-Quinn Information Criterion using Lutkepohl's definition.
 
-        :math:`\ln(\sigma) + (1 + df_{model}) 2 \ln(\ln(nobs))/nobs`
+        :math:`-2 llf + 2 \ln(\ln(nobs)) (1 + df_{model})`
         """
         # Lutkepohl
         # return np.log(self.sigma2)+ 2 * np.log(np.log(nobs))/nobs * self.k_ar
@@ -957,37 +968,42 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         # nobs = self.nobs
         # return -2 * self.llf/nobs + 2 * np.log(np.log(nobs))/nobs * \
         #        (self.k_ar + self.k_trend)
-        nobs = self.nobs
-        loglog_n = np.log(np.log(nobs))
-        log_sigma2 = np.log(self.sigma2)
-        return log_sigma2 + 2 * loglog_n / nobs * (1 + self.df_model)
+        return eval_measures.hqic(self.llf, self.nobs, self.df_model + 1)
 
     @cache_readonly
     def fpe(self):
-        """
+        r"""
         Final prediction error using Lütkepohl's definition.
 
-        ((n_totobs+k_trend)/(n_totobs-k_ar-k_trend))*sigma
+        :math:`((nobs+df_{model})/(nobs-df_{model}))*\sigma^2
         """
         nobs = self.nobs
         df_model = self.df_model
         # Lutkepohl
-        return ((nobs + df_model) / (nobs - df_model)) * self.sigma2
+        return self.sigma2 * ((nobs + df_model) / (nobs - df_model))
+
+    @cache_readonly
+    def aicc(self):
+        """
+        Akaike Information Criterion with small sample correction
+
+        :math:`2.0 * df_modelwc * nobs / (nobs - df_modelwc - 1.0)`
+        """
+        return eval_measures.aicc(self.llf, self.nobs, self.df_model + 1)
 
     @cache_readonly
     def bic(self):
         r"""
         Bayes Information Criterion
 
-        :math:`\ln(\sigma) + (1 + df_{model}) \ln(nobs)/nobs`
+        :math:`-2 llf + \ln(nobs) (1 + df_{model})`
         """
         # Lutkepohl
         # np.log(self.sigma2) + np.log(nobs)/nobs * self.k_ar
         # Include constant as est. free parameter
         # Stata
         # -2 * self.llf/nobs + np.log(nobs)/nobs * (self.k_ar + self.k_trend)
-        nobs = self.nobs
-        return np.log(self.sigma2) + (1 + self.df_model) * np.log(nobs) / nobs
+        return eval_measures.bic(self.llf, self.nobs, self.df_model + 1)
 
     @cache_readonly
     def resid(self):
@@ -1049,7 +1065,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         The `k_ar` initial values are computed via the Kalman Filter if the
         model is fit by `mle`.
         """
-        return self.model.predict(self.params)[self._hold_back:]
+        return self.model.predict(self.params)[self._hold_back :]
 
     def test_serial_correlation(self, lags=None, model_df=None):
         """
@@ -1349,14 +1365,14 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         return self.predict(start=start, end=end, dynamic=False, exog_oos=exog)
 
     def _plot_predictions(
-            self,
-            predictions,
-            start,
-            end,
-            alpha,
-            in_sample,
-            fig,
-            figsize,
+        self,
+        predictions,
+        start,
+        end,
+        alpha,
+        in_sample,
+        fig,
+        figsize,
     ):
         """Shared helper for plotting predictions"""
         from statsmodels.graphics.utils import _import_mpl, create_mpl_fig
@@ -1740,8 +1756,10 @@ def ar_select_order(
         nobs = res.nobs
         df_model = res.df_model
         sigma2 = 1.0 / nobs * sumofsq(res.resid)
-
-        res = SimpleNamespace(nobs=nobs, df_model=df_model, sigma2=sigma2)
+        llf = -nobs * (np.log(2 * np.pi * sigma2) + 1) / 2
+        res = SimpleNamespace(
+            nobs=nobs, df_model=df_model, sigma2=sigma2, llf=llf
+        )
 
         aic = AutoRegResults.aic.func(res)
         bic = AutoRegResults.bic.func(res)

@@ -419,8 +419,7 @@ class TimeSeriesModel(base.LikelihoodModel):
 
     def __init__(self, endog, exog=None, dates=None, freq=None,
                  missing='none', **kwargs):
-        super(TimeSeriesModel, self).__init__(endog, exog, missing=missing,
-                                              **kwargs)
+        super().__init__(endog, exog, missing=missing, **kwargs)
 
         # Date handling in indexes
         self._init_dates(dates, freq)
@@ -772,8 +771,7 @@ class TimeSeriesModel(base.LikelihoodModel):
 class TimeSeriesModelResults(base.LikelihoodModelResults):
     def __init__(self, model, params, normalized_cov_params, scale=1.):
         self.data = model.data
-        super(TimeSeriesModelResults,
-                self).__init__(model, params, normalized_cov_params, scale)
+        super().__init__(model, params, normalized_cov_params, scale)
 
 
 class TimeSeriesResultsWrapper(wrap.ResultsWrapper):

@@ -32,7 +32,7 @@ class TSMLEModel(LikelihoodModel):
 
     def __init__(self, endog, exog=None):
         #need to override p,q (nar,nma) correctly
-        super(TSMLEModel, self).__init__(endog, exog)
+        super().__init__(endog, exog)
         #set default arma(1,1)
         self.nar = 1
         self.nma = 1
@@ -81,6 +81,6 @@ class TSMLEModel(LikelihoodModel):
         if start_params is None and hasattr(self, '_start_params'):
             start_params = self._start_params
         #start_params = np.concatenate((0.05*np.ones(self.nar + self.nma), [1]))
-        mlefit = super(TSMLEModel, self).fit(start_params=start_params,
+        mlefit = super().fit(start_params=start_params,
                 maxiter=maxiter, method=method, tol=tol)
         return mlefit

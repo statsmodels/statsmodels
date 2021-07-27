@@ -17,6 +17,7 @@ __all__ = [
     "STLForecast",
     "SVAR",
     "SimpleExpSmoothing",
+    "UECM",
     "UnobservedComponents",
     "VAR",
     "VARMAX",
@@ -62,7 +63,7 @@ __all__ = [
 from . import interp, stattools, tsatools, vector_ar as var
 from ..graphics import tsaplots as graphics
 from .ar_model import AR, AutoReg
-from .ardl import ARDL
+from .ardl import ARDL, UECM
 from .arima import api as arima
 from .arima_model import ARIMA, ARMA
 from .arima_process import ArmaProcess, arma_generate_sample

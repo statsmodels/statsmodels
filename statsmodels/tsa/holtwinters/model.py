@@ -219,9 +219,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         freq=None,
         missing="none",
     ):
-        super(ExponentialSmoothing, self).__init__(
-            endog, None, dates, freq, missing=missing
-        )
+        super().__init__(endog, None, dates, freq, missing=missing)
         self._y = self._data = array_like(
             endog, "endog", ndim=1, contiguous=True, order="C"
         )
@@ -1538,7 +1536,7 @@ class SimpleExpSmoothing(ExponentialSmoothing):
         initialization_method=None,  # Future: 'estimated',
         initial_level=None,
     ):
-        super(SimpleExpSmoothing, self).__init__(
+        super().__init__(
             endog,
             initialization_method=initialization_method,
             initial_level=initial_level,
@@ -1610,7 +1608,7 @@ class SimpleExpSmoothing(ExponentialSmoothing):
         [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles
             and practice. OTexts, 2014.
         """
-        return super(SimpleExpSmoothing, self).fit(
+        return super().fit(
             smoothing_level=smoothing_level,
             optimized=optimized,
             start_params=start_params,
@@ -1693,7 +1691,7 @@ class Holt(ExponentialSmoothing):
         initial_trend=None,
     ):
         trend = "mul" if exponential else "add"
-        super(Holt, self).__init__(
+        super().__init__(
             endog,
             trend=trend,
             damped_trend=damped_trend,
@@ -1792,7 +1790,7 @@ class Holt(ExponentialSmoothing):
         [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles
             and practice. OTexts, 2014.
         """
-        return super(Holt, self).fit(
+        return super().fit(
             smoothing_level=smoothing_level,
             smoothing_trend=smoothing_trend,
             damping_trend=damping_trend,

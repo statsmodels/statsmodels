@@ -122,6 +122,9 @@
   - img: ../_static/images/autoregressions.png
     target: notebooks/generated/autoregressions.html
     text: Autoregressions
+  - img: ../_static/images/autoregressive_distributed_lag.png
+    target: notebooks/generated/autoregressive_distributed_lag.html
+    text: 'Autoregressive Distributed Lag Models'
   - img: ../_static/images/deterministics.png
     target: notebooks/generated/deterministics.html
     text: Deterministic Terms

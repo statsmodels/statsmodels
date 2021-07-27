@@ -84,7 +84,7 @@ class HoltWintersResults(Results):
         mle_retvals=None,
     ):
         self.data = model.data
-        super(HoltWintersResults, self).__init__(model, params)
+        super().__init__(model, params)
         self._model = model
         self._sse = sse
         self._aic = aic

@@ -242,7 +242,7 @@ class LikelihoodModel(Model):
     """
 
     def __init__(self, endog, exog=None, **kwargs):
-        super(LikelihoodModel, self).__init__(endog, exog, **kwargs)
+        super().__init__(endog, exog, **kwargs)
         self.initialize()
 
     def initialize(self):
