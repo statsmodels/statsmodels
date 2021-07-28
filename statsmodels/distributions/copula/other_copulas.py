@@ -8,8 +8,8 @@ License: BSD-3
 """
 import numpy as np
 from scipy import stats
-from scipy._lib._util import check_random_state  # noqa
 
+from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.distributions.copula.copulas import Copula
 
 
