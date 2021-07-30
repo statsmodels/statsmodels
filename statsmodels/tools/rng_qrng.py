@@ -31,7 +31,8 @@ def check_random_state(seed=None):
     """
     if isinstance(seed, np.random.RandomState):
         return seed
-    elif hasattr(stats.qmc, "QMCEngine") and isinstance(seed, stats.qmc.QMCEngine):
+    elif hasattr(stats.qmc, "QMCEngine") and \
+            isinstance(seed, stats.qmc.QMCEngine):
         return seed
     else:
         return np.random.default_rng(seed)
