@@ -115,7 +115,7 @@
     text: Mediation analysis with duration data
   - img: ../_static/images/copula.png
     target: notebooks/generated/copula.html
-    text: Copula - Multivariate joint distribution
+    text: Copulas
 - header: Time Series Analysis
   id: stats
   links:
