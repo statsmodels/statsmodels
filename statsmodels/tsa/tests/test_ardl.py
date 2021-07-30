@@ -10,7 +10,7 @@ from statsmodels.datasets import danish_data
 from statsmodels.iolib.summary import Summary
 from statsmodels.tools.sm_exceptions import SpecificationWarning
 from statsmodels.tsa.ar_model import AutoReg
-from statsmodels.tsa.ardl import ARDL, ARDLResults, ardl_select_order
+from statsmodels.tsa.ardl import ARDL, UECM, ARDLResults, ardl_select_order
 from statsmodels.tsa.deterministic import DeterministicProcess
 
 dane_data = danish_data.load_pandas().data
@@ -36,6 +36,22 @@ def lags(request):
     ],
 )
 def order(request):
+    return request.param
+
+
+@pytest.fixture(
+    scope="module",
+    params=[
+        2,
+        {"lry": 3, "ibo": 2, "ide": 1},
+    ],
+)
+def uecm_order(request):
+    return request.param
+
+
+@pytest.fixture(scope="module", params=[None, 3])
+def uecm_lags(request):
     return request.param
 
 
@@ -292,7 +308,7 @@ def test_ardl_select_order(
     assert res.period == period
     assert res.trend == trend
     assert res.seasonal == seasonal
-    assert isinstance(res.exog_lags, dict)
+    assert isinstance(res.dl_lags, dict)
     assert res.ar_lags is None or isinstance(res.ar_lags, list)
 
 
@@ -612,3 +628,118 @@ def test_ardl_smoke_plots(data, seasonal, trend, close_figures):
     fig = res.plot_predict(end=75, alpha=None, in_sample=False)
     assert isinstance(fig, Figure)
     assert isinstance(res.summary(), Summary)
+
+
+def test_uecm_model_init(
+    data: Dataset,
+    uecm_lags,
+    uecm_order,
+    trend,
+    causal,
+    fixed,
+    use_numpy,
+    seasonal,
+):
+    y, x, z, uecm_order, period = _convert_to_numpy(
+        data, fixed, uecm_order, seasonal, use_numpy
+    )
+
+    mod = UECM(
+        y,
+        uecm_lags,
+        x,
+        uecm_order,
+        trend,
+        causal=causal,
+        fixed=z,
+        seasonal=seasonal,
+        period=period,
+    )
+    res = mod.fit()
+    check_results(res)
+    res.predict()
+
+    ardl = ARDL(
+        y,
+        uecm_lags,
+        x,
+        uecm_order,
+        trend,
+        causal=causal,
+        fixed=z,
+        seasonal=seasonal,
+        period=period,
+    )
+    uecm = UECM.from_ardl(ardl)
+    uecm_res = uecm.fit()
+    check_results(uecm_res)
+    uecm_res.predict()
+
+
+def test_from_ardl_none(data):
+    with pytest.warns(SpecificationWarning):
+        mod = UECM.from_ardl(
+            ARDL(data.y, 2, data.x, {"lry": 2, "ide": 2, "ibo": None})
+        )
+    assert mod.ardl_order == (2, 2, 2)
+
+
+def test_uecm_model_formula(
+    data: Dataset,
+    uecm_lags,
+    uecm_order,
+    trend,
+    causal,
+    fixed,
+    seasonal,
+):
+    fmla = "lrm ~ lry + ibo + ide"
+    df = pd.concat([data.y, data.x], axis=1)
+    if fixed is not None:
+        fmla += " | " + " + ".join(fixed.columns)
+        df = pd.concat([df, fixed], axis=1)
+    mod = UECM.from_formula(
+        fmla,
+        df,
+        uecm_lags,
+        uecm_order,
+        trend,
+        causal=causal,
+        seasonal=seasonal,
+    )
+    res = mod.fit()
+    check_results(res)
+    res.predict()
+
+
+def test_uecm_errors(data):
+    with pytest.raises(TypeError, match="order must be None"):
+        UECM(data.y, 2, data.x, [0, 1, 2])
+    with pytest.raises(TypeError, match="lags must be an"):
+        UECM(data.y, [1, 2], data.x, 2)
+    with pytest.raises(TypeError, match="order values must be positive"):
+        UECM(data.y, 2, data.x, {"ibo": [1, 2]})
+    with pytest.raises(ValueError, match="Model must contain"):
+        UECM(data.y, 2, data.x, None)
+    with pytest.raises(ValueError, match="All included exog"):
+        UECM(data.y, 2, data.x, {"lry": 2, "ide": 2, "ibo": 0})
+    with pytest.raises(ValueError, match="hold_back must be"):
+        UECM(data.y, 3, data.x, 5, hold_back=4)
+    with pytest.raises(ValueError, match="The number of"):
+        UECM(data.y, 20, data.x, 4)
+    ardl = ARDL(data.y, 2, data.x, {"lry": [1, 2], "ide": 2, "ibo": 2})
+    with pytest.raises(ValueError, match="UECM can only be created from"):
+        UECM.from_ardl(ardl)
+    ardl = ARDL(data.y, 2, data.x, {"lry": [0, 2], "ide": 2, "ibo": 2})
+    with pytest.raises(ValueError, match="UECM can only be created from"):
+        UECM.from_ardl(ardl)
+    ardl = ARDL(data.y, [1, 3], data.x, 2)
+    with pytest.raises(ValueError, match="UECM can only be created from"):
+        UECM.from_ardl(ardl)
+    res = UECM(data.y, 2, data.x, 2).fit()
+    with pytest.raises(NotImplementedError):
+        res.predict(end=100)
+    with pytest.raises(NotImplementedError):
+        res.predict(dynamic=True)
+    with pytest.raises(NotImplementedError):
+        res.predict(dynamic=25)

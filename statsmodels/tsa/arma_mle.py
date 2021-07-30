@@ -51,7 +51,7 @@ class Arma(GenericLikelihoodModel):  #switch to generic mle
             FutureWarning
         )
         #need to override p,q (nar,nma) correctly
-        super(Arma, self).__init__(endog, exog)
+        super().__init__(endog, exog)
         #set default arma(1,1)
         self.nar = 1
         self.nma = 1
@@ -273,8 +273,9 @@ class Arma(GenericLikelihoodModel):  #switch to generic mle
         self.nar, self.nma = nar, nma
         if start_params is None:
             start_params = np.concatenate((0.05*np.ones(nar + nma), [1]))
-        mlefit = super(Arma, self).fit(start_params=start_params,
-                maxiter=maxiter, method=method, ftol=tol, **kwds)
+        mlefit = super().fit(start_params=start_params,
+                             maxiter=maxiter, method=method,
+                             ftol=tol, **kwds)
         #bug fix: running ls and then mle did not overwrite this
         rh = mlefit.params
         self.params = rh

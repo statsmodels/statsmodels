@@ -549,7 +549,7 @@ class VAR(TimeSeriesModel):
     def __init__(
         self, endog, exog=None, dates=None, freq=None, missing="none"
     ):
-        super(VAR, self).__init__(endog, exog, dates, freq, missing=missing)
+        super().__init__(endog, exog, dates, freq, missing=missing)
         if self.endog.ndim == 1:
             raise ValueError("Only gave one variable to VAR")
         self.neqs = self.endog.shape[1]
@@ -1362,7 +1362,7 @@ class VARResults(VARProcess):
             "k_exog_user": k_exog_user,
             "k_ar": lag_order,
         }
-        super(VARResults, self).__init__(
+        super().__init__(
             coefs,
             self.coefs_exog,
             sigma_u,

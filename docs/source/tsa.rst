@@ -230,6 +230,7 @@ and vector autoregressive models (:class:`~statsmodels.tsa.vector_ar.VAR`).
    ardl.ARDL
    ardl.ARDLResults
    ardl.ardl_select_order
+   ardl.UECM
 
 The `ardl.ARDL` model estimates parameters using conditional MLE (OLS)
 and allows for both simple deterministic terms (trends and seasonal

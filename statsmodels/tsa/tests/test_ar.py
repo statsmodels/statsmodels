@@ -657,26 +657,18 @@ def test_autoreg_info_criterion(lag):
     endog_tmp = endog[16 - lag :]
     r = AutoReg(endog_tmp, lags=lag).fit()
     # See issue #324 for the corrections vs. R
-    k_ar = len(r.model.ar_lags)
-    k_trend = 1
-    log_sigma2 = np.log(r.sigma2)
     aic = r.aic
-    aic = (aic - log_sigma2) * (1 + k_ar) / (1 + k_ar + k_trend)
-    aic += log_sigma2
-
     hqic = r.hqic
-    hqic = (hqic - log_sigma2) * (1 + k_ar) / (1 + k_ar + k_trend)
-    hqic += log_sigma2
-
     bic = r.bic
-    bic = (bic - log_sigma2) * (1 + k_ar) / (1 + k_ar + k_trend)
-    bic += log_sigma2
 
     res1 = np.array([aic, hqic, bic, r.fpe])
     # aic correction to match R
     res2 = results_ar.ARLagResults("const").ic.T
-
-    assert_almost_equal(res1, res2[lag - 1, :], DECIMAL_6)
+    comp = res2[lag - 1, :].copy()
+    k = 2 + lag
+    pen = np.array([2, 2 * np.log(np.log(r.nobs)), np.log(r.nobs)])
+    comp[:3] = -2 * r.llf + pen * k
+    assert_almost_equal(res1, comp, DECIMAL_6)
 
     r2 = AutoReg(endog, lags=lag, hold_back=16).fit()
     assert_allclose(r.aic, r2.aic)
@@ -779,8 +771,7 @@ def test_autoreg_score():
     assert isinstance(score, np.ndarray)
     assert score.shape == (4,)
     assert ar.information(res.params).shape == (4, 4)
-    assert_allclose(-ar.hessian(res.params),
-                    ar.information(res.params))
+    assert_allclose(-ar.hessian(res.params), ar.information(res.params))
 
 
 def test_autoreg_roots():
@@ -1159,3 +1150,21 @@ def test_ar_model_predict(ar2):
     res_pred = res.predict()
     mod_pred = mod.predict(res.params)
     assert_allclose(res_pred, mod_pred)
+
+
+def test_autoreg_no_variables(ar2):
+    mod = AutoReg(ar2[:10], None, trend="n")
+    res = mod.fit()
+    summary = res.summary()
+    summ_txt = summary.as_text()
+    assert "AutoReg(0)" in summ_txt
+    assert "No Model Parameters" in summ_txt
+
+
+def test_removal(ar2):
+    from statsmodels.tsa.ar_model import AR, ARResults
+
+    with pytest.raises(NotImplementedError):
+        AR(ar2)
+    with pytest.raises(NotImplementedError):
+        ARResults(ar2)

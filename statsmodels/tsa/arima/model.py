@@ -165,7 +165,7 @@ class ARIMA(sarimax.SARIMAX):
         # Note: we don't pass in a trend value to the base class, since ARIMA
         # standardizes the trend to always be part of exog, while the base
         # SARIMAX class puts it in the transition equation.
-        super(ARIMA, self).__init__(
+        super().__init__(
             endog, exog, trend=None, order=order,
             seasonal_order=seasonal_order,
             enforce_stationarity=enforce_stationarity,
@@ -366,7 +366,7 @@ class ARIMA(sarimax.SARIMAX):
             else:
                 method_kwargs.setdefault('disp', 0)
 
-                res = super(ARIMA, self).fit(
+                res = super().fit(
                     return_params=return_params, low_memory=low_memory,
                     cov_type=cov_type, cov_kwds=cov_kwds, **method_kwargs)
                 if not return_params:

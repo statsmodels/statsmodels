@@ -60,7 +60,7 @@ class SVAR(tsbase.TimeSeriesModel):
 
     def __init__(self, endog, svar_type, dates=None,
                  freq=None, A=None, B=None, missing='none'):
-        super(SVAR, self).__init__(endog, None, dates, freq, missing=missing)
+        super().__init__(endog, None, dates, freq, missing=missing)
         #(self.endog, self.names,
         # self.dates) = data_util.interpret_data(endog, names, dates)
 
@@ -107,7 +107,7 @@ class SVAR(tsbase.TimeSeriesModel):
 
         #LikelihoodModel.__init__(self, endog)
 
-        #super(SVAR, self).__init__(endog)
+        #super().__init__(endog)
 
     def fit(self, A_guess=None, B_guess=None, maxlags=None, method='ols',
             ic=None, trend='c', verbose=False, s_method='mle',
@@ -361,9 +361,9 @@ class SVAR(tsbase.TimeSeriesModel):
         else: #TODO: change to a warning?
             print("Order/rank conditions have not been checked")
 
-        retvals = super(SVAR, self).fit(start_params=start_params,
-                                        method=solver, maxiter=maxiter,
-                                        gtol=1e-20, disp=False).params
+        retvals = super().fit(start_params=start_params,
+                              method=solver, maxiter=maxiter,
+                              gtol=1e-20, disp=False).params
 
         A[A_mask] = retvals[:A_len]
         B[B_mask] = retvals[A_len:]
@@ -593,7 +593,7 @@ class SVARResults(SVARProcess, VARResults):
         self.A_mask = A_mask
         self.B_mask = B_mask
 
-        super(SVARResults, self).__init__(coefs, intercept, sigma_u, A, B,
+        super().__init__(coefs, intercept, sigma_u, A, B,
                                           names=names)
 
     def irf(self, periods=10, var_order=None):
