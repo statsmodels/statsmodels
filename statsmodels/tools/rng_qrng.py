@@ -29,10 +29,10 @@ def check_random_state(seed=None):
         Random number generator.
 
     """
-    if hasattr(stats.qmc, "QMCEngine"):
-        if isinstance(seed, stats.qmc.QMCEngine):
-            return seed
-    if isinstance(seed, np.random.RandomState):
+    if hasattr(stats, "qmc") and \
+            isinstance(seed, stats.qmc.QMCEngine):
         return seed
-
-    return np.random.default_rng(seed)
+    elif isinstance(seed, np.random.RandomState):
+        return seed
+    else:
+        return np.random.default_rng(seed)
