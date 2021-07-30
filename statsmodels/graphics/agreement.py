@@ -6,6 +6,7 @@ License: BSD-3
 '''
 
 import numpy as np
+
 from . import utils
 
 

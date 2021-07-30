@@ -647,7 +647,7 @@ def test_correct_labels(
     ax = fig.get_axes()[0]
     x_label = ax.get_xlabel()
     y_label = ax.get_ylabel()
-    if x_size <= y_size:
+    if x_size < y_size:
         if not labels:
             assert "2nd" in x_label
             assert "1st" in y_label
@@ -661,3 +661,28 @@ def test_correct_labels(
         else:
             assert "X" in x_label
             assert "Y" in y_label
+
+
+@pytest.mark.matplotlib
+def test_axis_order(close_figures):
+    xx = np.random.normal(10, 1, (100,))
+    xy = np.random.normal(1, 0.01, (100,))
+    fig = qqplot_2samples(xx, xy, "x", "y")
+    ax = fig.get_axes()[0]
+    y_range = np.diff(ax.get_ylim())[0]
+    x_range = np.diff(ax.get_xlim())[0]
+    assert y_range < x_range
+
+    xx_long = np.random.normal(10, 1, (1000,))
+    fig = qqplot_2samples(xx_long, xy, "x", "y")
+    ax = fig.get_axes()[0]
+    y_range = np.diff(ax.get_ylim())[0]
+    x_range = np.diff(ax.get_xlim())[0]
+    assert y_range < x_range
+
+    xy_long = np.random.normal(1, 0.01, (1000,))
+    fig = qqplot_2samples(xx, xy_long, "x", "y")
+    ax = fig.get_axes()[0]
+    y_range = np.diff(ax.get_ylim())[0]
+    x_range = np.diff(ax.get_xlim())[0]
+    assert x_range < y_range

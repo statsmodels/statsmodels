@@ -1,8 +1,8 @@
 import numpy as np
 import pytest
 
-from statsmodels.graphics.correlation import plot_corr, plot_corr_grid
 from statsmodels.datasets import randhie
+from statsmodels.graphics.correlation import plot_corr, plot_corr_grid
 
 
 @pytest.mark.matplotlib

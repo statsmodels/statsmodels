@@ -706,10 +706,12 @@ def qqplot_2samples(
     Parameters
     ----------
     data1 : {array_like, ProbPlot}
-        Data to plot along x axis.
+        Data to plot along x axis. If the sample sizes are unequal, the longer
+        series is always plotted along the x-axis.
     data2 : {array_like, ProbPlot}
         Data to plot along y axis. Does not need to have the same number of
-        observations as data 1.
+        observations as data 1. If the sample sizes are unequal, the longer
+        series is always plotted along the x-axis.
     xlabel : {None, str}
         User-provided labels for the x-axis. If None (default),
         other values are used.
@@ -772,7 +774,7 @@ def qqplot_2samples(
 
     if not isinstance(data2, ProbPlot):
         data2 = ProbPlot(data2)
-    if data2.data.shape[0] >= data1.data.shape[0]:
+    if data2.data.shape[0] > data1.data.shape[0]:
         fig = data1.qqplot(
             xlabel=ylabel, ylabel=xlabel, line=line, other=data2, ax=ax
         )

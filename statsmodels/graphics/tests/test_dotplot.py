@@ -1,8 +1,8 @@
 import numpy as np
+import pandas as pd
 import pytest
 
 from statsmodels.graphics.dotplots import dot_plot
-import pandas as pd
 
 # If true, the output is written to a multi-page pdf file.
 pdf_output = False

@@ -16,7 +16,6 @@ from scipy import stats
 
 from . import utils
 
-
 __all__ = ['scatter_ellipse']
 
 
