@@ -1,9 +1,9 @@
 import numpy as np
-from numpy.testing import assert_raises, assert_equal
+from numpy.testing import assert_equal, assert_raises
 from pandas import Series
 import pytest
 
-from statsmodels.graphics.factorplots import interaction_plot, _recode
+from statsmodels.graphics.factorplots import _recode, interaction_plot
 
 try:
     import matplotlib.pyplot as plt

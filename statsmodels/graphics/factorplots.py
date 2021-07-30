@@ -3,6 +3,7 @@
 Authors:    Josef Perktold, Skipper Seabold, Denis A. Engemann
 """
 from statsmodels.compat.python import lrange
+
 import numpy as np
 
 from statsmodels.graphics.plottools import rainbow

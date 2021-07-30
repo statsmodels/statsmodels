@@ -1,8 +1,8 @@
 import numpy as np
 import pytest
 
-from statsmodels.graphics.boxplots import violinplot, beanplot
 from statsmodels.datasets import anes96
+from statsmodels.graphics.boxplots import beanplot, violinplot
 
 try:
     import matplotlib.pyplot as plt

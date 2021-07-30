@@ -8,12 +8,14 @@ see the docstring of the mosaic function for more informations.
 # Author: Enrico Giampieri - 21 Jan 2013
 
 from statsmodels.compat.python import lrange, lzip
-import numpy as np
+
 from itertools import product
 
-from numpy import iterable, r_, cumsum, array
-from statsmodels.graphics import utils
+import numpy as np
+from numpy import array, cumsum, iterable, r_
 from pandas import DataFrame
+
+from statsmodels.graphics import utils
 
 __all__ = ["mosaic"]
 
@@ -620,6 +622,7 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
                          " See examples.")
 
     from matplotlib.patches import Rectangle
+
     #from pylab import Rectangle
     fig, ax = utils.create_mpl_ax(ax)
     # normalize the data to a dict with tuple of strings as keys

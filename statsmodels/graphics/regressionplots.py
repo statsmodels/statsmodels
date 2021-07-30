@@ -10,27 +10,28 @@ update
 2011-10-27 : docstrings
 
 '''
-from statsmodels.compat.python import lrange, lzip
 from statsmodels.compat.pandas import Appender
+from statsmodels.compat.python import lrange, lzip
 
 import numpy as np
 import pandas as pd
 from patsy import dmatrix
 
-from statsmodels.regression.linear_model import OLS, GLS, WLS
-from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.genmod.generalized_estimating_equations import GEE
-from statsmodels.sandbox.regression.predstd import wls_prediction_std
+from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.graphics import utils
 from statsmodels.nonparametric.smoothers_lowess import lowess
+from statsmodels.regression.linear_model import GLS, OLS, WLS
+from statsmodels.sandbox.regression.predstd import wls_prediction_std
 from statsmodels.tools.tools import maybe_unwrap_results
 
 from ._regressionplots_doc import (
     _plot_added_variable_doc,
-    _plot_partial_residuals_doc,
     _plot_ceres_residuals_doc,
     _plot_influence_doc,
-    _plot_leverage_resid2_doc)
+    _plot_leverage_resid2_doc,
+    _plot_partial_residuals_doc,
+)
 
 __all__ = ['plot_fit', 'plot_regress_exog', 'plot_partregress', 'plot_ccpr',
            'plot_regress_exog', 'plot_partregress_grid', 'plot_ccpr_grid',
@@ -929,7 +930,7 @@ def influence_plot(results, external=True, alpha=.05, criterion="cooks",
 def _plot_leverage_resid2(results, influence, alpha=.05, ax=None,
                          **kwargs):
 
-    from scipy.stats import zscore, norm
+    from scipy.stats import norm, zscore
     fig, ax = utils.create_mpl_ax(ax)
 
     infl = influence
