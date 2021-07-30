@@ -58,7 +58,7 @@ Copula
 ------
 
 The `copula` sub-module provides classes to model the dependence between
-parameters. Copula are used to construct a multivariate joint distribution and
+parameters. Copulae are used to construct a multivariate joint distribution and
 provide a set of functions like sampling, PDF, CDF.
 
 .. module:: statsmodels.distributions.copula.api
