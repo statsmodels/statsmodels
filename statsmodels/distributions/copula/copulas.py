@@ -478,6 +478,7 @@ class Copula(ABC):
         ax.set_aspect('equal')
         cbar = plt.colorbar(cs, ticks=vticks)
         cbar.set_label('p')
+        fig.tight_layout()
 
         return fig
 
