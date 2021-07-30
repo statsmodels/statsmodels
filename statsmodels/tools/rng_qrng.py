@@ -1,6 +1,3 @@
-import numbers
-from collections import Sequence
-
 import numpy as np
 import scipy.stats as stats
 
@@ -32,12 +29,9 @@ def check_random_state(seed=None):
         Random number generator.
 
     """
-    if seed is None or isinstance(seed, (numbers.Integral, np.integer, Sequence)):
-        return np.random.default_rng(seed)
-    elif isinstance(seed, (np.random.RandomState, np.random.Generator)):
+    if isinstance(seed, np.random.RandomState):
         return seed
     elif hasattr(stats.qmc, "QMCEngine") and isinstance(seed, stats.qmc.QMCEngine):
         return seed
     else:
-        raise ValueError(f"{seed:r} cannot be used to seed a"
-                         " numpy.random.Generator instance")
+        return np.random.default_rng(seed)
