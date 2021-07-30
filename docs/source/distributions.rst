@@ -54,6 +54,31 @@ use potentially slow inherited generic methods.
    zinegbin
    zipoisson
 
+Copula
+------
+
+The `copula` sub-module provides classes to model the dependence between
+parameters. Copulae are used to construct a multivariate joint distribution and
+provide a set of functions like sampling, PDF, CDF.
+
+.. module:: statsmodels.distributions.copula.api
+   :synopsis: Copula for modeling parameter dependence
+
+.. currentmodule:: statsmodels.distributions.copula.api
+
+.. autosummary::
+   :toctree: generated/
+
+   CopulaDistribution
+   CopulaDistributionBivariate
+   ArchimedeanCopula
+   FrankCopula
+   ClaytonCopula
+   GumbelCopula
+   GaussianCopula
+   StudentTCopula
+   ExtremeValueCopula
+   IndependentCopula
 
 Distribution Extras
 -------------------

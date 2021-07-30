@@ -208,7 +208,7 @@ class CopulaDistribution:
         rng = check_random_state(random_state)
         if self.copula is None:
             # this means marginals are independents
-            sample = rng.random((nobs, self.d))
+            sample = rng.random((nobs, len(self.marginals)))
         else:
             sample = self.copula.random(nobs, random_state=random_state)
 
