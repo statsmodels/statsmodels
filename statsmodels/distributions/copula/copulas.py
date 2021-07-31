@@ -15,9 +15,9 @@ from abc import ABC, abstractmethod
 import numpy as np
 from scipy import stats
 from scipy.special import expm1
-from scipy._lib._util import check_random_state
 
 from statsmodels.graphics import utils
+from statsmodels.tools.rng_qrng import check_random_state
 
 
 def copula_bv_indep(u, v):

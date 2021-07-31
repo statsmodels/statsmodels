@@ -10,10 +10,10 @@ import sys
 
 import numpy as np
 from scipy import stats, integrate, optimize
-from scipy._lib._util import check_random_state  # noqa
 
 from . import transforms
 from .copulas import Copula
+from statsmodels.tools.rng_qrng import check_random_state
 
 
 class ArchimedeanCopula(Copula):
