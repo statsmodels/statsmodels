@@ -334,7 +334,7 @@ class CheckCopula:
 
     def test_random(self):
         nobs = 2000
-        rng = np.random.default_rng(276586223967191651449357908970930003177)
+        rng = np.random.RandomState(27658622)
         self.rvs = rvs = self.copula.random(nobs, random_state=rng)
         assert rvs.shape == (nobs, 2)
         assert_array_almost_equal(np.mean(rvs, axis=0),
