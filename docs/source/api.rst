@@ -139,6 +139,8 @@ Statistics and Tests
    ~statsmodels.tsa.stattools.pacf_ols
    ~statsmodels.tsa.stattools.pacf_yw
    ~statsmodels.tsa.stattools.q_stat
+   ~statsmodels.tsa.stattools.range_unit_root_test
+
 
 Univariate Time-Series Analysis
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -25,6 +25,7 @@ __all__ = [
     "add_lag",
     "add_trend",
     "adfuller",
+    "range_unit_root_test",
     "arima",
     "arma_generate_sample",
     "arma_order_select_ic",
@@ -94,6 +95,7 @@ from .stattools import (
     pacf_ols,
     pacf_yw,
     q_stat,
+    range_unit_root_test,
 )
 from .tsatools import add_lag, add_trend, detrend, lagmat, lagmat2ds
 from .vector_ar.svar_model import SVAR

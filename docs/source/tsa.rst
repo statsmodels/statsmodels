@@ -75,6 +75,7 @@ Descriptive Statistics and Tests
    stattools.ccf
    stattools.adfuller
    stattools.kpss
+   stattools.range_unit_root_test
    stattools.zivot_andrews
    stattools.coint
    stattools.bds
