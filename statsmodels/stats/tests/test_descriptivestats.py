@@ -63,47 +63,56 @@ class TestSimpleTable(object):
     @pytest.mark.xfail(reason="Bad test")
     def test_basic_1(self):
         print("test_basic_1")
-        t1 = Describe(data1)
+        with pytest.warns(FutureWarning):
+            t1 = Describe(data1)
         print(t1.summary())
 
     def test_basic_2(self):
         print("test_basic_2")
-        t2 = Describe(data2)
+        with pytest.warns(FutureWarning):
+            t2 = Describe(data2)
         print(t2.summary())
 
     def test_describe_summary_float_ndarray(self):
         print("test_describe_summary_float_ndarray")
-        t1 = Describe(data3)
+        with pytest.warns(FutureWarning):
+            t1 = Describe(data3)
         print(t1.summary())
 
     def test_basic_4(self):
         print("test_basic_4")
-        t1 = Describe(data4)
+        with pytest.warns(FutureWarning):
+            t1 = Describe(data4)
         print(t1.summary())
 
     @pytest.mark.xfail(reason="Bad test")
     def test_basic_1a(self):
         print("test_basic_1a")
-        t1 = Describe(data1)
+        with pytest.warns(FutureWarning):
+            t1 = Describe(data1)
         print(t1.summary(stats="basic", columns=["alpha"]))
 
     @pytest.mark.xfail(reason="Bad test")
     def test_basic_1b(self):
         print("test_basic_1b")
-        t1 = Describe(data1)
+        with pytest.warns(FutureWarning):
+            t1 = Describe(data1)
         print(t1.summary(stats="basic", columns="all"))
 
     def test_basic_2a(self):
         print("test_basic_2a")
-        t2 = Describe(data2)
+        with pytest.warns(FutureWarning):
+            t2 = Describe(data2)
         print(t2.summary(stats="all"))
 
     def test_basic_3(aself):
-        t1 = Describe(data3)
+        with pytest.warns(FutureWarning):
+            t1 = Describe(data3)
         print(t1.summary(stats="all"))
 
     def test_basic_4a(self):
-        t1 = Describe(data4)
+        with pytest.warns(FutureWarning):
+            t1 = Describe(data4)
         print(t1.summary(stats="all"))
 
 
