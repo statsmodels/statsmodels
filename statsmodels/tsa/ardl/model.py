@@ -4,15 +4,18 @@ from statsmodels.compat.pandas import Appender, Substitution
 from statsmodels.compat.python import Literal
 
 from collections import defaultdict
+import datetime as dt
 from itertools import combinations, product
 import textwrap
 from types import SimpleNamespace
 from typing import (
+    TYPE_CHECKING,
     Any,
     Dict,
     Hashable,
     List,
     Mapping,
+    NamedTuple,
     Optional,
     Sequence,
     Tuple,
@@ -22,31 +25,65 @@ import warnings
 
 import numpy as np
 import pandas as pd
+from scipy import stats
 
+from statsmodels.base.data import PandasData
 import statsmodels.base.wrapper as wrap
-from statsmodels.iolib.summary import Summary
+from statsmodels.iolib.summary import Summary, summary_params
 from statsmodels.regression.linear_model import OLS
+from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.docstring import Docstring, Parameter, remove_parameters
 from statsmodels.tools.sm_exceptions import SpecificationWarning
-from statsmodels.tools.validation import array_like, bool_like, int_like
+from statsmodels.tools.validation import (
+    array_like,
+    bool_like,
+    float_like,
+    int_like,
+)
 from statsmodels.tsa.ar_model import (
     AROrderSelectionResults,
     AutoReg,
     AutoRegResults,
     sumofsq,
 )
+from statsmodels.tsa.ardl import pss_critical_values
 from statsmodels.tsa.arima_process import arma2ma
 from statsmodels.tsa.base import tsa_model
 from statsmodels.tsa.base.prediction import PredictionResults
 from statsmodels.tsa.deterministic import DeterministicProcess
 from statsmodels.tsa.tsatools import lagmat
 
+if TYPE_CHECKING:
+    import matplotlib.figure
+
 __all__ = [
     "ARDL",
     "ARDLResults",
     "ardl_select_order",
     "ARDLOrderSelectionResults",
+    "UECM",
+    "UECMResults",
+    "BoundsTestResult",
 ]
+
+
+class BoundsTestResult(NamedTuple):
+    stat: float
+    crit_vals: pd.DataFrame
+    p_values: pd.Series
+    null: str
+    alternative: str
+
+    def __repr__(self):
+        return f"""\
+{self.__class__.__name__}
+Stat: {self.stat:0.5f}
+Upper P-value: {self.p_values["upper"]:0.3g}
+Lower P-value: {self.p_values["lower"]:0.3g}
+Null: {self.null}
+Alternative: {self.alternative}
+"""
+
 
 _UECMOrder = Union[None, int, Dict[Hashable, Optional[int]]]
 
@@ -340,15 +377,16 @@ class ARDL(AutoReg):
         if self._order:
             min_lags = [min(val) for val in self._order.values()]
             self._causal = min(min_lags) > 0
+        self._results_class = ARDLResults
         self._results_wrapper = ARDLResultsWrapper
 
     @property
-    def fixed(self):
+    def fixed(self) -> Union[None, np.ndarray, pd.DataFrame]:
         """The fixed data used to construct the model"""
         return self.data.orig_fixed
 
     @property
-    def causal(self):
+    def causal(self) -> bool:
         """Flag indicating that the ARDL is causal"""
         return self._causal
 
@@ -372,7 +410,7 @@ class ARDL(AutoReg):
                 ardl_order.append(int(max(lags)))
         return tuple(ardl_order)
 
-    def _setup_regressors(self):
+    def _setup_regressors(self) -> None:
         """Place holder to let AutoReg init complete"""
         self._y = np.empty((self.endog.shape[0] - self._hold_back, 0))
 
@@ -402,15 +440,38 @@ class ARDL(AutoReg):
             exog_lags[key] = lagged_col[:, lags]
         return exog_lags
 
-    def _check_order(self, order: _ARDLOrder):
+    def _check_order(self, order: _ARDLOrder) -> Dict[Hashable, List[int]]:
         """Validate and standardize the model order"""
         return _format_order(self.data.orig_exog, order, self._causal)
 
-    def fit(
+    def _fit(
         self,
         cov_type: str = "nonrobust",
         cov_kwds: Dict[str, Any] = None,
-        use_t: bool = False,
+        use_t: bool = True,
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        if self._x.shape[1] == 0:
+            return np.empty((0,)), np.empty((0, 0)), np.empty((0, 0))
+        ols_mod = OLS(self._y, self._x)
+        ols_res = ols_mod.fit(
+            cov_type=cov_type, cov_kwds=cov_kwds, use_t=use_t
+        )
+        cov_params = ols_res.cov_params()
+        use_t = ols_res.use_t
+        if cov_type == "nonrobust" and not use_t:
+            nobs = self._y.shape[0]
+            k = self._x.shape[1]
+            scale = nobs / (nobs - k)
+            cov_params /= scale
+
+        return ols_res.params, cov_params, ols_res.normalized_cov_params
+
+    def fit(
+        self,
+        *,
+        cov_type: str = "nonrobust",
+        cov_kwds: Dict[str, Any] = None,
+        use_t: bool = True,
     ) -> ARDLResults:
         """
         Estimate the model parameters.
@@ -468,30 +529,16 @@ class ARDL(AutoReg):
         Use ``OLS`` to estimate model parameters and to estimate parameter
         covariance.
         """
-        if self._x.shape[1] == 0:
-            res = ARDLResults(
-                self, np.empty((0,)), np.empty((0, 0)), np.empty((0, 0))
-            )
-            return ARDLResultsWrapper(res)
-        ols_mod = OLS(self._y, self._x)
-        ols_res = ols_mod.fit(
+        params, cov_params, norm_cov_params = self._fit(
             cov_type=cov_type, cov_kwds=cov_kwds, use_t=use_t
         )
-        cov_params = ols_res.cov_params()
-        use_t = ols_res.use_t
-        if cov_type == "nonrobust" and not use_t:
-            nobs = self._y.shape[0]
-            k = self._x.shape[1]
-            scale = nobs / (nobs - k)
-            cov_params /= scale
-
         res = ARDLResults(
-            self, ols_res.params, cov_params, ols_res.normalized_cov_params
+            self, params, cov_params, norm_cov_params, use_t=use_t
         )
-        return self._results_wrapper(res)
+        return ARDLResultsWrapper(res)
 
     def _construct_regressors(
-        self, hold_back
+        self, hold_back: Optional[int]
     ) -> Tuple[np.ndarray, np.ndarray]:
         """Construct and format model regressors"""
         # TODO: Missing adjustment
@@ -578,7 +625,7 @@ class ARDL(AutoReg):
     ) -> np.ndarray:
         """Construct exog matrix for forecasts"""
 
-        def pad_x(x: np.ndarray, pad: int):
+        def pad_x(x: np.ndarray, pad: int) -> np.ndarray:
             if pad == 0:
                 return x
             k = x.shape[1]
@@ -624,14 +671,14 @@ class ARDL(AutoReg):
 
     def predict(
         self,
-        params,
-        start=None,
-        end=None,
-        dynamic=False,
-        exog=None,
-        exog_oos=None,
-        fixed=None,
-        fixed_oos=None,
+        params: _ArrayLike1D,
+        start: Union[None, int, str, dt.datetime, pd.Timestamp] = None,
+        end: Union[None, int, str, dt.datetime, pd.Timestamp] = None,
+        dynamic: bool = False,
+        exog: Union[None, np.ndarray, pd.DataFrame] = None,
+        exog_oos: Union[None, np.ndarray, pd.DataFrame] = None,
+        fixed: Union[None, np.ndarray, pd.DataFrame] = None,
+        fixed_oos: Union[None, np.ndarray, pd.DataFrame] = None,
     ):
         """
         In-sample prediction and out-of-sample forecasting.
@@ -943,14 +990,24 @@ class ARDLResults(AutoRegResults):
         model.
     scale : float, optional
         An estimate of the scale of the model.
+    use_t : bool
+        Whether use_t was set in fit
     """
 
     _cache = {}  # for scale setter
 
     def __init__(
-        self, model, params, cov_params, normalized_cov_params=None, scale=1.0
+        self,
+        model: ARDL,
+        params: np.ndarray,
+        cov_params: np.ndarray,
+        normalized_cov_params: Optional[np.ndarray] = None,
+        scale: float = 1.0,
+        use_t: bool = False,
     ):
-        super().__init__(model, params, normalized_cov_params, scale)
+        super().__init__(
+            model, params, normalized_cov_params, scale, use_t=use_t
+        )
         self._cache = {}
         self._params = params
         self._nobs = model.nobs
@@ -966,13 +1023,13 @@ class ARDLResults(AutoRegResults):
     @Appender(remove_parameters(ARDL.predict.__doc__, "params"))
     def predict(
         self,
-        start=None,
-        end=None,
-        dynamic=False,
-        exog=None,
-        exog_oos=None,
-        fixed=None,
-        fixed_oos=None,
+        start: Union[None, int, str, dt.datetime, pd.Timestamp] = None,
+        end: Union[None, int, str, dt.datetime, pd.Timestamp] = None,
+        dynamic: bool = False,
+        exog: Union[None, np.ndarray, pd.DataFrame] = None,
+        exog_oos: Union[None, np.ndarray, pd.DataFrame] = None,
+        fixed: Union[None, np.ndarray, pd.DataFrame] = None,
+        fixed_oos: Union[None, np.ndarray, pd.DataFrame] = None,
     ):
         return self.model.predict(
             self._params,
@@ -985,7 +1042,12 @@ class ARDLResults(AutoRegResults):
             fixed_oos=fixed_oos,
         )
 
-    def forecast(self, steps=1, exog=None, fixed=None):
+    def forecast(
+        self,
+        steps: int = 1,
+        exog: Union[None, np.ndarray, pd.DataFrame] = None,
+        fixed: Union[None, np.ndarray, pd.DataFrame] = None,
+    ) -> Union[np.ndarray, pd.Series]:
         """
         Out-of-sample forecasts
 
@@ -1025,7 +1087,7 @@ class ARDLResults(AutoRegResults):
             start=start, end=end, dynamic=False, exog_oos=exog, fixed_oos=fixed
         )
 
-    def _lag_repr(self):
+    def _lag_repr(self) -> np.ndarray:
         """Returns poly repr of an AR, (1  -phi1 L -phi2 L^2-...)"""
         ar_lags = self._ar_lags if self._ar_lags is not None else []
         k_ar = len(ar_lags)
@@ -1039,14 +1101,14 @@ class ARDLResults(AutoRegResults):
 
     def get_prediction(
         self,
-        start=None,
-        end=None,
-        dynamic=False,
-        exog=None,
-        exog_oos=None,
-        fixed=None,
-        fixed_oos=None,
-    ):
+        start: Union[None, int, str, dt.datetime, pd.Timestamp] = None,
+        end: Union[None, int, str, dt.datetime, pd.Timestamp] = None,
+        dynamic: bool = False,
+        exog: Union[None, np.ndarray, pd.DataFrame] = None,
+        exog_oos: Union[None, np.ndarray, pd.DataFrame] = None,
+        fixed: Union[None, np.ndarray, pd.DataFrame] = None,
+        fixed_oos: Union[None, np.ndarray, pd.DataFrame] = None,
+    ) -> Union[np.ndarray, pd.Series]:
         """
         Predictions and prediction intervals
 
@@ -1121,24 +1183,23 @@ class ARDLResults(AutoRegResults):
     @Substitution(predict_params=_predict_params)
     def plot_predict(
         self,
-        start=None,
-        end=None,
-        dynamic=False,
-        exog=None,
-        exog_oos=None,
-        fixed=None,
-        fixed_oos=None,
-        alpha=0.05,
-        in_sample=True,
-        fig=None,
-        figsize=None,
-    ):
+        start: Union[None, int, str, dt.datetime, pd.Timestamp] = None,
+        end: Union[None, int, str, dt.datetime, pd.Timestamp] = None,
+        dynamic: bool = False,
+        exog: Union[None, np.ndarray, pd.DataFrame] = None,
+        exog_oos: Union[None, np.ndarray, pd.DataFrame] = None,
+        fixed: Union[None, np.ndarray, pd.DataFrame] = None,
+        fixed_oos: Union[None, np.ndarray, pd.DataFrame] = None,
+        alpha: float = 0.05,
+        in_sample: bool = True,
+        fig: "matplotlib.figure.Figure" = None,
+        figsize: Optional[Tuple[int, int]] = None,
+    ) -> "matplotlib.figure.Figure":
         """
         Plot in- and out-of-sample predictions
 
         Parameters
-        ----------
-%(predict_params)s
+        ----------\n%(predict_params)s
         alpha : {float, None}
             The tail probability not covered by the confidence interval. Must
             be in (0, 1). Confidence interval is constructed assuming normally
@@ -1171,7 +1232,7 @@ class ARDLResults(AutoRegResults):
             predictions, start, end, alpha, in_sample, fig, figsize
         )
 
-    def summary(self, alpha=0.05):
+    def summary(self, alpha: float = 0.05) -> Summary:
         """
         Summarize the Model
 
@@ -1530,6 +1591,23 @@ from_formula_doc.insert_parameters("data", lags_param)
 from_formula_doc.insert_parameters("lags", order_param)
 
 
+fit_doc = Docstring(ARDL.fit.__doc__)
+fit_doc.replace_block(
+    "Returns", [Parameter("", "UECMResults", ["Estimation results."])]
+)
+
+if fit_doc._ds is not None:
+    see_also = fit_doc._ds["See Also"]
+    see_also.insert(
+        0,
+        (
+            [("statsmodels.tsa.ardl.ARDL", None)],
+            ["Autoregressive distributed lag model estimation"],
+        ),
+    )
+    fit_doc.replace_block("See Also", see_also)
+
+
 class UECM(ARDL):
     r"""
     Unconstrained Error Correlation Model(UECM)
@@ -1682,6 +1760,8 @@ class UECM(ARDL):
             missing=missing,
             deterministic=deterministic,
         )
+        self._results_class = UECMResults
+        self._results_wrapper = UECMResultsWrapper
 
     def _check_lags(self) -> Tuple[List[int], int]:
         """Check lags value conforms to requirement"""
@@ -1751,7 +1831,7 @@ class UECM(ARDL):
         return y_name, x_names
 
     def _construct_regressors(
-        self, hold_back
+        self, hold_back: Optional[int]
     ) -> Tuple[np.ndarray, np.ndarray]:
         """Construct and format model regressors"""
         # 1. Endogenous and endogenous lags
@@ -1829,6 +1909,22 @@ class UECM(ARDL):
             )
         return np.squeeze(y)[self._hold_back :], reg
 
+    @Appender(str(fit_doc))
+    def fit(
+        self,
+        *,
+        cov_type: str = "nonrobust",
+        cov_kwds: Dict[str, Any] = None,
+        use_t: bool = True,
+    ) -> UECMResults:
+        params, cov_params, norm_cov_params = self._fit(
+            cov_type=cov_type, cov_kwds=cov_kwds, use_t=use_t
+        )
+        res = UECMResults(
+            self, params, cov_params, norm_cov_params, use_t=use_t
+        )
+        return UECMResultsWrapper(res)
+
     @classmethod
     def from_ardl(
         cls, ardl: ARDL, missing: Literal["none", "drop", "raise"] = "none"
@@ -1891,15 +1987,15 @@ class UECM(ARDL):
 
     def predict(
         self,
-        params,
-        start=None,
-        end=None,
-        dynamic=False,
-        exog=None,
-        exog_oos=None,
-        fixed=None,
-        fixed_oos=None,
-    ):
+        params: Union[np.ndarray, pd.DataFrame],
+        start: Union[None, int, str, dt.datetime, pd.Timestamp] = None,
+        end: Union[None, int, str, dt.datetime, pd.Timestamp] = None,
+        dynamic: bool = False,
+        exog: Union[None, np.ndarray, pd.DataFrame] = None,
+        exog_oos: Union[None, np.ndarray, pd.DataFrame] = None,
+        fixed: Union[None, np.ndarray, pd.DataFrame] = None,
+        fixed_oos: Union[None, np.ndarray, pd.DataFrame] = None,
+    ) -> np.ndarray:
         """
         In-sample prediction and out-of-sample forecasting.
 
@@ -1980,7 +2076,7 @@ class UECM(ARDL):
         hold_back: Optional[int] = None,
         period: Optional[int] = None,
         missing: Literal["none", "raise"] = "none",
-    ) -> ARDL:
+    ) -> UECM:
         return super().from_formula(
             formula,
             data,
@@ -1994,3 +2090,437 @@ class UECM(ARDL):
             period=period,
             missing=missing,
         )
+
+
+class UECMResults(ARDLResults):
+    """
+    Class to hold results from fitting an UECM model.
+
+    Parameters
+    ----------
+    model : UECM
+        Reference to the model that is fit.
+    params : ndarray
+        The fitted parameters from the AR Model.
+    cov_params : ndarray
+        The estimated covariance matrix of the model parameters.
+    normalized_cov_params : ndarray
+        The array inv(dot(x.T,x)) where x contains the regressors in the
+        model.
+    scale : float, optional
+        An estimate of the scale of the model.
+    """
+
+    _cache = {}  # for scale setter
+
+    def _ci_wrap(
+        self, val: np.ndarray, name: str = ""
+    ) -> Union[np.ndarray, pd.Series, pd.DataFrame]:
+        if not isinstance(self.model.data, PandasData):
+            return val
+        ndet = self.model._blocks["deterministic"].shape[1]
+        nlvl = self.model._blocks["levels"].shape[1]
+        lbls = self.model.exog_names[: (ndet + nlvl)]
+        for i in range(ndet, ndet + nlvl):
+            lbl = lbls[i]
+            if lbl.endswith(".L1"):
+                lbls[i] = lbl[:-3]
+        if val.ndim == 2:
+            return pd.DataFrame(val, columns=lbls, index=lbls)
+        return pd.Series(val, index=lbls, name=name)
+
+    @cache_readonly
+    def ci_params(self) -> Union[np.ndarray, pd.Series]:
+        """Parameters of normalized cointegrating relationship"""
+        ndet = self.model._blocks["deterministic"].shape[1]
+        nlvl = self.model._blocks["levels"].shape[1]
+        base = np.asarray(self.params)[ndet]
+        return self._ci_wrap(self.params[: ndet + nlvl] / base, "ci_params")
+
+    @cache_readonly
+    def ci_bse(self) -> Union[np.ndarray, pd.Series]:
+        """Standard Errors of normalized cointegrating relationship"""
+        bse = np.sqrt(np.diag(self.ci_cov_params()))
+        return self._ci_wrap(bse, "ci_bse")
+
+    @cache_readonly
+    def ci_tvalues(self) -> Union[np.ndarray, pd.Series]:
+        """T-values of normalized cointegrating relationship"""
+        ndet = self.model._blocks["deterministic"].shape[1]
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            tvalues = np.asarray(self.ci_params) / np.asarray(self.ci_bse)
+            tvalues[ndet] = np.nan
+        return self._ci_wrap(tvalues, "ci_tvalues")
+
+    @cache_readonly
+    def ci_pvalues(self) -> Union[np.ndarray, pd.Series]:
+        """P-values of normalized cointegrating relationship"""
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            pvalues = 2 * (1 - stats.norm.cdf(np.abs(self.ci_tvalues)))
+        return self._ci_wrap(pvalues, "ci_pvalues")
+
+    def ci_conf_int(
+        self, alpha: float = 0.05
+    ) -> Union[np.ndarray, pd.DataFrame]:
+        alpha = float_like(alpha, "alpha")
+
+        if self.use_t:
+            q = stats.t(self.df_resid).ppf(1 - alpha / 2)
+        else:
+            q = stats.norm().ppf(1 - alpha / 2)
+        p = self.ci_params
+        se = self.ci_bse
+        out = [p - q * se, p + q * se]
+        if not isinstance(p, pd.Series):
+            return np.column_stack(out)
+
+        df = pd.concat(out, axis=1)
+        df.columns = ["lower", "upper"]
+
+        return df
+
+    def ci_summary(self, alpha: float = 0.05) -> Summary:
+        def _ci(alpha=alpha):
+            return np.asarray(self.ci_conf_int(alpha))
+
+        smry = Summary()
+        ndet = self.model._blocks["deterministic"].shape[1]
+        nlvl = self.model._blocks["levels"].shape[1]
+        exog_names = list(self.model.exog_names)[: (ndet + nlvl)]
+
+        model = SimpleNamespace(
+            endog_names=self.model.endog_names, exog_names=exog_names
+        )
+        data = SimpleNamespace(
+            params=self.ci_params,
+            bse=self.ci_bse,
+            tvalues=self.ci_tvalues,
+            pvalues=self.ci_pvalues,
+            conf_int=_ci,
+            model=model,
+        )
+        tab = summary_params(data)
+        tab.title = "Cointegrating Vector"
+        smry.tables.append(tab)
+
+        return smry
+
+    @cache_readonly
+    def ci_resids(self) -> Union[np.ndarray, pd.Series]:
+        d = self.model._blocks["deterministic"]
+        exog = self.model.data.orig_exog
+        is_pandas = isinstance(exog, pd.DataFrame)
+        exog = exog if is_pandas else self.model.exog
+        cols = [np.asarray(d), self.model.endog]
+        for key, value in self.model.dl_lags.items():
+            if value is not None:
+                if is_pandas:
+                    cols.append(np.asarray(exog[key]))
+                else:
+                    cols.append(exog[:, key])
+        ci_x = np.column_stack(cols)
+        resids = ci_x @ self.ci_params
+        if not isinstance(self.model.data, PandasData):
+            return resids
+        index = self.model.data.orig_endog.index
+        return pd.Series(resids, index=index, name="ci_resids")
+
+    def ci_cov_params(self) -> Union[np.ndarray, pd.DataFrame]:
+        """Covariance of normalized of cointegrating relationship"""
+        ndet = self.model._blocks["deterministic"].shape[1]
+        nlvl = self.model._blocks["levels"].shape[1]
+        loc = list(range(ndet + nlvl))
+        cov = self.cov_params()
+        cov_a = np.asarray(cov)
+        ci_cov = cov_a[np.ix_(loc, loc)]
+        m = ci_cov.shape[0]
+        params = np.asarray(self.params)[: ndet + nlvl]
+        base = params[ndet]
+        d = np.zeros((m, m))
+        for i in range(m):
+            if i == ndet:
+                continue
+            d[i, i] = 1 / base
+            d[i, ndet] = -params[i] / (base ** 2)
+        ci_cov = d @ ci_cov @ d.T
+        return self._ci_wrap(ci_cov)
+
+    def _lag_repr(self):
+        """Returns poly repr of an AR, (1  -phi1 L -phi2 L^2-...)"""
+        # TODO
+
+    def bounds_test(
+        self,
+        case: Literal[1, 2, 3, 4, 5],
+        cov_type: str = "nonrobust",
+        cov_kwds: Dict[str, Any] = None,
+        use_t: bool = True,
+        asymptotic: bool = True,
+        nsim: int = 100_000,
+        seed: Optional[
+            int, Sequence[int], np.random.RandomState, np.random.Generator
+        ] = None,
+    ):
+        r"""
+        Cointegration bounds test of Pesaran, Shin, and Smith
+
+        Parameters
+        ----------
+        case : {1, 2, 3, 4, 5}
+            One of the cases covered in the PSS test.
+        cov_type : str
+            The covariance estimator to use. The asymptotic distribution of
+            the PSS test has only been established in the homoskedastic case,
+            which is the default.
+
+            The most common choices are listed below.  Supports all covariance
+            estimators that are available in ``OLS.fit``.
+
+            * 'nonrobust' - The class OLS covariance estimator that assumes
+              homoskedasticity.
+            * 'HC0', 'HC1', 'HC2', 'HC3' - Variants of White's
+              (or Eiker-Huber-White) covariance estimator. `HC0` is the
+              standard implementation.  The other make corrections to improve
+              the finite sample performance of the heteroskedasticity robust
+              covariance estimator.
+            * 'HAC' - Heteroskedasticity-autocorrelation robust covariance
+              estimation. Supports cov_kwds.
+
+              - `maxlags` integer (required) : number of lags to use.
+              - `kernel` callable or str (optional) : kernel
+                  currently available kernels are ['bartlett', 'uniform'],
+                  default is Bartlett.
+              - `use_correction` bool (optional) : If true, use small sample
+                  correction.
+        cov_kwds : dict, optional
+            A dictionary of keyword arguments to pass to the covariance
+            estimator. `nonrobust` and `HC#` do not support cov_kwds.
+        use_t : bool, optional
+            A flag indicating that small-sample corrections should be applied
+            to the covariance estimator.
+        asymptotic : bool
+            Flag indicating whether to use asymptotic critical values which
+            were computed by simulation (True, default) or to simulate a
+            sample-size specific set of critical values. Tables are only
+            availble for up to 10 components in the cointegrating
+            relationship, so if more variables are included then simulation
+            is always used.
+        nsim : int
+            Number of simulations to run when computing exact critical values.
+            Only used if ``asymptotic`` is ``True``.
+        seed : {None, int, sequence[int], RandomState, Generator}, optional
+            Seed to use when simulating critical values. Must be provided if
+            reproducible critical value and p-values are required when
+            ``asymptotic`` is ``False``.
+
+        Returns
+        -------
+        BoundsTestResult
+            Named tuple containg ``stat``, ``crit_vals``, ``p_values``,
+            ``null` and ``alternative``. The statistic is the F-type
+            test statistic favored in PSS.
+
+        Notes
+        -----
+        The PSS bounds test has 5 cases which test the coefficients on the
+        level terms in the model
+
+        .. math::
+
+           \Delta Y_{t}=\delta_{0} + \delta_{1}t + X_{t-1}\beta
+                        + \sum_{j=0}^{P}\Delta X_{t-j}\Gamma + \epsilon_{t}
+
+        The cases determine which deterministic terms are included in the
+        model and which are tested as part of the test.
+
+        Cases:
+
+        1. No deterministic terms
+        2. Constant included in both the model and the test
+        3. Constant included in the model but not in the test
+        4. Constant and trend included in the model, only trend included in
+           the test
+        5. Constant and trend included in the model, neither included in the
+           test
+
+        The test statistic is a Wald-type quadratic form test that all of the
+        coefficients in :math:`\beta` are 0 along with any included
+        deterministic terms, which depends on the case. The statistic returned
+        is an F-type test statistic which is the standard quadratic form test
+        statistic devided by the number of restrictions.
+
+        References
+        ----------
+        .. [*] Pesaran, M. H., Shin, Y., & Smith, R. J. (2001). Bounds testing
+           approaches to the analysis of level relationships. Journal of
+           applied econometrics, 16(3), 289-326.
+        """
+        model = self.model
+        trend: Literal["n", "c", "ct"]
+        if case == 1:
+            trend = "n"
+        elif case in (2, 3):
+            trend = "c"
+        else:
+            trend = "ct"
+        order = {key: max(val) for key, val in model._order.items()}
+        uecm = UECM(
+            model.data.endog,
+            max(model.ar_lags),
+            model.data.orig_exog,
+            order=order,
+            causal=model.causal,
+            trend=trend,
+        )
+        res = uecm.fit(cov_type=cov_type, cov_kwds=cov_kwds, use_t=use_t)
+        cov = res.cov_params()
+        nvar = len(res.model.ardl_order)
+        if case == 1:
+            rest = np.arange(nvar)
+        elif case == 2:
+            rest = np.arange(nvar + 1)
+        elif case == 3:
+            rest = np.arange(1, nvar + 1)
+        elif case == 4:
+            rest = np.arange(1, nvar + 2)
+        elif case == 5:
+            rest = np.arange(2, nvar + 2)
+        r = np.zeros((rest.shape[0], cov.shape[1]))
+        for i, loc in enumerate(rest):
+            r[i, loc] = 1
+        vcv = r @ cov @ r.T
+        coef = r @ res.params
+        stat = coef.T @ np.linalg.inv(vcv) @ coef / r.shape[0]
+        k = nvar
+        if asymptotic and k <= 10:
+            cv = pss_critical_values.crit_vals
+            key = (k, case)
+            upper = cv[key + (True,)]
+            lower = cv[key + (False,)]
+            crit_vals = pd.DataFrame(
+                {"lower": lower, "upper": upper},
+                index=pss_critical_values.crit_percentiles,
+            )
+            crit_vals.index.name = "percentile"
+            p_values = pd.Series(
+                {
+                    "lower": _pss_pvalue(stat, k, case, False),
+                    "upper": _pss_pvalue(stat, k, case, True),
+                }
+            )
+        else:
+            nobs = res.resid.shape[0]
+            crit_vals, p_values = _pss_simulate(
+                stat, k, case, nobs=nobs, nsim=nsim, seed=seed
+            )
+
+        return BoundsTestResult(
+            stat,
+            crit_vals,
+            p_values,
+            "No Cointegration",
+            "Possible Cointegration",
+        )
+
+
+def _pss_pvalue(stat: float, k: int, case: int, i1: bool) -> float:
+    key = (k, case, i1)
+    large_p = pss_critical_values.large_p[key]
+    small_p = pss_critical_values.small_p[key]
+    threshold = pss_critical_values.stat_star[key]
+    log_stat = np.log(stat)
+    p = small_p if stat > threshold else large_p
+    x = [log_stat ** i for i in range(len(p))]
+    return 1 - stats.norm.cdf(x @ np.array(p))
+
+
+def _pss_simulate(
+    stat: float,
+    k: int,
+    case: Literal[1, 2, 3, 4, 5],
+    nobs: int,
+    nsim: int,
+    seed: Union[
+        int, Sequence[int], np.random.RandomState, np.random.Generator
+    ],
+) -> Tuple[pd.DataFrame, pd.Series]:
+    if not isinstance(seed, np.random.RandomState):
+        rs: Union[
+            np.random.RandomState, np.random.Generator
+        ] = np.random.default_rng(seed)
+    else:
+        assert isinstance(seed, np.random.RandomState)
+        rs = seed
+    f_upper = np.empty(nsim)
+    f_lower = np.empty(nsim)
+    const = np.ones(nobs)
+    tau = np.arange(nobs, dtype=float)
+    for j in range(nsim):
+        u = rs.standard_normal((k, nobs + 1))
+        y = np.cumsum(u[0])
+        x_upper = np.cumsum(u[1:], axis=1).T
+        x_lower = u[1:].T
+        lhs = np.diff(y)
+        rhv = [y[:-1], x_upper[:-1]]
+        if case == 2:
+            rhv.append(const)
+        elif case == 4:
+            rhv.append(tau)
+        if case >= 3:
+            rhv.append(const)
+        if case == 5:
+            rhv.append(tau)
+        rest = k
+        if case in (2, 4):
+            rest += 1
+        rhs = np.column_stack(rhv)
+        b = np.linalg.lstsq(rhs, lhs, rcond=None)[0]
+        u = lhs - rhs @ b
+        s2 = u.T @ u / (u.shape[0] - rhs.shape[1])
+        xpx = rhs.T @ rhs
+        vcv = np.linalg.inv(xpx) * s2
+        r = np.eye(rest, rhs.shape[1])
+        rvcvr = r @ vcv @ r.T
+        rb = r @ b
+        f_upper[j] = rb.T @ np.linalg.inv(rvcvr) @ rb / rest
+
+        rhs[:, 1:k] = x_lower[:-1]
+        b = np.linalg.lstsq(rhs, lhs, rcond=None)[0]
+        u = lhs - rhs @ b
+        s2 = u.T @ u / (u.shape[0] - rhs.shape[1])
+        xpx = rhs.T @ rhs
+        vcv = np.linalg.inv(xpx) * s2
+        r = np.eye(rest, rhs.shape[1])
+        rvcvr = r @ vcv @ r.T
+        rb = r @ b
+        f_lower[j] = rb.T @ np.linalg.inv(rvcvr) @ rb / rest
+
+    crit_percentiles = pss_critical_values.crit_percentiles
+    crit_vals = pd.DataFrame(
+        {
+            "lower": np.percentile(f_lower, crit_percentiles),
+            "upper": np.percentile(f_upper, crit_percentiles),
+        },
+        index=crit_percentiles,
+    )
+    crit_vals.index.name = "percentile"
+    p_values = pd.Series(
+        {"lower": (stat < f_lower).mean(), "upper": (stat < f_upper).mean()}
+    )
+    return crit_vals, p_values
+
+
+class UECMResultsWrapper(wrap.ResultsWrapper):
+    _attrs = {}
+    _wrap_attrs = wrap.union_dicts(
+        tsa_model.TimeSeriesResultsWrapper._wrap_attrs, _attrs
+    )
+    _methods = {}
+    _wrap_methods = wrap.union_dicts(
+        tsa_model.TimeSeriesResultsWrapper._wrap_methods, _methods
+    )
+
+
+wrap.populate_wrapper(UECMResultsWrapper, UECMResults)

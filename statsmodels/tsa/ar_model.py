@@ -434,7 +434,11 @@ class AutoReg(tsa_model.TimeSeriesModel):
             scale = nobs / (nobs - k)
             cov_params /= scale
         res = AutoRegResults(
-            self, ols_res.params, cov_params, ols_res.normalized_cov_params
+            self,
+            ols_res.params,
+            cov_params,
+            ols_res.normalized_cov_params,
+            use_t=use_t,
         )
 
         return AutoRegResultsWrapper(res)
@@ -855,12 +859,20 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         model.
     scale : float, optional
         An estimate of the scale of the model.
+    use_t : bool, optional
+        Whether use_t was set in fit
     """
 
     _cache = {}  # for scale setter
 
     def __init__(
-        self, model, params, cov_params, normalized_cov_params=None, scale=1.0
+        self,
+        model,
+        params,
+        cov_params,
+        normalized_cov_params=None,
+        scale=1.0,
+        use_t=False,
     ):
         super().__init__(model, params, normalized_cov_params, scale)
         self._cache = {}
@@ -869,6 +881,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         self._n_totobs = model.endog.shape[0]
         self._df_model = model.df_model
         self._ar_lags = model.ar_lags
+        self._use_t = use_t
         if self._ar_lags is not None:
             self._max_lag = max(self._ar_lags)
         else:

@@ -10,7 +10,12 @@ from statsmodels.datasets import danish_data
 from statsmodels.iolib.summary import Summary
 from statsmodels.tools.sm_exceptions import SpecificationWarning
 from statsmodels.tsa.ar_model import AutoReg
-from statsmodels.tsa.ardl import ARDL, UECM, ARDLResults, ardl_select_order
+from statsmodels.tsa.ardl.model import (
+    ARDL,
+    UECM,
+    ARDLResults,
+    ardl_select_order,
+)
 from statsmodels.tsa.deterministic import DeterministicProcess
 
 dane_data = danish_data.load_pandas().data
@@ -126,7 +131,6 @@ def check_results(res: ARDLResults):
     assert isinstance(model.nobs, int)
     assert isinstance(model.endog_names, str)
     assert isinstance(model.k_constant, int)
-    # res.diagnostic_summary()
     res.summary()
     res.test_heteroskedasticity()
     res.diagnostic_summary()
@@ -743,3 +747,87 @@ def test_uecm_errors(data):
         res.predict(dynamic=True)
     with pytest.raises(NotImplementedError):
         res.predict(dynamic=25)
+
+
+@pytest.mark.parametrize("use_numpy", [True, False])
+@pytest.mark.parametrize("use_t", [True, False])
+def test_uecm_ci_repr(use_numpy, use_t):
+    y = dane_data.lrm
+    x = dane_data[["lry", "ibo", "ide"]]
+    if use_numpy:
+        y = np.asarray(y)
+        x = np.asarray(x)
+    mod = UECM(y, 3, x, 3)
+    res = mod.fit(use_t=use_t)
+    if use_numpy:
+        ci_params = res.params[:5].copy()
+        ci_params /= ci_params[1]
+    else:
+        ci_params = res.params.iloc[:5].copy()
+        ci_params /= ci_params["lrm.L1"]
+    assert_allclose(res.ci_params, ci_params)
+    assert res.ci_bse.shape == (5,)
+    assert res.ci_tvalues.shape == (5,)
+    assert res.ci_pvalues.shape == (5,)
+    assert "Cointegrating Vector" in str(res.ci_summary())
+    assert res.ci_conf_int().shape == (5, 2)
+    assert res.ci_cov_params().shape == (5, 5)
+    assert res.ci_resids.shape == dane_data.lrm.shape
+
+
+@pytest.mark.parametrize("case", [1, 2, 3, 4, 5])
+def test_bounds_test(case):
+    mod = UECM(
+        dane_data.lrm,
+        3,
+        dane_data[["lry", "ibo", "ide"]],
+        {"lry": 1, "ibo": 3, "ide": 2},
+    )
+    res = mod.fit()
+    expected = {
+        1: 0.7109023,
+        2: 5.116768,
+        3: 6.205875,
+        4: 5.430622,
+        5: 6.785325,
+    }
+    bounds_result = res.bounds_test(case)
+    assert_allclose(bounds_result.stat, expected[case])
+    assert "BoundsTestResult" in str(bounds_result)
+
+
+@pytest.mark.parametrize("case", [1, 2, 3, 4, 5])
+def test_bounds_test_simulation(case):
+    mod = UECM(
+        dane_data.lrm,
+        3,
+        dane_data[["lry", "ibo", "ide"]],
+        {"lry": 1, "ibo": 3, "ide": 2},
+    )
+    res = mod.fit()
+    bounds_result = res.bounds_test(
+        case=case, asymptotic=False, seed=[1, 2, 3, 4], nsim=1_000
+    )
+    assert (bounds_result.p_values >= 0.0).all()
+    assert (bounds_result.p_values <= 1.0).all()
+    assert (bounds_result.crit_vals > 0.0).all().all()
+
+
+@pytest.mark.parametrize(
+    "seed",
+    [None, np.random.RandomState(0), 0, [1, 2], np.random.default_rng([1, 2])],
+)
+def test_bounds_test_seed(seed):
+    mod = UECM(
+        dane_data.lrm,
+        3,
+        dane_data[["lry", "ibo", "ide"]],
+        {"lry": 1, "ibo": 3, "ide": 2},
+    )
+    res = mod.fit()
+    bounds_result = res.bounds_test(
+        case=3, asymptotic=False, seed=seed, nsim=1_000
+    )
+    assert (bounds_result.p_values >= 0.0).all()
+    assert (bounds_result.p_values <= 1.0).all()
+    assert (bounds_result.crit_vals > 0.0).all().all()
