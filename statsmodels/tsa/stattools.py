@@ -2254,8 +2254,8 @@ look-up table. The actual p-value is {direction} than the p-value returned.
         rstore = ResultsStore()
         rstore.nobs = nobs
 
-        rstore.H0 = "The series is not {0} stationary"
-        rstore.HA = "The series is {0} stationary"
+        rstore.H0 = "The series is not stationary"
+        rstore.HA = "The series is stationary"
 
         return rur_stat, p_value, crit_dict, rstore
     else:
