@@ -1600,7 +1600,7 @@ class RegressionResults(base.LikelihoodModelResults):
             The `alpha` level for the confidence interval. The default
             `alpha` = .05 returns a 95% confidence interval.
         cols : array_like, optional
-            Columns to included in returned confidence intervals.
+            Columns to include in returned confidence intervals.
 
         Returns
         -------
