@@ -55,7 +55,7 @@ __all__ = [
     "levinson_durbin_pacf",
     "levinson_durbin",
     "zivot_andrews",
-    "rur",
+    "range_unit_root_test",
 ]
 
 SQRTEPS = np.sqrt(np.finfo(np.double).eps)
@@ -2136,7 +2136,7 @@ def _kpss_autolag(resids, nobs):
     autolags = int(gamma_hat * np.power(nobs, pwr))
     return autolags
 
-def rur(x, store=False):
+def range_unit_root_test(x, store=False):
     """
     Range unit-root test for stationarity.
 
@@ -2211,26 +2211,16 @@ def rur(x, store=False):
     ])
 
     # Interpolation for nobs
-    XX = np.array([nobs])
-
-    inter_crit = np.zeros((len(XX), crit.shape[1]))
+    inter_crit = np.zeros((1, crit.shape[1]))
     for i in range(crit.shape[1]):
         f = interp1d(n, crit[:, i])
-        for j in range(len(XX)):
-            inter_crit[j, i] = f(XX[j])
+        inter_crit[0, i] = f(nobs)
 
     # Calculate RUR stat
-    count = 0
-    max_p = x[0]
-    min_p = x[0]
-
-    for v in x[1:]:
-        if v > max_p:
-            max_p = v
-            count = count + 1
-        if v < min_p:
-            min_p = v
-            count = count + 1
+    xs = pd.Series(x)
+    exp_max = xs.expanding(1).max().shift(1)
+    exp_min = xs.expanding(1).min().shift(1)
+    count = (xs > exp_max).sum() + (xs < exp_min).sum()
 
     rur_stat = count / np.sqrt(len(x))
 
@@ -2247,14 +2237,14 @@ def rur(x, store=False):
 The test statistic is outside of the range of p-values available in the
 look-up table. The actual p-value is {direction} than the p-value returned.
 """
+    direction = ""
     if p_value == pvals[-1]:
-        warnings.warn(
-            warn_msg.format(direction="smaller"), InterpolationWarning
-        )
+        direction="smaller"
     elif p_value == pvals[0]:
-        warnings.warn(
-            warn_msg.format(direction="greater"), InterpolationWarning
-        )
+        direction="larger"
+
+    if direction:
+        warnings.warn( warn_msg.format(direction=direction), InterpolationWarning )
 
     crit_dict = {"10%": inter_crit[0,3], "5%": inter_crit[0,2], "2.5%": inter_crit[0,1], "1%": inter_crit[0,0]}
 
