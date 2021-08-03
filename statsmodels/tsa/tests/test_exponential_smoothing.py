@@ -466,7 +466,7 @@ def test_fit_vs_R(setup_model, reset_randomstate):
     try:
         assert loglike >= loglike_R - 1e-4
     except AssertionError:
-        fit = model.fit(disp=True, tol=1e-8, start_params=params)
+        fit = model.fit(disp=True, pgtol=1e-8, start_params=params)
         loglike = fit.llf
         try:
             assert loglike >= loglike_R - 1e-4

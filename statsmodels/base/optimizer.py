@@ -18,7 +18,7 @@ def check_kwargs(kwargs: dict[str, Any], allowed: Sequence[str], method: str):
             f"Keyword arguments have been passed to the optimizer that have "
             f"no effect. The list of allowed keyword arguments for method "
             f"{method} is: {', '.join(allowed)}. The list of unsupported "
-            f"keyword arguments passed include: {', '.join(extra)}. After"
+            f"keyword arguments passed include: {', '.join(extra)}. After "
             f"release 0.14, this will raise.",
             FutureWarning
         )
