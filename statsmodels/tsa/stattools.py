@@ -2244,7 +2244,7 @@ look-up table. The actual p-value is {direction} than the p-value returned.
         direction="larger"
 
     if direction:
-        warnings.warn( warn_msg.format(direction=direction), InterpolationWarning )
+        warnings.warn(warn_msg.format(direction=direction), InterpolationWarning)
 
     crit_dict = {"10%": inter_crit[0,3], "5%": inter_crit[0,2], "2.5%": inter_crit[0,1], "1%": inter_crit[0,0]}
 
