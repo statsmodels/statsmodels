@@ -8,12 +8,9 @@ All tests pass if file runs without error.
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
-import imp
 from numpy.testing import assert_allclose
 
 from statsmodels.regression import heckman
-
-imp.reload(heckman)
 
 
 def _load_data_mroz():
@@ -369,7 +366,8 @@ def test_heckman_2step(verbose=True):
         print(heckman_res.summary())
 
     ## With list input (no names) ##
-    heckman_basic_model = heckman.Heckman(Y.tolist(), X.as_matrix().tolist(), Z.as_matrix().tolist())
+    heckman_basic_model = heckman.Heckman(Y.tolist(), np.asarray(X).tolist(),
+                                          np.asarray(Z).tolist())
     heckman_basic_res = heckman_basic_model.fit(method='twostep')
 
     if verbose:
@@ -556,17 +554,17 @@ def test_heckman_2step_missingdata(verbose=True):
     /* last of introduced missings */
     '''
 
-    Y.ix[1-1] = np.nan
-    X.ix[2-1,'AX'] = np.nan; X.ix[2-1,'AX2'] = np.nan;
-    Z.ix[3-1,'WA'] = np.nan
+    Y.loc[1-1] = np.nan
+    X.loc[2-1,'AX'] = np.nan; X.loc[2-1,'AX2'] = np.nan;
+    Z.loc[3-1,'WA'] = np.nan
 
-    Y.ix[101-1] = np.nan
-    X.ix[102-1,'CIT'] = np.nan
-    Z.ix[103-1,'FAMINC'] = np.nan
+    Y.loc[101-1] = np.nan
+    X.loc[102-1,'CIT'] = np.nan
+    Z.loc[103-1,'FAMINC'] = np.nan
 
-    Y.ix[201-1] = np.nan
-    X.ix[202-1,'WE'] = np.nan
-    Z.ix[203-1,'K'] = np.nan
+    Y.loc[201-1] = np.nan
+    X.loc[202-1,'WE'] = np.nan
+    Z.loc[203-1,'K'] = np.nan
 
     ## fit it
 
@@ -578,7 +576,8 @@ def test_heckman_2step_missingdata(verbose=True):
         print(heckman_res.summary())
 
     ## With list input (no names) ##
-    heckman_basic_model = heckman.Heckman(Y.tolist(), X.as_matrix().tolist(), Z.as_matrix().tolist(),
+    heckman_basic_model = heckman.Heckman(Y.tolist(), np.asarray(X).tolist(),
+                                          np.asarray(Z).tolist(),
         missing='drop')
     heckman_basic_res = heckman_basic_model.fit(method='twostep')
 

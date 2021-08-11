@@ -584,13 +584,8 @@ class HeckmanResults(base.LikelihoodModelResults):
             except TypeError:
                 zname = 'z0_or_zconst'
 
-        try:  # for Python 3
-            if isinstance(zname, str):
-                zname = [zname]
-        except NameError:  # for Python 2
-            if isinstance(zname, basestring):
-                zname = [zname]
-
+        if isinstance(zname, str):
+            zname = [zname]
 
         ## create summary object
         # instantiate the object
