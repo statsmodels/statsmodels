@@ -47,9 +47,9 @@ the namespace exploration features of IPython, Spyder, IDLE, etc.):
     ['AR', 'ARMA', 'SVAR', 'VAR', '__builtins__', '__doc__',
     '__file__', '__name__', '__package__', 'acf', 'acovf', 'add_lag',
     'add_trend', 'adfuller', 'ccf', 'ccovf', 'datetools', 'detrend',
-    'filters', 'grangercausalitytests', 'interp', 'lagmat', 'lagmat2ds',
-    'pacf', 'pacf_ols', 'pacf_yw', 'periodogram', 'q_stat', 'stattools',
-    'tsatools', 'var']
+    'filters', 'grangercausalitytests', 'interp', 'lagmat', 'lagmat2ds', 'kpss',
+    'pacf', 'pacf_ols', 'pacf_yw', 'periodogram', 'q_stat', 'range_unit_root_test',
+    'stattools', 'tsatools', 'var']
 
 Notes
 ^^^^^
