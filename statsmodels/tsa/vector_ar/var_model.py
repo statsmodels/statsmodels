@@ -8,7 +8,6 @@ Lütkepohl (2005) New Introduction to Multiple Time Series Analysis
 """
 from __future__ import annotations
 
-from statsmodels.compat.pandas import deprecate_kwarg
 from statsmodels.compat.python import lrange
 
 from collections import defaultdict
@@ -1657,7 +1656,6 @@ class VARResults(VARProcess):
         return fc_cov
 
     # Monte Carlo irf standard errors
-    @deprecate_kwarg("T", "steps")
     def irf_errband_mc(
         self,
         orth=False,
@@ -1709,7 +1707,6 @@ class VARResults(VARProcess):
         upper = ma_sort[upp_idx, :, :, :]
         return lower, upper
 
-    @deprecate_kwarg("T", "steps")
     def irf_resim(
         self, orth=False, repl=1000, steps=10, seed=None, burn=100, cum=False
     ):

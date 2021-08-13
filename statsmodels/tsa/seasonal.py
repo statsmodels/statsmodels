@@ -1,8 +1,6 @@
 """
 Seasonal Decomposition by Moving Averages
 """
-from statsmodels.compat.pandas import deprecate_kwarg
-
 import numpy as np
 import pandas as pd
 from pandas.core.nanops import nanmean as pd_nanmean
@@ -58,7 +56,6 @@ def _extrapolate_trend(trend, npoints):
     return trend
 
 
-@deprecate_kwarg("freq", "period")
 def seasonal_mean(x, period):
     """
     Return means for each period in x. period is an int that gives the
@@ -68,7 +65,6 @@ def seasonal_mean(x, period):
     return np.array([pd_nanmean(x[i::period], axis=0) for i in range(period)])
 
 
-@deprecate_kwarg("freq", "period")
 def seasonal_decompose(
     x,
     model="additive",

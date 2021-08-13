@@ -2,8 +2,6 @@
 Provides a function to open the system browser to either search or go directly
 to a function's reference
 """
-from statsmodels.compat.pandas import deprecate_kwarg
-
 import webbrowser
 from urllib.parse import urlencode
 
@@ -43,7 +41,6 @@ def _generate_url(func, stable):
     return url
 
 
-@deprecate_kwarg('arg', 'func')
 def webdoc(func=None, stable=None):
     """
     Opens a browser and displays online documentation

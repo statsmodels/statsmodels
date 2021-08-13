@@ -6,9 +6,6 @@ References
 ----------
 Lütkepohl (2005) New Introduction to Multiple Time Series Analysis
 """
-
-from statsmodels.compat.pandas import deprecate_kwarg
-
 import numpy as np
 import numpy.linalg as npl
 from numpy.linalg import slogdet
@@ -614,7 +611,6 @@ class SVARResults(SVARProcess, VARResults):
 
         return IRAnalysis(self, P=P, periods=periods, svar=True)
 
-    @deprecate_kwarg('T', 'steps')
     def sirf_errband_mc(self, orth=False, repl=1000, steps=10,
                         signif=0.05, seed=None, burn=100, cum=False):
         """
