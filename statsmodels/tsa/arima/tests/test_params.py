@@ -590,15 +590,16 @@ def test_repr_str():
             {'x1': 0, 'x2': 4, 'ma.L1': 0, 'ma.L2': 3},
             np.array([0, 4, np.nan, np.nan, 0, 3, np.nan, np.nan, np.nan])
         ),
-        # all parameters are fixed except sigma2
+        # all parameters are fixed
         (
             {
                 'x1': 0, 'x2': 1,
                 'ar.L1': 2, 'ar.L3': 3,
                 'ma.L1': 4, 'ma.L2': 5,
-                'ar.S.L5': 6, 'ar.S.L10': 7
+                'ar.S.L5': 6, 'ar.S.L10': 7,
+                'sigma2': 8
             },
-            np.array(list(range(8)) + [np.nan])
+            np.array(list(range(9)))
         )
     ]
 )
@@ -712,6 +713,7 @@ def test_set_invalid_fixed_params():
         exog=np.random.random(size=(20, 2)),
         ar_order=[1, 0, 1], ma_order=2,
         seasonal_order=[2, 1, 0, 5],
+        concentrate_scale=True
     )
     p = params.SARIMAXParams(spec=spec)
     invalid_fixed_params = {'sigma2': 1}
@@ -753,63 +755,74 @@ def test_overwriting_fixed_params():
 
     # 2.2 call `set_fixed_params` a second time with different parameters, and
     # check that no warnings are raised
-    fixed_params_2 = {'ma.L2': -0.1}
+    fixed_params_2 = {'ma.L2': -0.1, 'sigma2': 2}
     with pytest.warns(None) as warning_record:
         p.set_fixed_params(fixed_params_2)
     assert len(warning_record) == 0   # no warnings
     assert_equal(
         p.is_param_fixed,
-        [True, False, True, False, False, True, False, False, False]
+        [True, False, True, False, False, True, False, False, True]
     )
     assert_equal(
         p.params,
-        [10, np.nan, 5, np.nan, np.nan, -0.1, np.nan, np.nan, np.nan]
+        [10, np.nan, 5, np.nan, np.nan, -0.1, np.nan, np.nan, 2]
     )
-    assert_equal(p.fixed_params, [10, 5, -0.1])
-    assert_equal(p.free_params, [np.nan] * 6)
+    assert_equal(p.fixed_params, [10, 5, -0.1, 2])
+    assert_equal(p.free_params, [np.nan] * 5)
 
     # 2.3 call `set_fixed_params` a third time which overwrites some previously
-    # fixed parameters with different values
-    # Only overwriting 'ar.L1' with a DIFFERENT value
+    # fixed parameters with different values and check that no warnings are
+    # raised
     fixed_params_3 = {'x1': 10, 'x2': 99, 'ar.L1': np.e}
-    with pytest.warns(UserWarning, match='Overwriting 1'):
+    with pytest.warns(None) as warning_record:
         p.set_fixed_params(fixed_params_3)
+    assert len(warning_record) == 0   # no warnings
     assert_equal(
         p.is_param_fixed,
-        [True, True, True, False, False, True, False, False, False]
+        [True, True, True, False, False, True, False, False, True]
     )
     assert_equal(
         p.params,
-        [10, 99, np.e, np.nan, np.nan, -0.1, np.nan, np.nan, np.nan]
+        [10, 99, np.e, np.nan, np.nan, -0.1, np.nan, np.nan, 2]
     )
-    assert_equal(p.fixed_params, [10, 99, np.e, -0.1])
-    assert_equal(p.free_params, [np.nan] * 5)
+    assert_equal(p.fixed_params, [10, 99, np.e, -0.1, 2])
+    assert_equal(p.free_params, [np.nan] * 4)
 
     # 2.4 call a few param setters, and check that no warnings are raised
     with pytest.warns(None) as warning_record:
         p.free_ar_params = [1]
-        p.sigma2 = 0.99
         p.free_seasonal_ar_params = [1. / 7., 0]
     assert len(warning_record) == 0   # no warnings
     assert_equal(
         p.is_param_fixed,
-        [True, True, True, False, False, True, False, False, False]
+        [True, True, True, False, False, True, False, False, True]
     )  # is_fixed status does not change
-    assert_equal(p.params, [10, 99, np.e, 1, np.nan, -0.1, 1./7., 0, 0.99])
-    assert_equal(p.fixed_params, [10, 99, np.e, -0.1])
-    assert_equal(p.free_params, [1, np.nan, 1./7., 0, 0.99])
+    assert_equal(p.params, [10, 99, np.e, 1, np.nan, -0.1, 1./7., 0, 2])
+    assert_equal(p.fixed_params, [10, 99, np.e, -0.1, 2])
+    assert_equal(p.free_params, [1, np.nan, 1./7., 0])
 
-    # 2.5 call full param setter to overwrite some fixed params with different
+    # 2.5 call sigma2 setter to overwrite previously fixed sigma2
+    with pytest.warns(UserWarning, match='Overwriting 1'):
+        p.sigma2 = 4
+    assert_equal(
+        p.is_param_fixed,
+        [True, True, True, False, False, True, False, False, True]
+    )  # is_fixed status does not change
+    assert_equal(p.params, [10, 99, np.e, 1, np.nan, -0.1, 1./7., 0, 4])
+    assert_equal(p.fixed_params, [10, 99, np.e, -0.1, 4])
+    assert_equal(p.free_params, [1, np.nan, 1./7., 0])
+
+    # 2.6 call full param setter to overwrite some fixed params with different
     # values
-    with pytest.warns(UserWarning, match='Overwriting 2'):
+    with pytest.warns(UserWarning, match='Overwriting 3'):
         p.params = [10, 1, 2, 3, 4, -0.1, 5, 6, 7]
     assert_equal(
         p.is_param_fixed,
-        [True, True, True, False, False, True, False, False, False]
+        [True, True, True, False, False, True, False, False, True]
     )  # is_fixed status does not change
     assert_equal(p.params, [10, 1, 2, 3, 4, -0.1, 5, 6, 7])
-    assert_equal(p.fixed_params, [10, 1, 2, -0.1])
-    assert_equal(p.free_params, [3, 4, 5, 6, 7])
+    assert_equal(p.fixed_params, [10, 1, 2, -0.1, 7])
+    assert_equal(p.free_params, [3, 4, 5, 6])
 
 
 def test_reset_fixed_params():
@@ -818,23 +831,24 @@ def test_reset_fixed_params():
         ar_order=[1, 0, 1], ma_order=2,
         seasonal_order=[2, 1, 0, 5],
     )
-    fixed_params = {'x1': 0, 'ar.L1': 1, 'ma.L2': -1, 'ar.S.L10': 10}
+    fixed_params = {'x1': 0, 'ar.L1': 1, 'ma.L2': -1, 'ar.S.L10': 10,
+                    'sigma2': 1}
 
     # check that with `keep_param_value=True`, the previously fixed params'
     # statuses are correctly reset, while the values are kept
     p = params.SARIMAXParams(spec=spec)
-    p.set_fixed_params(fixed_params)
+    p.set_fixed_params(fixed_params, validate=False)
     p.reset_fixed_params(keep_param_value=True)
     assert_equal(p.is_param_fixed, [False] * p.k_params)
     assert_equal(
         p.params,
-        [0, np.nan, 1, np.nan, np.nan, -1, np.nan, 10, np.nan]
+        [0, np.nan, 1, np.nan, np.nan, -1, np.nan, 10, 1]
     )
 
     # check that with `keep_param_value=False`, the previously fixed params'
     # are also correctly set back to np.nan
     p = params.SARIMAXParams(spec=spec)
-    p.set_fixed_params(fixed_params)
+    p.set_fixed_params(fixed_params, validate=False)
     p.reset_fixed_params(keep_param_value=False)
     assert_equal(p.is_param_fixed, [False] * 9)
     assert_equal(p.params, [np.nan] * 9)

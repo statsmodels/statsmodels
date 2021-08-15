@@ -135,7 +135,7 @@ def test_set_default_unbiased():
         ([0, 1], 0, {}, None),
         # invalid fixed param names
         (1, 3, {"ar.L2": 1, "ma.L2": 0}, "Invalid fixed parameter"),
-        ([0, 1], [0, 1], {"ma.L1": 0, "sigma2": 1}, "Invalid fixed parameter"),
+        ([0, 1], [0, 1], {"sigma2": 1}, "Invalid fixed parameter"),
         (0, 0, {"ma.L1": 0, "ar.L1": 0}, "Invalid fixed parameter"),
         (5, [1], {"random_param": 0, "ar.L1": 0}, "Invalid fixed parameter"),
         # invalid fixed param values

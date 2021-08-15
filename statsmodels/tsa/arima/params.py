@@ -85,10 +85,12 @@ class SARIMAXParams(object):
         # keeping counts for internal validation purposes
         self._k_fixed_params_split = {
             name: 0 for name in self._is_param_fixed_split.keys()
+            if name != 'sigma2'
         }
         self._k_free_params_split = {
             name: len(is_param_fixed) for name, is_param_fixed
             in self._is_param_fixed_split.items()
+            if name != 'sigma2'
         }
 
     @property
@@ -100,7 +102,7 @@ class SARIMAXParams(object):
     def exog_params(self, value):
         self._set_param_array(
             param_type='exog_params', value=value, k_params=self.k_exog_params,
-            title='exogenous coefficients'
+            title='exogenous coefficients', warn_fixed_overwrite=True
         )
 
     @property
@@ -141,7 +143,7 @@ class SARIMAXParams(object):
     def ar_params(self, value):
         self._set_param_array(
             param_type='ar_params', value=value, k_params=self.k_ar_params,
-            title='AR coefficients'
+            title='AR coefficients', warn_fixed_overwrite=True
         )
 
     @property
@@ -216,7 +218,7 @@ class SARIMAXParams(object):
     def ma_params(self, value):
         self._set_param_array(
             param_type='ma_params', value=value, k_params=self.k_ma_params,
-            title='MA coefficients'
+            title='MA coefficients', warn_fixed_overwrite=True
         )
 
     @property
@@ -292,7 +294,8 @@ class SARIMAXParams(object):
         self._set_param_array(
             param_type='seasonal_ar_params', value=value,
             k_params=self.k_seasonal_ar_params,
-            title='seasonal AR coefficients'
+            title='seasonal AR coefficients',
+            warn_fixed_overwrite=True
         )
 
     @property
@@ -375,7 +378,8 @@ class SARIMAXParams(object):
         self._set_param_array(
             param_type='seasonal_ma_params', value=value,
             k_params=self.k_seasonal_ma_params,
-            title='seasonal MA coefficients'
+            title='seasonal MA coefficients',
+            warn_fixed_overwrite=True
         )
 
     @property
@@ -449,15 +453,27 @@ class SARIMAXParams(object):
         self.seasonal_ma_params = seasonal_ma_params
 
     @property
+    def is_sigma2_fixed(self):
+        """(bool) Whether innovation variance has been fixed."""
+        return self._is_param_fixed_split['sigma2']
+
+    @property
     def sigma2(self):
         """(float) Innovation variance."""
         return self._params_split['sigma2']
 
     @sigma2.setter
-    def sigma2(self, params):
+    def sigma2(self, value):
         length = int(not self.spec.concentrate_scale)
-        self._params_split['sigma2'] = validate_basic(
-            params, length, title='sigma2').item()
+        value = validate_basic(value, length, title='sigma2').item()
+
+        self._warn_fixed_overwrite(
+            original_value=np.atleast_1d(self._params_split['sigma2']),
+            new_value=np.atleast_1d(value),
+            is_fixed_bool=np.atleast_1d(self.is_sigma2_fixed)
+        )
+
+        self._params_split['sigma2'] = value
         self._params = None
 
     @property
@@ -494,7 +510,7 @@ class SARIMAXParams(object):
         """(array) Whether parameters have previously been fixed."""
         if self._is_param_fixed is None:
             self._is_param_fixed = self.spec.join_params(
-                sigma2=False, **self._is_param_fixed_split
+                **self._is_param_fixed_split
             )
         return self._is_param_fixed.copy()
 
@@ -575,10 +591,10 @@ class SARIMAXParams(object):
 
         return ma_stationary and seasonal_ma_stationary
 
-    def set_fixed_params(self, fixed_params, validate=False):
+    def set_fixed_params(self, fixed_params, validate=False,
+                         **validate_kwargs):
         """
-        Sets all fixed params at once, which can be accessed afterwards through
-        `fixed_exog_params`, `fixed_ar_params`, etc.
+        Set fixed parameters.
 
         Parameters
         ----------
@@ -589,40 +605,57 @@ class SARIMAXParams(object):
             parameters.
         validate : bool, optional
             Whether to validate fixed parameter names and values.
-            See `SARIMAXSpecification.split_fixed_params` function.
+            See `SARIMAXSpecification.validate_fixed_params` function.
+        validate_kwargs : dict, optional
+            kwargs for `SARIMAXSpecification.validate_fixed_params` (e.g.
+            `allow_fixed_sigma2`)
         """
+        if validate:
+            self.spec.validate_fixed_params(fixed_params, **validate_kwargs)
 
         split_fixed_params, split_is_fixed_param = (
-            self.spec.split_fixed_params(
-                fixed_params=fixed_params, validate=validate
-            )
+            self.spec.split_fixed_params(fixed_params)
         )
-        param_types = split_fixed_params.keys()
-        assert set(param_types) == set(self._params_split) - {"sigma2"}
 
-        for param_type in param_types:
-            # write to param_split
-            self._set_param_array(
-                param_type=param_type, value=split_fixed_params[param_type],
-                k_params=split_is_fixed_param[param_type].sum(),
-                title=None, bool_indexer=split_is_fixed_param[param_type]
-            )
-            # update is_param_fixed_split
-            self._is_param_fixed_split[param_type] = (
-                self._is_param_fixed_split[param_type] |
-                split_is_fixed_param[param_type]
-            )
-            self._is_param_fixed = None  # clear cache
-            # update count
-            self._k_fixed_params_split[param_type] = (
-                self._is_param_fixed_split[param_type].sum()
-            )
-            self._k_free_params_split[param_type] = (
-                (~self._is_param_fixed_split[param_type]).sum()
-            )
+        for param_type in split_fixed_params.keys():
+            if param_type == "sigma2":
+                if split_is_fixed_param[param_type]:
+                    self._params_split[param_type] = validate_basic(
+                        split_fixed_params[param_type],
+                        int(not self.spec.concentrate_scale),
+                        title="sigma2"
+                    ).item()
+                    self._params = None
+                    self._is_param_fixed_split[param_type] = True
+                    self._is_param_fixed = None
+            else:
+                # write to param_split
+                self._set_param_array(
+                    param_type=param_type,
+                    value=split_fixed_params[param_type],
+                    k_params=split_is_fixed_param[param_type].sum(),
+                    title=None,
+                    bool_indexer=split_is_fixed_param[param_type],
+                    warn_fixed_overwrite=False
+                )
+                # update is_param_fixed_split
+                self._is_param_fixed_split[param_type] = (
+                    self._is_param_fixed_split[param_type] |
+                    split_is_fixed_param[param_type]
+                )
+                self._is_param_fixed = None  # clear cache
+                # update count
+                self._k_fixed_params_split[param_type] = (
+                    self._is_param_fixed_split[param_type].sum()
+                )
+                self._k_free_params_split[param_type] = (
+                    (~self._is_param_fixed_split[param_type]).sum()
+                )
 
     def reset_fixed_params(self, keep_param_value=False):
         """
+        Reset statuses and (optionally) values of previously fixed parameters.
+
         - Set status of all fixed params to 'free';
         - Set all fixed params to np.nan if keep_param_value is False
 
@@ -632,26 +665,37 @@ class SARIMAXParams(object):
             Whether to keep the current fixed param value; if False, all
             fixed params are set to np.nan
         """
-        for param_type in self._k_fixed_params_split.keys():
-            k_fixed_params = self._k_fixed_params_split[param_type]
-            k_free_params = self._k_free_params_split[param_type]
-            if k_fixed_params > 0:
-                # set current fixed values to np.nan if requested
+        for param_type in self._is_param_fixed_split.keys():
+            if param_type == "sigma2":
                 if not keep_param_value:
-                    self._set_param_array(
-                        param_type=param_type, value=np.nan,
-                        k_params=k_fixed_params, allow_infnan=True,
-                        bool_indexer=self._is_param_fixed_split[param_type],
-                        warn_fixed_overwrite=False
+                    # set current fixed values to np.nan if requested
+                    self._params_split[param_type] = np.nan
+                    self._params = None
+                # set the fixed param bool to False
+                self._is_param_fixed_split[param_type] = False
+            else:
+                k_fixed_params = self._k_fixed_params_split[param_type]
+                k_free_params = self._k_free_params_split[param_type]
+                if k_fixed_params > 0:
+                    # set current fixed values to np.nan if requested
+                    if not keep_param_value:
+                        bool_indexer = self._is_param_fixed_split[param_type]
+                        self._set_param_array(
+                            param_type=param_type,
+                            value=np.nan,
+                            k_params=k_fixed_params,
+                            allow_infnan=True,
+                            bool_indexer=bool_indexer,
+                            warn_fixed_overwrite=False
+                        )
+                    # set all fixed param bool to False
+                    self._is_param_fixed_split[param_type][:] = False
+                    # set fix counts to 0
+                    self._k_fixed_params_split[param_type] = 0
+                    # set free counts to total count
+                    self._k_free_params_split[param_type] = (
+                        k_fixed_params + k_free_params
                     )
-                # set all fixed param bool to False
-                self._is_param_fixed_split[param_type][:] = False
-                # set fix counts to 0
-                self._k_fixed_params_split[param_type] = 0
-                # set free counts to total count
-                self._k_free_params_split[param_type] = (
-                    k_fixed_params + k_free_params
-                )
 
         self._is_param_fixed = None  # reset cache
 
@@ -702,7 +746,8 @@ class SARIMAXParams(object):
     def _set_param_array(self, param_type, value, k_params, allow_infnan=False,
                          title=None, bool_indexer=None,
                          warn_fixed_overwrite=True):
-        """Helper function for setting entire or subset of param arrays
+        """
+        Helper function for setting entire or subset of param arrays.
 
         - Validates param value;
         - Check and warns if any previous fixed params are overwritten;
@@ -765,8 +810,10 @@ class SARIMAXParams(object):
     @staticmethod
     def _warn_fixed_overwrite(original_value, new_value, is_fixed_bool):
         """
-        Issues a warning when any previously fixed parameters are overwritten
-        with different values.
+        Issues a warning when any previously fixed parameters are overwritten.
+
+        Note that we only count "overwriting" when a previously fixed parameter
+        is replaced with a **different** value.
 
         Parameters
         ----------

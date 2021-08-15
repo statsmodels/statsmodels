@@ -97,7 +97,7 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
 
     if fixed_params is None:
         fixed_params = dict()
-    spec.validate_fixed_params(fixed_params)
+    spec.validate_fixed_params(fixed_params, allow_fixed_sigma2=False)
 
     endog = spec.endog
     if demean:
