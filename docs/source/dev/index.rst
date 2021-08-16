@@ -52,7 +52,7 @@ greatly helps the job of maintaining and releasing the software a shared effort.
   Check that the build output does not have *any* warnings due to your changes.
 - Follow `PEP8 <https://www.python.org/dev/peps/pep-0008/>`_ style guidelines
   wherever possible. Compare your code to what's in main by running
-  ``git diff upstream/main -u -- "*.py" | flake8 --diff`` prior to submitting.
+  ``git diff upstream/main -u -- "*.py" | flake8 --diff --isolated`` prior to submitting.
 - Finally, please add your changes to the release notes. Open the
   ``docs/source/release/versionX.X.rst`` file that has the version number of the
   next release and add your changes to the appropriate section.
