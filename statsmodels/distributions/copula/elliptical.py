@@ -50,7 +50,7 @@ class GaussianCopula(Copula):
         x = self.mv_density.rvs(size=n, random_state=random_state)
         return self.density.cdf(x)
 
-    def pdf(self, u):
+    def pdf(self, u, *args):
         ppf = self.density.ppf(u)
         mv_pdf_ppf = self.mv_density.pdf(ppf)
 

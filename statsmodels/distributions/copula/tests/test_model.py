@@ -41,6 +41,8 @@ class CopulaModel(GenericLikelihoodModel):
         cd = self.copula_distribution
         # ll = cd.logpdf(self.endog, args=(params[:2], params[2:]))
         cop_args = params[:self.k_copparams]
+        if cop_args.size == 0:
+            cop_args = ()
         if len(params) > self.k_copparams:
             marg_args = np.split(params[self.k_copparams:], 2)
         else:
@@ -118,6 +120,34 @@ class CheckEVfit(object):
         assert res.mle_retvals["converged"]
         assert not np.isnan(res.bse).any()
 
+    def test0(self):
+        cop = getattr(self, "copula_fixed", None)
+        if cop is None:
+            # skip test if not yet available
+            return
+        args = self.cop_args
+
+        cev = CopulaDistribution([stats.norm, stats.norm], cop, copargs=args)
+        k_marg = 2
+        mod = CopulaModel(cev, data_ev + [0.5, -0.1],
+                          k_params=0 + k_marg)
+
+        # TODO: patching for now
+        mod.k_copparams = 0
+        mod.df_resid = len(mod.endog) - mod.nparams
+        mod.df_model = mod.nparams - 0
+        res = mod.fit(start_params=[0.5, -0.1],
+                      method="bfgs")
+        # the following fails in TestEVAsymLogistic with nan loglike
+        # res = mod.fit(method="newton", start_params=res.params)
+
+        assert mod.nparams == 0 + k_marg
+        assert res.nobs == len(mod.endog)
+        assert_allclose(res.params, [0.5, -0.1], atol=0.2)
+        res.summary()
+        assert res.mle_retvals["converged"]
+        assert not np.isnan(res.bse).any()
+
 
 class TestEVHR(CheckEVfit):
 
@@ -153,3 +183,13 @@ class TestFrank(CheckEVfit):
         cls.copula = FrankCopula()
         cls.cop_args = (0.5,)
         cls.k_copparams = 1
+        cls.copula_fixed = FrankCopula(*cls.cop_args)
+
+
+class TestGaussian(CheckEVfit):
+
+    @classmethod
+    def setup_class(cls):
+        cls.copula = GaussianCopula()
+        cls.cop_args = ()
+        cls.k_copparams = 0

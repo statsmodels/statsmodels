@@ -360,7 +360,7 @@ class Copula(ABC):
     def __init__(self, d):
         self.d = d
 
-    def random(self, nobs=1, random_state=None):
+    def random(self, nobs=1, *args, random_state=None):
         """Draw `n` in the half-open interval ``[0, 1)``.
 
         Marginals are uniformly distributed.
@@ -385,15 +385,15 @@ class Copula(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def pdf(self, u):
+    def pdf(self, u, *args):
         """Probability density function."""
 
-    def logpdf(self, u):
+    def logpdf(self, u, *args):
         """Log of the PDF."""
-        return np.log(self.pdf(u))
+        return np.log(self.pdf(u, *args))
 
     @abstractmethod
-    def cdf(self, u):
+    def cdf(self, u, *args):
         """Cumulative density function."""
 
     def plot_scatter(self, sample=None, nobs=None, random_state=None, ax=None):
