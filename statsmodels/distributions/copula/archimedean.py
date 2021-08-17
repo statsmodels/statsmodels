@@ -151,6 +151,9 @@ class FrankCopula(ArchimedeanCopula):
         self.theta = theta
 
     def _handle_args(self, args):
+        # TODO: how to we handle non-tuple args? two we allow single values?
+        if not isinstance(args, tuple):
+            args = (args,)
         if args == () or args is None:
             theta = self.theta
         else:
@@ -208,7 +211,8 @@ class FrankCopula(ArchimedeanCopula):
                               (1 - np.exp(- th * u2)))
             return pdf
         else:
-            super().logpdf(u)
+            # for now use generic from base Copula class, log(self.pdf(...))
+            super(ArchimedeanCopula, self).logpdf(u)
 
     def cdfcond_2g1(self, u, args=()):
         u = np.atleast_2d(u)

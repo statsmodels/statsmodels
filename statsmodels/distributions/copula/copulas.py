@@ -218,7 +218,7 @@ class CopulaDistribution:
             sample[:, i] = dist.ppf(0.5 + (1 - 1e-10) * (sample[:, i] - 0.5))
         return sample
 
-    def cdf(self, y, args=None):
+    def cdf(self, y, cop_args=None, marg_args=None):
         """CDF of copula distribution.
 
         Parameters
@@ -237,19 +237,21 @@ class CopulaDistribution:
 
         """
         y = np.asarray(y)
-        if args is None:
-            args = self.copargs
+        if cop_args is None:
+            cop_args = self.copargs
+        if marg_args is None:
+            marg_args = [()] * y.shape[-1]
 
         cdf_marg = []
         for i in range(self.k_vars):
-            cdf_marg.append(self.marginals[i].cdf(y[..., i]))
+            cdf_marg.append(self.marginals[i].cdf(y[..., i], *marg_args[i]))
 
         u = np.column_stack(cdf_marg)
         if y.ndim == 1:
             u = u.squeeze()
-        return self.copula.cdf(u, args)
+        return self.copula.cdf(u, cop_args)
 
-    def pdf(self, y, args=None):
+    def pdf(self, y, cop_args=None, marg_args=None):
         """PDF of copula distribution.
 
         Parameters
@@ -266,9 +268,9 @@ class CopulaDistribution:
         -------
         pdf values
         """
-        return np.exp(self.logpdf(y, args=args))
+        return np.exp(self.logpdf(y, cop_args=cop_args, marg_args=marg_args))
 
-    def logpdf(self, y, args=None):
+    def logpdf(self, y, cop_args=None, marg_args=None):
         """Log-pdf of copula distribution.
 
         Parameters
@@ -287,20 +289,22 @@ class CopulaDistribution:
 
         """
         y = np.asarray(y)
-        if args is None:
-            args = self.copargs
+        if cop_args is None:
+            cop_args = self.copargs
+        if marg_args is None:
+            marg_args = tuple([()] * y.shape[-1])
 
         lpdf = 0.0
         cdf_marg = []
         for i in range(self.k_vars):
-            lpdf += self.marginals[i].logpdf(y[..., i])
-            cdf_marg.append(self.marginals[i].cdf(y[..., i]))
+            lpdf += self.marginals[i].logpdf(y[..., i], *marg_args[i])
+            cdf_marg.append(self.marginals[i].cdf(y[..., i], *marg_args[i]))
 
         u = np.column_stack(cdf_marg)
         if y.ndim == 1:
             u = u.squeeze()
 
-        lpdf += self.copula.logpdf(u, args)
+        lpdf += self.copula.logpdf(u, cop_args)
         return lpdf
 
 

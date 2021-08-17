@@ -33,11 +33,10 @@ class PickandDependence(object):
         return np.diag(approx_fprime_cs(t, self.evaluate, args=args))
 
     def deriv2(self, t, *args):
-        """First derivative of the dependence function
+        """Second derivative of the dependence function
 
         implemented through numerical differentiation
         """
-        # TODO: workaround proplem with numdiff for 1d
         if np.size(t) == 1:
             d2 = approx_hess([t], self.evaluate, args=args)[0]
         else:
@@ -55,6 +54,7 @@ class AsymLogistic(PickandDependence):
      - theta in (0,1]
      - a1, a2 in [0,1]
     '''
+    k_args = 3
 
     def _check_args(self, a1, a2, theta):
         condth = (theta > 0) and (theta <= 1)
@@ -100,6 +100,7 @@ class AsymNegLogistic(PickandDependence):
      - theta in (0,inf)
      - a1, a2 in (0,1]
     '''
+    k_args = 3
 
     def _check_args(self, a1, a2, theta):
         condth = (theta > 0)
@@ -157,6 +158,7 @@ class AsymMixed(PickandDependence):
      - theta + k <= 1
      - theta + 2*k <= 1
     '''
+    k_args = 2
 
     def _check_args(self, theta, k):
         condth = (theta >= 0)
@@ -189,6 +191,7 @@ class AsymBiLogistic(PickandDependence):
 
     not vectorized because of numerical integration
     '''
+    k_args = 2
 
     def _check_args(self, beta, delta):
         cond1 = (beta > 0) and (beta <= 1) and (delta > 0) and (delta <= 1)
@@ -220,6 +223,7 @@ class HR(PickandDependence):
     restrictions:
      - lambda in (0,inf)
     '''
+    k_args = 1
 
     def _check_args(self, lamda):
         cond = (lamda > 0)
@@ -243,7 +247,7 @@ class HR(PickandDependence):
                 order = -1
             else:
                 raise ValueError("order should be 1, 2, or (1,2)")
-        lamda = 2
+
         dn = 1 / np.sqrt(2 * np.pi)
         a = lamda
         g = np.log((1. - t) / t) * 0.5 / a
@@ -299,6 +303,7 @@ class TEV(PickandDependence):
      - rho in (-1,1)
      - x > 0
     '''
+    k_args = 2
 
     def _check_args(self, rho, df):
         x = df  # alias, Genest and Segers use chi, copual package uses df
