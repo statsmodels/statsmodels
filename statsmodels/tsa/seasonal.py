@@ -1,8 +1,6 @@
 """
 Seasonal Decomposition by Moving Averages
 """
-from statsmodels.compat.pandas import deprecate_kwarg
-
 import numpy as np
 import pandas as pd
 from pandas.core.nanops import nanmean as pd_nanmean
@@ -12,7 +10,7 @@ from statsmodels.tsa._stl import STL
 from statsmodels.tsa.filters.filtertools import convolution_filter
 from statsmodels.tsa.tsatools import freq_to_period
 
-__all__ = ['STL', 'seasonal_decompose', 'seasonal_mean', 'DecomposeResult']
+__all__ = ["STL", "seasonal_decompose", "seasonal_mean", "DecomposeResult"]
 
 
 def _extrapolate_trend(trend, npoints):
@@ -20,16 +18,26 @@ def _extrapolate_trend(trend, npoints):
     Replace nan values on trend's end-points with least-squares extrapolated
     values with regression considering npoints closest defined points.
     """
-    front = next(i for i, vals in enumerate(trend)
-                 if not np.any(np.isnan(vals)))
-    back = trend.shape[0] - 1 - next(i for i, vals in enumerate(trend[::-1])
-                                     if not np.any(np.isnan(vals)))
+    front = next(
+        i for i, vals in enumerate(trend) if not np.any(np.isnan(vals))
+    )
+    back = (
+        trend.shape[0]
+        - 1
+        - next(
+            i
+            for i, vals in enumerate(trend[::-1])
+            if not np.any(np.isnan(vals))
+        )
+    )
     front_last = min(front + npoints, back)
     back_first = max(front, back - npoints)
 
     k, n = np.linalg.lstsq(
         np.c_[np.arange(front, front_last), np.ones(front_last - front)],
-        trend[front:front_last], rcond=-1)[0]
+        trend[front:front_last],
+        rcond=-1,
+    )[0]
     extra = (np.arange(0, front) * np.c_[k] + np.c_[n]).T
     if trend.ndim == 1:
         extra = extra.squeeze()
@@ -37,16 +45,17 @@ def _extrapolate_trend(trend, npoints):
 
     k, n = np.linalg.lstsq(
         np.c_[np.arange(back_first, back), np.ones(back - back_first)],
-        trend[back_first:back], rcond=-1)[0]
+        trend[back_first:back],
+        rcond=-1,
+    )[0]
     extra = (np.arange(back + 1, trend.shape[0]) * np.c_[k] + np.c_[n]).T
     if trend.ndim == 1:
         extra = extra.squeeze()
-    trend[back + 1:] = extra
+    trend[back + 1 :] = extra
 
     return trend
 
 
-@deprecate_kwarg('freq', 'period')
 def seasonal_mean(x, period):
     """
     Return means for each period in x. period is an int that gives the
@@ -56,9 +65,14 @@ def seasonal_mean(x, period):
     return np.array([pd_nanmean(x[i::period], axis=0) for i in range(period)])
 
 
-@deprecate_kwarg('freq', 'period')
-def seasonal_decompose(x, model="additive", filt=None, period=None,
-                       two_sided=True, extrapolate_trend=0):
+def seasonal_decompose(
+    x,
+    model="additive",
+    filt=None,
+    period=None,
+    two_sided=True,
+    extrapolate_trend=0,
+):
     """
     Seasonal decomposition using moving averages.
 
@@ -123,71 +137,80 @@ def seasonal_decompose(x, model="additive", filt=None, period=None,
     pfreq = period
     pw = PandasWrapper(x)
     if period is None:
-        pfreq = getattr(getattr(x, 'index', None), 'inferred_freq', None)
+        pfreq = getattr(getattr(x, "index", None), "inferred_freq", None)
 
-    x = array_like(x, 'x', maxdim=2)
+    x = array_like(x, "x", maxdim=2)
     nobs = len(x)
 
     if not np.all(np.isfinite(x)):
         raise ValueError("This function does not handle missing values")
-    if model.startswith('m'):
+    if model.startswith("m"):
         if np.any(x <= 0):
-            raise ValueError("Multiplicative seasonality is not appropriate "
-                             "for zero and negative values")
+            raise ValueError(
+                "Multiplicative seasonality is not appropriate "
+                "for zero and negative values"
+            )
 
     if period is None:
         if pfreq is not None:
             pfreq = freq_to_period(pfreq)
             period = pfreq
         else:
-            raise ValueError("You must specify a period or x must be a "
-                             "pandas object with a DatetimeIndex with "
-                             "a freq not set to None")
+            raise ValueError(
+                "You must specify a period or x must be a pandas object with "
+                "a PeriodIndex or a DatetimeIndex with a freq not set to None"
+            )
     if x.shape[0] < 2 * pfreq:
-        raise ValueError('x must have 2 complete cycles requires {0} '
-                         'observations. x only has {1} '
-                         'observation(s)'.format(2 * pfreq, x.shape[0]))
+        raise ValueError(
+            f"x must have 2 complete cycles requires {2 * pfreq} "
+            f"observations. x only has {x.shape[0]} observation(s)"
+        )
 
     if filt is None:
         if period % 2 == 0:  # split weights at ends
-            filt = np.array([.5] + [1] * (period - 1) + [.5]) / period
+            filt = np.array([0.5] + [1] * (period - 1) + [0.5]) / period
         else:
-            filt = np.repeat(1. / period, period)
+            filt = np.repeat(1.0 / period, period)
 
     nsides = int(two_sided) + 1
     trend = convolution_filter(x, filt, nsides)
 
-    if extrapolate_trend == 'freq':
+    if extrapolate_trend == "freq":
         extrapolate_trend = period - 1
 
     if extrapolate_trend > 0:
         trend = _extrapolate_trend(trend, extrapolate_trend + 1)
 
-    if model.startswith('m'):
+    if model.startswith("m"):
         detrended = x / trend
     else:
         detrended = x - trend
 
     period_averages = seasonal_mean(detrended, period)
 
-    if model.startswith('m'):
+    if model.startswith("m"):
         period_averages /= np.mean(period_averages, axis=0)
     else:
         period_averages -= np.mean(period_averages, axis=0)
 
     seasonal = np.tile(period_averages.T, nobs // period + 1).T[:nobs]
 
-    if model.startswith('m'):
+    if model.startswith("m"):
         resid = x / seasonal / trend
     else:
         resid = detrended - seasonal
 
     results = []
-    for s, name in zip((seasonal, trend, resid, x),
-                       ('seasonal', 'trend', 'resid', None)):
+    for s, name in zip(
+        (seasonal, trend, resid, x), ("seasonal", "trend", "resid", None)
+    ):
         results.append(pw.wrap(s.squeeze(), columns=name))
-    return DecomposeResult(seasonal=results[0], trend=results[1],
-                           resid=results[2], observed=results[3])
+    return DecomposeResult(
+        seasonal=results[0],
+        trend=results[1],
+        resid=results[2],
+        observed=results[3],
+    )
 
 
 class DecomposeResult(object):
@@ -214,8 +237,9 @@ class DecomposeResult(object):
         if weights is None:
             weights = np.ones_like(observed)
             if isinstance(observed, pd.Series):
-                weights = pd.Series(weights, index=observed.index,
-                                    name='weights')
+                weights = pd.Series(
+                    weights, index=observed.index, name="weights"
+                )
         self._weights = weights
         self._resid = resid
         self._observed = observed
@@ -250,8 +274,14 @@ class DecomposeResult(object):
         """Number of observations"""
         return self._observed.shape
 
-    def plot(self, observed=True, seasonal=True, trend=True, resid=True,
-             weights=False):
+    def plot(
+        self,
+        observed=True,
+        seasonal=True,
+        trend=True,
+        resid=True,
+        weights=False,
+    ):
         """
         Plot estimated components
 
@@ -273,15 +303,17 @@ class DecomposeResult(object):
         matplotlib.figure.Figure
             The figure instance that containing the plot.
         """
-        from statsmodels.graphics.utils import _import_mpl
         from pandas.plotting import register_matplotlib_converters
+
+        from statsmodels.graphics.utils import _import_mpl
+
         plt = _import_mpl()
         register_matplotlib_converters()
-        series = [(self._observed, 'Observed')] if observed else []
-        series += [(self.trend, 'trend')] if trend else []
-        series += [(self.seasonal, 'seasonal')] if seasonal else []
-        series += [(self.resid, 'residual')] if resid else []
-        series += [(self.weights, 'weights')] if weights else []
+        series = [(self._observed, "Observed")] if observed else []
+        series += [(self.trend, "trend")] if trend else []
+        series += [(self.seasonal, "seasonal")] if seasonal else []
+        series += [(self.resid, "residual")] if resid else []
+        series += [(self.weights, "weights")] if weights else []
 
         if isinstance(self._observed, (pd.DataFrame, pd.Series)):
             nobs = self._observed.shape[0]
@@ -291,13 +323,13 @@ class DecomposeResult(object):
 
         fig, axs = plt.subplots(len(series), 1)
         for i, (ax, (series, def_name)) in enumerate(zip(axs, series)):
-            if def_name != 'residual':
+            if def_name != "residual":
                 ax.plot(series)
             else:
-                ax.plot(series, marker='o', linestyle='none')
-                ax.plot(xlim, (0, 0), color='#000000', zorder=-3)
-            name = getattr(series, 'name', def_name)
-            if def_name != 'Observed':
+                ax.plot(series, marker="o", linestyle="none")
+                ax.plot(xlim, (0, 0), color="#000000", zorder=-3)
+            name = getattr(series, "name", def_name)
+            if def_name != "Observed":
                 name = name.capitalize()
             title = ax.set_title if i == 0 and observed else ax.set_ylabel
             title(name)
