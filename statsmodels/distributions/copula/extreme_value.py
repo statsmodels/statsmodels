@@ -47,6 +47,7 @@ class ExtremeValueCopula(object):
 
     def __init__(self, transform):
         self.transform = transform
+        self.k_args = transform.k_args
 
     def cdf(self, u, args=()):
         """Evaluate cdf of bivariate extreme value copula.

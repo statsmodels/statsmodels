@@ -172,7 +172,7 @@ class CopulaDistribution:
     experimental, argument handling not yet finalized
 
     """
-    def __init__(self, marginals, copula, copargs=()):
+    def __init__(self, marginals, copula, cop_args=()):
         if copula in copulanamesbv:
             self.copula = copulanamesbv[copula]
         else:
@@ -181,7 +181,7 @@ class CopulaDistribution:
 
         # no checking done on marginals
         self.marginals = marginals
-        self.copargs = copargs
+        self.cop_args = cop_args
         self.k_vars = len(marginals)
 
     def random(self, nobs=1, random_state=None):
@@ -238,7 +238,7 @@ class CopulaDistribution:
         """
         y = np.asarray(y)
         if cop_args is None:
-            cop_args = self.copargs
+            cop_args = self.cop_args
         if marg_args is None:
             marg_args = [()] * y.shape[-1]
 
@@ -290,7 +290,7 @@ class CopulaDistribution:
         """
         y = np.asarray(y)
         if cop_args is None:
-            cop_args = self.copargs
+            cop_args = self.cop_args
         if marg_args is None:
             marg_args = tuple([()] * y.shape[-1])
 
@@ -360,7 +360,7 @@ class Copula(ABC):
     def __init__(self, d):
         self.d = d
 
-    def random(self, nobs=1, *args, random_state=None):
+    def random(self, nobs=1, args=(), random_state=None):
         """Draw `n` in the half-open interval ``[0, 1)``.
 
         Marginals are uniformly distributed.
@@ -385,15 +385,15 @@ class Copula(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def pdf(self, u, *args):
+    def pdf(self, u, args=()):
         """Probability density function."""
 
-    def logpdf(self, u, *args):
+    def logpdf(self, u, args=()):
         """Log of the PDF."""
         return np.log(self.pdf(u, *args))
 
     @abstractmethod
-    def cdf(self, u, *args):
+    def cdf(self, u, args=()):
         """Cumulative density function."""
 
     def plot_scatter(self, sample=None, nobs=None, random_state=None, ax=None):

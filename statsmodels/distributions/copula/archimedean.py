@@ -102,19 +102,22 @@ class ClaytonCopula(ArchimedeanCopula):
             raise ValueError('Theta must be > -1 and !=0')
         self.theta = theta
 
-    def random(self, n=1, random_state=None):
+    def random(self, n=1, args=(), random_state=None):
         rng = check_random_state(random_state)
         x = rng.random((n, 2))
         v = stats.gamma(1. / self.theta).rvs(size=(n, 1), random_state=rng)
         return (1 - np.log(x) / v) ** (-1. / self.theta)
 
-    def pdf(self, u):
+    def pdf(self, u, args=()):
         a = (self.theta + 1) * np.prod(u, axis=1) ** -(self.theta + 1)
         b = np.sum(u ** -self.theta, axis=1) - 1
         c = -(2 * self.theta + 1) / self.theta
         return a * b ** c
 
-    def cdf(self, u):
+    def logpdf(self, u, args=()):
+        return super(ArchimedeanCopula, self).logpdf(u)
+
+    def cdf(self, u, args=()):
         return (np.sum(u ** (-self.theta), axis=1) - 1) ** (-1.0 / self.theta)
 
     def tau(self, theta=None):
@@ -277,7 +280,7 @@ class GumbelCopula(ArchimedeanCopula):
             raise ValueError('Theta must be > 1')
         self.theta = theta
 
-    def random(self, n=1, random_state=None):
+    def random(self, n=1, args=(), random_state=None):
         rng = check_random_state(random_state)
         x = rng.random((n, 2))
         v = stats.levy_stable.rvs(
@@ -287,7 +290,7 @@ class GumbelCopula(ArchimedeanCopula):
         )
         return np.exp(-(-np.log(x) / v) ** (1. / self.theta))
 
-    def pdf(self, u):
+    def pdf(self, u, args=()):
         xy = -np.log(u)
         xy_theta = xy ** self.theta
 
@@ -302,10 +305,13 @@ class GumbelCopula(ArchimedeanCopula):
 
         return a * b * c * d * e
 
-    def cdf(self, u):
+    def cdf(self, u, args=()):
         h = np.sum((-np.log(u)) ** self.theta, axis=1)
         cdf = np.exp(-h ** (1.0 / self.theta))
         return cdf
+
+    def logpdf(self, u, args=()):
+        return super(ArchimedeanCopula, self).logpdf(u)
 
     def tau(self, theta=None):
         # Joe 2014 p. 172

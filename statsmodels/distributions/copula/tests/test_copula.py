@@ -194,7 +194,7 @@ def test_ev_copula_distr(case):
     cdf1 = ev.cdf(u, args)
     assert_allclose(cdf1, res1, rtol=1e-13)
 
-    cev = CopulaDistribution([uniform, uniform], ev, copargs=args)
+    cev = CopulaDistribution([uniform, uniform], ev, cop_args=args)
     cdfd = cev.cdf(np.array(u), cop_args=args)
     assert_allclose(cdfd, res1, rtol=1e-13)
     assert cdfd.shape == ()
@@ -221,7 +221,7 @@ def test_copulas_distr(case):
     cdf1 = ca.cdf(u, args=args)
     pdf1 = ca.pdf(u, args=args)
 
-    cad = CopulaDistribution([uniform, uniform], ca, copargs=args)
+    cad = CopulaDistribution([uniform, uniform], ca, cop_args=args)
     cdfd = cad.cdf(np.array(u), cop_args=args)
     assert_allclose(cdfd, cdf1, rtol=1e-13)
     assert cdfd.shape == ()
@@ -269,7 +269,7 @@ def test_gev_genextreme(case):
     cdf1 = ev.cdf(u, args)
     assert_allclose(cdf1, res1, rtol=1e-13)
 
-    cev = CopulaDistribution([gev, gev], ev, copargs=args)
+    cev = CopulaDistribution([gev, gev], ev, cop_args=args)
     cdfd = cev.cdf(np.array(y), cop_args=args)
     assert_allclose(cdfd, res1, rtol=1e-13)
     pdfd = cev.pdf(np.array(y), cop_args=args)

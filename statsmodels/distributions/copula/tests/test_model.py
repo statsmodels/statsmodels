@@ -15,7 +15,7 @@ from statsmodels.base.model import GenericLikelihoodModel
 import statsmodels.distributions.copula.api as smc
 from statsmodels.distributions.copula.api import (
     ClaytonCopula, GaussianCopula, FrankCopula,
-    CopulaDistribution)
+    GumbelCopula, CopulaDistribution)
 
 import statsmodels.distributions.tools as tools
 from statsmodels.distributions.copula import depfunc_ev as dep
@@ -57,7 +57,8 @@ class CopulaModel(GenericLikelihoodModel):
 def get_data(nobs):
     cop_f = FrankCopula()
     cd_f = CopulaDistribution([stats.norm, stats.norm], cop_f)
-    # np.random.seed(98645713)  # at some seeds, parameters atol-differ from true
+    # np.random.seed(98645713)
+    # at some seeds, parameters atol-differ from true
     # TODO: setting seed doesn't work for copula,
     # copula creates new randomly initialized random state, see #7650
     rng = np.random.RandomState(98645713)
@@ -69,13 +70,13 @@ def get_data(nobs):
 data_ev = get_data(500)
 
 
-class CheckEVfit(object):
+class CheckEVfit1(object):
 
     def test(self):
         cop = self.copula
         args = self.cop_args
 
-        cev = CopulaDistribution([stats.norm, stats.norm], cop, copargs=None)
+        cev = CopulaDistribution([stats.norm, stats.norm], cop, cop_args=None)
         k_marg = 4
         mod = CopulaModel(cev, data_ev + [0.5, -0.1],
                           k_params=self.k_copparams + k_marg)
@@ -99,7 +100,7 @@ class CheckEVfit(object):
         cop = self.copula
         args = self.cop_args
 
-        cev = CopulaDistribution([stats.norm, stats.norm], cop, copargs=None)
+        cev = CopulaDistribution([stats.norm, stats.norm], cop, cop_args=None)
         k_marg = 2
         mod = CopulaModel(cev, data_ev + [0.5, -0.1],
                           k_params=self.k_copparams + k_marg)
@@ -120,14 +121,19 @@ class CheckEVfit(object):
         assert res.mle_retvals["converged"]
         assert not np.isnan(res.bse).any()
 
+
+# temporarily split for copulas that only have fixed cop_args
+class CheckEVfit0(object):
+
     def test0(self):
+        # test with fixed copula params
         cop = getattr(self, "copula_fixed", None)
         if cop is None:
             # skip test if not yet available
             return
         args = self.cop_args
 
-        cev = CopulaDistribution([stats.norm, stats.norm], cop, copargs=args)
+        cev = CopulaDistribution([stats.norm, stats.norm], cop, cop_args=args)
         k_marg = 2
         mod = CopulaModel(cev, data_ev + [0.5, -0.1],
                           k_params=0 + k_marg)
@@ -147,6 +153,10 @@ class CheckEVfit(object):
         res.summary()
         assert res.mle_retvals["converged"]
         assert not np.isnan(res.bse).any()
+
+
+class CheckEVfit(CheckEVfit1, CheckEVfit0):
+    pass
 
 
 class TestEVHR(CheckEVfit):
@@ -174,6 +184,9 @@ class TestEVAsymMixed(CheckEVfit):
         cls.copula = ExtremeValueCopula(transform=dep.AsymMixed())
         cls.cop_args = (0.5, 0.05)
         cls.k_copparams = 2
+        # fixing cop_args is not yet supported
+        # cls.copula_fixed = ExtremeValueCopula(transform=dep.AsymMixed(),
+        #                                      *cls.cop_args)
 
 
 class TestFrank(CheckEVfit):
@@ -193,3 +206,23 @@ class TestGaussian(CheckEVfit):
         cls.copula = GaussianCopula()
         cls.cop_args = ()
         cls.k_copparams = 0
+
+
+class TestClayton(CheckEVfit0):
+
+    @classmethod
+    def setup_class(cls):
+        cls.copula = ClaytonCopula()
+        cls.cop_args = (1.01,)
+        cls.k_copparams = 1
+        cls.copula_fixed = ClaytonCopula(*cls.cop_args)
+
+
+class TestGumbel(CheckEVfit0):
+
+    @classmethod
+    def setup_class(cls):
+        cls.copula = GumbelCopula()
+        cls.cop_args = (1.01,)
+        cls.k_copparams = 1
+        cls.copula_fixed = GumbelCopula(*cls.cop_args)
