@@ -18,14 +18,30 @@ from statsmodels.tools.rng_qrng import check_random_state
 
 class ArchimedeanCopula(Copula):
 
-    def __init__(self, transform, theta=None):
+    def __init__(self, transform, args=()):
         super().__init__(d=2)
+        self.args = args
         self.transform = transform
+        self.k_args = 1
+
+    def _handle_args(self, args):
+        # TODO: how to we handle non-tuple args? two we allow single values?
+        # Model fit might give an args that can be empty
+        if isinstance(args, np.ndarray):
+            args = tuple(args)  # handles empty arrays, unpacks otherwise
+        if not isinstance(args, tuple):
+            # could still be a scalar or numpy scalar
+            args = (args,)
+        if len(args) == 0 or args is None:
+            args = self.args
+
+        return args
 
     def cdf(self, u, args=()):
         '''evaluate cdf of multivariate Archimedean copula
         '''
         """Evaluate CDF of multivariate Archimedean copula."""
+        args = self._handle_args(args)
         axis = -1
         phi = self.transform.evaluate
         phi_inv = self.transform.inverse
@@ -39,6 +55,7 @@ class ArchimedeanCopula(Copula):
         '''evaluate cdf of multivariate Archimedean copula
         '''
         """Evaluate PDF of multivariate Archimedean copula."""
+        args = self._handle_args(args)
         axis = -1
         u = np.asarray(u)
         if u.shape[-1] > 2:
@@ -62,6 +79,7 @@ class ArchimedeanCopula(Copula):
         '''
         """Evaluate log PDF of multivariate Archimedean copula."""
         # TODO: replace by formulas, and exp in pdf
+        args = self._handle_args(args)
         axis = -1
         u = np.asarray(u)
         if u.shape[-1] > 2:
@@ -95,30 +113,40 @@ class ClaytonCopula(ArchimedeanCopula):
 
     """
 
-    def __init__(self, theta=1):
-        super().__init__(transforms.TransfClayton(), theta=theta)
+    def __init__(self, theta=None):
+        if theta is not None:
+            args = (theta,)
+        else:
+            args = ()
+        super().__init__(transforms.TransfClayton(), args=args)
 
-        if theta <= -1 or theta == 0:
-            raise ValueError('Theta must be > -1 and !=0')
+        if theta is not None:
+            if theta <= -1 or theta == 0:
+                raise ValueError('Theta must be > -1 and !=0')
         self.theta = theta
 
     def random(self, n=1, args=(), random_state=None):
         rng = check_random_state(random_state)
+        th = self._handle_args(args)[0]
         x = rng.random((n, 2))
-        v = stats.gamma(1. / self.theta).rvs(size=(n, 1), random_state=rng)
-        return (1 - np.log(x) / v) ** (-1. / self.theta)
+        v = stats.gamma(1. / th).rvs(size=(n, 1), random_state=rng)
+        return (1 - np.log(x) / v) ** (-1. / th)
 
     def pdf(self, u, args=()):
-        a = (self.theta + 1) * np.prod(u, axis=1) ** -(self.theta + 1)
-        b = np.sum(u ** -self.theta, axis=1) - 1
-        c = -(2 * self.theta + 1) / self.theta
+        u = np.atleast_2d(u)
+        th = self._handle_args(args)[0]
+        a = (th + 1) * np.prod(u, axis=1) ** -(th + 1)
+        b = np.sum(u ** -th, axis=1) - 1
+        c = -(2 * th + 1) / th
         return a * b ** c
 
     def logpdf(self, u, args=()):
-        return super(ArchimedeanCopula, self).logpdf(u)
+        return super(ArchimedeanCopula, self).logpdf(u, args=args)
 
     def cdf(self, u, args=()):
-        return (np.sum(u ** (-self.theta), axis=1) - 1) ** (-1.0 / self.theta)
+        u = np.atleast_2d(u)
+        th = self._handle_args(args)[0]
+        return (np.sum(u ** (-th), axis=1) - 1) ** (-1.0 / th)
 
     def tau(self, theta=None):
         # Joe 2014 p. 168
@@ -146,39 +174,34 @@ class FrankCopula(ArchimedeanCopula):
 
     """
 
-    def __init__(self, theta=2):
-        super().__init__(transforms.TransfFrank(), theta=theta)
+    def __init__(self, theta=None):
+        if theta is not None:
+            args = (theta,)
+        else:
+            args = ()
+        super().__init__(transforms.TransfFrank(), args=args)
 
-        if theta == 0:
-            raise ValueError('Theta must be !=0')
+        if theta is not None:
+            if theta == 0:
+                raise ValueError('Theta must be !=0')
         self.theta = theta
 
-    def _handle_args(self, args):
-        # TODO: how to we handle non-tuple args? two we allow single values?
-        if not isinstance(args, tuple):
-            args = (args,)
-        if args == () or args is None:
-            theta = self.theta
-        else:
-            theta = args[0]
-        return theta
-
-    def random(self, n=1, random_state=None):
+    def random(self, n=1, args=(), random_state=None):
         rng = check_random_state(random_state)
+        th = self._handle_args(args)[0]
         x = rng.random((n, 2))
-        v = stats.logser.rvs(1. - np.exp(-self.theta),
+        v = stats.logser.rvs(1. - np.exp(-th),
                              size=(n, 1), random_state=rng)
 
-        return -1. / self.theta * np.log(1.
-                                         + np.exp(-(-np.log(x) / v))
-                                         * (np.exp(-self.theta) - 1.))
+        return -1. / th * np.log(1. + np.exp(-(-np.log(x) / v))
+                                 * (np.exp(-th) - 1.))
 
     # explicit BV formulas copied from Joe 1997 p. 141
     # todo: check expm1 and log1p for improved numerical precision
 
     def pdf(self, u, args=()):
         u = np.atleast_2d(u)
-        th = self._handle_args(args)
+        th = self._handle_args(args)[0]
         if u.shape[-1] != 2:
             return super().pdf(u)
 
@@ -192,7 +215,7 @@ class FrankCopula(ArchimedeanCopula):
 
     def cdf(self, u, args=()):
         u = np.atleast_2d(u)
-        th = self._handle_args(args)
+        th = self._handle_args(args)[0]
         dim = u.shape[-1]
         if dim != 2:
             return super().cdf(u)
@@ -204,7 +227,7 @@ class FrankCopula(ArchimedeanCopula):
 
     def logpdf(self, u, args=()):
         u = np.atleast_2d(u)
-        th = self._handle_args(args)
+        th, = self._handle_args(args)
         if u.shape[-1] == 2:
             # bivariate case
             u1, u2 = u[..., 0], u[..., 1]
@@ -215,11 +238,11 @@ class FrankCopula(ArchimedeanCopula):
             return pdf
         else:
             # for now use generic from base Copula class, log(self.pdf(...))
-            super(ArchimedeanCopula, self).logpdf(u)
+            super(ArchimedeanCopula, self).logpdf(u, args)
 
     def cdfcond_2g1(self, u, args=()):
         u = np.atleast_2d(u)
-        th = self._handle_args(args)
+        th = self._handle_args(args)[0]
         if u.shape[-1] == 2:
             # bivariate case
             u1, u2 = u[..., 0], u[..., 1]
@@ -231,7 +254,7 @@ class FrankCopula(ArchimedeanCopula):
 
     def ppfcond_2g1(self, q, u1, args=()):
         u1 = np.asarray(u1)
-        th = self._handle_args(args)
+        th = self._handle_args(args)[0]
         if u1.shape[-1] == 1:
             # bivariate case, conditional on value of first variable
             ppfc = - np.log(1 + np.expm1(- th) /
@@ -255,8 +278,8 @@ class FrankCopula(ArchimedeanCopula):
 
         result = optimize.least_squares(_theta_from_tau, 1, bounds=(
             MIN_FLOAT_LOG, MAX_FLOAT_LOG))
-        self.theta = result.x[0]
-        return self.theta
+        theta = result.x[0]
+        return theta
 
 
 class GumbelCopula(ArchimedeanCopula):
@@ -273,45 +296,55 @@ class GumbelCopula(ArchimedeanCopula):
 
     """
 
-    def __init__(self, theta=2):
-        super().__init__(transforms.TransfGumbel(), theta=theta)
+    def __init__(self, theta=None):
+        if theta is not None:
+            args = (theta,)
+        else:
+            args = ()
+        super().__init__(transforms.TransfGumbel(), args=args)
 
-        if theta <= 1:
-            raise ValueError('Theta must be > 1')
+        if theta is not None:
+            if theta <= 1:
+                raise ValueError('Theta must be > 1')
         self.theta = theta
 
     def random(self, n=1, args=(), random_state=None):
         rng = check_random_state(random_state)
+        th = self._handle_args(args)[0]
         x = rng.random((n, 2))
         v = stats.levy_stable.rvs(
-            1. / self.theta, 1., 0,
-            np.cos(np.pi / (2 * self.theta)) ** self.theta,
+            1. / th, 1., 0,
+            np.cos(np.pi / (2 * th)) ** th,
             size=(n, 1), random_state=rng
         )
-        return np.exp(-(-np.log(x) / v) ** (1. / self.theta))
+        return np.exp(-(-np.log(x) / v) ** (1. / th))
 
     def pdf(self, u, args=()):
+        u = np.atleast_2d(u)
+        th = self._handle_args(args)[0]
         xy = -np.log(u)
-        xy_theta = xy ** self.theta
+        xy_theta = xy ** th
 
         sum_xy_theta = np.sum(xy_theta, axis=1)
-        sum_xy_theta_theta = sum_xy_theta ** (1.0 / self.theta)
+        sum_xy_theta_theta = sum_xy_theta ** (1.0 / th)
 
         a = np.exp(-sum_xy_theta_theta)
-        b = sum_xy_theta_theta + self.theta - 1.0
-        c = sum_xy_theta ** (1.0 / self.theta - 2)
-        d = np.prod(xy, axis=1) ** (self.theta - 1.0)
+        b = sum_xy_theta_theta + th - 1.0
+        c = sum_xy_theta ** (1.0 / th - 2)
+        d = np.prod(xy, axis=1) ** (th - 1.0)
         e = np.prod(u, axis=1) ** (- 1.0)
 
         return a * b * c * d * e
 
     def cdf(self, u, args=()):
-        h = np.sum((-np.log(u)) ** self.theta, axis=1)
-        cdf = np.exp(-h ** (1.0 / self.theta))
+        u = np.atleast_2d(u)
+        th = self._handle_args(args)[0]
+        h = np.sum((-np.log(u)) ** th, axis=1)
+        cdf = np.exp(-h ** (1.0 / th))
         return cdf
 
     def logpdf(self, u, args=()):
-        return super(ArchimedeanCopula, self).logpdf(u)
+        return super(ArchimedeanCopula, self).logpdf(u, args=args)
 
     def tau(self, theta=None):
         # Joe 2014 p. 172

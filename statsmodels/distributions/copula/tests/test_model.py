@@ -55,7 +55,7 @@ class CopulaModel(GenericLikelihoodModel):
 
 
 def get_data(nobs):
-    cop_f = FrankCopula()
+    cop_f = FrankCopula(theta=2)
     cd_f = CopulaDistribution([stats.norm, stats.norm], cop_f)
     # np.random.seed(98645713)
     # at some seeds, parameters atol-differ from true
@@ -166,6 +166,8 @@ class TestEVHR(CheckEVfit):
         cls.copula = ExtremeValueCopula(transform=dep.HR())
         cls.cop_args = (1,)
         cls.k_copparams = 1
+        cls.copula_fixed = ExtremeValueCopula(transform=dep.HR(),
+                                              args=cls.cop_args)
 
 
 class TestEVAsymLogistic(CheckEVfit):
@@ -175,6 +177,8 @@ class TestEVAsymLogistic(CheckEVfit):
         cls.copula = ExtremeValueCopula(transform=dep.AsymLogistic())
         cls.cop_args = (0.1, 0.7, 0.7)
         cls.k_copparams = 3
+        cls.copula_fixed = ExtremeValueCopula(transform=dep.AsymLogistic(),
+                                              args=cls.cop_args)
 
 
 class TestEVAsymMixed(CheckEVfit):
@@ -184,9 +188,8 @@ class TestEVAsymMixed(CheckEVfit):
         cls.copula = ExtremeValueCopula(transform=dep.AsymMixed())
         cls.cop_args = (0.5, 0.05)
         cls.k_copparams = 2
-        # fixing cop_args is not yet supported
-        # cls.copula_fixed = ExtremeValueCopula(transform=dep.AsymMixed(),
-        #                                      *cls.cop_args)
+        cls.copula_fixed = ExtremeValueCopula(transform=dep.AsymMixed(),
+                                              args=cls.cop_args)
 
 
 class TestFrank(CheckEVfit):
@@ -208,7 +211,7 @@ class TestGaussian(CheckEVfit):
         cls.k_copparams = 0
 
 
-class TestClayton(CheckEVfit0):
+class TestClayton(CheckEVfit):
 
     @classmethod
     def setup_class(cls):
@@ -218,7 +221,7 @@ class TestClayton(CheckEVfit0):
         cls.copula_fixed = ClaytonCopula(*cls.cop_args)
 
 
-class TestGumbel(CheckEVfit0):
+class TestGumbel(CheckEVfit):
 
     @classmethod
     def setup_class(cls):

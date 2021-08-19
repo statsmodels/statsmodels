@@ -45,9 +45,22 @@ class ExtremeValueCopula(object):
 
     """
 
-    def __init__(self, transform):
+    def __init__(self, transform, args=()):
         self.transform = transform
         self.k_args = transform.k_args
+        self.args = args
+
+    def _handle_args(self, args):
+        # TODO: how to we handle non-tuple args? two we allow single values?
+        # Model fit might give an args that can be empty
+        if isinstance(args, np.ndarray):
+            args = tuple(args)  # handles empty arrays, unpacks otherwise
+        if args == () or args is None:
+            args = self.args
+        if not isinstance(args, tuple):
+            args = (args,)
+
+        return args
 
     def cdf(self, u, args=()):
         """Evaluate cdf of bivariate extreme value copula.
@@ -69,6 +82,7 @@ class ExtremeValueCopula(object):
         """
         # currently only Bivariate
         u, v = np.asarray(u).T
+        args = self._handle_args(args)
         cdfv = np.exp(np.log(u * v) *
                       self.transform(np.log(u)/np.log(u*v), *args))
         return cdfv
@@ -93,6 +107,7 @@ class ExtremeValueCopula(object):
         """
         tr = self.transform
         u1, u2 = np.asarray(u).T
+        args = self._handle_args(args)
 
         log_u12 = np.log(u1 * u2)
         t = np.log(u1) / log_u12
