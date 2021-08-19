@@ -161,9 +161,12 @@
   - img: ../_static/images/statespace_sarimax_internet.png
     target: notebooks/generated/statespace_sarimax_internet.html
     text: 'SARIMAX: Model selection, missing data'
+  - img: ../_static/images/statespace_sarimax_faq.png
+    target: notebooks/generated/statespace_sarimax_faq.html
+    text: 'SARIMAX: Frequently Asked Questions (FAQ)'
   - img: ../_static/images/statespace_varmax.png
     target: notebooks/generated/statespace_varmax.html
-    text: 'VARMAX: introduction'
+    text: 'VARMAX: Introduction'
   - img: ../_static/images/statespace_dfm_coincident.png
     target: notebooks/generated/statespace_dfm_coincident.html
     text: 'Dynamic Factor Models: Application'
