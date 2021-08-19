@@ -30,10 +30,10 @@ class IndependentCopula(Copula):
         x = rng.random((n, self.d))
         return x
 
-    def pdf(self, u):
-        return np.ones((len(u), 1))
+    def pdf(self, u, args=()):
+        return np.ones(len(u))
 
-    def cdf(self, u):
+    def cdf(self, u, args=()):
         return np.prod(u, axis=1)
 
     def plot_pdf(self, *args):

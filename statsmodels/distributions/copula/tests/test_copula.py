@@ -356,7 +356,7 @@ class CheckCopula:
 class TestIndependentCopula(CheckCopula):
     copula = IndependentCopula()
     dim = 2
-    pdf_u = np.ones((10, 1))
+    pdf_u = np.ones(10)
     cdf_u = np.prod(CheckCopula.u, axis=1)
 
 

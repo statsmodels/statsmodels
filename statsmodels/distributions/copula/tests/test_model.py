@@ -15,7 +15,7 @@ from statsmodels.base.model import GenericLikelihoodModel
 import statsmodels.distributions.copula.api as smc
 from statsmodels.distributions.copula.api import (
     ClaytonCopula, GaussianCopula, FrankCopula,
-    GumbelCopula, CopulaDistribution)
+    GumbelCopula, IndependentCopula, CopulaDistribution)
 
 import statsmodels.distributions.tools as tools
 from statsmodels.distributions.copula import depfunc_ev as dep
@@ -156,6 +156,7 @@ class CheckEVfit0(object):
 
 
 class CheckEVfit(CheckEVfit1, CheckEVfit0):
+    # unit test mainly for arg handling, not to verify parameter estimates
     pass
 
 
@@ -229,3 +230,13 @@ class TestGumbel(CheckEVfit):
         cls.cop_args = (1.01,)
         cls.k_copparams = 1
         cls.copula_fixed = GumbelCopula(*cls.cop_args)
+
+
+class TestIndependence(CheckEVfit0):
+
+    @classmethod
+    def setup_class(cls):
+        cls.copula = IndependentCopula()
+        cls.cop_args = ()
+        cls.k_copparams = 0
+        cls.copula_fixed = IndependentCopula(*cls.cop_args)
