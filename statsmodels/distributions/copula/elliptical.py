@@ -130,7 +130,8 @@ class StudentTCopula(Copula):
         return rho
 
     def spearmans_rho(self, pearson_corr=None):
-        """bivariate spearman's rho
+        """
+        bivariate Spearman's rho
 
         Joe (2014) p. 182
         """
@@ -145,7 +146,8 @@ class StudentTCopula(Copula):
         return tau
 
     def dependence_tail(self, pearson_corr=None):
-        """bivariate tail dependence parameter
+        """
+        bivariate tail dependence parameter
 
         Joe (2014) p. 182
         """

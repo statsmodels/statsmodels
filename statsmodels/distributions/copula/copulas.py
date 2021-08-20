@@ -153,7 +153,8 @@ class CopulaDistributionBivariate:
 
 
 class CopulaDistribution:
-    """Multivariate copula.
+    """
+    Multivariate copula.
 
     Instantiation needs the arguments, cop_args, that are required for copula
 
@@ -161,7 +162,8 @@ class CopulaDistribution:
     ----------
     marginals : list of distribution instances
         Marginal distributions.
-    copula : instance of copula class
+    copula : str, instance of copula class
+        String name or instance of a copula class
     copargs : tuple
         Parameters for copula
 
