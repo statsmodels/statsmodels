@@ -38,25 +38,28 @@ class GaussianCopula(Copula):
 
     """
 
-    def __init__(self, corr=None):
-        super().__init__(d=np.inf)
+    def __init__(self, k_dim=2, corr=None):
+        super().__init__(k_dim=k_dim)
         if corr is None:
             corr = [[1., 0.], [0., 1.]]
+        elif k_dim == 2 and np.size(corr) == 1:
+            corr = np.array([[1., corr], [corr, 1.]])
+
         self.corr = np.asarray(corr)
         self.density = stats.norm()
         self.mv_density = stats.multivariate_normal(cov=corr)
 
-    def rvs(self, n=1, random_state=None):
+    def rvs(self, n=1, args=(), random_state=None):
         x = self.mv_density.rvs(size=n, random_state=random_state)
         return self.density.cdf(x)
 
-    def pdf(self, u, *args):
+    def pdf(self, u, args=()):
         ppf = self.density.ppf(u)
         mv_pdf_ppf = self.mv_density.pdf(ppf)
 
         return mv_pdf_ppf / np.prod(self.density.pdf(ppf), axis=1)
 
-    def cdf(self, u):
+    def cdf(self, u, args=()):
         ppf = self.density.ppf(u)
         return self.mv_density.cdf(ppf)
 
@@ -92,27 +95,29 @@ class GaussianCopula(Copula):
 class StudentTCopula(Copula):
     """Student copula."""
 
-    def __init__(self, df=1, corr=None):
-        super().__init__(d=np.inf)
+    def __init__(self, k_dim=2, df=None, corr=None):
+        super().__init__(k_dim=k_dim)
         if corr is None:
             corr = [[1., 0.], [0., 1.]]
+        elif k_dim == 2 and np.size(corr) == 1:
+            corr = np.array([[1., corr], [corr, 1.]])
 
         self.df = df
         self.corr = np.asarray(corr)
         self.density = stats.t(df=df)
         self.mv_density = multivariate_t(shape=corr, df=df)
 
-    def rvs(self, n=1, random_state=None):
+    def rvs(self, n=1, args=(), random_state=None):
         x = self.mv_density.rvs(size=n, random_state=random_state)
         return self.density.cdf(x)
 
-    def pdf(self, u):
+    def pdf(self, u, args=()):
         ppf = self.density.ppf(u)
         mv_pdf_ppf = self.mv_density.pdf(ppf)
 
         return mv_pdf_ppf / np.prod(self.density.pdf(ppf), axis=1)
 
-    def cdf(self, u):
+    def cdf(self, u, args=()):
         raise NotImplementedError("CDF not available in closed form.")
         # ppf = self.density.ppf(u)
         # mvt = MVT([0, 0], self.corr, self.df)

@@ -8,6 +8,7 @@ License: BSD-3
 """
 
 import numpy as np
+from .copulas import Copula
 
 
 def copula_bv_ev(u, transform, args=()):
@@ -17,7 +18,7 @@ def copula_bv_ev(u, transform, args=()):
     return np.exp(np.log(u * v) * (transform(np.log(u)/np.log(u*v), *args)))
 
 
-class ExtremeValueCopula(object):
+class ExtremeValueCopula(Copula):
     """Extreme value copula constructed from Pickand's dependence function.
 
     Currently only bivariate copulas are available.
@@ -45,7 +46,8 @@ class ExtremeValueCopula(object):
 
     """
 
-    def __init__(self, transform, args=()):
+    def __init__(self, transform, args=(), k_dim=2):
+        super().__init__(k_dim=k_dim)
         self.transform = transform
         self.k_args = transform.k_args
         self.args = args

@@ -18,8 +18,8 @@ from statsmodels.tools.rng_qrng import check_random_state
 
 class ArchimedeanCopula(Copula):
 
-    def __init__(self, transform, args=()):
-        super().__init__(d=2)
+    def __init__(self, transform, args=(), k_dim=2):
+        super().__init__(k_dim=k_dim)
         self.args = args
         self.transform = transform
         self.k_args = 1
@@ -117,12 +117,12 @@ class ClaytonCopula(ArchimedeanCopula):
 
     """
 
-    def __init__(self, theta=None):
+    def __init__(self, theta=None, k_dim=2):
         if theta is not None:
             args = (theta,)
         else:
             args = ()
-        super().__init__(transforms.TransfClayton(), args=args)
+        super().__init__(transforms.TransfClayton(), args=args, k_dim=k_dim)
 
         if theta is not None:
             if theta <= -1 or theta == 0:
@@ -178,12 +178,12 @@ class FrankCopula(ArchimedeanCopula):
 
     """
 
-    def __init__(self, theta=None):
+    def __init__(self, theta=None, k_dim=2):
         if theta is not None:
             args = (theta,)
         else:
             args = ()
-        super().__init__(transforms.TransfFrank(), args=args)
+        super().__init__(transforms.TransfFrank(), args=args, k_dim=k_dim)
 
         if theta is not None:
             if theta == 0:
@@ -193,7 +193,7 @@ class FrankCopula(ArchimedeanCopula):
     def rvs(self, n=1, args=(), random_state=None):
         rng = check_random_state(random_state)
         th = self._handle_args(args)[0]
-        x = rng.random((n, 2))
+        x = rng.random((n, self.k_dim))
         v = stats.logser.rvs(1. - np.exp(-th),
                              size=(n, 1), random_state=rng)
 
@@ -300,12 +300,12 @@ class GumbelCopula(ArchimedeanCopula):
 
     """
 
-    def __init__(self, theta=None):
+    def __init__(self, theta=None, k_dim=2):
         if theta is not None:
             args = (theta,)
         else:
             args = ()
-        super().__init__(transforms.TransfGumbel(), args=args)
+        super().__init__(transforms.TransfGumbel(), args=args, k_dim=k_dim)
 
         if theta is not None:
             if theta <= 1:
@@ -314,7 +314,7 @@ class GumbelCopula(ArchimedeanCopula):
 
     def rvs(self, n=1, args=(), random_state=None):
         rng = check_random_state(random_state)
-        th = self._handle_args(args)[0]
+        th, = self._handle_args(args)
         x = rng.random((n, 2))
         v = stats.levy_stable.rvs(
             1. / th, 1., 0,
@@ -342,7 +342,7 @@ class GumbelCopula(ArchimedeanCopula):
 
     def cdf(self, u, args=()):
         u = np.atleast_2d(u)
-        th = self._handle_args(args)[0]
+        th, = self._handle_args(args)
         h = np.sum((-np.log(u)) ** th, axis=1)
         cdf = np.exp(-h ** (1.0 / th))
         return cdf

@@ -23,13 +23,12 @@ class IndependenceCopula(Copula):
         C_\theta(u,v) = uv
 
     """
-    def __init__(self, d=2):
-        self.d = d
-        super().__init__(d=self.d)
+    def __init__(self, k_dim=2):
+        super().__init__(k_dim=k_dim)
 
     def rvs(self, n=1, random_state=None):
         rng = check_random_state(random_state)
-        x = rng.random((n, self.d))
+        x = rng.random((n, self.k_dim))
         return x
 
     def pdf(self, u, args=()):

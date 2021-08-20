@@ -222,8 +222,11 @@ class Copula(ABC):
 
     """
 
-    def __init__(self, d):
-        self.d = d
+    def __init__(self, k_dim=2):
+        self.k_dim = k_dim
+        if k_dim > 2:
+            import warnings
+            warnings.warn("copulas for more than 2 dimension is untested")
 
     def rvs(self, nobs=1, args=(), random_state=None):
         """Draw `n` in the half-open interval ``[0, 1)``.
@@ -287,7 +290,7 @@ class Copula(ABC):
             Sample from the copula.
 
         """
-        if self.d != 2:
+        if self.k_dim != 2:
             raise ValueError("Can only plot 2-dimensional Copula.")
 
         if sample is None:
@@ -319,7 +322,7 @@ class Copula(ABC):
 
         """
         from matplotlib import pyplot as plt
-        if self.d != 2:
+        if self.k_dim != 2:
             import warnings
             warnings.warn("Plotting 2-dimensional Copula.")
 

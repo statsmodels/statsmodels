@@ -38,6 +38,7 @@ class CopulaModel(GenericLikelihoodModel):
         pass
 
     def loglike(self, params):
+        params = np.atleast_1d(params)
         cd = self.copula_distribution
         # ll = cd.logpdf(self.endog, args=(params[:2], params[2:]))
         cop_args = params[:self.k_copparams]
