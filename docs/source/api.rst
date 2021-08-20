@@ -171,11 +171,13 @@ Multivariate Time Series Models
 
 .. autosummary::
 
+   ~statsmodels.tsa.ardl.ARDL
    ~statsmodels.tsa.statespace.dynamic_factor.DynamicFactor
    ~statsmodels.tsa.statespace.dynamic_factor_mq.DynamicFactorMQ
    ~statsmodels.tsa.vector_ar.var_model.VAR
    ~statsmodels.tsa.statespace.varmax.VARMAX
    ~statsmodels.tsa.vector_ar.svar_model.SVAR
+   ~statsmodels.tsa.ardl.UECM
    ~statsmodels.tsa.vector_ar.vecm.VECM
    ~statsmodels.tsa.statespace.structural.UnobservedComponents
 

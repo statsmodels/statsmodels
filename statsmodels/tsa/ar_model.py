@@ -975,7 +975,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         r"""
         Final prediction error using Lütkepohl's definition.
 
-        :math:`((nobs+df_{model})/(nobs-df_{model}))*\sigma^2
+        :math:`((nobs+df_{model})/(nobs-df_{model})) \sigma^2`
         """
         nobs = self.nobs
         df_model = self.df_model
@@ -984,10 +984,10 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
 
     @cache_readonly
     def aicc(self):
-        """
+        r"""
         Akaike Information Criterion with small sample correction
 
-        :math:`2.0 * df_modelwc * nobs / (nobs - df_modelwc - 1.0)`
+        :math:`2.0 * df_{model} * nobs / (nobs - df_{model} - 1.0)`
         """
         return eval_measures.aicc(self.llf, self.nobs, self.df_model + 1)
 

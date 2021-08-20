@@ -31,8 +31,7 @@ structure is within statsmodels.tsa is
   adf unit root test, kpss test, bds test, ljung-box test and others.
 - ar_model : univariate autoregressive process, estimation with conditional
   and exact maximum likelihood and conditional least-squares
-- arima_model : univariate ARMA process, estimation with conditional
-  and exact maximum likelihood and conditional least-squares
+- arima.model : univariate ARIMA process, estimation with alternative methods
 - statespace : Comprehensive statespace model specification and estimation. See
   the :ref:`statespace documentation <statespace>`.
 - vector_ar, var : vector autoregressive process (VAR) and vector error correction

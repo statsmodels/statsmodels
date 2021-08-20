@@ -130,7 +130,7 @@ Other important new features
 
 * **Ability to write Stata datasets**: Added the ability to write Stata ``.dta`` files. See :class:`sm.iolib.StataWriter <foreign.StataWriter>`.
 
-.. currentmodule:: statsmodels.tsa.arima_model
+.. currentmodule:: statsmodels.tsa.arima.model
 
 * **ARIMA modeling**: statsmodels now has support for fitting Autoregressive Integrated Moving Average (ARIMA) models. See :class:`ARIMA` and :class:`ARIMAResults` for more information.
 
