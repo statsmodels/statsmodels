@@ -18,4 +18,4 @@ from statsmodels.distributions.copula.extreme_value import (
     ExtremeValueCopula)
 
 from statsmodels.distributions.copula.other_copulas import (
-    IndependentCopula)
+    IndependenceCopula)

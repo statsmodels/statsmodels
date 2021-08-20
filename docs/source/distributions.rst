@@ -77,7 +77,7 @@ provide a set of functions like sampling, PDF, CDF.
    GaussianCopula
    StudentTCopula
    ExtremeValueCopula
-   IndependentCopula
+   IndependenceCopula
 
 Distribution Extras
 -------------------

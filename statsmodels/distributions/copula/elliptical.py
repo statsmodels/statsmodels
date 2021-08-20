@@ -46,7 +46,7 @@ class GaussianCopula(Copula):
         self.density = stats.norm()
         self.mv_density = stats.multivariate_normal(cov=corr)
 
-    def random(self, n=1, random_state=None):
+    def rvs(self, n=1, random_state=None):
         x = self.mv_density.rvs(size=n, random_state=random_state)
         return self.density.cdf(x)
 
@@ -84,6 +84,10 @@ class GaussianCopula(Copula):
         corr = np.sin(tau * np.pi / 2)
         return corr
 
+    def _arg_from_tau(self, tau):
+        # for generic compat
+        return self.corr_from_tau(tau)
+
 
 class StudentTCopula(Copula):
     """Student copula."""
@@ -98,7 +102,7 @@ class StudentTCopula(Copula):
         self.density = stats.t(df=df)
         self.mv_density = multivariate_t(shape=corr, df=df)
 
-    def random(self, n=1, random_state=None):
+    def rvs(self, n=1, random_state=None):
         x = self.mv_density.rvs(size=n, random_state=random_state)
         return self.density.cdf(x)
 
@@ -172,3 +176,7 @@ class StudentTCopula(Copula):
         """
         corr = np.sin(tau * np.pi / 2)
         return corr
+
+    def _arg_from_tau(self, tau):
+        # for generic compat
+        return self.corr_from_tau(tau)

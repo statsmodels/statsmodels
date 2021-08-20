@@ -15,7 +15,7 @@ from statsmodels.base.model import GenericLikelihoodModel
 import statsmodels.distributions.copula.api as smc
 from statsmodels.distributions.copula.api import (
     ClaytonCopula, GaussianCopula, FrankCopula,
-    GumbelCopula, IndependentCopula, CopulaDistribution)
+    GumbelCopula, IndependenceCopula, CopulaDistribution)
 
 import statsmodels.distributions.tools as tools
 from statsmodels.distributions.copula import depfunc_ev as dep
@@ -62,7 +62,7 @@ def get_data(nobs):
     # TODO: setting seed doesn't work for copula,
     # copula creates new randomly initialized random state, see #7650
     rng = np.random.RandomState(98645713)
-    rvs = cd_f.random(nobs, random_state=rng)
+    rvs = cd_f.rvs(nobs, random_state=rng)
     assert_allclose(rvs.mean(0), [-0.02936002,  0.06658304], atol=1e-7)
     return rvs
 
@@ -236,7 +236,7 @@ class TestIndependence(CheckEVfit0):
 
     @classmethod
     def setup_class(cls):
-        cls.copula = IndependentCopula()
+        cls.copula = IndependenceCopula()
         cls.cop_args = ()
         cls.k_copparams = 0
-        cls.copula_fixed = IndependentCopula(*cls.cop_args)
+        cls.copula_fixed = IndependenceCopula(*cls.cop_args)

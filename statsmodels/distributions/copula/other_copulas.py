@@ -13,8 +13,10 @@ from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.distributions.copula.copulas import Copula
 
 
-class IndependentCopula(Copula):
-    """Independent copula.
+class IndependenceCopula(Copula):
+    """Independence copula.
+
+    Copula with independent random variables.
 
     .. math::
 
@@ -25,7 +27,7 @@ class IndependentCopula(Copula):
         self.d = d
         super().__init__(d=self.d)
 
-    def random(self, n=1, random_state=None):
+    def rvs(self, n=1, random_state=None):
         rng = check_random_state(random_state)
         x = rng.random((n, self.d))
         return x

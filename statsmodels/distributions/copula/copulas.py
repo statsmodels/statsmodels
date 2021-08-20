@@ -49,7 +49,7 @@ class CopulaDistribution:
         self.cop_args = cop_args
         self.k_vars = len(marginals)
 
-    def random(self, nobs=1, random_state=None):
+    def rvs(self, nobs=1, random_state=None):
         """Draw `n` in the half-open interval ``[0, 1)``.
 
         Sample the joint distribution.
@@ -77,7 +77,7 @@ class CopulaDistribution:
             # this means marginals are independents
             sample = rng.random((nobs, len(self.marginals)))
         else:
-            sample = self.copula.random(nobs, random_state=random_state)
+            sample = self.copula.rvs(nobs, random_state=random_state)
 
         for i, dist in enumerate(self.marginals):
             sample[:, i] = dist.ppf(0.5 + (1 - 1e-10) * (sample[:, i] - 0.5))
@@ -217,7 +217,7 @@ class Copula(ABC):
       Journal of the American Statistical Association, 83, 834–841, 1988.
     .. [2] Marius Hofert. "Sampling Archimedean copulas",
       Universität Ulm, 2008.
-    .. [3] Harry Joe. "Dependence Modeling with Copulas", Monographs on
+    .. rvs[3] Harry Joe. "Dependence Modeling with Copulas", Monographs on
       Statistics and Applied Probability 134, 2015.
 
     """
@@ -225,7 +225,7 @@ class Copula(ABC):
     def __init__(self, d):
         self.d = d
 
-    def random(self, nobs=1, args=(), random_state=None):
+    def rvs(self, nobs=1, args=(), random_state=None):
         """Draw `n` in the half-open interval ``[0, 1)``.
 
         Marginals are uniformly distributed.
@@ -291,7 +291,7 @@ class Copula(ABC):
             raise ValueError("Can only plot 2-dimensional Copula.")
 
         if sample is None:
-            sample = self.random(nobs=nobs, random_state=random_state)
+            sample = self.rvs(nobs=nobs, random_state=random_state)
 
         fig, ax = utils.create_mpl_ax(ax)
         ax.scatter(sample[:, 0], sample[:, 1])
@@ -362,11 +362,11 @@ class Copula(ABC):
             Kendall's tau.
 
         """
-        x = self.random(nobs, random_state=random_state)
+        x = self.rvs(nobs, random_state=random_state)
         return stats.kendalltau(x[:, 0], x[:, 1])[0]
 
-    def fit_theta(self, x):
-        """Compute ``theta`` using empirical Kendall's tau on sample data.
+    def fit_corr_param(self, data):
+        """Copula correlation parameter using Kendall's tau on sample data.
 
         Parameters
         ----------
@@ -379,11 +379,16 @@ class Copula(ABC):
             Theta.
 
         """
+        x = np.asarray(data)
+        if x.shape[1] != 2:
+            import warnings
+            warnings.warn("currently only first pair of data are used"
+                          " to compute kendall's tau")
         tau = stats.kendalltau(x[:, 0], x[:, 1])[0]
-        self.theta = self._theta_from_tau(tau)
+        self.theta = self._arg_from_tau(tau)
         return self.theta
 
-    def _theta_from_tau(self, tau):
+    def _arg_from_tau(self, tau):
         """Compute ``theta`` from tau.
 
         Parameters

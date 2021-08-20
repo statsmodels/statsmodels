@@ -98,6 +98,10 @@ class ArchimedeanCopula(Copula):
 
         return logpdfv
 
+    def _arg_from_tau(self, tau):
+        # for generic compat
+        return self.theta_from_tau(tau)
+
 
 class ClaytonCopula(ArchimedeanCopula):
     r"""Clayton copula.
@@ -125,7 +129,7 @@ class ClaytonCopula(ArchimedeanCopula):
                 raise ValueError('Theta must be > -1 and !=0')
         self.theta = theta
 
-    def random(self, n=1, args=(), random_state=None):
+    def rvs(self, n=1, args=(), random_state=None):
         rng = check_random_state(random_state)
         th = self._handle_args(args)[0]
         x = rng.random((n, 2))
@@ -155,7 +159,7 @@ class ClaytonCopula(ArchimedeanCopula):
 
         return theta / (theta + 2)
 
-    def _theta_from_tau(self, tau):
+    def theta_from_tau(self, tau):
         return 2 * tau / (1 - tau)
 
 
@@ -186,7 +190,7 @@ class FrankCopula(ArchimedeanCopula):
                 raise ValueError('Theta must be !=0')
         self.theta = theta
 
-    def random(self, n=1, args=(), random_state=None):
+    def rvs(self, n=1, args=(), random_state=None):
         rng = check_random_state(random_state)
         th = self._handle_args(args)[0]
         x = rng.random((n, 2))
@@ -264,7 +268,7 @@ class FrankCopula(ArchimedeanCopula):
         else:
             raise NotImplementedError
 
-    def _theta_from_tau(self, tau):
+    def theta_from_tau(self, tau):
         MIN_FLOAT_LOG = np.log(sys.float_info.min)
         MAX_FLOAT_LOG = np.log(sys.float_info.max)
         EPSILON = np.finfo(np.float32).eps
@@ -308,7 +312,7 @@ class GumbelCopula(ArchimedeanCopula):
                 raise ValueError('Theta must be > 1')
         self.theta = theta
 
-    def random(self, n=1, args=(), random_state=None):
+    def rvs(self, n=1, args=(), random_state=None):
         rng = check_random_state(random_state)
         th = self._handle_args(args)[0]
         x = rng.random((n, 2))
@@ -353,5 +357,5 @@ class GumbelCopula(ArchimedeanCopula):
 
         return (theta - 1) / theta
 
-    def _theta_from_tau(self, tau):
+    def theta_from_tau(self, tau):
         return 1 / (1 - tau)

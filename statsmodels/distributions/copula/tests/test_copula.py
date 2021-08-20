@@ -17,7 +17,7 @@ from statsmodels.distributions.tools import (
 
 from statsmodels.distributions.copula.elliptical import (
     GaussianCopula, StudentTCopula)
-from statsmodels.distributions.copula.other_copulas import IndependentCopula
+from statsmodels.distributions.copula.other_copulas import IndependenceCopula
 
 from statsmodels.distributions.copula.copulas import CopulaDistribution
 from statsmodels.distributions.copula.archimedean import (
@@ -108,9 +108,9 @@ gev_list = [
     ]
 
 
-def check_cop_random(cop, rvs=None, nobs=2000, k=10, use_pdf=True):
+def check_cop_rvs(cop, rvs=None, nobs=2000, k=10, use_pdf=True):
     if rvs is None:
-        rvs = cop.random(nobs)
+        rvs = cop.rvs(nobs)
     freq = frequencies_fromdata(rvs, k, use_ranks=True)
     if use_pdf:
         pdfg = approx_copula_pdf(cop, k_bins=k, force_uniform=True)
@@ -323,7 +323,7 @@ class CheckCopula:
     cdf_u = None
 
     def _est_visualization(self):
-        sample = self.copula.random(10000)
+        sample = self.copula.rvs(10000)
         assert sample.shape == (10000, 2)
         # h = sns.jointplot(sample[:, 0], sample[:, 1], kind='hex')
         # h.set_axis_labels('X1', 'X2', fontsize=16)
@@ -339,10 +339,10 @@ class CheckCopula:
     def test_validate_params(self):
         pass
 
-    def test_random(self):
+    def test_rvs(self):
         nobs = 2000
         rng = np.random.RandomState(27658622)
-        self.rvs = rvs = self.copula.random(nobs, random_state=rng)
+        self.rvs = rvs = self.copula.rvs(nobs, random_state=rng)
         assert rvs.shape == (nobs, 2)
         assert_array_almost_equal(np.mean(rvs, axis=0),
                                   np.repeat(0.5, self.dim), decimal=2)
@@ -353,8 +353,8 @@ class CheckCopula:
         assert_allclose(q0, q1, atol=0.025)
 
 
-class TestIndependentCopula(CheckCopula):
-    copula = IndependentCopula()
+class TestIndependenceCopula(CheckCopula):
+    copula = IndependenceCopula()
     dim = 2
     pdf_u = np.ones(10)
     cdf_u = np.prod(CheckCopula.u, axis=1)
@@ -368,13 +368,13 @@ class TestGaussianCopula(CheckCopula):
     cdf_u = [0.31906854, 0.06230196, 0.19284669, 0.39952707, 0.98144792,
              0.25677003, 0.05932818, 0.09605404, 0.35211017, 0.20885480]
 
-    def test_random(self):
+    def test_rvs(self):
         # copied from student t test,
         # currently inconsistent with non-elliptical copulas
-        super().test_random()
+        super().test_rvs()
 
-        chi2t, rvs = check_cop_random(self.copula, rvs=self.rvs, nobs=2000,
-                                      k=10, use_pdf=True)
+        chi2t, rvs = check_cop_rvs(self.copula, rvs=self.rvs, nobs=2000,
+                                   k=10, use_pdf=True)
         assert chi2t.pvalue > 0.1
         tau = stats.kendalltau(*rvs.T)[0]
         tau_cop = self.copula.tau()
@@ -392,11 +392,11 @@ class TestStudentTCopula(CheckCopula):
     def test_cdf(self):
         pytest.skip("Not implemented.")
 
-    def test_random(self):
-        super().test_random()
+    def test_rvs(self):
+        super().test_rvs()
 
-        chi2t, rvs = check_cop_random(self.copula, rvs=self.rvs, nobs=2000,
-                                      k=10, use_pdf=True)
+        chi2t, rvs = check_cop_rvs(self.copula, rvs=self.rvs, nobs=2000,
+                                   k=10, use_pdf=True)
         assert chi2t.pvalue > 0.1
         tau = stats.kendalltau(*rvs.T)[0]
         tau_cop = self.copula.tau()
