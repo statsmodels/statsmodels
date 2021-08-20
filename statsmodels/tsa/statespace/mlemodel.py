@@ -1684,6 +1684,9 @@ class MLEModel(tsbase.TimeSeriesModel):
 
     def handle_params(self, params, transformed=True, includes_fixed=False,
                       return_jacobian=False):
+        """
+        Ensure model parameters satisfy shape and other requirements
+        """
         params = np.array(params, ndmin=1)
 
         # Never want integer dtype, so convert to floats

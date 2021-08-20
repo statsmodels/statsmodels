@@ -27,7 +27,7 @@ from statsmodels.tsa.arima.specification import SARIMAXSpecification
 
 
 class ARIMA(sarimax.SARIMAX):
-    """
+    r"""
     Autoregressive Integrated Moving Average (ARIMA) model, and extensions
 
     This model is the basic interface for ARIMA-type models, including those
@@ -64,6 +64,10 @@ class ARIMA(sarimax.SARIMAX):
         an iterable defining a polynomial, as in `numpy.poly1d`, where
         `[1,1,0,1]` would denote :math:`a + bt + ct^3`. Default is 'c' for
         models without integration, and no trend for models with integration.
+        Note that all trend terms are included in the model as exogenous
+        regressors, which differs from how trends are included in ``SARIMAX``
+        models.  See the Notes section for a precise definition of the
+        treatment of trend terms.
     enforce_stationarity : bool, optional
         Whether or not to require the autoregressive parameters to correspond
         to a stationarity process.
@@ -93,14 +97,31 @@ class ARIMA(sarimax.SARIMAX):
     Notes
     -----
     This model incorporates both exogenous regressors and trend components
-    through "regression with ARIMA errors".
+    through "regression with ARIMA errors". This differs from the
+    specification estimated using ``SARIMAX`` which treats the trend
+    components separately from any included exogenous regressors. The full
+    specification of the model estimated here is:
+
+    .. math::
+
+        Y_{t}-\delta_{0}-\delta_{1}t-\ldots-\delta_{k}t^{k}-X_{t}\beta
+            & =\epsilon_{t} \\
+        \left(1-L\right)^{d}\left(1-L^{s}\right)^{D}\Phi\left(L\right)
+        \Phi_{s}\left(L\right)\epsilon_{t}
+            & =\Theta\left(L\right)\Theta_{s}\left(L\right)\eta_{t}
+
+    where :math:`\eta_t \sim WN(0,\sigma^2)` is a white noise process, L
+    is the lag operator, and :math:`G(L)` are lag polynomials corresponding
+    to the autoregressive (:math:`\Phi`), seasonal autoregressive
+    (:math:`\Phi_s`), moving average (:math:`\Theta`), and seasonal moving
+    average components (:math:`\Theta_s`).
 
     `enforce_stationarity` and `enforce_invertibility` are specified in the
     constructor because they affect loglikelihood computations, and so should
     not be changed on the fly. This is why they are not instead included as
     arguments to the `fit` method.
 
-    TODO: should we use concentrate_scale=True by default?
+    .. todo:: should concentrate_scale=True by default
 
     Examples
     --------

@@ -66,7 +66,7 @@ from ..graphics import tsaplots as graphics
 from .ar_model import AR, AutoReg
 from .ardl import ARDL, UECM
 from .arima import api as arima
-from .arima_model import ARIMA, ARMA
+from .arima.model import ARIMA
 from .arima_process import ArmaProcess, arma_generate_sample
 from .base import datetools
 from .exponential_smoothing.ets import ETSModel
