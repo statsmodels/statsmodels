@@ -124,34 +124,6 @@ copulanamesbv = {'indep': copula_bv_indep,
                  't': copula_bv_t}
 
 
-class CopulaDistributionBivariate:
-    """Bivariate copula.
-
-    might be obsolete,
-    see CopulaDistribution for multivariate distribution class
-
-    Instantiation needs the arguments, cop_args, that are required for copula
-    """
-    def __init__(self, marginalcdfs, copula, copargs=()):
-        if copula in copulanamesbv:
-            self.copula = copulanamesbv[copula]
-        else:
-            self.copula = copula
-
-        # no checking done on marginals
-        self.marginalcdfs = marginalcdfs
-        self.copargs = copargs
-
-    def cdf(self, xy, args=None):
-        '''xx needs to be iterable, instead of x,y for extension to multivariate
-        '''
-        x, y = xy
-        if args is None:
-            args = self.copargs
-        return self.copula(self.marginalcdfs[0](x), self.marginalcdfs[1](y),
-                           *args)
-
-
 class CopulaDistribution:
     """
     Multivariate copula.
