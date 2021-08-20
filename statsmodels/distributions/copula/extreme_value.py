@@ -37,7 +37,7 @@ class ExtremeValueCopula(object):
     - AsymMixed
     - HR
 
-    TEV and AsymBiLogistic currently do not have required derivaties.
+    TEV and AsymBiLogistic currently do not have required derivatives.
 
     See Also
     --------
