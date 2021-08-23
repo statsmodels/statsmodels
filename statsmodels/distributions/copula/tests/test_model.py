@@ -9,15 +9,12 @@ import numpy as np
 from scipy import stats
 # import matplotlib.pyplot as plt
 from numpy.testing import assert_allclose
-from scipy.stats import rankdata
 
 from statsmodels.base.model import GenericLikelihoodModel
-import statsmodels.distributions.copula.api as smc
 from statsmodels.distributions.copula.api import (
     ClaytonCopula, GaussianCopula, FrankCopula,
     GumbelCopula, IndependenceCopula, CopulaDistribution)
 
-import statsmodels.distributions.tools as tools
 from statsmodels.distributions.copula import depfunc_ev as dep
 from statsmodels.distributions.copula.extreme_value import ExtremeValueCopula
 

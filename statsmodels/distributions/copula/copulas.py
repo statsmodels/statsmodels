@@ -14,7 +14,6 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 from scipy import stats
-from scipy.special import expm1
 
 from statsmodels.graphics import utils
 from statsmodels.tools.rng_qrng import check_random_state
@@ -237,6 +236,9 @@ class Copula(ABC):
         ----------
         n : int, optional
             Number of samples to generate from the copula. Default is 1.
+        args : tuple
+            Arguments for copula parameters. The number of arguments depends
+            on the copula.
         random_state : {None, int, `numpy.random.Generator`}, optional
             If `seed` is None the `numpy.random.Generator` singleton is used.
             If `seed` is an int, a new ``Generator`` instance is used,
@@ -254,15 +256,66 @@ class Copula(ABC):
 
     @abstractmethod
     def pdf(self, u, args=()):
-        """Probability density function."""
+        """Probability density function of opula.
+
+        Parameters
+        ----------
+        u : array_like, 2-D
+            Points of random variables in unit hypercube at which method is
+            evaluated.
+            The second (or last) dimension should be the same as the dimension
+            of the random variable, e.g. 2 for bivariate copula.
+        args : tuple
+            Arguments for copula parameters. The number of arguments depends
+            on the copula.
+
+        Returns
+        -------
+        pdf : ndarray, (nobs, k_dim)
+            Copula pdf evaluated at points ``u``.
+        """
 
     def logpdf(self, u, args=()):
-        """Log of the PDF."""
+        """Log of copula pdf, loglikelihood.
+
+        Parameters
+        ----------
+        u : array_like, 2-D
+            Points of random variables in unit hypercube at which method is
+            evaluated.
+            The second (or last) dimension should be the same as the dimension
+            of the random variable, e.g. 2 for bivariate copula.
+        args : tuple
+            Arguments for copula parameters. The number of arguments depends
+            on the copula.
+
+        Returns
+        -------
+        cdf : ndarray, (nobs, k_dim)
+            Copula log-pdf evaluated at points ``u``.
+        """
         return np.log(self.pdf(u, *args))
 
     @abstractmethod
     def cdf(self, u, args=()):
-        """Cumulative density function."""
+        """Cumulative density function.
+
+        Parameters
+        ----------
+        u : array_like, 2-D
+            Points of random variables in unit hypercube at which method is
+            evaluated.
+            The second (or last) dimension should be the same as the dimension
+            of the random variable, e.g. 2 for bivariate copula.
+        args : tuple
+            Arguments for copula parameters. The number of arguments depends
+            on the copula.
+
+        Returns
+        -------
+        cdf : ndarray, (nobs, k_dim)
+            Copula cdf evaluated at points ``u``.
+        """
 
     def plot_scatter(self, sample=None, nobs=None, random_state=None, ax=None):
         """Sample the copula and plot.
@@ -373,13 +426,14 @@ class Copula(ABC):
 
         Parameters
         ----------
-        x : array_like
+        data : array_like
             Sample data used to fit `theta` using Kendall's tau.
 
         Returns
         -------
-        theta : float
-            Theta.
+        corr_param : float
+            Correlation parameter of the copula, ``theta`` in archimedean and
+            pearson correlation in elliptical.
 
         """
         x = np.asarray(data)
@@ -392,7 +446,7 @@ class Copula(ABC):
         return self.theta
 
     def _arg_from_tau(self, tau):
-        """Compute ``theta`` from tau.
+        """Compute correlation parameter ``theta`` from tau.
 
         Parameters
         ----------
@@ -401,8 +455,9 @@ class Copula(ABC):
 
         Returns
         -------
-        theta : float
-            Theta.
+        corr_param : float
+            Correlation parameter of the copula, ``theta`` in archimedean and
+            pearson correlation in elliptical.
 
         """
         raise NotImplementedError

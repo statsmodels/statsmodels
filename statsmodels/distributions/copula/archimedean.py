@@ -131,14 +131,14 @@ class ClaytonCopula(ArchimedeanCopula):
 
     def rvs(self, n=1, args=(), random_state=None):
         rng = check_random_state(random_state)
-        th = self._handle_args(args)[0]
+        th, = self._handle_args(args)
         x = rng.random((n, 2))
         v = stats.gamma(1. / th).rvs(size=(n, 1), random_state=rng)
         return (1 - np.log(x) / v) ** (-1. / th)
 
     def pdf(self, u, args=()):
         u = np.atleast_2d(u)
-        th = self._handle_args(args)[0]
+        th, = self._handle_args(args)
         a = (th + 1) * np.prod(u, axis=1) ** -(th + 1)
         b = np.sum(u ** -th, axis=1) - 1
         c = -(2 * th + 1) / th
@@ -149,7 +149,7 @@ class ClaytonCopula(ArchimedeanCopula):
 
     def cdf(self, u, args=()):
         u = np.atleast_2d(u)
-        th = self._handle_args(args)[0]
+        th, = self._handle_args(args)
         return (np.sum(u ** (-th), axis=1) - 1) ** (-1.0 / th)
 
     def tau(self, theta=None):
@@ -192,7 +192,7 @@ class FrankCopula(ArchimedeanCopula):
 
     def rvs(self, n=1, args=(), random_state=None):
         rng = check_random_state(random_state)
-        th = self._handle_args(args)[0]
+        th, = self._handle_args(args)
         x = rng.random((n, self.k_dim))
         v = stats.logser.rvs(1. - np.exp(-th),
                              size=(n, 1), random_state=rng)
@@ -205,7 +205,7 @@ class FrankCopula(ArchimedeanCopula):
 
     def pdf(self, u, args=()):
         u = np.atleast_2d(u)
-        th = self._handle_args(args)[0]
+        th, = self._handle_args(args)
         if u.shape[-1] != 2:
             return super().pdf(u)
 
@@ -219,7 +219,7 @@ class FrankCopula(ArchimedeanCopula):
 
     def cdf(self, u, args=()):
         u = np.atleast_2d(u)
-        th = self._handle_args(args)[0]
+        th, = self._handle_args(args)
         dim = u.shape[-1]
         if dim != 2:
             return super().cdf(u)
@@ -246,7 +246,7 @@ class FrankCopula(ArchimedeanCopula):
 
     def cdfcond_2g1(self, u, args=()):
         u = np.atleast_2d(u)
-        th = self._handle_args(args)[0]
+        th, = self._handle_args(args)
         if u.shape[-1] == 2:
             # bivariate case
             u1, u2 = u[..., 0], u[..., 1]
@@ -258,7 +258,7 @@ class FrankCopula(ArchimedeanCopula):
 
     def ppfcond_2g1(self, q, u1, args=()):
         u1 = np.asarray(u1)
-        th = self._handle_args(args)[0]
+        th, = self._handle_args(args)
         if u1.shape[-1] == 1:
             # bivariate case, conditional on value of first variable
             ppfc = - np.log(1 + np.expm1(- th) /
@@ -325,7 +325,7 @@ class GumbelCopula(ArchimedeanCopula):
 
     def pdf(self, u, args=()):
         u = np.atleast_2d(u)
-        th = self._handle_args(args)[0]
+        th, = self._handle_args(args)
         xy = -np.log(u)
         xy_theta = xy ** th
 
