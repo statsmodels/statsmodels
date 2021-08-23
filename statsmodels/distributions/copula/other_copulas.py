@@ -13,27 +13,28 @@ from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.distributions.copula.copulas import Copula
 
 
-class IndependentCopula(Copula):
-    """Independent copula.
+class IndependenceCopula(Copula):
+    """Independence copula.
+
+    Copula with independent random variables.
 
     .. math::
 
         C_\theta(u,v) = uv
 
     """
-    def __init__(self, d=2):
-        self.d = d
-        super().__init__(d=self.d)
+    def __init__(self, k_dim=2):
+        super().__init__(k_dim=k_dim)
 
-    def random(self, n=1, random_state=None):
+    def rvs(self, n=1, random_state=None):
         rng = check_random_state(random_state)
-        x = rng.random((n, self.d))
+        x = rng.random((n, self.k_dim))
         return x
 
-    def pdf(self, u):
-        return np.ones((len(u), 1))
+    def pdf(self, u, args=()):
+        return np.ones(len(u))
 
-    def cdf(self, u):
+    def cdf(self, u, args=()):
         return np.prod(u, axis=1)
 
     def plot_pdf(self, *args):
