@@ -748,8 +748,11 @@ def _table_proportion(count, nobs):
     recent scipy has more elaborate contingency table functions
 
     '''
+    count = np.asarray(count)
+    dt = np.promote_types(count.dtype, np.float64)
+    count = np.asarray(count, dtype=dt)
     table = np.column_stack((count, nobs - count))
-    expected = table.sum(0) * table.sum(1)[:,None] * 1. / table.sum()
+    expected = table.sum(0) * table.sum(1)[:, None] * 1. / table.sum()
     n_rows = table.shape[0]
     return table, expected, n_rows
 

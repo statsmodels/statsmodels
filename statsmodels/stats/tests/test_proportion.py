@@ -583,6 +583,16 @@ def test_proportion_ztests():
     # test only p-value
     assert_almost_equal(res1[1], res2[1], decimal=13)
 
+    # test with integers, issue #7603
+    res1 = smprop.proportions_ztest(np.asarray([15, 10]),
+                                    np.asarray([20, 50000]),
+                                    value=0, prop_var=None)
+    res2 = smprop.proportions_chisquare(np.asarray([15, 10]),
+                                        np.asarray([20, 50000]))
+    # test only p-value
+    assert_almost_equal(res1[1], res2[1], decimal=13)
+    assert_array_less(0, res2[-1][1])  # expected should be positive
+
 
 def test_confint_2indep():
     # alpha = 0.05
