@@ -2,7 +2,6 @@ __all__ = [
     "AR",
     "ARDL",
     "ARIMA",
-    "ARMA",
     "ArmaProcess",
     "AutoReg",
     "DynamicFactor",

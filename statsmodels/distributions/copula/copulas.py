@@ -14,142 +14,9 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 from scipy import stats
-from scipy.special import expm1
 
 from statsmodels.graphics import utils
 from statsmodels.tools.rng_qrng import check_random_state
-
-
-def copula_bv_indep(u, v):
-    '''independent bivariate copula
-    '''
-    return u*v
-
-
-def copula_bv_min(u, v):
-    '''comonotonic bivariate copula
-    '''
-    return np.minimum(u, v)
-
-
-def copula_bv_max(u, v):
-    '''countermonotonic bivariate copula
-    '''
-    return np.maximum(u + v - 1, 0)
-
-
-def copula_bv_clayton(u, theta):
-    '''Clayton or Cook, Johnson bivariate copula
-    '''
-    u, v = u
-    if isinstance(theta, tuple) and len(theta) == 1:
-        theta = theta[0]
-
-    if not theta > 0:
-        raise ValueError('theta needs to be strictly positive')
-
-    return np.power(np.power(u, -theta) + np.power(v, -theta) - 1, -theta)
-
-
-def copula_bv_frank(u, v, theta):
-    '''Cook, Johnson bivariate copula
-    '''
-    if not theta > 0:
-        raise ValueError('theta needs to be strictly positive')
-    cdfv = -np.log(1 + expm1(-theta*u) * expm1(-theta*v) / expm1(-theta))/theta
-    cdfv = np.minimum(cdfv, 1)  # necessary for example if theta=100
-    return cdfv
-
-
-def copula_bv_gauss(u, v, rho):
-    raise NotImplementedError
-
-
-def copula_bv_t(u, v, rho, df):
-    raise NotImplementedError
-
-
-# Archimedean Copulas through generator functions
-# ===============================================
-
-
-def copula_bv_archimedean(u, v, transform, args=()):
-    '''
-    '''
-    phi = transform.evaluate
-    phi_inv = transform.inverse
-    cdfv = phi_inv(phi(u, *args) + phi(v, *args), *args)
-    return cdfv
-
-
-def copula_mv_archimedean(u, transform, args=(), axis=-1):
-    '''generic multivariate Archimedean copula
-    '''
-    phi = transform.evaluate
-    phi_inv = transform.inverse
-    cdfv = phi_inv(phi(u, *args).sum(axis), *args)
-    return cdfv
-
-
-def copula_power_mv_archimedean(u, transform, alpha, beta, args=(), axis=-1):
-    '''generic multivariate Archimedean copula with additional power transforms
-
-    Nelson p.144, equ. 4.5.2
-    '''
-
-    def phi(u, alpha, beta, args=()):
-        return np.power(transform.evaluate(np.power(u, alpha), *args), beta)
-
-    def phi_inv(t, alpha, beta, args=()):
-        return np.power(transform.evaluate(np.power(t, 1. / beta), *args),
-                        1. / alpha)
-
-    cdfv = phi_inv(phi(u, *args).sum(axis), *args)
-    return cdfv
-
-
-# ==========================================================================
-
-# define dictionary of copulas by names and aliases
-copulanamesbv = {'indep': copula_bv_indep,
-                 'i': copula_bv_indep,
-                 'min': copula_bv_min,
-                 'max': copula_bv_max,
-                 'clayton': copula_bv_clayton,
-                 'cookjohnson': copula_bv_clayton,
-                 'cj': copula_bv_clayton,
-                 'frank': copula_bv_frank,
-                 'gauss': copula_bv_gauss,
-                 'normal': copula_bv_gauss,
-                 't': copula_bv_t}
-
-
-class CopulaDistributionBivariate:
-    """Bivariate copula.
-
-    might be obsolete,
-    see CopulaDistribution for multivariate distribution class
-
-    Instantiation needs the arguments, cop_args, that are required for copula
-    """
-    def __init__(self, marginalcdfs, copula, copargs=()):
-        if copula in copulanamesbv:
-            self.copula = copulanamesbv[copula]
-        else:
-            self.copula = copula
-
-        # no checking done on marginals
-        self.marginalcdfs = marginalcdfs
-        self.copargs = copargs
-
-    def cdf(self, xy, args=None):
-        '''xx needs to be iterable, instead of x,y for extension to multivariate
-        '''
-        x, y = xy
-        if args is None:
-            args = self.copargs
-        return self.copula(self.marginalcdfs[0](x), self.marginalcdfs[1](y),
-                           *args)
 
 
 class CopulaDistribution:
@@ -172,19 +39,16 @@ class CopulaDistribution:
     experimental, argument handling not yet finalized
 
     """
-    def __init__(self, marginals, copula, copargs=()):
-        if copula in copulanamesbv:
-            self.copula = copulanamesbv[copula]
-        else:
-            # assume it's an appropriate copula class
-            self.copula = copula
+    def __init__(self, marginals, copula, cop_args=()):
+
+        self.copula = copula
 
         # no checking done on marginals
         self.marginals = marginals
-        self.copargs = copargs
+        self.cop_args = cop_args
         self.k_vars = len(marginals)
 
-    def random(self, nobs=1, random_state=None):
+    def rvs(self, nobs=1, random_state=None):
         """Draw `n` in the half-open interval ``[0, 1)``.
 
         Sample the joint distribution.
@@ -212,13 +76,13 @@ class CopulaDistribution:
             # this means marginals are independents
             sample = rng.random((nobs, len(self.marginals)))
         else:
-            sample = self.copula.random(nobs, random_state=random_state)
+            sample = self.copula.rvs(nobs, random_state=random_state)
 
         for i, dist in enumerate(self.marginals):
             sample[:, i] = dist.ppf(0.5 + (1 - 1e-10) * (sample[:, i] - 0.5))
         return sample
 
-    def cdf(self, y, args=None):
+    def cdf(self, y, cop_args=None, marg_args=None):
         """CDF of copula distribution.
 
         Parameters
@@ -237,19 +101,21 @@ class CopulaDistribution:
 
         """
         y = np.asarray(y)
-        if args is None:
-            args = self.copargs
+        if cop_args is None:
+            cop_args = self.cop_args
+        if marg_args is None:
+            marg_args = [()] * y.shape[-1]
 
         cdf_marg = []
         for i in range(self.k_vars):
-            cdf_marg.append(self.marginals[i].cdf(y[..., i]))
+            cdf_marg.append(self.marginals[i].cdf(y[..., i], *marg_args[i]))
 
         u = np.column_stack(cdf_marg)
         if y.ndim == 1:
             u = u.squeeze()
-        return self.copula.cdf(u, args)
+        return self.copula.cdf(u, cop_args)
 
-    def pdf(self, y, args=None):
+    def pdf(self, y, cop_args=None, marg_args=None):
         """PDF of copula distribution.
 
         Parameters
@@ -266,9 +132,9 @@ class CopulaDistribution:
         -------
         pdf values
         """
-        return np.exp(self.logpdf(y, args=args))
+        return np.exp(self.logpdf(y, cop_args=cop_args, marg_args=marg_args))
 
-    def logpdf(self, y, args=None):
+    def logpdf(self, y, cop_args=None, marg_args=None):
         """Log-pdf of copula distribution.
 
         Parameters
@@ -287,20 +153,22 @@ class CopulaDistribution:
 
         """
         y = np.asarray(y)
-        if args is None:
-            args = self.copargs
+        if cop_args is None:
+            cop_args = self.cop_args
+        if marg_args is None:
+            marg_args = tuple([()] * y.shape[-1])
 
         lpdf = 0.0
         cdf_marg = []
         for i in range(self.k_vars):
-            lpdf += self.marginals[i].logpdf(y[..., i])
-            cdf_marg.append(self.marginals[i].cdf(y[..., i]))
+            lpdf += self.marginals[i].logpdf(y[..., i], *marg_args[i])
+            cdf_marg.append(self.marginals[i].cdf(y[..., i], *marg_args[i]))
 
         u = np.column_stack(cdf_marg)
         if y.ndim == 1:
             u = u.squeeze()
 
-        lpdf += self.copula.logpdf(u, args)
+        lpdf += self.copula.logpdf(u, cop_args)
         return lpdf
 
 
@@ -348,15 +216,18 @@ class Copula(ABC):
       Journal of the American Statistical Association, 83, 834–841, 1988.
     .. [2] Marius Hofert. "Sampling Archimedean copulas",
       Universität Ulm, 2008.
-    .. [3] Harry Joe. "Dependence Modeling with Copulas", Monographs on
+    .. rvs[3] Harry Joe. "Dependence Modeling with Copulas", Monographs on
       Statistics and Applied Probability 134, 2015.
 
     """
 
-    def __init__(self, d):
-        self.d = d
+    def __init__(self, k_dim=2):
+        self.k_dim = k_dim
+        if k_dim > 2:
+            import warnings
+            warnings.warn("copulas for more than 2 dimension is untested")
 
-    def random(self, nobs=1, random_state=None):
+    def rvs(self, nobs=1, args=(), random_state=None):
         """Draw `n` in the half-open interval ``[0, 1)``.
 
         Marginals are uniformly distributed.
@@ -365,6 +236,9 @@ class Copula(ABC):
         ----------
         n : int, optional
             Number of samples to generate from the copula. Default is 1.
+        args : tuple
+            Arguments for copula parameters. The number of arguments depends
+            on the copula.
         random_state : {None, int, `numpy.random.Generator`}, optional
             If `seed` is None the `numpy.random.Generator` singleton is used.
             If `seed` is an int, a new ``Generator`` instance is used,
@@ -381,16 +255,67 @@ class Copula(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def pdf(self, u):
-        """Probability density function."""
+    def pdf(self, u, args=()):
+        """Probability density function of opula.
 
-    def logpdf(self, u):
-        """Log of the PDF."""
-        return np.log(self.pdf(u))
+        Parameters
+        ----------
+        u : array_like, 2-D
+            Points of random variables in unit hypercube at which method is
+            evaluated.
+            The second (or last) dimension should be the same as the dimension
+            of the random variable, e.g. 2 for bivariate copula.
+        args : tuple
+            Arguments for copula parameters. The number of arguments depends
+            on the copula.
+
+        Returns
+        -------
+        pdf : ndarray, (nobs, k_dim)
+            Copula pdf evaluated at points ``u``.
+        """
+
+    def logpdf(self, u, args=()):
+        """Log of copula pdf, loglikelihood.
+
+        Parameters
+        ----------
+        u : array_like, 2-D
+            Points of random variables in unit hypercube at which method is
+            evaluated.
+            The second (or last) dimension should be the same as the dimension
+            of the random variable, e.g. 2 for bivariate copula.
+        args : tuple
+            Arguments for copula parameters. The number of arguments depends
+            on the copula.
+
+        Returns
+        -------
+        cdf : ndarray, (nobs, k_dim)
+            Copula log-pdf evaluated at points ``u``.
+        """
+        return np.log(self.pdf(u, *args))
 
     @abstractmethod
-    def cdf(self, u):
-        """Cumulative density function."""
+    def cdf(self, u, args=()):
+        """Cumulative density function.
+
+        Parameters
+        ----------
+        u : array_like, 2-D
+            Points of random variables in unit hypercube at which method is
+            evaluated.
+            The second (or last) dimension should be the same as the dimension
+            of the random variable, e.g. 2 for bivariate copula.
+        args : tuple
+            Arguments for copula parameters. The number of arguments depends
+            on the copula.
+
+        Returns
+        -------
+        cdf : ndarray, (nobs, k_dim)
+            Copula cdf evaluated at points ``u``.
+        """
 
     def plot_scatter(self, sample=None, nobs=None, random_state=None, ax=None):
         """Sample the copula and plot.
@@ -418,11 +343,11 @@ class Copula(ABC):
             Sample from the copula.
 
         """
-        if self.d != 2:
+        if self.k_dim != 2:
             raise ValueError("Can only plot 2-dimensional Copula.")
 
         if sample is None:
-            sample = self.random(nobs=nobs, random_state=random_state)
+            sample = self.rvs(nobs=nobs, random_state=random_state)
 
         fig, ax = utils.create_mpl_ax(ax)
         ax.scatter(sample[:, 0], sample[:, 1])
@@ -450,7 +375,7 @@ class Copula(ABC):
 
         """
         from matplotlib import pyplot as plt
-        if self.d != 2:
+        if self.k_dim != 2:
             import warnings
             warnings.warn("Plotting 2-dimensional Copula.")
 
@@ -493,29 +418,35 @@ class Copula(ABC):
             Kendall's tau.
 
         """
-        x = self.random(nobs, random_state=random_state)
+        x = self.rvs(nobs, random_state=random_state)
         return stats.kendalltau(x[:, 0], x[:, 1])[0]
 
-    def fit_theta(self, x):
-        """Compute ``theta`` using empirical Kendall's tau on sample data.
+    def fit_corr_param(self, data):
+        """Copula correlation parameter using Kendall's tau on sample data.
 
         Parameters
         ----------
-        x : array_like
+        data : array_like
             Sample data used to fit `theta` using Kendall's tau.
 
         Returns
         -------
-        theta : float
-            Theta.
+        corr_param : float
+            Correlation parameter of the copula, ``theta`` in archimedean and
+            pearson correlation in elliptical.
 
         """
+        x = np.asarray(data)
+        if x.shape[1] != 2:
+            import warnings
+            warnings.warn("currently only first pair of data are used"
+                          " to compute kendall's tau")
         tau = stats.kendalltau(x[:, 0], x[:, 1])[0]
-        self.theta = self._theta_from_tau(tau)
+        self.theta = self._arg_from_tau(tau)
         return self.theta
 
-    def _theta_from_tau(self, tau):
-        """Compute ``theta`` from tau.
+    def _arg_from_tau(self, tau):
+        """Compute correlation parameter ``theta`` from tau.
 
         Parameters
         ----------
@@ -524,8 +455,9 @@ class Copula(ABC):
 
         Returns
         -------
-        theta : float
-            Theta.
+        corr_param : float
+            Correlation parameter of the copula, ``theta`` in archimedean and
+            pearson correlation in elliptical.
 
         """
         raise NotImplementedError

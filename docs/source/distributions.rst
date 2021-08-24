@@ -70,7 +70,6 @@ provide a set of functions like sampling, PDF, CDF.
    :toctree: generated/
 
    CopulaDistribution
-   CopulaDistributionBivariate
    ArchimedeanCopula
    FrankCopula
    ClaytonCopula
@@ -78,7 +77,7 @@ provide a set of functions like sampling, PDF, CDF.
    GaussianCopula
    StudentTCopula
    ExtremeValueCopula
-   IndependentCopula
+   IndependenceCopula
 
 Distribution Extras
 -------------------
