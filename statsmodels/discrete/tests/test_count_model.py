@@ -144,18 +144,17 @@ class TestZeroInflatedModel_offset(CheckGeneric):
 
         assert_allclose(res3.params, self.res1.params, atol=1e-6, rtol=1e-6)
         fitted1 = self.res1.predict()
-        fitted3 = self.res1.predict()
+        fitted3 = res3.predict()
         assert_allclose(fitted3, fitted1, atol=1e-6, rtol=1e-6)
 
         ex = model1.exog
         ex_infl = model1.exog_infl
         offset = model1.offset
         fitted1_0 = self.res1.predict(exog=ex, exog_infl=ex_infl,
-                                      offset=offset)
+                                      offset=offset.tolist())
         fitted3_0 = res3.predict(exog=ex, exog_infl=ex_infl,
                                  exposure=np.exp(offset))
         assert_allclose(fitted3_0, fitted1_0, atol=1e-6, rtol=1e-6)
-
 
         ex = model1.exog[:10:2]
         ex_infl = model1.exog_infl[:10:2]
@@ -174,6 +173,11 @@ class TestZeroInflatedModel_offset(CheckGeneric):
         assert_allclose(fitted3_2, fitted1_2, atol=1e-6, rtol=1e-6)
         assert_allclose(fitted1_2, fitted1[:10:2], atol=1e-6, rtol=1e-6)
         assert_allclose(fitted3_2, fitted1[:10:2], atol=1e-6, rtol=1e-6)
+
+        # without specifying offset and exposure
+        fitted1_3 = self.res1.predict(exog=ex, exog_infl=ex_infl)
+        fitted3_3 = res3.predict(exog=ex, exog_infl=ex_infl)
+        assert_allclose(fitted3_3, fitted1_3, atol=1e-6, rtol=1e-6)
 
 
 class TestZeroInflatedModelPandas(CheckGeneric):
@@ -275,6 +279,18 @@ class TestZeroInflatedPoisson_predict(object):
         pr2 = sm.distributions.zipoisson.pmf(np.arange(pr.shape[1])[:, None],
                                              res.predict(), 0.05).T
         assert_allclose(pr, pr2, rtol=0.05, atol=0.05)
+
+    def test_predict_options(self):
+        # check default exog_infl, see #4757
+        res = self.res
+        n = 5
+        pr1 = res.predict(which='prob')
+        pr0 = res.predict(exog=res.model.exog[:n], which='prob')
+        assert_allclose(pr0, pr1[:n], rtol=1e-10)
+
+        fitted1 = res.predict()
+        fitted0 = res.predict(exog=res.model.exog[:n])
+        assert_allclose(fitted0, fitted1[:n], rtol=1e-10)
 
 
 @pytest.mark.slow
