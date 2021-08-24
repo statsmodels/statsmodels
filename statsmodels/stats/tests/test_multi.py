@@ -343,6 +343,14 @@ def test_issorted(method):
     assert_allclose(res2[0][sortrevind], res1[0], rtol=1e-10)
 
 
+@pytest.mark.parametrize('method', sorted(multitest_methods_names))
+def test_floating_precision(method):
+    # issue #7465
+    pvals = np.full(6000, 0.99)
+    pvals[0] = 1.138569e-56
+    assert multipletests(pvals, method=method)[1][0] > 1e-60
+
+
 def test_tukeyhsd():
     # example multicomp in R p 83
 
