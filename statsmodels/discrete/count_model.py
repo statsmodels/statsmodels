@@ -60,11 +60,13 @@ class GenericZeroInflated(CountModel):
 
         if exog_infl is None:
             self.k_inflate = 1
+            self._no_exog_infl = True
             self.exog_infl = np.ones((endog.size, self.k_inflate),
                                      dtype=np.float64)
         else:
             self.exog_infl = exog_infl
             self.k_inflate = exog_infl.shape[1]
+            self._no_exog_infl = False
 
         if len(exog.shape) == 1:
             self.k_exog = 1
@@ -387,19 +389,35 @@ class GenericZeroInflated(CountModel):
         Notes
         -----
         """
+        no_exog = False
         if exog is None:
+            no_exog = True
             exog = self.exog
 
         if exog_infl is None:
-            exog_infl = self.exog_infl
+            if no_exog:
+                exog_infl = self.exog_infl
+            else:
+                if self._no_exog_infl:
+                    exog_infl = np.ones((len(exog), 1))
+        else:
+            exog_infl = np.asarray(exog_infl)
+            if exog_infl.ndim == 1 and self.k_inflate == 1:
+                exog_infl = exog_infl[:, None]
 
         if exposure is None:
-            exposure = getattr(self, 'exposure', 0)
+            if no_exog:
+                exposure = getattr(self, 'exposure', 0)
+            else:
+                exposure = 0
         else:
             exposure = np.log(exposure)
 
         if offset is None:
-            offset = 0
+            if no_exog:
+                offset = getattr(self, 'offset', 0)
+            else:
+                offset = 0
 
         params_infl = params[:self.k_inflate]
         params_main = params[self.k_inflate:]
