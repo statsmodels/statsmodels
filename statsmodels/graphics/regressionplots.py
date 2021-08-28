@@ -301,7 +301,7 @@ def _partial_regression(endog, exog_i, exog_others):
 
 def plot_partregress(endog, exog_i, exog_others, data=None,
                      title_kwargs={}, obs_labels=True, label_kwargs={},
-                     ax=None, ret_coords=False, **kwargs):
+                     ax=None, ret_coords=False, eval_env=1, **kwargs):
     """Plot partial regression for a single regressor.
 
     Parameters
@@ -337,6 +337,9 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
     ret_coords : bool
         If True will return the coordinates of the points in the plot. You
         can use this to add your own annotations.
+    eval_env : int
+        Patsy eval environment if user functions and formulas are used in
+        defining endog or exog.
     **kwargs
         The keyword arguments passed to plot for the points.
 
@@ -384,16 +387,16 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
     #NOTE: there is no interaction between possible missing data and
     #obs_labels yet, so this will need to be tweaked a bit for this case
     fig, ax = utils.create_mpl_ax(ax)
-
+    print("eval_env:", eval_env)
     # strings, use patsy to transform to data
     if isinstance(endog, str):
-        endog = dmatrix(endog + "-1", data)
+        endog = dmatrix(endog + "-1", data, eval_env=eval_env)
 
     if isinstance(exog_others, str):
-        RHS = dmatrix(exog_others, data)
+        RHS = dmatrix(exog_others, data, eval_env=eval_env)
     elif isinstance(exog_others, list):
         RHS = "+".join(exog_others)
-        RHS = dmatrix(RHS, data)
+        RHS = dmatrix(RHS, data, eval_env=eval_env)
     else:
         RHS = exog_others
     RHS_isemtpy = False
@@ -402,7 +405,7 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
     elif isinstance(RHS, pd.DataFrame) and RHS.empty:
         RHS_isemtpy = True
     if isinstance(exog_i, str):
-        exog_i = dmatrix(exog_i + "-1", data)
+        exog_i = dmatrix(exog_i + "-1", data, eval_env=eval_env)
 
     # all arrays or pandas-like
 
