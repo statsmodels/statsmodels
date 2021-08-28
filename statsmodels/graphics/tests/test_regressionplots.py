@@ -348,3 +348,25 @@ class TestCERESPlot(object):
                 ax.set_title(ti + "\nPoisson regression\n" +
                              effect_str)
                 close_or_save(pdf, fig)
+
+
+@pytest.mark.matplotlib
+def test_partregress_formula_env():
+    # test that user function in formulas work, see #7672
+
+    @np.vectorize
+    def lg(x):
+        return np.log10(x) if x > 0 else 0
+
+    df = DataFrame(
+        dict(
+            a=np.random.random(size=10),
+            b=np.random.random(size=10),
+            c=np.random.random(size=10),
+            )
+        )
+    sm.graphics.plot_partregress(
+        "a", "lg(b)", ["c"], obs_labels=False, data=df, eval_env=1)
+
+    sm.graphics.plot_partregress(
+        "a", "lg(b)", ["c"], obs_labels=False, data=df)
