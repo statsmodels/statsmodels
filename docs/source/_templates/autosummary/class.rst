@@ -3,7 +3,21 @@
 .. currentmodule:: {{ module }}
 
 .. autoclass:: {{ objname }}
-   :exclude-members:
+   :exclude-members: {% for item in methods %}{%- if not item.startswith('_') or item in ['__call__'] %}{{ item }},{% endif %}{%- endfor %}
+
+   {% block methods %}
+   {% if methods %}
+   .. rubric:: Methods
+
+   .. autosummary::
+      :toctree:
+
+   {% for item in methods %}
+   {%- if not item.startswith('_') or item in ['__call__'] %}   ~{{ name }}.{{ item }}
+   {% endif %}
+   {%- endfor %}
+   {% endif %}
+   {% endblock %}
 
    {% block attributes %}
    {% if attributes %}
