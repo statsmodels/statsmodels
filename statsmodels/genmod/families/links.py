@@ -693,7 +693,7 @@ class CDFLink(Logit):
 
     def inverse_deriv(self, z):
         """
-        Derivative of the inverse of the CDF transformation link function
+        Derivative of the inverse link function
 
         Parameters
         ----------
@@ -719,15 +719,20 @@ class CDFLink(Logit):
 
         Returns
         -------
-        g'^(-1)(z) : ndarray
+        g^(-1)''(z) : ndarray
             The value of the second derivative of the inverse of the link
             function
 
         Notes
         -----
-        This method needs to be overwritten by subclasses
+        This method should be overwritten by subclasses.
+
+        The inherited method is implemented through numerical differentiation.
         """
-        raise NotImplementedError
+        from statsmodels.tools.numdiff import approx_fprime
+        z = np.atleast_1d(z)
+        # Note: special function for norm.ppf does not support complex
+        return np.diag(approx_fprime(z, self.inverse_deriv, centered=True))
 
 
 class probit(CDFLink):
