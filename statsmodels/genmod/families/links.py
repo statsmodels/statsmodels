@@ -729,10 +729,11 @@ class CDFLink(Logit):
 
         The inherited method is implemented through numerical differentiation.
         """
-        from statsmodels.tools.numdiff import approx_fprime
+        from statsmodels.tools.numdiff import _approx_fprime_scalar
         z = np.atleast_1d(z)
+
         # Note: special function for norm.ppf does not support complex
-        return np.diag(approx_fprime(z, self.inverse_deriv, centered=True))
+        return _approx_fprime_scalar(z, self.inverse_deriv, centered=True)
 
 
 class probit(CDFLink):

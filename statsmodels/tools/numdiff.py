@@ -139,7 +139,8 @@ def approx_fprime(x, f, epsilon=None, args=(), kwargs={}, centered=False):
     with the Jacobian of each observation with shape xk x nobs x xk. I.e.,
     the Jacobian of the first observation would be [:, 0, :]
     '''
-    n = len(x)
+    x = np.asarray(x)
+    n = x.shape[-1]
     # TODO:  add scaled stepsize
     f0 = f(*((x,)+args), **kwargs)
     dim = np.atleast_1d(f0).shape  # it could be a scalar
@@ -153,12 +154,61 @@ def approx_fprime(x, f, epsilon=None, args=(), kwargs={}, centered=False):
             ei[k] = 0.0
     else:
         epsilon = _get_epsilon(x, 3, epsilon, n) / 2.
-        for k in range(len(x)):
+        for k in range(n):
             ei[k] = epsilon[k]
             grad[k, :] = (f(*((x+ei,)+args), **kwargs) -
                           f(*((x-ei,)+args), **kwargs))/(2 * epsilon[k])
             ei[k] = 0.0
+
     return grad.squeeze().T
+
+
+def _approx_fprime_scalar(x, f, epsilon=None, args=(), kwargs={}, centered=False):
+    '''
+    Gradient of function vectorized for scalar parameter
+
+    Parameters
+    ----------
+    x : ndarray
+        parameters at which the derivative is evaluated
+    f : function
+        `f(*((x,)+args), **kwargs)` returning either one value or 1d array
+    epsilon : float, optional
+        Stepsize, if None, optimal stepsize is used. This is EPS**(1/2)*x for
+        `centered` == False and EPS**(1/3)*x for `centered` == True.
+    args : tuple
+        Tuple of additional arguments for function `f`.
+    kwargs : dict
+        Dictionary of additional keyword arguments for function `f`.
+    centered : bool
+        Whether central difference should be returned. If not, does forward
+        differencing.
+
+    Returns
+    -------
+    grad : ndarray
+        gradient or Jacobian
+
+    Notes
+    -----
+    If f returns a 1d array, it returns a Jacobian. If a 2d array is returned
+    by f (e.g., with a value for each observation), it returns a 3d array
+    with the Jacobian of each observation with shape xk x nobs x xk. I.e.,
+    the Jacobian of the first observation would be [:, 0, :]
+    '''
+    x = np.asarray(x)
+    n = 1
+
+    f0 = f(*((x,)+args), **kwargs)
+    if not centered:
+        eps = _get_epsilon(x, 2, epsilon, n)
+        grad = (f(*((x+eps,) + args), **kwargs) - f0) / eps
+    else:
+        eps = _get_epsilon(x, 3, epsilon, n) / 2.
+        grad = (f(*((x+eps,)+args), **kwargs) -
+                f(*((x-eps,)+args), **kwargs)) / (2 * eps)
+
+    return grad
 
 
 def approx_fprime_cs(x, f, epsilon=None, args=(), kwargs={}):
@@ -194,13 +244,25 @@ def approx_fprime_cs(x, f, epsilon=None, args=(), kwargs={}):
     # From Guilherme P. de Freitas, numpy mailing list
     # May 04 2010 thread "Improvement of performance"
     # http://mail.scipy.org/pipermail/numpy-discussion/2010-May/050250.html
-    n = len(x)
-    epsilon = _get_epsilon(x, 1, epsilon, n)
-    increments = np.identity(n) * 1j * epsilon
-    # TODO: see if this can be vectorized, but usually dim is small
-    partials = [f(x+ih, *args, **kwargs).imag / epsilon[i]
-                for i, ih in enumerate(increments)]
-    return np.array(partials).T
+    x = np.asarray(x)
+    n = x.shape[-1]
+
+    if x.ndim == 2 and n == 1:
+        epsilon = _get_epsilon(x, 1, epsilon, n)
+        increments = np.identity(n) * 1j * epsilon
+        # TODO: see if this can be vectorized, but usually dim is small
+        partials = [f(x.T+ih.T, *args, **kwargs).imag / epsilon.T[i]
+                    for i, ih in enumerate(increments.T)]
+        #raise
+        return np.array(partials).squeeze()
+    else:
+        epsilon = _get_epsilon(x, 1, epsilon, n)
+        increments = np.identity(n) * 1j * epsilon
+        # TODO: see if this can be vectorized, but usually dim is small
+        partials = [f(x+ih, *args, **kwargs).imag / epsilon[i]
+                    for i, ih in enumerate(increments)]
+        #raise
+        return np.array(partials).T
 
 
 def approx_hess_cs(x, f, epsilon=None, args=(), kwargs={}):
