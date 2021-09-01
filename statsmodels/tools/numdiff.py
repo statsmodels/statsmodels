@@ -247,22 +247,56 @@ def approx_fprime_cs(x, f, epsilon=None, args=(), kwargs={}):
     x = np.asarray(x)
     n = x.shape[-1]
 
-    if x.ndim == 2 and n == 1:
-        epsilon = _get_epsilon(x, 1, epsilon, n)
-        increments = np.identity(n) * 1j * epsilon
-        # TODO: see if this can be vectorized, but usually dim is small
-        partials = [f(x.T+ih.T, *args, **kwargs).imag / epsilon.T[i]
-                    for i, ih in enumerate(increments.T)]
-        #raise
-        return np.array(partials).squeeze()
-    else:
-        epsilon = _get_epsilon(x, 1, epsilon, n)
-        increments = np.identity(n) * 1j * epsilon
-        # TODO: see if this can be vectorized, but usually dim is small
-        partials = [f(x+ih, *args, **kwargs).imag / epsilon[i]
-                    for i, ih in enumerate(increments)]
-        #raise
-        return np.array(partials).T
+    epsilon = _get_epsilon(x, 1, epsilon, n)
+    increments = np.identity(n) * 1j * epsilon
+    # TODO: see if this can be vectorized, but usually dim is small
+    partials = [f(x+ih, *args, **kwargs).imag / epsilon[i]
+                for i, ih in enumerate(increments)]
+
+    return np.array(partials).T
+
+
+def _approx_fprime_cs_scalar(x, f, epsilon=None, args=(), kwargs={}):
+    '''
+    Calculate gradient or Jacobian with complex step derivative approximation
+
+    Parameters
+    ----------
+    x : ndarray
+        parameters at which the derivative is evaluated
+    f : function
+        `f(*((x,)+args), **kwargs)` returning either one value or 1d array
+    epsilon : float, optional
+        Stepsize, if None, optimal stepsize is used. Optimal step-size is
+        EPS*x. See note.
+    args : tuple
+        Tuple of additional arguments for function `f`.
+    kwargs : dict
+        Dictionary of additional keyword arguments for function `f`.
+
+    Returns
+    -------
+    partials : ndarray
+       array of partial derivatives, Gradient or Jacobian
+
+    Notes
+    -----
+    The complex-step derivative has truncation error O(epsilon**2), so
+    truncation error can be eliminated by choosing epsilon to be very small.
+    The complex-step derivative avoids the problem of round-off error with
+    small epsilon because there is no subtraction.
+    '''
+    # From Guilherme P. de Freitas, numpy mailing list
+    # May 04 2010 thread "Improvement of performance"
+    # http://mail.scipy.org/pipermail/numpy-discussion/2010-May/050250.html
+    x = np.asarray(x)
+    n = x.shape[-1]
+
+    epsilon = _get_epsilon(x, 1, epsilon, n)
+    eps = 1j * epsilon
+    partials = f(x + eps, *args, **kwargs).imag / epsilon
+
+    return np.array(partials)
 
 
 def approx_hess_cs(x, f, epsilon=None, args=(), kwargs={}):

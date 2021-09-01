@@ -16,6 +16,7 @@ from statsmodels.tools.numdiff import (
     approx_fprime_cs,
     approx_hess_cs,
     _approx_fprime_scalar,
+    _approx_fprime_cs_scalar
 )
 
 DEC3 = 3
@@ -320,9 +321,12 @@ def test_vectorized():
     # vectorized parameter, column vector
     p = np.array([[1, 2]]).T
     assert_allclose(approx_fprime(p, f), desired, rtol=1e-8)
-    assert_allclose(approx_fprime_cs(p, f), desired, rtol=1e-8)
     assert_allclose(_approx_fprime_scalar(p, f), desired[:, None], rtol=1e-8)
     assert_allclose(_approx_fprime_scalar(p.squeeze(), f),
+                    desired, rtol=1e-8)
+    assert_allclose(_approx_fprime_cs_scalar(p, f), desired[:, None],
+                    rtol=1e-8)
+    assert_allclose(_approx_fprime_cs_scalar(p.squeeze(), f),
                     desired, rtol=1e-8)
 
 
