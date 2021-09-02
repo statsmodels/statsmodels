@@ -320,7 +320,6 @@ def test_vectorized():
     desired = np.array([2, 2])
     # vectorized parameter, column vector
     p = np.array([[1, 2]]).T
-    assert_allclose(approx_fprime(p, f), desired, rtol=1e-8)
     assert_allclose(_approx_fprime_scalar(p, f), desired[:, None], rtol=1e-8)
     assert_allclose(_approx_fprime_scalar(p.squeeze(), f),
                     desired, rtol=1e-8)
@@ -328,6 +327,12 @@ def test_vectorized():
                     rtol=1e-8)
     assert_allclose(_approx_fprime_cs_scalar(p.squeeze(), f),
                     desired, rtol=1e-8)
+
+    # check 2-d row, see #7680
+    # not allowed/implemented for approx_fprime, raises broadcast ValueError
+    # assert_allclose(approx_fprime(p.T, f), desired, rtol=1e-8)
+    # similar as used in MarkovSwitching unit test
+    assert_allclose(approx_fprime_cs(p.T, f).squeeze(), desired, rtol=1e-8)
 
 
 if __name__ == '__main__':  # FIXME: turn into tests or move/remove

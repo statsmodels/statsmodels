@@ -139,9 +139,7 @@ def approx_fprime(x, f, epsilon=None, args=(), kwargs={}, centered=False):
     with the Jacobian of each observation with shape xk x nobs x xk. I.e.,
     the Jacobian of the first observation would be [:, 0, :]
     '''
-    x = np.asarray(x)
-    n = x.shape[-1]
-    # TODO:  add scaled stepsize
+    n = len(x)
     f0 = f(*((x,)+args), **kwargs)
     dim = np.atleast_1d(f0).shape  # it could be a scalar
     grad = np.zeros((n,) + dim, np.promote_types(float, x.dtype))
@@ -163,14 +161,19 @@ def approx_fprime(x, f, epsilon=None, args=(), kwargs={}, centered=False):
     return grad.squeeze().T
 
 
-def _approx_fprime_scalar(x, f, epsilon=None, args=(), kwargs={}, centered=False):
+def _approx_fprime_scalar(x, f, epsilon=None, args=(), kwargs={},
+                          centered=False):
     '''
-    Gradient of function vectorized for scalar parameter
+    Gradient of function vectorized for scalar parameter.
+
+    This assumes that the function ``f`` is vectorized for a scalar parameter.
+    The function value ``f(x)`` has then the same shape as the input ``x``.
+    The derivative returned by this function also has the same shape as ``x``.
 
     Parameters
     ----------
     x : ndarray
-        parameters at which the derivative is evaluated
+        Parameters at which the derivative is evaluated.
     f : function
         `f(*((x,)+args), **kwargs)` returning either one value or 1d array
     epsilon : float, optional
@@ -187,7 +190,7 @@ def _approx_fprime_scalar(x, f, epsilon=None, args=(), kwargs={}, centered=False
     Returns
     -------
     grad : ndarray
-        gradient or Jacobian
+        Array of derivatives, gradient evaluated at parameters ``x``.
 
     Notes
     -----
@@ -244,8 +247,7 @@ def approx_fprime_cs(x, f, epsilon=None, args=(), kwargs={}):
     # From Guilherme P. de Freitas, numpy mailing list
     # May 04 2010 thread "Improvement of performance"
     # http://mail.scipy.org/pipermail/numpy-discussion/2010-May/050250.html
-    x = np.asarray(x)
-    n = x.shape[-1]
+    n = len(x)
 
     epsilon = _get_epsilon(x, 1, epsilon, n)
     increments = np.identity(n) * 1j * epsilon
@@ -258,14 +260,18 @@ def approx_fprime_cs(x, f, epsilon=None, args=(), kwargs={}):
 
 def _approx_fprime_cs_scalar(x, f, epsilon=None, args=(), kwargs={}):
     '''
-    Calculate gradient or Jacobian with complex step derivative approximation
+    Calculate gradient for scalar parameter with complex step derivatives.
+
+    This assumes that the function ``f`` is vectorized for a scalar parameter.
+    The function value ``f(x)`` has then the same shape as the input ``x``.
+    The derivative returned by this function also has the same shape as ``x``.
 
     Parameters
     ----------
     x : ndarray
-        parameters at which the derivative is evaluated
+        Parameters at which the derivative is evaluated.
     f : function
-        `f(*((x,)+args), **kwargs)` returning either one value or 1d array
+        `f(*((x,)+args), **kwargs)` returning either one value or 1d array.
     epsilon : float, optional
         Stepsize, if None, optimal stepsize is used. Optimal step-size is
         EPS*x. See note.
@@ -277,7 +283,7 @@ def _approx_fprime_cs_scalar(x, f, epsilon=None, args=(), kwargs={}):
     Returns
     -------
     partials : ndarray
-       array of partial derivatives, Gradient or Jacobian
+       Array of derivatives, gradient evaluated for parameters ``x``.
 
     Notes
     -----
