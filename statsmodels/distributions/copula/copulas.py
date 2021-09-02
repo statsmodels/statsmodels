@@ -1,4 +1,4 @@
-'''
+"""
 
 Which Archimedean is Best?
 Extreme Value copulas formulas are based on Genest 2009
@@ -9,7 +9,7 @@ References
 Genest, C., 2009. Rank-based inference for bivariate extreme-value
 copulas. The Annals of Statistics, 37(5), pp.2990-3022.
 
-'''
+"""
 from abc import ABC, abstractmethod
 
 import numpy as np
@@ -55,11 +55,14 @@ class CopulaDistribution:
 
         Parameters
         ----------
-        n : int, optional
+        nobs : int, optional
             Number of samples to generate in the parameter space.
             Default is 1.
         random_state : {None, int, `numpy.random.Generator`}, optional
-            If `seed` is None the `numpy.random.Generator` singleton is used.
+            If `seed` is None then the legacy singleton NumPy generator.
+            This will change after 0.13 to use a fresh NumPy ``Generator``,
+            so you should explicitly pass a seeded ``Generator`` if you
+            need reproducible results.
             If `seed` is an int, a new ``Generator`` instance is used,
             seeded with `seed`.
             If `seed` is already a ``Generator`` instance then that instance is
@@ -70,6 +73,9 @@ class CopulaDistribution:
         sample : array_like (n, d)
             Sample from the joint distribution.
 
+        See Also
+        --------
+        statsmodels.tools.rng_qrng.check_random_state
         """
         rng = check_random_state(random_state)
         if self.copula is None:
@@ -234,13 +240,16 @@ class Copula(ABC):
 
         Parameters
         ----------
-        n : int, optional
+        nobs : int, optional
             Number of samples to generate from the copula. Default is 1.
         args : tuple
             Arguments for copula parameters. The number of arguments depends
             on the copula.
         random_state : {None, int, `numpy.random.Generator`}, optional
-            If `seed` is None the `numpy.random.Generator` singleton is used.
+            If `seed` is None then the legacy singleton NumPy generator.
+            This will change after 0.13 to use a fresh NumPy ``Generator``,
+            so you should explicitly pass a seeded ``Generator`` if you
+            need reproducible results.
             If `seed` is an int, a new ``Generator`` instance is used,
             seeded with `seed`.
             If `seed` is already a ``Generator`` instance then that instance is
@@ -251,6 +260,9 @@ class Copula(ABC):
         sample : array_like (nobs, d)
             Sample from the copula.
 
+        See Also
+        --------
+        statsmodels.tools.rng_qrng.check_random_state
         """
         raise NotImplementedError
 
@@ -322,10 +334,16 @@ class Copula(ABC):
 
         Parameters
         ----------
-        n : int, optional
+        sample : array-like, optional
+            The sample to plot.  If not provided (the default), a sample
+            is generated.
+        nobs : int, optional
             Number of samples to generate from the copula. Default is 1.
         random_state : {None, int, `numpy.random.Generator`}, optional
-            If `seed` is None the `numpy.random.Generator` singleton is used.
+            If `seed` is None then the legacy singleton NumPy generator.
+            This will change after 0.13 to use a fresh NumPy ``Generator``,
+            so you should explicitly pass a seeded ``Generator`` if you
+            need reproducible results.
             If `seed` is an int, a new ``Generator`` instance is used,
             seeded with `seed`.
             If `seed` is already a ``Generator`` instance then that instance is
@@ -342,6 +360,9 @@ class Copula(ABC):
         sample : array_like (n, d)
             Sample from the copula.
 
+        See Also
+        --------
+        statsmodels.tools.rng_qrng.check_random_state
         """
         if self.k_dim != 2:
             raise ValueError("Can only plot 2-dimensional Copula.")
@@ -434,7 +455,6 @@ class Copula(ABC):
         corr_param : float
             Correlation parameter of the copula, ``theta`` in archimedean and
             pearson correlation in elliptical.
-
         """
         x = np.asarray(data)
         if x.shape[1] != 2:
@@ -442,8 +462,7 @@ class Copula(ABC):
             warnings.warn("currently only first pair of data are used"
                           " to compute kendall's tau")
         tau = stats.kendalltau(x[:, 0], x[:, 1])[0]
-        self.theta = self._arg_from_tau(tau)
-        return self.theta
+        return self._theta_from_tau(tau)
 
     def _arg_from_tau(self, tau):
         """Compute correlation parameter ``theta`` from tau.

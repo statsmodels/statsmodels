@@ -150,3 +150,17 @@ special cases.
 
    squarenormalg
    squaretg
+
+
+Helper Functions
+----------------
+
+.. module:: statsmodels.tools.rng_qrng
+   :synopsis: Tools for working with random variable generation
+
+.. currentmodule:: statsmodels.tools.rng_qrng
+
+.. autosummary::
+   :toctree: generated/
+
+   check_random_state

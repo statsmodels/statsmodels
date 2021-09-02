@@ -6,26 +6,36 @@ Author: Josef Perktold
 License: BSD-3
 
 """
+from statsmodels.compat.scipy import SP_LT_15
+
 import numpy as np
 from numpy.testing import assert_allclose, assert_array_almost_equal
-from scipy import stats
 import pytest
+from scipy import stats
 
-from statsmodels.tools.numdiff import approx_fprime_cs, approx_hess
-from statsmodels.distributions.tools import (
-    frequencies_fromdata, approx_copula_pdf)
-
-from statsmodels.distributions.copula.elliptical import (
-    GaussianCopula, StudentTCopula)
-from statsmodels.distributions.copula.other_copulas import IndependenceCopula
-
-from statsmodels.distributions.copula.copulas import CopulaDistribution
 from statsmodels.distributions.copula.archimedean import (
-    ArchimedeanCopula, ClaytonCopula, FrankCopula, GumbelCopula)
-from statsmodels.distributions.copula.extreme_value import (
-    ExtremeValueCopula, copula_bv_ev)
-import statsmodels.distributions.copula.transforms as tra
+    ArchimedeanCopula,
+    ClaytonCopula,
+    FrankCopula,
+    GumbelCopula,
+)
+from statsmodels.distributions.copula.copulas import CopulaDistribution
 import statsmodels.distributions.copula.depfunc_ev as trev
+from statsmodels.distributions.copula.elliptical import (
+    GaussianCopula,
+    StudentTCopula,
+)
+from statsmodels.distributions.copula.extreme_value import (
+    ExtremeValueCopula,
+    copula_bv_ev,
+)
+from statsmodels.distributions.copula.other_copulas import IndependenceCopula
+import statsmodels.distributions.copula.transforms as tra
+from statsmodels.distributions.tools import (
+    approx_copula_pdf,
+    frequencies_fromdata,
+)
+from statsmodels.tools.numdiff import approx_fprime_cs, approx_hess
 
 uniform = stats.uniform
 
@@ -39,9 +49,8 @@ ev_list = [
     [trev.transform_tawn2, 0.9, 0.5, (0.5, 0.25), 0.48340673415789],
     # note evd has parameter for hr 1/lmbda (inverse of our parameter)
     [trev.transform_hr, 0.5, 0.9, (2,), 0.4551235014298542],
-    [trev.transform_joe, 0.5, 0.9, (0.5, 0.75, 1/0.25), 0.4543698299835434],
-    [trev.transform_joe, 0.9, 0.5, (0.5, 0.75, 1/0.25), 0.4539773435983587],
-
+    [trev.transform_joe, 0.5, 0.9, (0.5, 0.75, 1 / 0.25), 0.4543698299835434],
+    [trev.transform_joe, 0.9, 0.5, (0.5, 0.75, 1 / 0.25), 0.4539773435983587],
     # tev is against R `copula` package
     # > cop = tevCopula(0.8, df = 4)
     # > pCopula(c(0.5, 0.75), cop)
@@ -50,7 +59,7 @@ ev_list = [
     # [1] 0.4911039761533587
     [trev.transform_tev, 0.5, 0.75, (0.8, 4), 0.456807960674953],
     [trev.transform_tev, 0.5, 0.9, (0.8, 4), 0.4911039761533587],
-    ]
+]
 
 ev_dep_list = [
     # [trev.transform_bilogistic, 0.5, 0.9, (0.25, 0.05), 0.5],
@@ -83,7 +92,7 @@ cop_list = [
     [tra.TransfGumbel, 0.5, 0.9, (2,), 0.4960348880595387, 0.3973548776136501],
     [tra.TransfClayton, 0.5, 0.9, (2,), 0.485954322440435, 0.8921974147432954],
     [tra.TransfIndep, 0.5, 0.5, (), 0.25, 1],
-    ]
+]
 
 gev_list = [
     # [cop.transform_tawn, 0.5, 0.9, (0.5, 0.5, 0.5), 0.4724570876035117],
@@ -135,8 +144,8 @@ def check_cop_rvs(cop, rvs=None, nobs=2000, k=10, use_pdf=True):
 extrali = [
     [trev.transform_tawn, 0.5, 0.9, (0.8, 0.5, 0.75), 0.4724570876035117],
     [trev.transform_tawn, 0.5, 0.9, (0.5, 0.75, 0.5), 0.4724570876035117],
-    [trev.transform_tawn, 0.6, 0.4, (0.2, 0.7, 0.6), 0.4724570876035117]
-    ]
+    [trev.transform_tawn, 0.6, 0.4, (0.2, 0.7, 0.6), 0.4724570876035117],
+]
 
 
 @pytest.mark.parametrize("case", ev_list + extrali)
@@ -209,7 +218,7 @@ def test_ev_copula_distr(case):
     if ev_tr != trev.transform_bilogistic:
         cdfd = cev.cdf(np.array(u) * np.ones((3, 1)), cop_args=args)
         assert_allclose(cdfd, res1, rtol=1e-13)
-        assert cdfd.shape == (3, )
+        assert cdfd.shape == (3,)
 
 
 @pytest.mark.parametrize("case", cop_list)
@@ -242,12 +251,12 @@ def test_copulas_distr(case):
     # check vector values for u
     cdfd = cad.cdf(np.array(u) * np.ones((3, 1)), cop_args=args)
     assert_allclose(cdfd, cdf2, rtol=1e-13)
-    assert cdfd.shape == (3, )
+    assert cdfd.shape == (3,)
 
     # check mv, check at marginal cdf
     cdfmv = ca.cdf([v1, v2, 1], args=args)
     assert_allclose(cdfmv, cdf1, rtol=1e-13)
-    assert cdfd.shape == (3, )
+    assert cdfd.shape == (3,)
 
 
 @pytest.mark.parametrize("case", gev_list)
@@ -277,7 +286,6 @@ def test_gev_genextreme(case):
 
 
 class TestFrank:
-
     def test_basic(self):
         case = [tra.TransfFrank, 0.5, 0.9, (2,), 0.4710805107852225,
                 0.9257812360337806]
@@ -307,6 +315,7 @@ class TestFrank:
 
 class CheckCopula:
     """Generic tests for copula."""
+
     copula = None
     dim = None
     u = np.array([[0.33706249, 0.6075078],
@@ -344,13 +353,51 @@ class CheckCopula:
         rng = np.random.RandomState(27658622)
         self.rvs = rvs = self.copula.rvs(nobs, random_state=rng)
         assert rvs.shape == (nobs, 2)
-        assert_array_almost_equal(np.mean(rvs, axis=0),
-                                  np.repeat(0.5, self.dim), decimal=2)
+        assert_array_almost_equal(
+            np.mean(rvs, axis=0), np.repeat(0.5, self.dim), decimal=2
+        )
 
         # check empirical quantiles, uniform
         q0 = np.percentile(rvs, [25, 50, 75], axis=0)
         q1 = np.repeat(np.array([[0.25, 0.5, 0.75]]).T, 2, axis=1)
         assert_allclose(q0, q1, atol=0.025)
+
+
+class CheckModernCopula(CheckCopula):
+    @pytest.mark.parametrize(
+        "seed", ["random_state", "generator", "qmc", None, 0]
+    )
+    def test_seed(self, seed):
+        if SP_LT_15 and seed in ("generator", 0):
+            pytest.xfail(reason="Generator not supported for SciPy <= 1.3")
+        if seed == "random_state":
+            seed1 = np.random.RandomState(0)
+            seed2 = np.random.RandomState(0)
+        elif seed == "generator":
+            seed1 = np.random.default_rng(0)
+            seed2 = 0
+        elif seed is None:
+            seed1 = None
+            singleton = np.random.mtrand._rand
+            seed2 = np.random.RandomState()
+            seed2.set_state(singleton.get_state())
+        elif seed == "qmc":
+            if not hasattr(stats, "qmc"):
+                pytest.skip("QMC not available")
+            else:
+                pytest.xfail("QMC not working")
+            seed1 = stats.qmc.Halton(2)
+            seed2 = stats.qmc.Halton(2)
+        else:
+            seed1 = 0
+            seed2 = np.random.default_rng(0)
+
+        nobs = 2000
+        expected_warn = None if seed1 is not None else FutureWarning
+        with pytest.warns(expected_warn):
+            rvs1 = self.copula.rvs(nobs, random_state=seed1)
+        rvs2 = self.copula.rvs(nobs, random_state=seed2)
+        assert_allclose(rvs1, rvs2)
 
 
 class TestIndependenceCopula(CheckCopula):
@@ -361,7 +408,7 @@ class TestIndependenceCopula(CheckCopula):
 
 
 class TestGaussianCopula(CheckCopula):
-    copula = GaussianCopula(corr=[[1., 0.8], [0.8, 1.]])
+    copula = GaussianCopula(corr=[[1.0, 0.8], [0.8, 1.0]])
     dim = 2
     pdf_u = [1.03308741, 0.06507279, 0.72896012, 0.65389439, 16.45012399,
              0.34813218, 0.06768115, 0.08168840, 0.40521741, 1.26723470]
@@ -373,8 +420,9 @@ class TestGaussianCopula(CheckCopula):
         # currently inconsistent with non-elliptical copulas
         super().test_rvs()
 
-        chi2t, rvs = check_cop_rvs(self.copula, rvs=self.rvs, nobs=2000,
-                                   k=10, use_pdf=True)
+        chi2t, rvs = check_cop_rvs(
+            self.copula, rvs=self.rvs, nobs=2000, k=10, use_pdf=True
+        )
         assert chi2t.pvalue > 0.1
         tau = stats.kendalltau(*rvs.T)[0]
         tau_cop = self.copula.tau()
@@ -382,7 +430,7 @@ class TestGaussianCopula(CheckCopula):
 
 
 class TestStudentTCopula(CheckCopula):
-    copula = StudentTCopula(corr=[[1., 0.8], [0.8, 1.]], df=2)
+    copula = StudentTCopula(corr=[[1.0, 0.8], [0.8, 1.0]], df=2)
     dim = 2
     pdf_u = [0.8303065, 0.1359839, 0.5157746, 0.4776421, 26.2173959,
              0.3070661, 0.1349173, 0.1597064, 0.3303230, 1.0482301]
@@ -395,15 +443,16 @@ class TestStudentTCopula(CheckCopula):
     def test_rvs(self):
         super().test_rvs()
 
-        chi2t, rvs = check_cop_rvs(self.copula, rvs=self.rvs, nobs=2000,
-                                   k=10, use_pdf=True)
+        chi2t, rvs = check_cop_rvs(
+            self.copula, rvs=self.rvs, nobs=2000, k=10, use_pdf=True
+        )
         assert chi2t.pvalue > 0.1
         tau = stats.kendalltau(*rvs.T)[0]
         tau_cop = self.copula.tau()
         assert_allclose(tau, tau_cop, rtol=0.05)
 
 
-class TestClaytonCopula(CheckCopula):
+class TestClaytonCopula(CheckModernCopula):
     copula = ClaytonCopula(theta=1.2)
     dim = 2
     pdf_u = [1.0119836, 0.2072728, 0.8148839, 0.9481976, 2.1419659,
@@ -412,7 +461,7 @@ class TestClaytonCopula(CheckCopula):
              0.24082057, 0.05811908, 0.09343934, 0.33012582, 0.18738753]
 
 
-class TestFrankCopula(CheckCopula):
+class TestFrankCopula(CheckModernCopula):
     copula = FrankCopula(theta=3)
     dim = 2
     pdf_u = [0.9646599, 0.5627195, 0.8941964, 0.8364614, 2.9570945,
@@ -421,7 +470,7 @@ class TestFrankCopula(CheckCopula):
              0.23412757, 0.05196265, 0.08676979, 0.32803721, 0.16320730]
 
 
-class TestGumbelCopula(CheckCopula):
+class TestGumbelCopula(CheckModernCopula):
     copula = GumbelCopula(theta=1.5)
     dim = 2
     pdf_u = [1.0391696, 0.6539579, 0.9878446, 0.8679504, 16.6030932,
