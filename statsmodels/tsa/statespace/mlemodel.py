@@ -5,6 +5,8 @@ State Space Model
 Author: Chad Fulton
 License: Simplified-BSD
 """
+from statsmodels.compat.pandas import NumericIndex, is_int_index
+
 import contextlib
 import warnings
 
@@ -224,11 +226,11 @@ class MLEModel(tsbase.TimeSeriesModel):
                 stop = self._index._stop
                 step = self._index._step
             index = pd.RangeIndex(start, stop + step, step)
-        elif isinstance(self._index, pd.Int64Index):
+        elif is_int_index(self._index):
             # The only valid Int64Index is a full, incrementing index, so this
             # is general
             value = self._index[-1] + 1
-            index = pd.Int64Index(self._index.tolist() + [value])
+            index = NumericIndex(self._index.tolist() + [value])
         else:
             raise NotImplementedError
         return index

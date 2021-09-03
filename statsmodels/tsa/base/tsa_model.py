@@ -1,4 +1,9 @@
-from statsmodels.compat.pandas import is_numeric_dtype
+from statsmodels.compat.pandas import (
+    NumericIndex,
+    is_float_index,
+    is_int_index,
+    is_numeric_dtype,
+)
 
 import numbers
 import warnings
@@ -6,9 +11,7 @@ import warnings
 import numpy as np
 from pandas import (
     DatetimeIndex,
-    Float64Index,
     Index,
-    Int64Index,
     Period,
     PeriodIndex,
     RangeIndex,
@@ -55,7 +58,7 @@ def get_index_loc(key, index):
     key : label
         The key for which to find the location if the underlying index is
         a DateIndex or a location if the underlying index is a RangeIndex
-        or an Int64Index.
+        or a NumericIndex.
     index : pd.Index
         The index to search.
 
@@ -72,14 +75,14 @@ def get_index_loc(key, index):
     Notes
     -----
     If `key` is past the end of of the given index, and the index is either
-    an Int64Index or a date index, this function extends the index up to
+    a NumericIndex or a date index, this function extends the index up to
     and including key, and then returns the location in the new index.
     """
     base_index = index
 
     index = base_index
     date_index = isinstance(base_index, (PeriodIndex, DatetimeIndex))
-    int_index = isinstance(base_index, Int64Index)
+    int_index = is_int_index(base_index)
     range_index = isinstance(base_index, RangeIndex)
     index_class = type(base_index)
     nobs = len(index)
@@ -103,7 +106,7 @@ def get_index_loc(key, index):
                                stop=stop,
                                step=base_index_step)
 
-    # Special handling for Int64Index
+    # Special handling for NumericIndex
     if (not range_index and int_index and not date_index and
             isinstance(key, (int, np.integer))):
         # Negative indices (that lie in the Index)
@@ -111,7 +114,7 @@ def get_index_loc(key, index):
             key = nobs + key
         # Out-of-sample (note that we include key itself in the new index)
         elif key > base_index[-1]:
-            index = Int64Index(np.arange(base_index[0], int(key + 1)))
+            index = NumericIndex(np.arange(base_index[0], int(key + 1)))
 
     # Special handling for date indexes
     if date_index:
@@ -163,7 +166,7 @@ def get_index_loc(key, index):
         # (note that get_loc will throw a KeyError if key is invalid)
         loc = index.get_loc(key)
     elif int_index or range_index:
-        # For Int64Index and RangeIndex, key is assumed to be the location
+        # For NumericIndex and RangeIndex, key is assumed to be the location
         # and not an index value (this assumption is required to support
         # RangeIndex)
         try:
@@ -204,7 +207,7 @@ def get_index_label_loc(key, index, row_labels):
     key : label
         The key for which to find the location if the underlying index is
         a DateIndex or is only being used as row labels, or a location if
-        the underlying index is a RangeIndex or an Int64Index.
+        the underlying index is a RangeIndex or a NumericIndex.
     index : pd.Index
         The index to search.
     row_labels : pd.Index
@@ -325,7 +328,7 @@ def get_prediction_index(start, end, nobs, base_index, index=None, silent=False,
 
     This difference in behavior is necessary to support `RangeIndex`. This
     is because integers for a RangeIndex could refer either to index values
-    or to index locations in an ambiguous way (while for `Int64Index`,
+    or to index locations in an ambiguous way (while for `NumericIndex`,
     since we have required them to be full indexes, there is no ambiguity).
     """
 
@@ -381,7 +384,7 @@ def get_prediction_index(start, end, nobs, base_index, index=None, silent=False,
         # If we are in sample, and have row labels, use them
         if data.row_labels is not None and not (start_oos or end_oos):
             prediction_index = data.row_labels[start:end + 1]
-        # Otherwise, warn the user that they will get an Int64Index
+        # Otherwise, warn the user that they will get an NumericIndex
         else:
             if not silent:
                 warnings.warn('No supported index is available.'
@@ -439,11 +442,11 @@ class TimeSeriesModel(base.LikelihoodModel):
         Notes
         -----
         Creates `self._index` and related attributes. `self._index` is always
-        a Pandas index, and it is always Int64Index, DatetimeIndex, or
+        a Pandas index, and it is always NumericIndex, DatetimeIndex, or
         PeriodIndex.
 
         If Pandas objects, endog / exog may have any type of index. If it is
-        an Int64Index with values 0, 1, ..., nobs-1 or if it is (coerceable to)
+        an NumericIndex with values 0, 1, ..., nobs-1 or if it is (coerceable to)
         a DatetimeIndex or PeriodIndex *with an associated frequency*, then it
         is called a "supported" index. Otherwise it is called an "unsupported"
         index.
@@ -451,7 +454,7 @@ class TimeSeriesModel(base.LikelihoodModel):
         Supported indexes are standardized (i.e. a list of date strings is
         converted to a DatetimeIndex) and the result is put in `self._index`.
 
-        Unsupported indexes are ignored, and a supported Int64Index is
+        Unsupported indexes are ignored, and a supported NumericIndex is
         generated and put in `self._index`. Warnings are issued in this case
         to alert the user if the returned index from some operation (e.g.
         forecasting) is different from the original data's index. However,
@@ -461,7 +464,7 @@ class TimeSeriesModel(base.LikelihoodModel):
         The benefit of supported indexes is that they allow *forecasting*, i.e.
         it is possible to extend them in a reasonable way. Thus every model
         must have an underlying supported index, even if it is just a generated
-        Int64Index.
+        NumericIndex.
         """
 
         # Get our index from `dates` if available, otherwise from whatever
@@ -494,9 +497,8 @@ class TimeSeriesModel(base.LikelihoodModel):
                     # case also check if the first element is a float.
                     _index = np.asarray(index)
                     if (is_numeric_dtype(_index) or
-                            isinstance(index, Float64Index) or
-                            (Float64Index == tuple() and
-                             isinstance(_index[0], float))):
+                            is_float_index(index) or
+                            (isinstance(_index[0], float))):
                         raise ValueError('Numeric index given')
                     # If a non-index Pandas series was given, only keep its
                     # values (because we must have a pd.Index type, below, and
@@ -576,7 +578,7 @@ class TimeSeriesModel(base.LikelihoodModel):
         has_index = index is not None
         date_index = isinstance(index, (DatetimeIndex, PeriodIndex))
         period_index = isinstance(index, PeriodIndex)
-        int_index = isinstance(index, Int64Index)
+        int_index = is_int_index(index)
         range_index = isinstance(index, RangeIndex)
         has_freq = index.freq is not None if date_index else None
         increment = Index(range(self.endog.shape[0]))
@@ -627,7 +629,7 @@ class TimeSeriesModel(base.LikelihoodModel):
         key : label
             The key for which to find the location if the underlying index is
             a DateIndex or a location if the underlying index is a RangeIndex
-            or an Int64Index.
+            or an NumericIndex.
         base_index : pd.Index, optional
             Optionally the base index to search. If None, the model's index is
             searched.
@@ -645,7 +647,7 @@ class TimeSeriesModel(base.LikelihoodModel):
         Notes
         -----
         If `key` is past the end of of the given index, and the index is either
-        an Int64Index or a date index, this function extends the index up to
+        an NumericIndex or a date index, this function extends the index up to
         and including key, and then returns the location in the new index.
         """
 
@@ -662,7 +664,7 @@ class TimeSeriesModel(base.LikelihoodModel):
         key : label
             The key for which to find the location if the underlying index is
             a DateIndex or is only being used as row labels, or a location if
-            the underlying index is a RangeIndex or an Int64Index.
+            the underlying index is a RangeIndex or an NumericIndex.
         base_index : pd.Index, optional
             Optionally the base index to search. If None, the model's index is
             searched.
@@ -741,7 +743,7 @@ class TimeSeriesModel(base.LikelihoodModel):
 
         This difference in behavior is necessary to support `RangeIndex`. This
         is because integers for a RangeIndex could refer either to index values
-        or to index locations in an ambiguous way (while for `Int64Index`,
+        or to index locations in an ambiguous way (while for `NumericIndex`,
         since we have required them to be full indexes, there is no ambiguity).
         """
         nobs = len(self.endog)

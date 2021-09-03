@@ -1,6 +1,7 @@
 """
 Test AR Model
 """
+import datetime as dt
 from itertools import product
 
 import numpy as np
@@ -32,7 +33,7 @@ DECIMAL_4 = 4
 
 def gen_ar_data(nobs):
     rs = np.random.RandomState(982739)
-    idx = pd.date_range("1-1-1900", freq="M", periods=nobs)
+    idx = pd.date_range(dt.datetime(1900, 1, 1), freq="M", periods=nobs)
     return pd.Series(rs.standard_normal(nobs), index=idx), rs
 
 
@@ -264,7 +265,9 @@ def gen_data(nobs, nexog, pandas, seed=92874765):
     endog = rs.standard_normal((nobs))
     exog = rs.standard_normal((nobs, nexog)) if nexog else None
     if pandas:
-        index = pd.date_range("31-12-1999", periods=nobs, freq="M")
+        index = pd.date_range(
+            dt.datetime(1999, 12, 31), periods=nobs, freq="M"
+        )
         endog = pd.Series(endog, name="endog", index=index)
         if nexog:
             cols = ["exog.{0}".format(i) for i in range(exog.shape[1])]
@@ -706,7 +709,10 @@ def test_ar_order_select():
     # GH#2118
     np.random.seed(12345)
     y = arma_generate_sample([1, -0.75, 0.3], [1], 100)
-    ts = Series(y, index=date_range(start="1/1/1990", periods=100, freq="M"))
+    ts = Series(
+        y,
+        index=date_range(start=dt.datetime(1990, 1, 1), periods=100, freq="M"),
+    )
     res = ar_select_order(ts, maxlag=12, ic="aic")
     assert tuple(res.ar_lags) == (1, 2)
     assert isinstance(res.aic, dict)
@@ -791,7 +797,7 @@ def test_equiv_dynamic(reset_randomstate):
     res = mod.fit()
     pred0 = res.predict(500, 800, dynamic=0)
     pred1 = res.predict(500, 800, dynamic=True)
-    idx = pd.date_range("31-01-2000", periods=1001, freq="M")
+    idx = pd.date_range(dt.datetime(2000, 1, 30), periods=1001, freq="M")
     y = pd.Series(y, index=idx)
     mod = AutoReg(y, 1)
     res = mod.fit()
@@ -835,7 +841,9 @@ def test_predict_seasonal():
     effects = 10 * np.cos(np.arange(12) / 11 * 2 * np.pi)
     for i in range(1, 1001):
         y[i] = 10 + 0.9 * y[i - 1] + e[i] + effects[i % 12]
-    ys = pd.Series(y, index=pd.date_range("1-1-1950", periods=1001, freq="M"))
+    ys = pd.Series(
+        y, index=pd.date_range(dt.datetime(1950, 1, 1), periods=1001, freq="M")
+    )
     mod = AutoReg(ys, 1, seasonal=True)
     res = mod.fit()
     c = res.params.iloc[0]
@@ -868,7 +876,9 @@ def test_predict_exog():
     y[:3] = e[:3] * np.sqrt(1.0 / (1 - 0.9 ** 2)) + x[:3].sum(1)
     for i in range(3, 1001):
         y[i] = 10 + 0.9 * y[i - 1] - 0.5 * y[i - 3] + e[i] + x[i].sum()
-    ys = pd.Series(y, index=pd.date_range("1-1-1950", periods=1001, freq="M"))
+    ys = pd.Series(
+        y, index=pd.date_range(dt.datetime(1950, 1, 1), periods=1001, freq="M")
+    )
     xdf = pd.DataFrame(x, columns=["x0", "x1"], index=ys.index)
     mod = AutoReg(ys, [1, 3], trend="c", exog=xdf)
     res = mod.fit()
@@ -910,7 +920,9 @@ def test_predict_irregular_ar():
     y[:3] = e[:3] * np.sqrt(1.0 / (1 - 0.9 ** 2))
     for i in range(3, 1001):
         y[i] = 10 + 0.9 * y[i - 1] - 0.5 * y[i - 3] + e[i]
-    ys = pd.Series(y, index=pd.date_range("1-1-1950", periods=1001, freq="M"))
+    ys = pd.Series(
+        y, index=pd.date_range(dt.datetime(1950, 1, 1), periods=1001, freq="M")
+    )
     mod = AutoReg(ys, [1, 3], trend="ct")
     res = mod.fit()
     c = res.params.iloc[0]
@@ -952,11 +964,13 @@ def test_forecast_start_end_equiv(dynamic):
     effects = 10 * np.cos(np.arange(12) / 11 * 2 * np.pi)
     for i in range(1, 1001):
         y[i] = 10 + 0.9 * y[i - 1] + e[i] + effects[i % 12]
-    ys = pd.Series(y, index=pd.date_range("1-1-1950", periods=1001, freq="M"))
+    ys = pd.Series(
+        y, index=pd.date_range(dt.datetime(1950, 1, 1), periods=1001, freq="M")
+    )
     mod = AutoReg(ys, 1, seasonal=True)
     res = mod.fit()
     pred_int = res.predict(1000, 1020, dynamic=dynamic)
-    dates = pd.date_range("1-1-1950", periods=1021, freq="M")
+    dates = pd.date_range(dt.datetime(1950, 1, 1), periods=1021, freq="M")
     pred_dates = res.predict(dates[1000], dates[1020], dynamic=dynamic)
     assert_series_equal(pred_int, pred_dates)
 
@@ -991,7 +1005,7 @@ def test_deterministic(reset_randomstate):
 def test_autoreg_predict_forecast_equiv(reset_randomstate):
     e = np.random.normal(size=1000)
     nobs = e.shape[0]
-    idx = pd.date_range("2020-1-1", freq="D", periods=nobs)
+    idx = pd.date_range(dt.datetime(2020, 1, 1), freq="D", periods=nobs)
     for i in range(1, nobs):
         e[i] = 0.95 * e[i - 1] + e[i]
     y = pd.Series(e, index=idx)
@@ -1028,7 +1042,7 @@ def test_autoreg_plot_err():
 
 
 def test_autoreg_resids():
-    idx = pd.date_range("1900-01-01", periods=250, freq="M")
+    idx = pd.date_range(dt.datetime(1900, 1, 1), periods=250, freq="M")
     rs = np.random.RandomState(0)
     idx_dates = sorted(rs.choice(idx, size=100, replace=False))
     e = rs.standard_normal(250)

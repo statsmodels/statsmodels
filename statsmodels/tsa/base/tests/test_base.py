@@ -5,9 +5,9 @@ import numpy.testing as npt
 import pandas as pd
 import pytest
 
-from statsmodels.tsa.base.tsa_model import TimeSeriesModel
-from statsmodels.tools.testing import assert_equal
 from statsmodels.tools.sm_exceptions import ValueWarning
+from statsmodels.tools.testing import assert_equal
+from statsmodels.tsa.base.tsa_model import TimeSeriesModel
 
 
 def test_pandas_nodates_index():
