@@ -67,9 +67,8 @@ class Link(object):
 
         implemented through numerical differentiation
         """
-        from statsmodels.tools.numdiff import approx_fprime_cs
-        # TODO: workaround proplem with numdiff for 1d
-        return np.diag(approx_fprime_cs(p, self.deriv))
+        from statsmodels.tools.numdiff import _approx_fprime_cs_scalar
+        return _approx_fprime_cs_scalar(p, self.deriv)
 
     def inverse_deriv(self, z):
         """
@@ -686,10 +685,10 @@ class CDFLink(Logit):
 
         implemented through numerical differentiation
         """
-        from statsmodels.tools.numdiff import approx_fprime
+        from statsmodels.tools.numdiff import _approx_fprime_scalar
         p = np.atleast_1d(p)
         # Note: special function for norm.ppf does not support complex
-        return np.diag(approx_fprime(p, self.deriv, centered=True))
+        return _approx_fprime_scalar(p, self.deriv, centered=True)
 
     def inverse_deriv(self, z):
         """

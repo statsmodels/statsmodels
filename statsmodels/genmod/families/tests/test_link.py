@@ -144,6 +144,20 @@ def test_invlogit_stability():
     assert_equal(zinv, np.ones_like(z))
 
 
+class MyCLogLog(links.Link):
+
+    def __call__(self, p):
+        # p = self._clean(p)
+        return np.log(-np.log(1 - p))
+
+    def inverse(self, z):
+        return 1 - np.exp(-np.exp(z))
+
+    def deriv(self, p):
+        # p = self._clean(p)
+        return 1. / ((p - 1) * (np.log(1 - p)))
+
+
 class CasesCDFLink():
     # just as namespace to hold cases for test_cdflink
 
@@ -155,6 +169,8 @@ class CasesCDFLink():
         (links.CDFLink(dbn=stats.t(1)), links.cauchy()),
         # approximation of t by normal is not good enough for rtol, atol
         # (links.CDFLink(dbn=stats.t(1000000)), links.probit()),
+
+        (MyCLogLog(), links.cloglog()),  # not a cdflink, but compares
         ]
 
     methods = ['__call__', 'deriv', 'inverse', 'inverse_deriv', 'deriv2',
