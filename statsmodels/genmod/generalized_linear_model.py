@@ -1658,9 +1658,11 @@ class GLMResults(base.LikelihoodModelResults):
 
         kwargs = model._get_init_kwds()
         kwargs.pop('family')
-        if hasattr(self.model, '_offset_exposure'):
+        start_params = np.atleast_1d(self.family.link(endog.mean()))
+        oe = self.model._offset_exposure
+        if not (np.size(oe) == 1 and oe == 0):
             return GLM(endog, exog, family=self.family,
-                       **kwargs).fit().fittedvalues
+                       **kwargs).fit(start_params=start_params).fittedvalues
         else:
             # correct if fitted is identical across observations
             wls_model = lm.WLS(endog, exog,
