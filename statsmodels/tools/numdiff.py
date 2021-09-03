@@ -191,13 +191,6 @@ def _approx_fprime_scalar(x, f, epsilon=None, args=(), kwargs={},
     -------
     grad : ndarray
         Array of derivatives, gradient evaluated at parameters ``x``.
-
-    Notes
-    -----
-    If f returns a 1d array, it returns a Jacobian. If a 2d array is returned
-    by f (e.g., with a value for each observation), it returns a 3d array
-    with the Jacobian of each observation with shape xk x nobs x xk. I.e.,
-    the Jacobian of the first observation would be [:, 0, :]
     '''
     x = np.asarray(x)
     n = 1
@@ -447,7 +440,7 @@ def approx_hess3(x, f, epsilon=None, args=(), kwargs={}):
     n = len(x)
     h = _get_epsilon(x, 4, epsilon, n)
     ee = np.diag(h)
-    hess = np.outer(h,h)
+    hess = np.outer(h, h)
 
     for i in range(n):
         for j in range(i, n):
