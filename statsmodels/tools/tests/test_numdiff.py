@@ -15,6 +15,8 @@ from statsmodels.tools.numdiff import (
     approx_fprime,
     approx_fprime_cs,
     approx_hess_cs,
+    _approx_fprime_scalar,
+    _approx_fprime_cs_scalar
 )
 
 DEC3 = 3
@@ -309,6 +311,28 @@ def test_dtypes():
     assert_allclose(approx_fprime(np.array([1, 2]), f), desired)
     assert_allclose(approx_fprime(np.array([1., 2.]), f), desired)
     assert_allclose(approx_fprime(np.array([1.+0j, 2.+0j]), f), desired)
+
+
+def test_vectorized():
+    def f(x):
+        return 2*x
+
+    desired = np.array([2, 2])
+    # vectorized parameter, column vector
+    p = np.array([[1, 2]]).T
+    assert_allclose(_approx_fprime_scalar(p, f), desired[:, None], rtol=1e-8)
+    assert_allclose(_approx_fprime_scalar(p.squeeze(), f),
+                    desired, rtol=1e-8)
+    assert_allclose(_approx_fprime_cs_scalar(p, f), desired[:, None],
+                    rtol=1e-8)
+    assert_allclose(_approx_fprime_cs_scalar(p.squeeze(), f),
+                    desired, rtol=1e-8)
+
+    # check 2-d row, see #7680
+    # not allowed/implemented for approx_fprime, raises broadcast ValueError
+    # assert_allclose(approx_fprime(p.T, f), desired, rtol=1e-8)
+    # similar as used in MarkovSwitching unit test
+    assert_allclose(approx_fprime_cs(p.T, f).squeeze(), desired, rtol=1e-8)
 
 
 if __name__ == '__main__':  # FIXME: turn into tests or move/remove

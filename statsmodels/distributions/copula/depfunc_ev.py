@@ -11,7 +11,7 @@ License: BSD-3
 
 import numpy as np
 from scipy import stats
-from statsmodels.tools.numdiff import approx_fprime_cs, approx_hess
+from statsmodels.tools.numdiff import _approx_fprime_cs_scalar, approx_hess
 
 
 class PickandDependence(object):
@@ -27,10 +27,8 @@ class PickandDependence(object):
 
         implemented through numerical differentiation
         """
-        # TODO: workaround proplem with numdiff for 1d
         t = np.atleast_1d(t)
-        # return np.diag(approx_fprime(t, self.evaluate, args=args))
-        return np.diag(approx_fprime_cs(t, self.evaluate, args=args))
+        return _approx_fprime_cs_scalar(t, self.evaluate)
 
     def deriv2(self, t, *args):
         """Second derivative of the dependence function

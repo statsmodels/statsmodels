@@ -140,7 +140,6 @@ def approx_fprime(x, f, epsilon=None, args=(), kwargs={}, centered=False):
     the Jacobian of the first observation would be [:, 0, :]
     '''
     n = len(x)
-    # TODO:  add scaled stepsize
     f0 = f(*((x,)+args), **kwargs)
     dim = np.atleast_1d(f0).shape  # it could be a scalar
     grad = np.zeros((n,) + dim, np.promote_types(float, x.dtype))
@@ -153,12 +152,59 @@ def approx_fprime(x, f, epsilon=None, args=(), kwargs={}, centered=False):
             ei[k] = 0.0
     else:
         epsilon = _get_epsilon(x, 3, epsilon, n) / 2.
-        for k in range(len(x)):
+        for k in range(n):
             ei[k] = epsilon[k]
             grad[k, :] = (f(*((x+ei,)+args), **kwargs) -
                           f(*((x-ei,)+args), **kwargs))/(2 * epsilon[k])
             ei[k] = 0.0
+
     return grad.squeeze().T
+
+
+def _approx_fprime_scalar(x, f, epsilon=None, args=(), kwargs={},
+                          centered=False):
+    '''
+    Gradient of function vectorized for scalar parameter.
+
+    This assumes that the function ``f`` is vectorized for a scalar parameter.
+    The function value ``f(x)`` has then the same shape as the input ``x``.
+    The derivative returned by this function also has the same shape as ``x``.
+
+    Parameters
+    ----------
+    x : ndarray
+        Parameters at which the derivative is evaluated.
+    f : function
+        `f(*((x,)+args), **kwargs)` returning either one value or 1d array
+    epsilon : float, optional
+        Stepsize, if None, optimal stepsize is used. This is EPS**(1/2)*x for
+        `centered` == False and EPS**(1/3)*x for `centered` == True.
+    args : tuple
+        Tuple of additional arguments for function `f`.
+    kwargs : dict
+        Dictionary of additional keyword arguments for function `f`.
+    centered : bool
+        Whether central difference should be returned. If not, does forward
+        differencing.
+
+    Returns
+    -------
+    grad : ndarray
+        Array of derivatives, gradient evaluated at parameters ``x``.
+    '''
+    x = np.asarray(x)
+    n = 1
+
+    f0 = f(*((x,)+args), **kwargs)
+    if not centered:
+        eps = _get_epsilon(x, 2, epsilon, n)
+        grad = (f(*((x+eps,) + args), **kwargs) - f0) / eps
+    else:
+        eps = _get_epsilon(x, 3, epsilon, n) / 2.
+        grad = (f(*((x+eps,)+args), **kwargs) -
+                f(*((x-eps,)+args), **kwargs)) / (2 * eps)
+
+    return grad
 
 
 def approx_fprime_cs(x, f, epsilon=None, args=(), kwargs={}):
@@ -195,12 +241,61 @@ def approx_fprime_cs(x, f, epsilon=None, args=(), kwargs={}):
     # May 04 2010 thread "Improvement of performance"
     # http://mail.scipy.org/pipermail/numpy-discussion/2010-May/050250.html
     n = len(x)
+
     epsilon = _get_epsilon(x, 1, epsilon, n)
     increments = np.identity(n) * 1j * epsilon
     # TODO: see if this can be vectorized, but usually dim is small
     partials = [f(x+ih, *args, **kwargs).imag / epsilon[i]
                 for i, ih in enumerate(increments)]
+
     return np.array(partials).T
+
+
+def _approx_fprime_cs_scalar(x, f, epsilon=None, args=(), kwargs={}):
+    '''
+    Calculate gradient for scalar parameter with complex step derivatives.
+
+    This assumes that the function ``f`` is vectorized for a scalar parameter.
+    The function value ``f(x)`` has then the same shape as the input ``x``.
+    The derivative returned by this function also has the same shape as ``x``.
+
+    Parameters
+    ----------
+    x : ndarray
+        Parameters at which the derivative is evaluated.
+    f : function
+        `f(*((x,)+args), **kwargs)` returning either one value or 1d array.
+    epsilon : float, optional
+        Stepsize, if None, optimal stepsize is used. Optimal step-size is
+        EPS*x. See note.
+    args : tuple
+        Tuple of additional arguments for function `f`.
+    kwargs : dict
+        Dictionary of additional keyword arguments for function `f`.
+
+    Returns
+    -------
+    partials : ndarray
+       Array of derivatives, gradient evaluated for parameters ``x``.
+
+    Notes
+    -----
+    The complex-step derivative has truncation error O(epsilon**2), so
+    truncation error can be eliminated by choosing epsilon to be very small.
+    The complex-step derivative avoids the problem of round-off error with
+    small epsilon because there is no subtraction.
+    '''
+    # From Guilherme P. de Freitas, numpy mailing list
+    # May 04 2010 thread "Improvement of performance"
+    # http://mail.scipy.org/pipermail/numpy-discussion/2010-May/050250.html
+    x = np.asarray(x)
+    n = x.shape[-1]
+
+    epsilon = _get_epsilon(x, 1, epsilon, n)
+    eps = 1j * epsilon
+    partials = f(x + eps, *args, **kwargs).imag / epsilon
+
+    return np.array(partials)
 
 
 def approx_hess_cs(x, f, epsilon=None, args=(), kwargs={}):
@@ -345,7 +440,7 @@ def approx_hess3(x, f, epsilon=None, args=(), kwargs={}):
     n = len(x)
     h = _get_epsilon(x, 4, epsilon, n)
     ee = np.diag(h)
-    hess = np.outer(h,h)
+    hess = np.outer(h, h)
 
     for i in range(n):
         for j in range(i, n):

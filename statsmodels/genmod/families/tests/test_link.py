@@ -3,6 +3,9 @@ Test functions for genmod.families.links
 """
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal, assert_array_less
+from scipy import stats
+import pytest
+
 import statsmodels.genmod.families as families
 from statsmodels.tools import numdiff as nd
 
@@ -139,3 +142,50 @@ def test_invlogit_stability():
          812.2382651982667, 495.06449978924525]
     zinv = logit.inverse(z)
     assert_equal(zinv, np.ones_like(z))
+
+
+class MyCLogLog(links.Link):
+
+    def __call__(self, p):
+        # p = self._clean(p)
+        return np.log(-np.log(1 - p))
+
+    def inverse(self, z):
+        return 1 - np.exp(-np.exp(z))
+
+    def deriv(self, p):
+        # p = self._clean(p)
+        return 1. / ((p - 1) * (np.log(1 - p)))
+
+
+class CasesCDFLink():
+    # just as namespace to hold cases for test_cdflink
+
+    link_pairs = [
+        (links.CDFLink(dbn=stats.gumbel_l), links.cloglog()),
+        (links.CDFLink(dbn=stats.gumbel_r), links.loglog()),
+        (links.CDFLink(dbn=stats.norm), links.probit()),
+        (links.CDFLink(dbn=stats.logistic), links.logit()),
+        (links.CDFLink(dbn=stats.t(1)), links.cauchy()),
+        # approximation of t by normal is not good enough for rtol, atol
+        # (links.CDFLink(dbn=stats.t(1000000)), links.probit()),
+
+        (MyCLogLog(), links.cloglog()),  # not a cdflink, but compares
+        ]
+
+    methods = ['__call__', 'deriv', 'inverse', 'inverse_deriv', 'deriv2',
+               'inverse_deriv2']
+
+    p = np.linspace(0, 1, 6)
+    eps = 1e-3
+    p = np.clip(p, eps, 1 - eps)
+
+
+@pytest.mark.parametrize("m", CasesCDFLink.methods)
+@pytest.mark.parametrize("link1, link2", CasesCDFLink.link_pairs)
+def test_cdflink(m, link1, link2):
+    p = CasesCDFLink.p
+    res1 = getattr(link1, m)(p)
+    res2 = getattr(link2, m)(p)
+
+    assert_allclose(res1, res2, atol=1e-8, rtol=1e-8)

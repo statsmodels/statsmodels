@@ -67,9 +67,8 @@ class Link(object):
 
         implemented through numerical differentiation
         """
-        from statsmodels.tools.numdiff import approx_fprime_cs
-        # TODO: workaround proplem with numdiff for 1d
-        return np.diag(approx_fprime_cs(p, self.deriv))
+        from statsmodels.tools.numdiff import _approx_fprime_cs_scalar
+        return _approx_fprime_cs_scalar(p, self.deriv)
 
     def inverse_deriv(self, z):
         """
@@ -676,14 +675,24 @@ class CDFLink(Logit):
 
         implemented through numerical differentiation
         """
-        from statsmodels.tools.numdiff import approx_fprime
+        p = self._clean(p)
+        linpred = self.dbn.ppf(p)
+        return - self.inverse_deriv2(linpred) / self.dbn.pdf(linpred)**3
+
+    def deriv2_numdiff(self, p):
+        """
+        Second derivative of the link function g''(p)
+
+        implemented through numerical differentiation
+        """
+        from statsmodels.tools.numdiff import _approx_fprime_scalar
         p = np.atleast_1d(p)
         # Note: special function for norm.ppf does not support complex
-        return np.diag(approx_fprime(p, self.deriv, centered=True))
+        return _approx_fprime_scalar(p, self.deriv, centered=True)
 
     def inverse_deriv(self, z):
         """
-        Derivative of the inverse of the CDF transformation link function
+        Derivative of the inverse link function
 
         Parameters
         ----------
@@ -693,9 +702,37 @@ class CDFLink(Logit):
         Returns
         -------
         g^(-1)'(z) : ndarray
-            The value of the derivative of the inverse of the logit function
+            The value of the derivative of the inverse of the logit function.
+            This is just the pdf in a CDFLink,
         """
-        return 1/self.deriv(self.inverse(z))
+        return self.dbn.pdf(z)
+
+    def inverse_deriv2(self, z):
+        """
+        Second derivative of the inverse link function g^(-1)(z).
+
+        Parameters
+        ----------
+        z : array_like
+            `z` is usually the linear predictor for a GLM or GEE model.
+
+        Returns
+        -------
+        g^(-1)''(z) : ndarray
+            The value of the second derivative of the inverse of the link
+            function
+
+        Notes
+        -----
+        This method should be overwritten by subclasses.
+
+        The inherited method is implemented through numerical differentiation.
+        """
+        from statsmodels.tools.numdiff import _approx_fprime_scalar
+        z = np.atleast_1d(z)
+
+        # Note: special function for norm.ppf does not support complex
+        return _approx_fprime_scalar(z, self.inverse_deriv, centered=True)
 
 
 class probit(CDFLink):
