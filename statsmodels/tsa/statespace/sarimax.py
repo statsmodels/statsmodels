@@ -69,7 +69,7 @@ class SARIMAX(MLEModel):
         Whether or not to assume the endogenous observations `endog` were
         measured with error. Default is False.
     time_varying_regression : bool, optional
-        Used when an explanatory variables, `exog`, are provided provided
+        Used when an explanatory variables, `exog`, are provided
         to select whether or not coefficients on the exogenous regressors are
         allowed to vary over time. Default is False.
     mle_regression : bool, optional
