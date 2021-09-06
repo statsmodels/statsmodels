@@ -603,7 +603,7 @@ class ARDL(AutoReg):
         det = self._deterministics.in_sample()
         if num_oos:
             oos_det = self._deterministics.out_of_sample(num_oos)
-            det = pd.concat([det, oos_det], 0)
+            det = pd.concat([det, oos_det], axis=0)
         endog = self.data.endog
         if num_oos:
             endog = np.hstack([endog, np.full(num_oos, np.nan)])

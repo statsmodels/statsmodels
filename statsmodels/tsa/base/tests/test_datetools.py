@@ -1,7 +1,8 @@
 from datetime import datetime
+
 import numpy.testing as npt
-from statsmodels.tsa.base.datetools import (
-    date_parser, dates_from_range)
+
+from statsmodels.tsa.base.datetools import date_parser, dates_from_range
 
 
 def test_regex_matching_month():

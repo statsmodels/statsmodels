@@ -4,6 +4,7 @@ Tests for SARIMAX models
 Author: Chad Fulton
 License: Simplified-BSD
 """
+from statsmodels.compat.pandas import NumericIndex
 
 import os
 import warnings
@@ -2700,7 +2701,7 @@ def test_start_params_small_nobs():
 
 def test_simple_differencing_int64index():
     values = np.log(realgdp_results['value']).values
-    endog = pd.Series(values, index=pd.Int64Index(range(len(values))))
+    endog = pd.Series(values, index=NumericIndex(range(len(values))))
     mod = sarimax.SARIMAX(endog, order=(1, 1, 0), simple_differencing=True)
 
     assert_(mod._index.equals(endog.index[1:]))
@@ -2725,7 +2726,7 @@ def test_simple_differencing_dateindex():
 
 def test_simple_differencing_strindex():
     values = np.log(realgdp_results['value']).values
-    index = pd.Int64Index(range(len(values))).map(str)
+    index = NumericIndex(range(len(values))).map(str)
     endog = pd.Series(values, index=index)
     with pytest.warns(UserWarning):
         mod = sarimax.SARIMAX(endog, order=(1, 1, 0), simple_differencing=True)

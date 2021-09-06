@@ -3,10 +3,10 @@ from distutils.version import LooseVersion
 import numpy as np
 import pandas as pd
 from pandas.util._decorators import (
-    deprecate_kwarg,
     Appender,
     Substitution,
     cache_readonly,
+    deprecate_kwarg,
 )
 
 __all__ = [
@@ -21,6 +21,8 @@ __all__ = [
     "deprecate_kwarg",
     "Appender",
     "Substitution",
+    "NumericIndex",
+    "is_int_index",
     "make_dataframe",
     "to_numpy",
     "pandas_lt_1_0_0",
@@ -50,6 +52,80 @@ except ImportError:
 assert_frame_equal = testing.assert_frame_equal
 assert_index_equal = testing.assert_index_equal
 assert_series_equal = testing.assert_series_equal
+
+try:
+    from pandas import NumericIndex
+
+    has_numeric_index = True
+except ImportError:
+    from pandas import Int64Index as NumericIndex
+
+    has_numeric_index = False
+
+
+def is_int_index(index: pd.Index) -> bool:
+    """
+    Check if an index is integral
+
+    Parameters
+    ----------
+    index : pd.NumericIndex
+        Any numeric index
+
+    Returns
+    -------
+    bool
+        True if Int64Index, UInt64Index or NumericIndex with integral dtype
+    """
+    if type(index) is NumericIndex and np.issubdtype(index.dtype, np.integer):
+        return True
+    # Safe legacy path
+    try:
+        import warnings
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+
+            from pandas import Int64Index, UInt64Index
+
+            if type(index) in (Int64Index, UInt64Index):
+                return True
+    except ImportError:
+        pass
+    return False
+
+
+def is_float_index(index):
+    """
+    Check if an index is floating
+
+    Parameters
+    ----------
+    index : pd.NumericIndex
+        Any numeric index
+
+    Returns
+    -------
+    bool
+        True if Float64Index or NumericIndex with a floating dtype
+    """
+    if type(index) is NumericIndex and np.issubdtype(index.dtype, np.floating):
+        return True
+    # Safe legacy path
+    try:
+        import warnings
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+
+            from pandas import Float64Index
+
+            if type(index) is Float64Index:
+                return True
+    except ImportError:
+        pass
+    return False
+
 
 try:
     from pandas._testing import makeDataFrame as make_dataframe

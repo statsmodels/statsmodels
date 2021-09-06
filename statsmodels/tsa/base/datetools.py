@@ -1,12 +1,13 @@
 """
 Tools for working with dates
 """
-from statsmodels.compat.python import lrange, lzip, lmap, asstr
-import re
-import datetime
+from statsmodels.compat.python import asstr, lmap, lrange, lzip
 
-from pandas import to_datetime
+import datetime
+import re
+
 import numpy as np
+from pandas import to_datetime
 
 _quarter_to_day = {
         "1" : (3, 31),

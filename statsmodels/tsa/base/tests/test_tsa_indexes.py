@@ -9,16 +9,17 @@ Test index support in time series models
 Author: Chad Fulton
 License: BSD-3
 """
+from statsmodels.compat.pandas import NumericIndex, is_int_index
 
-import pytest
 import warnings
+
 import numpy as np
-import pandas as pd
-
 from numpy.testing import assert_equal, assert_raises
+import pandas as pd
+import pytest
 
-from statsmodels.tsa.base import tsa_model
 from statsmodels.tools.sm_exceptions import ValueWarning
+from statsmodels.tsa.base import tsa_model
 
 nobs = 5
 base_dta = np.arange(nobs)
@@ -85,13 +86,13 @@ series_timestamp_indexes = [
 
 # Supported increment indexes
 supported_increment_indexes = [
-    (pd.Int64Index(np.arange(nobs)), None),
+    (NumericIndex(np.arange(nobs)), None),
     (pd.RangeIndex(start=0, stop=nobs, step=1), None),
     (pd.RangeIndex(start=-5, stop=nobs - 5, step=1), None),
     (pd.RangeIndex(start=0, stop=nobs * 6, step=6), None)]
 
 # Supported date indexes
-# Only the Int64Index and the `date_indexes` are valid without
+# Only the NumericIndex and the `date_indexes` are valid without
 # frequency information
 supported_date_indexes = (
     numpy_datestr_indexes +
@@ -139,7 +140,7 @@ def test_instantiation_valid():
     # Each pandas index (of `endog`, `exog`, or passed to `dates`) can be:
     # 0. None
     # 1. RangeIndex (if applicable; i.e. if Pandas >= 0.18)
-    # 2. Int64Index with values exactly equal to 0, 1, ..., nobs-1
+    # 2. NumericIndex with values exactly equal to 0, 1, ..., nobs-1
     # 3. DatetimeIndex with frequency
     # 4. PeriodIndex with frequency
     # 5. Anything that does not fall into the above categories also should
@@ -197,7 +198,7 @@ def test_instantiation_valid():
 
             mod = tsa_model.TimeSeriesModel(endog)
             assert_equal(isinstance(mod._index,
-                                    (pd.Int64Index, pd.RangeIndex)), True)
+                                    (NumericIndex, pd.RangeIndex)), True)
             assert_equal(mod._index_none, True)
             assert_equal(mod._index_dates, False)
             assert_equal(mod._index_generated, True)
@@ -303,7 +304,7 @@ def test_instantiation_valid():
         endog.index = supported_increment_indexes[0][0]
 
         mod = tsa_model.TimeSeriesModel(endog)
-        assert_equal(type(mod._index) == pd.Int64Index, True)
+        assert type(mod._index) == NumericIndex
         assert_equal(mod._index_none, False)
         assert_equal(mod._index_dates, False)
         assert_equal(mod._index_generated, False)
@@ -420,7 +421,7 @@ def test_instantiation_valid():
                 endog.index = ix
                 mod = tsa_model.TimeSeriesModel(endog)
                 assert_equal(isinstance(mod._index,
-                             (pd.Int64Index, pd.RangeIndex)), True)
+                             (NumericIndex, pd.RangeIndex)), True)
                 assert_equal(mod._index_none, False)
                 assert_equal(mod._index_dates, False)
                 assert_equal(mod._index_generated, True)
@@ -442,8 +443,7 @@ def test_instantiation_valid():
                 endog = base_endog.copy()
                 endog.index = ix
                 mod = tsa_model.TimeSeriesModel(endog)
-                assert_equal(isinstance(mod._index,
-                             (pd.Int64Index, pd.RangeIndex)), True)
+                assert isinstance(mod._index, pd.RangeIndex) or is_int_index(mod._index)
                 assert_equal(mod._index_none, False)
                 assert_equal(mod._index_dates, False)
                 assert_equal(mod._index_generated, True)
