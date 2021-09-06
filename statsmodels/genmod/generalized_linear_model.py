@@ -1768,7 +1768,7 @@ class GLMResults(base.LikelihoodModelResults):
         Akaike Information Criterion
         -2 * `llf` + 2 * (`df_model` + 1)
         """
-        return -2 * self.llf + 2 * (self.df_model + 1)
+        return self.info_criteria("aic")
 
     @property
     def bic(self):
@@ -1826,11 +1826,9 @@ class GLMResults(base.LikelihoodModelResults):
         Based on the log-likelihood,
         -2 * `llf` + log(n) * (`df_model` + 1)
         """
-        return -2*self.llf + (self.df_model+1)*np.log(
-            self.df_model+self.df_resid+1
-        )
+        return self.info_criteria("bic")
 
-    def info_criteria(self, crit, scale=None):
+    def info_criteria(self, crit, scale=None, dk_params=0):
         """Return an information criterion for the model.
 
         Parameters
@@ -1840,6 +1838,11 @@ class GLMResults(base.LikelihoodModelResults):
         scale : float
             The scale parameter estimated using the parent model,
             used only for qaic.
+        dk_params : int or float
+            Correction to the number of parameters used in the information
+            criterion. By default, only mean parameters are included, the
+            scale parameter is not included in the parameter count.
+            Use ``dk_params=1`` to include scale in the parameter count.
 
         Returns the given information criterion value.
 
@@ -1860,13 +1863,15 @@ class GLMResults(base.LikelihoodModelResults):
         Burnham KP, Anderson KR (2002). Model Selection and Multimodel
         Inference; Springer New York.
         """
-
         crit = crit.lower()
+        k_params = self.df_model + 1 + dk_params
 
         if crit == "aic":
-            return self.aic
+            return -2 * self.llf + 2 * k_params
         elif crit == "bic":
-            return self.bic
+            nobs = self.df_model + self.df_resid + 1
+            bic = -2*self.llf + k_params*np.log(nobs)
+            return bic
         elif crit == "qaic":
             f = self.model.family
             fl = (families.Poisson, families.NegativeBinomial,
@@ -1876,7 +1881,7 @@ class GLMResults(base.LikelihoodModelResults):
                 msg += "Negative Binomial families."
                 warnings.warn(msg)
             llf = self.llf_scaled(scale=1)
-            return -2 * llf/scale + 2 * (self.df_model + 1)
+            return -2 * llf/scale + 2 * k_params
 
     @Appender(pred.get_prediction_glm.__doc__)
     def get_prediction(self, exog=None, exposure=None, offset=None,
