@@ -525,6 +525,10 @@ class RollingRegressionResults(object):
         with np.errstate(divide="ignore"):
             return self._wrap(RegressionResults.bic.func(self))
 
+    def info_criteria(self, crit, dk_params=0):
+        return self._wrap(RegressionResults.info_criteria(
+            self, crit, dk_params=dk_params))
+
     @cache_readonly
     def params(self):
         """Estimated model parameters"""
