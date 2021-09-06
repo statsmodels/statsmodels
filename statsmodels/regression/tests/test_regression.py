@@ -331,6 +331,12 @@ class TestOLS(CheckRegressionResults):
         model_norm_resid = self.res1.resid_pearson
         assert_almost_equal(model_norm_resid, norm_resid, DECIMAL_7)
 
+    def test_summary_slim(self):
+        # check that slim summary is smaller, does not verify content
+        summ = self.res1.summary(slim=True)
+        assert len(summ.tables) == 2
+        assert len(str(summ)) < 6700
+
     def test_norm_resid_zero_variance(self):
         with warnings.catch_warnings(record=True):
             y = self.res1.model.endog
