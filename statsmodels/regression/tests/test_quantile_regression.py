@@ -296,8 +296,8 @@ def test_collinear_matrix():
                   [1, 0, 1.5], [1, 0, .25]], dtype=np.float64)
     y = np.array([0, 1, 2, 3], dtype=np.float64)
 
-    est_collinear = QuantReg(y, X).fit(0.5)
-    assert len(est_collinear.params) == X.shape[1]
+    res_collinear = QuantReg(y, X).fit(0.5)
+    assert len(res_collinear.params) == X.shape[1]
 
 
 def test_nontrivial_singular_matrix():
@@ -310,5 +310,10 @@ def test_nontrivial_singular_matrix():
     X = np.column_stack((intercept, x_one, x_two, x_three, x_one))
 
     assert np.linalg.matrix_rank(X) < X.shape[1]
-    est_singular = QuantReg(y, X).fit(0.5)
-    assert len(est_singular.params) == X.shape[1]
+    res_singular = QuantReg(y, X).fit(0.5)
+    assert len(res_singular.params) == X.shape[1]
+    assert np.linalg.matrix_rank(res_singular.cov_params()) == X.shape[1] - 1
+
+    # prediction is correct even with singular exog
+    res_ns = QuantReg(y, X[:, :-1]).fit(0.5)
+    assert_allclose(res_singular.fittedvalues, res_ns.fittedvalues, rtol=0.01)
