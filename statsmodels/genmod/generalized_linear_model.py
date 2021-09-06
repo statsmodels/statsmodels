@@ -1658,9 +1658,11 @@ class GLMResults(base.LikelihoodModelResults):
 
         kwargs = model._get_init_kwds()
         kwargs.pop('family')
-        if hasattr(self.model, '_offset_exposure'):
+        start_params = np.atleast_1d(self.family.link(endog.mean()))
+        oe = self.model._offset_exposure
+        if not (np.size(oe) == 1 and oe == 0):
             return GLM(endog, exog, family=self.family,
-                       **kwargs).fit().fittedvalues
+                       **kwargs).fit(start_params=start_params).fittedvalues
         else:
             # correct if fitted is identical across observations
             wls_model = lm.WLS(endog, exog,
@@ -1730,6 +1732,35 @@ class GLMResults(base.LikelihoodModelResults):
         at the estimated scale.
         """
         return self.llf_scaled()
+
+    def pseudo_rsquared(self, kind="cs"):
+        """Pseudo R-squared
+
+        Cox-Snell likelihood ratio pseudo R-squared is valid for both discrete
+        and continuous data. McFadden's pseudo R-squared is only valid for
+        discrete data.
+
+        Cox & Snell's pseudo-R-squared.  `1 - exp( (llnull - llf)*(2/nobs) )
+
+        McFadden's pseudo-R-squared. `1 - (llf / llnull)`
+
+        Parameters
+        ----------
+        kind : "cs" or "mcf"
+            Type of pseudo R-saueare to return
+
+        Returns
+        -------
+        Pseudo R-squared
+        """
+        kind = kind.lower()
+        if kind.startswith("mcf"):
+            prsq = 1 - self.llf / self.llnull
+        elif kind.startswith("cox") or kind in ["cs", "lr"]:
+            prsq = 1 - np.exp((self.llnull - self.llf) * (2 / self.nobs))
+        else:
+            raise ValueError("only McFadden and Cox-Snell are available")
+        return prsq
 
     @cached_value
     def aic(self):
@@ -2013,13 +2044,19 @@ class GLMResults(base.LikelihoodModelResults):
                      ["%d" % self.fit_history['iteration']]),
                     ]
 
+        try:
+            prsquared = self.pseudo_rsquared(kind="cs")
+        except ValueError:
+            prsquared = np.nan
+
         top_right = [('No. Observations:', None),
                      ('Df Residuals:', None),
                      ('Df Model:', None),
                      ('Scale:', ["%#8.5g" % self.scale]),
                      ('Log-Likelihood:', None),
                      ('Deviance:', ["%#8.5g" % self.deviance]),
-                     ('Pearson chi2:', ["%#6.3g" % self.pearson_chi2])
+                     ('Pearson chi2:', ["%#6.3g" % self.pearson_chi2]),
+                     ('Pseudo R-squ. (CS):', ["%#6.4g" % prsquared])
                      ]
 
         if hasattr(self, 'cov_type'):

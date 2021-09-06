@@ -208,6 +208,15 @@ class CheckModelResultsMixin(object):
             assert_allclose(self.res1.pearson_chi2, self.res2.pearson_chi2,
                             atol=1e-6, rtol=1e-6)
 
+    def test_prsquared(self):
+        if hasattr(self.res2, 'prsquared'):
+            assert_allclose(self.res1.pseudo_rsquared(kind="mcf"),
+                            self.res2.prsquared, rtol=0.05)
+
+        if hasattr(self.res2, 'prsquared_cox_snell'):
+            assert_allclose(float(self.res1.pseudo_rsquared(kind="cs")),
+                            self.res2.prsquared_cox_snell, rtol=0.05)
+
     @pytest.mark.smoke
     def test_summary(self):
         self.res1.summary()
@@ -2586,4 +2595,4 @@ def test_tweedie_score():
 
         nhess = approx_hess_cs(pa, lambda x: model.loglike(x, scale=1))
         ahess = model.hessian(pa, scale=1)
-        assert_allclose(nhess, ahess, atol=1e-8, rtol=1e-8)
+        assert_allclose(nhess, ahess, atol=5e-8, rtol=5e-8)
