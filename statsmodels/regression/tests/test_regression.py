@@ -173,6 +173,15 @@ class CheckRegressionResults(object):
 
     def test_aic(self):
         assert_almost_equal(self.res1.aic, self.res2.aic, self.decimal_aic)
+        # the following just checks the definition
+        aicc1 = self.res1.info_criteria("aicc")
+        k = self.res1.df_model + self.res1.model.k_constant
+        nobs = self.res1.model.nobs
+        aicc2 = self.res1.aic + 2 * (k**2 + k) / (nobs - k - 1)
+        assert_allclose(aicc1, aicc2, rtol=1e-10)
+        hqic1 = self.res1.info_criteria("hqic")
+        hqic2 = (self.res1.aic - 2 * k) + 2 * np.log(np.log(nobs)) * k
+        assert_allclose(hqic1, hqic2, rtol=1e-10)
 
     decimal_bic = DECIMAL_4
 

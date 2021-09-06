@@ -2540,6 +2540,7 @@ def test_output_exposure_null(reset_randomstate):
     # Check that they are different
     assert np.abs(null_model_without_exposure.llf - model.llnull) > 1
 
+
 def test_qaic():
 
     # Example from documentation of R package MuMIn
@@ -2562,7 +2563,11 @@ def test_qaic():
     # presumably because they count the scale parameter in df.
     # This won't matter when comparing models by differencing
     # QAICs.
+    # Binomial doesn't have a scale parameter, so adding +1 is not correct.
     assert_allclose(qaic, 29.13266, rtol=1e-5, atol=1e-5)
+    qaic1 = r.info_criteria(crit="qaic", scale=scale, dk_params=1)
+    assert_allclose(qaic1, 31.13266, rtol=1e-5, atol=1e-5)
+
 
 def test_tweedie_score():
 

@@ -1826,7 +1826,7 @@ class RegressionResults(base.LikelihoodModelResults):
         For a model with a constant :math:`-2llf + 2(df\_model + 1)`. For a
         model without a constant :math:`-2llf + 2(df\_model)`.
         """
-        return -2 * self.llf + 2 * (self.df_model + self.k_constant)
+        return self.info_criteria("aic")
 
     @cache_readonly
     def bic(self):
@@ -1836,8 +1836,42 @@ class RegressionResults(base.LikelihoodModelResults):
         For a model with a constant :math:`-2llf + \log(n)(df\_model+1)`.
         For a model without a constant :math:`-2llf + \log(n)(df\_model)`.
         """
-        return (-2 * self.llf + np.log(self.nobs) * (self.df_model +
-                                                     self.k_constant))
+        return self.info_criteria("bic")
+
+    def info_criteria(self, crit, dk_params=0):
+        """Return an information criterion for the model.
+
+        Parameters
+        ----------
+        crit : string
+            One of 'aic', 'bic', 'aicc' or 'hqic'.
+        dk_params : int or float
+            Correction to the number of parameters used in the information
+            criterion. By default, only mean parameters are included, the
+            scale parameter is not included in the parameter count.
+            Use ``dk_params=1`` to include scale in the parameter count.
+
+        Returns the given information criterion value.
+
+        References
+        ----------
+        Burnham KP, Anderson KR (2002). Model Selection and Multimodel
+        Inference; Springer New York.
+        """
+        crit = crit.lower()
+        k_params = self.df_model + self.k_constant + dk_params
+
+        if crit == "aic":
+            return -2 * self.llf + 2 * k_params
+        elif crit == "bic":
+            bic = -2*self.llf + np.log(self.nobs) * k_params
+            return bic
+        elif crit == "aicc":
+            from statsmodels.tools.eval_measures import aicc
+            return aicc(self.llf, self.nobs, k_params)
+        elif crit == "hqic":
+            from statsmodels.tools.eval_measures import hqic
+            return hqic(self.llf, self.nobs, k_params)
 
     @cache_readonly
     def eigenvals(self):
