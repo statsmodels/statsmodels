@@ -99,7 +99,8 @@ class TestLilliefors(object):
         x_n = stats.norm.rvs(size=500)
         single_column_df = pd.DataFrame(data=x_n)
 
-        d_ks_norm, p_norm = lilliefors(single_column_df, dist='norm', pvalmethod='approx')
+        d_ks_norm, p_norm = lilliefors(single_column_df, dist='norm',
+                                       pvalmethod='approx')
 
         assert_almost_equal(d_ks_norm, 0.025957, decimal=3)
         assert_almost_equal(p_norm, 0.64175, decimal=3)
@@ -110,7 +111,8 @@ class TestLilliefors(object):
         multiple_column_2d_array = np.array([x_n, x_n]).T
 
         with pytest.raises(ValueError):
-            lilliefors(multiple_column_2d_array, dist='norm', pvalmethod='approx')
+            lilliefors(multiple_column_2d_array, dist='norm',
+                       pvalmethod='approx')
 
     def test_multiple_column_dataframe(self):
         np.random.seed(3975)
