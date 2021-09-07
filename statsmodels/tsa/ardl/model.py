@@ -2306,7 +2306,8 @@ class UECMResults(ARDLResults):
             sample-size specific set of critical values. Tables are only
             availble for up to 10 components in the cointegrating
             relationship, so if more variables are included then simulation
-            is always used.
+            is always used. The simulation computed the test statistic under
+            and assumption that the residuals are homoskedastic.
         nsim : int
             Number of simulations to run when computing exact critical values.
             Only used if ``asymptotic`` is ``True``.
@@ -2453,49 +2454,80 @@ def _pss_simulate(
     else:
         assert isinstance(seed, np.random.RandomState)
         rs = seed
+
+    def _vectorized_ols_resid(rhs, lhs):
+        rhs_t = np.transpose(rhs, [0, 2, 1])
+        xpx = np.matmul(rhs_t, rhs)
+        xpy = np.matmul(rhs_t, lhs)
+        b = np.linalg.solve(xpx, xpy)
+        return np.squeeze(lhs - np.matmul(rhs, b))
+
+    block_size = 100_000_000 // (8 * nobs * k)
+    remaining = nsim
+    loc = 0
     f_upper = np.empty(nsim)
     f_lower = np.empty(nsim)
-    const = np.ones(nobs)
-    tau = np.arange(nobs, dtype=float)
-    for j in range(nsim):
-        u = rs.standard_normal((k, nobs + 1))
-        y = np.cumsum(u[0])
-        x_upper = np.cumsum(u[1:], axis=1).T
-        x_lower = u[1:].T
-        lhs = np.diff(y)
-        rhv = [y[:-1], x_upper[:-1]]
-        if case == 2:
-            rhv.append(const)
-        elif case == 4:
-            rhv.append(tau)
-        if case >= 3:
-            rhv.append(const)
-        if case == 5:
-            rhv.append(tau)
-        rest = k
-        if case in (2, 4):
-            rest += 1
-        rhs = np.column_stack(rhv)
-        b = np.linalg.lstsq(rhs, lhs, rcond=None)[0]
-        u = lhs - rhs @ b
-        s2 = u.T @ u / (u.shape[0] - rhs.shape[1])
-        xpx = rhs.T @ rhs
-        vcv = np.linalg.inv(xpx) * s2
-        r = np.eye(rest, rhs.shape[1])
-        rvcvr = r @ vcv @ r.T
-        rb = r @ b
-        f_upper[j] = rb.T @ np.linalg.inv(rvcvr) @ rb / rest
+    while remaining > 0:
+        to_do = min(remaining, block_size)
+        e = rs.standard_normal((to_do, nobs + 1, k))
 
-        rhs[:, 1:k] = x_lower[:-1]
-        b = np.linalg.lstsq(rhs, lhs, rcond=None)[0]
-        u = lhs - rhs @ b
-        s2 = u.T @ u / (u.shape[0] - rhs.shape[1])
-        xpx = rhs.T @ rhs
-        vcv = np.linalg.inv(xpx) * s2
-        r = np.eye(rest, rhs.shape[1])
-        rvcvr = r @ vcv @ r.T
-        rb = r @ b
-        f_lower[j] = rb.T @ np.linalg.inv(rvcvr) @ rb / rest
+        y = np.cumsum(e[:, :, :1], axis=1)
+        x_upper = np.cumsum(e[:, :, 1:], axis=1)
+        x_lower = e[:, :, 1:]
+        lhs = np.diff(y, axis=1)
+        if case in (2, 3):
+            rhs = np.empty((to_do, nobs, k + 1))
+            rhs[:, :, -1] = 1
+        elif case in (4, 5):
+            rhs = np.empty((to_do, nobs, k + 2))
+            rhs[:, :, -2] = np.arange(nobs, dtype=float)
+            rhs[:, :, -1] = 1
+        else:
+            rhs = np.empty((to_do, nobs, k))
+        rhs[:, :, :1] = y[:, :-1]
+        rhs[:, :, 1:k] = x_upper[:, :-1]
+
+        u = _vectorized_ols_resid(rhs, lhs)
+        df = rhs.shape[1] - rhs.shape[2]
+        s2 = (u ** 2).sum(1) / df
+
+        if case in (3, 4):
+            rhs_r = rhs[:, :, -1:]
+        elif case == 5:  # case 5
+            rhs_r = rhs[:, :, -2:]
+        if case in (3, 4, 5):
+            ur = _vectorized_ols_resid(rhs_r, lhs)
+            nrest = rhs.shape[-1] - rhs_r.shape[-1]
+        else:
+            ur = np.squeeze(lhs)
+            nrest = rhs.shape[-1]
+
+        f = ((ur ** 2).sum(1) - (u ** 2).sum(1)) / nrest
+        f /= s2
+        f_upper[loc : loc + to_do] = f
+
+        # Lower
+        rhs[:, :, 1:k] = x_lower[:, :-1]
+        u = _vectorized_ols_resid(rhs, lhs)
+        s2 = (u ** 2).sum(1) / df
+
+        if case in (3, 4):
+            rhs_r = rhs[:, :, -1:]
+        elif case == 5:  # case 5
+            rhs_r = rhs[:, :, -2:]
+        if case in (3, 4, 5):
+            ur = _vectorized_ols_resid(rhs_r, lhs)
+            nrest = rhs.shape[-1] - rhs_r.shape[-1]
+        else:
+            ur = np.squeeze(lhs)
+            nrest = rhs.shape[-1]
+
+        f = ((ur ** 2).sum(1) - (u ** 2).sum(1)) / nrest
+        f /= s2
+        f_lower[loc : loc + to_do] = f
+
+        loc += to_do
+        remaining -= to_do
 
     crit_percentiles = pss_critical_values.crit_percentiles
     crit_vals = pd.DataFrame(
