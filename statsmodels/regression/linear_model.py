@@ -2618,7 +2618,7 @@ class RegressionResults(base.LikelihoodModelResults):
             self, exog=exog, transform=transform, weights=weights,
             row_labels=row_labels, **kwargs)
 
-    def summary(self, yname=None, xname=None, title=None, alpha=.05):
+    def summary(self, yname=None, xname=None, title=None, alpha=.05, slim=False):
         """
         Summarize the Regression Results.
 
@@ -2650,7 +2650,7 @@ class RegressionResults(base.LikelihoodModelResults):
             durbin_watson,
             jarque_bera,
             omni_normtest,
-        )
+            )
 
         jb, jbpv, skew, kurtosis = jarque_bera(self.wresid)
         omni, omnipv = omni_normtest(self.wresid)
@@ -2696,19 +2696,28 @@ class RegressionResults(base.LikelihoodModelResults):
                      ('BIC:', ["%#8.4g" % self.bic])
                      ]
 
-        diagn_left = [('Omnibus:', ["%#6.3f" % omni]),
-                      ('Prob(Omnibus):', ["%#6.3f" % omnipv]),
-                      ('Skew:', ["%#6.3f" % skew]),
-                      ('Kurtosis:', ["%#6.3f" % kurtosis])
-                      ]
+        if slim:
+            slimlist = ['Dep. Variable:', 'Model:', 'No. Observations:',
+                        'Covariance Type:', 'R-squared:', 'Adj. R-squared:',
+                        'F-statistic:', 'Prob (F-statistic):']
+            diagn_left = []
+            diagn_right = []
+            top_left = [elem for elem in top_left if elem[0] in slimlist]
+            top_right = [elem for elem in top_right if elem[0] in slimlist]
+        else:
+            diagn_left = [('Omnibus:', ["%#6.3f" % omni]),
+                          ('Prob(Omnibus):', ["%#6.3f" % omnipv]),
+                          ('Skew:', ["%#6.3f" % skew]),
+                          ('Kurtosis:', ["%#6.3f" % kurtosis])
+                          ]
 
-        diagn_right = [('Durbin-Watson:',
-                        ["%#8.3f" % durbin_watson(self.wresid)]
-                        ),
-                       ('Jarque-Bera (JB):', ["%#8.3f" % jb]),
-                       ('Prob(JB):', ["%#8.3g" % jbpv]),
-                       ('Cond. No.', ["%#8.3g" % condno])
-                       ]
+            diagn_right = [('Durbin-Watson:',
+                            ["%#8.3f" % durbin_watson(self.wresid)]
+                            ),
+                           ('Jarque-Bera (JB):', ["%#8.3f" % jb]),
+                           ('Prob(JB):', ["%#8.3g" % jbpv]),
+                           ('Cond. No.', ["%#8.3g" % condno])
+                           ]
 
         if title is None:
             title = self.model.__class__.__name__ + ' ' + "Regression Results"
@@ -2720,10 +2729,10 @@ class RegressionResults(base.LikelihoodModelResults):
                              yname=yname, xname=xname, title=title)
         smry.add_table_params(self, yname=yname, xname=xname, alpha=alpha,
                               use_t=self.use_t)
-
-        smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
-                             yname=yname, xname=xname,
-                             title="")
+        if not slim:
+            smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
+                                 yname=yname, xname=xname,
+                                 title="")
 
         # add warnings/notes, added to text format only
         etext = []
