@@ -266,7 +266,10 @@ def kstest_fit(x, dist='norm', pvalmethod="table"):
     pvalmethod = string_like(pvalmethod,
                              "pvalmethod",
                              options=("approx", "table"))
-    x = np.asarray(x)
+    x = np.squeeze(np.asarray(x))
+    if x.ndim != 1:
+        raise ValueError(f"Array `x` with shape {x.shape} cannot be squeezed"
+                         f" into a 1d array")
     nobs = len(x)
 
     if dist == 'norm':
