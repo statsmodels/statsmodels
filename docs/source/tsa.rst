@@ -230,7 +230,7 @@ and vector autoregressive models (:class:`~statsmodels.tsa.vector_ar.VAR`).
    ardl.ARDL
    ardl.ARDLResults
    ardl.ardl_select_order
-   ardl.UECM
+   ardl.ARDLOrderSelectionResults
 
 The `ardl.ARDL` model estimates parameters using conditional MLE (OLS)
 and allows for both simple deterministic terms (trends and seasonal
@@ -240,6 +240,23 @@ dummies) as well as complex deterministics using a
 AR-X and related models can also be fitted with
 :class:`~statsmodels.tsa.statespace.sarimax.SARIMAX` class (using full MLE via
 the Kalman Filter).
+
+Error Correction Models (ECM)
+"""""""""""""""""""""""""""""
+Error correction models are reparameterizations of ARDL models that
+regress the difference of the endogenous variable on the lagged levels
+of the endogenous variables and optional lagged differences of the
+exogenous variables.
+
+.. currentmodule:: statsmodels.tsa
+
+.. autosummary::
+   :toctree: generated/
+
+   ardl.UECM
+   ardl.UECMResults
+   ardl.BoundsTestResult
+
 
 Statespace Models
 """""""""""""""""
