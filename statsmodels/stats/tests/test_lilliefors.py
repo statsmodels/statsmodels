@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import pytest
 from numpy.testing import assert_almost_equal
 from scipy import stats
@@ -82,6 +83,16 @@ class TestLilliefors(object):
     def test_large_sample(self, reset_randomstate):
         x = np.random.randn(10000)
         lilliefors(x, pvalmethod='approx')
+
+    def test_dataframe(self):
+        np.random.seed(3975)
+        x_n = stats.norm.rvs(size=500)
+        single_column_df = pd.DataFrame(data=x_n)
+
+        d_ks_norm, p_norm = lilliefors(single_column_df, dist='norm', pvalmethod='approx')
+
+        assert_almost_equal(d_ks_norm, 0.025957, decimal=3)
+        assert_almost_equal(p_norm, 0.64175, decimal=3)
 
 
 def test_get_lilliefors_errors(reset_randomstate):
