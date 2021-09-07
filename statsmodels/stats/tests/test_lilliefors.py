@@ -84,7 +84,7 @@ class TestLilliefors(object):
         x = np.random.randn(10000)
         lilliefors(x, pvalmethod='approx')
 
-    def test_dataframe(self):
+    def test_single_column_dataframe(self):
         np.random.seed(3975)
         x_n = stats.norm.rvs(size=500)
         single_column_df = pd.DataFrame(data=x_n)
