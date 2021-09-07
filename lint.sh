@@ -195,7 +195,7 @@ if [ "$LINT" == true ]; then
         statsmodels/tsa/adfvalues.py \
         statsmodels/tsa/api.py \
         statsmodels/tsa/ar_model.py \
-        statsmodels/tsa/ardl.py \
+        statsmodels/tsa/ardl/ \
         statsmodels/tsa/arima/ \
         statsmodels/tsa/arima_model.py \
         statsmodels/tsa/base/__init__.py \

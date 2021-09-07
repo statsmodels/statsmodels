@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # coding: utf-8
 
 # DO NOT EDIT
@@ -10,7 +11,12 @@
 # # Prediction (out of sample)
 
 import numpy as np
+import matplotlib.pyplot as plt
+
 import statsmodels.api as sm
+
+plt.rc("figure", figsize=(16, 8))
+plt.rc("font", size=14)
 
 # ## Artificial data
 
@@ -19,7 +25,7 @@ sig = 0.25
 x1 = np.linspace(0, 20, nsample)
 X = np.column_stack((x1, np.sin(x1), (x1 - 5)**2))
 X = sm.add_constant(X)
-beta = [5., 0.5, 0.5, -0.02]
+beta = [5.0, 0.5, 0.5, -0.02]
 y_true = np.dot(X, beta)
 y = y_true + sig * np.random.normal(size=nsample)
 
@@ -47,13 +53,12 @@ print(ynewpred)
 import matplotlib.pyplot as plt
 
 fig, ax = plt.subplots()
-ax.plot(x1, y, 'o', label="Data")
-ax.plot(x1, y_true, 'b-', label="True")
-ax.plot(
-    np.hstack((x1, x1n)),
-    np.hstack((ypred, ynewpred)),
-    'r',
-    label="OLS prediction")
+ax.plot(x1, y, "o", label="Data")
+ax.plot(x1, y_true, "b-", label="True")
+ax.plot(np.hstack((x1, x1n)),
+        np.hstack((ypred, ynewpred)),
+        "r",
+        label="OLS prediction")
 ax.legend(loc="best")
 
 # ## Predicting with Formulas

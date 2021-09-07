@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # coding: utf-8
 
 # DO NOT EDIT
@@ -11,7 +12,7 @@
 
 # This example file shows how to use a few of the ``statsmodels``
 # regression diagnostic tests in a real-life context. You can learn about
-# more tests and find out more information abou the tests here on the
+# more tests and find out more information about the tests here on the
 # [Regression Diagnostics
 # page.](https://www.statsmodels.org/stable/diagnostic.html)
 #
@@ -32,11 +33,11 @@ import statsmodels.stats.api as sms
 import matplotlib.pyplot as plt
 
 # Load data
-url = 'https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/master/csv/HistData/Guerry.csv'
+url = "https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/master/csv/HistData/Guerry.csv"
 dat = pd.read_csv(url)
 
 # Fit regression model (using the natural log of one of the regressors)
-results = smf.ols('Lottery ~ Literacy + np.log(Pop1831)', data=dat).fit()
+results = smf.ols("Lottery ~ Literacy + np.log(Pop1831)", data=dat).fit()
 
 # Inspect the results
 print(results.summary())
@@ -45,13 +46,13 @@ print(results.summary())
 
 # Jarque-Bera test:
 
-name = ['Jarque-Bera', 'Chi^2 two-tail prob.', 'Skew', 'Kurtosis']
+name = ["Jarque-Bera", "Chi^2 two-tail prob.", "Skew", "Kurtosis"]
 test = sms.jarque_bera(results.resid)
 lzip(name, test)
 
 # Omni test:
 
-name = ['Chi^2', 'Two-tail probability']
+name = ["Chi^2", "Two-tail probability"]
 test = sms.omni_normtest(results.resid)
 lzip(name, test)
 
@@ -62,6 +63,7 @@ lzip(name, test)
 # example, we can compute and extract the first few rows of DFbetas by:
 
 from statsmodels.stats.outliers_influence import OLSInfluence
+
 test_class = OLSInfluence(results)
 test_class.dfbetas[:5, :]
 
@@ -70,6 +72,7 @@ test_class.dfbetas[:5, :]
 # Useful information on leverage can also be plotted:
 
 from statsmodels.graphics.regressionplots import plot_leverage_resid2
+
 fig, ax = plt.subplots(figsize=(8, 6))
 fig = plot_leverage_resid2(results, ax=ax)
 
@@ -86,14 +89,13 @@ np.linalg.cond(results.model.exog)
 #
 # Breush-Pagan test:
 
-name = ['Lagrange multiplier statistic', 'p-value',
-        'f-value', 'f p-value']
+name = ["Lagrange multiplier statistic", "p-value", "f-value", "f p-value"]
 test = sms.het_breuschpagan(results.resid, results.model.exog)
 lzip(name, test)
 
 # Goldfeld-Quandt test
 
-name = ['F statistic', 'p-value']
+name = ["F statistic", "p-value"]
 test = sms.het_goldfeldquandt(results.resid, results.model.exog)
 lzip(name, test)
 
@@ -102,6 +104,6 @@ lzip(name, test)
 # Harvey-Collier multiplier test for Null hypothesis that the linear
 # specification is correct:
 
-name = ['t value', 'p value']
+name = ["t value", "p value"]
 test = sms.linear_harvey_collier(results)
 lzip(name, test)

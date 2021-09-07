@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # coding: utf-8
 
 # DO NOT EDIT
@@ -16,12 +17,12 @@ import statsmodels.api as sm
 
 dta = sm.datasets.macrodata.load_pandas().data
 
-index = pd.Index(sm.tsa.datetools.dates_from_range('1959Q1', '2009Q3'))
+index = pd.Index(sm.tsa.datetools.dates_from_range("1959Q1", "2009Q3"))
 print(index)
 
 dta.index = index
-del dta['year']
-del dta['quarter']
+del dta["year"]
+del dta["quarter"]
 
 print(sm.datasets.macrodata.NOTE)
 
@@ -30,7 +31,7 @@ print(dta.head(10))
 fig = plt.figure(figsize=(12, 8))
 ax = fig.add_subplot(111)
 dta.realgdp.plot(ax=ax)
-legend = ax.legend(loc='upper left')
+legend = ax.legend(loc="upper left")
 legend.prop.set_size(20)
 
 # ### Hodrick-Prescott Filter
@@ -49,14 +50,13 @@ legend.prop.set_size(20)
 
 gdp_cycle, gdp_trend = sm.tsa.filters.hpfilter(dta.realgdp)
 
-gdp_decomp = dta[['realgdp']].copy()
+gdp_decomp = dta[["realgdp"]].copy()
 gdp_decomp["cycle"] = gdp_cycle
 gdp_decomp["trend"] = gdp_trend
 
 fig = plt.figure(figsize=(12, 8))
 ax = fig.add_subplot(111)
-gdp_decomp[["realgdp", "trend"]]["2000-03-31":].plot(
-    ax=ax, fontsize=16)
+gdp_decomp[["realgdp", "trend"]]["2000-03-31":].plot(ax=ax, fontsize=16)
 legend = ax.get_legend()
 legend.prop.set_size(20)
 
@@ -65,11 +65,11 @@ legend.prop.set_size(20)
 # #### Explore the hypothesis that inflation and unemployment are counter-
 # cyclical.
 
-# The Baxter-King filter is intended to explicitly deal with the periodicity
-# of the business cycle. By applying their band-pass filter to a series,
-# they produce a new series that does not contain fluctuations at higher or
-# lower than those of the business cycle. Specifically, the BK filter takes
-# the form of a symmetric moving average
+# The Baxter-King filter is intended to explicitly deal with the
+# periodicity of the business cycle. By applying their band-pass filter to a
+# series, they produce a new series that does not contain fluctuations at
+# higher or lower than those of the business cycle. Specifically, the BK
+# filter takes the form of a symmetric moving average
 #
 # $$y_{t}^{*}=\sum_{k=-K}^{k=K}a_ky_{t-k}$$
 #
@@ -105,8 +105,7 @@ bk_cycles = sm.tsa.filters.bkfilter(dta[["infl", "unemp"]])
 
 fig = plt.figure(figsize=(12, 10))
 ax = fig.add_subplot(111)
-bk_cycles.plot(
-    ax=ax, style=['r--', 'b-'])
+bk_cycles.plot(ax=ax, style=["r--", "b-"])
 
 # ### Christiano-Fitzgerald approximate band-pass filter: Inflation and
 # Unemployment
@@ -133,17 +132,16 @@ bk_cycles.plot(
 
 # The CF filter is appropriate for series that may follow a random walk.
 
-print(sm.tsa.stattools.adfuller(dta['unemp'])[:3])
+print(sm.tsa.stattools.adfuller(dta["unemp"])[:3])
 
-print(sm.tsa.stattools.adfuller(dta['infl'])[:3])
+print(sm.tsa.stattools.adfuller(dta["infl"])[:3])
 
 cf_cycles, cf_trend = sm.tsa.filters.cffilter(dta[["infl", "unemp"]])
 print(cf_cycles.head(10))
 
 fig = plt.figure(figsize=(14, 10))
 ax = fig.add_subplot(111)
-cf_cycles.plot(
-    ax=ax, style=['r--', 'b-'])
+cf_cycles.plot(ax=ax, style=["r--", "b-"])
 
 # Filtering assumes *a priori* that business cycles exist. Due to this
 # assumption, many macroeconomic models seek to create models that match the

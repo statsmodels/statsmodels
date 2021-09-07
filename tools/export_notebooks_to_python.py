@@ -106,7 +106,7 @@ def main():
                         'notebook'.format(nb_name))
             continue
         logger.info('Converting {0}'.format(nb_name))
-        with open(nb, 'r') as nb_file:
+        with open(nb, 'r', encoding="utf8") as nb_file:
             converter = nbconvert.PythonExporter()
             python = converter.from_file(nb_file)
             code = python[0].split('\n')
@@ -124,12 +124,14 @@ def main():
             if not code_out[0]:
                 code_out = code_out[1:]
             loc = 0
-            if 'coding' in code_out[0]:
-                loc = 1
+            for i, line in enumerate(code_out):
+                if "# coding: utf" in line:
+                    loc = i+1
+                    break
             code_out.insert(loc, DO_NOT_EDIT.format(notebook=nb_full_name))
             code_out = '\n'.join(code_out)
             code_out, success = FormatCode(code_out, style_config='pep8')
-            with open(out_file, 'w') as of:
+            with open(out_file, 'w', encoding="utf8") as of:
                 of.write(code_out)
 
 

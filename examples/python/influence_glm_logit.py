@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # coding: utf-8
 
 # DO NOT EDIT
@@ -22,25 +23,29 @@
 # deviance and effects on confidence intervals.
 
 import os.path
-import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.genmod import families
 
+plt.rc("figure", figsize=(16, 8))
+plt.rc("font", size=14)
+
 import statsmodels.stats.tests.test_influence
+
 test_module = statsmodels.stats.tests.test_influence.__file__
 cur_dir = cur_dir = os.path.abspath(os.path.dirname(test_module))
 
-file_name = 'binary_constrict.csv'
-file_path = os.path.join(cur_dir, 'results', file_name)
+file_name = "binary_constrict.csv"
+file_path = os.path.join(cur_dir, "results", file_name)
 df = pd.read_csv(file_path, index_col=0)
 
 res = GLM(
-    df['constrict'],
-    df[['const', 'log_rate', 'log_volumne']],
-    family=families.Binomial()).fit(
-        attach_wls=True, atol=1e-10)
+    df["constrict"],
+    df[["const", "log_rate", "log_volumne"]],
+    family=families.Binomial(),
+).fit(attach_wls=True, atol=1e-10)
 print(res.summary())
 
 # ## get the influence measures
@@ -66,16 +71,23 @@ print(res.summary())
 infl = res.get_influence(observed=False)
 
 summ_df = infl.summary_frame()
-summ_df.sort_values('cooks_d', ascending=False)[:10]
+summ_df.sort_values("cooks_d", ascending=False)[:10]
 
-infl.plot_influence()
+fig = infl.plot_influence()
+fig.tight_layout(pad=1.0)
 
-infl.plot_index(y_var='cooks', threshold=2 * infl.cooks_distance[0].mean())
+fig = infl.plot_index(y_var="cooks",
+                      threshold=2 * infl.cooks_distance[0].mean())
+fig.tight_layout(pad=1.0)
 
-infl.plot_index(y_var='resid', threshold=1)
+fig = infl.plot_index(y_var="resid", threshold=1)
+fig.tight_layout(pad=1.0)
 
-infl.plot_index(y_var='dfbeta', idx=1, threshold=0.5)
+fig = infl.plot_index(y_var="dfbeta", idx=1, threshold=0.5)
+fig.tight_layout(pad=1.0)
 
-infl.plot_index(y_var='dfbeta', idx=2, threshold=0.5)
+fig = infl.plot_index(y_var="dfbeta", idx=2, threshold=0.5)
+fig.tight_layout(pad=1.0)
 
-infl.plot_index(y_var='dfbeta', idx=0, threshold=0.5)
+fig = infl.plot_index(y_var="dfbeta", idx=0, threshold=0.5)
+fig.tight_layout(pad=1.0)

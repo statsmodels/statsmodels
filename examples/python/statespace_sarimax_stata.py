@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # coding: utf-8
 
 # DO NOT EDIT
@@ -40,6 +41,10 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 import requests
 from io import BytesIO
+# Register converters to avoid warnings
+pd.plotting.register_matplotlib_converters()
+plt.rc("figure", figsize=(16, 8))
+plt.rc("font", size=14)
 
 # ### ARIMA Example 1: Arima
 #
@@ -94,6 +99,8 @@ from io import BytesIO
 wpi1 = requests.get('https://www.stata-press.com/data/r12/wpi1.dta').content
 data = pd.read_stata(BytesIO(wpi1))
 data.index = data.t
+# Set the frequency
+data.index.freq = "QS-OCT"
 
 # Fit the model
 mod = sm.tsa.statespace.SARIMAX(data['wpi'], trend='c', order=(1, 1, 1))
@@ -104,20 +111,20 @@ print(res.summary())
 # we have:
 #
 # $$
-# \Delta y_t = 0.1050 + 0.8740 \Delta y_{t-1} - 0.4206 \epsilon_{t-1} +
+# \Delta y_t = 0.0943 + 0.8742 \Delta y_{t-1} - 0.4120 \epsilon_{t-1} +
 # \epsilon_{t}
 # $$
 #
-# where $\epsilon_{t} \sim N(0, 0.5226)$. Finally, recall that $c = (1 -
-# \phi_1) \beta_0$, and here $c = 0.1050$ and $\phi_1 = 0.8740$. To compare
+# where $\epsilon_{t} \sim N(0, 0.5257)$. Finally, recall that $c = (1 -
+# \phi_1) \beta_0$, and here $c = 0.0943$ and $\phi_1 = 0.8742$. To compare
 # with the output from Stata, we could calculate the mean:
 #
-# $$\beta_0 = \frac{c}{1 - \phi_1} = \frac{0.1050}{1 - 0.8740} = 0.83$$
+# $$\beta_0 = \frac{c}{1 - \phi_1} = \frac{0.0943}{1 - 0.8742} = 0.7496$$
 #
-# **Note**: these values are slightly different from the values in the
-# Stata documentation because the optimizer in statsmodels has found
-# parameters here that yield a higher likelihood. Nonetheless, they are very
-# close.
+# **Note**: This value is virtually identical to the value in the Stata
+# documentation, $\beta_0 = 0.7498$. The slight difference is likely down to
+# rounding and subtle differences in stopping criterion of the numerical
+# optimizers used.
 
 # ### ARIMA Example 2: Arima with additive seasonal effects
 #
@@ -151,6 +158,8 @@ print(res.summary())
 # Dataset
 data = pd.read_stata(BytesIO(wpi1))
 data.index = data.t
+data.index.freq = "QS-OCT"
+
 data['ln_wpi'] = np.log(data['wpi'])
 data['D.ln_wpi'] = data['ln_wpi'].diff()
 
@@ -214,8 +223,8 @@ fig = sm.graphics.tsa.plot_pacf(data.iloc[1:]['D.ln_wpi'], lags=40, ax=axes[1])
 # When the specification parameter is given as a maximum degree of the lag
 # polynomial, it implies that all polynomial terms up to that degree are
 # included. Notice that this is *not* the model we want to use, because it
-# would include terms for $\epsilon_{t-2}$ and $\epsilon_{t-3}$, which we
-# do not want here.
+# would include terms for $\epsilon_{t-2}$ and $\epsilon_{t-3}$, which we do
+# not want here.
 #
 # What we want is a polynomial that has terms for the 1st and 4th degrees,
 # but leaves out the 2nd and 3rd terms. To do that, we need to provide a
@@ -241,7 +250,9 @@ fig = sm.graphics.tsa.plot_pacf(data.iloc[1:]['D.ln_wpi'], lags=40, ax=axes[1])
 # which is what we want.
 
 # Fit the model
-mod = sm.tsa.statespace.SARIMAX(data['ln_wpi'], trend='c', order=(1, 1, 1))
+mod = sm.tsa.statespace.SARIMAX(data['ln_wpi'],
+                                trend='c',
+                                order=(1, 1, (1, 0, 0, 1)))
 res = mod.fit(disp=False)
 print(res.summary())
 
@@ -342,16 +353,16 @@ print(res.summary())
 # Dataset
 air2 = requests.get('https://www.stata-press.com/data/r12/air2.dta').content
 data = pd.read_stata(BytesIO(air2))
-data.index = pd.date_range(
-    start=datetime(data.time[0], 1, 1), periods=len(data), freq='MS')
+data.index = pd.date_range(start=datetime(data.time[0], 1, 1),
+                           periods=len(data),
+                           freq='MS')
 data['lnair'] = np.log(data['air'])
 
 # Fit the model
-mod = sm.tsa.statespace.SARIMAX(
-    data['lnair'],
-    order=(2, 1, 0),
-    seasonal_order=(1, 1, 0, 12),
-    simple_differencing=True)
+mod = sm.tsa.statespace.SARIMAX(data['lnair'],
+                                order=(2, 1, 0),
+                                seasonal_order=(1, 1, 0, 12),
+                                simple_differencing=True)
 res = mod.fit(disp=False)
 print(res.summary())
 
@@ -419,6 +430,7 @@ friedman2 = requests.get(
     'https://www.stata-press.com/data/r12/friedman2.dta').content
 data = pd.read_stata(BytesIO(friedman2))
 data.index = data.time
+data.index.freq = "QS-OCT"
 
 # Variables
 endog = data.loc['1959':'1981', 'consump']
@@ -442,6 +454,7 @@ print(res.summary())
 # Dataset
 raw = pd.read_stata(BytesIO(friedman2))
 raw.index = raw.time
+raw.index.freq = "QS-OCT"
 data = raw.loc[:'1981']
 
 # Variables
@@ -450,9 +463,10 @@ exog = sm.add_constant(data.loc['1959':, 'm2'])
 nobs = endog.shape[0]
 
 # Fit the model
-mod = sm.tsa.statespace.SARIMAX(
-    endog.loc[:'1978-01-01'], exog=exog.loc[:'1978-01-01'], order=(1, 0, 1))
-fit_res = mod.fit(disp=False)
+mod = sm.tsa.statespace.SARIMAX(endog.loc[:'1978-01-01'],
+                                exog=exog.loc[:'1978-01-01'],
+                                order=(1, 0, 1))
+fit_res = mod.fit(disp=False, maxiter=250)
 print(fit_res.summary())
 
 # Next, we want to get results for the full dataset but using the
@@ -498,15 +512,17 @@ predict_dy_ci = predict_dy.conf_int()
 # Graph
 fig, ax = plt.subplots(figsize=(9, 4))
 npre = 4
-ax.set(
-    title='Personal consumption', xlabel='Date', ylabel='Billions of dollars')
+ax.set(title='Personal consumption',
+       xlabel='Date',
+       ylabel='Billions of dollars')
 
 # Plot data points
 data.loc['1977-07-01':, 'consump'].plot(ax=ax, style='o', label='Observed')
 
 # Plot predictions
-predict.predicted_mean.loc['1977-07-01':].plot(
-    ax=ax, style='r--', label='One-step-ahead forecast')
+predict.predicted_mean.loc['1977-07-01':].plot(ax=ax,
+                                               style='r--',
+                                               label='One-step-ahead forecast')
 ci = predict_ci.loc['1977-07-01':]
 ax.fill_between(ci.index, ci.iloc[:, 0], ci.iloc[:, 1], color='r', alpha=0.1)
 predict_dy.predicted_mean.loc['1977-07-01':].plot(
@@ -536,8 +552,9 @@ ax.fill_between(ci.index, ci.iloc[:, 0], ci.iloc[:, 1], alpha=0.1)
 
 # Dynamic predictions and 95% confidence intervals
 predict_dy_error = predict_dy.predicted_mean - endog
-predict_dy_error.loc['1977-10-01':].plot(
-    ax=ax, style='r', label='Dynamic forecast (1978)')
+predict_dy_error.loc['1977-10-01':].plot(ax=ax,
+                                         style='r',
+                                         label='Dynamic forecast (1978)')
 ci = predict_dy_ci.loc['1977-10-01':].copy()
 ci.iloc[:, 0] -= endog.loc['1977-10-01':]
 ci.iloc[:, 1] -= endog.loc['1977-10-01':]

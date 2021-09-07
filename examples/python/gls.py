@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # coding: utf-8
 
 # DO NOT EDIT
@@ -9,13 +10,15 @@
 
 # # Generalized Least Squares
 
+import numpy as np
+
 import statsmodels.api as sm
 
 # The Longley dataset is a time series dataset:
 
 data = sm.datasets.longley.load()
 data.exog = sm.add_constant(data.exog)
-print(data.exog[:5])
+print(data.exog.head())
 
 #
 #  Let's assume that the data is heteroskedastic and that we know
@@ -35,7 +38,9 @@ ols_resid = sm.OLS(data.endog, data.exog).fit().resid
 # and that $\rho$ is simply the correlation of the residual a consistent
 # estimator for rho is to regress the residuals on the lagged residuals
 
-resid_fit = sm.OLS(ols_resid[1:], sm.add_constant(ols_resid[:-1])).fit()
+resid_fit = sm.OLS(
+    np.asarray(ols_resid)[1:],
+    sm.add_constant(np.asarray(ols_resid)[:-1])).fit()
 print(resid_fit.tvalues[1])
 print(resid_fit.pvalues[1])
 

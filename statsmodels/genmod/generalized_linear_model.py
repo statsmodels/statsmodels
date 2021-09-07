@@ -1734,24 +1734,26 @@ class GLMResults(base.LikelihoodModelResults):
         return self.llf_scaled()
 
     def pseudo_rsquared(self, kind="cs"):
-        """Pseudo R-squared
+        """
+        Pseudo R-squared
 
         Cox-Snell likelihood ratio pseudo R-squared is valid for both discrete
         and continuous data. McFadden's pseudo R-squared is only valid for
         discrete data.
 
-        Cox & Snell's pseudo-R-squared.  `1 - exp( (llnull - llf)*(2/nobs) )
+        Cox & Snell's pseudo-R-squared:  1 - exp((llnull - llf)*(2/nobs))
 
-        McFadden's pseudo-R-squared. `1 - (llf / llnull)`
+        McFadden's pseudo-R-squared: 1 - (llf / llnull)
 
         Parameters
         ----------
-        kind : "cs" or "mcf"
-            Type of pseudo R-saueare to return
+        kind : P"cs", "mcf"}
+            Type of pseudo R-square to return
 
         Returns
         -------
-        Pseudo R-squared
+        float
+            Pseudo R-squared
         """
         kind = kind.lower()
         if kind.startswith("mcf"):

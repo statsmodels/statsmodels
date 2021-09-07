@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # coding: utf-8
 
 # DO NOT EDIT
@@ -42,7 +43,8 @@ import statsmodels.api as sm
 # #### Example Data
 
 import pandas as pd
-url = 'https://stats.idre.ucla.edu/stat/data/hsb2.csv'
+
+url = "https://stats.idre.ucla.edu/stat/data/hsb2.csv"
 hsb2 = pd.read_table(url, delimiter=",")
 
 hsb2.head(10)
@@ -51,7 +53,7 @@ hsb2.head(10)
 # write, for each level of race ((1 = Hispanic, 2 = Asian, 3 = African
 # American and 4 = Caucasian)).
 
-hsb2.groupby('race')['write'].mean()
+hsb2.groupby("race")["write"].mean()
 
 # #### Treatment (Dummy) Coding
 
@@ -62,6 +64,7 @@ hsb2.groupby('race')['write'].mean()
 # for race would be
 
 from patsy.contrasts import Treatment
+
 levels = [1, 2, 3, 4]
 contrast = Treatment(reference=0).code_without_intercept(levels)
 print(contrast.matrix)
@@ -76,15 +79,16 @@ hsb2.race.head(10)
 
 print(contrast.matrix[hsb2.race - 1, :][:20])
 
-sm.categorical(hsb2.race.values)
+pd.get_dummies(hsb2.race.values, drop_first=False)
 
 # This is a bit of a trick, as the `race` category conveniently maps to
 # zero-based indices. If it does not, this conversion happens under the
-# hood, so this will not work in general but nonetheless is a useful exercise
-# to fix ideas. The below illustrates the output using the three contrasts
-# above
+# hood, so this will not work in general but nonetheless is a useful
+# exercise to fix ideas. The below illustrates the output using the three
+# contrasts above
 
 from statsmodels.formula.api import ols
+
 mod = ols("write ~ C(race, Treatment)", data=hsb2)
 res = mod.fit()
 print(res.summary())
@@ -112,13 +116,13 @@ def _name_levels(prefix, levels):
 class Simple(object):
     def _simple_contrast(self, levels):
         nlevels = len(levels)
-        contr = -1. / nlevels * np.ones((nlevels, nlevels - 1))
-        contr[1:][np.diag_indices(nlevels - 1)] = (nlevels - 1.) / nlevels
+        contr = -1.0 / nlevels * np.ones((nlevels, nlevels - 1))
+        contr[1:][np.diag_indices(nlevels - 1)] = (nlevels - 1.0) / nlevels
         return contr
 
     def code_with_intercept(self, levels):
-        contrast = np.column_stack((np.ones(len(levels)),
-                                    self._simple_contrast(levels)))
+        contrast = np.column_stack(
+            (np.ones(len(levels)), self._simple_contrast(levels)))
         return ContrastMatrix(contrast, _name_levels("Simp.", levels))
 
     def code_without_intercept(self, levels):
@@ -126,7 +130,7 @@ class Simple(object):
         return ContrastMatrix(contrast, _name_levels("Simp.", levels[:-1]))
 
 
-hsb2.groupby('race')['write'].mean().mean()
+hsb2.groupby("race")["write"].mean().mean()
 
 contrast = Simple().code_without_intercept(levels)
 print(contrast.matrix)
@@ -144,6 +148,7 @@ print(res.summary())
 # others, and level 3 to all the others.
 
 from patsy.contrasts import Sum
+
 contrast = Sum().code_without_intercept(levels)
 print(contrast.matrix)
 
@@ -155,7 +160,7 @@ print(res.summary())
 # to sum to zero. Notice that the intercept here is the grand mean where the
 # grand mean is the mean of means of the dependent variable by each level.
 
-hsb2.groupby('race')['write'].mean().mean()
+hsb2.groupby("race")["write"].mean().mean()
 
 # ### Backward Difference Coding
 
@@ -165,6 +170,7 @@ hsb2.groupby('race')['write'].mean().mean()
 # variable.
 
 from patsy.contrasts import Diff
+
 contrast = Diff().code_without_intercept(levels)
 print(contrast.matrix)
 
@@ -176,8 +182,8 @@ print(res.summary())
 # level 2 compared with the mean at level 1. Ie.,
 
 res.params["C(race, Diff)[D.1]"]
-hsb2.groupby('race').mean()["write"][2] - hsb2.groupby(
-    'race').mean()["write"][1]
+hsb2.groupby("race").mean()["write"][2] - hsb2.groupby(
+    "race").mean()["write"][1]
 
 # ### Helmert Coding
 
@@ -189,6 +195,7 @@ hsb2.groupby('race').mean()["write"][2] - hsb2.groupby(
 # variable such as race, but we would use the Helmert contrast like so:
 
 from patsy.contrasts import Helmert
+
 contrast = Helmert().code_without_intercept(levels)
 print(contrast.matrix)
 
@@ -199,7 +206,7 @@ print(res.summary())
 # To illustrate, the comparison on level 4 is the mean of the dependent
 # variable at the previous three levels taken from the mean at level 4
 
-grouped = hsb2.groupby('race')
+grouped = hsb2.groupby("race")
 grouped.mean()["write"][4] - grouped.mean()["write"][:3].mean()
 
 # As you can see, these are only equal up to a constant. Other versions of
@@ -207,9 +214,9 @@ grouped.mean()["write"][4] - grouped.mean()["write"][:3].mean()
 # hypothesis tests are the same.
 
 k = 4
-1. / k * (grouped.mean()["write"][k] - grouped.mean()["write"][:k - 1].mean())
+1.0 / k * (grouped.mean()["write"][k] - grouped.mean()["write"][:k - 1].mean())
 k = 3
-1. / k * (grouped.mean()["write"][k] - grouped.mean()["write"][:k - 1].mean())
+1.0 / k * (grouped.mean()["write"][k] - grouped.mean()["write"][:k - 1].mean())
 
 # ### Orthogonal Polynomial Coding
 
@@ -222,11 +229,13 @@ k = 3
 # not an ordered factor variable let's use `read` as an example. First we
 # need to create an ordered categorical from `read`.
 
-hsb2['readcat'] = np.asarray(pd.cut(hsb2.read, bins=3))
-hsb2.groupby('readcat').mean()['write']
+hsb2["readcat"] = np.asarray(pd.cut(hsb2.read, bins=4))
+hsb2["readcat"] = hsb2["readcat"].astype(object)
+hsb2.groupby("readcat").mean()["write"]
 
 from patsy.contrasts import Poly
-levels = hsb2.readcat.unique().tolist()
+
+levels = hsb2.readcat.unique()
 contrast = Poly().code_without_intercept(levels)
 print(contrast.matrix)
 
@@ -235,4 +244,4 @@ res = mod.fit()
 print(res.summary())
 
 # As you can see, readcat has a significant linear effect on the dependent
-# variable `write` but not a significant quadratic or cubic effect.
+# variable `write` but the quadratic and cubic effects are insignificant.

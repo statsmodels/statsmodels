@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # coding: utf-8
 
 # DO NOT EDIT
@@ -9,10 +10,9 @@
 
 # # Robust Linear Models
 
+import matplotlib.pyplot as plt
 import numpy as np
 import statsmodels.api as sm
-import matplotlib.pyplot as plt
-from statsmodels.sandbox.regression.predstd import wls_prediction_std
 
 # ## Estimation
 #
@@ -29,8 +29,8 @@ print(hub_results.params)
 print(hub_results.bse)
 print(
     hub_results.summary(
-        yname='y',
-        xname=['var_%d' % i for i in range(len(hub_results.params))]))
+        yname="y",
+        xname=["var_%d" % i for i in range(len(hub_results.params))]))
 
 # Huber's T norm with 'H2' covariance matrix
 
@@ -42,9 +42,9 @@ print(hub_results2.bse)
 # matrix
 
 andrew_mod = sm.RLM(data.endog, data.exog, M=sm.robust.norms.AndrewWave())
-andrew_results = andrew_mod.fit(
-    scale_est=sm.robust.scale.HuberScale(), cov="H3")
-print('Parameters: ', andrew_results.params)
+andrew_results = andrew_mod.fit(scale_est=sm.robust.scale.HuberScale(),
+                                cov="H3")
+print("Parameters: ", andrew_results.params)
 
 # See ``help(sm.RLM.fit)`` for more options and ``module sm.robust.scale``
 # for scale options
@@ -60,7 +60,7 @@ X = sm.add_constant(X)
 sig = 0.3  # smaller error variance makes OLS<->RLM contrast bigger
 beta = [5, 0.5, -0.0]
 y_true2 = np.dot(X, beta)
-y2 = y_true2 + sig * 1. * np.random.normal(size=nsample)
+y2 = y_true2 + sig * 1.0 * np.random.normal(size=nsample)
 y2[[39, 41, 43, 45, 48]] -= 5  # add some outliers (10% of nsample)
 
 # ### Example 1: quadratic function with linear truth
@@ -83,13 +83,16 @@ print(resrlm.bse)
 
 fig = plt.figure(figsize=(12, 8))
 ax = fig.add_subplot(111)
-ax.plot(x1, y2, 'o', label="data")
-ax.plot(x1, y_true2, 'b-', label="True")
-prstd, iv_l, iv_u = wls_prediction_std(res)
-ax.plot(x1, res.fittedvalues, 'r-', label="OLS")
-ax.plot(x1, iv_u, 'r--')
-ax.plot(x1, iv_l, 'r--')
-ax.plot(x1, resrlm.fittedvalues, 'g.-', label="RLM")
+ax.plot(x1, y2, "o", label="data")
+ax.plot(x1, y_true2, "b-", label="True")
+pred_ols = res.get_prediction()
+iv_l = pred_ols.summary_frame()["obs_ci_lower"]
+iv_u = pred_ols.summary_frame()["obs_ci_upper"]
+
+ax.plot(x1, res.fittedvalues, "r-", label="OLS")
+ax.plot(x1, iv_u, "r--")
+ax.plot(x1, iv_l, "r--")
+ax.plot(x1, resrlm.fittedvalues, "g.-", label="RLM")
 ax.legend(loc="best")
 
 # ### Example 2: linear function with linear truth
@@ -109,13 +112,15 @@ print(resrlm2.bse)
 
 # Draw a plot to compare OLS estimates to the robust estimates:
 
-prstd, iv_l, iv_u = wls_prediction_std(res2)
+pred_ols = res2.get_prediction()
+iv_l = pred_ols.summary_frame()["obs_ci_lower"]
+iv_u = pred_ols.summary_frame()["obs_ci_upper"]
 
 fig, ax = plt.subplots(figsize=(8, 6))
-ax.plot(x1, y2, 'o', label="data")
-ax.plot(x1, y_true2, 'b-', label="True")
-ax.plot(x1, res2.fittedvalues, 'r-', label="OLS")
-ax.plot(x1, iv_u, 'r--')
-ax.plot(x1, iv_l, 'r--')
-ax.plot(x1, resrlm2.fittedvalues, 'g.-', label="RLM")
+ax.plot(x1, y2, "o", label="data")
+ax.plot(x1, y_true2, "b-", label="True")
+ax.plot(x1, res2.fittedvalues, "r-", label="OLS")
+ax.plot(x1, iv_u, "r--")
+ax.plot(x1, iv_l, "r--")
+ax.plot(x1, resrlm2.fittedvalues, "g.-", label="RLM")
 legend = ax.legend(loc="best")

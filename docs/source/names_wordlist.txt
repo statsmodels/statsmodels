@@ -335,3 +335,5 @@ Archimedean
 kendall
 spearmans
 Escribano
+Pesaran
+Archimedean

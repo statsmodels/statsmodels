@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # coding: utf-8
 
 # DO NOT EDIT
@@ -28,13 +29,12 @@ from zipfile import ZipFile
 dk = requests.get('http://www.ssfpack.com/files/DK-data.zip').content
 f = BytesIO(dk)
 zipped = ZipFile(f)
-df = pd.read_table(
-    BytesIO(zipped.read('internet.dat')),
-    skiprows=1,
-    header=None,
-    sep='\s+',
-    engine='python',
-    names=['internet', 'dinternet'])
+df = pd.read_table(BytesIO(zipped.read('internet.dat')),
+                   skiprows=1,
+                   header=None,
+                   sep='\s+',
+                   engine='python',
+                   names=['internet', 'dinternet'])
 
 # ### Model Selection
 #
@@ -79,8 +79,9 @@ for p in range(6):
             continue
 
         # Estimate the model with no missing datapoints
-        mod = sm.tsa.statespace.SARIMAX(
-            dta_full, order=(p, 0, q), enforce_invertibility=False)
+        mod = sm.tsa.statespace.SARIMAX(dta_full,
+                                        order=(p, 0, q),
+                                        enforce_invertibility=False)
         try:
             res = mod.fit(disp=False)
             aic_full.iloc[p, q] = res.aic
@@ -88,8 +89,9 @@ for p in range(6):
             aic_full.iloc[p, q] = np.nan
 
         # Estimate the model with missing datapoints
-        mod = sm.tsa.statespace.SARIMAX(
-            dta_miss, order=(p, 0, q), enforce_invertibility=False)
+        mod = sm.tsa.statespace.SARIMAX(dta_miss,
+                                        order=(p, 0, q),
+                                        enforce_invertibility=False)
         try:
             res = mod.fit(disp=False)
             aic_miss.iloc[p, q] = res.aic
@@ -166,12 +168,11 @@ ax.plot(dta_miss, 'k.')
 
 # Plot
 ax.plot(idx[:-nforecast], predict.predicted_mean[:-nforecast], 'gray')
-ax.plot(
-    idx[-nforecast:],
-    predict.predicted_mean[-nforecast:],
-    'k--',
-    linestyle='--',
-    linewidth=2)
+ax.plot(idx[-nforecast:],
+        predict.predicted_mean[-nforecast:],
+        'k--',
+        linestyle='--',
+        linewidth=2)
 ax.fill_between(idx, predict_ci[:, 0], predict_ci[:, 1], alpha=0.15)
 
 ax.set(title='Figure 8.9 - Internet series')

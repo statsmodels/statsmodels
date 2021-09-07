@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # coding: utf-8
 
 # DO NOT EDIT
@@ -39,13 +40,13 @@ np.set_printoptions(suppress=True)
 print(sm.datasets.copper.DESCRLONG)
 
 dta = sm.datasets.copper.load_pandas().data
-dta.index = pd.date_range('1951-01-01', '1975-01-01', freq='AS')
-endog = dta['WORLDCONSUMPTION']
+dta.index = pd.date_range("1951-01-01", "1975-01-01", freq="AS")
+endog = dta["WORLDCONSUMPTION"]
 
 # To the regressors in the dataset, we add a column of ones for an
 # intercept
 exog = sm.add_constant(
-    dta[['COPPERPRICE', 'INCOMEINDEX', 'ALUMPRICE', 'INVENTORYINDEX']])
+    dta[["COPPERPRICE", "INCOMEINDEX", "ALUMPRICE", "INVENTORYINDEX"]])
 
 # First, construct and fit the model, and print a summary. Although the
 # `RLS` model computes the regression parameters recursively, so there are
@@ -64,8 +65,7 @@ print(res.summary())
 # `plot_recursive_coefficient` method.
 
 print(res.recursive_coefficients.filtered[0])
-res.plot_recursive_coefficient(
-    range(mod.k_exog), alpha=None, figsize=(10, 6))
+res.plot_recursive_coefficient(range(mod.k_exog), alpha=None, figsize=(10, 6))
 
 # The CUSUM statistic is available in the `cusum` attribute, but usually
 # it is more convenient to visually check for parameter stability using the
@@ -95,10 +95,10 @@ res.plot_cusum_squares()
 # between these variables to be stable, more recently it appears that the
 # relationship is unstable; see e.g. Sargent and Surico (2010).
 
-start = '1959-12-01'
-end = '2015-01-01'
-m2 = DataReader('M2SL', 'fred', start=start, end=end)
-cpi = DataReader('CPIAUCSL', 'fred', start=start, end=end)
+start = "1959-12-01"
+end = "2015-01-01"
+m2 = DataReader("M2SL", "fred", start=start, end=end)
+cpi = DataReader("CPIAUCSL", "fred", start=start, end=end)
 
 
 def ewma(series, beta, n_window):
@@ -110,14 +110,15 @@ def ewma(series, beta, n_window):
     for t in range(n_window, nobs - n_window):
         window = series.iloc[t - n_window:t + n_window + 1].values
         ma.append(scalar * np.sum(weights * window))
-    return pd.Series(
-        ma, name=series.name, index=series.iloc[n_window:-n_window].index)
+    return pd.Series(ma,
+                     name=series.name,
+                     index=series.iloc[n_window:-n_window].index)
 
 
 m2_ewma = ewma(
-    np.log(m2['M2SL'].resample('QS').mean()).diff().iloc[1:], 0.95, 10 * 4)
+    np.log(m2["M2SL"].resample("QS").mean()).diff().iloc[1:], 0.95, 10 * 4)
 cpi_ewma = ewma(
-    np.log(cpi['CPIAUCSL'].resample('QS').mean()).diff().iloc[1:], 0.95,
+    np.log(cpi["CPIAUCSL"].resample("QS").mean()).diff().iloc[1:], 0.95,
     10 * 4)
 
 # After constructing the moving averages using the $\beta = 0.95$ filter
@@ -127,21 +128,20 @@ cpi_ewma = ewma(
 
 fig, ax = plt.subplots(figsize=(13, 3))
 
-ax.plot(m2_ewma, label='M2 Growth (EWMA)')
-ax.plot(cpi_ewma, label='CPI Inflation (EWMA)')
+ax.plot(m2_ewma, label="M2 Growth (EWMA)")
+ax.plot(cpi_ewma, label="CPI Inflation (EWMA)")
 ax.legend()
 
 endog = cpi_ewma
 exog = sm.add_constant(m2_ewma)
-exog.columns = ['const', 'M2']
+exog.columns = ["const", "M2"]
 
 mod = sm.RecursiveLS(endog, exog)
 res = mod.fit()
 
 print(res.summary())
 
-res.plot_recursive_coefficient(
-    1, alpha=None)
+res.plot_recursive_coefficient(1, alpha=None)
 
 # The CUSUM plot now shows substantial deviation at the 5% level,
 # suggesting a rejection of the null hypothesis of parameter stability.
@@ -156,26 +156,27 @@ res.plot_cusum_squares()
 
 # # Example 3: Linear restrictions and formulas
 
-# ### Linear restrictions
+# ## Linear restrictions
 #
 # It is not hard to implement linear restrictions, using the `constraints`
 # parameter in constructing the model.
 
-endog = dta['WORLDCONSUMPTION']
+endog = dta["WORLDCONSUMPTION"]
 exog = sm.add_constant(
-    dta[['COPPERPRICE', 'INCOMEINDEX', 'ALUMPRICE', 'INVENTORYINDEX']])
+    dta[["COPPERPRICE", "INCOMEINDEX", "ALUMPRICE", "INVENTORYINDEX"]])
 
-mod = sm.RecursiveLS(endog, exog, constraints='COPPERPRICE = ALUMPRICE')
+mod = sm.RecursiveLS(endog, exog, constraints="COPPERPRICE = ALUMPRICE")
 res = mod.fit()
 print(res.summary())
 
-# ### Formula
+# ## Formula
 #
 # One could fit the same model using the class method `from_formula`.
 
 mod = sm.RecursiveLS.from_formula(
-    'WORLDCONSUMPTION ~ COPPERPRICE + INCOMEINDEX + ALUMPRICE + INVENTORYINDEX',
+    "WORLDCONSUMPTION ~ COPPERPRICE + INCOMEINDEX + ALUMPRICE + INVENTORYINDEX",
     dta,
-    constraints='COPPERPRICE = ALUMPRICE')
+    constraints="COPPERPRICE = ALUMPRICE",
+)
 res = mod.fit()
 print(res.summary())

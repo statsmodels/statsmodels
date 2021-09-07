@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # coding: utf-8
 
 # DO NOT EDIT
@@ -210,7 +211,7 @@ from IPython.display import display, Latex
 #
 # All data series considered here are taken from [Federal Reserve Economic
 # Data (FRED)](https://research.stlouisfed.org/fred2/). Conveniently, the
-# Python library [Pandas](http://pandas.pydata.org/) has the ability to
+# Python library [Pandas](https://pandas.pydata.org/) has the ability to
 # download data from FRED directly.
 
 # Datasets
@@ -221,15 +222,16 @@ start = '1948-01'
 end = '2008-01'
 us_gnp = DataReader('GNPC96', 'fred', start=start, end=end)
 us_gnp_deflator = DataReader('GNPDEF', 'fred', start=start, end=end)
-us_monetary_base = DataReader(
-    'AMBSL', 'fred', start=start, end=end).resample('QS').mean()
-recessions = DataReader(
-    'USRECQ', 'fred', start=start, end=end).resample('QS').last().values[:, 0]
+us_monetary_base = DataReader('AMBSL', 'fred', start=start,
+                              end=end).resample('QS').mean()
+recessions = DataReader('USRECQ', 'fred', start=start,
+                        end=end).resample('QS').last().values[:, 0]
 
 # Construct the dataframe
-dta = pd.concat(
-    map(np.log, (us_gnp, us_gnp_deflator, us_monetary_base)), axis=1)
+dta = pd.concat(map(np.log, (us_gnp, us_gnp_deflator, us_monetary_base)),
+                axis=1)
 dta.columns = ['US GNP', 'US Prices', 'US monetary base']
+dta.index.freq = dta.index.inferred_freq
 dates = dta.index._mpl_repr()
 
 # To get a sense of these three variables over the timeframe, we can plot
@@ -239,13 +241,12 @@ dates = dta.index._mpl_repr()
 ax = dta.plot(figsize=(13, 3))
 ylim = ax.get_ylim()
 ax.xaxis.grid()
-ax.fill_between(
-    dates,
-    ylim[0] + 1e-5,
-    ylim[1] - 1e-5,
-    recessions,
-    facecolor='k',
-    alpha=0.1)
+ax.fill_between(dates,
+                ylim[0] + 1e-5,
+                ylim[1] - 1e-5,
+                recessions,
+                facecolor='k',
+                alpha=0.1)
 
 # ## Model
 #
@@ -356,8 +357,7 @@ print(output_res.summary())
 # plot of the observed data versus the one-step-ahead predictions of the
 # model to assess fit.
 
-fig = output_res.plot_components(
-    legend_loc='lower right', figsize=(15, 9))
+fig = output_res.plot_components(legend_loc='lower right', figsize=(15, 9))
 
 # Finally, Harvey and Jaeger summarize the models in another way to
 # highlight the relative importances of the trend and cyclical components;
@@ -407,7 +407,7 @@ for res in (output_res, prices_res, prices_restricted_res, money_res,
     ]
     i += 1
 
-pd.set_option('float_format',
-              lambda x: '%.4g' % np.round(x, 2) if not np.isnan(x) else '-')
+pd.set_option('float_format', lambda x: '%.4g' % np.round(x, 2)
+              if not np.isnan(x) else '-')
 table_i = pd.DataFrame(table_i, index=index, columns=parameter_symbols)
 table_i

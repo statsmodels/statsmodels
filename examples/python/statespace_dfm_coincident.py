@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # coding: utf-8
 
 # DO NOT EDIT
@@ -10,11 +11,11 @@
 # # Dynamic factors and coincident indices
 #
 # Factor models generally try to find a small number of unobserved
-# "factors" that influence a substantial portion of the variation in a larger
-# number of observed variables, and they are related to dimension-reduction
-# techniques such as principal components analysis. Dynamic factor models
-# explicitly model the transition dynamics of the unobserved factors, and so
-# are often applied to time-series data.
+# "factors" that influence a substantial portion of the variation in a
+# larger number of observed variables, and they are related to dimension-
+# reduction techniques such as principal components analysis. Dynamic factor
+# models explicitly model the transition dynamics of the unobserved factors,
+# and so are often applied to time-series data.
 #
 # Macroeconomic coincident indices are designed to capture the common
 # component of the "business cycle"; such a component is assumed to
@@ -33,7 +34,7 @@
 # ## Macroeconomic data
 #
 # The coincident index is created by considering the comovements in four
-# macroeconomic variables (versions of thse variables are available on
+# macroeconomic variables (versions of these variables are available on
 # [FRED](https://research.stlouisfed.org/fred2/); the ID of the series used
 # below is given in parentheses):
 #
@@ -92,9 +93,9 @@ emp = DataReader('PAYEMS', 'fred', start=start, end=end)
 
 dta = pd.concat((indprod, income, sales, emp), axis=1)
 dta.columns = ['indprod', 'income', 'sales', 'emp']
+dta.index.freq = dta.index.inferred_freq
 
-dta.loc[:, 'indprod':'emp'].plot(
-    subplots=True, layout=(2, 2), figsize=(15, 6))
+dta.loc[:, 'indprod':'emp'].plot(subplots=True, layout=(2, 2), figsize=(15, 6))
 
 # Stock and Watson (1991) report that for their datasets, they could not
 # reject the null hypothesis of a unit root in each series (so the series
@@ -111,14 +112,14 @@ dta['dln_sales'] = (np.log(dta.sales)).diff() * 100
 dta['dln_emp'] = (np.log(dta.emp)).diff() * 100
 
 # De-mean and standardize
-dta['std_indprod'] = (
-    dta['dln_indprod'] - dta['dln_indprod'].mean()) / dta['dln_indprod'].std()
-dta['std_income'] = (
-    dta['dln_income'] - dta['dln_income'].mean()) / dta['dln_income'].std()
-dta['std_sales'] = (
-    dta['dln_sales'] - dta['dln_sales'].mean()) / dta['dln_sales'].std()
-dta['std_emp'] = (
-    dta['dln_emp'] - dta['dln_emp'].mean()) / dta['dln_emp'].std()
+dta['std_indprod'] = (dta['dln_indprod'] -
+                      dta['dln_indprod'].mean()) / dta['dln_indprod'].std()
+dta['std_income'] = (dta['dln_income'] -
+                     dta['dln_income'].mean()) / dta['dln_income'].std()
+dta['std_sales'] = (dta['dln_sales'] -
+                    dta['dln_sales'].mean()) / dta['dln_sales'].std()
+dta['std_emp'] = (dta['dln_emp'] -
+                  dta['dln_emp'].mean()) / dta['dln_emp'].std()
 
 # ## Dynamic factors
 #
@@ -191,9 +192,9 @@ dta['std_emp'] = (
 # **Aside**: in their empirical example, Kim and Nelson (1999) actually
 # consider a slightly different model in which the employment variable is
 # allowed to also depend on lagged values of the factor - this model does
-# not fit into the built-in `DynamicFactor` class, but can be accommodated by
-# using a subclass to implement the required new parameters and restrictions
-# - see Appendix A, below.
+# not fit into the built-in `DynamicFactor` class, but can be accommodated
+# by using a subclass to implement the required new parameters and
+# restrictions - see Appendix A, below.
 
 # ## Parameter estimation
 #
@@ -266,8 +267,12 @@ ax.legend()
 # Retrieve and also plot the NBER recession indicators
 rec = DataReader('USREC', 'fred', start=start, end=end)
 ylim = ax.get_ylim()
-ax.fill_between(
-    dates[:-3], ylim[0], ylim[1], rec.values[:-4, 0], facecolor='k', alpha=0.1)
+ax.fill_between(dates[:-3],
+                ylim[0],
+                ylim[1],
+                rec.values[:-4, 0],
+                facecolor='k',
+                alpha=0.1)
 
 # ## Post-estimation
 #
@@ -305,8 +310,8 @@ res.plot_coefficients_of_determination(figsize=(8, 2))
 # factor. We will compare it to the coincident index on published by the
 # Federal Reserve Bank of Philadelphia (USPHCI on FRED).
 
-usphci = DataReader(
-    'USPHCI', 'fred', start='1979-01-01', end='2014-12-01')['USPHCI']
+usphci = DataReader('USPHCI', 'fred', start='1979-01-01',
+                    end='2014-12-01')['USPHCI']
 usphci.plot(figsize=(13, 3))
 
 dusphci = usphci.diff()[1:].values
@@ -345,8 +350,8 @@ def compute_coincident_index(mod, res):
     coincident_index = pd.Series(coincident_index, index=dta.index).iloc[1:]
 
     # Normalize to use the same base year as USPHCI
-    coincident_index *= (
-        usphci.loc['1992-07-01'] / coincident_index.loc['1992-07-01'])
+    coincident_index *= (usphci.loc['1992-07-01'] /
+                         coincident_index.loc['1992-07-01'])
 
     return coincident_index
 
@@ -367,8 +372,12 @@ ax.legend(loc='lower right')
 
 # Retrieve and also plot the NBER recession indicators
 ylim = ax.get_ylim()
-ax.fill_between(
-    dates[:-3], ylim[0], ylim[1], rec.values[:-4, 0], facecolor='k', alpha=0.1)
+ax.fill_between(dates[:-3],
+                ylim[0],
+                ylim[1],
+                rec.values[:-4, 0],
+                facecolor='k',
+                alpha=0.1)
 
 # ## Appendix 1: Extending the dynamic factor model
 #
@@ -644,8 +653,11 @@ from statsmodels.tsa.statespace import tools
 class ExtendedDFM(sm.tsa.DynamicFactor):
     def __init__(self, endog, **kwargs):
         # Setup the model as if we had a factor order of 4
-        super(ExtendedDFM, self).__init__(
-            endog, k_factors=1, factor_order=4, error_order=2, **kwargs)
+        super(ExtendedDFM, self).__init__(endog,
+                                          k_factors=1,
+                                          factor_order=4,
+                                          error_order=2,
+                                          **kwargs)
 
         # Note: `self.parameters` is an ordered dict with the
         # keys corresponding to parameter types, and the values
@@ -655,8 +667,8 @@ class ExtendedDFM(sm.tsa.DynamicFactor):
 
         # Cache a slice for the location of the 4 factor AR
         # parameters (a_1, ..., a_4) in the full parameter vector
-        offset = (self.parameters['factor_loadings'] + self.parameters['exog']
-                  + self.parameters['error_cov'])
+        offset = (self.parameters['factor_loadings'] +
+                  self.parameters['exog'] + self.parameters['error_cov'])
         self._params_factor_ar = np.s_[offset:offset + 2]
         self._params_factor_zero = np.s_[offset + 2:offset + 4]
 
@@ -704,15 +716,16 @@ class ExtendedDFM(sm.tsa.DynamicFactor):
         # Return all the parameters
         return np.r_[unconstrained, constrained[-3:]]
 
-    def update(self, params, transformed=True, complex_step=False):
+    def update(self, params, transformed=True, **kwargs):
         # Peform the transformation, if required
         if not transformed:
             params = self.transform_params(params)
         params[self._params_factor_zero] = 0
 
         # Now perform the usual DFM update, but exclude our new parameters
-        super(ExtendedDFM, self).update(
-            params[:-3], transformed=True, complex_step=complex_step)
+        super(ExtendedDFM, self).update(params[:-3],
+                                        transformed=True,
+                                        **kwargs)
 
         # Finally, set our new parameters in the design matrix
         self.ssm['design', 3, 1:4] = params[-3:]
@@ -720,7 +733,7 @@ class ExtendedDFM(sm.tsa.DynamicFactor):
 
 # So what did we just do?
 #
-# #### `__init__`
+# **`__init__`**
 #
 # The important step here was specifying the base dynamic factor model
 # which we were operating with. In particular, as described above, we
@@ -728,20 +741,20 @@ class ExtendedDFM(sm.tsa.DynamicFactor):
 # AR(2) model for the factor. We also performed some general setup-related
 # tasks.
 #
-# #### `start_params`
+# **`start_params`**
 #
 # `start_params` are used as initial values in the optimizer. Since we are
 # adding three new parameters, we need to pass those in. If we had not done
 # this, the optimizer would use the default starting values, which would be
 # three elements short.
 #
-# #### `param_names`
+# **`param_names`**
 #
 # `param_names` are used in a variety of places, but especially in the
 # results class. Below we get a full result summary, which is only possible
 # when all the parameters have associated names.
 #
-# #### `transform_params` and `untransform_params`
+# **`transform_params`** and **`untransform_params`**
 #
 # The optimizer selects possibly parameter values in an unconstrained way.
 # That's not usually desired (since variances cannot be negative, for
@@ -755,9 +768,9 @@ class ExtendedDFM(sm.tsa.DynamicFactor):
 # parameters appropriate to the optimizer before we can begin the
 # optimization routine).
 #
-# Even though we do not need to transform or untransform our new parameters
-# (the loadings can in theory take on any values), we still need to modify
-# this function for two reasons:
+# Even though we do not need to transform or untransform our new
+# parameters (the loadings can in theory take on any values), we still need
+# to modify this function for two reasons:
 #
 # 1. The version in the `DynamicFactor` class is expecting 3 fewer
 # parameters than we have now. At a minimum, we need to handle the three new
@@ -767,7 +780,7 @@ class ExtendedDFM(sm.tsa.DynamicFactor):
 # actually have an AR(2) model, we need to re-do the constraint. We also set
 # the last two autoregressive coefficients to be zero here.
 #
-# #### `update`
+# **`update`**
 #
 # The most important reason we need to specify a new `update` method is
 # because we have three new parameters that we need to place into the state
@@ -779,8 +792,9 @@ class ExtendedDFM(sm.tsa.DynamicFactor):
 # Create the model
 extended_mod = ExtendedDFM(endog)
 initial_extended_res = extended_mod.fit(maxiter=1000, disp=False)
-extended_res = extended_mod.fit(
-    initial_extended_res.params, method='nm', maxiter=1000)
+extended_res = extended_mod.fit(initial_extended_res.params,
+                                method='nm',
+                                maxiter=1000)
 print(extended_res.summary(separate_params=False))
 
 # Although this model increases the likelihood, it is not preferred by the
@@ -801,17 +815,20 @@ extended_coincident_index = compute_coincident_index(extended_mod,
 # Plot the factor
 dates = endog.index._mpl_repr()
 ax.plot(dates, coincident_index, '-', linewidth=1, label='Basic model')
-ax.plot(
-    dates,
-    extended_coincident_index,
-    '--',
-    linewidth=3,
-    label='Extended model')
+ax.plot(dates,
+        extended_coincident_index,
+        '--',
+        linewidth=3,
+        label='Extended model')
 ax.plot(usphci.index._mpl_repr(), usphci, label='USPHCI')
 ax.legend(loc='lower right')
 ax.set(title='Coincident indices, comparison')
 
 # Retrieve and also plot the NBER recession indicators
 ylim = ax.get_ylim()
-ax.fill_between(
-    dates[:-3], ylim[0], ylim[1], rec.values[:-4, 0], facecolor='k', alpha=0.1)
+ax.fill_between(dates[:-3],
+                ylim[0],
+                ylim[1],
+                rec.values[:-4, 0],
+                facecolor='k',
+                alpha=0.1)
