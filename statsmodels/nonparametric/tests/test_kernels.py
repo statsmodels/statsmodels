@@ -149,3 +149,19 @@ class TestBiweight(CheckKernelMixin):
     kern = kernels.Biweight()
     se_n_diff = 9
     low_rtol = 0.3
+
+
+def test_tricube():
+    # > library(kedd)
+    # > xx = c(-1., -0.75, -0.5, -0.25, 0., 0.25, 0.5, 0.75, 1.)
+    # > res = kernel.fun(x = xx, kernel="tricube",deriv.order=0)
+    # > res$kx
+
+    res_kx = [
+        0.0000000000000000, 0.1669853116259163, 0.5789448302469136,
+        0.8243179321289062, 0.8641975308641975, 0.8243179321289062,
+        0.5789448302469136, 0.1669853116259163, 0.0000000000000000
+        ]
+    xx = np.linspace(-1, 1, 9)
+    kx = kernels.Tricube()(xx)
+    assert_allclose(kx, res_kx, rtol=1e-10)

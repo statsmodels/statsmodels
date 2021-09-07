@@ -33,6 +33,7 @@ kernel_switch = dict(
     triw=kernels.Triweight,
     cos=kernels.Cosine,
     cos2=kernels.Cosine2,
+    tric=kernels.Tricube
 )
 
 
