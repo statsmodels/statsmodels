@@ -30,6 +30,7 @@ __all__ = [
     "arima",
     "arma_generate_sample",
     "arma_order_select_ic",
+    "ardl_select_order",
     "bds",
     "bk_filter",
     "breakvar_heteroskedasticity_test",
@@ -58,12 +59,13 @@ __all__ = [
     "var",
     "x13_arima_analysis",
     "x13_arima_select_order",
+    "zivot_andrews"
 ]
 
 from . import interp, stattools, tsatools, vector_ar as var
 from ..graphics import tsaplots as graphics
 from .ar_model import AR, AutoReg
-from .ardl import ARDL, UECM
+from .ardl import ARDL, UECM, ardl_select_order
 from .arima import api as arima
 from .arima.model import ARIMA
 from .arima_process import ArmaProcess, arma_generate_sample
@@ -98,6 +100,7 @@ from .stattools import (
     pacf_yw,
     q_stat,
     range_unit_root_test,
+    zivot_andrews
 )
 from .tsatools import add_lag, add_trend, detrend, lagmat, lagmat2ds
 from .vector_ar.svar_model import SVAR
