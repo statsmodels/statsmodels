@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import pytest
 from numpy.testing import assert_almost_equal
 from scipy import stats
@@ -82,6 +83,43 @@ class TestLilliefors(object):
     def test_large_sample(self, reset_randomstate):
         x = np.random.randn(10000)
         lilliefors(x, pvalmethod='approx')
+
+    def test_x_dims(self):
+        np.random.seed(3975)
+        x_n = stats.norm.rvs(size=500)
+
+        # 1d array
+        data = x_n
+        d_ks_norm, p_norm = lilliefors(data, dist='norm', pvalmethod='approx')
+        assert_almost_equal(d_ks_norm, 0.025957, decimal=3)
+        assert_almost_equal(p_norm, 0.64175, decimal=3)
+
+        # 2d array with size 1 second dimension
+        data = x_n.reshape(-1, 1)
+        d_ks_norm, p_norm = lilliefors(data, dist='norm', pvalmethod='approx')
+        assert_almost_equal(d_ks_norm, 0.025957, decimal=3)
+        assert_almost_equal(p_norm, 0.64175, decimal=3)
+
+        # 2d array with larger second dimension
+        data = np.array([x_n, x_n]).T
+        with pytest.raises(ValueError):
+            lilliefors(data, dist='norm', pvalmethod='approx')
+
+        # single-column DataFrame
+        data = pd.DataFrame(data=x_n)
+        d_ks_norm, p_norm = lilliefors(data, dist='norm', pvalmethod='approx')
+        assert_almost_equal(d_ks_norm, 0.025957, decimal=3)
+        assert_almost_equal(p_norm, 0.64175, decimal=3)
+
+        # two-column DataFrame
+        data = pd.DataFrame(data=[x_n, x_n])
+        with pytest.raises(ValueError):
+            lilliefors(data, dist='norm', pvalmethod='approx')
+
+        # DataFrame with observations in columns
+        data = pd.DataFrame(data=x_n.reshape(-1, 1).T)
+        with pytest.raises(ValueError):
+            lilliefors(data, dist='norm', pvalmethod='approx')
 
 
 def test_get_lilliefors_errors(reset_randomstate):
