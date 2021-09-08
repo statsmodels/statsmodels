@@ -84,43 +84,42 @@ class TestLilliefors(object):
         x = np.random.randn(10000)
         lilliefors(x, pvalmethod='approx')
 
-    def test_single_column_2d_array(self):
+    def test_x_dims(self):
         np.random.seed(3975)
         x_n = stats.norm.rvs(size=500)
-        x_n = x_n.reshape(-1, 1)
 
-        d_ks_norm, p_norm = lilliefors(x_n, dist='norm', pvalmethod='approx')
-
+        # 1d array
+        data = x_n
+        d_ks_norm, p_norm = lilliefors(data, dist='norm', pvalmethod='approx')
         assert_almost_equal(d_ks_norm, 0.025957, decimal=3)
         assert_almost_equal(p_norm, 0.64175, decimal=3)
 
-    def test_single_column_dataframe(self):
-        np.random.seed(3975)
-        x_n = stats.norm.rvs(size=500)
-        single_column_df = pd.DataFrame(data=x_n)
-
-        d_ks_norm, p_norm = lilliefors(single_column_df, dist='norm',
-                                       pvalmethod='approx')
-
+        # 2d array with size 1 second dimension
+        data = x_n.reshape(-1, 1)
+        d_ks_norm, p_norm = lilliefors(data, dist='norm', pvalmethod='approx')
         assert_almost_equal(d_ks_norm, 0.025957, decimal=3)
         assert_almost_equal(p_norm, 0.64175, decimal=3)
 
-    def test_multiple_column_2d_array(self):
-        np.random.seed(3975)
-        x_n = stats.norm.rvs(size=500)
-        multiple_column_2d_array = np.array([x_n, x_n]).T
-
+        # 2d array with larger second dimension
+        data = np.array([x_n, x_n]).T
         with pytest.raises(ValueError):
-            lilliefors(multiple_column_2d_array, dist='norm',
-                       pvalmethod='approx')
+            lilliefors(data, dist='norm', pvalmethod='approx')
 
-    def test_multiple_column_dataframe(self):
-        np.random.seed(3975)
-        x_n = stats.norm.rvs(size=500)
-        multiple_column_df = pd.DataFrame(data=[x_n, x_n])
+        # single-column DataFrame
+        data = pd.DataFrame(data=x_n)
+        d_ks_norm, p_norm = lilliefors(data, dist='norm', pvalmethod='approx')
+        assert_almost_equal(d_ks_norm, 0.025957, decimal=3)
+        assert_almost_equal(p_norm, 0.64175, decimal=3)
 
+        # two-column DataFrame
+        data = pd.DataFrame(data=[x_n, x_n])
         with pytest.raises(ValueError):
-            lilliefors(multiple_column_df, dist='norm', pvalmethod='approx')
+            lilliefors(data, dist='norm', pvalmethod='approx')
+
+        # DataFrame with observations in columns
+        data = pd.DataFrame(data=x_n.reshape(-1, 1).T)
+        with pytest.raises(ValueError):
+            lilliefors(data, dist='norm', pvalmethod='approx')
 
 
 def test_get_lilliefors_errors(reset_randomstate):
