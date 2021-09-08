@@ -2,7 +2,7 @@ import numpy as np
 from statsmodels.multivariate.factor import Factor
 from numpy.testing import assert_allclose, assert_equal
 from scipy.optimize import approx_fprime
-
+import warnings
 
 # A small model for basic testing
 def _toy():
@@ -82,6 +82,23 @@ def test_exact_em():
             c_e = np.dot(load_e, load_e.T)
             c_e.flat[::c_e.shape[0]+1] += uniq_e
             assert_allclose(c_e, c, rtol=1e-4, atol=1e-4)
+
+
+def test_fit_ml_em_random_state():
+    # Ensure Factor._fit_ml_em doesn't change numpy's singleton random state
+    # see #7357
+
+    T = 10
+    epsilon = np.random.multivariate_normal(np.zeros(3), np.eye(3), size=T).T
+    initial = np.random.get_state()
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message='Fitting did not converge')
+        Factor(endog=epsilon, n_factor=2, method='ml').fit()
+    final = np.random.get_state()
+
+    assert(initial[0] == final[0])
+    assert_equal(initial[1], final[1])
+    assert(initial[2:] == final[2:])
 
 
 def test_em():

@@ -433,12 +433,13 @@ class Factor(Model):
 
         return FactorResults(self)
 
-    def _fit_ml_em(self, iter):
+    def _fit_ml_em(self, iter, random_state=None):
         """estimate Factor model using EM algorithm
         """
         # Starting values
-        np.random.seed(3427)
-        load = 0.1*np.random.normal(size=(self.k_endog, self.n_factor))
+        if random_state is None:
+            random_state = np.random.RandomState(3427)
+        load = 0.1 * random_state.standard_normal(size=(self.k_endog, self.n_factor))
         uniq = 0.5 * np.ones(self.k_endog)
 
         for k in range(iter):
