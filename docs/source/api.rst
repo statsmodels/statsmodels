@@ -140,6 +140,7 @@ Statistics and Tests
    ~statsmodels.tsa.stattools.pacf_yw
    ~statsmodels.tsa.stattools.q_stat
    ~statsmodels.tsa.stattools.range_unit_root_test
+   ~statsmodels.tsa.stattools.zivot_andrews
 
 
 Univariate Time-Series Analysis
@@ -148,11 +149,14 @@ Univariate Time-Series Analysis
 .. autosummary::
 
    ~statsmodels.tsa.ar_model.AutoReg
+   ~statsmodels.tsa.ardl.ARDL
    ~statsmodels.tsa.arima.model.ARIMA
    ~statsmodels.tsa.statespace.sarimax.SARIMAX
+   ~statsmodels.tsa.ardl.ardl_select_order
    ~statsmodels.tsa.stattools.arma_order_select_ic
    ~statsmodels.tsa.arima_process.arma_generate_sample
    ~statsmodels.tsa.arima_process.ArmaProcess
+   ~statsmodels.tsa.ardl.UECM
 
 Exponential Smoothing
 ~~~~~~~~~~~~~~~~~~~~~
@@ -171,13 +175,11 @@ Multivariate Time Series Models
 
 .. autosummary::
 
-   ~statsmodels.tsa.ardl.ARDL
    ~statsmodels.tsa.statespace.dynamic_factor.DynamicFactor
    ~statsmodels.tsa.statespace.dynamic_factor_mq.DynamicFactorMQ
    ~statsmodels.tsa.vector_ar.var_model.VAR
    ~statsmodels.tsa.statespace.varmax.VARMAX
    ~statsmodels.tsa.vector_ar.svar_model.SVAR
-   ~statsmodels.tsa.ardl.UECM
    ~statsmodels.tsa.vector_ar.vecm.VECM
    ~statsmodels.tsa.statespace.structural.UnobservedComponents
 
