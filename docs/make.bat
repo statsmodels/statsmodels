@@ -7,11 +7,8 @@ REM Command file for Sphinx documentation
 if "%SPHINXBUILD%" == "" (
 	set SPHINXBUILD=sphinx-build
 )
-
 set SOURCEDIR=source
 set BUILDDIR=build
-set SPHINXPROJ=statsmodels
-set SPHINXOPTS=
 
 set TOOLSPATH=../tools
 set DATASETBUILD=dataset_rst.py
@@ -27,7 +24,7 @@ if errorlevel 9009 (
 	echo.to the full path of the 'sphinx-build' executable. Alternatively you
 	echo.may add the Sphinx directory to PATH.
 	echo.
-	echo.If you do not have Sphinx installed, grab it from
+	echo.If you don't have Sphinx installed, grab it from
 	echo.http://sphinx-doc.org/
 	exit /b 1
 )
@@ -42,9 +39,9 @@ if "%1" == "html" (
     python %TOOLSPATH%/%DATASETBUILD%
 )
 
-echo %SPHINXBUILD% -b %1 %SOURCEDIR% %BUILDDIR% %SPHINXOPTS%
-%SPHINXBUILD% -b %1 %SOURCEDIR% %BUILDDIR% %SPHINXOPTS%
-if errorlevel 1 exit /b 1
+echo %SPHINXBUILD% -M %1 %SOURCEDIR% %BUILDDIR% %SPHINXOPTS% %O%
+%SPHINXBUILD% -M %1 %SOURCEDIR% %BUILDDIR% %SPHINXOPTS% %O%
+goto end
 
 if "%1" == "html" (
     echo xcopy /s /y source\examples\notebooks\generated\*.html %BUILDDIR%\html\examples\notebooks\generated\*.html
@@ -55,7 +52,7 @@ if "%1" == "html" (
 goto end
 
 :help
-%SPHINXBUILD% -M help %SOURCEDIR% %BUILDDIR% %SPHINXOPTS%
+%SPHINXBUILD% -M help %SOURCEDIR% %BUILDDIR% %SPHINXOPTS% %O%
 
 :end
 popd
