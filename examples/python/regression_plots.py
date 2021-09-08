@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # coding: utf-8
 
 # DO NOT EDIT
@@ -14,6 +15,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import statsmodels.api as sm
 from statsmodels.formula.api import ols
+
+plt.rc("figure", figsize=(16, 8))
+plt.rc("font", size=14)
 
 # ## Duncan's Prestige Dataset
 
@@ -55,8 +59,8 @@ print(prestige_model.summary())
 # argument. Options are Cook's distance and DFFITS, two measures of
 # influence.
 
-fig, ax = plt.subplots(figsize=(12, 8))
-fig = sm.graphics.influence_plot(prestige_model, ax=ax, criterion="cooks")
+fig = sm.graphics.influence_plot(prestige_model, criterion="cooks")
+fig.tight_layout(pad=1.0)
 
 # As you can see there are a few worrisome observations. Both contractor
 # and reporter have low leverage but a large residual. <br />
@@ -64,7 +68,7 @@ fig = sm.graphics.influence_plot(prestige_model, ax=ax, criterion="cooks")
 # minister have both high leverage and large residuals, and, <br />
 # therefore, large influence.
 
-# ### Partial Regression Plots
+# ### Partial Regression Plots (Duncan)
 
 # Since we are doing multivariate regressions, we cannot just look at
 # individual bivariate plots to discern relationships. <br />
@@ -91,13 +95,15 @@ fig = sm.graphics.influence_plot(prestige_model, ax=ax, criterion="cooks")
 # underlying assumptions such as homoskedasticity and <br />
 # linearity.
 
-fig, ax = plt.subplots(figsize=(12, 8))
-fig = sm.graphics.plot_partregress(
-    "prestige", "income", ["income", "education"], data=prestige, ax=ax)
+fig = sm.graphics.plot_partregress("prestige",
+                                   "income", ["income", "education"],
+                                   data=prestige)
+fig.tight_layout(pad=1.0)
 
-fix, ax = plt.subplots(figsize=(12, 14))
-fig = sm.graphics.plot_partregress(
-    "prestige", "income", ["education"], data=prestige, ax=ax)
+fig = sm.graphics.plot_partregress("prestige",
+                                   "income", ["education"],
+                                   data=prestige)
+fig.tight_layout(pad=1.0)
 
 # As you can see the partial regression plot confirms the influence of
 # conductor, minister, and RR.engineer on the partial relationship between
@@ -105,8 +111,9 @@ fig = sm.graphics.plot_partregress(
 # prestige. Dropping these cases confirms this.
 
 subset = ~prestige.index.isin(["conductor", "RR.engineer", "minister"])
-prestige_model2 = ols(
-    "prestige ~ income + education", data=prestige, subset=subset).fit()
+prestige_model2 = ols("prestige ~ income + education",
+                      data=prestige,
+                      subset=subset).fit()
 print(prestige_model2.summary())
 
 # For a quick check of all the regressors, you can use
@@ -114,8 +121,8 @@ print(prestige_model2.summary())
 # points, but you can use them to identify problems and then use
 # plot_partregress to get more information.
 
-fig = plt.figure(figsize=(12, 8))
-fig = sm.graphics.plot_partregress_grid(prestige_model, fig=fig)
+fig = sm.graphics.plot_partregress_grid(prestige_model)
+fig.tight_layout(pad=1.0)
 
 # ### Component-Component plus Residual (CCPR) Plots
 
@@ -134,8 +141,8 @@ fig = sm.graphics.plot_partregress_grid(prestige_model, fig=fig)
 # of  <br />
 # the true variance.
 
-fig, ax = plt.subplots(figsize=(12, 8))
-fig = sm.graphics.plot_ccpr(prestige_model, "education", ax=ax)
+fig = sm.graphics.plot_ccpr(prestige_model, "education")
+fig.tight_layout(pad=1.0)
 
 # As you can see the relationship between the variation in prestige
 # explained by education conditional on income seems to be linear, though
@@ -143,10 +150,10 @@ fig = sm.graphics.plot_ccpr(prestige_model, "education", ax=ax)
 # influence on the relationship. We can quickly look at more than one
 # variable by using plot_ccpr_grid.
 
-fig = plt.figure(figsize=(12, 8))
-fig = sm.graphics.plot_ccpr_grid(prestige_model, fig=fig)
+fig = sm.graphics.plot_ccpr_grid(prestige_model)
+fig.tight_layout(pad=1.0)
 
-# ### Regression Plots
+# ### Single Variable Regression Diagnostics
 
 # The plot_regress_exog function is a convenience function that gives a
 # 2x2 plot containing the dependent variable and fitted values with
@@ -155,8 +162,8 @@ fig = sm.graphics.plot_ccpr_grid(prestige_model, fig=fig)
 # and a CCPR plot. This function can be used for quickly checking modeling
 # assumptions with respect to a single regressor.
 
-fig = plt.figure(figsize=(12, 8))
-fig = sm.graphics.plot_regress_exog(prestige_model, "education", fig=fig)
+fig = sm.graphics.plot_regress_exog(prestige_model, "education")
+fig.tight_layout(pad=1.0)
 
 # ### Fit Plot
 
@@ -164,8 +171,8 @@ fig = sm.graphics.plot_regress_exog(prestige_model, "education", fig=fig)
 # independent variable. It includes prediction confidence intervals and
 # optionally plots the true dependent variable.
 
-fig, ax = plt.subplots(figsize=(12, 8))
-fig = sm.graphics.plot_fit(prestige_model, "education", ax=ax)
+fig = sm.graphics.plot_fit(prestige_model, "education")
+fig.tight_layout(pad=1.0)
 
 # ## Statewide Crime 2009 Dataset
 
@@ -175,11 +182,11 @@ fig = sm.graphics.plot_fit(prestige_model, "education", ax=ax)
 # Though the data here is not the same as in that example. You could run
 # that example by uncommenting the necessary cells below.
 
-#dta =
+# dta =
 # pd.read_csv("http://www.stat.ufl.edu/~aa/social/csv_files/statewide-
 # crime-2.csv")
-#dta = dta.set_index("State", inplace=True).dropna()
-#dta.rename(columns={"VR" : "crime",
+# dta = dta.set_index("State", inplace=True).dropna()
+# dta.rename(columns={"VR" : "crime",
 #                    "MR" : "murder",
 #                    "M"  : "pctmetro",
 #                    "W"  : "pctwhite",
@@ -188,36 +195,37 @@ fig = sm.graphics.plot_fit(prestige_model, "education", ax=ax)
 #                    "S"  : "single"
 #                    }, inplace=True)
 #
-#crime_model = ols("murder ~ pctmetro + poverty + pcths + single",
+# crime_model = ols("murder ~ pctmetro + poverty + pcths + single",
 # data=dta).fit()
 
 dta = sm.datasets.statecrime.load_pandas().data
 
-crime_model = ols(
-    "murder ~ urban + poverty + hs_grad + single", data=dta).fit()
+crime_model = ols("murder ~ urban + poverty + hs_grad + single",
+                  data=dta).fit()
 print(crime_model.summary())
 
-# ### Partial Regression Plots
+# ### Partial Regression Plots (Crime Data)
 
-fig = plt.figure(figsize=(12, 8))
-fig = sm.graphics.plot_partregress_grid(crime_model, fig=fig)
+fig = sm.graphics.plot_partregress_grid(crime_model)
+fig.tight_layout(pad=1.0)
 
-fig, ax = plt.subplots(figsize=(12, 8))
-fig = sm.graphics.plot_partregress(
-    "murder", "hs_grad", ["urban", "poverty", "single"], ax=ax, data=dta)
+fig = sm.graphics.plot_partregress("murder",
+                                   "hs_grad", ["urban", "poverty", "single"],
+                                   data=dta)
+fig.tight_layout(pad=1.0)
 
 # ### Leverage-Resid<sup>2</sup> Plot
 
 # Closely related to the influence_plot is the leverage-resid<sup>2</sup>
 # plot.
 
-fig, ax = plt.subplots(figsize=(8, 6))
-fig = sm.graphics.plot_leverage_resid2(crime_model, ax=ax)
+fig = sm.graphics.plot_leverage_resid2(crime_model)
+fig.tight_layout(pad=1.0)
 
 # ### Influence Plot
 
-fig, ax = plt.subplots(figsize=(8, 6))
-fig = sm.graphics.influence_plot(crime_model, ax=ax)
+fig = sm.graphics.influence_plot(crime_model)
+fig.tight_layout(pad=1.0)
 
 # ### Using robust regression to correct for outliers.
 
@@ -230,12 +238,13 @@ from statsmodels.formula.api import rlm
 rob_crime_model = rlm(
     "murder ~ urban + poverty + hs_grad + single",
     data=dta,
-    M=sm.robust.norms.TukeyBiweight(3)).fit(conv="weights")
+    M=sm.robust.norms.TukeyBiweight(3),
+).fit(conv="weights")
 print(rob_crime_model.summary())
 
-#rob_crime_model = rlm("murder ~ pctmetro + poverty + pcths + single",
+# rob_crime_model = rlm("murder ~ pctmetro + poverty + pcths + single",
 # data=dta, M=sm.robust.norms.TukeyBiweight()).fit(conv="weights")
-#print(rob_crime_model.summary())
+# print(rob_crime_model.summary())
 
 # There is not yet an influence diagnostics method as part of RLM, but we
 # can recreate them. (This depends on the status of [issue
@@ -254,15 +263,17 @@ hm = hat_matrix_diag.mean()
 rm = resid2.mean()
 
 from statsmodels.graphics import utils
-fig, ax = plt.subplots(figsize=(12, 8))
-ax.plot(resid2[idx], hat_matrix_diag, 'o')
+
+fig, ax = plt.subplots(figsize=(16, 8))
+ax.plot(resid2[idx], hat_matrix_diag, "o")
 ax = utils.annotate_axes(
     range(nobs),
     labels=rob_crime_model.model.data.row_labels[idx],
     points=lzip(resid2[idx], hat_matrix_diag),
     offset_points=[(-5, 5)] * nobs,
     size="large",
-    ax=ax)
+    ax=ax,
+)
 ax.set_xlabel("resid2")
 ax.set_ylabel("leverage")
 ylim = ax.get_ylim()

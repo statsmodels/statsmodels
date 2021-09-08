@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # coding: utf-8
 
 # DO NOT EDIT
@@ -28,7 +29,7 @@ print(sm.datasets.sunspots.NOTE)
 
 dta = sm.datasets.sunspots.load_pandas().data
 
-dta.index = pd.Index(sm.tsa.datetools.dates_from_range('1700', '2008'))
+dta.index = pd.Index(pd.date_range("1700", end="2009", freq="A-DEC"))
 del dta["YEAR"]
 
 dta.plot(figsize=(12, 4))
@@ -39,12 +40,12 @@ fig = sm.graphics.tsa.plot_acf(dta.values.squeeze(), lags=40, ax=ax1)
 ax2 = fig.add_subplot(212)
 fig = sm.graphics.tsa.plot_pacf(dta, lags=40, ax=ax2)
 
-arma_mod20 = sm.tsa.statespace.SARIMAX(
-    dta, order=(2, 0, 0), trend='c').fit(disp=False)
+arma_mod20 = sm.tsa.statespace.SARIMAX(dta, order=(2, 0, 0),
+                                       trend='c').fit(disp=False)
 print(arma_mod20.params)
 
-arma_mod30 = sm.tsa.statespace.SARIMAX(
-    dta, order=(3, 0, 0), trend='c').fit(disp=False)
+arma_mod30 = sm.tsa.statespace.SARIMAX(dta, order=(3, 0, 0),
+                                       trend='c').fit(disp=False)
 
 print(arma_mod20.aic, arma_mod20.bic, arma_mod20.hqic)
 
@@ -74,10 +75,11 @@ fig = sm.graphics.tsa.plot_acf(resid, lags=40, ax=ax1)
 ax2 = fig.add_subplot(212)
 fig = sm.graphics.tsa.plot_pacf(resid, lags=40, ax=ax2)
 
-r, q, p = sm.tsa.acf(resid, qstat=True)
-data = np.c_[range(1, 41), r[1:], q, p]
-table = pd.DataFrame(data, columns=['lag', "AC", "Q", "Prob(>Q)"])
-print(table.set_index('lag'))
+r, q, p = sm.tsa.acf(resid, fft=True, qstat=True)
+data = np.c_[r[1:], q, p]
+index = pd.Index(range(1, q.shape[0] + 1), name="lag")
+table = pd.DataFrame(data, columns=["AC", "Q", "Prob(>Q)"], index=index)
+print(table)
 
 # * This indicates a lack of fit.
 
@@ -87,8 +89,7 @@ predict_sunspots = arma_mod30.predict(start='1990', end='2012', dynamic=True)
 
 fig, ax = plt.subplots(figsize=(12, 8))
 dta.loc['1950':].plot(ax=ax)
-predict_sunspots.plot(
-    ax=ax, style='r')
+predict_sunspots.plot(ax=ax, style='r')
 
 
 def mean_forecast_err(y, yhat):

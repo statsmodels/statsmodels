@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # coding: utf-8
 
 # DO NOT EDIT
@@ -9,10 +10,10 @@
 
 # # Ordinary Least Squares
 
-import numpy as np
-import statsmodels.api as sm
 import matplotlib.pyplot as plt
-from statsmodels.sandbox.regression.predstd import wls_prediction_std
+import numpy as np
+import pandas as pd
+import statsmodels.api as sm
 
 np.random.seed(9876789)
 
@@ -40,8 +41,8 @@ print(results.summary())
 # Quantities of interest can be extracted directly from the fitted model.
 # Type ``dir(results)`` for a full list. Here are some examples:
 
-print('Parameters: ', results.params)
-print('R2: ', results.rsquared)
+print("Parameters: ", results.params)
+print("R2: ", results.rsquared)
 
 # ## OLS non-linear curve but linear in parameters
 #
@@ -52,7 +53,7 @@ nsample = 50
 sig = 0.5
 x = np.linspace(0, 20, nsample)
 X = np.column_stack((x, np.sin(x), (x - 5)**2, np.ones(nsample)))
-beta = [0.5, 0.5, -0.02, 5.]
+beta = [0.5, 0.5, -0.02, 5.0]
 
 y_true = np.dot(X, beta)
 y = y_true + sig * np.random.normal(size=nsample)
@@ -64,24 +65,26 @@ print(res.summary())
 
 # Extract other quantities of interest:
 
-print('Parameters: ', res.params)
-print('Standard errors: ', res.bse)
-print('Predicted values: ', res.predict())
+print("Parameters: ", res.params)
+print("Standard errors: ", res.bse)
+print("Predicted values: ", res.predict())
 
 # Draw a plot to compare the true relationship to OLS predictions.
 # Confidence intervals around the predictions are built using the
 # ``wls_prediction_std`` command.
 
-prstd, iv_l, iv_u = wls_prediction_std(res)
+pred_ols = res.get_prediction()
+iv_l = pred_ols.summary_frame()["obs_ci_lower"]
+iv_u = pred_ols.summary_frame()["obs_ci_upper"]
 
 fig, ax = plt.subplots(figsize=(8, 6))
 
-ax.plot(x, y, 'o', label="data")
-ax.plot(x, y_true, 'b-', label="True")
-ax.plot(x, res.fittedvalues, 'r--.', label="OLS")
-ax.plot(x, iv_u, 'r--')
-ax.plot(x, iv_l, 'r--')
-ax.legend(loc='best')
+ax.plot(x, y, "o", label="data")
+ax.plot(x, y_true, "b-", label="True")
+ax.plot(x, res.fittedvalues, "r--.", label="OLS")
+ax.plot(x, iv_u, "r--")
+ax.plot(x, iv_l, "r--")
+ax.legend(loc="best")
 
 # ## OLS with dummy variables
 #
@@ -92,15 +95,15 @@ nsample = 50
 groups = np.zeros(nsample, int)
 groups[20:40] = 1
 groups[40:] = 2
-#dummy = (groups[:,None] == np.unique(groups)).astype(float)
+# dummy = (groups[:,None] == np.unique(groups)).astype(float)
 
-dummy = sm.categorical(groups, drop=True)
+dummy = pd.get_dummies(groups).values
 x = np.linspace(0, 20, nsample)
 # drop reference category
 X = np.column_stack((x, dummy[:, 1:]))
 X = sm.add_constant(X, prepend=False)
 
-beta = [1., 3, -3, 10]
+beta = [1.0, 3, -3, 10]
 y_true = np.dot(X, beta)
 e = np.random.normal(size=nsample)
 y = y_true + e
@@ -119,15 +122,17 @@ print(res2.summary())
 
 # Draw a plot to compare the true relationship to OLS predictions:
 
-prstd, iv_l, iv_u = wls_prediction_std(res2)
+pred_ols2 = res2.get_prediction()
+iv_l = pred_ols.summary_frame()["obs_ci_lower"]
+iv_u = pred_ols.summary_frame()["obs_ci_upper"]
 
 fig, ax = plt.subplots(figsize=(8, 6))
 
-ax.plot(x, y, 'o', label="Data")
-ax.plot(x, y_true, 'b-', label="True")
-ax.plot(x, res2.fittedvalues, 'r--.', label="Predicted")
-ax.plot(x, iv_u, 'r--')
-ax.plot(x, iv_l, 'r--')
+ax.plot(x, y, "o", label="Data")
+ax.plot(x, y_true, "b-", label="True")
+ax.plot(x, res2.fittedvalues, "r--.", label="Predicted")
+ax.plot(x, iv_u, "r--")
+ax.plot(x, iv_l, "r--")
 legend = ax.legend(loc="best")
 
 # ## Joint hypothesis test
@@ -152,7 +157,7 @@ print(res2.f_test("x2 = x3 = 0"))
 # If we generate artificial data with smaller group effects, the T test
 # can no longer reject the Null hypothesis:
 
-beta = [1., 0.3, -0.0, 10]
+beta = [1.0, 0.3, -0.0, 10]
 y_true = np.dot(X, beta)
 y = y_true + np.random.normal(size=nsample)
 
@@ -170,6 +175,7 @@ print(res3.f_test("x2 = x3 = 0"))
 # make minor changes to model specification.
 
 from statsmodels.datasets.longley import load_pandas
+
 y = load_pandas().endog
 X = load_pandas().exog
 X = sm.add_constant(X)
@@ -207,8 +213,8 @@ print(condition_number)
 
 ols_results2 = sm.OLS(y.iloc[:14], X.iloc[:14]).fit()
 print("Percentage change %4.2f%%\n" * 7 % tuple([
-    i for i in
-    (ols_results2.params - ols_results.params) / ols_results.params * 100
+    i for i in (ols_results2.params - ols_results.params) /
+    ols_results.params * 100
 ]))
 
 # We can also look at formal statistics for this such as the DFBETAS -- a
@@ -220,6 +226,6 @@ infl = ols_results.get_influence()
 # In general we may consider DBETAS in absolute value greater than
 # $2/\sqrt{N}$ to be influential observations
 
-2. / len(X)**.5
+2.0 / len(X)**0.5
 
 print(infl.summary_frame().filter(regex="dfb"))

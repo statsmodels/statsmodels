@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # coding: utf-8
 
 # DO NOT EDIT
@@ -34,7 +35,9 @@ import statsmodels.api as sm
 import matplotlib.pyplot as plt
 
 from pandas_datareader.data import DataReader
+
 endog = DataReader('UNRATE', 'fred', start='1954-01-01')
+endog.index.freq = endog.index.inferred_freq
 
 # ### Hodrick-Prescott (HP) filter
 #
@@ -111,8 +114,7 @@ print(res_uc.summary())
 # movement in the unemployment rate is attributed to changes in the
 # underlying trend rather than to temporary cyclical movements.
 
-fig, axes = plt.subplots(
-    2, figsize=(13, 5))
+fig, axes = plt.subplots(2, figsize=(13, 5))
 axes[0].set(title='Level/trend component')
 axes[0].plot(endog.index, res_uc.level.smoothed, label='UC')
 axes[0].plot(endog.index, res_ucarima.level.smoothed, label='UC-ARIMA(2,0)')
@@ -122,8 +124,9 @@ axes[0].grid()
 
 axes[1].set(title='Cycle component')
 axes[1].plot(endog.index, res_uc.cycle.smoothed, label='UC')
-axes[1].plot(
-    endog.index, res_ucarima.autoregressive.smoothed, label='UC-ARIMA(2,0)')
+axes[1].plot(endog.index,
+             res_ucarima.autoregressive.smoothed,
+             label='UC-ARIMA(2,0)')
 axes[1].plot(hp_cycle, label='HP Filter')
 axes[1].legend(loc='upper left')
 axes[1].grid()

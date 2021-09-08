@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # coding: utf-8
 
 # DO NOT EDIT
@@ -134,8 +135,10 @@ class NBin(GenericLikelihoodModel):
             start_params = np.append(np.zeros(self.exog.shape[1]), .5)
             # intercept
             start_params[-2] = np.log(self.endog.mean())
-        return super(NBin, self).fit(
-            start_params=start_params, maxiter=maxiter, maxfun=maxfun, **kwds)
+        return super(NBin, self).fit(start_params=start_params,
+                                     maxiter=maxiter,
+                                     maxfun=maxfun,
+                                     **kwds)
 
 
 # Two important things to notice:
@@ -156,8 +159,8 @@ class NBin(GenericLikelihoodModel):
 # dataset is hosted in CSV format at the [Rdatasets repository](https://ra
 # w.githubusercontent.com/vincentarelbundock/Rdatasets). We use the
 # ``read_csv``
-# function from the [Pandas library](https://pandas.pydata.org) to load the
-# data
+# function from the [Pandas library](https://pandas.pydata.org) to load
+# the data
 # in memory. We then print the first few columns:
 #
 

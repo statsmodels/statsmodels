@@ -184,19 +184,18 @@ class STLForecast:
     @Substitution(fit_params=indent(_fit_params, " " * 8))
     def fit(self, *, inner_iter=None, outer_iter=None, fit_kwargs=None):
         """
-                Estimate STL and forecasting model parameters.
+        Estimate STL and forecasting model parameters.
 
-                Parameters
-                ----------
-        %(fit_params)s
-                fit_kwargs : Dict[str, Any]
-                    Any additional keyword arguments to pass to ``model``'s ``fit``
-                    method when estimating the model on the decomposed residuals.
+        Parameters
+        ----------\n%(fit_params)s
+        fit_kwargs : Dict[str, Any]
+            Any additional keyword arguments to pass to ``model``'s ``fit``
+            method when estimating the model on the decomposed residuals.
 
-                Returns
-                -------
-                STLForecastResults
-                    Results with forecasting methods.
+        Returns
+        -------
+        STLForecastResults
+            Results with forecasting methods.
         """
         fit_kwargs = {} if fit_kwargs is None else fit_kwargs
         stl = STL(self._endog, **self._stl_kwargs)

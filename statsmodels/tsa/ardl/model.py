@@ -2304,7 +2304,7 @@ class UECMResults(ARDLResults):
             Flag indicating whether to use asymptotic critical values which
             were computed by simulation (True, default) or to simulate a
             sample-size specific set of critical values. Tables are only
-            availble for up to 10 components in the cointegrating
+            available for up to 10 components in the cointegrating
             relationship, so if more variables are included then simulation
             is always used. The simulation computed the test statistic under
             and assumption that the residuals are homoskedastic.
@@ -2319,7 +2319,7 @@ class UECMResults(ARDLResults):
         Returns
         -------
         BoundsTestResult
-            Named tuple containg ``stat``, ``crit_vals``, ``p_values``,
+            Named tuple containing ``stat``, ``crit_vals``, ``p_values``,
             ``null` and ``alternative``. The statistic is the F-type
             test statistic favored in PSS.
 
@@ -2330,8 +2330,11 @@ class UECMResults(ARDLResults):
 
         .. math::
 
-           \Delta Y_{t}=\delta_{0} + \delta_{1}t + X_{t-1}\beta
+           \Delta Y_{t}=\delta_{0} + \delta_{1}t + Z_{t-1}\beta
                         + \sum_{j=0}^{P}\Delta X_{t-j}\Gamma + \epsilon_{t}
+
+        where :math:`Z_{t-1}` contains both :math:`Y_{t-1}` and
+        :math:`X_{t-1}`.
 
         The cases determine which deterministic terms are included in the
         model and which are tested as part of the test.
@@ -2350,7 +2353,7 @@ class UECMResults(ARDLResults):
         coefficients in :math:`\beta` are 0 along with any included
         deterministic terms, which depends on the case. The statistic returned
         is an F-type test statistic which is the standard quadratic form test
-        statistic devided by the number of restrictions.
+        statistic divided by the number of restrictions.
 
         References
         ----------

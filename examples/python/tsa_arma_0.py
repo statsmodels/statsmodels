@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # coding: utf-8
 
 # DO NOT EDIT
@@ -9,12 +10,12 @@
 
 # # Autoregressive Moving Average (ARMA): Sunspots data
 
-import numpy as np
-from scipy import stats
-import pandas as pd
 import matplotlib.pyplot as plt
-
+import numpy as np
+import pandas as pd
 import statsmodels.api as sm
+from scipy import stats
+from statsmodels.tsa.arima.model import ARIMA
 
 from statsmodels.graphics.api import qqplot
 
@@ -24,7 +25,8 @@ print(sm.datasets.sunspots.NOTE)
 
 dta = sm.datasets.sunspots.load_pandas().data
 
-dta.index = pd.Index(sm.tsa.datetools.dates_from_range('1700', '2008'))
+dta.index = pd.Index(sm.tsa.datetools.dates_from_range("1700", "2008"))
+dta.index.freq = dta.index.inferred_freq
 del dta["YEAR"]
 
 dta.plot(figsize=(12, 8))
@@ -35,10 +37,10 @@ fig = sm.graphics.tsa.plot_acf(dta.values.squeeze(), lags=40, ax=ax1)
 ax2 = fig.add_subplot(212)
 fig = sm.graphics.tsa.plot_pacf(dta, lags=40, ax=ax2)
 
-arma_mod20 = sm.tsa.ARMA(dta, (2, 0)).fit(disp=False)
+arma_mod20 = ARIMA(dta, order=(2, 0, 0)).fit()
 print(arma_mod20.params)
 
-arma_mod30 = sm.tsa.ARMA(dta, (3, 0)).fit(disp=False)
+arma_mod30 = ARIMA(dta, order=(3, 0, 0)).fit()
 
 print(arma_mod20.aic, arma_mod20.bic, arma_mod20.hqic)
 
@@ -60,7 +62,7 @@ stats.normaltest(resid)
 
 fig = plt.figure(figsize=(12, 8))
 ax = fig.add_subplot(111)
-fig = qqplot(resid, line='q', ax=ax, fit=True)
+fig = qqplot(resid, line="q", ax=ax, fit=True)
 
 fig = plt.figure(figsize=(12, 8))
 ax1 = fig.add_subplot(211)
@@ -68,22 +70,18 @@ fig = sm.graphics.tsa.plot_acf(resid.values.squeeze(), lags=40, ax=ax1)
 ax2 = fig.add_subplot(212)
 fig = sm.graphics.tsa.plot_pacf(resid, lags=40, ax=ax2)
 
-r, q, p = sm.tsa.acf(resid.values.squeeze(), qstat=True)
-data = np.c_[range(1, 41), r[1:], q, p]
-table = pd.DataFrame(data, columns=['lag', "AC", "Q", "Prob(>Q)"])
-print(table.set_index('lag'))
+r, q, p = sm.tsa.acf(resid.values.squeeze(), fft=True, qstat=True)
+data = np.c_[np.arange(1, 25), r[1:], q, p]
+
+table = pd.DataFrame(data, columns=["lag", "AC", "Q", "Prob(>Q)"])
+print(table.set_index("lag"))
 
 # * This indicates a lack of fit.
 
 # * In-sample dynamic prediction. How good does our model do?
 
-predict_sunspots = arma_mod30.predict('1990', '2012', dynamic=True)
+predict_sunspots = arma_mod30.predict("1990", "2012", dynamic=True)
 print(predict_sunspots)
-
-fig, ax = plt.subplots(figsize=(12, 8))
-ax = dta.loc['1950':].plot(ax=ax)
-fig = arma_mod30.plot_predict(
-    '1990', '2012', dynamic=True, ax=ax, plot_insample=False)
 
 
 def mean_forecast_err(y, yhat):
@@ -101,8 +99,8 @@ from statsmodels.tsa.arima_process import ArmaProcess
 
 np.random.seed(1234)
 # include zero-th lag
-arparams = np.array([1, .75, -.65, -.55, .9])
-maparams = np.array([1, .65])
+arparams = np.array([1, 0.75, -0.65, -0.55, 0.9])
+maparams = np.array([1, 0.65])
 
 # Let's make sure this model is estimable.
 
@@ -118,8 +116,8 @@ fig = plt.figure(figsize=(12, 8))
 ax = fig.add_subplot(111)
 ax.plot(arma_t.generate_sample(nsample=50))
 
-arparams = np.array([1, .35, -.15, .55, .1])
-maparams = np.array([1, .65])
+arparams = np.array([1, 0.35, -0.15, 0.55, 0.1])
+maparams = np.array([1, 0.65])
 arma_t = ArmaProcess(arparams, maparams)
 arma_t.isstationary
 
@@ -136,26 +134,27 @@ fig = sm.graphics.tsa.plot_pacf(arma_rvs, lags=40, ax=ax2)
 # * The partial autocorrelation function is a mixture of exponentials and
 # dampened sine waves after (p-q) lags.
 
-arma11 = sm.tsa.ARMA(arma_rvs, (1, 1)).fit(disp=False)
+lags = int(10 * np.log10(arma_rvs.shape[0]))
+arma11 = ARIMA(arma_rvs, order=(1, 0, 1)).fit()
 resid = arma11.resid
-r, q, p = sm.tsa.acf(resid, qstat=True)
-data = np.c_[range(1, 41), r[1:], q, p]
-table = pd.DataFrame(data, columns=['lag', "AC", "Q", "Prob(>Q)"])
-print(table.set_index('lag'))
+r, q, p = sm.tsa.acf(resid, nlags=lags, fft=True, qstat=True)
+data = np.c_[range(1, lags + 1), r[1:], q, p]
+table = pd.DataFrame(data, columns=["lag", "AC", "Q", "Prob(>Q)"])
+print(table.set_index("lag"))
 
-arma41 = sm.tsa.ARMA(arma_rvs, (4, 1)).fit(disp=False)
+arma41 = ARIMA(arma_rvs, order=(4, 0, 1)).fit()
 resid = arma41.resid
-r, q, p = sm.tsa.acf(resid, qstat=True)
-data = np.c_[range(1, 41), r[1:], q, p]
-table = pd.DataFrame(data, columns=['lag', "AC", "Q", "Prob(>Q)"])
-print(table.set_index('lag'))
+r, q, p = sm.tsa.acf(resid, nlags=lags, fft=True, qstat=True)
+data = np.c_[range(1, lags + 1), r[1:], q, p]
+table = pd.DataFrame(data, columns=["lag", "AC", "Q", "Prob(>Q)"])
+print(table.set_index("lag"))
 
 # ### Exercise: How good of in-sample prediction can you do for another
 # series, say, CPI
 
 macrodta = sm.datasets.macrodata.load_pandas().data
-macrodta.index = pd.Index(
-    sm.tsa.datetools.dates_from_range('1959Q1', '2009Q3'))
+macrodta.index = pd.Index(sm.tsa.datetools.dates_from_range(
+    "1959Q1", "2009Q3"))
 cpi = macrodta["cpi"]
 
 # #### Hint:

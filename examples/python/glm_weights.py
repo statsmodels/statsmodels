@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # coding: utf-8
 
 # DO NOT EDIT
@@ -62,11 +63,11 @@ np.bincount(data["affairs"].astype(int))
 # corresponding row.
 
 data2 = data.copy()
-data2['const'] = 1
-dc = data2['affairs rate_marriage age yrs_married const'.split()].groupby(
-    'affairs rate_marriage age yrs_married'.split()).count()
+data2["const"] = 1
+dc = (data2["affairs rate_marriage age yrs_married const".split()].groupby(
+    "affairs rate_marriage age yrs_married".split()).count())
 dc.reset_index(inplace=True)
-dc.rename(columns={'const': 'freq'}, inplace=True)
+dc.rename(columns={"const": "freq"}, inplace=True)
 print(dc.shape)
 dc.head()
 
@@ -80,9 +81,9 @@ dc.head()
 # We use again pandas ``groupby`` to combine observations and to create
 # the new variables. We also flatten the ``MultiIndex`` into a simple index.
 
-gr = data['affairs rate_marriage age yrs_married'.split()].groupby(
-    'rate_marriage age yrs_married'.split())
-df_a = gr.agg(['mean', 'sum', 'count'])
+gr = data["affairs rate_marriage age yrs_married".split()].groupby(
+    "rate_marriage age yrs_married".split())
+df_a = gr.agg(["mean", "sum", "count"])
 
 
 def merge_tuple(tpl):
@@ -101,7 +102,7 @@ df_a.head()
 # observations, and a dataframe `df_a` with 130 observations with unique
 # values of the explanatory variables.
 
-print('number of rows: \noriginal, with unique observations, with unique exog')
+print("number of rows: \noriginal, with unique observations, with unique exog")
 data.shape[0], dc.shape[0], df_a.shape[0]
 
 # ## Analysis
@@ -114,9 +115,10 @@ data.shape[0], dc.shape[0], df_a.shape[0]
 # ### original data
 
 glm = smf.glm(
-    'affairs ~ rate_marriage + age + yrs_married',
+    "affairs ~ rate_marriage + age + yrs_married",
     data=data,
-    family=sm.families.Poisson())
+    family=sm.families.Poisson(),
+)
 res_o = glm.fit()
 print(res_o.summary())
 
@@ -132,10 +134,11 @@ res_o.pearson_chi2 / res_o.df_resid
 # ``freq_weights`` into account.
 
 glm = smf.glm(
-    'affairs ~ rate_marriage + age + yrs_married',
+    "affairs ~ rate_marriage + age + yrs_married",
     data=dc,
     family=sm.families.Poisson(),
-    freq_weights=np.asarray(dc['freq']))
+    freq_weights=np.asarray(dc["freq"]),
+)
 res_f = glm.fit()
 print(res_f.summary())
 
@@ -155,10 +158,11 @@ res_f.pearson_chi2 / res_f.df_resid
 #
 
 glm = smf.glm(
-    'affairs ~ rate_marriage + age + yrs_married',
+    "affairs ~ rate_marriage + age + yrs_married",
     data=dc,
     family=sm.families.Poisson(),
-    var_weights=np.asarray(dc['freq']))
+    var_weights=np.asarray(dc["freq"]),
+)
 res_fv = glm.fit()
 print(res_fv.summary())
 
@@ -186,10 +190,11 @@ res_fv.pearson_chi2 / res_fv.df_resid, res_f.pearson_chi2 / res_f.df_resid
 # differ
 
 glm = smf.glm(
-    'affairs_sum ~ rate_marriage + age + yrs_married',
+    "affairs_sum ~ rate_marriage + age + yrs_married",
     data=df_a,
     family=sm.families.Poisson(),
-    exposure=np.asarray(df_a['affairs_count']))
+    exposure=np.asarray(df_a["affairs_count"]),
+)
 res_e = glm.fit()
 print(res_e.summary())
 
@@ -202,10 +207,11 @@ res_e.pearson_chi2 / res_e.df_resid
 # total exposure reflected by one combined observation.
 
 glm = smf.glm(
-    'affairs_mean ~ rate_marriage + age + yrs_married',
+    "affairs_mean ~ rate_marriage + age + yrs_married",
     data=df_a,
     family=sm.families.Poisson(),
-    var_weights=np.asarray(df_a['affairs_count']))
+    var_weights=np.asarray(df_a["affairs_count"]),
+)
 res_a = glm.fit()
 print(res_a.summary())
 
@@ -241,7 +247,7 @@ print(res_a.summary())
 # we assume that the underlying model is correctly specified.
 
 results_all = [res_o, res_f, res_e, res_a]
-names = 'res_o res_f res_e res_a'.split()
+names = "res_o res_f res_e res_a".split()
 
 pd.concat([r.params for r in results_all], axis=1, keys=names)
 
@@ -250,10 +256,11 @@ pd.concat([r.bse for r in results_all], axis=1, keys=names)
 pd.concat([r.pvalues for r in results_all], axis=1, keys=names)
 
 pd.DataFrame(
-    np.column_stack(
-        [[r.llf, r.deviance, r.pearson_chi2] for r in results_all]),
+    np.column_stack([[r.llf, r.deviance, r.pearson_chi2]
+                     for r in results_all]),
     columns=names,
-    index=['llf', 'deviance', 'pearson chi2'])
+    index=["llf", "deviance", "pearson chi2"],
+)
 
 # ### Likelihood Ratio type tests
 #
@@ -270,21 +277,21 @@ pd.DataFrame(
 
 # #### original observations and frequency weights
 
-glm = smf.glm(
-    'affairs ~ rate_marriage + yrs_married',
-    data=data,
-    family=sm.families.Poisson())
+glm = smf.glm("affairs ~ rate_marriage + yrs_married",
+              data=data,
+              family=sm.families.Poisson())
 res_o2 = glm.fit()
-#print(res_f2.summary())
+# print(res_f2.summary())
 res_o2.pearson_chi2 - res_o.pearson_chi2, res_o2.deviance - res_o.deviance, res_o2.llf - res_o.llf
 
 glm = smf.glm(
-    'affairs ~ rate_marriage + yrs_married',
+    "affairs ~ rate_marriage + yrs_married",
     data=dc,
     family=sm.families.Poisson(),
-    freq_weights=np.asarray(dc['freq']))
+    freq_weights=np.asarray(dc["freq"]),
+)
 res_f2 = glm.fit()
-#print(res_f2.summary())
+# print(res_f2.summary())
 res_f2.pearson_chi2 - res_f.pearson_chi2, res_f2.deviance - res_f.deviance, res_f2.llf - res_f.llf
 
 # #### aggregated data: ``exposure`` and ``var_weights``
@@ -293,18 +300,20 @@ res_f2.pearson_chi2 - res_f.pearson_chi2, res_f2.deviance - res_f.deviance, res_
 # differs and has the wrong sign.
 
 glm = smf.glm(
-    'affairs_sum ~ rate_marriage + yrs_married',
+    "affairs_sum ~ rate_marriage + yrs_married",
     data=df_a,
     family=sm.families.Poisson(),
-    exposure=np.asarray(df_a['affairs_count']))
+    exposure=np.asarray(df_a["affairs_count"]),
+)
 res_e2 = glm.fit()
 res_e2.pearson_chi2 - res_e.pearson_chi2, res_e2.deviance - res_e.deviance, res_e2.llf - res_e.llf
 
 glm = smf.glm(
-    'affairs_mean ~ rate_marriage + yrs_married',
+    "affairs_mean ~ rate_marriage + yrs_married",
     data=df_a,
     family=sm.families.Poisson(),
-    var_weights=np.asarray(df_a['affairs_count']))
+    var_weights=np.asarray(df_a["affairs_count"]),
+)
 res_a2 = glm.fit()
 res_a2.pearson_chi2 - res_a.pearson_chi2, res_a2.deviance - res_a.deviance, res_a2.llf - res_a.llf
 
@@ -313,24 +322,23 @@ res_a2.pearson_chi2 - res_a.pearson_chi2, res_a2.deviance - res_a.deviance, res_
 # First, we do some sanity checks that there are no basic bugs in the
 # computation of `pearson_chi2` and `resid_pearson`.
 
-res_e2.pearson_chi2, res_e.pearson_chi2, (res_e2.resid_pearson
-                                          **2).sum(), (res_e.resid_pearson
-                                                       **2).sum()
+res_e2.pearson_chi2, res_e.pearson_chi2, (res_e2.resid_pearson**2).sum(), (
+    res_e.resid_pearson**2).sum()
 
 res_e._results.resid_response.mean(), res_e.model.family.variance(
     res_e.mu)[:5], res_e.mu[:5]
 
-(res_e._results.resid_response**2 / res_e.model.family.variance(
-    res_e.mu)).sum()
+(res_e._results.resid_response**2 /
+ res_e.model.family.variance(res_e.mu)).sum()
 
 res_e2._results.resid_response.mean(), res_e2.model.family.variance(
     res_e2.mu)[:5], res_e2.mu[:5]
 
-(res_e2._results.resid_response**2 / res_e2.model.family.variance(
-    res_e2.mu)).sum()
+(res_e2._results.resid_response**2 /
+ res_e2.model.family.variance(res_e2.mu)).sum()
 
-(res_e2._results.resid_response**2).sum(), (res_e._results.resid_response
-                                            **2).sum()
+(res_e2._results.resid_response**2).sum(), (
+    res_e._results.resid_response**2).sum()
 
 # One possible reason for the incorrect sign is that we are subtracting
 # quadratic terms that are divided by different denominators. In some
@@ -360,7 +368,7 @@ res_e2._results.resid_response.mean(), res_e2.model.family.variance(
 # The remainder of the notebook just contains some additional checks and
 # can be ignored.
 
-np.exp(res_e2.model.exposure)[:5], np.asarray(df_a['affairs_count'])[:5]
+np.exp(res_e2.model.exposure)[:5], np.asarray(df_a["affairs_count"])[:5]
 
 res_e2.resid_pearson.sum() - res_e.resid_pearson.sum()
 
@@ -369,8 +377,8 @@ res_e2.mu[:5]
 res_a2.pearson_chi2, res_a.pearson_chi2, res_a2.resid_pearson.sum(
 ), res_a.resid_pearson.sum()
 
-((res_a2._results.resid_response**2) / res_a2.model.family.variance(res_a2.mu)
- * res_a2.model.var_weights).sum()
+((res_a2._results.resid_response**2) /
+ res_a2.model.family.variance(res_a2.mu) * res_a2.model.var_weights).sum()
 
 ((res_a._results.resid_response**2) / res_a.model.family.variance(res_a.mu) *
  res_a.model.var_weights).sum()
@@ -387,6 +395,7 @@ res_a2.model.endog[:5] * np.exp(res_e2.model.exposure)[:5]
 res_a2.model.endog[:5] * res_a2.model.var_weights[:5]
 
 from scipy import stats
+
 stats.chi2.sf(27.19530754604785, 1), stats.chi2.sf(29.083798806764687, 1)
 
 res_o.pvalues

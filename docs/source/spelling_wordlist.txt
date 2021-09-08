@@ -2534,3 +2534,13 @@ Reproducibility
 CopulaDistributionBivariate
 cdfcond
 pdfcond
+UECMResults
+BoundsTestResult
+ARDLOrderSelectionResults
+cLogLog
+marg
+IndependenceCopula
+dk
+qrng
+ppfcond
+reparameterizations

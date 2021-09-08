@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # coding: utf-8
 
 # DO NOT EDIT
@@ -67,6 +68,7 @@ try:
     from StringIO import StringIO
 except ImportError:
     from io import StringIO
+
 data = pd.read_csv(StringIO(data), delim_whitespace=True).astype(float)
 
 # Note: for the results we compare with the paper here, they drop the
@@ -91,11 +93,11 @@ data.head()
 # weights between the data points and internally re-scale them so that the
 # best-fit model will have `chi**2 / ndf = 1`.
 
-exog = sm.add_constant(data['x'])
-endog = data['y']
-weights = 1. / (data['y_err']**2)
+exog = sm.add_constant(data["x"])
+endog = data["y"]
+weights = 1.0 / (data["y_err"]**2)
 wls = sm.WLS(endog, exog, weights)
-results = wls.fit(cov_type='fixed scale')
+results = wls.fit(cov_type="fixed scale")
 print(results.summary())
 
 # ### Check against scipy.optimize.curve_fit
@@ -109,14 +111,14 @@ def f(x, a, b):
     return a * x + b
 
 
-xdata = data['x']
-ydata = data['y']
+xdata = data["x"]
+ydata = data["y"]
 p0 = [0, 0]  # initial parameter estimate
-sigma = data['y_err']
+sigma = data["y_err"]
 popt, pcov = curve_fit(f, xdata, ydata, p0, sigma, absolute_sigma=True)
 perr = np.sqrt(np.diag(pcov))
-print('a = {0:10.3f} +- {1:10.3f}'.format(popt[0], perr[0]))
-print('b = {0:10.3f} +- {1:10.3f}'.format(popt[1], perr[1]))
+print("a = {0:10.3f} +- {1:10.3f}".format(popt[0], perr[0]))
+print("b = {0:10.3f} +- {1:10.3f}".format(popt[1], perr[1]))
 
 # ### Check against self-written cost function
 
@@ -128,17 +130,16 @@ from scipy.optimize import minimize
 
 
 def chi2(pars):
-    """Cost function.
-    """
-    y_model = pars[0] * data['x'] + pars[1]
-    chi = (data['y'] - y_model) / data['y_err']
+    """Cost function."""
+    y_model = pars[0] * data["x"] + pars[1]
+    chi = (data["y"] - y_model) / data["y_err"]
     return np.sum(chi**2)
 
 
 result = minimize(fun=chi2, x0=[0, 0])
 popt = result.x
-print('a = {0:10.3f}'.format(popt[0]))
-print('b = {0:10.3f}'.format(popt[1]))
+print("a = {0:10.3f}".format(popt[0]))
+print("b = {0:10.3f}".format(popt[1]))
 
 # ## Non-linear models
 

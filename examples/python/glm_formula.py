@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # coding: utf-8
 
 # DO NOT EDIT
@@ -17,21 +18,33 @@
 
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
+
 star98 = sm.datasets.star98.load_pandas().data
-formula = 'SUCCESS ~ LOWINC + PERASIAN + PERBLACK + PERHISP + PCTCHRT +            PCTYRRND + PERMINTE*AVYRSEXP*AVSALK + PERSPENK*PTRATIO*PCTAF'
+formula = "SUCCESS ~ LOWINC + PERASIAN + PERBLACK + PERHISP + PCTCHRT +            PCTYRRND + PERMINTE*AVYRSEXP*AVSALK + PERSPENK*PTRATIO*PCTAF"
 dta = star98[[
-    'NABOVE', 'NBELOW', 'LOWINC', 'PERASIAN', 'PERBLACK', 'PERHISP', 'PCTCHRT',
-    'PCTYRRND', 'PERMINTE', 'AVYRSEXP', 'AVSALK', 'PERSPENK', 'PTRATIO',
-    'PCTAF'
+    "NABOVE",
+    "NBELOW",
+    "LOWINC",
+    "PERASIAN",
+    "PERBLACK",
+    "PERHISP",
+    "PCTCHRT",
+    "PCTYRRND",
+    "PERMINTE",
+    "AVYRSEXP",
+    "AVSALK",
+    "PERSPENK",
+    "PTRATIO",
+    "PCTAF",
 ]].copy()
-endog = dta['NABOVE'] / (dta['NABOVE'] + dta.pop('NBELOW'))
-del dta['NABOVE']
-dta['SUCCESS'] = endog
+endog = dta["NABOVE"] / (dta["NABOVE"] + dta.pop("NBELOW"))
+del dta["NABOVE"]
+dta["SUCCESS"] = endog
 
 # Then, we fit the GLM model:
 
 mod1 = smf.glm(formula=formula, data=dta, family=sm.families.Binomial()).fit()
-mod1.summary()
+print(mod1.summary())
 
 # Finally, we define a function to operate customized data transformation
 # using the formula framework:
@@ -41,9 +54,9 @@ def double_it(x):
     return 2 * x
 
 
-formula = 'SUCCESS ~ double_it(LOWINC) + PERASIAN + PERBLACK + PERHISP + PCTCHRT +            PCTYRRND + PERMINTE*AVYRSEXP*AVSALK + PERSPENK*PTRATIO*PCTAF'
+formula = "SUCCESS ~ double_it(LOWINC) + PERASIAN + PERBLACK + PERHISP + PCTCHRT +            PCTYRRND + PERMINTE*AVYRSEXP*AVSALK + PERSPENK*PTRATIO*PCTAF"
 mod2 = smf.glm(formula=formula, data=dta, family=sm.families.Binomial()).fit()
-mod2.summary()
+print(mod2.summary())
 
 # As expected, the coefficient for ``double_it(LOWINC)`` in the second
 # model is half the size of the ``LOWINC`` coefficient from the first model:

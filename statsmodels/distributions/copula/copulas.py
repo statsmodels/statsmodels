@@ -268,7 +268,7 @@ class Copula(ABC):
 
     @abstractmethod
     def pdf(self, u, args=()):
-        """Probability density function of opula.
+        """Probability density function of copula.
 
         Parameters
         ----------
@@ -453,7 +453,7 @@ class Copula(ABC):
         Returns
         -------
         corr_param : float
-            Correlation parameter of the copula, ``theta`` in archimedean and
+            Correlation parameter of the copula, ``theta`` in Archimedean and
             pearson correlation in elliptical.
         """
         x = np.asarray(data)
@@ -475,7 +475,7 @@ class Copula(ABC):
         Returns
         -------
         corr_param : float
-            Correlation parameter of the copula, ``theta`` in archimedean and
+            Correlation parameter of the copula, ``theta`` in Archimedean and
             pearson correlation in elliptical.
 
         """

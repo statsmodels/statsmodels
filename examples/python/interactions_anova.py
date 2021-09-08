@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # coding: utf-8
 
 # DO NOT EDIT
@@ -10,15 +11,17 @@
 # # Interactions and ANOVA
 
 # Note: This script is based heavily on Jonathan Taylor's class notes
-# http://www.stanford.edu/class/stats191/interactions.html
+# https://web.stanford.edu/class/stats191/notebooks/Interactions.html
 #
 # Download and format data:
 
-from statsmodels.compat import urlopen
+from urllib.request import urlopen
 import numpy as np
+
 np.set_printoptions(precision=4, suppress=True)
 
 import pandas as pd
+
 pd.set_option("display.width", 100)
 import matplotlib.pyplot as plt
 from statsmodels.formula.api import ols
@@ -26,12 +29,12 @@ from statsmodels.graphics.api import interaction_plot, abline_plot
 from statsmodels.stats.anova import anova_lm
 
 try:
-    salary_table = pd.read_csv('salary.table')
+    salary_table = pd.read_csv("salary.table")
 except:  # recent pandas can read URL without urlopen
-    url = 'http://stats191.stanford.edu/data/salary.table'
+    url = "http://stats191.stanford.edu/data/salary.table"
     fh = urlopen(url)
     salary_table = pd.read_table(fh)
-    salary_table.to_csv('salary.table')
+    salary_table.to_csv("salary.table")
 
 E = salary_table.E
 M = salary_table.M
@@ -41,19 +44,22 @@ S = salary_table.S
 # Take a look at the data:
 
 plt.figure(figsize=(6, 6))
-symbols = ['D', '^']
-colors = ['r', 'g', 'blue']
-factor_groups = salary_table.groupby(['E', 'M'])
+symbols = ["D", "^"]
+colors = ["r", "g", "blue"]
+factor_groups = salary_table.groupby(["E", "M"])
 for values, group in factor_groups:
     i, j = values
-    plt.scatter(
-        group['X'], group['S'], marker=symbols[j], color=colors[i - 1], s=144)
-plt.xlabel('Experience')
-plt.ylabel('Salary')
+    plt.scatter(group["X"],
+                group["S"],
+                marker=symbols[j],
+                color=colors[i - 1],
+                s=144)
+plt.xlabel("Experience")
+plt.ylabel("Salary")
 
 # Fit a linear model:
 
-formula = 'S ~ C(E) + C(M) + X'
+formula = "S ~ C(E) + C(M) + X"
 lm = ols(formula, salary_table).fit()
 print(lm.summary())
 
@@ -95,9 +101,10 @@ for values, group in factor_groups:
         marker=symbols[j],
         color=colors[i - 1],
         s=144,
-        edgecolors='black')
-plt.xlabel('Group')
-plt.ylabel('Residuals')
+        edgecolors="black",
+    )
+plt.xlabel("Group")
+plt.ylabel("Residuals")
 
 # Now we will test some interactions using anova or f_test
 
@@ -138,9 +145,10 @@ for values, group in factor_groups:
         marker=symbols[j],
         color=colors[i - 1],
         s=144,
-        edgecolors='black')
-plt.xlabel('X')
-plt.ylabel('standardized resids')
+        edgecolors="black",
+    )
+plt.xlabel("X")
+plt.ylabel("standardized resids")
 
 # Looks like one observation is an outlier.
 
@@ -148,52 +156,51 @@ drop_idx = abs(resid).argmax()
 print(drop_idx)  # zero-based index
 idx = salary_table.index.drop(drop_idx)
 
-lm32 = ols('S ~ C(E) + X + C(M)', data=salary_table, subset=idx).fit()
+lm32 = ols("S ~ C(E) + X + C(M)", data=salary_table, subset=idx).fit()
 
 print(lm32.summary())
-print('\n')
+print("\n")
 
-interX_lm32 = ols('S ~ C(E) * X + C(M)', data=salary_table, subset=idx).fit()
+interX_lm32 = ols("S ~ C(E) * X + C(M)", data=salary_table, subset=idx).fit()
 
 print(interX_lm32.summary())
-print('\n')
+print("\n")
 
 table3 = anova_lm(lm32, interX_lm32)
 print(table3)
-print('\n')
+print("\n")
 
-interM_lm32 = ols('S ~ X + C(E) * C(M)', data=salary_table, subset=idx).fit()
+interM_lm32 = ols("S ~ X + C(E) * C(M)", data=salary_table, subset=idx).fit()
 
 table4 = anova_lm(lm32, interM_lm32)
 print(table4)
-print('\n')
+print("\n")
 
 #  Replot the residuals
 
-try:
-    resid = interM_lm32.get_influence().summary_frame()['standard_resid']
-except:
-    resid = interM_lm32.get_influence().summary_frame()['standard_resid']
+resid = interM_lm32.get_influence().summary_frame()["standard_resid"]
 
 plt.figure(figsize=(6, 6))
+resid = resid.reindex(X.index)
 for values, group in factor_groups:
     i, j = values
     idx = group.index
     plt.scatter(
-        X[idx],
-        resid[idx],
+        X.loc[idx],
+        resid.loc[idx],
         marker=symbols[j],
         color=colors[i - 1],
         s=144,
-        edgecolors='black')
-plt.xlabel('X[~[32]]')
-plt.ylabel('standardized resids')
+        edgecolors="black",
+    )
+plt.xlabel("X[~[32]]")
+plt.ylabel("standardized resids")
 
 #  Plot the fitted values
 
-lm_final = ols('S ~ X + C(E)*C(M)', data=salary_table.drop([drop_idx])).fit()
+lm_final = ols("S ~ X + C(E)*C(M)", data=salary_table.drop([drop_idx])).fit()
 mf = lm_final.model.data.orig_exog
-lstyle = ['-', '--']
+lstyle = ["-", "--"]
 
 plt.figure(figsize=(6, 6))
 for values, group in factor_groups:
@@ -205,15 +212,14 @@ for values, group in factor_groups:
         marker=symbols[j],
         color=colors[i - 1],
         s=144,
-        edgecolors='black')
+        edgecolors="black",
+    )
     # drop NA because there is no idx 32 in the final model
-    plt.plot(
-        mf.X[idx].dropna(),
-        lm_final.fittedvalues[idx].dropna(),
-        ls=lstyle[j],
-        color=colors[i - 1])
-plt.xlabel('Experience')
-plt.ylabel('Salary')
+    fv = lm_final.fittedvalues.reindex(idx).dropna()
+    x = mf.X.reindex(idx).dropna()
+    plt.plot(x, fv, ls=lstyle[j], color=colors[i - 1])
+plt.xlabel("Experience")
+plt.ylabel("Salary")
 
 # From our first look at the data, the difference between Master's and PhD
 # in the management group is different than in the non-management group.
@@ -222,126 +228,136 @@ plt.ylabel('Salary')
 # experience, then plotting the means within each of the 6 groups using
 # interaction.plot.
 
-U = S - X * interX_lm32.params['X']
+U = S - X * interX_lm32.params["X"]
 
 plt.figure(figsize=(6, 6))
-interaction_plot(
-    E,
-    M,
-    U,
-    colors=['red', 'blue'],
-    markers=['^', 'D'],
-    markersize=10,
-    ax=plt.gca())
+interaction_plot(E,
+                 M,
+                 U,
+                 colors=["red", "blue"],
+                 markers=["^", "D"],
+                 markersize=10,
+                 ax=plt.gca())
 
 # ## Minority Employment Data
 
 try:
-    jobtest_table = pd.read_table('jobtest.table')
+    jobtest_table = pd.read_table("jobtest.table")
 except:  # do not have data already
-    url = 'http://stats191.stanford.edu/data/jobtest.table'
+    url = "http://stats191.stanford.edu/data/jobtest.table"
     jobtest_table = pd.read_table(url)
 
-factor_group = jobtest_table.groupby(['MINORITY'])
+factor_group = jobtest_table.groupby(["MINORITY"])
 
 fig, ax = plt.subplots(figsize=(6, 6))
-colors = ['purple', 'green']
-markers = ['o', 'v']
+colors = ["purple", "green"]
+markers = ["o", "v"]
 for factor, group in factor_group:
     ax.scatter(
-        group['TEST'],
-        group['JPERF'],
+        group["TEST"],
+        group["JPERF"],
         color=colors[factor],
         marker=markers[factor],
-        s=12**2)
-ax.set_xlabel('TEST')
-ax.set_ylabel('JPERF')
+        s=12**2,
+    )
+ax.set_xlabel("TEST")
+ax.set_ylabel("JPERF")
 
-min_lm = ols('JPERF ~ TEST', data=jobtest_table).fit()
+min_lm = ols("JPERF ~ TEST", data=jobtest_table).fit()
 print(min_lm.summary())
 
 fig, ax = plt.subplots(figsize=(6, 6))
 for factor, group in factor_group:
     ax.scatter(
-        group['TEST'],
-        group['JPERF'],
+        group["TEST"],
+        group["JPERF"],
         color=colors[factor],
         marker=markers[factor],
-        s=12**2)
+        s=12**2,
+    )
 
-ax.set_xlabel('TEST')
-ax.set_ylabel('JPERF')
+ax.set_xlabel("TEST")
+ax.set_ylabel("JPERF")
 fig = abline_plot(model_results=min_lm, ax=ax)
 
-min_lm2 = ols('JPERF ~ TEST + TEST:MINORITY', data=jobtest_table).fit()
+min_lm2 = ols("JPERF ~ TEST + TEST:MINORITY", data=jobtest_table).fit()
 
 print(min_lm2.summary())
 
 fig, ax = plt.subplots(figsize=(6, 6))
 for factor, group in factor_group:
     ax.scatter(
-        group['TEST'],
-        group['JPERF'],
+        group["TEST"],
+        group["JPERF"],
         color=colors[factor],
         marker=markers[factor],
-        s=12**2)
+        s=12**2,
+    )
 
 fig = abline_plot(
-    intercept=min_lm2.params['Intercept'],
-    slope=min_lm2.params['TEST'],
+    intercept=min_lm2.params["Intercept"],
+    slope=min_lm2.params["TEST"],
     ax=ax,
-    color='purple')
+    color="purple",
+)
 fig = abline_plot(
-    intercept=min_lm2.params['Intercept'],
-    slope=min_lm2.params['TEST'] + min_lm2.params['TEST:MINORITY'],
+    intercept=min_lm2.params["Intercept"],
+    slope=min_lm2.params["TEST"] + min_lm2.params["TEST:MINORITY"],
     ax=ax,
-    color='green')
+    color="green",
+)
 
-min_lm3 = ols('JPERF ~ TEST + MINORITY', data=jobtest_table).fit()
+min_lm3 = ols("JPERF ~ TEST + MINORITY", data=jobtest_table).fit()
 print(min_lm3.summary())
 
 fig, ax = plt.subplots(figsize=(6, 6))
 for factor, group in factor_group:
     ax.scatter(
-        group['TEST'],
-        group['JPERF'],
+        group["TEST"],
+        group["JPERF"],
         color=colors[factor],
         marker=markers[factor],
-        s=12**2)
+        s=12**2,
+    )
 
 fig = abline_plot(
-    intercept=min_lm3.params['Intercept'],
-    slope=min_lm3.params['TEST'],
+    intercept=min_lm3.params["Intercept"],
+    slope=min_lm3.params["TEST"],
     ax=ax,
-    color='purple')
+    color="purple",
+)
 fig = abline_plot(
-    intercept=min_lm3.params['Intercept'] + min_lm3.params['MINORITY'],
-    slope=min_lm3.params['TEST'],
+    intercept=min_lm3.params["Intercept"] + min_lm3.params["MINORITY"],
+    slope=min_lm3.params["TEST"],
     ax=ax,
-    color='green')
+    color="green",
+)
 
-min_lm4 = ols('JPERF ~ TEST * MINORITY', data=jobtest_table).fit()
+min_lm4 = ols("JPERF ~ TEST * MINORITY", data=jobtest_table).fit()
 print(min_lm4.summary())
 
 fig, ax = plt.subplots(figsize=(8, 6))
 for factor, group in factor_group:
     ax.scatter(
-        group['TEST'],
-        group['JPERF'],
+        group["TEST"],
+        group["JPERF"],
         color=colors[factor],
         marker=markers[factor],
-        s=12**2)
+        s=12**2,
+    )
 
 fig = abline_plot(
-    intercept=min_lm4.params['Intercept'],
-    slope=min_lm4.params['TEST'],
+    intercept=min_lm4.params["Intercept"],
+    slope=min_lm4.params["TEST"],
     ax=ax,
-    color='purple')
+    color="purple",
+)
 fig = abline_plot(
-    intercept=min_lm4.params['Intercept'] + min_lm4.params['MINORITY'],
-    slope=min_lm4.params['TEST'] + min_lm4.params['TEST:MINORITY'],
+    intercept=min_lm4.params["Intercept"] + min_lm4.params["MINORITY"],
+    slope=min_lm4.params["TEST"] + min_lm4.params["TEST:MINORITY"],
     ax=ax,
-    color='green')
+    color="green",
+)
 
 # is there any effect of MINORITY on slope or intercept?
 table5 = anova_lm(min_lm, min_lm4)
@@ -362,16 +378,16 @@ print(table8)
 # ## One-way ANOVA
 
 try:
-    rehab_table = pd.read_csv('rehab.table')
+    rehab_table = pd.read_csv("rehab.table")
 except:
-    url = 'http://stats191.stanford.edu/data/rehab.csv'
+    url = "http://stats191.stanford.edu/data/rehab.csv"
     rehab_table = pd.read_table(url, delimiter=",")
-    rehab_table.to_csv('rehab.table')
+    rehab_table.to_csv("rehab.table")
 
 fig, ax = plt.subplots(figsize=(8, 6))
-fig = rehab_table.boxplot('Time', 'Fitness', ax=ax, grid=False)
+fig = rehab_table.boxplot("Time", "Fitness", ax=ax, grid=False)
 
-rehab_lm = ols('Time ~ C(Fitness)', data=rehab_table).fit()
+rehab_lm = ols("Time ~ C(Fitness)", data=rehab_table).fit()
 table9 = anova_lm(rehab_lm)
 print(table9)
 
@@ -382,9 +398,9 @@ print(rehab_lm.summary())
 # ## Two-way ANOVA
 
 try:
-    kidney_table = pd.read_table('./kidney.table')
+    kidney_table = pd.read_table("./kidney.table")
 except:
-    url = 'http://stats191.stanford.edu/data/kidney.table'
+    url = "http://stats191.stanford.edu/data/kidney.table"
     kidney_table = pd.read_csv(url, delim_whitespace=True)
 
 # Explore the dataset
@@ -396,33 +412,36 @@ kidney_table.head(10)
 kt = kidney_table
 plt.figure(figsize=(8, 6))
 fig = interaction_plot(
-    kt['Weight'],
-    kt['Duration'],
-    np.log(kt['Days'] + 1),
-    colors=['red', 'blue'],
-    markers=['D', '^'],
+    kt["Weight"],
+    kt["Duration"],
+    np.log(kt["Days"] + 1),
+    colors=["red", "blue"],
+    markers=["D", "^"],
     ms=10,
-    ax=plt.gca())
+    ax=plt.gca(),
+)
 
 # You have things available in the calling namespace available in the
 # formula evaluation namespace
 
-kidney_lm = ols('np.log(Days+1) ~ C(Duration) * C(Weight)', data=kt).fit()
+kidney_lm = ols("np.log(Days+1) ~ C(Duration) * C(Weight)", data=kt).fit()
 
 table10 = anova_lm(kidney_lm)
 
 print(
     anova_lm(
-        ols('np.log(Days+1) ~ C(Duration) + C(Weight)', data=kt).fit(),
+        ols("np.log(Days+1) ~ C(Duration) + C(Weight)", data=kt).fit(),
         kidney_lm))
 print(
     anova_lm(
-        ols('np.log(Days+1) ~ C(Duration)', data=kt).fit(),
-        ols('np.log(Days+1) ~ C(Duration) + C(Weight, Sum)', data=kt).fit()))
+        ols("np.log(Days+1) ~ C(Duration)", data=kt).fit(),
+        ols("np.log(Days+1) ~ C(Duration) + C(Weight, Sum)", data=kt).fit(),
+    ))
 print(
     anova_lm(
-        ols('np.log(Days+1) ~ C(Weight)', data=kt).fit(),
-        ols('np.log(Days+1) ~ C(Duration) + C(Weight, Sum)', data=kt).fit()))
+        ols("np.log(Days+1) ~ C(Weight)", data=kt).fit(),
+        ols("np.log(Days+1) ~ C(Duration) + C(Weight, Sum)", data=kt).fit(),
+    ))
 
 # ## Sum of squares
 #
@@ -434,15 +453,15 @@ print(
 #
 #  Do not use Type III with non-orthogonal contrast - ie., Treatment
 
-sum_lm = ols(
-    'np.log(Days+1) ~ C(Duration, Sum) * C(Weight, Sum)', data=kt).fit()
+sum_lm = ols("np.log(Days+1) ~ C(Duration, Sum) * C(Weight, Sum)",
+             data=kt).fit()
 
 print(anova_lm(sum_lm))
 print(anova_lm(sum_lm, typ=2))
 print(anova_lm(sum_lm, typ=3))
 
 nosum_lm = ols(
-    'np.log(Days+1) ~ C(Duration, Treatment) * C(Weight, Treatment)',
+    "np.log(Days+1) ~ C(Duration, Treatment) * C(Weight, Treatment)",
     data=kt).fit()
 print(anova_lm(nosum_lm))
 print(anova_lm(nosum_lm, typ=2))

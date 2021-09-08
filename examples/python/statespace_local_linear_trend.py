@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # coding: utf-8
 
 # DO NOT EDIT
@@ -129,12 +130,12 @@ class LocalLinearTrend(sm.tsa.statespace.MLEModel):
         k_states = k_posdef = 2
 
         # Initialize the statespace
-        super(LocalLinearTrend, self).__init__(
-            endog,
-            k_states=k_states,
-            k_posdef=k_posdef,
-            initialization='approximate_diffuse',
-            loglikelihood_burn=k_states)
+        super(LocalLinearTrend,
+              self).__init__(endog,
+                             k_states=k_states,
+                             k_posdef=k_posdef,
+                             initialization='approximate_diffuse',
+                             loglikelihood_burn=k_states)
 
         # Initialize the matrices
         self.ssm['design'] = np.array([1, 0])
@@ -180,14 +181,13 @@ from zipfile import ZipFile
 ck = requests.get(
     'http://staff.feweb.vu.nl/koopman/projects/ckbook/OxCodeAll.zip').content
 zipped = ZipFile(BytesIO(ck))
-df = pd.read_table(
-    BytesIO(
-        zipped.read('OxCodeIntroStateSpaceBook/Chapter_2/NorwayFinland.txt')),
-    skiprows=1,
-    header=None,
-    sep='\s+',
-    engine='python',
-    names=['date', 'nf', 'ff'])
+df = pd.read_table(BytesIO(
+    zipped.read('OxCodeIntroStateSpaceBook/Chapter_2/NorwayFinland.txt')),
+                   skiprows=1,
+                   header=None,
+                   sep='\s+',
+                   engine='python',
+                   names=['date', 'nf', 'ff'])
 
 # Since we defined the local linear trend model as extending from
 # `MLEModel`, the `fit()` method is immediately available, just as in other
@@ -197,8 +197,9 @@ df = pd.read_table(
 #
 
 # Load Dataset
-df.index = pd.date_range(
-    start='%d-01-01' % df.date[0], end='%d-01-01' % df.iloc[-1, 0], freq='AS')
+df.index = pd.date_range(start='%d-01-01' % df.date[0],
+                         end='%d-01-01' % df.iloc[-1, 0],
+                         freq='AS')
 
 # Log transform
 df['lff'] = np.log(df['ff'])
@@ -225,17 +226,18 @@ df['lff'].plot(ax=ax, style='k.', label='Observations')
 predict.predicted_mean.plot(ax=ax, label='One-step-ahead Prediction')
 predict_ci = predict.conf_int(alpha=0.05)
 predict_index = np.arange(len(predict_ci))
-ax.fill_between(
-    predict_index[2:],
-    predict_ci.iloc[2:, 0],
-    predict_ci.iloc[2:, 1],
-    alpha=0.1)
+ax.fill_between(predict_index[2:],
+                predict_ci.iloc[2:, 0],
+                predict_ci.iloc[2:, 1],
+                alpha=0.1)
 
 forecast.predicted_mean.plot(ax=ax, style='r', label='Forecast')
 forecast_ci = forecast.conf_int()
 forecast_index = np.arange(len(predict_ci), len(predict_ci) + len(forecast_ci))
-ax.fill_between(
-    forecast_index, forecast_ci.iloc[:, 0], forecast_ci.iloc[:, 1], alpha=0.1)
+ax.fill_between(forecast_index,
+                forecast_ci.iloc[:, 0],
+                forecast_ci.iloc[:, 1],
+                alpha=0.1)
 
 # Cleanup the image
 ax.set_ylim((4, 8))

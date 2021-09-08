@@ -27,6 +27,7 @@ Regression and Linear Models
    discretemod
    mixed_glm
    anova
+   other_models
 
 Time Series Analysis
 --------------------

@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # coding: utf-8
 
 # DO NOT EDIT
@@ -59,17 +60,17 @@ sm.OLS.from_formula
 # ## OLS regression using formulas
 #
 # To begin, we fit the linear model described on the [Getting
-# Started](gettingstarted.html) page. Download the data, subset columns, and
-# list-wise delete to remove missing observations:
+# Started](./regression_diagnostics.html) page. Download the data, subset
+# columns, and list-wise delete to remove missing observations:
 
 dta = sm.datasets.get_rdataset("Guerry", "HistData", cache=True)
 
-df = dta.data[['Lottery', 'Literacy', 'Wealth', 'Region']].dropna()
+df = dta.data[["Lottery", "Literacy", "Wealth", "Region"]].dropna()
 df.head()
 
 # Fit the model:
 
-mod = ols(formula='Lottery ~ Literacy + Wealth + Region', data=df)
+mod = ols(formula="Lottery ~ Literacy + Wealth + Region", data=df)
 res = mod.fit()
 print(res.summary())
 
@@ -84,12 +85,12 @@ print(res.summary())
 # explicitly as categorical, we could have done so by using the ``C()``
 # operator:
 
-res = ols(formula='Lottery ~ Literacy + Wealth + C(Region)', data=df).fit()
+res = ols(formula="Lottery ~ Literacy + Wealth + C(Region)", data=df).fit()
 print(res.params)
 
 # Patsy's mode advanced features for categorical variables are discussed
 # in: [Patsy: Contrast Coding Systems for categorical
-# variables](contrasts.html)
+# variables](./contrasts.html)
 
 # ## Operators
 #
@@ -97,23 +98,23 @@ print(res.params)
 # from the right-hand side, and that "+" adds new columns to the design
 # matrix.
 #
-# ### Removing variables
+# ## Removing variables
 #
 # The "-" sign can be used to remove columns/variables. For instance, we
 # can remove the intercept from a model by:
 
-res = ols(formula='Lottery ~ Literacy + Wealth + C(Region) -1 ', data=df).fit()
+res = ols(formula="Lottery ~ Literacy + Wealth + C(Region) -1 ", data=df).fit()
 print(res.params)
 
-# ### Multiplicative interactions
+# ## Multiplicative interactions
 #
 # ":" adds a new column to the design matrix with the interaction of the
 # other two columns. "*" will also include the individual columns that were
 # multiplied together:
 
-res1 = ols(formula='Lottery ~ Literacy : Wealth - 1', data=df).fit()
-res2 = ols(formula='Lottery ~ Literacy * Wealth - 1', data=df).fit()
-print(res1.params, '\n')
+res1 = ols(formula="Lottery ~ Literacy : Wealth - 1", data=df).fit()
+res2 = ols(formula="Lottery ~ Literacy * Wealth - 1", data=df).fit()
+print(res1.params, "\n")
 print(res2.params)
 
 # Many other things are possible with operators. Please consult the [patsy
@@ -124,17 +125,17 @@ print(res2.params)
 #
 # You can apply vectorized functions to the variables in your model:
 
-res = smf.ols(formula='Lottery ~ np.log(Literacy)', data=df).fit()
+res = smf.ols(formula="Lottery ~ np.log(Literacy)", data=df).fit()
 print(res.params)
 
 # Define a custom function:
 
 
 def log_plus_1(x):
-    return np.log(x) + 1.
+    return np.log(x) + 1.0
 
 
-res = smf.ols(formula='Lottery ~ log_plus_1(Literacy)', data=df).fit()
+res = smf.ols(formula="Lottery ~ log_plus_1(Literacy)", data=df).fit()
 print(res.params)
 
 # Any function that is in the calling namespace is available to the
@@ -150,15 +151,16 @@ print(res.params)
 # To generate ``numpy`` arrays:
 
 import patsy
-f = 'Lottery ~ Literacy * Wealth'
-y, X = patsy.dmatrices(f, df, return_type='matrix')
+
+f = "Lottery ~ Literacy * Wealth"
+y, X = patsy.dmatrices(f, df, return_type="matrix")
 print(y[:5])
 print(X[:5])
 
 # To generate pandas data frames:
 
-f = 'Lottery ~ Literacy * Wealth'
-y, X = patsy.dmatrices(f, df, return_type='dataframe')
+f = "Lottery ~ Literacy * Wealth"
+y, X = patsy.dmatrices(f, df, return_type="dataframe")
 print(y[:5])
 print(X[:5])
 

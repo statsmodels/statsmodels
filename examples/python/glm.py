@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # coding: utf-8
 
 # DO NOT EDIT
@@ -14,9 +15,12 @@ import statsmodels.api as sm
 from scipy import stats
 from matplotlib import pyplot as plt
 
+plt.rc("figure", figsize=(16, 8))
+plt.rc("font", size=14)
+
 # ## GLM: Binomial response data
 #
-# ### Load data
+# ### Load Star98 data
 #
 #  In this example, we use the Star98 dataset which was taken with
 # permission
@@ -34,13 +38,13 @@ data.exog = sm.add_constant(data.exog, prepend=False)
 
 #  The dependent variable is N by 2 (Success: NABOVE, Failure: NBELOW):
 
-print(data.endog[:5, :])
+print(data.endog.head())
 
 #  The independent variables include all the other variables described
 # above, as
 #  well as the interaction terms:
 
-print(data.exog[:2, :])
+print(data.exog.head())
 
 # ### Fit and summary
 
@@ -50,7 +54,7 @@ print(res.summary())
 
 # ### Quantities of interest
 
-print('Total number of trials:', data.endog[0].sum())
+print('Total number of trials:', data.endog.iloc[:, 0].sum())
 print('Parameters: ', res.params)
 print('T-values: ', res.tvalues)
 
@@ -60,9 +64,10 @@ print('T-values: ', res.tvalues)
 
 means = data.exog.mean(axis=0)
 means25 = means.copy()
-means25[0] = stats.scoreatpercentile(data.exog[:, 0], 25)
+means25.iloc[0] = stats.scoreatpercentile(data.exog.iloc[:, 0], 25)
 means75 = means.copy()
-means75[0] = lowinc_75per = stats.scoreatpercentile(data.exog[:, 0], 75)
+means75.iloc[0] = lowinc_75per = stats.scoreatpercentile(
+    data.exog.iloc[:, 0], 75)
 resp_25 = res.predict(means25)
 resp_75 = res.predict(means75)
 diff = resp_75 - resp_25
@@ -78,7 +83,7 @@ print("%2.4f%%" % (diff * 100))
 # plots:
 
 nobs = res.nobs
-y = data.endog[:, 0] / data.endog.sum(1)
+y = data.endog.iloc[:, 0] / data.endog.sum(1)
 yhat = res.mu
 
 # Plot yhat vs y:
@@ -119,11 +124,12 @@ ax.set_title('Histogram of standardized deviance residuals')
 # QQ Plot of Deviance Residuals:
 
 from statsmodels import graphics
+
 graphics.gofplots.qqplot(resid, line='r')
 
 # ## GLM: Gamma for proportional count response
 #
-# ### Load data
+# ### Load Scottish Parliament Voting data
 #
 #  In the example above, we printed the ``NOTE`` attribute to learn about
 # the
@@ -137,12 +143,14 @@ print(sm.datasets.scotland.DESCRLONG)
 
 data2 = sm.datasets.scotland.load()
 data2.exog = sm.add_constant(data2.exog, prepend=False)
-print(data2.exog[:5, :])
-print(data2.endog[:5])
+print(data2.exog.head())
+print(data2.endog.head())
 
-# ### Fit and summary
+# ### Model Fit and summary
 
-glm_gamma = sm.GLM(data2.endog, data2.exog, family=sm.families.Gamma())
+glm_gamma = sm.GLM(data2.endog,
+                   data2.exog,
+                   family=sm.families.Gamma(sm.families.links.log()))
 glm_results = glm_gamma.fit()
 print(glm_results.summary())
 
@@ -157,8 +165,10 @@ X = np.column_stack((x, x**2))
 X = sm.add_constant(X, prepend=False)
 lny = np.exp(-(.03 * x + .0001 * x**2 - 1.0)) + .001 * np.random.rand(nobs2)
 
-# ### Fit and summary
+# ### Fit and summary (artificial data)
 
-gauss_log = sm.GLM(lny, X, family=sm.families.Gaussian(sm.families.links.log))
+gauss_log = sm.GLM(lny,
+                   X,
+                   family=sm.families.Gaussian(sm.families.links.log()))
 gauss_log_results = gauss_log.fit()
 print(gauss_log_results.summary())
