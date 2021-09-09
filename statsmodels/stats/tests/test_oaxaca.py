@@ -17,7 +17,8 @@ pandas_df = load_pandas()
 endog = pandas_df.endog.values
 exog = add_constant(pandas_df.exog.values, prepend=False)
 pd_endog, pd_exog = pandas_df.endog, add_constant(
-    pandas_df.exog, prepend=False)
+    pandas_df.exog, prepend=False
+)
 
 
 class TestOaxaca(object):
@@ -70,7 +71,7 @@ class TestOaxacaNoSwap(object):
 class TestOaxacaPandas(object):
     @classmethod
     def setup_class(cls):
-        cls.model = OaxacaBlinder(pd_endog, pd_exog, 'OWNRENT')
+        cls.model = OaxacaBlinder(pd_endog, pd_exog, "OWNRENT")
 
     def test_results(self):
         stata_results = np.array([158.7504, 321.7482, 75.45371, -238.4515])
@@ -90,7 +91,7 @@ class TestOaxacaPandas(object):
 class TestOaxacaPandasNoSwap(object):
     @classmethod
     def setup_class(cls):
-        cls.model = OaxacaBlinder(pd_endog, pd_exog, 'OWNRENT', swap=False)
+        cls.model = OaxacaBlinder(pd_endog, pd_exog, "OWNRENT", swap=False)
 
     def test_results(self):
         stata_results = np.array([-158.7504, -83.29674, 162.9978, -238.4515])
@@ -110,9 +111,9 @@ class TestOaxacaPandasNoSwap(object):
 class TestOaxacaNoConstPassed(object):
     @classmethod
     def setup_class(cls):
-        cls.model = OaxacaBlinder(pandas_df.endog.values,
-                                  pandas_df.exog.values,
-                                  3, hasconst=False)
+        cls.model = OaxacaBlinder(
+            pandas_df.endog.values, pandas_df.exog.values, 3, hasconst=False
+        )
 
     def test_results(self):
         stata_results = np.array([158.7504, 321.7482, 75.45371, -238.4515])
@@ -132,9 +133,13 @@ class TestOaxacaNoConstPassed(object):
 class TestOaxacaNoSwapNoConstPassed(object):
     @classmethod
     def setup_class(cls):
-        cls.model = OaxacaBlinder(pandas_df.endog.values,
-                                  pandas_df.exog.values,
-                                  3, hasconst=False, swap=False)
+        cls.model = OaxacaBlinder(
+            pandas_df.endog.values,
+            pandas_df.exog.values,
+            3,
+            hasconst=False,
+            swap=False,
+        )
 
     def test_results(self):
         stata_results = np.array([-158.7504, -83.29674, 162.9978, -238.4515])
@@ -154,9 +159,9 @@ class TestOaxacaNoSwapNoConstPassed(object):
 class TestOaxacaPandasNoConstPassed(object):
     @classmethod
     def setup_class(cls):
-        cls.model = OaxacaBlinder(pandas_df.endog,
-                                  pandas_df.exog,
-                                  'OWNRENT', hasconst=False)
+        cls.model = OaxacaBlinder(
+            pandas_df.endog, pandas_df.exog, "OWNRENT", hasconst=False
+        )
 
     def test_results(self):
         stata_results = np.array([158.7504, 321.7482, 75.45371, -238.4515])
@@ -176,8 +181,13 @@ class TestOaxacaPandasNoConstPassed(object):
 class TestOaxacaPandasNoSwapNoConstPassed(object):
     @classmethod
     def setup_class(cls):
-        cls.model = OaxacaBlinder(pandas_df.endog, pandas_df.exog,
-                                  'OWNRENT', hasconst=False, swap=False)
+        cls.model = OaxacaBlinder(
+            pandas_df.endog,
+            pandas_df.exog,
+            "OWNRENT",
+            hasconst=False,
+            swap=False,
+        )
 
     def test_results(self):
         stata_results = np.array([-158.7504, -83.29674, 162.9978, -238.4515])
@@ -199,13 +209,8 @@ class TestOneModel(object):
     def setup_class(cls):
         np.random.seed(0)
         cls.one_model = OaxacaBlinder(
-            pandas_df.endog,
-            pandas_df.exog,
-            'OWNRENT',
-            hasconst=False).two_fold(
-            True,
-            two_fold_type='self_submitted',
-            submitted_weight=1)
+            pandas_df.endog, pandas_df.exog, "OWNRENT", hasconst=False
+        ).two_fold(True, two_fold_type="self_submitted", submitted_weight=1)
 
     def test_results(self):
         unexp, exp, gap = self.one_model.params
@@ -226,13 +231,8 @@ class TestZeroModel(object):
     def setup_class(cls):
         np.random.seed(0)
         cls.zero_model = OaxacaBlinder(
-            pandas_df.endog,
-            pandas_df.exog,
-            'OWNRENT',
-            hasconst=False).two_fold(
-            True,
-            two_fold_type='self_submitted',
-            submitted_weight=0)
+            pandas_df.endog, pandas_df.exog, "OWNRENT", hasconst=False
+        ).two_fold(True, two_fold_type="self_submitted", submitted_weight=0)
 
     def test_results(self):
         unexp, exp, gap = self.zero_model.params
@@ -253,18 +253,13 @@ class TestOmegaModel(object):
     def setup_class(cls):
         np.random.seed(0)
         cls.omega_model = OaxacaBlinder(
-            pandas_df.endog,
-            pandas_df.exog,
-            'OWNRENT',
-            hasconst=False).two_fold(
-            True,
-            two_fold_type='nuemark')
+            pandas_df.endog, pandas_df.exog, "OWNRENT", hasconst=False
+        ).two_fold(True, two_fold_type="nuemark")
 
     def test_results(self):
         unexp, exp, gap = self.omega_model.params
         unexp_std, exp_std = self.omega_model.std
-        nue_params_stata_results = np.array(
-            [19.52467, 139.22577, 158.75044])
+        nue_params_stata_results = np.array([19.52467, 139.22577, 158.75044])
         nue_std_stata_results = np.array([59.82744, 48.25425])
 
         np.testing.assert_almost_equal(unexp, nue_params_stata_results[0], 3)
@@ -280,16 +275,15 @@ class TestPooledModel(object):
     def setup_class(cls):
         np.random.seed(0)
         cls.pooled_model = OaxacaBlinder(
-            pandas_df.endog,
-            pandas_df.exog,
-            'OWNRENT',
-            hasconst=False).two_fold(True)
+            pandas_df.endog, pandas_df.exog, "OWNRENT", hasconst=False
+        ).two_fold(True)
 
     def test_results(self):
         unexp, exp, gap = self.pooled_model.params
         unexp_std, exp_std = self.pooled_model.std
         pool_params_stata_results = np.array(
-            [27.940908, 130.809536, 158.75044])
+            [27.940908, 130.809536, 158.75044]
+        )
         pool_std_stata_results = np.array([89.209487, 58.612367])
 
         np.testing.assert_almost_equal(unexp, pool_params_stata_results[0], 3)
