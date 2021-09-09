@@ -189,7 +189,7 @@ html_theme_options = {
                'examples/index': 'examples and tutorials to get started with '
                                  'statsmodels'},
     "version_dropdown": True,
-    "version_json": "../versions.json",
+    "version_json": "../versions-v2.json",
 }
 
 language = 'en'
