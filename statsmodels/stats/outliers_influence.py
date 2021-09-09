@@ -6,18 +6,18 @@ Created on Sun Jan 29 11:16:09 2012
 Author: Josef Perktold
 License: BSD-3
 """
+from statsmodels.compat.pandas import Appender
+from statsmodels.compat.python import lzip
+
 from collections import defaultdict
 
 import numpy as np
 
-from statsmodels.compat.python import lzip
-from statsmodels.compat.pandas import Appender
 from statsmodels.graphics._regressionplots_doc import _plot_influence_doc
 from statsmodels.regression.linear_model import OLS
 from statsmodels.stats.multitest import multipletests
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.tools import maybe_unwrap_results
-
 
 # outliers test convenience wrapper
 
@@ -148,7 +148,8 @@ def reset_ramsey(res, degree=5):
 
 
 def variance_inflation_factor(exog, exog_idx):
-    """variance inflation factor, VIF, for one exogenous variable
+    """
+    Variance inflation factor, VIF, for one exogenous variable
 
     The variance inflation factor is a measure for the increase of the
     variance of the parameter estimates if an additional variable, given by
@@ -162,7 +163,7 @@ def variance_inflation_factor(exog, exog_idx):
 
     Parameters
     ----------
-    exog : ndarray
+    exog : {ndarray, DataFrame}
         design matrix with all explanatory variables, as for example used in
         regression
     exog_idx : int
@@ -170,7 +171,7 @@ def variance_inflation_factor(exog, exog_idx):
 
     Returns
     -------
-    vif : float
+    float
         variance inflation factor
 
     Notes
@@ -186,6 +187,7 @@ def variance_inflation_factor(exog, exog_idx):
     https://en.wikipedia.org/wiki/Variance_inflation_factor
     """
     k_vars = exog.shape[1]
+    exog = np.asarray(exog)
     x_i = exog[:, exog_idx]
     mask = np.arange(k_vars) != exog_idx
     x_noti = exog[:, mask]
@@ -443,6 +445,7 @@ class MLEInfluence(_BaseInfluenceMixin):
                                                     self.d_params.T).T).sum(1)
         cooks_d2 /= self.k_vars
         from scipy import stats
+
         # alpha = 0.1
         # print stats.f.isf(1-alpha, n_params, res.df_modelwc)
         # TODO use chi2   # use_f option
@@ -713,6 +716,7 @@ class OLSInfluence(_BaseInfluenceMixin):
         cooks_d2 *= hii / (1 - hii)
 
         from scipy import stats
+
         # alpha = 0.1
         # print stats.f.isf(1-alpha, n_params, res.df_modelwc)
         pvals = stats.f.sf(cooks_d2, self.k_vars, self.results.df_resid)
@@ -1050,9 +1054,10 @@ class OLSInfluence(_BaseInfluenceMixin):
         colnames, data = lzip(*table_raw)  # unzip
         data = np.column_stack(data)
         self.table_data = data
+        from copy import deepcopy
+
         from statsmodels.iolib.table import SimpleTable, default_html_fmt
         from statsmodels.iolib.tableformatting import fmt_base
-        from copy import deepcopy
         fmt = deepcopy(fmt_base)
         fmt_html = deepcopy(default_html_fmt)
         fmt['data_fmts'] = ["%4d"] + [float_fmt] * (data.shape[1] - 1)
@@ -1081,6 +1086,7 @@ def summary_table(res, alpha=0.05):
     """
 
     from scipy import stats
+
     from statsmodels.sandbox.regression.predstd import wls_prediction_std
 
     infl = OLSInfluence(res)
@@ -1127,9 +1133,10 @@ def summary_table(res, alpha=0.05):
     colnames = ss2
     # self.table_data = data
     # data = np.column_stack(data)
+    from copy import deepcopy
+
     from statsmodels.iolib.table import SimpleTable, default_html_fmt
     from statsmodels.iolib.tableformatting import fmt_base
-    from copy import deepcopy
     fmt = deepcopy(fmt_base)
     fmt_html = deepcopy(default_html_fmt)
     fmt['data_fmts'] = ["%4d"] + ["%6.3f"] * (data.shape[1] - 1)
@@ -1252,6 +1259,7 @@ class GLMInfluence(MLEInfluence):
         cooks_d2 *= hii / (1 - hii)
 
         from scipy import stats
+
         # alpha = 0.1
         # print stats.f.isf(1-alpha, n_params, res.df_modelwc)
         pvals = stats.f.sf(cooks_d2, self.k_vars, self.results.df_resid)
