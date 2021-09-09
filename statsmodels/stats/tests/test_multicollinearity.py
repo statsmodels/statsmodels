@@ -10,17 +10,29 @@ import warnings
 
 import numpy as np
 from numpy.testing import (
-    assert_allclose, assert_array_less, assert_equal, assert_almost_equal)
-# import statsmodels.stats.outliers_influence as smio
+    assert_allclose,
+    assert_almost_equal,
+    assert_array_less,
+    assert_equal,
+)
+import pandas as pd
+import pytest
+
 from statsmodels.regression.linear_model import OLS
-import statsmodels.stats.outliers_influence as smoi
 from statsmodels.stats.multicollinearity import (
-    vif, vif_selection, vif_ridge, MultiCollinearity,
-    MultiCollinearitySequential, collinear_index)
+    MultiCollinearity,
+    MultiCollinearitySequential,
+    collinear_index,
+    vif,
+    vif_ridge,
+    vif_selection,
+)
+import statsmodels.stats.outliers_influence as smoi
 
 
 def assert_allclose_large(x, y, rtol=1e-6, atol=0, ltol=1e12):
-    """ assert x and y are allclose or x and y are larger than ltol
+    """
+    assert x and y are allclose or x and y are larger than ltol
     """
     x = np.atleast_1d(x)
     y = np.atleast_1d(y)
@@ -37,7 +49,6 @@ def _get_data(nobs=100, k_vars=4):
 
 
 class CheckMuLtiCollinear(object):
-
     @classmethod
     def get_data(cls):
         nobs, k_vars = 100, 4
@@ -49,15 +60,17 @@ class CheckMuLtiCollinear(object):
     def test_sequential(self):
         xf = self.xf
         x = self.x
-        ols_results = [OLS(xf[:, k], xf[:, :k]).fit()
-                       for k in range(1, xf.shape[1])]
+        ols_results = [
+            OLS(xf[:, k], xf[:, :k]).fit() for k in range(1, xf.shape[1])
+        ]
         rsquared0 = np.array([res.rsquared for res in ols_results])
-        vif0 = 1. / np.maximum((1. - rsquared0), 1e-20)
+        vif0 = 1.0 / np.maximum((1.0 - rsquared0), 1e-20)
 
         mcoll = MultiCollinearitySequential(self.x)
 
-        assert_allclose(mcoll.rsquared_partial, rsquared0, rtol=1e-12,
-                        atol=1e-15)
+        assert_allclose(
+            mcoll.rsquared_partial, rsquared0, rtol=1e-12, atol=1e-15
+        )
         # infs could be just large values because of floating point imprecision
         # assert_allclose(mcoll.vif, vif0, rtol=1e-13)
         # mask_inf = np.isinf(vif0) & ~np.isinf(mcoll.vif)
@@ -65,28 +78,32 @@ class CheckMuLtiCollinear(object):
         # assert_array_less(1e30, mcoll.vif[mask_inf])
         assert_allclose_large(mcoll.vif, vif0, rtol=1e-13, ltol=1e-14)
 
-        if not (1. - rsquared0 == 0).any():
+        if not (1.0 - rsquared0 == 0).any():
             # The following requires nonsingular matrix because of Cholesky
             # check moment matrix as input
             x_dm = x - x.mean(0)  # standardize doesn't demean
             mcoll2 = MultiCollinearitySequential(
-                        None, moment_matrix=x_dm.T.dot(x_dm))
-            assert_allclose(mcoll2.rsquared_partial, mcoll.rsquared_partial,
-                            rtol=1e-13)
+                None, moment_matrix=x_dm.T.dot(x_dm)
+            )
+            assert_allclose(
+                mcoll2.rsquared_partial, mcoll.rsquared_partial, rtol=1e-13
+            )
             assert_allclose(mcoll2.vif, mcoll.vif, rtol=1e-13)
 
             # check correlation matrix as input
-            mcoll2 = MultiCollinearitySequential(None,
-                                                 np.corrcoef(x, rowvar=False),
-                                                 standardize=False)
-            assert_allclose(mcoll2.rsquared_partial, mcoll.rsquared_partial,
-                            rtol=1e-13)
+            mcoll2 = MultiCollinearitySequential(
+                None, np.corrcoef(x, rowvar=False), standardize=False
+            )
+            assert_allclose(
+                mcoll2.rsquared_partial, mcoll.rsquared_partial, rtol=1e-13
+            )
             assert_allclose(mcoll2.vif, mcoll.vif, rtol=1e-13)
 
         # Note we need a constant since x is not demeaned
         collinear_columns, keep_columns = collinear_index(xf)
-        not_coll = [i for i in range(xf.shape[1])
-                    if i not in collinear_columns]
+        not_coll = [
+            i for i in range(xf.shape[1]) if i not in collinear_columns
+        ]
         assert_equal(not_coll, keep_columns)
         # I haven't checked what the equvalent threshold is exactly
         # subtracting 1 from index to ignore constant column
@@ -95,7 +112,7 @@ class CheckMuLtiCollinear(object):
         if self.check_pandas:
             collinear_columns, keep_columns = collinear_index(self.xf_pd)
             # keep = ['const', 'var0', 'var1', 'var2']
-            assert_equal(self.xf_pd.columns[not_coll], keep_columns)
+            assert list(self.xf_pd.columns[not_coll]) == keep_columns
 
     def test_multicoll(self):
         xf = np.asarray(self.xf)  # convert from pandas DataFrame, for OLS only
@@ -108,7 +125,7 @@ class CheckMuLtiCollinear(object):
             ols_results.append(OLS(xf[:, k], xf[:, idx_k]).fit())
 
         rsquared0 = np.array([res.rsquared for res in ols_results])
-        vif0 = 1. / np.maximum((1. - rsquared0), 1e-20)
+        vif0 = 1.0 / np.maximum((1.0 - rsquared0), 1e-20)
         # for checking singular cases with pdb in pytest
         # if ((1. - rsquared0)<1e-14).any():
         #     raise
@@ -117,6 +134,13 @@ class CheckMuLtiCollinear(object):
 
         assert_allclose(mcoll.rsquared_partial, rsquared0, rtol=1e-13)
         assert_allclose_large(mcoll.vif, vif0, rtol=1e-12, ltol=1e12)
+        assert_allclose(mcoll.tss, np.ones(self.x.shape[1]))
+        rss = np.array([1 - res.rsquared for res in ols_results])
+        assert_allclose(mcoll.rss, rss, atol=1e-10)
+        alt_vif = mcoll.get_vif(ridge_factor=0)
+        if mcoll.vif.max() < 1e10:
+            # Only test nonsingular
+            assert_allclose(mcoll.vif, alt_vif)
 
         if mcoll.eigenvalues.min() > 1e-14:
             # TODO: check what to do in singular case
@@ -128,7 +152,7 @@ class CheckMuLtiCollinear(object):
             assert_allclose(mcoll.corr_partial[-1, -2], corrp1, rtol=1e-13)
 
         vif1_ = vif(self.x)
-        vif1 = np.asarray(vif1_)   # check values if pandas.Series
+        vif1 = np.asarray(vif1_)  # check values if pandas.Series
         # TODO: why does mcoll.vif have infs but vif1 doesn't?
         assert_allclose_large(vif1, mcoll.vif, rtol=1e-12, ltol=1e12)
         assert_allclose_large(vif1, vif0, rtol=1e-12, ltol=1e12)
@@ -139,22 +163,28 @@ class CheckMuLtiCollinear(object):
         # check moment matrix as input
         x_dm = self.x - self.x.mean(0)  # standardize doesn't demean
         mcoll2 = MultiCollinearity(None, moment_matrix=x_dm.T.dot(x_dm))
-        assert_allclose(mcoll2.rsquared_partial, mcoll.rsquared_partial,
-                        rtol=1e-13)
+        assert_allclose(
+            mcoll2.rsquared_partial, mcoll.rsquared_partial, rtol=1e-13
+        )
         # the following has floating point noise, mcoll.vif has inf
         assert_allclose_large(mcoll2.vif, mcoll.vif, rtol=1e-13, ltol=1e12)
 
         # compare with outlier influence function
         x_dm_arr = np.asarray(x_dm)  # smoi vif does not work with pandas
-        vif_oi = np.array([smoi.variance_inflation_factor(x_dm_arr, ii)
-                           for ii in range(x_dm_arr.shape[1])])
+        vif_oi = np.array(
+            [
+                smoi.variance_inflation_factor(x_dm_arr, ii)
+                for ii in range(x_dm_arr.shape[1])
+            ]
+        )
         assert_allclose_large(mcoll2.vif, vif_oi, rtol=1e-12, ltol=1e12)
 
         # check correlation matrix as input
         corr = np.corrcoef(self.x, rowvar=False)
         mcoll2 = MultiCollinearity(None, corr, standardize=False)
-        assert_allclose(mcoll2.rsquared_partial, mcoll.rsquared_partial,
-                        rtol=1e-13)
+        assert_allclose(
+            mcoll2.rsquared_partial, mcoll.rsquared_partial, rtol=1e-13
+        )
         assert_allclose_large(mcoll2.vif, mcoll.vif, rtol=1e-13, ltol=1e12)
 
         corr = np.corrcoef(self.x, rowvar=False)
@@ -168,9 +198,9 @@ class CheckMuLtiCollinear(object):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             condn = mcoll2.condition_number
-        assert_allclose_large(evals[0] / evals[-1],
-                              condn**2,
-                              rtol=1e-12, ltol=1e12)
+        assert_allclose_large(
+            evals[0] / evals[-1], condn ** 2, rtol=1e-12, ltol=1e12
+        )
 
         # test if standardize is false, equivalence with constant column
         mcoll_ns = MultiCollinearity(xf, standardize=False)
@@ -220,31 +250,60 @@ class TestMultiCollinearPandas(CheckMuLtiCollinear):
     def setup_class(cls):
         cls.get_data()
         import pandas
-        cls.names = ['var%d' % i for i in range(cls.x.shape[1])]
+
+        cls.names = ["var%d" % i for i in range(cls.x.shape[1])]
         cls.x = pandas.DataFrame(cls.x, columns=cls.names)
-        cls.xf_pd = pandas.DataFrame(cls.xf, columns=['const'] + cls.names)
+        cls.xf_pd = pandas.DataFrame(cls.xf, columns=["const"] + cls.names)
         cls.check_pandas = True
 
 
-def test_vif_selection():
+@pytest.mark.parametrize("use_pandas", [False, True])
+def test_vif_selection(use_pandas):
     x = _get_data(nobs=100, k_vars=15)
+    if use_pandas:
+        x = pd.DataFrame(x)
     idx, _ = vif_selection(x)
     assert_equal(idx, np.arange(10, dtype=int))
-    assert_array_less(vif(x[:, idx]), 10)
+    x_sel = x.iloc[:, idx] if use_pandas else x[:, idx]
+    assert_array_less(vif(x_sel), 10)
 
-    idx, _ = vif_selection(x[:, ::-1])
-    assert_equal(idx, np.arange(4, 14, dtype=int))
-    assert_array_less(vif(x[:, x.shape[1] - np.array(idx) - 1]), 10)
+    x_rev = x[[c for c in x.columns[::-1]]] if use_pandas else x[:, ::-1]
+    idx, _ = vif_selection(x_rev)
+    expected = np.arange(4, 14, dtype=int)
+    if use_pandas:
+        expected = list(x_rev.columns[expected])
+    assert_equal(idx, expected)
+    idx = x.shape[1] - np.array(idx) - 1
+    x_sel = x_rev.iloc[:, idx] if use_pandas else x[:, idx]
+    assert_array_less(vif(x_sel), 10)
 
     threshold = 5
-    idx, _ = vif_selection(x[:, ::-1], threshold=threshold)
-    assert_equal(idx, np.arange(7, 14, dtype=int))
-    assert_array_less(vif(x[:, x.shape[1] - np.array(idx) - 1]), threshold)
+    idx, _ = vif_selection(x_rev, threshold=threshold)
+    expected = np.arange(7, 14, dtype=int)
+    if use_pandas:
+        expected = list(x_rev.columns[expected])
+    assert_equal(idx, expected)
+    idx = x.shape[1] - np.array(idx) - 1
+    x_sel = x_rev.iloc[:, idx] if use_pandas else x[:, idx]
+    assert_array_less(vif(x_sel), threshold)
 
 
-def test_vif_ridge():
+def test_vif_selection_equiv():
+    x = _get_data(nobs=100, k_vars=15)
+    idx, _ = vif_selection(x)
+    moments = np.corrcoef(x, rowvar=False)
+    idx_moment, _ = vif_selection(None, moment_matrix=moments)
+    assert_equal(idx, idx_moment)
+    xs = (x - x.mean(0)) / (x.std(0) * np.sqrt(x.shape[0]))
+    idx_std, _ = vif_selection(xs, standardize=False)
+    assert_equal(idx, idx_std)
 
-    dta = np.array('''
+
+@pytest.mark.parametrize("is_corr", [True, False])
+def test_vif_ridge(is_corr):
+
+    dta = np.array(
+        """
     49 15.9 149.3 4.2 108.1
     50 16.4 161.2 4.1 114.8
     51 19 171.5 3.1 123.2
@@ -262,11 +321,14 @@ def test_vif_ridge():
     63 43.3 304.5 4.6 213.9
     64 49 323.4 7 223.8
     65 50.3 336.8 1.2 232
-    66 56.6 353.9 4.5 242.9'''.split(), float).reshape(-1, 5)
+    66 56.6 353.9 4.5 242.9""".split(),
+        float,
+    ).reshape(-1, 5)
 
     # Obs    _RIDGE_     DOPROD     STOCK      CONSUM
 
-    results_vif = np.array('''
+    results_vif = np.array(
+        """
       2     0.000     185.997    1.01891    186.110
       5     0.001      98.981    1.00845     99.041
       8     0.003      41.779    0.99890     41.804
@@ -300,28 +362,43 @@ def test_vif_ridge():
      92     0.700       0.140    0.34598      0.140
      95     0.800       0.130    0.30859      0.130
      98     0.900       0.121    0.27695      0.121
-    101     1.000       0.113    0.24994      0.112'''.split(), float
-    ).reshape(-1, 5)  # noqa
+    101     1.000       0.113    0.24994      0.112""".split(),
+        float,
+    ).reshape(
+        -1, 5
+    )  # noqa
 
     import pandas as pd
-    columns = 'YEAR IMPORT DOPROD STOCK CONSUM'.lower().split()
+
+    columns = "YEAR IMPORT DOPROD STOCK CONSUM".lower().split()
     example = pd.DataFrame(dta, columns=columns)
 
-    x = example['doprod stock consum'.split()].values
-    y = example['import'].values
+    x = example["doprod stock consum".split()].values
+    y = example["import"].values
 
     x = x[:11]
     y = y[:11]
-    xxs = np.corrcoef(x, rowvar=0)
+    if is_corr:
+        xxs = np.corrcoef(x, rowvar=0)
+    else:
+        xxs = x
 
     pen_factors = results_vif[:, 1]
-    res_vif = vif_ridge(xxs, pen_factors)
+    res_vif = vif_ridge(xxs, pen_factors, is_corr=is_corr)
 
     assert_almost_equal(res_vif, results_vif[:, 2:], decimal=3)
 
     from statsmodels.tools.tools import add_constant
+
     exog = add_constant(x)
 
     xxi = np.linalg.inv(exog.T.dot(exog))
     vif_ols = (np.diag(xxi) * exog.var(0) * len(x))[1:]
     assert_allclose(res_vif[0], vif_ols, rtol=2e-12)
+
+
+def test_constant_exception():
+    with pytest.raises(ValueError):
+        MultiCollinearity(np.ones((100, 1)))
+    with pytest.raises(ValueError):
+        vif_selection(np.ones((100, 1)))
