@@ -14,6 +14,7 @@ import numpy as np
 from numpy.linalg import LinAlgError
 import pandas as pd
 from scipy import stats
+from scipy.fft import next_fast_len
 from scipy.interpolate import interp1d
 
 from statsmodels.regression.linear_model import OLS, yule_walker
@@ -1092,6 +1093,52 @@ def ccf(x, y, adjusted=True):
 
     cvf = ccovf(x, y, adjusted=adjusted, demean=True)
     return cvf / (np.std(x) * np.std(y))
+
+
+def correlate_array(arr, adjusted=True, demean=True, normalize=False, nlags=None):
+    arr = array_like(arr, "arr", ndim=2)
+    adjusted = bool_like(adjusted, "adjusted")
+    demean = bool_like(demean, "demean")
+    normalize = bool_like(normalize, "normalize")
+    nlags = int_like(nlags, "nlags", optional=True)
+
+    # Get dimension of array
+    nobs, ncolumns = arr.shape
+    nfft = next_fast_len(2 * nobs + 1)
+    if nlags is None:
+        nlags = nobs - 1
+
+    if demean:
+        arr = arr - arr.mean(axis=0)
+
+    if adjusted:
+        d = np.arange(nobs, 0, -1)[:, np.newaxis]
+        # This correspons to the following, but significant slower for larger arrays:
+        # xi = np.ones(nobs)
+        # d = np.correlate(xi, xi, mode="full")[nobs - 1:, np.newaxis]
+    else:
+        d = nobs
+
+    if normalize:
+        norm = np.std(arr, axis=0)[:, np.newaxis]
+        norm[norm == 0] = np.nan
+    else:
+        norm = np.ones(ncolumns)[:, np.newaxis]
+
+    X = np.fft.fft(arr, n=nfft, axis=0)
+    corr = np.full([ncolumns, ncolumns, nlags + 1], np.nan)
+    for column in range(ncolumns):
+        if np.isnan(norm[column]):
+            continue
+
+        output = np.fft.ifft(X[:, [column]] * X.conj(), axis=0)[:nobs] / d
+        corr[column, :, :] = output[: nlags + 1, :].T.real / (norm[column] * norm)
+
+    if nlags:
+        # Copy to allow gc of full array rather than view
+        corr = corr.copy()
+
+    return corr
 
 
 # moved from sandbox.tsa.examples.try_ld_nitime, via nitime
