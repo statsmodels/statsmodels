@@ -14,8 +14,8 @@ import numpy as np
 from numpy.linalg import LinAlgError
 import pandas as pd
 from scipy import stats
-from scipy.fft import next_fast_len
 from scipy.interpolate import interp1d
+from scipy.signal import correlate
 
 from statsmodels.regression.linear_model import OLS, yule_walker
 from statsmodels.tools.sm_exceptions import (
@@ -1020,7 +1020,7 @@ def pacf(x, nlags=None, method="ywadjusted", alpha=None):
 
 
 @deprecate_kwarg("unbiased", "adjusted")
-def ccovf(x, y, adjusted=True, demean=True):
+def ccovf(x, y, adjusted=True, demean=True, method="auto"):
     """
     Calculate the crosscovariance between two series.
 
@@ -1032,21 +1032,28 @@ def ccovf(x, y, adjusted=True, demean=True):
        If True, then denominators for autocovariance is n-k, otherwise n.
     demean : bool, optional
         Flag indicating whether to demean x and y.
+    method : str {'auto', 'direct', 'fft'}, optional
+        A string indicating which method to use to calculate the correlation.
+        ``direct``
+           The correlation is determined directly from sums, the definition of
+           correlation.
+        ``fft``
+           The Fast Fourier Transform is used to perform the correlation more
+           quickly (only available for numerical arrays.)
+        ``auto``
+           Automatically chooses direct or Fourier method based on an estimate
+           of which is faster (default).
 
     Returns
     -------
     ndarray
         The estimated crosscovariance function.
-
-    Notes
-    -----
-    This uses np.correlate which does full convolution. For very long time
-    series it is recommended to use fft convolution instead.
     """
     x = array_like(x, "x")
     y = array_like(y, "y")
     adjusted = bool_like(adjusted, "adjusted")
     demean = bool_like(demean, "demean")
+    method = string_like(method, "method", options=("auto", "direct", "fft"))
 
     n = len(x)
     if demean:
@@ -1056,15 +1063,14 @@ def ccovf(x, y, adjusted=True, demean=True):
         xo = x
         yo = y
     if adjusted:
-        xi = np.ones(n)
-        d = np.correlate(xi, xi, "full")
+        d = np.arange(n, 0, -1)
     else:
         d = n
-    return (np.correlate(xo, yo, "full") / d)[n - 1 :]
+    return correlate(xo, yo, "full", method=method)[n - 1 :] / d
 
 
 @deprecate_kwarg("unbiased", "adjusted")
-def ccf(x, y, adjusted=True):
+def ccf(x, y, adjusted=True, method="auto"):
     """
     The cross-correlation function.
 
@@ -1074,6 +1080,17 @@ def ccf(x, y, adjusted=True):
        The time series data to use in the calculation.
     adjusted : bool
        If True, then denominators for autocovariance is n-k, otherwise n.
+    method : str {'auto', 'direct', 'fft'}, optional
+        A string indicating which method to use to calculate the correlation.
+        ``direct``
+           The correlation is determined directly from sums, the definition of
+           correlation.
+        ``fft``
+           The Fast Fourier Transform is used to perform the correlation more
+           quickly (only available for numerical arrays.)
+        ``auto``
+           Automatically chooses direct or Fourier method based on an estimate
+           of which is faster (default).
 
     Returns
     -------
@@ -1082,63 +1099,15 @@ def ccf(x, y, adjusted=True):
 
     Notes
     -----
-    This is based np.correlate which does full convolution. For very long time
-    series it is recommended to use fft convolution instead.
-
     If adjusted is true, the denominator for the autocovariance is adjusted.
     """
     x = array_like(x, "x")
     y = array_like(y, "y")
     adjusted = bool_like(adjusted, "adjusted")
+    method = string_like(method, "method", options=("auto", "direct", "fft"))
 
-    cvf = ccovf(x, y, adjusted=adjusted, demean=True)
+    cvf = ccovf(x, y, adjusted=adjusted, demean=True, method=method)
     return cvf / (np.std(x) * np.std(y))
-
-
-def correlate_array(arr, adjusted=True, demean=True, normalize=False, nlags=None):
-    arr = array_like(arr, "arr", ndim=2)
-    adjusted = bool_like(adjusted, "adjusted")
-    demean = bool_like(demean, "demean")
-    normalize = bool_like(normalize, "normalize")
-    nlags = int_like(nlags, "nlags", optional=True)
-
-    # Get dimension of array
-    nobs, ncolumns = arr.shape
-    nfft = next_fast_len(2 * nobs + 1)
-    if nlags is None:
-        nlags = nobs - 1
-
-    if demean:
-        arr = arr - arr.mean(axis=0)
-
-    if adjusted:
-        d = np.arange(nobs, 0, -1)[:, np.newaxis]
-        # This correspons to the following, but significant slower for larger arrays:
-        # xi = np.ones(nobs)
-        # d = np.correlate(xi, xi, mode="full")[nobs - 1:, np.newaxis]
-    else:
-        d = nobs
-
-    if normalize:
-        norm = np.std(arr, axis=0)[:, np.newaxis]
-        norm[norm == 0] = np.nan
-    else:
-        norm = np.ones(ncolumns)[:, np.newaxis]
-
-    X = np.fft.fft(arr, n=nfft, axis=0)
-    corr = np.full([ncolumns, ncolumns, nlags + 1], np.nan)
-    for column in range(ncolumns):
-        if np.isnan(norm[column]):
-            continue
-
-        output = np.fft.ifft(X[:, [column]] * X.conj(), axis=0)[:nobs] / d
-        corr[column, :, :] = output[: nlags + 1, :].T.real / (norm[column] * norm)
-
-    if nlags:
-        # Copy to allow gc of full array rather than view
-        corr = corr.copy()
-
-    return corr
 
 
 # moved from sandbox.tsa.examples.try_ld_nitime, via nitime
