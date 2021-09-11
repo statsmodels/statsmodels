@@ -1012,7 +1012,7 @@ def test_arma_order_select_ic():
     arparams = np.array([0.75, -0.25])
     maparams = np.array([0.65, 0.35])
     arparams = np.r_[1, -arparams]
-    maparam = np.r_[1, maparams]
+    maparam = np.r_[1, maparams]  # FIXME: Never used
     nobs = 250
     np.random.seed(2014)
     y = arma_generate_sample(arparams, maparams, nobs)
