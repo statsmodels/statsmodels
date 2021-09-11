@@ -59,7 +59,7 @@ def array_like(
         of obj (if present) or uses NumPy to automatically detect the dtype
     ndim : {int, None}
         Required number of dimensions of obj. If None, no check is performed.
-        If the numebr of dimensions of obj is less than ndim, additional axes
+        If the number of dimensions of obj is less than ndim, additional axes
         are inserted on the right. See examples.
     maxdim : {int, None}
         Maximum allowed dimension.  Use ``maxdim`` instead of ``ndim`` when

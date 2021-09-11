@@ -1029,7 +1029,7 @@ def ccovf(x, y, adjusted=True, demean=True, method="auto"):
     x, y : array_like
        The time series data to use in the calculation.
     adjusted : bool, optional
-       If True, then denominators for autocovariance is n-k, otherwise n.
+       If True, then denominators for crosscovariance is n-k, otherwise n.
     demean : bool, optional
         Flag indicating whether to demean x and y.
     method : str {'auto', 'direct', 'fft'}, optional
@@ -1079,7 +1079,7 @@ def ccf(x, y, adjusted=True, method="auto"):
     x, y : array_like
        The time series data to use in the calculation.
     adjusted : bool
-       If True, then denominators for autocovariance is n-k, otherwise n.
+       If True, then denominators for cross-correlation is n-k, otherwise n.
     method : str {'auto', 'direct', 'fft'}, optional
         A string indicating which method to use to calculate the correlation.
         ``direct``
