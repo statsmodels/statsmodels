@@ -30,6 +30,7 @@ from statsmodels.tsa.statespace.sarimax import SARIMAX
 from statsmodels.tsa.stattools import (
     acf,
     acovf,
+    ccovf,
     adfuller,
     arma_order_select_ic,
     breakvar_heteroskedasticity_test,
@@ -987,6 +988,18 @@ def test_acovf_fft_vs_convolution(demean, adjusted):
 
     F1 = acovf(q, demean=demean, adjusted=adjusted, fft=True)
     F2 = acovf(q, demean=demean, adjusted=adjusted, fft=False)
+    assert_almost_equal(F1, F2, decimal=7)
+
+
+@pytest.mark.parametrize("demean", [True, False])
+@pytest.mark.parametrize("adjusted", [True, False])
+def test_ccovf_fft_vs_convolution(demean, adjusted):
+    np.random.seed(1)
+    x = np.random.normal(size=128)
+    y = np.random.normal(size=128)
+
+    F1 = ccovf(x, y, demean=demean, adjusted=adjusted, method="direct")
+    F2 = ccovf(x, y, demean=demean, adjusted=adjusted, method="fft")
     assert_almost_equal(F1, F2, decimal=7)
 
 
