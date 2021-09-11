@@ -732,8 +732,7 @@ def pacf_yw(x, nlags=None, method="adjusted"):
     nlags = int_like(nlags, "nlags", optional=True)
     nobs = x.shape[0]
     if nlags is None:
-        if nlags is None:
-            nlags = min(int(10 * np.log10(nobs)), nobs - 1)
+        nlags = min(int(10 * np.log10(nobs)), nobs - 1)
 
     method = string_like(method, "method", options=("adjusted", "mle"))
     pacf = [1.0]
