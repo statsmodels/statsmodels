@@ -398,7 +398,7 @@ def acovf(x, adjusted=False, demean=True, fft=True, missing="none", nlag=None):
         If True, then denominators is n-k, otherwise n.
     demean : bool, default True
         If True, then subtract the mean x from each element of x.
-    fft : bool, default None
+    fft : bool, default True
         If True, use FFT convolution.  This method should be preferred
         for long time series.
     missing : str, default "none"
