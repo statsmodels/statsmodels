@@ -998,8 +998,20 @@ def test_ccovf_fft_vs_convolution(demean, adjusted):
     x = np.random.normal(size=128)
     y = np.random.normal(size=128)
 
-    F1 = ccovf(x, y, demean=demean, adjusted=adjusted, method="direct")
-    F2 = ccovf(x, y, demean=demean, adjusted=adjusted, method="fft")
+    F1 = ccovf(x, y, demean=demean, adjusted=adjusted, fft=False)
+    F2 = ccovf(x, y, demean=demean, adjusted=adjusted, fft=True)
+    assert_almost_equal(F1, F2, decimal=7)
+
+
+@pytest.mark.parametrize("demean", [True, False])
+@pytest.mark.parametrize("adjusted", [True, False])
+@pytest.mark.parametrize("fft", [True, False])
+def test_compare_acovf_vs_ccovf(demean, adjusted, fft):
+    np.random.seed(1)
+    x = np.random.normal(size=128)
+
+    F1 = acovf(x, demean=demean, adjusted=adjusted, fft=fft)
+    F2 = ccovf(x, x, demean=demean, adjusted=adjusted, fft=fft)
     assert_almost_equal(F1, F2, decimal=7)
 
 

@@ -587,7 +587,7 @@ def acf(
     qstat : bool, default False
         If True, returns the Ljung-Box q statistic for each autocorrelation
         coefficient.  See q_stat for more information.
-    fft : bool, default None
+    fft : bool, default True
         If True, computes the ACF via FFT.
     alpha : scalar, default None
         If a number is given, the confidence intervals for the given level are
@@ -1019,7 +1019,7 @@ def pacf(x, nlags=None, method="ywadjusted", alpha=None):
 
 
 @deprecate_kwarg("unbiased", "adjusted")
-def ccovf(x, y, adjusted=True, demean=True, method="auto"):
+def ccovf(x, y, adjusted=True, demean=True, fft=True):
     """
     Calculate the crosscovariance between two series.
 
@@ -1031,17 +1031,9 @@ def ccovf(x, y, adjusted=True, demean=True, method="auto"):
        If True, then denominators for crosscovariance is n-k, otherwise n.
     demean : bool, optional
         Flag indicating whether to demean x and y.
-    method : str {'auto', 'direct', 'fft'}, optional
-        A string indicating which method to use to calculate the correlation.
-        ``direct``
-           The correlation is determined directly from sums, the definition of
-           correlation.
-        ``fft``
-           The Fast Fourier Transform is used to perform the correlation more
-           quickly (only available for numerical arrays.)
-        ``auto``
-           Automatically chooses direct or Fourier method based on an estimate
-           of which is faster (default).
+    fft : bool, default True
+        If True, use FFT convolution.  This method should be preferred
+        for long time series.
 
     Returns
     -------
@@ -1052,7 +1044,7 @@ def ccovf(x, y, adjusted=True, demean=True, method="auto"):
     y = array_like(y, "y")
     adjusted = bool_like(adjusted, "adjusted")
     demean = bool_like(demean, "demean")
-    method = string_like(method, "method", options=("auto", "direct", "fft"))
+    fft = bool_like(fft, "fft", optional=False)
 
     n = len(x)
     if demean:
@@ -1065,31 +1057,25 @@ def ccovf(x, y, adjusted=True, demean=True, method="auto"):
         d = np.arange(n, 0, -1)
     else:
         d = n
+
+    method = "fft" if fft else "direct"
     return correlate(xo, yo, "full", method=method)[n - 1 :] / d
 
 
 @deprecate_kwarg("unbiased", "adjusted")
-def ccf(x, y, adjusted=True, method="auto"):
+def ccf(x, y, adjusted=True, fft=True):
     """
     The cross-correlation function.
 
     Parameters
     ----------
     x, y : array_like
-       The time series data to use in the calculation.
+        The time series data to use in the calculation.
     adjusted : bool
-       If True, then denominators for cross-correlation is n-k, otherwise n.
-    method : str {'auto', 'direct', 'fft'}, optional
-        A string indicating which method to use to calculate the correlation.
-        ``direct``
-           The correlation is determined directly from sums, the definition of
-           correlation.
-        ``fft``
-           The Fast Fourier Transform is used to perform the correlation more
-           quickly (only available for numerical arrays.)
-        ``auto``
-           Automatically chooses direct or Fourier method based on an estimate
-           of which is faster (default).
+        If True, then denominators for cross-correlation is n-k, otherwise n.
+    fft : bool, default True
+        If True, use FFT convolution.  This method should be preferred
+        for long time series.
 
     Returns
     -------
@@ -1103,9 +1089,9 @@ def ccf(x, y, adjusted=True, method="auto"):
     x = array_like(x, "x")
     y = array_like(y, "y")
     adjusted = bool_like(adjusted, "adjusted")
-    method = string_like(method, "method", options=("auto", "direct", "fft"))
+    fft = bool_like(fft, "fft", optional=False)
 
-    cvf = ccovf(x, y, adjusted=adjusted, demean=True, method=method)
+    cvf = ccovf(x, y, adjusted=adjusted, demean=True, fft=fft)
     return cvf / (np.std(x) * np.std(y))
 
 
