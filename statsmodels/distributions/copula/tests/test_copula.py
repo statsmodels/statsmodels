@@ -362,6 +362,20 @@ class CheckCopula:
         q1 = np.repeat(np.array([[0.25, 0.5, 0.75]]).T, 2, axis=1)
         assert_allclose(q0, q1, atol=0.025)
 
+        tau = stats.kendalltau(*rvs.T)[0]
+        tau_cop = self.copula.tau()
+        assert_allclose(tau, tau_cop, rtol=0.08, atol=0.005)
+
+        if isinstance(self.copula, IndependenceCopula):
+            # skip rest, no `_arg_from_tau` in IndependenceCopula
+            return
+        theta = self.copula.fit_corr_param(rvs)
+        theta_cop = getattr(self.copula, "theta", None)
+        if theta_cop is None:
+            # elliptical
+            theta_cop = self.copula.corr[0, 1]
+        assert_allclose(theta, theta_cop, rtol=0.1, atol=0.005)
+
 
 class CheckModernCopula(CheckCopula):
     @pytest.mark.parametrize(

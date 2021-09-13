@@ -16,6 +16,16 @@ from .copulas import Copula
 from statsmodels.tools.rng_qrng import check_random_state
 
 
+def _debye(alpha):
+    EPSILON = np.finfo(np.float32).eps
+
+    def integrand(t):
+        return t / (np.exp(t) - 1)
+
+    debye_value = integrate.quad(integrand, EPSILON, alpha)[0] / alpha
+    return debye_value
+
+
 class ArchimedeanCopula(Copula):
 
     def __init__(self, transform, args=(), k_dim=2):
@@ -268,17 +278,19 @@ class FrankCopula(ArchimedeanCopula):
         else:
             raise NotImplementedError
 
+    def tau(self, theta=None):
+        # Joe 2014 p. 166
+        if theta is None:
+            theta = self.theta
+        debye_value = _debye(theta)
+        return 1 + 4 * (debye_value - 1) / theta
+
     def theta_from_tau(self, tau):
         MIN_FLOAT_LOG = np.log(sys.float_info.min)
         MAX_FLOAT_LOG = np.log(sys.float_info.max)
-        EPSILON = np.finfo(np.float32).eps
 
         def _theta_from_tau(alpha):
-            def debye(t):
-                return t / (np.exp(t) - 1)
-
-            debye_value = integrate.quad(debye, EPSILON, alpha)[0] / alpha
-            return 4 * (debye_value - 1) / alpha + 1 - tau
+            return self.tau(theta=alpha) - tau
 
         result = optimize.least_squares(_theta_from_tau, 1, bounds=(
             MIN_FLOAT_LOG, MAX_FLOAT_LOG))

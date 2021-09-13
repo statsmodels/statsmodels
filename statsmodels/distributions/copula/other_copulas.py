@@ -37,6 +37,9 @@ class IndependenceCopula(Copula):
     def cdf(self, u, args=()):
         return np.prod(u, axis=1)
 
+    def tau(self):
+        return 0
+
     def plot_pdf(self, *args):
         raise NotImplementedError("PDF is constant over the domain.")
 

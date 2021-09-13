@@ -462,7 +462,7 @@ class Copula(ABC):
             warnings.warn("currently only first pair of data are used"
                           " to compute kendall's tau")
         tau = stats.kendalltau(x[:, 0], x[:, 1])[0]
-        return self.theta_from_tau(tau)
+        return self._arg_from_tau(tau)
 
     def _arg_from_tau(self, tau):
         """Compute correlation parameter ``theta`` from tau.
@@ -478,16 +478,5 @@ class Copula(ABC):
             Correlation parameter of the copula, ``theta`` in Archimedean and
             pearson correlation in elliptical.
 
-        """
-        raise NotImplementedError
-
-    def theta_from_tau(self, tau):
-        """
-        Compute model parameter ``theta`` from Kendall's tau.
-
-        Returns
-        -------
-        float
-            Theta parameter
         """
         raise NotImplementedError
