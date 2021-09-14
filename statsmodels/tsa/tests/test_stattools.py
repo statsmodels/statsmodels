@@ -982,8 +982,7 @@ def test_acovf2d(reset_randomstate):
 
 @pytest.mark.parametrize("demean", [True, False])
 @pytest.mark.parametrize("adjusted", [True, False])
-def test_acovf_fft_vs_convolution(demean, adjusted):
-    np.random.seed(1)
+def test_acovf_fft_vs_convolution(demean, adjusted, reset_randomstate):
     q = np.random.normal(size=100)
 
     F1 = acovf(q, demean=demean, adjusted=adjusted, fft=True)
@@ -993,8 +992,7 @@ def test_acovf_fft_vs_convolution(demean, adjusted):
 
 @pytest.mark.parametrize("demean", [True, False])
 @pytest.mark.parametrize("adjusted", [True, False])
-def test_ccovf_fft_vs_convolution(demean, adjusted):
-    np.random.seed(1)
+def test_ccovf_fft_vs_convolution(demean, adjusted, reset_randomstate):
     x = np.random.normal(size=128)
     y = np.random.normal(size=128)
 
@@ -1006,8 +1004,7 @@ def test_ccovf_fft_vs_convolution(demean, adjusted):
 @pytest.mark.parametrize("demean", [True, False])
 @pytest.mark.parametrize("adjusted", [True, False])
 @pytest.mark.parametrize("fft", [True, False])
-def test_compare_acovf_vs_ccovf(demean, adjusted, fft):
-    np.random.seed(1)
+def test_compare_acovf_vs_ccovf(demean, adjusted, fft, reset_randomstate):
     x = np.random.normal(size=128)
 
     F1 = acovf(x, demean=demean, adjusted=adjusted, fft=fft)
