@@ -1,16 +1,17 @@
 |PyPI Version| |Conda Version| |License| |Azure CI Build Status|
 |Codecov Coverage| |Coveralls Coverage| |PyPI downloads| |Conda downloads|
 
-About statsmodels
-=================
 
-statsmodels is a Python package that provides a complement to scipy for
-statistical computations including descriptive statistics and estimation
-and inference for statistical models.
+************************
+So cool dude will be commiting here a lot and a lot more as time goes
 
 
-Documentation
-=============
+************************
+
+
+
+
+
 
 The documentation for the latest release is at
 
