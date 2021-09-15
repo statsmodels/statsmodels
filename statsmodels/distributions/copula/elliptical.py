@@ -7,7 +7,6 @@ Author: Pamphile Roy
 License: BSD-3
 
 """
-import warnings
 import numpy as np
 from scipy import stats
 # scipy compat:
