@@ -54,7 +54,7 @@ class CopulaModel(GenericLikelihoodModel):
 
 def get_data(nobs):
     cop_f = FrankCopula(theta=2)
-    cd_f = CopulaDistribution([stats.norm, stats.norm], cop_f)
+    cd_f = CopulaDistribution(cop_f, [stats.norm, stats.norm])
     # np.random.seed(98645713)
     # at some seeds, parameters atol-differ from true
     # TODO: setting seed doesn't work for copula,
@@ -74,7 +74,7 @@ class CheckEVfit1(object):
         cop = self.copula
         args = self.cop_args
 
-        cev = CopulaDistribution([stats.norm, stats.norm], cop, cop_args=None)
+        cev = CopulaDistribution(cop, [stats.norm, stats.norm], cop_args=None)
         k_marg = 4
         mod = CopulaModel(cev, data_ev + [0.5, -0.1],
                           k_params=self.k_copparams + k_marg)
@@ -98,7 +98,7 @@ class CheckEVfit1(object):
         cop = self.copula
         args = self.cop_args
 
-        cev = CopulaDistribution([stats.norm, stats.norm], cop, cop_args=None)
+        cev = CopulaDistribution(cop, [stats.norm, stats.norm], cop_args=None)
         k_marg = 2
         mod = CopulaModel(cev, data_ev + [0.5, -0.1],
                           k_params=self.k_copparams + k_marg)
@@ -131,7 +131,7 @@ class CheckEVfit0(object):
             return
         args = self.cop_args
 
-        cev = CopulaDistribution([stats.norm, stats.norm], cop, cop_args=args)
+        cev = CopulaDistribution(cop, [stats.norm, stats.norm], cop_args=args)
         k_marg = 2
         mod = CopulaModel(cev, data_ev + [0.5, -0.1],
                           k_params=0 + k_marg)

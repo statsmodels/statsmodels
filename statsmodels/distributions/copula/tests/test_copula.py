@@ -203,7 +203,7 @@ def test_ev_copula_distr(case):
     cdf1 = ev.cdf(u, args)
     assert_allclose(cdf1, res1, rtol=1e-13)
 
-    cev = CopulaDistribution([uniform, uniform], ev, cop_args=args)
+    cev = CopulaDistribution(ev, [uniform, uniform], cop_args=args)
     cdfd = cev.cdf(np.array(u), cop_args=args)
     assert_allclose(cdfd, res1, rtol=1e-13)
     assert cdfd.shape == ()
@@ -230,7 +230,7 @@ def test_copulas_distr(case):
     cdf1 = ca.cdf(u, args=args)
     pdf1 = ca.pdf(u, args=args)
 
-    cad = CopulaDistribution([uniform, uniform], ca, cop_args=args)
+    cad = CopulaDistribution(ca, [uniform, uniform], cop_args=args)
     cdfd = cad.cdf(np.array(u), cop_args=args)
     assert_allclose(cdfd, cdf1, rtol=1e-13)
     assert cdfd.shape == ()
@@ -278,7 +278,7 @@ def test_gev_genextreme(case):
     cdf1 = ev.cdf(u, args)
     assert_allclose(cdf1, res1, rtol=1e-13)
 
-    cev = CopulaDistribution([gev, gev], ev, cop_args=args)
+    cev = CopulaDistribution(ev, [gev, gev], cop_args=args)
     cdfd = cev.cdf(np.array(y), cop_args=args)
     assert_allclose(cdfd, res1, rtol=1e-13)
     pdfd = cev.pdf(np.array(y), cop_args=args)
@@ -361,6 +361,20 @@ class CheckCopula:
         q0 = np.percentile(rvs, [25, 50, 75], axis=0)
         q1 = np.repeat(np.array([[0.25, 0.5, 0.75]]).T, 2, axis=1)
         assert_allclose(q0, q1, atol=0.025)
+
+        tau = stats.kendalltau(*rvs.T)[0]
+        tau_cop = self.copula.tau()
+        assert_allclose(tau, tau_cop, rtol=0.08, atol=0.005)
+
+        if isinstance(self.copula, IndependenceCopula):
+            # skip rest, no `_arg_from_tau` in IndependenceCopula
+            return
+        theta = self.copula.fit_corr_param(rvs)
+        theta_cop = getattr(self.copula, "theta", None)
+        if theta_cop is None:
+            # elliptical
+            theta_cop = self.copula.corr[0, 1]
+        assert_allclose(theta, theta_cop, rtol=0.1, atol=0.005)
 
 
 class CheckModernCopula(CheckCopula):

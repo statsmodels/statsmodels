@@ -67,7 +67,7 @@ def test_bernstein_distribution_2d():
     ca = ArchimedeanCopula(cop_tr())
     distr1 = stats.uniform
     distr2 = stats.uniform
-    cad = CopulaDistribution([distr1, distr2], ca, cop_args=args)
+    cad = CopulaDistribution(ca, [distr1, distr2], cop_args=args)
     cdfv = cad.cdf(grid.x_flat, args)
     cdf_g = cdfv.reshape(grid.k_grid)
 
@@ -118,7 +118,7 @@ class TestBernsteinBeta2d(object):
         ca = ArchimedeanCopula(cop_tr())
         distr1 = stats.beta(4, 3)
         distr2 = stats.beta(4, 4)  # (5, 2)
-        cad = CopulaDistribution([distr1, distr2], ca, cop_args=args)
+        cad = CopulaDistribution(ca, [distr1, distr2], cop_args=args)
         cdfv = cad.cdf(grid.x_flat, args)
         cdf_g = cdfv.reshape(grid.k_grid)
 
@@ -166,7 +166,7 @@ class TestBernsteinBeta2dd(TestBernsteinBeta2d):
         ca = ArchimedeanCopula(cop_tr())
         distr1 = stats.beta(4, 3)
         distr2 = stats.beta(4, 4)  # (5, 2)
-        cad = CopulaDistribution([distr1, distr2], ca, cop_args=args)
+        cad = CopulaDistribution(ca, [distr1, distr2], cop_args=args)
         cdfv = cad.cdf(grid.x_flat, args)
         cdf_g = cdfv.reshape(grid.k_grid)
 
