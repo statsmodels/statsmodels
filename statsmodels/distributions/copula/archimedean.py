@@ -27,6 +27,21 @@ def _debye(alpha):
 
 
 class ArchimedeanCopula(Copula):
+    """Base class for Archimedean copulas
+
+    Parameters
+    ----------
+    transform : instance of transformation class
+        Archimedean generator with required methods including first and second
+        derivatives
+    args : tuple
+        Optional copula parameters. Copula parameters can be either provided
+        when creating the instance or as arguments when calling methods.
+    k_dim : int
+        Dimension, number of components in the multivariate random variable.
+        Currently only bivariate copulas are verified. Support for more than
+        2 dimension is incomplete.
+    """
 
     def __init__(self, transform, args=(), k_dim=2):
         super().__init__(k_dim=k_dim)
@@ -42,15 +57,14 @@ class ArchimedeanCopula(Copula):
         if not isinstance(args, tuple):
             # could still be a scalar or numpy scalar
             args = (args,)
-        if len(args) == 0 or args is None:
+        if len(args) == 0 or args == (None,):
+            # second condition because we converted None to tuple
             args = self.args
 
         return args
 
     def cdf(self, u, args=()):
-        '''evaluate cdf of multivariate Archimedean copula
-        '''
-        """Evaluate CDF of multivariate Archimedean copula."""
+        """Evaluate cdf of Archimedean copula."""
         args = self._handle_args(args)
         axis = -1
         phi = self.transform.evaluate
@@ -62,9 +76,7 @@ class ArchimedeanCopula(Copula):
         return cdfv
 
     def pdf(self, u, args=()):
-        '''evaluate cdf of multivariate Archimedean copula
-        '''
-        """Evaluate PDF of multivariate Archimedean copula."""
+        """Evaluate pdf of Archimedean copula."""
         args = self._handle_args(args)
         axis = -1
         u = np.asarray(u)
@@ -85,9 +97,7 @@ class ArchimedeanCopula(Copula):
         return pdfv
 
     def logpdf(self, u, args=()):
-        '''evaluate cdf of multivariate Archimedean copula
-        '''
-        """Evaluate log PDF of multivariate Archimedean copula."""
+        """Evaluate log pdf of multivariate Archimedean copula."""
         # TODO: replace by formulas, and exp in pdf
         args = self._handle_args(args)
         axis = -1
@@ -139,11 +149,14 @@ class ClaytonCopula(ArchimedeanCopula):
                 raise ValueError('Theta must be > -1 and !=0')
         self.theta = theta
 
-    def rvs(self, n=1, args=(), random_state=None):
+    def rvs(self, nobs=1, args=(), random_state=None):
+        if self.k_dim != 2:
+            msg = "rvs is only available for bivariate copula"
+            raise NotImplementedError(msg)
         rng = check_random_state(random_state)
         th, = self._handle_args(args)
-        x = rng.random((n, 2))
-        v = stats.gamma(1. / th).rvs(size=(n, 1), random_state=rng)
+        x = rng.random((nobs, self.k_dim))
+        v = stats.gamma(1. / th).rvs(size=(nobs, 1), random_state=rng)
         return (1 - np.log(x) / v) ** (-1. / th)
 
     def pdf(self, u, args=()):
@@ -200,12 +213,15 @@ class FrankCopula(ArchimedeanCopula):
                 raise ValueError('Theta must be !=0')
         self.theta = theta
 
-    def rvs(self, n=1, args=(), random_state=None):
+    def rvs(self, nobs=1, args=(), random_state=None):
+        if self.k_dim != 2:
+            msg = "rvs is only available for bivariate copula"
+            raise NotImplementedError(msg)
         rng = check_random_state(random_state)
         th, = self._handle_args(args)
-        x = rng.random((n, self.k_dim))
+        x = rng.random((nobs, self.k_dim))
         v = stats.logser.rvs(1. - np.exp(-th),
-                             size=(n, 1), random_state=rng)
+                             size=(nobs, 1), random_state=rng)
 
         return -1. / th * np.log(1. + np.exp(-(-np.log(x) / v))
                                  * (np.exp(-th) - 1.))
@@ -255,6 +271,8 @@ class FrankCopula(ArchimedeanCopula):
             super(ArchimedeanCopula, self).logpdf(u, args)
 
     def cdfcond_2g1(self, u, args=()):
+        """Conditional cdf of second component given the value of first.
+        """
         u = np.atleast_2d(u)
         th, = self._handle_args(args)
         if u.shape[-1] == 2:
@@ -264,9 +282,11 @@ class FrankCopula(ArchimedeanCopula):
             cdfc /= np.expm1(-th) / np.expm1(- th * u2) + np.expm1(- th * u1)
             return cdfc
         else:
-            raise NotImplementedError
+            raise NotImplementedError("u needs to be bivariate (2 columns)")
 
     def ppfcond_2g1(self, q, u1, args=()):
+        """Conditional pdf of second component given the value of first.
+        """
         u1 = np.asarray(u1)
         th, = self._handle_args(args)
         if u1.shape[-1] == 1:
@@ -276,7 +296,7 @@ class FrankCopula(ArchimedeanCopula):
 
             return ppfc
         else:
-            raise NotImplementedError
+            raise NotImplementedError("u needs to be bivariate (2 columns)")
 
     def tau(self, theta=None):
         # Joe 2014 p. 166
@@ -324,14 +344,17 @@ class GumbelCopula(ArchimedeanCopula):
                 raise ValueError('Theta must be > 1')
         self.theta = theta
 
-    def rvs(self, n=1, args=(), random_state=None):
+    def rvs(self, nobs=1, args=(), random_state=None):
+        if self.k_dim != 2:
+            msg = "rvs is only available for bivariate copula"
+            raise NotImplementedError(msg)
         rng = check_random_state(random_state)
         th, = self._handle_args(args)
-        x = rng.random((n, 2))
+        x = rng.random((nobs, self.k_dim))
         v = stats.levy_stable.rvs(
             1. / th, 1., 0,
             np.cos(np.pi / (2 * th)) ** th,
-            size=(n, 1), random_state=rng
+            size=(nobs, 1), random_state=rng
         )
         return np.exp(-(-np.log(x) / v) ** (1. / th))
 

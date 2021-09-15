@@ -28,6 +28,11 @@ class ExtremeValueCopula(Copula):
     transform: instance of transformation class
         Pickand's dependence function with required methods including first
         and second derivatives
+    args : tuple
+        Optional copula parameters. Copula parameters can be either provided
+        when creating the instance or as arguments when calling methods.
+    k_dim : int
+        Currently only bivariate extreme value copulas are supported.
 
     Notes
     -----
@@ -38,7 +43,7 @@ class ExtremeValueCopula(Copula):
     - AsymMixed
     - HR
 
-    TEV and AsymBiLogistic currently do not have required derivatives.
+    TEV and AsymBiLogistic currently do not have required derivatives for pdf.
 
     See Also
     --------

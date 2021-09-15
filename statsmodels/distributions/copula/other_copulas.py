@@ -26,9 +26,9 @@ class IndependenceCopula(Copula):
     def __init__(self, k_dim=2):
         super().__init__(k_dim=k_dim)
 
-    def rvs(self, n=1, random_state=None):
+    def rvs(self, nobs=1, random_state=None):
         rng = check_random_state(random_state)
-        x = rng.random((n, self.k_dim))
+        x = rng.random((nobs, self.k_dim))
         return x
 
     def pdf(self, u, args=()):
