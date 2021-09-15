@@ -30,6 +30,7 @@ from statsmodels.tsa.statespace.sarimax import SARIMAX
 from statsmodels.tsa.stattools import (
     acf,
     acovf,
+    ccovf,
     adfuller,
     arma_order_select_ic,
     breakvar_heteroskedasticity_test,
@@ -981,12 +982,33 @@ def test_acovf2d(reset_randomstate):
 
 @pytest.mark.parametrize("demean", [True, False])
 @pytest.mark.parametrize("adjusted", [True, False])
-def test_acovf_fft_vs_convolution(demean, adjusted):
-    np.random.seed(1)
+def test_acovf_fft_vs_convolution(demean, adjusted, reset_randomstate):
     q = np.random.normal(size=100)
 
     F1 = acovf(q, demean=demean, adjusted=adjusted, fft=True)
     F2 = acovf(q, demean=demean, adjusted=adjusted, fft=False)
+    assert_almost_equal(F1, F2, decimal=7)
+
+
+@pytest.mark.parametrize("demean", [True, False])
+@pytest.mark.parametrize("adjusted", [True, False])
+def test_ccovf_fft_vs_convolution(demean, adjusted, reset_randomstate):
+    x = np.random.normal(size=128)
+    y = np.random.normal(size=128)
+
+    F1 = ccovf(x, y, demean=demean, adjusted=adjusted, fft=False)
+    F2 = ccovf(x, y, demean=demean, adjusted=adjusted, fft=True)
+    assert_almost_equal(F1, F2, decimal=7)
+
+
+@pytest.mark.parametrize("demean", [True, False])
+@pytest.mark.parametrize("adjusted", [True, False])
+@pytest.mark.parametrize("fft", [True, False])
+def test_compare_acovf_vs_ccovf(demean, adjusted, fft, reset_randomstate):
+    x = np.random.normal(size=128)
+
+    F1 = acovf(x, demean=demean, adjusted=adjusted, fft=fft)
+    F2 = ccovf(x, x, demean=demean, adjusted=adjusted, fft=fft)
     assert_almost_equal(F1, F2, decimal=7)
 
 
@@ -999,7 +1021,7 @@ def test_arma_order_select_ic():
     arparams = np.array([0.75, -0.25])
     maparams = np.array([0.65, 0.35])
     arparams = np.r_[1, -arparams]
-    maparam = np.r_[1, maparams]
+    maparam = np.r_[1, maparams]  # FIXME: Never used
     nobs = 250
     np.random.seed(2014)
     y = arma_generate_sample(arparams, maparams, nobs)

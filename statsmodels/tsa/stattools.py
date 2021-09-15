@@ -15,6 +15,7 @@ from numpy.linalg import LinAlgError
 import pandas as pd
 from scipy import stats
 from scipy.interpolate import interp1d
+from scipy.signal import correlate
 
 from statsmodels.regression.linear_model import OLS, yule_walker
 from statsmodels.tools.sm_exceptions import (
@@ -397,7 +398,7 @@ def acovf(x, adjusted=False, demean=True, fft=True, missing="none", nlag=None):
         If True, then denominators is n-k, otherwise n.
     demean : bool, default True
         If True, then subtract the mean x from each element of x.
-    fft : bool, default None
+    fft : bool, default True
         If True, use FFT convolution.  This method should be preferred
         for long time series.
     missing : str, default "none"
@@ -586,7 +587,7 @@ def acf(
     qstat : bool, default False
         If True, returns the Ljung-Box q statistic for each autocorrelation
         coefficient.  See q_stat for more information.
-    fft : bool, default None
+    fft : bool, default True
         If True, computes the ACF via FFT.
     alpha : scalar, default None
         If a number is given, the confidence intervals for the given level are
@@ -731,8 +732,7 @@ def pacf_yw(x, nlags=None, method="adjusted"):
     nlags = int_like(nlags, "nlags", optional=True)
     nobs = x.shape[0]
     if nlags is None:
-        if nlags is None:
-            nlags = min(int(10 * np.log10(nobs)), nobs - 1)
+        nlags = min(int(10 * np.log10(nobs)), nobs - 1)
 
     method = string_like(method, "method", options=("adjusted", "mle"))
     pacf = [1.0]
@@ -1019,7 +1019,7 @@ def pacf(x, nlags=None, method="ywadjusted", alpha=None):
 
 
 @deprecate_kwarg("unbiased", "adjusted")
-def ccovf(x, y, adjusted=True, demean=True):
+def ccovf(x, y, adjusted=True, demean=True, fft=True):
     """
     Calculate the crosscovariance between two series.
 
@@ -1028,24 +1028,23 @@ def ccovf(x, y, adjusted=True, demean=True):
     x, y : array_like
        The time series data to use in the calculation.
     adjusted : bool, optional
-       If True, then denominators for autocovariance is n-k, otherwise n.
+       If True, then denominators for crosscovariance is n-k, otherwise n.
     demean : bool, optional
         Flag indicating whether to demean x and y.
+    fft : bool, default True
+        If True, use FFT convolution.  This method should be preferred
+        for long time series.
 
     Returns
     -------
     ndarray
         The estimated crosscovariance function.
-
-    Notes
-    -----
-    This uses np.correlate which does full convolution. For very long time
-    series it is recommended to use fft convolution instead.
     """
     x = array_like(x, "x")
     y = array_like(y, "y")
     adjusted = bool_like(adjusted, "adjusted")
     demean = bool_like(demean, "demean")
+    fft = bool_like(fft, "fft", optional=False)
 
     n = len(x)
     if demean:
@@ -1055,24 +1054,28 @@ def ccovf(x, y, adjusted=True, demean=True):
         xo = x
         yo = y
     if adjusted:
-        xi = np.ones(n)
-        d = np.correlate(xi, xi, "full")
+        d = np.arange(n, 0, -1)
     else:
         d = n
-    return (np.correlate(xo, yo, "full") / d)[n - 1 :]
+
+    method = "fft" if fft else "direct"
+    return correlate(xo, yo, "full", method=method)[n - 1:] / d
 
 
 @deprecate_kwarg("unbiased", "adjusted")
-def ccf(x, y, adjusted=True):
+def ccf(x, y, adjusted=True, fft=True):
     """
     The cross-correlation function.
 
     Parameters
     ----------
     x, y : array_like
-       The time series data to use in the calculation.
+        The time series data to use in the calculation.
     adjusted : bool
-       If True, then denominators for autocovariance is n-k, otherwise n.
+        If True, then denominators for cross-correlation is n-k, otherwise n.
+    fft : bool, default True
+        If True, use FFT convolution.  This method should be preferred
+        for long time series.
 
     Returns
     -------
@@ -1081,16 +1084,14 @@ def ccf(x, y, adjusted=True):
 
     Notes
     -----
-    This is based np.correlate which does full convolution. For very long time
-    series it is recommended to use fft convolution instead.
-
     If adjusted is true, the denominator for the autocovariance is adjusted.
     """
     x = array_like(x, "x")
     y = array_like(y, "y")
     adjusted = bool_like(adjusted, "adjusted")
+    fft = bool_like(fft, "fft", optional=False)
 
-    cvf = ccovf(x, y, adjusted=adjusted, demean=True)
+    cvf = ccovf(x, y, adjusted=adjusted, demean=True, fft=fft)
     return cvf / (np.std(x) * np.std(y))
 
 
