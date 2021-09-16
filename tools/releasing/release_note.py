@@ -133,7 +133,8 @@ whats_new = defaultdict(dict)
 for pull in merged_pull_data:
     if pull["labels"]:
         labels = [lab.name for lab in pull["labels"] if
-                  not lab.name.startswith("type")]
+                  not (lab.name.startswith("type") or lab.name.startswith("prio"))]
+        labels = sorted(labels)
         if "maintenance" in labels and len(labels) > 1:
             labels.remove("maintenance")
         elif "comp-docs" in labels and len(labels) > 1:

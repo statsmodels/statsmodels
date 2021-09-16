@@ -23,9 +23,9 @@ are mentioned in the docstrings.
 
 Stats
 -----
-**Issues Closed**: 226
+**Issues Closed**: 227
 
-**Pull Requests Merged**: 140
+**Pull Requests Merged**: 143
 
 
 The Highlights
@@ -84,6 +84,7 @@ Major Feature
   (:pr:`7497`, :pr:`7501`)
 
 
+
 Submodules
 ----------
 
@@ -130,6 +131,13 @@ Submodules
 - Improve ARDL notebook  (:pr:`7699`)
 - Update versions.json  (:pr:`7702`)
 - Update versions file  (:pr:`7708`)
+- Update release note  (:pr:`7714`)
+
+
+
+``Performance``
+~~~~~~~~~~~~~~~
+- Added fft to ccovf and ccf  (:pr:`7721`)
 
 
 
@@ -147,7 +155,6 @@ Submodules
 - Allow remove_data to work when an attribute is not implemented  (:pr:`7511`)
 - REF/BUG generic likelihood LLRMixin use df_resid instead of df_model for llr_pvalue  (:pr:`7586`)
 - Raise when invalid optimization options passed to optimizer  (:pr:`7596`)
-- Allow remove_data to work when an attribute is not implemented  (:pr:`7511`)
 
 
 
@@ -171,6 +178,7 @@ Submodules
 - Random number generation wrapper for rng, qrng  (:pr:`7608`)
 - BUG/REF copula another round for 0.13  (:pr:`7648`)
 - Temporarily change the default RNG in check_random_state  (:pr:`7652`)
+- More copula improvements for 0.13  (:pr:`7723`)
 
 
 
@@ -192,7 +200,6 @@ Submodules
 - Enh glm loglog  (:pr:`7594`)
 - McFadden and Cox&Snell Pseudo R squared to GLMResults  (:pr:`7682`)
 - Add dk_params option to GLM info_criteria  (:pr:`7693`)
-- Change default derivative in CDFLink  (:pr:`7287`)
 
 
 
@@ -300,11 +307,6 @@ Submodules
 
 ``tsa``
 ~~~~~~~
-- Allow fixing parameters in ARIMA estimator Hannan-Rissanen
-  (:pr:`7497`, :pr:`7501`)
-- Fix a false validation error in a rare edge case of nested ``fix_params`` for
-  the following subclasses of ``MLEModel``: ``SARIMAX``, ``VARMAX``,
-  ``DynamicFactor``, ``UnobservedComponents`` (:pr:`7508`)
 - Changed month abbreviations with localization  (:pr:`7409`)
 - Add ARDL model  (:pr:`7433`)
 - Fix typo in ets error  (:pr:`7435`)
@@ -328,6 +330,7 @@ Submodules
 - Improve ARIMA documentation  (:pr:`7662`)
 - Update TSA Api  (:pr:`7701`)
 - Correct ArmaProcess.from_estimation  (:pr:`7709`)
+- Added fft to ccovf and ccf  (:pr:`7721`)
 
 
 
@@ -404,6 +407,7 @@ Thanks to all of the contributors for the 0.13.0 release (based on git log):
 - Graham Inggs
 - Greg Mcmahan
 - Helder Oliveira
+- Hsiao Yi
 - Jack Liu
 - Jake Jiacheng Liu
 - Jeremy Bejarano
@@ -425,13 +429,13 @@ Thanks to all of the contributors for the 0.13.0 release (based on git log):
 - Pamphile Roy
 - Pratyush Sharan
 - Roberto Nunes Mourão
+- SHH
 - Simardeep27
 - Sin Kim
 - Skipper Seabold
 - Stefan Appelhoff
 - Tomohiro Endo
 - Wahram Andrikyan
-- Yi Hsiao
 - cxan96
 - janosbiro
 - partev
@@ -585,3 +589,6 @@ The following Pull Requests were merged since the last release:
 - :pr:`7709`: BUG: Correct ArmaProcess.from_estimation
 - :pr:`7710`: BUG: describe / Description do not return percentiles
 - :pr:`7713`: ENH: Oaxaca Variance/Other Models
+- :pr:`7714`: DOC: Update release note
+- :pr:`7721`: ENH: Added fft to ccovf and ccf
+- :pr:`7723`: REF/ENH: more copula improvements for 0.13
