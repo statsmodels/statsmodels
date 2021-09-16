@@ -61,42 +61,48 @@ class BetaModel(GenericLikelihoodModel):
 
     The Model is parameterized by mean and precision. Both can depend on
     explanatory variables through link functions.
-    """
+
+    Parameters
+    ----------
+    endog : array_like
+        1d array of endogenous response variable.
+    exog : array_like
+        A nobs x k array where `nobs` is the number of observations and `k`
+        is the number of regressors. An intercept is not included by default
+        and should be added by the user (models specified using a formula
+        include an intercept by default). See `statsmodels.tools.add_constant`.
+    exog_precision : array_like
+        2d array of variables for the precision.
+    link : link
+        Any link in sm.families.links for mean, should have range in
+        interval [0, 1]. Default is logit-link.
+    link_precision : link
+        Any link in sm.families.links for precision, should have
+        range in positive line. Default is log-link.
+    **kwds : extra keywords
+        Keyword options that will be handled by super classes.
+        Not all general keywords will be supported in this class.
+
+    Notes
+    -----
+    Status: experimental, new in 0.13.
+    Core results are verified, but api can change and some extra results
+    specific to Beta regression are missing.
+
+    Examples
+    --------
+    {example}
+
+    See Also
+    --------
+    :ref:`links`
+
+    """.format(example=_init_example)
 
     def __init__(self, endog, exog, exog_precision=None,
                  link=families.links.Logit(),
                  link_precision=families.links.Log(), **kwds):
-        """
-        Parameters
-        ----------
-        endog : array-like
-            1d array of endogenous values (i.e. responses, outcomes,
-            dependent variables, or 'Y' values).
-        exog : array-like
-            2d array of exogeneous values (i.e. covariates, predictors,
-            independent variables, regressors, or 'X' values). A nobs x k
-            array where `nobs` is the number of observations and `k` is
-            the number of regressors. An intercept is not included by
-            default and should be added by the user. See
-            `statsmodels.tools.add_constant`.
-        exog_precision : array-like
-            2d array of variables for the precision.
-        link : link
-            Any link in sm.families.links for mean, should have range in
-            interval [0, 1]. Default is logit-link.
-        link_precision : link
-            Any link in sm.families.links for precision, should have
-            range in positive line. Default is log-link.
 
-        Examples
-        --------
-        {example}
-
-        See Also
-        --------
-        :ref:`links`
-
-        """.format(example=_init_example)
         etmp = np.array(endog)
         assert np.all((0 < etmp) & (etmp < 1))
         if exog_precision is None:
@@ -145,16 +151,18 @@ class BetaModel(GenericLikelihoodModel):
                                                   **kwargs)
 
     def predict(self, params, exog=None, exog_precision=None, which="mean"):
-        """predict values for mean or precision
+        """Predict values for mean or precision
 
         Parameters
         ----------
-        params : ndarray
-            Parameters for the model, will be split into coefficients for the
-            linear prediction of the mean, and the linear prediction of the
-            precision.
-        exog : ndarray or None
-        exog_precision : ndarray or None
+        Parameters
+        ----------
+        params : array_like
+            The model parameters.
+        exog : array_like
+            Array of predictor variables for mean.
+        exog_precision : array_like
+            Array of predictor variables for precision.
         which : str
 
             - "mean" : mean, conditional expectation E(endog | exog)
@@ -193,8 +201,18 @@ class BetaModel(GenericLikelihoodModel):
                 return linpred_prec
 
     def predict_precision(self, params, exog_precision=None):
-        """predict values for precision function for given exog_precision
+        """Predict values for precision function for given exog_precision.
 
+        Parameters
+        ----------
+        params : array_like
+            The model parameters.
+        exog_precision : array_like
+            Array of predictor variables for precision.
+
+        Returns
+        -------
+        Predicted precision.
         """
         if exog_precision is None:
             exog_precision = self.exog_precision
@@ -209,6 +227,18 @@ class BetaModel(GenericLikelihoodModel):
     def predict_var(self, params, exog=None, exog_precision=None):
         """predict values for conditional variance V(endog | exog)
 
+        Parameters
+        ----------
+        params : array_like
+            The model parameters.
+        exog : array_like
+            Array of predictor variables for mean.
+        exog_precision : array_like
+            Array of predictor variables for precision.
+
+        Returns
+        -------
+        Predicted conditional variance.
         """
         mean = self.predict(params, exog=exog)
         precision = self.predict_precision(params,
@@ -281,9 +311,19 @@ class BetaModel(GenericLikelihoodModel):
 
     def score(self, params):
         """
-        Returns the score vector of the profile log-likelihood.
+        Returns the score vector of the log-likelihood.
 
         http://www.tandfonline.com/doi/pdf/10.1080/00949650903389993
+
+        Parameters
+        ----------
+        params : ndarray
+            Parameter at which score is evaluated.
+
+        Returns
+        -------
+        score : ndarray
+            First derivative of loglikelihood function.
         """
         sf = self.score_factor(params)
 
@@ -292,12 +332,21 @@ class BetaModel(GenericLikelihoodModel):
         return np.concatenate((d1, d2))
 
     def _score_check(self, params):
-        """inherited score with finite differences
+        """Inherited score with finite differences
+
+        Parameters
+        ----------
+        params : ndarray
+            Parameter at which score is evaluated.
+
+        Returns
+        -------
+        score based on numerical derivatives
         """
         return super(BetaModel, self).score(params)
 
     def score_factor(self, params):
-        """derivative of loglikelihood function w.r.t. linear predictors
+        """Derivative of loglikelihood function w.r.t. linear predictors.
 
         This needs to be multiplied with the exog to obtain the score_obs.
 
@@ -351,10 +400,10 @@ class BetaModel(GenericLikelihoodModel):
 
     def score_hessian_factor(self, params, return_hessian=False,
                              observed=True):
-        """derivatives of loglikelihood function w.r.t. linear predictors
+        """Derivatives of loglikelihood function w.r.t. linear predictors.
 
         This calculates score and hessian factors at the same time, because
-        there is a large overlap in calculations
+        there is a large overlap in calculations.
 
         Parameters
         ----------
@@ -441,7 +490,7 @@ class BetaModel(GenericLikelihoodModel):
         Parameters
         ----------
         params : ndarray
-            parameter at which score is evaluated
+            Parameter at which score is evaluated.
 
         Returns
         -------
@@ -462,7 +511,7 @@ class BetaModel(GenericLikelihoodModel):
         Parameters
         ----------
         params : ndarray
-            parameter at which Hessian is evaluated
+            Parameter at which Hessian is evaluated.
         observed : bool
             If True, then the observed Hessian is returned (default).
             If False, then the expected information matrix is returned.
@@ -494,11 +543,21 @@ class BetaModel(GenericLikelihoodModel):
         ----------
         niter : int
             Number of iterations of WLS approximation
+        return_intermediate : bool
+            If False (default), then only the preliminary parameter estimate
+            will be returned.
+            If True, then also the two results instances of the WLS estimate
+            for mean parameters and for the precision parameters will be
+            returned.
 
         Returns
         -------
         sp : ndarray
             start parameters for the optimization
+        res_m2 : results instance (optional)
+            Results instance for the WLS regression of the mean function.
+        res_p2 : results instance (optional)
+            Results instance for the WLS regression of the precision function.
 
         Notes
         -----
@@ -544,7 +603,7 @@ class BetaModel(GenericLikelihoodModel):
     def fit(self, start_params=None, maxiter=1000, disp=False,
             method='bfgs', **kwds):
         """
-        Fit the model.
+        Fit the model by maximum likelihood.
 
         Parameters
         ----------
@@ -557,6 +616,12 @@ class BetaModel(GenericLikelihoodModel):
             Show convergence stats.
         method : str
             The optimization method to use.
+        kwds :
+            Keyword arguments for the optimizer.
+
+        Returns
+        -------
+        BetaResults instance.
         """
 
         if start_params is None:
@@ -582,12 +647,62 @@ class BetaModel(GenericLikelihoodModel):
 
     # code duplication with results class
     def get_distribution_params(self, params, exog=None, exog_precision=None):
+        """
+        Return distribution parameters converted from model prediction.
+
+        Parameters
+        ----------
+        params : array_like
+            The model parameters.
+        exog : array_like
+            Array of predictor variables for mean.
+        exog_precision : array_like
+            Array of predictor variables for mean.
+
+        Returns
+        -------
+        (alpha, beta) : tuple of ndarrays
+            Parameters for the scipy distribution to evaluate predictive
+            distribution.
+        """
         mean = self.predict(params, exog=exog)
         precision = self.predict(params, exog_precision=exog_precision,
                                  which="precision")
         return precision * mean, precision * (1 - mean)
 
     def get_distribution(self, params, exog=None, exog_precision=None):
+        """
+        Return a instance of the predictive distribution.
+
+        Parameters
+        ----------
+        params : array_like
+            The model parameters.
+        exog : array_like
+            Array of predictor variables for mean.
+        exog_precision : array_like
+            Array of predictor variables for mean.
+
+        Returns
+        -------
+        Instance of a scipy frozen distribution based on estimated
+        parameters.
+
+        See Also
+        --------
+        predict
+
+        Notes
+        -----
+        This function delegates to the predict method to handle exog and
+        exog_precision, which in turn makes any required transformations.
+
+        Due to the behavior of ``scipy.stats.distributions objects``, the
+        returned random number generator must be called with ``gen.rvs(n)``
+        where ``n`` is the number of observations in the data set used
+        to fit the model.  If any other value is used for ``n``, misleading
+        results will be produced.
+        """
         from scipy import stats
         args = self.get_distribution_params(params, exog=exog,
                                             exog_precision=exog_precision)
@@ -596,40 +711,101 @@ class BetaModel(GenericLikelihoodModel):
 
 
 class BetaResults(GenericLikelihoodModelResults, _LLRMixin):
+    """Results class for Beta regression
+
+    This class inherits from GenericLikelihoodModelResults and not all
+    inherited methods might be appropriate in this case.
+    """
 
     # GenericLikeihoodmodel doesn't define fittedvalues, residuals and similar
     @cache_readonly
     def fittedvalues(self):
+        """In-sample predicted mean, conditional expectation."""
         return self.model.predict(self.params)
 
     @cache_readonly
     def fitted_precision(self):
+        """In-sample predicted precision"""
         return self.model.predict_precision(self.params)
 
     @cache_readonly
     def resid(self):
+        """Response residual"""
         return self.model.endog - self.fittedvalues
 
     @cache_readonly
     def resid_pearson(self):
+        """Pearson standardize residual"""
         return self.resid / np.sqrt(self.model.predict_var(self.params))
 
     @cache_readonly
     def prsquared(self):
-        """
-        Cox-Snell, Likelihood-Ratio pseudo-R-squared.
+        """Cox-Snell Likelihood-Ratio pseudo-R-squared.
+
         1 - exp((llnull - .llf) * (2 / nobs))
         """
         return self.pseudo_rsquared(kind="lr")
 
     def get_distribution_params(self, exog=None, exog_precision=None,
                                 transform=True):
+        """
+        Return distribution parameters converted from model prediction.
+
+        Parameters
+        ----------
+        params : array_like
+            The model parameters.
+        exog : array_like
+            Array of predictor variables for mean.
+        transform : bool
+            If transform is True and formulas have been used, then predictor
+            ``exog`` is passed through the formula processing. Default is True.
+
+        Returns
+        -------
+        (alpha, beta) : tuple of ndarrays
+            Parameters for the scipy distribution to evaluate predictive
+            distribution.
+        """
         mean = self.predict(exog=exog, transform=transform)
         precision = self.predict(exog_precision=exog_precision,
                                  which="precision", transform=transform)
         return precision * mean, precision * (1 - mean)
 
     def get_distribution(self, exog=None, exog_precision=None, transform=True):
+        """
+        Return a instance of the predictive distribution.
+
+        Parameters
+        ----------
+        exog : array_like
+            Array of predictor variables for mean.
+        exog_precision : array_like
+            Array of predictor variables for mean.
+        transform : bool
+            If transform is True and formulas have been used, then predictor
+            ``exog`` is passed through the formula processing. Default is True.
+
+        Returns
+        -------
+        Instance of a scipy frozen distribution based on estimated
+        parameters.
+
+        See Also
+        --------
+        predict
+
+        Notes
+        -----
+        This function delegates to the predict method to handle exog and
+        exog_precision, which in turn makes any required transformations.
+
+        Due to the behavior of ``scipy.stats.distributions objects``, the
+        returned random number generator must be called with ``gen.rvs(n)``
+        where ``n`` is the number of observations in the data set used
+        to fit the model.  If any other value is used for ``n``, misleading
+        results will be produced.
+        """
         from scipy import stats
         args = self.get_distribution_params(exog=exog,
                                             exog_precision=exog_precision,
