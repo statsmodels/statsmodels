@@ -14,6 +14,7 @@ from pandas.api.types import CategoricalDtype
 from scipy import stats
 
 from statsmodels.base.model import (
+    LikelihoodModel,
     GenericLikelihoodModel,
     GenericLikelihoodModelResults,
 )
@@ -81,7 +82,7 @@ class OrderedModel(GenericLikelihoodModel):
     Notes
     -----
     Status: experimental, core results are verified, still subclasses
-        `GenericLikelihoodModel` which will change in future versions.
+    `GenericLikelihoodModel` which will change in future versions.
 
     The parameterization of OrderedModel requires that there is no constant in
     the model, neither explicit nor implicit. The constant is equivalent to
@@ -156,9 +157,9 @@ class OrderedModel(GenericLikelihoodModel):
         self.results_class = OrderedResults
 
     def _check_inputs(self, endog, exog):
-        """handle endog that is pandas Categorical
+        """Handle endog that is pandas Categorical.
 
-        checks if self.distrib is legal and provides Pandas ordered Categorical
+        Checks if self.distrib is legal and provides Pandas ordered Categorical
         support for endog.
 
         Parameters
@@ -263,18 +264,42 @@ class OrderedModel(GenericLikelihoodModel):
 
         return model
 
+    from_formula.__doc__ = LikelihoodModel.from_formula.__doc__
+
     def cdf(self, x):
-        """cdf evaluated at x
+        """Cdf evaluated at x.
+
+        Parameters
+        ----------
+        x : array_like
+            Points at which cdf is evaluated. In the model `x` is the latent
+            variable plus threshold constants.
+
+        Returns
+        -------
+        Value of the cumulative distribution function of the underlying latent
+        variable evaluated at x.
         """
         return self.distr.cdf(x)
 
     def pdf(self, x):
-        """pdf evaluated at x
+        """Pdf evaluated at x
+
+        Parameters
+        ----------
+        x : array_like
+            Points at which cdf is evaluated. In the model `x` is the latent
+            variable plus threshold constants.
+
+        Returns
+        -------
+        Value of the probability density function of the underlying latent
+        variable evaluated at x.
         """
         return self.distr.pdf(x)
 
     def prob(self, low, upp):
-        """interval probability
+        """Interval probability.
 
         Probability that value is in interval (low, upp], computed as
 
@@ -392,9 +417,7 @@ class OrderedModel(GenericLikelihoodModel):
             raise ValueError("`which` is not available")
 
     def _linpred(self, params, exog=None, offset=None):
-        """linear prediction of latent variable `x b`
-
-        currently only for exog from estimation sample (in-sample)
+        """Linear prediction of latent variable `x b`.
 
         Parameters
         ----------
@@ -533,7 +556,7 @@ class OrderedModel(GenericLikelihoodModel):
         start_params = np.concatenate((np.zeros(self.k_vars), start_threshold))
         return start_params
 
-    @Appender(GenericLikelihoodModel.fit.__doc__)
+    @Appender(LikelihoodModel.fit.__doc__)
     def fit(self, start_params=None, method='nm', maxiter=500, full_output=1,
             disp=1, callback=None, retall=0, **kwargs):
 
@@ -554,6 +577,11 @@ class OrderedModel(GenericLikelihoodModel):
 
 
 class OrderedResults(GenericLikelihoodModelResults):
+    """Results class for OrderedModel
+
+    This class inherits from GenericLikelihoodModelResults and not all
+    inherited methods might be appropriate in this case.
+    """
 
     def pred_table(self):
         """prediction table

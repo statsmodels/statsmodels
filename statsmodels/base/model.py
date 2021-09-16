@@ -961,11 +961,7 @@ class GenericLikelihoodModel(LikelihoodModel):
 
     def fit(self, start_params=None, method='nm', maxiter=500, full_output=1,
             disp=1, callback=None, retall=0, **kwargs):
-        """
-        Fit the model using maximum likelihood.
 
-        See LikelihoodModel.fit for more information.
-        """
         if start_params is None:
             if hasattr(self, 'start_params'):
                 start_params = self.start_params
