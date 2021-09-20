@@ -906,7 +906,19 @@ class GenericLikelihoodModel(LikelihoodModel):
         return -self.loglikeobs(params).sum(0)
 
     def loglikeobs(self, params):
-        """Log-likelihood of individual observations at params"""
+        """
+        Log-likelihood of the model for all observations at params.
+
+        Parameters
+        ----------
+        params : array_like
+            The parameters of the model.
+
+        Returns
+        -------
+        loglike : array_like
+            The log likelihood of the model evaluated at `params`.
+        """
         return -self.nloglikeobs(params)
 
     def score(self, params):

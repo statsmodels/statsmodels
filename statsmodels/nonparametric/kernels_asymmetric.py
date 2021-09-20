@@ -82,7 +82,7 @@ def pdf_kernel_asym(x, sample, bw, kernel_type, weights=None, batch_size=10):
         with 1 / nobs, where nobs is the size of `sample`
     batch_size : float
         If x is an 1-dim array, then points can be evaluated in vectorized
-        for. To limit the amount of memory, a loop can work in batches.
+        form. To limit the amount of memory, a loop can work in batches.
         The number of batches is determined so that the intermediate array
         sizes are limited by
 
@@ -149,7 +149,7 @@ def cdf_kernel_asym(x, sample, bw, kernel_type, weights=None, batch_size=10):
         with 1 / nobs, where nobs is the size of `sample`.
     batch_size : float
         If x is an 1-dim array, then points can be evaluated in vectorized
-        for. To limit the amount of memory, a loop can work in batches.
+        form. To limit the amount of memory, a loop can work in batches.
         The number of batches is determined so that the intermediate array
         sizes are limited by
 
