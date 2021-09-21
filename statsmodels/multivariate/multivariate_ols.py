@@ -246,7 +246,8 @@ def multivariate_stats(eigenvals,
 def _multivariate_ols_test(hypotheses, fit_results, exog_names,
                             endog_names):
     def fn(L, M, C):
-        # .. [1] https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_introreg_sect012.htm
+        # .. [1] https://support.sas.com/documentation/cdl/en/statug/63033
+        #        /HTML/default/viewer.htm#statug_introreg_sect012.htm
         params, df_resid, inv_cov, sscpr = fit_results
         # t1 = (L * params)M
         t1 = L.dot(params).dot(M) - C
@@ -276,11 +277,12 @@ def _multivariate_test(hypotheses, exog_names, endog_names, fn):
         T = L*inv(X'X)*L'
         H = M'B'L'*inv(T)*LBM
         E =  M'(Y'Y - B'X'XB)M
-    where H and E correspond to the numerator and denominator of a univariate F test.
-    Then find the eigenvalues of inv(H + E)*H from which the multivariate test
-    statistics are calculated.
+    where H and E correspond to the numerator and denominator of a univariate
+    F-test. Then find the eigenvalues of inv(H + E)*H from which the
+    multivariate test statistics are calculated.
 
-    .. [*] https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_introreg_sect012.htm
+    .. [*] https://support.sas.com/documentation/cdl/en/statug/63033/HTML
+           /default/viewer.htm#statug_introreg_sect012.htm
 
     Parameters
     ----------
@@ -478,8 +480,9 @@ class MultivariateTestResults(object):
 
     Parameters
     ----------
-    mv_test_df : pandas.DataFrame
-        DataFrame containing test results
+    results : dict[str, dict]
+        Dictionary containing test results. See the description
+        below for the expected format.
     endog_names : sequence[str]
         A list or other sequence of endogenous variables names
     exog_names : sequence[str]
@@ -487,33 +490,36 @@ class MultivariateTestResults(object):
 
     Attributes
     ----------
-    results : DataFrame
-        Each hypothesis is contained in column `key`. The index contains:
-        * 'stat': contains the multivariate test results
-        * 'contrast_L': contains the contrast_L matrix
-        * 'transform_M': contains the transform_M matrix
-        * 'constant_C': contains the constant_C matrix
-        * 'H': contains an intermediate Hypothesis matrix,
+    results : dict
+        Each hypothesis is contained in a single`key`. Each test must
+        have the following keys:
+
+        * 'stat' - contains the multivariate test results
+        * 'contrast_L' - contains the contrast_L matrix
+        * 'transform_M' - contains the transform_M matrix
+        * 'constant_C' - contains the constant_C matrix
+        * 'H' - contains an intermediate Hypothesis matrix,
           or the between groups sums of squares and cross-products matrix,
           corresponding to the numerator of the univariate F test.
-        * 'E': contains an intermediate Error matrix,
+        * 'E' - contains an intermediate Error matrix,
           corresponding to the denominator of the univariate F test.
           The Hypotheses and Error matrices can be used to calculate
           the same test statistics in 'stat', as well as to calculate
           the discriminant function (canonical correlates) from the
           eigenvectors of inv(E)H.
-    endog_names : sequence[str]
+
+    endog_names : list[str]
         The endogenous names
-    exog_names : sequence[str]
+    exog_names : list[str]
         The exogenous names
     summary_frame : DataFrame
         Returns results as a MultiIndex DataFrame
     """
 
-    def __init__(self, mv_test_df, endog_names, exog_names):
-        self.results = mv_test_df
-        self.endog_names = endog_names
-        self.exog_names = exog_names
+    def __init__(self, results, endog_names, exog_names):
+        self.results = results
+        self.endog_names = list(endog_names)
+        self.exog_names = list(exog_names)
 
     def __str__(self):
         return self.summary().__str__()
