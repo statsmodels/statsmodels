@@ -28,9 +28,11 @@ BRANCH = "main"
 # Provide access token using command line to keep out of repo
 ACCESS_TOKEN = os.environ.get("GITHUB_ACCESS_TOKEN", None)
 if not ACCESS_TOKEN:
-    raise RuntimeError("Must set environment variable GITHUB_ACCESS_TOKEN "
-                       "containing a valid GitHub access token before running"
-                       "this program.")
+    raise RuntimeError(
+        "Must set environment variable GITHUB_ACCESS_TOKEN "
+        "containing a valid GitHub access token before running"
+        "this program."
+    )
 
 # Using an access token
 g = Github(ACCESS_TOKEN)
@@ -44,11 +46,13 @@ first_commit_time = last_modified + dt.timedelta(seconds=1)
 first_commit_time_iso = first_commit_time.isoformat()
 
 # General search for sm/sm, PR, merged, merged> first commit time and branch
-query_parts = ("repo:statsmodels/statsmodels",
-               "is:pr",
-               "is:merged",
-               "merged:>{}".format(first_commit_time_iso),
-               "base:{}".format(BRANCH))
+query_parts = (
+    "repo:statsmodels/statsmodels",
+    "is:pr",
+    "is:merged",
+    "merged:>{}".format(first_commit_time_iso),
+    "base:{}".format(BRANCH),
+)
 query = " ".join(query_parts)
 merged_pull_data = []
 merged_pulls = g.search_issues(query)
@@ -60,17 +64,21 @@ for ms in statsmodels.get_milestones():
         milestone = ms
 if milestone is None:
     description = "Release {} issues and pull requests".format(MILESTONE)
-    milestone = statsmodels.create_milestone(MILESTONE, state="open",
-                                             description=description)
+    milestone = statsmodels.create_milestone(
+        MILESTONE, state="open", description=description
+    )
 
 # Get PR data and set the milestone if needed
 for pull in merged_pulls:
-    merged_pull_data.append({"number": pull.number,
-                             "title": pull.title,
-                             "login": pull.user.login,
-                             "labels": pull.labels,
-                             "milestone": pull.milestone}
-                            )
+    merged_pull_data.append(
+        {
+            "number": pull.number,
+            "title": pull.title,
+            "login": pull.user.login,
+            "labels": pull.labels,
+            "milestone": pull.milestone,
+        }
+    )
     if pull.milestone is None or pull.milestone != milestone:
         pull.edit(milestone=milestone)
 
@@ -114,10 +122,12 @@ for login in names:
 contributors = sorted(set(contributors))
 
 # Get all issues closed since first_commit_time_iso
-query_parts = ("repo:statsmodels/statsmodels",
-               "is:issue",
-               "is:closed",
-               "closed:>{}".format(first_commit_time_iso))
+query_parts = (
+    "repo:statsmodels/statsmodels",
+    "is:issue",
+    "is:closed",
+    "closed:>{}".format(first_commit_time_iso),
+)
 query = " ".join(query_parts)
 closed_issues = g.search_issues(query)
 # Set the milestone for these issues if needed
@@ -132,8 +142,11 @@ issues_closed = closed_issues.totalCount
 whats_new = defaultdict(dict)
 for pull in merged_pull_data:
     if pull["labels"]:
-        labels = [lab.name for lab in pull["labels"] if
-                  not (lab.name.startswith("type") or lab.name.startswith("prio"))]
+        labels = [
+            lab.name
+            for lab in pull["labels"]
+            if not (lab.name.startswith("type") or lab.name.startswith("prio"))
+        ]
         labels = sorted(labels)
         if "maintenance" in labels and len(labels) > 1:
             labels.remove("maintenance")
@@ -151,15 +164,16 @@ for pull in merged_pull_data:
 whats_new = {key: whats_new[key] for key in sorted(whats_new)}
 
 # Variables for the template
-variables = {"milestone": MILESTONE,
-             "release": RELEASE,
-             "version": VERSION,
-             "issues_closed": issues_closed,
-             "pulls_merged": len(merged_pull_data),
-             "contributors": contributors,
-             "pulls": merged_pull_data,
-             "whats_new": whats_new,
-             }
+variables = {
+    "milestone": MILESTONE,
+    "release": RELEASE,
+    "version": VERSION,
+    "issues_closed": issues_closed,
+    "pulls_merged": len(merged_pull_data),
+    "contributors": contributors,
+    "pulls": merged_pull_data,
+    "whats_new": whats_new,
+}
 
 # Read the template and generate the output
 with open("release_note.tmpl", encoding="utf-8") as tmpl:

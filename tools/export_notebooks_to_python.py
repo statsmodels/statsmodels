@@ -19,30 +19,46 @@ DO_NOT_EDIT = """
 # DO NOT EDIT 
 """
 
-logger = logging.getLogger('notebook-exporter')
+logger = logging.getLogger("notebook-exporter")
 logger.setLevel(logging.INFO)
 ch = logging.StreamHandler()
 ch.setLevel(logging.INFO)
 logger.addHandler(ch)
 
-parser = argparse.ArgumentParser(description="""
+parser = argparse.ArgumentParser(
+    description="""
 Sync notebooks to python by exporting. The exported files are
 always written in ../python relative to the notebooks. 
 Requires nbconvert and yapf.
-""")
-parser.add_argument('--full-path', '-fp', type=str, default=None,
-                    help='Full Path to notebook to convert. Converts all '
-                         'notebooks in FULL_PATH by default. If not '
-                         'specified, searches for examples in '
-                         '../examples/notebooks (relative to this file).')
-parser.add_argument('--notebook', '-nb', type=str, default=None,
-                    help='Name of a single notebook to export.  If not '
-                         'provided, all notebooks found are exported. Appends '
-                         '.ipynb if NOTEBOOK does not end with this '
-                         'extension.')
-parser.add_argument('--force', '-f', action='store_true',
-                    help='Force conversion if python file in destination '
-                         'exists and is newer than notebook.')
+"""
+)
+parser.add_argument(
+    "--full-path",
+    "-fp",
+    type=str,
+    default=None,
+    help="Full Path to notebook to convert. Converts all "
+    "notebooks in FULL_PATH by default. If not "
+    "specified, searches for examples in "
+    "../examples/notebooks (relative to this file).",
+)
+parser.add_argument(
+    "--notebook",
+    "-nb",
+    type=str,
+    default=None,
+    help="Name of a single notebook to export.  If not "
+    "provided, all notebooks found are exported. Appends "
+    ".ipynb if NOTEBOOK does not end with this "
+    "extension.",
+)
+parser.add_argument(
+    "--force",
+    "-f",
+    action="store_true",
+    help="Force conversion if python file in destination "
+    "exists and is newer than notebook.",
+)
 
 
 def is_newer(file1, file2, strict=True):
@@ -79,61 +95,64 @@ def main():
     full_path = args.full_path
     force = args.force
     if full_path is None:
-        full_path = os.path.join(BASE_PATH, '..', 'examples', 'notebooks')
+        full_path = os.path.join(BASE_PATH, "..", "examples", "notebooks")
     notebook = args.notebook
     if notebook is None:
-        notebooks = glob.glob(os.path.join(full_path, '*.ipynb'))
+        notebooks = glob.glob(os.path.join(full_path, "*.ipynb"))
     else:
-        if not notebook.endswith('.ipynb'):
-            notebook = notebook + '.ipynb'
+        if not notebook.endswith(".ipynb"):
+            notebook = notebook + ".ipynb"
         notebook = os.path.abspath(os.path.join(full_path, notebook))
         if not os.path.exists(notebook):
-            raise FileNotFoundError('Notebook {0} not found.'.format(notebook))
+            raise FileNotFoundError("Notebook {0} not found.".format(notebook))
         notebooks = [notebook]
     if not notebooks:
         import warnings
-        warnings.warn('No notebooks found', UserWarning)
+
+        warnings.warn("No notebooks found", UserWarning)
     for nb in notebooks:
         nb_full_name = os.path.split(nb)[1]
         nb_name = os.path.splitext(nb_full_name)[0]
-        py_name = nb_name + '.py'
+        py_name = nb_name + ".py"
         # Get base directory to notebook
         out_file = os.path.split(nb)[0]
         # Write to ../python
-        out_file = os.path.join(out_file, '..', 'python', py_name)
+        out_file = os.path.join(out_file, "..", "python", py_name)
         if is_newer(out_file, nb) and not force:
-            logger.info('Skipping {0}, exported version newer than '
-                        'notebook'.format(nb_name))
+            logger.info(
+                "Skipping {0}, exported version newer than "
+                "notebook".format(nb_name)
+            )
             continue
-        logger.info('Converting {0}'.format(nb_name))
-        with open(nb, 'r', encoding="utf8") as nb_file:
+        logger.info("Converting {0}".format(nb_name))
+        with open(nb, "r", encoding="utf8") as nb_file:
             converter = nbconvert.PythonExporter()
             python = converter.from_file(nb_file)
-            code = python[0].split('\n')
+            code = python[0].split("\n")
             code_out = []
             for i, block in enumerate(code):
-                if 'get_ipython' in block:
+                if "get_ipython" in block:
                     continue
-                elif block.startswith('# In[ ]:'):
+                elif block.startswith("# In[ ]:"):
                     continue
-                if block.startswith('#'):
+                if block.startswith("#"):
                     # Wrap comments from Markdown
                     block = textwrap.fill(block, width=74)
-                    block = block.replace('\n', '\n# ')
+                    block = block.replace("\n", "\n# ")
                 code_out.append(block)
             if not code_out[0]:
                 code_out = code_out[1:]
             loc = 0
             for i, line in enumerate(code_out):
                 if "# coding: utf" in line:
-                    loc = i+1
+                    loc = i + 1
                     break
             code_out.insert(loc, DO_NOT_EDIT.format(notebook=nb_full_name))
-            code_out = '\n'.join(code_out)
-            code_out, success = FormatCode(code_out, style_config='pep8')
-            with open(out_file, 'w', encoding="utf8") as of:
+            code_out = "\n".join(code_out)
+            code_out, success = FormatCode(code_out, style_config="pep8")
+            with open(out_file, "w", encoding="utf8") as of:
                 of.write(code_out)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
