@@ -168,12 +168,7 @@ def generate_diff(api, other):
             }
 
     def header(v, first=False):
-        return (
-            "\n\n" * (not first)
-            + f"\n{v}\n"
-            + "-" * len(v)
-            + "\n"
-        )
+        return "\n\n" * (not first) + f"\n{v}\n" + "-" * len(v) + "\n"
 
     with open("api-differences.rst", "w") as rst:
         rst.write(header("New Classes", first=True))
