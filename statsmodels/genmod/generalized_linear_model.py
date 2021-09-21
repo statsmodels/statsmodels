@@ -443,7 +443,7 @@ class GLM(base.LikelihoodModel):
         Parameters
         ----------
         params : ndarray
-            parameter at which score is evaluated
+            Parameter at which score is evaluated.
         scale : None or float
             If scale is None, then the default scale will be calculated.
             Default scale is defined by `self.scaletype` and set in fit.
@@ -465,7 +465,7 @@ class GLM(base.LikelihoodModel):
         Parameters
         ----------
         params : ndarray
-            parameter at which score is evaluated
+            Parameter at which score is evaluated.
         scale : None or float
             If scale is None, then the default scale will be calculated.
             Default scale is defined by `self.scaletype` and set in fit.

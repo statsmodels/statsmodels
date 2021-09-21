@@ -398,7 +398,7 @@ def _medcouple_1d(y):
     The current algorithm requires a O(N**2) memory allocations, and so may
     not work for very large arrays (N>10000).
 
-    .. [*] M. Huberta and E. Vandervierenb, "An adjusted boxplot for skewed
+    .. [*] M. Hubert and E. Vandervieren, "An adjusted boxplot for skewed
        distributions" Computational Statistics & Data Analysis, vol. 52, pp.
        5186-5201, August 2008.
     """
@@ -464,7 +464,7 @@ def medcouple(y, axis=0):
     The current algorithm requires a O(N**2) memory allocations, and so may
     not work for very large arrays (N>10000).
 
-    .. [*] M. Huberta and E. Vandervierenb, "An adjusted boxplot for skewed
+    .. [*] M. Hubert and E. Vandervieren, "An adjusted boxplot for skewed
        distributions" Computational Statistics & Data Analysis, vol. 52, pp.
        5186-5201, August 2008.
     """

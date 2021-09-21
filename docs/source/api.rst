@@ -25,9 +25,9 @@ Regression
 .. autosummary::
 
    ~statsmodels.regression.linear_model.OLS
+   ~statsmodels.regression.linear_model.WLS
    ~statsmodels.regression.linear_model.GLS
    ~statsmodels.regression.linear_model.GLSAR
-   ~statsmodels.regression.linear_model.WLS
    ~statsmodels.regression.recursive_ls.RecursiveLS
    ~statsmodels.regression.rolling.RollingOLS
    ~statsmodels.regression.rolling.RollingWLS
@@ -37,8 +37,6 @@ Imputation
 .. autosummary::
 
    ~statsmodels.imputation.bayes_mi.BayesGaussMI
-   ~statsmodels.genmod.bayes_mixed_glm.BinomialBayesMixedGLM
-   ~statsmodels.multivariate.factor.Factor
    ~statsmodels.imputation.bayes_mi.MI
    ~statsmodels.imputation.mice.MICE
    ~statsmodels.imputation.mice.MICEData
@@ -57,40 +55,43 @@ Generalized Linear Models
 
    ~statsmodels.genmod.generalized_linear_model.GLM
    ~statsmodels.gam.generalized_additive_model.GLMGam
+   ~statsmodels.genmod.bayes_mixed_glm.BinomialBayesMixedGLM
    ~statsmodels.genmod.bayes_mixed_glm.PoissonBayesMixedGLM
 
 Discrete and Count Models
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autosummary::
 
-   ~statsmodels.discrete.discrete_model.GeneralizedPoisson
    ~statsmodels.discrete.discrete_model.Logit
-   ~statsmodels.discrete.discrete_model.MNLogit
-   ~statsmodels.discrete.discrete_model.Poisson
    ~statsmodels.discrete.discrete_model.Probit
+   ~statsmodels.discrete.discrete_model.MNLogit
+   ~statsmodels.miscmodels.ordinal_model.OrderedModel
+   ~statsmodels.discrete.discrete_model.Poisson
    ~statsmodels.discrete.discrete_model.NegativeBinomial
    ~statsmodels.discrete.discrete_model.NegativeBinomialP
-   ~statsmodels.discrete.count_model.ZeroInflatedGeneralizedPoisson
-   ~statsmodels.discrete.count_model.ZeroInflatedNegativeBinomialP
+   ~statsmodels.discrete.discrete_model.GeneralizedPoisson
    ~statsmodels.discrete.count_model.ZeroInflatedPoisson
+   ~statsmodels.discrete.count_model.ZeroInflatedNegativeBinomialP
+   ~statsmodels.discrete.count_model.ZeroInflatedGeneralizedPoisson
 
 Multivariate Models
 ~~~~~~~~~~~~~~~~~~~
 .. autosummary::
 
+   ~statsmodels.multivariate.factor.Factor
    ~statsmodels.multivariate.manova.MANOVA
    ~statsmodels.multivariate.pca.PCA
 
-Misc Models
-~~~~~~~~~~~
+Other Models
+~~~~~~~~~~~~
 .. autosummary::
 
    ~statsmodels.regression.mixed_linear_model.MixedLM
+   ~statsmodels.duration.survfunc.SurvfuncRight
    ~statsmodels.duration.hazard_regression.PHReg
    ~statsmodels.regression.quantile_regression.QuantReg
    ~statsmodels.robust.robust_linear_model.RLM
-   ~statsmodels.duration.survfunc.SurvfuncRight
-
+   ~statsmodels.othermod.betareg.BetaModel
 
 Graphics
 ~~~~~~~~
@@ -236,8 +237,10 @@ X12/X13 Interface
 Models
 ~~~~~~
 
-The function descriptions of the methods exposed in the formula API are generic.
-See the documentation for the parent model for details.
+The lower case names are aliases to the `from_formula` method of the
+corresponding model class. The function descriptions of the methods exposed in
+the formula API are generic. See the documentation for the parent model for
+details.
 
 .. autosummary::
    :toctree: generated/
@@ -248,15 +251,15 @@ See the documentation for the parent model for details.
    ~statsmodels.formula.api.glsar
    ~statsmodels.formula.api.mixedlm
    ~statsmodels.formula.api.glm
+   ~statsmodels.formula.api.gee
+   ~statsmodels.formula.api.ordinal_gee
+   ~statsmodels.formula.api.nominal_gee
    ~statsmodels.formula.api.rlm
-   ~statsmodels.formula.api.mnlogit
    ~statsmodels.formula.api.logit
    ~statsmodels.formula.api.probit
+   ~statsmodels.formula.api.mnlogit
    ~statsmodels.formula.api.poisson
    ~statsmodels.formula.api.negativebinomial
    ~statsmodels.formula.api.quantreg
    ~statsmodels.formula.api.phreg
-   ~statsmodels.formula.api.ordinal_gee
-   ~statsmodels.formula.api.nominal_gee
-   ~statsmodels.formula.api.gee
    ~statsmodels.formula.api.glmgam

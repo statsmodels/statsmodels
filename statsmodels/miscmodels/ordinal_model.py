@@ -14,6 +14,7 @@ from pandas.api.types import CategoricalDtype
 from scipy import stats
 
 from statsmodels.base.model import (
+    Model,
     LikelihoodModel,
     GenericLikelihoodModel,
     GenericLikelihoodModelResults,
@@ -27,9 +28,9 @@ from statsmodels.tools.decorators import cache_readonly
 class OrderedModel(GenericLikelihoodModel):
     """Ordinal Model based on logistic or normal distribution
 
-    The parameterization corresponds to the proportional odds model.
-
-    The mode assumes that the endogenous variable is ordered but that the
+    The parameterization corresponds to the proportional odds model in the
+    logistic case.
+    The model assumes that the endogenous variable is ordered but that the
     labels have no numeric interpretation besides the ordering.
 
     The model is based on a latent linear variable, where we observe only a
@@ -264,7 +265,7 @@ class OrderedModel(GenericLikelihoodModel):
 
         return model
 
-    from_formula.__doc__ = LikelihoodModel.from_formula.__doc__
+    from_formula.__doc__ = Model.from_formula.__doc__
 
     def cdf(self, x):
         """Cdf evaluated at x.
@@ -373,18 +374,18 @@ class OrderedModel(GenericLikelihoodModel):
         Parameters
         ----------
         params : ndarray
-            Parameters for the Model, (exog_coef, transformed_thresholds)
+            Parameters for the Model, (exog_coef, transformed_thresholds).
         exog : array_like, optional
-            Design / exogenous data. Is exog is None, model exog is used.
+            Design / exogenous data. If exog is None, model exog is used.
         offset : array_like, optional
             Offset is added to the linear prediction with coefficient
             equal to 1. If offset is not provided and exog
             is None, uses the model's offset if present.  If not, uses
             0 as the default value.
         which : {"prob", "linpred", "cumprob"}
-            Determines which statistic is predicted
+            Determines which statistic is predicted.
 
-            - prob : predicted probabilities to be in c
+            - prob : predicted probabilities to be in each choice. 2-dim.
             - linear : 1-dim linear prediction of the latent variable
               ``x b + offset``
             - cumprob : predicted cumulative probability to be in choice k or
@@ -392,10 +393,15 @@ class OrderedModel(GenericLikelihoodModel):
 
         Returns
         -------
-        predicted probabilities : ndarray
-            2-dim predicted probabilities with observations in rows and one
-            column for each category or level of the categorical dependent
-            variable.
+        predicted values : ndarray
+            If which is "prob", then 2-dim predicted probabilities with
+            observations in rows and one column for each category or level of
+            the categorical dependent variable.
+            If which is "cumprob", then "prob" ar cumulatively added to get the
+            cdf at k, i.e. probaibility of observing choice k or lower.
+            If which is "linpred", then the conditional prediction of the
+            latent variable is returned. In this case, the return is
+            one-dimensional.
         """
         # note, exog and offset handling is in linpred
 
@@ -417,7 +423,7 @@ class OrderedModel(GenericLikelihoodModel):
             raise ValueError("`which` is not available")
 
     def _linpred(self, params, exog=None, offset=None):
-        """Linear prediction of latent variable `x b`.
+        """Linear prediction of latent variable `x b + offset`.
 
         Parameters
         ----------
@@ -459,7 +465,7 @@ class OrderedModel(GenericLikelihoodModel):
         return linpred
 
     def _bounds(self, params):
-        """integration bounds for the observation specific interval
+        """Integration bounds for the observation specific interval.
 
         This defines the lower and upper bounds for the intervals of the
         choices of all observations.
@@ -497,14 +503,26 @@ class OrderedModel(GenericLikelihoodModel):
         upp = thresh_i_upp - xb
         return low, upp
 
-    @Appender(GenericLikelihoodModel.fit.__doc__)
+    @Appender(GenericLikelihoodModel.loglike.__doc__)
     def loglike(self, params):
 
         return self.loglikeobs(params).sum()
 
-    @Appender(GenericLikelihoodModel.fit.__doc__)
     def loglikeobs(self, params):
+        """
+        Log-likelihood of OrderdModel for all observations.
 
+        Parameters
+        ----------
+        params : array_like
+            The parameters of the model.
+
+        Returns
+        -------
+        loglike_obs : array_like
+            The log likelihood for each observation of the model evaluated
+            at ``params``.
+        """
         low, upp = self._bounds(params)
         prob = self.prob(low, upp)
         return np.log(prob + 1e-20)
@@ -523,7 +541,7 @@ class OrderedModel(GenericLikelihoodModel):
         pdf_low = self.pdf(low)
 
         # TODO the following doesn't work yet because of the incremental exp
-        # parameterization. The following was written base on Greene for the
+        # parameterization. The following was written based on Greene for the
         # simple non-incremental parameterization.
         # k = self.k_levels - 1
         # idx = self.endog
@@ -543,7 +561,7 @@ class OrderedModel(GenericLikelihoodModel):
 
     @property
     def start_params(self):
-        """start parameters for the optimization corresponding to null model
+        """Start parameters for the optimization corresponding to null model.
 
         The threshold are computed from the observed frequencies and
         transformed to the exponential increments parameterization.

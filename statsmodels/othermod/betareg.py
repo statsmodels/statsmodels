@@ -155,8 +155,6 @@ class BetaModel(GenericLikelihoodModel):
 
         Parameters
         ----------
-        Parameters
-        ----------
         params : array_like
             The model parameters.
         exog : array_like
