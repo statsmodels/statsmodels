@@ -188,6 +188,7 @@ Non-Parametric Tests
 
    rank_compare_2indep
    rank_compare_2ordinal
+   RankCompareResult
    cohensd2problarger
    prob_larger_continuous
    rankdata_2samp
@@ -580,9 +581,11 @@ Moment Helpers
 --------------
 
 When there are missing values, then it is possible that a correlation or
-covariance matrix is not positive semi-definite. The following three
+covariance matrix is not positive semi-definite. The following
 functions can be used to find a correlation or covariance matrix that is
 positive definite and close to the original matrix.
+Additional functions estimate spatial covariance matrix and regularized
+inverse covariance or precision matrix.
 
 .. module:: statsmodels.stats.correlation_tools
    :synopsis: Procedures for ensuring correlations are positive semi-definite
@@ -601,6 +604,12 @@ positive definite and close to the original matrix.
    FactoredPSDMatrix
    kernel_covariance
 
+.. currentmodule:: statsmodels.stats.regularized_covariance
+
+.. autosummary::
+   :toctree: generated/
+
+   RegularizedInvCovariance
 
 These are utility functions to convert between central and non-central moments, skew,
 kurtosis and cummulants.

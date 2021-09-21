@@ -72,7 +72,7 @@ class RankCompareResult(HolderTuple):
 
     This is a subclass of HolderTuple that includes results from intermediate
     computations, as well as methods for hypothesis tests, confidence intervals
-    ans summary.
+    and summary.
     """
 
     def conf_int(self, value=None, alpha=0.05, alternative="two-sided"):
@@ -392,6 +392,7 @@ def rank_compare_2indep(x1, x2, use_t=True):
 
     See Also
     --------
+    RankCompareResult
     scipy.stats.brunnermunzel : Brunner-Munzel test for stochastic equality
     scipy.stats.mannwhitneyu : Mann-Whitney rank test on two samples.
 
@@ -537,6 +538,10 @@ def rank_compare_2ordinal(count1, count2, ddof=1, use_t=True):
         This includes methods for hypothesis tests and confidence intervals
         for the probability that sample 1 is stochastically larger than
         sample 2.
+
+    See Also
+    --------
+    RankCompareResult
 
     Notes
     -----

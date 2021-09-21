@@ -10,7 +10,7 @@ from .diagnostic import (
     linear_harvey_collier, linear_rainbow, linear_lm, linear_reset,
     breaks_cusumolsresid, breaks_hansen, recursive_olsresiduals,
     spec_white
-)
+    )
 from ._adnorm import normal_ad
 from ._lilliefors import lilliefors
 
@@ -31,7 +31,7 @@ from .sandwich_covariance import (
     cov_hac, cov_white_simple,
     cov_hc0, cov_hc1, cov_hc2, cov_hc3,
     se_cov
-)
+    )
 
 from .weightstats import (DescrStatsW, CompareMeans, ttest_ind, ttost_ind,
                           ttost_paired, ztest, ztost, zconfint)
@@ -41,9 +41,41 @@ from .proportion import (
     binom_tost, binom_tost_reject_interval,
     power_binom_tost, power_ztost_prop,
     proportion_confint, proportion_effectsize,
+    samplesize_confint_proportion,
     proportions_chisquare, proportions_chisquare_allpairs,
     proportions_chisquare_pairscontrol, proportions_ztest,
-    proportions_ztost, multinomial_proportions_confint)
+    proportions_ztost, multinomial_proportions_confint,
+    # 2 sample functions:
+    confint_proportions_2indep, power_proportions_2indep,
+    samplesize_proportions_2indep_onetail,
+    test_proportions_2indep, tost_proportions_2indep,
+    )
+
+from .rates import (
+    etest_poisson_2indep, test_poisson_2indep, tost_poisson_2indep,
+    )
+
+from .oneway import (
+        # mean and scale
+        anova_oneway, equivalence_oneway,
+        test_scale_oneway, equivalence_scale_oneway,
+        # power
+        effectsize_oneway,
+        power_equivalence_oneway, simulate_power_equivalence_oneway,
+        # from stats
+        anova_generic, equivalence_oneway_generic,
+        # effect size
+        confint_effectsize_oneway, confint_noncentrality,
+        convert_effectsize_fsqu,
+        f2_to_wellek, fstat_to_wellek, wellek_to_f2
+        )
+
+from .multivariate import (
+        test_cov, test_cov_blockdiagonal, test_cov_diagonal, test_cov_oneway,
+        test_cov_spherical,
+        test_mvmean, confint_mvmean, confint_mvmean_fromstats,
+        test_mvmean_2indep,
+        )
 
 from .power import (TTestPower, TTestIndPower, GofChisquarePower,
                     NormalIndPower, FTestAnovaPower, FTestPower,
@@ -51,7 +83,11 @@ from .power import (TTestPower, TTestIndPower, GofChisquarePower,
 
 from .descriptivestats import Describe
 
-from .anova import anova_lm
+from .anova import anova_lm, AnovaRM
+
+from .inter_rater import (
+    cohens_kappa, fleiss_kappa
+    )
 
 from .oaxaca import OaxacaBlinder
 
@@ -69,6 +105,10 @@ from statsmodels.stats.contingency_tables import (mcnemar, cochrans_q,
                                                   Table,
                                                   StratifiedTable)
 from .mediation import Mediation
+
+from .meta_analysis import (
+    combine_effects, effectsize_2proportions, effectsize_smd,
+    )
 
 __all__ = ["acorr_lm", "acorr_breusch_godfrey", "acorr_ljungbox", "anova_lm", "binom_test",
            "binom_test_reject_interval", "Mediation", "mcnemar", "cochrans_q", "SquareTable",
@@ -92,4 +132,6 @@ __all__ = ["acorr_lm", "acorr_breusch_godfrey", "acorr_ljungbox", "anova_lm", "b
            "NullDistribution", "tukeyhsd", "gof", "powerdiscrepancy", "gof_chisquare_discrete",
            "chisquare_effectsize", "stattools", "durbin_watson", "omni_normtest", "jarque_bera",
            "sandwich_covariance", "DescrStatsW", "CompareMeans", "ttest_ind", "ttost_ind",
-           "ttost_paired", "ztest", "ztost", "zconfint"]
+           "ttost_paired", "ztest", "ztost", "zconfint"
+           "etest_poisson_2indep", "test_poisson_2indep", "tost_poisson_2indep",
+           ]
