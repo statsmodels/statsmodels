@@ -539,6 +539,8 @@ class MultivariateTestResults(object):
     def summary(self, show_contrast_L=False, show_transform_M=False,
                 show_constant_C=False):
         """
+        Summary of test results
+
         Parameters
         ----------
         show_contrast_L : bool
