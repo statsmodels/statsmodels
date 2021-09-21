@@ -63,7 +63,8 @@ def check_revision_indices(news, revisions_index):
             endog_names.index(name)
             for name in desired_ix['revised variable']]
 
-        assert_(news.revisions_iloc.equals(desired_iloc))
+        assert_(news.revisions_iloc.equals(
+            desired_iloc.astype(news.revisions_iloc.dtypes)))
         assert_(news.revisions_ix.equals(desired_ix))
 
 
@@ -91,7 +92,8 @@ def check_update_indices(news, updates_index):
             endog_names.index(name)
             for name in desired_ix['updated variable']]
 
-        assert_(news.updates_iloc.equals(desired_iloc))
+        assert_(news.updates_iloc.equals(
+            desired_iloc.astype(news.updates_iloc.dtypes)))
         assert_(news.updates_ix.equals(desired_ix))
 
 
