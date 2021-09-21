@@ -471,32 +471,45 @@ class _MultivariateOLSResults(object):
 
 
 class MultivariateTestResults(object):
-    """ Multivariate test results class
+    """
+    Multivariate test results class
+
     Returned by `mv_test` method of `_MultivariateOLSResults` class
+
+    Parameters
+    ----------
+    mv_test_df : pandas.DataFrame
+        DataFrame containing test results
+    endog_names : sequence[str]
+        A list or other sequence of endogenous variables names
+    exog_names : sequence[str]
+        A list of other sequence of exogenous variables names
 
     Attributes
     ----------
-    results : dict
-       For hypothesis name `key`:
-           results[key]['stat'] contains the multivariate test results
-           results[key]['contrast_L'] contains the contrast_L matrix
-           results[key]['transform_M'] contains the transform_M matrix
-           results[key]['constant_C'] contains the constant_C matrix
-           results[key]['H'] contains an intermediate Hypothesis matrix,
-            or the between groups sums of squares and cross-products matrix,
-            corresponding to the numerator of the univariate F test.
-           results[key]['E'] contains an intermediate Error matrix,
-            corresponding to the denominator of the univariate F test.
-            The Hypotheses and Error matrices can be used to calculate
-            the same test statistics in 'stat', as well as to calculate
-            the discriminant function (canonical correlates) from the
-            eigenvectors of inv(E)H.
-
-    endog_names : str
-    exog_names : str
-    summary_frame : multiindex dataframe
-        Returns results as a multiindex dataframe
+    results : DataFrame
+        Each hypothesis is contained in column `key`. The index contains:
+        * 'stat': contains the multivariate test results
+        * 'contrast_L': contains the contrast_L matrix
+        * 'transform_M': contains the transform_M matrix
+        * 'constant_C': contains the constant_C matrix
+        * 'H': contains an intermediate Hypothesis matrix,
+          or the between groups sums of squares and cross-products matrix,
+          corresponding to the numerator of the univariate F test.
+        * 'E': contains an intermediate Error matrix,
+          corresponding to the denominator of the univariate F test.
+          The Hypotheses and Error matrices can be used to calculate
+          the same test statistics in 'stat', as well as to calculate
+          the discriminant function (canonical correlates) from the
+          eigenvectors of inv(E)H.
+    endog_names : sequence[str]
+        The endogenous names
+    exog_names : sequence[str]
+        The exogenous names
+    summary_frame : DataFrame
+        Returns results as a MultiIndex DataFrame
     """
+
     def __init__(self, mv_test_df, endog_names, exog_names):
         self.results = mv_test_df
         self.endog_names = endog_names
@@ -526,18 +539,19 @@ class MultivariateTestResults(object):
     def summary(self, show_contrast_L=False, show_transform_M=False,
                 show_constant_C=False):
         """
-
         Parameters
         ----------
-        contrast_L : True or False
+        show_contrast_L : bool
             Whether to show contrast_L matrix
-        transform_M : True or False
+        show_transform_M : bool
             Whether to show transform_M matrix
+        show_constant_C : bool
+            Whether to show the constant_C
         """
         summ = summary2.Summary()
         summ.add_title('Multivariate linear model')
         for key in self.results:
-            summ.add_dict({'':''})
+            summ.add_dict({'': ''})
             df = self.results[key]['stat'].copy()
             df = df.reset_index()
             c = df.columns.values
@@ -546,17 +560,17 @@ class MultivariateTestResults(object):
             df.index = ['', '', '', '']
             summ.add_df(df)
             if show_contrast_L:
-                summ.add_dict({key:' contrast L='})
+                summ.add_dict({key: ' contrast L='})
                 df = pd.DataFrame(self.results[key]['contrast_L'],
                                   columns=self.exog_names)
                 summ.add_df(df)
             if show_transform_M:
-                summ.add_dict({key:' transform M='})
+                summ.add_dict({key: ' transform M='})
                 df = pd.DataFrame(self.results[key]['transform_M'],
                                   index=self.endog_names)
                 summ.add_df(df)
             if show_constant_C:
-                summ.add_dict({key:' constant C='})
+                summ.add_dict({key: ' constant C='})
                 df = pd.DataFrame(self.results[key]['constant_C'])
                 summ.add_df(df)
         return summ
