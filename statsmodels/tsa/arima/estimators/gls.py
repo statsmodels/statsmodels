@@ -178,6 +178,13 @@ def gls(endog, exog=None, order=(0, 0, 0), seasonal_order=(0, 0, 0, 0),
     parameters = [p]
     converged = False if n_iter is None else None
     i = 0
+
+    def _check_arma_estimator_kwargs(kwargs, method):
+        if kwargs:
+            raise ValueError(
+                f"arma_estimator_kwargs not supported for method {method}"
+            )
+
     for i in range(1, max_iter + 1):
         prev = exog_params
 
@@ -188,11 +195,13 @@ def gls(endog, exog=None, order=(0, 0, 0), seasonal_order=(0, 0, 0, 0),
                 resid, ar_order=spec.ar_order, demean=False,
                 **arma_estimator_kwargs)
         elif arma_estimator == 'burg':
+            _check_arma_estimator_kwargs(arma_estimator_kwargs, "burg")
             p_arma, res_arma = burg(resid, ar_order=spec.ar_order,
-                                    demean=False, **arma_estimator_kwargs)
+                                    demean=False)
         elif arma_estimator == 'innovations':
+            _check_arma_estimator_kwargs(arma_estimator_kwargs, "innovations")
             out, res_arma = innovations(resid, ma_order=spec.ma_order,
-                                        demean=False, **arma_estimator_kwargs)
+                                        demean=False)
             p_arma = out[-1]
         elif arma_estimator == 'hannan_rissanen':
             p_arma, res_arma = hannan_rissanen(

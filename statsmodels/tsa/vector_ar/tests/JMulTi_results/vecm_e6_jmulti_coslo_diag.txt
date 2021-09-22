@@ -27,7 +27,7 @@ skewness only:            0.3098
 kurtosis only:            1.8401  
  p-value:                 0.3985  
 
-Reference: Lütkepohl (1993), Introduction to Multiple Time Series Analysis, 2ed, p. 153
+Reference: LÃ¼tkepohl (1993), Introduction to Multiple Time Series Analysis, 2ed, p. 153
 joint test statistic:     1.8898  
  p-value:                 0.7560  
 degrees of freedom:       4.0000  

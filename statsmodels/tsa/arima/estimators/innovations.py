@@ -53,7 +53,7 @@ def innovations(endog, ma_order=0, demean=True):
     .. [1] Brockwell, Peter J., and Richard A. Davis. 2016.
        Introduction to Time Series and Forecasting. Springer.
     """
-    max_spec = SARIMAXSpecification(endog, ma_order=ma_order)
+    spec = max_spec = SARIMAXSpecification(endog, ma_order=ma_order)
     endog = max_spec.endog
 
     if demean:

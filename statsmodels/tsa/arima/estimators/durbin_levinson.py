@@ -54,7 +54,7 @@ def durbin_levinson(endog, ar_order=0, demean=True, adjusted=False):
     .. [1] Brockwell, Peter J., and Richard A. Davis. 2016.
        Introduction to Time Series and Forecasting. Springer.
     """
-    max_spec = SARIMAXSpecification(endog, ar_order=ar_order)
+    spec = max_spec = SARIMAXSpecification(endog, ar_order=ar_order)
     endog = max_spec.endog
 
     # Make sure we have a consecutive process

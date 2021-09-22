@@ -134,6 +134,7 @@ def fftconvolve3(in1, in2=None, in3=None, mode="full"):
     # Always use 2**n-sized FFT
     fsize = 2**np.ceil(np.log2(size))
     #convolve shorter ones first, not sure if it matters
+    IN1 = in1.copy()  # TODO: Is this correct?
     if in2 is not None:
         IN1 = fft.fftn(in2, fsize)
     if in3 is not None:
@@ -281,7 +282,7 @@ def convolution_filter(x, filt, nsides=2):
 
     if filt.ndim == 1 or min(filt.shape) == 1:
         result = signal.convolve(x, filt, mode='valid')
-    elif filt.ndim == 2:
+    else:  # filt.ndim == 2
         nlags = filt.shape[0]
         nvar = x.shape[1]
         result = np.zeros((x.shape[0] - nlags + 1, nvar))

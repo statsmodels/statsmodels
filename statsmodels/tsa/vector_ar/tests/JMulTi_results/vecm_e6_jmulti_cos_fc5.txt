@@ -1,6 +1,6 @@
 *** Thu, 28 Jul 2016 16:37:09 ***
 FORECASTING
-Reference: Lütkepohl (1993), IMTSA, 2ed, ch. 5.2.6, ch. 10.5
+Reference: LÃ¼tkepohl (1993), IMTSA, 2ed, ch. 5.2.6, ch. 10.5
 CI coverage:              0.95     
 forecast horizon:         5 periods 
 using standard confidence intervals
