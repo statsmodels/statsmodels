@@ -28,3 +28,24 @@ gee = gee_.GEE.from_formula
 glmgam = gam_.GLMGam.from_formula
 
 del lm_, dm_, mlm_, glm_, roblm_, qr_, hr_, gee_, gam_
+
+__all__ = [
+    "gee",
+    "glm",
+    "glmgam",
+    "gls",
+    "glsar",
+    "logit",
+    "mixedlm",
+    "mnlogit",
+    "negativebinomial",
+    "nominal_gee",
+    "ols",
+    "ordinal_gee",
+    "phreg",
+    "poisson",
+    "probit",
+    "quantreg",
+    "rlm",
+    "wls",
+]
