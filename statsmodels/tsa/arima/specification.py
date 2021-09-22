@@ -573,8 +573,8 @@ class SARIMAXSpecification(object):
         `valid_estimators` are the estimators that could be passed as the
         `arma_estimator` argument to `gls`.
         """
-        estimators = set(['yule_walker', 'burg', 'innovations',
-                          'hannan_rissanen', 'innovations_mle', 'statespace'])
+        estimators = {'yule_walker', 'burg', 'innovations',
+                      'hannan_rissanen', 'innovations_mle', 'statespace'}
 
         # Properties
         has_ar = self.max_ar_order != 0

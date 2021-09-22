@@ -4,6 +4,7 @@ cython>=0.29
 # run
 matplotlib>=3
 colorama
+joblib
 # Remove due to failures on azure CI
 # cvxopt; os_name != "win32"
 

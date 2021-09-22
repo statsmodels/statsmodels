@@ -73,8 +73,8 @@ def correlation_sum(indicators, embedding_dim):
 
     Parameters
     ----------
-    indicators : 2d array
-        matrix of distance threshold indicators
+    indicators : ndarray
+        2d array of distance threshold indicators
     embedding_dim : int
         embedding dimension
 
@@ -114,7 +114,7 @@ def correlation_sums(indicators, max_dim):
 
     Returns
     -------
-    corrsums : 1d array
+    corrsums : ndarray
         Correlation sums
     """
 
@@ -133,8 +133,8 @@ def _var(indicators, max_dim):
 
     Parameters
     ----------
-    indicators : 2d array
-        matrix of distance threshold indicators
+    indicators : ndarray
+        2d array of distance threshold indicators
     max_dim : int
         maximum embedding dimension
 

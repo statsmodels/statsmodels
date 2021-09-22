@@ -123,6 +123,7 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
     lagged_endog = lagmat(endog, max_ar_order, trim='both')
 
     # If no AR or MA components, this is just a variance computation
+    mod = None
     if max_ma_order == 0 and max_ar_order == 0:
         p.sigma2 = np.var(endog, ddof=0)
         resid = endog.copy()
@@ -238,9 +239,9 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
 
         # Step 3.2: bias correction
         if unbiased is True:
+            if mod is None:
+                raise ValueError("Must have free parameters to use unbiased")
             Z = np.zeros_like(endog)
-            V = np.zeros_like(endog)
-            W = np.zeros_like(endog)
 
             ar_coef = p.ar_poly.coef
             ma_coef = p.ma_poly.coef

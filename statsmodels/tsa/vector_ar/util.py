@@ -49,6 +49,8 @@ def get_trendorder(trend='c'):
         trendorder = 2
     elif trend == 'ctt':
         trendorder = 3
+    else:
+        raise ValueError(f"Unkown trend: {trend}")
     return trendorder
 
 

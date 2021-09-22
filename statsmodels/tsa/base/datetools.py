@@ -107,7 +107,7 @@ def date_range_str(start, end=None, length=None):
         List of strings
     """
     flags = re.IGNORECASE | re.VERBOSE
-    #_check_range_inputs(end, length, freq)
+
     start = start.lower()
     if re.search(_m_pattern, start, flags):
         annual_freq = 12
@@ -127,8 +127,9 @@ def date_range_str(start, end=None, length=None):
     if end is not None:
         end = end.lower()
         yr2, offset2 = lmap(int, end.replace(":","").split(split))
-        length = (yr2 - yr1) * annual_freq + offset2
-    elif length:
+    else:  # length > 0
+        if not length:
+            raise ValueError("length must be provided if end is None")
         yr2 = yr1 + length // annual_freq
         offset2 = length % annual_freq + (offset1 - 1)
     years = [str(yr) for yr in np.repeat(lrange(yr1 + 1, yr2), annual_freq)]
@@ -183,6 +184,7 @@ def dates_from_range(start, end=None, length=None):
     --------
     >>> import statsmodels.api as sm
     >>> import pandas as pd
+    >>> nobs = 50
     >>> dates = pd.date_range('1960m1', length=nobs)
 
 
