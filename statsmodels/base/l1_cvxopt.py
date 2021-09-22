@@ -3,7 +3,6 @@ Holds files for l1 regularization of LikelihoodModel, using cvxopt.
 """
 import numpy as np
 import statsmodels.base.l1_solvers_common as l1_solvers_common
-from cvxopt import solvers, matrix
 
 
 def fit_l1_cvxopt_cp(
@@ -54,6 +53,8 @@ def fit_l1_cvxopt_cp(
         number of iterative refinement steps when solving KKT equations
         (default: 1).
     """
+    from cvxopt import solvers, matrix
+
     start_params = np.array(start_params).ravel('F')
 
     ## Extract arguments
@@ -143,6 +144,8 @@ def _objective_func(f, x, k_params, alpha, *args):
     """
     The regularized objective function.
     """
+    from cvxopt import matrix
+
     x_arr = np.asarray(x)
     params = x_arr[:k_params].ravel()
     u = x_arr[k_params:]
@@ -156,6 +159,8 @@ def _fprime(score, x, k_params, alpha):
     """
     The regularized derivative.
     """
+    from cvxopt import matrix
+
     x_arr = np.asarray(x)
     params = x_arr[:k_params].ravel()
     # Call the numpy version
@@ -169,6 +174,8 @@ def _get_G(k_params):
     """
     The linear inequality constraint matrix.
     """
+    from cvxopt import matrix
+
     I = np.eye(k_params)  # noqa:E741
     A = np.concatenate((-I, -I), axis=1)
     B = np.concatenate((I, -I), axis=1)
@@ -184,6 +191,8 @@ def _hessian_wrapper(hess, x, z, k_params):
     cvxopt wants the hessian of the objective function and the constraints.
         Since our constraints are linear, this part is all zeros.
     """
+    from cvxopt import matrix
+
     x_arr = np.asarray(x)
     params = x_arr[:k_params].ravel()
     zh_x = np.asarray(z[0]) * hess(params)
