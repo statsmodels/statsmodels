@@ -174,6 +174,16 @@ class CheckModelResults(CheckModelMixin):
         score = self.res1.model.score(self.res1.params)
         assert_almost_equal(jacsum, score, DECIMAL_9) #Poisson has low precision ?
 
+    def test_summary_latex(self):
+        # see #7747, last line of top table was dropped
+        summ = self.res1.summary()
+        ltx = summ.as_latex()
+        n_lines = len(ltx.splitlines())
+        if not isinstance(self.res1.model, MNLogit):
+            # skip MNLogit which creates several params tables
+            assert n_lines == 19 + np.size(self.res1.params)
+        assert "Covariance Type:" in ltx
+
 
 class CheckBinaryResults(CheckModelResults):
     def test_pred_table(self):

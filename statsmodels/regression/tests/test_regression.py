@@ -1149,6 +1149,7 @@ def test_summary_as_latex():
 \\textbf{No. Observations:} &          16      & \\textbf{  AIC:               } &     233.2   \\\\
 \\textbf{Df Residuals:}     &           9      & \\textbf{  BIC:               } &     238.6   \\\\
 \\textbf{Df Model:}         &           6      & \\textbf{                     } &             \\\\
+\\textbf{Covariance Type:}  &    nonrobust     & \\textbf{                     } &             \\\\
 \\bottomrule
 \\end{tabular}
 \\begin{tabular}{lcccccc}
