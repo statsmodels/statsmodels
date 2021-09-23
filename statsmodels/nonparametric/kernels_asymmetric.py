@@ -68,25 +68,25 @@ def pdf_kernel_asym(x, sample, bw, kernel_type, weights=None, batch_size=10):
     x : array_like, float
         Points for which density is evaluated. ``x`` can be scalar or 1-dim.
     sample : ndarray, 1-d
-        Sample from which kernel estimate is computed
+        Sample from which kernel estimate is computed.
     bw : float
-        Bandwidth parameter, there is currently no default value for it
+        Bandwidth parameter, there is currently no default value for it.
     kernel_type : str or callable
-        Kernel name or kernel function
+        Kernel name or kernel function.
         Currently supported kernel names are "beta", "beta2", "gamma",
-        "gamma2", "bs", "invgamma", "invgauss", "lognorm", "pdf",
-        "recipinvgauss" and "weibull".
+        "gamma2", "bs", "invgamma", "invgauss", "lognorm", "recipinvgauss" and
+        "weibull".
     weights : None or ndarray
         If weights is not None, then kernel for sample points are weighted
         by it. No weights corresponds to uniform weighting of each component
-        with 1 / nobs, where nobs is the size of `sample`
+        with 1 / nobs, where nobs is the size of `sample`.
     batch_size : float
         If x is an 1-dim array, then points can be evaluated in vectorized
         form. To limit the amount of memory, a loop can work in batches.
         The number of batches is determined so that the intermediate array
         sizes are limited by
 
-        ``np.size(batch) * len(sample) < batch_size * 1000``
+        ``np.size(batch) * len(sample) < batch_size * 1000``.
 
         Default is to have at most 10000 elements in intermediate arrays.
 
@@ -141,8 +141,8 @@ def cdf_kernel_asym(x, sample, bw, kernel_type, weights=None, batch_size=10):
     kernel_type : str or callable
         Kernel name or kernel function.
         Currently supported kernel names are "beta", "beta2", "gamma",
-        "gamma2", "bs", "invgamma", "invgauss", "lognorm", "pdf",
-        "recipinvgauss" and "weibull".
+        "gamma2", "bs", "invgamma", "invgauss", "lognorm", "recipinvgauss" and
+        "weibull".
     weights : None or ndarray
         If weights is not None, then kernel for sample points are weighted
         by it. No weights corresponds to uniform weighting of each component

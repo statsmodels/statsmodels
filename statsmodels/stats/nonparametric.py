@@ -383,9 +383,11 @@ def rank_compare_2indep(x1, x2, use_t=True):
     Returns
     -------
     res : RankCompareResult
+        The results instance contains the results for the Brunner-Munzel test
+        and has methods for hypothesis tests, confidence intervals and summary.
 
         statistic : float
-            The Brunner-Munzer W statistic.
+            The Brunner-Munzel W statistic.
         pvalue : float
             p-value assuming an t distribution. One-sided or
             two-sided, depending on the choice of `alternative` and `use_t`.
@@ -506,7 +508,8 @@ def rank_compare_2indep(x1, x2, use_t=True):
 
 
 def rank_compare_2ordinal(count1, count2, ddof=1, use_t=True):
-    """stochastically larger probability for 2 independent ordinal samples
+    """
+    Stochastically larger probability for 2 independent ordinal samples.
 
     This is a special case of `rank_compare_2indep` when the data are given as
     counts of two independent ordinal, i.e. ordered multinomial, samples.
@@ -523,7 +526,7 @@ def rank_compare_2ordinal(count1, count2, ddof=1, use_t=True):
         Counts of the first sample, categories are assumed to be ordered.
     count2 : array_like
         Counts of the second sample, number of categories and ordering needs
-        to be the same as for sample 1
+        to be the same as for sample 1.
     ddof : scalar
         Degrees of freedom correction for variance estimation. The default
         ddof=1 corresponds to `rank_compare_2indep`.
@@ -541,6 +544,7 @@ def rank_compare_2ordinal(count1, count2, ddof=1, use_t=True):
 
     See Also
     --------
+    rank_compare_2indep
     RankCompareResult
 
     Notes
@@ -588,7 +592,8 @@ def rank_compare_2ordinal(count1, count2, ddof=1, use_t=True):
 
 
 def prob_larger_continuous(distr1, distr2):
-    """probability indicating that distr1 is stochastically larger than distr2
+    """
+    Probability indicating that distr1 is stochastically larger than distr2.
 
     This computes
 
@@ -632,7 +637,8 @@ def prob_larger_continuous(distr1, distr2):
 
 
 def cohensd2problarger(d):
-    """convert Cohen's d effect size to stochastically-larger-probability
+    """
+    Convert Cohen's d effect size to stochastically-larger-probability.
 
     This assumes observations are normally distributed.
 

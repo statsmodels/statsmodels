@@ -57,7 +57,7 @@ _init_example = """
 
 
 class BetaModel(GenericLikelihoodModel):
-    """Beta Regression.
+    __doc__ = """Beta Regression.
 
     The Model is parameterized by mean and precision. Both can depend on
     explanatory variables through link functions.
