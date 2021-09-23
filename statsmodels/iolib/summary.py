@@ -718,7 +718,6 @@ def summary_return(tables, return_fmt='text'):
     elif return_fmt == 'latex':
         # TODO: insert \hline after updating SimpleTable
         table = copy.deepcopy(tables[0])
-        del table[-1]
         for part in tables[1:]:
             table.extend(part)
         return table.as_latex_tabular()
