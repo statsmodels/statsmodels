@@ -32,6 +32,7 @@ from statsmodels.tools.numdiff import (
 from statsmodels.tools.sm_exceptions import (
     DomainWarning,
     PerfectSeparationError,
+    ValueWarning,
 )
 from statsmodels.tools.tools import add_constant
 
@@ -1736,7 +1737,8 @@ class TestWtdGlmGammaNewton(CheckWtdDuplicationMixin):
 
     def test_init_kwargs(self):
         family_link = sm.families.Gamma(sm.families.links.log())
-        with assert_warns(UserWarning):
+
+        with pytest.warns(ValueWarning, match="unknown kwargs"):
             GLM(self.endog, self.exog, family=family_link,
                 weights=self.weight,  # incorrect keyword
                 )

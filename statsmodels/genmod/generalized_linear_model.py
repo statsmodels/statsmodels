@@ -43,6 +43,7 @@ from statsmodels.tools.sm_exceptions import (
     DomainWarning,
     HessianInversionWarning,
     PerfectSeparationError,
+    ValueWarning,
 )
 from statsmodels.tools.validation import float_like
 
@@ -295,8 +296,8 @@ class GLM(base.LikelihoodModel):
                           "hasconst", 'n_trials']
         kwargs_invalid = [i for i in kwargs if i not in kwargs_allowed]
         if kwargs_invalid and type(self) is GLM:
-            warnings.warn("unknown kwargs" + repr(kwargs_invalid),
-                          UserWarning)
+            warnings.warn("unknown kwargs " + repr(kwargs_invalid),
+                          ValueWarning)
 
         if (family is not None) and not isinstance(family.link,
                                                    tuple(family.safe_links)):
