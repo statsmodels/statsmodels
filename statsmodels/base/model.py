@@ -79,6 +79,10 @@ class Model(object):
     # Default is 1, which is more common. Override in models when needed
     # Set to None to skip check
     _formula_max_endog = 1
+    # kwargs that are generically allowed, maybe not supported in all models
+    _kwargs_allowed = [
+        "missing", 'missing_idx', 'formula', 'design_info', "hasconst",
+        ]
 
     def __init__(self, endog, exog=None, **kwargs):
         missing = kwargs.pop('missing', 'none')

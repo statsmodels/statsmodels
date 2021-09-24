@@ -264,7 +264,7 @@ def test_predict_remove_data():
     # GH6887
     endog = [i + np.random.normal(scale=0.1) for i in range(100)]
     exog = [i for i in range(100)]
-    model = OLS(endog, exog, weights=[1 for _ in range(100)]).fit()
+    model = WLS(endog, exog, weights=[1 for _ in range(100)]).fit()
     # we need to compute scale before we remove wendog, wexog
     model.scale
     model.remove_data()

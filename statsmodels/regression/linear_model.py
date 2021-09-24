@@ -47,7 +47,10 @@ from statsmodels.emplike.elregress import _ELRegOpts
 # need import in module instead of lazily to copy `__doc__`
 from statsmodels.regression._prediction import PredictionResults
 from statsmodels.tools.decorators import cache_readonly, cache_writable
-from statsmodels.tools.sm_exceptions import InvalidTestWarning
+from statsmodels.tools.sm_exceptions import (
+    InvalidTestWarning,
+    ValueWarning,
+    )
 from statsmodels.tools.tools import pinv_extended
 from statsmodels.tools.validation import string_like
 
@@ -875,6 +878,12 @@ class OLS(WLS):
                                   hasconst=hasconst, **kwargs)
         if "weights" in self._init_keys:
             self._init_keys.remove("weights")
+
+        kwargs_allowed = self._kwargs_allowed + ["offset"]
+        kwargs_invalid = [i for i in kwargs if i not in kwargs_allowed]
+        if kwargs_invalid and type(self) is OLS:
+            warnings.warn("unknown kwargs " + repr(kwargs_invalid),
+                          ValueWarning)
 
     def loglike(self, params, scale=None):
         """
