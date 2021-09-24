@@ -12,6 +12,7 @@ from numpy.testing import (
     assert_array_less,
     assert_equal,
     assert_raises,
+    assert_warns,
 )
 import pandas as pd
 from pandas.testing import assert_series_equal
@@ -1642,10 +1643,10 @@ class TestWtdGlmBinomial(CheckWtdDuplicationMixin):
         cls.endog = cls.endog / 100
         cls.endog_big = cls.endog_big / 100
         cls.res1 = GLM(cls.endog, cls.exog,
-                        freq_weights=cls.weight,
-                        family=sm.families.Binomial()).fit()
+                       freq_weights=cls.weight,
+                       family=sm.families.Binomial()).fit()
         cls.res2 = GLM(cls.endog_big, cls.exog_big,
-                        family=sm.families.Binomial()).fit()
+                       family=sm.families.Binomial()).fit()
 
 
 class TestWtdGlmNegativeBinomial(CheckWtdDuplicationMixin):
@@ -1681,10 +1682,10 @@ class TestWtdGlmGamma(CheckWtdDuplicationMixin):
         super(TestWtdGlmGamma, cls).setup_class()
         family_link = sm.families.Gamma(sm.families.links.log())
         cls.res1 = GLM(cls.endog, cls.exog,
-                        freq_weights=cls.weight,
-                        family=family_link).fit()
+                       freq_weights=cls.weight,
+                       family=family_link).fit()
         cls.res2 = GLM(cls.endog_big, cls.exog_big,
-                        family=family_link).fit()
+                       family=family_link).fit()
 
 
 class TestWtdGlmGaussian(CheckWtdDuplicationMixin):
@@ -1696,10 +1697,10 @@ class TestWtdGlmGaussian(CheckWtdDuplicationMixin):
         super(TestWtdGlmGaussian, cls).setup_class()
         family_link = sm.families.Gaussian(sm.families.links.log())
         cls.res1 = GLM(cls.endog, cls.exog,
-                        freq_weights=cls.weight,
-                        family=family_link).fit()
+                       freq_weights=cls.weight,
+                       family=family_link).fit()
         cls.res2 = GLM(cls.endog_big, cls.exog_big,
-                        family=family_link).fit()
+                       family=family_link).fit()
 
 
 class TestWtdGlmInverseGaussian(CheckWtdDuplicationMixin):
@@ -1711,10 +1712,10 @@ class TestWtdGlmInverseGaussian(CheckWtdDuplicationMixin):
         super(TestWtdGlmInverseGaussian, cls).setup_class()
         family_link = sm.families.InverseGaussian(sm.families.links.log())
         cls.res1 = GLM(cls.endog, cls.exog,
-                        freq_weights=cls.weight,
-                        family=family_link).fit()
+                       freq_weights=cls.weight,
+                       family=family_link).fit()
         cls.res2 = GLM(cls.endog_big, cls.exog_big,
-                        family=family_link).fit()
+                       family=family_link).fit()
 
 
 class TestWtdGlmGammaNewton(CheckWtdDuplicationMixin):
@@ -1726,12 +1727,19 @@ class TestWtdGlmGammaNewton(CheckWtdDuplicationMixin):
         super(TestWtdGlmGammaNewton, cls).setup_class()
         family_link = sm.families.Gamma(sm.families.links.log())
         cls.res1 = GLM(cls.endog, cls.exog,
-                        freq_weights=cls.weight,
-                        family=family_link,
-                        method='newton').fit()
+                       freq_weights=cls.weight,
+                       family=family_link
+                       ).fit(method='newton')
         cls.res2 = GLM(cls.endog_big, cls.exog_big,
-                        family=family_link,
-                        method='newton').fit()
+                       family=family_link
+                       ).fit(method='newton')
+
+    def test_init_kwargs(self):
+        family_link = sm.families.Gamma(sm.families.links.log())
+        with assert_warns(UserWarning):
+            GLM(self.endog, self.exog, family=family_link,
+                weights=self.weight,  # incorrect keyword
+                )
 
 
 class TestWtdGlmGammaScale_X2(CheckWtdDuplicationMixin):
@@ -1743,12 +1751,12 @@ class TestWtdGlmGammaScale_X2(CheckWtdDuplicationMixin):
         super(TestWtdGlmGammaScale_X2, cls).setup_class()
         family_link = sm.families.Gamma(sm.families.links.log())
         cls.res1 = GLM(cls.endog, cls.exog,
-                        freq_weights=cls.weight,
-                        family=family_link,
-                        scale='X2').fit()
+                       freq_weights=cls.weight,
+                       family=family_link,
+                       ).fit(scale='X2')
         cls.res2 = GLM(cls.endog_big, cls.exog_big,
-                        family=family_link,
-                        scale='X2').fit()
+                       family=family_link,
+                       ).fit(scale='X2')
 
 
 class TestWtdGlmGammaScale_dev(CheckWtdDuplicationMixin):
@@ -1760,12 +1768,12 @@ class TestWtdGlmGammaScale_dev(CheckWtdDuplicationMixin):
         super(TestWtdGlmGammaScale_dev, cls).setup_class()
         family_link = sm.families.Gamma(sm.families.links.log())
         cls.res1 = GLM(cls.endog, cls.exog,
-                        freq_weights=cls.weight,
-                        family=family_link,
-                        scale='dev').fit()
+                       freq_weights=cls.weight,
+                       family=family_link,
+                       ).fit(scale='dev')
         cls.res2 = GLM(cls.endog_big, cls.exog_big,
-                        family=family_link,
-                        scale='dev').fit()
+                       family=family_link,
+                       ).fit(scale='dev')
 
     def test_missing(self):
         endog = self.data.endog.copy()
