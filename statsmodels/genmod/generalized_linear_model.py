@@ -290,14 +290,8 @@ class GLM(base.LikelihoodModel):
                  exposure=None, freq_weights=None, var_weights=None,
                  missing='none', **kwargs):
 
-        # TODO: this can be applied to many models
-        # 'n_trials' is specific to GLM Binomial
-        kwargs_allowed = ["missing", 'missing_idx', 'formula', 'design_info',
-                          "hasconst", 'n_trials']
-        kwargs_invalid = [i for i in kwargs if i not in kwargs_allowed]
-        if kwargs_invalid and type(self) is GLM:
-            warnings.warn("unknown kwargs " + repr(kwargs_invalid),
-                          ValueWarning)
+        if type(self) is GLM:
+            self._check_kwargs(kwargs, ['n_trials'])
 
         if (family is not None) and not isinstance(family.link,
                                                    tuple(family.safe_links)):

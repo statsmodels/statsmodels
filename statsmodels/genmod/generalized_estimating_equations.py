@@ -496,9 +496,10 @@ class GEE(GLM):
                  exposure=None, dep_data=None, constraint=None,
                  update_dep=True, weights=None, **kwargs):
 
+        if type(self) is GEE:
+            self._check_kwargs(kwargs)
         if family is not None:
             if not isinstance(family.link, tuple(family.safe_links)):
-                import warnings
                 msg = ("The {0} link function does not respect the "
                        "domain of the {1} family.")
                 warnings.warn(msg.format(family.link.__class__.__name__,
@@ -543,6 +544,12 @@ class GEE(GLM):
 
         self._init_keys.extend(["update_dep", "constraint", "family",
                                 "cov_struct"])
+        # remove keys added by super that are not supported
+        try:
+            self._init_keys.remove("freq_weights")
+            self._init_keys.remove("var_weights")
+        except ValueError:
+            pass
 
         # Handle the family argument
         if family is None:
