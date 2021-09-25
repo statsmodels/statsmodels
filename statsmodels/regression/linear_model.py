@@ -625,7 +625,14 @@ class GLS(RegressionModel):
         # Need to adjust since RSS/n term in elastic net uses nominal
         # n in denominator
         if self.sigma is not None:
-            alpha = alpha * np.sum(1 / np.diag(self.sigma)) / len(self.endog)
+            if self.sigma.ndim == 2:
+                var_obs = np.diag(self.sigma)
+            elif self.sigma.ndim == 1:
+                var_obs = self.sigma
+            else:
+                raise ValueError("sigma should be 1-dim or 2-dim")
+
+            alpha = alpha * np.sum(1 / var_obs) / len(self.endog)
 
         rslt = OLS(self.wendog, self.wexog).fit_regularized(
             method=method, alpha=alpha,
