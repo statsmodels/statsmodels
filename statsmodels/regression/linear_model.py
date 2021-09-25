@@ -501,6 +501,8 @@ class GLS(RegressionModel):
 
     def __init__(self, endog, exog, sigma=None, missing='none', hasconst=None,
                  **kwargs):
+        if type(self) is GLS:
+            self._check_kwargs(kwargs)
         # TODO: add options igls, for iterative fgls if sigma is None
         # TODO: default if sigma is none should be two-step GLS
         sigma, cholsigmainv = _get_sigma(sigma, len(endog))
@@ -692,6 +694,8 @@ class WLS(RegressionModel):
 
     def __init__(self, endog, exog, weights=1., missing='none', hasconst=None,
                  **kwargs):
+        if type(self) is WLS:
+            self._check_kwargs(kwargs)
         weights = np.array(weights)
         if weights.shape == ():
             if (missing == 'drop' and 'missing_idx' in kwargs and
@@ -874,16 +878,17 @@ class OLS(WLS):
 
     def __init__(self, endog, exog=None, missing='none', hasconst=None,
                  **kwargs):
+        if "weights" in kwargs:
+            msg = ("Weights are not supported in OLS and will be ignored"
+                   "An exception will be raised in the next version.")
+            warnings.warn(msg, ValueWarning)
         super(OLS, self).__init__(endog, exog, missing=missing,
                                   hasconst=hasconst, **kwargs)
         if "weights" in self._init_keys:
             self._init_keys.remove("weights")
 
-        kwargs_allowed = self._kwargs_allowed + ["offset"]
-        kwargs_invalid = [i for i in kwargs if i not in kwargs_allowed]
-        if kwargs_invalid and type(self) is OLS:
-            warnings.warn("unknown kwargs " + repr(kwargs_invalid),
-                          ValueWarning)
+        if type(self) is OLS:
+            self._check_kwargs(kwargs, ["offset"])
 
     def loglike(self, params, scale=None):
         """

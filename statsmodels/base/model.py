@@ -110,6 +110,22 @@ class Model(object):
 
         return kwds
 
+    def _check_kwargs(self, kwargs, keys_extra=None, error=True):
+
+        kwargs_allowed = [
+            "missing", 'missing_idx', 'formula', 'design_info', "hasconst",
+            ]
+        if keys_extra:
+            kwargs_allowed.extend(keys_extra)
+
+        kwargs_invalid = [i for i in kwargs if i not in kwargs_allowed]
+        if kwargs_invalid:
+            msg = "unknown kwargs " + repr(kwargs_invalid)
+            if error is False:
+                warnings.warn(msg, ValueWarning)
+            else:
+                raise ValueError(msg)
+
     def _handle_data(self, endog, exog, missing, hasconst, **kwargs):
         data = handle_data(endog, exog, missing, hasconst, **kwargs)
         # kwargs arrays could have changed, easier to just attach here

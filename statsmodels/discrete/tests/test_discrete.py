@@ -45,6 +45,7 @@ from statsmodels.tools.sm_exceptions import (
     ConvergenceWarning,
     PerfectSeparationError,
     SpecificationWarning,
+    ValueWarning,
 )
 
 from .results.results_discrete import Anes, DiscreteL1, RandHIE, Spector
@@ -392,12 +393,13 @@ class TestProbitNewton(CheckBinaryResults):
         res2 = Spector.probit
         cls.res2 = res2
 
-    @pytest.mark.xfail(reason="res2 has no predict attribute",
-                       raises=AttributeError, strict=True)
-    def test_predict(self):
-        assert_almost_equal(self.res1.model.predict(self.res1.params),
-                            self.res2.predict,
-                            DECIMAL_4)
+    def test_init_kwargs(self):
+        endog = self.res1.model.endog
+        exog = self.res1.model.exog
+        z = np.ones(len(endog))
+        with pytest.warns(ValueWarning, match="unknown kwargs"):
+            # unsupported keyword
+            Probit(endog, exog, weights=z)
 
 
 class TestProbitBFGS(CheckBinaryResults):

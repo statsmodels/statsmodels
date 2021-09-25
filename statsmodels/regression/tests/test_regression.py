@@ -1439,11 +1439,13 @@ def test_regularized_predict():
     xmat = np.random.normal(size=(n, p))
     yvec = xmat.sum(1) + np.random.normal(size=n)
     wgt = np.random.uniform(1, 2, n)
-
-    for klass in WLS, GLS:
-        model1 = klass(yvec, xmat, weights=wgt)
-        result1 = model1.fit_regularized(alpha=2.0, L1_wt=0.5, refit=True)
-
+    model_wls = WLS(yvec, xmat, weights=wgt)
+    # TODO: params is not the same in GLS if sigma=1 / wgt, i.e 1-dim, #7755
+    model_gls = GLS(yvec, xmat, sigma=np.diag(1 / wgt))
+    res = []
+    for model1 in [model_wls, model_gls]:
+        result1 = model1.fit_regularized(alpha=20.0, L1_wt=0.5, refit=True)
+        res.append(result1)
         params = result1.params
         fittedvalues = np.dot(xmat, params)
         pr = model1.predict(result1.params)
@@ -1452,6 +1454,11 @@ def test_regularized_predict():
 
         pr = result1.predict()
         assert_allclose(fittedvalues, pr)
+
+    assert_allclose(res[0].model.wendog, res[1].model.wendog, rtol=1e-10)
+    assert_allclose(res[0].model.wexog, res[1].model.wexog, rtol=1e-10)
+    assert_allclose(res[0].fittedvalues, res[1].fittedvalues, rtol=1e-10)
+    assert_allclose(res[0].params, res[1].params, rtol=1e-10)
 
 
 def test_regularized_options():
