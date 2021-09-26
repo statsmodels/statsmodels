@@ -168,6 +168,7 @@ class ClaytonCopula(ArchimedeanCopula):
         return a * b ** c
 
     def logpdf(self, u, args=()):
+        # we skip Archimedean logpdf, that uses numdiff
         return super(ArchimedeanCopula, self).logpdf(u, args=args)
 
     def cdf(self, u, args=()):
@@ -268,6 +269,7 @@ class FrankCopula(ArchimedeanCopula):
             return pdf
         else:
             # for now use generic from base Copula class, log(self.pdf(...))
+            # we skip Archimedean logpdf, that uses numdiff
             super(ArchimedeanCopula, self).logpdf(u, args)
 
     def cdfcond_2g1(self, u, args=()):
@@ -383,6 +385,7 @@ class GumbelCopula(ArchimedeanCopula):
         return cdf
 
     def logpdf(self, u, args=()):
+        # we skip Archimedean logpdf, that uses numdiff
         return super(ArchimedeanCopula, self).logpdf(u, args=args)
 
     def tau(self, theta=None):

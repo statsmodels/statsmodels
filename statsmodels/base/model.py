@@ -29,6 +29,8 @@ from statsmodels.tools.sm_exceptions import (
 from statsmodels.tools.tools import nan_dot, recipr
 from statsmodels.tools.validation import bool_like
 
+ERROR_INIT_KWARGS = False
+
 _model_params_doc = """Parameters
     ----------
     endog : array_like
@@ -110,7 +112,7 @@ class Model(object):
 
         return kwds
 
-    def _check_kwargs(self, kwargs, keys_extra=None, error=True):
+    def _check_kwargs(self, kwargs, keys_extra=None, error=ERROR_INIT_KWARGS):
 
         kwargs_allowed = [
             "missing", 'missing_idx', 'formula', 'design_info', "hasconst",
