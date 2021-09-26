@@ -753,6 +753,7 @@ class TestOLS_GLS_WLS_equivalence(object):
         cls.results = []
         cls.results.append(OLS(y, x).fit())
         cls.results.append(WLS(y, x, w).fit())
+        # scaling weights does not change main results (except scale)
         cls.results.append(GLS(y, x, 100 * w).fit())
         cls.results.append(GLS(y, x, np.diag(0.1 * w)).fit())
 
@@ -800,6 +801,7 @@ class TestGLS_WLS_equivalence(TestOLS_GLS_WLS_equivalence):
         w_inv = 1.0 / w
         cls.results = []
         cls.results.append(WLS(y, x, w).fit())
+        # scaling weights does not change main results (except scale)
         cls.results.append(WLS(y, x, 0.01 * w).fit())
         cls.results.append(GLS(y, x, 100 * w_inv).fit())
         cls.results.append(GLS(y, x, np.diag(0.1 * w_inv)).fit())
@@ -1433,17 +1435,21 @@ def test_regularized_refit():
 
 
 def test_regularized_predict():
+    # this also compares WLS with GLS
     n = 100
     p = 5
     np.random.seed(3132)
     xmat = np.random.normal(size=(n, p))
     yvec = xmat.sum(1) + np.random.normal(size=n)
     wgt = np.random.uniform(1, 2, n)
-
-    for klass in WLS, GLS:
-        model1 = klass(yvec, xmat, weights=wgt)
-        result1 = model1.fit_regularized(alpha=2.0, L1_wt=0.5, refit=True)
-
+    model_wls = WLS(yvec, xmat, weights=wgt)
+    # TODO: params is not the same in GLS if sigma=1 / wgt, i.e 1-dim, #7755
+    model_gls1 = GLS(yvec, xmat, sigma=np.diag(1 / wgt))
+    model_gls2 = GLS(yvec, xmat, sigma=1 / wgt)
+    res = []
+    for model1 in [model_wls, model_gls1, model_gls2]:
+        result1 = model1.fit_regularized(alpha=20.0, L1_wt=0.5, refit=True)
+        res.append(result1)
         params = result1.params
         fittedvalues = np.dot(xmat, params)
         pr = model1.predict(result1.params)
@@ -1452,6 +1458,16 @@ def test_regularized_predict():
 
         pr = result1.predict()
         assert_allclose(fittedvalues, pr)
+
+    assert_allclose(res[0].model.wendog, res[1].model.wendog, rtol=1e-10)
+    assert_allclose(res[0].model.wexog, res[1].model.wexog, rtol=1e-10)
+    assert_allclose(res[0].fittedvalues, res[1].fittedvalues, rtol=1e-10)
+    assert_allclose(res[0].params, res[1].params, rtol=1e-10)
+
+    assert_allclose(res[0].model.wendog, res[2].model.wendog, rtol=1e-10)
+    assert_allclose(res[0].model.wexog, res[2].model.wexog, rtol=1e-10)
+    assert_allclose(res[0].fittedvalues, res[2].fittedvalues, rtol=1e-10)
+    assert_allclose(res[0].params, res[2].params, rtol=1e-10)
 
 
 def test_regularized_options():

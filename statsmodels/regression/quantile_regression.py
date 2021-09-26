@@ -75,6 +75,7 @@ class QuantReg(RegressionModel):
     '''
 
     def __init__(self, endog, exog, **kwargs):
+        self._check_kwargs(kwargs)
         super(QuantReg, self).__init__(endog, exog, **kwargs)
 
     def whiten(self, data):

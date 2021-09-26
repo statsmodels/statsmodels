@@ -29,6 +29,8 @@ from statsmodels.tools.sm_exceptions import (
 from statsmodels.tools.tools import nan_dot, recipr
 from statsmodels.tools.validation import bool_like
 
+ERROR_INIT_KWARGS = False
+
 _model_params_doc = """Parameters
     ----------
     endog : array_like
@@ -79,6 +81,10 @@ class Model(object):
     # Default is 1, which is more common. Override in models when needed
     # Set to None to skip check
     _formula_max_endog = 1
+    # kwargs that are generically allowed, maybe not supported in all models
+    _kwargs_allowed = [
+        "missing", 'missing_idx', 'formula', 'design_info', "hasconst",
+        ]
 
     def __init__(self, endog, exog=None, **kwargs):
         missing = kwargs.pop('missing', 'none')
@@ -105,6 +111,22 @@ class Model(object):
                      for key in self._init_keys))
 
         return kwds
+
+    def _check_kwargs(self, kwargs, keys_extra=None, error=ERROR_INIT_KWARGS):
+
+        kwargs_allowed = [
+            "missing", 'missing_idx', 'formula', 'design_info', "hasconst",
+            ]
+        if keys_extra:
+            kwargs_allowed.extend(keys_extra)
+
+        kwargs_invalid = [i for i in kwargs if i not in kwargs_allowed]
+        if kwargs_invalid:
+            msg = "unknown kwargs " + repr(kwargs_invalid)
+            if error is False:
+                warnings.warn(msg, ValueWarning)
+            else:
+                raise ValueError(msg)
 
     def _handle_data(self, endog, exog, missing, hasconst, **kwargs):
         data = handle_data(endog, exog, missing, hasconst, **kwargs)

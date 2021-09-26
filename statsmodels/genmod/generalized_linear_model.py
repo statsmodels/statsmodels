@@ -289,14 +289,8 @@ class GLM(base.LikelihoodModel):
                  exposure=None, freq_weights=None, var_weights=None,
                  missing='none', **kwargs):
 
-        # TODO: this can be applied to many models
-        # 'n_trials' is specific to GLM Binomial
-        kwargs_allowed = ["missing", 'missing_idx', 'formula', 'design_info',
-                          "hasconst", 'n_trials']
-        kwargs_invalid = [i for i in kwargs if i not in kwargs_allowed]
-        if kwargs_invalid and type(self) is GLM:
-            warnings.warn("unknown kwargs" + repr(kwargs_invalid),
-                          UserWarning)
+        if type(self) is GLM:
+            self._check_kwargs(kwargs, ['n_trials'])
 
         if (family is not None) and not isinstance(family.link,
                                                    tuple(family.safe_links)):
@@ -1665,8 +1659,10 @@ class GLMResults(base.LikelihoodModelResults):
         model = self.model
         exog = np.ones((len(endog), 1))
 
-        kwargs = model._get_init_kwds()
+        kwargs = model._get_init_kwds().copy()
         kwargs.pop('family')
+        for key in getattr(model, '_null_drop_keys', []):
+            del kwargs[key]
         start_params = np.atleast_1d(self.family.link(endog.mean()))
         oe = self.model._offset_exposure
         if not (np.size(oe) == 1 and oe == 0):

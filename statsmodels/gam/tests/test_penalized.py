@@ -12,6 +12,8 @@ import numpy as np
 from numpy.testing import assert_allclose, assert_equal, assert_
 import pandas as pd
 
+import pytest
+
 import patsy
 
 from statsmodels.discrete.discrete_model import Poisson, Logit, Probit
@@ -91,6 +93,10 @@ class CheckGAMMixin(object):
         assert_allclose(res1.fittedvalues, res2.fitted_values,
                         rtol=self.rtol_fitted)
 
+    @pytest.mark.smoke
+    def test_null_smoke(self):
+        self.res1.llnull
+
 
 class TestTheilPLS5(CheckGAMMixin):
 
@@ -119,6 +125,9 @@ class TestTheilPLS5(CheckGAMMixin):
         res1 = res1.model.fit(pen_weight=pw, cov_type='sandwich')
         assert_allclose(np.asarray(res1.cov_params()),
                         res2.Ve * self.covp_corrfact, rtol=1e-4)
+
+    def test_null_smoke(self):
+        pytest.skip("llnull not available")
 
 
 class TestGLMPenalizedPLS5(CheckGAMMixin):

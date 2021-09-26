@@ -47,7 +47,10 @@ from statsmodels.emplike.elregress import _ELRegOpts
 # need import in module instead of lazily to copy `__doc__`
 from statsmodels.regression._prediction import PredictionResults
 from statsmodels.tools.decorators import cache_readonly, cache_writable
-from statsmodels.tools.sm_exceptions import InvalidTestWarning
+from statsmodels.tools.sm_exceptions import (
+    InvalidTestWarning,
+    ValueWarning,
+    )
 from statsmodels.tools.tools import pinv_extended
 from statsmodels.tools.validation import string_like
 
@@ -498,6 +501,8 @@ class GLS(RegressionModel):
 
     def __init__(self, endog, exog, sigma=None, missing='none', hasconst=None,
                  **kwargs):
+        if type(self) is GLS:
+            self._check_kwargs(kwargs)
         # TODO: add options igls, for iterative fgls if sigma is None
         # TODO: default if sigma is none should be two-step GLS
         sigma, cholsigmainv = _get_sigma(sigma, len(endog))
@@ -620,7 +625,14 @@ class GLS(RegressionModel):
         # Need to adjust since RSS/n term in elastic net uses nominal
         # n in denominator
         if self.sigma is not None:
-            alpha = alpha * np.sum(1 / np.diag(self.sigma)) / len(self.endog)
+            if self.sigma.ndim == 2:
+                var_obs = np.diag(self.sigma)
+            elif self.sigma.ndim == 1:
+                var_obs = self.sigma
+            else:
+                raise ValueError("sigma should be 1-dim or 2-dim")
+
+            alpha = alpha * np.sum(1 / var_obs) / len(self.endog)
 
         rslt = OLS(self.wendog, self.wexog).fit_regularized(
             method=method, alpha=alpha,
@@ -689,6 +701,8 @@ class WLS(RegressionModel):
 
     def __init__(self, endog, exog, weights=1., missing='none', hasconst=None,
                  **kwargs):
+        if type(self) is WLS:
+            self._check_kwargs(kwargs)
         weights = np.array(weights)
         if weights.shape == ():
             if (missing == 'drop' and 'missing_idx' in kwargs and
@@ -871,10 +885,17 @@ class OLS(WLS):
 
     def __init__(self, endog, exog=None, missing='none', hasconst=None,
                  **kwargs):
+        if "weights" in kwargs:
+            msg = ("Weights are not supported in OLS and will be ignored"
+                   "An exception will be raised in the next version.")
+            warnings.warn(msg, ValueWarning)
         super(OLS, self).__init__(endog, exog, missing=missing,
                                   hasconst=hasconst, **kwargs)
         if "weights" in self._init_keys:
             self._init_keys.remove("weights")
+
+        if type(self) is OLS:
+            self._check_kwargs(kwargs, ["offset"])
 
     def loglike(self, params, scale=None):
         """

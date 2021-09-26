@@ -1803,7 +1803,6 @@ def test_plots(close_figures):
 
     model = gee.GEE(exog, endog, groups)
     result = model.fit()
-
     fig = result.plot_added_variable(1)
     assert_equal(isinstance(fig, plt.Figure), True)
     fig = result.plot_partial_residuals(1)
@@ -1988,16 +1987,16 @@ def test_quasipoisson(reg):
     grp = np.kron(np.arange(100), np.ones(n // 100))
 
     model1 = gee.GEE(y, x, family=families.Poisson(), groups=grp,
-                     cov_type="naive")
+                     )
     model2 = gee.GEE(y, x, family=families.Poisson(), groups=grp,
-                     cov_type="naive")
+                     )
 
     if reg:
         result1 = model1.fit_regularized(pen_wt=0.1)
         result2 = model2.fit_regularized(pen_wt=0.1, scale="X2")
     else:
-        result1 = model1.fit()
-        result2 = model2.fit(scale="X2")
+        result1 = model1.fit(cov_type="naive")
+        result2 = model2.fit(scale="X2", cov_type="naive")
 
     # The parameter estimates are the same regardless of how
     # the scale parameter is handled

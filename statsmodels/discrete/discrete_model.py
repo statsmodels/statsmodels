@@ -457,8 +457,9 @@ class BinaryModel(DiscreteModel):
     _continuous_ok = False
 
     def __init__(self, endog, exog, check_rank=True, **kwargs):
+        # unconditional check, requires no extra kwargs added by subclasses
+        self._check_kwargs(kwargs)
         super().__init__(endog, exog, check_rank, **kwargs)
-
         if not issubclass(self.__class__, MultinomialModel):
             if not np.all((self.endog >= 0) & (self.endog <= 1)):
                 raise ValueError("endog must be in the unit interval.")
@@ -774,6 +775,7 @@ class MultinomialModel(BinaryModel):
 class CountModel(DiscreteModel):
     def __init__(self, endog, exog, offset=None, exposure=None, missing='none',
                  check_rank=True, **kwargs):
+        self._check_kwargs(kwargs)
         super().__init__(endog, exog, check_rank, missing=missing,
                          offset=offset, exposure=exposure, **kwargs)
         if exposure is not None:
