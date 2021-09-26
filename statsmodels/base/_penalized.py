@@ -51,7 +51,7 @@ class PenalizedMixin(object):
 
         self._init_keys.extend(['penal', 'pen_weight'])
         self._null_drop_keys = getattr(self, '_null_drop_keys', [])
-        self._null_drop_keys.extend(['penal'])
+        self._null_drop_keys.extend(['penal', 'pen_weight'])
 
     def _handle_scale(self, params, scale=None, **kwds):
 

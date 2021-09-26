@@ -12,7 +12,6 @@ from numpy.testing import (
     assert_array_less,
     assert_equal,
     assert_raises,
-    assert_warns,
 )
 import pandas as pd
 from pandas.testing import assert_series_equal

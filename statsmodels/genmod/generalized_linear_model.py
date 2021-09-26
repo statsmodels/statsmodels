@@ -43,7 +43,6 @@ from statsmodels.tools.sm_exceptions import (
     DomainWarning,
     HessianInversionWarning,
     PerfectSeparationError,
-    ValueWarning,
 )
 from statsmodels.tools.validation import float_like
 
@@ -1660,8 +1659,10 @@ class GLMResults(base.LikelihoodModelResults):
         model = self.model
         exog = np.ones((len(endog), 1))
 
-        kwargs = model._get_init_kwds()
+        kwargs = model._get_init_kwds().copy()
         kwargs.pop('family')
+        for key in getattr(model, '_null_drop_keys', []):
+            del kwargs[key]
         start_params = np.atleast_1d(self.family.link(endog.mean()))
         oe = self.model._offset_exposure
         if not (np.size(oe) == 1 and oe == 0):
