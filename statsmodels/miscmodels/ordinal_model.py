@@ -6,6 +6,8 @@ Author: Josef Perktold
 License: BSD-3
 """
 
+import warnings
+
 from statsmodels.compat.pandas import Appender
 
 import numpy as np
@@ -135,6 +137,10 @@ class OrderedModel(GenericLikelihoodModel):
                 unique, index = np.unique(self.endog, return_inverse=True)
                 self.endog = index
                 labels = unique
+                if np.isnan(labels).any():
+                    msg = ("NaN in dependent variable detected. "
+                           "Missing values need to be removed.")
+                    raise ValueError(msg)
             elif self.endog.ndim == 2:
                 if not hasattr(self, "design_info"):
                     raise ValueError("2-dim endog not supported")
@@ -146,7 +152,7 @@ class OrderedModel(GenericLikelihoodModel):
                 # self.endog = self.endog.argmax(1)
 
         if self.k_constant > 0:
-            raise ValueError("there should not be a constant in the model")
+            raise ValueError("There should not be a constant in the model")
 
         self._initialize_labels(labels, k_levels=k_levels)
 
@@ -187,7 +193,6 @@ class OrderedModel(GenericLikelihoodModel):
         """
 
         if not isinstance(self.distr, stats.rv_continuous):
-            import warnings
             msg = (
                 f"{self.distr.name} is not a scipy.stats distribution."
             )

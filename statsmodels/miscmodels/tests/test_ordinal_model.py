@@ -283,7 +283,8 @@ class TestProbitModel(CheckOrdinalModelMixin):
         assert hasattr(modf2.data, "frame")
         assert not hasattr(modf2, "frame")
 
-        with pytest.raises(ValueError):
+        msg = "Only ordered pandas Categorical"
+        with pytest.raises(ValueError, match=msg):
             # only ordered categorical or numerical endog are allowed
             # string endog raises ValueError
             OrderedModel.from_formula(
@@ -375,7 +376,7 @@ class TestLogitModelFormula():
         # test over parameterized model with implicit constant
         formula = "apply ~ 0 + pared + public + gpa + C(dummy)"
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="not be a constant"):
             OrderedModel.from_formula(formula, data, distr='logit')
 
         # ignore constant, so we get results without exception
@@ -482,3 +483,16 @@ class TestLogitBinary():
         for attr in attributes:
             assert_allclose(getattr(resp, attr), getattr(res_logit, attr),
                             rtol=1e-4)
+
+
+def test_nan_endog_exceptions():
+    nobs = 15
+    y = np.repeat(np.arange(3), nobs // 3)
+    x = np.column_stack((np.ones(nobs), np.arange(nobs)))
+    with pytest.raises(ValueError, match="not be a constant"):
+        OrderedModel(y, x, distr='logit')
+
+    y_nan = y.astype(float)
+    y_nan[0] = np.nan
+    with pytest.raises(ValueError, match="NaN in dependent variable"):
+        OrderedModel(y_nan, x[:, 1:], distr='logit')
