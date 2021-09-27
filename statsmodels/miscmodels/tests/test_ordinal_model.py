@@ -496,3 +496,14 @@ def test_nan_endog_exceptions():
     y_nan[0] = np.nan
     with pytest.raises(ValueError, match="NaN in dependent variable"):
         OrderedModel(y_nan, x[:, 1:], distr='logit')
+
+    if hasattr(pd, "CategoricalDtype"):
+        df = pd.DataFrame({
+            "endog": pd.Series(
+                y, dtype=pd.CategoricalDtype([1, 2, 3], ordered=True)),
+            "exog": x[:, 1]
+            })
+
+        msg = "missing values in categorical endog"
+        with pytest.raises(ValueError, match=msg):
+            OrderedModel(df["endog"], df[["exog"]])
