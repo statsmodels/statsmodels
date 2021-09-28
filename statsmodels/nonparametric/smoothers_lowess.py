@@ -10,7 +10,7 @@ Author : Josef Perktold
 import numpy as np
 from ._smoothers_lowess import lowess as _lowess
 
-def lowess(endog, exog, frac=2.0/3.0, it=3, delta=0.0, xvals=None, is_sorted=False,
+def lowess(endog, exog, frac=2.0/3.0, windows=None, it=3, delta=0.0, xvals=None, is_sorted=False,
            missing='drop', return_sorted=True):
     '''LOWESS (Locally Weighted Scatterplot Smoothing)
 
@@ -26,6 +26,10 @@ def lowess(endog, exog, frac=2.0/3.0, it=3, delta=0.0, xvals=None, is_sorted=Fal
     frac : float
         Between 0 and 1. The fraction of the data used
         when estimating each y-value.
+    windows : 2-D numpy array
+        The window definitions for every point to estimate given as left
+        and right index on exog, respective the xvals.
+        This is a flexible alternative way of specifying the windows.
     it : int
         The number of residual-based reweightings
         to perform.
@@ -103,6 +107,9 @@ def lowess(endog, exog, frac=2.0/3.0, it=3, delta=0.0, xvals=None, is_sorted=Fal
     Some experimentation is likely required to find a good
     choice of `frac` and `iter` for a particular dataset.
 
+    It is also possible to specify the windows freely by using the `windows`
+    paramter. This allows to implement any custom window algorithm.
+
     References
     ----------
     Cleveland, W.S. (1979) "Robust Locally Weighted Regression
@@ -149,6 +156,18 @@ def lowess(endog, exog, frac=2.0/3.0, it=3, delta=0.0, xvals=None, is_sorted=Fal
         raise ValueError('endog must be a vector')
     if endog.shape[0] != exog.shape[0] :
         raise ValueError('exog and endog must have same length')
+
+    if windows is not None:
+        if windows.ndim != 2:
+            raise ValueError('windows must be a 2D matrix')
+        if windows.shape[1] != 2:
+            raise ValueError('second dim of windows must be 2')
+        if given_xvals:
+            raise ValueError('windows with xvals is not implemented')
+        if delta != 0.0:
+            raise ValueError('windows with delta is not implemented')
+        if windows is not None and windows.shape[0] != xvals.shape[0]:
+            raise ValueError('first dim of windows must be of same length as of x')
 
     if missing in ['drop', 'raise']:
         mask_valid = (np.isfinite(exog) & np.isfinite(endog))
@@ -209,23 +228,40 @@ def lowess(endog, exog, frac=2.0/3.0, it=3, delta=0.0, xvals=None, is_sorted=Fal
         else:
             xvals_all_valid = True
 
+    if windows is not None:
+        if windows.ndim != 2:
+            raise ValueError('windows must be a 2D matrix')
+        if windows.shape[1] != 2:
+            raise ValueError('second dim of windows must be 2')
+        if windows is not None and windows.shape[0] != xvals.shape[0]:
+            raise ValueError('first dim of windows must be of same length as of xvals')
+
     if not given_xvals:
         # Run LOWESS on the data points
-        res, _ = _lowess(y, x, x, np.ones_like(x),
-                        frac=frac, it=it, delta=delta, given_xvals=False)
+        if windows is None:
+            res, _ = _lowess(y, x, x, np.ones_like(x),
+                            frac=frac, it=it, delta=delta, given_xvals=False)
+        else:
+            res, _ = _lowess_win(y, x, windows=windows, it=it)
     else:
         # First run LOWESS on the data points to get the weights of the data points
         # using it-1 iterations, last iter done next
         if it > 0:
-            _, weights = _lowess(y, x, x, np.ones_like(x),
-                                frac=frac, it=it-1, delta=delta, given_xvals=False)
+            if windows is None:
+                _, weights = _lowess(y, x, x, np.ones_like(x),
+                                    frac=frac, it=it-1, delta=delta, given_xvals=False)
+            else:
+                raise ValueError('windows with xvals is not implemented')
         else:
             weights = np.ones_like(x)
 
         # Then run once more using those supplied weights at the points provided by xvals
         # No extra iterations are performed here since weights are fixed
-        res, _ = _lowess(y, x, xvalues, weights,
+        if windows is None:
+            res, _ = _lowess(y, x, xvalues, weights,
                         frac=frac, it=0, delta=delta, given_xvals=True)
+        else:
+            raise ValueError('windows with xvals is not implemented')
 
     _, yfitted = res.T
 
