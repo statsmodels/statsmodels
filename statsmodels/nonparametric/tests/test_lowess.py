@@ -158,6 +158,26 @@ class TestLowess(object):
         actual_lowess4 = lowess(y, x, xvals = actual_lowess[perm_idx,0], return_sorted=False)
         assert_almost_equal(actual_lowess[perm_idx,1], actual_lowess4, decimal=13)
 
+    def test_duplicate_xs(self):
+        # see 2449
+        # Generate cases with many duplicate x values
+        x = [0] + [1]*100 + [2]*100 + [3]
+        y = x + np.random.normal(size=len(x))*1e-8
+        result = lowess(y, x, frac=50/len(x), it=1)
+        # fit values should be approximately averages of values at
+        # a particular fit, which in this case are just equal to x
+        assert_almost_equal(result[1:-1,1], x[1:-1], decimal=7)
+
+    def test_spike(self):
+        # see 7700
+        # Create a curve that is easy to fit at first but gets harder further along.
+        # This used to give an outlier bad fit at position 961
+        x = np.linspace(0,10,1001)
+        y = np.cos(x**2/5)
+        result = lowess(y, x, frac=11/len(x), it=1)
+        assert_(np.all(result[:,1] > np.min(y) - 0.1))
+        assert_(np.all(result[:,1] < np.max(y) + 0.1))
+
 
 def test_returns_inputs():
     # see 1960
