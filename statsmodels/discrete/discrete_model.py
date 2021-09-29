@@ -3786,13 +3786,45 @@ class DiscreteResults(base.LikelihoodModelResults):
     def im_ratio(self):
         return pinf.im_ratio(self)
 
-    @cache_readonly
-    def tic(self):
-        return pinf.gbic(self)
+    def info_criteria(self, crit, dk_params=0):
+        """Return an information criterion for the model.
 
-    @cache_readonly
-    def gbic(self):
-        return pinf.gbic(self)
+        Parameters
+        ----------
+        crit : string
+            One of 'aic', 'bic', 'tic' or 'gbic'.
+        dk_params : int or float
+            Correction to the number of parameters used in the information
+            criterion. By default, only mean parameters are included, the
+            scale parameter is not included in the parameter count.
+            Use ``dk_params=1`` to include scale in the parameter count.
+
+        Returns the given information criterion value.
+
+        Notes
+        -----
+        Tic and bbic
+
+        References
+        ----------
+        Burnham KP, Anderson KR (2002). Model Selection and Multimodel
+        Inference; Springer New York.
+        """
+        crit = crit.lower()
+        k_params = self.df_model + 1 + dk_params
+
+        if crit == "aic":
+            return -2 * self.llf + 2 * k_params
+        elif crit == "bic":
+            nobs = self.df_model + self.df_resid + 1
+            bic = -2*self.llf + k_params*np.log(nobs)
+            return bic
+        elif crit == "tic":
+            return pinf.tic(self)
+        elif crit == "gbic":
+            return pinf.gbic(self)
+        else:
+            raise ValueError("Name of information criterion not recognized.")
 
     def _get_endog_name(self, yname, yname_list):
         if yname is None:
