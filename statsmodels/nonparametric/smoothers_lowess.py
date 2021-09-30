@@ -150,6 +150,11 @@ def lowess(endog, exog, frac=2.0/3.0, it=3, delta=0.0, xvals=None, is_sorted=Fal
     if endog.shape[0] != exog.shape[0] :
         raise ValueError('exog and endog must have same length')
 
+    if xvals is not None:
+        xvals = np.ascontiguousarray(xvals)
+        if xvals.ndim != 1:
+            raise ValueError('exog_predict must be a vector')
+
     if missing in ['drop', 'raise']:
         mask_valid = (np.isfinite(exog) & np.isfinite(endog))
         all_valid = np.all(mask_valid)
@@ -187,7 +192,14 @@ def lowess(endog, exog, frac=2.0/3.0, it=3, delta=0.0, xvals=None, is_sorted=Fal
         if delta != 0.0:
             raise ValueError("Cannot have non-zero 'delta' and 'xvals' values")
             # TODO: allow this again
+        mask_valid = np.isfinite(xvals)
+        if missing == "raise":
+            raise ValueError("NaN values in xvals with missing='raise'")
+        elif missing == 'drop':
+            xvals_mask_valid = mask_valid
 
+        xvalues = xvals
+        xvals_all_valid = True if missing == "none" else np.all(mask_valid)
         # With explicit xvals, we ignore 'return_sorted' and always
         # use the order provided
         return_sorted = False

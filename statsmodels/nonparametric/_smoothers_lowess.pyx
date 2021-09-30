@@ -15,13 +15,13 @@ cimport numpy as np
 import numpy as np
 from cpython cimport bool
 cimport cython
+from libc.math cimport NAN
 
 # there's no fmax in math.h with windows SDK apparently
 cdef inline double fmax(double x, double y): return x if x >= y else y
 
 DTYPE = np.double
 ctypedef np.double_t DTYPE_t
-cdef double NAN = float("NaN")
 
 def lowess(np.ndarray[DTYPE_t, ndim = 1] endog,
            np.ndarray[DTYPE_t, ndim = 1] exog,
@@ -30,8 +30,10 @@ def lowess(np.ndarray[DTYPE_t, ndim = 1] endog,
            double frac = 2.0 / 3.0,
            Py_ssize_t it = 3,
            double delta = 0.0,
-           bint given_xvals = False):
-    """lowess(endog, exog, frac=2.0/3.0, it=3, delta=0.0)
+           bint given_xvals = 0):
+    """
+    lowess(endog, exog, frac=2.0/3.0, it=3, delta=0.0)
+
     LOWESS (Locally Weighted Scatterplot Smoothing)
 
     A lowess function that outs smoothed estimates of endog
@@ -43,8 +45,10 @@ def lowess(np.ndarray[DTYPE_t, ndim = 1] endog,
         The y-values of the observed points
     exog : 1-D numpy array
         The x-values of the observed points. exog has to be increasing.
+    xvals : ndarray, 1d
+        The x-values of the points at which to perform the regression
     resid_weights : 1-D numpy array
-        The weightings of the observed points
+        The initial weightings of the observed points based off residuals
     frac : float
         Between 0 and 1. The fraction of the data used
         when estimating each y-value.
@@ -64,9 +68,9 @@ def lowess(np.ndarray[DTYPE_t, ndim = 1] endog,
         A numpy array with two columns. The first column
         is the sorted x values and the second column the
         associated estimated y-values.
-    resid_weights: numpy array
-        A numpy array with the residual weights on the data points
-        computed from the iterations performed
+    resid_weights: ndarray
+        A numpy array containing the final residual weightings
+        of the data points
 
     Notes
     -----
@@ -282,7 +286,7 @@ def update_neighborhood(np.ndarray[DTYPE_t, ndim = 1] x,
 
     return left_end, right_end, radius
 
-cdef bool calculate_weights(np.ndarray[DTYPE_t, ndim = 1] x,
+cdef bint calculate_weights(np.ndarray[DTYPE_t, ndim = 1] x,
                             np.ndarray[DTYPE_t, ndim = 1] weights,
                             np.ndarray[DTYPE_t, ndim = 1] resid_weights,
                             DTYPE_t xval,
@@ -326,9 +330,9 @@ cdef bool calculate_weights(np.ndarray[DTYPE_t, ndim = 1] x,
     cdef:
         np.ndarray[DTYPE_t, ndim = 1] x_j = x[left_end:right_end]
         np.ndarray[DTYPE_t, ndim = 1] dist_i_j = np.abs(x_j - xval) / radius
-        bint reg_ok = True
+        bint reg_ok = 1  # True
         double sum_weights
-        double num_nonzero_weights
+        int num_nonzero_weights = 0
 
     # Assign the distance measure to the weights, then apply the tricube
     # function to change in-place.
@@ -339,14 +343,15 @@ cdef bool calculate_weights(np.ndarray[DTYPE_t, ndim = 1] x,
                                       resid_weights[left_end:right_end])
 
     sum_weights = np.sum(weights[left_end:right_end])
-    num_nonzero_weights = np.sum(weights[left_end:right_end] > 1e-12)
+    for j in range(left_end, right_end):
+        num_nonzero_weights += weights[j] > 1e-12
 
     if num_nonzero_weights < 2:
         # Need at least 2 non-zero weights to get an okay regression fit
         # see 1960
-        reg_ok = False
-    else:
-        weights[left_end:right_end] = weights[left_end:right_end] / sum_weights
+        return 0  # False
+    for j in range(left_end, right_end):
+        weights[j] /= sum_weights
 
     return reg_ok
 
@@ -360,7 +365,7 @@ cdef void calculate_y_fit(np.ndarray[DTYPE_t, ndim = 1] x,
                           Py_ssize_t left_end,
                           Py_ssize_t right_end,
                           bint reg_ok,
-                          bint fill_with_nans = False):
+                          bint fill_with_nans = 0):
     """
     Calculate smoothed/fitted y-value by weighted regression.
 
