@@ -328,6 +328,7 @@ cdef bool calculate_weights(np.ndarray[DTYPE_t, ndim = 1] x,
         np.ndarray[DTYPE_t, ndim = 1] dist_i_j = np.abs(x_j - xval) / radius
         bint reg_ok = True
         double sum_weights
+        double num_nonzero_weights
 
     # Assign the distance measure to the weights, then apply the tricube
     # function to change in-place.
@@ -338,10 +339,10 @@ cdef bool calculate_weights(np.ndarray[DTYPE_t, ndim = 1] x,
                                       resid_weights[left_end:right_end])
 
     sum_weights = np.sum(weights[left_end:right_end])
+    num_nonzero_weights = np.sum(weights[left_end:right_end] > 1e-12)
 
-    if sum_weights <= 0.0 or (np.sum(weights[left_end:right_end] != 0) == 1):
-        # 2nd condition checks if only 1 local weight is non-zero, which
-        # will give a divisor of zero in calculate_y_fit
+    if num_nonzero_weights < 2:
+        # Need at least 2 non-zero weights to get an okay regression fit
         # see 1960
         reg_ok = False
     else:
@@ -421,6 +422,8 @@ cdef void calculate_y_fit(np.ndarray[DTYPE_t, ndim = 1] x,
             sum_weighted_x += weights[j] * x[j]
         for j in range(left_end, right_end):
             weighted_sqdev_x += weights[j] * (x[j] - sum_weighted_x) ** 2
+        # force this to always be a positive value
+        weighted_sqdev_x = fmax(weighted_sqdev_x, 1e-12)
         for j in range(left_end, right_end):
             p_i_j = weights[j] * (1.0 + (xval - sum_weighted_x) *
                              (x[j] - sum_weighted_x) / weighted_sqdev_x)
