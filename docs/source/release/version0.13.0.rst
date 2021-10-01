@@ -23,9 +23,9 @@ are mentioned in the docstrings.
 
 Stats
 -----
-**Issues Closed**: 227
+**Issues Closed**: 238
 
-**Pull Requests Merged**: 143
+**Pull Requests Merged**: 162
 
 
 The Highlights
@@ -215,12 +215,19 @@ Submodules
 - Update versions.json  (:pr:`7702`)
 - Update versions file  (:pr:`7708`)
 - Update release note  (:pr:`7714`)
+- Update release note  (:pr:`7726`)
+- Correct MultivariateTestResults doc string  (:pr:`7735`)
+- Correct MultivariateTestResults doc string  (:pr:`7738`)
+- Add missing function doc head  (:pr:`7740`)
+- More 0.13  (:pr:`7757`)
+- Fix lowess notebook  (:pr:`7770`)
 
 
 
 ``Performance``
 ~~~~~~~~~~~~~~~
 - Added fft to ccovf and ccf  (:pr:`7721`)
+- Improve Lowess  (:pr:`7768`)
 
 
 
@@ -271,6 +278,9 @@ Submodules
 - Correct small typo in Theta model Notebook  (:pr:`7450`)
 - Prevent indent running on None  (:pr:`7462`)
 - Update versions file  (:pr:`7708`)
+- Improve docs and docstrings, mainly for recent additions  (:pr:`7727`)
+- Api.py, docstring improvements  (:pr:`7732`)
+- Add to release notes, smaller doc fixes, references  (:pr:`7743`)
 
 
 
@@ -283,6 +293,8 @@ Submodules
 - Enh glm loglog  (:pr:`7594`)
 - McFadden and Cox&Snell Pseudo R squared to GLMResults  (:pr:`7682`)
 - Add dk_params option to GLM info_criteria  (:pr:`7693`)
+- Warn kwargs glm  (:pr:`7750`)
+- GLM init invalid kwargs use ValueWarning  (:pr:`7751`)
 
 
 
@@ -301,6 +313,7 @@ Submodules
 ``io``
 ~~~~~~
 - Add support for pickling for generic path-like objects  (:pr:`7581`)
+- Fix summary().as_latex, line in top table dropped  (:pr:`7748`)
 
 
 
@@ -333,6 +346,8 @@ Submodules
 - Pin matplotlib  (:pr:`7641`)
 - Modernize prediction in notebooks  (:pr:`7649`)
 - Protect against changes in numeric indexes  (:pr:`7685`)
+- Final issues in `__all__`  (:pr:`7742`)
+- Fix hard to reach errors  (:pr:`7744`)
 
 
 
@@ -341,12 +356,17 @@ Submodules
 - Multivariate - Return E and H matrices in dict  (:pr:`5491`)
 - Added the option `full_matrices=False` in the PCA method  (:pr:`7329`)
 - Factor fit ml em resets seed (rebased)  (:pr:`7703`)
+- Correct MultivariateTestResults doc string  (:pr:`7735`)
+- Correct MultivariateTestResults doc string  (:pr:`7738`)
+- Add missing function doc head  (:pr:`7740`)
 
 
 
 ``nonparametric``
 ~~~~~~~~~~~~~~~~~
 - ENH add  tricube kernel  (:pr:`7697`)
+- Fix lowess spikes/nans from epsilon values  (:pr:`7766`)
+- Improve Lowess  (:pr:`7768`)
 
 
 
@@ -385,11 +405,13 @@ Submodules
 ``tools``
 ~~~~~~~~~
 - Change default derivative in CDFLink  (:pr:`7287`)
+- Fix style issue  (:pr:`7739`)
 
 
 
 ``tsa``
 ~~~~~~~
+- Add Helper function to solve for polynomial coefficients from roots for ARIMA  (:pr:`6921`)
 - Changed month abbreviations with localization  (:pr:`7409`)
 - Add ARDL model  (:pr:`7433`)
 - Fix typo in ets error  (:pr:`7435`)
@@ -426,6 +448,7 @@ Submodules
 - Statespace MLEModel false validation error with nested fix_params (GH7507)  (:pr:`7508`)
 - Ensure attributes exist  (:pr:`7538`)
 - Ensure warning does not raise  (:pr:`7589`)
+- Assert correct iloc dtypes  (:pr:`7737`)
 
 
 
@@ -481,6 +504,7 @@ Thanks to all of the contributors for the 0.13.0 release (based on git log):
 - Aidan Russell
 - Alexander Stiebing
 - Austin Adams
+- Ben Greiner
 - Brent Pedersen
 - Chad Fulton
 - Chadwick Boulay
@@ -505,6 +529,7 @@ Thanks to all of the contributors for the 0.13.0 release (based on git log):
 - Max Mahlke
 - Michele Fortunato
 - Mike Ovyan
+- Min Rk
 - Natalie Heer
 - Nikolai Korolev
 - Omar Gutiérrez
@@ -512,16 +537,18 @@ Thanks to all of the contributors for the 0.13.0 release (based on git log):
 - Pamphile Roy
 - Pratyush Sharan
 - Roberto Nunes Mourão
-- SHH
 - Simardeep27
+- Simon Høxbro Hansen
 - Sin Kim
 - Skipper Seabold
 - Stefan Appelhoff
+- Thomas Brooks
 - Tomohiro Endo
 - Wahram Andrikyan
 - cxan96
 - janosbiro
 - partev
+- w31ha0
 
 
 These lists of names are automatically generated based on git log, and may not
@@ -533,6 +560,7 @@ Merged Pull Requests
 The following Pull Requests were merged since the last release:
 
 - :pr:`5491`: ENH: multivariate - Return E and H matrices in dict
+- :pr:`6921`: ENH: Add Helper function to solve for polynomial coefficients from roots for ARIMA
 - :pr:`7121`: MAINT: v0.12.1 backports
 - :pr:`7123`: DOC: Port missed doc fix
 - :pr:`7221`: MAINT: Backport fixes for 0.12.2 compat release
@@ -675,3 +703,21 @@ The following Pull Requests were merged since the last release:
 - :pr:`7714`: DOC: Update release note
 - :pr:`7721`: ENH: Added fft to ccovf and ccf
 - :pr:`7723`: REF/ENH: more copula improvements for 0.13
+- :pr:`7726`: DOC: Update release note
+- :pr:`7727`: DOC: improve docs and docstrings, mainly for recent additions
+- :pr:`7732`: DOC: api.py, docstring improvements
+- :pr:`7735`: DOC: Correct MultivariateTestResults doc string
+- :pr:`7737`: TST: Assert correct iloc dtypes
+- :pr:`7738`: DOC: Correct MultivariateTestResults doc string
+- :pr:`7739`: MAINT: Fix style issue
+- :pr:`7740`: DOC: add missing function doc head
+- :pr:`7742`: MAINT: Final issues in `__all__`
+- :pr:`7743`: DOC: add to release notes, smaller doc fixes, references
+- :pr:`7744`: MAINT: Fix hard to reach errors
+- :pr:`7748`: BUG: fix summary().as_latex, line in top table dropped
+- :pr:`7750`: ENH: Warn kwargs glm
+- :pr:`7751`: REF: GLM init invalid kwargs use ValueWarning
+- :pr:`7757`: BUG/MAINT/DOC: more 0.13
+- :pr:`7766`: BUG: fix lowess spikes/nans from epsilon values
+- :pr:`7768`: PERF/TST: Improve Lowess
+- :pr:`7770`: DOC: Fix lowess notebook
