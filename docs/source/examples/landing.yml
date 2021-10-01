@@ -65,6 +65,9 @@
   - img: ../_static/images/kde_overview.png
     target: notebooks/generated/kernel_density.html
     text: Univariate Kernel Density Estimator
+  - img: ../_static/images/lowess.png
+    target: notebooks/generated/lowess.html
+    text: Lowess Regression
 - header: Generalized Linear Models
   id: glm
   links:

@@ -63,7 +63,7 @@ for key in SETUP_REQUIREMENTS:
 
 INSTALL_REQUIREMENTS = SETUP_REQUIREMENTS.copy()
 INSTALL_REQUIREMENTS.update({'pandas': '0.25',  # released July 2019
-                             'patsy': '0.5.1',  # released January 2018
+                             'patsy': '0.5.2',  # released January 2018
                              })
 
 CYTHON_MIN_VER = '0.29.22'  # released 2020
