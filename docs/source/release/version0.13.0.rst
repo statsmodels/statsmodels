@@ -25,7 +25,7 @@ Stats
 -----
 **Issues Closed**: 238
 
-**Pull Requests Merged**: 162
+**Pull Requests Merged**: 165
 
 
 The Highlights
@@ -399,7 +399,7 @@ Submodules
 - Proportions_chisquare prevent integer overflow   (:pr:`7669`)
 - Fix lilliefors results for single-column DataFrames  (:pr:`7698`)
 - Describe / Description do not return percentiles  (:pr:`7710`)
-
+- ENH: add options to meta-analysis plot_forest (:pr:`7772`)
 
 
 ``tools``
@@ -721,3 +721,4 @@ The following Pull Requests were merged since the last release:
 - :pr:`7766`: BUG: fix lowess spikes/nans from epsilon values
 - :pr:`7768`: PERF/TST: Improve Lowess
 - :pr:`7770`: DOC: Fix lowess notebook
+- :pr:`7772`: ENH: add options to meta-analysis plot_forest
