@@ -276,13 +276,31 @@ class CombineResults(object):
         results = pd.DataFrame(res, index=labels, columns=col_names)
         return results
 
-    def plot_forest(self, ax=None, **kwds):
+    def plot_forest(self, alpha=0.05, use_t=None, use_exp=False,
+                    ax=None, **kwds):
         """Forest plot with means and confidence intervals
 
         Parameters
         ----------
         ax : None or matplotlib axis instance
             If ax is provided, then the plot will be added to it.
+        alpha : float in (0, 1)
+            Significance level for confidence interval. Nominal coverage is
+            ``1 - alpha``.
+        use_t : None or bool
+            If use_t is None, then the attribute `use_t` determines whether
+            normal or t-distribution is used for confidence intervals.
+            Specifying use_t overrides the attribute.
+            If use_t is false, then confidence intervals are based on the
+            normal distribution. If it is true, then the t-distribution is
+            used.
+        use_exp : bool
+            If `use_exp` is True, then the effect size and confidence limits
+            will be exponentiated. This transform log-odds-ration into
+            odds-ratio, and similarly for risk-ratio.
+        ax : AxesSubplot, optional
+            If given, this axes is used to plot in instead of a new figure
+            being created.
         kwds : optional keyword arguments
             Keywords are forwarded to the dot_plot function that creates the
             plot.
@@ -297,7 +315,9 @@ class CombineResults(object):
 
         """
         from statsmodels.graphics.dotplots import dot_plot
-        res_df = self.summary_frame()
+        res_df = self.summary_frame(alpha=alpha, use_t=use_t)
+        if use_exp:
+            res_df = np.exp(res_df[["eff", "ci_low", "ci_upp"]])
         hw = np.abs(res_df[["ci_low", "ci_upp"]] - res_df[["eff"]].values)
         fig = dot_plot(points=res_df["eff"], intervals=hw,
                        lines=res_df.index, line_order=res_df.index, **kwds)
