@@ -363,7 +363,7 @@ flattened.index = (flattened.index + 1).rename('horizon')
 print(flattened.iloc[:3, :5])
 
 # Compute the root mean square error
-rmse = (flattened**2) bhzjm.mean(axis=1)**0.5
+rmse = (flattened**2).mean(axis=1)**0.5
 
 print(rmse)
 
