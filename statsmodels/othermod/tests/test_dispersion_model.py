@@ -236,3 +236,30 @@ class TestJohnsonSUe():
         res1.summary()
         p_names = ['const', 'x1', 'scale-1', 'a0-0', 'a0-1', 'a1-0']
         assert res1.model.exog_names == p_names
+
+class TestJohnsonSUe2(TestJohnsonSUe):
+    # with link_extras for second shape parameter
+
+    @classmethod
+    def setup_class(cls):
+        np.random.seed(987127429)
+        nobs = 500
+        args = (0, 1, 0, 1)
+        y = stats.johnsonsu.rvs(*args, size=nobs)
+        x_const = np.ones(nobs)[:, None]
+        ex_trend = np.column_stack((np.ones(nobs), np.linspace(-1, 1, nobs)))
+
+        mod = odm.Johnsonsu(y, ex_trend, exog_scale=x_const,
+                            exog_extras=[ex_trend, x_const],
+                            link_extras=[families.links.identity(),
+                                         families.links.Log()],
+                            k_extra=2)
+        cls.res1 = mod.fit(start_params=[0.1, 0, 0, 0, 1, 2], method="bfgs")
+
+    def tes_links(self):
+        res1 = self.res1
+        mod1 = res1.model
+        assert isinstance(mod1.link, families.links.identity)
+        assert isinstance(mod1.link_scale, families.links.Log)
+        assert isinstance(mod1.link_extras[0], families.links.identity)
+        assert isinstance(mod1.link_extras[1], families.links.Log)

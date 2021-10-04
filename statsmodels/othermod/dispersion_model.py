@@ -30,22 +30,26 @@ class MultiLinkModel(GenericLikelihoodModel):
 
     '''
     def __init__(self, endog, exog, exog_scale=None,
-                 exog_extras=None,
+                 exog_extras=None, link=None,
                  link_scale=families.links.Log(),
-                 links=None, k_extra=None, **kwds):
+                 link_extras=None, k_extra=None, **kwds):
 
         # etmp = np.array(endog)
+        if k_extra is None:
+            raise ValueError("k_extra is required")
         self.k_extra = k_extra
 
+        # base datahandling only adds names for one exog
         if exog_scale is None:
             extra_names = ['scale']
             exog_scale = np.ones((len(endog), 1), dtype='f')
         else:
             extra_names = ['scale-%s' % zc for zc in
-                                (exog_scale.columns
-                                 if hasattr(exog_scale, 'columns')
-                                 else range(1, exog_scale.shape[1] + 1))]
+                           (exog_scale.columns
+                            if hasattr(exog_scale, 'columns')
+                            else range(1, exog_scale.shape[1] + 1))]
 
+        # handle extras
         self.nobs = endog.shape[0]  # no self.endog yet
         self.k_params_li = [exog.shape[1], exog_scale.shape[1]]
         if exog_extras is None:
@@ -69,20 +73,25 @@ class MultiLinkModel(GenericLikelihoodModel):
             extra_names.extend(['a%i-%s' % (i, zc)
                                 for zc in range(self.k_params_li[2 + i])])
         kwds['extra_params_names'] = extra_names
+        # 'extra_params_names' will be attached by super
 
         super().__init__(endog, exog, exog_scale=exog_scale,
                          **kwds)
 
-        # self.link = link
+        if link is None:
+            link = families.links.identity()
+        self.link = link
         self.link_scale = link_scale
+        if link_extras is None and self.k_extra > 0:
+            link_extras = [families.links.identity() for _ in range(self.k_extra)]
+        self.link_extras = link_extras
         # not needed, handled by super:
         # self.exog_scale = exog_scale
-        # inherited df do not account for precision params
 
         self.df_model = self.nparams - 1
         self.df_resid = self.nobs - self.nparams
         # need to fix, used for start_params,
-        #self.k_vars = self.exog.shape[1] + self.exog_scale.shape[1]
+        # self.k_vars = self.exog.shape[1] + self.exog_scale.shape[1]
         assert len(self.exog_scale) == len(self.endog)
         self.hess_type = "oim"
         if 'exog_scale' not in self._init_keys:
@@ -90,15 +99,16 @@ class MultiLinkModel(GenericLikelihoodModel):
 
         # todo: maybe not here
         self._set_start_params()
-        self._init_keys.extend(['link_scale'])
-        self._null_drop_keys = ['exog_scale']
+        self._init_keys.extend(['link', 'link_scale', 'link_extras'])
+        self._null_drop_keys = ['exog_scale', 'exog_extras']
         # self.results_class = BetaResults
-        #self.results_class_wrapper = BetaResultsWrapper
+        # self.results_class_wrapper = BetaResultsWrapper
 
     def initialize(self):
         # TODO: here or in __init__
         self.k_vars = self.exog.shape[1]
-        self.k_params = self.exog.shape[1] + self.exog_scale.shape[1] + self.k_extra
+        self.k_params = (self.exog.shape[1] + self.exog_scale.shape[1] +
+                         self.k_extra)
         self.fixed_params = None
         super().initialize()
 
@@ -127,7 +137,8 @@ class MultiLinkModel(GenericLikelihoodModel):
         k_scale = self.exog_scale.shape[1]
         p_split = self._split_params(params)
         params_loc = p_split[0]
-        loc = np.dot(self.exog, params_loc)
+        linpred_loc = np.dot(self.exog, params_loc)
+        loc = self.link.inverse(linpred_loc)
 
         params_scale = p_split[1]
         linpred_scale = np.dot(self.exog_scale, params_scale)
@@ -139,8 +150,8 @@ class MultiLinkModel(GenericLikelihoodModel):
             args.extend([i for i in params[k_mean + k_scale:]])
         else:
             for i in range(self.k_extra):
-                linpred = self.exog_extras[i] @ (p_split[2 + i])
-                args.append(linpred)
+                linpred = self.exog_extras[i].dot(p_split[2 + i])
+                args.append(self.link_extras[i].inverse(linpred))
                 if linpred.ndim > 1:
                     raise
 
