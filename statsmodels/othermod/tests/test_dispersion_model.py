@@ -209,3 +209,30 @@ class TestJohnsonSU3(TestJohnsonSU1):
                             k_extra=2)
         cls.res1 = mod.fit(start_params=[0.1,0, 0, 0, 1], method="bfgs")
         cls.res2 = results_ml.results_johnsonsu_2
+
+
+class TestJohnsonSUe():
+
+    @classmethod
+    def setup_class(cls):
+        np.random.seed(987127429)
+        nobs = 500
+        args = (0, 1, 0, 1)
+        y = stats.johnsonsu.rvs(*args, size=nobs)
+        x_const = np.ones(nobs)[:, None]
+        ex_trend = np.column_stack((np.ones(nobs), np.linspace(-1, 1, nobs)))
+
+        mod = odm.Johnsonsu(y, ex_trend, exog_scale=x_const,
+                            exog_extras=[ex_trend, x_const], k_extra=2)
+        cls.res1 = mod.fit(start_params=[0.1,0, 0, 0, 0, 1], method="bfgs")
+        # cls.res2 = results_ml.results_johnsonsu_2
+
+    def test_develop(self):
+        res1 = self.res1
+
+        assert len(res1.params) == 6
+
+        # smoke for summary
+        res1.summary()
+        p_names = ['const', 'x1', 'scale-1', 'a0-0', 'a0-1', 'a1-0']
+        assert res1.model.exog_names == p_names

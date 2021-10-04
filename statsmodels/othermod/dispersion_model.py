@@ -46,13 +46,7 @@ class MultiLinkModel(GenericLikelihoodModel):
                                  if hasattr(exog_scale, 'columns')
                                  else range(1, exog_scale.shape[1] + 1))]
 
-        extra_names.extend(['a-%s' % zc for zc in range(k_extra)])
-        kwds['extra_params_names'] = extra_names
-
-        super().__init__(endog, exog, exog_scale=exog_scale,
-                         **kwds)
-
-        self.nobs = self.endog.shape[0]
+        self.nobs = endog.shape[0]  # no self.endog yet
         self.k_params_li = [exog.shape[1], exog_scale.shape[1]]
         if exog_extras is None:
             self.k_params_li.extend([1] * (k_extra))
@@ -62,12 +56,22 @@ class MultiLinkModel(GenericLikelihoodModel):
                     self.k_params_li.append(1)
                     exog_extras[i] = np.ones((self.nobs, 1))
                 else:
-                    if exog_extras[i].shape[1] == 1:
+                    if exog_extras[i].ndim == 1:
                         exog_extras[i] = exog_extras[i][:, None]
+                    if exog_extras[i].ndim > 2:
+                        raise ValueError("exog_extras has more than 2 dim")
                     self.k_params_li.append(exog_extras[i].shape[1])
 
         self.k_params_cumli = np.cumsum(self.k_params_li).tolist()
         self.exog_extras = exog_extras
+
+        for i in range(self.k_extra):
+            extra_names.extend(['a%i-%s' % (i, zc)
+                                for zc in range(self.k_params_li[2 + i])])
+        kwds['extra_params_names'] = extra_names
+
+        super().__init__(endog, exog, exog_scale=exog_scale,
+                         **kwds)
 
         # self.link = link
         self.link_scale = link_scale
@@ -121,17 +125,24 @@ class MultiLinkModel(GenericLikelihoodModel):
     def _predict_dargs(self, params):
         k_mean = self.exog.shape[1]
         k_scale = self.exog_scale.shape[1]
-        beta = params[:k_mean]
-        loc = np.dot(self.exog, beta)
+        p_split = self._split_params(params)
+        params_loc = p_split[0]
+        loc = np.dot(self.exog, params_loc)
 
-        params_scale = params[k_mean : k_mean + k_scale]
+        params_scale = p_split[1]
         linpred_scale = np.dot(self.exog_scale, params_scale)
         scale = self.link_scale.inverse(linpred_scale)
 
         args = [loc, scale]
-        if self.k_extra > 0:
-            args.extend([i for i in params[k_mean + k_scale:]])
 
+        if self.exog_extras is None:
+            args.extend([i for i in params[k_mean + k_scale:]])
+        else:
+            for i in range(self.k_extra):
+                linpred = self.exog_extras[i] @ (p_split[2 + i])
+                args.append(linpred)
+                if linpred.ndim > 1:
+                    raise
 
         return tuple(args)
 
