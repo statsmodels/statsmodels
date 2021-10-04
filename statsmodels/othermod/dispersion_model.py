@@ -10,17 +10,197 @@ import numpy as np
 from scipy import special, stats
 
 from statsmodels.base.model import GenericLikelihoodModel
-from statsmodels.tools.tools import add_constant
 from statsmodels.genmod import families
 
-from statsmodels.miscmodels.tests.test_tmodel import mm
 
 FLOAT_EPS = np.finfo(float).eps
 
-#redefine some shortcuts
+# define some shortcuts
 np_log = np.log
 np_pi = np.pi
 sps_gamln = special.gammaln
+
+
+class MultiLinkModel(GenericLikelihoodModel):
+    '''Maximum Likelihood Estimation of Model with multiple sets of regressors.
+
+    This class models location or mean, scale or dispersion and optional
+    extra distribution parameters, where each can have explanatory variables
+    with link functions.
+
+    '''
+    def __init__(self, endog, exog, exog_scale=None,
+                 exog_extras=None,
+                 link_scale=families.links.Log(),
+                 links=None, k_extra=None, **kwds):
+
+        # etmp = np.array(endog)
+        self.k_extra = k_extra
+
+        if exog_scale is None:
+            extra_names = ['scale']
+            exog_scale = np.ones((len(endog), 1), dtype='f')
+        else:
+            extra_names = ['scale-%s' % zc for zc in
+                                (exog_scale.columns
+                                 if hasattr(exog_scale, 'columns')
+                                 else range(1, exog_scale.shape[1] + 1))]
+
+        extra_names.extend(['a-%s' % zc for zc in range(k_extra)])
+        kwds['extra_params_names'] = extra_names
+
+        super().__init__(endog, exog, exog_scale=exog_scale,
+                         **kwds)
+
+        self.nobs = self.endog.shape[0]
+        self.k_params_li = [exog.shape[1], exog_scale.shape[1]]
+        if exog_extras is None:
+            self.k_params_li.extend([1] * (k_extra))
+        else:
+            for i in range(k_extra):
+                if exog_extras[i] is None:
+                    self.k_params_li.append(1)
+                    exog_extras[i] = np.ones((self.nobs, 1))
+                else:
+                    if exog_extras[i].shape[1] == 1:
+                        exog_extras[i] = exog_extras[i][:, None]
+                    self.k_params_li.append(exog_extras[i].shape[1])
+
+        self.k_params_cumli = np.cumsum(self.k_params_li).tolist()
+        self.exog_extras = exog_extras
+
+        # self.link = link
+        self.link_scale = link_scale
+        # not needed, handled by super:
+        # self.exog_scale = exog_scale
+        # inherited df do not account for precision params
+
+        self.df_model = self.nparams - 1
+        self.df_resid = self.nobs - self.nparams
+        # need to fix, used for start_params,
+        #self.k_vars = self.exog.shape[1] + self.exog_scale.shape[1]
+        assert len(self.exog_scale) == len(self.endog)
+        self.hess_type = "oim"
+        if 'exog_scale' not in self._init_keys:
+            self._init_keys.extend(['exog_scale'])
+
+        # todo: maybe not here
+        self._set_start_params()
+        self._init_keys.extend(['link_scale'])
+        self._null_drop_keys = ['exog_scale']
+        # self.results_class = BetaResults
+        #self.results_class_wrapper = BetaResultsWrapper
+
+    def initialize(self):
+        # TODO: here or in __init__
+        self.k_vars = self.exog.shape[1]
+        self.k_params = self.exog.shape[1] + self.exog_scale.shape[1] + self.k_extra
+        self.fixed_params = None
+        super().initialize()
+
+    def _split_params(self, params):
+        return np.split(params, self.k_params_cumli[:-1])
+
+    # todo use propertie for start_params
+    def _set_start_params(self, start_params=None, use_kurtosis=False):
+        if start_params is not None:
+            self.start_params = start_params
+        else:
+            from statsmodels.regression.linear_model import OLS
+            res_ols = OLS(self.endog, self.exog).fit()
+            start_params = 0.1*np.ones(self.k_params)
+            start_params[:self.k_vars] = res_ols.params
+
+            # Here we only use constant, missing link
+            # TODO use regression
+            # using link makes convergence slower in the examples
+            start_params[self.exog.shape[1]] = self.link_scale(res_ols.scale)
+
+            self.start_params = start_params
+
+    def _predict_dargs(self, params):
+        k_mean = self.exog.shape[1]
+        k_scale = self.exog_scale.shape[1]
+        beta = params[:k_mean]
+        loc = np.dot(self.exog, beta)
+
+        params_scale = params[k_mean : k_mean + k_scale]
+        linpred_scale = np.dot(self.exog_scale, params_scale)
+        scale = self.link_scale.inverse(linpred_scale)
+
+        args = [loc, scale]
+        if self.k_extra > 0:
+            args.extend([i for i in params[k_mean + k_scale:]])
+
+
+        return tuple(args)
+
+
+    def loglike(self, params):
+        return self.loglikeobs(params).sum(0)
+
+    def _loglikeobs(self, mu, scale, endog=None):
+        raise NotImplementedError
+
+    def loglikeobs(self, params):
+        """
+        Loglikelihood of linear model with t distributed errors.
+
+        Parameters
+        ----------
+        params : ndarray
+            The parameters of the model. The last 2 parameters are degrees of
+            freedom and scale.
+
+        Returns
+        -------
+        loglike : ndarray
+            The log likelihood of the model evaluated at `params` for each
+            observation defined by self.endog and self.exog.
+
+        Notes
+        -----
+        .. math:: \\ln L=\\sum_{i=1}^{n}\\left[... \\right]
+
+        The t distribution is the standard t distribution and not a standardized
+        t distribution, which means that the scale parameter is not equal to the
+        standard deviation.
+
+        """
+        #print len(params),
+        #store_params.append(params)
+        if self.fixed_params is not None:
+            #print 'using fixed'
+            params = self.expandparams(params)
+
+        args = self._predict_dargs(params)
+        # endog = self.endog
+        ll_obs = self._loglikeobs(*args, endog=self.endog)
+        return ll_obs
+
+    def predict(self, params, exog=None):
+        if exog is None:
+            exog = self.exog
+        return np.dot(exog, params[:self.exog.shape[1]])
+
+
+class GaussianMultiLink(MultiLinkModel):
+
+    def _loglikeobs(self, mu, scale, endog=None):
+        ll_obs = -(endog - mu) ** 2 / scale
+        ll_obs += -np.log(scale) - np.log(2 * np.pi)
+        ll_obs /= 2
+        return ll_obs
+
+
+class Johnsonsu(MultiLinkModel):
+
+    def _loglikeobs(self, mu, scale, *args, endog=None):
+        if self.k_extra == 0:
+            ll_obs = stats.johnsonsu.logpdf(endog, 0, 1, mu, scale)
+        else:
+            ll_obs = stats.johnsonsu.logpdf(endog, *args, mu, scale)
+        return ll_obs
 
 
 class Het2pModel(GenericLikelihoodModel):
@@ -116,11 +296,7 @@ class Het2pModel(GenericLikelihoodModel):
         return self.loglikeobs(params).sum(0)
 
     def _loglikeobs(self, mu, scale, endog=None):
-        scale_sqrt = np.sqrt(scale)
-        ll_obs = -(endog - mu) ** 2 / scale
-        ll_obs += -np.log(scale) - np.log(2 * np.pi)
-        ll_obs /= 2
-        return ll_obs
+        raise NotImplementedError
 
     def loglikeobs(self, params):
         """
