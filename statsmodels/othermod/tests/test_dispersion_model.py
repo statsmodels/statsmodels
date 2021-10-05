@@ -29,6 +29,7 @@ from statsmodels.tools.sm_exceptions import (
 from statsmodels.miscmodels.tests.test_tmodel import mm
 from .results import results_multilink as results_ml
 
+
 class CheckCompare():
 
     def test_basic(self):
@@ -63,7 +64,7 @@ class TestGaussianHetWLS(CheckCompare):
         mod1 = odm.GaussianHet(endog, exog, exog_scale=exog)
         res1 = mod1.fit(method='bfgs', disp=False)
 
-        m_, s_ = mod1._predict_locscale(res1.params)
+        _, s_ = mod1._predict_locscale(res1.params)
 
         mod2 = WLS(endog, exog, weights=1 / s_)
         res2 = mod2.fit(cov_type='fixed scale', cov_kwds=dict(scale=1))
@@ -80,7 +81,7 @@ class TestGammaHetGLM(CheckCompare):
     def setup_class(cls):
         endog = mm.m_marietta.copy()
         # winsorize one outlier
-        #endog[endog > 0.25] = 0.25
+        # endog[endog > 0.25] = 0.25
         exog = add_constant(mm.CRSP)
         # mod3 = TLinearModel(endog, exog)
         # res3 = mod3.fit(method='bfgs', disp=False)
@@ -89,10 +90,10 @@ class TestGammaHetGLM(CheckCompare):
         y = (endog - endog.mean())**2
         mod1 = odm.GammaHet(y, exog, exog_scale=exog)
         res1 = mod1.fit(start_params=[0.5] * 2 + [1, 2], method='bfgs',
-                        #disp=False
+                        disp=False,
                         )
 
-        m_, s_ = mod1._predict_locscale(res1.params)
+        _, s_ = mod1._predict_locscale(res1.params)
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", DomainWarning)
@@ -122,7 +123,7 @@ class TestTHet(CheckCompare):
         mod1 = odm.TLinearModelHet(endog, exog)
         res1 = mod1.fit(method='bfgs', disp=False)
 
-        df1, m1, s1 = mod1._predict_locscale(res1.params)
+        # df1, m1, s1 = mod1._predict_locscale(res1.params)
 
         mod2 = TLinearModel(endog, exog)
         res2 = mod2.fit()
@@ -148,7 +149,7 @@ class TestJohnsonSU1():
 
         mod = odm.Johnsonsu(y, ex_trend, exog_scale=x_const,
                             exog_extras=[None, None], k_extra=2)
-        cls.res1 = mod.fit(start_params=[0.1,0, 0, 0, 1], method="bfgs")
+        cls.res1 = mod.fit(start_params=[0.1, 0, 0, 0, 1], method="bfgs")
         cls.res2 = results_ml.results_johnsonsu_2
 
     def test_basic(self):
@@ -190,7 +191,7 @@ class TestJohnsonSU2(TestJohnsonSU1):
 
         mod = odm.Johnsonsu(y, ex_trend, exog_scale=x_const,
                             exog_extras=[x_const, x_const], k_extra=2)
-        cls.res1 = mod.fit(start_params=[0.1,0, 0, 0, 1], method="bfgs")
+        cls.res1 = mod.fit(start_params=[0.1, 0, 0, 0, 1], method="bfgs")
         cls.res2 = results_ml.results_johnsonsu_2
 
 
@@ -207,11 +208,12 @@ class TestJohnsonSU3(TestJohnsonSU1):
 
         mod = odm.Johnsonsu(y, ex_trend, exog_scale=x_const,
                             k_extra=2)
-        cls.res1 = mod.fit(start_params=[0.1,0, 0, 0, 1], method="bfgs")
+        cls.res1 = mod.fit(start_params=[0.1, 0, 0, 0, 1], method="bfgs")
         cls.res2 = results_ml.results_johnsonsu_2
 
 
 class TestJohnsonSUe():
+    # with 2-column exog for second shape parameter
 
     @classmethod
     def setup_class(cls):
@@ -224,7 +226,7 @@ class TestJohnsonSUe():
 
         mod = odm.Johnsonsu(y, ex_trend, exog_scale=x_const,
                             exog_extras=[ex_trend, x_const], k_extra=2)
-        cls.res1 = mod.fit(start_params=[0.1,0, 0, 0, 0, 1], method="bfgs")
+        cls.res1 = mod.fit(start_params=[0.1, 0, 0, 0, 0, 1], method="bfgs")
         # cls.res2 = results_ml.results_johnsonsu_2
 
     def test_develop(self):
@@ -236,6 +238,7 @@ class TestJohnsonSUe():
         res1.summary()
         p_names = ['const', 'x1', 'scale-1', 'a0-0', 'a0-1', 'a1-0']
         assert res1.model.exog_names == p_names
+
 
 class TestJohnsonSUe2(TestJohnsonSUe):
     # with link_extras for second shape parameter

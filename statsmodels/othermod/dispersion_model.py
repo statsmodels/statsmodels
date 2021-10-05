@@ -83,7 +83,8 @@ class MultiLinkModel(GenericLikelihoodModel):
         self.link = link
         self.link_scale = link_scale
         if link_extras is None and self.k_extra > 0:
-            link_extras = [families.links.identity() for _ in range(self.k_extra)]
+            link_extras = [families.links.identity()
+                           for _ in range(self.k_extra)]
         self.link_extras = link_extras
         # not needed, handled by super:
         # self.exog_scale = exog_scale
@@ -133,6 +134,18 @@ class MultiLinkModel(GenericLikelihoodModel):
             self.start_params = start_params
 
     def _predict_dargs(self, params):
+        """Predict distribution parameters (args) for sample given params.
+
+        Parameters
+        ----------
+        params : ndarray
+            The parameters of the model. The last 2 parameters are degrees of
+            freedom and scale.
+
+        Returns
+        -------
+        tuple : parameter for distribution used in `_loglikeobs`
+        """
         k_mean = self.exog.shape[1]
         k_scale = self.exog_scale.shape[1]
         p_split = self._split_params(params)
@@ -157,11 +170,10 @@ class MultiLinkModel(GenericLikelihoodModel):
 
         return tuple(args)
 
-
     def loglike(self, params):
         return self.loglikeobs(params).sum(0)
 
-    def _loglikeobs(self, mu, scale, endog=None):
+    def _loglikeobs(self, mu, scale, *args, endog=None):
         raise NotImplementedError
 
     def loglikeobs(self, params):
@@ -184,15 +196,11 @@ class MultiLinkModel(GenericLikelihoodModel):
         -----
         .. math:: \\ln L=\\sum_{i=1}^{n}\\left[... \\right]
 
-        The t distribution is the standard t distribution and not a standardized
-        t distribution, which means that the scale parameter is not equal to the
-        standard deviation.
-
         """
-        #print len(params),
-        #store_params.append(params)
+        # print len(params),
+        # store_params.append(params)
         if self.fixed_params is not None:
-            #print 'using fixed'
+            # print 'using fixed'
             params = self.expandparams(params)
 
         args = self._predict_dargs(params)
@@ -246,15 +254,14 @@ class Het2pModel(GenericLikelihoodModel):
             exog_scale = np.ones((len(endog), 1), dtype='f')
         else:
             extra_names = ['scale-%s' % zc for zc in
-                                (exog_scale.columns
-                                 if hasattr(exog_scale, 'columns')
-                                 else range(1, exog_scale.shape[1] + 1))]
+                           (exog_scale.columns
+                            if hasattr(exog_scale, 'columns')
+                            else range(1, exog_scale.shape[1] + 1))]
 
         kwds['extra_params_names'] = extra_names
 
-        super().__init__(endog, exog,
-                                        exog_scale=exog_scale,
-                                        **kwds)
+        super().__init__(endog, exog, exog_scale=exog_scale,
+                         **kwds)
         # self.link = link
         self.link_scale = link_scale
         # not needed, handled by super:
@@ -264,7 +271,7 @@ class Het2pModel(GenericLikelihoodModel):
         self.df_model = self.nparams - 1
         self.df_resid = self.nobs - self.nparams
         # need to fix, used for start_params,
-        #self.k_vars = self.exog.shape[1] + self.exog_scale.shape[1]
+        # self.k_vars = self.exog.shape[1] + self.exog_scale.shape[1]
         assert len(self.exog_scale) == len(self.endog)
         self.hess_type = "oim"
         if 'exog_scale' not in self._init_keys:
@@ -275,7 +282,7 @@ class Het2pModel(GenericLikelihoodModel):
         self._init_keys.extend(['link_scale'])
         self._null_drop_keys = ['exog_scale']
         # self.results_class = BetaResults
-        #self.results_class_wrapper = BetaResultsWrapper
+        # self.results_class_wrapper = BetaResultsWrapper
 
     def initialize(self):
         # TODO: here or in __init__
@@ -307,12 +314,11 @@ class Het2pModel(GenericLikelihoodModel):
         beta = params[:k_mean]
         loc = np.dot(self.exog, beta)
 
-        params_scale = params[k_mean : k_mean + k_scale]
+        params_scale = params[k_mean : k_mean + k_scale]  # noqa: E203
         linpred_scale = np.dot(self.exog_scale, params_scale)
         scale = self.link_scale.inverse(linpred_scale)
 
         return loc, scale
-
 
     def loglike(self, params):
         return self.loglikeobs(params).sum(0)
@@ -338,17 +344,13 @@ class Het2pModel(GenericLikelihoodModel):
 
         Notes
         -----
-        .. math:: \\ln L=\\sum_{i=1}^{n}\\left[... \\right]
-
-        The t distribution is the standard t distribution and not a standardized
-        t distribution, which means that the scale parameter is not equal to the
-        standard deviation.
+        .. math:: \\ln L=\\sum_{i=1}^{n}...
 
         """
-        #print len(params),
-        #store_params.append(params)
+        # print len(params),
+        # store_params.append(params)
         if self.fixed_params is not None:
-            #print 'using fixed'
+            # print 'using fixed'
             params = self.expandparams(params)
 
         loc, scale = self._predict_locscale(params)
@@ -387,7 +389,6 @@ class GammaHet(Het2pModel):
 
     def _loglikeobs(self, mu, scale, endog=None):
         endog_mu = self._clean(endog / mu)
-        #endog_mu = (endog / mu)
         # weight_scale = var_weights / scale
         ll_obs = (np.log(endog_mu / scale) - endog_mu) / scale
         ll_obs -= special.gammaln(1 / scale) + np.log(endog)
@@ -398,41 +399,26 @@ class GammaHet(Het2pModel):
 class TLinearModelHet(GenericLikelihoodModel):
     '''Maximum Likelihood Estimation of Linear Model with t-distributed errors
 
-    This is an example for generic MLE.
-
-    Except for defining the negative log-likelihood method, all
-    methods and results are generic. Gradients and Hessian
-    and all resulting statistics are based on numerical
-    differentiation.
-
     '''
     def __init__(self, endog, exog, exog_scale=None,
                  link_scale=families.links.Log(), fix_df=False, **kwds):
-
-        # etmp = np.array(endog)
-        # TODO: add `df` last, after scale
-#        if "fix_df" in kwds:
-#            extra_names = []
-#        else:
-#            extra_names = ['df']
 
         if exog_scale is None:
             extra_names = ['scale']
             exog_scale = np.ones((len(endog), 1), dtype='f')
         else:
             extra_names = ['scale-%s' % zc for zc in
-                                (exog_scale.columns
-                                 if hasattr(exog_scale, 'columns')
-                                 else range(1, exog_scale.shape[1] + 1))]
+                           (exog_scale.columns
+                            if hasattr(exog_scale, 'columns')
+                            else range(1, exog_scale.shape[1] + 1))]
 
         if 'fix_df' not in kwds:
             extra_names.append('df')
 
         kwds['extra_params_names'] = extra_names
 
-        super().__init__(endog, exog,
-                                        exog_scale=exog_scale,
-                                        **kwds)
+        super().__init__(endog, exog, exog_scale=exog_scale,
+                         **kwds)
         # self.link = link
         self.link_scale = link_scale
         # not needed, handled by super:
@@ -442,7 +428,7 @@ class TLinearModelHet(GenericLikelihoodModel):
         self.df_model = self.nparams - 1
         self.df_resid = self.nobs - self.nparams
         # need to fix, used for start_params,
-        #self.k_vars = self.exog.shape[1] + self.exog_scale.shape[1]
+        # self.k_vars = self.exog.shape[1] + self.exog_scale.shape[1]
         assert len(self.exog_scale) == len(self.endog)
         self.hess_type = "oim"
         if 'exog_scale' not in self._init_keys:
@@ -453,7 +439,7 @@ class TLinearModelHet(GenericLikelihoodModel):
         self._init_keys.extend(['link_scale'])
         self._null_drop_keys = ['exog_scale']
         # self.results_class = BetaResults
-        #self.results_class_wrapper = BetaResultsWrapper
+        # self.results_class_wrapper = BetaResultsWrapper
 
     def initialize(self):
         # TODO: here or in __init__
@@ -499,7 +485,7 @@ class TLinearModelHet(GenericLikelihoodModel):
                     df = 5
 
                 start_params[-1] = df
-            #TODO adjust scale for df
+            # TODO adjust scale for df
             # Here we only use constant, missing link
             # TODO use regression
             # using link makes convergence slower in the examples
@@ -513,12 +499,11 @@ class TLinearModelHet(GenericLikelihoodModel):
         beta = params[:k_mean]
         loc = np.dot(self.exog, beta)
 
-        params_scale = params[k_mean : k_mean + k_scale]
+        params_scale = params[k_mean : k_mean + k_scale]  # noqa: E203
         linpred_scale = np.dot(self.exog_scale, params_scale)
         scale = self.link_scale.inverse(linpred_scale)
         df = params[-1]
         return df, loc, scale
-
 
     def loglike(self, params):
         return self.loglikeobs(params).sum(0)
@@ -541,24 +526,23 @@ class TLinearModelHet(GenericLikelihoodModel):
 
         Notes
         -----
-        .. math:: \\ln L=\\sum_{i=1}^{n}\\left[-\\lambda_{i}+y_{i}x_{i}^{\\prime}\\beta-\\ln y_{i}!\\right]
+        .. math:: \\ln L=\\sum_{i=1}^{n}\\left[-\\lambda_{i}+
+                  y_{i}x_{i}^{\\prime}\\beta-\\ln y_{i}!\\right]
 
-        The t distribution is the standard t distribution and not a standardized
-        t distribution, which means that the scale parameter is not equal to the
-        standard deviation.
+        The t distribution is the standard t distribution and not a
+        standardized t distribution, which means that the scale parameter is
+        not equal to the standard deviation.
 
         """
-        #print len(params),
-        #store_params.append(params)
+
         if self.fixed_params is not None:
-            #print 'using fixed'
             params = self.expandparams(params)
 
         df, loc, scale = self._predict_locscale(params)
         endog = self.endog
         scale_sqrt = np.sqrt(scale)
         x = (endog - loc) / scale_sqrt
-        #next part is stats.t._logpdf
+        # next part is stats.t._logpdf
         lPx = sps_gamln((df+1)/2) - sps_gamln(df/2.)
         lPx -= 0.5*np_log(df*np_pi) + (df+1)/2.*np_log(1+(x**2)/df)
         lPx -= np_log(scale_sqrt)  # correction for scale
