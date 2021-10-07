@@ -973,7 +973,7 @@ class LogLog(Logit):
 
         Notes
         -----
-        g^(-1)(`z`) = exp(-exp(`z`))
+        g^(-1)(`z`) = exp(-exp(-`z`))
         """
         return np.exp(-np.exp(-z))
 
@@ -993,7 +993,7 @@ class LogLog(Logit):
 
         Notes
         -----
-        g'(p) = - 1 /p * log(p)
+        g'(p) = - 1 /(p * log(p))
         """
         p = self._clean(p)
         return -1. / (p * (np.log(p)))
