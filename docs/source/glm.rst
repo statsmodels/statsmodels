@@ -179,6 +179,7 @@ available link functions can be obtained by
    Link
    CDFLink
    CLogLog
+   LogLog
    Log
    Logit
    NegativeBinomial
