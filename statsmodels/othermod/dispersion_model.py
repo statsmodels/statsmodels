@@ -211,7 +211,9 @@ class MultiLinkModel(GenericLikelihoodModel):
     def predict(self, params, exog=None):
         if exog is None:
             exog = self.exog
-        return np.dot(exog, params[:self.exog.shape[1]])
+        linpred = np.dot(exog, params[:self.exog.shape[1]])
+        m = self.link.inverse(linpred)
+        return m
 
 
 class GaussianMultiLink(MultiLinkModel):

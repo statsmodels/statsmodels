@@ -6,13 +6,18 @@ Author: Josef Perktod
 License: BSD-3
 """
 
+import os
 import warnings
 
 import numpy as np
 from numpy.testing import assert_allclose
 # import pytest
 
+from scipy.special import gammaln as lgamma  # for Beta test case
 from scipy import stats
+
+import pandas as pd
+import patsy
 
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.genmod import families
@@ -26,8 +31,52 @@ from statsmodels.tools.sm_exceptions import (
     DomainWarning,
     )
 
+from statsmodels.othermod.betareg import BetaModel
+# from .results import results_betareg as resultsb
 from statsmodels.miscmodels.tests.test_tmodel import mm
 from .results import results_multilink as results_ml
+
+cur_dir = os.path.dirname(os.path.abspath(__file__))
+res_dir = os.path.join(cur_dir, "results")
+methylation = pd.read_csv(os.path.join(res_dir, 'methylation-test.csv'))
+
+
+class BetaMultiLink(odm.MultiLinkModel):
+    # class for test case against betareg.BetaModel
+
+    def _loglikeobs(self, mu, phi, endog=None):
+        """
+        Loglikelihood for observations with data arguments.
+
+        Parameters
+        ----------
+        mu : ndarray
+            Predicted values for first parameter, mean, of the distribution.
+        phi : ndarray
+            Predicted values for second parameter, precision, of the
+            distribution.
+        endog : ndarray
+            Observed values of the response variable, endog.
+            ``endog`` is currently a required argument.
+
+        Returns
+        -------
+        loglike : ndarray
+            The log likelihood for each observation of the model evaluated
+            at `params`.
+        """
+        y = endog
+
+        eps_lb = 1e-200
+        alpha = np.clip(mu * phi, eps_lb, np.inf)
+        beta = np.clip((1 - mu) * phi, eps_lb, np.inf)
+
+        ll = (lgamma(phi) - lgamma(alpha)
+              - lgamma(beta)
+              + (mu * phi - 1) * np.log(y)
+              + (((1 - mu) * phi) - 1) * np.log(1 - y))
+
+        return ll
 
 
 class CheckCompare():
@@ -259,10 +308,59 @@ class TestJohnsonSUe2(TestJohnsonSUe):
                             k_extra=2)
         cls.res1 = mod.fit(start_params=[0.1, 0, 0, 0, 1, 2], method="bfgs")
 
-    def tes_links(self):
+    def test_links(self):
         res1 = self.res1
         mod1 = res1.model
         assert isinstance(mod1.link, families.links.identity)
         assert isinstance(mod1.link_scale, families.links.Log)
         assert isinstance(mod1.link_extras[0], families.links.identity)
         assert isinstance(mod1.link_extras[1], families.links.Log)
+
+
+class TestBetaMLModel(object):
+
+    @classmethod
+    def setup_class(cls):
+        # example from test_beta, using log-link for precision
+        form = "methylation ~ gender + CpG"
+        Z = cls.Z = patsy.dmatrix("~ age", methylation)
+        mod2 = BetaModel.from_formula(form, methylation, exog_precision=Z,
+                                      link_precision=families.links.Log())
+        res2 = mod2.fit()
+
+        mod1 = BetaMultiLink(mod2.endog, mod2.exog, exog_scale=Z,
+                             link=families.links.Logit(),
+                             link_scale=families.links.Log(),
+                             k_extra=0)
+        res1 = mod1.fit(start_params=res2.params*0.9, method='bfgs',
+                        disp=False)
+
+        cls.res1 = res1
+        cls.res2 = res2
+
+    def test_basic(self):
+        res1 = self.res1
+        res2 = self.res2
+
+        assert_allclose(res1.model.loglike(res2.params), res2.llf, rtol=1e-12)
+        assert_allclose(res1.llf, res2.llf, rtol=1e-6)
+
+        rtol = 1e-4
+        atol = 1e-5
+        assert_allclose(res1.params, res2.params,
+                        rtol=rtol, atol=atol)
+        assert_allclose(res1.bse, res2.bse,
+                        rtol=rtol, atol=atol)
+        assert_allclose(res1.tvalues, res2.tvalues,
+                        rtol=rtol, atol=atol)
+        assert_allclose(res1.pvalues, res2.pvalues,
+                        rtol=rtol, atol=atol)
+
+        # smoke for summary
+        res1.summary()
+
+    def test_links(self):
+        res1 = self.res1
+        mod1 = res1.model
+        assert isinstance(mod1.link, families.links.Logit)
+        assert isinstance(mod1.link_scale, families.links.Log)
