@@ -28,6 +28,30 @@ class MultiLinkModel(GenericLikelihoodModel):
     extra distribution parameters, where each can have explanatory variables
     with link functions.
 
+    Parameters
+    ----------
+    endog : array_like
+        1d array of endogenous response variable.
+    exog : array_like
+        Array of explanatory variables for first distribution parameter.
+    exog_scale : array_like or None
+        Array of explanatory variables for second distribution parameter.
+    exog_extras : list or tuple or None
+        List of array of explanatory variables for other distribution
+        parameters.
+    link : instance of link class
+        Link for first distribution parameter.
+        Default to identity link, ``families.links.identity()``.
+    link_scale : instance of link class
+        Link for second distribution parameter.
+        Default is ``families.links.Log()``.
+    link_extras : list or None
+        List of link instances for extra parameters.
+        Default to identity link for each extra parameter.
+    k_extra : int
+        Number of extra distribution parameters, in addition to the first two.
+        Required argument in this class.
+
     '''
     def __init__(self, endog, exog, exog_scale=None,
                  exog_extras=None, link=None,
@@ -144,7 +168,7 @@ class MultiLinkModel(GenericLikelihoodModel):
 
         Returns
         -------
-        tuple : parameter for distribution used in `_loglikeobs`
+        tuple : Parameters for distribution used in `_loglikeobs`.
         """
         k_mean = self.exog.shape[1]
         k_scale = self.exog_scale.shape[1]
@@ -183,8 +207,7 @@ class MultiLinkModel(GenericLikelihoodModel):
         Parameters
         ----------
         params : ndarray
-            The parameters of the model. The last 2 parameters are degrees of
-            freedom and scale.
+            The parameters of the model.
 
         Returns
         -------
