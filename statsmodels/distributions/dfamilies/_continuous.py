@@ -18,6 +18,10 @@ sps_gamln = special.gammaln
 
 
 class Gaussian(DFamily):
+    """Gaussian distribution family
+
+    Warning: derivatives not verified yet.
+    """
 
     k_args = 2
     names_arg = ["mean", "scale"]
@@ -52,6 +56,8 @@ class Gaussian(DFamily):
 
 
 class StudentT(DFamily):
+    """Student-t distribution family
+    """
 
     k_args = 3
     names_arg = ["mean", "scale", "df"]
@@ -72,6 +78,8 @@ class StudentT(DFamily):
 
 
 class JohnsonSU(DFamily):
+    """JohnsonSU distribution family
+    """
 
     k_args = 4
     names_arg = ["mean", "scale", "shape1", "shape2"]

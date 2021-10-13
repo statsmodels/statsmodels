@@ -20,7 +20,7 @@ from statsmodels.distributions.dfamilies._discrete import (
     )
 
 from statsmodels.distributions.dfamilies._restricted import (
-    BetaMP, WeibullMin,
+    BetaMP, Gamma, WeibullMin,
     )
 
 
@@ -33,6 +33,7 @@ all_fam = [
     (BetaBinomialPrecision, (0.45, 2), {"n_trials": 10}),
     (BetaBinomialDispersion, (0.45, 0.5), {"n_trials": 10}),
     (BetaMP, (0.5, 5), {}),
+    (Gamma, (2, 1.5), {}),
     (WeibullMin, (0.75, 2), {}),
     ]
 
@@ -67,3 +68,29 @@ def test_dfamilies_basic(case):
     else:
         pdf2 = distr.pdf(y)
     assert_allclose(pdf, pdf2, rtol=1e-10)
+
+
+def test_dfamilies_deriv():
+    case = (Gaussian, (1, 0.5), {})
+    fam, args, dkwds = case
+    if fam.domain.startswith("real"):
+        y = np.array([0.5, 1, 1.5])
+
+    fam = fam()
+    score = fam.score_obs(y, *args, **dkwds)
+    assert score[0].shape == (3,)
+    assert score[1].shape == (3,)
+    hessf = fam.hessian_factor(y, *args, **dkwds)
+    assert np.shape(hessf[0]) == ()  # TODO: do we want this? shape of mean arg
+    assert hessf[1].shape == (3,)
+    assert hessf[1].shape == (3,)
+
+    score = fam.score_obs(y, y, args[1], **dkwds)
+    assert score[0].shape == (3,)
+    assert score[1].shape == (3,)
+    hessf = fam.hessian_factor(y, y, args[1], **dkwds)
+    assert hessf[0].shape == (3,)
+    assert hessf[1].shape == (3,)
+    assert hessf[1].shape == (3,)
+
+    assert_allclose(hessf[0], y)

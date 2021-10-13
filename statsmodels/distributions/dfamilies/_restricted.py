@@ -14,6 +14,7 @@ from scipy import stats, special
 from .base import DFamily
 
 
+FLOAT_EPS = np.finfo(float).eps
 # define some shortcuts
 lngamma = special.gammaln
 
@@ -72,8 +73,45 @@ class BetaMP(DFamily):
         return ll
 
 
-class WeibullMin(DFamily):
+class Gamma(DFamily):
+    """Gamma distribution family.
+    """
+    k_args = 2
+    names_arg = ["mean", "scale"]
+    distribution = stats.gamma
+    domain = "realpp"
 
+    def _convert_dargs_sp(self, mean, scale):
+        shape = 1 / scale
+        scale_g = mean * scale
+        return shape, 0, scale_g
+
+    def _clean(self, x):
+        """
+        Helper function to trim the data so that it is in (0,inf)
+        Notes
+        -----
+        The need for this function was discovered through usage and its
+        possible that other families might need a check for validity of the
+        domain.
+        """
+        return np.clip(x, FLOAT_EPS, np.inf)
+
+    def loglike_obs(self, endog, mean, scale):
+        endog_mu = self._clean(endog / mean)
+        ll_obs = (np.log(endog_mu / scale) - endog_mu) / scale
+        ll_obs -= special.gammaln(1 / scale) + np.log(endog)
+
+        return ll_obs
+
+
+class WeibullMin(DFamily):
+    """Weibull (Min) distribution family.
+
+    Note, `scale` parameter is the variance parameter. For rescaling or
+    standardizing the random variables, square root of ``scale`` needs to be
+    used.
+    """
     k_args = 2
     names_arg = ["scale", "shape"]
     distribution = stats.weibull_min
