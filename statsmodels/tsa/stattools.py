@@ -5,9 +5,10 @@ from __future__ import annotations
 
 from statsmodels.compat.numpy import lstsq
 from statsmodels.compat.pandas import deprecate_kwarg
-from statsmodels.compat.python import lzip
+from statsmodels.compat.python import lzip, Literal
 from statsmodels.compat.scipy import _next_regular
 
+from typing import Tuple
 import warnings
 
 import numpy as np
@@ -179,8 +180,9 @@ def adfuller(
     ----------
     x : array_like, 1d
         The data series to test.
-    maxlag : int
-        Maximum lag which is included in test, default 12*(nobs/100)^{1/4}.
+    maxlag : {None, int}
+        Maximum lag which is included in test, default value of
+        12*(nobs/100)^{1/4} is used when ``None``.
     regression : {"c","ct","ctt","n"}
         Constant and trend order to include in regression.
 
@@ -1059,7 +1061,7 @@ def ccovf(x, y, adjusted=True, demean=True, fft=True):
         d = n
 
     method = "fft" if fft else "direct"
-    return correlate(xo, yo, "full", method=method)[n - 1:] / d
+    return correlate(xo, yo, "full", method=method)[n - 1 :] / d
 
 
 @deprecate_kwarg("unbiased", "adjusted")
@@ -1867,7 +1869,12 @@ def has_missing(data):
     return np.isnan(np.sum(data))
 
 
-def kpss(x, regression="c", nlags="auto", store=False):
+def kpss(
+    x,
+    regression: Literal["c", "ct"] = "c",
+    nlags: Literal["auto", "legacy"] | int = "auto",
+    store: bool = False,
+) -> Tuple[float, float, int, dict[str, float]]:
     """
     Kwiatkowski-Phillips-Schmidt-Shin test for stationarity.
 
@@ -1883,12 +1890,11 @@ def kpss(x, regression="c", nlags="auto", store=False):
 
         * "c" : The data is stationary around a constant (default).
         * "ct" : The data is stationary around a trend.
-    nlags : {None, str, int}, optional
-        Indicates the number of lags to be used. If None (default), lags is
-        calculated using the legacy method. If "auto", lags is calculated
-        using the data-dependent method of Hobijn et al. (1998). See also
-        Andrews (1991), Newey & West (1994), and Schwert (1989). If set to
-        "legacy",  uses int(12 * (n / 100)**(1 / 4)) , as outlined in
+    nlags : {str, int}, optional
+        Indicates the number of lags to be used. If "auto" (default), lags
+        is calculated using the data-dependent method of Hobijn et al. (1998).
+        See also Andrews (1991), Newey & West (1994), and Schwert (1989). If
+        set to "legacy",  uses int(12 * (n / 100)**(1 / 4)) , as outlined in
         Schwert (1989).
     store : bool
         If True, then a result instance is returned additionally to
@@ -1914,7 +1920,7 @@ def kpss(x, regression="c", nlags="auto", store=False):
 
     Notes
     -----
-    To estimate sigma^2 the Newey-West estimator is used. If lags is None,
+    To estimate sigma^2 the Newey-West estimator is used. If lags is "legacy",
     the truncation lag parameter is set to int(12 * (n / 100) ** (1 / 4)),
     as outlined in Schwert (1989). The p-values are interpolated from
     Table 1 of Kwiatkowski et al. (1992). If the computed statistic is
@@ -1968,19 +1974,26 @@ def kpss(x, regression="c", nlags="auto", store=False):
     if nlags == "legacy":
         nlags = int(np.ceil(12.0 * np.power(nobs / 100.0, 1 / 4.0)))
         nlags = min(nlags, nobs - 1)
-    elif nlags == "auto":
+    elif nlags == "auto" or nlags is None:
+        if nlags is None:
+            # TODO: Remove before 0.14 is released
+            warnings.warn(
+                "None is not a valid value for nlags. It must be an integer, "
+                "'auto' or 'legacy'. None will raise starting in 0.14",
+                FutureWarning,
+            )
         # autolag method of Hobijn et al. (1998)
         nlags = _kpss_autolag(resids, nobs)
         nlags = min(nlags, nobs - 1)
+    elif isinstance(nlags, str):
+        raise ValueError("nvals must be 'auto' or 'legacy' when not an int")
     else:
-        nlags = int(nlags)
+        nlags = int_like(nlags, "nlags", optional=False)
 
-    if nlags >= nobs:
-        raise ValueError(
-            "lags ({}) must be < number of observations ({})".format(
-                nlags, nobs
+        if nlags >= nobs:
+            raise ValueError(
+                f"lags ({nlags}) must be < number of observations ({nobs})"
             )
-        )
 
     pvals = [0.10, 0.05, 0.025, 0.01]
 
@@ -2053,6 +2066,7 @@ def _kpss_autolag(resids, nobs):
     autolags = int(gamma_hat * np.power(nobs, pwr))
     return autolags
 
+
 def range_unit_root_test(x, store=False):
     """
     Range unit-root test for stationarity.
@@ -2111,21 +2125,25 @@ def range_unit_root_test(x, store=False):
     # Table from [1] has been replicated using 200,000 samples
     # Critical values for new n_obs values have been identified
     pvals = [0.01, 0.025, 0.05, 0.10, 0.90, 0.95]
-    n = np.array([25, 50, 100, 150, 200, 250, 500, 1000, 2000, 3000, 4000, 5000])
-    crit = np.array([
-        [0.6626, 0.8126, 0.9192, 1.0712, 2.4863, 2.7312],
-        [0.7977, 0.9274, 1.0478, 1.1964, 2.6821, 2.9613],
-        [0.9070, 1.0243, 1.1412, 1.2888, 2.8317, 3.1393],
-        [0.9543, 1.0768, 1.1869, 1.3294, 2.8915, 3.2049],
-        [0.9833, 1.0984, 1.2101, 1.3494, 2.9308, 3.2482],
-        [0.9982, 1.1137, 1.2242, 1.3632, 2.9571, 3.2842],
-        [1.0494, 1.1643, 1.2712, 1.4076, 3.0207, 3.3584],
-        [1.0846, 1.1959, 1.2988, 1.4344, 3.0653, 3.4073],
-        [1.1121, 1.2200, 1.3230, 1.4556, 3.0948, 3.4439],
-        [1.1204, 1.2295, 1.3303, 1.4656, 3.1054, 3.4632],
-        [1.1309, 1.2347, 1.3378, 1.4693, 3.1165, 3.4717],
-        [1.1377, 1.2402, 1.3408, 1.4729, 3.1252, 3.4807]
-    ])
+    n = np.array(
+        [25, 50, 100, 150, 200, 250, 500, 1000, 2000, 3000, 4000, 5000]
+    )
+    crit = np.array(
+        [
+            [0.6626, 0.8126, 0.9192, 1.0712, 2.4863, 2.7312],
+            [0.7977, 0.9274, 1.0478, 1.1964, 2.6821, 2.9613],
+            [0.9070, 1.0243, 1.1412, 1.2888, 2.8317, 3.1393],
+            [0.9543, 1.0768, 1.1869, 1.3294, 2.8915, 3.2049],
+            [0.9833, 1.0984, 1.2101, 1.3494, 2.9308, 3.2482],
+            [0.9982, 1.1137, 1.2242, 1.3632, 2.9571, 3.2842],
+            [1.0494, 1.1643, 1.2712, 1.4076, 3.0207, 3.3584],
+            [1.0846, 1.1959, 1.2988, 1.4344, 3.0653, 3.4073],
+            [1.1121, 1.2200, 1.3230, 1.4556, 3.0948, 3.4439],
+            [1.1204, 1.2295, 1.3303, 1.4656, 3.1054, 3.4632],
+            [1.1309, 1.2347, 1.3378, 1.4693, 3.1165, 3.4717],
+            [1.1377, 1.2402, 1.3408, 1.4729, 3.1252, 3.4807],
+        ]
+    )
 
     # Interpolation for nobs
     inter_crit = np.zeros((1, crit.shape[1]))
@@ -2141,9 +2159,9 @@ def range_unit_root_test(x, store=False):
 
     rur_stat = count / np.sqrt(len(x))
 
-    k = len(pvals)-1
-    for i in range(len(pvals)-1,-1,-1):
-        if rur_stat < inter_crit[0,i]:
+    k = len(pvals) - 1
+    for i in range(len(pvals) - 1, -1, -1):
+        if rur_stat < inter_crit[0, i]:
             k = i
         else:
             break
@@ -2156,14 +2174,21 @@ look-up table. The actual p-value is {direction} than the p-value returned.
 """
     direction = ""
     if p_value == pvals[-1]:
-        direction="smaller"
+        direction = "smaller"
     elif p_value == pvals[0]:
-        direction="larger"
+        direction = "larger"
 
     if direction:
-        warnings.warn(warn_msg.format(direction=direction), InterpolationWarning)
+        warnings.warn(
+            warn_msg.format(direction=direction), InterpolationWarning
+        )
 
-    crit_dict = {"10%": inter_crit[0,3], "5%": inter_crit[0,2], "2.5%": inter_crit[0,1], "1%": inter_crit[0,0]}
+    crit_dict = {
+        "10%": inter_crit[0, 3],
+        "5%": inter_crit[0, 2],
+        "2.5%": inter_crit[0, 1],
+        "1%": inter_crit[0, 0],
+    }
 
     if store:
         from statsmodels.stats.diagnostic import ResultsStore
