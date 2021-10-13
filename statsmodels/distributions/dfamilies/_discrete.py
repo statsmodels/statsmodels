@@ -12,6 +12,13 @@ from scipy import stats, special
 from .base import DFamily
 
 
+try:
+    stats.betabinom
+except AttributeError:
+    # scipy < 1.4.0 does not have betabinom
+    stats.betabinom = None
+
+
 class BetaBinomialStd(DFamily):
     """BetaBinomial family with standard parameterization
     """

@@ -51,6 +51,8 @@ def test_dfamilies_basic(case):
         y = np.array([0.5, 1, 1.5])
 
     fam = fam()
+    if fam.distribution is None:
+        pytest.skip("scipy too old, version < 1.4.0")
     logpdf = fam.loglike_obs(y, *args, **dkwds)
     distr = fam.get_distribution(*args, **dkwds)
     if fam.domain.startswith("int"):
