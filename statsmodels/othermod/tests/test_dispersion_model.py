@@ -22,11 +22,15 @@ import patsy
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.genmod import families
 from statsmodels.genmod.families import links
+from statsmodels.distributions.dfamilies._continuous import (
+    Gaussian,
+    )
 from statsmodels.tools.tools import add_constant
 
 from statsmodels.regression.linear_model import WLS
 from statsmodels.miscmodels.tmodel import TLinearModel
-from statsmodels.othermod.base_model import MultiLinkModel
+from statsmodels.othermod.base_model import (
+    MultiLinkModel, _MultiLinkFamilyModel)
 import statsmodels.othermod.dispersion_model as odm
 from statsmodels.tools.sm_exceptions import (
     DomainWarning,
@@ -178,6 +182,28 @@ class TestTHet(CheckCompare):
         mod2 = TLinearModel(endog, exog)
         res2 = mod2.fit()
 
+        cls.res1 = res1
+        cls.res2 = res2
+        cls.k_mean = exog.shape[1]
+
+
+class TestGaussianFamily(CheckCompare):
+
+    @classmethod
+    def setup_class(cls):
+        endog = mm.m_marietta.copy()
+        # winsorize one outlier
+        endog[endog > 0.25] = 0.25
+        exog = add_constant(mm.CRSP)
+        # mod3 = TLinearModel(endog, exog)
+        # res3 = mod3.fit(method='bfgs', disp=False)
+
+        # dropping outlier observation to get comparable params
+        mod1 = odm.GaussianHet(endog, exog, exog_scale=exog, k_extra=0)
+        res1 = mod1.fit(method='bfgs', disp=False)
+        mod2 = _MultiLinkFamilyModel(endog, exog, exog_scale=exog,
+                                     dfamily=Gaussian())
+        res2 = mod2.fit(method='bfgs', disp=False)
         cls.res1 = res1
         cls.res2 = res2
         cls.k_mean = exog.shape[1]

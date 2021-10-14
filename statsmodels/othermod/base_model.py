@@ -228,3 +228,36 @@ class MultiLinkModel(GenericLikelihoodModel):
         linpred = np.dot(exog, params[:self.exog.shape[1]])
         m = self.link.inverse(linpred)
         return m
+
+
+class _MultiLinkFamilyModel(MultiLinkModel):
+    """Experimental class using DFamily
+    """
+
+    def __init__(self, endog, exog, exog_scale=None,
+                 exog_extras=None, dfamily=None, link=None,
+                 link_scale=families.links.Log(),
+                 link_extras=None, k_extra=None, **kwds):
+
+        if dfamily is None:
+            raise ValueError("dfamily is required")
+        if type(dfamily) is type:
+            # Note, difficult to debug if class is used
+            raise ValueError("dfamily needs to be an instance, not a class")
+
+        self.dfamily = dfamily
+
+        super().__init__(
+            endog, exog,
+            exog_scale=exog_scale,
+            exog_extras=exog_extras,
+            link=link,
+            link_scale=link_scale,
+            link_extras=link_extras,
+            k_extra=dfamily.k_args - 2,
+            **kwds)
+
+    def _loglikeobs(self, *dargs, endog=None):
+        # Todo: need `dkwargs` like n_trials in BetaBinomial
+        ll_obs = self.dfamily.loglike_obs(endog, *dargs)
+        return ll_obs

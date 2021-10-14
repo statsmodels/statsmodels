@@ -12,6 +12,12 @@ from scipy import special, stats
 from statsmodels.base.model import GenericLikelihoodModel
 from statsmodels.genmod import families
 from .base_model import MultiLinkModel
+from statsmodels.distributions.dfamilies._continuous import (
+    Gaussian, JohnsonSU,
+    )
+from statsmodels.distributions.dfamilies._restricted import (
+    Gamma,
+    )
 
 
 FLOAT_EPS = np.finfo(float).eps
@@ -24,6 +30,8 @@ sps_gamln = special.gammaln
 
 class GaussianHet(MultiLinkModel):
 
+    dfamily = Gaussian()
+
     def _loglikeobs(self, mu, scale, endog=None):
         ll_obs = -(endog - mu) ** 2 / scale
         ll_obs += -np.log(scale) - np.log(2 * np.pi)
@@ -32,6 +40,8 @@ class GaussianHet(MultiLinkModel):
 
 
 class Johnsonsu(MultiLinkModel):
+
+    dfamily = JohnsonSU()
 
     def _loglikeobs(self, mu, scale, *args, endog=None):
         if self.k_extra == 0:
@@ -42,6 +52,8 @@ class Johnsonsu(MultiLinkModel):
 
 
 class GammaHet(MultiLinkModel):
+
+    dfamily = Gamma()
 
     def _clean(self, x):
         """
