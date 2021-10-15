@@ -86,7 +86,7 @@ before_install:
   - if [ "$TRAVIS_OS_NAME" = "osx" ]; then pip install "pytest-xdist==1.29"; fi;
   - |
     if [ ${COVERAGE} = true ]; then
-        pip install codecov coverage coveralls pytest-cov
+        pip install coverage coveralls pytest-cov
         export COVERAGE_OPTS="--cov=statsmodels --cov-report="
         echo "Cython coverage:" ${SM_CYTHON_COVERAGE}
     else
@@ -122,4 +122,9 @@ script:
 
 after_success:
   - if [[ ${COVERAGE} = true ]]; then coveralls; fi
-  - if [[ ${COVERAGE} = true ]]; then codecov; fi
+  - |
+    if [[ ${COVERAGE} = true ]]; then
+      curl -Os https://uploader.codecov.io/latest/linux/codecov
+      chmod +x codecov
+      ./codecov
+    fi
