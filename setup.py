@@ -35,6 +35,12 @@ except ImportError:
 
     HAS_CYTHON = False
 
+try:
+    import numpy  # noqa: F401
+
+    HAS_NUMPY = True
+except ImportError:
+    HAS_NUMPY = False
 
 ###############################################################################
 # Key Values that Change Each Release
@@ -198,6 +204,28 @@ Use one of:
         sys.exit(1)
 
 
+def update_extension(extension, requires_math=True):
+    import numpy  # noqa: F811
+    from numpy.distutils.log import set_verbosity
+    from numpy.distutils.misc_util import get_info
+    set_verbosity(1)
+
+    numpy_includes = [numpy.get_include()]
+    extra_incl = pkg_resources.resource_filename('numpy', 'core/include')
+    numpy_includes += [extra_incl]
+    numpy_includes = list(set(numpy_includes))
+    numpy_math_libs = get_info('npymath')
+
+    if not hasattr(extension, 'include_dirs'):
+        return
+    extension.include_dirs = list(set(extension.include_dirs +
+                                      numpy_includes))
+    if requires_math:
+        extension.include_dirs += numpy_math_libs['include_dirs']
+        extension.libraries += numpy_math_libs['libraries']
+        extension.library_dirs += numpy_math_libs['library_dirs']
+
+
 class DeferredBuildExt(build_ext):
     """build_ext command for use when numpy headers are needed."""
 
@@ -206,30 +234,14 @@ class DeferredBuildExt(build_ext):
         build_ext.build_extensions(self)
 
     def _update_extensions(self):
-        import numpy
-        from numpy.distutils.log import set_verbosity
-        from numpy.distutils.misc_util import get_info
-        set_verbosity(1)
-
-        numpy_includes = [numpy.get_include()]
-        extra_incl = pkg_resources.resource_filename('numpy', 'core/include')
-        numpy_includes += [extra_incl]
-        numpy_includes = list(set(numpy_includes))
-        numpy_math_libs = get_info('npymath')
-
         for extension in self.extensions:
-            if not hasattr(extension, 'include_dirs'):
-                continue
-            extension.include_dirs = list(set(extension.include_dirs +
-                                              numpy_includes))
-            if extension.name in EXT_REQUIRES_NUMPY_MATH_LIBS:
-                extension.include_dirs += numpy_math_libs['include_dirs']
-                extension.libraries += numpy_math_libs['libraries']
-                extension.library_dirs += numpy_math_libs['library_dirs']
+            requires_math = extension.name in EXT_REQUIRES_NUMPY_MATH_LIBS
+            update_extension(extension, requires_math=requires_math)
 
 
 cmdclass = versioneer.get_cmdclass()
-cmdclass['build_ext'] = DeferredBuildExt
+if not HAS_NUMPY:
+    cmdclass['build_ext'] = DeferredBuildExt
 cmdclass['clean'] = CleanCommand
 
 
@@ -299,6 +311,11 @@ for source in statespace_exts:
                     libraries=[], library_dirs=[],
                     define_macros=DEFINE_MACROS)
     extensions.append(ext)
+
+if HAS_NUMPY:
+    for extension in extensions:
+        requires_math = extension.name in EXT_REQUIRES_NUMPY_MATH_LIBS
+        update_extension(extension, requires_math=requires_math)
 
 if HAS_CYTHON:
     extensions = cythonize(extensions, compiler_directives=COMPILER_DIRECTIVES,
