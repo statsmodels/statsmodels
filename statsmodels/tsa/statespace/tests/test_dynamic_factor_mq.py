@@ -1895,8 +1895,8 @@ def test_standardized_MQ(reset_randomstate, idiosyncratic_ar1):
     endog2_M, endog2_Q, f2 = test_dynamic_factor_mq_monte_carlo.gen_k_factor2(
         nobs, k=k2, idiosyncratic_ar1=idiosyncratic_ar1)
 
-    endog_M = pd.concat([endog1_M, f2, endog2_M], axis=1)
-    endog_Q = pd.concat([endog1_Q, endog2_Q], axis=1)
+    endog_M = pd.concat([endog1_M, f2, endog2_M], axis=1, sort=True)
+    endog_Q = pd.concat([endog1_Q, endog2_Q], axis=1, sort=True)
 
     endog_M1 = endog_M.loc[:'1957-12']
     endog_Q1 = endog_Q.loc[:'1957Q4']
