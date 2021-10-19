@@ -138,10 +138,10 @@ def lowess(np.ndarray[DTYPE_t, ndim = 1] endog,
 
     """
     cdef:
-        Py_ssize_t n, j
+        Py_ssize_t j
         int k
         Py_ssize_t robiter, i, left_end, right_end
-        np.npy_intp out_n, last_fit_i
+        np.npy_intp n, out_n, last_fit_i
         np.ndarray[DTYPE_t, ndim = 1] x, y
         np.ndarray[DTYPE_t, ndim = 1] y_fit
         np.ndarray[DTYPE_t, ndim = 1] weights
@@ -154,8 +154,8 @@ def lowess(np.ndarray[DTYPE_t, ndim = 1] endog,
     if not 0 <= frac <= 1:
            raise ValueError("Lowess `frac` must be in the range [0,1]!")
 
-    n = x.shape[0]
-    out_n = xvals.shape[0]
+    n = np.PyArray_DIMS(x)[0]
+    out_n = np.PyArray_DIMS(xvals)[0]
 
     # The number of neighbors in each regression.
     # round up if close to integer
