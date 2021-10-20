@@ -2508,12 +2508,12 @@ class ZivotAndrewsUnitRoot(object):
         cvdict : dict
             The critical values for the test statistic at the 1%, 5%, and 10%
             levels.
+        baselag : int
+            The number of lags used for period regressions.
         bpidx : int
             The index of x corresponding to endogenously calculated break period
             with values in the range [0..nobs-1].
-        baselag : int
-            The number of lags used for period regressions.
-
+        
         Notes
         -----
         H0 = unit root with a single structural break
