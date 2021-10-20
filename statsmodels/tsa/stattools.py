@@ -2513,7 +2513,7 @@ class ZivotAndrewsUnitRoot(object):
         bpidx : int
             The index of x corresponding to endogenously calculated break period
             with values in the range [0..nobs-1].
-        
+
         Notes
         -----
         H0 = unit root with a single structural break
