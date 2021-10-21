@@ -82,6 +82,8 @@ class MultiLinkModel(GenericLikelihoodModel):
                     self.k_params_li.append(exog_extras[i].shape[1])
 
         self.k_params_cumli = np.cumsum(self.k_params_li).tolist()
+        self.k_params = self.k_params_cumli[-1]
+        self.nparams = self.k_params  # TODO: old attribute
         self.exog_extras = exog_extras
 
         for i in range(self.k_extra):
@@ -104,7 +106,8 @@ class MultiLinkModel(GenericLikelihoodModel):
         # not needed, handled by super:
         # self.exog_scale = exog_scale
 
-        self.df_model = self.nparams - 1
+        self.df_null = 2 + self.k_extra
+        self.df_model = self.k_params - self.df_null
         self.df_resid = self.nobs - self.nparams
         # need to fix, used for start_params,
         # self.k_vars = self.exog.shape[1] + self.exog_scale.shape[1]
@@ -123,8 +126,8 @@ class MultiLinkModel(GenericLikelihoodModel):
     def initialize(self):
         # TODO: here or in __init__
         self.k_vars = self.exog.shape[1]
-        self.k_params = (self.exog.shape[1] + self.exog_scale.shape[1] +
-                         self.k_extra)
+        # self.k_params = (self.exog.shape[1] + self.exog_scale.shape[1] +
+        #                  self.k_extra)
         self.fixed_params = None
         super().initialize()
 

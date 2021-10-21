@@ -13,7 +13,7 @@ from statsmodels.tools.testing import Holder
 # regression numbers during development
 res = {
  'nobs': 500,
- 'df_model': 4,
+ 'df_model': 1,
  'df_resid': 495,
  'llf': -930.6435448892571,
  'df_modelwc': 5,
