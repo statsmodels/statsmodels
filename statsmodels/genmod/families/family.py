@@ -390,14 +390,14 @@ class Poisson(Family):
     statsmodels.genmod.families.family.Family : Parent class for all links.
     :ref:`links` : Further details on links.
     """
-    links = [L.log, L.identity, L.sqrt]
+    links = [L.Log, L.identity, L.sqrt]
     variance = V.mu
     valid = [0, np.inf]
     safe_links = [L.Log, ]
 
     def __init__(self, link=None):
         if link is None:
-            link = L.log()
+            link = L.Log()
         super(Poisson, self).__init__(link=link, variance=Poisson.variance)
 
     def _resid_dev(self, endog, mu):
@@ -539,7 +539,7 @@ class Gaussian(Family):
     :ref:`links` : Further details on links.
     """
 
-    links = [L.log, L.identity, L.inverse_power]
+    links = [L.Log, L.identity, L.inverse_power]
     variance = V.constant
     safe_links = links
 
@@ -704,7 +704,7 @@ class Gamma(Family):
     statsmodels.genmod.families.family.Family : Parent class for all links.
     :ref:`links` : Further details on links.
     """
-    links = [L.log, L.identity, L.inverse_power]
+    links = [L.Log, L.identity, L.inverse_power]
     variance = V.mu_squared
     safe_links = [L.Log, ]
 
@@ -875,7 +875,7 @@ class Binomial(Family):
     number of trials for each row.
     """
 
-    links = [L.logit, L.probit, L.cauchy, L.log, L.cloglog, L.loglog,
+    links = [L.Logit, L.probit, L.cauchy, L.Log, L.CLogLog, L.LogLog,
              L.identity]
     variance = V.binary  # this is not used below in an effort to include n
 
@@ -884,7 +884,7 @@ class Binomial(Family):
 
     def __init__(self, link=None):  # , n=1.):
         if link is None:
-            link = L.logit()
+            link = L.Logit()
         # TODO: it *should* work for a constant n>1 actually, if freq_weights
         # is equal to n
         self.n = 1
@@ -1134,7 +1134,7 @@ class InverseGaussian(Family):
     literature as the Wald distribution.
     """
 
-    links = [L.inverse_squared, L.inverse_power, L.identity, L.log]
+    links = [L.inverse_squared, L.inverse_power, L.identity, L.Log]
     variance = V.mu_cubed
     safe_links = [L.inverse_squared, L.Log, ]
 
@@ -1302,7 +1302,7 @@ class NegativeBinomial(Family):
 
     with :math:`E[Y]=\mu\,` and :math:`Var[Y]=\mu+\alpha\mu^2`.
     """
-    links = [L.log, L.cloglog, L.identity, L.nbinom, L.Power]
+    links = [L.Log, L.CLogLog, L.identity, L.NegativeBinomial, L.Power]
     # TODO: add the ability to use the power links with an if test
     # similar to below
     variance = V.nbinom
@@ -1311,7 +1311,7 @@ class NegativeBinomial(Family):
     def __init__(self, link=None, alpha=1.):
         self.alpha = 1. * alpha  # make it at least float
         if link is None:
-            link = L.log()
+            link = L.Log()
         super(NegativeBinomial, self).__init__(
             link=link, variance=V.NegativeBinomial(alpha=self.alpha))
 
@@ -1508,9 +1508,9 @@ class Tweedie(Family):
     estimated using the ``estimate_tweedie_power`` function that is part of the
     statsmodels.genmod.generalized_linear_model.GLM class.
     """
-    links = [L.log, L.Power]
+    links = [L.Log, L.Power]
     variance = V.Power(power=1.5)
-    safe_links = [L.log, L.Power]
+    safe_links = [L.Log, L.Power]
 
     def __init__(self, link=None, var_power=1., eql=False):
         self.var_power = var_power
@@ -1519,7 +1519,7 @@ class Tweedie(Family):
             raise ValueError("Tweedie: if EQL=True then var_power must fall "
                              "between 1 and 2")
         if link is None:
-            link = L.log()
+            link = L.Log()
         super(Tweedie, self).__init__(
             link=link, variance=V.Power(power=var_power * 1.))
 
