@@ -727,25 +727,25 @@ def dispersion_poisson(results):
     description.append(['CT nb1', 'mu (1 + a)'])
 
     endog_v = var_resid_endog / fitted
-    res_ols_nb2 = OLS(endog_v, fitted).fit(cov_type='HC1', use_t=False)
+    res_ols_nb2 = OLS(endog_v, fitted).fit(cov_type='HC3', use_t=False)
     stat_ols_hc1_nb2 = res_ols_nb2.tvalues[0]
     pval_ols_hc1_nb2 = res_ols_nb2.pvalues[0]
     results_all.append([stat_ols_hc1_nb2, pval_ols_hc1_nb2])
-    description.append(['CT nb2 HC1', 'mu (1 + a mu)'])
+    description.append(['CT nb2 HC3', 'mu (1 + a mu)'])
 
-    res_ols_nb1 = OLS(endog_v, np.ones(len(endog_v))).fit(cov_type='HC1',
+    res_ols_nb1 = OLS(endog_v, np.ones(len(endog_v))).fit(cov_type='HC3',
                                                           use_t=False)
     stat_ols_hc1_nb1 = res_ols_nb1.tvalues[0]
     pval_ols_hc1_nb1 = res_ols_nb1.pvalues[0]
     results_all.append([stat_ols_hc1_nb1, pval_ols_hc1_nb1])
-    description.append(['CT nb1 HC1', 'mu (1 + a)'])
+    description.append(['CT nb1 HC3', 'mu (1 + a)'])
 
     return np.array(results_all), description
 
 
 def dispersion_poisson_generic(results, exog_new_test, exog_new_control=None,
                                include_score=False, use_endog=True,
-                               cov_type='HC1', cov_kwds=None, use_t=False):
+                               cov_type='HC3', cov_kwds=None, use_t=False):
     """A variable addition test for the variance function
 
     This uses an artificial regression to calculate a variant of an LM or
@@ -789,7 +789,7 @@ def dispersion_poisson_generic(results, exog_new_test, exog_new_control=None,
         use_wald = False
 
     res_ols = OLS(endog_v, ex).fit(cov_type=cov_type, cov_kwds=cov_kwds,
-                  use_t=use_t)
+                                   use_t=use_t)
 
     if use_wald:
         # we have controls and need to test coefficients
