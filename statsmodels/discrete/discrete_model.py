@@ -833,7 +833,7 @@ class CountModel(DiscreteModel):
         return kwds
 
     def predict(self, params, exog=None, exposure=None, offset=None,
-                linear=False):
+                which='mean', linear=None):
         """
         Predict response variable of a count model given exogenous variables
 
@@ -862,6 +862,12 @@ class CountModel(DiscreteModel):
         If exposure is specified, then it will be logged by the method.
         The user does not need to log it first.
         """
+        if linear is not None:
+            msg = 'linear keyword is deprecated, use which="linear"'
+            warnings.warn(msg, DeprecationWarning)
+            if linear is True:
+                which = "linear"
+
         # the following is copied from GLM predict (without family/link check)
         # Use fit offset if appropriate
         if offset is None and exog is None and hasattr(self, 'offset'):
@@ -883,10 +889,12 @@ class CountModel(DiscreteModel):
 
         fitted = np.dot(exog, params[:exog.shape[1]])
         linpred = fitted + exposure + offset
-        if not linear:
-            return np.exp(linpred) # not cdf
-        else:
+        if which == "mean":
+            return np.exp(linpred)
+        elif which.startswith("lin"):
             return linpred
+        else:
+            raise ValueError('keyword which has to be "mean" and "linear"')
 
     def _derivative_predict(self, params, exog=None, transform='dydx'):
         """
@@ -1425,6 +1433,30 @@ class Poisson(CountModel):
         """
         return self.exog
 
+    def predict(self, params, exog=None, exposure=None, offset=None,
+                which='mean', linear=None, n=None):
+
+        if which.startswith("lin"):
+            which = "linear"
+        if which in ["mean", "linear"]:
+            return super().predict(params, exog=exog, exposure=exposure,
+                                   offset=offset,
+                                   which=which, linear=linear)
+        # TODO: add full set of which
+        if which == "prob":
+            if n is not None:
+                counts = np.atleast_2d(n)
+            else:
+                counts = np.atleast_2d(
+                    np.arange(0, np.max(self.endog) + 1))
+            mu = self.predict(params, exog=exog,
+                              exposure=exposure, offset=offset,
+                              )[:, None]
+            # uses broadcasting
+            return stats.poisson.pmf(counts, mu)
+
+        return res
+
 
 class GeneralizedPoisson(CountModel):
     __doc__ = """
@@ -1808,7 +1840,7 @@ class GeneralizedPoisson(CountModel):
 
         Notes
         -----
-        If exposure is specified, then it will be logged by the method.
+        If exposure is specified, then it will be log tranformed by the method.
         The user does not need to log it first.
         """
         if exog is None:
@@ -3542,9 +3574,6 @@ class NegativeBinomialP(CountModel):
             it assumed to be 1 row of exogenous variables. If you only have
             one regressor and would like to do prediction, you must provide
             a 2d array with shape[1] == 1.
-        linear : bool, optional
-            If True, returns the linear predictor dot(exog,params).  Else,
-            returns the value of the cdf at the linear predictor.
         offset : array_like, optional
             Offset is added to the linear prediction with coefficient equal to 1.
         exposure : array_like, optional
@@ -3577,11 +3606,11 @@ class NegativeBinomialP(CountModel):
             return np.exp(linpred)
         elif which == 'linear':
             return linpred
-        elif which =='prob':
+        elif which == 'prob':
             counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
             mu = self.predict(params, exog, exposure, offset)
             size, prob = self.convert_params(params, mu)
-            return nbinom.pmf(counts, size[:,None], prob[:,None])
+            return nbinom.pmf(counts, size[:, None], prob[:, None])
         else:
             raise ValueError('keyword "which" = %s not recognized' % which)
 
@@ -4101,6 +4130,7 @@ class L1CountResults(DiscreteResults):
 
         self.df_model = self.nnz_params - 1 - k_extra
         self.df_resid = float(self.model.endog.shape[0] - self.nnz_params) + k_extra
+
 
 class PoissonResults(CountResults):
 

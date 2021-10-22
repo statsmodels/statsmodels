@@ -71,13 +71,14 @@ class PoissonDiagnostic(CountDiagnostic):
         if sort_var is None:
             sort_var = self.results.predict(which="lin")
 
-        endog = self.model.endog
+        endog = self.results.model.endog
         # not sure yet how this is supposed to work
         # max_count = endog.max * 2
         # no option for max count in predict
         # counts = (endog == np.arange(max_count)).astype(int)
         expected = self.results.predict(which="prob")
-        counts = (endog == np.arange(expected.shape[1])).astype(int)
+        expected[:, -1] += 1 - expected.sum(1)
+        counts = (endog[:, None] == np.arange(expected.shape[1])).astype(int)
         # we should correct for or include truncated upper bin
 
         # TODO: what's the correct df, same as for multinomial/ordered ?
@@ -92,7 +93,9 @@ class PoissonDiagnostic(CountDiagnostic):
         """plot observed versus predicted frequencies for entire sample
         """
         probs_predicted = self.probs_predicted.sum(0)
-        freq = np.bincount(self.model.endog, minlength=len(probs_predicted))
-        fig = plot_probs(freq, label='predicted', upp_xlim=None,
+        freq = np.bincount(self.results.model.endog.astype(int),
+                           minlength=len(probs_predicted))
+        fig = plot_probs(freq, probs_predicted,
+                         label='predicted', upp_xlim=None,
                          fig=None)
         return fig

@@ -32,6 +32,8 @@ def _combine_bins(edge_index, x):
     Returns
     -------
     x_new : ndarray
+    k_li : ndarray
+        Count of columns combined in bin.
 
 
     Examples
@@ -180,6 +182,7 @@ def test_chisquare_prob(results, probs, bin_edges=None, method=None):
     if bin_edges is not None:
         d_ind_bins, k_bins = _combine_bins(bin_edges, d_ind)
         probs_bins, k_bins = _combine_bins(bin_edges, probs)
+        k_bins = probs_bins.shape[-1]
     else:
         d_ind_bins, k_bins = d_ind, d_ind.shape[1]
         probs_bins = probs
@@ -194,7 +197,9 @@ def test_chisquare_prob(results, probs, bin_edges=None, method=None):
     if df < k_bins - 1:
         # not a problem in general, but it can be for OPG version
         import warnings
+        # TODO: Warning shows up in Monte Carlo loop, skip for now
         warnings.warn('auxiliary model is rank deficient')
+
     extras = (diff1, res_aux)
     return chi2_stat, stats.chi2.sf(chi2_stat, df), df, extras
 
