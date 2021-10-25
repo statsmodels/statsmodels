@@ -7,17 +7,27 @@ License: BSD-3
 
 """
 
+import warnings
+
 import numpy as np
 
 from statsmodels.tools.decorators import cache_readonly
 
 from statsmodels.stats._diagnostic_other import (
-        dispersion_poisson, dispersion_poisson_generic)
+    dispersion_poisson,
+    # dispersion_poisson_generic,
+    )
+
 from statsmodels.stats.diagnostic_gen import (
-        test_chisquare_binning)
+    test_chisquare_binning
+    )
 from statsmodels.discrete._diagnostics_count import (
-        test_poisson_zeroinflation, test_poisson_zeroinflation_brock,
-        test_chisquare_prob, plot_probs)
+    test_poisson_zeroinflation_jh,
+    test_poisson_zeroinflation_broek,
+    test_poisson_zeros,
+    test_chisquare_prob,
+    plot_probs
+    )
 
 
 class CountDiagnostic(object):
@@ -46,16 +56,106 @@ class PoissonDiagnostic(CountDiagnostic):
         res = dispersion_poisson(self.results)
         return res
 
-    def test_poisson_zeroinflation(self, exog_infl=None):
-        res = test_poisson_zeroinflation(self.results, exog_infl=exog_infl)
-        return res
+    def test_poisson_zeroinflation(self, method="prob", exog_infl=None):
+        """Test for excess zeros, zero inflation or deflation.
 
-    def test_poisson_zeroinflation_brock(self):
-        res = test_poisson_zeroinflation_brock(self.results)
+        Parameters
+        ----------
+        method : str
+            Three methods ara available for the test:
+
+             = "prob" ; moment test for the probability of zeros
+             - "broek" : score test against zero inflation with or without
+                explanatory variables for inflation
+
+        exog_infl : array_like or None
+            Optional explanatory variables under the alternative of zero
+            inflation, or deflation. Only used if method is "broek".
+
+        Returns
+        -------
+        results
+
+        Notes
+        -----
+        If method = "prob", then the moment test of He et al 1_ is used based
+        on the explicit formula in Tang and Tang 2_.
+
+        If method = "broek" and exog_infl is None, then the test by Van den
+        Broek 3_ is used. This is a score test against and alternative of
+        constant zero inflation or deflation.
+
+        If method = "broek" and exog_infl is provided, then the extension of
+        the broek test to varying zero inflation or deflatio by Jansakul and
+        Hinde is used.
+
+        Warning: The Broek test and the Jansakul and Hinde version are not
+        stabke when the probability of zeros in Poiss is small, i.e. if the
+        conditional means of the estimated Poisson distribution are large.
+
+        """
+        if method == "prob":
+            if exog_infl is not None:
+                warnings.warn('exog_infl is only used if method = "broek"')
+            res = test_poisson_zeros(self.results)
+        elif method == "broek":
+            if exog_infl is None:
+                res = test_poisson_zeroinflation_broek(self.results)
+            else:
+                exog_infl = np.asarray(exog_infl)
+                if exog_infl.ndim == 1:
+                    exog_infl = exog_infl[:, None]
+                res = test_poisson_zeroinflation_jh(self.results,
+                                                    exog_infl=exog_infl)
+
         return res
 
     def test_chisquare_prob(self, bin_edges=None, method=None):
-        """moment test for binned probabilites using OPG
+        """Moment test for binned probabilites using OPG.
+
+        Paramters
+        ---------
+        binedges : array_like or None
+            This defines which counts are included in the test on frequencies
+            and how counts are combined in bins.
+            The default if bin_edges is None will change in future.
+            See Notes and Example sections below.
+        method : str
+            Currently only `method = "opg"` is available.
+            If method is None, the OPG will be used, but the default might
+            change in future versions.
+            See Notes section below.
+
+        Notes
+        -----
+        Warning: The current default can have many empty or nearly empty bins.
+        The default number of bins is given by max(endog).
+        Currently it is recommended to limit the nuber of bins explicitly, s
+        ee Examples below.
+        Binning will change in future and automatic binning will be added.
+
+        Currently only the outer product of gradient, OPG, method is
+        implemented. In many case, the OPG version of a specification test
+        overrejects in small samples.
+        Specialized tests that use observed or expected information matrix
+        often have better small sample properties.
+        The default method will change if better methods are added.
+
+        Examples
+        --------
+        The following call is a test for the probability of zeros
+        `test_chisquare_prob(bin_edges=np.arange(3))`
+
+        `test_chisquare_prob(bin_edges=np.arange(10))` tests the hypothesis
+        that the frequences for counts up to 7 correspond to the estimated
+        Poisson distributions.
+        In this case, edges are 0, ..., 9 which defines 9 bins for
+        counts 0 to 8. The last bin is dropped, so the joint test hypothesis is
+        that the observed aggregated frequencies for counts 0 to 7 correspond
+        to the Poisson prediction for those grequencies. Predicted probabilites
+        Prob(y_i = k | x) are aggregated over observations ``i``.
+
+
         """
         probs = self.results.predict(which="prob")
         res = test_chisquare_prob(self.results, probs, bin_edges=bin_edges,

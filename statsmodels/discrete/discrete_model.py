@@ -1455,8 +1455,6 @@ class Poisson(CountModel):
             # uses broadcasting
             return stats.poisson.pmf(counts, mu)
 
-        return res
-
 
 class GeneralizedPoisson(CountModel):
     __doc__ = """

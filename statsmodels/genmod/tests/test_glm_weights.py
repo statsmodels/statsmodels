@@ -36,7 +36,6 @@ import pytest
 import statsmodels.api as sm
 # load data into module namespace
 from statsmodels.datasets.cpunish import load
-from statsmodels.discrete import discrete_model as discrete
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.tools.sm_exceptions import SpecificationWarning
 from statsmodels.tools.tools import add_constant

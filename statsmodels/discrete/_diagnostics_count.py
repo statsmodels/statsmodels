@@ -175,6 +175,19 @@ def test_chisquare_prob(results, probs, bin_edges=None, method=None):
 
     Auxiliary regression drops the last column of binned probs to avoid
     that probabilities sum to 1.
+
+    References
+    ----------
+    Andrews, Donald W. K. 1988a. “Chi-Square Diagnostic Tests for Econometric
+    Models: Theory.” Econometrica 56 (6): 1419–53.
+    https://doi.org/10.2307/1913105.
+
+    Andrews, Donald W. K. 1988b. “Chi-Square Diagnostic Tests for Econometric
+    Models.” Journal of Econometrics 37 (1): 135–56.
+    https://doi.org/10.1016/0304-4076(88)90079-6.
+
+    Manjón, M., and O. Martínez. 2014. “The Chi-Squared Goodness-of-Fit  Test
+    for Count-Data Models.” Stata Journal 14 (4): 798–816.
     """
     res = results
     score_obs = results.model.score_obs(results.params)
@@ -204,7 +217,7 @@ def test_chisquare_prob(results, probs, bin_edges=None, method=None):
     return chi2_stat, stats.chi2.sf(chi2_stat, df), df, extras
 
 
-def test_poisson_zeroinflation(results_poisson, exog_infl=None):
+def test_poisson_zeroinflation_jh(results_poisson, exog_infl=None):
     """score test for zero inflation or deflation in Poisson
 
     This implements Jansakul and Hinde 2009 score test
@@ -245,10 +258,13 @@ def test_poisson_zeroinflation(results_poisson, exog_infl=None):
     distinguish zero inflation and deflation from the
     two-sided deviations. (The general one-sided case is
     difficult.)
+    In this case the test specializes to the test by Broek
 
     References
     ----------
-    Jansakul and Hinde 2009
+    Jansakul, N., and J. P. Hinde. 2002. “Score Tests for Zero-Inflated Poisson
+    Models.” Computational Statistics & Data Analysis 40 (1): 75–96.
+    https://doi.org/10.1016/S0167-9473(01)00104-9.
     """
     if not isinstance(results_poisson.model, Poisson):
         # GLM Poisson would be also valid, not tried
@@ -282,17 +298,23 @@ def test_poisson_zeroinflation(results_poisson, exog_infl=None):
     return statistic, pvalue, df, df2
 
 
-def test_poisson_zeroinflation_brock(results_poisson):
+def test_poisson_zeroinflation_broek(results_poisson):
     """score test for zero modification in Poisson, special case
 
     This assumes that the Poisson model has a constant and that
     the zero modification probability is constant.
 
     This is a special case of test_poisson_zeroinflation derived by
-    van den Brock 1995.
+    van den Broek 1995.
 
     The test reports two sided and one sided alternatives based on
     the normal distribution of the test statistic.
+
+    References
+    ----------
+    Broek, Jan van den. 1995. “A Score Test for Zero Inflation in a Poisson
+    Distribution.” Biometrics 51 (2): 738–43. https://doi.org/10.2307/2532959.
+
     """
 
     mu = results_poisson.predict()
@@ -300,10 +322,45 @@ def test_poisson_zeroinflation_brock(results_poisson):
     endog = results_poisson.model.endog
     nobs = len(endog)
 
-    score =  ((endog == 0) / prob_zero).sum() - nobs
-    var_score = (1 / prob_zero).sum() - nobs - endog.sum()
+    # score =  ((endog == 0) / prob_zero).sum() - nobs
+    # var_score = (1 / prob_zero).sum() - nobs - endog.sum()
+    score = (((endog == 0) - prob_zero) / prob_zero).sum()
+    var_score = ((1 - prob_zero) / prob_zero).sum() - endog.sum()
     statistic = score / np.sqrt(var_score)
     pvalue_two = 2 * stats.norm.sf(np.abs(statistic))
     pvalue_upp = stats.norm.sf(statistic)
     pvalue_low = stats.norm.cdf(statistic)
     return statistic, pvalue_two, pvalue_upp, pvalue_low, stats.chi2.sf(statistic**2, 1)
+
+
+def test_poisson_zeros(results):
+    """Test for excess zeros in Poisson regression model.
+
+    The test is implemented following Tang and Tang equ. (12) which is based
+    on the test derived in He et al 2019.
+
+    References
+    ----------
+
+    Tang, Yi, and Wan Tang. 2018. “Testing Modified Zeros for Poisson
+    Regression Models:” Statistical Methods in Medical Research, September.
+    https://doi.org/10.1177/0962280218796253.
+
+    He, Hua, Hui Zhang, Peng Ye, and Wan Tang. 2019. “A Test of Inflated Zeros
+    for Poisson Regression Models.” Statistical Methods in Medical Research 28
+    (4): 1157–69. https://doi.org/10.1177/0962280217749991.
+
+    """
+    x = results.model.exog
+    mean = results.predict()
+    prob0 = np.exp(-mean)
+    counts = (results.model.endog == 0).astype(int)
+    diff = counts.sum() - prob0.sum()
+    var1 = prob0 @ (1 - prob0)
+    pm = prob0 * mean
+    c = np.linalg.inv(x.T * mean @ x)
+    pmx = pm @ x
+    var2 = pmx @ c @ pmx
+    var = var1 - var2
+    statistic = diff / np.sqrt(var)
+    return statistic, 2 * stats.norm.sf(np.abs(statistic))
