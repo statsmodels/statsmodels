@@ -2,11 +2,11 @@ import numpy as np
 import pandas as pd
 from scipy.special import inv_boxcox
 from scipy.stats import (
-    _distn_infrastructure,
     boxcox,
     rv_continuous,
     rv_discrete,
 )
+from scipy.stats.distributions import rv_frozen
 
 from statsmodels.base.data import PandasData
 from statsmodels.base.model import Results
@@ -710,7 +710,7 @@ class HoltWintersResults(Results):
         elif isinstance(random_errors, (rv_continuous, rv_discrete)):
             params = random_errors.fit(resid)
             eps = random_errors.rvs(*params, size=(nsimulations, repetitions))
-        elif isinstance(random_errors, _distn_infrastructure.rv_frozen):
+        elif isinstance(random_errors, rv_frozen):
             eps = random_errors.rvs(size=(nsimulations, repetitions))
         else:
             raise ValueError("Argument random_errors has unexpected value!")

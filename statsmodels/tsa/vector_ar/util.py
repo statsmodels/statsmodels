@@ -7,8 +7,7 @@ from statsmodels.compat.python import asbytes
 
 import numpy as np
 import pandas as pd
-import scipy.linalg.decomp as decomp
-import scipy.stats as stats
+from scipy import stats, linalg
 
 import statsmodels.tsa.tsatools as tsa
 
@@ -269,7 +268,7 @@ def eigval_decomp(sym_array):
     k: largest eigenvector
     """
     #check if symmetric, do not include shock period
-    eigva, W = decomp.eig(sym_array, left=True, right=False)
+    eigva, W = linalg.eig(sym_array, left=True, right=False)
     k = np.argmax(eigva)
     return W, eigva, k
 
