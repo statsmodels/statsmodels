@@ -261,7 +261,7 @@ class TestInfluenceLogitCompare(InfluenceCompareExact):
         res2 = mod2.fit(method="newton", tol=1e-10)
 
         cls.infl1 = res.get_influence()
-        cls.infl0 = MLEInfluence(res2)
+        cls.infl0 = res2.get_influence()
 
 
 class TestInfluencePoissonCompare(InfluenceCompareExact):
@@ -278,4 +278,4 @@ class TestInfluencePoissonCompare(InfluenceCompareExact):
         res2 = mod2.fit(tol=1e-10)
 
         cls.infl0 = res.get_influence()
-        cls.infl1 = MLEInfluence(res2)
+        cls.infl1 = res2.get_influence()

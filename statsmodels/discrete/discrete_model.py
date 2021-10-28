@@ -2054,7 +2054,7 @@ class Logit(BinaryModel):
 
     def score_factor(self, params):
         """
-        Poisson model score_factor for each observation
+        Logit model score_factor for each observation
 
         Parameters
         ----------
@@ -4205,6 +4205,23 @@ class PoissonResults(CountResults):
         p = self.predict()  # fittedvalues is still linear
         return (self.model.endog - p)/np.sqrt(p)
 
+    def get_influence(self):
+        """
+        Get an instance of MLEInfluence with influence and outlier measures
+
+        Returns
+        -------
+        infl : MLEInfluence instance
+            The instance has methods to calculate the main influence and
+            outlier measures as attributes.
+
+        See Also
+        --------
+        statsmodels.stats.outliers_influence.MLEInfluence
+        """
+        from statsmodels.stats.outliers_influence import MLEInfluence
+        return MLEInfluence(self)
+
 
 class L1PoissonResults(L1CountResults, PoissonResults):
     pass
@@ -4394,6 +4411,23 @@ class LogitResults(BinaryResults):
                                       pred_kwds=pred_kwds)
 
         return res
+
+    def get_influence(self):
+        """
+        Get an instance of MLEInfluence with influence and outlier measures
+
+        Returns
+        -------
+        infl : MLEInfluence instance
+            The instance has methods to calculate the main influence and
+            outlier measures as attributes.
+
+        See Also
+        --------
+        statsmodels.stats.outliers_influence.MLEInfluence
+        """
+        from statsmodels.stats.outliers_influence import MLEInfluence
+        return MLEInfluence(self)
 
 
 class ProbitResults(BinaryResults):

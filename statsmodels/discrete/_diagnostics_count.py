@@ -8,6 +8,7 @@ Author: Josef Perktold
 import numpy as np
 from scipy import stats
 
+from statsmodels.stats.base import HolderTuple
 from statsmodels.discrete.discrete_model import Poisson
 from statsmodels.regression.linear_model import OLS
 
@@ -169,7 +170,6 @@ def test_chisquare_prob(results, probs, bin_edges=None, method=None):
     Status : experimental, no verified unit tests, needs to be generalized
     currently only OPG version with auxiliary regression is implemented
 
-
     Assumes counts are np.arange(probs.shape[1]), i.e. consecutive
     integers starting at zero.
 
@@ -178,16 +178,16 @@ def test_chisquare_prob(results, probs, bin_edges=None, method=None):
 
     References
     ----------
-    Andrews, Donald W. K. 1988a. “Chi-Square Diagnostic Tests for Econometric
-    Models: Theory.” Econometrica 56 (6): 1419–53.
-    https://doi.org/10.2307/1913105.
+    .. [1] Andrews, Donald W. K. 1988a. “Chi-Square Diagnostic Tests for
+           Econometric Models: Theory.” Econometrica 56 (6): 1419–53.
+           https://doi.org/10.2307/1913105.
 
-    Andrews, Donald W. K. 1988b. “Chi-Square Diagnostic Tests for Econometric
-    Models.” Journal of Econometrics 37 (1): 135–56.
-    https://doi.org/10.1016/0304-4076(88)90079-6.
+    .. [2] Andrews, Donald W. K. 1988b. “Chi-Square Diagnostic Tests for
+           Econometric Models.” Journal of Econometrics 37 (1): 135–56.
+           https://doi.org/10.1016/0304-4076(88)90079-6.
 
-    Manjón, M., and O. Martínez. 2014. “The Chi-Squared Goodness-of-Fit  Test
-    for Count-Data Models.” Stata Journal 14 (4): 798–816.
+    .. [3] Manjón, M., and O. Martínez. 2014. “The Chi-Squared Goodness-of-Fit
+           Test for Count-Data Models.” Stata Journal 14 (4): 798–816.
     """
     res = results
     score_obs = results.model.score_obs(results.params)
@@ -200,8 +200,8 @@ def test_chisquare_prob(results, probs, bin_edges=None, method=None):
         d_ind_bins, k_bins = d_ind, d_ind.shape[1]
         probs_bins = probs
     diff1 = d_ind_bins - probs_bins
-    #diff2 = (1 - d_ind.sum(1)) - (1 - probs_bins.sum(1))
-    x_aux = np.column_stack((score_obs, diff1[:, :-1])) #, diff2))
+    # diff2 = (1 - d_ind.sum(1)) - (1 - probs_bins.sum(1))
+    x_aux = np.column_stack((score_obs, diff1[:, :-1]))  # diff2))
     nobs = x_aux.shape[0]
     res_aux = OLS(np.ones(nobs), x_aux).fit()
 
@@ -213,8 +213,18 @@ def test_chisquare_prob(results, probs, bin_edges=None, method=None):
         # TODO: Warning shows up in Monte Carlo loop, skip for now
         warnings.warn('auxiliary model is rank deficient')
 
-    extras = (diff1, res_aux)
-    return chi2_stat, stats.chi2.sf(chi2_stat, df), df, extras
+    statistic = chi2_stat
+    pvalue = stats.chi2.sf(chi2_stat, df)
+
+    res = HolderTuple(
+        statistic=statistic,
+        pvalue=pvalue,
+        df=df,
+        diff1=diff1,
+        res_aux=res_aux,
+        distribution="chi2",
+        )
+    return res
 
 
 def test_poisson_zeroinflation_jh(results_poisson, exog_infl=None):
@@ -262,9 +272,9 @@ def test_poisson_zeroinflation_jh(results_poisson, exog_infl=None):
 
     References
     ----------
-    Jansakul, N., and J. P. Hinde. 2002. “Score Tests for Zero-Inflated Poisson
-    Models.” Computational Statistics & Data Analysis 40 (1): 75–96.
-    https://doi.org/10.1016/S0167-9473(01)00104-9.
+    .. [1] Jansakul, N., and J. P. Hinde. 2002. “Score Tests for Zero-Inflated
+           Poisson Models.” Computational Statistics & Data Analysis 40 (1):
+           75–96. https://doi.org/10.1016/S0167-9473(01)00104-9.
     """
     if not isinstance(results_poisson.model, Poisson):
         # GLM Poisson would be also valid, not tried
@@ -291,11 +301,20 @@ def test_poisson_zeroinflation_jh(results_poisson, exog_infl=None):
     score_infl = score_obs_infl.sum(0)
     cov_score_infl = cov_infl - cross_derivative.T.dot(cov_poi).dot(cross_derivative)
     cov_score_infl_inv = np.linalg.pinv(cov_score_infl)
+
     statistic = score_infl.dot(cov_score_infl_inv).dot(score_infl)
     df2 = np.linalg.matrix_rank(cov_score_infl)  # more general, maybe not needed
     df = exog_infl.shape[1]
     pvalue = stats.chi2.sf(statistic, df)
-    return statistic, pvalue, df, df2
+
+    res = HolderTuple(
+        statistic=statistic,
+        pvalue=pvalue,
+        df=df,
+        rank_score=df2,
+        distribution="chi2",
+        )
+    return res
 
 
 def test_poisson_zeroinflation_broek(results_poisson):
@@ -312,16 +331,16 @@ def test_poisson_zeroinflation_broek(results_poisson):
 
     References
     ----------
-    Broek, Jan van den. 1995. “A Score Test for Zero Inflation in a Poisson
-    Distribution.” Biometrics 51 (2): 738–43. https://doi.org/10.2307/2532959.
+    .. [1] Broek, Jan van den. 1995. “A Score Test for Zero Inflation in a
+           Poisson Distribution.” Biometrics 51 (2): 738–43.
+           https://doi.org/10.2307/2532959.
 
     """
 
     mu = results_poisson.predict()
     prob_zero = np.exp(-mu)
     endog = results_poisson.model.endog
-    nobs = len(endog)
-
+    # nobs = len(endog)
     # score =  ((endog == 0) / prob_zero).sum() - nobs
     # var_score = (1 / prob_zero).sum() - nobs - endog.sum()
     score = (((endog == 0) - prob_zero) / prob_zero).sum()
@@ -330,25 +349,37 @@ def test_poisson_zeroinflation_broek(results_poisson):
     pvalue_two = 2 * stats.norm.sf(np.abs(statistic))
     pvalue_upp = stats.norm.sf(statistic)
     pvalue_low = stats.norm.cdf(statistic)
-    return statistic, pvalue_two, pvalue_upp, pvalue_low, stats.chi2.sf(statistic**2, 1)
+
+    res = HolderTuple(
+        statistic=statistic,
+        pvalue=pvalue_two,
+        pvalue_smaller=pvalue_upp,
+        pvalue_larger=pvalue_low,
+        chi2=statistic**2,
+        pvalue_chi2=stats.chi2.sf(statistic**2, 1),
+        df_chi2=1,
+        distribution="normal",
+        )
+    return res
 
 
 def test_poisson_zeros(results):
     """Test for excess zeros in Poisson regression model.
 
-    The test is implemented following Tang and Tang equ. (12) which is based
-    on the test derived in He et al 2019.
+    The test is implemented following Tang and Tang [1]_ equ. (12) which is
+    based on the test derived in He et al 2019 [2]_.
 
     References
     ----------
 
-    Tang, Yi, and Wan Tang. 2018. “Testing Modified Zeros for Poisson
-    Regression Models:” Statistical Methods in Medical Research, September.
-    https://doi.org/10.1177/0962280218796253.
+    .. [1] Tang, Yi, and Wan Tang. 2018. “Testing Modified Zeros for Poisson
+           Regression Models:” Statistical Methods in Medical Research,
+           September. https://doi.org/10.1177/0962280218796253.
 
-    He, Hua, Hui Zhang, Peng Ye, and Wan Tang. 2019. “A Test of Inflated Zeros
-    for Poisson Regression Models.” Statistical Methods in Medical Research 28
-    (4): 1157–69. https://doi.org/10.1177/0962280217749991.
+    .. [2] He, Hua, Hui Zhang, Peng Ye, and Wan Tang. 2019. “A Test of Inflated
+           Zeros for Poisson Regression Models.” Statistical Methods in
+           Medical Research 28 (4): 1157–69.
+           https://doi.org/10.1177/0962280217749991.
 
     """
     x = results.model.exog
@@ -363,4 +394,19 @@ def test_poisson_zeros(results):
     var2 = pmx @ c @ pmx
     var = var1 - var2
     statistic = diff / np.sqrt(var)
-    return statistic, 2 * stats.norm.sf(np.abs(statistic))
+
+    pvalue_two = 2 * stats.norm.sf(np.abs(statistic))
+    pvalue_upp = stats.norm.sf(statistic)
+    pvalue_low = stats.norm.cdf(statistic)
+
+    res = HolderTuple(
+        statistic=statistic,
+        pvalue=pvalue_two,
+        pvalue_smaller=pvalue_upp,
+        pvalue_larger=pvalue_low,
+        chi2=statistic**2,
+        pvalue_chi2=stats.chi2.sf(statistic**2, 1),
+        df_chi2=1,
+        distribution="normal",
+        )
+    return res

@@ -6,7 +6,7 @@ Author: Josef Perktold
 """
 
 import numpy as np
-from numpy.testing import assert_allclose
+from numpy.testing import assert_allclose, assert_equal
 import pytest
 
 from statsmodels.discrete.discrete_model import Poisson
@@ -54,8 +54,9 @@ class TestCountDiagnostic(object):
         tzi3 = dia.test_poisson_zeroinflation_jh(self.res, self.exog)
 
         # regression test
-        tzi3_1 = (0.79863597832443878, 0.67077736750318928, 2, 2)
+        tzi3_1 = (0.79863597832443878, 0.67077736750318928)
         assert_allclose(tzi3, tzi3_1, rtol=5e-4)
+        assert_equal(tzi3.df, 2)
 
     @pytest.mark.matplotlib
     def test_probs(self, close_figures):
