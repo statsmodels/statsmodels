@@ -36,7 +36,6 @@ import pytest
 import statsmodels.api as sm
 # load data into module namespace
 from statsmodels.datasets.cpunish import load
-from statsmodels.discrete import discrete_model as discrete
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.tools.sm_exceptions import SpecificationWarning
 from statsmodels.tools.tools import add_constant
@@ -98,17 +97,22 @@ class CheckWeight(object):
             return None  # use SkipError instead
         resid_all = dict(zip(res2.resids_colnames, res2.resids.T))
 
-        assert_allclose(res1.resid_response, resid_all['resid_response'], atol= 1e-6, rtol=2e-6)
-        assert_allclose(res1.resid_pearson, resid_all['resid_pearson'], atol= 1e-6, rtol=2e-6)
-        assert_allclose(res1.resid_deviance, resid_all['resid_deviance'], atol= 1e-6, rtol=2e-6)
-        assert_allclose(res1.resid_working, resid_all['resid_working'], atol= 1e-6, rtol=2e-6)
+        assert_allclose(res1.resid_response, resid_all['resid_response'],
+                        atol=1e-6, rtol=2e-6)
+        assert_allclose(res1.resid_pearson, resid_all['resid_pearson'],
+                        atol=1e-6, rtol=2e-6)
+        assert_allclose(res1.resid_deviance, resid_all['resid_deviance'],
+                        atol=1e-6, rtol=2e-6)
+        assert_allclose(res1.resid_working, resid_all['resid_working'],
+                        atol=1e-6, rtol=2e-6)
         if resid_all.get('resid_anscombe') is None:
             return None
         # Stata does not use var_weights in anscombe residuals, it seems.
         # Adjust residuals to match our approach.
         resid_a = res1.resid_anscombe
 
-        assert_allclose(resid_a, resid_all['resid_anscombe'] * np.sqrt(res1._var_weights), atol= 1e-6, rtol=2e-6)
+        resid_a1 = resid_all['resid_anscombe'] * np.sqrt(res1._var_weights)
+        assert_allclose(resid_a, resid_a1, atol=1e-6, rtol=2e-6)
 
     def test_compare_optimizers(self):
         res1 = self.res1
@@ -136,14 +140,17 @@ class CheckWeight(object):
             assert_allclose(self.res1.pearson_chi2, self.res2.deviance_p,
                             atol=1e-6, rtol=1e-6)
 
+    def test_getprediction(self):
+        pred = self.res1.get_prediction()
+        assert_allclose(pred.linpred.se_mean, pred.linpred.se_mean, rtol=1e-10)
+
 
 class TestGlmPoissonPlain(CheckWeight):
     @classmethod
     def setup_class(cls):
         cls.res1 = GLM(cpunish_data.endog, cpunish_data.exog,
                        family=sm.families.Poisson()).fit()
-        # compare with discrete, start close to save time
-        modd = discrete.Poisson(cpunish_data.endog, cpunish_data.exog)
+
         cls.res2 = res_stata.results_poisson_none_nonrobust
 
 
@@ -154,9 +161,9 @@ class TestGlmPoissonFwNr(CheckWeight):
         fweights = np.array(fweights)
 
         cls.res1 = GLM(cpunish_data.endog, cpunish_data.exog,
-                    family=sm.families.Poisson(), freq_weights=fweights).fit()
-        # compare with discrete, start close to save time
-        modd = discrete.Poisson(cpunish_data.endog, cpunish_data.exog)
+                       family=sm.families.Poisson(), freq_weights=fweights
+                       ).fit()
+
         cls.res2 = res_stata.results_poisson_fweight_nonrobust
 
 
@@ -171,9 +178,8 @@ class TestGlmPoissonAwNr(CheckWeight):
         aweights = fweights / wsum * nobs
 
         cls.res1 = GLM(cpunish_data.endog, cpunish_data.exog,
-                    family=sm.families.Poisson(), var_weights=aweights).fit()
-        # compare with discrete, start close to save time
-        modd = discrete.Poisson(cpunish_data.endog, cpunish_data.exog)
+                       family=sm.families.Poisson(), var_weights=aweights
+                       ).fit()
 
         # Need to copy to avoid inplace adjustment
         from copy import copy
@@ -196,9 +202,9 @@ class TestGlmPoissonPwNr(CheckWeight):
         aweights = fweights / wsum * nobs
 
         cls.res1 = GLM(cpunish_data.endog, cpunish_data.exog,
-                    family=sm.families.Poisson(), freq_weights=fweights).fit(cov_type='HC1')
-        # compare with discrete, start close to save time
-        #modd = discrete.Poisson(cpunish_data.endog, cpunish_data.exog)
+                       family=sm.families.Poisson(), freq_weights=fweights
+                       ).fit(cov_type='HC1')
+
         cls.res2 = res_stata.results_poisson_pweight_nonrobust
 
     # TODO: find more informative reasons why these fail
@@ -225,9 +231,9 @@ class TestGlmPoissonFwHC(CheckWeight):
         mod = GLM(cpunish_data.endog, cpunish_data.exog,
                   family=sm.families.Poisson(),
                   freq_weights=fweights)
-        cls.res1 = mod.fit(cov_type='HC0') #, cov_kwds={'use_correction':False})
-        # compare with discrete, start close to save time
-        #modd = discrete.Poisson(cpunish_data.endog, cpunish_data.exog)
+        cls.res1 = mod.fit(cov_type='HC0')
+        # cov_kwds={'use_correction':False})
+
         cls.res2 = res_stata.results_poisson_fweight_hc1
 
 
@@ -250,9 +256,9 @@ class TestGlmPoissonAwHC(CheckWeight):
         mod = GLM(cpunish_data.endog, cpunish_data.exog,
                   family=sm.families.Poisson(),
                   var_weights=aweights)
-        cls.res1 = mod.fit(cov_type='HC0') #, cov_kwds={'use_correction':False})
-        # compare with discrete, start close to save time
-        # modd = discrete.Poisson(cpunish_data.endog, cpunish_data.exog)
+        cls.res1 = mod.fit(cov_type='HC0')
+        # cov_kwds={'use_correction':False})
+
         cls.res2 = res_stata.results_poisson_aweight_hc1
 
 
@@ -270,16 +276,15 @@ class TestGlmPoissonFwClu(CheckWeight):
         n_groups = len(np.unique(gid))
 
         # no wnobs yet in sandwich covariance calcualtion
-        cls.corr_fact = 1 / np.sqrt(n_groups / (n_groups - 1))   #np.sqrt((wsum - 1.) / wsum)
-        cov_kwds = {'groups': gid, 'use_correction':False}
+        cls.corr_fact = 1 / np.sqrt(n_groups / (n_groups - 1))
+        # np.sqrt((wsum - 1.) / wsum)
+        cov_kwds = {'groups': gid, 'use_correction': False}
         with pytest.warns(None):
             mod = GLM(cpunish_data.endog, cpunish_data.exog,
                       family=sm.families.Poisson(),
                       freq_weights=fweights)
             cls.res1 = mod.fit(cov_type='cluster', cov_kwds=cov_kwds)
 
-        # compare with discrete, start close to save time
-        #modd = discrete.Poisson(cpunish_data.endog, cpunish_data.exog)
         cls.res2 = res_stata.results_poisson_fweight_clu1
 
 
@@ -392,7 +397,8 @@ def gen_endog(lin_pred, family_class, link, binom_version=0):
         else:
             endog = np.empty((len(lin_pred), 2))
             n = 10
-            endog[:, 0] = (np.random.uniform(size=(len(lin_pred), n)) < mu[:, None]).sum(1)
+            endog[:, 0] = (np.random.uniform(size=(len(lin_pred), n)) <
+                           mu[:, None]).sum(1)
             endog[:, 1] = n - endog[:, 0]
     elif family_class == fam.Poisson:
         endog = np.random.poisson(mu)
@@ -693,7 +699,7 @@ class TestTweedieRepeatedvsAverage(CheckWeight):
         endog = gen_endog(lin_pred, family, link)
         mod1 = sm.GLM(endog, exog, family=family(link=link(), var_power=1.5))
         cls.res1 = mod1.fit(rtol=1e-10, atol=0, tol_criterion='params',
-                             scaletype='x2')
+                            scaletype='x2')
 
         agg = pd.DataFrame(exog)
         agg['endog'] = endog
@@ -726,7 +732,7 @@ class TestBinomial0RepeatedvsAverage(CheckWeight):
         endog = gen_endog(lin_pred, family, link, binom_version=0)
         mod1 = sm.GLM(endog, exog, family=family(link=link()))
         cls.res1 = mod1.fit(rtol=1e-10, atol=0, tol_criterion='params',
-                             scaletype='x2')
+                            scaletype='x2')
 
         agg = pd.DataFrame(exog)
         agg['endog'] = endog
@@ -792,7 +798,8 @@ def test_warnings_raised():
 weights = [1, 1, 1, 2, 2, 2, 3, 3, 3, 1, 1, 1, 2, 2, 2, 3, 3]
 
 
-@pytest.mark.parametrize('formatted', [weights, np.asarray(weights), pd.Series(weights)],
+@pytest.mark.parametrize('formatted', [weights, np.asarray(weights),
+                                       pd.Series(weights)],
                          ids=['list', 'ndarray', 'Series'])
 def test_weights_different_formats(formatted):
     check_weights_as_formats(formatted)
@@ -825,12 +832,12 @@ class TestBinomialVsVarWeights(CheckWeight):
         data.exog = add_constant(data.exog, prepend=False)
 
         cls.res1 = GLM(data.endog, data.exog,
-                        family=sm.families.Binomial()).fit()
+                       family=sm.families.Binomial()).fit()
         weights = data.endog.sum(axis=1)
         endog2 = data.endog[:, 0] / weights
         cls.res2 = GLM(endog2, data.exog,
-                        family=sm.families.Binomial(),
-                        var_weights=weights).fit()
+                       family=sm.families.Binomial(),
+                       var_weights=weights).fit()
 
 
 class TestGlmGaussianWLS(CheckWeight):

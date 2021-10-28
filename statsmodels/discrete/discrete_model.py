@@ -32,6 +32,7 @@ from statsmodels.base.data import handle_data  # for mnlogit
 from statsmodels.base.l1_slsqp import fit_l1_slsqp
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
+import statsmodels.base._parameter_inference as pinf
 from statsmodels.distributions import genpoisson_p
 import statsmodels.regression.linear_model as lm
 from statsmodels.tools import data as data_tools, tools
@@ -564,6 +565,26 @@ class BinaryModel(DiscreteModel):
         return self._derivative_exog_helper(margeff, params, exog,
                                             dummy_idx, count_idx, transform)
 
+    def _deriv_mean_dparams(self, params):
+        """
+        Derivative of the expected endog with respect to the parameters.
+
+        Parameters
+        ----------
+        params : ndarray
+            parameter at which score is evaluated
+
+        Returns
+        -------
+        The value of the derivative of the expected endog with respect
+        to the parameter vector.
+        """
+        link = self.family.link
+        lin_pred = self.predict(params, linear=True)
+        idl = link.inverse_deriv(lin_pred)
+        dmat = self.exog * idl[:, None]
+        return dmat
+
 
 class MultinomialModel(BinaryModel):
 
@@ -812,7 +833,7 @@ class CountModel(DiscreteModel):
         return kwds
 
     def predict(self, params, exog=None, exposure=None, offset=None,
-                linear=False):
+                which='mean', linear=None):
         """
         Predict response variable of a count model given exogenous variables
 
@@ -841,6 +862,12 @@ class CountModel(DiscreteModel):
         If exposure is specified, then it will be logged by the method.
         The user does not need to log it first.
         """
+        if linear is not None:
+            msg = 'linear keyword is deprecated, use which="linear"'
+            warnings.warn(msg, DeprecationWarning)
+            if linear is True:
+                which = "linear"
+
         # the following is copied from GLM predict (without family/link check)
         # Use fit offset if appropriate
         if offset is None and exog is None and hasattr(self, 'offset'):
@@ -862,10 +889,12 @@ class CountModel(DiscreteModel):
 
         fitted = np.dot(exog, params[:exog.shape[1]])
         linpred = fitted + exposure + offset
-        if not linear:
-            return np.exp(linpred) # not cdf
-        else:
+        if which == "mean":
+            return np.exp(linpred)
+        elif which.startswith("lin"):
             return linpred
+        else:
+            raise ValueError('keyword which has to be "mean" and "linear"')
 
     def _derivative_predict(self, params, exog=None, transform='dydx'):
         """
@@ -912,6 +941,28 @@ class CountModel(DiscreteModel):
 
         return self._derivative_exog_helper(margeff, params, exog,
                                             dummy_idx, count_idx, transform)
+
+    def _deriv_mean_dparams(self, params):
+        """
+        Derivative of the expected endog with respect to the parameters.
+
+        Parameters
+        ----------
+        params : ndarray
+            parameter at which score is evaluated
+
+        Returns
+        -------
+        The value of the derivative of the expected endog with respect
+        to the parameter vector.
+        """
+        from statsmodels.genmod.families import links
+        link = links.Log()
+        lin_pred = self.predict(params, linear=True)
+        idl = link.inverse_deriv(lin_pred)
+        dmat = self.exog * idl[:, None]
+        return dmat
+
 
     @Appender(DiscreteModel.fit.__doc__)
     def fit(self, start_params=None, method='newton', maxiter=35,
@@ -975,7 +1026,7 @@ class Poisson(CountModel):
         equal to 1.
         """ + base._missing_param_doc + _check_rank_doc}
 
-    @property
+    @cache_readonly
     def family(self):
         from statsmodels.genmod import families
         return families.Poisson()
@@ -1303,7 +1354,6 @@ class Poisson(CountModel):
         L = np.exp(np.dot(X,params) + offset + exposure)
         return (self.endog - L)
 
-
     def hessian(self, params):
         """
         Poisson model Hessian matrix of the loglikelihood
@@ -1361,6 +1411,49 @@ class Poisson(CountModel):
         X = self.exog
         L = np.exp(np.dot(X,params) + exposure + offset)
         return L
+
+    def _deriv_score_obs_dendog(self, params, scale=None):
+        """derivative of score_obs w.r.t. endog
+
+        Parameters
+        ----------
+        params : ndarray
+            parameter at which score is evaluated
+        scale : None or float
+            If scale is None, then the default scale will be calculated.
+            Default scale is defined by `self.scaletype` and set in fit.
+            If scale is not None, then it is used as a fixed scale.
+
+        Returns
+        -------
+        derivative : ndarray_2d
+            The derivative of the score_obs with respect to endog. This
+            can is given by `score_factor0[:, None] * exog` where
+            `score_factor0` is the score_factor without the residual.
+        """
+        return self.exog
+
+    def predict(self, params, exog=None, exposure=None, offset=None,
+                which='mean', linear=None, n=None):
+
+        if which.startswith("lin"):
+            which = "linear"
+        if which in ["mean", "linear"]:
+            return super().predict(params, exog=exog, exposure=exposure,
+                                   offset=offset,
+                                   which=which, linear=linear)
+        # TODO: add full set of which
+        if which == "prob":
+            if n is not None:
+                counts = np.atleast_2d(n)
+            else:
+                counts = np.atleast_2d(
+                    np.arange(0, np.max(self.endog) + 1))
+            mu = self.predict(params, exog=exog,
+                              exposure=exposure, offset=offset,
+                              )[:, None]
+            # uses broadcasting
+            return stats.poisson.pmf(counts, mu)
 
 
 class GeneralizedPoisson(CountModel):
@@ -1745,7 +1838,7 @@ class GeneralizedPoisson(CountModel):
 
         Notes
         -----
-        If exposure is specified, then it will be logged by the method.
+        If exposure is specified, then it will be log tranformed by the method.
         The user does not need to log it first.
         """
         if exog is None:
@@ -1841,6 +1934,11 @@ class Logit(BinaryModel):
         """
         X = np.asarray(X)
         return np.exp(-X)/(1+np.exp(-X))**2
+
+    @cache_readonly
+    def family(self):
+        from statsmodels.genmod import families
+        return families.Binomial()
 
     def loglike(self, params):
         """
@@ -1954,6 +2052,35 @@ class Logit(BinaryModel):
         L = self.cdf(np.dot(X, params))
         return (y - L)[:,None] * X
 
+    def score_factor(self, params):
+        """
+        Logit model score_factor for each observation
+
+        Parameters
+        ----------
+        params : array_like
+            The parameters of the model
+
+        Returns
+        -------
+        score : array_like
+            The score factor (nobs, ) of the model evaluated at `params`
+
+        Notes
+        -----
+        .. math:: \\frac{\\partial\\ln L_{i}}{\\partial\\beta}=\\left(y_{i}-\\lambda_{i}\\right)
+
+        for observations :math:`i=1,...,n`
+
+        where the loglinear model is assumed
+
+        .. math:: \\ln\\lambda_{i}=x_{i}\\beta
+        """
+        y = self.endog
+        X = self.exog
+        L = self.cdf(np.dot(X, params))
+        return (y - L)
+
     def hessian(self, params):
         """
         Logit model Hessian matrix of the log-likelihood
@@ -1977,6 +2104,26 @@ class Logit(BinaryModel):
         L = self.cdf(np.dot(X,params))
         return -np.dot(L*(1-L)*X.T,X)
 
+    def hessian_factor(self, params):
+        """
+        Logit model Hessian factor
+
+        Parameters
+        ----------
+        params : array_like
+            The parameters of the model
+
+        Returns
+        -------
+        hess : ndarray, (nobs,)
+            The Hessian factor, second derivative of loglikelihood function
+            with respect to the linear predictor evaluated at `params`
+
+        """
+        X = self.exog
+        L = self.cdf(np.dot(X, params))
+        return L * (1 - L)
+
     @Appender(DiscreteModel.fit.__doc__)
     def fit(self, start_params=None, method='newton', maxiter=35,
             full_output=1, disp=1, callback=None, **kwargs):
@@ -1990,6 +2137,27 @@ class Logit(BinaryModel):
 
         discretefit = LogitResults(self, bnryfit)
         return BinaryResultsWrapper(discretefit)
+
+    def _deriv_score_obs_dendog(self, params, scale=None):
+        """derivative of score_obs w.r.t. endog
+
+        Parameters
+        ----------
+        params : ndarray
+            parameter at which score is evaluated
+        scale : None or float
+            If scale is None, then the default scale will be calculated.
+            Default scale is defined by `self.scaletype` and set in fit.
+            If scale is not None, then it is used as a fixed scale.
+
+        Returns
+        -------
+        derivative : ndarray_2d
+            The derivative of the score_obs with respect to endog. This
+            can is given by `score_factor0[:, None] * exog` where
+            `score_factor0` is the score_factor without the residual.
+        """
+        return self.exog
 
 
 class Probit(BinaryModel):
@@ -3404,9 +3572,6 @@ class NegativeBinomialP(CountModel):
             it assumed to be 1 row of exogenous variables. If you only have
             one regressor and would like to do prediction, you must provide
             a 2d array with shape[1] == 1.
-        linear : bool, optional
-            If True, returns the linear predictor dot(exog,params).  Else,
-            returns the value of the cdf at the linear predictor.
         offset : array_like, optional
             Offset is added to the linear prediction with coefficient equal to 1.
         exposure : array_like, optional
@@ -3439,11 +3604,11 @@ class NegativeBinomialP(CountModel):
             return np.exp(linpred)
         elif which == 'linear':
             return linpred
-        elif which =='prob':
+        elif which == 'prob':
             counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
             mu = self.predict(params, exog, exposure, offset)
             size, prob = self.convert_params(params, mu)
-            return nbinom.pmf(counts, size[:,None], prob[:,None])
+            return nbinom.pmf(counts, size[:, None], prob[:, None])
         else:
             raise ValueError('keyword "which" = %s not recognized' % which)
 
@@ -3643,6 +3808,50 @@ class DiscreteResults(base.LikelihoodModelResults):
         number of regressors including the intercept.
         """
         return -2*self.llf + np.log(self.nobs)*(self.df_model+1)
+
+    @cache_readonly
+    def im_ratio(self):
+        return pinf.im_ratio(self)
+
+    def info_criteria(self, crit, dk_params=0):
+        """Return an information criterion for the model.
+
+        Parameters
+        ----------
+        crit : string
+            One of 'aic', 'bic', 'tic' or 'gbic'.
+        dk_params : int or float
+            Correction to the number of parameters used in the information
+            criterion. By default, only mean parameters are included, the
+            scale parameter is not included in the parameter count.
+            Use ``dk_params=1`` to include scale in the parameter count.
+
+        Returns the given information criterion value.
+
+        Notes
+        -----
+        Tic and bbic
+
+        References
+        ----------
+        Burnham KP, Anderson KR (2002). Model Selection and Multimodel
+        Inference; Springer New York.
+        """
+        crit = crit.lower()
+        k_params = self.df_model + 1 + dk_params
+
+        if crit == "aic":
+            return -2 * self.llf + 2 * k_params
+        elif crit == "bic":
+            nobs = self.df_model + self.df_resid + 1
+            bic = -2*self.llf + k_params*np.log(nobs)
+            return bic
+        elif crit == "tic":
+            return pinf.tic(self)
+        elif crit == "gbic":
+            return pinf.gbic(self)
+        else:
+            raise ValueError("Name of information criterion not recognized.")
 
     def _get_endog_name(self, yname, yname_list):
         if yname is None:
@@ -3920,7 +4129,32 @@ class L1CountResults(DiscreteResults):
         self.df_model = self.nnz_params - 1 - k_extra
         self.df_resid = float(self.model.endog.shape[0] - self.nnz_params) + k_extra
 
+
 class PoissonResults(CountResults):
+
+    def get_prediction(self, exog=None, exposure=None, offset=None,
+                       transform=True, linear=False,
+                       row_labels=None):
+
+        import statsmodels.genmod._prediction as pred
+        import statsmodels.regression._prediction as linpred
+
+        pred_kwds = {'exposure': exposure, 'offset': offset, 'linear': True}
+
+        # two calls to a get_prediction duplicates exog generation if patsy
+        res_linpred = linpred.get_prediction(self, exog=exog,
+                                             transform=transform,
+                                             row_labels=row_labels,
+                                             pred_kwds=pred_kwds)
+
+        pred_kwds['linear'] = False
+        res = pred.get_prediction_glm(self, exog=exog, transform=transform,
+                                      row_labels=row_labels,
+                                      linpred=res_linpred,
+                                      link=self.model.family.link,
+                                      pred_kwds=pred_kwds)
+
+        return res
 
     def predict_prob(self, n=None, exog=None, exposure=None, offset=None,
                      transform=True):
@@ -3970,6 +4204,23 @@ class PoissonResults(CountResults):
         # Pearson residuals
         p = self.predict()  # fittedvalues is still linear
         return (self.model.endog - p)/np.sqrt(p)
+
+    def get_influence(self):
+        """
+        Get an instance of MLEInfluence with influence and outlier measures
+
+        Returns
+        -------
+        infl : MLEInfluence instance
+            The instance has methods to calculate the main influence and
+            outlier measures as attributes.
+
+        See Also
+        --------
+        statsmodels.stats.outliers_influence.MLEInfluence
+        """
+        from statsmodels.stats.outliers_influence import MLEInfluence
+        return MLEInfluence(self)
 
 
 class L1PoissonResults(L1CountResults, PoissonResults):
@@ -4136,6 +4387,47 @@ class LogitResults(BinaryResults):
         """
         # Generalized residuals
         return self.model.endog - self.predict()
+
+    def get_prediction(self, exog=None, exposure=None, offset=None,
+                       transform=True, linear=False,
+                       row_labels=None):
+
+        import statsmodels.genmod._prediction as pred
+        import statsmodels.regression._prediction as linpred
+
+        pred_kwds = {'linear': True}
+
+        # two calls to a get_prediction duplicates exog generation if patsy
+        res_linpred = linpred.get_prediction(self, exog=exog,
+                                             transform=transform,
+                                             row_labels=row_labels,
+                                             pred_kwds=pred_kwds)
+
+        pred_kwds['linear'] = False
+        res = pred.get_prediction_glm(self, exog=exog, transform=transform,
+                                      row_labels=row_labels,
+                                      linpred=res_linpred,
+                                      link=self.model.family.link,
+                                      pred_kwds=pred_kwds)
+
+        return res
+
+    def get_influence(self):
+        """
+        Get an instance of MLEInfluence with influence and outlier measures
+
+        Returns
+        -------
+        infl : MLEInfluence instance
+            The instance has methods to calculate the main influence and
+            outlier measures as attributes.
+
+        See Also
+        --------
+        statsmodels.stats.outliers_influence.MLEInfluence
+        """
+        from statsmodels.stats.outliers_influence import MLEInfluence
+        return MLEInfluence(self)
 
 
 class ProbitResults(BinaryResults):

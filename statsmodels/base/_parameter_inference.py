@@ -256,3 +256,45 @@ def score_test(self, exog_extra=None, params_constrained=None,
         return stat, pval
     else:
         raise NotImplementedError('only hypothesis "joint" is available')
+
+
+def im_ratio(results):
+    res = getattr(results, "_results", results)  # shortcut
+    hess = res.model.hessian(res.params)
+    if res.cov_type == "nonrobust":
+        score_obs = res.model.score_obs(res.params)
+        cov_score = score_obs.T @ score_obs
+        hessneg_inv = np.linalg.inv(-hess)
+        im_ratio = hessneg_inv @ cov_score
+    else:
+        im_ratio = res.cov_params() @ (-hess)
+    return im_ratio
+
+
+def tic(results):
+    """Takeuchi information criterion for misspecified models
+
+    """
+    imr = getattr(results, "im_ratio", im_ratio(results))
+    tic = - 2 * results.llf + 2 * np.trace(imr)
+    return tic
+
+
+def gbic(results, gbicp=False):
+    """generalized BIC for misspecified models
+
+    References
+    ----------
+    Lv, Jinchi, and Jun S. Liu. 2014. "Model Selection Principles in
+    Misspecified Models." Journal of the Royal Statistical Society.
+    Series B (Statistical Methodology) 76 (1): 141–67.
+
+    """
+    self = getattr(results, "_results", results)
+    k_params = self.df_model + 1
+    nobs = k_params + self.df_resid
+    imr = getattr(results, "im_ratio", im_ratio(results))
+    imr_logdet = np.linalg.slogdet(imr)[1]
+    gbic = -2 * self.llf + k_params * np.log(nobs) - imr_logdet  # LL equ. (20)
+    gbicp = gbic + np.trace(imr)  # LL equ. (23)
+    return gbic, gbicp
