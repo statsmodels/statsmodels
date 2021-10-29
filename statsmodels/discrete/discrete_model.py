@@ -33,9 +33,7 @@ from statsmodels.base.l1_slsqp import fit_l1_slsqp
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
 from statsmodels.base._constraints import fit_constrained_wrap
-import statsmodels.base._parameter_inference as pinf
-infer = pinf   # alias, 2 different shorcut names
-
+import statsmodels.base._parameter_inference as pinfer
 from statsmodels.distributions import genpoisson_p
 import statsmodels.regression.linear_model as lm
 from statsmodels.tools import data as data_tools, tools
@@ -4128,7 +4126,7 @@ class DiscreteResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def im_ratio(self):
-        return pinf.im_ratio(self)
+        return pinfer.im_ratio(self)
 
     def info_criteria(self, crit, dk_params=0):
         """Return an information criterion for the model.
@@ -4164,9 +4162,9 @@ class DiscreteResults(base.LikelihoodModelResults):
             bic = -2*self.llf + k_params*np.log(nobs)
             return bic
         elif crit == "tic":
-            return pinf.tic(self)
+            return pinfer.tic(self)
         elif crit == "gbic":
-            return pinf.gbic(self)
+            return pinfer.gbic(self)
         else:
             raise ValueError("Name of information criterion not recognized.")
 
@@ -4174,15 +4172,15 @@ class DiscreteResults(base.LikelihoodModelResults):
                    hypothesis='joint', cov_type=None, cov_kwds=None,
                    k_constraints=None, observed=True):
 
-        res = infer.score_test(self, exog_extra=exog_extra,
-                               params_constrained=params_constrained,
-                               hypothesis=hypothesis,
-                               cov_type=cov_type, cov_kwds=cov_kwds,
-                               k_constraints=k_constraints,
-                               observed=observed)
+        res = pinfer.score_test(self, exog_extra=exog_extra,
+                                params_constrained=params_constrained,
+                                hypothesis=hypothesis,
+                                cov_type=cov_type, cov_kwds=cov_kwds,
+                                k_constraints=k_constraints,
+                                observed=observed)
         return res
 
-    score_test.__doc__ = infer.score_test.__doc__
+    score_test.__doc__ = pinfer.score_test.__doc__
 
     def _get_endog_name(self, yname, yname_list):
         if yname is None:

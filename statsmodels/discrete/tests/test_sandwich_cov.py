@@ -504,6 +504,7 @@ class TestGLMPoisson(CheckDiscreteGLM):
 
     @classmethod
     def setup_class(cls):
+        np.random.seed(987125643)  # not intentional seed
         endog_count = np.random.poisson(endog)
         cls.cov_type = 'HC0'
 

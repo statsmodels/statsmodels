@@ -28,8 +28,7 @@ import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
 
 from statsmodels.genmod._prediction import PredictionResults
-import statsmodels.base._parameter_inference as infer
-import statsmodels.regression._tools as reg_tools
+import statsmodels.base._parameter_inference as pinfer
 
 from statsmodels.graphics._regressionplots_doc import (
     _plot_added_variable_doc,
@@ -1929,15 +1928,15 @@ class GLMResults(base.LikelihoodModelResults):
                    hypothesis='joint', cov_type=None, cov_kwds=None,
                    k_constraints=None, observed=True):
 
-        res = infer.score_test(self, exog_extra=exog_extra,
-                               params_constrained=params_constrained,
-                               hypothesis=hypothesis,
-                               cov_type=cov_type, cov_kwds=cov_kwds,
-                               k_constraints=k_constraints,
-                               observed=observed)
+        res = pinfer.score_test(self, exog_extra=exog_extra,
+                                params_constrained=params_constrained,
+                                hypothesis=hypothesis,
+                                cov_type=cov_type, cov_kwds=cov_kwds,
+                                k_constraints=k_constraints,
+                                observed=observed)
         return res
 
-    score_test.__doc__ = infer.score_test.__doc__
+    score_test.__doc__ = pinfer.score_test.__doc__
 
     def get_hat_matrix_diag(self, observed=True):
         """

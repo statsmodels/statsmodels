@@ -454,7 +454,7 @@ class TestLogitConstrained1(CheckGLMConstrainedMixin):
         # params sequence same as Stata, but Stata reports param = nan
         # and we have param = value = 0
 
-        #res1ul = Logit(data.endog, data.exog).fit(method="newton", disp=0)
+        # res1ul = Logit(data.endog, data.exog).fit(method="newton", disp=0)
         cls.res2 = reslogit.results_constraint1
 
         mod1 = Logit(spector_data.endog, spector_data.exog)
@@ -562,7 +562,7 @@ class TestLogitConstrained2HC(CheckGLMConstrainedMixin):
     @classmethod
     def setup_class(cls):
         cls.idx = slice(None)  # params sequence same as Stata
-        #res1ul = Logit(data.endog, data.exog).fit(method="newton", disp=0)
+        # res1ul = Logit(data.endog, data.exog).fit(method="newton", disp=0)
         cls.res2 = reslogit.results_constraint2_robust
 
         mod1 = Logit(spector_data.endog, spector_data.exog)

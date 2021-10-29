@@ -460,8 +460,13 @@ class MLEInfluence(_BaseInfluenceMixin):
         experimental, agrees with GLMInfluence for Binomial and Gaussian.
         no reference for this
         """
+        from statsmodels.genmod.generalized_linear_model import GLM
         sf = self.results.model.score_factor(self.results.params)
         hf = self.results.model.hessian_factor(self.results.params)
+        if not isinstance(self.results.model, GLM):
+            # hessian_factor in GLM has wrong sign
+            hf = -hf
+
         return sf / np.sqrt(hf) / np.sqrt(1 - self.hat_matrix_diag)
 
     @cache_readonly
