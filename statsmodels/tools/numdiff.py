@@ -48,7 +48,7 @@ import numpy as np
 from statsmodels.compat.pandas import Appender, Substitution
 
 # NOTE: we only do double precision internally so far
-EPS = np.MachAr().eps
+EPS = np.finfo(float).eps
 
 _hessian_docs = """
     Calculate Hessian with finite difference derivative approximation
