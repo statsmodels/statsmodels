@@ -26,7 +26,10 @@ from numpy.linalg.linalg import LinAlgError
 
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
+
 from statsmodels.genmod._prediction import PredictionResults
+import statsmodels.base._parameter_inference as pinfer
+
 from statsmodels.graphics._regressionplots_doc import (
     _plot_added_variable_doc,
     _plot_ceres_residuals_doc,
@@ -1369,7 +1372,6 @@ class GLM(base.LikelihoodModel):
         params = mr.x
 
         if not mr.success:
-            import warnings
             ngrad = np.sqrt(np.sum(mr.jac**2))
             msg = "GLM ridge optimization may have failed, |grad|=%f" % ngrad
             warnings.warn(msg)
@@ -1523,14 +1525,12 @@ class GLMResults(base.LikelihoodModelResults):
         # temporary warning
         ct = (cov_type == 'nonrobust') or (cov_type.upper().startswith('HC'))
         if self.model._has_freq_weights and not ct:
-            import warnings
 
             from statsmodels.tools.sm_exceptions import SpecificationWarning
             warnings.warn('cov_type not fully supported with freq_weights',
                           SpecificationWarning)
 
         if self.model._has_var_weights and not ct:
-            import warnings
 
             from statsmodels.tools.sm_exceptions import SpecificationWarning
             warnings.warn('cov_type not fully supported with var_weights',
@@ -1917,6 +1917,26 @@ class GLMResults(base.LikelihoodModelResults):
                                       link=self.model.family.link,
                                       pred_kwds=pred_kwds)
 
+        return res
+
+    @Appender(pinfer.score_test.__doc__)
+    def score_test(self, exog_extra=None, params_constrained=None,
+                   hypothesis='joint', cov_type=None, cov_kwds=None,
+                   k_constraints=None, observed=True):
+
+        if self.model._has_freq_weights is True:
+            warnings.warn("score test has not been verified with freq_weights",
+                          UserWarning)
+        if self.model._has_var_weights is True:
+            warnings.warn("score test has not been verified with var_weights",
+                          UserWarning)
+
+        res = pinfer.score_test(self, exog_extra=exog_extra,
+                                params_constrained=params_constrained,
+                                hypothesis=hypothesis,
+                                cov_type=cov_type, cov_kwds=cov_kwds,
+                                k_constraints=k_constraints,
+                                observed=observed)
         return res
 
     def get_hat_matrix_diag(self, observed=True):

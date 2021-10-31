@@ -32,7 +32,8 @@ from statsmodels.base.data import handle_data  # for mnlogit
 from statsmodels.base.l1_slsqp import fit_l1_slsqp
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
-import statsmodels.base._parameter_inference as pinf
+from statsmodels.base._constraints import fit_constrained_wrap
+import statsmodels.base._parameter_inference as pinfer
 from statsmodels.distributions import genpoisson_p
 import statsmodels.regression.linear_model as lm
 from statsmodels.tools import data as data_tools, tools
@@ -42,6 +43,7 @@ from statsmodels.tools.sm_exceptions import (
     PerfectSeparationError,
     SpecificationWarning,
 )
+
 
 try:
     import cvxopt  # noqa:F401
@@ -457,19 +459,23 @@ class DiscreteModel(base.LikelihoodModel):
 class BinaryModel(DiscreteModel):
     _continuous_ok = False
 
-    def __init__(self, endog, exog, check_rank=True, **kwargs):
+    def __init__(self, endog, exog, offset=None, check_rank=True, **kwargs):
         # unconditional check, requires no extra kwargs added by subclasses
         self._check_kwargs(kwargs)
-        super().__init__(endog, exog, check_rank, **kwargs)
+        super().__init__(endog, exog, offset=offset, check_rank=check_rank,
+                         **kwargs)
         if not issubclass(self.__class__, MultinomialModel):
             if not np.all((self.endog >= 0) & (self.endog <= 1)):
                 raise ValueError("endog must be in the unit interval.")
+
+        if offset is None:
+            delattr(self, 'offset')
 
             if (not self._continuous_ok and
                     np.any(self.endog != np.round(self.endog))):
                 raise ValueError("endog must be binary, either 0 or 1")
 
-    def predict(self, params, exog=None, linear=False):
+    def predict(self, params, exog=None, linear=False, offset=None):
         """
         Predict response variable of a model given exogenous variables.
 
@@ -489,12 +495,21 @@ class BinaryModel(DiscreteModel):
         array
             Fitted values at exog.
         """
+        # Use fit offset if appropriate
+        if offset is None and exog is None and hasattr(self, 'offset'):
+            offset = self.offset
+        elif offset is None:
+            offset = 0.
+
         if exog is None:
             exog = self.exog
+
+        linpred = np.dot(exog, params) + offset
+
         if not linear:
-            return self.cdf(np.dot(exog, params))
+            return self.cdf(linpred)
         else:
-            return np.dot(exog, params)
+            return linpred
 
     @Appender(DiscreteModel.fit_regularized.__doc__)
     def fit_regularized(self, start_params=None, method='l1',
@@ -520,7 +535,16 @@ class BinaryModel(DiscreteModel):
         discretefit = L1BinaryResults(self, bnryfit)
         return L1BinaryResultsWrapper(discretefit)
 
-    def _derivative_predict(self, params, exog=None, transform='dydx'):
+    def fit_constrained(self, constraints, start_params=None, **fit_kwds):
+
+        res = fit_constrained_wrap(self, constraints, start_params=None,
+                                   **fit_kwds)
+        return res
+
+    fit_constrained.__doc__ = fit_constrained_wrap.__doc__
+
+    def _derivative_predict(self, params, exog=None, transform='dydx',
+                            offset=None):
         """
         For computing marginal effects standard errors.
 
@@ -533,13 +557,14 @@ class BinaryModel(DiscreteModel):
         """
         if exog is None:
             exog = self.exog
-        dF = self.pdf(np.dot(exog, params))[:,None] * exog
+        linpred = self.predict(params, exog, offset=offset, linear=True)
+        dF = self.pdf(linpred)[:,None] * exog
         if 'ey' in transform:
-            dF /= self.predict(params, exog)[:,None]
+            dF /= self.predict(params, exog, offset=offset)[:,None]
         return dF
 
     def _derivative_exog(self, params, exog=None, transform='dydx',
-                         dummy_idx=None, count_idx=None):
+                         dummy_idx=None, count_idx=None, offset=None):
         """
         For computing marginal effects returns dF(XB) / dX where F(.) is
         the predicted probabilities
@@ -554,8 +579,9 @@ class BinaryModel(DiscreteModel):
         if exog is None:
             exog = self.exog
 
-        margeff = np.dot(self.pdf(np.dot(exog, params))[:, None],
-                         params[None, :])
+        linpred = self.predict(params, exog, offset=offset, linear=True)
+        margeff = np.dot(self.pdf(linpred)[:,None],
+                         params[None,:])
 
         if 'ex' in transform:
             margeff *= exog
@@ -1410,7 +1436,7 @@ class Poisson(CountModel):
         exposure = getattr(self, "exposure", 0)
         X = self.exog
         L = np.exp(np.dot(X,params) + exposure + offset)
-        return L
+        return -L
 
     def _deriv_score_obs_dendog(self, params, scale=None):
         """derivative of score_obs w.r.t. endog
@@ -1724,6 +1750,31 @@ class GeneralizedPoisson(CountModel):
         else:
             return score
 
+    def score_factor(self, params):
+        if self._transparams:
+            alpha = np.exp(params[-1])
+        else:
+            alpha = params[-1]
+
+        params = params[:-1]
+        p = self.parameterization
+        y = self.endog[:,None]
+        mu = self.predict(params)[:,None]
+        mu_p = np.power(mu, p)
+        a1 = 1 + alpha * mu_p
+        a2 = mu + alpha * mu_p * y
+        a3 = alpha * p * mu ** (p - 1)
+        a4 = a3 * y
+        dmudb = mu
+
+        dalpha = (mu_p * (y * ((y - 1) / a2 - 2 / a1) + a2 / a1**2))
+        dparams = dmudb * (-a4 / a1 +
+                           a3 * a2 / (a1 ** 2) +
+                           (1 + a4) * ((y - 1) / a2 - 1 / a1) +
+                           1 / mu)
+
+        return np.column_stack((dparams, dalpha))
+
     def _score_p(self, params):
         """
         Generalized Poisson model derivative of the log-likelihood by p-parameter
@@ -1745,7 +1796,6 @@ class GeneralizedPoisson(CountModel):
             alpha = params[-1]
         params = params[:-1]
         p = self.parameterization
-        exog = self.exog
         y = self.endog[:,None]
         mu = self.predict(params)[:,None]
         mu_p = np.power(mu, p)
@@ -1831,6 +1881,89 @@ class GeneralizedPoisson(CountModel):
 
         return hess_arr
 
+    def hessian_factor(self, params):
+        """
+        Generalized Poisson model Hessian matrix of the loglikelihood
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model
+
+        Returns
+        -------
+        hess : ndarray, (nobs, 3)
+            The Hessian factor, second derivative of loglikelihood function
+            with respect to linear predictor and dispersion parameter
+            evaluated at `params`
+            The first column contains the second derivative w.r.t. linpred,
+            the second column contains the cross derivative, and the
+            third column contains the second derivative w.r.t. the dispersion
+            parameter.
+
+        """
+        if self._transparams:
+            alpha = np.exp(params[-1])
+        else:
+            alpha = params[-1]
+
+        params = params[:-1]
+        p = self.parameterization
+        exog = self.exog
+        y = self.endog #[:,None]
+        mu = self.predict(params)  # [:,None]
+        mu_p = np.power(mu, p)
+        a1 = 1 + alpha * mu_p
+        a2 = mu + alpha * mu_p * y
+        a3 = alpha * p * mu ** (p - 1)
+        a4 = a3 * y
+        a5 = p * mu ** (p - 1)
+        dmudb = mu
+
+        # for dl/dlinpred dparams
+        nobs = exog.shape[0]
+        hess_fact = np.empty((nobs, 3))
+
+
+        hess_fact[:, 0] = mu * (
+             mu * (a3 * a4 / a1**2 -
+                   2 * a3**2 * a2 / a1**3 +
+                   2 * a3 * (a4 + 1) / a1**2 -
+                   a4 * p / (mu * a1) +
+                   a3 * p * a2 / (mu * a1**2) +
+                   a4 / (mu * a1) -
+                   a3 * a2 / (mu * a1**2) +
+                   (y - 1) * a4 * (p - 1) / (a2 * mu) -
+                   (y - 1) * (1 + a4)**2 / a2**2 -
+                   a4 * (p - 1) / (a1 * mu) -
+                   1 / mu**2) +
+             (-a4 / a1 +
+              a3 * a2 / a1**2 +
+              (y - 1) * (1 + a4) / a2 -
+              (1 + a4) / a1 +
+              1 / mu))
+
+        # for dl/dlinpred dalpha
+        dldpda = ((2 * a4 * mu_p / a1**2 -
+                         2 * a3 * mu_p * a2 / a1**3 -
+                         mu_p * y * (y - 1) * (1 + a4) / a2**2 +
+                         mu_p * (1 + a4) / a1**2 +
+                         a5 * y * (y - 1) / a2 -
+                         2 * a5 * y / a1 +
+                         a5 * a2 / a1**2) * dmudb)
+
+        hess_fact[:, 1] = dldpda
+
+        # for dl/dalpha dalpha
+        dldada = mu_p**2 * (3 * y / a1**2 -
+                            (y / a2)**2. * (y - 1) -
+                            2 * a2 / a1**3)
+
+        hess_fact[:, 2] = dldada
+
+        return hess_fact
+
+
     def predict(self, params, exog=None, exposure=None, offset=None,
                 which='mean'):
         """
@@ -1874,6 +2007,8 @@ class Logit(BinaryModel):
     Logit Model
 
     %(params)s
+    offset : array_like
+        Offset is added to the linear prediction with coefficient equal to 1.
     %(extra_params)s
 
     Attributes
@@ -1966,8 +2101,8 @@ class Logit(BinaryModel):
         logistic distribution is symmetric.
         """
         q = 2*self.endog - 1
-        X = self.exog
-        return np.sum(np.log(self.cdf(q*np.dot(X,params))))
+        linpred = self.predict(params, linear=True)
+        return np.sum(np.log(self.cdf(q * linpred)))
 
     def loglikeobs(self, params):
         """
@@ -1997,8 +2132,8 @@ class Logit(BinaryModel):
         logistic distribution is symmetric.
         """
         q = 2*self.endog - 1
-        X = self.exog
-        return np.log(self.cdf(q*np.dot(X,params)))
+        linpred = self.predict(params, linear=True)
+        return np.log(self.cdf(q * linpred))
 
     def score(self, params):
         """
@@ -2022,8 +2157,8 @@ class Logit(BinaryModel):
 
         y = self.endog
         X = self.exog
-        L = self.cdf(np.dot(X,params))
-        return np.dot(y - L,X)
+        fitted = self.predict(params)
+        return np.dot(y - fitted, X)
 
     def score_obs(self, params):
         """
@@ -2049,12 +2184,12 @@ class Logit(BinaryModel):
 
         y = self.endog
         X = self.exog
-        L = self.cdf(np.dot(X, params))
-        return (y - L)[:,None] * X
+        fitted = self.predict(params)
+        return (y - fitted)[:,None] * X
 
     def score_factor(self, params):
         """
-        Logit model score_factor for each observation
+        Logit model derivative of the log-likelihood with respect to linpred.
 
         Parameters
         ----------
@@ -2063,8 +2198,9 @@ class Logit(BinaryModel):
 
         Returns
         -------
-        score : array_like
-            The score factor (nobs, ) of the model evaluated at `params`
+        score_factor : array_like
+            The derivative of the loglikelihood for each observation evaluated
+            at `params`.
 
         Notes
         -----
@@ -2077,9 +2213,8 @@ class Logit(BinaryModel):
         .. math:: \\ln\\lambda_{i}=x_{i}\\beta
         """
         y = self.endog
-        X = self.exog
-        L = self.cdf(np.dot(X, params))
-        return (y - L)
+        fitted = self.predict(params)
+        return (y - fitted)
 
     def hessian(self, params):
         """
@@ -2101,7 +2236,7 @@ class Logit(BinaryModel):
         .. math:: \\frac{\\partial^{2}\\ln L}{\\partial\\beta\\partial\\beta^{\\prime}}=-\\sum_{i}\\Lambda_{i}\\left(1-\\Lambda_{i}\\right)x_{i}x_{i}^{\\prime}
         """
         X = self.exog
-        L = self.cdf(np.dot(X,params))
+        L = self.predict(params)
         return -np.dot(L*(1-L)*X.T,X)
 
     def hessian_factor(self, params):
@@ -2118,11 +2253,9 @@ class Logit(BinaryModel):
         hess : ndarray, (nobs,)
             The Hessian factor, second derivative of loglikelihood function
             with respect to the linear predictor evaluated at `params`
-
         """
-        X = self.exog
-        L = self.cdf(np.dot(X, params))
-        return L * (1 - L)
+        L = self.predict(params)
+        return -L * (1 - L)
 
     @Appender(DiscreteModel.fit.__doc__)
     def fit(self, start_params=None, method='newton', maxiter=35,
@@ -2165,6 +2298,8 @@ class Probit(BinaryModel):
     Probit Model
 
     %(params)s
+    offset : array_like
+        Offset is added to the linear prediction with coefficient equal to 1.
     %(extra_params)s
 
     Attributes
@@ -2242,9 +2377,8 @@ class Probit(BinaryModel):
         """
 
         q = 2*self.endog - 1
-        X = self.exog
-        return np.sum(np.log(np.clip(self.cdf(q*np.dot(X,params)),
-            FLOAT_EPS, 1)))
+        linpred = self.predict(params, linear=True)
+        return np.sum(np.log(np.clip(self.cdf(q * linpred), FLOAT_EPS, 1)))
 
     def loglikeobs(self, params):
         """
@@ -2272,8 +2406,8 @@ class Probit(BinaryModel):
         """
 
         q = 2*self.endog - 1
-        X = self.exog
-        return np.log(np.clip(self.cdf(q*np.dot(X,params)), FLOAT_EPS, 1))
+        linpred = self.predict(params, linear=True)
+        return np.log(np.clip(self.cdf(q*linpred), FLOAT_EPS, 1))
 
 
     def score(self, params):
@@ -2300,7 +2434,7 @@ class Probit(BinaryModel):
         """
         y = self.endog
         X = self.exog
-        XB = np.dot(X,params)
+        XB = self.predict(params, linear=True)
         q = 2*y - 1
         # clip to get rid of invalid divide complaint
         L = q*self.pdf(q*XB)/np.clip(self.cdf(q*XB), FLOAT_EPS, 1 - FLOAT_EPS)
@@ -2332,11 +2466,43 @@ class Probit(BinaryModel):
         """
         y = self.endog
         X = self.exog
-        XB = np.dot(X,params)
+        XB = self.predict(params, linear=True)
         q = 2*y - 1
         # clip to get rid of invalid divide complaint
         L = q*self.pdf(q*XB)/np.clip(self.cdf(q*XB), FLOAT_EPS, 1 - FLOAT_EPS)
         return L[:,None] * X
+
+    def score_factor(self, params):
+        """
+        Probit model Jacobian for each observation
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model
+
+        Returns
+        -------
+        score_factor : array_like (nobs,)
+            The derivative of the loglikelihood function for each observation
+            with respect to linear predictor evaluated at `params`
+
+        Notes
+        -----
+        .. math:: \\frac{\\partial\\ln L_{i}}{\\partial\\beta}=\\left[\\frac{q_{i}\\phi\\left(q_{i}x_{i}^{\\prime}\\beta\\right)}{\\Phi\\left(q_{i}x_{i}^{\\prime}\\beta\\right)}\\right]x_{i}
+
+        for observations :math:`i=1,...,n`
+
+        Where :math:`q=2y-1`. This simplification comes from the fact that the
+        normal distribution is symmetric.
+        """
+        y = self.endog
+        XB = self.predict(params, linear=True)
+        q = 2*y - 1
+        # clip to get rid of invalid divide complaint
+        L = q*self.pdf(q*XB)/np.clip(self.cdf(q*XB), FLOAT_EPS, 1 - FLOAT_EPS)
+        return L
+
 
     def hessian(self, params):
         """
@@ -2364,10 +2530,40 @@ class Probit(BinaryModel):
         and :math:`q=2y-1`
         """
         X = self.exog
-        XB = np.dot(X,params)
+        XB = self.predict(params, linear=True)
         q = 2*self.endog - 1
         L = q*self.pdf(q*XB)/self.cdf(q*XB)
         return np.dot(-L*(L+XB)*X.T,X)
+
+    def hessian_factor(self, params):
+        """
+        Probit model Hessian factor of the log-likelihood
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model
+
+        Returns
+        -------
+        hess : ndarray, (nobs,)
+            The Hessian factor, second derivative of loglikelihood function
+            with respect to linear predictor evaluated at `params`
+
+        Notes
+        -----
+        .. math:: \\frac{\\partial^{2}\\ln L}{\\partial\\beta\\partial\\beta^{\\prime}}=-\\lambda_{i}\\left(\\lambda_{i}+x_{i}^{\\prime}\\beta\\right)x_{i}x_{i}^{\\prime}
+
+        where
+
+        .. math:: \\lambda_{i}=\\frac{q_{i}\\phi\\left(q_{i}x_{i}^{\\prime}\\beta\\right)}{\\Phi\\left(q_{i}x_{i}^{\\prime}\\beta\\right)}
+
+        and :math:`q=2y-1`
+        """
+        XB = self.predict(params, linear=True)
+        q = 2 * self.endog - 1
+        L = q * self.pdf(q * XB) / self.cdf(q * XB)
+        return -L * (L + XB)
 
     @Appender(DiscreteModel.fit.__doc__)
     def fit(self, start_params=None, method='newton', maxiter=35,
@@ -2982,7 +3178,7 @@ class NegativeBinomial(CountModel):
         hess_arr[tri_idx] = hess_arr.T[tri_idx]
 
         # for dl/dparams dalpha
-        da1 = -alpha**-2
+        # da1 = -alpha**-2
         dldpda = np.sum(-a1 * dparams + exog * a1 *
                         (-trigamma*mu/alpha**2 - prob), axis=0)
 
@@ -3358,6 +3554,49 @@ class NegativeBinomialP(CountModel):
         else:
             return score
 
+    def score_factor(self, params):
+        """
+        Generalized Negative Binomial (NB-P) model score (gradient) vector of the log-likelihood for each observations.
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model
+
+        Returns
+        -------
+        score : ndarray, 1-D
+            The score vector of the model, i.e. the first derivative of the
+            loglikelihood function, evaluated at `params`
+        """
+        if self._transparams:
+            alpha = np.exp(params[-1])
+        else:
+            alpha = params[-1]
+
+        params = params[:-1]
+        p = 2 - self.parameterization
+        y = self.endog
+
+        mu = self.predict(params)
+        mu_p = mu**p
+        a1 = mu_p / alpha
+        a2 = mu + a1
+        a3 = y + a1
+        a4 = p * a1 / mu
+
+        dgpart = digamma(a3) - digamma(a1)
+
+        dparams = ((a4 * dgpart -
+                   a3 / a2) +
+                   y / mu + a4 * (1 - a3 / a2 + np.log(a1 / a2)))
+        dparams = (mu * dparams).T
+        dalpha = (-a1 / alpha * (dgpart +
+                                 np.log(a1 / a2) +
+                                 1 - a3 / a2))
+
+        return np.column_stack((dparams, dalpha))
+
     def hessian(self, params):
         """
         Generalized Negative Binomial (NB-P) model hessian maxtrix of the log-likelihood
@@ -3433,11 +3672,77 @@ class NegativeBinomialP(CountModel):
 
         return hess_arr
 
+    def hessian_factor(self, params):
+        """
+        Generalized Negative Binomial (NB-P) model hessian maxtrix of the log-likelihood
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model
+
+        Returns
+        -------
+        hessian : ndarray, 2-D
+            The hessian matrix of the model.
+        """
+        if self._transparams:
+            alpha = np.exp(params[-1])
+        else:
+            alpha = params[-1]
+        params = params[:-1]
+
+        p = 2 - self.parameterization
+        y = self.endog
+        exog = self.exog
+        mu = self.predict(params)
+
+        mu_p = mu**p
+        a1 = mu_p / alpha
+        a2 = mu + a1
+        a3 = y + a1
+        a4 = p * a1 / mu
+        a5 = a4 * p / mu
+
+        dgpart = digamma(a3) - digamma(a1)
+
+        nobs = exog.shape[0]
+        hess_fact = np.zeros((nobs, 3))
+
+        coeff = mu**2 * (((1 + a4)**2 * a3 / a2**2 -
+                          a3 * (a5 - a4 / mu) / a2 -
+                          y / mu**2 -
+                          2 * a4 * (1 + a4) / a2 +
+                          a5 * (np.log(a1) - np.log(a2) + dgpart + 2) -
+                          a4 * (np.log(a1) - np.log(a2) + dgpart + 1) / mu -
+                          a4**2 * (polygamma(1, a1) - polygamma(1, a3))) +
+                         (-(1 + a4) * a3 / a2 +
+                          y / mu +
+                          a4 * (np.log(a1) - np.log(a2) + dgpart + 1)) / mu)
+
+        hess_fact[:, 0] = coeff
+
+        hess_fact[:, 1] = (mu * a1 *
+                ((1 + a4) * (1 - a3 / a2) / a2 -
+                 p * (np.log(a1 / a2) + dgpart + 2) / mu +
+                 p * (a3 / mu + a4) / a2 +
+                 a4 * (polygamma(1, a1) - polygamma(1, a3))) / alpha)
+
+        da2 = (a1 * (2 * np.log(a1 / a2) +
+                     2 * dgpart + 3 -
+                     2 * a3 / a2 - a1 * polygamma(1, a1) +
+                     a1 * polygamma(1, a3) - 2 * a1 / a2 +
+                     a1 * a3 / a2**2) / alpha**2)
+
+        hess_fact[:, 2] = da2
+
+        return hess_fact
+
+
     @Appender(_get_start_params_null_docs)
     def _get_start_params_null(self):
         offset = getattr(self, "offset", 0)
         exposure = getattr(self, "exposure", 0)
-        q = self.parameterization - 1
 
         const = (self.endog / np.exp(offset + exposure)).mean()
         params = [np.log(const)]
@@ -3811,7 +4116,7 @@ class DiscreteResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def im_ratio(self):
-        return pinf.im_ratio(self)
+        return pinfer.im_ratio(self)
 
     def info_criteria(self, crit, dk_params=0):
         """Return an information criterion for the model.
@@ -3847,11 +4152,25 @@ class DiscreteResults(base.LikelihoodModelResults):
             bic = -2*self.llf + k_params*np.log(nobs)
             return bic
         elif crit == "tic":
-            return pinf.tic(self)
+            return pinfer.tic(self)
         elif crit == "gbic":
-            return pinf.gbic(self)
+            return pinfer.gbic(self)
         else:
             raise ValueError("Name of information criterion not recognized.")
+
+    def score_test(self, exog_extra=None, params_constrained=None,
+                   hypothesis='joint', cov_type=None, cov_kwds=None,
+                   k_constraints=None, observed=True):
+
+        res = pinfer.score_test(self, exog_extra=exog_extra,
+                                params_constrained=params_constrained,
+                                hypothesis=hypothesis,
+                                cov_type=cov_type, cov_kwds=cov_kwds,
+                                k_constraints=k_constraints,
+                                observed=observed)
+        return res
+
+    score_test.__doc__ = pinfer.score_test.__doc__
 
     def _get_endog_name(self, yname, yname_list):
         if yname is None:
@@ -4494,7 +4813,6 @@ class MultinomialResults(DiscreteResults):
             except TypeError:
                 ynames[i] = str(ynames[i])
         if issue_warning:
-            import warnings
             warnings.warn(msg, SpecificationWarning)
 
         return ynames
