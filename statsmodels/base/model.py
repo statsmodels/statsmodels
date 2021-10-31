@@ -2102,9 +2102,9 @@ class LikelihoodModelResults(Results):
 
         """
         from statsmodels.stats._delta_method import NonlinearDeltaCov
-        func_args = None  #TODO: not yet implemented, maybe skip - use partial
+        func_args = None  # TODO: not yet implemented, maybe skip - use partial
         nl = NonlinearDeltaCov(func, self.params, self.cov_params(),
-                               grad=deriv, func_args=func_args)
+                               deriv=deriv, func_args=func_args)
 
         return nl
 

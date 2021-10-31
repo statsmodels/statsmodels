@@ -9,11 +9,12 @@ from __future__ import print_function
 import numpy as np
 from scipy import stats
 
+
 class NonlinearDeltaCov(object):
     '''Asymptotic covariance by Deltamethod
 
-    the function is designed for 2d array, with rows equal to
-    the number of equations and columns equal to the number
+    The function is designed for 2d array, with rows equal to
+    the number of equations or constraints and columns equal to the number
     of parameters. 1d params work by chance ?
 
     fun: R^{m*k) -> R^{m}  where m is number of equations and k is
@@ -32,19 +33,19 @@ class NonlinearDeltaCov(object):
     Parameters
     ----------
     func : callable, f(params)
-        nonlinear function of the estimation parameters. The return of
-        the function can be vector valued, i.e. a 1-D array
+        Nonlinear function of the estimation parameters. The return of
+        the function can be vector valued, i.e. a 1-D array.
     params : ndarray
-        parameters at which function `func` is evaluated
+        Parameters at which function `func` is evaluated.
     cov_params : ndarray
-        covariance matrix of the parameters `params`
+        Covariance matrix of the parameters `params`.
     deriv : function or None
-        first derivative or Jacobian of func. If deriv is None, then a
+        First derivative or Jacobian of func. If deriv is None, then a
         numerical derivative will be used. If func returns a 1-D array,
         then the `deriv` should have rows corresponding to the elements
         of the return of func.
     func_args : None
-        not yet implemented
+        Not yet implemented.
 
 
     '''
@@ -58,12 +59,12 @@ class NonlinearDeltaCov(object):
             raise NotImplementedError('func_args not yet implemented')
 
     def grad(self, params=None, **kwds):
-        """first derivative, jacobian of func evaluated at params
+        """First derivative, jacobian of func evaluated at params.
 
         Parameters
         ----------
         params : None or ndarray
-            values at which gradient is evaluated. If params is None, then
+            Values at which gradient is evaluated. If params is None, then
             the attached params are used.
             TODO: should we drop this
         kwds : keyword arguments
@@ -75,7 +76,6 @@ class NonlinearDeltaCov(object):
         -------
         grad : ndarray
             gradient or jacobian of the function
-
         """
         if params is None:
             params = self.params
@@ -93,14 +93,14 @@ class NonlinearDeltaCov(object):
             return jac
 
     def cov(self):
-        """covariance matrix of the transformed random variable
+        """Covariance matrix of the transformed random variable.
         """
         g = self.grad()
         covar = np.dot(np.dot(g, self.cov_params), g.T)
         return covar
 
     def predicted(self):
-        """value of the function evaluated at the attached params
+        """Value of the function evaluated at the attached params.
 
         Note: This is not equal to the expected value if the transformation is
         nonlinear. If params is the maximum likelihood estimate, then
@@ -116,9 +116,9 @@ class NonlinearDeltaCov(object):
         return predicted
 
     def wald_test(self, value):
-        """Joint hypothesis tests that H0: f(params) = value
+        """Joint hypothesis tests that H0: f(params) = value.
 
-        The alternative hypothesis is two-sided H1: f(params) != value
+        The alternative hypothesis is two-sided H1: f(params) != value.
 
         Warning: this might be replaced with more general version that returns
         ContrastResults.
@@ -132,12 +132,10 @@ class NonlinearDeltaCov(object):
         Returns
         -------
         statistic : float
-            value of the test statistic
+            Value of the test statistic.
         pvalue : float
-            p-value for the hypothesis test, based and chisquare distribution
-            and implies a two-sided hypothesis test
-
-
+            The p-value for the hypothesis test, based and chisquare
+            distribution and implies a two-sided hypothesis test
         """
         # TODO: add use_t option or not?
         m = self.predicted()
@@ -147,7 +145,6 @@ class NonlinearDeltaCov(object):
         lmstat = np.dot(np.dot(diff.T, np.linalg.inv(v)), diff)
         return lmstat, stats.chi2.sf(lmstat, df_constraints)
 
-
     def se_vectorized(self):
         """standard error for each equation (row) treated separately
 
@@ -156,11 +153,10 @@ class NonlinearDeltaCov(object):
         var = (np.dot(g, self.cov_params) * g).sum(-1)
         return np.sqrt(var)
 
-
     def conf_int(self, alpha=0.05, use_t=False, df=None, var_extra=None,
                  predicted=None, se=None):
         """
-        confidence interval for predicted based on delta method
+        Confidence interval for predicted based on delta method.
 
         Parameters
         ----------
@@ -175,15 +171,15 @@ class NonlinearDeltaCov(object):
             degrees of freedom for t distribution. Only used and required if
             use_t is True.
         var_extra : None or array_like float
-            additional variance that is added to the variance based on the
+            Additional variance that is added to the variance based on the
             delta method. This can be used to obtain confidence intervalls for
             new observations (prediction interval).
         predicted : ndarray (float)
-            predicted value, can be used to avoid repeated calculations if it
-            is already available
+            Predicted value, can be used to avoid repeated calculations if it
+            is already available.
         se : ndarray (float)
-            standard error, can be used to avoid repeated calculations if it
-            is already available
+            Standard error, can be used to avoid repeated calculations if it
+            is already available.
 
         Returns
         -------
@@ -191,10 +187,10 @@ class NonlinearDeltaCov(object):
             Each row contains [lower, upper] limits of the confidence interval
             for the corresponding parameter. The first column contains all
             lower, the second column contains all upper limits.
-
         """
 
-        # TODO: predicted and se as arguments to avoid duplicate calculations, keep?
+        # TODO: predicted and se as arguments to avoid duplicate calculations
+        # or leave unchanged?
         if not use_t:
             dist = stats.norm
             dist_args = ()
@@ -215,13 +211,13 @@ class NonlinearDeltaCov(object):
         lower = predicted - q * se
         upper = predicted + q * se
         ci = np.column_stack((lower, upper))
-        if ci.shape[1] !=2:
+        if ci.shape[1] != 2:
             raise RuntimeError('something wrong: ci not 2 columns')
         return ci
 
-
-    def summary(self, xname=None, alpha=0.05, title=None, use_t=False, df=None):
-        """Summarize the Results of the nonlinear transformation
+    def summary(self, xname=None, alpha=0.05, title=None, use_t=False,
+                df=None):
+        """Summarize the Results of the nonlinear transformation.
 
         This provides a parameter table equivalent to `t_test` and reuses
         `ContrastResults`.
@@ -231,7 +227,7 @@ class NonlinearDeltaCov(object):
         xname : list of strings, optional
             Default is `c_##` for ## in p the number of regressors
         alpha : float
-            significance level for the confidence intervals. Default is
+            Significance level for the confidence intervals. Default is
             alpha = 0.05 which implies a confidence level of 95%.
         title : string, optional
             Title for the params table. If not None, then this replaces the
@@ -251,7 +247,6 @@ class NonlinearDeltaCov(object):
             in the same form as the parameter results table in the model
             results summary.
             For F or Wald test, the return is a string.
-
         """
         # this is an experimental reuse of ContrastResults
         from statsmodels.stats.contrast import ContrastResults
@@ -267,9 +262,9 @@ class NonlinearDeltaCov(object):
         if use_t:
             df_resid = df
             cr = ContrastResults(effect=predicted, t=statistic, sd=se,
-                                   df_denom=df_resid)
+                                 df_denom=df_resid)
         else:
             cr = ContrastResults(effect=predicted, statistic=statistic, sd=se,
-                                   df_denom=None, distribution='norm')
+                                 df_denom=None, distribution='norm')
 
         return cr.summary(xname=xname, alpha=alpha, title=title)
