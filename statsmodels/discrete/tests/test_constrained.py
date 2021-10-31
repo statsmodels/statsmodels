@@ -404,7 +404,6 @@ class CheckGLMConstrainedMixin(CheckPoissonConstrainedMixin):
         res2 = self.res2  # reference results
         res1 = self.res1m
 
-        # FIXME: dont leave commented-out
         # assert_allclose(res1.aic, res2.aic, rtol=1e-10)  # far away
         # Stata aic in ereturn and in estat ic are very different
         # we have the same as estat ic
@@ -418,10 +417,8 @@ class CheckGLMConstrainedMixin(CheckPoissonConstrainedMixin):
             # FutureWarning for BIC changes
             assert_allclose(res1.bic, res2.bic, rtol=1e-10)
         # bic is deviance based
-        # FIXME: dont leave commented-out
         #  assert_allclose(res1.bic, res2.infocrit[5], rtol=1e-10)
         assert_allclose(res1.deviance, res2.deviance, rtol=1e-10)
-        # FIXME: dont leave commented-out
         # TODO: which chi2 are these
         # assert_allclose(res1.pearson_chi2, res2.chi2, rtol=1e-10)
 

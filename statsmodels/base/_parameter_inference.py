@@ -245,7 +245,8 @@ def score_test(self, exog_extra=None, params_constrained=None,
         pval = stats.chi2.sf(chi2stat, k_constraints)
         return chi2stat, pval
     else:
-        raise NotImplementedError('only cov_type "nonrobust" is available')
+        msg = 'Only cov_type "nonrobust" and "HC0" are available.'
+        raise NotImplementedError(msg)
 
     if hypothesis == 'joint':
         chi2stat = score.dot(np.linalg.solve(cov_score_test, score[:, None]))

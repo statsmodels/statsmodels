@@ -1758,7 +1758,6 @@ class GeneralizedPoisson(CountModel):
 
         params = params[:-1]
         p = self.parameterization
-        exog = self.exog
         y = self.endog[:,None]
         mu = self.predict(params)[:,None]
         mu_p = np.power(mu, p)
@@ -1797,7 +1796,6 @@ class GeneralizedPoisson(CountModel):
             alpha = params[-1]
         params = params[:-1]
         p = self.parameterization
-        exog = self.exog
         y = self.endog[:,None]
         mu = self.predict(params)[:,None]
         mu_p = np.power(mu, p)
@@ -1923,7 +1921,7 @@ class GeneralizedPoisson(CountModel):
         dmudb = mu
 
         # for dl/dlinpred dparams
-        nobs, k_vars = exog.shape
+        nobs = exog.shape[0]
         hess_fact = np.empty((nobs, 3))
 
 
@@ -2103,7 +2101,6 @@ class Logit(BinaryModel):
         logistic distribution is symmetric.
         """
         q = 2*self.endog - 1
-        X = self.exog
         linpred = self.predict(params, linear=True)
         return np.sum(np.log(self.cdf(q * linpred)))
 
@@ -2135,7 +2132,6 @@ class Logit(BinaryModel):
         logistic distribution is symmetric.
         """
         q = 2*self.endog - 1
-        X = self.exog
         linpred = self.predict(params, linear=True)
         return np.log(self.cdf(q * linpred))
 
@@ -2217,7 +2213,6 @@ class Logit(BinaryModel):
         .. math:: \\ln\\lambda_{i}=x_{i}\\beta
         """
         y = self.endog
-        X = self.exog
         fitted = self.predict(params)
         return (y - fitted)
 
@@ -2259,7 +2254,6 @@ class Logit(BinaryModel):
             The Hessian factor, second derivative of loglikelihood function
             with respect to the linear predictor evaluated at `params`
         """
-        X = self.exog
         L = self.predict(params)
         return -L * (1 - L)
 
@@ -2412,7 +2406,6 @@ class Probit(BinaryModel):
         """
 
         q = 2*self.endog - 1
-        X = self.exog
         linpred = self.predict(params, linear=True)
         return np.log(np.clip(self.cdf(q*linpred), FLOAT_EPS, 1))
 
@@ -2504,7 +2497,6 @@ class Probit(BinaryModel):
         normal distribution is symmetric.
         """
         y = self.endog
-        X = self.exog
         XB = self.predict(params, linear=True)
         q = 2*y - 1
         # clip to get rid of invalid divide complaint
@@ -2568,7 +2560,6 @@ class Probit(BinaryModel):
 
         and :math:`q=2y-1`
         """
-        X = self.exog
         XB = self.predict(params, linear=True)
         q = 2 * self.endog - 1
         L = q * self.pdf(q * XB) / self.cdf(q * XB)
@@ -3187,7 +3178,7 @@ class NegativeBinomial(CountModel):
         hess_arr[tri_idx] = hess_arr.T[tri_idx]
 
         # for dl/dparams dalpha
-        da1 = -alpha**-2
+        # da1 = -alpha**-2
         dldpda = np.sum(-a1 * dparams + exog * a1 *
                         (-trigamma*mu/alpha**2 - prob), axis=0)
 
@@ -3752,7 +3743,6 @@ class NegativeBinomialP(CountModel):
     def _get_start_params_null(self):
         offset = getattr(self, "offset", 0)
         exposure = getattr(self, "exposure", 0)
-        q = self.parameterization - 1
 
         const = (self.endog / np.exp(offset + exposure)).mean()
         params = [np.log(const)]
@@ -4823,7 +4813,6 @@ class MultinomialResults(DiscreteResults):
             except TypeError:
                 ynames[i] = str(ynames[i])
         if issue_warning:
-            import warnings
             warnings.warn(msg, SpecificationWarning)
 
         return ynames
