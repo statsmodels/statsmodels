@@ -26,7 +26,7 @@ from statsmodels.tsa.arima.estimators.gls import gls as estimate_gls
 from statsmodels.tsa.arima.specification import SARIMAXSpecification
 
 
-class ARIMA(sarimax.SARIMAX):
+class ARIMA2(sarimax.SARIMAX):
     r"""
     Autoregressive Integrated Moving Average (ARIMA) model, and extensions
 
