@@ -40,49 +40,6 @@ def maxabs(arr1, arr2):
 def maxabsrel(arr1, arr2):
     return np.max(np.abs(arr2 / arr1 - 1))
 
-class NonlinearDeltaCov(object):
-    '''Asymptotic covariance by Deltamethod
-
-    the function is designed for 2d array, with rows equal to
-    the number of equations and columns equal to the number
-    of parameters. 1d params work by chance ?
-
-    fun: R^{m*k) -> R^{m}  where m is number of equations and k is
-    the number of parameters.
-
-    equations follow Greene
-
-    '''
-    def __init__(self, fun, params, cov_params):
-        self.fun = fun
-        self.params = params
-        self.cov_params = cov_params
-
-    def grad(self, params=None, **kwds):
-        if params is None:
-            params = self.params
-        kwds.setdefault('epsilon', 1e-4)
-        from statsmodels.tools.numdiff import approx_fprime
-        return approx_fprime(params, self.fun, **kwds)
-
-    def cov(self):
-        g = self.grad()
-        covar = np.dot(np.dot(g, self.cov_params), g.T)
-        return covar
-
-    def expected(self):
-        # rename: misnomer, this is the MLE of the fun
-        return self.fun(self.params)
-
-    def wald(self, value):
-        m = self.expected()
-        v = self.cov()
-        df = np.size(m)
-        diff = m - value
-        lmstat = np.dot(np.dot(diff.T, np.linalg.inv(v)), diff)
-        return lmstat, stats.chi2.sf(lmstat, df)
-
-
 
 
 class PoissonGMLE(GenericLikelihoodModel):
