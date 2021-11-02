@@ -2081,7 +2081,7 @@ class LikelihoodModelResults(Results):
                               factor_labels=factor_labels)
         return res
 
-    def _wald_test_nl(self, func, deriv=None): #, func_args=None):
+    def _get_wald_nonlinear(self, func, deriv=None):
         """Experimental method for nonlinear prediction and tests
 
         Parameters

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Unit tests for NonlinearDeltaCov and LikelihoodResults._wald_test_nl
+"""Unit tests for NonlinearDeltaCov and LikelihoodResults._get_wald_nonlinear
 Created on Sun Mar 01 01:05:35 2015
 
 Author: Josef Perktold
@@ -31,7 +31,7 @@ class TestDeltacovOLS(object):
             return np.dot(x, params)**2
 
         nl = NonlinearDeltaCov(fun, res.params, res.cov_params())
-        nlm = res._wald_test_nl(fun)
+        nlm = res._get_wald_nonlinear(fun)
         # margeff excludes constant, last parameter in this case
         assert_allclose(nlm.se_vectorized(), nlm.se_vectorized(), rtol=1e-12)
         assert_allclose(nlm.predicted(), nlm.predicted(), rtol=1e-12)
@@ -99,8 +99,12 @@ def test_deltacov_margeff():
 
     # 2d f doesn't work correctly,
     # se_vectorized and predicted are 2d column vector
-    f = lambda p: np.squeeze(res_poi.model._derivative_exog(
-        p, res_poi.model.exog.mean(0)[None, :]))
+
+    def f(p):
+        ex = res_poi.model.exog.mean(0)[None, :]
+        fv = res_poi.model._derivative_exog(p, ex)
+        return np.squeeze(fv)
+
     nlp = NonlinearDeltaCov(f, res_poi.params, res_poi.cov_params())
 
     marg = res_poi.get_margeff(at='mean')
@@ -108,7 +112,7 @@ def test_deltacov_margeff():
     assert_allclose(nlp.se_vectorized()[:-1], marg.margeff_se, rtol=1e-13)
     assert_allclose(nlp.predicted()[:-1], marg.margeff, rtol=1e-13)
 
-    nlpm = res_poi._wald_test_nl(f)
+    nlpm = res_poi._get_wald_nonlinear(f)
     # margeff excludes constant, last parameter in this case
     assert_allclose(nlpm.se_vectorized()[:-1], marg.margeff_se, rtol=1e-13)
     assert_allclose(nlpm.predicted()[:-1], marg.margeff, rtol=1e-13)
