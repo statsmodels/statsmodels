@@ -79,7 +79,7 @@ def _lm_robust(score, constraint_matrix, score_deriv_inv, cov_score,
 
 def score_test(self, exog_extra=None, params_constrained=None,
                hypothesis='joint', cov_type=None, cov_kwds=None,
-               k_constraints=None, observed=True):
+               k_constraints=None, scale=None, observed=True):
     """score test for restrictions or for omitted variables
 
     Null Hypothesis : constraints are satisfied
@@ -193,8 +193,17 @@ def score_test(self, exog_extra=None, params_constrained=None,
                 raise ValueError('if exog_extra is None, then k_constraints'
                                  'needs to be given')
 
-        score = model.score(params_constrained)
-        score_obs = model.score_obs(params_constrained)
+        # we need to use results scale as additional parameter
+        if scale is not None:
+            # we need to use results scale as additional parameter, gh #7840
+            score_kwd = {'scale': scale}
+            hess_kwd['scale'] = scale
+        else:
+            score_kwd = {}
+
+        # duplicate computation of score, might not be needed
+        score = model.score(params_constrained, **score_kwd)
+        score_obs = model.score_obs(params_constrained, **score_kwd)
         hessian = model.hessian(params_constrained, **hess_kwd)
 
     else:
