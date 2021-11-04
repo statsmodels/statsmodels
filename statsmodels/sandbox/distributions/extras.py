@@ -59,6 +59,13 @@ from scipy.stats import distributions
 
 from statsmodels.stats.moment_helpers import mvsk2mc, mc2mvsk
 
+try:
+    from scipy.stats._mvn import mvndst
+except ImportError:
+    # Must be using SciPy <1.8.0 where this function was moved (it's not a
+    # public SciPy function, but we need it here)
+    from scipy.stats.mvn import mvndst
+
 
 #note copied from distr_skewnorm_0.py
 
@@ -871,7 +878,7 @@ absnormalg = TransfTwo_gen(stats.norm, np.abs, inverseplus, inverseminus,
 
 #copied from mvncdf.py
 '''multivariate normal probabilities and cumulative distribution function
-a wrapper for scipy.stats.kde.mvndst
+a wrapper for scipy.stats._mvn.mvndst
 
 
       SUBROUTINE MVNDST( N, LOWER, UPPER, INFIN, CORREL, MAXPTS,
@@ -919,37 +926,36 @@ a wrapper for scipy.stats.kde.mvndst
 
 
 
->>> scipy.stats.kde.mvn.mvndst([0.0,0.0],[10.0,10.0],[0,0],[0.5])
+>>> mvndst([0.0,0.0],[10.0,10.0],[0,0],[0.5])
 (2e-016, 1.0, 0)
->>> scipy.stats.kde.mvn.mvndst([0.0,0.0],[100.0,100.0],[0,0],[0.0])
+>>> mvndst([0.0,0.0],[100.0,100.0],[0,0],[0.0])
 (2e-016, 1.0, 0)
->>> scipy.stats.kde.mvn.mvndst([0.0,0.0],[1.0,1.0],[0,0],[0.0])
+>>> mvndst([0.0,0.0],[1.0,1.0],[0,0],[0.0])
 (2e-016, 0.70786098173714096, 0)
->>> scipy.stats.kde.mvn.mvndst([0.0,0.0],[0.001,1.0],[0,0],[0.0])
+>>> mvndst([0.0,0.0],[0.001,1.0],[0,0],[0.0])
 (2e-016, 0.42100802096993045, 0)
->>> scipy.stats.kde.mvn.mvndst([0.0,0.0],[0.001,10.0],[0,0],[0.0])
+>>> mvndst([0.0,0.0],[0.001,10.0],[0,0],[0.0])
 (2e-016, 0.50039894221391101, 0)
->>> scipy.stats.kde.mvn.mvndst([0.0,0.0],[0.001,100.0],[0,0],[0.0])
+>>> mvndst([0.0,0.0],[0.001,100.0],[0,0],[0.0])
 (2e-016, 0.50039894221391101, 0)
->>> scipy.stats.kde.mvn.mvndst([0.0,0.0],[0.01,100.0],[0,0],[0.0])
+>>> mvndst([0.0,0.0],[0.01,100.0],[0,0],[0.0])
 (2e-016, 0.5039893563146316, 0)
->>> scipy.stats.kde.mvn.mvndst([0.0,0.0],[0.1,100.0],[0,0],[0.0])
+>>> mvndst([0.0,0.0],[0.1,100.0],[0,0],[0.0])
 (2e-016, 0.53982783727702899, 0)
->>> scipy.stats.kde.mvn.mvndst([0.0,0.0],[0.1,100.0],[2,2],[0.0])
+>>> mvndst([0.0,0.0],[0.1,100.0],[2,2],[0.0])
 (2e-016, 0.019913918638514494, 0)
->>> scipy.stats.kde.mvn.mvndst([0.0,0.0],[0.0,0.0],[0,0],[0.0])
+>>> mvndst([0.0,0.0],[0.0,0.0],[0,0],[0.0])
 (2e-016, 0.25, 0)
->>> scipy.stats.kde.mvn.mvndst([0.0,0.0],[0.0,0.0],[-1,0],[0.0])
+>>> mvndst([0.0,0.0],[0.0,0.0],[-1,0],[0.0])
 (2e-016, 0.5, 0)
->>> scipy.stats.kde.mvn.mvndst([0.0,0.0],[0.0,0.0],[-1,0],[0.5])
+>>> mvndst([0.0,0.0],[0.0,0.0],[-1,0],[0.5])
 (2e-016, 0.5, 0)
->>> scipy.stats.kde.mvn.mvndst([0.0,0.0],[0.0,0.0],[0,0],[0.5])
+>>> mvndst([0.0,0.0],[0.0,0.0],[0,0],[0.5])
 (2e-016, 0.33333333333333337, 0)
->>> scipy.stats.kde.mvn.mvndst([0.0,0.0],[0.0,0.0],[0,0],[0.99])
+>>> mvndst([0.0,0.0],[0.0,0.0],[0,0],[0.99])
 (2e-016, 0.47747329317779391, 0)
 '''
 
-#from scipy.stats import kde
 
 informcode = {0: 'normal completion with ERROR < EPS',
               1: '''completion with ERROR > EPS and MAXPTS function values used;
@@ -959,7 +965,7 @@ informcode = {0: 'normal completion with ERROR < EPS',
 def mvstdnormcdf(lower, upper, corrcoef, **kwds):
     '''standardized multivariate normal cumulative distribution function
 
-    This is a wrapper for scipy.stats.kde.mvn.mvndst which calculates
+    This is a wrapper for scipy.stats._mvn.mvndst which calculates
     a rectangular integral over a standardized multivariate normal
     distribution.
 
@@ -1067,7 +1073,7 @@ def mvstdnormcdf(lower, upper, corrcoef, **kwds):
     #print lower,',',upper,',',infin,',',correl
     #print correl.shape
     #print kwds.items()
-    error, cdfvalue, inform = scipy.stats.kde.mvn.mvndst(lower,upper,infin,correl,**kwds)
+    error, cdfvalue, inform = mvndst(lower,upper,infin,correl,**kwds)
     if inform:
         print('something wrong', informcode[inform], error)
     return cdfvalue
@@ -1076,7 +1082,7 @@ def mvstdnormcdf(lower, upper, corrcoef, **kwds):
 def mvnormcdf(upper, mu, cov, lower=None,  **kwds):
     '''multivariate normal cumulative distribution function
 
-    This is a wrapper for scipy.stats.kde.mvn.mvndst which calculates
+    This is a wrapper for scipy.stats._mvn.mvndst which calculates
     a rectangular integral over a multivariate normal distribution.
 
     Parameters
