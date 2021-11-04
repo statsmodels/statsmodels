@@ -1931,12 +1931,21 @@ class GLMResults(base.LikelihoodModelResults):
             warnings.warn("score test has not been verified with var_weights",
                           UserWarning)
 
+        # We need to temporarily change model.df_resid for scale computation
+        # TODO: find a nicer way. gh #7840
+        mod_df_resid = self.model.df_resid
+        self.model.df_resid = self.df_resid
+        if k_constraints is not None:
+            self.model.df_resid += k_constraints
         res = pinfer.score_test(self, exog_extra=exog_extra,
                                 params_constrained=params_constrained,
                                 hypothesis=hypothesis,
                                 cov_type=cov_type, cov_kwds=cov_kwds,
                                 k_constraints=k_constraints,
+                                scale=None,
                                 observed=observed)
+
+        self.model.df_resid = mod_df_resid
         return res
 
     def get_hat_matrix_diag(self, observed=True):
