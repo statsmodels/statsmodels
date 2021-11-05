@@ -2120,6 +2120,13 @@ class LikelihoodModelResults(Results):
         cols : array_like, optional
             Specifies which confidence intervals to return.
 
+        .. deprecated: 0.13
+
+           cols is deprecated and will be removed after 0.14 is released.
+           cols only works when inputs are NumPy arrays and will fail
+           when using pandas Series or DataFrames as input. You can
+           subset the confidence intervals using slices.
+
         Returns
         -------
         array_like
@@ -2167,6 +2174,14 @@ class LikelihoodModelResults(Results):
         lower = params - q * bse
         upper = params + q * bse
         if cols is not None:
+            warnings.warn(
+                "cols is deprecated and will be removed after 0.14 is "
+                "released. cols only works when inputs are NumPy arrays and "
+                "will fail when using pandas Series or DataFrames as input. "
+                "Subsets of confidence intervals can be selected using slices "
+                "of the full confidence interval array.",
+                FutureWarning
+            )
             cols = np.asarray(cols)
             lower = lower[cols]
             upper = upper[cols]
