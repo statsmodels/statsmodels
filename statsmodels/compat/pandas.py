@@ -1,4 +1,5 @@
 from distutils.version import LooseVersion
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -26,6 +27,9 @@ __all__ = [
     "make_dataframe",
     "to_numpy",
     "pandas_lt_1_0_0",
+    "get_cached_func",
+    "get_cached_doc",
+    "call_cached_func",
 ]
 
 version = LooseVersion(pd.__version__)
@@ -181,3 +185,19 @@ def to_numpy(po: pd.DataFrame) -> np.ndarray:
         return po.to_numpy()
     except AttributeError:
         return po.values
+
+
+def get_cached_func(cached_prop):
+    try:
+        return cached_prop.fget
+    except AttributeError:
+        return cached_prop.func
+
+
+def call_cached_func(cached_prop, *args, **kwargs):
+    f = get_cached_func(cached_prop)
+    return f(*args, **kwargs)
+
+
+def get_cached_doc(cached_prop) -> Optional[str]:
+    return get_cached_func(cached_prop).__doc__
