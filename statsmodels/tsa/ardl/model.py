@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from statsmodels.compat.pandas import Appender, Substitution
+from statsmodels.compat.pandas import Appender, Substitution, call_cached_func
 from statsmodels.compat.python import Literal
 
 from collections import defaultdict
@@ -1450,9 +1450,9 @@ def ardl_select_order(
             nobs=nobs, df_model=df + x.shape[1], sigma2=sigma2, llf=llf
         )
 
-        aic = ARDLResults.aic.func(res)
-        bic = ARDLResults.bic.func(res)
-        hqic = ARDLResults.hqic.func(res)
+        aic = call_cached_func(ARDLResults.aic, res)
+        bic = call_cached_func(ARDLResults.bic, res)
+        hqic = call_cached_func(ARDLResults.hqic, res)
 
         return aic, bic, hqic
 
