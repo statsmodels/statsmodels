@@ -18,7 +18,7 @@ def fast_linbin(np.ndarray[DOUBLE] X, double a, double b, int M, int trunc=1):
     """
     cdef:
         Py_ssize_t i, li_i
-        int nobs = X.shape[0]
+        int nobs = np.PyArray_DIMS(X)[0]
         double delta = (b - a)/(M - 1)
         np.ndarray[DOUBLE] gcnts = np.zeros(M, float)
         np.ndarray[DOUBLE] lxi = (X - a)/delta
