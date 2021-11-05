@@ -146,7 +146,8 @@ import datetime as dt
 
 import numpy as np
 import pandas as pd
-from scipy.stats import _distn_infrastructure, norm, rv_continuous, rv_discrete
+from scipy.stats import norm, rv_continuous, rv_discrete
+from scipy.stats.distributions import rv_frozen
 
 from statsmodels.base.covtype import descriptions
 import statsmodels.base.wrapper as wrap
@@ -1813,7 +1814,7 @@ class ETSResults(base.StateSpaceMLEResults):
         elif isinstance(random_errors, (rv_continuous, rv_discrete)):
             params = random_errors.fit(self.resid)
             eps = random_errors.rvs(*params, size=(nsimulations, repetitions))
-        elif isinstance(random_errors, _distn_infrastructure.rv_frozen):
+        elif isinstance(random_errors, rv_frozen):
             eps = random_errors.rvs(size=(nsimulations, repetitions))
         else:
             raise ValueError("Argument random_errors has unexpected value!")
