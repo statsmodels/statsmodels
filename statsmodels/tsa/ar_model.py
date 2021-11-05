@@ -1,7 +1,12 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
-from statsmodels.compat.pandas import Appender, Substitution, to_numpy
+from statsmodels.compat.pandas import (
+    Appender,
+    Substitution,
+    call_cached_func,
+    to_numpy,
+)
 
 from collections.abc import Iterable
 import datetime as dt
@@ -1774,9 +1779,9 @@ def ar_select_order(
             nobs=nobs, df_model=df_model, sigma2=sigma2, llf=llf
         )
 
-        aic = AutoRegResults.aic.func(res)
-        bic = AutoRegResults.bic.func(res)
-        hqic = AutoRegResults.hqic.func(res)
+        aic = call_cached_func(AutoRegResults.aic, res)
+        bic = call_cached_func(AutoRegResults.bic, res)
+        hqic = call_cached_func(AutoRegResults.hqic, res)
 
         return aic, bic, hqic
 

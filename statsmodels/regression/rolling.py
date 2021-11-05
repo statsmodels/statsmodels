@@ -8,7 +8,13 @@ Copyright (c) 2019 Kevin Sheppard
 License: 3-clause BSD
 """
 from statsmodels.compat.numpy import lstsq
-from statsmodels.compat.pandas import Appender, Substitution, cache_readonly
+from statsmodels.compat.pandas import (
+    Appender,
+    Substitution,
+    cache_readonly,
+    call_cached_func,
+    get_cached_doc,
+)
 
 from collections import namedtuple
 
@@ -474,6 +480,7 @@ class RollingRegressionResults(object):
     cov_type : str
         Name of covariance estimator
     """
+
     _data_in_cache = tuple()
 
     def __init__(
@@ -515,19 +522,20 @@ class RollingRegressionResults(object):
             return DataFrame(val, columns=col_names, index=mi)
 
     @cache_readonly
-    @Appender(RegressionResults.aic.func.__doc__)
+    @Appender(get_cached_doc(RegressionResults.aic))
     def aic(self):
-        return self._wrap(RegressionResults.aic.func(self))
+        return self._wrap(call_cached_func(RegressionResults.aic, self))
 
     @cache_readonly
-    @Appender(RegressionResults.bic.func.__doc__)
+    @Appender(get_cached_doc(RegressionResults.bic))
     def bic(self):
         with np.errstate(divide="ignore"):
-            return self._wrap(RegressionResults.bic.func(self))
+            return self._wrap(call_cached_func(RegressionResults.bic, self))
 
     def info_criteria(self, crit, dk_params=0):
-        return self._wrap(RegressionResults.info_criteria(
-            self, crit, dk_params=dk_params))
+        return self._wrap(
+            RegressionResults.info_criteria(self, crit, dk_params=dk_params)
+        )
 
     @cache_readonly
     def params(self):
@@ -535,12 +543,12 @@ class RollingRegressionResults(object):
         return self._wrap(self._params)
 
     @cache_readonly
-    @Appender(RegressionResults.ssr.func.__doc__)
+    @Appender(get_cached_doc(RegressionResults.ssr))
     def ssr(self):
         return self._wrap(self._ssr)
 
     @cache_readonly
-    @Appender(RegressionResults.llf.func.__doc__)
+    @Appender(get_cached_doc(RegressionResults.llf))
     def llf(self):
         return self._wrap(self._llf)
 
@@ -555,27 +563,29 @@ class RollingRegressionResults(object):
         return self._k_constant
 
     @cache_readonly
-    @Appender(RegressionResults.centered_tss.func.__doc__)
+    @Appender(get_cached_doc(RegressionResults.centered_tss))
     def centered_tss(self):
         return self._centered_tss
 
     @cache_readonly
-    @Appender(RegressionResults.uncentered_tss.func.__doc__)
+    @Appender(get_cached_doc(RegressionResults.uncentered_tss))
     def uncentered_tss(self):
         return self._uncentered_tss
 
     @cache_readonly
-    @Appender(RegressionResults.rsquared.func.__doc__)
+    @Appender(get_cached_doc(RegressionResults.rsquared))
     def rsquared(self):
-        return self._wrap(RegressionResults.rsquared.func(self))
+        return self._wrap(call_cached_func(RegressionResults.rsquared, self))
 
     @cache_readonly
-    @Appender(RegressionResults.rsquared_adj.func.__doc__)
+    @Appender(get_cached_doc(RegressionResults.rsquared_adj))
     def rsquared_adj(self):
-        return self._wrap(RegressionResults.rsquared_adj.func(self))
+        return self._wrap(
+            call_cached_func(RegressionResults.rsquared_adj, self)
+        )
 
     @cache_readonly
-    @Appender(RegressionResults.nobs.func.__doc__)
+    @Appender(get_cached_doc(RegressionResults.nobs))
     def nobs(self):
         return self._wrap(self._nobs)
 
@@ -590,24 +600,24 @@ class RollingRegressionResults(object):
         return self._use_t
 
     @cache_readonly
-    @Appender(RegressionResults.ess.func.__doc__)
+    @Appender(get_cached_doc(RegressionResults.ess))
     def ess(self):
-        return self._wrap(RegressionResults.ess.func(self))
+        return self._wrap(call_cached_func(RegressionResults.ess, self))
 
     @cache_readonly
-    @Appender(RegressionResults.mse_model.func.__doc__)
+    @Appender(get_cached_doc(RegressionResults.mse_model))
     def mse_model(self):
-        return self._wrap(RegressionResults.mse_model.func(self))
+        return self._wrap(call_cached_func(RegressionResults.mse_model, self))
 
     @cache_readonly
-    @Appender(RegressionResults.mse_resid.func.__doc__)
+    @Appender(get_cached_doc(RegressionResults.mse_resid))
     def mse_resid(self):
-        return self._wrap(RegressionResults.mse_resid.func(self))
+        return self._wrap(call_cached_func(RegressionResults.mse_resid, self))
 
     @cache_readonly
-    @Appender(RegressionResults.mse_total.func.__doc__)
+    @Appender(get_cached_doc(RegressionResults.mse_total))
     def mse_total(self):
-        return self._wrap(RegressionResults.mse_total.func(self))
+        return self._wrap(call_cached_func(RegressionResults.mse_total, self))
 
     @cache_readonly
     def _cov_params(self):
@@ -629,17 +639,19 @@ class RollingRegressionResults(object):
             the returned covariance is a DataFrame with a MultiIndex with
             key (observation, variable), so that the covariance for
             observation with index i is cov.loc[i].
-         """
+        """
         return self._wrap(self._cov_params)
 
     @cache_readonly
-    @Appender(RegressionResults.f_pvalue.func.__doc__)
+    @Appender(get_cached_doc(RegressionResults.f_pvalue))
     def f_pvalue(self):
         with np.errstate(invalid="ignore"):
-            return self._wrap(RegressionResults.f_pvalue.func(self))
+            return self._wrap(
+                call_cached_func(RegressionResults.f_pvalue, self)
+            )
 
     @cache_readonly
-    @Appender(RegressionResults.fvalue.func.__doc__)
+    @Appender(get_cached_doc(RegressionResults.fvalue))
     def fvalue(self):
         if self._cov_type == "nonrobust":
             return self.mse_model / self.mse_resid
@@ -665,19 +677,21 @@ class RollingRegressionResults(object):
             return stat
 
     @cache_readonly
-    @Appender(RegressionResults.bse.func.__doc__)
+    @Appender(get_cached_doc(RegressionResults.bse))
     def bse(self):
         with np.errstate(invalid="ignore"):
             return self._wrap(np.sqrt(np.diagonal(self._cov_params, 0, 2)))
 
     @cache_readonly
-    @Appender(LikelihoodModelResults.tvalues.func.__doc__)
+    @Appender(get_cached_doc(LikelihoodModelResults.tvalues))
     def tvalues(self):
         with np.errstate(invalid="ignore"):
-            return self._wrap(LikelihoodModelResults.tvalues.func(self))
+            return self._wrap(
+                call_cached_func(LikelihoodModelResults.tvalues, self)
+            )
 
     @cache_readonly
-    @Appender(LikelihoodModelResults.pvalues.func.__doc__)
+    @Appender(get_cached_doc(LikelihoodModelResults.pvalues))
     def pvalues(self):
         if self.use_t:
             df_resid = getattr(self, "df_resid_inference", self.df_resid)
