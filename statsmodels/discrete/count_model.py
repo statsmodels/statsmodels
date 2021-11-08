@@ -470,6 +470,24 @@ class GenericZeroInflated(CountModel):
         else:
             raise ValueError('which = %s is not available' % which)
 
+    def _derivative_predict(self, params, exog=None, transform='dydx'):
+        """NotImplemented
+        """
+        raise NotImplementedError
+
+    def _derivative_exog(self, params, exog=None, transform="dydx",
+                         dummy_idx=None, count_idx=None):
+        """NotImplemented
+        """
+        raise NotImplementedError
+
+    def _deriv_mean_dparams(self, params):
+        """
+        NotImplemented Derivative of the expected endog with respect to the
+        parameters.
+        """
+        raise NotImplementedError
+
 
 class ZeroInflatedPoisson(GenericZeroInflated):
     __doc__ = """
