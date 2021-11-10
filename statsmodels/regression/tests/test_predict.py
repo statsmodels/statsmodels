@@ -215,7 +215,9 @@ class TestWLSPrediction(object):
 
         # function for parameter transformation
         # should be separate test method
-        from statsmodels.genmod._prediction import params_transform_univariate
+        from statsmodels.base._prediction_inference import (
+            params_transform_univariate
+            )
         rates = params_transform_univariate(res_glm.params, res_glm.cov_params())
 
         rates2 = np.column_stack((np.exp(res_glm.params),

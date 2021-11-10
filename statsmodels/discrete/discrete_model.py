@@ -34,6 +34,7 @@ import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
 from statsmodels.base._constraints import fit_constrained_wrap
 import statsmodels.base._parameter_inference as pinfer
+from statsmodels.base import _prediction_inference as pred
 from statsmodels.distributions import genpoisson_p
 import statsmodels.regression.linear_model as lm
 from statsmodels.tools import data as data_tools, tools
@@ -4455,7 +4456,6 @@ class PoissonResults(CountResults):
                        transform=True, linear=False,
                        row_labels=None):
 
-        import statsmodels.genmod._prediction as pred
         import statsmodels.regression._prediction as linpred
 
         pred_kwds = {'exposure': exposure, 'offset': offset, 'linear': True}
@@ -4711,7 +4711,6 @@ class LogitResults(BinaryResults):
                        transform=True, linear=False,
                        row_labels=None):
 
-        import statsmodels.genmod._prediction as pred
         import statsmodels.regression._prediction as linpred
 
         pred_kwds = {'linear': True}
