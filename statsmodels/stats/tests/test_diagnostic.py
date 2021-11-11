@@ -1723,7 +1723,7 @@ def test_encompasing_direct(cov_type, reset_randomstate):
     direct1 = OLS(y, np.hstack([x1, x[:, 1:], z_extra])).fit(cov_type=cov_type)
     r1 = np.zeros((4, 3 + 1 + 3))
     r1[:, -4:] = np.eye(4)
-    direct_test_1 = direct1.wald_test(r1, use_f=True)
+    direct_test_1 = direct1.wald_test(r1, use_f=True, scalar=True)
     expected = (
         float(np.squeeze(direct_test_1.statistic)),
         float(np.squeeze(direct_test_1.pvalue)),
@@ -1735,7 +1735,7 @@ def test_encompasing_direct(cov_type, reset_randomstate):
     direct2 = OLS(y, np.hstack([z1, x_extra])).fit(cov_type=cov_type)
     r2 = np.zeros((2, 2 + 3 + 2))
     r2[:, -2:] = np.eye(2)
-    direct_test_2 = direct2.wald_test(r2, use_f=True)
+    direct_test_2 = direct2.wald_test(r2, use_f=True, scalar=True)
     expected = (
         float(np.squeeze(direct_test_2.statistic)),
         float(np.squeeze(direct_test_2.pvalue)),

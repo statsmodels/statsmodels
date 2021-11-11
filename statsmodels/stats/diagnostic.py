@@ -303,8 +303,8 @@ def compare_encompassing(results_x, results_z, cov_type="nonrobust",
         res = OLS(endog, aug_reg).fit(cov_type=cov_est, cov_kwds=cov_kwds)
         r_matrix = np.zeros((k_a, k))
         r_matrix[:, -k_a:] = np.eye(k_a)
-        test = res.wald_test(r_matrix, use_f=True)
-        stat, pvalue = float(np.squeeze(test.statistic)), float(test.pvalue)
+        test = res.wald_test(r_matrix, use_f=True, scalar=True)
+        stat, pvalue = test.statistic, test.pvalue
         df_num, df_denom = int(test.df_num), int(test.df_denom)
         return stat, pvalue, df_num, df_denom
 
@@ -593,7 +593,7 @@ def acorr_lm(resid, nlags=None, autolag=None, store=False, *, period=None,
         # Note: deg of freedom for LM test: nvars - constant = lags used
     else:
         r_matrix = np.hstack((np.zeros((usedlag, 1)), np.eye(usedlag)))
-        test_stat = resols.wald_test(r_matrix, use_f=False)
+        test_stat = resols.wald_test(r_matrix, use_f=False, scalar=True)
         lm = float(test_stat.statistic)
         lmpval = float(test_stat.pvalue)
 
@@ -1105,7 +1105,7 @@ def linear_reset(res, power=3, test_type="fitted", use_f=False,
     nrestr = aug_exog.shape[1] - exog.shape[1]
     nparams = aug_exog.shape[1]
     r_mat = np.eye(nrestr, nparams, k=nparams-nrestr)
-    return res.wald_test(r_mat, use_f=use_f)
+    return res.wald_test(r_mat, use_f=use_f, scalar=True)
 
 
 def linear_harvey_collier(res, order_by=None, skip=None):
