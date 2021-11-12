@@ -608,7 +608,8 @@ class TestGAMMPGBSPoisson(CheckGAMMixin):
         res2 = self.res2
         wtt = res1.wald_test_terms(skip_single=True,
                                    combine_terms=['fuel', 'drive',
-                                                  'weight', 'hp'])
+                                                  'weight', 'hp'],
+                                   scalar=True)
         # mgcv has term test for linear part
         assert_allclose(wtt.statistic[:2], res2.pTerms_chi_sq, rtol=1e-7)
         assert_allclose(wtt.pvalues[:2], res2.pTerms_pv, rtol=1e-6)

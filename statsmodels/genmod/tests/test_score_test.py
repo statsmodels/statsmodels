@@ -63,11 +63,11 @@ class TestScoreTest(object):
         res_constr = mod_full.fit_constrained('x5=0, x6=0')
         res_drop = mod_drop.fit()
 
-        wald = res_full.wald_test(restriction)
+        wald = res_full.wald_test(restriction, scalar=True)
         lm_constr = np.hstack(score_test(res_constr))
         lm_extra = np.hstack(score_test(res_drop, exog_extra=self.exog_extra))
 
-        res_wald = np.hstack([wald.statistic.squeeze(), wald.pvalue, [wald.df_denom]])
+        res_wald = np.hstack([wald.statistic, wald.pvalue, [wald.df_denom]])
         assert_allclose(lm_constr, res_wald, rtol=self.rtol_ws, atol=self.atol_ws)
         assert_allclose(lm_extra, res_wald, rtol=self.rtol_ws, atol=self.atol_ws)
         assert_allclose(lm_constr, lm_extra, rtol=1e-12, atol=1e-14)
@@ -76,12 +76,12 @@ class TestScoreTest(object):
 
         cov_type='HC0'
         res_full_hc = mod_full.fit(cov_type=cov_type, start_params=res_full.params)
-        wald = res_full_hc.wald_test(restriction)
+        wald = res_full_hc.wald_test(restriction, scalar=True)
         lm_constr = np.hstack(score_test(res_constr, cov_type=cov_type))
         lm_extra = np.hstack(score_test(res_drop, exog_extra=self.exog_extra,
                                         cov_type=cov_type))
 
-        res_wald = np.hstack([wald.statistic.squeeze(), wald.pvalue, [wald.df_denom]])
+        res_wald = np.hstack([wald.statistic, wald.pvalue, [wald.df_denom]])
         assert_allclose(lm_constr, res_wald, rtol=self.rtol_ws, atol=self.atol_ws)
         assert_allclose(lm_extra, res_wald, rtol=self.rtol_ws, atol=self.atol_ws)
         assert_allclose(lm_constr, lm_extra, rtol=1e-13)
