@@ -1735,7 +1735,8 @@ class TestGeneralizedPoisson_p2(object):
         assert_allclose(self.res1.llf, self.res2.llf)
 
     def test_wald(self):
-        result = self.res1.wald_test(np.eye(len(self.res1.params))[:-2])
+        result = self.res1.wald_test(np.eye(len(self.res1.params))[:-2],
+                                     scalar=True)
         assert_allclose(result.statistic, self.res2.wald_statistic)
         assert_allclose(result.pvalue, self.res2.wald_pvalue, atol=1e-15)
 

@@ -93,12 +93,12 @@ def check_ftest_pvalues(results):
     use_t = res.use_t
     k_vars = len(res.params)
     # check default use_t
-    pvals = [res.wald_test(np.eye(k_vars)[k], use_f=use_t).pvalue
+    pvals = [res.wald_test(np.eye(k_vars)[k], use_f=use_t, scalar=True).pvalue
              for k in range(k_vars)]
     assert_allclose(pvals, res.pvalues, rtol=5e-10, atol=1e-25)
 
     # automatic use_f based on results class use_t
-    pvals = [res.wald_test(np.eye(k_vars)[k]).pvalue
+    pvals = [res.wald_test(np.eye(k_vars)[k], scalar=True).pvalue
              for k in range(k_vars)]
     assert_allclose(pvals, res.pvalues, rtol=5e-10, atol=1e-25)
 
