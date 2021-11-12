@@ -320,12 +320,20 @@ class TestPenalizedPoissonOraclePenalized2(CheckPenalizedPoisson):
         modp = PoissonPenalized(y, x[:, :cls.k_nonzero], penal=cls.penalty)
         modp.pen_weight *= 10  # need to penalize more to get oracle selection
         modp.penal.tau = 0.05
-        cls.res2 = modp.fit(method='bfgs', maxiter=100, disp=0)
+        sp2 = np.array([0.96817921, 0.43673551, 0.33096011, 0.27416614])
+        cls.res2 = modp.fit(start_params=sp2 * 0.5, method='bfgs',
+                            maxiter=100, disp=0)
+
+        params_notrim = np.array([
+            9.68178874e-01, 4.36744981e-01, 3.30965041e-01, 2.74161883e-01,
+            -2.58988461e-06, -1.24352640e-06, 4.48584458e-08, -2.46876149e-06,
+            -1.02471074e-05, -4.39248098e-06])
 
         mod = PoissonPenalized(y, x, penal=cls.penalty)
         mod.pen_weight *= 10  # need to penalize more to get oracle selection
         mod.penal.tau = 0.05
-        cls.res1 = mod.fit(method='bfgs', maxiter=100, trim=True, disp=0)
+        cls.res1 = mod.fit(start_params=params_notrim * 0.5,
+                           method='bfgs', maxiter=100, trim=True, disp=0)
 
         cls.exog_index = slice(None, cls.k_nonzero, None)
 
@@ -349,14 +357,20 @@ class TestPenalizedPoissonOraclePenalized2HC(CheckPenalizedPoisson):
         modp = PoissonPenalized(y, x[:, :cls.k_nonzero], penal=cls.penalty)
         modp.pen_weight *= 10  # need to penalize more to get oracle selection
         modp.penal.tau = 0.05
-        cls.res2 = modp.fit(cov_type=cov_type, method='bfgs', maxiter=100,
-                            disp=0)
+        sp2 = np.array([0.96817921, 0.43673551, 0.33096011, 0.27416614])
+        cls.res2 = modp.fit(start_params=sp2 * 0.5, cov_type=cov_type,
+                            method='bfgs', maxiter=100, disp=0)
+
+        params_notrim = np.array([
+            9.68178874e-01, 4.36744981e-01, 3.30965041e-01, 2.74161883e-01,
+            -2.58988461e-06, -1.24352640e-06, 4.48584458e-08, -2.46876149e-06,
+            -1.02471074e-05, -4.39248098e-06])
 
         mod = PoissonPenalized(y, x, penal=cls.penalty)
         mod.pen_weight *= 10  # need to penalize more to get oracle selection
         mod.penal.tau = 0.05
-        cls.res1 = mod.fit(cov_type=cov_type, method='bfgs', maxiter=100,
-                           trim=True, disp=0)
+        cls.res1 = mod.fit(start_params=params_notrim * 0.5,cov_type=cov_type,
+                           method='bfgs', maxiter=100, trim=True, disp=0)
 
         cls.exog_index = slice(None, cls.k_nonzero, None)
         cls.atol = 1e-12
