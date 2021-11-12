@@ -466,7 +466,7 @@ class TestOnewayOLS(object):
         v = np.zeros(c_equal.shape[0])
 
         # noncentrality at estimated parameters
-        wt = res_ols.wald_test(c_equal)
+        wt = res_ols.wald_test(c_equal, scalar=True)
         df_num, df_denom = wt.df_num, wt.df_denom
 
         cov_p = res_ols.cov_params()
@@ -495,7 +495,7 @@ class TestOnewayOLS(object):
         params_alt = res_ols.params * 0.75
         # compute constraint value so we can get noncentrality from wald_test
         v_off = _offset_constraint(c_equal, res_ols.params, params_alt)
-        wt_off = res_ols.wald_test((c_equal, v + v_off))
+        wt_off = res_ols.wald_test((c_equal, v + v_off), scalar=True)
         nc_wt_off = wald_test_noncent_generic(params_alt, c_equal, v,
                                               cov_p, diff=None, joint=True)
         assert_allclose(nc_wt_off, wt_off.statistic * wt_off.df_num,

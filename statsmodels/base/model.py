@@ -1762,12 +1762,12 @@ class LikelihoodModelResults(Results):
         >>> print(f_test)
         <F test: F=array([[ 144.17976065]]), p=6.322026217355609e-08, df_denom=9, df_num=3>
         """
-        res = self.wald_test(r_matrix, cov_p=cov_p, invcov=invcov, use_f=True)
+        res = self.wald_test(r_matrix, cov_p=cov_p, invcov=invcov, use_f=True, scalar=True)
         return res
 
     # TODO: untested for GLMs?
     def wald_test(self, r_matrix, cov_p=None, invcov=None,
-                  use_f=None, df_constraints=None):
+                  use_f=None, df_constraints=None, scalar=None):
         """
         Compute a Wald-test for a joint linear hypothesis.
 
@@ -1799,6 +1799,13 @@ class LikelihoodModelResults(Results):
         df_constraints : int, optional
             The number of constraints. If not provided the number of
             constraints is determined from r_matrix.
+        scalar : bool, optional
+            Flag indicating whether the Wald test statistic should be returned
+            as a sclar float. The current behavior is to return an array.
+            This will switch to a scalar float after 0.14 is released. To
+            get the future behavior now, set scalar to True. To silence
+            the warning and retain the legacy behavior, set scalar to
+            False.
 
         Returns
         -------
@@ -1823,6 +1830,7 @@ class LikelihoodModelResults(Results):
         where the rank of the covariance of the noise is not full.
         """
         use_f = bool_like(use_f, "use_f", strict=True, optional=True)
+        scalar = bool_like(scalar, "scalar", strict=True, optional=True)
         if use_f is None:
             # switch to use_t false if undefined
             use_f = (hasattr(self, 'use_t') and self.use_t)
@@ -1877,6 +1885,17 @@ class LikelihoodModelResults(Results):
             F = np.dot(np.dot(Rbq.T, invcov), Rbq)
 
         df_resid = getattr(self, 'df_resid_inference', self.df_resid)
+        if scalar is None:
+            warnings.warn(
+                "The behavior of wald_test will change after 0.14 to returning "
+                "scalar test statistic values. To get the future behavior now, "
+                "set scalar to True. To silence this message while retaining "
+                "the legacy behavior, set scalar to False.",
+                FutureWarning
+            )
+            scalar = False
+        if scalar and F.size == 1:
+            F = float(F)
         if use_f:
             F /= J
             return ContrastResults(F=F, df_denom=df_resid,
@@ -1886,7 +1905,7 @@ class LikelihoodModelResults(Results):
                                    distribution='chi2', distargs=(J,))
 
     def wald_test_terms(self, skip_single=False, extra_constraints=None,
-                        combine_terms=None):
+                        combine_terms=None, scalar=None):
         """
         Compute a sequence of Wald tests for terms over multiple columns.
 
@@ -1907,6 +1926,13 @@ class LikelihoodModelResults(Results):
             Each string in this list is matched to the name of the terms or
             the name of the exogenous variables. All columns whose name
             includes that string are combined in one joint test.
+        scalar : bool, optional
+            Flag indicating whether the Wald test statistic should be returned
+            as a sclar float. The current behavior is to return an array.
+            This will switch to a scalar float after 0.14 is released. To
+            get the future behavior now, set scalar to True. To silence
+            the warning and retain the legacy behavior, set scalar to
+            False.
 
         Returns
         -------
@@ -2001,8 +2027,8 @@ class LikelihoodModelResults(Results):
         res_wald = []
         index = []
         for name, constraint in constraints + combined_constraints + extra_constraints:
-            wt = result.wald_test(constraint)
-            row = [wt.statistic.item(), wt.pvalue.item(), constraint.shape[0]]
+            wt = result.wald_test(constraint, scalar=scalar)
+            row = [wt.statistic, wt.pvalue, constraint.shape[0]]
             if use_t:
                 row.append(wt.df_denom)
             res_wald.append(row)

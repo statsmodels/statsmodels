@@ -236,7 +236,7 @@ class CheckGMM(object):
         # assert_allclose(res_f.pvalue, res2.Fp, rtol=1e-08, atol=0)
 
         # Smoke test for Wald
-        res_wald = res1.wald_test(restriction[:-1])
+        res_wald = res1.wald_test(restriction[:-1], scalar=True)
 
     @pytest.mark.smoke
     def test_summary(self):

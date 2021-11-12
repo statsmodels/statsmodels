@@ -191,7 +191,7 @@ def test_other_tests_autoreg(ols_autoreg_result):
     r = np.ones_like(a.params)
     a.t_test(r)
     r = np.eye(a.params.shape[0])
-    a.wald_test(r)
+    a.wald_test(r, scalar=True)
 
 
 # TODO: test likelihood for ARX model?
