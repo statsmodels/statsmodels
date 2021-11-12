@@ -6,6 +6,7 @@ requires = [
     "numpy==1.17.4; python_version=='3.7'",
     "numpy==1.17.4; python_version=='3.8'",
     "numpy==1.19.4; python_version=='3.9'",
-    "numpy; python_version>'3.9'",
+    "numpy==1.21.4; python_version=='3.10'",
+    "numpy; python_version>'3.10'",
     "scipy>=1.3",
 ]
