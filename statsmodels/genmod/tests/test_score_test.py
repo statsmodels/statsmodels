@@ -64,7 +64,7 @@ class TestScoreTest(object):
         res_drop = mod_drop.fit()
 
         wald = res_full.wald_test(restriction, scalar=True)
-        lm_constr = np.hstack(res_constr.score_test())
+        lm_constr = np.hstack(score_test(res_constr))
         lm_extra = np.hstack(score_test(res_drop, exog_extra=self.exog_extra))
 
         res_wald = np.hstack([wald.statistic, wald.pvalue, [wald.df_denom]])
