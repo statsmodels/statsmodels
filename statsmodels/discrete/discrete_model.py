@@ -4372,6 +4372,7 @@ class CountResults(DiscreteResults):
     __doc__ = _discrete_results_docs % {
         "one_line_description": "A results class for count data",
         "extra_attr": ""}
+
     @cache_readonly
     def resid(self):
         """
@@ -4387,6 +4388,67 @@ class CountResults(DiscreteResults):
         are also handled.
         """
         return self.model.endog - self.predict()
+
+    def get_prediction(self, exog=None, exposure=None, offset=None,
+                       transform=True, which="mean", linear=None,
+                       row_labels=None, use_mean=False, **kwargs):
+
+        import statsmodels.regression._prediction as linpred
+
+        if linear is True:
+            # compatibility with old keyword
+            which = "linear"
+
+        pred_kwds = kwargs
+        pred_kwds.update({'exposure': exposure, 'offset': offset})
+
+        if which == "linear":
+            # pred_kwds["linear"] = True  # old keyword
+            pred_kwds["which"] = "linear"
+            # two calls to a get_prediction duplicates exog generation if patsy
+            res_linpred = linpred.get_prediction(
+                self,
+                exog=exog,
+                transform=transform,
+                row_labels=row_labels,
+                pred_kwds=pred_kwds,
+                )
+            if which == "linear":
+                res = res_linpred
+        elif which == "mean" and (use_mean is False):
+            # endpoint transformation
+            if self.model.k_extra > 0:
+                # TODO:
+                index = np.arange(self.model.exog.shape[1])
+            else:
+                index = None
+
+            pred_kwds["which"] = which
+            # TODO: add link or ilink to all link based models (except zi
+            link = getattr(self.model, "link", None)
+            if link is None:
+                from statsmodels.genmod.families import links
+                link = links.Log()
+            res = pred.get_prediction_monotonic(
+                self,
+                exog=exog,
+                transform=transform,
+                row_labels=row_labels,
+                link=link,
+                pred_kwds=pred_kwds,
+                index=index,
+                )
+
+        else:
+            # which is not mean or linear, or we need averaging
+            res = pred.get_prediction_delta(
+                self,
+                which=which,
+                use_mean=use_mean,
+                pred_kwds=pred_kwds,
+                )
+
+        return res
 
 
 class NegativeBinomialResults(CountResults):

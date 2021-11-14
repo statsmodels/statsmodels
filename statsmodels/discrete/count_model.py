@@ -441,11 +441,11 @@ class GenericZeroInflated(CountModel):
         self.model_main.exog = tmp_exog
         self.model_main.endog = tmp_endog
         # tmp_offset might be an array with elementwise equality testing
-        if len(tmp_offset) == 1 and tmp_offset[0] == 'no':
+        if np.size(tmp_offset) == 1 and tmp_offset[0] == 'no':
             del self.model_main.offset
         else:
             self.model_main.offset = tmp_offset
-        if len(tmp_exposure) == 1 and tmp_exposure[0] == 'no':
+        if np.size(tmp_exposure) == 1 and tmp_exposure[0] == 'no':
             del self.model_main.exposure
         else:
             self.model_main.exposure = tmp_exposure
@@ -733,7 +733,27 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
         return start_params
 
 
-class ZeroInflatedPoissonResults(CountResults):
+class ZeroInflatedResults(CountResults):
+
+    def get_prediction(self, exog=None, exog_infl=None, exposure=None,
+                       offset=None, which='mean', use_mean=False,
+                       transform=True, row_labels=None):
+
+        import statsmodels.base._prediction_inference as pred
+
+        pred_kwds = {
+            'exog_infl': exog_infl,
+            'exposure': exposure,
+            'offset': offset,
+            }
+
+        res = pred.get_prediction_delta(self, exog=exog, which=which, 
+                                        use_mean=use_mean,
+                                        pred_kwds=pred_kwds)
+        return res
+
+
+class ZeroInflatedPoissonResults(ZeroInflatedResults):
     __doc__ = _discrete_results_docs % {
     "one_line_description": "A results class for Zero Inflated Poisson",
     "extra_attr": ""}
@@ -769,7 +789,7 @@ wrap.populate_wrapper(L1ZeroInflatedPoissonResultsWrapper,
                       L1ZeroInflatedPoissonResults)
 
 
-class ZeroInflatedGeneralizedPoissonResults(CountResults):
+class ZeroInflatedGeneralizedPoissonResults(ZeroInflatedResults):
     __doc__ = _discrete_results_docs % {
         "one_line_description": "A results class for Zero Inflated Generalized Poisson",
         "extra_attr": ""}
@@ -810,7 +830,7 @@ wrap.populate_wrapper(L1ZeroInflatedGeneralizedPoissonResultsWrapper,
                       L1ZeroInflatedGeneralizedPoissonResults)
 
 
-class ZeroInflatedNegativeBinomialResults(CountResults):
+class ZeroInflatedNegativeBinomialResults(ZeroInflatedResults):
     __doc__ = _discrete_results_docs % {
         "one_line_description": "A results class for Zero Inflated Generalized Negative Binomial",
         "extra_attr": ""}
