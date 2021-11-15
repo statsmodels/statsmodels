@@ -356,7 +356,8 @@ class GLMGamResults(GLMResults):
         if cpr:
             # TODO: resid_response does not make sense with nonlinear link
             # use resid_working ?
-            cpr_ = y_est + self.resid_working
+            residual = self.resid_working[sort_index]
+            cpr_ = y_est + residual
             ax.plot(x, cpr_, '.', lw=2)
 
         ax.set_xlabel(smoother.smoothers[variable].variable_name)
