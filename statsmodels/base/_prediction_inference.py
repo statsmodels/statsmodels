@@ -13,6 +13,127 @@ import pandas as pd
 
 
 # this is based on PredictionResults, copied and adjusted
+class PredictionResultsBase(object):
+
+    def __init__(self, predicted, var_pred, func=None, deriv=None,
+                 df=None, dist=None, row_labels=None, **kwds):
+        self.predicted = predicted
+        self.var_pred = var_pred
+        self.func = func
+        self.deriv = deriv
+        self.df = df
+        self.row_labels = row_labels
+        self.__dict__.update(kwds)
+
+        if dist is None or dist == 'norm':
+            self.dist = stats.norm
+            self.dist_args = ()
+        elif dist == 't':
+            self.dist = stats.t
+            self.dist_args = (self.df,)
+        else:
+            self.dist = dist
+            self.dist_args = ()
+
+    @property
+    def se(self):
+        return np.sqrt(self.var_pred)
+
+    @property
+    def tvalues(self):
+        return self.predicted / self.se
+
+    def t_test(self, value=0, alternative='two-sided'):
+        '''z- or t-test for hypothesis that mean is equal to value
+
+        Parameters
+        ----------
+        value : array_like
+            value under the null hypothesis
+        alternative : str
+            'two-sided', 'larger', 'smaller'
+
+        Returns
+        -------
+        stat : ndarray
+            test statistic
+        pvalue : ndarray
+            p-value of the hypothesis test, the distribution is given by
+            the attribute of the instance, specified in `__init__`. Default
+            if not specified is the normal distribution.
+
+        '''
+        # assumes symmetric distribution
+        stat = (self.predicted_mean - value) / self.se_mean
+
+        if alternative in ['two-sided', '2-sided', '2s']:
+            pvalue = self.dist.sf(np.abs(stat), *self.dist_args)*2
+        elif alternative in ['larger', 'l']:
+            pvalue = self.dist.sf(stat, *self.dist_args)
+        elif alternative in ['smaller', 's']:
+            pvalue = self.dist.cdf(stat, *self.dist_args)
+        else:
+            raise ValueError('invalid alternative')
+        return stat, pvalue
+
+    def _conf_int_generic(self, center, se, alpha, dist_args=None):
+        """internal function to avoid code duplication
+        """
+        if dist_args is None:
+            dist_args = ()
+
+        q = self.dist.ppf(1 - alpha / 2., *dist_args)
+        lower = center - q * se
+        upper = center + q * se
+        ci = np.column_stack((lower, upper))
+        # if we want to stack at a new last axis, for lower.ndim > 1
+        # np.concatenate((lower[..., None], upper[..., None]), axis=-1)
+        return ci
+
+    def conf_int(self, *, alpha=0.05, **kwds):
+        """
+        Returns the confidence interval of the value, `effect` of the
+        constraint.
+
+        Parameters
+        ----------
+        alpha : float, optional
+            The significance level for the confidence interval.
+            ie., The default `alpha` = .05 returns a 95% confidence interval.
+
+        kwds : extra keyword arguments
+            currently ignored, only for compatibility, consistent signature
+
+        Returns
+        -------
+        ci : ndarray, (k_constraints, 2)
+            The array has the lower and the upper limit of the confidence
+            interval in the columns.
+        """
+
+        ci = self._conf_int_generic(self.predicted, self.se, alpha,
+                                    dist_args=self.dist_args)
+        return ci
+
+    def summary_frame(self, alpha=0.05):
+        """Summary frame"""
+        ci = self.conf_int(alpha=alpha)
+        to_include = {}
+        to_include['predicted'] = self.predicted
+        to_include['se'] = self.se
+        to_include['ci_lower'] = ci[:, 0]
+        to_include['ci_upper'] = ci[:, 1]
+
+        self.table = to_include
+        # pandas dict does not handle 2d_array
+        # data = np.column_stack(list(to_include.values()))
+        # names = ....
+        res = pd.DataFrame(to_include, index=self.row_labels,
+                           columns=to_include.keys())
+        return res
+
+
+# this is based on PredictionResults, copied and adjusted
 class PredictionResultsMonotonic(object):
 
     def __init__(self, predicted, var_pred, linpred=None, linpred_se=None,
@@ -125,13 +246,6 @@ class PredictionResultsMonotonic(object):
         elif method == 'delta' or is_linear:
             ci = self._conf_int_generic(self.predicted, self.se, alpha,
                                         dist_args=self.dist_args)
-            # se = self.se_mean
-            # q = self.dist.ppf(1 - alpha / 2., *self.dist_args)
-            # lower = self.predicted_mean - q * se
-            # upper = self.predicted_mean + q * se
-            # ci = np.column_stack((lower, upper))
-            # # if we want to stack at a new last axis, for lower.ndim > 1
-            # # np.concatenate((lower[..., None], upper[..., None]), axis=-1)
 
         return ci
 
@@ -151,6 +265,16 @@ class PredictionResultsMonotonic(object):
         res = pd.DataFrame(to_include, index=self.row_labels,
                            columns=to_include.keys())
         return res
+
+
+class PredictionResultsDelta(PredictionResultsBase):
+
+    def __init__(self, results_delta, **kwds):
+
+        predicted = results_delta.predicted()
+        var_pred = results_delta.var()
+
+        super().__init__(predicted, var_pred, **kwds)
 
 
 # this is similar to ContrastResults after t_test, partially copied, adjusted
@@ -384,9 +508,10 @@ def get_prediction_glm(self, exog=None, transform=True,
         var_resid = self.cov_kwds['scale']
 
     dist = ['norm', 't'][self.use_t]
-    return PredictionResults(predicted_mean, var_pred_mean, var_resid,
-                             df=self.df_resid, dist=dist,
-                             row_labels=row_labels, linpred=linpred, link=link)
+    return PredictionResultsMean(
+        predicted_mean, var_pred_mean, var_resid,
+        df=self.df_resid, dist=dist,
+        row_labels=row_labels, linpred=linpred, link=link)
 
 
 def get_prediction_monotonic(self, exog=None, transform=True,
@@ -445,9 +570,6 @@ def get_prediction_monotonic(self, exog=None, transform=True,
     linpred = self.model.predict(self.params, exog, **pred_kwds_linear)
 
     predicted = self.model.predict(self.params, exog, **pred_kwds)
-
-    covb = self.cov_params()
-
     link_deriv = func_deriv(linpred)
     var_pred = link_deriv**2 * linpred_var
 
@@ -519,7 +641,8 @@ def get_prediction_delta(
 
     nlpm = self._get_wald_nonlinear(f_pred)
     # TODO: currently returns NonlinearDeltaCov
-    return nlpm
+    res = PredictionResultsDelta(nlpm)
+    return res
 
 
 def params_transform_univariate(params, cov_params, link=None, transform=None,
@@ -550,10 +673,12 @@ def params_transform_univariate(params, cov_params, link=None, transform=None,
     dist = stats.norm
 
     # TODO: need ci for linear prediction, method of `lin_pred
-    linpred = PredictionResults(params, np.diag(cov_params), dist=dist,
-                                row_labels=row_labels, link=links.identity())
+    linpred = PredictionResultsMean(
+        params, np.diag(cov_params), dist=dist,
+        row_labels=row_labels, link=links.identity())
 
-    res = PredictionResults(predicted_mean, var_pred_mean, dist=dist,
-                            row_labels=row_labels, linpred=linpred, link=link)
+    res = PredictionResultsMean(
+        predicted_mean, var_pred_mean, dist=dist,
+        row_labels=row_labels, linpred=linpred, link=link)
 
     return res

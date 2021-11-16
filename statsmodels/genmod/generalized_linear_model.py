@@ -28,7 +28,7 @@ import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
 
 from statsmodels.base import _prediction_inference as pred
-from statsmodels.base._prediction_inference import PredictionResults
+from statsmodels.base._prediction_inference import PredictionResultsMean
 import statsmodels.base._parameter_inference as pinfer
 
 from statsmodels.graphics._regressionplots_doc import (
@@ -53,7 +53,7 @@ from statsmodels.tools.validation import float_like
 # need import in module instead of lazily to copy `__doc__`
 from . import families
 
-__all__ = ['GLM', 'PredictionResults']
+__all__ = ['GLM', 'PredictionResultsMean']
 
 
 def _check_convergence(criterion, iteration, atol, rtol):

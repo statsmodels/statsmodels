@@ -431,8 +431,8 @@ class GenericZeroInflated(CountModel):
         # this is just prob(y=0 | model_main)
         tmp_exog = self.model_main.exog
         tmp_endog = self.model_main.endog
-        tmp_offset = getattr(self.model_main, 'offset', ['no'])
-        tmp_exposure = getattr(self.model_main, 'exposure', ['no'])
+        tmp_offset = getattr(self.model_main, 'offset', False)
+        tmp_exposure = getattr(self.model_main, 'exposure', False)
         self.model_main.exog = exog
         self.model_main.endog = np.zeros((exog.shape[0]))
         self.model_main.offset = offset
@@ -441,11 +441,13 @@ class GenericZeroInflated(CountModel):
         self.model_main.exog = tmp_exog
         self.model_main.endog = tmp_endog
         # tmp_offset might be an array with elementwise equality testing
-        if np.size(tmp_offset) == 1 and tmp_offset[0] == 'no':
+        #if np.size(tmp_offset) == 1 and tmp_offset[0] == 'no':
+        if tmp_offset is False:
             del self.model_main.offset
         else:
             self.model_main.offset = tmp_offset
-        if np.size(tmp_exposure) == 1 and tmp_exposure[0] == 'no':
+        #if np.size(tmp_exposure) == 1 and tmp_exposure[0] == 'no':
+        if tmp_exposure is False:
             del self.model_main.exposure
         else:
             self.model_main.exposure = tmp_exposure
@@ -747,7 +749,7 @@ class ZeroInflatedResults(CountResults):
             'offset': offset,
             }
 
-        res = pred.get_prediction_delta(self, exog=exog, which=which, 
+        res = pred.get_prediction_delta(self, exog=exog, which=which,
                                         use_mean=use_mean,
                                         pred_kwds=pred_kwds)
         return res
