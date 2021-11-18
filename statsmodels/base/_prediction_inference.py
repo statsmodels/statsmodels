@@ -283,8 +283,8 @@ class PredictionResultsMean(object):
     def __init__(self, predicted_mean, var_pred_mean, var_resid=None,
                  df=None, dist=None, row_labels=None, linpred=None, link=None):
         # TODO: is var_resid used? drop from arguments?
-        self.predicted_mean = predicted_mean
-        self.var_pred_mean = var_pred_mean
+        self.predicted = predicted_mean
+        self.var_pred = var_pred_mean
         self.df = df
         self.var_resid = var_resid
         self.row_labels = row_labels
@@ -302,12 +302,27 @@ class PredictionResultsMean(object):
             self.dist_args = ()
 
     @property
+    def predicted_mean(self):
+        # alias for backwards compatibility
+        return self.predicted
+
+    @property
+    def var_pred_mean(self):
+        # alias for backwards compatibility
+        return self.var_pred
+
+    @property
     def se_mean(self):
+        # alias for backwards compatibility
+        return self.se
+
+    @property
+    def se(self):
         return np.sqrt(self.var_pred_mean)
 
     @property
     def tvalues(self):
-        return self.predicted_mean / self.se_mean
+        return self.predicted / self.se
 
     def t_test(self, value=0, alternative='two-sided'):
         '''z- or t-test for hypothesis that mean is equal to value
@@ -586,7 +601,7 @@ def get_prediction_delta(
         self,
         exog=None,
         which="mean",
-        use_mean=False,
+        average=False,
         transform=True,
         row_labels=None,
         pred_kwds=None
@@ -635,7 +650,7 @@ def get_prediction_delta(
         """Prediction function as function of params
         """
         pred = self.model.predict(p, exog, which=which, **pred_kwds)
-        if use_mean:
+        if average:
             pred = pred.mean(0)
         return pred
 

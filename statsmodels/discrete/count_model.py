@@ -361,7 +361,7 @@ class GenericZeroInflated(CountModel):
         return hess_arr
 
     def predict(self, params, exog=None, exog_infl=None, exposure=None,
-                offset=None, which='mean'):
+                offset=None, which='mean', y_values=None):
         """
         Predict response variable of a count model given exogenous variables.
 
@@ -468,7 +468,8 @@ class GenericZeroInflated(CountModel):
         elif which == 'prob-main':
             return prob_main
         elif which == 'prob':
-            return self._predict_prob(params, exog, exog_infl, exposure, offset)
+            return self._predict_prob(params, exog, exog_infl, exposure,
+                                      offset, y_values=y_values)
         else:
             raise ValueError('which = %s is not available' % which)
 
@@ -553,11 +554,13 @@ class ZeroInflatedPoisson(GenericZeroInflated):
 
         return hess_arr
 
-    def _predict_prob(self, params, exog, exog_infl, exposure, offset):
+    def _predict_prob(self, params, exog, exog_infl, exposure, offset,
+                      y_values=None):
         params_infl = params[:self.k_inflate]
         params_main = params[self.k_inflate:]
 
-        counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
+        if y_values is None:
+            y_values = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
 
         if len(exog_infl.shape) < 2:
             transform = True
@@ -570,7 +573,7 @@ class ZeroInflatedPoisson(GenericZeroInflated):
         w = np.clip(w, np.finfo(float).eps, 1 - np.finfo(float).eps)
         mu = self.model_main.predict(params_main, exog,
             offset=offset)[:, None]
-        result = self.distribution.pmf(counts, mu, w)
+        result = self.distribution.pmf(y_values, mu, w)
         return result[0] if transform else result
 
     def _get_start_params(self):
@@ -627,12 +630,14 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
         kwds['p'] = self.model_main.parameterization + 1
         return kwds
 
-    def _predict_prob(self, params, exog, exog_infl, exposure, offset):
+    def _predict_prob(self, params, exog, exog_infl, exposure, offset,
+                      y_values=None):
         params_infl = params[:self.k_inflate]
         params_main = params[self.k_inflate:]
 
         p = self.model_main.parameterization
-        counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
+        if y_values is None:
+            y_values = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
 
         if len(exog_infl.shape) < 2:
             transform = True
@@ -645,7 +650,7 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
         w[w == 1.] = np.nextafter(1, 0)
         mu = self.model_main.predict(params_main, exog,
             exposure=exposure, offset=offset)[:, None]
-        result = self.distribution.pmf(counts, mu, params_main[-1], p, w)
+        result = self.distribution.pmf(y_values, mu, params_main[-1], p, w)
         return result[0] if transform else result
 
     def _get_start_params(self):
@@ -706,12 +711,14 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
         kwds['p'] = self.model_main.parameterization
         return kwds
 
-    def _predict_prob(self, params, exog, exog_infl, exposure, offset):
+    def _predict_prob(self, params, exog, exog_infl, exposure, offset,
+                      y_values=None):
         params_infl = params[:self.k_inflate]
         params_main = params[self.k_inflate:]
 
         p = self.model_main.parameterization
-        counts = np.arange(0, np.max(self.endog)+1)
+        if y_values is None:
+            y_values = np.arange(0, np.max(self.endog)+1)
 
         if len(exog_infl.shape) < 2:
             transform = True
@@ -724,7 +731,7 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
         w = np.clip(w, np.finfo(float).eps, 1 - np.finfo(float).eps)
         mu = self.model_main.predict(params_main, exog,
             exposure=exposure, offset=offset)[:, None]
-        result = self.distribution.pmf(counts, mu, params_main[-1], p, w)
+        result = self.distribution.pmf(y_values, mu, params_main[-1], p, w)
         return result[0] if transform else result
 
     def _get_start_params(self):
@@ -738,7 +745,8 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
 class ZeroInflatedResults(CountResults):
 
     def get_prediction(self, exog=None, exog_infl=None, exposure=None,
-                       offset=None, which='mean', use_mean=False,
+                       offset=None, which='mean', average=False,
+                       y_values=None,
                        transform=True, row_labels=None):
 
         import statsmodels.base._prediction_inference as pred
@@ -747,10 +755,11 @@ class ZeroInflatedResults(CountResults):
             'exog_infl': exog_infl,
             'exposure': exposure,
             'offset': offset,
+            'y_values': y_values,
             }
 
         res = pred.get_prediction_delta(self, exog=exog, which=which,
-                                        use_mean=use_mean,
+                                        average=average,
                                         pred_kwds=pred_kwds)
         return res
 
