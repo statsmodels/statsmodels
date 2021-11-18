@@ -12,7 +12,7 @@ from scipy import stats
 import pandas as pd
 
 
-# this is based on PredictionResults, copied and adjusted
+# this is similar to ContrastResults after t_test, partially copied, adjusted
 class PredictionResultsBase(object):
 
     def __init__(self, predicted, var_pred, func=None, deriv=None,
@@ -64,7 +64,7 @@ class PredictionResultsBase(object):
 
         '''
         # assumes symmetric distribution
-        stat = (self.predicted_mean - value) / self.se_mean
+        stat = (self.predicted - value) / self.se
 
         if alternative in ['two-sided', '2-sided', '2s']:
             pvalue = self.dist.sf(np.abs(stat), *self.dist_args)*2
@@ -133,8 +133,7 @@ class PredictionResultsBase(object):
         return res
 
 
-# this is based on PredictionResults, copied and adjusted
-class PredictionResultsMonotonic(object):
+class PredictionResultsMonotonic(PredictionResultsBase):
 
     def __init__(self, predicted, var_pred, linpred=None, linpred_se=None,
                  func=None, deriv=None, df=None, dist=None, row_labels=None):
@@ -157,47 +156,6 @@ class PredictionResultsMonotonic(object):
         else:
             self.dist = dist
             self.dist_args = ()
-
-    @property
-    def se(self):
-        return np.sqrt(self.var_pred)
-
-    @property
-    def tvalues(self):
-        return self.predicted / self.se
-
-    def t_test(self, value=0, alternative='two-sided'):
-        '''z- or t-test for hypothesis that mean is equal to value
-
-        Parameters
-        ----------
-        value : array_like
-            value under the null hypothesis
-        alternative : str
-            'two-sided', 'larger', 'smaller'
-
-        Returns
-        -------
-        stat : ndarray
-            test statistic
-        pvalue : ndarray
-            p-value of the hypothesis test, the distribution is given by
-            the attribute of the instance, specified in `__init__`. Default
-            if not specified is the normal distribution.
-
-        '''
-        # assumes symmetric distribution
-        stat = (self.predicted_mean - value) / self.se_mean
-
-        if alternative in ['two-sided', '2-sided', '2s']:
-            pvalue = self.dist.sf(np.abs(stat), *self.dist_args)*2
-        elif alternative in ['larger', 'l']:
-            pvalue = self.dist.sf(stat, *self.dist_args)
-        elif alternative in ['smaller', 's']:
-            pvalue = self.dist.cdf(stat, *self.dist_args)
-        else:
-            raise ValueError('invalid alternative')
-        return stat, pvalue
 
     def _conf_int_generic(self, center, se, alpha, dist_args=None):
         """internal function to avoid code duplication
@@ -249,23 +207,6 @@ class PredictionResultsMonotonic(object):
 
         return ci
 
-    def summary_frame(self, alpha=0.05):
-        """Summary frame"""
-        ci = self.conf_int(alpha=alpha)
-        to_include = {}
-        to_include['predicted'] = self.predicted
-        to_include['se'] = self.se
-        to_include['ci_lower'] = ci[:, 0]
-        to_include['ci_upper'] = ci[:, 1]
-
-        self.table = to_include
-        # pandas dict does not handle 2d_array
-        # data = np.column_stack(list(to_include.values()))
-        # names = ....
-        res = pd.DataFrame(to_include, index=self.row_labels,
-                           columns=to_include.keys())
-        return res
-
 
 class PredictionResultsDelta(PredictionResultsBase):
 
@@ -277,8 +218,7 @@ class PredictionResultsDelta(PredictionResultsBase):
         super().__init__(predicted, var_pred, **kwds)
 
 
-# this is similar to ContrastResults after t_test, partially copied, adjusted
-class PredictionResultsMean(object):
+class PredictionResultsMean(PredictionResultsBase):
 
     def __init__(self, predicted_mean, var_pred_mean, var_resid=None,
                  df=None, dist=None, row_labels=None, linpred=None, link=None):
@@ -315,47 +255,6 @@ class PredictionResultsMean(object):
     def se_mean(self):
         # alias for backwards compatibility
         return self.se
-
-    @property
-    def se(self):
-        return np.sqrt(self.var_pred_mean)
-
-    @property
-    def tvalues(self):
-        return self.predicted / self.se
-
-    def t_test(self, value=0, alternative='two-sided'):
-        '''z- or t-test for hypothesis that mean is equal to value
-
-        Parameters
-        ----------
-        value : array_like
-            value under the null hypothesis
-        alternative : str
-            'two-sided', 'larger', 'smaller'
-
-        Returns
-        -------
-        stat : ndarray
-            test statistic
-        pvalue : ndarray
-            p-value of the hypothesis test, the distribution is given by
-            the attribute of the instance, specified in `__init__`. Default
-            if not specified is the normal distribution.
-
-        '''
-        # assumes symmetric distribution
-        stat = (self.predicted_mean - value) / self.se_mean
-
-        if alternative in ['two-sided', '2-sided', '2s']:
-            pvalue = self.dist.sf(np.abs(stat), *self.dist_args)*2
-        elif alternative in ['larger', 'l']:
-            pvalue = self.dist.sf(stat, *self.dist_args)
-        elif alternative in ['smaller', 's']:
-            pvalue = self.dist.cdf(stat, *self.dist_args)
-        else:
-            raise ValueError('invalid alternative')
-        return stat, pvalue
 
     def conf_int(self, method='endpoint', alpha=0.05, **kwds):
         """
