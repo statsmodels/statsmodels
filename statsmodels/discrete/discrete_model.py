@@ -995,7 +995,7 @@ class CountModel(DiscreteModel):
         """
         from statsmodels.genmod.families import links
         link = links.Log()
-        lin_pred = self.predict(params, linear=True)
+        lin_pred = self.predict(params, which="linear")
         idl = link.inverse_deriv(lin_pred)
         dmat = self.exog * idl[:, None]
         return dmat
@@ -4199,7 +4199,67 @@ class DiscreteResults(base.LikelihoodModelResults):
 
     def get_prediction(self, exog=None,
                        transform=True, which="mean", linear=None,
-                       row_labels=None, average=False, **kwargs):
+                       row_labels=None, average=False, y_values=None,
+                       **kwargs):
+        """
+        Compute prediction results when endpoint transformation is valid.
+
+        Parameters
+        ----------
+        exog : array_like, optional
+            The values for which you want to predict.
+        transform : bool, optional
+            If the model was fit via a formula, do you want to pass
+            exog through the formula. Default is True. E.g., if you fit
+            a model y ~ log(x1) + log(x2), and transform is True, then
+            you can pass a data structure that contains x1 and x2 in
+            their original form. Otherwise, you'd need to log the data
+            first.
+        which : str
+            Which statistic is to be predicted. Default is "mean".
+            The available statistics and options depend on the model.
+            see the model.predict docstring
+        linear : bool
+            Linear has been replaced by the `which` keyword and will be
+            deprecated.
+            If linear is True, then `which` is ignored and the linear
+            prediction is returned.
+        row_labels : list of str or None
+            If row_lables are provided, then they will replace the generated
+            labels.
+        average : bool
+            If average is True, then the mean prediction is computed, that is,
+            predictions are computed for individual exog and then the average
+            over observation is used.
+            If average is False, then the results are the predictions for all
+            observations, i.e. same length as ``exog``.
+        y_values : None or nd_array
+            Some predictive statistics like which="prob" are computed at
+            values of the response variable. If y_values is not None, then
+            it will be used instead of the default set of y_values.
+
+            **Warning:** ``which="prob"`` for count models currently computes
+            the pmf for all y=k up to max(endog). This can be a large array if
+            the observed endog values are large.
+            This will likely change so that the set of y_values will be chosen
+            to limit the array size.
+        **kwargs :
+            Some models can take additional keyword arguments, such as offset,
+            exposure or additional exog in multi-part models like zero inflated
+            models.
+            See the predict method of the model for the details.
+
+        Returns
+        -------
+        prediction_results : PredictionResults
+            The prediction results instance contains prediction and prediction
+            variance and can on demand calculate confidence intervals and
+            summary dataframe for the prediction.
+
+        Notes
+        -----
+        Status: new in 0.14, experimental
+        """
 
         import statsmodels.regression._prediction as linpred
 
@@ -4208,6 +4268,9 @@ class DiscreteResults(base.LikelihoodModelResults):
             which = "linear"
 
         pred_kwds = kwargs
+        # y_values is explicit so we can add it to the docstring
+        if y_values is not None:
+            pred_kwds["y_values"] = y_values
 
         if which == "linear":
             # pred_kwds["linear"] = True  # old keyword

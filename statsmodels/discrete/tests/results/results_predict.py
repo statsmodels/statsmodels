@@ -12,15 +12,7 @@ note seond `_cons` in params_table rownames is lnalpha
 import numpy as np
 import pandas as pd
 
-
-class Bunch(dict):
-    def __init__(self, **kw):
-        dict.__init__(self, kw)
-        self.__dict__ = self
-
-        for i,att in enumerate(['params', 'bse', 'tvalues', 'pvalues']):
-            self[att] = self.params_table[:,i]
-
+from statsmodels.tools.testing import ParamsTableTestBunch
 
 est = dict(
            rank = 9,
@@ -131,7 +123,7 @@ table_colnames = 'b se z pvalue ll ul df crit eform'.split()
 table_rownames = '1bn._predict 2._predict 3._predict 4._predict 5._predict'.split()
 dframe_mean = pd.DataFrame(table, index=table_rownames, columns=table_colnames)
 
-results_nb_docvis = Bunch(
+results_nb_docvis = ParamsTableTestBunch(
     params_table=params_table,
     params_table_colnames=params_table_colnames,
     params_table_rownames=params_table_rownames,
@@ -251,7 +243,7 @@ table_colnames = 'b se z pvalue ll ul df crit eform'.split()
 table_rownames = '1bn._predict 2._predict 3._predict 4._predict 5._predict'.split()
 dframe_mean = pd.DataFrame(table, index=table_rownames, columns=table_colnames)
 
-results_zinb_docvis = Bunch(
+results_zinb_docvis = ParamsTableTestBunch(
     params_table=params_table,
     params_table_colnames=params_table_colnames,
     params_table_rownames=params_table_rownames,
