@@ -34,6 +34,7 @@ import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
 from statsmodels.base._constraints import fit_constrained_wrap
 import statsmodels.base._parameter_inference as pinfer
+from statsmodels.base import _prediction_inference as pred
 from statsmodels.distributions import genpoisson_p
 import statsmodels.regression.linear_model as lm
 from statsmodels.tools import data as data_tools, tools
@@ -180,6 +181,7 @@ class DiscreteModel(base.LikelihoodModel):
         self._check_rank = check_rank
         super().__init__(endog, exog, **kwargs)
         self.raise_on_perfect_prediction = True
+        self.k_extra = 0
 
     def initialize(self):
         """
@@ -426,7 +428,7 @@ class DiscreteModel(base.LikelihoodModel):
 
         return cov_params
 
-    def predict(self, params, exog=None, linear=False):
+    def predict(self, params, exog=None, which="mean", linear=False):
         """
         Predict response variable of a model given exogenous variables.
         """
@@ -475,7 +477,8 @@ class BinaryModel(DiscreteModel):
                     np.any(self.endog != np.round(self.endog))):
                 raise ValueError("endog must be binary, either 0 or 1")
 
-    def predict(self, params, exog=None, linear=False, offset=None):
+    def predict(self, params, exog=None, which="mean", linear=False,
+                offset=None):
         """
         Predict response variable of a model given exogenous variables.
 
@@ -504,12 +507,17 @@ class BinaryModel(DiscreteModel):
         if exog is None:
             exog = self.exog
 
+        if linear is True:
+            which = "linear"
+
         linpred = np.dot(exog, params) + offset
 
-        if not linear:
+        if which == "mean":
             return self.cdf(linpred)
-        else:
+        elif which == "linear":
             return linpred
+        else:
+            raise ValueError('Only which is "mean" or "linear" is available.')
 
     @Appender(DiscreteModel.fit_regularized.__doc__)
     def fit_regularized(self, start_params=None, method='l1',
@@ -656,7 +664,7 @@ class MultinomialModel(BinaryModel):
         self.df_model *= (self.J-1)  # for each J - 1 equation.
         self.df_resid = self.exog.shape[0] - self.df_model - (self.J-1)
 
-    def predict(self, params, exog=None, linear=False):
+    def predict(self, params, exog=None, which="mean", linear=False):
         """
         Predict response variable of a model given exogenous variables.
 
@@ -684,8 +692,11 @@ class MultinomialModel(BinaryModel):
             exog = self.exog
         if exog.ndim == 1:
             exog = exog[None]
-        pred = super().predict(params, exog, linear)
-        if linear:
+        if linear is True:
+            which = "linear"
+
+        pred = super().predict(params, exog, which=which)
+        if which == "linear":
             pred = np.column_stack((np.zeros(len(exog)), pred))
         return pred
 
@@ -984,7 +995,7 @@ class CountModel(DiscreteModel):
         """
         from statsmodels.genmod.families import links
         link = links.Log()
-        lin_pred = self.predict(params, linear=True)
+        lin_pred = self.predict(params, which="linear")
         idl = link.inverse_deriv(lin_pred)
         dmat = self.exog * idl[:, None]
         return dmat
@@ -1460,7 +1471,7 @@ class Poisson(CountModel):
         return self.exog
 
     def predict(self, params, exog=None, exposure=None, offset=None,
-                which='mean', linear=None, n=None):
+                which='mean', linear=None, y_values=None):
 
         if which.startswith("lin"):
             which = "linear"
@@ -1470,16 +1481,16 @@ class Poisson(CountModel):
                                    which=which, linear=linear)
         # TODO: add full set of which
         if which == "prob":
-            if n is not None:
-                counts = np.atleast_2d(n)
+            if y_values is not None:
+                y_values = np.atleast_2d(y_values)
             else:
-                counts = np.atleast_2d(
+                y_values = np.atleast_2d(
                     np.arange(0, np.max(self.endog) + 1))
             mu = self.predict(params, exog=exog,
                               exposure=exposure, offset=offset,
                               )[:, None]
             # uses broadcasting
-            return stats.poisson.pmf(counts, mu)
+            return stats.poisson.pmf(y_values, mu)
 
 
 class GeneralizedPoisson(CountModel):
@@ -1963,9 +1974,8 @@ class GeneralizedPoisson(CountModel):
 
         return hess_fact
 
-
     def predict(self, params, exog=None, exposure=None, offset=None,
-                which='mean'):
+                which='mean', y_values=None):
         """
         Predict response variable of a count model given exogenous variables.
 
@@ -1992,11 +2002,12 @@ class GeneralizedPoisson(CountModel):
             return np.exp(linpred)
         elif which == 'linear':
             return linpred
-        elif which =='prob':
-            counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
+        elif which == 'prob':
+            if y_values is None:
+                y_values = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
             mu = self.predict(params, exog=exog, exposure=exposure,
-                              offset=offset)[:,None]
-            return genpoisson_p.pmf(counts, mu, params[-1],
+                              offset=offset)[:, None]
+            return genpoisson_p.pmf(y_values, mu, params[-1],
                                     self.parameterization + 1)
         else:
             raise ValueError('keyword \'which\' not recognized')
@@ -2021,6 +2032,12 @@ class Logit(BinaryModel):
            'extra_params': base._missing_param_doc + _check_rank_doc}
 
     _continuous_ok = True
+
+    @cache_readonly
+    def link(self):
+        from statsmodels.genmod.families import links
+        link = links.Logit()
+        return link
 
     def cdf(self, X):
         """
@@ -2310,6 +2327,12 @@ class Probit(BinaryModel):
         A reference to the exogenous design.
     """ % {'params': base._model_params_doc,
            'extra_params': base._missing_param_doc + _check_rank_doc}
+
+    @cache_readonly
+    def link(self):
+        from statsmodels.genmod.families import links
+        link = links.probit()
+        return link
 
     def cdf(self, X):
         """
@@ -3862,7 +3885,7 @@ class NegativeBinomialP(CountModel):
         return L1NegativeBinomialResultsWrapper(discretefit)
 
     def predict(self, params, exog=None, exposure=None, offset=None,
-                which='mean'):
+                which='mean', y_values=None):
         """
         Predict response variable of a model given exogenous variables.
 
@@ -3910,10 +3933,12 @@ class NegativeBinomialP(CountModel):
         elif which == 'linear':
             return linpred
         elif which == 'prob':
-            counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
+            if y_values is None:
+                y_values = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
+
             mu = self.predict(params, exog, exposure, offset)
             size, prob = self.convert_params(params, mu)
-            return nbinom.pmf(counts, size[:, None], prob[:, None])
+            return nbinom.pmf(y_values, size[:, None], prob[:, None])
         else:
             raise ValueError('keyword "which" = %s not recognized' % which)
 
@@ -4172,6 +4197,130 @@ class DiscreteResults(base.LikelihoodModelResults):
 
     score_test.__doc__ = pinfer.score_test.__doc__
 
+    def get_prediction(self, exog=None,
+                       transform=True, which="mean", linear=None,
+                       row_labels=None, average=False, y_values=None,
+                       **kwargs):
+        """
+        Compute prediction results when endpoint transformation is valid.
+
+        Parameters
+        ----------
+        exog : array_like, optional
+            The values for which you want to predict.
+        transform : bool, optional
+            If the model was fit via a formula, do you want to pass
+            exog through the formula. Default is True. E.g., if you fit
+            a model y ~ log(x1) + log(x2), and transform is True, then
+            you can pass a data structure that contains x1 and x2 in
+            their original form. Otherwise, you'd need to log the data
+            first.
+        which : str
+            Which statistic is to be predicted. Default is "mean".
+            The available statistics and options depend on the model.
+            see the model.predict docstring
+        linear : bool
+            Linear has been replaced by the `which` keyword and will be
+            deprecated.
+            If linear is True, then `which` is ignored and the linear
+            prediction is returned.
+        row_labels : list of str or None
+            If row_lables are provided, then they will replace the generated
+            labels.
+        average : bool
+            If average is True, then the mean prediction is computed, that is,
+            predictions are computed for individual exog and then the average
+            over observation is used.
+            If average is False, then the results are the predictions for all
+            observations, i.e. same length as ``exog``.
+        y_values : None or nd_array
+            Some predictive statistics like which="prob" are computed at
+            values of the response variable. If y_values is not None, then
+            it will be used instead of the default set of y_values.
+
+            **Warning:** ``which="prob"`` for count models currently computes
+            the pmf for all y=k up to max(endog). This can be a large array if
+            the observed endog values are large.
+            This will likely change so that the set of y_values will be chosen
+            to limit the array size.
+        **kwargs :
+            Some models can take additional keyword arguments, such as offset,
+            exposure or additional exog in multi-part models like zero inflated
+            models.
+            See the predict method of the model for the details.
+
+        Returns
+        -------
+        prediction_results : PredictionResults
+            The prediction results instance contains prediction and prediction
+            variance and can on demand calculate confidence intervals and
+            summary dataframe for the prediction.
+
+        Notes
+        -----
+        Status: new in 0.14, experimental
+        """
+
+        import statsmodels.regression._prediction as linpred
+
+        if linear is True:
+            # compatibility with old keyword
+            which = "linear"
+
+        pred_kwds = kwargs
+        # y_values is explicit so we can add it to the docstring
+        if y_values is not None:
+            pred_kwds["y_values"] = y_values
+
+        if which == "linear":
+            # pred_kwds["linear"] = True  # old keyword
+            pred_kwds["which"] = "linear"
+            # two calls to a get_prediction duplicates exog generation if patsy
+            res_linpred = linpred.get_prediction(
+                self,
+                exog=exog,
+                transform=transform,
+                row_labels=row_labels,
+                pred_kwds=pred_kwds,
+                )
+            if which == "linear":
+                res = res_linpred
+        elif which == "mean" and (average is False):
+            # endpoint transformation
+            if self.model.k_extra > 0:
+                # TODO:
+                index = np.arange(self.model.exog.shape[1])
+            else:
+                index = None
+
+            pred_kwds["which"] = which
+            # TODO: add link or ilink to all link based models (except zi
+            link = getattr(self.model, "link", None)
+            if link is None:
+                from statsmodels.genmod.families import links
+                link = links.Log()
+            res = pred.get_prediction_monotonic(
+                self,
+                exog=exog,
+                transform=transform,
+                row_labels=row_labels,
+                link=link,
+                pred_kwds=pred_kwds,
+                index=index,
+                )
+
+        else:
+            # which is not mean or linear, or we need averaging
+            res = pred.get_prediction_delta(
+                self,
+                exog=exog,
+                which=which,
+                average=average,
+                pred_kwds=pred_kwds,
+                )
+
+        return res
+
     def _get_endog_name(self, yname, yname_list):
         if yname is None:
             yname = self.model.endog_names
@@ -4371,6 +4520,7 @@ class CountResults(DiscreteResults):
     __doc__ = _discrete_results_docs % {
         "one_line_description": "A results class for count data",
         "extra_attr": ""}
+
     @cache_readonly
     def resid(self):
         """
@@ -4428,6 +4578,7 @@ class GeneralizedPoissonResults(NegativeBinomialResults):
         mu = self.predict()
         return (1 + self.params[-1] * mu**p)**2
 
+
 class L1CountResults(DiscreteResults):
     __doc__ = _discrete_results_docs % {"one_line_description" :
             "A results class for count data fit by l1 regularization",
@@ -4450,30 +4601,6 @@ class L1CountResults(DiscreteResults):
 
 
 class PoissonResults(CountResults):
-
-    def get_prediction(self, exog=None, exposure=None, offset=None,
-                       transform=True, linear=False,
-                       row_labels=None):
-
-        import statsmodels.genmod._prediction as pred
-        import statsmodels.regression._prediction as linpred
-
-        pred_kwds = {'exposure': exposure, 'offset': offset, 'linear': True}
-
-        # two calls to a get_prediction duplicates exog generation if patsy
-        res_linpred = linpred.get_prediction(self, exog=exog,
-                                             transform=transform,
-                                             row_labels=row_labels,
-                                             pred_kwds=pred_kwds)
-
-        pred_kwds['linear'] = False
-        res = pred.get_prediction_glm(self, exog=exog, transform=transform,
-                                      row_labels=row_labels,
-                                      linpred=res_linpred,
-                                      link=self.model.family.link,
-                                      pred_kwds=pred_kwds)
-
-        return res
 
     def predict_prob(self, n=None, exog=None, exposure=None, offset=None,
                      transform=True):
@@ -4707,30 +4834,6 @@ class LogitResults(BinaryResults):
         # Generalized residuals
         return self.model.endog - self.predict()
 
-    def get_prediction(self, exog=None, exposure=None, offset=None,
-                       transform=True, linear=False,
-                       row_labels=None):
-
-        import statsmodels.genmod._prediction as pred
-        import statsmodels.regression._prediction as linpred
-
-        pred_kwds = {'linear': True}
-
-        # two calls to a get_prediction duplicates exog generation if patsy
-        res_linpred = linpred.get_prediction(self, exog=exog,
-                                             transform=transform,
-                                             row_labels=row_labels,
-                                             pred_kwds=pred_kwds)
-
-        pred_kwds['linear'] = False
-        res = pred.get_prediction_glm(self, exog=exog, transform=transform,
-                                      row_labels=row_labels,
-                                      linpred=res_linpred,
-                                      link=self.model.family.link,
-                                      pred_kwds=pred_kwds)
-
-        return res
-
     def get_influence(self):
         """
         Get an instance of MLEInfluence with influence and outlier measures
@@ -4869,6 +4972,11 @@ class MultinomialResults(DiscreteResults):
         confint = super(DiscreteResults, self).conf_int(alpha=alpha,
                                                             cols=cols)
         return confint.transpose(2,0,1)
+
+    def get_prediction(self):
+        """Not implemented for Multinomial
+        """
+        raise NotImplementedError
 
     def margeff(self):
         raise NotImplementedError("Use get_margeff instead")

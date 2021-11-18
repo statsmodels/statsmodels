@@ -504,7 +504,7 @@ class MLEInfluence(_BaseInfluenceMixin):
         # Note: this and the previous methods are for the response
         # and not for a weighted response, i.e. not the self.exog, self.endog
         # this will be relevant for WLS comparing fitted endog versus wendog
-        return self.d_fittedvalues / self._get_prediction.se_mean
+        return self.d_fittedvalues / self._get_prediction.se
 
     def summary_frame(self):
         """
@@ -1296,7 +1296,7 @@ class GLMInfluence(MLEInfluence):
         # Note: this and the previous methods are for the response
         # and not for a weighted response, i.e. not the self.exog, self.endog
         # this will be relevant for WLS comparing fitted endog versus wendog
-        return self.d_linpred / self._get_prediction.linpred.se_mean
+        return self.d_linpred / self._get_prediction.linpred.se
 
     @property
     def _fittedvalues_one(self):

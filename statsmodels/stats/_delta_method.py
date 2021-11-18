@@ -145,12 +145,19 @@ class NonlinearDeltaCov(object):
         lmstat = np.dot(np.dot(diff.T, np.linalg.inv(v)), diff)
         return lmstat, stats.chi2.sf(lmstat, df_constraints)
 
-    def se_vectorized(self):
+    def var(self):
         """standard error for each equation (row) treated separately
 
         """
         g = self.grad()
         var = (np.dot(g, self.cov_params) * g).sum(-1)
+        return var
+
+    def se_vectorized(self):
+        """standard error for each equation (row) treated separately
+
+        """
+        var = self.var()
         return np.sqrt(var)
 
     def conf_int(self, alpha=0.05, use_t=False, df=None, var_extra=None,

@@ -361,7 +361,7 @@ class GenericZeroInflated(CountModel):
         return hess_arr
 
     def predict(self, params, exog=None, exog_infl=None, exposure=None,
-                offset=None, which='mean'):
+                offset=None, which='mean', y_values=None):
         """
         Predict response variable of a count model given exogenous variables.
 
@@ -431,8 +431,8 @@ class GenericZeroInflated(CountModel):
         # this is just prob(y=0 | model_main)
         tmp_exog = self.model_main.exog
         tmp_endog = self.model_main.endog
-        tmp_offset = getattr(self.model_main, 'offset', ['no'])
-        tmp_exposure = getattr(self.model_main, 'exposure', ['no'])
+        tmp_offset = getattr(self.model_main, 'offset', False)
+        tmp_exposure = getattr(self.model_main, 'exposure', False)
         self.model_main.exog = exog
         self.model_main.endog = np.zeros((exog.shape[0]))
         self.model_main.offset = offset
@@ -441,11 +441,13 @@ class GenericZeroInflated(CountModel):
         self.model_main.exog = tmp_exog
         self.model_main.endog = tmp_endog
         # tmp_offset might be an array with elementwise equality testing
-        if len(tmp_offset) == 1 and tmp_offset[0] == 'no':
+        #if np.size(tmp_offset) == 1 and tmp_offset[0] == 'no':
+        if tmp_offset is False:
             del self.model_main.offset
         else:
             self.model_main.offset = tmp_offset
-        if len(tmp_exposure) == 1 and tmp_exposure[0] == 'no':
+        #if np.size(tmp_exposure) == 1 and tmp_exposure[0] == 'no':
+        if tmp_exposure is False:
             del self.model_main.exposure
         else:
             self.model_main.exposure = tmp_exposure
@@ -466,9 +468,28 @@ class GenericZeroInflated(CountModel):
         elif which == 'prob-main':
             return prob_main
         elif which == 'prob':
-            return self._predict_prob(params, exog, exog_infl, exposure, offset)
+            return self._predict_prob(params, exog, exog_infl, exposure,
+                                      offset, y_values=y_values)
         else:
             raise ValueError('which = %s is not available' % which)
+
+    def _derivative_predict(self, params, exog=None, transform='dydx'):
+        """NotImplemented
+        """
+        raise NotImplementedError
+
+    def _derivative_exog(self, params, exog=None, transform="dydx",
+                         dummy_idx=None, count_idx=None):
+        """NotImplemented
+        """
+        raise NotImplementedError
+
+    def _deriv_mean_dparams(self, params):
+        """
+        NotImplemented Derivative of the expected endog with respect to the
+        parameters.
+        """
+        raise NotImplementedError
 
 
 class ZeroInflatedPoisson(GenericZeroInflated):
@@ -533,11 +554,13 @@ class ZeroInflatedPoisson(GenericZeroInflated):
 
         return hess_arr
 
-    def _predict_prob(self, params, exog, exog_infl, exposure, offset):
+    def _predict_prob(self, params, exog, exog_infl, exposure, offset,
+                      y_values=None):
         params_infl = params[:self.k_inflate]
         params_main = params[self.k_inflate:]
 
-        counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
+        if y_values is None:
+            y_values = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
 
         if len(exog_infl.shape) < 2:
             transform = True
@@ -550,7 +573,7 @@ class ZeroInflatedPoisson(GenericZeroInflated):
         w = np.clip(w, np.finfo(float).eps, 1 - np.finfo(float).eps)
         mu = self.model_main.predict(params_main, exog,
             offset=offset)[:, None]
-        result = self.distribution.pmf(counts, mu, w)
+        result = self.distribution.pmf(y_values, mu, w)
         return result[0] if transform else result
 
     def _get_start_params(self):
@@ -607,12 +630,14 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
         kwds['p'] = self.model_main.parameterization + 1
         return kwds
 
-    def _predict_prob(self, params, exog, exog_infl, exposure, offset):
+    def _predict_prob(self, params, exog, exog_infl, exposure, offset,
+                      y_values=None):
         params_infl = params[:self.k_inflate]
         params_main = params[self.k_inflate:]
 
         p = self.model_main.parameterization
-        counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
+        if y_values is None:
+            y_values = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
 
         if len(exog_infl.shape) < 2:
             transform = True
@@ -625,7 +650,7 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
         w[w == 1.] = np.nextafter(1, 0)
         mu = self.model_main.predict(params_main, exog,
             exposure=exposure, offset=offset)[:, None]
-        result = self.distribution.pmf(counts, mu, params_main[-1], p, w)
+        result = self.distribution.pmf(y_values, mu, params_main[-1], p, w)
         return result[0] if transform else result
 
     def _get_start_params(self):
@@ -686,12 +711,14 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
         kwds['p'] = self.model_main.parameterization
         return kwds
 
-    def _predict_prob(self, params, exog, exog_infl, exposure, offset):
+    def _predict_prob(self, params, exog, exog_infl, exposure, offset,
+                      y_values=None):
         params_infl = params[:self.k_inflate]
         params_main = params[self.k_inflate:]
 
         p = self.model_main.parameterization
-        counts = np.arange(0, np.max(self.endog)+1)
+        if y_values is None:
+            y_values = np.arange(0, np.max(self.endog)+1)
 
         if len(exog_infl.shape) < 2:
             transform = True
@@ -704,7 +731,7 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
         w = np.clip(w, np.finfo(float).eps, 1 - np.finfo(float).eps)
         mu = self.model_main.predict(params_main, exog,
             exposure=exposure, offset=offset)[:, None]
-        result = self.distribution.pmf(counts, mu, params_main[-1], p, w)
+        result = self.distribution.pmf(y_values, mu, params_main[-1], p, w)
         return result[0] if transform else result
 
     def _get_start_params(self):
@@ -715,7 +742,29 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
         return start_params
 
 
-class ZeroInflatedPoissonResults(CountResults):
+class ZeroInflatedResults(CountResults):
+
+    def get_prediction(self, exog=None, exog_infl=None, exposure=None,
+                       offset=None, which='mean', average=False,
+                       y_values=None,
+                       transform=True, row_labels=None):
+
+        import statsmodels.base._prediction_inference as pred
+
+        pred_kwds = {
+            'exog_infl': exog_infl,
+            'exposure': exposure,
+            'offset': offset,
+            'y_values': y_values,
+            }
+
+        res = pred.get_prediction_delta(self, exog=exog, which=which,
+                                        average=average,
+                                        pred_kwds=pred_kwds)
+        return res
+
+
+class ZeroInflatedPoissonResults(ZeroInflatedResults):
     __doc__ = _discrete_results_docs % {
     "one_line_description": "A results class for Zero Inflated Poisson",
     "extra_attr": ""}
@@ -751,7 +800,7 @@ wrap.populate_wrapper(L1ZeroInflatedPoissonResultsWrapper,
                       L1ZeroInflatedPoissonResults)
 
 
-class ZeroInflatedGeneralizedPoissonResults(CountResults):
+class ZeroInflatedGeneralizedPoissonResults(ZeroInflatedResults):
     __doc__ = _discrete_results_docs % {
         "one_line_description": "A results class for Zero Inflated Generalized Poisson",
         "extra_attr": ""}
@@ -792,7 +841,7 @@ wrap.populate_wrapper(L1ZeroInflatedGeneralizedPoissonResultsWrapper,
                       L1ZeroInflatedGeneralizedPoissonResults)
 
 
-class ZeroInflatedNegativeBinomialResults(CountResults):
+class ZeroInflatedNegativeBinomialResults(ZeroInflatedResults):
     __doc__ = _discrete_results_docs % {
         "one_line_description": "A results class for Zero Inflated Generalized Negative Binomial",
         "extra_attr": ""}
