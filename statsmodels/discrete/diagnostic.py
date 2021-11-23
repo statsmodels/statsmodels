@@ -31,7 +31,99 @@ from statsmodels.discrete._diagnostics_count import (
 
 
 class CountDiagnostic(object):
-    pass
+    """Diagnostic and specification tests and plots for Count model
+
+    status: experimental
+
+    Parameters
+    ----------
+    results : PoissonResults instance
+
+    """
+
+    def __init__(self, results, y_max=None):
+        self.results = results
+        self.y_max = y_max
+
+    @cache_readonly
+    def probs_predicted(self):
+        if self.y_max is not None:
+            kwds = {"y_values": np.arange(self.y_max)}
+        else:
+            kwds = {}
+        return self.results.predict(which="prob", **kwds)
+
+    def test_chisquare_prob(self, bin_edges=None, method=None):
+        """Moment test for binned probabilites using OPG.
+
+        Paramters
+        ---------
+        binedges : array_like or None
+            This defines which counts are included in the test on frequencies
+            and how counts are combined in bins.
+            The default if bin_edges is None will change in future.
+            See Notes and Example sections below.
+        method : str
+            Currently only `method = "opg"` is available.
+            If method is None, the OPG will be used, but the default might
+            change in future versions.
+            See Notes section below.
+
+        Returns
+        -------
+        test result
+
+        Notes
+        -----
+        Warning: The current default can have many empty or nearly empty bins.
+        The default number of bins is given by max(endog).
+        Currently it is recommended to limit the nuber of bins explicitly,
+        see Examples below.
+        Binning will change in future and automatic binning will be added.
+
+        Currently only the outer product of gradient, OPG, method is
+        implemented. In many case, the OPG version of a specification test
+        overrejects in small samples.
+        Specialized tests that use observed or expected information matrix
+        often have better small sample properties.
+        The default method will change if better methods are added.
+
+        Examples
+        --------
+        The following call is a test for the probability of zeros
+        `test_chisquare_prob(bin_edges=np.arange(3))`
+
+        `test_chisquare_prob(bin_edges=np.arange(10))` tests the hypothesis
+        that the frequences for counts up to 7 correspond to the estimated
+        Poisson distributions.
+        In this case, edges are 0, ..., 9 which defines 9 bins for
+        counts 0 to 8. The last bin is dropped, so the joint test hypothesis is
+        that the observed aggregated frequencies for counts 0 to 7 correspond
+        to the model prediction for those frequencies. Predicted probabilites
+        Prob(y_i = k | x) are aggregated over observations ``i``.
+
+        """
+        kwds = {}
+        if bin_edges is not None:
+            # TODO: verify upper bound, we drop last bin (may be open, inf)
+            kwds["y_values"] = np.arange(bin_edges[-2] + 1)
+        probs = self.results.predict(which="prob", **kwds)
+        res = test_chisquare_prob(self.results, probs, bin_edges=bin_edges,
+                                  method=method)
+        return res
+
+    def plot_probs(self, label='predicted', upp_xlim=None,
+                   fig=None):
+        """Plot observed versus predicted frequencies for entire sample.
+        """
+        probs_predicted = self.probs_predicted.sum(0)
+        k_probs = len(probs_predicted)
+        freq = np.bincount(self.results.model.endog.astype(int),
+                           minlength=k_probs)[:k_probs]
+        fig = plot_probs(freq, probs_predicted,
+                         label=label, upp_xlim=upp_xlim,
+                         fig=fig)
+        return fig
 
 
 class PoissonDiagnostic(CountDiagnostic):
@@ -45,12 +137,8 @@ class PoissonDiagnostic(CountDiagnostic):
 
     """
 
-    def __init__(self, results):
+    def _init__(self, results):
         self.results = results
-
-    @cache_readonly
-    def probs_predicted(self):
-        return self.results.predict(which="prob")
 
     def test_dispersion(self):
         """Test for excess (over or under) dispersion in Poisson.
@@ -116,62 +204,6 @@ class PoissonDiagnostic(CountDiagnostic):
 
         return res
 
-    def test_chisquare_prob(self, bin_edges=None, method=None):
-        """Moment test for binned probabilites using OPG.
-
-        Paramters
-        ---------
-        binedges : array_like or None
-            This defines which counts are included in the test on frequencies
-            and how counts are combined in bins.
-            The default if bin_edges is None will change in future.
-            See Notes and Example sections below.
-        method : str
-            Currently only `method = "opg"` is available.
-            If method is None, the OPG will be used, but the default might
-            change in future versions.
-            See Notes section below.
-
-        Returns
-        -------
-        test result
-
-        Notes
-        -----
-        Warning: The current default can have many empty or nearly empty bins.
-        The default number of bins is given by max(endog).
-        Currently it is recommended to limit the nuber of bins explicitly,
-        see Examples below.
-        Binning will change in future and automatic binning will be added.
-
-        Currently only the outer product of gradient, OPG, method is
-        implemented. In many case, the OPG version of a specification test
-        overrejects in small samples.
-        Specialized tests that use observed or expected information matrix
-        often have better small sample properties.
-        The default method will change if better methods are added.
-
-        Examples
-        --------
-        The following call is a test for the probability of zeros
-        `test_chisquare_prob(bin_edges=np.arange(3))`
-
-        `test_chisquare_prob(bin_edges=np.arange(10))` tests the hypothesis
-        that the frequences for counts up to 7 correspond to the estimated
-        Poisson distributions.
-        In this case, edges are 0, ..., 9 which defines 9 bins for
-        counts 0 to 8. The last bin is dropped, so the joint test hypothesis is
-        that the observed aggregated frequencies for counts 0 to 7 correspond
-        to the Poisson prediction for those frequencies. Predicted probabilites
-        Prob(y_i = k | x) are aggregated over observations ``i``.
-
-
-        """
-        probs = self.results.predict(which="prob")
-        res = test_chisquare_prob(self.results, probs, bin_edges=bin_edges,
-                                  method=method)
-        return res
-
     def _chisquare_binned(self, sort_var=None, bins=10, k_max=None, df=None,
                           sort_method="quicksort", frac_upp=0.1,
                           alpha_nc=0.05):
@@ -180,7 +212,7 @@ class PoissonDiagnostic(CountDiagnostic):
         Note, this does not take into account that parameters are estimated.
         The distribution of the test statistic is only an approximation.
 
-        This corresponds to the Hosemer-Lemeshow type test for an ordinal
+        This corresponds to the Hosmer-Lemeshow type test for an ordinal
         response variable. The outcome space y = k is partitioned into bins
         and treated as ordinal variable.
         The observations are split into approximately equal sized groups
@@ -217,15 +249,3 @@ class PoissonDiagnostic(CountDiagnostic):
                                      sort_method=sort_method,
                                      alpha_nc=alpha_nc)
         return res
-
-    def plot_probs(self, label='predicted', upp_xlim=None,
-                   fig=None):
-        """Plot observed versus predicted frequencies for entire sample.
-        """
-        probs_predicted = self.probs_predicted.sum(0)
-        freq = np.bincount(self.results.model.endog.astype(int),
-                           minlength=len(probs_predicted))
-        fig = plot_probs(freq, probs_predicted,
-                         label=label, upp_xlim=upp_xlim,
-                         fig=fig)
-        return fig

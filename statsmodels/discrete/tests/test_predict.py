@@ -122,6 +122,20 @@ class CheckPredict():
         stat, _ = pred.t_test(value=pred.predicted)
         assert_equal(stat, 0)
 
+    def test_diagnostic(self):
+        # smoke test for now
+        res1 = self.res1
+
+        dia = res1.get_diagnostic(y_max=21)
+        res_chi2 = dia.test_chisquare_prob(bin_edges=np.arange(4))
+        assert_equal(res_chi2.diff1.shape[1], 3)
+        assert_equal(dia.probs_predicted.shape[1], 21)
+
+        try:
+            dia.plot_probs(upp_xlim=20)
+        except ImportError:
+            pass
+
 
 class TestNegativeBinomialPPredict(CheckPredict):
 

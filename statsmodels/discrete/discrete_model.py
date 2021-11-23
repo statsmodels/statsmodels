@@ -4537,6 +4537,25 @@ class CountResults(DiscreteResults):
         """
         return self.model.endog - self.predict()
 
+    def get_diagnostic(self, y_max=None):
+        """
+        Get instance of class with specification and diagnostic methods.
+
+        experimental, API of Diagnostic classes will change
+
+        Returns
+        -------
+        CountDiagnostic instance
+            The instance has methods to perform specification and diagnostic
+            tesst and plots
+
+        See Also
+        --------
+        statsmodels.statsmodels.discrete.diagnostic.CountDiagnostic
+        """
+        from statsmodels.discrete.diagnostic import CountDiagnostic
+        return CountDiagnostic(self, y_max=y_max)
+
 
 class NegativeBinomialResults(CountResults):
     __doc__ = _discrete_results_docs % {
@@ -4667,6 +4686,26 @@ class PoissonResults(CountResults):
         """
         from statsmodels.stats.outliers_influence import MLEInfluence
         return MLEInfluence(self)
+
+    def get_diagnostic(self, y_max=None):
+        """
+        Get instance of class with specification and diagnostic methods
+
+        experimental, API of Diagnostic classes will change
+
+        Returns
+        -------
+        PoissonDiagnostic instance
+            The instance has methods to perform specification and diagnostic
+            tesst and plots
+
+        See Also
+        --------
+        statsmodels.statsmodels.discrete.diagnostic.PoissonDiagnostic
+        """
+        from statsmodels.discrete.diagnostic import (
+            PoissonDiagnostic)
+        return PoissonDiagnostic(self, y_max=y_max)
 
 
 class L1PoissonResults(L1CountResults, PoissonResults):
