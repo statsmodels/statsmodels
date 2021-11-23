@@ -4261,8 +4261,6 @@ class DiscreteResults(base.LikelihoodModelResults):
         Status: new in 0.14, experimental
         """
 
-        import statsmodels.regression._prediction as linpred
-
         if linear is True:
             # compatibility with old keyword
             which = "linear"
@@ -4273,18 +4271,14 @@ class DiscreteResults(base.LikelihoodModelResults):
             pred_kwds["y_values"] = y_values
 
         if which == "linear":
-            # pred_kwds["linear"] = True  # old keyword
-            pred_kwds["which"] = "linear"
-            # two calls to a get_prediction duplicates exog generation if patsy
-            res_linpred = linpred.get_prediction(
+            res = pred.get_prediction_linear(
                 self,
                 exog=exog,
                 transform=transform,
                 row_labels=row_labels,
                 pred_kwds=pred_kwds,
                 )
-            if which == "linear":
-                res = res_linpred
+
         elif which == "mean" and (average is False):
             # endpoint transformation
             if self.model.k_extra > 0:

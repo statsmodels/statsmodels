@@ -149,6 +149,19 @@ class TestNegativeBinomialPPredict(CheckPredict):
         cls.k_infl = 0
         cls.rtol = 1e-8
 
+    def test_predict_linear(self):
+        res1 = self.res1
+        ex = np.asarray(exog[:5])
+        pred = res1.get_prediction(ex, which="linear", **self.pred_kwds_mean)
+        k_extra = len(res1.params) - ex.shape[1]
+        if k_extra > 0:
+            # not zero-inflated models have params_infl first
+            ex = np.column_stack((ex, np.zeros((ex.shape[0], k_extra))))
+        tt = res1.t_test(ex)
+        cip = pred.conf_int()  # assumes no offset
+        cit = tt.conf_int()
+        assert_allclose(cip, cit, rtol=1e-12)
+
 
 class TestZINegativeBinomialPPredict(CheckPredict):
 
