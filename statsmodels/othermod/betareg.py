@@ -160,21 +160,25 @@ class BetaModel(GenericLikelihoodModel):
         exog : array_like
             Array of predictor variables for mean.
         exog_precision : array_like
-            Array of predictor variables for precision.
+            Array of predictor variables for precision parameter.
         which : str
 
             - "mean" : mean, conditional expectation E(endog | exog)
             - "precision" : predicted precision
-            - "linpred" : linear predictor for the mean function
-            - "linpred_precision" : linear predictor for the precision function
+            - "linear" : linear predictor for the mean function
+            - "linear-precision" : linear predictor for the precision parameter
 
         Returns
         -------
         ndarray, predicted values
         """
+        if which == "linpred":
+            which = "linear"
+        if which in ["linpred_precision", "linear_precision"]:
+            which = "linear-precision"
 
         k_mean = self.exog.shape[1]
-        if which in ["mean",  "linpred"]:
+        if which in ["mean",  "linear"]:
             if exog is None:
                 exog = self.exog
             params_mean = params[:k_mean]
@@ -186,7 +190,7 @@ class BetaModel(GenericLikelihoodModel):
             else:
                 return linpred
 
-        elif which in ["precision", "linpred_precision"]:
+        elif which in ["precision", "linear-precision"]:
             if exog_precision is None:
                 exog_precision = self.exog_precision
             params_prec = params[k_mean:]

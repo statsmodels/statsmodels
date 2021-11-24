@@ -4270,49 +4270,15 @@ class DiscreteResults(base.LikelihoodModelResults):
         if y_values is not None:
             pred_kwds["y_values"] = y_values
 
-        if which == "linear":
-            res = pred.get_prediction_linear(
-                self,
-                exog=exog,
-                transform=transform,
-                row_labels=row_labels,
-                pred_kwds=pred_kwds,
-                )
-
-        elif which == "mean" and (average is False):
-            # endpoint transformation
-            if self.model.k_extra > 0:
-                # TODO:
-                index = np.arange(self.model.exog.shape[1])
-            else:
-                index = None
-
-            pred_kwds["which"] = which
-            # TODO: add link or ilink to all link based models (except zi
-            link = getattr(self.model, "link", None)
-            if link is None:
-                from statsmodels.genmod.families import links
-                link = links.Log()
-            res = pred.get_prediction_monotonic(
-                self,
-                exog=exog,
-                transform=transform,
-                row_labels=row_labels,
-                link=link,
-                pred_kwds=pred_kwds,
-                index=index,
-                )
-
-        else:
-            # which is not mean or linear, or we need averaging
-            res = pred.get_prediction_delta(
-                self,
-                exog=exog,
-                which=which,
-                average=average,
-                pred_kwds=pred_kwds,
-                )
-
+        res = pred.get_prediction(
+            self,
+            exog=exog,
+            which=which,
+            transform=transform,
+            row_labels=row_labels,
+            average=average,
+            pred_kwds=pred_kwds
+            )
         return res
 
     def _get_endog_name(self, yname, yname_list):

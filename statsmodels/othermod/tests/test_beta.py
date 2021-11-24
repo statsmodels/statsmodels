@@ -290,3 +290,19 @@ class TestBetaMeth():
         assert_allclose(v26, v2[:n], rtol=1e-13)
         # check that we don't have pandas in distr
         assert isinstance(distr6f.args[0], np.ndarray)
+
+        # minimal checks for get_prediction
+        pma = res1.get_prediction(which="mean", average=True)
+        dfma = pma.summary_frame()
+        assert_allclose(pma.predicted, mean.mean(), rtol=1e-13)
+        assert_equal(dfma.shape, (1, 4))
+        pm = res1.get_prediction(exog=df6, which="mean", average=False)
+        dfm = pm.summary_frame()
+        assert_allclose(pm.predicted, mean6, rtol=1e-13)
+        assert_equal(dfm.shape, (6, 4))
+        # smoke tests
+        res1.get_prediction(which="linear", average=False)
+        res1.get_prediction(which="precision", average=True)
+        res1.get_prediction(exog_precision=ex_prec, which="precision",
+                            average=False)
+        res1.get_prediction(which="linear-precision", average=True)
