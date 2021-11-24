@@ -2729,6 +2729,7 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
             transform=True,
             row_labels=None,
             average=False,
+            agg_weights=None,
             **kwargs
             ):
         """
@@ -2758,6 +2759,9 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
             over observation is used.
             If average is False, then the results are the predictions for all
             observations, i.e. same length as ``exog``.
+        agg_weights : ndarray, optional
+            Aggregation weights, only used if average is True.
+            The weights are not normalized.
         **kwargs :
             Some models can take additional keyword arguments, such as offset,
             exposure or additional exog in multi-part models like zero inflated
@@ -2786,6 +2790,7 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
             transform=transform,
             row_labels=row_labels,
             average=average,
+            agg_weights=agg_weights,
             pred_kwds=pred_kwds
             )
         return res

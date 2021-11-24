@@ -746,7 +746,7 @@ class ZeroInflatedResults(CountResults):
 
     def get_prediction(self, exog=None, exog_infl=None, exposure=None,
                        offset=None, which='mean', average=False,
-                       y_values=None,
+                       agg_weights=None, y_values=None,
                        transform=True, row_labels=None):
 
         import statsmodels.base._prediction_inference as pred
@@ -760,6 +760,7 @@ class ZeroInflatedResults(CountResults):
 
         res = pred.get_prediction_delta(self, exog=exog, which=which,
                                         average=average,
+                                        agg_weights=agg_weights,
                                         pred_kwds=pred_kwds)
         return res
 

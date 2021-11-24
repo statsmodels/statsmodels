@@ -625,6 +625,7 @@ def get_prediction_delta(
         exog=None,
         which="mean",
         average=False,
+        agg_weights=None,
         transform=True,
         row_labels=None,
         pred_kwds=None
@@ -645,6 +646,9 @@ def get_prediction_delta(
         observation is used.
         If average is False, then the results are the predictions for all
         observations, i.e. same length as ``exog``.
+    agg_weights : ndarray, optional
+        Aggregation weights, only used if average is True.
+        The weights are not normalized.
     transform : bool, optional
         If the model was fit via a formula, do you want to pass
         exog through the formula. Default is True. E.g., if you fit
@@ -675,13 +679,16 @@ def get_prediction_delta(
         transform=transform,
         row_labels=row_labels,
         )
+    if agg_weights is None:
+        agg_weights = np.array(1.)
 
     def f_pred(p):
         """Prediction function as function of params
         """
         pred = self.model.predict(p, exog, which=which, **pred_kwds)
         if average:
-            pred = pred.mean(0)
+            # using `.T` which should work if aggweights is 1-dim
+            pred = (pred.T * agg_weights.T).mean(-1).T
         return pred
 
     nlpm = self._get_wald_nonlinear(f_pred)
@@ -691,7 +698,7 @@ def get_prediction_delta(
 
 
 def get_prediction(self, exog=None, transform=True, which="mean",
-                   row_labels=None, average=False,
+                   row_labels=None, average=False, agg_weights=None,
                    pred_kwds=None):
     """
     Compute prediction results when endpoint transformation is valid.
@@ -725,6 +732,9 @@ def get_prediction(self, exog=None, transform=True, which="mean",
         over observation is used.
         If average is False, then the results are the predictions for all
         observations, i.e. same length as ``exog``.
+    agg_weights : ndarray, optional
+        Aggregation weights, only used if average is True.
+        The weights are not normalized.
     **kwargs :
         Some models can take additional keyword arguments, such as offset,
         exposure or additional exog in multi-part models like zero inflated
@@ -785,6 +795,7 @@ def get_prediction(self, exog=None, transform=True, which="mean",
             exog=exog,
             which=which,
             average=average,
+            agg_weights=agg_weights,
             pred_kwds=pred_kwds,
             )
 

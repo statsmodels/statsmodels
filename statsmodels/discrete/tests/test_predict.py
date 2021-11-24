@@ -122,6 +122,19 @@ class CheckPredict():
         stat, _ = pred.t_test(value=pred.predicted)
         assert_equal(stat, 0)
 
+        # test agg_weights
+        df6 = exog[:6]
+        aw = np.zeros(len(res1.model.endog))
+        aw[:6] = 1
+        aw /= aw.mean()
+        pm6 = res1.get_prediction(exog=df6, which="mean", average=True,
+                                  **self.pred_kwds_6)
+        dfm6 = pm6.summary_frame()
+        pmw = res1.get_prediction(which="mean", average=True, agg_weights=aw)
+        dfmw = pmw.summary_frame()
+        assert_allclose(pmw.predicted, pm6.predicted, rtol=1e-13)
+        assert_allclose(dfmw, dfm6, rtol=1e-7)
+
     def test_diagnostic(self):
         # smoke test for now
         res1 = self.res1
@@ -146,6 +159,7 @@ class TestNegativeBinomialPPredict(CheckPredict):
         cls.res1 = res1
         cls.res2 = resp.results_nb_docvis
         cls.pred_kwds_mean = {}
+        cls.pred_kwds_6 = {}
         cls.k_infl = 0
         cls.rtol = 1e-8
 
@@ -180,5 +194,6 @@ class TestZINegativeBinomialPPredict(CheckPredict):
         cls.res1 = res1
         cls.res2 = resp.results_zinb_docvis
         cls.pred_kwds_mean = {"exog_infl": exog_infl.mean(0)}
+        cls.pred_kwds_6 = {"exog_infl": exog_infl[:6]}
         cls.k_infl = 2
         cls.rtol = 1e-4

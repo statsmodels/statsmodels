@@ -4199,7 +4199,8 @@ class DiscreteResults(base.LikelihoodModelResults):
 
     def get_prediction(self, exog=None,
                        transform=True, which="mean", linear=None,
-                       row_labels=None, average=False, y_values=None,
+                       row_labels=None, average=False,
+                       agg_weights=None, y_values=None,
                        **kwargs):
         """
         Compute prediction results when endpoint transformation is valid.
@@ -4233,6 +4234,9 @@ class DiscreteResults(base.LikelihoodModelResults):
             over observation is used.
             If average is False, then the results are the predictions for all
             observations, i.e. same length as ``exog``.
+        agg_weights : ndarray, optional
+            Aggregation weights, only used if average is True.
+            The weights are not normalized.
         y_values : None or nd_array
             Some predictive statistics like which="prob" are computed at
             values of the response variable. If y_values is not None, then
@@ -4277,6 +4281,7 @@ class DiscreteResults(base.LikelihoodModelResults):
             transform=transform,
             row_labels=row_labels,
             average=average,
+            agg_weights=agg_weights,
             pred_kwds=pred_kwds
             )
         return res

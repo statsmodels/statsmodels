@@ -306,3 +306,16 @@ class TestBetaMeth():
         res1.get_prediction(exog_precision=ex_prec, which="precision",
                             average=False)
         res1.get_prediction(which="linear-precision", average=True)
+
+        # test agg_weights
+        pm = res1.get_prediction(exog=df6, which="mean", average=True)
+        dfm = pm.summary_frame()
+        aw = np.zeros(len(res1.model.endog))
+        aw[:6] = 1
+        aw /= aw.mean()
+        pm6 = res1.get_prediction(exog=df6, which="mean", average=True)
+        dfm6 = pm6.summary_frame()
+        pmw = res1.get_prediction(which="mean", average=True, agg_weights=aw)
+        dfmw = pmw.summary_frame()
+        assert_allclose(pmw.predicted, pm6.predicted, rtol=1e-13)
+        assert_allclose(dfmw, dfm6, rtol=1e-13)
