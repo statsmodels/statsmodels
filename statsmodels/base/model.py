@@ -1002,6 +1002,10 @@ class GenericLikelihoodModel(LikelihoodModel):
             else:
                 start_params = 0.1 * np.ones(self.nparams)
 
+        if "cov_type" not in kwargs:
+            # this will add default cov_type name and description
+            kwargs["cov_type"] = 'nonrobust'
+
         fit_method = super(GenericLikelihoodModel, self).fit
         mlefit = fit_method(start_params=start_params,
                             method=method, maxiter=maxiter,
