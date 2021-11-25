@@ -340,10 +340,10 @@ class BetaModel(GenericLikelihoodModel):
         score : ndarray
             First derivative of loglikelihood function.
         """
-        sf = self.score_factor(params)
+        sf1, sf2 = self.score_factor(params)
 
-        d1 = np.dot(sf[:, 0], self.exog)
-        d2 = np.dot(sf[:, 1], self.exog_precision)
+        d1 = np.dot(sf1, self.exog)
+        d2 = np.dot(sf2, self.exog_precision)
         return np.concatenate((d1, d2))
 
     def _score_check(self, params):
@@ -411,7 +411,7 @@ class BetaModel(GenericLikelihoodModel):
         sf1 = phi * t * (ystar - mustar)
         sf2 = h * (mu * (ystar - mustar) + yt - mut)
 
-        return np.column_stack((sf1, sf2))
+        return (sf1, sf2)
 
     def score_hessian_factor(self, params, return_hessian=False,
                              observed=True):
@@ -494,9 +494,9 @@ class BetaModel(GenericLikelihoodModel):
             if observed:
                 jgg += (mu * ymu_star + yt - mut) * q * h**3    # **3 ?
 
-            return np.column_stack((sf1, sf2)), (-jbb, -jbg, -jgg)
+            return (sf1, sf2), (-jbb, -jbg, -jgg)
         else:
-            return np.column_stack((sf1, sf2))
+            return (sf1, sf2)
 
     def score_obs(self, params):
         """
@@ -513,11 +513,11 @@ class BetaModel(GenericLikelihoodModel):
             The first derivative of the loglikelihood function evaluated at
             params for each observation.
         """
-        sf = self.score_factor(params)
+        sf1, sf2 = self.score_factor(params)
 
         # elementwise product for each row (observation)
-        d1 = sf[:, :1] * self.exog
-        d2 = sf[:, 1:2] * self.exog_precision
+        d1 = sf1[:, None] * self.exog
+        d2 = sf2[:, None] * self.exog_precision
         return np.column_stack((d1, d2))
 
     def hessian(self, params, observed=None):
@@ -549,7 +549,7 @@ class BetaModel(GenericLikelihoodModel):
         d11 = (self.exog.T * hf11).dot(self.exog)
         d12 = (self.exog.T * hf12).dot(self.exog_precision)
         d22 = (self.exog_precision.T * hf22).dot(self.exog_precision)
-        return np.bmat([[d11, d12], [d12.T, d22]]).A
+        return np.block([[d11, d12], [d12.T, d22]])
 
     def _start_params(self, niter=2, return_intermediate=False):
         """find starting values
