@@ -655,6 +655,8 @@ class ETSModel(base.StateSpaceMLEModel):
         endog = np.array(data.orig_endog, order="C")
         if endog.ndim != 1:
             raise ValueError("endog must be 1-dimensional")
+        if endog.dtype != np.double:
+            endog = np.asarray(data.orig_endog, order="C", dtype=float)
         return endog, None
 
     @property
@@ -790,7 +792,11 @@ class ETSModel(base.StateSpaceMLEModel):
         if self.initialization_method != "estimated":
             internal[4] = self.initial_level
             internal[5] = self.initial_trend
-            internal[6:] = self.initial_seasonal
+            if np.isscalar(self.initial_seasonal):
+                internal[6:] = self.initial_seasonal
+            else:
+                # See GH 7893
+                internal[6:] = self.initial_seasonal[::-1]
         return internal
 
     def _model_params(self, internal):
@@ -1408,7 +1414,8 @@ class ETSResults(base.StateSpaceMLEResults):
             self.smoothing_trend = self.beta
         if self.has_seasonal:
             self.season = states[:, self.model._seasonal_index]
-            self.initial_seasonal = internal_params[6:]
+            # See GH 7893
+            self.initial_seasonal = internal_params[6:][::-1]
             self.initial_state[
                 self.model._seasonal_index :
             ] = self.initial_seasonal
