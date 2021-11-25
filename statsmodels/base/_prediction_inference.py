@@ -478,6 +478,73 @@ def get_prediction_glm(self, exog=None, transform=True,
         row_labels=row_labels, linpred=linpred, link=link)
 
 
+def get_prediction_linear(self, exog=None, transform=True,
+                          row_labels=None, pred_kwds=None, index=None):
+    """
+    Compute prediction results for linear prediction.
+
+    Parameters
+    ----------
+    exog : array_like, optional
+        The values for which you want to predict.
+    transform : bool, optional
+        If the model was fit via a formula, do you want to pass
+        exog through the formula. Default is True. E.g., if you fit
+        a model y ~ log(x1) + log(x2), and transform is True, then
+        you can pass a data structure that contains x1 and x2 in
+        their original form. Otherwise, you'd need to log the data
+        first.
+    row_labels : list of str or None
+        If row_lables are provided, then they will replace the generated
+        labels.
+    pred_kwargs :
+        Some models can take additional keyword arguments, such as offset or
+        additional exog in multi-part models.
+        See the predict method of the model for the details.
+    index : slice or array-index
+        Is used to select rows and columns of cov_params, if the prediction
+        function only depends on a subset of parameters.
+
+    Returns
+    -------
+    prediction_results : PredictionResults
+        The prediction results instance contains prediction and prediction
+        variance and can on demand calculate confidence intervals and summary
+        tables for the prediction.
+    """
+
+    # prepare exog and row_labels, based on base Results.predict
+    exog, row_labels = _get_exog_predict(
+        self,
+        exog=exog,
+        transform=transform,
+        row_labels=row_labels,
+        )
+
+    if pred_kwds is None:
+        pred_kwds = {}
+
+    k1 = exog.shape[1]
+    if len(self.params > k1):
+        # TODO: we allow endpoint transformation only for the first link
+        index = np.arange(k1)
+    else:
+        index = None
+    # get linear prediction and standard errors
+    covb = self.cov_params(column=index)
+    var_pred = (exog * np.dot(covb, exog.T).T).sum(1)
+    pred_kwds_linear = pred_kwds.copy()
+    pred_kwds_linear["which"] = "linear"
+    predicted = self.model.predict(self.params, exog, **pred_kwds_linear)
+
+    dist = ['norm', 't'][self.use_t]
+    res = PredictionResultsBase(predicted, var_pred,
+                                df=self.df_resid, dist=dist,
+                                row_labels=row_labels
+                                )
+    return res
+
+
 def get_prediction_monotonic(self, exog=None, transform=True,
                              row_labels=None, link=None,
                              pred_kwds=None, index=None):
@@ -558,6 +625,7 @@ def get_prediction_delta(
         exog=None,
         which="mean",
         average=False,
+        agg_weights=None,
         transform=True,
         row_labels=None,
         pred_kwds=None
@@ -578,6 +646,9 @@ def get_prediction_delta(
         observation is used.
         If average is False, then the results are the predictions for all
         observations, i.e. same length as ``exog``.
+    agg_weights : ndarray, optional
+        Aggregation weights, only used if average is True.
+        The weights are not normalized.
     transform : bool, optional
         If the model was fit via a formula, do you want to pass
         exog through the formula. Default is True. E.g., if you fit
@@ -608,18 +679,126 @@ def get_prediction_delta(
         transform=transform,
         row_labels=row_labels,
         )
+    if agg_weights is None:
+        agg_weights = np.array(1.)
 
     def f_pred(p):
         """Prediction function as function of params
         """
         pred = self.model.predict(p, exog, which=which, **pred_kwds)
         if average:
-            pred = pred.mean(0)
+            # using `.T` which should work if aggweights is 1-dim
+            pred = (pred.T * agg_weights.T).mean(-1).T
         return pred
 
     nlpm = self._get_wald_nonlinear(f_pred)
     # TODO: currently returns NonlinearDeltaCov
     res = PredictionResultsDelta(nlpm)
+    return res
+
+
+def get_prediction(self, exog=None, transform=True, which="mean",
+                   row_labels=None, average=False, agg_weights=None,
+                   pred_kwds=None):
+    """
+    Compute prediction results when endpoint transformation is valid.
+
+    Parameters
+    ----------
+    exog : array_like, optional
+        The values for which you want to predict.
+    transform : bool, optional
+        If the model was fit via a formula, do you want to pass
+        exog through the formula. Default is True. E.g., if you fit
+        a model y ~ log(x1) + log(x2), and transform is True, then
+        you can pass a data structure that contains x1 and x2 in
+        their original form. Otherwise, you'd need to log the data
+        first.
+    which : str
+        Which statistic is to be predicted. Default is "mean".
+        The available statistics and options depend on the model.
+        see the model.predict docstring
+    linear : bool
+        Linear has been replaced by the `which` keyword and will be
+        deprecated.
+        If linear is True, then `which` is ignored and the linear
+        prediction is returned.
+    row_labels : list of str or None
+        If row_lables are provided, then they will replace the generated
+        labels.
+    average : bool
+        If average is True, then the mean prediction is computed, that is,
+        predictions are computed for individual exog and then the average
+        over observation is used.
+        If average is False, then the results are the predictions for all
+        observations, i.e. same length as ``exog``.
+    agg_weights : ndarray, optional
+        Aggregation weights, only used if average is True.
+        The weights are not normalized.
+    **kwargs :
+        Some models can take additional keyword arguments, such as offset,
+        exposure or additional exog in multi-part models like zero inflated
+        models.
+        See the predict method of the model for the details.
+
+    Returns
+    -------
+    prediction_results : PredictionResults
+        The prediction results instance contains prediction and prediction
+        variance and can on demand calculate confidence intervals and
+        summary dataframe for the prediction.
+
+    Notes
+    -----
+    Status: new in 0.14, experimental
+    """
+    use_endpoint = getattr(self.model, "_use_endpoint", True)
+
+    if which == "linear":
+        res = get_prediction_linear(
+            self,
+            exog=exog,
+            transform=transform,
+            row_labels=row_labels,
+            pred_kwds=pred_kwds,
+            )
+
+    elif (which == "mean")and (use_endpoint is True) and (average is False):
+        # endpoint transformation
+        k1 = self.model.exog.shape[1]
+        if len(self.params > k1):
+            # TODO: we allow endpoint transformation only for the first link
+            index = np.arange(k1)
+        else:
+            index = None
+
+        pred_kwds["which"] = which
+        # TODO: add link or ilink to all link based models (except zi
+        link = getattr(self.model, "link", None)
+        if link is None:
+            from statsmodels.genmod.families import links
+            link = links.Log()
+        res = get_prediction_monotonic(
+            self,
+            exog=exog,
+            transform=transform,
+            row_labels=row_labels,
+            link=link,
+            pred_kwds=pred_kwds,
+            index=index,
+            )
+
+    else:
+        # which is not mean or linear, or we need averaging
+        res = get_prediction_delta(
+            self,
+            exog=exog,
+            which=which,
+            average=average,
+            agg_weights=agg_weights,
+            pred_kwds=pred_kwds,
+            )
+
     return res
 
 

@@ -160,21 +160,26 @@ class BetaModel(GenericLikelihoodModel):
         exog : array_like
             Array of predictor variables for mean.
         exog_precision : array_like
-            Array of predictor variables for precision.
+            Array of predictor variables for precision parameter.
         which : str
 
             - "mean" : mean, conditional expectation E(endog | exog)
             - "precision" : predicted precision
-            - "linpred" : linear predictor for the mean function
-            - "linpred_precision" : linear predictor for the precision function
+            - "linear" : linear predictor for the mean function
+            - "linear-precision" : linear predictor for the precision parameter
 
         Returns
         -------
         ndarray, predicted values
         """
+        # compatibility with old names and misspelling
+        if which == "linpred":
+            which = "linear"
+        if which in ["linpred_precision", "linear_precision"]:
+            which = "linear-precision"
 
         k_mean = self.exog.shape[1]
-        if which in ["mean",  "linpred"]:
+        if which in ["mean",  "linear"]:
             if exog is None:
                 exog = self.exog
             params_mean = params[:k_mean]
@@ -182,11 +187,11 @@ class BetaModel(GenericLikelihoodModel):
             linpred = np.dot(exog, params_mean)
             if which == "mean":
                 mu = self.link.inverse(linpred)
-                return mu
+                res = mu
             else:
-                return linpred
+                res = linpred
 
-        elif which in ["precision", "linpred_precision"]:
+        elif which in ["precision", "linear-precision"]:
             if exog_precision is None:
                 exog_precision = self.exog_precision
             params_prec = params[k_mean:]
@@ -194,11 +199,23 @@ class BetaModel(GenericLikelihoodModel):
 
             if which == "precision":
                 phi = self.link_precision.inverse(linpred_prec)
-                return phi
+                res = phi
             else:
-                return linpred_prec
+                res = linpred_prec
 
-    def predict_precision(self, params, exog_precision=None):
+        elif which == "var":
+            res = self._predict_var(
+                params,
+                exog=exog,
+                exog_precision=exog_precision
+                )
+
+        else:
+            raise ValueError('which = %s is not available' % which)
+
+        return res
+
+    def _predict_precision(self, params, exog_precision=None):
         """Predict values for precision function for given exog_precision.
 
         Parameters
@@ -222,7 +239,7 @@ class BetaModel(GenericLikelihoodModel):
 
         return phi
 
-    def predict_var(self, params, exog=None, exog_precision=None):
+    def _predict_var(self, params, exog=None, exog_precision=None):
         """predict values for conditional variance V(endog | exog)
 
         Parameters
@@ -239,7 +256,7 @@ class BetaModel(GenericLikelihoodModel):
         Predicted conditional variance.
         """
         mean = self.predict(params, exog=exog)
-        precision = self.predict_precision(params,
+        precision = self._predict_precision(params,
                                            exog_precision=exog_precision)
 
         var_endog = mean * (1 - mean) / (1 + precision)
@@ -724,7 +741,7 @@ class BetaResults(GenericLikelihoodModelResults, _LLRMixin):
     @cache_readonly
     def fitted_precision(self):
         """In-sample predicted precision"""
-        return self.model.predict_precision(self.params)
+        return self.model.predict(self.params, which="precision")
 
     @cache_readonly
     def resid(self):
@@ -734,7 +751,8 @@ class BetaResults(GenericLikelihoodModelResults, _LLRMixin):
     @cache_readonly
     def resid_pearson(self):
         """Pearson standardize residual"""
-        return self.resid / np.sqrt(self.model.predict_var(self.params))
+        std = np.sqrt(self.model.predict(self.params, which="var"))
+        return self.resid / std
 
     @cache_readonly
     def prsquared(self):

@@ -2722,6 +2722,79 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
         if self.df_resid != self.nobs - k_params:
             warnings.warn("df_resid differs from nobs - nparams")
 
+    def get_prediction(
+            self,
+            exog=None,
+            which="mean",
+            transform=True,
+            row_labels=None,
+            average=False,
+            agg_weights=None,
+            **kwargs
+            ):
+        """
+        Compute prediction results when endpoint transformation is valid.
+
+        Parameters
+        ----------
+        exog : array_like, optional
+            The values for which you want to predict.
+        transform : bool, optional
+            If the model was fit via a formula, do you want to pass
+            exog through the formula. Default is True. E.g., if you fit
+            a model y ~ log(x1) + log(x2), and transform is True, then
+            you can pass a data structure that contains x1 and x2 in
+            their original form. Otherwise, you'd need to log the data
+            first.
+        which : str
+            Which statistic is to be predicted. Default is "mean".
+            The available statistics and options depend on the model.
+            see the model.predict docstring
+        row_labels : list of str or None
+            If row_lables are provided, then they will replace the generated
+            labels.
+        average : bool
+            If average is True, then the mean prediction is computed, that is,
+            predictions are computed for individual exog and then the average
+            over observation is used.
+            If average is False, then the results are the predictions for all
+            observations, i.e. same length as ``exog``.
+        agg_weights : ndarray, optional
+            Aggregation weights, only used if average is True.
+            The weights are not normalized.
+        **kwargs :
+            Some models can take additional keyword arguments, such as offset,
+            exposure or additional exog in multi-part models like zero inflated
+            models.
+            See the predict method of the model for the details.
+
+        Returns
+        -------
+        prediction_results : PredictionResults
+            The prediction results instance contains prediction and prediction
+            variance and can on demand calculate confidence intervals and
+            summary dataframe for the prediction.
+
+        Notes
+        -----
+        Status: new in 0.14, experimental
+        """
+        from statsmodels.base._prediction_inference import get_prediction
+
+        pred_kwds = kwargs
+
+        res = get_prediction(
+            self,
+            exog=exog,
+            which=which,
+            transform=transform,
+            row_labels=row_labels,
+            average=average,
+            agg_weights=agg_weights,
+            pred_kwds=pred_kwds
+            )
+        return res
+
     def summary(self, yname=None, xname=None, title=None, alpha=.05):
         """Summarize the Regression Results
 

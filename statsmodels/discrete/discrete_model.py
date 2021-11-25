@@ -4199,7 +4199,8 @@ class DiscreteResults(base.LikelihoodModelResults):
 
     def get_prediction(self, exog=None,
                        transform=True, which="mean", linear=None,
-                       row_labels=None, average=False, y_values=None,
+                       row_labels=None, average=False,
+                       agg_weights=None, y_values=None,
                        **kwargs):
         """
         Compute prediction results when endpoint transformation is valid.
@@ -4233,6 +4234,9 @@ class DiscreteResults(base.LikelihoodModelResults):
             over observation is used.
             If average is False, then the results are the predictions for all
             observations, i.e. same length as ``exog``.
+        agg_weights : ndarray, optional
+            Aggregation weights, only used if average is True.
+            The weights are not normalized.
         y_values : None or nd_array
             Some predictive statistics like which="prob" are computed at
             values of the response variable. If y_values is not None, then
@@ -4261,8 +4265,6 @@ class DiscreteResults(base.LikelihoodModelResults):
         Status: new in 0.14, experimental
         """
 
-        import statsmodels.regression._prediction as linpred
-
         if linear is True:
             # compatibility with old keyword
             which = "linear"
@@ -4272,53 +4274,16 @@ class DiscreteResults(base.LikelihoodModelResults):
         if y_values is not None:
             pred_kwds["y_values"] = y_values
 
-        if which == "linear":
-            # pred_kwds["linear"] = True  # old keyword
-            pred_kwds["which"] = "linear"
-            # two calls to a get_prediction duplicates exog generation if patsy
-            res_linpred = linpred.get_prediction(
-                self,
-                exog=exog,
-                transform=transform,
-                row_labels=row_labels,
-                pred_kwds=pred_kwds,
-                )
-            if which == "linear":
-                res = res_linpred
-        elif which == "mean" and (average is False):
-            # endpoint transformation
-            if self.model.k_extra > 0:
-                # TODO:
-                index = np.arange(self.model.exog.shape[1])
-            else:
-                index = None
-
-            pred_kwds["which"] = which
-            # TODO: add link or ilink to all link based models (except zi
-            link = getattr(self.model, "link", None)
-            if link is None:
-                from statsmodels.genmod.families import links
-                link = links.Log()
-            res = pred.get_prediction_monotonic(
-                self,
-                exog=exog,
-                transform=transform,
-                row_labels=row_labels,
-                link=link,
-                pred_kwds=pred_kwds,
-                index=index,
-                )
-
-        else:
-            # which is not mean or linear, or we need averaging
-            res = pred.get_prediction_delta(
-                self,
-                exog=exog,
-                which=which,
-                average=average,
-                pred_kwds=pred_kwds,
-                )
-
+        res = pred.get_prediction(
+            self,
+            exog=exog,
+            which=which,
+            transform=transform,
+            row_labels=row_labels,
+            average=average,
+            agg_weights=agg_weights,
+            pred_kwds=pred_kwds
+            )
         return res
 
     def _get_endog_name(self, yname, yname_list):
