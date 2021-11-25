@@ -86,7 +86,8 @@ class CheckRegressionResults(object):
 
     def test_conf_int_subset(self):
         if len(self.res1.params) > 1:
-            ci1 = self.res1.conf_int(cols=(1, 2))
+            with pytest.warns(FutureWarning, match="cols is"):
+                ci1 = self.res1.conf_int(cols=(1, 2))
             ci2 = self.res1.conf_int()[1:3]
             assert_almost_equal(ci1, ci2, self.decimal_conf_int_subset)
         else:
