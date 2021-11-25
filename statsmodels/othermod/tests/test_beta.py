@@ -146,7 +146,7 @@ class TestBetaModel(object):
         distr = rslt.get_distribution()
         mean, var = distr.stats()
         assert_allclose(rslt.fittedvalues, mean, rtol=1e-13)
-        assert_allclose(rslt.model.predict_var(rslt.params), var, rtol=1e-13)
+        assert_allclose(rslt.model._predict_var(rslt.params), var, rtol=1e-13)
         resid = rslt.model.endog - mean
         assert_allclose(rslt.resid, resid, rtol=1e-12)
         assert_allclose(rslt.resid_pearson, resid / np.sqrt(var), rtol=1e-12)
@@ -235,7 +235,7 @@ class TestBetaMeth():
     def test_predict_distribution(self):
         res1 = self.res1
         mean = res1.predict()
-        var_ = res1.model.predict_var(res1.params)
+        var_ = res1.model._predict_var(res1.params)
         distr = res1.get_distribution()
         m2, v2 = distr.stats()
         assert_allclose(mean, m2, rtol=1e-13)
@@ -255,8 +255,8 @@ class TestBetaMeth():
         # todo: prec6 wrong exog if not used as keyword, no exception raised
         prec6 = res1.predict(exog_precision=ex_prec, which="precision",
                              transform=False)
-        var6 = res1.model.predict_var(res1.params, exog=ex,
-                                      exog_precision=ex_prec)
+        var6 = res1.model._predict_var(res1.params, exog=ex,
+                                       exog_precision=ex_prec)
 
         assert_allclose(mean6, mean[:n], rtol=1e-13)
         assert_allclose(prec6, prec[:n], rtol=1e-13)
@@ -300,6 +300,11 @@ class TestBetaMeth():
         dfm = pm.summary_frame()
         assert_allclose(pm.predicted, mean6, rtol=1e-13)
         assert_equal(dfm.shape, (6, 4))
+        pv = res1.get_prediction(exog=df6, exog_precision=ex_prec,
+                                 which="var", average=False)
+        dfv = pv.summary_frame()
+        assert_allclose(pv.predicted, var6, rtol=1e-13)
+        assert_equal(dfv.shape, (6, 4))
         # smoke tests
         res1.get_prediction(which="linear", average=False)
         res1.get_prediction(which="precision", average=True)
