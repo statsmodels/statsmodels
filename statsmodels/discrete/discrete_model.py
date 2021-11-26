@@ -1769,8 +1769,8 @@ class GeneralizedPoisson(CountModel):
 
         params = params[:-1]
         p = self.parameterization
-        y = self.endog[:,None]
-        mu = self.predict(params)[:,None]
+        y = self.endog # [:,None]
+        mu = self.predict(params) #[:,None]
         mu_p = np.power(mu, p)
         a1 = 1 + alpha * mu_p
         a2 = mu + alpha * mu_p * y
@@ -1784,7 +1784,7 @@ class GeneralizedPoisson(CountModel):
                            (1 + a4) * ((y - 1) / a2 - 1 / a1) +
                            1 / mu)
 
-        return np.column_stack((dparams, dalpha))
+        return dparams, dalpha
 
     def _score_p(self, params):
         """
@@ -1920,9 +1920,8 @@ class GeneralizedPoisson(CountModel):
 
         params = params[:-1]
         p = self.parameterization
-        exog = self.exog
-        y = self.endog #[:,None]
-        mu = self.predict(params)  # [:,None]
+        y = self.endog
+        mu = self.predict(params)
         mu_p = np.power(mu, p)
         a1 = 1 + alpha * mu_p
         a2 = mu + alpha * mu_p * y
@@ -1931,12 +1930,7 @@ class GeneralizedPoisson(CountModel):
         a5 = p * mu ** (p - 1)
         dmudb = mu
 
-        # for dl/dlinpred dparams
-        nobs = exog.shape[0]
-        hess_fact = np.empty((nobs, 3))
-
-
-        hess_fact[:, 0] = mu * (
+        dbb = mu * (
              mu * (a3 * a4 / a1**2 -
                    2 * a3**2 * a2 / a1**3 +
                    2 * a3 * (a4 + 1) / a1**2 -
@@ -1955,7 +1949,7 @@ class GeneralizedPoisson(CountModel):
               1 / mu))
 
         # for dl/dlinpred dalpha
-        dldpda = ((2 * a4 * mu_p / a1**2 -
+        dba = ((2 * a4 * mu_p / a1**2 -
                          2 * a3 * mu_p * a2 / a1**3 -
                          mu_p * y * (y - 1) * (1 + a4) / a2**2 +
                          mu_p * (1 + a4) / a1**2 +
@@ -1963,16 +1957,12 @@ class GeneralizedPoisson(CountModel):
                          2 * a5 * y / a1 +
                          a5 * a2 / a1**2) * dmudb)
 
-        hess_fact[:, 1] = dldpda
-
         # for dl/dalpha dalpha
-        dldada = mu_p**2 * (3 * y / a1**2 -
+        daa = mu_p**2 * (3 * y / a1**2 -
                             (y / a2)**2. * (y - 1) -
                             2 * a2 / a1**3)
 
-        hess_fact[:, 2] = dldada
-
-        return hess_fact
+        return dbb, dba, daa
 
     def predict(self, params, exog=None, exposure=None, offset=None,
                 which='mean', y_values=None):
@@ -3618,7 +3608,7 @@ class NegativeBinomialP(CountModel):
                                  np.log(a1 / a2) +
                                  1 - a3 / a2))
 
-        return np.column_stack((dparams, dalpha))
+        return dparams, dalpha
 
     def hessian(self, params):
         """
@@ -3717,7 +3707,6 @@ class NegativeBinomialP(CountModel):
 
         p = 2 - self.parameterization
         y = self.endog
-        exog = self.exog
         mu = self.predict(params)
 
         mu_p = mu**p
@@ -3728,9 +3717,6 @@ class NegativeBinomialP(CountModel):
         a5 = a4 * p / mu
 
         dgpart = digamma(a3) - digamma(a1)
-
-        nobs = exog.shape[0]
-        hess_fact = np.zeros((nobs, 3))
 
         coeff = mu**2 * (((1 + a4)**2 * a3 / a2**2 -
                           a3 * (a5 - a4 / mu) / a2 -
@@ -3743,24 +3729,21 @@ class NegativeBinomialP(CountModel):
                           y / mu +
                           a4 * (np.log(a1) - np.log(a2) + dgpart + 1)) / mu)
 
-        hess_fact[:, 0] = coeff
+        hfbb = coeff
 
-        hess_fact[:, 1] = (mu * a1 *
+        hfba = (mu * a1 *
                 ((1 + a4) * (1 - a3 / a2) / a2 -
                  p * (np.log(a1 / a2) + dgpart + 2) / mu +
                  p * (a3 / mu + a4) / a2 +
                  a4 * (polygamma(1, a1) - polygamma(1, a3))) / alpha)
 
-        da2 = (a1 * (2 * np.log(a1 / a2) +
+        hfaa = (a1 * (2 * np.log(a1 / a2) +
                      2 * dgpart + 3 -
                      2 * a3 / a2 - a1 * polygamma(1, a1) +
                      a1 * polygamma(1, a3) - 2 * a1 / a2 +
                      a1 * a3 / a2**2) / alpha**2)
 
-        hess_fact[:, 2] = da2
-
-        return hess_fact
-
+        return hfbb, hfba, hfaa
 
     @Appender(_get_start_params_null_docs)
     def _get_start_params_null(self):
