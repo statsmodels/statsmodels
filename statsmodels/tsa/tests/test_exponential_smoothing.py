@@ -742,7 +742,8 @@ def statespace_comparison(austourists):
         initialization_method="known",
         initial_level=ets_results.initial_level,
         initial_trend=ets_results.initial_trend,
-        initial_seasonal=ets_results.initial_seasonal,
+        # See GH 7893
+        initial_seasonal=ets_results.initial_seasonal[::-1],
     )
     with statespace_model.fix_params(
         {
@@ -1047,3 +1048,22 @@ def test_estimated_initialization_short_data(oildata, trend, seasonal, nobs):
         initialization_method='estimated'
     ).fit()
     assert ~np.any(np.isnan(res.params))
+
+
+@pytest.mark.parametrize("method", ["estimated", "heuristic"])
+def test_seasonal_order(reset_randomstate, method):
+    seasonal = np.arange(12.0)
+    time_series = np.array(list(seasonal) * 100)
+    res = ETSModel(
+        time_series,
+        seasonal="add",
+        seasonal_periods=12,
+        initialization_method=method,
+    ).fit()
+    assert_allclose(
+        res.initial_seasonal + res.initial_level,
+        seasonal,
+        atol=1e-4,
+        rtol=1e-4,
+    )
+    assert res.mae < 1e-6
