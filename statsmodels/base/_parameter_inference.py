@@ -79,7 +79,7 @@ def _lm_robust(score, constraint_matrix, score_deriv_inv, cov_score,
 
 def score_test(self, exog_extra=None, params_constrained=None,
                hypothesis='joint', cov_type=None, cov_kwds=None,
-               k_constraints=None, scale=None, observed=True):
+               k_constraints=None, r_matrix=None, scale=None, observed=True):
     """score test for restrictions or for omitted variables
 
     Null Hypothesis : constraints are satisfied
@@ -172,7 +172,7 @@ def score_test(self, exog_extra=None, params_constrained=None,
     if params_constrained is None:
         params_constrained = self.params
     cov_type = cov_type if cov_type is not None else self.cov_type
-    r_matrix = None
+    # r_matrix = None
 
     if observed is False:
         hess_kwd = {'observed': False}
@@ -213,23 +213,37 @@ def score_test(self, exog_extra=None, params_constrained=None,
         if hasattr(self, 'constraints'):
             raise NotImplementedError('if exog_extra is not None, then self'
                                       'should not be a constrained fit result')
-        exog_extra = np.asarray(exog_extra)
-        k_constraints = 0
-        ex = np.column_stack((model.exog, exog_extra))
-        k_constraints += ex.shape[1] - model.exog.shape[1]
-        # TODO use diag instead of full np.eye
-        r_matrix = np.eye(len(self.params) + k_constraints)[-k_constraints:]
 
-        score_factor = model.score_factor(params_constrained)
-        score_obs = (score_factor[:, None] * ex)
-        score = score_obs.sum(0)
-        hessian_factor = model.hessian_factor(params_constrained,
-                                              **hess_kwd)
-        # see #4714
-        from statsmodels.genmod.generalized_linear_model import GLM
-        if isinstance(model, GLM):
-            hessian_factor *= -1
-        hessian = np.dot(ex.T * hessian_factor, ex)
+        if isinstance(exog_extra, tuple):
+            sh = model._scorehess_extra(params_constrained, *exog_extra,
+                                        **hess_kwd)
+            score_obs, hessian, k_constraints, r_matrix = sh
+            score = score_obs.sum(0)
+        else:
+            exog_extra = np.asarray(exog_extra)
+            k_constraints = 0
+            ex = np.column_stack((model.exog, exog_extra))
+            # this uses shape not matrix rank to determine k_constraints
+            # requires nonsingular (no added perfect collinearity)
+            k_constraints += ex.shape[1] - model.exog.shape[1]
+            # TODO use diag instead of full np.eye
+            r_matrix = np.eye(len(self.params) + k_constraints
+                              )[-k_constraints:]
+
+            score_factor = model.score_factor(params_constrained)
+            if score_factor.ndim == 1:
+                score_obs = (score_factor[:, None] * ex)
+            else:
+                sf = score_factor
+                score_obs = np.column_stack((sf[:, :1] * ex, sf[:, 1:]))
+            score = score_obs.sum(0)
+            hessian_factor = model.hessian_factor(params_constrained,
+                                                  **hess_kwd)
+            # see #4714
+            from statsmodels.genmod.generalized_linear_model import GLM
+            if isinstance(model, GLM):
+                hessian_factor *= -1
+            hessian = np.dot(ex.T * hessian_factor, ex)
 
     if cov_type == 'nonrobust':
         cov_score_test = -hessian
