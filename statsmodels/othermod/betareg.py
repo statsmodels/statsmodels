@@ -150,6 +150,9 @@ class BetaModel(GenericLikelihoodModel):
         return super(BetaModel, cls).from_formula(formula, data, *args,
                                                   **kwargs)
 
+    def _get_exogs(self):
+        return (self.exog, self.exog_precision)
+
     def predict(self, params, exog=None, exog_precision=None, which="mean"):
         """Predict values for mean or precision
 
@@ -550,70 +553,6 @@ class BetaModel(GenericLikelihoodModel):
         d12 = (self.exog.T * hf12).dot(self.exog_precision)
         d22 = (self.exog_precision.T * hf22).dot(self.exog_precision)
         return np.block([[d11, d12], [d12.T, d22]])
-
-    def _scorehess_extra(self, params, exog_extra=None,
-                         exog_precision_extra=None, observed=None):
-        """Experimental helper function for variable addition score test.
-
-        This will be refactored or replaced.
-
-        This uses score and hessian factor at the params which should be the
-        params of the restricted model.
-
-        """
-        if observed is None:
-            if self.hess_type == "eim":
-                observed = False
-            else:
-                observed = True
-
-        k_mean = self.exog.shape[1]
-        k_prec = self.exog_precision.shape[1]
-        if exog_extra is not None:
-            exog = np.column_stack((self.exog, exog_extra))
-        else:
-            exog = self.exog
-
-        if exog_precision_extra is not None:
-            exog_precision = np.column_stack((self.exog_precision,
-                                              exog_precision_extra))
-        else:
-            exog_precision = self.exog_precision
-
-        k_mean_new = exog.shape[1]
-        k_prec_new = exog_precision.shape[1]
-        k_cm = k_mean_new - k_mean
-        k_cp = k_prec_new - k_prec
-        k_constraints = k_cm + k_cp
-
-        index_mean = np.arange(k_mean, k_mean_new)
-        index_prec = np.arange(k_mean_new + k_prec, k_mean_new + k_prec_new)
-
-        r_matrix = np.zeros((k_constraints, len(params) + k_constraints))
-        # print(exog.shape, exog_precision.shape)
-        # print(r_matrix.shape, k_cm, k_cp, k_mean_new, k_prec_new)
-        # print(index_mean, index_prec)
-        r_matrix[:k_cm, index_mean] = np.eye(k_cm)
-        r_matrix[k_cm: k_cm + k_cp, index_prec] = np.eye(k_cp)
-
-        sf, hf = self.score_hessian_factor(params, return_hessian=True,
-                                           observed=observed)
-
-        sf1, sf2 = sf
-        hf11, hf12, hf22 = hf
-
-        # elementwise product for each row (observation)
-        d1 = sf1[:, None] * exog
-        d2 = sf2[:, None] * exog_precision
-        score_obs = np.column_stack((d1, d2))
-
-        # elementwise product for each row (observation)
-        d11 = (exog.T * hf11).dot(exog)
-        d12 = (exog.T * hf12).dot(exog_precision)
-        d22 = (exog_precision.T * hf22).dot(exog_precision)
-        hessian = np.block([[d11, d12], [d12.T, d22]])
-
-        return score_obs, hessian, k_constraints, r_matrix
 
     def _start_params(self, niter=2, return_intermediate=False):
         """find starting values

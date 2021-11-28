@@ -1537,6 +1537,9 @@ class GeneralizedPoisson(CountModel):
         kwds['p'] = self.parameterization + 1
         return kwds
 
+    def _get_exogs(self):
+        return (self.exog, None)
+
     def loglike(self, params):
         """
         Loglikelihood of Generalized Poisson model
@@ -3448,6 +3451,9 @@ class NegativeBinomialP(CountModel):
         kwds = super()._get_init_kwds()
         kwds['p'] = self.parameterization
         return kwds
+
+    def _get_exogs(self):
+        return (self.exog, None)
 
     def loglike(self, params):
         """
