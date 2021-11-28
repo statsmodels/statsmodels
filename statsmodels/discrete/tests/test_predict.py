@@ -15,6 +15,7 @@ from statsmodels.base._prediction_inference import PredictionResultsMonotonic
 
 from statsmodels.discrete.discrete_model import (
     NegativeBinomialP,
+    GeneralizedPoisson,
     )
 from statsmodels.discrete.count_model import (
     ZeroInflatedNegativeBinomialP
@@ -150,18 +151,7 @@ class CheckPredict():
             pass
 
 
-class TestNegativeBinomialPPredict(CheckPredict):
-
-    @classmethod
-    def setup_class(cls):
-        # using newton has results much closer to Stata than bfgs
-        res1 = NegativeBinomialP(endog, exog).fit(method="newton", maxiter=300)
-        cls.res1 = res1
-        cls.res2 = resp.results_nb_docvis
-        cls.pred_kwds_mean = {}
-        cls.pred_kwds_6 = {}
-        cls.k_infl = 0
-        cls.rtol = 1e-8
+class CheckExtras():
 
     def test_predict_linear(self):
         res1 = self.res1
@@ -175,6 +165,77 @@ class TestNegativeBinomialPPredict(CheckPredict):
         cip = pred.conf_int()  # assumes no offset
         cit = tt.conf_int()
         assert_allclose(cip, cit, rtol=1e-12)
+
+    def test_score_test(self):
+        res1 = self.res1
+        modr = self.klass(endog, exog.values[:, :-1])
+        resr = modr.fit(method="newton", maxiter=300)
+        params_restr = np.concatenate([resr.params[:-1], [0],
+                                       resr.params[-1:]])
+        r_matrix = np.zeros((1, len(params_restr)))
+        r_matrix[0, -2] = 1
+        exog_extra = res1.model.exog[:, -1:]
+
+        from statsmodels.base._parameter_inference import score_test
+        sc1 = score_test(res1, params_constrained=params_restr,
+                         k_constraints=1)
+        sc2 = score_test(resr, exog_extra=(exog_extra, None))
+        assert_allclose(sc2[:2], sc1[:2])
+
+        sc1_hc = score_test(res1, params_constrained=params_restr,
+                            k_constraints=1, r_matrix=r_matrix, cov_type="HC0")
+        sc2_hc = score_test(resr, exog_extra=(exog_extra, None),
+                            cov_type="HC0")
+        assert_allclose(sc2_hc[:2], sc1_hc[:2])
+
+    def test_score_test_alpha(self):
+        # this is mostly sanity check
+        # we need heteroscedastic model, i.e. exog_dispersion as comparison
+        # res1 = self.res1
+        modr = self.klass(endog, exog.values[:, :-1])
+        resr = modr.fit(method="newton", maxiter=300)
+        params_restr = np.concatenate([resr.params[:], [0]])
+        r_matrix = np.zeros((1, len(params_restr)))
+        r_matrix[0, -1] = 1
+        # use random expg_extra, then we don't reject null
+        # exog_extra = res1.model.exog[:, 1:2]
+        np.random.seed(987125643)
+        exog_extra = 0.01 * np.random.randn(endog.shape[0])
+
+        from statsmodels.base._parameter_inference import (
+            score_test, _scorehess_extra)
+
+        # note: we need params for the restricted model here
+        # if params is not given, then it will be taked from results instance
+        sh = _scorehess_extra(resr, exog_extra=None,
+                              exog2_extra=exog_extra, hess_kwds=None)
+        assert not np.isnan(sh[0]).any()
+
+        # sc1 = score_test(res1, params_constrained=params_restr,
+        #                  k_constraints=1)
+        sc2 = score_test(resr, exog_extra=(None, exog_extra))
+        assert sc2[1] > 0.01
+
+        # sc1_hc = score_test(res1, params_constrained=params_restr,
+        #                   k_constraints=1, r_matrix=r_matrix, cov_type="HC0")
+        sc2_hc = score_test(resr, exog_extra=(None, exog_extra),
+                            cov_type="HC0")
+        assert sc2_hc[1] > 0.01
+
+
+class TestNegativeBinomialPPredict(CheckPredict, CheckExtras):
+
+    @classmethod
+    def setup_class(cls):
+        cls.klass = NegativeBinomialP
+        # using newton has results much closer to Stata than bfgs
+        res1 = NegativeBinomialP(endog, exog).fit(method="newton", maxiter=300)
+        cls.res1 = res1
+        cls.res2 = resp.results_nb_docvis
+        cls.pred_kwds_mean = {}
+        cls.pred_kwds_6 = {}
+        cls.k_infl = 0
+        cls.rtol = 1e-8
 
 
 class TestZINegativeBinomialPPredict(CheckPredict):
@@ -197,3 +258,18 @@ class TestZINegativeBinomialPPredict(CheckPredict):
         cls.pred_kwds_6 = {"exog_infl": exog_infl[:6]}
         cls.k_infl = 2
         cls.rtol = 1e-4
+
+
+class TestGeneralizedPoissonPredict(CheckExtras):
+
+    @classmethod
+    def setup_class(cls):
+        cls.klass = GeneralizedPoisson
+        mod1 = GeneralizedPoisson(endog, exog)
+        res1 = mod1.fit(method="newton")
+        cls.res1 = res1
+        cls.res2 = resp.results_nb_docvis
+        cls.pred_kwds_mean = {}
+        cls.pred_kwds_6 = {}
+        cls.k_infl = 0
+        cls.rtol = 1e-8

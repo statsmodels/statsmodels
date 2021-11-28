@@ -79,7 +79,7 @@ def _lm_robust(score, constraint_matrix, score_deriv_inv, cov_score,
 
 def score_test(self, exog_extra=None, params_constrained=None,
                hypothesis='joint', cov_type=None, cov_kwds=None,
-               k_constraints=None, scale=None, observed=True):
+               k_constraints=None, r_matrix=None, scale=None, observed=True):
     """score test for restrictions or for omitted variables
 
     Null Hypothesis : constraints are satisfied
@@ -166,13 +166,15 @@ def score_test(self, exog_extra=None, params_constrained=None,
     score_obs without degrees of freedom correction.
     """
     # TODO: we are computing unnecessary things for cov_type nonrobust
+    if hasattr(self, "_results"):
+        # use numpy if we have wrapper, not relevant if method
+        self = self._results
     model = self.model
-    nobs = model.endog.shape[0] # model.nobs
+    nobs = model.endog.shape[0]  # model.nobs
     # discrete Poisson does not have nobs
     if params_constrained is None:
         params_constrained = self.params
     cov_type = cov_type if cov_type is not None else self.cov_type
-    r_matrix = None
 
     if observed is False:
         hess_kwd = {'observed': False}
@@ -213,23 +215,37 @@ def score_test(self, exog_extra=None, params_constrained=None,
         if hasattr(self, 'constraints'):
             raise NotImplementedError('if exog_extra is not None, then self'
                                       'should not be a constrained fit result')
-        exog_extra = np.asarray(exog_extra)
-        k_constraints = 0
-        ex = np.column_stack((model.exog, exog_extra))
-        k_constraints += ex.shape[1] - model.exog.shape[1]
-        # TODO use diag instead of full np.eye
-        r_matrix = np.eye(len(self.params) + k_constraints)[-k_constraints:]
 
-        score_factor = model.score_factor(params_constrained)
-        score_obs = (score_factor[:, None] * ex)
-        score = score_obs.sum(0)
-        hessian_factor = model.hessian_factor(params_constrained,
-                                              **hess_kwd)
-        # see #4714
-        from statsmodels.genmod.generalized_linear_model import GLM
-        if isinstance(model, GLM):
-            hessian_factor *= -1
-        hessian = np.dot(ex.T * hessian_factor, ex)
+        if isinstance(exog_extra, tuple):
+            sh = _scorehess_extra(self, params_constrained, *exog_extra,
+                                  hess_kwds=hess_kwd)
+            score_obs, hessian, k_constraints, r_matrix = sh
+            score = score_obs.sum(0)
+        else:
+            exog_extra = np.asarray(exog_extra)
+            k_constraints = 0
+            ex = np.column_stack((model.exog, exog_extra))
+            # this uses shape not matrix rank to determine k_constraints
+            # requires nonsingular (no added perfect collinearity)
+            k_constraints += ex.shape[1] - model.exog.shape[1]
+            # TODO use diag instead of full np.eye
+            r_matrix = np.eye(len(self.params) + k_constraints
+                              )[-k_constraints:]
+
+            score_factor = model.score_factor(params_constrained)
+            if score_factor.ndim == 1:
+                score_obs = (score_factor[:, None] * ex)
+            else:
+                sf = score_factor
+                score_obs = np.column_stack((sf[:, :1] * ex, sf[:, 1:]))
+            score = score_obs.sum(0)
+            hessian_factor = model.hessian_factor(params_constrained,
+                                                  **hess_kwd)
+            # see #4714
+            from statsmodels.genmod.generalized_linear_model import GLM
+            if isinstance(model, GLM):
+                hessian_factor *= -1
+            hessian = np.dot(ex.T * hessian_factor, ex)
 
     if cov_type == 'nonrobust':
         cov_score_test = -hessian
@@ -270,6 +286,80 @@ def score_test(self, exog_extra=None, params_constrained=None,
         return stat, pval
     else:
         raise NotImplementedError('only hypothesis "joint" is available')
+
+
+def _scorehess_extra(self, params=None, exog_extra=None,
+                     exog2_extra=None, hess_kwds=None):
+    """Experimental helper function for variable addition score test.
+
+    This uses score and hessian factor at the params which should be the
+    params of the restricted model.
+
+    """
+    if hess_kwds is None:
+        hess_kwds = {}
+    # this corresponds to a model methods, so we need only the model
+    model = self.model
+    # as long as we have results instance, we can take params from it
+    if params is None:
+        params = self.params
+
+    # get original exog from model, currently only if exactly 2
+    exog_o1, exog_o2 = model._get_exogs()
+
+    if exog_o2 is None:
+        # if extra params is scalar, as in NB, GPP
+        exog_o2 = np.ones((exog_o1.shape[0], 1))
+
+    k_mean = exog_o1.shape[1]
+    k_prec = exog_o2.shape[1]
+    if exog_extra is not None:
+        exog = np.column_stack((exog_o1, exog_extra))
+    else:
+        exog = exog_o1
+
+    if exog2_extra is not None:
+        exog2 = np.column_stack((exog_o2, exog2_extra))
+    else:
+        exog2 = exog_o2
+
+    k_mean_new = exog.shape[1]
+    k_prec_new = exog2.shape[1]
+    k_cm = k_mean_new - k_mean
+    k_cp = k_prec_new - k_prec
+    k_constraints = k_cm + k_cp
+
+    index_mean = np.arange(k_mean, k_mean_new)
+    index_prec = np.arange(k_mean_new + k_prec, k_mean_new + k_prec_new)
+
+    r_matrix = np.zeros((k_constraints, len(params) + k_constraints))
+    # print(exog.shape, exog2.shape)
+    # print(r_matrix.shape, k_cm, k_cp, k_mean_new, k_prec_new)
+    # print(index_mean, index_prec)
+    r_matrix[:k_cm, index_mean] = np.eye(k_cm)
+    r_matrix[k_cm: k_cm + k_cp, index_prec] = np.eye(k_cp)
+
+    if hasattr(model, "score_hessian_factor"):
+        sf, hf = model.score_hessian_factor(params, return_hessian=True,
+                                            **hess_kwds)
+    else:
+        sf = model.score_factor(params)
+        hf = model.hessian_factor(params, **hess_kwds)
+
+    sf1, sf2 = sf
+    hf11, hf12, hf22 = hf
+
+    # elementwise product for each row (observation)
+    d1 = sf1[:, None] * exog
+    d2 = sf2[:, None] * exog2
+    score_obs = np.column_stack((d1, d2))
+
+    # elementwise product for each row (observation)
+    d11 = (exog.T * hf11).dot(exog)
+    d12 = (exog.T * hf12).dot(exog2)
+    d22 = (exog2.T * hf22).dot(exog2)
+    hessian = np.block([[d11, d12], [d12.T, d22]])
+    return score_obs, hessian, k_constraints, r_matrix
 
 
 def im_ratio(results):

@@ -102,22 +102,24 @@ def check_jac(self):
     # TODO: change when score_obs uses score_factor for DRYing
     s1 = res1.model.score_obs(res1.params)
     sf = res1.model.score_factor(res1.params)
-    if sf.ndim == 1:
+    if not isinstance(sf, tuple):
         s2 = sf[:, None] * exog
-    elif sf.ndim == 2:
-        s2 = np.column_stack((sf[:, :1] * exog, sf[:, 1:]))
+    else:
+        sf0, sf1 = sf
+        s2 = np.column_stack((sf0[:, None] * exog, sf1))
 
     assert_allclose(s2, s1, rtol=1e-10)
 
     # check hessian_factor
     h1 = res1.model.hessian(res1.params)
     hf = res1.model.hessian_factor(res1.params)
-    if sf.ndim == 1:
+    if not isinstance(hf, tuple):
         h2 = (hf * exog.T).dot(exog)
-    elif sf.ndim == 2:
-        h00 = (hf[:, 0] * exog.T).dot(exog)
-        h10 = np.atleast_2d(hf[:, 1].T.dot(exog))
-        h11 = np.atleast_2d(hf[:, 2].sum(0))
+    else:
+        hf0, hf1, hf2 = hf
+        h00 = (hf0 * exog.T).dot(exog)
+        h10 = np.atleast_2d(hf1.T.dot(exog))
+        h11 = np.atleast_2d(hf2.sum(0))
         h2 = np.vstack((np.column_stack((h00, h10.T)),
                         np.column_stack((h10, h11))))
 
