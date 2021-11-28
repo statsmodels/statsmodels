@@ -370,3 +370,17 @@ class TestBetaIncome():
         sc2_hc = score_test(resr, exog_extra=(None, exog_prec_extra),
                             cov_type="HC0")
         assert_allclose(sc2_hc[:2], sc1_hc[:2])
+
+    def test_influence(self):
+        # currently only smoke test
+        res1 = self.res1
+        from statsmodels.stats.outliers_influence import MLEInfluence
+
+        influ = MLEInfluence(res1)
+        attrs = ['cooks_distance', 'd_fittedvalues', 'd_fittedvalues_scaled',
+                 'd_params', 'dfbetas', 'hat_matrix_diag', 'resid_studentized'
+                 ]
+        for attr in attrs:
+            getattr(influ, attr)
+
+        influ.summary_frame()

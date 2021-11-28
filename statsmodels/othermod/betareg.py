@@ -363,7 +363,7 @@ class BetaModel(GenericLikelihoodModel):
         """
         return super(BetaModel, self).score(params)
 
-    def score_factor(self, params):
+    def score_factor(self, params, endog=None):
         """Derivative of loglikelihood function w.r.t. linear predictors.
 
         This needs to be multiplied with the exog to obtain the score_obs.
@@ -389,7 +389,8 @@ class BetaModel(GenericLikelihoodModel):
         from scipy import special
         digamma = special.psi
 
-        y, X, Z = self.endog, self.exog, self.exog_precision
+        y = self.endog if endog is None else endog
+        X, Z = self.exog, self.exog_precision
         nz = Z.shape[1]
         Xparams = params[:-nz]
         Zparams = params[-nz:]
@@ -554,6 +555,13 @@ class BetaModel(GenericLikelihoodModel):
         d22 = (self.exog_precision.T * hf22).dot(self.exog_precision)
         return np.block([[d11, d12], [d12.T, d22]])
 
+    def hessian_factor(self, params, observed=True):
+        """Derivatives of loglikelihood function w.r.t. linear predictors.
+        """
+        _, hf = self.score_hessian_factor(params, return_hessian=True,
+                                          observed=observed)
+        return hf
+
     def _start_params(self, niter=2, return_intermediate=False):
         """find starting values
 
@@ -662,6 +670,57 @@ class BetaModel(GenericLikelihoodModel):
             # currently GenericLikelihoodModel doe not add wrapper
             res = BetaResultsWrapper(res)
         return res
+
+    def _deriv_mean_dparams(self, params):
+        """
+        Derivative of the expected endog with respect to the parameters.
+
+        not verified yet
+
+        Parameters
+        ----------
+        params : ndarray
+            parameter at which score is evaluated
+
+        Returns
+        -------
+        The value of the derivative of the expected endog with respect
+        to the parameter vector.
+        """
+        link = self.link
+        lin_pred = self.predict(params, which="linear")
+        idl = link.inverse_deriv(lin_pred)
+        dmat = self.exog * idl[:, None]
+        return np.column_stack((dmat, np.zeros(self.exog_precision.shape)))
+
+    def _deriv_score_obs_dendog(self, params):
+        """derivative of score_obs w.r.t. endog
+
+        Parameters
+        ----------
+        params : ndarray
+            parameter at which score is evaluated
+
+        Returns
+        -------
+        derivative : ndarray_2d
+            The derivative of the score_obs with respect to endog.
+        """
+        from statsmodels.tools.numdiff import _approx_fprime_cs_scalar
+
+        def f(y):
+            if y.ndim == 2 and y.shape[1] == 1:
+                y = y[:, 0]
+            sf = self.score_factor(params, endog=y)
+            return np.column_stack(sf)
+
+        dsf = _approx_fprime_cs_scalar(self.endog[:, None], f)
+        # deriv is 2d vector
+        d1 = dsf[:, :1] * self.exog
+        d2 = dsf[:, 1:2] * self.exog_precision
+
+        return np.column_stack((d1, d2))
+
 
     # code duplication with results class
     def get_distribution_params(self, params, exog=None, exog_precision=None):
