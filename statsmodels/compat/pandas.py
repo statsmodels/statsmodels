@@ -26,15 +26,18 @@ __all__ = [
     "is_int_index",
     "make_dataframe",
     "to_numpy",
-    "pandas_lt_1_0_0",
+    "PD_LT_1_0_0",
     "get_cached_func",
     "get_cached_doc",
     "call_cached_func",
+    "PD_LT_1_4"
 ]
 
 version = LooseVersion(pd.__version__)
 
-pandas_lt_1_0_0 = version < LooseVersion("1.0.0")
+PD_LT_1_0_0 = version < LooseVersion("1.0.0")
+PD_LT_1_4 = version < LooseVersion("1.4")
+
 
 try:
     from pandas.api.types import is_numeric_dtype

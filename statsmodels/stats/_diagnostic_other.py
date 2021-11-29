@@ -259,7 +259,11 @@ def lm_test_glm(result, exog_extra, mean_deriv=None):
     x2 = exog_extra
 
     # test omitted
-    lin_pred = res.predict(linear=True)
+    try:
+        lin_pred = res.predict(which="linear")
+    except TypeError:
+        # TODO: Standardized to which="linear" and remove linear kwarg
+        lin_pred = res.predict(linear=True)
     dm_incl = dm(x, lin_pred)
     if x2 is not None:
         dm_excl = dm(x2, lin_pred)

@@ -202,7 +202,7 @@ class CheckModelResults(CheckModelMixin):
 
     def test_predict_xb(self):
         assert_almost_equal(self.res1.model.predict(self.res1.params,
-                            linear=True),
+                            which="linear"),
                             self.res2.yhat, DECIMAL_4)
 
     def test_loglikeobs(self):
@@ -1195,7 +1195,7 @@ class TestNegativeBinomialNB2Newton(CheckNegBinMixin, CheckModelResults):
                             np.exp(self.res2.fittedvalues[:10]), DECIMAL_3)
 
     def test_predict_xb(self):
-        assert_almost_equal(self.res1.predict(linear=True)[:10],
+        assert_almost_equal(self.res1.predict(which="linear")[:10],
                             self.res2.fittedvalues[:10], DECIMAL_3)
 
 
@@ -1282,7 +1282,7 @@ class TestNegativeBinomialNB2BFGS(CheckNegBinMixin, CheckModelResults):
                             np.exp(self.res2.fittedvalues[:10]), DECIMAL_3)
 
     def test_predict_xb(self):
-        assert_almost_equal(self.res1.predict(linear=True)[:10],
+        assert_almost_equal(self.res1.predict(which="linear")[:10],
                             self.res2.fittedvalues[:10], DECIMAL_3)
 
 
@@ -1366,7 +1366,7 @@ class TestNegativeBinomialGeometricBFGS(CheckNegBinMixin, CheckModelResults):
         assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_3)
 
     def test_predict_xb(self):
-        assert_almost_equal(self.res1.predict(linear=True)[:10],
+        assert_almost_equal(self.res1.predict(which="linear")[:10],
                             self.res2.fittedvalues[:10], DECIMAL_3)
 
     def test_zstat(self): # Low precision because Z vs. t
@@ -1704,7 +1704,7 @@ def test_predict_with_exposure():
                                    exposure=df['exposure'])
 
     params = np.array([1, .4])
-    pred = mod1.predict(params, linear=True)
+    pred = mod1.predict(params, which="linear")
     # No exposure is passed, so default to using mod1.exposure, which
     # should have been logged
     X = df[['constant', 'Bar']].values # mod1.exog
@@ -1713,7 +1713,7 @@ def test_predict_with_exposure():
     # The above should have passed without the current patch.  The next
     # test would fail under the old code
 
-    pred2 = mod1.predict(params, exposure=[np.exp(2)]*4, linear=True)
+    pred2 = mod1.predict(params, exposure=[np.exp(2)]*4, which="linear")
     expected2 = expected + 1
     assert_allclose(pred2, expected2)
 

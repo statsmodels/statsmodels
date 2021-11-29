@@ -1,4 +1,4 @@
-from statsmodels.compat.pandas import NumericIndex, pandas_lt_1_0_0
+from statsmodels.compat.pandas import NumericIndex, PD_LT_1_0_0
 
 from typing import Hashable, Tuple
 
@@ -331,7 +331,7 @@ def test_fourier(index):
     assert list(terms.columns) == cols
 
 
-@pytest.mark.skipif(pandas_lt_1_0_0, reason="bug in old pandas")
+@pytest.mark.skipif(PD_LT_1_0_0, reason="bug in old pandas")
 def test_index_like():
     idx = np.empty((100, 2))
     with pytest.raises(TypeError, match="index must be a pandas"):
