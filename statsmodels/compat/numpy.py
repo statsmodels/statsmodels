@@ -43,7 +43,16 @@ from distutils.version import LooseVersion
 
 import numpy as np
 
+__all__ = [
+    "NP_LT_123",
+    "NP_LT_114",
+    "lstsq",
+    "np_matrix_rank",
+    "np_new_unique",
+]
+
 NP_LT_114 = LooseVersion(np.__version__) < LooseVersion("1.14")
+NP_LT_123 = LooseVersion(np.__version__) < LooseVersion("1.23")
 
 np_matrix_rank = np.linalg.matrix_rank
 np_new_unique = np.unique

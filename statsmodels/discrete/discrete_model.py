@@ -4600,7 +4600,7 @@ class PoissonResults(CountResults):
         else:
             counts = np.atleast_2d(np.arange(0, np.max(self.model.endog)+1))
         mu = self.predict(exog=exog, exposure=exposure, offset=offset,
-                          transform=transform, linear=False)[:,None]
+                          transform=transform, which="mean")[:,None]
         # uses broadcasting
         return stats.poisson.pmf(counts, mu)
 

@@ -393,7 +393,8 @@ class TestGLMPoissonConstrained1b(CheckPoissonConstrainedMixin):
         assert_allclose(predicted, res2.predict(), rtol=1e-10)
         assert_allclose(res1.mu, predicted, rtol=1e-10)
         assert_allclose(res1.fittedvalues, predicted, rtol=1e-10)
-        assert_allclose(res2.predict(linear=True), res2.predict(linear=True),
+        assert_allclose(res2.predict(which="linear"),
+                        res2.predict(which="linear"),
                         rtol=1e-10)
 
 
