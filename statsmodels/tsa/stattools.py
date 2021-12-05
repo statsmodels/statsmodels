@@ -629,10 +629,11 @@ def acf(
     Returns
     -------
     acf : ndarray
-        The autocorrelation function, nlags+1 elements including lag zero.
-    confint : ndarray, optional
-        Confidence intervals for the ACF, 2*(nlags+1) elements including
+        The autocorrelation function, nlags+1 elements since it includes
         lag zero.
+    confint : ndarray, optional
+        Confidence intervals for the ACF, 2*(nlags+1) elements since it
+        includes lag zero.
         Returned if alpha is not None.
     qstat : ndarray, optional
         The Ljung-Box Q-Statistic, nlags elements (excludes lag zero).
@@ -937,10 +938,10 @@ def pacf(x, nlags=None, method="ywadjusted", alpha=None):
     Returns
     -------
     pacf : ndarray
-        Partial autocorrelations, nlags+1 elements including lag zero.
+        Partial autocorrelations, nlags+1 elements since it includes lag zero
     confint : ndarray, optional
-        Confidence intervals for the PACF, 2*(nlags+1) elements including lag
-        zero. Returned if confint is not None.
+        Confidence intervals for the PACF, 2*(nlags+1) elements since it
+        includes lag zero. Returned if confint is not None.
 
     See Also
     --------
