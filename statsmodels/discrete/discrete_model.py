@@ -998,6 +998,9 @@ class CountModel(DiscreteModel):
         lin_pred = self.predict(params, which="linear")
         idl = link.inverse_deriv(lin_pred)
         dmat = self.exog * idl[:, None]
+        if self.k_extra > 0:
+            dmat_extra = np.zeros((dmat.shape[0], self.k_extra))
+            dmat = np.column_stack((dmat, dmat_extra))
         return dmat
 
 
@@ -1764,7 +1767,7 @@ class GeneralizedPoisson(CountModel):
         else:
             return score
 
-    def score_factor(self, params):
+    def score_factor(self, params, endog=None):
         if self._transparams:
             alpha = np.exp(params[-1])
         else:
@@ -1772,8 +1775,9 @@ class GeneralizedPoisson(CountModel):
 
         params = params[:-1]
         p = self.parameterization
-        y = self.endog # [:,None]
-        mu = self.predict(params) #[:,None]
+        y = self.endog if endog is None else endog
+
+        mu = self.predict(params)
         mu_p = np.power(mu, p)
         a1 = 1 + alpha * mu_p
         a2 = mu + alpha * mu_p * y
@@ -2004,6 +2008,35 @@ class GeneralizedPoisson(CountModel):
                                     self.parameterization + 1)
         else:
             raise ValueError('keyword \'which\' not recognized')
+
+    def _deriv_score_obs_dendog(self, params):
+        """derivative of score_obs w.r.t. endog
+
+        Parameters
+        ----------
+        params : ndarray
+            parameter at which score is evaluated
+
+        Returns
+        -------
+        derivative : ndarray_2d
+            The derivative of the score_obs with respect to endog.
+        """
+        # code duplication with NegativeBinomialP
+        from statsmodels.tools.numdiff import _approx_fprime_cs_scalar
+
+        def f(y):
+            if y.ndim == 2 and y.shape[1] == 1:
+                y = y[:, 0]
+            sf = self.score_factor(params, endog=y)
+            return np.column_stack(sf)
+
+        dsf = _approx_fprime_cs_scalar(self.endog[:, None], f)
+        # deriv is 2d vector
+        d1 = dsf[:, :1] * self.exog
+        d2 = dsf[:, 1:2]
+
+        return np.column_stack((d1, d2))
 
 
 class Logit(BinaryModel):
@@ -3573,7 +3606,7 @@ class NegativeBinomialP(CountModel):
         else:
             return score
 
-    def score_factor(self, params):
+    def score_factor(self, params, endog=None):
         """
         Generalized Negative Binomial (NB-P) model score (gradient) vector of the log-likelihood for each observations.
 
@@ -3595,7 +3628,7 @@ class NegativeBinomialP(CountModel):
 
         params = params[:-1]
         p = 2 - self.parameterization
-        y = self.endog
+        y = self.endog if endog is None else endog
 
         mu = self.predict(params)
         mu_p = mu**p
@@ -3939,6 +3972,34 @@ class NegativeBinomialP(CountModel):
         prob = size / (size + mu)
 
         return (size, prob)
+
+    def _deriv_score_obs_dendog(self, params):
+        """derivative of score_obs w.r.t. endog
+
+        Parameters
+        ----------
+        params : ndarray
+            parameter at which score is evaluated
+
+        Returns
+        -------
+        derivative : ndarray_2d
+            The derivative of the score_obs with respect to endog.
+        """
+        from statsmodels.tools.numdiff import _approx_fprime_cs_scalar
+
+        def f(y):
+            if y.ndim == 2 and y.shape[1] == 1:
+                y = y[:, 0]
+            sf = self.score_factor(params, endog=y)
+            return np.column_stack(sf)
+
+        dsf = _approx_fprime_cs_scalar(self.endog[:, None], f)
+        # deriv is 2d vector
+        d1 = dsf[:, :1] * self.exog
+        d2 = dsf[:, 1:2]
+
+        return np.column_stack((d1, d2))
 
 
 ### Results Class ###

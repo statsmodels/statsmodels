@@ -369,7 +369,8 @@ class MLEInfluence(_BaseInfluenceMixin):
         self.nobs, self.k_vars = results.model.exog.shape
         self.endog = endog if endog is not None else results.model.endog
         self.exog = exog if exog is not None else results.model.exog
-        self.resid = resid if resid is not None else results.resid_pearson
+        self.resid = resid if resid is not None else (
+            getattr(results, "resid_pearson", None))
         self.scale = scale if scale is not None else results.scale
         self.cov_params = (cov_params if cov_params is not None
                            else results.cov_params())
@@ -463,6 +464,10 @@ class MLEInfluence(_BaseInfluenceMixin):
         from statsmodels.genmod.generalized_linear_model import GLM
         sf = self.results.model.score_factor(self.results.params)
         hf = self.results.model.hessian_factor(self.results.params)
+        if isinstance(sf, tuple):
+            sf = sf[0]
+        if isinstance(hf, tuple):
+            hf = hf[0]
         if not isinstance(self.results.model, GLM):
             # hessian_factor in GLM has wrong sign
             hf = -hf
