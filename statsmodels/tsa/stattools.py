@@ -585,8 +585,8 @@ def acf(
        If True, then denominators for autocovariance are n-k, otherwise n.
     nlags : int, optional
         Number of lags to return autocorrelation for. If not provided,
-        uses min(10 * np.log10(nobs), nobs - 1). Note: the acf at lag 0 (ie., 1)
-        is returned in addition to nlags.
+        uses min(10 * np.log10(nobs), nobs - 1).
+        Note: the acf at lag 0 (ie., 1) is returned in addition to nlags.
     qstat : bool, default False
         If True, returns the Ljung-Box q statistic for each autocorrelation
         coefficient.  See q_stat for more information.
@@ -631,7 +631,8 @@ def acf(
     acf : ndarray
         The autocorrelation function, nlags+1 elements including lag zero.
     confint : ndarray, optional
-        Confidence intervals for the ACF, 2*(nlags+1) elements including lag zero.
+        Confidence intervals for the ACF, 2*(nlags+1) elements including
+        lag zero.
         Returned if alpha is not None.
     qstat : ndarray, optional
         The Ljung-Box Q-Statistic, nlags elements (excludes lag zero).
@@ -938,7 +939,8 @@ def pacf(x, nlags=None, method="ywadjusted", alpha=None):
     pacf : ndarray
         Partial autocorrelations, nlags+1 elements including lag zero.
     confint : ndarray, optional
-        Confidence intervals for the PACF, 2*(nlags+1) elements including lag zero. Returned if confint is not None.
+        Confidence intervals for the PACF, 2*(nlags+1) elements including lag
+        zero. Returned if confint is not None.
 
     See Also
     --------
