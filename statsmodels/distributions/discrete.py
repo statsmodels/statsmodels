@@ -23,6 +23,15 @@ class genpoisson_p_gen(rv_discrete):
     def _pmf(self, x, mu, alpha, p):
         return np.exp(self._logpmf(x, mu, alpha, p))
 
+    def mean(self, mu, alpha, p):
+        return mu
+
+    def var(self, mu, alpha, p):
+        dispersion_factor = (1 + alpha * mu**(p - 1))**2
+        var = dispersion_factor * mu
+        return var
+
+
 genpoisson_p = genpoisson_p_gen(name='genpoisson_p',
                                 longname='Generalized Poisson')
 

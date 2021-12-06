@@ -619,6 +619,13 @@ class BinaryModel(DiscreteModel):
         dmat = self.exog * idl[:, None]
         return dmat
 
+    def get_distribution(self, params, exog=None, offset=None):
+        """get frozen instance of distribution
+        """
+        mu = self.predict(params, exog=exog, offset=offset)
+        distr = stats.bernoulli(mu[:, None])
+        return distr
+
 
 class MultinomialModel(BinaryModel):
 
@@ -828,6 +835,11 @@ class MultinomialModel(BinaryModel):
         margeff = self._derivative_exog_helper(margeff, params, exog,
                                                dummy_idx, count_idx, transform)
         return margeff.reshape(len(exog), -1, order='F')
+
+    def get_distribution(self, params, exog=None, offset=None):
+        """get frozen instance of distribution
+        """
+        raise NotImplementedError
 
 
 class CountModel(DiscreteModel):
@@ -1495,6 +1507,13 @@ class Poisson(CountModel):
             # uses broadcasting
             return stats.poisson.pmf(y_values, mu)
 
+    def get_distribution(self, params, exog=None, exposure=None, offset=None):
+        """get frozen instance of distribution
+        """
+        mu = self.predict(params, exog=exog, exposure=exposure, offset=offset)
+        distr = stats.poisson(mu)
+        return distr
+
 
 class GeneralizedPoisson(CountModel):
     __doc__ = """
@@ -1999,6 +2018,12 @@ class GeneralizedPoisson(CountModel):
             return np.exp(linpred)
         elif which == 'linear':
             return linpred
+        elif which == 'var':
+            mean = np.exp(linpred)
+            alpha = params[-1]
+            pm1 = self.parameterization  # `p - 1` in GPP
+            var_ = mean * (1 + alpha * mean**pm1)**2
+            return var_
         elif which == 'prob':
             if y_values is None:
                 y_values = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
@@ -2037,6 +2062,14 @@ class GeneralizedPoisson(CountModel):
         d2 = dsf[:, 1:2]
 
         return np.column_stack((d1, d2))
+
+    def get_distribution(self, params, exog=None, exposure=None, offset=None):
+        """get frozen instance of distribution
+        """
+        mu = self.predict(params, exog=exog, exposure=exposure, offset=offset)
+        p = self.parameterization + 1
+        distr = genpoisson_p(mu[:, None], params[-1], p)
+        return distr
 
 
 class Logit(BinaryModel):
@@ -3436,6 +3469,26 @@ class NegativeBinomial(CountModel):
         discretefit = L1NegativeBinomialResults(self, cntfit)
         return L1NegativeBinomialResultsWrapper(discretefit)
 
+    def get_distribution(self, params, exog=None, exposure=None, offset=None):
+        """get frozen instance of distribution
+        """
+        mu = self.predict(params, exog=exog, exposure=exposure, offset=offset)
+        if self.loglike_method == 'geometric':
+            distr = stats.geom(1 / mu)
+        else:
+            if self.loglike_method == 'nb2':
+                p = 2
+            elif self.loglike_method == 'nb1':
+                p = 1
+
+            alpha = params[-1]
+            q = 2 - p
+            size = 1. / alpha * mu**q
+            prob = size / (size + mu)
+            distr = nbinom(size[:, None], prob[:, None])
+
+        return distr
+
 
 class NegativeBinomialP(CountModel):
     __doc__ = """
@@ -3856,8 +3909,8 @@ class NegativeBinomialP(CountModel):
             self._transparams = False
             mlefit._results.params[-1] = np.exp(mlefit._results.params[-1])
 
-        nbinfit = NegativeBinomialResults(self, mlefit._results)
-        result = NegativeBinomialResultsWrapper(nbinfit)
+        nbinfit = NegativeBinomialPResults(self, mlefit._results)
+        result = NegativeBinomialPResultsWrapper(nbinfit)
 
         if cov_kwds is None:
             cov_kwds = {}
@@ -3954,6 +4007,12 @@ class NegativeBinomialP(CountModel):
             return np.exp(linpred)
         elif which == 'linear':
             return linpred
+        elif which == 'var':
+            mean = np.exp(linpred)
+            alpha = params[-1]
+            p = self.parameterization  # no `-1` as in GPP
+            var_ = mean * (1 + alpha * mean**(p - 1))
+            return var_
         elif which == 'prob':
             if y_values is None:
                 y_values = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
@@ -4000,6 +4059,14 @@ class NegativeBinomialP(CountModel):
         d2 = dsf[:, 1:2]
 
         return np.column_stack((d1, d2))
+
+    def get_distribution(self, params, exog=None, exposure=None, offset=None):
+        """get frozen instance of distribution
+        """
+        mu = self.predict(params, exog=exog, exposure=exposure, offset=offset)
+        size, prob = self.convert_params(params, mu)
+        distr = nbinom(size[:, None], prob[:, None])
+        return distr
 
 
 ### Results Class ###
@@ -4336,6 +4403,17 @@ class DiscreteResults(base.LikelihoodModelResults):
             )
         return res
 
+    def get_distribution(self, exog=None, transform=True, **kwargs):
+
+        exog, _ = self._transform_predict_exog(exog, transform=transform)
+        if exog is not None:
+            exog = np.asarray(exog)
+        distr = self.model.get_distribution(self.params,
+                                            exog=exog,
+                                            **kwargs
+                                            )
+        return distr
+
     def _get_endog_name(self, yname, yname_list):
         if yname is None:
             yname = self.model.endog_names
@@ -4599,6 +4677,12 @@ class NegativeBinomialResults(CountResults):
         k_extra = getattr(self.model, 'k_extra', 0)
         return -2*self.llf + np.log(self.nobs)*(self.df_model +
                                                 self.k_constant + k_extra)
+
+
+class NegativeBinomialPResults(NegativeBinomialResults):
+    __doc__ = _discrete_results_docs % {
+        "one_line_description": "A results class for NegativeBinomialP",
+        "extra_attr": ""}
 
 
 class GeneralizedPoissonResults(NegativeBinomialResults):
@@ -5139,6 +5223,14 @@ class NegativeBinomialResultsWrapper(lm.RegressionResultsWrapper):
 
 wrap.populate_wrapper(NegativeBinomialResultsWrapper,
                       NegativeBinomialResults)
+
+
+class NegativeBinomialPResultsWrapper(lm.RegressionResultsWrapper):
+    pass
+
+
+wrap.populate_wrapper(NegativeBinomialPResultsWrapper,
+                      NegativeBinomialPResults)
 
 
 class GeneralizedPoissonResultsWrapper(lm.RegressionResultsWrapper):
