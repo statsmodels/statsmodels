@@ -379,6 +379,7 @@ likelihood fitting functionality for estimation and results output.
 
    mlemodel.MLEModel
    mlemodel.MLEResults
+   mlemodel.PredictionResults
 
 For a basic example demonstrating creating and estimating a custom state space
 model, see the `Local Linear Trend example notebook <examples/notebooks/generated/statespace_local_linear_trend.html>`__.
