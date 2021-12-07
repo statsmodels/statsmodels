@@ -516,6 +516,10 @@ class BinaryModel(DiscreteModel):
             return self.cdf(linpred)
         elif which == "linear":
             return linpred
+        if which == "var":
+            mu = self.cdf(linpred)
+            var_ = mu * (1 - mu)
+            return var_
         else:
             raise ValueError('Only which is "mean" or "linear" is available.')
 
@@ -880,6 +884,32 @@ class CountModel(DiscreteModel):
         if 'exposure' in kwds and kwds['exposure'] is not None:
             kwds['exposure'] = np.exp(kwds['exposure'])
         return kwds
+
+    def _get_predict_arrays(self, exog=None, offset=None, exposure=None):
+
+        # convert extras if not None
+        if exposure is not None:
+            exposure = np.log(np.asarray(exposure))
+        if offset is not None:
+            offset = np.asarray(offset)
+
+        # get defaults
+        if exog is None:
+            # prediction is in-sample
+            exog = self.exog
+            if exposure is None:
+                exposure = getattr(self, 'exposure', 0)
+            if offset is None:
+                offset = getattr(self, 'offset', 0)
+        else:
+            # user specified
+            exog = np.asarray(exog)
+            if exposure is None:
+                exposure = 0
+            if offset is None:
+                offset = 0
+
+        return exog, offset, exposure
 
     def predict(self, params, exog=None, exposure=None, offset=None,
                 which='mean', linear=None):
@@ -1495,7 +1525,12 @@ class Poisson(CountModel):
                                    offset=offset,
                                    which=which, linear=linear)
         # TODO: add full set of which
-        if which == "prob":
+        elif which == "var":
+            mu = self.predict(params, exog=exog,
+                              exposure=exposure, offset=offset,
+                              )
+            return mu
+        elif which == "prob":
             if y_values is not None:
                 y_values = np.atleast_2d(y_values)
             else:
@@ -3335,6 +3370,81 @@ class NegativeBinomial(CountModel):
         sc = approx_fprime_cs(params, self.loglikeobs)
         return sc
 
+    def predict(self, params, exog=None, exposure=None, offset=None,
+                which='mean', linear=None, y_values=None):
+        """
+        Predict response variable of a count model given exogenous variables
+
+        Parameters
+        ----------
+        params : array_like
+            Model parameters
+        exog : array_like, optional
+            Design / exogenous data. Is exog is None, model exog is used.
+        exposure : array_like, optional
+            Log(exposure) is added to the linear prediction with
+            coefficient equal to 1. If exposure is not provided and exog
+            is None, uses the model's exposure if present.  If not, uses
+            0 as the default value.
+        offset : array_like, optional
+            Offset is added to the linear prediction with coefficient
+            equal to 1. If offset is not provided and exog
+            is None, uses the model's offset if present.  If not, uses
+            0 as the default value.
+        linear : bool
+            If True, returns the linear predicted values.  If False,
+            returns the exponential of the linear predicted value.
+
+        Notes
+        -----
+        If exposure is specified, then it will be logged by the method.
+        The user does not need to log it first.
+        """
+        if linear is not None:
+            msg = 'linear keyword is deprecated, use which="linear"'
+            warnings.warn(msg, DeprecationWarning)
+            if linear is True:
+                which = "linear"
+
+        # avoid duplicate computation for get-distribution
+        if which == "prob":
+            distr = self.get_distribution(
+                params,
+                exog=exog,
+                exposure=exposure,
+                offset=offset
+                )
+            if y_values is None:
+                y_values = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
+            return distr.pmf(y_values)
+
+        exog, offset, exposure = self._get_predict_arrays(
+            exog=exog,
+            offset=offset,
+            exposure=exposure
+            )
+
+        fitted = np.dot(exog, params[:exog.shape[1]])
+        linpred = fitted + exposure + offset
+        if which == "mean":
+            return np.exp(linpred)
+        elif which.startswith("lin"):
+            return linpred
+        elif which == "var":
+            mu = np.exp(linpred)
+            if self.loglike_method == 'geometric':
+                var_ = mu * (1 + mu)
+            else:
+                if self.loglike_method == 'nb2':
+                    p = 2
+                elif self.loglike_method == 'nb1':
+                    p = 1
+                alpha = params[-1]
+                var_ = mu * (1 + alpha * mu**(p - 1))
+            return var_
+        else:
+            raise ValueError('keyword which has to be "mean" and "linear"')
+
     @Appender(_get_start_params_null_docs)
     def _get_start_params_null(self):
         offset = getattr(self, "offset", 0)
@@ -3474,7 +3584,7 @@ class NegativeBinomial(CountModel):
         """
         mu = self.predict(params, exog=exog, exposure=exposure, offset=offset)
         if self.loglike_method == 'geometric':
-            distr = stats.geom(1 / mu)
+            distr = stats.geom(1 / (1 + mu[:, None]), loc=-1)
         else:
             if self.loglike_method == 'nb2':
                 p = 2

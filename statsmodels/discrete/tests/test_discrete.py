@@ -140,6 +140,10 @@ def check_distr(res):
     m2 = distr1.mean()
     assert_allclose(m, np.squeeze(m2), rtol=1e-10)
 
+    v = res.predict(which="var")
+    v2 = distr.var()
+    assert_allclose(v, np.squeeze(v2), rtol=1e-10)
+
 
 class CheckModelMixin(object):
     # Assertions about the Model object, as opposed to the Results
