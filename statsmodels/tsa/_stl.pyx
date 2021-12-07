@@ -104,7 +104,7 @@ def _is_pos_int(x, odd):
 cdef class STL(object):
     """
     STL(endog, period=None, seasonal=7, trend=None, low_pass=None,
-        seasonal_deg=0, trend_deg=0, low_pass_deg=0, robust=False,
+        seasonal_deg=1, trend_deg=1, low_pass_deg=1, robust=False,
         seasonal_jump=1, trend_jump=1, low_pass_jump=1)
 
     Season-Trend decomposition using LOESS.
