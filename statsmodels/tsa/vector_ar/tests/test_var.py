@@ -725,6 +725,7 @@ class TestVARExtras(object):
         data = mdata.values
         data = np.diff(np.log(data), axis=0) * 400
         cls.res0 = VAR(data).fit(maxlags=2)
+        cls.data = data
 
     def test_process(self, close_figures):
         res0 = self.res0
@@ -738,6 +739,13 @@ class TestVARExtras(object):
         # initialization does not use long run intercept, see #4542
         assert_allclose(ysim[0], res0.intercept, rtol=1e-10)
         assert_allclose(ysim[1], res0.intercept, rtol=1e-10)
+
+        data = self.data
+        y_sim_init = res0.simulate_var(seed=987128, initial_values=data[-k_ar:])
+        y_sim_init_2 = res0.simulate_var(seed=987128, initial_values=data[-1])
+        assert_allclose(y_sim_init[:k_ar], data[-k_ar:])
+        assert_allclose(y_sim_init_2[0], data[-1])
+        assert_allclose(y_sim_init_2[1], data[-1])
 
         n_sim = 900
         ysimz = res0.simulate_var(
