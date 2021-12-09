@@ -336,7 +336,7 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
                    for i in range(n_quantiles)]
     else:
         pvalues = [np.percentile(pdf_r, (1 - alpha[i]) * 100,
-                                 midpoint='midpoint')
+                                 method='midpoint')
                    for i in range(n_quantiles)]
 
     # Find mean, outliers curves
