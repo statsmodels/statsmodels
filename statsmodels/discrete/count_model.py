@@ -581,6 +581,18 @@ class ZeroInflatedPoisson(GenericZeroInflated):
         start_params = np.append(np.ones(self.k_inflate) * 0.1, start_params)
         return start_params
 
+    def get_distribution(self, params, exog=None, exog_infl=None,
+                         exposure=None, offset=None):
+        """get frozen instance of distribution
+        """
+        mu = self.predict(params, exog=exog, exog_infl=exog_infl,
+                          exposure=exposure, offset=offset, which="mean-main")
+        w = self.predict(params, exog=exog, exog_infl=exog_infl,
+                         exposure=exposure, offset=offset, which="prob-main")
+
+        distr = self.distribution(mu[:, None], 1 - w[:, None])
+        return distr
+
 
 class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
     __doc__ = """
@@ -635,7 +647,7 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
         params_infl = params[:self.k_inflate]
         params_main = params[self.k_inflate:]
 
-        p = self.model_main.parameterization
+        p = self.model_main.parameterization + 1
         if y_values is None:
             y_values = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
 
@@ -660,6 +672,18 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
                 exog_infl=self.exog_infl).fit(disp=0).params
         start_params = np.append(start_params, 0.1)
         return start_params
+
+    def get_distribution(self, params, exog=None, exog_infl=None,
+                         exposure=None, offset=None):
+        """get frozen instance of distribution
+        """
+        p = self.model_main.parameterization + 1
+        mu = self.predict(params, exog=exog, exog_infl=exog_infl,
+                          exposure=exposure, offset=offset, which="mean-main")
+        w = self.predict(params, exog=exog, exog_infl=exog_infl,
+                         exposure=exposure, offset=offset, which="prob-main")
+        distr = self.distribution(mu[:, None], params[-1], p, 1 - w[:, None])
+        return distr
 
 
 class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
@@ -740,6 +764,19 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
             start_params = self.model_main.fit(disp=0, method='nm').params
         start_params = np.append(np.zeros(self.k_inflate), start_params)
         return start_params
+
+    def get_distribution(self, params, exog=None, exog_infl=None,
+                         exposure=None, offset=None):
+        """get frozen instance of distribution
+        """
+        p = self.model_main.parameterization
+        mu = self.predict(params, exog=exog, exog_infl=exog_infl,
+                          exposure=exposure, offset=offset, which="mean-main")
+        w = self.predict(params, exog=exog, exog_infl=exog_infl,
+                         exposure=exposure, offset=offset, which="prob-main")
+
+        distr = self.distribution(mu[:, None], params[-1], p, 1 - w[:, None])
+        return distr
 
 
 class ZeroInflatedResults(CountResults):

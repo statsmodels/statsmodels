@@ -1914,10 +1914,14 @@ class TestGeneralizedPoisson_p1(object):
         assert_allclose(res_reg1.bse, self.res1.bse, atol=1e-5)
 
         # check shrinkage, regression numbers
-        assert_allclose((self.res1.params[:-2]**2).mean(), 0.016580955543320779)
-        assert_allclose((res_reg1.params[:-2]**2).mean(), 0.016580734975068664)
-        assert_allclose((res_reg2.params[:-2]**2).mean(), 0.010672558641545994)
-        assert_allclose((res_reg3.params[:-2]**2).mean(), 0.00035544919793048415)
+        assert_allclose((self.res1.params[:-2]**2).mean(),
+                        0.016580955543320779, rtol=1e-5)
+        assert_allclose((res_reg1.params[:-2]**2).mean(),
+                        0.016580734975068664, rtol=1e-5)
+        assert_allclose((res_reg2.params[:-2]**2).mean(),
+                        0.010672558641545994, rtol=1e-5)
+        assert_allclose((res_reg3.params[:-2]**2).mean(),
+                        0.00035544919793048415, rtol=1e-5)
 
     def test_init_kwds(self):
         kwds = self.res1.model._get_init_kwds()

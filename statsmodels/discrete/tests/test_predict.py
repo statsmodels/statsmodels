@@ -9,16 +9,22 @@ License: BSD-3
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 
+import pytest
+
 from statsmodels.tools.tools import add_constant
 
 from statsmodels.base._prediction_inference import PredictionResultsMonotonic
 
 from statsmodels.discrete.discrete_model import (
+    Poisson,
+    NegativeBinomial,
     NegativeBinomialP,
     GeneralizedPoisson,
     )
 from statsmodels.discrete.count_model import (
-    ZeroInflatedNegativeBinomialP
+    ZeroInflatedPoisson,
+    ZeroInflatedNegativeBinomialP,
+    ZeroInflatedGeneralizedPoisson,
     )
 
 from statsmodels.sandbox.regression.tests.test_gmm_poisson import DATA
@@ -287,3 +293,65 @@ class TestGeneralizedPoissonPredict(CheckExtras):
         cls.pred_kwds_6 = {}
         cls.k_infl = 0
         cls.rtol = 1e-8
+
+
+mu = np.log(1.5)
+alpha = 1.5
+w = -1.5
+models = [
+    (ZeroInflatedPoisson, {}, np.array([w, mu])),
+    (ZeroInflatedGeneralizedPoisson, {}, np.array([w, mu, alpha])),
+    (ZeroInflatedGeneralizedPoisson, {"p": 1}, np.array([w, mu, alpha])),
+    (ZeroInflatedNegativeBinomialP, {}, np.array([w, mu, alpha])),
+    (ZeroInflatedNegativeBinomialP, {"p": 1}, np.array([w, mu, alpha])),
+    (Poisson, {}, np.array([mu])),
+    (NegativeBinomialP, {}, np.array([mu, alpha])),
+    (NegativeBinomialP, {"p": 1}, np.array([mu, alpha])),
+    (GeneralizedPoisson, {}, np.array([mu, alpha])),
+    (GeneralizedPoisson, {"p": 2}, np.array([mu, alpha])),
+    (NegativeBinomial, {}, np.array([mu, alpha])),
+    (NegativeBinomial, {"loglike_method": 'nb1'}, np.array([mu, alpha])),
+    (NegativeBinomial, {"loglike_method": 'geometric'}, np.array([mu])),
+    ]
+
+
+def get_data_simulated():
+    np.random.seed(987456348)
+    nobs = 500
+    x = np.ones((nobs, 1))
+    yn = np.random.randn(nobs)
+    y = 1 * (1.5 + yn)**2
+    y = np.trunc(y+0.5)
+    return y, x
+
+
+y_count, x_const = get_data_simulated()
+
+
+@pytest.mark.parametrize("case", models)
+def test_distr(case):
+    y, x = y_count, x_const
+    nobs = len(y)
+    np.random.seed(987456348)
+
+    cls_model, kwds, params = case
+    print("\n\n", cls_model, kwds)
+    mod = cls_model(y, x, **kwds)
+    res = mod.fit()
+    params_dgp = params
+    distr = mod.get_distribution(params_dgp)
+    try:
+        y2 = distr.rvs(size=(nobs, 1)).squeeze()
+    except ValueError:
+        y2 = distr.rvs(size=nobs).squeeze()
+
+    mod = cls_model(y2, x, **kwds)
+    res = mod.fit(start_params=params_dgp)
+    # params are not close enough to dgp, zero-inflation estimate is noisy
+    # assert_allclose(res.params, params_dgp, rtol=0.25)
+    distr2 = mod.get_distribution(res.params)
+    assert_allclose(distr2.mean().squeeze()[0], y2.mean(), rtol=0.2)
+    assert_allclose(distr2.var().squeeze()[0], y2.var(), rtol=0.2)
+    dia = res.get_diagnostic()
+    # fig = dia.plot_probs();
+    # fig.suptitle(cls_model.__name__ + repr(kwds), fontsize=16)

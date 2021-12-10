@@ -1656,6 +1656,8 @@ class GeneralizedPoisson(CountModel):
         mu_p = np.power(mu, p)
         a1 = 1 + alpha * mu_p
         a2 = mu + (a1 - 1) * endog
+        a1 = np.maximum(1e-20, a1)
+        a2 = np.maximum(1e-20, a2)
         return (np.log(mu) + (endog - 1) * np.log(a2) - endog *
                 np.log(a1) - gammaln(endog + 1) - a2 / a1)
 
