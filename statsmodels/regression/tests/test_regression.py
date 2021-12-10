@@ -1587,7 +1587,7 @@ def test_ols_constant(reset_randomstate):
     y = np.random.standard_normal((200))
     x = np.ones((200, 1))
     res = OLS(y, x).fit()
-    with pytest.warns(None) as recording:
+    with warnings.catch_warnings(record=True) as recording:
         assert np.isnan(res.fvalue)
         assert np.isnan(res.f_pvalue)
     assert len(recording) == 0
