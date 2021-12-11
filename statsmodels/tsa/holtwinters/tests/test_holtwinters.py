@@ -916,9 +916,8 @@ def test_equivalence_cython_python(trend, seasonal):
         initialization_method="estimated",
     )
 
-    with pytest.warns(None):
-        # Overflow in mul-mul case fixed
-        res = mod.fit()
+    # Overflow in mul-mul case fixed
+    res = mod.fit()
     assert isinstance(res.summary().as_text(), str)
 
     params = res.params
