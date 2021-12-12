@@ -467,6 +467,9 @@ class GenericZeroInflated(CountModel):
             return prob_zero
         elif which == 'prob-main':
             return prob_main
+        elif which == 'var':
+            mu = np.exp(lin_pred)
+            return self._predict_var(params, mu, 1 - prob_main)
         elif which == 'prob':
             return self._predict_prob(params, exog, exog_infl, exposure,
                                       offset, y_values=y_values)
@@ -576,6 +579,27 @@ class ZeroInflatedPoisson(GenericZeroInflated):
         result = self.distribution.pmf(y_values, mu, w)
         return result[0] if transform else result
 
+    def _predict_var(self, params, mu, prob_infl):
+        """predict values for conditional variance V(endog | exog)
+
+        Parameters
+        ----------
+        params : array_like
+            The model parameters. This is only used to extract extra params
+            like dispersion parameter.
+        mu : array_like
+            Array of mean predictions for main model.
+        prob_inlf : array_like
+            Array of predicted probabilities of zero-inflation `w`.
+
+        Returns
+        -------
+        Predicted conditional variance.
+        """
+        w = prob_infl
+        var_ = (1 - w) * mu * (1 + w * mu)
+        return var_
+
     def _get_start_params(self):
         start_params = self.model_main.fit(disp=0, method="nm").params
         start_params = np.append(np.ones(self.k_inflate) * 0.1, start_params)
@@ -664,6 +688,29 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
             exposure=exposure, offset=offset)[:, None]
         result = self.distribution.pmf(y_values, mu, params_main[-1], p, w)
         return result[0] if transform else result
+
+    def _predict_var(self, params, mu, prob_infl):
+        """predict values for conditional variance V(endog | exog)
+
+        Parameters
+        ----------
+        params : array_like
+            The model parameters. This is only used to extract extra params
+            like dispersion parameter.
+        mu : array_like
+            Array of mean predictions for main model.
+        prob_inlf : array_like
+            Array of predicted probabilities of zero-inflation `w`.
+
+        Returns
+        -------
+        Predicted conditional variance.
+        """
+        alpha = params[-1]
+        w = prob_infl
+        p = self.model_main.parameterization
+        var_ = (1 - w) * mu * ((1 + alpha * mu**p)**2 + w * mu)
+        return var_
 
     def _get_start_params(self):
         with warnings.catch_warnings():
@@ -757,6 +804,29 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
             exposure=exposure, offset=offset)[:, None]
         result = self.distribution.pmf(y_values, mu, params_main[-1], p, w)
         return result[0] if transform else result
+
+    def _predict_var(self, params, mu, prob_infl):
+        """predict values for conditional variance V(endog | exog)
+
+        Parameters
+        ----------
+        params : array_like
+            The model parameters. This is only used to extract extra params
+            like dispersion parameter.
+        mu : array_like
+            Array of mean predictions for main model.
+        prob_inlf : array_like
+            Array of predicted probabilities of zero-inflation `w`.
+
+        Returns
+        -------
+        Predicted conditional variance.
+        """
+        alpha = params[-1]
+        w = prob_infl
+        p = self.model_main.parameterization
+        var_ = (1 - w) * mu * (1 + alpha * mu**(p - 1) + w * mu)
+        return var_
 
     def _get_start_params(self):
         with warnings.catch_warnings():

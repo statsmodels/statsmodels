@@ -352,6 +352,8 @@ def test_distr(case):
     distr2 = mod.get_distribution(res.params)
     assert_allclose(distr2.mean().squeeze()[0], y2.mean(), rtol=0.2)
     assert_allclose(distr2.var().squeeze()[0], y2.var(), rtol=0.2)
+    var_ = res.predict(which="var")
+    assert_allclose(var_, distr2.var().squeeze(), rtol=1e-12)
     dia = res.get_diagnostic()
     # fig = dia.plot_probs();
     # fig.suptitle(cls_model.__name__ + repr(kwds), fontsize=16)
