@@ -16,6 +16,9 @@ from statsmodels.tools.tools import add_constant
 from statsmodels.base._prediction_inference import PredictionResultsMonotonic
 
 from statsmodels.discrete.discrete_model import (
+    BinaryModel,
+    Logit,
+    Probit,
     Poisson,
     NegativeBinomial,
     NegativeBinomialP,
@@ -299,6 +302,8 @@ mu = np.log(1.5)
 alpha = 1.5
 w = -1.5
 models = [
+    (Logit, {}, np.array([0.1])),
+    (Probit, {}, np.array([0.1])),
     (ZeroInflatedPoisson, {}, np.array([w, mu])),
     (ZeroInflatedGeneralizedPoisson, {}, np.array([w, mu, alpha])),
     (ZeroInflatedGeneralizedPoisson, {"p": 1}, np.array([w, mu, alpha])),
@@ -335,6 +340,9 @@ def test_distr(case):
     np.random.seed(987456348)
 
     cls_model, kwds, params = case
+    if issubclass(cls_model, BinaryModel):
+        y = (y > 0.5).astype(float)
+
     print("\n\n", cls_model, kwds)
     mod = cls_model(y, x, **kwds)
     res = mod.fit()
@@ -354,6 +362,7 @@ def test_distr(case):
     assert_allclose(distr2.var().squeeze()[0], y2.var(), rtol=0.2)
     var_ = res.predict(which="var")
     assert_allclose(var_, distr2.var().squeeze(), rtol=1e-12)
-    dia = res.get_diagnostic()
-    # fig = dia.plot_probs();
-    # fig.suptitle(cls_model.__name__ + repr(kwds), fontsize=16)
+    if not issubclass(cls_model, BinaryModel):
+        dia = res.get_diagnostic()
+        # fig = dia.plot_probs();
+        # fig.suptitle(cls_model.__name__ + repr(kwds), fontsize=16)
