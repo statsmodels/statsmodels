@@ -4,6 +4,7 @@ from functools import reduce
 import warnings
 
 import numpy as np
+import pandas as pd
 from scipy import stats
 
 from statsmodels.base.data import handle_data
@@ -1066,52 +1067,7 @@ class Results(object):
         if hasattr(model, 'k_constant'):
             self.k_constant = model.k_constant
 
-    def predict(self, exog=None, transform=True, *args, **kwargs):
-        """
-        Call self.model.predict with self.params as the first argument.
-
-        Parameters
-        ----------
-        exog : array_like, optional
-            The values for which you want to predict. see Notes below.
-        transform : bool, optional
-            If the model was fit via a formula, do you want to pass
-            exog through the formula. Default is True. E.g., if you fit
-            a model y ~ log(x1) + log(x2), and transform is True, then
-            you can pass a data structure that contains x1 and x2 in
-            their original form. Otherwise, you'd need to log the data
-            first.
-        *args
-            Additional arguments to pass to the model, see the
-            predict method of the model for the details.
-        **kwargs
-            Additional keywords arguments to pass to the model, see the
-            predict method of the model for the details.
-
-        Returns
-        -------
-        array_like
-            See self.model.predict.
-
-        Notes
-        -----
-        The types of exog that are supported depends on whether a formula
-        was used in the specification of the model.
-
-        If a formula was used, then exog is processed in the same way as
-        the original data. This transformation needs to have key access to the
-        same variable names, and can be a pandas DataFrame or a dict like
-        object that contains numpy arrays.
-
-        If no formula was used, then the provided exog needs to have the
-        same number of columns as the original exog in the model. No
-        transformation of the data is performed except converting it to
-        a numpy array.
-
-        Row indices as in pandas data frames are supported, and added to the
-        returned prediction.
-        """
-        import pandas as pd
+    def _transform_predict_exog(self, exog, transform=True):
 
         is_pandas = _is_using_pandas(exog, None)
         exog_index = None
@@ -1159,6 +1115,56 @@ class Results(object):
                                    self.model.exog.shape[1] == 1):
                 exog = exog[:, None]
             exog = np.atleast_2d(exog)  # needed in count model shape[1]
+
+        return exog, exog_index
+
+    def predict(self, exog=None, transform=True, *args, **kwargs):
+        """
+        Call self.model.predict with self.params as the first argument.
+
+        Parameters
+        ----------
+        exog : array_like, optional
+            The values for which you want to predict. see Notes below.
+        transform : bool, optional
+            If the model was fit via a formula, do you want to pass
+            exog through the formula. Default is True. E.g., if you fit
+            a model y ~ log(x1) + log(x2), and transform is True, then
+            you can pass a data structure that contains x1 and x2 in
+            their original form. Otherwise, you'd need to log the data
+            first.
+        *args
+            Additional arguments to pass to the model, see the
+            predict method of the model for the details.
+        **kwargs
+            Additional keywords arguments to pass to the model, see the
+            predict method of the model for the details.
+
+        Returns
+        -------
+        array_like
+            See self.model.predict.
+
+        Notes
+        -----
+        The types of exog that are supported depends on whether a formula
+        was used in the specification of the model.
+
+        If a formula was used, then exog is processed in the same way as
+        the original data. This transformation needs to have key access to the
+        same variable names, and can be a pandas DataFrame or a dict like
+        object that contains numpy arrays.
+
+        If no formula was used, then the provided exog needs to have the
+        same number of columns as the original exog in the model. No
+        transformation of the data is performed except converting it to
+        a numpy array.
+
+        Row indices as in pandas data frames are supported, and added to the
+        returned prediction.
+        """
+        exog, exog_index = self._transform_predict_exog(exog,
+                                                        transform=transform)
 
         predict_results = self.model.predict(self.params, exog, *args,
                                              **kwargs)
