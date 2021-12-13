@@ -428,7 +428,7 @@ class DiscreteModel(base.LikelihoodModel):
 
         return cov_params
 
-    def predict(self, params, exog=None, which="mean", linear=False):
+    def predict(self, params, exog=None, which="mean", linear=None):
         """
         Predict response variable of a model given exogenous variables.
         """
@@ -477,7 +477,7 @@ class BinaryModel(DiscreteModel):
                     np.any(self.endog != np.round(self.endog))):
                 raise ValueError("endog must be binary, either 0 or 1")
 
-    def predict(self, params, exog=None, which="mean", linear=False,
+    def predict(self, params, exog=None, which="mean", linear=None,
                 offset=None):
         """
         Predict response variable of a model given exogenous variables.
@@ -489,15 +489,32 @@ class BinaryModel(DiscreteModel):
         exog : array_like
             1d or 2d array of exogenous values.  If not supplied, the
             whole exog attribute of the model is used.
-        linear : bool, optional
-            If True, returns the linear predictor dot(exog,params).  Else,
-            returns the value of the cdf at the linear predictor.
+                which : 'mean', 'linear', 'var', 'prob' (optional)
+            Statitistic to predict. Default is 'mean'.
+
+            - 'mean' returns the conditional expectation of endog E(y | x),
+              i.e. exp of linear predictor.
+            - 'linear' returns the linear predictor of the mean function.
+            - 'var' returns the estimated variance of endog implied by the
+              model.
+
+        linear : bool
+            The ``linear` keyword is deprecated and will be removed,
+            use ``which`` keyword instead.
+            If True, returns the linear predicted values.  If False or None,
+            then the statistic specified by ``which`` will be returned.
 
         Returns
         -------
         array
             Fitted values at exog.
         """
+        if linear is not None:
+            msg = 'linear keyword is deprecated, use which="linear"'
+            warnings.warn(msg, DeprecationWarning)
+            if linear is True:
+                which = "linear"
+
         # Use fit offset if appropriate
         if offset is None and exog is None and hasattr(self, 'offset'):
             offset = self.offset
@@ -506,9 +523,6 @@ class BinaryModel(DiscreteModel):
 
         if exog is None:
             exog = self.exog
-
-        if linear is True:
-            which = "linear"
 
         linpred = np.dot(exog, params) + offset
 
@@ -521,7 +535,8 @@ class BinaryModel(DiscreteModel):
             var_ = mu * (1 - mu)
             return var_
         else:
-            raise ValueError('Only which is "mean" or "linear" is available.')
+            raise ValueError('Only `which` is "mean", "linear" or "var" are'
+                             ' available.')
 
     @Appender(DiscreteModel.fit_regularized.__doc__)
     def fit_regularized(self, start_params=None, method='l1',
@@ -569,7 +584,7 @@ class BinaryModel(DiscreteModel):
         """
         if exog is None:
             exog = self.exog
-        linpred = self.predict(params, exog, offset=offset, linear=True)
+        linpred = self.predict(params, exog, offset=offset, which="linear")
         dF = self.pdf(linpred)[:,None] * exog
         if 'ey' in transform:
             dF /= self.predict(params, exog, offset=offset)[:,None]
@@ -591,7 +606,7 @@ class BinaryModel(DiscreteModel):
         if exog is None:
             exog = self.exog
 
-        linpred = self.predict(params, exog, offset=offset, linear=True)
+        linpred = self.predict(params, exog, offset=offset, which="linear")
         margeff = np.dot(self.pdf(linpred)[:,None],
                          params[None,:])
 
@@ -618,13 +633,37 @@ class BinaryModel(DiscreteModel):
         to the parameter vector.
         """
         link = self.family.link
-        lin_pred = self.predict(params, linear=True)
+        lin_pred = self.predict(params, which="linear")
         idl = link.inverse_deriv(lin_pred)
         dmat = self.exog * idl[:, None]
         return dmat
 
     def get_distribution(self, params, exog=None, offset=None):
-        """get frozen instance of distribution
+        """Get frozen instance of distribution based on predicted parameters.
+
+        Parameters
+        ----------
+        params : array_like
+            The parameters of the model.
+        exog : ndarray, optional
+            Explanatory variables for the main count model.
+            If ``exog`` is None, then the data from the model will be used.
+        offset : ndarray, optional
+            Offset is added to the linear predictor of the mean function with
+            coefficient equal to 1.
+            Default is zero if exog is not None, and the model offset if exog
+            is None.
+        exposure : ndarray, optional
+            Log(exposure) is added to the linear predictor  of the mean
+            function with coefficient equal to 1. If exposure is specified,
+            then it will be logged by the method. The user does not need to
+            log it first.
+            Default is one if exog is is not None, and it is the model exposure
+            if exog is None.
+
+        Returns
+        -------
+        Instance of frozen scipy distribution.
         """
         mu = self.predict(params, exog=exog, offset=offset)
         distr = stats.bernoulli(mu[:, None])
@@ -675,7 +714,7 @@ class MultinomialModel(BinaryModel):
         self.df_model *= (self.J-1)  # for each J - 1 equation.
         self.df_resid = self.exog.shape[0] - self.df_model - (self.J-1)
 
-    def predict(self, params, exog=None, which="mean", linear=False):
+    def predict(self, params, exog=None, which="mean", linear=None):
         """
         Predict response variable of a model given exogenous variables.
 
@@ -699,12 +738,16 @@ class MultinomialModel(BinaryModel):
         Column 0 is the base case, the rest conform to the rows of params
         shifted up one for the base case.
         """
+        if linear is not None:
+            msg = 'linear keyword is deprecated, use which="linear"'
+            warnings.warn(msg, DeprecationWarning)
+            if linear is True:
+                which = "linear"
+
         if exog is None: # do here to accommodate user-given exog
             exog = self.exog
         if exog.ndim == 1:
             exog = exog[None]
-        if linear is True:
-            which = "linear"
 
         pred = super().predict(params, exog, which=which)
         if which == "linear":
@@ -932,9 +975,18 @@ class CountModel(DiscreteModel):
             equal to 1. If offset is not provided and exog
             is None, uses the model's offset if present.  If not, uses
             0 as the default value.
+        which : 'mean', 'linear', 'var', 'prob' (optional)
+            Statitistic to predict. Default is 'mean'.
+
+            - 'mean' returns the conditional expectation of endog E(y | x),
+              i.e. exp of linear predictor.
+            - 'linear' returns the linear predictor of the mean function.
+
         linear : bool
-            If True, returns the linear predicted values.  If False,
-            returns the exponential of the linear predicted value.
+            The ``linear` keyword is deprecated and will be removed,
+            use ``which`` keyword instead.
+            If True, returns the linear predicted values.  If False or None,
+            then the statistic specified by ``which`` will be returned.
 
         Notes
         -----
@@ -1517,6 +1569,57 @@ class Poisson(CountModel):
 
     def predict(self, params, exog=None, exposure=None, offset=None,
                 which='mean', linear=None, y_values=None):
+        """
+        Predict response variable of a model given exogenous variables.
+
+        Parameters
+        ----------
+        params : array_like
+            2d array of fitted parameters of the model. Should be in the
+            order returned from the model.
+        exog : array_like, optional
+            1d or 2d array of exogenous values.  If not supplied, then the
+            exog attribute of the model is used. If a 1d array is given
+            it assumed to be 1 row of exogenous variables. If you only have
+            one regressor and would like to do prediction, you must provide
+            a 2d array with shape[1] == 1.
+        offset : array_like, optional
+            Offset is added to the linear predictor with coefficient equal
+            to 1.
+            Default is zero if exog is not None, and the model offset if exog
+            is None.
+        exposure : array_like, optional
+            Log(exposure) is added to the linear prediction with coefficient
+            equal to 1.
+            Default is one if exog is is not None, and is the model exposure
+            if exog is None.
+        which : 'mean', 'linear', 'var', 'prob' (optional)
+            Statitistic to predict. Default is 'mean'.
+
+            - 'mean' returns the conditional expectation of endog E(y | x),
+              i.e. exp of linear predictor.
+            - 'linear' returns the linear predictor of the mean function.
+            - 'var' returns the estimated variance of endog implied by the
+              model.
+            - 'prob' return probabilities for counts from 0 to max(endog) or
+              for y_values if those are provided.
+
+        linear : bool
+            The ``linear` keyword is deprecated and will be removed,
+            use ``which`` keyword instead.
+            If True, returns the linear predicted values.  If False or None,
+            then the statistic specified by ``which`` will be returned.
+        y_values : array_like
+            Values of the random variable endog at which pmf is evaluated.
+            Only used if ``which="prob"``
+        """
+        # Note docstring is reused by other count models
+
+        if linear is not None:
+            msg = 'linear keyword is deprecated, use which="linear"'
+            warnings.warn(msg, DeprecationWarning)
+            if linear is True:
+                which = "linear"
 
         if which.startswith("lin"):
             which = "linear"
@@ -1543,7 +1646,31 @@ class Poisson(CountModel):
             return stats.poisson.pmf(y_values, mu)
 
     def get_distribution(self, params, exog=None, exposure=None, offset=None):
-        """get frozen instance of distribution
+        """Get frozen instance of distribution based on predicted parameters.
+
+        Parameters
+        ----------
+        params : array_like
+            The parameters of the model.
+        exog : ndarray, optional
+            Explanatory variables for the main count model.
+            If ``exog`` is None, then the data from the model will be used.
+        offset : ndarray, optional
+            Offset is added to the linear predictor of the mean function with
+            coefficient equal to 1.
+            Default is zero if exog is not None, and the model offset if exog
+            is None.
+        exposure : ndarray, optional
+            Log(exposure) is added to the linear predictor  of the mean
+            function with coefficient equal to 1. If exposure is specified,
+            then it will be logged by the method. The user does not need to
+            log it first.
+            Default is one if exog is is not None, and it is the model exposure
+            if exog is None.
+
+        Returns
+        -------
+        Instance of frozen scipy distribution subclass.
         """
         mu = self.predict(params, exog=exog, exposure=exposure, offset=offset)
         distr = stats.poisson(mu)
@@ -2027,16 +2154,10 @@ class GeneralizedPoisson(CountModel):
 
         return dbb, dba, daa
 
+    @Appender(Poisson.predict.__doc__)
     def predict(self, params, exog=None, exposure=None, offset=None,
                 which='mean', y_values=None):
-        """
-        Predict response variable of a count model given exogenous variables.
 
-        Notes
-        -----
-        If exposure is specified, then it will be log tranformed by the method.
-        The user does not need to log it first.
-        """
         if exog is None:
             exog = self.exog
 
@@ -2100,6 +2221,7 @@ class GeneralizedPoisson(CountModel):
 
         return np.column_stack((d1, d2))
 
+    @Appender(Poisson.get_distribution.__doc__)
     def get_distribution(self, params, exog=None, exposure=None, offset=None):
         """get frozen instance of distribution
         """
@@ -2214,7 +2336,7 @@ class Logit(BinaryModel):
         logistic distribution is symmetric.
         """
         q = 2*self.endog - 1
-        linpred = self.predict(params, linear=True)
+        linpred = self.predict(params, which="linear")
         return np.sum(np.log(self.cdf(q * linpred)))
 
     def loglikeobs(self, params):
@@ -2245,7 +2367,7 @@ class Logit(BinaryModel):
         logistic distribution is symmetric.
         """
         q = 2*self.endog - 1
-        linpred = self.predict(params, linear=True)
+        linpred = self.predict(params, which="linear")
         return np.log(self.cdf(q * linpred))
 
     def score(self, params):
@@ -2496,7 +2618,7 @@ class Probit(BinaryModel):
         """
 
         q = 2*self.endog - 1
-        linpred = self.predict(params, linear=True)
+        linpred = self.predict(params, which="linear")
         return np.sum(np.log(np.clip(self.cdf(q * linpred), FLOAT_EPS, 1)))
 
     def loglikeobs(self, params):
@@ -2525,7 +2647,7 @@ class Probit(BinaryModel):
         """
 
         q = 2*self.endog - 1
-        linpred = self.predict(params, linear=True)
+        linpred = self.predict(params, which="linear")
         return np.log(np.clip(self.cdf(q*linpred), FLOAT_EPS, 1))
 
 
@@ -2553,7 +2675,7 @@ class Probit(BinaryModel):
         """
         y = self.endog
         X = self.exog
-        XB = self.predict(params, linear=True)
+        XB = self.predict(params, which="linear")
         q = 2*y - 1
         # clip to get rid of invalid divide complaint
         L = q*self.pdf(q*XB)/np.clip(self.cdf(q*XB), FLOAT_EPS, 1 - FLOAT_EPS)
@@ -2585,7 +2707,7 @@ class Probit(BinaryModel):
         """
         y = self.endog
         X = self.exog
-        XB = self.predict(params, linear=True)
+        XB = self.predict(params, which="linear")
         q = 2*y - 1
         # clip to get rid of invalid divide complaint
         L = q*self.pdf(q*XB)/np.clip(self.cdf(q*XB), FLOAT_EPS, 1 - FLOAT_EPS)
@@ -2616,7 +2738,7 @@ class Probit(BinaryModel):
         normal distribution is symmetric.
         """
         y = self.endog
-        XB = self.predict(params, linear=True)
+        XB = self.predict(params, which="linear")
         q = 2*y - 1
         # clip to get rid of invalid divide complaint
         L = q*self.pdf(q*XB)/np.clip(self.cdf(q*XB), FLOAT_EPS, 1 - FLOAT_EPS)
@@ -2649,7 +2771,7 @@ class Probit(BinaryModel):
         and :math:`q=2y-1`
         """
         X = self.exog
-        XB = self.predict(params, linear=True)
+        XB = self.predict(params, which="linear")
         q = 2*self.endog - 1
         L = q*self.pdf(q*XB)/self.cdf(q*XB)
         return np.dot(-L*(L+XB)*X.T,X)
@@ -2679,7 +2801,7 @@ class Probit(BinaryModel):
 
         and :math:`q=2y-1`
         """
-        XB = self.predict(params, linear=True)
+        XB = self.predict(params, which="linear")
         q = 2 * self.endog - 1
         L = q * self.pdf(q * XB) / self.cdf(q * XB)
         return -L * (L + XB)
@@ -3372,36 +3494,10 @@ class NegativeBinomial(CountModel):
         sc = approx_fprime_cs(params, self.loglikeobs)
         return sc
 
+    @Appender(Poisson.predict.__doc__)
     def predict(self, params, exog=None, exposure=None, offset=None,
                 which='mean', linear=None, y_values=None):
-        """
-        Predict response variable of a count model given exogenous variables
 
-        Parameters
-        ----------
-        params : array_like
-            Model parameters
-        exog : array_like, optional
-            Design / exogenous data. Is exog is None, model exog is used.
-        exposure : array_like, optional
-            Log(exposure) is added to the linear prediction with
-            coefficient equal to 1. If exposure is not provided and exog
-            is None, uses the model's exposure if present.  If not, uses
-            0 as the default value.
-        offset : array_like, optional
-            Offset is added to the linear prediction with coefficient
-            equal to 1. If offset is not provided and exog
-            is None, uses the model's offset if present.  If not, uses
-            0 as the default value.
-        linear : bool
-            If True, returns the linear predicted values.  If False,
-            returns the exponential of the linear predicted value.
-
-        Notes
-        -----
-        If exposure is specified, then it will be logged by the method.
-        The user does not need to log it first.
-        """
         if linear is not None:
             msg = 'linear keyword is deprecated, use which="linear"'
             warnings.warn(msg, DeprecationWarning)
@@ -3581,6 +3677,7 @@ class NegativeBinomial(CountModel):
         discretefit = L1NegativeBinomialResults(self, cntfit)
         return L1NegativeBinomialResultsWrapper(discretefit)
 
+    @Appender(Poisson.get_distribution.__doc__)
     def get_distribution(self, params, exog=None, exposure=None, offset=None):
         """get frozen instance of distribution
         """
@@ -4071,36 +4168,10 @@ class NegativeBinomialP(CountModel):
 
         return L1NegativeBinomialResultsWrapper(discretefit)
 
+    @Appender(Poisson.predict.__doc__)
     def predict(self, params, exog=None, exposure=None, offset=None,
                 which='mean', y_values=None):
-        """
-        Predict response variable of a model given exogenous variables.
 
-        Parameters
-        ----------
-        params : array_like
-            2d array of fitted parameters of the model. Should be in the
-            order returned from the model.
-        exog : array_like, optional
-            1d or 2d array of exogenous values.  If not supplied, the
-            whole exog attribute of the model is used. If a 1d array is given
-            it assumed to be 1 row of exogenous variables. If you only have
-            one regressor and would like to do prediction, you must provide
-            a 2d array with shape[1] == 1.
-        offset : array_like, optional
-            Offset is added to the linear prediction with coefficient equal to 1.
-        exposure : array_like, optional
-            Log(exposure) is added to the linear prediction with coefficient
-        equal to 1.
-        which : 'mean', 'linear', 'prob', optional.
-            'mean' returns the exp of linear predictor exp(dot(exog,params)).
-            'linear' returns the linear predictor dot(exog,params).
-            'prob' return probabilities for counts from 0 to max(endog).
-            Default is 'mean'.
-
-        Notes
-        -----
-        """
         if exog is None:
             exog = self.exog
 
@@ -4172,6 +4243,7 @@ class NegativeBinomialP(CountModel):
 
         return np.column_stack((d1, d2))
 
+    @Appender(Poisson.get_distribution.__doc__)
     def get_distribution(self, params, exog=None, exposure=None, offset=None):
         """get frozen instance of distribution
         """
@@ -5130,7 +5202,7 @@ class ProbitResults(BinaryResults):
         # generalized residuals
         model = self.model
         endog = model.endog
-        XB = self.predict(linear=True)
+        XB = self.predict(which="linear")
         pdf = model.pdf(XB)
         cdf = model.cdf(XB)
         return endog * pdf/cdf - (1-endog)*pdf/(1-cdf)
