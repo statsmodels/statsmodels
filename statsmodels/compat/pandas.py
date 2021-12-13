@@ -1,4 +1,4 @@
-from distutils.version import LooseVersion
+from packaging.version import Version, parse
 from typing import Optional
 
 import numpy as np
@@ -33,10 +33,10 @@ __all__ = [
     "PD_LT_1_4"
 ]
 
-version = LooseVersion(pd.__version__)
+version = parse(pd.__version__)
 
-PD_LT_1_0_0 = version < LooseVersion("1.0.0")
-PD_LT_1_4 = version < LooseVersion("1.4")
+PD_LT_1_0_0 = version < Version("1.0.0")
+PD_LT_1_4 = version < Version("1.4")
 
 
 try:
