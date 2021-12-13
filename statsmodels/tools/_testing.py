@@ -11,7 +11,7 @@ The first group of functions provide consistency checks
 
 import os
 import sys
-from distutils.version import LooseVersion
+from packaging.version import Version, parse
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_
@@ -32,7 +32,7 @@ class PytestTester(object):
     def __call__(self, extra_args=None, exit=False):
         try:
             import pytest
-            if not LooseVersion(pytest.__version__) >= LooseVersion('3.0'):
+            if not parse(pytest.__version__) >= Version('3.0'):
                 raise ImportError
             if extra_args is None:
                 extra_args = ['--tb=short', '--disable-pytest-warnings']
