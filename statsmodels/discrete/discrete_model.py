@@ -4353,6 +4353,15 @@ class DiscreteResults(base.LikelihoodModelResults):
         return self.model.endog - self.predict()
 
     @cache_readonly
+    def resid_pearson(self):
+        """
+        Pearson residuals defined as response residuals divided by standard
+        deviation implied by the model.
+        """
+        var_ = self.predict(which="var")
+        return self.resid_response / np.sqrt(var_)
+
+    @cache_readonly
     def aic(self):
         """
         Akaike information criterion.  `-2*(llf - p)` where `p` is the number

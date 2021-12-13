@@ -345,7 +345,7 @@ def test_distr(case):
 
     print("\n\n", cls_model, kwds)
     mod = cls_model(y, x, **kwds)
-    res = mod.fit()
+    # res = mod.fit()
     params_dgp = params
     distr = mod.get_distribution(params_dgp)
     try:
@@ -354,7 +354,7 @@ def test_distr(case):
         y2 = distr.rvs(size=nobs).squeeze()
 
     mod = cls_model(y2, x, **kwds)
-    res = mod.fit(start_params=params_dgp)
+    res = mod.fit(start_params=params_dgp, method="bfgs", maxiter=500)
     # params are not close enough to dgp, zero-inflation estimate is noisy
     # assert_allclose(res.params, params_dgp, rtol=0.25)
     distr2 = mod.get_distribution(res.params)
@@ -362,6 +362,10 @@ def test_distr(case):
     assert_allclose(distr2.var().squeeze()[0], y2.var(), rtol=0.2)
     var_ = res.predict(which="var")
     assert_allclose(var_, distr2.var().squeeze(), rtol=1e-12)
+    mean = res.predict()
+
+    assert_allclose(res.resid_pearson, (y2 - mean) / np.sqrt(var_), rtol=1e-13)
+
     if not issubclass(cls_model, BinaryModel):
         dia = res.get_diagnostic()
         # fig = dia.plot_probs();
