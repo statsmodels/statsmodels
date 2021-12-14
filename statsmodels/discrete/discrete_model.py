@@ -632,7 +632,7 @@ class BinaryModel(DiscreteModel):
         The value of the derivative of the expected endog with respect
         to the parameter vector.
         """
-        link = self.family.link
+        link = self.link
         lin_pred = self.predict(params, which="linear")
         idl = link.inverse_deriv(lin_pred)
         dmat = self.exog * idl[:, None]
@@ -4688,6 +4688,23 @@ class DiscreteResults(base.LikelihoodModelResults):
         """
         from statsmodels.discrete.discrete_margins import DiscreteMargins
         return DiscreteMargins(self, (at, method, atexog, dummy, count))
+
+    def get_influence(self):
+        """
+        Get an instance of MLEInfluence with influence and outlier measures
+
+        Returns
+        -------
+        infl : MLEInfluence instance
+            The instance has methods to calculate the main influence and
+            outlier measures as attributes.
+
+        See Also
+        --------
+        statsmodels.stats.outliers_influence.MLEInfluence
+        """
+        from statsmodels.stats.outliers_influence import MLEInfluence
+        return MLEInfluence(self)
 
     def summary(self, yname=None, xname=None, title=None, alpha=.05,
                 yname_list=None):

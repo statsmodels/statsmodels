@@ -319,6 +319,13 @@ models = [
     (NegativeBinomial, {"loglike_method": 'geometric'}, np.array([mu])),
     ]
 
+models_influ = [
+    Logit,
+    Poisson,
+    NegativeBinomialP,
+    GeneralizedPoisson,
+    ]
+
 
 def get_data_simulated():
     np.random.seed(987456348)
@@ -370,3 +377,8 @@ def test_distr(case):
         dia = res.get_diagnostic()
         # fig = dia.plot_probs();
         # fig.suptitle(cls_model.__name__ + repr(kwds), fontsize=16)
+
+    if cls_model in models_influ:
+        influ = res.get_influence()
+        influ.summary_frame()
+        assert influ.resid.shape == (len(y2), )

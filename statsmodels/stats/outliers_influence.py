@@ -456,10 +456,25 @@ class MLEInfluence(_BaseInfluenceMixin):
 
     @cache_readonly
     def resid_studentized(self):
+        """studentized default residuals
+
+        This uses the residual in `resid` attribute, which is by default
+        resid_pearson and studentizes is using the generalized leverage.
+
+        self.resid / np.sqrt(1 - self.hat_matrix_diag)
+
+        """
+        return self.resid / np.sqrt(1 - self.hat_matrix_diag)
+
+    def resid_score_factor(self):
         """Score residual divided by sqrt of hessian factor
 
         experimental, agrees with GLMInfluence for Binomial and Gaussian.
         no reference for this
+
+        Note: Nhis might have nan values if second derivative, hessian_factor,
+        is positive, i.e. loglikelihood is not globally concave w.r.t. linear
+        predictor. (This occured in an example for GeneralizedPoisson)
         """
         from statsmodels.genmod.generalized_linear_model import GLM
         sf = self.results.model.score_factor(self.results.params)
@@ -469,10 +484,56 @@ class MLEInfluence(_BaseInfluenceMixin):
         if isinstance(hf, tuple):
             hf = hf[0]
         if not isinstance(self.results.model, GLM):
-            # hessian_factor in GLM has wrong sign
+            # hessian_factor in GLM has wrong sign, is already positive
             hf = -hf
 
         return sf / np.sqrt(hf) / np.sqrt(1 - self.hat_matrix_diag)
+
+    def resid_score(self, joint=True, index=None, studentize=False):
+        """Score observations scaled by inverse hessian
+
+        Parameters
+        ----------
+        joint : bool
+            If joint is true, then a quadratic form similar to score_test is
+            returned for each observation.
+            If joint is false, then standardized score_obs are returned. The
+            returned array is two-dimensional
+        index : ndarray (optional)
+            Optional index to select a subset of score_obs columns.
+            By default, all columns of score_obs will be used.
+        studentize : bool
+            If studentize is true, the the scaled residuals are also
+            studentized using the generalized leverage.
+
+        Returns
+        -------
+        array :  1-D or 2-D residuals
+
+        Notes
+        -----
+        Status: experimental
+        """
+        # currently no caching
+        score_obs = self.results.model.score_obs(self.results.params)
+        hess = self.results.model.hessian(self.results.params)
+        if index is not None:
+            score_obs = score_obs[:, index]
+            hess = hess[index[:, None], index]
+
+        if joint:
+            resid = (score_obs.T * np.linalg.solve(-hess, score_obs.T)).sum(0)
+        else:
+            resid = score_obs / np.sqrt(np.diag(-hess))
+
+        if studentize:
+            if joint:
+                resid /= np.sqrt(1 - self.hat_matrix_diag)
+            else:
+                # 2-dim resid
+                resid /= np.sqrt(1 - self.hat_matrix_diag[:, None])
+
+        return resid
 
     @cache_readonly
     def _get_prediction(self):
