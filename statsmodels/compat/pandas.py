@@ -36,7 +36,7 @@ __all__ = [
 version = parse(pd.__version__)
 
 PD_LT_1_0_0 = version < Version("1.0.0")
-PD_LT_1_4 = version < Version("1.4")
+PD_LT_1_4 = version < Version("1.3.99")
 
 
 try:

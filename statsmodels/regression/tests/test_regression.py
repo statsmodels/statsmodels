@@ -1599,3 +1599,12 @@ def test_summary_no_constant():
     y = rs.standard_normal(100)
     summary = OLS(y, x).fit().summary()
     assert "R² is computed " in summary.as_text()
+
+
+def test_condition_number(reset_randomstate):
+    y = np.random.standard_normal(100)
+    x = np.random.standard_normal((100, 1))
+    x = x + np.random.standard_normal((100, 5))
+    res = OLS(y, x).fit()
+    assert_allclose(res.condition_number, np.sqrt(np.linalg.cond(x.T @ x)))
+    assert_allclose(res.condition_number, np.linalg.cond(x))
