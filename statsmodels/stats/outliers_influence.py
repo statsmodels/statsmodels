@@ -369,9 +369,15 @@ class MLEInfluence(_BaseInfluenceMixin):
         self.nobs, self.k_vars = results.model.exog.shape
         self.endog = endog if endog is not None else results.model.endog
         self.exog = exog if exog is not None else results.model.exog
-        self.resid = resid if resid is not None else (
-            getattr(results, "resid_pearson", None))
         self.scale = scale if scale is not None else results.scale
+        if resid is not None:
+            self.resid = resid
+        else:
+            self.resid = getattr(results, "resid_pearson", None)
+            if self.resid is not None: # and scale != 1:
+                # GLM and similar does not divide resid_pearson by scale
+                self.resid = self.resid / np.sqrt(self.scale)
+
         self.cov_params = (cov_params if cov_params is not None
                            else results.cov_params())
         self.model_class = results.model.__class__
@@ -1305,8 +1311,8 @@ class GLMInfluence(MLEInfluence):
         pearson residuals by default, and
         hii is the diagonal of the hat matrix.
         """
-        hii = self.hat_matrix_diag
-        return self.resid / np.sqrt(self.scale * (1 - hii))
+        # redundant with scaled resid_pearson, keep for docstring for now
+        return super().resid_studentized
 
     # same computation as OLS
     @cache_readonly

@@ -382,3 +382,8 @@ def test_distr(case):
         influ = res.get_influence()
         influ.summary_frame()
         assert influ.resid.shape == (len(y2), )
+
+        resid = influ.resid_score_factor()
+        assert resid.shape == (len(y2), )
+        resid = influ.resid_score()
+        assert resid.shape == (len(y2), )

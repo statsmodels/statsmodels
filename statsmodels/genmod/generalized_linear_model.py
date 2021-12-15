@@ -2003,7 +2003,7 @@ class GLMResults(base.LikelihoodModelResults):
         # using get_hat_matrix_diag has duplicated computation
         hat_matrix_diag = self.get_hat_matrix_diag(observed=observed)
         infl = GLMInfluence(self, endog=wendog, exog=wexog,
-                         resid=self.resid_pearson,
+                         resid=self.resid_pearson / np.sqrt(self.scale),
                          hat_matrix_diag=hat_matrix_diag)
         return infl
 
