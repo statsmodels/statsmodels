@@ -4,9 +4,9 @@ import numpy as np
 import scipy
 
 SP_VERSION = parse(scipy.__version__)
-SP_LT_15 = SP_VERSION < Version("1.5")
+SP_LT_15 = SP_VERSION < Version("1.4.99")
 SCIPY_GT_14 = not SP_LT_15
-SP_LT_16 = SP_VERSION < Version("1.6")
+SP_LT_16 = SP_VERSION < Version("1.5.99")
 
 
 def _next_regular(target):

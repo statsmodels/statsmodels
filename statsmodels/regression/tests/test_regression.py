@@ -1610,3 +1610,12 @@ def test_slim_summary(reset_randomstate):
     slim_summ = res.summary(slim=True)
     assert str(summ) == str(summ2)
     assert str(slim_summ) != str(summ)
+
+
+def test_condition_number(reset_randomstate):
+    y = np.random.standard_normal(100)
+    x = np.random.standard_normal((100, 1))
+    x = x + np.random.standard_normal((100, 5))
+    res = OLS(y, x).fit()
+    assert_allclose(res.condition_number, np.sqrt(np.linalg.cond(x.T @ x)))
+    assert_allclose(res.condition_number, np.linalg.cond(x))

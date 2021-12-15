@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+import warnings
+
+from statsmodels.compat.pandas import PD_LT_1_4
+
 
 import os
 
@@ -220,6 +224,14 @@ def test_getframe_smoke():
         return
         # TODO: separate this and do pytest.skip?
 
+    # Old implementation that warns
+    if PD_LT_1_4:
+        with warnings.catch_warnings():
+            warnings.simplefilter("always")
+            lds.to_latex()
+    else:
+        # Smoke test using new style to_latex
+        lds.style.to_latex()
     try:
         from pandas.io import formats as pd_formats
     except ImportError:

@@ -1900,8 +1900,8 @@ class RegressionResults(base.LikelihoodModelResults):
         if self._wexog_singular_values is not None:
             eigvals = self._wexog_singular_values ** 2
         else:
-            eigvals = np.linalg.linalg.eigvalsh(np.dot(self.model.wexog.T,
-                                                       self.model.wexog))
+            wx = self.model.wexog
+            eigvals = np.linalg.linalg.eigvalsh(wx.T @ wx)
         return np.sort(eigvals)[::-1]
 
     @cache_readonly
@@ -1909,7 +1909,10 @@ class RegressionResults(base.LikelihoodModelResults):
         """
         Return condition number of exogenous matrix.
 
-        Calculated as ratio of largest to smallest eigenvalue.
+        Calculated as ratio of largest to smallest singular value of the
+        exogenous variables. This value is the same as the square root of
+        the ratio of the largest to smallest eigenvalue of the inner-product
+        of the exogenous variables.
         """
         eigvals = self.eigenvals
         return np.sqrt(eigvals[0]/eigvals[-1])
