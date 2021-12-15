@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import warnings
+
 from statsmodels.compat.pandas import PD_LT_1_4
 
 import os
@@ -223,7 +225,9 @@ def test_getframe_smoke():
 
     # Old implementation that warns
     if PD_LT_1_4:
-        lds.to_latex()
+        with warnings.catch_warnings():
+            warnings.simplefilter("always")
+            lds.to_latex()
     else:
         # Smoke test using new style to_latex
         lds.style.to_latex()
