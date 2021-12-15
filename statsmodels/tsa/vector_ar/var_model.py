@@ -950,11 +950,14 @@ class VARProcess(object):
             most recent. Note that this values will be returned by the
             simulation as the first values of `endog_simulated` and they
             will count for the total number of steps.
+        n_sim : int
+            Number of simulations to perform.
 
         Returns
         -------
         endog_simulated : nd_array
-            Endog of the simulated VAR process
+            Endog of the simulated VAR process. Shape will be (n_sim, steps, neqs)
+            or (steps, neqs) if `n_sim` = 1.
         """
         steps_ = None
         if offset is None:
