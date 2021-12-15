@@ -82,8 +82,8 @@ class TestZIPoisson(object):
 
         m = np.array([1, 5, 10])
         poisson_mean, poisson_var = poisson.mean(m), poisson.var(m)
-        zipoisson_mean = sm.distributions.zipoisson._mean(m, 0)
-        zipoisson_var = sm.distributions.zipoisson._var(m, 0.0)
+        zipoisson_mean = sm.distributions.zipoisson.mean(m, 0)
+        zipoisson_var = sm.distributions.zipoisson.var(m, 0.0)
         assert_allclose(poisson_mean, zipoisson_mean, rtol=1e-10)
         assert_allclose(poisson_var, zipoisson_var, rtol=1e-10)
 
@@ -123,8 +123,8 @@ class TestZIGeneralizedPoisson(object):
         # compare with Poisson special case
         m = np.array([1, 5, 10])
         poisson_mean, poisson_var = poisson.mean(m), poisson.var(m)
-        zigenpoisson_mean = sm.distributions.zigenpoisson._mean(m, 0, 1, 0)
-        zigenpoisson_var = sm.distributions.zigenpoisson._var(m, 0.0, 1, 0)
+        zigenpoisson_mean = sm.distributions.zigenpoisson.mean(m, 0, 1, 0)
+        zigenpoisson_var = sm.distributions.zigenpoisson.var(m, 0.0, 1, 0)
         assert_allclose(poisson_mean, zigenpoisson_mean, rtol=1e-10)
         assert_allclose(poisson_var, zigenpoisson_var, rtol=1e-10)
 
@@ -212,8 +212,8 @@ class TestZiNBP(object):
         for m in [9, np.array([1, 5, 10])]:
             n, p = sm.distributions.zinegbin.convert_params(m, 1, 1)
             nbinom_mean, nbinom_var = nbinom.mean(n, p), nbinom.var(n, p)
-            zinb_mean = sm.distributions.zinegbin._mean(m, 1, 1, 0)
-            zinb_var = sm.distributions.zinegbin._var(m, 1, 1, 0)
+            zinb_mean = sm.distributions.zinegbin.mean(m, 1, 1, 0)
+            zinb_var = sm.distributions.zinegbin.var(m, 1, 1, 0)
             assert_allclose(nbinom_mean, zinb_mean, rtol=1e-10)
             assert_allclose(nbinom_var, zinb_var, rtol=1e-10)
 

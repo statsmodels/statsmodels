@@ -85,14 +85,19 @@ def load_randhie():
     data.exog = np.asarray(data.exog, dtype=float)
     return data
 
-def check_jac(self):
+
+def check_jac(self, res=None):
     # moved from CheckModelResults
-    res1 = self.res1
-    exog = self.res1.model.exog
-    #basic cross check
-    jacsum = self.res1.model.score_obs(self.res1.params).sum(0)
-    score = self.res1.model.score(self.res1.params)
-    assert_almost_equal(jacsum, score, DECIMAL_9) #Poisson has low precision ?
+    if res is None:
+        res1 = self.res1
+    else:
+        res1 = res
+
+    exog = res1.model.exog
+    # basic cross check
+    jacsum = res1.model.score_obs(res1.params).sum(0)
+    score = res1.model.score(res1.params)
+    assert_almost_equal(jacsum, score, DECIMAL_9) # Poisson has low precision ?
 
     if isinstance(res1.model, (NegativeBinomial, MNLogit)):
         # skip the rest
@@ -124,6 +129,20 @@ def check_jac(self):
                         np.column_stack((h10, h11))))
 
     assert_allclose(h2, h1, rtol=1e-10)
+
+
+def check_distr(res):
+    distr = res.get_distribution()
+    distr1 = res.model.get_distribution(res.params)
+    m = res.predict()
+    m2 = distr.mean()
+    assert_allclose(m, np.squeeze(m2), rtol=1e-10)
+    m2 = distr1.mean()
+    assert_allclose(m, np.squeeze(m2), rtol=1e-10)
+
+    v = res.predict(which="var")
+    v2 = distr.var()
+    assert_allclose(v, np.squeeze(v2), rtol=1e-10)
 
 
 class CheckModelMixin(object):
@@ -222,6 +241,9 @@ class CheckModelResults(CheckModelMixin):
             # skip MNLogit which creates several params tables
             assert n_lines == 19 + np.size(self.res1.params)
         assert "Covariance Type:" in ltx
+
+    def test_distr(self):
+        check_distr(self.res1)
 
 
 class CheckBinaryResults(CheckModelResults):
@@ -1496,6 +1518,11 @@ class CheckMNLogitBaseZero(CheckModelResults):
     def test_cov_params(self):
         super(CheckMNLogitBaseZero, self).test_cov_params()
 
+    @pytest.mark.xfail(reason="Test has not been implemented for this class.",
+                       strict=True, raises=NotImplementedError)
+    def test_distr(self):
+        super().test_distr()
+
 
 class TestMNLogitNewtonBaseZero(CheckMNLogitBaseZero):
     @classmethod
@@ -1783,6 +1810,12 @@ class TestGeneralizedPoisson_p2(object):
         t_test = self.res1.t_test(unit_matrix)
         assert_allclose(self.res1.tvalues, t_test.tvalue)
 
+    def test_jac(self):
+        check_jac(self)
+
+    def test_distr(self):
+        check_distr(self.res1)
+
 
 class TestGeneralizedPoisson_transparams(object):
     # Test Generalized Poisson model
@@ -1881,15 +1914,22 @@ class TestGeneralizedPoisson_p1(object):
         assert_allclose(res_reg1.bse, self.res1.bse, atol=1e-5)
 
         # check shrinkage, regression numbers
-        assert_allclose((self.res1.params[:-2]**2).mean(), 0.016580955543320779)
-        assert_allclose((res_reg1.params[:-2]**2).mean(), 0.016580734975068664)
-        assert_allclose((res_reg2.params[:-2]**2).mean(), 0.010672558641545994)
-        assert_allclose((res_reg3.params[:-2]**2).mean(), 0.00035544919793048415)
+        assert_allclose((self.res1.params[:-2]**2).mean(),
+                        0.016580955543320779, rtol=1e-5)
+        assert_allclose((res_reg1.params[:-2]**2).mean(),
+                        0.016580734975068664, rtol=1e-5)
+        assert_allclose((res_reg2.params[:-2]**2).mean(),
+                        0.010672558641545994, rtol=1e-5)
+        assert_allclose((res_reg3.params[:-2]**2).mean(),
+                        0.00035544919793048415, rtol=1e-5)
 
     def test_init_kwds(self):
         kwds = self.res1.model._get_init_kwds()
         assert_('p' in kwds)
         assert_equal(kwds['p'], 1)
+
+    def test_distr(self):
+        check_distr(self.res1)
 
 
 class TestGeneralizedPoisson_underdispersion(object):
@@ -1961,8 +2001,10 @@ class TestGeneralizedPoisson_underdispersion(object):
                         rtol=0.01)
 
     def test_jac(self):
-        self.res1 = self.res
-        check_jac(self)
+        check_jac(self, res=self.res)
+
+    def test_distr(self):
+        check_distr(self.res)
 
 
 class TestNegativeBinomialPNB2Newton(CheckNegBinMixin, CheckModelResults):

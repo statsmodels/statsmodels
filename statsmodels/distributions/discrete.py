@@ -23,6 +23,15 @@ class genpoisson_p_gen(rv_discrete):
     def _pmf(self, x, mu, alpha, p):
         return np.exp(self._logpmf(x, mu, alpha, p))
 
+    def mean(self, mu, alpha, p):
+        return mu
+
+    def var(self, mu, alpha, p):
+        dispersion_factor = (1 + alpha * mu**(p - 1))**2
+        var = dispersion_factor * mu
+        return var
+
+
 genpoisson_p = genpoisson_p_gen(name='genpoisson_p',
                                 longname='Generalized Poisson')
 
@@ -53,12 +62,12 @@ class zipoisson_gen(rv_discrete):
         x[q < w] = 0
         return x
 
-    def _mean(self, mu, w):
+    def mean(self, mu, w):
         return (1 - w) * mu
 
-    def _var(self, mu, w):
+    def var(self, mu, w):
         dispersion_factor = 1 + w * mu
-        var = (dispersion_factor * self._mean(mu, w))
+        var = (dispersion_factor * self.mean(mu, w))
         return var
 
     def _moment(self, n, mu, w):
@@ -84,13 +93,13 @@ class zigeneralizedpoisson_gen(rv_discrete):
     def _pmf(self, x, mu, alpha, p, w):
         return np.exp(self._logpmf(x, mu, alpha, p, w))
 
-    def _mean(self, mu, alpha, p, w):
+    def mean(self, mu, alpha, p, w):
         return (1 - w) * mu
 
-    def _var(self, mu, alpha, p, w):
+    def var(self, mu, alpha, p, w):
         p = p - 1
         dispersion_factor = (1 + alpha * mu ** p) ** 2 + w * mu
-        var = (dispersion_factor * self._mean(mu, alpha, p, w))
+        var = (dispersion_factor * self.mean(mu, alpha, p, w))
         return var
 
 
@@ -131,12 +140,12 @@ class zinegativebinomial_gen(rv_discrete):
         x[q < w] = 0
         return x
 
-    def _mean(self, mu, alpha, p, w):
+    def mean(self, mu, alpha, p, w):
         return (1 - w) * mu
 
-    def _var(self, mu, alpha, p, w):
+    def var(self, mu, alpha, p, w):
         dispersion_factor = 1 + alpha * mu ** (p - 1) + w * mu
-        var = (dispersion_factor * self._mean(mu, alpha, p, w))
+        var = (dispersion_factor * self.mean(mu, alpha, p, w))
         return var
 
     def _moment(self, n, mu, alpha, p, w):

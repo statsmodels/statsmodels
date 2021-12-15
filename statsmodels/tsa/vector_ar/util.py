@@ -217,10 +217,10 @@ def varsim(coefs, intercept, sig_u, steps=100, initial_values=None, seed=None):
         If offset is not None, then exog of the model are used if they were
         provided in the model
     initial_values : array_like, optional
-        Initial values for use in the simulation. Shape should be 
+        Initial values for use in the simulation. Shape should be
         (nlags, neqs) or (neqs,). Values should be ordered from less to
-        most recent. Note that this values will be returned by the 
-        simulation as the first values of `endog_simulated` and they 
+        most recent. Note that this values will be returned by the
+        simulation as the first values of `endog_simulated` and they
         will count for the total number of steps.
     seed : {None, int}
         If seed is not None, then it will be used with for the random

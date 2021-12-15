@@ -363,31 +363,51 @@ class GenericZeroInflated(CountModel):
     def predict(self, params, exog=None, exog_infl=None, exposure=None,
                 offset=None, which='mean', y_values=None):
         """
-        Predict response variable of a count model given exogenous variables.
+        Predict response variable or other statistic given exogenous variables.
 
         Parameters
         ----------
         params : array_like
-            The parameters of the model
+            The parameters of the model.
         exog : ndarray, optional
-            A reference to the exogenous design.
-            If not assigned, will be used exog from fitting.
+            Explanatory variables for the main count model.
+            If ``exog`` is None, then the data from the model will be used.
         exog_infl : ndarray, optional
-            A reference to the zero-inflated exogenous design.
-            If not assigned, will be used exog from fitting.
+            Explanatory variables for the zero-inflation model.
+            ``exog_infl`` has to be provided if ``exog`` was provided unless
+            ``exog_infl`` in the model is only a constant.
         offset : ndarray, optional
-            Offset is added to the linear prediction with coefficient equal to 1.
+            Offset is added to the linear predictor of the mean function with
+            coefficient equal to 1.
+            Default is zero if exog is not None, and the model offset if exog
+            is None.
         exposure : ndarray, optional
-            Log(exposure) is added to the linear prediction with coefficient
-            equal to 1. If exposure is specified, then it will be logged by the method.
-            The user does not need to log it first.
-        which : str, optional
-            Define values that will be predicted.
-            'mean', 'mean-main', 'linear', 'mean-nonzero', 'prob-zero, 'prob', 'prob-main'
-            Default is 'mean'.
+            Log(exposure) is added to the linear predictor with coefficient
+            equal to 1. If exposure is specified, then it will be logged by
+            the method. The user does not need to log it first.
+            Default is one if exog is is not None, and it is the model exposure
+            if exog is None.
+        which : str (optional)
+            Statitistic to predict. Default is 'mean'.
 
-        Notes
-        -----
+            - 'mean' : the conditional expectation of endog E(y | x),
+              i.e. exp of linear predictor.
+            - 'linear' : the linear predictor of the mean function.
+            - 'var' : returns the estimated variance of endog implied by the
+              model.
+            - 'mean-main' : mean of the main count model
+            - 'prob-main' : probability of selecting the main model.
+                The probability of zero inflation is ``1 - prob-main``.
+            - 'mean-nonzero' : expected value conditional on having observation
+              larger than zero, E(y | X, y>0)
+            - 'prob-zero' : probability of observing a zero count. P(y=0 | x)
+            - 'prob' : probabilities of each count from 0 to max(endog), or
+              for y_values if those are provided. This is a multivariate
+              return (2-dim when predicting for several observations).
+
+        y_values : array_like
+            Values of the random variable endog at which pmf is evaluated.
+            Only used if ``which="prob"``
         """
         no_exog = False
         if exog is None:
@@ -467,6 +487,9 @@ class GenericZeroInflated(CountModel):
             return prob_zero
         elif which == 'prob-main':
             return prob_main
+        elif which == 'var':
+            mu = np.exp(lin_pred)
+            return self._predict_var(params, mu, 1 - prob_main)
         elif which == 'prob':
             return self._predict_prob(params, exog, exog_infl, exposure,
                                       offset, y_values=y_values)
@@ -576,10 +599,71 @@ class ZeroInflatedPoisson(GenericZeroInflated):
         result = self.distribution.pmf(y_values, mu, w)
         return result[0] if transform else result
 
+    def _predict_var(self, params, mu, prob_infl):
+        """predict values for conditional variance V(endog | exog)
+
+        Parameters
+        ----------
+        params : array_like
+            The model parameters. This is only used to extract extra params
+            like dispersion parameter.
+        mu : array_like
+            Array of mean predictions for main model.
+        prob_inlf : array_like
+            Array of predicted probabilities of zero-inflation `w`.
+
+        Returns
+        -------
+        Predicted conditional variance.
+        """
+        w = prob_infl
+        var_ = (1 - w) * mu * (1 + w * mu)
+        return var_
+
     def _get_start_params(self):
         start_params = self.model_main.fit(disp=0, method="nm").params
         start_params = np.append(np.ones(self.k_inflate) * 0.1, start_params)
         return start_params
+
+    def get_distribution(self, params, exog=None, exog_infl=None,
+                         exposure=None, offset=None):
+        """Get frozen instance of distribution based on predicted parameters.
+
+        Parameters
+        ----------
+        params : array_like
+            The parameters of the model.
+        exog : ndarray, optional
+            Explanatory variables for the main count model.
+            If ``exog`` is None, then the data from the model will be used.
+        exog_infl : ndarray, optional
+            Explanatory variables for the zero-inflation model.
+            ``exog_infl`` has to be provided if ``exog`` was provided unless
+            ``exog_infl`` in the model is only a constant.
+        offset : ndarray, optional
+            Offset is added to the linear predictor of the mean function with
+            coefficient equal to 1.
+            Default is zero if exog is not None, and the model offset if exog
+            is None.
+        exposure : ndarray, optional
+            Log(exposure) is added to the linear predictor  of the mean
+            function with coefficient equal to 1. If exposure is specified,
+            then it will be logged by the method. The user does not need to
+            log it first.
+            Default is one if exog is is not None, and it is the model exposure
+            if exog is None.
+
+        Returns
+        -------
+        Instance of frozen scipy distribution subclass.
+        """
+        mu = self.predict(params, exog=exog, exog_infl=exog_infl,
+                          exposure=exposure, offset=offset, which="mean-main")
+        w = self.predict(params, exog=exog, exog_infl=exog_infl,
+                         exposure=exposure, offset=offset, which="prob-main")
+
+        distr = self.distribution(mu[:, None], 1 - w[:, None])
+        return distr
 
 
 class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
@@ -635,7 +719,7 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
         params_infl = params[:self.k_inflate]
         params_main = params[self.k_inflate:]
 
-        p = self.model_main.parameterization
+        p = self.model_main.parameterization + 1
         if y_values is None:
             y_values = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
 
@@ -653,6 +737,29 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
         result = self.distribution.pmf(y_values, mu, params_main[-1], p, w)
         return result[0] if transform else result
 
+    def _predict_var(self, params, mu, prob_infl):
+        """predict values for conditional variance V(endog | exog)
+
+        Parameters
+        ----------
+        params : array_like
+            The model parameters. This is only used to extract extra params
+            like dispersion parameter.
+        mu : array_like
+            Array of mean predictions for main model.
+        prob_inlf : array_like
+            Array of predicted probabilities of zero-inflation `w`.
+
+        Returns
+        -------
+        Predicted conditional variance.
+        """
+        alpha = params[-1]
+        w = prob_infl
+        p = self.model_main.parameterization
+        var_ = (1 - w) * mu * ((1 + alpha * mu**p)**2 + w * mu)
+        return var_
+
     def _get_start_params(self):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=ConvergenceWarning)
@@ -660,6 +767,18 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
                 exog_infl=self.exog_infl).fit(disp=0).params
         start_params = np.append(start_params, 0.1)
         return start_params
+
+    @Appender(ZeroInflatedPoisson.get_distribution.__doc__)
+    def get_distribution(self, params, exog=None, exog_infl=None,
+                         exposure=None, offset=None):
+
+        p = self.model_main.parameterization + 1
+        mu = self.predict(params, exog=exog, exog_infl=exog_infl,
+                          exposure=exposure, offset=offset, which="mean-main")
+        w = self.predict(params, exog=exog, exog_infl=exog_infl,
+                         exposure=exposure, offset=offset, which="prob-main")
+        distr = self.distribution(mu[:, None], params[-1], p, 1 - w[:, None])
+        return distr
 
 
 class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
@@ -734,12 +853,48 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
         result = self.distribution.pmf(y_values, mu, params_main[-1], p, w)
         return result[0] if transform else result
 
+    def _predict_var(self, params, mu, prob_infl):
+        """predict values for conditional variance V(endog | exog)
+
+        Parameters
+        ----------
+        params : array_like
+            The model parameters. This is only used to extract extra params
+            like dispersion parameter.
+        mu : array_like
+            Array of mean predictions for main model.
+        prob_inlf : array_like
+            Array of predicted probabilities of zero-inflation `w`.
+
+        Returns
+        -------
+        Predicted conditional variance.
+        """
+        alpha = params[-1]
+        w = prob_infl
+        p = self.model_main.parameterization
+        var_ = (1 - w) * mu * (1 + alpha * mu**(p - 1) + w * mu)
+        return var_
+
     def _get_start_params(self):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=ConvergenceWarning)
             start_params = self.model_main.fit(disp=0, method='nm').params
         start_params = np.append(np.zeros(self.k_inflate), start_params)
         return start_params
+
+    @Appender(ZeroInflatedPoisson.get_distribution.__doc__)
+    def get_distribution(self, params, exog=None, exog_infl=None,
+                         exposure=None, offset=None):
+
+        p = self.model_main.parameterization
+        mu = self.predict(params, exog=exog, exog_infl=exog_infl,
+                          exposure=exposure, offset=offset, which="mean-main")
+        w = self.predict(params, exog=exog, exog_infl=exog_infl,
+                         exposure=exposure, offset=offset, which="prob-main")
+
+        distr = self.distribution(mu[:, None], params[-1], p, 1 - w[:, None])
+        return distr
 
 
 class ZeroInflatedResults(CountResults):
