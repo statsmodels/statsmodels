@@ -923,7 +923,7 @@ class VARProcess(object):
         """
         return is_stable(self.coefs, verbose=verbose)
 
-    def simulate_var(self, steps=None, offset=None, seed=None, initial_values=None):
+    def simulate_var(self, steps=None, offset=None, seed=None, initial_values=None, n_sim=1):
         """
         simulate the VAR(p) process for the desired number of steps
 
@@ -985,7 +985,7 @@ class VARProcess(object):
                 )
 
         y = util.varsim(
-            self.coefs, offset, self.sigma_u, steps=steps, seed=seed, initial_values=initial_values,
+            self.coefs, offset, self.sigma_u, steps=steps, seed=seed, initial_values=initial_values, n_sim=n_sim
         )
         return y
 

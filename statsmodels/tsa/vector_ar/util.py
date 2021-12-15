@@ -191,7 +191,7 @@ def acf_to_acorr(acf):
     return acf / np.sqrt(np.outer(diag, diag))
 
 
-def varsim(coefs, intercept, sig_u, steps=100, initial_values=None, seed=None):
+def varsim(coefs, intercept, sig_u, steps=100, initial_values=None, seed=None, n_sim=1):
     """
     Simulate VAR(p) process, given coefficients and assuming Gaussian noise
 
@@ -236,31 +236,33 @@ def varsim(coefs, intercept, sig_u, steps=100, initial_values=None, seed=None):
     p, k, k = coefs.shape
     if sig_u is None:
         sig_u = np.eye(k)
-    ugen = rmvnorm(np.zeros(len(sig_u)), sig_u, steps)
-    result = np.zeros((steps, k))
+    ugen = rmvnorm(np.zeros(len(sig_u)), sig_u, steps*n_sim).reshape(n_sim, steps, k)
+    result = np.zeros((n_sim, steps, k))
     if intercept is not None:
         # intercept can be 2-D like an offset variable
         if np.ndim(intercept) > 1:
-            if not len(intercept) == len(ugen):
+            if not len(intercept) == ugen.shape[1]:
                 raise ValueError('2-D intercept needs to have length `steps`')
         # add intercept/offset also to intial values
         result += intercept
-        result[p:] += ugen[p:]
+        result[:,p:] += ugen[:,p:]
     else:
-        result[p:] = ugen[p:]
+        result[:,p:] = ugen[:,p:]
 
     initial_values = array_like(initial_values, "initial_values", optional=True, maxdim=2)
     if initial_values is not None:
         if not (initial_values.shape == (p, k) or initial_values.shape == (k,)):
             raise ValueError("initial_values should have shape (p, k) or (k,) where p is the number of lags and k is the number of equations.")
-        result[:p] = initial_values
+        result[:,:p] = initial_values
 
     # add in AR terms
     for t in range(p, steps):
-        ygen = result[t]
+        ygen = result[:,t]
         for j in range(p):
-            ygen += np.dot(coefs[j], result[t-j-1])
+            ygen += np.dot(coefs[j], result[:,t-j-1].T).T
 
+    if n_sim == 1:
+        result = result.reshape(steps, k)
     return result
 
 
