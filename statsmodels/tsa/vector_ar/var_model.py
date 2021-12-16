@@ -923,7 +923,7 @@ class VARProcess(object):
         """
         return is_stable(self.coefs, verbose=verbose)
 
-    def simulate_var(self, steps=None, offset=None, seed=None, initial_values=None, n_sim=1):
+    def simulate_var(self, steps=None, offset=None, seed=None, initial_values=None, nsimulations=None):
         """
         simulate the VAR(p) process for the desired number of steps
 
@@ -950,14 +950,15 @@ class VARProcess(object):
             most recent. Note that this values will be returned by the
             simulation as the first values of `endog_simulated` and they
             will count for the total number of steps.
-        n_sim : int
-            Number of simulations to perform.
+        nsimulations : {None, int}
+            Number of simulations to perform. If `nsimulations` is None it will
+            perform one simulation and return value will have shape (steps, neqs).
 
         Returns
         -------
         endog_simulated : nd_array
-            Endog of the simulated VAR process. Shape will be (n_sim, steps, neqs)
-            or (steps, neqs) if `n_sim` = 1.
+            Endog of the simulated VAR process. Shape will be (nsimulations, steps, neqs)
+            or (steps, neqs) if `nsimulations` is None.
         """
         steps_ = None
         if offset is None:
@@ -988,7 +989,13 @@ class VARProcess(object):
                 )
 
         y = util.varsim(
-            self.coefs, offset, self.sigma_u, steps=steps, seed=seed, initial_values=initial_values, n_sim=n_sim
+            self.coefs,
+            offset,
+            self.sigma_u,
+            steps=steps,
+            seed=seed,
+            initial_values=initial_values,
+            nsimulations=nsimulations
         )
         return y
 
