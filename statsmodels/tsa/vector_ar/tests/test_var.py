@@ -14,7 +14,6 @@ import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
 import pandas as pd
 import pytest
-from scipy.stats import ttest_ind, bartlett
 
 from statsmodels.datasets import macrodata
 import statsmodels.tools.data as data_util
@@ -904,15 +903,6 @@ class TestVARExtras(object):
         )
         assert_allclose(sim2_init[0,:k_ar], init)
         assert_allclose(sim2_init[1,:k_ar], init)
-
-        sim1000 = res0.simulate_var(seed=987128, steps=1000, n_sim=2)
-        # Checking for equal means and variances
-        significance = .05
-        for i in range(neqs):
-            s0 = sim1000[0,:,i]
-            s1 = sim1000[1,:,i]
-            assert(ttest_ind(s0, s1).pvalue > significance)
-            assert(bartlett(s0, s1).pvalue > significance)
 
 
 def test_var_cov_params_pandas(bivariate_var_data):
