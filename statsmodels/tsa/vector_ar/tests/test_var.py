@@ -894,12 +894,12 @@ class TestVARExtras(object):
         init = self.data[-k_ar:]
 
         sim1 = res0.simulate_var(seed=987128, steps=10)
-        sim2 = res0.simulate_var(seed=987128, steps=10, n_sim=2)
+        sim2 = res0.simulate_var(seed=987128, steps=10, nsimulations=2)
         assert_equal(sim2.shape, (2, 10, neqs))
         assert_allclose(sim1, sim2[0])
 
         sim2_init = res0.simulate_var(
-            seed=987128, steps=10, initial_values=init, n_sim=2
+            seed=987128, steps=10, initial_values=init, nsimulations=2
         )
         assert_allclose(sim2_init[0,:k_ar], init)
         assert_allclose(sim2_init[1,:k_ar], init)
