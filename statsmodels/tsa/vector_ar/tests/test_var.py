@@ -887,6 +887,23 @@ class TestVARExtras(object):
         assert_allclose(fci3, fci1, rtol=1e-12)
         assert_allclose(fci3, fci2, rtol=1e-12)
 
+    def test_multiple_simulations(self):
+        res0 = self.res0
+        k_ar = res0.k_ar
+        neqs = res0.neqs
+        init = self.data[-k_ar:]
+
+        sim1 = res0.simulate_var(seed=987128, steps=10)
+        sim2 = res0.simulate_var(seed=987128, steps=10, nsimulations=2)
+        assert_equal(sim2.shape, (2, 10, neqs))
+        assert_allclose(sim1, sim2[0])
+
+        sim2_init = res0.simulate_var(
+            seed=987128, steps=10, initial_values=init, nsimulations=2
+        )
+        assert_allclose(sim2_init[0,:k_ar], init)
+        assert_allclose(sim2_init[1,:k_ar], init)
+
 
 def test_var_cov_params_pandas(bivariate_var_data):
     df = pd.DataFrame(bivariate_var_data, columns=["x", "y"])
