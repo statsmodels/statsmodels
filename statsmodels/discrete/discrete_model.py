@@ -2506,17 +2506,13 @@ class Logit(BinaryModel):
         discretefit = LogitResults(self, bnryfit)
         return BinaryResultsWrapper(discretefit)
 
-    def _deriv_score_obs_dendog(self, params, scale=None):
+    def _deriv_score_obs_dendog(self, params):
         """derivative of score_obs w.r.t. endog
 
         Parameters
         ----------
         params : ndarray
             parameter at which score is evaluated
-        scale : None or float
-            If scale is None, then the default scale will be calculated.
-            Default scale is defined by `self.scaletype` and set in fit.
-            If scale is not None, then it is used as a fixed scale.
 
         Returns
         -------
@@ -2818,6 +2814,30 @@ class Probit(BinaryModel):
                               **kwargs)
         discretefit = ProbitResults(self, bnryfit)
         return BinaryResultsWrapper(discretefit)
+
+    def _deriv_score_obs_dendog(self, params):
+        """derivative of score_obs w.r.t. endog
+
+        Parameters
+        ----------
+        params : ndarray
+            parameter at which score is evaluated
+
+        Returns
+        -------
+        derivative : ndarray_2d
+            The derivative of the score_obs with respect to endog. This
+            can is given by `score_factor0[:, None] * exog` where
+            `score_factor0` is the score_factor without the residual.
+        """
+
+        linpred = self.predict(params, which="linear")
+
+        pdf_ = self.pdf(linpred)
+        # clip to get rid of invalid divide complaint
+        cdf_ = np.clip(self.cdf(linpred), FLOAT_EPS, 1 - FLOAT_EPS)
+        deriv = pdf_ / cdf_ / (1 - cdf_)  # deriv factor
+        return deriv[:, None] * self.exog
 
 
 class MNLogit(MultinomialModel):

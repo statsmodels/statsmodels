@@ -321,9 +321,13 @@ models = [
 
 models_influ = [
     Logit,
+    Probit,
     Poisson,
     NegativeBinomialP,
     GeneralizedPoisson,
+    ZeroInflatedPoisson,
+    ZeroInflatedGeneralizedPoisson,
+    ZeroInflatedNegativeBinomialP,
     ]
 
 
@@ -383,7 +387,11 @@ def test_distr(case):
         influ.summary_frame()
         assert influ.resid.shape == (len(y2), )
 
-        resid = influ.resid_score_factor()
-        assert resid.shape == (len(y2), )
+        try:
+            resid = influ.resid_score_factor()
+            assert resid.shape == (len(y2), )
+        except AttributeError:
+            # no score_factor in ZI models
+            pass
         resid = influ.resid_score()
         assert resid.shape == (len(y2), )

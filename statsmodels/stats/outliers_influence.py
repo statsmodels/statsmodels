@@ -6,6 +6,9 @@ Created on Sun Jan 29 11:16:09 2012
 Author: Josef Perktold
 License: BSD-3
 """
+
+import warnings
+
 from statsmodels.compat.pandas import Appender
 from statsmodels.compat.python import lzip
 
@@ -396,8 +399,18 @@ class MLEInfluence(_BaseInfluenceMixin):
         if hasattr(self, '_hat_matrix_diag'):
             return self._hat_matrix_diag
 
+        try:
+            dsdy = self.results.model._deriv_score_obs_dendog(
+                self.results.params)
+        except NotImplementedError:
+            dsdy = None
+
+        if dsdy is None:
+            warnings.warn("hat matrix is not available, missing derivatives")
+            return None
+
         dmu_dp = self.results.model._deriv_mean_dparams(self.results.params)
-        dsdy = self.results.model._deriv_score_obs_dendog(self.results.params)
+
         # dmu_dp = 1 /
         #      self.results.model.family.link.deriv(self.results.fittedvalues)
         h = (dmu_dp * np.linalg.solve(-self.hessian, dsdy.T).T).sum(1)
@@ -412,7 +425,10 @@ class MLEInfluence(_BaseInfluenceMixin):
         """
         so_noti = self.score_obs.sum(0) - self.score_obs
         beta_i = np.linalg.solve(self.hessian, so_noti.T).T
-        return beta_i / (1 - self.hat_matrix_diag)[:, None]
+        if self.hat_matrix_diag is not None:
+            beta_i /= (1 - self.hat_matrix_diag)[:, None]
+
+        return beta_i
 
     @cache_readonly
     def dfbetas(self):
@@ -609,12 +625,21 @@ class MLEInfluence(_BaseInfluenceMixin):
         beta_labels = ['dfb_' + i for i in data.xnames]
 
         # grab the results
-        summary_data = DataFrame(dict(
-            cooks_d=self.cooks_distance[0],
-            standard_resid=self.resid_studentized,
-            hat_diag=self.hat_matrix_diag,
-            dffits_internal=self.d_fittedvalues_scaled),
-            index=row_labels)
+        if self.hat_matrix_diag is not None:
+            summary_data = DataFrame(dict(
+                cooks_d=self.cooks_distance[0],
+                standard_resid=self.resid_studentized,
+                hat_diag=self.hat_matrix_diag,
+                dffits_internal=self.d_fittedvalues_scaled),
+                index=row_labels)
+        else:
+            summary_data = DataFrame(dict(
+                cooks_d=self.cooks_distance[0],
+                # standard_resid=self.resid_studentized,
+                # hat_diag=self.hat_matrix_diag,
+                dffits_internal=self.d_fittedvalues_scaled),
+                index=row_labels)
+
         # NOTE: if we do not give columns, order of above will be arbitrary
         dfbeta = DataFrame(self.dfbetas, columns=beta_labels,
                            index=row_labels)
