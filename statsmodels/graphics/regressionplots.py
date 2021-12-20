@@ -860,7 +860,9 @@ def abline_plot(intercept=None, slope=None, horiz=None, vert=None,
                         "        The instance of Influence for model."}))
 def _influence_plot(results, influence, external=True, alpha=.05,
                     criterion="cooks", size=48, plot_alpha=.75, ax=None,
+                    leverage=None, resid=None,
                     **kwargs):
+    # leverage and resid kwds are used only internally for MLEInfluence
     infl = influence
     fig, ax = utils.create_mpl_ax(ax)
 
@@ -880,34 +882,40 @@ def _influence_plot(results, influence, external=True, alpha=.05,
 
     psize = (psize - psize.min()) * new_range/old_range + 8**2
 
-    leverage = infl.hat_matrix_diag
-    if external:
-        resids = infl.resid_studentized_external
+    if leverage is None:
+        leverage = infl.hat_matrix_diag
+    if resid is None:
+        ylabel = "Studentized Residuals"
+        if external:
+            resid = infl.resid_studentized_external
+        else:
+            resid = infl.resid_studentized
     else:
-        resids = infl.resid_studentized
+        resid = np.asarray(resid)
+        ylabel = "Residuals"
 
     from scipy import stats
 
     cutoff = stats.t.ppf(1.-alpha/2, results.df_resid)
-    large_resid = np.abs(resids) > cutoff
+    large_resid = np.abs(resid) > cutoff
     large_leverage = leverage > _high_leverage(results)
     large_points = np.logical_or(large_resid, large_leverage)
 
-    ax.scatter(leverage, resids, s=psize, alpha=plot_alpha)
+    ax.scatter(leverage, resid, s=psize, alpha=plot_alpha)
 
     # add point labels
     labels = results.model.data.row_labels
     if labels is None:
-        labels = lrange(len(resids))
+        labels = lrange(len(resid))
     ax = utils.annotate_axes(np.where(large_points)[0], labels,
-                             lzip(leverage, resids),
+                             lzip(leverage, resid),
                              lzip(-(psize/2)**.5, (psize/2)**.5), "x-large",
                              ax)
 
     # TODO: make configurable or let people do it ex-post?
     font = {"fontsize": 16, "color": "black"}
-    ax.set_ylabel("Studentized Residuals", **font)
-    ax.set_xlabel("H Leverage", **font)
+    ax.set_ylabel(ylabel, **font)
+    ax.set_xlabel("Leverage", **font)
     ax.set_title("Influence Plot", **font)
     return fig
 

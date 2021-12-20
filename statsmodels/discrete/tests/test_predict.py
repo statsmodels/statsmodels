@@ -395,3 +395,8 @@ def test_distr(case):
             pass
         resid = influ.resid_score()
         assert resid.shape == (len(y2), )
+
+        try:
+            influ.plot_influence()
+        except ImportError:
+            pass

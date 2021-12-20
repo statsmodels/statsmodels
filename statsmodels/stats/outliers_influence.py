@@ -210,10 +210,19 @@ class _BaseInfluenceMixin(object):
         if external is None:
             external = hasattr(self, '_cache') and 'res_looo' in self._cache
         from statsmodels.graphics.regressionplots import _influence_plot
-        res = _influence_plot(self.results, self, external=external,
-                              alpha=alpha,
-                              criterion=criterion, size=size,
-                              plot_alpha=plot_alpha, ax=ax, **kwargs)
+        if self.hat_matrix_diag is not None:
+            res = _influence_plot(self.results, self, external=external,
+                                  alpha=alpha,
+                                  criterion=criterion, size=size,
+                                  plot_alpha=plot_alpha, ax=ax, **kwargs)
+        else:
+            warnings.warn("Plot uses pearson residuals and exog hat matrix.")
+            res = _influence_plot(self.results, self, external=external,
+                                  alpha=alpha,
+                                  criterion=criterion, size=size,
+                                  leverage=self.hat_matrix_exog_diag,
+                                  resid=self.resid,
+                                  plot_alpha=plot_alpha, ax=ax, **kwargs)
         return res
 
     def _plot_index(self, y, ylabel, threshold=None, title=None, ax=None,
@@ -288,7 +297,7 @@ class _BaseInfluenceMixin(object):
         elif criterion.startswith('cook'):
             y = self.cooks_distance[0]
             ylabel = "Cook's distance"
-        elif criterion.startswith('resid'):
+        elif criterion.startswith('resid_stu'):
             y = self.resid_studentized
             ylabel = "Internally Studentized Residuals"
         else:
@@ -365,11 +374,11 @@ class MLEInfluence(_BaseInfluenceMixin):
 
     def __init__(self, results, resid=None, endog=None, exog=None,
                  hat_matrix_diag=None, cov_params=None, scale=None):
-        # I'm not calling super for now, OLS attributes might not be available
-        # check which model is allowed
+        # this __init__ attaches attributes that we don't really need
         self.results = results = maybe_unwrap_results(results)
         # TODO: check for extra params in e.g. NegBin
         self.nobs, self.k_vars = results.model.exog.shape
+        self.k_params = np.size(results.params)
         self.endog = endog if endog is not None else results.model.endog
         self.exog = exog if exog is not None else results.model.exog
         self.scale = scale if scale is not None else results.scale
@@ -415,6 +424,21 @@ class MLEInfluence(_BaseInfluenceMixin):
         #      self.results.model.family.link.deriv(self.results.fittedvalues)
         h = (dmu_dp * np.linalg.solve(-self.hessian, dsdy.T).T).sum(1)
         return h
+
+    @cache_readonly
+    def hat_matrix_exog_diag(self):
+        """Diagonal of the hat_matrix for OLS
+
+        Notes
+        -----
+        temporarily calculated here, this should go to model class
+        """
+        get_exogs = getattr(self.results.model, "_get_exogs", None)
+        if get_exogs is not None:
+            exog = np.column_stack(get_exogs())
+        else:
+            exog = self.exog
+        return (exog * np.linalg.pinv(exog).T).sum(1)
 
     @cache_readonly
     def d_params(self):
@@ -466,13 +490,13 @@ class MLEInfluence(_BaseInfluenceMixin):
         """
         cooks_d2 = (self.d_params * np.linalg.solve(self.cov_params,
                                                     self.d_params.T).T).sum(1)
-        cooks_d2 /= self.k_vars
+        cooks_d2 /= self.k_params
         from scipy import stats
 
         # alpha = 0.1
         # print stats.f.isf(1-alpha, n_params, res.df_modelwc)
         # TODO use chi2   # use_f option
-        pvals = stats.f.sf(cooks_d2, self.k_vars, self.results.df_resid)
+        pvals = stats.f.sf(cooks_d2, self.k_params, self.results.df_resid)
 
         return cooks_d2, pvals
 
