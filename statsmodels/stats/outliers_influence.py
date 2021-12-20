@@ -313,31 +313,28 @@ class _BaseInfluenceMixin(object):
 
 
 class MLEInfluence(_BaseInfluenceMixin):
-    """Local Influence and outlier measures (experimental)
-
-    This currently subclasses GLMInfluence instead of the other way.
-    No common superclass yet.
-    This is another version before checking what is common
+    """Global Influence and outlier measures (experimental)
 
     Parameters
     ----------
     results : instance of results class
         This only works for model and results classes that have the necessary
         helper methods.
-    other arguments are only to override default behavior and are used instead
-    of the corresponding attribute of the results class.
-    By default resid_pearson is used as resid.
-
-
-
+    other arguments :
+        Those are only available to override default behavior and are used
+        instead of the corresponding attribute of the results class.
+        By default resid_pearson is used as resid.
 
     Attributes
     ----------
     hat_matrix_diag (hii) : This is the generalized leverage computed as the
         local derivative of fittedvalues (predicted mean) with respect to the
         observed response for each observation.
+        Not available for ZeroInflated models because of nondifferentiability.
     d_params : Change in parameters computed with one Newton step using the
         full Hessian corrected by division by (1 - hii).
+        If hat_matrix_diag is not available, then the division by (1 - hii) is
+        not included.
     dbetas : change in parameters divided by the standard error of parameters
         from the full model results, ``bse``.
     cooks_distance : quadratic form for change in parameters weighted by
@@ -356,9 +353,21 @@ class MLEInfluence(_BaseInfluenceMixin):
 
     Notes
     -----
-    MLEInfluence produces the same results as GLMInfluence (verified for GLM
-    Binomial and Gaussian). There will be some differences for non-canonical
-    links or if a robust cov_type is used.
+    MLEInfluence uses generic definitions based on maximum likelihood models.
+
+    MLEInfluence produces the same results as GLMInfluence for canonical
+    links (verified for GLM Binomial, Poisson and Gaussian). There will be
+    some differences for non-canonical links or if a robust cov_type is used.
+    For example, the generalized leverage differs from the definition of the
+    GLM hat matrix in the case of Probit, which corresponds to family
+    Binomial with a non-canonical link.
+
+    The extension to non-standard models, e.g. multi-link model like
+    BetaModel and the ZeroInflated models is still experimental and might still
+    change.
+    Additonally, ZeroInflated and some threshold models have a
+    nondifferentiability in the generalized leverage. How this case is treated
+    might also change.
 
     Warning: This does currently not work for constrained or penalized models,
     e.g. models estimated with fit_constrained or fit_regularized.
@@ -415,7 +424,8 @@ class MLEInfluence(_BaseInfluenceMixin):
             dsdy = None
 
         if dsdy is None:
-            warnings.warn("hat matrix is not available, missing derivatives")
+            warnings.warn("hat matrix is not available, missing derivatives",
+                          UserWarning)
             return None
 
         dmu_dp = self.results.model._deriv_mean_dparams(self.results.params)
@@ -427,11 +437,8 @@ class MLEInfluence(_BaseInfluenceMixin):
 
     @cache_readonly
     def hat_matrix_exog_diag(self):
-        """Diagonal of the hat_matrix for OLS
+        """Diagonal of the hat_matrix using only exog as in OLS
 
-        Notes
-        -----
-        temporarily calculated here, this should go to model class
         """
         get_exogs = getattr(self.results.model, "_get_exogs", None)
         if get_exogs is not None:
@@ -442,7 +449,7 @@ class MLEInfluence(_BaseInfluenceMixin):
 
     @cache_readonly
     def d_params(self):
-        """Change in parameter estimates
+        """Approximate change in parameter estimates when dropping observation.
 
         This uses one-step approximation of the parameter change to deleting
         one observation.
@@ -456,7 +463,7 @@ class MLEInfluence(_BaseInfluenceMixin):
 
     @cache_readonly
     def dfbetas(self):
-        """Scaled change in parameter estimates
+        """Scaled change in parameter estimates.
 
         The one-step change of parameters in d_params is rescaled by dividing
         by the standard error of the parameter estimate given by results.bse.
@@ -467,7 +474,7 @@ class MLEInfluence(_BaseInfluenceMixin):
 
     @cache_readonly
     def params_one(self):
-        """Parameter estimate based on one-step approximation
+        """Parameter estimate based on one-step approximation.
 
         This the one step parameter estimate computed as
         ``params`` from the full sample minus ``d_params``.
@@ -476,7 +483,7 @@ class MLEInfluence(_BaseInfluenceMixin):
 
     @cache_readonly
     def cooks_distance(self):
-        """Cook's distance and p-values
+        """Cook's distance and p-values.
 
         Based on one step approximation d_params and on results.cov_params
         Cook's distance divides by the number of explanatory variables.
@@ -502,21 +509,24 @@ class MLEInfluence(_BaseInfluenceMixin):
 
     @cache_readonly
     def resid_studentized(self):
-        """studentized default residuals
+        """studentized default residuals.
 
         This uses the residual in `resid` attribute, which is by default
         resid_pearson and studentizes is using the generalized leverage.
 
         self.resid / np.sqrt(1 - self.hat_matrix_diag)
 
+        Studentized residuals are not available if hat_matrix_diag is None.
+
         """
         return self.resid / np.sqrt(1 - self.hat_matrix_diag)
 
     def resid_score_factor(self):
-        """Score residual divided by sqrt of hessian factor
+        """Score residual divided by sqrt of hessian factor.
 
         experimental, agrees with GLMInfluence for Binomial and Gaussian.
-        no reference for this
+        This corresponds to considering the linear predictors as parameters
+        of the model.
 
         Note: Nhis might have nan values if second derivative, hessian_factor,
         is positive, i.e. loglikelihood is not globally concave w.r.t. linear
@@ -536,7 +546,10 @@ class MLEInfluence(_BaseInfluenceMixin):
         return sf / np.sqrt(hf) / np.sqrt(1 - self.hat_matrix_diag)
 
     def resid_score(self, joint=True, index=None, studentize=False):
-        """Score observations scaled by inverse hessian
+        """Score observations scaled by inverse hessian.
+
+        Score residual in resid_score are defined in analogy to a score test
+        statistic for each observation.
 
         Parameters
         ----------
@@ -559,6 +572,14 @@ class MLEInfluence(_BaseInfluenceMixin):
         Notes
         -----
         Status: experimental
+
+        Because of the one srep approacimation of d_params, score residuals
+        are identical to cooks_distance, except for
+
+        - cooks_distance is normalized by the number of parameters
+        - cooks_distance uses cov_params, resid_score is based on Hessian.
+          This will make them differ in the case of robust cov_params.
+
         """
         # currently no caching
         score_obs = self.results.model.score_obs(self.results.params)
@@ -589,15 +610,15 @@ class MLEInfluence(_BaseInfluenceMixin):
 
     @cache_readonly
     def d_fittedvalues(self):
-        """Change in expected response, fittedvalues
+        """Change in expected response, fittedvalues.
 
         Local change of expected mean given the change in the parameters as
         computed in d_params.
 
         Notes
         -----
-        This uses one-step approximation of the parameter change to deleting
-        one observation ``d_params``.
+        This uses the one-step approximation of the parameter change to
+        deleting one observation ``d_params``.
         """
         # results.params might be a pandas.Series
         params = np.asarray(self.results.params)
@@ -607,7 +628,7 @@ class MLEInfluence(_BaseInfluenceMixin):
     @property
     def d_fittedvalues_scaled(self):
         """
-        Change in fittedvalues scaled by standard errors
+        Change in fittedvalues scaled by standard errors.
 
         This uses one-step approximation of the parameter change to deleting
         one observation ``d_params``, and divides by the standard errors
@@ -637,7 +658,7 @@ class MLEInfluence(_BaseInfluenceMixin):
         * standard_resid : Standardized residuals defined in
           `resid_studentizedl`
         * hat_diag : The diagonal of the projection, or hat, matrix defined in
-          `hat_matrix_diag`
+          `hat_matrix_diag`. Not included if None.
         * dffits_internal : DFFITS statistics using internally Studentized
           residuals defined in `d_fittedvalues_scaled`
         """

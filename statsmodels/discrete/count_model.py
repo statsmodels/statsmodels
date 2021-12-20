@@ -101,6 +101,11 @@ class GenericZeroInflated(CountModel):
         self._init_keys.extend(['exog_infl', 'inflation'])
         self._null_drop_keys = ['exog_infl']
 
+    def _get_exogs(self):
+        """list of exogs, for internal use in post-estimation
+        """
+        return (self.exog, self.exog_infl)
+
     def loglike(self, params):
         """
         Loglikelihood of Generic Zero Inflated model.
@@ -976,6 +981,42 @@ class ZeroInflatedResults(CountResults):
                                         agg_weights=agg_weights,
                                         pred_kwds=pred_kwds)
         return res
+
+    def get_influence(self):
+        """
+        Get an instance of MLEInfluence with influence and outlier measures
+
+        See notes section for influence measures that do not apply for
+        zero inflated models.
+
+        Returns
+        -------
+        infl : MLEInfluence instance
+            The instance has methods to calculate the main influence and
+            outlier measures as attributes.
+
+        See Also
+        --------
+        statsmodels.stats.outliers_influence.MLEInfluence
+
+        Notes
+        -----
+        ZeroInflated models have functions that are not differentiable
+        with respect to sample endog if endog=0.
+        This means that generalized leverage cannot be computed in the usual
+        definition.
+
+        Currently, both the generalized leverage, in `hat_matrix_diag attribute
+        and studetized residuals are not available.
+        In the influence plot generalized leverage is replaced by a hat matrix
+        diagonal that only takes combined exog into account, computed in the
+        same way as for OLS. This is a measure for exog outliers but does
+        not take specific features of the model into account.
+
+        """
+        # same as sumper in DiscreteResults, only added for docstring
+        from statsmodels.stats.outliers_influence import MLEInfluence
+        return MLEInfluence(self)
 
 
 class ZeroInflatedPoissonResults(ZeroInflatedResults):

@@ -260,7 +260,7 @@ class BetaModel(GenericLikelihoodModel):
         """
         mean = self.predict(params, exog=exog)
         precision = self._predict_precision(params,
-                                           exog_precision=exog_precision)
+                                            exog_precision=exog_precision)
 
         var_endog = mean * (1 - mean) / (1 + precision)
         return var_endog
@@ -721,8 +721,6 @@ class BetaModel(GenericLikelihoodModel):
 
         return np.column_stack((d1, d2))
 
-
-    # code duplication with results class
     def get_distribution_params(self, params, exog=None, exog_precision=None):
         """
         Return distribution parameters converted from model prediction.
@@ -891,6 +889,40 @@ class BetaResults(GenericLikelihoodModelResults, _LLRMixin):
         args = (np.asarray(arg) for arg in args)
         distr = stats.beta(*args)
         return distr
+
+    def get_influence(self):
+        """
+        Get an instance of MLEInfluence with influence and outlier measures
+
+        Returns
+        -------
+        infl : MLEInfluence instance
+            The instance has methods to calculate the main influence and
+            outlier measures as attributes.
+
+        See Also
+        --------
+        statsmodels.stats.outliers_influence.MLEInfluence
+
+        Notes
+        -----
+        Support for mutli-link and multi-exog models is still experimental
+        in MLEInfluence. Interface and some definitions might still change.
+
+        Note: Difference to R betareg: Betareg has the same general leverage
+        as this model. However, they use a linear approximation hat matrix
+        to scale and studentize influence and residual statistics.
+        MLEInfluence uses the generalized leverage as hat_matrix_diag.
+        Additionally, MLEInfluence uses pearson residuals for residual
+        analusis.
+
+        References
+        ----------
+        todo
+
+        """
+        from statsmodels.stats.outliers_influence import MLEInfluence
+        return MLEInfluence(self)
 
     def bootstrap(self, *args, **kwargs):
         raise NotImplementedError
