@@ -1,6 +1,7 @@
+from statsmodels.compat.pytest import pytest_warns
+
 import numpy as np
 from numpy.testing import assert_, assert_allclose, assert_raises
-import pytest
 
 import statsmodels.datasets.macrodata.data as macro
 from statsmodels.tsa.vector_ar.tests.JMulTi_results.parse_jmulti_vecm_output import (
@@ -133,7 +134,7 @@ def load_results_statsmodels(dataset):
         warn_typ = FutureWarning if dt_s_tup[0] == "nc" else None
 
         model = VAR(endog, exog)
-        with pytest.warns(warn_typ):
+        with pytest_warns(warn_typ):
             results_per_deterministic_terms[dt_s_tup] = model.fit(
                 maxlags=4, trend=dt_s_tup[0], method="ols"
             )
@@ -573,7 +574,7 @@ def test_lag_order_selection():
             exog = generate_exog_from_season(dt[1], len(endog_tot))
             model = VAR(endog_tot, exog)
             warn_typ = FutureWarning if dt[0] == "nc" else None
-            with pytest.warns(warn_typ):
+            with pytest_warns(warn_typ):
                 obtained_all = model.select_order(10, trend=dt[0])
             for ic in ["aic", "fpe", "hqic", "bic"]:
                 err_msg = build_err_msg(
