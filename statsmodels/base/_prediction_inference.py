@@ -433,7 +433,7 @@ def get_prediction_glm(self, exog=None, transform=True,
     link : instance of link function
         If no link function is provided, then the ``mmodel.family.link` is
         used.
-    pred_kwargs :
+    pred_kwds : dict
         Some models can take additional keyword arguments, such as offset or
         additional exog in multi-part models.
         See the predict method of the model for the details.

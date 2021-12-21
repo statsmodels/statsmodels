@@ -43,6 +43,7 @@ from statsmodels.tools.decorators import (
     cached_data,
     cached_value,
 )
+from statsmodels.tools.docstring import Docstring
 from statsmodels.tools.sm_exceptions import (
     DomainWarning,
     HessianInversionWarning,
@@ -1448,6 +1449,9 @@ class GLM(base.LikelihoodModel):
         return res
 
 
+get_prediction_doc = Docstring(pred.get_prediction_glm.__doc__)
+get_prediction_doc.remove_parameters("pred_kwds")
+
 class GLMResults(base.LikelihoodModelResults):
     """
     Class to contain GLM results.
@@ -1896,7 +1900,7 @@ class GLMResults(base.LikelihoodModelResults):
             llf = self.llf_scaled(scale=1)
             return -2 * llf/scale + 2 * k_params
 
-    @Appender(pred.get_prediction_glm.__doc__)
+    @Appender(str(get_prediction_doc))
     def get_prediction(self, exog=None, exposure=None, offset=None,
                        transform=True, linear=False,
                        row_labels=None):

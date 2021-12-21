@@ -489,8 +489,8 @@ class BinaryModel(DiscreteModel):
         exog : array_like
             1d or 2d array of exogenous values.  If not supplied, the
             whole exog attribute of the model is used.
-                which : 'mean', 'linear', 'var', 'prob' (optional)
-            Statitistic to predict. Default is 'mean'.
+        which : {'mean', 'linear', 'var', 'prob'}, optional
+            Statistic to predict. Default is 'mean'.
 
             - 'mean' returns the conditional expectation of endog E(y | x),
               i.e. exp of linear predictor.
@@ -499,10 +499,13 @@ class BinaryModel(DiscreteModel):
               model.
 
         linear : bool
-            The ``linear` keyword is deprecated and will be removed,
-            use ``which`` keyword instead.
             If True, returns the linear predicted values.  If False or None,
             then the statistic specified by ``which`` will be returned.
+
+            .. deprecated: 0.14
+
+               The ``linear` keyword is deprecated and will be removed,
+               use ``which`` keyword instead.
 
         Returns
         -------
