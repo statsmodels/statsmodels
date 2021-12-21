@@ -659,7 +659,7 @@ class ExponentialSmoothing(TimeSeriesModel):
             gamma = fixed.get("smoothing_seasonal", gamma)
             phi = fixed.get("damping_trend", phi)
             l0 = fixed.get("initial_level", l0)
-            b0 = fixed.get("initial_trend", l0)
+            b0 = fixed.get("initial_trend", b0)
             for i in range(self.seasonal_periods):
                 s0[i] = fixed.get(f"initial_seasonal.{i}", s0[i])
         return sel, alpha, beta, gamma, phi, l0, b0, s0
