@@ -1444,7 +1444,6 @@ class GLMInfluence(MLEInfluence):
     def _fittedvalues_one(self):
         """experimental code
         """
-        import warnings
         warnings.warn('this ignores offset and exposure', UserWarning)
         # TODO: we need to handle offset, exposure and weights
         # use original model exog not transformed influence exog
