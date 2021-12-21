@@ -376,11 +376,14 @@ class TestBetaIncome():
         res1 = self.res1
         from statsmodels.stats.outliers_influence import MLEInfluence
 
-        influ = MLEInfluence(res1)
+        influ0 = MLEInfluence(res1)
+        influ = res1.get_influence()
         attrs = ['cooks_distance', 'd_fittedvalues', 'd_fittedvalues_scaled',
                  'd_params', 'dfbetas', 'hat_matrix_diag', 'resid_studentized'
                  ]
         for attr in attrs:
             getattr(influ, attr)
 
-        influ.summary_frame()
+        frame = influ.summary_frame()
+        frame0 = influ0.summary_frame()
+        assert_allclose(frame, frame0, rtol=1e-13, atol=1e-13)

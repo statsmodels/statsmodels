@@ -6,6 +6,9 @@ Created on Sun Jan 29 11:16:09 2012
 Author: Josef Perktold
 License: BSD-3
 """
+
+import warnings
+
 from statsmodels.compat.pandas import Appender
 from statsmodels.compat.python import lzip
 
@@ -207,10 +210,19 @@ class _BaseInfluenceMixin(object):
         if external is None:
             external = hasattr(self, '_cache') and 'res_looo' in self._cache
         from statsmodels.graphics.regressionplots import _influence_plot
-        res = _influence_plot(self.results, self, external=external,
-                              alpha=alpha,
-                              criterion=criterion, size=size,
-                              plot_alpha=plot_alpha, ax=ax, **kwargs)
+        if self.hat_matrix_diag is not None:
+            res = _influence_plot(self.results, self, external=external,
+                                  alpha=alpha,
+                                  criterion=criterion, size=size,
+                                  plot_alpha=plot_alpha, ax=ax, **kwargs)
+        else:
+            warnings.warn("Plot uses pearson residuals and exog hat matrix.")
+            res = _influence_plot(self.results, self, external=external,
+                                  alpha=alpha,
+                                  criterion=criterion, size=size,
+                                  leverage=self.hat_matrix_exog_diag,
+                                  resid=self.resid,
+                                  plot_alpha=plot_alpha, ax=ax, **kwargs)
         return res
 
     def _plot_index(self, y, ylabel, threshold=None, title=None, ax=None,
@@ -285,7 +297,7 @@ class _BaseInfluenceMixin(object):
         elif criterion.startswith('cook'):
             y = self.cooks_distance[0]
             ylabel = "Cook's distance"
-        elif criterion.startswith('resid'):
+        elif criterion.startswith('resid_stu'):
             y = self.resid_studentized
             ylabel = "Internally Studentized Residuals"
         else:
@@ -301,31 +313,28 @@ class _BaseInfluenceMixin(object):
 
 
 class MLEInfluence(_BaseInfluenceMixin):
-    """Local Influence and outlier measures (experimental)
-
-    This currently subclasses GLMInfluence instead of the other way.
-    No common superclass yet.
-    This is another version before checking what is common
+    """Global Influence and outlier measures (experimental)
 
     Parameters
     ----------
     results : instance of results class
         This only works for model and results classes that have the necessary
         helper methods.
-    other arguments are only to override default behavior and are used instead
-    of the corresponding attribute of the results class.
-    By default resid_pearson is used as resid.
-
-
-
+    other arguments :
+        Those are only available to override default behavior and are used
+        instead of the corresponding attribute of the results class.
+        By default resid_pearson is used as resid.
 
     Attributes
     ----------
     hat_matrix_diag (hii) : This is the generalized leverage computed as the
         local derivative of fittedvalues (predicted mean) with respect to the
         observed response for each observation.
+        Not available for ZeroInflated models because of nondifferentiability.
     d_params : Change in parameters computed with one Newton step using the
         full Hessian corrected by division by (1 - hii).
+        If hat_matrix_diag is not available, then the division by (1 - hii) is
+        not included.
     dbetas : change in parameters divided by the standard error of parameters
         from the full model results, ``bse``.
     cooks_distance : quadratic form for change in parameters weighted by
@@ -344,9 +353,21 @@ class MLEInfluence(_BaseInfluenceMixin):
 
     Notes
     -----
-    MLEInfluence produces the same results as GLMInfluence (verified for GLM
-    Binomial and Gaussian). There will be some differences for non-canonical
-    links or if a robust cov_type is used.
+    MLEInfluence uses generic definitions based on maximum likelihood models.
+
+    MLEInfluence produces the same results as GLMInfluence for canonical
+    links (verified for GLM Binomial, Poisson and Gaussian). There will be
+    some differences for non-canonical links or if a robust cov_type is used.
+    For example, the generalized leverage differs from the definition of the
+    GLM hat matrix in the case of Probit, which corresponds to family
+    Binomial with a non-canonical link.
+
+    The extension to non-standard models, e.g. multi-link model like
+    BetaModel and the ZeroInflated models is still experimental and might still
+    change.
+    Additonally, ZeroInflated and some threshold models have a
+    nondifferentiability in the generalized leverage. How this case is treated
+    might also change.
 
     Warning: This does currently not work for constrained or penalized models,
     e.g. models estimated with fit_constrained or fit_regularized.
@@ -362,16 +383,22 @@ class MLEInfluence(_BaseInfluenceMixin):
 
     def __init__(self, results, resid=None, endog=None, exog=None,
                  hat_matrix_diag=None, cov_params=None, scale=None):
-        # I'm not calling super for now, OLS attributes might not be available
-        # check which model is allowed
+        # this __init__ attaches attributes that we don't really need
         self.results = results = maybe_unwrap_results(results)
         # TODO: check for extra params in e.g. NegBin
         self.nobs, self.k_vars = results.model.exog.shape
+        self.k_params = np.size(results.params)
         self.endog = endog if endog is not None else results.model.endog
         self.exog = exog if exog is not None else results.model.exog
-        self.resid = resid if resid is not None else (
-            getattr(results, "resid_pearson", None))
         self.scale = scale if scale is not None else results.scale
+        if resid is not None:
+            self.resid = resid
+        else:
+            self.resid = getattr(results, "resid_pearson", None)
+            if self.resid is not None: # and scale != 1:
+                # GLM and similar does not divide resid_pearson by scale
+                self.resid = self.resid / np.sqrt(self.scale)
+
         self.cov_params = (cov_params if cov_params is not None
                            else results.cov_params())
         self.model_class = results.model.__class__
@@ -390,27 +417,53 @@ class MLEInfluence(_BaseInfluenceMixin):
         if hasattr(self, '_hat_matrix_diag'):
             return self._hat_matrix_diag
 
+        try:
+            dsdy = self.results.model._deriv_score_obs_dendog(
+                self.results.params)
+        except NotImplementedError:
+            dsdy = None
+
+        if dsdy is None:
+            warnings.warn("hat matrix is not available, missing derivatives",
+                          UserWarning)
+            return None
+
         dmu_dp = self.results.model._deriv_mean_dparams(self.results.params)
-        dsdy = self.results.model._deriv_score_obs_dendog(self.results.params)
+
         # dmu_dp = 1 /
         #      self.results.model.family.link.deriv(self.results.fittedvalues)
         h = (dmu_dp * np.linalg.solve(-self.hessian, dsdy.T).T).sum(1)
         return h
 
     @cache_readonly
+    def hat_matrix_exog_diag(self):
+        """Diagonal of the hat_matrix using only exog as in OLS
+
+        """
+        get_exogs = getattr(self.results.model, "_get_exogs", None)
+        if get_exogs is not None:
+            exog = np.column_stack(get_exogs())
+        else:
+            exog = self.exog
+        return (exog * np.linalg.pinv(exog).T).sum(1)
+
+    @cache_readonly
     def d_params(self):
-        """Change in parameter estimates
+        """Approximate change in parameter estimates when dropping observation.
 
         This uses one-step approximation of the parameter change to deleting
         one observation.
         """
         so_noti = self.score_obs.sum(0) - self.score_obs
         beta_i = np.linalg.solve(self.hessian, so_noti.T).T
-        return beta_i / (1 - self.hat_matrix_diag)[:, None]
+        if self.hat_matrix_diag is not None:
+            beta_i /= (1 - self.hat_matrix_diag)[:, None]
+
+        return beta_i
 
     @cache_readonly
     def dfbetas(self):
-        """Scaled change in parameter estimates
+        """Scaled change in parameter estimates.
 
         The one-step change of parameters in d_params is rescaled by dividing
         by the standard error of the parameter estimate given by results.bse.
@@ -421,7 +474,7 @@ class MLEInfluence(_BaseInfluenceMixin):
 
     @cache_readonly
     def params_one(self):
-        """Parameter estimate based on one-step approximation
+        """Parameter estimate based on one-step approximation.
 
         This the one step parameter estimate computed as
         ``params`` from the full sample minus ``d_params``.
@@ -430,7 +483,7 @@ class MLEInfluence(_BaseInfluenceMixin):
 
     @cache_readonly
     def cooks_distance(self):
-        """Cook's distance and p-values
+        """Cook's distance and p-values.
 
         Based on one step approximation d_params and on results.cov_params
         Cook's distance divides by the number of explanatory variables.
@@ -444,22 +497,40 @@ class MLEInfluence(_BaseInfluenceMixin):
         """
         cooks_d2 = (self.d_params * np.linalg.solve(self.cov_params,
                                                     self.d_params.T).T).sum(1)
-        cooks_d2 /= self.k_vars
+        cooks_d2 /= self.k_params
         from scipy import stats
 
         # alpha = 0.1
         # print stats.f.isf(1-alpha, n_params, res.df_modelwc)
         # TODO use chi2   # use_f option
-        pvals = stats.f.sf(cooks_d2, self.k_vars, self.results.df_resid)
+        pvals = stats.f.sf(cooks_d2, self.k_params, self.results.df_resid)
 
         return cooks_d2, pvals
 
     @cache_readonly
     def resid_studentized(self):
-        """Score residual divided by sqrt of hessian factor
+        """studentized default residuals.
+
+        This uses the residual in `resid` attribute, which is by default
+        resid_pearson and studentizes is using the generalized leverage.
+
+        self.resid / np.sqrt(1 - self.hat_matrix_diag)
+
+        Studentized residuals are not available if hat_matrix_diag is None.
+
+        """
+        return self.resid / np.sqrt(1 - self.hat_matrix_diag)
+
+    def resid_score_factor(self):
+        """Score residual divided by sqrt of hessian factor.
 
         experimental, agrees with GLMInfluence for Binomial and Gaussian.
-        no reference for this
+        This corresponds to considering the linear predictors as parameters
+        of the model.
+
+        Note: Nhis might have nan values if second derivative, hessian_factor,
+        is positive, i.e. loglikelihood is not globally concave w.r.t. linear
+        predictor. (This occured in an example for GeneralizedPoisson)
         """
         from statsmodels.genmod.generalized_linear_model import GLM
         sf = self.results.model.score_factor(self.results.params)
@@ -469,10 +540,67 @@ class MLEInfluence(_BaseInfluenceMixin):
         if isinstance(hf, tuple):
             hf = hf[0]
         if not isinstance(self.results.model, GLM):
-            # hessian_factor in GLM has wrong sign
+            # hessian_factor in GLM has wrong sign, is already positive
             hf = -hf
 
         return sf / np.sqrt(hf) / np.sqrt(1 - self.hat_matrix_diag)
+
+    def resid_score(self, joint=True, index=None, studentize=False):
+        """Score observations scaled by inverse hessian.
+
+        Score residual in resid_score are defined in analogy to a score test
+        statistic for each observation.
+
+        Parameters
+        ----------
+        joint : bool
+            If joint is true, then a quadratic form similar to score_test is
+            returned for each observation.
+            If joint is false, then standardized score_obs are returned. The
+            returned array is two-dimensional
+        index : ndarray (optional)
+            Optional index to select a subset of score_obs columns.
+            By default, all columns of score_obs will be used.
+        studentize : bool
+            If studentize is true, the the scaled residuals are also
+            studentized using the generalized leverage.
+
+        Returns
+        -------
+        array :  1-D or 2-D residuals
+
+        Notes
+        -----
+        Status: experimental
+
+        Because of the one srep approacimation of d_params, score residuals
+        are identical to cooks_distance, except for
+
+        - cooks_distance is normalized by the number of parameters
+        - cooks_distance uses cov_params, resid_score is based on Hessian.
+          This will make them differ in the case of robust cov_params.
+
+        """
+        # currently no caching
+        score_obs = self.results.model.score_obs(self.results.params)
+        hess = self.results.model.hessian(self.results.params)
+        if index is not None:
+            score_obs = score_obs[:, index]
+            hess = hess[index[:, None], index]
+
+        if joint:
+            resid = (score_obs.T * np.linalg.solve(-hess, score_obs.T)).sum(0)
+        else:
+            resid = score_obs / np.sqrt(np.diag(-hess))
+
+        if studentize:
+            if joint:
+                resid /= np.sqrt(1 - self.hat_matrix_diag)
+            else:
+                # 2-dim resid
+                resid /= np.sqrt(1 - self.hat_matrix_diag[:, None])
+
+        return resid
 
     @cache_readonly
     def _get_prediction(self):
@@ -482,15 +610,15 @@ class MLEInfluence(_BaseInfluenceMixin):
 
     @cache_readonly
     def d_fittedvalues(self):
-        """Change in expected response, fittedvalues
+        """Change in expected response, fittedvalues.
 
         Local change of expected mean given the change in the parameters as
         computed in d_params.
 
         Notes
         -----
-        This uses one-step approximation of the parameter change to deleting
-        one observation ``d_params``.
+        This uses the one-step approximation of the parameter change to
+        deleting one observation ``d_params``.
         """
         # results.params might be a pandas.Series
         params = np.asarray(self.results.params)
@@ -500,7 +628,7 @@ class MLEInfluence(_BaseInfluenceMixin):
     @property
     def d_fittedvalues_scaled(self):
         """
-        Change in fittedvalues scaled by standard errors
+        Change in fittedvalues scaled by standard errors.
 
         This uses one-step approximation of the parameter change to deleting
         one observation ``d_params``, and divides by the standard errors
@@ -530,7 +658,7 @@ class MLEInfluence(_BaseInfluenceMixin):
         * standard_resid : Standardized residuals defined in
           `resid_studentizedl`
         * hat_diag : The diagonal of the projection, or hat, matrix defined in
-          `hat_matrix_diag`
+          `hat_matrix_diag`. Not included if None.
         * dffits_internal : DFFITS statistics using internally Studentized
           residuals defined in `d_fittedvalues_scaled`
         """
@@ -542,12 +670,21 @@ class MLEInfluence(_BaseInfluenceMixin):
         beta_labels = ['dfb_' + i for i in data.xnames]
 
         # grab the results
-        summary_data = DataFrame(dict(
-            cooks_d=self.cooks_distance[0],
-            standard_resid=self.resid_studentized,
-            hat_diag=self.hat_matrix_diag,
-            dffits_internal=self.d_fittedvalues_scaled),
-            index=row_labels)
+        if self.hat_matrix_diag is not None:
+            summary_data = DataFrame(dict(
+                cooks_d=self.cooks_distance[0],
+                standard_resid=self.resid_studentized,
+                hat_diag=self.hat_matrix_diag,
+                dffits_internal=self.d_fittedvalues_scaled),
+                index=row_labels)
+        else:
+            summary_data = DataFrame(dict(
+                cooks_d=self.cooks_distance[0],
+                # standard_resid=self.resid_studentized,
+                # hat_diag=self.hat_matrix_diag,
+                dffits_internal=self.d_fittedvalues_scaled),
+                index=row_labels)
+
         # NOTE: if we do not give columns, order of above will be arbitrary
         dfbeta = DataFrame(self.dfbetas, columns=beta_labels,
                            index=row_labels)
@@ -1244,8 +1381,8 @@ class GLMInfluence(MLEInfluence):
         pearson residuals by default, and
         hii is the diagonal of the hat matrix.
         """
-        hii = self.hat_matrix_diag
-        return self.resid / np.sqrt(self.scale * (1 - hii))
+        # redundant with scaled resid_pearson, keep for docstring for now
+        return super().resid_studentized
 
     # same computation as OLS
     @cache_readonly
@@ -1307,7 +1444,6 @@ class GLMInfluence(MLEInfluence):
     def _fittedvalues_one(self):
         """experimental code
         """
-        import warnings
         warnings.warn('this ignores offset and exposure', UserWarning)
         # TODO: we need to handle offset, exposure and weights
         # use original model exog not transformed influence exog

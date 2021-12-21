@@ -6,6 +6,7 @@ Author: Josef Perktod
 License: BSD-3
 """
 
+import warnings
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 
@@ -319,6 +320,17 @@ models = [
     (NegativeBinomial, {"loglike_method": 'geometric'}, np.array([mu])),
     ]
 
+models_influ = [
+    Logit,
+    Probit,
+    Poisson,
+    NegativeBinomialP,
+    GeneralizedPoisson,
+    ZeroInflatedPoisson,
+    ZeroInflatedGeneralizedPoisson,
+    ZeroInflatedNegativeBinomialP,
+    ]
+
 
 def get_data_simulated():
     np.random.seed(987456348)
@@ -370,3 +382,32 @@ def test_distr(case):
         dia = res.get_diagnostic()
         # fig = dia.plot_probs();
         # fig.suptitle(cls_model.__name__ + repr(kwds), fontsize=16)
+
+    if cls_model in models_influ:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=UserWarning)
+            # ZI models warn about missint hat_matrix_diag
+            influ = res.get_influence()
+            influ.summary_frame()
+
+        assert influ.resid.shape == (len(y2), )
+
+        try:
+            resid = influ.resid_score_factor()
+            assert resid.shape == (len(y2), )
+        except AttributeError:
+            # no score_factor in ZI models
+            pass
+        resid = influ.resid_score()
+        assert resid.shape == (len(y2), )
+
+        f_sc = influ.d_fittedvalues_scaled  # requires se from get_prediction()
+        assert f_sc.shape == (len(y2), )
+
+        try:
+            with warnings.catch_warnings():
+                # ZI models warn about missint hat_matrix_diag
+                warnings.simplefilter("ignore", category=UserWarning)
+                influ.plot_influence()
+        except ImportError:
+            pass

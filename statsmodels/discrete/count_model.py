@@ -101,6 +101,11 @@ class GenericZeroInflated(CountModel):
         self._init_keys.extend(['exog_infl', 'inflation'])
         self._null_drop_keys = ['exog_infl']
 
+    def _get_exogs(self):
+        """list of exogs, for internal use in post-estimation
+        """
+        return (self.exog, self.exog_infl)
+
     def loglike(self, params):
         """
         Loglikelihood of Generic Zero Inflated model.
@@ -257,6 +262,7 @@ class GenericZeroInflated(CountModel):
 
         mu = self.model_main.predict(params_main)
 
+        # TODO: need to allow for complex to use CS numerical derivatives
         dldp = np.zeros((self.exog.shape[0], self.k_exog), dtype=np.float64)
         dldw = np.zeros_like(self.exog_infl, dtype=np.float64)
 
@@ -509,10 +515,67 @@ class GenericZeroInflated(CountModel):
 
     def _deriv_mean_dparams(self, params):
         """
-        NotImplemented Derivative of the expected endog with respect to the
-        parameters.
+        Derivative of the expected endog with respect to the parameters.
+
+        Parameters
+        ----------
+        params : ndarray
+            parameter at which score is evaluated
+
+        Returns
+        -------
+        The value of the derivative of the expected endog with respect
+        to the parameter vector.
+        """
+        params_infl = params[:self.k_inflate]
+        params_main = params[self.k_inflate:]
+
+        w = self.model_infl.predict(params_infl)
+        w = np.clip(w, np.finfo(float).eps, 1 - np.finfo(float).eps)
+        mu = self.model_main.predict(params_main)
+
+        score_infl = self.model_infl._deriv_mean_dparams(params_infl)
+        score_main = self.model_main._deriv_mean_dparams(params_main)
+
+        dmat_infl = - mu[:, None] * score_infl
+        dmat_main = (1 - w[:, None]) * score_main
+
+        dmat = np.column_stack((dmat_infl, dmat_main))
+        return dmat
+
+    def _deriv_score_obs_dendog(self, params):
+        """derivative of score_obs w.r.t. endog
+
+        Parameters
+        ----------
+        params : ndarray
+            parameter at which score is evaluated
+
+        Returns
+        -------
+        derivative : ndarray_2d
+            The derivative of the score_obs with respect to endog.
         """
         raise NotImplementedError
+
+        # The below currently does not work, discontinuity at zero
+        # see https://github.com/statsmodels/statsmodels/pull/7951#issuecomment-996355875  # noqa
+        from statsmodels.tools.numdiff import _approx_fprime_scalar
+        endog_original = self.endog
+
+        def f(y):
+            if y.ndim == 2 and y.shape[1] == 1:
+                y = y[:, 0]
+            self.endog = y
+            self.model_main.endog = y
+            sf = self.score_obs(params)
+            self.endog = endog_original
+            self.model_main.endog = endog_original
+            return sf
+
+        ds = _approx_fprime_scalar(self.endog[:, None], f, epsilon=1e-2)
+
+        return ds
 
 
 class ZeroInflatedPoisson(GenericZeroInflated):
@@ -918,6 +981,42 @@ class ZeroInflatedResults(CountResults):
                                         agg_weights=agg_weights,
                                         pred_kwds=pred_kwds)
         return res
+
+    def get_influence(self):
+        """
+        Get an instance of MLEInfluence with influence and outlier measures
+
+        See notes section for influence measures that do not apply for
+        zero inflated models.
+
+        Returns
+        -------
+        infl : MLEInfluence instance
+            The instance has methods to calculate the main influence and
+            outlier measures as attributes.
+
+        See Also
+        --------
+        statsmodels.stats.outliers_influence.MLEInfluence
+
+        Notes
+        -----
+        ZeroInflated models have functions that are not differentiable
+        with respect to sample endog if endog=0.
+        This means that generalized leverage cannot be computed in the usual
+        definition.
+
+        Currently, both the generalized leverage, in `hat_matrix_diag attribute
+        and studetized residuals are not available.
+        In the influence plot generalized leverage is replaced by a hat matrix
+        diagonal that only takes combined exog into account, computed in the
+        same way as for OLS. This is a measure for exog outliers but does
+        not take specific features of the model into account.
+
+        """
+        # same as sumper in DiscreteResults, only added for docstring
+        from statsmodels.stats.outliers_influence import MLEInfluence
+        return MLEInfluence(self)
 
 
 class ZeroInflatedPoissonResults(ZeroInflatedResults):
