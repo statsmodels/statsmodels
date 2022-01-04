@@ -166,15 +166,25 @@ zinegbin = zinegativebinomial_gen(name='zinegbin',
 class truncatedpoisson_gen(rv_discrete):
     '''Truncated Poisson discrete random variable
     '''
+    # TODO: need cdf, and rvs
+
     def _argcheck(self, mu, truncation):
+        # this does not work
+        # vector bound breaks some generic methods
+        # self.a = truncation + 1 # max(truncation + 1, 0)
         return (mu >= 0) & (truncation >= 0)
+
+    def _get_support(self, mu, truncation):
+        return truncation + 1, self.b
 
     def _logpmf(self, x, mu, truncation):
         pmf = 0
         for i in range(int(np.max(truncation)) + 1):
-            pmf += poisson.pmf(truncation, mu)
+            pmf += poisson.pmf(i, mu)
 
-        return poisson.logpmf(x, mu) - np.log(1 - pmf)
+        logpmf_ = poisson.logpmf(x, mu) - np.log(1 - pmf)
+        #logpmf_[x < truncation + 1] = - np.inf
+        return logpmf_
 
     def _pmf(self, x, mu, truncation):
         return np.exp(self._logpmf(x, mu, truncation))
@@ -188,14 +198,18 @@ class truncatednegbin_gen(rv_discrete):
     def _argcheck(self, mu, alpha, p, truncation):
         return (mu >= 0) & (truncation >= 0)
 
+    def _get_support(self, mu, alpha, p, truncation):
+        return truncation + 1, self.b
+
     def _logpmf(self, x, mu, alpha, p, truncation):
+        size, prob = self.convert_params(mu, alpha, p)
         pmf = 0
         for i in range(int(np.max(truncation)) + 1):
-            size, prob = self.convert_params(mu, alpha, p)
-            pmf += nbinom.pmf(truncation, size, prob)
+            pmf += nbinom.pmf(i, size, prob)
 
-        size, prob = self.convert_params(mu, alpha, p)
-        return nbinom.logpmf(x, size, prob) - np.log(1 - pmf)
+        logpmf_ = nbinom.logpmf(x, size, prob) - np.log(1 - pmf)
+        # logpmf_[x < truncation + 1] = - np.inf
+        return logpmf_
 
     def _pmf(self, x, mu, alpha, p, truncation):
         return np.exp(self._logpmf(x, mu, alpha, p, truncation))

@@ -324,13 +324,15 @@ class TruncatedPoisson(GenericTruncated):
             return np.exp(linpred) / (1 - np.exp(-np.exp(linpred)))
         elif which == 'linear':
             return linpred
+        elif which == 'mean-main':
+            return np.exp(linpred)
         elif which == 'prob':
             if count_prob is not None:
                 counts = np.atleast_2d(count_prob)
             else:
                 counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
             mu = self.predict(params, exog=exog, exposure=exposure,
-                              offset=offset)[:,None]
+                              offset=offset, which="mean-main")[:, None]
             return self.model_dist.pmf(counts, mu, self.trunc)
         else:
             raise TypeError(
@@ -419,13 +421,15 @@ class TruncatedNegativeBinomialP(GenericTruncated):
             return np.exp(linpred) / (1 - np.exp(-np.exp(linpred)))
         elif which == 'linear':
             return linpred
+        elif which == 'mean-main':
+            return np.exp(linpred)
         elif which == 'prob':
             if count_prob is not None:
                 counts = np.atleast_2d(count_prob)
             else:
                 counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
             mu = self.predict(params, exog=exog, exposure=exposure,
-                              offset=offset)[:,None]
+                              offset=offset, which="mean-main")[:, None]
             return self.model_dist.pmf(counts, mu, params[-1],
                 self.model_main.parameterization, self.trunc)
         else:
@@ -515,13 +519,15 @@ class TruncatedGeneralizedPoisson(GenericTruncated):
             return np.exp(linpred) / (1 - np.exp(-np.exp(linpred)))
         elif which == 'linear':
             return linpred
+        elif which == 'mean-main':
+            return np.exp(linpred)
         elif which == 'prob':
             if count_prob is not None:
                 counts = np.atleast_2d(count_prob)
             else:
                 counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
             mu = self.predict(params, exog=exog, exposure=exposure,
-                              offset=offset)[:,None]
+                              offset=offset, which="mean-main")[:, None]
             return self.model_dist.pmf(counts, mu, params[-1],
                 self.model_main.parametrization, self.trunc)
         else:
