@@ -12,8 +12,6 @@ Journal of Forecasting, 19(2), 287-290.
 Fioruci, J. A., Pellegrini, T. R., Louzada, F., & Petropoulos, F. (2015).
 The optimized theta method. arXiv preprint arXiv:1503.03529.
 """
-from statsmodels.compat.pandas import NumericIndex
-
 from typing import TYPE_CHECKING, Optional, Tuple
 
 import numpy as np
@@ -648,7 +646,7 @@ class ThetaModelResults:
 
         ax = fig.add_subplot(111)
         nobs = self.model.endog_orig.shape[0]
-        index = NumericIndex(np.arange(nobs))
+        index = pd.Index(np.arange(nobs))
         if in_sample:
             if isinstance(self.model.endog_orig, pd.Series):
                 index = self.model.endog_orig.index

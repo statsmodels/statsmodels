@@ -1,4 +1,4 @@
-from statsmodels.compat.pandas import PD_LT_1_0_0, NumericIndex
+from statsmodels.compat.pandas import PD_LT_1_0_0, is_int_index
 from statsmodels.compat.pytest import pytest_warns
 
 from typing import Hashable, Tuple
@@ -39,7 +39,7 @@ def index(request):
     elif param == "range":
         idx = pd.RangeIndex(0, 123)
     elif param == "int64":
-        idx = NumericIndex(np.arange(123))
+        idx = pd.Index(np.arange(123))
     elif param == "fib":
         fib = [0, 1]
         for _ in range(113):
@@ -68,7 +68,15 @@ def test_time_trend_smoke(index, forecast_index):
     tt.in_sample(index)
     steps = 83 if forecast_index is None else len(forecast_index)
     warn = None
-    if type(index) is NumericIndex and np.any(np.diff(index) != 1) or (type(index) is pd.Index and max(index) > 2 ** 63 and forecast_index is None):
+    if (
+        is_int_index(index)
+        and np.any(np.diff(index) != 1)
+        or (
+            type(index) is pd.Index
+            and max(index) > 2 ** 63
+            and forecast_index is None
+        )
+    ):
         warn = UserWarning
     with pytest_warns(warn):
         tt.out_of_sample(steps, index, forecast_index)
@@ -92,7 +100,15 @@ def test_seasonality_smoke(index, forecast_index):
     s.in_sample(index)
     steps = 83 if forecast_index is None else len(forecast_index)
     warn = None
-    if type(index) is NumericIndex and np.any(np.diff(index) != 1) or (type(index) is pd.Index and max(index) > 2 ** 63 and forecast_index is None):
+    if (
+        is_int_index(index)
+        and np.any(np.diff(index) != 1)
+        or (
+            type(index) is pd.Index
+            and max(index) > 2 ** 63
+            and forecast_index is None
+        )
+    ):
         warn = UserWarning
     with pytest_warns(warn):
         s.out_of_sample(steps, index, forecast_index)
@@ -112,7 +128,15 @@ def test_fourier_smoke(index, forecast_index):
     f.in_sample(index)
     steps = 83 if forecast_index is None else len(forecast_index)
     warn = None
-    if type(index) is NumericIndex and np.any(np.diff(index) != 1) or (type(index) is pd.Index and max(index) > 2 ** 63 and forecast_index is None):
+    if (
+        is_int_index(index)
+        and np.any(np.diff(index) != 1)
+        or (
+            type(index) is pd.Index
+            and max(index) > 2 ** 63
+            and forecast_index is None
+        )
+    ):
         warn = UserWarning
     with pytest_warns(warn):
         f.out_of_sample(steps, index, forecast_index)
@@ -238,10 +262,8 @@ def test_time_trend(index):
     assert np.all(const == 1)
     pd.testing.assert_index_equal(const.index, index)
     warn = None
-    if (
-        type(index) is NumericIndex
-        and np.any(np.diff(index) != 1)
-        or (type(index) is pd.Index and max(index) > 2 ** 63)
+    if (is_int_index(index) and np.any(np.diff(index) != 1)) or (
+        type(index) is pd.Index and max(index) > 2 ** 63
     ):
         warn = UserWarning
     with pytest_warns(warn):
@@ -290,7 +312,7 @@ def test_seasonality(index):
     np.testing.assert_equal(expected, np.asarray(exog))
 
     warn = None
-    if (type(index) is NumericIndex and np.any(np.diff(index) != 1)) or (
+    if (is_int_index(index) and np.any(np.diff(index) != 1)) or (
         type(index) is pd.Index and max(index) > 2 ** 63
     ):
         warn = UserWarning
@@ -601,7 +623,7 @@ def test_drop_two_consants(time_index):
     "index",
     [
         pd.RangeIndex(0, 200),
-        NumericIndex(np.arange(200)),
+        pd.Index(np.arange(200)),
         pd.date_range("2000-1-1", freq="M", periods=200),
         pd.period_range("2000-1-1", freq="M", periods=200),
     ],
