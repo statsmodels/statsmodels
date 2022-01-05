@@ -6,7 +6,6 @@ from statsmodels.stats.anova import AnovaRM
 from numpy.testing import (assert_array_almost_equal, assert_raises,
                            assert_equal)
 
-
 DV = [7, 3, 6, 6, 5, 8, 6, 7,
       7, 11, 9, 11, 10, 10, 11, 11,
       8, 14, 10, 11, 12, 10, 11, 12,
@@ -108,13 +107,13 @@ def test_three_factors_repeated_measures_anova():
     Results reproduces R `ezANOVA` function from library ez
     """
     df = AnovaRM(data, 'DV', 'id', within=['A', 'B', 'D']).fit()
-    a = [[1,  7,  8.7650709, 0.021087505],
-         [2, 14,  8.4985785, 0.003833921],
-         [1,  7, 20.5076546, 0.002704428],
-         [2, 14,  0.8457797, 0.450021759],
-         [1,  7, 21.7593382, 0.002301792],
-         [2, 14,  6.2416695, 0.011536846],
-         [2, 14,  5.4253359, 0.018010647]]
+    a = [[1, 7, 8.7650709, 0.021087505],
+         [2, 14, 8.4985785, 0.003833921],
+         [1, 7, 20.5076546, 0.002704428],
+         [2, 14, 0.8457797, 0.450021759],
+         [1, 7, 21.7593382, 0.002301792],
+         [2, 14, 6.2416695, 0.011536846],
+         [2, 14, 5.4253359, 0.018010647]]
     assert_array_almost_equal(df.anova_table.iloc[:, [1, 2, 0, 3]].values,
                               a, decimal=5)
 
@@ -149,7 +148,9 @@ def test_repeated_measures_aggregation():
 
 def test_repeated_measures_aggregation_one_subject_duplicated():
     df1 = AnovaRM(data, 'DV', 'id', within=['A', 'B', 'D']).fit()
-    df2 = AnovaRM(data.append(data.loc[data['id'] == '1', :]).reset_index(),
+    data2 = pd.concat([data, data.loc[data['id'] == '1', :]], axis=0)
+    data2 = data2.reset_index()
+    df2 = AnovaRM(data2,
                   'DV', 'id', within=['A', 'B', 'D'],
                   aggregate_func=np.mean).fit()
 
