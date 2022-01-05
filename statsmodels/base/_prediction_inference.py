@@ -431,12 +431,11 @@ def get_prediction_glm(self, exog=None, transform=True,
         Instance of linear prediction results used for confidence intervals
         based on endpoint transformation.
     link : instance of link function
-        If no link function is provided, then the ``mmodel.family.link` is
-        used.
+        If no link function is provided, then the `model.family.link` is used.
     pred_kwds : dict
         Some models can take additional keyword arguments, such as offset or
-        additional exog in multi-part models.
-        See the predict method of the model for the details.
+        additional exog in multi-part models. See the predict method of the
+        model for the details.
 
     Returns
     -------

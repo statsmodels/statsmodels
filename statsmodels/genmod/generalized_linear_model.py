@@ -1452,6 +1452,7 @@ class GLM(base.LikelihoodModel):
 get_prediction_doc = Docstring(pred.get_prediction_glm.__doc__)
 get_prediction_doc.remove_parameters("pred_kwds")
 
+
 class GLMResults(base.LikelihoodModelResults):
     """
     Class to contain GLM results.
