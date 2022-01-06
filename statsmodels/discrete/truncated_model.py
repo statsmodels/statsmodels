@@ -416,9 +416,13 @@ class TruncatedNegativeBinomialP(GenericTruncated):
 
         fitted = np.dot(exog, params[:exog.shape[1]])
         linpred = fitted + exposure + offset
+        alpha = params[-1]
 
         if which == 'mean':
-            return np.exp(linpred) / (1 - np.exp(-np.exp(linpred)))
+            mu = np.exp(linpred)
+            p = self.model_main.parameterization
+            prob_zero = (1 + alpha * mu**(p-1))**(- 1 / alpha)
+            return mu / (1 - prob_zero)
         elif which == 'linear':
             return linpred
         elif which == 'mean-main':

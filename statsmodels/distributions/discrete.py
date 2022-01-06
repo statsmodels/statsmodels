@@ -172,7 +172,7 @@ class truncatedpoisson_gen(rv_discrete):
         # this does not work
         # vector bound breaks some generic methods
         # self.a = truncation + 1 # max(truncation + 1, 0)
-        return (mu >= 0) & (truncation >= 0)
+        return (mu >= 0) & (truncation >= -1)
 
     def _get_support(self, mu, truncation):
         return truncation + 1, self.b
@@ -196,7 +196,7 @@ class truncatednegbin_gen(rv_discrete):
     '''Truncated Generalized Negative Binomial (NB-P) discrete random variable
     '''
     def _argcheck(self, mu, alpha, p, truncation):
-        return (mu >= 0) & (truncation >= 0)
+        return (mu >= 0) & (truncation >= -1)
 
     def _get_support(self, mu, alpha, p, truncation):
         return truncation + 1, self.b
