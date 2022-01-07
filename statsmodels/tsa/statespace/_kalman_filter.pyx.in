@@ -827,7 +827,7 @@ cdef class {{prefix}}KalmanFilter(object):
 
         Is usually called to reset the filter to the beginning.
         """
-        if not t == 0 and t >= self.model.nobs:
+        if not t == 0 and t >= <unsigned int>self.model.nobs:
             raise IndexError("Observation index out of range")
         self.t = t
 

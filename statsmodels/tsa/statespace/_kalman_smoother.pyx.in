@@ -485,7 +485,7 @@ cdef class {{prefix}}KalmanSmoother(object):
         explicitly reset the smoother using the `reset` method.
         """
         # Make sure the seek location is valid
-        if not t == 0 and t >= self.model.nobs:
+        if not t == 0 and t >= <unsigned int>self.model.nobs:
             raise IndexError("Observation index out of range")
 
         # Make sure we have not changed filter methods in-between seeking
