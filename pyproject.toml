@@ -1,8 +1,10 @@
 [build-system]
+# These are strictly build requirements. Runtime requirements are listed in
+# INSTALL_REQUIRES in setup.py
 requires = [
-    "setuptools",
-    "wheel",
-    "cython>=0.29.22",
+    "setuptools>=59.2.0",
+    "wheel>=0.37.1",
+    "cython>=0.29.26,<3",  # Sync with CYTHON_MIN_VER in setup
     "oldest-supported-numpy",
     "scipy>=1.3",
 ]
