@@ -173,3 +173,13 @@ class TestHurdlePoissonR():
         assert_allclose(res1.bse, pt2[:, 1], atol=1e-5)
         assert_allclose(res1.tvalues, pt2[:, 2], rtol=5e-4, atol=5e-4)
         assert_allclose(res1.pvalues, pt2[:, 3], rtol=5e-4, atol=1e-7)
+
+        assert_equal(res1.df_resid, res2.df_residual)
+        assert_equal(res1.df_model, res2.df_null - res2.df_residual)
+        assert_allclose(res1.aic, res2.aic, rtol=1e-8)
+
+        # we have zero model first
+        idx = np.concatenate((np.arange(3, 6), np.arange(3)))
+        vcov = res2.vcov[idx[:, None], idx]
+        assert_allclose(np.asarray(res1.cov_params()), vcov,
+                        rtol=1e-4, atol=1e-8)

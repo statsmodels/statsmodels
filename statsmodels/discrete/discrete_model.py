@@ -4462,7 +4462,8 @@ class DiscreteResults(base.LikelihoodModelResults):
         Akaike information criterion.  `-2*(llf - p)` where `p` is the number
         of regressors including the intercept.
         """
-        return -2*(self.llf - (self.df_model+1))
+        k_extra = getattr(self.model, 'k_extra', 0)
+        return -2*(self.llf - (self.df_model + 1 + k_extra))
 
     @cache_readonly
     def bic(self):
@@ -4470,7 +4471,8 @@ class DiscreteResults(base.LikelihoodModelResults):
         Bayesian information criterion. `-2*llf + ln(nobs)*p` where `p` is the
         number of regressors including the intercept.
         """
-        return -2*self.llf + np.log(self.nobs)*(self.df_model+1)
+        k_extra = getattr(self.model, 'k_extra', 0)
+        return -2*self.llf + np.log(self.nobs)*(self.df_model + 1 + k_extra)
 
     @cache_readonly
     def im_ratio(self):
@@ -4501,7 +4503,8 @@ class DiscreteResults(base.LikelihoodModelResults):
         Inference; Springer New York.
         """
         crit = crit.lower()
-        k_params = self.df_model + 1 + dk_params
+        k_extra = getattr(self.model, 'k_extra', 0)
+        k_params = self.df_model + 1 + k_extra + dk_params
 
         if crit == "aic":
             return -2 * self.llf + 2 * k_params

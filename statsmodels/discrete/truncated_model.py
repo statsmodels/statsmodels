@@ -1003,7 +1003,17 @@ class Hurdle(CountModel):
         result._results.model = self
         result.mle_retvals['converged'] = [results1.mle_retvals['converged'], results2.mle_retvals['converged']]
         result._results.params = np.append(results1._results.params, results2._results.params)
+        # TODO: the following should be in __init__ or initialize
         result._results.df_model += results2._results.df_model
+        self.k_extra1 += getattr(results1._results, "k_extra", 0)
+        self.k_extra2 += getattr(results2._results, "k_extra", 0)
+        self.k_extra = (self.k_extra1 + self.k_extra2 + 1)
+
+        # fix up cov_params
+        from scipy.linalg import block_diag
+        result._results.normalized_cov_params = (
+            block_diag(results1._results.cov_params(),
+                       results2._results.cov_params()))
 
         modelfit = self.result(self, result._results, results1, results2)
         result = self.result_wrapper(modelfit)
@@ -1081,6 +1091,8 @@ class HurdleResults(CountResults):
                 cov_type=cov_type, cov_kwds=cov_kwds, use_t=use_t)
         self.model1 = model1
         self.model2 = model2
+        # TODO: this is to fix df_resid, should be automatic but is not
+        self.df_resid = self.model.endog.shape[0] - len(self.params)
 
     @cache_readonly
     def llnull(self):

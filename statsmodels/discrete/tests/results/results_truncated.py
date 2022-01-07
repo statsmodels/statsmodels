@@ -19,6 +19,8 @@ hurdle_poisson.n = 3629
 hurdle_poisson.df_null = 3627
 hurdle_poisson.df_residual = 3623
 hurdle_poisson.loglik = -13612.9091771797
+hurdle_poisson.aic = 27237.81835436
+hurdle_poisson.bic = 27274.9986288
 hurdle_poisson.vcov = np.array([
     0.000239404800324688, -4.59559682721834e-05, -4.59865258972631e-05, 0, 0,
     0, -4.59559682721834e-05, 2.54346275490526e-05, -1.20164687288645e-06, 0,
