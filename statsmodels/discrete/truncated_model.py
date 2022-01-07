@@ -169,10 +169,15 @@ class GenericTruncated(CountModel):
             model = self.model_main.__class__(self.endog, self.exog,
                                               offset=offset)
             start_params = model.fit(disp=0).params
-        mlefit = super(GenericTruncated, self).fit(start_params=start_params,
-                       method=method, maxiter=maxiter, disp=disp,
-                       full_output=full_output, callback=lambda x:x,
-                       **kwargs)
+        mlefit = super(GenericTruncated, self).fit(
+            start_params=start_params,
+            method=method,
+            maxiter=maxiter,
+            disp=disp,
+            full_output=full_output,
+            callback=lambda x: x,
+            **kwargs
+            )
 
         zipfit = self.result(self, mlefit._results)
         result = self.result_wrapper(zipfit)
@@ -186,7 +191,8 @@ class GenericTruncated(CountModel):
 
     fit.__doc__ = DiscreteModel.fit.__doc__
 
-    def fit_regularized(self, start_params=None, method='l1',
+    def fit_regularized(
+            self, start_params=None, method='l1',
             maxiter='defined_by_method', full_output=1, disp=1, callback=None,
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
             qc_tol=0.03, **kwargs):
@@ -205,7 +211,8 @@ class GenericTruncated(CountModel):
             start_params = model.fit_regularized(
                 start_params=start_params, method=method, maxiter=maxiter,
                 full_output=full_output, disp=0, callback=callback,
-                alpha=alpha_p, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
+                alpha=alpha_p, trim_mode=trim_mode,
+                auto_trim_tol=auto_trim_tol,
                 size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs).params
         cntfit = super(CountModel, self).fit_regularized(
                 start_params=start_params, method=method, maxiter=maxiter,
@@ -434,8 +441,8 @@ class TruncatedNegativeBinomialP(GenericTruncated):
                 counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
             mu = self.predict(params, exog=exog, exposure=exposure,
                               offset=offset, which="mean-main")[:, None]
-            return self.model_dist.pmf(counts, mu, params[-1],
-                self.model_main.parameterization, self.trunc)
+            p = self.model_main.parameterization
+            return self.model_dist.pmf(counts, mu, params[-1], p, self.trunc)
         else:
             raise TypeError(
                 "argument wich == %s not handled" % which)
@@ -478,9 +485,11 @@ class TruncatedGeneralizedPoisson(GenericTruncated):
             missing=missing,
             **kwargs
             )
-        self.model_main = GeneralizedPoisson(self.endog, self.exog,
-                                            exposure=exposure,
-                                            offset=offset, p=p)
+        self.model_main = GeneralizedPoisson(self.endog,
+                                             self.exog,
+                                             exposure=exposure,
+                                             offset=offset,
+                                             p=p)
         self.k_extra = self.model_main.k_extra
         self.exog_names.extend(self.model_main.exog_names[-self.k_extra:])
         self.model_dist = None
@@ -532,8 +541,8 @@ class TruncatedGeneralizedPoisson(GenericTruncated):
                 counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
             mu = self.predict(params, exog=exog, exposure=exposure,
                               offset=offset, which="mean-main")[:, None]
-            return self.model_dist.pmf(counts, mu, params[-1],
-                self.model_main.parametrization, self.trunc)
+            p = self.model_main.parametrization
+            return self.model_dist.pmf(counts, mu, params[-1], p, self.trunc)
         else:
             raise TypeError(
                 "argument wich == %s not handled" % which)
@@ -617,8 +626,10 @@ class GenericCensored(CountModel):
         """
         llf_main = self.model_main.loglikeobs(params)
 
-        llf = np.concatenate((llf_main[self.zero_idx],
-            np.log(1 - np.exp(llf_main[self.nonzero_idx]))))
+        llf = np.concatenate(
+            (llf_main[self.zero_idx],
+             np.log(1 - np.exp(llf_main[self.nonzero_idx])))
+            )
 
         return llf
 
@@ -640,10 +651,12 @@ class GenericCensored(CountModel):
         score_main = self.model_main.score_obs(params)
         llf_main = self.model_main.loglikeobs(params)
 
-        score = np.concatenate((score_main[self.zero_idx],
+        score = np.concatenate((
+            score_main[self.zero_idx],
             (score_main[self.nonzero_idx].T *
-            -np.exp(llf_main[self.nonzero_idx]) /
-            (1 - np.exp(llf_main[self.nonzero_idx]))).T))
+             -np.exp(llf_main[self.nonzero_idx]) /
+             (1 - np.exp(llf_main[self.nonzero_idx]))).T
+            ))
 
         return score
 
@@ -674,10 +687,14 @@ class GenericCensored(CountModel):
             model = self.model_main.__class__(self.endog, self.exog,
                                               offset=offset)
             start_params = model.fit(disp=0).params
-        mlefit = super(GenericCensored, self).fit(start_params=start_params,
-                       maxiter=maxiter, disp=disp,
-                       full_output=full_output, callback=lambda x:x,
-                       **kwargs)
+        mlefit = super(GenericCensored, self).fit(
+            start_params=start_params,
+            maxiter=maxiter,
+            disp=disp,
+            full_output=full_output,
+            callback=lambda x: x,
+            **kwargs
+            )
 
         zipfit = self.result(self, mlefit._results)
         result = self.result_wrapper(zipfit)
@@ -691,7 +708,8 @@ class GenericCensored(CountModel):
 
     fit.__doc__ = DiscreteModel.fit.__doc__
 
-    def fit_regularized(self, start_params=None, method='l1',
+    def fit_regularized(
+            self, start_params=None, method='l1',
             maxiter='defined_by_method', full_output=1, disp=1, callback=None,
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
             qc_tol=0.03, **kwargs):
@@ -710,7 +728,8 @@ class GenericCensored(CountModel):
             start_params = model.fit_regularized(
                 start_params=start_params, method=method, maxiter=maxiter,
                 full_output=full_output, disp=0, callback=callback,
-                alpha=alpha_p, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
+                alpha=alpha_p, trim_mode=trim_mode,
+                auto_trim_tol=auto_trim_tol,
                 size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs).params
         cntfit = super(CountModel, self).fit_regularized(
                 start_params=start_params, method=method, maxiter=maxiter,
@@ -775,8 +794,8 @@ class CensoredPoisson(GenericCensored):
     def __init__(self, endog, exog, offset=None,
                  exposure=None, missing='none', **kwargs):
         super(CensoredPoisson, self).__init__(endog, exog, offset=offset,
-                                               exposure=exposure,
-                                               missing=missing, **kwargs)
+                                              exposure=exposure,
+                                              missing=missing, **kwargs)
         self.model_main = Poisson(np.zeros_like(self.endog), self.exog)
         self.model_dist = None
         self.result = GenericTruncatedResults
@@ -810,9 +829,10 @@ class CensoredGeneralizedPoisson(GenericCensored):
 
     def __init__(self, endog, exog, offset=None, p=2,
                  exposure=None, missing='none', **kwargs):
-        super(CensoredGeneralizedPoisson, self).__init__(endog, exog, offset=offset,
-                                               exposure=exposure,
-                                               missing=missing, **kwargs)
+        super(CensoredGeneralizedPoisson, self).__init__(
+            endog, exog, offset=offset, exposure=exposure,
+            missing=missing, **kwargs)
+
         self.model_main = GeneralizedPoisson(
             np.zeros_like(self.endog), self.exog)
         self.model_dist = None
@@ -847,10 +867,18 @@ class CensoredNegativeBinomialP(GenericCensored):
 
     def __init__(self, endog, exog, offset=None, p=2,
                  exposure=None, missing='none', **kwargs):
-        super(CensoredNegativeBinomialP, self).__init__(endog, exog, offset=offset,
-                                                       exposure=exposure,
-                                                       missing=missing, **kwargs)
-        self.model_main = NegativeBinomialP(np.zeros_like(self.endog), self.exog, p=p)
+        super(CensoredNegativeBinomialP, self).__init__(
+            endog,
+            exog,
+            offset=offset,
+            exposure=exposure,
+            missing=missing,
+            **kwargs
+            )
+        self.model_main = NegativeBinomialP(np.zeros_like(self.endog),
+                                            self.exog,
+                                            p=p
+                                            )
         self.model_dist = None
         self.result = GenericTruncatedResults
         self.result_wrapper = GenericTruncatedResultsWrapper
@@ -884,9 +912,14 @@ class Censored(GenericCensored):
     def __init__(self, endog, exog, model=Poisson,
                  distribution=truncatedpoisson, offset=None,
                  exposure=None, missing='none', **kwargs):
-        super(Censored, self).__init__(endog, exog, offset=offset,
-                                               exposure=exposure,
-                                               missing=missing, **kwargs)
+        super(Censored, self).__init__(
+            endog,
+            exog,
+            offset=offset,
+            exposure=exposure,
+            missing=missing,
+            **kwargs
+            )
         self.model_main = model(np.zeros_like(self.endog), self.exog)
         self.model_dist = distribution
         self.result = GenericTruncatedResults
@@ -919,7 +952,7 @@ class Hurdle(CountModel):
         Define parameterization parameter zero hurdle model family.
         Used when zerodist='negbin'.
     """ % {'params': base._model_params_doc,
-           'extra_params' :
+           'extra_params':
            """offset : array_like
         Offset is added to the linear prediction with coefficient equal to 1.
     exposure : array_like
@@ -929,12 +962,17 @@ class Hurdle(CountModel):
     """ + base._missing_param_doc}
 
     def __init__(self, endog, exog, offset=None,
-                       dist="poisson", zerodist="poisson",
-                       p=2, pzero=2,
-                       exposure=None, missing='none', **kwargs):
-        super(Hurdle, self).__init__(endog, exog, offset=offset,
-                                            exposure=exposure,
-                                            missing=missing, **kwargs)
+                 dist="poisson", zerodist="poisson",
+                 p=2, pzero=2,
+                 exposure=None, missing='none', **kwargs):
+        super(Hurdle, self).__init__(
+            endog,
+            exog,
+            offset=offset,
+            exposure=exposure,
+            missing=missing,
+            **kwargs
+            )
         self.exog_names.insert(0, 'inflate_const')
         self.k_extra1 = 0
         self.k_extra2 = 0
@@ -962,7 +1000,8 @@ class Hurdle(CountModel):
         if dist == "poisson":
             self.model2 = TruncatedPoisson(self.endog, self.exog)
         elif dist == "negbin":
-            self.model2 = TruncatedNegativeBinomialP(self.endog, self.exog, p=p)
+            self.model2 = TruncatedNegativeBinomialP(self.endog, self.exog,
+                                                     p=p)
 
     def loglike(self, params):
         """
@@ -983,26 +1022,35 @@ class Hurdle(CountModel):
         --------
 
         """
-        k = int((len(params) - self.k_extra1 - self.k_extra2) / 2) + self.k_extra1
-        return self.model1.loglike(params[:k]) + self.model2.loglike(params[k:])
+        k = int((len(params) - self.k_extra1 - self.k_extra2) / 2
+                ) + self.k_extra1
+        return (self.model1.loglike(params[:k]) +
+                self.model2.loglike(params[k:]))
 
     def fit(self, start_params=None, method='bfgs', maxiter=35,
             full_output=1, disp=1, callback=None,
             cov_type='nonrobust', cov_kwds=None, use_t=None, **kwargs):
-        results1 = self.model1.fit(start_params=start_params,
-                       method=method, maxiter=maxiter, disp=disp,
-                       full_output=full_output, callback=lambda x:x,
-                       **kwargs)
 
-        results2 = self.model2.fit(start_params=start_params,
-                       method=method, maxiter=maxiter, disp=disp,
-                       full_output=full_output, callback=lambda x:x,
-                       **kwargs)
+        results1 = self.model1.fit(
+            start_params=start_params,
+            method=method, maxiter=maxiter, disp=disp,
+            full_output=full_output, callback=lambda x: x,
+            **kwargs
+            )
+
+        results2 = self.model2.fit(
+            start_params=start_params,
+            method=method, maxiter=maxiter, disp=disp,
+            full_output=full_output, callback=lambda x: x,
+            **kwargs
+            )
 
         result = deepcopy(results1)
         result._results.model = self
-        result.mle_retvals['converged'] = [results1.mle_retvals['converged'], results2.mle_retvals['converged']]
-        result._results.params = np.append(results1._results.params, results2._results.params)
+        result.mle_retvals['converged'] = [results1.mle_retvals['converged'],
+                                           results2.mle_retvals['converged']]
+        result._results.params = np.append(results1._results.params,
+                                           results2._results.params)
         # TODO: the following should be in __init__ or initialize
         result._results.df_model += results2._results.df_model
         self.k_extra1 += getattr(results1._results, "k_extra", 0)
@@ -1031,13 +1079,13 @@ class Hurdle(CountModel):
 class GenericTruncatedResults(CountResults):
     __doc__ = _discrete_results_docs % {
         "one_line_description": "A results class for Generic Truncated",
-                    "extra_attr": ""}
+        "extra_attr": ""}
 
 
 class TruncatedPoissonResults(GenericTruncatedResults):
     __doc__ = _discrete_results_docs % {
         "one_line_description": "A results class for Truncated Poisson",
-                    "extra_attr": ""}
+        "extra_attr": ""}
 
     @cache_readonly
     def _dispersion_factor(self):
@@ -1048,8 +1096,9 @@ class TruncatedPoissonResults(GenericTruncatedResults):
 
 class TruncatedNegativeBinomialResults(GenericTruncatedResults):
     __doc__ = _discrete_results_docs % {
-        "one_line_description": "A results class for Truncated Negative Binomial",
-                    "extra_attr": ""}
+        "one_line_description":
+            "A results class for Truncated Negative Binomial",
+        "extra_attr": ""}
 
     @cache_readonly
     def _dispersion_factor(self):
@@ -1082,13 +1131,18 @@ wrap.populate_wrapper(L1GenericTruncatedResultsWrapper,
 
 class HurdleResults(CountResults):
     __doc__ = _discrete_results_docs % {
-        "one_line_description" : "A results class for Hurdle model",
-                    "extra_attr" : ""}
+        "one_line_description": "A results class for Hurdle model",
+        "extra_attr": ""}
 
-    def __init__(self, model, mlefit, model1, model2, cov_type='nonrobust', cov_kwds=None,
-                 use_t=None):
-        super(HurdleResults, self).__init__(model, mlefit,
-                cov_type=cov_type, cov_kwds=cov_kwds, use_t=use_t)
+    def __init__(self, model, mlefit, model1, model2, cov_type='nonrobust',
+                 cov_kwds=None, use_t=None):
+        super(HurdleResults, self).__init__(
+            model,
+            mlefit,
+            cov_type=cov_type,
+            cov_kwds=cov_kwds,
+            use_t=use_t,
+            )
         self.model1 = model1
         self.model2 = model2
         # TODO: this is to fix df_resid, should be automatic but is not
