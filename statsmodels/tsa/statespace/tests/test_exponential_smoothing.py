@@ -451,8 +451,8 @@ class CheckKnownInitialization(object):
         cls.initial_seasonal = None
         if cls.mod.seasonal:
             cls.initial_seasonal = [
-                cls.res.params['initial_seasonal.%d' % i]
-                for i in range(cls.mod.seasonal_periods - 1)]
+                cls.res.params['initial_seasonal.L%d' % i]
+                for i in range(1, cls.mod.seasonal_periods)]
 
         # Get the estimated parameters
         cls.params = cls.res.params[:'initial_level'].drop('initial_level')
@@ -569,8 +569,6 @@ class CheckHeuristicInitialization(object):
         # Create a model with the given known initialization
         endog = cls.mod.data.orig_endog
         initial_seasonal = cls.mod._initial_seasonal
-        if initial_seasonal is not None:
-            initial_seasonal = initial_seasonal[:-1]
         cls.known_mod = cls.mod.clone(endog, initialization_method='known',
                                       initial_level=cls.mod._initial_level,
                                       initial_trend=cls.mod._initial_trend,
@@ -640,6 +638,11 @@ class TestHoltWintersHeuristicInitialization(CheckHeuristicInitialization):
         # Get seasonal initial states
         detrended = aust - trend
         initial_seasonal = np.nanmean(detrended.values.reshape(6, 4), axis=0)
+        # The above command gets seasonals for observations 1, 2, 3, 4.
+        # Lagging these four periods gives us initial seasonals for lags
+        # L3, L2, L1, L0, but the state vector is ordered L0, L1, L2, L3, so we
+        # need to reverse the order of this vector.
+        initial_seasonal = initial_seasonal[::-1]
         desired = np.r_[desired, initial_seasonal - np.mean(initial_seasonal)]
 
         assert_allclose(self.init_heuristic, desired)
