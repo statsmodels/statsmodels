@@ -17,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.9]
+        python-version: [3.8]
     steps:
     - name: Checkout
       uses: actions/checkout@v2
