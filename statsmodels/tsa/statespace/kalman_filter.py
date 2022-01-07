@@ -2215,6 +2215,12 @@ class PredictionResults(FilterResults):
         self.ndynamic = ndynamic
         self.nforecast = nforecast
 
+        self._predicted_signal = None
+        self._predicted_signal_cov = None
+        self._filtered_signal = None
+        self._filtered_signal_cov = None
+        self._smoothed_signal = None
+        self._smoothed_signal_cov = None
         self._filtered_forecasts = None
         self._filtered_forecasts_error_cov = None
         self._smoothed_forecasts = None
@@ -2302,7 +2308,7 @@ class PredictionResults(FilterResults):
 
         return getattr(self, _attr)
 
-    def _compute_forecasts(self, states, states_cov):
+    def _compute_forecasts(self, states, states_cov, signal_only=False):
         d = self.obs_intercept
         Z = self.design
         H = self.obs_cov
@@ -2311,17 +2317,83 @@ class PredictionResults(FilterResults):
             d = d[:, None]
 
         if Z.ndim == 2:
-            forecasts = d + Z @ states
-            forecasts_error_cov = (
-                Z[None, ...] @ states_cov.T @ Z.T[None, ...] + H.T).T
+            if not signal_only:
+                forecasts = d + Z @ states
+                forecasts_error_cov = (
+                    Z[None, ...] @ states_cov.T @ Z.T[None, ...] + H.T).T
+            else:
+                forecasts = Z @ states
+                forecasts_error_cov = (
+                    Z[None, ...] @ states_cov.T @ Z.T[None, ...]).T
         else:
-            forecasts = d + (Z * states[None, :, :]).sum(axis=1)
-            tmp = Z[:, None, ...] * states_cov[None, ...]
-            tmp = (tmp[:, :, :, None, :]
-                   * Z.transpose(1, 0, 2)[None, :, None, ...])
-            forecasts_error_cov = (tmp.sum(axis=1).sum(axis=1).T + H.T).T
+            if not signal_only:
+                forecasts = d + (Z * states[None, :, :]).sum(axis=1)
+                tmp = Z[:, None, ...] * states_cov[None, ...]
+                tmp = (tmp[:, :, :, None, :]
+                    * Z.transpose(1, 0, 2)[None, :, None, ...])
+                forecasts_error_cov = (tmp.sum(axis=1).sum(axis=1).T + H.T).T
+            else:
+                forecasts = (Z * states[None, :, :]).sum(axis=1)
+                tmp = Z[:, None, ...] * states_cov[None, ...]
+                tmp = (tmp[:, :, :, None, :]
+                    * Z.transpose(1, 0, 2)[None, :, None, ...])
+                forecasts_error_cov = tmp.sum(axis=1).sum(axis=1)
 
         return forecasts, forecasts_error_cov
+
+    @property
+    def predicted_signal(self):
+        if self._predicted_signal is None:
+            self._predicted_signal, self._predicted_signal_cov = (
+                self._compute_forecasts(self.predicted_state,
+                                        self.predicted_state_cov,
+                                        signal_only=True))
+        return self._predicted_signal
+
+    @property
+    def predicted_signal_cov(self):
+        if self._predicted_signal_cov is None:
+            self._predicted_signal, self._predicted_signal_cov = (
+                self._compute_forecasts(self.predicted_state,
+                                        self.predicted_state_cov,
+                                        signal_only=True))
+        return self._predicted_signal_cov
+
+    @property
+    def filtered_signal(self):
+        if self._filtered_signal is None:
+            self._filtered_signal, self._filtered_signal_cov = (
+                self._compute_forecasts(self.filtered_state,
+                                        self.filtered_state_cov,
+                                        signal_only=True))
+        return self._filtered_signal
+
+    @property
+    def filtered_signal_cov(self):
+        if self._filtered_signal_cov is None:
+            self._filtered_signal, self._filtered_signal_cov = (
+                self._compute_forecasts(self.filtered_state,
+                                        self.filtered_state_cov,
+                                        signal_only=True))
+        return self._filtered_signal_cov
+
+    @property
+    def smoothed_signal(self):
+        if self._smoothed_signal is None:
+            self._smoothed_signal, self._smoothed_signal_cov = (
+                self._compute_forecasts(self.smoothed_state,
+                                        self.smoothed_state_cov,
+                                        signal_only=True))
+        return self._smoothed_signal
+
+    @property
+    def smoothed_signal_cov(self):
+        if self._smoothed_signal_cov is None:
+            self._smoothed_signal, self._smoothed_signal_cov = (
+                self._compute_forecasts(self.smoothed_state,
+                                        self.smoothed_state_cov,
+                                        signal_only=True))
+        return self._smoothed_signal_cov
 
     @property
     def filtered_forecasts_error_cov(self):

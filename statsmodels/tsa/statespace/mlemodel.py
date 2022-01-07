@@ -3223,8 +3223,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         return output
 
     def get_prediction(self, start=None, end=None, dynamic=False,
-                       information_set='predicted', index=None, exog=None,
-                       extend_model=None, extend_kwargs=None, **kwargs):
+                       information_set='predicted', signal_only=False,
+                       index=None, exog=None, extend_model=None,
+                       extend_kwargs=None, **kwargs):
         """
         In-sample prediction and out-of-sample forecasting
 
@@ -3295,9 +3296,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         # Return a new mlemodel.PredictionResults object
         return PredictionResultsWrapper(PredictionResults(
             self, prediction_results, information_set=information_set,
-            row_labels=prediction_index))
+            signal_only=signal_only, row_labels=prediction_index))
 
-    def get_forecast(self, steps=1, **kwargs):
+    def get_forecast(self, steps=1, signal_only=False, **kwargs):
         """
         Out-of-sample forecasts and prediction intervals
 
@@ -3322,10 +3323,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             end = self.nobs + steps - 1
         else:
             end = steps
-        return self.get_prediction(start=self.nobs, end=end, **kwargs)
+        return self.get_prediction(start=self.nobs, end=end,
+                                   signal_only=signal_only, **kwargs)
 
     def predict(self, start=None, end=None, dynamic=False,
-                information_set='predicted', **kwargs):
+                information_set='predicted', signal_only=False, **kwargs):
         """
         In-sample prediction and out-of-sample forecasting
 
@@ -3369,10 +3371,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         # Perform the prediction
         prediction_results = self.get_prediction(
-            start, end, dynamic, information_set=information_set, **kwargs)
+            start, end, dynamic, information_set=information_set,
+            signal_only=signal_only, **kwargs)
         return prediction_results.predicted_mean
 
-    def forecast(self, steps=1, **kwargs):
+    def forecast(self, steps=1, signal_only=False, **kwargs):
         """
         Out-of-sample forecasts
 
@@ -3397,7 +3400,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             end = self.nobs + steps - 1
         else:
             end = steps
-        return self.predict(start=self.nobs, end=end, **kwargs)
+        return self.predict(start=self.nobs, end=end, signal_only=signal_only,
+                            **kwargs)
 
     def simulate(self, nsimulations, measurement_shocks=None,
                  state_shocks=None, initial_state=None, anchor=None,
@@ -4580,7 +4584,7 @@ class PredictionResults(pred.PredictionResults):
     ----------
     """
     def __init__(self, model, prediction_results, row_labels=None,
-                 information_set='predicted'):
+                 information_set='predicted', signal_only=False):
         if model.model.k_endog == 1:
             endog = pd.Series(prediction_results.endog[0],
                               name=model.model.endog_names)
@@ -4591,15 +4595,27 @@ class PredictionResults(pred.PredictionResults):
             endog=endog, predict_dates=row_labels))
         self.prediction_results = prediction_results
 
+        self.information_set = information_set
+        self.signal_only = signal_only
+
         # Get required values
         k_endog, nobs = prediction_results.endog.shape
         res = self.prediction_results.results
         if information_set == 'predicted' and not res.memory_no_forecast_mean:
-            predicted_mean = self.prediction_results.forecasts
+            if not signal_only:
+                predicted_mean = self.prediction_results.forecasts
+            else:
+                predicted_mean = self.prediction_results.predicted_signal
         elif information_set == 'filtered' and not res.memory_no_filtered_mean:
-            predicted_mean = self.prediction_results.filtered_forecasts
+            if not signal_only:
+                predicted_mean = self.prediction_results.filtered_forecasts
+            else:
+                predicted_mean = self.prediction_results.filtered_signal
         elif information_set == 'smoothed':
-            predicted_mean = self.prediction_results.smoothed_forecasts
+            if not signal_only:
+                predicted_mean = self.prediction_results.smoothed_forecasts
+            else:
+                predicted_mean = self.prediction_results.smoothed_signal
         else:
             predicted_mean = np.zeros((k_endog, nobs)) * np.nan
 
@@ -4609,13 +4625,22 @@ class PredictionResults(pred.PredictionResults):
             predicted_mean = predicted_mean.transpose()
 
         if information_set == 'predicted' and not res.memory_no_forecast_cov:
-            var_pred_mean = self.prediction_results.forecasts_error_cov
+            if not signal_only:
+                var_pred_mean = self.prediction_results.forecasts_error_cov
+            else:
+                var_pred_mean = self.prediction_results.predicted_signal_cov
         elif information_set == 'filtered' and not res.memory_no_filtered_mean:
-            var_pred_mean = (
-                self.prediction_results.filtered_forecasts_error_cov)
+            if not signal_only:
+                var_pred_mean = (
+                    self.prediction_results.filtered_forecasts_error_cov)
+            else:
+                var_pred_mean = self.prediction_results.filtered_signal_cov
         elif information_set == 'smoothed':
-            var_pred_mean = (
-                self.prediction_results.smoothed_forecasts_error_cov)
+            if not signal_only:
+                var_pred_mean = (
+                    self.prediction_results.smoothed_forecasts_error_cov)
+            else:
+                var_pred_mean = self.prediction_results.smoothed_signal_cov
         else:
             var_pred_mean = np.zeros((k_endog, k_endog, nobs)) * np.nan
 
