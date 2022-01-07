@@ -531,7 +531,7 @@ cdef class {{prefix}}Statespace(object):
         self._previous_t = self.t
 
         # Set the global time indicator, if valid
-        if t >= self.nobs:
+        if t >= <unsigned int>self.nobs:
             raise IndexError("Observation index out of range")
         self.t = t
 
