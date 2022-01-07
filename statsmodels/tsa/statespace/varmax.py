@@ -732,7 +732,8 @@ class VARMAX(MLEModel):
                 intercept = np.dot(self._trend_data[1:], trend_params)
             self.ssm[self._idx_state_intercept] += intercept.T
 
-            if self._final_trend is not None and not self._trend_is_const:
+            if (self._final_trend is not None
+                    and self._idx_state_intercept[-1].stop == -1):
                 self.ssm['state_intercept', :self.k_endog, -1:] += np.dot(
                     self._final_trend, trend_params).T
 
@@ -919,6 +920,37 @@ class VARMAXResults(MLEResults):
         return res
 
     @contextlib.contextmanager
+    def _set_final_exog(self, exog):
+        """
+        Set the final state intercept value using out-of-sample `exog` / trend
+
+        Parameters
+        ----------
+        exog : ndarray
+            Out-of-sample `exog` values, usually produced by
+            `_validate_out_of_sample_exog` to ensure the correct shape (this
+            method does not do any additional validation of its own).
+        out_of_sample : int
+            Number of out-of-sample periods.
+
+        Notes
+        -----
+        This context manager calls the model-level context manager and
+        additionally updates the last element of filter_results.state_intercept
+        appropriately.
+        """
+        mod = self.model
+        with mod._set_final_exog(exog):
+            cache_value = self.filter_results.state_intercept[:, -1]
+            mod.update(self.params)
+            self.filter_results.state_intercept[:mod.k_endog, -1] = (
+                mod['state_intercept', :mod.k_endog, -1])
+            try:
+                yield
+            finally:
+                self.filter_results.state_intercept[:, -1] = cache_value
+
+    @contextlib.contextmanager
     def _set_final_predicted_state(self, exog, out_of_sample):
         """
         Set the final predicted state value using out-of-sample `exog` / trend
@@ -968,8 +1000,9 @@ class VARMAXResults(MLEResults):
                 self.filter_results.predicted_state[:, -1] = np.nan
 
     @Appender(MLEResults.get_prediction.__doc__)
-    def get_prediction(self, start=None, end=None, dynamic=False, index=None,
-                       exog=None, **kwargs):
+    def get_prediction(self, start=None, end=None, dynamic=False,
+                       information_set='predicted', index=None, exog=None,
+                       **kwargs):
         if start is None:
             start = 0
 
@@ -987,11 +1020,12 @@ class VARMAXResults(MLEResults):
                 self.model.trend_offset + self.nobs)
 
         # Get the prediction
-        with self.model._set_final_exog(exog):
+        with self._set_final_exog(exog):
             with self._set_final_predicted_state(exog, out_of_sample):
                 out = super(VARMAXResults, self).get_prediction(
-                    start=start, end=end, dynamic=dynamic, index=index,
-                    exog=exog, extend_kwargs=extend_kwargs, **kwargs)
+                    start=start, end=end, dynamic=dynamic,
+                    information_set=information_set, index=index, exog=exog,
+                    extend_kwargs=extend_kwargs, **kwargs)
         return out
 
     @Appender(MLEResults.simulate.__doc__)

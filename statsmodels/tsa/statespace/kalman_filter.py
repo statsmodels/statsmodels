@@ -2038,19 +2038,20 @@ class FilterResults(FrozenRepresentation):
         # Kalman filter output
         if ndynamic == 0 and nforecast == 0:
             results = self
+            oos_results = None
         # If we have dynamic prediction or forecasting, then we need to
         # re-apply the Kalman filter
         else:
             # Figure out the period for which we need to run the Kalman filter
             if dynamic is not None:
-                kf_start = min(start, dynamic, self.nobs)
+                kf_start = min(dynamic, self.nobs)
             else:
-                kf_start = min(start, self.nobs)
+                kf_start = self.nobs
             kf_end = end
 
             # Make start, end consistent with the results that we're generating
-            start = max(start - kf_start, 0)
-            end = kf_end - kf_start
+            # start = max(start - kf_start, 0)
+            # end = kf_end - kf_start
 
             # We must at least store forecasts and predictions
             kwargs['conserve_memory'] = (
@@ -2061,6 +2062,9 @@ class FilterResults(FrozenRepresentation):
             kwargs['filter_method'] = (
                 self.model.filter_method & ~FILTER_CHANDRASEKHAR)
 
+            # TODO: there is a corner case here when the filter has not
+            #       exited the diffuse filter, in which case this known
+            #       initialization is not correct.
             # Even if we have not stored all predicted values (means and covs),
             # we can still do pure out-of-sample forecasting because we will
             # always have stored the last predicted values. In this case, we
@@ -2091,10 +2095,12 @@ class FilterResults(FrozenRepresentation):
                 model.endog[:, -(ndynamic + nforecast):] = np.nan
 
             with model.fixed_scale(self.scale):
-                results = model.filter()
+                oos_results = model.filter()
+
+            results = self
 
         return PredictionResults(results, start, end, nstatic, ndynamic,
-                                 nforecast)
+                                 nforecast, oos_results=oos_results)
 
 
 class PredictionResults(FilterResults):
@@ -2182,7 +2188,7 @@ class PredictionResults(FilterResults):
     returning the appropriate ranges for everything.
     """
     representation_attributes = [
-        'endog', 'design', 'design', 'obs_intercept',
+        'endog', 'design', 'obs_intercept',
         'obs_cov', 'transition', 'state_intercept', 'selection',
         'state_cov'
     ]
@@ -2191,10 +2197,15 @@ class PredictionResults(FilterResults):
         'predicted_state', 'predicted_state_cov',
         'forecasts', 'forecasts_error', 'forecasts_error_cov'
     ]
+    smoother_attributes = [
+        'smoothed_state', 'smoothed_state_cov',
+    ]
 
-    def __init__(self, results, start, end, nstatic, ndynamic, nforecast):
+    def __init__(self, results, start, end, nstatic, ndynamic, nforecast,
+                 oos_results=None):
         # Save the filter results object
         self.results = results
+        self.oos_results = oos_results
 
         # Save prediction ranges
         self.npredictions = start - end
@@ -2203,6 +2214,11 @@ class PredictionResults(FilterResults):
         self.nstatic = nstatic
         self.ndynamic = ndynamic
         self.nforecast = nforecast
+
+        self._filtered_forecasts = None
+        self._filtered_forecasts_error_cov = None
+        self._smoothed_forecasts = None
+        self._smoothed_forecasts_error_cov = None
 
     def clear(self):
         attributes = (['endog'] + self.representation_attributes
@@ -2229,6 +2245,39 @@ class PredictionResults(FilterResults):
             if attr == 'endog' or attr in self.filter_attributes:
                 # Get a copy
                 value = getattr(self.results, attr).copy()
+                if self.ndynamic > 0:
+                    value = value[..., :-self.ndynamic]
+                if self.oos_results is not None:
+                    oos_value = getattr(self.oos_results, attr).copy()
+
+                    # Note that the last element of the results predicted state
+                    # and state cov will overlap with the first element of the
+                    # oos predicted state and state cov, so eliminate the
+                    # last element of the results versions
+                    if attr[:9] == 'predicted':
+                        value = value[..., :-1]
+
+                    value = np.concatenate([value, oos_value], axis=-1)
+
+                # Subset to the correct time frame
+                value = value[..., self.start:self.end]
+            elif attr in self.smoother_attributes:
+                if self.ndynamic > 0:
+                    raise NotImplementedError(
+                        'Cannot retrieve smoothed attributes when using'
+                        ' dynamic prediction, since the information set used'
+                        ' to compute the smoothed results differs from the'
+                        ' information set implied by the dynamic prediction.')
+                # Get a copy
+                value = getattr(self.results, attr).copy()
+
+                # The oos_results object is only dynamic or out-of-sample,
+                # so filtered == smoothed
+                if self.oos_results is not None:
+                    filtered_attr = 'filtered' + attr[8:]
+                    oos_value = getattr(self.oos_results, filtered_attr).copy()
+                    value = np.concatenate([value, oos_value], axis=-1)
+
                 # Subset to the correct time frame
                 value = value[..., self.start:self.end]
             elif attr in self.representation_attributes:
@@ -2238,6 +2287,12 @@ class PredictionResults(FilterResults):
                 if value.shape[-1] == 1:
                     value = value[..., 0]
                 else:
+                    if self.ndynamic > 0:
+                        value = value[..., :-self.ndynamic]
+
+                    if self.oos_results is not None:
+                        oos_value = getattr(self.oos_results, attr).copy()
+                        value = np.concatenate([value, oos_value], axis=-1)
                     value = value[..., self.start:self.end]
             else:
                 raise AttributeError("'%s' object has no attribute '%s'" %
@@ -2246,6 +2301,83 @@ class PredictionResults(FilterResults):
             setattr(self, _attr, value)
 
         return getattr(self, _attr)
+
+    def _compute_forecasts(self, states, states_cov):
+        d = self.obs_intercept
+        Z = self.design
+        H = self.obs_cov
+
+        if d.ndim == 1:
+            d = d[:, None]
+
+        if Z.ndim == 2:
+            forecasts = d + Z @ states
+            forecasts_error_cov = (
+                Z[None, ...] @ states_cov.T @ Z.T[None, ...] + H.T).T
+        else:
+            forecasts = d + (Z * states[None, :, :]).sum(axis=1)
+            tmp = Z[:, None, ...] * states_cov[None, ...]
+            tmp = (tmp[:, :, :, None, :]
+                   * Z.transpose(1, 0, 2)[None, :, None, ...])
+            forecasts_error_cov = (tmp.sum(axis=1).sum(axis=1).T + H.T).T
+
+        return forecasts, forecasts_error_cov
+
+    @property
+    def filtered_forecasts_error_cov(self):
+        if self._filtered_forecasts_cov is None:
+            self._filtered_forecasts, self._filtered_forecasts_error_cov = (
+                self._compute_forecasts(self.filtered_state,
+                                        self.filtered_state_cov))
+        return self._filtered_forecasts_error_cov
+
+    @property
+    def smoothed_forecasts(self):
+        if self._smoothed_forecasts is None:
+            self._smoothed_forecasts, self._smoothed_forecasts_error_cov = (
+                self._compute_forecasts(self.smoothed_state,
+                                        self.smoothed_state_cov))
+        return self._smoothed_forecasts
+
+    @property
+    def smoothed_forecasts_error_cov(self):
+        if self._smoothed_forecasts_error_cov is None:
+            self._smoothed_forecasts, self._smoothed_forecasts_error_cov = (
+                self._compute_forecasts(self.smoothed_state,
+                                        self.smoothed_state_cov))
+        return self._smoothed_forecasts_error_cov
+
+    @property
+    def filtered_forecasts(self):
+        if self._filtered_forecasts is None:
+            self._filtered_forecasts, self._filtered_forecasts_cov = (
+                self._compute_forecasts(self.filtered_state,
+                                        self.filtered_state_cov))
+        return self._filtered_forecasts
+
+    @property
+    def filtered_forecasts_error_cov(self):
+        if self._filtered_forecasts_cov is None:
+            self._filtered_forecasts, self._filtered_forecasts_cov = (
+                self._compute_forecasts(self.filtered_state,
+                                        self.filtered_state_cov))
+        return self._filtered_forecasts_cov
+
+    @property
+    def smoothed_forecasts(self):
+        if self._smoothed_forecasts is None:
+            self._smoothed_forecasts, self._smoothed_forecasts_cov = (
+                self._compute_forecasts(self.smoothed_state,
+                                        self.smoothed_state_cov))
+        return self._smoothed_forecasts
+
+    @property
+    def smoothed_forecasts_error_cov(self):
+        if self._smoothed_forecasts_cov is None:
+            self._smoothed_forecasts, self._smoothed_forecasts_cov = (
+                self._compute_forecasts(self.smoothed_state,
+                                        self.smoothed_state_cov))
+        return self._smoothed_forecasts_cov
 
 
 def _check_dynamic(dynamic, start, end, nobs):

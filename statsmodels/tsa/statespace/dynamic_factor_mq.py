@@ -3571,8 +3571,9 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
         return fig
 
     def get_prediction(self, start=None, end=None, dynamic=False,
-                       index=None, exog=None, extend_model=None,
-                       extend_kwargs=None, original_scale=True, **kwargs):
+                       information_set='predicted', index=None, exog=None,
+                       extend_model=None, extend_kwargs=None,
+                       original_scale=True, **kwargs):
         """
         In-sample prediction and out-of-sample forecasting.
 
@@ -3613,6 +3614,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
         """
         # Get usual predictions (in the possibly-standardized scale)
         res = super().get_prediction(start=start, end=end, dynamic=dynamic,
+                                     information_set=information_set,
                                      index=index, exog=exog,
                                      extend_model=extend_model,
                                      extend_kwargs=extend_kwargs, **kwargs)

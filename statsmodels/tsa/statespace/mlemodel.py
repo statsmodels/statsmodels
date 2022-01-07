@@ -3223,8 +3223,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         return output
 
     def get_prediction(self, start=None, end=None, dynamic=False,
-                       index=None, exog=None, extend_model=None,
-                       extend_kwargs=None, **kwargs):
+                       information_set='predicted', index=None, exog=None,
+                       extend_model=None, extend_kwargs=None, **kwargs):
         """
         In-sample prediction and out-of-sample forecasting
 
@@ -3294,7 +3294,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         # Return a new mlemodel.PredictionResults object
         return PredictionResultsWrapper(PredictionResults(
-            self, prediction_results, row_labels=prediction_index))
+            self, prediction_results, information_set=information_set,
+            row_labels=prediction_index))
 
     def get_forecast(self, steps=1, **kwargs):
         """
@@ -3323,7 +3324,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             end = steps
         return self.get_prediction(start=self.nobs, end=end, **kwargs)
 
-    def predict(self, start=None, end=None, dynamic=False, **kwargs):
+    def predict(self, start=None, end=None, dynamic=False,
+                information_set='predicted', **kwargs):
         """
         In-sample prediction and out-of-sample forecasting
 
@@ -3366,7 +3368,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             Prediction results and confidence intervals
         """
         # Perform the prediction
-        prediction_results = self.get_prediction(start, end, dynamic, **kwargs)
+        prediction_results = self.get_prediction(
+            start, end, dynamic, information_set=information_set, **kwargs)
         return prediction_results.predicted_mean
 
     def forecast(self, steps=1, **kwargs):
@@ -4576,7 +4579,8 @@ class PredictionResults(pred.PredictionResults):
     Attributes
     ----------
     """
-    def __init__(self, model, prediction_results, row_labels=None):
+    def __init__(self, model, prediction_results, row_labels=None,
+                 information_set='predicted'):
         if model.model.k_endog == 1:
             endog = pd.Series(prediction_results.endog[0],
                               name=model.model.endog_names)
@@ -4589,8 +4593,13 @@ class PredictionResults(pred.PredictionResults):
 
         # Get required values
         k_endog, nobs = prediction_results.endog.shape
-        if not prediction_results.results.memory_no_forecast_mean:
+        res = self.prediction_results.results
+        if information_set == 'predicted' and not res.memory_no_forecast_mean:
             predicted_mean = self.prediction_results.forecasts
+        elif information_set == 'filtered' and not res.memory_no_filtered_mean:
+            predicted_mean = self.prediction_results.filtered_forecasts
+        elif information_set == 'smoothed':
+            predicted_mean = self.prediction_results.smoothed_forecasts
         else:
             predicted_mean = np.zeros((k_endog, nobs)) * np.nan
 
@@ -4599,8 +4608,14 @@ class PredictionResults(pred.PredictionResults):
         else:
             predicted_mean = predicted_mean.transpose()
 
-        if not prediction_results.results.memory_no_forecast_cov:
+        if information_set == 'predicted' and not res.memory_no_forecast_cov:
             var_pred_mean = self.prediction_results.forecasts_error_cov
+        elif information_set == 'filtered' and not res.memory_no_filtered_mean:
+            var_pred_mean = (
+                self.prediction_results.filtered_forecasts_error_cov)
+        elif information_set == 'smoothed':
+            var_pred_mean = (
+                self.prediction_results.smoothed_forecasts_error_cov)
         else:
             var_pred_mean = np.zeros((k_endog, k_endog, nobs)) * np.nan
 
