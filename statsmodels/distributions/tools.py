@@ -6,6 +6,7 @@ Author: Josef Perktold
 License: BSD-3
 
 """
+import warnings
 
 import numpy as np
 from scipy import interpolate, stats
@@ -324,13 +325,19 @@ def _eval_bernstein_1d(x, fvals, method="binom"):
     n = k_terms - 1.
 
     if method.lower() == "binom":
-        poly_base = stats.binom.pmf(k, n, xx[..., None])
+        # Divide by 0 RuntimeWarning here
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            poly_base = stats.binom.pmf(k, n, xx[..., None])
         bp_values = (fvals * poly_base).sum(-1)
     elif method.lower() == "bpoly":
         bpb = interpolate.BPoly(fvals[:, None], [0., 1])
         bp_values = bpb(x)
     elif method.lower() == "beta":
-        poly_base = stats.beta.pdf(xx[..., None], k + 1, n - k + 1) / (n + 1)
+        # Divide by 0 RuntimeWarning here
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            poly_base = stats.beta.pdf(xx[..., None], k + 1, n - k + 1) / (n + 1)
         bp_values = (fvals * poly_base).sum(-1)
     else:
         raise ValueError("method not recogized")
