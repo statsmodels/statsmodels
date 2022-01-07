@@ -108,18 +108,53 @@ def proportion_confint(count, nobs, alpha=0.05, method='normal'):
         ci_low = q_ - dist
         ci_upp = q_ + dist
 
+
+
     elif method == 'binom_test':
         # inverting the binomial test
         def func(qi):
             return stats.binom_test(count, nobs, p=qi) - alpha
+
+        def _bound(qi, lower=True):
+            """
+            Try hard to find a bound different from eps or 1 - eps
+
+            Parameters
+            ----------
+            qi : float
+                The empirical success rate
+            lower : bool
+                Whether to fund a lower bound for the left side of the CI
+
+            Returns
+            -------
+            float
+                The coarse bound
+            """
+            default = FLOAT_INFO.eps if lower else 1.0 - FLOAT_INFO.eps
+
+            def step(v):
+                return v / 8 if lower else v + (1.0 - v) / 8
+
+            x = step(qi)
+            w = func(x)
+            cnt = 1
+            while w > 0 and cnt < 10:
+                x = step(x)
+                w = func(x)
+                cnt += 1
+            return x if cnt < 10 else default
+
         if count == 0:
             ci_low = 0
         else:
-            ci_low = optimize.brentq(func, FLOAT_INFO.eps, q_)
+            lower_bnd = _bound(q_, lower=True)
+            ci_low = optimize.brentq(func, lower_bnd, q_)
         if count == nobs:
             ci_upp = 1
         else:
-            ci_upp = optimize.brentq(func, q_, 1. - FLOAT_INFO.eps)
+            upper_bnd = _bound(q_, lower=False)
+            ci_upp = optimize.brentq(func, q_, upper_bnd)
 
     elif method == 'beta':
         ci_low = stats.beta.ppf(alpha_2, count, nobs - count + 1)

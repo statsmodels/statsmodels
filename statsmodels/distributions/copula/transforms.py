@@ -8,6 +8,7 @@ Author: Josef Perktold
 License: BSD-3
 
 """
+import warnings
 
 import numpy as np
 from scipy.special import expm1
@@ -24,7 +25,10 @@ class TransfFrank(Transforms):
 
     def evaluate(self, t, theta):
         t = np.asarray(t)
-        return - (np.log(-expm1(-theta*t)) - np.log(-expm1(-theta)))
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            val = -(np.log(-expm1(-theta*t)) - np.log(-expm1(-theta)))
+        return val
         # return - np.log(expm1(-theta*t) / expm1(-theta))
 
     def inverse(self, phi, theta):
