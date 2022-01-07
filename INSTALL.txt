@@ -1,15 +1,15 @@
 Dependencies
 ------------
 
-python >= 3.7
+python >= 3.8
 
     www.python.org
 
-numpy >= 1.17
+numpy >= 1.18
 
     www.numpy.org
 
-scipy >= 1.3
+scipy >= 1.4
     
     www.scipy.org
 
@@ -21,7 +21,7 @@ patsy >= 0.5.2
 
     patsy.readthedocs.org
 
-cython >= 0.29.22
+cython >= 0.29.26
 
     https://cython.org/
 

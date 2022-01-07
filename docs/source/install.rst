@@ -15,7 +15,7 @@ Instructions for installing from PyPI, source or a development version are also 
 Python Support
 --------------
 
-statsmodels supports Python 3.7, 3.8, and 3.9.
+statsmodels supports Python 3.8, 3.9, and 3.10.
 
 Anaconda
 --------
@@ -130,15 +130,15 @@ Dependencies
 
 The current minimum dependencies are:
 
-* `Python <https://www.python.org>`__ >= 3.7
-* `NumPy <https://www.scipy.org/>`__ >= 1.17
-* `SciPy <https://www.scipy.org/>`__ >= 1.3
+* `Python <https://www.python.org>`__ >= 3.8
+* `NumPy <https://www.scipy.org/>`__ >= 1.18
+* `SciPy <https://www.scipy.org/>`__ >= 1.4
 * `Pandas <https://pandas.pydata.org/>`__ >= 1.0
 * `Patsy <https://patsy.readthedocs.io/en/latest/>`__ >= 0.5.2
 
 Cython is required to build from a git checkout but not to run or install from PyPI:
 
-* `Cython <https://cython.org/>`__ >= 0.29 is required to build the code from
+* `Cython <https://cython.org/>`__ >= 0.29.26 is required to build the code from
   github but not from a source distribution.
 
 Given the long release cycle, statsmodels follows a loose time-based policy for

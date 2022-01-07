@@ -60,7 +60,7 @@ assert_index_equal = testing.assert_index_equal
 assert_series_equal = testing.assert_series_equal
 
 
-def is_int_index(index: pd.Index):
+def is_int_index(index: pd.Index) -> bool:
     """
     Check if an index is integral
 
@@ -81,7 +81,7 @@ def is_int_index(index: pd.Index):
     )
 
 
-def is_float_index(index):
+def is_float_index(index: pd.Index) -> bool:
     """
     Check if an index is floating
 
