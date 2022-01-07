@@ -7,15 +7,17 @@ import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
 import statsmodels.regression.linear_model as lm
 from statsmodels.distributions import truncatedpoisson, truncatednegbin
-from statsmodels.discrete.discrete_model import (DiscreteModel, CountModel,
-                                                 Poisson, Logit, CountResults,
-                                                 L1CountResults, Probit,
-                                                 NegativeBinomial,
-                                                 NegativeBinomialP,
-                                                 GeneralizedPoisson,
-                                                 _discrete_results_docs)
-from statsmodels.tools.numdiff import (approx_fprime, approx_hess,
-                                       approx_hess_cs, approx_fprime_cs)
+from statsmodels.discrete.discrete_model import (
+    DiscreteModel,
+    CountModel,
+    CountResults,
+    L1CountResults,
+    Poisson,
+    NegativeBinomialP,
+    GeneralizedPoisson,
+    _discrete_results_docs,
+    )
+from statsmodels.tools.numdiff import approx_hess
 from statsmodels.tools.decorators import cache_readonly
 from copy import deepcopy
 
@@ -59,6 +61,9 @@ class GenericTruncated(CountModel):
         self.exog = self.exog[self.endog >= (truncation + 1)]
         self.endog = self.endog[self.endog >= (truncation + 1)]
         self.trunc = truncation
+        self.truncation = truncation  # needed for recreating model
+        self._init_keys.extend(['truncation'])
+        self._null_drop_keys = []
 
     def loglike(self, params):
         """
@@ -328,7 +333,12 @@ class TruncatedPoisson(GenericTruncated):
         linpred = fitted + exposure + offset
 
         if which == 'mean':
-            return np.exp(linpred) / (1 - np.exp(-np.exp(linpred)))
+            if self.truncation == 0:
+                return np.exp(linpred) / (1 - np.exp(-np.exp(linpred)))
+            elif self.truncation == -1:
+                return np.exp(linpred)
+            elif self.truncation > 0:
+                raise NotImplementedError("conditional mean not implemented")
         elif which == 'linear':
             return linpred
         elif which == 'mean-main':
@@ -426,10 +436,15 @@ class TruncatedNegativeBinomialP(GenericTruncated):
         alpha = params[-1]
 
         if which == 'mean':
-            mu = np.exp(linpred)
-            p = self.model_main.parameterization
-            prob_zero = (1 + alpha * mu**(p-1))**(- 1 / alpha)
-            return mu / (1 - prob_zero)
+            if self.truncation == 0:
+                mu = np.exp(linpred)
+                p = self.model_main.parameterization
+                prob_zero = (1 + alpha * mu**(p-1))**(- 1 / alpha)
+                return mu / (1 - prob_zero)
+            elif self.truncation == -1:
+                return np.exp(linpred)
+            elif self.truncation > 0:
+                raise NotImplementedError("conditional mean not implemented")
         elif which == 'linear':
             return linpred
         elif which == 'mean-main':
@@ -529,7 +544,12 @@ class TruncatedGeneralizedPoisson(GenericTruncated):
         linpred = fitted + exposure + offset
 
         if which == 'mean':
-            return np.exp(linpred) / (1 - np.exp(-np.exp(linpred)))
+            if self.truncation == 0:
+                return np.exp(linpred) / (1 - np.exp(-np.exp(linpred)))
+            elif self.truncation == -1:
+                    return np.exp(linpred)
+            elif self.truncation > 0:
+                raise NotImplementedError("conditional mean not implemented")
         elif which == 'linear':
             return linpred
         elif which == 'mean-main':
@@ -1089,6 +1109,10 @@ class TruncatedPoissonResults(GenericTruncatedResults):
 
     @cache_readonly
     def _dispersion_factor(self):
+        if self.model.trunc != 0:
+            msg = "dispersion is only available for zero-truncation"
+            raise NotImplementedError(msg)
+
         mu = np.exp(self.predict(which='linear'))
 
         return (1 - mu / (np.exp(mu) - 1))
@@ -1102,6 +1126,10 @@ class TruncatedNegativeBinomialResults(GenericTruncatedResults):
 
     @cache_readonly
     def _dispersion_factor(self):
+        if self.model.trunc != 0:
+            msg = "dispersion is only available for zero-truncation"
+            raise NotImplementedError(msg)
+
         alpha = self.params[-1]
         p = self.model.model_main.parameterization
         mu = np.exp(self.predict(which='linear'))
