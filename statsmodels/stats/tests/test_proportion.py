@@ -7,23 +7,28 @@ Author: Josef Perktold
 """
 import warnings
 
-import pytest
 import numpy as np
+from numpy.testing import (
+    assert_allclose,
+    assert_almost_equal,
+    assert_array_less,
+    assert_equal,
+    assert_raises,
+)
 import pandas as pd
-from numpy.testing import (assert_almost_equal, assert_equal,
-                           assert_array_less, assert_raises, assert_allclose)
+import pytest
 
-from statsmodels.stats.proportion import (proportion_confint,
-                                          confint_proportions_2indep,
-                                          multinomial_proportions_confint,
-                                          score_test_proportions_2indep,
-                                          power_proportions_2indep,
-                                          samplesize_proportions_2indep_onetail,
-                                          )
 import statsmodels.stats.proportion as smprop
+from statsmodels.stats.proportion import (
+    confint_proportions_2indep,
+    multinomial_proportions_confint,
+    power_proportions_2indep,
+    proportion_confint,
+    samplesize_proportions_2indep_onetail,
+    score_test_proportions_2indep,
+)
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
 from statsmodels.tools.testing import Holder
-
 
 probci_methods = {'agresti_coull': 'agresti-coull',
                   'normal': 'asymptotic',
@@ -909,3 +914,34 @@ def test_power_2indep():
                                                ratio=1, alpha=0.05, value=0,
                                                alternative='two-sided')
     assert_allclose(n2, n, rtol=1e-13)
+
+
+@pytest.mark.parametrize("count", np.arange(10, 90, 5))
+@pytest.mark.parametrize("method", list(probci_methods.keys()) + ["binom_test"])
+def test_ci_symmetry(count, method):
+    n = 100
+    a = proportion_confint(count, n, method=method)
+    b = proportion_confint(n - count, n, method=method)
+    assert_allclose(np.array(a), 1.0 - np.array(b[::-1]))
+
+
+@pytest.mark.parametrize("nobs", [47, 50])
+@pytest.mark.parametrize("count", np.arange(48))
+def test_ci_symmetry_binom_test(nobs, count):
+    a = proportion_confint(count, nobs, method="binom_test")
+    b = proportion_confint(nobs - count, nobs, method="binom_test")
+    assert_allclose(np.array(a), 1.0 - np.array(b[::-1]))
+
+
+def test_int_check():
+    with pytest.raises(ValueError):
+        proportion_confint(10.5, 20)
+    with pytest.raises(ValueError):
+        proportion_confint(10, 20.5)
+    with pytest.raises(ValueError):
+        proportion_confint(np.array([10.3]), 20)
+    a = proportion_confint(21.0, 47, method="binom_test")
+    b = proportion_confint(21, 47, method="binom_test")
+    c = proportion_confint(21, 47.0, method="binom_test")
+    assert_allclose(a, b)
+    assert_allclose(a, c)

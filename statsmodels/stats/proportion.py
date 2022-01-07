@@ -8,19 +8,21 @@ License: BSD-3
 """
 
 from statsmodels.compat.python import lzip
-import numpy as np
-from scipy import stats, optimize
+
 from sys import float_info
 
-from statsmodels.stats.base import AllPairsResults
-from statsmodels.tools.sm_exceptions import HypothesisTestWarning
+import numpy as np
+from scipy import optimize, stats
+
+from statsmodels.stats.base import AllPairsResults, HolderTuple
 from statsmodels.stats.weightstats import _zstat_generic2
-from statsmodels.stats.base import HolderTuple
+from statsmodels.tools.sm_exceptions import HypothesisTestWarning
 from statsmodels.tools.testing import Holder
 
 
 def proportion_confint(count, nobs, alpha=0.05, method='normal'):
-    '''confidence interval for a binomial proportion
+    """
+    Confidence interval for a binomial proportion
 
     Parameters
     ----------
@@ -76,17 +78,28 @@ def proportion_confint(count, nobs, alpha=0.05, method='normal'):
     Brown, Lawrence D.; Cai, T. Tony; DasGupta, Anirban (2001). "Interval
         Estimation for a Binomial Proportion",
         Statistical Science 16 (2): 101–133. doi:10.1214/ss/1009213286.
-
-    '''
+    """
 
     pd_index = getattr(count, 'index', None)
     if pd_index is not None and callable(pd_index):
         # this rules out lists, lists have an index method
         pd_index = None
-    count = np.asarray(count)
-    nobs = np.asarray(nobs)
 
-    q_ = count * 1. / nobs
+    def _check(x: np.ndarray, name: str) -> np.ndarray:
+        if np.issubdtype(x.dtype, np.integer):
+            return x
+        y = x.astype(np.int64, casting="unsafe")
+        if np.any(y != x):
+            raise ValueError(
+                f"{name} must have an integral dtype. Found data with "
+                f"dtype {x.dtype}"
+            )
+        return y
+
+    count = _check(np.asarray(count), "count")
+    nobs = _check(np.asarray(nobs), "nobs")
+
+    q_ = count / nobs
     alpha_2 = 0.5 * alpha
 
     if method == 'normal':
@@ -98,7 +111,7 @@ def proportion_confint(count, nobs, alpha=0.05, method='normal'):
     elif method == 'binom_test':
         # inverting the binomial test
         def func(qi):
-            return stats.binom_test(q_ * nobs, nobs, p=qi) - alpha
+            return stats.binom_test(count, nobs, p=qi) - alpha
         if count == 0:
             ci_low = 0
         else:
