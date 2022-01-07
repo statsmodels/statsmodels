@@ -9,8 +9,6 @@ License: BSD-3
 
 from statsmodels.compat.python import lzip
 
-from sys import float_info
-
 import numpy as np
 from scipy import optimize, stats
 
@@ -18,6 +16,8 @@ from statsmodels.stats.base import AllPairsResults, HolderTuple
 from statsmodels.stats.weightstats import _zstat_generic2
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
 from statsmodels.tools.testing import Holder
+
+FLOAT_INFO = np.finfo(float)
 
 
 def proportion_confint(count, nobs, alpha=0.05, method='normal'):
@@ -115,11 +115,11 @@ def proportion_confint(count, nobs, alpha=0.05, method='normal'):
         if count == 0:
             ci_low = 0
         else:
-            ci_low = optimize.brentq(func, float_info.min, q_)
+            ci_low = optimize.brentq(func, FLOAT_INFO.eps, q_)
         if count == nobs:
             ci_upp = 1
         else:
-            ci_upp = optimize.brentq(func, q_, 1. - float_info.epsilon)
+            ci_upp = optimize.brentq(func, q_, 1. - FLOAT_INFO.eps)
 
     elif method == 'beta':
         ci_low = stats.beta.ppf(alpha_2, count, nobs - count + 1)
