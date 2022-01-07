@@ -158,7 +158,11 @@ def sign_test(samp, mu0=0):
     pos = np.sum(samp > mu0)
     neg = np.sum(samp < mu0)
     M = (pos - neg) / 2.0
-    p = stats.binom_test(min(pos, neg), pos + neg, 0.5)
+    try:
+        p = stats.binomtest(min(pos, neg), pos + neg, 0.5).pvalue
+    except AttributeError:
+        # Remove after min SciPy >= 1.7
+        p = stats.binom_test(min(pos, neg), pos + neg, 0.5)
     return M, p
 
 

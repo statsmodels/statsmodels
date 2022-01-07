@@ -112,8 +112,13 @@ def proportion_confint(count, nobs, alpha=0.05, method='normal'):
 
     elif method == 'binom_test':
         # inverting the binomial test
-        def func(qi):
-            return stats.binom_test(count, nobs, p=qi) - alpha
+        if hasattr(stats, "binomtest"):
+            def func(qi):
+                return stats.binomtest(count, nobs, p=qi).pvalue - alpha
+        else:
+            # Remove after min SciPy >= 1.7
+            def func(qi):
+                return stats.binom_test(count, nobs, p=qi) - alpha
 
         def _bound(qi, lower=True):
             """
@@ -598,7 +603,8 @@ def binom_tost_reject_interval(low, upp, nobs, alpha=0.05):
 
 
 def binom_test_reject_interval(value, nobs, alpha=0.05, alternative='two-sided'):
-    '''rejection region for binomial test for one sample proportion
+    """
+    Rejection region for binomial test for one sample proportion
 
     The interval includes the end points of the rejection region.
 
@@ -609,14 +615,11 @@ def binom_test_reject_interval(value, nobs, alpha=0.05, alternative='two-sided')
     nobs : int
         the number of trials or observations.
 
-
     Returns
     -------
-    x_low, x_upp : float
+    x_low, x_upp : int
         lower and upper bound of rejection region
-
-
-    '''
+    """
     if alternative in ['2s', 'two-sided']:
         alternative = '2s'  # normalize alternative name
         alpha = alpha / 2
@@ -630,11 +633,12 @@ def binom_test_reject_interval(value, nobs, alpha=0.05, alternative='two-sided')
     else :
         x_upp = nobs
 
-    return x_low, x_upp
+    return int(x_low), int(x_upp)
 
 
 def binom_test(count, nobs, prop=0.5, alternative='two-sided'):
-    '''Perform a test that the probability of success is p.
+    """
+    Perform a test that the probability of success is p.
 
     This is an exact, two-sided test of the null hypothesis
     that the probability of success in a Bernoulli experiment
@@ -661,13 +665,16 @@ def binom_test(count, nobs, prop=0.5, alternative='two-sided'):
     Notes
     -----
     This uses scipy.stats.binom_test for the two-sided alternative.
-
-    '''
+    """
 
     if np.any(prop > 1.0) or np.any(prop < 0.0):
         raise ValueError("p must be in range [0,1]")
     if alternative in ['2s', 'two-sided']:
-        pval = stats.binom_test(count, n=nobs, p=prop)
+        try:
+            pval = stats.binomtest(count, n=nobs, p=prop).pvalue
+        except AttributeError:
+            # Remove after min SciPy >= 1.7
+            pval = stats.binom_test(count, n=nobs, p=prop)
     elif alternative in ['l', 'larger']:
         pval = stats.binom.sf(count-1, nobs, prop)
     elif alternative in ['s', 'smaller']:
