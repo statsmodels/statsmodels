@@ -32,8 +32,8 @@ jobs:
           python.version: '3.8'
           use.conda: true
           PANDAS: 1.0.5
-          NUMPY: 1.19.5
-          SCIPY: 1.5.4
+          NUMPY: 1.19.2
+          SCIPY: 1.5.2
           MATPLOTLIB: 3.2.2
           coverage: true
           PYTEST_OPTIONS: ''
