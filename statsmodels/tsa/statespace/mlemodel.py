@@ -3227,7 +3227,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                        information_set='predicted', signal_only=False,
                        index=None, exog=None, extend_model=None,
                        extend_kwargs=None, **kwargs):
-        """
+        r"""
         In-sample prediction and out-of-sample forecasting
 
         Parameters
@@ -3251,6 +3251,25 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             prediction; starting with this observation and continuing through
             the end of prediction, forecasted endogenous values will be used
             instead.
+        information_set : str, optional
+            The information set to condition each prediction on. Default is
+            "predicted", which computes predictions of period t values
+            conditional on observed data through period t-1; these are
+            one-step-ahead predictions, and correspond with the typical
+            `fittedvalues` results attribute. Alternatives are "filtered",
+            which computes predictions of period t values conditional on
+            observed data through period t, and "smoothed", which computes
+            predictions of period t values conditional on the entire dataset
+            (including also future observations t+1, t+2, ...).
+        signal_only : bool, optional
+            Whether to compute predictions of only the "signal" component of
+            the observation equation. Default is False. For example, the
+            observation equation of a time-invariant model is
+            :math:`y_t = d + Z \alpha_t + \varepsilon_t`, and the "signal"
+            component is then :math:`Z \alpha_t`. If this argument is set to
+            True, then predictions of the "signal" :math:`Z \alpha_t` will be
+            returned. Otherwise, the default is for predictions of :math:`y_t`
+            to be returned.
         **kwargs
             Additional arguments may required for forecasting beyond the end
             of the sample. See `FilterResults.predict` for more details.
@@ -3300,7 +3319,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             signal_only=signal_only, row_labels=prediction_index))
 
     def get_forecast(self, steps=1, signal_only=False, **kwargs):
-        """
+        r"""
         Out-of-sample forecasts and prediction intervals
 
         Parameters
@@ -3309,7 +3328,16 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             If an integer, the number of steps to forecast from the end of the
             sample. Can also be a date string to parse or a datetime type.
             However, if the dates index does not have a fixed frequency, steps
-            must be an integer. Default
+            must be an integer. Default is 1.
+        signal_only : bool, optional
+            Whether to compute forecasts of only the "signal" component of
+            the observation equation. Default is False. For example, the
+            observation equation of a time-invariant model is
+            :math:`y_t = d + Z \alpha_t + \varepsilon_t`, and the "signal"
+            component is then :math:`Z \alpha_t`. If this argument is set to
+            True, then forecasts of the "signal" :math:`Z \alpha_t` will be
+            returned. Otherwise, the default is for forecasts of :math:`y_t`
+            to be returned.
         **kwargs
             Additional arguments may required for forecasting beyond the end
             of the sample. See `FilterResults.predict` for more details.
@@ -3353,6 +3381,25 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             prediction; starting with this observation and continuing through
             the end of prediction, forecasted endogenous values will be used
             instead.
+        information_set : str, optional
+            The information set to condition each prediction on. Default is
+            "predicted", which computes predictions of period t values
+            conditional on observed data through period t-1; these are
+            one-step-ahead predictions, and correspond with the typical
+            `fittedvalues` results attribute. Alternatives are "filtered",
+            which computes predictions of period t values conditional on
+            observed data through period t, and "smoothed", which computes
+            predictions of period t values conditional on the entire dataset
+            (including also future observations t+1, t+2, ...).
+        signal_only : bool, optional
+            Whether to compute predictions of only the "signal" component of
+            the observation equation. Default is False. For example, the
+            observation equation of a time-invariant model is
+            :math:`y_t = d + Z \alpha_t + \varepsilon_t`, and the "signal"
+            component is then :math:`Z \alpha_t`. If this argument is set to
+            True, then predictions of the "signal" :math:`Z \alpha_t` will be
+            returned. Otherwise, the default is for predictions of :math:`y_t`
+            to be returned.
         **kwargs
             Additional arguments may required for forecasting beyond the end
             of the sample. See `FilterResults.predict` for more details.
@@ -3377,7 +3424,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         return prediction_results.predicted_mean
 
     def forecast(self, steps=1, signal_only=False, **kwargs):
-        """
+        r"""
         Out-of-sample forecasts
 
         Parameters
@@ -3386,7 +3433,16 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             If an integer, the number of steps to forecast from the end of the
             sample. Can also be a date string to parse or a datetime type.
             However, if the dates index does not have a fixed frequency, steps
-            must be an integer. Default
+            must be an integer. Default is 1.
+        signal_only : bool, optional
+            Whether to compute forecasts of only the "signal" component of
+            the observation equation. Default is False. For example, the
+            observation equation of a time-invariant model is
+            :math:`y_t = d + Z \alpha_t + \varepsilon_t`, and the "signal"
+            component is then :math:`Z \alpha_t`. If this argument is set to
+            True, then forecasts of the "signal" :math:`Z \alpha_t` will be
+            returned. Otherwise, the default is for forecasts of :math:`y_t`
+            to be returned.
         **kwargs
             Additional arguments may required for forecasting beyond the end
             of the sample. See `FilterResults.predict` for more details.
