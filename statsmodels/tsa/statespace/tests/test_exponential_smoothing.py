@@ -430,7 +430,8 @@ class TestHoltWintersNoTrendETSEstimated(CheckExponentialSmoothing):
     def test_mle_estimates(self):
         # Test that our fitted coefficients are at least as good as those from
         # `ets`
-        mle_res = self.res.model.fit(disp=0, maxiter=100)
+        start_params = [0.5, 0.4, 4, 32, 2.3, -2, -9]
+        mle_res = self.res.model.fit(start_params, disp=0, maxiter=100)
         assert_(self.res.llf <= mle_res.llf)
 
 
@@ -450,9 +451,10 @@ class CheckKnownInitialization(object):
         cls.initial_trend = cls.res.params.get('initial_trend', None)
         cls.initial_seasonal = None
         if cls.mod.seasonal:
-            cls.initial_seasonal = [
-                cls.res.params['initial_seasonal.L%d' % i]
-                for i in range(1, cls.mod.seasonal_periods)]
+            cls.initial_seasonal = (
+                [cls.res.params['initial_seasonal']]
+                +  [cls.res.params['initial_seasonal.L%d' % i]
+                    for i in range(1, cls.mod.seasonal_periods - 1)])
 
         # Get the estimated parameters
         cls.params = cls.res.params[:'initial_level'].drop('initial_level')
@@ -737,7 +739,7 @@ class CheckConcentratedInitialization(object):
 
     def test_estimated_params(self):
         # Alternatively, estimate the remaining parameters
-        res = self.mod.fit(disp=0, maxiter=100)
+        res = self.mod.fit(self.start_params, disp=0, maxiter=100)
         np.set_printoptions(suppress=True)
         conc_res = self.conc_mod.fit(self.start_params[:len(self.params)],
                                      disp=0)
@@ -751,7 +753,7 @@ class TestSESConcentratedInitialization(CheckConcentratedInitialization):
     @classmethod
     def setup_class(cls):
         mod = ExponentialSmoothing(oildata)
-        start_params = pd.Series([0.85, 445.], index=mod.param_names)
+        start_params = pd.Series([0.85, 447.], index=mod.param_names)
         super().setup_class(mod, start_params=start_params, rtol=1e-5)
 
 
@@ -780,7 +782,7 @@ class TestHoltWintersConcentratedInitialization(
     def setup_class(cls):
         mod = ExponentialSmoothing(aust, trend=True, seasonal=4)
         start_params = pd.Series(
-            [0.0005, 0.0004, 0.5, 33., 0.4, 2.5, -2., -9.],
+            [0.0005, 0.0004, 0.0002, 33., 0.4, 2.2, -2., -9.3],
             index=mod.param_names)
         super().setup_class(mod, start_params=start_params, rtol=1e-3)
 
@@ -803,7 +805,7 @@ class TestHoltWintersNoTrendConcentratedInitialization(
     def setup_class(cls):
         mod = ExponentialSmoothing(aust, seasonal=4)
         start_params = pd.Series(
-            [0.5, 0.49, 30., 2., -2, -9], index=mod.param_names)
+            [0.5, 0.49, 32., 2.3, -2.1, -9.3], index=mod.param_names)
         super().setup_class(mod, start_params=start_params, rtol=1e-4)
 
 
