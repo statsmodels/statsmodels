@@ -1763,7 +1763,8 @@ class MLEModel(tsbase.TimeSeriesModel):
             A numpy array of shape (out_of_sample, k_exog) if the model
             contains an `exog` component, or None if it does not.
         """
-        if out_of_sample and self.k_exog > 0:
+        k_exog = getattr(self, 'k_exog', 0)
+        if out_of_sample and k_exog > 0:
             if exog is None:
                 raise ValueError('Out-of-sample operations in a model'
                                  ' with a regression component require'
@@ -1778,7 +1779,7 @@ class MLEModel(tsbase.TimeSeriesModel):
                                  ' appropriate shape. Required %s, got %s.'
                                  % (str(required_exog_shape),
                                     str(exog.shape)))
-        elif self.k_exog > 0 and exog is not None:
+        elif k_exog > 0 and exog is not None:
             exog = None
             warnings.warn('Exogenous array provided, but additional data'
                           ' is not required. `exog` argument ignored.',
@@ -3223,9 +3224,10 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         return output
 
     def get_prediction(self, start=None, end=None, dynamic=False,
+                       information_set='predicted', signal_only=False,
                        index=None, exog=None, extend_model=None,
                        extend_kwargs=None, **kwargs):
-        """
+        r"""
         In-sample prediction and out-of-sample forecasting
 
         Parameters
@@ -3249,6 +3251,25 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             prediction; starting with this observation and continuing through
             the end of prediction, forecasted endogenous values will be used
             instead.
+        information_set : str, optional
+            The information set to condition each prediction on. Default is
+            "predicted", which computes predictions of period t values
+            conditional on observed data through period t-1; these are
+            one-step-ahead predictions, and correspond with the typical
+            `fittedvalues` results attribute. Alternatives are "filtered",
+            which computes predictions of period t values conditional on
+            observed data through period t, and "smoothed", which computes
+            predictions of period t values conditional on the entire dataset
+            (including also future observations t+1, t+2, ...).
+        signal_only : bool, optional
+            Whether to compute predictions of only the "signal" component of
+            the observation equation. Default is False. For example, the
+            observation equation of a time-invariant model is
+            :math:`y_t = d + Z \alpha_t + \varepsilon_t`, and the "signal"
+            component is then :math:`Z \alpha_t`. If this argument is set to
+            True, then predictions of the "signal" :math:`Z \alpha_t` will be
+            returned. Otherwise, the default is for predictions of :math:`y_t`
+            to be returned.
         **kwargs
             Additional arguments may required for forecasting beyond the end
             of the sample. See `FilterResults.predict` for more details.
@@ -3294,10 +3315,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         # Return a new mlemodel.PredictionResults object
         return PredictionResultsWrapper(PredictionResults(
-            self, prediction_results, row_labels=prediction_index))
+            self, prediction_results, information_set=information_set,
+            signal_only=signal_only, row_labels=prediction_index))
 
-    def get_forecast(self, steps=1, **kwargs):
-        """
+    def get_forecast(self, steps=1, signal_only=False, **kwargs):
+        r"""
         Out-of-sample forecasts and prediction intervals
 
         Parameters
@@ -3306,7 +3328,16 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             If an integer, the number of steps to forecast from the end of the
             sample. Can also be a date string to parse or a datetime type.
             However, if the dates index does not have a fixed frequency, steps
-            must be an integer. Default
+            must be an integer. Default is 1.
+        signal_only : bool, optional
+            Whether to compute forecasts of only the "signal" component of
+            the observation equation. Default is False. For example, the
+            observation equation of a time-invariant model is
+            :math:`y_t = d + Z \alpha_t + \varepsilon_t`, and the "signal"
+            component is then :math:`Z \alpha_t`. If this argument is set to
+            True, then forecasts of the "signal" :math:`Z \alpha_t` will be
+            returned. Otherwise, the default is for forecasts of :math:`y_t`
+            to be returned.
         **kwargs
             Additional arguments may required for forecasting beyond the end
             of the sample. See `FilterResults.predict` for more details.
@@ -3321,9 +3352,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             end = self.nobs + steps - 1
         else:
             end = steps
-        return self.get_prediction(start=self.nobs, end=end, **kwargs)
+        return self.get_prediction(start=self.nobs, end=end,
+                                   signal_only=signal_only, **kwargs)
 
-    def predict(self, start=None, end=None, dynamic=False, **kwargs):
+    def predict(self, start=None, end=None, dynamic=False,
+                information_set='predicted', signal_only=False, **kwargs):
         """
         In-sample prediction and out-of-sample forecasting
 
@@ -3348,6 +3381,25 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             prediction; starting with this observation and continuing through
             the end of prediction, forecasted endogenous values will be used
             instead.
+        information_set : str, optional
+            The information set to condition each prediction on. Default is
+            "predicted", which computes predictions of period t values
+            conditional on observed data through period t-1; these are
+            one-step-ahead predictions, and correspond with the typical
+            `fittedvalues` results attribute. Alternatives are "filtered",
+            which computes predictions of period t values conditional on
+            observed data through period t, and "smoothed", which computes
+            predictions of period t values conditional on the entire dataset
+            (including also future observations t+1, t+2, ...).
+        signal_only : bool, optional
+            Whether to compute predictions of only the "signal" component of
+            the observation equation. Default is False. For example, the
+            observation equation of a time-invariant model is
+            :math:`y_t = d + Z \alpha_t + \varepsilon_t`, and the "signal"
+            component is then :math:`Z \alpha_t`. If this argument is set to
+            True, then predictions of the "signal" :math:`Z \alpha_t` will be
+            returned. Otherwise, the default is for predictions of :math:`y_t`
+            to be returned.
         **kwargs
             Additional arguments may required for forecasting beyond the end
             of the sample. See `FilterResults.predict` for more details.
@@ -3366,11 +3418,13 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             Prediction results and confidence intervals
         """
         # Perform the prediction
-        prediction_results = self.get_prediction(start, end, dynamic, **kwargs)
+        prediction_results = self.get_prediction(
+            start, end, dynamic, information_set=information_set,
+            signal_only=signal_only, **kwargs)
         return prediction_results.predicted_mean
 
-    def forecast(self, steps=1, **kwargs):
-        """
+    def forecast(self, steps=1, signal_only=False, **kwargs):
+        r"""
         Out-of-sample forecasts
 
         Parameters
@@ -3379,7 +3433,16 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             If an integer, the number of steps to forecast from the end of the
             sample. Can also be a date string to parse or a datetime type.
             However, if the dates index does not have a fixed frequency, steps
-            must be an integer. Default
+            must be an integer. Default is 1.
+        signal_only : bool, optional
+            Whether to compute forecasts of only the "signal" component of
+            the observation equation. Default is False. For example, the
+            observation equation of a time-invariant model is
+            :math:`y_t = d + Z \alpha_t + \varepsilon_t`, and the "signal"
+            component is then :math:`Z \alpha_t`. If this argument is set to
+            True, then forecasts of the "signal" :math:`Z \alpha_t` will be
+            returned. Otherwise, the default is for forecasts of :math:`y_t`
+            to be returned.
         **kwargs
             Additional arguments may required for forecasting beyond the end
             of the sample. See `FilterResults.predict` for more details.
@@ -3394,7 +3457,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             end = self.nobs + steps - 1
         else:
             end = steps
-        return self.predict(start=self.nobs, end=end, **kwargs)
+        return self.predict(start=self.nobs, end=end, signal_only=signal_only,
+                            **kwargs)
 
     def simulate(self, nsimulations, measurement_shocks=None,
                  state_shocks=None, initial_state=None, anchor=None,
@@ -4576,7 +4640,8 @@ class PredictionResults(pred.PredictionResults):
     Attributes
     ----------
     """
-    def __init__(self, model, prediction_results, row_labels=None):
+    def __init__(self, model, prediction_results, row_labels=None,
+                 information_set='predicted', signal_only=False):
         if model.model.k_endog == 1:
             endog = pd.Series(prediction_results.endog[0],
                               name=model.model.endog_names)
@@ -4587,10 +4652,27 @@ class PredictionResults(pred.PredictionResults):
             endog=endog, predict_dates=row_labels))
         self.prediction_results = prediction_results
 
+        self.information_set = information_set
+        self.signal_only = signal_only
+
         # Get required values
         k_endog, nobs = prediction_results.endog.shape
-        if not prediction_results.results.memory_no_forecast_mean:
-            predicted_mean = self.prediction_results.forecasts
+        res = self.prediction_results.results
+        if information_set == 'predicted' and not res.memory_no_forecast_mean:
+            if not signal_only:
+                predicted_mean = self.prediction_results.forecasts
+            else:
+                predicted_mean = self.prediction_results.predicted_signal
+        elif information_set == 'filtered' and not res.memory_no_filtered_mean:
+            if not signal_only:
+                predicted_mean = self.prediction_results.filtered_forecasts
+            else:
+                predicted_mean = self.prediction_results.filtered_signal
+        elif information_set == 'smoothed':
+            if not signal_only:
+                predicted_mean = self.prediction_results.smoothed_forecasts
+            else:
+                predicted_mean = self.prediction_results.smoothed_signal
         else:
             predicted_mean = np.zeros((k_endog, nobs)) * np.nan
 
@@ -4599,8 +4681,23 @@ class PredictionResults(pred.PredictionResults):
         else:
             predicted_mean = predicted_mean.transpose()
 
-        if not prediction_results.results.memory_no_forecast_cov:
-            var_pred_mean = self.prediction_results.forecasts_error_cov
+        if information_set == 'predicted' and not res.memory_no_forecast_cov:
+            if not signal_only:
+                var_pred_mean = self.prediction_results.forecasts_error_cov
+            else:
+                var_pred_mean = self.prediction_results.predicted_signal_cov
+        elif information_set == 'filtered' and not res.memory_no_filtered_mean:
+            if not signal_only:
+                var_pred_mean = (
+                    self.prediction_results.filtered_forecasts_error_cov)
+            else:
+                var_pred_mean = self.prediction_results.filtered_signal_cov
+        elif information_set == 'smoothed':
+            if not signal_only:
+                var_pred_mean = (
+                    self.prediction_results.smoothed_forecasts_error_cov)
+            else:
+                var_pred_mean = self.prediction_results.smoothed_signal_cov
         else:
             var_pred_mean = np.zeros((k_endog, k_endog, nobs)) * np.nan
 

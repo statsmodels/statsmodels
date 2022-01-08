@@ -3571,9 +3571,10 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
         return fig
 
     def get_prediction(self, start=None, end=None, dynamic=False,
-                       index=None, exog=None, extend_model=None,
-                       extend_kwargs=None, original_scale=True, **kwargs):
-        """
+                       information_set='predicted', signal_only=False,
+                       original_scale=True, index=None, exog=None,
+                       extend_model=None, extend_kwargs=None, **kwargs):
+        r"""
         In-sample prediction and out-of-sample forecasting.
 
         Parameters
@@ -3597,6 +3598,25 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
             prediction; starting with this observation and continuing through
             the end of prediction, forecasted endogenous values will be used
             instead.
+        information_set : str, optional
+            The information set to condition each prediction on. Default is
+            "predicted", which computes predictions of period t values
+            conditional on observed data through period t-1; these are
+            one-step-ahead predictions, and correspond with the typical
+            `fittedvalues` results attribute. Alternatives are "filtered",
+            which computes predictions of period t values conditional on
+            observed data through period t, and "smoothed", which computes
+            predictions of period t values conditional on the entire dataset
+            (including also future observations t+1, t+2, ...).
+        signal_only : bool, optional
+            Whether to compute forecasts of only the "signal" component of
+            the observation equation. Default is False. For example, the
+            observation equation of a time-invariant model is
+            :math:`y_t = d + Z \alpha_t + \varepsilon_t`, and the "signal"
+            component is then :math:`Z \alpha_t`. If this argument is set to
+            True, then forecasts of the "signal" :math:`Z \alpha_t` will be
+            returned. Otherwise, the default is for forecasts of :math:`y_t`
+            to be returned.
         original_scale : bool, optional
             If the model specification standardized the data, whether or not
             to return predictions in the original scale of the data (i.e.
@@ -3613,6 +3633,8 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
         """
         # Get usual predictions (in the possibly-standardized scale)
         res = super().get_prediction(start=start, end=end, dynamic=dynamic,
+                                     information_set=information_set,
+                                     signal_only=signal_only,
                                      index=index, exog=exog,
                                      extend_model=extend_model,
                                      extend_kwargs=extend_kwargs, **kwargs)
@@ -3620,7 +3642,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
         # If applicable, convert predictions back to original space
         if self.model.standardize and original_scale:
             prediction_results = res.prediction_results
-            k_endog, nobs = prediction_results.endog.shape
+            k_endog, _ = prediction_results.endog.shape
 
             mean = np.array(self.model._endog_mean)
             std = np.array(self.model._endog_std)
@@ -3629,16 +3651,14 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
                 mean = mean[None, :]
                 std = std[None, :]
 
-            if not prediction_results.results.memory_no_forecast_mean:
-                res._results._predicted_mean = (
-                    res._results._predicted_mean * std + mean)
+            res._results._predicted_mean = (
+                res._results._predicted_mean * std + mean)
 
-            if not prediction_results.results.memory_no_forecast_cov:
-                if k_endog == 1:
-                    res._results._var_pred_mean *= std**2
-                else:
-                    res._results._var_pred_mean = (
-                        std * res._results._var_pred_mean * std.T)
+            if k_endog == 1:
+                res._results._var_pred_mean *= std**2
+            else:
+                res._results._var_pred_mean = (
+                    std * res._results._var_pred_mean * std.T)
 
         return res
 
