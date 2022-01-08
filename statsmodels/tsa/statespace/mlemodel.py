@@ -1763,7 +1763,8 @@ class MLEModel(tsbase.TimeSeriesModel):
             A numpy array of shape (out_of_sample, k_exog) if the model
             contains an `exog` component, or None if it does not.
         """
-        if out_of_sample and self.k_exog > 0:
+        k_exog = getattr(self, 'k_exog', 0)
+        if out_of_sample and k_exog > 0:
             if exog is None:
                 raise ValueError('Out-of-sample operations in a model'
                                  ' with a regression component require'
@@ -1778,7 +1779,7 @@ class MLEModel(tsbase.TimeSeriesModel):
                                  ' appropriate shape. Required %s, got %s.'
                                  % (str(required_exog_shape),
                                     str(exog.shape)))
-        elif self.k_exog > 0 and exog is not None:
+        elif k_exog > 0 and exog is not None:
             exog = None
             warnings.warn('Exogenous array provided, but additional data'
                           ' is not required. `exog` argument ignored.',
