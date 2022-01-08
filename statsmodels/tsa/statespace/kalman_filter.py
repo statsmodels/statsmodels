@@ -2252,7 +2252,8 @@ class PredictionResults(FilterResults):
                 # Get a copy
                 value = getattr(self.results, attr).copy()
                 if self.ndynamic > 0:
-                    value = value[..., :self.end - self.ndynamic - self.nforecast]
+                    end = self.end - self.ndynamic - self.nforecast
+                    value = value[..., :end]
                 if self.oos_results is not None:
                     oos_value = getattr(self.oos_results, attr).copy()
 
@@ -2297,7 +2298,8 @@ class PredictionResults(FilterResults):
                     value = value[..., 0]
                 else:
                     if self.ndynamic > 0:
-                        value = value[..., :self.end - self.ndynamic - self.nforecast]
+                        end = self.end - self.ndynamic - self.nforecast
+                        value = value[..., :end]
 
                     if self.oos_results is not None:
                         oos_value = getattr(self.oos_results, attr).copy()
@@ -2333,13 +2335,13 @@ class PredictionResults(FilterResults):
                 forecasts = d + (Z * states[None, :, :]).sum(axis=1)
                 tmp = Z[:, None, ...] * states_cov[None, ...]
                 tmp = (tmp[:, :, :, None, :]
-                    * Z.transpose(1, 0, 2)[None, :, None, ...])
+                       * Z.transpose(1, 0, 2)[None, :, None, ...])
                 forecasts_error_cov = (tmp.sum(axis=1).sum(axis=1).T + H.T).T
             else:
                 forecasts = (Z * states[None, :, :]).sum(axis=1)
                 tmp = Z[:, None, ...] * states_cov[None, ...]
                 tmp = (tmp[:, :, :, None, :]
-                    * Z.transpose(1, 0, 2)[None, :, None, ...])
+                       * Z.transpose(1, 0, 2)[None, :, None, ...])
                 forecasts_error_cov = tmp.sum(axis=1).sum(axis=1)
 
         return forecasts, forecasts_error_cov
