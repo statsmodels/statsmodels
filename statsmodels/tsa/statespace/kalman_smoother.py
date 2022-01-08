@@ -693,10 +693,14 @@ class SmootherResults(FilterResults):
         start = 1
         end = None
         if 'scaled_smoothed_estimator' in attributes:
+            self.scaled_smoothed_estimator_presample = (
+                self.scaled_smoothed_estimator[:, 0])
             self.scaled_smoothed_estimator = (
                 self.scaled_smoothed_estimator[:, start:end]
             )
         if 'scaled_smoothed_estimator_cov' in attributes:
+            self.scaled_smoothed_estimator_cov_presample = (
+                self.scaled_smoothed_estimator_cov[:, :, 0])
             self.scaled_smoothed_estimator_cov = (
                 self.scaled_smoothed_estimator_cov[:, :, start:end]
             )
@@ -714,7 +718,9 @@ class SmootherResults(FilterResults):
             self.smoothed_state_autocov *= self.scale
             self.smoothed_state_disturbance_cov *= self.scale
             self.smoothed_measurement_disturbance_cov *= self.scale
+            self.scaled_smoothed_estimator_presample /= self.scale
             self.scaled_smoothed_estimator /= self.scale
+            self.scaled_smoothed_estimator_cov_presample /= self.scale
             self.scaled_smoothed_estimator_cov /= self.scale
             self.smoothing_error /= self.scale
 
