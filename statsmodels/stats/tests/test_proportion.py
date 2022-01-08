@@ -397,17 +397,17 @@ def test_binom_rejection_interval():
     ci_low, ci_upp = smprop.binom_test_reject_interval(prop, nobs, alpha=alpha,
                                                        alternative=alternative)
     pval = smprop.binom_test(ci_upp, nobs, prop=prop,
-                                  alternative=alternative)
+                             alternative=alternative)
     assert_array_less(pval, alpha)
     pval = smprop.binom_test(ci_upp - 1, nobs, prop=prop,
-                                  alternative=alternative)
+                             alternative=alternative)
     assert_array_less(alpha, pval)
     pval = smprop.binom_test(ci_upp, nobs, prop=prop,
-                                  alternative=alternative)
+                             alternative=alternative)
     assert_array_less(pval, alpha)
 
     pval = smprop.binom_test(ci_upp - 1, nobs, prop=prop,
-                                  alternative=alternative)
+                             alternative=alternative)
     assert_array_less(alpha, pval)
 
 
