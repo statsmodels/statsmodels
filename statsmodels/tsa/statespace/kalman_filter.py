@@ -2396,30 +2396,6 @@ class PredictionResults(FilterResults):
         return self._smoothed_signal_cov
 
     @property
-    def filtered_forecasts_error_cov(self):
-        if self._filtered_forecasts_cov is None:
-            self._filtered_forecasts, self._filtered_forecasts_error_cov = (
-                self._compute_forecasts(self.filtered_state,
-                                        self.filtered_state_cov))
-        return self._filtered_forecasts_error_cov
-
-    @property
-    def smoothed_forecasts(self):
-        if self._smoothed_forecasts is None:
-            self._smoothed_forecasts, self._smoothed_forecasts_error_cov = (
-                self._compute_forecasts(self.smoothed_state,
-                                        self.smoothed_state_cov))
-        return self._smoothed_forecasts
-
-    @property
-    def smoothed_forecasts_error_cov(self):
-        if self._smoothed_forecasts_error_cov is None:
-            self._smoothed_forecasts, self._smoothed_forecasts_error_cov = (
-                self._compute_forecasts(self.smoothed_state,
-                                        self.smoothed_state_cov))
-        return self._smoothed_forecasts_error_cov
-
-    @property
     def filtered_forecasts(self):
         if self._filtered_forecasts is None:
             self._filtered_forecasts, self._filtered_forecasts_cov = (
