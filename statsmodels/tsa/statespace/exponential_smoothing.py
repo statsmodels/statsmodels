@@ -276,7 +276,6 @@ class ExponentialSmoothing(MLEModel):
                         ' one of s or s-1, where s is the number of seasonal'
                         ' periods.')
 
-
         # Note that the simple and heuristic methods of computing initial
         # seasonal factors return estimated seasonal factors associated with
         # the first t = 1, 2, ..., `n_seasons` observations. To use these as

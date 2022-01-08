@@ -453,8 +453,8 @@ class CheckKnownInitialization(object):
         if cls.mod.seasonal:
             cls.initial_seasonal = (
                 [cls.res.params['initial_seasonal']]
-                +  [cls.res.params['initial_seasonal.L%d' % i]
-                    for i in range(1, cls.mod.seasonal_periods - 1)])
+                + [cls.res.params['initial_seasonal.L%d' % i]
+                   for i in range(1, cls.mod.seasonal_periods - 1)])
 
         # Get the estimated parameters
         cls.params = cls.res.params[:'initial_level'].drop('initial_level')
