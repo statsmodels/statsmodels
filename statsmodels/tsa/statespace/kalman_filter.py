@@ -2252,7 +2252,7 @@ class PredictionResults(FilterResults):
                 # Get a copy
                 value = getattr(self.results, attr).copy()
                 if self.ndynamic > 0:
-                    value = value[..., :-self.ndynamic]
+                    value = value[..., :self.end - self.ndynamic - self.nforecast]
                 if self.oos_results is not None:
                     oos_value = getattr(self.oos_results, attr).copy()
 
@@ -2260,7 +2260,10 @@ class PredictionResults(FilterResults):
                     # and state cov will overlap with the first element of the
                     # oos predicted state and state cov, so eliminate the
                     # last element of the results versions
-                    if attr[:9] == 'predicted':
+                    # But if we have dynamic prediction, then we have already
+                    # eliminated the last element of the predicted state, so
+                    # we do not need to do it here.
+                    if self.ndynamic == 0 and attr[:9] == 'predicted':
                         value = value[..., :-1]
 
                     value = np.concatenate([value, oos_value], axis=-1)
@@ -2294,7 +2297,7 @@ class PredictionResults(FilterResults):
                     value = value[..., 0]
                 else:
                     if self.ndynamic > 0:
-                        value = value[..., :-self.ndynamic]
+                        value = value[..., :self.end - self.ndynamic - self.nforecast]
 
                     if self.oos_results is not None:
                         oos_value = getattr(self.oos_results, attr).copy()
