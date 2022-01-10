@@ -6,7 +6,10 @@ import numpy as np
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
 import statsmodels.regression.linear_model as lm
-from statsmodels.distributions import truncatedpoisson, truncatednegbin
+from statsmodels.distributions.discrete import (
+    truncatedpoisson,
+    truncatednegbin,
+    )
 from statsmodels.discrete.discrete_model import (
     DiscreteModel,
     CountModel,
@@ -547,7 +550,7 @@ class TruncatedGeneralizedPoisson(GenericTruncated):
             if self.truncation == 0:
                 return np.exp(linpred) / (1 - np.exp(-np.exp(linpred)))
             elif self.truncation == -1:
-                    return np.exp(linpred)
+                return np.exp(linpred)
             elif self.truncation > 0:
                 raise NotImplementedError("conditional mean not implemented")
         elif which == 'linear':

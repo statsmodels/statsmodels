@@ -2,8 +2,13 @@
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 
-import statsmodels.api as sm
+from statsmodels import datasets
+from statsmodels.tools.tools import add_constant
 
+from statsmodels.distributions.discrete import (
+    truncatedpoisson,
+    truncatednegbin,
+    )
 from statsmodels.discrete.truncated_model import (
     TruncatedPoisson,
     TruncatedNegativeBinomialP,
@@ -52,9 +57,9 @@ class CheckResults(object):
 class TestTruncatedPoissonModel(CheckResults):
     @classmethod
     def setup_class(cls):
-        data = sm.datasets.randhie.load()
-        exog = sm.add_constant(np.asarray(data.exog)[:, :4], prepend=False)
-        mod = sm.TruncatedPoisson(data.endog, exog, truncation=5)
+        data = datasets.randhie.load()
+        exog = add_constant(np.asarray(data.exog)[:, :4], prepend=False)
+        mod = TruncatedPoisson(data.endog, exog, truncation=5)
         cls.res1 = mod.fit(method="newton", maxiter=500)
         res2 = RandHIE()
         res2.truncated_poisson()
@@ -64,10 +69,10 @@ class TestTruncatedPoissonModel(CheckResults):
 class TestZeroTruncatedPoissonModel(CheckResults):
     @classmethod
     def setup_class(cls):
-        data = sm.datasets.randhie.load()
-        exog = sm.add_constant(np.asarray(data.exog)[:, :4], prepend=False)
-        cls.res1 = sm.TruncatedPoisson(data.endog, exog, truncation=0
-                                       ).fit(maxiter=500)
+        data = datasets.randhie.load()
+        exog = add_constant(np.asarray(data.exog)[:, :4], prepend=False)
+        mod = TruncatedPoisson(data.endog, exog, truncation=0)
+        cls.res1 = mod.fit(maxiter=500)
         res2 = RandHIE()
         res2.zero_truncated_poisson()
         cls.res2 = res2
@@ -76,11 +81,10 @@ class TestZeroTruncatedPoissonModel(CheckResults):
 class TestZeroTruncatedNBPModel(CheckResults):
     @classmethod
     def setup_class(cls):
-        data = sm.datasets.randhie.load()
-        exog = sm.add_constant(np.asarray(data.exog)[:, :3], prepend=False)
-        cls.res1 = sm.TruncatedNegativeBinomialP(data.endog, exog,
-                                                 truncation=0
-                                                 ).fit(maxiter=500)
+        data = datasets.randhie.load()
+        exog = add_constant(np.asarray(data.exog)[:, :3], prepend=False)
+        mod = TruncatedNegativeBinomialP(data.endog, exog, truncation=0)
+        cls.res1 = mod.fit(maxiter=500)
         res2 = RandHIE()
         res2.zero_truncted_nbp()
         cls.res2 = res2
@@ -98,9 +102,8 @@ class TestTruncatedPoisson_predict(object):
         exog = np.ones((nobs, 2))
         exog[:nobs//2, 1] = 2
         mu_true = exog.dot(cls.expected_params)
-        cls.endog = sm.distributions.truncatedpoisson.rvs(mu_true, 0,
-                                                          size=mu_true.shape)
-        model = sm.TruncatedPoisson(cls.endog, exog, truncation=0)
+        cls.endog = truncatedpoisson.rvs(mu_true, 0, size=mu_true.shape)
+        model = TruncatedPoisson(cls.endog, exog, truncation=0)
         cls.res = model.fit(method='bfgs', maxiter=5000)
 
     def test_mean(self):
@@ -116,7 +119,7 @@ class TestTruncatedPoisson_predict(object):
         res = self.res
 
         pr = res.predict(which='prob')
-        pr2 = sm.distributions.truncatedpoisson.pmf(
+        pr2 = truncatedpoisson.pmf(
             np.arange(8), res.predict(which="mean-main")[:, None], 0)
         assert_allclose(pr, pr2, rtol=1e-10, atol=1e-10)
 
@@ -130,10 +133,9 @@ class TestTruncatedNBP_predict(object):
         exog = np.ones((nobs, 2))
         exog[:nobs//2, 1] = 2
         mu_true = np.exp(exog.dot(cls.expected_params[:-1]))
-        cls.endog = sm.distributions.truncatednegbin.rvs(
+        cls.endog = truncatednegbin.rvs(
             mu_true, cls.expected_params[-1], 2, 0, size=mu_true.shape)
-        model = sm.TruncatedNegativeBinomialP(cls.endog, exog, truncation=0,
-                                              p=2)
+        model = TruncatedNegativeBinomialP(cls.endog, exog, truncation=0, p=2)
         cls.res = model.fit(method='nm', maxiter=5000, maxfun=5000)
 
     def test_mean(self):
@@ -149,7 +151,7 @@ class TestTruncatedNBP_predict(object):
         res = self.res
 
         pr = res.predict(which='prob')
-        pr2 = sm.distributions.truncatednegbin.pmf(
+        pr2 = truncatednegbin.pmf(
             np.arange(29),
             res.predict(which="mean-main")[:, None], res.params[-1], 2, 0)
         assert_allclose(pr, pr2, rtol=1e-10, atol=1e-10)
