@@ -24,8 +24,8 @@ from statsmodels.tools.sm_exceptions import (X13NotFoundError,
 
 __all__ = ["x13_arima_select_order", "x13_arima_analysis"]
 
-_binary_names = ('x13as.exe', 'x13as', 'x12a.exe', 'x12a')
-
+_binary_names = ('x13as.exe', 'x13as', 'x12a.exe', 'x12a',
+                 'x13as_ascii', 'x13as_html')
 
 class _freq_to_period:
     def __getitem__(self, key):
