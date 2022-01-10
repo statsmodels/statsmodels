@@ -18,7 +18,11 @@ from statsmodels.iolib.summary import Summary
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.sm_exceptions import SpecificationWarning, ValueWarning
 from statsmodels.tools.tools import Bunch
-from statsmodels.tsa.ar_model import AutoReg, ar_select_order
+from statsmodels.tsa.ar_model import (
+    AutoReg,
+    AutoRegResultsWrapper,
+    ar_select_order,
+)
 from statsmodels.tsa.arima_process import arma_generate_sample
 from statsmodels.tsa.deterministic import (
     DeterministicProcess,
@@ -439,6 +443,7 @@ def test_parameterless_autoreg():
             "t_test_pairwise",
             "wald_test",
             "wald_test_terms",
+            "apply",
         ):
             continue
         attr = getattr(res, attr)
@@ -1184,3 +1189,55 @@ def test_removal(ar2):
         AR(ar2)
     with pytest.raises(NotImplementedError):
         ARResults(ar2)
+
+
+def test_autoreg_apply(ols_autoreg_result):
+    res, _ = ols_autoreg_result
+    y = res.model.endog
+    n = y.shape[0] // 2
+    y = y[:n]
+    x = res.model.exog
+    if x is not None:
+        x = x[:n]
+    res_apply = res.apply(endog=y, exog=x)
+    assert "using a different" in str(res_apply.summary())
+    assert isinstance(res_apply, AutoRegResultsWrapper)
+    assert_allclose(res.params, res_apply.params)
+    exog_oos = None
+    if res.model.exog is not None:
+        exog_oos = res.model.exog[-10:]
+    fcasts_apply = res_apply.forecast(10, exog=exog_oos)
+    assert isinstance(fcasts_apply, np.ndarray)
+    assert fcasts_apply.shape == (10,)
+
+    res_refit = res.apply(endog=y, exog=x, refit=True)
+    assert not np.allclose(res.params, res_refit.params)
+    assert not np.allclose(res.llf, res_refit.llf)
+    assert res_apply.fittedvalues.shape == res_refit.fittedvalues.shape
+    assert not np.allclose(res_apply.llf, res_refit.llf)
+    if res.model.exog is None:
+        fcasts_refit = res_refit.forecast(10, exog=exog_oos)
+        assert isinstance(fcasts_refit, np.ndarray)
+        assert fcasts_refit.shape == (10,)
+        assert not np.allclose(fcasts_refit, fcasts_apply)
+
+
+def test_autoreg_apply_exception(reset_randomstate):
+    y = np.random.standard_normal(250)
+    mod = AutoReg(y, lags=10)
+    res = mod.fit()
+    with pytest.raises(ValueError, match="An exception occured"):
+        res.apply(y[:5])
+
+    x = np.random.standard_normal((y.shape[0], 3))
+    res = AutoReg(y, lags=1, exog=x).fit()
+    with pytest.raises(ValueError, match="exog must be provided"):
+        res.apply(y[50:150])
+    x = np.random.standard_normal((y.shape[0], 3))
+    res = AutoReg(y, lags=1, exog=x).fit()
+    with pytest.raises(ValueError, match="The number of exog"):
+        res.apply(y[50:150], exog=x[50:150, :2])
+
+    res = AutoReg(y, lags=1).fit()
+    with pytest.raises(ValueError, match="exog must be None"):
+        res.apply(y[50:150], exog=x[50:150])
