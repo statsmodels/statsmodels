@@ -1741,6 +1741,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
 
         See Also
         --------
+        AutoRegResults.append
         statsmodels.tsa.statespace.mlemodel.MLEResults.apply
 
         Notes
@@ -1757,39 +1758,46 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
 
         Examples
         --------
+        >>> import pandas as pd
         >>> from statsmodels.tsa.ar_model import AutoReg
-        >>> index = pd.period_range(start='2000', periods=2, freq='A')
-        >>> original_observations = pd.Series([1.2, 1.5], index=index)
+        >>> index = pd.period_range(start='2000', periods=3, freq='A')
+        >>> original_observations = pd.Series([1.2, 1.5, 1.8], index=index)
         >>> mod = AutoReg(original_observations, lags=1, trend="n")
         >>> res = mod.fit()
         >>> print(res.params)
-        y.L1    1.300813
+        y.L1    1.219512
         dtype: float64
         >>> print(res.fittedvalues)
-        2001    1.560976
-        2002    1.951220
+        2001    1.463415
+        2002    1.829268
         Freq: A-DEC, dtype: float64
         >>> print(res.forecast(1))
-        2003    2.601626
+        2003    2.195122
         Freq: A-DEC, dtype: float64
 
         >>> new_index = pd.period_range(start='1980', periods=3, freq='A')
         >>> new_observations = pd.Series([1.4, 0.3, 1.2], index=new_index)
         >>> new_res = res.apply(new_observations)
         >>> print(new_res.params)
-        y.L1    1.300813
+        y.L1    1.219512
         dtype: float64
         >>> print(new_res.fittedvalues)
-        1980    1.1707
-        1981    1.3659
-        1982    0.2927
+        1981    1.707317
+        1982    0.365854
         Freq: A-DEC, dtype: float64
         >>> print(new_res.forecast(1))
-        1983    1.1707
+        1983    1.463415
         Freq: A-DEC, dtype: float64
         """
         existing = self.model
         try:
+            deterministic = existing.deterministic
+            if deterministic is not None:
+                if isinstance(endog, (pd.Series, pd.DataFrame)):
+                    index = endog.index
+                else:
+                    index = np.arange(endog.shape[0])
+                deterministic = deterministic.apply(index)
             mod = AutoReg(
                 endog,
                 lags=existing.ar_lags,
@@ -1798,7 +1806,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
                 exog=exog,
                 hold_back=existing.hold_back,
                 period=existing.period,
-                deterministic=existing.deterministic,
+                deterministic=deterministic,
                 old_names=False,
             )
         except Exception as exc:
@@ -1846,6 +1854,128 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         )
 
         return AutoRegResultsWrapper(res)
+
+    def append(self, endog, exog=None, refit=False, fit_kwargs=None):
+        """
+        Append observations to the ones used to fit the model
+
+        Creates a new result object using the current fitted parameters
+        where additional observations are appended to the data used
+        to fit the model. The new results can then be used for
+        analysis or forecasting.
+
+        Parameters
+        ----------
+        endog : array_like
+            New observations from the modeled time-series process.
+        exog : array_like, optional
+            New observations of exogenous regressors, if applicable.
+        refit : bool, optional
+            Whether to re-fit the parameters, using the new dataset.
+            Default is False (so parameters from the current results object
+            are used to create the new results object).
+        fit_kwargs : dict, optional
+            Keyword arguments to pass to `fit` (if `refit=True`).
+
+        Returns
+        -------
+        AutoRegResults
+            Updated results object containing results for the new dataset.
+
+        See Also
+        --------
+        AutoRegResults.apply
+        statsmodels.tsa.statespace.mlemodel.MLEResults.append
+
+        Notes
+        -----
+        The endog and exog arguments to this method must be formatted in the
+        same way (e.g. Pandas Series versus Numpy array) as were the endog
+        and exog arrays passed to the original model.
+
+        The endog argument to this method should consist of new observations
+        that occurred directly after the last element of endog. For any other
+        kind of dataset, see the apply method.
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> from statsmodels.tsa.ar_model import AutoReg
+        >>> index = pd.period_range(start='2000', periods=3, freq='A')
+        >>> original_observations = pd.Series([1.2, 1.4, 1.8], index=index)
+        >>> mod = AutoReg(original_observations, lags=1, trend="n")
+        >>> res = mod.fit()
+        >>> print(res.params)
+        y.L1    1.235294
+        dtype: float64
+        >>> print(res.fittedvalues)
+        2001    1.482353
+        2002    1.729412
+        Freq: A-DEC, dtype: float64
+        >>> print(res.forecast(1))
+        2003    2.223529
+        Freq: A-DEC, dtype: float64
+
+        >>> new_index = pd.period_range(start='2003', periods=3, freq='A')
+        >>> new_observations = pd.Series([2.1, 2.4, 2.7], index=new_index)
+        >>> updated_res = res.append(new_observations)
+        >>> print(updated_res.params)
+        y.L1    1.235294
+        dtype: float64
+        >>> print(updated_res.fittedvalues)
+        dtype: float64
+        2001    1.482353
+        2002    1.729412
+        2003    2.223529
+        2004    2.594118
+        2005    2.964706
+        Freq: A-DEC, dtype: float64
+        >>> print(updated_res.forecast(1))
+        2006    3.335294
+        Freq: A-DEC, dtype: float64
+        """
+
+        def _check(orig, new, name, use_pandas=True):
+            from statsmodels.tsa.statespace.mlemodel import _check_index
+
+            typ = type(orig)
+            if not isinstance(new, typ):
+                raise TypeError(
+                    f"{name} must have the same type as the {name} used to "
+                    f"originally create the model ({typ.__name__})."
+                )
+            if not use_pandas:
+                return np.concatenate([orig, new])
+            start = len(orig)
+            end = start + len(new) - 1
+            _, _, _, append_ix = self.model._get_prediction_index(start, end)
+            _check_index(append_ix, new, title=name)
+            return pd.concat([orig, new], axis=0)
+
+        existing = self.model
+        no_exog = existing.exog is None
+        if no_exog != (exog is None):
+            if no_exog:
+                err = (
+                    "Original model does not contain exog data but exog data "
+                    "passed"
+                )
+            else:
+                err = "Original model has exog data but not exog data passed"
+            raise ValueError(err)
+        if isinstance(existing.data.orig_endog, (pd.Series, pd.DataFrame)):
+            endog = _check(existing.data.orig_endog, endog, "endog")
+        else:
+            endog = _check(
+                existing.endog, np.asarray(endog), "endog", use_pandas=False
+            )
+        if isinstance(existing.data.orig_exog, (pd.Series, pd.DataFrame)):
+            exog = _check(existing.data.orig_exog, exog, "exog")
+        elif exog is not None:
+            exog = _check(
+                existing.exog, np.asarray(exog), "endog", use_pandas=False
+            )
+        return self.apply(endog, exog, refit=refit, fit_kwargs=fit_kwargs)
 
 
 class AutoRegResultsWrapper(wrap.ResultsWrapper):

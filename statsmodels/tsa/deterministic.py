@@ -1451,3 +1451,29 @@ differences can be extended when producing out-of-sample forecasts.
             self._extendable = self._index[0] == 0 and np.all(
                 np.diff(self._index) == 1
             )
+
+    def apply(self, index):
+        """
+        Create an identical determinstic process with a different index
+
+        Parameters
+        ----------
+        index : index_like
+            An index-like object. If not an index, it is converted to an
+            index.
+
+        Returns
+        -------
+        DeterministicProcess
+            The deterministic process applied to a different index
+        """
+        return DeterministicProcess(
+            index,
+            period=self._period,
+            constant=self._constant,
+            order=self._order,
+            seasonal=self._seasonal,
+            fourier=self._fourier,
+            additional_terms=self._additional_terms,
+            drop=self._drop,
+        )
