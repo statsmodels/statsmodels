@@ -3357,23 +3357,23 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
     def predict(self, start=None, end=None, dynamic=False,
                 information_set='predicted', signal_only=False, **kwargs):
-        """
+        r"""
         In-sample prediction and out-of-sample forecasting
 
         Parameters
         ----------
-        start : int, str, or datetime, optional
+        start : {int, str,datetime}, optional
             Zero-indexed observation number at which to start forecasting,
             i.e., the first forecast is start. Can also be a date string to
-            parse or a datetime type. Default is the the zeroth observation.
-        end : int, str, or datetime, optional
+            parse or a datetime type. Default is the zeroth observation.
+        end : {int, str,datetime}, optional
             Zero-indexed observation number at which to end forecasting, i.e.,
             the last forecast is end. Can also be a date string to
             parse or a datetime type. However, if the dates index does not
             have a fixed frequency, end must be an integer index if you
             want out of sample prediction. Default is the last observation in
             the sample.
-        dynamic : bool, int, str, or datetime, optional
+        dynamic : {bool, int, str,datetime}, optional
             Integer offset relative to `start` at which to begin dynamic
             prediction. Can also be an absolute date string to parse or a
             datetime type (these are not interpreted as offsets).
@@ -3401,8 +3401,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             returned. Otherwise, the default is for predictions of :math:`y_t`
             to be returned.
         **kwargs
-            Additional arguments may required for forecasting beyond the end
-            of the sample. See `FilterResults.predict` for more details.
+            Additional arguments may be required for forecasting beyond the end
+            of the sample. See ``FilterResults.predict`` for more details.
 
         Returns
         -------
