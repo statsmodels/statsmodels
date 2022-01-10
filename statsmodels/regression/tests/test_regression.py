@@ -1598,3 +1598,15 @@ def test_summary_no_constant():
     y = rs.standard_normal(100)
     summary = OLS(y, x).fit().summary()
     assert "R² is computed " in summary.as_text()
+
+
+def test_slim_summary(reset_randomstate):
+    y = np.random.standard_normal(100)
+    x = np.random.standard_normal((100, 1))
+    x = x + np.random.standard_normal((100, 5))
+    res = OLS(y, x).fit()
+    summ = res.summary()
+    summ2 = res.summary()
+    slim_summ = res.summary(slim=True)
+    assert str(summ) == str(summ2)
+    assert str(slim_summ) != str(summ)

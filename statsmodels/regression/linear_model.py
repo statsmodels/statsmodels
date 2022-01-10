@@ -30,11 +30,12 @@ R. Davidson and J.G. MacKinnon.  "Econometric Theory and Methods," Oxford,
 
 W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
 """
-
+from __future__ import annotations
 
 from statsmodels.compat.pandas import Appender
 from statsmodels.compat.python import lrange, lzip
 
+from typing import Sequence
 import warnings
 
 import numpy as np
@@ -47,12 +48,9 @@ from statsmodels.emplike.elregress import _ELRegOpts
 # need import in module instead of lazily to copy `__doc__`
 from statsmodels.regression._prediction import PredictionResults
 from statsmodels.tools.decorators import cache_readonly, cache_writable
-from statsmodels.tools.sm_exceptions import (
-    InvalidTestWarning,
-    ValueWarning,
-    )
+from statsmodels.tools.sm_exceptions import InvalidTestWarning, ValueWarning
 from statsmodels.tools.tools import pinv_extended
-from statsmodels.tools.validation import string_like
+from statsmodels.tools.validation import bool_like, float_like, string_like
 
 from . import _prediction as pred
 
@@ -2639,7 +2637,14 @@ class RegressionResults(base.LikelihoodModelResults):
             self, exog=exog, transform=transform, weights=weights,
             row_labels=row_labels, **kwargs)
 
-    def summary(self, yname=None, xname=None, title=None, alpha=.05, slim=False):
+    def summary(
+            self,
+            yname: str | None = None,
+            xname: Sequence[str] | None = None,
+            title: str | None = None,
+            alpha: float = 0.05,
+            slim: bool = False,
+    ):
         """
         Summarize the Regression Results.
 
@@ -2654,8 +2659,11 @@ class RegressionResults(base.LikelihoodModelResults):
         title : str, optional
             Title for the top table. If not None, then this replaces the
             default title.
-        alpha : float
+        alpha : float, optional
             The significance level for the confidence intervals.
+        slim : bool, optional
+            Flag indicating to produce reduced set or diagnostic information.
+            Default is False.
 
         Returns
         -------
@@ -2671,7 +2679,9 @@ class RegressionResults(base.LikelihoodModelResults):
             durbin_watson,
             jarque_bera,
             omni_normtest,
-            )
+        )
+        alpha = float_like(alpha, "alpha", optional=False)
+        slim = bool_like(slim, "slim", optional=False, strict=True)
 
         jb, jbpv, skew, kurtosis = jarque_bera(self.wresid)
         omni, omnipv = omni_normtest(self.wresid)
@@ -2721,8 +2731,7 @@ class RegressionResults(base.LikelihoodModelResults):
             slimlist = ['Dep. Variable:', 'Model:', 'No. Observations:',
                         'Covariance Type:', 'R-squared:', 'Adj. R-squared:',
                         'F-statistic:', 'Prob (F-statistic):']
-            diagn_left = []
-            diagn_right = []
+            diagn_left = diagn_right = []
             top_left = [elem for elem in top_left if elem[0] in slimlist]
             top_right = [elem for elem in top_right if elem[0] in slimlist]
         else:
@@ -2790,8 +2799,14 @@ class RegressionResults(base.LikelihoodModelResults):
 
         return smry
 
-    def summary2(self, yname=None, xname=None, title=None, alpha=.05,
-                 float_format="%.4f"):
+    def summary2(
+            self,
+            yname: str | None = None,
+            xname: Sequence[str] | None = None,
+            title: str | None = None,
+            alpha: float = 0.05,
+            float_format: str = "%.4f",
+    ):
         """
         Experimental summary function to summarize the regression results.
 
