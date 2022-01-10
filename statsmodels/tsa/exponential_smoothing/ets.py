@@ -1195,7 +1195,7 @@ class ETSModel(base.StateSpaceMLEModel):
 
         .. math::
 
-           s^2 = \frac{1}{n}\sum\limits_{t=1}^n \frac{\hat{y}_t - y_t}{k_t}
+           s^2 = \frac{1}{n}\sum\limits_{t=1}^n \frac{(\hat{y}_t - y_t)^2}{k_t}
 
         where :math:`k_t = 1` for the additive error model and :math:`k_t =
         y_t` for the multiplicative error model.
