@@ -2,6 +2,7 @@
 Test AR Model
 """
 from statsmodels.compat.pytest import pytest_warns
+from typing import NamedTuple, Union
 
 import datetime as dt
 from itertools import product
@@ -278,9 +279,11 @@ def gen_data(nobs, nexog, pandas, seed=92874765):
         if nexog:
             cols = ["exog.{0}".format(i) for i in range(exog.shape[1])]
             exog = pd.DataFrame(exog, columns=cols, index=index)
-    from collections import namedtuple
 
-    DataSet = namedtuple("DataSet", ["endog", "exog"])
+    class DataSet(NamedTuple):
+        endog: Union[np.ndarray, pd.Series]
+        exog: Union[np.ndarray, pd.DataFrame]
+
     return DataSet(endog=endog, exog=exog)
 
 
@@ -444,6 +447,7 @@ def test_parameterless_autoreg():
             "wald_test",
             "wald_test_terms",
             "apply",
+            "append",
         ):
             continue
         attr = getattr(res, attr)
@@ -1241,3 +1245,122 @@ def test_autoreg_apply_exception(reset_randomstate):
     res = AutoReg(y, lags=1).fit()
     with pytest.raises(ValueError, match="exog must be None"):
         res.apply(y[50:150], exog=x[50:150])
+
+
+@pytest.fixture
+def append_data():
+    rs = np.random.RandomState(0)
+    y = rs.standard_normal(250)
+    x = rs.standard_normal((250, 3))
+    x_oos = rs.standard_normal((10, 3))
+    y_oos = rs.standard_normal(10)
+    index = pd.date_range(
+        "2020-1-1", periods=y.shape[0] + y_oos.shape[0], freq="M"
+    )
+    y = pd.Series(y, index=index[: y.shape[0]], name="y")
+    x = pd.DataFrame(
+        x,
+        index=index[: y.shape[0]],
+        columns=[f"x{i}" for i in range(x.shape[1])],
+    )
+    y_oos = pd.Series(y_oos, index=index[y.shape[0] :], name="y")
+    x_oos = pd.DataFrame(x_oos, index=index[y.shape[0] :], columns=x.columns)
+    y_both = pd.concat([y, y_oos], axis=0)
+    x_both = pd.concat([x, x_oos], axis=0)
+
+    class AppendData(NamedTuple):
+        y: pd.Series
+        y_oos: pd.Series
+        y_both: pd.Series
+        x: pd.Series
+        x_oos: pd.DataFrame
+        x_both: pd.DataFrame
+
+    return AppendData(y, y_oos, y_both, x, x_oos, x_both)
+
+
+@pytest.mark.parametrize("trend", ["n", "ct"])
+@pytest.mark.parametrize("use_pandas", [True, False])
+@pytest.mark.parametrize("lags", [0, 1, 3])
+@pytest.mark.parametrize("seasonal", [True, False])
+def test_autoreg_append(append_data, use_pandas, lags, trend, seasonal):
+    period = 12 if not use_pandas else None
+    y = append_data.y
+    y_oos = append_data.y_oos
+    y_both = append_data.y_both
+    x = append_data.x
+    x_oos = append_data.x_oos
+    x_both = append_data.x_both
+    if not use_pandas:
+        y = np.asarray(y)
+        x = np.asarray(x)
+        y_oos = np.asarray(y_oos)
+        x_oos = np.asarray(x_oos)
+        y_both = np.asarray(y_both)
+        x_both = np.asarray(x_both)
+
+    res = AutoReg(
+        y, lags=lags, trend=trend, seasonal=seasonal, period=period
+    ).fit()
+    res_append = res.append(y_oos, refit=True)
+    res_direct = AutoReg(
+        y_both, lags=lags, trend=trend, seasonal=seasonal, period=period
+    ).fit()
+    res_exog = AutoReg(
+        y, exog=x, lags=lags, trend=trend, seasonal=seasonal, period=period
+    ).fit()
+    res_exog_append = res_exog.append(y_oos, exog=x_oos, refit=True)
+    res_exog_direct = AutoReg(
+        y_both,
+        exog=x_both,
+        lags=lags,
+        trend=trend,
+        seasonal=seasonal,
+        period=period,
+    ).fit()
+
+    assert_allclose(res_direct.params, res_append.params)
+    assert_allclose(res_exog_direct.params, res_exog_append.params)
+    if use_pandas:
+        with pytest.raises(TypeError, match="endog must have the same type"):
+            res.append(np.asarray(y_oos))
+        with pytest.raises(TypeError, match="exog must have the same type"):
+            res_exog.append(y_oos, np.asarray(x_oos))
+    with pytest.raises(ValueError, match="Original model does"):
+        res.append(y_oos, exog=x_oos)
+    with pytest.raises(ValueError, match="Original model has exog"):
+        res_exog.append(y_oos)
+
+
+def test_autoreg_append_deterministic(append_data):
+    y = append_data.y
+    y_oos = append_data.y_oos
+    y_both = append_data.y_both
+    x = append_data.x
+    x_oos = append_data.x_oos
+    x_both = append_data.x_both
+
+    terms = [TimeTrend(constant=True, order=1), Seasonality(12)]
+    dp = DeterministicProcess(y.index, additional_terms=terms)
+
+    res = AutoReg(y, lags=3, trend="n", deterministic=dp).fit()
+    res_append = res.append(y_oos, refit=True)
+    res_direct = AutoReg(
+        y_both, lags=3, trend="n", deterministic=dp.apply(y_both.index)
+    ).fit()
+    assert_allclose(res_append.params, res_direct.params)
+
+    res_np = AutoReg(np.asarray(y), lags=3, trend="n", deterministic=dp).fit()
+    res_append_np = res_np.append(np.asarray(y_oos))
+    assert_allclose(res_np.params, res_append_np.params)
+
+    res = AutoReg(y, exog=x, lags=3, trend="n", deterministic=dp).fit()
+    res_append = res.append(y_oos, exog=x_oos, refit=True)
+    res_direct = AutoReg(
+        y_both,
+        exog=x_both,
+        lags=3,
+        trend="n",
+        deterministic=dp.apply(y_both.index),
+    ).fit()
+    assert_allclose(res_append.params, res_direct.params)
