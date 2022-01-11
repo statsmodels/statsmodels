@@ -3,6 +3,9 @@
 __all__ = [
     "BayesGaussMI",
     "BinomialBayesMixedGLM",
+    "ConditionalLogit",
+    "ConditionalMNLogit",
+    "ConditionalPoisson",
     "Factor",
     "GEE",
     "GLM",
@@ -70,6 +73,12 @@ __all__ = [
 
 from . import datasets, distributions, iolib, regression, robust, tools
 from .__init__ import test
+from ._version import get_versions
+from .discrete.conditional_models import (
+    ConditionalLogit,
+    ConditionalMNLogit,
+    ConditionalPoisson,
+)
 from .discrete.count_model import (
     ZeroInflatedGeneralizedPoisson,
     ZeroInflatedNegativeBinomialP,
@@ -122,7 +131,6 @@ from .tools.print_version import show_versions
 from .tools.tools import add_constant, categorical
 from .tools.web import webdoc
 from .tsa import api as tsa
-from ._version import get_versions
 
 __version__ = get_versions()["version"]
 del get_versions
