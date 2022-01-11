@@ -73,6 +73,10 @@ Discrete and Count Models
    ~statsmodels.discrete.count_model.ZeroInflatedPoisson
    ~statsmodels.discrete.count_model.ZeroInflatedNegativeBinomialP
    ~statsmodels.discrete.count_model.ZeroInflatedGeneralizedPoisson
+   ~statsmodels.discrete.conditional_models.ConditionalLogit
+   ~statsmodels.discrete.conditional_models.ConditionalMNLogit
+   ~statsmodels.discrete.conditional_models.ConditionalPoisson
+
 
 Multivariate Models
 ~~~~~~~~~~~~~~~~~~~
@@ -263,3 +267,6 @@ details.
    ~statsmodels.formula.api.quantreg
    ~statsmodels.formula.api.phreg
    ~statsmodels.formula.api.glmgam
+   ~statsmodels.formula.api.conditional_logit
+   ~statsmodels.formula.api.conditional_mnlogit
+   ~statsmodels.formula.api.conditional_poisson
