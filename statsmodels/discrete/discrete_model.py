@@ -1647,6 +1647,8 @@ class Poisson(CountModel):
                               )[:, None]
             # uses broadcasting
             return stats.poisson.pmf(y_values, mu)
+        else:
+            raise ValueError('Value of the `which` option is not recognized')
 
     def get_distribution(self, params, exog=None, exposure=None, offset=None):
         """Get frozen instance of distribution based on predicted parameters.

@@ -110,7 +110,10 @@ class TestTruncatedPoisson_predict(object):
         assert_allclose(self.res.predict().mean(), self.endog.mean(),
                         atol=2e-1, rtol=2e-1)
 
-    def t_est_var(self):  # TODO: temporaritly disabled, _disp incorrect
+    def test_var(self):
+        v = self.res.predict(which="var").mean()
+        assert_allclose(v, self.endog.var(), atol=2e-1, rtol=2e-1)
+        return
         assert_allclose((self.res.predict().mean() *
                         self.res._dispersion_factor.mean()),
                         self.endog.var(), atol=5e-2, rtol=5e-2)
@@ -142,7 +145,10 @@ class TestTruncatedNBP_predict(object):
         assert_allclose(self.res.predict().mean(), self.endog.mean(),
                         atol=2e-1, rtol=2e-1)
 
-    def t_est_var(self):  # TODO: temporaritly disabled, _disp incorrect
+    def test_var(self):
+        v = self.res.predict(which="var").mean()
+        assert_allclose(v, self.endog.var(), atol=1e-1, rtol=1e-2)
+        return
         assert_allclose((self.res.predict().mean() *
                         self.res._dispersion_factor.mean()),
                         self.endog.var(), atol=5e-2, rtol=5e-2)
@@ -228,6 +234,18 @@ class CheckTruncatedST():
         ci = pred.conf_int()[start_idx:k]
         assert_allclose(ci[:, 0], rdf[:-1, 4], rtol=5e-5, atol=1e-10)
         assert_allclose(ci[:, 1], rdf[:-1, 5], rtol=5e-5, atol=1e-10)
+
+        # untruncated predicted probabilites, subset is common to reference
+        ex = res1.model.exog.mean(0)
+        rdf = res2.margins_pr.table
+        k = rdf.shape[0] - 1
+        pred = res1.get_prediction(which="prob-main", average=True)
+        assert_allclose(pred.predicted[:k], rdf[:-1, 0], rtol=5e-5)
+        assert_allclose(pred.se[:k], rdf[:-1, 1],
+                        rtol=8e-4, atol=1e-10)
+        ci = pred.conf_int()[:k]
+        assert_allclose(ci[:, 0], rdf[:-1, 4], rtol=5e-4, atol=1e-10)
+        assert_allclose(ci[:, 1], rdf[:-1, 5], rtol=5e-4, atol=1e-10)
 
 
 class TestTruncatedPoissonSt(CheckTruncatedST):

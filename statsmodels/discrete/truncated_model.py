@@ -336,12 +336,21 @@ class TruncatedPoisson(GenericTruncated):
         linpred = fitted + exposure + offset
 
         if which == 'mean':
+            mu = np.exp(linpred)
             if self.truncation == 0:
-                return np.exp(linpred) / (1 - np.exp(-np.exp(linpred)))
+                return mu / (1 - np.exp(-np.exp(linpred)))
             elif self.truncation == -1:
-                return np.exp(linpred)
+                return mu
             elif self.truncation > 0:
-                raise NotImplementedError("conditional mean not implemented")
+                counts = np.atleast_2d(np.arange(0, self.truncation + 1))
+                # next is same as in prob-main below
+                probs = self.model_main.predict(
+                    params, exog=exog, exposure=np.exp(exposure),
+                    offset=offset, which="prob", y_values=counts)
+                prob_tregion = probs.sum(1)
+                mean_tregion = (np.arange(self.truncation + 1) * probs).sum(1)
+                mean = (mu - mean_tregion) / (1 - prob_tregion)
+                return mean
         elif which == 'linear':
             return linpred
         elif which == 'mean-main':
@@ -354,6 +363,30 @@ class TruncatedPoisson(GenericTruncated):
             mu = self.predict(params, exog=exog, exposure=exposure,
                               offset=offset, which="mean-main")[:, None]
             return self.model_dist.pmf(counts, mu, self.trunc)
+        elif which == 'prob-main':
+            if count_prob is not None:
+                counts = np.atleast_2d(count_prob)
+            else:
+                counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
+            probs = self.model_main.predict(
+                params, exog=exog, exposure=np.exp(exposure),
+                offset=offset, which="prob")[:, None]
+            return probs
+        elif which == 'var':
+            mu = np.exp(linpred)
+            counts = np.atleast_2d(np.arange(0, self.truncation + 1))
+            # next is same as in prob-main below
+            probs = self.model_main.predict(
+                params, exog=exog, exposure=np.exp(exposure),
+                offset=offset, which="prob", y_values=counts)
+            prob_tregion = probs.sum(1)
+            mean_tregion = (np.arange(self.truncation + 1) * probs).sum(1)
+            mean = (mu - mean_tregion) / (1 - prob_tregion)
+            mnc2_tregion = (np.arange(self.truncation + 1)**2 *
+                            probs).sum(1)
+            mnc2 = (mu**2 + mu - mnc2_tregion) / (1 - prob_tregion)
+            v = mnc2 - mean**2
+            return v
         else:
             raise TypeError(
                 "argument wich == %s not handled" % which)
@@ -439,15 +472,23 @@ class TruncatedNegativeBinomialP(GenericTruncated):
         alpha = params[-1]
 
         if which == 'mean':
+            mu = np.exp(linpred)
             if self.truncation == 0:
-                mu = np.exp(linpred)
                 p = self.model_main.parameterization
                 prob_zero = (1 + alpha * mu**(p-1))**(- 1 / alpha)
                 return mu / (1 - prob_zero)
             elif self.truncation == -1:
-                return np.exp(linpred)
+                return mu
             elif self.truncation > 0:
-                raise NotImplementedError("conditional mean not implemented")
+                counts = np.atleast_2d(np.arange(0, self.truncation + 1))
+                # next is same as in prob-main below
+                probs = self.model_main.predict(
+                    params, exog=exog, exposure=np.exp(exposure),
+                    offset=offset, which="prob", y_values=counts)
+                prob_tregion = probs.sum(1)
+                mean_tregion = (np.arange(self.truncation + 1) * probs).sum(1)
+                mean = (mu - mean_tregion) / (1 - prob_tregion)
+                return mean
         elif which == 'linear':
             return linpred
         elif which == 'mean-main':
@@ -461,6 +502,33 @@ class TruncatedNegativeBinomialP(GenericTruncated):
                               offset=offset, which="mean-main")[:, None]
             p = self.model_main.parameterization
             return self.model_dist.pmf(counts, mu, params[-1], p, self.trunc)
+        elif which == 'prob-main':
+            if count_prob is not None:
+                counts = np.atleast_2d(count_prob)
+            else:
+                counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
+            probs = self.model_main.predict(
+                params, exog=exog, exposure=np.exp(exposure),
+                offset=offset, which="prob", y_values=counts)[:, None]
+            return probs
+        elif which == 'var':
+            mu = np.exp(linpred)
+            counts = np.atleast_2d(np.arange(0, self.truncation + 1))
+            # next is same as in prob-main below
+            probs = self.model_main.predict(
+                params, exog=exog, exposure=np.exp(exposure),
+                offset=offset, which="prob", y_values=counts)
+            prob_tregion = probs.sum(1)
+            mean_tregion = (np.arange(self.truncation + 1) * probs).sum(1)
+            mean = (mu - mean_tregion) / (1 - prob_tregion)
+            mnc2_tregion = (np.arange(self.truncation + 1)**2 *
+                            probs).sum(1)
+            p = self.model_main.parameterization
+            vm = mu * (1 + alpha * mu**(p-1))
+            # uncentered 2nd moment
+            mnc2 = (mu**2 + vm - mnc2_tregion) / (1 - prob_tregion)
+            v = mnc2 - mean**2
+            return v
         else:
             raise TypeError(
                 "argument wich == %s not handled" % which)
