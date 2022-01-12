@@ -305,7 +305,7 @@ class TestHurdlePoissonR():
         endog = DATA["docvis"]
         exog_names = ['const', 'aget', 'totchr']
         exog = DATA[exog_names]
-        cls.res1 = Hurdle(endog, exog).fit(method="bfgs", maxiter=300)
+        cls.res1 = Hurdle(endog, exog).fit(method="newton", maxiter=300)
         cls.res2 = results_t.hurdle_poisson
 
     def test_basic(self):
@@ -328,3 +328,61 @@ class TestHurdlePoissonR():
         vcov = res2.vcov[idx[:, None], idx]
         assert_allclose(np.asarray(res1.cov_params()), vcov,
                         rtol=1e-4, atol=1e-8)
+
+    def test_predict(self):
+        res1 = self.res1
+        res2 = self.res2
+
+        ex = res1.model.exog.mean(0, keepdims=True)
+        mu1 = res1.model1.predict(ex)
+        prob_zero = np.exp(-mu1)
+        prob_nz = 1 - prob_zero
+        assert_allclose(prob_nz, res2.predict_zero, rtol=5e-4, atol=5e-4)
+        prob_nz_ = res1.model1.model._prob_nonzero(mu1, res1.params[:4])
+        assert_allclose(prob_nz_, res2.predict_zero, rtol=5e-4, atol=5e-4)
+
+        mean_main = res1.model2.predict(ex, which="mean-main")
+        assert_allclose(mean_main, res2.predict_mean_main,
+                        rtol=5e-4, atol=5e-4)
+
+        prob_main = res1.model2.predict(ex, which="prob")[0] * prob_nz
+        prob_main[0] = prob_zero
+        assert_allclose(prob_main[:4], res2.predict_prob, rtol=5e-4, atol=5e-4)
+
+        assert_allclose(mean_main * prob_nz, res2.predict_mean,
+                        rtol=1e-3, atol=5e-4)
+
+        m = res1.predict(ex)
+        assert_allclose(m, res2.predict_mean, rtol=1e-6, atol=5e-7)
+        mm = res1.predict(ex, which="mean-main")
+        assert_allclose(mm, res2.predict_mean_main, rtol=1e-7, atol=1e-7)
+        mnz = res1.predict(ex, which="mean-nonzero")
+        assert_allclose(mnz, res2.predict_mean / (1 - res2.predict_prob[0]),
+                        rtol=5e-7, atol=5e-7)
+        prob_main = res1.predict(ex, which="prob-main")
+        pt = res1.predict(ex, which="prob-trunc")
+        assert_allclose(prob_main / (1 - pt), res2.predict_zero,
+                        rtol=5e-4, atol=5e-4)
+        probs = res1.predict(ex, which="prob")[0]  # return is 2-dim
+        assert_allclose(probs[:4], res2.predict_prob, rtol=1e-5, atol=1e-6)
+
+        # check vectorized and options, consistencey and smoke
+        k_ex = 5
+        ex5 = res1.model.exog[:k_ex]
+        p1a = res1.predict(ex5, which="prob", y_values=np.arange(3))
+        p1b = res1.get_prediction(ex5, which="prob", y_values=np.arange(3))
+        assert_allclose(p1a, p1b.predicted, rtol=1e-10, atol=1e-10)
+        # TODO: two dim prediction not yet supported in frame
+        # assert p1b.summary_frame().shape == (4, 4)
+
+        p2a = res1.predict(which="prob", y_values=np.arange(3))
+        p2b = res1.get_prediction(which="prob", y_values=np.arange(3),
+                                  average=True)
+        assert_allclose(p2a.mean(0), p2b.predicted, rtol=1e-10, atol=1e-10)
+
+        # TODO: which="var" raises AttributeError
+        for which in ["mean", "mean-main", "prob-main", "prob-zero", "linear"]:
+            p3a = res1.predict(ex5, which=which)
+            p3b = res1.get_prediction(ex5, which=which)
+            assert_allclose(p3a, p3b.predicted, rtol=1e-10, atol=1e-10)
+            assert p3b.summary_frame().shape == (k_ex, 4)

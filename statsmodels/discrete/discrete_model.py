@@ -1650,6 +1650,14 @@ class Poisson(CountModel):
         else:
             raise ValueError('Value of the `which` option is not recognized')
 
+    def _prob_nonzero(self, mu, params=None):
+        """Probability that count is not zero
+
+        internal use in Censored model, will be refactored or removed
+        """
+        prob_nz = - np.expm1(-mu)
+        return prob_nz
+
     def get_distribution(self, params, exog=None, exposure=None, offset=None):
         """Get frozen instance of distribution based on predicted parameters.
 
@@ -4267,6 +4275,16 @@ class NegativeBinomialP(CountModel):
         d2 = dsf[:, 1:2]
 
         return np.column_stack((d1, d2))
+
+    def _prob_nonzero(self, mu, params):
+        """Probability that count is not zero
+
+        internal use in Censored model, will be refactored or removed
+        """
+        alpha = params[-1]
+        p = self.model_main.parameterization
+        prob_nz = 1 - (1 + alpha * mu**(p-1))**(- 1 / alpha)
+        return prob_nz
 
     @Appender(Poisson.get_distribution.__doc__)
     def get_distribution(self, params, exog=None, exposure=None, offset=None):

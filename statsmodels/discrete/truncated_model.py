@@ -321,16 +321,12 @@ class TruncatedPoisson(GenericTruncated):
         If exposure is specified, then it will be logged by the method.
         The user does not need to log it first.
         """
-        if exog is None:
-            exog = self.exog
 
-        if exposure is None:
-            exposure = getattr(self, 'exposure', 0)
-        elif exposure != 0:
-            exposure = np.log(exposure)
-
-        if offset is None:
-            offset = getattr(self, 'offset', 0)
+        exog, offset, exposure = self._get_predict_arrays(
+            exog=exog,
+            offset=offset,
+            exposure=exposure
+            )
 
         fitted = np.dot(exog, params[:exog.shape[1]])
         linpred = fitted + exposure + offset
@@ -360,7 +356,7 @@ class TruncatedPoisson(GenericTruncated):
                 counts = np.atleast_2d(count_prob)
             else:
                 counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
-            mu = self.predict(params, exog=exog, exposure=exposure,
+            mu = self.predict(params, exog=exog, exposure=np.exp(exposure),
                               offset=offset, which="mean-main")[:, None]
             return self.model_dist.pmf(counts, mu, self.trunc)
         elif which == 'prob-main':
@@ -456,16 +452,11 @@ class TruncatedNegativeBinomialP(GenericTruncated):
         If exposure is specified, then it will be logged by the method.
         The user does not need to log it first.
         """
-        if exog is None:
-            exog = self.exog
-
-        if exposure is None:
-            exposure = getattr(self, 'exposure', 0)
-        elif exposure != 0:
-            exposure = np.log(exposure)
-
-        if offset is None:
-            offset = getattr(self, 'offset', 0)
+        exog, offset, exposure = self._get_predict_arrays(
+            exog=exog,
+            offset=offset,
+            exposure=exposure
+            )
 
         fitted = np.dot(exog, params[:exog.shape[1]])
         linpred = fitted + exposure + offset
@@ -498,7 +489,7 @@ class TruncatedNegativeBinomialP(GenericTruncated):
                 counts = np.atleast_2d(count_prob)
             else:
                 counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
-            mu = self.predict(params, exog=exog, exposure=exposure,
+            mu = self.predict(params, exog=exog, exposure=np.exp(exposure),
                               offset=offset, which="mean-main")[:, None]
             p = self.model_main.parameterization
             return self.model_dist.pmf(counts, mu, params[-1], p, self.trunc)
@@ -1018,6 +1009,14 @@ class Censored(GenericCensored):
         self.result_reg = L1GenericTruncatedResults
         self.result_reg_wrapper = L1GenericTruncatedResultsWrapper
 
+    def _prob_nonzero(self, mu, params):
+        """Probability that count is not zero
+
+        internal use in Censored model, will be refactored or removed
+        """
+        prob_nz = self.model_main._prob_nonzero(mu, params)
+        return prob_nz
+
 
 class Hurdle(CountModel):
     """
@@ -1165,6 +1164,113 @@ class Hurdle(CountModel):
         return result
 
     fit.__doc__ = DiscreteModel.fit.__doc__
+
+    def predict(self, params, exog=None, exog_zero=None, exposure=None,
+                offset=None, which='mean', y_values=None):
+        """
+        Predict response variable or other statistic given exogenous variables.
+
+        Parameters
+        ----------
+        params : array_like
+            The parameters of the model.
+        exog : ndarray, optional
+            Explanatory variables for the main count model.
+            If ``exog`` is None, then the data from the model will be used.
+        exog_infl : ndarray, optional
+            Explanatory variables for the zero-inflation model.
+            ``exog_infl`` has to be provided if ``exog`` was provided unless
+            ``exog_infl`` in the model is only a constant.
+        offset : ndarray, optional
+            Offset is added to the linear predictor of the mean function with
+            coefficient equal to 1.
+            Default is zero if exog is not None, and the model offset if exog
+            is None.
+        exposure : ndarray, optional
+            Log(exposure) is added to the linear predictor with coefficient
+            equal to 1. If exposure is specified, then it will be logged by
+            the method. The user does not need to log it first.
+            Default is one if exog is is not None, and it is the model exposure
+            if exog is None.
+        which : str (optional)
+            Statitistic to predict. Default is 'mean'.
+
+            - 'mean' : the conditional expectation of endog E(y | x),
+              i.e. exp of linear predictor.
+            - 'linear' : the linear predictor of the mean function.
+            - 'var' : returns the estimated variance of endog implied by the
+              model.
+            - 'mean-main' : untruncated mean of the main count model
+            - 'prob-main' : probability of selecting the main model.
+                The probability of zero inflation is ``1 - prob-main``.
+            - 'mean-nonzero' : expected value conditional on having observation
+              larger than zero, E(y | X, y>0)
+            - 'prob-zero' : probability of observing a zero count. P(y=0 | x)
+            - 'prob' : probabilities of each count from 0 to max(endog), or
+              for y_values if those are provided. This is a multivariate
+              return (2-dim when predicting for several observations).
+
+        y_values : array_like
+            Values of the random variable endog at which pmf is evaluated.
+            Only used if ``which="prob"``
+        """
+        which = which.lower()  # make it case insensitive
+        no_exog = True if exog is None else False
+        exog, offset, exposure = self._get_predict_arrays(
+            exog=exog,
+            offset=offset,
+            exposure=exposure
+            )
+
+        if exog_zero is None:
+            if no_exog:
+                exog_zero = self.exog
+            else:
+                exog_zero = exog
+
+        k_zeros = int((len(params) - self.k_extra1 - self.k_extra2) / 2
+                      ) + self.k_extra1
+        params_zero = params[:k_zeros]
+        params_main = params[k_zeros:]
+
+        lin_pred = (np.dot(exog, params_main[:self.exog.shape[1]]) +
+                    exposure + offset)
+
+        # this currently is mean_main, offset, exposure for zero part ?
+        mu1 = self.model1.predict(params_zero, exog=exog)
+        prob_main = self.model1.model_main._prob_nonzero(mu1, params_zero)
+        prob_zero = (1 - prob_main)
+
+        mu2 = np.exp(lin_pred)
+        prob_ntrunc = self.model1.model_main._prob_nonzero(mu2, params_main)
+
+        if which == 'mean':
+            return prob_main * np.exp(lin_pred) / prob_ntrunc
+        elif which == 'mean-main':
+            return np.exp(lin_pred)
+        elif which == 'linear':
+            return lin_pred
+        elif which == 'mean-nonzero':
+            return np.exp(lin_pred) / prob_ntrunc
+        elif which == 'prob-zero':
+            return prob_zero
+        elif which == 'prob-main':
+            return prob_main
+        elif which == 'prob-trunc':
+            return 1 - prob_ntrunc
+        # not yet supported
+        # elif which == 'var':
+        #     mu = np.exp(lin_pred)
+        #     return self._predict_var(params, mu, 1 - prob_main)
+        elif which == 'prob':
+            probs_main = self.model2.predict(
+                params_main, exog, np.exp(exposure), offset, which="prob",
+                count_prob=y_values)
+            probs_main *= prob_main[:, None]
+            probs_main[:, 0] = prob_zero
+            return probs_main
+        else:
+            raise ValueError('which = %s is not available' % which)
 
 
 class GenericTruncatedResults(CountResults):
