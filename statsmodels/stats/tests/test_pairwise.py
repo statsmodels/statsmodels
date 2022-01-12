@@ -365,4 +365,4 @@ class TestTuckeyHSD4(CheckTuckeyHSDMixin):
         cls.reject2 = np.array([False, False, False,  True, False, False,  True, False,  True, False])
 
     def test_hochberg_intervals(self):
-        assert_almost_equal(self.res.halfwidths, self.halfwidth2, 14)
+        assert_almost_equal(self.res.halfwidths, self.halfwidth2, 4)

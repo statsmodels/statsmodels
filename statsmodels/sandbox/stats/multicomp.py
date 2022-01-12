@@ -76,6 +76,13 @@ from statsmodels.stats.multitest import multipletests, _ecdf as ecdf, fdrcorrect
 from statsmodels.graphics import utils
 from statsmodels.tools.sm_exceptions import ValueWarning
 
+try:
+    from scipy.stats import studentized_range
+    qsturng = studentized_range.ppf
+    psturng = studentized_range.sf
+except ImportError:
+    from statsmodels.stats.libqsturng import qsturng, psturng
+
 qcrit = '''
   2     3     4     5     6     7     8     9     10
 5   3.64 5.70   4.60 6.98   5.22 7.80   5.67 8.42   6.03 8.91   6.33 9.32   6.58 9.67   6.80 9.97   6.99 10.24
@@ -153,7 +160,6 @@ def get_tukeyQcrit2(k, df, alpha=0.05):
 
     not enough error checking for limitations
     '''
-    from statsmodels.stats.libqsturng import qsturng
     return qsturng(1-alpha, k, df)
 
 
@@ -171,8 +177,6 @@ def get_tukey_pvalue(k, df, q):
         quantile value of Studentized Range
 
     '''
-
-    from statsmodels.stats.libqsturng import psturng
     return psturng(q, k, df)
 
 
