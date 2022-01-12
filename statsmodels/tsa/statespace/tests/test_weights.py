@@ -1,6 +1,9 @@
 """
 Tests for computation of weight functions in state space models
 
+TODO: add test that sum of the contributions times the observations equals the
+      actual smoothed state vector
+
 Author: Chad Fulton
 License: Simplified-BSD
 """
@@ -10,7 +13,7 @@ import pytest
 import numpy as np
 import pandas as pd
 
-from numpy.testing import assert_equal, assert_raises, assert_allclose, assert_
+from numpy.testing import assert_equal, assert_allclose
 
 from statsmodels import datasets
 from statsmodels.tsa.statespace import sarimax, varmax
@@ -54,6 +57,9 @@ def test_smoothed_state_obs_weights_sarimax(use_exog, trend,
                           exog=exog if use_exog else None,
                           concentrate_scale=concentrate_scale,
                           measurement_error=measurement_error)
+    prior_mean = np.array([-0.4])
+    prior_cov = np.eye(1) * 1.2
+    mod.ssm.initialize_known(prior_mean, prior_cov)
     res = mod.smooth(params)
 
     # Compute the desiried weights
@@ -75,14 +81,32 @@ def test_smoothed_state_obs_weights_sarimax(use_exog, trend,
                                           exog=exog if use_exog else None,
                                           concentrate_scale=concentrate_scale,
                                           measurement_error=measurement_error)
+                tmp_mod.ssm.initialize_known(prior_mean, prior_cov)
                 tmp_res = tmp_mod.smooth(params)
 
                 desired[:, j, :, i] = (tmp_res.smoothed_state.T
                                        - res.smoothed_state.T)
 
-    actual = tools.compute_obs_weights_smoothed_state(res)
+    desired_prior_weights = np.zeros((n, m, m)) * np.nan
+    for i in range(m):
+        a = prior_mean.copy()
+        a[i] += 1
+        tmp_mod = sarimax.SARIMAX(endog, order=(1, 0, 0), trend=trend,
+                                    exog=exog if use_exog else None,
+                                    concentrate_scale=concentrate_scale,
+                                    measurement_error=measurement_error)
+        tmp_mod.ssm.initialize_known(a, prior_cov)
+        tmp_res = tmp_mod.smooth(params)
 
-    assert_allclose(actual[:, :, 0, 0], desired[:, :, 0, 0], atol=1e-12)
+        desired_prior_weights[:, :, i] = (tmp_res.smoothed_state.T
+                                          - res.smoothed_state.T)
+
+    mod.ssm.initialize_known(prior_mean, prior_cov)
+    actual, actual_prior_weights = (
+        tools.compute_smoothed_state_weights(res))
+
+    assert_allclose(actual, desired, atol=1e-12)
+    assert_allclose(actual_prior_weights, desired_prior_weights, atol=1e-12)
 
 
 @pytest.mark.parametrize('use_exog', [False, True])
@@ -110,6 +134,10 @@ def test_smoothed_state_obs_weights_varmax(use_exog, trend):
     # Fit the model
     mod = varmax.VARMAX(endog, order=(1, 0), trend=trend,
                         exog=exog if use_exog else None)
+    prior_mean = np.array([-0.4, 0.9])
+    prior_cov = np.array([[1.4, 0.3],
+                          [0.3, 2.6]])
+    mod.ssm.initialize_known(prior_mean, prior_cov)
     res = mod.smooth(params)
 
     # Compute the desiried weights
@@ -129,14 +157,29 @@ def test_smoothed_state_obs_weights_varmax(use_exog, trend):
                 y[j, i] = 1.0
                 tmp_mod = varmax.VARMAX(y, order=(1, 0), trend=trend,
                                         exog=exog if use_exog else None)
+                tmp_mod.ssm.initialize_known(prior_mean, prior_cov)
                 tmp_res = tmp_mod.smooth(params)
 
                 desired[:, j, :, i] = (tmp_res.smoothed_state.T
                                        - res.smoothed_state.T)
 
-    actual = tools.compute_obs_weights_smoothed_state(res)
+    desired_prior_weights = np.zeros((n, m, m)) * np.nan
+    for i in range(m):
+        a = prior_mean.copy()
+        a[i] += 1
+        tmp_mod = varmax.VARMAX(endog, order=(1, 0), trend=trend,
+                                exog=exog if use_exog else None)
+        tmp_mod.ssm.initialize_known(a, prior_cov)
+        tmp_res = tmp_mod.smooth(params)
+
+        desired_prior_weights[:, :, i] = (tmp_res.smoothed_state.T
+                                          - res.smoothed_state.T)
+
+    mod.ssm.initialize_known(prior_mean, prior_cov)
+    actual, actual_prior_weights = tools.compute_smoothed_state_weights(res)
 
     assert_allclose(actual, desired, atol=1e-12)
+    assert_allclose(actual_prior_weights, desired_prior_weights, atol=1e-12)
 
 
 @pytest.mark.parametrize('diffuse', [0, 1, 4])
@@ -152,8 +195,11 @@ def test_smoothed_state_obs_weights_TVSS(univariate, diffuse,
     endog[7, :] = np.nan
     endog[8, 1] = np.nan
     mod = TVSS(endog)
+
+    prior_mean = np.array([1.2, 0.8])
+    prior_cov = np.eye(2)
     if not diffuse:
-        mod.ssm.initialize_known([1.2, 0.8], np.eye(2))
+        mod.ssm.initialize_known(prior_mean, prior_cov)
     if univariate:
         mod.ssm.filter_univariate = True
     res = mod.smooth([])
@@ -175,7 +221,7 @@ def test_smoothed_state_obs_weights_TVSS(univariate, diffuse,
                 y[j, i] = 1.0
                 tmp_mod = mod.clone(y)
                 if not diffuse:
-                    tmp_mod.ssm.initialize_known([1.2, 0.8], np.eye(2))
+                    tmp_mod.ssm.initialize_known(prior_mean, prior_cov)
                 if univariate:
                     tmp_mod.ssm.filter_univariate = True
                 tmp_res = tmp_mod.smooth([])
@@ -183,13 +229,44 @@ def test_smoothed_state_obs_weights_TVSS(univariate, diffuse,
                 desired[:, j, :, i] = (tmp_res.smoothed_state.T
                                        - res.smoothed_state.T)
 
-    actual = tools.compute_obs_weights_smoothed_state(res)
+    desired_prior_weights = np.zeros((n, m, m)) * np.nan
+    if not diffuse:
+        for i in range(m):
+            a = prior_mean.copy()
+            a[i] += 1
+            tmp_mod = mod.clone(endog)
+            tmp_mod.ssm.initialize_known(a, prior_cov)
+            tmp_res = tmp_mod.smooth([])
+
+            desired_prior_weights[:, :, i] = (tmp_res.smoothed_state.T
+                                              - res.smoothed_state.T)
+
+    if not diffuse:
+        mod.ssm.initialize_known(prior_mean, prior_cov)
+    actual, actual_prior_weights = (
+        tools.compute_smoothed_state_weights(res))
 
     d = res.nobs_diffuse
     assert_equal(d, diffuse)
     if diffuse:
         assert_allclose(actual[:d], np.nan, atol=1e-12)
         assert_allclose(actual[:, :d], np.nan, atol=1e-12)
+    else:
+        # Test that the weights are the same
+        assert_allclose(actual_prior_weights, desired_prior_weights,
+                        atol=1e-12)
+
+        # In the non-diffuse case, we can actually use the weights along with
+        # the prior and observations to compute the smoothed state directly,
+        # and then compare that to what was returned by the usual Kalman
+        # smoothing routines
+        contribution_prior = np.nansum(
+            actual_prior_weights * prior_mean[None, None, :], axis=2)
+        contribution_endog = np.nansum(
+            actual * (endog - mod['obs_intercept'].T)[None, :, None, :],
+            axis=(1, 3))
+        computed_smoothed_state = contribution_prior + contribution_endog
+        assert_allclose(computed_smoothed_state, res.smoothed_state.T)
     assert_allclose(actual[d:, d:], desired[d:, d:], atol=1e-12)
 
 
@@ -245,7 +322,7 @@ def test_smoothed_state_obs_weights_univariate_singular(singular, periods,
                 desired[:, j, :, i] = (tmp_res.smoothed_state.T
                                        - res.smoothed_state.T)
 
-    actual = tools.compute_obs_weights_smoothed_state(res)
+    actual, _ = tools.compute_smoothed_state_weights(res)
 
     assert_allclose(actual, desired, atol=1e-12)
 
@@ -287,9 +364,10 @@ def test_smoothed_state_obs_weights_collapsed(reset_randomstate):
                 desired[:, j, :, i] = (tmp_res.smoothed_state.T
                                        - res.smoothed_state.T)
 
-    actual = tools.compute_obs_weights_smoothed_state(res)
+    actual, _ = tools.compute_smoothed_state_weights(res)
 
     assert_allclose(actual, desired, atol=1e-12)
+
 
 @pytest.mark.parametrize('compute_j', [np.arange(10), [0, 1, 2], [5, 0, 9], 8])
 @pytest.mark.parametrize('compute_t', [np.arange(10), [3, 2, 2], [0, 2, 5], 5])
@@ -330,7 +408,7 @@ def test_compute_t_compute_j(compute_j, compute_t, reset_randomstate):
                 desired[:, j, :, i] = (tmp_res.smoothed_state.T
                                        - res.smoothed_state.T)
 
-    actual = tools.compute_obs_weights_smoothed_state(
+    actual, _ = tools.compute_smoothed_state_weights(
         res, compute_t=compute_t, compute_j=compute_j)
 
     compute_t = np.atleast_1d(compute_t)
@@ -345,30 +423,30 @@ def test_compute_t_compute_j(compute_j, compute_t, reset_randomstate):
     assert_allclose(actual, desired, atol=1e-12)
 
 
-def test_resmooth(reset_randomstate):
+def test_resmooth():
     # Tests that resmooth works as it ought to, to reset the filter
     endog = [0.1, -0.3, -0.1, 0.5, 0.02]
     mod = sarimax.SARIMAX(endog, order=(1, 0, 0), measurement_error=True)
-    print(mod.param_names)
+
     res1 = mod.smooth([0.5, 2.0, 1.0])
-    weights1_original = tools.compute_obs_weights_smoothed_state(
+    weights1_original, _ = tools.compute_smoothed_state_weights(
         res1, resmooth=False)
     res2 = mod.smooth([0.2, 1.0, 1.2])
-    weights2_original = tools.compute_obs_weights_smoothed_state(
+    weights2_original, _ = tools.compute_smoothed_state_weights(
         res2, resmooth=False)
 
-    weights1_no_resmooth = tools.compute_obs_weights_smoothed_state(
+    weights1_no_resmooth, _ = tools.compute_smoothed_state_weights(
         res1, resmooth=False)
-    weights1_resmooth = tools.compute_obs_weights_smoothed_state(
+    weights1_resmooth, _ = tools.compute_smoothed_state_weights(
         res1, resmooth=True)
 
-    weights2_no_resmooth = tools.compute_obs_weights_smoothed_state(
+    weights2_no_resmooth, _ = tools.compute_smoothed_state_weights(
         res2, resmooth=False)
-    weights2_resmooth = tools.compute_obs_weights_smoothed_state(
+    weights2_resmooth, _ = tools.compute_smoothed_state_weights(
         res2, resmooth=True)
 
-    weights1_default = tools.compute_obs_weights_smoothed_state(res1)
-    weights2_default = tools.compute_obs_weights_smoothed_state(res2)
+    weights1_default, _ = tools.compute_smoothed_state_weights(res1)
+    weights2_default, _ = tools.compute_smoothed_state_weights(res2)
 
     assert_allclose(weights1_no_resmooth, weights2_original)
     assert_allclose(weights1_resmooth, weights1_original)

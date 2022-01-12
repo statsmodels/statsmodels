@@ -1180,13 +1180,14 @@ cdef int _{{prefix}}select_cov(int k_states, int k_posdef, int k_states_total,
             selected_cov[i] = 0
 
 
-cpdef _{{prefix}}compute_obs_weights_smoothed_state(
+cpdef _{{prefix}}compute_smoothed_state_weights(
         {{prefix}}KalmanSmoother smoother,
         {{prefix}}KalmanFilter kfilter,
         {{prefix}}Statespace model,
         np.int32_t [:] compute_t,
         np.int32_t [:] compute_j,
-        {{cython_type}} scale):
+        {{cython_type}} scale,
+        int compute_prior_weights=False):
     cdef:
         int t, i, j, n_t, n_j, min_j, max_j, p_t, p_j
         int n = model.nobs
@@ -1205,7 +1206,7 @@ cpdef _{{prefix}}compute_obs_weights_smoothed_state(
         {{cython_type}} beta = 0.0
         {{cython_type}} gamma = -1.0
         {{cython_type}} scalar
-        {{cython_type}} [::1, :, :] Hi_W, K
+        {{cython_type}} [::1, :, :] Hi_W, K, prior_weights
         {{cython_type}} [::1, :, :, :] weights
         {{cython_type}} [::1, :] tmp, F, Fi, FiZ
         {{cython_type}} * _Pt
@@ -1246,6 +1247,11 @@ cpdef _{{prefix}}compute_obs_weights_smoothed_state(
     dim3[0] = p; dim3[1] = m; dim3[2] = n;
     Hi_W = np.PyArray_ZEROS(3, dim3, {{typenum}}, FORTRAN)
     K = np.PyArray_ZEROS(3, dim3, {{typenum}}, FORTRAN)
+    dim3[0] = m; dim3[1] = m; dim3[2] = n;
+    # Note: the order here is (m, l, t), where the `l` dimension refers to the
+    # element of the initial state vector, and the `m, t` dimensions refer to
+    # the element / time point of the smoothed state vector.
+    prior_weights = np.PyArray_ZEROS(3, dim3, {{typenum}}, FORTRAN) * np.nan
     dim2[0] = p; dim2[1] = p;
     F = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
     Fi = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
@@ -1362,6 +1368,11 @@ cpdef _{{prefix}}compute_obs_weights_smoothed_state(
         for i in range(m):
             kfilter.tmp0[i, i] = kfilter.tmp0[i, i] + 1
 
+        # This is the weight of the prior on the smoothed state at
+        # time t > 0
+        if t == 0 and compute_prior_weights:
+            blas.{{prefix}}copy(&kfilter.k_states2, kfilter._tmp0, &inc, &prior_weights[0, 0, t], &inc)
+
         for j in range(t - 1, min_j - 1, -1):
             # Since we are not handling any diffuse observations now, we can
             # stop as soon as we get to the diffuse periods
@@ -1389,7 +1400,8 @@ cpdef _{{prefix}}compute_obs_weights_smoothed_state(
                                     &alpha, kfilter._tmp0, &kfilter.k_states,
                                             _K, &kfilter.k_states,
                                     &beta, &weights[0, 0, t, j], &kfilter.k_states)
-            if j > min_j:
+
+            if j > min_j or (j == 0 and compute_prior_weights):
                 # tmp = tmp @ L
                 blas.{{prefix}}gemm("N", "N", &model._k_states, &model._k_states, &model._k_states,
                             &alpha, kfilter._tmp0, &kfilter.k_states,
@@ -1397,6 +1409,11 @@ cpdef _{{prefix}}compute_obs_weights_smoothed_state(
                             &beta, kfilter._tmp00, &kfilter.k_states)
                 blas.{{prefix}}copy(&kfilter.k_states2, kfilter._tmp00, &inc,
                                                         kfilter._tmp0, &inc)
+
+                # This is the weight of the prior on the smoothed state at
+                # time t > 0
+                if j == 0 and compute_prior_weights:
+                    blas.{{prefix}}copy(&kfilter.k_states2, kfilter._tmp0, &inc, &prior_weights[0, 0, t], &inc)
 
         # For j == t
         # For the univariate case, some notes:
@@ -1440,6 +1457,6 @@ cpdef _{{prefix}}compute_obs_weights_smoothed_state(
                                             &Hi_W[0, 0, j], &p,
                                     &beta, &weights[0, 0, t, j], &kfilter.k_states)
 
-    return np.array(weights), np.array(Hi_W)
+    return np.array(weights), np.array(prior_weights), np.array(Hi_W)
 
 {{endfor}}
