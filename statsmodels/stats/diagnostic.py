@@ -331,7 +331,6 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
         length. If lags is a list or array, then all lags are included up to
         the largest lag in the list, however only the tests for the lags in
         the list are reported. If lags is None, then the default maxlag is
-        currently min((nobs // 2 - 2), 40). After 0.12 this will change to
         min(10, nobs // 5). The default number of lags changes if period
         is set.
     boxpierce : bool, default False
@@ -348,31 +347,25 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
         for seasonal data which uses min(2*period, nobs // 5) if set. If None,
         then the default rule is used to set the number of lags. When set, must
         be >= 2.
-    return_df : bool, default True
-        Flag indicating whether to return the result as a single DataFrame
-        with columns lb_stat, lb_pvalue, and optionally bp_stat and bp_pvalue.
-        After 0.12, this will become the only return method.  Set to True
-        to return the DataFrame or False to continue returning the 2 - 4
-        output. If None (the default), a warning is raised.
     auto_lag : bool, default False
         Flag indicating whether to automatically determine the optimal lag
         length based on threshold of maximum correlation value.
 
     Returns
     -------
-    lbvalue : float or array
-        The Ljung-Box test statistic.
-    pvalue : float or array
-        The p-value based on chi-square distribution. The p-value is computed
-        as 1.0 - chi2.cdf(lbvalue, dof) where dof is lag - model_df. If
-        lag - model_df <= 0, then NaN is returned for the pvalue.
-    bpvalue : (optional), float or array
-        The test statistic for Box-Pierce test.
-    bppvalue : (optional), float or array
-        The p-value based for Box-Pierce test on chi-square distribution.
-        The p-value is computed as 1.0 - chi2.cdf(bpvalue, dof) where dof is
-        lag - model_df. If lag - model_df <= 0, then NaN is returned for the
-        pvalue.
+    DataFrame
+        Frame with columns:
+
+        * lb_stat - The Ljung-Box test statistic.
+        * lb_pvalue - The p-value based on chi-square distribution. The
+          p-value is computed as 1 - chi2.cdf(lb_stat, dof) where dof is
+          lag - model_df. If lag - model_df <= 0, then NaN is returned for
+          the pvalue.
+        * bp_stat - The Box-Pierce test statistic.
+        * bp_pvalue - The p-value based for Box-Pierce test on chi-square
+          distribution. The p-value is computed as 1 - chi2.cdf(bp_stat, dof)
+          where dof is lag - model_df. If lag - model_df <= 0, then NaN is
+          returned for the pvalue.
 
     See Also
     --------
@@ -424,7 +417,6 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
     from statsmodels.tsa.stattools import acf
     x = array_like(x, "x")
     period = int_like(period, "period", optional=True)
-    return_df = bool_like(return_df, "return_df", optional=False)
     model_df = int_like(model_df, "model_df", optional=False)
     if period is not None and period <= 1:
         raise ValueError("period must be >= 2")
@@ -476,24 +468,19 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
     pval[loc] = stats.chi2.sf(qljungbox[loc], adj_lags[loc])
 
     if not boxpierce:
-        if return_df:
-            return pd.DataFrame({"lb_stat": qljungbox, "lb_pvalue": pval},
-                                index=lags)
-        return qljungbox, pval
+        return pd.DataFrame({"lb_stat": qljungbox, "lb_pvalue": pval},
+                            index=lags)
 
     qboxpierce = nobs * np.cumsum(sacf[1:maxlag + 1] ** 2)[lags - 1]
     pvalbp = np.full_like(qljungbox, np.nan)
     pvalbp[loc] = stats.chi2.sf(qboxpierce[loc], adj_lags[loc])
-    if return_df:
-        return pd.DataFrame({"lb_stat": qljungbox, "lb_pvalue": pval,
-                             "bp_stat": qboxpierce, "bp_pvalue": pvalbp},
-                            index=lags)
-
-    return qljungbox, pval, qboxpierce, pvalbp
+    return pd.DataFrame({"lb_stat": qljungbox, "lb_pvalue": pval,
+                         "bp_stat": qboxpierce, "bp_pvalue": pvalbp},
+                        index=lags)
 
 
 @deprecate_kwarg("maxlag", "nlags")
-def acorr_lm(resid, nlags=None, autolag=None, store=False, *, period=None,
+def acorr_lm(resid, nlags=None, store=False, *, period=None,
              ddof=0, cov_type="nonrobust", cov_kwargs=None):
     """
     Lagrange Multiplier tests for autocorrelation.
@@ -507,12 +494,7 @@ def acorr_lm(resid, nlags=None, autolag=None, store=False, *, period=None,
     resid : array_like
         Time series to test.
     nlags : int, default None
-        Highest lag to use. The behavior of this parameter will change
-        after 0.12.
-    autolag : {str, None}, default "AIC"
-        If None, then a fixed number of lags given by maxlag is used. This
-        parameter is deprecated and will be removed after 0.12.  Searching
-        for model specification cannot control test size.
+        Highest lag to use.
     store : bool, default False
         If true then the intermediate results are also returned.
     period : int, default none
@@ -578,9 +560,6 @@ def acorr_lm(resid, nlags=None, autolag=None, store=False, *, period=None,
     xdall = np.c_[np.ones((nobs, 1)), xdall]
     xshort = resid[-nobs:]
     res_store = ResultsStore()
-
-    if autolag is not None:
-        raise NotImplementedError("autolag has been removed")
     usedlag = maxlag
 
     resols = OLS(xshort, xdall[:, :usedlag + 1]).fit(cov_type=cov_type,
@@ -606,7 +585,7 @@ def acorr_lm(resid, nlags=None, autolag=None, store=False, *, period=None,
 
 
 @deprecate_kwarg("maxlag", "nlags")
-def het_arch(resid, nlags=None, autolag=None, store=False, ddof=0):
+def het_arch(resid, nlags=None, store=False, ddof=0):
     """
     Engle's Test for Autoregressive Conditional Heteroscedasticity (ARCH).
 
@@ -615,12 +594,7 @@ def het_arch(resid, nlags=None, autolag=None, store=False, ddof=0):
     resid : ndarray
         residuals from an estimation, or time series
     nlags : int, default None
-        Highest lag to use. The behavior of this parameter will change
-        after 0.12.
-    autolag : {str, None}, default None
-        If None, then a fixed number of lags given by maxlag is used. This
-        parameter is deprecated and will be removed after 0.12.  Searching
-        for model specification cannot control test size.
+        Highest lag to use.
     store : bool, default False
         If true then the intermediate results are also returned
     ddof : int, default 0
@@ -647,8 +621,7 @@ def het_arch(resid, nlags=None, autolag=None, store=False, ddof=0):
     -----
     verified against R:FinTS::ArchTest
     """
-    return acorr_lm(resid ** 2, nlags=nlags, autolag=autolag, store=store,
-                    ddof=ddof)
+    return acorr_lm(resid ** 2, nlags=nlags, store=store, ddof=ddof)
 
 
 @deprecate_kwarg("results", "res")

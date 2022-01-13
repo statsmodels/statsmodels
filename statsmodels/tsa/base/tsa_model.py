@@ -407,6 +407,7 @@ def get_prediction_index(
                 " `index` argument will only be used"
                 " internally.",
                 ValueWarning,
+                stacklevel=2,
             )
         prediction_index = Index(index)
     # Now, if we *do not* have a supported index, but we were given some
@@ -423,6 +424,7 @@ def get_prediction_index(
                     " Prediction results will be given with"
                     " an integer index beginning at `start`.",
                     ValueWarning,
+                    stacklevel=2,
                 )
             warnings.warn(
                 "No supported index is available. In the next"
@@ -430,6 +432,7 @@ def get_prediction_index(
                 " without a supported index will result in an"
                 " exception.",
                 DeprecationWarning,
+                stacklevel=2,
             )
     elif index_none:
         prediction_index = None
@@ -582,6 +585,7 @@ class TimeSeriesModel(base.LikelihoodModel):
                                 " provided, so inferred frequency %s"
                                 " will be used." % freq,
                                 ValueWarning,
+                                stacklevel = 2,
                             )
 
                 # Convert the passed freq to a pandas offset object
@@ -649,6 +653,7 @@ class TimeSeriesModel(base.LikelihoodModel):
                 "An unsupported index was provided and will be"
                 " ignored when e.g. forecasting.",
                 ValueWarning,
+                stacklevel=2,
             )
         if date_index and not has_freq:
             warnings.warn(
@@ -656,6 +661,7 @@ class TimeSeriesModel(base.LikelihoodModel):
                 " associated frequency information and so will be"
                 " ignored when e.g. forecasting.",
                 ValueWarning,
+                stacklevel=2,
             )
         if date_index and not is_monotonic:
             warnings.warn(
@@ -663,6 +669,7 @@ class TimeSeriesModel(base.LikelihoodModel):
                 " monotonic and so will be ignored when e.g."
                 " forecasting.",
                 ValueWarning,
+                stacklevel=2,
             )
 
         # Construct the internal index

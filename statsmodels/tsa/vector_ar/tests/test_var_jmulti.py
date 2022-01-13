@@ -1,5 +1,3 @@
-from statsmodels.compat.pytest import pytest_warns
-
 import numpy as np
 from numpy.testing import assert_, assert_allclose, assert_raises
 
@@ -131,13 +129,12 @@ def load_results_statsmodels(dataset):
     for dt_s_tup in dt_s_list:
         endog = data[dataset]
         exog = generate_exog_from_season(dt_s_tup[1], len(endog))
-        warn_typ = FutureWarning if dt_s_tup[0] == "nc" else None
 
         model = VAR(endog, exog)
-        with pytest_warns(warn_typ):
-            results_per_deterministic_terms[dt_s_tup] = model.fit(
-                maxlags=4, trend=dt_s_tup[0], method="ols"
-            )
+        trend = dt_s_tup[0] if dt_s_tup[0] != "nc" else "n"
+        results_per_deterministic_terms[dt_s_tup] = model.fit(
+            maxlags=4, trend=trend, method="ols"
+        )
     return results_per_deterministic_terms
 
 
@@ -573,9 +570,8 @@ def test_lag_order_selection():
             endog_tot = data[ds]
             exog = generate_exog_from_season(dt[1], len(endog_tot))
             model = VAR(endog_tot, exog)
-            warn_typ = FutureWarning if dt[0] == "nc" else None
-            with pytest_warns(warn_typ):
-                obtained_all = model.select_order(10, trend=dt[0])
+            trend = "n" if dt[0] == "nc" else dt[0]
+            obtained_all = model.select_order(10, trend=trend)
             for ic in ["aic", "fpe", "hqic", "bic"]:
                 err_msg = build_err_msg(
                     ds, dt, "LAG ORDER SELECTION - " + ic.upper()

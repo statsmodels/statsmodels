@@ -31,7 +31,6 @@ __all__ = [
     "unvec",
     "unvech",
     "freq_to_period",
-    "rename_trend",
 ]
 
 
@@ -814,14 +813,3 @@ def freq_to_period(freq):
             "freq {} not understood. Please report if you "
             "think this is in error.".format(freq)
         )
-
-
-def rename_trend(trend: str):
-    if trend == "nc":
-        warnings.warn(
-            "trend 'nc' has been renamed to 'n' after 0.14 is released. Use "
-            "'n' now to avoid this warning.",
-            FutureWarning,
-        )
-        return "n"
-    return trend

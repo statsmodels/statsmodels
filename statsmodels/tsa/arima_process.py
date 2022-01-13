@@ -301,6 +301,7 @@ def arma_periodogram(ar, ma, worN=None, whole=0):
         warnings.warn(
             "Warning: nan in frequency response h, maybe a unit " "root",
             RuntimeWarning,
+            stacklevel=2,
         )
     return w, sd
 

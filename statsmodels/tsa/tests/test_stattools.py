@@ -129,8 +129,6 @@ class TestADFNoConstant(CheckADF):
 
     @classmethod
     def setup_class(cls):
-        with pytest.warns(FutureWarning):
-            adfuller(cls.x, regression="nc", autolag=None, maxlag=4)
         cls.res1 = adfuller(cls.x, regression="n", autolag=None, maxlag=4)
         cls.teststat = 3.5227498
 
@@ -595,10 +593,6 @@ def test_coint():
     res[1] = [-3.8199323012888384, nan, nan, nan]
     res[2] = [-1.6865000791270679, nan, nan, nan]
     res[3] = [-3.7991270451873675, nan, nan, nan]
-
-    with pytest.warns(FutureWarning):
-        # Ensure warning raised for nc rather than n
-        coint(y[:, 0], y[:, 1], trend="nc", maxlag=4, autolag=None)
 
     for trend in ["c", "ct", "ctt", "n"]:
         res1 = {}

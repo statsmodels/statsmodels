@@ -754,7 +754,8 @@ def statespace_comparison(austourists):
         }
     ):
         statespace_results = statespace_model.fit()
-
+    ets_results.test_serial_correlation("ljungbox")
+    statespace_results.test_serial_correlation("ljungbox")
     return ets_results, statespace_results
 
 

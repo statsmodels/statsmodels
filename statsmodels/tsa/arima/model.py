@@ -402,7 +402,8 @@ class ARIMA(sarimax.SARIMAX):
             if self._spec_arima.is_integrated:
                 warnings.warn('Provided `endog` series has been differenced'
                               ' to eliminate integration prior to parameter'
-                              ' estimation by method "%s".' % method)
+                              ' estimation by method "%s".' % method,
+                              stacklevel=2,)
                 endog = diff(
                     endog, k_diff=self._spec_arima.diff,
                     k_seasonal_diff=self._spec_arima.seasonal_diff,

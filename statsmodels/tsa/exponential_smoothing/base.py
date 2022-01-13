@@ -268,7 +268,10 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
 
         warnings.warn('Calculation of the Hessian using finite differences'
                       ' is usually subject to substantial approximation'
-                      ' errors.', PrecisionWarning)
+                      ' errors.',
+                      PrecisionWarning,
+                      stacklevel=3,
+                      )
 
         if not approx_centered:
             epsilon = _get_epsilon(params, 3, None, len(params))
@@ -577,18 +580,16 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
                 else:
                     lags = min(10, nobs_effective // 5)
 
+            cols = [2, 3] if method == 'boxpierce' else [0, 1]
             for i in range(self.model.k_endog):
                 if hasattr(self, "filter_results"):
                     x = self.filter_results.standardized_forecasts_error[i][d:]
                 else:
                     x = self.standardized_forecasts_error
                 results = acorr_ljungbox(
-                    x, lags=lags, boxpierce=(method == 'boxpierce'),
-                    return_df=False)
-                if method == 'ljungbox':
-                    output.append(results[0:2])
-                else:
-                    output.append(results[2:])
+                    x, lags=lags, boxpierce=(method == 'boxpierce')
+                )
+                output.append(np.asarray(results)[:, cols].T)
 
             output = np.c_[output]
         else:
@@ -721,12 +722,16 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
                 if numer_dof < 2:
                     warnings.warn('Early subset of data for variable %d'
                                   '  has too few non-missing observations to'
-                                  ' calculate test statistic.' % i)
+                                  ' calculate test statistic.' % i,
+                                  stacklevel=2,
+                                  )
                     numer_resid = np.nan
                 if denom_dof < 2:
                     warnings.warn('Later subset of data for variable %d'
                                   '  has too few non-missing observations to'
-                                  ' calculate test statistic.' % i)
+                                  ' calculate test statistic.' % i,
+                                  stacklevel=2,
+                                  )
                     denom_resid = np.nan
 
                 test_statistic = np.sum(numer_resid) / np.sum(denom_resid)

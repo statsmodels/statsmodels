@@ -155,7 +155,7 @@ def _format_order(
                 "dictionary.  Missing keys: "
             )
             msg += ", ".join([str(k) for k in sorted(missing)]) + "."
-            warnings.warn(msg, SpecificationWarning)
+            warnings.warn(msg, SpecificationWarning, stacklevel=2)
 
         for key in exog_order:
             _check_order(exog_order[key], causal)

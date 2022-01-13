@@ -37,7 +37,7 @@ from statsmodels.tools.validation import (
 from statsmodels.tsa._bds import bds
 from statsmodels.tsa._innovations import innovations_algo, innovations_filter
 from statsmodels.tsa.adfvalues import mackinnoncrit, mackinnonp
-from statsmodels.tsa.tsatools import add_trend, lagmat, lagmat2ds, rename_trend
+from statsmodels.tsa.tsatools import add_trend, lagmat, lagmat2ds
 
 __all__ = [
     "acovf",
@@ -259,7 +259,6 @@ def adfuller(
     """
     x = array_like(x, "x")
     maxlag = int_like(maxlag, "maxlag", optional=True)
-    regression = rename_trend(regression)
     regression = string_like(
         regression, "regression", options=("c", "ct", "ctt", "n")
     )
@@ -1327,7 +1326,8 @@ def breakvar_heteroskedasticity_test(
             warnings.warn(
                 "Early subset of data for variable %d"
                 " has too few non-missing observations to"
-                " calculate test statistic." % i
+                " calculate test statistic." % i,
+                stacklevel=2,
             )
             numer_squared_sum[i] = np.nan
 
@@ -1339,7 +1339,8 @@ def breakvar_heteroskedasticity_test(
             warnings.warn(
                 "Later subset of data for variable %d"
                 " has too few non-missing observations to"
-                " calculate test statistic." % i
+                " calculate test statistic." % i,
+                stacklevel=2,
             )
             denom_squared_sum[i] = np.nan
 
@@ -1694,7 +1695,6 @@ def coint(
     """
     y0 = array_like(y0, "y0")
     y1 = array_like(y1, "y1", ndim=2)
-    trend = rename_trend(trend)
     trend = string_like(trend, "trend", options=("c", "n", "ct", "ctt"))
     string_like(method, "method", options=("aeg",))
     maxlag = int_like(maxlag, "maxlag", optional=True)
@@ -1722,6 +1722,7 @@ def coint(
             "y0 and y1 are (almost) perfectly colinear."
             "Cointegration test is not reliable in this case.",
             CollinearityWarning,
+            stacklevel=2,
         )
         # Edge case where series are too similar
         res_adf = (-np.inf,)
@@ -1988,6 +1989,7 @@ def kpss(
                 "None is not a valid value for nlags. It must be an integer, "
                 "'auto' or 'legacy'. None will raise starting in 0.14",
                 FutureWarning,
+                stacklevel=2,
             )
         # autolag method of Hobijn et al. (1998)
         nlags = _kpss_autolag(resids, nobs)
@@ -2016,11 +2018,15 @@ look-up table. The actual p-value is {direction} than the p-value returned.
 """
     if p_value == pvals[-1]:
         warnings.warn(
-            warn_msg.format(direction="smaller"), InterpolationWarning
+            warn_msg.format(direction="smaller"),
+            InterpolationWarning,
+            stacklevel=2,
         )
     elif p_value == pvals[0]:
         warnings.warn(
-            warn_msg.format(direction="greater"), InterpolationWarning
+            warn_msg.format(direction="greater"),
+            InterpolationWarning,
+            stacklevel=2,
         )
 
     crit_dict = {"10%": crit[0], "5%": crit[1], "2.5%": crit[2], "1%": crit[3]}
@@ -2187,7 +2193,9 @@ look-up table. The actual p-value is {direction} than the p-value returned.
 
     if direction:
         warnings.warn(
-            warn_msg.format(direction=direction), InterpolationWarning
+            warn_msg.format(direction=direction),
+            InterpolationWarning,
+            stacklevel=2,
         )
 
     crit_dict = {

@@ -10,7 +10,6 @@ import numpy as np
 import numpy.linalg as npl
 from numpy.linalg import slogdet
 
-from statsmodels.tsa.tsatools import rename_trend
 from statsmodels.tools.decorators import deprecated_alias
 from statsmodels.tools.numdiff import approx_fprime, approx_hess
 import statsmodels.tsa.base.tsa_model as tsbase
@@ -162,7 +161,6 @@ class SVAR(tsbase.TimeSeriesModel):
         est : SVARResults
         """
         lags = maxlags
-        trend = rename_trend(trend)
         if ic is not None:
             selections = self.select_order(maxlags=maxlags, verbose=verbose)
             if ic not in selections:

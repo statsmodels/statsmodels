@@ -31,7 +31,6 @@ def get_var_endog(y, lags, trend='c', has_constant='skip'):
     Z = np.array([y[t-lags : t][::-1].ravel() for t in range(lags, nobs)])
 
     # Add constant, trend, etc.
-    trend = tsa.rename_trend(trend)
     if trend != 'n':
         Z = tsa.add_trend(Z, prepend=True, trend=trend,
                           has_constant=has_constant)

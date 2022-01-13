@@ -150,6 +150,7 @@ class DeterministicTerm(ABC):
             "extending. The index is set will contain the position relative "
             "to the data length.",
             UserWarning,
+            stacklevel=2,
         )
         nobs = index.shape[0]
         return pd.RangeIndex(nobs + 1, nobs + steps + 1)
