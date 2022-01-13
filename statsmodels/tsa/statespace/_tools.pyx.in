@@ -1200,8 +1200,8 @@ cpdef _{{prefix}}compute_smoothed_state_weights(
         np.int32_t [:] store_t, store_j
         np.npy_intp dim1[1]
         np.npy_intp dim2[2]
-        np.npy_intp dim3[2]
-        np.npy_intp dim4[2]
+        np.npy_intp dim3[3]
+        np.npy_intp dim4[4]
         {{cython_type}} alpha = 1.0
         {{cython_type}} beta = 0.0
         {{cython_type}} gamma = -1.0
@@ -1433,7 +1433,6 @@ cpdef _{{prefix}}compute_smoothed_state_weights(
                                 &scale, &kfilter.predicted_state_cov[0, 0, t], &kfilter.k_states,
                                          &Hi_W[0, 0, j], &model.k_endog,
                                 &beta, &weights[0, 0, t, j], &kfilter.k_states)
-
 
         # Forwards from j = t+1, t+2, ..., max_j
         # tmp = Pt
