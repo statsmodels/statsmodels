@@ -1540,6 +1540,8 @@ class FilterResults(FrozenRepresentation):
         # Save Kalman filter output
         self.converged = bool(kalman_filter.converged)
         self.period_converged = kalman_filter.period_converged
+        self.univariate_filter = np.array(kalman_filter.univariate_filter,
+                                          copy=True)
 
         self.filtered_state = np.array(kalman_filter.filtered_state, copy=True)
         self.filtered_state_cov = np.array(

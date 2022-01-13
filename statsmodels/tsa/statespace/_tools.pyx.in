@@ -1179,4 +1179,283 @@ cdef int _{{prefix}}select_cov(int k_states, int k_posdef, int k_states_total,
         for i in range(k_states2):
             selected_cov[i] = 0
 
+
+cpdef _{{prefix}}compute_smoothed_state_weights(
+        {{prefix}}KalmanSmoother smoother,
+        {{prefix}}KalmanFilter kfilter,
+        {{prefix}}Statespace model,
+        np.int32_t [:] compute_t,
+        np.int32_t [:] compute_j,
+        {{cython_type}} scale,
+        int compute_prior_weights=False):
+    cdef:
+        int t, i, j, n_t, n_j, min_j, max_j, p_t, p_j
+        int n = model.nobs
+        int p = model.k_endog
+        int m = model.k_states
+        int pm = p * m
+        int filter_collapsed, compute_K
+        int inc = 1
+        int compute
+        np.int32_t [:] store_t, store_j
+        np.npy_intp dim1[1]
+        np.npy_intp dim2[2]
+        np.npy_intp dim3[3]
+        np.npy_intp dim4[4]
+        {{cython_type}} alpha = 1.0
+        {{cython_type}} beta = 0.0
+        {{cython_type}} gamma = -1.0
+        {{cython_type}} scalar
+        {{cython_type}} [::1, :, :] Hi_W, K, prior_weights
+        {{cython_type}} [::1, :, :, :] weights
+        {{cython_type}} [::1, :] tmp, F, Fi, FiZ
+        {{cython_type}} * _Pt
+        {{cython_type}} * _Z
+        {{cython_type}} * _H
+        {{cython_type}} * _FiZ
+        {{cython_type}} * _K
+
+    n_t = compute_t.size
+    n_j = compute_j.size
+    min_j = compute_j[0]
+    max_j = compute_j[n_j - 1]
+    dim1[0] = n;
+    store_j = np.PyArray_ZEROS(1, dim1, np.NPY_INT32, FORTRAN)
+    for i in range(n_j):
+        j = compute_j[i]
+        store_j[j] = True
+
+    dim1[0] = n;
+    store_t = np.PyArray_ZEROS(1, dim1, np.NPY_INT32, FORTRAN)
+    for i in range(n_t):
+        t = compute_t[i]
+        store_t[t] = True
+
+    # Flags
+    filter_collapsed = kfilter.filter_method & 0x20
+
+    # Create required storage and temporary matrices
+    # Hi_W = np.zeros((p, m, n), order='F')
+    # K = np.zeros((p, m, n), order='F')
+    # weights = np.zeros((m, p, n, n), order='F') * np.nan
+    # tmp = np.zeros((m, m), order='F')
+    # F = np.zeros((p, p), order='F')
+    # Fi = np.zeros((p, p), order='F')
+    # FiZ = np.zeros((p, m), order='F')
+    dim4[0] = m; dim4[1] = p; dim4[2] = n; dim4[3] = n;
+    weights = np.PyArray_ZEROS(4, dim4, {{typenum}}, FORTRAN) * np.nan
+    dim3[0] = p; dim3[1] = m; dim3[2] = n;
+    Hi_W = np.PyArray_ZEROS(3, dim3, {{typenum}}, FORTRAN)
+    K = np.PyArray_ZEROS(3, dim3, {{typenum}}, FORTRAN)
+    dim3[0] = m; dim3[1] = m; dim3[2] = n;
+    # Note: the order here is (m, l, t), where the `l` dimension refers to the
+    # element of the initial state vector, and the `m, t` dimensions refer to
+    # the element / time point of the smoothed state vector.
+    prior_weights = np.PyArray_ZEROS(3, dim3, {{typenum}}, FORTRAN) * np.nan
+    dim2[0] = p; dim2[1] = p;
+    F = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+    Fi = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+    dim2[0] = m; dim2[1] = p;
+    tmp = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+    dim2[0] = p; dim2[1] = m;
+    FiZ = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+
+    # First pass to compute required quantities, if necessary
+    for t in range(n):
+        p_t = p - model.nmissing[t]
+
+        # Handling of exact diffuse periods is not currently available
+        # Also, we can skip computations for periods that are not needed for
+        # the requested t, j combinations
+        if (t < kfilter.nobs_diffuse
+                or (not store_t[t] and (t < min_j or t > max_j))):
+            # No need to set this when using the dictionary
+            # K[t] = np.zeros((m, p_t)) * np.nan
+            # Hi_W[t] is already initialized to NaNs, so can skip:
+            # Hi_W[t, :] = np.nan
+            continue
+
+        # Move the statespace representation to the time period, but do not
+        # apply the collapse (first zero) or diagonalization (second zero)
+        model.seek(t, 0, 0, True)
+
+        # Get statespace objects
+        if p_t == 0:
+            # No need to set this when using the dictionary
+            # K.append(np.zeros((m, 0)))
+            # Hi_W[t] is already initialized to NaNs, so can skip:
+            # Hi_W[t, :] = np.nan
+            continue
+
+        # Get filtered objects
+        compute_K = kfilter.univariate_filter[t] or filter_collapsed
+        if compute_K:
+            # Note: typically would need to multiply both P and F by the
+            # scale, but F is inverted and K = T P Z' F^{-1}, the scale terms
+            # cancel out
+            # F = Z @ P @ Z.T + H
+            # Note: here use Fi as a temporary array for the moment
+            # Z @ P
+            blas.{{prefix}}gemm("N", "N", &model._k_endog, &model._k_states, &model._k_states,
+                                &alpha, model._design, &model._k_endog,
+                                        &kfilter.predicted_state_cov[0, 0, t], &kfilter.k_states,
+                                &beta, &FiZ[0, 0], &model.k_endog)
+            for i in range(model._k_endog): # columns
+                for j in range(model._k_endog): # rows
+                    F[j, i] = model._obs_cov[j + i*model._k_endog]
+            blas.{{prefix}}gemm("N", "T", &model._k_endog, &model._k_endog, &model._k_states,
+                                &alpha, &FiZ[0, 0], &model.k_endog,
+                                        model._design, &model._k_endog,
+                                &alpha, &F[0, 0], &model.k_endog)
+            # Note: pinv is required for the cases in which F is singular
+            # Note: use T to make the array Fortran contiguous
+            Fi = np.linalg.pinv(F[:p_t, :p_t]).T
+            blas.{{prefix}}gemm("N", "N", &model._k_endog, &model._k_states, &model._k_endog,
+                                &alpha, &Fi[0, 0], &model._k_endog,
+                                        model._design, &model._k_endog,
+                                &beta, &FiZ[0, 0], &model.k_endog)
+
+            # P_t Z_t' F_t^{-1}
+            # $(m \times p) = (m \times m) (m \times p)$
+            blas.{{prefix}}gemm("N", "T", &model._k_states, &model._k_endog, &model._k_states,
+                                &alpha, &kfilter.predicted_state_cov[0, 0, t], &kfilter.k_states,
+                                        &FiZ[0, 0], &model.k_endog,
+                                &beta, &tmp[0, 0], &kfilter.k_states)
+            # T_t P_t Z_t' F_t^{-1}
+            # $(m \times p) = (m \times m) (m \times p)$
+            blas.{{prefix}}gemm("N", "N", &model._k_states, &model._k_endog, &model._k_states,
+                                &alpha, model._transition, &kfilter.k_states,
+                                        &tmp[0, 0], &kfilter.k_states,
+                                &beta, &K[0, 0, t], &kfilter.k_states)
+
+            _FiZ = &FiZ[0, 0]
+            _K = &K[0, 0, t]
+        else:
+            _FiZ = &kfilter.tmp3[0, 0, t]
+            _K = &kfilter.kalman_gain[0, 0, t]
+
+        # Compute required quantites
+        # W_j = H_j (F_j^{-1} Z_j - K_j' N_j L_j)
+        # => H_j^{-1} W_j = F_j^{-1} Z_j - K_j' N_j L_j
+        blas.{{prefix}}copy(&pm, _FiZ, &inc, &Hi_W[0, 0, t], &inc)
+
+        scalar = 1. / scale
+        blas.{{prefix}}gemm("N", "N", &model._k_states, &model._k_states, &model._k_states,
+                            &scalar, &smoother.scaled_smoothed_estimator_cov[0, 0, t + 1], &kfilter.k_states,
+                                    &smoother.innovations_transition[0, 0, t], &kfilter.k_states,
+                            &beta, kfilter._tmp0, &kfilter.k_states)
+
+        blas.{{prefix}}gemm("T", "N", &model._k_endog, &model._k_states, &model._k_states,
+                            &gamma, _K, &kfilter.k_states,
+                                    kfilter._tmp0, &kfilter.k_states,
+                            &scalar, &Hi_W[0, 0, t], &model.k_endog)
+
+    # Second pass to compute weights
+    # for t in compute_t:
+    for t in range(n):
+        if t < kfilter.nobs_diffuse or not store_t[t]:
+            continue
+
+        # Backwards from j = t-1, t-2, ... min_j
+        # tmp = I - P_t N_{t - 1}
+        # Note: normally would need to multiply Pt by scale and divide N[t+1]
+        # by `scale`, but since they're being multiplied here, the scale terms
+        # cancel out.
+        blas.{{prefix}}gemm("N", "N", &model._k_states, &model._k_states, &model._k_states,
+                            &gamma, &kfilter.predicted_state_cov[0, 0, t], &kfilter.k_states,
+                                    &smoother.scaled_smoothed_estimator_cov[0, 0, t], &kfilter.k_states,
+                            &beta, kfilter._tmp0, &kfilter.k_states)
+        for i in range(m):
+            kfilter.tmp0[i, i] = kfilter.tmp0[i, i] + 1
+
+        # This is the weight of the prior on the smoothed state at
+        # time t > 0
+        if t == 0 and compute_prior_weights:
+            blas.{{prefix}}copy(&kfilter.k_states2, kfilter._tmp0, &inc, &prior_weights[0, 0, t], &inc)
+
+        for j in range(t - 1, min_j - 1, -1):
+            # Since we are not handling any diffuse observations now, we can
+            # stop as soon as we get to the diffuse periods
+            if j < kfilter.nobs_diffuse:
+                continue
+
+            p_j = p - model.nmissing[j]
+
+            compute_K = kfilter.univariate_filter[t] or filter_collapsed
+            if compute_K:
+                _K = &K[0, 0, j]
+            else:
+                _K = &kfilter.kalman_gain[0, 0, j]
+
+            # The difference for univariate her would be:
+            # - if j in compute_j, then we have a subloop, i in p_j (but in
+            #   descending order, since we're going backwards here), where
+            #   we need to compute L_{j,i} and update tmp = tmp @ L_{j,i}
+            # - if j not in compute_j, then we only need to update
+            #   tmp = tmp @ L[j] (as in the conventional case), since
+            #   L[j] = \prod_i L_{j, i}
+            if store_j[j] and p_j > 0:
+                # weights[:, :p_j, t, j] = tmp @ K[j][:, :p_j]
+                blas.{{prefix}}gemm("N", "N", &model._k_states, &p_j, &model._k_states,
+                                    &alpha, kfilter._tmp0, &kfilter.k_states,
+                                            _K, &kfilter.k_states,
+                                    &beta, &weights[0, 0, t, j], &kfilter.k_states)
+
+            if j > min_j or (j == 0 and compute_prior_weights):
+                # tmp = tmp @ L
+                blas.{{prefix}}gemm("N", "N", &model._k_states, &model._k_states, &model._k_states,
+                            &alpha, kfilter._tmp0, &kfilter.k_states,
+                                    &smoother.innovations_transition[0, 0, j], &kfilter.k_states,
+                            &beta, kfilter._tmp00, &kfilter.k_states)
+                blas.{{prefix}}copy(&kfilter.k_states2, kfilter._tmp00, &inc,
+                                                        kfilter._tmp0, &inc)
+
+                # This is the weight of the prior on the smoothed state at
+                # time t > 0
+                if j == 0 and compute_prior_weights:
+                    blas.{{prefix}}copy(&kfilter.k_states2, kfilter._tmp0, &inc, &prior_weights[0, 0, t], &inc)
+
+        # For j == t
+        # For the univariate case, some notes:
+        # Note in general about computing weights that we need to define what
+        # we mean by the state at time t. So if we were computing weights for
+        # the predicted state at time t, that would mean we were computing
+        # weights for the expectation of the time t state conditional on all
+        # information dated time t-1 or earlier. So I thnk that j==t refers
+        # to the specific case that j = t and i = p_t, i.e. we have
+        # incorporated all the information from time t. Then j = t but i < p_t
+        # would follow the j < t formula.
+        j = t
+        p_j = p - model.nmissing[t]
+        # weights[:, :p_j, t, j] = Pt @ Hi_W[j, :p_j].T
+        if store_j[j] and p_j > 0:
+            blas.{{prefix}}gemm("N", "T", &model._k_states, &p_j, &model._k_states,
+                                &scale, &kfilter.predicted_state_cov[0, 0, t], &kfilter.k_states,
+                                         &Hi_W[0, 0, j], &model.k_endog,
+                                &beta, &weights[0, 0, t, j], &kfilter.k_states)
+
+        # Forwards from j = t+1, t+2, ..., max_j
+        # tmp = Pt
+        blas.{{prefix}}copy(&kfilter.k_states2, &kfilter.predicted_state_cov[0, 0, t], &inc, kfilter._tmp0, &inc)
+        if scale != 1:
+            blas.{{prefix}}scal(&kfilter.k_states2, &scale, kfilter._tmp0, &inc)
+        for j in range(t + 1, max_j + 1):
+            p_j = p - model.nmissing[j]
+            # tmp = tmp @ L[j-1].T
+            blas.{{prefix}}gemm("N", "T", &model._k_states, &model._k_states, &model._k_states,
+                                &alpha, kfilter._tmp0, &kfilter.k_states,
+                                        &smoother.innovations_transition[0, 0, j - 1], &kfilter.k_states,
+                                &beta, kfilter._tmp00, &kfilter.k_states)
+            blas.{{prefix}}copy(&kfilter.k_states2, kfilter._tmp00, &inc,
+                                                        kfilter._tmp0, &inc)
+
+            if store_j[j] and p_j > 0:
+                # weights[:, :p_j, t, j] = tmp @ Hi_W[j, :p_j].T
+                blas.{{prefix}}gemm("N", "T", &model._k_states, &p_j, &model._k_states,
+                                    &alpha, kfilter._tmp0, &kfilter.k_states,
+                                            &Hi_W[0, 0, j], &p,
+                                    &beta, &weights[0, 0, t, j], &kfilter.k_states)
+
+    return np.array(weights), np.array(prior_weights), np.array(Hi_W)
+
 {{endfor}}
