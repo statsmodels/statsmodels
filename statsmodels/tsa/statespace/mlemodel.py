@@ -1925,6 +1925,11 @@ class MLEModel(tsbase.TimeSeriesModel):
             be a Pandas DataFrame that has a MultiIndex for the columns, with
             the first level containing the names of the `endog` variables and
             the second level containing the repetition number.
+
+        See Also
+        --------
+        impulse_responses
+            Impulse response functions
         """
         # Make sure the model class has the current parameters
         self.update(params, transformed=transformed,
@@ -2090,6 +2095,12 @@ class MLEModel(tsbase.TimeSeriesModel):
             models the impulse responses are only given for `steps` elements
             (to avoid having to unexpectedly provide updated time-varying
             matrices).
+
+        See Also
+        --------
+        simulate
+            Simulate a time series according to the given state space model,
+            optionally with specified series for the innovations.
 
         Notes
         -----
@@ -3277,8 +3288,17 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         Returns
         -------
         predictions : PredictionResults
-            PredictionResults instance containing in-sample predictions and
-            out-of-sample forecasts.
+            PredictionResults instance containing in-sample predictions /
+            out-of-sample forecasts and results including confidence intervals.
+
+        See Also
+        --------
+        forecast
+            Out-of-sample forecasts.
+        predict
+            In-sample predictions and out-of-sample forecasts.
+        get_forecast
+            Out-of-sample forecasts and results including confidence intervals.
         """
         if start is None:
             start = 0
@@ -3344,9 +3364,19 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Returns
         -------
-        predictions : PredictionResults
-            PredictionResults instance containing in-sample predictions and
-            out-of-sample forecasts.
+        forecasts : PredictionResults
+            PredictionResults instance containing out-of-sample forecasts and
+            results including confidence intervals.
+
+        See also
+        --------
+        forecast
+            Out-of-sample forecasts.
+        predict
+            In-sample predictions and out-of-sample forecasts.
+        get_prediction
+            In-sample predictions / out-of-sample forecasts and results
+            including confidence intervals.
         """
         if isinstance(steps, int):
             end = self.nobs + steps - 1
@@ -3406,16 +3436,20 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Returns
         -------
-        forecast : array_like
-            Array of out of in-sample predictions and / or out-of-sample
-            forecasts. An (npredict x k_endog) array.
+        predictions : array_like
+            In-sample predictions / Out-of-sample forecasts. (Numpy array or
+            Pandas Series or DataFrame, depending on input and dimensions).
+            Dimensions are `(npredict x k_endog)`.
 
         See Also
         --------
         forecast
-            Out-of-sample forecasts
+            Out-of-sample forecasts.
+        get_forecast
+            Out-of-sample forecasts and results including confidence intervals.
         get_prediction
-            Prediction results and confidence intervals
+            In-sample predictions / out-of-sample forecasts and results
+            including confidence intervals.
         """
         # Perform the prediction
         prediction_results = self.get_prediction(
@@ -3449,9 +3483,20 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Returns
         -------
-        forecast : PredictionResults
-            PredictionResults instance containing in-sample predictions and
-            out-of-sample forecasts.
+        forecast : array_like
+            Out-of-sample forecasts (Numpy array or Pandas Series or DataFrame,
+            depending on input and dimensions).
+            Dimensions are `(steps x k_endog)`.
+
+        See Also
+        --------
+        predict
+            In-sample predictions and out-of-sample forecasts.
+        get_forecast
+            Out-of-sample forecasts and results including confidence intervals.
+        get_prediction
+            In-sample predictions / out-of-sample forecasts and results
+            including confidence intervals.
         """
         if isinstance(steps, int):
             end = self.nobs + steps - 1
@@ -3518,6 +3563,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             be a Pandas DataFrame that has a MultiIndex for the columns, with
             the first level containing the names of the `endog` variables and
             the second level containing the repetition number.
+
+        See Also
+        --------
+        impulse_responses
+            Impulse response functions
         """
         # Get the starting location
         if anchor is None or anchor == 'start':
@@ -3614,6 +3664,12 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             models the impulse responses are only given for `steps` elements
             (to avoid having to unexpectedly provide updated time-varying
             matrices).
+
+        See Also
+        --------
+        simulate
+            Simulate a time series according to the given state space model,
+            optionally with specified series for the innovations.
 
         Notes
         -----
