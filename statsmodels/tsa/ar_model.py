@@ -230,12 +230,14 @@ class AutoReg(tsa_model.TimeSeriesModel):
                 'When using deterministic, trend must be "n" and '
                 "seasonal must be False.",
                 SpecificationWarning,
+                stacklevel=2,
             )
         if self._old_names:
             warnings.warn(
                 "old_names will be removed after the 0.14 release. You should "
                 "stop setting this parameter and use the new names.",
                 FutureWarning,
+                stacklevel=2,
             )
         self._lags, self._hold_back = self._check_lags()
         self._setup_regressors()

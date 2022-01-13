@@ -1665,6 +1665,7 @@ class VARResults(VARProcess):
                 warnings.warn(
                     "forecast cov takes parameter uncertainty into" "account",
                     OutputWarning,
+                    stacklevel = 2,
                 )
         else:
             raise ValueError("method has to be either 'mse' or 'auto'")

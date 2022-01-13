@@ -643,12 +643,14 @@ def coint_johansen(endog, det_order, k_ar_diff):
             "Critical values are only available for a det_order of "
             "-1, 0, or 1.",
             category=HypothesisTestWarning,
+            stacklevel = 2,
         )
     if endog.shape[1] > 12:  # todo: test with a time series of 13 variables
         warnings.warn(
             "Critical values are only available for time series "
             "with 12 variables at most.",
             category=HypothesisTestWarning,
+            stacklevel = 2,
         )
 
     from statsmodels.regression.linear_model import OLS

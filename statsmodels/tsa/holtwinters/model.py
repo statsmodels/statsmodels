@@ -822,7 +822,7 @@ class ExponentialSmoothing(TimeSeriesModel):
                 "Model has no free parameters to estimate. Set "
                 "optimized=False to suppress this warning"
             )
-            warnings.warn(message, EstimationWarning)
+            warnings.warn(message, EstimationWarning, stacklevel=3)
             data = data.unpack_parameters(params)
             data.params = params
             data.mask = sel

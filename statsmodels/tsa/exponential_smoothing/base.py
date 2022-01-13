@@ -268,7 +268,10 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
 
         warnings.warn('Calculation of the Hessian using finite differences'
                       ' is usually subject to substantial approximation'
-                      ' errors.', PrecisionWarning)
+                      ' errors.',
+                      PrecisionWarning,
+                      stacklevel=3,
+                      )
 
         if not approx_centered:
             epsilon = _get_epsilon(params, 3, None, len(params))
@@ -721,12 +724,16 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
                 if numer_dof < 2:
                     warnings.warn('Early subset of data for variable %d'
                                   '  has too few non-missing observations to'
-                                  ' calculate test statistic.' % i)
+                                  ' calculate test statistic.' % i,
+                                  stacklevel=2,
+                                  )
                     numer_resid = np.nan
                 if denom_dof < 2:
                     warnings.warn('Later subset of data for variable %d'
                                   '  has too few non-missing observations to'
-                                  ' calculate test statistic.' % i)
+                                  ' calculate test statistic.' % i,
+                                  stacklevel=2,
+                                  )
                     denom_resid = np.nan
 
                 test_statistic = np.sum(numer_resid) / np.sum(denom_resid)
