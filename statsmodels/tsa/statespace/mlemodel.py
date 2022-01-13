@@ -3155,8 +3155,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             If lags is a list or array, then all lags are included up to the
             largest lag in the list, however only the tests for the lags in the
             list are reported.
-            If lags is None, then the default maxlag is 12*(nobs/100)^{1/4}.
-            After 0.12 the default maxlag will change to min(10, nobs // 5) for
+            If lags is None, then the default maxlag is min(10, nobs // 5) for
             non-seasonal models and min(2*m, nobs // 5) for seasonal time
             series where m is the seasonal period.
         df_adjust : bool, optional
@@ -3218,15 +3217,13 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             if df_adjust:
                 model_df = max(0, self.df_model - self.k_diffuse_states - 1)
 
+            cols = [2, 3] if method == 'boxpierce' else [0, 1]
             for i in range(self.model.k_endog):
                 results = acorr_ljungbox(
                     self.filter_results.standardized_forecasts_error[i][d:],
                     lags=lags, boxpierce=(method == 'boxpierce'),
-                    model_df=model_df, return_df=False)
-                if method == 'ljungbox':
-                    output.append(results[0:2])
-                else:
-                    output.append(results[2:])
+                    model_df=model_df)
+                output.append(np.asarray(results)[:, cols].T)
 
             output = np.c_[output]
         else:

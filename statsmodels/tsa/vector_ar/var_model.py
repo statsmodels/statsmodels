@@ -652,7 +652,6 @@ class VAR(TimeSeriesModel):
         See Lütkepohl pp. 146-153 for implementation details.
         """
         lags = maxlags
-        trend = tsa.rename_trend(trend)
         if trend not in ["c", "ct", "ctt", "n"]:
             raise ValueError("trend '{}' not supported for VAR".format(trend))
 
@@ -796,7 +795,6 @@ class VAR(TimeSeriesModel):
         -------
         selections : LagOrderResults
         """
-        trend = tsa.rename_trend(trend)
         ntrend = len(trend) if trend.startswith("c") else 0
         max_estimable = (self.n_totobs - self.neqs - ntrend) // (1 + self.neqs)
         if maxlags is None:

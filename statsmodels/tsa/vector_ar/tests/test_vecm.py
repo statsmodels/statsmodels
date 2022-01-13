@@ -1,5 +1,3 @@
-from statsmodels.compat.pytest import pytest_warns
-
 import numpy as np
 from numpy.testing import (
     assert_,
@@ -111,16 +109,14 @@ def load_results_statsmodels(dataset):
     results_per_deterministic_terms = dict.fromkeys(dataset.dt_s_list)
 
     for dt_s_tup in dataset.dt_s_list:
-        warn_typ = FutureWarning if dt_s_tup[0] == "nc" else None
-        with pytest_warns(warn_typ):
-            model = VECM(
-                data[dataset],
-                k_ar_diff=3,
-                coint_rank=coint_rank,
-                deterministic=dt_s_tup[0],
-                seasons=dt_s_tup[1],
-                first_season=dt_s_tup[2],
-            )
+        model = VECM(
+            data[dataset],
+            k_ar_diff=3,
+            coint_rank=coint_rank,
+            deterministic=dt_s_tup[0],
+            seasons=dt_s_tup[1],
+            first_season=dt_s_tup[2],
+        )
         results_per_deterministic_terms[dt_s_tup] = model.fit(method="ml")
     return results_per_deterministic_terms
 
@@ -156,15 +152,13 @@ def load_results_statsmodels_exog(dataset):
                 )
                 # remove "lo" since it's now already in exog.
                 det_string = det_string[:-2]
-        warn_typ = FutureWarning if det_string == "nc" else None
-        with pytest_warns(warn_typ):
-            model = VECM(
-                endog,
-                exog,
-                k_ar_diff=3,
-                coint_rank=coint_rank,
-                deterministic=det_string,
-            )
+        model = VECM(
+            endog,
+            exog,
+            k_ar_diff=3,
+            coint_rank=coint_rank,
+            deterministic=det_string,
+        )
         results_per_deterministic_terms[dt_s_tup] = model.fit(method="ml")
     return results_per_deterministic_terms
 
@@ -201,18 +195,16 @@ def load_results_statsmodels_exog_coint(dataset):
             # reversing (such that constant is first and linear is second)
             exog_coint = exog_coint[::-1]
             exog_coint = np.hstack(exog_coint)
-        warn_typ = FutureWarning if det_string == "nc" else None
-        with pytest_warns(warn_typ):
-            model = VECM(
-                endog,
-                exog=None,
-                exog_coint=exog_coint,
-                k_ar_diff=3,
-                coint_rank=coint_rank,
-                deterministic=det_string,
-                seasons=dt_s_tup[1],
-                first_season=dt_s_tup[2],
-            )
+        model = VECM(
+            endog,
+            exog=None,
+            exog_coint=exog_coint,
+            k_ar_diff=3,
+            coint_rank=coint_rank,
+            deterministic=det_string,
+            seasons=dt_s_tup[1],
+            first_season=dt_s_tup[2],
+        )
         results_per_deterministic_terms[dt_s_tup] = model.fit(method="ml")
     return results_per_deterministic_terms
 
@@ -1565,9 +1557,10 @@ def test_lag_order_selection():
             deterministic = dt[0]
             endog_tot = data[ds]
 
-            warn_typ = FutureWarning if dt[0] == "nc" else None
-            with pytest_warns(warn_typ):
-                obtained_all = select_order(endog_tot, 10, dt[0], dt[1])
+            trend = "n" if dt[0] == "nc" else dt[0]
+            obtained_all = select_order(
+                endog_tot, 10, deterministic=dt[0], seasons=dt[1]
+            )
             deterministic_outside_exog = ""
             # "co" is not in exog in any test case
             if "co" in deterministic:

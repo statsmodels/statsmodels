@@ -1142,8 +1142,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         lags : int
             The maximum number of lags to use in the test. Jointly tests that
             all autocorrelations up to and including lag j are zero for
-            j = 1, 2, ..., lags. If None, uses lag=12*(nobs/100)^{1/4}.
-            After 0.12 the number of lags will change to min(10, nobs // 5).
+            j = 1, 2, ..., lags. If None, uses min(10, nobs // 5).
         model_df : int
             The model degree of freedom to use when adjusting computing the
             test statistic to account for parameter estimation. If None, uses
@@ -1181,19 +1180,14 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             lags=lags,
             boxpierce=False,
             model_df=model_df,
-            return_df=False,
         )
         cols = ["Ljung-Box", "LB P-value", "DF"]
         if lags == 1:
-            test_stats = [list(test_stats) + [max(0, 1 - model_df)]]
+            df = max(0, 1 - model_df)
         else:
-            df = np.clip(np.arange(1, lags + 1) - model_df, 0, np.inf).astype(
-                int
-            )
-            test_stats = list(test_stats) + [df]
-            test_stats = [
-                [test_stats[i][j] for i in range(3)] for j in range(lags)
-            ]
+            df = np.clip(np.arange(1, lags + 1) - model_df, 0, np.inf)
+            df = df.astype(int)
+        test_stats["df"] = df
         index = pd.RangeIndex(1, lags + 1, name="Lag")
         return pd.DataFrame(test_stats, columns=cols, index=index)
 
@@ -1253,7 +1247,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             lags = min(nobs_effective // 5, 10)
         out = []
         for lag in range(1, lags + 1):
-            res = het_arch(self.resid, nlags=lag, autolag=None)
+            res = het_arch(self.resid, nlags=lag)
             out.append([res[0], res[1], lag])
         index = pd.RangeIndex(1, lags + 1, name="Lag")
         cols = ["ARCH-LM", "P-value", "DF"]

@@ -1797,7 +1797,7 @@ class GLMResults(base.LikelihoodModelResults):
 
         .. warning::
 
-            The current definition is base don the deviance rather than the
+            The current definition is based on the deviance rather than the
             log-likelihood. This is not consistent with the AIC definition,
             and after 0.13 both will make use of the log-likelihood definition.
 

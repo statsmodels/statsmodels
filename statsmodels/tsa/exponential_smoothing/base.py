@@ -580,18 +580,16 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
                 else:
                     lags = min(10, nobs_effective // 5)
 
+            cols = [2, 3] if method == 'boxpierce' else [0, 1]
             for i in range(self.model.k_endog):
                 if hasattr(self, "filter_results"):
                     x = self.filter_results.standardized_forecasts_error[i][d:]
                 else:
                     x = self.standardized_forecasts_error
                 results = acorr_ljungbox(
-                    x, lags=lags, boxpierce=(method == 'boxpierce'),
-                    return_df=False)
-                if method == 'ljungbox':
-                    output.append(results[0:2])
-                else:
-                    output.append(results[2:])
+                    x, lags=lags, boxpierce=(method == 'boxpierce')
+                )
+                output.append(np.asarray(results)[:, cols].T)
 
             output = np.c_[output]
         else:

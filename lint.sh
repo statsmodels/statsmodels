@@ -108,7 +108,6 @@ if [ "$LINT" == true ]; then
         statsmodels/iolib/tests/results/ \
         statsmodels/iolib/tests/test_pickle.py \
         statsmodels/miscmodels/__init__.py \
-        statsmodels/miscmodels/tests/test_tarma.py \
         statsmodels/multivariate/__init__.py \
         statsmodels/multivariate/api.py \
         statsmodels/multivariate/factor_rotation/_analytic_rotation.py \

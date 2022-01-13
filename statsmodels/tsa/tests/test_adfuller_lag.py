@@ -5,7 +5,6 @@ Created on Wed May 30 21:39:46 2012
 Author: Josef Perktold
 """
 import numpy as np
-import pytest
 from numpy.testing import assert_almost_equal, assert_equal
 
 from statsmodels.datasets import macrodata
@@ -17,8 +16,6 @@ def test_adf_autolag():
     #this is mostly a unit test
     d2 = macrodata.load_pandas().data
     x = np.log(d2['realgdp'].values)
-    with pytest.warns(FutureWarning):
-        tsast.adfuller(x, regression="nc")
     for k_trend, tr in enumerate(['n', 'c', 'ct', 'ctt']):
         x = np.log(d2['realgdp'].values)
         xd = np.diff(x)

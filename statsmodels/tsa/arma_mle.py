@@ -7,16 +7,9 @@ License: BSD
 TODO: check everywhere initialization of signal.lfilter
 
 """
-import warnings
-
-import numpy as np
-from scipy import signal, optimize
-from statsmodels.base.model import GenericLikelihoodModel
 
 
-#copied from sandbox/regression/mle.py
-#rename until merge of classes is complete
-class Arma(GenericLikelihoodModel):  #switch to generic mle
+class Arma:
     """
     Removed in 0.14. Use SARIMAX, ARIMA or AutoReg.
 

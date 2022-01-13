@@ -37,7 +37,7 @@ from statsmodels.tools.validation import (
 from statsmodels.tsa._bds import bds
 from statsmodels.tsa._innovations import innovations_algo, innovations_filter
 from statsmodels.tsa.adfvalues import mackinnoncrit, mackinnonp
-from statsmodels.tsa.tsatools import add_trend, lagmat, lagmat2ds, rename_trend
+from statsmodels.tsa.tsatools import add_trend, lagmat, lagmat2ds
 
 __all__ = [
     "acovf",
@@ -259,7 +259,6 @@ def adfuller(
     """
     x = array_like(x, "x")
     maxlag = int_like(maxlag, "maxlag", optional=True)
-    regression = rename_trend(regression)
     regression = string_like(
         regression, "regression", options=("c", "ct", "ctt", "n")
     )
@@ -1696,7 +1695,6 @@ def coint(
     """
     y0 = array_like(y0, "y0")
     y1 = array_like(y1, "y1", ndim=2)
-    trend = rename_trend(trend)
     trend = string_like(trend, "trend", options=("c", "n", "ct", "ctt"))
     string_like(method, "method", options=("aeg",))
     maxlag = int_like(maxlag, "maxlag", optional=True)
