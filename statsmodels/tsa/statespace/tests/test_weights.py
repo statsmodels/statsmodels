@@ -1,9 +1,6 @@
 """
 Tests for computation of weight functions in state space models
 
-TODO: add test that sum of the contributions times the observations equals the
-      actual smoothed state vector
-
 Author: Chad Fulton
 License: Simplified-BSD
 """
@@ -92,9 +89,9 @@ def test_smoothed_state_obs_weights_sarimax(use_exog, trend,
         a = prior_mean.copy()
         a[i] += 1
         tmp_mod = sarimax.SARIMAX(endog, order=(1, 0, 0), trend=trend,
-                                    exog=exog if use_exog else None,
-                                    concentrate_scale=concentrate_scale,
-                                    measurement_error=measurement_error)
+                                  exog=exog if use_exog else None,
+                                  concentrate_scale=concentrate_scale,
+                                  measurement_error=measurement_error)
         tmp_mod.ssm.initialize_known(a, prior_cov)
         tmp_res = tmp_mod.smooth(params)
 
