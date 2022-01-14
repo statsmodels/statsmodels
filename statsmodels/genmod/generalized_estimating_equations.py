@@ -522,8 +522,6 @@ class GEE(GLM):
                 exposure = exposure[ii]
             del kwargs["missing_idx"]
 
-        _check_args(endog, exog, groups, time, offset, exposure)
-
         self.missing = missing
         self.dep_data = dep_data
         self.constraint = constraint
@@ -541,6 +539,15 @@ class GEE(GLM):
                                   exposure=exposure, weights=weights,
                                   dep_data=dep_data, missing=missing,
                                   family=family, **kwargs)
+
+        _check_args(
+            self.endog,
+            self.exog,
+            self.groups,
+            self.time,
+            getattr(self, "offset", None),
+            getattr(self, "exposure", None),
+        )
 
         self._init_keys.extend(["update_dep", "constraint", "family",
                                 "cov_struct"])
