@@ -305,6 +305,28 @@ class TruncatedPoisson(GenericTruncated):
         self.result_reg = L1GenericTruncatedResults
         self.result_reg_wrapper = L1GenericTruncatedResultsWrapper
 
+    def _predict_mom_trunc0(self, params, mu):
+        """predict values for mean and variance of zero-truncated distribution
+
+        experimental api, will likely be replaced by other methods
+
+        Parameters
+        ----------
+        params : array_like
+            The model parameters. This is only used to extract extra params
+            like dispersion parameter.
+        mu : array_like
+            Array of mean predictions for main model.
+
+        Returns
+        -------
+        Predicted conditional variance.
+        """
+        w = (1 - np.exp(-mu))  # prob of no truncation, 1 - P(y=0)
+        m = mu / w
+        var_ = m - (1 - w) * m**2
+        return m, var_
+
     def predict(self, params, exog=None, exposure=None, offset=None,
                 which='mean', count_prob=None):
         """
@@ -334,7 +356,7 @@ class TruncatedPoisson(GenericTruncated):
         if which == 'mean':
             mu = np.exp(linpred)
             if self.truncation == 0:
-                return mu / (1 - np.exp(-np.exp(linpred)))
+                return mu / (1 - np.exp(-mu))
             elif self.truncation == -1:
                 return mu
             elif self.truncation > 0:
@@ -435,6 +457,36 @@ class TruncatedNegativeBinomialP(GenericTruncated):
         self.result_wrapper = GenericTruncatedResultsWrapper
         self.result_reg = L1GenericTruncatedResults
         self.result_reg_wrapper = L1GenericTruncatedResultsWrapper
+
+    def _predict_mom_trunc0(self, params, mu):
+        """predict values for mean and variance of zero-truncated distribution
+
+        experimental api, will likely be replaced by other methods
+
+        Parameters
+        ----------
+        params : array_like
+            The model parameters. This is only used to extract extra params
+            like dispersion parameter.
+        mu : array_like
+            Array of mean predictions for main model.
+
+        Returns
+        -------
+        Predicted conditional variance.
+        """
+        # note: prob_zero and vm are distribution specific, rest is generic
+        # when mean of base model is mu
+        alpha = params[-1]
+        p = self.model_main.parameterization
+        prob_zero = (1 + alpha * mu**(p-1))**(- 1 / alpha)
+        w = 1 - prob_zero  # prob of no truncation, 1 - P(y=0)
+        m = mu / w
+        vm = mu * (1 + alpha * mu**(p-1))  # variance of NBP
+        # uncentered 2nd moment is vm + mu**2
+        mnc2 = (mu**2 + vm) / w  # uses mnc2_tregion = 0
+        var_ = mnc2 - m**2
+        return m, var_
 
     def predict(self, params, exog=None, exposure=None, offset=None,
                 which='mean', count_prob=None):
@@ -771,6 +823,7 @@ class GenericCensored(CountModel):
             start_params = model.fit(disp=0).params
         mlefit = super(GenericCensored, self).fit(
             start_params=start_params,
+            method=method,
             maxiter=maxiter,
             disp=disp,
             full_output=full_output,
@@ -1004,6 +1057,11 @@ class Censored(GenericCensored):
             )
         self.model_main = model(np.zeros_like(self.endog), self.exog)
         self.model_dist = distribution
+        # fix k_extra and exog_names
+        self.k_extra = k_extra = self.model_main.k_extra
+        if k_extra > 0:
+            self.exog_names.extend(self.model_main.exog_names[-k_extra:])
+
         self.result = GenericTruncatedResults
         self.result_wrapper = GenericTruncatedResultsWrapper
         self.result_reg = L1GenericTruncatedResults
@@ -1086,12 +1144,14 @@ class Hurdle(CountModel):
         elif zerodist == "negbin":
             self.model1 = Censored(self.endog, self.exog,
                                    model=NegativeBinomialP)
+            self.k_extra1 += 1
 
         if dist == "poisson":
             self.model2 = TruncatedPoisson(self.endog, self.exog)
         elif dist == "negbin":
             self.model2 = TruncatedNegativeBinomialP(self.endog, self.exog,
                                                      p=p)
+            self.k_extra2 += 1
 
     def loglike(self, params):
         """
@@ -1143,15 +1203,25 @@ class Hurdle(CountModel):
                                            results2._results.params)
         # TODO: the following should be in __init__ or initialize
         result._results.df_model += results2._results.df_model
+        # this looks wrong attr does not exist, always 0
         self.k_extra1 += getattr(results1._results, "k_extra", 0)
         self.k_extra2 += getattr(results2._results, "k_extra", 0)
         self.k_extra = (self.k_extra1 + self.k_extra2 + 1)
+        xnames1 = ["zm_" + name for name in self.model1.exog_names]
+        self.exog_names[:] = xnames1 + self.model2.exog_names
 
-        # fix up cov_params
+        # fix up cov_params,
+        # we could use normalized cov_params directly, unless it's not used
         from scipy.linalg import block_diag
-        result._results.normalized_cov_params = (
-            block_diag(results1._results.cov_params(),
-                       results2._results.cov_params()))
+        result._results.normalized_cov_params = None
+        try:
+            cov1 = results1._results.cov_params()
+            cov2 = results2._results.cov_params()
+            result._results.normalized_cov_params = block_diag(cov1, cov2)
+        except ValueError as e:
+            if "need covariance" not in str(e):
+                # could be some other problem
+                raise
 
         modelfit = self.result(self, result._results, results1, results2)
         result = self.result_wrapper(modelfit)
@@ -1238,11 +1308,12 @@ class Hurdle(CountModel):
 
         # this currently is mean_main, offset, exposure for zero part ?
         mu1 = self.model1.predict(params_zero, exog=exog)
+        # prob that count model applies y>0 from zero model predict
         prob_main = self.model1.model_main._prob_nonzero(mu1, params_zero)
         prob_zero = (1 - prob_main)
 
         mu2 = np.exp(lin_pred)
-        prob_ntrunc = self.model1.model_main._prob_nonzero(mu2, params_main)
+        prob_ntrunc = self.model2.model_main._prob_nonzero(mu2, params_main)
 
         if which == 'mean':
             return prob_main * np.exp(lin_pred) / prob_ntrunc
@@ -1259,9 +1330,12 @@ class Hurdle(CountModel):
         elif which == 'prob-trunc':
             return 1 - prob_ntrunc
         # not yet supported
-        # elif which == 'var':
-        #     mu = np.exp(lin_pred)
-        #     return self._predict_var(params, mu, 1 - prob_main)
+        elif which == 'var':
+            # generic computation using results from submodels
+            mu = np.exp(lin_pred)
+            mt, vt = self.model2._predict_mom_trunc0(params_main, mu)
+            var_ = prob_main * vt + prob_main * (1 - prob_main) * mt**2
+            return var_
         elif which == 'prob':
             probs_main = self.model2.predict(
                 params_main, exog, np.exp(exposure), offset, which="prob",

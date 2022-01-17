@@ -4,6 +4,7 @@ from numpy.testing import assert_allclose, assert_equal
 
 from statsmodels import datasets
 from statsmodels.tools.tools import add_constant
+from statsmodels.tools.testing import Holder
 
 from statsmodels.distributions.discrete import (
     truncatedpoisson,
@@ -352,6 +353,7 @@ class TestHurdlePoissonR():
         assert_allclose(mean_main * prob_nz, res2.predict_mean,
                         rtol=1e-3, atol=5e-4)
 
+        # with corresponding predict `which`
         m = res1.predict(ex)
         assert_allclose(m, res2.predict_mean, rtol=1e-6, atol=5e-7)
         mm = res1.predict(ex, which="mean-main")
@@ -386,3 +388,110 @@ class TestHurdlePoissonR():
             p3b = res1.get_prediction(ex5, which=which)
             assert_allclose(p3a, p3b.predicted, rtol=1e-10, atol=1e-10)
             assert p3b.summary_frame().shape == (k_ex, 4)
+
+        # var1 = res1.predict(which="var")
+        resid_p1 = res1.resid_pearson[:5]
+        resid_p2 = np.asarray([
+            -1.5892397298897, -0.3239276467705, -1.5878941800178,
+            0.6613236544236, -0.6690997162962,
+            ])
+        assert_allclose(resid_p1, resid_p2, rtol=1e-5, atol=1e-5)
+
+
+class CheckHurdlePredict():
+
+    def test_basic(self):
+        res1 = self.res1
+        res2 = self.res2
+        assert res1.df_model == res2.df_model
+        # assert res1.df_null == res2.df_null  # not in res1
+        assert res1.df_resid == res2.df_resid
+        assert res1.model.k_extra == res2.k_extra
+        assert len(res1.model.exog_names) == res2.k_params
+        assert res1.model.exog_names == res2.exog_names
+
+        # smoke test
+        res1.summary()
+
+    def test_predict(self):
+        res1 = self.res1
+        endog = res1.model.endog
+        exog = res1.model.exog
+
+        pred_mean = res1.predict(which="mean").mean()
+        assert_allclose(pred_mean, endog.mean(), rtol=1e-2)
+
+        mask_nz = endog > 0
+        mean_nz = endog[mask_nz].mean()
+        pred_mean_nz = res1.predict(which="mean-nonzero").mean()
+        assert_allclose(pred_mean_nz, mean_nz, rtol=0.05)
+        # Note: the Truncated model is based on different exog
+        # prediction for nonzero part is better in nonzero sample than full
+        pred_mean_nnz = res1.predict(exog=exog[mask_nz],
+                                     which="mean-nonzero").mean()
+        assert_allclose(pred_mean_nnz, mean_nz, rtol=5e-4)
+
+        pred_mean_nzm = res1.model2.predict(which="mean").mean()
+        assert_allclose(pred_mean_nzm, mean_nz, rtol=5e-4)
+        assert_allclose(pred_mean_nzm, pred_mean_nnz, rtol=1e-4)
+
+        # check variance
+        pred_var = res1.predict(which="var").mean()
+        assert_allclose(pred_var, res1.resid.var(), rtol=0.05)
+
+        pred_var = res1.model2.predict(which="var").mean()
+        assert_allclose(pred_var, res1.resid[endog > 0].var(), rtol=0.05)
+
+        # check probabilities
+        freq = np.bincount(endog.astype(int)) / len(endog)
+        pred_prob = res1.predict(which="prob").mean(0)
+        assert_allclose(pred_prob, freq, rtol=0.005, atol=0.01)
+        dia_hnb = res1.get_diagnostic()
+        assert_allclose(dia_hnb.probs_predicted.mean(0), pred_prob, rtol=1e-10)
+        try:
+            dia_hnb.plot_probs()
+        except ImportError:
+            pass
+
+        pred_prob0 = res1.predict(which="prob-zero").mean(0)
+        assert_allclose(pred_prob0, freq[0], rtol=1e-4)
+        assert_allclose(pred_prob0, pred_prob[0], rtol=1e-10)
+
+
+class TestHurdleNegbinSimulated(CheckHurdlePredict):
+
+    @classmethod
+    def setup_class(cls):
+
+        nobs = 2000
+        exog = np.column_stack((np.ones(nobs), np.linspace(0, 3, nobs)))
+        y_fake = np.arange(nobs) // (nobs / 3)  # need some zeros and non-zeros
+
+        # get predicted probabilities for model
+        mod = Hurdle(y_fake, exog, dist="negbin", zerodist="negbin")
+        p_dgp = np.array([-0.4, 2, 0.5, 0.2, 0.5, 0.5])
+        probs = mod.predict(p_dgp, which="prob", y_values=np.arange(50))
+        cdf = probs.cumsum(1)
+        n = cdf.shape[0]
+        cdf = np.column_stack((cdf, np.ones(n)))
+
+        # simulate data,
+        # cooked example that doesn't have identification problems
+        rng = np.random.default_rng(987456348)
+        u = rng.random((n, 1))
+        endog = np.argmin(cdf < u, axis=1)
+
+        mod_hnb = Hurdle(endog, exog, dist="negbin", zerodist="negbin")
+        cls.res1 = mod_hnb.fit(maxiter=300)
+
+        df_null = 4
+        cls.res2 = Holder(
+            nobs=nobs,
+            k_params=6,
+            df_model=2,
+            df_null=df_null,
+            df_resid=nobs-6,
+            k_extra=df_null - 1,
+            exog_names=['zm_const', 'zm_x1', 'zm_alpha', 'const', 'x1',
+                        'alpha'],
+            )

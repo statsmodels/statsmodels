@@ -4282,7 +4282,7 @@ class NegativeBinomialP(CountModel):
         internal use in Censored model, will be refactored or removed
         """
         alpha = params[-1]
-        p = self.model_main.parameterization
+        p = self.parameterization
         prob_nz = 1 - (1 + alpha * mu**(p-1))**(- 1 / alpha)
         return prob_nz
 
