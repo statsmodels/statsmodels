@@ -61,10 +61,17 @@ class GenericTruncated(CountModel):
             missing=missing,
             **kwargs
             )
-        self.exog = self.exog[self.endog >= (truncation + 1)]
-        self.endog = self.endog[self.endog >= (truncation + 1)]
+        mask = self.endog > truncation
+        self.exog = self.exog[mask]
+        self.endog = self.endog[mask]
+        if offset is not None:
+            self.offset = self.offset[mask]
+        if exposure is not None:
+            self.exposure = self.exposure[mask]
+
         self.trunc = truncation
         self.truncation = truncation  # needed for recreating model
+        # We cannot set the correct df_resid here, not enough information
         self._init_keys.extend(['truncation'])
         self._null_drop_keys = []
 
@@ -177,6 +184,11 @@ class GenericTruncated(CountModel):
             model = self.model_main.__class__(self.endog, self.exog,
                                               offset=offset)
             start_params = model.fit(disp=0).params
+
+        # Todo: check how we can to this in __init__
+        k_params = self.df_model + 1 + self.k_extra
+        self.df_resid = self.endog.shape[0] - k_params
+
         mlefit = super(GenericTruncated, self).fit(
             start_params=start_params,
             method=method,
@@ -1121,11 +1133,8 @@ class Hurdle(CountModel):
             missing=missing,
             **kwargs
             )
-        self.exog_names.insert(0, 'inflate_const')
         self.k_extra1 = 0
         self.k_extra2 = 0
-        for i in range(self.exog.shape[1], 1, -1):
-            self.exog_names.insert(0, 'zero_x%d' % (i-1))
 
         self._initialize(dist, zerodist, p, pzero)
         self.result = HurdleResults
@@ -1181,6 +1190,9 @@ class Hurdle(CountModel):
             full_output=1, disp=1, callback=None,
             cov_type='nonrobust', cov_kwds=None, use_t=None, **kwargs):
 
+        if cov_type != "nonrobust":
+            raise ValueError("robust cov_type currently not supported")
+
         results1 = self.model1.fit(
             start_params=start_params,
             method=method, maxiter=maxiter, disp=disp,
@@ -1226,16 +1238,11 @@ class Hurdle(CountModel):
         modelfit = self.result(self, result._results, results1, results2)
         result = self.result_wrapper(modelfit)
 
-        if cov_kwds is None:
-            cov_kwds = {}
-
-        result._get_robustcov_results(cov_type=cov_type,
-                                      use_self=True, use_t=use_t, **cov_kwds)
         return result
 
     fit.__doc__ = DiscreteModel.fit.__doc__
 
-    def predict(self, params, exog=None, exog_zero=None, exposure=None,
+    def predict(self, params, exog=None, exposure=None,
                 offset=None, which='mean', y_values=None):
         """
         Predict response variable or other statistic given exogenous variables.
@@ -1292,6 +1299,7 @@ class Hurdle(CountModel):
             exposure=exposure
             )
 
+        exog_zero = None  # not yet
         if exog_zero is None:
             if no_exog:
                 exog_zero = self.exog

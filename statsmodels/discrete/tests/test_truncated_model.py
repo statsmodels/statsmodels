@@ -180,11 +180,13 @@ class CheckTruncatedST():
         assert_allclose(res1.tvalues[:k], pt2[:k, 2], rtol=5e-4, atol=5e-4)
         assert_allclose(res1.pvalues[:k], pt2[:k, 3], rtol=5e-4, atol=1e-7)
 
-        # df_resid not available in Stata
-        # assert_equal(res1.df_resid, res2.df_residual)
         assert_equal(res1.df_model, res2.df_m)
         assert_allclose(res1.aic, res2.icr[-2], rtol=1e-8)
         assert_allclose(res1.bic, res2.icr[-1], rtol=1e-8)
+        nobs = res1.model.endog.shape[0]
+        assert_equal((res1.model.endog < 1).sum(), 0)
+        # df_resid not available in Stata
+        assert_equal(res1.df_resid, nobs - len(res1.params))
 
     def test_predict(self):
         res1 = self.res1
