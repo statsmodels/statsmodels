@@ -1061,7 +1061,8 @@ class VARMAXResults(MLEResults):
 
         return out
 
-    def _news_previous_results(self, previous, start, end, periods):
+    def _news_previous_results(self, previous, start, end, periods,
+                               state_index=None):
         # We need to figure out the out-of-sample exog, so that we can add back
         # in the last exog, predicted state
         exog = None
@@ -1096,7 +1097,7 @@ class VARMAXResults(MLEResults):
 
             out = self.smoother_results.news(
                 previous.smoother_results, start=start, end=end,
-                revised=revised_results)
+                revised=revised_results, state_index=state_index)
         return out
 
     @Appender(MLEResults.summary.__doc__)

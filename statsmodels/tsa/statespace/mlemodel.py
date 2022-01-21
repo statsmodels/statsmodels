@@ -35,7 +35,7 @@ from .simulation_smoother import SimulationSmoother
 from .kalman_smoother import SmootherResults
 from .kalman_filter import INVERT_UNIVARIATE, SOLVE_LU, MEMORY_CONSERVE
 from .initialization import Initialization
-from .tools import prepare_exog, concat, _safe_cond
+from .tools import prepare_exog, concat, _safe_cond, get_impact_dates
 
 
 def _handle_args(names, defaults, *args, **kwargs):
@@ -3731,98 +3731,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         return res
 
-    def _news_previous_results(self, previous, start, end, periods):
-        # Compute the news
-        out = self.smoother_results.news(previous.smoother_results,
-                                         start=start, end=end)
-        return out
-
-    def _news_updated_results(self, updated, start, end, periods):
-        return updated._news_previous_results(self, start, end, periods)
-
-    def _news_previous_data(self, endog, start, end, periods, exog):
-        previous = self.apply(endog, exog=exog, copy_initialization=True)
-        return self._news_previous_results(previous, start, end, periods)
-
-    def _news_updated_data(self, endog, start, end, periods, exog):
-        updated = self.apply(endog, exog=exog, copy_initialization=True)
-        return self._news_updated_results(updated, start, end, periods)
-
-    def news(self, comparison, impact_date=None, impacted_variable=None,
-             start=None, end=None, periods=None, exog=None,
-             comparison_type=None, return_raw=False, tolerance=1e-10,
-             **kwargs):
-        """
-        Compute impacts from updated data (news and revisions)
-
-        Parameters
-        ----------
-        comparison : array_like or MLEResults
-            An updated dataset with updated and/or revised data from which the
-            news can be computed, or an updated or previous results object
-            to use in computing the news.
-        impact_date : int, str, or datetime, optional
-            A single specific period of impacts from news and revisions to
-            compute. Can also be a date string to parse or a datetime type.
-            This argument cannot be used in combination with `start`, `end`, or
-            `periods`. Default is the first out-of-sample observation.
-        impacted_variable : str, list, array, or slice, optional
-            Observation variable label or slice of labels specifying that only
-            specific impacted variables should be shown in the News output. The
-            impacted variable(s) describe the variables that were *affected* by
-            the news. If you do not know the labels for the variables, check
-            the `endog_names` attribute of the model instance.
-        start : int, str, or datetime, optional
-            The first period of impacts from news and revisions to compute.
-            Can also be a date string to parse or a datetime type. Default is
-            the first out-of-sample observation.
-        end : int, str, or datetime, optional
-            The last period of impacts from news and revisions to compute.
-            Can also be a date string to parse or a datetime type. Default is
-            the first out-of-sample observation.
-        periods : int, optional
-            The number of periods of impacts from news and revisions to
-            compute.
-        exog : array_like, optional
-            Array of exogenous regressors for the out-of-sample period, if
-            applicable.
-        comparison_type : {None, 'previous', 'updated'}
-            This denotes whether the `comparison` argument represents a
-            *previous* results object or dataset or an *updated* results object
-            or dataset. If not specified, then an attempt is made to determine
-            the comparison type.
-        return_raw : bool, optional
-            Whether or not to return only the specific output or a full
-            results object. Default is to return a full results object.
-        tolerance : float, optional
-            The numerical threshold for determining zero impact. Default is
-            that any impact less than 1e-10 is assumed to be zero.
-
-        Returns
-        -------
-        NewsResults
-            Impacts of data revisions and news on estimates
-
-        References
-        ----------
-        .. [1] Bańbura, Marta, and Michele Modugno.
-               "Maximum likelihood estimation of factor models on datasets with
-               arbitrary pattern of missing data."
-               Journal of Applied Econometrics 29, no. 1 (2014): 133-160.
-        .. [2] Bańbura, Marta, Domenico Giannone, and Lucrezia Reichlin.
-               "Nowcasting."
-               The Oxford Handbook of Economic Forecasting. July 8, 2011.
-        .. [3] Bańbura, Marta, Domenico Giannone, Michele Modugno, and Lucrezia
-               Reichlin.
-               "Now-casting and the real-time data flow."
-               In Handbook of economic forecasting, vol. 2, pp. 195-237.
-               Elsevier, 2013.
-        """
-        # Validate input
-        if self.smoother_results is None:
-            raise ValueError('Cannot compute news without Kalman smoother'
-                             ' results.')
-
+    def _get_previous_updated(self, comparison, exog=None,
+                              comparison_type=None, **kwargs):
         # If we were given data, create a new results object
         comparison_dataset = not isinstance(
             comparison, (MLEResults, MLEResultsWrapper))
@@ -3888,40 +3798,133 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                              ' news by comparing this results set to previous'
                              ' results objects.')
 
-        # Handle start, end, periods
-        # There doesn't seem to be any universal defaults that both (a) make
-        # sense for all data update combinations, and (b) work with both
-        # time-invariant and time-varying models. So we require that the user
-        # specify exactly two of start, end, periods.
-        if impact_date is not None:
-            if not (start is None and end is None and periods is None):
-                raise ValueError('Cannot use the `impact_date` argument in'
-                                 ' combination with `start`, `end`, or'
-                                 ' `periods`.')
-            start = impact_date
-            periods = 1
-        if start is None and end is None and periods is None:
-            start = previous.nobs - 1
-            end = previous.nobs - 1
-        if int(start is None) + int(end is None) + int(periods is None) != 1:
-            raise ValueError('Of the three parameters: start, end, and'
-                             ' periods, exactly two must be specified')
-        # If we have the `periods` object, we need to convert `start`/`end` to
-        # integers so that we can compute the other one. That's because
-        # _get_prediction_index doesn't support a `periods` argument
-        elif start is not None and periods is not None:
-            start, _, _, _ = self.model._get_prediction_index(start, start)
-            end = start + (periods - 1)
-        elif end is not None and periods is not None:
-            _, end, _, _ = self.model._get_prediction_index(end, end)
-            start = end - (periods - 1)
-        elif start is not None and end is not None:
-            pass
+        return previous, updated, comparison_dataset
 
-        # Get the integer-based start, end and the prediction index
-        start, end, out_of_sample, prediction_index = (
-            updated.model._get_prediction_index(start, end))
-        end = end + out_of_sample
+    def _news_previous_results(self, previous, start, end, periods,
+                               state_index=None):
+        # Compute the news
+        out = self.smoother_results.news(previous.smoother_results,
+                                         start=start, end=end,
+                                         state_index=state_index)
+        return out
+
+    def _news_updated_results(self, updated, start, end, periods,
+                              state_index=None):
+        return updated._news_previous_results(self, start, end, periods,
+                                              state_index=state_index)
+
+    def _news_previous_data(self, endog, start, end, periods, exog,
+                            state_index=None):
+        previous = self.apply(endog, exog=exog, copy_initialization=True)
+        return self._news_previous_results(previous, start, end, periods,
+                                           state_index=state_index)
+
+    def _news_updated_data(self, endog, start, end, periods, exog,
+                           state_index=None):
+        updated = self.apply(endog, exog=exog, copy_initialization=True)
+        return self._news_updated_results(updated, start, end, periods,
+                                          state_index=state_index)
+
+    def news(self, comparison, impact_date=None, impacted_variable=None,
+             start=None, end=None, periods=None, exog=None,
+             comparison_type=None, state_index=None, return_raw=False,
+             tolerance=1e-10, **kwargs):
+        """
+        Compute impacts from updated data (news and revisions)
+
+        Parameters
+        ----------
+        comparison : array_like or MLEResults
+            An updated dataset with updated and/or revised data from which the
+            news can be computed, or an updated or previous results object
+            to use in computing the news.
+        impact_date : int, str, or datetime, optional
+            A single specific period of impacts from news and revisions to
+            compute. Can also be a date string to parse or a datetime type.
+            This argument cannot be used in combination with `start`, `end`, or
+            `periods`. Default is the first out-of-sample observation.
+        impacted_variable : str, list, array, or slice, optional
+            Observation variable label or slice of labels specifying that only
+            specific impacted variables should be shown in the News output. The
+            impacted variable(s) describe the variables that were *affected* by
+            the news. If you do not know the labels for the variables, check
+            the `endog_names` attribute of the model instance.
+        start : int, str, or datetime, optional
+            The first period of impacts from news and revisions to compute.
+            Can also be a date string to parse or a datetime type. Default is
+            the first out-of-sample observation.
+        end : int, str, or datetime, optional
+            The last period of impacts from news and revisions to compute.
+            Can also be a date string to parse or a datetime type. Default is
+            the first out-of-sample observation.
+        periods : int, optional
+            The number of periods of impacts from news and revisions to
+            compute.
+        exog : array_like, optional
+            Array of exogenous regressors for the out-of-sample period, if
+            applicable.
+        comparison_type : {None, 'previous', 'updated'}
+            This denotes whether the `comparison` argument represents a
+            *previous* results object or dataset or an *updated* results object
+            or dataset. If not specified, then an attempt is made to determine
+            the comparison type.
+        state_index : array_like, optional
+            An optional index specifying a subset of states to use when
+            constructing the impacts of revisions and news. For example, if
+            `state_index=[0, 1]` is passed, then only the impacts to the
+            observed variables arising from the impacts to the first two
+            states will be returned. Default is to use all states.
+        return_raw : bool, optional
+            Whether or not to return only the specific output or a full
+            results object. Default is to return a full results object.
+        tolerance : float, optional
+            The numerical threshold for determining zero impact. Default is
+            that any impact less than 1e-10 is assumed to be zero.
+
+        Returns
+        -------
+        NewsResults
+            Impacts of data revisions and news on estimates
+
+        References
+        ----------
+        .. [1] Bańbura, Marta, and Michele Modugno.
+               "Maximum likelihood estimation of factor models on datasets with
+               arbitrary pattern of missing data."
+               Journal of Applied Econometrics 29, no. 1 (2014): 133-160.
+        .. [2] Bańbura, Marta, Domenico Giannone, and Lucrezia Reichlin.
+               "Nowcasting."
+               The Oxford Handbook of Economic Forecasting. July 8, 2011.
+        .. [3] Bańbura, Marta, Domenico Giannone, Michele Modugno, and Lucrezia
+               Reichlin.
+               "Now-casting and the real-time data flow."
+               In Handbook of economic forecasting, vol. 2, pp. 195-237.
+               Elsevier, 2013.
+        """
+        # Validate input
+        if self.smoother_results is None:
+            raise ValueError('Cannot compute news without Kalman smoother'
+                             ' results.')
+
+        if state_index is not None:
+            state_index = np.sort(np.array(state_index, dtype=int))
+            if state_index[0] < 0:
+                raise ValueError('Cannot include negative indexes in'
+                                 ' `state_index`.')
+            if state_index[-1] >= self.model.k_states:
+                raise ValueError(f'Given state index {state_index[-1]} is too'
+                                 ' large for the number of states in the model'
+                                 f' ({self.model.k_states}).')
+
+        # Get the previous and updated results objects from `self` and
+        # `comparison`:
+        previous, updated, comparison_dataset = self._get_previous_updated(
+            comparison, exog=exog, comparison_type=comparison_type, **kwargs)
+
+        # Handle start, end, periods
+        start, end, prediction_index = get_impact_dates(
+            previous_model=previous.model, updated_model=updated.model,
+            impact_date=impact_date, start=start, end=end, periods=periods)
 
         # News results will always use Pandas, so if the model's data was not
         # from Pandas, we'll create an index, as if the model's data had been
@@ -3975,13 +3978,149 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         # Compute the news
         news_results = (
-            updated._news_previous_results(previous, start, end + 1, periods))
+            updated._news_previous_results(previous, start, end + 1, periods,
+                                           state_index=state_index))
 
         if not return_raw:
             news_results = NewsResults(
                 news_results, self, updated, previous, impacted_variable,
                 tolerance, row_labels=prediction_index)
         return news_results
+
+    def get_smoothed_decomposition(self, decomposition_of='smoothed_state',
+                                   state_index=None):
+        r"""
+        Decompose smoothed output into contributions from observations
+
+        Parameters
+        ----------
+        decomposition_of : {"smoothed_state", "smoothed_signal"}
+            The object to perform a decomposition of. If it is set to
+            "smoothed_state", then the elements of the smoothed state vector
+            are decomposed into the contributions of each observation. If it
+            is set to "smoothed_signal", then the predictions of the
+            observation vector based on the smoothed state vector are
+            decomposed. Default is "smoothed_state".
+        state_index : array_like, optional
+            An optional index specifying a subset of states to use when
+            constructing the decomposition of the "smoothed_signal". For
+            example, if `state_index=[0, 1]` is passed, then only the
+            contributions of observed variables to the smoothed signal arising
+            from the first two states will be returned. Note that if not all
+            states are used, the contributions will not sum to the smoothed
+            signal. Default is to use all states.
+
+        Returns
+        -------
+        data_contributions : pd.DataFrame
+            Contributions of observations to the decomposed object. If the
+            smoothed state is being decomposed, then `data_contributions` is
+            shaped `(k_states x nobs, k_endog x nobs)` with a `pd.MultiIndex`
+            index corresponding to `state_to x date_to` and `pd.MultiIndex`
+            columns corresponding to `variable_from x date_from`. If the
+            smoothed signal is being decomposed, then `data_contributions` is
+            shaped `(k_endog x nobs, k_endog x nobs)` with `pd.MultiIndex`-es
+            corresponding to `variable_to x date_to` and
+            `variable_from x date_from`.
+        obs_intercept_contributions : pd.DataFrame
+            Contributions of the observation intercept to the decomposed
+            object. If the smoothed state is being decomposed, then
+            `obs_intercept_contributions` is
+            shaped `(k_states x nobs, k_endog x nobs)` with a `pd.MultiIndex`
+            index corresponding to `state_to x date_to` and `pd.MultiIndex`
+            columns corresponding to `obs_intercept_from x date_from`. If the
+            smoothed signal is being decomposed, then
+            `obs_intercept_contributions` is shaped
+            `(k_endog x nobs, k_endog x nobs)` with `pd.MultiIndex`-es
+            corresponding to `variable_to x date_to` and
+            `obs_intercept_from x date_from`.
+        state_intercept_contributions : pd.DataFrame
+            Contributions of the state intercept to the decomposed
+            object. If the smoothed state is being decomposed, then
+            `state_intercept_contributions` is
+            shaped `(k_states x nobs, k_states x nobs)` with a `pd.MultiIndex`
+            index corresponding to `state_to x date_to` and `pd.MultiIndex`
+            columns corresponding to `state_intercept_from x date_from`. If the
+            smoothed signal is being decomposed, then
+            `state_intercept_contributions` is shaped
+            `(k_endog x nobs, k_states x nobs)` with `pd.MultiIndex`-es
+            corresponding to `variable_to x date_to` and
+            `state_intercept_from x date_from`.
+        prior_contributions : pd.DataFrame
+            Contributions of the prior to the decomposed object. If the
+            smoothed state is being decomposed, then `prior_contributions` is
+            shaped `(nobs x k_states, k_states)`, with a `pd.MultiIndex`
+            index corresponding to `state_to x date_to` and columns
+            corresponding to elements of the prior mean (aka "initial state").
+            If the smoothed signal is being decomposed, then
+            `prior_contributions` is shaped `(nobs x k_endog, k_states)`,
+            with a `pd.MultiIndex` index corresponding to
+            `variable_to x date_to` and columns corresponding to elements of
+            the prior mean.
+
+        Notes
+        -----
+        Denote the smoothed state at time :math:`t` by :math:`\alpha_t`. Then
+        the smoothed signal is :math:`Z_t \alpha_t`, where :math:`Z_t` is the
+        design matrix operative at time :math:`t`.
+        """
+        (data_contributions, obs_intercept_contributions,
+         state_intercept_contributions, prior_contributions) = (
+            self.smoother_results.get_smoothed_decomposition(
+                decomposition_of=decomposition_of, state_index=state_index))
+
+        # Construct indexes
+        endog_names = self.model.endog_names
+        if self.model.k_endog == 1:
+            endog_names = [endog_names]
+
+        if decomposition_of == 'smoothed_state':
+            contributions_to = pd.MultiIndex.from_product(
+                [self.model.state_names, self.model._index],
+                names=['state_to', 'date_to'])
+        else:
+            contributions_to = pd.MultiIndex.from_product(
+                [endog_names, self.model._index],
+                names=['variable_to', 'date_to'])
+        contributions_from = pd.MultiIndex.from_product(
+            [endog_names, self.model._index],
+            names=['variable_from', 'date_from'])
+        obs_intercept_contributions_from = pd.MultiIndex.from_product(
+            [endog_names, self.model._index],
+            names=['obs_intercept_from', 'date_from'])
+        state_intercept_contributions_from = pd.MultiIndex.from_product(
+            [self.model.state_names, self.model._index],
+            names=['state_intercept_from', 'date_from'])
+        prior_contributions_from = pd.Index(self.model.state_names,
+                                            name='initial_state_from')
+
+        # Construct DataFrames
+        shape = data_contributions.shape
+        data_contributions = pd.DataFrame(
+            data_contributions.reshape(
+                shape[0] * shape[1], shape[2] * shape[3], order='F'),
+            index=contributions_to, columns=contributions_from)
+
+        shape = obs_intercept_contributions.shape
+        obs_intercept_contributions = pd.DataFrame(
+            obs_intercept_contributions.reshape(
+                shape[0] * shape[1], shape[2] * shape[3], order='F'),
+            index=contributions_to, columns=obs_intercept_contributions_from)
+
+        shape = state_intercept_contributions.shape
+        state_intercept_contributions = pd.DataFrame(
+            state_intercept_contributions.reshape(
+                shape[0] * shape[1], shape[2] * shape[3], order='F'),
+            index=contributions_to, columns=state_intercept_contributions_from)
+
+        shape = prior_contributions.shape
+        prior_contributions = pd.DataFrame(
+            prior_contributions.reshape(shape[0] * shape[1], shape[2],
+                                        order='F'),
+            index=contributions_to, columns=prior_contributions_from)
+
+        return (data_contributions, obs_intercept_contributions,
+                state_intercept_contributions, prior_contributions)
 
     def append(self, endog, exog=None, refit=False, fit_kwargs=None,
                copy_initialization=False, **kwargs):
@@ -4114,10 +4253,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                                         columns=self.model.exog_names)
 
         if copy_initialization:
-            res = self.filter_results
-            init = Initialization(
-                self.model.k_states, 'known', constant=res.initial_state,
-                stationary_cov=res.initial_state_cov)
+            init = Initialization.from_results(self.filter_results)
             kwargs.setdefault('initialization', init)
 
         mod = self.model.clone(new_endog, exog=new_exog, **kwargs)
@@ -4307,10 +4443,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         mod = self.model.clone(endog, exog=exog, **kwargs)
 
         if copy_initialization:
-            res = self.filter_results
-            init = Initialization(
-                self.model.k_states, 'known', constant=res.initial_state,
-                stationary_cov=res.initial_state_cov)
+            init = Initialization.from_results(self.filter_results)
             mod.ssm.initialization = init
 
         res = self._apply(mod, refit=refit, fit_kwargs=fit_kwargs, **kwargs)

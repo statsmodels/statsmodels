@@ -13,7 +13,7 @@ from statsmodels.tsa.statespace.kalman_filter import (KalmanFilter,
                                                       FilterResults)
 from statsmodels.tsa.statespace.tools import (
     reorder_missing_matrix, reorder_missing_vector, copy_index_matrix)
-from statsmodels.tsa.statespace import tools
+from statsmodels.tsa.statespace import tools, initialization
 
 SMOOTHER_STATE = 0x01              # Durbin and Koopman (2012), Chapter 4.4.2
 SMOOTHER_STATE_COV = 0x02          # ibid., Chapter 4.4.3
@@ -1048,7 +1048,7 @@ class SmootherResults(FilterResults):
         return acov
 
     def news(self, previous, t=None, start=None, end=None,
-             revised=None, design=None):
+             revised=None, design=None, state_index=None):
         r"""
         Compute the news and impacts associated with a data release
 
@@ -1076,6 +1076,12 @@ class SmootherResults(FilterResults):
             model has a time-varying design matrix, and the argument `t` is out
             of this model's sample, then a new design matrix for period `t`
             must be provided. Unused otherwise.
+        state_index : array_like, optional
+            An optional index specifying a subset of states to use when
+            constructing the impacts of revisions and news. For example, if
+            `state_index=[0, 1]` is passed, then only the impacts to the
+            observed variables arising from the impacts to the first two
+            states will be returned.
 
         Returns
         -------
@@ -1097,14 +1103,18 @@ class SmootherResults(FilterResults):
               were newly incorporated in a data release (but not including
               revisions to data points that already existed in the previous
               release). In [1]_, this is described as "news" in equation (17).
+            - `revisions`
             - `gain`: the gain matrix associated with the "Kalman-like" update
               from the news, E[y I'] E[I I']^{-1}. In [1]_, this can be found
               in the equation For E[y_{k,t_k} \mid I_{v+1}] in the middle of
               page 17.
+            - `revision_weights`
             - `update_forecasts`: forecasts of the updated periods used to
               construct the news, E[y^u | previous].
             - `update_realized`: realizations of the updated periods used to
               construct the news, y^u.
+            - `revised_prev`
+            - `revised`
             - `prev_impacted_forecasts`: previous forecast of the periods of
               interest, E[y^i | previous].
             - `post_impacted_forecasts`: forecast of the periods of interest
@@ -1119,7 +1129,8 @@ class SmootherResults(FilterResults):
         -----
         This method computes the effect of new data (e.g. from a new data
         release) on smoothed forecasts produced by a state space model, as
-        described in [1]_.
+        described in [1]_. It also computes the effect of revised data on
+        smoothed forecasts.
 
         References
         ----------
@@ -1183,7 +1194,12 @@ class SmootherResults(FilterResults):
                 raise ValueError(error_ss % f'time-invariant {key} while'
                                  ' `previous` does not')
 
-        # We cannot forecast out-of-sample periods in a time-varying models
+        # Standardize
+        if state_index is not None:
+            state_index = np.atleast_1d(
+                np.sort(np.array(state_index, dtype=int)))
+
+        # We cannot forecast out-of-sample periods in a time-varying model
         if end > self.nobs and not self.model.time_invariant:
             raise RuntimeError('Cannot compute the impacts of news on periods'
                                ' outside of the sample in time-varying'
@@ -1203,68 +1219,120 @@ class SmootherResults(FilterResults):
         revisions_ix, updates_ix = previous.model.diff_endog(self.endog.T)
 
         # Compute prev / post impact forecasts
-        prev_impacted_forecasts = (
-            previous.smoothed_forecasts[..., start:end])
-        if end > previous.nobs:
-            predict_start = max(start, previous.nobs)
-            p = previous.predict(
-                start=predict_start, end=end, **extend_kwargs)
-            prev_impacted_forecasts = np.concatenate(
-                (prev_impacted_forecasts, p.forecasts), axis=1)
-        post_impacted_forecasts = (
-            self.smoothed_forecasts[..., start:end])
-        if end > self.nobs:
-            predict_start = max(start, self.nobs)
-            p = self.predict(start=predict_start, end=end, **extend_kwargs)
-            post_impacted_forecasts = np.concatenate(
-                (post_impacted_forecasts, p.forecasts), axis=1)
+        prev_impacted_forecasts = previous.predict(
+            start=start, end=end, **extend_kwargs).smoothed_forecasts
+        post_impacted_forecasts = self.predict(
+            start=start, end=end).smoothed_forecasts
 
-        # If we have revisions to previous data, then we need to construct a
-        # new results set that only includes those revisions
-        if len(revisions_ix) > 0 and revised is None:
+        # Get revision weights, impacts, and forecasts
+        if len(revisions_ix) > 0:
+            revised_endog = self.endog[:, :previous.nobs].copy()
+            revised_endog[previous.missing.astype(bool)] = np.nan
+
+            # Compute the revisions
+            revised_j, revised_p = zip(*revisions_ix)
+            compute_j = np.arange(revised_j[0], revised_j[-1] + 1)
+            revised_prev = previous.endog.T[compute_j]
+            revised = revised_endog.T[compute_j]
+            revisions = (revised - revised_prev)
+
+            # Compute the weights of the smoothed state vector
+            compute_t = np.arange(start, end)
+            ix = np.ix_(compute_t, compute_j)
+
+            # Construct a model from which we can create weights for impacts
+            # through `end`
+            # Construct endog for the new model
+            tmp_endog = revised_endog.T.copy()
+            tmp_nobs = max(end, previous.nobs)
+            oos_nobs = tmp_nobs - previous.nobs
+            if oos_nobs > 0:
+                tmp_endog = np.concatenate([
+                    tmp_endog, np.zeros((oos_nobs, self.k_endog)) * np.nan
+                ], axis=0)
+
             # Copy time-varying matrices (required by clone)
             clone_kwargs = {}
             for key in self.model.shapes.keys():
                 if key == 'obs':
                     continue
-                prev_mat = getattr(previous, key)
-                if prev_mat.shape[-1] > 1:
-                    clone_kwargs[key] = prev_mat
+                mat = getattr(self, key)
+                if mat.shape[-1] > 1:
+                    clone_kwargs[key] = mat[..., :tmp_nobs]
 
-            rev_endog = self.endog.T[:previous.nobs].copy()
-            rev_endog[previous.missing.astype(bool).T] = np.nan
-            rev_mod = previous.model.clone(rev_endog, **clone_kwargs)
-            # TODO: performance: can get a performance improvement for large
-            #       models with `update_filter=False, update_smoother=False`,
-            #       but then will need to manually populate the fields that we
-            #       need for what we do below (i.e. we call
-            #       `smoothed_forecasts` and `predict`)
-            # TODO: performance: we don't need to smooth back through the
-            #       entire sample for what we're doing, since we only need
-            #       smoothed_forecasts for the impact period
-            revised = rev_mod.smooth()
+            rev_mod = previous.model.clone(tmp_endog, **clone_kwargs)
+            init = initialization.Initialization.from_results(self)
+            rev_mod.initialize(init)
+            revision_results = rev_mod.smooth()
 
-        # Compute impacts from the revisions, if any
-        if len(revisions_ix) > 0:
-            # Compute the effect of revisions on forecasts of the impacted
-            # variables
-            revised_impact_forecasts = (
-                revised.smoothed_forecasts[..., start:end])
+            smoothed_state_weights, _, _ = (
+                tools._compute_smoothed_state_weights(
+                    rev_mod, compute_t=compute_t, compute_j=compute_j,
+                    compute_prior_weights=False, scale=previous.scale))
+            smoothed_state_weights = smoothed_state_weights[ix]
 
-            if end > revised.nobs:
-                predict_start = max(start, revised.nobs)
-                p = revised.predict(
-                    start=predict_start, end=end, **extend_kwargs)
-                revised_impact_forecasts = np.concatenate(
-                    (revised_impact_forecasts, p.forecasts), axis=1)
+            # Convert the weights in terms of smoothed forecasts
+            # t, j, m, p, i
+            ZT = rev_mod.design.T
+            if ZT.shape[0] > 1:
+                ZT = ZT[compute_t]
 
-            revision_impacts = (revised_impact_forecasts -
-                                prev_impacted_forecasts).T
+            # Subset the states used for the impacts if applicable
+            if state_index is not None:
+                ZT = ZT[:, state_index, :]
+                smoothed_state_weights = (
+                    smoothed_state_weights[:, :, state_index])
+
+            # Multiplication gives: t, j, m, p * t, j, m, p, k
+            # Sum along axis=2 gives: t, j, p, k
+            # Transpose to: t, j, k, p (i.e. like t, j, m, p but with k instead
+            # of m)
+            revision_weights = np.nansum(
+                smoothed_state_weights[..., None]
+                * ZT[:, None, :, None, :], axis=2).transpose(0, 1, 3, 2)
+
+            # Multiplication gives: t, j, k, p * t, j, k, p
+            # Sum along axes 1, 3 gives: t, k
+            # This is also a valid way to compute impacts, but it employes
+            # unnecessary multiplications with zeros; it is better to use the
+            # below method that flattens the revision indices before computing
+            # the impacts
+            # revision_impacts = np.nansum(
+            #     revision_weights * revisions[None, :, None, :], axis=(1, 3))
+
+            # Flatten the weights and revisions along the revised j, k
+            # dimensions so that we only retain the actual revision elements
+            ix_j = revised_j - revised_j[0]
+            # Shape is: t, k, j * p
+            # Note: have to transpose first so that the two advanced indexes
+            # are next to each other, so that "the dimensions from the
+            # advanced indexing operations are inserted into the result
+            # array at the same spot as they were in the initial array"
+            # (see https://numpy.org/doc/stable/user/basics.indexing.html,
+            # "Combining advanced and basic indexing")
+            revision_weights = (
+                revision_weights.transpose(0, 2, 1, 3)[:, :, ix_j, revised_p])
+            # Shape is j * k
+            revisions = revisions[ix_j, revised_p]
+            # Shape is t, k
+            revision_impacts = revision_weights @ revisions
+
+            # Similarly, flatten the revised and revised_prev series
+            revised = revised[ix_j, revised_p]
+            revised_prev = revised_prev[ix_j, revised_p]
+
+            # Squeeze if `t` argument used
             if t is not None:
+                revision_weights = revision_weights[0]
                 revision_impacts = revision_impacts[0]
         else:
-            revised = previous
+            revised_endog = None
+            revised = None
+            revised_prev = None
+            revisions = None
+            revision_weights = None
             revision_impacts = None
+            revision_results = None
 
         # Now handle updates
         if len(updates_ix) > 0:
@@ -1272,30 +1340,15 @@ class SmootherResults(FilterResults):
             update_t, update_k = zip(*updates_ix)
             update_start_t = np.min(update_t)
             update_end_t = np.max(update_t)
-            update_end_insample_t = np.minimum(revised.nobs - 1, update_end_t)
-            update_nforecast = update_end_t - update_end_insample_t
 
-            # For the in-sample periods, get out the smoothed forecasts for
-            # the updated variables for each relevant time period
-            i1 = update_start_t
-            i2 = update_end_insample_t + 1
-            if i2 > i1:
-                forecasts_insample = revised.smoothed_forecasts[:, i1:i2]
+            if revision_results is None:
+                forecasts = previous.predict(
+                    start=update_start_t, end=update_end_t + 1,
+                    **extend_kwargs).smoothed_forecasts.T
             else:
-                forecasts_insample = np.zeros((self.k_endog, 0))
-
-            # For the out-of-sample periods, predicted and smoothed forecasts
-            # for the updated variables are the same
-            if update_nforecast > 0:
-                forecast_start = previous.nobs
-                forecast_end = forecast_start + update_nforecast
-                p = revised.predict(
-                    start=forecast_start, end=forecast_end, **extend_kwargs)
-                forecasts_oos = p.forecasts
-            else:
-                forecasts_oos = np.zeros((self.k_endog, 0))
-            forecasts = np.c_[forecasts_insample, forecasts_oos].T
-
+                forecasts = revision_results.predict(
+                    start=update_start_t,
+                    end=update_end_t + 1).smoothed_forecasts.T
             realized = self.endog.T[update_start_t:update_end_t + 1]
             forecasts_error = realized - forecasts
 
@@ -1312,6 +1365,8 @@ class SmootherResults(FilterResults):
             elif end <= self.nobs:
                 design = self.design[..., start:end].transpose(2, 0, 1)
             else:
+                # Note: this case is no longer possible, since above we raise
+                # ValueError for time-varying case with end > self.nobs
                 if design is None:
                     raise ValueError('Model has time-varying design matrix, so'
                                      ' an updated time-varying matrix for'
@@ -1320,8 +1375,16 @@ class SmootherResults(FilterResults):
                     design = design[None, ...]
                 else:
                     design = design.transpose(2, 0, 1)
-            state_gain = revised.smoothed_state_gain(
+
+            state_gain = previous.smoothed_state_gain(
                 updates_ix, start=start, end=end, extend_kwargs=extend_kwargs)
+
+            # Subset the states used for the impacts if applicable
+            if state_index is not None:
+                design = design[:, :, state_index]
+                state_gain = state_gain[:, state_index]
+
+            # Compute the gain in terms of observed variables
             obs_gain = design @ state_gain
 
             # Get the news
@@ -1348,26 +1411,36 @@ class SmootherResults(FilterResults):
             revision_impacts=revision_impacts,
             # news = A = y^u - E[y^u | previous]
             news=update_forecasts_error,
+            # revivions y^r(updated) - y^r(previous)
+            revisions=revisions,
             # gain matrix = E[y A'] E[A A']^{-1}
             gain=obs_gain,
+            # weights on observations for the smoothed signal
+            revision_weights=revision_weights,
             # forecasts of the updated periods used to construct the news
-            # = E[y^u | previous]
+            # = E[y^u | revised]
             update_forecasts=update_forecasts,
             # realizations of the updated periods used to construct the news
             # = y^u
             update_realized=update_realized,
+            # revised observations of the periods that were revised
+            # = y^r_{revised}
+            revised=revised,
+            # previous observations of the periods that were revised
+            # = y^r_{previous}
+            revised_prev=revised_prev,
             # previous forecast of the periods of interest, E[y^i | previous]
             prev_impacted_forecasts=prev_impacted_forecasts,
             # post. forecast of the periods of interest, E[y^i | post]
             post_impacted_forecasts=post_impacted_forecasts,
             # results object associated with the revision
-            revision_results=None,
+            revision_results=revision_results,
             # list of (x, y) positions of revisions to endog
             revisions_ix=revisions_ix,
             # list of (x, y) positions of updates to endog
-            updates_ix=updates_ix)
-        if len(revisions_ix) > 0:
-            out.revision_results = revised
+            updates_ix=updates_ix,
+            # index of state variables used to compute impacts
+            state_index=state_index)
 
         return out
 
@@ -1526,3 +1599,153 @@ class SmootherResults(FilterResults):
     @property
     def smoothed_forecasts_error_cov(self):
         return self._get_smoothed_forecasts()[2]
+
+    def get_smoothed_decomposition(self, decomposition_of='smoothed_state',
+                                   state_index=None):
+        r"""
+        Decompose smoothed output into contributions from observations
+
+        Parameters
+        ----------
+        decomposition_of : {"smoothed_state", "smoothed_signal"}
+            The object to perform a decomposition of. If it is set to
+            "smoothed_state", then the elements of the smoothed state vector
+            are decomposed into the contributions of each observation. If it
+            is set to "smoothed_signal", then the predictions of the
+            observation vector based on the smoothed state vector are
+            decomposed. Default is "smoothed_state".
+        state_index : array_like, optional
+            An optional index specifying a subset of states to use when
+            constructing the decomposition of the "smoothed_signal". For
+            example, if `state_index=[0, 1]` is passed, then only the
+            contributions of observed variables to the smoothed signal arising
+            from the first two states will be returned. Note that if not all
+            states are used, the contributions will not sum to the smoothed
+            signal. Default is to use all states.
+
+        Returns
+        -------
+        data_contributions : array
+            Contributions of observations to the decomposed object. If the
+            smoothed state is being decomposed, then `data_contributions` are
+            shaped `(nobs, k_states, nobs, k_endog)`, where the
+            `(t, m, j, p)`-th element is the contribution of the `p`-th
+            observation at time `j` to the `m`-th state at time `t`. If the
+            smoothed signal is being decomposed, then `data_contributions` are
+            shaped `(nobs, k_endog, nobs, k_endog)`, where the
+            `(t, k, j, p)`-th element is the contribution of the `p`-th
+            observation at time `j` to the smoothed prediction of the `k`-th
+            observation at time `t`.
+        obs_intercept_contributions : array
+            Contributions of the observation intercept to the decomposed
+            object. If the smoothed state is being decomposed, then
+            `obs_intercept_contributions` are shaped
+            `(nobs, k_states, nobs, k_endog)`, where the `(t, m, j, p)`-th
+            element is the contribution of the `p`-th observation intercept at
+            time `j` to the `m`-th state at time `t`. If the smoothed signal
+            is being decomposed, then `obs_intercept_contributions` are shaped
+            `(nobs, k_endog, nobs, k_endog)`, where the `(t, k, j, p)`-th
+            element is the contribution of the `p`-th observation at time `j`
+            to the smoothed prediction of the `k`-th observation at time `t`.
+        state_intercept_contributions : array
+            Contributions of the state intercept to the decomposed object. If
+            the smoothed state is being decomposed, then
+            `state_intercept_contributions` are shaped
+            `(nobs, k_states, nobs, k_states)`, where the `(t, m, j, l)`-th
+            element is the contribution of the `l`-th state intercept at
+            time `j` to the `m`-th state at time `t`. If the smoothed signal
+            is being decomposed, then `state_intercept_contributions` are
+            shaped `(nobs, k_endog, nobs, k_endog)`, where the
+            `(t, k, j, l)`-th element is the contribution of the `p`-th
+            observation at time `j` to the smoothed prediction of the `k`-th
+            observation at time `t`.
+        prior_contributions : array
+            Contributions of the prior to the decomposed object. If the
+            smoothed state is being decomposed, then `prior_contributions` are
+            shaped `(nobs, k_states, k_states)`, where the `(t, m, l)`-th
+            element is the contribution of the `l`-th element of the prior
+            mean to the `m`-th state at time `t`. If the smoothed signal is
+            being decomposed, then `prior_contributions` are shaped
+            `(nobs, k_endog, k_states)`, where the `(t, k, l)`-th
+            element is the contribution of the `l`-th element of the prior mean
+            to the smoothed prediction of the `k`-th observation at time `t`.
+
+        Notes
+        -----
+        Denote the smoothed state at time :math:`t` by :math:`\alpha_t`. Then
+        the smoothed signal is :math:`Z_t \alpha_t`, where :math:`Z_t` is the
+        design matrix operative at time :math:`t`.
+        """
+        if decomposition_of not in ['smoothed_state', 'smoothed_signal']:
+            raise ValueError('Invalid value for `decomposition_of`. Must be'
+                             ' one of "smoothed_state" or "smoothed_signal".')
+
+        weights, state_intercept_weights, prior_weights = (
+            tools._compute_smoothed_state_weights(
+                self.model, compute_prior_weights=True, scale=self.scale))
+
+        # Get state space objects
+        ZT = self.model.design.T           # t, m, p
+        dT = self.model.obs_intercept.T    # t, p
+        cT = self.model.state_intercept.T  # t, m
+
+        # Subset the states used for the impacts if applicable
+        if decomposition_of == 'smoothed_signal' and state_index is not None:
+            ZT = ZT[:, state_index, :]
+            weights = weights[:, :, state_index]
+            prior_weights = prior_weights[:, state_index, :]
+
+        # Convert the weights in terms of smoothed signal
+        # t, j, m, p, i
+        if decomposition_of == 'smoothed_signal':
+            # Multiplication gives: t, j, m, p * t, j, m, p, k
+            # Sum along axis=2 gives: t, j, p, k
+            # Transpose to: t, j, k, p (i.e. like t, j, m, p but with k instead
+            # of m)
+            weights = np.nansum(weights[..., None] * ZT[:, None, :, None, :],
+                                axis=2).transpose(0, 1, 3, 2)
+
+            # Multiplication gives: t, j, m, l * t, j, m, l, k
+            # Sum along axis=2 gives: t, j, l, k
+            # Transpose to: t, j, k, l (i.e. like t, j, m, p but with k instead
+            # of m and l instead of p)
+            state_intercept_weights = np.nansum(
+                state_intercept_weights[..., None] * ZT[:, None, :, None, :],
+                axis=2).transpose(0, 1, 3, 2)
+
+            # Multiplication gives: t, m, l * t, m, l, k = t, m, l, k
+            # Sum along axis=1 gives: t, l, k
+            # Transpose to: t, k, l (i.e. like t, m, l but with k instead of m)
+            prior_weights = np.nansum(
+                prior_weights[..., None] * ZT[:, :, None, :],
+                axis=1).transpose(0, 2, 1)
+
+        # Contributions of observations: multiply weights by observations
+        # Multiplication gives t, j, {m,k}, p
+        data_contributions = weights * self.model.endog.T[None, :, None, :]
+        # Transpose to: t, {m,k}, j, p
+        data_contributions = data_contributions.transpose(0, 2, 1, 3)
+
+        # Contributions of obs intercept: multiply data weights by obs
+        # intercept
+        # Multiplication gives t, j, {m,k}, p
+        obs_intercept_contributions = -weights * dT[None, :, None, :]
+        # Transpose to: t, {m,k}, j, p
+        obs_intercept_contributions = (
+            obs_intercept_contributions.transpose(0, 2, 1, 3))
+
+        # Contributions of state intercept: multiply state intercept weights
+        # by state intercept
+        # Multiplication gives t, j, {m,k}, l
+        state_intercept_contributions = (
+            state_intercept_weights * cT[None, :, None, :])
+        # Transpose to: t, {m,k}, j, l
+        state_intercept_contributions = (
+            state_intercept_contributions.transpose(0, 2, 1, 3))
+
+        # Contributions of prior: multiply weights by prior
+        # Multiplication gives t, {m, k}, l
+        prior_contributions = prior_weights * self.initial_state[None, None, :]
+
+        return (data_contributions, obs_intercept_contributions,
+                state_intercept_contributions, prior_contributions)

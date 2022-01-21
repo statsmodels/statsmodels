@@ -84,7 +84,30 @@ def test_smoothed_state_obs_weights_sarimax(use_exog, trend,
                 desired[:, j, :, i] = (tmp_res.smoothed_state.T
                                        - res.smoothed_state.T)
 
+    desired_state_intercept_weights = np.zeros((n, n, m, m)) * np.nan
+    # Here we manually compute the weights by adjusting one state intercept
+    # at a time
+    for j in range(n):
+        for ell in range(m):
+            tmp_mod = sarimax.SARIMAX(endog, order=(1, 0, 0), trend=trend,
+                                      exog=exog if use_exog else None,
+                                      concentrate_scale=concentrate_scale,
+                                      measurement_error=measurement_error)
+            tmp_mod.ssm.initialize_known(prior_mean, prior_cov)
+            tmp_mod.update(params)
+            if tmp_mod['state_intercept'].ndim == 1:
+                si = tmp_mod['state_intercept']
+                tmp_mod['state_intercept'] = np.zeros((mod.k_states, mod.nobs))
+                tmp_mod['state_intercept', :, :] = si
+            tmp_mod['state_intercept', ell, j] += 1.0
+            tmp_res = tmp_mod.ssm.smooth()
+
+            desired_state_intercept_weights[:, j, :, ell] = (
+                tmp_res.smoothed_state.T - res.smoothed_state.T)
+
     desired_prior_weights = np.zeros((n, m, m)) * np.nan
+    # Here we manually compute the weights by adjusting one prior element at
+    # a time
     for i in range(m):
         a = prior_mean.copy()
         a[i] += 1
@@ -99,10 +122,12 @@ def test_smoothed_state_obs_weights_sarimax(use_exog, trend,
                                           - res.smoothed_state.T)
 
     mod.ssm.initialize_known(prior_mean, prior_cov)
-    actual, actual_prior_weights = (
+    actual, actual_state_intercept_weights, actual_prior_weights = (
         tools.compute_smoothed_state_weights(res))
 
     assert_allclose(actual, desired, atol=1e-12)
+    assert_allclose(actual_state_intercept_weights,
+                    desired_state_intercept_weights, atol=1e-12)
     assert_allclose(actual_prior_weights, desired_prior_weights, atol=1e-12)
 
 
@@ -160,6 +185,25 @@ def test_smoothed_state_obs_weights_varmax(use_exog, trend):
                 desired[:, j, :, i] = (tmp_res.smoothed_state.T
                                        - res.smoothed_state.T)
 
+    desired_state_intercept_weights = np.zeros((n, n, m, m)) * np.nan
+    # Here we manually compute the weights by adjusting one state intercept
+    # at a time
+    for j in range(n):
+        for ell in range(m):
+            tmp_mod = varmax.VARMAX(endog, order=(1, 0), trend=trend,
+                                    exog=exog if use_exog else None)
+            tmp_mod.ssm.initialize_known(prior_mean, prior_cov)
+            tmp_mod.update(params)
+            if tmp_mod['state_intercept'].ndim == 1:
+                si = tmp_mod['state_intercept']
+                tmp_mod['state_intercept'] = np.zeros((mod.k_states, mod.nobs))
+                tmp_mod['state_intercept', :, :] = si[:, None]
+            tmp_mod['state_intercept', ell, j] += 1.0
+            tmp_res = tmp_mod.ssm.smooth()
+
+            desired_state_intercept_weights[:, j, :, ell] = (
+                tmp_res.smoothed_state.T - res.smoothed_state.T)
+
     desired_prior_weights = np.zeros((n, m, m)) * np.nan
     for i in range(m):
         a = prior_mean.copy()
@@ -173,9 +217,12 @@ def test_smoothed_state_obs_weights_varmax(use_exog, trend):
                                           - res.smoothed_state.T)
 
     mod.ssm.initialize_known(prior_mean, prior_cov)
-    actual, actual_prior_weights = tools.compute_smoothed_state_weights(res)
+    actual, actual_state_intercept_weights, actual_prior_weights = (
+        tools.compute_smoothed_state_weights(res))
 
     assert_allclose(actual, desired, atol=1e-12)
+    assert_allclose(actual_state_intercept_weights,
+                    desired_state_intercept_weights, atol=1e-12)
     assert_allclose(actual_prior_weights, desired_prior_weights, atol=1e-12)
 
 
@@ -226,6 +273,26 @@ def test_smoothed_state_obs_weights_TVSS(univariate, diffuse,
                 desired[:, j, :, i] = (tmp_res.smoothed_state.T
                                        - res.smoothed_state.T)
 
+    desired_state_intercept_weights = np.zeros((n, n, m, m)) * np.nan
+    # Here we manually compute the weights by adjusting one state intercept
+    # at a time
+    for j in range(n):
+        for ell in range(m):
+            tmp_mod = mod.clone(endog)
+            if not diffuse:
+                tmp_mod.ssm.initialize_known(prior_mean, prior_cov)
+            if univariate:
+                tmp_mod.ssm.filter_univariate = True
+            if tmp_mod['state_intercept'].ndim == 1:
+                si = tmp_mod['state_intercept']
+                tmp_mod['state_intercept'] = np.zeros((mod.k_states, mod.nobs))
+                tmp_mod['state_intercept', :, :] = si[:, None]
+            tmp_mod['state_intercept', ell, j] += 1.0
+            tmp_res = tmp_mod.ssm.smooth()
+
+            desired_state_intercept_weights[:, j, :, ell] = (
+                tmp_res.smoothed_state.T - res.smoothed_state.T)
+
     desired_prior_weights = np.zeros((n, m, m)) * np.nan
     if not diffuse:
         for i in range(m):
@@ -240,7 +307,7 @@ def test_smoothed_state_obs_weights_TVSS(univariate, diffuse,
 
     if not diffuse:
         mod.ssm.initialize_known(prior_mean, prior_cov)
-    actual, actual_prior_weights = (
+    actual, actual_state_intercept_weights, actual_prior_weights = (
         tools.compute_smoothed_state_weights(res))
 
     d = res.nobs_diffuse
@@ -248,6 +315,9 @@ def test_smoothed_state_obs_weights_TVSS(univariate, diffuse,
     if diffuse:
         assert_allclose(actual[:d], np.nan, atol=1e-12)
         assert_allclose(actual[:, :d], np.nan, atol=1e-12)
+        assert_allclose(actual_state_intercept_weights[:d], np.nan)
+        assert_allclose(actual_state_intercept_weights[:, :d], np.nan)
+        assert_allclose(actual_prior_weights, np.nan)
     else:
         # Test that the weights are the same
         assert_allclose(actual_prior_weights, desired_prior_weights,
@@ -257,6 +327,9 @@ def test_smoothed_state_obs_weights_TVSS(univariate, diffuse,
         # the prior and observations to compute the smoothed state directly,
         # and then compare that to what was returned by the usual Kalman
         # smoothing routines
+        # Note that TVSS sets the state intercept to zeros, so this does not
+        # test that, although those weights are tested separately, see above
+        # and below.
         contribution_prior = np.nansum(
             actual_prior_weights * prior_mean[None, None, :], axis=2)
         contribution_endog = np.nansum(
@@ -265,6 +338,8 @@ def test_smoothed_state_obs_weights_TVSS(univariate, diffuse,
         computed_smoothed_state = contribution_prior + contribution_endog
         assert_allclose(computed_smoothed_state, res.smoothed_state.T)
     assert_allclose(actual[d:, d:], desired[d:, d:], atol=1e-12)
+    assert_allclose(actual_state_intercept_weights[d:, d:],
+                    desired_state_intercept_weights[d:, d:], atol=1e-12)
 
 
 @pytest.mark.parametrize('singular', ['both', 0, 1])
@@ -319,7 +394,7 @@ def test_smoothed_state_obs_weights_univariate_singular(singular, periods,
                 desired[:, j, :, i] = (tmp_res.smoothed_state.T
                                        - res.smoothed_state.T)
 
-    actual, _ = tools.compute_smoothed_state_weights(res)
+    actual, _, _ = tools.compute_smoothed_state_weights(res)
 
     assert_allclose(actual, desired, atol=1e-12)
 
@@ -361,9 +436,32 @@ def test_smoothed_state_obs_weights_collapsed(reset_randomstate):
                 desired[:, j, :, i] = (tmp_res.smoothed_state.T
                                        - res.smoothed_state.T)
 
-    actual, _ = tools.compute_smoothed_state_weights(res)
+    desired_state_intercept_weights = np.zeros((n, n, m, m)) * np.nan
+    # Here we manually compute the weights by adjusting one state intercept
+    # at a time
+    for j in range(n):
+        for ell in range(m):
+            tmp_mod = mod.clone(endog)
+            tmp_mod['obs_intercept'] = np.zeros((6, 1))
+            tmp_mod.ssm.initialize_known([1.2, 0.8], np.eye(2))
+            mod.ssm.filter_collapsed = True
+
+            if tmp_mod['state_intercept'].ndim == 1:
+                si = tmp_mod['state_intercept']
+                tmp_mod['state_intercept'] = np.zeros((mod.k_states, mod.nobs))
+                tmp_mod['state_intercept', :, :] = si[:, None]
+            tmp_mod['state_intercept', ell, j] += 1.0
+            tmp_res = tmp_mod.ssm.smooth()
+
+            desired_state_intercept_weights[:, j, :, ell] = (
+                tmp_res.smoothed_state.T - res.smoothed_state.T)
+
+    actual, actual_state_intercept_weights, _ = (
+        tools.compute_smoothed_state_weights(res))
 
     assert_allclose(actual, desired, atol=1e-12)
+    assert_allclose(actual_state_intercept_weights,
+                    desired_state_intercept_weights, atol=1e-12)
 
 
 @pytest.mark.parametrize('compute_j', [np.arange(10), [0, 1, 2], [5, 0, 9], 8])
@@ -405,7 +503,7 @@ def test_compute_t_compute_j(compute_j, compute_t, reset_randomstate):
                 desired[:, j, :, i] = (tmp_res.smoothed_state.T
                                        - res.smoothed_state.T)
 
-    actual, _ = tools.compute_smoothed_state_weights(
+    actual, _, _ = tools.compute_smoothed_state_weights(
         res, compute_t=compute_t, compute_j=compute_j)
 
     compute_t = np.atleast_1d(compute_t)
@@ -426,24 +524,24 @@ def test_resmooth():
     mod = sarimax.SARIMAX(endog, order=(1, 0, 0), measurement_error=True)
 
     res1 = mod.smooth([0.5, 2.0, 1.0])
-    weights1_original, _ = tools.compute_smoothed_state_weights(
+    weights1_original, _, _ = tools.compute_smoothed_state_weights(
         res1, resmooth=False)
     res2 = mod.smooth([0.2, 1.0, 1.2])
-    weights2_original, _ = tools.compute_smoothed_state_weights(
+    weights2_original, _, _ = tools.compute_smoothed_state_weights(
         res2, resmooth=False)
 
-    weights1_no_resmooth, _ = tools.compute_smoothed_state_weights(
+    weights1_no_resmooth, _, _ = tools.compute_smoothed_state_weights(
         res1, resmooth=False)
-    weights1_resmooth, _ = tools.compute_smoothed_state_weights(
+    weights1_resmooth, _, _ = tools.compute_smoothed_state_weights(
         res1, resmooth=True)
 
-    weights2_no_resmooth, _ = tools.compute_smoothed_state_weights(
+    weights2_no_resmooth, _, _ = tools.compute_smoothed_state_weights(
         res2, resmooth=False)
-    weights2_resmooth, _ = tools.compute_smoothed_state_weights(
+    weights2_resmooth, _, _ = tools.compute_smoothed_state_weights(
         res2, resmooth=True)
 
-    weights1_default, _ = tools.compute_smoothed_state_weights(res1)
-    weights2_default, _ = tools.compute_smoothed_state_weights(res2)
+    weights1_default, _, _ = tools.compute_smoothed_state_weights(res1)
+    weights2_default, _, _ = tools.compute_smoothed_state_weights(res2)
 
     assert_allclose(weights1_no_resmooth, weights2_original)
     assert_allclose(weights1_resmooth, weights1_original)
