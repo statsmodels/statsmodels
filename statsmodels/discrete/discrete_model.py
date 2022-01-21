@@ -1658,6 +1658,13 @@ class Poisson(CountModel):
         prob_nz = - np.expm1(-mu)
         return prob_nz
 
+    def _var(self, mu, params=None):
+        """variance implied by the distribution
+
+        internal use, will be refactored or removed
+        """
+        return mu
+
     def get_distribution(self, params, exog=None, exposure=None, offset=None):
         """Get frozen instance of distribution based on predicted parameters.
 
@@ -2233,6 +2240,27 @@ class GeneralizedPoisson(CountModel):
         d2 = dsf[:, 1:2]
 
         return np.column_stack((d1, d2))
+
+    def _var(self, mu, params=None):
+        """variance implied by the distribution
+
+        internal use, will be refactored or removed
+        """
+        alpha = params[-1]
+        pm1 = self.parameterization  # `p-1` in GPP
+        var_ = mu * (1 + alpha * mu**pm1)**2
+        return var_
+
+    def _prob_nonzero(self, mu, params):
+        """Probability that count is not zero
+
+        internal use in Censored model, will be refactored or removed
+        """
+        alpha = params[-1]
+        pm1 = self.parameterization  # p-1 in GPP
+        prob_zero = np.exp(- mu / (1 + alpha * mu**pm1))
+        prob_nz = 1 - prob_zero
+        return prob_nz
 
     @Appender(Poisson.get_distribution.__doc__)
     def get_distribution(self, params, exog=None, exposure=None, offset=None):
@@ -4275,6 +4303,16 @@ class NegativeBinomialP(CountModel):
         d2 = dsf[:, 1:2]
 
         return np.column_stack((d1, d2))
+
+    def _var(self, mu, params=None):
+        """variance implied by the distribution
+
+        internal use, will be refactored or removed
+        """
+        alpha = params[-1]
+        p = self.parameterization  # no `-1` as in GPP
+        var_ = mu * (1 + alpha * mu**(p - 1))
+        return var_
 
     def _prob_nonzero(self, mu, params):
         """Probability that count is not zero

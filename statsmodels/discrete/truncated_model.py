@@ -271,6 +271,98 @@ class TruncatedLFGeneric(CountModel):
         """
         return approx_hess(params, self.loglike)
 
+    def predict(self, params, exog=None, exposure=None, offset=None,
+                which='mean', y_values=None):
+        """
+        Paramaters
+        ----------
+        y_values : array-like or int
+            The counts for which you want the probabilities. If y_values is
+            None then the probabilities for each count from 0 to max(y) are
+            given.
+
+        Predict response variable of a count model given exogenous variables.
+        Notes
+        -----
+        If exposure is specified, then it will be logged by the method.
+        The user does not need to log it first.
+        """
+        exog, offset, exposure = self._get_predict_arrays(
+            exog=exog,
+            offset=offset,
+            exposure=exposure
+            )
+
+        fitted = np.dot(exog, params[:exog.shape[1]])
+        linpred = fitted + exposure + offset
+
+        if which == 'mean':
+            mu = np.exp(linpred)
+            if self.truncation == 0:
+                prob_main = self.model_main._prob_nonzero(mu, params)
+                return mu / prob_main
+            elif self.truncation == -1:
+                return mu
+            elif self.truncation > 0:
+                counts = np.atleast_2d(np.arange(0, self.truncation + 1))
+                # next is same as in prob-main below
+                probs = self.model_main.predict(
+                    params, exog=exog, exposure=np.exp(exposure),
+                    offset=offset, which="prob", y_values=counts)
+                prob_tregion = probs.sum(1)
+                mean_tregion = (np.arange(self.truncation + 1) * probs).sum(1)
+                mean = (mu - mean_tregion) / (1 - prob_tregion)
+                return mean
+        elif which == 'linear':
+            return linpred
+        elif which == 'mean-main':
+            return np.exp(linpred)
+        elif which == 'prob':
+            if y_values is not None:
+                counts = np.atleast_2d(y_values)
+            else:
+                counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
+            mu = np.exp(linpred)[:, None]
+            if self.k_extra == 0:
+                # poisson, no extra params
+                probs = self.model_dist.pmf(counts, mu, self.trunc)
+            elif self.k_extra == 1:
+                p = self.model_main.parameterization
+                probs = self.model_dist.pmf(counts, mu, params[-1],
+                                            p, self.trunc)
+            else:
+                raise ValueError("k_extra is not 0 or 1")
+            return probs
+        elif which == 'prob-main':
+            if y_values is not None:
+                counts = np.atleast_2d(y_values)
+            else:
+                counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
+            probs = self.model_main.predict(
+                params, exog=exog, exposure=np.exp(exposure),
+                offset=offset, which="prob", y_values=counts)[:, None]
+            return probs
+        elif which == 'var':
+            mu = np.exp(linpred)
+            counts = np.atleast_2d(np.arange(0, self.truncation + 1))
+            # next is same as in prob-main below
+            probs = self.model_main.predict(
+                params, exog=exog, exposure=np.exp(exposure),
+                offset=offset, which="prob", y_values=counts)
+            prob_tregion = probs.sum(1)
+            mean_tregion = (np.arange(self.truncation + 1) * probs).sum(1)
+            mean = (mu - mean_tregion) / (1 - prob_tregion)
+            mnc2_tregion = (np.arange(self.truncation + 1)**2 *
+                            probs).sum(1)
+            vm = self.model_main._var(mu, params)
+            # uncentered 2nd moment
+            mnc2 = (mu**2 + vm - mnc2_tregion) / (1 - prob_tregion)
+            v = mnc2 - mean**2
+            return v
+        else:
+            raise TypeError(
+                "argument which == %s not handled" % which)
+
 
 class TruncatedLFPoisson(TruncatedLFGeneric):
     """
@@ -339,88 +431,6 @@ class TruncatedLFPoisson(TruncatedLFGeneric):
         m = mu / w
         var_ = m - (1 - w) * m**2
         return m, var_
-
-    def predict(self, params, exog=None, exposure=None, offset=None,
-                which='mean', y_values=None):
-        """
-        Paramaters
-        ----------
-        y_values : array-like or int
-            The counts for which you want the probabilities. If y_values is
-            None then the probabilities for each count from 0 to max(y) are
-            given.
-
-        Predict response variable of a count model given exogenous variables.
-        Notes
-        -----
-        If exposure is specified, then it will be logged by the method.
-        The user does not need to log it first.
-        """
-
-        exog, offset, exposure = self._get_predict_arrays(
-            exog=exog,
-            offset=offset,
-            exposure=exposure
-            )
-
-        fitted = np.dot(exog, params[:exog.shape[1]])
-        linpred = fitted + exposure + offset
-
-        if which == 'mean':
-            mu = np.exp(linpred)
-            if self.truncation == 0:
-                return mu / (1 - np.exp(-mu))
-            elif self.truncation == -1:
-                return mu
-            elif self.truncation > 0:
-                counts = np.atleast_2d(np.arange(0, self.truncation + 1))
-                # next is same as in prob-main below
-                probs = self.model_main.predict(
-                    params, exog=exog, exposure=np.exp(exposure),
-                    offset=offset, which="prob", y_values=counts)
-                prob_tregion = probs.sum(1)
-                mean_tregion = (np.arange(self.truncation + 1) * probs).sum(1)
-                mean = (mu - mean_tregion) / (1 - prob_tregion)
-                return mean
-        elif which == 'linear':
-            return linpred
-        elif which == 'mean-main':
-            return np.exp(linpred)
-        elif which == 'prob':
-            if y_values is not None:
-                counts = np.atleast_2d(y_values)
-            else:
-                counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
-            mu = self.predict(params, exog=exog, exposure=np.exp(exposure),
-                              offset=offset, which="mean-main")[:, None]
-            return self.model_dist.pmf(counts, mu, self.trunc)
-        elif which == 'prob-main':
-            if y_values is not None:
-                counts = np.atleast_2d(y_values)
-            else:
-                counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
-            probs = self.model_main.predict(
-                params, exog=exog, exposure=np.exp(exposure),
-                offset=offset, which="prob")[:, None]
-            return probs
-        elif which == 'var':
-            mu = np.exp(linpred)
-            counts = np.atleast_2d(np.arange(0, self.truncation + 1))
-            # next is same as in prob-main below
-            probs = self.model_main.predict(
-                params, exog=exog, exposure=np.exp(exposure),
-                offset=offset, which="prob", y_values=counts)
-            prob_tregion = probs.sum(1)
-            mean_tregion = (np.arange(self.truncation + 1) * probs).sum(1)
-            mean = (mu - mean_tregion) / (1 - prob_tregion)
-            mnc2_tregion = (np.arange(self.truncation + 1)**2 *
-                            probs).sum(1)
-            mnc2 = (mu**2 + mu - mnc2_tregion) / (1 - prob_tregion)
-            v = mnc2 - mean**2
-            return v
-        else:
-            raise TypeError(
-                "argument wich == %s not handled" % which)
 
 
 class TruncatedLFNegativeBinomialP(TruncatedLFGeneric):
@@ -501,94 +511,6 @@ class TruncatedLFNegativeBinomialP(TruncatedLFGeneric):
         var_ = mnc2 - m**2
         return m, var_
 
-    def predict(self, params, exog=None, exposure=None, offset=None,
-                which='mean', y_values=None):
-        """
-        Paramaters
-        ----------
-        y_values : array-like or int
-            The counts for which you want the probabilities. If y_values is
-            None then the probabilities for each count from 0 to max(y) are
-            given.
-
-        Predict response variable of a count model given exogenous variables.
-        Notes
-        -----
-        If exposure is specified, then it will be logged by the method.
-        The user does not need to log it first.
-        """
-        exog, offset, exposure = self._get_predict_arrays(
-            exog=exog,
-            offset=offset,
-            exposure=exposure
-            )
-
-        fitted = np.dot(exog, params[:exog.shape[1]])
-        linpred = fitted + exposure + offset
-        alpha = params[-1]
-
-        if which == 'mean':
-            mu = np.exp(linpred)
-            if self.truncation == 0:
-                p = self.model_main.parameterization
-                prob_zero = (1 + alpha * mu**(p-1))**(- 1 / alpha)
-                return mu / (1 - prob_zero)
-            elif self.truncation == -1:
-                return mu
-            elif self.truncation > 0:
-                counts = np.atleast_2d(np.arange(0, self.truncation + 1))
-                # next is same as in prob-main below
-                probs = self.model_main.predict(
-                    params, exog=exog, exposure=np.exp(exposure),
-                    offset=offset, which="prob", y_values=counts)
-                prob_tregion = probs.sum(1)
-                mean_tregion = (np.arange(self.truncation + 1) * probs).sum(1)
-                mean = (mu - mean_tregion) / (1 - prob_tregion)
-                return mean
-        elif which == 'linear':
-            return linpred
-        elif which == 'mean-main':
-            return np.exp(linpred)
-        elif which == 'prob':
-            if y_values is not None:
-                counts = np.atleast_2d(y_values)
-            else:
-                counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
-            mu = self.predict(params, exog=exog, exposure=np.exp(exposure),
-                              offset=offset, which="mean-main")[:, None]
-            p = self.model_main.parameterization
-            return self.model_dist.pmf(counts, mu, params[-1], p, self.trunc)
-        elif which == 'prob-main':
-            if y_values is not None:
-                counts = np.atleast_2d(y_values)
-            else:
-                counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
-            probs = self.model_main.predict(
-                params, exog=exog, exposure=np.exp(exposure),
-                offset=offset, which="prob", y_values=counts)[:, None]
-            return probs
-        elif which == 'var':
-            mu = np.exp(linpred)
-            counts = np.atleast_2d(np.arange(0, self.truncation + 1))
-            # next is same as in prob-main below
-            probs = self.model_main.predict(
-                params, exog=exog, exposure=np.exp(exposure),
-                offset=offset, which="prob", y_values=counts)
-            prob_tregion = probs.sum(1)
-            mean_tregion = (np.arange(self.truncation + 1) * probs).sum(1)
-            mean = (mu - mean_tregion) / (1 - prob_tregion)
-            mnc2_tregion = (np.arange(self.truncation + 1)**2 *
-                            probs).sum(1)
-            p = self.model_main.parameterization
-            vm = mu * (1 + alpha * mu**(p-1))
-            # uncentered 2nd moment
-            mnc2 = (mu**2 + vm - mnc2_tregion) / (1 - prob_tregion)
-            v = mnc2 - mean**2
-            return v
-        else:
-            raise TypeError(
-                "argument wich == %s not handled" % which)
-
 
 class TruncatedLFGeneralizedPoisson(TruncatedLFGeneric):
     """
@@ -639,59 +561,6 @@ class TruncatedLFGeneralizedPoisson(TruncatedLFGeneric):
         self.result_class_wrapper = TruncatedLFGenericResultsWrapper
         self.result_class_reg = L1TruncatedLFGenericResults
         self.result_class_reg_wrapper = L1TruncatedLFGenericResultsWrapper
-
-    def predict(self, params, exog=None, exposure=None, offset=None,
-                which='mean', y_values=None):
-        """
-        Paramaters
-        ----------
-        y_values : array-like or int
-            The counts for which you want the probabilities. If y_values is
-            None then the probabilities for each count from 0 to max(y) are
-            given.
-
-        Notes
-        -----
-        If exposure is specified, then it will be logged by the method.
-        The user does not need to log it first.
-        """
-        if exog is None:
-            exog = self.exog
-
-        if exposure is None:
-            exposure = getattr(self, 'exposure', 0)
-        elif exposure != 0:
-            exposure = np.log(exposure)
-
-        if offset is None:
-            offset = getattr(self, 'offset', 0)
-
-        fitted = np.dot(exog, params[:exog.shape[1]])
-        linpred = fitted + exposure + offset
-
-        if which == 'mean':
-            if self.truncation == 0:
-                return np.exp(linpred) / (1 - np.exp(-np.exp(linpred)))
-            elif self.truncation == -1:
-                return np.exp(linpred)
-            elif self.truncation > 0:
-                raise NotImplementedError("conditional mean not implemented")
-        elif which == 'linear':
-            return linpred
-        elif which == 'mean-main':
-            return np.exp(linpred)
-        elif which == 'prob':
-            if y_values is not None:
-                counts = np.atleast_2d(y_values)
-            else:
-                counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
-            mu = self.predict(params, exog=exog, exposure=exposure,
-                              offset=offset, which="mean-main")[:, None]
-            p = self.model_main.parametrization
-            return self.model_dist.pmf(counts, mu, params[-1], p, self.trunc)
-        else:
-            raise TypeError(
-                "argument wich == %s not handled" % which)
 
 
 class _RCensoredGeneric(CountModel):
