@@ -1928,7 +1928,7 @@ def _compute_smoothed_state_weights(ssm, compute_t=None, compute_j=None,
                          ' `compute_j` must include the time period 0.')
 
     # Compute the weights
-    weights, prior_weights, _ = func(
+    weights, state_intercept_weights, prior_weights, _ = func(
         _smoother, _kfilter, _model, compute_t, compute_j, scale,
         bool(compute_prior_weights))
 
@@ -1950,10 +1950,13 @@ def _compute_smoothed_state_weights(ssm, compute_t=None, compute_j=None,
         # Transpose m, p, t, j -> t, j, m, p
         weights = weights.transpose(2, 3, 0, 1)
 
+    # Transpose m, l, t, j -> t, j, m, l
+    state_intercept_weights = state_intercept_weights.transpose(2, 3, 0, 1)
+
     # Transpose m, l, t -> t, m, l
     prior_weights = prior_weights.transpose(2, 0, 1)
 
-    return weights, prior_weights
+    return weights, state_intercept_weights, prior_weights
 
 
 def compute_smoothed_state_weights(results, compute_t=None, compute_j=None,
@@ -2009,9 +2012,8 @@ def compute_smoothed_state_weights(results, compute_t=None, compute_j=None,
         always shaped `(nobs, k_states, k_states)`. If prior weights are not
         computed, then all entries will be set to NaNs. The `(t, m, l)`-th
         element of this matrix contains the weight of the `l`-th element of the
-        prior mean (also called the "initial state") at time `j` in
-        constructing the `m`-th element of the smoothed state vector at
-        time `t`.
+        prior mean (also called the "initial state") in constructing the
+        `m`-th element of the smoothed state vector at time `t`.
 
     Notes
     -----
@@ -2145,8 +2147,8 @@ def get_impact_dates(previous_model, updated_model, impact_date=None,
     if impact_date is not None:
         if not (start is None and end is None and periods is None):
             raise ValueError('Cannot use the `impact_date` argument in'
-                                ' combination with `start`, `end`, or'
-                                ' `periods`.')
+                             ' combination with `start`, `end`, or'
+                             ' `periods`.')
         start = impact_date
         periods = 1
     if start is None and end is None and periods is None:
@@ -2154,7 +2156,7 @@ def get_impact_dates(previous_model, updated_model, impact_date=None,
         end = previous_model.nobs - 1
     if int(start is None) + int(end is None) + int(periods is None) != 1:
         raise ValueError('Of the three parameters: start, end, and'
-                            ' periods, exactly two must be specified')
+                         ' periods, exactly two must be specified')
     # If we have the `periods` object, we need to convert `start`/`end` to
     # integers so that we can compute the other one. That's because
     # _get_prediction_index doesn't support a `periods` argument

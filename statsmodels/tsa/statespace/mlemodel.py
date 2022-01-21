@@ -3987,6 +3987,141 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                 tolerance, row_labels=prediction_index)
         return news_results
 
+    def get_smoothed_decomposition(self, decomposition_of='smoothed_state',
+                                   state_index=None):
+        r"""
+        Decompose smoothed output into contributions from observations
+
+        Parameters
+        ----------
+        decomposition_of : {"smoothed_state", "smoothed_signal"}
+            The object to perform a decomposition of. If it is set to
+            "smoothed_state", then the elements of the smoothed state vector
+            are decomposed into the contributions of each observation. If it
+            is set to "smoothed_signal", then the predictions of the
+            observation vector based on the smoothed state vector are
+            decomposed. Default is "smoothed_state".
+        state_index : array_like, optional
+            An optional index specifying a subset of states to use when
+            constructing the decomposition of the "smoothed_signal". For
+            example, if `state_index=[0, 1]` is passed, then only the
+            contributions of observed variables to the smoothed signal arising
+            from the first two states will be returned. Note that if not all
+            states are used, the contributions will not sum to the smoothed
+            signal. Default is to use all states.
+
+        Returns
+        -------
+        data_contributions : pd.DataFrame
+            Contributions of observations to the decomposed object. If the
+            smoothed state is being decomposed, then `data_contributions` is
+            shaped `(k_states x nobs, k_endog x nobs)` with a `pd.MultiIndex`
+            index corresponding to `state_to x date_to` and `pd.MultiIndex`
+            columns corresponding to `variable_from x date_from`. If the
+            smoothed signal is being decomposed, then `data_contributions` is
+            shaped `(k_endog x nobs, k_endog x nobs)` with `pd.MultiIndex`-es
+            corresponding to `variable_to x date_to` and
+            `variable_from x date_from`.
+        obs_intercept_contributions : pd.DataFrame
+            Contributions of the observation intercept to the decomposed
+            object. If the smoothed state is being decomposed, then
+            `obs_intercept_contributions` is
+            shaped `(k_states x nobs, k_endog x nobs)` with a `pd.MultiIndex`
+            index corresponding to `state_to x date_to` and `pd.MultiIndex`
+            columns corresponding to `obs_intercept_from x date_from`. If the
+            smoothed signal is being decomposed, then
+            `obs_intercept_contributions` is shaped
+            `(k_endog x nobs, k_endog x nobs)` with `pd.MultiIndex`-es
+            corresponding to `variable_to x date_to` and
+            `obs_intercept_from x date_from`.
+        state_intercept_contributions : pd.DataFrame
+            Contributions of the state intercept to the decomposed
+            object. If the smoothed state is being decomposed, then
+            `state_intercept_contributions` is
+            shaped `(k_states x nobs, k_states x nobs)` with a `pd.MultiIndex`
+            index corresponding to `state_to x date_to` and `pd.MultiIndex`
+            columns corresponding to `state_intercept_from x date_from`. If the
+            smoothed signal is being decomposed, then
+            `state_intercept_contributions` is shaped
+            `(k_endog x nobs, k_states x nobs)` with `pd.MultiIndex`-es
+            corresponding to `variable_to x date_to` and
+            `state_intercept_from x date_from`.
+        prior_contributions : pd.DataFrame
+            Contributions of the prior to the decomposed object. If the
+            smoothed state is being decomposed, then `prior_contributions` is
+            shaped `(nobs x k_states, k_states)`, with a `pd.MultiIndex`
+            index corresponding to `state_to x date_to` and columns
+            corresponding to elements of the prior mean (aka "initial state").
+            If the smoothed signal is being decomposed, then
+            `prior_contributions` is shaped `(nobs x k_endog, k_states)`,
+            with a `pd.MultiIndex` index corresponding to
+            `variable_to x date_to` and columns corresponding to elements of
+            the prior mean.
+
+        Notes
+        -----
+        Denote the smoothed state at time :math:`t` by :math:`\alpha_t`. Then
+        the smoothed signal is :math:`Z_t \alpha_t`, where :math:`Z_t` is the
+        design matrix operative at time :math:`t`.
+        """
+        (data_contributions, obs_intercept_contributions,
+         state_intercept_contributions, prior_contributions) = (
+            self.smoother_results.get_smoothed_decomposition(
+                decomposition_of=decomposition_of, state_index=state_index))
+
+        # Construct indexes
+        endog_names = self.model.endog_names
+        if self.model.k_endog == 1:
+            endog_names = [endog_names]
+
+        if decomposition_of == 'smoothed_state':
+            contributions_to = pd.MultiIndex.from_product(
+                [self.model.state_names, self.model._index],
+                names=['state_to', 'date_to'])
+        else:
+            contributions_to = pd.MultiIndex.from_product(
+                [endog_names, self.model._index],
+                names=['variable_to', 'date_to'])
+        contributions_from = pd.MultiIndex.from_product(
+            [endog_names, self.model._index],
+            names=['variable_from', 'date_from'])
+        obs_intercept_contributions_from = pd.MultiIndex.from_product(
+            [endog_names, self.model._index],
+            names=['obs_intercept_from', 'date_from'])
+        state_intercept_contributions_from = pd.MultiIndex.from_product(
+            [self.model.state_names, self.model._index],
+            names=['state_intercept_from', 'date_from'])
+        prior_contributions_from = pd.Index(self.model.state_names,
+                                            name='initial_state_from')
+
+        # Construct DataFrames
+        shape = data_contributions.shape
+        data_contributions = pd.DataFrame(
+            data_contributions.reshape(
+                shape[0] * shape[1], shape[2] * shape[3], order='F'),
+            index=contributions_to, columns=contributions_from)
+
+        shape = obs_intercept_contributions.shape
+        obs_intercept_contributions = pd.DataFrame(
+            obs_intercept_contributions.reshape(
+                shape[0] * shape[1], shape[2] * shape[3], order='F'),
+            index=contributions_to, columns=obs_intercept_contributions_from)
+
+        shape = state_intercept_contributions.shape
+        state_intercept_contributions = pd.DataFrame(
+            state_intercept_contributions.reshape(
+                shape[0] * shape[1], shape[2] * shape[3], order='F'),
+            index=contributions_to, columns=state_intercept_contributions_from)
+
+        shape = prior_contributions.shape
+        prior_contributions = pd.DataFrame(
+            prior_contributions.reshape(shape[0] * shape[1], shape[2],
+                                        order='F'),
+            index=contributions_to, columns=prior_contributions_from)
+
+        return (data_contributions, obs_intercept_contributions,
+                state_intercept_contributions, prior_contributions)
+
     def append(self, endog, exog=None, refit=False, fit_kwargs=None,
                copy_initialization=False, **kwargs):
         """

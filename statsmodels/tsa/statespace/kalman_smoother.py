@@ -1265,9 +1265,10 @@ class SmootherResults(FilterResults):
             rev_mod.initialize(init)
             revision_results = rev_mod.smooth()
 
-            smoothed_state_weights, _ = tools._compute_smoothed_state_weights(
-                rev_mod, compute_t=compute_t, compute_j=compute_j,
-                compute_prior_weights=False, scale=previous.scale)
+            smoothed_state_weights, _, _ = (
+                tools._compute_smoothed_state_weights(
+                    rev_mod, compute_t=compute_t, compute_j=compute_j,
+                    compute_prior_weights=False, scale=previous.scale))
             smoothed_state_weights = smoothed_state_weights[ix]
 
             # Convert the weights in terms of smoothed forecasts
@@ -1414,7 +1415,7 @@ class SmootherResults(FilterResults):
             revisions=revisions,
             # gain matrix = E[y A'] E[A A']^{-1}
             gain=obs_gain,
-            # gain matrix = E[y A'] E[A A']^{-1}
+            # weights on observations for the smoothed signal
             revision_weights=revision_weights,
             # forecasts of the updated periods used to construct the news
             # = E[y^u | revised]
@@ -1598,3 +1599,153 @@ class SmootherResults(FilterResults):
     @property
     def smoothed_forecasts_error_cov(self):
         return self._get_smoothed_forecasts()[2]
+
+    def get_smoothed_decomposition(self, decomposition_of='smoothed_state',
+                                   state_index=None):
+        r"""
+        Decompose smoothed output into contributions from observations
+
+        Parameters
+        ----------
+        decomposition_of : {"smoothed_state", "smoothed_signal"}
+            The object to perform a decomposition of. If it is set to
+            "smoothed_state", then the elements of the smoothed state vector
+            are decomposed into the contributions of each observation. If it
+            is set to "smoothed_signal", then the predictions of the
+            observation vector based on the smoothed state vector are
+            decomposed. Default is "smoothed_state".
+        state_index : array_like, optional
+            An optional index specifying a subset of states to use when
+            constructing the decomposition of the "smoothed_signal". For
+            example, if `state_index=[0, 1]` is passed, then only the
+            contributions of observed variables to the smoothed signal arising
+            from the first two states will be returned. Note that if not all
+            states are used, the contributions will not sum to the smoothed
+            signal. Default is to use all states.
+
+        Returns
+        -------
+        data_contributions : array
+            Contributions of observations to the decomposed object. If the
+            smoothed state is being decomposed, then `data_contributions` are
+            shaped `(nobs, k_states, nobs, k_endog)`, where the
+            `(t, m, j, p)`-th element is the contribution of the `p`-th
+            observation at time `j` to the `m`-th state at time `t`. If the
+            smoothed signal is being decomposed, then `data_contributions` are
+            shaped `(nobs, k_endog, nobs, k_endog)`, where the
+            `(t, k, j, p)`-th element is the contribution of the `p`-th
+            observation at time `j` to the smoothed prediction of the `k`-th
+            observation at time `t`.
+        obs_intercept_contributions : array
+            Contributions of the observation intercept to the decomposed
+            object. If the smoothed state is being decomposed, then
+            `obs_intercept_contributions` are shaped
+            `(nobs, k_states, nobs, k_endog)`, where the `(t, m, j, p)`-th
+            element is the contribution of the `p`-th observation intercept at
+            time `j` to the `m`-th state at time `t`. If the smoothed signal
+            is being decomposed, then `obs_intercept_contributions` are shaped
+            `(nobs, k_endog, nobs, k_endog)`, where the `(t, k, j, p)`-th
+            element is the contribution of the `p`-th observation at time `j`
+            to the smoothed prediction of the `k`-th observation at time `t`.
+        state_intercept_contributions : array
+            Contributions of the state intercept to the decomposed object. If
+            the smoothed state is being decomposed, then
+            `state_intercept_contributions` are shaped
+            `(nobs, k_states, nobs, k_states)`, where the `(t, m, j, l)`-th
+            element is the contribution of the `l`-th state intercept at
+            time `j` to the `m`-th state at time `t`. If the smoothed signal
+            is being decomposed, then `state_intercept_contributions` are
+            shaped `(nobs, k_endog, nobs, k_endog)`, where the
+            `(t, k, j, l)`-th element is the contribution of the `p`-th
+            observation at time `j` to the smoothed prediction of the `k`-th
+            observation at time `t`.
+        prior_contributions : array
+            Contributions of the prior to the decomposed object. If the
+            smoothed state is being decomposed, then `prior_contributions` are
+            shaped `(nobs, k_states, k_states)`, where the `(t, m, l)`-th
+            element is the contribution of the `l`-th element of the prior
+            mean to the `m`-th state at time `t`. If the smoothed signal is
+            being decomposed, then `prior_contributions` are shaped
+            `(nobs, k_endog, k_states)`, where the `(t, k, l)`-th
+            element is the contribution of the `l`-th element of the prior mean
+            to the smoothed prediction of the `k`-th observation at time `t`.
+
+        Notes
+        -----
+        Denote the smoothed state at time :math:`t` by :math:`\alpha_t`. Then
+        the smoothed signal is :math:`Z_t \alpha_t`, where :math:`Z_t` is the
+        design matrix operative at time :math:`t`.
+        """
+        if decomposition_of not in ['smoothed_state', 'smoothed_signal']:
+            raise ValueError('Invalid value for `decomposition_of`. Must be'
+                             ' one of "smoothed_state" or "smoothed_signal".')
+
+        weights, state_intercept_weights, prior_weights = (
+            tools._compute_smoothed_state_weights(
+                self.model, compute_prior_weights=True, scale=self.scale))
+
+        # Get state space objects
+        ZT = self.model.design.T           # t, m, p
+        dT = self.model.obs_intercept.T    # t, p
+        cT = self.model.state_intercept.T  # t, m
+
+        # Subset the states used for the impacts if applicable
+        if decomposition_of == 'smoothed_signal' and state_index is not None:
+            ZT = ZT[:, state_index, :]
+            weights = weights[:, :, state_index]
+            prior_weights = prior_weights[:, state_index, :]
+
+        # Convert the weights in terms of smoothed signal
+        # t, j, m, p, i
+        if decomposition_of == 'smoothed_signal':
+            # Multiplication gives: t, j, m, p * t, j, m, p, k
+            # Sum along axis=2 gives: t, j, p, k
+            # Transpose to: t, j, k, p (i.e. like t, j, m, p but with k instead
+            # of m)
+            weights = np.nansum(weights[..., None] * ZT[:, None, :, None, :],
+                                axis=2).transpose(0, 1, 3, 2)
+
+            # Multiplication gives: t, j, m, l * t, j, m, l, k
+            # Sum along axis=2 gives: t, j, l, k
+            # Transpose to: t, j, k, l (i.e. like t, j, m, p but with k instead
+            # of m and l instead of p)
+            state_intercept_weights = np.nansum(
+                state_intercept_weights[..., None] * ZT[:, None, :, None, :],
+                axis=2).transpose(0, 1, 3, 2)
+
+            # Multiplication gives: t, m, l * t, m, l, k = t, m, l, k
+            # Sum along axis=1 gives: t, l, k
+            # Transpose to: t, k, l (i.e. like t, m, l but with k instead of m)
+            prior_weights = np.nansum(
+                prior_weights[..., None] * ZT[:, :, None, :],
+                axis=1).transpose(0, 2, 1)
+
+        # Contributions of observations: multiply weights by observations
+        # Multiplication gives t, j, {m,k}, p
+        data_contributions = weights * self.model.endog.T[None, :, None, :]
+        # Transpose to: t, {m,k}, j, p
+        data_contributions = data_contributions.transpose(0, 2, 1, 3)
+
+        # Contributions of obs intercept: multiply data weights by obs
+        # intercept
+        # Multiplication gives t, j, {m,k}, p
+        obs_intercept_contributions = -weights * dT[None, :, None, :]
+        # Transpose to: t, {m,k}, j, p
+        obs_intercept_contributions = (
+            obs_intercept_contributions.transpose(0, 2, 1, 3))
+
+        # Contributions of state intercept: multiply state intercept weights
+        # by state intercept
+        # Multiplication gives t, j, {m,k}, l
+        state_intercept_contributions = (
+            state_intercept_weights * cT[None, :, None, :])
+        # Transpose to: t, {m,k}, j, l
+        state_intercept_contributions = (
+            state_intercept_contributions.transpose(0, 2, 1, 3))
+
+        # Contributions of prior: multiply weights by prior
+        # Multiplication gives t, {m, k}, l
+        prior_contributions = prior_weights * self.initial_state[None, None, :]
+
+        return (data_contributions, obs_intercept_contributions,
+                state_intercept_contributions, prior_contributions)

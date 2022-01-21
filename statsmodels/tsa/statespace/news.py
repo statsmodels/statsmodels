@@ -123,7 +123,11 @@ class NewsResults(object):
         self.row_labels = row_labels
         self.params = []  # required for `summary` to work
 
-        columns = np.atleast_1d(self.updated.model.endog_names)
+        self.endog_names = self.updated.model.endog_names
+        self.k_endog = len(self.endog_names)
+
+        index = self.updated.model._index
+        columns = np.atleast_1d(self.endog_names)
 
         # E[y^i | post]
         self.post_impacted_forecasts = pd.DataFrame(
@@ -146,7 +150,6 @@ class NewsResults(object):
                               self.prev_impacted_forecasts)
 
         # Indices of revisions and updates
-        index = self.updated.model._index
         self.revisions_iloc = pd.DataFrame(
             list(zip(*news_results.revisions_ix)),
             index=['revision date', 'revised variable']).T
@@ -452,8 +455,8 @@ class NewsResults(object):
         """
         weights = self.revision_weights.stack(level=[0, 1])
         df = pd.concat([
-            self.revised_prev.rename('observed (prev)').reindex(weights.index),
             self.revised.reindex(weights.index),
+            self.revised_prev.rename('observed (prev)').reindex(weights.index),
             self.revisions.reindex(weights.index),
             weights.rename('weight'),
             (self.revisions * weights).rename('impact'),
@@ -747,8 +750,8 @@ class NewsResults(object):
         impacts
         """
         # Squeeze for univariate models
-        if impacted_variable is None and self.updated.model.k_endog == 1:
-            impacted_variable = self.updated.model.endog_names
+        if impacted_variable is None and self.k_endog == 1:
+            impacted_variable = self.endog_names[0]
 
         # Default is to only show the revisions columns if there were any
         # revisions (otherwise it would just be a column of zeros)
@@ -918,11 +921,11 @@ class NewsResults(object):
         details_by_update
         """
         # Squeeze for univariate models
-        if self.updated.model.k_endog == 1:
+        if self.k_endog == 1:
             if impacted_variable is None:
-                impacted_variable = self.updated.model.endog_names
+                impacted_variable = self.endog_names[0]
             if updated_variable is None:
-                updated_variable = self.updated.model.endog_names
+                updated_variable = self.endog_names[0]
 
         # Select only the variables / dates of interest
         s = list(np.s_[:, :, :, :, :, :])
@@ -1290,7 +1293,7 @@ class NewsResults(object):
         """
         # Default for include_details_tables
         if include_details_tables is None:
-            include_details_tables = self.updated.model.k_endog == 1
+            include_details_tables = (self.k_endog == 1)
 
         # Model specification results
         model = self.model.model
@@ -1351,7 +1354,7 @@ class NewsResults(object):
             table_ix += 1
 
         # Detail tables
-        multiple_tables = self.updated.model.k_endog > 1
+        multiple_tables = (self.k_endog > 1)
         details_tables = self.summary_details(
             source='news',
             impact_date=impact_date, impacted_variable=impacted_variable,
@@ -1388,3 +1391,39 @@ class NewsResults(object):
                     table_ix += 1
 
         return summary
+
+    def get_details(self, include_revisions=True, include_updates=True):
+        details = []
+        if include_updates:
+            details.append(self.details_by_impact.rename(
+                columns={'forecast (prev)': 'previous'}))
+        if include_revisions:
+            tmp = self.revision_details_by_impact.rename_axis(
+                index={'revision date': 'update date',
+                       'revised variable': 'updated variable'})
+            tmp = tmp.rename(columns={'revised': 'observed',
+                                      'observed (prev)': 'previous',
+                                      'revision': 'news'})
+            details.append(tmp)
+        if not (include_updates or include_revisions):
+            details.append(self.details_by_impact.rename(
+                columns={'forecast (prev)': 'previous'}).iloc[:0])
+
+        return pd.concat(details)
+
+    def get_impacts(self, groupby=None, include_revisions=True,
+                    include_updates=True):
+        details = self.get_details(include_revisions=include_revisions,
+                                   include_updates=include_updates)
+
+        impacts = details['impact'].unstack(['impact date',
+                                             'impacted variable'])
+
+        if groupby is not None:
+            impacts = (impacts.unstack('update date')
+                              .groupby(groupby).sum(min_count=1)
+                              .stack('update date')
+                              .swaplevel()
+                              .sort_index())
+
+        return impacts

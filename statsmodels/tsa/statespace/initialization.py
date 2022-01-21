@@ -282,14 +282,14 @@ class Initialization(object):
         # Validate the diffuse component
         if Pstar is not None and (R0 is not None or Q0 is not None):
             raise ValueError('Cannot specify the initial state covariance both'
-                            ' as `Pstar` and as the components R0 and Q0'
-                            '  (because `Pstar` is defined such that'
-                            " `Pstar=R0 Q0 R0'`).")
+                             ' as `Pstar` and as the components R0 and Q0'
+                             '  (because `Pstar` is defined such that'
+                             " `Pstar=R0 Q0 R0'`).")
         if Pinf is not None and A is not None:
             raise ValueError('Cannot specify both the diffuse covariance'
-                            ' matrix `Pinf` and the selection matrix for'
-                            ' diffuse elements, A, (because Pinf is defined'
-                            " such that `Pinf=A A'`).")
+                             ' matrix `Pinf` and the selection matrix for'
+                             ' diffuse elements, A, (because Pinf is defined'
+                             " such that `Pinf=A A'`).")
         elif A is not None:
             Pinf = np.dot(A, A.T)
 
@@ -298,11 +298,11 @@ class Initialization(object):
             a = np.zeros(k_states)
         if len(a) != k_states:
             raise ValueError('Must provide constant initialization vector for'
-                            ' the entire state vector.')
+                             ' the entire state vector.')
         if R0 is not None or Q0 is not None:
             if R0 is None or Q0 is None:
                 raise ValueError('If specifying either of R0 or Q0 then you'
-                                ' must specify both R0 and Q0.')
+                                 ' must specify both R0 and Q0.')
             Pstar = R0.dot(Q0).dot(R0.T)
 
         # Handle the diffuse component
@@ -315,9 +315,9 @@ class Initialization(object):
                     if not (np.all(Pstar[i] == 0) and
                             np.all(Pstar[:, i] == 0)):
                         raise ValueError(f'The state at position {i} was'
-                                        ' specified as diffuse in Pinf, but'
-                                        ' also contains a non-diffuse diagonal'
-                                        ' or off-diagonal in Pstar.')
+                                         ' specified as diffuse in Pinf, but'
+                                         ' also contains a non-diffuse diagonal'
+                                         ' or off-diagonal in Pstar.')
         k_diffuse_states = len(diffuse_ix)
 
         nondiffuse_ix = [i for i in np.arange(k_states) if i not in diffuse_ix]
@@ -326,7 +326,7 @@ class Initialization(object):
         # If there are non-diffuse states, require Pstar
         if Pstar is None and k_nondiffuse_states > 0:
             raise ValueError('Must provide initial covariance matrix for'
-                            ' non-diffuse states.')
+                             ' non-diffuse states.')
 
         # Construct the initialization
         init = cls(k_states)
