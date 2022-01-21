@@ -426,7 +426,6 @@ def test_news(matlab_results, run):
     # Compute the news
     news = res2.news(res1, impact_date='2016-09', comparison_type='previous')
 
-    print(news.revision_impacts.loc['2016-09', 'GDPC1'])
     assert_allclose(news.revision_impacts.loc['2016-09', 'GDPC1'],
                     results['revision_impacts'])
 

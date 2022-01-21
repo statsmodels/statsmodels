@@ -1899,15 +1899,71 @@ def _safe_cond(a):
         else:
             return np.inf
 
+def _compute_smoothed_state_weights(ssm, compute_t=None, compute_j=None,
+                                    compute_prior_weights=None, scale=1.0):
+    # Get references to the Cython objects
+    _model = ssm._statespace
+    _kfilter = ssm._kalman_filter
+    _smoother = ssm._kalman_smoother
 
-def compute_smoothed_state_weights(res, compute_t=None, compute_j=None,
+    # Determine the appropriate function for the dtype
+    func = prefix_compute_smoothed_state_weights_map[ssm.prefix]
+
+    # Handle compute_t and compute_j indexes
+    if compute_t is None:
+        compute_t = np.arange(ssm.nobs)
+    if compute_j is None:
+        compute_j = np.arange(ssm.nobs)
+    compute_t = np.unique(np.atleast_1d(compute_t).astype(np.int32))
+    compute_t.sort()
+    compute_j = np.unique(np.atleast_1d(compute_j).astype(np.int32))
+    compute_j.sort()
+
+    # Default setting for computing the prior weights
+    if compute_prior_weights is None:
+        compute_prior_weights = compute_j[0] == 0
+    # Validate that compute_prior_weights is valid
+    if compute_prior_weights and compute_j[0] != 0:
+        raise ValueError('If `compute_prior_weights` is set to True, then'
+                         ' `compute_j` must include the time period 0.')
+
+    # Compute the weights
+    weights, prior_weights, _ = func(
+        _smoother, _kfilter, _model, compute_t, compute_j, scale,
+        bool(compute_prior_weights))
+
+    # Re-order missing entries correctly and transpose to the appropriate
+    # shape
+    if np.any(_model.nmissing):
+        shape = weights.shape
+        # Transpose m, p, t, j, -> t, m, p, j so that we can use the
+        # `reorder_missing_matrix` function
+        weights = np.asfortranarray(weights.transpose(2, 0, 1, 3).reshape(
+            shape[2] * shape[0], shape[1], shape[3], order='C'))
+        missing = np.asfortranarray(np.isnan(ssm.endog).astype(np.int32))
+        reorder_missing_matrix(weights, missing, reorder_cols=True,
+                               inplace=True)
+        # Transpose t, m, p, j -> t, j, m, p,
+        weights = (weights.reshape(shape[2], shape[0], shape[1], shape[3])
+                          .transpose(0, 3, 1, 2))
+    else:
+        # Transpose m, p, t, j -> t, j, m, p
+        weights = weights.transpose(2, 3, 0, 1)
+
+    # Transpose m, l, t -> t, m, l
+    prior_weights = prior_weights.transpose(2, 0, 1)
+
+    return weights, prior_weights
+
+
+def compute_smoothed_state_weights(results, compute_t=None, compute_j=None,
                                    compute_prior_weights=None, resmooth=None):
     r"""
     Construct the weights of observations and the prior on the smoothed state
 
     Parameters
     ----------
-    res : MLEResults object
+    results : MLEResults object
         Results object from fitting a state space model.
     compute_t : array_like, optional
         An explicit list of periods `t` of the smoothed state vector to compute
@@ -2006,13 +2062,13 @@ def compute_smoothed_state_weights(res, compute_t=None, compute_j=None,
             Oxford University Press.
     """
     # Get the python model object
-    mod = res.model
+    mod = results.model
     # Always update the parameters to be consistent with `res`
-    mod.update(res.params)
+    mod.update(results.params)
     # By default, resmooth if it appears the results have changed; check is
     # based on the smoothed state vector
     if resmooth is None:
-        resmooth = np.any(res.smoothed_state !=
+        resmooth = np.any(results.smoothed_state !=
                           mod.ssm._kalman_smoother.smoothed_state)
     # Resmooth if necessary, otherwise at least update the Cython model
     if resmooth:
@@ -2021,56 +2077,152 @@ def compute_smoothed_state_weights(res, compute_t=None, compute_j=None,
     else:
         mod.ssm._initialize_representation()
 
-    # Get references to the Cython objects
-    _model = mod.ssm._statespace
-    _kfilter = mod.ssm._kalman_filter
-    _smoother = mod.ssm._kalman_smoother
+    return _compute_smoothed_state_weights(
+        mod.ssm, compute_t=compute_t, compute_j=compute_j,
+        compute_prior_weights=compute_prior_weights,
+        scale=results.filter_results.scale)
 
-    # Determine the appropriate function for the dtype
-    func = prefix_compute_smoothed_state_weights_map[mod.ssm.prefix]
 
-    # Handle compute_t and compute_j indexes
-    if compute_t is None:
-        compute_t = np.arange(mod.nobs)
-    if compute_j is None:
-        compute_j = np.arange(mod.nobs)
-    compute_t = np.unique(np.atleast_1d(compute_t).astype(np.int32))
-    compute_t.sort()
-    compute_j = np.unique(np.atleast_1d(compute_j).astype(np.int32))
-    compute_j.sort()
 
-    # Default setting for computing the prior weights
-    if compute_prior_weights is None:
-        compute_prior_weights = compute_j[0] == 0
-    # Validate that compute_prior_weights is valid
-    if compute_prior_weights and compute_j[0] != 0:
-        raise ValueError('If `compute_prior_weights` is set to True, then'
-                         ' `compute_j` must include the time period 0.')
+def get_impact_dates(previous_model, updated_model, impact_date=None,
+                     start=None, end=None, periods=None):
+    """
+    Compute start/end periods and an index, often for impacts of data updates
 
-    # Compute the weights
-    weights, prior_weights, _ = func(
-        _smoother, _kfilter, _model, compute_t, compute_j,
-        res.filter_results.scale, bool(compute_prior_weights))
+    Parameters
+    ----------
+    previous_model : MLEModel
+        Model used to compute default start/end periods if None are given.
+        In the case of computing impacts of data updates, this would be the
+        model estimated with the previous dataset. Otherwise, can be the same
+        as `updated_model`.
+    updated_model : MLEModel
+        Model used to compute the index. In the case of computing impacts of
+        data updates, this would be the model estimated with the updated
+        dataset. Otherwise, can be the same as `previous_model`.
+    impact_date : {int, str, datetime}, optional
+        Specific individual impact date. Cannot be used in combination with
+        `start`, `end`, or `periods`.
+    start : {int, str, datetime}, optional
+        Starting point of the impact dates. If given, one of `end` or `periods`
+        must also be given. If a negative integer, will be computed relative to
+        the dates in the `updated_model` index. Cannot be used in combination
+        with `impact_date`.
+    end : {int, str, datetime}, optional
+        Ending point of the impact dates. If given, one of `start` or `periods`
+        must also be given. If a negative integer, will be computed relative to
+        the dates in the `updated_model` index. Cannot be used in combination
+        with `impact_date`.
+    periods : int, optional
+        Number of impact date periods. If given, one of `start` or `end`
+        must also be given. Cannot be used in combination with `impact_date`.
 
-    # Re-order missing entries correctly and transpose to the appropriate
-    # shape
-    if np.any(_model.nmissing):
-        shape = weights.shape
-        # Transpose m, p, t, j, -> t, m, p, j so that we can use the
-        # `reorder_missing_matrix` function
-        weights = np.asfortranarray(weights.transpose(2, 0, 1, 3).reshape(
-            shape[2] * shape[0], shape[1], shape[3], order='C'))
-        missing = np.isnan(mod.endog).T.astype(np.int32)
-        reorder_missing_matrix(weights, missing, reorder_cols=True,
-                               inplace=True)
-        # Transpose t, m, p, j -> t, j, m, p,
-        weights = (weights.reshape(shape[2], shape[0], shape[1], shape[3])
-                          .transpose(0, 3, 1, 2))
+    Returns
+    -------
+    start : int
+        Integer location of the first included impact dates.
+    end : int
+        Integer location of the last included impact dates (i.e. this integer
+        location is included in the returned `index`).
+    index : pd.Index
+        Index associated with `start` and `end`, as computed from the
+        `updated_model`'s index.
+
+    Notes
+    -----
+    This function is typically used as a helper for standardizing start and
+    end periods for a date range where the most sensible default values are
+    based on some initial dataset (here contained in the `previous_model`),
+    while index-related operations (especially relative start/end dates given
+    via negative integers) are most sensibly computed from an updated dataset
+    (here contained in the `updated_model`).
+
+    """
+    # There doesn't seem to be any universal default that both (a) make
+    # sense for all data update combinations, and (b) work with both
+    # time-invariant and time-varying models. So we require that the user
+    # specify exactly two of start, end, periods.
+    if impact_date is not None:
+        if not (start is None and end is None and periods is None):
+            raise ValueError('Cannot use the `impact_date` argument in'
+                                ' combination with `start`, `end`, or'
+                                ' `periods`.')
+        start = impact_date
+        periods = 1
+    if start is None and end is None and periods is None:
+        start = previous_model.nobs - 1
+        end = previous_model.nobs - 1
+    if int(start is None) + int(end is None) + int(periods is None) != 1:
+        raise ValueError('Of the three parameters: start, end, and'
+                            ' periods, exactly two must be specified')
+    # If we have the `periods` object, we need to convert `start`/`end` to
+    # integers so that we can compute the other one. That's because
+    # _get_prediction_index doesn't support a `periods` argument
+    elif start is not None and periods is not None:
+        start, _, _, _ = updated_model._get_prediction_index(start, start)
+        end = start + (periods - 1)
+    elif end is not None and periods is not None:
+        _, end, _, _ = updated_model._get_prediction_index(end, end)
+        start = end - (periods - 1)
+    elif start is not None and end is not None:
+        pass
+
+    # Get the integer-based start, end and the prediction index
+    start, end, out_of_sample, prediction_index = (
+        updated_model._get_prediction_index(start, end))
+    end = end + out_of_sample
+
+    return start, end, prediction_index
+
+
+def _atleast_1d(*arys):
+    """
+    Version of `np.atleast_1d`, copied from
+    https://github.com/numpy/numpy/blob/master/numpy/core/shape_base.py,
+    with the following modifications:
+
+    1. It allows for `None` arguments, and passes them directly through
+    """
+    res = []
+    for ary in arys:
+        if ary is None:
+            result = None
+        else:
+            ary = np.asanyarray(ary)
+            if ary.ndim == 0:
+                result = ary.reshape(1)
+            else:
+                result = ary
+        res.append(result)
+    if len(res) == 1:
+        return res[0]
     else:
-        # Transpose m, p, t, j -> t, j, m, p
-        weights = weights.transpose(2, 3, 0, 1)
+        return res
 
-    # Transpose m, l, t -> t, m, l
-    prior_weights = prior_weights.transpose(2, 0, 1)
 
-    return weights, prior_weights
+def _atleast_2d(*arys):
+    """
+    Version of `np.atleast_2d`, copied from
+    https://github.com/numpy/numpy/blob/master/numpy/core/shape_base.py,
+    with the following modifications:
+
+    1. It allows for `None` arguments, and passes them directly through
+    2. Instead of creating new axis at the beginning, it creates it at the end
+    """
+    res = []
+    for ary in arys:
+        if ary is None:
+            result = None
+        else:
+            ary = np.asanyarray(ary)
+            if ary.ndim == 0:
+                result = ary.reshape(1, 1)
+            elif ary.ndim == 1:
+                result = ary[:, np.newaxis]
+            else:
+                result = ary
+        res.append(result)
+    if len(res) == 1:
+        return res[0]
+    else:
+        return res

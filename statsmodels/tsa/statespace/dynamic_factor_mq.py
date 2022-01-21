@@ -1340,7 +1340,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             # TODO: test each of these options
             if endog_is_pandas:
                 ix = pd.period_range(endog.index[0] - 1, endog.index[-1],
-                                     freq='M')
+                                     freq=endog.index.freq)
                 endog = endog.reindex(ix)
             else:
                 endog = np.c_[[np.nan] * endog.shape[1], endog.T].T
@@ -3664,8 +3664,9 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
 
     def news(self, comparison, impact_date=None, impacted_variable=None,
              start=None, end=None, periods=None, exog=None,
-             comparison_type=None, return_raw=False, tolerance=1e-10,
-             endog_quarterly=None, original_scale=True, **kwargs):
+             comparison_type=None, state_index=None, return_raw=False,
+             tolerance=1e-10, endog_quarterly=None, original_scale=True,
+             **kwargs):
         """
         Compute impacts from updated data (news and revisions).
 
@@ -3705,6 +3706,14 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
             *previous* results object or dataset or an *updated* results object
             or dataset. If not specified, then an attempt is made to determine
             the comparison type.
+        state_index : array_like or "common", optional
+            An optional index specifying a subset of states to use when
+            constructing the impacts of revisions and news. For example, if
+            `state_index=[0, 1]` is passed, then only the impacts to the
+            observed variables arising from the impacts to the first two
+            states will be returned. If the string "common" is passed and the
+            model includes idiosyncratic AR(1) components, news will only be
+            computed based on the common states. Default is to use all states.
         return_raw : bool, optional
             Whether or not to return only the specific output or a full
             results object. Default is to return a full results object.
@@ -3732,12 +3741,16 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
                In Handbook of economic forecasting, vol. 2, pp. 195-237.
                Elsevier, 2013.
         """
+        if state_index == 'common':
+            state_index = (
+                np.arange(self.model.k_states - self.model.k_endog))
+
         news_results = super().news(
             comparison, impact_date=impact_date,
             impacted_variable=impacted_variable, start=start, end=end,
             periods=periods, exog=exog, comparison_type=comparison_type,
-            return_raw=return_raw, tolerance=tolerance,
-            endog_quarterly=endog_quarterly, **kwargs)
+            state_index=state_index, return_raw=return_raw,
+            tolerance=tolerance, endog_quarterly=endog_quarterly, **kwargs)
 
         # If we have standardized the data, we may want to report the news in
         # the original scale. If so, we need to modify the data to "undo" the
@@ -3757,24 +3770,27 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
                     news_results.revision_impacts * endog_std)
 
             # Update forecasts
-            for name in ['prev_impacted_forecasts', 'news', 'update_realized',
-                         'update_forecasts', 'post_impacted_forecasts']:
+            for name in ['prev_impacted_forecasts', 'news', 'revisions',
+                         'update_realized', 'update_forecasts',
+                         'revised', 'revised_prev', 'post_impacted_forecasts']:
                 dta = getattr(news_results, name)
 
-                # for pd.Series, dta.multiply(...) removes the name attribute;
-                # save it now so that we can add it back in
+                # for pd.Series, dta.multiply(...) and (sometimes) dta.add(...)
+                # remove the name attribute; save it now so that we can add it
+                # back in
                 orig_name = None
                 if hasattr(dta, 'name'):
                     orig_name = dta.name
 
                 dta = dta.multiply(endog_std, level=1)
 
+                if name not in ['news', 'revisions']:
+                    dta = dta.add(endog_mean, level=1)
+
                 # add back in the name attribute if it was removed
                 if orig_name is not None:
                     dta.name = orig_name
 
-                if name != 'news':
-                    dta = dta.add(endog_mean, level=1)
                 setattr(news_results, name, dta)
 
             # For the weights: rows correspond to update (date, variable) and
@@ -3790,6 +3806,10 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
             news_results.weights = (
                 news_results.weights.divide(endog_std, axis=0, level=1)
                                     .multiply(endog_std, axis=1, level=1))
+            news_results.revision_weights = (
+                news_results.revision_weights
+                            .divide(endog_std, axis=0, level=1)
+                            .multiply(endog_std, axis=1, level=1))
 
         return news_results
 
@@ -4005,10 +4025,8 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
                                retain_standardization=retain_standardization,
                                **kwargs)
         if copy_initialization:
-            res = self.filter_results
-            init = initialization.Initialization(
-                self.model.k_states, 'known', constant=res.initial_state,
-                stationary_cov=res.initial_state_cov)
+            init = initialization.Initialization.from_results(
+                self.filter_results)
             mod.ssm.initialization = init
 
         res = self._apply(mod, refit=refit, fit_kwargs=fit_kwargs, **kwargs)
