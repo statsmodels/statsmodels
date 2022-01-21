@@ -316,8 +316,8 @@ class Initialization(object):
                             np.all(Pstar[:, i] == 0)):
                         raise ValueError(f'The state at position {i} was'
                                          ' specified as diffuse in Pinf, but'
-                                         ' also contains a non-diffuse diagonal'
-                                         ' or off-diagonal in Pstar.')
+                                         ' also contains a non-diffuse'
+                                         ' diagonal or off-diagonal in Pstar.')
         k_diffuse_states = len(diffuse_ix)
 
         nondiffuse_ix = [i for i in np.arange(k_states) if i not in diffuse_ix]

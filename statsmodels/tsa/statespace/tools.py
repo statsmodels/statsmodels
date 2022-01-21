@@ -1899,6 +1899,7 @@ def _safe_cond(a):
         else:
             return np.inf
 
+
 def _compute_smoothed_state_weights(ssm, compute_t=None, compute_j=None,
                                     compute_prior_weights=None, scale=1.0):
     # Get references to the Cython objects
@@ -2083,7 +2084,6 @@ def compute_smoothed_state_weights(results, compute_t=None, compute_j=None,
         mod.ssm, compute_t=compute_t, compute_j=compute_j,
         compute_prior_weights=compute_prior_weights,
         scale=results.filter_results.scale)
-
 
 
 def get_impact_dates(previous_model, updated_model, impact_date=None,
