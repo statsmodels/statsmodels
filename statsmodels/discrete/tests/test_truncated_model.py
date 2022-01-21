@@ -11,9 +11,9 @@ from statsmodels.distributions.discrete import (
     truncatednegbin,
     )
 from statsmodels.discrete.truncated_model import (
-    TruncatedPoisson,
-    TruncatedNegativeBinomialP,
-    Hurdle
+    TruncatedLFPoisson,
+    TruncatedLFNegativeBinomialP,
+    HurdleCountModel,
     )
 
 from statsmodels.sandbox.regression.tests.test_gmm_poisson import DATA
@@ -55,24 +55,24 @@ class CheckResults(object):
                         rtol=1e-3, atol=5e-3)
 
 
-class TestTruncatedPoissonModel(CheckResults):
+class TestTruncatedLFPoissonModel(CheckResults):
     @classmethod
     def setup_class(cls):
         data = datasets.randhie.load()
         exog = add_constant(np.asarray(data.exog)[:, :4], prepend=False)
-        mod = TruncatedPoisson(data.endog, exog, truncation=5)
+        mod = TruncatedLFPoisson(data.endog, exog, truncation=5)
         cls.res1 = mod.fit(method="newton", maxiter=500)
         res2 = RandHIE()
         res2.truncated_poisson()
         cls.res2 = res2
 
 
-class TestZeroTruncatedPoissonModel(CheckResults):
+class TestZeroTruncatedLFPoissonModel(CheckResults):
     @classmethod
     def setup_class(cls):
         data = datasets.randhie.load()
         exog = add_constant(np.asarray(data.exog)[:, :4], prepend=False)
-        mod = TruncatedPoisson(data.endog, exog, truncation=0)
+        mod = TruncatedLFPoisson(data.endog, exog, truncation=0)
         cls.res1 = mod.fit(maxiter=500)
         res2 = RandHIE()
         res2.zero_truncated_poisson()
@@ -84,7 +84,7 @@ class TestZeroTruncatedNBPModel(CheckResults):
     def setup_class(cls):
         data = datasets.randhie.load()
         exog = add_constant(np.asarray(data.exog)[:, :3], prepend=False)
-        mod = TruncatedNegativeBinomialP(data.endog, exog, truncation=0)
+        mod = TruncatedLFNegativeBinomialP(data.endog, exog, truncation=0)
         cls.res1 = mod.fit(maxiter=500)
         res2 = RandHIE()
         res2.zero_truncted_nbp()
@@ -94,7 +94,7 @@ class TestZeroTruncatedNBPModel(CheckResults):
         pass
 
 
-class TestTruncatedPoisson_predict(object):
+class TestTruncatedLFPoisson_predict(object):
     @classmethod
     def setup_class(cls):
         cls.expected_params = [1, 0.5]
@@ -104,7 +104,7 @@ class TestTruncatedPoisson_predict(object):
         exog[:nobs//2, 1] = 2
         mu_true = exog.dot(cls.expected_params)
         cls.endog = truncatedpoisson.rvs(mu_true, 0, size=mu_true.shape)
-        model = TruncatedPoisson(cls.endog, exog, truncation=0)
+        model = TruncatedLFPoisson(cls.endog, exog, truncation=0)
         cls.res = model.fit(method='bfgs', maxiter=5000)
 
     def test_mean(self):
@@ -139,7 +139,8 @@ class TestTruncatedNBP_predict(object):
         mu_true = np.exp(exog.dot(cls.expected_params[:-1]))
         cls.endog = truncatednegbin.rvs(
             mu_true, cls.expected_params[-1], 2, 0, size=mu_true.shape)
-        model = TruncatedNegativeBinomialP(cls.endog, exog, truncation=0, p=2)
+        model = TruncatedLFNegativeBinomialP(cls.endog, exog,
+                                             truncation=0, p=2)
         cls.res = model.fit(method='nm', maxiter=5000, maxfun=5000)
 
     def test_mean(self):
@@ -251,15 +252,15 @@ class CheckTruncatedST():
         assert_allclose(ci[:, 1], rdf[:-1, 5], rtol=5e-4, atol=1e-10)
 
 
-class TestTruncatedPoissonSt(CheckTruncatedST):
+class TestTruncatedLFPoissonSt(CheckTruncatedST):
     # test against R pscl
     @classmethod
     def setup_class(cls):
         endog = DATA["docvis"]
         exog_names = ['aget', 'totchr', 'const']
         exog = DATA[exog_names]
-        cls.res1 = TruncatedPoisson(endog, exog).fit(method="bfgs",
-                                                     maxiter=300)
+        cls.res1 = TruncatedLFPoisson(endog, exog).fit(method="bfgs",
+                                                       maxiter=300)
         cls.res2 = results_ts.results_trunc_poisson
 
 
@@ -270,19 +271,19 @@ class TestTruncatedNegBinSt(CheckTruncatedST):
         endog = DATA["docvis"]
         exog_names = ['aget', 'totchr', 'const']
         exog = DATA[exog_names]
-        cls.res1 = TruncatedNegativeBinomialP(endog, exog).fit(method="bfgs",
-                                                               maxiter=300)
+        cls.res1 = TruncatedLFNegativeBinomialP(endog, exog).fit(method="bfgs",
+                                                                 maxiter=300)
         cls.res2 = results_ts.results_trunc_negbin
 
 
-class TestTruncatedPoisson1St(CheckTruncatedST):
+class TestTruncatedLFPoisson1St(CheckTruncatedST):
     # test against R pscl
     @classmethod
     def setup_class(cls):
         endog = DATA["docvis"]
         exog_names = ['aget', 'totchr', 'const']
         exog = DATA[exog_names]
-        cls.res1 = TruncatedPoisson(
+        cls.res1 = TruncatedLFPoisson(
             endog, exog, truncation=1
             ).fit(method="bfgs", maxiter=300)
         cls.res2 = results_ts.results_trunc_poisson1
@@ -295,7 +296,7 @@ class TestTruncatedNegBin1St(CheckTruncatedST):
         endog = DATA["docvis"]
         exog_names = ['aget', 'totchr', 'const']
         exog = DATA[exog_names]
-        cls.res1 = TruncatedNegativeBinomialP(
+        cls.res1 = TruncatedLFNegativeBinomialP(
             endog, exog, truncation=1
             ).fit(method="newton", maxiter=300)  # "bfgs" is not close enough
         cls.res2 = results_ts.results_trunc_negbin1
@@ -308,7 +309,8 @@ class TestHurdlePoissonR():
         endog = DATA["docvis"]
         exog_names = ['const', 'aget', 'totchr']
         exog = DATA[exog_names]
-        cls.res1 = Hurdle(endog, exog).fit(method="newton", maxiter=300)
+        cls.res1 = HurdleCountModel(endog, exog).fit(method="newton",
+                                                     maxiter=300)
         cls.res2 = results_t.hurdle_poisson
 
     def test_basic(self):
@@ -337,18 +339,18 @@ class TestHurdlePoissonR():
         res2 = self.res2
 
         ex = res1.model.exog.mean(0, keepdims=True)
-        mu1 = res1.model1.predict(ex)
+        mu1 = res1.results_zero.predict(ex)
         prob_zero = np.exp(-mu1)
         prob_nz = 1 - prob_zero
         assert_allclose(prob_nz, res2.predict_zero, rtol=5e-4, atol=5e-4)
-        prob_nz_ = res1.model1.model._prob_nonzero(mu1, res1.params[:4])
+        prob_nz_ = res1.results_zero.model._prob_nonzero(mu1, res1.params[:4])
         assert_allclose(prob_nz_, res2.predict_zero, rtol=5e-4, atol=5e-4)
 
-        mean_main = res1.model2.predict(ex, which="mean-main")
+        mean_main = res1.results_count.predict(ex, which="mean-main")
         assert_allclose(mean_main, res2.predict_mean_main,
                         rtol=5e-4, atol=5e-4)
 
-        prob_main = res1.model2.predict(ex, which="prob")[0] * prob_nz
+        prob_main = res1.results_count.predict(ex, which="prob")[0] * prob_nz
         prob_main[0] = prob_zero
         assert_allclose(prob_main[:4], res2.predict_prob, rtol=5e-4, atol=5e-4)
 
@@ -433,7 +435,7 @@ class CheckHurdlePredict():
                                      which="mean-nonzero").mean()
         assert_allclose(pred_mean_nnz, mean_nz, rtol=5e-4)
 
-        pred_mean_nzm = res1.model2.predict(which="mean").mean()
+        pred_mean_nzm = res1.results_count.predict(which="mean").mean()
         assert_allclose(pred_mean_nzm, mean_nz, rtol=5e-4)
         assert_allclose(pred_mean_nzm, pred_mean_nnz, rtol=1e-4)
 
@@ -441,7 +443,7 @@ class CheckHurdlePredict():
         pred_var = res1.predict(which="var").mean()
         assert_allclose(pred_var, res1.resid.var(), rtol=0.05)
 
-        pred_var = res1.model2.predict(which="var").mean()
+        pred_var = res1.results_count.predict(which="var").mean()
         assert_allclose(pred_var, res1.resid[endog > 0].var(), rtol=0.05)
 
         # check probabilities
@@ -470,7 +472,7 @@ class TestHurdleNegbinSimulated(CheckHurdlePredict):
         y_fake = np.arange(nobs) // (nobs / 3)  # need some zeros and non-zeros
 
         # get predicted probabilities for model
-        mod = Hurdle(y_fake, exog, dist="negbin", zerodist="negbin")
+        mod = HurdleCountModel(y_fake, exog, dist="negbin", zerodist="negbin")
         p_dgp = np.array([-0.4, 2, 0.5, 0.2, 0.5, 0.5])
         probs = mod.predict(p_dgp, which="prob", y_values=np.arange(50))
         cdf = probs.cumsum(1)
@@ -483,7 +485,8 @@ class TestHurdleNegbinSimulated(CheckHurdlePredict):
         u = rng.random((n, 1))
         endog = np.argmin(cdf < u, axis=1)
 
-        mod_hnb = Hurdle(endog, exog, dist="negbin", zerodist="negbin")
+        mod_hnb = HurdleCountModel(endog, exog,
+                                   dist="negbin", zerodist="negbin")
         cls.res1 = mod_hnb.fit(maxiter=300)
 
         df_null = 4
