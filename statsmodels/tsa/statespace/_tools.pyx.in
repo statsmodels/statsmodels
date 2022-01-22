@@ -1461,31 +1461,36 @@ cpdef _{{prefix}}compute_smoothed_state_weights(
         blas.{{prefix}}copy(&kfilter.k_states2, &kfilter.predicted_state_cov[0, 0, t], &inc, kfilter._tmp0, &inc)
         if scale != 1:
             blas.{{prefix}}scal(&kfilter.k_states2, &scale, kfilter._tmp0, &inc)
-        for j in range(t + 1, max_j + 1):
-            p_j = p - model.nmissing[j]
-            # tmp = tmp @ L[j-1].T
+        if max_j > t:
+            # tmp = tmp @ L[t].T
             blas.{{prefix}}gemm("N", "T", &model._k_states, &model._k_states, &model._k_states,
                                 &alpha, kfilter._tmp0, &kfilter.k_states,
-                                        &smoother.innovations_transition[0, 0, j - 1], &kfilter.k_states,
+                                        &smoother.innovations_transition[0, 0, t], &kfilter.k_states,
+                                &beta, kfilter._tmp00, &kfilter.k_states)
+            blas.{{prefix}}copy(&kfilter.k_states2, kfilter._tmp00, &inc,
+                                                        kfilter._tmp0, &inc)
+
+        for j in range(t + 1, max_j + 1):
+            p_j = p - model.nmissing[j]
+
+            if store_j[j] and p_j > 0:
+                # weights[:, :p_j, t, j] = tmp @ Hi_W[j, :p_j].T
+                blas.{{prefix}}gemm("N", "T", &model._k_states, &p_j, &model._k_states,
+                                    &alpha, kfilter._tmp0, &kfilter.k_states,
+                                            &Hi_W[0, 0, j], &p,
+                                    &beta, &weights[0, 0, t, j], &kfilter.k_states)
+
+            # tmp = tmp @ L[j].T
+            blas.{{prefix}}gemm("N", "T", &model._k_states, &model._k_states, &model._k_states,
+                                &alpha, kfilter._tmp0, &kfilter.k_states,
+                                        &smoother.innovations_transition[0, 0, j], &kfilter.k_states,
                                 &beta, kfilter._tmp00, &kfilter.k_states)
             blas.{{prefix}}copy(&kfilter.k_states2, kfilter._tmp00, &inc,
                                                         kfilter._tmp0, &inc)
 
             if store_j[j]:
-                if p_j > 0:
-                    # weights[:, :p_j, t, j] = tmp @ Hi_W[j, :p_j].T
-                    blas.{{prefix}}gemm("N", "T", &model._k_states, &p_j, &model._k_states,
-                                        &alpha, kfilter._tmp0, &kfilter.k_states,
-                                                &Hi_W[0, 0, j], &p,
-                                        &beta, &weights[0, 0, t, j], &kfilter.k_states)
-
                 # state_intercept_weights[:, :, t, j] = -(tmp @ N_j)
-                # TODO: can re-organize to avoid redoing the tmp @ L multiplication
                 scalar = -1 / scale
-                blas.{{prefix}}gemm("N", "T", &model._k_states, &model._k_states, &model._k_states,
-                            &alpha, kfilter._tmp0, &kfilter.k_states,
-                                    &smoother.innovations_transition[0, 0, j], &kfilter.k_states,
-                            &beta, kfilter._tmp00, &kfilter.k_states)
                 blas.{{prefix}}gemm("N", "N", &model._k_states, &model._k_states, &model._k_states,
                                 &scalar, kfilter._tmp00, &kfilter.k_states,
                                         &smoother.scaled_smoothed_estimator_cov[0, 0, j + 1], &kfilter.k_states,
