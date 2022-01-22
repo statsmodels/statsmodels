@@ -1,5 +1,6 @@
 import numpy as np
-from scipy.stats import rv_discrete, nbinom, poisson
+
+from scipy.stats import rv_discrete, poisson, nbinom
 from scipy.special import gammaln
 from scipy._lib._util import _lazywhere
 
@@ -34,6 +35,7 @@ class genpoisson_p_gen(rv_discrete):
 
 genpoisson_p = genpoisson_p_gen(name='genpoisson_p',
                                 longname='Generalized Poisson')
+
 
 class zipoisson_gen(rv_discrete):
     '''Zero Inflated Poisson distribution
@@ -160,6 +162,65 @@ class zinegativebinomial_gen(rv_discrete):
 zinegbin = zinegativebinomial_gen(name='zinegbin',
     longname='Zero Inflated Generalized Negative Binomial')
 
+
+class truncatedpoisson_gen(rv_discrete):
+    '''Truncated Poisson discrete random variable
+    '''
+    # TODO: need cdf, and rvs
+
+    def _argcheck(self, mu, truncation):
+        # this does not work
+        # vector bound breaks some generic methods
+        # self.a = truncation + 1 # max(truncation + 1, 0)
+        return (mu >= 0) & (truncation >= -1)
+
+    def _get_support(self, mu, truncation):
+        return truncation + 1, self.b
+
+    def _logpmf(self, x, mu, truncation):
+        pmf = 0
+        for i in range(int(np.max(truncation)) + 1):
+            pmf += poisson.pmf(i, mu)
+
+        logpmf_ = poisson.logpmf(x, mu) - np.log(1 - pmf)
+        #logpmf_[x < truncation + 1] = - np.inf
+        return logpmf_
+
+    def _pmf(self, x, mu, truncation):
+        return np.exp(self._logpmf(x, mu, truncation))
+
+truncatedpoisson = truncatedpoisson_gen(name='truncatedpoisson',
+                                        longname='Truncated Poisson')
+
+class truncatednegbin_gen(rv_discrete):
+    '''Truncated Generalized Negative Binomial (NB-P) discrete random variable
+    '''
+    def _argcheck(self, mu, alpha, p, truncation):
+        return (mu >= 0) & (truncation >= -1)
+
+    def _get_support(self, mu, alpha, p, truncation):
+        return truncation + 1, self.b
+
+    def _logpmf(self, x, mu, alpha, p, truncation):
+        size, prob = self.convert_params(mu, alpha, p)
+        pmf = 0
+        for i in range(int(np.max(truncation)) + 1):
+            pmf += nbinom.pmf(i, size, prob)
+
+        logpmf_ = nbinom.logpmf(x, size, prob) - np.log(1 - pmf)
+        # logpmf_[x < truncation + 1] = - np.inf
+        return logpmf_
+
+    def _pmf(self, x, mu, alpha, p, truncation):
+        return np.exp(self._logpmf(x, mu, alpha, p, truncation))
+
+    def convert_params(self, mu, alpha, p):
+        size = 1. / alpha * mu**(2-p)
+        prob = size / (size + mu)
+        return (size, prob)
+
+truncatednegbin = truncatednegbin_gen(name='truncatednegbin',
+    longname='Truncated Generalized Negative Binomial')
 
 class DiscretizedCount(rv_discrete):
     """Count distribution based on discretized distribution

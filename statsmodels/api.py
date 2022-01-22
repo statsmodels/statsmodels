@@ -13,6 +13,7 @@ __all__ = [
     "GLS",
     "GLSAR",
     "GeneralizedPoisson",
+    "HurdleCountModel",
     "Logit",
     "MANOVA",
     "MI",
@@ -35,6 +36,8 @@ __all__ = [
     "RLM",
     "RecursiveLS",
     "SurvfuncRight",
+    "TruncatedLFPoisson",
+    "TruncatedLFNegativeBinomialP",
     "WLS",
     "ZeroInflatedGeneralizedPoisson",
     "ZeroInflatedNegativeBinomialP",
@@ -93,6 +96,11 @@ from .discrete.discrete_model import (
     Poisson,
     Probit,
 )
+from .discrete.truncated_model import (
+    TruncatedLFPoisson,
+    TruncatedLFNegativeBinomialP,
+    HurdleCountModel,
+    )
 from .duration import api as duration
 from .duration.hazard_regression import PHReg
 from .duration.survfunc import SurvfuncRight

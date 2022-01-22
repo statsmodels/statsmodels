@@ -1647,6 +1647,23 @@ class Poisson(CountModel):
                               )[:, None]
             # uses broadcasting
             return stats.poisson.pmf(y_values, mu)
+        else:
+            raise ValueError('Value of the `which` option is not recognized')
+
+    def _prob_nonzero(self, mu, params=None):
+        """Probability that count is not zero
+
+        internal use in Censored model, will be refactored or removed
+        """
+        prob_nz = - np.expm1(-mu)
+        return prob_nz
+
+    def _var(self, mu, params=None):
+        """variance implied by the distribution
+
+        internal use, will be refactored or removed
+        """
+        return mu
 
     def get_distribution(self, params, exog=None, exposure=None, offset=None):
         """Get frozen instance of distribution based on predicted parameters.
@@ -2223,6 +2240,27 @@ class GeneralizedPoisson(CountModel):
         d2 = dsf[:, 1:2]
 
         return np.column_stack((d1, d2))
+
+    def _var(self, mu, params=None):
+        """variance implied by the distribution
+
+        internal use, will be refactored or removed
+        """
+        alpha = params[-1]
+        pm1 = self.parameterization  # `p-1` in GPP
+        var_ = mu * (1 + alpha * mu**pm1)**2
+        return var_
+
+    def _prob_nonzero(self, mu, params):
+        """Probability that count is not zero
+
+        internal use in Censored model, will be refactored or removed
+        """
+        alpha = params[-1]
+        pm1 = self.parameterization  # p-1 in GPP
+        prob_zero = np.exp(- mu / (1 + alpha * mu**pm1))
+        prob_nz = 1 - prob_zero
+        return prob_nz
 
     @Appender(Poisson.get_distribution.__doc__)
     def get_distribution(self, params, exog=None, exposure=None, offset=None):
@@ -4266,6 +4304,26 @@ class NegativeBinomialP(CountModel):
 
         return np.column_stack((d1, d2))
 
+    def _var(self, mu, params=None):
+        """variance implied by the distribution
+
+        internal use, will be refactored or removed
+        """
+        alpha = params[-1]
+        p = self.parameterization  # no `-1` as in GPP
+        var_ = mu * (1 + alpha * mu**(p - 1))
+        return var_
+
+    def _prob_nonzero(self, mu, params):
+        """Probability that count is not zero
+
+        internal use in Censored model, will be refactored or removed
+        """
+        alpha = params[-1]
+        p = self.parameterization
+        prob_nz = 1 - (1 + alpha * mu**(p-1))**(- 1 / alpha)
+        return prob_nz
+
     @Appender(Poisson.get_distribution.__doc__)
     def get_distribution(self, params, exog=None, exposure=None, offset=None):
         """get frozen instance of distribution
@@ -4462,7 +4520,8 @@ class DiscreteResults(base.LikelihoodModelResults):
         Akaike information criterion.  `-2*(llf - p)` where `p` is the number
         of regressors including the intercept.
         """
-        return -2*(self.llf - (self.df_model+1))
+        k_extra = getattr(self.model, 'k_extra', 0)
+        return -2*(self.llf - (self.df_model + 1 + k_extra))
 
     @cache_readonly
     def bic(self):
@@ -4470,7 +4529,8 @@ class DiscreteResults(base.LikelihoodModelResults):
         Bayesian information criterion. `-2*llf + ln(nobs)*p` where `p` is the
         number of regressors including the intercept.
         """
-        return -2*self.llf + np.log(self.nobs)*(self.df_model+1)
+        k_extra = getattr(self.model, 'k_extra', 0)
+        return -2*self.llf + np.log(self.nobs)*(self.df_model + 1 + k_extra)
 
     @cache_readonly
     def im_ratio(self):
@@ -4501,7 +4561,8 @@ class DiscreteResults(base.LikelihoodModelResults):
         Inference; Springer New York.
         """
         crit = crit.lower()
-        k_params = self.df_model + 1 + dk_params
+        k_extra = getattr(self.model, 'k_extra', 0)
+        k_params = self.df_model + 1 + k_extra + dk_params
 
         if crit == "aic":
             return -2 * self.llf + 2 * k_params
