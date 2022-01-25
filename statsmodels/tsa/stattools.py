@@ -1514,7 +1514,7 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
         if res2djoint.model.k_constant:
             tss = res2djoint.centered_tss
         else:
-            tss = res2djoint.centered_tss
+            tss = res2djoint.uncentered_tss
         if (
             tss == 0
             or res2djoint.ssr == 0
