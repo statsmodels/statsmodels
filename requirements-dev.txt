@@ -31,7 +31,7 @@ pyyaml
 pandas-datareader
 simplegeneric
 seaborn
-numpydoc
+numpydoc<1.2
 theano-pymc
 pymc3
 arviz
