@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from statsmodels.compat.numpy import lstsq
 from statsmodels.compat.pandas import deprecate_kwarg
-from statsmodels.compat.python import lzip, Literal
+from statsmodels.compat.python import Literal, lzip
 from statsmodels.compat.scipy import _next_regular
 
 from typing import Tuple
@@ -1386,7 +1386,7 @@ def breakvar_heteroskedasticity_test(
     return test_statistic, p_value
 
 
-def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
+def grangercausalitytests(x, maxlag, addconst=True, verbose=None):
     """
     Four tests for granger non causality of 2 time series.
 
@@ -1405,7 +1405,13 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
     addconst : bool
         Include a constant in the model.
     verbose : bool
-        Print results.
+        Print results. Deprecated
+
+        .. deprecated: 0.14
+
+           verbose is deprecated and will be removed after 0.15 is released
+
+
 
     Returns
     -------
@@ -1459,11 +1465,19 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
     if not np.isfinite(x).all():
         raise ValueError("x contains NaN or inf values.")
     addconst = bool_like(addconst, "addconst")
-    verbose = bool_like(verbose, "verbose")
+    if verbose is not None:
+        verbose = bool_like(verbose, "verbose")
+        warnings.warn(
+            "verbose is deprecated since functions should not print results",
+            FutureWarning,
+        )
+    else:
+        verbose = True  # old default
+
     try:
         maxlag = int_like(maxlag, "maxlag")
         if maxlag <= 0:
-            raise ValueError("maxlag must a a positive integer")
+            raise ValueError("maxlag must be a positive integer")
         lags = np.arange(1, maxlag + 1)
     except TypeError:
         lags = np.array([int(lag) for lag in maxlag])
