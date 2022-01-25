@@ -16,6 +16,8 @@ Judge, ... (1985): The Theory and Practise of Econometrics
 Author: josefpktd
 License: BSD
 """
+import warnings
+
 from statsmodels.compat.pandas import Appender
 
 import numpy as np
@@ -496,7 +498,9 @@ def lpol2index(ar):
     index : ndarray
         index (lags) of lag polynomial with non-zero elements
     """
-    ar = array_like(ar, "ar")
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", np.ComplexWarning)
+        ar = array_like(ar, "ar")
     index = np.nonzero(ar)[0]
     coeffs = ar[index]
     return coeffs, index
@@ -728,8 +732,10 @@ class ArmaProcess(object):
             ar = np.array([1.0])
         if ma is None:
             ma = np.array([1.0])
-        self.ar = array_like(ar, "ar")
-        self.ma = array_like(ma, "ma")
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", np.ComplexWarning)
+            self.ar = array_like(ar, "ar")
+            self.ma = array_like(ma, "ma")
         self.arcoefs = -self.ar[1:]
         self.macoefs = self.ma[1:]
         self.arpoly = np.polynomial.Polynomial(self.ar)
