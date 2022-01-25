@@ -131,8 +131,8 @@ class CheckExponentialSmoothing(object):
         cls.forecast = res.get_forecast(cls.nforecast)
 
     def test_fitted(self):
-        assert_allclose(self.res.fittedvalues,
-                        results_predict['%s_mean' % self.name][:self.nobs])
+        predicted = results_predict['%s_mean' % self.name]
+        assert_allclose(self.res.fittedvalues, predicted.iloc[:self.nobs])
 
     def test_output(self):
         # There are two types of output, depending on some internal switch of
@@ -153,16 +153,20 @@ class CheckExponentialSmoothing(object):
 
     def test_forecasts(self):
         # Forecast mean
-        assert_allclose(self.forecast.predicted_mean,
-                        results_predict['%s_mean' % self.name][self.nobs:])
+        predicted = results_predict['%s_mean' % self.name]
+        assert_allclose(
+            self.forecast.predicted_mean,
+            predicted.iloc[self.nobs:]
+        )
 
     def test_conf_int(self):
         # Forecast confidence intervals
         ci_95 = self.forecast.conf_int(alpha=0.05)
-        assert_allclose(ci_95['lower y'],
-                        results_predict['%s_lower' % self.name][self.nobs:])
-        assert_allclose(ci_95['upper y'],
-                        results_predict['%s_upper' % self.name][self.nobs:])
+        lower = results_predict['%s_lower' % self.name]
+        upper = results_predict['%s_upper' % self.name]
+
+        assert_allclose(ci_95['lower y'], lower.iloc[self.nobs:])
+        assert_allclose(ci_95['upper y'], upper.iloc[self.nobs:])
 
     def test_initial_states(self):
         mask = results_states.columns.str.startswith(self.name)
@@ -823,10 +827,10 @@ class TestMultiIndex(CheckExponentialSmoothing):
     def test_conf_int(self):
         # Forecast confidence intervals
         ci_95 = self.forecast.conf_int(alpha=0.05)
-        assert_allclose(ci_95["lower ('oil', 'data')"],
-                        results_predict['%s_lower' % self.name][self.nobs:])
-        assert_allclose(ci_95["upper ('oil', 'data')"],
-                        results_predict['%s_upper' % self.name][self.nobs:])
+        lower = results_predict['%s_lower' % self.name]
+        upper = results_predict['%s_upper' % self.name]
+        assert_allclose(ci_95["lower ('oil', 'data')"], lower.iloc[self.nobs:])
+        assert_allclose(ci_95["upper ('oil', 'data')"], upper.iloc[self.nobs:])
 
 
 def test_invalid():
