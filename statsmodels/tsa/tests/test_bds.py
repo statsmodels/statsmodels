@@ -56,8 +56,8 @@ class TestBDSSequence(CheckBDS):
     @classmethod
     def setup_class(cls):
         cls.results = results[results[0] == 1]
-        cls.bds_stats = np.array(cls.results[2][1:])
-        cls.pvalues = np.array(cls.results[3][1:])
+        cls.bds_stats = np.array(cls.results[2].iloc[1:])
+        cls.pvalues = np.array(cls.results[3].iloc[1:])
 
         cls.data = data[0][data[0].notnull()]
         cls.res = bds(cls.data, 5)
@@ -70,8 +70,8 @@ class TestBDSNormal(CheckBDS):
     @classmethod
     def setup_class(cls):
         cls.results = results[results[0] == 2]
-        cls.bds_stats = np.array(cls.results[2][1:])
-        cls.pvalues = np.array(cls.results[3][1:])
+        cls.bds_stats = np.array(cls.results[2].iloc[1:])
+        cls.pvalues = np.array(cls.results[3].iloc[1:])
 
         cls.data = data[1][data[1].notnull()]
         cls.res = bds(cls.data, 5)
@@ -84,8 +84,8 @@ class TestBDSCombined(CheckBDS):
     @classmethod
     def setup_class(cls):
         cls.results = results[results[0] == 3]
-        cls.bds_stats = np.array(cls.results[2][1:])
-        cls.pvalues = np.array(cls.results[3][1:])
+        cls.bds_stats = np.array(cls.results[2].iloc[1:])
+        cls.pvalues = np.array(cls.results[3].iloc[1:])
 
         cls.data = data[2][data[2].notnull()]
         cls.res = bds(cls.data, 5)
@@ -102,8 +102,8 @@ class TestBDSGDPC1(CheckBDS):
     @classmethod
     def setup_class(cls):
         cls.results = results[results[0] == 4]
-        cls.bds_stats = np.array(cls.results[2][1:])
-        cls.pvalues = np.array(cls.results[3][1:])
+        cls.bds_stats = np.array(cls.results[2].iloc[1:])
+        cls.pvalues = np.array(cls.results[3].iloc[1:])
 
         cls.data = data[3][data[3].notnull()]
         cls.res = bds(cls.data, 5)

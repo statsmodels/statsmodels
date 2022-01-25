@@ -462,8 +462,13 @@ class TestDiagnosticG(object):
             parameters=(0,),
             distr="chi2",
         )
-
-        df = smsdia.acorr_ljungbox(res.resid[:30], boxpierce=True, lags=13)
+        if isinstance(res.resid, np.ndarray):
+            resid = res.resid[:30]
+        else:
+            resid = res.resid.iloc[:30]
+        df = smsdia.acorr_ljungbox(
+            resid, boxpierce=True, lags=13
+        )
         idx = df.index.max()
         compare_to_reference(
             [df.loc[idx, "lb_stat"], df.loc[idx, "lb_pvalue"]],
@@ -981,7 +986,11 @@ class TestDiagnosticG(object):
 
         lf1 = smsdia.lilliefors(res.resid, pvalmethod="approx")
         lf2 = smsdia.lilliefors(res.resid ** 2, pvalmethod="approx")
-        lf3 = smsdia.lilliefors(res.resid[:20], pvalmethod="approx")
+        if isinstance(res.resid, np.ndarray):
+            resid = res.resid[:20]
+        else:
+            resid = res.resid.iloc[:20]
+        lf3 = smsdia.lilliefors(resid, pvalmethod="approx")
 
         compare_to_reference(lf1, lilliefors1, decimal=(12, 12))
         compare_to_reference(
@@ -1016,7 +1025,7 @@ class TestDiagnosticG(object):
         compare_to_reference(ad1, adr1, decimal=(11, 13))
         ad2 = smsdia.normal_ad(res.resid ** 2)
         assert_(np.isinf(ad2[0]))
-        ad3 = smsdia.normal_ad(res.resid[:20])
+        ad3 = smsdia.normal_ad(resid)
         compare_to_reference(ad3, adr3, decimal=(11, 12))
 
     def test_influence(self):
