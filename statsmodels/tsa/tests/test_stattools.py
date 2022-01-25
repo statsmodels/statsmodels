@@ -69,6 +69,14 @@ def acovf_data():
     return rnd.randn(250)
 
 
+@pytest.fixture(scope="module")
+def gc_data():
+    mdata = macrodata.load_pandas().data
+    mdata = mdata[["realgdp", "realcons"]].values
+    data = mdata.astype(float)
+    return np.diff(np.log(data), axis=0)
+
+
 class CheckADF(object):
     """
     Test Augmented Dickey-Fuller
@@ -659,7 +667,8 @@ class TestGrangerCausality(object):
 
         # R: lmtest:grangertest
         r_result = [0.243097, 0.7844328, 195, 2]  # f_test
-        gr = grangercausalitytests(data[:, 1::-1], 2, verbose=False)
+        with pytest.warns(FutureWarning, match="verbose is"):
+            gr = grangercausalitytests(data[:, 1::-1], 2, verbose=False)
         assert_almost_equal(r_result, gr[2][0]["ssr_ftest"], decimal=7)
         assert_almost_equal(
             gr[2][0]["params_ftest"], gr[2][0]["ssr_ftest"], decimal=7
@@ -670,8 +679,10 @@ class TestGrangerCausality(object):
         mdata = mdata[["realgdp", "realcons"]].values
         data = mdata.astype(float)
         data = np.diff(np.log(data), axis=0)
-        gr = grangercausalitytests(data[:, 1::-1], 2, verbose=False)
-        gr2 = grangercausalitytests(data[:, 1::-1], [2], verbose=False)
+        with pytest.warns(FutureWarning, match="verbose is"):
+            gr = grangercausalitytests(data[:, 1::-1], 2, verbose=False)
+        with pytest.warns(FutureWarning, match="verbose is"):
+            gr2 = grangercausalitytests(data[:, 1::-1], [2], verbose=False)
         assert 1 in gr
         assert 1 not in gr2
         assert_almost_equal(
@@ -684,9 +695,11 @@ class TestGrangerCausality(object):
     def test_granger_fails_on_nobs_check(self, reset_randomstate):
         # Test that if maxlag is too large, Granger Test raises a clear error.
         x = np.random.rand(10, 2)
-        grangercausalitytests(x, 2, verbose=False)  # This should pass.
+        with pytest.warns(FutureWarning, match="verbose is"):
+            grangercausalitytests(x, 2, verbose=False)  # This should pass.
         with pytest.raises(ValueError):
-            grangercausalitytests(x, 3, verbose=False)
+            with pytest.warns(FutureWarning, match="verbose is"):
+                grangercausalitytests(x, 3, verbose=False)
 
     def test_granger_fails_on_finite_check(self, reset_randomstate):
         x = np.random.rand(1000, 2)
@@ -1512,4 +1525,17 @@ gc_data_sets = [df1, df2, df3, df4]
 @pytest.mark.parametrize("dataset", gc_data_sets)
 def test_granger_causality_exceptions(dataset):
     with pytest.raises(InfeasibleTestError):
-        grangercausalitytests(dataset, 4)
+        with pytest.warns(FutureWarning, match="verbose"):
+            grangercausalitytests(dataset, 4, verbose=False)
+
+
+def test_granger_causality_exception_maxlag(gc_data):
+    with pytest.raises(ValueError, match="maxlag must be"):
+        grangercausalitytests(gc_data, maxlag=-1)
+    with pytest.raises(NotImplementedError):
+        grangercausalitytests(gc_data, 3, addconst=False)
+
+
+def test_granger_causality_verbose(gc_data):
+    with pytest.warns(FutureWarning, match="verbose"):
+        grangercausalitytests(gc_data, 3, verbose=True)
