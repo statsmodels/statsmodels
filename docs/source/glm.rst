@@ -132,7 +132,7 @@ Results Class
    :toctree: generated/
 
    GLMResults
-   PredictionResults
+   PredictionResultsMean
 
 .. _families:
 
