@@ -7,7 +7,7 @@ License: BSD-3
 
 
 Notes
-------
+-----
 
 It's pretty slow if the model is misspecified, in my first example convergence
 in loglike is not reached within 2000 iterations. Added stop criteria based

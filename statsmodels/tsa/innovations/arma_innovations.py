@@ -204,7 +204,7 @@ def arma_score(endog, ar_params=None, ma_params=None, sigma2=1,
         used internally.
 
     Returns
-    ---------
+    -------
     ndarray
         Score, evaluated at the given parameters.
 
@@ -252,7 +252,7 @@ def arma_scoreobs(endog, ar_params=None, ma_params=None, sigma2=1,
         used internally.
 
     Returns
-    ---------
+    -------
     ndarray
         Score per observation, evaluated at the given parameters.
 
