@@ -565,7 +565,7 @@ class Gaussian(Family):
             Deviance residuals as defined below.
 
         Notes
-        --------
+        -----
         .. math::
 
            resid\_dev_i = (endog_i - \mu_i) ** 2

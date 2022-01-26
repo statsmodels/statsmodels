@@ -117,7 +117,7 @@ class GenericZeroInflated(CountModel):
             See notes.
 
         Notes
-        --------
+        -----
         .. math:: \\ln L=\\sum_{y_{i}=0}\\ln(w_{i}+(1-w_{i})*P_{main\\_model})+
             \\sum_{y_{i}>0}(\\ln(1-w_{i})+L_{main\\_model})
             where P - pdf of main model, L - loglike function of main model.
@@ -140,7 +140,7 @@ class GenericZeroInflated(CountModel):
             at `params`. See Notes for definition.
 
         Notes
-        --------
+        -----
         .. math:: \\ln L=\\ln(w_{i}+(1-w_{i})*P_{main\\_model})+
             \\ln(1-w_{i})+L_{main\\_model}
             where P - pdf of main model, L - loglike function of main model.
