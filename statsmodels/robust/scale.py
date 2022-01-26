@@ -317,7 +317,7 @@ class Huber(object):
 huber = Huber()
 
 
-class HuberScale(object):
+class HuberScale:
     r"""
     Huber's scaling for fitting robust linear models.
 
@@ -339,7 +339,7 @@ class HuberScale(object):
         Return's Huber's scale computed as below
 
     Notes
-    --------
+    -----
     Huber's scale is the iterative solution to
 
     scale_(i+1)**2 = 1/(n*h)*sum(chi(r/sigma_i)*sigma_i**2
@@ -349,8 +349,8 @@ class HuberScale(object):
     chi(x) = (x**2)/2       for \|x\| < d
     chi(x) = (d**2)/2       for \|x\| >= d
 
-    and the Huber constant h = (n-p)/n*(d**2 + (1-d**2)*\
-            scipy.stats.norm.cdf(d) - .5 - d*sqrt(2*pi)*exp(-0.5*d**2)
+    and the Huber constant h = (n-p)/n*(d**2 + (1-d**2)*
+    scipy.stats.norm.cdf(d) - .5 - d*sqrt(2*pi)*exp(-0.5*d**2)
     """
 
     def __init__(self, d=2.5, tol=1e-08, maxiter=30):

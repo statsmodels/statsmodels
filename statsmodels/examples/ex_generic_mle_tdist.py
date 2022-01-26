@@ -65,7 +65,7 @@ class MyT(GenericLikelihoodModel):
         The log likelihood of the model evaluated at `params`
 
         Notes
-        --------
+        -----
         .. math:: \\ln L=\\sum_{i=1}^{n}\\left[-\\lambda_{i}+y_{i}x_{i}^{\\prime}\\beta-\\ln y_{i}!\\right]
         """
         #print len(params),

@@ -5,7 +5,7 @@ def _make_index(prob,size):
     Returns a boolean index for given probabilities.
 
     Notes
-    ---------
+    -----
     prob = [.75,.25] means that there is a 75% chance of the first column
     being True and a 25% chance of the second column being True. The
     columns are mutually exclusive.
