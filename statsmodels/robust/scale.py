@@ -339,7 +339,7 @@ class HuberScale(object):
         Return's Huber's scale computed as below
 
     Notes
-    --------
+    -----
     Huber's scale is the iterative solution to
 
     scale_(i+1)**2 = 1/(n*h)*sum(chi(r/sigma_i)*sigma_i**2
