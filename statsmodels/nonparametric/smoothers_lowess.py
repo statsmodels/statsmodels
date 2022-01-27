@@ -234,7 +234,7 @@ def lowess(endog, exog, frac=2.0/3.0, it=3, delta=0.0, xvals=None, is_sorted=Fal
                                 frac=frac, it=it-1, delta=delta, given_xvals=False)
         else:
             weights = np.ones_like(x)
-        xvalues = np.ascontiguousarray(xvalues)
+        xvalues = np.ascontiguousarray(xvalues, dtype=float)
         # Then run once more using those supplied weights at the points provided by xvals
         # No extra iterations are performed here since weights are fixed
         res, _ = _lowess(y, x, xvalues, weights,
