@@ -23,6 +23,8 @@ from statsmodels.stats.multitest import (multipletests, fdrcorrection,
                                          local_fdr, multitest_methods_names)
 from statsmodels.stats.multicomp import tukeyhsd
 from scipy.stats.distributions import norm
+import scipy
+from packaging import version
 
 pval0 = np.array([
     0.838541367553,  0.642193923795,  0.680845947633,
@@ -389,8 +391,13 @@ def test_tukeyhsd():
 
     # check p-values (divergence of high values is expected)
     small_pvals_idx = [2, 5, 7, 9]
+
+    # Remove this check when minimum SciPy version is 1.7+ (gh-8035)
+    scipy_version = (version.parse(scipy.version.version) >=
+                     version.parse('1.7.0'))
+    rtol = 1e-5 if scipy_version else 1e-2
     assert_allclose(myres[8][small_pvals_idx], res[small_pvals_idx, 3],
-                    rtol=1e-3)
+                    rtol=rtol)
 
 
 def test_local_fdr():
