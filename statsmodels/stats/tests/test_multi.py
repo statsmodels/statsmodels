@@ -14,6 +14,7 @@ are tested against R:multtest
 '''
 import pytest
 import numpy as np
+import pandas as pd
 from numpy.testing import (assert_almost_equal, assert_equal,
                            assert_allclose)
 
@@ -21,7 +22,7 @@ from statsmodels.stats.multitest import (multipletests, fdrcorrection,
                                          fdrcorrection_twostage,
                                          NullDistribution,
                                          local_fdr, multitest_methods_names)
-from statsmodels.stats.multicomp import tukeyhsd
+from statsmodels.stats.multicomp import tukeyhsd, games_howell, pairwise_games_howell
 from scipy.stats.distributions import norm
 
 pval0 = np.array([
@@ -391,6 +392,136 @@ def test_tukeyhsd():
     small_pvals_idx = [2, 5, 7, 9]
     assert_allclose(myres[8][small_pvals_idx], res[small_pvals_idx, 3],
                     rtol=1e-3)
+
+
+def test_games_howell():
+    """
+    means and variances for the test come from setting base means where two
+    are the same and two are clearly different and adding noise that means
+    two of the groups should be statistically different from the other two
+    and the two with the same base mean should not be stat different.
+
+    Originally generated as:
+    np.random.seed(20210218)
+    base_means = np.array([0, 0, -5, 5])
+    noise = [np.random.normal(loc=0.0, scale=0.1, size=reps) for reps in [3, 8, 6, 4]]
+
+    All test values computed by hand except for the first p_adj value and the
+    q_crit values for the lower and upper confidence intervals since and these
+    values all agree with this implementation in R (one has to code it up
+    yourself as the package does one work as expected):
+    https://rpubs.com/aaronsc32/games-howell-test
+    """
+    expected_results = pd.DataFrame(
+        {
+            "group1": ["grp_1", "grp_1", "grp_1", "grp_2", "grp_2", "grp_3"],
+            "group2": ["grp_2", "grp_3", "grp_4", "grp_3", "grp_4", "grp_4"],
+            "mean_difference": [0.1209, -4.952, 5.13, -5.0729, 5.009, 10.0819],
+            "standard_error": [0.0484, 0.049, 0.0733, 0.0294, 0.0619, 0.0624],
+            "q": [2.498, 101.0077, 69.9969, 172.7079, 80.9337, 161.6458],
+            "degrees_freedom": [2.8773, 2.995, 4.9695, 11.3508, 3.7219, 3.8199],
+            "p_adj": [0.4339, 0.001, 0.001, 0.001, 0.001, 0.001],
+            "lower": [-0.2195, -5.287, 4.7465, -5.1973, 4.639, 9.7142],
+            "upper": [0.4614, -4.6169, 5.5134, -4.9485, 5.379, 10.4497],
+        }
+    )
+    means = np.array([-0.07022087, 0.05071469, -5.02219617, 5.05973107])
+    vars = np.array([0.01165387, 0.00642479, 0.00553452, 0.02743093])
+    nobs = np.array([3, 8, 6, 4])
+    (
+        pairs,
+        meandiffs,
+        stderr_pairs,
+        q_crit_values,
+        df_pairs,
+        p_values,
+        ci_lower_limits,
+        ci_upper_limits,
+    ) = games_howell(means, vars, nobs)
+    assert_almost_equal(
+        meandiffs, expected_results["mean_difference"].values, decimal=4
+    )
+    assert_almost_equal(
+        stderr_pairs, expected_results["standard_error"].values, decimal=4
+    )
+    assert_almost_equal(q_crit_values, expected_results["q"].values, decimal=4)
+    assert_almost_equal(df_pairs, expected_results["degrees_freedom"].values, decimal=4)
+    assert_almost_equal(p_values, expected_results["p_adj"].values, decimal=4)
+    assert_almost_equal(ci_lower_limits, expected_results["lower"].values, decimal=4)
+    assert_almost_equal(ci_upper_limits, expected_results["upper"].values, decimal=4)
+
+
+def test_connecting_letters():
+    """
+    Uses the same data as the previous test.
+    """
+    expected_results = pd.DataFrame(
+        {
+            "group": ["grp_1", "grp_2", "grp_3", "grp_4"],
+            "mean": [-0.07022087, 0.05071469, -5.02219617, 5.05973107],
+            "1": [1, 1, np.nan, np.nan],
+            "2": [np.nan, np.nan, 2, np.nan],
+            "3": [np.nan, np.nan, np.nan, 3],
+        }
+    )
+    obs = np.array(
+        [
+            3.21810786e-02,
+            -5.98649248e-02,
+            -1.82978761e-01,
+            2.04637431e-01,
+            7.73945782e-02,
+            1.64391654e-02,
+            1.09856344e-01,
+            2.18174810e-02,
+            -5.89446096e-02,
+            3.72352297e-02,
+            -2.71809444e-03,
+            -4.96220130e00,
+            -5.04879548e00,
+            -4.90253767e00,
+            -5.07207031e00,
+            -5.09865647e00,
+            -5.04891580e00,
+            4.90705327e00,
+            5.29484364e00,
+            5.00613229e00,
+            5.03089509e00,
+        ]
+    )
+    grps = np.array(
+        [
+            "grp_1",
+            "grp_1",
+            "grp_1",
+            "grp_2",
+            "grp_2",
+            "grp_2",
+            "grp_2",
+            "grp_2",
+            "grp_2",
+            "grp_2",
+            "grp_2",
+            "grp_3",
+            "grp_3",
+            "grp_3",
+            "grp_3",
+            "grp_3",
+            "grp_3",
+            "grp_4",
+            "grp_4",
+            "grp_4",
+            "grp_4",
+        ]
+    )
+    gh = pairwise_games_howell(obs, grps)
+    # The results have "" for user convenience visually. To test we convert them
+    # to nan.  pd assert frame equal does not handle the "" as expected.
+    cl = gh.connecting_letters().replace("", np.nan)
+    cl = cl.astype({"1": float, "2": float, "3": float})
+    pd.testing.assert_frame_equal(expected_results, cl)
+
+
 
 
 def test_local_fdr():
