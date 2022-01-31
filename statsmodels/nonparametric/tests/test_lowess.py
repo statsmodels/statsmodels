@@ -12,13 +12,14 @@ available in R's MASS package.
 import os
 
 import numpy as np
-import pytest
 from numpy.testing import (
-    assert_almost_equal,
     assert_,
-    assert_raises,
+    assert_allclose,
+    assert_almost_equal,
     assert_equal,
+    assert_raises,
 )
+import pytest
 
 from statsmodels.nonparametric.smoothers_lowess import lowess
 
@@ -227,7 +228,8 @@ class TestLowess(object):
 
     def test_spike(self):
         # see 7700
-        # Create a curve that is easy to fit at first but gets harder further along.
+        # Create a curve that is easy to fit at first but gets
+        # harder further along.
         # This used to give an outlier bad fit at position 961
         x = np.linspace(0, 10, 1001)
         y = np.cos(x ** 2 / 5)
@@ -285,3 +287,11 @@ def test_returns_inputs():
     x = np.arange(20)
     result = lowess(y, x, frac=0.4)
     assert_almost_equal(result, np.column_stack((x, y)))
+
+
+def test_xvals_dtype(reset_randomstate):
+    y = [0] * 10 + [1] * 10
+    x = np.arange(20)
+    # Previously raised ValueError: Buffer dtype mismatch
+    results_xvals = lowess(y, x, frac=0.4, xvals=x[:5])
+    assert_allclose(results_xvals, np.zeros(5), atol=1e-12)
