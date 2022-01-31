@@ -61,6 +61,8 @@ TODO
 
 
 '''
+from collections import namedtuple
+
 from statsmodels.compat.python import lzip, lrange
 
 import copy
@@ -75,6 +77,15 @@ from statsmodels.iolib.table import SimpleTable
 from statsmodels.stats.multitest import multipletests, _ecdf as ecdf, fdrcorrection as fdrcorrection0, fdrcorrection_twostage
 from statsmodels.graphics import utils
 from statsmodels.tools.sm_exceptions import ValueWarning
+
+try:
+    # Studentized Range in SciPy 1.7+
+    from scipy.stats import studentized_range
+except ImportError:
+    from statsmodels.stats.libqsturng import qsturng, psturng
+    studentized_range_tuple = namedtuple('studentized_range', ['ppf', 'sf'])
+    studentized_range = studentized_range_tuple(ppf=qsturng, sf=psturng)
+
 
 qcrit = '''
   2     3     4     5     6     7     8     9     10
@@ -153,8 +164,7 @@ def get_tukeyQcrit2(k, df, alpha=0.05):
 
     not enough error checking for limitations
     '''
-    from statsmodels.stats.libqsturng import qsturng
-    return qsturng(1-alpha, k, df)
+    return studentized_range.ppf(1-alpha, k, df)
 
 
 def get_tukey_pvalue(k, df, q):
@@ -171,9 +181,7 @@ def get_tukey_pvalue(k, df, q):
         quantile value of Studentized Range
 
     '''
-
-    from statsmodels.stats.libqsturng import psturng
-    return psturng(q, k, df)
+    return studentized_range.sf(q, k, df)
 
 
 def Tukeythreegene(first, second, third):
