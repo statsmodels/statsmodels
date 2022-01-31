@@ -870,9 +870,9 @@ class TestVARExtras(object):
         fci3 = res_lin_trend2.forecast_interval(
             res_lin_trend2.endog[-2:], h, exog_future=exf2
         )
-        assert_allclose(fci2, fci1, rtol=1e-12)
-        assert_allclose(fci3, fci1, rtol=1e-12)
-        assert_allclose(fci3, fci2, rtol=1e-12)
+        assert_allclose(fci2, fci1, rtol=1e-12, atol=1e-12)
+        assert_allclose(fci3, fci1, rtol=1e-12, atol=1e-12)
+        assert_allclose(fci3, fci2, rtol=1e-12, atol=1e-12)
 
 
 def test_var_cov_params_pandas(bivariate_var_data):
