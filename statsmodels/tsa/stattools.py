@@ -1395,7 +1395,7 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
     Parameters
     ----------
     x : array_like
-        The data for test whether the time series in the second column Granger
+        The data for testing whether the time series in the second column Granger
         causes the time series in the first column. Missing values are not
         supported.
     maxlag : {int, Iterable[int]}
