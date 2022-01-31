@@ -4,7 +4,6 @@ Linear exponential smoothing models
 Author: Chad Fulton
 License: BSD-3
 """
-
 import numpy as np
 import pandas as pd
 from statsmodels.base.data import PandasData
@@ -105,6 +104,15 @@ class ExponentialSmoothing(MLEModel):
         self.damped_trend = bool_like(damped_trend, 'damped_trend')
         self.seasonal_periods = int_like(seasonal, 'seasonal', optional=True)
         self.seasonal = self.seasonal_periods is not None
+        if seasonal:
+            import warnings
+
+            warnings.warn(
+                "ExponentialSmoothing should not be used with seasonal "
+                "terms. It has a serious bug that has not been fixed. "
+                "Instead use ETSModel.",
+                RuntimeWarning
+            )
         self.initialization_method = string_like(
             initialization_method, 'initialization_method').lower()
         self.concentrate_scale = bool_like(concentrate_scale,
