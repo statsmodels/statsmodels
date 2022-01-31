@@ -601,7 +601,7 @@ class TestWaldAnovaOLSF(CheckAnovaMixin):
         predicted2 = self.res.predict(ex[1:])
 
         assert_index_equal(predicted1.index, ex.index)
-        assert_series_equal(predicted1[1:], predicted2)
+        assert_series_equal(predicted1.iloc[1:], predicted2)
         assert_equal(predicted1.values[0], np.nan)
 
 

@@ -583,7 +583,14 @@ class TimeSeriesModel(base.LikelihoodModel):
         has_freq = index.freq is not None if date_index else None
         increment = Index(range(self.endog.shape[0]))
         is_increment = index.equals(increment) if int_index else None
-        is_monotonic = index.is_monotonic if date_index else None
+        if date_index:
+            try:
+                is_monotonic = index.is_monotonic_increasing
+            except AttributeError:
+                # Remove after pandas 1.5 is minimum
+                is_monotonic = index.is_monotonic
+        else:
+            is_monotonic = None
 
         # Issue warnings for unsupported indexes
         if has_index and not (date_index or range_index or is_increment):

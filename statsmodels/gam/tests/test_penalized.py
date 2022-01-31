@@ -667,7 +667,7 @@ class TestGAMMPGBSPoissonFormula(TestGAMMPGBSPoisson):
         assert_equal(res1a.model.design_info_linear.column_names,
                      xnames[:4])
 
-        assert_equal(res1a.fittedvalues[2:4].index.values, [2, 3])
+        assert_equal(res1a.fittedvalues.iloc[2:4].index.values, [2, 3])
         assert_equal(res1a.params.index.values, xnames)
         assert_(isinstance(res1a.params, pd.Series))
 
