@@ -1024,7 +1024,7 @@ class Poisson(CountModel):
             point of X.
 
         Notes
-        --------
+        -----
         The PMF is defined as
 
         .. math:: \\frac{e^{-\\lambda_{i}}\\lambda_{i}^{y_{i}}}{y_{i}!}
@@ -1054,7 +1054,7 @@ class Poisson(CountModel):
             See notes.
 
         Notes
-        --------
+        -----
         .. math:: \\ln L=\\sum_{i=1}^{n}\\left[-\\lambda_{i}+y_{i}x_{i}^{\\prime}\\beta-\\ln y_{i}!\\right]
         """
         offset = getattr(self, "offset", 0)
@@ -1083,7 +1083,7 @@ class Poisson(CountModel):
             at `params`. See Notes
 
         Notes
-        --------
+        -----
         .. math:: \\ln L_{i}=\\left[-\\lambda_{i}+y_{i}x_{i}^{\\prime}\\beta-\\ln y_{i}!\\right]
 
         for observations :math:`i=1,...,n`
@@ -1423,7 +1423,7 @@ class GeneralizedPoisson(CountModel):
             See notes.
 
         Notes
-        --------
+        -----
         .. math:: \\ln L=\\sum_{i=1}^{n}\\left[\\mu_{i}+(y_{i}-1)*ln(\\mu_{i}+
             \\alpha*\\mu_{i}^{p-1}*y_{i})-y_{i}*ln(1+\\alpha*\\mu_{i}^{p-1})-
             ln(y_{i}!)-\\frac{\\mu_{i}+\\alpha*\\mu_{i}^{p-1}*y_{i}}{1+\\alpha*
@@ -1447,7 +1447,7 @@ class GeneralizedPoisson(CountModel):
             at `params`. See Notes
 
         Notes
-        --------
+        -----
         .. math:: \\ln L=\\sum_{i=1}^{n}\\left[\\mu_{i}+(y_{i}-1)*ln(\\mu_{i}+
             \\alpha*\\mu_{i}^{p-1}*y_{i})-y_{i}*ln(1+\\alpha*\\mu_{i}^{p-1})-
             ln(y_{i}!)-\\frac{\\mu_{i}+\\alpha*\\mu_{i}^{p-1}*y_{i}}{1+\\alpha*

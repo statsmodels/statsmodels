@@ -762,7 +762,7 @@ class WLS(RegressionModel):
             The value of the log-likelihood function for a WLS Model.
 
         Notes
-        --------
+        -----
         .. math:: -\frac{n}{2}\log SSR
                   -\frac{n}{2}\left(1+\log\left(\frac{2\pi}{n}\right)\right)
                   -\frac{1}{2}\log\left(\left|W\right|\right)
