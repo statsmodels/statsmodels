@@ -75,6 +75,9 @@ class ExponentialSmoothing(MLEModel):
 
     Notes
     -----
+
+    **Overview**
+
     The parameters and states of this model are estimated by setting up the
     exponential smoothing equations as a special case of a linear Gaussian
     state space model and applying the Kalman filter. As such, it has slightly
@@ -87,6 +90,54 @@ class ExponentialSmoothing(MLEModel):
     easier to work with. In addition, it supports computing confidence
     intervals for forecasts and it supports concentrating the initial
     state out of the likelihood function.
+
+    **Model timing**
+
+    Typical exponential smoothing results correspond to the "filtered" output
+    from state space models, because they incorporate both the transition to
+    the new time point (adding the trend to the level and advancing the season)
+    and updating to incorporate information from the observed datapoint. By
+    contrast, the "predicted" output from state space models only incorporates
+    the transition.
+
+    One consequence is that the "initial state" corresponds to the "filtered"
+    state at time t=0, but this is different from the usual state space
+    initialization used in Statsmodels, which initializes the model with the
+    "predicted" state at time t=1. This is important to keep in mind if
+    setting the initial state directly (via `initialization_method='known'`).
+
+    **Seasonality**
+
+    In seasonal models, it is important to note that seasonals are included in
+    the state vector of this model in the order:
+    `[seasonal, seasonal.L1, seasonal.L2, seasonal.L3, ...]`. At time t, the
+    `'seasonal'` state holds the seasonal factor operative at time t, while
+    the `'seasonal.L'` state holds the seasonal factor that would have been
+    operative at time t-1.
+
+    Suppose that the seasonal order is `n_seasons = 4`. Then, because the
+    initial state corresponds to time t=0 and the time t=1 is in the same
+    season as time t=-3, the initial seasonal factor for time t=1 comes from
+    the lag "L3" initial seasonal factor (i.e. at time t=1 this will be both
+    the "L4" seasonal factor as well as the "L0", or current, seasonal factor).
+
+    When the initial state is estimated (`initialization_method='estimated'`),
+    there are only `n_seasons - 1` parameters, because the seasonal factors are
+    normalized to sum to one. The three parameters that are estimated
+    correspond to the lags "L0", "L1", and "L2" seasonal factors as of time
+    t=0 (alternatively, the lags "L1", "L2", and "L3" as of time t=1).
+
+    When the initial state is given (`initialization_method='known'`), the
+    initial seasonal factors for time t=0 must be given by the argument
+    `initial_seasonal`. This can either be a length `n_seasons - 1` array --
+    in which case it should contain the lags "L0" - "L2" (in that order)
+    seasonal factors as of time t=0 -- or a length `n_seasons` array, in which
+    case it should contain the "L0" - "L3" (in that order) seasonal factors
+    as of time t=0.
+
+    Note that in the state vector and parameters, the "L0" seasonal is
+    called "seasonal" or "initial_seasonal", while the i>0 lag is
+    called "seasonal.L{i}".
 
     References
     ----------
@@ -234,6 +285,20 @@ class ExponentialSmoothing(MLEModel):
                         ' one of s or s-1, where s is the number of seasonal'
                         ' periods.')
 
+        # Note that the simple and heuristic methods of computing initial
+        # seasonal factors return estimated seasonal factors associated with
+        # the first t = 1, 2, ..., `n_seasons` observations. To use these as
+        # the initial state, we lag them by `n_seasons`. This yields, for
+        # example for `n_seasons = 4`, the seasons lagged L3, L2, L1, L0.
+        # As described above, the state vector in this model should have
+        # seasonal factors ordered L0, L1, L2, L3, and as a result we need to
+        # reverse the order of the computed initial seasonal factors from
+        # these methods.
+        methods = ['simple', 'heuristic']
+        if (self.initialization_method in methods
+                and initial_seasonal is not None):
+            initial_seasonal = initial_seasonal[::-1]
+
         self._initial_level = initial_level
         self._initial_trend = initial_trend
         self._initial_seasonal = initial_seasonal
@@ -275,8 +340,9 @@ class ExponentialSmoothing(MLEModel):
         if self.trend:
             state_names += ['trend']
         if self.seasonal:
-            state_names += ['seasonal.%d' % i
-                            for i in range(self.seasonal_periods)]
+            state_names += (
+                ['seasonal'] + ['seasonal.L%d' % i
+                                for i in range(1, self.seasonal_periods)])
 
         return state_names
 
@@ -298,8 +364,10 @@ class ExponentialSmoothing(MLEModel):
             if self.trend:
                 param_names += ['initial_trend']
             if self.seasonal:
-                param_names += ['initial_seasonal.%d' % i
-                                for i in range(self.seasonal_periods - 1)]
+                param_names += (
+                    ['initial_seasonal']
+                    + ['initial_seasonal.L%d' % i
+                       for i in range(1, self.seasonal_periods - 1)])
 
         return param_names
 
@@ -331,7 +399,7 @@ class ExponentialSmoothing(MLEModel):
             if self.trend:
                 start_params += [initial_trend]
             if self.seasonal:
-                start_params += initial_seasonal.tolist()[:-1]
+                start_params += initial_seasonal.tolist()[::-1][:-1]
 
         return np.array(start_params)
 
@@ -651,7 +719,7 @@ class ExponentialSmoothingResults(MLEResults):
             params = np.array(self.initial_state)
             if params.ndim > 1:
                 params = params[0]
-            names = self.model.state_names
+            names = self.model.state_names[1:]
             param_header = ['initialization method: %s'
                             % self.model.initialization_method]
             params_stubs = names
