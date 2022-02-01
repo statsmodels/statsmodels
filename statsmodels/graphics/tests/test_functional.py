@@ -23,6 +23,7 @@ labels = data.raw_data[:, 0].astype(int)
 data = data.raw_data[:, 1:]
 
 
+@pytest.mark.slow
 @pytest.mark.matplotlib
 def test_hdr_basic(close_figures):
     try:

@@ -3,6 +3,7 @@ import warnings
 
 from statsmodels.compat.pandas import PD_LT_1_4
 
+
 import os
 
 import numpy as np
@@ -214,7 +215,7 @@ def test_getframe_smoke():
     assert_(isinstance(df, pd.DataFrame))
 
     lds = res.get_loadings_frame(style='strings', decimals=3, threshold=0.3)
-
+    lds.to_latex()
 
     # The Styler option require jinja2, skip if not available
     try:

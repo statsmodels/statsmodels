@@ -3,8 +3,8 @@
 @IF not Defined PYTEST_DIRECTIVES GOTO :RUN_FROM_INSTALL
 
 @echo Running test from %CD%
-@echo pytest -n auto -r s statsmodels --dist loadscope --skip-examples %PYTEST_DIRECTIVES%
-pytest -n auto -r s statsmodels --dist loadscope --skip-examples %PYTEST_DIRECTIVES%
+@echo pytest -n auto -r s statsmodels --skip-examples %PYTEST_DIRECTIVES%
+pytest -n auto -r s statsmodels --skip-examples %PYTEST_DIRECTIVES%
 
 @GOTO :End
 
