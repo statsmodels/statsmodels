@@ -74,6 +74,7 @@ INSTALL_REQUIREMENTS.update(
     {
         "pandas": "0.25",  # released July 2019
         "patsy": "0.5.2",  # released January 2018
+        "packaging": "21.3"
     }
 )
 

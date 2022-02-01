@@ -1,4 +1,4 @@
-from distutils.version import LooseVersion
+from packaging.version import Version, parse
 from typing import Optional
 
 import numpy as np
@@ -22,19 +22,21 @@ __all__ = [
     "deprecate_kwarg",
     "Appender",
     "Substitution",
-    "NumericIndex",
     "is_int_index",
+    "is_float_index",
     "make_dataframe",
     "to_numpy",
-    "pandas_lt_1_0_0",
+    "PD_LT_1_0_0",
     "get_cached_func",
     "get_cached_doc",
     "call_cached_func",
+    "PD_LT_1_4",
 ]
 
-version = LooseVersion(pd.__version__)
+version = parse(pd.__version__)
 
-pandas_lt_1_0_0 = version < LooseVersion("1.0.0")
+PD_LT_1_0_0 = version < Version("1.0.0")
+PD_LT_1_4 = version < Version("1.3.99")
 
 try:
     from pandas.api.types import is_numeric_dtype
@@ -73,62 +75,40 @@ def is_int_index(index: pd.Index) -> bool:
 
     Parameters
     ----------
-    index : pd.NumericIndex
+    index : pd.Index
         Any numeric index
 
     Returns
     -------
     bool
-        True if Int64Index, UInt64Index or NumericIndex with integral dtype
+        True if is an index with a standard integral type
     """
-    if type(index) is NumericIndex and np.issubdtype(index.dtype, np.integer):
-        return True
-    # Safe legacy path
-    try:
-        import warnings
-
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-
-            from pandas import Int64Index, UInt64Index
-
-            if type(index) in (Int64Index, UInt64Index):
-                return True
-    except ImportError:
-        pass
-    return False
+    return (
+        isinstance(index, pd.Index)
+        and isinstance(index.dtype, np.dtype)
+        and np.issubdtype(index.dtype, np.integer)
+    )
 
 
-def is_float_index(index):
+def is_float_index(index: pd.Index) -> bool:
     """
     Check if an index is floating
 
     Parameters
     ----------
-    index : pd.NumericIndex
+    index : pd.Index
         Any numeric index
 
     Returns
     -------
     bool
-        True if Float64Index or NumericIndex with a floating dtype
+        True if an index with a standard numpy floating dtype
     """
-    if type(index) is NumericIndex and np.issubdtype(index.dtype, np.floating):
-        return True
-    # Safe legacy path
-    try:
-        import warnings
-
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-
-            from pandas import Float64Index
-
-            if type(index) is Float64Index:
-                return True
-    except ImportError:
-        pass
-    return False
+    return (
+        isinstance(index, pd.Index)
+        and isinstance(index.dtype, np.dtype)
+        and np.issubdtype(index.dtype, np.floating)
+    )
 
 
 try:
