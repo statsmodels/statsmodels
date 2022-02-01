@@ -36,7 +36,7 @@ jobs:
           SCIPY: 1.4.1
           MATPLOTLIB: 3.2.2
           coverage: true
-          PYTEST_OPTIONS: ''
+          PYTEST_PATTERN: '(not slow)'
         python_37_legacy_blas:
           python.version: '3.7'
           use.conda: false
@@ -45,8 +45,9 @@ jobs:
           PANDAS: 0.25.3
           MATPLOTLIB: 3.1.3
           SCIPY: 1.3.2
-          BLAS: "nomkl blas=*=openblas"
-          PYTEST_OPTIONS: ''
+          # Temporarily disable
+          # BLAS: "nomkl blas=*=openblas"
+          PYTEST_PATTERN: '(not slow)'
         python38_numpy118:
           python.version: '3.8'
           NUMPY: 1.18.5
@@ -107,7 +108,7 @@ jobs:
       echo "Testing site packages"
       mkdir test_run_dir
       pushd test_run_dir
-      python -c "import statsmodels; statsmodels.test(['--junitxml=../junit/test-results.xml', '--skip-examples', '-v'])"
+      python -c "import statsmodels; statsmodels.test(['-n', 'auto', '--junitxml=../junit/test-results.xml', '--skip-examples', '-v'])"
       popd
     displayName: 'Run tests (site-packages)'
     condition: eq(variables['test.install'], 'true')
@@ -117,8 +118,8 @@ jobs:
       if [[ ${COVERAGE} == "true" ]]; then
         export COVERAGE_OPTS="--cov-config .coveragerc --cov=statsmodels --cov-report xml:coverage.xml --cov-report term"
       fi
-      echo pytest -v -m "${PYTEST_PATTERN}" --skip-examples --junitxml=junit/test-results.xml --dist loadscope --durations=25 ${COVERAGE_OPTS} statsmodels
-      pytest -v -m "${PYTEST_PATTERN}" --skip-examples --junitxml=junit/test-results.xml --dist loadscope --durations=25 ${COVERAGE_OPTS} statsmodels
+      echo pytest -m "${PYTEST_PATTERN}" --skip-examples --junitxml=junit/test-results.xml -n auto --dist loadscope --durations=25 ${COVERAGE_OPTS} statsmodels
+      pytest -m "${PYTEST_PATTERN}" --skip-examples --junitxml=junit/test-results.xml -n auto --dist loadscope --durations=25 ${COVERAGE_OPTS} statsmodels
     displayName: 'Run tests (editable)'
     condition: and(ne(variables['test.install'], 'true'), ne(variables['pip.pre'], 'true'))
 
@@ -127,8 +128,8 @@ jobs:
       if [[ ${COVERAGE} == "true" ]]; then
         export COVERAGE_OPTS="--cov-config .coveragerc --cov=statsmodels --cov-report xml:coverage.xml --cov-report term"
       fi
-      echo pytest -m "${PYTEST_PATTERN}" --skip-examples --junitxml=junit/test-results.xml --dist loadscope --durations=25 ${COVERAGE_OPTS} statsmodels
-      pytest -m "${PYTEST_PATTERN}" --skip-examples --junitxml=junit/test-results.xml --dist loadscope --durations=25 ${COVERAGE_OPTS} statsmodels
+      echo pytest -m "${PYTEST_PATTERN}" --skip-examples --junitxml=junit/test-results.xml -n auto --dist loadscope --durations=25 ${COVERAGE_OPTS} statsmodels
+      pytest -m "${PYTEST_PATTERN}" --skip-examples --junitxml=junit/test-results.xml -n auto --dist loadscope --durations=25 ${COVERAGE_OPTS} statsmodels
     displayName: 'Run tests (pip pre)'
     condition: and(ne(variables['test.install'], 'true'), eq(variables['pip.pre'], 'true'))
     continueOnError: true
