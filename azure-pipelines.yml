@@ -9,6 +9,7 @@ variables:
   OMP_NUM_THREADS: 1
   VML_NUM_THREADS: 1
   OPENBLAS_NUM_THREADS: 1
+  OPENBLAS_VERBOSE: 2
   PYTHONHASHSEED: 0 # Ensure tests are correctly gathered by xdist
   SETUPTOOLS_USE_DISTUTILS: "stdlib"
   USE_MATPLOTLIB: true
