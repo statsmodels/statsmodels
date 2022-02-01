@@ -59,15 +59,6 @@ assert_frame_equal = testing.assert_frame_equal
 assert_index_equal = testing.assert_index_equal
 assert_series_equal = testing.assert_series_equal
 
-try:
-    from pandas import NumericIndex
-
-    has_numeric_index = True
-except ImportError:
-    from pandas import Int64Index as NumericIndex
-
-    has_numeric_index = False
-
 
 def is_int_index(index: pd.Index) -> bool:
     """
