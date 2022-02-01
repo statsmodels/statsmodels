@@ -45,7 +45,8 @@ jobs:
           PANDAS: 0.25.3
           MATPLOTLIB: 3.1.3
           SCIPY: 1.3.2
-          BLAS: "nomkl blas=*=openblas"
+          # Temporarily disable
+          # BLAS: "nomkl blas=*=openblas"
           PYTEST_OPTIONS: ''
         python38_numpy118:
           python.version: '3.8'
