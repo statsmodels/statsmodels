@@ -30,7 +30,7 @@ jobs:
           lint: true
         python37:
           python.version: '3.7'
-          use.conda: true
+          use.conda: false
           PANDAS: 0.25.3
           NUMPY: 1.18.5
           SCIPY: 1.4.1
@@ -39,7 +39,7 @@ jobs:
           PYTEST_OPTIONS: ''
         python_37_legacy_blas:
           python.version: '3.7'
-          use.conda: true
+          use.conda: false
           coverage: true
           NUMPY: 1.17.4
           PANDAS: 0.25.3
