@@ -137,14 +137,11 @@ def test_against_wls_inference(data, use_t, cov_type):
     y, x, w = data
     mod = RollingWLS(y, x, window=100, weights=w)
     res = mod.fit(use_t=use_t, cov_type=cov_type)
-    ci_cols = ci = res.conf_int()
-    test_cols = x.shape[1] > 3
+    ci = res.conf_int()
 
     # This is a smoke test of cov_params to make sure it works
     res.cov_params()
 
-    if test_cols:
-        ci_cols = res.conf_int(cols=[0, 2])
     # Skip to improve performance
     for i in range(100, y.shape[0]):
         _y = get_sub(y, i, 100)
@@ -167,14 +164,6 @@ def test_against_wls_inference(data, use_t, cov_type):
         else:
             ci_val = ci[i - 1].T
         assert_allclose(ci_val, wls_ci)
-        if test_cols:
-            wls_ci = wls.conf_int(cols=[0, 2])
-            if isinstance(ci_cols, pd.DataFrame):
-                ci_val = ci_cols.iloc[i - 1]
-                ci_val = np.asarray(ci_val).reshape((-1, 2))
-            else:
-                ci_val = ci_cols[i - 1].T
-            assert_allclose(ci_val, wls_ci)
 
 
 def test_raise(data):

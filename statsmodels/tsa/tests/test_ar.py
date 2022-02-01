@@ -1,6 +1,9 @@
 """
 Test AR Model
 """
+from statsmodels.compat.pytest import pytest_warns
+from typing import NamedTuple, Union
+
 import datetime as dt
 from itertools import product
 
@@ -272,9 +275,11 @@ def gen_data(nobs, nexog, pandas, seed=92874765):
         if nexog:
             cols = ["exog.{0}".format(i) for i in range(exog.shape[1])]
             exog = pd.DataFrame(exog, columns=cols, index=index)
-    from collections import namedtuple
 
-    DataSet = namedtuple("DataSet", ["endog", "exog"])
+    class DataSet(NamedTuple):
+        endog: Union[np.ndarray, pd.Series]
+        exog: Union[np.ndarray, pd.DataFrame]
+
     return DataSet(endog=endog, exog=exog)
 
 
@@ -685,7 +690,7 @@ def test_autoreg_named_series(reset_randomstate, old_names):
     warning = FutureWarning if old_names else None
     dates = period_range(start="2011-1", periods=72, freq="M")
     y = Series(np.random.randn(72), name="foobar", index=dates)
-    with pytest.warns(warning):
+    with pytest_warns(warning):
         results = AutoReg(y, lags=2, old_names=old_names).fit()
 
     if old_names:
@@ -752,13 +757,13 @@ def test_autoreg_summary_corner(old_names):
     dates = period_range(start="1959Q1", periods=len(data), freq="Q")
     data.index = dates
     warning = FutureWarning if old_names else None
-    with pytest.warns(warning):
+    with pytest_warns(warning):
         res = AutoReg(data, lags=4, old_names=old_names).fit()
     summ = res.summary().as_text()
     assert "AutoReg(4)" in summ
     assert "cpi.L4" in summ
     assert "03-31-1960" in summ
-    with pytest.warns(warning):
+    with pytest_warns(warning):
         res = AutoReg(data, lags=0, old_names=old_names).fit()
     summ = res.summary().as_text()
     if old_names:

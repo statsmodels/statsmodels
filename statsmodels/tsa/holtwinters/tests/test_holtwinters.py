@@ -2,6 +2,8 @@
 Author: Terence L van Zyl
 Modified: Kevin Sheppard
 """
+from statsmodels.compat.pytest import pytest_warns
+
 import os
 import re
 import warnings
@@ -923,9 +925,8 @@ def test_equivalence_cython_python(trend, seasonal):
         initialization_method="estimated",
     )
 
-    with pytest.warns(None):
-        # Overflow in mul-mul case fixed
-        res = mod.fit()
+    # Overflow in mul-mul case fixed
+    res = mod.fit()
     assert isinstance(res.summary().as_text(), str)
 
     params = res.params
@@ -2006,7 +2007,7 @@ def test_forecast_index_types(ses, index_typ):
     ses = ses.copy()
     ses.index = index[:-36]
 
-    with pytest.warns(warning):
+    with pytest_warns(warning):
         res = ExponentialSmoothing(
             ses,
             trend="add",
@@ -2014,7 +2015,7 @@ def test_forecast_index_types(ses, index_typ):
             initialization_method="heuristic",
             **kwargs
         ).fit()
-    with pytest.warns(warning):
+    with pytest_warns(warning):
         fcast = res.forecast(36)
     assert isinstance(fcast, pd.Series)
     pd.testing.assert_index_equal(fcast.index, fcast_index)
