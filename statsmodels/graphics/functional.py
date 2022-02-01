@@ -1,4 +1,6 @@
 """Module for functional boxplots."""
+from statsmodels.compat.numpy import NP_LT_123
+
 import numpy as np
 from scipy.special import comb
 

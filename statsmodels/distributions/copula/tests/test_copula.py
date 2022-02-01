@@ -6,6 +6,8 @@ Author: Josef Perktold
 License: BSD-3
 
 """
+from statsmodels.compat.pytest import pytest_warns
+
 from statsmodels.compat.scipy import SP_LT_15
 
 import numpy as np
@@ -408,7 +410,7 @@ class CheckModernCopula(CheckCopula):
 
         nobs = 2000
         expected_warn = None if seed1 is not None else FutureWarning
-        with pytest.warns(expected_warn):
+        with pytest_warns(expected_warn):
             rvs1 = self.copula.rvs(nobs, random_state=seed1)
         rvs2 = self.copula.rvs(nobs, random_state=seed2)
         assert_allclose(rvs1, rvs2)

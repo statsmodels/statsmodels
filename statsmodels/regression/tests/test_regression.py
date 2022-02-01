@@ -86,7 +86,8 @@ class CheckRegressionResults(object):
 
     def test_conf_int_subset(self):
         if len(self.res1.params) > 1:
-            ci1 = self.res1.conf_int(cols=(1, 2))
+            with pytest.warns(FutureWarning, match="cols is"):
+                ci1 = self.res1.conf_int(cols=(1, 2))
             ci2 = self.res1.conf_int()[1:3]
             assert_almost_equal(ci1, ci2, self.decimal_conf_int_subset)
         else:
@@ -1586,7 +1587,7 @@ def test_ols_constant(reset_randomstate):
     y = np.random.standard_normal((200))
     x = np.ones((200, 1))
     res = OLS(y, x).fit()
-    with pytest.warns(None) as recording:
+    with warnings.catch_warnings(record=True) as recording:
         assert np.isnan(res.fvalue)
         assert np.isnan(res.f_pvalue)
     assert len(recording) == 0
@@ -1600,6 +1601,15 @@ def test_summary_no_constant():
     assert "R² is computed " in summary.as_text()
 
 
+def test_condition_number(reset_randomstate):
+    y = np.random.standard_normal(100)
+    x = np.random.standard_normal((100, 1))
+    x = x + np.random.standard_normal((100, 5))
+    res = OLS(y, x).fit()
+    assert_allclose(res.condition_number, np.sqrt(np.linalg.cond(x.T @ x)))
+    assert_allclose(res.condition_number, np.linalg.cond(x))
+
+
 def test_slim_summary(reset_randomstate):
     y = np.random.standard_normal(100)
     x = np.random.standard_normal((100, 1))
@@ -1610,12 +1620,3 @@ def test_slim_summary(reset_randomstate):
     slim_summ = res.summary(slim=True)
     assert str(summ) == str(summ2)
     assert str(slim_summ) != str(summ)
-
-
-def test_condition_number(reset_randomstate):
-    y = np.random.standard_normal(100)
-    x = np.random.standard_normal((100, 1))
-    x = x + np.random.standard_normal((100, 5))
-    res = OLS(y, x).fit()
-    assert_allclose(res.condition_number, np.sqrt(np.linalg.cond(x.T @ x)))
-    assert_allclose(res.condition_number, np.linalg.cond(x))

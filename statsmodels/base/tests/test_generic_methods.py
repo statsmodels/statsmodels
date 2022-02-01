@@ -10,6 +10,7 @@ Created on Wed Oct 30 14:01:27 2013
 
 Author: Josef Perktold
 """
+from statsmodels.compat.pytest import pytest_warns
 from statsmodels.compat.pandas import assert_index_equal, assert_series_equal
 from statsmodels.compat.platform import (
     PLATFORM_LINUX32,
@@ -217,18 +218,18 @@ class CheckGenericMixin(object):
                     sp[self.transform_index] = np.exp(sp[self.transform_index])
 
                 start_params[keep_index_p] = sp
-                with pytest.warns(warn_cls):
+                with pytest_warns(warn_cls):
                     res1 = mod._fit_collinear(cov_type=cov_type,
                                               start_params=start_params,
                                               method=method, disp=0)
                 if cov_type != 'nonrobust':
                     # reestimate original model to get robust cov
-                    with pytest.warns(warn_cls):
+                    with pytest_warns(warn_cls):
                         res2 = self.results.model.fit(cov_type=cov_type,
                                                       start_params=sp,
                                                       method=method, disp=0)
             else:
-                with pytest.warns(warn_cls):
+                with pytest_warns(warn_cls):
                     # more special casing RLM
                     if (isinstance(self.results.model, (sm.RLM))):
                         res1 = mod._fit_collinear()

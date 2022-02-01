@@ -4,8 +4,6 @@ Tests for news results
 Author: Chad Fulton
 License: BSD-3
 """
-from statsmodels.compat.pandas import NumericIndex
-
 from statsmodels.compat.pandas import (
     assert_frame_equal,
     assert_series_equal,
@@ -929,9 +927,9 @@ def test_start_end_int(which):
         endog_init = endog.iloc[:-1]
         index_plus2 = pd.RangeIndex((nobs + 2) * 2, step=2)
     elif which == 'int64':
-        endog.index = NumericIndex(np.arange(nobs))
+        endog.index = pd.Index(np.arange(nobs))
         endog_init = endog.iloc[:-1]
-        index_plus2 = NumericIndex(np.arange(nobs + 2))
+        index_plus2 = pd.Index(np.arange(nobs + 2))
     elif which == 'numpy':
         endog = endog.values
         endog_init = endog[:-1]
