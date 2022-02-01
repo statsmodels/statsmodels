@@ -194,7 +194,7 @@ class TEGMM(GMM):
 
         tind = self.res_select.model.endog
         prob = self.res_select.model.predict(p_tm)
-        momt = self.mom_outcome(tm, self.endog, tind, prob, weighted=True)
+        momt = self.mom_outcome(tm, self.endog, tind, prob) #, weighted=True)
         moms = np.column_stack((momt,
                                 self.res_select.model.score_obs(p_tm)))
         return moms
@@ -249,9 +249,9 @@ class RegAdjustment(object):
         self.nobs = endog.shape[0]
         # no init keys are supported
         mod0 = model.__class__(endog[~treat_mask], exog[~treat_mask])
-        self.result0 = mod0.fit(cov_type='HC1')
+        self.result0 = mod0.fit(cov_type='HC0')
         mod1 = model.__class__(endog[treat_mask], exog[treat_mask])
-        self.result1 = mod1.fit(cov_type='HC1')
+        self.result1 = mod1.fit(cov_type='HC0')
         self.predict_mean0 = self.model_pool.predict(self.result0.params).mean()
         self.predict_mean1 = self.model_pool.predict(self.result1.params).mean()
 
@@ -340,13 +340,13 @@ class RegAdjustment(object):
         endog = self.model_pool.endog
         exog = self.model_pool.exog
 
-        mod0 = sm.WLS(endog[~treat_mask], exog[~treat_mask], weights=1/prob[~treat_mask])
+        mod0 = sm.WLS(endog[~treat_mask], exog[~treat_mask], weights=1/(1 - prob[~treat_mask]))
         result0 = mod0.fit(cov_type='HC1')
 
-        mean0_ipwra = result0.predict(self.exog).mean()
+        mean0_ipwra = result0.predict(exog).mean()
         mod1 = sm.WLS(endog[treat_mask], exog[treat_mask], weights=1/prob[treat_mask])
         result1 = mod1.fit(cov_type='HC1')
-        mean1_ipwra = result1.predict(self.exog).mean()
+        mean1_ipwra = result1.predict(exog).mean()
 
         #res_ipwra = np.array((mean1_ipwra - mean0_ipwra, mean0_ipwra, mean1_ipwra))
         return mean1_ipwra - mean0_ipwra, mean0_ipwra, mean1_ipwra
