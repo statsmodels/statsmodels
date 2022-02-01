@@ -45,42 +45,18 @@ except ImportError:
 ###############################################################################
 # Key Values that Change Each Release
 ###############################################################################
-SETUP_REQUIREMENTS = {
-    "numpy": "1.17",  # released July 2019
-    "scipy": "1.3",  # released May 2019
+# These are strictly installation requirements. Builds requirements are
+# managed in pyproject.toml
+INSTALL_REQUIREMENTS = {
+    "numpy": "1.17",  # released December 2019
+    "scipy": "1.3",  # released December 2019
+    "pandas": "0.25",  # released January 2020
+    "patsy": "0.5.2",  # released January 2018
+    "packaging": "21.3"  # released Nov 2021
 }
 
-REQ_NOT_MET_MSG = """
-{0} is installed but older ({1}) than required ({2}). You must manually
-upgrade {0} before installing or install into a fresh virtualenv.
-"""
-for key in SETUP_REQUIREMENTS:
-    from distutils.version import LooseVersion
-    import importlib
+CYTHON_MIN_VER = "0.29.26"  # released 2020
 
-    req_ver = LooseVersion(SETUP_REQUIREMENTS[key])
-    try:
-        mod = importlib.import_module(key)
-        ver = LooseVersion(mod.__version__)
-        if ver < req_ver:
-            raise RuntimeError(REQ_NOT_MET_MSG.format(key, ver, req_ver))
-    except ImportError:
-        pass
-    except AttributeError:
-        raise RuntimeError(REQ_NOT_MET_MSG.format(key, ver, req_ver))
-
-INSTALL_REQUIREMENTS = SETUP_REQUIREMENTS.copy()
-INSTALL_REQUIREMENTS.update(
-    {
-        "pandas": "0.25",  # released July 2019
-        "patsy": "0.5.2",  # released January 2018
-        "packaging": "21.3"
-    }
-)
-
-CYTHON_MIN_VER = "0.29.22"  # released 2020
-
-SETUP_REQUIRES = [k + ">=" + v for k, v in SETUP_REQUIREMENTS.items()]
 INSTALL_REQUIRES = [k + ">=" + v for k, v in INSTALL_REQUIREMENTS.items()]
 
 EXTRAS_REQUIRE = {
@@ -125,6 +101,7 @@ CLASSIFIERS = [
     "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
     "Operating System :: OS Independent",
     "Intended Audience :: End Users/Desktop",
     "Intended Audience :: Developers",
@@ -420,7 +397,6 @@ setup(
     package_data=package_data,
     distclass=BinaryDistribution,
     include_package_data=False,  # True will install all files in repo
-    setup_requires=SETUP_REQUIRES,
     install_requires=INSTALL_REQUIRES,
     extras_require=EXTRAS_REQUIRE,
     zip_safe=False,
