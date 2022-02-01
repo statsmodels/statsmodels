@@ -15,18 +15,18 @@ else
 fi
 
 python -m pip install --upgrade pip setuptools wheel
-python -m pip install cython pytest pytest-xdist coverage pytest-cov ipython jupyter notebook nbconvert "property_cached>=1.6.3" black==20.8b1 isort flake8 nbconvert==5.6.1 coveralls
+python -m pip install cython pytest pytest-xdist coverage pytest-cov ipython jupyter notebook nbconvert isort flake8 nbconvert==5.6.1 coveralls
 
-if [[ -n ${NUMPY} ]]; then CMD="$CMD==${NUMPY}"; fi;
+if [[ -n ${NUMPY} ]]; then CMD="$CMD~=${NUMPY}"; fi;
 CMD="$CMD scipy"
-if [[ -n ${SCIPY} ]]; then CMD="$CMD==${SCIPY}"; fi;
+if [[ -n ${SCIPY} ]]; then CMD="$CMD~=${SCIPY}"; fi;
 CMD="$CMD pandas"
-if [[ -n ${PANDAS} ]]; then CMD="$CMD==${PANDAS}"; fi;
+if [[ -n ${PANDAS} ]]; then CMD="$CMD~=${PANDAS}"; fi;
 
 if [[ ${USE_MATPLOTLIB} == true ]]; then
   CMD="$CMD matplotlib"
   if [[ -n ${MATPLOTLIB} ]]; then
-    CMD="$CMD==${MATPLOTLIB}";
+    CMD="$CMD~=${MATPLOTLIB}";
   fi
 fi
 
