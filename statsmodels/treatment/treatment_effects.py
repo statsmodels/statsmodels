@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
-"""Treatment effect estimators, follows largely Stata's teffects in Stata 13 manual
+"""Treatment effect estimators
+
+follows largely Stata's teffects in Stata 13 manual
 
 Created on Tue Jun  9 22:45:23 2015
 
@@ -29,7 +31,7 @@ could be loaded with webuse
 import numpy as np
 import statsmodels.api as sm
 
-
+from statsmodels.sandbox.regression.gmm import GMM
 
 
 def mom_ate(te, endog, tind, prob, weighted=True):
@@ -42,11 +44,12 @@ def mom_ate(te, endog, tind, prob, weighted=True):
         w1 = (tind / prob)
         w2 = (1. - tind) / (1. - prob)
         wdiff = w1 / w1.mean() - w2 / w2.mean()
-        #wdiff = w1 / w1.sum() - w2 / w2.sum()
+        # wdiff = w1 / w1.sum() - w2 / w2.sum()
     else:
         wdiff = (tind / prob) - (1 - tind) / (1 - prob)
 
     return endog * wdiff - te
+
 
 def mom_atm(tm, endog, tind, prob, weighted=True):
     """moment conditions for average treatment means (POM)
@@ -69,7 +72,7 @@ def mom_ols(tm, endog, tind, prob, weighted=True):
     w = tind / prob + (1-tind) / (1 - prob)
 
     treat_ind = np.column_stack((1 - tind, tind))
-    mom = (w * (endog - treat_ind.dot(tm)))[:,None] * treat_ind
+    mom = (w * (endog - treat_ind.dot(tm)))[:, None] * treat_ind
 
     return mom
 
@@ -82,15 +85,11 @@ def ate_ipw(endog, tind, prob, weighted=True):
         w1 = (tind / prob)
         w2 = (1. - tind) / (1. - prob)
         wdiff = w1 / w1.mean() - w2 / w2.mean()
-        #wdiff = w1 / w1.sum() - w2 / w2.sum()
+        # wdiff = w1 / w1.sum() - w2 / w2.sum()
     else:
         wdiff = (tind / prob) - (1 - tind) / (1 - prob)
 
     return (endog * wdiff).mean()
-
-
-
-from statsmodels.sandbox.regression.gmm import GMM
 
 
 class TEGMMGeneric1(GMM):
@@ -122,7 +121,8 @@ class TEGMMGeneric1(GMM):
             self.k_select = len(res_select.model.data.param_names)
 
         if exclude_tmoms:
-            self.prob = self.res_select.predict() # fittedvalues is still linpred
+            # fittedvalues is still linpred
+            self.prob = self.res_select.predict()
         else:
             self.prob = None
 
@@ -132,7 +132,6 @@ class TEGMMGeneric1(GMM):
         p_tm = params[k_outcome:]
 
         tind = self.res_select.model.endog
-
 
         if self.exclude_tmoms:
             prob = self.prob
@@ -150,7 +149,6 @@ class TEGMMGeneric1(GMM):
         moms = np.column_stack(moms_list)
         return moms
 
-
     def momcond_aipw(self, params):
         k_outcome = len(params) - self.k_select
         tm = params[:k_outcome]
@@ -163,7 +161,6 @@ class TEGMMGeneric1(GMM):
         moms = np.column_stack((momt,
                                 self.res_select.model.score_obs(p_tm)))
         return moms
-
 
 
 class TEGMM(GMM):
@@ -187,19 +184,16 @@ class TEGMM(GMM):
         if self.data.xnames is None:
             self.data.xnames = []
 
-
     def momcond(self, params):
         tm = params[:2]
         p_tm = params[2:]
 
         tind = self.res_select.model.endog
         prob = self.res_select.model.predict(p_tm)
-        momt = self.mom_outcome(tm, self.endog, tind, prob) #, weighted=True)
+        momt = self.mom_outcome(tm, self.endog, tind, prob)  # weighted=True)
         moms = np.column_stack((momt,
                                 self.res_select.model.score_obs(p_tm)))
         return moms
-
-
 
 
 class RegAdjustment(object):
@@ -242,7 +236,6 @@ class RegAdjustment(object):
         self.treatment = np.asarray(treatment)
         self.treat_mask = treat_mask = (treatment == 1)
 
-
         self.model_pool = model
         endog = model.endog
         exog = model.exog
@@ -252,8 +245,10 @@ class RegAdjustment(object):
         self.result0 = mod0.fit(cov_type='HC0')
         mod1 = model.__class__(endog[treat_mask], exog[treat_mask])
         self.result1 = mod1.fit(cov_type='HC0')
-        self.predict_mean0 = self.model_pool.predict(self.result0.params).mean()
-        self.predict_mean1 = self.model_pool.predict(self.result1.params).mean()
+        self.predict_mean0 = self.model_pool.predict(self.result0.params
+                                                     ).mean()
+        self.predict_mean1 = self.model_pool.predict(self.result1.params
+                                                     ).mean()
 
         # this only works for linear model, need margins for discrete
         exog_mean = exog.mean(0)
@@ -288,7 +283,7 @@ class RegAdjustment(object):
         nobs = self.nobs
         if prob is None:
             raise NotImplementedError
-            #prob = ???   # need selection model or probability
+            # prob = ???   # need selection model or probability
         tind = self.treatment
         correct0 = (self.result0.resid / (1 - prob[tind == 0])).sum() / nobs
         correct1 = (self.result1.resid / (prob[tind == 1])).sum() / nobs
@@ -308,7 +303,7 @@ class RegAdjustment(object):
         nobs = self.nobs
         if prob is None:
             raise NotImplementedError
-            #prob = ???   # need selection model or probability
+            # prob = ???   # need selection model or probability
 
         endog = self.model_pool.endog
         exog = self.model_pool.exog
@@ -316,14 +311,19 @@ class RegAdjustment(object):
         treat_mask = self.treat_mask
 
         ww1 = tind / prob * (tind / prob - 1)
-        mod1 = sm.WLS(endog[treat_mask], exog[treat_mask], weights=ww1[treat_mask])
+        mod1 = sm.WLS(endog[treat_mask], exog[treat_mask],
+                      weights=ww1[treat_mask])
         result1 = mod1.fit(cov_type='HC1')
         mean1_ipw2 = result1.predict(exog).mean()
 
         ww0 = (1 - tind) / (1 - prob) * ((1 - tind) / (1 - prob) - 1)
-        mod0 = sm.WLS(endog[~treat_mask], exog[~treat_mask], weights=ww0[~treat_mask])
+        mod0 = sm.WLS(endog[~treat_mask], exog[~treat_mask],
+                      weights=ww0[~treat_mask])
         result0 = mod0.fit(cov_type='HC1')
         mean0_ipw2 = result0.predict(exog).mean()
+
+        self.results_ipwwls0 = result0
+        self.results_ipwwls1 = result1
 
         correct0 = (result0.resid / (1 - prob[tind == 0])).sum() / nobs
         correct1 = (result1.resid / (prob[tind == 1])).sum() / nobs
@@ -340,17 +340,17 @@ class RegAdjustment(object):
         endog = self.model_pool.endog
         exog = self.model_pool.exog
 
-        mod0 = sm.WLS(endog[~treat_mask], exog[~treat_mask], weights=1/(1 - prob[~treat_mask]))
+        mod0 = sm.WLS(endog[~treat_mask], exog[~treat_mask],
+                      weights=1/(1 - prob[~treat_mask]))
         result0 = mod0.fit(cov_type='HC1')
 
         mean0_ipwra = result0.predict(exog).mean()
-        mod1 = sm.WLS(endog[treat_mask], exog[treat_mask], weights=1/prob[treat_mask])
+        mod1 = sm.WLS(endog[treat_mask], exog[treat_mask],
+                      weights=1/prob[treat_mask])
         result1 = mod1.fit(cov_type='HC1')
         mean1_ipwra = result1.predict(exog).mean()
 
-        #res_ipwra = np.array((mean1_ipwra - mean0_ipwra, mean0_ipwra, mean1_ipwra))
         return mean1_ipwra - mean0_ipwra, mean0_ipwra, mean1_ipwra
-
 
     def summary(self):
         """summary table for regression adjustment ATE and POM, based on t_test
@@ -358,5 +358,6 @@ class RegAdjustment(object):
         """
         txt = [str(self.tt0.summary(title='POM Treatment 0'))]
         txt.append(str(self.tt1.summary(title='POM Treatment 1')))
-        txt.append('ATE = %f10.4   std.dev. = %f10.4' % (self.ate, self.se_ate))
+        txt.append('ATE = %10.4f   std.dev. = %10.4f' % (
+            self.ate, self.se_ate))
         return '\n'.join(txt)
