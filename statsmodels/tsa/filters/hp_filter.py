@@ -5,7 +5,7 @@ from scipy.sparse.linalg import spsolve
 from statsmodels.tools.validation import array_like, PandasWrapper
 
 
-def hpfilter(x, lamb=1600):
+def hpfilter(x, lamb=1600, two_sided=True):
     """
     Hodrick-Prescott filter.
 
@@ -18,6 +18,12 @@ def hpfilter(x, lamb=1600):
         suggested for quarterly data. Ravn and Uhlig suggest using a value
         of 6.25 (1600/4**4) for annual data and 129600 (1600*3**4) for monthly
         data.
+    two_sided : bool, optional
+        Switch between two-sided and one-sided Hodrick-Prescott filter.
+        If True (default), the two-sided approach will be computed.
+        If False, the one-sided or real-time approach is computed by running
+        the two-sided approach succesively with each new observation.
+
 
     Returns
     -------
@@ -39,7 +45,7 @@ def hpfilter(x, lamb=1600):
 
     Notes
     -----
-    The HP filter removes a smooth trend, `T`, from the data `x`. by solving
+    The two-sided HP filter removes a smooth trend, `T`, from the data `x`. by solving
 
     min sum((x[t] - T[t])**2 + lamb*((T[t+1] - T[t]) - (T[t] - T[t-1]))**2)
      T   t
@@ -55,6 +61,10 @@ def hpfilter(x, lamb=1600):
     K[i,j] = 1 if i == j or i == j + 2
     K[i,j] = -2 if i == j + 1
     K[i,j] = 0 otherwise
+
+    The one-sided or real-time HP filter uses only observations dated t or earlier
+    to filter the time series observation x[t]. For each observation x[t],
+    the two-sided HP filter is applied with hpfilter(x[t], lamb).
 
     References
     ----------
@@ -98,4 +108,13 @@ def hpfilter(x, lamb=1600):
     trend = spsolve(I+lamb*K.T.dot(K), x, use_umfpack=use_umfpack)
 
     cycle = x - trend
+    if not two_sided:
+        one_sided_cycle = [0, 0]
+        one_sided_trend = list(x[:2])
+        for t in range(3, nobs):
+            cycle_t, trend_t = hpfilter(x[:t], lamb=lamb, two_sided=True)
+            one_sided_cycle.append(cycle_t[-1])
+            one_sided_trend.append(trend_t[-1])
+        trend = one_sided_trend + [trend[-1]]
+        cycle = one_sided_cycle + [cycle[-1]]
     return pw.wrap(cycle, append='cycle'), pw.wrap(trend, append='trend')
