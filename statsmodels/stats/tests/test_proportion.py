@@ -915,6 +915,16 @@ def test_power_2indep():
                                                alternative='two-sided')
     assert_allclose(n2, n, rtol=1e-13)
 
+    # with nobs ratio != 1
+    # note Stata has reversed ratio compared to ours, see #8049
+    pwr_st = 0.7995659211532175
+    n = 154
+    res = power_proportions_2indep(-0.1, 0.2, n, ratio=2.)
+    assert_allclose(res.power, pwr_st, atol=1e-7)
+
+    n2 = samplesize_proportions_2indep_onetail(-0.1, 0.2, pwr_st, ratio=2)
+    assert_allclose(n2, n, rtol=1e-4)
+
 
 @pytest.mark.parametrize("count", np.arange(10, 90, 5))
 @pytest.mark.parametrize("method", list(probci_methods.keys()) + ["binom_test"])
