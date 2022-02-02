@@ -1836,7 +1836,7 @@ def _std_2prop_power(diff, p2, ratio=1, alpha=0.05, value=0):
     p2_alt = p2
     p1_alt = p2_alt + diff
 
-    std_null = _std_diff_prop(p1_vnull, p2_vnull)
+    std_null = _std_diff_prop(p1_vnull, p2_vnull, ratio=nobs_ratio)
     std_alt = _std_diff_prop(p1_alt, p2_alt, ratio=nobs_ratio)
     return p_pooled, std_null, std_alt
 
@@ -1892,16 +1892,16 @@ def power_proportions_2indep(diff, prop2, nobs1, ratio=1, alpha=0.05,
             pooled proportion, used for std_null
         std_null
             standard error of difference under the null hypothesis (without
-            sqrt(nobs))
+            sqrt(nobs1))
         std_alt
             standard error of difference under the alternative hypothesis
-            (without sqrt(nobs))
+            (without sqrt(nobs1))
     """
     # TODO: avoid possible circular import, check if needed
     from statsmodels.stats.power import normal_power_het
 
-    p_pooled, std_null, std_alt = _std_2prop_power(diff, prop2, ratio=1,
-                                                   alpha=0.05, value=0)
+    p_pooled, std_null, std_alt = _std_2prop_power(diff, prop2, ratio=ratio,
+                                                   alpha=alpha, value=value)
 
     pow_ = normal_power_het(diff, nobs1, alpha, std_null=std_null,
                             std_alternative=std_alt,
