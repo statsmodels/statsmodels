@@ -196,8 +196,8 @@ class TEGMM(GMM):
         return moms
 
 
-class RegAdjustment(object):
-    """estimate average treatment effect using regression adjustment
+class TreatmentEffect(object):
+    """Estimate average treatment effect under conditional independence
 
     The class is written for regressio adjustment estimator but now also
     includes methods to calculate POM and ATE for other estimators
@@ -232,14 +232,24 @@ class RegAdjustment(object):
 
     """
 
-    def __init__(self, model, treatment, **kwds):
+    def __init__(self, model, treatment, results_select=None, _cov_type="HC0",
+                 **kwds):
+        # Note _cov_type is only for preliminary estimators,
+        # cov in GMM alwasy corresponds to HC0
         self.treatment = np.asarray(treatment)
         self.treat_mask = treat_mask = (treatment == 1)
+
+        if results_select is not None:
+            self.results_select = results_select
+            self.prob_select = results_select.predict()
 
         self.model_pool = model
         endog = model.endog
         exog = model.exog
         self.nobs = endog.shape[0]
+        self._cov_type = _cov_type
+
+        results_select
         # no init keys are supported
         mod0 = model.__class__(endog[~treat_mask], exog[~treat_mask])
         self.result0 = mod0.fit(cov_type='HC0')
@@ -266,13 +276,14 @@ class RegAdjustment(object):
         """
         raise NotImplementedError
 
-    def ra(self):
+    def ra(self, return_results=True):
         """
         ATE and POM from regression adjustment
         """
-        return self.ate, self.tt0.effect, self.tt1.effect
+        if not return_results:
+            return self.ate, self.tt0.effect, self.tt1.effect
 
-    def aipw(self, prob=None):
+    def aipw(self, prob=None, return_results=True):
         """ATE and POM from double robust augmented inverse probability weighting
 
         replicates Stata's `teffects aipw`
@@ -282,17 +293,17 @@ class RegAdjustment(object):
         """
         nobs = self.nobs
         if prob is None:
-            raise NotImplementedError
-            # prob = ???   # need selection model or probability
+            prob = self.prob_select
         tind = self.treatment
         correct0 = (self.result0.resid / (1 - prob[tind == 0])).sum() / nobs
         correct1 = (self.result1.resid / (prob[tind == 1])).sum() / nobs
         tmean0 = self.tt0.effect + correct0
         tmean1 = self.tt1.effect + correct1
         ate = tmean1 - tmean0
-        return ate, tmean0, tmean1
+        if not return_results:
+            return ate, tmean0, tmean1
 
-    def aipw_wls(self, prob=None):
+    def aipw_wls(self, prob=None, return_results=True):
         """double robust augmented inverse probability weighting
 
         replicates Stata's `teffects aipw`
@@ -302,8 +313,7 @@ class RegAdjustment(object):
         """
         nobs = self.nobs
         if prob is None:
-            raise NotImplementedError
-            # prob = ???   # need selection model or probability
+            prob = self.prob_select
 
         endog = self.model_pool.endog
         exog = self.model_pool.exog
@@ -330,15 +340,18 @@ class RegAdjustment(object):
         tmean0 = mean0_ipw2 + correct0
         tmean1 = mean1_ipw2 + correct1
         ate = tmean1 - tmean0
-        return ate, tmean0, tmean1
+        if not return_results:
+            return ate, tmean0, tmean1
 
-    def ipw_ra(self, prob=None):
+    def ipw_ra(self, prob=None, return_results=True):
         """ATE and POM for ipweighted regression adjustment
 
         """
         treat_mask = self.treat_mask
         endog = self.model_pool.endog
         exog = self.model_pool.exog
+        if prob is None:
+            prob = self.prob_select
 
         mod0 = sm.WLS(endog[~treat_mask], exog[~treat_mask],
                       weights=1/(1 - prob[~treat_mask]))
@@ -350,7 +363,8 @@ class RegAdjustment(object):
         result1 = mod1.fit(cov_type='HC1')
         mean1_ipwra = result1.predict(exog).mean()
 
-        return mean1_ipwra - mean0_ipwra, mean0_ipwra, mean1_ipwra
+        if not return_results:
+            return mean1_ipwra - mean0_ipwra, mean0_ipwra, mean1_ipwra
 
     def summary(self):
         """summary table for regression adjustment ATE and POM, based on t_test
