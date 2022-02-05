@@ -61,11 +61,11 @@ class TestTEffects():
         res1 = np.asarray(res1).squeeze()
         assert_allclose(res1[:2], res2.table[:2, 0], rtol=1e-4)
 
-        if meth in ["ipw"]:
+        if meth in ["ipw", "aipw"]:
             res1 = getattr(teff, meth)(return_results=True)
-            assert_allclose(res1.params[:2], res2.table[:2, 0], rtol=1e-8)
-            assert_allclose(res1.bse[:2], res2.table[:2, 1], rtol=1e-4)
-            assert_allclose(res1.tvalues[:2], res2.table[:2, 2], rtol=1e-4)
+            assert_allclose(res1.params[:2], res2.table[:2, 0], rtol=1e-5)
+            assert_allclose(res1.bse[:2], res2.table[:2, 1], rtol=5e-4)
+            assert_allclose(res1.tvalues[:2], res2.table[:2, 2], rtol=5e-4)
             assert_allclose(res1.pvalues[:2], res2.table[:2, 3],
                             rtol=1e-4, atol=1e-15)
             ci = res1.conf_int()

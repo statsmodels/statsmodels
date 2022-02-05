@@ -29,6 +29,7 @@ could be loaded with webuse
 """
 
 import numpy as np
+from scipy.linalg import block_diag
 import statsmodels.api as sm
 
 from statsmodels.sandbox.regression.gmm import GMM
@@ -132,11 +133,13 @@ class TEGMMGeneric1(GMM):
 
     """
 
-    def __init__(self, endog, res_select, mom_outcome, exclude_tmoms=False):
+    def __init__(self, endog, res_select, mom_outcome, exclude_tmoms=False,
+                 **kwargs):
         super(TEGMMGeneric1, self).__init__(endog, None, None)
         self.res_select = res_select
         self.mom_outcome = mom_outcome
         self.exclude_tmoms = exclude_tmoms
+        self.__dict__.update(kwargs)
 
         # add xnames so it's not None
         # we don't have exog in init in this version
@@ -222,6 +225,78 @@ class TEGMM(GMM):
         momt = self.mom_outcome(tm, self.endog, tind, prob)  # weighted=True)
         moms = np.column_stack((momt,
                                 self.res_select.model.score_obs(p_tm)))
+        return moms
+
+
+class AIPWGMM(TEGMMGeneric1):
+    """ GMM for aipw treatment effect and potential outcome
+
+    uses unweighted outcome regression
+    """
+
+    def momcond(self, params):
+        ra = self.teff
+        treat_mask = ra.treat_mask
+        res_select = ra.results_select
+
+        add_pom0 = True
+        if add_pom0:
+            ppom = params[1]
+            mask = np.arange(len(params)) != 1
+            params = params[mask]
+
+        k = ra.result0.model.exog.shape[1]
+        pm = params[0]  # ATE parameter
+        p0 = params[1:k+1]
+        p1 = params[k+1:2*k+1]
+        ps = params[2*k+1:]
+        mod0 = ra.result0.model
+        mod1 = ra.result1.model
+        # reorder exog so it matches sub models by group
+        exog = np.concatenate((mod0.exog, mod1.exog), axis=0)
+        endog = np.concatenate((mod0.endog, mod1.endog), axis=0)
+
+        # todo: need weights in outcome models
+        prob_sel = np.asarray(res_select.model.predict(ps))
+
+        prob_sel = np.clip(prob_sel, 0.01, 0.99)
+
+        prob0 = prob_sel[~treat_mask]
+        prob1 = prob_sel[treat_mask]
+        prob = np.concatenate((prob0, prob1))
+
+        # outcome models by treatment unweighted
+        fitted0 = mod0.predict(p0, exog)
+        mom0 = mom_olsex(p0, model=mod0)
+
+        fitted1 = mod1.predict(p1, exog)
+        mom1 = mom_olsex(p1, model=mod1)
+
+        mom_outcome = block_diag(mom0, mom1)
+
+        # moments for target statistics, ATE and POM
+        tind = ra.treatment
+        tind = np.concatenate((tind[~treat_mask], tind[treat_mask]))
+        correct0 = (endog - fitted0) / (1 - prob) * (1 - tind)
+        correct1 = (endog - fitted1) / prob * tind
+
+        tmean0 = fitted0 + correct0
+        tmean1 = fitted1 + correct1
+        ate = tmean1 - tmean0
+
+        mm = ate - pm
+        # mf = np.concatenate((fitted0, fitted1)) - pm
+        if add_pom0:
+            mpom = tmean0 - ppom
+            mm = np.column_stack((mm, mpom))
+
+        # Note: res_select has original data order,
+        # mom_outcome and mm use grouped observations
+        mom_select = res_select.model.score_obs(ps)
+        mom_select = np.concatenate((mom_select[~treat_mask],
+                                     mom_select[treat_mask]), axis=0)
+
+        moms = np.column_stack((mm, mom_outcome, mom_select))
         return moms
 
 
@@ -348,6 +423,23 @@ class TreatmentEffect(object):
         ate = tmean1 - tmean0
         if not return_results:
             return ate, tmean0, tmean1
+
+        endog = self.model_pool.endog
+        p2_aipw = np.asarray([ate, tmean0]).squeeze()
+
+        mag_aipw1 = AIPWGMM(endog, self.results_select, mom_ols_te, teff=self)
+        start_params = np.concatenate((
+            p2_aipw,
+            self.result0.params, self.result1.params,
+            self.results_select.params))
+        res_gmm = mag_aipw1.fit(
+            start_params=start_params,
+            inv_weights=np.eye(len(start_params)),
+            optim_method='nm',
+            optim_args={"maxiter": 5000},
+            maxiter=1)
+
+        return res_gmm
 
     def aipw_wls(self, prob=None, return_results=True):
         """double robust augmented inverse probability weighting
