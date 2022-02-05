@@ -77,19 +77,48 @@ def mom_ols(tm, endog, tind, prob, weighted=True):
     return mom
 
 
+def mom_ols_te(tm, endog, tind, prob, weighted=True):
+    """
+    moment condition for average treatment mean based on OLS dummy regression
+
+    first moment is ATE
+    second moment is POM0  (control)
+
+    """
+    w = tind / prob + (1-tind) / (1 - prob)
+
+    treat_ind = np.column_stack((tind, np.ones(len(tind))))
+    mom = (w * (endog - treat_ind.dot(tm)))[:, None] * treat_ind
+
+    return mom
+
+
+def mom_olsex(params, model=None, exog=None, scale=None):
+    exog = exog if exog is not None else model.exog
+    fitted = model.predict(params, exog)
+    resid = model.endog - fitted
+    if scale is not None:
+        resid /= scale
+    mom = resid[:, None] * exog
+    return mom
+
+
 def ate_ipw(endog, tind, prob, weighted=True):
     """average treatment effect based on basic inverse propensity weighting.
 
     """
     if weighted:
         w1 = (tind / prob)
-        w2 = (1. - tind) / (1. - prob)
-        wdiff = w1 / w1.mean() - w2 / w2.mean()
+        w0 = (1. - tind) / (1. - prob)
+        w0 /= w0.mean()
+        w1 /= w1.mean()
+        wdiff = w1 - w0
+        # wdiff = w1 / w1.mean() - w0 / w0.mean()
         # wdiff = w1 / w1.sum() - w2 / w2.sum()
     else:
         wdiff = (tind / prob) - (1 - tind) / (1 - prob)
 
-    return (endog * wdiff).mean()
+    return (endog * wdiff).mean(), (endog * w0).mean(), (endog * w1).mean()
 
 
 class TEGMMGeneric1(GMM):
@@ -275,6 +304,23 @@ class TreatmentEffect(object):
 
         """
         raise NotImplementedError
+
+    def ipw(self, prob=None, return_results=True):
+        endog = self.model_pool.endog
+        tind = self.treatment
+        if prob is None:
+            prob = self.prob_select
+        res_ipw = ate_ipw(endog, tind, prob, weighted=True)
+
+        if not return_results:
+            return res_ipw
+
+        gmm = TEGMMGeneric1(endog, self.results_select, mom_ols_te)
+        start_params = np.concatenate((res_ipw[:2],
+                                       self.results_select.params))
+        res_gmm = gmm.fit(start_params=start_params, optim_method='nm',
+                          inv_weights=np.eye(len(start_params)), maxiter=1)
+        return res_gmm
 
     def ra(self, return_results=True):
         """
