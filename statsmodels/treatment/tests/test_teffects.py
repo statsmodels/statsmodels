@@ -61,17 +61,32 @@ class TestTEffects():
         res1 = np.asarray(res1).squeeze()
         assert_allclose(res1[:2], res2.table[:2, 0], rtol=1e-4)
 
-        if meth in ["ipw", "aipw"]:
+        if meth in ["ipw", "aipw", "aipw_wls", "ra", "ipw_ra"]:
             res1 = getattr(teff, meth)(return_results=True)
             assert_allclose(res1.params[:2], res2.table[:2, 0], rtol=1e-5)
-            assert_allclose(res1.bse[:2], res2.table[:2, 1], rtol=5e-4)
-            assert_allclose(res1.tvalues[:2], res2.table[:2, 2], rtol=5e-4)
+            assert_allclose(res1.bse[:2], res2.table[:2, 1], rtol=1e-3)
+            assert_allclose(res1.tvalues[:2], res2.table[:2, 2], rtol=1e-3)
             assert_allclose(res1.pvalues[:2], res2.table[:2, 3],
                             rtol=1e-4, atol=1e-15)
             ci = res1.conf_int()
-            assert_allclose(ci[:2, 0], res2.table[:2, 4], rtol=1e-4)
-            assert_allclose(ci[:2, 1], res2.table[:2, 5], rtol=1e-4)
+            assert_allclose(ci[:2, 0], res2.table[:2, 4], rtol=5e-4)
+            assert_allclose(ci[:2, 1], res2.table[:2, 5], rtol=5e-4)
 
-            # all GMM params
-            # constant is in different position
-            # assert_allclose(res1.params, res2.table[:, 0], rtol=1e-4)
+            # test all GMM params
+            # constant is in different position in Stata, `idx` rearanges
+            k_p = len(res1.params)
+            if k_p == 8:
+                # IPW, no outcome regression
+                idx = [0, 1, 7, 2, 3, 4, 5, 6]
+            elif k_p == 18:
+                idx = [0, 1, 6, 2, 3, 4, 5, 11, 7, 8, 9, 10, 17, 12, 13, 14,
+                       15, 16]
+            elif k_p == 12:
+                # RA, no selection regression
+                idx = [0, 1, 6, 2, 3, 4, 5, 11, 7, 8, 9, 10]
+            else:
+                idx = np.arange(k_p)
+
+            # TODO: check if improved optimization brings values closer
+            assert_allclose(res1.params, res2.table[idx, 0], rtol=1e-4)
+            assert_allclose(res1.bse, res2.table[idx, 1], rtol=0.05)

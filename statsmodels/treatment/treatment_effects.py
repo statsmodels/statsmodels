@@ -300,6 +300,176 @@ class AIPWGMM(TEGMMGeneric1):
         return moms
 
 
+class AIPWWLSGMM(TEGMMGeneric1):
+    """ GMM for ipwra treatment effect and potential outcome
+    """
+
+    def momcond(self, params):
+        ra = self.teff
+        treat_mask = ra.treat_mask
+        res_select = ra.results_select
+
+        add_pom0 = True
+        if add_pom0:
+            ppom = params[1]
+            mask = np.arange(len(params)) != 1
+            params = params[mask]
+
+        k = ra.result0.model.exog.shape[1]
+        pm = params[0]  # ATE parameter
+        p0 = params[1:k+1]
+        p1 = params[k+1:2*k+1]
+        ps = params[-6:]
+        mod0 = ra.result0.model
+        mod1 = ra.result1.model
+        # reorder exog so it matches sub models by group
+        exog = np.concatenate((mod0.exog, mod1.exog), axis=0)
+        endog = np.concatenate((mod0.endog, mod1.endog), axis=0)
+
+        # todo: need weights in outcome models
+        prob_sel = np.asarray(res_select.model.predict(ps))
+
+        prob_sel = np.clip(prob_sel, 0.001, 0.999)
+
+        prob0 = prob_sel[~treat_mask]
+        prob1 = prob_sel[treat_mask]
+        prob = np.concatenate((prob0, prob1))
+
+        tind = 0
+        ww0 = (1 - tind) / (1 - prob0) * ((1 - tind) / (1 - prob0) - 1)
+        tind = 1
+        ww1 = tind / prob1 * (tind / prob1 - 1)
+
+        # outcome models by treatment using IPW weights
+        fitted0 = mod0.predict(p0, exog)
+        mom0 = mom_olsex(p0, model=mod0) * ww0[:, None]
+
+        fitted1 = mod1.predict(p1, exog)
+        mom1 = mom_olsex(p1, model=mod1) * ww1[:, None]
+
+        mom_outcome = block_diag(mom0, mom1)
+
+        # moments for target statistics, ATE and POM
+        tind = ra.treatment
+        tind = np.concatenate((tind[~treat_mask], tind[treat_mask]))
+
+        correct0 = (endog - fitted0) / (1 - prob) * (1 - tind)
+        correct1 = (endog - fitted1) / prob * tind
+
+        tmean0 = fitted0 + correct0
+        tmean1 = fitted1 + correct1
+        ate = tmean1 - tmean0
+
+        mm = ate - pm
+        # mf = np.concatenate((fitted0, fitted1)) - pm
+        if add_pom0:
+            mpom = tmean0 - ppom
+            mm = np.column_stack((mm, mpom))
+
+        # Note: res_select has original data order,
+        # mom_outcome and mm use grouped observations
+        mom_select = res_select.model.score_obs(ps)
+        mom_select = np.concatenate((mom_select[~treat_mask],
+                                     mom_select[treat_mask]), axis=0)
+
+        moms = np.column_stack((mm, mom_outcome, mom_select))
+        return moms
+
+
+class RAGMM(TEGMMGeneric1):
+
+    def momcond(self, params):
+        ra = self.teff
+
+        add_pom0 = True
+        if add_pom0:
+            ppom = params[1]
+            mask = np.arange(len(params)) != 1
+            params = params[mask]
+
+        k = ra.result0.model.exog.shape[1]
+        pm = params[0]
+        p0 = params[1:k+1]
+        p1 = params[-k:]
+        mod0 = ra.result0.model
+        mod1 = ra.result1.model
+        exog = np.concatenate((mod0.exog, mod1.exog), axis=0)
+
+        fitted0 = mod0.predict(p0, exog)
+        mom0 = mom_olsex(p0, model=mod0)
+
+        fitted1 = mod1.predict(p1, exog)
+        mom1 = mom_olsex(p1, model=mod1)
+
+        momout = block_diag(mom0, mom1)
+
+        mm = fitted1 - fitted0 - pm
+        # mf = np.concatenate((fitted0, fitted1)) - pm
+        if add_pom0:
+            mpom = fitted0 - ppom
+            mm = np.column_stack((mm, mpom))
+
+        moms = np.column_stack((mm, momout))
+        return moms
+
+
+class IPWRAGMM(TEGMMGeneric1):
+    """ GMM for ipwra treatment effect and potential outcome
+    """
+
+    def momcond(self, params):
+        ra = self.teff
+        treat_mask = ra.treat_mask
+        res_select = ra.results_select
+
+        add_pom0 = True
+        if add_pom0:
+            ppom = params[1]
+            mask = np.arange(len(params)) != 1
+            params = params[mask]
+
+        k = ra.result0.model.exog.shape[1]
+        pm = params[0]  # ATE parameter
+        p0 = params[1:k+1]
+        p1 = params[k+1:2*k+1]
+        ps = params[-6:]
+        mod0 = ra.result0.model
+        mod1 = ra.result1.model
+        # reorder exog so it matches sub models by group
+        exog = np.concatenate((mod0.exog, mod1.exog), axis=0)
+
+        # todo: need weights in outcome models
+        prob_sel = np.asarray(res_select.model.predict(ps))
+        prob_sel = np.clip(prob_sel, 0.001, 0.999)
+        prob0 = prob_sel[~treat_mask]
+        prob1 = prob_sel[treat_mask]
+
+        # outcome models by treatment using IPW weights
+        fitted0 = mod0.predict(p0, exog)
+        mom0 = mom_olsex(p0, model=mod0) / (1 - prob0[:, None])
+
+        fitted1 = mod1.predict(p1, exog)
+        mom1 = mom_olsex(p1, model=mod1) / prob1[:, None]
+
+        mom_outcome = block_diag(mom0, mom1)
+
+        # moments for target statistics, ATE and POM
+        mm = fitted1 - fitted0 - pm
+        # mf = np.concatenate((fitted0, fitted1)) - pm
+        if add_pom0:
+            mpom = fitted0 - ppom
+            mm = np.column_stack((mm, mpom))
+
+        # Note: res_select has original data order,
+        # mom_outcome and mm use grouped observations
+        mom_select = res_select.model.score_obs(ps)
+        mom_select = np.concatenate((mom_select[~treat_mask],
+                                     mom_select[treat_mask]), axis=0)
+
+        moms = np.column_stack((mm, mom_outcome, mom_select))
+        return moms
+
+
 class TreatmentEffect(object):
     """Estimate average treatment effect under conditional independence
 
@@ -340,6 +510,7 @@ class TreatmentEffect(object):
                  **kwds):
         # Note _cov_type is only for preliminary estimators,
         # cov in GMM alwasy corresponds to HC0
+        self.__dict__.update(kwds)  # currently not used
         self.treatment = np.asarray(treatment)
         self.treat_mask = treat_mask = (treatment == 1)
 
@@ -403,6 +574,16 @@ class TreatmentEffect(object):
         """
         if not return_results:
             return self.ate, self.tt0.effect, self.tt1.effect
+
+        endog = self.model_pool.endog
+        mod_gmm = RAGMM(endog, self.results_select, mom_ols_te, teff=self)
+        start_params = np.concatenate((
+            self.ate, self.tt0.effect,
+            self.result0.params,
+            self.result1.params))
+        res_gmm = mod_gmm.fit(start_params=start_params,
+                              inv_weights=np.eye(len(start_params)))
+        return res_gmm
 
     def aipw(self, prob=None, return_results=True):
         """ATE and POM from double robust augmented inverse probability weighting
@@ -481,6 +662,23 @@ class TreatmentEffect(object):
         if not return_results:
             return ate, tmean0, tmean1
 
+        p2_aipw_wls = np.asarray([ate, tmean0]).squeeze()
+
+        # GMM
+        mod_gmm = AIPWWLSGMM(endog, self.results_select, mom_ols_te, teff=self)
+        start_params = np.concatenate((
+            p2_aipw_wls,
+            result0.params,
+            result1.params,
+            self.results_select.params))
+        res_gmm = mod_gmm.fit(
+            start_params=start_params,
+            inv_weights=np.eye(len(start_params)),
+            optim_method='nm',
+            optim_args={"maxiter": 5000},
+            maxiter=0)
+        return res_gmm
+
     def ipw_ra(self, prob=None, return_results=True):
         """ATE and POM for ipweighted regression adjustment
 
@@ -503,6 +701,24 @@ class TreatmentEffect(object):
 
         if not return_results:
             return mean1_ipwra - mean0_ipwra, mean0_ipwra, mean1_ipwra
+
+        # GMM
+        mod_gmm = IPWRAGMM(endog, self.results_select, mom_ols_te, teff=self)
+        start_params = np.concatenate((
+            [mean1_ipwra - mean0_ipwra, mean0_ipwra],
+            result0.params,
+            result1.params,
+            np.asarray(self.results_select.params)
+            ))
+        res_gmm = mod_gmm.fit(
+            start_params=start_params,
+            inv_weights=np.eye(len(start_params)),
+            optim_method='nm',
+            optim_args={"maxiter": 2000},
+            maxiter=1
+            )
+
+        return res_gmm
 
     def summary(self):
         """summary table for regression adjustment ATE and POM, based on t_test
