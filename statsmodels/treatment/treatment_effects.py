@@ -33,6 +33,7 @@ from scipy.linalg import block_diag
 import statsmodels.api as sm
 
 from statsmodels.sandbox.regression.gmm import GMM
+from statsmodels.stats.contrast import ContrastResults
 
 
 def mom_ate(te, endog, tind, prob, weighted=True):
@@ -108,16 +109,13 @@ def ate_ipw(endog, tind, prob, weighted=True):
     """average treatment effect based on basic inverse propensity weighting.
 
     """
+    w1 = (tind / prob)
+    w0 = (1. - tind) / (1. - prob)
     if weighted:
-        w1 = (tind / prob)
-        w0 = (1. - tind) / (1. - prob)
         w0 /= w0.mean()
         w1 /= w1.mean()
-        wdiff = w1 - w0
-        # wdiff = w1 / w1.mean() - w0 / w0.mean()
-        # wdiff = w1 / w1.sum() - w2 / w2.sum()
-    else:
-        wdiff = (tind / prob) - (1 - tind) / (1 - prob)
+
+    wdiff = w1 - w0
 
     return (endog * wdiff).mean(), (endog * w0).mean(), (endog * w1).mean()
 
@@ -136,7 +134,7 @@ class TEGMMGeneric1(GMM):
     def __init__(self, endog, res_select, mom_outcome, exclude_tmoms=False,
                  **kwargs):
         super(TEGMMGeneric1, self).__init__(endog, None, None)
-        self.res_select = res_select
+        self.results_select = res_select
         self.mom_outcome = mom_outcome
         self.exclude_tmoms = exclude_tmoms
         self.__dict__.update(kwargs)
@@ -154,7 +152,7 @@ class TEGMMGeneric1(GMM):
 
         if exclude_tmoms:
             # fittedvalues is still linpred
-            self.prob = self.res_select.predict()
+            self.prob = self.results_select.predict()
         else:
             self.prob = None
 
@@ -163,19 +161,19 @@ class TEGMMGeneric1(GMM):
         tm = params[:k_outcome]
         p_tm = params[k_outcome:]
 
-        tind = self.res_select.model.endog
+        tind = self.results_select.model.endog
 
         if self.exclude_tmoms:
             prob = self.prob
         else:
-            prob = self.res_select.model.predict(p_tm)
+            prob = self.results_select.model.predict(p_tm)
 
         moms_list = []
         mom_o = self.mom_outcome(tm, self.endog, tind, prob, weighted=True)
         moms_list.append(mom_o)
 
         if not self.exclude_tmoms:
-            mom_t = self.res_select.model.score_obs(p_tm)
+            mom_t = self.results_select.model.score_obs(p_tm)
             moms_list.append(mom_t)
 
         moms = np.column_stack(moms_list)
@@ -186,12 +184,12 @@ class TEGMMGeneric1(GMM):
         tm = params[:k_outcome]
         p_tm = params[k_outcome:]
 
-        tind = self.res_select.model.endog
-        prob = self.res_select.model.predict(p_tm)
+        tind = self.results_select.model.endog
+        prob = self.results_select.model.predict(p_tm)
 
         momt = self.mom_outcome(tm, self.endog, tind, prob, weighted=True)
         moms = np.column_stack((momt,
-                                self.res_select.model.score_obs(p_tm)))
+                                self.results_select.model.score_obs(p_tm)))
         return moms
 
 
@@ -208,7 +206,7 @@ class TEGMM(GMM):
 
     def __init__(self, endog, res_select, mom_outcome):
         super(TEGMM, self).__init__(endog, None, None)
-        self.res_select = res_select
+        self.results_select = res_select
         self.mom_outcome = mom_outcome
 
         # add xnames so it's not None
@@ -220,15 +218,15 @@ class TEGMM(GMM):
         tm = params[:2]
         p_tm = params[2:]
 
-        tind = self.res_select.model.endog
-        prob = self.res_select.model.predict(p_tm)
+        tind = self.results_select.model.endog
+        prob = self.results_select.model.predict(p_tm)
         momt = self.mom_outcome(tm, self.endog, tind, prob)  # weighted=True)
         moms = np.column_stack((momt,
-                                self.res_select.model.score_obs(p_tm)))
+                                self.results_select.model.score_obs(p_tm)))
         return moms
 
 
-class AIPWGMM(TEGMMGeneric1):
+class _AIPWGMM(TEGMMGeneric1):
     """ GMM for aipw treatment effect and potential outcome
 
     uses unweighted outcome regression
@@ -245,13 +243,13 @@ class AIPWGMM(TEGMMGeneric1):
             mask = np.arange(len(params)) != 1
             params = params[mask]
 
-        k = ra.result0.model.exog.shape[1]
+        k = ra.results0.model.exog.shape[1]
         pm = params[0]  # ATE parameter
         p0 = params[1:k+1]
         p1 = params[k+1:2*k+1]
         ps = params[2*k+1:]
-        mod0 = ra.result0.model
-        mod1 = ra.result1.model
+        mod0 = ra.results0.model
+        mod1 = ra.results1.model
         # reorder exog so it matches sub models by group
         exog = np.concatenate((mod0.exog, mod1.exog), axis=0)
         endog = np.concatenate((mod0.endog, mod1.endog), axis=0)
@@ -300,8 +298,10 @@ class AIPWGMM(TEGMMGeneric1):
         return moms
 
 
-class AIPWWLSGMM(TEGMMGeneric1):
-    """ GMM for ipwra treatment effect and potential outcome
+class _AIPWWLSGMM(TEGMMGeneric1):
+    """ GMM for aipw-wls treatment effect and potential outcome
+
+    uses weighted outcome regression
     """
 
     def momcond(self, params):
@@ -315,13 +315,13 @@ class AIPWWLSGMM(TEGMMGeneric1):
             mask = np.arange(len(params)) != 1
             params = params[mask]
 
-        k = ra.result0.model.exog.shape[1]
+        k = ra.results0.model.exog.shape[1]
         pm = params[0]  # ATE parameter
         p0 = params[1:k+1]
         p1 = params[k+1:2*k+1]
         ps = params[-6:]
-        mod0 = ra.result0.model
-        mod1 = ra.result1.model
+        mod0 = ra.results0.model
+        mod1 = ra.results1.model
         # reorder exog so it matches sub models by group
         exog = np.concatenate((mod0.exog, mod1.exog), axis=0)
         endog = np.concatenate((mod0.endog, mod1.endog), axis=0)
@@ -376,7 +376,11 @@ class AIPWWLSGMM(TEGMMGeneric1):
         return moms
 
 
-class RAGMM(TEGMMGeneric1):
+class _RAGMM(TEGMMGeneric1):
+    """GMM for regression adjustment treatment effect and potential outcome
+
+    uses unweighted outcome regression
+    """
 
     def momcond(self, params):
         ra = self.teff
@@ -387,12 +391,12 @@ class RAGMM(TEGMMGeneric1):
             mask = np.arange(len(params)) != 1
             params = params[mask]
 
-        k = ra.result0.model.exog.shape[1]
+        k = ra.results0.model.exog.shape[1]
         pm = params[0]
         p0 = params[1:k+1]
         p1 = params[-k:]
-        mod0 = ra.result0.model
-        mod1 = ra.result1.model
+        mod0 = ra.results0.model
+        mod1 = ra.results1.model
         exog = np.concatenate((mod0.exog, mod1.exog), axis=0)
 
         fitted0 = mod0.predict(p0, exog)
@@ -413,7 +417,7 @@ class RAGMM(TEGMMGeneric1):
         return moms
 
 
-class IPWRAGMM(TEGMMGeneric1):
+class _IPWRAGMM(TEGMMGeneric1):
     """ GMM for ipwra treatment effect and potential outcome
     """
 
@@ -428,13 +432,13 @@ class IPWRAGMM(TEGMMGeneric1):
             mask = np.arange(len(params)) != 1
             params = params[mask]
 
-        k = ra.result0.model.exog.shape[1]
+        k = ra.results0.model.exog.shape[1]
         pm = params[0]  # ATE parameter
         p0 = params[1:k+1]
         p1 = params[k+1:2*k+1]
         ps = params[-6:]
-        mod0 = ra.result0.model
-        mod1 = ra.result1.model
+        mod0 = ra.results0.model
+        mod1 = ra.results1.model
         # reorder exog so it matches sub models by group
         exog = np.concatenate((mod0.exog, mod1.exog), axis=0)
 
@@ -470,13 +474,33 @@ class IPWRAGMM(TEGMMGeneric1):
         return moms
 
 
+class TreatmentEffectResults(ContrastResults):
+
+    def __init__(self, teff, results_gmm, method, **kwds):
+
+        k_params = len(results_gmm.params)
+        constraints = np.zeros((3, k_params))
+        constraints[0, 0] = 1
+        constraints[1, 1] = 1
+        constraints[2, :2] = [1, 1]
+        tt = results_gmm.t_test(constraints)
+        self.__dict__.update(tt.__dict__)
+        self.teff = teff
+        self.results_gmm = results_gmm
+        self.method = method
+        # TODO: make those explicit?
+        self.__dict__.update(kwds)
+
+        self.c_names = ["ATE", "POM0", "POM1"]
+
+
 class TreatmentEffect(object):
     """Estimate average treatment effect under conditional independence
 
-    The class is written for regressio adjustment estimator but now also
-    includes methods to calculate POM and ATE for other estimators
-    (no standard errors for those yet, summary is only for RA).
-
+    This class estimates treatment effect and potential outcome using 5
+    different methods, ipw, ra, aipw, aipw-wls, ipw-ra.
+    Standard errors and inference are based on the joint GMM representation of
+    selection or treatment model, outcome model and effect functions.
 
     Parameters
     ----------
@@ -484,25 +508,20 @@ class TreatmentEffect(object):
         The model class should contain endog and exog for the full model.
     treatment : ndarray
         indicator array for observations with treatment (1) or without (0)
+    results_select : results instance
+        The results instance for the treatment or selection model.
+    _cov_type : "HC0"
+        Internal keyword. The keyword oes not affect GMMResults which always
+        corresponds to HC0 standard errors.
     kwds : keyword arguments
         currently not used
 
     Notes
     -----
-    The results are attached after creating the instance.
-    Calling the `summary` will return a string with an overview of the results.
-
-    This is currently a basic implementation targeting OLS
-    Other models will need new methods for the calculations, e.g. nonlinear
-    prediction standard errors, or we need to use a more generic method to
-    calculate ATE.
-
-    This currently only looks at the outcome model and takes the probabilities
-    of the selection model (propensity score) as argument in methods.
-
-    Other limitations
-    Does not use any `model.__init__` keywords.
-
+    The outcome model is currently limited to a linear model based on OLS or
+    WLS.
+    Other outcome models, like Logit and Poisson, will become available in
+    future.
 
     """
 
@@ -527,18 +546,18 @@ class TreatmentEffect(object):
         results_select
         # no init keys are supported
         mod0 = model.__class__(endog[~treat_mask], exog[~treat_mask])
-        self.result0 = mod0.fit(cov_type='HC0')
+        self.results0 = mod0.fit(cov_type='HC0')
         mod1 = model.__class__(endog[treat_mask], exog[treat_mask])
-        self.result1 = mod1.fit(cov_type='HC0')
-        self.predict_mean0 = self.model_pool.predict(self.result0.params
+        self.results1 = mod1.fit(cov_type='HC0')
+        self.predict_mean0 = self.model_pool.predict(self.results0.params
                                                      ).mean()
-        self.predict_mean1 = self.model_pool.predict(self.result1.params
+        self.predict_mean1 = self.model_pool.predict(self.results1.params
                                                      ).mean()
 
         # this only works for linear model, need margins for discrete
         exog_mean = exog.mean(0)
-        self.tt0 = self.result0.t_test(exog_mean)
-        self.tt1 = self.result1.t_test(exog_mean)
+        self.tt0 = self.results0.t_test(exog_mean)
+        self.tt1 = self.results1.t_test(exog_mean)
         self.ate = self.tt1.effect - self.tt0.effect
         self.se_ate = np.sqrt(self.tt1.sd**2 + self.tt0.sd**2)
 
@@ -551,11 +570,10 @@ class TreatmentEffect(object):
         """
         raise NotImplementedError
 
-    def ipw(self, prob=None, return_results=True):
+    def ipw(self, return_results=True, disp=False):
         endog = self.model_pool.endog
         tind = self.treatment
-        if prob is None:
-            prob = self.prob_select
+        prob = self.prob_select
         res_ipw = ate_ipw(endog, tind, prob, weighted=True)
 
         if not return_results:
@@ -565,27 +583,37 @@ class TreatmentEffect(object):
         start_params = np.concatenate((res_ipw[:2],
                                        self.results_select.params))
         res_gmm = gmm.fit(start_params=start_params, optim_method='nm',
-                          inv_weights=np.eye(len(start_params)), maxiter=1)
-        return res_gmm
+                          inv_weights=np.eye(len(start_params)), maxiter=1,
+                          optim_args={"maxiter": 5000, "disp": disp},
+                          )
 
-    def ra(self, return_results=True):
+        res = TreatmentEffectResults(self, res_gmm, "IPW",
+                                     start_params=start_params)
+        return res
+
+    def ra(self, return_results=True, disp=False):
         """
         ATE and POM from regression adjustment
         """
         if not return_results:
-            return self.ate, self.tt0.effect, self.tt1.effect
+            # Note: currently 1-d arrays, get scalar
+            return self.ate[0], self.tt0.effect[0], self.tt1.effect[0]
 
         endog = self.model_pool.endog
-        mod_gmm = RAGMM(endog, self.results_select, mom_ols_te, teff=self)
+        mod_gmm = _RAGMM(endog, self.results_select, mom_ols_te, teff=self)
         start_params = np.concatenate((
             self.ate, self.tt0.effect,
-            self.result0.params,
-            self.result1.params))
+            self.results0.params,
+            self.results1.params))
         res_gmm = mod_gmm.fit(start_params=start_params,
-                              inv_weights=np.eye(len(start_params)))
-        return res_gmm
+                              inv_weights=np.eye(len(start_params)),
+                              optim_args={"maxiter": 5000, "disp": disp},
+                              )
+        res = TreatmentEffectResults(self, res_gmm, "IPW",
+                                     start_params=start_params)
+        return res
 
-    def aipw(self, prob=None, return_results=True):
+    def aipw(self, return_results=True, disp=False):
         """ATE and POM from double robust augmented inverse probability weighting
 
         replicates Stata's `teffects aipw`
@@ -594,35 +622,37 @@ class TreatmentEffect(object):
 
         """
         nobs = self.nobs
-        if prob is None:
-            prob = self.prob_select
+        prob = self.prob_select
         tind = self.treatment
-        correct0 = (self.result0.resid / (1 - prob[tind == 0])).sum() / nobs
-        correct1 = (self.result1.resid / (prob[tind == 1])).sum() / nobs
+        correct0 = (self.results0.resid / (1 - prob[tind == 0])).sum() / nobs
+        correct1 = (self.results1.resid / (prob[tind == 1])).sum() / nobs
         tmean0 = self.tt0.effect + correct0
         tmean1 = self.tt1.effect + correct1
         ate = tmean1 - tmean0
         if not return_results:
-            return ate, tmean0, tmean1
+            # Note: currently 1-d arrays, get scalar
+            return ate[0], tmean0[0], tmean1[0]
 
         endog = self.model_pool.endog
         p2_aipw = np.asarray([ate, tmean0]).squeeze()
 
-        mag_aipw1 = AIPWGMM(endog, self.results_select, mom_ols_te, teff=self)
+        mag_aipw1 = _AIPWGMM(endog, self.results_select, mom_ols_te, teff=self)
         start_params = np.concatenate((
             p2_aipw,
-            self.result0.params, self.result1.params,
+            self.results0.params, self.results1.params,
             self.results_select.params))
         res_gmm = mag_aipw1.fit(
             start_params=start_params,
             inv_weights=np.eye(len(start_params)),
             optim_method='nm',
-            optim_args={"maxiter": 5000},
+            optim_args={"maxiter": 5000, "disp": disp},
             maxiter=1)
 
-        return res_gmm
+        res = TreatmentEffectResults(self, res_gmm, "IPW",
+                                     start_params=start_params)
+        return res
 
-    def aipw_wls(self, prob=None, return_results=True):
+    def aipw_wls(self, return_results=True, disp=False):
         """double robust augmented inverse probability weighting
 
         replicates Stata's `teffects aipw`
@@ -631,8 +661,7 @@ class TreatmentEffect(object):
 
         """
         nobs = self.nobs
-        if prob is None:
-            prob = self.prob_select
+        prob = self.prob_select
 
         endog = self.model_pool.endog
         exog = self.model_pool.exog
@@ -665,7 +694,8 @@ class TreatmentEffect(object):
         p2_aipw_wls = np.asarray([ate, tmean0]).squeeze()
 
         # GMM
-        mod_gmm = AIPWWLSGMM(endog, self.results_select, mom_ols_te, teff=self)
+        mod_gmm = _AIPWWLSGMM(endog, self.results_select, mom_ols_te,
+                              teff=self)
         start_params = np.concatenate((
             p2_aipw_wls,
             result0.params,
@@ -675,19 +705,20 @@ class TreatmentEffect(object):
             start_params=start_params,
             inv_weights=np.eye(len(start_params)),
             optim_method='nm',
-            optim_args={"maxiter": 5000},
+            optim_args={"maxiter": 5000, "disp": disp},
             maxiter=0)
-        return res_gmm
+        res = TreatmentEffectResults(self, res_gmm, "IPW",
+                                     start_params=start_params)
+        return res
 
-    def ipw_ra(self, prob=None, return_results=True):
-        """ATE and POM for ipweighted regression adjustment
+    def ipw_ra(self, return_results=True, disp=False):
+        """ATE and POM for ip-weighted regression adjustment
 
         """
         treat_mask = self.treat_mask
         endog = self.model_pool.endog
         exog = self.model_pool.exog
-        if prob is None:
-            prob = self.prob_select
+        prob = self.prob_select
 
         mod0 = sm.WLS(endog[~treat_mask], exog[~treat_mask],
                       weights=1/(1 - prob[~treat_mask]))
@@ -703,7 +734,7 @@ class TreatmentEffect(object):
             return mean1_ipwra - mean0_ipwra, mean0_ipwra, mean1_ipwra
 
         # GMM
-        mod_gmm = IPWRAGMM(endog, self.results_select, mom_ols_te, teff=self)
+        mod_gmm = _IPWRAGMM(endog, self.results_select, mom_ols_te, teff=self)
         start_params = np.concatenate((
             [mean1_ipwra - mean0_ipwra, mean0_ipwra],
             result0.params,
@@ -714,18 +745,10 @@ class TreatmentEffect(object):
             start_params=start_params,
             inv_weights=np.eye(len(start_params)),
             optim_method='nm',
-            optim_args={"maxiter": 2000},
+            optim_args={"maxiter": 2000, "disp": disp},
             maxiter=1
             )
 
-        return res_gmm
-
-    def summary(self):
-        """summary table for regression adjustment ATE and POM, based on t_test
-
-        """
-        txt = [str(self.tt0.summary(title='POM Treatment 0'))]
-        txt.append(str(self.tt1.summary(title='POM Treatment 1')))
-        txt.append('ATE = %10.4f   std.dev. = %10.4f' % (
-            self.ate, self.se_ate))
-        return '\n'.join(txt)
+        res = TreatmentEffectResults(self, res_gmm, "IPW",
+                                     start_params=start_params)
+        return res

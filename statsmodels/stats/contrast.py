@@ -62,6 +62,10 @@ class ContrastResults:
         # should we return python scalar?
         self.pvalue = np.squeeze(self.pvalue)
 
+        if self.effect is not None:
+            self.c_names = ['c%d' % ii for ii in range(len(self.effect))]
+        else:
+            self.c_names = None
 
     def conf_int(self, alpha=0.05):
         """
@@ -131,7 +135,7 @@ class ContrastResults:
             use_t = (self.distribution == 't')
             yname='constraints' # Not used in params_frame
             if xname is None:
-                xname = ['c%d' % ii for ii in range(len(self.effect))]
+                xname = self.c_names
             from statsmodels.iolib.summary import summary_params
             pvalues = np.atleast_1d(self.pvalue)
             summ = summary_params((self, self.effect, self.sd, self.statistic,
@@ -164,7 +168,7 @@ class ContrastResults:
             use_t = (self.distribution == 't')
             yname='constraints'  # Not used in params_frame
             if xname is None:
-                xname = ['c%d' % ii for ii in range(len(self.effect))]
+                xname = self.c_names
             from statsmodels.iolib.summary import summary_params_frame
             summ = summary_params_frame((self, self.effect, self.sd,
                                          self.statistic,self.pvalue,
