@@ -41,6 +41,9 @@
   - img: ../_static/images/regression_plots.png
     target: notebooks/generated/regression_plots.html
     text: Regression Plots
+  - img: ../_static/images/linear_regression_diagnostics_plots.png
+    target: notebooks/generated/linear_regression_diagnostics_plots.html
+    text: Linear Regression Diagnostic
   - img: ../_static/images/categorical_interaction_plot.png
     target: notebooks/generated/categorical_interaction_plot.html
     text: Categorical Interactions
