@@ -35,7 +35,7 @@ This a bug fix and deprecation only release.
 
 
 ``maintenance``
-~~~~~~~~~~~~~~~
+---------------
 - Merge pull request #7787 from gmcmacran/loglogDoc  (:pr:`7845`)
 - Merge pull request #7791 from Wooqo/fix-hw  (:pr:`7846`)
 - Merge pull request #7795 from bashtage/bug-none-kpss  (:pr:`7847`)
