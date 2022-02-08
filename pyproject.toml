@@ -8,3 +8,4 @@ requires = [
     "oldest-supported-numpy",
     "scipy>=1.3",
 ]
+build-backend = "setuptools.build_meta"
