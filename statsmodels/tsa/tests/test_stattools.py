@@ -349,6 +349,10 @@ class TestPACF(CheckCorrGram):
         pacfld = pacf(self.x, nlags=40, method="lda")
         assert_almost_equal(pacfyw, pacfld, DECIMAL_8)
 
+    def test_burg(self):
+        pacfburg_, _ = pacf_burg(self.x, nlags=40)
+        pacfburg = pacf(self.x, nlags=40, method="burg")
+        assert_almost_equal(pacfburg_, pacfburg, DECIMAL_8)
 
 class TestBreakvarHeteroskedasticityTest(object):
     from scipy.stats import chi2, f
