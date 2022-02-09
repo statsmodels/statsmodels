@@ -925,6 +925,7 @@ def pacf(x, nlags=None, method="ywadjusted", alpha=None):
           correction.
         - "ldb" or "ldbiased" : Levinson-Durbin recursion without bias
           correction.
+        - "burg" :  Burg"s partial autocorrelation estimator.
 
     alpha : float, optional
         If a number is given, the confidence intervals for the given level are
@@ -983,6 +984,7 @@ def pacf(x, nlags=None, method="ywadjusted", alpha=None):
         "ldb",
         "ldbiased",
         "ld_biased",
+        "burg"
     )
     x = array_like(x, "x", maxdim=2)
     method = string_like(method, "method", options=methods)
@@ -1010,6 +1012,8 @@ def pacf(x, nlags=None, method="ywadjusted", alpha=None):
         acv = acovf(x, adjusted=True, fft=False)
         ld_ = levinson_durbin(acv, nlags=nlags, isacov=True)
         ret = ld_[2]
+    elif method == "burg":
+        ret, _ = pacf_burg(x, nlags=nlags, demean=True)
     # inconsistent naming with ywmle
     else:  # method in ("ldb", "ldbiased", "ld_biased")
         acv = acovf(x, adjusted=False, fft=False)
