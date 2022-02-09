@@ -22,7 +22,7 @@ import pkg_resources
 SETUP_DIR = Path(__file__).parent.resolve()
 
 sys.path.append(str(SETUP_DIR))
-import versioneer
+import versioneer  # noqa: E402
 
 del sys.path[-1]
 
@@ -59,7 +59,7 @@ INSTALL_REQUIREMENTS = {
     "scipy": "1.4",  # released December 2019
     "pandas": "1.0",  # released January 2020
     "patsy": "0.5.2",  # released January 2018
-    "packaging": "21.3"  # released Nov 2021
+    "packaging": "21.3",  # released Nov 2021
 }
 
 CYTHON_MIN_VER = "0.29.26"  # released 2020
