@@ -12,13 +12,20 @@ from collections import defaultdict
 from distutils.command.clean import clean
 import fnmatch
 import os
-from os.path import abspath, join as pjoin, relpath, split
+from os.path import join as pjoin, relpath, split
+from pathlib import Path
 import shutil
 import sys
 
 import pkg_resources
 
+SETUP_DIR = Path(__file__).parent.resolve()
+
+sys.path.append(str(SETUP_DIR))
 import versioneer
+
+del sys.path[-1]
+
 
 try:
     # SM_FORCE_C is a testing shim to force setup to use C source files
@@ -79,9 +86,7 @@ EXTRAS_REQUIRE = {
 ###############################################################################
 DISTNAME = "statsmodels"
 DESCRIPTION = "Statistical computations and models for Python"
-SETUP_DIR = split(abspath(__file__))[0]
-with open(pjoin(SETUP_DIR, "README.rst")) as readme:
-    README = readme.read()
+README = SETUP_DIR.joinpath("README.rst").read_text()
 LONG_DESCRIPTION = README
 MAINTAINER = "statsmodels Developers"
 MAINTAINER_EMAIL = "pystatsmodels@googlegroups.com"
