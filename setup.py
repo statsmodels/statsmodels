@@ -12,7 +12,7 @@ from collections import defaultdict
 from distutils.command.clean import clean
 import fnmatch
 import os
-from os.path import join as pjoin, relpath, split
+from os.path import join as pjoin, relpath
 from pathlib import Path
 import shutil
 import sys
