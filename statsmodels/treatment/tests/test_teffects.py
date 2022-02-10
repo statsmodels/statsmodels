@@ -89,3 +89,21 @@ class TestTEffects():
             # TODO: check if improved optimization brings values closer
             assert_allclose(res1.params, res2.table[idx, 0], rtol=1e-4)
             assert_allclose(res1.bse, res2.table[idx, 1], rtol=0.05)
+
+        # test effects on the treated, not available for aipw
+        if not meth.startswith("aipw"):
+            table = res2.table_t
+
+            res1 = getattr(teff, meth)(return_results=False, effect_group=1)
+            assert_allclose(res1[:2], table[:2, 0], rtol=1e-4)
+
+            res1 = getattr(teff, meth)(return_results=True,
+                                       effect_group=1).results_gmm
+            assert_allclose(res1.params[:2], table[:2, 0], rtol=5e-5)
+            assert_allclose(res1.bse[:2], table[:2, 1], rtol=1e-3)
+            assert_allclose(res1.tvalues[:2], table[:2, 2], rtol=1e-3)
+            assert_allclose(res1.pvalues[:2], table[:2, 3],
+                            rtol=1e-4, atol=1e-15)
+            ci = res1.conf_int()
+            assert_allclose(ci[:2, 0], table[:2, 4], rtol=5e-4)
+            assert_allclose(ci[:2, 1], table[:2, 5], rtol=5e-4)
