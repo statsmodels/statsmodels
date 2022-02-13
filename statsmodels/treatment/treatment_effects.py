@@ -29,10 +29,12 @@ could be loaded with webuse
 """
 
 import numpy as np
+from statsmodels.compat.pandas import Substitution
 from scipy.linalg import block_diag
 from statsmodels.regression.linear_model import WLS
 from statsmodels.sandbox.regression.gmm import GMM
 from statsmodels.stats.contrast import ContrastResults
+from statsmodels.tools.docstring import indent
 
 
 def _mom_ate(params, endog, tind, prob, weighted=True):
@@ -252,7 +254,11 @@ class _IPWGMM(_TEGMMGeneric1):
         else:
             raise ValueError("incorrect option for effect_group")
 
-        w = tind / prob + (1-tind) / (1 - prob)
+        w = tind / prob + (1 - tind) / (1 - prob)
+        # Are we supposed to use scaled weights? doesn't cloesely match Stata
+        # w1 = tind / prob
+        # w2 = (1 - tind) / (1 - prob)
+        # w = w1 / w1.sum() * tind.sum() + w2 / w2.sum() * (1 - tind).sum()
         if probt is not None:
             w *= probt
 
@@ -539,6 +545,46 @@ class TreatmentEffectResults(ContrastResults):
         self.c_names = ["ATE", "POM0", "POM1"]
 
 
+doc_params_returns = """\
+Parameters
+----------
+return_results : bool
+    If True, then a results instance is returned.
+    If False, just ATE, POM0 and POM1 are returned.
+effect_group : {"all", 0, 1}
+    ``effectgroup`` determines for which population the effects are
+    estimated.
+    If effect_group is "all", then sample average treatment effect and
+    potential outcomes are returned
+    If effect_group is 1 or "treated", then effects on treated are
+    returned.
+    If effect_group is 0, "treated" or "control", then effects on
+    untreated, i.e. control group, are returned.
+disp : bool
+    Indicates whether the scipy optimizer should display the
+    optimization results
+
+Returns
+-------
+TreatmentEffectsResults instance or tuple (ATE, POM0, POM1)
+"""
+
+doc_params_returns2 = """\
+Parameters
+----------
+return_results : bool
+    If True, then a results instance is returned.
+    If False, just ATE, POM0 and POM1 are returned.
+disp : bool
+    Indicates whether the scipy optimizer should display the
+    optimization results
+
+Returns
+-------
+TreatmentEffectsResults instance or tuple (ATE, POM0, POM1)
+"""
+
+
 class TreatmentEffect(object):
     """Estimate average treatment effect under conditional independence
 
@@ -550,7 +596,7 @@ class TreatmentEffect(object):
     Parameters
     ----------
     model : instance of a model class
-        The model class should contain endog and exog for the full model.
+        The model class should contain endog and exog for the outcome model.
     treatment : ndarray
         indicator array for observations with treatment (1) or without (0)
     results_select : results instance
@@ -588,25 +634,18 @@ class TreatmentEffect(object):
         self.nobs = endog.shape[0]
         self._cov_type = _cov_type
 
-        results_select
         # no init keys are supported
         mod0 = model.__class__(endog[~treat_mask], exog[~treat_mask])
-        self.results0 = mod0.fit(cov_type='HC0')
+        self.results0 = mod0.fit(cov_type=_cov_type)
         mod1 = model.__class__(endog[treat_mask], exog[treat_mask])
-        self.results1 = mod1.fit(cov_type='HC0')
-        self.predict_mean0 = self.model_pool.predict(self.results0.params
-                                                     ).mean()
-        self.predict_mean1 = self.model_pool.predict(self.results1.params
-                                                     ).mean()
+        self.results1 = mod1.fit(cov_type=_cov_type)
+        # self.predict_mean0 = self.model_pool.predict(self.results0.params
+        #                                             ).mean()
+        # self.predict_mean1 = self.model_pool.predict(self.results1.params
+        #                                             ).mean()
 
         self.exog_grouped = np.concatenate((mod0.exog, mod1.exog), axis=0)
         self.endog_grouped = np.concatenate((mod0.endog, mod1.endog), axis=0)
-        # # this only works for linear model, need margins for discrete
-        # exog_mean = exog.mean(0)
-        # self.tt0 = self.results0.t_test(exog_mean)
-        # self.tt1 = self.results1.t_test(exog_mean)
-        # self.ate = self.tt1.effect - self.tt0.effect
-        # self.se_ate = np.sqrt(self.tt1.sd**2 + self.tt0.sd**2)
 
     @classmethod
     def from_data(cls, endog, exog, treatment, model='ols', **kwds):
@@ -618,6 +657,34 @@ class TreatmentEffect(object):
         raise NotImplementedError
 
     def ipw(self, return_results=True, effect_group="all", disp=False):
+        """Inverse Probability Weighted treatment effect estimation.
+
+        Parameters
+        ----------
+        return_results : bool
+            If True, then a results instance is returned.
+            If False, just ATE, POM0 and POM1 are returned.
+        effect_group : {"all", 0, 1}
+            ``effectgroup`` determines for which population the effects are
+            estimated.
+            If effect_group is "all", then sample average treatment effect and
+            potential outcomes are returned
+            If effect_group is 1 or "treated", then effects on treated are
+            returned.
+            If effect_group is 0, "treated" or "control", then effects on
+            untreated, i.e. control group, are returned.
+        disp : bool
+            Indicates whether the scipy optimizer should display the
+            optimization results
+
+        Returns
+        -------
+        TreatmentEffectsResults instance or tuple (ATE, POM0, POM1)
+
+        See Also
+        --------
+        TreatmentEffectsResults
+        """
         endog = self.model_pool.endog
         tind = self.treatment
         prob = self.prob_select
@@ -646,9 +713,11 @@ class TreatmentEffect(object):
                       effect_group=effect_group)
         start_params = np.concatenate((res_ipw[:2],
                                        self.results_select.params))
-        res_gmm = gmm.fit(start_params=start_params, optim_method='nm',
-                          inv_weights=np.eye(len(start_params)), maxiter=1,
+        res_gmm = gmm.fit(start_params=start_params,
+                          inv_weights=np.eye(len(start_params)),
+                          optim_method='nm',
                           optim_args={"maxiter": 5000, "disp": disp},
+                          maxiter=1,
                           )
 
         res = TreatmentEffectResults(self, res_gmm, "IPW",
@@ -657,9 +726,14 @@ class TreatmentEffect(object):
                                      )
         return res
 
+    @Substitution(params_returns=indent(doc_params_returns, " " * 8))
     def ra(self, return_results=True, effect_group="all", disp=False):
         """
-        ATE and POM from regression adjustment
+        Regression Adjustment treatment effect estimation.
+        \n%(params_returns)s
+        See Also
+        --------
+        TreatmentEffectsResults
         """
         # need indicator for reordered observations
         tind = np.zeros(len(self.treatment))
@@ -679,29 +753,32 @@ class TreatmentEffect(object):
         else:
             raise ValueError("incorrect option for effect_group")
 
-        # this only works for linear model, need margins for discrete
         exog = self.exog_grouped
+
+        # weight or indicator for effect_group
         if probt is not None:
-            exog = exog * (probt / probt.mean())[:, None]
-        exog_mean = exog.mean(0)
-        tt0 = self.results0.t_test(exog_mean)
-        tt1 = self.results1.t_test(exog_mean)
-        ate = tt1.effect - tt0.effect
-        # se_ate = np.sqrt(tt1.sd**2 + tt0.sd**2)
+            cw = (probt / probt.mean())
+        else:
+            cw = 1
+
+        pom0 = (self.results0.predict(exog) * cw).mean()
+        pom1 = (self.results1.predict(exog) * cw).mean()
         if not return_results:
-            # Note: currently 1-d arrays, get scalar
-            return ate[0], tt0.effect[0], tt1.effect[0]
+            return pom1 - pom0, pom0, pom1
 
         endog = self.model_pool.endog
         mod_gmm = _RAGMM(endog, self.results_select, None, teff=self,
                          probt=probt)
         start_params = np.concatenate((
-            ate, tt0.effect,
+            # ate, tt0.effect,
+            [pom1 - pom0, pom0],
             self.results0.params,
             self.results1.params))
         res_gmm = mod_gmm.fit(start_params=start_params,
                               inv_weights=np.eye(len(start_params)),
+                              optim_method='nm',
                               optim_args={"maxiter": 5000, "disp": disp},
+                              maxiter=1,
                               )
         res = TreatmentEffectResults(self, res_gmm, "IPW",
                                      start_params=start_params,
@@ -709,12 +786,17 @@ class TreatmentEffect(object):
                                      )
         return res
 
+    @Substitution(params_returns=indent(doc_params_returns2, " " * 8))
     def aipw(self, return_results=True, disp=False):
-        """ATE and POM from double robust augmented inverse probability weighting
-
-        replicates Stata's `teffects aipw`
+        """
+        ATE and POM from double robust augmented inverse probability weighting
+        \n%(params_returns)s
+        See Also
+        --------
+        TreatmentEffectsResults
 
         """
+
         nobs = self.nobs
         prob = self.prob_select
         tind = self.treatment
@@ -748,11 +830,18 @@ class TreatmentEffect(object):
                                      )
         return res
 
+    @Substitution(params_returns=indent(doc_params_returns2, " " * 8))
     def aipw_wls(self, return_results=True, disp=False):
-        """double robust augmented inverse probability weighting
+        """
+        ATE and POM from double robust augmented inverse probability weighting.
 
-        replicates Stata's `teffects aipw wnls`
-        No option for effect on treated or on untreated is available.
+        This uses weighted outcome regression, while `aipw` uses unweighted
+        outcome regression.
+        Option for effect on treated or on untreated is not available.
+        \n%(params_returns)s
+        See Also
+        --------
+        TreatmentEffectsResults
 
         """
         nobs = self.nobs
@@ -802,15 +891,22 @@ class TreatmentEffect(object):
             inv_weights=np.eye(len(start_params)),
             optim_method='nm',
             optim_args={"maxiter": 5000, "disp": disp},
-            maxiter=0)
+            maxiter=1)
         res = TreatmentEffectResults(self, res_gmm, "IPW",
                                      start_params=start_params,
                                      effect_group="all",
                                      )
         return res
 
+    @Substitution(params_returns=indent(doc_params_returns, " " * 8))
     def ipw_ra(self, return_results=True, effect_group="all", disp=False):
-        """ATE and POM for ip-weighted regression adjustment
+        """
+        ATE and POM from inverse probability weighted regression adjustment.
+
+        \n%(params_returns)s
+        See Also
+        --------
+        TreatmentEffectsResults
 
         """
         treat_mask = self.treat_mask
