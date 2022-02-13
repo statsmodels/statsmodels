@@ -383,7 +383,7 @@ def lagmat(x,
     trim = trim.lower()
     if is_pandas and trim in ("none", "backward"):
         raise ValueError(
-            "trim cannot be 'none' or 'forward' when used on "
+            "trim cannot be 'none' or 'backward' when used on "
             "Series or DataFrames"
         )
 
