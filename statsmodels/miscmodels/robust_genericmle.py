@@ -67,7 +67,7 @@ class MEstimator(GenericLikelihoodModel):
                 return self.loglikeobs(p)
 
             import statsmodels.tools.numdiff as nd
-            grad_scale = nd.approx_fprime([scale], func)
+            grad_scale = nd.approx_fprime(np.array([scale]), func)
             return -np.column_stack((score_obs, -grad_scale))
 
         else:
