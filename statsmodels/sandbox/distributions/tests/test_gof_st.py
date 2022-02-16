@@ -46,23 +46,23 @@ def test_gof_stephens2_0():
     #compare interpolated with approximate pvalues, includes table points
     for dist in dist_pv:
         for ti in ti_pv:
-            check_interp(ti, dist)
+            check_compare(ti, dist)
 
 
 
 
 def t_est_gof_stephens2():  #obsolete
     #not corrected yet
-    print pvalue_st(t, cutoff, coef)
+    print(pvalue_st(t, cutoff, coef))
 
     alpha = [0.15, 0.10, 0.05, 0.025, 0.01]
     a2_exp = [0.916, 1.062, 1.321, 1.591, 1.959]
 
     for t, aa in zip(a2_exp, alpha):
-        print pvalue_st(t, cutoff, coef), aa
+        print(pvalue_st(t, cutoff, coef), aa)
 
     for t, aa in zip(crit_normal_a2, alpha):
-        print pvalue_st(t, acut2, acoef2), aa
+        print(pvalue_st(t, acut2, acoef2), aa)
 
     #compare with linear interpolation
     from scipy import interpolate

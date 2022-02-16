@@ -25,9 +25,9 @@ from scipy import stats
 
 from statsmodels.tools.decorators import cache_readonly
 
-from _gof_stephens2 import (pvalue_normal, pvalue_expon, pvalue_interp,
+from ._gof_stephens2 import (pvalue_normal, pvalue_expon, pvalue_interp,
                             modify_normal, modify_expon)
-from _gof_stephens70 import gof_pvals
+from ._gof_stephens70 import gof_pvals
 
 
 class GOF(object):
@@ -367,9 +367,9 @@ class NewNorm(object):
         return x.mean(axis), x.std(axis)
 
     def cdf(self, x, args):
-        return distributions.norm.cdf(x, loc=args[0], scale=args[1])
+        return stats.norm.cdf(x, loc=args[0], scale=args[1])
 
     def rvs(self, args, size):
         loc=args[0]
         scale=args[1]
-        return loc + scale * distributions.norm.rvs(size=size)
+        return loc + scale * stats.norm.rvs(size=size)
