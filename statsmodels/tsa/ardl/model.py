@@ -233,8 +233,8 @@ class ARDL(AutoReg):
         can be omitted if using a pandas object for endog that contains a
         recognized frequency.
     missing : {"none", "drop", "raise"}, optional
-        Available options are 'none', 'drop', and 'raise'. If 'none', no nan
-        checking is done. If 'drop', any observations with nans are dropped.
+        Available options are 'none', 'drop', and 'raise'. If 'none', no NaN
+        checking is done. If 'drop', any observations with NaNs are dropped.
         If 'raise', an error is raised. Default is 'none'.
 
     Notes
@@ -580,7 +580,7 @@ class ARDL(AutoReg):
             raise ValueError(
                 f"The number of regressors ({reg.shape[1]}) including "
                 "deterministics, lags of the endog, lags of the exogenous, "
-                "and fixed regressors is larer than the sample available "
+                "and fixed regressors is larger than the sample available "
                 f"for estimation ({reg.shape[0]})."
             )
         return self.data.endog[self._hold_back :], reg
@@ -912,7 +912,7 @@ class ARDL(AutoReg):
             that contains a recognized frequency.
         missing : {"none", "drop", "raise"}, optional
             Available options are 'none', 'drop', and 'raise'. If 'none', no
-            nan checking is done. If 'drop', any observations with nans are
+            NaN checking is done. If 'drop', any observations with NaNs are
             dropped. If 'raise', an error is raised. Default is 'none'.
 
         Returns
@@ -1243,7 +1243,7 @@ class ARDLResults(AutoRegResults):
 
         Returns
         -------
-        smry : Summary instance
+        Summary
             This holds the summary table and text, which can be printed or
             converted to various output formats.
 
@@ -1426,8 +1426,8 @@ def ardl_select_order(
         can be omitted if using a pandas object for endog that contains a
         recognized frequency.
     missing : {"none", "drop", "raise"}, optional
-        Available options are 'none', 'drop', and 'raise'. If 'none', no nan
-        checking is done. If 'drop', any observations with nans are dropped.
+        Available options are 'none', 'drop', and 'raise'. If 'none', no NaN
+        checking is done. If 'drop', any observations with NaNs are dropped.
         If 'raise', an error is raised. Default is 'none'.
 
     Returns
@@ -1662,8 +1662,8 @@ class UECM(ARDL):
         can be omitted if using a pandas object for endog that contains a
         recognized frequency.
     missing : {"none", "drop", "raise"}, optional
-        Available options are 'none', 'drop', and 'raise'. If 'none', no nan
-        checking is done. If 'drop', any observations with nans are dropped.
+        Available options are 'none', 'drop', and 'raise'. If 'none', no NaN
+        checking is done. If 'drop', any observations with NaNs are dropped.
         If 'raise', an error is raised. Default is 'none'.
 
     Notes
@@ -1904,7 +1904,7 @@ class UECM(ARDL):
             raise ValueError(
                 f"The number of regressors ({reg.shape[1]}) including "
                 "deterministics, lags of the endog, lags of the exogenous, "
-                "and fixed regressors is larer than the sample available "
+                "and fixed regressors is larger than the sample available "
                 f"for estimation ({reg.shape[0]})."
             )
         return np.squeeze(y)[self._hold_back :], reg
