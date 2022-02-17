@@ -707,6 +707,28 @@ def acorr_breusch_godfrey(res, nlags=None, store=False):
         return lm, lmpval, fval, fpval
 
 
+def _check_het_test(x: np.ndarray, test_name: str) -> None:
+    """
+    Check validity of the exogenous regressors in a heteroskedasticity test
+
+    Parameters
+    ----------
+    x : ndarray
+        The exogenous regressor array
+    test_name : str
+        The test name for the exception
+    """
+    x_max = x.max(axis=0)
+    if (
+        not np.any(((x_max - x.min(axis=0)) == 0) & (x_max != 0))
+        or x.shape[1] < 2
+    ):
+        raise ValueError(
+            f"{test_name} test requires exog to have at least "
+            "two columns where one is a constant."
+        )
+
+
 def het_breuschpagan(resid, exog_het, robust=True):
     r"""
     Breusch-Pagan Lagrange Multiplier test for heteroscedasticity
@@ -775,9 +797,9 @@ def het_breuschpagan(resid, exog_het, robust=True):
     .. [3] Koenker, R. (1981). "A note on studentizing a test for
        heteroskedasticity". Journal of Econometrics 17 (1): 107–112.
     """
-
-    x = np.asarray(exog_het)
-    y = np.asarray(resid) ** 2
+    x = array_like(exog_het, "exog_het", ndim=2)
+    _check_het_test(x, "The Breusch-Pagan")
+    y = array_like(resid, "resid", ndim=1) ** 2
     if not robust:
         y = y / np.mean(y)
     nobs, nvars = x.shape
@@ -828,9 +850,7 @@ def het_white(resid, exog):
     """
     x = array_like(exog, "exog", ndim=2)
     y = array_like(resid, "resid", ndim=2, shape=(x.shape[0], 1))
-    if x.shape[1] < 2:
-        raise ValueError("White's heteroskedasticity test requires exog to"
-                         "have at least two columns where one is a constant.")
+    _check_het_test(x, "White's heteroskedasticity")
     nobs, nvars0 = x.shape
     i0, i1 = np.triu_indices(nvars0)
     exog = x[:, i0] * x[:, i1]

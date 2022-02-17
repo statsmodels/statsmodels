@@ -244,6 +244,19 @@ class TestDiagnosticG(object):
         bp = smsdia.het_breuschpagan(res.resid, res.model.exog)
         compare_to_reference(bp, bptest, decimal=(12, 12))
 
+    def test_het_breusch_pagan_1d_err(self):
+        res = self.res
+        x = np.asarray(res.model.exog)[:, -1]
+        with pytest.raises(ValueError, match="The Breusch-Pagan"):
+            smsdia.het_breuschpagan(res.resid, x)
+        x = np.ones_like(x)
+        with pytest.raises(ValueError, match="The Breusch-Pagan"):
+            smsdia.het_breuschpagan(res.resid, x)
+        x = np.asarray(res.model.exog).copy()
+        x[:, 0] = 0
+        with pytest.raises(ValueError, match="The Breusch-Pagan"):
+            smsdia.het_breuschpagan(res.resid, x)
+
     def test_het_breusch_pagan_nonrobust(self):
         res = self.res
 
