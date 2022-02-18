@@ -7,6 +7,8 @@ License: BSD-3
 
 
 import numpy as np
+import warnings
+
 from scipy import stats
 
 from statsmodels.stats.base import HolderTuple
@@ -57,7 +59,7 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=1,
         - 'smaller' :  H1: ratio of rates is smaller than ratio_null
     etest_kwds: dictionary
         Additional parameters to be passed to the etest_poisson_2indep
-        function, namely ygrid.
+        function, namely y_grid.
 
     Returns
     -------
@@ -150,7 +152,8 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=1,
 
 
 def etest_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=1,
-                         method='score', alternative='2-sided', ygrid=None):
+                         method='score', alternative='2-sided', ygrid=None,
+                         y_grid=None):
     """E-test for ratio of two sample Poisson rates
 
     If the two Poisson rates are g1 and g2, then the Null hypothesis is
@@ -184,10 +187,14 @@ def etest_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=1,
            'larger' :   H1: ratio of rates is larger than ratio_null
            'smaller' :  H1: ratio of rates is smaller than ratio_null
 
-    ygrid : None or 1-D ndarray
+    y_grid : None or 1-D ndarray
         Grid values for counts of the Poisson distribution used for computing
         the pvalue. By default truncation is based on an upper tail Poisson
         quantiles.
+
+    ygrid : None or 1-D ndarray
+        Same as y_grid. Deprecated. If both y_grid and ygrid are provided,
+        ygrid will be ignored.
 
     Returns
     -------
@@ -237,15 +244,23 @@ def etest_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=1,
 
     stat_sample = stat_func(y1, y2)
 
+    if ygrid is not None:
+        warnings.warn("ygrid is deprecated, use y_grid", DeprecationWarning)
+    y_grid = y_grid if y_grid is not None else ygrid
+
     # The following uses a fixed truncation for evaluating the probabilities
     # It will currently only work for small counts, so that sf at truncation
     # point is small
     # We can make it depend on the amount of truncated sf.
     # Some numerical optimization or checks for large means need to be added.
-    if ygrid is None:
+    if y_grid is None:
         threshold = stats.poisson.isf(1e-13, max(mean1, mean2))
         threshold = max(threshold, 100)   # keep at least 100
         y_grid = np.arange(threshold + 1)
+    else:
+        y_grid = np.asarray(y_grid)
+        if y_grid.ndim != 1:
+            raise ValueError("y_grid needs to be None or 1-dimensional array")
     pdf1 = stats.poisson.pmf(y_grid, mean1)
     pdf2 = stats.poisson.pmf(y_grid, mean2)
 
