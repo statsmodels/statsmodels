@@ -221,8 +221,8 @@ class SimpleTable(list):
     def _repr_html_(self, **fmt_dict):
         return self.as_html(**fmt_dict)
 
-    def _repr_latex_(self, **fmt_dict):
-        return self.as_latex_tabular(**fmt_dict)
+    def _repr_latex_(self, center=True, **fmt_dict):
+        return self.as_latex_tabular(center, **fmt_dict)
 
     def _add_headers_stubs(self, headers, stubs):
         """Return None.  Adds headers and stubs to table,
