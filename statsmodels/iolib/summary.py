@@ -764,6 +764,10 @@ class Summary(object):
         '''Display as HTML in IPython notebook.'''
         return self.as_html()
 
+    def _repr_latex_(self):
+        '''Display as LaTeX when converting IPython notebook to PDF.'''
+        return self.as_latex()
+
     def add_table_2cols(self, res,  title=None, gleft=None, gright=None,
                         yname=None, xname=None):
         """

@@ -30,6 +30,10 @@ class Summary(object):
         """Display as HTML in IPython notebook."""
         return self.as_html()
 
+    def _repr_latex_(self):
+        '''Display as LaTeX when converting IPython notebook to PDF.'''
+        return self.as_latex()
+
     def add_df(self, df, index=True, header=True, float_format='%.4f',
                align='r'):
         """

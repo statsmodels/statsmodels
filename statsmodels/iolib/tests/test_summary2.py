@@ -115,6 +115,38 @@ parentheses.
                 if line.startswith(variable):
                     assert line in str(actual)
 
+    def test__repr_latex_(self):
+        desired = r'''
+\begin{table}
+\caption{}
+\label{}
+\begin{center}
+\begin{tabular}{lll}
+\hline
+               & y I      & y II      \\
+\hline
+const          & 7.7500   & 12.4231   \\
+               & (1.1058) & (3.1872)  \\
+x1             & -0.7500  & -1.5769   \\
+               & (0.2368) & (0.6826)  \\
+R-squared      & 0.7697   & 0.6401    \\
+R-squared Adj. & 0.6930   & 0.5202    \\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+'''
+        x = [1, 5, 7, 3, 5]
+        x = add_constant(x)
+        y1 = [6, 4, 2, 7, 4]
+        y2 = [8, 5, 0, 12, 4]
+        reg1 = OLS(y1, x).fit()
+        reg2 = OLS(y2, x).fit()
+
+        actual = summary_col([reg1, reg2])._repr_latex_()
+        actual = '\n%s\n' % actual
+        assert_equal(actual, desired)
+
     def test_OLSsummary(self):
         # Test that latex output of regular OLS output still contains
         # multiple tables
