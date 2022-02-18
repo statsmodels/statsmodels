@@ -241,3 +241,24 @@ stub2 1.95038     2.6
                              txt_fmt=default_txt_fmt)
         actual = '\n%s\n' % actual.as_text()
         assert_equal(desired, str(actual))
+
+    def test__repr_latex(self):
+        desired = r"""
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+               & \textbf{header1} & \textbf{header2}  \\
+\midrule
+\textbf{stub1} &      5.394       &       29.3        \\
+\textbf{stub2} &       343        &       34.2        \\
+\bottomrule
+\end{tabular}
+\end{center}
+"""
+        testdata = [[5.394, 29.3], [343, 34.2]]
+        teststubs = ('stub1', 'stub2')
+        testheader = ('header1', 'header2')
+        tbl = SimpleTable(testdata, testheader, teststubs,
+                          txt_fmt=default_txt_fmt)
+        actual = '\n%s\n' % tbl._repr_latex_()
+        assert_equal(actual, desired)
