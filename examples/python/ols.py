@@ -123,8 +123,8 @@ print(res2.summary())
 # Draw a plot to compare the true relationship to OLS predictions:
 
 pred_ols2 = res2.get_prediction()
-iv_l = pred_ols.summary_frame()["obs_ci_lower"]
-iv_u = pred_ols.summary_frame()["obs_ci_upper"]
+iv_l = pred_ols2.summary_frame()["obs_ci_lower"]
+iv_u = pred_ols2.summary_frame()["obs_ci_upper"]
 
 fig, ax = plt.subplots(figsize=(8, 6))
 

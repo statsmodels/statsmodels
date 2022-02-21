@@ -24,10 +24,10 @@
 # Finally, the `RecursiveLS` model allows imposing linear restrictions on
 # the parameter vectors, and can be constructed using the formula interface.
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
-import matplotlib.pyplot as plt
 from pandas_datareader.data import DataReader
 
 np.set_printoptions(suppress=True)
@@ -85,7 +85,7 @@ fig = res.plot_cusum()
 
 res.plot_cusum_squares()
 
-# # Example 2: Quantity theory of money
+# ## Example 2: Quantity theory of money
 #
 # The quantity theory of money suggests that "a given change in the rate
 # of change in the quantity of money induces ... an equal change in the rate
@@ -154,7 +154,7 @@ res.plot_cusum()
 
 res.plot_cusum_squares()
 
-# # Example 3: Linear restrictions and formulas
+# ## Example 3: Linear restrictions and formulas
 
 # ## Linear restrictions
 #
