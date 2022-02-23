@@ -1,6 +1,8 @@
 
 
 import pytest
+import warnings
+from numpy import arange
 from numpy.testing import assert_allclose, assert_equal
 
 # we cannot import test_poisson_2indep directly, pytest treats that as test
@@ -245,3 +247,31 @@ def test_alternative(case):
     _, pv = smr.test_poisson_2indep(count1, n1, count2, n2, method=meth,
                                     ratio_null=1.2, alternative=alt)
     assert_allclose(pv, cases_alt[case], rtol=1e-13)
+
+
+def test_y_grid_regression():
+    y_grid = arange(1000)
+
+    _, pv = etest_poisson_2indep(60, 51477.5, 30, 54308.7, y_grid=y_grid)
+    assert_allclose(pv, 0.000567261758250953, atol=1e-15)
+
+    _, pv = etest_poisson_2indep(41, 28010, 15, 19017, y_grid=y_grid)
+    assert_allclose(pv, 0.03782053187021494, atol=1e-15)
+
+    _, pv = etest_poisson_2indep(1, 1, 1, 1, y_grid=[1])
+    assert_allclose(pv, 0.1353352832366127, atol=1e-15)
+
+
+def test_invalid_y_grid():
+    # check ygrid deprecation
+    warnings.simplefilter("always")
+    with warnings.catch_warnings(record=True) as w:
+        etest_poisson_2indep(1, 1, 1, 1, ygrid=[1])
+    assert len(w) == 1
+    assert issubclass(w[0].category, DeprecationWarning)
+    assert "ygrid" in str(w[0].message)
+
+    # check y_grid validity
+    with pytest.raises(ValueError) as e:
+        etest_poisson_2indep(1, 1, 1, 1, y_grid=1)
+    assert "y_grid" in str(e.value)
