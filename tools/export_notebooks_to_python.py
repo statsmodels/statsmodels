@@ -150,7 +150,7 @@ def main():
             code_out.insert(loc, DO_NOT_EDIT.format(notebook=nb_full_name))
             code_out = "\n".join(code_out)
             code_out, success = FormatCode(code_out, style_config="pep8")
-            with open(out_file, "w", encoding="utf8") as of:
+            with open(out_file, "w", encoding="utf8", newline="\n") as of:
                 of.write(code_out)
 
 

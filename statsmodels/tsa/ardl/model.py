@@ -13,12 +13,10 @@ from typing import (
     Any,
     Dict,
     Hashable,
-    List,
     Mapping,
     NamedTuple,
     Optional,
     Sequence,
-    Tuple,
     Union,
 )
 import warnings
@@ -34,6 +32,12 @@ from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.docstring import Docstring, Parameter, remove_parameters
 from statsmodels.tools.sm_exceptions import SpecificationWarning
+from statsmodels.tools.typing import (
+    ArrayLike1D,
+    ArrayLike2D,
+    Float64Array,
+    NDArray,
+)
 from statsmodels.tools.validation import (
     array_like,
     bool_like,
@@ -88,17 +92,17 @@ Alternative: {self.alternative}
 _UECMOrder = Union[None, int, Dict[Hashable, Optional[int]]]
 
 _ARDLOrder = Union[
+    None,
+    int,
     _UECMOrder,
     Sequence[int],
-    Dict[Hashable, Union[None, int, Sequence[int]]],
+    Dict[Hashable, Union[int, Sequence[int], None]],
 ]
 
-_ArrayLike1D = Union[Sequence[float], np.ndarray, pd.Series]
-_ArrayLike2D = Union[Sequence[Sequence[float]], np.ndarray, pd.DataFrame]
 _INT_TYPES = (int, np.integer)
 
 
-def _check_order(order: Union[int, Sequence[int]], causal: bool) -> bool:
+def _check_order(order: int | Sequence[int] | None, causal: bool) -> bool:
     if order is None:
         return True
     if isinstance(order, (int, np.integer)):
@@ -126,15 +130,17 @@ def _check_order(order: Union[int, Sequence[int]], causal: bool) -> bool:
 
 
 def _format_order(
-    exog: _ArrayLike2D, order: _ARDLOrder, causal: bool
-) -> Dict[Hashable, List[int]]:
+    exog: ArrayLike2D, order: _ARDLOrder, causal: bool
+) -> dict[Hashable, list[int]]:
+    keys: list[Hashable]
+    exog_order: dict[Hashable, int | Sequence[int] | None]
     if exog is None and order in (0, None):
         return {}
     if not isinstance(exog, pd.DataFrame):
         exog = array_like(exog, "exog", ndim=2, maxdim=2)
         keys = list(range(exog.shape[1]))
     else:
-        keys = exog.columns
+        keys = [col for col in exog.columns]
     if order is None:
         exog_order = {k: None for k in keys}
     elif isinstance(order, Mapping):
@@ -147,14 +153,14 @@ def _format_order(
                 "variable(s) that are not contained in exog"
             )
             msg += " Extra keys: "
-            msg += ", ".join([str(k) for k in sorted(extra)]) + "."
+            msg += ", ".join(list(sorted([str(v) for v in extra]))) + "."
             raise ValueError(msg)
         if missing:
             msg = (
                 "exog contains variables that are missing from the order "
                 "dictionary.  Missing keys: "
             )
-            msg += ", ".join([str(k) for k in sorted(missing)]) + "."
+            msg += ", ".join([str(k) for k in missing]) + "."
             warnings.warn(msg, SpecificationWarning, stacklevel=2)
 
         for key in exog_order:
@@ -165,14 +171,16 @@ def _format_order(
     else:
         _check_order(order, causal)
         exog_order = {k: list(order) for k in keys}
-    final_order: Dict[Hashable, List[int]] = {}
+    final_order: dict[Hashable, list[int]] = {}
     for key in exog_order:
-        if exog_order[key] is None:
+        value = exog_order[key]
+        if value is None:
             continue
-        if isinstance(exog_order[key], int):
-            final_order[key] = list(range(int(causal), exog_order[key] + 1))
+        assert value is not None
+        if isinstance(value, int):
+            final_order[key] = list(range(int(causal), value + 1))
         else:
-            final_order[key] = [int(lag) for lag in exog_order[key]]
+            final_order[key] = [int(lag) for lag in value]
 
     return final_order
 
@@ -308,18 +316,18 @@ class ARDL(AutoReg):
 
     def __init__(
         self,
-        endog: Union[Sequence[float], pd.Series, _ArrayLike2D],
-        lags: Union[None, int, Sequence[int]],
-        exog: Optional[_ArrayLike2D] = None,
+        endog: Sequence[float] | pd.Series | ArrayLike2D,
+        lags: int | Sequence[int] | None,
+        exog: ArrayLike2D | None = None,
         order: _ARDLOrder = 0,
         trend: Literal["n", "c", "ct", "ctt"] = "c",
         *,
-        fixed: Optional[_ArrayLike2D] = None,
+        fixed: ArrayLike2D | None = None,
         causal: bool = False,
         seasonal: bool = False,
-        deterministic: Optional[DeterministicProcess] = None,
-        hold_back: Optional[int] = None,
-        period: Optional[int] = None,
+        deterministic: DeterministicProcess | None = None,
+        hold_back: int | None = None,
+        period: int | None = None,
         missing: Literal["none", "drop", "raise"] = "none",
     ) -> None:
         self._x = np.empty((0, 0))
@@ -361,8 +369,8 @@ class ARDL(AutoReg):
             self._fixed = np.empty((self.data.endog.shape[0], 0))
             self._fixed_names = []
 
-        self._blocks: Dict[str, np.ndarray] = {}
-        self._names: Dict[str, Sequence[str]] = {}
+        self._blocks: dict[str, np.ndarray] = {}
+        self._names: dict[str, Sequence[str]] = {}
 
         # 1. Check and update order
         self._order = self._check_order(order)
@@ -381,7 +389,7 @@ class ARDL(AutoReg):
         self._results_wrapper = ARDLResultsWrapper
 
     @property
-    def fixed(self) -> Union[None, np.ndarray, pd.DataFrame]:
+    def fixed(self) -> NDArray | pd.DataFrame | None:
         """The fixed data used to construct the model"""
         return self.data.orig_fixed
 
@@ -391,17 +399,17 @@ class ARDL(AutoReg):
         return self._causal
 
     @property
-    def ar_lags(self) -> Optional[List[int]]:
+    def ar_lags(self) -> list[int] | None:
         """The autoregressive lags included in the model"""
         return None if not self._lags else self._lags
 
     @property
-    def dl_lags(self) -> Dict[Hashable, List[int]]:
+    def dl_lags(self) -> dict[Hashable, list[int]]:
         """The lags of exogenous variables included in the model"""
         return self._order
 
     @property
-    def ardl_order(self) -> Tuple[int, ...]:
+    def ardl_order(self) -> tuple[int, ...]:
         """The order of the ARDL(p,q)"""
         ar_order = 0 if not self._lags else int(max(self._lags))
         ardl_order = [ar_order]
@@ -416,8 +424,8 @@ class ARDL(AutoReg):
 
     @staticmethod
     def _format_exog(
-        exog: _ArrayLike2D, order: Dict[Hashable, List[int]]
-    ) -> Dict[Hashable, np.ndarray]:
+        exog: ArrayLike2D, order: dict[Hashable, list[int]]
+    ) -> dict[Hashable, np.ndarray]:
         """Transform exogenous variables and orders to regressors"""
         if not order:
             return {}
@@ -432,6 +440,7 @@ class ARDL(AutoReg):
             if order[key] is None:
                 continue
             if isinstance(exog, np.ndarray):
+                assert isinstance(key, int)
                 col = exog[:, key]
             else:
                 col = exog[key]
@@ -440,16 +449,16 @@ class ARDL(AutoReg):
             exog_lags[key] = lagged_col[:, lags]
         return exog_lags
 
-    def _check_order(self, order: _ARDLOrder) -> Dict[Hashable, List[int]]:
+    def _check_order(self, order: _ARDLOrder) -> dict[Hashable, list[int]]:
         """Validate and standardize the model order"""
         return _format_order(self.data.orig_exog, order, self._causal)
 
     def _fit(
         self,
         cov_type: str = "nonrobust",
-        cov_kwds: Dict[str, Any] = None,
+        cov_kwds: dict[str, Any] = None,
         use_t: bool = True,
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         if self._x.shape[1] == 0:
             return np.empty((0,)), np.empty((0, 0)), np.empty((0, 0))
         ols_mod = OLS(self._y, self._x)
@@ -470,7 +479,7 @@ class ARDL(AutoReg):
         self,
         *,
         cov_type: str = "nonrobust",
-        cov_kwds: Dict[str, Any] = None,
+        cov_kwds: dict[str, Any] = None,
         use_t: bool = True,
     ) -> ARDLResults:
         """
@@ -538,14 +547,17 @@ class ARDL(AutoReg):
         return ARDLResultsWrapper(res)
 
     def _construct_regressors(
-        self, hold_back: Optional[int]
-    ) -> Tuple[np.ndarray, np.ndarray]:
+        self, hold_back: int | None
+    ) -> tuple[np.ndarray, np.ndarray]:
         """Construct and format model regressors"""
         # TODO: Missing adjustment
         self._maxlag = max(self._lags) if self._lags else 0
-        self._endog_reg, self._endog = lagmat(
+        _endog_reg, _endog = lagmat(
             self.data.endog, self._maxlag, original="sep"
         )
+        assert isinstance(_endog, np.ndarray)
+        assert isinstance(_endog_reg, np.ndarray)
+        self._endog_reg, self._endog = _endog_reg, _endog
         if self._endog_reg.shape[1] != len(self._lags):
             lag_locs = [lag - 1 for lag in self._lags]
             self._endog_reg = self._endog_reg[:, lag_locs]
@@ -618,10 +630,10 @@ class ARDL(AutoReg):
         start: int,
         end: int,
         num_oos: int,
-        exog: Optional[_ArrayLike2D],
-        exog_oos: Optional[_ArrayLike2D],
-        fixed: Optional[_ArrayLike2D],
-        fixed_oos: Optional[_ArrayLike2D],
+        exog: ArrayLike2D | None,
+        exog_oos: ArrayLike2D | None,
+        fixed: ArrayLike2D | None,
+        fixed_oos: ArrayLike2D | None,
     ) -> np.ndarray:
         """Construct exog matrix for forecasts"""
 
@@ -671,14 +683,14 @@ class ARDL(AutoReg):
 
     def predict(
         self,
-        params: _ArrayLike1D,
-        start: Union[None, int, str, dt.datetime, pd.Timestamp] = None,
-        end: Union[None, int, str, dt.datetime, pd.Timestamp] = None,
+        params: ArrayLike1D,
+        start: int | str | dt.datetime | pd.Timestamp | None = None,
+        end: int | str | dt.datetime | pd.Timestamp | None = None,
         dynamic: bool = False,
-        exog: Union[None, np.ndarray, pd.DataFrame] = None,
-        exog_oos: Union[None, np.ndarray, pd.DataFrame] = None,
-        fixed: Union[None, np.ndarray, pd.DataFrame] = None,
-        fixed_oos: Union[None, np.ndarray, pd.DataFrame] = None,
+        exog: NDArray | pd.DataFrame | None = None,
+        exog_oos: NDArray | pd.DataFrame | None = None,
+        fixed: NDArray | pd.DataFrame | None = None,
+        fixed_oos: NDArray | pd.DataFrame | None = None,
     ):
         """
         In-sample prediction and out-of-sample forecasting.
@@ -845,17 +857,17 @@ class ARDL(AutoReg):
         cls,
         formula: str,
         data: pd.DataFrame,
-        lags: Union[None, int, Sequence[int]] = 0,
+        lags: int | Sequence[int] | None = 0,
         order: _ARDLOrder = 0,
         trend: Literal["n", "c", "ct", "ctt"] = "n",
         *,
         causal: bool = False,
         seasonal: bool = False,
-        deterministic: Optional[DeterministicProcess] = None,
-        hold_back: Optional[int] = None,
-        period: Optional[int] = None,
+        deterministic: DeterministicProcess | None = None,
+        hold_back: int | None = None,
+        period: int | None = None,
         missing: Literal["none", "raise"] = "none",
-    ) -> ARDL:
+    ) -> ARDL | "UECM":
         """
         Construct an ARDL from a formula
 
@@ -947,7 +959,7 @@ class ARDL(AutoReg):
             endog_name = formula.split("~")[0].strip()
             fixed_formula = f"{endog_name} ~ {fixed_formula} - 1"
             mod = OLS.from_formula(fixed_formula, data)
-            fixed: Optional[pd.DataFrame] = mod.data.orig_exog
+            fixed: pd.DataFrame | None = mod.data.orig_exog
             fixed.index = index
         else:
             fixed = None
@@ -1001,7 +1013,7 @@ class ARDLResults(AutoRegResults):
         model: ARDL,
         params: np.ndarray,
         cov_params: np.ndarray,
-        normalized_cov_params: Optional[np.ndarray] = None,
+        normalized_cov_params: Float64Array | None = None,
         scale: float = 1.0,
         use_t: bool = False,
     ):
@@ -1023,13 +1035,13 @@ class ARDLResults(AutoRegResults):
     @Appender(remove_parameters(ARDL.predict.__doc__, "params"))
     def predict(
         self,
-        start: Union[None, int, str, dt.datetime, pd.Timestamp] = None,
-        end: Union[None, int, str, dt.datetime, pd.Timestamp] = None,
+        start: int | str | dt.datetime | pd.Timestamp | None = None,
+        end: int | str | dt.datetime | pd.Timestamp | None = None,
         dynamic: bool = False,
-        exog: Union[None, np.ndarray, pd.DataFrame] = None,
-        exog_oos: Union[None, np.ndarray, pd.DataFrame] = None,
-        fixed: Union[None, np.ndarray, pd.DataFrame] = None,
-        fixed_oos: Union[None, np.ndarray, pd.DataFrame] = None,
+        exog: NDArray | pd.DataFrame | None = None,
+        exog_oos: NDArray | pd.DataFrame | None = None,
+        fixed: NDArray | pd.DataFrame | None = None,
+        fixed_oos: NDArray | pd.DataFrame | None = None,
     ):
         return self.model.predict(
             self._params,
@@ -1045,9 +1057,9 @@ class ARDLResults(AutoRegResults):
     def forecast(
         self,
         steps: int = 1,
-        exog: Union[None, np.ndarray, pd.DataFrame] = None,
-        fixed: Union[None, np.ndarray, pd.DataFrame] = None,
-    ) -> Union[np.ndarray, pd.Series]:
+        exog: NDArray | pd.DataFrame | None = None,
+        fixed: NDArray | pd.DataFrame | None = None,
+    ) -> np.ndarray | pd.Series:
         """
         Out-of-sample forecasts
 
@@ -1101,14 +1113,14 @@ class ARDLResults(AutoRegResults):
 
     def get_prediction(
         self,
-        start: Union[None, int, str, dt.datetime, pd.Timestamp] = None,
-        end: Union[None, int, str, dt.datetime, pd.Timestamp] = None,
+        start: int | str | dt.datetime | pd.Timestamp | None = None,
+        end: int | str | dt.datetime | pd.Timestamp | None = None,
         dynamic: bool = False,
-        exog: Union[None, np.ndarray, pd.DataFrame] = None,
-        exog_oos: Union[None, np.ndarray, pd.DataFrame] = None,
-        fixed: Union[None, np.ndarray, pd.DataFrame] = None,
-        fixed_oos: Union[None, np.ndarray, pd.DataFrame] = None,
-    ) -> Union[np.ndarray, pd.Series]:
+        exog: NDArray | pd.DataFrame | None = None,
+        exog_oos: NDArray | pd.DataFrame | None = None,
+        fixed: NDArray | pd.DataFrame | None = None,
+        fixed_oos: NDArray | pd.DataFrame | None = None,
+    ) -> np.ndarray | pd.Series:
         """
         Predictions and prediction intervals
 
@@ -1174,7 +1186,7 @@ class ARDLResults(AutoRegResults):
         if oos > 0:
             ar_params = self._lag_repr()
             ma = arma2ma(ar_params, np.ones(1), lags=oos)
-            mean_var[-oos:] = self.sigma2 * np.cumsum(ma ** 2)
+            mean_var[-oos:] = self.sigma2 * np.cumsum(ma**2)
         if isinstance(mean, pd.Series):
             mean_var = pd.Series(mean_var, index=mean.index)
 
@@ -1183,17 +1195,17 @@ class ARDLResults(AutoRegResults):
     @Substitution(predict_params=_predict_params)
     def plot_predict(
         self,
-        start: Union[None, int, str, dt.datetime, pd.Timestamp] = None,
-        end: Union[None, int, str, dt.datetime, pd.Timestamp] = None,
+        start: int | str | dt.datetime | pd.Timestamp | None = None,
+        end: int | str | dt.datetime | pd.Timestamp | None = None,
         dynamic: bool = False,
-        exog: Union[None, np.ndarray, pd.DataFrame] = None,
-        exog_oos: Union[None, np.ndarray, pd.DataFrame] = None,
-        fixed: Union[None, np.ndarray, pd.DataFrame] = None,
-        fixed_oos: Union[None, np.ndarray, pd.DataFrame] = None,
+        exog: NDArray | pd.DataFrame | None = None,
+        exog_oos: NDArray | pd.DataFrame | None = None,
+        fixed: NDArray | pd.DataFrame | None = None,
+        fixed_oos: NDArray | pd.DataFrame | None = None,
         alpha: float = 0.05,
         in_sample: bool = True,
         fig: "matplotlib.figure.Figure" = None,
-        figsize: Optional[Tuple[int, int]] = None,
+        figsize: tuple[int, int] | None = None,
     ) -> "matplotlib.figure.Figure":
         """
         Plot in- and out-of-sample predictions
@@ -1281,7 +1293,7 @@ class ARDLResults(AutoRegResults):
         top_right = [
             ("No. Observations:", [str(len(self.model.endog))]),
             ("Log Likelihood", ["%#5.3f" % self.llf]),
-            ("S.D. of innovations", ["%#5.3f" % self.sigma2 ** 0.5]),
+            ("S.D. of innovations", ["%#5.3f" % self.sigma2**0.5]),
             ("AIC", ["%#5.3f" % self.aic]),
             ("BIC", ["%#5.3f" % self.bic]),
             ("HQIC", ["%#5.3f" % self.hqic]),
@@ -1343,26 +1355,26 @@ class ARDLOrderSelectionResults(AROrderSelectionResults):
         self._hqic = self._hqic.sort_index()
 
     @property
-    def dl_lags(self) -> Dict[Hashable, List[int]]:
+    def dl_lags(self) -> dict[Hashable, list[int]]:
         """The lags of exogenous variables in the selected model"""
         return self._model.dl_lags
 
 
 def ardl_select_order(
-    endog: Union[Sequence[float], pd.Series, _ArrayLike2D],
+    endog: ArrayLike1D | ArrayLike2D,
     maxlag: int,
-    exog: _ArrayLike2D,
-    maxorder: Union[int, Dict[Hashable, int]],
+    exog: ArrayLike2D,
+    maxorder: int | dict[Hashable, int],
     trend: Literal["n", "c", "ct", "ctt"] = "c",
     *,
-    fixed: Optional[_ArrayLike2D] = None,
+    fixed: ArrayLike2D | None = None,
     causal: bool = False,
     ic: Literal["aic", "bic"] = "bic",
     glob: bool = False,
     seasonal: bool = False,
-    deterministic: Optional[DeterministicProcess] = None,
-    hold_back: Optional[int] = None,
-    period: Optional[int] = None,
+    deterministic: DeterministicProcess | None = None,
+    hold_back: int | None = None,
+    period: int | None = None,
     missing: Literal["none", "raise"] = "none",
 ) -> ARDLOrderSelectionResults:
     r"""
@@ -1732,18 +1744,18 @@ class UECM(ARDL):
 
     def __init__(
         self,
-        endog: Union[Sequence[float], pd.Series, _ArrayLike2D],
-        lags: Union[None, int],
-        exog: Optional[_ArrayLike2D] = None,
+        endog: ArrayLike1D | ArrayLike2D,
+        lags: int | None,
+        exog: ArrayLike2D | None = None,
         order: _UECMOrder = 0,
         trend: Literal["n", "c", "ct", "ctt"] = "c",
         *,
-        fixed: Optional[_ArrayLike2D] = None,
+        fixed: ArrayLike2D | None = None,
         causal: bool = False,
         seasonal: bool = False,
-        deterministic: Optional[DeterministicProcess] = None,
-        hold_back: Optional[int] = None,
-        period: Optional[int] = None,
+        deterministic: DeterministicProcess | None = None,
+        hold_back: int | None = None,
+        period: int | None = None,
         missing: Literal["none", "drop", "raise"] = "none",
     ) -> None:
         super().__init__(
@@ -1763,11 +1775,13 @@ class UECM(ARDL):
         self._results_class = UECMResults
         self._results_wrapper = UECMResultsWrapper
 
-    def _check_lags(self) -> Tuple[List[int], int]:
+    def _check_lags(
+        self, lags: int | Sequence[int] | None, hold_back: int | None
+    ) -> tuple[list[int], int]:
         """Check lags value conforms to requirement"""
-        if not (isinstance(self._lags, _INT_TYPES) or self._lags is None):
+        if not (isinstance(lags, _INT_TYPES) or lags is None):
             raise TypeError("lags must be an integer or None")
-        return super()._check_lags()
+        return super()._check_lags(lags, hold_back)
 
     def _check_order(self, order: _ARDLOrder):
         """Check order conforms to requirement"""
@@ -1831,8 +1845,8 @@ class UECM(ARDL):
         return y_name, x_names
 
     def _construct_regressors(
-        self, hold_back: Optional[int]
-    ) -> Tuple[np.ndarray, np.ndarray]:
+        self, hold_back: int | None
+    ) -> tuple[np.ndarray, np.ndarray]:
         """Construct and format model regressors"""
         # 1. Endogenous and endogenous lags
         self._maxlag = max(self._lags) if self._lags else 0
@@ -1914,7 +1928,7 @@ class UECM(ARDL):
         self,
         *,
         cov_type: str = "nonrobust",
-        cov_kwds: Dict[str, Any] = None,
+        cov_kwds: dict[str, Any] = None,
         use_t: bool = True,
     ) -> UECMResults:
         params, cov_params, norm_cov_params = self._fit(
@@ -1987,14 +2001,14 @@ class UECM(ARDL):
 
     def predict(
         self,
-        params: Union[np.ndarray, pd.DataFrame],
-        start: Union[None, int, str, dt.datetime, pd.Timestamp] = None,
-        end: Union[None, int, str, dt.datetime, pd.Timestamp] = None,
+        params: ArrayLike1D,
+        start: int | str | dt.datetime | pd.Timestamp | None = None,
+        end: int | str | dt.datetime | pd.Timestamp | None = None,
         dynamic: bool = False,
-        exog: Union[None, np.ndarray, pd.DataFrame] = None,
-        exog_oos: Union[None, np.ndarray, pd.DataFrame] = None,
-        fixed: Union[None, np.ndarray, pd.DataFrame] = None,
-        fixed_oos: Union[None, np.ndarray, pd.DataFrame] = None,
+        exog: NDArray | pd.DataFrame | None = None,
+        exog_oos: NDArray | pd.DataFrame | None = None,
+        fixed: NDArray | pd.DataFrame | None = None,
+        fixed_oos: NDArray | pd.DataFrame | None = None,
     ) -> np.ndarray:
         """
         In-sample prediction and out-of-sample forecasting.
@@ -2066,15 +2080,15 @@ class UECM(ARDL):
         cls,
         formula: str,
         data: pd.DataFrame,
-        lags: Union[None, int, Sequence[int]] = 0,
+        lags: int | Sequence[int] | None = 0,
         order: _ARDLOrder = 0,
         trend: Literal["n", "c", "ct", "ctt"] = "n",
         *,
         causal: bool = False,
         seasonal: bool = False,
-        deterministic: Optional[DeterministicProcess] = None,
-        hold_back: Optional[int] = None,
-        period: Optional[int] = None,
+        deterministic: DeterministicProcess | None = None,
+        hold_back: int | None = None,
+        period: int | None = None,
         missing: Literal["none", "raise"] = "none",
     ) -> UECM:
         return super().from_formula(
@@ -2111,11 +2125,11 @@ class UECMResults(ARDLResults):
         An estimate of the scale of the model.
     """
 
-    _cache = {}  # for scale setter
+    _cache: dict[str, Any] = {}  # for scale setter
 
     def _ci_wrap(
         self, val: np.ndarray, name: str = ""
-    ) -> Union[np.ndarray, pd.Series, pd.DataFrame]:
+    ) -> NDArray | pd.Series | pd.DataFrame:
         if not isinstance(self.model.data, PandasData):
             return val
         ndet = self.model._blocks["deterministic"].shape[1]
@@ -2130,7 +2144,7 @@ class UECMResults(ARDLResults):
         return pd.Series(val, index=lbls, name=name)
 
     @cache_readonly
-    def ci_params(self) -> Union[np.ndarray, pd.Series]:
+    def ci_params(self) -> np.ndarray | pd.Series:
         """Parameters of normalized cointegrating relationship"""
         ndet = self.model._blocks["deterministic"].shape[1]
         nlvl = self.model._blocks["levels"].shape[1]
@@ -2138,13 +2152,13 @@ class UECMResults(ARDLResults):
         return self._ci_wrap(self.params[: ndet + nlvl] / base, "ci_params")
 
     @cache_readonly
-    def ci_bse(self) -> Union[np.ndarray, pd.Series]:
+    def ci_bse(self) -> np.ndarray | pd.Series:
         """Standard Errors of normalized cointegrating relationship"""
         bse = np.sqrt(np.diag(self.ci_cov_params()))
         return self._ci_wrap(bse, "ci_bse")
 
     @cache_readonly
-    def ci_tvalues(self) -> Union[np.ndarray, pd.Series]:
+    def ci_tvalues(self) -> np.ndarray | pd.Series:
         """T-values of normalized cointegrating relationship"""
         ndet = self.model._blocks["deterministic"].shape[1]
         with warnings.catch_warnings():
@@ -2154,16 +2168,14 @@ class UECMResults(ARDLResults):
         return self._ci_wrap(tvalues, "ci_tvalues")
 
     @cache_readonly
-    def ci_pvalues(self) -> Union[np.ndarray, pd.Series]:
+    def ci_pvalues(self) -> np.ndarray | pd.Series:
         """P-values of normalized cointegrating relationship"""
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             pvalues = 2 * (1 - stats.norm.cdf(np.abs(self.ci_tvalues)))
         return self._ci_wrap(pvalues, "ci_pvalues")
 
-    def ci_conf_int(
-        self, alpha: float = 0.05
-    ) -> Union[np.ndarray, pd.DataFrame]:
+    def ci_conf_int(self, alpha: float = 0.05) -> Float64Array | pd.DataFrame:
         alpha = float_like(alpha, "alpha")
 
         if self.use_t:
@@ -2208,7 +2220,7 @@ class UECMResults(ARDLResults):
         return smry
 
     @cache_readonly
-    def ci_resids(self) -> Union[np.ndarray, pd.Series]:
+    def ci_resids(self) -> np.ndarray | pd.Series:
         d = self.model._blocks["deterministic"]
         exog = self.model.data.orig_exog
         is_pandas = isinstance(exog, pd.DataFrame)
@@ -2227,7 +2239,7 @@ class UECMResults(ARDLResults):
         index = self.model.data.orig_endog.index
         return pd.Series(resids, index=index, name="ci_resids")
 
-    def ci_cov_params(self) -> Union[np.ndarray, pd.DataFrame]:
+    def ci_cov_params(self) -> Float64Array | pd.DataFrame:
         """Covariance of normalized of cointegrating relationship"""
         ndet = self.model._blocks["deterministic"].shape[1]
         nlvl = self.model._blocks["levels"].shape[1]
@@ -2243,7 +2255,7 @@ class UECMResults(ARDLResults):
             if i == ndet:
                 continue
             d[i, i] = 1 / base
-            d[i, ndet] = -params[i] / (base ** 2)
+            d[i, ndet] = -params[i] / (base**2)
         ci_cov = d @ ci_cov @ d.T
         return self._ci_wrap(ci_cov)
 
@@ -2255,13 +2267,15 @@ class UECMResults(ARDLResults):
         self,
         case: Literal[1, 2, 3, 4, 5],
         cov_type: str = "nonrobust",
-        cov_kwds: Dict[str, Any] = None,
+        cov_kwds: dict[str, Any] = None,
         use_t: bool = True,
         asymptotic: bool = True,
         nsim: int = 100_000,
-        seed: Optional[
-            int, Sequence[int], np.random.RandomState, np.random.Generator
-        ] = None,
+        seed: int
+        | Sequence[int]
+        | np.random.RandomState
+        | np.random.Generator
+        | None = None,
     ):
         r"""
         Cointegration bounds test of Pesaran, Shin, and Smith
@@ -2436,7 +2450,7 @@ def _pss_pvalue(stat: float, k: int, case: int, i1: bool) -> float:
     threshold = pss_critical_values.stat_star[key]
     log_stat = np.log(stat)
     p = small_p if stat > threshold else large_p
-    x = [log_stat ** i for i in range(len(p))]
+    x = [log_stat**i for i in range(len(p))]
     return 1 - stats.norm.cdf(x @ np.array(p))
 
 
@@ -2446,14 +2460,15 @@ def _pss_simulate(
     case: Literal[1, 2, 3, 4, 5],
     nobs: int,
     nsim: int,
-    seed: Union[
-        int, Sequence[int], np.random.RandomState, np.random.Generator
-    ],
-) -> Tuple[pd.DataFrame, pd.Series]:
+    seed: int
+    | Sequence[int]
+    | np.random.RandomState
+    | np.random.Generator
+    | None,
+) -> tuple[pd.DataFrame, pd.Series]:
+    rs: np.random.RandomState | np.random.Generator
     if not isinstance(seed, np.random.RandomState):
-        rs: Union[
-            np.random.RandomState, np.random.Generator
-        ] = np.random.default_rng(seed)
+        rs = np.random.default_rng(seed)
     else:
         assert isinstance(seed, np.random.RandomState)
         rs = seed
@@ -2492,7 +2507,7 @@ def _pss_simulate(
 
         u = _vectorized_ols_resid(rhs, lhs)
         df = rhs.shape[1] - rhs.shape[2]
-        s2 = (u ** 2).sum(1) / df
+        s2 = (u**2).sum(1) / df
 
         if case in (3, 4):
             rhs_r = rhs[:, :, -1:]
@@ -2505,14 +2520,14 @@ def _pss_simulate(
             ur = np.squeeze(lhs)
             nrest = rhs.shape[-1]
 
-        f = ((ur ** 2).sum(1) - (u ** 2).sum(1)) / nrest
+        f = ((ur**2).sum(1) - (u**2).sum(1)) / nrest
         f /= s2
         f_upper[loc : loc + to_do] = f
 
         # Lower
         rhs[:, :, 1:k] = x_lower[:, :-1]
         u = _vectorized_ols_resid(rhs, lhs)
-        s2 = (u ** 2).sum(1) / df
+        s2 = (u**2).sum(1) / df
 
         if case in (3, 4):
             rhs_r = rhs[:, :, -1:]
@@ -2525,7 +2540,7 @@ def _pss_simulate(
             ur = np.squeeze(lhs)
             nrest = rhs.shape[-1]
 
-        f = ((ur ** 2).sum(1) - (u ** 2).sum(1)) / nrest
+        f = ((ur**2).sum(1) - (u**2).sum(1)) / nrest
         f /= s2
         f_lower[loc : loc + to_do] = f
 

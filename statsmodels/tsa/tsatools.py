@@ -12,6 +12,7 @@ from pandas.tseries.frequencies import to_offset
 
 from statsmodels.tools.data import _is_recarray, _is_using_pandas
 from statsmodels.tools.sm_exceptions import ValueWarning
+from statsmodels.tools.typing import NDArray
 from statsmodels.tools.validation import (
     array_like,
     bool_like,
@@ -297,7 +298,7 @@ def lagmat(x,
            trim: Literal["forward", "backward", "both", "none"]='forward',
            original: Literal["ex", "sep", "in"]="ex",
            use_pandas: bool=False
-           ):
+           )-> NDArray | DataFrame | tuple[NDArray, NDArray] | tuple[DataFrame, DataFrame]:
     """
     Create 2d array of lags.
 
@@ -772,7 +773,7 @@ def unintegrate(x, levels):
     return np.cumsum(np.r_[x0, x])
 
 
-def freq_to_period(freq):
+def freq_to_period(freq: str | offsets.DateOffset) -> int:
     """
     Convert a pandas frequency to a periodicity
 
@@ -783,7 +784,7 @@ def freq_to_period(freq):
 
     Returns
     -------
-    period : int
+    int
         Periodicity of freq
 
     Notes
@@ -792,6 +793,7 @@ def freq_to_period(freq):
     """
     if not isinstance(freq, offsets.DateOffset):
         freq = to_offset(freq)  # go ahead and standardize
+    assert isinstance(freq, offsets.DateOffset)
     freq = freq.rule_code.upper()
 
     if freq == "A" or freq.startswith(("A-", "AS-")):
