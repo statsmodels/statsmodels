@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from statsmodels.compat.python import lzip
 
 from functools import reduce
@@ -238,7 +240,7 @@ class Model(object):
         return self.data.ynames
 
     @property
-    def exog_names(self):
+    def exog_names(self) -> list[str] | None:
         """
         Names of exogenous variables.
         """

@@ -603,7 +603,7 @@ def _fit_lbfgs(f, score, start_params, fargs, kwargs, disp=True, maxiter=100,
     """
     check_kwargs(
         kwargs,
-        ("m", "pgtol", "factr", "maxfun", "epsilon", "approx_grad", "bounds", "loglike_and_score"),
+        ("m", "pgtol", "factr", "maxfun", "epsilon", "approx_grad", "bounds", "loglike_and_score", "iprint"),
         "lbfgs"
     )
     # Use unconstrained optimization by default.

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from statsmodels.compat.pandas import (
     is_float_index,
     is_int_index,
@@ -290,7 +292,7 @@ def get_prediction_index(
     index_none=False,
     index_generated=None,
     data=None,
-):
+) -> tuple[int, int, int, Index | None]:
     """
     Get the location of a specific key in an index or model row labels
 
@@ -774,7 +776,7 @@ class TimeSeriesModel(base.LikelihoodModel):
             base_index = self._index
         return get_index_label_loc(key, base_index, self.data.row_labels)
 
-    def _get_prediction_index(self, start, end, index=None, silent=False):
+    def _get_prediction_index(self, start, end, index=None, silent=False) -> tuple[int, int, int, Index | None]:
         """
         Get the location of a specific key in an index or model row labels
 
@@ -851,6 +853,7 @@ class TimeSeriesModel(base.LikelihoodModel):
             vals = [vals]
         self.data.xnames = vals
 
+    # TODO: This is an antipattern, fix/remove with VAR
     # overwrite with writable property for (V)AR models
     exog_names = property(
         _get_exog_names,
