@@ -180,6 +180,7 @@ available link functions can be obtained by
    CDFLink
    CLogLog
    LogLog
+   CLog
    Log
    Logit
    NegativeBinomial
@@ -191,6 +192,7 @@ available link functions can be obtained by
    inverse_power
    inverse_squared
    log
+   clog
    logit
    nbinom
    probit
