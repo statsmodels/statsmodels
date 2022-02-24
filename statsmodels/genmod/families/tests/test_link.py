@@ -17,6 +17,7 @@ sqrt = links.sqrt()
 inverse_squared = links.inverse_squared()
 identity = links.identity()
 log = links.log()
+logc = links.logc()
 probit = links.probit()
 cauchy = links.cauchy()
 cloglog = links.CLogLog()
@@ -25,7 +26,7 @@ negbinom = links.NegativeBinomial()
 
 # TODO: parametrize all these tess
 Links = [logit, inverse_power, sqrt, inverse_squared, identity,
-         log, probit, cauchy, cloglog, loglog, negbinom]
+         log, logc, probit, cauchy, cloglog, loglog, negbinom]
 
 # links with defined second derivative of inverse link.
 LinksISD = [inverse_power, sqrt, inverse_squared, identity,
