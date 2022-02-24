@@ -586,6 +586,149 @@ class log(Log):
     pass
 
 
+class LogC(Link):
+    """
+    The log-complement transform
+
+    Notes
+    -----
+    call and derivative call a private method _clean to trim the data by
+    machine epsilon so that p is in (0,1). logc is an alias of LogC.
+    """
+
+    def _clean(self, x):
+        return np.clip(x, FLOAT_EPS, 1)
+
+    def __call__(self, p, **extra):
+        """
+        Log-complement transform link function
+
+        Parameters
+        ----------
+        x : array_like
+            Mean parameters
+
+        Returns
+        -------
+        z : ndarray
+            log(1 - x)
+
+        Notes
+        -----
+        g(p) = log(1-p)
+        """
+        x = self._clean(p)
+        return np.log(1 - x)
+
+    def inverse(self, z):
+        """
+        Inverse of log-complement transform link function
+
+        Parameters
+        ----------
+        z : ndarray
+            The inverse of the link function at `p`
+
+        Returns
+        -------
+        p : ndarray
+            The mean probabilities given the value of the inverse `z`
+
+        Notes
+        -----
+        g^{-1}(z) = 1 - exp(z)
+        """
+        return 1 - np.exp(z)
+
+    def deriv(self, p):
+        """
+        Derivative of log-complement transform link function
+
+        Parameters
+        ----------
+        p : array_like
+            Mean parameters
+
+        Returns
+        -------
+        g'(p) : ndarray
+            derivative of log-complement transform of x
+
+        Notes
+        -----
+        g'(x) = -1/(1 - x)
+        """
+        p = self._clean(p)
+        return -1. / (1. - p)
+
+    def deriv2(self, p):
+        """
+        Second derivative of the log-complement transform link function
+
+        Parameters
+        ----------
+        p : array_like
+            Mean parameters
+
+        Returns
+        -------
+        g''(p) : ndarray
+            Second derivative of log-complement transform of x
+
+        Notes
+        -----
+        g''(x) = -(-1/(1 - x))^2
+        """
+        p = self._clean(p)
+        return -1 * np.power(-1. / (1. - p), 2)
+
+    def inverse_deriv(self, z):
+        """
+        Derivative of the inverse of the log-complement transform link
+        function
+
+        Parameters
+        ----------
+        z : ndarray
+            The inverse of the link function at `p`
+
+        Returns
+        -------
+        g^(-1)'(z) : ndarray
+            The value of the derivative of the inverse of the log-complement
+            function.
+        """
+        return -np.exp(z)
+
+    def inverse_deriv2(self, z):
+        """
+        Second derivative of the inverse link function g^(-1)(z).
+
+        Parameters
+        ----------
+        z : array_like
+            The inverse of the link function at `p`
+
+        Returns
+        -------
+        g^(-1)''(z) : ndarray
+            The value of the second derivative of the inverse of the
+            log-complement function.
+        """
+        return -np.exp(z)
+
+
+class logc(LogC):
+    """
+    The log-complement transform
+
+    Notes
+    -----
+    logc is a an alias of LogC.
+    """
+    pass
+
+
 # TODO: the CDFLink is untested
 class CDFLink(Logit):
     """
