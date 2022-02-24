@@ -17,6 +17,7 @@ sqrt = links.sqrt()
 inverse_squared = links.inverse_squared()
 identity = links.identity()
 log = links.log()
+logc = links.logc()
 probit = links.probit()
 cauchy = links.cauchy()
 cloglog = links.CLogLog()
@@ -25,11 +26,11 @@ negbinom = links.NegativeBinomial()
 
 # TODO: parametrize all these tess
 Links = [logit, inverse_power, sqrt, inverse_squared, identity,
-         log, probit, cauchy, cloglog, loglog, negbinom]
+         log, logc, probit, cauchy, cloglog, loglog, negbinom]
 
 # links with defined second derivative of inverse link.
 LinksISD = [inverse_power, sqrt, inverse_squared, identity,
-            cauchy, probit, loglog]
+            logc, cauchy, probit, loglog]
 
 
 def get_domainvalue(link):
@@ -41,7 +42,7 @@ def get_domainvalue(link):
         z = min(z, 3)
     elif isinstance(link, links.LogLog):
         z = max(z, -3)
-    elif isinstance(link, links.NegativeBinomial):
+    elif isinstance(link, (links.NegativeBinomial, links.LogC)):
         # domain is negative numbers
         z = -z
     return z
@@ -71,12 +72,15 @@ def test_deriv():
     for link in Links:
         for k in range(10):
             p = np.random.uniform(0, 1)
+            if isinstance(link, links.cauchy):
+                p = np.clip(p, 0.03, 0.97)
             d = link.deriv(p)
             da = nd.approx_fprime(np.r_[p], link)
             assert_allclose(d, da, rtol=1e-6, atol=1e-6,
                             err_msg=str(link))
             if not isinstance(link, (type(inverse_power),
-                                     type(inverse_squared))):
+                                     type(inverse_squared),
+                                     type(logc))):
                 # check monotonically increasing
                 assert_array_less(-d, 0)
 
@@ -105,7 +109,7 @@ def test_inverse_deriv():
 
     for link in Links:
         for k in range(10):
-            z = -np.log(np.random.uniform())  # In domain for all families
+            z = get_domainvalue(link)
             d = link.inverse_deriv(z)
             f = 1 / link.deriv(link.inverse(z))
             assert_allclose(d, f, rtol=1e-8, atol=1e-10,
