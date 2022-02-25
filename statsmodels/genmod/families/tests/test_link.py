@@ -42,7 +42,7 @@ def get_domainvalue(link):
         z = min(z, 3)
     elif isinstance(link, links.LogLog):
         z = max(z, -3)
-    elif isinstance(link, links.NegativeBinomial):
+    elif isinstance(link, links.NegativeBinomial, links.CLog):
         # domain is negative numbers
         z = -z
     return z
