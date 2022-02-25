@@ -684,7 +684,7 @@ class LogC(Link):
 
     def inverse_deriv(self, z):
         """
-        Derivative of the inverse of the log-complement transform link 
+        Derivative of the inverse of the log-complement transform link
         function
 
         Parameters
@@ -695,8 +695,25 @@ class LogC(Link):
         Returns
         -------
         g^(-1)'(z) : ndarray
-            The value of the derivative of the inverse of the log-complement 
+            The value of the derivative of the inverse of the log-complement
             function.
+        """
+        return -np.exp(z)
+    
+    def inverse_deriv2(self, z):
+        """
+        Second derivative of the inverse link function g^(-1)(z).
+
+        Parameters
+        ----------
+        z : array_like
+            The inverse of the link function at `p`
+
+        Returns
+        -------
+        g^(-1)''(z) : ndarray
+            The value of the second derivative of the inverse of the
+            log-complement function.
         """
         return -np.exp(z)
 
