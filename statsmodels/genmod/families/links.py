@@ -680,7 +680,7 @@ class LogC(Link):
         g''(x) = -(-1/(1 - x))^2
         """
         p = self._clean(p)
-        return -1 * np.pow(-1. / (1. - p), 2)
+        return -1 * np.power(-1. / (1. - p), 2)
 
     def inverse_deriv(self, z):
         """
