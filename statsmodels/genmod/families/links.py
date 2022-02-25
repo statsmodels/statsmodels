@@ -699,7 +699,7 @@ class LogC(Link):
             function.
         """
         return -np.exp(z)
-    
+
     def inverse_deriv2(self, z):
         """
         Second derivative of the inverse link function g^(-1)(z).
