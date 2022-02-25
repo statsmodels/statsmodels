@@ -72,6 +72,8 @@ def test_deriv():
     for link in Links:
         for k in range(10):
             p = np.random.uniform(0, 1)
+            if isinstance(link, links.cauchy):
+                p = np.clip(p, 0.03, 0.97)
             d = link.deriv(p)
             da = nd.approx_fprime(np.r_[p], link)
             assert_allclose(d, da, rtol=1e-6, atol=1e-6,
