@@ -8,9 +8,16 @@ from pandas.core.nanops import nanmean as pd_nanmean
 from statsmodels.tools.validation import PandasWrapper, array_like
 from statsmodels.tsa._stl import STL
 from statsmodels.tsa.filters.filtertools import convolution_filter
+from statsmodels.tsa.mstl import MSTL
 from statsmodels.tsa.tsatools import freq_to_period
 
-__all__ = ["STL", "seasonal_decompose", "seasonal_mean", "DecomposeResult"]
+__all__ = [
+    "STL",
+    "seasonal_decompose",
+    "seasonal_mean",
+    "DecomposeResult",
+    "MSTL",
+]
 
 
 def _extrapolate_trend(trend, npoints):
@@ -311,7 +318,21 @@ class DecomposeResult(object):
         register_matplotlib_converters()
         series = [(self._observed, "Observed")] if observed else []
         series += [(self.trend, "trend")] if trend else []
-        series += [(self.seasonal, "seasonal")] if seasonal else []
+
+        if self.seasonal.ndim == 1:
+            series += [(self.seasonal, "seasonal")] if seasonal else []
+        elif self.seasonal.ndim > 1:
+            if isinstance(self.seasonal, pd.DataFrame):
+                for col in self.seasonal.columns:
+                    series += (
+                        [(self.seasonal[col], "seasonal")] if seasonal else []
+                    )
+            else:
+                for i in range(self.seasonal.shape[1]):
+                    series += (
+                        [(self.seasonal[:, i], "seasonal")] if seasonal else []
+                    )
+
         series += [(self.resid, "residual")] if resid else []
         series += [(self.weights, "weights")] if weights else []
 
