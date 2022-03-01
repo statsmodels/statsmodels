@@ -153,7 +153,7 @@ DEFINE_MACROS = [
 
 
 exts = dict(
-    _stl={"source": "statsmodels/tsa/_stl.pyx"},
+    _stl={"source": "statsmodels/tsa/stl/_stl.pyx"},
     _exponential_smoothers={
         "source": "statsmodels/tsa/holtwinters/_exponential_smoothers.pyx"
     },  # noqa: E501

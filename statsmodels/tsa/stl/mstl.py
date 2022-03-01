@@ -29,7 +29,8 @@ from statsmodels.tsa.tsatools import freq_to_period
 
 class MSTL:
     """
-    MSTL(endog, periods=None, windows=None, lmbda=None, iterate=2, stl_kwargs=None)
+    MSTL(endog, periods=None, windows=None, lmbda=None, iterate=2,
+         stl_kwargs=None)
 
     Season-Trend decomposition using LOESS for multiple seasonalities.
 
