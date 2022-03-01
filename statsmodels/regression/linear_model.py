@@ -35,7 +35,7 @@ from __future__ import annotations
 from statsmodels.compat.pandas import Appender
 from statsmodels.compat.python import lrange, lzip
 
-from typing import Sequence
+from typing import Literal, Sequence
 import warnings
 
 import numpy as np
@@ -50,6 +50,7 @@ from statsmodels.regression._prediction import PredictionResults
 from statsmodels.tools.decorators import cache_readonly, cache_writable
 from statsmodels.tools.sm_exceptions import InvalidTestWarning, ValueWarning
 from statsmodels.tools.tools import pinv_extended
+from statsmodels.tools.typing import Float64Array
 from statsmodels.tools.validation import bool_like, float_like, string_like
 
 from . import _prediction as pred
@@ -189,6 +190,7 @@ class RegressionModel(base.LikelihoodModel):
     """
     def __init__(self, endog, exog, **kwargs):
         super(RegressionModel, self).__init__(endog, exog, **kwargs)
+        self.pinv_wexog: Float64Array | None = None
         self._data_attr.extend(['pinv_wexog', 'wendog', 'wexog', 'weights'])
 
     def initialize(self):
@@ -250,8 +252,24 @@ class RegressionModel(base.LikelihoodModel):
         """
         raise NotImplementedError("Subclasses must implement.")
 
-    def fit(self, method="pinv", cov_type='nonrobust', cov_kwds=None,
-            use_t=None, **kwargs):
+    def fit(
+            self,
+            method: Literal["pinv", "qr"] = "pinv",
+            cov_type: Literal[
+                "nonrobust",
+                "fixed scale",
+                "HC0",
+                "HC1",
+                "HC2",
+                "HC3",
+                "hac-panel",
+                "hac-groupsum",
+                "cluster",
+            ] = "nonrobust",
+            cov_kwds=None,
+            use_t: bool | None = None,
+            **kwargs
+    ):
         """
         Full fit of the model.
 
@@ -327,7 +345,8 @@ class RegressionModel(base.LikelihoodModel):
                 self.rank = np.linalg.matrix_rank(R)
             else:
                 Q, R = self.exog_Q, self.exog_R
-
+            # Needed for some covariance estimators, see GH #8157
+            self.pinv_wexog = np.linalg.pinv(self.wexog)
             # used in ANOVA
             self.effects = effects = np.dot(Q.T, self.wendog)
             beta = np.linalg.solve(R, effects)
