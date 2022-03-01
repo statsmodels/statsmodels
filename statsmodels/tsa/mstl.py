@@ -29,7 +29,7 @@ from statsmodels.tsa.tsatools import freq_to_period
 
 class MSTL:
     """
-    MSTL(endog, periods=None, windows=None, lmbda=None, iterate=2, **kwargs)
+    MSTL(endog, periods=None, windows=None, lmbda=None, iterate=2, stl_kwargs=None)
 
     Season-Trend decomposition using LOESS for multiple seasonalities.
 
@@ -52,11 +52,8 @@ class MSTL:
         value will be estimated that maximizes the log-likelihood function.
     iterate : int, optional
         Number of iterations to use to refine the seasonal component.
-
-    Other Parameters
-    ----------------
-    **kwargs : dict
-        Other arguments are passed to STL.
+    stl_kwargs: dict, optional
+        Arguments to pass to STL.
 
     See Also
     --------
@@ -86,7 +83,7 @@ class MSTL:
     with periods 24 (daily) and 24*7 (weekly).
 
     >>> from statsmodels.tsa.seasonal import MSTL
-    >>> res = STL(data, periods=(24, 24*7)).fit()
+    >>> res = MSTL(data, periods=(24, 24*7)).fit()
     >>> res.plot()
     >>> plt.show()
     """
@@ -94,11 +91,12 @@ class MSTL:
     def __init__(
         self,
         endog: ArrayLike1D,
+        *,
         periods: Optional[Union[int, Sequence[int]]] = None,
         windows: Optional[Union[int, Sequence[int]]] = None,
         lmbda: Optional[Union[float, str]] = None,
         iterate: int = 2,
-        **kwargs,
+        stl_kwargs: Optional[Dict[str, Union[int, bool, None]]] = None,
     ):
         self.endog = endog
         self._y = self._to_1d_array(endog)
@@ -107,7 +105,9 @@ class MSTL:
         self.periods = self._process_periods(periods)
         self.windows = self._process_windows(windows)
         self.iterate = iterate
-        self._stl_args = self._remove_overloaded_stl_args(kwargs)
+        self._stl_kwargs = self._remove_overloaded_stl_args(
+            stl_kwargs if stl_kwargs else {}
+        )
 
         if len(self.periods) != len(self.windows):
             raise ValueError("Periods and windows must have same length")
@@ -152,7 +152,7 @@ class MSTL:
                     endog=deseas,
                     period=periods[i],
                     seasonal=windows[i],
-                    **self._stl_args,
+                    **self._stl_kwargs,
                 ).fit()
                 seasonal[i] = res.seasonal
                 deseas = deseas - seasonal[i]
