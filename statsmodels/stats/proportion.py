@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-"""Tests and Confidence Intervals for Binomial Proportions
+"""
+Tests and Confidence Intervals for Binomial Proportions
 
 Created on Fri Mar 01 00:23:07 2013
 
@@ -8,48 +9,135 @@ License: BSD-3
 """
 
 from statsmodels.compat.python import lzip
-
+from typing import Callable, Tuple
 import numpy as np
+import pandas as pd
 from scipy import optimize, stats
 
 from statsmodels.stats.base import AllPairsResults, HolderTuple
 from statsmodels.stats.weightstats import _zstat_generic2
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
 from statsmodels.tools.testing import Holder
+from statsmodels.tools.validation import array_like
 
 FLOAT_INFO = np.finfo(float)
 
 
-def proportion_confint(count, nobs, alpha=0.05, method='normal'):
+def _bound_proportion_confint(
+    func: Callable[[float], float], qi: float, lower: bool = True
+) -> float:
+    """
+    Try hard to find a bound different from eps/1 - eps in proportion_confint
+
+    Parameters
+    ----------
+    func : callable
+        Callable function to use as the objective of the search
+    qi : float
+        The empirical success rate
+    lower : bool
+        Whether to fund a lower bound for the left side of the CI
+
+    Returns
+    -------
+    float
+        The coarse bound
+    """
+    default = FLOAT_INFO.eps if lower else 1.0 - FLOAT_INFO.eps
+
+    def step(v):
+        return v / 8 if lower else v + (1.0 - v) / 8
+
+    x = step(qi)
+    w = func(x)
+    cnt = 1
+    while w > 0 and cnt < 10:
+        x = step(x)
+        w = func(x)
+        cnt += 1
+    return x if cnt < 10 else default
+
+
+def _bisection_search_conservative(
+    func: Callable[[float], float], lb: float, ub: float, steps: int = 27
+) -> Tuple[float, float]:
+    """
+    Private function used as a fallback by proportion_confint
+
+    Used when brentq returns a non-conservative bound for the CI
+
+    Parameters
+    ----------
+    func : callable
+        Callable function to use as the objective of the search
+    lb : float
+        Lower bound
+    ub : float
+        Upper bound
+    steps : int
+        Number of steps to use in the bisection
+
+    Returns
+    -------
+    est : float
+        The estimated value.  Will always produce a negative value of func
+    func_val : float
+        The value of the function at the estimate
+    """
+    upper = func(ub)
+    lower = func(lb)
+    best = upper if upper < 0 else lower
+    best_pt = ub if upper < 0 else lb
+    if np.sign(lower) == np.sign(upper):
+        raise ValueError("problem with signs")
+    mp = (ub + lb) / 2
+    mid = func(mp)
+    if (mid < 0) and (mid > best):
+        best = mid
+        best_pt = mp
+    for _ in range(steps):
+        if np.sign(mid) == np.sign(upper):
+            ub = mp
+            upper = mid
+        else:
+            lb = mp
+        mp = (ub + lb) / 2
+        mid = func(mp)
+        if (mid < 0) and (mid > best):
+            best = mid
+            best_pt = mp
+    return best_pt, best
+
+
+def proportion_confint(count, nobs, alpha=0.05, method="normal"):
     """
     Confidence interval for a binomial proportion
 
     Parameters
     ----------
-    count : int or array_array_like
-        number of successes, can be pandas Series or DataFrame
-    nobs : int
-        total number of trials
+    count : {int, array_like}
+        number of successes, can be pandas Series or DataFrame. Arrays
+        much contain integer values.
+    nobs : {int, array_like}
+        total number of trials.  Arrays much contain integer values.
     alpha : float in (0, 1)
         significance level, default 0.05
-    method : {'normal', 'agresti_coull', 'beta', 'wilson', 'binom_test'}
-        default: 'normal'
-        method to use for confidence interval,
-        currently available methods :
+    method : {"normal", "agresti_coull", "beta", "wilson", "binom_test"}
+        default: "normal"
+        method to use for confidence interval. Supported methods:
 
          - `normal` : asymptotic normal approximation
          - `agresti_coull` : Agresti-Coull interval
          - `beta` : Clopper-Pearson interval based on Beta distribution
          - `wilson` : Wilson Score interval
          - `jeffreys` : Jeffreys Bayesian Interval
-         - `binom_test` : experimental, inversion of binom_test
+         - `binom_test` : Numerical inversion of binom_test
 
     Returns
     -------
-    ci_low, ci_upp : float, ndarray, or pandas Series or DataFrame
+    ci_low, ci_upp : {float, ndarray, Series DataFrame}
         lower and upper confidence level with coverage (approximately) 1-alpha.
-        When a pandas object is returned, then the index is taken from the
-        `count`.
+        When a pandas object is returned, then the index is taken from `count`.
 
     Notes
     -----
@@ -57,13 +145,13 @@ def proportion_confint(count, nobs, alpha=0.05, method='normal'):
     but is in general conservative. Most of the other methods have average
     coverage equal to 1-alpha, but will have smaller coverage in some cases.
 
-    The 'beta' and 'jeffreys' interval are central, they use alpha/2 in each
+    The "beta" and "jeffreys" interval are central, they use alpha/2 in each
     tail, and alpha is not adjusted at the boundaries. In the extreme case
     when `count` is zero or equal to `nobs`, then the coverage will be only
-    1 - alpha/2 in the case of 'beta'.
+    1 - alpha/2 in the case of "beta".
 
     The confidence intervals are clipped to be in the [0, 1] interval in the
-    case of 'normal' and 'agresti_coull'.
+    case of "normal" and "agresti_coull".
 
     Method "binom_test" directly inverts the binomial test in scipy.stats.
     which has discrete steps.
@@ -79,11 +167,10 @@ def proportion_confint(count, nobs, alpha=0.05, method='normal'):
         Estimation for a Binomial Proportion",
         Statistical Science 16 (2): 101–133. doi:10.1214/ss/1009213286.
     """
-
-    pd_index = getattr(count, 'index', None)
-    if pd_index is not None and callable(pd_index):
-        # this rules out lists, lists have an index method
-        pd_index = None
+    is_scalar = np.isscalar(count) and np.isscalar(nobs)
+    is_pandas = isinstance(count, (pd.Series, pd.DataFrame))
+    count_a = array_like(count, "count", optional=False, ndim=None)
+    nobs_a = array_like(nobs, "nobs", optional=False, ndim=None)
 
     def _check(x: np.ndarray, name: str) -> np.ndarray:
         if np.issubdtype(x.dtype, np.integer):
@@ -96,126 +183,131 @@ def proportion_confint(count, nobs, alpha=0.05, method='normal'):
             )
         return y
 
-    count = _check(np.asarray(count), "count")
-    nobs = _check(np.asarray(nobs), "nobs")
+    count_a = _check(np.asarray(count_a), "count")
+    nobs_a = _check(np.asarray(nobs_a), "count")
 
-    q_ = count / nobs
+    q_ = count_a / nobs_a
     alpha_2 = 0.5 * alpha
 
-    if method == 'normal':
-        std_ = np.sqrt(q_ * (1 - q_) / nobs)
-        dist = stats.norm.isf(alpha / 2.) * std_
+    if method == "normal":
+        std_ = np.sqrt(q_ * (1 - q_) / nobs_a)
+        dist = stats.norm.isf(alpha / 2.0) * std_
         ci_low = q_ - dist
         ci_upp = q_ + dist
-
-
-
-    elif method == 'binom_test':
+    elif method == "binom_test":
         # inverting the binomial test
-        if hasattr(stats, "binomtest"):
-            def func(qi):
-                return stats.binomtest(count, nobs, p=qi).pvalue - alpha
-        else:
-            # Remove after min SciPy >= 1.7
-            def func(qi):
-                return stats.binom_test(count, nobs, p=qi) - alpha
+        def func_factory(count: int, nobs: int) -> Callable[[float], float]:
+            if hasattr(stats, "binomtest"):
 
-        def _bound(qi, lower=True):
-            """
-            Try hard to find a bound different from eps or 1 - eps
+                def func(qi):
+                    return stats.binomtest(count, nobs, p=qi).pvalue - alpha
 
-            Parameters
-            ----------
-            qi : float
-                The empirical success rate
-            lower : bool
-                Whether to fund a lower bound for the left side of the CI
+            else:
+                # Remove after min SciPy >= 1.7
+                def func(qi):
+                    return stats.binom_test(count, nobs, p=qi) - alpha
 
-            Returns
-            -------
-            float
-                The coarse bound
-            """
-            default = FLOAT_INFO.eps if lower else 1.0 - FLOAT_INFO.eps
+            return func
 
-            def step(v):
-                return v / 8 if lower else v + (1.0 - v) / 8
-
-            x = step(qi)
-            w = func(x)
-            cnt = 1
-            while w > 0 and cnt < 10:
-                x = step(x)
-                w = func(x)
-                cnt += 1
-            return x if cnt < 10 else default
-
-        if count == 0:
-            ci_low = 0
-        else:
-            lower_bnd = _bound(q_, lower=True)
-            ci_low = optimize.brentq(func, lower_bnd, q_)
-        if count == nobs:
-            ci_upp = 1
-        else:
-            upper_bnd = _bound(q_, lower=False)
-            ci_upp = optimize.brentq(func, q_, upper_bnd)
-
-    elif method == 'beta':
-        ci_low = stats.beta.ppf(alpha_2, count, nobs - count + 1)
-        ci_upp = stats.beta.isf(alpha_2, count + 1, nobs - count)
+        bcast = np.broadcast(count_a, nobs_a)
+        ci_low = np.zeros(bcast.shape)
+        ci_upp = np.zeros(bcast.shape)
+        index = bcast.index
+        for c, n in bcast:
+            # Enforce symmetry
+            reverse = False
+            _q = q_.flat[index]
+            if c > n // 2:
+                c = n - c
+                reverse = True
+                _q = 1 - _q
+            func = func_factory(c, n)
+            if c == 0:
+                ci_low.flat[index] = 0.0
+            else:
+                lower_bnd = _bound_proportion_confint(func, _q, lower=True)
+                val, _z = optimize.brentq(
+                    func, lower_bnd, _q, full_output=True
+                )
+                if func(val) > 0:
+                    power = 10
+                    new_lb = val - (val - lower_bnd) / 2**power
+                    while func(new_lb) > 0 and power >= 0:
+                        power -= 1
+                        new_lb = val - (val - lower_bnd) / 2**power
+                    val, _ = _bisection_search_conservative(func, new_lb, _q)
+                ci_low.flat[index] = val
+            if c == n:
+                ci_upp.flat[index] = 1.0
+            else:
+                upper_bnd = _bound_proportion_confint(func, _q, lower=False)
+                val, _z = optimize.brentq(
+                    func, _q, upper_bnd, full_output=True
+                )
+                if func(val) > 0:
+                    power = 10
+                    new_ub = val + (upper_bnd - val) / 2**power
+                    while func(new_ub) > 0 and power >= 0:
+                        power -= 1
+                        new_ub = val - (upper_bnd - val) / 2**power
+                    val, _ = _bisection_search_conservative(func, _q, new_ub)
+                ci_upp.flat[index] = val
+            if reverse:
+                temp = ci_upp.flat[index]
+                ci_upp.flat[index] = 1 - ci_low.flat[index]
+                ci_low.flat[index] = 1 - temp
+            index = bcast.index
+    elif method == "beta":
+        ci_low = stats.beta.ppf(alpha_2, count_a, nobs_a - count_a + 1)
+        ci_upp = stats.beta.isf(alpha_2, count_a + 1, nobs_a - count_a)
 
         if np.ndim(ci_low) > 0:
-            ci_low[q_ == 0] = 0
-            ci_upp[q_ == 1] = 1
+            ci_low.flat[q_.flat == 0] = 0
+            ci_upp.flat[q_.flat == 1] = 1
         else:
-            ci_low = ci_low if (q_ != 0) else 0
-            ci_upp = ci_upp if (q_ != 1) else 1
-
-    elif method == 'agresti_coull':
-        crit = stats.norm.isf(alpha / 2.)
-        nobs_c = nobs + crit**2
-        q_c = (count + crit**2 / 2.) / nobs_c
-        std_c = np.sqrt(q_c * (1. - q_c) / nobs_c)
+            ci_low = 0 if q_ == 0 else ci_low
+            ci_upp = 1 if q_ == 1 else ci_upp
+    elif method == "agresti_coull":
+        crit = stats.norm.isf(alpha / 2.0)
+        nobs_c = nobs_a + crit**2
+        q_c = (count_a + crit**2 / 2.0) / nobs_c
+        std_c = np.sqrt(q_c * (1.0 - q_c) / nobs_c)
         dist = crit * std_c
         ci_low = q_c - dist
         ci_upp = q_c + dist
-
-    elif method == 'wilson':
-        crit = stats.norm.isf(alpha / 2.)
+    elif method == "wilson":
+        crit = stats.norm.isf(alpha / 2.0)
         crit2 = crit**2
-        denom = 1 + crit2 / nobs
-        center = (q_ + crit2 / (2 * nobs)) / denom
-        dist = crit * np.sqrt(q_ * (1. - q_) / nobs + crit2 / (4. * nobs**2))
+        denom = 1 + crit2 / nobs_a
+        center = (q_ + crit2 / (2 * nobs_a)) / denom
+        dist = crit * np.sqrt(
+            q_ * (1.0 - q_) / nobs_a + crit2 / (4.0 * nobs_a**2)
+        )
         dist /= denom
         ci_low = center - dist
         ci_upp = center + dist
-
     # method adjusted to be more forgiving of misspellings or incorrect option name
-    elif method[:4] == 'jeff':
-        ci_low, ci_upp = stats.beta.interval(1 - alpha, count + 0.5,
-                                             nobs - count + 0.5)
-
+    elif method[:4] == "jeff":
+        ci_low, ci_upp = stats.beta.interval(
+            1 - alpha, count_a + 0.5, nobs_a - count_a + 0.5
+        )
     else:
-        raise NotImplementedError('method "%s" is not available' % method)
-
-    if method in ['normal', 'agresti_coull']:
+        raise NotImplementedError(f"method {method} is not available")
+    if method in ["normal", "agresti_coull"]:
         ci_low = np.clip(ci_low, 0, 1)
         ci_upp = np.clip(ci_upp, 0, 1)
-    if pd_index is not None and np.ndim(ci_low) > 0:
-        import pandas as pd
-        if np.ndim(ci_low) == 1:
-            ci_low = pd.Series(ci_low, index=pd_index)
-            ci_upp = pd.Series(ci_upp, index=pd_index)
-        if np.ndim(ci_low) == 2:
-            ci_low = pd.DataFrame(ci_low, index=pd_index)
-            ci_upp = pd.DataFrame(ci_upp, index=pd_index)
-
+    if is_pandas:
+        container = pd.Series if isinstance(count, pd.Series) else pd.DataFrame
+        ci_low = container(ci_low, index=count.index)
+        ci_upp = container(ci_upp, index=count.index)
+    if is_scalar:
+        return float(ci_low), float(ci_upp)
     return ci_low, ci_upp
 
 
 def multinomial_proportions_confint(counts, alpha=0.05, method='goodman'):
-    '''Confidence intervals for multinomial proportions.
+    """
+    Confidence intervals for multinomial proportions.
 
     Parameters
     ----------
@@ -297,7 +389,7 @@ def multinomial_proportions_confint(counts, alpha=0.05, method='goodman'):
            simultaneous confidence intervals for multinomial proportions for
            small counts in a large number of cells," Journal of Statistical
            Software, Vol. 5, No. 6, 2000, pp. 1-24.
-    '''
+    """
     if alpha <= 0 or alpha >= 1:
         raise ValueError('alpha must be in (0, 1), bounds excluded')
     counts = np.array(counts, dtype=float)
@@ -316,24 +408,30 @@ def multinomial_proportions_confint(counts, alpha=0.05, method='goodman'):
     elif method[:5] == 'sison':  # We accept any name starting with 'sison'
         # Define a few functions we'll use a lot.
         def poisson_interval(interval, p):
-            """Compute P(b <= Z <= a) where Z ~ Poisson(p) and
-            `interval = (b, a)`."""
+            """
+            Compute P(b <= Z <= a) where Z ~ Poisson(p) and
+            `interval = (b, a)`.
+            """
             b, a = interval
             prob = stats.poisson.cdf(a, p) - stats.poisson.cdf(b - 1, p)
             return prob
 
         def truncated_poisson_factorial_moment(interval, r, p):
-            """Compute mu_r, the r-th factorial moment of a poisson random
-            variable of parameter `p` truncated to `interval = (b, a)`."""
+            """
+            Compute mu_r, the r-th factorial moment of a poisson random
+            variable of parameter `p` truncated to `interval = (b, a)`.
+            """
             b, a = interval
             return p ** r * (1 - ((poisson_interval((a - r + 1, a), p) -
                                    poisson_interval((b - r, b - 1), p)) /
                                   poisson_interval((b, a), p)))
 
         def edgeworth(intervals):
-            """Compute the Edgeworth expansion term of Sison & Glaz's formula
+            """
+            Compute the Edgeworth expansion term of Sison & Glaz's formula
             (1) (approximated probability for multinomial proportions in a
-            given box)."""
+            given box).
+            """
             # Compute means and central moments of the truncated poisson
             # variables.
             mu_r1, mu_r2, mu_r3, mu_r4 = [
@@ -363,8 +461,10 @@ def multinomial_proportions_confint(counts, alpha=0.05, method='goodman'):
 
 
         def approximated_multinomial_interval(intervals):
-            """Compute approximated probability for Multinomial(n, proportions)
-            to be in `intervals` (Sison & Glaz's formula (1))."""
+            """
+            Compute approximated probability for Multinomial(n, proportions)
+            to be in `intervals` (Sison & Glaz's formula (1)).
+            """
             return np.exp(
                 np.sum(np.log([poisson_interval(interval, p)
                                for (interval, p) in zip(intervals, counts)])) +
@@ -373,8 +473,10 @@ def multinomial_proportions_confint(counts, alpha=0.05, method='goodman'):
             )
 
         def nu(c):
-            """Compute interval coverage for a given `c` (Sison & Glaz's
-            formula (7))."""
+            """
+            Compute interval coverage for a given `c` (Sison & Glaz's
+            formula (7)).
+            """
             return approximated_multinomial_interval(
                 [(np.maximum(count - c, 0), np.minimum(count + c, n))
                  for count in counts])
@@ -404,7 +506,8 @@ def multinomial_proportions_confint(counts, alpha=0.05, method='goodman'):
 
 def samplesize_confint_proportion(proportion, half_length, alpha=0.05,
                                   method='normal'):
-    '''find sample size to get desired confidence interval length
+    """
+    Find sample size to get desired confidence interval length
 
     Parameters
     ----------
@@ -429,7 +532,7 @@ def samplesize_confint_proportion(proportion, half_length, alpha=0.05,
     this is mainly to store the formula.
     possible application: number of replications in bootstrap samples
 
-    '''
+    """
     q_ = proportion
     if method == 'normal':
         n = q_ * (1 - q_) / (half_length / stats.norm.isf(alpha / 2.))**2
@@ -440,7 +543,7 @@ def samplesize_confint_proportion(proportion, half_length, alpha=0.05,
 
 
 def proportion_effectsize(prop1, prop2, method='normal'):
-    '''
+    """
     Effect size for a test comparing two proportions
 
     for use in power function
@@ -474,7 +577,7 @@ def proportion_effectsize(prop1, prop2, method='normal'):
     >>> sm.stats.proportion_effectsize([0.3, 0.4, 0.5], 0.4)
     array([-0.21015893,  0.        ,  0.20135792])
 
-    '''
+    """
     if method != 'normal':
         raise ValueError('only "normal" is implemented')
 
@@ -483,7 +586,8 @@ def proportion_effectsize(prop1, prop2, method='normal'):
 
 
 def std_prop(prop, nobs):
-    '''standard error for the estimate of a proportion
+    """
+    Standard error for the estimate of a proportion
 
     This is just ``np.sqrt(p * (1. - p) / nobs)``
 
@@ -498,7 +602,7 @@ def std_prop(prop, nobs):
     -------
     std : array_like
         standard error for a proportion of nobs independent observations
-    '''
+    """
     return np.sqrt(prop * (1. - prop) / nobs)
 
 
@@ -509,13 +613,14 @@ def _std_diff_prop(p1, p2, ratio=1):
 def _power_ztost(mean_low, var_low, mean_upp, var_upp, mean_alt, var_alt,
                  alpha=0.05, discrete=True, dist='norm', nobs=None,
                  continuity=0, critval_continuity=0):
-    '''Generic statistical power function for normal based equivalence test
+    """
+    Generic statistical power function for normal based equivalence test
 
     This includes options to adjust the normal approximation and can use
     the binomial to evaluate the probability of the rejection region
 
     see power_ztost_prob for a description of the options
-    '''
+    """
     # TODO: refactor structure, separate norm and binom better
     if not isinstance(continuity, tuple):
         continuity = (continuity, continuity)
@@ -551,7 +656,8 @@ def _power_ztost(mean_low, var_low, mean_upp, var_upp, mean_alt, var_alt,
 
 
 def binom_tost(count, nobs, low, upp):
-    '''exact TOST test for one proportion using binomial distribution
+    """
+    Exact TOST test for one proportion using binomial distribution
 
     Parameters
     ----------
@@ -569,7 +675,7 @@ def binom_tost(count, nobs, low, upp):
     pval_low, pval_upp : floats
         p-values of lower and upper one-sided tests
 
-    '''
+    """
     # binom_test_stat only returns pval
     tt1 = binom_test(count, nobs, alternative='larger', prop=low)
     tt2 = binom_test(count, nobs, alternative='smaller', prop=upp)
@@ -577,7 +683,8 @@ def binom_tost(count, nobs, low, upp):
 
 
 def binom_tost_reject_interval(low, upp, nobs, alpha=0.05):
-    '''rejection region for binomial TOST
+    """
+    Rejection region for binomial TOST
 
     The interval includes the end points,
     `reject` if and only if `r_low <= x <= r_upp`.
@@ -596,7 +703,7 @@ def binom_tost_reject_interval(low, upp, nobs, alpha=0.05):
     x_low, x_upp : float
         lower and upper bound of rejection region
 
-    '''
+    """
     x_low = stats.binom.isf(alpha, nobs, low) + 1
     x_upp = stats.binom.ppf(alpha, nobs, upp) - 1
     return x_low, x_upp
@@ -697,7 +804,8 @@ def power_binom_tost(low, upp, nobs, p_alt=None, alpha=0.05):
 def power_ztost_prop(low, upp, nobs, p_alt, alpha=0.05, dist='norm',
                      variance_prop=None, discrete=True, continuity=0,
                      critval_continuity=0):
-    '''Power of proportions equivalence test based on normal distribution
+    """
+    Power of proportions equivalence test based on normal distribution
 
     Parameters
     ----------
@@ -766,7 +874,7 @@ def power_ztost_prop(low, upp, nobs, p_alt, alpha=0.05, dist='norm',
     SAS Manual: Chapter 68: The Power Procedure, Computational Resources
     PASS Chapter 110: Equivalence Tests for One Proportion.
 
-    '''
+    """
     mean_low = low
     var_low = std_prop(low, nobs)**2
     mean_upp = upp
@@ -782,7 +890,8 @@ def power_ztost_prop(low, upp, nobs, p_alt, alpha=0.05, dist='norm',
 
 
 def _table_proportion(count, nobs):
-    '''create a k by 2 contingency table for proportion
+    """
+    Create a k by 2 contingency table for proportion
 
     helper function for proportions_chisquare
 
@@ -802,7 +911,7 @@ def _table_proportion(count, nobs):
     -----
     recent scipy has more elaborate contingency table functions
 
-    '''
+    """
     count = np.asarray(count)
     dt = np.promote_types(count.dtype, np.float64)
     count = np.asarray(count, dtype=dt)
@@ -917,7 +1026,8 @@ def proportions_ztest(count, nobs, value=None, alternative='two-sided',
 
 
 def proportions_ztost(count, nobs, low, upp, prop_var='sample'):
-    '''Equivalence test based on normal distribution
+    """
+    Equivalence test based on normal distribution
 
     Parameters
     ----------
@@ -949,7 +1059,7 @@ def proportions_ztost(count, nobs, low, upp, prop_var='sample'):
     -----
     checked only for 1 sample case
 
-    '''
+    """
     if prop_var == 'limits':
         prop_var_low = low
         prop_var_upp = upp
@@ -968,7 +1078,8 @@ def proportions_ztost(count, nobs, low, upp, prop_var='sample'):
 
 
 def proportions_chisquare(count, nobs, value=None):
-    '''test for proportions based on chisquare test
+    """
+    Test for proportions based on chisquare test
 
     Parameters
     ----------
@@ -1007,7 +1118,7 @@ def proportions_chisquare(count, nobs, value=None):
     given and count and nobs are not scalar, then the null hypothesis is
     that all samples have the same proportion.
 
-    '''
+    """
     nobs = np.atleast_1d(nobs)
     table, expected, n_rows = _table_proportion(count, nobs)
     if value is not None:
@@ -1023,7 +1134,8 @@ def proportions_chisquare(count, nobs, value=None):
 
 
 def proportions_chisquare_allpairs(count, nobs, multitest_method='hs'):
-    '''chisquare test of proportions for all pairs of k samples
+    """
+    Chisquare test of proportions for all pairs of k samples
 
     Performs a chisquare test for proportions for all pairwise comparisons.
     The alternative is two-sided
@@ -1053,7 +1165,7 @@ def proportions_chisquare_allpairs(count, nobs, multitest_method='hs'):
     Notes
     -----
     Yates continuity correction is not available.
-    '''
+    """
     #all_pairs = lmap(list, lzip(*np.triu_indices(4, 1)))
     all_pairs = lzip(*np.triu_indices(len(count), 1))
     pvals = [proportions_chisquare(count[list(pair)], nobs[list(pair)])[1]
@@ -1063,7 +1175,8 @@ def proportions_chisquare_allpairs(count, nobs, multitest_method='hs'):
 
 def proportions_chisquare_pairscontrol(count, nobs, value=None,
                                multitest_method='hs', alternative='two-sided'):
-    '''chisquare test of proportions for pairs of k samples compared to control
+    """
+    Chisquare test of proportions for pairs of k samples compared to control
 
     Performs a chisquare test for proportions for pairwise comparisons with a
     control (Dunnet's test). The control is assumed to be the first element
@@ -1102,7 +1215,7 @@ def proportions_chisquare_pairscontrol(count, nobs, value=None,
 
     ``value`` and ``alternative`` options are not yet implemented.
 
-    '''
+    """
     if (value is not None) or (alternative not in ['two-sided', '2s']):
         raise NotImplementedError
     #all_pairs = lmap(list, lzip(*np.triu_indices(4, 1)))
@@ -1116,7 +1229,8 @@ def proportions_chisquare_pairscontrol(count, nobs, value=None,
 
 def confint_proportions_2indep(count1, nobs1, count2, nobs2, method=None,
                                compare='diff', alpha=0.05, correction=True):
-    """Confidence intervals for comparing two independent proportions
+    """
+    Confidence intervals for comparing two independent proportions
 
     This assumes that we have two independent binomial samples.
 
@@ -1298,7 +1412,8 @@ def confint_proportions_2indep(count1, nobs1, count2, nobs2, method=None,
 
 def _shrink_prob(count1, nobs1, count2, nobs2, shrink_factor=2,
                  return_corr=True):
-    """shrink observed counts towards independence
+    """
+    Shrink observed counts towards independence
 
     Helper function for 'logit-smoothed' inference for the odds-ratio of two
     independent proportions.
@@ -1342,7 +1457,8 @@ def _shrink_prob(count1, nobs1, count2, nobs2, shrink_factor=2,
 def score_test_proportions_2indep(count1, nobs1, count2, nobs2, value=None,
                                   compare='diff', alternative='two-sided',
                                   correction=True, return_results=True):
-    """score_test for two independent proportions
+    """
+    Score test for two independent proportions
 
     This uses the constrained estimate of the proportions to compute
     the variance under the Null hypothesis.
@@ -1498,7 +1614,8 @@ def test_proportions_2indep(count1, nobs1, count2, nobs2, value=None,
                             method=None, compare='diff',
                             alternative='two-sided', correction=True,
                             return_results=True):
-    """Hypothesis test for comparing two independent proportions
+    """
+    Hypothesis test for comparing two independent proportions
 
     This assumes that we have two independent binomial samples.
 
@@ -1872,7 +1989,8 @@ def tost_proportions_2indep(count1, nobs1, count2, nobs2, low, upp,
 
 
 def _std_2prop_power(diff, p2, ratio=1, alpha=0.05, value=0):
-    """compute standard error under null and alternative for 2 proportions
+    """
+    Compute standard error under null and alternative for 2 proportions
 
     helper function for power and sample size computation
 
@@ -1899,7 +2017,8 @@ def _std_2prop_power(diff, p2, ratio=1, alpha=0.05, value=0):
 def power_proportions_2indep(diff, prop2, nobs1, ratio=1, alpha=0.05,
                              value=0, alternative='two-sided',
                              return_results=True):
-    """power for ztest that two independent proportions are equal
+    """
+    Power for ztest that two independent proportions are equal
 
     This assumes that the variance is based on the pooled proportion
     under the null and the non-pooled variance under the alternative
@@ -1980,7 +2099,8 @@ def power_proportions_2indep(diff, prop2, nobs1, ratio=1, alpha=0.05,
 def samplesize_proportions_2indep_onetail(diff, prop2, power, ratio=1,
                                           alpha=0.05, value=0,
                                           alternative='two-sided'):
-    """required sample size assuming normal distribution based on one tail
+    """
+    Required sample size assuming normal distribution based on one tail
 
     This uses an explicit computation for the sample size that is required
     to achieve a given power corresponding to the appropriate tails of the
@@ -2031,7 +2151,8 @@ def samplesize_proportions_2indep_onetail(diff, prop2, power, ratio=1,
 
 def _score_confint_inversion(count1, nobs1, count2, nobs2, compare='diff',
                              alpha=0.05, correction=True):
-    """Compute score confidence interval by inverting score test
+    """
+    Compute score confidence interval by inverting score test
 
     Parameters
     ----------
@@ -2104,7 +2225,8 @@ def _score_confint_inversion(count1, nobs1, count2, nobs2, compare='diff',
 
 def _confint_riskratio_koopman(count1, nobs1, count2, nobs2, alpha=0.05,
                                correction=True):
-    """score confidence interval for ratio or proportions, Koopman/Nam
+    """
+    Score confidence interval for ratio or proportions, Koopman/Nam
 
     signature not consistent with other functions
 
@@ -2139,7 +2261,8 @@ def _confint_riskratio_koopman(count1, nobs1, count2, nobs2, alpha=0.05,
 
 
 def _confint_riskratio_paired_nam(table, alpha=0.05):
-    """confidence interval for marginal risk ratio for matched pairs
+    """
+    Confidence interval for marginal risk ratio for matched pairs
 
     need full table
 
