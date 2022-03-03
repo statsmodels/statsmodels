@@ -106,7 +106,7 @@ class MSTL:
         self.periods = self._process_periods(periods)
         self.windows = self._process_windows(windows)
         self.iterate = iterate
-        self._stl_kwargs = self._remove_overloaded_stl_args(
+        self._stl_kwargs = self._remove_overloaded_stl_kwargs(
             stl_kwargs if stl_kwargs else {}
         )
 
@@ -143,6 +143,10 @@ class MSTL:
         else:
             y = self._y
 
+        # Get STL fit params
+        stl_inner_iter = self._stl_kwargs.pop("inner_iter", None)
+        stl_outer_iter = self._stl_kwargs.pop("outer_iter", None)
+
         # Iterate over each seasonal component to extract seasonalities
         seasonal = np.zeros(shape=(num_seasons, self.nobs))
         deseas = y
@@ -154,7 +158,7 @@ class MSTL:
                     period=periods[i],
                     seasonal=windows[i],
                     **self._stl_kwargs,
-                ).fit()
+                ).fit(inner_iter=stl_inner_iter, outer_iter=stl_outer_iter)
                 seasonal[i] = res.seasonal
                 deseas = deseas - seasonal[i]
 
@@ -213,11 +217,11 @@ class MSTL:
         return windows
 
     @staticmethod
-    def _remove_overloaded_stl_args(stl_args: Dict) -> Dict:
+    def _remove_overloaded_stl_kwargs(stl_kwargs: Dict) -> Dict:
         args = ["endog", "period", "seasonal"]
         for arg in args:
-            stl_args.pop(arg, None)
-        return stl_args
+            stl_kwargs.pop(arg, None)
+        return stl_kwargs
 
     @staticmethod
     def _default_seasonal_windows(n: int) -> ArrayLike1D:
