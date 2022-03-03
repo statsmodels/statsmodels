@@ -1,24 +1,30 @@
-import numpy as np
+from pathlib import Path
+
+from numpy.testing import assert_allclose
 import pandas as pd
 import pytest
 
 from statsmodels.tsa.seasonal import MSTL
 
 
-@pytest.fixture(scope="module")
-def data():
-    t = np.arange(1, 1000)
-    trend = 0.0001 * t**2 + 100
-    daily_seasonality = 5 * np.sin(2 * np.pi * t / 24)
-    weekly_seasonality = 10 * np.sin(2 * np.pi * t / (24 * 7))
-    y = trend + daily_seasonality + weekly_seasonality
-    return y
+@pytest.fixture(scope="function")
+def mstl_results():
+    cur_dir = Path(__file__).parent.resolve()
+    print(cur_dir)
+    file_path = cur_dir / "results/mstl_test_results.csv"
+    return pd.read_csv(file_path)
 
 
-@pytest.fixture(scope="module")
-def data_pd(data):
-    ts = pd.date_range(start="2000-01-01", periods=len(data), freq="H")
-    return pd.Series(data=data, index=ts)
+@pytest.fixture(scope="function")
+def data_pd():
+    cur_dir = Path(__file__).parent.resolve()
+    file_path = cur_dir / "results/mstl_elec_vic.csv"
+    return pd.read_csv(file_path, index_col=["ds"], parse_dates=["ds"])
+
+
+@pytest.fixture(scope="function")
+def data(data_pd):
+    return data_pd["y"].values
 
 
 def test_return_pandas_series_when_input_pandas_and_len_periods_one(data_pd):
@@ -118,3 +124,31 @@ def test_plot(data, data_pd, close_figures):
     mod = MSTL(endog=data_pd, periods=5)
     res = mod.fit()
     res.plot()
+
+
+def test_output_similar_to_R_implementation(data_pd, mstl_results):
+    mod = MSTL(
+        endog=data_pd,
+        periods=(24, 24 * 7),
+        stl_kwargs={
+            "seasonal_deg": 0,
+            "seasonal_jump": 1,
+            "trend_jump": 1,
+            "trend_deg": 1,
+            "low_pass_jump": 1,
+            "low_pass_deg": 1,
+            "inner_iter": 2,
+            "outer_iter": 0,
+        },
+    )
+    res = mod.fit()
+
+    expected_observed = mstl_results["Data"]
+    expected_trend = mstl_results["Trend"]
+    expected_seasonal = mstl_results[["Seasonal24", "Seasonal168"]]
+    expected_resid = mstl_results["Remainder"]
+
+    assert_allclose(res.observed, expected_observed)
+    assert_allclose(res.trend, expected_trend)
+    assert_allclose(res.seasonal, expected_seasonal)
+    assert_allclose(res.resid, expected_resid)
