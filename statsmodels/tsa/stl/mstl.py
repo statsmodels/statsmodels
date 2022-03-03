@@ -24,7 +24,7 @@ import pandas as pd
 from scipy.stats import boxcox
 
 from statsmodels.tools.typing import ArrayLike1D
-from statsmodels.tsa.seasonal import STL
+from statsmodels.tsa.stl._stl import STL
 from statsmodels.tsa.tsatools import freq_to_period
 
 
