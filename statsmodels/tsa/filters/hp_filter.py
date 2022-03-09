@@ -109,7 +109,7 @@ def hpfilter(x, lamb=1600, two_sided=True):
 
     cycle = x - trend
     if not two_sided:
-        one_sided_cycle = [0,0]
+        one_sided_cycle = [0, 0]
         one_sided_trend = list(x[:2])
         for t in range(3, nobs):
             cycle_t, trend_t = hpfilter(x[:t], lamb=lamb, two_sided=True)
@@ -117,6 +117,4 @@ def hpfilter(x, lamb=1600, two_sided=True):
             one_sided_trend.append(trend_t[-1])
         trend = one_sided_trend + [trend[-1]]
         cycle = one_sided_cycle + [cycle[-1]]
-
-
     return pw.wrap(cycle, append='cycle'), pw.wrap(trend, append='trend')
