@@ -7,7 +7,75 @@ from numpy.testing import assert_allclose, assert_equal
 
 # we cannot import test_poisson_2indep directly, pytest treats that as test
 import statsmodels.stats.rates as smr
-from statsmodels.stats.rates import etest_poisson_2indep
+from statsmodels.stats.rates import (
+    # test_poisson, # cannot import functions that start with test
+    confint_poisson,
+    etest_poisson_2indep,
+    )
+
+
+methods = ["wald", "score", "exact-c", "waldccv", "sqrt-a", "sqrt-v", "midp-c",
+           ]
+
+
+@pytest.mark.parametrize('method', methods)
+def test_rate_poisson_consistency(method):
+    # check consistency between test and confint for one poisson rate
+    count, nobs = 15, 400
+    ci = confint_poisson(count, nobs, method=method)
+    pv1 = smr.test_poisson(count, nobs, value=ci[0], method=method).pvalue
+    pv2 = smr.test_poisson(count, nobs, value=ci[1], method=method).pvalue
+
+    rtol = 1e-10
+    if method in ["midp-c"]:
+        # numerical root finding, lower precision
+        rtol = 1e-6
+    assert_allclose(pv1, 0.05, rtol=rtol)
+    assert_allclose(pv2, 0.05, rtol=rtol)
+
+
+def test_rate_poisson_r():
+    count, nobs = 15, 400
+
+    # DescTools
+    # PoissonCI(x=15, n=400, method = c("exact","score", "wald", "byar"))
+    # exact 0.0375 0.0209884653319583 0.0618505471787146
+    # score 0.0375 0.0227264749053794 0.0618771721463559
+    # wald  0.0375 0.0185227303217751 0.0564772696782249
+    # byar  0.0375 0.0219084369245707 0.0602933510943048
+
+
+    # > rr = poisson.exact(15, 400, r=0.05, tsmethod="central")
+    # > rr$p.value
+    # > rr$conf.int
+    pv2 = 0.313026269279486
+    ci2 = (0.0209884653319583, 0.0618505471787146)
+    rt = smr.test_poisson(count, nobs, value=0.05, method="exact-c")
+    ci = confint_poisson(count, nobs, method="exact-c")
+    assert_allclose(rt.pvalue, pv2, rtol=1e-12)
+    assert_allclose(ci, ci2, rtol=1e-12)
+
+    # R package ratesci
+    # sr = scoreci(15, 400, contrast="p", distrib = "poi", skew=FALSE,
+    #      theta0=0.05)
+    # pval computed from 2 * min(pval_left, pval_right)
+    pv2 = 0.263552477282973
+    # ci2 = (0.022726, 0.061877)  # no additional digits available
+    ci2 = (0.0227264749053794, 0.0618771721463559)  # from DescTools
+    rt = smr.test_poisson(count, nobs, value=0.05, method="score")
+    ci = confint_poisson(count, nobs, method="score")
+    assert_allclose(rt.pvalue, pv2, rtol=1e-12)
+    assert_allclose(ci, ci2, rtol=1e-12)
+
+    # > jeffreysci(15, 400, distrib = "poi")
+    ci2 = (0.0219234232268444, 0.0602898619930649)
+    ci = confint_poisson(count, nobs, method="jeff")
+    assert_allclose(ci, ci2, rtol=1e-12)
+
+    # from DescTools
+    ci2 = (0.0185227303217751, 0.0564772696782249)
+    ci = confint_poisson(count, nobs, method="wald")
+    assert_allclose(ci, ci2, rtol=1e-12)
 
 
 def test_twosample_poisson():
