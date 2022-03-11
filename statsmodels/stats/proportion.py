@@ -117,9 +117,9 @@ def proportion_confint(count, nobs, alpha=0.05, method="normal"):
     ----------
     count : {int, array_like}
         number of successes, can be pandas Series or DataFrame. Arrays
-        much contain integer values.
+        must contain integer values.
     nobs : {int, array_like}
-        total number of trials.  Arrays much contain integer values.
+        total number of trials.  Arrays must contain integer values.
     alpha : float in (0, 1)
         significance level, default 0.05
     method : {"normal", "agresti_coull", "beta", "wilson", "binom_test"}
