@@ -11,6 +11,9 @@ from statsmodels.stats.rates import (
     # test_poisson, # cannot import functions that start with test
     confint_poisson,
     etest_poisson_2indep,
+    power_poisson_2indep,
+    power_equivalence_poisson_2indep,
+    power_poisson_diff_2indep,
     )
 
 
@@ -343,3 +346,93 @@ def test_invalid_y_grid():
     with pytest.raises(ValueError) as e:
         etest_poisson_2indep(1, 1, 1, 1, y_grid=1)
     assert "y_grid" in str(e.value)
+
+
+def test_poisson_power_2ratio():
+    # power compared to PASS documentation
+
+    rate1, rate2 = 2.2, 2.2
+    nobs1, nobs2 = 95, 95
+    nobs_ratio = 1
+    alpha = 0.025
+    exposure = 2.5
+    low, upp = 0.8, 1.25
+    dispersion = 1
+
+    # check power of equivalence test
+    cases = [
+        (1.9, 704, 704, 0.90012),
+        (2.0, 246, 246, 0.90057),
+        (2.2, 95, 95, 0.90039),
+        (2.5, 396, 396, 0.90045),
+    ]
+
+    for case in cases:
+        rate1, nobs1, nobs2, p = case
+        pow_ = power_equivalence_poisson_2indep(
+            rate1, nobs1, rate2, nobs2, exposure, low, upp, alpha=alpha,
+            dispersion=dispersion)
+        assert_allclose(pow_, p, atol=5e-5)
+
+    # check power of onesided test, smaller with a margin
+    # non-inferiority
+    # alternative smaller H1: rate1 / rate2 < R
+    cases = [
+        (1.8, 29, 29, 0.90056),
+        (1.9, 39, 39, 0.90649),
+        (2.2, 115, 115, 0.90014),
+        (2.4, 404, 404, 0.90064),
+    ]
+
+    low = 1.2
+    for case in cases:
+        rate1, nobs1, nobs2, p = case
+        pow_ = power_poisson_2indep(rate1, nobs1, rate2, nobs2, exposure,
+                                    value=low, alpha=0.025, dispersion=1,
+                                    alternative="smaller")
+
+        assert_allclose(pow_, p, atol=5e-5)
+
+    # check power of onesided test, larger with a margin (superiority)
+    # alternative larger H1: rate1 / rate2 > R
+    # here I just reverse the case of smaller alternative
+
+    cases = [
+        (1.8, 29, 29, 0.90056),
+        (1.9, 39, 39, 0.90649),
+        (2.2, 115, 115, 0.90014),
+        (2.4, 404, 404, 0.90064),
+    ]
+
+    rate1 = 2.2
+    low = 1 / 1.2
+    for case in cases:
+        rate2, nobs1, nobs2, p = case
+        pow_ = power_poisson_2indep(
+            rate1, nobs1, rate2, nobs2, exposure, value=low, alpha=0.025,
+            dispersion=1, alternative="larger")
+        assert_allclose(pow_, p, atol=5e-5)
+
+
+def test_power_poisson_equal():
+
+    # Example from Chapter 436: Tests for the Difference Between Two Poisson
+    # Rates
+    # equality null H0: rate1 = rate2
+    #
+    # Power N1 N2 N rate1 rate2 diff(rate2-rate1) ratio(rate2/rate1) Alpha
+    # 0.82566 8 6 14 10.00 15.00 5.00 1.5000 0.050
+    #
+    # "1" is reference group
+    # we use group 2 reference
+
+    nobs1, nobs2 = 6, 8
+    nobs_ratio = nobs1 / nobs2
+    rate1, rate2 = 15, 10
+    exposure=1
+    low = 1
+    diff = rate1 - rate2
+    pow_ = power_poisson_diff_2indep(
+        diff, rate2, nobs1, nobs_ratio=nobs_ratio, alpha=0.05, value=0,
+        alternative='larger', return_results=True)
+    assert_allclose(pow_.power, 0.82566, atol=5e-5)

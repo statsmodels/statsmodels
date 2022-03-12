@@ -691,7 +691,7 @@ def _std_2poisson_power(diff, rate2, nobs_ratio=1, alpha=0.05,
     return None, np.sqrt(v1), np.sqrt(v1)
 
 
-def power_ppoisson_diff_2indep(diff, rate2, nobs1, nobs_ratio=1, alpha=0.05,
+def power_poisson_diff_2indep(diff, rate2, nobs1, nobs_ratio=1, alpha=0.05,
                                value=0, alternative='two-sided',
                                return_results=True):
     """power for ztest that two independent poisson rates are equal
@@ -773,6 +773,7 @@ def power_ppoisson_diff_2indep(diff, rate2, nobs1, nobs_ratio=1, alpha=0.05,
             nobs2=nobs_ratio * nobs1,
             nobs_ratio=nobs_ratio,
             alpha=alpha,
+            tuple_=("power",),  # override default
             )
         return res
     else:
