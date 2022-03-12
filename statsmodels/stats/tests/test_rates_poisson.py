@@ -36,6 +36,15 @@ def test_rate_poisson_consistency(method):
     assert_allclose(pv1, 0.05, rtol=rtol)
     assert_allclose(pv2, 0.05, rtol=rtol)
 
+    # check one-sided, note all confint are central
+    pv1 = smr.test_poisson(count, nobs, value=ci[0], method=method,
+                           alternative="larger").pvalue
+    pv2 = smr.test_poisson(count, nobs, value=ci[1], method=method,
+                           alternative="smaller").pvalue
+
+    assert_allclose(pv1, 0.025, rtol=rtol)
+    assert_allclose(pv2, 0.025, rtol=rtol)
+
 
 def test_rate_poisson_r():
     count, nobs = 15, 400
@@ -79,6 +88,13 @@ def test_rate_poisson_r():
     ci2 = (0.0185227303217751, 0.0564772696782249)
     ci = confint_poisson(count, nobs, method="wald")
     assert_allclose(ci, ci2, rtol=1e-12)
+
+    # from ratesci
+    # rateci(15, 400, distrib = "poi")
+    # I think their lower ci is wrong, it also doesn't match for exact_c
+    ci2 = (0.0243357599260795, 0.0604627555786095)
+    ci = confint_poisson(count, nobs, method="midp-c")
+    assert_allclose(ci[1], ci2[1], rtol=1e-5)
 
 
 def test_twosample_poisson():

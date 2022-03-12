@@ -5,7 +5,6 @@ License: BSD-3
 
 '''
 
-
 import numpy as np
 import warnings
 
@@ -55,13 +54,23 @@ def test_poisson(count, nobs, value, method=None, alternative="two-sided",
         pvalue = stats.norm.sf(statistic)
 
     elif method.startswith("exact-c") or method.startswith("midp-c"):
-        pvalue = 2 * np.minimum(stats.poisson.cdf(count, n * value),
-                                stats.poisson.sf(count - 1, n * value))
+        pv1 = stats.poisson.cdf(count, n * value)
+        pv2 = stats.poisson.sf(count - 1, n * value)
+        if method.startswith("midp-c"):
+            pv1 = pv1 - 0.5 * stats.poisson.pmf(count, n * value)
+            pv2 = pv2 - 0.5 * stats.poisson.pmf(count, n * value)
+        if alternative == "two-sided":
+            pvalue = 2 * np.minimum(pv1, pv2)
+        elif alternative == "larger":
+            pvalue = pv2
+        elif alternative == "smaller":
+            pvalue = pv1
+        else:
+            msg = 'alternative should be "two-sided", "larger" or "smaller"'
+            raise ValueError(msg)
+
         statistic = None
         dist = "Poisson"
-
-        if method.startswith("midp-c"):
-            pvalue = pvalue - 0.5 * stats.poisson.pmf(count, n * value)
 
     elif method == "sqrt-a":
         # anscombe, based on Swift 2009 (with transformation to rate)
@@ -288,7 +297,7 @@ def _invert_test_confint(count, nobs, alpha=0.05, method="midp-c",
         return v
 
     ci = confint_poisson(count, nobs, method=method_start)
-    low = optimize.fmin(func, ci[0], xtol=1e-8,  disp=False)
+    low = optimize.fmin(func, ci[0], xtol=1e-8, disp=False)
     upp = optimize.fmin(func, ci[1], xtol=1e-8, disp=False)
     assert np.size(low) == 1
     return low[0], upp[0]
@@ -692,8 +701,8 @@ def _std_2poisson_power(diff, rate2, nobs_ratio=1, alpha=0.05,
 
 
 def power_poisson_diff_2indep(diff, rate2, nobs1, nobs_ratio=1, alpha=0.05,
-                               value=0, alternative='two-sided',
-                               return_results=True):
+                              value=0, alternative='two-sided',
+                              return_results=True):
     """power for ztest that two independent poisson rates are equal
 
     Warning preliminary
