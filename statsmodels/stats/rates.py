@@ -659,15 +659,24 @@ def power_poisson_2indep(rate1, nobs1, rate2, nobs2, exposure, value=0,
     low = value  # alias from original equivalence test case
     nobs_ratio = nobs1 / nobs2
     v1 = dispersion / exposure * (1 / rate2 + 1 / (nobs_ratio * rate1))
-    v0_low = v0_upp = v1
+    v0 = v1
+    std0 = np.sqrt(v0)
+    std1 = np.sqrt(v1)
 
-    crit = norm.isf(alpha)
-    if alternative == "smaller":
-        pow_ = norm.cdf((np.sqrt(nobs2) * (np.log(low) - np.log(rate1 / rate2))
-                        - crit * np.sqrt(v0_low)) / np.sqrt(v1))
-    elif alternative == "larger":
-        pow_ = norm.sf((np.sqrt(nobs2) * (np.log(low) - np.log(rate1 / rate2))
-                       + crit * np.sqrt(v0_low)) / np.sqrt(v1))
+    if alternative == "two-sided":
+        crit = norm.isf(alpha / 2)
+    else:
+        crit = norm.isf(alpha)
+    es = np.log(low) - np.log(rate1 / rate2)
+    pow_ = 0
+    if alternative in ["smaller", "two-sided"]:
+        pow_ = pow_ + norm.cdf((np.sqrt(nobs2) * es - crit * std0) / std1)
+    if alternative in ["larger", "two-sided"]:
+        pow_ = pow_ + norm.sf((np.sqrt(nobs2) * es + crit * std0) / std1)
+
+    if alternative not in ["smaller", "larger", "two-sided"]:
+        raise ValueError("alternative not recognized")
+
     return pow_
 
 

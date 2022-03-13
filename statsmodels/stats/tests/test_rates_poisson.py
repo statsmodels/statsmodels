@@ -409,6 +409,17 @@ def test_poisson_power_2ratio():
 
         assert_allclose(pow_, p, atol=5e-5)
 
+        pow_ = power_poisson_2indep(
+            rate1, nobs1, rate2, nobs2, exposure, value=low, alpha=0.05,
+            dispersion=1, alternative="two-sided")
+        assert_allclose(pow_, p, atol=5e-5)
+
+    # check size, power at null
+    pow_ = power_poisson_2indep(
+            rate1, nobs1, rate2, nobs2, exposure, value=rate1 / rate2,
+            alpha=0.05, dispersion=1, alternative="two-sided")
+    assert_allclose(pow_, 0.05, atol=5e-5)
+
     # check power of onesided test, larger with a margin (superiority)
     # alternative larger H1: rate1 / rate2 > R
     # here I just reverse the case of smaller alternative
@@ -427,6 +438,11 @@ def test_poisson_power_2ratio():
         pow_ = power_poisson_2indep(
             rate1, nobs1, rate2, nobs2, exposure, value=low, alpha=0.025,
             dispersion=1, alternative="larger")
+        assert_allclose(pow_, p, atol=5e-5)
+
+        pow_ = power_poisson_2indep(
+            rate1, nobs1, rate2, nobs2, exposure, value=low, alpha=0.05,
+            dispersion=1, alternative="two-sided")
         assert_allclose(pow_, p, atol=5e-5)
 
 
