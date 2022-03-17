@@ -1407,8 +1407,9 @@ class ExponentialSmoothing(TimeSeriesModel):
         # (s0 + gamma) + (b0 + beta) + (l0 + alpha) + phi
         k = m * has_seasonal + 2 * has_trend + 2 + 1 * damped
         aic = self.nobs * np.log(sse / self.nobs) + k * 2
-        if self.nobs - k - 3 > 0:
-            aicc_penalty = (2 * (k + 2) * (k + 3)) / (self.nobs - k - 3)
+        dof_eff = self.nobs - k - 3
+        if dof_eff > 0:
+            aicc_penalty = (2 * (k + 2) * (k + 3)) / dof_eff
         else:
             aicc_penalty = np.inf
         aicc = aic + aicc_penalty

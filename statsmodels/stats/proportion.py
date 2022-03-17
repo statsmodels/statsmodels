@@ -109,7 +109,7 @@ def _bisection_search_conservative(
     return best_pt, best
 
 
-def proportion_confint(count, nobs, alpha=0.05, method="normal"):
+def proportion_confint(count, nobs, alpha:float=0.05, method="normal"):
     """
     Confidence interval for a binomial proportion
 
@@ -119,9 +119,15 @@ def proportion_confint(count, nobs, alpha=0.05, method="normal"):
         number of successes, can be pandas Series or DataFrame. Arrays
         must contain integer values.
     nobs : {int, array_like}
+<<<<<<< Updated upstream
         total number of trials.  Arrays must contain integer values.
     alpha : float in (0, 1)
         significance level, default 0.05
+=======
+        total number of trials.  Arrays much contain integer values.
+    alpha : float
+        Significance level, default 0.05. Must be in (0, 1)
+>>>>>>> Stashed changes
     method : {"normal", "agresti_coull", "beta", "wilson", "binom_test"}
         default: "normal"
         method to use for confidence interval. Supported methods:

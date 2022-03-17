@@ -377,8 +377,17 @@ def aicc(llf, nobs, df_modelwc):
     References
     ----------
     https://en.wikipedia.org/wiki/Akaike_information_criterion#AICc
+
+    Notes
+    -----
+    Returns +inf if the effective degrees of freedom, defined as
+    ``nobs - df_modelwc - 1.0``, is <= 0.
     """
-    return -2.0 * llf + 2.0 * df_modelwc * nobs / (nobs - df_modelwc - 1.0)
+    dof_eff = nobs - df_modelwc - 1.0
+    if dof_eff > 0:
+        return -2.0 * llf + 2.0 * df_modelwc * nobs / dof_eff
+    else:
+        return np.inf
 
 
 def bic(llf, nobs, df_modelwc):
@@ -492,7 +501,8 @@ def aic_sigma(sigma2, nobs, df_modelwc, islog=False):
 
 
 def aicc_sigma(sigma2, nobs, df_modelwc, islog=False):
-    """Akaike information criterion (AIC) with small sample correction
+    """
+    Akaike information criterion (AIC) with small sample correction
 
     Parameters
     ----------
