@@ -155,6 +155,9 @@
   - img: ../_static/images/stl_decomposition.png
     target: notebooks/generated/stl_decomposition.html
     text: Seasonal Decomposition
+  - img: ../_static/images/mstl_decomposition.png
+    target: notebooks/generated/mstl_decomposition.html
+    text: Multi-seasonal Decomposition
   - img: ../_static/images/stationarity_detrending_adf_kpss.png
     target: notebooks/generated/stationarity_detrending_adf_kpss.html
     text: Stationarity and detrending (ADF/KPSS)
