@@ -11,6 +11,7 @@ from statsmodels.stats.rates import (
     # test_poisson, # cannot import functions that start with test
     confint_poisson,
     etest_poisson_2indep,
+    confint_poisson_2indep,
     power_poisson_2indep,
     power_equivalence_poisson_2indep,
     power_poisson_diff_2indep,
@@ -56,7 +57,6 @@ def test_rate_poisson_r():
     # wald  0.0375 0.0185227303217751 0.0564772696782249
     # byar  0.0375 0.0219084369245707 0.0602933510943048
 
-
     # > rr = poisson.exact(15, 400, r=0.05, tsmethod="central")
     # > rr$p.value
     # > rr$conf.int
@@ -95,6 +95,40 @@ def test_rate_poisson_r():
     ci2 = (0.0243357599260795, 0.0604627555786095)
     ci = confint_poisson(count, nobs, method="midp-c")
     assert_allclose(ci[1], ci2[1], rtol=1e-5)
+
+
+methods_diff = ["wald", "score", #"waldccv",
+                ]
+
+
+@pytest.mark.parametrize('method', methods_diff)
+def test_rate_poisson_diff_consistency(method):
+    # check consistency between test and confint for one poisson rate
+    count1, n1, count2, n2 = 30, 400 / 10, 7, 300 / 10   # avoid low=0
+    ci = confint_poisson_2indep(count1, n1, count2, n2, method=method,
+                                compare="diff")
+    pv1 = smr.test_poisson_2indep(count1, n1, count2, n2, value=ci[0],
+                                  method=method, compare="diff").pvalue
+    pv2 = smr.test_poisson_2indep(count1, n1, count2, n2, value=ci[1],
+                                  method=method, compare="diff").pvalue
+
+    rtol = 1e-10
+    if method in ["score"]:
+        # numerical root finding, lower precision
+        rtol = 1e-6
+    assert_allclose(pv1, 0.05, rtol=rtol)
+    assert_allclose(pv2, 0.05, rtol=rtol)
+
+    # check one-sided, note all confint are central
+    pv1 = smr.test_poisson_2indep(count1, n1, count2, n2, value=ci[0], method=method,
+                                  compare="diff",
+                                  alternative="larger").pvalue
+    pv2 = smr.test_poisson_2indep(count1, n1, count2, n2, value=ci[1], method=method,
+                                  compare="diff",
+                                  alternative="smaller").pvalue
+
+    assert_allclose(pv1, 0.025, rtol=rtol)
+    assert_allclose(pv2, 0.025, rtol=rtol)
 
 
 def test_twosample_poisson():

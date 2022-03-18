@@ -143,7 +143,7 @@ def confint_poisson(count, exposure, method=None, alpha=0.05):
     - "exact-c" central confidence interval based on gamma distribution
     - "score" : based on score test, uses variance under null value
     - "wald" : based on wald test, uses variance base on estimated rate.
-    - "waldcc" : based on wald test with 0.5 count added to variance
+    - "waldccv" : based on wald test with 0.5 count added to variance
       computation. This does not use continuity correct for the center of the
       confidence interval.
     - "midp-c" : based on midp correction of central exact confidence interval.
@@ -290,6 +290,8 @@ def confint_poisson(count, exposure, method=None, alpha=0.05):
 
 def _invert_test_confint(count, nobs, alpha=0.05, method="midp-c",
                          method_start="exact-c"):
+    """invert hypothesis test to get confidence interval
+    """
 
     def func(r):
         v = (test_poisson(count, nobs, value=r, method=method)[1] -
@@ -303,9 +305,35 @@ def _invert_test_confint(count, nobs, alpha=0.05, method="midp-c",
     return low[0], upp[0]
 
 
-def test_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=1,
-                        method='score', alternative='two-sided',
-                        etest_kwds=None):
+def _invert_test_confint_2indep(
+        count1, exposure1, count2, exposure2,
+        alpha=0.05,
+        method="score",
+        compare="diff",
+        method_start="wald"
+        ):
+    """invert hypothesis test to get confidence interval
+    """
+
+    def func(r):
+        v = (test_poisson_2indep(
+             count1, exposure1, count2, exposure2,
+             value=r, method=method, compare=compare
+             )[1] - alpha)**2
+        return v
+
+    ci = confint_poisson_2indep(count1, exposure1, count2, exposure2,
+                                method=method_start, compare=compare)
+    low = optimize.fmin(func, ci[0], xtol=1e-8)#, disp=False)
+    upp = optimize.fmin(func, ci[1], xtol=1e-8) #, disp=False)
+    assert np.size(low) == 1
+    return low[0], upp[0]
+
+
+def test_poisson_2indep(count1, exposure1, count2, exposure2, value=None,
+                        ratio_null=None,
+                        method=None, compare='ratio',
+                        alternative='two-sided', etest_kwds=None):
     '''test for ratio of two sample Poisson intensities
 
     If the two Poisson rates are g1 and g2, then the Null hypothesis is
@@ -339,6 +367,32 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=1,
         provide pvalues from `etest_poisson_2indep` using score or wald
         statistic respectively.
         see Notes.
+
+        ratio:
+
+        - 'wald': method W1A, wald test, variance based on separate estimates
+        - 'score': method W2A, score test, variance based on estimate under
+          the Null hypothesis
+        - 'wald-log': W3A   not yet available
+        - 'score-log' W4A   not yet available
+        - 'sqrt': W5A, based on variance stabilizing square root transformation
+        - 'exact-cond': exact conditional test based on binomial distribution
+        - 'cond-midp': midpoint-pvalue of exact conditional test
+        - 'etest': etest with score test statistic
+        - 'etest-wald': etest with wald test statistic
+
+        diff:
+
+        - 'wald',
+        - 'waldccv'
+        - 'score' if correction is True, then this uses the degrees of freedom
+           correction ``nobs / (nobs - 1)`` as in Miettinen Nurminen 1985
+
+    compare : {'diff', 'ratio'}
+        If compare is `diff`, then the confidence interval is for
+        diff = rat11 - rate22.
+        If compare is `ratio`, then the confidence interval is for the
+        rate ratio defined by ratio = rate1 / rate2.
     alternative : string
         The alternative hypothesis, H1, has to be one of the following
 
@@ -381,53 +435,96 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=1,
     # shortcut names
     y1, n1, y2, n2 = count1, exposure1, count2, exposure2
     d = n2 / n1
-    r = ratio_null
-    r_d = r / d
+    rate1, rate2 = y1 / n1, y2 / n2
 
-    if method in ['score']:
-        stat = (y1 - y2 * r_d) / np.sqrt((y1 + y2) * r_d)
-        dist = 'normal'
-    elif method in ['wald']:
-        stat = (y1 - y2 * r_d) / np.sqrt(y1 + y2 * r_d**2)
-        dist = 'normal'
-    elif method in ['sqrt']:
-        stat = 2 * (np.sqrt(y1 + 3 / 8.) - np.sqrt((y2 + 3 / 8.) * r_d))
-        stat /= np.sqrt(1 + r_d)
-        dist = 'normal'
-    elif method in ['exact-cond', 'cond-midp']:
-        from statsmodels.stats import proportion
-        bp = r_d / (1 + r_d)
-        y_total = y1 + y2
-        stat = None
-        # TODO: why y2 in here and not y1, check definition of H1 "larger"
-        pvalue = proportion.binom_test(y1, y_total, prop=bp,
-                                       alternative=alternative)
-        if method in ['cond-midp']:
-            # not inplace in case we still want binom pvalue
-            pvalue = pvalue - 0.5 * stats.binom.pmf(y1, y_total, bp)
+    if compare == 'ratio':
+        if method is None:
+            # default method
+            method = 'score'
 
-        dist = 'binomial'
-    elif method.startswith('etest'):
-        if method.endswith('wald'):
-            method_etest = 'wald'
+        if ratio_null is None and value is None:
+            # default value
+            ratio_null = 1
+        elif ratio_null is not None:
+            # add deprecation warning
+            ratio_null = ratio_null  # just to be explicit
+            value = ratio_null
         else:
-            method_etest = 'score'
-        if etest_kwds is None:
-            etest_kwds = {}
+            ratio_null = value
 
-        stat, pvalue = etest_poisson_2indep(
-            count1, exposure1, count2, exposure2, ratio_null=ratio_null,
-            method=method_etest, alternative=alternative, **etest_kwds)
+        r = ratio_null
+        r_d = r / d
 
-        dist = 'poisson'
+        if method in ['score']:
+            stat = (y1 - y2 * r_d) / np.sqrt((y1 + y2) * r_d)
+            dist = 'normal'
+        elif method in ['wald']:
+            stat = (y1 - y2 * r_d) / np.sqrt(y1 + y2 * r_d**2)
+            dist = 'normal'
+        elif method in ['sqrt']:
+            stat = 2 * (np.sqrt(y1 + 3 / 8.) - np.sqrt((y2 + 3 / 8.) * r_d))
+            stat /= np.sqrt(1 + r_d)
+            dist = 'normal'
+        elif method in ['exact-cond', 'cond-midp']:
+            from statsmodels.stats import proportion
+            bp = r_d / (1 + r_d)
+            y_total = y1 + y2
+            stat = None
+            # TODO: why y2 in here and not y1, check definition of H1 "larger"
+            pvalue = proportion.binom_test(y1, y_total, prop=bp,
+                                           alternative=alternative)
+            if method in ['cond-midp']:
+                # not inplace in case we still want binom pvalue
+                pvalue = pvalue - 0.5 * stats.binom.pmf(y1, y_total, bp)
+
+            dist = 'binomial'
+        elif method.startswith('etest'):
+            if method.endswith('wald'):
+                method_etest = 'wald'
+            else:
+                method_etest = 'score'
+            if etest_kwds is None:
+                etest_kwds = {}
+
+            stat, pvalue = etest_poisson_2indep(
+                count1, exposure1, count2, exposure2, ratio_null=ratio_null,
+                method=method_etest, alternative=alternative, **etest_kwds)
+
+            dist = 'poisson'
+        else:
+            raise ValueError('method not recognized')
+
+    elif compare == "diff":
+        if method in ['wald']:
+            stat = (rate1 - rate2 - value) / np.sqrt(rate1 / n1 + rate2 / n2)
+            dist = 'normal'
+            "waldccv"
+        elif method in ['waldccv']:
+            stat = (rate1 - rate2 - value)
+            stat /= np.sqrt((count2 + 0.5) / n1**2 + (count2 + 0.5) / n2**2)
+            dist = 'normal'
+        elif method in ['score']:
+            # estimate rates with constraint MLE
+            count_pooled = y1 + y2
+            rate_pooled = count_pooled / (n1 + n2)
+            dt = rate_pooled - value
+            r2_cmle = 0.5 * (dt + np.sqrt(dt**2 + 4 * value * y2 / (n1 + n2)))
+            r1_cmle = r2_cmle + value
+
+            stat = ((rate1 - rate2 - value) /
+                    np.sqrt(r1_cmle / n1 + r2_cmle / n2))
+            dist = 'normal'
+        else:
+            raise ValueError('method not recognized')
     else:
-        raise ValueError('method not recognized')
+        raise NotImplementedError('"compare" needs to be ratio or diff')
 
     if dist == 'normal':
         stat, pvalue = _zstat_generic2(stat, 1, alternative)
 
-    rates = (y1 / n1, y2 / n2)
-    ratio = rates[0] / rates[1]
+    rates = (rate1, rate2)
+    ratio = rate1 / rate2
+    diff = rate1 - rate2
     res = HolderTuple(statistic=stat,
                       pvalue=pvalue,
                       distribution=dist,
@@ -435,6 +532,7 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=1,
                       alternative=alternative,
                       rates=rates,
                       ratio=ratio,
+                      diff=diff,
                       ratio_null=ratio_null)
     return res
 
@@ -647,9 +745,78 @@ def tost_poisson_2indep(count1, exposure1, count2, exposure2, low, upp,
     return res
 
 
+def confint_poisson_2indep(count1, exposure1, count2, exposure2,
+                           method='score', compare='ratio', alpha=0.05,
+                           ):
+    """Confidence interval for ratio of 2 indep poisson rates
+    """
+
+    # shortcut names
+    y1, n1, y2, n2 = count1, exposure1, count2, exposure2
+    rate1, rate2 = y1 / n1, y2 / n2
+    alpha = alpha / 2  # two-sided only
+
+    if compare == "ratio":
+
+        if method == "wald":
+            crit = stats.norm.isf(alpha)
+            c = 0
+            center = (count1 + c) / (count2 + c) * n2 / n1
+            std = np.sqrt(1 / (count1 + c) + 1 / (count2 + c))
+
+            ci = (center * np.exp(- crit * std), center * np.exp(crit * std))
+
+        elif method == "waldcc":
+            crit = stats.norm.isf(alpha)
+            center = (count1 + 0.5) / (count2 + 0.5) * n2 / n1
+            std = np.sqrt(1 / (count1 + 0.5) + 1 / (count2 + 0.5))
+
+            ci = (center * np.exp(- crit * std), center * np.exp(crit * std))
+
+        elif method == "sqrtcc":
+            crit = stats.norm.isf(alpha)
+            center = (count1 + 0.5) * (count2 + 0.5)
+            std = 0.5 * np.sqrt(count1 + 0.5 + count2 + 0.5 - 0.25 * crit)
+            denom = count2 + 0.5 - 0.25 * crit
+
+            low_sqrt = n2 / n1 * (center - crit * std) / denom
+            upp_sqrt = n2 / n1 * (center + crit * std) / denom
+
+            ci = (low_sqrt**2, upp_sqrt**2)
+
+        else:
+            raise ValueError('method not recognized')
+
+    elif compare == "diff":
+
+        if method in ['wald']:
+            crit = stats.norm.isf(alpha)
+            center = rate1 - rate2
+            half = crit * np.sqrt(rate1 / n1 + rate2 / n2)
+            ci = center - half, center + half
+
+        elif method == "score":
+            low, upp = _invert_test_confint_2indep(
+                count1, exposure1, count2, exposure2,
+                alpha=alpha * 2,   # check how alpha is defined
+                method="score",
+                compare="diff",
+                method_start="wald"
+                )
+            ci = (low, upp)
+        else:
+            raise ValueError('method not recognized')
+    else:
+        raise NotImplementedError('"compare" needs to be ratio or diff')
+
+    ci = (np.maximum(ci[0], 0), ci[1])
+    return ci
+
+
 def power_poisson_2indep(rate1, nobs1, rate2, nobs2, exposure, value=0,
                          alpha=0.025, dispersion=1, alternative="smaller"):
     """power for one-sided test of ratio of 2 independent poisson rates
+
     this is currently for superiority and non-inferiority testing
 
     signature not adjusted yet
