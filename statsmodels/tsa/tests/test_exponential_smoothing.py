@@ -1068,3 +1068,21 @@ def test_seasonal_order(reset_randomstate, method):
         rtol=1e-4,
     )
     assert res.mae < 1e-6
+
+
+def test_aicc_0_dof():
+    # GH8172
+    endog = [109.0, 101.0, 104.0, 90.0, 105.0]
+
+    model = ETSModel(
+        endog=endog,
+        initialization_method='known',
+        initial_level=100.0,
+        initial_trend=0.0,
+        error='add',
+        trend='add',
+        damped_trend=True
+    )
+    aicc = model.fit().aicc
+    assert not np.isfinite(aicc)
+    assert aicc > 0
