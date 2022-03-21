@@ -214,7 +214,7 @@ if [ "$LINT" == true ]; then
         statsmodels/tsa/tests/test_ar.py \
         statsmodels/tsa/tests/test_bds.py \
         statsmodels/tsa/tests/test_seasonal.py \
-        statsmodels/tsa/tests/test_stl.py \
+        statsmodels/tsa/stl/ \
         statsmodels/tsa/tests/test_x13.py \
         statsmodels/tsa/vector_ar/__init__.py \
         statsmodels/tsa/vector_ar/api.py \
