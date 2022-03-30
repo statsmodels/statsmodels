@@ -197,7 +197,9 @@ def fleiss_kappa(table, method='fleiss'):
     Parameters
     ----------
     table : array_like, 2-D
-        assumes subjects in rows, and categories in columns
+        assumes subjects in rows, and categories in columns. Convert raw data
+        into this format by using
+        :func:`statsmodels.stats.inter_rater.aggregate_raters`
     method : str
         Method 'fleiss' returns Fleiss' kappa which uses the sample margin
         to define the chance outcome.
