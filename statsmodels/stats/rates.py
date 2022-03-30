@@ -12,6 +12,7 @@ from scipy import stats, optimize
 
 from statsmodels.stats.base import HolderTuple
 from statsmodels.stats.weightstats import _zstat_generic2
+from statsmodels.stats._inference_tools import _mover_confint
 
 # shorthand
 norm = stats.norm
@@ -127,7 +128,7 @@ def confint_poisson(count, exposure, method=None, alpha=0.05):
         Method to use for confidence interval
         This is required, there is currently no default method
     alpha : float in (0, 1)
-        Signifivance level, nominal coverage of the confidence interval is
+        Significance level, nominal coverage of the confidence interval is
         1 - alpha.
 
     Returns
@@ -288,6 +289,85 @@ def confint_poisson(count, exposure, method=None, alpha=0.05):
     return ci
 
 
+def tolerance_int_poisson(count, exposure, prob, exposure_new=1.,
+                          method=None, alpha=0.05,
+                          alternative="two-sided"):
+    """tolerance interval for a poisson observation
+
+    Parameters
+    ----------
+    count : array_like
+        Observed count, number of events.
+    exposure : arrat_like
+        Currently this is total exposure time of the count variable.
+    prob : float in (0, 1)
+        Probability of poisson interval, often called "content"
+    exposure_new : float
+        Exposure of the new or predicted observation.
+    method : str
+        Method to used for confidence interval of the estimate of the
+        poisson rate, used in `confint_poisson`.
+        This is required, there is currently no default method.
+    alpha : float in (0, 1)
+        Significance level for the confidence interval of the estimate of the
+        Poisson rate. Nominal coverage of the confidence interval is
+        1 - alpha.
+    alternative : {"two-sider", "larger", "smaller")
+        The tolerance interval can be two-dised or one sided.
+        Alternative "larger" provides the upper bound of the confidence
+        interval, larger counts are outside the interval.
+
+    Returns
+    -------
+    tuple (low, upp) of limits of tolerance interval.
+    The tolerance interval is a closed interval, that is both ``low`` and
+    ``upp`` are in the interval.
+
+    """
+
+    low, upp = confint_poisson(count, exposure, method=method, alpha=alpha)
+    if exposure_new != 1:
+        low /= exposure_new
+        upp /= exposure_new
+
+    if alternative == "two-sided":
+        low_pred = stats.poisson.ppf(prob / 2, low)
+        upp_pred = stats.poisson.isf(prob / 2, upp) - 1
+    elif alternative == "larger":
+        low_pred = 0
+        upp_pred = stats.poisson.isf(prob / 2, upp) - 1
+    elif alternative == "smaller":
+        low_pred = stats.poisson.ppf(prob / 2, low)
+        upp_pred = np.inf
+
+    return low_pred, upp_pred
+
+
+def confint_quantile_poisson(count, exposure, prob, exposure_new=1.,
+                             method=None, alpha=0.05,
+                             alternative="two-sided"):
+    """confidence interval for quantile of poisson random variable
+
+    """
+
+    low, upp = confint_poisson(count, exposure, method=method, alpha=alpha)
+    if exposure_new != 1:
+        low /= exposure_new
+        upp /= exposure_new
+
+    if alternative == "two-sided":
+        low_pred = stats.poisson.ppf(prob, low)
+        upp_pred = stats.poisson.ppf(prob, upp) - 1
+    elif alternative == "larger":
+        low_pred = 0
+        upp_pred = stats.poisson.ppf(prob, upp)
+    elif alternative == "smaller":
+        low_pred = stats.poisson.ppf(prob, low)
+        upp_pred = np.inf
+
+    return low_pred, upp_pred
+
+
 def _invert_test_confint(count, nobs, alpha=0.05, method="midp-c",
                          method_start="exact-c"):
     """invert hypothesis test to get confidence interval
@@ -324,8 +404,8 @@ def _invert_test_confint_2indep(
 
     ci = confint_poisson_2indep(count1, exposure1, count2, exposure2,
                                 method=method_start, compare=compare)
-    low = optimize.fmin(func, ci[0], xtol=1e-8)#, disp=False)
-    upp = optimize.fmin(func, ci[1], xtol=1e-8) #, disp=False)
+    low = optimize.fmin(func, ci[0], xtol=1e-8, disp=False)
+    upp = optimize.fmin(func, ci[1], xtol=1e-8, disp=False)
     assert np.size(low) == 1
     return low[0], upp[0]
 
@@ -807,6 +887,7 @@ def tost_poisson_2indep(count1, exposure1, count2, exposure2, low, upp,
 
 def confint_poisson_2indep(count1, exposure1, count2, exposure2,
                            method='score', compare='ratio', alpha=0.05,
+                           method_mover="score",
                            ):
     """Confidence interval for ratio of 2 indep poisson rates
     """
@@ -844,8 +925,17 @@ def confint_poisson_2indep(count1, exposure1, count2, exposure2,
 
             ci = (low_sqrt**2, upp_sqrt**2)
 
+        elif method == "mover":
+            method_p = method_mover
+            ci1 = confint_poisson(y1, n1, method=method_p, alpha=2*alpha)
+            ci2 = confint_poisson(y2, n2, method=method_p, alpha=2*alpha)
+
+            ci = _mover_confint(rate1, rate2, ci1, ci2, contrast="ratio")
+
         else:
             raise ValueError('method not recognized')
+
+        ci = (np.maximum(ci[0], 0), ci[1])
 
     elif compare == "diff":
 
@@ -871,12 +961,18 @@ def confint_poisson_2indep(count1, exposure1, count2, exposure2,
                 method_start="waldccv"
                 )
             ci = (low, upp)
+
+        elif method == "mover":
+            method_p = method_mover
+            ci1 = confint_poisson(y1, n1, method=method_p, alpha=2*alpha)
+            ci2 = confint_poisson(y2, n2, method=method_p, alpha=2*alpha)
+
+            ci = _mover_confint(rate1, rate2, ci1, ci2, contrast="diff")
         else:
             raise ValueError('method not recognized')
     else:
         raise NotImplementedError('"compare" needs to be ratio or diff')
 
-    ci = (np.maximum(ci[0], 0), ci[1])
     return ci
 
 
@@ -1011,7 +1107,7 @@ def power_poisson_diff_2indep(diff, rate2, nobs1, nobs_ratio=1, alpha=0.05,
                                                       nobs_ratio=nobs_ratio,
                                                       alpha=alpha, value=value)
 
-    pow_ = normal_power_het(diff, nobs1, 0.05, std_null=std_null,
+    pow_ = normal_power_het(diff, nobs1, alpha, std_null=std_null,
                             std_alternative=std_alt,
                             alternative=alternative)
 
