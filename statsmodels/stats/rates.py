@@ -495,6 +495,8 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, value=None,
             raise ValueError('method not recognized')
 
     elif compare == "diff":
+        if value is None:
+            value = 0
         if method in ['wald']:
             stat = (rate1 - rate2 - value) / np.sqrt(rate1 / n1 + rate2 / n2)
             dist = 'normal'
@@ -514,6 +516,20 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, value=None,
             stat = ((rate1 - rate2 - value) /
                     np.sqrt(r1_cmle / n1 + r2_cmle / n2))
             dist = 'normal'
+        elif method.startswith('etest'):
+            if method.endswith('wald'):
+                method_etest = 'wald'
+            else:
+                method_etest = 'score'
+            if etest_kwds is None:
+                etest_kwds = {}
+
+            stat, pvalue = etest_poisson_2indep(
+                count1, exposure1, count2, exposure2, value=value,
+                method=method_etest, compare="diff",
+                alternative=alternative, **etest_kwds)
+
+            dist = 'poisson'
         else:
             raise ValueError('method not recognized')
     else:
@@ -533,12 +549,32 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, value=None,
                       rates=rates,
                       ratio=ratio,
                       diff=diff,
-                      ratio_null=ratio_null)
+                      value=value,
+                      ratio_null=ratio_null
+                      )
     return res
 
 
+def _score_diff(y1, n1, y2, n2, value=0, return_cmle=False):
+    count_pooled = y1 + y2
+    rate1, rate2 = y1 / n1, y2 / n2
+    rate_pooled = count_pooled / (n1 + n2)
+    dt = rate_pooled - value
+    r2_cmle = 0.5 * (dt + np.sqrt(dt**2 + 4 * value * y2 / (n1 + n2)))
+    r1_cmle = r2_cmle + value
+    eps = 1e-20  # avoid zero division in stat_func
+    stat = ((rate1 - rate2 - value) /
+            np.sqrt(r1_cmle / n1 + r2_cmle / n2 + eps))
+
+    if return_cmle:
+        return stat, r1_cmle, r2_cmle
+    else:
+        return stat
+
+
 def etest_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=1,
-                         method='score', alternative='2-sided', ygrid=None,
+                         value=None, method='score', compare="ratio",
+                         alternative='2-sided', ygrid=None,
                          y_grid=None):
     """E-test for ratio of two sample Poisson rates
 
@@ -601,28 +637,52 @@ def etest_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=1,
 
     eps = 1e-20  # avoid zero division in stat_func
 
-    if method in ['score']:
-        def stat_func(x1, x2):
-            return (x1 - x2 * r_d) / np.sqrt((x1 + x2) * r_d + eps)
-        # TODO: do I need these? return_results ?
-        # rate2_cmle = (y1 + y2) / n2 / (1 + r_d)
-        # rate1_cmle = rate2_cmle * r
-        # rate1 = rate1_cmle
-        # rate2 = rate2_cmle
-    elif method in ['wald']:
-        def stat_func(x1, x2):
-            return (x1 - x2 * r_d) / np.sqrt(x1 + x2 * r_d**2 + eps)
-        # rate2_mle = y2 / n2
-        # rate1_mle = y1 / n1
-        # rate1 = rate1_mle
-        # rate2 = rate2_mle
-    else:
-        raise ValueError('method not recognized')
+    if compare == "ratio":
+        rate2_cmle = (y1 + y2) / n2 / (1 + r_d)
+        rate1_cmle = rate2_cmle * r
+
+        if method in ['score']:
+            def stat_func(x1, x2):
+                return (x1 - x2 * r_d) / np.sqrt((x1 + x2) * r_d + eps)
+            # TODO: do I need these? return_results ?
+            # rate2_cmle = (y1 + y2) / n2 / (1 + r_d)
+            # rate1_cmle = rate2_cmle * r
+            # rate1 = rate1_cmle
+            # rate2 = rate2_cmle
+        elif method in ['wald']:
+            def stat_func(x1, x2):
+                return (x1 - x2 * r_d) / np.sqrt(x1 + x2 * r_d**2 + eps)
+            # rate2_mle = y2 / n2
+            # rate1_mle = y1 / n1
+            # rate1 = rate1_mle
+            # rate2 = rate2_mle
+        else:
+            raise ValueError('method not recognized')
+
+    elif compare == "diff":
+        if value is None:
+            value = 0
+        tmp = _score_diff(y1, n1, y2, n2, value=0, return_cmle=True)
+        _, rate1_cmle, rate2_cmle = tmp
+
+        if method in ['score']:
+
+            def stat_func(x1, x2):
+                return _score_diff(x1, n1, x2, n2, value=value)
+
+        elif method in ['wald']:
+
+            def stat_func(x1, x2):
+                rate1, rate2 = x1 / n1, x2 / n2
+                stat = (rate1 - rate2 - value)
+                stat /= np.sqrt(rate1 / n1 + rate2 / n2 + eps)
+                return stat
+
+        else:
+            raise ValueError('method not recognized')
 
     # The sampling distribution needs to be based on the null hypotheis
     # use constrained MLE from 'score' calculation
-    rate2_cmle = (y1 + y2) / n2 / (1 + r_d)
-    rate1_cmle = rate2_cmle * r
     rate1 = rate1_cmle
     rate2 = rate2_cmle
     mean1 = n1 * rate1
@@ -795,13 +855,20 @@ def confint_poisson_2indep(count1, exposure1, count2, exposure2,
             half = crit * np.sqrt(rate1 / n1 + rate2 / n2)
             ci = center - half, center + half
 
+        elif method in ['waldccv']:
+            crit = stats.norm.isf(alpha)
+            center = rate1 - rate2
+            std = np.sqrt((count2 + 0.5) / n1**2 + (count2 + 0.5) / n2**2)
+            half = crit * std
+            ci = center - half, center + half
+
         elif method == "score":
             low, upp = _invert_test_confint_2indep(
                 count1, exposure1, count2, exposure2,
                 alpha=alpha * 2,   # check how alpha is defined
                 method="score",
                 compare="diff",
-                method_start="wald"
+                method_start="waldccv"
                 )
             ci = (low, upp)
         else:
