@@ -20,7 +20,7 @@ norm = stats.norm
 
 def test_poisson(count, nobs, value, method=None, alternative="two-sided",
                  dispersion=1):
-    """ WIP  test for one sample poisson mean or rate
+    """test for one sample poisson mean or rate
 
     See Also
     --------
@@ -810,7 +810,7 @@ def tost_poisson_2indep(count1, exposure1, count2, exposure2, low, upp,
                         method='score'):
     '''Equivalence test based on two one-sided `test_proportions_2indep`
 
-    This assumes that we have two independent binomial samples.
+    This assumes that we have two independent poisson samples.
 
     The Null and alternative hypothesis for equivalence testing are
 
@@ -876,6 +876,68 @@ def tost_poisson_2indep(count1, exposure1, count2, exposure2, low, upp,
     idx_max = 0 if tt1.pvalue < tt2.pvalue else 1
     res = HolderTuple(statistic=[tt1.statistic, tt2.statistic][idx_max],
                       pvalue=[tt1.pvalue, tt2.pvalue][idx_max],
+                      method=method,
+                      results_larger=tt1,
+                      results_smaller=tt2,
+                      title="Equivalence test for 2 independent Poisson rates"
+                      )
+
+    return res
+
+
+def nonequivalence_poisson_2indep(count1, exposure1, count2, exposure2,
+                                  low, upp, method='score'):
+    """Test for non-equivalence, minimum effect for poisson
+
+    This reverses null and alternative hypothesis compared to equivalence
+    testing. The null hypothesis is that the effect, ratio (or diff), is in
+    an interval that specifies a range of irrelevant or unimportant
+    differences between the two samples.
+
+    The Null and alternative hypothesis comparing the ratio of rates are
+
+    - H0: low < g1 / g2 < upp
+    - H1: g1 / g2 <= low or upp <= g1 / g2
+
+    where g1 and g2 are the Poisson rates.
+
+
+    Notes
+    -----
+    This is implemented as two one-sided tests at the minimum effect boundaries
+    (low, upp) with (nominal) size alpha / 2 each.
+    The size of the test is the sum of the two one-tailed tests, which
+    corresponds to an equal-tailed two-sided test.
+    If low and upp are equal, then the result is the same as the standard
+    two-sided test.
+
+    The p-value is computed as `2 * min(pvalue_low, pvalue_upp)` in analogy to
+    two-sided equal-tail tests.
+
+    In large samples the nominal size of the test will be below alpha.
+
+    References
+    ----------
+    Hodges, J. L., Jr., and E. L. Lehmann. 1954. Testing the Approximate
+    Validity of Statistical Hypotheses. Journal of the Royal Statistical
+    Society, Series B (Methodological) 16: 261–68.
+
+    Kim, Jae H., and Andrew P. Robinson. 2019. “Interval-Based Hypothesis
+    Testing and Its Applications to Economics and Finance.”
+    Econometrics 7 (2): 21. https://doi.org/10.3390/econometrics7020021.
+
+    """
+    tt1 = test_poisson_2indep(count1, exposure1, count2, exposure2,
+                              ratio_null=low, method=method,
+                              alternative='smaller')
+    tt2 = test_poisson_2indep(count1, exposure1, count2, exposure2,
+                              ratio_null=upp, method=method,
+                              alternative='larger')
+
+    idx_min = 0 if tt1.pvalue < tt2.pvalue else 1
+    pvalue = 2 * min(tt1.pvalue, tt2.pvalue)
+    res = HolderTuple(statistic=[tt1.statistic, tt2.statistic][idx_min],
+                      pvalue=pvalue,
                       method=method,
                       results_larger=tt1,
                       results_smaller=tt2,
@@ -1010,6 +1072,56 @@ def power_poisson_2indep(rate1, nobs1, rate2, nobs2, exposure, value=0,
     return pow_
 
 
+def power_poisson_2indep_v2(rate1, nobs1, rate2, nobs2, exposure, value=0,
+                            alpha=0.05, dispersion=1, alternative="smaller",
+                            method_var="alt",
+                            return_results=True):
+    """power for test of ratio of 2 independent poisson rates
+
+    This is based on Zhu and Zhu and Lakkis. It does not directly correspond
+    to `test_poisson_2indep`.
+
+    """
+    # TODO: avoid possible circular import, check if needed
+    from statsmodels.stats.power import normal_power_het
+
+    nobs_ratio = nobs2 / nobs1
+    v1 = dispersion / exposure * (1 / rate1 + 1 / (nobs_ratio * rate2))
+    if method_var == "alt":
+        v0 = v1
+    elif method_var == "score":
+        v0 = dispersion / exposure * (1 + value * nobs_ratio)**2
+        v0 /= value * nobs_ratio * (rate1 + (nobs_ratio * rate2))
+    else:
+        raise NotImplementedError(f"method_var {method_var} not recognized")
+
+    std_null = np.sqrt(v0)
+    std_alt = np.sqrt(v1)
+    es = np.log(rate1 / rate2) - np.log(value)
+
+    pow_ = normal_power_het(es, nobs1, alpha, std_null=std_null,
+                            std_alternative=std_alt,
+                            alternative=alternative)
+
+    p_pooled = None  # TODO: replace or remove
+
+    if return_results:
+        res = HolderTuple(
+            power=pow_,
+            p_pooled=p_pooled,
+            std_null=std_null,
+            std_alt=std_alt,
+            nobs1=nobs1,
+            nobs2=nobs_ratio * nobs1,
+            nobs_ratio=nobs_ratio,
+            alpha=alpha,
+            tuple_=("power",),  # override default
+            )
+        return res
+
+    return pow_
+
+
 def power_equivalence_poisson_2indep(rate1, nobs1, rate2, nobs2, exposure,
                                      low, upp, alpha=0.025, dispersion=1):
     """power for equivalence test of ratio of 2 independent poisson rates
@@ -1028,6 +1140,105 @@ def power_equivalence_poisson_2indep(rate1, nobs1, rate2, nobs2, exposure,
                   - crit * np.sqrt(v0_upp)) / np.sqrt(v1)) - 1
         )
     return pow_
+
+
+def power_equivalence_poisson_2indep_v2(rate1, nobs1, rate2, nobs2, exposure,
+                                        low, upp, alpha=0.025, dispersion=1):
+    """power for equivalence test of ratio of 2 independent poisson rates
+
+    WIP missing var option, redundant/unused nobs1
+    """
+    nobs_ratio = nobs1 / nobs2
+    v1 = dispersion / exposure * (1 / rate2 + 1 / (nobs_ratio * rate1))
+    v0_low = v0_upp = v1
+
+    es_low = np.log(rate1 / rate2) - np.log(low)
+    es_upp = np.log(upp) - np.log(rate1 / rate2)
+    std_null_low = np.sqrt(v0_low)
+    std_null_upp = np.sqrt(v0_upp)
+    std_alternative = np.sqrt(v1)
+
+    pow_ = _power_equivalence_het_v0(es_low, es_upp, nobs2, alpha=alpha,
+                                     std_null_low=std_null_low,
+                                     std_null_upp=std_null_upp,
+                                     std_alternative=std_alternative)
+
+    return pow_
+
+
+def power_equivalence_poisson_2indep_v3(rate1, nobs1, rate2, nobs2, exposure,
+                                        low, upp, alpha=0.05, dispersion=1,
+                                        method_var="alt"):
+    """power for equivalence test of ratio of 2 independent poisson rates
+
+
+    """
+    nobs_ratio = nobs1 / nobs2
+    v1 = dispersion / exposure * (1 / rate2 + 1 / (nobs_ratio * rate1))
+
+    if method_var == "alt":
+        v0_low = v0_upp = v1
+    elif method_var == "score":
+        v0_low = dispersion / exposure * (1 + low * nobs_ratio)**2
+        v0_low /= low * nobs_ratio * (rate1 + (nobs_ratio * rate2))
+        v0_upp = dispersion / exposure * (1 + upp * nobs_ratio)**2
+        v0_upp /= upp * nobs_ratio * (rate1 + (nobs_ratio * rate2))
+    else:
+        raise NotImplementedError(f"method_var {method_var} not recognized")
+
+    es_low = np.log(rate1 / rate2) - np.log(low)
+    es_upp = np.log(rate1 / rate2) - np.log(upp)
+    std_null_low = np.sqrt(v0_low)
+    std_null_upp = np.sqrt(v0_upp)
+    std_alternative = np.sqrt(v1)
+
+    pow_ = _power_equivalence_het(es_low, es_upp, nobs2, alpha=alpha,
+                                  std_null_low=std_null_low,
+                                  std_null_upp=std_null_upp,
+                                  std_alternative=std_alternative)
+
+    return pow_
+
+
+def _power_equivalence_het_v0(es_low, es_upp, nobs, alpha=0.05,
+                              std_null_low=None,
+                              std_null_upp=None,
+                              std_alternative=None):
+    """power for equivalence test
+
+    """
+
+    s0_low = std_null_low
+    s0_upp = std_null_upp
+    s1 = std_alternative
+
+    crit = norm.isf(alpha)
+    pow_ = (
+        norm.cdf((np.sqrt(nobs) * es_low - crit * s0_low) / s1) +
+        norm.cdf((np.sqrt(nobs) * es_upp - crit * s0_upp) / s1) - 1
+        )
+    return pow_
+
+
+def _power_equivalence_het(es_low, es_upp, nobs, alpha=0.05,
+                              std_null_low=None,
+                              std_null_upp=None,
+                              std_alternative=None):
+    """power for equivalence test
+
+    """
+
+    s0_low = std_null_low
+    s0_upp = std_null_upp
+    s1 = std_alternative
+
+    crit = norm.isf(alpha)
+
+    p1 = norm.sf((np.sqrt(nobs) * es_low - crit * s0_low) / s1)
+    p2 = norm.cdf((np.sqrt(nobs) * es_upp + crit * s0_upp) / s1)
+    pow_ = 1 - (p1 + p2)
+    return pow_, p1, p2
+
 
 
 def _std_2poisson_power(diff, rate2, nobs_ratio=1, alpha=0.05,
@@ -1126,3 +1337,95 @@ def power_poisson_diff_2indep(diff, rate2, nobs1, nobs_ratio=1, alpha=0.05,
         return res
     else:
         return pow_
+
+
+def power_negbin_2indep_v2(rate1, nobs1, rate2, nobs2, exposure, value=1,
+                           alpha=0.05, dispersion=0.01, alternative="smaller",
+                           method_var="alt",
+                           return_results=True):
+    """power for one-sided test of ratio of 2 independent poisson rates
+
+    this is currently for superiority and non-inferiority testing
+
+    signature not adjusted yet
+
+    incomplete alternatives, var options missing
+    """
+    # TODO: avoid possible circular import, check if needed
+    from statsmodels.stats.power import normal_power_het
+
+    nobs_ratio = nobs2 / nobs1
+    v1 = ((1 / rate1 + 1 / (nobs_ratio * rate2)) / exposure +
+          (1 + nobs_ratio) / nobs_ratio * dispersion)
+    if method_var == "alt":
+        v0 = v1
+    elif method_var == "score":
+        v0 = (1 + value * nobs_ratio)**2 / (
+             exposure * nobs_ratio * value * (rate1 + nobs_ratio * rate2))
+        v0 += (1 + nobs_ratio) / nobs_ratio * dispersion
+    else:
+        raise NotImplementedError(f"method_var {method_var} not recognized")
+
+    std_null = np.sqrt(v0)
+    std_alt = np.sqrt(v1)
+    es = np.log(rate1 / rate2) - np.log(value)
+
+    pow_ = normal_power_het(es, nobs1, alpha, std_null=std_null,
+                            std_alternative=std_alt,
+                            alternative=alternative)
+
+    p_pooled = None  # TODO: replace or remove
+
+    if return_results:
+        res = HolderTuple(
+            power=pow_,
+            p_pooled=p_pooled,
+            std_null=std_null,
+            std_alt=std_alt,
+            nobs1=nobs1,
+            nobs2=nobs_ratio * nobs1,
+            nobs_ratio=nobs_ratio,
+            alpha=alpha,
+            tuple_=("power",),  # override default
+            )
+        return res
+
+    return pow_
+
+
+def power_equivalence_neginb_2indep_v3(rate1, nobs1, rate2, nobs2, exposure,
+                                        low, upp, alpha=0.05, dispersion=1,
+                                        method_var="alt"):
+    """
+    Power for equivalence test of ratio of 2 indep. negative binomial rates
+
+
+    """
+    nobs_ratio = nobs1 / nobs2
+
+    v1 = ((1 / rate1 + 1 / (nobs_ratio * rate2)) / exposure +
+          (1 + nobs_ratio) / nobs_ratio * dispersion)
+    if method_var == "alt":
+        v0_low = v0_upp = v1
+    elif method_var == "score":
+        v0_low = (1 + low * nobs_ratio)**2 / (
+             exposure * nobs_ratio * low * (rate1 + nobs_ratio * rate2))
+        v0_low += (1 + nobs_ratio) / nobs_ratio * dispersion
+        v0_upp = (1 + upp * nobs_ratio)**2 / (
+             exposure * nobs_ratio * upp * (rate1 + nobs_ratio * rate2))
+        v0_upp += (1 + nobs_ratio) / nobs_ratio * dispersion
+    else:
+        raise NotImplementedError(f"method_var {method_var} not recognized")
+
+    es_low = np.log(rate1 / rate2) - np.log(low)
+    es_upp = np.log(rate1 / rate2) - np.log(upp)
+    std_null_low = np.sqrt(v0_low)
+    std_null_upp = np.sqrt(v0_upp)
+    std_alternative = np.sqrt(v1)
+
+    pow_ = _power_equivalence_het(es_low, es_upp, nobs2, alpha=alpha,
+                                  std_null_low=std_null_low,
+                                  std_null_upp=std_null_upp,
+                                  std_alternative=std_alternative)
+
+    return pow_
