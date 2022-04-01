@@ -34,7 +34,7 @@ To obtain the latest released version of statsmodels using pip:
 
 .. code-block:: bash
 
-    pip install statsmodels
+    python -m pip install statsmodels
 
 Follow `this link to our PyPI page <https://pypi.org/project/statsmodels/>`__ to directly
 download wheels or source.
@@ -74,21 +74,14 @@ If your system is already set up with pip, a compiler, and git, you can try:
 
 .. code-block:: bash
 
-    pip install git+https://github.com/statsmodels/statsmodels
+    python -m pip install git+https://github.com/statsmodels/statsmodels
 
 If you do not have pip installed or want to do the installation more manually,
 you can also type:
 
 .. code-block:: bash
 
-    python setup.py install
-
-Or even more manually
-
-.. code-block:: bash
-
-    python setup.py build
-    python setup.py install
+    python -m pip install .
 
 statsmodels can also be installed in `develop` mode which installs statsmodels
 into the current python environment in-place. The advantage of this is that
@@ -97,7 +90,10 @@ restarts without having to re-install statsmodels.
 
 .. code-block:: bash
 
-    python setup.py develop
+    python -m pip install -e .
+
+It is usually recommended to use the ``--no-build-isolation`` to speed up
+the build process.
 
 Compilers
 ~~~~~~~~~

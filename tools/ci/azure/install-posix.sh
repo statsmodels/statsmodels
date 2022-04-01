@@ -15,7 +15,7 @@ else
 fi
 
 python -m pip install --upgrade pip setuptools wheel
-python -m pip install cython "pytest~=7.0.1" pytest-xdist coverage pytest-cov ipython jupyter notebook nbconvert "property_cached>=1.6.3" black==20.8b1 isort flake8 nbconvert==5.6.1 coveralls
+python -m pip install cython "pytest~=7.0.1" pytest-xdist coverage pytest-cov ipython jupyter notebook nbconvert "property_cached>=1.6.3" black==20.8b1 isort flake8 nbconvert==5.6.1 coveralls setuptools_scm[toml]
 
 if [[ -n ${NUMPY} ]]; then CMD="$CMD==${NUMPY}"; fi;
 CMD="$CMD scipy"
@@ -34,8 +34,8 @@ CMD="${CMD} patsy ${BLAS}"
 echo $CMD
 eval $CMD
 
-if [[ ${USE_CVXOPT} = true ]]; then pip install cvxopt; fi
+if [[ ${USE_CVXOPT} = true ]]; then python -m pip install cvxopt; fi
 
 if [ "${PIP_PRE}" = true ]; then
-  pip install -i https://pypi.anaconda.org/scipy-wheels-nightly/simple numpy pandas scipy --upgrade --use-deprecated=legacy-resolver
+  python -m pip install -i https://pypi.anaconda.org/scipy-wheels-nightly/simple numpy pandas scipy --upgrade --use-deprecated=legacy-resolver
 fi

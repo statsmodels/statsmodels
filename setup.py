@@ -1,7 +1,7 @@
 """
 To build with coverage of Cython files
 export SM_CYTHON_COVERAGE=1
-python setup.py develop
+python -m pip install -e .
 pytest --cov=statsmodels statsmodels
 coverage html
 """
@@ -20,11 +20,6 @@ import sys
 import pkg_resources
 
 SETUP_DIR = Path(__file__).parent.resolve()
-
-sys.path.append(str(SETUP_DIR))
-import versioneer  # noqa: E402
-
-del sys.path[-1]
 
 
 try:
@@ -54,17 +49,12 @@ except ImportError:
 ###############################################################################
 # These are strictly installation requirements. Builds requirements are
 # managed in pyproject.toml
-INSTALL_REQUIREMENTS = {
-    "numpy": "1.18",  # released December 2019
-    "scipy": "1.4",  # released December 2019
-    "pandas": "1.0",  # released January 2020
-    "patsy": "0.5.2",  # released January 2018
-    "packaging": "21.3",  # released Nov 2021
-}
+INSTALL_REQUIRES = []
+with open("requirements.txt") as req:
+    for line in req.readlines():
+        INSTALL_REQUIRES.append(line.split("#")[0].strip())
 
 CYTHON_MIN_VER = "0.29.26"  # released 2020
-
-INSTALL_REQUIRES = [k + ">=" + v for k, v in INSTALL_REQUIREMENTS.items()]
 
 EXTRAS_REQUIRE = {
     "build": ["cython>=" + CYTHON_MIN_VER],
@@ -252,10 +242,9 @@ class DeferredBuildExt(build_ext):
             update_extension(extension, requires_math=requires_math)
 
 
-cmdclass = versioneer.get_cmdclass()
+cmdclass = {"clean": CleanCommand}
 if not HAS_NUMPY:
     cmdclass["build_ext"] = DeferredBuildExt
-cmdclass["clean"] = CleanCommand
 
 
 def check_source(source_name):
@@ -384,7 +373,6 @@ class BinaryDistribution(Distribution):
 
 setup(
     name=DISTNAME,
-    version=versioneer.get_version(),
     maintainer=MAINTAINER,
     ext_modules=extensions,
     maintainer_email=MAINTAINER_EMAIL,

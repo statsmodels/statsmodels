@@ -1,5 +1,5 @@
-numpy>=1.17
-scipy>=1.3
-pandas>=0.25
-patsy>=0.5.2
-packaging>=21.3
+numpy >=1.18  # released December 2019
+scipy>=1.4  # released December 2019
+pandas>=1.0  # released January 2020
+patsy>=0.5.2  # released January 2018
+packaging>=21.3  # released Nov 2021

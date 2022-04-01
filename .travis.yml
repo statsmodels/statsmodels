@@ -98,8 +98,7 @@ before_install:
 
 # Install packages
 install:
-  # Bug in NumPy < 1.16.1 that raises ValueError on size mismatch
-  - if [[ ${NUMPY} != "1.15" ]]; then pip install -e .; else python setup.py develop; fi
+  - pip install -e .
 
 before_script:
   - if [[ ${DOCBUILD} = true ]]; then source tools/ci/docbuild_install.sh; fi;

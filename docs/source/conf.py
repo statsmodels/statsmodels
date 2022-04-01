@@ -13,7 +13,7 @@
 # serve to show the default.
 
 import contextlib
-from distutils.version import LooseVersion
+from packaging.version import parse
 import os
 from os.path import dirname, join
 import sys
@@ -98,13 +98,13 @@ autoclass_content = 'class'
 
 release = __version__
 
-lv = LooseVersion(release)
+parsed_version = parse(release)
 commit = ''
 full_version = short_version = version = release
-if '+' in lv.version:
-    short_version = lv.vstring[:lv.vstring.index('+')]
-    commit = lv.version[lv.version.index('+') + 1]
-    version = short_version + ' (+{0})'.format(commit)
+if parsed_version.is_devrelease:
+    short_version = parsed_version.base_version
+    commit = parsed_version.dev
+    version = short_version + f' (+{commit})'
 
 # Remove release to prevent it triggering a conf change
 del release

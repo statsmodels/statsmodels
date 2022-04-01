@@ -33,13 +33,13 @@ fi
 
 # Install in our own virtualenv
 python -m pip install --upgrade pip
-pip install --upgrade virtualenv
+python -m pip install --upgrade virtualenv
 virtualenv --python=python venv
 source venv/bin/activate
 python --version # just to check
 python -m pip install --upgrade pip
-pip install ${EXTRA_PIP_FLAGS} ${PKGS} ${DEPEND_ALWAYS}
+python -m pip install ${EXTRA_PIP_FLAGS} ${PKGS} ${DEPEND_ALWAYS}
 
 if [ "${PIP_PRE}" = true ]; then
-  pip install -i https://pypi.anaconda.org/scipy-wheels-nightly/simple numpy pandas scipy --upgrade --use-deprecated=legacy-resolver
+  python -m pip install -i https://pypi.anaconda.org/scipy-wheels-nightly/simple numpy pandas scipy --upgrade --use-deprecated=legacy-resolver
 fi

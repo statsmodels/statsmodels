@@ -277,7 +277,7 @@ Submodules
 
 ``maintenance``
 ~~~~~~~~~~~~~~~
-- Switch to standard setup.py so that ``pip install statsmodels`` can succeed in an empty virtual environment
+- Switch to standard setup.py so that ``python -m pip install statsmodels`` can succeed in an empty virtual environment
 - General compatibility fixes for recent versions of numpy, scipy and pandas
 - Added new CI using Azure Pipelines (:pr:`5617`)
 - Enable linting on travis to ensure code is up to standards (:pr:`4820`)

@@ -11,7 +11,7 @@ using a development install of statsmodels by running:
 
 .. code-block:: bash
 
-   pip install -e .
+   python -m pip install -e .
 
 from the root directory of the git repository. The flag ``-e`` is for editable.
 
@@ -19,7 +19,7 @@ This command compiles the C code and add statsmodels to your activate python
 environment by creating links from your python environment's libraries
 to the statsmodels source code. Therefore, changes to pure python code will
 be immediately available to the user without a re-install. Changes to C code or
-Cython code require rerunning ``pip install -e .`` before these changes are
+Cython code require rerunning ``python -m pip install -e .`` before these changes are
 available.
 
 Test Driven Development
@@ -37,7 +37,7 @@ Like many packages, statsmodels uses the `pytest testing system <https://docs.py
 Running Tests
 -------------
 Test are run from the command line by calling ``pytest``. Directly running tests using
-pytest requires that statsmodels is installed using ``pip install -e .`` as described
+pytest requires that statsmodels is installed using ``python -m pip install -e .`` as described
 above.
 
 Tests can be run at different levels of granularity:
@@ -165,7 +165,7 @@ speed up runs of the full test suite when needed.
 
 .. code-block:: bash
 
-   pip install pytest-xdist
+   python -m pip install pytest-xdist
    export MKL_NUM_THREADS=1
    export OMP_NUM_THREADS=1
    pytest -n auto statsmodels

@@ -71,12 +71,15 @@ __all__ = [
     "tools",
     "tsa",
     "webdoc",
+    "__version_info__"
 ]
 
 
 from . import datasets, distributions, iolib, regression, robust, tools
 from .__init__ import test
-from ._version import get_versions
+from statsmodels._version import (
+    version as __version__, version_tuple as __version_info__
+)
 from .discrete.conditional_models import (
     ConditionalLogit,
     ConditionalMNLogit,
@@ -139,8 +142,5 @@ from .tools.print_version import show_versions
 from .tools.tools import add_constant, categorical
 from .tools.web import webdoc
 from .tsa import api as tsa
-
-__version__ = get_versions()["version"]
-del get_versions
 
 load = load_pickle

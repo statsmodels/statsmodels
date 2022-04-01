@@ -1,5 +1,7 @@
 
-from statsmodels._version import get_versions
+from ._version import (
+    version as __version__, version_tuple as __version_info__
+)
 
 debug_warnings = False
 
@@ -33,5 +35,4 @@ def test(extra_args=None, exit=False):
     return tst(extra_args=extra_args, exit=exit)
 
 
-__version__ = get_versions()['version']
-del get_versions
+__all__ = ['__version__', '__version_info__', 'test']
