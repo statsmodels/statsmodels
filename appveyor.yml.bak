@@ -36,8 +36,8 @@ build_script:
   - If Defined PY_MAJOR_VER ( call tools\ci\appveyor_conda.bat ) else ( call tools\ci\appveyor_pip.bat )
   # Pin to 1.29 for now due to test discovery issues
   - python -m pip install --upgrade pip "setuptools<50.0"
-  - pip install pytest "pytest-xdist==1.29" pytest-randomly
-  - if Defined PYTEST_DIRECTIVES ( pip install -e . --no-build-isolation ) else ( pip install . )
+  - python -m pip install pytest "pytest-xdist==1.29" pytest-randomly
+  - if Defined PYTEST_DIRECTIVES ( python -m pip install -e . --no-build-isolation ) else ( pip install . )
 
 test_script:
   - call tools\ci\run_test.bat

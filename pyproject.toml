@@ -6,6 +6,11 @@ requires = [
     "wheel>=0.37.1",
     "cython>=0.29.26,<3",  # Sync with CYTHON_MIN_VER in setup
     "oldest-supported-numpy",
-    "scipy>=1.3",
+    "numpy; python_version>='3.11'",
+    "scipy>=1.4",
+    "setuptools_scm[toml]>=6.4.2,<7.0.0",
 ]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+write_to = "statsmodels/_version.py"

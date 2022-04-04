@@ -71,7 +71,7 @@ Installing
 
 To get the latest release using pip
 
-    pip install statsmodels --upgrade-strategy only-if-needed
+    python -m pip install statsmodels --upgrade-strategy only-if-needed
 
 The additional parameter pip --upgrade-strategy only-if-needed will ensure
 that dependencies, e.g. NumPy or pandas, are not upgraded unless required.
@@ -82,7 +82,7 @@ Ubuntu/Debian
 On Ubuntu you can get dependencies through:
 
     sudo apt-get install python python-dev python-setuptools python-numpy python-scipy
-    pip install cython pandas
+    python -m pip install cython pandas
 
 Alternatively, you can install from the NeuroDebian repository:
     
@@ -103,7 +103,7 @@ Or clone the bleeding edge code from our repository on github at
 
 In the statsmodels directory do (with proper permissions)
 
-    python setup.py install
+    python -m pip install .
 
 You will need a C compiler installed.
 

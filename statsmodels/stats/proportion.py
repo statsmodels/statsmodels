@@ -119,15 +119,9 @@ def proportion_confint(count, nobs, alpha:float=0.05, method="normal"):
         number of successes, can be pandas Series or DataFrame. Arrays
         must contain integer values.
     nobs : {int, array_like}
-<<<<<<< Updated upstream
         total number of trials.  Arrays must contain integer values.
-    alpha : float in (0, 1)
-        significance level, default 0.05
-=======
-        total number of trials.  Arrays much contain integer values.
     alpha : float
         Significance level, default 0.05. Must be in (0, 1)
->>>>>>> Stashed changes
     method : {"normal", "agresti_coull", "beta", "wilson", "binom_test"}
         default: "normal"
         method to use for confidence interval. Supported methods:
@@ -167,11 +161,11 @@ def proportion_confint(count, nobs, alpha:float=0.05, method="normal"):
 
     References
     ----------
-    https://en.wikipedia.org/wiki/Binomial_proportion_confidence_interval
+    .. [*] https://en.wikipedia.org/wiki/Binomial_proportion_confidence_interval
 
-    Brown, Lawrence D.; Cai, T. Tony; DasGupta, Anirban (2001). "Interval
-        Estimation for a Binomial Proportion",
-        Statistical Science 16 (2): 101–133. doi:10.1214/ss/1009213286.
+    .. [*] Brown, Lawrence D.; Cai, T. Tony; DasGupta, Anirban (2001).
+       "Interval Estimation for a Binomial Proportion", Statistical
+       Science 16 (2): 101–133. doi:10.1214/ss/1009213286.
     """
     is_scalar = np.isscalar(count) and np.isscalar(nobs)
     is_pandas = isinstance(count, (pd.Series, pd.DataFrame))
