@@ -321,6 +321,7 @@ Time Series Filters
 
    seasonal_decompose
    STL
+   MSTL
    DecomposeResult
 
 TSA Tools

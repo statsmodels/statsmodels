@@ -195,6 +195,7 @@ Filters and Decompositions
 
    ~statsmodels.tsa.seasonal.seasonal_decompose
    ~statsmodels.tsa.seasonal.STL
+   ~statsmodels.tsa.seasonal.MSTL
    ~statsmodels.tsa.filters.bk_filter.bkfilter
    ~statsmodels.tsa.filters.cf_filter.cffilter
    ~statsmodels.tsa.filters.hp_filter.hpfilter
