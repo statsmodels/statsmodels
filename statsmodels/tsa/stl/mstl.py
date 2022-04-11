@@ -64,30 +64,38 @@ class MSTL:
     References
     ----------
     .. [1] K. Bandura, R.J. Hyndman, and C. Bergmeir (2021)
-    MSTL: A Seasonal-Trend Decomposition Algorithm for Time Series with
-    Multiple Seasonal Patterns. arXiv preprint arXiv:2107.13462.
+        MSTL: A Seasonal-Trend Decomposition Algorithm for Time Series with
+        Multiple Seasonal Patterns. arXiv preprint arXiv:2107.13462.
 
     Examples
     --------
-    Start by creating a toy dataset with multiple seasonal components.
+    Start by creating a toy dataset with hourly frequency and multiple seasonal
+    components.
 
     >>> import numpy as np
     >>> import matplotlib.pyplot as plt
-    >>> register_matplotlib_converters()
+    >>> import pandas as pd
+    >>> pd.plotting.register_matplotlib_converters()
+    >>> np.random.seed(0)
     >>> t = np.arange(1, 1000)
     >>> trend = 0.0001 * t ** 2 + 100
     >>> daily_seasonality = 5 * np.sin(2 * np.pi * t / 24)
     >>> weekly_seasonality = 10 * np.sin(2 * np.pi * t / (24 * 7))
     >>> noise = np.random.randn(len(t))
     >>> y = trend + daily_seasonality + weekly_seasonality + noise
+    >>> index = pd.date_range(start='2000-01-01', periods=len(t), freq='H')
+    >>> data = pd.DataFrame(data=y, index=index)
 
-    Use MSTL to decompose the time series into multiple seasonal components
-    with periods 24 (daily) and 24*7 (weekly).
+    Use MSTL to decompose the time series into two seasonal components
+    with periods 24 (daily seasonality) and 24*7 (weekly seasonality).
 
     >>> from statsmodels.tsa.seasonal import MSTL
     >>> res = MSTL(data, periods=(24, 24*7)).fit()
     >>> res.plot()
+    >>> plt.tight_layout()
     >>> plt.show()
+
+    .. plot:: plots/mstl_plot.py
     """
 
     def __init__(
@@ -114,8 +122,8 @@ class MSTL:
 
     def fit(self):
         """
-        Estimate multiple season components as well as trend and residuals
-        components.
+        Estimate a trend component, multiple seasonal components, and a
+        residual component.
 
         Returns
         -------

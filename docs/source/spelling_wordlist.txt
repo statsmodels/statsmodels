@@ -412,6 +412,7 @@ Lowess
 Lumley
 Lutkepohl
 MANOVA
+MSTL
 MICEData
 MLEInfluence
 MLEModel
