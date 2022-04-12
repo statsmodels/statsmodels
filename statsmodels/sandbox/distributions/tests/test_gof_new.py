@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.testing import assert_array_almost_equal
 
-from statsmodels.sandbox.distributions.gof_new import bootstrap, NewNorm
+from statsmodels.sandbox.distributions.gof_one_sample import bootstrap, NewNorm
 
 
 def test_loop_vectorized_batch_equivalence():
