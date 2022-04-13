@@ -1447,6 +1447,8 @@ def recursive_olsresiduals(res, skip=None, lamda=0.0, alpha=0.95,
     Journal of the Royal Statistical Society. Series B (Methodological) 37,
     no. 2 (1975): 149-192.
     """
+    if not isinstance(res, RegressionResultsWrapper):
+        raise TypeError("res a regression results instance")
     y = res.model.endog
     x = res.model.exog
     order_by = array_like(order_by, "order_by", dtype="int", optional=True,
