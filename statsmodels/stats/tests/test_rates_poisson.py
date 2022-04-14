@@ -13,8 +13,12 @@ from statsmodels.stats.rates import (
     etest_poisson_2indep,
     confint_poisson_2indep,
     power_poisson_2indep,
+    power_poisson_2indep_v2,
     power_equivalence_poisson_2indep,
     power_poisson_diff_2indep,
+
+    power_equivalence_neginb_2indep_v3,
+    power_negbin_2indep_v2,
     )
 
 
@@ -536,3 +540,118 @@ def test_power_poisson_equal():
         diff, rate2, nobs1, nobs_ratio=nobs_ratio, alpha=0.05, value=0,
         alternative='larger', return_results=True)
     assert_allclose(pow_.power, 0.82566, atol=5e-5)
+
+
+def test_power_negbin():
+
+    # example from PASS ch. 468, last example Zhu 2016
+    # Note, the table has wrong RU, does not correspond to text
+    rate1, rate2 = 2.5, 2.5
+    nobs1, nobs2 = 965, 965
+    alpha = 0.05
+    exposure = 0.9
+    low, upp = 0.875, 1 / 0.875
+    dispersion = 0.35
+
+    pow1 = 0.90022
+    pow_ = power_equivalence_neginb_2indep_v3(
+        rate1, nobs1, rate2, nobs2, exposure, low, upp, alpha=alpha,
+        dispersion=dispersion, method_var="alt")
+    assert_allclose(pow_[0], pow1, atol=5e-5)
+
+    nobs1, nobs2 = 966, 966
+
+    pow1 = 0.90015
+    pow_ = power_equivalence_neginb_2indep_v3(
+        rate1, nobs1, rate2, nobs2, exposure, low, upp, alpha=alpha,
+        dispersion=dispersion, method_var="ftotal")
+    assert_allclose(pow_[0], pow1, atol=5e-5)
+
+    pow1 = 0.90034
+    pow_ = power_equivalence_neginb_2indep_v3(
+        rate1, nobs1, rate2, nobs2, exposure, low, upp, alpha=alpha,
+        dispersion=dispersion, method_var="score")
+    assert_allclose(pow_[0], pow1, atol=5e-5)
+
+    # test with unequal sample size agains R
+    # R packages MKmisc and PASSED have only equality test, ratio=1, for negbin
+    # package PASSED has same results as MKmisc but different signature
+    # in R: treatment and control are reversed, theta = 1 / dispersion
+    # > power_NegativeBinomial(n1 = 100, n2=50, mu1 = 0.5, mu2 = 0.3, theta=2,
+    #   duration = 2, approach = 3))
+
+    rate2, nobs2, rate1, nobs1, exposure = 0.3, 50, 0.5, 100, 2
+    pow1 = 0.6207448
+    pow_ = power_negbin_2indep_v2(rate2, nobs2, rate1, nobs1, exposure,
+                                  value=1,
+                                  alpha=alpha, dispersion=0.5,
+                                  alternative="two-sided",
+                                  method_var="score",
+                                  return_results=False)
+    assert_allclose(pow_, pow1, atol=5e-2)
+
+    # flip nobs ratio
+    pow1 = 0.5825763
+    nobs1, nobs2 = nobs2, nobs1
+    pow_ = power_negbin_2indep_v2(
+        rate2, nobs2, rate1, nobs1, exposure,
+        value=1,
+        alpha=alpha, dispersion=0.5,
+        alternative="two-sided",
+        method_var="score",
+        return_results=False)
+    assert_allclose(pow_, pow1, atol=5e-2)
+
+    # corner case poisson
+    # > power_NegativeBinomial(n1 = 50, n2=100, mu1 = 0.5, mu2 = 0.3,
+    #   theta=200000, duration = 2, approach = 3)
+    pow1 = 0.7248956
+    pow_ = power_negbin_2indep_v2(
+        rate2, nobs2, rate1, nobs1, exposure, value=1,
+        alpha=alpha, dispersion=0, alternative="two-sided",
+        method_var="score",
+        return_results=False)
+
+    assert_allclose(pow_, pow1, atol=5e-2)
+
+    pow_p = power_poisson_2indep_v2(
+        rate2, nobs2, rate1, nobs1, exposure, value=1,
+        alpha=alpha, dispersion=1, alternative="two-sided",
+        method_var="score",
+        return_results=True)
+
+    assert_allclose(pow_p, pow1, atol=5e-2)
+    assert_allclose(pow_p, pow_, rtol=1e-13)
+
+    # test one-sided
+    pow1 = 0.823889
+    pow_ = power_negbin_2indep_v2(
+        rate2, nobs2, rate1, nobs1, exposure, value=1,
+        alpha=alpha, dispersion=0, alternative="smaller",
+        method_var="score",
+        return_results=False)
+
+    pow_p = power_poisson_2indep_v2(
+        rate2, nobs2, rate1, nobs1, exposure, value=1,
+        alpha=alpha, dispersion=1, alternative="smaller",
+        method_var="score",
+        return_results=True)
+
+    assert_allclose(pow_p, pow1, atol=5e-2)
+    assert_allclose(pow_p, pow_, rtol=1e-13)
+
+    # reverse 2 samples
+    pow_ = power_negbin_2indep_v2(
+        rate1, nobs1, rate2, nobs2, exposure, value=1,
+        alpha=alpha, dispersion=0, alternative="larger",
+        method_var="score",
+        return_results=False)
+
+    pow_p = power_poisson_2indep_v2(
+        rate1, nobs1, rate2, nobs2, exposure, value=1,
+        alpha=alpha, dispersion=1, alternative="larger",
+        method_var="score",
+        return_results=True)
+
+    assert_allclose(pow_p, pow1, atol=5e-2)
+    assert_allclose(pow_p, pow_, rtol=1e-13)

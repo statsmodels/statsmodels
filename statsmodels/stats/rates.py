@@ -533,13 +533,20 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, value=None,
             ratio_null = value
 
         r = ratio_null
-        r_d = r / d
+        r_d = r / d   # r1 * n1 / (r2 * n2)
 
         if method in ['score']:
             stat = (y1 - y2 * r_d) / np.sqrt((y1 + y2) * r_d)
             dist = 'normal'
         elif method in ['wald']:
             stat = (y1 - y2 * r_d) / np.sqrt(y1 + y2 * r_d**2)
+            dist = 'normal'
+        elif method in ['score-log']:
+            stat = (np.log(y1 / y2) - np.log(r_d))
+            stat /= np.sqrt((2 + 1 / r_d + r_d) / (y1 + y2))
+            dist = 'normal'
+        elif method in ['wald-log']:
+            stat = (np.log(y1 / y2) - np.log(r_d)) / np.sqrt(1 / y1 + 1 / y2)
             dist = 'normal'
         elif method in ['sqrt']:
             stat = 2 * (np.sqrt(y1 + 3 / 8.) - np.sqrt((y2 + 3 / 8.) * r_d))
@@ -636,6 +643,9 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, value=None,
 
 
 def _score_diff(y1, n1, y2, n2, value=0, return_cmle=False):
+    """score test and cmle for difference of 2 independent poisson rates
+
+    """
     count_pooled = y1 + y2
     rate1, rate2 = y1 / n1, y2 / n2
     rate_pooled = count_pooled / (n1 + n2)
@@ -712,7 +722,7 @@ def etest_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=1,
     """
     y1, n1, y2, n2 = count1, exposure1, count2, exposure2
     d = n2 / n1
-    r = ratio_null
+    r = ratio_null   # rate1 / rate2
     r_d = r / d
 
     eps = 1e-20  # avoid zero division in stat_func
@@ -886,7 +896,7 @@ def tost_poisson_2indep(count1, exposure1, count2, exposure2, low, upp,
 
 
 def nonequivalence_poisson_2indep(count1, exposure1, count2, exposure2,
-                                  low, upp, method='score'):
+                                  low, upp, method='score', compare="ratio"):
     """Test for non-equivalence, minimum effect for poisson
 
     This reverses null and alternative hypothesis compared to equivalence
@@ -928,7 +938,7 @@ def nonequivalence_poisson_2indep(count1, exposure1, count2, exposure2,
 
     """
     tt1 = test_poisson_2indep(count1, exposure1, count2, exposure2,
-                              ratio_null=low, method=method,
+                              ratio_null=low, method=method, compare=compare,
                               alternative='smaller')
     tt2 = test_poisson_2indep(count1, exposure1, count2, exposure2,
                               ratio_null=upp, method=method,
@@ -1090,8 +1100,9 @@ def power_poisson_2indep_v2(rate1, nobs1, rate2, nobs2, exposure, value=0,
     if method_var == "alt":
         v0 = v1
     elif method_var == "score":
-        v0 = dispersion / exposure * (1 + value * nobs_ratio)**2
-        v0 /= value * nobs_ratio * (rate1 + (nobs_ratio * rate2))
+        #nobs_ratio = 1 / nobs_ratio
+        v0 = dispersion / exposure * (1 + value / nobs_ratio)**2
+        v0 /= value / nobs_ratio * (rate1 + (nobs_ratio * rate2))
     else:
         raise NotImplementedError(f"method_var {method_var} not recognized")
 
@@ -1128,8 +1139,8 @@ def power_equivalence_poisson_2indep(rate1, nobs1, rate2, nobs2, exposure,
 
     WIP missing var option, redundant/unused nobs1
     """
-    nobs_ratio = nobs1 / nobs2
-    v1 = dispersion / exposure * (1 / rate2 + 1 / (nobs_ratio * rate1))
+    nobs_ratio = nobs2 / nobs1
+    v1 = dispersion / exposure * (1 / rate1 + 1 / (nobs_ratio * rate2))
     v0_low = v0_upp = v1
 
     crit = norm.isf(alpha)
@@ -1148,8 +1159,8 @@ def power_equivalence_poisson_2indep_v2(rate1, nobs1, rate2, nobs2, exposure,
 
     WIP missing var option, redundant/unused nobs1
     """
-    nobs_ratio = nobs1 / nobs2
-    v1 = dispersion / exposure * (1 / rate2 + 1 / (nobs_ratio * rate1))
+    nobs_ratio = nobs2 / nobs1
+    v1 = dispersion / exposure * (1 / rate1 + 1 / (nobs_ratio * rate2))
     v0_low = v0_upp = v1
 
     es_low = np.log(rate1 / rate2) - np.log(low)
@@ -1173,8 +1184,8 @@ def power_equivalence_poisson_2indep_v3(rate1, nobs1, rate2, nobs2, exposure,
 
 
     """
-    nobs_ratio = nobs1 / nobs2
-    v1 = dispersion / exposure * (1 / rate2 + 1 / (nobs_ratio * rate1))
+    nobs_ratio = nobs2 / nobs1
+    v1 = dispersion / exposure * (1 / rate1 + 1 / (nobs_ratio * rate2))
 
     if method_var == "alt":
         v0_low = v0_upp = v1
@@ -1238,7 +1249,6 @@ def _power_equivalence_het(es_low, es_upp, nobs, alpha=0.05,
     p2 = norm.cdf((np.sqrt(nobs) * es_upp + crit * s0_upp) / s1)
     pow_ = 1 - (p1 + p2)
     return pow_, p1, p2
-
 
 
 def _std_2poisson_power(diff, rate2, nobs_ratio=1, alpha=0.05,
@@ -1339,8 +1349,40 @@ def power_poisson_diff_2indep(diff, rate2, nobs1, nobs_ratio=1, alpha=0.05,
         return pow_
 
 
+def _var_cmle_negbin(rate1, rate2, nobs_ratio, exposure=1, value=1,
+                     dispersion=0):
+    """
+    variance based on constrained cmle, for score test version
+
+    for ratio comparison of two negative binomial samples
+
+    value = rate1 / rate2 under the null
+    """
+    # definitions in Zhu
+    # nobs_ratio = n1 / n0
+    # value = ratio = r1 / r0
+    rate0 = rate2  # control
+    nobs_ratio = 1 / nobs_ratio
+
+    a = - dispersion * exposure * value * (1 + nobs_ratio)
+    b = (dispersion * exposure * (rate0 * value + nobs_ratio * rate1) -
+         (1 + nobs_ratio * value))
+    c = rate0 + nobs_ratio * rate1
+    if dispersion == 0:
+        r0 = -c / b
+    else:
+        r0 = (-b - np.sqrt(b**2 - 4 * a * c)) / (2 * a)
+    r1 = r0 * value
+    v = (1 / exposure / r0 * (1 + 1 / value / nobs_ratio) +
+         (1 + nobs_ratio) / nobs_ratio * dispersion)
+
+    r2 = r0
+    return v * nobs_ratio, r1, r2
+
+
 def power_negbin_2indep_v2(rate1, nobs1, rate2, nobs2, exposure, value=1,
-                           alpha=0.05, dispersion=0.01, alternative="smaller",
+                           alpha=0.05, dispersion=0.01,
+                           alternative="two-sided",
                            method_var="alt",
                            return_results=True):
     """power for one-sided test of ratio of 2 independent poisson rates
@@ -1359,10 +1401,14 @@ def power_negbin_2indep_v2(rate1, nobs1, rate2, nobs2, exposure, value=1,
           (1 + nobs_ratio) / nobs_ratio * dispersion)
     if method_var == "alt":
         v0 = v1
-    elif method_var == "score":
+    elif method_var == "ftotal":
         v0 = (1 + value * nobs_ratio)**2 / (
              exposure * nobs_ratio * value * (rate1 + nobs_ratio * rate2))
         v0 += (1 + nobs_ratio) / nobs_ratio * dispersion
+    elif method_var == "score":
+        v0 = _var_cmle_negbin(rate1, rate2, nobs_ratio,
+                              exposure=exposure, value=value,
+                              dispersion=dispersion)[0]
     else:
         raise NotImplementedError(f"method_var {method_var} not recognized")
 
@@ -1394,26 +1440,33 @@ def power_negbin_2indep_v2(rate1, nobs1, rate2, nobs2, exposure, value=1,
 
 
 def power_equivalence_neginb_2indep_v3(rate1, nobs1, rate2, nobs2, exposure,
-                                        low, upp, alpha=0.05, dispersion=1,
+                                        low, upp, alpha=0.05, dispersion=0,
                                         method_var="alt"):
     """
     Power for equivalence test of ratio of 2 indep. negative binomial rates
 
 
     """
-    nobs_ratio = nobs1 / nobs2
+    nobs_ratio = nobs2 / nobs1
 
-    v1 = ((1 / rate1 + 1 / (nobs_ratio * rate2)) / exposure +
+    v1 = ((1 / rate2 + 1 / (nobs_ratio * rate1)) / exposure +
           (1 + nobs_ratio) / nobs_ratio * dispersion)
     if method_var == "alt":
         v0_low = v0_upp = v1
-    elif method_var == "score":
+    elif method_var == "ftotal":
         v0_low = (1 + low * nobs_ratio)**2 / (
              exposure * nobs_ratio * low * (rate1 + nobs_ratio * rate2))
         v0_low += (1 + nobs_ratio) / nobs_ratio * dispersion
         v0_upp = (1 + upp * nobs_ratio)**2 / (
              exposure * nobs_ratio * upp * (rate1 + nobs_ratio * rate2))
         v0_upp += (1 + nobs_ratio) / nobs_ratio * dispersion
+    elif method_var == "score":
+        v0_low = _var_cmle_negbin(rate1, rate2, nobs_ratio,
+                                  exposure=exposure, value=low,
+                                  dispersion=dispersion)[0]
+        v0_upp = _var_cmle_negbin(rate1, rate2, nobs_ratio,
+                                  exposure=exposure, value=upp,
+                                  dispersion=dispersion)[0]
     else:
         raise NotImplementedError(f"method_var {method_var} not recognized")
 
@@ -1423,7 +1476,7 @@ def power_equivalence_neginb_2indep_v3(rate1, nobs1, rate2, nobs2, exposure,
     std_null_upp = np.sqrt(v0_upp)
     std_alternative = np.sqrt(v1)
 
-    pow_ = _power_equivalence_het(es_low, es_upp, nobs2, alpha=alpha,
+    pow_ = _power_equivalence_het(es_low, es_upp, nobs1, alpha=alpha,
                                   std_null_low=std_null_low,
                                   std_null_upp=std_null_upp,
                                   std_alternative=std_alternative)
