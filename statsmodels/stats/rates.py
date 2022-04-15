@@ -541,7 +541,7 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, value=None,
 
     compare : {'diff', 'ratio'}
         If compare is `diff`, then the confidence interval is for
-        diff = rat11 - rate22.
+        diff = rate1 - rate2.
         If compare is `ratio`, then the confidence interval is for the
         rate ratio defined by ratio = rate1 / rate2.
     alternative : string
@@ -1122,40 +1122,6 @@ def confint_poisson_2indep(count1, exposure1, count2, exposure2,
 
 
 def power_poisson_2indep(rate1, nobs1, rate2, nobs2, exposure, value=0,
-                         alpha=0.025, dispersion=1, alternative="smaller"):
-    """power for one-sided test of ratio of 2 independent poisson rates
-
-    this is currently for superiority and non-inferiority testing
-
-    signature not adjusted yet
-
-    incomplete alternatives, var options missing
-    """
-    low = value  # alias from original equivalence test case
-    nobs_ratio = nobs1 / nobs2
-    v1 = dispersion / exposure * (1 / rate2 + 1 / (nobs_ratio * rate1))
-    v0 = v1
-    std0 = np.sqrt(v0)
-    std1 = np.sqrt(v1)
-
-    if alternative == "two-sided":
-        crit = norm.isf(alpha / 2)
-    else:
-        crit = norm.isf(alpha)
-    es = np.log(low) - np.log(rate1 / rate2)
-    pow_ = 0
-    if alternative in ["smaller", "two-sided"]:
-        pow_ = pow_ + norm.cdf((np.sqrt(nobs2) * es - crit * std0) / std1)
-    if alternative in ["larger", "two-sided"]:
-        pow_ = pow_ + norm.sf((np.sqrt(nobs2) * es + crit * std0) / std1)
-
-    if alternative not in ["smaller", "larger", "two-sided"]:
-        raise ValueError("alternative not recognized")
-
-    return pow_
-
-
-def power_poisson_2indep_v2(rate1, nobs1, rate2, nobs2, exposure, value=0,
                             alpha=0.05, dispersion=1, alternative="smaller",
                             method_var="alt",
                             return_results=True):
@@ -1173,7 +1139,7 @@ def power_poisson_2indep_v2(rate1, nobs1, rate2, nobs2, exposure, value=0,
     if method_var == "alt":
         v0 = v1
     elif method_var == "score":
-        #nobs_ratio = 1 / nobs_ratio
+        # nobs_ratio = 1 / nobs_ratio
         v0 = dispersion / exposure * (1 + value / nobs_ratio)**2
         v0 /= value / nobs_ratio * (rate1 + (nobs_ratio * rate2))
     else:
@@ -1207,50 +1173,6 @@ def power_poisson_2indep_v2(rate1, nobs1, rate2, nobs2, exposure, value=0,
 
 
 def power_equivalence_poisson_2indep(rate1, nobs1, rate2, nobs2, exposure,
-                                     low, upp, alpha=0.025, dispersion=1):
-    """power for equivalence test of ratio of 2 independent poisson rates
-
-    WIP missing var option, redundant/unused nobs1
-    """
-    nobs_ratio = nobs2 / nobs1
-    v1 = dispersion / exposure * (1 / rate1 + 1 / (nobs_ratio * rate2))
-    v0_low = v0_upp = v1
-
-    crit = norm.isf(alpha)
-    pow_ = (
-        norm.cdf((np.sqrt(nobs2) * (np.log(rate1 / rate2) - np.log(low))
-                  - crit * np.sqrt(v0_low)) / np.sqrt(v1)) +
-        norm.cdf((np.sqrt(nobs2) * (np.log(upp) - np.log(rate1 / rate2))
-                  - crit * np.sqrt(v0_upp)) / np.sqrt(v1)) - 1
-        )
-    return pow_
-
-
-def power_equivalence_poisson_2indep_v2(rate1, nobs1, rate2, nobs2, exposure,
-                                        low, upp, alpha=0.025, dispersion=1):
-    """power for equivalence test of ratio of 2 independent poisson rates
-
-    WIP missing var option, redundant/unused nobs1
-    """
-    nobs_ratio = nobs2 / nobs1
-    v1 = dispersion / exposure * (1 / rate1 + 1 / (nobs_ratio * rate2))
-    v0_low = v0_upp = v1
-
-    es_low = np.log(rate1 / rate2) - np.log(low)
-    es_upp = np.log(upp) - np.log(rate1 / rate2)
-    std_null_low = np.sqrt(v0_low)
-    std_null_upp = np.sqrt(v0_upp)
-    std_alternative = np.sqrt(v1)
-
-    pow_ = _power_equivalence_het_v0(es_low, es_upp, nobs2, alpha=alpha,
-                                     std_null_low=std_null_low,
-                                     std_null_upp=std_null_upp,
-                                     std_alternative=std_alternative)
-
-    return pow_
-
-
-def power_equivalence_poisson_2indep_v3(rate1, nobs1, rate2, nobs2, exposure,
                                         low, upp, alpha=0.05, dispersion=1,
                                         method_var="alt"):
     """power for equivalence test of ratio of 2 independent poisson rates
@@ -1453,7 +1375,7 @@ def _var_cmle_negbin(rate1, rate2, nobs_ratio, exposure=1, value=1,
     return v * nobs_ratio, r1, r2
 
 
-def power_negbin_2indep_v2(rate1, nobs1, rate2, nobs2, exposure, value=1,
+def power_negbin_2indep(rate1, nobs1, rate2, nobs2, exposure, value=1,
                            alpha=0.05, dispersion=0.01,
                            alternative="two-sided",
                            method_var="alt",
@@ -1512,7 +1434,7 @@ def power_negbin_2indep_v2(rate1, nobs1, rate2, nobs2, exposure, value=1,
     return pow_
 
 
-def power_equivalence_neginb_2indep_v3(rate1, nobs1, rate2, nobs2, exposure,
+def power_equivalence_neginb_2indep(rate1, nobs1, rate2, nobs2, exposure,
                                         low, upp, alpha=0.05, dispersion=0,
                                         method_var="alt"):
     """
