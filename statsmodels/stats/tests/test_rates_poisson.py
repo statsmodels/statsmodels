@@ -2,14 +2,18 @@
 
 import pytest
 import warnings
+import numpy as np
 from numpy import arange
 from numpy.testing import assert_allclose, assert_equal
+from scipy import stats
 
 # we cannot import test_poisson_2indep directly, pytest treats that as test
 import statsmodels.stats.rates as smr
 from statsmodels.stats.rates import (
     # test_poisson, # cannot import functions that start with test
     confint_poisson,
+    tolerance_int_poisson,
+    confint_quantile_poisson,
     etest_poisson_2indep,
     confint_poisson_2indep,
     power_poisson_2indep,
@@ -99,6 +103,77 @@ def test_rate_poisson_r():
     ci2 = (0.0243357599260795, 0.0604627555786095)
     ci = confint_poisson(count, nobs, method="midp-c")
     assert_allclose(ci[1], ci2[1], rtol=1e-5)
+
+
+cases_tolint = [
+    ("wald", 15, 1, 1, (3, 32), (3, np.inf), (0, 31)),
+    ("score", 15, 1, 1, (4, 35), (4, np.inf), (0, 33)),
+    ("wald", 150, 100, 100, (104, 200), (108, np.inf), (0, 196)),
+    ("score", 150, 100, 100, (106, 202), (109, np.inf), (0, 198)),
+    ("exact-c", 150, 100, 100, (105, 202), (109, np.inf), (0, 198)),
+    ]
+
+
+@pytest.mark.parametrize('case', cases_tolint)
+def test_tol_int(case):
+    # results values are from R package `tolerance, e.g.
+    # poistol.int(15, 1, m = 1, alpha = 0.05, P = 0.975, side = 1, method="LS")
+    # poistol.int(150, 100, m = 100, alpha = 0.05, P = 0.95, side = 2,
+    #     method="SC")
+    # exact-c is method="TAB"
+
+    prob = 0.95
+    prob_one = 0.975
+    meth, count, exposure, exposure_new, r2, rs, rl = case
+    ti = tolerance_int_poisson(
+        count, exposure, prob, exposure_new=exposure_new,
+        method=meth, alpha=0.05, alternative="two-sided")
+    assert_equal(ti, r2)
+    ti = tolerance_int_poisson(
+        count, exposure, prob_one, exposure_new=exposure_new,
+        method=meth, alpha=0.05, alternative="larger")
+    assert_equal(ti, rl)
+    ti = tolerance_int_poisson(
+        count, exposure, prob_one, exposure_new=exposure_new,
+        method=meth, alpha=0.05, alternative="smaller")
+    assert_equal(ti, rs)
+
+    # check without parameter uncertainty, confint at alpha=1
+    if meth not in ["exact-c"]:
+        # confint for "exact-c" does not collapse to point if alpha=1, check
+        ti = tolerance_int_poisson(
+            count, exposure, prob, exposure_new=exposure_new,
+            method=meth, alpha=0.99999, alternative="two-sided")
+        ci = stats.poisson.interval(prob, count / exposure * exposure_new)
+        assert_equal(ti, ci)
+
+    # check confint_quantile_poisson,
+    # should same as upper tol_int
+    ciq = confint_quantile_poisson(
+        count, exposure, prob_one, exposure_new=exposure_new,
+        method=meth, alpha=0.05, alternative="two-sided")
+
+    assert_equal(ciq[1], r2[1])
+
+    ciq = confint_quantile_poisson(
+        count, exposure, prob_one, exposure_new=exposure_new,
+        method=meth, alpha=0.05, alternative="larger")
+
+    assert_equal(ciq[1], rl[1])
+
+    # should same as lower tol_int
+    prob_low = 0.025
+    ciq = confint_quantile_poisson(
+        count, exposure, prob_low, exposure_new=exposure_new,
+        method=meth, alpha=0.05, alternative="two-sided")
+
+    assert_equal(ciq[0], r2[0])
+
+    ciq = confint_quantile_poisson(
+        count, exposure, prob_low, exposure_new=exposure_new,
+        method=meth, alpha=0.05, alternative="smaller")
+
+    assert_equal(ciq[0], rs[0])
 
 
 methods_diff = ["wald", "score", "waldccv",

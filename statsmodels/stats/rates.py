@@ -289,7 +289,7 @@ def confint_poisson(count, exposure, method=None, alpha=0.05):
     return ci
 
 
-def tolerance_int_poisson(count, exposure, prob, exposure_new=1.,
+def tolerance_int_poisson(count, exposure, prob=0.95, exposure_new=1.,
                           method=None, alpha=0.05,
                           alternative="two-sided"):
     """tolerance interval for a poisson observation
@@ -301,7 +301,9 @@ def tolerance_int_poisson(count, exposure, prob, exposure_new=1.,
     exposure : arrat_like
         Currently this is total exposure time of the count variable.
     prob : float in (0, 1)
-        Probability of poisson interval, often called "content"
+        Probability of poisson interval, often called "content".
+        With known parameters, each tail would have at most probability
+        ``1 - prob / 2`` in the two-sided interval.
     exposure_new : float
         Exposure of the new or predicted observation.
     method : str
@@ -313,7 +315,7 @@ def tolerance_int_poisson(count, exposure, prob, exposure_new=1.,
         Poisson rate. Nominal coverage of the confidence interval is
         1 - alpha.
     alternative : {"two-sider", "larger", "smaller")
-        The tolerance interval can be two-dised or one sided.
+        The tolerance interval can be two-sided or one-sided.
         Alternative "larger" provides the upper bound of the confidence
         interval, larger counts are outside the interval.
 
@@ -323,23 +325,48 @@ def tolerance_int_poisson(count, exposure, prob, exposure_new=1.,
     The tolerance interval is a closed interval, that is both ``low`` and
     ``upp`` are in the interval.
 
-    """
+    Notes
+    -----
+    verified against R package tolerance `poistol.int`
 
-    low, upp = confint_poisson(count, exposure, method=method, alpha=alpha)
+    See Also
+    --------
+    `confint_poisson`
+    `confint_quantile_poisson`
+
+    References
+    ----------
+    Hahn, Gerald J, and William Q Meeker. 2010. Statistical Intervals: A Guide
+    for Practitioners.
+
+    Hahn, Gerald J., and Ramesh Chandra. 1981. “Tolerance Intervals for Poisson
+    and Binomial Variables.” Journal of Quality Technology 13 (2): 100–110.
+    https://doi.org/10.1080/00224065.1981.11980998.
+
+    """
+    prob_tail = 1 - prob
+    alpha_ = alpha
+    if alternative != "two-sided":
+        # confint_poisson does not have one-sided alternatives
+        alpha_ = alpha * 2
+    low, upp = confint_poisson(count, exposure, method=method, alpha=alpha_)
+
     if exposure_new != 1:
-        low /= exposure_new
-        upp /= exposure_new
+        low *= exposure_new
+        upp *= exposure_new
 
     if alternative == "two-sided":
-        low_pred = stats.poisson.ppf(prob / 2, low)
-        upp_pred = stats.poisson.isf(prob / 2, upp) - 1
+        low_pred = stats.poisson.ppf(prob_tail / 2, low)
+        upp_pred = stats.poisson.ppf(1 - prob_tail / 2, upp)
     elif alternative == "larger":
         low_pred = 0
-        upp_pred = stats.poisson.isf(prob / 2, upp) - 1
+        upp_pred = stats.poisson.ppf(1 - prob_tail, upp)
     elif alternative == "smaller":
-        low_pred = stats.poisson.ppf(prob / 2, low)
+        low_pred = stats.poisson.ppf(prob_tail, low)
         upp_pred = np.inf
 
+    # clip -1 of ppf(0)
+    low_pred = np.maximum(low_pred, 0)
     return low_pred, upp_pred
 
 
@@ -348,16 +375,58 @@ def confint_quantile_poisson(count, exposure, prob, exposure_new=1.,
                              alternative="two-sided"):
     """confidence interval for quantile of poisson random variable
 
-    """
+    Parameters
+    ----------
+    count : array_like
+        Observed count, number of events.
+    exposure : arrat_like
+        Currently this is total exposure time of the count variable.
+    prob : float in (0, 1)
+        Probability for the quantile, e.g. 0.95 to get the upper 95% quantile.
+        With known mean mu, the quantile would be poisson.ppf(prob, mu).
+    exposure_new : float
+        Exposure of the new or predicted observation.
+    method : str
+        Method to used for confidence interval of the estimate of the
+        poisson rate, used in `confint_poisson`.
+        This is required, there is currently no default method.
+    alpha : float in (0, 1)
+        Significance level for the confidence interval of the estimate of the
+        Poisson rate. Nominal coverage of the confidence interval is
+        1 - alpha.
+    alternative : {"two-sider", "larger", "smaller")
+        The tolerance interval can be two-sided or one-sided.
+        Alternative "larger" provides the upper bound of the confidence
+        interval, larger counts are outside the interval.
 
-    low, upp = confint_poisson(count, exposure, method=method, alpha=alpha)
+    Returns
+    -------
+    tuple (low, upp) of limits of tolerance interval.
+    The confidence interval is a closed interval, that is both ``low`` and
+    ``upp`` are in the interval.
+
+    See Also
+    --------
+    `confint_poisson`
+    `tolerance_int_poisson`
+
+    References
+    ----------
+    Hahn, Gerald J, and William Q Meeker. 2010. Statistical Intervals: A Guide
+    for Practitioners.
+    """
+    alpha_ = alpha
+    if alternative != "two-sided":
+        # confint_poisson does not have one-sided alternatives
+        alpha_ = alpha * 2
+    low, upp = confint_poisson(count, exposure, method=method, alpha=alpha_)
     if exposure_new != 1:
-        low /= exposure_new
-        upp /= exposure_new
+        low *= exposure_new
+        upp *= exposure_new
 
     if alternative == "two-sided":
         low_pred = stats.poisson.ppf(prob, low)
-        upp_pred = stats.poisson.ppf(prob, upp) - 1
+        upp_pred = stats.poisson.ppf(prob, upp)
     elif alternative == "larger":
         low_pred = 0
         upp_pred = stats.poisson.ppf(prob, upp)
@@ -365,6 +434,8 @@ def confint_quantile_poisson(count, exposure, prob, exposure_new=1.,
         low_pred = stats.poisson.ppf(prob, low)
         upp_pred = np.inf
 
+    # clip -1 of ppf(0)
+    low_pred = np.maximum(low_pred, 0)
     return low_pred, upp_pred
 
 
@@ -944,9 +1015,11 @@ def nonequivalence_poisson_2indep(count1, exposure1, count2, exposure2,
                               ratio_null=upp, method=method,
                               alternative='larger')
 
-    idx_min = 0 if tt1.pvalue < tt2.pvalue else 1
-    pvalue = 2 * min(tt1.pvalue, tt2.pvalue)
-    res = HolderTuple(statistic=[tt1.statistic, tt2.statistic][idx_min],
+    # idx_min = 0 if tt1.pvalue < tt2.pvalue else 1
+    idx_min = np.asarray(tt1.pvalue < tt2.pvalue, int)
+    pvalue = 2 * np.minimum(tt1.pvalue, tt2.pvalue)
+    np.column_stack([tt1.statistic, tt2.statistic])[idx_min]
+    res = HolderTuple(statistic=stats,
                       pvalue=pvalue,
                       method=method,
                       results_larger=tt1,
