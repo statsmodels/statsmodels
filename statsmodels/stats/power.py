@@ -129,7 +129,7 @@ def normal_power_het(diff, nobs, alpha, std_null=1., std_alternative=None,
     std_null : float
         standard deviation under the Null hypothesis without division by
         sqrt(nobs)
-    std_null : float
+    std_alternative : float
         standard deviation under the Alternative hypothesis without division
         by sqrt(nobs)
     alternative : string, 'two-sided' (default), 'larger', 'smaller'
@@ -189,7 +189,7 @@ def normal_sample_size_one_tail(diff, power, alpha, std_null=1.,
     std_null : float
         standard deviation under the Null hypothesis without division by
         sqrt(nobs)
-    std_null : float
+    std_alternative : float
         standard deviation under the Alternative hypothesis without division
         by sqrt(nobs)
 
