@@ -485,17 +485,26 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, value=None,
                         ratio_null=None,
                         method=None, compare='ratio',
                         alternative='two-sided', etest_kwds=None):
-    '''test for ratio of two sample Poisson intensities
+    '''Test for comparing two sample Poisson intensity rates.
 
-    If the two Poisson rates are g1 and g2, then the Null hypothesis is
+    Rates are defined as expected count divided by exposure.
 
-    - H0: g1 / g2 = ratio_null
+    The Null and alternative hypothesis for the rates, rate1 and rate2, of two
+    independent Poisson samples are
 
-    against one of the following alternatives
+    for compare = 'diff'
 
-    - H1_2-sided: g1 / g2 != ratio_null
-    - H1_larger: g1 / g2 > ratio_null
-    - H1_smaller: g1 / g2 < ratio_null
+    - H0: rate1 - rate2 - value = 0
+    - H1: rate1 - rate2 - value != 0  if alternative = 'two-sided'
+    - H1: rate1 - rate2 - value > 0   if alternative = 'larger'
+    - H1: rate1 - rate2 - value < 0   if alternative = 'smaller'
+
+    for compare = 'ratio'
+
+    - H0: rate1 / rate2 - value = 0
+    - H1: rate1 / rate2 - value != 0  if alternative = 'two-sided'
+    - H1: rate1 / rate2 - value > 0   if alternative = 'larger'
+    - H1: rate1 / rate2 - value < 0   if alternative = 'smaller'
 
     Parameters
     ----------
@@ -511,23 +520,19 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, value=None,
         ratio of the two Poisson rates under the Null hypothesis. Default is 1.
     method : string
         Method for the test statistic and the p-value. Defaults to `'score'`.
-        Current Methods are based on Gu et. al 2008.
-        Implemented are 'wald', 'score' and 'sqrt' based asymptotic normal
-        distribution, and the exact conditional test 'exact-cond', and its
-        mid-point version 'cond-midp'. method='etest' and method='etest-wald'
-        provide pvalues from `etest_poisson_2indep` using score or wald
-        statistic respectively.
         see Notes.
 
         ratio:
 
-        - 'wald': method W1A, wald test, variance based on separate estimates
+        - 'wald': method W1A, wald test, variance based on observed rates
         - 'score': method W2A, score test, variance based on estimate under
           the Null hypothesis
-        - 'wald-log': W3A   not yet available
-        - 'score-log' W4A   not yet available
+        - 'wald-log': W3A, uses log-ratio, variance based on observed rates
+        - 'score-log' W4A, uses log-ratio, variance based on estimate under
+          the Null hypothesis
         - 'sqrt': W5A, based on variance stabilizing square root transformation
         - 'exact-cond': exact conditional test based on binomial distribution
+           This uses ``binom_test`` which is minlike in the two-sided case.
         - 'cond-midp': midpoint-pvalue of exact conditional test
         - 'etest': etest with score test statistic
         - 'etest-wald': etest with wald test statistic
@@ -536,13 +541,13 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, value=None,
 
         - 'wald',
         - 'waldccv'
-        - 'score' if correction is True, then this uses the degrees of freedom
-           correction ``nobs / (nobs - 1)`` as in Miettinen Nurminen 1985
+        - 'score'
 
     compare : {'diff', 'ratio'}
-        If compare is `diff`, then the confidence interval is for
+        Default is "ratio".
+        If compare is `diff`, then the hypothesis test is for
         diff = rate1 - rate2.
-        If compare is `ratio`, then the confidence interval is for the
+        If compare is `ratio`, then the hypothesis test is for the
         rate ratio defined by ratio = rate1 / rate2.
     alternative : string
         The alternative hypothesis, H1, has to be one of the following
@@ -562,6 +567,9 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, value=None,
 
     Notes
     -----
+    The hypothesis tests for compare="ratio" are based on Gu et al 2018.
+    The e-tests are also based on ...
+
     - 'wald': method W1A, wald test, variance based on separate estimates
     - 'score': method W2A, score test, variance based on estimate under Null
     - 'wald-log': W3A
@@ -1044,13 +1052,23 @@ def confint_poisson_2indep(count1, exposure1, count2, exposure2,
 
     if compare == "ratio":
 
-        if method == "wald":
+        if method == "wald-log":
             crit = stats.norm.isf(alpha)
             c = 0
             center = (count1 + c) / (count2 + c) * n2 / n1
             std = np.sqrt(1 / (count1 + c) + 1 / (count2 + c))
 
             ci = (center * np.exp(- crit * std), center * np.exp(crit * std))
+
+        elif method == "score-log":
+            low, upp = _invert_test_confint_2indep(
+                count1, exposure1, count2, exposure2,
+                alpha=alpha * 2,   # check how alpha is defined
+                method="score-log",
+                compare="ratio",
+                method_start="waldcc"
+                )
+            ci = (low, upp)
 
         elif method == "waldcc":
             crit = stats.norm.isf(alpha)
