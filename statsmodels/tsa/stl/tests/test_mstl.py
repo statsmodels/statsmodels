@@ -10,7 +10,6 @@ from statsmodels.tsa.seasonal import MSTL
 @pytest.fixture(scope="function")
 def mstl_results():
     cur_dir = Path(__file__).parent.resolve()
-    print(cur_dir)
     file_path = cur_dir / "results/mstl_test_results.csv"
     return pd.read_csv(file_path)
 
