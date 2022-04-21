@@ -24,6 +24,7 @@ from statsmodels.stats.rates import (
     )
 
 methods = ["wald", "score", "exact-c", "waldccv", "sqrt-a", "sqrt-v", "midp-c",
+           "sqrt",
            ]
 
 
@@ -209,7 +210,7 @@ def test_rate_poisson_diff_consistency(method):
     assert_allclose(pv2, 0.025, rtol=rtol)
 
 
-methods_ratio = ["wald-log", "score-log", # "waldccv",
+methods_ratio = ["wald-log", "score-log",  # "waldccv",
                  ]
 
 
@@ -437,6 +438,40 @@ def test_twosample_poisson():
     assert_allclose(pve2, pve2r, rtol=0, atol=5e-4)
 
 
+cases_diff_ng = [
+    ("wald",  (2.2047, 0.0137), (1.5514, 0.06040)),
+    ("score", (2.0818, 0.0187), (1.5023, 0.06651)),
+    ("etest-wald",  (2.2047, 0.0184), (1.5514, 0.06626)),
+    # Ng reports 0.07088 at value=0.0002, looks strange
+    ("etest-score", (2.0818, 0.0179), (1.5023, 0.06626)),  # 0.07088)),
+    ]
+
+
+@pytest.mark.parametrize('case', cases_diff_ng)
+def test_twosample_poisson_diff(case):
+    # testing against two examples Ng et al 2007
+    # methods_diff = ["wald", "score", "etest-wald", "etest"]
+
+    meth, res1, res2 = case
+    count1, exposure1, count2, exposure2 = 41, 28010, 15, 19017
+
+    value = 0
+    t = smr.test_poisson_2indep(count1, exposure1, count2, exposure2,
+                                value=value,
+                                ratio_null=None,
+                                method=meth, compare='diff',
+                                alternative='larger', etest_kwds=None)
+    assert_allclose((t.statistic, t.pvalue), res1, atol=0.0006)
+
+    value = 0.0002
+    t = smr.test_poisson_2indep(count1, exposure1, count2, exposure2,
+                                value=value,
+                                ratio_null=None,
+                                method=meth, compare='diff',
+                                alternative='larger', etest_kwds=None)
+    assert_allclose((t.statistic, t.pvalue), res2, atol=0.0007)
+
+
 def test_twosample_poisson_r():
     # testing against R package `exactci
     from .results.results_rates import res_pexact_cond, res_pexact_cond_midp
@@ -485,6 +520,86 @@ def test_twosample_poisson_r():
     rest = smr.test_poisson_2indep(count1, n1, count2, n2, method='exact-cond',
                                    ratio_null=1.2, alternative='smaller')
     assert_allclose(rest.pvalue, pv2, rtol=1e-12)
+
+
+def test_confint_poisson_2indep():
+    # test other confint methods
+
+    count1, exposure1, count2, exposure2 = 60, 51477.5, 30, 54308.7
+
+    ci = confint_poisson_2indep(count1, exposure1, count2, exposure2,
+                                method='mover', compare='ratio', alpha=0.1,
+                                method_mover="jeff",
+                                )
+    ci1 = (1.4667, 3.0608)  # LTW 2014
+    assert_allclose(ci, ci1, atol=0.05)
+    # moverci(60, 51477.5, 30, 54308.7, type = "jeff", distrib="poi",
+    # contrast="RR", cc=0, level=0.9)
+    #   Lower Estimate    Upper
+    # est 1.466768 2.104135 3.058634
+    # ratesci uses different center for mover-jeffreys
+    ci1 = (1.466768, 3.058634)
+    assert_allclose(ci, ci1, rtol=0.001)
+
+    ci = confint_poisson_2indep(count1, exposure1, count2, exposure2,
+                                method='mover', compare='ratio', alpha=0.1,
+                                method_mover="score",
+                                )
+    ci1 = (1.4611, 3.0424)  # LTW 2014
+    assert_allclose(ci, ci1, atol=0.05)
+
+    ci = confint_poisson_2indep(count1, exposure1, count2, exposure2,
+                                method='waldcc', compare='ratio', alpha=0.1,
+                                )
+    ci1 = (1.4523, 3.0154)  # LTW 2014
+    assert_allclose(ci, ci1, atol=0.0005)
+
+    ci = confint_poisson_2indep(count1, exposure1, count2, exposure2,
+                                method='score', compare='ratio', alpha=0.05,
+                                )
+    ci1 = (1.365962, 3.259306)
+    assert_allclose(ci, ci1, atol=5e-6)
+
+    # with diff
+    # use larger rates for diff
+    exposure1 /= 1000
+    exposure2 /= 1000
+    ci = confint_poisson_2indep(count1, exposure1, count2, exposure2,
+                                method='mover', compare='diff', alpha=0.05,
+                                method_mover="jeff",
+                                )
+    # moverci(60, 51477.5/1000, 30, 54308.7/1000, type = "jeff", distrib="poi",
+    # contrast="RD", cc=0, level=0.95)
+    ci1 = (0.2629322, 0.9786493)
+    assert_allclose(ci, ci1, atol=0.005)
+    ci = confint_poisson_2indep(count1, exposure1, count2, exposure2,
+                                method='score', compare='diff', alpha=0.05,
+                                )
+    # scoreci(60, 51477.5/1000, 30, 54308.7/1000, distrib="poi", contrast="RD",
+    # skew=FALSE, cc=0, level=0.95)
+    ci1 = (0.265796, 0.989192)
+    assert_allclose(ci, ci1, atol=5e-6)
+
+    # example in Li et al 2011, scaled
+    ci = confint_poisson_2indep(count2, exposure2, count1, exposure1,
+                                method='mover', compare='diff', alpha=0.1,
+                                method_mover="jeff",
+                                )
+    # moverci(30, 54308.7/1000, 60, 51477.5/1000, type = "jeff", distrib="poi",
+    # contrast="RD", cc=0, level=0.90)
+    ci1 = (-0.9183272231752, -0.3188611692202)
+    assert_allclose(ci, ci1, atol=0.005)
+    ci1 = (-0.9195, -0.3193)  # from Li et al 2011
+    assert_allclose(ci, ci1, atol=0.005)
+
+    ci = confint_poisson_2indep(count2, exposure2, count1, exposure1,
+                                method='mover', compare='diff', alpha=0.1,
+                                method_mover="jeff",
+                                )
+    # scoreci(30, 54308.7/1000, 60, 51477.5/1000, distrib="poi", contrast="RD",
+    # skew=FALSE, cc=0, level=0.90)
+    ci1 = (-0.9232, -0.3188)  # from Li et al 2011
+    assert_allclose(ci, ci1, atol=0.006)
 
 
 def test_tost_poisson():
@@ -576,7 +691,7 @@ def test_poisson_power_2ratio():
 
     rate1, rate2 = 2.2, 2.2
     nobs1, nobs2 = 95, 95
-    nobs_ratio = 1
+    # nobs_ratio = 1
     alpha = 0.025
     exposure = 2.5
     low, upp = 0.8, 1.25
@@ -668,8 +783,7 @@ def test_power_poisson_equal():
     nobs1, nobs2 = 6, 8
     nobs_ratio = nobs1 / nobs2
     rate1, rate2 = 15, 10
-    exposure=1
-    low = 1
+
     diff = rate1 - rate2
     pow_ = power_poisson_diff_2indep(
         diff, rate2, nobs1, nobs_ratio=nobs_ratio, alpha=0.05, value=0,
@@ -718,11 +832,12 @@ def test_power_negbin():
     rate2, nobs2, rate1, nobs1, exposure = 0.3, 50, 0.5, 100, 2
     pow1 = 0.6207448
     pow_ = power_negbin_2indep(rate2, nobs2, rate1, nobs1, exposure,
-                                  value=1,
-                                  alpha=alpha, dispersion=0.5,
-                                  alternative="two-sided",
-                                  method_var="score",
-                                  return_results=False)
+                               value=1,
+                               alpha=alpha, dispersion=0.5,
+                               alternative="two-sided",
+                               method_var="score",
+                               return_results=False,
+                               )
     assert_allclose(pow_, pow1, atol=5e-2)
 
     # flip nobs ratio

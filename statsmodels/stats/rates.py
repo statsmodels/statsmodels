@@ -73,6 +73,10 @@ def test_poisson(count, nobs, value, method=None, alternative="two-sided",
         statistic = None
         dist = "Poisson"
 
+    elif method == "sqrt":
+        std = 0.5
+        statistic = (np.sqrt(count) - np.sqrt(n * value)) / std
+
     elif method == "sqrt-a":
         # anscombe, based on Swift 2009 (with transformation to rate)
         std = 0.5
@@ -580,10 +584,26 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, value=None,
     - 'etest': etest with score test statistic
     - 'etest-wald': etest with wald test statistic
 
+    The hypothesis test for compare="diff" are based on Ng et al 2007 and ...
+
+    - wald
+    - score
+    - etest-score
+    - etest-wald
+
+    Note the etests use the constraint maximum likelihood estimate (cmle) as
+    parameters for the underlying Poisson probabilities. The constraint cmle
+    parameters are the same as in the score test.
+    This differs from the moment estimates in Krishnamoorty and Thomson.
+
     References
     ----------
     Gu, Ng, Tang, Schucany 2008: Testing the Ratio of Two Poisson Rates,
     Biometrical Journal 50 (2008) 2, 2008
+
+    Ng, H. K. T., K. Gu, and M. L. Tang. 2007. “A Comparative Study of Tests
+    for the Difference of Two Poisson Means.” Computational Statistics & Data
+    Analysis 51 (6): 3085–99. https://doi.org/10.1016/j.csda.2006.02.004.
 
     See Also
     --------
@@ -595,6 +615,7 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, value=None,
     y1, n1, y2, n2 = count1, exposure1, count2, exposure2
     d = n2 / n1
     rate1, rate2 = y1 / n1, y2 / n2
+    rates_cmle = None
 
     if compare == 'ratio':
         if method is None:
@@ -658,7 +679,7 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, value=None,
 
             dist = 'poisson'
         else:
-            raise ValueError('method not recognized')
+            raise ValueError(f'method "{method}" not recognized')
 
     elif compare == "diff":
         if value is None:
@@ -681,12 +702,16 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, value=None,
 
             stat = ((rate1 - rate2 - value) /
                     np.sqrt(r1_cmle / n1 + r2_cmle / n2))
+            rates_cmle = (r1_cmle, r2_cmle)
             dist = 'normal'
         elif method.startswith('etest'):
             if method.endswith('wald'):
                 method_etest = 'wald'
             else:
                 method_etest = 'score'
+                if method == "etest":
+                    method = method + "-score"
+
             if etest_kwds is None:
                 etest_kwds = {}
 
@@ -697,7 +722,7 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, value=None,
 
             dist = 'poisson'
         else:
-            raise ValueError('method not recognized')
+            raise ValueError(f'method "{method}" not recognized')
     else:
         raise NotImplementedError('"compare" needs to be ratio or diff')
 
@@ -716,7 +741,8 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, value=None,
                       ratio=ratio,
                       diff=diff,
                       value=value,
-                      ratio_null=ratio_null
+                      rates_cmle=rates_cmle,
+                      ratio_null=ratio_null,
                       )
     return res
 
@@ -743,7 +769,7 @@ def _score_diff(y1, n1, y2, n2, value=0, return_cmle=False):
 
 def etest_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=1,
                          value=None, method='score', compare="ratio",
-                         alternative='2-sided', ygrid=None,
+                         alternative='two-sided', ygrid=None,
                          y_grid=None):
     """E-test for ratio of two sample Poisson rates
 
@@ -797,16 +823,19 @@ def etest_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=1,
     ----------
     Gu, Ng, Tang, Schucany 2008: Testing the Ratio of Two Poisson Rates,
     Biometrical Journal 50 (2008) 2, 2008
+    Ng, H. K. T., K. Gu, and M. L. Tang. 2007. “A Comparative Study of Tests
+    for the Difference of Two Poisson Means.” Computational Statistics & Data
+    Analysis 51 (6): 3085–99. https://doi.org/10.1016/j.csda.2006.02.004.
 
     """
     y1, n1, y2, n2 = count1, exposure1, count2, exposure2
     d = n2 / n1
-    r = ratio_null   # rate1 / rate2
-    r_d = r / d
 
     eps = 1e-20  # avoid zero division in stat_func
 
     if compare == "ratio":
+        r = ratio_null   # rate1 / rate2
+        r_d = r / d
         rate2_cmle = (y1 + y2) / n2 / (1 + r_d)
         rate1_cmle = rate2_cmle * r
 
@@ -831,7 +860,7 @@ def etest_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=1,
     elif compare == "diff":
         if value is None:
             value = 0
-        tmp = _score_diff(y1, n1, y2, n2, value=0, return_cmle=True)
+        tmp = _score_diff(y1, n1, y2, n2, value=value, return_cmle=True)
         _, rate1_cmle, rate2_cmle = tmp
 
         if method in ['score']:
@@ -883,11 +912,11 @@ def etest_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=1,
     eps = 1e-15   # correction for strict inequality check
 
     if alternative in ['two-sided', '2-sided', '2s']:
-        mask = np.abs(stat_space) >= np.abs(stat_sample) - eps
+        mask = np.abs(stat_space) >= (np.abs(stat_sample) - eps)
     elif alternative in ['larger', 'l']:
-        mask = stat_space >= stat_sample - eps
+        mask = stat_space >= (stat_sample - eps)
     elif alternative in ['smaller', 's']:
-        mask = stat_space <= stat_sample + eps
+        mask = stat_space <= (stat_sample + eps)
     else:
         raise ValueError('invalid alternative')
 
@@ -1052,7 +1081,17 @@ def confint_poisson_2indep(count1, exposure1, count2, exposure2,
 
     if compare == "ratio":
 
-        if method == "wald-log":
+        if method == "score":
+            low, upp = _invert_test_confint_2indep(
+                count1, exposure1, count2, exposure2,
+                alpha=alpha * 2,   # check how alpha is defined
+                method="score",
+                compare="ratio",
+                method_start="waldcc"
+                )
+            ci = (low, upp)
+
+        elif method == "wald-log":
             crit = stats.norm.isf(alpha)
             c = 0
             center = (count1 + c) / (count2 + c) * n2 / n1
@@ -1096,7 +1135,7 @@ def confint_poisson_2indep(count1, exposure1, count2, exposure2,
             ci = _mover_confint(rate1, rate2, ci1, ci2, contrast="ratio")
 
         else:
-            raise ValueError('method not recognized')
+            raise ValueError(f'method "{method}" not recognized')
 
         ci = (np.maximum(ci[0], 0), ci[1])
 
@@ -1132,7 +1171,7 @@ def confint_poisson_2indep(count1, exposure1, count2, exposure2,
 
             ci = _mover_confint(rate1, rate2, ci1, ci2, contrast="diff")
         else:
-            raise ValueError('method not recognized')
+            raise ValueError(f'method "{method}" not recognized')
     else:
         raise NotImplementedError('"compare" needs to be ratio or diff')
 
