@@ -1881,8 +1881,10 @@ def arma_order_select_ic(
     # add the minimums to the results dict
     min_res = {}
     for i, result in res.items():
-        mins = np.where(result.min().min() == result)
-        min_res.update({i + "_min_order": (mins[0][0], mins[1][0])})
+        delta = np.ascontiguousarray(np.abs(result.min().min() - result))
+        ncols = delta.shape[1]
+        loc = np.argmin(delta)
+        min_res.update({i + "_min_order": (loc // ncols, loc % ncols)})
     res.update(min_res)
 
     return Bunch(**res)
