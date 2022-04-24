@@ -291,7 +291,7 @@ class Description:
         if self._data.shape[1] == 0:
 
             raise ValueError(
-                "Selecting {col_types} results in an empty DataFrame"
+                f"Selecting {col_types} results in an empty DataFrame"
             )
         self._is_numeric = [is_numeric_dtype(dt) for dt in self._data.dtypes]
         self._is_cat_like = [
