@@ -7,8 +7,8 @@ BUILDDIR = sys.argv[-1]
 read_file_path = os.path.join(BUILDDIR,'latex','statsmodels.tex')
 write_file_path = os.path.join(BUILDDIR, 'latex','statsmodels_tmp.tex')
 
-read_file = open(read_file_path,'r')
-write_file = open(write_file_path, 'w')
+read_file = open(read_file_path, 'r', encoding="utf-8")
+write_file = open(write_file_path, 'w', encoding="utf-8")
 
 for line in read_file:
     if 'longtable}{LL' in line:

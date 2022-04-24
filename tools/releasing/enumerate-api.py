@@ -170,7 +170,7 @@ def generate_diff(api, other):
     def header(v, first=False):
         return "\n\n" * (not first) + f"\n{v}\n" + "-" * len(v) + "\n"
 
-    with open("api-differences.rst", "w") as rst:
+    with open("api-differences.rst", "w", encoding="utf-8") as rst:
         rst.write(header("New Classes", first=True))
         for val in sorted(new_classes):
             rst.write(f"* :class:`{val}`\n")
@@ -279,10 +279,10 @@ def main():
         import statsmodels
 
         out_file = f"statsmodels-{statsmodels.__version__}-api.json"
-    with open(out_file, "w") as api:
+    with open(out_file, "w", encoding="utf-8") as api:
         json.dump(current_api, api, indent=2, sort_keys=True)
     if args.diff is not None:
-        with open(args.diff, "r") as other:
+        with open(args.diff, "r", encoding="utf-8") as other:
             other_api = json.load(other)
         generate_diff(current_api, other_api)
 

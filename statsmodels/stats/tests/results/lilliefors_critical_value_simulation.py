@@ -139,7 +139,7 @@ asymp_critical_values = {'normal': normal_asymp_crit_vals,
 
 """
     cv_filename = '../../_lilliefors_critical_values.py'
-    with io.open(cv_filename, 'w', newline='\n') as cv:
+    with io.open(cv_filename, 'w', newline='\n', encoding="utf-8") as cv:
         cv.write(FormatCode(header)[0])
         cv.write(FormatCode(normal)[0])
         cv.write('\n\n')

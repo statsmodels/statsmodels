@@ -1515,7 +1515,7 @@ class GEE(GLM):
             update, hm = self._update_regularized(
                               mean_params, pen_wt, scad_param, eps)
             if update is None:
-                msg = "Singular matrix encountered in regularized GEE update",
+                msg = "Singular matrix encountered in regularized GEE update"
                 warnings.warn(msg, ConvergenceWarning)
                 break
             if itr > miniter and np.sqrt(np.sum(update**2)) < ctol:

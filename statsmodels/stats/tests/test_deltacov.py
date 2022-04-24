@@ -15,12 +15,13 @@ from statsmodels.stats._delta_method import NonlinearDeltaCov
 
 class TestDeltacovOLS(object):
 
-    def setup_class(self):
+    @classmethod
+    def setup_class(cls):
         nobs, k_vars = 100, 4
         x = np.random.randn(nobs, k_vars)
         x[:, 0] = 1
         y = x[:, :-1].sum(1) + np.random.randn(nobs)
-        self.res = OLS(y, x).fit()
+        cls.res = OLS(y, x).fit()
 
     def test_method(self):
         # test Results.method is same as calling function/class

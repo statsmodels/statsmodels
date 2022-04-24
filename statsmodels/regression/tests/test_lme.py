@@ -58,7 +58,7 @@ class R_Results(object):
         cur_dir = os.path.dirname(os.path.abspath(__file__))
         rdir = os.path.join(cur_dir, 'results')
         fname = os.path.join(rdir, "lme%02d.csv" % ds_ix)
-        with open(fname) as fid:
+        with open(fname, encoding="utf-8") as fid:
             rdr = csv.reader(fid)
             header = next(rdr)
             data = [[float(x) for x in line] for line in rdr]

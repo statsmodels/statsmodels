@@ -50,7 +50,7 @@ except ImportError:
 # These are strictly installation requirements. Builds requirements are
 # managed in pyproject.toml
 INSTALL_REQUIRES = []
-with open("requirements.txt") as req:
+with open("requirements.txt", encoding="utf-8") as req:
     for line in req.readlines():
         INSTALL_REQUIRES.append(line.split("#")[0].strip())
 
@@ -266,11 +266,11 @@ def check_source(source_name):
 def process_tempita(source_name):
     """Runs pyx.in files through tempita is needed"""
     if source_name.endswith("pyx.in"):
-        with open(source_name, "r") as templated:
+        with open(source_name, "r", encoding="utf-8") as templated:
             pyx_template = templated.read()
         pyx = Tempita.sub(pyx_template)
         pyx_filename = source_name[:-3]
-        with open(pyx_filename, "w") as pyx_file:
+        with open(pyx_filename, "w", encoding="utf-8") as pyx_file:
             pyx_file.write(pyx)
         file_stats = os.stat(source_name)
         try:

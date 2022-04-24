@@ -405,7 +405,7 @@ plot_basedir = join(dirname(dirname(os.path.abspath(__file__))), 'source')
 # ghissue config
 github_project_url = 'https://github.com/statsmodels/statsmodels'
 
-example_context = yaml.safe_load(open('examples/landing.yml'))
+example_context = yaml.safe_load(open('examples/landing.yml', encoding="utf-8"))
 html_context.update({'examples': example_context})
 
 # --------------- DOCTEST -------------------

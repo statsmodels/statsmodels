@@ -1617,7 +1617,7 @@ def test_issue_339():
     smry = "\n".join(res1.summary().as_text().split('\n')[9:])
     cur_dir = os.path.dirname(os.path.abspath(__file__))
     test_case_file = os.path.join(cur_dir, 'results', 'mn_logit_summary.txt')
-    with open(test_case_file, 'r') as fd:
+    with open(test_case_file, 'r', encoding="utf-8") as fd:
         test_case = fd.read()
     np.testing.assert_equal(smry, test_case[:-1])
     # smoke test for summary2

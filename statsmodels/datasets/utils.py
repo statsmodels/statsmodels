@@ -119,7 +119,8 @@ def _get_cache(cache):
 
 def _cache_it(data, cache_path):
     import zlib
-    open(cache_path, "wb").write(zlib.compress(data))
+    with open(cache_path, "wb") as zf:
+        zf.write(zlib.compress(data))
 
 
 def _open_cache(cache_path):

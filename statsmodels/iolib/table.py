@@ -97,7 +97,7 @@ def csv2st(csvfile, headers=False, stubs=False, title=None):
     Can also supply headers and stubs as tuples of strings.
     """
     rows = list()
-    with open(csvfile, 'r') as fh:
+    with open(csvfile, 'r', encoding="utf-8") as fh:
         reader = csv.reader(fh)
         if headers is True:
             headers = next(reader)

@@ -245,7 +245,7 @@ if __name__ == "__main__":
         # older numpy versions do not have formatter option
         pass
 
-    OUT = open("gee_gaussian_simulation_check.txt", "w")
+    OUT = open("gee_gaussian_simulation_check.txt", "w", encoding="utf-8")
 
     nrep = 100
 
