@@ -288,7 +288,7 @@ def oildata():
 
 
 def obtain_R_results(path):
-    with path.open("r") as f:
+    with path.open("r", encoding="utf-8") as f:
         R_results = json.load(f)
 
     # remove invalid models

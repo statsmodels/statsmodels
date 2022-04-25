@@ -23,7 +23,7 @@ if 'y' in cont.lower():
         try:
             print("Executing example file", run_all_f)
             print("-----------------------" + "-"*len(run_all_f))
-            exec(open(run_all_f).read())
+            exec(open(run_all_f, encoding="utf-8").read())
         except:
             #f might be overwritten in the executed file
             print("*********************")

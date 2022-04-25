@@ -17,7 +17,7 @@ np.set_printoptions(formatter={'all': lambda x: "%8.3f" % x},
                     suppress=True)
 
 
-OUT = open("gee_simulation_check.txt", "w")
+OUT = open("gee_simulation_check.txt", "w", encoding="utf-8")
 
 class GEE_simulator(object):
 

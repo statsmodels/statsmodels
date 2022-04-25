@@ -65,7 +65,7 @@ plt.plot(expected_lowess[:,1])
 rpath = os.path.split(statsmodels.nonparametric.tests.results.__file__)[0]
 rfile = os.path.join(rpath, 'test_lowess_frac.csv')
 test_data = np.genfromtxt(open(rfile, 'rb'),
-                                  delimiter = ',', names = True)
+                          delimiter=',', names=True)
 expected_lowess_23 = np.array([test_data['x'], test_data['out_2_3']]).T
 expected_lowess_15 = np.array([test_data['x'], test_data['out_1_5']]).T
 

@@ -160,5 +160,7 @@ crit_vals = {crit_vals}
     fm = FileMode(target_versions=targets, line_length=79)
     formatted_code = format_file_contents(raw_code, fast=False, mode=fm)
 
-    with open("../pss_critical_values.py", "w", newline="\n") as out:
+    with open(
+            "../pss_critical_values.py", "w", newline="\n", encoding="utf-8"
+    ) as out:
         out.write(formatted_code)

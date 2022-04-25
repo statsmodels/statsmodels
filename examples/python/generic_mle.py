@@ -130,7 +130,7 @@ class NBin(GenericLikelihoodModel):
     def fit(self, start_params=None, maxiter=10000, maxfun=5000, **kwds):
         # we have one additional parameter and we need to add it for summary
         self.exog_names.append('alpha')
-        if start_params == None:
+        if start_params is None:
             # Reasonable starting values
             start_params = np.append(np.zeros(self.exog.shape[1]), .5)
             # intercept

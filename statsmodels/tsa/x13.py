@@ -202,7 +202,7 @@ def _convert_out_to_series(x, dates, name):
 
 def _open_and_read(fname):
     # opens a file, reads it, and make sure it's closed
-    with open(fname, 'r') as fin:
+    with open(fname, 'r', encoding="utf-8") as fin:
         fout = fin.read()
     return fout
 

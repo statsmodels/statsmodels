@@ -19,7 +19,7 @@ from statsmodels.stats.libqsturng import qsturng, psturng
 
 
 def read_ch(fname):
-    with open(fname) as f:
+    with open(fname, encoding="utf-8") as f:
         lines = f.readlines()
     ps,rs,vs,qs = lzip(*[L.split(',') for L in lines])
     return lmap(float, ps), lmap(float, rs),lmap(float, vs), lmap(float, qs)

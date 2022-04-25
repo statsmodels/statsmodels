@@ -21,7 +21,7 @@ def generate_logistic():
 
     p = len(beta)
 
-    OUT = open("gee_logistic_1.csv", "w")
+    OUT = open("gee_logistic_1.csv", "w", encoding="utf-8")
 
     for i in range(nclust):
 
@@ -62,7 +62,7 @@ def generate_linear():
 
     p = len(beta)
 
-    OUT = open("gee_linear_1.csv", "w")
+    OUT = open("gee_linear_1.csv", "w", encoding="utf-8")
 
     for i in range(nclust):
 
@@ -102,7 +102,7 @@ def generate_nested_linear():
 
     p = len(beta)
 
-    OUT = open("gee_nested_linear_1.csv", "w")
+    OUT = open("gee_nested_linear_1.csv", "w", encoding="utf-8")
 
     for i in range(nclust):
 
@@ -130,7 +130,7 @@ def generate_ordinal():
 
     rz = 0.5
 
-    OUT = open("gee_ordinal_1.csv", "w")
+    OUT = open("gee_ordinal_1.csv", "w", encoding="utf-8")
 
     for i in range(200):
 
@@ -165,7 +165,7 @@ def generate_nominal():
 
     rz = 0.5
 
-    OUT = open("gee_nominal_1.csv", "w")
+    OUT = open("gee_nominal_1.csv", "w", encoding="utf-8")
 
     for i in range(200):
 
@@ -203,7 +203,7 @@ def generate_poisson():
 
     nclust = 100
 
-    OUT = open("gee_poisson_1.csv", "w")
+    OUT = open("gee_poisson_1.csv", "w", encoding="utf-8")
 
     for i in range(nclust):
 

@@ -60,11 +60,11 @@ class TestExpandNormMom(CheckExpandNorm):
     # compare with normal, skew=0, excess_kurtosis=0
 
     @classmethod
-    def setup_class(kls):
-        kls.scale = 2
-        kls.dist1 = stats.norm(1, 2)
-        kls.mvsk = [1., 2**2, 0, 0]
-        kls.dist2 = NormExpan_gen(kls.mvsk, mode='mvsk')
+    def setup_class(cls):
+        cls.scale = 2
+        cls.dist1 = stats.norm(1, 2)
+        cls.mvsk = [1., 2**2, 0, 0]
+        cls.dist2 = NormExpan_gen(cls.mvsk, mode='mvsk')
 
 
 class TestExpandNormSample(object):
@@ -72,17 +72,17 @@ class TestExpandNormSample(object):
     # precision not high enough because of mvsk from data
 
     @classmethod
-    def setup_class(kls):
-        kls.dist1 = dist1 = stats.norm(1, 2)
+    def setup_class(cls):
+        cls.dist1 = dist1 = stats.norm(1, 2)
         np.random.seed(5999)
-        kls.rvs = dist1.rvs(size=200)
+        cls.rvs = dist1.rvs(size=200)
         #rvs = np.concatenate([rvs, -rvs])
         # fix mean and std of sample
         #rvs = (rvs - rvs.mean())/rvs.std(ddof=1) * np.sqrt(2) + 1
-        kls.dist2 = NormExpan_gen(kls.rvs, mode='sample')
+        cls.dist2 = NormExpan_gen(cls.rvs, mode='sample')
 
-        kls.scale = 2
-        kls.atol_pdf = 1e-3
+        cls.scale = 2
+        cls.atol_pdf = 1e-3
 
     def test_ks(self):
         # cdf is slow

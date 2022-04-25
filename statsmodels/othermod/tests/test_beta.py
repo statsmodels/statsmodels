@@ -67,18 +67,18 @@ def assert_close(a, b, eps):
 class TestBetaModel(object):
 
     @classmethod
-    def setup_class(self):
+    def setup_class(cls):
         model = "I(food/income) ~ income + persons"
-        self.income_fit = BetaModel.from_formula(model, income).fit()
+        cls.income_fit = BetaModel.from_formula(model, income).fit()
 
-        model = self.model = "methylation ~ gender + CpG"
-        Z = self.Z = patsy.dmatrix("~ age", methylation)
+        model = cls.model = "methylation ~ gender + CpG"
+        Z = cls.Z = patsy.dmatrix("~ age", methylation)
         mod = BetaModel.from_formula(model, methylation, exog_precision=Z,
                                      link_precision=links.identity())
-        self.meth_fit = mod.fit()
+        cls.meth_fit = mod.fit()
         mod = BetaModel.from_formula(model, methylation, exog_precision=Z,
                                      link_precision=links.Log())
-        self.meth_log_fit = mod.fit()
+        cls.meth_log_fit = mod.fit()
 
     def test_income_coefficients(self):
         rslt = self.income_fit
