@@ -64,7 +64,7 @@ def assert_close(a, b, eps):
     assert np.allclose(a, b, rtol=0.01, atol=eps), (list(a), list(b))
 
 
-class TestBetaModel(object):
+class TestBetaModel:
 
     @classmethod
     def setup_class(cls):

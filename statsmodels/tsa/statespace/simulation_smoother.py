@@ -291,7 +291,7 @@ class SimulationSmoother(KalmanSmoother):
         return results
 
 
-class SimulationSmoothResults(object):
+class SimulationSmoothResults:
     r"""
     Results from applying the Kalman smoother and/or filter to a state space
     model.

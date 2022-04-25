@@ -59,7 +59,7 @@ from statsmodels.discrete.discrete_margins import (
     _get_dummy_index, _get_count_index)
 
 
-class ParameterConstraint(object):
+class ParameterConstraint:
     """
     A class for managing linear equality constraints for a parameter
     vector.
@@ -3000,7 +3000,7 @@ class _Multinomial(families.Family):
         self.link = _MultinomialLogit(self.ncut)
 
 
-class GEEMargins(object):
+class GEEMargins:
     """
     Estimated marginal effects for a regression model fit with GEE.
 

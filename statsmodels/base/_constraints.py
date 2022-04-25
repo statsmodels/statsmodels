@@ -10,7 +10,7 @@ License: BSD-3
 import numpy as np
 
 
-class LinearConstraints(object):
+class LinearConstraints:
     """Class to hold linear constraints information
 
     Affine constraints are defined as ``R b = q` where `R` is the constraints
@@ -94,7 +94,7 @@ class LinearConstraints(object):
         return cls(lc.coefs, lc.constants, lc.variable_names)
 
 
-class TransformRestriction(object):
+class TransformRestriction:
     """Transformation for linear constraints `R params = q`
 
     Note, the transformation from the reduced to the full parameters is an

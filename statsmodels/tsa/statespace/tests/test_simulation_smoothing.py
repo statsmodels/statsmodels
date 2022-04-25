@@ -18,7 +18,7 @@ from statsmodels.tsa.statespace.simulation_smoother import (
 current_path = os.path.dirname(os.path.abspath(__file__))
 
 
-class MultivariateVARKnown(object):
+class MultivariateVARKnown:
     """
     Tests for simulation smoothing values in a couple of special cases of
     variates. Both computed values and KFAS values are used for comparison
@@ -474,7 +474,7 @@ class TestDFM(TestMultivariateVARKnown):
         pass
 
 
-class MultivariateVAR(object):
+class MultivariateVAR:
     """
     More generic tests for simulation smoothing; use actual N(0,1) variates
     """

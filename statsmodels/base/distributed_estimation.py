@@ -362,7 +362,7 @@ def _helper_fit_partition(self, pnum, endog, exog, fit_kwds,
     return results
 
 
-class DistributedModel(object):
+class DistributedModel:
     __doc__ = """
     Distributed model class
 

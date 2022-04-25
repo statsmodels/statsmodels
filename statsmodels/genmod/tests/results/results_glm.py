@@ -21,7 +21,7 @@ DECIMAL_1 = 1
 DECIMAL_0 = 0
 
 
-class Longley(object):
+class Longley:
     """
     Longley used for TestGlmGaussian
 
@@ -99,7 +99,7 @@ class Longley(object):
             70757.757825193927])
 
 
-class GaussianLog(object):
+class GaussianLog:
     """
     Uses generated data.  These results are from R and Stata.
     """
@@ -357,7 +357,7 @@ class GaussianLog(object):
             0.14665279717814039, 0.14094543192735109])
 
 
-class GaussianInverse(object):
+class GaussianInverse:
     """
     This test uses generated data.  Results are from R and Stata.
     """
@@ -598,7 +598,7 @@ class GaussianInverse(object):
             0.08382979,  0.0823717,   0.08095035,  0.07956453,  0.07821311])
 
 
-class Star98(object):
+class Star98:
     """
     Star98 class used with TestGlmBinomial
     """
@@ -696,7 +696,7 @@ class Star98(object):
             0.39582747,  0.41037006,  0.34174944])
 
 
-class Lbw(object):
+class Lbw:
     '''
     The LBW data can be found here
 
@@ -777,7 +777,7 @@ class Lbw(object):
             0.36096386,  0.54962701,  0.71996086,  0.6633756])
 
 
-class Scotvote(object):
+class Scotvote:
     """
     Scotvot class is used with TestGlmGamma.
     """
@@ -814,7 +814,7 @@ class Scotvote(object):
             67.37947398,  60.49162862,  73.82609217,  69.61515621])
 
 
-class Cancer(object):
+class Cancer:
     '''
     The Cancer data can be found here
 
@@ -1110,7 +1110,7 @@ class CancerIdentity(Cancer):
             22.95054409,  21.87657748,  29.39434374,  27.24641052])
 
 
-class Cpunish(object):
+class Cpunish:
     '''
     The following are from the R script in models.datasets.cpunish
     Slightly different than published results, but should be correct
@@ -1159,7 +1159,7 @@ class Cpunish_offset(Cpunish):
             4.375e-01, 4.284e-01, 4.284e+00)
 
 
-class InvGauss(object):
+class InvGauss:
     '''
     Usef
 
@@ -2220,7 +2220,7 @@ class InvGauss(object):
             0.9433708,   0.82376832,  1.01726905,  0.81914971,  0.73290844])
 
 
-class Medpar1(object):
+class Medpar1:
     '''
     The medpar1 data can be found here.
 
@@ -3761,7 +3761,7 @@ class InvGaussIdentity(Medpar1):
             5.34385962])
 
 
-class Committee(object):
+class Committee:
     def __init__(self):
         self.resids = np.array([
             [-5.04950800e-01,  -6.29721800e-01, -8.35499100e+01,
@@ -3830,7 +3830,7 @@ class Committee(object):
             42.75939828,   55.56133536,    0.72532053,   18.14664665])
 
 
-class Wfs(object):
+class Wfs:
     """
     Wfs used for TestGlmPoissonOffset
 
@@ -3877,7 +3877,7 @@ class Wfs(object):
             330.7497, 84.38604, 1456.757, 451.005, 67.51025]
 
 
-class CpunishTweediePower15(object):
+class CpunishTweediePower15:
     """
     # From R
     setwd('c:/workspace')
@@ -3952,7 +3952,7 @@ class CpunishTweediePower15(object):
             1.73235552803559]
 
 
-class CpunishTweediePower2(object):
+class CpunishTweediePower2:
     """
     # From R
     setwd('c:/workspace')
@@ -4028,7 +4028,7 @@ class CpunishTweediePower2(object):
             1.73761117252919]
 
 
-class CpunishTweedieLog1(object):
+class CpunishTweedieLog1:
     """
     # From R
     setwd('c:/workspace')
@@ -4106,7 +4106,7 @@ class CpunishTweedieLog1(object):
             1.83932239216282]
 
 
-class FairTweedieLog15(object):
+class FairTweedieLog15:
     """
     # From R
     setwd('c:/workspace')

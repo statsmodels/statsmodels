@@ -22,7 +22,7 @@ penalties do not belong here).
 import numpy as np
 
 
-class Penalty(object):
+class Penalty:
     """
     A class for representing a scalar-value penalty.
 
@@ -398,7 +398,7 @@ class SCADSmoothed(SCAD):
             return weights * value
 
 
-class ConstraintsPenalty(object):
+class ConstraintsPenalty:
     """
     Penalty applied to linear transformation of parameters
 
@@ -527,7 +527,7 @@ class L2ConstraintsPenalty(ConstraintsPenalty):
                                                   restriction=restriction)
 
 
-class CovariancePenalty(object):
+class CovariancePenalty:
 
     def __init__(self, weight):
         # weight should be scalar

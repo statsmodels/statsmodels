@@ -82,7 +82,7 @@ def _simple_dbl_exp_smoother(x, alpha, beta, l0, b0, nforecast=0):
     return lvals, b, f, err, xhat
 
 
-class TestHoltWinters(object):
+class TestHoltWinters:
     @classmethod
     def setup_class(cls):
         # Changed for backwards compatibility with pandas

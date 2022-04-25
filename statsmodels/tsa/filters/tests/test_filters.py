@@ -617,7 +617,7 @@ def test_hpfilter_pandas():
     assert_equal(cycle.name, "realgdp_cycle")
 
 
-class TestFilters(object):
+class TestFilters:
     @classmethod
     def setup_class(cls):
         # even

@@ -31,7 +31,7 @@ from statsmodels.tsa.statespace.kalman_smoother import (
 current_path = os.path.dirname(os.path.abspath(__file__))
 
 
-class TestStatesAR3(object):
+class TestStatesAR3:
     @classmethod
     def setup_class(cls, alternate_timing=False, *args, **kwargs):
         # Dataset / Stata comparison
@@ -209,7 +209,7 @@ class TestStatesAR3UnivariateSmoothing(TestStatesAR3):
                      SMOOTH_UNIVARIATE)
 
 
-class TestStatesMissingAR3(object):
+class TestStatesMissingAR3:
     @classmethod
     def setup_class(cls, alternate_timing=False, *args, **kwargs):
         # Dataset
@@ -363,7 +363,7 @@ class TestStatesMissingAR3UnivariateSmoothing(TestStatesMissingAR3):
                      SMOOTH_UNIVARIATE)
 
 
-class TestMultivariateMissing(object):
+class TestMultivariateMissing:
     """
     Tests for most filtering and smoothing variables against output from the
     R library KFAS.
@@ -553,7 +553,7 @@ class TestMultivariateMissingUnivariateSmoothing(TestMultivariateMissing):
                      SMOOTH_UNIVARIATE)
 
 
-class TestMultivariateVAR(object):
+class TestMultivariateVAR:
     """
     Tests for most filtering and smoothing variables against output from the
     R library KFAS.
@@ -736,7 +736,7 @@ class TestMultivariateVARClassicalSmoothing(TestMultivariateVAR):
                      SMOOTH_CLASSICAL)
 
 
-class TestMultivariateVARUnivariate(object):
+class TestMultivariateVARUnivariate:
     """
     Tests for most filtering and smoothing variables against output from the
     R library KFAS.
@@ -910,7 +910,7 @@ class TestMultivariateVARUnivariateSmoothing(TestMultivariateVARUnivariate):
                      SMOOTH_UNIVARIATE)
 
 
-class TestVARAutocovariances(object):
+class TestVARAutocovariances:
     @classmethod
     def setup_class(cls, which='mixed', *args, **kwargs):
         # Data

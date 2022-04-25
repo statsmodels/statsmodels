@@ -94,7 +94,7 @@ def trim_mean(a, proportiontocut, axis=0):
     return np.mean(newa, axis=axis)
 
 
-class TrimmedMean(object):
+class TrimmedMean:
     """
     class for trimmed and winsorized one sample statistics
 

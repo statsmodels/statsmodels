@@ -27,7 +27,7 @@ def load_stackloss():
     return data
 
 
-class CheckRlmResultsMixin(object):
+class CheckRlmResultsMixin:
     '''
     res2 contains  results from Rmodelwrap or were obtained from a statistical
     packages such as R, Stata, or SAS and written to results.results_rlm

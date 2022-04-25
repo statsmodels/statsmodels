@@ -10,7 +10,7 @@ import numpy as np
 from scipy import stats
 
 
-class NonlinearDeltaCov(object):
+class NonlinearDeltaCov:
     '''Asymptotic covariance by Deltamethod
 
     The function is designed for 2d array, with rows equal to

@@ -386,7 +386,7 @@ class ExponentialSmoothing(TimeSeriesModel):
                 valid = ", ".join(valid_keys[:-1]) + ", and " + valid_keys[-1]
                 raise KeyError(
                     f"{key} if not allowed. Only {valid} are supported in "
-                    f"this specification."
+                    "this specification."
                 )
 
         if "smoothing_level" in values:

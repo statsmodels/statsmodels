@@ -42,7 +42,7 @@ xg = np.linspace(x.min(), x.max(), 40) # grid points default in Stata
 #kern = kernels.Biweight()
 
 
-class CheckKernelMixin(object):
+class CheckKernelMixin:
 
     se_rtol = 0.7
     upp_rtol = 0.1

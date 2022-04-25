@@ -52,7 +52,7 @@ def custom_labeller(cell):
         return 'missing'
 
 
-class TestCell(object):
+class TestCell:
     def test_celldata(self):
         celldata = cell0data, cell1data, row1data[0], row1data[1]
         cells = [Cell(datum, datatype=i % 2)
@@ -61,7 +61,7 @@ class TestCell(object):
             assert_equal(cell.data, datum)
 
 
-class TestSimpleTable(object):
+class TestSimpleTable:
     def test_txt_fmt1(self):
         # Limited test of custom txt_fmt
         desired = """

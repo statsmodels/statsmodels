@@ -105,7 +105,7 @@ class Test_MVN_MVT_prob(object):
                                                 maxpts=100000, abseps=1e-5), 4)
 
 
-class TestMVDistributions(object):
+class TestMVDistributions:
     #this is not well organized
 
     @classmethod

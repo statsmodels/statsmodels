@@ -26,7 +26,7 @@ from statsmodels.tsa.vector_ar.vecm import (
 pytestmark = pytest.mark.filterwarnings("ignore:in the future np.array_split")
 
 
-class DataSet(object):
+class DataSet:
     """
     A class for representing the data in a data module.
 

@@ -15,11 +15,11 @@ def check_kwargs(kwargs: dict[str, Any], allowed: Sequence[str], method: str):
         import warnings
 
         warnings.warn(
-            f"Keyword arguments have been passed to the optimizer that have "
-            f"no effect. The list of allowed keyword arguments for method "
+            "Keyword arguments have been passed to the optimizer that have "
+            "no effect. The list of allowed keyword arguments for method "
             f"{method} is: {', '.join(allowed)}. The list of unsupported "
             f"keyword arguments passed include: {', '.join(extra)}. After "
-            f"release 0.14, this will raise.",
+            "release 0.14, this will raise.",
             FutureWarning
         )
 
@@ -30,7 +30,7 @@ def _check_method(method, methods):
         raise ValueError(message)
 
 
-class Optimizer(object):
+class Optimizer:
     def _fit(self, objective, gradient, start_params, fargs, kwargs,
              hessian=None, method='newton', maxiter=100, full_output=True,
              disp=True, callback=None, retall=False):

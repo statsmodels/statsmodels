@@ -29,7 +29,7 @@ def check_pickle(obj):
     return res, plen
 
 
-class RemoveDataPickle(object):
+class RemoveDataPickle:
 
     @classmethod
     def setup_class(cls):

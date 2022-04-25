@@ -63,7 +63,7 @@ def gendat():
     return df
 
 
-class TestMICEData(object):
+class TestMICEData:
 
     def test_default(self):
         # Test with all defaults.
@@ -298,7 +298,7 @@ class TestMICEData(object):
             close_figures()
 
 
-class TestMICE(object):
+class TestMICE:
 
     def test_MICE(self):
 

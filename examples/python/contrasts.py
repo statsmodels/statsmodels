@@ -113,7 +113,7 @@ def _name_levels(prefix, levels):
     return ["[%s%s]" % (prefix, level) for level in levels]
 
 
-class Simple(object):
+class Simple:
     def _simple_contrast(self, levels):
         nlevels = len(levels)
         contr = -1.0 / nlevels * np.ones((nlevels, nlevels - 1))

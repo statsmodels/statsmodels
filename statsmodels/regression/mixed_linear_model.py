@@ -206,7 +206,7 @@ def _dotsum(x, y):
         return np.dot(x.ravel(), y.ravel())
 
 
-class VCSpec(object):
+class VCSpec:
     """
     Define the variance component structure of a multilevel model.
 
@@ -248,7 +248,7 @@ def _get_exog_re_names(self, exog_re):
     return defnames
 
 
-class MixedLMParams(object):
+class MixedLMParams:
     """
     This class represents a parameter state for a mixed linear model.
 
@@ -580,7 +580,7 @@ def _convert_vc(exog_vc):
     vc_mats = []
 
     # Get the groups in sorted order
-    groups = set([])
+    groups = set()
     for k, v in exog_vc.items():
         groups |= set(v.keys())
     groups = list(groups)
@@ -2918,7 +2918,7 @@ class MixedLMResultsWrapper(base.LikelihoodResultsWrapper):
 
 def _handle_missing(data, groups, formula, re_formula, vc_formula):
 
-    tokens = set([])
+    tokens = set()
 
     forms = [formula]
     if re_formula is not None:

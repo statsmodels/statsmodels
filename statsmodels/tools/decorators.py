@@ -44,7 +44,7 @@ def deprecated_alias(old_name, new_name, remove_version=None, msg=None,
     Instances of the `Foo` class have a `nvars` attribute, but it _should_
     be called `neqs`:
 
-    class Foo(object):
+    class Foo:
         nvars = deprecated_alias('nvars', 'neqs')
         def __init__(self, neqs):
             self.neqs = neqs
@@ -72,7 +72,7 @@ def deprecated_alias(old_name, new_name, remove_version=None, msg=None,
     return res
 
 
-class CachedAttribute(object):
+class CachedAttribute:
 
     def __init__(self, func, cachename=None):
         self.fget = func

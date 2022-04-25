@@ -414,8 +414,8 @@ R = dict(zip([2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,
 
 inf = np.inf
 # we will need a tinv function
-_tinv = lambda p, df : scipy.stats.t.isf(p, df)
-_phi = lambda p : scipy.stats.norm.isf(p)
+_tinv = scipy.stats.t.isf
+_phi = scipy.stats.norm.isf
 
 # Now we can build the A 'matrix'
 

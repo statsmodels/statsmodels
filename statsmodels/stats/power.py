@@ -266,7 +266,7 @@ def ftest_power(effect_size, df_num, df_denom, alpha, ncc=1):
 #class based implementation
 #--------------------------
 
-class Power(object):
+class Power:
     '''Statistical Power calculations, Base Class
 
     so far this could all be class methods

@@ -29,7 +29,7 @@ curdir = os.path.dirname(os.path.abspath(__file__))
 rpath = os.path.join(curdir, "results")
 
 
-class TestLowess(object):
+class TestLowess:
     def test_import(self):
         # this does not work
         # from statsmodels.api.nonparametric import lowess as lowess1

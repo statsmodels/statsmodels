@@ -10,7 +10,7 @@ ltx_fmt1 = default_latex_fmt.copy()
 html_fmt1 = default_html_fmt.copy()
 
 
-class TestSimpleTable(object):
+class TestSimpleTable:
     def test_simple_table_1(self):
         # Basic test, test_simple_table_1
         desired = '''

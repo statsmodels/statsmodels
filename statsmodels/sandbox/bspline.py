@@ -179,7 +179,7 @@ def _zero_triband(a, lower=0):
     return a
 
 
-class BSpline(object):
+class BSpline:
 
     '''
 

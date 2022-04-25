@@ -204,7 +204,7 @@ def test_other_tests_autoreg(ols_autoreg_result):
 # TODO: test likelihood for ARX model?
 
 
-class CheckARMixin(object):
+class CheckARMixin:
     def test_params(self):
         assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_6)
 

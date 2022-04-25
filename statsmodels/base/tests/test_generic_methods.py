@@ -35,7 +35,7 @@ import statsmodels.tools._testing as smt
 from statsmodels.tools.sm_exceptions import HessianInversionWarning
 
 
-class CheckGenericMixin(object):
+class CheckGenericMixin:
 
     @classmethod
     def setup_class(cls):
@@ -493,7 +493,7 @@ class TestGenericGEEPoissonBC(CheckGenericMixin):
 
 # Other test classes
 
-class CheckAnovaMixin(object):
+class CheckAnovaMixin:
 
     @classmethod
     def setup_class(cls):
@@ -648,7 +648,7 @@ class TestWaldAnovaNegBin1(CheckAnovaMixin):
         cls.res = mod.fit(cov_type='HC0')
 
 
-class CheckPairwise(object):
+class CheckPairwise:
 
     def test_default(self):
         res = self.res

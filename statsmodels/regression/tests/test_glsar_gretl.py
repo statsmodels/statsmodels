@@ -31,7 +31,7 @@ def compare_ftest(contrast_res, other, decimal=(5,4)):
     assert_equal("f", other[4])
 
 
-class TestGLSARGretl(object):
+class TestGLSARGretl:
 
     def test_all(self):
 

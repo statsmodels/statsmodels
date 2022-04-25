@@ -15,7 +15,7 @@ from scipy.special import expm1
 
 
 # not used yet
-class Transforms(object):
+class Transforms:
 
     def __init__(self):
         pass

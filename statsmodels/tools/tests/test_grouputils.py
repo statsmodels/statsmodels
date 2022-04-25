@@ -11,7 +11,7 @@ from statsmodels.tools.grouputils import (dummy_sparse, Grouping, Group,
 from statsmodels.datasets import grunfeld, anes96
 
 
-class CheckGrouping(object):
+class CheckGrouping:
 
     @pytest.mark.smoke
     def test_reindex(self):

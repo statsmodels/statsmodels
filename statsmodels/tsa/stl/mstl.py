@@ -186,7 +186,7 @@ class MSTL:
 
     def __str__(self):
         return (
-            f"MSTL(endog,"
+            "MSTL(endog,"
             f" periods={self.periods},"
             f" windows={self.windows},"
             f" lmbda={self.lmbda},"

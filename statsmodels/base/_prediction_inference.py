@@ -13,7 +13,7 @@ import pandas as pd
 
 
 # this is similar to ContrastResults after t_test, partially copied, adjusted
-class PredictionResultsBase(object):
+class PredictionResultsBase:
     """Based class for get_prediction results
     """
 

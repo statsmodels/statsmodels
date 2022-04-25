@@ -752,12 +752,12 @@ class ARDL(AutoReg):
                 if not isinstance(arr, pd.DataFrame):
                     raise TypeError(
                         f"{name} must be a DataFrame when the original exog "
-                        f"was a DataFrame"
+                        "was a DataFrame"
                     )
                 if sorted(arr.columns) != sorted(self.data.orig_exog.columns):
                     raise ValueError(
                         f"{name} must have the same columns as the original "
-                        f"exog"
+                        "exog"
                     )
             else:
                 arr = array_like(arr, name, ndim=2, optional=False)
@@ -806,7 +806,7 @@ class ARDL(AutoReg):
                 raise ValueError(
                     f"exog_oos must have at least {num_oos - max_1step} "
                     f"observations to produce {num_oos} forecasts based on "
-                    f"the model specification."
+                    "the model specification."
                 )
 
             if self._fixed.shape[1] and fixed_oos is None:

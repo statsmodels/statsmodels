@@ -121,7 +121,7 @@ def test_ar_transparams():
     assert not np.isnan(tools._ar_transparams(arr)).any()
 
 
-class TestLagmat(object):
+class TestLagmat:
     @classmethod
     def setup_class(cls):
         data = macrodata.load_pandas()
@@ -460,7 +460,7 @@ def test_freq_to_period():
         assert_equal(tools.freq_to_period(to_offset(i)), j)
 
 
-class TestDetrend(object):
+class TestDetrend:
     @classmethod
     def setup_class(cls):
         cls.data_1d = np.arange(5.0)
@@ -535,7 +535,7 @@ class TestDetrend(object):
         assert_raises(NotImplementedError, tools.detrend, np.ones((3, 3, 3)))
 
 
-class TestAddTrend(object):
+class TestAddTrend:
     @classmethod
     def setup_class(cls):
         cls.n = 200
@@ -676,7 +676,7 @@ class TestAddTrend(object):
         assert tools.add_trend(self.arr_2d, "n") is not self.arr_2d
 
 
-class TestLagmat2DS(object):
+class TestLagmat2DS:
     @classmethod
     def setup_class(cls):
         data = macrodata.load_pandas()

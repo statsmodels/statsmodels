@@ -121,7 +121,7 @@ aust = pd.Series([
     index=pd.period_range(start='2005Q1', end='2010Q4', freq='Q'))
 
 
-class CheckExponentialSmoothing(object):
+class CheckExponentialSmoothing:
     @classmethod
     def setup_class(cls, name, res):
         cls.name = name
@@ -439,7 +439,7 @@ class TestHoltWintersNoTrendETSEstimated(CheckExponentialSmoothing):
         assert_(self.res.llf <= mle_res.llf)
 
 
-class CheckKnownInitialization(object):
+class CheckKnownInitialization:
     @classmethod
     def setup_class(cls, mod, start_params):
         # Base model, with estimated initialization
@@ -558,7 +558,7 @@ class TestHoltWintersNoTrendKnownInitialization(CheckKnownInitialization):
         super().setup_class(mod, start_params)
 
 
-class CheckHeuristicInitialization(object):
+class CheckHeuristicInitialization:
     @classmethod
     def setup_class(cls, mod):
         cls.mod = mod
@@ -697,7 +697,7 @@ def test_concentrated_initialization():
     assert_allclose(res1.initial_state, res2.initial_state, rtol=1e-5)
 
 
-class CheckConcentratedInitialization(object):
+class CheckConcentratedInitialization:
     @classmethod
     def setup_class(cls, mod, start_params=None, atol=0, rtol=1e-7):
         # Note: because of the different computations methods (linear

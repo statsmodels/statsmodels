@@ -15,7 +15,7 @@ from statsmodels.tools.sm_exceptions import EstimationWarning
 DECIMAL_5 = .00001
 
 
-class TestPCA(object):
+class TestPCA:
     @classmethod
     def setup_class(cls):
         rs = np.random.RandomState()

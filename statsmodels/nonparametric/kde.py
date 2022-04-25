@@ -45,7 +45,7 @@ def _checkisfit(self):
 
 
 # Kernel Density Estimator Class
-class KDEUnivariate(object):
+class KDEUnivariate:
     """
     Univariate Kernel Density Estimator.
 

@@ -60,7 +60,7 @@ _extra_param_doc = """
         formula interface."""
 
 
-class Model(object):
+class Model:
     __doc__ = """
     A (predictive) statistical model. Intended to be subclassed not used.
 
@@ -1033,7 +1033,7 @@ class GenericLikelihoodModel(LikelihoodModel):
         return genericmlefit
 
 
-class Results(object):
+class Results:
     """
     Class to contain model results
 
@@ -2374,7 +2374,7 @@ wrap.populate_wrapper(LikelihoodResultsWrapper,  # noqa:E305
                       LikelihoodModelResults)
 
 
-class ResultMixin(object):
+class ResultMixin:
 
     @cache_readonly
     def df_modelwc(self):

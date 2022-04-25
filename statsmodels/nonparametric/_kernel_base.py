@@ -335,7 +335,7 @@ class GenericKDE (object):
         raise NotImplementedError
 
 
-class EstimatorSettings(object):
+class EstimatorSettings:
     """
     Object to specify settings for density estimation or regression.
 
@@ -393,7 +393,7 @@ class EstimatorSettings(object):
         self.n_jobs = n_jobs
 
 
-class LeaveOneOut(object):
+class LeaveOneOut:
     """
     Generator to give leave-one-out views on X.
 

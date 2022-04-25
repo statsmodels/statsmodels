@@ -219,7 +219,7 @@ def test_conditional_loglikelihoods():
                     np.log(conditional_likelihoods[2, :, :]))
 
 
-class MarkovAutoregression(object):
+class MarkovAutoregression:
     @classmethod
     def setup_class(cls, true, endog, atol=1e-5, rtol=1e-7, **kwargs):
         cls.model = markov_autoregression.MarkovAutoregression(endog, **kwargs)

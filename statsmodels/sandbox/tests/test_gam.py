@@ -88,10 +88,10 @@ from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.regression.linear_model import OLS
 
 
-class Dummy(object):
+class Dummy:
     pass
 
-class CheckAM(object):
+class CheckAM:
 
     def test_predict(self):
         assert_almost_equal(self.res1.y_pred,
@@ -139,7 +139,7 @@ class CheckGAM(CheckAM):
                             self.res2.y_pred[:10], decimal=2)
 
 
-class BaseAM(object):
+class BaseAM:
 
     @classmethod
     def setup_class(cls):

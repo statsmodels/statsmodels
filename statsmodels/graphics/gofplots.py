@@ -13,7 +13,7 @@ from . import utils
 __all__ = ["qqplot", "qqplot_2samples", "qqline", "ProbPlot"]
 
 
-class ProbPlot(object):
+class ProbPlot:
     """
     Q-Q and P-P Probability Plots
 

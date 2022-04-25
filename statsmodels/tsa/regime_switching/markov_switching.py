@@ -305,7 +305,7 @@ def cy_kim_smoother_log(regime_transition, predicted_joint_probabilities,
     return smoothed_joint_probabilities, smoothed_marginal_probabilities
 
 
-class MarkovSwitchingParams(object):
+class MarkovSwitchingParams:
     """
     Class to hold parameters in Markov switching models
 
@@ -1514,7 +1514,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         return unconstrained
 
 
-class HamiltonFilterResults(object):
+class HamiltonFilterResults:
     """
     Results from applying the Hamilton filter to a state space model.
 

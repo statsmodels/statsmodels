@@ -18,7 +18,7 @@ from statsmodels.tools.tools import add_constant
 from .results.results_ordinal_model import data_store as ds
 
 
-class CheckOrdinalModelMixin(object):
+class CheckOrdinalModelMixin:
 
     def test_basic(self):
         # checks basic results againt R MASS package

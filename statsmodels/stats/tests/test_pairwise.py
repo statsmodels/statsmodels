@@ -168,7 +168,7 @@ def get_thsd(mci, alpha=0.05):
     assert_almost_equal(var_, var2, decimal=14)
     return resi
 
-class CheckTuckeyHSDMixin(object):
+class CheckTuckeyHSDMixin:
 
     @classmethod
     def setup_class_(cls):

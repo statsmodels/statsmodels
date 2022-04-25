@@ -54,7 +54,7 @@ import matplotlib.pyplot as plt
 
 #np.random.seed(987656789)
 
-class Diffusion(object):
+class Diffusion:
     '''Wiener Process, Brownian Motion with mu=0 and sigma=1
     '''
     def __init__(self):
@@ -387,7 +387,7 @@ class SchwartzOne(ExactDiffusion):
 
 
 
-class BrownianBridge(object):
+class BrownianBridge:
     def __init__(self):
         pass
 
@@ -411,7 +411,7 @@ class BrownianBridge(object):
         return x, t, su
 
 
-class CompoundPoisson(object):
+class CompoundPoisson:
     '''nobs iid compound poisson distributions, not a process in time
     '''
     def __init__(self, lambd, randfn=np.random.normal):

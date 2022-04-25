@@ -83,7 +83,7 @@ def repanel_cov(groups, sigmas):
 class PanelData(Panel):
     pass
 
-class PanelModel(object):
+class PanelModel:
     """
     An abstract statistical model class for panel (longitudinal) datasets.
 

@@ -12,7 +12,7 @@ from . import stattools as stt
 
 
 #todo: check subclassing for descriptive stats classes
-class TsaDescriptive(object):
+class TsaDescriptive:
     '''collection of descriptive statistical methods for time series
 
     '''

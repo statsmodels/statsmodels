@@ -156,7 +156,7 @@ def array_like(
     return arr
 
 
-class PandasWrapper(object):
+class PandasWrapper:
     """
     Wrap array_like using the index from the original input, if pandas
 

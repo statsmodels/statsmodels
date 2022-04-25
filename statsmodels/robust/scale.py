@@ -172,7 +172,7 @@ def _qn_naive(a, c=1 / (np.sqrt(2) * Gaussian.ppf(5 / 8))):
         return output
 
 
-class Huber(object):
+class Huber:
     """
     Huber's proposal 2 for estimating location and scale jointly.
 

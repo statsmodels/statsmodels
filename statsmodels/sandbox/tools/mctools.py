@@ -29,7 +29,7 @@ import numpy as np
 from statsmodels.iolib.table import SimpleTable
 
 #copied from stattools
-class StatTestMC(object):
+class StatTestMC:
     """class to run Monte Carlo study on a statistical test'''
 
     TODO

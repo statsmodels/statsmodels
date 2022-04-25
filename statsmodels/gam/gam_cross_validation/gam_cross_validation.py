@@ -160,7 +160,7 @@ class BasePenaltiesPathCV(with_metaclass(ABCMeta)):
         # TODO add return
 
 
-class MultivariateGAMCVPath(object):
+class MultivariateGAMCVPath:
     """k-fold cross-validation for GAM
 
     Warning: The API of this class is preliminary and will change.

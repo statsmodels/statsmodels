@@ -220,7 +220,7 @@ def seasonal_decompose(
     )
 
 
-class DecomposeResult(object):
+class DecomposeResult:
     """
     Results class for seasonal decompositions
 

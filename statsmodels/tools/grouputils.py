@@ -180,7 +180,7 @@ def dummy_sparse(groups):
     return indi
 
 
-class Group(object):
+class Group:
 
     def __init__(self, group, name=''):
 
@@ -308,7 +308,7 @@ def _make_generic_names(index):
     return [("group{0:0"+pad+"}").format(i) for i in range(n_names)]
 
 
-class Grouping(object):
+class Grouping:
     def __init__(self, index, names=None):
         """
         index : index-like

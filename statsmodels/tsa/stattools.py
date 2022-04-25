@@ -2239,7 +2239,7 @@ look-up table. The actual p-value is {direction} than the p-value returned.
         return rur_stat, p_value, crit_dict
 
 
-class ZivotAndrewsUnitRoot(object):
+class ZivotAndrewsUnitRoot:
     """
     Class wrapper for Zivot-Andrews structural-break unit-root test
     """

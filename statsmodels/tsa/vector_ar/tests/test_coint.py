@@ -22,7 +22,7 @@ with open(dta_path, "rb") as fd:
     dta = np.genfromtxt(fd)
 
 
-class CheckCointJoh(object):
+class CheckCointJoh:
 
     def test_basic(self):
         assert_equal(self.res.ind, np.arange(len(self.res.ind), dtype=int))

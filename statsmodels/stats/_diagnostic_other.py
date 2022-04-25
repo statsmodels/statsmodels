@@ -167,7 +167,7 @@ from statsmodels.tools.decorators import cache_readonly
 from statsmodels.regression.linear_model import OLS
 
 
-class ResultsGeneric(object):
+class ResultsGeneric:
 
 
     def __init__(self, **kwds):
@@ -946,7 +946,7 @@ def conditional_moment_test_regression(mom_test, mom_test_deriv=None,
     return statistic, pval
 
 
-class CMTNewey(object):
+class CMTNewey:
     """generic moment test for GMM
 
     This is a class to calculate and hold the various results
@@ -1108,7 +1108,7 @@ class CMTNewey(object):
         return stat, pval, df
 
 
-class CMTTauchen(object):
+class CMTTauchen:
     """generic moment tests or conditional moment tests for Quasi-MLE
 
     This is a generic class based on Tauchen 1985

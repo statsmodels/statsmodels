@@ -35,7 +35,7 @@ class GLMPenalized(PenalizedMixin, GLM):
     pass
 
 
-class CheckPenalizedPoisson(object):
+class CheckPenalizedPoisson:
 
     @classmethod
     def setup_class(cls):

@@ -20,7 +20,7 @@ DECIMAL = 4
 #  data is a problem
 
 
-class TestChem(object):
+class TestChem:
     @classmethod
     def setup_class(cls):
         cls.chem = np.array(
@@ -90,7 +90,7 @@ class TestChem(object):
         assert_almost_equal(hh(self.chem)[1], 0.66782, DECIMAL)
 
 
-class TestMad(object):
+class TestMad:
     @classmethod
     def setup_class(cls):
         np.random.seed(54321)
@@ -120,7 +120,7 @@ class TestMad(object):
         )
 
 
-class TestMadAxes(object):
+class TestMadAxes:
     @classmethod
     def setup_class(cls):
         np.random.seed(54321)
@@ -143,7 +143,7 @@ class TestMadAxes(object):
         assert_equal(m.shape, (40, 10))
 
 
-class TestIqr(object):
+class TestIqr:
     @classmethod
     def setup_class(cls):
         np.random.seed(54321)
@@ -165,7 +165,7 @@ class TestIqr(object):
             scale.iqr(empty)
 
 
-class TestIqrAxes(object):
+class TestIqrAxes:
     @classmethod
     def setup_class(cls):
         np.random.seed(54321)
@@ -188,7 +188,7 @@ class TestIqrAxes(object):
         assert_equal(m.shape, (40, 10))
 
 
-class TestQn(object):
+class TestQn:
     @classmethod
     def setup_class(cls):
         np.random.seed(54321)
@@ -236,7 +236,7 @@ class TestQn(object):
             scale.iqr(empty)
 
 
-class TestQnAxes(object):
+class TestQnAxes:
     @classmethod
     def setup_class(cls):
         np.random.seed(54321)
@@ -259,7 +259,7 @@ class TestQnAxes(object):
         assert_equal(m.shape, (40, 10))
 
 
-class TestHuber(object):
+class TestHuber:
     @classmethod
     def setup_class(cls):
         np.random.seed(54321)
@@ -271,7 +271,7 @@ class TestHuber(object):
         assert_equal(m.shape, (10,))
 
 
-class TestHuberAxes(object):
+class TestHuberAxes:
     @classmethod
     def setup_class(cls):
         np.random.seed(54321)

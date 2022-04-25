@@ -18,7 +18,7 @@ DEC = 4
 DEC4 = 4
 DEC5 = 5
 
-class CompareMixin(object):
+class CompareMixin:
 
     def test_params(self):
         assert_almost_equal(self.res.params, self.res_glm.params, DEC5)

@@ -169,7 +169,7 @@ def yule_walker_acov(acov, order=1, method="unbiased", df=None, inv=False):
                        demean=False)
 
 
-class ARCovariance(object):
+class ARCovariance:
     '''
     experimental class for Covariance of AR process
     classmethod? staticmethods?

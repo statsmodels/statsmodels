@@ -37,7 +37,7 @@ def gen_data(dim, use_pandas):
     return out
 
 
-class TestArrayLike(object):
+class TestArrayLike:
     def test_1d(self, use_pandas):
         data = gen_data(1, use_pandas)
         a = array_like(data, "a")

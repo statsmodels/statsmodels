@@ -3,7 +3,7 @@ import numpy as np
 # TODO: add plots to weighting functions for online docs.
 
 
-class RobustNorm(object):
+class RobustNorm:
     """
     The parent class for the norms used for robust regression.
 

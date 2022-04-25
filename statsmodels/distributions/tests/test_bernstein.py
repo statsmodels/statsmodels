@@ -110,7 +110,7 @@ def test_bernstein_distribution_2d():
     assert_allclose(pdf_m, np.ones(len(xx)), atol=1e-13)
 
 
-class TestBernsteinBeta2d(object):
+class TestBernsteinBeta2d:
 
     @classmethod
     def setup_class(cls):

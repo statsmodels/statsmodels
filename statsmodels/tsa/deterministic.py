@@ -116,7 +116,7 @@ class DeterministicTerm(ABC):
             assert isinstance(forecast_index, pd.Index)
             if forecast_index.shape[0] != steps:
                 raise ValueError(
-                    f"The number of values in forecast_index "
+                    "The number of values in forecast_index "
                     f"({forecast_index.shape[0]}) must match steps ({steps})."
                 )
             return forecast_index

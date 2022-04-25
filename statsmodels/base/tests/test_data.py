@@ -15,7 +15,7 @@ from statsmodels.discrete.discrete_model import Logit
 
 
 # FIXME: do not leave commented-out, enable or move/remove
-# class TestDates(object):
+# class TestDates:
 #    @classmethod
 #    def setup_class(cls):
 #        nrows = 10
@@ -25,7 +25,7 @@ from statsmodels.discrete.discrete_model import Logit
 #        np.testing.assert_equal(data.wrap_output(self.dates_input, 'dates'),
 #                                self.dates_result)
 
-class TestArrays(object):
+class TestArrays:
     @classmethod
     def setup_class(cls):
         cls.endog = np.random.random(10)
@@ -488,7 +488,7 @@ class TestMultipleEqsDataFrames(TestDataFrames):
                            self.col_eq_result)
 
 
-class TestMissingArray(object):
+class TestMissingArray:
     @classmethod
     def setup_class(cls):
         X = np.random.random((25, 4))
@@ -559,7 +559,7 @@ class TestMissingArray(object):
         np.testing.assert_array_equal(data.weights, weights)
 
 
-class TestMissingPandas(object):
+class TestMissingPandas:
     @classmethod
     def setup_class(cls):
         X = np.random.random((25, 4))
@@ -625,7 +625,7 @@ class TestMissingPandas(object):
         np.testing.assert_(data.row_labels.equals(labels))
 
 
-class TestConstant(object):
+class TestConstant:
     @classmethod
     def setup_class(cls):
         from statsmodels.datasets.longley import load_pandas
@@ -658,7 +658,7 @@ class TestConstant(object):
         np.testing.assert_equal(data.const_idx, None)
 
 
-class TestHandleMissing(object):
+class TestHandleMissing:
 
     def test_pandas(self):
 
@@ -718,7 +718,7 @@ class TestHandleMissing(object):
         assert_series_equal(data['endog'], y_exp)
 
 
-class CheckHasConstant(object):
+class CheckHasConstant:
 
     def test_hasconst(self):
         for x, result in zip(self.exogs, self.results):

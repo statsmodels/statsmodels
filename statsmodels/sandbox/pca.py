@@ -2,7 +2,7 @@
 import numpy as np
 
 
-class Pca(object):
+class Pca:
     """
     A basic class for Principal Component Analysis (PCA).
 

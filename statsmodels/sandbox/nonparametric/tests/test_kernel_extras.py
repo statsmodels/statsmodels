@@ -4,7 +4,7 @@ import numpy.testing as npt
 from statsmodels.sandbox.nonparametric.kernel_extras import SemiLinear
 
 
-class KernelExtrasTestBase(object):
+class KernelExtrasTestBase:
     @classmethod
     def setup_class(cls):
         nobs = 60

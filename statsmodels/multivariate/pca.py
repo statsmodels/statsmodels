@@ -21,7 +21,7 @@ def _norm(x):
     return np.sqrt(np.sum(x * x))
 
 
-class PCA(object):
+class PCA:
     """
     Principal Component Analysis
 

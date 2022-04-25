@@ -19,7 +19,7 @@ from scipy.interpolate import interp1d, interp2d, Rbf
 from statsmodels.tools.decorators import cache_readonly
 
 
-class TableDist(object):
+class TableDist:
     """
     Distribution, critical values and p-values from tables
 

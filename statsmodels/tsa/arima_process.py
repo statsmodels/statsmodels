@@ -658,7 +658,7 @@ _generate_sample_doc.replace_block("Notes", [])
 _generate_sample_doc.replace_block("Examples", [])
 
 
-class ArmaProcess(object):
+class ArmaProcess:
     r"""
     Theoretical properties of an ARMA process for specified lag-polynomials.
 

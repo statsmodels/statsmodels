@@ -1869,7 +1869,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             and existing.exog.shape[1] != mod.exog.shape[1]
         ):
             raise ValueError(
-                f"The number of exog variables passed must match the original "
+                "The number of exog variables passed must match the original "
                 f"number of exog values ({existing.exog.shape[1]})"
             )
         if refit:
@@ -2192,7 +2192,7 @@ def ar_select_order(
     return AROrderSelectionResults(mod, ics, trend, seasonal, period)
 
 
-class AROrderSelectionResults(object):
+class AROrderSelectionResults:
     """
     Results from an AR order selection
 

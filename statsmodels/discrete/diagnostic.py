@@ -30,7 +30,7 @@ from statsmodels.discrete._diagnostics_count import (
     )
 
 
-class CountDiagnostic(object):
+class CountDiagnostic:
     """Diagnostic and specification tests and plots for Count model
 
     status: experimental

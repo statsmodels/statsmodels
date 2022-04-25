@@ -87,7 +87,7 @@ def check_wrapper(results):
     assert_(isinstance(results._results.centered_resid, np.ndarray))
 
 
-class TestGEE(object):
+class TestGEE:
 
     def test_margins_gaussian(self):
         # Check marginal effects for a Gaussian GEE fit.  Marginal
@@ -1620,7 +1620,7 @@ class TestGEE(object):
             assert_allclose(sum(vl), m * (m + 1) / 2)
 
         # Check for duplicates.
-        ixs = set([])
+        ixs = set()
         for g in model1.group_labels:
             for v in eq.pairs[g].values():
                 for a, b in zip(v[0], v[1]):
@@ -1636,7 +1636,7 @@ class TestGEE(object):
             model1.fit(maxiter=2)
 
 
-class CheckConsistency(object):
+class CheckConsistency:
 
     start_params = None
 

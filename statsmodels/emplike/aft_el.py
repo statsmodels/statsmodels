@@ -169,7 +169,7 @@ class OptAFT(_OptFuncts):
         return self.test_beta([b0], [param_num])[0] - self.r0
 
 
-class emplikeAFT(object):
+class emplikeAFT:
     """
 
     Class for estimating and conducting inference in an AFT model.

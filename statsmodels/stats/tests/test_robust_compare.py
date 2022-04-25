@@ -78,7 +78,7 @@ class Test_Trim(object):
         assert_equal(res1, res2)
 
 
-class TestTrimmedR1(object):
+class TestTrimmedR1:
 
     @classmethod
     def setup_class(cls):
@@ -183,7 +183,7 @@ class TestTrimmedR1(object):
         assert_allclose(df2, df, rtol=1e-13)
 
 
-class TestTrimmedRAnova(object):
+class TestTrimmedRAnova:
 
     @classmethod
     def setup_class(cls):

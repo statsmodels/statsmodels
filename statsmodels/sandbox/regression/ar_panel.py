@@ -27,7 +27,7 @@ from scipy import optimize
 from statsmodels.regression.linear_model import OLS
 
 
-class PanelAR1(object):
+class PanelAR1:
     def __init__(self, endog, exog=None, groups=None):
         #take this from a super class, no checking is done here
         nobs = endog.shape[0]

@@ -357,7 +357,7 @@ def test__do_ros():
     npt.assert_array_almost_equal(result, expected)
 
 
-class CheckROSMixin(object):
+class CheckROSMixin:
     def test_ros_df(self):
         result = ros.impute_ros(self.rescol, self.cencol, df=self.df)
         npt.assert_array_almost_equal(

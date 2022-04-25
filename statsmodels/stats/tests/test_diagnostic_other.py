@@ -16,7 +16,7 @@ from statsmodels.stats._diagnostic_other import CMTNewey, CMTTauchen
 import statsmodels.stats._diagnostic_other as diao
 
 
-class CheckCMT(object):
+class CheckCMT:
 
     def test_score(self):
         expected = self.results_score

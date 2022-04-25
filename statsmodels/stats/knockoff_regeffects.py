@@ -1,7 +1,7 @@
 import numpy as np
 
 
-class RegressionEffects(object):
+class RegressionEffects:
     """
     Base class for regression effects used in RegressionFDR.
 

@@ -25,7 +25,7 @@ def read_ch(fname):
     return lmap(float, ps), lmap(float, rs),lmap(float, vs), lmap(float, qs)
 
 
-class TestQsturng(object):
+class TestQsturng:
     def test_scalar(self):
         # scalar input -> scalar output
         assert_almost_equal(4.43645545899562, qsturng(.9,5,6), 5)
@@ -133,7 +133,7 @@ class TestQsturng(object):
         errors = np.abs(qs-qsturng(ps,rs,vs))/qs
         assert_equal(np.array([]), np.where(errors > .03)[0])
 
-class TestPsturng(object):
+class TestPsturng:
     def test_scalar(self):
         "scalar input -> scalar output"
         assert_almost_equal(.1, psturng(4.43645545899562,5,6), 5)

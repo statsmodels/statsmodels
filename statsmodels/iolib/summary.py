@@ -734,7 +734,7 @@ def summary_return(tables, return_fmt='text'):
         raise ValueError('available output formats are text, csv, latex, html')
 
 
-class Summary(object):
+class Summary:
     """
     Result summary
 

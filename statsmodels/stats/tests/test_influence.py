@@ -51,7 +51,7 @@ def test_influence_glm_bernoulli():
     assert_allclose(c_bar, results_sas[:, 9], atol=6e-5)
 
 
-class InfluenceCompareExact(object):
+class InfluenceCompareExact:
     # Mixin to compare and test two Influence instances
 
     def test_basics(self):

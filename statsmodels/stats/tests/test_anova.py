@@ -73,7 +73,7 @@ kidney_table = StringIO("""Days      Duration Weight ID
 kidney_table.seek(0)
 kidney_table = read_csv(kidney_table, sep=r"\s+", engine='python').astype(int)
 
-class TestAnovaLM(object):
+class TestAnovaLM:
     @classmethod
     def setup_class(cls):
         # kidney data taken from JT's course
@@ -96,7 +96,7 @@ class TestAnovaLM(object):
         np.testing.assert_almost_equal(results['PR(>F)'].values, pr_f)
 
 
-class TestAnovaLMNoconstant(object):
+class TestAnovaLMNoconstant:
     @classmethod
     def setup_class(cls):
         # kidney data taken from JT's course

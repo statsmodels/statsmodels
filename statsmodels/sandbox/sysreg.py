@@ -15,7 +15,7 @@ __all__ = ['SUR', 'Sem2SLS']
 #TODO: make a dictionary that holds equation specific information
 #rather than these cryptic lists?  Slower to get a dict value?
 #TODO: refine sigma definition
-class SUR(object):
+class SUR:
     """
     Seemingly Unrelated Regression
 
@@ -255,7 +255,7 @@ exogenous variables.  Got length %s" % len(sys))
 #TODO: Should just have a general 2SLS estimator to subclass
 # for IV, FGLS, etc.
 # Also should probably have SEM class and estimators as subclasses
-class Sem2SLS(object):
+class Sem2SLS:
     """
     Two-Stage Least Squares for Simultaneous equations
 

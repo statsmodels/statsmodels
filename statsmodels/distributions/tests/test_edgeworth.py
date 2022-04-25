@@ -12,7 +12,7 @@ import scipy.stats as stats
 from statsmodels.distributions.edgeworth import (_faa_di_bruno_partitions,
         cumulant_from_moments, ExpandedNormal)
 
-class TestFaaDiBruno(object):
+class TestFaaDiBruno:
     def test_neg_arg(self):
         assert_raises(ValueError, _faa_di_bruno_partitions, -1)
         assert_raises(ValueError, _faa_di_bruno_partitions, 0)
@@ -44,7 +44,7 @@ def _chi2_cumulant(n, df):
     return 2**(n-1) * factorial(n - 1) * df
 
 
-class TestCumulants(object):
+class TestCumulants:
     def test_badvalues(self):
         assert_raises(ValueError, cumulant_from_moments, [1, 2, 3], 0)
         assert_raises(ValueError, cumulant_from_moments, [1, 2, 3], 4)
@@ -66,7 +66,7 @@ class TestCumulants(object):
             assert_allclose(kappa, _chi2_cumulant(n, df))
 
 
-class TestExpandedNormal(object):
+class TestExpandedNormal:
     def test_too_few_cumulants(self):
         assert_raises(ValueError, ExpandedNormal, [1])
 

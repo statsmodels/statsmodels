@@ -38,7 +38,7 @@ from scipy import stats
 from statsmodels.tools.decorators import cache_readonly
 
 
-class DescrStatsW(object):
+class DescrStatsW:
     """
     Descriptive statistics and tests with weights for case weights
 
@@ -846,7 +846,7 @@ def _zconfint_generic(mean, std_mean, alpha, alternative):
     return lower, upper
 
 
-class CompareMeans(object):
+class CompareMeans:
     """class for two sample comparison
 
     The tests and the confidence interval work for multi-endpoint comparison:

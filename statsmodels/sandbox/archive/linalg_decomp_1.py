@@ -28,7 +28,7 @@ from scipy import linalg
 from statsmodels.tools.decorators import cache_readonly
 
 
-class PlainMatrixArray(object):
+class PlainMatrixArray:
     '''Class that defines linalg operation on an array
 
     simplest version as benchmark

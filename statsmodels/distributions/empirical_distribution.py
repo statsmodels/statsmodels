@@ -31,7 +31,7 @@ def _conf_set(F, alpha=.05):
     upper = np.clip(F + epsilon, 0, 1)
     return lower, upper
 
-class StepFunction(object):
+class StepFunction:
     """
     A basic step function.
 

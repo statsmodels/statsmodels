@@ -10,7 +10,7 @@ from statsmodels.tools.tools import add_constant
 from statsmodels.regression.linear_model import OLS
 
 
-class TestSummaryLatex(object):
+class TestSummaryLatex:
 
     def test_summarycol(self):
         # Test for latex output of summary_col object

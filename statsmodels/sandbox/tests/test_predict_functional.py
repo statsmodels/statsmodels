@@ -16,7 +16,7 @@ def pctl(q):
     return lambda x : np.percentile(x, 100 *q)
 
 
-class TestPredFunc(object):
+class TestPredFunc:
 
     @classmethod
     def setup_class(cls):

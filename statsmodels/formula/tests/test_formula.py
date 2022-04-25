@@ -19,7 +19,7 @@ from statsmodels.tools.testing import assert_equal
 longley_formula = 'TOTEMP ~ GNPDEFL + GNP + UNEMP + ARMED + POP + YEAR'
 
 
-class CheckFormulaOLS(object):
+class CheckFormulaOLS:
 
     @classmethod
     def setup_class(cls):

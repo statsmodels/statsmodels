@@ -3,7 +3,7 @@ import numpy as np
 from statsmodels.iolib.table import SimpleTable
 
 
-class HypothesisTestResults(object):
+class HypothesisTestResults:
     """
     Results class for hypothesis tests.
 

@@ -7,7 +7,7 @@ import statsmodels.api as sm
 nparam = sm.nonparametric
 
 
-class KernelRegressionTestBase(object):
+class KernelRegressionTestBase:
     @classmethod
     def setup_class(cls):
         nobs = 60
