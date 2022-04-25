@@ -86,7 +86,7 @@ def opt_wrapper(func):
     return f
 
 
-class _OptConfig(object):
+class _OptConfig:
     alpha: float
     beta: float
     phi: float

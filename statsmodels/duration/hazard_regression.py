@@ -1665,7 +1665,7 @@ class PHRegResults(base.LikelihoodModelResults):
         return smry
 
 
-class rv_discrete_float(object):
+class rv_discrete_float:
     """
     A class representing a collection of discrete distributions.
 

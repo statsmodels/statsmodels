@@ -320,7 +320,7 @@ def ar2lhs(ar):
     return -ar[1:]
 
 
-class _Var(object):
+class _Var:
     '''obsolete VAR class, use tsa.VAR instead, for internal use only
 
 

@@ -208,7 +208,7 @@ def test_corrpsd_threshold(threshold):
     assert_allclose(evals[0], threshold, rtol=0.25, atol=1e-15)
 
 
-class Test_Factor(object):
+class Test_Factor:
 
     def test_corr_nearest_factor_arrpack(self):
 

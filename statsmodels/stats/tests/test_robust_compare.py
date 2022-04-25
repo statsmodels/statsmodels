@@ -22,7 +22,7 @@ from statsmodels.tools.testing import Holder
 from scipy.stats import trim1
 
 
-class Test_Trim(object):
+class Test_Trim:
     # test trim functions
     # taken from scipy and adjusted
     def t_est_trim1(self):

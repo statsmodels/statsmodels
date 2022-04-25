@@ -94,7 +94,7 @@ class TestZeroTruncatedNBPModel(CheckResults):
         pass
 
 
-class TestTruncatedLFPoisson_predict(object):
+class TestTruncatedLFPoisson_predict:
     @classmethod
     def setup_class(cls):
         cls.expected_params = [1, 0.5]
@@ -128,7 +128,7 @@ class TestTruncatedLFPoisson_predict(object):
         assert_allclose(pr, pr2, rtol=1e-10, atol=1e-10)
 
 
-class TestTruncatedNBP_predict(object):
+class TestTruncatedNBP_predict:
     @classmethod
     def setup_class(cls):
         cls.expected_params = [1, 0.5, 0.5]

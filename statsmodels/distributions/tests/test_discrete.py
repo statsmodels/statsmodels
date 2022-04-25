@@ -20,7 +20,7 @@ from statsmodels.distributions.discrete import (
     )
 
 
-class TestGenpoisson_p(object):
+class TestGenpoisson_p:
     # Test Generalized Poisson Destribution
 
     def test_pmf_p1(self):

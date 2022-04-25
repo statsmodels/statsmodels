@@ -168,7 +168,7 @@ def load_basic_cohn():
     return cohn
 
 
-class Test__ros_sort(object):
+class Test__ros_sort:
     def setup(self):
         self.df = load_basic_data()
 
@@ -207,7 +207,7 @@ class Test__ros_sort(object):
         assert_frame_equal(result, self.expected_with_warning)
 
 
-class Test_cohn_numbers(object):
+class Test_cohn_numbers:
     def setup(self):
         self.df = load_basic_data()
         self.final_cols = ['lower_dl', 'upper_dl', 'nuncen_above', 'nobs_below',
@@ -242,7 +242,7 @@ class Test_cohn_numbers(object):
         assert result.shape == (0, 6)
 
 
-class Test__detection_limit_index(object):
+class Test__detection_limit_index:
     def setup(self):
         self.cohn = load_basic_cohn()
         self.empty_cohn = pandas.DataFrame(numpy.empty((0, 7)))
@@ -272,7 +272,7 @@ def test__ros_group_rank():
     assert_series_equal(result.astype(int), expected.astype(int))
 
 
-class Test__ros_plot_pos(object):
+class Test__ros_plot_pos:
     def setup(self):
         self.cohn = load_basic_cohn()
 

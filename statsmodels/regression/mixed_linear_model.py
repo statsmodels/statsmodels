@@ -2287,7 +2287,7 @@ class MixedLM(base.LikelihoodModel):
         return _mixedlm_distribution(self, params, scale, exog)
 
 
-class _mixedlm_distribution(object):
+class _mixedlm_distribution:
     """
     A private class for simulating data from a given mixed linear model.
 

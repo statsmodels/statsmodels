@@ -11,7 +11,7 @@ from statsmodels.sandbox.distributions.multivariate import (
 from statsmodels.sandbox.distributions.mv_normal import MVT, MVNormal
 
 
-class Test_MVN_MVT_prob(object):
+class Test_MVN_MVT_prob:
     #test for block integratal, cdf, of multivariate t and normal
     #comparison results from R
 

@@ -44,7 +44,7 @@ doc = {'description':
 ''',
 'ref': ''}
 
-class _UnivariateFunction(object):
+class _UnivariateFunction:
     #Base Class for Univariate non-linear example.
     #Does not work on it's own. needs additionally at least self.func
     __doc__ = '''%(description)s

@@ -742,7 +742,7 @@ class TestLM:
         )
 
 
-class TestOLS_GLS_WLS_equivalence(object):
+class TestOLS_GLS_WLS_equivalence:
     @classmethod
     def setup_class(cls):
         data = longley.load()
@@ -822,7 +822,7 @@ class TestNonFit:
         assert_equal(self.ols_model.df_resid, 9)
 
 
-class TestWLS_CornerCases(object):
+class TestWLS_CornerCases:
     @classmethod
     def setup_class(cls):
         cls.exog = np.ones((1,))
