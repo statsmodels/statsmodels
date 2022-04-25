@@ -1760,7 +1760,7 @@ def test_binary_pred_table_zeros():
     assert_equal(res.pred_table(), expected)
 
 
-class TestGeneralizedPoisson_p2(object):
+class TestGeneralizedPoisson_p2:
     # Test Generalized Poisson model
 
     @classmethod
@@ -1817,7 +1817,7 @@ class TestGeneralizedPoisson_p2(object):
         check_distr(self.res1)
 
 
-class TestGeneralizedPoisson_transparams(object):
+class TestGeneralizedPoisson_transparams:
     # Test Generalized Poisson model
 
     @classmethod
@@ -1857,7 +1857,7 @@ class TestGeneralizedPoisson_transparams(object):
         assert_allclose(self.res1.llf, self.res2.llf)
 
 
-class TestGeneralizedPoisson_p1(object):
+class TestGeneralizedPoisson_p1:
     # Test Generalized Poisson model
 
     @classmethod
@@ -1932,7 +1932,7 @@ class TestGeneralizedPoisson_p1(object):
         check_distr(self.res1)
 
 
-class TestGeneralizedPoisson_underdispersion(object):
+class TestGeneralizedPoisson_underdispersion:
 
     @classmethod
     def setup_class(cls):

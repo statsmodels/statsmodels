@@ -509,7 +509,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
         assert type(res_unpickled) is type(self.res)  # noqa: E721
 
 
-class E1_Results(object):
+class E1_Results:
     """
     Results from Lütkepohl (2005) using E2 dataset
     """

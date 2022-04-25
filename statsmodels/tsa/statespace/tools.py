@@ -200,7 +200,7 @@ def companion_matrix(polynomial):
             raise ValueError("Companion matrix polynomials must include at"
                              " least two terms.")
 
-        if isinstance(polynomial, list) or isinstance(polynomial, tuple):
+        if isinstance(polynomial, (list, tuple)):
             try:
                 # Note: cannot use polynomial[0] because of the special
                 # behavior associated with matrix polynomials and the constant

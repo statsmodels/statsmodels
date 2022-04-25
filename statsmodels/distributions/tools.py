@@ -13,7 +13,7 @@ from scipy import interpolate, stats
 
 # helper functions to work on a grid of cdf and pdf, histogram
 
-class _Grid(object):
+class _Grid:
     """Create Grid values and indices, grid in [0, 1]^d
 
     This class creates a regular grid in a d dimensional hyper cube.

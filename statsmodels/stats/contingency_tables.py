@@ -58,7 +58,7 @@ def _make_df_square(table):
     return table
 
 
-class _Bunch(object):
+class _Bunch:
 
     def __repr__(self):
         return "<bunch containing results, print to see contents>"

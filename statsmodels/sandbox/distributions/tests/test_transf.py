@@ -78,7 +78,7 @@ stats.foldnorm.__class__._stats = foldnorm_stats
 
 DECIMAL = 5
 
-class Test_Transf2(object):
+class Test_Transf2:
 
     @classmethod
     def setup_class(cls):

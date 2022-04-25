@@ -199,7 +199,7 @@ def variance_inflation_factor(exog, exog_idx):
     return vif
 
 
-class _BaseInfluenceMixin(object):
+class _BaseInfluenceMixin:
     """common methods between OLSInfluence and MLE/GLMInfluence
     """
 

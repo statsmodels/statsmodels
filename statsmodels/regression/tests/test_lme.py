@@ -22,7 +22,7 @@ from .results import lme_r_results
 # TODO: add tests with unequal group sizes
 
 
-class R_Results(object):
+class R_Results:
     """
     A class for holding various results obtained from fitting one data
     set using lmer in R.

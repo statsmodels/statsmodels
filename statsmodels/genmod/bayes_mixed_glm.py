@@ -566,7 +566,7 @@ class _BayesMixedGLM(base.Model):
         return pr
 
 
-class _VariationalBayesMixedGLM(object):
+class _VariationalBayesMixedGLM:
     """
     A mixin providing generic (not family-specific) methods for
     variational Bayes mean field fitting.
