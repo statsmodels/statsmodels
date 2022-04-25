@@ -36,7 +36,7 @@ res_file = os.path.join(curdir, "results", "bds_results.csv")
 results = pd.read_csv(res_file, header=None)
 
 
-class CheckBDS(object):
+class CheckBDS:
     """
     Test BDS
 

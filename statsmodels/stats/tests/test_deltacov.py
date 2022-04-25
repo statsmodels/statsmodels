@@ -13,7 +13,7 @@ from statsmodels.regression.linear_model import OLS
 from statsmodels.stats._delta_method import NonlinearDeltaCov
 
 
-class TestDeltacovOLS(object):
+class TestDeltacovOLS:
 
     @classmethod
     def setup_class(cls):

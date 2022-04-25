@@ -25,7 +25,7 @@ def strip_blank_lines(line):
     return line
 
 
-class Reader(object):
+class Reader:
     """
     A line-based string reader.
     """
@@ -555,7 +555,7 @@ class NumpyDocString(Mapping):
         return "\n".join(out)
 
 
-class Docstring(object):
+class Docstring:
     """
     Docstring modification.
 

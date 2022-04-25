@@ -52,7 +52,7 @@ data = data.astype(int)
 data['logpyears'] = np.log(data['pyears'])
 
 
-class CheckPoissonConstrainedMixin(object):
+class CheckPoissonConstrainedMixin:
 
     def test_basic(self):
         res1 = self.res1

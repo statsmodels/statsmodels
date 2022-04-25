@@ -472,7 +472,7 @@ class _MultivariateOLSResults(object):
         raise NotImplementedError
 
 
-class MultivariateTestResults(object):
+class MultivariateTestResults:
     """
     Multivariate test results class
 

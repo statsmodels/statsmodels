@@ -695,7 +695,7 @@ class KernelCensoredReg(KernelReg):
         return mean, mfx
 
 
-class TestRegCoefC(object):
+class TestRegCoefC:
     """
     Significance test for continuous variables in a nonparametric regression.
 

@@ -19,7 +19,7 @@ from itertools import combinations
 
 
 ################################################################################
-class LeaveOneOut(object):
+class LeaveOneOut:
     """
     Leave-One-Out cross validation iterator:
     Provides train/test indexes to split data in train test sets
@@ -71,7 +71,7 @@ class LeaveOneOut(object):
 
 
 ################################################################################
-class LeavePOut(object):
+class LeavePOut:
     """
     Leave-P-Out cross validation iterator:
     Provides train/test indexes to split data in train test sets
@@ -130,7 +130,7 @@ class LeavePOut(object):
 
 
 ################################################################################
-class KFold(object):
+class KFold:
     """
     K-Folds cross validation iterator:
     Provides train/test indexes to split data in train test sets
@@ -195,7 +195,7 @@ class KFold(object):
 
 
 ################################################################################
-class LeaveOneLabelOut(object):
+class LeaveOneLabelOut:
     """
     Leave-One-Label_Out cross-validation iterator:
     Provides train/test indexes to split data in train test sets
@@ -279,7 +279,7 @@ possible to add other arrays of the same shape[0] too
 ################################################################################
 #below: Author: josef-pktd
 
-class KStepAhead(object):
+class KStepAhead:
     """
     KStepAhead cross validation iterator:
     Provides fit/test indexes to split data in sequential sets

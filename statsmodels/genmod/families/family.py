@@ -17,7 +17,7 @@ from . import links as L, varfuncs as V
 FLOAT_EPS = np.finfo(float).eps
 
 
-class Family(object):
+class Family:
     """
     The parent class for one-parameter exponential families.
 

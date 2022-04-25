@@ -30,7 +30,7 @@ from .results import (
 # TODO: implement test_hac_simple
 
 
-class CheckOLSRobust(object):
+class CheckOLSRobust:
     def test_basic(self):
         res1 = self.res1
         res2 = self.res2
@@ -184,7 +184,7 @@ class TestOLSRobustHacLarge(TestOLSRobust1):
         self.res2 = res.results_ivhac4_large
 
 
-class CheckOLSRobustNewMixin(object):
+class CheckOLSRobustNewMixin:
     # This uses the robust covariance as default covariance
 
     def test_compare(self):
@@ -860,7 +860,7 @@ class TestWLSRobustSmall(CheckWLSRobustCluster, CheckOLSRobustNewMixin):
         self.rtolh = 1e-10
 
 
-class TestWLSOLSRobustSmall(object):
+class TestWLSOLSRobustSmall:
     @classmethod
     def setup_class(cls):
         # import pandas as pa

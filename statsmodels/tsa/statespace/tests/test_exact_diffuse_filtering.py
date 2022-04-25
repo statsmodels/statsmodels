@@ -219,7 +219,7 @@ def model_dfm(endog=None, params=None, factor_order=2):
 # - Analytic tests (Koopman, 1997) -------------------------------------------
 
 
-class TestLocalLevelAnalytic(object):
+class TestLocalLevelAnalytic:
     @classmethod
     def setup_class(cls, **kwargs):
         cls.mod, cls.ssm = model_local_level(**kwargs)
@@ -256,7 +256,7 @@ class TestLocalLevelAnalyticDirect(TestLocalLevelAnalytic):
         super(TestLocalLevelAnalyticDirect, cls).setup_class(direct=True)
 
 
-class TestLocalLinearTrendAnalytic(object):
+class TestLocalLinearTrendAnalytic:
     @classmethod
     def setup_class(cls, **kwargs):
         cls.mod, cls.ssm = model_local_linear_trend(**kwargs)
@@ -409,7 +409,7 @@ def test_common_level_restricted_analytic():
     assert_equal(res.nobs_diffuse, 1)
 
 
-class CheckSSMResults(object):
+class CheckSSMResults:
     atol = 1e-14
     rtol = 1e-07
     atol_diffuse = 1e-7
@@ -614,7 +614,7 @@ class CheckSSMResults(object):
             self.sim_a.simulated_state_disturbance)
 
 
-class CheckApproximateDiffuseMixin(object):
+class CheckApproximateDiffuseMixin:
     """
     Test the exact diffuse initialization against the approximate diffuse
     initialization. By definition, the first few observations will be quite
@@ -649,7 +649,7 @@ class CheckApproximateDiffuseMixin(object):
         assert_equal(self.results_b.initial_diffuse_state_cov, None)
 
 
-class CheckKFASMixin(object):
+class CheckKFASMixin:
     """
     Test against values from KFAS
     """

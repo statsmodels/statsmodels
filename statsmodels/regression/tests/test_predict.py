@@ -106,7 +106,7 @@ def test_predict_se():
         np.testing.assert_allclose(sew, sew1 + res3.scale * (wv - 1))
 
 
-class TestWLSPrediction(object):
+class TestWLSPrediction:
 
     @classmethod
     def setup_class(cls):

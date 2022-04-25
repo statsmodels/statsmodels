@@ -155,7 +155,7 @@ idx = idx[1:] + idx[:1]
 exog_st = exog[:, idx]
 
 
-class TestGMMOLS(object):
+class TestGMMOLS:
 
     @classmethod
     def setup_class(cls):
@@ -194,7 +194,7 @@ class TestGMMOLS(object):
 
 
 
-class CheckGMM(object):
+class CheckGMM:
 
     params_tol = [5e-6, 5e-6]
     bse_tol = [5e-7, 5e-7]
@@ -599,7 +599,7 @@ class TestGMMStOneiterOLS_Linear(CheckGMM):
 
 # ------------------
 
-class TestGMMSt2(object):
+class TestGMMSt2:
     # this looks like an old version, trying out different comparisons
     # of options with Stats
 
@@ -668,7 +668,7 @@ class TestGMMSt2(object):
 
 
 
-class CheckIV2SLS(object):
+class CheckIV2SLS:
 
     def test_basic(self):
         res1, res2 = self.res1, self.res2

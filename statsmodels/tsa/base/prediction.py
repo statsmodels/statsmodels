@@ -3,7 +3,7 @@ import pandas as pd
 from scipy import stats
 
 
-class PredictionResults(object):
+class PredictionResults:
     """
     Prediction results
 

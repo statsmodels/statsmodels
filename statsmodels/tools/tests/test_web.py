@@ -5,7 +5,7 @@ from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.web import _generate_url, webdoc
 
 
-class TestWeb(object):
+class TestWeb:
     stable = 'https://www.statsmodels.org/stable/'
     devel = 'https://www.statsmodels.org/devel/'
 

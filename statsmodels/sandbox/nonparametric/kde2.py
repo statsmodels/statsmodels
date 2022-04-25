@@ -8,7 +8,7 @@ from . import kernels
 
 
 #TODO: should this be a function?
-class KDE(object):
+class KDE:
     """
     Kernel Density Estimator
 

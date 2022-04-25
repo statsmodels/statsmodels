@@ -23,7 +23,7 @@ output_path = os.path.join('results', 'results_dynamic_factor_stata.csv')
 output_results = pd.read_csv(os.path.join(current_path, output_path))
 
 
-class CheckDynamicFactor(object):
+class CheckDynamicFactor:
     @classmethod
     def setup_class(cls, true, k_factors, factor_order, cov_type='approx',
                     included_vars=['dln_inv', 'dln_inc', 'dln_consump'],

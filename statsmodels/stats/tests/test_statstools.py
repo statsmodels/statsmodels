@@ -170,7 +170,7 @@ def test_durbin_watson_pandas(reset_randomstate):
     assert_almost_equal(durbin_watson(x), durbin_watson(x_series), decimal=13)
 
 
-class TestStattools(object):
+class TestStattools:
     @classmethod
     def setup_class(cls):
         x = np.random.standard_normal(1000)

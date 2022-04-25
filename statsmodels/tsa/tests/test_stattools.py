@@ -77,7 +77,7 @@ def gc_data():
     return np.diff(np.log(data), axis=0)
 
 
-class CheckADF(object):
+class CheckADF:
     """
     Test Augmented Dickey-Fuller
 
@@ -188,7 +188,7 @@ class TestADFNoConstant2(CheckADF):
         )
 
 
-class CheckCorrGram(object):
+class CheckCorrGram:
     """
     Set up for ACF, PACF tests.
     """
@@ -354,7 +354,7 @@ class TestPACF(CheckCorrGram):
         pacfburg = pacf(self.x, nlags=40, method="burg")
         assert_almost_equal(pacfburg_, pacfburg, DECIMAL_8)
 
-class TestBreakvarHeteroskedasticityTest(object):
+class TestBreakvarHeteroskedasticityTest:
     from scipy.stats import chi2, f
 
     def test_1d_input(self):
@@ -474,7 +474,7 @@ class TestBreakvarHeteroskedasticityTest(object):
         assert actual_pvalue == expected_pvalue
 
 
-class CheckCoint(object):
+class CheckCoint:
     """
     Test Cointegration Test Results for 2-variable system
 
@@ -661,7 +661,7 @@ def test_coint_perfect_collinearity():
     assert_(np.isneginf(c[0]))
 
 
-class TestGrangerCausality(object):
+class TestGrangerCausality:
     def test_grangercausality(self):
         # some example data
         mdata = macrodata.load_pandas().data
@@ -1392,7 +1392,7 @@ def test_adfuller_maxlag_too_large(reset_randomstate):
         adfuller(y, maxlag=51)
 
 
-class SetupZivotAndrews(object):
+class SetupZivotAndrews:
     # test directory
     cur_dir = CURR_DIR
     run_dir = os.path.join(cur_dir, "results")

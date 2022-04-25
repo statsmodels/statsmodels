@@ -26,7 +26,7 @@ from statsmodels.tools.numdiff import approx_fprime
 import warnings
 
 
-class ProcessCovariance(object):
+class ProcessCovariance:
     r"""
     A covariance model for a process indexed by a real parameter.
 

@@ -26,7 +26,7 @@ from statsmodels.tools.testing import Holder
 
 
 # Mixin for tests against other packages.
-class CheckExternalMixin(object):
+class CheckExternalMixin:
 
     @classmethod
     def get_descriptives(cls, ddof=0):
@@ -163,7 +163,7 @@ class TestSim2(CheckExternalMixin):
         cls.get_descriptives()
 
 
-class TestWeightstats(object):
+class TestWeightstats:
 
     @classmethod
     def setup_class(cls):
@@ -332,7 +332,7 @@ class TestWeightstats(object):
         assert_(str(cm1.summary()) == str(cm2.summary()))
 
 
-class CheckWeightstats1dMixin(object):
+class CheckWeightstats1dMixin:
 
     def test_basic(self):
         x1r = self.x1r
@@ -683,7 +683,7 @@ alternatives = {'less': 'smaller',
                 'two.sided': 'two-sided'}
 
 
-class TestZTest(object):
+class TestZTest:
     # all examples use the same data
     # no weights used in tests
 

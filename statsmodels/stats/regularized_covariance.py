@@ -124,7 +124,7 @@ def _calc_approx_inv_cov(nodewise_row_l, nodewise_weight_l):
     return approx_inv_cov
 
 
-class RegularizedInvCovariance(object):
+class RegularizedInvCovariance:
     """
     Class for estimating regularized inverse covariance with
     nodewise regression

@@ -52,7 +52,7 @@ cpunish_data.exog[:, 3] = np.log(cpunish_data.exog[:, 3])
 cpunish_data.exog = add_constant(cpunish_data.exog, prepend=False)
 
 
-class CheckWeight(object):
+class CheckWeight:
     def test_basic(self):
         res1 = self.res1
         res2 = self.res2

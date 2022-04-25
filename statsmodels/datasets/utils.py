@@ -125,9 +125,9 @@ def _cache_it(data, cache_path):
 
 def _open_cache(cache_path):
     import zlib
-    data = zlib.decompress(open(cache_path, 'rb').read())
     # return as bytes object encoded in utf-8 for cross-compat of cached
-    return data
+    with open(cache_path, 'rb') as zf:
+        return zlib.decompress(zf.read())
 
 
 def _urlopen_cached(url, cache):

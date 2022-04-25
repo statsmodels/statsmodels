@@ -10,7 +10,7 @@ from statsmodels.genmod.cov_struct import Independence
 from numpy.testing import assert_allclose
 
 
-class CheckGEEGLM(object):
+class CheckGEEGLM:
 
     def test_basic(self):
         res1 = self.result1

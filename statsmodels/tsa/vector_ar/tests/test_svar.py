@@ -15,7 +15,7 @@ DECIMAL_5 = 5
 DECIMAL_4 = 4
 
 
-class TestSVAR(object):
+class TestSVAR:
     @classmethod
     def setup_class(cls):
         mdata = statsmodels.datasets.macrodata.load_pandas().data

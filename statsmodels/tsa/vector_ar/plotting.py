@@ -5,7 +5,7 @@ import numpy as np
 import statsmodels.tsa.vector_ar.util as util
 
 
-class MPLConfigurator(object):
+class MPLConfigurator:
 
     def __init__(self):
         self._inverse_actions = []

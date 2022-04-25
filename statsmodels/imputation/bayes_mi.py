@@ -3,7 +3,7 @@ import pandas as pd
 from statsmodels.base.model import LikelihoodModelResults
 
 
-class BayesGaussMI(object):
+class BayesGaussMI:
     """
     Bayesian Imputation using a Gaussian model.
 
@@ -190,7 +190,7 @@ class BayesGaussMI(object):
         self.cov = np.linalg.inv(ma)
 
 
-class MI(object):
+class MI:
     """
     MI performs multiple imputation using a provided imputer object.
 

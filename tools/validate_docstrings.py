@@ -318,7 +318,7 @@ def get_api_items(api_doc_fd):
         previous_line = line
 
 
-class Docstring(object):
+class Docstring:
     def __init__(self, name):
         self.name = name
         obj = self._load_obj(name)
@@ -521,7 +521,7 @@ class Docstring(object):
                 self.name.split(".")[-1] in self.obj._accessors
             ):
                 # accessor classes have a signature but don't want to show this
-                return tuple()
+                return ()
         try:
             sig = inspect.signature(self.obj)
         except (TypeError, ValueError):
@@ -544,7 +544,7 @@ class Docstring(object):
             except Exception as exc:
                 print("!! numpydoc failed  on {0}!!".format(str(self.obj)))
                 print(exc)
-                return tuple()
+                return ()
         params = list(sig.parameters.keys())
         out_params = params[:]
         kind = inspect.Parameter.VAR_POSITIONAL

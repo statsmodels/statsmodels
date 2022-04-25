@@ -360,7 +360,7 @@ _transform_names = dict(dydx='dy/dx',
                         dyex='dy/d(lnx)',
                         eydx='d(lny)/dx')
 
-class Margins(object):
+class Margins:
     """
     Mostly a do nothing class. Lays out the methods expected of a sub-class.
 
@@ -407,7 +407,7 @@ class Margins(object):
         raise NotImplementedError
 
 #class DiscreteMargins(Margins):
-class DiscreteMargins(object):
+class DiscreteMargins:
     """Get marginal effects of a Discrete Choice model.
 
     Parameters

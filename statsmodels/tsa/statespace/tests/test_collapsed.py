@@ -27,7 +27,7 @@ from numpy.testing import assert_equal, assert_allclose
 current_path = os.path.dirname(os.path.abspath(__file__))
 
 
-class Trivariate(object):
+class Trivariate:
     """
     Tests collapsing three-dimensional observation data to two-dimensional
     """
@@ -433,7 +433,7 @@ class TestTrivariateUnivariateAllMissingAlternate(
         assert(self.model._kalman_filter.filter_timing == 1)
 
 
-class TestDFM(object):
+class TestDFM:
     @classmethod
     def create_model(cls, obs, **kwargs):
         # Create the model with typical state space

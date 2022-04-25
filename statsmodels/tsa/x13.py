@@ -207,7 +207,7 @@ def _open_and_read(fname):
     return fout
 
 
-class Spec(object):
+class Spec:
     @property
     def spec_name(self):
         return self.__class__.__name__.replace("Spec", "")
@@ -590,7 +590,7 @@ def x13_arima_select_order(endog, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
     return res
 
 
-class X13ArimaAnalysisResult(object):
+class X13ArimaAnalysisResult:
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)

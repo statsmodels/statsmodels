@@ -13,7 +13,7 @@ import statsmodels.stats.sandwich_covariance as sw
 from statsmodels.tools.grouputils import GroupSorted
 
 
-class CheckPanelLagMixin(object):
+class CheckPanelLagMixin:
 
     @classmethod
     def calculate(cls):

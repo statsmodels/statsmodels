@@ -7,7 +7,7 @@ Hard-coded results for test_regression
 import numpy as np
 
 
-class Longley(object):
+class Longley:
     '''
     The results for the Longley dataset were obtained from NIST
 
@@ -74,7 +74,7 @@ class Longley(object):
     HC3_se = (91.11939, 0.05562, 0.82213, 0.29879, 0.32491, 922.80784, 1799477)
 
 
-class LongleyGls(object):
+class LongleyGls:
     '''
     The following results were obtained from running the test script with R.
     '''
@@ -99,7 +99,7 @@ class LongleyGls(object):
         self.aic = 250.858992591
 
 
-class CCardWLS(object):
+class CCardWLS:
     def __init__(self):
         self.params = [
             -2.6941851611, 158.426977524, -7.24928987289,
@@ -176,7 +176,7 @@ class CCardWLS(object):
             (-392.9263, 164.7085)]
 
 
-class LongleyRTO(object):
+class LongleyRTO:
     def __init__(self):
         # Regression Through the Origin model
         # from Stata, make sure you force double to replicate

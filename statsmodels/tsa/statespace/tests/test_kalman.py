@@ -45,7 +45,7 @@ prefix_kalman_filter_map = {
 current_path = os.path.dirname(os.path.abspath(__file__))
 
 
-class Clark1987(object):
+class Clark1987:
     """
     Clark's (1987) univariate unobserved components model of real GDP (as
     presented in Kim and Nelson, 1999)
@@ -427,7 +427,7 @@ class TestClark1987ConserveAll(Clark1987):
         )
 
 
-class Clark1989(object):
+class Clark1989:
     """
     Clark's (1989) bivariate unobserved components model of real GDP (as
     presented in Kim and Nelson, 1999)

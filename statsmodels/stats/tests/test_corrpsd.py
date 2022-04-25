@@ -103,7 +103,7 @@ def test_corr_psd():
     assert_almost_equal(x2, y, decimal=14)
 
 
-class CheckCorrPSDMixin(object):
+class CheckCorrPSDMixin:
 
     def test_nearest(self):
         x = self.x
@@ -144,7 +144,7 @@ class CheckCorrPSDMixin(object):
         assert_allclose(d, res_r.normF, rtol=0.0015)
 
 
-class TestCovPSD(object):
+class TestCovPSD:
 
     @classmethod
     def setup_class(cls):

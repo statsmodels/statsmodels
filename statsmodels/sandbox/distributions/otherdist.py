@@ -24,7 +24,7 @@ existing distributions by transformation, mixing, compounding
 import numpy as np
 from scipy import stats
 
-class ParametricMixtureD(object):
+class ParametricMixtureD:
     '''mixtures with a discrete distribution
 
     The mixing distribution is a discrete distribution like scipy.stats.poisson.
@@ -125,7 +125,7 @@ class ParametricMixtureD(object):
 
 #try:
 
-class ClippedContinuous(object):
+class ClippedContinuous:
     '''clipped continuous distribution with a masspoint at clip_lower
 
 

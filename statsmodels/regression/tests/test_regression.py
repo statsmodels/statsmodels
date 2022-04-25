@@ -44,7 +44,7 @@ except ImportError:
     has_cvxopt = False
 
 
-class CheckRegressionResults(object):
+class CheckRegressionResults:
     """
     res2 contains results from Rmodelwrap or were obtained from a statistical
     packages such as R, Stata, or SAS and were written to model_results
@@ -364,7 +364,7 @@ class TestRTO(CheckRegressionResults):
         cls.res_qr = res_qr
 
 
-class TestFtest(object):
+class TestFtest:
     """
     Tests f_test vs. RegressionResults
     """
@@ -390,7 +390,7 @@ class TestFtest(object):
         assert_equal(self.Ftest.df_num, 6)
 
 
-class TestFTest2(object):
+class TestFTest2:
     """
     A joint test that the coefficient on
     GNP = the coefficient on UNEMP  and that the coefficient on
@@ -429,7 +429,7 @@ class TestFTest2(object):
         assert_equal(self.Ftest1.df_num, 2)
 
 
-class TestFtestQ(object):
+class TestFtestQ:
     """
     A joint hypothesis test that Rb = q.  Coefficient tests are essentially
     made up.  Test values taken from Stata.
@@ -465,7 +465,7 @@ class TestFtestQ(object):
         assert_equal(self.Ftest1.df_num, 5)
 
 
-class TestTtest(object):
+class TestTtest:
     """
     Test individual t-tests.  Ie., are the coefficients significantly
     different than zero.
@@ -507,7 +507,7 @@ class TestTtest(object):
         assert_almost_equal(self.Ttest.effect, self.res1.params)
 
 
-class TestTtest2(object):
+class TestTtest2:
     """
     Tests the hypothesis that the coefficients on POP and YEAR
     are equal.
@@ -542,7 +542,7 @@ class TestTtest2(object):
         assert_almost_equal(self.Ttest1.effect, -1829.2025687186533, DECIMAL_4)
 
 
-class TestGLS(object):
+class TestGLS:
     """
     These test results were obtained by replication with R.
     """
@@ -657,7 +657,7 @@ class TestGLS_alt_sigma(CheckRegressionResults):
 #        assert_almost_equal(conf1, conf2, DECIMAL_4)
 
 
-class TestLM(object):
+class TestLM:
     @classmethod
     def setup_class(cls):
         # TODO: Test HAC method
@@ -808,7 +808,7 @@ class TestGLS_WLS_equivalence(TestOLS_GLS_WLS_equivalence):
         cls.results.append(GLS(y, x, np.diag(0.1 * w_inv)).fit())
 
 
-class TestNonFit(object):
+class TestNonFit:
     @classmethod
     def setup_class(cls):
         data = longley.load()
@@ -968,7 +968,7 @@ class TestGLS_OLS(CheckRegressionResults):
 # FIXME: do not leave this commented-out sitting here
 # TODO: test AR
 # why the two-stage in AR?
-# class TestAR(object):
+# class TestAR:
 #     from statsmodels.datasets.sunspots import load
 #     data = load()
 #     model = AR(data.endog, rho=4).fit()
@@ -983,7 +983,7 @@ class TestGLS_OLS(CheckRegressionResults):
 #        pass
 
 
-class TestYuleWalker(object):
+class TestYuleWalker:
     @classmethod
     def setup_class(cls):
         from statsmodels.datasets.sunspots import load
@@ -1184,7 +1184,7 @@ Notes: \\newline
     assert_equal(table, expected)
 
 
-class TestRegularizedFit(object):
+class TestRegularizedFit:
 
     # Make sure there are no problems when no variables are selected.
     def test_empty_model(self):

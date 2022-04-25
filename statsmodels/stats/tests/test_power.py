@@ -27,7 +27,7 @@ except ImportError:
     pass
 
 
-class CheckPowerMixin(object):
+class CheckPowerMixin:
 
     def test_power(self):
         #test against R results

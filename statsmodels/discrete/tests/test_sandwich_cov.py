@@ -42,7 +42,7 @@ exposure = np.asarray(data['service'])
 
 
 # TODO get the test methods from regression/tests
-class CheckCountRobustMixin(object):
+class CheckCountRobustMixin:
 
 
     def test_basic(self):
@@ -437,7 +437,7 @@ class TestNegbinCluExposureFit(CheckCountRobustMixin):
         cls.corr_fact = cls.get_correction_factor(cls.res1)
 
 
-class CheckDiscreteGLM(object):
+class CheckDiscreteGLM:
     # compare GLM with other models, no verified reference results
 
     def test_basic(self):

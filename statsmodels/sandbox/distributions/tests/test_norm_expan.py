@@ -17,7 +17,7 @@ from numpy.testing import assert_allclose, assert_array_less
 from statsmodels.sandbox.distributions.extras import NormExpan_gen
 
 
-class CheckDistribution(object):
+class CheckDistribution:
 
     @pytest.mark.smoke
     def test_dist1(self):
@@ -67,7 +67,7 @@ class TestExpandNormMom(CheckExpandNorm):
         cls.dist2 = NormExpan_gen(cls.mvsk, mode='mvsk')
 
 
-class TestExpandNormSample(object):
+class TestExpandNormSample:
     # do not subclass CheckExpandNorm,
     # precision not high enough because of mvsk from data
 

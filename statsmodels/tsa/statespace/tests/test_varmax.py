@@ -27,7 +27,7 @@ varmax_path = os.path.join('results', 'results_varmax_stata.csv')
 varmax_results = pd.read_csv(os.path.join(current_path, varmax_path))
 
 
-class CheckVARMAX(object):
+class CheckVARMAX:
     """
     Test Vector Autoregression against Stata's `dfactor` code (Stata's
     `var` function uses OLS and not state space / MLE, so we cannot get

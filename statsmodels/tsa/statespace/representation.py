@@ -13,7 +13,7 @@ from .initialization import Initialization
 from . import tools
 
 
-class OptionWrapper(object):
+class OptionWrapper:
     def __init__(self, mask_attribute, mask_value):
         # Name of the class-level bitmask attribute
         self.mask_attribute = mask_attribute
@@ -33,7 +33,7 @@ class OptionWrapper(object):
         setattr(obj, self.mask_attribute, value)
 
 
-class MatrixWrapper(object):
+class MatrixWrapper:
     def __init__(self, name, attribute):
         self.name = name
         self.attribute = attribute
@@ -88,7 +88,7 @@ class MatrixWrapper(object):
         return value
 
 
-class Representation(object):
+class Representation:
     r"""
     State space representation of a time series process
 
@@ -1051,7 +1051,7 @@ class Representation(object):
             raise RuntimeError('Statespace model not initialized.')
 
 
-class FrozenRepresentation(object):
+class FrozenRepresentation:
     """
     Frozen Statespace Model
 

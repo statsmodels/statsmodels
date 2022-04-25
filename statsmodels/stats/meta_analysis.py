@@ -14,7 +14,7 @@ from scipy import stats
 from statsmodels.stats.base import HolderTuple
 
 
-class CombineResults(object):
+class CombineResults:
     """Results from combined estimate of means or effect sizes
 
     This currently includes intermediate results that might be removed

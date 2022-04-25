@@ -418,7 +418,7 @@ def _ssr_reduced_model(y, x, term_slices, params, keys):
     return ssr, df_resid
 
 
-class AnovaRM(object):
+class AnovaRM:
     """
     Repeated measures Anova using least squares regression
 
@@ -610,7 +610,7 @@ class AnovaRM(object):
         return AnovaResults(anova_table)
 
 
-class AnovaResults(object):
+class AnovaResults:
     """
     Anova results class
 

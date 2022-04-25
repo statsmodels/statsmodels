@@ -7,7 +7,7 @@ import scipy.stats
 FLOAT_EPS = np.finfo(float).eps
 
 
-class Link(object):
+class Link:
     """
     A generic link function for one-parameter exponential family.
 

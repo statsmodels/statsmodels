@@ -851,7 +851,7 @@ class _VariationalBayesMixedGLM(object):
                 vc_mean_grad, vc_sd_grad)
 
 
-class BayesMixedGLMResults(object):
+class BayesMixedGLMResults:
     """
     Class to hold results from a Bayesian estimation of a Mixed GLM model.
 

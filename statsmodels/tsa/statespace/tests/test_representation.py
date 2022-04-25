@@ -35,7 +35,7 @@ clark1989_path = os.path.join('results', 'results_clark1989_R.csv')
 clark1989_results = pd.read_csv(os.path.join(current_path, clark1989_path))
 
 
-class Clark1987(object):
+class Clark1987:
     """
     Clark's (1987) univariate unobserved components model of real GDP (as
     presented in Kim and Nelson, 1999)
@@ -279,7 +279,7 @@ class TestClark1987ConserveAll(Clark1987):
         )
 
 
-class Clark1989(object):
+class Clark1989:
     """
     Clark's (1989) bivariate unobserved components model of real GDP (as
     presented in Kim and Nelson, 1999)
@@ -668,7 +668,8 @@ def test_initialization():
     mod = Representation(1, k_states=2)
 
     # Test invalid state initialization
-    assert_raises(RuntimeError, lambda: mod._initialize_state())
+    with pytest.raises(RuntimeError):
+        mod._initialize_state()
 
     # Test valid initialization
     initial_state = np.zeros(2,) + 1.5

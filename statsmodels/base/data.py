@@ -51,7 +51,7 @@ def _nan_rows(*arrs):
     return reduce(_nan_row_maybe_two_inputs, arrs).squeeze()
 
 
-class ModelData(object):
+class ModelData:
     """
     Class responsible for handling input data and extracting metadata into the
     appropriate form

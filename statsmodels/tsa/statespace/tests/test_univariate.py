@@ -27,7 +27,7 @@ from statsmodels.tsa.statespace.sarimax import SARIMAX
 current_path = os.path.dirname(os.path.abspath(__file__))
 
 
-class TestClark1989(object):
+class TestClark1989:
     """
     Clark's (1989) bivariate unobserved components model of real GDP (as
     presented in Kim and Nelson, 1999)
@@ -248,7 +248,7 @@ class TestClark1989Alternate(TestClark1989):
         assert(self.model._kalman_filter.filter_timing == 1)
 
 
-class MultivariateMissingGeneralObsCov(object):
+class MultivariateMissingGeneralObsCov:
     @classmethod
     def setup_class(cls, which, dtype=float, alternate_timing=False, **kwargs):
         # Results
@@ -509,7 +509,7 @@ class TestMultivariateMixedMissingGeneralObsCov(
         )
 
 
-class TestMultivariateVAR(object):
+class TestMultivariateVAR:
     @classmethod
     def setup_class(cls, which='none', **kwargs):
         # Results

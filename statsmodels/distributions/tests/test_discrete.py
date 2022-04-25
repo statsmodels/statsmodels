@@ -49,7 +49,7 @@ class TestGenpoisson_p(object):
         assert_allclose(poisson_pmf, genpoisson_pmf, rtol=1e-15)
 
 
-class TestTruncatedPoisson(object):
+class TestTruncatedPoisson:
     """
     Test Truncated Poisson distribution
     """
@@ -74,7 +74,7 @@ class TestTruncatedPoisson(object):
         assert_allclose(poisson_logpmf, tpoisson_logpmf, rtol=1e-7)
 
 
-class TestZIPoisson(object):
+class TestZIPoisson:
 
     def test_pmf_zero(self):
         poisson_pmf = poisson.pmf(3, 2)
@@ -130,7 +130,7 @@ class TestZIPoisson(object):
         assert_allclose(poisson_m2, zip_m2, rtol=1e-10)
 
 
-class TestZIGeneralizedPoisson(object):
+class TestZIGeneralizedPoisson:
     def test_pmf_zero(self):
         gp_pmf = genpoisson_p.pmf(3, 2, 1, 1)
         zigp_pmf = zigenpoisson.pmf(3, 2, 1, 1, 0)
@@ -162,7 +162,7 @@ class TestZIGeneralizedPoisson(object):
         assert_allclose(poisson_var, zigenpoisson_var, rtol=1e-10)
 
 
-class TestZiNBP(object):
+class TestZiNBP:
 
     def test_pmf_p2(self):
         n, p = zinegbin.convert_params(30, 0.1, 2)
@@ -507,7 +507,7 @@ class TestGeometric():
         assert_equal(isf, -1)
 
 
-class TestTruncatedNBP(object):
+class TestTruncatedNBP:
     """
     Test Truncated Poisson distribution
     """

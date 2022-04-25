@@ -135,7 +135,7 @@ expanding scheme until window observation, and the roll.
     extra_parameters=extra_parameters,
 )
 @Appender(_doc)
-class RollingWLS(object):
+class RollingWLS:
     def __init__(
         self,
         endog,
@@ -462,7 +462,7 @@ class RollingOLS(RollingWLS):
         )
 
 
-class RollingRegressionResults(object):
+class RollingRegressionResults:
     """
     Results from rolling regressions
 

@@ -12,7 +12,7 @@ from .table import SimpleTable
 from .tableformatting import fmt_latex, fmt_txt
 
 
-class Summary(object):
+class Summary:
     def __init__(self):
         self.tables = []
         self.settings = []

@@ -19,7 +19,7 @@ from numpy.testing import assert_allclose, assert_
 import pandas as pd
 
 
-class PytestTester(object):
+class PytestTester:
     def __init__(self, package_path=None):
         f = sys._getframe(1)
         if package_path is None:

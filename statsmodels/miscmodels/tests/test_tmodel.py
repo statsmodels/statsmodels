@@ -68,7 +68,7 @@ mm.date = np.array([
     ])
 
 
-class CheckTLinearModelMixin(object):
+class CheckTLinearModelMixin:
 
     def test_basic(self):
         res1 = self.res1
@@ -149,7 +149,7 @@ class TestTModel(CheckTLinearModelMixin):
         cls.resf = resf
 
 
-class TestTModelFixed(object):
+class TestTModelFixed:
 
     @classmethod
     def setup_class(cls):

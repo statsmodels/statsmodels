@@ -80,7 +80,7 @@ def moment_exponential_mult(params, data, exp=True):
 #------------------- test classes
 
 # copied from test_gmm.py, with changes
-class CheckGMM(object):
+class CheckGMM:
 
     # default tolerance, overwritten by subclasses
     params_tol = [5e-6, 5e-6]

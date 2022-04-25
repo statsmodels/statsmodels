@@ -58,7 +58,7 @@ df_autos_ = pd.read_csv(file_path)
 df_autos = df_autos_[['city_mpg', 'fuel', 'drive', 'weight', 'hp']].dropna()
 
 
-class CheckGAMMixin(object):
+class CheckGAMMixin:
 
     @classmethod
     def _init(cls):
@@ -215,7 +215,7 @@ class TestGAM5Bfgs(CheckGAMMixin):
                         rtol=self.rtol_fitted)
 
 
-class TestGAM6Pirls(object):
+class TestGAM6Pirls:
 
     @classmethod
     def setup_class(cls):
@@ -246,7 +246,7 @@ class TestGAM6Pirls(object):
                         rtol=self.rtol_fitted)
 
 
-class TestGAM6Bfgs(object):
+class TestGAM6Bfgs:
 
     @classmethod
     def setup_class(cls):
@@ -273,7 +273,7 @@ class TestGAM6Bfgs(object):
                         rtol=self.rtol_fitted)
 
 
-class TestGAM6Bfgs0(object):
+class TestGAM6Bfgs0:
 
     @classmethod
     def setup_class(cls):
@@ -328,7 +328,7 @@ pls6_exog = np.array([
     ]).reshape(10, 6, order='F')
 
 
-class TestGAM6ExogBfgs(object):
+class TestGAM6ExogBfgs:
 
     @classmethod
     def setup_class(cls):
@@ -356,7 +356,7 @@ class TestGAM6ExogBfgs(object):
                         rtol=1e-13)
 
 
-class TestGAM6ExogPirls(object):
+class TestGAM6ExogPirls:
 
     @classmethod
     def setup_class(cls):
@@ -384,7 +384,7 @@ class TestGAM6ExogPirls(object):
                         rtol=1e-13)
 
 
-class TestGAMMPG(object):
+class TestGAMMPG:
 
     @classmethod
     def setup_class(cls):

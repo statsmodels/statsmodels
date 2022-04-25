@@ -157,7 +157,7 @@ def _checkargs(time, status, entry, freq_weights, exog):
         raise ValueError("the rows of exog should align with time")
 
 
-class CumIncidenceRight(object):
+class CumIncidenceRight:
     """
     Estimation and inference for a cumulative incidence function.
 
@@ -260,7 +260,7 @@ class CumIncidenceRight(object):
         self.title = "" if not title else title
 
 
-class SurvfuncRight(object):
+class SurvfuncRight:
     """
     Estimation and inference for a survival function.
 
@@ -457,7 +457,7 @@ class SurvfuncRight(object):
             g = lambda x: x
             gprime = lambda x: 1
         elif method == "log":
-            g = lambda x: np.log(x)
+            g = np.log
             gprime = lambda x: 1 / x
         elif method == "logit":
             g = lambda x: np.log(x / (1 - x))

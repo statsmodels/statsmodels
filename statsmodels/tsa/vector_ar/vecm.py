@@ -738,7 +738,7 @@ def coint_johansen(endog, det_order, k_ar_diff):
     return JohansenTestResult(rkt, r0t, a, d, lr1, lr2, cvt, cvm, aind)
 
 
-class JohansenTestResult(object):
+class JohansenTestResult:
     """
     Results class for Johansen's cointegration test
 
@@ -1177,7 +1177,7 @@ class VECM(tsbase.TimeSeriesModel):
         return param_names
 
 
-class VECMResults(object):
+class VECMResults:
     """Class for holding estimation related results of a vector error
     correction model (VECM).
 

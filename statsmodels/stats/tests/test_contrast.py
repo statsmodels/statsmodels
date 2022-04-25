@@ -5,7 +5,7 @@ from statsmodels.stats.contrast import Contrast
 import statsmodels.stats.contrast as smc
 
 
-class TestContrast(object):
+class TestContrast:
     @classmethod
     def setup_class(cls):
         numpy.random.seed(54321)

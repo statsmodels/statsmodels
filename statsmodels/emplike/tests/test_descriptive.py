@@ -7,7 +7,7 @@ from statsmodels.emplike.descriptive import DescStat
 from .results.el_results import DescStatRes
 
 
-class GenRes(object):
+class GenRes:
     """
     Reads in the data and creates class instance to be tested
     """

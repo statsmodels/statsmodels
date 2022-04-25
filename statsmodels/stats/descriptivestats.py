@@ -645,7 +645,7 @@ def describe(
     ).frame
 
 
-class Describe(object):
+class Describe:
     """
     Removed.
     """

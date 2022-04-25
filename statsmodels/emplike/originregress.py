@@ -25,7 +25,7 @@ from statsmodels.regression.linear_model import OLS, RegressionResults
 from statsmodels.tools.tools import add_constant
 
 
-class ELOriginRegress(object):
+class ELOriginRegress:
     """
     Empirical Likelihood inference and estimation for linear regression
     through the origin.

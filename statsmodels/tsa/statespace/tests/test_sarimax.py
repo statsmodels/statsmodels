@@ -31,7 +31,7 @@ coverage_path = os.path.join('results', 'results_sarimax_coverage.csv')
 coverage_results = pd.read_csv(os.path.join(current_path, coverage_path))
 
 
-class TestSARIMAXStatsmodels(object):
+class TestSARIMAXStatsmodels:
     """
     Test ARIMA model using SARIMAX class against statsmodels ARIMA class
 
@@ -93,7 +93,7 @@ class TestSARIMAXStatsmodels(object):
         smt.check_ftest_pvalues(self.result_b)
 
 
-class TestRealGDPARStata(object):
+class TestRealGDPARStata:
     """
     Includes tests of filtered states and standardized forecast errors.
 
@@ -131,7 +131,7 @@ class TestRealGDPARStata(object):
         )
 
 
-class SARIMAXStataTests(object):
+class SARIMAXStataTests:
     def test_loglike(self):
         assert_almost_equal(
             self.result.llf,
@@ -949,7 +949,7 @@ class TestFriedmanForecast(Friedman):
         )
 
 
-class SARIMAXCoverageTest(object):
+class SARIMAXCoverageTest:
     @classmethod
     def setup_class(cls, i, decimal=4, endog=None, *args, **kwargs):
         # Dataset

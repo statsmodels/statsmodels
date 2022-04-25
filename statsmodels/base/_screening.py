@@ -12,7 +12,7 @@ import numpy as np
 from statsmodels.base._penalties import SCADSmoothed
 
 
-class ScreeningResults(object):
+class ScreeningResults:
     """Results for Variable Screening
 
     Note: Indices except for exog_idx and in the iterated case also
@@ -66,7 +66,7 @@ class ScreeningResults(object):
         self.__dict__.update(**kwds)
 
 
-class VariableScreening(object):
+class VariableScreening:
     """Ultra-high, conditional sure independence screening
 
     This is an adjusted version of Fan's sure independence screening.

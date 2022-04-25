@@ -109,7 +109,7 @@ def test_fleis_randolph():
     assert_allclose(fleiss_kappa(table, method='rand'), 0.785714, atol=6e-6)
 
 
-class CheckCohens(object):
+class CheckCohens:
 
     def test_results(self):
         res = self.res

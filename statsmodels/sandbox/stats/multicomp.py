@@ -506,7 +506,7 @@ def tiecorrect(xranks):
     return tiecorrection
 
 
-class GroupsStats(object):
+class GroupsStats:
     '''
     statistics by groups (another version)
 
@@ -606,7 +606,7 @@ class GroupsStats(object):
         """groupvarwithin"""
         return self.groupsswithin()/(self.groupnobs-1) #.sum()
 
-class TukeyHSDResults(object):
+class TukeyHSDResults:
     """Results from Tukey HSD test, with additional plot methods
 
     Can also compute and plot additional post-hoc evaluations using this
@@ -788,7 +788,7 @@ class TukeyHSDResults(object):
         return fig
 
 
-class MultiComparison(object):
+class MultiComparison:
     '''Tests for multiple comparisons
 
     Parameters
@@ -1520,7 +1520,7 @@ def multicontrast_pvalues(tstat, tcorr, df=None, dist='t', alternative='two-side
 
 
 
-class StepDown(object):
+class StepDown:
     '''a class for step down methods
 
     This is currently for simple tree subset descend, similar to homogeneous_subsets,

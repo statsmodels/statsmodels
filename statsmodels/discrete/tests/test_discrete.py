@@ -145,7 +145,7 @@ def check_distr(res):
     assert_allclose(v, np.squeeze(v2), rtol=1e-10)
 
 
-class CheckModelMixin(object):
+class CheckModelMixin:
     # Assertions about the Model object, as opposed to the Results
     # Assumes that mixed-in class implements:
     #   res1
@@ -263,7 +263,7 @@ class CheckBinaryResults(CheckModelResults):
         self.res1.resid_response
 
 
-class CheckMargEff(object):
+class CheckMargEff:
     """
     Test marginal effects (margeff) and its options
     """
@@ -591,7 +591,7 @@ class TestProbitMinimizeAdditionalOptions(CheckBinaryResults):
                                                      min_method='Nelder-Mead',
                                                      xatol=1e-4, fatol=1e-4)
 
-class CheckLikelihoodModelL1(object):
+class CheckLikelihoodModelL1:
     """
     For testing results generated with L1 regularization
     """
@@ -673,7 +673,7 @@ class TestLogitL1(CheckLikelihoodModelL1):
 
 @pytest.mark.skipif(not has_cvxopt, reason='Skipped test_cvxopt since cvxopt '
                                            'is not available')
-class TestCVXOPT(object):
+class TestCVXOPT:
 
     @classmethod
     def setup_class(cls):
@@ -696,7 +696,7 @@ class TestCVXOPT(object):
         assert_almost_equal(res_slsqp.params, res_cvxopt.params, DECIMAL_4)
 
 
-class TestSweepAlphaL1(object):
+class TestSweepAlphaL1:
 
     @classmethod
     def setup_class(cls):
@@ -718,7 +718,7 @@ class TestSweepAlphaL1(object):
             assert_almost_equal(res2.params, self.res1.params[i], DECIMAL_4)
 
 
-class CheckL1Compatability(object):
+class CheckL1Compatability:
     """
     Tests compatability between l1 and unregularized by setting alpha such
     that certain parameters should be effectively unregularized, and others
@@ -913,7 +913,7 @@ class TestProbitL1Compatability(CheckL1Compatability):
         cls.res_unreg = Probit(data.endog, exog_no_PSI).fit(disp=0, tol=1e-15)
 
 
-class CompareL1(object):
+class CompareL1:
     """
     For checking results for l1 regularization.
     Assumes self.res1 and self.res2 are two legitimate models to be compared.
@@ -1165,7 +1165,7 @@ class TestPoissonNewton(CheckModelResults):
         super(TestPoissonNewton, self).test_cov_params()
 
 
-class CheckNegBinMixin(object):
+class CheckNegBinMixin:
     # Test methods shared by TestNegativeBinomialXYZ classes
 
     @pytest.mark.xfail(reason="pvalues do not match, in some cases wrong size",
@@ -2245,7 +2245,7 @@ class TestNegativeBinomialPL1Compatability(CheckL1Compatability):
         cls.k_extra = 1  # 1 extra parameter in nb2
 
 
-class TestNegativeBinomialPPredictProb(object):
+class TestNegativeBinomialPPredictProb:
 
     def test_predict_prob_p1(self):
         expected_params = [1, -0.5]
@@ -2296,7 +2296,7 @@ class TestNegativeBinomialPPredictProb(object):
             atol=1e-2, rtol=1e-2)
 
 
-class CheckNull(object):
+class CheckNull:
 
     @classmethod
     def _get_data(cls):

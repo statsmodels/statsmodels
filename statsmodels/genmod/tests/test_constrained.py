@@ -21,7 +21,7 @@ from statsmodels.tools.sm_exceptions import ValueWarning
 from statsmodels.tools.tools import add_constant
 
 
-class ConstrainedCompareMixin(object):
+class ConstrainedCompareMixin:
 
     @classmethod
     def setup_class(cls):

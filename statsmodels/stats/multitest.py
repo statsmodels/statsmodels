@@ -566,7 +566,7 @@ def local_fdr(zscores, null_proportion=1.0, null_pdf=None, deg=7,
     return fdr
 
 
-class NullDistribution(object):
+class NullDistribution:
     """
     Estimate a Gaussian distribution for the null Z-scores.
 

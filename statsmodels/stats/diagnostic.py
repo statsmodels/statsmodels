@@ -95,7 +95,7 @@ def _check_nested_results(results_x, results_z):
     return nested
 
 
-class ResultsStore(object):
+class ResultsStore:
     def __str__(self):
         return getattr(self, '_str', self.__class__.__name__)
 

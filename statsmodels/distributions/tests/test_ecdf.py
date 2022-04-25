@@ -3,7 +3,7 @@ import numpy.testing as npt
 from numpy.testing import assert_raises
 from statsmodels.distributions import StepFunction, monotone_fn_inverter
 
-class TestDistributions(object):
+class TestDistributions:
 
     def test_StepFunction(self):
         x = np.arange(20)

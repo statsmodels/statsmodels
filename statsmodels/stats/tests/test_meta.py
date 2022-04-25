@@ -25,7 +25,7 @@ from statsmodels.stats.meta_analysis import (
 from .results import results_meta
 
 
-class TestEffectsizeBinom(object):
+class TestEffectsizeBinom:
 
     @classmethod
     def setup_class(cls):
@@ -77,7 +77,7 @@ class TestEffectsizeBinom(object):
         assert_allclose(var_eff, res2.v_as, rtol=1e-13)
 
 
-class TestEffSmdMeta(object):
+class TestEffSmdMeta:
 
     @classmethod
     def setup_class(cls):
@@ -143,7 +143,7 @@ class TestEffSmdMeta(object):
         assert_allclose(var_eff, vi_m, rtol=1e-13)
 
 
-class TestMetaK1(object):
+class TestMetaK1:
 
     @classmethod
     def setup_class(cls):
@@ -291,7 +291,7 @@ class TestMetaK1(object):
         assert_allclose(df, 9 - 1, atol=1e-10)
 
 
-class TestMetaBinOR(object):
+class TestMetaBinOR:
     # testing against results from R package `meta`
 
     @classmethod

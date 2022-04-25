@@ -86,7 +86,7 @@ def test_gq():
     assert_equal(gq[-1], "increasing")
 
 
-class TestDiagnosticG(object):
+class TestDiagnosticG:
     @classmethod
     def setup_class(cls):
         d = macrodata.load_pandas().data

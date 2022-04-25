@@ -35,7 +35,7 @@ class HolderTuple(Holder):
         return np.asarray(list(self.tuple), dtype=dtype)
 
 
-class AllPairsResults(object):
+class AllPairsResults:
     '''Results class for pairwise comparisons, based on p-values
 
     Parameters

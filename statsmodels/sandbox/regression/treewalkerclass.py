@@ -205,7 +205,7 @@ def getnodes(tree):
 
 testxb = 2 #global to class to return strings instead of numbers
 
-class RU2NMNL(object):
+class RU2NMNL:
     '''Nested Multinomial Logit with Random Utility 2 parameterization
 
 

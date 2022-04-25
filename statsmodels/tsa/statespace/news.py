@@ -14,7 +14,7 @@ from statsmodels.iolib.summary import Summary
 from statsmodels.iolib.tableformatting import fmt_params
 
 
-class NewsResults(object):
+class NewsResults:
     """
     Impacts of data revisions and news on estimates of variables of interest
 

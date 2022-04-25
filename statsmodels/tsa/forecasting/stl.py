@@ -508,7 +508,7 @@ class STLForecastResults:
             import warnings
 
             warnings.warn(
-                f"The variance of the predicted mean is not available using "
+                "The variance of the predicted mean is not available using "
                 f"the {self.model.__class__.__name__} model class.",
                 UserWarning,
                 stacklevel=2,

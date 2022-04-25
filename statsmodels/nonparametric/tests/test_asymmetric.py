@@ -31,7 +31,7 @@ kernels_unit = [("beta", 0.005),
                 ]
 
 
-class CheckKernels(object):
+class CheckKernels:
 
     def test_kernels(self, case):
         name, bw = case

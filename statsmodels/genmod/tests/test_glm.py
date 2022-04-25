@@ -68,7 +68,7 @@ def iris():
                          delimiter=",", skip_header=1)
 
 
-class CheckModelResultsMixin(object):
+class CheckModelResultsMixin:
     '''
     res2 should be either the results from RModelWrap
     or the results as defined in model_results_data
@@ -251,7 +251,7 @@ class CheckModelResultsMixin(object):
             assert_allclose(distr.kwds[k], distr2.kwds[k], rtol=1e-13)
 
 
-class CheckComparisonMixin(object):
+class CheckComparisonMixin:
 
     def test_compare_discrete(self):
         res1 = self.res1
@@ -1452,7 +1452,7 @@ def test_glm_irls_method():
     assert_equal(res_g1.method, 'bfgs')
 
 
-class CheckWtdDuplicationMixin(object):
+class CheckWtdDuplicationMixin:
     decimal_params = DECIMAL_4
 
     @classmethod
@@ -1877,7 +1877,7 @@ def test_wtd_patsy_missing():
     assert_equal(mod_misisng.freq_weights, keep_weights)
 
 
-class CheckTweedie(object):
+class CheckTweedie:
     def test_resid(self):
         idx1 = len(self.res1.resid_response) - 1
         idx2 = len(self.res2.resid_response) - 1
@@ -1994,7 +1994,7 @@ class TestTweedieLog15Fair(CheckTweedie):
         cls.res2 = FairTweedieLog15()
 
 
-class CheckTweedieSpecial(object):
+class CheckTweedieSpecial:
     def test_mu(self):
         assert_allclose(self.res1.mu, self.res2.mu, rtol=1e-5, atol=1e-5)
 
@@ -2289,7 +2289,7 @@ def test_glm_lasso_6431():
                     fit = model._fit_ridge(alpha=0, start_params=None, method=method)
                 assert_allclose(params, fit.params, atol=1e-6, rtol=1e-6)
 
-class TestRegularized(object):
+class TestRegularized:
 
     def test_regularized(self):
 
@@ -2335,7 +2335,7 @@ class TestRegularized(object):
                 assert_equal(np.sign(llf_sm - llf_r), 1)
 
 
-class TestConvergence(object):
+class TestConvergence:
     @classmethod
     def setup_class(cls):
         '''

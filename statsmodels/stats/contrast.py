@@ -7,7 +7,7 @@ from statsmodels.stats.multitest import multipletests
 
 
 #TODO: should this be public if it's just a container?
-class ContrastResults(object):
+class ContrastResults:
     """
     Class for results of tests of linear restrictions on coefficients in a model.
 
@@ -178,7 +178,7 @@ class ContrastResults(object):
 
 
 
-class Contrast(object):
+class Contrast:
     """
     This class is used to construct contrast matrices in regression models.
 
@@ -339,7 +339,7 @@ def contrastfromcols(L, D, pseudo=None):
 
 
 # TODO: this is currently a minimal version, stub
-class WaldTestResults(object):
+class WaldTestResults:
     # for F and chi2 tests of joint hypothesis, mainly for vectorized
 
     def __init__(self, statistic, distribution, dist_args, table=None,
@@ -497,7 +497,7 @@ def t_test_multi(result, contrasts, method='hs', alpha=0.05, ci_method=None,
     return res_df
 
 
-class MultiCompResult(object):
+class MultiCompResult:
     """class to hold return of t_test_pairwise
 
     currently just a minimal class to hold attributes.

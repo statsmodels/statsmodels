@@ -8,7 +8,7 @@ import statsmodels.api as sm
 nparam = sm.nonparametric
 
 
-class KDETestBase(object):
+class KDETestBase:
     def setup(self):
         nobs = 60
         np.random.seed(123456)

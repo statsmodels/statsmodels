@@ -21,7 +21,7 @@ pd_endog, pd_exog = pandas_df.endog, add_constant(
 )
 
 
-class TestOaxaca(object):
+class TestOaxaca:
     @classmethod
     def setup_class(cls):
         cls.model = OaxacaBlinder(endog, exog, 3)
@@ -48,7 +48,7 @@ class TestOaxaca(object):
         np.testing.assert_almost_equal(inter_var, stata_results_std[2], 3)
 
 
-class TestOaxacaNoSwap(object):
+class TestOaxacaNoSwap:
     @classmethod
     def setup_class(cls):
         cls.model = OaxacaBlinder(endog, exog, 3, swap=False)
@@ -68,7 +68,7 @@ class TestOaxacaNoSwap(object):
         np.testing.assert_almost_equal(unexp, stata_results_pooled[2], 3)
 
 
-class TestOaxacaPandas(object):
+class TestOaxacaPandas:
     @classmethod
     def setup_class(cls):
         cls.model = OaxacaBlinder(pd_endog, pd_exog, "OWNRENT")
@@ -88,7 +88,7 @@ class TestOaxacaPandas(object):
         np.testing.assert_almost_equal(unexp, stata_results_pooled[2], 3)
 
 
-class TestOaxacaPandasNoSwap(object):
+class TestOaxacaPandasNoSwap:
     @classmethod
     def setup_class(cls):
         cls.model = OaxacaBlinder(pd_endog, pd_exog, "OWNRENT", swap=False)
@@ -108,7 +108,7 @@ class TestOaxacaPandasNoSwap(object):
         np.testing.assert_almost_equal(unexp, stata_results_pooled[2], 3)
 
 
-class TestOaxacaNoConstPassed(object):
+class TestOaxacaNoConstPassed:
     @classmethod
     def setup_class(cls):
         cls.model = OaxacaBlinder(
@@ -130,7 +130,7 @@ class TestOaxacaNoConstPassed(object):
         np.testing.assert_almost_equal(unexp, stata_results_pooled[2], 3)
 
 
-class TestOaxacaNoSwapNoConstPassed(object):
+class TestOaxacaNoSwapNoConstPassed:
     @classmethod
     def setup_class(cls):
         cls.model = OaxacaBlinder(
@@ -156,7 +156,7 @@ class TestOaxacaNoSwapNoConstPassed(object):
         np.testing.assert_almost_equal(unexp, stata_results_pooled[2], 3)
 
 
-class TestOaxacaPandasNoConstPassed(object):
+class TestOaxacaPandasNoConstPassed:
     @classmethod
     def setup_class(cls):
         cls.model = OaxacaBlinder(
@@ -178,7 +178,7 @@ class TestOaxacaPandasNoConstPassed(object):
         np.testing.assert_almost_equal(unexp, stata_results_pooled[2], 3)
 
 
-class TestOaxacaPandasNoSwapNoConstPassed(object):
+class TestOaxacaPandasNoSwapNoConstPassed:
     @classmethod
     def setup_class(cls):
         cls.model = OaxacaBlinder(
@@ -204,7 +204,7 @@ class TestOaxacaPandasNoSwapNoConstPassed(object):
         np.testing.assert_almost_equal(unexp, stata_results_pooled[2], 3)
 
 
-class TestOneModel(object):
+class TestOneModel:
     @classmethod
     def setup_class(cls):
         np.random.seed(0)
@@ -226,7 +226,7 @@ class TestOneModel(object):
         np.testing.assert_almost_equal(exp_std, one_std_stata_results[1], 3)
 
 
-class TestZeroModel(object):
+class TestZeroModel:
     @classmethod
     def setup_class(cls):
         np.random.seed(0)
@@ -248,7 +248,7 @@ class TestZeroModel(object):
         np.testing.assert_almost_equal(exp_std, zero_std_stata_results[1], 3)
 
 
-class TestOmegaModel(object):
+class TestOmegaModel:
     @classmethod
     def setup_class(cls):
         np.random.seed(0)
@@ -270,7 +270,7 @@ class TestOmegaModel(object):
         np.testing.assert_almost_equal(exp_std, nue_std_stata_results[1], 3)
 
 
-class TestPooledModel(object):
+class TestPooledModel:
     @classmethod
     def setup_class(cls):
         np.random.seed(0)

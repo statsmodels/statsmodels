@@ -14,7 +14,7 @@ import statsmodels.discrete._diagnostics_count as dia
 from statsmodels.discrete.diagnostic import PoissonDiagnostic
 
 
-class TestCountDiagnostic(object):
+class TestCountDiagnostic:
 
     @classmethod
     def setup_class(cls):

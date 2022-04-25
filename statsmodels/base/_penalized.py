@@ -11,7 +11,7 @@ from ._penalties import NonePenalty
 from statsmodels.tools.numdiff import approx_fprime_cs, approx_fprime
 
 
-class PenalizedMixin(object):
+class PenalizedMixin:
     """Mixin class for Maximum Penalized Likelihood
 
     Parameters

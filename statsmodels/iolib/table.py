@@ -46,7 +46,7 @@ column have their own datatype.) This means that you can just specify
 ``len(datatypes)<ncols`` then datatype assignment will cycle across a
 row.  E.g., if you provide 10 columns of data with ``datatypes=[0,1]``
 then you will have 5 columns of datatype 0 and 5 columns of datatype
-1, alternating.  Correspoding to this specification, you should provide
+1, alternating.  Corresponding to this specification, you should provide
 a list of two ``data_fmts`` and a list of two ``data_aligns``.
 
 Cells can be assigned labels as their `datatype` attribute.
@@ -632,7 +632,7 @@ class Row(list):
         return [cell.data for cell in self]
 
 
-class Cell(object):
+class Cell:
     """Provides a table cell.
     A cell can belong to a Row, but does not have to.
     """

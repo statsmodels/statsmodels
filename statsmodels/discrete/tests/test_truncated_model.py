@@ -22,7 +22,7 @@ from .results import results_truncated as results_t
 from .results import results_truncated_st as results_ts
 
 
-class CheckResults(object):
+class CheckResults:
     def test_params(self):
         assert_allclose(self.res1.params, self.res2.params,
                         atol=1e-5, rtol=1e-5)

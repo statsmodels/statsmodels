@@ -19,7 +19,7 @@ import numpy as np
 from . import correlation_structures as cs
 
 
-class PanelSample(object):
+class PanelSample:
     '''data generating process for panel with within correlation
 
     allows various within correlation structures, but no random intercept yet

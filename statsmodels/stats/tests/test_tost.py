@@ -369,7 +369,7 @@ res2 = smws.ttost_paired(clinic[:15, 3], clinic[15:, 3], -0.6, 0.6, transform=No
 res = smws.ttost_ind(clinic[:15, 3], clinic[15:, 3], -0.6, 0.6, usevar='unequal')
 
 
-class CheckTostMixin(object):
+class CheckTostMixin:
 
     def test_pval(self):
         assert_almost_equal(self.res1.pvalue, self.res2.p_value, decimal=13)

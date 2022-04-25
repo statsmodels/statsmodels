@@ -840,7 +840,7 @@ class VAR(TimeSeriesModel):
         raise NotImplementedError("formulas are not supported for VAR models.")
 
 
-class VARProcess(object):
+class VARProcess:
     """
     Class represents a known VAR(p) process
 
@@ -2368,7 +2368,7 @@ class VARResultsWrapper(wrap.ResultsWrapper):
 wrap.populate_wrapper(VARResultsWrapper, VARResults)  # noqa:E305
 
 
-class FEVD(object):
+class FEVD:
     """
     Compute and plot Forecast error variance decomposition and asymptotic
     standard errors

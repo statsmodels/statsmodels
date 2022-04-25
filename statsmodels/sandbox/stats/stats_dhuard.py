@@ -151,7 +151,7 @@ def empiricalcdf(data, method='Hazen'):
     return cdf
 
 
-class HistDist(object):
+class HistDist:
     '''Distribution with piecewise linear cdf, pdf is step function
 
     can be created from empiricial distribution or from a histogram (not done yet)

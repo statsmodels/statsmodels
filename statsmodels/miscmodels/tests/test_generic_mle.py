@@ -59,7 +59,7 @@ class MyPareto(GenericLikelihoodModel):
         return -logpdf
 
 
-class CheckGenericMixin(object):
+class CheckGenericMixin:
     # mostly smoke tests for now
 
     def test_summary(self):
@@ -196,7 +196,7 @@ class TwoPeakLLHNoExog(GenericLikelihoodModel):
         return -sumlogl
 
 
-class TestTwoPeakLLHNoExog(object):
+class TestTwoPeakLLHNoExog:
 
     @classmethod
     def setup_class(cls):

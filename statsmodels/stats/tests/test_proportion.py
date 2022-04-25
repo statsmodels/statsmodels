@@ -172,7 +172,7 @@ def test_confint_multinomial_proportions_zeros():
     assert_allclose(ci_01, ci_0, atol=5e-4)
 
 
-class CheckProportionMixin(object):
+class CheckProportionMixin:
     def test_proptest(self):
         # equality of k-samples
         pt = smprop.proportions_chisquare(self.n_success, self.nobs, value=None)

@@ -792,7 +792,7 @@ class TransfTwo_gen(distributions.rv_continuous):
 
 #TODO: rename these functions to have unique names
 
-class SquareFunc(object):
+class SquareFunc:
     '''class to hold quadratic function with inverse function and derivative
 
     using instance methods instead of class methods, if we want extension

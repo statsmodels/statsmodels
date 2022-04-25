@@ -192,7 +192,7 @@ res0_large = np.array([
     ]).reshape(30, 10, order='F')
 
 
-class CheckMultiTestsMixin(object):
+class CheckMultiTestsMixin:
 
     @pytest.mark.parametrize('key,val', sorted(rmethods.items()))
     def test_multi_pvalcorrection_rmethods(self, key, val):

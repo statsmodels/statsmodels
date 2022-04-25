@@ -6,7 +6,7 @@ import os
 import numpy as np
 
 
-class Namespace(object):
+class Namespace:
     pass
 
 
@@ -17,7 +17,7 @@ class Namespace(object):
 cur_dir = os.path.abspath(os.path.dirname(__file__))
 
 
-class Anes(object):
+class Anes:
     def __init__(self):
         """r
         Results are from Stata 11 (checked vs R nnet package).
@@ -246,7 +246,7 @@ class Anes(object):
     mnlogit_basezero = mnlogit_basezero()
 
 
-class DiscreteL1(object):
+class DiscreteL1:
     def __init__(self):
         """
         Special results for L1 models
@@ -434,7 +434,7 @@ class DiscreteL1(object):
     mnlogit = mnlogit()
 
 
-class Spector(object):
+class Spector:
     """
     Results are from Stata 11
     """
@@ -810,7 +810,7 @@ class Spector(object):
     probit = probit()
 
 
-class RandHIE(object):
+class RandHIE:
     """
     Results obtained from Stata 11
     """

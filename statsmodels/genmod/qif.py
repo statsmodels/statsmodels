@@ -10,7 +10,7 @@ import statsmodels.base.wrapper as wrap
 from statsmodels.tools.decorators import cache_readonly
 
 
-class QIFCovariance(object):
+class QIFCovariance:
     """
     A covariance model for quadratic inference function regression.
 

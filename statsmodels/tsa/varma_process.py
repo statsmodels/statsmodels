@@ -435,7 +435,7 @@ class _Var(object):
         return vargenerate(self.arhat, u, initvalues=self.y)
 
 
-class VarmaPoly(object):
+class VarmaPoly:
     '''class to keep track of Varma polynomial format
 
 

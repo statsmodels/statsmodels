@@ -74,7 +74,7 @@ class _Bunch(object):
         return "\n".join(tab)
 
 
-class Table(object):
+class Table:
     """
     A two-way contingency table.
 
@@ -913,7 +913,7 @@ class Table2x2(SquareTable):
         return tab
 
 
-class StratifiedTable(object):
+class StratifiedTable:
     """
     Analyses for a collection of 2x2 contingency tables.
 

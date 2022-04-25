@@ -24,7 +24,7 @@ from statsmodels.tools.sm_exceptions import (
 from statsmodels.tools.validation import bool_like
 
 
-class CovStruct(object):
+class CovStruct:
     """
     Base class for correlation and covariance structures.
 
@@ -1484,7 +1484,7 @@ class Equivalence(CovStruct):
         # Initialize so that any equivalence class containing a
         # variance parameter has value 1.
         self.dep_params = defaultdict(lambda: 0.)
-        self._var_classes = set([])
+        self._var_classes = set()
         for gp in self.model.group_labels:
             for lb in self.pairs[gp]:
                 j1, j2 = self.pairs[gp][lb]

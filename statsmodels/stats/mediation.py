@@ -20,7 +20,7 @@ import pandas as pd
 from statsmodels.graphics.utils import maybe_name_or_idx
 
 
-class Mediation(object):
+class Mediation:
     """
     Conduct a mediation analysis.
 
@@ -341,7 +341,7 @@ def _pvalue(vec):
     return 2 * min(sum(vec > 0), sum(vec < 0)) / float(len(vec))
 
 
-class MediationResults(object):
+class MediationResults:
     """
     A class for holding the results of a mediation analysis.
 

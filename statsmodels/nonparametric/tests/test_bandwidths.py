@@ -25,7 +25,7 @@ Xi = mixture_rvs([.25,.75], size=200, dist=[stats.norm, stats.norm],
                 kwargs = (dict(loc=-1,scale=.5),dict(loc=1,scale=.5)))
 
 
-class TestBandwidthCalculation(object):
+class TestBandwidthCalculation:
 
     def test_calculate_bandwidth_gaussian(self):
 
@@ -48,7 +48,7 @@ class TestBandwidthCalculation(object):
         assert_allclose(bw, bw_expected)
 
 
-class CheckNormalReferenceConstant(object):
+class CheckNormalReferenceConstant:
 
     def test_calculate_normal_reference_constant(self):
         const = self.constant
@@ -80,7 +80,7 @@ class TestTriweight(CheckNormalReferenceConstant):
     constant = 3.15
 
 
-class BandwidthZero(object):
+class BandwidthZero:
 
     def test_bandwidth_zero(self):
 

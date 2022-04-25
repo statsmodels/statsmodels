@@ -13,7 +13,7 @@ from statsmodels.sandbox.nonparametric import smoothers
 from statsmodels.regression.linear_model import OLS, WLS
 
 
-class CheckSmoother(object):
+class CheckSmoother:
 
     def test_predict(self):
         assert_almost_equal(self.res_ps.predict(self.x),
@@ -34,7 +34,7 @@ class CheckSmoother(object):
 
 
 
-class BasePolySmoother(object):
+class BasePolySmoother:
 
     @classmethod
     def setup_class(cls):
