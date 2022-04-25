@@ -2756,6 +2756,7 @@ class RegressionResults(base.LikelihoodModelResults):
             diagn_left = diagn_right = []
             top_left = [elem for elem in top_left if elem[0] in slimlist]
             top_right = [elem for elem in top_right if elem[0] in slimlist]
+            top_right = top_right + [("",[])] * (len(top_left) - len(top_right))
         else:
             diagn_left = [('Omnibus:', ["%#6.3f" % omni]),
                           ('Prob(Omnibus):', ["%#6.3f" % omnipv]),

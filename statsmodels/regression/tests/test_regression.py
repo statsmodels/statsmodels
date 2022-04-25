@@ -1615,8 +1615,10 @@ def test_slim_summary(reset_randomstate):
     x = np.random.standard_normal((100, 1))
     x = x + np.random.standard_normal((100, 5))
     res = OLS(y, x).fit()
-    summ = res.summary()
-    summ2 = res.summary()
-    slim_summ = res.summary(slim=True)
-    assert str(summ) == str(summ2)
-    assert str(slim_summ) != str(summ)
+    import copy
+    summ = copy.deepcopy(res.summary())
+    slim_summ = copy.deepcopy(res.summary(slim=True))
+    assert len(summ.tables) == 3
+    assert len(slim_summ.tables) == 2
+    assert summ.tables[0].as_text() != slim_summ.tables[0].as_text()
+    assert slim_summ.tables[1].as_text() == summ.tables[1].as_text()
