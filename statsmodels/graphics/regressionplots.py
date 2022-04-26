@@ -387,7 +387,7 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
     #NOTE: there is no interaction between possible missing data and
     #obs_labels yet, so this will need to be tweaked a bit for this case
     fig, ax = utils.create_mpl_ax(ax)
-    print("eval_env:", eval_env)
+
     # strings, use patsy to transform to data
     if isinstance(endog, str):
         endog = dmatrix(endog + "-1", data, eval_env=eval_env)
