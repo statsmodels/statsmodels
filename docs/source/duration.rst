@@ -37,7 +37,7 @@ Here we create a ``SurvfuncRight`` object using data from the
 We fit the survival distribution only for the female subjects.
 
 
-.. code-block:: python
+.. ipython:: python
 
    import statsmodels.api as sm
 
@@ -48,7 +48,7 @@ We fit the survival distribution only for the female subjects.
 The main features of the fitted survival distribution can be seen by
 calling the ``summary`` method:
 
-.. code-block:: python
+.. ipython:: python
 
     sf.summary().head()
 
@@ -57,21 +57,21 @@ of the survival distribution.  Since only around 30% of the subjects
 died during this study, we can only estimate quantiles below the 0.3
 probability point:
 
-.. code-block:: python
+.. ipython:: python
 
     sf.quantile(0.25)
     sf.quantile_ci(0.25)
 
 To plot a single survival function, call the ``plot`` method:
 
-.. code-block:: python
+.. ipython:: python
 
     sf.plot()
 
 Since this is a large dataset with a lot of censoring, we may wish
 to not plot the censoring symbols:
 
-.. code-block:: python
+.. ipython:: python
 
     fig = sf.plot()
     ax = fig.get_axes()[0]
@@ -82,7 +82,7 @@ We can also add a 95% simultaneous confidence band to the plot.
 Typically these bands only plotted for central part of the
 distribution.
 
-.. code-block:: python
+.. ipython:: python
 
     fig = sf.plot()
     lcb, ucb = sf.simultaneous_cb()
@@ -96,7 +96,7 @@ distribution.
 Here we plot survival functions for two groups (females and males) on
 the same axes:
 
-.. code-block:: python
+.. ipython:: python
 
     gb = data.groupby("sex")
     ax = plt.axes()
@@ -117,13 +117,13 @@ We can formally compare two survival distributions with ``survdiff``,
 which implements several standard nonparametric procedures.  The
 default procedure is the logrank test:
 
-.. code-block:: python
+.. ipython:: python
 
     stat, pv = sm.duration.survdiff(data.futime, data.death, data.sex)
 
 Here are some of the other testing procedures implemented by survdiff:
 
-.. code-block:: python
+.. ipython:: python
 
     # Fleming-Harrington with p=1, i.e. weight by pooled survival time
     stat, pv = sm.duration.survdiff(data.futime, data.death, data.sex, weight_type='fh', fh_p=1)
@@ -147,7 +147,7 @@ the hazard (instantaneous event rate) is multiplied by a given factor
 depending on the value of the covariates.
 
 
-.. code-block:: python
+.. ipython:: python
 
    import statsmodels.api as sm
    import statsmodels.formula.api as smf
