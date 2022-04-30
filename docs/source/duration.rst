@@ -140,13 +140,13 @@ Here are some of the other testing procedures implemented by survdiff:
 .. ipython:: python
    :okwarning:
 
-    # fleming-Harrington with p=1, i.e. weight by pooled survival time
+    # Fleming-Harrington with p=1, i.e. weight by pooled survival time
     stat, pv = sm.duration.survdiff(data.futime, data.death, data.sex, weight_type='fh', fh_p=1)
 
-    # gehan-Breslow, weight by number at risk
+    # Gehan-Breslow, weight by number at risk
     stat, pv = sm.duration.survdiff(data.futime, data.death, data.sex, weight_type='gb')
 
-    # tarone-Ware, weight by the square root of the number at risk
+    # Tarone-Ware, weight by the square root of the number at risk
     stat, pv = sm.duration.survdiff(data.futime, data.death, data.sex, weight_type='tw')
 
 
