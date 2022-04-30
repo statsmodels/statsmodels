@@ -6,7 +6,7 @@ set PATH=C:\Py;C:\Py\Scripts;C:\Py\Library\bin;%PATH%
 conda config --set always_yes yes
 conda update conda --quiet
 IF Defined SCIPY (
-    conda install numpy=%NUMPY% scipy=%SCIPY% icc_rt cython pandas pip nose patsy --quiet
+    conda install numpy=%NUMPY% scipy=%SCIPY% icc_rt "cython>=0.29.28,<3.0.0" pandas pip nose patsy --quiet
 ) else (
-    conda install numpy scipy cython pandas pip nose patsy --quiet
+    conda install numpy scipy "cython>=0.29.28,<3.0.0" pandas pip nose patsy --quiet
 )
