@@ -38,6 +38,7 @@ We fit the survival distribution only for the female subjects.
 
 
 .. ipython:: python
+   :okwarning:
 
    import statsmodels.api as sm
 
@@ -49,6 +50,7 @@ The main features of the fitted survival distribution can be seen by
 calling the ``summary`` method:
 
 .. ipython:: python
+   :okwarning:
 
     sf.summary().head()
 
@@ -58,6 +60,7 @@ died during this study, we can only estimate quantiles below the 0.3
 probability point:
 
 .. ipython:: python
+   :okwarning:
 
     sf.quantile(0.25)
     sf.quantile_ci(0.25)
@@ -65,17 +68,21 @@ probability point:
 To plot a single survival function, call the ``plot`` method:
 
 .. ipython:: python
+   :okwarning:
 
+    @savefig duration_survival_plot1.png
     sf.plot()
 
 Since this is a large dataset with a lot of censoring, we may wish
 to not plot the censoring symbols:
 
 .. ipython:: python
+   :okwarning:
 
     fig = sf.plot()
     ax = fig.get_axes()[0]
     pt = ax.get_lines()[1]
+    @savefig duration_survival_nocensor_plot.png
     pt.set_visible(False)
 
 We can also add a 95% simultaneous confidence band to the plot.
@@ -83,6 +90,7 @@ Typically these bands only plotted for central part of the
 distribution.
 
 .. ipython:: python
+   :okwarning:
 
     fig = sf.plot()
     lcb, ucb = sf.simultaneous_cb()
@@ -91,47 +99,54 @@ distribution.
     ax.set_xlim(365, 365*10)
     ax.set_ylim(0.7, 1)
     ax.set_ylabel("Proportion alive")
+    @savefig duration_survival_95ci_plot.png
     ax.set_xlabel("Days since enrollment")
 
 Here we plot survival functions for two groups (females and males) on
 the same axes:
 
 .. ipython:: python
+   :okwarning:
 
-    gb = data.groupby("sex")
-    ax = plt.axes()
-    sexes = []
-    for g in gb:
-        sexes.append(g[0])
-        sf = sm.SurvfuncRight(g[1]["futime"], g[1]["death"])
-        sf.plot(ax)
-    li = ax.get_lines()
-    li[1].set_visible(False)
-    li[3].set_visible(False)
-    plt.figlegend((li[0], li[2]), sexes, "center right")
-    plt.ylim(0.6, 1)
-    ax.set_ylabel("Proportion alive")
-    ax.set_xlabel("Days since enrollment")
+   import matplotlib.pyplot as plt
+
+   gb = data.groupby("sex")
+   ax = plt.axes()
+   sexes = []
+   for g in gb:
+       sexes.append(g[0])
+       sf = sm.SurvfuncRight(g[1]["futime"], g[1]["death"])
+       sf.plot(ax)
+   li = ax.get_lines()
+   li[1].set_visible(False)
+   li[3].set_visible(False)
+   plt.figlegend((li[0], li[2]), sexes, "center right")
+   plt.ylim(0.6, 1)
+   ax.set_ylabel("Proportion alive")
+   @savefig duration_survival_bysex_plot.png
+   ax.set_xlabel("Days since enrollment")
 
 We can formally compare two survival distributions with ``survdiff``,
 which implements several standard nonparametric procedures.  The
 default procedure is the logrank test:
 
 .. ipython:: python
+   :okwarning:
 
     stat, pv = sm.duration.survdiff(data.futime, data.death, data.sex)
 
 Here are some of the other testing procedures implemented by survdiff:
 
 .. ipython:: python
+   :okwarning:
 
-    # Fleming-Harrington with p=1, i.e. weight by pooled survival time
+    # fleming-Harrington with p=1, i.e. weight by pooled survival time
     stat, pv = sm.duration.survdiff(data.futime, data.death, data.sex, weight_type='fh', fh_p=1)
 
-    # Gehan-Breslow, weight by number at risk
+    # gehan-Breslow, weight by number at risk
     stat, pv = sm.duration.survdiff(data.futime, data.death, data.sex, weight_type='gb')
 
-    # Tarone-Ware, weight by the square root of the number at risk
+    # tarone-Ware, weight by the square root of the number at risk
     stat, pv = sm.duration.survdiff(data.futime, data.death, data.sex, weight_type='tw')
 
 
@@ -148,6 +163,8 @@ depending on the value of the covariates.
 
 
 .. ipython:: python
+   :okexcept:
+   :okwarning:
 
    import statsmodels.api as sm
    import statsmodels.formula.api as smf
@@ -159,10 +176,7 @@ depending on the value of the covariates.
    data["female"] = (data["sex"] == "F").astype(int)
    data["year"] = data["sample.yr"] - min(data["sample.yr"])
    status = data["death"].values
-
-   mod = smf.phreg("futime ~ 0 + age + female + creatinine + "
-                   "np.sqrt(kappa) + np.sqrt(lam) + year + mgus",
-                   data, status=status, ties="efron")
+   mod = smf.phreg("futime ~ 0 + age + female + creatinine + np.sqrt(kappa) + np.sqrt(lam) + year + mgus", data, status=status, ties="efron")
    rslt = mod.fit()
    print(rslt.summary())
 
