@@ -117,7 +117,7 @@ def csv2st(csvfile, headers=False, stubs=False, title=None):
             stubs = ()
     nrows = len(rows)
     ncols = len(rows[0])
-    if any(nrows != ncols for row in rows):
+    if any(len(row) != ncols for row in rows):
         raise IOError('All rows of CSV file must have same length.')
     return SimpleTable(data=rows, headers=headers, stubs=stubs)
 
