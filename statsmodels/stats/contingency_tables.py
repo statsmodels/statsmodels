@@ -441,6 +441,8 @@ class SquareTable(Table):
         If True and any cell count is zero, add 0.5 to all values
         in the table.
 
+    Notes
+    -----
     These methods should only be used when the rows and columns of the
     table have the same categories.  If `table` is provided as a
     Pandas DataFrame, the row and column indices will be extended to
@@ -471,14 +473,15 @@ class SquareTable(Table):
 
         Returns
         -------
-        A bunch with attributes:
+        Bunch
+            A bunch with attributes
 
-        statistic : float
-            chisquare test statistic
-        p-value : float
-            p-value of the test statistic based on chisquare distribution
-        df : int
-            degrees of freedom of the chisquare distribution
+            * statistic : float
+                chisquare test statistic
+            * p-value : float
+                p-value of the test statistic based on chisquare distribution
+            * df : int
+                degrees of freedom of the chisquare distribution
 
         Notes
         -----
@@ -529,14 +532,17 @@ class SquareTable(Table):
             estimates of the covariance matrix for the estimated
             difference between the row margins and the column margins.
 
-        Returns a bunch with attributes:
+        Returns
+        -------
+        Bunch
+            A bunch with attributes:
 
-        statistic : float
-            The chi^2 test statistic
-        pvalue : float
-            The p-value of the test statistic
-        df : int
-            The degrees of freedom of the reference distribution
+            * statistic : float
+                The chi^2 test statistic
+            * pvalue : float
+                The p-value of the test statistic
+            * df : int
+                The degrees of freedom of the reference distribution
 
         Notes
         -----
@@ -998,7 +1004,7 @@ class StratifiedTable:
 
         Returns
         -------
-        A StratifiedTable instance.
+        StratifiedTable
         """
 
         if not isinstance(data, pd.DataFrame):
@@ -1036,7 +1042,8 @@ class StratifiedTable:
 
         Returns
         -------
-        A bunch containing the chi^2 test statistic and p-value.
+        Bunch
+            A bunch containing the chi^2 test statistic and p-value.
         """
 
         statistic = np.sum(self.table[0, 0, :] -

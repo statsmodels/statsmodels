@@ -4814,17 +4814,33 @@ wrap.populate_wrapper(MLEResultsWrapper, MLEResults)  # noqa:E305
 
 class PredictionResults(pred.PredictionResults):
     """
+    Prediction result from MLE models
 
     Parameters
     ----------
+    model : MLEModel
+        The models used to make the prediction
     prediction_results : kalman_filter.PredictionResults instance
         Results object from prediction after fitting or filtering a state space
         model.
     row_labels : iterable
         Row labels for the predicted data.
+    information_set : str
+        Name of information set
+    signal_only : bool
+        Whether the prediction is for the signal only
 
     Attributes
     ----------
+    model : MLEModel
+        The models used to make the prediction
+    prediction_results : kalman_filter.PredictionResults instance
+        Results object from prediction after fitting or filtering a state space
+        model.
+    information_set : str
+        Name of information set
+    signal_only : bool
+        Whether the prediction is for the signal only
     """
     def __init__(self, model, prediction_results, row_labels=None,
                  information_set='predicted', signal_only=False):
