@@ -1570,7 +1570,7 @@ def breaks_hansen(olsresults):
     f = nobs * (ft[:, :, None] * ft[:, None, :]).sum(0)
     s = (score[:, :, None] * score[:, None, :]).sum(0)
     h = np.trace(np.dot(np.linalg.inv(f), s))
-    crit95 = np.array([(2, 1.9), (6, 3.75), (15, 3.75), (19, 4.52)],
+    crit95 = np.array([(2, 1.01), (6, 1.9), (15, 3.75), (19, 4.52)],
                       dtype=[("nobs", int), ("crit", float)])
     # TODO: get critical values from Bruce Hansen's 1992 paper
     return h, crit95
