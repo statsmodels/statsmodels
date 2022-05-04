@@ -5,11 +5,10 @@ python -m pip install -e .
 pytest --cov=statsmodels statsmodels
 coverage html
 """
-from setuptools import Extension, find_packages, setup
+from setuptools import Command, Extension, find_packages, setup
 from setuptools.dist import Distribution
 
 from collections import defaultdict
-from distutils.command.clean import clean
 import fnmatch
 import os
 from os.path import join as pjoin, relpath
@@ -192,7 +191,7 @@ statespace_exts = [
 ]
 
 
-class CleanCommand(clean):
+class CleanCommand(Command):
     def run(self):
         msg = """
 
@@ -208,17 +207,17 @@ Use one of:
 
 
 def update_extension(extension, requires_math=True):
-    import numpy  # noqa: F811
-    from numpy.distutils.log import set_verbosity
-    from numpy.distutils.misc_util import get_info
+    import numpy as np
 
-    set_verbosity(1)
-
-    numpy_includes = [numpy.get_include()]
+    numpy_includes = [np.get_include()]
     extra_incl = pkg_resources.resource_filename("numpy", "core/include")
     numpy_includes += [extra_incl]
     numpy_includes = list(set(numpy_includes))
-    numpy_math_libs = get_info("npymath")
+    numpy_math_libs = {
+        "include_dirs": [np.get_include()],
+        "library_dirs": [os.path.join(np.get_include(), '..', 'lib')],
+        "libraries": ["npymath"]
+    }
 
     if not hasattr(extension, "include_dirs"):
         return
