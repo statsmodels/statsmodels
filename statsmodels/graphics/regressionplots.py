@@ -203,7 +203,7 @@ def plot_regress_exog(results, exog_idx, fig=None):
     and CCPR plot for poverty rate.
 
     >>> import statsmodels.api as sm
-    >>> import matplotlib.pyplot as plot
+    >>> import matplotlib.pyplot as plt
     >>> import statsmodels.formula.api as smf
 
     >>> fig = plt.figure(figsize=(8, 6))
@@ -619,7 +619,7 @@ def plot_ccpr(results, exog_idx, ax=None):
     of poverty ('poverty').
 
     >>> import statsmodels.api as sm
-    >>> import matplotlib.pyplot as plot
+    >>> import matplotlib.pyplot as plt
     >>> import statsmodels.formula.api as smf
 
     >>> crime_data = sm.datasets.statecrime.load_pandas()
