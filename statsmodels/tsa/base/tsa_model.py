@@ -147,7 +147,7 @@ def get_index_loc(key, index):
                 key = index[key]
         # Other key types (i.e. string date or some datetime-like object)
         else:
-            # Covert the key to the appropriate date-like object
+            # Convert the key to the appropriate date-like object
             if index_class is PeriodIndex:
                 date_key = Period(key, freq=base_index.freq)
             else:
