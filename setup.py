@@ -192,7 +192,15 @@ statespace_exts = [
 
 
 class CleanCommand(Command):
-    def run(self):
+    user_options = []
+
+    def initialize_options(self) -> None:
+        pass
+
+    def finalize_options(self) -> None:
+        pass
+
+    def run(self) -> None:
         msg = """
 
 python setup.py clean is not supported.
