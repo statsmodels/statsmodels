@@ -384,7 +384,7 @@ class Description:
         mean = df.mean()
         mad = (df - mean).abs().mean()
         std_err = std.copy()
-        std_err.loc[count > 0] /= count.loc[count > 0]
+        std_err.loc[count > 0] /= count.loc[count > 0] ** 0.5
         if self._use_t:
             q = stats.t(count - 1).ppf(1.0 - self._alpha / 2)
         else:
