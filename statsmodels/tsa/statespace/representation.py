@@ -958,7 +958,7 @@ class Representation:
 
     def initialize_diffuse(self):
         """
-        Initialize the statespace model as stationary.
+        Initialize the statespace model as diffuse.
         """
         self.initialize('diffuse')
 
