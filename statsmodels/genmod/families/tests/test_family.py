@@ -61,6 +61,7 @@ def test_tweedie_loglike_obs(power):
     tweedie = Tweedie(var_power=power, eql=False)
     mu = 2.0
     scale = 2.9
+
     def pdf(y):
         return np.exp(tweedie.loglike_obs(
                     endog=y, mu=mu, scale=scale
