@@ -8,7 +8,6 @@ The one parameter exponential family distributions used by GLM.
 
 
 import inspect
-import numbers
 
 import numpy as np
 from scipy import special, stats
@@ -1647,7 +1646,7 @@ class Tweedie(Family):
             if p < 1 or p > 2:
                 # We have not yet implemented the actual likelihood
                 return np.nan
-            
+
             # See: Dunn, Smyth (2004) "Series evaluation of Tweedie
             # exponential dispersion model densities"
             # pdf(y, mu, p, phi) = f(y, theta, phi)
