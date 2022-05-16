@@ -1,9 +1,12 @@
 """
 Test functions for genmod.families.family
 """
+import numpy as np
 import pytest
+from scipy import integrate
 
 import statsmodels.genmod.families as F
+from statsmodels.genmod.families.family import Tweedie
 import statsmodels.genmod.families.links as L
 
 all_links = {
@@ -50,3 +53,17 @@ def test_invalid_family_link(family, links):
 def test_family_link(family, links):
     for link in links:
         assert family(link())
+
+
+@pytest.mark.parametrize("power", (1.1, 1.5, 1.9))
+def test_tweedie_loglike_obs(power):
+    """Test that Tweedie loglike is normalized to 1."""
+    tweedie = Tweedie(var_power=power, eql=False)
+    mu = 2.0
+    scale = 2.9
+    def pdf(y):
+        return np.exp(tweedie.loglike_obs(
+                    endog=y, mu=mu, scale=scale
+        ))
+
+    assert pdf(0) + integrate.quad(pdf, 0, 1e2)[0] == pytest.approx(1, abs=1e-4)
