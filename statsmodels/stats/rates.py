@@ -20,7 +20,52 @@ norm = stats.norm
 
 def test_poisson(count, nobs, value, method=None, alternative="two-sided",
                  dispersion=1):
-    """test for one sample poisson mean or rate
+    """Test for one sample poisson mean or rate
+
+    Parameters
+    ----------
+    count : array_like
+        Observed count, number of events.
+    nobs : arrat_like
+        Currently this is total exposure time of the count variable.
+        This will likely change.
+    value : float, array_like
+        This is the value of poisson rate under the null hypothesis.
+    method : str
+        Method to use for confidence interval.
+        This is required, there is currently no default method.
+        See Notes for available methods.
+    alternative : {'two-sided', 'smaller', 'larger'}
+        alternative hypothesis, which can be two-sided or either one of the
+        one-sided tests.
+    dispersion : float
+        Dispersion scale coefficient for Poisson QMLE. Default is that the
+        data follows a Poisson distribution. Dispersion different from 1
+        correspond to excess-dispersion in Poisson quasi-likelihood (GLM).
+        Dispersion coeffficient different from one is currently only used in
+        wald and score method.
+
+    Returns
+    -------
+    HolderTuple instance with test statistic, pvalue and other attributes.
+
+    Notes
+    -----
+    The implementatio of the hypothesis test is mainly based on the references
+    for the confidence interval, see confint_poisson.
+
+    Available methods are:
+
+    - "score" : based on score test, uses variance under null value
+    - "wald" : based on wald test, uses variance base on estimated rate.
+    - "waldccv" : based on wald test with 0.5 count added to variance
+      computation. This does not use continuity correction for the center of
+      the confidence interval.
+    - "exact-c" central confidence interval based on gamma distribution
+    - "midp-c" : based on midp correction of central exact confidence interval.
+      this uses numerical inversion of the test function. not vectorized.
+    - "sqrt" : based on square root transformed counts
+    - "sqrt-a" based on Anscombe square root transformation of counts + 3/8.
 
     See Also
     --------
@@ -149,8 +194,8 @@ def confint_poisson(count, exposure, method=None, alpha=0.05):
     - "score" : based on score test, uses variance under null value
     - "wald" : based on wald test, uses variance base on estimated rate.
     - "waldccv" : based on wald test with 0.5 count added to variance
-      computation. This does not use continuity correct for the center of the
-      confidence interval.
+      computation. This does not use continuity correction for the center of
+      the confidence interval.
     - "midp-c" : based on midp correction of central exact confidence interval.
       this uses numerical inversion of the test function. not vectorized.
     - "jeffreys" : based on Jeffreys' prior. computed using gamma distribution
@@ -167,7 +212,8 @@ def confint_poisson(count, exposure, method=None, alpha=0.05):
     sqrt-v is a corrected square root method attributed to vandenbrouke, which
     might also be deleted.
 
-    todo:
+    Todo:
+
     - missing dispersion,
     - maybe split nobs and exposure (? needed in NB). Exposure could be used
       to standardize rate.
@@ -335,8 +381,8 @@ def tolerance_int_poisson(count, exposure, prob=0.95, exposure_new=1.,
 
     See Also
     --------
-    `confint_poisson`
-    `confint_quantile_poisson`
+    confint_poisson
+    confint_quantile_poisson
 
     References
     ----------
@@ -411,8 +457,8 @@ def confint_quantile_poisson(count, exposure, prob, exposure_new=1.,
 
     See Also
     --------
-    `confint_poisson`
-    `tolerance_int_poisson`
+    confint_poisson
+    tolerance_int_poisson
 
     References
     ----------
@@ -467,7 +513,7 @@ def _invert_test_confint_2indep(
         compare="diff",
         method_start="wald"
         ):
-    """invert hypothesis test to get confidence interval
+    """invert hypothesis test to get confidence interval for 2indep
     """
 
     def func(r):
@@ -520,8 +566,12 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, value=None,
         Number of events in second sample.
     exposure2 : float
         Total exposure (time * subjects) in second sample.
-    ratio: float
+    ratio_null: float
         ratio of the two Poisson rates under the Null hypothesis. Default is 1.
+        Deprecated, use ``value`` instead.
+    value : float
+        Value of the ratio or diff of 2 independent rates under the null
+        hypothesis. Default is equal rates, i.e. 1 for ratio and 0 for diff.
     method : string
         Method for the test statistic and the p-value. Defaults to `'score'`.
         see Notes.
@@ -538,7 +588,7 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, value=None,
         - 'exact-cond': exact conditional test based on binomial distribution
            This uses ``binom_test`` which is minlike in the two-sided case.
         - 'cond-midp': midpoint-pvalue of exact conditional test
-        - 'etest': etest with score test statistic
+        - 'etest' or 'etest-score: etest with score test statistic
         - 'etest-wald': etest with wald test statistic
 
         diff:
@@ -546,6 +596,8 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, value=None,
         - 'wald',
         - 'waldccv'
         - 'score'
+        - 'etest-score' or 'etest: etest with score test statistic
+        - 'etest-wald': etest with wald test statistic
 
     compare : {'diff', 'ratio'}
         Default is "ratio".
@@ -576,15 +628,16 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, value=None,
 
     - 'wald': method W1A, wald test, variance based on separate estimates
     - 'score': method W2A, score test, variance based on estimate under Null
-    - 'wald-log': W3A
-    - 'score-log' W4A
+    - 'wald-log': W3A, wald test for log transformed ratio
+    - 'score-log' W4A, score test for log transformed ratio
     - 'sqrt': W5A, based on variance stabilizing square root transformation
     - 'exact-cond': exact conditional test based on binomial distribution
     - 'cond-midp': midpoint-pvalue of exact conditional test
     - 'etest': etest with score test statistic
     - 'etest-wald': etest with wald test statistic
 
-    The hypothesis test for compare="diff" are based on Ng et al 2007 and ...
+    The hypothesis test for compare="diff" are mainly based on Ng et al 2007
+    and ...
 
     - wald
     - score
@@ -594,16 +647,18 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, value=None,
     Note the etests use the constraint maximum likelihood estimate (cmle) as
     parameters for the underlying Poisson probabilities. The constraint cmle
     parameters are the same as in the score test.
-    This differs from the moment estimates in Krishnamoorty and Thomson.
+    The E-test in Krishnamoorty and Thomson uses a moment estimator instead of
+    the score estimator.
 
     References
     ----------
-    Gu, Ng, Tang, Schucany 2008: Testing the Ratio of Two Poisson Rates,
-    Biometrical Journal 50 (2008) 2, 2008
+    .. [1] Gu, Ng, Tang, Schucany 2008: Testing the Ratio of Two Poisson Rates,
+       Biometrical Journal 50 (2008) 2, 2008
 
-    Ng, H. K. T., K. Gu, and M. L. Tang. 2007. “A Comparative Study of Tests
-    for the Difference of Two Poisson Means.” Computational Statistics & Data
-    Analysis 51 (6): 3085–99. https://doi.org/10.1016/j.csda.2006.02.004.
+    .. [2] Ng, H. K. T., K. Gu, and M. L. Tang. 2007. “A Comparative Study of
+       Tests for the Difference of Two Poisson Means.”
+       Computational Statistics & Data Analysis 51 (6): 3085–99.
+       https://doi.org/10.1016/j.csda.2006.02.004.
 
     See Also
     --------
@@ -793,8 +848,11 @@ def etest_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=1,
         Number of events in first sample
     exposure2 : float
         Total exposure (time * subjects) in first sample
-    ratio : float
+    ratio_null : float
         ratio of the two Poisson rates under the Null hypothesis. Default is 1.
+    value : float
+        Value of the ratio or diff of 2 independent rates under the null
+        hypothesis. Default is equal rates, i.e. 1 for ratio and 0 for diff.
     method : {"score", "wald"}
         Method for the test statistic that defines the rejection region.
     alternative : string
@@ -950,11 +1008,7 @@ def tost_poisson_2indep(count1, exposure1, count2, exposure2, low, upp,
     low, upp :
         equivalence margin for the ratio of Poisson rates
     method: string
-        Method for the test statistic and the p-value. Defaults to `'score'`.
-        Current Methods are based on Gu et. al 2008
-        Implemented are 'wald', 'score' and 'sqrt' based asymptotic normal
-        distribution, and the exact conditional test 'exact-cond', and its
-        mid-point version 'cond-midp', see Notes
+        TOST uses ``test_poisson_2indep`` and has the same methods.
 
     Returns
     -------
@@ -1072,6 +1126,67 @@ def confint_poisson_2indep(count1, exposure1, count2, exposure2,
                            method_mover="score",
                            ):
     """Confidence interval for ratio of 2 indep poisson rates
+
+    Parameters
+    ----------
+    count1 : int
+        Number of events in first sample.
+    exposure1 : float
+        Total exposure (time * subjects) in first sample.
+    count2 : int
+        Number of events in second sample.
+    exposure2 : float
+        Total exposure (time * subjects) in second sample.
+    method : string
+        Method for the test statistic and the p-value. Defaults to `'score'`.
+        see Notes.
+
+        ratio:
+
+        - 'wald': NOT YET, method W1A, wald test, variance based on observed
+          rates
+        - 'waldcc' :
+        - 'score': method W2A, score test, variance based on estimate under
+          the Null hypothesis
+        - 'wald-log': W3A, uses log-ratio, variance based on observed rates
+        - 'score-log' W4A, uses log-ratio, variance based on estimate under
+          the Null hypothesis
+        - 'sqrt': W5A, based on variance stabilizing square root transformation
+        - 'sqrtcc' :
+        - 'exact-cond': NOT YET, exact conditional test based on binomial
+          distribution
+           This uses ``binom_test`` which is minlike in the two-sided case.
+        - 'cond-midp': NOT YET, midpoint-pvalue of exact conditional test
+        - 'mover' :
+
+        diff:
+
+        - 'wald',
+        - 'waldccv'
+        - 'score'
+        - 'mover'
+
+    compare : {'diff', 'ratio'}
+        Default is "ratio".
+        If compare is `diff`, then the hypothesis test is for
+        diff = rate1 - rate2.
+        If compare is `ratio`, then the hypothesis test is for the
+        rate ratio defined by ratio = rate1 / rate2.
+    alternative : string
+        The alternative hypothesis, H1, has to be one of the following
+
+        - 'two-sided': H1: ratio of rates is not equal to ratio_null (default)
+        - 'larger' :   H1: ratio of rates is larger than ratio_null
+        - 'smaller' :  H1: ratio of rates is smaller than ratio_null
+
+    alpha : float in (0, 1)
+        Significance level, nominal coverage of the confidence interval is
+        1 - alpha.
+
+    Returns
+    -------
+    tuple (low, upp) : confidence limits.
+
     """
 
     # shortcut names
@@ -1179,14 +1294,24 @@ def confint_poisson_2indep(count1, exposure1, count2, exposure2,
 
 
 def power_poisson_2indep(rate1, nobs1, rate2, nobs2, exposure, value=0,
-                            alpha=0.05, dispersion=1, alternative="smaller",
-                            method_var="alt",
-                            return_results=True):
+                         alpha=0.05, dispersion=1, alternative="smaller",
+                         method_var="alt",
+                         return_results=True):
     """power for test of ratio of 2 independent poisson rates
 
     This is based on Zhu and Zhu and Lakkis. It does not directly correspond
     to `test_poisson_2indep`.
 
+    References
+    ----------
+    .. [1] Zhu, Haiyuan. 2017. “Sample Size Calculation for Comparing Two
+       Poisson or Negative Binomial Rates in Noninferiority or Equivalence
+       Trials.” Statistics in Biopharmaceutical Research, March.
+       https://doi.org/10.1080/19466315.2016.1225594
+    .. [2] Zhu, Haiyuan, and Hassan Lakkis. 2014. “Sample Size Calculation for
+       Comparing Two Negative Binomial Rates.” Statistics in Medicine 33 (3):
+       376–87. https://doi.org/10.1002/sim.5947.
+    .. [3] PASS documentation
     """
     # TODO: avoid possible circular import, check if needed
     from statsmodels.stats.power import normal_power_het
@@ -1230,11 +1355,20 @@ def power_poisson_2indep(rate1, nobs1, rate2, nobs2, exposure, value=0,
 
 
 def power_equivalence_poisson_2indep(rate1, nobs1, rate2, nobs2, exposure,
-                                        low, upp, alpha=0.05, dispersion=1,
-                                        method_var="alt"):
+                                     low, upp, alpha=0.05, dispersion=1,
+                                     method_var="alt"):
     """power for equivalence test of ratio of 2 independent poisson rates
 
-
+    References
+    ----------
+    .. [1] Zhu, Haiyuan. 2017. “Sample Size Calculation for Comparing Two
+       Poisson or Negative Binomial Rates in Noninferiority or Equivalence
+       Trials.” Statistics in Biopharmaceutical Research, March.
+       https://doi.org/10.1080/19466315.2016.1225594
+    .. [2] Zhu, Haiyuan, and Hassan Lakkis. 2014. “Sample Size Calculation for
+       Comparing Two Negative Binomial Rates.” Statistics in Medicine 33 (3):
+       376–87. https://doi.org/10.1002/sim.5947.
+    .. [3] PASS documentation
     """
     nobs_ratio = nobs2 / nobs1
     v1 = dispersion / exposure * (1 / rate1 + 1 / (nobs_ratio * rate2))
@@ -1284,9 +1418,9 @@ def _power_equivalence_het_v0(es_low, es_upp, nobs, alpha=0.05,
 
 
 def _power_equivalence_het(es_low, es_upp, nobs, alpha=0.05,
-                              std_null_low=None,
-                              std_null_upp=None,
-                              std_alternative=None):
+                           std_null_low=None,
+                           std_null_upp=None,
+                           std_alternative=None):
     """power for equivalence test
 
     """
@@ -1297,6 +1431,8 @@ def _power_equivalence_het(es_low, es_upp, nobs, alpha=0.05,
 
     crit = norm.isf(alpha)
 
+    # Note: rejection region is an interval [low, upp]
+    # Here we compute the complement of the two tail probabilities
     p1 = norm.sf((np.sqrt(nobs) * es_low - crit * s0_low) / s1)
     p2 = norm.cdf((np.sqrt(nobs) * es_upp + crit * s0_upp) / s1)
     pow_ = 1 - (p1 + p2)
@@ -1432,18 +1568,29 @@ def _var_cmle_negbin(rate1, rate2, nobs_ratio, exposure=1, value=1,
     return v * nobs_ratio, r1, r2
 
 
-def power_negbin_2indep(rate1, nobs1, rate2, nobs2, exposure, value=1,
-                           alpha=0.05, dispersion=0.01,
-                           alternative="two-sided",
-                           method_var="alt",
-                           return_results=True):
+def power_negbin_2indep(rate1, nobs1, rate2, nobs2, exposure,
+                        value=1,
+                        alpha=0.05,
+                        dispersion=0.01,
+                        alternative="two-sided",
+                        method_var="alt",
+                        return_results=True):
     """power for one-sided test of ratio of 2 independent poisson rates
 
     this is currently for superiority and non-inferiority testing
 
     signature not adjusted yet
 
-    incomplete alternatives, var options missing
+    References
+    ----------
+    .. [1] Zhu, Haiyuan. 2017. “Sample Size Calculation for Comparing Two
+       Poisson or Negative Binomial Rates in Noninferiority or Equivalence
+       Trials.” Statistics in Biopharmaceutical Research, March.
+       https://doi.org/10.1080/19466315.2016.1225594
+    .. [2] Zhu, Haiyuan, and Hassan Lakkis. 2014. “Sample Size Calculation for
+       Comparing Two Negative Binomial Rates.” Statistics in Medicine 33 (3):
+       376–87. https://doi.org/10.1002/sim.5947.
+    .. [3] PASS documentation
     """
     # TODO: avoid possible circular import, check if needed
     from statsmodels.stats.power import normal_power_het
@@ -1492,12 +1639,22 @@ def power_negbin_2indep(rate1, nobs1, rate2, nobs2, exposure, value=1,
 
 
 def power_equivalence_neginb_2indep(rate1, nobs1, rate2, nobs2, exposure,
-                                        low, upp, alpha=0.05, dispersion=0,
-                                        method_var="alt"):
+                                    low, upp, alpha=0.05, dispersion=0,
+                                    method_var="alt"):
     """
     Power for equivalence test of ratio of 2 indep. negative binomial rates
 
 
+    References
+    ----------
+    .. [1] Zhu, Haiyuan. 2017. “Sample Size Calculation for Comparing Two
+       Poisson or Negative Binomial Rates in Noninferiority or Equivalence
+       Trials.” Statistics in Biopharmaceutical Research, March.
+       https://doi.org/10.1080/19466315.2016.1225594
+    .. [2] Zhu, Haiyuan, and Hassan Lakkis. 2014. “Sample Size Calculation for
+       Comparing Two Negative Binomial Rates.” Statistics in Medicine 33 (3):
+       376–87. https://doi.org/10.1002/sim.5947.
+    .. [3] PASS documentation
     """
     nobs_ratio = nobs2 / nobs1
 
