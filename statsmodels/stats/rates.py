@@ -18,6 +18,33 @@ from statsmodels.stats._inference_tools import _mover_confint
 norm = stats.norm
 
 
+method_names_poisson_1samp = {
+    "test": [
+        "wald",
+        "score",
+        "exact-c",
+        "midp-c",
+        "waldccv",
+        "sqrt-a",
+        "sqrt-v",
+        "sqrt",
+        ],
+    "confint": [
+        "wald",
+        "score",
+        "exact-c",
+        "midp-c",
+        "jeff",
+        "waldccv",
+        "sqrt-a",
+        "sqrt-v",
+        "sqrt",
+        "sqrt-cent",
+        "sqrt-centcc",
+        ]
+    }
+
+
 def test_poisson(count, nobs, value, method=None, alternative="two-sided",
                  dispersion=1):
     """Test for one sample poisson mean or rate
@@ -531,6 +558,46 @@ def _invert_test_confint_2indep(
     upp = optimize.fmin(func, ci[1], xtol=1e-8, disp=False)
     assert np.size(low) == 1
     return low[0], upp[0]
+
+
+method_names_poisson_2indep = {
+    "test": {
+        "ratio": [
+            "wald",
+            "score",
+            "score-log",
+            "wald-log",
+            "exact-cond",
+            "cond-midp",
+            "sqrt",
+            "etest-score",
+            "etest-wald"
+            ],
+        "diff": [
+            "wald",
+            "score",
+            "waldccv",
+            "etest-score",
+            "etest-wald"
+            ]
+        },
+    "confint": {
+        "ratio": [
+            "waldcc",
+            "score",
+            "score-log",
+            "wald-log",
+            "sqrtcc",
+            "mover",
+            ],
+        "diff": [
+            "wald",
+            "score",
+            "waldccv",
+            "mover"
+            ]
+        }
+    }
 
 
 def test_poisson_2indep(count1, exposure1, count2, exposure2, value=None,

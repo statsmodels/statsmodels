@@ -21,6 +21,8 @@ from statsmodels.stats.rates import (
     power_poisson_diff_2indep,
     power_equivalence_neginb_2indep,
     power_negbin_2indep,
+    method_names_poisson_1samp,
+    method_names_poisson_2indep,
     )
 
 methods = ["wald", "score", "exact-c", "waldccv", "sqrt-a", "sqrt-v", "midp-c",
@@ -172,6 +174,27 @@ def test_tol_int(case):
         method=meth, alpha=0.05, alternative="smaller")
 
     assert_equal(ciq[0], rs[0])
+
+
+class TestMethodsCompar1samp():
+    # check that all methods for test and confint produce similar results
+
+    @pytest.mark.parametrize('meth', method_names_poisson_1samp["test"])
+    def test_test(self, meth):
+        count1, n1 = 60, 514.775
+        tst = smr.test_poisson(count1, n1, method=meth, value=0.1,
+                               alternative='two-sided')
+
+        assert_allclose(tst.pvalue, 0.25, rtol=0.1)
+
+    @pytest.mark.parametrize('meth', method_names_poisson_1samp["confint"])
+    def test_confint(self, meth):
+        count1, n1 = 60, 514.775
+        ci = confint_poisson(count1, n1, method=meth, alpha=0.05)
+        assert_allclose(ci, [0.089, 0.158], rtol=0.1)
+
+
+# ######## below are 2indep tests
 
 
 methods_diff = ["wald", "score", "waldccv",
@@ -656,6 +679,43 @@ def test_alternative(case):
     _, pv = smr.test_poisson_2indep(count1, n1, count2, n2, method=meth,
                                     ratio_null=1.2, alternative=alt)
     assert_allclose(pv, cases_alt[case], rtol=1e-13)
+
+
+class TestMethodsCompare2indep():
+    # check that all methods for test and confint produce similar results
+
+    @pytest.mark.parametrize(
+        "compare, meth",
+        [("ratio", meth) for meth
+         in method_names_poisson_2indep["test"]["ratio"]] +
+        [("diff", meth) for meth
+         in method_names_poisson_2indep["test"]["diff"]]
+        )
+    def test_test(self, meth, compare):
+        count1, n1, count2, n2 = 60, 514.775, 40, 543.0870000
+        tst = smr.test_poisson_2indep(count1, n1, count2, n2, method=meth,
+                                      compare=compare,
+                                      value=None, alternative='two-sided')
+
+        assert_allclose(tst.pvalue, 0.0245, rtol=0.2)
+
+    @pytest.mark.parametrize(
+        "compare, meth",
+        [("ratio", meth) for meth
+         in method_names_poisson_2indep["confint"]["ratio"]] +
+        [("diff", meth) for meth
+         in method_names_poisson_2indep["confint"]["diff"]]
+        )
+    def test_confint(self, meth, compare):
+        count1, n1, count2, n2 = 60, 514.775, 40, 543.0870000
+        if compare == "ratio":
+            ci_val = [1.04, 2.34]
+        else:
+            ci_val = [0.0057, 0.081]
+
+        ci = confint_poisson_2indep(count1, n1, count2, n2, method=meth,
+                                    compare=compare, alpha=0.05)
+        assert_allclose(ci, ci_val, rtol=0.1)
 
 
 def test_y_grid_regression():
