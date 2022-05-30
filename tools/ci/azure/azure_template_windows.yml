@@ -39,7 +39,7 @@ jobs:
     displayName: 'Update essentials'
 
   - script: |
-      python -m pip install -r requirements.txt
+      python -m pip install -r requirements.txt 
       python -m pip install -r requirements-dev.txt
     displayName: 'Install dependencies'
 
