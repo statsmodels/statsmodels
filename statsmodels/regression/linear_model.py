@@ -262,6 +262,7 @@ class RegressionModel(base.LikelihoodModel):
                 "HC1",
                 "HC2",
                 "HC3",
+                "HAC",
                 "hac-panel",
                 "hac-groupsum",
                 "cluster",
