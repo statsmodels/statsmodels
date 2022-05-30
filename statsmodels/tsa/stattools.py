@@ -695,7 +695,7 @@ def acf(
         varacf[2:] *= 1 + 2 * np.cumsum(acf[1:-1] ** 2)
     else:
         varacf = 1.0 / len(x)
-    interval = stats.norm.ppf(1 - alpha / 2.0) * np.sqrt(varacf)
+    interval = stats.norm.ppf(1 - _alpha / 2.0) * np.sqrt(varacf)
     confint = np.array(lzip(acf - interval, acf + interval))
     if not qstat:
         return acf, confint
