@@ -250,8 +250,25 @@ class RegressionModel(base.LikelihoodModel):
         """
         raise NotImplementedError("Subclasses must implement.")
 
-    def fit(self, method="pinv", cov_type='nonrobust', cov_kwds=None,
-            use_t=None, **kwargs):
+    def fit(
+            self,
+            method: Literal["pinv", "qr"] = "pinv",
+            cov_type: Literal[
+                "nonrobust",
+                "fixed scale",
+                "HC0",
+                "HC1",
+                "HC2",
+                "HC3",
+                "HAC",
+                "hac-panel",
+                "hac-groupsum",
+                "cluster",
+            ] = "nonrobust",
+            cov_kwds=None,
+            use_t: bool | None = None,
+            **kwargs
+    ):
         """
         Full fit of the model.
 
