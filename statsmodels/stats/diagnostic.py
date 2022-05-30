@@ -373,6 +373,9 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
         Regression model fitting.
     statsmodels.regression.linear_model.RegressionResults
         Results from linear regression models.
+    statsmodels.stats.stattools.q_stat
+        Ljung-Box test statistic computed from estimated
+        autocorrelations.
 
     Notes
     -----

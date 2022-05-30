@@ -544,6 +544,13 @@ def q_stat(x, nobs):
     p-value : ndarray
         P-value of the Q statistic.
 
+    See Also
+    --------
+    statsmodels.stats.diagnostic.acorr_ljungbox
+        Ljung-Box Q-test for autocorrelation in time series based
+        on a time series rather than the estimated autocorrelation
+        function.
+
     Notes
     -----
     Designed to be used with acf.
@@ -680,24 +687,23 @@ def acf(
     acf = avf[: nlags + 1] / avf[0]
     if not (qstat or alpha):
         return acf
+    _alpha = alpha if alpha is not None else 0.05
+    if bartlett_confint:
+        varacf = np.ones_like(acf) / nobs
+        varacf[0] = 0
+        varacf[1] = 1.0 / nobs
+        varacf[2:] *= 1 + 2 * np.cumsum(acf[1:-1] ** 2)
+    else:
+        varacf = 1.0 / len(x)
+    interval = stats.norm.ppf(1 - _alpha / 2.0) * np.sqrt(varacf)
+    confint = np.array(lzip(acf - interval, acf + interval))
+    if not qstat:
+        return acf, confint
+    qstat, pvalue = q_stat(acf[1:], nobs=nobs)  # drop lag 0
     if alpha is not None:
-        if bartlett_confint:
-            varacf = np.ones_like(acf) / nobs
-            varacf[0] = 0
-            varacf[1] = 1.0 / nobs
-            varacf[2:] *= 1 + 2 * np.cumsum(acf[1:-1] ** 2)
-        else:
-            varacf = 1.0 / len(x)
-        interval = stats.norm.ppf(1 - alpha / 2.0) * np.sqrt(varacf)
-        confint = np.array(lzip(acf - interval, acf + interval))
-        if not qstat:
-            return acf, confint
-    if qstat:
-        qstat, pvalue = q_stat(acf[1:], nobs=nobs)  # drop lag 0
-        if alpha is not None:
-            return acf, confint, qstat, pvalue
-        else:
-            return acf, qstat, pvalue
+        return acf, confint, qstat, pvalue
+    else:
+        return acf, qstat, pvalue
 
 
 def pacf_yw(x, nlags=None, method="adjusted"):
