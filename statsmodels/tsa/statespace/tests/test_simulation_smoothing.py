@@ -7,11 +7,12 @@ License: Simplified-BSD
 import os
 
 import numpy as np
-from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
+from numpy.testing import assert_allclose, assert_equal
+import pytest
 
 from statsmodels import datasets
-from statsmodels.tsa.statespace import mlemodel, sarimax, structural
+from statsmodels.tsa.statespace import mlemodel, sarimax, structural, varmax
 from statsmodels.tsa.statespace.simulation_smoother import (
     SIMULATION_STATE, SIMULATION_DISTURBANCE, SIMULATION_ALL)
 
@@ -159,12 +160,15 @@ class MultivariateVARKnown:
         sim = self.sim
         Z = self.model['design']
 
-        n_disturbance_variates = (
-            (self.model.k_endog + self.model.ssm.k_posdef) * self.model.nobs)
+        nobs = self.model.nobs
+        k_endog = self.model.k_endog
+        k_posdef = self.model.ssm.k_posdef
+        k_states = self.model.k_states
 
         # Test against known quantities (see above for description)
-        sim.simulate(disturbance_variates=np.zeros(n_disturbance_variates),
-                     initial_state_variates=np.zeros(self.model.k_states))
+        sim.simulate(measurement_disturbance_variates=np.zeros(nobs * k_endog),
+                     state_disturbance_variates=np.zeros(nobs * k_posdef),
+                     initial_state_variates=np.zeros(k_states))
         assert_allclose(sim.generated_measurement_disturbance, 0)
         assert_allclose(sim.generated_state_disturbance, 0)
         assert_allclose(sim.generated_state, 0)
@@ -204,13 +208,15 @@ class MultivariateVARKnown:
 
         Z = self.model['design']
 
+        nobs = self.model.nobs
+        k_endog = self.model.k_endog
+        k_posdef = self.model.ssm.k_posdef
+        k_states = self.model.k_states
+
         # Construct the variates
         measurement_disturbance_variates = np.reshape(
-            np.arange(self.model.nobs * self.model.k_endog) / 10.,
-            (self.model.nobs, self.model.k_endog))
-        disturbance_variates = np.r_[
-            measurement_disturbance_variates.ravel(),
-            np.zeros(self.model.nobs * self.model.ssm.k_posdef)]
+            np.arange(nobs * k_endog) / 10., (nobs, k_endog))
+        state_disturbance_variates = np.zeros(nobs * k_posdef)
 
         # Compute some additional known quantities
         generated_measurement_disturbance = np.zeros(
@@ -219,10 +225,11 @@ class MultivariateVARKnown:
         for t in range(self.model.nobs):
             generated_measurement_disturbance[t] = np.dot(
                 chol, measurement_disturbance_variates[t])
+        y = generated_measurement_disturbance.copy()
+        y[np.isnan(self.model.endog)] = np.nan
 
         generated_model = mlemodel.MLEModel(
-            generated_measurement_disturbance, k_states=self.model.k_states,
-            k_posdef=self.model.ssm.k_posdef)
+            y, k_states=k_states, k_posdef=k_posdef)
         for name in ['design', 'obs_cov', 'transition',
                      'selection', 'state_cov']:
             generated_model[name] = self.model[name]
@@ -242,8 +249,10 @@ class MultivariateVARKnown:
             self.results.smoothed_state_disturbance)
 
         # Test against known values
-        sim.simulate(disturbance_variates=disturbance_variates,
-                     initial_state_variates=np.zeros(self.model.k_states))
+        sim.simulate(measurement_disturbance_variates=(
+                        measurement_disturbance_variates),
+                     state_disturbance_variates=state_disturbance_variates,
+                     initial_state_variates=np.zeros(k_states))
         assert_allclose(sim.generated_measurement_disturbance,
                         generated_measurement_disturbance)
         assert_allclose(sim.generated_state_disturbance, 0)
@@ -285,17 +294,17 @@ class MultivariateVARKnown:
         Z = self.model['design']
         T = self.model['transition']
 
+        nobs = self.model.nobs
+        k_endog = self.model.k_endog
+        k_posdef = self.model.ssm.k_posdef
+        k_states = self.model.k_states
+
         # Construct the variates
         measurement_disturbance_variates = np.reshape(
-            np.arange(self.model.nobs * self.model.k_endog) / 10.,
-            (self.model.nobs, self.model.k_endog))
+            np.arange(nobs * k_endog) / 10., (nobs, k_endog))
         state_disturbance_variates = np.reshape(
-            np.arange(self.model.nobs * self.model.ssm.k_posdef) / 10.,
-            (self.model.nobs, self.model.ssm.k_posdef))
-        disturbance_variates = np.r_[
-            measurement_disturbance_variates.ravel(),
-            state_disturbance_variates.ravel()]
-        initial_state_variates = np.zeros(self.model.k_states)
+            np.arange(nobs * k_posdef) / 10., (nobs, k_posdef))
+        initial_state_variates = np.zeros(k_states)
 
         # Compute some additional known quantities
         generated_measurement_disturbance = np.zeros(
@@ -322,10 +331,11 @@ class MultivariateVARKnown:
                                        generated_state_disturbance.T[:, t])
             generated_obs[:, t] = (np.dot(Z, generated_state[:, t]) +
                                    generated_measurement_disturbance.T[:, t])
+        y = generated_obs.copy().T
+        y[np.isnan(self.model.endog)] = np.nan
 
-        generated_model = mlemodel.MLEModel(
-            generated_obs.T, k_states=self.model.k_states,
-            k_posdef=self.model.ssm.k_posdef)
+        generated_model = mlemodel.MLEModel(y, k_states=k_states,
+                                            k_posdef=k_posdef)
         for name in ['design', 'obs_cov', 'transition',
                      'selection', 'state_cov']:
             generated_model[name] = self.model[name]
@@ -347,8 +357,10 @@ class MultivariateVARKnown:
             self.results.smoothed_state_disturbance)
 
         # Test against known values
-        sim.simulate(disturbance_variates=disturbance_variates,
-                     initial_state_variates=np.zeros(self.model.k_states))
+        sim.simulate(measurement_disturbance_variates=(
+                        measurement_disturbance_variates),
+                     state_disturbance_variates=state_disturbance_variates,
+                     initial_state_variates=np.zeros(k_states))
 
         assert_allclose(sim.generated_measurement_disturbance,
                         generated_measurement_disturbance)
@@ -356,7 +368,7 @@ class MultivariateVARKnown:
                         generated_state_disturbance)
         assert_allclose(sim.generated_state, generated_state)
         assert_allclose(sim.generated_obs, generated_obs)
-        assert_allclose(sim.simulated_state, simulated_state)
+        assert_allclose(sim.simulated_state, simulated_state, atol=1e-7)
         if not self.model.ssm.filter_collapsed:
             assert_allclose(sim.simulated_measurement_disturbance.T,
                             simulated_measurement_disturbance.T)
@@ -529,8 +541,17 @@ class MultivariateVAR:
 
         Z = self.model['design']
 
+        nobs = self.model.nobs
+        k_endog = self.model.k_endog
+        k_posdef = self.model.ssm.k_posdef
+        k_states = self.model.k_states
+
         # Simulate with known variates
-        sim.simulate(disturbance_variates=self.variates[:-3],
+        # TODO
+        sim.simulate(measurement_disturbance_variates=(
+                        self.variates[:nobs * k_endog]),
+                     state_disturbance_variates=(
+                        self.variates[nobs * k_endog:-3]),
                      initial_state_variates=self.variates[-3:])
 
         # Test against R package KFAS values
@@ -579,11 +600,11 @@ def test_misc():
     sim = mod.simulation_smoother()
 
     # Test that the simulation smoother is drawing variates correctly
-    np.random.seed(1234)
+    rs = np.random.RandomState(1234)
     n_disturbance_variates = mod.nobs * (mod.k_endog + mod.k_states)
-    variates = np.random.normal(size=n_disturbance_variates)
-    np.random.seed(1234)
-    sim.simulate()
+    variates = rs.normal(size=n_disturbance_variates)
+    rs = np.random.RandomState(1234)
+    sim.simulate(random_state=rs)
     assert_allclose(sim.generated_measurement_disturbance[:, 0],
                     variates[:mod.nobs])
     assert_allclose(sim.generated_state_disturbance[:, 0],
@@ -617,7 +638,8 @@ def test_simulation_smoothing_obs_intercept():
     mod = structural.UnobservedComponents(endog, 'rwalk', exog=np.ones(nobs))
     mod.update([1, intercept])
     sim = mod.simulation_smoother()
-    sim.simulate(disturbance_variates=np.zeros(mod.nobs * 2),
+    sim.simulate(measurement_disturbance_variates=np.zeros(mod.nobs),
+                 state_disturbance_variates=np.zeros(mod.nobs),
                  initial_state_variates=np.zeros(1))
     assert_equal(sim.simulated_state[0], 0)
 
@@ -633,7 +655,8 @@ def test_simulation_smoothing_state_intercept():
     mod.update([intercept, 1., 1.])
 
     sim = mod.simulation_smoother()
-    sim.simulate(disturbance_variates=np.zeros(mod.nobs * 2),
+    sim.simulate(measurement_disturbance_variates=np.zeros(mod.nobs),
+                 state_disturbance_variates=np.zeros(mod.nobs),
                  initial_state_variates=np.zeros(1))
     assert_equal(sim.simulated_state[0], intercept)
 
@@ -650,7 +673,8 @@ def test_simulation_smoothing_state_intercept_diffuse():
     mod.update([intercept, 1., 1.])
 
     sim = mod.simulation_smoother()
-    sim.simulate(disturbance_variates=np.zeros(mod.nobs * 2),
+    sim.simulate(measurement_disturbance_variates=np.zeros(mod.nobs),
+                 state_disturbance_variates=np.zeros(mod.nobs),
                  initial_state_variates=np.zeros(1))
     assert_equal(sim.simulated_state[0], intercept)
 
@@ -662,6 +686,147 @@ def test_simulation_smoothing_state_intercept_diffuse():
     mod.update([intercept, 1., 1.])
 
     sim = mod.simulation_smoother()
-    sim.simulate(disturbance_variates=np.zeros(mod.nobs * 2),
+    sim.simulate(measurement_disturbance_variates=np.zeros(mod.nobs),
+                 state_disturbance_variates=np.zeros(mod.nobs),
                  initial_state_variates=np.zeros(1))
     assert_equal(sim.simulated_state[0], intercept)
+
+
+def test_deprecated_arguments_univariate():
+    nobs = 10
+    intercept = 100
+    endog = np.ones(nobs) * intercept
+
+    mod = sarimax.SARIMAX(endog, order=(0, 0, 0), trend='c',
+                          measurement_error=True,
+                          initialization='diffuse')
+    mod.update([intercept, 0.5, 2.])
+
+    mds = np.arange(10) / 10.
+    sds = np.arange(10)[::-1] / 20.
+
+    # Test using deprecated `disturbance_variates`
+    sim = mod.simulation_smoother()
+    sim.simulate(measurement_disturbance_variates=mds,
+                 state_disturbance_variates=sds,
+                 initial_state_variates=np.zeros(1))
+    desired = sim.simulated_state[0]
+
+    with pytest.deprecated_call():
+        sim.simulate(disturbance_variates=np.r_[mds, sds],
+                    initial_state_variates=np.zeros(1))
+    actual = sim.simulated_state[0]
+
+    # Test using deprecated `pretransformed`
+    sim = mod.simulation_smoother()
+    sim.simulate(measurement_disturbance_variates=mds,
+                 state_disturbance_variates=sds,
+                 initial_state_variates=np.zeros(1),
+                 pretransformed_measurement_disturbance_variates=True,
+                 pretransformed_state_disturbance_variates=True)
+    desired = sim.simulated_state[0]
+
+    with pytest.deprecated_call():
+        sim.simulate(measurement_disturbance_variates=mds,
+                     state_disturbance_variates=sds,
+                     pretransformed=True,
+                     initial_state_variates=np.zeros(1))
+    actual = sim.simulated_state[0]
+
+    assert_allclose(actual, desired)
+
+
+def test_deprecated_arguments_multivariate():
+    nobs = 5
+    endog = np.array([[0.3, 1.4],
+                      [-0.1, 0.6],
+                      [0.2, 0.7],
+                      [0.1, 0.9],
+                      [0.5, -0.1]])
+
+    mod = varmax.VARMAX(endog, order=(1, 0, 0))
+    mod.update([1.2, 0.5,
+                0.8, 0.1, -0.2, 0.5,
+                5.2, 0.5, 8.1])
+
+    mds = np.arange(10).reshape(5, 2) / 10.
+    sds = np.arange(10).reshape(5, 2)[::-1] / 20.
+
+    # Test using deprecated `disturbance_variates`
+    sim = mod.simulation_smoother()
+    sim.simulate(measurement_disturbance_variates=mds,
+                 state_disturbance_variates=sds,
+                 initial_state_variates=np.zeros(2))
+    desired = sim.simulated_state[0]
+
+    with pytest.deprecated_call():
+        sim.simulate(disturbance_variates=np.r_[mds.ravel(), sds.ravel()],
+                     initial_state_variates=np.zeros(2))
+    actual = sim.simulated_state[0]
+
+    # Test using deprecated `pretransformed`
+    sim = mod.simulation_smoother()
+    sim.simulate(measurement_disturbance_variates=mds,
+                 state_disturbance_variates=sds,
+                 initial_state_variates=np.zeros(2),
+                 pretransformed_measurement_disturbance_variates=True,
+                 pretransformed_state_disturbance_variates=True)
+    desired = sim.simulated_state[0]
+
+    with pytest.deprecated_call():
+        sim.simulate(measurement_disturbance_variates=mds,
+                     state_disturbance_variates=sds,
+                     pretransformed=True,
+                     initial_state_variates=np.zeros(2))
+    actual = sim.simulated_state[0]
+
+    assert_allclose(actual, desired)
+
+
+def test_nan():
+    """
+    This is a very slow test to check that the distribution of simulated states
+    (from the posterior) is correct in the presense of NaN values. Here, it
+    checks the marginal distribution of the drawn states against the values
+    computed from the smoother and prints the result.
+
+    With the fixed simulation smoother, it prints:
+
+    True values:
+    [1.         0.66666667 0.66666667 1.        ]
+    [0.         0.95238095 0.95238095 0.        ]
+
+    Simulated values:
+    [1.         0.66699187 0.66456719 1.        ]
+    [0.       0.953608 0.953198 0.      ]
+
+    Previously, it would have printed:
+
+    True values:
+    [1.         0.66666667 0.66666667 1.        ]
+    [0.         0.95238095 0.95238095 0.        ]
+
+    Simulated values:
+    [1.         0.66666667 0.66666667 1.        ]
+    [0. 0. 0. 0.]
+    """
+    return
+    mod = sarimax.SARIMAX([1, np.nan, np.nan, 1], order=(1, 0, 0), trend='c')
+    res = mod.smooth([0, 0.5, 1.0])
+
+    rs = np.random.RandomState(1234)
+    sim = mod.simulation_smoother(random_state=rs)
+
+    n = 1000000
+    out = np.zeros((n, mod.nobs))
+    for i in range(n):
+        sim.simulate()
+        out[i] = sim.simulated_state
+
+    print('True values:')
+    print(res.smoothed_state[0])
+    print(res.smoothed_state_cov[0, 0])
+    print()
+    print('Simulated values:')
+    print(np.mean(out, axis=0))
+    print(np.var(out, axis=0).round(6))

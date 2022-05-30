@@ -1855,6 +1855,9 @@ class MLEModel(tsbase.TimeSeriesModel):
                  state_shocks=None, initial_state=None, anchor=None,
                  repetitions=None, exog=None, extend_model=None,
                  extend_kwargs=None, transformed=True, includes_fixed=False,
+                 pretransformed_measurement_shocks=True,
+                 pretransformed_state_shocks=True,
+                 pretransformed_initial_state=True, random_state=None,
                  **kwargs):
         r"""
         Simulate a new time series following the state space model
@@ -1912,6 +1915,31 @@ class MLEModel(tsbase.TimeSeriesModel):
             this argument describes whether or not `params` also includes
             the fixed parameters, in addition to the free parameters. Default
             is False.
+        pretransformed_measurement_shocks : bool, optional
+            If `measurement_shocks` is provided, this flag indicates whether it
+            should be directly used as the shocks. If False, then it is assumed
+            to contain draws from the standard Normal distribution that must be
+            transformed using the `obs_cov` covariance matrix. Default is True.
+        pretransformed_state_shocks : bool, optional
+            If `state_shocks` is provided, this flag indicates whether it
+            should be directly used as the shocks. If False, then it is assumed
+            to contain draws from the standard Normal distribution that must be
+            transformed using the `state_cov` covariance matrix. Default is
+            True.
+        pretransformed_initial_state : bool, optional
+            If `initial_state` is provided, this flag indicates whether it
+            should be directly used as the initial_state. If False, then it is
+            assumed to contain draws from the standard Normal distribution that
+            must be transformed using the `initial_state_cov` covariance matrix.
+            Default is True.
+        random_state : {None, int, `numpy.random.Generator`,
+                        `numpy.random.RandomState`}, optional
+            If `seed` is None (or `np.random`), the `numpy.random.RandomState`
+            singleton is used.
+            If `seed` is an int, a new ``RandomState`` instance is used,
+            seeded with `seed`.
+            If `seed` is already a ``Generator`` or ``RandomState`` instance
+            then that instance is used.
 
         Returns
         -------
@@ -1973,12 +2001,13 @@ class MLEModel(tsbase.TimeSeriesModel):
         # Construct a model that represents the simulation period
         end = min(self.nobs, iloc + nsimulations)
         nextend = iloc + nsimulations - end
-        sim_model = self.ssm.extend(np.empty((nextend, self.k_endog)),
+        sim_model = self.ssm.extend(np.zeros((nextend, self.k_endog)),
                                     start=iloc, end=end, **kwargs)
 
         # Simulate the data
         _repetitions = 1 if repetitions is None else repetitions
         sim = np.zeros((nsimulations, self.k_endog, _repetitions))
+        simulator = None
 
         for i in range(_repetitions):
             initial_state_variates = None
@@ -1991,9 +2020,15 @@ class MLEModel(tsbase.TimeSeriesModel):
             # TODO: allow specifying measurement / state shocks for each
             # repetition?
 
-            out, _ = sim_model.simulate(
+            out, _, simulator = sim_model.simulate(
                 nsimulations, measurement_shocks, state_shocks,
-                initial_state_variates)
+                initial_state_variates,
+                pretransformed_measurement_shocks=(
+                    pretransformed_measurement_shocks),
+                pretransformed_state_shocks=pretransformed_state_shocks,
+                pretransformed_initial_state=pretransformed_initial_state,
+                simulator=simulator, return_simulator=True,
+                random_state=random_state)
 
             sim[:, :, i] = out
 
@@ -3505,7 +3540,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
     def simulate(self, nsimulations, measurement_shocks=None,
                  state_shocks=None, initial_state=None, anchor=None,
                  repetitions=None, exog=None, extend_model=None,
-                 extend_kwargs=None, **kwargs):
+                 extend_kwargs=None,
+                 pretransformed_measurement_shocks=True,
+                 pretransformed_state_shocks=True,
+                 pretransformed_initial_state=True,
+                 random_state=None, **kwargs):
         r"""
         Simulate a new time series following the state space model
 
@@ -3547,6 +3586,31 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             Number of simulated paths to generate. Default is 1 simulated path.
         exog : array_like, optional
             New observations of exogenous regressors, if applicable.
+        pretransformed_measurement_shocks : bool, optional
+            If `measurement_shocks` is provided, this flag indicates whether it
+            should be directly used as the shocks. If False, then it is assumed
+            to contain draws from the standard Normal distribution that must be
+            transformed using the `obs_cov` covariance matrix. Default is True.
+        pretransformed_state_shocks : bool, optional
+            If `state_shocks` is provided, this flag indicates whether it
+            should be directly used as the shocks. If False, then it is assumed
+            to contain draws from the standard Normal distribution that must be
+            transformed using the `state_cov` covariance matrix. Default is
+            True.
+        pretransformed_initial_state : bool, optional
+            If `initial_state` is provided, this flag indicates whether it
+            should be directly used as the initial_state. If False, then it is
+            assumed to contain draws from the standard Normal distribution that
+            must be transformed using the `initial_state_cov` covariance matrix.
+            Default is True.
+        random_state : {None, int, `numpy.random.Generator`,
+                        `numpy.random.RandomState`}, optional
+            If `seed` is None (or `np.random`), the `numpy.random.RandomState`
+            singleton is used.
+            If `seed` is an int, a new ``RandomState`` instance is used,
+            seeded with `seed`.
+            If `seed` is already a ``Generator`` or ``RandomState`` instance
+            then that instance is used.
 
         Returns
         -------
@@ -3601,7 +3665,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                 anchor=anchor, repetitions=repetitions, exog=exog,
                 transformed=True, includes_fixed=True,
                 extend_model=extend_model, extend_kwargs=extend_kwargs,
-                **kwargs)
+                pretransformed_measurement_shocks=(
+                    pretransformed_measurement_shocks),
+                pretransformed_state_shocks=pretransformed_state_shocks,
+                pretransformed_initial_state=pretransformed_initial_state,
+                random_state=random_state, **kwargs)
 
         return sim
 

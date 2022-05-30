@@ -301,10 +301,13 @@ cdef int {{prefix}}updating_conventional({{prefix}}KalmanFilter kfilter, {{prefi
     if not kfilter.converged:
         # T_t P_t Z_t' F_t^{-1}
         # $(m \times p) = (m \times m) (m \times p)$
-        blas.{{prefix}}gemm("N", "N", &model._k_states, &model._k_endog, &model._k_states,
-              &alpha, model._transition, &kfilter.k_states,
-                      &kfilter.CtmpW[0, 0], &kfilter.k_states,
-              &beta, kfilter._kalman_gain, &kfilter.k_states)
+        if model.identity_transition:
+            blas.{{prefix}}copy(&model._k_endogstates, &kfilter.CtmpW[0, 0], &inc, kfilter._kalman_gain, &inc)
+        else:
+            blas.{{prefix}}gemm("N", "N", &model._k_states, &model._k_endog, &model._k_states,
+                &alpha, model._transition, &kfilter.k_states,
+                        &kfilter.CtmpW[0, 0], &kfilter.k_states,
+                &beta, kfilter._kalman_gain, &kfilter.k_states)
 
     return 0
 
@@ -324,10 +327,13 @@ cdef int {{prefix}}prediction_conventional({{prefix}}KalmanFilter kfilter, {{pre
     # #### Predicted state for time t+1
     # $a_{t+1} = T_t a_{t|t} + c_t$
     blas.{{prefix}}copy(&model._k_states, model._state_intercept, &inc, kfilter._predicted_state, &inc)
-    blas.{{prefix}}gemv("N", &model._k_states, &model._k_states,
-          &alpha, model._transition, &model._k_states,
-                  kfilter._filtered_state, &inc,
-          &alpha, kfilter._predicted_state, &inc)
+    if model.identity_transition:
+        blas.{{prefix}}axpy(&model._k_states, &alpha, kfilter._filtered_state, &inc, kfilter._predicted_state, &inc)
+    else:
+        blas.{{prefix}}gemv("N", &model._k_states, &model._k_states,
+            &alpha, model._transition, &model._k_states,
+                    kfilter._filtered_state, &inc,
+            &alpha, kfilter._predicted_state, &inc)
 
     # #### Predicted state covariance matrix for time t+1
     # $P_{t+1} = T_t P_{t|t} T_t' + Q_t^*$
@@ -358,17 +364,20 @@ cdef int {{prefix}}prediction_conventional({{prefix}}KalmanFilter kfilter, {{pre
             # Kalman filter prediction step
             # $\\#_0 = T_t P_{t|t} $
 
-            # $(m \times m) = (m \times m) (m \times m)$
-            blas.{{prefix}}gemm("N", "N", &model._k_states, &model._k_states, &model._k_states,
-                  &alpha, model._transition, &model._k_states,
-                          kfilter._filtered_state_cov, &kfilter.k_states,
-                  &beta, kfilter._tmp0, &kfilter.k_states)
-            # $P_{t+1} = 1.0 \\#_0 T_t' + 1.0 \\#$  
-            # $(m \times m) = (m \times m) (m \times m) + (m \times m)$
-            blas.{{prefix}}gemm("N", "T", &model._k_states, &model._k_states, &model._k_states,
-                  &alpha, kfilter._tmp0, &kfilter.k_states,
-                          model._transition, &model._k_states,
-                  &alpha, kfilter._predicted_state_cov, &kfilter.k_states)
+            if model.identity_transition:
+                blas.{{prefix}}axpy(&model._k_states2, &alpha, kfilter._filtered_state_cov, &inc, kfilter._predicted_state_cov, &inc)
+            else:
+                # $(m \times m) = (m \times m) (m \times m)$
+                blas.{{prefix}}gemm("N", "N", &model._k_states, &model._k_states, &model._k_states,
+                    &alpha, model._transition, &model._k_states,
+                            kfilter._filtered_state_cov, &kfilter.k_states,
+                    &beta, kfilter._tmp0, &kfilter.k_states)
+                # $P_{t+1} = 1.0 \\#_0 T_t' + 1.0 \\#$  
+                # $(m \times m) = (m \times m) (m \times m) + (m \times m)$
+                blas.{{prefix}}gemm("N", "T", &model._k_states, &model._k_states, &model._k_states,
+                    &alpha, kfilter._tmp0, &kfilter.k_states,
+                            model._transition, &model._k_states,
+                    &alpha, kfilter._predicted_state_cov, &kfilter.k_states)
 
     return 0
 
