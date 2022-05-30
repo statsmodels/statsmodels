@@ -7,10 +7,10 @@ on:
 
 jobs:
   backport:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     name: Backport
     steps:
       - name: Backport
-        uses: tibdex/backport@v1
+        uses: tibdex/backport@v2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
