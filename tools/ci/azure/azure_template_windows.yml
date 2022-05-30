@@ -39,16 +39,9 @@ jobs:
     displayName: 'Update essentials'
 
   - script: |
-      python -m pip install "pywinpty<1.0" -r requirements.txt
-      python -m pip install "pywinpty<1.0" -r requirements-dev.txt
-    displayName: 'Install dependencies (x86)'
-    condition: eq(variables['python.architecture'], 'x86')
-
-  - script: |
       python -m pip install -r requirements.txt
       python -m pip install -r requirements-dev.txt
-    displayName: 'Install dependencies (x86_64)'
-    condition: ne(variables['python.architecture'], 'x86')
+    displayName: 'Install dependencies'
 
   - script: |
       python -m pip list
