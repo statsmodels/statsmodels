@@ -1,5 +1,5 @@
 # build
-cython>=0.29
+cython>=0.29.28,<3.0.0
 
 # run
 matplotlib>=3
