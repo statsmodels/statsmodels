@@ -2813,6 +2813,24 @@ def test_sarimax_starting_values_few_obsevations(reset_randomstate):
     )
 
 
+def test_sarimax_starting_values_few_obsevations_long_ma(reset_randomstate):
+    # GH 8232
+    y = np.random.standard_normal(9)
+    y = [
+        3066.3, 3260.2, 3573.7, 3423.6, 3598.5, 3802.8, 3353.4, 4026.1,
+        4684. , 4099.1, 3883.1, 3801.5, 3104. , 3574. , 3397.2, 3092.9,
+        3083.8, 3106.7, 2939.6
+    ]
+
+    sarimax_model = sarimax.SARIMAX(
+        endog=y, order=(0, 1, 5), trend="n"
+    ).fit(disp=False)
+
+    assert np.all(
+        np.isfinite(sarimax_model.predict(start=len(y), end=len(y) + 11))
+    )
+
+
 def test_sarimax_forecast_exog_trend(reset_randomstate):
     # Test that an error is not raised that the given `exog` for the forecast
     # period is a constant when forecating with an intercept
