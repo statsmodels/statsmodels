@@ -80,6 +80,11 @@ def test_poisson(count, nobs, value, method=None, alternative="two-sided",
         msg = "method needs to be specified, currently no default method"
         raise ValueError(msg)
 
+    if dispersion != 1:
+        if method not in ["wald", "waldcc", "score"]:
+            msg = "excess dispersion only supported in wald and score methods"
+            raise ValueError(msg)
+
     dist = "normal"
 
     if method == "wald":
@@ -91,7 +96,7 @@ def test_poisson(count, nobs, value, method=None, alternative="two-sided",
         # add 0.5 event, not 0.5 event rate as in waldcc
         # std = np.sqrt((rate + 0.5 / n) / n)
         # statistic = (rate + 0.5 / n - value) / std
-        std = np.sqrt((rate + 0.5 / n) / n)
+        std = np.sqrt(dispersion * (rate + 0.5 / n) / n)
         statistic = (rate - value) / std
 
     elif method == "score":
@@ -136,10 +141,7 @@ def test_poisson(count, nobs, value, method=None, alternative="two-sided",
                      np.sqrt(n * value)) / std
 
     else:
-        raise ValueError("unknown method")
-
-    if dispersion != 1 and dist != "normal":
-        warnings.warn("Dispersion is ignored with method %s." % method)
+        raise ValueError("unknown method %s" % method)
 
     if dist == 'normal':
         statistic, pvalue = _zstat_generic2(statistic, 1, alternative)
@@ -745,7 +747,7 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, value=None,
             "waldccv"
         elif method in ['waldccv']:
             stat = (rate1 - rate2 - value)
-            stat /= np.sqrt((count2 + 0.5) / n1**2 + (count2 + 0.5) / n2**2)
+            stat /= np.sqrt((count1 + 0.5) / n1**2 + (count2 + 0.5) / n2**2)
             dist = 'normal'
         elif method in ['score']:
             # estimate rates with constraint MLE
@@ -983,7 +985,7 @@ def etest_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=1,
 
 
 def tost_poisson_2indep(count1, exposure1, count2, exposure2, low, upp,
-                        method='score'):
+                        method='score', compare='ratio'):
     '''Equivalence test based on two one-sided `test_proportions_2indep`
 
     This assumes that we have two independent poisson samples.
@@ -1039,16 +1041,20 @@ def tost_poisson_2indep(count1, exposure1, count2, exposure2, low, upp,
     '''
 
     tt1 = test_poisson_2indep(count1, exposure1, count2, exposure2,
-                              ratio_null=low, method=method,
+                              value=low, method=method,
+                              compare=compare,
                               alternative='larger')
     tt2 = test_poisson_2indep(count1, exposure1, count2, exposure2,
-                              ratio_null=upp, method=method,
+                              value=upp, method=method,
+                              compare=compare,
                               alternative='smaller')
 
-    idx_max = 0 if tt1.pvalue < tt2.pvalue else 1
+    idx_max = 0 if tt1.pvalue > tt2.pvalue else 1
     res = HolderTuple(statistic=[tt1.statistic, tt2.statistic][idx_max],
                       pvalue=[tt1.pvalue, tt2.pvalue][idx_max],
                       method=method,
+                      compare=compare,
+                      equiv_limits=(low, upp),
                       results_larger=tt1,
                       results_smaller=tt2,
                       title="Equivalence test for 2 independent Poisson rates"
@@ -1232,13 +1238,14 @@ def confint_poisson_2indep(count1, exposure1, count2, exposure2,
             ci = (center * np.exp(- crit * std), center * np.exp(crit * std))
 
         elif method == "sqrtcc":
+            # coded based on Price, Bonett 2000 equ (2.4)
             crit = stats.norm.isf(alpha)
-            center = (count1 + 0.5) * (count2 + 0.5)
+            center = np.sqrt((count1 + 0.5) * (count2 + 0.5))
             std = 0.5 * np.sqrt(count1 + 0.5 + count2 + 0.5 - 0.25 * crit)
-            denom = count2 + 0.5 - 0.25 * crit
+            denom = (count2 + 0.5 - 0.25 * crit**2)
 
-            low_sqrt = n2 / n1 * (center - crit * std) / denom
-            upp_sqrt = n2 / n1 * (center + crit * std) / denom
+            low_sqrt = (center - crit * std) / denom
+            upp_sqrt = (center + crit * std) / denom
 
             ci = (low_sqrt**2, upp_sqrt**2)
 
@@ -1265,7 +1272,7 @@ def confint_poisson_2indep(count1, exposure1, count2, exposure2,
         elif method in ['waldccv']:
             crit = stats.norm.isf(alpha)
             center = rate1 - rate2
-            std = np.sqrt((count2 + 0.5) / n1**2 + (count2 + 0.5) / n2**2)
+            std = np.sqrt((count1 + 0.5) / n1**2 + (count2 + 0.5) / n2**2)
             half = crit * std
             ci = center - half, center + half
 
