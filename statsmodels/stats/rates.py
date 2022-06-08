@@ -147,7 +147,7 @@ def test_poisson(count, nobs, value, method=None, alternative="two-sided",
             msg = 'alternative should be "two-sided", "larger" or "smaller"'
             raise ValueError(msg)
 
-        statistic = None
+        statistic = np.nan
         dist = "Poisson"
 
     elif method == "sqrt":
@@ -780,7 +780,7 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, value=None,
             from statsmodels.stats import proportion
             bp = r_d / (1 + r_d)
             y_total = y1 + y2
-            stat = None
+            stat = np.nan
             # TODO: why y2 in here and not y1, check definition of H1 "larger"
             pvalue = proportion.binom_test(y1, y_total, prop=bp,
                                            alternative=alternative)
@@ -1173,17 +1173,17 @@ def nonequivalence_poisson_2indep(count1, exposure1, count2, exposure2,
 
     """
     tt1 = test_poisson_2indep(count1, exposure1, count2, exposure2,
-                              ratio_null=low, method=method, compare=compare,
+                              value=low, method=method, compare=compare,
                               alternative='smaller')
     tt2 = test_poisson_2indep(count1, exposure1, count2, exposure2,
-                              ratio_null=upp, method=method,
+                              value=upp, method=method, compare=compare,
                               alternative='larger')
 
     # idx_min = 0 if tt1.pvalue < tt2.pvalue else 1
     idx_min = np.asarray(tt1.pvalue < tt2.pvalue, int)
     pvalue = 2 * np.minimum(tt1.pvalue, tt2.pvalue)
-    np.column_stack([tt1.statistic, tt2.statistic])[idx_min]
-    res = HolderTuple(statistic=stats,
+    statistic = np.choose(idx_min, [tt1.statistic, tt2.statistic])
+    res = HolderTuple(statistic=statistic,
                       pvalue=pvalue,
                       method=method,
                       results_larger=tt1,

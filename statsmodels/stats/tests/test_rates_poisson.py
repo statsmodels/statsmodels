@@ -16,6 +16,7 @@ from statsmodels.stats.rates import (
     confint_quantile_poisson,
     etest_poisson_2indep,
     confint_poisson_2indep,
+    nonequivalence_poisson_2indep,
     power_poisson_2indep,
     power_equivalence_poisson_2indep,
     power_poisson_diff_2indep,
@@ -699,6 +700,24 @@ class TestMethodsCompare2indep():
 
         assert_allclose(tst.pvalue, 0.0245, rtol=0.2)
 
+        # compare with degenerate interval for nonequivalence
+        if compare == "ratio":
+            f = 1.00
+            low, upp = 1 / f, f
+        else:
+            v = 0.00
+            low, upp = -v, v
+
+        tst2 = nonequivalence_poisson_2indep(count1, n1, count2, n2, low, upp,
+                                             method=meth,
+                                             compare=compare)
+        if "cond" in meth or "etest" in meth:
+            # comparison is not exact for noncentral methods
+            rtol = 0.1
+        else:
+            rtol = 1e-12
+        assert_allclose(tst2.pvalue, tst.pvalue, rtol=rtol)
+
     @pytest.mark.parametrize(
         "compare, meth",
         [("ratio", meth) for meth
@@ -716,6 +735,48 @@ class TestMethodsCompare2indep():
         ci = confint_poisson_2indep(count1, n1, count2, n2, method=meth,
                                     compare=compare, alpha=0.05)
         assert_allclose(ci, ci_val, rtol=0.1)
+
+    @pytest.mark.parametrize(
+        "compare, meth",
+        [("ratio", meth) for meth
+         in method_names_poisson_2indep["test"]["ratio"]] +
+        [("diff", meth) for meth
+         in method_names_poisson_2indep["test"]["diff"]]
+        )
+    def test_test_vectorized(self, meth, compare):
+        if "etest" in meth:
+            pytest.skip("nonequivalence etest not vectorized")
+
+        count1, n1, count2, n2 = 60, 514.775, 40, 543.0870000
+        count1v = np.array([count1, count2])
+        n1v = np.array([n1, n2])
+        nfact = 1.
+        # scipy binom test requires int dtype
+        count2v = np.array([count2, count1 * nfact], dtype=int)
+        n2v = np.array([n2, n1 * nfact])
+        count1, n1, count2, n2 = count1v, n1v, count2v, n2v
+
+        # compare with degenerate interval for nonequivalence
+        if compare == "ratio":
+            f = 1.00
+            low, upp = 1 / f, f
+        else:
+            v = 0.00
+            low, upp = -v, v
+
+        tst2 = nonequivalence_poisson_2indep(count1, n1, count2, n2, low, upp,
+                                             method=meth,
+                                             compare=compare)
+        assert tst2.statistic.shape == (2,)
+        assert tst2.pvalue.shape == (2,)
+
+        if not ("cond" in meth or "etest" in meth):
+            # not all methods are vectorized for smr.test_poisson_2indep
+            tst = smr.test_poisson_2indep(count1, n1, count2, n2, method=meth,
+                                          compare=compare,
+                                          value=None, alternative='two-sided')
+
+            assert_allclose(tst2.pvalue, tst.pvalue, rtol=1e-12)
 
 
 def test_y_grid_regression():
