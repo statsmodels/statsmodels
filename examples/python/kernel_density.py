@@ -102,7 +102,7 @@ kde.fit()  # Estimate the densities
 fig = plt.figure(figsize=(12, 5))
 ax = fig.add_subplot(111)
 
-# Plot the histrogram
+# Plot the histogram
 ax.hist(
     obs_dist,
     bins=20,
@@ -148,7 +148,7 @@ ax.grid(True, zorder=-5)
 fig = plt.figure(figsize=(12, 5))
 ax = fig.add_subplot(111)
 
-# Plot the histrogram
+# Plot the histogram
 ax.hist(
     obs_dist,
     bins=25,
