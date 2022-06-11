@@ -4346,11 +4346,13 @@ class DiscreteResults(base.LikelihoodModelResults):
         #super(DiscreteResults, self).__init__(model, params,
         #        np.linalg.inv(-hessian), scale=1.)
         self.model = model
+        self.method = "MLE"
         self.df_model = model.df_model
         self.df_resid = model.df_resid
         self._cache = {}
         self.nobs = model.exog.shape[0]
         self.__dict__.update(mlefit.__dict__)
+        self.converged = mlefit.mle_retvals["converged"]
 
         if not hasattr(self, 'cov_type'):
             # do this only if super, i.e. mlefit did not already add cov_type
@@ -4821,7 +4823,7 @@ class DiscreteResults(base.LikelihoodModelResults):
 
         top_left = [('Dep. Variable:', None),
                      ('Model:', [self.model.__class__.__name__]),
-                     ('Method:', ['MLE']),
+                     ('Method:', [self.method]),
                      ('Date:', None),
                      ('Time:', None),
                      ('converged:', ["%s" % self.mle_retvals['converged']]),
