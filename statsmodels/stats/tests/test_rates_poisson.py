@@ -17,11 +17,11 @@ from statsmodels.stats.rates import (
     etest_poisson_2indep,
     confint_poisson_2indep,
     nonequivalence_poisson_2indep,
-    power_poisson_2indep,
+    power_poisson_ratio_2indep,
     power_equivalence_poisson_2indep,
     power_poisson_diff_2indep,
     power_equivalence_neginb_2indep,
-    power_negbin_2indep,
+    power_negbin_ratio_2indep,
     method_names_poisson_1samp,
     method_names_poisson_2indep,
     )
@@ -833,6 +833,14 @@ def test_poisson_power_2ratio():
             dispersion=dispersion)
         assert_allclose(pow_[0], p, atol=5e-5)
 
+        # compare other method_var for similar results
+        pow_2 = power_equivalence_poisson_2indep(
+            rate1, nobs1, rate2, nobs2, exposure, low, upp, alpha=alpha,
+            method_var="score",
+            dispersion=dispersion)
+
+        assert_allclose(pow_2[0], p, rtol=5e-3)
+
     # check power of onesided test, smaller with a margin
     # non-inferiority
     # alternative smaller H1: rate1 / rate2 < R
@@ -846,19 +854,20 @@ def test_poisson_power_2ratio():
     low = 1.2
     for case in cases:
         rate1, nobs1, nobs2, p = case
-        pow_ = power_poisson_2indep(rate1, nobs1, rate2, nobs2, exposure,
-                                    value=low, alpha=0.025, dispersion=1,
-                                    alternative="smaller")
+        pow_ = power_poisson_ratio_2indep(
+            rate1, nobs1, rate2, nobs2,
+            exposure=exposure, value=low, alpha=0.025, dispersion=1,
+            alternative="smaller")
 
         assert_allclose(pow_, p, atol=5e-5)
 
-        pow_ = power_poisson_2indep(
+        pow_ = power_poisson_ratio_2indep(
             rate1, nobs1, rate2, nobs2, exposure, value=low, alpha=0.05,
             dispersion=1, alternative="two-sided")
         assert_allclose(pow_, p, atol=5e-5)
 
     # check size, power at null
-    pow_ = power_poisson_2indep(
+    pow_ = power_poisson_ratio_2indep(
             rate1, nobs1, rate2, nobs2, exposure, value=rate1 / rate2,
             alpha=0.05, dispersion=1, alternative="two-sided")
     assert_allclose(pow_, 0.05, atol=5e-5)
@@ -878,15 +887,29 @@ def test_poisson_power_2ratio():
     low = 1 / 1.2
     for case in cases:
         rate2, nobs1, nobs2, p = case
-        pow_ = power_poisson_2indep(
+        pow_ = power_poisson_ratio_2indep(
             rate1, nobs1, rate2, nobs2, exposure, value=low, alpha=0.025,
             dispersion=1, alternative="larger")
         assert_allclose(pow_, p, atol=5e-5)
 
-        pow_ = power_poisson_2indep(
+        # compare other method_var for similar results
+        pow_2 = power_poisson_ratio_2indep(
+            rate1, nobs1, rate2, nobs2, exposure, value=low, alpha=0.025,
+            method_var="score",
+            dispersion=1, alternative="larger")
+        assert_allclose(pow_2, p, rtol=5e-3)
+
+        pow_ = power_poisson_ratio_2indep(
             rate1, nobs1, rate2, nobs2, exposure, value=low, alpha=0.05,
             dispersion=1, alternative="two-sided")
         assert_allclose(pow_, p, atol=5e-5)
+
+        # compare other method_var for similar results
+        pow_2 = power_poisson_ratio_2indep(
+            rate1, nobs1, rate2, nobs2, exposure, value=low, alpha=0.05,
+            method_var="score",
+            dispersion=1, alternative="two-sided")
+        assert_allclose(pow_2, p, rtol=5e-3)
 
 
 def test_power_poisson_equal():
@@ -902,14 +925,38 @@ def test_power_poisson_equal():
     # we use group 2 reference
 
     nobs1, nobs2 = 6, 8
-    nobs_ratio = nobs1 / nobs2
+    nobs_ratio = nobs2 / nobs1
     rate1, rate2 = 15, 10
 
     diff = rate1 - rate2
     pow_ = power_poisson_diff_2indep(
         diff, rate2, nobs1, nobs_ratio=nobs_ratio, alpha=0.05, value=0,
-        alternative='larger', return_results=True)
+        method_var="alt", alternative='larger', return_results=True)
     assert_allclose(pow_.power, 0.82566, atol=5e-5)
+
+    # This supports now nonzero value
+    # example in table 1 of Stucke, Kieser (2013
+    # regression numbers but close to exact power in table
+
+    pow_ = power_poisson_diff_2indep(
+        0, 0.6, 97, 3 / 2,
+        value=0.3,
+        alpha=0.025,
+        alternative="smaller",
+        method_var="score",
+        return_results=True)
+
+    assert_allclose(pow_.power, 0.802596, atol=5e-5)
+
+    pow_ = power_poisson_diff_2indep(
+        0, 0.6, 128, 2 / 3,
+        value=0.3,
+        alpha=0.025,
+        alternative="smaller",
+        method_var="score",
+        return_results=True)
+
+    assert_allclose(pow_.power, 0.80194, atol=5e-5)
 
 
 def test_power_negbin():
@@ -952,19 +999,21 @@ def test_power_negbin():
 
     rate2, nobs2, rate1, nobs1, exposure = 0.3, 50, 0.5, 100, 2
     pow1 = 0.6207448
-    pow_ = power_negbin_2indep(rate2, nobs2, rate1, nobs1, exposure,
-                               value=1,
-                               alpha=alpha, dispersion=0.5,
-                               alternative="two-sided",
-                               method_var="score",
-                               return_results=False,
-                               )
+    pow_ = power_negbin_ratio_2indep(
+        rate2, nobs2, rate1, nobs1,
+        exposure=exposure,
+        value=1,
+        alpha=alpha, dispersion=0.5,
+        alternative="two-sided",
+        method_var="score",
+        return_results=False,
+        )
     assert_allclose(pow_, pow1, atol=5e-2)
 
     # flip nobs ratio
     pow1 = 0.5825763
     nobs1, nobs2 = nobs2, nobs1
-    pow_ = power_negbin_2indep(
+    pow_ = power_negbin_ratio_2indep(
         rate2, nobs2, rate1, nobs1, exposure,
         value=1,
         alpha=alpha, dispersion=0.5,
@@ -977,7 +1026,7 @@ def test_power_negbin():
     # > power_NegativeBinomial(n1 = 50, n2=100, mu1 = 0.5, mu2 = 0.3,
     #   theta=200000, duration = 2, approach = 3)
     pow1 = 0.7248956
-    pow_ = power_negbin_2indep(
+    pow_ = power_negbin_ratio_2indep(
         rate2, nobs2, rate1, nobs1, exposure, value=1,
         alpha=alpha, dispersion=0, alternative="two-sided",
         method_var="score",
@@ -985,7 +1034,7 @@ def test_power_negbin():
 
     assert_allclose(pow_, pow1, atol=5e-2)
 
-    pow_p = power_poisson_2indep(
+    pow_p = power_poisson_ratio_2indep(
         rate2, nobs2, rate1, nobs1, exposure, value=1,
         alpha=alpha, dispersion=1, alternative="two-sided",
         method_var="score",
@@ -996,13 +1045,13 @@ def test_power_negbin():
 
     # test one-sided
     pow1 = 0.823889
-    pow_ = power_negbin_2indep(
+    pow_ = power_negbin_ratio_2indep(
         rate2, nobs2, rate1, nobs1, exposure, value=1,
         alpha=alpha, dispersion=0, alternative="smaller",
         method_var="score",
         return_results=False)
 
-    pow_p = power_poisson_2indep(
+    pow_p = power_poisson_ratio_2indep(
         rate2, nobs2, rate1, nobs1, exposure, value=1,
         alpha=alpha, dispersion=1, alternative="smaller",
         method_var="score",
@@ -1012,13 +1061,13 @@ def test_power_negbin():
     assert_allclose(pow_p, pow_, rtol=1e-13)
 
     # reverse 2 samples
-    pow_ = power_negbin_2indep(
+    pow_ = power_negbin_ratio_2indep(
         rate1, nobs1, rate2, nobs2, exposure, value=1,
         alpha=alpha, dispersion=0, alternative="larger",
         method_var="score",
         return_results=False)
 
-    pow_p = power_poisson_2indep(
+    pow_p = power_poisson_ratio_2indep(
         rate1, nobs1, rate2, nobs2, exposure, value=1,
         alpha=alpha, dispersion=1, alternative="larger",
         method_var="score",

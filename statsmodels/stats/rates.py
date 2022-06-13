@@ -882,8 +882,8 @@ def _score_diff(y1, n1, y2, n2, value=0, return_cmle=False):
     r2_cmle = 0.5 * (dt + np.sqrt(dt**2 + 4 * value * y2 / (n1 + n2)))
     r1_cmle = r2_cmle + value
     eps = 1e-20  # avoid zero division in stat_func
-    stat = ((rate1 - rate2 - value) /
-            np.sqrt(r1_cmle / n1 + r2_cmle / n2 + eps))
+    v = r1_cmle / n1 + r2_cmle / n2
+    stat = (rate1 - rate2 - value) / np.sqrt(v + eps)
 
     if return_cmle:
         return stat, r1_cmle, r2_cmle
@@ -1367,10 +1367,16 @@ def confint_poisson_2indep(count1, exposure1, count2, exposure2,
     return ci
 
 
-def power_poisson_2indep(rate1, nobs1, rate2, nobs2, exposure, value=0,
-                         alpha=0.05, dispersion=1, alternative="smaller",
-                         method_var="alt",
-                         return_results=True):
+def power_poisson_ratio_2indep(
+        rate1, nobs1, rate2, nobs2,
+        exposure=1,
+        value=0,
+        alpha=0.05,
+        dispersion=1,
+        alternative="smaller",
+        method_var="alt",
+        return_results=True,
+        ):
     """power for test of ratio of 2 independent poisson rates
 
     This is based on Zhu and Zhu and Lakkis. It does not directly correspond
@@ -1513,45 +1519,57 @@ def _power_equivalence_het(es_low, es_upp, nobs, alpha=0.05,
     return pow_, p1, p2
 
 
-def _std_2poisson_power(diff, rate2, nobs_ratio=1, alpha=0.05,
-                        exposure=1, dispersion=1,
-                        value=0):
-    rate1 = rate2 + diff
+def _std_2poisson_power(
+        rate1, rate2, nobs_ratio=1, alpha=0.05,
+        exposure=1,
+        dispersion=1,
+        value=0,
+        method_var="score",
+        ):
+    rates_pooled = (rate1 + rate2 * nobs_ratio) / (1 + nobs_ratio)
     # v1 = dispersion / exposure * (1 / rate2 + 1 / (nobs_ratio * rate1))
-    v1 = rate1 + nobs_ratio * rate2
-    return None, np.sqrt(v1), np.sqrt(v1)
+    if method_var == "alt":
+        v0 = v1 = rate1 + rate2 / nobs_ratio
+    else:
+        # uaw n1 = 1 as normalization
+        _, r1_cmle, r2_cmle = _score_diff(
+            rate1, 1, rate2 * nobs_ratio, nobs_ratio, value=value,
+            return_cmle=True)
+        v1 = rate1 + rate2 / nobs_ratio
+        v0 = r1_cmle + r2_cmle / nobs_ratio
+    return rates_pooled, np.sqrt(v0), np.sqrt(v1)
 
 
 def power_poisson_diff_2indep(diff, rate2, nobs1, nobs_ratio=1, alpha=0.05,
-                              value=0, alternative='two-sided',
+                              value=0,
+                              method_var="score",
+                              alternative='two-sided',
                               return_results=True):
     """power for ztest that two independent poisson rates are equal
 
-    Warning preliminary
-    currently wald test type to replicate PASS chapter 436
-    analogy to proportion test (copy paste docstring)
-    TODO: nobs1 or nobs2 in signature
+    This currently wald test type to replicate PASS chapter 436
+    analogy to proportion test.
 
-    This assumes that the variance is based on the ?????
+    This assumes that the variance is based on the pooled variance
     under the null and the non-pooled variance under the alternative
 
     Parameters
     ----------
     diff : float
-        difference between proportion 1 and 2 under the alternative
-    prop2 : float
-        proportion for the reference case, prop2, proportions for the
-        first case will be computing using p2 and diff
-        p1 = p2 + diff
+        Difference between rates 1 and 2 under the alternative
+    rate2 : float
+        Poisson rate for the reference sample, prop2, The rate for the
+        first sample will be computing using rate2 and diff
+        rate1 = rate2 + diff
     nobs1 : float or int
         number of observations in sample 1
-    ratio : float
-        sample size ratio, nobs2 = ratio * nobs1
+    nobs_ratio : float
+        sample size ratio, nobs2 = nobs_ratio * nobs1
     alpha : float in interval (0,1)
         Significance level, e.g. 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
     value : float
-        currently only `value=0`, i.e. equality testing, is supported
+        Difference between rates 1 and 2 under the null hypothesis.
     alternative : string, 'two-sided' (default), 'larger', 'smaller'
         Alternative hypothesis whether the power is calculated for a
         two-sided (default) or one sided test. The one-sided test can be
@@ -1574,8 +1592,8 @@ def power_poisson_diff_2indep(diff, rate2, nobs1, nobs_ratio=1, alpha=0.05,
 
         Other attributes in results instance include :
 
-        p_pooled
-            pooled proportion, used for std_null
+        rate_pooled
+            pooled rate, used for std_null
         std_null
             standard error of difference under the null hypothesis (without
             sqrt(nobs1))
@@ -1586,18 +1604,25 @@ def power_poisson_diff_2indep(diff, rate2, nobs1, nobs_ratio=1, alpha=0.05,
     # TODO: avoid possible circular import, check if needed
     from statsmodels.stats.power import normal_power_het
 
-    p_pooled, std_null, std_alt = _std_2poisson_power(diff, rate2,
-                                                      nobs_ratio=nobs_ratio,
-                                                      alpha=alpha, value=value)
+    rate1 = rate2 + diff
+    rate_pooled, std_null, std_alt = _std_2poisson_power(
+        rate1,
+        rate2,
+        nobs_ratio=nobs_ratio,
+        alpha=alpha,
+        value=value,
+        method_var=method_var,
+        )
 
-    pow_ = normal_power_het(diff, nobs1, alpha, std_null=std_null,
+    pow_ = normal_power_het(diff - value, nobs1, alpha, std_null=std_null,
                             std_alternative=std_alt,
                             alternative=alternative)
 
     if return_results:
         res = HolderTuple(
             power=pow_,
-            p_pooled=p_pooled,
+            rate_pooled=rate_pooled,
+            rates_alt=(rate2 + diff, rate2),
             std_null=std_null,
             std_alt=std_alt,
             nobs1=nobs1,
@@ -1642,13 +1667,15 @@ def _var_cmle_negbin(rate1, rate2, nobs_ratio, exposure=1, value=1,
     return v * nobs_ratio, r1, r2
 
 
-def power_negbin_2indep(rate1, nobs1, rate2, nobs2, exposure,
-                        value=1,
-                        alpha=0.05,
-                        dispersion=0.01,
-                        alternative="two-sided",
-                        method_var="alt",
-                        return_results=True):
+def power_negbin_ratio_2indep(
+        rate1, nobs1, rate2, nobs2,
+        exposure=1,
+        value=1,
+        alpha=0.05,
+        dispersion=0.01,
+        alternative="two-sided",
+        method_var="alt",
+        return_results=True):
     """power for one-sided test of ratio of 2 independent poisson rates
 
     this is currently for superiority and non-inferiority testing
