@@ -1368,7 +1368,8 @@ def confint_poisson_2indep(count1, exposure1, count2, exposure2,
 
 
 def power_poisson_ratio_2indep(
-        rate1, nobs1, rate2, nobs2,
+        rate1, rate2, nobs1,
+        nobs_ratio=1,
         exposure=1,
         value=0,
         alpha=0.05,
@@ -1396,7 +1397,7 @@ def power_poisson_ratio_2indep(
     # TODO: avoid possible circular import, check if needed
     from statsmodels.stats.power import normal_power_het
 
-    nobs_ratio = nobs2 / nobs1
+    nobs2 = nobs_ratio * nobs1
     v1 = dispersion / exposure * (1 / rate1 + 1 / (nobs_ratio * rate2))
     if method_var == "alt":
         v0 = v1
@@ -1424,7 +1425,7 @@ def power_poisson_ratio_2indep(
             std_null=std_null,
             std_alt=std_alt,
             nobs1=nobs1,
-            nobs2=nobs_ratio * nobs1,
+            nobs2=nobs2,
             nobs_ratio=nobs_ratio,
             alpha=alpha,
             tuple_=("power",),  # override default
@@ -1434,8 +1435,9 @@ def power_poisson_ratio_2indep(
     return pow_
 
 
-def power_equivalence_poisson_2indep(rate1, nobs1, rate2, nobs2, exposure,
-                                     low, upp, alpha=0.05, dispersion=1,
+def power_equivalence_poisson_2indep(rate1, rate2, nobs1,
+                                     low, upp, nobs_ratio=1,
+                                     exposure=1, alpha=0.05, dispersion=1,
                                      method_var="alt"):
     """power for equivalence test of ratio of 2 independent poisson rates
 
@@ -1450,7 +1452,7 @@ def power_equivalence_poisson_2indep(rate1, nobs1, rate2, nobs2, exposure,
        376–87. https://doi.org/10.1002/sim.5947.
     .. [3] PASS documentation
     """
-    nobs_ratio = nobs2 / nobs1
+    nobs2 = nobs_ratio * nobs1
     v1 = dispersion / exposure * (1 / rate1 + 1 / (nobs_ratio * rate2))
 
     if method_var == "alt":
@@ -1540,7 +1542,7 @@ def _std_2poisson_power(
     return rates_pooled, np.sqrt(v0), np.sqrt(v1)
 
 
-def power_poisson_diff_2indep(diff, rate2, nobs1, nobs_ratio=1, alpha=0.05,
+def power_poisson_diff_2indep(rate1, rate2, nobs1, nobs_ratio=1, alpha=0.05,
                               value=0,
                               method_var="score",
                               alternative='two-sided',
@@ -1604,7 +1606,7 @@ def power_poisson_diff_2indep(diff, rate2, nobs1, nobs_ratio=1, alpha=0.05,
     # TODO: avoid possible circular import, check if needed
     from statsmodels.stats.power import normal_power_het
 
-    rate1 = rate2 + diff
+    diff = rate1 - rate2
     rate_pooled, std_null, std_alt = _std_2poisson_power(
         rate1,
         rate2,
@@ -1668,7 +1670,8 @@ def _var_cmle_negbin(rate1, rate2, nobs_ratio, exposure=1, value=1,
 
 
 def power_negbin_ratio_2indep(
-        rate1, nobs1, rate2, nobs2,
+        rate1, rate2, nobs1,
+        nobs_ratio=1,
         exposure=1,
         value=1,
         alpha=0.05,
@@ -1696,7 +1699,7 @@ def power_negbin_ratio_2indep(
     # TODO: avoid possible circular import, check if needed
     from statsmodels.stats.power import normal_power_het
 
-    nobs_ratio = nobs2 / nobs1
+    nobs2 = nobs_ratio * nobs1
     v1 = ((1 / rate1 + 1 / (nobs_ratio * rate2)) / exposure +
           (1 + nobs_ratio) / nobs_ratio * dispersion)
     if method_var == "alt":
@@ -1729,7 +1732,7 @@ def power_negbin_ratio_2indep(
             std_null=std_null,
             std_alt=std_alt,
             nobs1=nobs1,
-            nobs2=nobs_ratio * nobs1,
+            nobs2=nobs2,
             nobs_ratio=nobs_ratio,
             alpha=alpha,
             tuple_=("power",),  # override default
@@ -1739,8 +1742,9 @@ def power_negbin_ratio_2indep(
     return pow_
 
 
-def power_equivalence_neginb_2indep(rate1, nobs1, rate2, nobs2, exposure,
-                                    low, upp, alpha=0.05, dispersion=0,
+def power_equivalence_neginb_2indep(rate1, rate2, nobs1,
+                                    low, upp, nobs_ratio=1,
+                                    exposure=1, alpha=0.05, dispersion=0,
                                     method_var="alt"):
     """
     Power for equivalence test of ratio of 2 indep. negative binomial rates
@@ -1757,7 +1761,7 @@ def power_equivalence_neginb_2indep(rate1, nobs1, rate2, nobs2, exposure,
        376–87. https://doi.org/10.1002/sim.5947.
     .. [3] PASS documentation
     """
-    nobs_ratio = nobs2 / nobs1
+    nobs2 = nobs_ratio * nobs1
 
     v1 = ((1 / rate2 + 1 / (nobs_ratio * rate1)) / exposure +
           (1 + nobs_ratio) / nobs_ratio * dispersion)
