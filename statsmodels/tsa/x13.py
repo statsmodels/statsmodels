@@ -54,8 +54,9 @@ def _find_x12(x12path=None, prefer_x13=True):
     """
     global _binary_names
     if x12path is not None and x12path.endswith(_binary_names):
-        # remove binary from path if given
-        x12path = os.path.dirname(x12path)
+        # remove binary from path if path is not a directory
+        if not os.path.isdir(x12path):
+            x12path = os.path.dirname(x12path)
 
     if not prefer_x13:  # search for x12 first
         _binary_names = _binary_names[::-1]
