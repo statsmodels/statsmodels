@@ -833,7 +833,7 @@ def test_poisson_power_2ratio():
             nobs_ratio=nobs2 / nobs1,
             exposure=exposure, alpha=alpha,
             dispersion=dispersion)
-        assert_allclose(pow_[0], p, atol=5e-5)
+        assert_allclose(pow_, p, atol=5e-5)
 
         # compare other method_var for similar results
         pow_2 = power_equivalence_poisson_2indep(
@@ -844,7 +844,7 @@ def test_poisson_power_2ratio():
             method_var="score",
             dispersion=dispersion)
 
-        assert_allclose(pow_2[0], p, rtol=5e-3)
+        assert_allclose(pow_2, p, rtol=5e-3)
 
     # check power of onesided test, smaller with a margin
     # non-inferiority
@@ -945,7 +945,7 @@ def test_power_poisson_equal():
     assert_allclose(pow_.power, 0.82566, atol=5e-5)
 
     # This supports now nonzero value
-    # example in table 1 of Stucke, Kieser (2013
+    # example in table 1 of Stucke, Kieser (2013)
     # regression numbers but close to exact power in table
 
     pow_ = power_poisson_diff_2indep(
@@ -987,7 +987,7 @@ def test_power_negbin():
         exposure=exposure,
         alpha=alpha,
         dispersion=dispersion, method_var="alt")
-    assert_allclose(pow_[0], pow1, atol=5e-5)
+    assert_allclose(pow_, pow1, atol=5e-5)
 
     nobs1, nobs2 = 966, 966
 
@@ -998,7 +998,7 @@ def test_power_negbin():
         exposure=exposure,
         alpha=alpha,
         dispersion=dispersion, method_var="ftotal")
-    assert_allclose(pow_[0], pow1, atol=5e-5)
+    assert_allclose(pow_, pow1, atol=5e-5)
 
     pow1 = 0.90034
     pow_ = power_equivalence_neginb_2indep(
@@ -1007,7 +1007,7 @@ def test_power_negbin():
         exposure=exposure,
         alpha=alpha,
         dispersion=dispersion, method_var="score")
-    assert_allclose(pow_[0], pow1, atol=5e-5)
+    assert_allclose(pow_, pow1, atol=5e-5)
 
     # test with unequal sample size agains R
     # R packages MKmisc and PASSED have only equality test, ratio=1, for negbin
