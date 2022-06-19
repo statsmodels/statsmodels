@@ -313,7 +313,7 @@ num_blocks = size(blocks,2);  % Number of blocks
 %Kalman filter sequence
 
 % Running the Kalman filter and smoother with current parameters
-% Note that log-liklihood is NOT re-estimated after the runKF step: This
+% Note that log-likelihood is NOT re-estimated after the runKF step: This
 % effectively gives the previous iteration's log-likelihood
 % For more information on output, see runKF
 [Zsmooth, Vsmooth, VVsmooth, loglik] = runKF(y, A, C, Q, R, Z_0, V_0);

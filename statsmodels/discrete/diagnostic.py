@@ -77,7 +77,7 @@ class CountDiagnostic:
         -----
         Warning: The current default can have many empty or nearly empty bins.
         The default number of bins is given by max(endog).
-        Currently it is recommended to limit the nuber of bins explicitly,
+        Currently it is recommended to limit the number of bins explicitly,
         see Examples below.
         Binning will change in future and automatic binning will be added.
 
@@ -94,7 +94,7 @@ class CountDiagnostic:
         `test_chisquare_prob(bin_edges=np.arange(3))`
 
         `test_chisquare_prob(bin_edges=np.arange(10))` tests the hypothesis
-        that the frequences for counts up to 7 correspond to the estimated
+        that the frequencies for counts up to 7 correspond to the estimated
         Poisson distributions.
         In this case, edges are 0, ..., 9 which defines 9 bins for
         counts 0 to 8. The last bin is dropped, so the joint test hypothesis is
