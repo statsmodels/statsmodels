@@ -472,12 +472,37 @@ Status: experimental, API might change, added in 0.12
 
 .. currentmodule:: statsmodels.stats.rates
 
+statistical function for one sample
+
+.. autosummary::
+   :toctree: generated
+
+   confint_poisson
+   confint_quantile_poisson
+   test_poisson
+   tolerance_int_poisson
+
+statistical function for two independent samples
+
 .. autosummary::
    :toctree: generated
 
    test_poisson_2indep
    etest_poisson_2indep
+   confint_poisson_2indep
    tost_poisson_2indep
+   nonequivalence_poisson_2indep
+
+functions for statistical power
+
+.. autosummary::
+   :toctree: generated
+
+   power_poisson_2indep
+   power_equivalence_poisson_2indep
+   power_poisson_diff_2indep
+   power_negbin_2indep
+   power_equivalence_neginb_2indep
 
 
 Multivariate
