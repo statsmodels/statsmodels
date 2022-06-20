@@ -342,7 +342,7 @@ def _fit_minimize(f, score, start_params, fargs, kwargs, disp=True,
         score = None
 
     # Use bounds/constraints only if they're allowed by the method
-    has_bounds = ['L-BFGS-B', 'TNC', 'SLSQP', 'trust-constr']
+    has_bounds = ['Nelder-Mead', 'L-BFGS-B', 'TNC', 'SLSQP', 'Powell', 'trust-constr']
     has_constraints = ['COBYLA', 'SLSQP', 'trust-constr']
 
     if 'bounds' in kwargs.keys() and kwargs['min_method'] in has_bounds:
