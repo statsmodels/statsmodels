@@ -736,7 +736,7 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, value=None,
     '''
 
     # shortcut names
-    y1, n1, y2, n2 = count1, exposure1, count2, exposure2
+    y1, n1, y2, n2 = map(np.asarray, [count1, exposure1, count2, exposure2])
     d = n2 / n1
     rate1, rate2 = y1 / n1, y2 / n2
     rates_cmle = None
@@ -752,9 +752,9 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, value=None,
         elif ratio_null is not None:
             warnings.warn("'ratio_null' is deprecated, use 'value' keyword",
                           DeprecationWarning)
-            ratio_null = ratio_null  # just to be explicit  # noqa
             value = ratio_null
         else:
+            # for results holder instance, it still contains ratio_null
             ratio_null = value
 
         r = value
@@ -799,7 +799,7 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, value=None,
                 etest_kwds = {}
 
             stat, pvalue = etest_poisson_2indep(
-                count1, exposure1, count2, exposure2, ratio_null=ratio_null,
+                count1, exposure1, count2, exposure2, value=value,
                 method=method_etest, alternative=alternative, **etest_kwds)
 
             dist = 'poisson'
@@ -860,6 +860,7 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, value=None,
     res = HolderTuple(statistic=stat,
                       pvalue=pvalue,
                       distribution=dist,
+                      compare=compare,
                       method=method,
                       alternative=alternative,
                       rates=rates,
@@ -966,7 +967,7 @@ def etest_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=None,
     Analysis 51 (6): 3085–99. https://doi.org/10.1016/j.csda.2006.02.004.
 
     """
-    y1, n1, y2, n2 = count1, exposure1, count2, exposure2
+    y1, n1, y2, n2 = map(np.asarray, [count1, exposure1, count2, exposure2])
     d = n2 / n1
 
     eps = 1e-20  # avoid zero division in stat_func
@@ -974,14 +975,11 @@ def etest_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=None,
     if compare == "ratio":
         if ratio_null is None and value is None:
             # default value
-            value = ratio_null = 1
+            value = 1
         elif ratio_null is not None:
             warnings.warn("'ratio_null' is deprecated, use 'value' keyword",
                           DeprecationWarning)
-            ratio_null = ratio_null  # just to be explicit  # noqa
             value = ratio_null
-        else:
-            ratio_null = value
 
         r = value  # rate1 / rate2
         r_d = r / d
@@ -1285,7 +1283,7 @@ def confint_poisson_2indep(count1, exposure1, count2, exposure2,
     """
 
     # shortcut names
-    y1, n1, y2, n2 = count1, exposure1, count2, exposure2
+    y1, n1, y2, n2 = map(np.asarray, [count1, exposure1, count2, exposure2])
     rate1, rate2 = y1 / n1, y2 / n2
     alpha = alpha / 2  # two-sided only
 
@@ -1477,6 +1475,8 @@ def power_poisson_ratio_2indep(
     # TODO: avoid possible circular import, check if needed
     from statsmodels.stats.power import normal_power_het
 
+    rate1, rate2, nobs1 = map(np.asarray, [rate1, rate2, nobs1])
+
     nobs2 = nobs_ratio * nobs1
     v1 = dispersion / exposure * (1 / rate1 + 1 / (nobs_ratio * rate2))
     if method_var == "alt":
@@ -1591,6 +1591,8 @@ def power_equivalence_poisson_2indep(rate1, rate2, nobs1,
        376–87. https://doi.org/10.1002/sim.5947.
     .. [3] PASS documentation
     """
+    rate1, rate2, nobs1 = map(np.asarray, [rate1, rate2, nobs1])
+
     nobs2 = nobs_ratio * nobs1
     v1 = dispersion / exposure * (1 / rate1 + 1 / (nobs_ratio * rate2))
 
@@ -1766,6 +1768,8 @@ def power_poisson_diff_2indep(rate1, rate2, nobs1, nobs_ratio=1, alpha=0.05,
     # TODO: avoid possible circular import, check if needed
     from statsmodels.stats.power import normal_power_het
 
+    rate1, rate2, nobs1 = map(np.asarray, [rate1, rate2, nobs1])
+
     diff = rate1 - rate2
     _, std_null, std_alt = _std_2poisson_power(
         rate1,
@@ -1917,6 +1921,8 @@ def power_negbin_ratio_2indep(
     # TODO: avoid possible circular import, check if needed
     from statsmodels.stats.power import normal_power_het
 
+    rate1, rate2, nobs1 = map(np.asarray, [rate1, rate2, nobs1])
+
     nobs2 = nobs_ratio * nobs1
     v1 = ((1 / rate1 + 1 / (nobs_ratio * rate2)) / exposure +
           (1 + nobs_ratio) / nobs_ratio * dispersion)
@@ -2034,6 +2040,8 @@ def power_equivalence_neginb_2indep(rate1, rate2, nobs1,
        376–87. https://doi.org/10.1002/sim.5947.
     .. [3] PASS documentation
     """
+    rate1, rate2, nobs1 = map(np.asarray, [rate1, rate2, nobs1])
+
     nobs2 = nobs_ratio * nobs1
 
     v1 = ((1 / rate2 + 1 / (nobs_ratio * rate1)) / exposure +
