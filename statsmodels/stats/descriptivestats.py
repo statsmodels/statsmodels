@@ -392,6 +392,9 @@ class Description:
 
         def _mode(ser):
             mode_res = stats.mode(ser.dropna())
+            # Changes in SciPy 1.10
+            if np.isscalar(mode_res[0]):
+                return float(mode_res[0]), mode_res[1]
             if mode_res[0].shape[0] > 0:
                 return [float(val) for val in mode_res]
             return np.nan, np.nan
