@@ -4,6 +4,7 @@ Defines the link functions to be used with GLM and GEE families.
 
 import numpy as np
 import scipy.stats
+from statsmodels.tools.decorators import depreciated
 FLOAT_EPS = np.finfo(float).eps
 
 
@@ -246,6 +247,7 @@ class Logit(Link):
         return (2*p - 1) / v**2
 
 
+@depreciated("logit is deprecated. Use Logit instead.")
 class logit(Logit):
     pass
 
@@ -575,6 +577,7 @@ class Log(Link):
         return np.exp(z)
 
 
+@depreciated("log is deprecated. Use Log instead.")
 class log(Log):
     """
     The log transform
@@ -914,6 +917,7 @@ class CLogLog(Logit):
         return np.exp(z - np.exp(z))
 
 
+@depreciated("cloglog is deprecated. Use CLogLog instead.")
 class cloglog(CLogLog):
     """
     The CLogLog transform link function.
@@ -1049,6 +1053,7 @@ class LogLog(Logit):
         return self.inverse_deriv(z) * (np.exp(-z) - 1)
 
 
+@depreciated("loglog is deprecated. Use LogLog instead.")
 class loglog(LogLog):
     """
     The LogLog transform link function.
@@ -1184,6 +1189,7 @@ class NegativeBinomial(Link):
         return t / (self.alpha * (1-t)**2)
 
 
+@depreciated("nbinom is deprecated. Use NegativeBinomial instead.")
 class nbinom(NegativeBinomial):
     """
     The negative binomial link function.

@@ -1,10 +1,12 @@
+import functools
+
 from statsmodels.tools.sm_exceptions import CacheWriteWarning
 from statsmodels.compat.pandas import cache_readonly as PandasCacheReadonly
 
 import warnings
 
 __all__ = ['cache_readonly', 'cache_writable', 'deprecated_alias',
-           'ResettableCache']
+           'ResettableCache', 'depreciated']
 
 
 class ResettableCache(dict):
@@ -130,6 +132,14 @@ class cache_writable(_cache_readonly):
     def __call__(self, func):
         return CachedWritableAttribute(func,
                                        cachename=self.cachename)
+
+
+def depreciated(func, msg):
+    warnings.warn(msg, DeprecationWarning)
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+    return wrapper
 
 
 # Use pandas since it works with docs correctly
