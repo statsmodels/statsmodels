@@ -1248,7 +1248,7 @@ def confint_poisson_2indep(count1, exposure1, count2, exposure2,
         - 'sqrtcc' :
         - 'exact-cond': NOT YET, exact conditional test based on binomial
           distribution
-           This uses ``binom_test`` which is minlike in the two-sided case.
+          This uses ``binom_test`` which is minlike in the two-sided case.
         - 'cond-midp': NOT YET, midpoint-pvalue of exact conditional test
         - 'mover' :
 
