@@ -465,7 +465,8 @@ Rates
 Statistical functions for rates. This currently includes hypothesis tests for
 two independent samples.
 
-Status: experimental, API might change, added in 0.12
+Status: experimental, API might change, added in 0.12, refactored and enhanced
+in 0.14
 
 .. module:: statsmodels.stats.rates
    :synopsis: Tests for Poisson rates
@@ -477,9 +478,9 @@ statistical function for one sample
 .. autosummary::
    :toctree: generated
 
+   test_poisson
    confint_poisson
    confint_quantile_poisson
-   test_poisson
    tolerance_int_poisson
 
 statistical function for two independent samples
@@ -498,10 +499,10 @@ functions for statistical power
 .. autosummary::
    :toctree: generated
 
-   power_poisson_2indep
+   power_poisson_ratio_2indep
    power_equivalence_poisson_2indep
    power_poisson_diff_2indep
-   power_negbin_2indep
+   power_negbin_ratio_2indep
    power_equivalence_neginb_2indep
 
 

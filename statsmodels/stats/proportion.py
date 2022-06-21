@@ -1230,7 +1230,7 @@ def proportions_chisquare_pairscontrol(count, nobs, value=None,
 def confint_proportions_2indep(count1, nobs1, count2, nobs2, method=None,
                                compare='diff', alpha=0.05, correction=True):
     """
-    Confidence intervals for comparing two independent proportions
+    Confidence intervals for comparing two independent proportions.
 
     This assumes that we have two independent binomial samples.
 
@@ -1654,6 +1654,11 @@ def test_proportions_2indep(count1, nobs1, count2, nobs2, value=None,
         Count for the second sample.
     nobs2 : int
         Sample size for the second sample.
+    value : float
+        Value of the difference, risk ratio or odds ratio of 2 independent
+        proportions under the null hypothesis.
+        Default is equal proportions, 0 for diff and 1 for risk-ratio and for
+        odds-ratio.
     method : string
         Method for computing confidence interval. If method is None, then a
         default method is used. The default might change as more methods are

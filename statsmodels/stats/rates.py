@@ -401,8 +401,8 @@ def tolerance_int_poisson(count, exposure, prob=0.95, exposure_new=1.,
     Returns
     -------
     tuple (low, upp) of limits of tolerance interval.
-    The tolerance interval is a closed interval, that is both ``low`` and
-    ``upp`` are in the interval.
+        The tolerance interval is a closed interval, that is both ``low`` and
+        ``upp`` are in the interval.
 
     Notes
     -----
@@ -415,12 +415,12 @@ def tolerance_int_poisson(count, exposure, prob=0.95, exposure_new=1.,
 
     References
     ----------
-    Hahn, Gerald J, and William Q Meeker. 2010. Statistical Intervals: A Guide
-    for Practitioners.
-
-    Hahn, Gerald J., and Ramesh Chandra. 1981. “Tolerance Intervals for Poisson
-    and Binomial Variables.” Journal of Quality Technology 13 (2): 100–110.
-    https://doi.org/10.1080/00224065.1981.11980998.
+    .. [1] Hahn, Gerald J., and William Q. Meeker. 1991. Statistical Intervals:
+       A Guide for Practitioners. 1st ed. Wiley Series in Probability and
+       Statistics. Wiley. https://doi.org/10.1002/9780470316771.
+    .. [2] Hahn, Gerald J., and Ramesh Chandra. 1981. “Tolerance Intervals for
+       Poisson and Binomial Variables.” Journal of Quality Technology 13 (2):
+       100–110. https://doi.org/10.1080/00224065.1981.11980998.
 
     """
     prob_tail = 1 - prob
@@ -670,16 +670,16 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, value=None,
 
     compare : {'diff', 'ratio'}
         Default is "ratio".
-        If compare is `diff`, then the hypothesis test is for
-        diff = rate1 - rate2.
         If compare is `ratio`, then the hypothesis test is for the
         rate ratio defined by ratio = rate1 / rate2.
-    alternative : string
+        If compare is `diff`, then the hypothesis test is for
+        diff = rate1 - rate2.
+    alternative : {"two-sided" (default), "larger", smaller}
         The alternative hypothesis, H1, has to be one of the following
 
-        - 'two-sided': H1: ratio of rates is not equal to ratio_null (default)
-        - 'larger' :   H1: ratio of rates is larger than ratio_null
-        - 'smaller' :  H1: ratio of rates is smaller than ratio_null
+        - 'two-sided': H1: ratio, or diff, of rates is not equal to value
+        - 'larger' :   H1: ratio, or diff, of rates is larger than value
+        - 'smaller' :  H1: ratio, or diff, of rates is smaller than value
     etest_kwds: dictionary
         Additional parameters to be passed to the etest_poisson_2indep
         function, namely y_grid.
@@ -1079,10 +1079,15 @@ def tost_poisson_2indep(count1, exposure1, count2, exposure2, low, upp,
 
     The Null and alternative hypothesis for equivalence testing are
 
-    - H0: g1 / g2 <= low or upp <= g1 / g2
-    - H1: low < g1 / g2 < upp
+    for compare = 'ratio'
 
-    where g1 and g2 are the Poisson rates.
+    - H0: rate1 / rate2 <= low or upp <= rate1 / rate2
+    - H1: low < rate1 / rate2 < upp
+
+    for compare = 'diff'
+
+    - H0: rate1 - rate2 <= low or upp <= rate1 - rate2
+    - H1: low < rate - rate < upp
 
     Parameters
     ----------
@@ -1095,27 +1100,38 @@ def tost_poisson_2indep(count1, exposure1, count2, exposure2, low, upp,
     exposure2 : float
         Total exposure (time * subjects) in second sample
     low, upp :
-        equivalence margin for the ratio of Poisson rates
+        equivalence margin for the ratio or difference of Poisson rates
     method: string
         TOST uses ``test_poisson_2indep`` and has the same methods.
+
+        ratio:
+
+        - 'wald': method W1A, wald test, variance based on observed rates
+        - 'score': method W2A, score test, variance based on estimate under
+          the Null hypothesis
+        - 'wald-log': W3A, uses log-ratio, variance based on observed rates
+        - 'score-log' W4A, uses log-ratio, variance based on estimate under
+          the Null hypothesis
+        - 'sqrt': W5A, based on variance stabilizing square root transformation
+        - 'exact-cond': exact conditional test based on binomial distribution
+           This uses ``binom_test`` which is minlike in the two-sided case.
+        - 'cond-midp': midpoint-pvalue of exact conditional test
+        - 'etest' or 'etest-score: etest with score test statistic
+        - 'etest-wald': etest with wald test statistic
+
+        diff:
+
+        - 'wald',
+        - 'waldccv'
+        - 'score'
+        - 'etest-score' or 'etest: etest with score test statistic
+        - 'etest-wald': etest with wald test statistic
 
     Returns
     -------
     results : instance of HolderTuple class
         The two main attributes are test statistic `statistic` and p-value
         `pvalue`.
-
-    Notes
-    -----
-    - 'wald': method W1A, wald test, variance based on separate estimates
-    - 'score': method W2A, score test, variance based on estimate under Null
-    - 'wald-log': W3A  not implemented
-    - 'score-log' W4A  not implemented
-    - 'sqrt': W5A, based on variance stabilizing square root transformation
-    - 'exact-cond': exact conditional test based on binomial distribution
-    - 'cond-midp': midpoint-pvalue of exact conditional test
-
-    The latter two are only verified for one-sided example.
 
     References
     ----------
@@ -1152,7 +1168,7 @@ def tost_poisson_2indep(count1, exposure1, count2, exposure2, low, upp,
 
 def nonequivalence_poisson_2indep(count1, exposure1, count2, exposure2,
                                   low, upp, method='score', compare="ratio"):
-    """Test for non-equivalence, minimum effect for poisson
+    """Test for non-equivalence, minimum effect for poisson.
 
     This reverses null and alternative hypothesis compared to equivalence
     testing. The null hypothesis is that the effect, ratio (or diff), is in
@@ -1161,10 +1177,15 @@ def nonequivalence_poisson_2indep(count1, exposure1, count2, exposure2,
 
     The Null and alternative hypothesis comparing the ratio of rates are
 
-    - H0: low < g1 / g2 < upp
-    - H1: g1 / g2 <= low or upp <= g1 / g2
+    for compare = 'ratio':
 
-    where g1 and g2 are the Poisson rates.
+    - H0: low < rate1 / rate2 < upp
+    - H1: rate1 / rate2 <= low or upp <= rate1 / rate2
+
+    for compare = 'diff':
+
+    - H0: rate1 - rate2 <= low or upp <= rate1 - rate2
+    - H1: low < rate - rate < upp
 
 
     Notes
@@ -1183,13 +1204,13 @@ def nonequivalence_poisson_2indep(count1, exposure1, count2, exposure2,
 
     References
     ----------
-    Hodges, J. L., Jr., and E. L. Lehmann. 1954. Testing the Approximate
-    Validity of Statistical Hypotheses. Journal of the Royal Statistical
-    Society, Series B (Methodological) 16: 261–68.
+    .. [1] Hodges, J. L., Jr., and E. L. Lehmann. 1954. Testing the Approximate
+       Validity of Statistical Hypotheses. Journal of the Royal Statistical
+       Society, Series B (Methodological) 16: 261–68.
 
-    Kim, Jae H., and Andrew P. Robinson. 2019. “Interval-Based Hypothesis
-    Testing and Its Applications to Economics and Finance.”
-    Econometrics 7 (2): 21. https://doi.org/10.3390/econometrics7020021.
+    .. [2] Kim, Jae H., and Andrew P. Robinson. 2019. “Interval-Based
+       Hypothesis Testing and Its Applications to Economics and Finance.”
+       Econometrics 7 (2): 21. https://doi.org/10.3390/econometrics7020021.
 
     """
     tt1 = test_poisson_2indep(count1, exposure1, count2, exposure2,
@@ -1218,7 +1239,7 @@ def confint_poisson_2indep(count1, exposure1, count2, exposure2,
                            method='score', compare='ratio', alpha=0.05,
                            method_mover="score",
                            ):
-    """Confidence interval for ratio of 2 indep poisson rates
+    """Confidence interval for ratio or difference of 2 indep poisson rates.
 
     Parameters
     ----------
@@ -1248,7 +1269,7 @@ def confint_poisson_2indep(count1, exposure1, count2, exposure2,
         - 'sqrtcc' :
         - 'exact-cond': NOT YET, exact conditional test based on binomial
           distribution
-           This uses ``binom_test`` which is minlike in the two-sided case.
+          This uses ``binom_test`` which is minlike in the two-sided case.
         - 'cond-midp': NOT YET, midpoint-pvalue of exact conditional test
         - 'mover' :
 
@@ -1758,11 +1779,11 @@ def power_poisson_diff_2indep(rate1, rate2, nobs1, nobs_ratio=1, alpha=0.05,
 
     References
     ----------
-    .. [1] PASS manual chapter 436
-    .. [2] Stucke, Kathrin, and Meinhard Kieser. 2013. “Sample Size
+    .. [1] Stucke, Kathrin, and Meinhard Kieser. 2013. “Sample Size
        Calculations for Noninferiority Trials with Poisson Distributed Count
        Data.” Biometrical Journal 55 (2): 203–16.
        https://doi.org/10.1002/bimj.201200142.
+    .. [2] PASS manual chapter 436
 
     """
     # TODO: avoid possible circular import, check if needed
