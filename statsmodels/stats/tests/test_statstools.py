@@ -112,30 +112,6 @@ def test_jarque_bera():
     assert_almost_equal(jb, st_pv_R, 14)
 
 
-def test_shapiro():
-    #tests against R fBasics
-    #testing scipy.stats
-    from scipy.stats import shapiro
-
-    st_pv_R = np.array([0.939984787255526, 0.239621898000460])
-    sh = shapiro(x)
-    assert_almost_equal(sh, st_pv_R, 4)
-
-    #st is ok -7.15e-06, pval agrees at -3.05e-10
-    st_pv_R = np.array([5.799574255943298e-01, 1.838456834681376e-06 * 1e4])
-    sh = shapiro(x**2) * np.array([1, 1e4])
-    assert_almost_equal(sh, st_pv_R, 5)
-
-    st_pv_R = np.array([0.91730442643165588, 0.08793704167882448])
-    sh = shapiro(np.log(x**2))
-    assert_almost_equal(sh, st_pv_R, 5)
-
-    #diff is [  9.38773155e-07,   5.48221246e-08]
-    st_pv_R = np.array([0.818361863493919373, 0.001644620895206969])
-    sh = shapiro(np.exp(-x**2))
-    assert_almost_equal(sh, st_pv_R, 5)
-
-
 def test_adnorm():
     #tests against R fBasics
     st_pv = []

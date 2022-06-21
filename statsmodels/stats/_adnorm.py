@@ -46,6 +46,7 @@ def anderson_statistic(x, dist='norm', fit=True, params=(), axis=0):
             s = np.expand_dims(np.std(x, ddof=1, axis=axis), axis)
             w = (y - xbar) / s
             z = stats.norm.cdf(w)
+            print(xbar, s, w, z)
             # print z
         elif callable(dist):
             params = dist.fit(x)
