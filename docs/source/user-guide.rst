@@ -60,6 +60,7 @@ Statistics and Tools
    stats
    contingency_tables
    imputation
+   treatment
    emplike
    distributions
    graphics
