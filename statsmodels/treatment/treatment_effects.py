@@ -526,6 +526,9 @@ class _IPWRAGMM(_TEGMMGeneric1):
 
 
 class TreatmentEffectResults(ContrastResults):
+    """Results class for TreatmentEffect
+
+    """
 
     def __init__(self, teff, results_gmm, method, **kwds):
 
