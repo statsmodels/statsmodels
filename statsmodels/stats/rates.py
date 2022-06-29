@@ -1152,9 +1152,13 @@ def tost_poisson_2indep(count1, exposure1, count2, exposure2, low, upp,
                               compare=compare,
                               alternative='smaller')
 
-    idx_max = 0 if tt1.pvalue > tt2.pvalue else 1
-    res = HolderTuple(statistic=[tt1.statistic, tt2.statistic][idx_max],
-                      pvalue=[tt1.pvalue, tt2.pvalue][idx_max],
+    # idx_max = 1 if t1.pvalue < t2.pvalue else 0
+    idx_max = np.asarray(tt1.pvalue < tt2.pvalue, int)
+    statistic = np.choose(idx_max, [tt1.statistic, tt2.statistic])
+    pvalue = np.choose(idx_max, [tt1.pvalue, tt2.pvalue])
+
+    res = HolderTuple(statistic=statistic,
+                      pvalue=pvalue,
                       method=method,
                       compare=compare,
                       equiv_limits=(low, upp),

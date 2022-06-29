@@ -783,6 +783,34 @@ class TestMethodsCompare2indep():
 
             assert_allclose(tst2.pvalue, tst.pvalue, rtol=1e-12)
 
+        # check vectorized equivalence test
+        if compare == "ratio":
+            f = 1.5
+            low, upp = 1 / f, f
+        else:
+            v = 0.5
+            low, upp = -v, v
+
+        tst0 = smr.tost_poisson_2indep(count1[0], n1[0], count2[0], n2[0],
+                                       low, upp,
+                                       method=meth,
+                                       compare=compare)
+        tst1 = smr.tost_poisson_2indep(count1[1], n1[1], count2[1], n2[1],
+                                       low, upp,
+                                       method=meth,
+                                       compare=compare)
+
+        tst2 = smr.tost_poisson_2indep(count1, n1, count2, n2, low, upp,
+                                       method=meth,
+                                       compare=compare)
+        assert tst2.statistic.shape == (2,)
+        assert tst2.pvalue.shape == (2,)
+
+        assert_allclose(tst2.statistic[0], tst0.statistic, rtol=1e-12)
+        assert_allclose(tst2.pvalue[0], tst0.pvalue, rtol=1e-12)
+        assert_allclose(tst2.statistic[1], tst1.statistic, rtol=1e-12)
+        assert_allclose(tst2.pvalue[1], tst1.pvalue, rtol=1e-12)
+
 
 def test_y_grid_regression():
     y_grid = arange(1000)
