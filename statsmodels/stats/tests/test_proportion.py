@@ -424,7 +424,7 @@ def test_binom_tost():
     # vectorized, TODO: observed proportion = 0 returns nan
     ci = smprop.proportion_confint(np.arange(1, 20), 20, method='beta',
                                    alpha=0.05)
-    bt = smprop.binom_tost(np.arange(1, 20), 20, *ci)
+    bt = smprop.binom_tost(np.arange(1, 20), 20, ci[0], ci[1])
     bt = np.asarray(bt)
     assert_almost_equal(bt, 0.025 * np.ones(bt.shape), decimal=12)
 
@@ -816,6 +816,8 @@ def test_equivalence_2indep():
     alpha = 0.05
     count1, nobs1 = 7, 34
     count2, nobs2 = 1, 34
+    count1v, nobs1v = [7, 1], 34
+    count2v, nobs2v = [1, 7], 34
 
     methods_both = [
                     ('diff', 'agresti-caffo'),
@@ -837,10 +839,26 @@ def test_equivalence_2indep():
                                               alpha=2 * alpha,
                                               correction=False)
 
+        # Note: test should have only one margin at confint
         res = smprop.tost_proportions_2indep(
-                count1, nobs1, count2, nobs2, low, upp, compare=co,
+                count1, nobs1, count2, nobs2, low, upp * 1.05, compare=co,
                 method=method, correction=False)
         assert_allclose(res.pvalue, alpha, atol=1e-10)
+
+        res = smprop.tost_proportions_2indep(
+                count1, nobs1, count2, nobs2, low * 0.95, upp, compare=co,
+                method=method, correction=False)
+        assert_allclose(res.pvalue, alpha, atol=1e-10)
+
+        # vectorized
+        if method == 'logit-smoothed':
+            # not correctly vectorized
+            return
+        res1 = res  # for debugging  # noqa
+        res = smprop.tost_proportions_2indep(
+                count1v, nobs1v, count2v, nobs2v, low * 0.95, upp, compare=co,
+                method=method, correction=False)
+        assert_allclose(res.pvalue[0], alpha, atol=1e-10)
 
 
 def test_score_confint_koopman_nam():
