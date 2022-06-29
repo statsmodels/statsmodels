@@ -220,7 +220,7 @@ class RankCompareResult(HolderTuple):
         t1 = self.test_prob_superior(low, alternative='larger')
         t2 = self.test_prob_superior(upp, alternative='smaller')
 
-        # idx_max = 0 if t1.pvalue < t2.pvalue else 1
+        # idx_max = 1 if t1.pvalue < t2.pvalue else 0
         idx_max = np.asarray(t1.pvalue < t2.pvalue, int)
         title = "Equivalence test for Prob(x1 > x2) + 0.5 Prob(x1 = x2) "
         res = HolderTuple(statistic=np.choose(idx_max,

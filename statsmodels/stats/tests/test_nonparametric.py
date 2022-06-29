@@ -391,9 +391,15 @@ def test_rank_compare_2indep1():
     assert_allclose(res_ub[1], 0.05, rtol=1e-13)
 
     # test consistency of tost and confint
-    res_tost = res.tost_prob_superior(*ci)
-    assert_allclose(res_tost.results_smaller.pvalue, 0.025, rtol=1e-13)
+    # lower margin is binding, alternative larger
+    res_tost = res.tost_prob_superior(ci[0], ci[1] * 1.05)
     assert_allclose(res_tost.results_larger.pvalue, 0.025, rtol=1e-13)
+    assert_allclose(res_tost.pvalue, 0.025, rtol=1e-13)
+
+    # upper margin is binding, alternative smaller
+    res_tost = res.tost_prob_superior(ci[0] * 0.85, ci[1])
+    assert_allclose(res_tost.results_smaller.pvalue, 0.025, rtol=1e-13)
+    assert_allclose(res_tost.pvalue, 0.025, rtol=1e-13)
 
     # use t-distribution
     # our ranking is defined as reversed from lawstat, and BM article
@@ -419,9 +425,15 @@ def test_rank_compare_2indep1():
     assert_allclose(res_ub[1], 0.05, rtol=1e-11)
 
     # test consistency of tost and confint
-    res_tost = res.tost_prob_superior(*ci)
-    assert_allclose(res_tost.results_smaller.pvalue, 0.025, rtol=1e-11)
-    assert_allclose(res_tost.results_larger.pvalue, 0.025, rtol=1e-11)
+    # lower margin is binding, alternative larger
+    res_tost = res.tost_prob_superior(ci[0], ci[1] * 1.05)
+    assert_allclose(res_tost.results_larger.pvalue, 0.025, rtol=1e-10)
+    assert_allclose(res_tost.pvalue, 0.025, rtol=1e-10)
+
+    # upper margin is binding, alternative smaller
+    res_tost = res.tost_prob_superior(ci[0] * 0.85, ci[1])
+    assert_allclose(res_tost.results_smaller.pvalue, 0.025, rtol=1e-10)
+    assert_allclose(res_tost.pvalue, 0.025, rtol=1e-10)
 
     # extras
     # cohen's d

@@ -1442,6 +1442,9 @@ def _shrink_prob(count1, nobs1, count2, nobs2, shrink_factor=2,
         false.
 
     """
+    vectorized = any(np.size(i) > 1 for i in [count1, nobs1, count2, nobs2])
+    if vectorized:
+        raise ValueError("function is not vectorized")
     nobs_col = np.array([count1 + count2, nobs1 - count1 + nobs2 - count2])
     nobs_row = np.array([nobs1, nobs2])
     nobs = nobs1 + nobs2
@@ -1746,6 +1749,9 @@ def test_proportions_2indep(count1, nobs1, count2, nobs2, value=None,
         # TODO: odds ratio does not work if value=1 for score test
         value = 0 if compare == 'diff' else 1
 
+    count1, nobs1, count2, nobs2 = map(np.asarray,
+                                       [count1, nobs1, count2, nobs2])
+
     p1 = count1 / nobs1
     p2 = count2 / nobs2
     diff = p1 - p2
@@ -1980,9 +1986,13 @@ def tost_proportions_2indep(count1, nobs1, count2, nobs2, low, upp,
                                   correction=correction,
                                   return_results=True)
 
-    idx_max = 0 if tt1.pvalue < tt2.pvalue else 1
-    res = HolderTuple(statistic=[tt1.statistic, tt2.statistic][idx_max],
-                      pvalue=[tt1.pvalue, tt2.pvalue][idx_max],
+    # idx_max = 1 if t1.pvalue < t2.pvalue else 0
+    idx_max = np.asarray(tt1.pvalue < tt2.pvalue, int)
+    statistic = np.choose(idx_max, [tt1.statistic, tt2.statistic])
+    pvalue = np.choose(idx_max, [tt1.pvalue, tt2.pvalue])
+
+    res = HolderTuple(statistic=statistic,
+                      pvalue=pvalue,
                       compare=compare,
                       method=method,
                       results_larger=tt1,
