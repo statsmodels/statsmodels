@@ -7,6 +7,7 @@ from __future__ import annotations
 from typing import Any, Sequence
 import numpy as np
 from scipy import optimize
+from statsmodels.compat.scipy import SP_LT_15, SP_LT_17
 
 
 def check_kwargs(kwargs: dict[str, Any], allowed: Sequence[str], method: str):
@@ -342,7 +343,11 @@ def _fit_minimize(f, score, start_params, fargs, kwargs, disp=True,
         score = None
 
     # Use bounds/constraints only if they're allowed by the method
-    has_bounds = ['Nelder-Mead', 'L-BFGS-B', 'TNC', 'SLSQP', 'Powell', 'trust-constr']
+    has_bounds = ['L-BFGS-B', 'TNC', 'SLSQP', 'trust-constr']
+    # Added in SP 1.5
+    has_bounds += ['Powell'] * (not SP_LT_15)
+    # Added in SP 1.7
+    has_bounds += ['Nelder-Mead'] * (not SP_LT_17)
     has_constraints = ['COBYLA', 'SLSQP', 'trust-constr']
 
     if 'bounds' in kwargs.keys() and kwargs['min_method'] in has_bounds:
