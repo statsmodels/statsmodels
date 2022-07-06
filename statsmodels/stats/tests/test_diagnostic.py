@@ -1705,9 +1705,11 @@ def test_ljungbox_auto_lag_selection():
     data = sunspots.load_pandas().data["SUNACTIVITY"]
     res = AutoReg(data, 4, old_names=False).fit()
     resid = res.resid
-    res1 = smsdia.acorr_ljungbox(resid)
-    res2 = smsdia.acorr_ljungbox(resid, model_df=4)
+    res1 = smsdia.acorr_ljungbox(resid, auto_lag=True)
+    res2 = smsdia.acorr_ljungbox(resid, model_df=4, auto_lag=True)
     assert_allclose(res1.iloc[:, 0], res2.iloc[:, 0])
+    assert res1.shape[0] >= 1
+    assert res2.shape[0] >= 1
     assert np.all(np.isnan(res2.iloc[:4, 1]))
     assert np.all(res2.iloc[4:, 1] <= res1.iloc[4:, 1])
 
