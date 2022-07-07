@@ -1714,6 +1714,12 @@ def test_ljungbox_auto_lag_selection():
     assert np.all(res2.iloc[4:, 1] <= res1.iloc[4:, 1])
 
 
+def test_ljungbox_auto_lag_whitenoise():
+    data = np.random.rand(1000) #white noise process
+    res = smsdia.acorr_ljungbox(data, auto_lag=True)
+    assert res.shape[0] >= 1 #auto lag selected must be at least 1
+
+
 def test_ljungbox_errors_warnings():
     data = sunspots.load_pandas().data["SUNACTIVITY"]
     with pytest.raises(ValueError, match="model_df must"):
