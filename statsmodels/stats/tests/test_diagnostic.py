@@ -1708,6 +1708,7 @@ def test_ljungbox_auto_lag_selection():
     res1 = smsdia.acorr_ljungbox(resid, auto_lag=True)
     res2 = smsdia.acorr_ljungbox(resid, model_df=4, auto_lag=True)
     assert_allclose(res1.iloc[:, 0], res2.iloc[:, 0])
+    #TODO: compare selected lags with Stata/ R to confirm that corect auto_lag is selected
     assert res1.shape[0] >= 1
     assert res2.shape[0] >= 1
     assert np.all(np.isnan(res2.iloc[:4, 1]))
@@ -1717,6 +1718,7 @@ def test_ljungbox_auto_lag_selection():
 def test_ljungbox_auto_lag_whitenoise():
     data = np.random.rand(1000) #white noise process
     res = smsdia.acorr_ljungbox(data, auto_lag=True)
+    #TODO: compare selected lags with Stata/ R to confirm that corect auto_lag is selected
     assert res.shape[0] >= 1 #auto lag selected must be at least 1
 
 
