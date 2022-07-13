@@ -140,7 +140,7 @@ def _make_automdl_options(maxorder, maxdiff, diff):
 
 def _make_var_names(exog):
     if hasattr(exog, "name"):
-        var_names = exog.name
+        var_names = [exog.name]
     elif hasattr(exog, "columns"):
         var_names = exog.columns
     else:
