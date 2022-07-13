@@ -163,7 +163,7 @@ def test_minimize_scipy_powell():
     assert_almost_equal(xopt, [2, 3.5], 4)
 
 
-@pytest.mark.skipif(SP_LT_17, reason="Nelder-Mead bounds support added in SP 1.7")
+@pytest.mark.skipif(SP_LT_17, reason="NM bounds support added in SP 1.7")
 def test_minimize_scipy_nm():
     func = fit_funcs["minimize"]
     xopt, _ = func(
