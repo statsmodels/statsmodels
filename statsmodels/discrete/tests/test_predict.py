@@ -355,7 +355,6 @@ def test_distr(case):
     if issubclass(cls_model, BinaryModel):
         y = (y > 0.5).astype(float)
 
-    print("\n\n", cls_model, kwds)
     mod = cls_model(y, x, **kwds)
     # res = mod.fit()
     params_dgp = params
