@@ -315,7 +315,6 @@ class AutoReg(tsa_model.TimeSeriesModel):
                 assert isinstance(val, int)
                 _lags.append(val)
             _lags_arr: NDArray = np.array(sorted(_lags))
-            print(_lags_arr)
             if (
                 np.any(_lags_arr < 1)
                 or np.unique(_lags_arr).shape[0] != _lags_arr.shape[0]
