@@ -416,25 +416,27 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
         sacf = acf(x, nlags=maxlag, fft=False)
 
         if not boxpierce:
-            q_sacf = (nobs * (nobs + 2) * np.cumsum(sacf[1:maxlag + 1] ** 2
-                / (nobs - np.arange(1, maxlag + 1))))
+            q_sacf = (
+                    nobs * (nobs + 2) * np.cumsum(sacf[1:maxlag + 1] ** 2
+                    / (nobs - np.arange(1, maxlag + 1)))
+                    )
         else:
             q_sacf = nobs * np.cumsum(sacf[1:maxlag + 1] ** 2)
 
-        #obtain thresholds
+        # obtain thresholds
         q = 2.4
         threshold = np.sqrt(q * np.log(nobs))
         threshold_metric = np.abs(sacf).max() * np.sqrt(nobs)
 
-        #compute penalized sum of squared autocorrelations
+        # compute penalized sum of squared autocorrelations
         if (threshold_metric <= threshold):
             q_sacf = q_sacf - (np.arange(1, nobs) * np.log(nobs))
         else:
             q_sacf = q_sacf - (2 * np.arange(1, nobs))
 
-        #note: np.argmax returns first (i.e., smallest) index of largest value
+        # note: np.argmax returns first (i.e., smallest) index of largest value
         lags = np.argmax(q_sacf)
-        lags = max(1, lags) #optimal lag has to be at least 1
+        lags = max(1, lags)  # optimal lag has to be at least 1
         lags = int_like(lags, "lags")
         lags = np.arange(1, lags + 1)
     elif period is not None:
