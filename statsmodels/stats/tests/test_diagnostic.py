@@ -1701,7 +1701,7 @@ def test_ljungbox_dof_adj():
     assert np.all(res2.iloc[4:, 1] <= res1.iloc[4:, 1])
 
 
-def test_ljungbox_auto_lag_selection():
+def test_ljungbox_auto_lag_selection(reset_randomstate):
     data = sunspots.load_pandas().data["SUNACTIVITY"]
     res = AutoReg(data, 4, old_names=False).fit()
     resid = res.resid
@@ -1716,8 +1716,8 @@ def test_ljungbox_auto_lag_selection():
     assert np.all(res2.iloc[4:, 1] <= res1.iloc[4:, 1])
 
 
-def test_ljungbox_auto_lag_whitenoise():
-    data = np.random.rand(1000)  # white noise process
+def test_ljungbox_auto_lag_whitenoise(reset_randomstate):
+    data = np.random.randn(1000)  # white noise process
     res = smsdia.acorr_ljungbox(data, auto_lag=True)
     # TODO: compare selected lags with Stata/ R to confirm 
     # that correct auto_lag is selected
