@@ -418,8 +418,7 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
         if not boxpierce:
             q_sacf = (
                     nobs * (nobs + 2) * np.cumsum(sacf[1:maxlag + 1] ** 2
-                    / (nobs - np.arange(1, maxlag + 1)))
-                    )
+                    / (nobs - np.arange(1, maxlag + 1))))
         else:
             q_sacf = nobs * np.cumsum(sacf[1:maxlag + 1] ** 2)
 
