@@ -399,23 +399,6 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
            lb_stat     lb_pvalue
     10  214.106992  1.827374e-40
     """
-    def get_optimal_length(threshold_metric, threshold, maxlag, func):
-        optimal_lag = 0
-        least_penalised = 0
-
-        for lags in range(1, maxlag + 1):
-            if (threshold_metric <= threshold):
-                penalty = lags * np.log(nobs)
-            else:
-                penalty = 2 * lags
-
-            test_statistic = func(lags)
-            penalised = test_statistic - penalty
-            if (penalised > least_penalised):
-                optimal_lag = lags
-                least_penalised = penalised
-
-        return optimal_lag
     # Avoid cyclic import
     from statsmodels.tsa.stattools import acf
     x = array_like(x, "x")
@@ -429,25 +412,30 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
     if auto_lag:
         maxlag = nobs - 1
 
-        # Compute threshold metrics
+        # Compute sum of squared autocorrelations
         sacf = acf(x, nlags=maxlag, fft=False)
-        sacf2 = sacf[1:maxlag + 1] ** 2 / (nobs - np.arange(1, maxlag + 1))
-        q = 2.4
-        threshold = np.sqrt(q * np.log(nobs))
-        threshold_metric = max(np.abs(sacf)) * np.sqrt(nobs)
 
         if not boxpierce:
-            lags = get_optimal_length(
-                threshold_metric,
-                threshold, maxlag,
-                lambda p: nobs * (nobs + 2) * np.cumsum(sacf2)[p - 1])
+            q_sacf = (nobs * (nobs + 2) *
+                      np.cumsum(sacf[1:maxlag + 1] ** 2
+                                / (nobs - np.arange(1, maxlag + 1))))
         else:
-            lags = get_optimal_length(
-                threshold_metric,
-                threshold,
-                maxlag,
-                lambda p: nobs * np.cumsum(sacf[1:maxlag + 1] ** 2)[p - 1])
+            q_sacf = nobs * np.cumsum(sacf[1:maxlag + 1] ** 2)
 
+        # obtain thresholds
+        q = 2.4
+        threshold = np.sqrt(q * np.log(nobs))
+        threshold_metric = np.abs(sacf).max() * np.sqrt(nobs)
+
+        # compute penalized sum of squared autocorrelations
+        if (threshold_metric <= threshold):
+            q_sacf = q_sacf - (np.arange(1, nobs) * np.log(nobs))
+        else:
+            q_sacf = q_sacf - (2 * np.arange(1, nobs))
+
+        # note: np.argmax returns first (i.e., smallest) index of largest value
+        lags = np.argmax(q_sacf)
+        lags = max(1, lags)  # optimal lag has to be at least 1
         lags = int_like(lags, "lags")
         lags = np.arange(1, lags + 1)
     elif period is not None:
