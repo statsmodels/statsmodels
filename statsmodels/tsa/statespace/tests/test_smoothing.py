@@ -72,12 +72,13 @@ class TestStatesAR3:
                 cls.results.smoother_results.smoothed_state_cov[:, :, i])
 
         # Perform simulation smoothing
-        n_disturbance_variates = (
-            (cls.model.k_endog + cls.model.ssm.k_posdef) * cls.model.nobs
-        )
+        nobs = cls.model.nobs
+        k_endog = cls.model.k_endog
+        k_posdef = cls.model.ssm.k_posdef
         cls.sim = cls.model.simulation_smoother(filter_timing=0)
         cls.sim.simulate(
-            disturbance_variates=np.zeros(n_disturbance_variates),
+            measurement_disturbance_variates=np.zeros(nobs * k_endog),
+            state_disturbance_variates=np.zeros(nobs * k_posdef),
             initial_state_variates=np.zeros(cls.model.k_states)
         )
 
@@ -257,12 +258,13 @@ class TestStatesMissingAR3:
                 cls.results.smoothed_state_cov[:, :, i])
 
         # Perform simulation smoothing
-        n_disturbance_variates = (
-            (cls.model.k_endog + cls.model.k_posdef) * cls.model.nobs
-        )
+        nobs = cls.model.nobs
+        k_endog = cls.model.k_endog
+        k_posdef = cls.model.ssm.k_posdef
         cls.sim = cls.model.simulation_smoother()
         cls.sim.simulate(
-            disturbance_variates=np.zeros(n_disturbance_variates),
+            measurement_disturbance_variates=np.zeros(nobs * k_endog),
+            state_disturbance_variates=np.zeros(nobs * k_posdef),
             initial_state_variates=np.zeros(cls.model.k_states)
         )
 

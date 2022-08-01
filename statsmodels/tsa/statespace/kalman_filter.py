@@ -1093,7 +1093,12 @@ class KalmanFilter(Representation):
         return llf_obs
 
     def simulate(self, nsimulations, measurement_shocks=None,
-                 state_shocks=None, initial_state=None):
+                 state_shocks=None, initial_state=None,
+                 pretransformed_measurement_shocks=True,
+                 pretransformed_state_shocks=True,
+                 pretransformed_initial_state=True,
+                 simulator=None, return_simulator=False,
+                 random_state=None):
         r"""
         Simulate a new time series following the state space model
 
@@ -1124,6 +1129,35 @@ class KalmanFilter(Representation):
             the model has not been initialized, then a vector of zeros is used.
             Note that this is not included in the returned `simulated_states`
             array.
+        pretransformed_measurement_shocks : bool, optional
+            If `measurement_shocks` is provided, this flag indicates whether it
+            should be directly used as the shocks. If False, then it is assumed
+            to contain draws from the standard Normal distribution that must be
+            transformed using the `obs_cov` covariance matrix. Default is True.
+        pretransformed_state_shocks : bool, optional
+            If `state_shocks` is provided, this flag indicates whether it
+            should be directly used as the shocks. If False, then it is assumed
+            to contain draws from the standard Normal distribution that must be
+            transformed using the `state_cov` covariance matrix. Default is
+            True.
+        pretransformed_initial_state : bool, optional
+            If `initial_state` is provided, this flag indicates whether it
+            should be directly used as the initial_state. If False, then it is
+            assumed to contain draws from the standard Normal distribution that
+            must be transformed using the `initial_state_cov` covariance
+            matrix. Default is True.
+        return_simulator : bool, optional
+            Whether or not to return the simulator object. Typically used to
+            improve performance when performing repeated sampling. Default is
+            False.
+        random_state : {None, int, `numpy.random.Generator`,
+                        `numpy.random.RandomState`}, optional
+            If `seed` is None (or `np.random`), the `numpy.random.RandomState`
+            singleton is used.
+            If `seed` is an int, a new ``RandomState`` instance is used,
+            seeded with `seed`.
+            If `seed` is already a ``Generator`` or ``RandomState`` instance
+            then that instance is used.
 
         Returns
         -------
@@ -1131,6 +1165,10 @@ class KalmanFilter(Representation):
             An (nsimulations x k_endog) array of simulated observations.
         simulated_states : ndarray
             An (nsimulations x k_states) array of simulated states.
+        simulator : SimulationSmoothResults
+            If `return_simulator=True`, then an instance of a simulator is
+            returned, which can be reused for additional simulations of the
+            same size.
         """
         time_invariant = self.time_invariant
         # Check for valid number of simulations
@@ -1138,85 +1176,22 @@ class KalmanFilter(Representation):
             raise ValueError('In a time-varying model, cannot create more'
                              ' simulations than there are observations.')
 
-        # Check / generate measurement shocks
-        if measurement_shocks is not None:
-            measurement_shocks = np.array(measurement_shocks)
-            if measurement_shocks.ndim == 0:
-                measurement_shocks = measurement_shocks[np.newaxis, np.newaxis]
-            elif measurement_shocks.ndim == 1:
-                measurement_shocks = measurement_shocks[:, np.newaxis]
-            required_shape = (nsimulations, self.k_endog)
-            try:
-                measurement_shocks = measurement_shocks.reshape(required_shape)
-            except ValueError:
-                raise ValueError('Provided measurement shocks are not of the'
-                                 ' appropriate shape. Required %s, got %s.'
-                                 % (str(required_shape),
-                                    str(measurement_shocks.shape)))
-        elif self.shapes['obs_cov'][-1] == 1:
-            measurement_shocks = np.random.multivariate_normal(
-                mean=np.zeros(self.k_endog), cov=self['obs_cov'],
-                size=nsimulations)
+        return self._simulate(
+            nsimulations,
+            measurement_disturbance_variates=measurement_shocks,
+            state_disturbance_variates=state_shocks,
+            initial_state_variates=initial_state,
+            pretransformed_measurement_disturbance_variates=(
+                pretransformed_measurement_shocks),
+            pretransformed_state_disturbance_variates=(
+                pretransformed_state_shocks),
+            pretransformed_initial_state_variates=(
+                pretransformed_initial_state),
+            simulator=simulator, return_simulator=return_simulator,
+            random_state=random_state)
 
-        # Check / generate state shocks
-        if state_shocks is not None:
-            state_shocks = np.array(state_shocks)
-            if state_shocks.ndim == 0:
-                state_shocks = state_shocks[np.newaxis, np.newaxis]
-            elif state_shocks.ndim == 1:
-                state_shocks = state_shocks[:, np.newaxis]
-            required_shape = (nsimulations, self.k_posdef)
-            try:
-                state_shocks = state_shocks.reshape(required_shape)
-            except ValueError:
-                raise ValueError('Provided state shocks are not of the'
-                                 ' appropriate shape. Required %s, got %s.'
-                                 % (str(required_shape),
-                                    str(state_shocks.shape)))
-        elif self.shapes['state_cov'][-1] == 1:
-            state_shocks = np.random.multivariate_normal(
-                mean=np.zeros(self.k_posdef), cov=self['state_cov'],
-                size=nsimulations)
-
-        # Handle time-varying case
-        tvp = (self.shapes['obs_cov'][-1] > 1 or
-               self.shapes['state_cov'][-1] > 1)
-        if tvp and measurement_shocks is None:
-            measurement_shocks = np.zeros((nsimulations, self.k_endog))
-            for i in range(nsimulations):
-                measurement_shocks[i] = np.random.multivariate_normal(
-                    mean=np.zeros(self.k_endog),
-                    cov=self['obs_cov', ..., i])
-        if tvp and state_shocks is None:
-            state_shocks = np.zeros((nsimulations, self.k_posdef))
-            for i in range(nsimulations):
-                state_shocks[i] = np.random.multivariate_normal(
-                    mean=np.zeros(self.k_posdef),
-                    cov=self['state_cov', ..., i])
-
-        # Get the initial states
-        if initial_state is not None:
-            initial_state = np.array(initial_state)
-            if initial_state.ndim == 0:
-                initial_state = initial_state[np.newaxis]
-            elif (initial_state.ndim > 1 and
-                  not initial_state.shape == (self.k_states, 1)):
-                raise ValueError('Invalid shape of provided initial state'
-                                 ' vector. Required (%d, 1)' % self.k_states)
-        elif self.initialization is not None:
-            out = self.initialization(model=self)
-            initial_state = out[0] + np.random.multivariate_normal(
-                np.zeros_like(out[0]), out[2])
-        else:
-            # TODO: deprecate this, since we really should not be simulating
-            # unless we have an initialization.
-            initial_state = np.zeros(self.k_states)
-
-        return self._simulate(nsimulations, measurement_shocks, state_shocks,
-                              initial_state)
-
-    def _simulate(self, nsimulations, measurement_shocks, state_shocks,
-                  initial_state):
+    def _simulate(self, nsimulations, simulator=None, random_state=None,
+                  **kwargs):
         raise NotImplementedError('Simulation only available through'
                                   ' the simulation smoother.')
 

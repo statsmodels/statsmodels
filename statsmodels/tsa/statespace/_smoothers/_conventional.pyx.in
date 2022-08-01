@@ -102,10 +102,13 @@ cdef int {{prefix}}smoothed_estimators_missing_conventional({{prefix}}KalmanSmoo
     # as scaled_smoothed_estimator[t-1] because we actually need to store
     # T+1 of them (r_{T-1} to r_{-1} -> r_T to r_0)
     if smoother.smoother_output & (SMOOTHER_STATE | SMOOTHER_DISTURBANCE):
-        blas.{{prefix}}gemv("T", &model._k_states, &model._k_states,
-                  &alpha, model._transition, &model._k_states,
-                          smoother._input_scaled_smoothed_estimator, &inc,
-                  &beta, smoother._scaled_smoothed_estimator, &inc)
+        if model.identity_transition:
+            blas.{{prefix}}copy(&model._k_states, smoother._input_scaled_smoothed_estimator, &inc, smoother._scaled_smoothed_estimator, &inc)
+        else:
+            blas.{{prefix}}gemv("T", &model._k_states, &model._k_states,
+                    &alpha, model._transition, &model._k_states,
+                            smoother._input_scaled_smoothed_estimator, &inc,
+                    &beta, smoother._scaled_smoothed_estimator, &inc)
 
     # Scaled smoothed estimator covariance matrix  
     # $N_{t-1} = T_t' N_t T_t$  
@@ -114,14 +117,17 @@ cdef int {{prefix}}smoothed_estimators_missing_conventional({{prefix}}KalmanSmoo
     # than as scaled_smoothed_estimator_cov[t-1] because we actually
     # need to store T+1 of them (N_{T-1} to N_{-1} -> N_T to N_0)
     if smoother.smoother_output & (SMOOTHER_STATE_COV | SMOOTHER_DISTURBANCE_COV):
-        blas.{{prefix}}gemm("N", "N", &model._k_states, &model._k_states, &model._k_states,
-                  &alpha, smoother._input_scaled_smoothed_estimator_cov, &kfilter.k_states,
-                          model._transition, &model._k_states,
-                  &beta, smoother._tmp0, &kfilter.k_states)
-        blas.{{prefix}}gemm("T", "N", &kfilter.k_states, &kfilter.k_states, &kfilter.k_states,
-                  &alpha, model._transition, &model._k_states,
-                          smoother._tmp0, &kfilter.k_states,
-                  &beta, smoother._scaled_smoothed_estimator_cov, &kfilter.k_states)
+        if model.identity_transition:
+            blas.{{prefix}}copy(&model._k_states2, smoother._input_scaled_smoothed_estimator_cov, &inc, smoother._scaled_smoothed_estimator_cov, &inc)
+        else:
+            blas.{{prefix}}gemm("N", "N", &model._k_states, &model._k_states, &model._k_states,
+                      &alpha, smoother._input_scaled_smoothed_estimator_cov, &kfilter.k_states,
+                              model._transition, &model._k_states,
+                      &beta, smoother._tmp0, &kfilter.k_states)
+            blas.{{prefix}}gemm("T", "N", &kfilter.k_states, &kfilter.k_states, &kfilter.k_states,
+                      &alpha, model._transition, &model._k_states,
+                              smoother._tmp0, &kfilter.k_states,
+                      &beta, smoother._scaled_smoothed_estimator_cov, &kfilter.k_states)
 
     # $L_t = T_t$  
     blas.{{prefix}}copy(&model._k_states2, model._transition, &inc, smoother._tmpL, &inc)
@@ -223,7 +229,7 @@ cdef int {{prefix}}smoothed_estimators_measurement_conventional({{prefix}}Kalman
                           smoother._input_scaled_smoothed_estimator, &inc,
                   &alpha, smoother._smoothing_error, &inc)
 
-    # $L_t = (T_t - K_t Z_t)$  
+    # $L_t = (T_t - K_t Z_t)$  = (T_t - T_t P_t Z_t' F_t^{-1} Z_t)
     # $(m \times m) = (m \times m) + (m \times p) (p \times m)$
     # (this is required for any type of smoothing)
     blas.{{prefix}}copy(&model._k_states2, model._transition, &inc, smoother._tmpL, &inc)

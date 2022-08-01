@@ -30,7 +30,7 @@ cdef class sStatespace(object):
     cdef public int diagonal_obs_cov
     cdef readonly int _diagonal_obs_cov
     cdef public int subset_design
-    cdef public int companion_transition
+    cdef public int companion_transition, identity_transition
 
     # Temporary arrays
     cdef np.float32_t [::1,:] tmp
@@ -107,7 +107,7 @@ cdef class dStatespace(object):
     cdef public int diagonal_obs_cov
     cdef readonly int _diagonal_obs_cov
     cdef public int subset_design
-    cdef public int companion_transition
+    cdef public int companion_transition, identity_transition
 
     # Temporary arrays
     cdef np.float64_t [::1,:] tmp
@@ -184,7 +184,7 @@ cdef class cStatespace(object):
     cdef public int diagonal_obs_cov
     cdef readonly int _diagonal_obs_cov
     cdef public int subset_design
-    cdef public int companion_transition
+    cdef public int companion_transition, identity_transition
 
     # Temporary arrays
     cdef np.complex64_t [::1,:] tmp
@@ -261,7 +261,7 @@ cdef class zStatespace(object):
     cdef public int diagonal_obs_cov
     cdef readonly int _diagonal_obs_cov
     cdef public int subset_design
-    cdef public int companion_transition
+    cdef public int companion_transition, identity_transition
 
     # Temporary arrays
     cdef np.complex128_t [::1,:] tmp
