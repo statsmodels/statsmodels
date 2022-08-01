@@ -233,7 +233,7 @@ class TestTrivariateConventionalAlternate(TestTrivariateConventional):
             alternate_timing=True, *args, **kwargs)
 
     def test_using_alterate(self):
-        assert(self.model._kalman_filter.filter_timing == 1)
+        assert self.model._kalman_filter.filter_timing == 1
 
 
 class TestTrivariateConventionalPartialMissing(Trivariate):
@@ -276,7 +276,7 @@ class TestTrivariateConventionalPartialMissingAlternate(
               cls).setup_class(alternate_timing=True, *args, **kwargs)
 
     def test_using_alterate(self):
-        assert(self.model._kalman_filter.filter_timing == 1)
+        assert self.model._kalman_filter.filter_timing == 1
 
 
 class TestTrivariateConventionalAllMissing(Trivariate):
@@ -319,7 +319,7 @@ class TestTrivariateConventionalAllMissingAlternate(
             alternate_timing=True, *args, **kwargs)
 
     def test_using_alterate(self):
-        assert(self.model._kalman_filter.filter_timing == 1)
+        assert self.model._kalman_filter.filter_timing == 1
 
 
 class TestTrivariateUnivariate(Trivariate):
@@ -357,7 +357,7 @@ class TestTrivariateUnivariateAlternate(TestTrivariateUnivariate):
             alternate_timing=True, *args, **kwargs)
 
     def test_using_alterate(self):
-        assert(self.model._kalman_filter.filter_timing == 1)
+        assert self.model._kalman_filter.filter_timing == 1
 
 
 class TestTrivariateUnivariatePartialMissing(Trivariate):
@@ -400,7 +400,7 @@ class TestTrivariateUnivariatePartialMissingAlternate(
               cls).setup_class(alternate_timing=True, *args, **kwargs)
 
     def test_using_alterate(self):
-        assert(self.model._kalman_filter.filter_timing == 1)
+        assert self.model._kalman_filter.filter_timing == 1
 
 
 class TestTrivariateUnivariateAllMissing(Trivariate):
@@ -443,7 +443,7 @@ class TestTrivariateUnivariateAllMissingAlternate(
             alternate_timing=True, *args, **kwargs)
 
     def test_using_alterate(self):
-        assert(self.model._kalman_filter.filter_timing == 1)
+        assert self.model._kalman_filter.filter_timing == 1
 
 
 class TestDFM:

@@ -170,7 +170,8 @@ class SimulationSmoother(KalmanSmoother):
         simulated_obs = np.array(simulator.generated_obs, copy=True)
         simulated_state = np.array(simulator.generated_state, copy=True)
 
-        out = (simulated_obs.T[:nsimulations], simulated_state.T[:nsimulations])
+        out = (simulated_obs.T[:nsimulations],
+               simulated_state.T[:nsimulations])
         if return_simulator:
             out = out + (simulator,)
         return out
@@ -591,8 +592,8 @@ class SimulationSmoothResults:
             If `measurement_disturbance_variates` is provided, this flag
             indicates whether it should be directly used as the shocks. If
             False, then it is assumed to contain draws from the standard Normal
-            distribution that must be transformed using the `obs_cov` covariance
-            matrix. Default is False.
+            distribution that must be transformed using the `obs_cov`
+            covariance matrix. Default is False.
         pretransformed_state_disturbance_variates : bool, optional
             If `state_disturbance_variates` is provided, this flag indicates
             whether it should be directly used as the shocks. If False, then it
@@ -600,11 +601,11 @@ class SimulationSmoothResults:
             that must be transformed using the `state_cov` covariance matrix.
             Default is False.
         pretransformed_initial_state_variates : bool, optional
-            If `initial_state_variates` is provided, this flag indicates whether
-            it should be directly used as the initial_state. If False, then it
-            is assumed to contain draws from the standard Normal distribution
-            that must be transformed using the `initial_state_cov` covariance
-            matrix. Default is False.
+            If `initial_state_variates` is provided, this flag indicates
+            whether it should be directly used as the initial_state. If False,
+            then it is assumed to contain draws from the standard Normal
+            distribution that must be transformed using the `initial_state_cov`
+            covariance matrix. Default is False.
         random_state : {None, int, `numpy.random.Generator`,
                         `numpy.random.RandomState`}, optional
             If `seed` is None (or `np.random`), the `numpy.random.RandomState`
@@ -634,10 +635,9 @@ class SimulationSmoothResults:
                                  ' `state_disturbance_variates`.')
             if disturbance_variates is not None:
                 disturbance_variates = disturbance_variates.ravel()
-                measurement_disturbance_variates = (
-                    disturbance_variates[:self.model.nobs * self.model.k_endog])
-                state_disturbance_variates = (
-                    disturbance_variates[self.model.nobs * self.model.k_endog:])
+                n_mds = self.model.nobs * self.model.k_endog
+                measurement_disturbance_variates = disturbance_variates[:n_mds]
+                state_disturbance_variates = disturbance_variates[n_mds:]
         if pretransformed is not None:
             msg = ('`pretransformed` keyword is deprecated, use'
                    ' `pretransformed_measurement_disturbance_variates` and'
@@ -650,7 +650,8 @@ class SimulationSmoothResults:
                     ' `pretransformed_measurement_disturbance_variates` or'
                     ' `pretransformed_state_disturbance_variates`.')
             if pretransformed is not None:
-                pretransformed_measurement_disturbance_variates = pretransformed
+                pretransformed_measurement_disturbance_variates = (
+                    pretransformed)
                 pretransformed_state_disturbance_variates = pretransformed
 
         if pretransformed_measurement_disturbance_variates is None:
@@ -724,8 +725,8 @@ class SimulationSmoothResults:
             # Note: there is a third option, which is to set the initial state
             # variates with pretransformed = True. However, this option simply
             # eliminates the multiplication by the Cholesky factor of the
-            # initial state cov, but still adds the initial state mean. It's not
-            # clear when this would be useful...
+            # initial state cov, but still adds the initial state mean. It's
+            # not clear when this would be useful...
         else:
             self._simulation_smoother.draw_initial_state_variates(
                 random_state)

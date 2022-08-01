@@ -543,8 +543,6 @@ class MultivariateVAR:
 
         nobs = self.model.nobs
         k_endog = self.model.k_endog
-        k_posdef = self.model.ssm.k_posdef
-        k_states = self.model.k_states
 
         # Simulate with known variates
         # TODO
@@ -714,7 +712,7 @@ def test_deprecated_arguments_univariate():
 
     with pytest.deprecated_call():
         sim.simulate(disturbance_variates=np.r_[mds, sds],
-                    initial_state_variates=np.zeros(1))
+                     initial_state_variates=np.zeros(1))
     actual = sim.simulated_state[0]
 
     # Test using deprecated `pretransformed`
@@ -737,7 +735,6 @@ def test_deprecated_arguments_univariate():
 
 
 def test_deprecated_arguments_multivariate():
-    nobs = 5
     endog = np.array([[0.3, 1.4],
                       [-0.1, 0.6],
                       [0.2, 0.7],

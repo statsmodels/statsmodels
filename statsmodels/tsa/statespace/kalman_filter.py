@@ -1144,8 +1144,8 @@ class KalmanFilter(Representation):
             If `initial_state` is provided, this flag indicates whether it
             should be directly used as the initial_state. If False, then it is
             assumed to contain draws from the standard Normal distribution that
-            must be transformed using the `initial_state_cov` covariance matrix.
-            Default is True.
+            must be transformed using the `initial_state_cov` covariance
+            matrix. Default is True.
         return_simulator : bool, optional
             Whether or not to return the simulator object. Typically used to
             improve performance when performing repeated sampling. Default is

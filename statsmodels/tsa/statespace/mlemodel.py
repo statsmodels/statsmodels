@@ -1930,8 +1930,8 @@ class MLEModel(tsbase.TimeSeriesModel):
             If `initial_state` is provided, this flag indicates whether it
             should be directly used as the initial_state. If False, then it is
             assumed to contain draws from the standard Normal distribution that
-            must be transformed using the `initial_state_cov` covariance matrix.
-            Default is True.
+            must be transformed using the `initial_state_cov` covariance
+            matrix. Default is True.
         random_state : {None, int, `numpy.random.Generator`,
                         `numpy.random.RandomState`}, optional
             If `seed` is None (or `np.random`), the `numpy.random.RandomState`
@@ -3601,8 +3601,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             If `initial_state` is provided, this flag indicates whether it
             should be directly used as the initial_state. If False, then it is
             assumed to contain draws from the standard Normal distribution that
-            must be transformed using the `initial_state_cov` covariance matrix.
-            Default is True.
+            must be transformed using the `initial_state_cov` covariance
+            matrix. Default is True.
         random_state : {None, int, `numpy.random.Generator`,
                         `numpy.random.RandomState`}, optional
             If `seed` is None (or `np.random`), the `numpy.random.RandomState`
