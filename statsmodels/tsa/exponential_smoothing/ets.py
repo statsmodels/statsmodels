@@ -1165,7 +1165,7 @@ class ETSModel(base.StateSpaceMLEModel):
             # parameterizations, we clip negative values to very small positive
             # values so that the log-transformation yields very large negative
             # values.
-            yhat[yhat <= 0] = 1 / (1e-8 * (1 + np.abs(yhat[yhat < 0])))
+            yhat[yhat <= 0] = 1 / (1e-8 * (1 + np.abs(yhat[yhat <= 0])))
             logL -= np.sum(np.log(yhat))
         return logL
 
