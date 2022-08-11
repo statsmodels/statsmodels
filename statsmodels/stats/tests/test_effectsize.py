@@ -72,5 +72,6 @@ def test_noncent_t():
     mean = stats.nct.mean(df, res.nc)
     assert_allclose(t_stat, mean, rtol=1e-8)
 
+    # Tolerancee relaxed due to Boost integration in SciPy
     assert_allclose(stats.nct.cdf(t_stat, df, res.confint), [0.975, 0.025],
-                    rtol=1e-10)
+                    rtol=1e-6)
