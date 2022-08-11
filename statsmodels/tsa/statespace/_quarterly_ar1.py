@@ -194,14 +194,16 @@ class QuarterlyAR1(mlemodel.MLEModel):
         return params1
 
     def transform_params(self, unconstrained):
-        return np.array([
+        # array no longer accepts inhomogeneous inputs
+        return np.hstack([
             constrain_stationary_univariate(unconstrained[:1]),
             unconstrained[1]**2])
 
     def untransform_params(self, constrained):
-        return np.array([
+        # array no longer accepts inhomogeneous inputs
+        return np.hstack([
             unconstrain_stationary_univariate(constrained[:1]),
-            constrained[1]**0.5])
+            constrained[1] ** 0.5])
 
     def update(self, params, **kwargs):
         super().update(params, **kwargs)
