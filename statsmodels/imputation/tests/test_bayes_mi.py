@@ -131,11 +131,11 @@ def test_MI_stat():
 
         # Check the SE
         d = np.abs(r.bse[0] - exp[j]) / exp[j]
-        assert(d < 0.03)
+        assert d < 0.03
 
         # Check the FMI
         d = np.abs(r.fmi[0] - fmi[j])
-        assert(d < 0.05)
+        assert d < 0.05
 
 
 def test_mi_formula():
