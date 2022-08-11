@@ -281,7 +281,9 @@ class Mediation:
             outcome_result = self._fit_model(self.outcome_model, self._outcome_fit_kwargs)
             mediator_result = self._fit_model(self.mediator_model, self._mediator_fit_kwargs)
         elif not method.startswith("boot"):
-            raise("method must be either 'parametric' or 'bootstrap'")
+            raise ValueError(
+                "method must be either 'parametric' or 'bootstrap'"
+            )
 
         indirect_effects = [[], []]
         direct_effects = [[], []]

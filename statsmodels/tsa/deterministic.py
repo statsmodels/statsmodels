@@ -1170,9 +1170,9 @@ class DeterministicProcess:
             self._deterministic_terms.append(TimeTrend(constant, order))
         if seasonal and fourier:
             raise ValueError(
-                """seasonal and fourier can be initialized through the constructor since\
-these will be necessarily perfectly collinear. Instead, you can pass \
-additional components using the additional_terms input."""
+                """seasonal and fourier can be initialized through the \
+constructor since these will be necessarily perfectly collinear. Instead, \
+you can pass additional components using the additional_terms input."""
             )
         if (seasonal or fourier) and period is None:
             if period is None:
