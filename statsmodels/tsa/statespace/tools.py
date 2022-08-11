@@ -1866,8 +1866,8 @@ def prepare_trend_spec(trend):
             raise ValueError(
                 "Valid trend inputs are 'c' (constant), 't' (linear trend in "
                 "time), 'ct' (both), 'ctt' (both with trend squared) or an "
-                "interable defining a polynomial, e.g., [1, 1, 0, 1] is a + "
-                f"b*t + ct**3. Received {trend}"
+                "interable defining a polynomial, e.g., [1, 1, 0, 1] is `a + "
+                f"b*t + ct**3`. Received {trend}"
             )
 
     # Note: k_trend is not the degree of the trend polynomial, because e.g.
