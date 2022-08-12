@@ -473,7 +473,7 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
 
 
 def fboxplot(data, xdata=None, labels=None, depth=None, method='MBD',
-             wfactor=1.5, ax=None, plot_opts=None):
+             wfactor=1.5, ax=None, plot_opts=None, outliers=True):
     """
     Plot functional boxplot.
 
