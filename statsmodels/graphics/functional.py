@@ -659,7 +659,7 @@ def fboxplot(data, xdata=None, labels=None, depth=None, method='MBD',
     bar_mid_val = (xdata[0] + xdata[-1]) / 2
     _xdata = list(xdata)
     _xdata.append(bar_mid_val)
-    _xdata.sort()
+    _xdata.sort() 
     no_bar = _xdata.index(bar_mid_val)
     ax.vlines(xdata[no_bar], lower_nonout[no_bar], lower[no_bar],
               colors=plot_opts.get('mid_bar', 'blue'))
