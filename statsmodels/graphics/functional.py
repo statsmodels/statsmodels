@@ -644,8 +644,8 @@ def fboxplot(data, xdata=None, labels=None, depth=None, method='MBD',
     # Plot envelope of all non-outlying data
     lower_nonout = data[ix_nonout, :].min(axis=0)
     upper_nonout = data[ix_nonout, :].max(axis=0)
-    ax.plot(xdata, lower, color=plot_opts.get('margin_line_color', 'blue'))
-    ax.plot(xdata, upper, color=plot_opts.get('margin_line_color', 'blue'))
+    ax.plot(xdata, lower_nonout, color=plot_opts.get('margin_line_color', 'blue'))
+    ax.plot(xdata, upper_nonout, color=plot_opts.get('margin_line_color', 'blue'))
     ax.fill_between(xdata, lower_nonout, upper_nonout,
                     color=plot_opts.get('c_outer', (0.75, 0.75, 0.75)))
 
@@ -657,8 +657,10 @@ def fboxplot(data, xdata=None, labels=None, depth=None, method='MBD',
 
     # plot the vertical bar at middle points over x
     bar_mid_val = (xdata[0] + xdata[-1]) / 2
-    _xdata = list(xdata).append(bar_mid_val)
-    no_bar = np.sort(_xdata).index(bar_mid_val)
+    _xdata = list(xdata)
+    _xdata.append(bar_mid_val)
+    _xdata.sort()
+    no_bar = _xdata.index(bar_mid_val)
     ax.vlines(xdata[no_bar], lower_nonout[no_bar], lower[no_bar],
               colors=plot_opts.get('mid_bar', 'blue'))
     ax.vlines(xdata[no_bar], upper[no_bar], upper_nonout[no_bar],
