@@ -519,9 +519,15 @@ def fboxplot(data, xdata=None, labels=None, depth=None, method='MBD',
           - 'c_inner', valid MPL color. Color of the central 50% region
           - 'c_outer', valid MPL color. Color of the non-outlying region
           - 'c_median', valid MPL color. Color of the median.
+          - 'mid_bar', valid MPL color. Color of the middle bar.
+          - 'margin_line_color', valid MPL color. Color of the 50% marginal lines.
           - 'lw_outliers', scalar.  Linewidth for drawing outlier curves.
           - 'lw_median', scalar.  Linewidth for drawing the median curve.
           - 'draw_nonout', bool.  If True, also draw non-outlying curves.
+          - 'mid_bar', valid MPL color. Color of the middle bar.
+    outliers : bool, optional
+        Default: True, the lines with outliers are shown in the plot; If False,
+        the lines with outliers will not be shown in the plot.
 
     Returns
     -------
@@ -638,24 +644,38 @@ def fboxplot(data, xdata=None, labels=None, depth=None, method='MBD',
     # Plot envelope of all non-outlying data
     lower_nonout = data[ix_nonout, :].min(axis=0)
     upper_nonout = data[ix_nonout, :].max(axis=0)
+    ax.plot(xdata, lower, color=plot_opts.get('margin_line_color', 'blue'))
+    ax.plot(xdata, upper, color=plot_opts.get('margin_line_color', 'blue'))
     ax.fill_between(xdata, lower_nonout, upper_nonout,
                     color=plot_opts.get('c_outer', (0.75, 0.75, 0.75)))
 
     # Plot central 50% region
+    ax.plot(xdata, lower, color=plot_opts.get('margin_line_color', 'blue'))
+    ax.plot(xdata, upper, color=plot_opts.get('margin_line_color', 'blue'))
     ax.fill_between(xdata, lower, upper,
                     color=plot_opts.get('c_inner', (0.5, 0.5, 0.5)))
+
+    # plot the vertical bar at middle points over x
+    bar_mid_val = (xdata[0] + xdata[-1]) / 2
+    _xdata = list(xdata).append(bar_mid_val)
+    no_bar = np.sort(_xdata).index(bar_mid_val)
+    ax.vlines(xdata[no_bar], lower_nonout[no_bar], lower[no_bar],
+              colors=plot_opts.get('mid_bar', 'blue'))
+    ax.vlines(xdata[no_bar], upper[no_bar], upper_nonout[no_bar],
+              colors=plot_opts.get('mid_bar', 'blue'))
 
     # Plot median curve
     ax.plot(xdata, median_curve, color=plot_opts.get('c_median', 'k'),
             lw=plot_opts.get('lw_median', 2))
 
     # Plot outliers
-    cmap = plot_opts.get('cmap_outliers')
-    for ii, ix in enumerate(ix_outliers):
-        label = str(labels[ix]) if labels is not None else None
-        ax.plot(xdata, data[ix, :],
-                color=cmap(float(ii) / (len(ix_outliers)-1)), label=label,
-                lw=plot_opts.get('lw_outliers', 1))
+    if outliers:
+        cmap = plot_opts.get('cmap_outliers')
+        for ii, ix in enumerate(ix_outliers):
+            label = str(labels[ix]) if labels is not None else None
+            ax.plot(xdata, data[ix, :],
+                    color=cmap(float(ii) / (len(ix_outliers)-1)), label=label,
+                    lw=plot_opts.get('lw_outliers', 1))
 
     if plot_opts.get('draw_nonout', False):
         for ix in ix_nonout:
