@@ -644,14 +644,18 @@ def fboxplot(data, xdata=None, labels=None, depth=None, method='MBD',
     # Plot envelope of all non-outlying data
     lower_nonout = data[ix_nonout, :].min(axis=0)
     upper_nonout = data[ix_nonout, :].max(axis=0)
-    ax.plot(xdata, lower_nonout, color=plot_opts.get('margin_line_color', 'blue'))
-    ax.plot(xdata, upper_nonout, color=plot_opts.get('margin_line_color', 'blue'))
+    ax.plot(xdata, lower_nonout,
+            color=plot_opts.get('margin_line_color', 'blue'))
+    ax.plot(xdata, upper_nonout,
+            color=plot_opts.get('margin_line_color', 'blue'))
     ax.fill_between(xdata, lower_nonout, upper_nonout,
                     color=plot_opts.get('c_outer', (0.75, 0.75, 0.75)))
 
     # Plot central 50% region
-    ax.plot(xdata, lower, color=plot_opts.get('margin_line_color', 'blue'))
-    ax.plot(xdata, upper, color=plot_opts.get('margin_line_color', 'blue'))
+    ax.plot(xdata, lower,
+            color=plot_opts.get('margin_line_color', 'blue'))
+    ax.plot(xdata, upper,
+            color=plot_opts.get('margin_line_color', 'blue'))
     ax.fill_between(xdata, lower, upper,
                     color=plot_opts.get('c_inner', (0.5, 0.5, 0.5)))
 
@@ -659,7 +663,7 @@ def fboxplot(data, xdata=None, labels=None, depth=None, method='MBD',
     bar_mid_val = (xdata[0] + xdata[-1]) / 2
     _xdata = list(xdata)
     _xdata.append(bar_mid_val)
-    _xdata.sort() 
+    _xdata.sort()
     no_bar = _xdata.index(bar_mid_val)
     ax.vlines(xdata[no_bar], lower_nonout[no_bar], lower[no_bar],
               colors=plot_opts.get('mid_bar', 'blue'))
