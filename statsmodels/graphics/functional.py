@@ -520,7 +520,7 @@ def fboxplot(data, xdata=None, labels=None, depth=None, method='MBD',
           - 'c_outer', valid MPL color. Color of the non-outlying region
           - 'c_median', valid MPL color. Color of the median.
           - 'mid_bar', valid MPL color. Color of the middle bar.
-          - 'margin_line_color', valid MPL color. Color of the 50% marginal lines.
+          - 'margin_line_color', valid MPL color. Color of the 50% lines.
           - 'lw_outliers', scalar.  Linewidth for drawing outlier curves.
           - 'lw_median', scalar.  Linewidth for drawing the median curve.
           - 'draw_nonout', bool.  If True, also draw non-outlying curves.
