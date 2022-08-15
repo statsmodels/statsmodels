@@ -1468,7 +1468,7 @@ def yule_walker(x, order=1, method="adjusted", df=None, inv=False,
         r[k] = (x[0:-k] * x[k:]).sum() / (n - k * adj_needed)
     R = toeplitz(r[:-1])
 
-    rho = np.linalg.pinv(R) * r[1:]
+    rho = np.linalg.pinv(R) @ r[1:]
     sigmasq = r[0] - (r[1:]*rho).sum()
     sigma = np.sqrt(sigmasq) if not np.isnan(sigmasq) and sigmasq > 0 else np.nan
     if inv:
