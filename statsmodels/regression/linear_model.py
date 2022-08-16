@@ -179,10 +179,11 @@ def _get_sigma(sigma, nobs):
         if sigma.shape != (nobs, nobs):
             raise ValueError("Sigma must be a scalar, 1d of length %s or a 2d "
                              "array of shape %s x %s" % (nobs, nobs, nobs))
-        cholsigmainv, info = dtrtri(cholesky(sigma, lower=True), 
+        cholsigmainv, info = dtrtri(cholesky(sigma, lower=True),
                                     lower=True, overwrite_c=True)
         if info > 0:
-            raise np.linalg.LinAlgError('Singular matrix')
+            raise np.linalg.LinAlgError('Cholesky decomposition of sigma '
+                                        'yields a singular matrix')
         elif info < 0:
             raise ValueError('Invalid input to dtrtri (info = %d)' % info)
     return sigma, cholsigmainv
