@@ -415,7 +415,10 @@ def lagmat(x,
 
     if is_pandas:
         x = orig
-        x_columns = x.columns if isinstance(x, DataFrame) else [x.name]
+        if isinstance(x, DataFrame):
+            x_columns = [x for c in x.columns]
+        else:
+            x_columns = [x.name]
         columns = [str(col) for col in x_columns]
         for lag in range(maxlag):
             lag_str = str(lag + 1)
