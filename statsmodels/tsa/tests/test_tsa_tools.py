@@ -449,6 +449,21 @@ class TestLagmat:
         assert_frame_equal(lead, expected.iloc[:, :1])
         assert_frame_equal(lags, expected.iloc[:, 1:])
 
+    def test_range_index_columns(self):
+        # GH 8377
+        df = pd.DataFrame(np.arange(200).reshape((-1, 2)))
+        df.columns = pd.RangeIndex(2)
+        result = stattools.lagmat(df, maxlag=2, use_pandas=True)
+        assert result.shape == (100, 4)
+        assert list(result.columns) == ["0.L.1", "1.L.1", "0.L.2", "1.L.2"]
+
+    def test_duplicate_column_names(self):
+        # GH 8377
+        df = pd.DataFrame(np.arange(200).reshape((-1, 2)))
+        df.columns = [0, "0"]
+        with pytest.raises(ValueError, match="Columns names must be"):
+            stattools.lagmat(df, maxlag=2, use_pandas=True)
+
 
 def test_freq_to_period():
     from pandas.tseries.frequencies import to_offset
