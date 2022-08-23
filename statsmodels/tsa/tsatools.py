@@ -397,8 +397,8 @@ def lagmat(x,
     lm = np.zeros((nobs + maxlag, nvar * (maxlag + 1)))
     for k in range(0, int(maxlag + 1)):
         lm[
-            maxlag - k : nobs + maxlag - k,
-            nvar * (maxlag - k) : nvar * (maxlag - k + 1),
+        maxlag - k: nobs + maxlag - k,
+        nvar * (maxlag - k): nvar * (maxlag - k + 1),
         ] = x
 
     if trim in ("none", "forward"):
@@ -415,7 +415,15 @@ def lagmat(x,
 
     if is_pandas:
         x = orig
-        x_columns = x.columns if isinstance(x, DataFrame) else [x.name]
+        if isinstance(x, DataFrame):
+            x_columns = [str(c) for c in x.columns]
+            if len(set(x_columns)) != x.shape[1]:
+                raise ValueError(
+                    "Columns names must be distinct after conversion to string "
+                    "(if not already strings)."
+                )
+        else:
+            x_columns = [str(x.name)]
         columns = [str(col) for col in x_columns]
         for lag in range(maxlag):
             lag_str = str(lag + 1)
