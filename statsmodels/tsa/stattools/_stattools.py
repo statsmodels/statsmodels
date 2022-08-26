@@ -2704,9 +2704,10 @@ def coint(
 
 
 def diebold_mariano_test(y, forecast1, forecast2, horizon=1, 
-                         criterion="MSE", power=2):
+                         criterion="MSE", power=2, harvey_adj=False):
     """
-    Compute information criteria for many ARMA models.
+    Performs a Diebold-Mariano test under the null hypothesis of 
+    equal predictive accuracy between two forecasts.
 
     Parameters
     ----------
@@ -2723,6 +2724,9 @@ def diebold_mariano_test(y, forecast1, forecast2, horizon=1,
         Implemented criterions are 'MSE', 'MAD', 'MAPE', 'poly'.
     power : int, optional
         Keyword arguments to be passed when criterion='poly'.
+    harvey_adj: bool
+        indicates if Harvey-Leybourne-Newbold correction for small samples
+        should be used. Default is False.
 
     Returns
     -------
@@ -2781,8 +2785,9 @@ def diebold_mariano_test(y, forecast1, forecast2, horizon=1,
     DM_stat=V_d**(-0.5)*mean_d
     
     # Harvey adjustment based on Harvey et. al (1997)
-    harvey_adj=((T+1 - 2*horizon + horizon*(horizon-1)/T)/T)**(0.5)
-    DM_stat = harvey_adj*DM_stat
+    if harvey_adj:
+        adj=((T+1 - 2*horizon + horizon*(horizon-1)/T)/T)**(0.5)
+        DM_stat = adj*DM_stat
     
     # Find p-value & format output
     p_value = 2*stats.t.cdf(-np.abs(DM_stat), df = T - 1)
