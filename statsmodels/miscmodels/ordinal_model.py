@@ -404,7 +404,7 @@ class OrderedModel(GenericLikelihoodModel):
             observations in rows and one column for each category or level of
             the categorical dependent variable.
             If which is "cumprob", then "prob" ar cumulatively added to get the
-            cdf at k, i.e. probaibility of observing choice k or lower.
+            cdf at k, i.e. probability of observing choice k or lower.
             If which is "linpred", then the conditional prediction of the
             latent variable is returned. In this case, the return is
             one-dimensional.
