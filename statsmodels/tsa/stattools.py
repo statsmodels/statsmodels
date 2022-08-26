@@ -1967,11 +1967,9 @@ def diebold_mariano_test(y, forecast1, forecast2, horizon=1,
         resid2 = np.power(forecast2 - y, power)
         d = resid1 - resid2
     
-    # mean of d & autocovariance 
+    # calculate test statistics 
     mean_d = d.mean()
     gamma = acovf(d, nlag=(horizon-1))
-    
-    # calculate test statistics
     V_d = (gamma[0] + 2*sum(gamma[1:]))/T
     DM_stat=V_d**(-0.5)*mean_d
     
