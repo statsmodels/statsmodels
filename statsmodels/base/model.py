@@ -2381,6 +2381,10 @@ class ResultMixin:
         """Model WC"""
         # collect different ways of defining the number of parameters, used for
         # aic, bic
+
+        return self.params.size
+
+        # previous, too fragile for multipart models for now
         if hasattr(self, 'df_model'):
             if hasattr(self, 'k_constant'):
                 hasconst = self.k_constant
@@ -2729,7 +2733,9 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
 
         k_params = len(mlefit.params)
         # checks mainly for adding new models or subclassing
-        if self.df_model + self.model.k_constant != k_params:
+        # TODO: We need to replace k_constant by df_null for multipart models
+        df_null = getattr(self.model, "df_null", self.model.k_constant)
+        if self.df_model + df_null != k_params:
             warnings.warn("df_model + k_constant differs from nparams")
         if self.df_resid != self.nobs - k_params:
             warnings.warn("df_resid differs from nobs - nparams")
