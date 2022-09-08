@@ -109,7 +109,8 @@ def aggregate_raters(data, n_cat=None):
     arr : nd_array, (n_rows, n_cat)
         Contains counts of raters that assigned a category level to individuals.
         Subjects are in rows, category levels in columns.
-
+    categories : nd_array, (category_levels)
+        Contains the category levels.
 
     '''
     data = np.asarray(data)
