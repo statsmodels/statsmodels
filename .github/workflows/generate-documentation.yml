@@ -8,8 +8,13 @@ on:
       - main
   pull_request:
 
+permissions: {}
+
 jobs:
   build:
+    permissions:
+      contents: write # for git push
+
     runs-on: ubuntu-latest
     defaults:
       run:
