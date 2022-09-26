@@ -8,6 +8,7 @@ The one parameter exponential family distributions used by GLM.
 
 
 import inspect
+import warnings
 
 import numpy as np
 from scipy import special, stats
@@ -1310,6 +1311,9 @@ class NegativeBinomial(Family):
 
     def __init__(self, link=None, alpha=1.):
         self.alpha = 1. * alpha  # make it at least float
+        if alpha is self.__init__.__defaults__[1]:
+            warnings.warn("Negative binomial dispersion parameter alpha not "
+                          f"set. Using default value alpha={alpha}.")
         if link is None:
             link = L.Log()
         super(NegativeBinomial, self).__init__(

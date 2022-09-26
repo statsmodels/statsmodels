@@ -1636,6 +1636,22 @@ def test_issue_341():
     np.testing.assert_equal(res1.predict(x[None]).shape, (1,7))
 
 
+def test_negative_binomial_default_alpha_param():
+    with pytest.warns(UserWarning, match='Negative binomial'
+                      ' dispersion parameter alpha not set'):
+        sm.families.NegativeBinomial()
+    with pytest.warns(UserWarning, match='Negative binomial'
+                      ' dispersion parameter alpha not set'):
+        sm.families.NegativeBinomial(link=sm.families.links.nbinom(alpha=1.0))
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        sm.families.NegativeBinomial(alpha=1.0)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        sm.families.NegativeBinomial(link=sm.families.links.nbinom(alpha=1.0),
+                                     alpha=1.0)
+
+
 def test_iscount():
     X = np.random.random((50, 10))
     X[:,2] = np.random.randint(1, 10, size=50)
