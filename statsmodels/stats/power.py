@@ -181,8 +181,10 @@ def normal_sample_size_one_tail(diff, power, alpha, std_null=1.,
     ----------
     diff : float
         difference in the estimated means or statistics under the alternative.
-    power : float in interval (alpha, 1)
-        number of observations
+    power : float in interval (0,1)
+        power of the test, e.g. 0.8, is one minus the probability of a type II error.
+        Power is the probability that the test correctly rejects the Null
+        Hypothesis if the Alternative Hypothesis is true.
     alpha : float in interval (0,1)
         significance level, e.g. 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
