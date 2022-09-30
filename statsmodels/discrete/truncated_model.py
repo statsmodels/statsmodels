@@ -1159,7 +1159,7 @@ class HurdleCountModel(CountModel):
             - 'var' : returns the estimated variance of endog implied by the
               model.
             - 'prob-main' : probability of selecting the main model which is
-                the probability of observing a nonzero count P(y > 0 | x).
+              the probability of observing a nonzero count P(y > 0 | x).
             - 'prob-zero' : probability of observing a zero count. P(y=0 | x).
               This is equal to is ``1 - prob-main``
             - 'prob-trunc' : probability of truncation of the truncated count
