@@ -53,7 +53,7 @@ with open("requirements.txt", encoding="utf-8") as req:
     for line in req.readlines():
         INSTALL_REQUIRES.append(line.split("#")[0].strip())
 
-CYTHON_MIN_VER = "0.29.26"  # released 2020
+CYTHON_MIN_VER = "3.0.0a11"  # released 2022
 
 EXTRAS_REQUIRE = {
     "build": ["cython>=" + CYTHON_MIN_VER],
