@@ -18,17 +18,17 @@ jobs:
     matrix:
       ${{ if eq(parameters.name, 'Linux') }}:
         python_311_latest:
-          python.version: '3.11'
+          python.version: '3.11.0-rc.2'
           lint: true
         python_310_latest:
           python.version: '3.10'
           lint: true
         python_311_pre:
-          python.version: '3.11'
+          python.version: '3.11.0-rc.2'
           pip.pre: true
       ${{ if eq(parameters.name, 'macOS') }}:
         python311_macos_latest:
-          python.version: '3.11'
+          python.version: '3.11.0-rc.2'
     maxParallel: 10
 
   steps:
