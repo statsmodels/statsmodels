@@ -16,14 +16,11 @@ jobs:
     vmImage: ${{ parameters.vmImage }}
   strategy:
     matrix:
-      python38_win_latest:
-        python.version: '3.8'
-        python.architecture: 'x64'
-      python39_win_latest:
-        python.version: '3.9'
-        python.architecture: 'x64'
       python310_win_latest:
         python.version: '3.10'
+        python.architecture: 'x64'
+      python311_win_latest:
+        python.version: '3.11'
         python.architecture: 'x64'
     maxParallel: 10
 
@@ -32,6 +29,7 @@ jobs:
     inputs:
       versionSpec: '$(python.version)'
       architecture: '$(python.architecture)'
+      allowUnstable: true
     displayName: 'Use Python $(python.version)'
 
   - script: |
@@ -39,7 +37,7 @@ jobs:
     displayName: 'Update essentials'
 
   - script: |
-      python -m pip install -r requirements.txt 
+      python -m pip install -r requirements.txt
       python -m pip install -r requirements-dev.txt
     displayName: 'Install dependencies'
 
