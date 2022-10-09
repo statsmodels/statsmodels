@@ -17,6 +17,9 @@ jobs:
   strategy:
     matrix:
       ${{ if eq(parameters.name, 'Linux') }}:
+        python_311_latest:
+          python.version: '3.11'
+          lint: true
         python_310_latest:
           python.version: '3.10'
           lint: true
@@ -54,12 +57,12 @@ jobs:
           PANDAS: 1.1.5
           MATPLOTLIB: 3.4.3
           lint: true
-        python_310_pre:
-          python.version: '3.10'
+        python_311_pre:
+          python.version: '3.11'
           pip.pre: true
       ${{ if eq(parameters.name, 'macOS') }}:
-        python39_macos_latest:
-          python.version: '3.9'
+        python311_macos_latest:
+          python.version: '3.11'
     maxParallel: 10
 
   steps:
