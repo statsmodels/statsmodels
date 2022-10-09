@@ -2,6 +2,12 @@
 
 trigger:
 - main
+schedules:
+- cron: "0 6 * * 1"   # Each Monday at 06:00 UTC
+  displayName: Weekly scheduled run
+  branches:
+    include: [main, maintenance/0.13.x]
+  always: true
 
 variables:
   MKL_NUM_THREADS: 1
