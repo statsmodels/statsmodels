@@ -124,7 +124,7 @@ class CheckGrouping:
                                             lambda x, idx : x.mean(0),
                                             level=1)
             expected = self.data.reset_index().groupby(names[1]
-                                                       ).mean()[
+                                                       ).mean(numeric_only=False)[
                                                         self.data.columns]
             np.testing.assert_allclose(transformed_slices, expected.values,
                                        rtol=1e-12, atol=1e-25)

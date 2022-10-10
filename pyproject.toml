@@ -7,7 +7,8 @@ requires = [
     "cython>=0.29.26,<3",  # Sync with CYTHON_MIN_VER in setup
     "oldest-supported-numpy",
     "numpy; python_version>='3.11'",
-    "scipy>=1.4",
+    "scipy>=1.4,!=1.9.2",
+    "scipy>=1.4,!=1.9.2; sys_platform == \"win32\"",  # Blacklist 1.9.2 due to Windows issues
     "setuptools_scm[toml]>=6.4.2,<7.0.0",
 ]
 build-backend = "setuptools.build_meta"

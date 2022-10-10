@@ -391,7 +391,7 @@ class Description:
             q = stats.norm.ppf(1.0 - self._alpha / 2)
 
         def _mode(ser):
-            mode_res = stats.mode(ser.dropna())
+            mode_res = stats.mode(ser.dropna(), keepdims=True)
             # Changes in SciPy 1.10
             if np.isscalar(mode_res[0]):
                 return float(mode_res[0]), mode_res[1]
