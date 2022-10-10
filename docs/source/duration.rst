@@ -120,7 +120,7 @@ the same axes:
    li = ax.get_lines()
    li[1].set_visible(False)
    li[3].set_visible(False)
-   plt.figlegend((li[0], li[2]), sexes, "center right")
+   plt.figlegend((li[0], li[2]), sexes, loc="center right")
    plt.ylim(0.6, 1)
    ax.set_ylabel("Proportion alive")
    @savefig duration_survival_bysex_plot.png
