@@ -119,6 +119,9 @@
   - img: ../_static/images/anova.png
     target: notebooks/generated/interactions_anova.html
     text: ANOVA
+  - img: ../_static/images/rank_compare.png
+    target: notebooks/generated/stats_rankcompare.html
+    text: Rank Comparison
   - img: ../_static/images/metaanalysis1.png
     target: notebooks/generated/metaanalysis1.html
     text: Meta-Analysis in statsmodels
