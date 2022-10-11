@@ -93,6 +93,16 @@ The specific model classes are:
    ZeroInflatedNegativeBinomialP
    ZeroInflatedGeneralizedPoisson
 
+.. currentmodule:: statsmodels.discrete.truncated_model
+.. module:: statsmodels.discrete.truncated_model
+
+.. autosummary::
+   :toctree: generated/
+
+   HurdleCountModel
+   TruncatedLFNegativeBinomialP
+   TruncatedLFPoisson
+
 .. currentmodule:: statsmodels.discrete.conditional_models
 .. module:: statsmodels.discrete.conditional_models
 
@@ -137,6 +147,22 @@ The specific result classes are:
    ZeroInflatedPoissonResults
    ZeroInflatedNegativeBinomialResults
    ZeroInflatedGeneralizedPoissonResults
+
+.. currentmodule:: statsmodels.discrete.truncated_model
+
+.. autosummary::
+   :toctree: generated/
+
+   HurdleCountResults
+   TruncatedLFPoissonResults
+   TruncatedNegativeBinomialResults
+
+.. currentmodule:: statsmodels.discrete.conditional_models
+
+.. autosummary::
+   :toctree: generated/
+
+   ConditionalResults
    
 .. currentmodule:: statsmodels.miscmodels.ordinal_model
 
