@@ -128,6 +128,9 @@
   - img: ../_static/images/mediation_survival.png
     target: notebooks/generated/mediation_survival.html
     text: Mediation analysis with duration data
+  - img: ../_static/images/treatment_effect.png
+    target: notebooks/generated/treatment_effect.html
+    text: Treatment Effect Estimation
   - img: ../_static/images/copula.png
     target: notebooks/generated/copula.html
     text: Copulas
