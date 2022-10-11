@@ -1108,7 +1108,7 @@ def test_fvalue_const_only():
     rs = np.random.RandomState(12345)
     x = rs.randint(0, 3, size=30)
     x = pd.get_dummies(pd.Series(x, dtype="category"), drop_first=False)
-    x.iloc[:, 0] = 1
+    x[x.columns[0]] = 1
     y = np.dot(x, [1.0, 2.0, 3.0]) + rs.normal(size=30)
     res = OLS(y, x, hasconst=True).fit(cov_type="HC1")
     assert not np.isnan(res.fvalue)

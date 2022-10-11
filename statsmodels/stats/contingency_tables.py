@@ -1010,9 +1010,9 @@ class StratifiedTable:
         if not isinstance(data, pd.DataFrame):
             data1 = pd.DataFrame(index=np.arange(data.shape[0]),
                                  columns=[var1, var2, strata])
-            data1.loc[:, var1] = data[:, var1]
-            data1.loc[:, var2] = data[:, var2]
-            data1.loc[:, strata] = data[:, strata]
+            data1[data1.columns[var1]] = data[:, var1]
+            data1[data1.columns[var2]] = data[:, var2]
+            data1[data1.columns[strata]] = data[:, strata]
         else:
             data1 = data[[var1, var2, strata]]
 

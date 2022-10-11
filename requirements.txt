@@ -1,5 +1,6 @@
 numpy >=1.18  # released December 2019
-scipy>=1.4  # released December 2019
+scipy>=1.4,!=1.9.2  # released December 2019
+scipy>=1.4,!=1.9.2; sys_platform == "win32"  # Blacklist 1.9.2 due to Windows issues
 pandas>=1.0  # released January 2020
 patsy>=0.5.2  # released January 2018
 packaging>=21.3  # released Nov 2021
