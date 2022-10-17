@@ -54,6 +54,8 @@ from statsmodels.tools.tools import pinv_extended
 from statsmodels.tools.typing import Float64Array
 from statsmodels.tools.validation import bool_like, float_like, string_like
 
+from wildboottest import wildboottest
+
 from . import _prediction as pred
 
 __docformat__ = 'restructuredtext en'
@@ -2485,6 +2487,9 @@ class RegressionResults(base.LikelihoodModelResults):
             small sample correction.
           ``df_correction`` : bool, optional
             Adjustment to df_resid, see cov_type 'cluster' above
+        
+        - 'wildclusterbootstrap': Wild Cluster Bootstrap p-values Currently does not support standard errors, or variance covariance matrices.
+            ``
 
         **Reminder**: ``use_correction`` in "hac-groupsum" and "hac-panel" is
         not bool, needs to be in {False, 'hac', 'cluster'}.
@@ -2649,6 +2654,25 @@ class RegressionResults(base.LikelihoodModelResults):
                 self, maxlags, time, weights_func=weights_func,
                 use_correction=use_correction)
             res.cov_kwds['description'] = descriptions['HAC-Groupsum']
+        elif cov_type.lower() == 'wildclusterbootstrap':
+            cluster = kwargs['cluster']
+            B = kwargs['B']
+            weights_type = kwargs['weights_type']
+            impose_null = kwargs['impose_null']
+            bootstrap_type = kwargs['bootstrap_type']
+            seed = kwargs['seed']
+            param = kwargs['param']
+            
+            res.cov_params_default = wildboottest(
+                model = res.model,
+                param=param,
+                cluster=cluster,
+                B=B,
+                weights_type=weights_type,
+                impose_null=impose_null,
+                bootstrap_type=bootstrap_type,
+                seed=seed
+            )
         else:
             raise ValueError('cov_type not recognized. See docstring for ' +
                              'available options and spelling')
