@@ -1826,7 +1826,7 @@ class RegressionResults(base.LikelihoodModelResults):
         Otherwise computed using a Wald-like quadratic form that tests whether
         all coefficients (excluding the constant) are zero.
         """
-        if hasattr(self, 'cov_type') and self.cov_type != 'nonrobust':
+        if hasattr(self, 'cov_type') and self.cov_type != 'nonrobust' and self.cov_type != 'wildclusterbootstrap':
             # with heteroscedasticity or correlation robustness
             k_params = self.normalized_cov_params.shape[0]
             mat = np.eye(k_params)
@@ -1849,6 +1849,9 @@ class RegressionResults(base.LikelihoodModelResults):
             # using backdoor to set another attribute that we already have
             self._cache['f_pvalue'] = float(ft.pvalue)
             return float(ft.fvalue)
+        # elif hasattr(self, 'cov_type') and self.cov_type == 'wildclusterbootstrap':
+        #     #TODO: #8451 Add fvalue for full model
+        #     return np.nan
         else:
             # for standard homoscedastic case
             return self.mse_model/self.mse_resid
@@ -2661,11 +2664,15 @@ class RegressionResults(base.LikelihoodModelResults):
             impose_null = kwargs['impose_null']
             bootstrap_type = kwargs['bootstrap_type']
             seed = kwargs['seed']
-            param = kwargs['param']
+            res.cov_kwds['description'] = \
+                descriptions['wildclusterbootstrap'].format(
+                    bootstrap_type = bootstrap_type,
+                    weights_type = weights_type
+                )
+
             
-            res.cov_params_default = wildboottest(
+            res.pvalues_wcb, res.tvalues_wcb = wildboottest(
                 model = res.model,
-                param=param,
                 cluster=cluster,
                 B=B,
                 weights_type=weights_type,
@@ -2673,6 +2680,9 @@ class RegressionResults(base.LikelihoodModelResults):
                 bootstrap_type=bootstrap_type,
                 seed=seed
             )
+                        
+            beta_k = res.model.exog.shape[1]
+            res.cov_params_default = np.full((beta_k, beta_k),  np.nan)
         else:
             raise ValueError('cov_type not recognized. See docstring for ' +
                              'available options and spelling')
@@ -2812,8 +2822,15 @@ class RegressionResults(base.LikelihoodModelResults):
         smry = Summary()
         smry.add_table_2cols(self, gleft=top_left, gright=top_right,
                              yname=yname, xname=xname, title=title)
-        smry.add_table_params(self, yname=yname, xname=xname, alpha=alpha,
-                              use_t=self.use_t)
+        
+        if self.cov_type == 'wildclusterbootstrap':
+            # results, params, std_err, tvalues, pvalues, conf_int = results
+            res = self, self.params, self.bse, self.tvalues_wcb, self.pvalues_wcb, self.conf_int(0.05)
+            smry.add_table_params(res, yname=yname, xname=xname, alpha=alpha,
+                        use_t=self.use_t)
+        else:
+            smry.add_table_params(self, yname=yname, xname=xname, alpha=alpha,
+                                use_t=self.use_t)
         if not slim:
             smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
                                  yname=yname, xname=xname,
