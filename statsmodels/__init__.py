@@ -1,5 +1,5 @@
 
-from ._version import (
+from statsmodels._version import (
     version as __version__, version_tuple as __version_info__
 )
 
