@@ -5,7 +5,7 @@ to a function's reference
 import webbrowser
 from urllib.parse import urlencode
 
-from statsmodels._version import __version__
+from statsmodels import __version__
 
 BASE_URL = 'https://www.statsmodels.org/'
 
