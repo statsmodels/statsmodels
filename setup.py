@@ -62,13 +62,18 @@ INSTALL_REQUIREMENTS = {
     "packaging": "21.3",  # released Nov 2021
 }
 
+DEVELOP_REQUIRES = []
+with open("requirements-dev.txt", encoding="utf-8") as req:
+    for line in req.readlines():
+        DEVELOP_REQUIRES.append(line.split("#")[0].strip())
+
 CYTHON_MIN_VER = "0.29.26"  # released 2020
 
 INSTALL_REQUIRES = [k + ">=" + v for k, v in INSTALL_REQUIREMENTS.items()]
 
 EXTRAS_REQUIRE = {
     "build": ["cython>=" + CYTHON_MIN_VER],
-    "develop": ["cython>=" + CYTHON_MIN_VER],
+    "develop": ["cython>=" + CYTHON_MIN_VER] + DEVELOP_REQUIRES,
     "docs": [
         "sphinx",
         "nbconvert",
