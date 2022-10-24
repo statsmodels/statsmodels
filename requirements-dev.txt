@@ -19,19 +19,3 @@ pywinpty; os_name == "nt"
 # code quality
 flake8
 isort
-
-# doc
-sphinx
-sphinx-material
-jupyter
-notebook
-nbsphinx
-nbconvert
-pyyaml
-pandas-datareader
-simplegeneric
-seaborn
-numpydoc
-theano-pymc
-pymc3
-arviz
