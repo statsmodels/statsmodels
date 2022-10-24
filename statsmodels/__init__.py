@@ -1,7 +1,7 @@
+from statsmodels._version import __version__, __version_tuple__
 
-from ._version import (
-    version as __version__, version_tuple as __version_info__
-)
+__version_info__ = __version_tuple__
+
 
 debug_warnings = False
 
@@ -31,8 +31,9 @@ def test(extra_args=None, exit=False):
         The status code from the test run if exit is False.
     """
     from .tools._testing import PytestTester
+
     tst = PytestTester(package_path=__file__)
     return tst(extra_args=extra_args, exit=exit)
 
 
-__all__ = ['__version__', '__version_info__', 'test']
+__all__ = ["__version__", "__version_info__", "__version_tuple__", "test"]
