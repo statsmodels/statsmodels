@@ -184,7 +184,7 @@ class TestProbPlotLongelyNoFit(BaseProbplotMixin):
             self.mod_fit.resid, dist=stats.t, distargs=(4,), fit=False
         )
         self.line = "r"
-        super().setup()
+        super().setup_method()
 
 
 class TestProbPlotLongelyWithFit(BaseProbplotMixin):
@@ -197,7 +197,7 @@ class TestProbPlotLongelyWithFit(BaseProbplotMixin):
             self.mod_fit.resid, dist=stats.t, distargs=(4,), fit=True
         )
         self.line = "r"
-        super().setup()
+        super().setup_method()
 
 
 class TestProbPlotRandomNormalMinimal(BaseProbplotMixin):
@@ -224,7 +224,7 @@ class TestProbPlotRandomNormalFullDist(BaseProbplotMixin):
         self.data = np.random.normal(loc=8.25, scale=3.25, size=37)
         self.prbplt = ProbPlot(self.data, dist=stats.norm(loc=8.5, scale=3.0))
         self.line = "45"
-        super().setup()
+        super().setup_method()
 
     def test_loc_set(self):
         assert self.prbplt.loc == 8.5
