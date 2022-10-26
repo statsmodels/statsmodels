@@ -48,7 +48,7 @@ def test_noncent_f():
     assert_allclose(f_stat, mean, rtol=1e-8)
 
     assert_allclose(stats.ncf.cdf(f_stat, df1, df2, res.confint),
-                    [0.975, 0.025], rtol=1e-10)
+                    [0.975, 0.025], rtol=1e-4)
 
 
 def test_noncent_t():
