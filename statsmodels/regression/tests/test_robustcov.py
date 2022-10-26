@@ -108,7 +108,7 @@ class CheckOLSRobust:
 class TestOLSRobust1(CheckOLSRobust):
     # compare with regress robust
 
-    def setup(self):
+    def setup_method(self):
         res_ols = self.res1
         self.bse_robust = res_ols.HC1_se
         self.cov_robust = res_ols.cov_HC1
@@ -135,7 +135,7 @@ class TestOLSRobust1(CheckOLSRobust):
 class TestOLSRobust2(TestOLSRobust1):
     # compare with ivreg robust small
 
-    def setup(self):
+    def setup_method(self):
         res_ols = self.res1
         self.bse_robust = res_ols.HC1_se
         self.cov_robust = res_ols.cov_HC1
@@ -147,7 +147,7 @@ class TestOLSRobust2(TestOLSRobust1):
 class TestOLSRobust3(TestOLSRobust1):
     # compare with ivreg robust   (not small)
 
-    def setup(self):
+    def setup_method(self):
         res_ols = self.res1
         self.bse_robust = res_ols.HC0_se
         self.cov_robust = res_ols.cov_HC0
@@ -159,7 +159,7 @@ class TestOLSRobust3(TestOLSRobust1):
 class TestOLSRobustHacSmall(TestOLSRobust1):
     # compare with ivreg robust small
 
-    def setup(self):
+    def setup_method(self):
         res_ols = self.res1
         cov1 = sw.cov_hac_simple(res_ols, nlags=4, use_correction=True)
         se1 = sw.se_cov(cov1)
@@ -173,7 +173,7 @@ class TestOLSRobustHacSmall(TestOLSRobust1):
 class TestOLSRobustHacLarge(TestOLSRobust1):
     # compare with ivreg robust (not small)
 
-    def setup(self):
+    def setup_method(self):
         res_ols = self.res1
         cov1 = sw.cov_hac_simple(res_ols, nlags=4, use_correction=False)
         se1 = sw.se_cov(cov1)
@@ -273,7 +273,7 @@ class CheckOLSRobustNewMixin:
 class TestOLSRobust2SmallNew(TestOLSRobust1, CheckOLSRobustNewMixin):
     # compare with ivreg robust small
 
-    def setup(self):
+    def setup_method(self):
         res_ols = self.res1.get_robustcov_results("HC1", use_t=True)
         self.res3 = self.res1
         self.res1 = res_ols
@@ -311,7 +311,7 @@ class TestOLSRobust2SmallNew(TestOLSRobust1, CheckOLSRobustNewMixin):
 class TestOLSRobustHACSmallNew(TestOLSRobust1, CheckOLSRobustNewMixin):
     # compare with ivreg robust small
 
-    def setup(self):
+    def setup_method(self):
         res_ols = self.res1.get_robustcov_results(
             "HAC", maxlags=4, use_correction=True, use_t=True
         )
@@ -330,7 +330,7 @@ class TestOLSRobustHACSmallNew(TestOLSRobust1, CheckOLSRobustNewMixin):
 class TestOLSRobust2LargeNew(TestOLSRobust1, CheckOLSRobustNewMixin):
     # compare with ivreg robust small
 
-    def setup(self):
+    def setup_method(self):
         res_ols = self.res1.get_robustcov_results("HC0")
         res_ols.use_t = False
         self.res3 = self.res1
@@ -387,7 +387,7 @@ class CheckOLSRobustCluster(CheckOLSRobust):
 class TestOLSRobustCluster2(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
     # compare with `reg cluster`
 
-    def setup(self):
+    def setup_method(self):
         res_ols = self.res1.get_robustcov_results(
             "cluster", groups=self.groups, use_correction=True, use_t=True
         )
@@ -411,7 +411,7 @@ class TestOLSRobustCluster2Input(
 ):
     # compare with `reg cluster`
 
-    def setup(self):
+    def setup_method(self):
         import pandas as pd
 
         fat_array = self.groups.reshape(-1, 1)
@@ -460,7 +460,7 @@ class TestOLSRobustCluster2Fit(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
     # copy, past uses fit method
     # compare with `reg cluster`
 
-    def setup(self):
+    def setup_method(self):
         res_ols = self.res1.model.fit(
             cov_type="cluster",
             cov_kwds=dict(groups=self.groups, use_correction=True, use_t=True),
@@ -495,7 +495,7 @@ class TestOLSRobustCluster2Large(
 ):
     # compare with `reg cluster`
 
-    def setup(self):
+    def setup_method(self):
         res_ols = self.res1.get_robustcov_results(
             "cluster",
             groups=self.groups,
@@ -528,7 +528,7 @@ class TestOLSRobustCluster2LargeFit(
 ):
     # compare with `reg cluster`
 
-    def setup(self):
+    def setup_method(self):
         model = OLS(self.res1.model.endog, self.res1.model.exog)
         # res_ols = self.res1.model.fit(cov_type='cluster',
         res_ols = model.fit(
@@ -563,7 +563,7 @@ class TestOLSRobustCluster2LargeFit(
 class TestOLSRobustClusterGS(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
     # compare with `reg cluster`
 
-    def setup(self):
+    def setup_method(self):
         res_ols = self.res1.get_robustcov_results(
             "nw-groupsum",
             time=self.time,
@@ -592,7 +592,7 @@ class TestOLSRobustClusterGS(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
 class TestOLSRobustClusterGSFit(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
     # compare with `reg cluster`
 
-    def setup(self):
+    def setup_method(self):
         res_ols = self.res1.model.fit(
             cov_type="nw-groupsum",
             cov_kwds=dict(
@@ -620,7 +620,7 @@ class TestOLSRobustClusterGSFit(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
 class TestOLSRobustClusterNWP(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
     # compare with `reg cluster`
 
-    def setup(self):
+    def setup_method(self):
         res_ols = self.res1.get_robustcov_results(
             "nw-panel",
             time=self.time,
@@ -662,7 +662,7 @@ class TestOLSRobustClusterNWPGroupsFit(
 ):
     # compare with `reg cluster`
 
-    def setup(self):
+    def setup_method(self):
         res_ols = self.res1.model.fit(
             cov_type="nw-panel",
             cov_kwds=dict(
@@ -693,7 +693,7 @@ class TestOLSRobustClusterNWPGroupsFit(
 class TestOLSRobustCluster2G(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
     # compare with `reg cluster`
 
-    def setup(self):
+    def setup_method(self):
         res_ols = self.res1.get_robustcov_results(
             "cluster",
             groups=(self.groups, self.time),
@@ -724,7 +724,7 @@ class TestOLSRobustCluster2GLarge(
 ):
     # compare with `reg cluster`
 
-    def setup(self):
+    def setup_method(self):
         res_ols = self.res1.get_robustcov_results(
             "cluster",
             groups=(self.groups, self.time),
@@ -788,7 +788,7 @@ class CheckWLSRobustCluster(CheckOLSRobust):
 class TestWLSRobustCluster2(CheckWLSRobustCluster, CheckOLSRobustNewMixin):
     # compare with `reg cluster`
 
-    def setup(self):
+    def setup_method(self):
         res_ols = self.res1.get_robustcov_results(
             "cluster", groups=self.groups, use_correction=True, use_t=True
         )
@@ -813,7 +813,7 @@ class TestWLSRobustCluster2Large(
 ):
     # compare with `reg cluster`
 
-    def setup(self):
+    def setup_method(self):
         res_ols = self.res1.get_robustcov_results(
             "cluster",
             groups=self.groups,
@@ -840,7 +840,7 @@ class TestWLSRobustCluster2Large(
 class TestWLSRobustSmall(CheckWLSRobustCluster, CheckOLSRobustNewMixin):
     # compare with `reg cluster`
 
-    def setup(self):
+    def setup_method(self):
         res_ols = self.res1.get_robustcov_results("HC1", use_t=True)
         self.res3 = self.res1
         self.res1 = res_ols
