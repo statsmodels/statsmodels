@@ -184,7 +184,7 @@ class TestProbPlotLongelyNoFit(BaseProbplotMixin):
             self.mod_fit.resid, dist=stats.t, distargs=(4,), fit=False
         )
         self.line = "r"
-        super().setup()
+        super().setup_method()
 
 
 class TestProbPlotLongelyWithFit(BaseProbplotMixin):
@@ -197,7 +197,7 @@ class TestProbPlotLongelyWithFit(BaseProbplotMixin):
             self.mod_fit.resid, dist=stats.t, distargs=(4,), fit=True
         )
         self.line = "r"
-        super().setup()
+        super().setup_method()
 
 
 class TestProbPlotRandomNormalMinimal(BaseProbplotMixin):
@@ -206,7 +206,7 @@ class TestProbPlotRandomNormalMinimal(BaseProbplotMixin):
         self.data = np.random.normal(loc=8.25, scale=3.25, size=37)
         self.prbplt = ProbPlot(self.data)
         self.line = None
-        super(TestProbPlotRandomNormalMinimal, self).setup()
+        super(TestProbPlotRandomNormalMinimal, self).setup_method()
 
 
 class TestProbPlotRandomNormalWithFit(BaseProbplotMixin):
@@ -215,7 +215,7 @@ class TestProbPlotRandomNormalWithFit(BaseProbplotMixin):
         self.data = np.random.normal(loc=8.25, scale=3.25, size=37)
         self.prbplt = ProbPlot(self.data, fit=True)
         self.line = "q"
-        super(TestProbPlotRandomNormalWithFit, self).setup()
+        super(TestProbPlotRandomNormalWithFit, self).setup_method()
 
 
 class TestProbPlotRandomNormalFullDist(BaseProbplotMixin):
@@ -224,7 +224,7 @@ class TestProbPlotRandomNormalFullDist(BaseProbplotMixin):
         self.data = np.random.normal(loc=8.25, scale=3.25, size=37)
         self.prbplt = ProbPlot(self.data, dist=stats.norm(loc=8.5, scale=3.0))
         self.line = "45"
-        super().setup()
+        super().setup_method()
 
     def test_loc_set(self):
         assert self.prbplt.loc == 8.5
@@ -271,7 +271,7 @@ class TestProbPlotRandomNormalLocScaleDist(BaseProbplotMixin):
         self.data = np.random.normal(loc=8.25, scale=3.25, size=37)
         self.prbplt = ProbPlot(self.data, loc=8, scale=3)
         self.line = "45"
-        super(TestProbPlotRandomNormalLocScaleDist, self).setup()
+        super(TestProbPlotRandomNormalLocScaleDist, self).setup_method()
 
     def test_loc_set(self):
         assert self.prbplt.loc == 8
