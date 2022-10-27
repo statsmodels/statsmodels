@@ -62,7 +62,7 @@ jobs:
           pip.pre: true
       ${{ if eq(parameters.name, 'macOS') }}:
         python311_macos_latest:
-          python.version: '3.11-dev'
+          python.version: '3.11'
     maxParallel: 10
 
   steps:
@@ -70,7 +70,6 @@ jobs:
     inputs:
       versionSpec: '$(python.version)'
       architecture: 'x64'
-      allowUnstable: true
     displayName: 'Use Python $(python.version)'
 
   - bash: |
