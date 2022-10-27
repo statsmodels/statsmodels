@@ -125,7 +125,7 @@ class TestRlm(CheckRlmResultsMixin):
         cls.res1.h2 = h2
         cls.res1.h3 = h3
 
-    def setup(self):
+    def setup_method(self):
         from .results.results_rlm import Huber
         self.res2 = Huber()
 
@@ -163,7 +163,7 @@ class TestHampel(TestRlm):
         cls.res1.h2 = h2
         cls.res1.h3 = h3
 
-    def setup(self):
+    def setup_method(self):
         from .results.results_rlm import Hampel
         self.res2 = Hampel()
 
@@ -183,7 +183,7 @@ class TestRlmBisquare(TestRlm):
         cls.res1.h2 = h2
         cls.res1.h3 = h3
 
-    def setup(self):
+    def setup_method(self):
         from .results.results_rlm import BiSquare
         self.res2 = BiSquare()
 
@@ -201,7 +201,7 @@ class TestRlmAndrews(TestRlm):
         cls.res1.h2 = h2
         cls.res1.h3 = h3
 
-    def setup(self):
+    def setup_method(self):
         from .results.results_rlm import Andrews
         self.res2 = Andrews()
 
@@ -223,7 +223,7 @@ class TestRlmHuber(CheckRlmResultsMixin):
         cls.res1.h2 = h2
         cls.res1.h3 = h3
 
-    def setup(self):
+    def setup_method(self):
         from .results.results_rlm import HuberHuber
         self.res2 = HuberHuber()
 
@@ -241,7 +241,7 @@ class TestHampelHuber(TestRlm):
         cls.res1.h2 = h2
         cls.res1.h3 = h3
 
-    def setup(self):
+    def setup_method(self):
         from .results.results_rlm import HampelHuber
         self.res2 = HampelHuber()
 
@@ -259,7 +259,7 @@ class TestRlmBisquareHuber(TestRlm):
         cls.res1.h2 = h2
         cls.res1.h3 = h3
 
-    def setup(self):
+    def setup_method(self):
         from .results.results_rlm import BisquareHuber
         self.res2 = BisquareHuber()
 
@@ -277,7 +277,7 @@ class TestRlmAndrewsHuber(TestRlm):
         cls.res1.h2 = h2
         cls.res1.h3 = h3
 
-    def setup(self):
+    def setup_method(self):
         from .results.results_rlm import AndrewsHuber
         self.res2 = AndrewsHuber()
 
@@ -300,7 +300,7 @@ class TestRlmSresid(CheckRlmResultsMixin):
         cls.res1.h2 = h2
         cls.res1.h3 = h3
 
-    def setup(self):
+    def setup_method(self):
         from .results.results_rlm import Huber
         self.res2 = Huber()
 

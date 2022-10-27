@@ -245,7 +245,7 @@ class TestClark1989Alternate(TestClark1989):
                                                        *args, **kwargs)
 
     def test_using_alterate(self):
-        assert(self.model._kalman_filter.filter_timing == 1)
+        assert self.model._kalman_filter.filter_timing == 1
 
 
 class MultivariateMissingGeneralObsCov(object):

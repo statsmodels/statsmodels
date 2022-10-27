@@ -126,7 +126,7 @@ class TestPlot(object):
 
 
 class TestPlotPandas(TestPlot):
-    def setup(self):
+    def setup_method(self):
         nsample = 100
         sig = 0.5
         x1 = np.linspace(0, 20, nsample)

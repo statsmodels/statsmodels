@@ -781,7 +781,7 @@ def plot_survfunc(survfuncs, ax=None):
     # If we have only a single survival function to plot, put it into
     # a list.
     try:
-        assert(type(survfuncs[0]) is SurvfuncRight)
+        assert type(survfuncs[0]) is SurvfuncRight
     except:
         survfuncs = [survfuncs]
 

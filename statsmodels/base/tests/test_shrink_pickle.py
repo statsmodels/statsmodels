@@ -129,7 +129,7 @@ class RemoveDataPickle(object):
 
 class TestRemoveDataPickleOLS(RemoveDataPickle):
 
-    def setup(self):
+    def setup_method(self):
         # fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
@@ -139,7 +139,7 @@ class TestRemoveDataPickleOLS(RemoveDataPickle):
 
 class TestRemoveDataPickleWLS(RemoveDataPickle):
 
-    def setup(self):
+    def setup_method(self):
         # fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
@@ -149,7 +149,7 @@ class TestRemoveDataPickleWLS(RemoveDataPickle):
 
 class TestRemoveDataPicklePoisson(RemoveDataPickle):
 
-    def setup(self):
+    def setup_method(self):
         # fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
@@ -170,7 +170,7 @@ class TestRemoveDataPicklePoisson(RemoveDataPickle):
 
 class TestRemoveDataPickleNegativeBinomial(RemoveDataPickle):
 
-    def setup(self):
+    def setup_method(self):
         # fit for each test, because results will be changed by test
         np.random.seed(987689)
         data = sm.datasets.randhie.load()
@@ -180,7 +180,7 @@ class TestRemoveDataPickleNegativeBinomial(RemoveDataPickle):
 
 class TestRemoveDataPickleLogit(RemoveDataPickle):
 
-    def setup(self):
+    def setup_method(self):
         # fit for each test, because results will be changed by test
         x = self.exog
         nobs = x.shape[0]
@@ -200,7 +200,7 @@ class TestRemoveDataPickleLogit(RemoveDataPickle):
 
 class TestRemoveDataPickleRLM(RemoveDataPickle):
 
-    def setup(self):
+    def setup_method(self):
         # fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
@@ -210,7 +210,7 @@ class TestRemoveDataPickleRLM(RemoveDataPickle):
 
 class TestRemoveDataPickleGLM(RemoveDataPickle):
 
-    def setup(self):
+    def setup_method(self):
         # fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
@@ -249,7 +249,7 @@ class TestRemoveDataPickleGLM(RemoveDataPickle):
 
 class TestRemoveDataPickleGLMConstrained(RemoveDataPickle):
 
-    def setup(self):
+    def setup_method(self):
         # fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
@@ -269,7 +269,7 @@ class TestPickleFormula(RemoveDataPickle):
                               columns=cls.exog.columns)
         cls.reduction_factor = 0.5
 
-    def setup(self):
+    def setup_method(self):
         x = self.exog
         np.random.seed(123)
         y = x.sum(1) + np.random.randn(x.shape[0])
@@ -292,21 +292,21 @@ class TestPickleFormula2(RemoveDataPickle):
                               columns=cls.data.columns[1:])
         cls.reduction_factor = 0.5
 
-    def setup(self):
+    def setup_method(self):
         self.results = sm.OLS.from_formula("Y ~ A + B + C",
                                            data=self.data).fit()
 
 
 class TestPickleFormula3(TestPickleFormula2):
 
-    def setup(self):
+    def setup_method(self):
         self.results = sm.OLS.from_formula("Y ~ A + B * C",
                                            data=self.data).fit()
 
 
 class TestPickleFormula4(TestPickleFormula2):
 
-    def setup(self):
+    def setup_method(self):
         self.results = sm.OLS.from_formula("Y ~ np.log(abs(A) + 1) + B * C",
                                            data=self.data).fit()
 
@@ -316,14 +316,14 @@ class TestPickleFormula4(TestPickleFormula2):
 
 class TestPickleFormula5(TestPickleFormula2):
 
-    def setup(self):
+    def setup_method(self):
         self.results = sm.OLS.from_formula("Y ~ log(abs(A) + 1) + B * C",
                                            data=self.data).fit()
 
 
 class TestRemoveDataPicklePoissonRegularized(RemoveDataPickle):
 
-    def setup(self):
+    def setup_method(self):
         # fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)

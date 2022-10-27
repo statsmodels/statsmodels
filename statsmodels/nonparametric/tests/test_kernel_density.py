@@ -9,7 +9,7 @@ nparam = sm.nonparametric
 
 
 class KDETestBase(object):
-    def setup(self):
+    def setup_method(self):
         nobs = 60
         np.random.seed(123456)
         self.o = np.random.binomial(2, 0.7, size=(nobs, 1))
