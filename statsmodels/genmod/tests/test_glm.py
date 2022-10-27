@@ -351,7 +351,7 @@ class TestGlmGaussian(CheckModelResultsMixin):
         assert_allclose(hess_obs1, hess_obsd, rtol=1e-8)
 
 # FIXME: enable or delete
-#    def setup(self):
+#    def setup_method(self):
 #        if skipR:
 #            raise SkipTest, "Rpy not installed."
 #        Gauss = r.gaussian
@@ -840,7 +840,7 @@ class TestGlmNegbinomial(CheckModelResultsMixin):
         cls.res2 = res2
 
 # FIXME: enable or delete
-#    def setup(self):
+#    def setup_method(self):
 #        if skipR:
 #            raise SkipTest, "Rpy not installed"
 #        r.library('MASS')  # this does not work when done in rmodelwrap?

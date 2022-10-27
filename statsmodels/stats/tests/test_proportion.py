@@ -216,7 +216,7 @@ class CheckProportionMixin:
 
 
 class TestProportion(CheckProportionMixin):
-    def setup(self):
+    def setup_method(self):
         self.n_success = np.array([ 73,  90, 114,  75])
         self.nobs = np.array([ 86,  93, 136,  82])
 

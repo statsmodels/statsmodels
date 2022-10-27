@@ -16,7 +16,7 @@ from statsmodels.graphics.utils import _import_mpl
 
 
 class BaseProbplotMixin:
-    def setup(self):
+    def setup_method(self):
         try:
             import matplotlib.pyplot as plt
 
@@ -175,7 +175,7 @@ class BaseProbplotMixin:
 
 
 class TestProbPlotLongelyNoFit(BaseProbplotMixin):
-    def setup(self):
+    def setup_method(self):
         np.random.seed(5)
         self.data = sm.datasets.longley.load()
         self.data.exog = sm.add_constant(self.data.exog, prepend=False)
@@ -184,11 +184,11 @@ class TestProbPlotLongelyNoFit(BaseProbplotMixin):
             self.mod_fit.resid, dist=stats.t, distargs=(4,), fit=False
         )
         self.line = "r"
-        super().setup()
+        super().setup_method()
 
 
 class TestProbPlotLongelyWithFit(BaseProbplotMixin):
-    def setup(self):
+    def setup_method(self):
         np.random.seed(5)
         self.data = sm.datasets.longley.load()
         self.data.exog = sm.add_constant(self.data.exog, prepend=False)
@@ -197,34 +197,34 @@ class TestProbPlotLongelyWithFit(BaseProbplotMixin):
             self.mod_fit.resid, dist=stats.t, distargs=(4,), fit=True
         )
         self.line = "r"
-        super().setup()
+        super().setup_method()
 
 
 class TestProbPlotRandomNormalMinimal(BaseProbplotMixin):
-    def setup(self):
+    def setup_method(self):
         np.random.seed(5)
         self.data = np.random.normal(loc=8.25, scale=3.25, size=37)
         self.prbplt = ProbPlot(self.data)
         self.line = None
-        super(TestProbPlotRandomNormalMinimal, self).setup()
+        super(TestProbPlotRandomNormalMinimal, self).setup_method()
 
 
 class TestProbPlotRandomNormalWithFit(BaseProbplotMixin):
-    def setup(self):
+    def setup_method(self):
         np.random.seed(5)
         self.data = np.random.normal(loc=8.25, scale=3.25, size=37)
         self.prbplt = ProbPlot(self.data, fit=True)
         self.line = "q"
-        super(TestProbPlotRandomNormalWithFit, self).setup()
+        super(TestProbPlotRandomNormalWithFit, self).setup_method()
 
 
 class TestProbPlotRandomNormalFullDist(BaseProbplotMixin):
-    def setup(self):
+    def setup_method(self):
         np.random.seed(5)
         self.data = np.random.normal(loc=8.25, scale=3.25, size=37)
         self.prbplt = ProbPlot(self.data, dist=stats.norm(loc=8.5, scale=3.0))
         self.line = "45"
-        super().setup()
+        super().setup_method()
 
     def test_loc_set(self):
         assert self.prbplt.loc == 8.5
@@ -248,7 +248,7 @@ class TestProbPlotRandomNormalFullDist(BaseProbplotMixin):
 
 
 class TestCompareSamplesDifferentSize:
-    def setup(self):
+    def setup_method(self):
         np.random.seed(5)
         self.data1 = ProbPlot(np.random.normal(loc=8.25, scale=3.25, size=37))
         self.data2 = ProbPlot(np.random.normal(loc=8.25, scale=3.25, size=55))
@@ -266,12 +266,12 @@ class TestCompareSamplesDifferentSize:
 
 
 class TestProbPlotRandomNormalLocScaleDist(BaseProbplotMixin):
-    def setup(self):
+    def setup_method(self):
         np.random.seed(5)
         self.data = np.random.normal(loc=8.25, scale=3.25, size=37)
         self.prbplt = ProbPlot(self.data, loc=8, scale=3)
         self.line = "45"
-        super(TestProbPlotRandomNormalLocScaleDist, self).setup()
+        super(TestProbPlotRandomNormalLocScaleDist, self).setup_method()
 
     def test_loc_set(self):
         assert self.prbplt.loc == 8
@@ -287,7 +287,7 @@ class TestProbPlotRandomNormalLocScaleDist(BaseProbplotMixin):
 
 
 class TestTopLevel:
-    def setup(self):
+    def setup_method(self):
         self.data = sm.datasets.longley.load()
         self.data.exog = sm.add_constant(self.data.exog, prepend=False)
         self.mod_fit = sm.OLS(self.data.endog, self.data.exog).fit()
@@ -383,7 +383,7 @@ class TestCheckDist:
 
 
 class TestDoPlot:
-    def setup(self):
+    def setup_method(self):
         try:
             import matplotlib.pyplot as plt
 
@@ -460,7 +460,7 @@ class TestDoPlot:
 
 
 class TestQQLine:
-    def setup(self):
+    def setup_method(self):
         np.random.seed(0)
         self.x = np.sort(np.random.normal(loc=2.9, scale=1.2, size=37))
         self.y = np.sort(np.random.normal(loc=3.0, scale=1.1, size=37))
@@ -569,7 +569,7 @@ class TestQQLine:
 
 
 class TestPlottingPosition:
-    def setup(self):
+    def setup_method(self):
         self.N = 13
         self.data = np.arange(self.N)
 
