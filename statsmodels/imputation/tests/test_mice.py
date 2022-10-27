@@ -99,7 +99,7 @@ class TestMICEData(object):
         assert_equal(imp_data._cycle_order, ['x5', 'x3', 'x4', 'y', 'x2', 'x1'])
 
         # Should make a copy
-        assert(not (df is imp_data.data))
+        assert not (df is imp_data.data)
 
         (endog_obs, exog_obs, exog_miss,
          predict_obs_kwds, predict_miss_kwds) = imp_data.get_split_data('x3')
@@ -132,12 +132,12 @@ class TestMICEData(object):
         all_x = []
         for j in range(2):
             x = imp_data.next_sample()
-            assert(isinstance(x, pd.DataFrame))
+            assert isinstance(x, pd.DataFrame)
             assert_equal(df.shape, x.shape)
             all_x.append(x)
 
         # The returned dataframes are all the same object
-        assert(all_x[0] is all_x[1])
+        assert all_x[0] is all_x[1]
 
 
     def test_pertmeth(self):
@@ -193,9 +193,9 @@ class TestMICEData(object):
                               perturbation_method=pm)
 
             x = idata.next_sample()
-            assert(isinstance(x, pd.DataFrame))
+            assert isinstance(x, pd.DataFrame)
 
-        assert(all([val == (299, 4) for val in hist]))
+        assert all([val == (299, 4) for val in hist])
 
     def test_set_imputer(self):
         # Test with specified perturbation method.
@@ -307,7 +307,7 @@ class TestMICE(object):
         mi = mice.MICE("y ~ x1 + x2 + x1:x2", sm.OLS, imp_data)
         result = mi.fit(1, 3)
 
-        assert(issubclass(result.__class__, mice.MICEResults))
+        assert issubclass(result.__class__, mice.MICEResults)
 
         # Smoke test for results
         smr = result.summary()
@@ -323,7 +323,7 @@ class TestMICE(object):
 
         for j in range(3):
             x = mi.next_sample()
-            assert(issubclass(x.__class__, RegressionResultsWrapper))
+            assert issubclass(x.__class__, RegressionResultsWrapper)
 
 
     def test_MICE1_regularized(self):
@@ -345,8 +345,8 @@ class TestMICE(object):
 
         for j in range(3):
             x = mi.next_sample()
-            assert(isinstance(x, GLMResultsWrapper))
-            assert(isinstance(x.family, sm.families.Binomial))
+            assert isinstance(x, GLMResultsWrapper)
+            assert isinstance(x.family, sm.families.Binomial)
 
     @pytest.mark.slow
     def test_combine(self):

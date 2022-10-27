@@ -159,12 +159,12 @@ def load_results_jmulti(dataset):
         if "co" not in dt_string and "lo" not in dt_string \
                 and "s" not in dt_string:
             # JMulTi: no deterministic terms section in VEC representation
-            del(section_header[1])
-            del(sections[1])
+            del section_header[1]
+            del sections[1]
             if "ci" not in dt_string and "li" not in dt_string:
                 # JMulTi: no deterministic section in VAR repr.
-                del(section_header[-1])
-                del(sections[-1])
+                del section_header[-1]
+                del sections[-1]
         results = dict()
         results["est"] = dict.fromkeys(sections)
         results["se"] = dict.fromkeys(sections)

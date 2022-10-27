@@ -1555,7 +1555,7 @@ class TestGEE(object):
             for v in eq.pairs[g].values():
                 for a, b in zip(v[0], v[1]):
                     ky = (a, b)
-                    assert(ky not in ixs)
+                    assert ky not in ixs
                     ixs.add(ky)
 
         # Smoke test  # TODO: pytest.mark.smoke?

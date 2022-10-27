@@ -497,7 +497,7 @@ class SmoothingSpline(BSpline):
             _g = _band2array(self.g, lower=1, symmetric=True)
             self.coef, _, self.rank = L.lstsq(self.btb + pen*_g, bty)[0:3]
             self.rank = min(self.rank, self.btb.shape[0])
-            del(_g)
+            del _g
         else:
             self.btb = np.zeros(self.g.shape, np.float64)
             nband, nbasis = self.g.shape
@@ -515,9 +515,6 @@ class SmoothingSpline(BSpline):
         self.resid = y * self.weights - np.dot(self.coef, bt)
         self.pen = pen
 
-        del(bty)
-        del(mask)
-        del(bt)
 
     def smooth(self, y, x=None, weights=None):
 

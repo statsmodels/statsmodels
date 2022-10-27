@@ -520,7 +520,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         if self.k_regimes < 2:
             raise ValueError('Markov switching models must have at least two'
                              ' regimes.')
-        if not(self.exog_tvtp is None or self.exog_tvtp.shape[0] == self.nobs):
+        if not (self.exog_tvtp is None or self.exog_tvtp.shape[0] == self.nobs):
             raise ValueError('Time-varying transition probabilities exogenous'
                              ' array must have the same number of observations'
                              ' as the endogenous array.')
