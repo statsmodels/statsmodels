@@ -294,7 +294,7 @@ class CheckGenericMixin(object):
 
 class TestGenericOLS(CheckGenericMixin):
 
-    def setup(self):
+    def setup_method(self):
         #fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
@@ -305,7 +305,7 @@ class TestGenericOLS(CheckGenericMixin):
 class TestGenericOLSOneExog(CheckGenericMixin):
     # check with single regressor (no constant)
 
-    def setup(self):
+    def setup_method(self):
         #fit for each test, because results will be changed by test
         x = self.exog[:, 1]
         np.random.seed(987689)
@@ -320,7 +320,7 @@ class TestGenericOLSOneExog(CheckGenericMixin):
 
 class TestGenericWLS(CheckGenericMixin):
 
-    def setup(self):
+    def setup_method(self):
         #fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
@@ -330,7 +330,7 @@ class TestGenericWLS(CheckGenericMixin):
 
 class TestGenericPoisson(CheckGenericMixin):
 
-    def setup(self):
+    def setup_method(self):
         #fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
@@ -344,7 +344,7 @@ class TestGenericPoisson(CheckGenericMixin):
 
 class TestGenericPoissonOffset(CheckGenericMixin):
 
-    def setup(self):
+    def setup_method(self):
         #fit for each test, because results will be changed by test
         x = self.exog
         nobs = x.shape[0]
@@ -363,7 +363,7 @@ class TestGenericPoissonOffset(CheckGenericMixin):
 
 class TestGenericNegativeBinomial(CheckGenericMixin):
 
-    def setup(self):
+    def setup_method(self):
         #fit for each test, because results will be changed by test
         np.random.seed(987689)
         data = sm.datasets.randhie.load()
@@ -380,7 +380,7 @@ class TestGenericNegativeBinomial(CheckGenericMixin):
 
 class TestGenericLogit(CheckGenericMixin):
 
-    def setup(self):
+    def setup_method(self):
         #fit for each test, because results will be changed by test
         x = self.exog
         nobs = x.shape[0]
@@ -397,7 +397,7 @@ class TestGenericLogit(CheckGenericMixin):
 
 class TestGenericRLM(CheckGenericMixin):
 
-    def setup(self):
+    def setup_method(self):
         #fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
@@ -407,7 +407,7 @@ class TestGenericRLM(CheckGenericMixin):
 
 class TestGenericGLM(CheckGenericMixin):
 
-    def setup(self):
+    def setup_method(self):
         #fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
@@ -417,7 +417,7 @@ class TestGenericGLM(CheckGenericMixin):
 
 class TestGenericGLMPoissonOffset(CheckGenericMixin):
 
-    def setup(self):
+    def setup_method(self):
         #fit for each test, because results will be changed by test
         x = self.exog
         nobs = x.shape[0]
@@ -437,7 +437,7 @@ class TestGenericGLMPoissonOffset(CheckGenericMixin):
 
 class TestGenericGEEPoisson(CheckGenericMixin):
 
-    def setup(self):
+    def setup_method(self):
         #fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
@@ -454,7 +454,7 @@ class TestGenericGEEPoisson(CheckGenericMixin):
 
 class TestGenericGEEPoissonNaive(CheckGenericMixin):
 
-    def setup(self):
+    def setup_method(self):
         #fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
@@ -473,7 +473,7 @@ class TestGenericGEEPoissonNaive(CheckGenericMixin):
 
 class TestGenericGEEPoissonBC(CheckGenericMixin):
 
-    def setup(self):
+    def setup_method(self):
         #fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)

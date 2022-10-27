@@ -723,7 +723,7 @@ class TestKPSS:
     """
 
     @classmethod
-    def setup(cls):
+    def setup_class(cls):
         cls.data = macrodata.load_pandas()
         cls.x = cls.data.data["realgdp"].values
 
@@ -844,7 +844,7 @@ class TestRUR:
     """
 
     @classmethod
-    def setup(cls):
+    def setup_class(cls):
         cls.data = macrodata.load_pandas()
         cls.x = cls.data.data["realgdp"].values
 

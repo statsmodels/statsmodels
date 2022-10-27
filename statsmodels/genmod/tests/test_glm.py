@@ -343,7 +343,7 @@ class TestGlmGaussian(CheckModelResultsMixin):
         assert_allclose(hess_obs1, hess_obsd, rtol=1e-8)
 
 # FIXME: enable or delete
-#    def setup(self):
+#    def setup_method(self):
 #        if skipR:
 #            raise SkipTest, "Rpy not installed."
 #        Gauss = r.gaussian
@@ -399,7 +399,7 @@ class TestGaussianLog(CheckModelResultsMixin):
         cls.res2 = GaussianLog()
 
 # FIXME: enable or delete
-#    def setup(cls):
+#    def setup_class(cls):
 #        if skipR:
 #            raise SkipTest, "Rpy not installed"
 #        GaussLogLink = r.gaussian(link = "log")
@@ -430,7 +430,7 @@ class TestGaussianInverse(CheckModelResultsMixin):
         cls.res2 = GaussianInverse()
 
 # FIXME: enable or delete
-#    def setup(cls):
+#    def setup_class(cls):
 #        if skipR:
 #            raise SkipTest, "Rpy not installed."
 #        InverseLink = r.gaussian(link = "inverse")
@@ -653,7 +653,7 @@ class TestGlmGammaLog(CheckModelResultsMixin):
         cls.res2 = res2
 
 # FIXME: enable or delete
-#    def setup(cls):
+#    def setup_class(cls):
 #        if skipR:
 #            raise SkipTest, "Rpy not installed."
 #        cls.res2 = RModel(cls.data.endog, cls.data.exog, r.glm,
@@ -680,7 +680,7 @@ class TestGlmGammaIdentity(CheckModelResultsMixin):
         cls.res2 = res2
 
 # FIXME: enable or delete
-#    def setup(cls):
+#    def setup_class(cls):
 #        if skipR:
 #            raise SkipTest, "Rpy not installed."
 #        cls.res2 = RModel(cls.data.endog, cls.data.exog, r.glm,
@@ -763,7 +763,7 @@ class TestGlmInvgaussLog(CheckModelResultsMixin):
         cls.res2 = res2
 
 # FIXME: enable or delete
-#    def setup(cls):
+#    def setup_class(cls):
 #        if skipR:
 #            raise SkipTest, "Rpy not installed."
 #        cls.res2 = RModel(cls.data.endog, cls.data.exog, r.glm,
@@ -791,7 +791,7 @@ class TestGlmInvgaussIdentity(CheckModelResultsMixin):
         cls.res2 = InvGaussIdentity()
 
 # FIXME: enable or delete
-#    def setup(cls):
+#    def setup_class(cls):
 #        if skipR:
 #            raise SkipTest, "Rpy not installed."
 #        cls.res2 = RModel(cls.data.endog, cls.data.exog, r.glm,
@@ -832,7 +832,7 @@ class TestGlmNegbinomial(CheckModelResultsMixin):
         cls.res2 = res2
 
 # FIXME: enable or delete
-#    def setup(self):
+#    def setup_method(self):
 #        if skipR:
 #            raise SkipTest, "Rpy not installed"
 #        r.library('MASS')  # this does not work when done in rmodelwrap?
