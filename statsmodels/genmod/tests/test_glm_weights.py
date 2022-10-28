@@ -272,10 +272,14 @@ class TestGlmPoissonFwClu(CheckWeight):
         # no wnobs yet in sandwich covariance calcualtion
         cls.corr_fact = 1 / np.sqrt(n_groups / (n_groups - 1))   #np.sqrt((wsum - 1.) / wsum)
         cov_kwds = {'groups': gid, 'use_correction':False}
-        with pytest.warns(None):
-            mod = GLM(cpunish_data.endog, cpunish_data.exog,
-                      family=sm.families.Poisson(),
-                      freq_weights=fweights)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+
+            mod = GLM(
+                cpunish_data.endog, cpunish_data.exog,
+                family=sm.families.Poisson(), freq_weights=fweights
+            )
             cls.res1 = mod.fit(cov_type='cluster', cov_kwds=cov_kwds)
 
         # compare with discrete, start close to save time

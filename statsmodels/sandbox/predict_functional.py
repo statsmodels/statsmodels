@@ -188,7 +188,7 @@ def _make_exog_from_formula(result, focus_var, summaries, values, num_points):
 
     # or they may be provided as given values.
     for ky in values.keys():
-        fexog.loc[:, ky] = values[ky]
+        fexog[ky] = values[ky]
 
     dexog = patsy.dmatrix(model.data.design_info, fexog,
                           return_type='dataframe')

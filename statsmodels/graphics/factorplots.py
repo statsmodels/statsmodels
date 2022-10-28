@@ -128,20 +128,20 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
         raise ValueError("Must be a color for each trace level")
 
     if plottype == 'both' or plottype == 'b':
-        for i, (values, group) in enumerate(plot_data.groupby(['trace'])):
+        for i, (values, group) in enumerate(plot_data.groupby('trace')):
             # trace label
             label = str(group['trace'].values[0])
             ax.plot(group['x'], group['response'], color=colors[i],
                     marker=markers[i], label=label,
                     linestyle=linestyles[i], **kwargs)
     elif plottype == 'line' or plottype == 'l':
-        for i, (values, group) in enumerate(plot_data.groupby(['trace'])):
+        for i, (values, group) in enumerate(plot_data.groupby('trace')):
             # trace label
             label = str(group['trace'].values[0])
             ax.plot(group['x'], group['response'], color=colors[i],
                     label=label, linestyle=linestyles[i], **kwargs)
     elif plottype == 'scatter' or plottype == 's':
-        for i, (values, group) in enumerate(plot_data.groupby(['trace'])):
+        for i, (values, group) in enumerate(plot_data.groupby('trace')):
             # trace label
             label = str(group['trace'].values[0])
             ax.scatter(group['x'], group['response'], color=colors[i],

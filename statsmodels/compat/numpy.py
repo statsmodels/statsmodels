@@ -43,14 +43,16 @@ from packaging.version import Version, parse
 import numpy as np
 
 __all__ = [
-    "NP_LT_123",
     "NP_LT_114",
+    "NP_LT_122",
+    "NP_LT_123",
     "lstsq",
     "np_matrix_rank",
     "np_new_unique",
 ]
 
 NP_LT_114 = parse(np.__version__) < Version("1.13.99")
+NP_LT_122 = parse(np.__version__) < Version("1.21.99")
 NP_LT_123 = parse(np.__version__) < Version("1.22.99")
 
 np_matrix_rank = np.linalg.matrix_rank

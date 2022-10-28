@@ -724,7 +724,7 @@ class MICEData(object):
 
         ha, la = ax.get_legend_handles_labels()
         pad = 0.0001 if plot_points else 0.5
-        leg = fig.legend(ha, la, 'center right', numpoints=1,
+        leg = fig.legend(ha, la, loc="center right", numpoints=1,
                          handletextpad=pad)
         leg.draw_frame(False)
 
@@ -821,7 +821,7 @@ class MICEData(object):
                     alpha=0.6, lw=4, label=lak[ky])
 
         ha, la = ax.get_legend_handles_labels()
-        leg = fig.legend(ha, la, 'center right', numpoints=1)
+        leg = fig.legend(ha, la, loc="center right", numpoints=1)
         leg.draw_frame(False)
 
         ax.set_xlabel(col_name + " observed or imputed")
@@ -892,7 +892,7 @@ class MICEData(object):
         ha.extend([h1[-1][0], h2[-1][0]])
         la.extend(["Obs", "All"])
 
-        leg = fig.legend(ha, la, 'center right', numpoints=1)
+        leg = fig.legend(ha, la, loc="center right", numpoints=1)
         leg.draw_frame(False)
 
         ax.set_xlabel(col_name)
