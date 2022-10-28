@@ -1,6 +1,7 @@
 # build
 cython>=0.29.32
 setuptools_scm[toml]~=7.0.0
+oldest-supported-numpy>=2022.8.16
 
 # run
 matplotlib>=3
