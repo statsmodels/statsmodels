@@ -1,5 +1,6 @@
 # build
-cython>=0.29
+cython>=0.29.32
+setuptools_scm[toml]~=7.0.0
 
 # run
 matplotlib>=3

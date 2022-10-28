@@ -1,15 +1,14 @@
 """
 To build with coverage of Cython files
 export SM_CYTHON_COVERAGE=1
-python setup.py develop
+python -m pip install -e .
 pytest --cov=statsmodels statsmodels
 coverage html
 """
-from setuptools import Extension, find_packages, setup
+from setuptools import Command, Extension, find_packages, setup
 from setuptools.dist import Distribution
 
 from collections import defaultdict
-from distutils.command.clean import clean
 import fnmatch
 import os
 from os.path import join as pjoin, relpath
@@ -20,6 +19,7 @@ import sys
 import pkg_resources
 
 SETUP_DIR = Path(__file__).parent.resolve()
+
 
 try:
     # SM_FORCE_C is a testing shim to force setup to use C source files
@@ -48,21 +48,21 @@ except ImportError:
 ###############################################################################
 # These are strictly installation requirements. Builds requirements are
 # managed in pyproject.toml
-INSTALL_REQUIREMENTS = {
-    "numpy": "1.17",  # released December 2019
-    "scipy": "1.3",  # released December 2019
-    "pandas": "0.25",  # released January 2020
-    "patsy": "0.5.2",  # released January 2018
-    "packaging": "21.3",  # released Nov 2021
-}
+INSTALL_REQUIRES = []
+with open("requirements.txt", encoding="utf-8") as req:
+    for line in req.readlines():
+        INSTALL_REQUIRES.append(line.split("#")[0].strip())
 
-CYTHON_MIN_VER = "0.29.26"  # released 2020
+DEVELOP_REQUIRES = []
+with open("requirements-dev.txt", encoding="utf-8") as req:
+    for line in req.readlines():
+        DEVELOP_REQUIRES.append(line.split("#")[0].strip())
 
-INSTALL_REQUIRES = [k + ">=" + v for k, v in INSTALL_REQUIREMENTS.items()]
+CYTHON_MIN_VER = "0.29.32"  # released 2020
 
 EXTRAS_REQUIRE = {
     "build": ["cython>=" + CYTHON_MIN_VER],
-    "develop": ["cython>=" + CYTHON_MIN_VER],
+    "develop": ["cython>=" + CYTHON_MIN_VER] + DEVELOP_REQUIRES,
     "docs": [
         "sphinx",
         "nbconvert",
@@ -101,6 +101,7 @@ CLASSIFIERS = [
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
     "Operating System :: OS Independent",
     "Intended Audience :: End Users/Desktop",
     "Intended Audience :: Developers",
@@ -197,8 +198,16 @@ statespace_exts = [
 ]
 
 
-class CleanCommand(clean):
-    def run(self):
+class CleanCommand(Command):
+    user_options = []
+
+    def initialize_options(self) -> None:
+        pass
+
+    def finalize_options(self) -> None:
+        pass
+
+    def run(self) -> None:
         msg = """
 
 python setup.py clean is not supported.
@@ -213,17 +222,17 @@ Use one of:
 
 
 def update_extension(extension, requires_math=True):
-    import numpy  # noqa: F811
-    from numpy.distutils.log import set_verbosity
-    from numpy.distutils.misc_util import get_info
+    import numpy as np
 
-    set_verbosity(1)
-
-    numpy_includes = [numpy.get_include()]
+    numpy_includes = [np.get_include()]
     extra_incl = pkg_resources.resource_filename("numpy", "core/include")
     numpy_includes += [extra_incl]
     numpy_includes = list(set(numpy_includes))
-    numpy_math_libs = get_info("npymath")
+    numpy_math_libs = {
+        "include_dirs": [np.get_include()],
+        "library_dirs": [os.path.join(np.get_include(), '..', 'lib')],
+        "libraries": ["npymath"]
+    }
 
     if not hasattr(extension, "include_dirs"):
         return
@@ -271,11 +280,11 @@ def check_source(source_name):
 def process_tempita(source_name):
     """Runs pyx.in files through tempita is needed"""
     if source_name.endswith("pyx.in"):
-        with open(source_name, "r") as templated:
+        with open(source_name, "r", encoding="utf-8") as templated:
             pyx_template = templated.read()
         pyx = Tempita.sub(pyx_template)
         pyx_filename = source_name[:-3]
-        with open(pyx_filename, "w") as pyx_file:
+        with open(pyx_filename, "w", encoding="utf-8") as pyx_file:
             pyx_file.write(pyx)
         file_stats = os.stat(source_name)
         try:
@@ -379,8 +388,6 @@ class BinaryDistribution(Distribution):
 setup(
     name=DISTNAME,
     maintainer=MAINTAINER,
-    use_scm_version=True,
-    setup_requires=['setuptools_scm'],
     ext_modules=extensions,
     maintainer_email=MAINTAINER_EMAIL,
     description=DESCRIPTION,
