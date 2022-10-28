@@ -37,6 +37,7 @@ __all__ = [
     "ZeroInflatedNegativeBinomialP",
     "ZeroInflatedPoisson",
     "__version__",
+    "__version_tuple__",
     "add_constant",
     "categorical",
     "cov_struct",
@@ -122,9 +123,6 @@ from .tools.print_version import show_versions
 from .tools.tools import add_constant, categorical
 from .tools.web import webdoc
 from .tsa import api as tsa
-from ._version import get_versions
-
-__version__ = get_versions()["version"]
-del get_versions
+from statsmodels._version import __version__, __version_tuple__
 
 load = load_pickle

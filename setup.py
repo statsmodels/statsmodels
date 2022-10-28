@@ -21,12 +21,6 @@ import pkg_resources
 
 SETUP_DIR = Path(__file__).parent.resolve()
 
-sys.path.append(str(SETUP_DIR))
-import versioneer  # noqa: E402
-
-del sys.path[-1]
-
-
 try:
     # SM_FORCE_C is a testing shim to force setup to use C source files
     FORCE_C = int(os.environ.get("SM_FORCE_C", 0))
@@ -253,10 +247,9 @@ class DeferredBuildExt(build_ext):
             update_extension(extension, requires_math=requires_math)
 
 
-cmdclass = versioneer.get_cmdclass()
+cmdclass = {"clean": CleanCommand}
 if not HAS_NUMPY:
     cmdclass["build_ext"] = DeferredBuildExt
-cmdclass["clean"] = CleanCommand
 
 
 def check_source(source_name):
@@ -385,8 +378,9 @@ class BinaryDistribution(Distribution):
 
 setup(
     name=DISTNAME,
-    version=versioneer.get_version(),
     maintainer=MAINTAINER,
+    use_scm_version=True,
+    setup_requires=['setuptools_scm'],
     ext_modules=extensions,
     maintainer_email=MAINTAINER_EMAIL,
     description=DESCRIPTION,

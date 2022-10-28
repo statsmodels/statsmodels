@@ -502,9 +502,9 @@ class PandasData(ModelData):
     """
 
     def _convert_endog_exog(self, endog, exog=None):
-        #TODO: remove this when we handle dtype systematically
+        # TODO: remove this when we handle dtype systematically
         orig_endog, orig_exog = endog, exog
-        
+
         def _to_numpy(x, force=True):
             if isinstance(x,(pd.DataFrame, pd.Series)):
                 return x.to_numpy()
