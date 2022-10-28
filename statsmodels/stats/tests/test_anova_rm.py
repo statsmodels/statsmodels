@@ -140,7 +140,8 @@ def test_repeated_measures_unbalanced_data():
 
 def test_repeated_measures_aggregation():
     df1 = AnovaRM(data, 'DV', 'id', within=['A', 'B', 'D']).fit()
-    df2 = AnovaRM(data.append(data), 'DV', 'id', within=['A', 'B', 'D'],
+    double_data = pd.concat([data, data], axis=0)
+    df2 = AnovaRM(double_data, 'DV', 'id', within=['A', 'B', 'D'],
                   aggregate_func=np.mean).fit()
 
     assert_frame_equal(df1.anova_table, df2.anova_table)
@@ -148,7 +149,9 @@ def test_repeated_measures_aggregation():
 
 def test_repeated_measures_aggregation_one_subject_duplicated():
     df1 = AnovaRM(data, 'DV', 'id', within=['A', 'B', 'D']).fit()
-    df2 = AnovaRM(data.append(data.loc[data['id'] == '1', :]).reset_index(),
+    data2 = pd.concat([data, data.loc[data['id'] == '1', :]], axis=0)
+    data2 = data2.reset_index()
+    df2 = AnovaRM(data2,
                   'DV', 'id', within=['A', 'B', 'D'],
                   aggregate_func=np.mean).fit()
 
@@ -156,12 +159,13 @@ def test_repeated_measures_aggregation_one_subject_duplicated():
 
 
 def test_repeated_measures_aggregate_func():
-    assert_raises(ValueError, AnovaRM, data.append(data), 'DV', 'id',
+    double_data = pd.concat([data, data], axis=0)
+    assert_raises(ValueError, AnovaRM, double_data, 'DV', 'id',
                   within=['A', 'B', 'D'])
 
-    m1 = AnovaRM(data.append(data), 'DV', 'id', within=['A', 'B', 'D'],
+    m1 = AnovaRM(double_data, 'DV', 'id', within=['A', 'B', 'D'],
                  aggregate_func=np.mean)
-    m2 = AnovaRM(data.append(data), 'DV', 'id', within=['A', 'B', 'D'],
+    m2 = AnovaRM(double_data, 'DV', 'id', within=['A', 'B', 'D'],
                  aggregate_func=np.median)
 
     assert_raises(AssertionError, assert_equal,
@@ -170,10 +174,11 @@ def test_repeated_measures_aggregate_func():
 
 
 def test_repeated_measures_aggregate_func_mean():
-    m1 = AnovaRM(data.append(data), 'DV', 'id', within=['A', 'B', 'D'],
+    double_data = pd.concat([data, data], axis=0)
+    m1 = AnovaRM(double_data, 'DV', 'id', within=['A', 'B', 'D'],
                  aggregate_func=np.mean)
 
-    m2 = AnovaRM(data.append(data), 'DV', 'id', within=['A', 'B', 'D'],
+    m2 = AnovaRM(double_data, 'DV', 'id', within=['A', 'B', 'D'],
                  aggregate_func='mean')
 
     assert_equal(m1.aggregate_func, m2.aggregate_func)
@@ -191,7 +196,8 @@ def test_repeated_measures_aggregate_compare_with_ezANOVA():
         index=pd.Index(['A', 'B', 'D', 'A:B', 'A:D', 'B:D', 'A:B:D']))
     ez = ez[['F Value', 'Num DF', 'Den DF', 'Pr > F']]
 
-    df = (AnovaRM(data.append(data), 'DV', 'id', within=['A', 'B', 'D'],
+    double_data = pd.concat([data, data], axis=0)
+    df = (AnovaRM(double_data, 'DV', 'id', within=['A', 'B', 'D'],
                   aggregate_func=np.mean)
           .fit()
           .anova_table)

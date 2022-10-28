@@ -86,7 +86,7 @@ def test_gq():
     assert_equal(gq[-1], "increasing")
 
 
-class TestDiagnosticG(object):
+class TestDiagnosticG:
     @classmethod
     def setup_class(cls):
         d = macrodata.load_pandas().data
@@ -457,8 +457,12 @@ class TestDiagnosticG(object):
             parameters=(0,),
             distr="chi2",
         )
+        if isinstance(res.resid, np.ndarray):
+            resid = res.resid[:30]
+        else:
+            resid = res.resid.iloc[:30]
         lb, lbpval, bp, bppval = smsdia.acorr_ljungbox(
-            res.resid[:30], boxpierce=True, lags=13, return_df=False
+            resid, boxpierce=True, lags=13, return_df=False
         )
         if isinstance(res.resid, np.ndarray):
             resid = res.resid[:30]

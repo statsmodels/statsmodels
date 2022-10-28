@@ -2,6 +2,8 @@
 Base tools for handling various kinds of data structures, attaching metadata to
 results, and doing data cleaning
 """
+import pandas as pd
+
 from statsmodels.compat.python import lmap
 
 from functools import reduce
@@ -504,8 +506,24 @@ class PandasData(ModelData):
         endog = np.asarray(endog)
         exog = exog if exog is None else np.asarray(exog)
         if endog.dtype == object or exog is not None and exog.dtype == object:
-            raise ValueError("Pandas data cast to numpy dtype of object. "
-                             "Check input data with np.asarray(data).")
+            if isinstance(endog, pd.DataFrame):
+                endog_dtype = endog.dtypes
+            elif isinstance(endog, pd.Series):
+                endog_dtype = endog.dtypes
+            else:
+                endog_dtype = None
+            if isinstance(exog, pd.DataFrame):
+                exog_dtype = exog.dtypes
+            elif isinstance(exog, pd.Series):
+                exog_dtype = exog.dtypes
+            else:
+                exog_dtype = None
+            raise ValueError(
+                "Pandas data cast to numpy dtype of object. Check input data "
+                "with np.asarray(data). The types seen were"
+                f"{endog_dtype} and {exog_dtype}. The data was"
+                f"{endog}\nand\n {exog}."
+            )
         return super(PandasData, self)._convert_endog_exog(endog, exog)
 
     @classmethod
