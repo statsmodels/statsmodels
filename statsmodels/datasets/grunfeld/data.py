@@ -74,7 +74,7 @@ def load_pandas():
     """
     data = _get_data()
     data.year = data.year.astype(float)
-    raw_data = pd.get_dummies(data)
+    raw_data = pd.get_dummies(data, dtype=float)
     ds = du.process_pandas(data, endog_idx=0)
     ds.raw_data = raw_data
     return ds

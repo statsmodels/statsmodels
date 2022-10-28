@@ -144,14 +144,14 @@ class CheckGrouping(object):
         self.grouping.dummy_sparse()
         values = data.index.get_level_values(0).values
         expected = pd.get_dummies(pd.Series(values, dtype="category"),
-                                  drop_first=False)
+                                  drop_first=False, dtype=float)
         np.testing.assert_equal(self.grouping._dummies.toarray(), expected)
 
         if len(self.grouping.group_names) > 1:
             self.grouping.dummy_sparse(level=1)
             values = data.index.get_level_values(1).values
             expected = pd.get_dummies(pd.Series(values, dtype="category"),
-                                      drop_first=False)
+                                      drop_first=False, dtype=float)
             np.testing.assert_equal(self.grouping._dummies.toarray(),
                                     expected)
 

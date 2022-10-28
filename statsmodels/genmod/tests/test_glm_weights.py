@@ -595,7 +595,7 @@ class TestRepeatedvsAggregated(CheckWeight):
         exog[:, 0] = 1
         exog[:, 1] = np.random.randint(low=-5, high=5, size=n)
         x = np.repeat(np.array([1, 2, 3, 4]), n / 4)
-        exog[:, 2:] = get_dummies(x)
+        exog[:, 2:] = get_dummies(x, dtype=float)
         beta = np.array([-1, 0.1, -0.05, .2, 0.35])
         lin_pred = (exog * beta).sum(axis=1)
         family = sm.families.Poisson
@@ -626,7 +626,7 @@ class TestRepeatedvsAverage(CheckWeight):
         exog[:, 0] = 1
         exog[:, 1] = np.random.randint(low=-5, high=5, size=n)
         x = np.repeat(np.array([1, 2, 3, 4]), n / 4)
-        exog[:, 2:] = get_dummies(x)
+        exog[:, 2:] = get_dummies(x, dtype=float)
         beta = np.array([-1, 0.1, -0.05, .2, 0.35])
         lin_pred = (exog * beta).sum(axis=1)
         family = sm.families.Poisson
@@ -657,7 +657,7 @@ class TestTweedieRepeatedvsAggregated(CheckWeight):
         exog[:, 0] = 1
         exog[:, 1] = np.random.randint(low=-5, high=5, size=n)
         x = np.repeat(np.array([1, 2, 3, 4]), n / 4)
-        exog[:, 2:] = get_dummies(x)
+        exog[:, 2:] = get_dummies(x, dtype=float)
         beta = np.array([7, 0.1, -0.05, .2, 0.35])
         lin_pred = (exog * beta).sum(axis=1)
         family = sm.families.Tweedie
@@ -689,7 +689,7 @@ class TestTweedieRepeatedvsAverage(CheckWeight):
         exog[:, 0] = 1
         exog[:, 1] = np.random.randint(low=-5, high=5, size=n)
         x = np.repeat(np.array([1, 2, 3, 4]), n / 4)
-        exog[:, 2:] = get_dummies(x)
+        exog[:, 2:] = get_dummies(x, dtype=float)
         beta = np.array([7, 0.1, -0.05, .2, 0.35])
         lin_pred = (exog * beta).sum(axis=1)
         family = sm.families.Tweedie
@@ -722,7 +722,7 @@ class TestBinomial0RepeatedvsAverage(CheckWeight):
         exog[:, 0] = 1
         exog[:, 1] = np.random.randint(low=-5, high=5, size=n)
         x = np.repeat(np.array([1, 2, 3, 4]), n / 4)
-        exog[:, 2:] = get_dummies(x)
+        exog[:, 2:] = get_dummies(x, dtype=float)
         beta = np.array([-1, 0.1, -0.05, .2, 0.35])
         lin_pred = (exog * beta).sum(axis=1)
         family = sm.families.Binomial
@@ -755,7 +755,7 @@ class TestBinomial0RepeatedvsDuplicated(CheckWeight):
         exog[:, 0] = 1
         exog[:, 1] = np.random.randint(low=-5, high=5, size=n)
         x = np.repeat(np.array([1, 2, 3, 4]), n / 4)
-        exog[:, 2:] = get_dummies(x)
+        exog[:, 2:] = get_dummies(x, dtype=float)
         beta = np.array([-1, 0.1, -0.05, .2, 0.35])
         lin_pred = (exog * beta).sum(axis=1)
         family = sm.families.Binomial

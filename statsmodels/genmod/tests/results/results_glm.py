@@ -708,7 +708,9 @@ class Lbw(object):
                                 "stata_lbw_glm.csv")
 
         data = pd.read_csv(filename)
-        dummies = pd.get_dummies(data.race, prefix="race", drop_first=False)
+        dummies = pd.get_dummies(
+            data.race, prefix="race", drop_first=False, dtype=float
+        )
         data = pd.concat([data, dummies], axis=1)
         self.endog = data.low
         design = data[["age", "lwt", "race_black", "race_other", "smoke",
@@ -825,8 +827,8 @@ class Cancer(object):
                                 "stata_cancer_glm.csv")
         data = np.recfromcsv(open(filename, 'rb'))
         self.endog = data.studytime
-        dummies = pd.get_dummies(pd.Series(data.drug, dtype="category"),
-                                 drop_first=True)
+        cat_data = pd.Series(data.drug, dtype="category")
+        dummies = pd.get_dummies(cat_data, drop_first=True, dtype=float)
         design = np.column_stack((data.age, dummies)).astype(float)
         self.exog = add_constant(design, prepend=False)
 
@@ -2231,7 +2233,9 @@ class Medpar1(object):
                                 "stata_medpar1_glm.csv")
         data = pd.read_csv(filename).to_records()
         self.endog = data.los
-        dummies = pd.get_dummies(data.admitype, prefix="race", drop_first=True)
+        dummies = pd.get_dummies(
+            data.admitype, prefix="race", drop_first=True, dtype=float
+        )
         design = np.column_stack((data.codes, dummies)).astype(float)
         self.exog = add_constant(design, prepend=False)
 

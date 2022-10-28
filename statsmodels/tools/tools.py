@@ -181,7 +181,7 @@ def categorical(data, col=None, dictnames=False, drop=False):
             raise ValueError('data.name does not match col '
                              '\'{0}\''.format(col))
         data_cat = pd.Categorical(data)
-        dummies = pd.get_dummies(data_cat)
+        dummies = pd.get_dummies(data_cat, dtype=float)
         col_map = {i: cat for i, cat in enumerate(data_cat.categories) if
                    cat in dummies}
         if not drop:

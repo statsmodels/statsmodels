@@ -476,7 +476,7 @@ def test_categorical_pandas_errors(string_var):
 
 def test_categorical_series(string_var):
     design = tools.categorical(string_var, drop=True)
-    dummies = pd.get_dummies(pd.Categorical(string_var))
+    dummies = pd.get_dummies(pd.Categorical(string_var), dtype=float)
     assert_frame_equal(design, dummies)
     design = tools.categorical(string_var, drop=False)
     dummies.columns = list(dummies.columns)
@@ -491,7 +491,7 @@ def test_categorical_series(string_var):
 def test_categorical_dataframe(string_var):
     df = pd.DataFrame(string_var)
     design = tools.categorical(df, "string_var", drop=True)
-    dummies = pd.get_dummies(pd.Categorical(string_var))
+    dummies = pd.get_dummies(pd.Categorical(string_var), dtype=float)
     assert_frame_equal(design, dummies)
 
     df = pd.DataFrame({"apple": string_var, "ban": string_var})

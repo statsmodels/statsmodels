@@ -97,7 +97,7 @@ groups[20:40] = 1
 groups[40:] = 2
 # dummy = (groups[:,None] == np.unique(groups)).astype(float)
 
-dummy = pd.get_dummies(groups).values
+dummy = pd.get_dummies(groups, dtype=float).values
 x = np.linspace(0, 20, nsample)
 # drop reference category
 X = np.column_stack((x, dummy[:, 1:]))

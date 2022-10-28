@@ -78,7 +78,7 @@ def test_manova_sas_example():
 
 def test_manova_no_formula():
     # Same as previous test only skipping formula interface
-    exog = add_constant(pd.get_dummies(X[['Loc']], drop_first=True))
+    exog = add_constant(pd.get_dummies(X[['Loc']], drop_first=True, dtype=float))
     endog = X[['Basal', 'Occ', 'Max']]
     mod = MANOVA(endog, exog)
     intercept = np.zeros((1, 3))
@@ -137,7 +137,7 @@ def test_manova_no_formula():
 @pytest.mark.smoke
 def test_manova_no_formula_no_hypothesis():
     # Same as previous test only skipping formula interface
-    exog = add_constant(pd.get_dummies(X[['Loc']], drop_first=True))
+    exog = add_constant(pd.get_dummies(X[['Loc']], drop_first=True, dtype=float))
     endog = X[['Basal', 'Occ', 'Max']]
     mod = MANOVA(endog, exog)
     r = mod.mv_test()

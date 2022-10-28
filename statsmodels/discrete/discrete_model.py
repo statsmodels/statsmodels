@@ -117,7 +117,7 @@ def _numpy_to_dummies(endog):
         endog_dummies = endog
         ynames = range(endog.shape[1])
     else:
-        dummies = get_dummies(endog, drop_first=False)
+        dummies = get_dummies(endog, drop_first=False, dtype=float)
         ynames = {i: dummies.columns[i] for i in range(dummies.shape[1])}
         endog_dummies = np.asarray(dummies, dtype=float)
 
@@ -130,13 +130,13 @@ def _pandas_to_dummies(endog):
     if endog.ndim == 2:
         if endog.shape[1] == 1:
             yname = endog.columns[0]
-            endog_dummies = get_dummies(endog.iloc[:, 0])
+            endog_dummies = get_dummies(endog.iloc[:, 0], dtype=float)
         else:  # series
             yname = 'y'
             endog_dummies = endog
     else:
         yname = endog.name
-        endog_dummies = get_dummies(endog)
+        endog_dummies = get_dummies(endog, dtype=float)
     ynames = endog_dummies.columns.tolist()
 
     return endog_dummies, ynames, yname
