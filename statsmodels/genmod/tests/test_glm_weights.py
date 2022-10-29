@@ -575,9 +575,9 @@ def test_wtd_gradient_irls():
                                     atol=5e-5)
 
 
-def get_dummies(x):
+def get_dummies(x, dtype=float):
     values = np.sort(np.unique(x))
-    out = np.zeros(shape=(x.shape[0], len(values) - 1))
+    out = np.zeros(shape=(x.shape[0], len(values) - 1), dtype=dtype)
     for i, v in enumerate(values):
         if i == 0:
             continue
