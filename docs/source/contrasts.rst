@@ -139,8 +139,8 @@ For example, here the coefficient on level 1 is the mean of `write` at level 2 c
 .. ipython:: python
 
    res.params["C(race, Diff)[D.1]"]
-   hsb2.groupby('race').mean()["write"][2] - \
-       hsb2.groupby('race').mean()["write"][1]
+   hsb2.groupby('race').mean()["write"].loc[2] - \
+       hsb2.groupby('race').mean()["write"].loc[1]
 
 Helmert Coding
 --------------
@@ -162,16 +162,16 @@ To illustrate, the comparison on level 4 is the mean of the dependent variable a
 .. ipython:: python
 
    grouped = hsb2.groupby('race')
-   grouped.mean()["write"][4] - grouped.mean()["write"][:3].mean()
+   grouped.mean()["write"].loc[4] - grouped.mean()["write"].loc[:3].mean()
 
 As you can see, these are only equal up to a constant. Other versions of the Helmert contrast give the actual difference in means. Regardless, the hypothesis tests are the same.
 
 .. ipython:: python
 
    k = 4
-   1./k * (grouped.mean()["write"][k] - grouped.mean()["write"][:k-1].mean())
+   1./k * (grouped.mean()["write"].loc[k] - grouped.mean()["write"].loc[:k-1].mean())
    k = 3
-   1./k * (grouped.mean()["write"][k] - grouped.mean()["write"][:k-1].mean())
+   1./k * (grouped.mean()["write"].loc[k] - grouped.mean()["write"].loc[:k-1].mean())
 
 
 Orthogonal Polynomial Coding
