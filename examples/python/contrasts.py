@@ -79,7 +79,7 @@ hsb2.race.head(10)
 
 print(contrast.matrix[hsb2.race - 1, :][:20])
 
-pd.get_dummies(hsb2.race.values, drop_first=False)
+pd.get_dummies(hsb2.race.values, drop_first=False, dtype=float)
 
 # This is a bit of a trick, as the `race` category conveniently maps to
 # zero-based indices. If it does not, this conversion happens under the

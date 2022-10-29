@@ -502,27 +502,36 @@ class PandasData(ModelData):
     """
 
     def _convert_endog_exog(self, endog, exog=None):
-        #TODO: remove this when we handle dtype systematically
-        endog = np.asarray(endog)
-        exog = exog if exog is None else np.asarray(exog)
+        # TODO: remove this when we handle dtype systematically
+        orig_endog, orig_exog = endog, exog
+
+        def _to_numpy(x, force=True):
+            if isinstance(x,(pd.DataFrame, pd.Series)):
+                return x.to_numpy()
+            elif x is not None or force:
+                return np.asarray(x)
+            return None
+
+        endog = _to_numpy(endog)
+        exog = _to_numpy(exog, force=False)
         if endog.dtype == object or exog is not None and exog.dtype == object:
-            if isinstance(endog, pd.DataFrame):
-                endog_dtype = endog.dtypes
+            if isinstance(orig_endog, pd.DataFrame):
+                endog_dtype = orig_endog.dtypes
             elif isinstance(endog, pd.Series):
-                endog_dtype = endog.dtypes
+                endog_dtype = orig_endog.dtype
             else:
                 endog_dtype = None
-            if isinstance(exog, pd.DataFrame):
-                exog_dtype = exog.dtypes
+            if isinstance(orig_exog, pd.DataFrame):
+                exog_dtype = orig_exog.dtypes
             elif isinstance(exog, pd.Series):
-                exog_dtype = exog.dtypes
+                exog_dtype = orig_exog.dtype
             else:
                 exog_dtype = None
             raise ValueError(
                 "Pandas data cast to numpy dtype of object. Check input data "
                 "with np.asarray(data). The types seen were"
-                f"{endog_dtype} and {exog_dtype}. The data was"
-                f"{endog}\nand\n {exog}."
+                f"{endog_dtype} and {exog_dtype}. The data was\n"
+                f"{orig_endog}\nand\n {orig_exog}\nbefore. After,\n{endog}\n{exog}."
             )
         return super(PandasData, self)._convert_endog_exog(endog, exog)
 

@@ -1,5 +1,7 @@
 # build
-cython>=0.29
+cython>=0.29.32,<3.0.0
+setuptools_scm[toml]~=7.0.0
+oldest-supported-numpy>=2022.8.16
 
 # run
 matplotlib>=3
@@ -9,7 +11,7 @@ joblib
 # cvxopt; os_name != "win32"
 
 # test
-pytest
+pytest~=7.0.1
 pytest-randomly
 pytest-xdist
 
@@ -19,19 +21,3 @@ pywinpty; os_name == "nt"
 # code quality
 flake8
 isort
-
-# doc
-sphinx
-sphinx-material
-jupyter
-notebook
-nbsphinx
-nbconvert
-pyyaml
-pandas-datareader
-simplegeneric
-seaborn
-numpydoc
-theano-pymc
-pymc3
-arviz

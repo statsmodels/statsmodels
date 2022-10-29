@@ -1086,7 +1086,7 @@ def test_bad_size():
 def test_const_indicator():
     rs = np.random.RandomState(12345)
     x = rs.randint(0, 3, size=30)
-    x = pd.get_dummies(pd.Series(x, dtype="category"), drop_first=False)
+    x = pd.get_dummies(pd.Series(x, dtype="category"), drop_first=False, dtype=float)
     y = np.dot(x, [1.0, 2.0, 3.0]) + rs.normal(size=30)
     resc = OLS(y, add_constant(x.iloc[:, 1:], prepend=True)).fit()
     res = OLS(y, x, hasconst=True).fit()
@@ -1098,8 +1098,8 @@ def test_const_indicator():
 def test_fvalue_const_only():
     rs = np.random.RandomState(12345)
     x = rs.randint(0, 3, size=30)
-    x = pd.get_dummies(pd.Series(x, dtype="category"), drop_first=False)
-    x.iloc[:, 0] = 1
+    x = pd.get_dummies(pd.Series(x, dtype="category"), drop_first=False, dtype=float)
+    x[x.columns[0]] = 1
     y = np.dot(x, [1.0, 2.0, 3.0]) + rs.normal(size=30)
     res = OLS(y, x, hasconst=True).fit(cov_type="HC1")
     assert not np.isnan(res.fvalue)

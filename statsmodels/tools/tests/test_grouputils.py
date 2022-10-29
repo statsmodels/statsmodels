@@ -144,14 +144,14 @@ class CheckGrouping(object):
         self.grouping.dummy_sparse()
         values = data.index.get_level_values(0).values
         expected = pd.get_dummies(pd.Series(values, dtype="category"),
-                                  drop_first=False)
+                                  drop_first=False, dtype=float)
         np.testing.assert_equal(self.grouping._dummies.toarray(), expected)
 
         if len(self.grouping.group_names) > 1:
             self.grouping.dummy_sparse(level=1)
             values = data.index.get_level_values(1).values
             expected = pd.get_dummies(pd.Series(values, dtype="category"),
-                                      drop_first=False)
+                                      drop_first=False, dtype=float)
             np.testing.assert_equal(self.grouping._dummies.toarray(),
                                     expected)
 
@@ -317,7 +317,7 @@ def test_dummy_sparse():
 
     g = np.array([0, 0, 2, 1, 1, 2, 0])
     indi = dummy_sparse(g)
-    assert isinstance(indi, sparse.csr.csr_matrix)
+    assert isinstance(indi, sparse.csr_matrix)
     result = indi.todense()
     expected = np.matrix([[1, 0, 0],
                          [1, 0, 0],

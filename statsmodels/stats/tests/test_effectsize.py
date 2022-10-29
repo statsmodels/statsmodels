@@ -69,7 +69,7 @@ def test_noncent_t():
     assert_allclose(res.confint, ci_nc, rtol=0.005)
     # verify umvue unbiased
     mean = stats.nct.mean(df, res.nc)
-    assert_allclose(t_stat, mean, rtol=1e-8)
+    assert_allclose(t_stat, mean, rtol=1e-5)
 
     assert_allclose(stats.nct.cdf(t_stat, df, res.confint), [0.975, 0.025],
-                    rtol=1e-10)
+                    rtol=1e-5)

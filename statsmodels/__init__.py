@@ -1,5 +1,4 @@
-
-from statsmodels._version import get_versions
+from statsmodels._version import __version__, __version_tuple__
 
 debug_warnings = False
 
@@ -33,5 +32,4 @@ def test(extra_args=None, exit=False):
     return tst(extra_args=extra_args, exit=exit)
 
 
-__version__ = get_versions()['version']
-del get_versions
+__all__ = ["__version__", "__version_tuple__", "test"]
