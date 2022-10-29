@@ -1,0 +1,15 @@
+# Requirements for doc build, in addition to requirements.txt
+sphinx
+sphinx-material
+jupyter
+notebook
+nbsphinx
+nbconvert
+pyyaml
+pandas-datareader
+simplegeneric
+seaborn
+numpydoc
+theano-pymc; os_name != "nt"
+pymc3; os_name != "nt"
+arviz; os_name != "nt"
