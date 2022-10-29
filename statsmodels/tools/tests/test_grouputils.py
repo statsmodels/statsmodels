@@ -317,7 +317,7 @@ def test_dummy_sparse():
 
     g = np.array([0, 0, 2, 1, 1, 2, 0])
     indi = dummy_sparse(g)
-    assert isinstance(indi, sparse.csr.csr_matrix)
+    assert isinstance(indi, sparse.csr_matrix)
     result = indi.todense()
     expected = np.matrix([[1, 0, 0],
                          [1, 0, 0],
