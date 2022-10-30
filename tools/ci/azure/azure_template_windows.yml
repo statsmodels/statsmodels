@@ -25,6 +25,12 @@ jobs:
       python39_win_latest:
         python.version: '3.9'
         python.architecture: 'x64'
+      python310_win_latest:
+        python.version: '3.10'
+        python.architecture: 'x64'
+      python311_win_latest:
+        python.version: '3.11'
+        python.architecture: 'x64'
     maxParallel: 10
 
   steps:
@@ -39,16 +45,9 @@ jobs:
     displayName: 'Update essentials'
 
   - script: |
-      python -m pip install "pywinpty<1.0" -r requirements.txt
-      python -m pip install "pywinpty<1.0" -r requirements-dev.txt
-    displayName: 'Install dependencies (x86)'
-    condition: eq(variables['python.architecture'], 'x86')
-
-  - script: |
       python -m pip install -r requirements.txt
       python -m pip install -r requirements-dev.txt
-    displayName: 'Install dependencies (x86_64)'
-    condition: ne(variables['python.architecture'], 'x86')
+    displayName: 'Install dependencies'
 
   - script: |
       python -m pip list

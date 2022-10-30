@@ -58,7 +58,7 @@ jobs:
         python -m pip install -r requirements-doc.txt
         python -m pip list
     - name: Install statsmodels
-      run: python -m pip install -e . --no-build-isolation -v
+      run: python -m pip install . -vv
     - name: Build documentation
       run: |
         pushd docs

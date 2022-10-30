@@ -6,7 +6,7 @@ requires = [
     # Workaround for oldest supported numpy using 1.21.6, but SciPy 1.9.2+ requiring 1.22.3+
     "oldest-supported-numpy; python_version!='3.10' or platform_system!='Windows' or platform_python_implementation=='PyPy'",
     "numpy==1.22.3; python_version=='3.10' and platform_system=='Windows' and platform_python_implementation != 'PyPy'",
-    "numpy; python_version>='3.12'",
+    "numpy; python_version>='3.11'",
     "scipy>=1.3",
     "setuptools_scm[toml]>=7.0,<8"
 ]

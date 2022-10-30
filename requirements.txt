@@ -1,3 +1,5 @@
+# Workaround for scipy build requirement
+numpy>=1.22.3; python_version=="3.10" and platform_system=="Windows" and platform_python_implementation != "PyPy"
 numpy>=1.17
 scipy>=1.3
 pandas>=0.25
