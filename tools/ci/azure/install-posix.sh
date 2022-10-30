@@ -17,16 +17,16 @@ fi
 python -m pip install --upgrade "pip~=22.0.4" setuptools wheel
 python -m pip install "cython>=0.29.28,<3.0.0" "pytest~=7.0.1" pytest-xdist coverage pytest-cov ipython jupyter notebook nbconvert black==20.8b1 isort flake8 nbconvert==5.6.1 coveralls setuptools_scm[toml]~=7.0.0
 
-if [[ -n ${NUMPY} ]]; then CMD="$CMD~=${NUMPY}"; fi;
+if [[ -n ${NUMPY} ]]; then CMD="$CMD==${NUMPY}"; fi;
 CMD="$CMD scipy"
-if [[ -n ${SCIPY} ]]; then CMD="$CMD~=${SCIPY}"; fi;
+if [[ -n ${SCIPY} ]]; then CMD="$CMD==${SCIPY}"; fi;
 CMD="$CMD pandas"
-if [[ -n ${PANDAS} ]]; then CMD="$CMD~=${PANDAS}"; fi;
+if [[ -n ${PANDAS} ]]; then CMD="$CMD==${PANDAS}"; fi;
 
 if [[ ${USE_MATPLOTLIB} == true ]]; then
   CMD="$CMD matplotlib"
   if [[ -n ${MATPLOTLIB} ]]; then
-    CMD="$CMD~=${MATPLOTLIB}";
+    CMD="$CMD==${MATPLOTLIB}";
   fi
 fi
 

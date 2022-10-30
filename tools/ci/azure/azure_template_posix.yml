@@ -89,9 +89,9 @@ jobs:
 
   - script: |
       echo "Installing to site packages"
-      python setup.py bdist_wheel
+      python -m pip wheel .
       WHL=$(ls -t dist)
-      pip install ./dist/${WHL}
+      python -m pip install ./dist/${WHL}
     displayName: 'Install statsmodels (site-packages)'
     condition: eq(variables['test.install'], 'true')
 
@@ -114,7 +114,7 @@ jobs:
       echo "Testing site packages"
       mkdir test_run_dir
       pushd test_run_dir
-      python -c "import statsmodels; statsmodels.test(['-n', 'auto', '--junitxml=../junit/test-results.xml', '--skip-examples', '-v'])"
+      python -c "import statsmodels; statsmodels.test(['-n', 'auto', '--junitxml=../junit/test-results.xml', '--skip-examples'])"
       popd
     displayName: 'Run tests (site-packages)'
     condition: eq(variables['test.install'], 'true')
