@@ -33,7 +33,7 @@ W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
 from __future__ import annotations
 
 from statsmodels.compat.pandas import Appender
-from statsmodels.compat.python import lrange, lzip
+from statsmodels.compat.python import Literal, lrange, lzip
 
 from typing import Sequence
 import warnings
@@ -46,13 +46,12 @@ import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
 from statsmodels.emplike.elregress import _ELRegOpts
 # need import in module instead of lazily to copy `__doc__`
+from statsmodels.regression import _prediction as pred
 from statsmodels.regression._prediction import PredictionResults
 from statsmodels.tools.decorators import cache_readonly, cache_writable
 from statsmodels.tools.sm_exceptions import InvalidTestWarning, ValueWarning
 from statsmodels.tools.tools import pinv_extended
 from statsmodels.tools.validation import bool_like, float_like, string_like
-
-from . import _prediction as pred
 
 __docformat__ = 'restructuredtext en'
 
