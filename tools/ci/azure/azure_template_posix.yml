@@ -17,12 +17,52 @@ jobs:
   strategy:
     matrix:
       ${{ if eq(parameters.name, 'Linux') }}:
-        python_311_latest:
-          python.version: '3.11'
+        python_39:
+          python.version: '3.9'
+          lint: true
+        python_38:
+          python.version: '3.8'
+          USE_MATPLOTLIB: false
+          USE_CVXOPT: false
+          SCIPY: 1.5.4
+          PANDAS: 1.1.5
+          NUMPY: 1.19.5
+          lint: true
+        python37:
+          python.version: '3.7'
+          use.conda: false
+          PANDAS: 0.25.3
+          NUMPY: 1.18.5
+          SCIPY: 1.4.1
+          MATPLOTLIB: 3.2.2
+          coverage: true
+          PYTEST_PATTERN: '(not slow)'
+        python_37_legacy_blas:
+          python.version: '3.7'
+          use.conda: false
+          coverage: true
+          NUMPY: 1.17.4
+          PANDAS: 0.25.3
+          MATPLOTLIB: 3.1.3
+          SCIPY: 1.3.2
+          # Temporarily disable
+          # BLAS: "nomkl blas=*=openblas"
+          PYTEST_PATTERN: '(not slow)'
+        python38_numpy118:
+          python.version: '3.8'
+          NUMPY: 1.18.5
+          SCIPY: 1.3.3
+          PANDAS: 1.0.5
           lint: true
         python_310_latest:
           python.version: '3.10'
           lint: true
+        python_311_latest:
+          python.version: '3.11'
+          lint: true
+        python_310_pre:
+          python.version: '3.10'
+          pip.pre: true
       ${{ if eq(parameters.name, 'macOS') }}:
         python311_macos_latest:
           python.version: '3.11'
