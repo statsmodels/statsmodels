@@ -17,18 +17,7 @@ jobs:
   strategy:
     matrix:
       ${{ if eq(parameters.name, 'Linux') }}:
-        python_39:
-          python.version: '3.9'
-          lint: true
-        python_38:
-          python.version: '3.8'
-          USE_MATPLOTLIB: false
-          USE_CVXOPT: false
-          SCIPY: 1.5.4
-          PANDAS: 1.1.5
-          NUMPY: 1.19.5
-          lint: true
-        python37:
+        python37_mid:
           python.version: '3.7'
           use.conda: false
           PANDAS: 0.25.3
@@ -54,13 +43,24 @@ jobs:
           SCIPY: 1.3.3
           PANDAS: 1.0.5
           lint: true
+        python_38_numpy119:
+          python.version: '3.8'
+          USE_MATPLOTLIB: false
+          USE_CVXOPT: false
+          SCIPY: 1.5.4
+          PANDAS: 1.1.5
+          NUMPY: 1.19.5
+          lint: true
+        python_39_latest:
+          python.version: '3.9'
+          lint: true
         python_310_latest:
           python.version: '3.10'
           lint: true
         python_311_latest:
           python.version: '3.11'
           lint: true
-        python_310_pre:
+        python_pip_pre:
           python.version: '3.10'
           pip.pre: true
       ${{ if eq(parameters.name, 'macOS') }}:
