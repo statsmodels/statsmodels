@@ -8,7 +8,7 @@ import numpy as np
 
 
 def mean_residual_life(x, frac=None, alpha=0.05):
-    '''empirical mean residual life or expected shortfall
+    """empirical mean residual life or expected shortfall
 
     Parameters
     ----------
@@ -24,7 +24,7 @@ def mean_residual_life(x, frac=None, alpha=0.05):
         last observations std is zero
         vectorize loop using cumsum
         frac does not work yet
-    '''
+    """
 
     axis = 0  # searchsorted is 1d only
     x = np.asarray(x)
@@ -35,16 +35,18 @@ def mean_residual_life(x, frac=None, alpha=0.05):
     else:
         xthreshold = xsorted[np.floor(nobs * frac).astype(int)]
     # use searchsorted instead of simple index in case of ties
-    xlargerindex = np.searchsorted(xsorted, xthreshold, side='right')
+    xlargerindex = np.searchsorted(xsorted, xthreshold, side="right")
 
     # TODO:replace loop with cumsum ?
     result = []
-    for i in range(len(xthreshold)-1):
+    for i in range(len(xthreshold) - 1):
         k_ind = xlargerindex[i]
         rmean = x[k_ind:].mean()
         # this does not work for last observations, nans
         rstd = x[k_ind:].std()
-        rmstd = rstd/np.sqrt(nobs-k_ind)  # std error of mean, check formula
+        rmstd = rstd / np.sqrt(
+            nobs - k_ind
+        )  # std error of mean, check formula
         result.append((k_ind, xthreshold[i], rmean, rmstd))
 
     res = np.array(result)

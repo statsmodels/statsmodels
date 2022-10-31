@@ -30,44 +30,15 @@ Stats
 
 The Highlights
 ==============
-
-
-What's new - an overview
-========================
-
-The following lists the main new features of statsmodels 0.13.3. In addition,
-release 0.13.3 includes bug fixes, refactorings and improvements in many areas.
+This is a Python 3.11 compatability release only.  There are no significant
+new features or bug fixes.
 
 Submodules
 ----------
 
-
 ``maintenance``
 ~~~~~~~~~~~~~~~
 - Backport Python 3.11 to 0.13.x branch  (:pr:`8484`)
-
-
-
-
-
-bug-wrong
----------
-
-A new issue label `type-bug-wrong` indicates bugs that cause that incorrect
-numbers are returned without warnings.
-(Regular bugs are mostly usability bugs or bugs that raise an exception for
-unsupported use cases.)
-`see tagged issues <https://github.com/statsmodels/statsmodels/issues?q=is%3Aissue+label%3Atype-bug-wrong+is%3Aclosed+milestone%3A0.13.3/>`_
-
-
-Major Bugs Fixed
-================
-
-See github issues for a list of bug fixes included in this release
-
-- `Closed bugs <https://github.com/statsmodels/statsmodels/pulls?utf8=%E2%9C%93&q=is%3Apr+is%3Amerged+milestone%3A0.13.3+label%3Atype-bug/>`_
-- `Closed bugs (wrong result) <https://github.com/statsmodels/statsmodels/pulls?q=is%3Apr+is%3Amerged+milestone%3A0.13.3+label%3Atype-bug-wrong/>`_
-
 
 Development summary and credits
 ===============================
