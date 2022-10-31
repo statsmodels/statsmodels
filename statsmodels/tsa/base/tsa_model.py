@@ -16,7 +16,6 @@ from pandas import (
     Period,
     PeriodIndex,
     RangeIndex,
-    Int64Index,
     Series,
     Timestamp,
     date_range,
@@ -685,7 +684,7 @@ class TimeSeriesModel(base.LikelihoodModel):
             _index = index
         else:
             _index = increment
-            if isinstance(index, Int64Index) or isinstance(index, RangeIndex):
+            if isinstance(index, Index) and index.dtype == int:
                 _index += index.min()
             index_generated = True
         self._index = _index
