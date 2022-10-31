@@ -952,6 +952,7 @@ class ETSModel(base.StateSpaceMLEModel):
         disp=True,
         callback=None,
         return_params=False,
+        method="lbfgs",
         **kwargs,
     ):
         r"""
@@ -1039,21 +1040,45 @@ class ETSModel(base.StateSpaceMLEModel):
             is_fixed = np.zeros(self._k_params_internal, dtype=int)
             fixed_values = np.empty_like(internal_start_params)
             params_without_fixed = []
-            kwargs["bounds"] = []
+
+            supported_methods = (
+                "newton",
+                "nm",
+                "bfgs",
+                "lbfgs",
+                "powell",
+                "cg",
+                "ncg",
+                "basinhopping",
+                "minimize"
+            )
+            method = string_like(
+                method,
+                "method",
+                options=supported_methods,
+                lower=False,
+                optional=True,
+            )
+
+            if method == "lbfgs":
+                kwargs["bounds"] = []
+                kwargs["approx_grad"] = True  
+
             for i in range(self._k_params_internal):
                 if bounds[i][0] == bounds[i][1]:
                     is_fixed[i] = True
                     fixed_values[i] = bounds[i][0]
                 else:
                     params_without_fixed.append(internal_start_params[i])
-                    kwargs["bounds"].append(bounds[i])
+
+                    if method == "lbfgs":
+                        kwargs["bounds"].append(bounds[i])
             params_without_fixed = np.asarray(params_without_fixed)
 
             # pre-allocate memory for smoothing results
             yhat = np.zeros(self.nobs)
             xhat = np.zeros((self.nobs, self._k_states_internal))
-
-            kwargs["approx_grad"] = True
+                               
             with self.use_internal_loglike():
                 mlefit = super().fit(
                     params_without_fixed,
@@ -1065,7 +1090,7 @@ class ETSModel(base.StateSpaceMLEModel):
                         use_beta_star,
                         use_gamma_star,
                     ),
-                    method="lbfgs",
+                    method=method,
                     maxiter=maxiter,
                     full_output=full_output,
                     disp=disp,
