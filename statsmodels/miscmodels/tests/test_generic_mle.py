@@ -12,7 +12,7 @@ from scipy import stats
 from statsmodels.base.model import GenericLikelihoodModel
 
 from numpy.testing import (assert_array_less, assert_almost_equal,
-                           assert_allclose, assert_)
+                           assert_allclose)
 
 class MyPareto(GenericLikelihoodModel):
     '''Maximum Likelihood Estimation pareto distribution

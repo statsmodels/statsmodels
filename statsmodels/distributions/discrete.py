@@ -405,7 +405,8 @@ class DiscretizedModel(GenericLikelihoodModel):
         super().__init__(endog, exog, distr=distr)
         self._init_keys.append('distr')
         self.df_resid = len(endog) - distr.k_shapes
-        self.df_model = distr.k_shapes  # no constant subtracted
+        self.df_model = 0
+        self.k_extra = distr.k_shapes  # no constant subtracted
         self.k_constant = 0
         self.nparams = distr.k_shapes  # needed for start_params
         self.start_params = 0.5 * np.ones(self.nparams)
