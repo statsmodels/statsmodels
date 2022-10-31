@@ -98,7 +98,10 @@ def proportion_confint(count, nobs, alpha=0.05, method='normal'):
     elif method == 'binom_test':
         # inverting the binomial test
         def func(qi):
-            return stats.binom_test(q_ * nobs, nobs, p=qi) - alpha
+            if hasattr(stats, "binomtest"):
+                return stats.binomtest(q_ * nobs, nobs, p=qi).pvalue - alpha
+            else:
+                return stats.binom_test(q_ * nobs, nobs, p=qi) - alpha
         if count == 0:
             ci_low = 0
         else:

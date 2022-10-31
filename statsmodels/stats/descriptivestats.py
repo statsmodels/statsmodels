@@ -749,10 +749,16 @@ class Describe(object):
         return p
 
     def _mode_val(self, x):
-        return stats.mode(x)[0][0]
+        try:
+            return stats.mode(x, keepdims=True)[0][0]
+        except TypeError:
+            return stats.mode(x)[0][0]
 
     def _mode_bin(self, x):
-        return stats.mode(x)[1][0]
+        try:
+            return stats.mode(x, keepdims=True)[1][0]
+        except TypeError:
+            return stats.mode(x)[1][0]
 
     def _array_typer(self):
         """if not a sctructured array"""
