@@ -693,6 +693,8 @@ class TimeSeriesModel(base.LikelihoodModel):
             _index = index
         else:
             _index = increment
+            if isinstance(index, Index) and index.dtype == int:
+                _index += index.min()
             index_generated = True
         self._index = _index
         self._index_generated = index_generated
