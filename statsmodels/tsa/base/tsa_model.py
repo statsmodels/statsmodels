@@ -104,7 +104,9 @@ def get_index_loc(key, index):
                 base_index_start = base_index._start
                 base_index_step = base_index._step
             stop = base_index_start + (key + 1) * base_index_step
-            index = RangeIndex(start=base_index_start, stop=stop, step=base_index_step)
+            index = RangeIndex(
+                start=base_index_start, stop=stop, step=base_index_step
+            )
 
     # Special handling for NumericIndex
     if (
@@ -353,7 +355,9 @@ def get_prediction_index(
     # Convert index keys (start, end) to index locations and get associated
     # indexes.
     try:
-        start, _, start_oos = get_index_label_loc(start, base_index, data.row_labels)
+        start, _, start_oos = get_index_label_loc(
+            start, base_index, data.row_labels
+        )
     except KeyError:
         raise KeyError(
             "The `start` argument could not be matched to a"
@@ -362,7 +366,9 @@ def get_prediction_index(
     if end is None:
         end = max(start, len(base_index) - 1)
     try:
-        end, end_index, end_oos = get_index_label_loc(end, base_index, data.row_labels)
+        end, end_index, end_oos = get_index_label_loc(
+            end, base_index, data.row_labels
+        )
     except KeyError:
         raise KeyError(
             "The `end` argument could not be matched to a"
@@ -563,7 +569,8 @@ class TimeSeriesModel(base.LikelihoodModel):
                     # index below
                     if dates is not None:
                         raise ValueError(
-                            "Non-date index index provided to" " `dates` argument."
+                            "Non-date index index provided to"
+                            " `dates` argument."
                         )
             # Now, if we were given, or coerced, a date-based index, make sure
             # it has an associated frequency
@@ -580,7 +587,7 @@ class TimeSeriesModel(base.LikelihoodModel):
                                 " provided, so inferred frequency %s"
                                 " will be used." % freq,
                                 ValueWarning,
-                                stacklevel=2,
+                                stacklevel = 2,
                             )
 
                 # Convert the passed freq to a pandas offset object
@@ -615,7 +622,9 @@ class TimeSeriesModel(base.LikelihoodModel):
                 # also a given frequency, raise an exception if they are not
                 # equal
                 elif (
-                    freq is not None and not inferred_freq and not (index.freq == freq)
+                    freq is not None
+                    and not inferred_freq
+                    and not (index.freq == freq)
                 ):
                     raise ValueError(
                         "The given frequency argument is"
@@ -684,8 +693,6 @@ class TimeSeriesModel(base.LikelihoodModel):
             _index = index
         else:
             _index = increment
-            if isinstance(index, Index) and index.dtype == int:
-                _index += index.min()
             index_generated = True
         self._index = _index
         self._index_generated = index_generated
@@ -769,9 +776,7 @@ class TimeSeriesModel(base.LikelihoodModel):
             base_index = self._index
         return get_index_label_loc(key, base_index, self.data.row_labels)
 
-    def _get_prediction_index(
-        self, start, end, index=None, silent=False
-    ) -> tuple[int, int, int, Index | None]:
+    def _get_prediction_index(self, start, end, index=None, silent=False) -> tuple[int, int, int, Index | None]:
         """
         Get the location of a specific key in an index or model row labels
 
@@ -866,11 +871,15 @@ class TimeSeriesModelResults(base.LikelihoodModelResults):
 
 class TimeSeriesResultsWrapper(wrap.ResultsWrapper):
     _attrs = {}
-    _wrap_attrs = wrap.union_dicts(base.LikelihoodResultsWrapper._wrap_attrs, _attrs)
+    _wrap_attrs = wrap.union_dicts(
+        base.LikelihoodResultsWrapper._wrap_attrs, _attrs
+    )
     _methods = {"predict": "dates"}
     _wrap_methods = wrap.union_dicts(
         base.LikelihoodResultsWrapper._wrap_methods, _methods
     )
 
 
-wrap.populate_wrapper(TimeSeriesResultsWrapper, TimeSeriesModelResults)  # noqa:E305
+wrap.populate_wrapper(
+    TimeSeriesResultsWrapper, TimeSeriesModelResults  # noqa:E305
+)
