@@ -1187,7 +1187,7 @@ class ETSModel(base.StateSpaceMLEModel):
 
             if method == "lbfgs":
                 kwargs["bounds"] = []
-                kwargs["approx_grad"] = True  
+                kwargs["approx_grad"] = True
 
             for i in range(self._k_params_internal):
                 if bounds[i][0] == bounds[i][1]:
@@ -1203,7 +1203,7 @@ class ETSModel(base.StateSpaceMLEModel):
             # pre-allocate memory for smoothing results
             yhat = np.zeros(self.nobs)
             xhat = np.zeros((self.nobs, self._k_states_internal))
-                               
+
             with self.use_internal_loglike():
                 mlefit = super().fit(
                     params_without_fixed,
