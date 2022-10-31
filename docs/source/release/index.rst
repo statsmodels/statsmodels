@@ -7,6 +7,7 @@ Release Notes
 .. toctree::
    :maxdepth: 1
 
+   version0.13.3
    version0.13.2
    version0.13.1
    version0.13.0
@@ -25,4 +26,3 @@ Release Notes
 
 For an overview of changes that occurred previous to the 0.5.0 release
 see :ref:`old_changes`.
-

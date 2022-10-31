@@ -11,24 +11,22 @@ import numpy as np
 
 
 class TransformFunction(object):
-
     def __call__(self, x):
         self.func(x)
-
 
 
 ## Hump and U-shaped functions
 
 
 class SquareFunc(TransformFunction):
-    '''class to hold quadratic function with inverse function and derivative
+    """class to hold quadratic function with inverse function and derivative
 
     using instance methods instead of class methods, if we want extension
     to parametrized function
-    '''
+    """
 
     def func(self, x):
-        return np.power(x, 2.)
+        return np.power(x, 2.0)
 
     def inverseplus(self, x):
         return np.sqrt(x)
@@ -37,20 +35,17 @@ class SquareFunc(TransformFunction):
         return 0.0 - np.sqrt(x)
 
     def derivplus(self, x):
-        return 0.5/np.sqrt(x)
+        return 0.5 / np.sqrt(x)
 
     def derivminus(self, x):
-        return 0.0 - 0.5/np.sqrt(x)
-
-
+        return 0.0 - 0.5 / np.sqrt(x)
 
 
 class NegSquareFunc(TransformFunction):
-    '''negative quadratic function
+    """negative quadratic function"""
 
-    '''
     def func(self, x):
-        return -np.power(x,2)
+        return -np.power(x, 2)
 
     def inverseplus(self, x):
         return np.sqrt(-x)
@@ -59,15 +54,14 @@ class NegSquareFunc(TransformFunction):
         return 0.0 - np.sqrt(-x)
 
     def derivplus(self, x):
-        return 0.0 - 0.5/np.sqrt(-x)
+        return 0.0 - 0.5 / np.sqrt(-x)
 
     def derivminus(self, x):
-        return 0.5/np.sqrt(-x)
+        return 0.5 / np.sqrt(-x)
 
 
 class AbsFunc(TransformFunction):
-    '''class for absolute value transformation
-    '''
+    """class for absolute value transformation"""
 
     def func(self, x):
         return np.abs(x)
@@ -90,7 +84,6 @@ class AbsFunc(TransformFunction):
 
 
 class LogFunc(TransformFunction):
-
     def func(self, x):
         return np.log(x)
 
@@ -98,11 +91,10 @@ class LogFunc(TransformFunction):
         return np.exp(y)
 
     def deriv(self, x):
-        return 1./x
+        return 1.0 / x
+
 
 class ExpFunc(TransformFunction):
-
-
     def func(self, x):
         return np.exp(x)
 
@@ -114,22 +106,20 @@ class ExpFunc(TransformFunction):
 
 
 class BoxCoxNonzeroFunc(TransformFunction):
-
     def __init__(self, lamda):
         self.lamda = lamda
 
     def func(self, x):
-        return (np.power(x, self.lamda) - 1)/self.lamda
+        return (np.power(x, self.lamda) - 1) / self.lamda
 
     def inverse(self, y):
-        return (self.lamda * y + 1)/self.lamda
+        return (self.lamda * y + 1) / self.lamda
 
     def deriv(self, x):
         return np.power(x, self.lamda - 1)
 
 
 class AffineFunc(TransformFunction):
-
     def __init__(self, constant, slope):
         self.constant = constant
         self.slope = slope
@@ -145,7 +135,6 @@ class AffineFunc(TransformFunction):
 
 
 class ChainFunc(TransformFunction):
-
     def __init__(self, finn, fout):
         self.finn = finn
         self.fout = fout
@@ -161,28 +150,28 @@ class ChainFunc(TransformFunction):
         return self.fout.deriv(z) * self.finn.deriv(x)
 
 
-#def inverse(x):
+# def inverse(x):
 #    return np.divide(1.0,x)
 #
-#mux, stdx = 0.05, 0.1
-#mux, stdx = 9.0, 1.0
-#def inversew(x):
+# mux, stdx = 0.05, 0.1
+# mux, stdx = 9.0, 1.0
+# def inversew(x):
 #    return 1.0/(1+mux+x*stdx)
-#def inversew_inv(x):
+# def inversew_inv(x):
 #    return (1.0/x - 1.0 - mux)/stdx #.np.divide(1.0,x)-10
 #
-#def identit(x):
+# def identit(x):
 #    return x
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     absf = AbsFunc()
     absf.func(5) == 5
     absf.func(-5) == 5
     absf.inverseplus(5) == 5
     absf.inverseminus(5) == -5
 
-    chainf = ChainFunc(AffineFunc(1,2), BoxCoxNonzeroFunc(2))
-    print(chainf.func(3.))
-    chainf2 = ChainFunc(BoxCoxNonzeroFunc(2), AffineFunc(1,2))
-    print(chainf.func(3.))
+    chainf = ChainFunc(AffineFunc(1, 2), BoxCoxNonzeroFunc(2))
+    print(chainf.func(3.0))
+    chainf2 = ChainFunc(BoxCoxNonzeroFunc(2), AffineFunc(1, 2))
+    print(chainf.func(3.0))

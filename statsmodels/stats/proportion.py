@@ -98,7 +98,10 @@ def proportion_confint(count, nobs, alpha=0.05, method='normal'):
     elif method == 'binom_test':
         # inverting the binomial test
         def func(qi):
-            return stats.binom_test(q_ * nobs, nobs, p=qi) - alpha
+            if hasattr(stats, "binomtest"):
+                return stats.binomtest(q_ * nobs, nobs, p=qi).pvalue - alpha
+            else:
+                return stats.binom_test(q_ * nobs, nobs, p=qi) - alpha
         if count == 0:
             ci_low = 0
         else:
@@ -619,7 +622,11 @@ def binom_test(count, nobs, prop=0.5, alternative='two-sided'):
     if np.any(prop > 1.0) or np.any(prop < 0.0):
         raise ValueError("p must be in range [0,1]")
     if alternative in ['2s', 'two-sided']:
-        pval = stats.binom_test(count, n=nobs, p=prop)
+        try:
+            pval = stats.binomtest(int(count), n=int(nobs), p=prop).pvalue
+        except AttributeError:
+            # Remove after min SciPy >= 1.7
+            pval = stats.binom_test(count, n=nobs, p=prop)
     elif alternative in ['l', 'larger']:
         pval = stats.binom.sf(count-1, nobs, prop)
     elif alternative in ['s', 'smaller']:
