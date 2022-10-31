@@ -125,7 +125,8 @@ class BetaModel(GenericLikelihoodModel):
         # self.exog_precision = exog_precision
         # inherited df do not account for precision params
         self.nobs = self.endog.shape[0]
-        self.df_model = self.nparams - 1
+        self.k_extra = 1
+        self.df_model = self.nparams - 2
         self.df_resid = self.nobs - self.nparams
         assert len(self.exog_precision) == len(self.endog)
         self.hess_type = "oim"

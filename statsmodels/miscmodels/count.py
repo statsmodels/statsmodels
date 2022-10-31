@@ -162,9 +162,9 @@ class PoissonZiGMLE(GenericLikelihoodModel):
 
     def __init__(self, endog, exog=None, offset=None, missing='none', **kwds):
         # let them be none in case user wants to use inheritance
-
+        self.k_extra = 1
         super(PoissonZiGMLE, self).__init__(endog, exog, missing=missing,
-                **kwds)
+                extra_params_names=["zi"], **kwds)
         if offset is not None:
             if offset.ndim == 1:
                 offset = offset[:,None] #need column
@@ -178,9 +178,12 @@ class PoissonZiGMLE(GenericLikelihoodModel):
         self.nparams = self.exog.shape[1]
         #what's the shape in regression for exog if only constant
         self.start_params = np.hstack((np.ones(self.nparams), 0))
+        # need to add zi params to nparams
+        self.nparams += 1
         self.cloneattr = ['start_params']
-        #needed for t_test and summary
-        self.exog_names.append('zi')
+        # needed for t_test and summary
+        # Note: no added to super __init__ which also adjusts df_resid
+        # self.exog_names.append('zi')
 
 
     # original copied from discretemod.Poisson

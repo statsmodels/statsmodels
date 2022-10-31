@@ -419,7 +419,7 @@ class TestDiscretizedGammaEx():
             params=[3.52636, 0.425617],
             llf=-187.469,
             chi2=1.701208,  # chisquare test
-            df_model=2,
+            df_model=0,
             p=0.4272,  # p-value for chi2
             aic=378.938,
             probs=[46.48, 73.72, 27.88, 6.5, 1.42])
