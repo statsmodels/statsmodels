@@ -7,7 +7,13 @@ requires = [
     "oldest-supported-numpy; python_version!='3.10' or platform_system!='Windows' or platform_python_implementation=='PyPy'",
     "numpy==1.22.3; python_version=='3.10' and platform_system=='Windows' and platform_python_implementation != 'PyPy'",
     "numpy; python_version>='3.11'",
-    "scipy>=1.3",
+    # 1.8+ Not available for 3.7
+    "scipy>=1.3,<1.8; python_version=='3.7'",
+    # 1.9+ Not available for 32-bit windows, so use 1.8 for all 3.8 & 3.9/Windows
+    "scipy>=1.3,<1.9; python_version=='3.8' and platform_system=='Windows'",
+    "scipy>=1.3,<1.9; python_version=='3.9' and platform_system=='Windows'",
+    # Cap at 1.9.x for all other platforms
+    "scipy>=1.3,<1.10; python_version>'3.7' or platform_system!='Windows'",
     "setuptools_scm[toml]>=7.0,<8"
 ]
 build-backend = "setuptools.build_meta"
