@@ -19,6 +19,9 @@ the moment conditions of the treatment model, outcome model and effects
 statistics, average treatment effect ATE, potential outcome means POM, and
 for some methods optionally average treatment effect on the treated ATT.
 
+See also overview notebook in
+`Treatment Effect <examples/notebooks/generated/treatment_effect.html>`__
+
 .. module:: statsmodels.treatment.treatment_effects
 .. currentmodule:: statsmodels.treatment.treatment_effects
 

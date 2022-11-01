@@ -464,6 +464,8 @@ Rates
 
 Statistical functions for rates. This currently includes hypothesis tests for
 two independent samples.
+See also example notebook for an overview
+`Poisson Rates <examples/notebooks/generated/stats_poisson.html>`__
 
 Status: experimental, API might change, added in 0.12, refactored and enhanced
 in 0.14
