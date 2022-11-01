@@ -43,11 +43,11 @@ jobs:
       env:
         EVENT_TYPE: ${{ github.event_name }}
     - name: Install pandoc
-      uses: r-lib/actions/setup-pandoc@v1
+      uses: r-lib/actions/setup-pandoc@v2
     - name: Install graphviz
       uses: ts-graphviz/setup-graphviz@v1
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies

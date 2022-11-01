@@ -10,6 +10,7 @@ environment to build statsmodels from source. We recommend that you develop
 using a development install of statsmodels in a `venv` by running:
 
 .. code-block:: bash
+
     python -m venv .venv
     python -m pip install -e ".[develop]"
 
