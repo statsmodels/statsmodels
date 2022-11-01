@@ -1275,6 +1275,11 @@ def confint_proportions_2indep(count1, nobs1, count2, nobs2, method=None,
     -------
     low, upp
 
+    See Also
+    --------
+    test_proportions_2indep
+    tost_proportions_2indep
+
     Notes
     -----
     Status: experimental, API and defaults might still change.
@@ -1663,7 +1668,7 @@ def test_proportions_2indep(count1, nobs1, count2, nobs2, value=None,
         Default is equal proportions, 0 for diff and 1 for risk-ratio and for
         odds-ratio.
     method : string
-        Method for computing confidence interval. If method is None, then a
+        Method for computing the hypothesis test. If method is None, then a
         default method is used. The default might change as more methods are
         added.
 
@@ -1694,11 +1699,11 @@ def test_proportions_2indep(count1, nobs1, count2, nobs2, value=None,
            correction ``nobs / (nobs - 1)`` as in Miettinen Nurminen 1985
 
     compare : {'diff', 'ratio' 'odds-ratio'}
-        If compare is `diff`, then the confidence interval is for
-        diff = p1 - p2.
-        If compare is `ratio`, then the confidence interval is for the
+        If compare is `diff`, then the hypothesis test is for the risk
+        difference diff = p1 - p2.
+        If compare is `ratio`, then the hypothesis test is for the
         risk ratio defined by ratio = p1 / p2.
-        If compare is `odds-ratio`, then the confidence interval is for the
+        If compare is `odds-ratio`, then the hypothesis test is for the
         odds-ratio defined by or = p1 / (1 - p1) / (p2 / (1 - p2)
     alternative : {'two-sided', 'smaller', 'larger'}
         alternative hypothesis, which can be two-sided or either one of the
@@ -1726,10 +1731,21 @@ def test_proportions_2indep(count1, nobs1, count2, nobs2, value=None,
         other attributes :
             additional information about the hypothesis test
 
+    See Also
+    --------
+    tost_proportions_2indep
+    confint_proportions_2indep
+
     Notes
     -----
     Status: experimental, API and defaults might still change.
         More ``methods`` will be added.
+
+    The current default methods are
+
+    - 'diff': 'agresti-caffo',
+    - 'ratio': 'log-adjusted',
+    - 'odds-ratio': 'logit-adjusted'
 
     """
     method_default = {'diff': 'agresti-caffo',
@@ -1921,7 +1937,7 @@ def tost_proportions_2indep(count1, nobs1, count2, nobs2, low, upp,
     low, upp :
         equivalence margin for diff, risk ratio or odds ratio
     method : string
-        method for computing confidence interval. If method is None, then a
+        method for computing the hypothesis test. If method is None, then a
         default method is used. The default might change as more methods are
         added.
 
@@ -1949,11 +1965,11 @@ def tost_proportions_2indep(count1, nobs1, count2, nobs2, low, upp,
             correction ``nobs / (nobs - 1)`` as in Miettinen Nurminen 1985
 
     compare : string in ['diff', 'ratio' 'odds-ratio']
-        If compare is `diff`, then the confidence interval is for
+        If compare is `diff`, then the hypothesis test is for
         diff = p1 - p2.
-        If compare is `ratio`, then the confidence interval is for the
+        If compare is `ratio`, then the hypothesis test is for the
         risk ratio defined by ratio = p1 / p2.
-        If compare is `odds-ratio`, then the confidence interval is for the
+        If compare is `odds-ratio`, then the hypothesis test is for the
         odds-ratio defined by or = p1 / (1 - p1) / (p2 / (1 - p2).
     correction : bool
         If correction is True (default), then the Miettinen and Nurminen
@@ -1969,9 +1985,17 @@ def tost_proportions_2indep(count1, nobs1, count2, nobs2, low, upp,
     t1 : test results
         results instance for one-sided hypothesis at the upper margin
 
+    See Also
+    --------
+    test_proportions_2indep
+    confint_proportions_2indep
+
     Notes
     -----
     Status: experimental, API and defaults might still change.
+
+    The TOST equivalence test delegates to `test_proportions_2indep` and has
+    the same method and comparison options.
 
     """
 

@@ -681,7 +681,7 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, value=None,
         - 'larger' :   H1: ratio, or diff, of rates is larger than value
         - 'smaller' :  H1: ratio, or diff, of rates is smaller than value
     etest_kwds: dictionary
-        Additional parameters to be passed to the etest_poisson_2indep
+        Additional optional parameters to be passed to the etest_poisson_2indep
         function, namely y_grid.
 
     Returns
@@ -689,6 +689,11 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, value=None,
     results : instance of HolderTuple class
         The two main attributes are test statistic `statistic` and p-value
         `pvalue`.
+
+    See Also
+    --------
+    tost_poisson_2indep
+    etest_poisson_2indep
 
     Notes
     -----
@@ -729,10 +734,6 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, value=None,
        Computational Statistics & Data Analysis 51 (6): 3085–99.
        https://doi.org/10.1016/j.csda.2006.02.004.
 
-    See Also
-    --------
-    tost_poisson_2indep
-    etest_poisson_2indep
     '''
 
     # shortcut names
@@ -1141,6 +1142,7 @@ def tost_poisson_2indep(count1, exposure1, count2, exposure2, low, upp,
     See Also
     --------
     test_poisson_2indep
+    confint_poisson_2indep
     '''
 
     tt1 = test_poisson_2indep(count1, exposure1, count2, exposure2,
