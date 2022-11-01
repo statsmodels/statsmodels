@@ -13,7 +13,7 @@ requires = [
     "scipy>=1.3,<1.9; python_version=='3.8' and platform_system=='Windows' and platform_machine=='x86'",
     "scipy>=1.3,<1.9; python_version=='3.9' and platform_system=='Windows' and platform_machine=='x86'",
     # Cap at 1.9.x for all other platforms
-    "scipy>=1.3,<1.10; (python_version>'3.7' or platform_system!='Windows' or platform_machine!='x86') and python_version<'3.12'",
+    "scipy>=1.3,<1.10; (python_version>'3.9' or platform_system!='Windows' or platform_machine!='x86') and python_version<'3.12'",
     "scipy>=1.9; python_version>='3.12'",
     "setuptools_scm[toml]>=7.0,<8"
 ]
