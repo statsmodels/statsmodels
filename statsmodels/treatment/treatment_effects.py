@@ -526,6 +526,9 @@ class _IPWRAGMM(_TEGMMGeneric1):
 
 
 class TreatmentEffectResults(ContrastResults):
+    """Results class for treatment effect estimation
+
+    """
 
     def __init__(self, teff, results_gmm, method, **kwds):
 
@@ -613,6 +616,10 @@ class TreatmentEffect(object):
     WLS.
     Other outcome models, like Logit and Poisson, will become available in
     future.
+
+    See `Treatment Effect notebook
+    <../examples/notebooks/generated/treatment_effect.html>`__
+    for an overview.
 
     """
 
