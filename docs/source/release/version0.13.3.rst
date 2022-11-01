@@ -80,3 +80,7 @@ The following Pull Requests were merged since the last release:
 - :pr:`8480`: MAINT: Update doc build instructions
 - :pr:`8483`: DOC: Fix warnings
 - :pr:`8484`: MAINT: Backport Python 3.11 to 0.13.x branch
+- :pr:`8485`: DOC: Add release note for 0.13.3
+- :pr:`8489`: MAINT: Set some Pins
+- :pr:`8491`: MAINT: Refine pins
+- :pr:`8493`: DOC: Final 0.13.3 docs
