@@ -116,8 +116,9 @@ class TestPoissonDiagnosticClass():
 
         respoi = Poisson(self.endog, self.exog).fit(disp=0)
         dia = PoissonDiagnostic(respoi)
-        t_disp = dia.test_dispersion()[0]
-        assert_allclose(t_disp, res_dispersion, rtol=1e-8)
+        t_disp = dia.test_dispersion()
+        res_disp = np.column_stack(((t_disp.statistic, t_disp.pvalue)))
+        assert_allclose(res_disp, res_dispersion, rtol=1e-8)
 
         nobs = self.endog.shape[0]
         t_zi_jh = dia.test_poisson_zeroinflation(method="broek",
