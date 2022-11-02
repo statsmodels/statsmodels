@@ -8,6 +8,8 @@ Author: Josef Perktold
 import numpy as np
 from scipy import stats
 
+import pandas as pd
+
 from statsmodels.stats.base import HolderTuple
 from statsmodels.discrete.discrete_model import Poisson
 from statsmodels.regression.linear_model import OLS
@@ -227,7 +229,20 @@ def test_chisquare_prob(results, probs, bin_edges=None, method=None):
     return res
 
 
-def dispersion_poisson(results):
+class DispersionResults(HolderTuple):
+
+    def summary_frame(self):
+        frame = pd.DataFrame({
+            "statistic": self.statistic,
+            "pvalue": self.pvalue,
+            "method": self.method,
+            "alternative": self.alternative
+            })
+
+        return frame
+
+
+def test_poisson_dispersion(results, method="all", _old=False):
     """Score/LM type tests for Poisson variance assumptions
 
     Null Hypothesis is
@@ -244,25 +259,32 @@ def dispersion_poisson(results):
     results : Poisson results instance
         This can be a results instance for either a discrete Poisson or a GLM
         with family Poisson.
+    method : str
+        Not used yet. Currently results for all methods are returned.
+    _old : bool
+        Temporary keyword for backwards compatibility, will be removed
+        in future version of statsmodels.
 
     Returns
     -------
-    res : ndarray, shape (7, 2)
-       each row contains the test statistic and p-value for one of the 7 tests
-       computed here.
-    description : 2-D list of strings
-       Each test has two strings a descriptive name and a string for the
-       alternative hypothesis.
+    res : instance
+        The instance of DispersionResults has the hypothesis test results,
+        statistic, pvalue, method, alternative, as main attributes and a
+        summary_frame method that returns the results as pandas DataFrame.
+
     """
+
+    if method not in ["all"]:
+        raise ValueError(f'unknown method "{method}"')
 
     if hasattr(results, '_results'):
         results = results._results
 
     endog = results.model.endog
-    nobs = endog.shape[0]   #TODO: use attribute, may need to be added
+    nobs = endog.shape[0]  # TODO: use attribute, may need to be added
     fitted = results.predict()
-    #fitted = results.fittedvalues  # discrete has linear prediction
-    #this assumes Poisson
+    # fitted = results.fittedvalues  # discrete has linear prediction
+    # this assumes Poisson
     resid2 = results.resid_response**2
     var_resid_endog = (resid2 - endog)
     var_resid_fitted = (resid2 - fitted)
@@ -312,12 +334,31 @@ def dispersion_poisson(results):
     results_all.append([stat_ols_hc1_nb1, pval_ols_hc1_nb1])
     description.append(['CT nb1 HC3', 'mu (1 + a)'])
 
-    return np.array(results_all), description
+    results_all = np.array(results_all)
+    if _old:
+        # for backwards compatibility in 0.14, remove in later versions
+        return results_all, description
+    else:
+        res = DispersionResults(
+            statistic=results_all[:, 0],
+            pvalue=results_all[:, 1],
+            method=[i[0] for i in description],
+            alternative=[i[1] for i in description],
+            name="Poisson Dispersion Test"
+            )
+        return res
 
 
-def dispersion_poisson_generic(results, exog_new_test, exog_new_control=None,
-                               include_score=False, use_endog=True,
-                               cov_type='HC3', cov_kwds=None, use_t=False):
+def _test_poisson_dispersion_generic(
+        results,
+        exog_new_test,
+        exog_new_control=None,
+        include_score=False,
+        use_endog=True,
+        cov_type='HC3',
+        cov_kwds=None,
+        use_t=False
+        ):
     """A variable addition test for the variance function
 
     This uses an artificial regression to calculate a variant of an LM or
@@ -332,11 +373,11 @@ def dispersion_poisson_generic(results, exog_new_test, exog_new_control=None,
         results = results._results
 
     endog = results.model.endog
-    nobs = endog.shape[0]   #TODO: use attribute, may need to be added
+    nobs = endog.shape[0]   # TODO: use attribute, may need to be added
     # fitted = results.fittedvalues  # generic has linpred as fittedvalues
     fitted = results.predict()
     resid2 = results.resid_response**2
-    #the following assumes Poisson
+    # the following assumes Poisson
     if use_endog:
         var_resid = (resid2 - endog)
     else:

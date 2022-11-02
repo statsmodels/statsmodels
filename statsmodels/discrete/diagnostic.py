@@ -17,8 +17,8 @@ from statsmodels.stats.diagnostic_gen import (
     test_chisquare_binning
     )
 from statsmodels.discrete._diagnostics_count import (
-    dispersion_poisson,
-    # dispersion_poisson_generic,
+    test_poisson_dispersion,
+    # _test_poisson_dispersion_generic,
     test_poisson_zeroinflation_jh,
     test_poisson_zeroinflation_broek,
     test_poisson_zeros,
@@ -147,7 +147,7 @@ class PoissonDiagnostic(CountDiagnostic):
         -------
         dispersion results
         """
-        res = dispersion_poisson(self.results)
+        res = test_poisson_dispersion(self.results)
         return res
 
     def test_poisson_zeroinflation(self, method="prob", exog_infl=None):
