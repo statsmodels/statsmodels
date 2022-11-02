@@ -3,7 +3,6 @@
 # INSTALL_REQUIRES in setup.py
 requires = [
     "setuptools>=59.2.0",
-    "wheel>=0.37.1",
     "cython>=0.29.26,<3",  # Sync with CYTHON_MIN_VER in setup
     # Workaround for oldest supported numpy using 1.21.6, but SciPy 1.9.2+ requiring 1.22.3+
     "oldest-supported-numpy; python_version!='3.10' or platform_system!='Windows' or platform_python_implementation=='PyPy'",
