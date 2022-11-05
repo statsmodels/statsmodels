@@ -638,6 +638,11 @@ class TimeSeriesModel(base.LikelihoodModel):
                     " but `freq` argument was provided."
                 )
 
+        if isinstance(index, Index) and index.is_integer():
+            _index = RangeIndex(index[0], index[-1] + 1)
+            if (_index == index).all():
+                index = _index
+
         # Get attributes of the index
         has_index = index is not None
         date_index = isinstance(index, (DatetimeIndex, PeriodIndex))
@@ -693,9 +698,8 @@ class TimeSeriesModel(base.LikelihoodModel):
             _index = index
         else:
             _index = increment
-            if isinstance(index, Index) and index.dtype == int:
-                _index += index.min()
             index_generated = True
+        
         self._index = _index
         self._index_generated = index_generated
         self._index_none = index is None
