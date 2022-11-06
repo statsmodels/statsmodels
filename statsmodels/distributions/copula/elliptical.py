@@ -152,7 +152,8 @@ class GaussianCopula(EllipticalCopula):
 
         self.corr = np.asarray(corr)
         self.distr_uv = stats.norm
-        self.distr_mv = stats.multivariate_normal(cov=corr, allow_singular=allow_singular)
+        self.distr_mv = stats.multivariate_normal(
+            cov=corr, allow_singular=allow_singular)
 
     def dependence_tail(self, corr=None):
         """
