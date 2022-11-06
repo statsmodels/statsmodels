@@ -705,7 +705,7 @@ class TimeSeriesModel(base.LikelihoodModel):
         else:
             _index = increment
             index_generated = True
-        
+
         self._index = _index
         self._index_generated = index_generated
         self._index_none = index is None
