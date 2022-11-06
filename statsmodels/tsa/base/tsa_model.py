@@ -642,6 +642,12 @@ class TimeSeriesModel(base.LikelihoodModel):
             _index = RangeIndex(index[0], index[-1] + 1)
             if (_index == index).all():
                 index = _index
+                warnings.warn(
+                    "An unsupported integer index was provided and will be"
+                    " converted to a range index with the same values.",
+                    ValueWarning,
+                    stacklevel=2,
+                )
 
         # Get attributes of the index
         has_index = index is not None
