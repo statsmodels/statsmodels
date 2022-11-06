@@ -638,7 +638,11 @@ class TimeSeriesModel(base.LikelihoodModel):
                     " but `freq` argument was provided."
                 )
 
-        if isinstance(index, Index) and index.is_integer():
+        if (
+            isinstance(index, Index) and
+            not isinstance(index, RangeIndex) and
+            index.is_integer()
+        ):
             _index = RangeIndex(index[0], index[-1] + 1)
             if (_index == index).all():
                 index = _index
