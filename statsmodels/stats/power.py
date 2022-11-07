@@ -201,6 +201,8 @@ def normal_sample_size_one_tail(diff, power, alpha, std_null=1.,
         sample size to achieve the desired power
 
     """
+    if std_alternative is None:
+        std_alternative = 0
 
     crit_power = stats.norm.isf(power)
     crit = stats.norm.isf(alpha)
