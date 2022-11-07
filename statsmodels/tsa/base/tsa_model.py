@@ -644,7 +644,7 @@ class TimeSeriesModel(base.LikelihoodModel):
             index.is_integer()
         ):
             _index = RangeIndex(index[0], index[-1] + 1)
-            if (_index == index).all():
+            if _index.equals(index):
                 index = _index
                 warnings.warn(
                     "An unsupported integer index was provided and will be"
