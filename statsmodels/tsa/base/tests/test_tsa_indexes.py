@@ -426,8 +426,8 @@ def test_instantiation_valid():
 
         # Unsupported (but valid) indexes, should all give warnings
         message = (
-            "An unsupported index was provided and will be"
-            " ignored when e.g. forecasting."
+            "An unsupported integer index was provided and will be "
+            "converted to a range index with the same values."
         )
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
