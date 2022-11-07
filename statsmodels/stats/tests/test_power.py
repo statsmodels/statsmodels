@@ -772,3 +772,9 @@ def test_power_solver_warn():
                               alternative='larger')
         assert_equal(nip.cache_fit_res[0], 0)
         assert_equal(len(nip.cache_fit_res), 3)
+
+
+def test_normal_sample_size_one_tail():
+    # Test for check that power >= alpha
+    with pytest.raises(ValueError):
+        smp.normal_sample_size_one_tail(1, 0.03, 0.05, 1, 1)
