@@ -304,6 +304,13 @@ class CheckComparisonMixin:
         assert_allclose(predd.summary_frame().values,
                         pred1.summary_frame().values, rtol=1e-6)
 
+        pred1 = self.res1.get_prediction(which="mean")  # GLM
+        predd = self.resd.get_prediction()  # discrete class
+        assert_allclose(predd.predicted, pred1.predicted, rtol=1e-11)
+        assert_allclose(predd.se, pred1.se, rtol=1e-6)
+        assert_allclose(predd.summary_frame().values,
+                        pred1.summary_frame().values, rtol=1e-6)
+
 
 class TestGlmGaussian(CheckModelResultsMixin):
     @classmethod

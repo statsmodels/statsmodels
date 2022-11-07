@@ -847,7 +847,7 @@ class GLM(base.LikelihoodModel):
         return power
 
     def predict(self, params, exog=None, exposure=None, offset=None,
-                linear=False):
+                which="mean", linear=None):
         """
         Return predicted values for a design matrix
 
@@ -862,10 +862,20 @@ class GLM(base.LikelihoodModel):
             function.  See notes for details.
         offset : array_like, optional
             Offset values.  See notes for details.
+        which : 'mean', 'linear', 'var'(optional)
+            Statitistic to predict. Default is 'mean'.
+
+            - 'mean' returns the conditional expectation of endog E(y | x),
+              i.e. inverse of the model's link function of linear predictor.
+            - 'linear' returns the linear predictor of the mean function.
+            - 'var' variance of endog implied by the likelihood model
+
         linear : bool
-            If True, returns the linear predicted values.  If False,
-            returns the value of the inverse of the model's link function at
-            the linear predicted values.
+            The ``linear` keyword is deprecated and will be removed,
+            use ``which`` keyword instead.
+            If True, returns the linear predicted values.  If False or None,
+            then the statistic specified by ``which`` will be returned.
+
 
         Returns
         -------
@@ -880,6 +890,11 @@ class GLM(base.LikelihoodModel):
 
         Exposure values must be strictly positive.
         """
+        if linear is not None:
+            msg = 'linear keyword is deprecated, use which="linear"'
+            warnings.warn(msg, DeprecationWarning)
+            if linear is True:
+                which = "linear"
 
         # Use fit offset if appropriate
         if offset is None and exog is None and hasattr(self, 'offset'):
@@ -905,10 +920,15 @@ class GLM(base.LikelihoodModel):
             exog = self.exog
 
         linpred = np.dot(exog, params) + offset + exposure
-        if linear:
-            return linpred
-        else:
+
+        if which == "mean":
             return self.family.fitted(linpred)
+        elif which == "linear":
+            return linpred
+        elif which == "var":
+            return "not yet"
+        else:
+            raise ValueError(f'The which value "{which}" is not recognized')
 
     def get_distribution(self, params, scale=None, exog=None, exposure=None,
                          offset=None, var_weights=1., n_trials=1.):
@@ -954,7 +974,7 @@ class GLM(base.LikelihoodModel):
                                     families.NegativeBinomial)):
             scale = 1.
 
-        mu = self.predict(params, exog, exposure, offset, linear=False)
+        mu = self.predict(params, exog, exposure, offset, which="mean")
 
         kwds = {}
         if (np.any(n_trials != 1) and
@@ -1903,25 +1923,46 @@ class GLMResults(base.LikelihoodModelResults):
 
     @Appender(str(get_prediction_doc))
     def get_prediction(self, exog=None, exposure=None, offset=None,
-                       transform=True, linear=False,
+                       transform=True, which=None, linear=None,
+                       average=False, agg_weights=None,
                        row_labels=None):
 
         import statsmodels.regression._prediction as linpred
 
-        pred_kwds = {'exposure': exposure, 'offset': offset, 'linear': True}
+        pred_kwds = {'exposure': exposure, 'offset': offset, 'which': 'linear'}
 
-        # two calls to a get_prediction duplicates exog generation if patsy
-        res_linpred = linpred.get_prediction(self, exog=exog,
-                                             transform=transform,
-                                             row_labels=row_labels,
-                                             pred_kwds=pred_kwds)
+        if which is None:
+            # two calls to a get_prediction duplicates exog generation if patsy
+            res_linpred = linpred.get_prediction(self, exog=exog,
+                                                 transform=transform,
+                                                 row_labels=row_labels,
+                                                 pred_kwds=pred_kwds)
 
-        pred_kwds['linear'] = False
-        res = pred.get_prediction_glm(self, exog=exog, transform=transform,
-                                      row_labels=row_labels,
-                                      linpred=res_linpred,
-                                      link=self.model.family.link,
-                                      pred_kwds=pred_kwds)
+            pred_kwds['which'] = 'mean'
+            res = pred.get_prediction_glm(self, exog=exog, transform=transform,
+                                          row_labels=row_labels,
+                                          linpred=res_linpred,
+                                          link=self.model.family.link,
+                                          pred_kwds=pred_kwds)
+        else:
+            # new generic version, if 'which' is specified
+
+            pred_kwds = {'exposure': exposure, 'offset': offset}
+            # not yet, only applies to count families
+            # y_values is explicit so we can add it to the docstring
+            # if y_values is not None:
+            #    pred_kwds["y_values"] = y_values
+
+            res = pred.get_prediction(
+                self,
+                exog=exog,
+                which=which,
+                transform=transform,
+                row_labels=row_labels,
+                average=average,
+                agg_weights=agg_weights,
+                pred_kwds=pred_kwds
+                )
 
         return res
 
