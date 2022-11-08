@@ -775,6 +775,10 @@ def test_power_solver_warn():
 
 
 def test_normal_sample_size_one_tail():
-    # Test for check that power >= alpha
-    with pytest.raises(ValueError):
-        smp.normal_sample_size_one_tail(1, 0.03, 0.05, 1, 1)
+    # Test that using default value of std_alternative does not raise an
+    # exception. A power of 0.8 and alpha of 0.05 were chosen to reflect
+    # commonly used values in hypothesis testing. Difference in means and
+    # standard deviation of null population were chosen somewhat arbitrarily --
+    # there's nothing special about those values. Return value doesn't matter
+    # for this "test", so long as an exception is not raised.
+    smp.normal_sample_size_one_tail(5, 0.8, 0.05, 2, std_alternative=None)
