@@ -200,11 +200,6 @@ def normal_sample_size_one_tail(diff, power, alpha, std_null=1.,
         sample size to achieve the desired power
 
     """
-    if power < alpha:
-        raise ValueError(
-            f"Power cannot be less than alpha; set power >= {alpha} to fix"
-            )
-
     if std_alternative is None:
         std_alternative = 0
 
