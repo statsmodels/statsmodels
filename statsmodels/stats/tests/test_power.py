@@ -782,3 +782,12 @@ def test_normal_sample_size_one_tail():
     # there's nothing special about those values. Return value doesn't matter
     # for this "test", so long as an exception is not raised.
     smp.normal_sample_size_one_tail(5, 0.8, 0.05, 2, std_alternative=None)
+
+    # Test that numpy.nan is returned in the correct elements if power is less than
+    # alpha.
+    alphas = np.asarray([0.01, 0.05, 0.1, 0.5, 0.8])
+    powers = np.asarray([0.99, 0.95, 0.9, 0.5, 0.2])
+    nan_mask = np.where(alphas - powers > 0, np.nan, alphas - powers)
+    sample_sizes_with_nans = smp.normal_sample_size_one_tail(5, powers, alphas, 2, 2)
+    check_nans = np.isnan(nan_mask) == np.isnan(sample_sizes_with_nans)
+    assert np.all(check_nans)
