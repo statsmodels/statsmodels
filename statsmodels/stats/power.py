@@ -190,9 +190,10 @@ def normal_sample_size_one_tail(diff, power, alpha, std_null=1.,
     std_null : float
         standard deviation under the Null hypothesis without division by
         sqrt(nobs)
-    std_alternative : float
+    std_alternative : float (optional)
         standard deviation under the Alternative hypothesis without division by
-        sqrt(nobs)
+        sqrt(nobs). Defaults to None. If None, ``std_alternative`` is set to the
+        value of ``std_null``.
 
     Returns
     -------
@@ -201,7 +202,7 @@ def normal_sample_size_one_tail(diff, power, alpha, std_null=1.,
 
     """
     if std_alternative is None:
-        std_alternative = 0
+        std_alternative = std_null
 
     crit_power = stats.norm.isf(power)
     crit = stats.norm.isf(alpha)
