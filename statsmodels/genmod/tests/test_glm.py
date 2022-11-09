@@ -297,7 +297,9 @@ class CheckComparisonMixin:
         assert_equal(df, 1)
 
     def test_get_prediction(self):
-        pred1 = self.res1.get_prediction()  # GLM
+        with pytest.warns(DeprecationWarning):
+            # deprecation warning for linear keyword
+            pred1 = self.res1.get_prediction()  # GLM
         predd = self.resd.get_prediction()  # discrete class
         assert_allclose(predd.predicted, pred1.predicted_mean, rtol=1e-11)
         assert_allclose(predd.se, pred1.se_mean, rtol=1e-6)
@@ -339,7 +341,7 @@ class TestGlmGaussian(CheckModelResultsMixin):
         res1 = self.res1
         # OLS does not define score_obs
         from statsmodels.regression.linear_model import OLS
-        resd = OLS(self.data.endog, self.data.exog).fit()
+        resd = OLS(self.data.endog, self.data.exog).fit(use_t=False)
         self.resd = resd  # attach to access from the outside
 
         assert_allclose(res1.llf, resd.llf, rtol=1e-10)
@@ -356,6 +358,22 @@ class TestGlmGaussian(CheckModelResultsMixin):
         hess_obsd = -1. / resd.scale * resd.model.exog.T.dot(resd.model.exog)
         # low precision because of badly scaled exog
         assert_allclose(hess_obs1, hess_obsd, rtol=1e-8)
+
+        with pytest.warns(DeprecationWarning):
+            # deprecation warning for linear keyword
+            pred1 = res1.get_prediction()  # GLM
+        predd = resd.get_prediction()  # discrete class
+        assert_allclose(predd.predicted, pred1.predicted_mean, rtol=1e-11)
+        assert_allclose(predd.se, pred1.se_mean, rtol=1e-6)
+        assert_allclose(predd.summary_frame().values[:, :4],
+                        pred1.summary_frame().values, rtol=1e-6)
+
+        pred1 = self.res1.get_prediction(which="mean")  # GLM
+        predd = self.resd.get_prediction()  # discrete class
+        assert_allclose(predd.predicted, pred1.predicted, rtol=1e-11)
+        assert_allclose(predd.se, pred1.se, rtol=1e-6)
+        assert_allclose(predd.summary_frame().values[:, :4],
+                        pred1.summary_frame().values, rtol=1e-6)
 
 # FIXME: enable or delete
 #    def setup_method(self):
@@ -837,7 +855,8 @@ class TestGlmNegbinomial(CheckModelResultsMixin):
         cls.data.exog = add_constant(cls.data.exog, prepend=False)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=DomainWarning)
-            fam = sm.families.NegativeBinomial()
+            with pytest.warns(UserWarning):
+                fam = sm.families.NegativeBinomial()
 
         cls.res1 = GLM(cls.data.endog, cls.data.exog,
                 family=fam).fit(scale='x2')
@@ -949,18 +968,21 @@ class TestGlmPoissonOffset(CheckModelResultsMixin):
 
         # Check offset defaults
         offset = np.random.uniform(1, 2, 100)
-        mod2 = GLM(endog, exog, offset=offset, family=sm.families.Poisson()).fit()
+        mod2 = GLM(endog, exog, offset=offset,
+                   family=sm.families.Poisson()).fit()
         pred1 = mod2.predict()
-        pred2 = mod2.predict(offset=offset)
-        pred3 = mod2.predict(exog=exog, offset=offset)
+        pred2 = mod2.predict(which="mean", offset=offset)
+        pred3 = mod2.predict(exog=exog, which="mean", offset=offset)
         assert_almost_equal(pred1, pred2)
         assert_almost_equal(pred2, pred3)
 
         # Check that offset shifts the linear predictor
         mod3 = GLM(endog, exog, family=sm.families.Poisson()).fit()
         offset = np.random.uniform(1, 2, 10)
-        pred1 = mod3.predict(exog=exog1, offset=offset, linear=True)
-        pred2 = mod3.predict(exog=exog1, offset=2*offset, linear=True)
+        with pytest.warns(DeprecationWarning):
+            # deprecation warning for linear keyword
+            pred1 = mod3.predict(exog=exog1, offset=offset, linear=True)
+        pred2 = mod3.predict(exog=exog1, offset=2*offset, which="linear")
         assert_almost_equal(pred2, pred1+offset)
 
         # Passing exposure as a pandas series should not effect output type

@@ -141,7 +141,9 @@ class CheckWeight:
                             atol=1e-6, rtol=1e-6)
 
     def test_getprediction(self):
-        pred = self.res1.get_prediction()
+        with pytest.warns(DeprecationWarning):
+            # deprecation warning for linear keyword
+            pred = self.res1.get_prediction()
         assert_allclose(pred.linpred.se_mean, pred.linpred.se_mean, rtol=1e-10)
 
 
