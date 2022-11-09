@@ -342,7 +342,7 @@ class DecomposeResult:
         else:
             xlim = (0, self._observed.shape[0] - 1)
 
-        fig, axs = plt.subplots(len(series), 1)
+        fig, axs = plt.subplots(len(series), 1, sharex=True)
         for i, (ax, (series, def_name)) in enumerate(zip(axs, series)):
             if def_name != "residual":
                 ax.plot(series)
