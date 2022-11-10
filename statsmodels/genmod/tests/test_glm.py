@@ -250,6 +250,10 @@ class CheckModelResultsMixin:
         for k in distr2.kwds:
             assert_allclose(distr.kwds[k], distr2.kwds[k], rtol=1e-13)
 
+        # compare var with predict
+        var_ = res1.predict(which="var_unscaled")
+        assert_allclose(var_ * res_scale, var_endog, rtol=1e-13)
+
 
 class CheckComparisonMixin:
 

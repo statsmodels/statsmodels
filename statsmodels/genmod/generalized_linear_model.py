@@ -868,7 +868,8 @@ class GLM(base.LikelihoodModel):
             - 'mean' returns the conditional expectation of endog E(y | x),
               i.e. inverse of the model's link function of linear predictor.
             - 'linear' returns the linear predictor of the mean function.
-            - 'var' variance of endog implied by the likelihood model
+            - 'var_unscaled' variance of endog implied by the likelihood model.
+              This does not include scale or var_weights.
 
         linear : bool
             The ``linear` keyword is deprecated and will be removed,
@@ -925,8 +926,10 @@ class GLM(base.LikelihoodModel):
             return self.family.fitted(linpred)
         elif which == "linear":
             return linpred
-        elif which == "var":
-            return "not yet"
+        elif which == "var_unscaled":
+            mean = self.family.fitted(linpred)
+            var_ = self.family.variance(mean)
+            return var_
         else:
             raise ValueError(f'The which value "{which}" is not recognized')
 
@@ -1921,11 +1924,97 @@ class GLMResults(base.LikelihoodModelResults):
             llf = self.llf_scaled(scale=1)
             return -2 * llf/scale + 2 * k_params
 
-    @Appender(str(get_prediction_doc))
+    # now explicit docs, old and new behavior, copied from generic classes
+    # @Appender(str(get_prediction_doc))
     def get_prediction(self, exog=None, exposure=None, offset=None,
                        transform=True, which=None, linear=None,
                        average=False, agg_weights=None,
                        row_labels=None):
+        """
+    Compute prediction results for GLM compatible models.
+
+    Options and return class depend on whether "which" is None or not.
+
+    Parameters
+    ----------
+    exog : array_like, optional
+        The values for which you want to predict.
+    exposure : array_like, optional
+        Exposure time values, only can be used with the log link
+        function.
+    offset : array_like, optional
+        Offset values.
+    transform : bool, optional
+        If the model was fit via a formula, do you want to pass
+        exog through the formula. Default is True. E.g., if you fit
+        a model y ~ log(x1) + log(x2), and transform is True, then
+        you can pass a data structure that contains x1 and x2 in
+        their original form. Otherwise, you'd need to log the data
+        first.
+    which : 'mean', 'linear', 'var'(optional)
+        Statitistic to predict. Default is 'mean'.
+        If which is None, then the deprecated keyword "linear" applies.
+        If which is not None, then a generic Prediction results class will
+        be returned. Some options are only available if which is not None.
+        See notes.
+
+        - 'mean' returns the conditional expectation of endog E(y | x),
+          i.e. inverse of the model's link function of linear predictor.
+        - 'linear' returns the linear predictor of the mean function.
+        - 'var_unscaled' variance of endog implied by the likelihood model.
+          This does not include scale or var_weights.
+
+    linear : bool
+        The ``linear` keyword is deprecated and will be removed,
+        use ``which`` keyword instead.
+        If which is None, then the linear keyword is used, otherwise it will
+        be ignored.
+        If True and which is None, the linear predicted values are returned.
+        If False or None, then the statistic specified by ``which`` will be
+        returned.
+    average : bool
+        Keyword is only used if ``which`` is not None.
+        If average is True, then the mean prediction is computed, that is,
+        predictions are computed for individual exog and then the average
+        over observation is used.
+        If average is False, then the results are the predictions for all
+        observations, i.e. same length as ``exog``.
+    agg_weights : ndarray, optional
+        Keyword is only used if ``which`` is not None.
+        Aggregation weights, only used if average is True.
+    row_labels : list of str or None
+        If row_lables are provided, then they will replace the generated
+        labels.
+
+    Returns
+    -------
+    prediction_results : instance of a PredictionResults class.
+        The prediction results instance contains prediction and prediction
+        variance and can on demand calculate confidence intervals and summary
+        tables for the prediction of the mean and of new observations.
+        The Results class of the return depends on the value of ``which``.
+
+    See Also
+    --------
+    GLM.predict
+    GLMResults.predict
+
+    Notes
+    -----
+    Changes in statsmodels 0.14: The ``which`` keyword has been added.
+    If ``which`` is None, then the behavior is the same as in previous
+    versions, and returns the mean and linear prediction results.
+    If the ``which`` keyword is not None, then a generic prediction results
+    class is returned and is not backwards compatible with the old prediction
+    results class, e.g. column names of summary_frame differs.
+    There are more choices for the returned predicted statistic using
+    ``which``. More choices will be added in the next release.
+    Two additional keyword, average and agg_weights options are now also
+    available if ``which`` is not None.
+    In a future version ``which`` will become not None and the backwards
+    compatible prediction results class will be removed.
+
+    """
 
         import statsmodels.regression._prediction as linpred
 
