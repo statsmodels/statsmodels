@@ -775,6 +775,13 @@ def get_prediction(self, exog=None, transform=True, which="mean",
         # TODO: add link or ilink to all link based models (except zi
         link = getattr(self.model, "link", None)
         if link is None:
+            # GLM
+            if hasattr(self.model, "family"):
+                link = getattr(self.model.family, "link", None)
+        if link is None:
+            # defaulting to log link for count models
+            import warnings
+            warnings.warn("using default log-link in get_prediction")
             from statsmodels.genmod.families import links
             link = links.Log()
         res = get_prediction_monotonic(

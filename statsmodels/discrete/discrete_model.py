@@ -984,6 +984,8 @@ class CountModel(DiscreteModel):
             - 'mean' returns the conditional expectation of endog E(y | x),
               i.e. exp of linear predictor.
             - 'linear' returns the linear predictor of the mean function.
+            - 'var' variance of endog implied by the likelihood model
+            - 'prob' predicted probabilities for counts.
 
         linear : bool
             The ``linear` keyword is deprecated and will be removed,
