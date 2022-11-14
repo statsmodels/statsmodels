@@ -180,7 +180,7 @@ def normal_sample_size_one_tail(diff, power, alpha, std_null=1.,
     ----------
     diff : float
         difference in the estimated means or statistics under the alternative.
-    power : float in interval [alpha,1)
+    power : float in interval (alpha,1)
         power of the test, e.g. 0.8, is one minus the probability of a type II
         error. Power is the probability that the test correctly rejects the
         Null Hypothesis if the Alternative Hypothesis is true.
@@ -198,7 +198,8 @@ def normal_sample_size_one_tail(diff, power, alpha, std_null=1.,
     Returns
     -------
     nobs : float
-        sample size to achieve the desired power
+        sample size to achieve the desired power. When power <= alpha, ``nobs``
+        will be zero.
 
     """
     if std_alternative is None:
@@ -214,7 +215,7 @@ def normal_sample_size_one_tail(diff, power, alpha, std_null=1.,
     alpha_minus_power = (
         alpha * np.ones_like(std_null) - power * np.ones_like(std_alternative)
         ) / np.ones_like(diff)
-    n1 = np.where(alpha_minus_power > 0, np.nan, n1)
+    n1 = np.where(alpha_minus_power >= 0, 0, n1)
     return n1
 
 
