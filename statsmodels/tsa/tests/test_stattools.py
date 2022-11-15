@@ -188,6 +188,12 @@ class TestADFNoConstant2(CheckADF):
         )
 
 
+@pytest.mark.parametrize("x", [np.full(8, 5.0)])
+def test_adfuller_resid_variance_zero(x):
+    with pytest.raises(ValueError):
+        adfuller(x)
+
+
 class CheckCorrGram:
     """
     Set up for ACF, PACF tests.
