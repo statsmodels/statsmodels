@@ -186,7 +186,9 @@ def normal_sample_size_one_tail(diff, power, alpha, std_null=1.,
         Null Hypothesis if the Alternative Hypothesis is true.
     alpha : float in interval (0,1)
         significance level, e.g. 0.05, is the probability of a type I error,
-        that is wrong rejections if the Null Hypothesis is true.
+        that is wrong rejections if the Null Hypothesis is true. Use alpha/2 to
+        compute the one tail approximation to the two-sided test, i.e. consider
+        only one tail of two-sided test.
     std_null : float
         standard deviation under the Null hypothesis without division by
         sqrt(nobs)
