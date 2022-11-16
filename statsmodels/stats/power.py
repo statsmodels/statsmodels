@@ -209,15 +209,8 @@ def normal_sample_size_one_tail(diff, power, alpha, std_null=1.,
 
     crit_power = stats.norm.isf(power)
     crit = stats.norm.isf(alpha)
-    n1 = ((crit * std_null - crit_power * std_alternative) / diff)**2
 
-    # Enforce condition that power >= alpha; return np.nan for elements not
-    # satisfying this condition. np.ones_like used to satisfy broadcastability
-    # constraints and to yield a Boolean array with the same shape as n1.
-    alpha_minus_power = (
-        alpha * np.ones_like(std_null) - power * np.ones_like(std_alternative)
-        ) / np.ones_like(diff)
-    n1 = np.where(alpha_minus_power >= 0, 0, n1)
+    n1 = (np.maximum(crit * std_null - crit_power * std_alternative, 0) / diff)**2
     return n1
 
 
