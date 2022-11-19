@@ -1636,8 +1636,8 @@ def test_pandas_univariate_integer_index():
 
     # Fit the forecaster and ensure that the right warning is raised.
     with pytest.warns(ValueWarning, match=warning_text):
-        forecaster = sarimax.SARIMAX(endog=y, k_factors=1, factor_order=1)
-        forecaster = forecaster.fit()
+        forecaster = sarimax.SARIMAX(endog=y, order=(1, 0, 0))
+        forecaster = forecaster.smooth([0.5, 1.0])
         simulations = forecaster.simulate(
             nsimulations=5,
             repetitions=2,
