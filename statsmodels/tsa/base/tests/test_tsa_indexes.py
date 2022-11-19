@@ -109,7 +109,7 @@ not_starting_from_zero_int_indexes = [
 
 # Unsupported (but still valid) indexes
 other_unsupported_indexes = [
-    # Reverse order
+    # Reverse order index
     (np.arange(nobs)[::-1], None),
     # Float indexes, even if they increment from zero
     (np.arange(nobs) * 1.0, None),
