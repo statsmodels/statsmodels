@@ -1504,7 +1504,7 @@ class LinearIVGMM(IVGMM):
 
 class NonlinearIVGMM(IVGMM):
     """
-    Class for non-linear instrumental variables estimation wusing GMM
+    Class for non-linear instrumental variables estimation using GMM
 
     The model is assumed to have the following moment condition
 
