@@ -1146,9 +1146,6 @@ def proportions_chisquare_allpairs(count, nobs, multitest_method='hs'):
         the number of successes in nobs trials.
     nobs : int
         the number of trials or observations.
-    prop : float, optional
-        The probability of success under the null hypothesis,
-        `0 <= prop <= 1`. The default value is `prop = 0.5`
     multitest_method : str
         This chooses the method for the multiple testing p-value correction,
         that is used as default in the results.
@@ -1189,9 +1186,6 @@ def proportions_chisquare_pairscontrol(count, nobs, value=None,
         the number of successes in nobs trials.
     nobs : int
         the number of trials or observations.
-    prop : float, optional
-        The probability of success under the null hypothesis,
-        `0 <= prop <= 1`. The default value is `prop = 0.5`
     multitest_method : str
         This chooses the method for the multiple testing p-value correction,
         that is used as default in the results.
