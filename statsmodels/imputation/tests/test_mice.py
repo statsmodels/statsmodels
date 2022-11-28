@@ -349,8 +349,11 @@ class TestMICE:
             assert isinstance(x.family, sm.families.Binomial)
 
     @pytest.mark.slow
-    def t_est_combine(self):
-
+    @pytest.mark.xfail(
+        reason="Sometimes fails on NumPy 1.24 due to reliance on BLAS"
+    )
+    def test_combine(self, reset_randomstate):
+        # TODO: Fragile since MICE uses np.random
         np.random.seed(3897)
         x1 = np.random.normal(size=300)
         x2 = np.random.normal(size=300)
