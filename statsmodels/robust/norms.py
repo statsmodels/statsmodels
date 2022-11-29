@@ -711,7 +711,7 @@ class Hampel(RobustNorm):
         return v
 
     def psi_deriv(self, z):
-        t1, t2, t3 = self._subset(z)
+        t1, _, t3 = self._subset(z)
         a, b, c = self.a, self.b, self.c
         # default is t1
         d = np.zeros_like(z)
@@ -828,7 +828,7 @@ class MQuantileNorm(RobustNorm):
     """M-quantiles objective function based on a base norm
 
     This norm has the same asymmetric structure as the objective function
-    in QuantileRegression but replaces the L1, absolute value by a chosen
+    in QuantileRegression but replaces the L1 absolute value by a chosen
     base norm.
 
     rho_q(u) = |q - I(q < 0)| * rho_base(u)
@@ -844,10 +844,13 @@ class MQuantileNorm(RobustNorm):
     base_norm : RobustNorm instance
         basic norm that is transformed into an asymmetric M-quantile norm
 
-    Note:
+    Notes
+    -----
     This is mainly for base norms that are not redescending, like HuberT or
     LeastSquares. (See Jones for the relationship of M-quantiles to quantiles
     in the case of non-redescending Norms.)
+
+    Expectiles are M-quantiles with the LeastSquares as base norm.
 
     References
     ----------
@@ -873,46 +876,72 @@ class MQuantileNorm(RobustNorm):
 
     def rho(self, z):
         """
-        The robust criterion estimator function.
+        The robust criterion function for MQuantileNorm.
 
-        Abstract method:
+        Parameters
+        ----------
+        z : array_like
+            1d array
 
-        -2 loglike used in M-estimator
+        Returns
+        -------
+        rho : ndarray
         """
         qq = self._get_q(z)
         return qq * self.base_norm.rho(z)
 
     def psi(self, z):
         """
-        Derivative of rho.  Sometimes referred to as the influence function.
+        The psi function for MQuantileNorm estimator.
 
-        Abstract method:
+        The analytic derivative of rho
 
-        psi = rho'
+        Parameters
+        ----------
+        z : array_like
+            1d array
+
+        Returns
+        -------
+        psi : ndarray
         """
         qq = self._get_q(z)
         return qq * self.base_norm.psi(z)
 
     def weights(self, z):
         """
-        Returns the value of psi(z) / z
+        MQuantileNorm weighting function for the IRLS algorithm
 
-        Abstract method:
+        The psi function scaled by z, psi(z) / z
 
-        psi(z) / z
+        Parameters
+        ----------
+        z : array_like
+            1d array
+
+        Returns
+        -------
+        weights : ndarray
         """
         qq = self._get_q(z)
         return qq * self.base_norm.weights(z)
 
     def psi_deriv(self, z):
         '''
-        Deriative of psi.  Used to obtain robust covariance matrix.
+        The derivative of MQuantileNorm function
 
-        See statsmodels.rlm for more information.
+        Parameters
+        ----------
+        z : array_like
+            1d array
 
-        Abstract method:
+        Returns
+        -------
+        psi_deriv : ndarray
 
-        psi_derive = psi'
+        Notes
+        -----
+        Used to estimate the robust covariance matrix.
         '''
         qq = self._get_q(z)
         return qq * self.base_norm.psi_deriv(z)
@@ -965,7 +994,7 @@ def estimate_location(a, scale, norm=None, axis=0, initial=None,
     else:
         mu = initial
 
-    for iter in range(maxiter):
+    for _ in range(maxiter):
         W = norm.weights((a-mu)/scale)
         nmu = np.sum(W*a, axis) / np.sum(W, axis)
         if np.alltrue(np.less(np.abs(mu - nmu), scale * tol)):
