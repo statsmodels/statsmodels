@@ -711,7 +711,7 @@ class Hampel(RobustNorm):
         return v
 
     def psi_deriv(self, z):
-        t1, t2, t3 = self._subset(z)
+        t1, _, t3 = self._subset(z)
         a, b, c = self.a, self.b, self.c
         # default is t1
         d = np.zeros_like(z)
@@ -824,6 +824,135 @@ class TukeyBiweight(RobustNorm):
                          - (4*z**2/self.c**2) * (1-(z/self.c)**2))
 
 
+class MQuantileNorm(RobustNorm):
+    """M-quantiles objective function based on a base norm
+
+    This norm has the same asymmetric structure as the objective function
+    in QuantileRegression but replaces the L1 absolute value by a chosen
+    base norm.
+
+    rho_q(u) = |q - I(q < 0)| * rho_base(u)
+    or
+    rho_q(u) = q * rho_base(u)  if u >= 0
+    rho_q(u) = (1 - q) * rho_base(u)  if u < 0
+
+
+    Parameters
+    ----------
+    q : float
+        M-quantile, must be between 0 and 1
+    base_norm : RobustNorm instance
+        basic norm that is transformed into an asymmetric M-quantile norm
+
+    Notes
+    -----
+    This is mainly for base norms that are not redescending, like HuberT or
+    LeastSquares. (See Jones for the relationship of M-quantiles to quantiles
+    in the case of non-redescending Norms.)
+
+    Expectiles are M-quantiles with the LeastSquares as base norm.
+
+    References
+    ----------
+    Newey Powell
+    Jones
+    Bianchi Salvati
+    ...
+
+    """
+
+    def __init__(self, q, base_norm):
+        self.q = q
+        self.base_norm = base_norm
+
+    def _get_q(self, z):
+
+        nobs = len(z)
+        mask_neg = (z < 0)  # if self.q < 0.5 else (z <= 0)  # maybe symmetric
+        qq = np.empty(nobs)
+        qq[mask_neg] = 1 - self.q
+        qq[~mask_neg] = self.q
+        return qq
+
+    def rho(self, z):
+        """
+        The robust criterion function for MQuantileNorm.
+
+        Parameters
+        ----------
+        z : array_like
+            1d array
+
+        Returns
+        -------
+        rho : ndarray
+        """
+        qq = self._get_q(z)
+        return qq * self.base_norm.rho(z)
+
+    def psi(self, z):
+        """
+        The psi function for MQuantileNorm estimator.
+
+        The analytic derivative of rho
+
+        Parameters
+        ----------
+        z : array_like
+            1d array
+
+        Returns
+        -------
+        psi : ndarray
+        """
+        qq = self._get_q(z)
+        return qq * self.base_norm.psi(z)
+
+    def weights(self, z):
+        """
+        MQuantileNorm weighting function for the IRLS algorithm
+
+        The psi function scaled by z, psi(z) / z
+
+        Parameters
+        ----------
+        z : array_like
+            1d array
+
+        Returns
+        -------
+        weights : ndarray
+        """
+        qq = self._get_q(z)
+        return qq * self.base_norm.weights(z)
+
+    def psi_deriv(self, z):
+        '''
+        The derivative of MQuantileNorm function
+
+        Parameters
+        ----------
+        z : array_like
+            1d array
+
+        Returns
+        -------
+        psi_deriv : ndarray
+
+        Notes
+        -----
+        Used to estimate the robust covariance matrix.
+        '''
+        qq = self._get_q(z)
+        return qq * self.base_norm.psi_deriv(z)
+
+    def __call__(self, z):
+        """
+        Returns the value of estimator rho applied to an input
+        """
+        return self.rho(z)
+
+
 def estimate_location(a, scale, norm=None, axis=0, initial=None,
                       maxiter=30, tol=1.0e-06):
     """
@@ -865,7 +994,7 @@ def estimate_location(a, scale, norm=None, axis=0, initial=None,
     else:
         mu = initial
 
-    for iter in range(maxiter):
+    for _ in range(maxiter):
         W = norm.weights((a-mu)/scale)
         nmu = np.sum(W*a, axis) / np.sum(W, axis)
         if np.alltrue(np.less(np.abs(mu - nmu), scale * tol)):
