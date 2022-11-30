@@ -124,6 +124,8 @@ class GaussianCopula(EllipticalCopula):
         matrix is the identity matrix.
     k_dim : int
         Dimension, number of components in the multivariate random variable.
+    allow_singular : bool
+        Allow singular correlation matrix
 
     Notes
     -----
@@ -141,7 +143,7 @@ class GaussianCopula(EllipticalCopula):
 
     """
 
-    def __init__(self, corr=None, k_dim=2):
+    def __init__(self, corr=None, k_dim=2, allow_singular=False):
         super().__init__(k_dim=k_dim)
         if corr is None:
             corr = np.eye(k_dim)
@@ -150,7 +152,8 @@ class GaussianCopula(EllipticalCopula):
 
         self.corr = np.asarray(corr)
         self.distr_uv = stats.norm
-        self.distr_mv = stats.multivariate_normal(cov=corr)
+        self.distr_mv = stats.multivariate_normal(
+            cov=corr, allow_singular=allow_singular)
 
     def dependence_tail(self, corr=None):
         """
