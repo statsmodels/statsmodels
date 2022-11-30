@@ -14,7 +14,7 @@ import warnings
 
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_allclose, assert_raises,
-                           assert_equal, assert_warns)
+                           assert_equal, assert_warns, assert_array_equal)
 import pytest
 
 import statsmodels.stats.power as smp
@@ -772,3 +772,22 @@ def test_power_solver_warn():
                               alternative='larger')
         assert_equal(nip.cache_fit_res[0], 0)
         assert_equal(len(nip.cache_fit_res), 3)
+
+
+def test_normal_sample_size_one_tail():
+    # Test that using default value of std_alternative does not raise an
+    # exception. A power of 0.8 and alpha of 0.05 were chosen to reflect
+    # commonly used values in hypothesis testing. Difference in means and
+    # standard deviation of null population were chosen somewhat arbitrarily --
+    # there's nothing special about those values. Return value doesn't matter
+    # for this "test", so long as an exception is not raised.
+    smp.normal_sample_size_one_tail(5, 0.8, 0.05, 2, std_alternative=None)
+
+    # Test that zero is returned in the correct elements if power is less
+    # than alpha.
+    alphas = np.asarray([0.01, 0.05, 0.1, 0.5, 0.8])
+    powers = np.asarray([0.99, 0.95, 0.9, 0.5, 0.2])
+    # zero_mask = np.where(alphas - powers > 0, 0.0, alphas - powers)
+    nobs_with_zeros = smp.normal_sample_size_one_tail(5, powers, alphas, 2, 2)
+    # check_nans = np.isnan(zero_mask) == np.isnan(nobs_with_nans)
+    assert_array_equal(nobs_with_zeros[powers <= alphas], 0)
