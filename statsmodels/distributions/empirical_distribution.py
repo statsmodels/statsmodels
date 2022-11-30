@@ -4,6 +4,7 @@ Empirical CDF Functions
 import numpy as np
 from scipy.interpolate import interp1d
 
+
 def _conf_set(F, alpha=.05):
     r"""
     Constructs a Dvoretzky-Kiefer-Wolfowitz confidence band for the eCDF.
@@ -19,7 +20,8 @@ def _conf_set(F, alpha=.05):
     -----
     Based on the DKW inequality.
 
-    .. math:: P \left( \sup_x \left| F(x) - \hat(F)_n(X) \right| > \epsilon \right) \leq 2e^{-2n\epsilon^2}
+    .. math:: P \left( \sup_x \left| F(x) - \hat(F)_n(X) \right| >
+       \epsilon \right) \leq 2e^{-2n\epsilon^2}
 
     References
     ----------
@@ -30,6 +32,7 @@ def _conf_set(F, alpha=.05):
     lower = np.clip(F - epsilon, 0, 1)
     upper = np.clip(F + epsilon, 0, 1)
     return lower, upper
+
 
 class StepFunction:
     """
@@ -55,7 +58,8 @@ class StepFunction:
     Examples
     --------
     >>> import numpy as np
-    >>> from statsmodels.distributions.empirical_distribution import StepFunction
+    >>> from statsmodels.distributions.empirical_distribution import (
+    >>>     StepFunction)
     >>>
     >>> x = np.arange(20)
     >>> y = np.arange(20)
@@ -74,7 +78,7 @@ class StepFunction:
     3.0
     """
 
-    def __init__(self, x, y, ival=0., sorted=False, side='left'):
+    def __init__(self, x, y, ival=0., sorted=False, side='left'):  # noqa
 
         if side.lower() not in ['right', 'left']:
             msg = "side can take the values 'right' or 'left'"
@@ -104,6 +108,7 @@ class StepFunction:
 
         tind = np.searchsorted(self.x, time, self.side) - 1
         return self.y[tind]
+
 
 class ECDF(StepFunction):
     """
@@ -135,7 +140,7 @@ class ECDF(StepFunction):
         x = np.array(x, copy=True)
         x.sort()
         nobs = len(x)
-        y = np.linspace(1./nobs,1,nobs)
+        y = np.linspace(1./nobs, 1, nobs)
         super(ECDF, self).__init__(x, y, side=side, sorted=True)
         # TODO: make `step` an arg and have a linear interpolation option?
         # This is the path with `step` is True
@@ -144,6 +149,7 @@ class ECDF(StepFunction):
         # which would have raised a NameError if hit, so would need to be
         # fixed.  See GH#5701.
 
+
 class ECDFDiscrete(StepFunction):
     """
     Return the Empirical Weighted CDF of an array as a step function.
@@ -151,14 +157,17 @@ class ECDFDiscrete(StepFunction):
     Parameters
     ----------
     x : array_like
-        Data values. If freq_weights is None, then x is treated as observations and the ecdf is 
-        computed from the frequency counts of unique values using nunpy.unique. 
-        If freq_weights is not None, then x will be taken as the support of the mass point 
-        distribution with freq_weights as counts for x values.
+        Data values. If freq_weights is None, then x is treated as observations
+        and the ecdf is computed from the frequency counts of unique values
+        using nunpy.unique.
+        If freq_weights is not None, then x will be taken as the support of the
+        mass point distribution with freq_weights as counts for x values.
         The x values can be arbitrary sortable values and need not be integers.
     freq_weights : array_like
-        Weights of the observations.  sum(freq_weights) is interpreted as nobs for confint.
-        If freq_weights is None, then the frequency counts for unique values will be computed from the data x.
+        Weights of the observations.  sum(freq_weights) is interpreted as nobs
+        for confint.
+        If freq_weights is None, then the frequency counts for unique values
+        will be computed from the data x.
     side : {'left', 'right'}, optional
         Default is 'right'. Defines the shape of the intervals constituting the
         steps. 'right' correspond to [a, b) intervals and 'left' to (a, b].
@@ -170,7 +179,8 @@ class ECDFDiscrete(StepFunction):
     Examples
     --------
     >>> import numpy as np
-    >>> from statsmodels.distributions.empirical_distribution import ECDFDiscrete
+    >>> from statsmodels.distributions.empirical_distribution import (
+    >>>     ECDFDiscrete)
     >>>
     >>> ewcdf = ECDFDiscrete([3, 3, 1, 4])
     >>> ewcdf([3, 55, 0.5, 1.5])
@@ -205,7 +215,6 @@ class ECDFDiscrete(StepFunction):
         super(ECDFDiscrete, self).__init__(x, y, side=side, sorted=True)
 
 
-
 def monotone_fn_inverter(fn, x, vectorized=True, **keywords):
     """
     Given a monotone function fn (no checking is done to verify monotonicity)
@@ -224,23 +233,3 @@ def monotone_fn_inverter(fn, x, vectorized=True, **keywords):
     a = np.argsort(y)
 
     return interp1d(y[a], x[a])
-
-if __name__ == "__main__":
-    #TODO: Make sure everything is correctly aligned and make a plotting
-    # function
-    from urllib.request import urlopen
-    import matplotlib.pyplot as plt
-    nerve_data = urlopen('http://www.statsci.org/data/general/nerve.txt')
-    nerve_data = np.loadtxt(nerve_data)
-    x = nerve_data / 50. # was in 1/50 seconds
-    cdf = ECDF(x)
-    x.sort()
-    F = cdf(x)
-    plt.step(x, F, where='post')
-    lower, upper = _conf_set(F)
-    plt.step(x, lower, 'r', where='post')
-    plt.step(x, upper, 'r', where='post')
-    plt.xlim(0, 1.5)
-    plt.ylim(0, 1.05)
-    plt.vlines(x, 0, .05)
-    plt.show()
