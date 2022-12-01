@@ -168,8 +168,8 @@ The list of available link functions can be obtained by
    Logit
    NegativeBinomial
    Power
-   cauchy
-   identity
-   inverse_power
-   inverse_squared
-   probit
+   Cauchy
+   Identity
+   InversePower
+   InverseSquared
+   Probit

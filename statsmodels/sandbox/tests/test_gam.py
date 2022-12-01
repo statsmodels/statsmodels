@@ -238,12 +238,12 @@ class BaseGAM(BaseAM, CheckGAM):
         cls.res2 = res2 = res_glm  #reuse existing glm results, will add additional
 
         #eta in GLM terminology
-        res2.y_pred = res_glm.model.predict(res_glm.params, exog, linear=True)
+        res2.y_pred = res_glm.model.predict(res_glm.params, exog, which="linear")
         res1.y_pred = res_gam.predict(x)
         res1.y_predshort = res_gam.predict(x[:10]) #, linear=True)
 
         #mu
-        res2.mu_pred = res_glm.model.predict(res_glm.params, exog, linear=False)
+        res2.mu_pred = res_glm.model.predict(res_glm.params, exog, which="mean")
         res1.mu_pred = res_gam.mu
 
         #parameters

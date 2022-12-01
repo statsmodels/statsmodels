@@ -334,7 +334,7 @@ def predict_functional(result, focus_var, summaries=None, values=None,
     from statsmodels.genmod.generalized_estimating_equations import GEE
     if isinstance(result.model, (GLM, GEE)):
         kwargs_pred = kwargs.copy()
-        kwargs_pred.update({"linear": True})
+        kwargs_pred.update({"which": "linear"})
     else:
         kwargs_pred = kwargs
 

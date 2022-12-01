@@ -596,7 +596,7 @@ class TestGAMMPGBSPoisson(CheckGAMMixin):
         #                        linear=True)
         xp = pd.DataFrame(res1.model.smoother.x[2:4])
         linpred = res1.predict(df_autos.iloc[2:4], xp,
-                               linear=True)
+                               which="linear")
         assert_allclose(linpred, res2.linear_predictors[2:4],
                         rtol=self.rtol_fitted)
 
