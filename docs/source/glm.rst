@@ -186,15 +186,9 @@ available link functions can be obtained by
    NegativeBinomial
    Power
    cauchy
-   cloglog
-   loglog
    identity
    inverse_power
    inverse_squared
-   log
-   logc
-   logit
-   nbinom
    probit
 
 .. _varfuncs:

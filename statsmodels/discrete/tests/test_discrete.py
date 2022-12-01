@@ -1650,8 +1650,7 @@ def test_negative_binomial_default_alpha_param():
     with warnings.catch_warnings():
         warnings.simplefilter("error")
         sm.families.NegativeBinomial(alpha=1.0)
-    with warnings.catch_warnings():
-        warnings.simplefilter("error")
+    with pytest.warns(FutureWarning):
         sm.families.NegativeBinomial(link=sm.families.links.nbinom(alpha=1.0),
                                      alpha=1.0)
 

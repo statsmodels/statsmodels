@@ -4,6 +4,7 @@ Defines the link functions to be used with GLM and GEE families.
 
 import numpy as np
 import scipy.stats
+import warnings
 FLOAT_EPS = np.finfo(float).eps
 
 
@@ -247,7 +248,20 @@ class Logit(Link):
 
 
 class logit(Logit):
-    pass
+    """
+    Alias of Logit
+
+    .. deprecated: 0.14.0
+
+       Use Logit instead.
+    """
+    def __init__(self):
+        warnings.warn(
+            "The logit alias is deprecated. Use Logit instead. logit will "
+            "be removed after the 0.15.0 release.",
+            FutureWarning
+        )
+        super().__init__()
 
 
 class Power(Link):
@@ -416,7 +430,7 @@ class inverse_power(Power):
     Alias of statsmodels.family.links.Power(power=-1.)
     """
     def __init__(self):
-        super(inverse_power, self).__init__(power=-1.)
+        super().__init__(power=-1.)
 
 
 class sqrt(Power):
@@ -430,7 +444,7 @@ class sqrt(Power):
     Alias of statsmodels.family.links.Power(power=.5)
     """
     def __init__(self):
-        super(sqrt, self).__init__(power=.5)
+        super().__init__(power=.5)
 
 
 class inverse_squared(Power):
@@ -444,7 +458,7 @@ class inverse_squared(Power):
     Alias of statsmodels.family.links.Power(power=2.)
     """
     def __init__(self):
-        super(inverse_squared, self).__init__(power=-2.)
+        super().__init__(power=-2.)
 
 
 class identity(Power):
@@ -458,7 +472,7 @@ class identity(Power):
     Alias of statsmodels.family.links.Power(power=1.)
     """
     def __init__(self):
-        super(identity, self).__init__(power=1.)
+        super().__init__(power=1.)
 
 
 class Log(Link):
@@ -579,11 +593,22 @@ class log(Log):
     """
     The log transform
 
+    .. deprecated: 0.14.0
+
+       Use Log instead.
+
     Notes
     -----
     log is a an alias of Log.
     """
-    pass
+
+    def __init__(self):
+        warnings.warn(
+            "The log alias is deprecated. Use Log instead. log will be removed "
+            "after the 0.15.0 release.",
+            FutureWarning
+        )
+        super().__init__()
 
 
 class LogC(Link):
@@ -722,11 +747,21 @@ class logc(LogC):
     """
     The log-complement transform
 
+    .. deprecated: 0.14.0
+
+       Use LogC instead.
+
     Notes
     -----
     logc is a an alias of LogC.
     """
-    pass
+    def __init__(self):
+        warnings.warn(
+            "The logc alias is deprecated. Use LogC instead. logc will be "
+            "removed after the 0.15.0 release.",
+            FutureWarning
+        )
+        super().__init__()
 
 
 # TODO: the CDFLink is untested
@@ -920,7 +955,7 @@ class cauchy(CDFLink):
     """
 
     def __init__(self):
-        super(cauchy, self).__init__(dbn=scipy.stats.cauchy)
+        super().__init__(dbn=scipy.stats.cauchy)
 
     def deriv2(self, p):
         """
@@ -1061,6 +1096,10 @@ class cloglog(CLogLog):
     """
     The CLogLog transform link function.
 
+    .. deprecated: 0.14.0
+
+       Use CLogLog instead.
+
     Notes
     -----
     g(`p`) = log(-log(1-`p`))
@@ -1068,7 +1107,13 @@ class cloglog(CLogLog):
     cloglog is an alias for CLogLog
     cloglog = CLogLog()
     """
-    pass
+    def __init__(self):
+        warnings.warn(
+            "The cloglog alias is deprecated. Use CLogLog instead.  cloglog will be "
+            "removed after the 0.15.0 release.",
+            FutureWarning
+        )
+        super().__init__()
 
 
 class LogLog(Logit):
@@ -1196,6 +1241,10 @@ class loglog(LogLog):
     """
     The LogLog transform link function.
 
+    .. deprecated: 0.14.0
+
+       Use LogLog instead.
+
     Notes
     -----
     g(`p`) = -log(-log(`p`))
@@ -1203,7 +1252,13 @@ class loglog(LogLog):
     loglog is an alias for LogLog
     loglog = LogLog()
     """
-    pass
+    def __init__(self):
+        warnings.warn(
+            "The loglog alias is deprecated. Use LogLog instead. "
+            "loglog will be removed after the 0.15.0 release.",
+            FutureWarning
+        )
+        super().__init__()
 
 
 class NegativeBinomial(Link):
@@ -1331,6 +1386,10 @@ class nbinom(NegativeBinomial):
     """
     The negative binomial link function.
 
+    .. deprecated: 0.14.0
+
+       Use NegativeBinomial instead.
+
     Notes
     -----
     g(p) = log(p/(p + 1/alpha))
@@ -1338,4 +1397,12 @@ class nbinom(NegativeBinomial):
     nbinom is an alias of NegativeBinomial.
     nbinom = NegativeBinomial(alpha=1.)
     """
-    pass
+
+    def __init__(self, alpha=1.):
+        warnings.warn(
+            "The nbinom alias is deprecated. Use NegativeBinomial instead. "
+            "nbinom will be removed after the 0.15.0 release.",
+            FutureWarning
+        )
+        super().__init__(alpha=alpha)
+
