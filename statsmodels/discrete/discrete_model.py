@@ -4549,15 +4549,15 @@ class DiscreteResults(base.LikelihoodModelResults):
             One of 'aic', 'bic', 'tic' or 'gbic'.
         dk_params : int or float
             Correction to the number of parameters used in the information
-            criterion. By default, only mean parameters are included, the
-            scale parameter is not included in the parameter count.
-            Use ``dk_params=1`` to include scale in the parameter count.
+            criterion.
 
-        Returns the given information criterion value.
+        Returns
+        -------
+        Value of information criterion.
 
         Notes
         -----
-        Tic and bbic
+        Tic and gbic
 
         References
         ----------

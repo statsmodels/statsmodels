@@ -274,14 +274,56 @@ class TruncatedLFGeneric(CountModel):
     def predict(self, params, exog=None, exposure=None, offset=None,
                 which='mean', y_values=None):
         """
-        Paramaters
-        ----------
-        y_values : array-like or int
-            The counts for which you want the probabilities. If y_values is
-            None then the probabilities for each count from 0 to max(y) are
-            given.
+        Predict response variable or other statistic given exogenous variables.
 
-        Predict response variable of a count model given exogenous variables.
+        Parameters
+        ----------
+        params : array_like
+            The parameters of the model.
+        exog : ndarray, optional
+            Explanatory variables for the main count model.
+            If ``exog`` is None, then the data from the model will be used.
+        offset : ndarray, optional
+            Offset is added to the linear predictor of the mean function with
+            coefficient equal to 1.
+            Default is zero if exog is not None, and the model offset if exog
+            is None.
+        exposure : ndarray, optional
+            Log(exposure) is added to the linear predictor with coefficient
+            equal to 1. If exposure is specified, then it will be logged by
+            the method. The user does not need to log it first.
+            Default is one if exog is is not None, and it is the model exposure
+            if exog is None.
+        which : str (optional)
+            Statitistic to predict. Default is 'mean'.
+
+            - 'mean' : the conditional expectation of endog E(y | x)
+            - 'mean-main' : mean parameter of truncated count model.
+              Note, this is not the mean of the truncated distribution.
+            - 'linear' : the linear predictor of the truncated count model.
+            - 'var' : returns the estimated variance of endog implied by the
+              model.
+            - 'prob-trunc' : probability of truncation. This is the probability
+              of observing a zero count implied
+              by the truncation model.
+            - 'prob' : probabilities of each count from 0 to max(endog), or
+              for y_values if those are provided. This is a multivariate
+              return (2-dim when predicting for several observations).
+              The probabilities in the truncated region are zero.
+            - 'prob-base' : probabilities for untruncated base distribution.
+              The probabilities are for each count from 0 to max(endog), or
+              for y_values if those are provided. This is a multivariate
+              return (2-dim when predicting for several observations).
+
+
+        y_values : array_like
+            Values of the random variable endog at which pmf is evaluated.
+            Only used if ``which="prob"``
+
+        Returns
+        -------
+        predicted values
+
         Notes
         -----
         If exposure is specified, then it will be logged by the method.
@@ -313,6 +355,8 @@ class TruncatedLFGeneric(CountModel):
                 mean_tregion = (np.arange(self.truncation + 1) * probs).sum(1)
                 mean = (mu - mean_tregion) / (1 - prob_tregion)
                 return mean
+            else:
+                raise ValueError("unsupported self.truncation")
         elif which == 'linear':
             return linpred
         elif which == 'mean-main':
@@ -333,7 +377,7 @@ class TruncatedLFGeneric(CountModel):
             else:
                 raise ValueError("k_extra is not 0 or 1")
             return probs
-        elif which == 'prob-main':
+        elif which == 'prob-base':
             if y_values is not None:
                 counts = np.atleast_2d(y_values)
             else:
@@ -360,19 +404,19 @@ class TruncatedLFGeneric(CountModel):
             v = mnc2 - mean**2
             return v
         else:
-            raise TypeError(
+            raise ValueError(
                 "argument which == %s not handled" % which)
 
 
 class TruncatedLFPoisson(TruncatedLFGeneric):
-    """
+    __doc__ = """
     Truncated Poisson model for count data
 
     %(params)s
     %(extra_params)s
 
     Attributes
-    -----------
+    ----------
     endog : array
         A reference to the endogenous response variable
     exog : array
@@ -405,6 +449,7 @@ class TruncatedLFPoisson(TruncatedLFGeneric):
                                   exposure=exposure,
                                   offset=offset)
         self.model_dist = truncatedpoisson
+
         self.result_class = TruncatedLFPoissonResults
         self.result_class_wrapper = TruncatedLFGenericResultsWrapper
         self.result_class_reg = L1TruncatedLFGenericResults
@@ -434,14 +479,14 @@ class TruncatedLFPoisson(TruncatedLFGeneric):
 
 
 class TruncatedLFNegativeBinomialP(TruncatedLFGeneric):
-    """
+    __doc__ = """
     Truncated Generalized Negative Binomial model for count data
 
     %(params)s
     %(extra_params)s
 
     Attributes
-    -----------
+    ----------
     endog : array
         A reference to the endogenous response variable
     exog : array
@@ -476,6 +521,7 @@ class TruncatedLFNegativeBinomialP(TruncatedLFGeneric):
         self.k_extra = self.model_main.k_extra
         self.exog_names.extend(self.model_main.exog_names[-self.k_extra:])
         self.model_dist = truncatednegbin
+
         self.result_class = TruncatedNegativeBinomialResults
         self.result_class_wrapper = TruncatedLFGenericResultsWrapper
         self.result_class_reg = L1TruncatedLFGenericResults
@@ -513,14 +559,14 @@ class TruncatedLFNegativeBinomialP(TruncatedLFGeneric):
 
 
 class TruncatedLFGeneralizedPoisson(TruncatedLFGeneric):
-    """
+    __doc__ = """
     Truncated Generalized Poisson model for count data
 
     %(params)s
     %(extra_params)s
 
     Attributes
-    -----------
+    ----------
     endog : array
         A reference to the endogenous response variable
     exog : array
@@ -558,6 +604,7 @@ class TruncatedLFGeneralizedPoisson(TruncatedLFGeneric):
         self.exog_names.extend(self.model_main.exog_names[-self.k_extra:])
         self.model_dist = None
         self.result_class = TruncatedNegativeBinomialResults
+
         self.result_class_wrapper = TruncatedLFGenericResultsWrapper
         self.result_class_reg = L1TruncatedLFGenericResults
         self.result_class_reg_wrapper = L1TruncatedLFGenericResultsWrapper
@@ -571,7 +618,7 @@ class _RCensoredGeneric(CountModel):
     %(extra_params)s
 
     Attributes
-    -----------
+    ----------
     endog : array
         A reference to the endogenous response variable
     exog : array
@@ -785,7 +832,7 @@ class _RCensoredGeneric(CountModel):
 
 
 class _RCensoredPoisson(_RCensoredGeneric):
-    """
+    __doc__ = """
     Censored Poisson model for count data
 
     %(params)s
@@ -821,7 +868,7 @@ class _RCensoredPoisson(_RCensoredGeneric):
 
 
 class _RCensoredGeneralizedPoisson(_RCensoredGeneric):
-    """
+    __doc__ = """
     Censored Generalized Poisson model for count data
 
     %(params)s
@@ -859,7 +906,7 @@ class _RCensoredGeneralizedPoisson(_RCensoredGeneric):
 
 
 class _RCensoredNegativeBinomialP(_RCensoredGeneric):
-    """
+    __doc__ = """
     Censored Negative Binomial model for count data
 
     %(params)s
@@ -903,7 +950,7 @@ class _RCensoredNegativeBinomialP(_RCensoredGeneric):
 
 
 class _RCensored(_RCensoredGeneric):
-    """
+    __doc__ = """
     Censored model for count data
 
     %(params)s
@@ -958,7 +1005,7 @@ class _RCensored(_RCensoredGeneric):
 
 
 class HurdleCountModel(CountModel):
-    """
+    __doc__ = """
     Hurdle model for count data
 
     %(params)s
@@ -1175,8 +1222,8 @@ class HurdleCountModel(CountModel):
             Values of the random variable endog at which pmf is evaluated.
             Only used if ``which="prob"``
 
-        Return
-        ------
+        Returns
+        -------
         predicted values
 
         Notes
