@@ -320,8 +320,8 @@ class TruncatedLFGeneric(CountModel):
             Values of the random variable endog at which pmf is evaluated.
             Only used if ``which="prob"``
 
-        Return
-        ------
+        Returns
+        -------
         predicted values
 
         Notes
@@ -355,6 +355,8 @@ class TruncatedLFGeneric(CountModel):
                 mean_tregion = (np.arange(self.truncation + 1) * probs).sum(1)
                 mean = (mu - mean_tregion) / (1 - prob_tregion)
                 return mean
+            else:
+                raise ValueError("unsupported self.truncation")
         elif which == 'linear':
             return linpred
         elif which == 'mean-main':
@@ -402,19 +404,19 @@ class TruncatedLFGeneric(CountModel):
             v = mnc2 - mean**2
             return v
         else:
-            raise TypeError(
+            raise ValueError(
                 "argument which == %s not handled" % which)
 
 
 class TruncatedLFPoisson(TruncatedLFGeneric):
-    """
+    __doc__ = """
     Truncated Poisson model for count data
 
     %(params)s
     %(extra_params)s
 
     Attributes
-    -----------
+    ----------
     endog : array
         A reference to the endogenous response variable
     exog : array
@@ -477,14 +479,14 @@ class TruncatedLFPoisson(TruncatedLFGeneric):
 
 
 class TruncatedLFNegativeBinomialP(TruncatedLFGeneric):
-    """
+    __doc__ = """
     Truncated Generalized Negative Binomial model for count data
 
     %(params)s
     %(extra_params)s
 
     Attributes
-    -----------
+    ----------
     endog : array
         A reference to the endogenous response variable
     exog : array
@@ -557,14 +559,14 @@ class TruncatedLFNegativeBinomialP(TruncatedLFGeneric):
 
 
 class TruncatedLFGeneralizedPoisson(TruncatedLFGeneric):
-    """
+    __doc__ = """
     Truncated Generalized Poisson model for count data
 
     %(params)s
     %(extra_params)s
 
     Attributes
-    -----------
+    ----------
     endog : array
         A reference to the endogenous response variable
     exog : array
@@ -616,7 +618,7 @@ class _RCensoredGeneric(CountModel):
     %(extra_params)s
 
     Attributes
-    -----------
+    ----------
     endog : array
         A reference to the endogenous response variable
     exog : array
@@ -830,7 +832,7 @@ class _RCensoredGeneric(CountModel):
 
 
 class _RCensoredPoisson(_RCensoredGeneric):
-    """
+    __doc__ = """
     Censored Poisson model for count data
 
     %(params)s
@@ -866,7 +868,7 @@ class _RCensoredPoisson(_RCensoredGeneric):
 
 
 class _RCensoredGeneralizedPoisson(_RCensoredGeneric):
-    """
+    __doc__ = """
     Censored Generalized Poisson model for count data
 
     %(params)s
@@ -904,7 +906,7 @@ class _RCensoredGeneralizedPoisson(_RCensoredGeneric):
 
 
 class _RCensoredNegativeBinomialP(_RCensoredGeneric):
-    """
+    __doc__ = """
     Censored Negative Binomial model for count data
 
     %(params)s
@@ -948,7 +950,7 @@ class _RCensoredNegativeBinomialP(_RCensoredGeneric):
 
 
 class _RCensored(_RCensoredGeneric):
-    """
+    __doc__ = """
     Censored model for count data
 
     %(params)s
@@ -1003,7 +1005,7 @@ class _RCensored(_RCensoredGeneric):
 
 
 class HurdleCountModel(CountModel):
-    """
+    __doc__ = """
     Hurdle model for count data
 
     %(params)s
@@ -1220,8 +1222,8 @@ class HurdleCountModel(CountModel):
             Values of the random variable endog at which pmf is evaluated.
             Only used if ``which="prob"``
 
-        Return
-        ------
+        Returns
+        -------
         predicted values
 
         Notes

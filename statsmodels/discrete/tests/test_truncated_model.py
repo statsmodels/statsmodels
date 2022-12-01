@@ -243,7 +243,7 @@ class CheckTruncatedST():
         ex = res1.model.exog.mean(0)
         rdf = res2.margins_pr.table
         k = rdf.shape[0] - 1
-        pred = res1.get_prediction(which="prob-main", average=True)
+        pred = res1.get_prediction(which="prob-base", average=True)
         assert_allclose(pred.predicted[:k], rdf[:-1, 0], rtol=5e-5)
         assert_allclose(pred.se[:k], rdf[:-1, 1],
                         rtol=8e-4, atol=1e-10)
