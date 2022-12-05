@@ -125,7 +125,11 @@ class GaussianCopula(EllipticalCopula):
     k_dim : int
         Dimension, number of components in the multivariate random variable.
     allow_singular : bool
-        Allow singular correlation matrix
+        Allow singular correlation matrix.
+        The behavior when the correlation matrix is singular is determined by
+        `scipy.stats.multivariate_normal`` and might not be appropriate for
+        all copula or copula distribution metnods. Behavior might change in
+        future versions.
 
     Notes
     -----

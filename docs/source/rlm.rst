@@ -85,6 +85,7 @@ Norms
    Hampel
    HuberT
    LeastSquares
+   MQuantileNorm
    RamsayE
    RobustNorm
    TrimmedMean
