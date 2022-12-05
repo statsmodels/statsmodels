@@ -19,6 +19,7 @@ import pytest
 from scipy import stats
 
 import statsmodels.api as sm
+from statsmodels.compat.scipy import SP_LT_17
 from statsmodels.datasets import cpunish, longley
 from statsmodels.discrete import discrete_model as discrete
 from statsmodels.genmod.generalized_linear_model import GLM, SET_USE_BIC_LLF
@@ -2638,6 +2639,8 @@ def test_tweedie_score():
 
     for eql in [True, False]:
         for p in [1, 1.5, 2]:
+            if eql is False and SP_LT_17:
+                pytest.skip('skip, scipy too old, no bessel_wright')
 
             fam = sm.families.Tweedie(var_power=p, eql=eql)
             model = GLM(y, x, family=fam)
