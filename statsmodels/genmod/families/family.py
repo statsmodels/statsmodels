@@ -1631,6 +1631,7 @@ class Tweedie(Family):
         Biometrika 74:2, pp 221-232.  https://www.jstor.org/stable/2336136
         """
         p = self.var_power
+        endog = np.atleast_1d(endog)
         if p == 1:
             return Poisson().loglike_obs(
                 endog=endog,
@@ -1677,9 +1678,9 @@ class Tweedie(Family):
                 if not np.isscalar(scale):
                     scale = scale[idx]
                 x = ((p - 1) * scale / endog) ** alpha
-                x /=  (2 - p) * scale
+                x /= (2 - p) * scale
                 wb = special.wright_bessel(-alpha, 0, x)
-                ll_obs += np.log(1/endog * wb)
+                ll_obs[idx] += np.log(1/endog * wb)
             return ll_obs
         else:
             # Equations 4 of Kaas

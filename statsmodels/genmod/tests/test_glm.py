@@ -2636,18 +2636,19 @@ def test_tweedie_score():
     for i in range(n):
         y[i] = np.random.gamma(alp, 1 / bet[i], N[i]).sum()
 
-    for p in [1, 1.5, 2]:
+    for eql in [True, False]:
+        for p in [1, 1.5, 2]:
 
-        fam = sm.families.Tweedie(var_power=p, eql=True)
-        model = GLM(y, x, family=fam)
-        result = model.fit()
+            fam = sm.families.Tweedie(var_power=p, eql=eql)
+            model = GLM(y, x, family=fam)
+            result = model.fit()
 
-        pa = result.params + 0.2*np.random.normal(size=result.params.size)
+            pa = result.params + 0.2*np.random.normal(size=result.params.size)
 
-        ngrad = approx_fprime_cs(pa, lambda x: model.loglike(x, scale=1))
-        agrad = model.score(pa, scale=1)
-        assert_allclose(ngrad, agrad, atol=1e-8, rtol=1e-8)
+            ngrad = approx_fprime_cs(pa, lambda x: model.loglike(x, scale=1))
+            agrad = model.score(pa, scale=1)
+            assert_allclose(ngrad, agrad, atol=1e-8, rtol=1e-8)
 
-        nhess = approx_hess_cs(pa, lambda x: model.loglike(x, scale=1))
-        ahess = model.hessian(pa, scale=1)
-        assert_allclose(nhess, ahess, atol=5e-8, rtol=5e-8)
+            nhess = approx_hess_cs(pa, lambda x: model.loglike(x, scale=1))
+            ahess = model.hessian(pa, scale=1)
+            assert_allclose(nhess, ahess, atol=5e-8, rtol=5e-8)

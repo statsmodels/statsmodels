@@ -2,6 +2,7 @@
 Test functions for genmod.families.family
 """
 import numpy as np
+from numpy.testing import assert_allclose
 import pytest
 from scipy import integrate
 
@@ -67,4 +68,4 @@ def test_tweedie_loglike_obs(power):
                     endog=y, mu=mu, scale=scale
         ))
 
-    assert pdf(0) + integrate.quad(pdf, 0, 1e2)[0] == pytest.approx(1, abs=1e-4)
+    assert_allclose(pdf(0) + integrate.quad(pdf, 0, 1e2)[0], 1, atol=1e-4)
