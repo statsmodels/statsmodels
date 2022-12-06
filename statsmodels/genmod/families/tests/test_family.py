@@ -1,9 +1,13 @@
 """
 Test functions for genmod.families.family
 """
+import warnings
+
+import pytest
+
 import numpy as np
 from numpy.testing import assert_allclose
-import pytest
+
 from scipy import integrate
 
 from statsmodels.compat.scipy import SP_LT_17
@@ -47,14 +51,24 @@ link_cases = [
 def test_invalid_family_link(family, links):
     invalid_links = all_links - links
     with pytest.raises(ValueError):
-        for link in invalid_links:
-            family(link())
+        with warnings.catch_warnings():
+            msg = ("Negative binomial dispersion parameter alpha not set. "
+                   "Using default value alpha=1.0.")
+            warnings.filterwarnings("ignore", message=msg,
+                                    category=UserWarning)
+            for link in invalid_links:
+                family(link())
 
 
 @pytest.mark.parametrize("family, links", link_cases)
 def test_family_link(family, links):
-    for link in links:
-        assert family(link())
+    with warnings.catch_warnings():
+        msg = ("Negative binomial dispersion parameter alpha not set. "
+               "Using default value alpha=1.0.")
+        warnings.filterwarnings("ignore", message=msg,
+                                category=UserWarning)
+        for link in links:
+            assert family(link())
 
 
 @pytest.mark.skipif(SP_LT_17, reason="Scipy too old, function not available")

@@ -634,7 +634,7 @@ class GLM(base.LikelihoodModel):
         The value of the derivative of the expected endog with respect
         to the parameter vector.
         """
-        lin_pred = self.predict(params, linear=True)
+        lin_pred = self.predict(params, which="linear")
         idl = self.family.link.inverse_deriv(lin_pred)
         dmat = self.exog * idl[:, None]
         return dmat

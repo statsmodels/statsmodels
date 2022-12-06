@@ -2062,7 +2062,7 @@ def power_proportions_2indep(diff, prop2, nobs1, ratio=1, alpha=0.05,
         difference between proportion 1 and 2 under the alternative
     prop2 : float
         proportion for the reference case, prop2, proportions for the
-        first case will be computing using p2 and diff
+        first case will be computed using p2 and diff
         p1 = p2 + diff
     nobs1 : float or int
         number of observations in sample 1
