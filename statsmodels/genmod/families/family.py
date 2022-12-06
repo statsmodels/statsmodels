@@ -1312,7 +1312,7 @@ class NegativeBinomial(Family):
 
     def __init__(self, link=None, alpha=1.):
         self.alpha = 1. * alpha  # make it at least float
-        if alpha is self.__init__.__defaults__[1]:
+        if alpha is self.__init__.__defaults__[1]:  # `is` is intentional
             warnings.warn("Negative binomial dispersion parameter alpha not "
                           f"set. Using default value alpha={alpha}.")
         if link is None:
