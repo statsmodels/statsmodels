@@ -456,7 +456,8 @@ def get_prediction_glm(self, exog=None, transform=True,
     if pred_kwds is None:
         pred_kwds = {}
 
-    pred_kwds['linear'] = False
+    pred_kwds['linear'] = False  # needed to get DeprecationWarning for linear
+    # pred_kwds['which'] = "mean"
     predicted_mean = self.model.predict(self.params, exog, **pred_kwds)
 
     covb = self.cov_params()
