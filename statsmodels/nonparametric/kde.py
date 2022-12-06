@@ -140,7 +140,7 @@ class KDEUnivariate:
         cut : float
             Defines the length of the grid past the lowest and highest values
             of x so that the kernel goes to zero. The end points are
-            -/+ cut*bw*{min(x) or max(x)}
+            ``min(x) - cut * adjust * bw`` and ``max(x) + cut * adjust * bw``.
         adjust : float
             An adjustment factor for the bw. Bandwidth becomes bw * adjust.
 
