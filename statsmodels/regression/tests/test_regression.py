@@ -334,7 +334,12 @@ class TestOLS(CheckRegressionResults):
 
     def test_summary_slim(self):
         # check that slim summary is smaller, does not verify content
-        summ = self.res1.summary(slim=True)
+        with warnings.catch_warnings():
+            msg = "kurtosistest only valid for n>=20"
+            warnings.filterwarnings("ignore", message=msg,
+                                    category=UserWarning)
+
+            summ = self.res1.summary(slim=True)
         assert len(summ.tables) == 2
         assert len(str(summ)) < 6700
 
