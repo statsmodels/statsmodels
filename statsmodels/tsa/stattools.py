@@ -268,6 +268,9 @@ def adfuller(
     store = bool_like(store, "store")
     regresults = bool_like(regresults, "regresults")
 
+    if x.max() == x.min():
+        raise ValueError("Invalid input, x is constant")
+
     if regresults:
         store = True
 
