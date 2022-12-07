@@ -31,7 +31,7 @@ from statsmodels.tools.numdiff import (
 )
 from statsmodels.tools.sm_exceptions import (
     DomainWarning,
-    PerfectSeparationError,
+    PerfectSeparationWarning,
     ValueWarning,
 )
 from statsmodels.tools.tools import add_constant
@@ -1004,9 +1004,9 @@ def test_perfect_pred(iris):
     y = y[y != 2]
     X = add_constant(X, prepend=True)
     glm = GLM(y, X, family=sm.families.Binomial())
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", category=RuntimeWarning)
-        assert_raises(PerfectSeparationError, glm.fit)
+
+    with pytest.warns(PerfectSeparationWarning):
+        glm.fit()
 
 
 def test_score_test_ols():

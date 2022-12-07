@@ -47,7 +47,7 @@ from statsmodels.tools.docstring import Docstring
 from statsmodels.tools.sm_exceptions import (
     DomainWarning,
     HessianInversionWarning,
-    PerfectSeparationError,
+    PerfectSeparationWarning,
 )
 from statsmodels.tools.validation import float_like
 
@@ -1248,8 +1248,9 @@ class GLM(base.LikelihoodModel):
             history = self._update_history(wls_results, mu, history)
             self.scale = self.estimate_scale(mu)
             if endog.squeeze().ndim == 1 and np.allclose(mu - endog, 0):
-                msg = "Perfect separation detected, results not available"
-                raise PerfectSeparationError(msg)
+                msg = ("Perfect separation or prediction detected, "
+                       "parameter may not be identified")
+                warnings.warn(msg, category=PerfectSeparationWarning)
             converged = _check_convergence(criterion, iteration + 1, atol,
                                            rtol)
             if converged:
