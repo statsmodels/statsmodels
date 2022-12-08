@@ -944,7 +944,7 @@ class MultiComparison:
                               ('group2', object),
                               ('stat',float),
                               ('pval',float),
-                              ('reject', np.bool8)])
+                              ('reject', np.bool_)])
         else:
             resarr = np.array(lzip(self.groupsunique[i1], self.groupsunique[i2],
                                   np.round(res[:,0],4),
@@ -956,7 +956,7 @@ class MultiComparison:
                               ('stat',float),
                               ('pval',float),
                               ('pval_corr',float),
-                              ('reject', np.bool8)])
+                              ('reject', np.bool_)])
         results_table = SimpleTable(resarr, headers=resarr.dtype.names)
         results_table.title = (
             'Test Multiple Comparison %s \n%s%4.2f method=%s'
@@ -1008,7 +1008,7 @@ class MultiComparison:
                                  ('p-adj', float),
                                  ('lower', float),
                                  ('upper', float),
-                                 ('reject', np.bool8)])
+                                 ('reject', np.bool_)])
         results_table = SimpleTable(resarr, headers=resarr.dtype.names)
         results_table.title = 'Multiple Comparison of Means - Tukey HSD, ' + \
                               'FWER=%4.2f' % alpha
