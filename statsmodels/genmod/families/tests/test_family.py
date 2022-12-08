@@ -56,6 +56,8 @@ def test_invalid_family_link(family, links):
                    "Using default value alpha=1.0.")
             warnings.filterwarnings("ignore", message=msg,
                                     category=UserWarning)
+            warnings.filterwarnings("ignore",
+                                    category=FutureWarning)
             for link in invalid_links:
                 family(link())
 
@@ -67,6 +69,8 @@ def test_family_link(family, links):
                "Using default value alpha=1.0.")
         warnings.filterwarnings("ignore", message=msg,
                                 category=UserWarning)
+        warnings.filterwarnings("ignore",
+                                category=FutureWarning)
         for link in links:
             assert family(link())
 

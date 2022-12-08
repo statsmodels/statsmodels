@@ -712,7 +712,7 @@ class Gamma(Family):
 
     def __init__(self, link=None):
         if link is None:
-            link = L.inverse_power()
+            link = L.InversePower()
         super(Gamma, self).__init__(link=link, variance=Gamma.variance)
 
     def _resid_dev(self, endog, mu):
@@ -1114,7 +1114,7 @@ class InverseGaussian(Family):
     link : a link instance, optional
         The default link for the inverse Gaussian family is the
         inverse squared link.
-        Available links are inverse_squared, inverse, log, and identity.
+        Available links are InverseSquared, Inverse, Log, and Identity.
         See statsmodels.genmod.families.links for more information.
 
     Attributes
@@ -1142,7 +1142,7 @@ class InverseGaussian(Family):
 
     def __init__(self, link=None):
         if link is None:
-            link = L.inverse_squared()
+            link = L.InverseSquared()
         super(InverseGaussian, self).__init__(
             link=link, variance=InverseGaussian.variance)
 

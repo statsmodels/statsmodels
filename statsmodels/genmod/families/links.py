@@ -15,6 +15,7 @@ def _link_deprecation_warning(old, new):
         f"link alias will be removed after the 0.15.0 release.",
         FutureWarning
     )
+    # raise
 
 
 class Link:
@@ -268,10 +269,10 @@ class Power(Link):
     Notes
     -----
     Aliases of Power:
-    inverse = Power(power=-1)
-    sqrt = Power(power=.5)
-    inverse_squared = Power(power=-2.)
-    identity = Power(power=1.)
+    Inverse = Power(power=-1)
+    Sqrt = Power(power=.5)
+    InverseSquared = Power(power=-2.)
+    Identity = Power(power=1.)
     """
 
     def __init__(self, power=1.):
