@@ -392,7 +392,7 @@ class Poisson(Family):
     statsmodels.genmod.families.family.Family : Parent class for all links.
     :ref:`links` : Further details on links.
     """
-    links = [L.Log, L.identity, L.sqrt]
+    links = [L.Log, L.Identity, L.Sqrt]
     variance = V.mu
     valid = [0, np.inf]
     safe_links = [L.Log, ]
@@ -541,13 +541,13 @@ class Gaussian(Family):
     :ref:`links` : Further details on links.
     """
 
-    links = [L.Log, L.identity, L.inverse_power]
+    links = [L.Log, L.Identity, L.InversePower]
     variance = V.constant
     safe_links = links
 
     def __init__(self, link=None):
         if link is None:
-            link = L.identity()
+            link = L.Identity()
         super(Gaussian, self).__init__(link=link, variance=Gaussian.variance)
 
     def _resid_dev(self, endog, mu):
@@ -706,7 +706,7 @@ class Gamma(Family):
     statsmodels.genmod.families.family.Family : Parent class for all links.
     :ref:`links` : Further details on links.
     """
-    links = [L.Log, L.identity, L.inverse_power]
+    links = [L.Log, L.Identity, L.InversePower]
     variance = V.mu_squared
     safe_links = [L.Log, ]
 
@@ -877,8 +877,8 @@ class Binomial(Family):
     number of trials for each row.
     """
 
-    links = [L.Logit, L.probit, L.cauchy, L.Log, L.LogC, L.CLogLog, L.LogLog,
-             L.identity]
+    links = [L.Logit, L.Probit, L.Cauchy, L.Log, L.LogC, L.CLogLog, L.LogLog,
+             L.Identity]
     variance = V.binary  # this is not used below in an effort to include n
 
     # Other safe links, e.g. cloglog and probit are subclasses
@@ -1136,9 +1136,9 @@ class InverseGaussian(Family):
     literature as the Wald distribution.
     """
 
-    links = [L.inverse_squared, L.inverse_power, L.identity, L.Log]
+    links = [L.InverseSquared, L.InversePower, L.Identity, L.Log]
     variance = V.mu_cubed
-    safe_links = [L.inverse_squared, L.Log, ]
+    safe_links = [L.InverseSquared, L.Log, ]
 
     def __init__(self, link=None):
         if link is None:
@@ -1304,7 +1304,7 @@ class NegativeBinomial(Family):
 
     with :math:`E[Y]=\mu\,` and :math:`Var[Y]=\mu+\alpha\mu^2`.
     """
-    links = [L.Log, L.CLogLog, L.identity, L.NegativeBinomial, L.Power]
+    links = [L.Log, L.CLogLog, L.Identity, L.NegativeBinomial, L.Power]
     # TODO: add the ability to use the power links with an if test
     # similar to below
     variance = V.nbinom
