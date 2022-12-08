@@ -323,7 +323,8 @@ def x13_arima_analysis(endog, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
                        exog=None, log=None, outlier=True, trading=False,
                        forecast_periods=None, retspec=False,
                        speconly=False, start=None, freq=None,
-                       print_stdout=False, x12path=None, prefer_x13=True):
+                       print_stdout=False, x12path=None, prefer_x13=True,
+                       tempdir=None):
     """
     Perform x13-arima analysis for monthly or quarterly data.
 
@@ -385,6 +386,9 @@ def x13_arima_analysis(endog, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
         environmental variable. If False, will look for x12a first and will
         fallback to the X12PATH environmental variable. If x12path points
         to the path for the X12/X13 binary, it does nothing.
+    tempdir : str
+        The path to where temporary files are created by the function.
+        If None, files are created in the default temporary file location.
 
     Returns
     -------
@@ -435,8 +439,10 @@ def x13_arima_analysis(endog, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
         return spec
     # write it to a tempfile
     # TODO: make this more robust - give the user some control?
-    ftempin = tempfile.NamedTemporaryFile(delete=False, suffix='.spc')
-    ftempout = tempfile.NamedTemporaryFile(delete=False)
+    ftempin = tempfile.NamedTemporaryFile(delete=False,
+                                          suffix='.spc',
+                                          dir=tempdir)
+    ftempout = tempfile.NamedTemporaryFile(delete=False, dir=tempdir)
     try:
         ftempin.write(spec.encode('utf8'))
         ftempin.close()
@@ -492,7 +498,7 @@ def x13_arima_select_order(endog, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
                            exog=None, log=None, outlier=True, trading=False,
                            forecast_periods=None,
                            start=None, freq=None, print_stdout=False,
-                           x12path=None, prefer_x13=True):
+                           x12path=None, prefer_x13=True, tempdir=None):
     """
     Perform automatic seasonal ARIMA order identification using x12/x13 ARIMA.
 
@@ -548,6 +554,9 @@ def x13_arima_select_order(endog, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
         environmental variable. If False, will look for x12a first and will
         fallback to the X12PATH environmental variable. If x12path points
         to the path for the X12/X13 binary, it does nothing.
+    tempdir : str
+        The path to where temporary files are created by the function.
+        If None, files are created in the default temporary file location.
 
     Returns
     -------
@@ -575,7 +584,8 @@ def x13_arima_select_order(endog, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
                                  outlier=outlier, trading=trading,
                                  forecast_periods=forecast_periods,
                                  maxorder=maxorder, maxdiff=maxdiff, diff=diff,
-                                 start=start, freq=freq, prefer_x13=prefer_x13)
+                                 start=start, freq=freq, prefer_x13=prefer_x13,
+                                 tempdir=tempdir)
     model = re.search("(?<=Final automatic model choice : ).*",
                       results.results)
     order = model.group()
