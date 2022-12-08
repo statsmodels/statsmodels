@@ -24,6 +24,7 @@ from statsmodels.tools.sm_exceptions import (
     InfeasibleTestError,
     InterpolationWarning,
     MissingDataError,
+    ValueWarning,
 )
 from statsmodels.tools.tools import Bunch, add_constant
 from statsmodels.tools.validation import (
@@ -750,8 +751,10 @@ def pacf_yw(x, nlags=None, method="adjusted"):
 
     method = string_like(method, "method", options=("adjusted", "mle"))
     pacf = [1.0]
-    for k in range(1, nlags + 1):
-        pacf.append(yule_walker(x, k, method=method)[0][-1])
+    with warnings.catch_warnings():
+        warnings.simplefilter("once", ValueWarning)
+        for k in range(1, nlags + 1):
+            pacf.append(yule_walker(x, k, method=method)[0][-1])
     return np.array(pacf)
 
 
