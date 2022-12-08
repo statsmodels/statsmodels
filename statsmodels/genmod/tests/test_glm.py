@@ -302,9 +302,7 @@ class CheckComparisonMixin:
         assert_equal(df, 1)
 
     def test_get_prediction(self):
-        with pytest.warns(DeprecationWarning):
-            # deprecation warning for linear keyword
-            pred1 = self.res1.get_prediction()  # GLM
+        pred1 = self.res1.get_prediction()  # GLM
         predd = self.resd.get_prediction()  # discrete class
         assert_allclose(predd.predicted, pred1.predicted_mean, rtol=1e-11)
         assert_allclose(predd.se, pred1.se_mean, rtol=1e-6)
@@ -364,9 +362,7 @@ class TestGlmGaussian(CheckModelResultsMixin):
         # low precision because of badly scaled exog
         assert_allclose(hess_obs1, hess_obsd, rtol=1e-8)
 
-        with pytest.warns(DeprecationWarning):
-            # deprecation warning for linear keyword
-            pred1 = res1.get_prediction()  # GLM
+        pred1 = res1.get_prediction()  # GLM
         predd = resd.get_prediction()  # discrete class
         assert_allclose(predd.predicted, pred1.predicted_mean, rtol=1e-11)
         assert_allclose(predd.se, pred1.se_mean, rtol=1e-6)
