@@ -49,7 +49,10 @@ from statsmodels.emplike.elregress import _ELRegOpts
 # need import in module instead of lazily to copy `__doc__`
 from statsmodels.regression._prediction import PredictionResults
 from statsmodels.tools.decorators import cache_readonly, cache_writable
-from statsmodels.tools.sm_exceptions import InvalidTestWarning, ValueWarning
+from statsmodels.tools.sm_exceptions import (
+    InvalidTestWarning,
+    ValueWarning,
+    )
 from statsmodels.tools.tools import pinv_extended
 from statsmodels.tools.typing import Float64Array
 from statsmodels.tools.validation import bool_like, float_like, string_like
@@ -1475,7 +1478,15 @@ def yule_walker(x, order=1, method="adjusted", df=None, inv=False,
         r[k] = (x[0:-k] * x[k:]).sum() / (n - k * adj_needed)
     R = toeplitz(r[:-1])
 
-    rho = np.linalg.solve(R, r[1:])
+    try:
+        rho = np.linalg.solve(R, r[1:])
+    except np.linalg.LinAlgError as err:
+        if 'Singular matrix' in str(err):
+            warnings.warn("Matrix is singular. Using pinv.", ValueWarning)
+            rho = np.linalg.pinv(R) @ r[1:]
+        else:
+            raise
+
     sigmasq = r[0] - (r[1:]*rho).sum()
     sigma = np.sqrt(sigmasq) if not np.isnan(sigmasq) and sigmasq > 0 else np.nan
     if inv:
