@@ -2594,7 +2594,7 @@ class Probit(BinaryModel):
     @cache_readonly
     def link(self):
         from statsmodels.genmod.families import links
-        link = links.probit()
+        link = links.Probit()
         return link
 
     def cdf(self, X):

@@ -1,10 +1,15 @@
 
+import warnings
+
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 
 from statsmodels import datasets
 from statsmodels.tools.tools import add_constant
 from statsmodels.tools.testing import Holder
+from statsmodels.tools.sm_exceptions import (
+    ConvergenceWarning,
+    )
 
 from statsmodels.distributions.discrete import (
     truncatedpoisson,
@@ -45,9 +50,12 @@ class CheckResults:
 
     def test_fit_regularized(self):
         model = self.res1.model
-
         alpha = np.ones(len(self.res1.params))
-        res_reg = model.fit_regularized(alpha=alpha*0.01, disp=0)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=ConvergenceWarning)
+            # This does not catch all Convergence warnings, why?
+            res_reg = model.fit_regularized(alpha=alpha*0.01, disp=0)
 
         assert_allclose(res_reg.params, self.res1.params,
                         rtol=1e-3, atol=5e-3)

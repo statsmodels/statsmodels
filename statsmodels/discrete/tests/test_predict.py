@@ -385,7 +385,7 @@ def test_distr(case):
     if cls_model in models_influ:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=UserWarning)
-            # ZI models warn about missint hat_matrix_diag
+            # ZI models warn about missing hat_matrix_diag
             influ = res.get_influence()
             influ.summary_frame()
 
@@ -405,7 +405,7 @@ def test_distr(case):
 
         try:
             with warnings.catch_warnings():
-                # ZI models warn about missint hat_matrix_diag
+                # ZI models warn about missing hat_matrix_diag
                 warnings.simplefilter("ignore", category=UserWarning)
                 influ.plot_influence()
         except ImportError:
