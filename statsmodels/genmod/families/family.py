@@ -14,6 +14,9 @@ import numpy as np
 from scipy import special, stats
 
 from statsmodels.compat.scipy import SP_LT_17
+from statsmodels.tools.sm_exceptions import (
+    ValueWarning,
+    )
 from . import links as L, varfuncs as V
 
 FLOAT_EPS = np.finfo(float).eps
@@ -1334,7 +1337,8 @@ class NegativeBinomial(Family):
         self.alpha = 1. * alpha  # make it at least float
         if alpha is self.__init__.__defaults__[1]:  # `is` is intentional
             warnings.warn("Negative binomial dispersion parameter alpha not "
-                          f"set. Using default value alpha={alpha}.")
+                          f"set. Using default value alpha={alpha}.",
+                          ValueWarning)
         if link is None:
             link = L.Log()
         super(NegativeBinomial, self).__init__(
