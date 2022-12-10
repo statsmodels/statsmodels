@@ -305,7 +305,7 @@ class TestGlmTweedieAwNr(CheckWeight):
                 data=data,
                 family=sm.families.Tweedie(
                     var_power=1.55,
-                    link=sm.families.links.log()
+                    link=sm.families.links.Log()
                     ),
                 var_weights=aweights
         )
@@ -326,7 +326,7 @@ class TestGlmGammaAwNr(CheckWeight):
         aweights[::5] = 5
         aweights[::13] = 3
         model = sm.GLM(endog, exog,
-                       family=sm.families.Gamma(link=sm.families.links.log()),
+                       family=sm.families.Gamma(link=sm.families.links.Log()),
                        var_weights=aweights)
         cls.res1 = model.fit(rtol=1e-25, atol=0)
         cls.res2 = res_r.results_gamma_aweights_nonrobust
@@ -355,7 +355,7 @@ class TestGlmGaussianAwNr(CheckWeight):
         model = smf.glm(
                 'EXECUTIONS ~ INCOME + SOUTH - 1',
                 data=data,
-                family=sm.families.Gaussian(link=sm.families.links.log()),
+                family=sm.families.Gaussian(link=sm.families.links.Log()),
                 var_weights=aweights
         )
         cls.res1 = model.fit(rtol=1e-25, atol=0)
@@ -432,16 +432,16 @@ def test_wtd_gradient_irls():
 
     fam = sm.families
     lnk = sm.families.links
-    families = [(fam.Binomial, [lnk.logit, lnk.probit, lnk.cloglog, lnk.log,
-                                lnk.cauchy]),
-                (fam.Poisson, [lnk.log, lnk.identity, lnk.sqrt]),
-                (fam.Gamma, [lnk.log, lnk.identity, lnk.inverse_power]),
-                (fam.Gaussian, [lnk.identity, lnk.log, lnk.inverse_power]),
-                (fam.InverseGaussian, [lnk.log, lnk.identity,
-                                       lnk.inverse_power,
-                                       lnk.inverse_squared]),
-                (fam.NegativeBinomial, [lnk.log, lnk.inverse_power,
-                                        lnk.inverse_squared, lnk.identity])]
+    families = [(fam.Binomial, [lnk.Logit, lnk.Probit, lnk.CLogLog, lnk.Log,
+                                lnk.Cauchy]),
+                (fam.Poisson, [lnk.Log, lnk.Identity, lnk.Sqrt]),
+                (fam.Gamma, [lnk.Log, lnk.Identity, lnk.InversePower]),
+                (fam.Gaussian, [lnk.Identity, lnk.Log, lnk.InversePower]),
+                (fam.InverseGaussian, [lnk.Log, lnk.Identity,
+                                       lnk.InversePower,
+                                       lnk.InverseSquared]),
+                (fam.NegativeBinomial, [lnk.Log, lnk.InversePower,
+                                        lnk.InverseSquared, lnk.Identity])]
 
     n = 100
     p = 3
@@ -456,67 +456,67 @@ def test_wtd_gradient_irls():
 
                 if family_class != fam.Binomial and binom_version == 1:
                     continue
-                elif family_class == fam.Binomial and link == lnk.cloglog:
+                elif family_class == fam.Binomial and link == lnk.CLogLog:
                     # Cannot get gradient to converage with var_weights here
                     continue
-                elif family_class == fam.Binomial and link == lnk.log:
+                elif family_class == fam.Binomial and link == lnk.Log:
                     # Cannot get gradient to converage with var_weights here
                     continue
-                elif (family_class, link) == (fam.Poisson, lnk.identity):
+                elif (family_class, link) == (fam.Poisson, lnk.Identity):
                     lin_pred = 20 + exog.sum(1)
-                elif (family_class, link) == (fam.Binomial, lnk.log):
+                elif (family_class, link) == (fam.Binomial, lnk.Log):
                     lin_pred = -1 + exog.sum(1) / 8
-                elif (family_class, link) == (fam.Poisson, lnk.sqrt):
+                elif (family_class, link) == (fam.Poisson, lnk.Sqrt):
                     lin_pred = -2 + exog.sum(1)
-                elif (family_class, link) == (fam.Gamma, lnk.log):
+                elif (family_class, link) == (fam.Gamma, lnk.Log):
                     # Cannot get gradient to converge with var_weights here
                     continue
-                elif (family_class, link) == (fam.Gamma, lnk.identity):
+                elif (family_class, link) == (fam.Gamma, lnk.Identity):
                     # Cannot get gradient to converage with var_weights here
                     continue
-                elif (family_class, link) == (fam.Gamma, lnk.inverse_power):
+                elif (family_class, link) == (fam.Gamma, lnk.InversePower):
                     # Cannot get gradient to converage with var_weights here
                     continue
-                elif (family_class, link) == (fam.Gaussian, lnk.log):
+                elif (family_class, link) == (fam.Gaussian, lnk.Log):
                     # Cannot get gradient to converage with var_weights here
                     continue
-                elif (family_class, link) == (fam.Gaussian, lnk.inverse_power):
+                elif (family_class, link) == (fam.Gaussian, lnk.InversePower):
                     # Cannot get gradient to converage with var_weights here
                     continue
-                elif (family_class, link) == (fam.InverseGaussian, lnk.log):
+                elif (family_class, link) == (fam.InverseGaussian, lnk.Log):
                     # Cannot get gradient to converage with var_weights here
                     lin_pred = -1 + exog.sum(1)
                     continue
                 elif (family_class, link) == (fam.InverseGaussian,
-                                              lnk.identity):
+                                              lnk.Identity):
                     # Cannot get gradient to converage with var_weights here
                     lin_pred = 20 + 5*exog.sum(1)
                     lin_pred = np.clip(lin_pred, 1e-4, np.inf)
                     continue
                 elif (family_class, link) == (fam.InverseGaussian,
-                                              lnk.inverse_squared):
+                                              lnk.InverseSquared):
                     lin_pred = 0.5 + exog.sum(1) / 5
                     continue  # skip due to non-convergence
                 elif (family_class, link) == (fam.InverseGaussian,
-                                              lnk.inverse_power):
+                                              lnk.InversePower):
                     lin_pred = 1 + exog.sum(1) / 5
                     method = 'newton'
                 elif (family_class, link) == (fam.NegativeBinomial,
-                                              lnk.identity):
+                                              lnk.Identity):
                     lin_pred = 20 + 5*exog.sum(1)
                     lin_pred = np.clip(lin_pred, 1e-3, np.inf)
                     method = 'newton'
                 elif (family_class, link) == (fam.NegativeBinomial,
-                                              lnk.inverse_squared):
+                                              lnk.InverseSquared):
                     lin_pred = 0.1 + np.random.uniform(size=exog.shape[0])
                     continue  # skip due to non-convergence
                 elif (family_class, link) == (fam.NegativeBinomial,
-                                              lnk.inverse_power):
+                                              lnk.InversePower):
                     # Cannot get gradient to converage with var_weights here
                     lin_pred = 1 + exog.sum(1) / 5
                     continue
 
-                elif (family_class, link) == (fam.Gaussian, lnk.inverse_power):
+                elif (family_class, link) == (fam.Gaussian, lnk.InversePower):
                     # adding skip because of convergence failure
                     skip_one = True
                 else:
@@ -601,7 +601,7 @@ class TestRepeatedvsAggregated(CheckWeight):
         beta = np.array([-1, 0.1, -0.05, .2, 0.35])
         lin_pred = (exog * beta).sum(axis=1)
         family = sm.families.Poisson
-        link = sm.families.links.log
+        link = sm.families.links.Log
         endog = gen_endog(lin_pred, family, link)
         mod1 = sm.GLM(endog, exog, family=family(link=link()))
         cls.res1 = mod1.fit()
@@ -632,7 +632,7 @@ class TestRepeatedvsAverage(CheckWeight):
         beta = np.array([-1, 0.1, -0.05, .2, 0.35])
         lin_pred = (exog * beta).sum(axis=1)
         family = sm.families.Poisson
-        link = sm.families.links.log
+        link = sm.families.links.Log
         endog = gen_endog(lin_pred, family, link)
         mod1 = sm.GLM(endog, exog, family=family(link=link()))
         cls.res1 = mod1.fit()
@@ -663,7 +663,7 @@ class TestTweedieRepeatedvsAggregated(CheckWeight):
         beta = np.array([7, 0.1, -0.05, .2, 0.35])
         lin_pred = (exog * beta).sum(axis=1)
         family = sm.families.Tweedie
-        link = sm.families.links.log
+        link = sm.families.links.Log
         endog = gen_endog(lin_pred, family, link)
         mod1 = sm.GLM(endog, exog, family=family(link=link(), var_power=1.5))
         cls.res1 = mod1.fit(rtol=1e-20, atol=0, tol_criterion='params')
@@ -695,7 +695,7 @@ class TestTweedieRepeatedvsAverage(CheckWeight):
         beta = np.array([7, 0.1, -0.05, .2, 0.35])
         lin_pred = (exog * beta).sum(axis=1)
         family = sm.families.Tweedie
-        link = sm.families.links.log
+        link = sm.families.links.Log
         endog = gen_endog(lin_pred, family, link)
         mod1 = sm.GLM(endog, exog, family=family(link=link(), var_power=1.5))
         cls.res1 = mod1.fit(rtol=1e-10, atol=0, tol_criterion='params',
@@ -728,7 +728,7 @@ class TestBinomial0RepeatedvsAverage(CheckWeight):
         beta = np.array([-1, 0.1, -0.05, .2, 0.35])
         lin_pred = (exog * beta).sum(axis=1)
         family = sm.families.Binomial
-        link = sm.families.links.logit
+        link = sm.families.links.Logit
         endog = gen_endog(lin_pred, family, link, binom_version=0)
         mod1 = sm.GLM(endog, exog, family=family(link=link()))
         cls.res1 = mod1.fit(rtol=1e-10, atol=0, tol_criterion='params',
@@ -761,7 +761,7 @@ class TestBinomial0RepeatedvsDuplicated(CheckWeight):
         beta = np.array([-1, 0.1, -0.05, .2, 0.35])
         lin_pred = (exog * beta).sum(axis=1)
         family = sm.families.Binomial
-        link = sm.families.links.logit
+        link = sm.families.links.Logit
         endog = gen_endog(lin_pred, family, link, binom_version=0)
         wt = np.random.randint(1, 5, n)
         mod1 = sm.GLM(endog, exog, family=family(link=link()), freq_weights=wt)
@@ -855,7 +855,7 @@ class TestGlmGaussianWLS(CheckWeight):
         model = smf.glm(
                 'EXECUTIONS ~ INCOME + SOUTH - 1',
                 data=data,
-                family=sm.families.Gaussian(link=sm.families.links.identity()),
+                family=sm.families.Gaussian(link=sm.families.links.Identity()),
                 var_weights=aweights
         )
         wlsmodel = smf.wls(

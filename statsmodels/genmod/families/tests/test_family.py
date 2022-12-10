@@ -11,6 +11,9 @@ from numpy.testing import assert_allclose
 from scipy import integrate
 
 from statsmodels.compat.scipy import SP_LT_17
+from statsmodels.tools.sm_exceptions import (
+    ValueWarning,
+    )
 import statsmodels.genmod.families as F
 from statsmodels.genmod.families.family import Tweedie
 import statsmodels.genmod.families.links as L
@@ -56,6 +59,8 @@ def test_invalid_family_link(family, links):
                    "Using default value alpha=1.0.")
             warnings.filterwarnings("ignore", message=msg,
                                     category=UserWarning)
+            warnings.filterwarnings("ignore",
+                                    category=FutureWarning)
             for link in invalid_links:
                 family(link())
 
@@ -66,9 +71,24 @@ def test_family_link(family, links):
         msg = ("Negative binomial dispersion parameter alpha not set. "
                "Using default value alpha=1.0.")
         warnings.filterwarnings("ignore", message=msg,
-                                category=UserWarning)
+                                category=ValueWarning)
+        warnings.filterwarnings("ignore",
+                                category=FutureWarning)
         for link in links:
             assert family(link())
+
+
+@pytest.mark.parametrize("family, links", link_cases)
+def test_family_link_check(family, links):
+    # check that we can turn of all link checks
+    class Hugo():
+        pass
+    with warnings.catch_warnings():
+        msg = ("Negative binomial dispersion parameter alpha not set. "
+               "Using default value alpha=1.0.")
+        warnings.filterwarnings("ignore", message=msg,
+                                category=ValueWarning)
+        assert family(Hugo(), check_link=False)
 
 
 @pytest.mark.skipif(SP_LT_17, reason="Scipy too old, function not available")

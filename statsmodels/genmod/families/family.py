@@ -14,6 +14,9 @@ import numpy as np
 from scipy import special, stats
 
 from statsmodels.compat.scipy import SP_LT_17
+from statsmodels.tools.sm_exceptions import (
+    ValueWarning,
+    )
 from . import links as L, varfuncs as V
 
 FLOAT_EPS = np.finfo(float).eps
@@ -59,13 +62,14 @@ class Family:
         #  <statsmodels.family.links.Power object at 0x9a4236c>]
         # for Poisson...
         self._link = link
-        if not isinstance(link, L.Link):
-            raise TypeError("The input should be a valid Link object.")
-        if hasattr(self, "links"):
-            validlink = max([isinstance(link, _) for _ in self.links])
-            if not validlink:
-                errmsg = "Invalid link for family, should be in %s. (got %s)"
-                raise ValueError(errmsg % (repr(self.links), link))
+        if self._check_link:
+            if not isinstance(link, L.Link):
+                raise TypeError("The input should be a valid Link object.")
+            if hasattr(self, "links"):
+                validlink = max([isinstance(link, _) for _ in self.links])
+                if not validlink:
+                    msg = "Invalid link for family, should be in %s. (got %s)"
+                    raise ValueError(msg % (repr(self.links), link))
 
     def _getlink(self):
         """
@@ -76,15 +80,16 @@ class Family:
     # link property for each family is a pointer to link instance
     link = property(_getlink, _setlink, doc="Link function for family")
 
-    def __init__(self, link, variance):
+    def __init__(self, link, variance, check_link=True):
+        self._check_link = check_link
         if inspect.isclass(link):
             warnmssg = (
                 "Calling Family(..) with a link class is not allowed. Use an "
                 "instance of a link class instead."
             )
             raise TypeError(warnmssg)
-        else:
-            self.link = link
+
+        self.link = link
         self.variance = variance
 
     def starting_mu(self, y):
@@ -397,10 +402,14 @@ class Poisson(Family):
     valid = [0, np.inf]
     safe_links = [L.Log, ]
 
-    def __init__(self, link=None):
+    def __init__(self, link=None, check_link=True):
         if link is None:
             link = L.Log()
-        super(Poisson, self).__init__(link=link, variance=Poisson.variance)
+        super(Poisson, self).__init__(
+            link=link,
+            variance=Poisson.variance,
+            check_link=check_link
+            )
 
     def _resid_dev(self, endog, mu):
         r"""
@@ -545,10 +554,14 @@ class Gaussian(Family):
     variance = V.constant
     safe_links = links
 
-    def __init__(self, link=None):
+    def __init__(self, link=None, check_link=True):
         if link is None:
             link = L.Identity()
-        super(Gaussian, self).__init__(link=link, variance=Gaussian.variance)
+        super(Gaussian, self).__init__(
+            link=link,
+            variance=Gaussian.variance,
+            check_link=check_link
+            )
 
     def _resid_dev(self, endog, mu):
         r"""
@@ -710,10 +723,14 @@ class Gamma(Family):
     variance = V.mu_squared
     safe_links = [L.Log, ]
 
-    def __init__(self, link=None):
+    def __init__(self, link=None, check_link=True):
         if link is None:
-            link = L.inverse_power()
-        super(Gamma, self).__init__(link=link, variance=Gamma.variance)
+            link = L.InversePower()
+        super(Gamma, self).__init__(
+            link=link,
+            variance=Gamma.variance,
+            check_link=check_link
+            )
 
     def _resid_dev(self, endog, mu):
         r"""
@@ -884,7 +901,7 @@ class Binomial(Family):
     # Other safe links, e.g. cloglog and probit are subclasses
     safe_links = [L.Logit, L.CDFLink]
 
-    def __init__(self, link=None):  # , n=1.):
+    def __init__(self, link=None, check_link=True):  # , n=1.):
         if link is None:
             link = L.Logit()
         # TODO: it *should* work for a constant n>1 actually, if freq_weights
@@ -892,8 +909,11 @@ class Binomial(Family):
         self.n = 1
         # overwritten by initialize if needed but always used to initialize
         # variance since endog is assumed/forced to be (0,1)
-        super(Binomial, self).__init__(link=link,
-                                       variance=V.Binomial(n=self.n))
+        super(Binomial, self).__init__(
+            link=link,
+            variance=V.Binomial(n=self.n),
+            check_link=check_link
+            )
 
     def starting_mu(self, y):
         r"""
@@ -1114,7 +1134,7 @@ class InverseGaussian(Family):
     link : a link instance, optional
         The default link for the inverse Gaussian family is the
         inverse squared link.
-        Available links are inverse_squared, inverse, log, and identity.
+        Available links are InverseSquared, Inverse, Log, and Identity.
         See statsmodels.genmod.families.links for more information.
 
     Attributes
@@ -1140,11 +1160,14 @@ class InverseGaussian(Family):
     variance = V.mu_cubed
     safe_links = [L.InverseSquared, L.Log, ]
 
-    def __init__(self, link=None):
+    def __init__(self, link=None, check_link=True):
         if link is None:
-            link = L.inverse_squared()
+            link = L.InverseSquared()
         super(InverseGaussian, self).__init__(
-            link=link, variance=InverseGaussian.variance)
+            link=link,
+            variance=InverseGaussian.variance,
+            check_link=check_link
+            )
 
     def _resid_dev(self, endog, mu):
         r"""
@@ -1310,15 +1333,19 @@ class NegativeBinomial(Family):
     variance = V.nbinom
     safe_links = [L.Log, ]
 
-    def __init__(self, link=None, alpha=1.):
+    def __init__(self, link=None, alpha=1., check_link=True):
         self.alpha = 1. * alpha  # make it at least float
         if alpha is self.__init__.__defaults__[1]:  # `is` is intentional
             warnings.warn("Negative binomial dispersion parameter alpha not "
-                          f"set. Using default value alpha={alpha}.")
+                          f"set. Using default value alpha={alpha}.",
+                          ValueWarning)
         if link is None:
             link = L.Log()
         super(NegativeBinomial, self).__init__(
-            link=link, variance=V.NegativeBinomial(alpha=self.alpha))
+            link=link,
+            variance=V.NegativeBinomial(alpha=self.alpha),
+            check_link=check_link
+            )
 
     def _resid_dev(self, endog, mu):
         r"""
@@ -1518,7 +1545,7 @@ class Tweedie(Family):
     variance = V.Power(power=1.5)
     safe_links = [L.Log, L.Power]
 
-    def __init__(self, link=None, var_power=1., eql=False):
+    def __init__(self, link=None, var_power=1., eql=False, check_link=True):
         self.var_power = var_power
         self.eql = eql
         if eql and (var_power < 1 or var_power > 2):
@@ -1527,7 +1554,10 @@ class Tweedie(Family):
         if link is None:
             link = L.Log()
         super(Tweedie, self).__init__(
-            link=link, variance=V.Power(power=var_power * 1.))
+            link=link,
+            variance=V.Power(power=var_power * 1.),
+            check_link=check_link
+            )
 
     def _resid_dev(self, endog, mu):
         r"""
