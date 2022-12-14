@@ -12,6 +12,7 @@ import numpy as np
 from numpy.testing import assert_allclose
 import pandas as pd
 from scipy.linalg import block_diag
+from scipy.special import expit
 import pytest
 
 from statsmodels.tools.linalg import matrix_sqrt
@@ -28,8 +29,6 @@ from statsmodels.gam.gam_cross_validation.cross_validators import KFold
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.genmod.families.family import Gaussian
 from statsmodels.genmod.generalized_linear_model import lm
-
-sigmoid = np.vectorize(lambda x: 1.0 / (1.0 + np.exp(-x)))
 
 
 def polynomial_sample_data():
@@ -218,8 +217,8 @@ def test_gam_discrete():
     lg_gam = LogitGam(y, bsplines, alpha=alpha)
     res_lg_gam = lg_gam.fit(maxiter=10000)
     y_gam = np.dot(bsplines.basis, res_lg_gam.params)
-    y_gam = sigmoid(y_gam)
-    y_mgcv = sigmoid(y_mgcv)
+    y_gam = expit(y_gam)
+    y_mgcv = expit(y_mgcv)
 
     # plt.plot(x, y_gam, label='gam')
     # plt.plot(x, y_mgcv, label='mgcv')
