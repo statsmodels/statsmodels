@@ -2317,18 +2317,14 @@ class Logit(BinaryModel):
 
         Returns
         -------
-        1/(1 + exp(-X))
+        cdf : ndarray
+            The cdf evaluated at `X`.
 
         Notes
         -----
-        In the logit model,
-
-        .. math:: \\Lambda\\left(x^{\\prime}\\beta\\right)=
-                  \\text{Prob}\\left(Y=1|x\\right)=
-                  \\frac{e^{x^{\\prime}\\beta}}{1+e^{x^{\\prime}\\beta}}
+        This function is just an alias for scipy.stats.logistic.cdf
         """
-        X = np.asarray(X)
-        return 1/(1+np.exp(-X))
+        return stats.logistic.cdf(X)
 
     def pdf(self, X):
         """
@@ -2342,17 +2338,13 @@ class Logit(BinaryModel):
         Returns
         -------
         pdf : ndarray
-            The value of the Logit probability mass function, PMF, for each
-            point of X. ``np.exp(-x)/(1+np.exp(-X))**2``
+            The pdf evaluated at `X`.
 
         Notes
         -----
-        In the logit model,
-
-        .. math:: \\lambda\\left(x^{\\prime}\\beta\\right)=\\frac{e^{-x^{\\prime}\\beta}}{\\left(1+e^{-x^{\\prime}\\beta}\\right)^{2}}
+        This function is just an alias for scipy.stats.logistic.pdf
         """
-        X = np.asarray(X)
-        return np.exp(-X)/(1+np.exp(-X))**2
+        return stats.logistic.pdf(X)
 
     @cache_readonly
     def family(self):
@@ -2599,12 +2591,12 @@ class Probit(BinaryModel):
 
     def cdf(self, X):
         """
-        Probit (Normal) cumulative distribution function
+        The probit (normal) cumulative distribution function
 
         Parameters
         ----------
         X : array_like
-            The linear predictor of the model (XB).
+            `X` is the linear predictor of the probit model.  See notes.
 
         Returns
         -------
@@ -2615,29 +2607,27 @@ class Probit(BinaryModel):
         -----
         This function is just an alias for scipy.stats.norm.cdf
         """
-        return stats.norm._cdf(X)
+        return stats.norm.cdf(X)
 
     def pdf(self, X):
         """
-        Probit (Normal) probability density function
+        The probit (normal) probability density function
 
         Parameters
         ----------
         X : array_like
-            The linear predictor of the model (XB).
+            `X` is the linear predictor of the probit model.  See notes.
 
         Returns
         -------
         pdf : ndarray
-            The value of the normal density function for each point of X.
+            The pdf evaluated at `X`.
 
         Notes
         -----
         This function is just an alias for scipy.stats.norm.pdf
         """
-        X = np.asarray(X)
-        return stats.norm._pdf(X)
-
+        return stats.norm.pdf(X)
 
     def loglike(self, params):
         """
