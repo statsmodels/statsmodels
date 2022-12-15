@@ -54,7 +54,7 @@ from statsmodels.tools.tools import pinv_extended
 from statsmodels.tools.typing import Float64Array
 from statsmodels.tools.validation import bool_like, float_like, string_like
 
-from wildboottest import wildboottest
+from wildboottest.wildboottest import wildboottest
 
 from . import _prediction as pred
 
@@ -2658,12 +2658,20 @@ class RegressionResults(base.LikelihoodModelResults):
                 use_correction=use_correction)
             res.cov_kwds['description'] = descriptions['HAC-Groupsum']
         elif cov_type.lower() == 'wildclusterbootstrap':
+            
+            required_cov_params = ['cluster', 'B', 'weights_type', 'impose_null', 'bootstrap_type', 'seed']
+            
+            if not all(i in kwargs for i in required_cov_params):
+                raise KeyError(f"{', '.join(required_cov_params)} in cov_params must be specified.")
+            
             cluster = kwargs['cluster']
             B = kwargs['B']
             weights_type = kwargs['weights_type']
             impose_null = kwargs['impose_null']
             bootstrap_type = kwargs['bootstrap_type']
             seed = kwargs['seed']
+            use_correction = kwargs.get('use_correction', True)
+            use_cluster_correction = kwargs.get("use_cluster_correction", True)
             res.cov_kwds['description'] = \
                 descriptions['wildclusterbootstrap'].format(
                     bootstrap_type = bootstrap_type,
@@ -2671,15 +2679,21 @@ class RegressionResults(base.LikelihoodModelResults):
                 )
 
             
-            res.pvalues_wcb, res.tvalues_wcb = wildboottest(
+            wcb = wildboottest(
                 model = res.model,
                 cluster=cluster,
                 B=B,
                 weights_type=weights_type,
                 impose_null=impose_null,
                 bootstrap_type=bootstrap_type,
-                seed=seed
+                seed=seed,
+                adj = use_correction,
+                cluster_adj = use_cluster_correction,
+                show=False
             )
+            
+            res.pvalues_wcb = wcb['p-value'].values
+            res.tvalues_wcb = wcb['statistic'].values
                         
             beta_k = res.model.exog.shape[1]
             res.cov_params_default = np.full((beta_k, beta_k),  np.nan)
@@ -2825,9 +2839,9 @@ class RegressionResults(base.LikelihoodModelResults):
         
         if self.cov_type == 'wildclusterbootstrap':
             # results, params, std_err, tvalues, pvalues, conf_int = results
-            res = self, self.params, self.bse, self.tvalues_wcb, self.pvalues_wcb, self.conf_int(0.05)
+            res = self, self.params, self.bse, self.tvalues_wcb, self.pvalues_wcb, self.conf_int(alpha)
             smry.add_table_params(res, yname=yname, xname=xname, alpha=alpha,
-                        use_t=self.use_t)
+                        use_t=True)
         else:
             smry.add_table_params(self, yname=yname, xname=xname, alpha=alpha,
                                 use_t=self.use_t)
