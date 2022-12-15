@@ -717,6 +717,42 @@ class TestOLSRobustCluster2G(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
             0.35  # only f_pvalue and confint for constant differ >rtol=0.05
         )
         self.rtolh = 1e-10
+        
+class TestOLSWildClusterBootstrap(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
+    # compare with `reg cluster`
+
+    def setup(self):
+        res_ols = self.res1.get_robustcov_results(
+            "wildclusterbootstrap",
+            cluster=self.groups,
+            B = 1000,
+            weights_type='rademacher',
+            impose_null=True,
+            bootstrap_type='11',
+            seed= 123123
+        )
+        
+        self.res3 = self.res1
+        self.res1 = res_ols
+        self.bse_robust = res_ols.bse
+        self.cov_robust = res_ols.cov_params()
+        cov1 = sw.cov_cluster(self.res1, self.groups, use_correction=True)
+        se1 = sw.se_cov(cov1)
+        self.bse_robust2 = se1
+        self.cov_robust2 = cov1
+        self.small = True
+        self.res2 = res2.results_cluster
+
+        self.rtol = 1e-6
+        self.rtolh = 1e-10
+        
+    def test_basic(self):
+        res1 = self.res1
+        res2 = self.res2
+        rtol = getattr(self, "rtol", 1e-10)
+        assert_allclose(res1.params, res2.params, rtol=rtol)
+        # assert_allclose(self.bse_robust, res2.bse, rtol=rtol)
+        # assert_allclose(self.cov_robust, res2.cov, rtol=rtol)
 
 
 class TestOLSRobustCluster2GLarge(
