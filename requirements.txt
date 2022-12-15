@@ -6,3 +6,4 @@ scipy>=1.4,!=1.9.2; sys_platform == "win32"  # Blacklist 1.9.2 due to Windows is
 pandas>=1.0  # released January 2020
 patsy>=0.5.2  # released January 2018
 packaging>=21.3  # released Nov 2021
+wildboottest>=0.1.6 # released Dec 2022

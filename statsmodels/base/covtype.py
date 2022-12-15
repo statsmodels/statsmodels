@@ -42,6 +42,7 @@ descriptions = {
     'robust-approx': 'Quasi-maximum likelihood covariance matrix used for '
                      'robustness to some misspecifications; calculated using '
                      'numerical ({approx_type}) differentiation.',
+    'wildclusterbootstrap' : 'Wild Cluster Bootstrap assuming {bootstrap_type} bootstrap_type and {weights_type} weight type.'
 }
 
 
