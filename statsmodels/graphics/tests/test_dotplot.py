@@ -16,6 +16,7 @@ except ImportError:
 def close_or_save(pdf, fig):
     if pdf_output:
         pdf.savefig(fig)
+    plt.close(fig)
 
 
 @pytest.mark.matplotlib

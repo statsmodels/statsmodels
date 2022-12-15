@@ -111,21 +111,20 @@ class CheckGrouping:
         names = self.data.index.names
         transformed_slices = self.grouping.transform_slices(
                                             self.data.values,
-                                            lambda x, idx : x.mean(0),
+                                            lambda x, idx : x.mean(0),  # noqa
                                             level=0)
-        expected = self.data.reset_index().groupby(names[0]).mean()[
-                                                    self.data.columns]
+        expected = self.data.reset_index().groupby(
+            names[0])[self.data.columns].mean()
         np.testing.assert_allclose(transformed_slices, expected.values,
                                    rtol=1e-12, atol=1e-25)
 
         if len(names) > 1:
             transformed_slices = self.grouping.transform_slices(
                                             self.data.values,
-                                            lambda x, idx : x.mean(0),
+                                            lambda x, idx : x.mean(0),  # noqa
                                             level=1)
-            expected = self.data.reset_index().groupby(names[1]
-                                                       ).mean(numeric_only=False)[
-                                                        self.data.columns]
+            expected = self.data.reset_index().groupby(
+                names[1])[self.data.columns].mean()
             np.testing.assert_allclose(transformed_slices, expected.values,
                                        rtol=1e-12, atol=1e-25)
 

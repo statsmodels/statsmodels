@@ -170,7 +170,7 @@ class _ConditionalModel(base.LikelihoodModel):
         from statsmodels.base.elastic_net import fit_elasticnet
 
         if method != "elastic_net":
-            raise ValueError("method for fit_regularied must be elastic_net")
+            raise ValueError("method for fit_regularized must be elastic_net")
 
         defaults = {"maxiter": 50, "L1_wt": 1, "cnvrg_tol": 1e-10,
                     "zero_tol": 1e-10}

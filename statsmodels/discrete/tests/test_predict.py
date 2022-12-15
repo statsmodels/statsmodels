@@ -153,7 +153,7 @@ class CheckPredict():
         dia = res1.get_diagnostic(y_max=21)
         res_chi2 = dia.test_chisquare_prob(bin_edges=np.arange(4))
         assert_equal(res_chi2.diff1.shape[1], 3)
-        assert_equal(dia.probs_predicted.shape[1], 21)
+        assert_equal(dia.probs_predicted.shape[1], 22)
 
         try:
             dia.plot_probs(upp_xlim=20)
@@ -385,7 +385,7 @@ def test_distr(case):
     if cls_model in models_influ:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=UserWarning)
-            # ZI models warn about missint hat_matrix_diag
+            # ZI models warn about missing hat_matrix_diag
             influ = res.get_influence()
             influ.summary_frame()
 
@@ -405,7 +405,7 @@ def test_distr(case):
 
         try:
             with warnings.catch_warnings():
-                # ZI models warn about missint hat_matrix_diag
+                # ZI models warn about missing hat_matrix_diag
                 warnings.simplefilter("ignore", category=UserWarning)
                 influ.plot_influence()
         except ImportError:

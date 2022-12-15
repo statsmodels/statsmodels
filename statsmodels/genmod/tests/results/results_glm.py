@@ -708,7 +708,8 @@ class Lbw:
                                 "stata_lbw_glm.csv")
 
         data = pd.read_csv(filename)
-        dummies = pd.get_dummies(data.race, prefix="race", drop_first=False)
+        dummies = pd.get_dummies(data.race, prefix="race", drop_first=False,
+                                 dtype=float)
         data = pd.concat([data, dummies], axis=1)
         self.endog = data.low
         design = data[["age", "lwt", "race_black", "race_other", "smoke",
@@ -2231,7 +2232,8 @@ class Medpar1:
                                 "stata_medpar1_glm.csv")
         data = pd.read_csv(filename).to_records()
         self.endog = data.los
-        dummies = pd.get_dummies(data.admitype, prefix="race", drop_first=True)
+        dummies = pd.get_dummies(data.admitype, prefix="race", drop_first=True,
+                                 dtype=float)
         design = np.column_stack((data.codes, dummies)).astype(float)
         self.exog = add_constant(design, prepend=False)
 

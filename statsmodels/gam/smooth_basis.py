@@ -402,7 +402,7 @@ class UnivariateBSplines(UnivariateGamSmoother):
     x : ndarray, 1-D
         underlying explanatory variable for smooth terms.
     df : int
-        numer of basis functions or degrees of freedom
+        number of basis functions or degrees of freedom
     degree : int
         degree of the spline
     include_intercept : bool

@@ -456,7 +456,6 @@ def get_prediction_glm(self, exog=None, transform=True,
     if pred_kwds is None:
         pred_kwds = {}
 
-    pred_kwds['linear'] = False
     predicted_mean = self.model.predict(self.params, exog, **pred_kwds)
 
     covb = self.cov_params()
@@ -775,6 +774,13 @@ def get_prediction(self, exog=None, transform=True, which="mean",
         # TODO: add link or ilink to all link based models (except zi
         link = getattr(self.model, "link", None)
         if link is None:
+            # GLM
+            if hasattr(self.model, "family"):
+                link = getattr(self.model.family, "link", None)
+        if link is None:
+            # defaulting to log link for count models
+            import warnings
+            warnings.warn("using default log-link in get_prediction")
             from statsmodels.genmod.families import links
             link = links.Log()
         res = get_prediction_monotonic(

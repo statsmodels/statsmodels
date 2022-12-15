@@ -180,20 +180,16 @@ available link functions can be obtained by
    CDFLink
    CLogLog
    LogLog
+   LogC
    Log
    Logit
    NegativeBinomial
    Power
-   cauchy
-   cloglog
-   loglog
-   identity
-   inverse_power
-   inverse_squared
-   log
-   logit
-   nbinom
-   probit
+   Cauchy
+   Identity
+   InversePower
+   InverseSquared
+   Probit
 
 .. _varfuncs:
 

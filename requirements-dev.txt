@@ -1,6 +1,6 @@
 # build
 cython>=0.29.28,<3.0.0
-setuptools_scm[toml]>=6.4.2,<7.0.0
+setuptools_scm[toml]~=7.0.0
 oldest-supported-numpy>=2022.4.18
 
 # run
@@ -21,19 +21,3 @@ pywinpty; os_name == "nt"
 # code quality
 flake8
 isort
-
-# doc
-sphinx
-sphinx-material
-jupyter
-notebook
-nbsphinx
-nbconvert
-pyyaml
-pandas-datareader
-simplegeneric
-seaborn
-numpydoc
-theano-pymc; os_name != "nt"
-pymc3; os_name != "nt"
-arviz; os_name != "nt"

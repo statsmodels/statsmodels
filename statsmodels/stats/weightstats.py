@@ -433,6 +433,8 @@ class DescrStatsW:
             pvalue = stats.t.sf(tstat, dof)
         elif alternative == "smaller":
             pvalue = stats.t.cdf(tstat, dof)
+        else:
+            raise ValueError("alternative not recognized")
 
         return tstat, pvalue, dof
 

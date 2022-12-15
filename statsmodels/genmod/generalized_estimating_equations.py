@@ -2985,7 +2985,7 @@ class _Multinomial(families.Family):
     variance = varfuncs.binary
     safe_links = [_MultinomialLogit, ]
 
-    def __init__(self, nlevels):
+    def __init__(self, nlevels, check_link=True):
         """
         Parameters
         ----------
@@ -2993,6 +2993,7 @@ class _Multinomial(families.Family):
             The number of distinct categories for the multinomial
             distribution.
         """
+        self._check_link = check_link
         self.initialize(nlevels)
 
     def initialize(self, nlevels):

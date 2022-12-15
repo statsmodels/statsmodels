@@ -42,8 +42,9 @@ from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.numdiff import approx_fprime_cs
 from statsmodels.tools.sm_exceptions import (
     PerfectSeparationError,
+    PerfectSeparationWarning,
     SpecificationWarning,
-)
+    )
 
 
 try:
@@ -180,7 +181,7 @@ class DiscreteModel(base.LikelihoodModel):
     def __init__(self, endog, exog, check_rank=True, **kwargs):
         self._check_rank = check_rank
         super().__init__(endog, exog, **kwargs)
-        self.raise_on_perfect_prediction = True
+        self.raise_on_perfect_prediction = False  # keep for backwards compat
         self.k_extra = 0
 
     def initialize(self):
@@ -213,10 +214,15 @@ class DiscreteModel(base.LikelihoodModel):
     def _check_perfect_pred(self, params, *args):
         endog = self.endog
         fittedvalues = self.cdf(np.dot(self.exog, params[:self.exog.shape[1]]))
-        if (self.raise_on_perfect_prediction and
-                np.allclose(fittedvalues - endog, 0)):
-            msg = "Perfect separation detected, results not available"
-            raise PerfectSeparationError(msg)
+        if np.allclose(fittedvalues - endog, 0):
+            if self.raise_on_perfect_prediction:
+                # backwards compatibility for attr raise_on_perfect_prediction
+                msg = "Perfect separation detected, results not available"
+                raise PerfectSeparationError(msg)
+            else:
+                msg = ("Perfect separation or prediction detected, "
+                       "parameter may not be identified")
+                warnings.warn(msg, category=PerfectSeparationWarning)
 
     @Appender(base.LikelihoodModel.fit.__doc__)
     def fit(self, start_params=None, method='newton', maxiter=35,
@@ -984,6 +990,8 @@ class CountModel(DiscreteModel):
             - 'mean' returns the conditional expectation of endog E(y | x),
               i.e. exp of linear predictor.
             - 'linear' returns the linear predictor of the mean function.
+            - 'var' variance of endog implied by the likelihood model
+            - 'prob' predicted probabilities for counts.
 
         linear : bool
             The ``linear` keyword is deprecated and will be removed,
@@ -2586,7 +2594,7 @@ class Probit(BinaryModel):
     @cache_readonly
     def link(self):
         from statsmodels.genmod.families import links
-        link = links.probit()
+        link = links.Probit()
         return link
 
     def cdf(self, X):
@@ -4547,15 +4555,15 @@ class DiscreteResults(base.LikelihoodModelResults):
             One of 'aic', 'bic', 'tic' or 'gbic'.
         dk_params : int or float
             Correction to the number of parameters used in the information
-            criterion. By default, only mean parameters are included, the
-            scale parameter is not included in the parameter count.
-            Use ``dk_params=1`` to include scale in the parameter count.
+            criterion.
 
-        Returns the given information criterion value.
+        Returns
+        -------
+        Value of information criterion.
 
         Notes
         -----
-        Tic and bbic
+        Tic and gbic
 
         References
         ----------
@@ -5154,7 +5162,7 @@ class BinaryResults(DiscreteResults):
         etext = []
         if predclose_sum == len(fittedvalues):  # TODO: nobs?
             wstr = "Complete Separation: The results show that there is"
-            wstr += "complete separation.\n"
+            wstr += "complete separation or perfect prediction.\n"
             wstr += "In this case the Maximum Likelihood Estimator does "
             wstr += "not exist and the parameters\n"
             wstr += "are not identified."

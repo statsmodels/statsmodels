@@ -60,6 +60,7 @@ class TLinearModel(GenericLikelihoodModel):
     '''
 
     def initialize(self):
+        print("running Tmodel initialize")
         # TODO: here or in __init__
         self.k_vars = self.exog.shape[1]
         if not hasattr(self, 'fix_df'):
@@ -80,10 +81,14 @@ class TLinearModel(GenericLikelihoodModel):
             self.fixed_paramsmask = np.isnan(fixdf)
             extra_params_names = ['scale']
 
+        super(TLinearModel, self).initialize()
+
+        # Note: this needs to be after super initialize
+        # super initialize sets default df_resid,
+        #_set_extra_params_names adjusts it
         self._set_extra_params_names(extra_params_names)
         self._set_start_params()
 
-        super(TLinearModel, self).initialize()
 
     def _set_start_params(self, start_params=None, use_kurtosis=False):
         if start_params is not None:

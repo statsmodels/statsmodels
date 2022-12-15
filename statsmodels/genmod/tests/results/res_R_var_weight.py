@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import os
 
+from statsmodels.compat.scipy import SP_LT_17
 from statsmodels.tools.tools import Bunch
 
 path = os.path.abspath(__file__)
@@ -18,7 +19,10 @@ res['bse'] = np.array([
     0.25438368514036091561, 0.011629899831763365614, 0.011034604276375996681
 ])
 res['deviance'] = 45399.238887
-res['ll'] = np.nan
+if SP_LT_17:
+    res['ll'] = np.nan
+else:
+    res['ll'] = -8669.17968  # regression number, not from R
 res['resids_colnames'] = [
     'resid_response', 'resid_pearson', 'resid_deviance', 'resid_working']
 csv_path = os.path.join(dir_path, 'results_tweedie_aweights_nonrobust.csv')

@@ -1,3 +1,5 @@
+# Workaround for scipy build requirement
+numpy>=1.22.3; python_version=="3.10" and platform_system=="Windows" and platform_python_implementation != "PyPy"
 numpy >=1.18  # released December 2019
 scipy>=1.4,!=1.9.2  # released December 2019
 scipy>=1.4,!=1.9.2; sys_platform == "win32"  # Blacklist 1.9.2 due to Windows issues

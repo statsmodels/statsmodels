@@ -158,8 +158,8 @@ class OrderedModel(GenericLikelihoodModel):
 
         # adjust df
         self.k_extra = self.k_levels - 1
-        self.df_model = self.k_vars + self.k_extra
-        self.df_resid = self.nobs - self.df_model
+        self.df_model = self.k_vars
+        self.df_resid = self.nobs - (self.k_vars + self.k_extra)
 
         self.results_class = OrderedResults
 

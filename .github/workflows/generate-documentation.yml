@@ -52,7 +52,7 @@ jobs:
     - name: Install graphviz
       uses: ts-graphviz/setup-graphviz@v1
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
         cache: "pip"
@@ -61,9 +61,10 @@ jobs:
         python -m pip install --upgrade pip wheel setuptools
         python -m pip install -r requirements.txt
         python -m pip install -r requirements-dev.txt
+        python -m pip install -r requirements-doc.txt
         python -m pip list
     - name: Install statsmodels
-      run: python -m pip install -e . --no-build-isolation -v
+      run: python -m pip install . -vv
     - name: Build documentation
       run: |
         pushd docs

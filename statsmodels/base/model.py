@@ -859,6 +859,10 @@ class GenericLikelihoodModel(LikelihoodModel):
             else:
                 self.data.xnames = extra_params_names
 
+            self.k_extra = len(extra_params_names)
+            if hasattr(self, "df_resid"):
+                self.df_resid -= self.k_extra
+
         self.nparams = len(self.exog_names)
 
     # this is redundant and not used when subclassing
@@ -2381,6 +2385,7 @@ class ResultMixin:
         """Model WC"""
         # collect different ways of defining the number of parameters, used for
         # aic, bic
+        k_extra = getattr(self.model, "k_extra", 0)
         if hasattr(self, 'df_model'):
             if hasattr(self, 'k_constant'):
                 hasconst = self.k_constant
@@ -2389,7 +2394,7 @@ class ResultMixin:
             else:
                 # default assumption
                 hasconst = 1
-            return self.df_model + hasconst
+            return self.df_model + hasconst + k_extra
         else:
             return self.params.size
 
@@ -2710,17 +2715,19 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
 
         # TODO: possibly move to model.fit()
         #       and outsource together with patching names
-        if hasattr(model, 'df_model'):
+        k_extra = getattr(self.model, "k_extra", 0)
+        if hasattr(model, 'df_model') and not np.isnan(model.df_model):
             self.df_model = model.df_model
         else:
-            self.df_model = len(mlefit.params)
+            df_model = len(mlefit.params) - self.model.k_constant - k_extra
+            self.df_model = df_model
             # retrofitting the model, used in t_test TODO: check design
-            self.model.df_model = self.df_model
+            self.model.df_model = df_model
 
-        if hasattr(model, 'df_resid'):
+        if hasattr(model, 'df_resid') and not np.isnan(model.df_resid):
             self.df_resid = model.df_resid
         else:
-            self.df_resid = self.endog.shape[0] - self.df_model
+            self.df_resid = self.endog.shape[0] - self.df_model - k_extra
             # retrofitting the model, used in t_test TODO: check design
             self.model.df_resid = self.df_resid
 
@@ -2729,10 +2736,13 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
 
         k_params = len(mlefit.params)
         # checks mainly for adding new models or subclassing
-        if self.df_model + self.model.k_constant != k_params:
-            warnings.warn("df_model + k_constant differs from nparams")
+
+        if self.df_model + self.model.k_constant + k_extra != k_params:
+            warnings.warn("df_model + k_constant + k_extra "
+                          "differs from k_params")
+
         if self.df_resid != self.nobs - k_params:
-            warnings.warn("df_resid differs from nobs - nparams")
+            warnings.warn("df_resid differs from nobs - k_params")
 
     def get_prediction(
             self,

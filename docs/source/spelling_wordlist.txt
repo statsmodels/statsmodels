@@ -2459,7 +2459,6 @@ wo
 worN
 wresid
 wts
-wusing
 www
 xdist
 xfail

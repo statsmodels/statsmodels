@@ -144,9 +144,9 @@ def powerdiscrepancy(observed, expected, lambd=0.0, axis=0, ddof=0):
             if axis == 0:
                 e = e.T
 
-    if np.all(np.sum(e, axis=axis) == n):
+    if np.allclose(np.sum(e, axis=axis), n, rtol=1e-8, atol=0):
         p = e/(1.0*nt)
-    elif np.all(np.sum(e, axis=axis) == 1):
+    elif np.allclose(np.sum(e, axis=axis), 1, rtol=1e-8, atol=0):
         p = e
         e = nt * e
     else:
