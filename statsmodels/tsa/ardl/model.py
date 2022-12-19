@@ -278,6 +278,12 @@ class ARDL(AutoReg):
     statsmodels.tsa.arima.model.ARIMA
         ARIMA model estimation
 
+    Notes
+    -----
+    See the notebook `Autoregressive Distributed Lag Models
+    <../examples/notebooks/generated/autoregressive_distributed_lag.html>`__
+    for an overview.
+
     Examples
     --------
     >>> from statsmodels.tsa.api import ARDL
