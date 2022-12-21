@@ -232,7 +232,7 @@ def t_est_mixedlm():
     outcome_model = sm.MixedLM.from_formula("y ~ med + x", groups="id", data=df)
     me = Mediation(outcome_model, mediator_model, "x", "med")
     np.random.seed(383628)
-    mr = me.fit(n_rep=2)
+    mr = me.fit(n_rep=100)
     st = mr.summary()
 
     # check model results unchanged, regression numbers
@@ -258,10 +258,10 @@ def t_est_mixedlm():
         ])
 
     assert_allclose(st.to_numpy(), res_summ, rtol=0.15)
-    assert_allclose(st.iloc[-1, 0], 0.52, rtol=1e-2, atol=1e-2)
+    assert_allclose(st.iloc[-1, 0], 0.56, rtol=1e-2, atol=1e-2)
 
     pm = st.loc["Prop. mediated (average)", "Estimate"]
-    assert_allclose(pm, 0.52, rtol=1e-2, atol=1e-2)
+    assert_allclose(pm, 0.56, rtol=1e-2, atol=1e-2)
 
 
 def test_surv():
