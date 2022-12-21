@@ -228,7 +228,9 @@ class TestWLSPrediction:
         from statsmodels.genmod.families import links
 
         # with identity transform
-        pt = params_transform_univariate(res_glm.params, res_glm.cov_params(), link=links.identity())
+        pt = params_transform_univariate(
+            res_glm.params, res_glm.cov_params(), link=links.Identity()
+        )
 
         assert_allclose(pt.tvalues, res_glm.tvalues, rtol=1e-13)
         assert_allclose(pt.se_mean, res_glm.bse, rtol=1e-13)

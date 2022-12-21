@@ -172,7 +172,7 @@ class CasesCDFLink():
         (links.CDFLink(dbn=stats.logistic), links.Logit()),
         (links.CDFLink(dbn=stats.t(1)), links.Cauchy()),
         # approximation of t by normal is not good enough for rtol, atol
-        # (links.CDFLink(dbn=stats.t(1000000)), links.probit()),
+        # (links.CDFLink(dbn=stats.t(1000000)), links.Probit()),
 
         (MyCLogLog(), links.CLogLog()),  # not a cdflink, but compares
         ]

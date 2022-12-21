@@ -837,7 +837,7 @@ def params_transform_univariate(params, cov_params, link=None, transform=None,
     # TODO: need ci for linear prediction, method of `lin_pred
     linpred = PredictionResultsMean(
         params, np.diag(cov_params), dist=dist,
-        row_labels=row_labels, link=links.identity())
+        row_labels=row_labels, link=links.Identity())
 
     res = PredictionResultsMean(
         predicted_mean, var_pred_mean, dist=dist,

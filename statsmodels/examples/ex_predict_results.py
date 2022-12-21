@@ -85,7 +85,7 @@ assert_allclose(rates.summary_frame().values, rates2, rtol=1e-13)
 
 
 # with identity transform
-pt = params_transform_univariate(res_glm.params, res_glm.cov_params(), link=links.identity())
+pt = params_transform_univariate(res_glm.params, res_glm.cov_params(), link=links.Identity())
 print(pt.tvalues)
 
 assert_allclose(pt.tvalues, res_glm.tvalues, rtol=1e-13)
