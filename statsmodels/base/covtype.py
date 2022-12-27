@@ -20,7 +20,8 @@ descriptions = {
            'robust (HAC) using {maxlags} lags and '
            '{correction} small sample correction',
     'fixed_scale': 'Standard Errors are based on fixed scale',
-    'cluster': 'Standard Errors are robust to cluster correlation (cluster)',
+    'cluster': 'Standard Errors are robust to cluster correlation (CRV1)',
+    'cluster-jackknife': 'Standard Errors are robust to cluster correlation (CRV3)',
     'HAC-Panel': 'Standard Errors are robust to '
                  'cluster correlation (HAC-Panel)',
     'HAC-Groupsum': 'Driscoll and Kraay Standard Errors are robust to '
@@ -119,7 +120,7 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
       ``use_correction``: bool, optional
         If true, use small sample correction
 
-    - 'cluster': clustered covariance estimator
+    - 'cluster': clustered covariance estimator (CRV1)
 
       ``groups`` : array_like[int], required :
         Integer-valued index of clusters or groups.
@@ -144,7 +145,33 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
         small.
         If False, then `df_resid` of the results instance is not
         adjusted.
+        
+        
+    - 'cluster-jackknife': clustered covariance estimator (CRV3)
 
+      ``groups`` : array_like[int], required :
+        Integer-valued index of clusters or groups.
+
+      ``use_correction``: bool, optional
+        If True the sandwich covariance is calculated with a small
+        sample correction.
+        If False the sandwich covariance is calculated without
+        small sample correction.
+
+      ``df_correction``: bool, optional
+        If True (default), then the degrees of freedom for the
+        inferential statistics and hypothesis tests, such as
+        pvalues, f_pvalue, conf_int, and t_test and f_test, are
+        based on the number of groups minus one instead of the
+        total number of observations minus the number of explanatory
+        variables. `df_resid` of the results instance is also
+        adjusted. When `use_t` is also True, then pvalues are
+        computed using the Student's t distribution using the
+        corrected values. These may differ substantially from
+        p-values based on the normal is the number of groups is
+        small.
+        If False, then `df_resid` of the results instance is not
+        adjusted.
 
     - 'hac-groupsum': Driscoll and Kraay, heteroscedasticity and
       autocorrelation robust covariance for panel data

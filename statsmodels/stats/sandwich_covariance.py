@@ -94,6 +94,9 @@ Sets: Comparing Approaches,” Review of Financial Studies 22, no. 1
 With Multiway Clustering,” Journal of Business and Economic Statistics 29
 (April 2011): 238-249.
 
+[5] MacKinnon, Nielsen & Webb, "Fast and Reliable Jackknife and Bootstrap Methods
+    for Cluster-Robust Inference", Queens University Working Paper No. 1485 (October 2022)
+
 
 not used yet:
 A.C. Cameron, J.B. Gelbach, and D.L. Miller, “Bootstrap-based improvements
@@ -313,6 +316,65 @@ def _HCCM2(hessian_inv, scale):
     H = np.dot(np.dot(xxi, scale), xxi.T)
     return H
 
+def _cluster_jackknife(results, group, clusters, k_params, n_groups):
+
+    '''
+    Computes CRV3 Variance-Covariance Matrix Via a Cluster Jackknife. 
+    For reference, see "Fast and Reliable Jackknife and Bootstrap
+    Methods for Cluster-Robust Inference", MacKinnon, Nielsen & Webb, Queens 
+    University Working Paper No. 1485
+
+    Parameters
+    ----------
+    results : result instance
+        need to contain regression results, uses ...
+    group : pd.Series
+        pd.Series containing the clustering variable
+    clusters : 
+        unique clusters
+    k_params : int
+        number of model coefficients
+    n_groups: int
+        the number of clusters 
+
+    Returns
+    -------
+    H : ndarray (k_vars, k_vars)
+        cluster jackknife estimate of a robust covariance matrix for the parameter estimates
+    '''
+
+    X = results.model.wexog
+    Y = results.model.wendog
+
+    beta_jack = np.zeros((n_groups, k_params))
+    # inverse hessian precomputed?
+    tXX = np.transpose(X) @ X
+    tXy = np.transpose(X) @ Y
+    beta_hat = results.params
+    #beta_hat = np.linalg.inv(tXX) @ tXy
+
+    # compute leave-one-out regression coefficients (aka clusterjacks')        
+    for ixg, g in enumerate(clusters):
+              
+        Xg = X[np.where(group == g)]
+        Yg = Y[np.where(group == g)]
+        tXgXg = np.transpose(Xg) @ Xg
+        # jackknife regression coefficient
+        beta_jack[ixg,:] = (
+            np.linalg.pinv(tXX - tXgXg) @ (tXy - np.transpose(Xg) @ Yg)
+        ).flatten()
+              
+    
+    # optional: beta_bar in MNW (2022)
+    beta_center = beta_hat       
+    H = np.zeros((k_params, k_params))
+    for ixg, g in enumerate(clusters):
+        beta_centered = beta_jack[ixg,:] - beta_center
+        H += np.outer(beta_centered, beta_centered)
+            
+    return H 
+
+
 #TODO: other kernels, move ?
 def weights_bartlett(nlags):
     '''Bartlett weights for HAC
@@ -496,7 +558,7 @@ def cov_crosssection_0(results, group):
     cov = _HCCM1(results, scale)
     return cov
 
-def cov_cluster(results, group, use_correction=True):
+def cov_cluster(results, group, use_correction=True, jackknife=False):
     '''cluster robust covariance matrix
 
     Calculates sandwich covariance matrix for a single cluster, i.e. grouped
@@ -507,8 +569,14 @@ def cov_cluster(results, group, use_correction=True):
     results : result instance
        result of a regression, uses results.model.exog and results.resid
        TODO: this should use wexog instead
+    group : array_like[int] :
+        Integer-valued index of clusters or groups.
     use_correction : bool
        If true (default), then the small sample correction factor is used.
+    jackknife : bool
+       If false (default), computes a CRV1 cluster robust variance covariance matrix. 
+       If true, runs the cluster jackknife to compute a CRV3 robust variance covariance matrix. 
+
 
     Returns
     -------
@@ -533,15 +601,22 @@ def cov_cluster(results, group, use_correction=True):
     nobs, k_params = xu.shape
     n_groups = len(clusters) #replace with stored group attributes if available
 
-    cov_c = _HCCM2(hessian_inv, scale)
+    if jackknife == False:
+        cov_c = _HCCM2(hessian_inv, scale)
 
-    if use_correction:
-        cov_c *= (n_groups / (n_groups - 1.) *
-                  ((nobs-1.) / float(nobs - k_params)))
+        if use_correction:
+            cov_c *= (n_groups / (n_groups - 1.) *
+                    ((nobs-1.) / float(nobs - k_params)))
+
+    else: 
+        cov_c = _cluster_jackknife(results, group, clusters, k_params, n_groups)
+
+        if use_correction: 
+            cov_c *= (n_groups / (n_groups - 1.))
 
     return cov_c
 
-def cov_cluster_2groups(results, group, group2=None, use_correction=True):
+def cov_cluster_2groups(results, group, group2=None, use_correction=True, jackknife = False):
     '''cluster robust covariance matrix for two groups/clusters
 
     Parameters
@@ -551,6 +626,10 @@ def cov_cluster_2groups(results, group, group2=None, use_correction=True):
        TODO: this should use wexog instead
     use_correction : bool
        If true (default), then the small sample correction factor is used.
+    jackknife : bool
+       If false (default), computes a CRV1 cluster robust variance covariance matrix. 
+       If true, runs the cluster jackknife to compute a CRV3 robust variance covariance matrix. 
+
 
     Returns
     -------
@@ -582,14 +661,15 @@ def cov_cluster_2groups(results, group, group2=None, use_correction=True):
         group = (group0, group1)
 
 
-    cov0 = cov_cluster(results, group0, use_correction=use_correction)
+    cov0 = cov_cluster(results, group0, use_correction=use_correction, jackknife=jackknife)
     #[0] because we get still also returns bse
-    cov1 = cov_cluster(results, group1, use_correction=use_correction)
+    cov1 = cov_cluster(results, group1, use_correction=use_correction, jackknife=jackknife)
 
     # cov of cluster formed by intersection of two groups
     cov01 = cov_cluster(results,
                         combine_indices(group)[0],
-                        use_correction=use_correction)
+                        use_correction=use_correction, 
+                        jackknife=jackknife)
 
     #robust cov matrix for union of groups
     cov_both = cov0 + cov1 - cov01
