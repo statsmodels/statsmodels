@@ -351,7 +351,6 @@ def _cluster_jackknife(results, group, clusters, k_params, n_groups):
     tXX = np.transpose(X) @ X
     tXy = np.transpose(X) @ Y
     beta_hat = results.params
-    #beta_hat = np.linalg.inv(tXX) @ tXy
 
     # compute leave-one-out regression coefficients (aka clusterjacks')        
     for ixg, g in enumerate(clusters):
@@ -596,12 +595,12 @@ def cov_cluster(results, group, use_correction=True, jackknife=False):
     else:
         clusters = np.unique(group)
 
-    scale = S_crosssection(xu, group)
-
     nobs, k_params = xu.shape
     n_groups = len(clusters) #replace with stored group attributes if available
 
     if jackknife == False:
+
+        scale = S_crosssection(xu, group)
         cov_c = _HCCM2(hessian_inv, scale)
 
         if use_correction:
