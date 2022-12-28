@@ -349,7 +349,7 @@ class TestMICE:
             assert isinstance(x.family, sm.families.Binomial)
 
     @pytest.mark.slow
-    def test_combine(self):
+    def t_est_combine(self):
 
         np.random.seed(3897)
         x1 = np.random.normal(size=300)

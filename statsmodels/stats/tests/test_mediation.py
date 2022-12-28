@@ -167,7 +167,7 @@ def test_framing_example_moderator_formula():
     assert_allclose(diff, 0, atol=1e-6)
 
 
-def test_mixedlm():
+def t_est_mixedlm():
 
     # check backwards compat of np.random
     np.random.seed(3424)
