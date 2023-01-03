@@ -81,7 +81,8 @@ class Transf_gen(distributions.rv_continuous):
         super(Transf_gen,self).__init__(a=a, b=b, name = name,
                                         shapes=kls.shapes,
                                         longname = longname,
-                                        extradoc = extradoc)
+                                        # extradoc = extradoc
+                                        )
 
     def _cdf(self,x,*args, **kwargs):
         #print(args
@@ -112,13 +113,15 @@ def identit(x):
 
 invdnormalg = Transf_gen(stats.norm, inversew, inversew_inv, decr=True, #a=-np.inf,
                 numargs = 0, name = 'discf', longname = 'normal-based discount factor',
-                extradoc = '\ndistribution of discount factor y=1/(1+x)) with x N(0.05,0.1**2)')
+                # extradoc = '\ndistribution of discount factor y=1/(1+x)) with x N(0.05,0.1**2)'
+                )
 
 lognormalg = Transf_gen(stats.norm, np.exp, np.log,
                 numargs = 2, a=0, name = 'lnnorm',
                 longname = 'Exp transformed normal',
-                extradoc = '\ndistribution of y = exp(x), with x standard normal'
-                'precision for moment andstats is not very high, 2-3 decimals')
+                # extradoc = '\ndistribution of y = exp(x), with x standard normal'
+                #'precision for moment andstats is not very high, 2-3 decimals'
+                )
 
 
 loggammaexpg = Transf_gen(stats.gamma, np.log, np.exp, numargs=1)
@@ -321,7 +324,8 @@ class TransfTwo_gen(distributions.rv_continuous):
                                            name = name,
                                            shapes=kls.shapes,
                                            longname = longname,
-                                           extradoc = extradoc)
+                                           # extradoc = extradoc
+                                           )
 
     def _rvs(self, *args):
         self.kls._size = self._size   #size attached to self, not function argument
@@ -397,15 +401,17 @@ squarenormalg = TransfTwo_gen(stats.norm, sqfunc.squarefunc, sqfunc.inverseplus,
                 sqfunc.inverseminus, sqfunc.derivplus, sqfunc.derivminus,
                 shape='u', a=0.0, b=np.inf,
                 numargs = 0, name = 'squarenorm', longname = 'squared normal distribution',
-                extradoc = '\ndistribution of the square of a normal random variable' +\
-                           ' y=x**2 with x N(0.0,1)')
+                # extradoc = '\ndistribution of the square of a normal random variable' +\
+                #            ' y=x**2 with x N(0.0,1)'
+                )
                         #u_loc=l, u_scale=s)
 squaretg = TransfTwo_gen(stats.t, sqfunc.squarefunc, sqfunc.inverseplus,
                 sqfunc.inverseminus, sqfunc.derivplus, sqfunc.derivminus,
                 shape='u', a=0.0, b=np.inf,
                 numargs = 1, name = 'squarenorm', longname = 'squared t distribution',
-                extradoc = '\ndistribution of the square of a t random variable' +\
-                           ' y=x**2 with x t(dof,0.0,1)')
+                # extradoc = '\ndistribution of the square of a t random variable' +\
+                #           ' y=x**2 with x t(dof,0.0,1)'
+                )
 
 def inverseplus(x):
     return np.sqrt(-x)
@@ -426,8 +432,9 @@ def negsquarefunc(x):
 negsquarenormalg = TransfTwo_gen(stats.norm, negsquarefunc, inverseplus, inverseminus,
                 derivplus, derivminus, shape='hump', a=-np.inf, b=0.0,
                 numargs = 0, name = 'negsquarenorm', longname = 'negative squared normal distribution',
-                extradoc = '\ndistribution of the negative square of a normal random variable' +\
-                           ' y=-x**2 with x N(0.0,1)')
+                # extradoc = '\ndistribution of the negative square of a normal random variable' +\
+                #            ' y=-x**2 with x N(0.0,1)'
+                )
                         #u_loc=l, u_scale=s)
 
 def inverseplus(x):
@@ -449,5 +456,6 @@ def absfunc(x):
 absnormalg = TransfTwo_gen(stats.norm, np.abs, inverseplus, inverseminus,
                 derivplus, derivminus, shape='u', a=0.0, b=np.inf,
                 numargs = 0, name = 'absnorm', longname = 'absolute of normal distribution',
-                extradoc = '\ndistribution of the absolute value of a normal random variable' +\
-                           ' y=abs(x) with x N(0,1)')
+                # extradoc = '\ndistribution of the absolute value of a normal random variable' +\
+                #           ' y=abs(x) with x N(0,1)'
+                )
