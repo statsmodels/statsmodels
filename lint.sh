@@ -21,7 +21,6 @@ if [ "$LINT" == true ]; then
         examples \
         setup.py \
         statsmodels/__init__.py \
-        statsmodels/_version.py \
         statsmodels/api.py \
         statsmodels/base/__init__.py \
         statsmodels/base/distributed_estimation.py \
