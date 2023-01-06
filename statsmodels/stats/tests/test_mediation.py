@@ -60,8 +60,11 @@ def test_framing_example():
     outcome = np.asarray(data["cong_mesg"])
     outcome_exog = patsy.dmatrix("emo + treat + age + educ + gender + income", data,
                                   return_type='dataframe')
-    probit = sm.families.links.probit
-    outcome_model = sm.GLM(outcome, outcome_exog, family=sm.families.Binomial(link=probit()))
+    outcome_model = sm.GLM(
+        outcome,
+        outcome_exog,
+        family=sm.families.Binomial(link=sm.families.links.Probit())
+    )
 
     mediator = np.asarray(data["emo"])
     mediator_exog = patsy.dmatrix("treat + age + educ + gender + income", data,
@@ -96,8 +99,11 @@ def test_framing_example_moderator():
     outcome = np.asarray(data["cong_mesg"])
     outcome_exog = patsy.dmatrix("emo + treat + age + educ + gender + income", data,
                                   return_type='dataframe')
-    probit = sm.families.links.probit
-    outcome_model = sm.GLM(outcome, outcome_exog, family=sm.families.Binomial(link=probit()))
+    outcome_model = sm.GLM(
+        outcome,
+        outcome_exog,
+        family=sm.families.Binomial(link=sm.families.links.Probit())
+    )
 
     mediator = np.asarray(data["emo"])
     mediator_exog = patsy.dmatrix("treat + age + educ + gender + income", data,
@@ -125,9 +131,11 @@ def test_framing_example_formula():
     cur_dir = os.path.dirname(os.path.abspath(__file__))
     data = pd.read_csv(os.path.join(cur_dir, 'results', "framing.csv"))
 
-    probit = sm.families.links.probit
-    outcome_model = sm.GLM.from_formula("cong_mesg ~ emo + treat + age + educ + gender + income",
-                                        data, family=sm.families.Binomial(link=probit()))
+    outcome_model = sm.GLM.from_formula(
+        "cong_mesg ~ emo + treat + age + educ + gender + income",
+        data,
+        family=sm.families.Binomial(link=sm.families.links.Probit())
+    )
 
     mediator_model = sm.OLS.from_formula("emo ~ treat + age + educ + gender + income", data)
 
@@ -151,9 +159,11 @@ def test_framing_example_moderator_formula():
     cur_dir = os.path.dirname(os.path.abspath(__file__))
     data = pd.read_csv(os.path.join(cur_dir, 'results', "framing.csv"))
 
-    probit = sm.families.links.probit
-    outcome_model = sm.GLM.from_formula("cong_mesg ~ emo + treat*age + emo*age + educ + gender + income",
-                                        data, family=sm.families.Binomial(link=probit()))
+    outcome_model = sm.GLM.from_formula(
+        "cong_mesg ~ emo + treat*age + emo*age + educ + gender + income",
+        data,
+        family=sm.families.Binomial(link=sm.families.links.Probit())
+    )
 
     mediator_model = sm.OLS.from_formula("emo ~ treat*age + educ + gender + income", data)
 
@@ -222,7 +232,7 @@ def t_est_mixedlm():
     outcome_model = sm.MixedLM.from_formula("y ~ med + x", groups="id", data=df)
     me = Mediation(outcome_model, mediator_model, "x", "med")
     np.random.seed(383628)
-    mr = me.fit(n_rep=2)
+    mr = me.fit(n_rep=100)
     st = mr.summary()
 
     # check model results unchanged, regression numbers
@@ -248,10 +258,10 @@ def t_est_mixedlm():
         ])
 
     assert_allclose(st.to_numpy(), res_summ, rtol=0.15)
-    assert_allclose(st.iloc[-1, 0], 0.52, rtol=1e-2, atol=1e-2)
+    assert_allclose(st.iloc[-1, 0], 0.56, rtol=1e-2, atol=1e-2)
 
     pm = st.loc["Prop. mediated (average)", "Estimate"]
-    assert_allclose(pm, 0.52, rtol=1e-2, atol=1e-2)
+    assert_allclose(pm, 0.56, rtol=1e-2, atol=1e-2)
 
 
 def test_surv():

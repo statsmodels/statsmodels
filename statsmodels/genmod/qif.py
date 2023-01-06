@@ -216,7 +216,11 @@ class QIF(base.Model):
         cmat = np.zeros((d, d))
 
         fastvar = self.family.variance is varfuncs.constant
-        fastlink = isinstance(self.family.link, links.identity)
+        fastlink = isinstance(
+            self.family.link,
+            # TODO: Remove links.identity after deprecation final
+            (links.Identity, links.identity)
+        )
 
         for ix in self.groups_ix:
             sd = np.sqrt(va[ix])

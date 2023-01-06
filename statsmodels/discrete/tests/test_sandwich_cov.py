@@ -552,7 +552,7 @@ class TestGLMProbit(CheckDiscreteGLM):
         endog_bin = (endog > endog.mean()).astype(int)
         cls.cov_type = 'cluster'
 
-        mod1 = GLM(endog_bin, exog, family=families.Binomial(link=links.probit()))
+        mod1 = GLM(endog_bin, exog, family=families.Binomial(link=links.Probit()))
         cls.res1 = mod1.fit(method='newton',
                             cov_type='cluster', cov_kwds=dict(groups=group))
 
@@ -582,7 +582,7 @@ class TestGLMProbitOffset(CheckDiscreteGLM):
         offset = np.ones(endog_bin.shape[0])
 
         mod1 = GLM(endog_bin, exog,
-                   family=families.Binomial(link=links.probit()),
+                   family=families.Binomial(link=links.Probit()),
                    offset=offset)
         cls.res1 = mod1.fit(method='newton',
                             cov_type='cluster', cov_kwds=dict(groups=group))

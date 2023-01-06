@@ -74,7 +74,7 @@ class TestBetaModel:
         model = cls.model = "methylation ~ gender + CpG"
         Z = cls.Z = patsy.dmatrix("~ age", methylation)
         mod = BetaModel.from_formula(model, methylation, exog_precision=Z,
-                                     link_precision=links.identity())
+                                     link_precision=links.Identity())
         cls.meth_fit = mod.fit()
         mod = BetaModel.from_formula(model, methylation, exog_precision=Z,
                                      link_precision=links.Log())
@@ -121,14 +121,14 @@ class TestBetaModel:
     def test_precision_formula(self):
         m = BetaModel.from_formula(self.model, methylation,
                                    exog_precision_formula='~ age',
-                                   link_precision=links.identity())
+                                   link_precision=links.Identity())
         rslt = m.fit()
         assert_close(rslt.params, self.meth_fit.params, 1e-10)
         assert isinstance(rslt.params, pd.Series)
 
     def test_scores(self):
         model, Z = self.model, self.Z
-        for link in (links.identity(), links.log()):
+        for link in (links.Identity(), links.Log()):
             mod2 = BetaModel.from_formula(model, methylation, exog_precision=Z,
                                           link_precision=link)
             rslt_m = mod2.fit()

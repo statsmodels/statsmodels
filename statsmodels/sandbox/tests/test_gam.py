@@ -290,7 +290,7 @@ class TestGAMGaussianLogLink(BaseGAM):
     def setup_class(cls):
         super(TestGAMGaussianLogLink, cls).setup_class()  # initialize DGP
 
-        cls.family = family.Gaussian(links.log())
+        cls.family = family.Gaussian(links.Log())
         cls.rvs = stats.norm.rvs
         cls.scale = 5
 
@@ -303,7 +303,7 @@ class TestGAMGamma(BaseGAM):
     def setup_class(cls):
         super(TestGAMGamma, cls).setup_class() #initialize DGP
 
-        cls.family = family.Gamma(links.log())
+        cls.family = family.Gamma(links.Log())
         cls.rvs = stats.gamma.rvs
 
         cls.init()

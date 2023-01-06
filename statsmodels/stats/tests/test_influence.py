@@ -273,7 +273,7 @@ class TestInfluenceProbitCompare(InfluenceCompareExact):
     def setup_class(cls):
         df = data_bin
         mod = GLM(df['constrict'], df[['const', 'log_rate', 'log_volumne']],
-                  family=families.Binomial(link=families.links.probit()))
+                  family=families.Binomial(link=families.links.Probit()))
         res = mod.fit(method="newton", tol=1e-10)
         from statsmodels.discrete.discrete_model import Probit
         mod2 = Probit(df['constrict'], df[['const', 'log_rate', 'log_volumne']])
