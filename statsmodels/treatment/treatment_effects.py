@@ -526,7 +526,8 @@ class _IPWRAGMM(_TEGMMGeneric1):
 
 
 class TreatmentEffectResults(ContrastResults):
-    """Results class for treatment effect estimation
+    """
+    Results class for treatment effect estimation
 
     Parameters
     ----------
@@ -542,11 +543,10 @@ class TreatmentEffectResults(ContrastResults):
     This class is a subclass of ContrastResults and inherits methods like
     summary, summary_frame and conf_int. Attributes correspond to a z-test
     given by ``GMMResults.t_test``.
-
     """
 
     def __init__(self, teff, results_gmm, method, **kwds):
-
+        super().__init__()
         k_params = len(results_gmm.params)
         constraints = np.zeros((3, k_params))
         constraints[0, 0] = 1
