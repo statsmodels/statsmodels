@@ -1133,7 +1133,9 @@ def test_custom_index():
         warnings.simplefilter("always")
 
         mod = tsa_model.TimeSeriesModel(endog)
-        assert_equal(str(w[0].message), message)
+        # Change due to pandas changes that produce a warning
+        messages = [str(warn.message) for warn in w]
+        assert message in messages
     start_key = -2
     end_key = -1
     start, end, out_of_sample, prediction_index = mod._get_prediction_index(
