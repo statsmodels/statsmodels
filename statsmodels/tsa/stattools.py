@@ -240,6 +240,10 @@ def adfuller(
 
     The autolag option and maxlag for it are described in Greene.
 
+    See the notebook `Stationarity and detrending (ADF/KPSS)
+    <../examples/notebooks/generated/stationarity_detrending_adf_kpss.html>`__
+    for an overview.
+    
     References
     ----------
     .. [1] W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
@@ -253,10 +257,6 @@ def adfuller(
     .. [4] MacKinnon, J.G. 2010. "Critical Values for Cointegration Tests."  Queen"s
         University, Dept of Economics, Working Papers.  Available at
         http://ideas.repec.org/p/qed/wpaper/1227.html
-
-    Examples
-    --------
-    See example notebook
     """
     x = array_like(x, "x")
     maxlag = int_like(maxlag, "maxlag", optional=True)
@@ -1969,6 +1969,10 @@ def kpss(
 
     Missing values are not handled.
 
+    See the notebook `Stationarity and detrending (ADF/KPSS)
+    <../examples/notebooks/generated/stationarity_detrending_adf_kpss.html>`__
+    for an overview.
+    
     References
     ----------
     .. [1] Andrews, D.W.K. (1991). Heteroskedasticity and autocorrelation

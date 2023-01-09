@@ -123,6 +123,13 @@ class ARIMA(sarimax.SARIMAX):
 
     .. todo:: should concentrate_scale=True by default
 
+    Notes
+    -----
+    See the notebook `ARMA: Sunspots Data
+    <../examples/notebooks/generated/tsa_arma_0.html>`__ and
+    `ARMA: Artificial Data <../examples/notebooks/generated/tsa_arma_1.html>`__
+    for an overview.
+
     Examples
     --------
     >>> mod = sm.tsa.arima.ARIMA(endog, order=(1, 0, 0))
