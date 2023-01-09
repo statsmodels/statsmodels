@@ -1932,14 +1932,14 @@ class MLEModel(tsbase.TimeSeriesModel):
             assumed to contain draws from the standard Normal distribution that
             must be transformed using the `initial_state_cov` covariance
             matrix. Default is True.
-        random_state : {None, int, `numpy.random.Generator`,
-                        `numpy.random.RandomState`}, optional
-            If `seed` is None (or `np.random`), the `numpy.random.RandomState`
-            singleton is used.
-            If `seed` is an int, a new ``RandomState`` instance is used,
-            seeded with `seed`.
-            If `seed` is already a ``Generator`` or ``RandomState`` instance
-            then that instance is used.
+        random_state : {None, int, Generator, RandomState}, optional
+            If `seed` is None (or `np.random`), the
+            class:``~numpy.random.RandomState`` singleton is used.
+            If `seed` is an int, a new class:``~numpy.random.RandomState``
+            instance is used, seeded with `seed`.
+            If `seed` is already a class:``~numpy.random.Generator`` or
+            class:``~numpy.random.RandomState`` instance then that instance is
+            used.
 
         Returns
         -------
@@ -3603,14 +3603,14 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             assumed to contain draws from the standard Normal distribution that
             must be transformed using the `initial_state_cov` covariance
             matrix. Default is True.
-        random_state : {None, int, `numpy.random.Generator`,
-                        `numpy.random.RandomState`}, optional
-            If `seed` is None (or `np.random`), the `numpy.random.RandomState`
-            singleton is used.
-            If `seed` is an int, a new ``RandomState`` instance is used,
-            seeded with `seed`.
-            If `seed` is already a ``Generator`` or ``RandomState`` instance
-            then that instance is used.
+        random_state : {None, int, Generator, RandomState}, optional
+            If `seed` is None (or `np.random`), the
+            class:``~numpy.random.RandomState`` singleton is used.
+            If `seed` is an int, a new class:``~numpy.random.RandomState``
+            instance is used, seeded with `seed`.
+            If `seed` is already a class:``~numpy.random.Generator`` or
+            class:``~numpy.random.RandomState`` instance then that instance is
+            used.
 
         Returns
         -------
