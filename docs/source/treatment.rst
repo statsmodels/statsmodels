@@ -22,12 +22,12 @@ for some methods optionally average treatment effect on the treated ATT.
 See also overview notebook in
 `Treatment Effect <examples/notebooks/generated/treatment_effect.html>`__
 
-.. module:: statsmodels.treatment.treatment_effects
-.. currentmodule:: statsmodels.treatment.treatment_effects
+.. module:: statsmodels.treatment
+.. currentmodule:: statsmodels.treatment
 
 
 .. autosummary::
    :toctree: generated/
 
-   TreatmentEffect
-   TreatmentEffectResults
+   treatment_effects.TreatmentEffect
+   treatment_effects.TreatmentEffectResults
