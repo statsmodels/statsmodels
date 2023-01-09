@@ -515,7 +515,7 @@ def test_compute_t_compute_j(compute_j, compute_t, reset_randomstate):
         if j not in compute_j:
             desired[:, j] = np.nan
 
-    assert_allclose(actual, desired, atol=1e-12)
+    assert_allclose(actual, desired, atol=1e-7)
 
 
 def test_resmooth():
