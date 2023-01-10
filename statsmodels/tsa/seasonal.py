@@ -356,5 +356,4 @@ class DecomposeResult:
             title(name)
             ax.set_xlim(xlim)
 
-        fig.tight_layout()
-        return fig
+        return fig.tight_layout()
