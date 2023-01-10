@@ -51,7 +51,7 @@ cdef {{prefix}}toeplitz(int n, int offset0, int offset1,
                         {{cython_type}} [:, :] out_matrix):
     """
     toeplitz(int n, int o0, int o1, {{cython_type}} [:] in_column, {{cython_type}} [:, :] out_matrix
-    
+
     Construct a Toeplitz block in a matrix in place
 
     Parameters
@@ -93,7 +93,7 @@ cpdef {{prefix}}arma_transformed_acovf_fast({{cython_type}} [:] ar,
                                             {{cython_type}} [:] arma_acovf):
     """
     arma_transformed_acovf_fast({{cython_type}} [:] ar, {{cython_type}} [:] ma, {{cython_type}} [:] arma_acovf)
-    
+
     Quickly construct the autocovariance matrix for a transformed process.
 
     Using the autocovariance function for an ARMA process, constructs the
@@ -201,7 +201,7 @@ cpdef {{prefix}}arma_innovations_algo_fast(int nobs,
                                            {{cython_type}} [:] acovf2):
     """
     arma_innovations_algo_fast(int nobs, {{cython_type}} [:] ar_params, {{cython_type}} [:] ma_params, {{cython_type}} [:, :] acovf, {{cython_type}} [:] acovf2)
-    
+
     Quickly apply innovations algorithm for an ARMA process.
 
     Parameters
@@ -304,7 +304,7 @@ cpdef {{prefix}}arma_innovations_filter({{cython_type}} [:] endog,
                                         {{cython_type}} [:, :] theta):
     """
     arma_innovations_filter({{cython_type}} [:] endog, {{cython_type}} [:] ar_params, {{cython_type}} [:] ma_params, {{cython_type}} [:, :] theta):
-    
+
     Innovations filter for an ARMA process.
 
     Parameters
@@ -375,7 +375,7 @@ cpdef {{prefix}}arma_innovations({{cython_type}} [:] endog,
                                       {{cython_type}} sigma2):
     """
     arma_innovations({{cython_type}} [:] endog, {{cython_type}} [:] ar_params, {{cython_type}} [:] ma_params):
-    
+
     Compute innovations and variances based on an ARMA process.
 
     Parameters

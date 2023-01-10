@@ -197,7 +197,7 @@ class ExponentialSmoothing(TimeSeriesModel):
     See the notebook `Exponential Smoothing
     <../examples/notebooks/generated/exponential_smoothing.html>`__
     for an overview.
-    
+
     References
     ----------
     .. [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles
@@ -1532,7 +1532,7 @@ class SimpleExpSmoothing(ExponentialSmoothing):
     See the notebook `Exponential Smoothing
     <../examples/notebooks/generated/exponential_smoothing.html>`__
     for an overview.
-    
+
     References
     ----------
     .. [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles
@@ -1686,7 +1686,7 @@ class Holt(ExponentialSmoothing):
     See the notebook `Exponential Smoothing
     <../examples/notebooks/generated/exponential_smoothing.html>`__
     for an overview.
-    
+
     References
     ----------
     .. [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles

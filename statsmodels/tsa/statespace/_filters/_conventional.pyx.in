@@ -256,7 +256,7 @@ cdef int {{prefix}}updating_conventional({{prefix}}KalmanFilter kfilter, {{prefi
         {{cython_type}} alpha = 1.0
         {{cython_type}} beta = 0.0
         {{cython_type}} gamma = -1.0
-    
+
     # #### Filtered state for time t
     # $a_{t|t} = a_t + P_t Z_t' F_t^{-1} v_t$  
     # $a_{t|t} = 1.0 * \\#_1 \\#_2 + 1.0 a_t$

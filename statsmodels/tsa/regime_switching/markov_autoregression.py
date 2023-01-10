@@ -88,7 +88,7 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
     See the notebook `Markov switching autoregression
     <../examples/notebooks/generated/markov_autoregression.html>`__
     for an overview.
-    
+
     References
     ----------
     Kim, Chang-Jin, and Charles R. Nelson. 1999.

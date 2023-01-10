@@ -55,7 +55,7 @@ def cffilter(x, low=6, high=32, drift=True):
     -----
     See the notebook `Time Series Filters
     <../examples/notebooks/generated/tsa_filters.html>`__ for an overview.
-    
+
     Examples
     --------
     >>> import statsmodels.api as sm

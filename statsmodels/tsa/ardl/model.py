@@ -267,6 +267,10 @@ class ARDL(AutoReg):
     then the 0-th lag of the exogenous variables is not included and the
     sum starts at ``m=1``.
 
+    See the notebook `Autoregressive Distributed Lag Models
+    <../examples/notebooks/generated/autoregressive_distributed_lag.html>`__
+    for an overview.
+
     See Also
     --------
     statsmodels.tsa.ar_model.AutoReg
@@ -277,12 +281,6 @@ class ARDL(AutoReg):
         Seasonal ARIMA model estimation with optional exogenous regressors
     statsmodels.tsa.arima.model.ARIMA
         ARIMA model estimation
-
-    Notes
-    -----
-    See the notebook `Autoregressive Distributed Lag Models
-    <../examples/notebooks/generated/autoregressive_distributed_lag.html>`__
-    for an overview.
 
     Examples
     --------

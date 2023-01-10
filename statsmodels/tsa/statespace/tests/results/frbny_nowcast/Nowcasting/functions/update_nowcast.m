@@ -104,8 +104,8 @@ else
     % Display the table output
     fprintf('\n  Nowcast Detail Table \n\n')
     disp(news_table(data_released, :))
-    
-    
+
+
     % Output results to structure
     Res.impact_revisions = impact_revisions;
     Res.weight = weight;
@@ -156,7 +156,7 @@ singlenews = zeros(1,N);  % Initialize news vector (will store news for each ser
 
 if ~isnan(X_new(t_fcst,v_news)) 
     Res_old = para_const(X_old, Res, 0);  % Apply Kalman filter for old data
-    
+
 
     for i=1:size(v_news,2)      % Loop for each target variable
         % (Observed value) - (predicted value)
@@ -167,7 +167,7 @@ if ~isnan(X_new(t_fcst,v_news))
         y_old(1,i) = Res_old.X_sm(t_fcst,v_news(i));
         y_new(1,i) = X_new(t_fcst,v_news(i));
     end
-    
+
     % Forecast-related output set to empty
     actual=[];forecast=[];weight=[];t_miss=[];v_miss=[];innov=[];
 
@@ -178,22 +178,22 @@ else
     % Initialize series mean/standard deviation respectively
     Mx = Res.Mx;
     Wx = Res.Wx;
-    
+
     % Calculate indicators for missing values (1 if missing, 0 otherwise)
     miss_old=isnan(X_old);
     miss_new=isnan(X_new);
-    
+
     % Indicator for missing--combine above information to single matrix where:
     % (i) -1: Value is in the old data, but missing in new data
     % (ii) 1: Value is in the new data, but missing in old data 
     % (iii) 0: Values are missing from/available in both datasets
     i_miss = miss_old - miss_new;
-    
+
     % Time/variable indicies where case (b) is true
     [t_miss,v_miss]=find(i_miss==1);
-    
+
     %% FORECAST SUBCASE (A): NO NEW INFORMATION
-    
+
     if isempty(v_miss)
         % Fill in missing variables using a Kalman filter
         Res_old = para_const(X_old, Res, 0);
@@ -216,32 +216,32 @@ else
    
     % Difference between forecast time and new data time
     lag = t_fcst-t_miss;
-    
+
     % Gives biggest time interval between forecast and new data
     k = max([abs(lag); max(lag)-min(lag)]);
-    
+
     C = Res.C;   % Observation matrix
     R = Res.R';  % Covariance for observation matrix residuals
-    
+
     % Number of new events
     n_news = size(lag,1);
-    
+
     % Smooth old dataset
     Res_old = para_const(X_old, Res, k);
     Plag = Res_old.Plag;
-    
+
     % Smooth new dataset
     Res_new = para_const(X_new, Res, 0);
-    
+
     % Subset for target variable and forecast time
     y_old = Res_old.X_sm(t_fcst,v_news);
     y_new = Res_new.X_sm(t_fcst,v_news);
-    
-    
-    
+
+
+
     P = Res_old.P(:,:,2:end);
     P1=[];  % Initialize projection onto updates
-    
+
     % Cycle through total number of updates
     for i=1:n_news
         h = abs(t_fcst-t_miss(i));
@@ -255,7 +255,7 @@ else
         end
         P1=[P1 Pp*C(v_miss(i),1:r)'];  % Projection on updates
     end
-    
+
     for i=1:size(t_miss,1)
         % Standardize predicted and observed values
         X_new_norm = (X_new(t_miss(i),v_miss(i)) - Mx(v_miss(i)))./Wx(v_miss(i));
@@ -264,11 +264,11 @@ else
         % Innovation: Gives [observed] data - [predicted data]
         innov(i)= X_new_norm - X_sm_norm;          
     end
-    
+
     ins=size(innov,2);
     P2=[];
     p2=[];
-    
+
     % Gives non-standardized series weights
     for i=1:size(lag,1)
         for j=1:size(lag,1)
@@ -290,7 +290,7 @@ else
         P2=[P2;p2];
         p2=[];
     end
-    
+
     clear temp
     for i=1:size(v_news,2)      % loop on v_news
         % Convert to real units (unstadardized data)
@@ -298,13 +298,13 @@ else
         temp(1,:,i) = Wx(v_news(i))*C(v_news(i),1:r)*P1*inv(P2).*innov;
         gain(:,:,i) = Wx(v_news(i))*C(v_news(i),1:r)*P1*inv(P2);
     end
-    
+
     % Initialize output objects
     singlenews = NaN(max(t_miss)-min(t_miss)+1,N); %,size(v_news,2)
     actual     = NaN(N,1);  % Actual forecasted values
     forecast   = NaN(N,1);  % Forecasted values
     weight     = NaN(N,1,size(v_news,2));
-    
+
     % Fill in output values 
     for i=1:size(innov,2)
         actual(v_miss(i),1) = X_new(t_miss(i),v_miss(i));  
@@ -315,12 +315,12 @@ else
             weight(v_miss(i),:,j) = gain(:,i,j)/Wx(v_miss(i));
         end
     end
-    
+
     singlenews = sum(singlenews,1);      % Returns total news
 
-    
+
     [v_miss, ~, ~] = unique(v_miss);  
-    
+
 end
 
 end
@@ -615,10 +615,10 @@ function S = FIS(A, S)
             S.VmT_1(:,:,t-1) = VmU * J_2'+J_1 * (V_T1 - A * VmU) * J_2';
         end
     end
-    
+
 end
 
-    
+
 function [y,C,R,L]  = MissData(y,C,R)
 %______________________________________________________________________
 % PROC missdata                                                        

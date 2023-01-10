@@ -118,8 +118,9 @@ class STLForecast:
       both in- and out-of-sample predictions.
 
     See the notebook `Seasonal Decomposition
-    <../examples/notebooks/generated/stl_decomposition.html>`__ for an overview.
-    
+    <../examples/notebooks/generated/stl_decomposition.html>`__ for an
+    overview.
+
     Examples
     --------
     >>> import numpy as np

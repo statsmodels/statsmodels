@@ -195,7 +195,7 @@ cdef int {{prefix}}smoothed_disturbances_missing_conventional({{prefix}}KalmanSm
     # TODO this is not explicitly addressed in Durbin and Koopman Chapter 4
     # or in Koopman (1993) - need to find a source for if this is correct
     # Note: this is what the MATLAB ssm toolbox does, also
-    
+
     # Smoothed measurement disturbances have unconditional expected
     # value of 0, so no need to do anything
 

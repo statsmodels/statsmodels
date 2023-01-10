@@ -167,7 +167,7 @@ cdef class STL(object):
 
     See the notebook `Seasonal Decomposition
     <../examples/notebooks/generated/stl_decomposition.html>`__ for an overview.
-    
+
     References
     ----------
     .. [1] R. B. Cleveland, W. S. Cleveland, J.E. McRae, and I. Terpenning
