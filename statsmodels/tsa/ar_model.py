@@ -164,7 +164,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
     -----
     See the notebook `Autoregressions
     <../examples/notebooks/generated/autoregressions.html>`__ for an overview.
-    
+
     Examples
     --------
     >>> import statsmodels.api as sm

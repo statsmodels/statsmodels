@@ -72,8 +72,9 @@ class MarkovRegression(markov_switching.MarkovSwitching):
     ones.
 
     See the notebook `Markov switching dynamic regression
-    <../examples/notebooks/generated/markov_regression.html>`__ for an overview.
-    
+    <../examples/notebooks/generated/markov_regression.html>`__ for an
+    overview.
+
     References
     ----------
     Kim, Chang-Jin, and Charles R. Nelson. 1999.

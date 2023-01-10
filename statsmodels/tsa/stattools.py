@@ -243,7 +243,7 @@ def adfuller(
     See the notebook `Stationarity and detrending (ADF/KPSS)
     <../examples/notebooks/generated/stationarity_detrending_adf_kpss.html>`__
     for an overview.
-    
+
     References
     ----------
     .. [1] W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
@@ -1972,7 +1972,7 @@ def kpss(
     See the notebook `Stationarity and detrending (ADF/KPSS)
     <../examples/notebooks/generated/stationarity_detrending_adf_kpss.html>`__
     for an overview.
-    
+
     References
     ----------
     .. [1] Andrews, D.W.K. (1991). Heteroskedasticity and autocorrelation
