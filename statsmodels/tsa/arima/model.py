@@ -121,14 +121,12 @@ class ARIMA(sarimax.SARIMAX):
     not be changed on the fly. This is why they are not instead included as
     arguments to the `fit` method.
 
-    .. todo:: should concentrate_scale=True by default
-
-    Notes
-    -----
     See the notebook `ARMA: Sunspots Data
     <../examples/notebooks/generated/tsa_arma_0.html>`__ and
     `ARMA: Artificial Data <../examples/notebooks/generated/tsa_arma_1.html>`__
     for an overview.
+
+    .. todo:: should concentrate_scale=True by default
 
     Examples
     --------
