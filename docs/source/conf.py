@@ -420,9 +420,9 @@ import pandas as pd
 """
 
 extlinks = {'pr': ('https://github.com/statsmodels/statsmodels/pull/%s',
-                   'PR #'),
+                   'PR #%s'),
             'issue': ('https://github.com/statsmodels/statsmodels/issues/%s',
-                      'Issue #')
+                      'Issue #%s')
             }
 
 autosectionlabel_prefix_document = True
