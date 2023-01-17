@@ -1,5 +1,5 @@
 # Requirements for doc build, in addition to requirements.txt
-sphinx==5.3.0
+sphinx
 sphinx-material
 jupyter
 notebook
