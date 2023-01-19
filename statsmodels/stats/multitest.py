@@ -385,7 +385,7 @@ def fdrcorrection_twostage(pvals, alpha=0.05, method='bky', iter=False,
     pvalue-corrected : ndarray
         pvalues adjusted for multiple hypotheses testing to limit FDR
     m0 : int
-        ntest - rej, estimated number of true hypotheses
+        ntest - rej, estimated number of true (not rejected) hypotheses
     alpha_stages : list of floats
         A list of alphas that have been used at each stage
 
@@ -430,30 +430,35 @@ def fdrcorrection_twostage(pvals, alpha=0.05, method='bky', iter=False,
                                    is_sorted=True)
     r1 = rej.sum()
     if (r1 == 0) or (r1 == ntests):
-        return rej, pvalscorr * fact, ntests - r1, alpha_stages
-    ri_old = r1
+        # return rej, pvalscorr * fact, ntests - r1, alpha_stages
+        reject = rej
+        pvalscorr *= fact
+        ri = r1
+    else:
+        ri_old = r1
 
-    while True:
-        ntests0 = 1.0 * ntests - ri_old
-        alpha_star = alpha_prime * ntests / ntests0
-        alpha_stages.append(alpha_star)
-        #print ntests0, alpha_star
-        rej, pvalscorr = fdrcorrection(pvals, alpha=alpha_star, method='indep',
-                                       is_sorted=True)
-        ri = rej.sum()
-        if (not iter) or ri == ri_old:
-            break
-        elif ri < ri_old:
-            # prevent cycles and endless loops
-            raise RuntimeError(" oops - should not be here")
-        ri_old = ri
+        while True:
+            ntests0 = 1.0 * ntests - ri_old
+            alpha_star = alpha_prime * ntests / ntests0
+            alpha_stages.append(alpha_star)
+            #print ntests0, alpha_star
+            rej, pvalscorr = fdrcorrection(pvals, alpha=alpha_star, method='indep',
+                                           is_sorted=True)
+            ri = rej.sum()
+            if (not iter) or ri == ri_old:
+                break
+            elif ri < ri_old:
+                # prevent cycles and endless loops
+                raise RuntimeError(" oops - should not be here")
+            ri_old = ri
 
-    # make adjustment to pvalscorr to reflect estimated number of Non-Null cases
-    # decision is then pvalscorr < alpha  (or <=)
-    pvalscorr *= ntests0 * 1.0 /  ntests
-    if method == 'bky':
-        pvalscorr *= (1. + alpha)
+        # make adjustment to pvalscorr to reflect estimated number of Non-Null cases
+        # decision is then pvalscorr < alpha  (or <=)
+        pvalscorr *= ntests0 * 1.0 /  ntests
+        if method == 'bky':
+            pvalscorr *= (1. + alpha)
 
+    pvalscorr[pvalscorr>1] = 1
     if not is_sorted:
         pvalscorr_ = np.empty_like(pvalscorr)
         pvalscorr_[pvals_sortind] = pvalscorr
