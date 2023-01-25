@@ -401,6 +401,7 @@ def fdrcorrection_twostage(pvals, alpha=0.05, method='bky',
         maxiter=True is full iteration (maxiter=-1 or maxiter=len(pvals))
 
     iter : bool
+        ``iter`` is deprecated use ``maxiter`` instead.
         If iter is True, then only one iteration step is used, this is the
         two-step method.
         If iter is False, then iterations are stopped at convergence which
@@ -438,6 +439,11 @@ def fdrcorrection_twostage(pvals, alpha=0.05, method='bky',
 
     '''
     pvals = np.asarray(pvals)
+
+    if iter is not None:
+        import warnings
+        msg = "iter keyword is deprecated, use maxiter keyword instead."
+        warnings.warn(msg, FutureWarning)
 
     if iter is False:
         maxiter = 1
