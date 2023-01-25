@@ -80,41 +80,57 @@ class ArchimedeanCopula(Copula):
         args = self._handle_args(args)
         axis = -1
         u = np.asarray(u)
-        if u.shape[-1] > 2:
-            msg = "pdf is currently only available for bivariate copula"
-            raise ValueError(msg)
-        # phi = self.transform.evaluate
-        # phi_inv = self.transform.inverse
+
         phi_d1 = self.transform.deriv
-        phi_d2 = self.transform.deriv2
+        if u.shape[-1] == 2:
+            psi_d = self.transform.deriv2_inverse
+        elif u.shape[-1] == 3:
+            psi_d = self.transform.deriv3_inverse
+        elif u.shape[-1] == 4:
+            psi_d = self.transform.deriv4_inverse
+        else:
+            # will raise NotImplementedError if not available
+            k = u.shape[-1]
 
-        cdfv = self.cdf(u, args=args)
+            def psi_d(*args):
+                return self.transform.derivk_inverse(k, *args)
 
-        pdfv = - np.product(phi_d1(u, *args), axis)
-        pdfv *= phi_d2(cdfv, *args)
-        pdfv /= phi_d1(cdfv, *args)**3
+        psi = self.transform.evaluate(u, *args).sum(axis)
 
-        return pdfv
+        pdfv = np.product(phi_d1(u, *args), axis)
+        pdfv *= (psi_d(psi, *args))
+
+        # use abs, I'm not sure yet about where to add signs
+        return np.abs(pdfv)
 
     def logpdf(self, u, args=()):
         """Evaluate log pdf of multivariate Archimedean copula."""
         # TODO: replace by formulas, and exp in pdf
+        # return np.log(self.pdf(u, args))
         args = self._handle_args(args)
         axis = -1
         u = np.asarray(u)
-        if u.shape[-1] > 2:
-            msg = "pdf is currently only available for bivariate copula"
-            raise ValueError(msg)
 
         phi_d1 = self.transform.deriv
-        phi_d2 = self.transform.deriv2
+        if u.shape[-1] == 2:
+            psi_d = self.transform.deriv2_inverse
+        elif u.shape[-1] == 3:
+            psi_d = self.transform.deriv3_inverse
+        elif u.shape[-1] == 4:
+            psi_d = self.transform.deriv4_inverse
+        else:
+            # will raise NotImplementedError if not available
+            k = u.shape[-1]
 
-        cdfv = self.cdf(u, args=args)
+            def psi_d(*args):
+                return self.transform.derivk_inverse(k, *args)
+
+        psi = self.transform.evaluate(u, *args).sum(axis)
 
         # I need np.abs because derivatives are negative,
         # is this correct for mv?
         logpdfv = np.sum(np.log(np.abs(phi_d1(u, *args))), axis)
-        logpdfv += np.log(np.abs(phi_d2(cdfv, *args) / phi_d1(cdfv, *args)**3))
+        logpdfv += np.log(np.abs(psi_d(psi, *args)))
 
         return logpdfv
 
@@ -174,7 +190,8 @@ class ClaytonCopula(ArchimedeanCopula):
     def cdf(self, u, args=()):
         u = np.atleast_2d(u)
         th, = self._handle_args(args)
-        return (np.sum(u ** (-th), axis=1) - 1) ** (-1.0 / th)
+        d = u.shape[-1]  # self.k_dim
+        return (np.sum(u ** (-th), axis=1) - d + 1) ** (-1.0 / th)
 
     def tau(self, theta=None):
         # Joe 2014 p. 168
@@ -248,8 +265,8 @@ class FrankCopula(ArchimedeanCopula):
         u = np.atleast_2d(u)
         th, = self._handle_args(args)
         dim = u.shape[-1]
-        if dim != 2:
-            return super().cdf(u)
+        # if dim != 2:
+        #     return super().cdf(u)
 
         num = np.prod(1 - np.exp(- th * u), axis=1)
         den = (1 - np.exp(-th)) ** (dim - 1)
