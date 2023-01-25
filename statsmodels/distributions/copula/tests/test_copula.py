@@ -207,6 +207,17 @@ def test_copulas(case):
     logpdf1 = ca.logpdf(u, args=args)
     assert_allclose(logpdf1, np.log(pdf2), rtol=1e-13)
 
+    # compare with specific copula class
+    ca2 = cop()
+    cdf3 = ca2.cdf(u, args=args)
+    pdf3 = ca2.pdf(u, args=args)
+    logpdf3 = ca2.logpdf(u, args=args)
+    assert_allclose(cdf3, cdf2, rtol=1e-13)
+    assert_allclose(pdf3, pdf2, rtol=1e-13)
+
+    logpdf1 = ca.logpdf(u, args=args)
+    assert_allclose(logpdf3, np.log(pdf2), rtol=1e-13)
+
 
 @pytest.mark.parametrize("case", ev_list)
 def test_ev_copula_distr(case):

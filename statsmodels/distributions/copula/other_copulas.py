@@ -55,7 +55,7 @@ class IndependenceCopula(Copula):
         return np.ones(len(u))
 
     def cdf(self, u, args=()):
-        return np.prod(u, axis=1)
+        return np.prod(u, axis=-1)
 
     def tau(self):
         return 0

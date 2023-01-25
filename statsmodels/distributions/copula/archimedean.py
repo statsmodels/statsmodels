@@ -178,10 +178,13 @@ class ClaytonCopula(ArchimedeanCopula):
     def pdf(self, u, args=()):
         u = np.atleast_2d(u)
         th, = self._handle_args(args)
-        a = (th + 1) * np.prod(u, axis=1) ** -(th + 1)
-        b = np.sum(u ** -th, axis=1) - 1
-        c = -(2 * th + 1) / th
-        return a * b ** c
+        if u.shape[1] == 2:
+            a = (th + 1) * np.prod(u, axis=1) ** -(th + 1)
+            b = np.sum(u ** -th, axis=1) - 1
+            c = -(2 * th + 1) / th
+            return a * b ** c
+        else:
+            return super().pdf(u, args)
 
     def logpdf(self, u, args=()):
         # we skip Archimedean logpdf, that uses numdiff
@@ -251,7 +254,7 @@ class FrankCopula(ArchimedeanCopula):
         u = np.atleast_2d(u)
         th, = self._handle_args(args)
         if u.shape[-1] != 2:
-            return super().pdf(u)
+            return super().pdf(u, th)
 
         g_ = np.exp(-th * np.sum(u, axis=1)) - 1
         g1 = np.exp(-th) - 1
@@ -287,7 +290,7 @@ class FrankCopula(ArchimedeanCopula):
         else:
             # for now use generic from base Copula class, log(self.pdf(...))
             # we skip Archimedean logpdf, that uses numdiff
-            super(ArchimedeanCopula, self).logpdf(u, args)
+            return super(FrankCopula, self).logpdf(u, args)
 
     def cdfcond_2g1(self, u, args=()):
         """Conditional cdf of second component given the value of first.
@@ -380,19 +383,22 @@ class GumbelCopula(ArchimedeanCopula):
     def pdf(self, u, args=()):
         u = np.atleast_2d(u)
         th, = self._handle_args(args)
-        xy = -np.log(u)
-        xy_theta = xy ** th
+        if u.shape[-1] == 2:
+            xy = -np.log(u)
+            xy_theta = xy ** th
 
-        sum_xy_theta = np.sum(xy_theta, axis=1)
-        sum_xy_theta_theta = sum_xy_theta ** (1.0 / th)
+            sum_xy_theta = np.sum(xy_theta, axis=1)
+            sum_xy_theta_theta = sum_xy_theta ** (1.0 / th)
 
-        a = np.exp(-sum_xy_theta_theta)
-        b = sum_xy_theta_theta + th - 1.0
-        c = sum_xy_theta ** (1.0 / th - 2)
-        d = np.prod(xy, axis=1) ** (th - 1.0)
-        e = np.prod(u, axis=1) ** (- 1.0)
+            a = np.exp(-sum_xy_theta_theta)
+            b = sum_xy_theta_theta + th - 1.0
+            c = sum_xy_theta ** (1.0 / th - 2)
+            d = np.prod(xy, axis=1) ** (th - 1.0)
+            e = np.prod(u, axis=1) ** (- 1.0)
 
-        return a * b * c * d * e
+            return a * b * c * d * e
+        else:
+            return super().pdf(u, args)
 
     def cdf(self, u, args=()):
         u = np.atleast_2d(u)
