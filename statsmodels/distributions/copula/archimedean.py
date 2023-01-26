@@ -188,7 +188,7 @@ class ClaytonCopula(ArchimedeanCopula):
 
     def logpdf(self, u, args=()):
         # we skip Archimedean logpdf, that uses numdiff
-        return super(ArchimedeanCopula, self).logpdf(u, args=args)
+        return super().logpdf(u, args=args)
 
     def cdf(self, u, args=()):
         u = np.atleast_2d(u)
@@ -290,7 +290,7 @@ class FrankCopula(ArchimedeanCopula):
         else:
             # for now use generic from base Copula class, log(self.pdf(...))
             # we skip Archimedean logpdf, that uses numdiff
-            return super(FrankCopula, self).logpdf(u, args)
+            return super().logpdf(u, args)
 
     def cdfcond_2g1(self, u, args=()):
         """Conditional cdf of second component given the value of first.
@@ -409,7 +409,7 @@ class GumbelCopula(ArchimedeanCopula):
 
     def logpdf(self, u, args=()):
         # we skip Archimedean logpdf, that uses numdiff
-        return super(ArchimedeanCopula, self).logpdf(u, args=args)
+        return super().logpdf(u, args=args)
 
     def tau(self, theta=None):
         # Joe 2014 p. 172

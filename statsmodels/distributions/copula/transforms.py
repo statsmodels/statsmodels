@@ -210,6 +210,9 @@ class TransfIndep(Transforms):
     def deriv3_inverse(self, phi, *args):
         return -np.exp(-phi)
 
+    def deriv4_inverse(self, phi, *args):
+        return np.exp(-phi)
+
 
 class _TransfPower(Transforms):
     """generic multivariate Archimedean copula with additional power transforms
