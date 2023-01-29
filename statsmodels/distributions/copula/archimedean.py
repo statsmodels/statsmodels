@@ -63,9 +63,20 @@ class ArchimedeanCopula(Copula):
 
         return args
 
+    def _handle_u(self, u):
+        u = np.asarray(u)
+        if u.shape[-1] != self.k_dim:
+            import warnings
+            warnings.warn("u has different dimension than k_dim. "
+                          "This will raise exception in future versions",
+                          FutureWarning)
+
+        return u
+
     def cdf(self, u, args=()):
         """Evaluate cdf of Archimedean copula."""
         args = self._handle_args(args)
+        u = self._handle_u(u)
         axis = -1
         phi = self.transform.evaluate
         phi_inv = self.transform.inverse
@@ -77,44 +88,59 @@ class ArchimedeanCopula(Copula):
 
     def pdf(self, u, args=()):
         """Evaluate pdf of Archimedean copula."""
+        u = self._handle_u(u)
         args = self._handle_args(args)
         axis = -1
-        u = np.asarray(u)
-        if u.shape[-1] > 2:
-            msg = "pdf is currently only available for bivariate copula"
-            raise ValueError(msg)
-        # phi = self.transform.evaluate
-        # phi_inv = self.transform.inverse
+
         phi_d1 = self.transform.deriv
-        phi_d2 = self.transform.deriv2
+        if u.shape[-1] == 2:
+            psi_d = self.transform.deriv2_inverse
+        elif u.shape[-1] == 3:
+            psi_d = self.transform.deriv3_inverse
+        elif u.shape[-1] == 4:
+            psi_d = self.transform.deriv4_inverse
+        else:
+            # will raise NotImplementedError if not available
+            k = u.shape[-1]
 
-        cdfv = self.cdf(u, args=args)
+            def psi_d(*args):
+                return self.transform.derivk_inverse(k, *args)
 
-        pdfv = - np.product(phi_d1(u, *args), axis)
-        pdfv *= phi_d2(cdfv, *args)
-        pdfv /= phi_d1(cdfv, *args)**3
+        psi = self.transform.evaluate(u, *args).sum(axis)
 
-        return pdfv
+        pdfv = np.product(phi_d1(u, *args), axis)
+        pdfv *= (psi_d(psi, *args))
+
+        # use abs, I'm not sure yet about where to add signs
+        return np.abs(pdfv)
 
     def logpdf(self, u, args=()):
         """Evaluate log pdf of multivariate Archimedean copula."""
-        # TODO: replace by formulas, and exp in pdf
+
+        u = self._handle_u(u)
         args = self._handle_args(args)
         axis = -1
-        u = np.asarray(u)
-        if u.shape[-1] > 2:
-            msg = "pdf is currently only available for bivariate copula"
-            raise ValueError(msg)
 
         phi_d1 = self.transform.deriv
-        phi_d2 = self.transform.deriv2
+        if u.shape[-1] == 2:
+            psi_d = self.transform.deriv2_inverse
+        elif u.shape[-1] == 3:
+            psi_d = self.transform.deriv3_inverse
+        elif u.shape[-1] == 4:
+            psi_d = self.transform.deriv4_inverse
+        else:
+            # will raise NotImplementedError if not available
+            k = u.shape[-1]
 
-        cdfv = self.cdf(u, args=args)
+            def psi_d(*args):
+                return self.transform.derivk_inverse(k, *args)
+
+        psi = self.transform.evaluate(u, *args).sum(axis)
 
         # I need np.abs because derivatives are negative,
         # is this correct for mv?
         logpdfv = np.sum(np.log(np.abs(phi_d1(u, *args))), axis)
-        logpdfv += np.log(np.abs(phi_d2(cdfv, *args) / phi_d1(cdfv, *args)**3))
+        logpdfv += np.log(np.abs(psi_d(psi, *args)))
 
         return logpdfv
 
@@ -160,21 +186,25 @@ class ClaytonCopula(ArchimedeanCopula):
         return (1 - np.log(x) / v) ** (-1. / th)
 
     def pdf(self, u, args=()):
-        u = np.atleast_2d(u)
+        u = self._handle_u(u)
         th, = self._handle_args(args)
-        a = (th + 1) * np.prod(u, axis=1) ** -(th + 1)
-        b = np.sum(u ** -th, axis=1) - 1
-        c = -(2 * th + 1) / th
-        return a * b ** c
+        if u.shape[-1] == 2:
+            a = (th + 1) * np.prod(u, axis=-1) ** -(th + 1)
+            b = np.sum(u ** -th, axis=-1) - 1
+            c = -(2 * th + 1) / th
+            return a * b ** c
+        else:
+            return super().pdf(u, args)
 
     def logpdf(self, u, args=()):
         # we skip Archimedean logpdf, that uses numdiff
-        return super(ArchimedeanCopula, self).logpdf(u, args=args)
+        return super().logpdf(u, args=args)
 
     def cdf(self, u, args=()):
-        u = np.atleast_2d(u)
+        u = self._handle_u(u)
         th, = self._handle_args(args)
-        return (np.sum(u ** (-th), axis=1) - 1) ** (-1.0 / th)
+        d = u.shape[-1]  # self.k_dim
+        return (np.sum(u ** (-th), axis=-1) - d + 1) ** (-1.0 / th)
 
     def tau(self, theta=None):
         # Joe 2014 p. 168
@@ -231,33 +261,31 @@ class FrankCopula(ArchimedeanCopula):
     # todo: check expm1 and log1p for improved numerical precision
 
     def pdf(self, u, args=()):
-        u = np.atleast_2d(u)
+        u = self._handle_u(u)
         th, = self._handle_args(args)
         if u.shape[-1] != 2:
-            return super().pdf(u)
+            return super().pdf(u, th)
 
-        g_ = np.exp(-th * np.sum(u, axis=1)) - 1
+        g_ = np.exp(-th * np.sum(u, axis=-1)) - 1
         g1 = np.exp(-th) - 1
 
         num = -th * g1 * (1 + g_)
-        aux = np.prod(np.exp(-th * u) - 1, axis=1) + g1
+        aux = np.prod(np.exp(-th * u) - 1, axis=-1) + g1
         den = aux ** 2
         return num / den
 
     def cdf(self, u, args=()):
-        u = np.atleast_2d(u)
+        u = self._handle_u(u)
         th, = self._handle_args(args)
         dim = u.shape[-1]
-        if dim != 2:
-            return super().cdf(u)
 
-        num = np.prod(1 - np.exp(- th * u), axis=1)
+        num = np.prod(1 - np.exp(- th * u), axis=-1)
         den = (1 - np.exp(-th)) ** (dim - 1)
 
         return -1.0 / th * np.log(1 - num / den)
 
     def logpdf(self, u, args=()):
-        u = np.atleast_2d(u)
+        u = self._handle_u(u)
         th, = self._handle_args(args)
         if u.shape[-1] == 2:
             # bivariate case
@@ -270,12 +298,12 @@ class FrankCopula(ArchimedeanCopula):
         else:
             # for now use generic from base Copula class, log(self.pdf(...))
             # we skip Archimedean logpdf, that uses numdiff
-            super(ArchimedeanCopula, self).logpdf(u, args)
+            return super().logpdf(u, args)
 
     def cdfcond_2g1(self, u, args=()):
         """Conditional cdf of second component given the value of first.
         """
-        u = np.atleast_2d(u)
+        u = self._handle_u(u)
         th, = self._handle_args(args)
         if u.shape[-1] == 2:
             # bivariate case
@@ -361,32 +389,35 @@ class GumbelCopula(ArchimedeanCopula):
         return np.exp(-(-np.log(x) / v) ** (1. / th))
 
     def pdf(self, u, args=()):
-        u = np.atleast_2d(u)
+        u = self._handle_u(u)
         th, = self._handle_args(args)
-        xy = -np.log(u)
-        xy_theta = xy ** th
+        if u.shape[-1] == 2:
+            xy = -np.log(u)
+            xy_theta = xy ** th
 
-        sum_xy_theta = np.sum(xy_theta, axis=1)
-        sum_xy_theta_theta = sum_xy_theta ** (1.0 / th)
+            sum_xy_theta = np.sum(xy_theta, axis=-1)
+            sum_xy_theta_theta = sum_xy_theta ** (1.0 / th)
 
-        a = np.exp(-sum_xy_theta_theta)
-        b = sum_xy_theta_theta + th - 1.0
-        c = sum_xy_theta ** (1.0 / th - 2)
-        d = np.prod(xy, axis=1) ** (th - 1.0)
-        e = np.prod(u, axis=1) ** (- 1.0)
+            a = np.exp(-sum_xy_theta_theta)
+            b = sum_xy_theta_theta + th - 1.0
+            c = sum_xy_theta ** (1.0 / th - 2)
+            d = np.prod(xy, axis=-1) ** (th - 1.0)
+            e = np.prod(u, axis=-1) ** (- 1.0)
 
-        return a * b * c * d * e
+            return a * b * c * d * e
+        else:
+            return super().pdf(u, args)
 
     def cdf(self, u, args=()):
-        u = np.atleast_2d(u)
+        u = self._handle_u(u)
         th, = self._handle_args(args)
-        h = np.sum((-np.log(u)) ** th, axis=1)
+        h = np.sum((-np.log(u)) ** th, axis=-1)
         cdf = np.exp(-h ** (1.0 / th))
         return cdf
 
     def logpdf(self, u, args=()):
         # we skip Archimedean logpdf, that uses numdiff
-        return super(ArchimedeanCopula, self).logpdf(u, args=args)
+        return super().logpdf(u, args=args)
 
     def tau(self, theta=None):
         # Joe 2014 p. 172

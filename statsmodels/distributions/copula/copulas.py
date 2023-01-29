@@ -264,9 +264,6 @@ class Copula(ABC):
 
     def __init__(self, k_dim=2):
         self.k_dim = k_dim
-        if k_dim > 2:
-            import warnings
-            warnings.warn("copulas for more than 2 dimension is untested")
 
     def rvs(self, nobs=1, args=(), random_state=None):
         """Draw `n` in the half-open interval ``[0, 1)``.

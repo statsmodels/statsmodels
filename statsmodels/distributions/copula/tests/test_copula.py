@@ -6,6 +6,7 @@ Author: Josef Perktold
 License: BSD-3
 
 """
+import warnings
 from statsmodels.compat.pytest import pytest_warns
 
 from statsmodels.compat.scipy import SP_LT_15
@@ -90,11 +91,42 @@ ev_dep_list = [
 
 
 cop_list = [
-    [tra.TransfFrank, 0.5, 0.9, (2,), 0.4710805107852225, 0.9257812360337806],
-    [tra.TransfGumbel, 0.5, 0.9, (2,), 0.4960348880595387, 0.3973548776136501],
-    [tra.TransfClayton, 0.5, 0.9, (2,), 0.485954322440435, 0.8921974147432954],
-    [tra.TransfIndep, 0.5, 0.5, (), 0.25, 1],
-]
+    [tra.TransfFrank, [0.5, 0.9], (2,), 0.4710805107852225,
+     0.9257812360337806, FrankCopula],
+    [tra.TransfGumbel, [0.5, 0.9], (2,), 0.4960348880595387,
+     0.3973548776136501, GumbelCopula],
+    [tra.TransfClayton, [0.5, 0.9], (2,), 0.485954322440435,
+     0.8921974147432954, ClaytonCopula],
+    [tra.TransfIndep, [0.5, 0.5], (), 0.25, 1, IndependenceCopula],
+    ]
+
+
+# separate mv list because test_copulas_distr not yet adjusted
+copk_list = [
+    # k_dim = 3
+    [tra.TransfGumbel, [0.6, 0.5, 0.9], (2,), 0.4200146617837097,
+     0.7507987484870147, GumbelCopula],
+    [tra.TransfClayton, [0.6, 0.5, 0.9], (2,), 0.4078289289864994,
+     1.430033358494079, ClaytonCopula],
+    [tra.TransfFrank, [0.6, 0.5, 0.9], (2,), 0.3397845258821868,
+     1.123811705698149, FrankCopula],
+    # k_dim = 4
+    [tra.TransfGumbel, [0.6, 0.5, 0.9, 0.1], (2,), 0.08538643946528957,
+     0.05130542596740889, GumbelCopula],
+    [tra.TransfClayton, [0.6, 0.5, 0.9, 0.1], (2,), 0.09758427058689817,
+     0.00428071573295176, ClaytonCopula],
+    [tra.TransfFrank, [0.6, 0.5, 0.9, 0.1], (2,), 0.05456579067435671,
+     0.4089534511841545, FrankCopula],
+    [tra.TransfIndep, [0.5, 0.5, 0.5, 0.5], (), 0.0625, 1, IndependenceCopula],
+    ]
+
+# archimedean with pdf only for k_dim <= 4
+cop_2d = [
+    [tra.TransfFrank, (2,), FrankCopula],
+    [tra.TransfGumbel, (2,), GumbelCopula],
+    # [tra.TransfClayton, (2,), ClaytonCopula],
+    # [tra.TransfIndep, (), IndependenceCopula],
+    ]
 
 gev_list = [
     # [cop.transform_tawn, 0.5, 0.9, (0.5, 0.5, 0.5), 0.4724570876035117],
@@ -179,18 +211,31 @@ def test_ev_dep(case):
     assert_allclose(df, res2, rtol=1e-13)
 
 
-@pytest.mark.parametrize("case", cop_list)
+@pytest.mark.parametrize("case", cop_list + copk_list)
 def test_copulas(case):
     # check ev copulas, cdf and transform against R `copula` package
-    cop_tr, v1, v2, args, cdf2, pdf2 = case
-    ca = ArchimedeanCopula(cop_tr())
-    cdf1 = ca.cdf([v1, v2], args=args)
-    pdf1 = ca.pdf([v1, v2], args=args)
+    cop_tr, u, args, cdf2, pdf2, cop = case
+    k_dim = np.asarray(u).shape[-1]
+    ca = ArchimedeanCopula(cop_tr(), k_dim=k_dim)
+    cdf1 = ca.cdf(u, args=args)
+    pdf1 = ca.pdf(u, args=args)
     assert_allclose(cdf1, cdf2, rtol=1e-13)
     assert_allclose(pdf1, pdf2, rtol=1e-13)
+    assert cdf1.shape == ()
 
-    logpdf1 = ca.logpdf([v1, v2], args=args)
+    logpdf1 = ca.logpdf(u, args=args)
     assert_allclose(logpdf1, np.log(pdf2), rtol=1e-13)
+
+    # compare with specific copula class
+    ca2 = cop(k_dim=k_dim)
+    cdf3 = ca2.cdf(u, args=args)
+    pdf3 = ca2.pdf(u, args=args)
+    logpdf3 = ca2.logpdf(u, args=args)
+    assert_allclose(cdf3, cdf2, rtol=1e-13)
+    assert_allclose(pdf3, pdf2, rtol=1e-13)
+    assert_allclose(logpdf3, np.log(pdf2), rtol=1e-13)
+    assert cdf3.shape == ()
+    assert pdf3.shape == ()  # currently fails
 
 
 @pytest.mark.parametrize("case", ev_list)
@@ -223,16 +268,20 @@ def test_ev_copula_distr(case):
         assert cdfd.shape == (3,)
 
 
-@pytest.mark.parametrize("case", cop_list)
+@pytest.mark.parametrize("case", cop_list + copk_list)
 def test_copulas_distr(case):
     # check ev copulas, cdf and transform against R `copula` package
-    cop_tr, v1, v2, args, cdf2, pdf2 = case
-    u = [v1, v2]
-    ca = ArchimedeanCopula(cop_tr())
+    cop_tr, u, args, cdf2, pdf2, cop = case
+    k_dim = np.asarray(u).shape[-1]
+
+    ca = ArchimedeanCopula(cop_tr(), k_dim=k_dim)
     cdf1 = ca.cdf(u, args=args)
     pdf1 = ca.pdf(u, args=args)
 
-    cad = CopulaDistribution(ca, [uniform, uniform], cop_args=args)
+    marginals = [uniform] * k_dim
+    cad = CopulaDistribution(ca, marginals, cop_args=args)
+    # TODO: check also for specific archimedean classes
+    # cad = CopulaDistribution(cop(k_dim=k_dim), marginals, cop_args=args)
     cdfd = cad.cdf(np.array(u), cop_args=args)
     assert_allclose(cdfd, cdf1, rtol=1e-13)
     assert cdfd.shape == ()
@@ -256,9 +305,27 @@ def test_copulas_distr(case):
     assert cdfd.shape == (3,)
 
     # check mv, check at marginal cdf
-    cdfmv = ca.cdf([v1, v2, 1], args=args)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", FutureWarning)
+
+        cdfmv = ca.cdf(list(u) + [1], args=args)
     assert_allclose(cdfmv, cdf1, rtol=1e-13)
     assert cdfd.shape == (3,)
+
+
+@pytest.mark.parametrize("case", cop_2d)
+@pytest.mark.parametrize("k_dim", [5, 6])
+def test_copulas_raise(case, k_dim):
+    cop_tr, args, cop = case
+    u = [0.5] * k_dim
+
+    ca = ArchimedeanCopula(cop_tr(), k_dim=k_dim)
+
+    with pytest.raises(NotImplementedError):
+        ca.rvs(u, args=args)
+
+    with pytest.raises(NotImplementedError):
+        ca.pdf(u, args=args)
 
 
 @pytest.mark.parametrize("case", gev_list)
