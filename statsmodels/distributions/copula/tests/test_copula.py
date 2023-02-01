@@ -37,7 +37,6 @@ import statsmodels.distributions.copula.transforms as tra
 from statsmodels.distributions.tools import (
     approx_copula_pdf,
     frequencies_fromdata,
-    cdf2prob_grid,
 )
 from statsmodels.tools.numdiff import approx_fprime_cs, approx_hess
 
@@ -497,11 +496,12 @@ class CheckRvsDim():
     # class to check rvs for larger k_dim
     def test_rvs(self):
         nobs = 2000
+        use_pdf = getattr(self, "use_pdf", False)
         # seed adjusted to avoid test failures with rvs numbers
         rng = np.random.RandomState(97651629) #27658622)
         rvs = self.copula.rvs(nobs, random_state=rng)
         chi2t, rvs = check_cop_rvs(
-            self.copula, rvs=rvs, nobs=nobs, k=10, use_pdf=False
+            self.copula, rvs=rvs, nobs=nobs, k=10, use_pdf=use_pdf
             )
         assert chi2t.pvalue > 0.1
 
@@ -512,6 +512,9 @@ class CheckRvsDim():
         tau = np.mean(taus)
         tau_cop = self.copula.tau()
         assert_allclose(tau, tau_cop, rtol=0.05)
+        theta_est = self.copula.fit_corr_param(rvs)
+        # specific to archimedean
+        assert_allclose(theta_est, self.copula.args, rtol=0.1)
 
 
 class TestGaussianCopula(CheckCopula):
@@ -534,6 +537,17 @@ class TestGaussianCopula(CheckCopula):
         tau = stats.kendalltau(*rvs.T)[0]
         tau_cop = self.copula.tau()
         assert_allclose(tau, tau_cop, rtol=0.05)
+
+        corr_est = self.copula.fit_corr_param(rvs)
+        assert_allclose(corr_est, 0.8, rtol=0.1)
+
+
+class T_estGaussianCopula3d(CheckRvsDim):
+    copula = GaussianCopula(corr=[[1.0, 0.5, 0.2],
+                                  [0.5, 1.0, 0.2],
+                                  [0.2, 0.2, 1.0]], k_dim=3)
+    dim = 3
+    use_pdf = True
 
 
 class TestStudentTCopula(CheckCopula):

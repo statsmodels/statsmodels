@@ -93,6 +93,35 @@ class EllipticalCopula(Copula):
         corr = np.sin(tau * np.pi / 2)
         return corr
 
+    def fit_corr_param(self, data):
+        """Copula correlation parameter using Kendall's tau of sample data.
+
+        Parameters
+        ----------
+        data : array_like
+            Sample data used to fit `theta` using Kendall's tau.
+
+        Returns
+        -------
+        corr_param : float
+            Correlation parameter of the copula, ``theta`` in Archimedean and
+            pearson correlation in elliptical.
+            If k_dim > 2, then average tau is used.
+        """
+        x = np.asarray(data)
+
+        if x.shape[1] == 2:
+            tau = stats.kendalltau(x[:, 0], x[:, 1])[0]
+        else:
+            k = self.k_dim
+            tau = np.eye(k)
+            for i in range(k):
+                for j in range(i+1, k):
+                    tau_ij = stats.kendalltau(x[..., i], x[..., j])[0]
+                    tau[i, j] = tau[j, i] = tau_ij
+
+        return self._arg_from_tau(tau)
+
 
 class GaussianCopula(EllipticalCopula):
     r"""Gaussian copula.

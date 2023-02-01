@@ -175,18 +175,33 @@ def nearest_matrix_margins(mat, maxiter=100, tol=1e-8):
     -----
     This function is intended for internal use and will be generalized in
     future. API will change.
+
+    changed in 0.14 to support k_dim > 2.
+
+
     """
     pc = np.asarray(mat)
     converged = False
+
     for _ in range(maxiter):
-        pc = pc / pc.sum(0) / pc.sum(1)[:, None]
+        pc0 = pc.copy()
+        for ax in range(pc.ndim):
+            axs = tuple([i for i in range(pc.ndim) if not i == ax])
+            pc0 /= pc.sum(axis=axs, keepdims=True)
+        pc = pc0
         pc /= pc.sum()
-        if np.ptp(pc.sum(0)) < tol:
-            if np.ptp(pc.sum(1)) < tol:
-                converged = True
-                break
+
+        # check convergence
+        mptps = []
+        for ax in range(pc.ndim):
+            axs = tuple([i for i in range(pc.ndim) if not i == ax])
+            marg = pc.sum(axis=axs, keepdims=False)
+            mptps.append(np.ptp(marg))
+        if max(mptps) < tol:
+            converged = True
+            break
+
     if not converged:
-        import warnings
         from statsmodels.tools.sm_exceptions import ConvergenceWarning
         warnings.warn("Iterations did not converge, maxiter reached",
                       ConvergenceWarning)
@@ -262,9 +277,17 @@ def approx_copula_pdf(copula, k_bins=10, force_uniform=True, use_pdf=False):
         Instance of a copula class. Only the ``pdf`` method is used.
     k_bins : int
         Number of bins along each dimension in the approximating histogram.
-    use_ranks : bool
-        If use_rank is True, then data will be converted to ranks without
-        tie handling.
+    force_uniform : bool
+        If true, then the pdf grid will be adjusted to have uniform margins
+        using `nearest_matrix_margin`.
+        If false, then no adjustment is done and the margins may not be exactly
+        uniform.
+    use_pdf : bool
+        If false, then the grid cell probabilities will be computed from the
+        copula cdf.
+        If true, then the density, ``pdf``, is used and cell probabilities
+        are approximated by averaging the pdf of the cell corners. This is
+        only useful if the cdf is not available.
 
     Returns
     -------
@@ -272,8 +295,8 @@ def approx_copula_pdf(copula, k_bins=10, force_uniform=True, use_pdf=False):
         Probability that random variable falls in given bin. This corresponds
         to a discrete distribution, and is not scaled to bin size to form a
         piecewise uniform, histogram density.
-        Bin probabilities are a 2-dim array with k_bins rows and k_bins
-        columns with first random variable in rows and second in columns.
+        Bin probabilities are a k-dim array with k_bins segments in each
+        dimensionrows.
 
     Notes
     -----
