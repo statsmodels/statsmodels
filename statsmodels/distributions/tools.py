@@ -253,7 +253,7 @@ def frequencies_fromdata(data, k_bins, use_ranks=True):
     return freqr
 
 
-def approx_copula_pdf(copula, k_bins=10, force_uniform=True):
+def approx_copula_pdf(copula, k_bins=10, force_uniform=True, use_pdf=False):
     """Histogram probabilities as approximation to a copula density.
 
     Parameters
@@ -284,14 +284,24 @@ def approx_copula_pdf(copula, k_bins=10, force_uniform=True):
     k = k_bins + 1
     g = _Grid([k] * k_dim, eps=0.1 / k_bins)
     ks = tuple([k] * k_dim)
-    pdfg = copula.pdf(g.x_flat).reshape(*ks, order="F")
-    # correct for bin size
-    pdfg *= 1 / k**k_dim
-    ag = average_grid(pdfg)
-    if force_uniform:
-        pdf_grid = nearest_matrix_margins(ag, maxiter=100, tol=1e-8)
+
+    if use_pdf:
+        pdfg = copula.pdf(g.x_flat).reshape(*ks, order="F")
+        # correct for bin size
+        pdfg *= 1 / k**k_dim
+        ag = average_grid(pdfg)
+        if force_uniform:
+            pdf_grid = nearest_matrix_margins(ag, maxiter=100, tol=1e-8)
+        else:
+            pdf_grid = ag / ag.sum()
     else:
-        pdf_grid = ag / ag.sum()
+        cdfg = copula.cdf(g.x_flat).reshape(*ks, order="F")
+        # correct for bin size
+        pdf_grid = cdf2prob_grid(cdfg, prepend=None)
+        # TODO: check boundary approximation, eg. undefined at zero
+        # for now just normalize
+        pdf_grid /= pdf_grid.sum()
+
     return pdf_grid
 
 

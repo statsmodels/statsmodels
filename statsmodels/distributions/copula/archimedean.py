@@ -176,9 +176,6 @@ class ClaytonCopula(ArchimedeanCopula):
         self.theta = theta
 
     def rvs(self, nobs=1, args=(), random_state=None):
-        # if self.k_dim != 2:
-        #     msg = "rvs is only available for bivariate copula"
-        #     raise NotImplementedError(msg)
         rng = check_random_state(random_state)
         th, = self._handle_args(args)
         x = rng.random((nobs, self.k_dim))
@@ -249,9 +246,6 @@ class FrankCopula(ArchimedeanCopula):
         self.theta = theta
 
     def rvs(self, nobs=1, args=(), random_state=None):
-        if self.k_dim != 2:
-            msg = "rvs is only available for bivariate copula"
-            raise NotImplementedError(msg)
         rng = check_random_state(random_state)
         th, = self._handle_args(args)
         x = rng.random((nobs, self.k_dim))
@@ -379,9 +373,6 @@ class GumbelCopula(ArchimedeanCopula):
         self.theta = theta
 
     def rvs(self, nobs=1, args=(), random_state=None):
-        if self.k_dim != 2:
-            msg = "rvs is only available for bivariate copula"
-            raise NotImplementedError(msg)
         rng = check_random_state(random_state)
         th, = self._handle_args(args)
         x = rng.random((nobs, self.k_dim))
@@ -390,7 +381,12 @@ class GumbelCopula(ArchimedeanCopula):
             np.cos(np.pi / (2 * th)) ** th,
             size=(nobs, 1), random_state=rng
         )
-        return np.exp(-(-np.log(x) / v) ** (1. / th))
+
+        if self.k_dim != 2:
+            rv = np.exp(-(-np.log(x) / v) ** (1. / th))
+        else:
+            rv = self.transform.inverse(- np.log(x) / v, th)
+        return rv
 
     def pdf(self, u, args=()):
         u = self._handle_u(u)
