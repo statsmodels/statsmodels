@@ -240,8 +240,9 @@ def frequencies_fromdata(data, k_bins, use_ranks=True):
     future. API will change.
     """
     data = np.asarray(data)
+    k_dim = data.shape[-1]
     k = k_bins + 1
-    g2 = _Grid([k, k], eps=0)
+    g2 = _Grid([k] * k_dim, eps=0)
     if use_ranks:
         data = _rankdata_no_ties(data) / (data.shape[0] + 1)
         # alternatives: scipy handles ties, but uses np.apply_along_axis
@@ -279,11 +280,13 @@ def approx_copula_pdf(copula, k_bins=10, force_uniform=True):
     This function is intended for internal use and will be generalized in
     future. API will change.
     """
+    k_dim = copula.k_dim
     k = k_bins + 1
-    g = _Grid([k, k], eps=0.1 / k_bins)
-    pdfg = copula.pdf(g.x_flat).reshape(k, k, order="F")
+    g = _Grid([k] * k_dim, eps=0.1 / k_bins)
+    ks = tuple([k] * k_dim)
+    pdfg = copula.pdf(g.x_flat).reshape(*ks, order="F")
     # correct for bin size
-    pdfg *= 1 / k**2
+    pdfg *= 1 / k**k_dim
     ag = average_grid(pdfg)
     if force_uniform:
         pdf_grid = nearest_matrix_margins(ag, maxiter=100, tol=1e-8)

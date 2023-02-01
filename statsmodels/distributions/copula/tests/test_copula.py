@@ -154,13 +154,18 @@ gev_list = [
 def check_cop_rvs(cop, rvs=None, nobs=2000, k=10, use_pdf=True):
     if rvs is None:
         rvs = cop.rvs(nobs)
+    else:
+        nobs = rvs.shape[0]
     freq = frequencies_fromdata(rvs, k, use_ranks=True)
     if use_pdf:
-        pdfg = approx_copula_pdf(cop, k_bins=k, force_uniform=True)
+        pdfg = approx_copula_pdf(cop, k_bins=k, force_uniform=False) #True)
         count_pdf = pdfg * nobs
     else:
         # use copula cdf if available
         raise NotImplementedError
+
+    freq = freq.ravel()
+    count_pdf = count_pdf.ravel()
     mask = count_pdf < 2
     if mask.sum() > 5:
         cp = count_pdf[mask]
