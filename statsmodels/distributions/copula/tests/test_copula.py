@@ -154,13 +154,15 @@ gev_list = [
 def check_cop_rvs(cop, rvs=None, nobs=2000, k=10, use_pdf=True):
     if rvs is None:
         rvs = cop.rvs(nobs)
-    freq = frequencies_fromdata(rvs, k, use_ranks=True)
-    if use_pdf:
-        pdfg = approx_copula_pdf(cop, k_bins=k, force_uniform=True)
-        count_pdf = pdfg * nobs
     else:
-        # use copula cdf if available
-        raise NotImplementedError
+        nobs = rvs.shape[0]
+    freq = frequencies_fromdata(rvs, k, use_ranks=True)
+    pdfg = approx_copula_pdf(cop, k_bins=k, force_uniform=True,
+                             use_pdf=use_pdf)
+    count_pdf = pdfg * nobs
+
+    freq = freq.ravel()
+    count_pdf = count_pdf.ravel()
     mask = count_pdf < 2
     if mask.sum() > 5:
         cp = count_pdf[mask]
@@ -490,6 +492,44 @@ class TestIndependenceCopula(CheckCopula):
     cdf_u = np.prod(CheckCopula.u, axis=1)
 
 
+class CheckRvsDim():
+    # class to check rvs for larger k_dim
+    def test_rvs(self):
+        nobs = 2000
+        use_pdf = getattr(self, "use_pdf", False)
+        # seed adjusted to avoid test failures with rvs numbers
+        rng = np.random.RandomState(97651629) #27658622)
+        rvs = self.copula.rvs(nobs, random_state=rng)
+        chi2t, rvs = check_cop_rvs(
+            self.copula, rvs=rvs, nobs=nobs, k=10, use_pdf=use_pdf
+            )
+        assert chi2t.pvalue > 0.1
+
+        k = self.dim
+        assert k == rvs.shape[1]
+
+        tau_cop = self.copula.tau()
+
+        if np.ndim(tau_cop) == 2:
+            # elliptical copula with tau matrix
+            tau = np.eye(k)
+            for i in range(k):
+                for j in range(i+1, k):
+                    tau_ij = stats.kendalltau(rvs[..., i], rvs[..., j])[0]
+                    tau[i, j] = tau[j, i] = tau_ij
+            atol = 0.05
+        else:
+            taus = [stats.kendalltau(rvs[..., i], rvs[..., j])[0]
+                    for i in range(k) for j in range(i+1, k)]
+            tau = np.mean(taus)
+            atol = 0
+
+        assert_allclose(tau, tau_cop, rtol=0.05, atol=atol)
+        theta_est = self.copula.fit_corr_param(rvs)
+        # specific to archimedean
+        assert_allclose(theta_est, self.copula.args[0], rtol=0.1, atol=atol)
+
+
 class TestGaussianCopula(CheckCopula):
     copula = GaussianCopula(corr=[[1.0, 0.8], [0.8, 1.0]])
     dim = 2
@@ -510,6 +550,18 @@ class TestGaussianCopula(CheckCopula):
         tau = stats.kendalltau(*rvs.T)[0]
         tau_cop = self.copula.tau()
         assert_allclose(tau, tau_cop, rtol=0.05)
+
+        corr_est = self.copula.fit_corr_param(rvs)
+        assert_allclose(corr_est, 0.8, rtol=0.1)
+
+
+class TestGaussianCopula3d(CheckRvsDim):
+    copula = GaussianCopula(corr=[[1.0, 0.8, 0.1],
+                                  [0.8, 1.0, 0.3],
+                                  [0.1, 0.3, 1.0]],
+                            k_dim=3)
+    dim = 3
+    use_pdf = False
 
 
 class TestStudentTCopula(CheckCopula):
@@ -535,6 +587,15 @@ class TestStudentTCopula(CheckCopula):
         assert_allclose(tau, tau_cop, rtol=0.05)
 
 
+class TestStudentTCopula3d(CheckRvsDim):
+    copula = StudentTCopula(corr=[[1.0, 0.8, 0.1],
+                                  [0.8, 1.0, 0.3],
+                                  [0.1, 0.3, 1.0]],
+                            k_dim=3, df=10)
+    dim = 3
+    use_pdf = True
+
+
 class TestClaytonCopula(CheckModernCopula):
     copula = ClaytonCopula(theta=1.2)
     dim = 2
@@ -542,6 +603,12 @@ class TestClaytonCopula(CheckModernCopula):
              0.6828507, 0.2040454, 0.2838497, 0.8197787, 1.1096360]
     cdf_u = [0.28520375, 0.06101690, 0.17703377, 0.36848218, 0.97772088,
              0.24082057, 0.05811908, 0.09343934, 0.33012582, 0.18738753]
+
+
+class TestClaytonCopula_3d(CheckRvsDim):
+    # currently only checks rvs
+    copula = ClaytonCopula(theta=1.2, k_dim=3)
+    dim = 3
 
 
 class TestFrankCopula(CheckModernCopula):
@@ -553,6 +620,11 @@ class TestFrankCopula(CheckModernCopula):
              0.23412757, 0.05196265, 0.08676979, 0.32803721, 0.16320730]
 
 
+class TestFrankCopula_3d(CheckRvsDim):
+    copula = FrankCopula(theta=3, k_dim=3)
+    dim = 3
+
+
 class TestGumbelCopula(CheckModernCopula):
     copula = GumbelCopula(theta=1.5)
     dim = 2
@@ -560,3 +632,8 @@ class TestGumbelCopula(CheckModernCopula):
              0.7542073, 0.6668307, 0.6275887, 0.7477991, 1.1564864]
     cdf_u = [0.27194634, 0.05484380, 0.15668190, 0.37098420, 0.98176346,
              0.23422865, 0.05188260, 0.08659615, 0.33086960, 0.15803914]
+
+
+class TestGumbelCopula_3d(CheckRvsDim):
+    copula = GumbelCopula(theta=1.5, k_dim=3)
+    dim = 3

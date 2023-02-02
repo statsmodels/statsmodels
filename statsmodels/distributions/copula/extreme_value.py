@@ -159,3 +159,6 @@ class ExtremeValueCopula(Copula):
         where t = np.log(v)/np.log(u*v)
         """
         raise NotImplementedError
+
+    def fit_corr_param(self, data):
+        raise NotImplementedError

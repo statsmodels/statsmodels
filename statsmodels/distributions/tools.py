@@ -175,18 +175,33 @@ def nearest_matrix_margins(mat, maxiter=100, tol=1e-8):
     -----
     This function is intended for internal use and will be generalized in
     future. API will change.
+
+    changed in 0.14 to support k_dim > 2.
+
+
     """
     pc = np.asarray(mat)
     converged = False
+
     for _ in range(maxiter):
-        pc = pc / pc.sum(0) / pc.sum(1)[:, None]
+        pc0 = pc.copy()
+        for ax in range(pc.ndim):
+            axs = tuple([i for i in range(pc.ndim) if not i == ax])
+            pc0 /= pc.sum(axis=axs, keepdims=True)
+        pc = pc0
         pc /= pc.sum()
-        if np.ptp(pc.sum(0)) < tol:
-            if np.ptp(pc.sum(1)) < tol:
-                converged = True
-                break
+
+        # check convergence
+        mptps = []
+        for ax in range(pc.ndim):
+            axs = tuple([i for i in range(pc.ndim) if not i == ax])
+            marg = pc.sum(axis=axs, keepdims=False)
+            mptps.append(np.ptp(marg))
+        if max(mptps) < tol:
+            converged = True
+            break
+
     if not converged:
-        import warnings
         from statsmodels.tools.sm_exceptions import ConvergenceWarning
         warnings.warn("Iterations did not converge, maxiter reached",
                       ConvergenceWarning)
@@ -240,8 +255,9 @@ def frequencies_fromdata(data, k_bins, use_ranks=True):
     future. API will change.
     """
     data = np.asarray(data)
+    k_dim = data.shape[-1]
     k = k_bins + 1
-    g2 = _Grid([k, k], eps=0)
+    g2 = _Grid([k] * k_dim, eps=0)
     if use_ranks:
         data = _rankdata_no_ties(data) / (data.shape[0] + 1)
         # alternatives: scipy handles ties, but uses np.apply_along_axis
@@ -252,7 +268,7 @@ def frequencies_fromdata(data, k_bins, use_ranks=True):
     return freqr
 
 
-def approx_copula_pdf(copula, k_bins=10, force_uniform=True):
+def approx_copula_pdf(copula, k_bins=10, force_uniform=True, use_pdf=False):
     """Histogram probabilities as approximation to a copula density.
 
     Parameters
@@ -261,9 +277,17 @@ def approx_copula_pdf(copula, k_bins=10, force_uniform=True):
         Instance of a copula class. Only the ``pdf`` method is used.
     k_bins : int
         Number of bins along each dimension in the approximating histogram.
-    use_ranks : bool
-        If use_rank is True, then data will be converted to ranks without
-        tie handling.
+    force_uniform : bool
+        If true, then the pdf grid will be adjusted to have uniform margins
+        using `nearest_matrix_margin`.
+        If false, then no adjustment is done and the margins may not be exactly
+        uniform.
+    use_pdf : bool
+        If false, then the grid cell probabilities will be computed from the
+        copula cdf.
+        If true, then the density, ``pdf``, is used and cell probabilities
+        are approximated by averaging the pdf of the cell corners. This is
+        only useful if the cdf is not available.
 
     Returns
     -------
@@ -271,24 +295,37 @@ def approx_copula_pdf(copula, k_bins=10, force_uniform=True):
         Probability that random variable falls in given bin. This corresponds
         to a discrete distribution, and is not scaled to bin size to form a
         piecewise uniform, histogram density.
-        Bin probabilities are a 2-dim array with k_bins rows and k_bins
-        columns with first random variable in rows and second in columns.
+        Bin probabilities are a k-dim array with k_bins segments in each
+        dimensionrows.
 
     Notes
     -----
     This function is intended for internal use and will be generalized in
     future. API will change.
     """
+    k_dim = copula.k_dim
     k = k_bins + 1
-    g = _Grid([k, k], eps=0.1 / k_bins)
-    pdfg = copula.pdf(g.x_flat).reshape(k, k, order="F")
-    # correct for bin size
-    pdfg *= 1 / k**2
-    ag = average_grid(pdfg)
-    if force_uniform:
-        pdf_grid = nearest_matrix_margins(ag, maxiter=100, tol=1e-8)
+    ks = tuple([k] * k_dim)
+
+    if use_pdf:
+        g = _Grid([k] * k_dim, eps=0.1 / k_bins)
+        pdfg = copula.pdf(g.x_flat).reshape(*ks)
+        # correct for bin size
+        pdfg *= 1 / k**k_dim
+        ag = average_grid(pdfg)
+        if force_uniform:
+            pdf_grid = nearest_matrix_margins(ag, maxiter=100, tol=1e-8)
+        else:
+            pdf_grid = ag / ag.sum()
     else:
-        pdf_grid = ag / ag.sum()
+        g = _Grid([k] * k_dim, eps=1e-6)
+        cdfg = copula.cdf(g.x_flat).reshape(*ks)
+        # correct for bin size
+        pdf_grid = cdf2prob_grid(cdfg, prepend=None)
+        # TODO: check boundary approximation, eg. undefined at zero
+        # for now just normalize
+        pdf_grid /= pdf_grid.sum()
+
     return pdf_grid
 
 

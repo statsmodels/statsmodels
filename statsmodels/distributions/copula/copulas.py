@@ -487,13 +487,17 @@ class Copula(ABC):
         corr_param : float
             Correlation parameter of the copula, ``theta`` in Archimedean and
             pearson correlation in elliptical.
+            If k_dim > 2, then average tau is used.
         """
         x = np.asarray(data)
-        if x.shape[1] != 2:
-            import warnings
-            warnings.warn("currently only first pair of data are used"
-                          " to compute kendall's tau")
-        tau = stats.kendalltau(x[:, 0], x[:, 1])[0]
+
+        if x.shape[1] == 2:
+            tau = stats.kendalltau(x[:, 0], x[:, 1])[0]
+        else:
+            k = self.k_dim
+            taus = [stats.kendalltau(x[..., i], x[..., j])[0]
+                    for i in range(k) for j in range(i+1, k)]
+            tau = np.mean(taus)
         return self._arg_from_tau(tau)
 
     def _arg_from_tau(self, tau):
