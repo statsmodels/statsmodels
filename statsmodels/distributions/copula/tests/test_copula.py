@@ -158,7 +158,7 @@ def check_cop_rvs(cop, rvs=None, nobs=2000, k=10, use_pdf=True):
         nobs = rvs.shape[0]
     freq = frequencies_fromdata(rvs, k, use_ranks=True)
     pdfg = approx_copula_pdf(cop, k_bins=k, force_uniform=True,
-                             use_pdf=use_pdf).T
+                             use_pdf=use_pdf)
     count_pdf = pdfg * nobs
 
     freq = freq.ravel()
@@ -507,9 +507,9 @@ class CheckRvsDim():
 
         k = self.dim
         assert k == rvs.shape[1]
-        
+
         tau_cop = self.copula.tau()
-        
+
         if np.ndim(tau_cop) == 2:
             # elliptical copula with tau matrix
             tau = np.eye(k)
@@ -523,7 +523,7 @@ class CheckRvsDim():
                     for i in range(k) for j in range(i+1, k)]
             tau = np.mean(taus)
             atol = 0
-        
+
         assert_allclose(tau, tau_cop, rtol=0.05, atol=atol)
         theta_est = self.copula.fit_corr_param(rvs)
         # specific to archimedean

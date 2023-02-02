@@ -309,7 +309,7 @@ def approx_copula_pdf(copula, k_bins=10, force_uniform=True, use_pdf=False):
 
     if use_pdf:
         g = _Grid([k] * k_dim, eps=0.1 / k_bins)
-        pdfg = copula.pdf(g.x_flat).reshape(*ks, order="F")
+        pdfg = copula.pdf(g.x_flat).reshape(*ks)
         # correct for bin size
         pdfg *= 1 / k**k_dim
         ag = average_grid(pdfg)
@@ -319,7 +319,7 @@ def approx_copula_pdf(copula, k_bins=10, force_uniform=True, use_pdf=False):
             pdf_grid = ag / ag.sum()
     else:
         g = _Grid([k] * k_dim, eps=1e-6)
-        cdfg = copula.cdf(g.x_flat).reshape(*ks, order="F")
+        cdfg = copula.cdf(g.x_flat).reshape(*ks)
         # correct for bin size
         pdf_grid = cdf2prob_grid(cdfg, prepend=None)
         # TODO: check boundary approximation, eg. undefined at zero
