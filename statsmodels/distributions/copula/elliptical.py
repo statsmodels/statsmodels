@@ -184,6 +184,7 @@ class GaussianCopula(EllipticalCopula):
             corr = np.array([[1., corr], [corr, 1.]])
 
         self.corr = np.asarray(corr)
+        self.args = (self.corr,)
         self.distr_uv = stats.norm
         self.distr_mv = stats.multivariate_normal(
             cov=corr, allow_singular=allow_singular)
@@ -252,6 +253,7 @@ class StudentTCopula(EllipticalCopula):
 
         self.df = df
         self.corr = np.asarray(corr)
+        self.args = (corr, df)
         # both uv and mv are frozen distributions
         self.distr_uv = stats.t(df=df)
         self.distr_mv = multivariate_t(shape=corr, df=df)

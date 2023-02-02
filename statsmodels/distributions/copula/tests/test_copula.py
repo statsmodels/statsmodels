@@ -158,7 +158,7 @@ def check_cop_rvs(cop, rvs=None, nobs=2000, k=10, use_pdf=True):
         nobs = rvs.shape[0]
     freq = frequencies_fromdata(rvs, k, use_ranks=True)
     pdfg = approx_copula_pdf(cop, k_bins=k, force_uniform=True,
-                             use_pdf=use_pdf)
+                             use_pdf=use_pdf).T
     count_pdf = pdfg * nobs
 
     freq = freq.ravel()
@@ -507,14 +507,27 @@ class CheckRvsDim():
 
         k = self.dim
         assert k == rvs.shape[1]
-        taus = [stats.kendalltau(rvs[..., i], rvs[..., j])[0]
-                for i in range(k) for j in range(i+1, k)]
-        tau = np.mean(taus)
+        
         tau_cop = self.copula.tau()
-        assert_allclose(tau, tau_cop, rtol=0.05)
+        
+        if np.ndim(tau_cop) == 2:
+            # elliptical copula with tau matrix
+            tau = np.eye(k)
+            for i in range(k):
+                for j in range(i+1, k):
+                    tau_ij = stats.kendalltau(rvs[..., i], rvs[..., j])[0]
+                    tau[i, j] = tau[j, i] = tau_ij
+            atol = 0.05
+        else:
+            taus = [stats.kendalltau(rvs[..., i], rvs[..., j])[0]
+                    for i in range(k) for j in range(i+1, k)]
+            tau = np.mean(taus)
+            atol = 0
+        
+        assert_allclose(tau, tau_cop, rtol=0.05, atol=atol)
         theta_est = self.copula.fit_corr_param(rvs)
         # specific to archimedean
-        assert_allclose(theta_est, self.copula.args, rtol=0.1)
+        assert_allclose(theta_est, self.copula.args[0], rtol=0.1, atol=atol)
 
 
 class TestGaussianCopula(CheckCopula):
@@ -542,12 +555,13 @@ class TestGaussianCopula(CheckCopula):
         assert_allclose(corr_est, 0.8, rtol=0.1)
 
 
-class T_estGaussianCopula3d(CheckRvsDim):
-    copula = GaussianCopula(corr=[[1.0, 0.5, 0.2],
-                                  [0.5, 1.0, 0.2],
-                                  [0.2, 0.2, 1.0]], k_dim=3)
+class TestGaussianCopula3d(CheckRvsDim):
+    copula = GaussianCopula(corr=[[1.0, 0.8, 0.1],
+                                  [0.8, 1.0, 0.3],
+                                  [0.1, 0.3, 1.0]],
+                            k_dim=3)
     dim = 3
-    use_pdf = True
+    use_pdf = False
 
 
 class TestStudentTCopula(CheckCopula):
@@ -571,6 +585,15 @@ class TestStudentTCopula(CheckCopula):
         tau = stats.kendalltau(*rvs.T)[0]
         tau_cop = self.copula.tau()
         assert_allclose(tau, tau_cop, rtol=0.05)
+
+
+class TestStudentTCopula3d(CheckRvsDim):
+    copula = StudentTCopula(corr=[[1.0, 0.8, 0.1],
+                                  [0.8, 1.0, 0.3],
+                                  [0.1, 0.3, 1.0]],
+                            k_dim=3, df=10)
+    dim = 3
+    use_pdf = True
 
 
 class TestClaytonCopula(CheckModernCopula):

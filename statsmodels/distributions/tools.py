@@ -305,10 +305,10 @@ def approx_copula_pdf(copula, k_bins=10, force_uniform=True, use_pdf=False):
     """
     k_dim = copula.k_dim
     k = k_bins + 1
-    g = _Grid([k] * k_dim, eps=0.1 / k_bins)
     ks = tuple([k] * k_dim)
 
     if use_pdf:
+        g = _Grid([k] * k_dim, eps=0.1 / k_bins)
         pdfg = copula.pdf(g.x_flat).reshape(*ks, order="F")
         # correct for bin size
         pdfg *= 1 / k**k_dim
@@ -318,6 +318,7 @@ def approx_copula_pdf(copula, k_bins=10, force_uniform=True, use_pdf=False):
         else:
             pdf_grid = ag / ag.sum()
     else:
+        g = _Grid([k] * k_dim, eps=1e-6)
         cdfg = copula.cdf(g.x_flat).reshape(*ks, order="F")
         # correct for bin size
         pdf_grid = cdf2prob_grid(cdfg, prepend=None)
