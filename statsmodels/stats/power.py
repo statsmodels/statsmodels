@@ -581,8 +581,8 @@ class TTestPower(Power):
         Parameters
         ----------
         effect_size : float
-            standardized effect size, mean divided by the standard deviation.
-            effect size has to be positive.
+            Standardized effect size.The effect size is here Cohen's f, square
+            root of "f2".
         nobs : int or float
             sample size, number of observations.
         alpha : float in interval (0,1)
@@ -870,6 +870,8 @@ class NormalIndPower(Power):
 class FTestPower(Power):
     '''Statistical Power calculations for generic F-test
 
+    This is based on Cohen's f as effect size measure.
+
     '''
 
     def power(self, effect_size, df_num, df_denom, alpha, ncc=1):
@@ -878,8 +880,8 @@ class FTestPower(Power):
         Parameters
         ----------
         effect_size : float
-            standardized effect size, mean divided by the standard deviation.
-            effect size has to be positive.
+            Standardized effect size.The effect size is here Cohen's f, square
+            root of "f2".
         df_num : int or float
             numerator degrees of freedom.
         df_denom : int or float
@@ -971,6 +973,12 @@ class FTestPower(Power):
 class FTestAnovaPower(Power):
     '''Statistical Power calculations F-test for one factor balanced ANOVA
 
+    This is based on Cohen's f as effect size measure.
+
+    See Also
+    --------
+    statsmodels.stats.oneway.effectsize_oneway
+
     '''
 
     def power(self, effect_size, nobs, alpha, k_groups=2):
@@ -979,8 +987,8 @@ class FTestAnovaPower(Power):
         Parameters
         ----------
         effect_size : float
-            standardized effect size, mean divided by the standard deviation.
-            effect size has to be positive.
+            standardized effect size. The effect size is here Cohen's f, square
+            root of "f2".
         nobs : int or float
             sample size, number of observations.
         alpha : float in interval (0,1)

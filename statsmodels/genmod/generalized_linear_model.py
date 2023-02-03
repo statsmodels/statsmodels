@@ -218,6 +218,10 @@ class GLM(base.LikelihoodModel):
 
     Notes
     -----
+    Note: PerfectSeparationError exception has been converted to a
+    PerfectSeparationWarning and perfect separation or perfect prediction will
+    not raise an exception by default. (changed in version 0.14)
+
     Only the following combinations make sense for family and link:
 
      ============= ===== === ===== ====== ======= === ==== ====== ====== ====

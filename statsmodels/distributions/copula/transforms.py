@@ -14,7 +14,6 @@ import numpy as np
 from scipy.special import expm1, gamma
 
 
-# not used yet
 class Transforms:
 
     def __init__(self):
