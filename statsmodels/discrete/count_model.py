@@ -369,7 +369,7 @@ class GenericZeroInflated(CountModel):
     def predict(self, params, exog=None, exog_infl=None, exposure=None,
                 offset=None, which='mean', y_values=None):
         """
-        Predict response variable or other statistic given exogenous variables.
+        Predict expected response or other statistic given exogenous variables.
 
         Parameters
         ----------
@@ -396,8 +396,8 @@ class GenericZeroInflated(CountModel):
         which : str (optional)
             Statitistic to predict. Default is 'mean'.
 
-            - 'mean' : the conditional expectation of endog E(y | x),
-              i.e. exp of linear predictor.
+            - 'mean' : the conditional expectation of endog E(y | x). This
+              takes inflated zeros into account.
             - 'linear' : the linear predictor of the mean function.
             - 'var' : returns the estimated variance of endog implied by the
               model.

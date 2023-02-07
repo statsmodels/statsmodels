@@ -34,6 +34,10 @@ class Family:
     variance : a variance function
         Measures the variance as a function of the mean probabilities.
         See the individual families for the default variance function.
+    check_link : bool
+        If True (default), then and exception is raised if the link is invalid
+        for the family.
+        If False, then the link is not checked.
 
     See Also
     --------
@@ -383,6 +387,10 @@ class Poisson(Family):
         The default link for the Poisson family is the log link. Available
         links are log, identity, and sqrt. See statsmodels.families.links for
         more information.
+    check_link : bool
+        If True (default), then and exception is raised if the link is invalid
+        for the family.
+        If False, then the link is not checked.
 
     Attributes
     ----------
@@ -535,6 +543,10 @@ class Gaussian(Family):
         The default link for the Gaussian family is the identity link.
         Available links are log, identity, and inverse.
         See statsmodels.genmod.families.links for more information.
+    check_link : bool
+        If True (default), then and exception is raised if the link is invalid
+        for the family.
+        If False, then the link is not checked.
 
     Attributes
     ----------
@@ -705,6 +717,10 @@ class Gamma(Family):
         The default link for the Gamma family is the inverse link.
         Available links are log, identity, and inverse.
         See statsmodels.genmod.families.links for more information.
+    check_link : bool
+        If True (default), then and exception is raised if the link is invalid
+        for the family.
+        If False, then the link is not checked.
 
     Attributes
     ----------
@@ -867,6 +883,10 @@ class Binomial(Family):
         The default link for the Binomial family is the logit link.
         Available links are logit, probit, cauchy, log, loglog, and cloglog.
         See statsmodels.genmod.families.links for more information.
+    check_link : bool
+        If True (default), then and exception is raised if the link is invalid
+        for the family.
+        If False, then the link is not checked.
 
     Attributes
     ----------
@@ -1136,6 +1156,10 @@ class InverseGaussian(Family):
         inverse squared link.
         Available links are InverseSquared, Inverse, Log, and Identity.
         See statsmodels.genmod.families.links for more information.
+    check_link : bool
+        If True (default), then and exception is raised if the link is invalid
+        for the family.
+        If False, then the link is not checked.
 
     Attributes
     ----------
@@ -1299,6 +1323,10 @@ class NegativeBinomial(Family):
         The ancillary parameter for the negative binomial distribution.
         For now ``alpha`` is assumed to be nonstochastic.  The default value
         is 1.  Permissible values are usually assumed to be between .01 and 2.
+    check_link : bool
+        If True (default), then and exception is raised if the link is invalid
+        for the family.
+        If False, then the link is not checked.
 
     Attributes
     ----------
@@ -1518,6 +1546,10 @@ class Tweedie(Family):
         likelihood is used.
         In both cases, for likelihood computations the var_power
         must be between 1 and 2.
+    check_link : bool
+        If True (default), then and exception is raised if the link is invalid
+        for the family.
+        If False, then the link is not checked.
 
     Attributes
     ----------

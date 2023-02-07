@@ -831,10 +831,12 @@ class MQuantileNorm(RobustNorm):
     in QuantileRegression but replaces the L1 absolute value by a chosen
     base norm.
 
-    rho_q(u) = |q - I(q < 0)| * rho_base(u)
-    or
-    rho_q(u) = q * rho_base(u)  if u >= 0
-    rho_q(u) = (1 - q) * rho_base(u)  if u < 0
+        rho_q(u) = |q - I(q < 0)| * rho_base(u)
+
+    or, equivalently,
+
+        rho_q(u) = q * rho_base(u)  if u >= 0
+        rho_q(u) = (1 - q) * rho_base(u)  if u < 0
 
 
     Parameters
@@ -854,9 +856,22 @@ class MQuantileNorm(RobustNorm):
 
     References
     ----------
-    Newey Powell
-    Jones
-    Bianchi Salvati
+
+    .. [*] Bianchi, Annamaria, and Nicola Salvati. 2015. “Asymptotic Properties
+       and Variance Estimators of the M-Quantile Regression Coefficients
+       Estimators.” Communications in Statistics - Theory and Methods 44 (11):
+       2416–29. doi:10.1080/03610926.2013.791375.
+
+    .. [*] Breckling, Jens, and Ray Chambers. 1988. “M-Quantiles.”
+       Biometrika 75 (4): 761–71. doi:10.2307/2336317.
+
+    .. [*] Jones, M. C. 1994. “Expectiles and M-Quantiles Are Quantiles.”
+       Statistics & Probability Letters 20 (2): 149–53.
+       doi:10.1016/0167-7152(94)90031-0.
+
+    .. [*] Newey, Whitney K., and James L. Powell. 1987. “Asymmetric Least
+       Squares Estimation and Testing.” Econometrica 55 (4): 819–47.
+       doi:10.2307/1911031.
     ...
 
     """

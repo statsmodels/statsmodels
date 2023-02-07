@@ -30,6 +30,8 @@ refactoring
 
 
 """
+import warnings
+
 import numpy as np
 from scipy import stats, optimize
 from statsmodels.tools.rootfinding import brentq_expanding
@@ -232,7 +234,7 @@ def ftest_anova_power(effect_size, nobs, alpha, k_groups=2, df=None):
     return pow_#, crit
 
 
-def ftest_power(effect_size, df_num, df_denom, alpha, ncc=1):
+def ftest_power(effect_size, df2, df1, alpha, ncc=1):
     '''Calculate the power of a F-test.
 
     Parameters
@@ -240,10 +242,12 @@ def ftest_power(effect_size, df_num, df_denom, alpha, ncc=1):
     effect_size : float
         standardized effect size, mean divided by the standard deviation.
         effect size has to be positive.
-    df_num : int or float
-        numerator degrees of freedom.
-    df_denom : int or float
-        denominator degrees of freedom.
+    df2 : int or float
+        Denominator degrees of freedom.
+        This corresponds to the df_resid in Wald tests.
+    df1 : int or float
+        Numerator degrees of freedom.
+        This corresponds to the number of constraints in Wald tests.
     alpha : float in interval (0,1)
         significance level, e.g. 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
@@ -260,18 +264,25 @@ def ftest_power(effect_size, df_num, df_denom, alpha, ncc=1):
 
     Notes
     -----
+    changed in 0.14: use df2, df1 instead of df_num, df_denom as arg names.
+    The latter had reversed meaning.
 
-    sample size is given implicitly by df_num
+    The sample size is given implicitly by ``df2`` with fixed number of
+    constraints given by numerator degrees of freedom ``df1``:
 
-    set ncc=0 to match t-test, or f-test in LikelihoodModelResults.
+        nobs = df2 + df1 + ncc
+
+    Set ncc=0 to match t-test, or f-test in LikelihoodModelResults.
     ncc=1 matches the non-centrality parameter in R::pwr::pwr.f2.test
 
     ftest_power with ncc=0 should also be correct for f_test in regression
-    models, with df_num and d_denom as defined there. (not verified yet)
+    models, with df_num (df1) as number of constraints and d_denom (df2) as
+    df_resid.
     '''
+    df_num, df_denom = df1, df2
     nc = effect_size**2 * (df_denom + df_num + ncc)
-    crit = stats.f.isf(alpha, df_denom, df_num)
-    pow_ = stats.ncf.sf(crit, df_denom, df_num, nc)
+    crit = stats.f.isf(alpha, df_num, df_denom)
+    pow_ = stats.ncf.sf(crit, df_num, df_denom, nc)
     return pow_ #, crit, nc
 
 
@@ -581,8 +592,8 @@ class TTestPower(Power):
         Parameters
         ----------
         effect_size : float
-            standardized effect size, mean divided by the standard deviation.
-            effect size has to be positive.
+            Standardized effect size.The effect size is here Cohen's f, square
+            root of "f2".
         nobs : int or float
             sample size, number of observations.
         alpha : float in interval (0,1)
@@ -868,22 +879,63 @@ class NormalIndPower(Power):
 
 
 class FTestPower(Power):
-    '''Statistical Power calculations for generic F-test
+    """Statistical Power calculations for generic F-test of a constraint
 
-    '''
+    This is based on Cohen's f as effect size measure.
+
+    Warning: Methods in this class have the names df_num and df_denom reversed.
+
+    Examples
+    --------
+    Sample size and power for multiple regression base on R-squared
+
+    Compute effect size from R-squared
+
+    >>> r2 = 0.1
+    >>> f2 = r2 / (1 - r2)
+    >>> f = np.sqrt(f2)
+    >>> r2, f2, f
+    (0.1, 0.11111111111111112, 0.33333333333333337)
+
+    Find sample size by solving for denominator df, wrongly named ``df_num``
+
+    >>> df1 = 1  # number of constraints in hypothesis test
+    >>> df2 = FTestPower().solve_power(effect_size=f, alpha=0.1, power=0.9,
+                                       df_denom=df1)
+    >>> ncc = 1  # default
+    >>> nobs = df2 + df1 + ncc
+    >>> df2, nobs
+    (76.46459758305376, 78.46459758305376)
+
+    verify power at df2
+
+    >>> FTestPower().power(effect_size=f, alpha=0.1, df_denom=df1, df_num=df2)
+    0.8999999972109698
+
+    """
 
     def power(self, effect_size, df_num, df_denom, alpha, ncc=1):
         '''Calculate the power of a F-test.
 
+        The effect size is Cohen's ``f``, square root of ``f2``.
+
+        The sample size is given by ``nobs = df_denom + df_num + ncc``
+
+        Warning: The meaning of df_num and df_denom is reversed.
+
         Parameters
         ----------
         effect_size : float
-            standardized effect size, mean divided by the standard deviation.
-            effect size has to be positive.
+            Standardized effect size. The effect size is here Cohen's ``f``,
+            square root of ``f2``.
         df_num : int or float
-            numerator degrees of freedom.
+            Warning incorrect name
+            denominator degrees of freedom,
+            This corresponds to the number of constraints in Wald tests.
         df_denom : int or float
-            denominator degrees of freedom.
+            Warning incorrect name
+            numerator degrees of freedom.
+            This corresponds to the df_resid in Wald tests.
         alpha : float in interval (0,1)
             significance level, e.g. 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
@@ -916,7 +968,7 @@ class FTestPower(Power):
 
     #method is only added to have explicit keywords and docstring
     def solve_power(self, effect_size=None, df_num=None, df_denom=None,
-                    nobs=None, alpha=None, power=None, ncc=1):
+                    alpha=None, power=None, ncc=1, **kwargs):
         '''solve for any one parameter of the power of a F-test
 
         for the one sample F-test the keywords are:
@@ -924,14 +976,26 @@ class FTestPower(Power):
 
         Exactly one needs to be ``None``, all others need numeric values.
 
+        The effect size is Cohen's ``f``, square root of ``f2``.
+
+        The sample size is given by ``nobs = df_denom + df_num + ncc``.
+
+        Warning: The meaning of df_num and df_denom is reversed.
 
         Parameters
         ----------
         effect_size : float
-            standardized effect size, mean divided by the standard deviation.
-            effect size has to be positive.
-        nobs : int or float
-            sample size, number of observations.
+            Standardized effect size. The effect size is here Cohen's ``f``,
+            square root of ``f2``.
+        df_num : int or float
+            Warning incorrect name
+            denominator degrees of freedom,
+            This corresponds to the number of constraints in Wald tests.
+            Sample size is given by ``nobs = df_denom + df_num + ncc``
+        df_denom : int or float
+            Warning incorrect name
+            numerator degrees of freedom.
+            This corresponds to the df_resid in Wald tests.
         alpha : float in interval (0,1)
             significance level, e.g. 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
@@ -939,10 +1003,13 @@ class FTestPower(Power):
             power of the test, e.g. 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
-        alternative : str, 'two-sided' (default) or 'one-sided'
-            extra argument to choose whether the power is calculated for a
-            two-sided (default) or one sided test.
-            'one-sided' assumes we are in the relevant tail.
+        ncc : int
+            degrees of freedom correction for non-centrality parameter.
+            see Notes
+        kwargs : empty
+            ``kwargs`` are not used and included for backwards compatibility.
+            If ``nobs`` is used as keyword, then a warning is issued. All
+            other keywords in ``kwargs`` raise a ValueError.
 
         Returns
         -------
@@ -961,6 +1028,11 @@ class FTestPower(Power):
         where this fails.
 
         '''
+        if kwargs:
+            if "nobs" in kwargs:
+                warnings.warn("nobs is not used")
+            else:
+                raise ValueError(f"incorrect keyword(s) {kwargs}")
         return super(FTestPower, self).solve_power(effect_size=effect_size,
                                                       df_num=df_num,
                                                       df_denom=df_denom,
@@ -971,6 +1043,12 @@ class FTestPower(Power):
 class FTestAnovaPower(Power):
     '''Statistical Power calculations F-test for one factor balanced ANOVA
 
+    This is based on Cohen's f as effect size measure.
+
+    See Also
+    --------
+    statsmodels.stats.oneway.effectsize_oneway
+
     '''
 
     def power(self, effect_size, nobs, alpha, k_groups=2):
@@ -979,8 +1057,8 @@ class FTestAnovaPower(Power):
         Parameters
         ----------
         effect_size : float
-            standardized effect size, mean divided by the standard deviation.
-            effect size has to be positive.
+            standardized effect size. The effect size is here Cohen's f, square
+            root of "f2".
         nobs : int or float
             sample size, number of observations.
         alpha : float in interval (0,1)
