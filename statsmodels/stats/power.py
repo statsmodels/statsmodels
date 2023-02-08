@@ -45,8 +45,16 @@ def nct_sf(x, df, nc):
     return 1 - special.nctdtr(df, nc, x)
 
 
+def ncf_cdf(x, dfn, dfd, nc):
+    return special.ncfdtr(dfn, dfd, nc, x)
+
+
 def ncf_sf(x, dfn, dfd, nc):
     return 1 - special.ncfdtr(dfn, dfd, nc, x)
+
+
+def ncf_ppf(q, dfn, dfd, nc):
+    return special.ncfdtri(dfn, dfd, nc, q)
 
 
 def ttest_power(effect_size, nobs, alpha, df=None, alternative='two-sided'):
