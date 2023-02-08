@@ -386,7 +386,7 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
 
 
 # Vertical summary instance for multiple models
-def _col_params(result, float_format='%.4f', stars=True):
+def _col_params(result, float_format='%.4f', stars=True, include_r2=False):
     """Stack coefficients and standard errors in single column
     """
 
@@ -409,14 +409,17 @@ def _col_params(result, float_format='%.4f', stars=True):
     res = res.iloc[:, :2]
     res = res.stack()
 
-    rsquared = getattr(result, 'rsquared', np.nan)
-    rsquared_adj = getattr(result, 'rsquared_adj', np.nan)
-    r2 = pd.Series({('R-squared', ""): rsquared,
-                    ('R-squared Adj.', ""): rsquared_adj})
+    # Add R-squared
+    if include_r2:
+        rsquared = getattr(result, 'rsquared', np.nan)
+        rsquared_adj = getattr(result, 'rsquared_adj', np.nan)
+        r2 = pd.Series({('R-squared', ""): rsquared,
+                        ('R-squared Adj.', ""): rsquared_adj})
 
-    if r2.notnull().any():
-        r2 = r2.apply(lambda x: float_format % x)
-        res = pd.concat([res, r2], axis=0)
+        if r2.notnull().any():
+            r2 = r2.apply(lambda x: float_format % x)
+            res = pd.concat([res, r2], axis=0)
+
     res = pd.DataFrame(res)
     res.columns = [str(result.model.endog_names)]
     return res
@@ -457,7 +460,8 @@ def _make_unique(list_of_names):
 
 
 def summary_col(results, float_format='%.4f', model_names=(), stars=False,
-                info_dict=None, regressor_order=(), drop_omitted=False):
+                info_dict=None, regressor_order=(), drop_omitted=False,
+                include_r2=True):
     """
     Summarize multiple results instances side-by-side (coefs and SEs)
 
@@ -488,13 +492,15 @@ def summary_col(results, float_format='%.4f', model_names=(), stars=False,
         Includes regressors that are not specified in regressor_order. If
         False, regressors not specified will be appended to end of the list.
         If True, only regressors in regressor_order will be included.
+    include_r2 : bool, optional
+        Includes R2 and adjusted R2 in the summary table.
     """
 
     if not isinstance(results, list):
         results = [results]
 
-    cols = [_col_params(x, stars=stars, float_format=float_format) for x in
-            results]
+    cols = [_col_params(x, stars=stars, float_format=float_format,
+                        include_r2=include_r2) for x in results]
 
     # Unique column names (pandas has problems merging otherwise)
     if model_names:
