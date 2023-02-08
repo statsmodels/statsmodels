@@ -33,8 +33,21 @@ refactoring
 import warnings
 
 import numpy as np
-from scipy import stats, optimize
+from scipy import stats, optimize, special
 from statsmodels.tools.rootfinding import brentq_expanding
+
+
+def nct_cdf(x, df, nc):
+    return special.nctdtr(df, nc, x)
+
+
+def nct_sf(x, df, nc):
+    return 1 - special.nctdtr(df, nc, x)
+
+
+def ncf_sf(x, dfn, dfd, nc):
+    return 1 - special.ncfdtr(dfn, dfd, nc, x)
+
 
 def ttest_power(effect_size, nobs, alpha, df=None, alternative='two-sided'):
     '''Calculate power of a ttest
@@ -60,15 +73,19 @@ def ttest_power(effect_size, nobs, alpha, df=None, alternative='two-sided'):
             # avoid endless loop, https://github.com/scipy/scipy/issues/2667
             pow_ = np.nan
         else:
-            pow_ = stats.nct._sf(crit_upp, df, d*np.sqrt(nobs))
+            # pow_ = stats.nct._sf(crit_upp, df, d*np.sqrt(nobs))
+            # use scipy.special
+            pow_ = nct_sf(crit_upp, df, d*np.sqrt(nobs))
     if alternative in ['two-sided', '2s', 'smaller']:
         crit_low = stats.t.ppf(alpha_, df)
         #print crit_low, df, d*np.sqrt(nobs)
         if np.any(np.isnan(crit_low)):
             pow_ = np.nan
         else:
-            pow_ += stats.nct._cdf(crit_low, df, d*np.sqrt(nobs))
+            # pow_ += stats.nct._cdf(crit_low, df, d*np.sqrt(nobs))
+            pow_ += nct_cdf(crit_low, df, d*np.sqrt(nobs))
     return pow_
+
 
 def normal_power(effect_size, nobs, alpha, alternative='two-sided', sigma=1.):
     """Calculate power of a normal distributed test statistic
@@ -230,7 +247,7 @@ def ftest_anova_power(effect_size, nobs, alpha, k_groups=2, df=None):
     df_num = k_groups - 1
     df_denom = nobs - k_groups
     crit = stats.f.isf(alpha, df_num, df_denom)
-    pow_ = stats.ncf.sf(crit, df_num, df_denom, effect_size**2 * nobs)
+    pow_ = ncf_sf(crit, df_num, df_denom, effect_size**2 * nobs)
     return pow_
 
 
@@ -281,7 +298,9 @@ def ftest_power(effect_size, df2, df1, alpha, ncc=1):
     df_num, df_denom = df1, df2
     nc = effect_size**2 * (df_denom + df_num + ncc)
     crit = stats.f.isf(alpha, df_num, df_denom)
-    pow_ = stats.ncf.sf(crit, df_num, df_denom, nc)
+    # pow_ = stats.ncf.sf(crit, df_num, df_denom, nc)
+    # use scipy.special for ncf
+    pow_ = ncf_sf(crit, df_num, df_denom, nc)
     return pow_ #, crit, nc
 
 
@@ -340,7 +359,9 @@ def ftest_power_f2(effect_size, df_num, df_denom, alpha, ncc=1):
 
     nc = effect_size * (df_denom + df_num + ncc)
     crit = stats.f.isf(alpha, df_num, df_denom)
-    pow_ = stats.ncf.sf(crit, df_num, df_denom, nc)
+    # pow_ = stats.ncf.sf(crit, df_num, df_denom, nc)
+    # use scipy.special for ncf
+    pow_ = ncf_sf(crit, df_num, df_denom, nc)
     return pow_
 
 
@@ -947,8 +968,8 @@ class FTestPower(Power):
 
     See Also
     --------
-    `FTestPowerF2` : Power class with same functionality but uses Cohen's
-        f-squared as effect size and has corrected keyword names.
+    FTestPowerF2 :
+        Class with Cohen's f-squared as effect size, corrected keyword names.
 
     Examples
     --------
