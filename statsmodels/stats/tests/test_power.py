@@ -88,7 +88,7 @@ class CheckPowerMixin:
 
     @pytest.mark.matplotlib
     def test_power_plot(self, close_figures):
-        if self.cls == smp.FTestPower:
+        if self.cls in [smp.FTestPower, smp.FTestPowerF2]:
             pytest.skip('skip FTestPower plot_power')
         fig = plt.figure()
         ax = fig.add_subplot(2,1,1)
@@ -699,6 +699,33 @@ class TestFtestPower(CheckPowerMixin):
             smp.FTestPower().solve_power(
                 effect_size=0.3, alpha=0.1, power=0.9, df_denom=2,
                 junk=3)
+
+
+class TestFtestPowerF2(CheckPowerMixin):
+
+    @classmethod
+    def setup_class(cls):
+        res2 = Holder()
+        #> rf = pwr.f2.test(u=5, v=19, f2=0.3**2, sig.level=0.1)
+        #> cat_items(rf, "res2.")
+        res2.u = 5
+        res2.v = 19
+        res2.f2 = 0.09
+        res2.sig_level = 0.1
+        res2.power = 0.235454222377575
+        res2.method = 'Multiple regression power calculation'
+
+        cls.res2 = res2
+        cls.kwds = {'effect_size': res2.f2, 'df_num': res2.u,
+                     'df_denom': res2.v, 'alpha': res2.sig_level,
+                     'power': res2.power}
+        # keyword for which we do not look for root:
+        # solving for n_bins does not work, will not be used in regular usage
+        cls.kwds_extra = {}
+        cls.args_names = ['effect_size', 'df_num', 'df_denom', 'alpha']
+        cls.cls = smp.FTestPowerF2
+        # precision for test_power
+        cls.decimal = 5
 
 
 
