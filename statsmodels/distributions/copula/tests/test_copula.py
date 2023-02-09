@@ -21,6 +21,7 @@ from statsmodels.distributions.copula.archimedean import (
     ClaytonCopula,
     FrankCopula,
     GumbelCopula,
+    _debyem1_expansion,
 )
 from statsmodels.distributions.copula.copulas import CopulaDistribution
 import statsmodels.distributions.copula.depfunc_ev as trev
@@ -378,6 +379,23 @@ class TestFrank:
         cdfc = cop.cdfcond_2g1(u, args=args)
         ppfc = cop.ppfcond_2g1(cdfc, [0.6], args=args)
         assert_allclose(ppfc, u[1], rtol=1e-13)
+
+    def test_tau(self):
+        copula = FrankCopula(k_dim=2)
+
+        theta = [2, 1, 1e-2, 1e-4, 1e-5, 1e-6]
+        # > tau(frankCopula(param = 2, dim = 2))
+        tau_r = [0.2138945692196201, 0.110018536448993, 0.001111110000028503,
+                 1.111110992013664e-05, 1.111104651951855e-06,
+                 1.108825244955369e-07]
+
+        tau_cop = [copula.tau(th) for th in theta]
+        assert_allclose(tau_cop[:-1], tau_r[:-1], rtol=1e-5)
+        # relative precision at very small tau is not very high
+
+        # check debye function
+        taud = 1 + 4 * _debyem1_expansion(theta) / theta
+        assert_allclose(taud, tau_cop, rtol=1e-5)
 
 
 # The reference results are coming from the R package Copula.
