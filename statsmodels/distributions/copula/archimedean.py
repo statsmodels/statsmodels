@@ -17,13 +17,59 @@ from statsmodels.tools.rng_qrng import check_random_state
 
 
 def _debye(alpha):
-    EPSILON = np.finfo(np.float32).eps
+    # EPSILON = np.finfo(np.float32).eps
+    EPSILON = np.finfo(np.float64).eps * 100
 
     def integrand(t):
         return t / (np.exp(t) - 1)
 
     debye_value = integrate.quad(integrand, EPSILON, alpha)[0] / alpha
     return debye_value
+
+
+def _debyem1_expansion(x):
+    """Debye function minus 1, Taylor series approximation around zero
+
+    function is not used
+    """
+    x = np.asarray(x)
+    # Expansion derived using Wolfram alpha
+    dm1 = (-x/4 + x**2/36 - x**4/3600 + x**6/211680 - x**8/10886400 +
+           x**10/526901760 - x**12 * 691/16999766784000)
+    return dm1
+
+
+def tau_frank(theta):
+    """Kendall's tau for Frank Copula
+
+    This uses Taylor series expansion for theta <= 1.
+
+    Parameters
+    ----------
+    theta : float
+        Parameter of the Frank copula. (not vectorized)
+
+    Returns
+    -------
+    tau : float, tau for given theta
+    """
+
+    if theta <= 1:
+        tau = _tau_frank_expansion(theta)
+    else:
+        debye_value = _debye(theta)
+        tau = 1 + 4 * (debye_value - 1) / theta
+
+    return tau
+
+
+def _tau_frank_expansion(x):
+    x = np.asarray(x)
+    # expansion derived using wolfram alpha
+    # agrees better with R copula for x<=1, maybe even for larger theta
+    tau = (x/9 - x**3/900 + x**5/52920 - x**7/2721600 + x**9/131725440 -
+           x**11 * 691/4249941696000)
+    return tau
 
 
 class ArchimedeanCopula(Copula):
@@ -330,8 +376,8 @@ class FrankCopula(ArchimedeanCopula):
         # Joe 2014 p. 166
         if theta is None:
             theta = self.theta
-        debye_value = _debye(theta)
-        return 1 + 4 * (debye_value - 1) / theta
+
+        return tau_frank(theta)
 
     def theta_from_tau(self, tau):
         MIN_FLOAT_LOG = np.log(sys.float_info.min)
@@ -340,7 +386,10 @@ class FrankCopula(ArchimedeanCopula):
         def _theta_from_tau(alpha):
             return self.tau(theta=alpha) - tau
 
-        result = optimize.least_squares(_theta_from_tau, 1, bounds=(
+        # avoid start=1, because break in tau approximation method
+        start = 0.5 if tau < 0.11 else 2
+
+        result = optimize.least_squares(_theta_from_tau, start, bounds=(
             MIN_FLOAT_LOG, MAX_FLOAT_LOG))
         theta = result.x[0]
         return theta
