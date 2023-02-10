@@ -103,7 +103,7 @@ class Summary:
 
     def add_text(self, string):
         """Append a note to the bottom of the summary table. In ASCII tables,
-        the note will be wrapped to table width. Notes are not indendented.
+        the note will be wrapped to table width. Notes are not indented.
         """
         self.extra_txt.append(string)
 
@@ -201,7 +201,12 @@ class Summary:
         tab = [x.as_html() for x in simple_tables]
         tab = '\n'.join(tab)
 
-        return tab
+        temp_txt = [st.replace('\n', '<br/>\n')for st in self.extra_txt]
+        txt = '<br/>\n'.join(temp_txt)
+
+        out = '<br/>\n'.join([tab, txt])
+
+        return out
 
     def as_latex(self, label=''):
         """Generate LaTeX Summary Table
@@ -234,8 +239,12 @@ class Summary:
             # create single tabular object for summary_col
             tab = re.sub(to_replace, r'\\midrule\n', tab)
 
-        out = '\\begin{table}', title, label, tab, '\\end{table}'
-        out = '\n'.join(out)
+        non_captioned = '\\begin{table}', title, label, tab, '\\end{table}'
+        non_captioned = '\n'.join(non_captioned)
+
+        txt = ' \\newline \n'.join(self.extra_txt)
+        out = non_captioned + '\n\\bigskip\n' + txt
+
         return out
 
 

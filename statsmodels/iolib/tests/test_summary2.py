@@ -33,6 +33,8 @@ R-squared Adj. & 0.6930   & 0.5202    \\
 \end{tabular}
 \end{center}
 \end{table}
+\bigskip
+Standard errors in parentheses.
 '''
         x = [1, 5, 7, 3, 5]
         x = add_constant(x)
@@ -135,6 +137,8 @@ R-squared Adj. & 0.6930   & 0.5202    \\
 \end{tabular}
 \end{center}
 \end{table}
+\bigskip
+Standard errors in parentheses.
 '''
         x = [1, 5, 7, 3, 5]
         x = add_constant(x)
