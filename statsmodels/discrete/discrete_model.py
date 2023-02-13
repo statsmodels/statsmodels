@@ -213,7 +213,7 @@ class DiscreteModel(base.LikelihoodModel):
 
     def _check_perfect_pred(self, params, *args):
         endog = self.endog
-        fittedvalues = self.cdf(np.dot(self.exog, params[:self.exog.shape[1]]))
+        fittedvalues = self.predict(params)
         if np.allclose(fittedvalues - endog, 0):
             if self.raise_on_perfect_prediction:
                 # backwards compatibility for attr raise_on_perfect_prediction
