@@ -191,7 +191,6 @@ def multipletests(pvals, alpha=0.05, method='hs', is_sorted=False,
         pvals_corrected_raw = pvals * np.arange(ntests, 0, -1)
         pvals_corrected = np.maximum.accumulate(pvals_corrected_raw)
         del pvals_corrected_raw
-        gc.collect()
 
     elif method.lower() in ['sh', 'simes-hochberg']:
         alphash = alphaf / np.arange(ntests, 0, -1)
