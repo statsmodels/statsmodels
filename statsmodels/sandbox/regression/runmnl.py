@@ -27,7 +27,7 @@ import numpy.lib.recfunctions as recf
 from scipy import optimize
 
 
-class TryCLogit(object):
+class TryCLogit:
     '''
     Conditional Logit, data handling test
 
@@ -106,7 +106,7 @@ class TryCLogit(object):
         return optimize.fmin(self.loglike, start_params, maxfun=10000)
 
 
-class TryNCLogit(object):
+class TryNCLogit:
     '''
     Nested Conditional Logit (RUNMNL), data handling test
 
@@ -176,7 +176,7 @@ class TryNCLogit(object):
 ####### new in treewalkerclass.py, copy new version to replace this
 ####### problem with bzr I will disconnect history when copying
 testxb = 0 #global to class
-class RU2NMNL(object):
+class RU2NMNL:
     '''Nested Multinomial Logit with Random Utility 2 parameterization
 
     '''

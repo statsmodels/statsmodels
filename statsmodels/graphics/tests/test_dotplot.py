@@ -16,6 +16,7 @@ except ImportError:
 def close_or_save(pdf, fig):
     if pdf_output:
         pdf.savefig(fig)
+    plt.close(fig)
 
 
 @pytest.mark.matplotlib
@@ -205,7 +206,7 @@ def test_all(close_figures, reset_randomstate):
     fig = dot_plot(points, intervals=intervals, lines=lines, styles=styles,
             ax=ax, stacked=True)
     handles, labels = ax.get_legend_handles_labels()
-    leg = plt.figlegend(handles, labels, "center right", numpoints=1,
+    leg = plt.figlegend(handles, labels, loc="center right", numpoints=1,
                         handletextpad=0.0001)
     leg.draw_frame(False)
     ax.set_title("Dotplot with two points per line")
@@ -218,7 +219,7 @@ def test_all(close_figures, reset_randomstate):
                   styles=styles, ax=ax, stacked=True,
                   styles_order=["Dog", "Cat"])
     handles, labels = ax.get_legend_handles_labels()
-    leg = plt.figlegend(handles, labels, "center right", numpoints=1,
+    leg = plt.figlegend(handles, labels, loc="center right", numpoints=1,
                         handletextpad=0.0001)
     leg.draw_frame(False)
     ax.set_title("Dotplot with two points per line (reverse order)")
@@ -235,7 +236,7 @@ def test_all(close_figures, reset_randomstate):
     fig = dot_plot(points, intervals=intervals, lines=lines, styles=styles,
             ax=ax, stacked=True, horizontal=False)
     handles, labels = ax.get_legend_handles_labels()
-    leg = plt.figlegend(handles, labels, "center right", numpoints=1,
+    leg = plt.figlegend(handles, labels, loc="center right", numpoints=1,
                         handletextpad=0.0001)
     leg.draw_frame(False)
     ax.set_title("Vertical dotplot with two points per line")
@@ -251,7 +252,7 @@ def test_all(close_figures, reset_randomstate):
     handles, labels = ax.get_legend_handles_labels()
     lh = dict(zip(labels, handles))
     handles = [lh[l] for l in styles_order]
-    leg = plt.figlegend(handles, styles_order, "center right", numpoints=1,
+    leg = plt.figlegend(handles, styles_order, loc="center right", numpoints=1,
                         handletextpad=0.0001)
     leg.draw_frame(False)
     ax.set_title("Vertical dotplot with two points per line (reverse order)")
@@ -268,7 +269,7 @@ def test_all(close_figures, reset_randomstate):
     fig = dot_plot(points, intervals=intervals, lines=lines, styles=styles,
             ax=ax, stacked=True, striped=True, horizontal=False)
     handles, labels = ax.get_legend_handles_labels()
-    leg = plt.figlegend(handles, labels, "center right", numpoints=1,
+    leg = plt.figlegend(handles, labels, loc="center right", numpoints=1,
                         handletextpad=0.0001)
     leg.draw_frame(False)
     plt.ylim(-20, 20)
@@ -291,7 +292,7 @@ def test_all(close_figures, reset_randomstate):
             ax=ax, stacked=True, marker_props=marker_props,
             line_props=line_props)
     handles, labels = ax.get_legend_handles_labels()
-    leg = plt.figlegend(handles, labels, "center right", numpoints=1,
+    leg = plt.figlegend(handles, labels, loc="center right", numpoints=1,
                         handletextpad=0.0001)
     leg.draw_frame(False)
     ax.set_title("Dotplot with color-matched points and intervals")
@@ -313,7 +314,7 @@ def test_all(close_figures, reset_randomstate):
             ax=ax, stacked=True, marker_props=marker_props,
             line_props=line_props, horizontal=False)
     handles, labels = ax.get_legend_handles_labels()
-    leg = plt.figlegend(handles, labels, "center right", numpoints=1,
+    leg = plt.figlegend(handles, labels, loc="center right", numpoints=1,
                         handletextpad=0.0001)
     leg.draw_frame(False)
     ax.set_title("Dotplot with color-matched points and intervals")
@@ -405,7 +406,7 @@ def test_all(close_figures, reset_randomstate):
     fig = dot_plot(points, lines=lines, styles=styles,
             ax=ax, stacked=True)
     handles, labels = ax.get_legend_handles_labels()
-    leg = plt.figlegend(handles, labels, "center right", numpoints=1,
+    leg = plt.figlegend(handles, labels, loc="center right", numpoints=1,
                         handletextpad=0.0001)
     leg.draw_frame(False)
     ax.set_title("Dotplot with different numbers of points per line")

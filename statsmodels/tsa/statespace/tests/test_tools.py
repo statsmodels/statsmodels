@@ -16,7 +16,7 @@ from statsmodels.tsa.statespace import tools
 from statsmodels.tsa.stattools import acovf
 
 
-class TestCompanionMatrix(object):
+class TestCompanionMatrix:
 
     cases = [
         (2, np.array([[0, 1], [0, 0]])),
@@ -39,7 +39,7 @@ class TestCompanionMatrix(object):
             assert_equal(tools.companion_matrix(polynomial), result)
 
 
-class TestDiff(object):
+class TestDiff:
 
     x = np.arange(10)
     cases = [
@@ -85,7 +85,7 @@ class TestDiff(object):
             assert_almost_equal(x, result)
 
 
-class TestSolveDiscreteLyapunov(object):
+class TestSolveDiscreteLyapunov:
 
     def solve_dicrete_lyapunov_direct(self, a, q, complex_step=False):
         # This is the discrete Lyapunov solver as "real function of real
@@ -152,7 +152,7 @@ class TestSolveDiscreteLyapunov(object):
         assert_allclose(actual, desired)
 
 
-class TestConcat(object):
+class TestConcat:
 
     x = np.arange(10)
 
@@ -184,7 +184,7 @@ class TestConcat(object):
                 tools.concat(*args[:-1])
 
 
-class TestIsInvertible(object):
+class TestIsInvertible:
 
     cases = [
         ([1, -0.5], True),
@@ -200,7 +200,7 @@ class TestIsInvertible(object):
             assert_equal(tools.is_invertible(polynomial), invertible)
 
 
-class TestConstrainStationaryUnivariate(object):
+class TestConstrainStationaryUnivariate:
 
     cases = [
         (np.array([2.]), -2./((1+2.**2)**0.5))
@@ -212,7 +212,7 @@ class TestConstrainStationaryUnivariate(object):
             assert_equal(result, constrained)
 
 
-class TestUnconstrainStationaryUnivariate(object):
+class TestUnconstrainStationaryUnivariate:
 
     cases = [
         (np.array([-2./((1+2.**2)**0.5)]), np.array([2.]))
@@ -224,7 +224,7 @@ class TestUnconstrainStationaryUnivariate(object):
             assert_allclose(result, unconstrained)
 
 
-class TestStationaryUnivariate(object):
+class TestStationaryUnivariate:
     # Test that the constraint and unconstrained functions are inverses
 
     constrained_cases = [
@@ -244,7 +244,7 @@ class TestStationaryUnivariate(object):
             assert_allclose(reunconstrained, unconstrained)
 
 
-class TestValidateMatrixShape(object):
+class TestValidateMatrixShape:
     # name, shape, nrows, ncols, nobs
     valid = [
         ('TEST', (5, 2), 5, 2, None),
@@ -271,7 +271,7 @@ class TestValidateMatrixShape(object):
                 tools.validate_matrix_shape(*args)
 
 
-class TestValidateVectorShape(object):
+class TestValidateVectorShape:
     # name, shape, nrows, ncols, nobs
     valid = [
         ('TEST', (5,), 5, None),
@@ -367,7 +367,7 @@ def test_multivariate_pacf():
         np.diag([1, 0]), atol=1e-2)
 
 
-class TestConstrainStationaryMultivariate(object):
+class TestConstrainStationaryMultivariate:
 
     cases = [
         # This is the same test as the univariate case above, except notice
@@ -405,7 +405,7 @@ class TestConstrainStationaryMultivariate(object):
             assert_array_less(np.abs(np.linalg.eigvals(companion)), 1)
 
 
-class TestUnconstrainStationaryMultivariate(object):
+class TestUnconstrainStationaryMultivariate:
 
     cases = [
         # This is the same test as the univariate case above, except notice
@@ -422,7 +422,7 @@ class TestUnconstrainStationaryMultivariate(object):
             assert_allclose(result[0], unconstrained)
 
 
-class TestStationaryMultivariate(object):
+class TestStationaryMultivariate:
     # Test that the constraint and unconstrained functions are inverses
 
     constrained_cases = [

@@ -51,7 +51,7 @@ def test_influence_glm_bernoulli():
     assert_allclose(c_bar, results_sas[:, 9], atol=6e-5)
 
 
-class InfluenceCompareExact(object):
+class InfluenceCompareExact:
     # Mixin to compare and test two Influence instances
 
     def test_basics(self):
@@ -66,12 +66,14 @@ class InfluenceCompareExact(object):
 
         cd_rtol = getattr(self, 'cd_rtol', 1e-7)
         assert_allclose(infl0.cooks_distance[0], infl1.cooks_distance[0],
-                        rtol=cd_rtol)
+                        rtol=cd_rtol, atol=1e-14)  # very small values possible
         assert_allclose(infl0.dfbetas, infl1.dfbetas, rtol=1e-9, atol=5e-9)
         assert_allclose(infl0.d_params, infl1.d_params, rtol=1e-9, atol=5e-9)
-        assert_allclose(infl0.d_fittedvalues, infl1.d_fittedvalues, rtol=5e-9)
+        assert_allclose(infl0.d_fittedvalues, infl1.d_fittedvalues,
+                        rtol=5e-9, atol=1e-14)
         assert_allclose(infl0.d_fittedvalues_scaled,
-                        infl1.d_fittedvalues_scaled, rtol=5e-9)
+                        infl1.d_fittedvalues_scaled,
+                        rtol=5e-9, atol=1e-14)
 
     @pytest.mark.smoke
     @pytest.mark.matplotlib
@@ -101,7 +103,7 @@ class InfluenceCompareExact(object):
 
         df0 = infl0.summary_frame()
         df1 = infl1.summary_frame()
-        assert_allclose(df0.values, df1.values, rtol=5e-5)
+        assert_allclose(df0.values, df1.values, rtol=5e-5, atol=1e-14)
         pdt.assert_index_equal(df0.index, df1.index)
 
 
@@ -221,7 +223,8 @@ class TestInfluenceGaussianGLMOLS(InfluenceCompareExact):
                         rtol=1e-12)
         assert_allclose(infl0.resid_studentized,
                         infl1.resid_studentized, rtol=1e-12, atol=1e-7)
-        assert_allclose(infl0.cooks_distance, infl1.cooks_distance, rtol=1e-7)
+        assert_allclose(infl0.cooks_distance, infl1.cooks_distance,
+                        rtol=1e-7, atol=1e-14)  # very small values possible
         assert_allclose(infl0.dfbetas, infl1.dfbetas, rtol=0.1) # changed
         # OLSInfluence only has looo dfbeta/d_params
         assert_allclose(infl0.d_params, infl1.dfbeta, rtol=1e-9, atol=1e-14)
@@ -246,3 +249,74 @@ class TestInfluenceGaussianGLMOLS(InfluenceCompareExact):
         cols = ['cooks_d', 'standard_resid', 'hat_diag', 'dffits_internal']
         assert_allclose(df0[cols].values, df1[cols].values, rtol=1e-5)
         pdt.assert_index_equal(df0.index, df1.index)
+
+
+class TestInfluenceLogitCompare(InfluenceCompareExact):
+
+    @classmethod
+    def setup_class(cls):
+        df = data_bin
+        mod = GLM(df['constrict'], df[['const', 'log_rate', 'log_volumne']],
+                  family=families.Binomial())
+        res = mod.fit(method="newton", tol=1e-10)
+        from statsmodels.discrete.discrete_model import Logit
+        mod2 = Logit(df['constrict'], df[['const', 'log_rate', 'log_volumne']])
+        res2 = mod2.fit(method="newton", tol=1e-10)
+
+        cls.infl1 = res.get_influence()
+        cls.infl0 = res2.get_influence()
+
+
+class TestInfluenceProbitCompare(InfluenceCompareExact):
+
+    @classmethod
+    def setup_class(cls):
+        df = data_bin
+        mod = GLM(df['constrict'], df[['const', 'log_rate', 'log_volumne']],
+                  family=families.Binomial(link=families.links.Probit()))
+        res = mod.fit(method="newton", tol=1e-10)
+        from statsmodels.discrete.discrete_model import Probit
+        mod2 = Probit(df['constrict'], df[['const', 'log_rate', 'log_volumne']])
+        res2 = mod2.fit(method="newton", tol=1e-10)
+
+        cls.infl1 = MLEInfluence(res)  # res.get_influence()
+        cls.infl0 = res2.get_influence()
+
+    def test_basics_specific(self):
+        infl1 = self.infl1
+        infl0 = self.infl0
+        res1 = self.infl1.results
+        res0 = self.infl0.results
+
+        assert_allclose(res1.params, res1.params, rtol=1e-10)
+
+        d1 = res1.model._deriv_mean_dparams(res1.params)
+        d0 = res1.model._deriv_mean_dparams(res0.params)
+        assert_allclose(d0, d1, rtol=1e-10)
+
+        d1 = res1.model._deriv_score_obs_dendog(res1.params)
+        d0 = res1.model._deriv_score_obs_dendog(res0.params)
+        assert_allclose(d0, d1, rtol=1e-10)
+
+        s1 = res1.model.score_obs(res1.params)
+        s0 = res1.model.score_obs(res0.params)
+        assert_allclose(s0, s1, rtol=1e-10)
+
+        assert_allclose(infl0.hessian, infl1.hessian, rtol=1e-10)
+
+
+class TestInfluencePoissonCompare(InfluenceCompareExact):
+
+    @classmethod
+    def setup_class(cls):
+        df = data_bin
+        mod = GLM(df['constrict'], df[['const', 'log_rate', 'log_volumne']],
+                  family=families.Poisson())
+        res = mod.fit(attach_wls=True, atol=1e-10)
+        from statsmodels.discrete.discrete_model import Poisson
+        mod2 = Poisson(df['constrict'],
+                       df[['const', 'log_rate', 'log_volumne']])
+        res2 = mod2.fit(tol=1e-10)
+
+        cls.infl0 = res.get_influence()
+        cls.infl1 = res2.get_influence()

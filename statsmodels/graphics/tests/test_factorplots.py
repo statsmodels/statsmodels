@@ -11,7 +11,7 @@ except ImportError:
     pass
 
 
-class TestInteractionPlot(object):
+class TestInteractionPlot:
 
     @classmethod
     def setup_class(cls):

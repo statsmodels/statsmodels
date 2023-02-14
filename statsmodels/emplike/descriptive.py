@@ -46,7 +46,7 @@ def DescStat(endog):
         return DescStatMV(endog)
 
 
-class _OptFuncts(object):
+class _OptFuncts:
     """
     A class that holds functions that are optimized/solved.
 

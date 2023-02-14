@@ -121,7 +121,7 @@ def test_ar_transparams():
     assert not np.isnan(tools._ar_transparams(arr)).any()
 
 
-class TestLagmat(object):
+class TestLagmat:
     @classmethod
     def setup_class(cls):
         data = macrodata.load_pandas()
@@ -449,6 +449,21 @@ class TestLagmat(object):
         assert_frame_equal(lead, expected.iloc[:, :1])
         assert_frame_equal(lags, expected.iloc[:, 1:])
 
+    def test_range_index_columns(self):
+        # GH 8377
+        df = pd.DataFrame(np.arange(200).reshape((-1, 2)))
+        df.columns = pd.RangeIndex(2)
+        result = stattools.lagmat(df, maxlag=2, use_pandas=True)
+        assert result.shape == (100, 4)
+        assert list(result.columns) == ["0.L.1", "1.L.1", "0.L.2", "1.L.2"]
+
+    def test_duplicate_column_names(self):
+        # GH 8377
+        df = pd.DataFrame(np.arange(200).reshape((-1, 2)))
+        df.columns = [0, "0"]
+        with pytest.raises(ValueError, match="Columns names must be"):
+            stattools.lagmat(df, maxlag=2, use_pandas=True)
+
 
 def test_freq_to_period():
     from pandas.tseries.frequencies import to_offset
@@ -460,7 +475,7 @@ def test_freq_to_period():
         assert_equal(tools.freq_to_period(to_offset(i)), j)
 
 
-class TestDetrend(object):
+class TestDetrend:
     @classmethod
     def setup_class(cls):
         cls.data_1d = np.arange(5.0)
@@ -535,7 +550,7 @@ class TestDetrend(object):
         assert_raises(NotImplementedError, tools.detrend, np.ones((3, 3, 3)))
 
 
-class TestAddTrend(object):
+class TestAddTrend:
     @classmethod
     def setup_class(cls):
         cls.n = 200
@@ -676,7 +691,7 @@ class TestAddTrend(object):
         assert tools.add_trend(self.arr_2d, "n") is not self.arr_2d
 
 
-class TestLagmat2DS(object):
+class TestLagmat2DS:
     @classmethod
     def setup_class(cls):
         data = macrodata.load_pandas()
@@ -790,3 +805,12 @@ class TestLagmat2DS(object):
         data = np.zeros((100, 2, 2))
         with pytest.raises(ValueError):
             stattools.lagmat2ds(data, 5)
+
+
+def test_grangercausality():
+    data = np.random.rand(100, 2)
+    with pytest.warns(FutureWarning, match="verbose"):
+        out = stattools.grangercausalitytests(data, maxlag=2, verbose=False)
+    result, models = out[1]
+    res2down, res2djoint, rconstr = models
+    assert res2djoint.centered_tss is not res2djoint.uncentered_tss

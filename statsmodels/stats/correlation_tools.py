@@ -862,7 +862,7 @@ def corr_thresholded(data, minabs=None, max_elt=1e7):
     return cmat
 
 
-class MultivariateKernel(object):
+class MultivariateKernel:
     """
     Base class for multivariate kernels.
 

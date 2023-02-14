@@ -7,6 +7,7 @@ from __future__ import annotations
 from typing import Any, Sequence
 import numpy as np
 from scipy import optimize
+from statsmodels.compat.scipy import SP_LT_15, SP_LT_17
 
 
 def check_kwargs(kwargs: dict[str, Any], allowed: Sequence[str], method: str):
@@ -15,11 +16,11 @@ def check_kwargs(kwargs: dict[str, Any], allowed: Sequence[str], method: str):
         import warnings
 
         warnings.warn(
-            f"Keyword arguments have been passed to the optimizer that have "
-            f"no effect. The list of allowed keyword arguments for method "
+            "Keyword arguments have been passed to the optimizer that have "
+            "no effect. The list of allowed keyword arguments for method "
             f"{method} is: {', '.join(allowed)}. The list of unsupported "
             f"keyword arguments passed include: {', '.join(extra)}. After "
-            f"release 0.14, this will raise.",
+            "release 0.14, this will raise.",
             FutureWarning
         )
 
@@ -30,7 +31,7 @@ def _check_method(method, methods):
         raise ValueError(message)
 
 
-class Optimizer(object):
+class Optimizer:
     def _fit(self, objective, gradient, start_params, fargs, kwargs,
              hessian=None, method='newton', maxiter=100, full_output=True,
              disp=True, callback=None, retall=False):
@@ -343,6 +344,12 @@ def _fit_minimize(f, score, start_params, fargs, kwargs, disp=True,
 
     # Use bounds/constraints only if they're allowed by the method
     has_bounds = ['L-BFGS-B', 'TNC', 'SLSQP', 'trust-constr']
+    # Added in SP 1.5
+    if not SP_LT_15:
+        has_bounds += ['Powell']
+    # Added in SP 1.7
+    if not SP_LT_17:
+        has_bounds += ['Nelder-Mead']
     has_constraints = ['COBYLA', 'SLSQP', 'trust-constr']
 
     if 'bounds' in kwargs.keys() and kwargs['min_method'] in has_bounds:
@@ -603,7 +610,7 @@ def _fit_lbfgs(f, score, start_params, fargs, kwargs, disp=True, maxiter=100,
     """
     check_kwargs(
         kwargs,
-        ("m", "pgtol", "factr", "maxfun", "epsilon", "approx_grad", "bounds", "loglike_and_score"),
+        ("m", "pgtol", "factr", "maxfun", "epsilon", "approx_grad", "bounds", "loglike_and_score", "iprint"),
         "lbfgs"
     )
     # Use unconstrained optimization by default.

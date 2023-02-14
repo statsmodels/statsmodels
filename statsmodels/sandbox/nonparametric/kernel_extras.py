@@ -41,7 +41,7 @@ from statsmodels.nonparametric._kernel_base import \
 __all__ = ['SingleIndexModel', 'SemiLinear', 'TestFForm']
 
 
-class TestFForm(object):
+class TestFForm:
     """
     Nonparametric test for functional form.
 

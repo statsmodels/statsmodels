@@ -1,12 +1,14 @@
-from distutils.version import LooseVersion
+from packaging.version import Version, parse
 
 import numpy as np
 import scipy
 
-SP_VERSION = LooseVersion(scipy.__version__)
-SCIPY_GT_14 = SP_VERSION >= LooseVersion("1.5")
-SP_LT_15 = SP_VERSION < LooseVersion("1.5")
-SP_LT_16 = SP_VERSION < LooseVersion("1.6")
+SP_VERSION = parse(scipy.__version__)
+SP_LT_15 = SP_VERSION < Version("1.4.99")
+SCIPY_GT_14 = not SP_LT_15
+SP_LT_16 = SP_VERSION < Version("1.5.99")
+SP_LT_17 = SP_VERSION < Version("1.6.99")
+SP_LT_19 = SP_VERSION < Version("1.8.99")
 
 
 def _next_regular(target):

@@ -6,9 +6,10 @@ there might still be problems with loc and scale,
 
 '''
 
-
 from scipy import stats
+
 __date__ = "2010-12-29 dec"
+
 
 class MaxDist(stats.rv_continuous):
     """ max of n of scipy.stats normal expon ...
@@ -17,24 +18,28 @@ class MaxDist(stats.rv_continuous):
             sample = maxnormal10( size=1000 )
             sample.cdf = cdf ^ n,  ppf ^ (1/n)
     """
-    def __init__( self, dist, n ):
+
+    def __init__(self, dist, n):
         self.dist = dist
         self.n = n
-        extradoc = 'maximumdistribution is the distribution of the '\
+        extradoc = 'maximumdistribution is the distribution of the ' \
                    + 'maximum of n i.i.d. random variable'
         super(MaxDist, self).__init__(name='maxdist', a=dist.a, b=dist.b,
-                        longname = 'A maximumdistribution', extradoc = extradoc)
+                                      longname='A maximumdistribution',
+                                      # extradoc = extradoc
+                                      )
 
     def _pdf(self, x, *args, **kw):
         return self.n * self.dist.pdf(x, *args, **kw) \
-               * self.dist.cdf(x, *args, **kw )**(self.n-1)
+            * self.dist.cdf(x, *args, **kw) ** (self.n - 1)
 
     def _cdf(self, x, *args, **kw):
-        return self.dist.cdf(x, *args, **kw)**self.n
+        return self.dist.cdf(x, *args, **kw) ** self.n
 
     def _ppf(self, q, *args, **kw):
         # y = F(x) ^ n  <=>  x = F-1( y ^ 1/n)
-        return self.dist.ppf(q**(1./self.n), *args, **kw)
+        return self.dist.ppf(q ** (1. / self.n), *args, **kw)
+
 
 ##    def rvs( self, *args, **kw ):
 ##       size = kw.pop( "size", 1 )
@@ -45,7 +50,7 @@ class MaxDist(stats.rv_continuous):
 maxdistr = MaxDist(stats.norm, 10)
 
 print(maxdistr.rvs(size=10))
-print(maxdistr.stats(moments = 'mvsk'))
+print(maxdistr.stats(moments='mvsk'))
 
 '''
 >>> print maxdistr.stats(moments = 'mvsk')

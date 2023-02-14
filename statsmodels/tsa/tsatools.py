@@ -12,6 +12,7 @@ from pandas.tseries.frequencies import to_offset
 
 from statsmodels.tools.data import _is_recarray, _is_using_pandas
 from statsmodels.tools.sm_exceptions import ValueWarning
+from statsmodels.tools.typing import NDArray
 from statsmodels.tools.validation import (
     array_like,
     bool_like,
@@ -31,7 +32,6 @@ __all__ = [
     "unvec",
     "unvech",
     "freq_to_period",
-    "rename_trend",
 ]
 
 
@@ -298,7 +298,7 @@ def lagmat(x,
            trim: Literal["forward", "backward", "both", "none"]='forward',
            original: Literal["ex", "sep", "in"]="ex",
            use_pandas: bool=False
-           ):
+           )-> NDArray | DataFrame | tuple[NDArray, NDArray] | tuple[DataFrame, DataFrame]:
     """
     Create 2d array of lags.
 
@@ -384,7 +384,7 @@ def lagmat(x,
     trim = trim.lower()
     if is_pandas and trim in ("none", "backward"):
         raise ValueError(
-            "trim cannot be 'none' or 'forward' when used on "
+            "trim cannot be 'none' or 'backward' when used on "
             "Series or DataFrames"
         )
 
@@ -397,8 +397,8 @@ def lagmat(x,
     lm = np.zeros((nobs + maxlag, nvar * (maxlag + 1)))
     for k in range(0, int(maxlag + 1)):
         lm[
-            maxlag - k : nobs + maxlag - k,
-            nvar * (maxlag - k) : nvar * (maxlag - k + 1),
+        maxlag - k: nobs + maxlag - k,
+        nvar * (maxlag - k): nvar * (maxlag - k + 1),
         ] = x
 
     if trim in ("none", "forward"):
@@ -415,7 +415,15 @@ def lagmat(x,
 
     if is_pandas:
         x = orig
-        x_columns = x.columns if isinstance(x, DataFrame) else [x.name]
+        if isinstance(x, DataFrame):
+            x_columns = [str(c) for c in x.columns]
+            if len(set(x_columns)) != x.shape[1]:
+                raise ValueError(
+                    "Columns names must be distinct after conversion to string "
+                    "(if not already strings)."
+                )
+        else:
+            x_columns = [str(x.name)]
         columns = [str(col) for col in x_columns]
         for lag in range(maxlag):
             lag_str = str(lag + 1)
@@ -773,7 +781,7 @@ def unintegrate(x, levels):
     return np.cumsum(np.r_[x0, x])
 
 
-def freq_to_period(freq):
+def freq_to_period(freq: str | offsets.DateOffset) -> int:
     """
     Convert a pandas frequency to a periodicity
 
@@ -784,7 +792,7 @@ def freq_to_period(freq):
 
     Returns
     -------
-    period : int
+    int
         Periodicity of freq
 
     Notes
@@ -793,6 +801,7 @@ def freq_to_period(freq):
     """
     if not isinstance(freq, offsets.DateOffset):
         freq = to_offset(freq)  # go ahead and standardize
+    assert isinstance(freq, offsets.DateOffset)
     freq = freq.rule_code.upper()
 
     if freq == "A" or freq.startswith(("A-", "AS-")):
@@ -814,14 +823,3 @@ def freq_to_period(freq):
             "freq {} not understood. Please report if you "
             "think this is in error.".format(freq)
         )
-
-
-def rename_trend(trend: str):
-    if trend == "nc":
-        warnings.warn(
-            "trend 'nc' has been renamed to 'n' after 0.14 is released. Use "
-            "'n' now to avoid this warning.",
-            FutureWarning,
-        )
-        return "n"
-    return trend

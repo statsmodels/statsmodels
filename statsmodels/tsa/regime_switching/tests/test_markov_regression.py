@@ -407,7 +407,7 @@ mumpspc = [0.29791319, 0.41467956, 1.13061404, 1.23267496,
            0.05628902, 0.00924054]
 
 
-class MarkovRegression(object):
+class MarkovRegression:
     @classmethod
     def setup_class(cls, true, endog, atol=1e-5, rtol=1e-7, **kwargs):
         cls.model = markov_regression.MarkovRegression(endog, **kwargs)

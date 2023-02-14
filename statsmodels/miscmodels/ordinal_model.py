@@ -158,8 +158,8 @@ class OrderedModel(GenericLikelihoodModel):
 
         # adjust df
         self.k_extra = self.k_levels - 1
-        self.df_model = self.k_vars + self.k_extra
-        self.df_resid = self.nobs - self.df_model
+        self.df_model = self.k_vars
+        self.df_resid = self.nobs - (self.k_vars + self.k_extra)
 
         self.results_class = OrderedResults
 
@@ -404,7 +404,7 @@ class OrderedModel(GenericLikelihoodModel):
             observations in rows and one column for each category or level of
             the categorical dependent variable.
             If which is "cumprob", then "prob" ar cumulatively added to get the
-            cdf at k, i.e. probaibility of observing choice k or lower.
+            cdf at k, i.e. probability of observing choice k or lower.
             If which is "linpred", then the conditional prediction of the
             latent variable is returned. In this case, the return is
             one-dimensional.

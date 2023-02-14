@@ -4,7 +4,7 @@ Results from Matlab and R
 import numpy as np
 
 
-class DescStatRes(object):
+class DescStatRes:
     """
 
     The results were generated from Bruce Hansen's
@@ -283,7 +283,7 @@ class DescStatRes(object):
         self.test_joint_skew_kurt = (8.753952, .012563)
 
 
-class RegressionResults(object):
+class RegressionResults:
     """
     Results for EL Regression
     """
@@ -323,7 +323,7 @@ class RegressionResults(object):
         self.test_ci_beta3 = (-0.3804313225443794, 0.006934528877337928)
 
 
-class ANOVAResults(object):
+class ANOVAResults:
     """
     Results for ANOVA
     """
@@ -342,7 +342,7 @@ class ANOVAResults(object):
             0.017381,  0.017902,  0.016557,  0.015522,  0.017455,  0.017248]))
 
 
-class AFTRes(object):
+class AFTRes:
     """
     Results for the AFT model from package emplik in R written by Mai Zhou
     """
@@ -353,7 +353,7 @@ class AFTRes(object):
         self.test_joint = (11.8068, 0.002730147)
 
 
-class OriginResults(object):
+class OriginResults:
     """
     These results are from Bruce Hansen's Matlab package.
     To replicate the results, the exogenous variables were scaled

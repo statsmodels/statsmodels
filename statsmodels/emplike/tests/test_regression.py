@@ -8,7 +8,7 @@ from statsmodels.tools import add_constant
 from .results.el_results import RegressionResults
 
 
-class GenRes(object):
+class GenRes:
     """
     Loads data and creates class instance ot be tested
     """

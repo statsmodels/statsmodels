@@ -29,7 +29,7 @@ def trimboth(a, proportiontocut, axis=0):
     a : array_like
         Data to trim.
     proportiontocut : float or int
-        Proportion of total data set to trim of each end.
+        Proportion of data to trim at each end.
     axis : int or None
         Axis along which the observations are trimmed. The default is to trim
         along axis=0. If axis is None then the array will be flattened before
@@ -37,7 +37,7 @@ def trimboth(a, proportiontocut, axis=0):
 
     Returns
     -------
-    out : ndarray
+    out : array-like
         Trimmed version of array `a`.
 
     Examples
@@ -66,8 +66,7 @@ def trimboth(a, proportiontocut, axis=0):
 
 def trim_mean(a, proportiontocut, axis=0):
     """
-    Return mean of array after trimming observations from both lower and upper
-    tails.
+    Return mean of array after trimming observations from both tails.
 
     If `proportiontocut` = 0.1, slices off 'leftmost' and 'rightmost' 10% of
     scores. Slices off LESS if proportion results in a non-integer slice
@@ -78,7 +77,7 @@ def trim_mean(a, proportiontocut, axis=0):
     a : array_like
         Input array
     proportiontocut : float
-        Fraction to cut off of both tails of the observations
+        Fraction to cut off at each tail of the sorted observations.
     axis : int or None
         Axis along which the trimmed means are computed. The default is axis=0.
         If axis is None then the trimmed mean will be computed for the
@@ -94,11 +93,26 @@ def trim_mean(a, proportiontocut, axis=0):
     return np.mean(newa, axis=axis)
 
 
-class TrimmedMean(object):
+class TrimmedMean:
     """
     class for trimmed and winsorized one sample statistics
 
     axis is None, i.e. ravelling, is not supported
+
+    Parameters
+    ----------
+    data : array-like
+        The data, observations to analyze.
+    fraction : float in (0, 0.5)
+        The fraction of observations to trim at each tail.
+        The number of observations trimmed at each tail is
+        ``int(fraction * nobs)``
+    is_sorted : boolean
+        Indicator if data is already sorted. By default the data is sorted
+        along ``axis``.
+    axis : int
+        The axis of reduce operations. By default axis=0, that is observations
+        are along the zero dimension, i.e. rows if 2-dim.
     """
 
     def __init__(self, data, fraction, is_sorted=False, axis=0):
@@ -131,6 +145,8 @@ class TrimmedMean(object):
 
     @property
     def data_trimmed(self):
+        """numpy array of trimmed and sorted data
+        """
         # returns a view
         return self.data_sorted[self.sl]
 
@@ -189,7 +205,7 @@ class TrimmedMean(object):
     def ttest_mean(self, value=0, transform='trimmed',
                    alternative='two-sided'):
         """
-        One sample ttest for trimmed or Winsorized mean
+        One sample t-test for trimmed or Winsorized mean
 
         Parameters
         ----------

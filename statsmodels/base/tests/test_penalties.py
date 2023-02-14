@@ -13,7 +13,7 @@ import statsmodels.base._penalties as smpen
 from statsmodels.tools.numdiff import approx_fprime, approx_hess
 
 
-class CheckPenalty(object):
+class CheckPenalty:
 
     def test_symmetry(self):
         pen = self.pen

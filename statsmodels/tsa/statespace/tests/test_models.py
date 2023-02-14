@@ -50,7 +50,7 @@ class Intercepts(mlemodel.MLEModel):
         self['state_intercept'] = params[3:]
 
 
-class TestIntercepts(object):
+class TestIntercepts:
     @classmethod
     def setup_class(cls, which='mixed', **kwargs):
         # Results
@@ -229,7 +229,7 @@ def test_large_kposdef():
     assert_raises(ValueError, LargeStateCovAR1, np.arange(10))
 
 
-class TestLargeStateCovAR1(object):
+class TestLargeStateCovAR1:
     @classmethod
     def setup_class(cls):
         pytest.skip(

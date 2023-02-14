@@ -12,7 +12,7 @@ from scipy import stats
 from statsmodels.base.model import GenericLikelihoodModel
 
 from numpy.testing import (assert_array_less, assert_almost_equal,
-                           assert_allclose, assert_)
+                           assert_allclose)
 
 class MyPareto(GenericLikelihoodModel):
     '''Maximum Likelihood Estimation pareto distribution
@@ -22,6 +22,9 @@ class MyPareto(GenericLikelihoodModel):
 
     def initialize(self):   #TODO needed or not
         super(MyPareto, self).initialize()
+        extra_params_names = ['shape', 'loc', 'scale']
+        self._set_extra_params_names(extra_params_names)
+
         #start_params needs to be attribute
         self.start_params = np.array([1.5, self.endog.min() - 1.5, 1.])
 
@@ -59,7 +62,7 @@ class MyPareto(GenericLikelihoodModel):
         return -logpdf
 
 
-class CheckGenericMixin(object):
+class CheckGenericMixin:
     # mostly smoke tests for now
 
     def test_summary(self):
@@ -95,10 +98,18 @@ class CheckGenericMixin(object):
             assert_allclose(self.res1.bsejhj, self.res1.bsejac,
                             rtol=0.05, atol=1.5)
 
-
-
-
-
+    def test_df(self):
+        res = self.res1
+        k_extra = getattr(self, "k_extra", 0)
+        if res.model.exog is not None:
+            nobs, k_vars = res.model.exog.shape
+            k_constant = 1
+        else:
+            nobs, k_vars = res.model.endog.shape[0], 0
+            k_constant = 0
+        assert res.df_resid == nobs - k_vars - k_extra
+        assert res.df_model == k_vars - k_constant
+        assert len(res.params) == k_vars + k_extra
 
 
 class TestMyPareto1(CheckGenericMixin):
@@ -113,12 +124,14 @@ class TestMyPareto1(CheckGenericMixin):
         mod_par = MyPareto(rvs)
         mod_par.fixed_params = None
         mod_par.fixed_paramsmask = None
-        mod_par.df_model = 3
-        mod_par.df_resid = mod_par.endog.shape[0] - mod_par.df_model
+        mod_par.df_model = 0
+        mod_par.k_extra = k_extra = 3
+        mod_par.df_resid = mod_par.endog.shape[0] - mod_par.df_model -  k_extra
         mod_par.data.xnames = ['shape', 'loc', 'scale']
 
         cls.mod = mod_par
         cls.res1 = mod_par.fit(disp=None)
+        cls.k_extra = k_extra
 
         # Note: possible problem with parameters close to min data boundary
         # see issue #968
@@ -148,12 +161,14 @@ class TestMyParetoRestriction(CheckGenericMixin):
         mod_par.fixed_params = fixdf
         mod_par.fixed_paramsmask = np.isnan(fixdf)
         mod_par.start_params = mod_par.start_params[mod_par.fixed_paramsmask]
-        mod_par.df_model = 2
-        mod_par.df_resid = mod_par.endog.shape[0] - mod_par.df_model
+        mod_par.df_model = 0
+        mod_par.k_extra = k_extra = 2
+        mod_par.df_resid = mod_par.endog.shape[0] - mod_par.df_model - k_extra
         mod_par.data.xnames = ['shape', 'scale']
 
         cls.mod = mod_par
         cls.res1 = mod_par.fit(disp=None)
+        cls.k_extra = k_extra
 
         # Note: loc is fixed, no problems with parameters close to min data
         cls.skip_bsejac = False
@@ -172,8 +187,13 @@ class TwoPeakLLHNoExog(GenericLikelihoodModel):
         # so we re-use their PDFs here
         self.signal = signal
         self.background = background
-        super(TwoPeakLLHNoExog, self).__init__(endog=endog, exog=exog,
-                                         *args, **kwargs)
+        super(TwoPeakLLHNoExog, self).__init__(
+            endog=endog,
+            exog=exog,
+            *args,
+            extra_params_names=self.exog_names,
+            **kwargs
+            )
 
     def loglike(self, params):        # pylint: disable=E0202
         return -self.nloglike(params)
@@ -196,7 +216,7 @@ class TwoPeakLLHNoExog(GenericLikelihoodModel):
         return -sumlogl
 
 
-class TestTwoPeakLLHNoExog(object):
+class TestTwoPeakLLHNoExog:
 
     @classmethod
     def setup_class(cls):
@@ -225,7 +245,8 @@ class TestTwoPeakLLHNoExog(object):
         res = llh_noexog.fit()
         assert_allclose(res.params, self.params, rtol=1e-1)
         # TODO: nan if exog is None,
-        assert_(np.isnan(res.df_resid))
+        assert res.df_resid == 248
+        assert res.df_model == 0
         res_bs = res.bootstrap(nrep=50)
         assert_allclose(res_bs[2].mean(0), self.params, rtol=1e-1)
         # SMOKE test,

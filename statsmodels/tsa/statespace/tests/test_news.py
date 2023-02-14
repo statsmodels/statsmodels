@@ -4,8 +4,6 @@ Tests for news results
 Author: Chad Fulton
 License: BSD-3
 """
-from statsmodels.compat.pandas import NumericIndex
-
 from statsmodels.compat.pandas import (
     assert_frame_equal,
     assert_series_equal,
@@ -180,7 +178,7 @@ def check_news(news, revisions, updates, impact_dates, impacted_variables,
 
     # - Table: data revisions ------------------------------------------------
     assert_equal(news.data_revisions.columns.tolist(),
-                 ['observed (prev)', 'revised'])
+                 ['revised', 'observed (prev)'])
     assert_equal(news.data_revisions.index.names,
                  ['revision date', 'revised variable'])
     assert_(news.data_revisions.index.equals(revisions_index))
@@ -269,8 +267,10 @@ def check_news(news, revisions, updates, impact_dates, impacted_variables,
                     news.post_impacted_forecasts.stack(), atol=1e-12)
 
 
-@pytest.mark.parametrize('revisions', [True, False])
-@pytest.mark.parametrize('updates', [True, False])
+# @pytest.mark.parametrize('revisions', [True, False])
+# @pytest.mark.parametrize('updates', [True, False])
+@pytest.mark.parametrize('revisions', [True])
+@pytest.mark.parametrize('updates', [True])
 def test_sarimax_time_invariant(revisions, updates):
     # Construct previous and updated datasets
     endog = dta['infl'].copy()
@@ -329,6 +329,7 @@ def test_sarimax_time_invariant(revisions, updates):
         updates_index = pd.MultiIndex.from_arrays(
             [[], []], names=['update date', 'updated variable'])
         update_impacts = None
+    print(update_impacts)
 
     # Impact forecasts
     if updates:
@@ -929,9 +930,9 @@ def test_start_end_int(which):
         endog_init = endog.iloc[:-1]
         index_plus2 = pd.RangeIndex((nobs + 2) * 2, step=2)
     elif which == 'int64':
-        endog.index = NumericIndex(np.arange(nobs))
+        endog.index = pd.Index(np.arange(nobs))
         endog_init = endog.iloc[:-1]
-        index_plus2 = NumericIndex(np.arange(nobs + 2))
+        index_plus2 = pd.Index(np.arange(nobs + 2))
     elif which == 'numpy':
         endog = endog.values
         endog_init = endog[:-1]

@@ -1,3 +1,6 @@
+.. image:: docs/source/images/statsmodels-logo-v2-horizontal.svg
+  :alt: Statsmodels logo
+
 |PyPI Version| |Conda Version| |License| |Azure CI Build Status|
 |Codecov Coverage| |Coveralls Coverage| |PyPI downloads| |Conda downloads|
 

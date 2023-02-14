@@ -7,7 +7,7 @@ from statsmodels.tools.decorators import (cache_readonly, deprecated_alias)
 
 def test_cache_readonly():
 
-    class Example(object):
+    class Example:
         def __init__(self):
             self._cache = {}
             self.a = 0
@@ -33,7 +33,7 @@ def test_cache_readonly():
 
 
 def dummy_factory(msg, remove_version, warning):
-    class Dummy(object):
+    class Dummy:
         y = deprecated_alias('y', 'x',
                              remove_version=remove_version,
                              msg=msg,

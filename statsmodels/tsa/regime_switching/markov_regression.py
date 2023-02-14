@@ -8,7 +8,6 @@ import numpy as np
 import statsmodels.base.wrapper as wrap
 
 from statsmodels.tsa.regime_switching import markov_switching
-from statsmodels.tsa.tsatools import rename_trend
 
 
 class MarkovRegression(markov_switching.MarkovSwitching):
@@ -72,6 +71,10 @@ class MarkovRegression(markov_switching.MarkovSwitching):
     if `trend='c'`, the passed `exog` array should not already have a column of
     ones.
 
+    See the notebook `Markov switching dynamic regression
+    <../examples/notebooks/generated/markov_regression.html>`__ for an
+    overview.
+
     References
     ----------
     Kim, Chang-Jin, and Charles R. Nelson. 1999.
@@ -86,7 +89,8 @@ class MarkovRegression(markov_switching.MarkovSwitching):
                  missing='none'):
 
         # Properties
-        self.trend = rename_trend(trend)
+        from statsmodels.tools.validation import string_like
+        self.trend = string_like(trend, "trend", options=("n", "c", "ct", "t"))
         self.switching_trend = switching_trend
         self.switching_exog = switching_exog
         self.switching_variance = switching_variance

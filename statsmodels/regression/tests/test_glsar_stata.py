@@ -14,7 +14,7 @@ from statsmodels.tools.tools import add_constant
 from statsmodels.datasets import macrodata
 
 
-class CheckStataResultsMixin(object):
+class CheckStataResultsMixin:
 
     def test_params_table(self):
         res, results = self.res, self.results

@@ -8,7 +8,7 @@ import statsmodels.stats.dist_dependence_measures as ddm
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
 
 
-class TestDistDependenceMeasures(object):
+class TestDistDependenceMeasures:
     @classmethod
     def setup_class(cls):
         """

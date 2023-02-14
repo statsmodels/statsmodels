@@ -56,7 +56,7 @@ from scipy import stats
 from statsmodels.regression.linear_model import OLS, WLS
 
 
-class OneWayLS(object):
+class OneWayLS:
     '''Class to test equality of regression coefficients across groups
 
     This class performs tests whether the linear regression coefficients are

@@ -1,5 +1,6 @@
 import numpy as np
-from scipy.stats import rv_discrete, nbinom, poisson
+
+from scipy.stats import rv_discrete, poisson, nbinom
 from scipy.special import gammaln
 from scipy._lib._util import _lazywhere
 
@@ -23,8 +24,18 @@ class genpoisson_p_gen(rv_discrete):
     def _pmf(self, x, mu, alpha, p):
         return np.exp(self._logpmf(x, mu, alpha, p))
 
+    def mean(self, mu, alpha, p):
+        return mu
+
+    def var(self, mu, alpha, p):
+        dispersion_factor = (1 + alpha * mu**(p - 1))**2
+        var = dispersion_factor * mu
+        return var
+
+
 genpoisson_p = genpoisson_p_gen(name='genpoisson_p',
                                 longname='Generalized Poisson')
+
 
 class zipoisson_gen(rv_discrete):
     '''Zero Inflated Poisson distribution
@@ -53,12 +64,12 @@ class zipoisson_gen(rv_discrete):
         x[q < w] = 0
         return x
 
-    def _mean(self, mu, w):
+    def mean(self, mu, w):
         return (1 - w) * mu
 
-    def _var(self, mu, w):
+    def var(self, mu, w):
         dispersion_factor = 1 + w * mu
-        var = (dispersion_factor * self._mean(mu, w))
+        var = (dispersion_factor * self.mean(mu, w))
         return var
 
     def _moment(self, n, mu, w):
@@ -84,13 +95,13 @@ class zigeneralizedpoisson_gen(rv_discrete):
     def _pmf(self, x, mu, alpha, p, w):
         return np.exp(self._logpmf(x, mu, alpha, p, w))
 
-    def _mean(self, mu, alpha, p, w):
+    def mean(self, mu, alpha, p, w):
         return (1 - w) * mu
 
-    def _var(self, mu, alpha, p, w):
+    def var(self, mu, alpha, p, w):
         p = p - 1
         dispersion_factor = (1 + alpha * mu ** p) ** 2 + w * mu
-        var = (dispersion_factor * self._mean(mu, alpha, p, w))
+        var = (dispersion_factor * self.mean(mu, alpha, p, w))
         return var
 
 
@@ -131,12 +142,12 @@ class zinegativebinomial_gen(rv_discrete):
         x[q < w] = 0
         return x
 
-    def _mean(self, mu, alpha, p, w):
+    def mean(self, mu, alpha, p, w):
         return (1 - w) * mu
 
-    def _var(self, mu, alpha, p, w):
+    def var(self, mu, alpha, p, w):
         dispersion_factor = 1 + alpha * mu ** (p - 1) + w * mu
-        var = (dispersion_factor * self._mean(mu, alpha, p, w))
+        var = (dispersion_factor * self.mean(mu, alpha, p, w))
         return var
 
     def _moment(self, n, mu, alpha, p, w):
@@ -151,6 +162,65 @@ class zinegativebinomial_gen(rv_discrete):
 zinegbin = zinegativebinomial_gen(name='zinegbin',
     longname='Zero Inflated Generalized Negative Binomial')
 
+
+class truncatedpoisson_gen(rv_discrete):
+    '''Truncated Poisson discrete random variable
+    '''
+    # TODO: need cdf, and rvs
+
+    def _argcheck(self, mu, truncation):
+        # this does not work
+        # vector bound breaks some generic methods
+        # self.a = truncation + 1 # max(truncation + 1, 0)
+        return (mu >= 0) & (truncation >= -1)
+
+    def _get_support(self, mu, truncation):
+        return truncation + 1, self.b
+
+    def _logpmf(self, x, mu, truncation):
+        pmf = 0
+        for i in range(int(np.max(truncation)) + 1):
+            pmf += poisson.pmf(i, mu)
+
+        logpmf_ = poisson.logpmf(x, mu) - np.log(1 - pmf)
+        #logpmf_[x < truncation + 1] = - np.inf
+        return logpmf_
+
+    def _pmf(self, x, mu, truncation):
+        return np.exp(self._logpmf(x, mu, truncation))
+
+truncatedpoisson = truncatedpoisson_gen(name='truncatedpoisson',
+                                        longname='Truncated Poisson')
+
+class truncatednegbin_gen(rv_discrete):
+    '''Truncated Generalized Negative Binomial (NB-P) discrete random variable
+    '''
+    def _argcheck(self, mu, alpha, p, truncation):
+        return (mu >= 0) & (truncation >= -1)
+
+    def _get_support(self, mu, alpha, p, truncation):
+        return truncation + 1, self.b
+
+    def _logpmf(self, x, mu, alpha, p, truncation):
+        size, prob = self.convert_params(mu, alpha, p)
+        pmf = 0
+        for i in range(int(np.max(truncation)) + 1):
+            pmf += nbinom.pmf(i, size, prob)
+
+        logpmf_ = nbinom.logpmf(x, size, prob) - np.log(1 - pmf)
+        # logpmf_[x < truncation + 1] = - np.inf
+        return logpmf_
+
+    def _pmf(self, x, mu, alpha, p, truncation):
+        return np.exp(self._logpmf(x, mu, alpha, p, truncation))
+
+    def convert_params(self, mu, alpha, p):
+        size = 1. / alpha * mu**(2-p)
+        prob = size / (size + mu)
+        return (size, prob)
+
+truncatednegbin = truncatednegbin_gen(name='truncatednegbin',
+    longname='Truncated Generalized Negative Binomial')
 
 class DiscretizedCount(rv_discrete):
     """Count distribution based on discretized distribution
@@ -335,7 +405,8 @@ class DiscretizedModel(GenericLikelihoodModel):
         super().__init__(endog, exog, distr=distr)
         self._init_keys.append('distr')
         self.df_resid = len(endog) - distr.k_shapes
-        self.df_model = distr.k_shapes  # no constant subtracted
+        self.df_model = 0
+        self.k_extra = distr.k_shapes  # no constant subtracted
         self.k_constant = 0
         self.nparams = distr.k_shapes  # needed for start_params
         self.start_params = 0.5 * np.ones(self.nparams)

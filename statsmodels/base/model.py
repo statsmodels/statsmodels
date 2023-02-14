@@ -1,9 +1,12 @@
+from __future__ import annotations
+
 from statsmodels.compat.python import lzip
 
 from functools import reduce
 import warnings
 
 import numpy as np
+import pandas as pd
 from scipy import stats
 
 from statsmodels.base.data import handle_data
@@ -57,7 +60,7 @@ _extra_param_doc = """
         formula interface."""
 
 
-class Model(object):
+class Model:
     __doc__ = """
     A (predictive) statistical model. Intended to be subclassed not used.
 
@@ -237,7 +240,7 @@ class Model(object):
         return self.data.ynames
 
     @property
-    def exog_names(self):
+    def exog_names(self) -> list[str] | None:
         """
         Names of exogenous variables.
         """
@@ -856,6 +859,10 @@ class GenericLikelihoodModel(LikelihoodModel):
             else:
                 self.data.xnames = extra_params_names
 
+            self.k_extra = len(extra_params_names)
+            if hasattr(self, "df_resid"):
+                self.df_resid -= self.k_extra
+
         self.nparams = len(self.exog_names)
 
     # this is redundant and not used when subclassing
@@ -1002,6 +1009,10 @@ class GenericLikelihoodModel(LikelihoodModel):
             else:
                 start_params = 0.1 * np.ones(self.nparams)
 
+        if "cov_type" not in kwargs:
+            # this will add default cov_type name and description
+            kwargs["cov_type"] = 'nonrobust'
+
         fit_method = super(GenericLikelihoodModel, self).fit
         mlefit = fit_method(start_params=start_params,
                             method=method, maxiter=maxiter,
@@ -1026,7 +1037,7 @@ class GenericLikelihoodModel(LikelihoodModel):
         return genericmlefit
 
 
-class Results(object):
+class Results:
     """
     Class to contain model results
 
@@ -1062,52 +1073,7 @@ class Results(object):
         if hasattr(model, 'k_constant'):
             self.k_constant = model.k_constant
 
-    def predict(self, exog=None, transform=True, *args, **kwargs):
-        """
-        Call self.model.predict with self.params as the first argument.
-
-        Parameters
-        ----------
-        exog : array_like, optional
-            The values for which you want to predict. see Notes below.
-        transform : bool, optional
-            If the model was fit via a formula, do you want to pass
-            exog through the formula. Default is True. E.g., if you fit
-            a model y ~ log(x1) + log(x2), and transform is True, then
-            you can pass a data structure that contains x1 and x2 in
-            their original form. Otherwise, you'd need to log the data
-            first.
-        *args
-            Additional arguments to pass to the model, see the
-            predict method of the model for the details.
-        **kwargs
-            Additional keywords arguments to pass to the model, see the
-            predict method of the model for the details.
-
-        Returns
-        -------
-        array_like
-            See self.model.predict.
-
-        Notes
-        -----
-        The types of exog that are supported depends on whether a formula
-        was used in the specification of the model.
-
-        If a formula was used, then exog is processed in the same way as
-        the original data. This transformation needs to have key access to the
-        same variable names, and can be a pandas DataFrame or a dict like
-        object that contains numpy arrays.
-
-        If no formula was used, then the provided exog needs to have the
-        same number of columns as the original exog in the model. No
-        transformation of the data is performed except converting it to
-        a numpy array.
-
-        Row indices as in pandas data frames are supported, and added to the
-        returned prediction.
-        """
-        import pandas as pd
+    def _transform_predict_exog(self, exog, transform=True):
 
         is_pandas = _is_using_pandas(exog, None)
         exog_index = None
@@ -1155,6 +1121,56 @@ class Results(object):
                                    self.model.exog.shape[1] == 1):
                 exog = exog[:, None]
             exog = np.atleast_2d(exog)  # needed in count model shape[1]
+
+        return exog, exog_index
+
+    def predict(self, exog=None, transform=True, *args, **kwargs):
+        """
+        Call self.model.predict with self.params as the first argument.
+
+        Parameters
+        ----------
+        exog : array_like, optional
+            The values for which you want to predict. see Notes below.
+        transform : bool, optional
+            If the model was fit via a formula, do you want to pass
+            exog through the formula. Default is True. E.g., if you fit
+            a model y ~ log(x1) + log(x2), and transform is True, then
+            you can pass a data structure that contains x1 and x2 in
+            their original form. Otherwise, you'd need to log the data
+            first.
+        *args
+            Additional arguments to pass to the model, see the
+            predict method of the model for the details.
+        **kwargs
+            Additional keywords arguments to pass to the model, see the
+            predict method of the model for the details.
+
+        Returns
+        -------
+        array_like
+            See self.model.predict.
+
+        Notes
+        -----
+        The types of exog that are supported depends on whether a formula
+        was used in the specification of the model.
+
+        If a formula was used, then exog is processed in the same way as
+        the original data. This transformation needs to have key access to the
+        same variable names, and can be a pandas DataFrame or a dict like
+        object that contains numpy arrays.
+
+        If no formula was used, then the provided exog needs to have the
+        same number of columns as the original exog in the model. No
+        transformation of the data is performed except converting it to
+        a numpy array.
+
+        Row indices as in pandas data frames are supported, and added to the
+        returned prediction.
+        """
+        exog, exog_index = self._transform_predict_exog(exog,
+                                                        transform=transform)
 
         predict_results = self.model.predict(self.params, exog, *args,
                                              **kwargs)
@@ -1762,12 +1778,12 @@ class LikelihoodModelResults(Results):
         >>> print(f_test)
         <F test: F=array([[ 144.17976065]]), p=6.322026217355609e-08, df_denom=9, df_num=3>
         """
-        res = self.wald_test(r_matrix, cov_p=cov_p, invcov=invcov, use_f=True)
+        res = self.wald_test(r_matrix, cov_p=cov_p, invcov=invcov, use_f=True, scalar=True)
         return res
 
     # TODO: untested for GLMs?
     def wald_test(self, r_matrix, cov_p=None, invcov=None,
-                  use_f=None, df_constraints=None):
+                  use_f=None, df_constraints=None, scalar=None):
         """
         Compute a Wald-test for a joint linear hypothesis.
 
@@ -1799,6 +1815,13 @@ class LikelihoodModelResults(Results):
         df_constraints : int, optional
             The number of constraints. If not provided the number of
             constraints is determined from r_matrix.
+        scalar : bool, optional
+            Flag indicating whether the Wald test statistic should be returned
+            as a sclar float. The current behavior is to return an array.
+            This will switch to a scalar float after 0.14 is released. To
+            get the future behavior now, set scalar to True. To silence
+            the warning and retain the legacy behavior, set scalar to
+            False.
 
         Returns
         -------
@@ -1823,6 +1846,7 @@ class LikelihoodModelResults(Results):
         where the rank of the covariance of the noise is not full.
         """
         use_f = bool_like(use_f, "use_f", strict=True, optional=True)
+        scalar = bool_like(scalar, "scalar", strict=True, optional=True)
         if use_f is None:
             # switch to use_t false if undefined
             use_f = (hasattr(self, 'use_t') and self.use_t)
@@ -1877,6 +1901,17 @@ class LikelihoodModelResults(Results):
             F = np.dot(np.dot(Rbq.T, invcov), Rbq)
 
         df_resid = getattr(self, 'df_resid_inference', self.df_resid)
+        if scalar is None:
+            warnings.warn(
+                "The behavior of wald_test will change after 0.14 to returning "
+                "scalar test statistic values. To get the future behavior now, "
+                "set scalar to True. To silence this message while retaining "
+                "the legacy behavior, set scalar to False.",
+                FutureWarning
+            )
+            scalar = False
+        if scalar and F.size == 1:
+            F = float(F)
         if use_f:
             F /= J
             return ContrastResults(F=F, df_denom=df_resid,
@@ -1886,7 +1921,7 @@ class LikelihoodModelResults(Results):
                                    distribution='chi2', distargs=(J,))
 
     def wald_test_terms(self, skip_single=False, extra_constraints=None,
-                        combine_terms=None):
+                        combine_terms=None, scalar=None):
         """
         Compute a sequence of Wald tests for terms over multiple columns.
 
@@ -1907,6 +1942,13 @@ class LikelihoodModelResults(Results):
             Each string in this list is matched to the name of the terms or
             the name of the exogenous variables. All columns whose name
             includes that string are combined in one joint test.
+        scalar : bool, optional
+            Flag indicating whether the Wald test statistic should be returned
+            as a sclar float. The current behavior is to return an array.
+            This will switch to a scalar float after 0.14 is released. To
+            get the future behavior now, set scalar to True. To silence
+            the warning and retain the legacy behavior, set scalar to
+            False.
 
         Returns
         -------
@@ -2001,8 +2043,8 @@ class LikelihoodModelResults(Results):
         res_wald = []
         index = []
         for name, constraint in constraints + combined_constraints + extra_constraints:
-            wt = result.wald_test(constraint)
-            row = [wt.statistic.item(), wt.pvalue.item(), constraint.shape[0]]
+            wt = result.wald_test(constraint, scalar=scalar)
+            row = [wt.statistic, wt.pvalue, constraint.shape[0]]
             if use_t:
                 row.append(wt.df_denom)
             res_wald.append(row)
@@ -2081,6 +2123,33 @@ class LikelihoodModelResults(Results):
                               factor_labels=factor_labels)
         return res
 
+    def _get_wald_nonlinear(self, func, deriv=None):
+        """Experimental method for nonlinear prediction and tests
+
+        Parameters
+        ----------
+        func : callable, f(params)
+            nonlinear function of the estimation parameters. The return of
+            the function can be vector valued, i.e. a 1-D array
+        deriv : function or None
+            first derivative or Jacobian of func. If deriv is None, then a
+            numerical derivative will be used. If func returns a 1-D array,
+            then the `deriv` should have rows corresponding to the elements
+            of the return of func.
+
+        Returns
+        -------
+        nl : instance of `NonlinearDeltaCov` with attributes and methods to
+            calculate the results for the prediction or tests
+
+        """
+        from statsmodels.stats._delta_method import NonlinearDeltaCov
+        func_args = None  # TODO: not yet implemented, maybe skip - use partial
+        nl = NonlinearDeltaCov(func, self.params, self.cov_params(),
+                               deriv=deriv, func_args=func_args)
+
+        return nl
+
     def conf_int(self, alpha=.05, cols=None):
         """
         Construct confidence interval for the fitted parameters.
@@ -2092,6 +2161,13 @@ class LikelihoodModelResults(Results):
             `alpha` = .05 returns a 95% confidence interval.
         cols : array_like, optional
             Specifies which confidence intervals to return.
+
+        .. deprecated: 0.13
+
+           cols is deprecated and will be removed after 0.14 is released.
+           cols only works when inputs are NumPy arrays and will fail
+           when using pandas Series or DataFrames as input. You can
+           subset the confidence intervals using slices.
 
         Returns
         -------
@@ -2140,6 +2216,14 @@ class LikelihoodModelResults(Results):
         lower = params - q * bse
         upper = params + q * bse
         if cols is not None:
+            warnings.warn(
+                "cols is deprecated and will be removed after 0.14 is "
+                "released. cols only works when inputs are NumPy arrays and "
+                "will fail when using pandas Series or DataFrames as input. "
+                "Subsets of confidence intervals can be selected using slices "
+                "of the full confidence interval array.",
+                FutureWarning
+            )
             cols = np.asarray(cols)
             lower = lower[cols]
             upper = upper[cols]
@@ -2294,13 +2378,14 @@ wrap.populate_wrapper(LikelihoodResultsWrapper,  # noqa:E305
                       LikelihoodModelResults)
 
 
-class ResultMixin(object):
+class ResultMixin:
 
     @cache_readonly
     def df_modelwc(self):
         """Model WC"""
         # collect different ways of defining the number of parameters, used for
         # aic, bic
+        k_extra = getattr(self.model, "k_extra", 0)
         if hasattr(self, 'df_model'):
             if hasattr(self, 'k_constant'):
                 hasconst = self.k_constant
@@ -2309,7 +2394,7 @@ class ResultMixin(object):
             else:
                 # default assumption
                 hasconst = 1
-            return self.df_model + hasconst
+            return self.df_model + hasconst + k_extra
         else:
             return self.params.size
 
@@ -2630,17 +2715,19 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
 
         # TODO: possibly move to model.fit()
         #       and outsource together with patching names
-        if hasattr(model, 'df_model'):
+        k_extra = getattr(self.model, "k_extra", 0)
+        if hasattr(model, 'df_model') and not np.isnan(model.df_model):
             self.df_model = model.df_model
         else:
-            self.df_model = len(mlefit.params)
+            df_model = len(mlefit.params) - self.model.k_constant - k_extra
+            self.df_model = df_model
             # retrofitting the model, used in t_test TODO: check design
-            self.model.df_model = self.df_model
+            self.model.df_model = df_model
 
-        if hasattr(model, 'df_resid'):
+        if hasattr(model, 'df_resid') and not np.isnan(model.df_resid):
             self.df_resid = model.df_resid
         else:
-            self.df_resid = self.endog.shape[0] - self.df_model
+            self.df_resid = self.endog.shape[0] - self.df_model - k_extra
             # retrofitting the model, used in t_test TODO: check design
             self.model.df_resid = self.df_resid
 
@@ -2649,10 +2736,86 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
 
         k_params = len(mlefit.params)
         # checks mainly for adding new models or subclassing
-        if self.df_model + self.model.k_constant != k_params:
-            warnings.warn("df_model + k_constant differs from nparams")
+
+        if self.df_model + self.model.k_constant + k_extra != k_params:
+            warnings.warn("df_model + k_constant + k_extra "
+                          "differs from k_params")
+
         if self.df_resid != self.nobs - k_params:
-            warnings.warn("df_resid differs from nobs - nparams")
+            warnings.warn("df_resid differs from nobs - k_params")
+
+    def get_prediction(
+            self,
+            exog=None,
+            which="mean",
+            transform=True,
+            row_labels=None,
+            average=False,
+            agg_weights=None,
+            **kwargs
+            ):
+        """
+        Compute prediction results when endpoint transformation is valid.
+
+        Parameters
+        ----------
+        exog : array_like, optional
+            The values for which you want to predict.
+        transform : bool, optional
+            If the model was fit via a formula, do you want to pass
+            exog through the formula. Default is True. E.g., if you fit
+            a model y ~ log(x1) + log(x2), and transform is True, then
+            you can pass a data structure that contains x1 and x2 in
+            their original form. Otherwise, you'd need to log the data
+            first.
+        which : str
+            Which statistic is to be predicted. Default is "mean".
+            The available statistics and options depend on the model.
+            see the model.predict docstring
+        row_labels : list of str or None
+            If row_lables are provided, then they will replace the generated
+            labels.
+        average : bool
+            If average is True, then the mean prediction is computed, that is,
+            predictions are computed for individual exog and then the average
+            over observation is used.
+            If average is False, then the results are the predictions for all
+            observations, i.e. same length as ``exog``.
+        agg_weights : ndarray, optional
+            Aggregation weights, only used if average is True.
+            The weights are not normalized.
+        **kwargs :
+            Some models can take additional keyword arguments, such as offset,
+            exposure or additional exog in multi-part models like zero inflated
+            models.
+            See the predict method of the model for the details.
+
+        Returns
+        -------
+        prediction_results : PredictionResults
+            The prediction results instance contains prediction and prediction
+            variance and can on demand calculate confidence intervals and
+            summary dataframe for the prediction.
+
+        Notes
+        -----
+        Status: new in 0.14, experimental
+        """
+        from statsmodels.base._prediction_inference import get_prediction
+
+        pred_kwds = kwargs
+
+        res = get_prediction(
+            self,
+            exog=exog,
+            which=which,
+            transform=transform,
+            row_labels=row_labels,
+            average=average,
+            agg_weights=agg_weights,
+            pred_kwds=pred_kwds
+            )
+        return res
 
     def summary(self, yname=None, xname=None, title=None, alpha=.05):
         """Summarize the Regression Results

@@ -9,7 +9,7 @@ from statsmodels.discrete.discrete_model import Poisson
 
 DEC = 3
 
-class Dummy(object):
+class Dummy:
     pass
 
 self = Dummy()

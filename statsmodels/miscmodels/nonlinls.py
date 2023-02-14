@@ -11,7 +11,7 @@ from scipy import optimize
 from statsmodels.base.model import Model
 
 
-class Results(object):
+class Results:
     '''just a dummy placeholder for now
     most results from RegressionResults can be used here
     '''

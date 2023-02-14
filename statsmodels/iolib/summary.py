@@ -734,7 +734,7 @@ def summary_return(tables, return_fmt='text'):
         raise ValueError('available output formats are text, csv, latex, html')
 
 
-class Summary(object):
+class Summary:
     """
     Result summary
 
@@ -763,6 +763,10 @@ class Summary(object):
     def _repr_html_(self):
         '''Display as HTML in IPython notebook.'''
         return self.as_html()
+
+    def _repr_latex_(self):
+        '''Display as LaTeX when converting IPython notebook to PDF.'''
+        return self.as_latex()
 
     def add_table_2cols(self, res,  title=None, gleft=None, gright=None,
                         yname=None, xname=None):

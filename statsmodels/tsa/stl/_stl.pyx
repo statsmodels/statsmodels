@@ -104,7 +104,7 @@ def _is_pos_int(x, odd):
 cdef class STL(object):
     """
     STL(endog, period=None, seasonal=7, trend=None, low_pass=None,
-        seasonal_deg=0, trend_deg=0, low_pass_deg=0, robust=False,
+        seasonal_deg=1, trend_deg=1, low_pass_deg=1, robust=False,
         seasonal_jump=1, trend_jump=1, low_pass_jump=1)
 
     Season-Trend decomposition using LOESS.
@@ -164,6 +164,9 @@ cdef class STL(object):
     contains a bug that appears in the determination of the median that is
     used in the robust weighting. This version matches the fixed version that
     uses a correct partitioned sort to determine the median.
+
+    See the notebook `Seasonal Decomposition
+    <../examples/notebooks/generated/stl_decomposition.html>`__ for an overview.
 
     References
     ----------

@@ -7,7 +7,7 @@ License: BSD-3
 
 
 Notes
-------
+-----
 
 It's pretty slow if the model is misspecified, in my first example convergence
 in loglike is not reached within 2000 iterations. Added stop criteria based
@@ -23,7 +23,7 @@ import numpy.linalg as L
 from statsmodels.base.model import LikelihoodModelResults
 from statsmodels.tools.decorators import cache_readonly
 
-class Unit(object):
+class Unit:
     """
     Individual experimental unit for
     EM implementation of (repeated measures)
@@ -172,7 +172,7 @@ class Unit(object):
         return - 2 * self.logL(ML=ML)
 
 
-class OneWayMixed(object):
+class OneWayMixed:
     """
     Model for
     EM implementation of (repeated measures)

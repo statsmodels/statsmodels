@@ -88,5 +88,7 @@ if __name__ == "__main__":
             COPYRIGHT=copyr,
         )
         print("Writing {0}.".format(rst_file_name))
-        with open(os.path.realpath(write_pth), "w") as rst_file:
+        with open(
+                os.path.realpath(write_pth), "w", encoding="utf-8"
+        ) as rst_file:
             rst_file.write(write_file)

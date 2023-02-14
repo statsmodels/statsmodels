@@ -3,7 +3,7 @@ import inspect
 from textwrap import dedent
 
 
-class ResultsWrapper(object):
+class ResultsWrapper:
     """
     Class which wraps a statsmodels estimation Results class and steps in to
     reattach metadata to results (if available)

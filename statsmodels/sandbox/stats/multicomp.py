@@ -61,6 +61,8 @@ TODO
 
 
 '''
+from collections import namedtuple
+
 from statsmodels.compat.python import lzip, lrange
 
 import copy
@@ -75,6 +77,15 @@ from statsmodels.iolib.table import SimpleTable
 from statsmodels.stats.multitest import multipletests, _ecdf as ecdf, fdrcorrection as fdrcorrection0, fdrcorrection_twostage
 from statsmodels.graphics import utils
 from statsmodels.tools.sm_exceptions import ValueWarning
+
+try:
+    # Studentized Range in SciPy 1.7+
+    from scipy.stats import studentized_range
+except ImportError:
+    from statsmodels.stats.libqsturng import qsturng, psturng
+    studentized_range_tuple = namedtuple('studentized_range', ['ppf', 'sf'])
+    studentized_range = studentized_range_tuple(ppf=qsturng, sf=psturng)
+
 
 qcrit = '''
   2     3     4     5     6     7     8     9     10
@@ -153,8 +164,7 @@ def get_tukeyQcrit2(k, df, alpha=0.05):
 
     not enough error checking for limitations
     '''
-    from statsmodels.stats.libqsturng import qsturng
-    return qsturng(1-alpha, k, df)
+    return studentized_range.ppf(1-alpha, k, df)
 
 
 def get_tukey_pvalue(k, df, q):
@@ -171,9 +181,7 @@ def get_tukey_pvalue(k, df, q):
         quantile value of Studentized Range
 
     '''
-
-    from statsmodels.stats.libqsturng import psturng
-    return psturng(q, k, df)
+    return studentized_range.sf(q, k, df)
 
 
 def Tukeythreegene(first, second, third):
@@ -498,7 +506,7 @@ def tiecorrect(xranks):
     return tiecorrection
 
 
-class GroupsStats(object):
+class GroupsStats:
     '''
     statistics by groups (another version)
 
@@ -598,7 +606,7 @@ class GroupsStats(object):
         """groupvarwithin"""
         return self.groupsswithin()/(self.groupnobs-1) #.sum()
 
-class TukeyHSDResults(object):
+class TukeyHSDResults:
     """Results from Tukey HSD test, with additional plot methods
 
     Can also compute and plot additional post-hoc evaluations using this
@@ -780,7 +788,7 @@ class TukeyHSDResults(object):
         return fig
 
 
-class MultiComparison(object):
+class MultiComparison:
     '''Tests for multiple comparisons
 
     Parameters
@@ -936,7 +944,7 @@ class MultiComparison(object):
                               ('group2', object),
                               ('stat',float),
                               ('pval',float),
-                              ('reject', np.bool8)])
+                              ('reject', np.bool_)])
         else:
             resarr = np.array(lzip(self.groupsunique[i1], self.groupsunique[i2],
                                   np.round(res[:,0],4),
@@ -948,7 +956,7 @@ class MultiComparison(object):
                               ('stat',float),
                               ('pval',float),
                               ('pval_corr',float),
-                              ('reject', np.bool8)])
+                              ('reject', np.bool_)])
         results_table = SimpleTable(resarr, headers=resarr.dtype.names)
         results_table.title = (
             'Test Multiple Comparison %s \n%s%4.2f method=%s'
@@ -1000,7 +1008,7 @@ class MultiComparison(object):
                                  ('p-adj', float),
                                  ('lower', float),
                                  ('upper', float),
-                                 ('reject', np.bool8)])
+                                 ('reject', np.bool_)])
         results_table = SimpleTable(resarr, headers=resarr.dtype.names)
         results_table.title = 'Multiple Comparison of Means - Tukey HSD, ' + \
                               'FWER=%4.2f' % alpha
@@ -1512,7 +1520,7 @@ def multicontrast_pvalues(tstat, tcorr, df=None, dist='t', alternative='two-side
 
 
 
-class StepDown(object):
+class StepDown:
     '''a class for step down methods
 
     This is currently for simple tree subset descend, similar to homogeneous_subsets,

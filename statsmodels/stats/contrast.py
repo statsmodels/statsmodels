@@ -7,7 +7,7 @@ from statsmodels.stats.multitest import multipletests
 
 
 #TODO: should this be public if it's just a container?
-class ContrastResults(object):
+class ContrastResults:
     """
     Class for results of tests of linear restrictions on coefficients in a model.
 
@@ -57,11 +57,17 @@ class ContrastResults(object):
                 self.pvalue = np.full_like(value, np.nan)
                 not_nan = ~np.isnan(value)
                 self.pvalue[not_nan] = self.dist.sf(np.abs(value[not_nan])) * 2
+        else:
+            self.pvalue = np.nan
 
         # cleanup
         # should we return python scalar?
         self.pvalue = np.squeeze(self.pvalue)
 
+        if self.effect is not None:
+            self.c_names = ['c%d' % ii for ii in range(len(self.effect))]
+        else:
+            self.c_names = None
 
     def conf_int(self, alpha=0.05):
         """
@@ -131,7 +137,7 @@ class ContrastResults(object):
             use_t = (self.distribution == 't')
             yname='constraints' # Not used in params_frame
             if xname is None:
-                xname = ['c%d' % ii for ii in range(len(self.effect))]
+                xname = self.c_names
             from statsmodels.iolib.summary import summary_params
             pvalues = np.atleast_1d(self.pvalue)
             summ = summary_params((self, self.effect, self.sd, self.statistic,
@@ -164,7 +170,7 @@ class ContrastResults(object):
             use_t = (self.distribution == 't')
             yname='constraints'  # Not used in params_frame
             if xname is None:
-                xname = ['c%d' % ii for ii in range(len(self.effect))]
+                xname = self.c_names
             from statsmodels.iolib.summary import summary_params_frame
             summ = summary_params_frame((self, self.effect, self.sd,
                                          self.statistic,self.pvalue,
@@ -178,7 +184,7 @@ class ContrastResults(object):
 
 
 
-class Contrast(object):
+class Contrast:
     """
     This class is used to construct contrast matrices in regression models.
 
@@ -339,7 +345,7 @@ def contrastfromcols(L, D, pseudo=None):
 
 
 # TODO: this is currently a minimal version, stub
-class WaldTestResults(object):
+class WaldTestResults:
     # for F and chi2 tests of joint hypothesis, mainly for vectorized
 
     def __init__(self, statistic, distribution, dist_args, table=None,
@@ -497,7 +503,7 @@ def t_test_multi(result, contrasts, method='hs', alpha=0.05, ci_method=None,
     return res_df
 
 
-class MultiCompResult(object):
+class MultiCompResult:
     """class to hold return of t_test_pairwise
 
     currently just a minimal class to hold attributes.

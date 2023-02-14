@@ -109,7 +109,7 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
 
     - 'HAC': heteroskedasticity-autocorrelation robust covariance
 
-      ``maxlag`` :  integer, required
+      ``maxlags`` :  integer, required
         number of lags to use
 
       ``kernel`` : {callable, str}, optional
@@ -152,7 +152,7 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
 
       ``time`` : array_like, required
         index of time periods
-      ``maxlag`` : integer, required
+      ``maxlags`` : integer, required
         number of lags to use
       ``kernel`` : {callable, str}, optional
         The available kernels are ['bartlett', 'uniform']. The default is
@@ -176,7 +176,7 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
         indicator for groups
       ``time`` : array_like[int]
         index of time periods
-      ``maxlag`` : int, required
+      ``maxlags`` : int, required
         number of lags to use
       ``kernel`` : {callable, str}, optional
         Available kernels are ['bartlett', 'uniform'], default

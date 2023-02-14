@@ -28,7 +28,7 @@ import pandas as pd
 from statsmodels.iolib import summary2
 
 
-class RegressionFDR(object):
+class RegressionFDR:
     """
     Control FDR in a regression procedure.
 

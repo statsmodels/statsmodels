@@ -2,7 +2,6 @@
 from statsmodels.compat.pandas import deprecate_kwarg
 
 import calendar
-import warnings
 
 import numpy as np
 import pandas as pd
@@ -246,7 +245,7 @@ def plot_pacf(
     ax=None,
     lags=None,
     alpha=0.05,
-    method=None,
+    method="ywm",
     use_vlines=True,
     title="Partial Autocorrelation",
     zero=True,
@@ -343,15 +342,6 @@ def plot_pacf(
 
     .. plot:: plots/graphics_tsa_plot_pacf.py
     """
-    if method is None:
-        method = "yw"
-        warnings.warn(
-            "The default method 'yw' can produce PACF values outside of "
-            "the [-1,1] interval. After 0.13, the default will change to"
-            "unadjusted Yule-Walker ('ywm'). You can use this method now "
-            "by setting method='ywm'.",
-            FutureWarning,
-        )
     fig, ax = utils.create_mpl_ax(ax)
     vlines_kwargs = {} if vlines_kwargs is None else vlines_kwargs
     lags, nlags, irregular = _prepare_data_corr_plot(x, lags, zero)

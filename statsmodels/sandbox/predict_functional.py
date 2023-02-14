@@ -188,7 +188,7 @@ def _make_exog_from_formula(result, focus_var, summaries, values, num_points):
 
     # or they may be provided as given values.
     for ky in values.keys():
-        fexog.loc[:, ky] = values[ky]
+        fexog[ky] = values[ky]
 
     dexog = patsy.dmatrix(model.data.design_info, fexog,
                           return_type='dataframe')
@@ -334,7 +334,7 @@ def predict_functional(result, focus_var, summaries=None, values=None,
     from statsmodels.genmod.generalized_estimating_equations import GEE
     if isinstance(result.model, (GLM, GEE)):
         kwargs_pred = kwargs.copy()
-        kwargs_pred.update({"linear": True})
+        kwargs_pred.update({"which": "linear"})
     else:
         kwargs_pred = kwargs
 

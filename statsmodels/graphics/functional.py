@@ -1,4 +1,6 @@
 """Module for functional boxplots."""
+from statsmodels.compat.numpy import NP_LT_123
+
 import numpy as np
 from scipy.special import comb
 
@@ -20,7 +22,7 @@ from . import utils
 __all__ = ['hdrboxplot', 'fboxplot', 'rainbowplot', 'banddepth']
 
 
-class HdrResults(object):
+class HdrResults:
     """Wrap results and pretty print them."""
 
     def __init__(self, kwds):
@@ -328,9 +330,14 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
 
     n_quantiles = len(alpha)
     pdf_r = ks_gaussian.pdf(data_r).flatten()
-    pvalues = [np.percentile(pdf_r, (1 - alpha[i]) * 100,
-                             interpolation='linear')
-               for i in range(n_quantiles)]
+    if NP_LT_123:
+        pvalues = [np.percentile(pdf_r, (1 - alpha[i]) * 100,
+                                 interpolation='linear')
+                   for i in range(n_quantiles)]
+    else:
+        pvalues = [np.percentile(pdf_r, (1 - alpha[i]) * 100,
+                                 method='midpoint')
+                   for i in range(n_quantiles)]
 
     # Find mean, outliers curves
     if have_de_optim and not use_brute:

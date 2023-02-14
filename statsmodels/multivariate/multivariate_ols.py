@@ -405,7 +405,7 @@ class _MultivariateOLS(Model):
         return _MultivariateOLSResults(self)
 
 
-class _MultivariateOLSResults(object):
+class _MultivariateOLSResults:
     """
     _MultivariateOLS results class
     """
@@ -472,7 +472,7 @@ class _MultivariateOLSResults(object):
         raise NotImplementedError
 
 
-class MultivariateTestResults(object):
+class MultivariateTestResults:
     """
     Multivariate test results class
 

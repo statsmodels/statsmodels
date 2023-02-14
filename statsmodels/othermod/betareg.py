@@ -125,7 +125,8 @@ class BetaModel(GenericLikelihoodModel):
         # self.exog_precision = exog_precision
         # inherited df do not account for precision params
         self.nobs = self.endog.shape[0]
-        self.df_model = self.nparams - 1
+        self.k_extra = 1
+        self.df_model = self.nparams - 2
         self.df_resid = self.nobs - self.nparams
         assert len(self.exog_precision) == len(self.endog)
         self.hess_type = "oim"
@@ -150,6 +151,9 @@ class BetaModel(GenericLikelihoodModel):
         return super(BetaModel, cls).from_formula(formula, data, *args,
                                                   **kwargs)
 
+    def _get_exogs(self):
+        return (self.exog, self.exog_precision)
+
     def predict(self, params, exog=None, exog_precision=None, which="mean"):
         """Predict values for mean or precision
 
@@ -160,21 +164,26 @@ class BetaModel(GenericLikelihoodModel):
         exog : array_like
             Array of predictor variables for mean.
         exog_precision : array_like
-            Array of predictor variables for precision.
+            Array of predictor variables for precision parameter.
         which : str
 
             - "mean" : mean, conditional expectation E(endog | exog)
             - "precision" : predicted precision
-            - "linpred" : linear predictor for the mean function
-            - "linpred_precision" : linear predictor for the precision function
+            - "linear" : linear predictor for the mean function
+            - "linear-precision" : linear predictor for the precision parameter
 
         Returns
         -------
         ndarray, predicted values
         """
+        # compatibility with old names and misspelling
+        if which == "linpred":
+            which = "linear"
+        if which in ["linpred_precision", "linear_precision"]:
+            which = "linear-precision"
 
         k_mean = self.exog.shape[1]
-        if which in ["mean",  "linpred"]:
+        if which in ["mean",  "linear"]:
             if exog is None:
                 exog = self.exog
             params_mean = params[:k_mean]
@@ -182,11 +191,11 @@ class BetaModel(GenericLikelihoodModel):
             linpred = np.dot(exog, params_mean)
             if which == "mean":
                 mu = self.link.inverse(linpred)
-                return mu
+                res = mu
             else:
-                return linpred
+                res = linpred
 
-        elif which in ["precision", "linpred_precision"]:
+        elif which in ["precision", "linear-precision"]:
             if exog_precision is None:
                 exog_precision = self.exog_precision
             params_prec = params[k_mean:]
@@ -194,11 +203,23 @@ class BetaModel(GenericLikelihoodModel):
 
             if which == "precision":
                 phi = self.link_precision.inverse(linpred_prec)
-                return phi
+                res = phi
             else:
-                return linpred_prec
+                res = linpred_prec
 
-    def predict_precision(self, params, exog_precision=None):
+        elif which == "var":
+            res = self._predict_var(
+                params,
+                exog=exog,
+                exog_precision=exog_precision
+                )
+
+        else:
+            raise ValueError('which = %s is not available' % which)
+
+        return res
+
+    def _predict_precision(self, params, exog_precision=None):
         """Predict values for precision function for given exog_precision.
 
         Parameters
@@ -222,7 +243,7 @@ class BetaModel(GenericLikelihoodModel):
 
         return phi
 
-    def predict_var(self, params, exog=None, exog_precision=None):
+    def _predict_var(self, params, exog=None, exog_precision=None):
         """predict values for conditional variance V(endog | exog)
 
         Parameters
@@ -239,8 +260,8 @@ class BetaModel(GenericLikelihoodModel):
         Predicted conditional variance.
         """
         mean = self.predict(params, exog=exog)
-        precision = self.predict_precision(params,
-                                           exog_precision=exog_precision)
+        precision = self._predict_precision(params,
+                                            exog_precision=exog_precision)
 
         var_endog = mean * (1 - mean) / (1 + precision)
         return var_endog
@@ -323,10 +344,10 @@ class BetaModel(GenericLikelihoodModel):
         score : ndarray
             First derivative of loglikelihood function.
         """
-        sf = self.score_factor(params)
+        sf1, sf2 = self.score_factor(params)
 
-        d1 = np.dot(sf[:, 0], self.exog)
-        d2 = np.dot(sf[:, 1], self.exog_precision)
+        d1 = np.dot(sf1, self.exog)
+        d2 = np.dot(sf2, self.exog_precision)
         return np.concatenate((d1, d2))
 
     def _score_check(self, params):
@@ -343,7 +364,7 @@ class BetaModel(GenericLikelihoodModel):
         """
         return super(BetaModel, self).score(params)
 
-    def score_factor(self, params):
+    def score_factor(self, params, endog=None):
         """Derivative of loglikelihood function w.r.t. linear predictors.
 
         This needs to be multiplied with the exog to obtain the score_obs.
@@ -369,7 +390,8 @@ class BetaModel(GenericLikelihoodModel):
         from scipy import special
         digamma = special.psi
 
-        y, X, Z = self.endog, self.exog, self.exog_precision
+        y = self.endog if endog is None else endog
+        X, Z = self.exog, self.exog_precision
         nz = Z.shape[1]
         Xparams = params[:-nz]
         Zparams = params[-nz:]
@@ -394,7 +416,7 @@ class BetaModel(GenericLikelihoodModel):
         sf1 = phi * t * (ystar - mustar)
         sf2 = h * (mu * (ystar - mustar) + yt - mut)
 
-        return np.column_stack((sf1, sf2))
+        return (sf1, sf2)
 
     def score_hessian_factor(self, params, return_hessian=False,
                              observed=True):
@@ -477,9 +499,9 @@ class BetaModel(GenericLikelihoodModel):
             if observed:
                 jgg += (mu * ymu_star + yt - mut) * q * h**3    # **3 ?
 
-            return np.column_stack((sf1, sf2)), (-jbb, -jbg, -jgg)
+            return (sf1, sf2), (-jbb, -jbg, -jgg)
         else:
-            return np.column_stack((sf1, sf2))
+            return (sf1, sf2)
 
     def score_obs(self, params):
         """
@@ -496,11 +518,11 @@ class BetaModel(GenericLikelihoodModel):
             The first derivative of the loglikelihood function evaluated at
             params for each observation.
         """
-        sf = self.score_factor(params)
+        sf1, sf2 = self.score_factor(params)
 
         # elementwise product for each row (observation)
-        d1 = sf[:, :1] * self.exog
-        d2 = sf[:, 1:2] * self.exog_precision
+        d1 = sf1[:, None] * self.exog
+        d2 = sf2[:, None] * self.exog_precision
         return np.column_stack((d1, d2))
 
     def hessian(self, params, observed=None):
@@ -532,7 +554,14 @@ class BetaModel(GenericLikelihoodModel):
         d11 = (self.exog.T * hf11).dot(self.exog)
         d12 = (self.exog.T * hf12).dot(self.exog_precision)
         d22 = (self.exog_precision.T * hf22).dot(self.exog_precision)
-        return np.bmat([[d11, d12], [d12.T, d22]]).A
+        return np.block([[d11, d12], [d12.T, d22]])
+
+    def hessian_factor(self, params, observed=True):
+        """Derivatives of loglikelihood function w.r.t. linear predictors.
+        """
+        _, hf = self.score_hessian_factor(params, return_hessian=True,
+                                          observed=observed)
+        return hf
 
     def _start_params(self, niter=2, return_intermediate=False):
         """find starting values
@@ -643,7 +672,56 @@ class BetaModel(GenericLikelihoodModel):
             res = BetaResultsWrapper(res)
         return res
 
-    # code duplication with results class
+    def _deriv_mean_dparams(self, params):
+        """
+        Derivative of the expected endog with respect to the parameters.
+
+        not verified yet
+
+        Parameters
+        ----------
+        params : ndarray
+            parameter at which score is evaluated
+
+        Returns
+        -------
+        The value of the derivative of the expected endog with respect
+        to the parameter vector.
+        """
+        link = self.link
+        lin_pred = self.predict(params, which="linear")
+        idl = link.inverse_deriv(lin_pred)
+        dmat = self.exog * idl[:, None]
+        return np.column_stack((dmat, np.zeros(self.exog_precision.shape)))
+
+    def _deriv_score_obs_dendog(self, params):
+        """derivative of score_obs w.r.t. endog
+
+        Parameters
+        ----------
+        params : ndarray
+            parameter at which score is evaluated
+
+        Returns
+        -------
+        derivative : ndarray_2d
+            The derivative of the score_obs with respect to endog.
+        """
+        from statsmodels.tools.numdiff import _approx_fprime_cs_scalar
+
+        def f(y):
+            if y.ndim == 2 and y.shape[1] == 1:
+                y = y[:, 0]
+            sf = self.score_factor(params, endog=y)
+            return np.column_stack(sf)
+
+        dsf = _approx_fprime_cs_scalar(self.endog[:, None], f)
+        # deriv is 2d vector
+        d1 = dsf[:, :1] * self.exog
+        d2 = dsf[:, 1:2] * self.exog_precision
+
+        return np.column_stack((d1, d2))
+
     def get_distribution_params(self, params, exog=None, exog_precision=None):
         """
         Return distribution parameters converted from model prediction.
@@ -724,7 +802,7 @@ class BetaResults(GenericLikelihoodModelResults, _LLRMixin):
     @cache_readonly
     def fitted_precision(self):
         """In-sample predicted precision"""
-        return self.model.predict_precision(self.params)
+        return self.model.predict(self.params, which="precision")
 
     @cache_readonly
     def resid(self):
@@ -734,7 +812,8 @@ class BetaResults(GenericLikelihoodModelResults, _LLRMixin):
     @cache_readonly
     def resid_pearson(self):
         """Pearson standardize residual"""
-        return self.resid / np.sqrt(self.model.predict_var(self.params))
+        std = np.sqrt(self.model.predict(self.params, which="var"))
+        return self.resid / std
 
     @cache_readonly
     def prsquared(self):
@@ -811,6 +890,40 @@ class BetaResults(GenericLikelihoodModelResults, _LLRMixin):
         args = (np.asarray(arg) for arg in args)
         distr = stats.beta(*args)
         return distr
+
+    def get_influence(self):
+        """
+        Get an instance of MLEInfluence with influence and outlier measures
+
+        Returns
+        -------
+        infl : MLEInfluence instance
+            The instance has methods to calculate the main influence and
+            outlier measures as attributes.
+
+        See Also
+        --------
+        statsmodels.stats.outliers_influence.MLEInfluence
+
+        Notes
+        -----
+        Support for mutli-link and multi-exog models is still experimental
+        in MLEInfluence. Interface and some definitions might still change.
+
+        Note: Difference to R betareg: Betareg has the same general leverage
+        as this model. However, they use a linear approximation hat matrix
+        to scale and studentize influence and residual statistics.
+        MLEInfluence uses the generalized leverage as hat_matrix_diag.
+        Additionally, MLEInfluence uses pearson residuals for residual
+        analusis.
+
+        References
+        ----------
+        todo
+
+        """
+        from statsmodels.stats.outliers_influence import MLEInfluence
+        return MLEInfluence(self)
 
     def bootstrap(self, *args, **kwargs):
         raise NotImplementedError

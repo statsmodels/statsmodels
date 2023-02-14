@@ -240,7 +240,7 @@ cdef int {{prefix}}smoothed_disturbances_alternative({{prefix}}KalmanSmoother sm
                       &alpha, smoother._tmp0, &kfilter.k_states,
                               &smoother.scaled_smoothed_estimator[0, smoother.t+1], &inc,
                       &beta, smoother._smoothed_state_disturbance, &inc)
-    
+
     if smoother.smoother_output & SMOOTHER_DISTURBANCE_COV:
         # $\\#_00 = K_t H_t$  
         # $(m \times p) = (m \times p) (p \times p)$  

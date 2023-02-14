@@ -20,10 +20,10 @@ fprintf('%30s | %17s    %12s    %10s    %8s    %8s    %8s    %8s \n',...
 fprintf([repmat('-',1,130) '\n']);
 
 for i = 1:N
-    
+
     % time indexes for which there are observed values for series i
     t_obs = ~isnan(X(:,i));
-    
+
     data_series = Spec.SeriesName{i};
     if length(data_series) > 30
         data_series = [data_series(1:27) '...'];
@@ -81,7 +81,7 @@ for i = 1:N
             data_series,num_obs,units_transformed,frequency,mean_series,stdv_series,min_series,max_series);
     fprintf('%30s | %17s    %12s    %10s    %8s    %8s    %8s    %8s \n',...
             series_id,date_range,'','','','',min_date,max_date);
-    
+
 end
 
 fprintf('\n\n\n');

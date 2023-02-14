@@ -13,7 +13,7 @@ import pandas as pd
 
 
 # this is similar to ContrastResults after t_test, copied and adjusted
-class PredictionResults(object):
+class PredictionResults:
     """
     Results class for predictions.
 
@@ -36,8 +36,8 @@ class PredictionResults(object):
 
     def __init__(self, predicted_mean, var_pred_mean, var_resid,
                  df=None, dist=None, row_labels=None):
-        self.predicted_mean = predicted_mean
-        self.var_pred_mean = var_pred_mean
+        self.predicted = predicted_mean
+        self.var_pred = var_pred_mean
         self.df = df
         self.var_resid = var_resid
         self.row_labels = row_labels
@@ -58,6 +58,21 @@ class PredictionResults(object):
 
     @property
     def se_mean(self):
+        return self.se
+
+    @property
+    def predicted_mean(self):
+        # alias for backwards compatibility
+        return self.predicted
+
+    @property
+    def var_pred_mean(self):
+        # alias for backwards compatibility
+        return self.var_pred
+
+    @property
+    def se(self):
+        # alias for backwards compatibility
         return np.sqrt(self.var_pred_mean)
 
     def conf_int(self, obs=False, alpha=0.05):

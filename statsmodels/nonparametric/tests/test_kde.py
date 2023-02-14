@@ -33,7 +33,7 @@ Xi = mixture_rvs([.25, .75], size=200, dist=[stats.norm, stats.norm],
                  kwargs=(dict(loc=-1, scale=.5), dict(loc=1, scale=.5)))
 
 
-class TestKDEExceptions(object):
+class TestKDEExceptions:
 
     @classmethod
     def setup_class(cls):
@@ -60,7 +60,7 @@ class TestKDEExceptions(object):
             self.kde.fit(kernel="epa", gridsize=50, fft=True, bw="silverman")
 
 
-class CheckKDE(object):
+class CheckKDE:
     decimal_density = 7
 
     def test_density(self):
@@ -196,7 +196,7 @@ class TestKDEGaussFFT(CheckKDE):
         cls.res_density = np.genfromtxt(open(rfname2, 'rb'))
 
 
-class CheckKDEWeights(object):
+class CheckKDEWeights:
 
     @classmethod
     def setup_class(cls):
@@ -351,7 +351,7 @@ def test_fit_self(reset_randomstate):
     assert isinstance(kde.fit(), KDE)
 
 
-class TestKDECustomBandwidth(object):
+class TestKDECustomBandwidth:
     decimal_density = 7
 
     @classmethod

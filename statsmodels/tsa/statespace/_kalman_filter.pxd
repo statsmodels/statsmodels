@@ -196,7 +196,7 @@ cdef class sKalmanFilter(object):
     # ### Define some constants
     cdef readonly int k_endog, k_states, k_posdef, k_endog2, k_states2, k_posdef2, k_endogstates, k_statesposdef
     cdef readonly int ldwork
-    
+
     cdef allocate_arrays(self)
     cdef void set_dimensions(self)
     cpdef set_filter_method(self, int filter_method, int force_reset=*)
@@ -350,7 +350,7 @@ cdef class dKalmanFilter(object):
     # ### Define some constants
     cdef readonly int k_endog, k_states, k_posdef, k_endog2, k_states2, k_posdef2, k_endogstates, k_statesposdef
     cdef readonly int ldwork
-    
+
     cdef allocate_arrays(self)
     cdef void set_dimensions(self)
     cpdef set_filter_method(self, int filter_method, int force_reset=*)
@@ -505,7 +505,7 @@ cdef class cKalmanFilter(object):
     # ### Define some constants
     cdef readonly int k_endog, k_states, k_posdef, k_endog2, k_states2, k_posdef2, k_endogstates, k_statesposdef
     cdef readonly int ldwork
-    
+
     cdef allocate_arrays(self)
     cdef void set_dimensions(self)
     cpdef set_filter_method(self, int filter_method, int force_reset=*)
@@ -660,7 +660,7 @@ cdef class zKalmanFilter(object):
     # ### Define some constants
     cdef readonly int k_endog, k_states, k_posdef, k_endog2, k_states2, k_posdef2, k_endogstates, k_statesposdef
     cdef readonly int ldwork
-    
+
     cdef allocate_arrays(self)
     cdef void set_dimensions(self)
     cpdef set_filter_method(self, int filter_method, int force_reset=*)

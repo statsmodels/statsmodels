@@ -11,7 +11,7 @@ import numpy as np
 from . import tools
 
 
-class Initialization(object):
+class Initialization:
     r"""
     State space initialization
 
@@ -208,6 +208,149 @@ class Initialization(object):
         if initialization_type is not None:
             self.set(None, initialization_type, constant=constant,
                      stationary_cov=stationary_cov)
+
+    @classmethod
+    def from_components(cls, k_states, a=None, Pstar=None, Pinf=None, A=None,
+                        R0=None, Q0=None):
+        r"""
+        Construct initialization object from component matrices
+
+        Parameters
+        ----------
+        a : array_like, optional
+            Vector of constant values describing the mean of the stationary
+            component of the initial state.
+        Pstar : array_like, optional
+            Stationary component of the initial state covariance matrix. If
+            given, should be a matrix shaped `k_states x k_states`. The
+            submatrix associated with the diffuse states should contain zeros.
+            Note that by definition, `Pstar = R0 @ Q0 @ R0.T`, so either
+            `R0,Q0` or `Pstar` may be given, but not both.
+        Pinf : array_like, optional
+            Diffuse component of the initial state covariance matrix. If given,
+            should be a matrix shaped `k_states x k_states` with ones in the
+            diagonal positions corresponding to states with diffuse
+            initialization and zeros otherwise. Note that by definition,
+            `Pinf = A @ A.T`, so either `A` or `Pinf` may be given, but not
+            both.
+        A : array_like, optional
+            Diffuse selection matrix, used in the definition of the diffuse
+            initial state covariance matrix. If given, should be a
+            `k_states x k_diffuse_states` matrix that contains the subset of
+            the columns of the identity matrix that correspond to states with
+            diffuse initialization. Note that by definition, `Pinf = A @ A.T`,
+            so either `A` or `Pinf` may be given, but not both.
+        R0 : array_like, optional
+            Stationary selection matrix, used in the definition of the
+            stationary initial state covariance matrix. If given, should be a
+            `k_states x k_nondiffuse_states` matrix that contains the subset of
+            the columns of the identity matrix that correspond to states with a
+            non-diffuse initialization. Note that by definition,
+            `Pstar = R0 @ Q0 @ R0.T`, so either `R0,Q0` or `Pstar` may be
+            given, but not both.
+        Q0 : array_like, optional
+            Covariance matrix associated with stationary initial states. If
+            given, should be a matrix shaped
+            `k_nondiffuse_states x k_nondiffuse_states`.
+            Note that by definition, `Pstar = R0 @ Q0 @ R0.T`, so either
+            `R0,Q0` or `Pstar` may be given, but not both.
+
+        Returns
+        -------
+        initialization
+            Initialization object.
+
+        Notes
+        -----
+        The matrices `a, Pstar, Pinf, A, R0, Q0` and the process for
+        initializing the state space model is as given in Chapter 5 of [1]_.
+        For the definitions of these matrices, see equation (5.2) and the
+        subsequent discussion there.
+
+        References
+        ----------
+        .. [*] Durbin, James, and Siem Jan Koopman. 2012.
+           Time Series Analysis by State Space Methods: Second Edition.
+           Oxford University Press.
+        """
+        k_states = k_states
+
+        # Standardize the input
+        a = tools._atleast_1d(a)
+        Pstar, Pinf, A, R0, Q0 = tools._atleast_2d(Pstar, Pinf, A, R0, Q0)
+
+        # Validate the diffuse component
+        if Pstar is not None and (R0 is not None or Q0 is not None):
+            raise ValueError('Cannot specify the initial state covariance both'
+                             ' as `Pstar` and as the components R0 and Q0'
+                             '  (because `Pstar` is defined such that'
+                             " `Pstar=R0 Q0 R0'`).")
+        if Pinf is not None and A is not None:
+            raise ValueError('Cannot specify both the diffuse covariance'
+                             ' matrix `Pinf` and the selection matrix for'
+                             ' diffuse elements, A, (because Pinf is defined'
+                             " such that `Pinf=A A'`).")
+        elif A is not None:
+            Pinf = np.dot(A, A.T)
+
+        # Validate the non-diffuse component
+        if a is None:
+            a = np.zeros(k_states)
+        if len(a) != k_states:
+            raise ValueError('Must provide constant initialization vector for'
+                             ' the entire state vector.')
+        if R0 is not None or Q0 is not None:
+            if R0 is None or Q0 is None:
+                raise ValueError('If specifying either of R0 or Q0 then you'
+                                 ' must specify both R0 and Q0.')
+            Pstar = R0.dot(Q0).dot(R0.T)
+
+        # Handle the diffuse component
+        diffuse_ix = []
+        if Pinf is not None:
+            diffuse_ix = np.where(np.diagonal(Pinf))[0].tolist()
+
+            if Pstar is not None:
+                for i in diffuse_ix:
+                    if not (np.all(Pstar[i] == 0) and
+                            np.all(Pstar[:, i] == 0)):
+                        raise ValueError(f'The state at position {i} was'
+                                         ' specified as diffuse in Pinf, but'
+                                         ' also contains a non-diffuse'
+                                         ' diagonal or off-diagonal in Pstar.')
+        k_diffuse_states = len(diffuse_ix)
+
+        nondiffuse_ix = [i for i in np.arange(k_states) if i not in diffuse_ix]
+        k_nondiffuse_states = k_states - k_diffuse_states
+
+        # If there are non-diffuse states, require Pstar
+        if Pstar is None and k_nondiffuse_states > 0:
+            raise ValueError('Must provide initial covariance matrix for'
+                             ' non-diffuse states.')
+
+        # Construct the initialization
+        init = cls(k_states)
+        if nondiffuse_ix:
+            nondiffuse_groups = np.split(
+                nondiffuse_ix, np.where(np.diff(nondiffuse_ix) != 1)[0] + 1)
+        else:
+            nondiffuse_groups = []
+        for group in nondiffuse_groups:
+            s = slice(group[0], group[-1] + 1)
+            init.set(s, 'known', constant=a[s], stationary_cov=Pstar[s, s])
+        for i in diffuse_ix:
+            init.set(i, 'diffuse')
+
+        return init
+
+    @classmethod
+    def from_results(cls, filter_results):
+        a = filter_results.initial_state
+        Pstar = filter_results.initial_state_cov
+        Pinf = filter_results.initial_diffuse_state_cov
+
+        return cls.from_components(filter_results.model.k_states,
+                                   a=a, Pstar=Pstar, Pinf=Pinf)
 
     def __setitem__(self, index, initialization_type):
         self.set(index, initialization_type)

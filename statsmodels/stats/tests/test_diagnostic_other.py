@@ -16,7 +16,7 @@ from statsmodels.stats._diagnostic_other import CMTNewey, CMTTauchen
 import statsmodels.stats._diagnostic_other as diao
 
 
-class CheckCMT(object):
+class CheckCMT:
 
     def test_score(self):
         expected = self.results_score
@@ -67,13 +67,14 @@ class TestCMTOLS(CheckCMT):
         cls.results_hc0 = (1.6385932313952, 0.4407415561953, 2)
         cls.results_opg = (1.72226002418488, 0.422684174119544, 2.0)
 
-    @classmethod    # TODO: a better structure ?
-    def attach_moment_conditions(self):
-        res_ols = self.res_ols
+    @classmethod
+    def attach_moment_conditions(cls):
+        # TODO: a better structure ?
+        res_ols = cls.res_ols
         # assumes x = column_stack([x0, x1])
-        x = self.exog_full
-        #x0 = self.res_ols.model.exog  # not used here
-        x1 = self.exog_add
+        x = cls.exog_full
+        #x0 = cls.res_ols.model.exog  # not used here
+        x1 = cls.exog_add
 
         nobs, k_constraints = x1.shape
 
@@ -99,14 +100,14 @@ class TestCMTOLS(CheckCMT):
         covm = moms_obs.T.dot(moms_obs)
 
         #attach
-        self.nobs = nobs
-        self.moms = moms
-        self.moms_obs = moms_obs
-        self.cov_moms = cov_moms
-        self.covm = covm
-        self.moms_deriv = moms_deriv
-        self.weights = weights
-        self.L = L
+        cls.nobs = nobs
+        cls.moms = moms
+        cls.moms_obs = moms_obs
+        cls.cov_moms = cov_moms
+        cls.covm = covm
+        cls.moms_deriv = moms_deriv
+        cls.weights = weights
+        cls.L = L
 
     def res_score(self):
         res_ols = self.res_ols

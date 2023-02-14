@@ -30,16 +30,18 @@ R. Davidson and J.G. MacKinnon.  "Econometric Theory and Methods," Oxford,
 
 W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
 """
-
+from __future__ import annotations
 
 from statsmodels.compat.pandas import Appender
 from statsmodels.compat.python import lrange, lzip
 
+from typing import Literal, Sequence
 import warnings
 
 import numpy as np
 from scipy import optimize, stats
-from scipy.linalg import toeplitz
+from scipy.linalg import cholesky, toeplitz
+from scipy.linalg.lapack import dtrtri
 
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
@@ -52,7 +54,8 @@ from statsmodels.tools.sm_exceptions import (
     ValueWarning,
     )
 from statsmodels.tools.tools import pinv_extended
-from statsmodels.tools.validation import string_like
+from statsmodels.tools.typing import Float64Array
+from statsmodels.tools.validation import bool_like, float_like, string_like
 
 from . import _prediction as pred
 
@@ -179,7 +182,13 @@ def _get_sigma(sigma, nobs):
         if sigma.shape != (nobs, nobs):
             raise ValueError("Sigma must be a scalar, 1d of length %s or a 2d "
                              "array of shape %s x %s" % (nobs, nobs, nobs))
-        cholsigmainv = np.linalg.cholesky(np.linalg.inv(sigma)).T
+        cholsigmainv, info = dtrtri(cholesky(sigma, lower=True),
+                                    lower=True, overwrite_c=True)
+        if info > 0:
+            raise np.linalg.LinAlgError('Cholesky decomposition of sigma '
+                                        'yields a singular matrix')
+        elif info < 0:
+            raise ValueError('Invalid input to dtrtri (info = %d)' % info)
     return sigma, cholsigmainv
 
 
@@ -191,6 +200,7 @@ class RegressionModel(base.LikelihoodModel):
     """
     def __init__(self, endog, exog, **kwargs):
         super(RegressionModel, self).__init__(endog, exog, **kwargs)
+        self.pinv_wexog: Float64Array | None = None
         self._data_attr.extend(['pinv_wexog', 'wendog', 'wexog', 'weights'])
 
     def initialize(self):
@@ -252,8 +262,25 @@ class RegressionModel(base.LikelihoodModel):
         """
         raise NotImplementedError("Subclasses must implement.")
 
-    def fit(self, method="pinv", cov_type='nonrobust', cov_kwds=None,
-            use_t=None, **kwargs):
+    def fit(
+            self,
+            method: Literal["pinv", "qr"] = "pinv",
+            cov_type: Literal[
+                "nonrobust",
+                "fixed scale",
+                "HC0",
+                "HC1",
+                "HC2",
+                "HC3",
+                "HAC",
+                "hac-panel",
+                "hac-groupsum",
+                "cluster",
+            ] = "nonrobust",
+            cov_kwds=None,
+            use_t: bool | None = None,
+            **kwargs
+    ):
         """
         Full fit of the model.
 
@@ -329,7 +356,8 @@ class RegressionModel(base.LikelihoodModel):
                 self.rank = np.linalg.matrix_rank(R)
             else:
                 Q, R = self.exog_Q, self.exog_R
-
+            # Needed for some covariance estimators, see GH #8157
+            self.pinv_wexog = np.linalg.pinv(self.wexog)
             # used in ANOVA
             self.effects = effects = np.dot(Q.T, self.wendog)
             beta = np.linalg.solve(R, effects)
@@ -762,7 +790,7 @@ class WLS(RegressionModel):
             The value of the log-likelihood function for a WLS Model.
 
         Notes
-        --------
+        -----
         .. math:: -\frac{n}{2}\log SSR
                   -\frac{n}{2}\left(1+\log\left(\frac{2\pi}{n}\right)\right)
                   -\frac{1}{2}\log\left(\left|W\right|\right)
@@ -1450,7 +1478,15 @@ def yule_walker(x, order=1, method="adjusted", df=None, inv=False,
         r[k] = (x[0:-k] * x[k:]).sum() / (n - k * adj_needed)
     R = toeplitz(r[:-1])
 
-    rho = np.linalg.solve(R, r[1:])
+    try:
+        rho = np.linalg.solve(R, r[1:])
+    except np.linalg.LinAlgError as err:
+        if 'Singular matrix' in str(err):
+            warnings.warn("Matrix is singular. Using pinv.", ValueWarning)
+            rho = np.linalg.pinv(R) @ r[1:]
+        else:
+            raise
+
     sigmasq = r[0] - (r[1:]*rho).sum()
     sigma = np.sqrt(sigmasq) if not np.isnan(sigmasq) and sigmasq > 0 else np.nan
     if inv:
@@ -1872,7 +1908,9 @@ class RegressionResults(base.LikelihoodModelResults):
             scale parameter is not included in the parameter count.
             Use ``dk_params=1`` to include scale in the parameter count.
 
-        Returns the given information criterion value.
+        Returns
+        -------
+        Value of information criterion.
 
         References
         ----------
@@ -1902,8 +1940,8 @@ class RegressionResults(base.LikelihoodModelResults):
         if self._wexog_singular_values is not None:
             eigvals = self._wexog_singular_values ** 2
         else:
-            eigvals = np.linalg.linalg.eigvalsh(np.dot(self.model.wexog.T,
-                                                       self.model.wexog))
+            wx = self.model.wexog
+            eigvals = np.linalg.linalg.eigvalsh(wx.T @ wx)
         return np.sort(eigvals)[::-1]
 
     @cache_readonly
@@ -1911,7 +1949,10 @@ class RegressionResults(base.LikelihoodModelResults):
         """
         Return condition number of exogenous matrix.
 
-        Calculated as ratio of largest to smallest eigenvalue.
+        Calculated as ratio of largest to smallest singular value of the
+        exogenous variables. This value is the same as the square root of
+        the ratio of the largest to smallest eigenvalue of the inner-product
+        of the exogenous variables.
         """
         eigvals = self.eigenvals
         return np.sqrt(eigvals[0]/eigvals[-1])
@@ -2639,7 +2680,14 @@ class RegressionResults(base.LikelihoodModelResults):
             self, exog=exog, transform=transform, weights=weights,
             row_labels=row_labels, **kwargs)
 
-    def summary(self, yname=None, xname=None, title=None, alpha=.05, slim=False):
+    def summary(
+            self,
+            yname: str | None = None,
+            xname: Sequence[str] | None = None,
+            title: str | None = None,
+            alpha: float = 0.05,
+            slim: bool = False,
+    ):
         """
         Summarize the Regression Results.
 
@@ -2654,8 +2702,11 @@ class RegressionResults(base.LikelihoodModelResults):
         title : str, optional
             Title for the top table. If not None, then this replaces the
             default title.
-        alpha : float
+        alpha : float, optional
             The significance level for the confidence intervals.
+        slim : bool, optional
+            Flag indicating to produce reduced set or diagnostic information.
+            Default is False.
 
         Returns
         -------
@@ -2671,7 +2722,9 @@ class RegressionResults(base.LikelihoodModelResults):
             durbin_watson,
             jarque_bera,
             omni_normtest,
-            )
+        )
+        alpha = float_like(alpha, "alpha", optional=False)
+        slim = bool_like(slim, "slim", optional=False, strict=True)
 
         jb, jbpv, skew, kurtosis = jarque_bera(self.wresid)
         omni, omnipv = omni_normtest(self.wresid)
@@ -2721,10 +2774,10 @@ class RegressionResults(base.LikelihoodModelResults):
             slimlist = ['Dep. Variable:', 'Model:', 'No. Observations:',
                         'Covariance Type:', 'R-squared:', 'Adj. R-squared:',
                         'F-statistic:', 'Prob (F-statistic):']
-            diagn_left = []
-            diagn_right = []
+            diagn_left = diagn_right = []
             top_left = [elem for elem in top_left if elem[0] in slimlist]
             top_right = [elem for elem in top_right if elem[0] in slimlist]
+            top_right = top_right + [("",[])] * (len(top_left) - len(top_right))
         else:
             diagn_left = [('Omnibus:', ["%#6.3f" % omni]),
                           ('Prob(Omnibus):', ["%#6.3f" % omnipv]),
@@ -2790,8 +2843,14 @@ class RegressionResults(base.LikelihoodModelResults):
 
         return smry
 
-    def summary2(self, yname=None, xname=None, title=None, alpha=.05,
-                 float_format="%.4f"):
+    def summary2(
+            self,
+            yname: str | None = None,
+            xname: Sequence[str] | None = None,
+            title: str | None = None,
+            alpha: float = 0.05,
+            float_format: str = "%.4f",
+    ):
         """
         Experimental summary function to summarize the regression results.
 

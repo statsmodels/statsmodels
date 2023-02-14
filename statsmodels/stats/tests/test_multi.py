@@ -23,6 +23,8 @@ from statsmodels.stats.multitest import (multipletests, fdrcorrection,
                                          local_fdr, multitest_methods_names)
 from statsmodels.stats.multicomp import tukeyhsd
 from scipy.stats.distributions import norm
+import scipy
+from packaging import version
 
 pval0 = np.array([
     0.838541367553,  0.642193923795,  0.680845947633,
@@ -190,7 +192,7 @@ res0_large = np.array([
     ]).reshape(30, 10, order='F')
 
 
-class CheckMultiTestsMixin(object):
+class CheckMultiTestsMixin:
 
     @pytest.mark.parametrize('key,val', sorted(rmethods.items()))
     def test_multi_pvalcorrection_rmethods(self, key, val):
@@ -324,6 +326,75 @@ def test_fdr_bky():
     assert_almost_equal([0.047619, 0.0649], res_tst[-1][:2], 3)
     assert_equal(8, res_tst[0].sum())
 
+    # reference number from Prism, see #8619
+    res2 = np.array([
+        0.0012, 0.0023, 0.0073, 0.0274, 0.0464, 0.0492, 0.0492, 0.0497,
+        0.0589, 0.3742, 0.4475, 0.5505, 0.5800, 0.6262, 0.77
+        ])
+    assert_allclose(res_tst[1], res2, atol=6e-5)
+
+    # issue #8619, problems if no or all rejected, ordering
+    pvals = np.array([0.2, 0.8, 0.3, 0.5, 1])
+    res1 = fdrcorrection_twostage(pvals, alpha=0.05, method='bky')
+    res2 = multipletests(pvals, alpha=0.05, method='fdr_tsbky')
+    assert_equal(res1[0], res2[0])
+    assert_allclose(res1[1], res2[1], atol=6e-5)
+    # confirmed with Prism
+    res_pv = np.array([0.7875, 1., 0.7875, 0.875 , 1.])
+    assert_allclose(res1[1], res_pv, atol=6e-5)
+
+
+def test_fdr_twostage():
+    # test for iteration in fdrcorrection_twostage, new maxiter
+    # example from BKY
+    pvals = [
+        0.0001, 0.0004, 0.0019, 0.0095, 0.0201, 0.0278, 0.0298, 0.0344, 0.0459,
+        0.3240, 0.4262, 0.5719, 0.6528, 0.7590, 1.000]
+    n = len(pvals)
+
+    # bh twostage fdr
+    k = 0
+    # same pvalues as one-stage fdr
+    res0 = multipletests(pvals, alpha=0.05, method='fdr_bh')
+    res1 = fdrcorrection_twostage(pvals, alpha=0.05, method='bh', maxiter=k,
+                                  iter=None)
+    res2 = multipletests(pvals, alpha=0.05, method='fdr_tsbh', maxiter=k)
+    assert_allclose(res1[1], res0[1])
+    assert_allclose(res2[1], res1[1])
+
+    k = 1
+    # pvalues corrected by first stage number of rejections
+    res0 = multipletests(pvals, alpha=0.05, method='fdr_bh')
+    res1 = fdrcorrection_twostage(pvals, alpha=0.05, method='bh', maxiter=k,
+                                  iter=None)
+    res2 = multipletests(pvals, alpha=0.05, method='fdr_tsbh', maxiter=k)
+    res3 = multipletests(pvals, alpha=0.05, method='fdr_tsbh')
+    assert_allclose(res1[1], res0[1] * (1 - res0[0].sum() / n))
+    assert_allclose(res2[1], res1[1])
+    assert_allclose(res3[1], res1[1])  # check default maxiter
+
+    # bky has an extra factor 1+alpha in fdr twostage independent of iter
+    fact = 1 + 0.05
+    k = 0
+    # same pvalues as one-stage fdr
+    res0 = multipletests(pvals, alpha=0.05, method='fdr_bh')
+    res1 = fdrcorrection_twostage(pvals, alpha=0.05, method='bky', maxiter=k,
+                                  iter=None)
+    res2 = multipletests(pvals, alpha=0.05, method='fdr_tsbky', maxiter=k)
+    assert_allclose(res1[1], np.clip(res0[1] * fact, 0, 1))
+    assert_allclose(res2[1], res1[1])
+
+    k = 1
+    # pvalues corrected by first stage number of rejections
+    res0 = multipletests(pvals, alpha=0.05, method='fdr_bh')
+    res1 = fdrcorrection_twostage(pvals, alpha=0.05, method='bky', maxiter=k,
+                                  iter=None)
+    res2 = multipletests(pvals, alpha=0.05, method='fdr_tsbky', maxiter=k)
+    res3 = multipletests(pvals, alpha=0.05, method='fdr_tsbky')
+    assert_allclose(res1[1], res0[1] * (1 - res0[0].sum() / n) * fact)
+    assert_allclose(res2[1], res1[1])
+    assert_allclose(res3[1], res1[1])  # check default maxiter
+
 
 @pytest.mark.parametrize('method', sorted(multitest_methods_names))
 def test_issorted(method):
@@ -381,7 +452,7 @@ def test_tukeyhsd():
         [-19.016667, -37.204253, -0.8290806, 0.037710044]])
 
     m_r = [94.39167, 102.54167,  91.13333, 118.20000,  99.18333]
-    myres = tukeyhsd(m_r, 6, 110.8, alpha=0.05, df=4)
+    myres = tukeyhsd(m_r, 6, 110.8254416667, alpha=0.05, df=4)
     pairs, reject, meandiffs, std_pairs, confint, q_crit = myres[:6]
     assert_almost_equal(meandiffs, res[:, 0], decimal=5)
     assert_almost_equal(confint, res[:, 1:3], decimal=2)
@@ -389,8 +460,13 @@ def test_tukeyhsd():
 
     # check p-values (divergence of high values is expected)
     small_pvals_idx = [2, 5, 7, 9]
+
+    # Remove this check when minimum SciPy version is 1.7+ (gh-8035)
+    scipy_version = (version.parse(scipy.version.version) >=
+                     version.parse('1.7.0'))
+    rtol = 1e-5 if scipy_version else 1e-2
     assert_allclose(myres[8][small_pvals_idx], res[small_pvals_idx, 3],
-                    rtol=1e-3)
+                    rtol=rtol)
 
 
 def test_local_fdr():

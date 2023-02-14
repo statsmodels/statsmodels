@@ -5,7 +5,7 @@ import numpy as np
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 
 
-class ARLagResults(object):
+class ARLagResults:
     """
     Results are from R vars::VARselect for sunspot data.
 
@@ -42,7 +42,7 @@ class ARLagResults(object):
             self.ic = np.asarray(ic).reshape(4, -1, order='F')
 
 
-class ARResultsOLS(object):
+class ARResultsOLS:
     """
     Results of fitting an AR(9) model to the sunspot data.
 
@@ -170,7 +170,7 @@ class ARResultsOLS(object):
             self.FVOLSn15start312 = np.hstack((fv[-1], pv[:19]))
 
 
-class ARResultsMLE(object):
+class ARResultsMLE:
     """
     Results of fitting an AR(9) model to the sunspot data using exact MLE.
 

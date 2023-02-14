@@ -19,7 +19,7 @@ with open(path, "rb") as fd:
 # CSS results are therefore taken from R and gretl
 
 
-class ARIMA111(object):
+class ARIMA111:
     def __init__(self, method="mle"):
         self.k_ar = 1
         self.k_diff = 1
@@ -191,7 +191,7 @@ class ARIMA111(object):
             self.forecasterr_dyn = forecast_results['fc111cdynse_css']
 
 
-class ARIMA211(object):
+class ARIMA211:
     def __init__(self, method="mle"):
         if method == 'mle':
             # from stata
@@ -269,7 +269,7 @@ class ARIMA211(object):
             self.forecasterr_dyn = forecast_results['fc111cdynse_css']
 
 
-class ARIMA112(object):
+class ARIMA112:
     def __init__(self, method="mle"):
         self.df_model = 3
         self.k = 5

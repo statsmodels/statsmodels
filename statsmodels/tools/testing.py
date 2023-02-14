@@ -46,7 +46,7 @@ ParamsTableTestBunch = bunch_factory('params_table', PARAM_LIST)
 MarginTableTestBunch = bunch_factory('margins_table', PARAM_LIST)
 
 
-class Holder(object):
+class Holder:
     """
     Test-focused class to simplify accessing values by attribute
     """

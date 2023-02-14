@@ -238,7 +238,7 @@ cdef object holt_win_init(double[::1] x, HoltWintersArgs hw_args):
     cdef Py_ssize_t i, n, idx = 0
     cdef double[::1] p, s
     cdef long[::1] xi
-    
+
     p = hw_args._p
     xi = hw_args._xi
     n = p.shape[0]

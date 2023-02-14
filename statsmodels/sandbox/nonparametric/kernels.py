@@ -25,7 +25,7 @@ from scipy.special import factorial
 from numpy import exp, multiply, square, divide, subtract, inf
 
 
-class NdKernel(object):
+class NdKernel:
     """Generic N-dimensial kernel
 
     Parameters
@@ -105,7 +105,7 @@ class NdKernel(object):
         return self._kernweight(x)
 
 
-class CustomKernel(object):
+class CustomKernel:
     """
     Generic 1D Kernel object.
     Can be constructed by selecting a standard named Kernel,

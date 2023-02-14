@@ -16,7 +16,7 @@ import warnings
 
 import numpy
 from scipy import stats
-import pandas
+import pandas as pd
 
 
 def _ros_sort(df, observations, censorship, warn=False):
@@ -29,7 +29,7 @@ def _ros_sort(df, observations, censorship, warn=False):
 
     Parameters
     ----------
-    df : pandas.DataFrame
+    df : DataFrame
 
     observations : str
         Name of the column in the dataframe that contains observed
@@ -43,7 +43,7 @@ def _ros_sort(df, observations, censorship, warn=False):
 
     Returns
     ------
-    sorted_df : pandas.DataFrame
+    sorted_df : DataFrame
         The sorted dataframe with all columns dropped except the
         observation and censorship columns.
     """
@@ -60,7 +60,8 @@ def _ros_sort(df, observations, censorship, warn=False):
                    "the max uncensored observation.")
             warnings.warn(msg)
 
-    return censored.append(uncensored)[[observations, censorship]].reset_index(drop=True)
+    combined = pd.concat([censored, uncensored], axis=0)
+    return combined[[observations, censorship]].reset_index(drop=True)
 
 
 def cohn_numbers(df, observations, censorship):
@@ -83,7 +84,7 @@ def cohn_numbers(df, observations, censorship):
 
     Parameters
     ----------
-    dataframe : pandas.DataFrame
+    dataframe : DataFrame
 
     observations : str
         Name of the column in the dataframe that contains observed
@@ -97,7 +98,7 @@ def cohn_numbers(df, observations, censorship):
 
     Returns
     -------
-    cohn : pandas.DataFrame
+    cohn : DataFrame
     """
 
     def nuncen_above(row):
@@ -170,7 +171,7 @@ def cohn_numbers(df, observations, censorship):
 
     # unique, sorted detection limts
     censored_data = df[censorship]
-    DLs = pandas.unique(df.loc[censored_data, observations])
+    DLs = pd.unique(df.loc[censored_data, observations])
     DLs.sort()
 
     # if there is a observations smaller than the minimum detection limit,
@@ -182,7 +183,7 @@ def cohn_numbers(df, observations, censorship):
         # create a dataframe
         # (editted for pandas 0.14 compatibility; see commit 63f162e
         #  when `pipe` and `assign` are available)
-        cohn = pandas.DataFrame(DLs, columns=['lower_dl'])
+        cohn = pd.DataFrame(DLs, columns=['lower_dl'])
         cohn.loc[:, 'upper_dl'] = set_upper_limit(cohn)
         cohn.loc[:, 'nuncen_above'] = cohn.apply(nuncen_above, axis=1)
         cohn.loc[:, 'nobs_below'] = cohn.apply(nobs_below, axis=1)
@@ -193,7 +194,7 @@ def cohn_numbers(df, observations, censorship):
     else:
         dl_cols = ['lower_dl', 'upper_dl', 'nuncen_above',
                    'nobs_below', 'ncen_equal', 'prob_exceedance']
-        cohn = pandas.DataFrame(numpy.empty((0, len(dl_cols))), columns=dl_cols)
+        cohn = pd.DataFrame(numpy.empty((0, len(dl_cols))), columns=dl_cols)
 
     return cohn
 
@@ -210,7 +211,7 @@ def _detection_limit_index(obs, cohn):
     obs : float
         A single observation from the larger dataset.
 
-    cohn : pandas.DataFrame
+    cohn : DataFrame
         DataFrame of Cohn numbers.
 
     Returns
@@ -241,7 +242,7 @@ def _ros_group_rank(df, dl_idx, censorship):
 
     Parameters
     ----------
-    df : pandas.DataFrame
+    df : DataFrame
 
     dl_idx : str
         Name of the column in the dataframe the index of the
@@ -279,7 +280,7 @@ def _ros_plot_pos(row, censorship, cohn):
 
     Parameters
     ----------
-    row : pandas.Series or dict-like
+    row : {Series, dict}
         Full observation (row) from a censored dataset. Requires a
         'rank', 'detection_limit', and `censorship` column.
 
@@ -288,7 +289,7 @@ def _ros_plot_pos(row, censorship, cohn):
         observation is left-censored. (i.e., True -> censored,
         False -> uncensored)
 
-    cohn : pandas.DataFrame
+    cohn : DataFrame
         DataFrame of Cohn numbers.
 
     Returns
@@ -339,14 +340,14 @@ def plotting_positions(df, censorship, cohn):
 
     Parameters
     ----------
-    df : pandas.DataFrame
+    df : DataFrame
 
     censorship : str
         Name of the column in the dataframe that indicates that a
         observation is left-censored. (i.e., True -> censored,
         False -> uncensored)
 
-    cohn : pandas.DataFrame
+    cohn : DataFrame
         DataFrame of Cohn numbers.
 
     Returns
@@ -377,7 +378,7 @@ def _impute(df, observations, censorship, transform_in, transform_out):
 
     Parameters
     ----------
-    df : pandas.DataFrame
+    df : DataFrame
     observations : str
         Name of the column in the dataframe that contains observed
         values. Censored values should be set to the detection (upper)
@@ -393,7 +394,7 @@ def _impute(df, observations, censorship, transform_in, transform_out):
 
     Returns
     -------
-    estimated : pandas.DataFrame
+    estimated : DataFrame
         A new dataframe with two new columns: "estimated" and "final".
         The "estimated" column contains of the values inferred from the
         best-fit line. The "final" column contains the estimated values
@@ -432,7 +433,7 @@ def _do_ros(df, observations, censorship, transform_in, transform_out):
 
     Parameters
     ----------
-    df : pandas.DataFrame
+    df : DataFrame
 
     observations : str
         Name of the column in the dataframe that contains observed
@@ -451,7 +452,7 @@ def _do_ros(df, observations, censorship, transform_in, transform_out):
 
     Returns
     -------
-    estimated : pandas.DataFrame
+    estimated : DataFrame
         A new dataframe with two new columns: "estimated" and "final".
         The "estimated" column contains of the values inferred from the
         best-fit line. The "final" column contains the estimated values
@@ -497,7 +498,7 @@ def impute_ros(observations, censorship, df=None, min_uncensored=2,
           * True if censored,
           * False if uncensored
 
-    df : pandas.DataFrame, optional
+    df : DataFrame, optional
         If `observations` and `censorship` are labels, this is the
         DataFrame that contains those columns.
 
@@ -530,7 +531,7 @@ def impute_ros(observations, censorship, df=None, min_uncensored=2,
 
     Returns
     -------
-    imputed : numpy.array (default) or pandas.DataFrame
+    imputed : {ndarray, DataFrame}
         The final observations where the censored values have either been
         imputed through ROS or substituted as a fraction of the
         detection limit.
@@ -542,7 +543,7 @@ def impute_ros(observations, censorship, df=None, min_uncensored=2,
 
     # process arrays into a dataframe, if necessary
     if df is None:
-        df = pandas.DataFrame({'obs': observations, 'cen': censorship})
+        df = pd.DataFrame({'obs': observations, 'cen': censorship})
         observations = 'obs'
         censorship = 'cen'
 

@@ -5,7 +5,7 @@ import numpy as np
 FLOAT_EPS = np.finfo(float).eps
 
 
-class VarianceFunction(object):
+class VarianceFunction:
     """
     Relates the variance of a random variable to its mean. Defaults to 1.
 
@@ -59,7 +59,7 @@ constant is an alias of VarianceFunction()
 """
 
 
-class Power(object):
+class Power:
     """
     Power variance function
 
@@ -142,7 +142,7 @@ This is an alias of statsmodels.family.links.Power(power=3)
 """
 
 
-class Binomial(object):
+class Binomial:
     """
     Binomial variance function
 
@@ -213,7 +213,7 @@ This is an alias of Binomial(n=1)
 """
 
 
-class NegativeBinomial(object):
+class NegativeBinomial:
     '''
     Negative binomial variance function
 

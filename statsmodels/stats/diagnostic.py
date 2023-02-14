@@ -95,7 +95,7 @@ def _check_nested_results(results_x, results_z):
     return nested
 
 
-class ResultsStore(object):
+class ResultsStore:
     def __str__(self):
         return getattr(self, '_str', self.__class__.__name__)
 
@@ -303,8 +303,8 @@ def compare_encompassing(results_x, results_z, cov_type="nonrobust",
         res = OLS(endog, aug_reg).fit(cov_type=cov_est, cov_kwds=cov_kwds)
         r_matrix = np.zeros((k_a, k))
         r_matrix[:, -k_a:] = np.eye(k_a)
-        test = res.wald_test(r_matrix, use_f=True)
-        stat, pvalue = float(np.squeeze(test.statistic)), float(test.pvalue)
+        test = res.wald_test(r_matrix, use_f=True, scalar=True)
+        stat, pvalue = test.statistic, test.pvalue
         df_num, df_denom = int(test.df_num), int(test.df_denom)
         return stat, pvalue, df_num, df_denom
 
@@ -331,7 +331,6 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
         length. If lags is a list or array, then all lags are included up to
         the largest lag in the list, however only the tests for the lags in
         the list are reported. If lags is None, then the default maxlag is
-        currently min((nobs // 2 - 2), 40). After 0.12 this will change to
         min(10, nobs // 5). The default number of lags changes if period
         is set.
     boxpierce : bool, default False
@@ -348,31 +347,25 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
         for seasonal data which uses min(2*period, nobs // 5) if set. If None,
         then the default rule is used to set the number of lags. When set, must
         be >= 2.
-    return_df : bool, default True
-        Flag indicating whether to return the result as a single DataFrame
-        with columns lb_stat, lb_pvalue, and optionally bp_stat and bp_pvalue.
-        After 0.12, this will become the only return method.  Set to True
-        to return the DataFrame or False to continue returning the 2 - 4
-        output. If None (the default), a warning is raised.
     auto_lag : bool, default False
         Flag indicating whether to automatically determine the optimal lag
         length based on threshold of maximum correlation value.
 
     Returns
     -------
-    lbvalue : float or array
-        The Ljung-Box test statistic.
-    pvalue : float or array
-        The p-value based on chi-square distribution. The p-value is computed
-        as 1.0 - chi2.cdf(lbvalue, dof) where dof is lag - model_df. If
-        lag - model_df <= 0, then NaN is returned for the pvalue.
-    bpvalue : (optional), float or array
-        The test statistic for Box-Pierce test.
-    bppvalue : (optional), float or array
-        The p-value based for Box-Pierce test on chi-square distribution.
-        The p-value is computed as 1.0 - chi2.cdf(bpvalue, dof) where dof is
-        lag - model_df. If lag - model_df <= 0, then NaN is returned for the
-        pvalue.
+    DataFrame
+        Frame with columns:
+
+        * lb_stat - The Ljung-Box test statistic.
+        * lb_pvalue - The p-value based on chi-square distribution. The
+          p-value is computed as 1 - chi2.cdf(lb_stat, dof) where dof is
+          lag - model_df. If lag - model_df <= 0, then NaN is returned for
+          the pvalue.
+        * bp_stat - The Box-Pierce test statistic.
+        * bp_pvalue - The p-value based for Box-Pierce test on chi-square
+          distribution. The p-value is computed as 1 - chi2.cdf(bp_stat, dof)
+          where dof is lag - model_df. If lag - model_df <= 0, then NaN is
+          returned for the pvalue.
 
     See Also
     --------
@@ -380,6 +373,9 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
         Regression model fitting.
     statsmodels.regression.linear_model.RegressionResults
         Results from linear regression models.
+    statsmodels.stats.stattools.q_stat
+        Ljung-Box test statistic computed from estimated
+        autocorrelations.
 
     Notes
     -----
@@ -403,28 +399,10 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
            lb_stat     lb_pvalue
     10  214.106992  1.827374e-40
     """
-    def get_optimal_length(threshold_metric, threshold, maxlag, func):
-        optimal_lag = 0
-        least_penalised = 0
-
-        for lags in range(1, maxlag + 1):
-            if (threshold_metric <= threshold):
-                penalty = lags * np.log(nobs)
-            else:
-                penalty = 2 * lags
-
-            test_statistic = func(lags)
-            penalised = test_statistic - penalty
-            if (penalised > least_penalised):
-                optimal_lag = lags
-                least_penalised = penalised
-
-        return optimal_lag
     # Avoid cyclic import
     from statsmodels.tsa.stattools import acf
     x = array_like(x, "x")
     period = int_like(period, "period", optional=True)
-    return_df = bool_like(return_df, "return_df", optional=False)
     model_df = int_like(model_df, "model_df", optional=False)
     if period is not None and period <= 1:
         raise ValueError("period must be >= 2")
@@ -434,25 +412,30 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
     if auto_lag:
         maxlag = nobs - 1
 
-        # Compute threshold metrics
+        # Compute sum of squared autocorrelations
         sacf = acf(x, nlags=maxlag, fft=False)
-        sacf2 = sacf[1:maxlag + 1] ** 2 / (nobs - np.arange(1, maxlag + 1))
-        q = 2.4
-        threshold = np.sqrt(q * np.log(nobs))
-        threshold_metric = max(np.abs(sacf)) * np.sqrt(nobs)
 
         if not boxpierce:
-            lags = get_optimal_length(
-                threshold_metric,
-                threshold, maxlag,
-                lambda p: nobs * (nobs + 2) * np.cumsum(sacf2)[p - 1])
+            q_sacf = (nobs * (nobs + 2) *
+                      np.cumsum(sacf[1:maxlag + 1] ** 2
+                                / (nobs - np.arange(1, maxlag + 1))))
         else:
-            lags = get_optimal_length(
-                threshold_metric,
-                threshold,
-                maxlag,
-                lambda p: nobs * np.cumsum(sacf[1:maxlag + 1] ** 2)[p - 1])
+            q_sacf = nobs * np.cumsum(sacf[1:maxlag + 1] ** 2)
 
+        # obtain thresholds
+        q = 2.4
+        threshold = np.sqrt(q * np.log(nobs))
+        threshold_metric = np.abs(sacf).max() * np.sqrt(nobs)
+
+        # compute penalized sum of squared autocorrelations
+        if (threshold_metric <= threshold):
+            q_sacf = q_sacf - (np.arange(1, nobs) * np.log(nobs))
+        else:
+            q_sacf = q_sacf - (2 * np.arange(1, nobs))
+
+        # note: np.argmax returns first (i.e., smallest) index of largest value
+        lags = np.argmax(q_sacf)
+        lags = max(1, lags)  # optimal lag has to be at least 1
         lags = int_like(lags, "lags")
         lags = np.arange(1, lags + 1)
     elif period is not None:
@@ -476,24 +459,19 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
     pval[loc] = stats.chi2.sf(qljungbox[loc], adj_lags[loc])
 
     if not boxpierce:
-        if return_df:
-            return pd.DataFrame({"lb_stat": qljungbox, "lb_pvalue": pval},
-                                index=lags)
-        return qljungbox, pval
+        return pd.DataFrame({"lb_stat": qljungbox, "lb_pvalue": pval},
+                            index=lags)
 
     qboxpierce = nobs * np.cumsum(sacf[1:maxlag + 1] ** 2)[lags - 1]
     pvalbp = np.full_like(qljungbox, np.nan)
     pvalbp[loc] = stats.chi2.sf(qboxpierce[loc], adj_lags[loc])
-    if return_df:
-        return pd.DataFrame({"lb_stat": qljungbox, "lb_pvalue": pval,
-                             "bp_stat": qboxpierce, "bp_pvalue": pvalbp},
-                            index=lags)
-
-    return qljungbox, pval, qboxpierce, pvalbp
+    return pd.DataFrame({"lb_stat": qljungbox, "lb_pvalue": pval,
+                         "bp_stat": qboxpierce, "bp_pvalue": pvalbp},
+                        index=lags)
 
 
 @deprecate_kwarg("maxlag", "nlags")
-def acorr_lm(resid, nlags=None, autolag=None, store=False, *, period=None,
+def acorr_lm(resid, nlags=None, store=False, *, period=None,
              ddof=0, cov_type="nonrobust", cov_kwargs=None):
     """
     Lagrange Multiplier tests for autocorrelation.
@@ -507,12 +485,7 @@ def acorr_lm(resid, nlags=None, autolag=None, store=False, *, period=None,
     resid : array_like
         Time series to test.
     nlags : int, default None
-        Highest lag to use. The behavior of this parameter will change
-        after 0.12.
-    autolag : {str, None}, default "AIC"
-        If None, then a fixed number of lags given by maxlag is used. This
-        parameter is deprecated and will be removed after 0.12.  Searching
-        for model specification cannot control test size.
+        Highest lag to use.
     store : bool, default False
         If true then the intermediate results are also returned.
     period : int, default none
@@ -578,9 +551,6 @@ def acorr_lm(resid, nlags=None, autolag=None, store=False, *, period=None,
     xdall = np.c_[np.ones((nobs, 1)), xdall]
     xshort = resid[-nobs:]
     res_store = ResultsStore()
-
-    if autolag is not None:
-        raise NotImplementedError("autolag has been removed")
     usedlag = maxlag
 
     resols = OLS(xshort, xdall[:, :usedlag + 1]).fit(cov_type=cov_type,
@@ -593,7 +563,7 @@ def acorr_lm(resid, nlags=None, autolag=None, store=False, *, period=None,
         # Note: deg of freedom for LM test: nvars - constant = lags used
     else:
         r_matrix = np.hstack((np.zeros((usedlag, 1)), np.eye(usedlag)))
-        test_stat = resols.wald_test(r_matrix, use_f=False)
+        test_stat = resols.wald_test(r_matrix, use_f=False, scalar=True)
         lm = float(test_stat.statistic)
         lmpval = float(test_stat.pvalue)
 
@@ -606,7 +576,7 @@ def acorr_lm(resid, nlags=None, autolag=None, store=False, *, period=None,
 
 
 @deprecate_kwarg("maxlag", "nlags")
-def het_arch(resid, nlags=None, autolag=None, store=False, ddof=0):
+def het_arch(resid, nlags=None, store=False, ddof=0):
     """
     Engle's Test for Autoregressive Conditional Heteroscedasticity (ARCH).
 
@@ -615,12 +585,7 @@ def het_arch(resid, nlags=None, autolag=None, store=False, ddof=0):
     resid : ndarray
         residuals from an estimation, or time series
     nlags : int, default None
-        Highest lag to use. The behavior of this parameter will change
-        after 0.12.
-    autolag : {str, None}, default None
-        If None, then a fixed number of lags given by maxlag is used. This
-        parameter is deprecated and will be removed after 0.12.  Searching
-        for model specification cannot control test size.
+        Highest lag to use.
     store : bool, default False
         If true then the intermediate results are also returned
     ddof : int, default 0
@@ -647,8 +612,7 @@ def het_arch(resid, nlags=None, autolag=None, store=False, ddof=0):
     -----
     verified against R:FinTS::ArchTest
     """
-    return acorr_lm(resid ** 2, nlags=nlags, autolag=autolag, store=store,
-                    ddof=ddof)
+    return acorr_lm(resid ** 2, nlags=nlags, store=store, ddof=ddof)
 
 
 @deprecate_kwarg("results", "res")
@@ -734,6 +698,28 @@ def acorr_breusch_godfrey(res, nlags=None, store=False):
         return lm, lmpval, fval, fpval
 
 
+def _check_het_test(x: np.ndarray, test_name: str) -> None:
+    """
+    Check validity of the exogenous regressors in a heteroskedasticity test
+
+    Parameters
+    ----------
+    x : ndarray
+        The exogenous regressor array
+    test_name : str
+        The test name for the exception
+    """
+    x_max = x.max(axis=0)
+    if (
+        not np.any(((x_max - x.min(axis=0)) == 0) & (x_max != 0))
+        or x.shape[1] < 2
+    ):
+        raise ValueError(
+            f"{test_name} test requires exog to have at least "
+            "two columns where one is a constant."
+        )
+
+
 def het_breuschpagan(resid, exog_het, robust=True):
     r"""
     Breusch-Pagan Lagrange Multiplier test for heteroscedasticity
@@ -802,9 +788,9 @@ def het_breuschpagan(resid, exog_het, robust=True):
     .. [3] Koenker, R. (1981). "A note on studentizing a test for
        heteroskedasticity". Journal of Econometrics 17 (1): 107–112.
     """
-
-    x = np.asarray(exog_het)
-    y = np.asarray(resid) ** 2
+    x = array_like(exog_het, "exog_het", ndim=2)
+    _check_het_test(x, "The Breusch-Pagan")
+    y = array_like(resid, "resid", ndim=1) ** 2
     if not robust:
         y = y / np.mean(y)
     nobs, nvars = x.shape
@@ -855,9 +841,7 @@ def het_white(resid, exog):
     """
     x = array_like(exog, "exog", ndim=2)
     y = array_like(resid, "resid", ndim=2, shape=(x.shape[0], 1))
-    if x.shape[1] < 2:
-        raise ValueError("White's heteroskedasticity test requires exog to"
-                         "have at least two columns where one is a constant.")
+    _check_het_test(x, "White's heteroskedasticity")
     nobs, nvars0 = x.shape
     i0, i1 = np.triu_indices(nvars0)
     exog = x[:, i0] * x[:, i1]
@@ -1105,7 +1089,7 @@ def linear_reset(res, power=3, test_type="fitted", use_f=False,
     nrestr = aug_exog.shape[1] - exog.shape[1]
     nparams = aug_exog.shape[1]
     r_mat = np.eye(nrestr, nparams, k=nparams-nrestr)
-    return res.wald_test(r_mat, use_f=use_f)
+    return res.wald_test(r_mat, use_f=use_f, scalar=True)
 
 
 def linear_harvey_collier(res, order_by=None, skip=None):
@@ -1454,6 +1438,8 @@ def recursive_olsresiduals(res, skip=None, lamda=0.0, alpha=0.95,
     Journal of the Royal Statistical Society. Series B (Methodological) 37,
     no. 2 (1975): 149-192.
     """
+    if not isinstance(res, RegressionResultsWrapper):
+        raise TypeError("res a regression results instance")
     y = res.model.endog
     x = res.model.exog
     order_by = array_like(order_by, "order_by", dtype="int", optional=True,
@@ -1575,7 +1561,7 @@ def breaks_hansen(olsresults):
     f = nobs * (ft[:, :, None] * ft[:, None, :]).sum(0)
     s = (score[:, :, None] * score[:, None, :]).sum(0)
     h = np.trace(np.dot(np.linalg.inv(f), s))
-    crit95 = np.array([(2, 1.9), (6, 3.75), (15, 3.75), (19, 4.52)],
+    crit95 = np.array([(2, 1.01), (6, 1.9), (15, 3.75), (19, 4.52)],
                       dtype=[("nobs", int), ("crit", float)])
     # TODO: get critical values from Bruce Hansen's 1992 paper
     return h, crit95

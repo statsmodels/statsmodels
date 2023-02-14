@@ -53,6 +53,9 @@ def bkfilter(x, low=6, high=32, K=12):
 
       theta = -sum(b)/(2K+1)
 
+    See the notebook `Time Series Filters
+    <../examples/notebooks/generated/tsa_filters.html>`__ for an overview.
+
     References
     ----------
     Baxter, M. and R. G. King. "Measuring Business Cycles: Approximate

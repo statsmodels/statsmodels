@@ -14,7 +14,7 @@ from scipy import stats
 from statsmodels.tools.numdiff import _approx_fprime_cs_scalar, approx_hess
 
 
-class PickandDependence(object):
+class PickandDependence:
 
     def __call__(self, *args, **kwargs):
         return self.evaluate(*args, **kwargs)

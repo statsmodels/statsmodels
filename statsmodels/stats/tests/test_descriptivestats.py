@@ -1,11 +1,11 @@
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal
 import pandas as pd
+import scipy.stats
 import pytest
 
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.stats.descriptivestats import (
-    Describe,
     Description,
     describe,
     sign_test,
@@ -55,65 +55,6 @@ data2 = np.array(
 data3 = np.array([[1, 2, 4, 4], [2, 3, 3, 3], [2, 4, 4, 3]], dtype=float)
 
 data4 = np.array([[1, 2, 3, 4, 5, 6], [6, 5, 4, 3, 2, 1], [9, 9, 9, 9, 9, 9]])
-
-
-class TestSimpleTable(object):
-    # from statsmodels.iolib.table import SimpleTable, default_txt_fmt
-
-    @pytest.mark.xfail(reason="Bad test")
-    def test_basic_1(self):
-        print("test_basic_1")
-        with pytest.warns(FutureWarning):
-            t1 = Describe(data1)
-        print(t1.summary())
-
-    def test_basic_2(self):
-        print("test_basic_2")
-        with pytest.warns(FutureWarning):
-            t2 = Describe(data2)
-        print(t2.summary())
-
-    def test_describe_summary_float_ndarray(self):
-        print("test_describe_summary_float_ndarray")
-        with pytest.warns(FutureWarning):
-            t1 = Describe(data3)
-        print(t1.summary())
-
-    def test_basic_4(self):
-        print("test_basic_4")
-        with pytest.warns(FutureWarning):
-            t1 = Describe(data4)
-        print(t1.summary())
-
-    @pytest.mark.xfail(reason="Bad test")
-    def test_basic_1a(self):
-        print("test_basic_1a")
-        with pytest.warns(FutureWarning):
-            t1 = Describe(data1)
-        print(t1.summary(stats="basic", columns=["alpha"]))
-
-    @pytest.mark.xfail(reason="Bad test")
-    def test_basic_1b(self):
-        print("test_basic_1b")
-        with pytest.warns(FutureWarning):
-            t1 = Describe(data1)
-        print(t1.summary(stats="basic", columns="all"))
-
-    def test_basic_2a(self):
-        print("test_basic_2a")
-        with pytest.warns(FutureWarning):
-            t2 = Describe(data2)
-        print(t2.summary(stats="all"))
-
-    def test_basic_3(aself):
-        with pytest.warns(FutureWarning):
-            t1 = Describe(data3)
-        print(t1.summary(stats="all"))
-
-    def test_basic_4a(self):
-        with pytest.warns(FutureWarning):
-            t1 = Describe(data4)
-        print(t1.summary(stats="all"))
 
 
 def test_description_exceptions():
@@ -227,6 +168,16 @@ def test_extension_types(df):
     df.loc[df.index[::2], "d"] = pd.NA
     res = Description(df)
     np.testing.assert_allclose(res.frame.c, res.frame.d)
+
+
+def test_std_err(df):
+    """
+    Test the standard error of the mean matches result from scipy.stats.sem
+    """
+    np.testing.assert_allclose(
+        Description(df["a"]).frame.loc["std_err"],
+        scipy.stats.sem(df["a"])
+    )
 
 
 def test_describe(df):

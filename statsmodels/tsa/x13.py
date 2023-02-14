@@ -24,7 +24,8 @@ from statsmodels.tools.sm_exceptions import (X13NotFoundError,
 
 __all__ = ["x13_arima_select_order", "x13_arima_analysis"]
 
-_binary_names = ('x13as.exe', 'x13as', 'x12a.exe', 'x12a')
+_binary_names = ('x13as.exe', 'x13as', 'x12a.exe', 'x12a',
+                 'x13as_ascii', 'x13as_html')
 
 
 class _freq_to_period:
@@ -53,8 +54,9 @@ def _find_x12(x12path=None, prefer_x13=True):
     """
     global _binary_names
     if x12path is not None and x12path.endswith(_binary_names):
-        # remove binary from path if given
-        x12path = os.path.dirname(x12path)
+        # remove binary from path if path is not a directory
+        if not os.path.isdir(x12path):
+            x12path = os.path.dirname(x12path)
 
     if not prefer_x13:  # search for x12 first
         _binary_names = _binary_names[::-1]
@@ -138,7 +140,7 @@ def _make_automdl_options(maxorder, maxdiff, diff):
 
 def _make_var_names(exog):
     if hasattr(exog, "name"):
-        var_names = exog.name
+        var_names = [exog.name]
     elif hasattr(exog, "columns"):
         var_names = exog.columns
     else:
@@ -201,12 +203,12 @@ def _convert_out_to_series(x, dates, name):
 
 def _open_and_read(fname):
     # opens a file, reads it, and make sure it's closed
-    with open(fname, 'r') as fin:
+    with open(fname, 'r', encoding="utf-8") as fin:
         fout = fin.read()
     return fout
 
 
-class Spec(object):
+class Spec:
     @property
     def spec_name(self):
         return self.__class__.__name__.replace("Spec", "")
@@ -321,7 +323,8 @@ def x13_arima_analysis(endog, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
                        exog=None, log=None, outlier=True, trading=False,
                        forecast_periods=None, retspec=False,
                        speconly=False, start=None, freq=None,
-                       print_stdout=False, x12path=None, prefer_x13=True):
+                       print_stdout=False, x12path=None, prefer_x13=True,
+                       tempdir=None):
     """
     Perform x13-arima analysis for monthly or quarterly data.
 
@@ -383,6 +386,9 @@ def x13_arima_analysis(endog, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
         environmental variable. If False, will look for x12a first and will
         fallback to the X12PATH environmental variable. If x12path points
         to the path for the X12/X13 binary, it does nothing.
+    tempdir : str
+        The path to where temporary files are created by the function.
+        If None, files are created in the default temporary file location.
 
     Returns
     -------
@@ -433,8 +439,10 @@ def x13_arima_analysis(endog, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
         return spec
     # write it to a tempfile
     # TODO: make this more robust - give the user some control?
-    ftempin = tempfile.NamedTemporaryFile(delete=False, suffix='.spc')
-    ftempout = tempfile.NamedTemporaryFile(delete=False)
+    ftempin = tempfile.NamedTemporaryFile(delete=False,
+                                          suffix='.spc',
+                                          dir=tempdir)
+    ftempout = tempfile.NamedTemporaryFile(delete=False, dir=tempdir)
     try:
         ftempin.write(spec.encode('utf8'))
         ftempin.close()
@@ -490,7 +498,7 @@ def x13_arima_select_order(endog, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
                            exog=None, log=None, outlier=True, trading=False,
                            forecast_periods=None,
                            start=None, freq=None, print_stdout=False,
-                           x12path=None, prefer_x13=True):
+                           x12path=None, prefer_x13=True, tempdir=None):
     """
     Perform automatic seasonal ARIMA order identification using x12/x13 ARIMA.
 
@@ -546,6 +554,9 @@ def x13_arima_select_order(endog, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
         environmental variable. If False, will look for x12a first and will
         fallback to the X12PATH environmental variable. If x12path points
         to the path for the X12/X13 binary, it does nothing.
+    tempdir : str
+        The path to where temporary files are created by the function.
+        If None, files are created in the default temporary file location.
 
     Returns
     -------
@@ -573,7 +584,8 @@ def x13_arima_select_order(endog, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
                                  outlier=outlier, trading=trading,
                                  forecast_periods=forecast_periods,
                                  maxorder=maxorder, maxdiff=maxdiff, diff=diff,
-                                 start=start, freq=freq, prefer_x13=prefer_x13)
+                                 start=start, freq=freq, prefer_x13=prefer_x13,
+                                 tempdir=tempdir)
     model = re.search("(?<=Final automatic model choice : ).*",
                       results.results)
     order = model.group()
@@ -589,7 +601,7 @@ def x13_arima_select_order(endog, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
     return res
 
 
-class X13ArimaAnalysisResult(object):
+class X13ArimaAnalysisResult:
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)

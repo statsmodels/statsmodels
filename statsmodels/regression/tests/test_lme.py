@@ -22,7 +22,7 @@ from .results import lme_r_results
 # TODO: add tests with unequal group sizes
 
 
-class R_Results(object):
+class R_Results:
     """
     A class for holding various results obtained from fitting one data
     set using lmer in R.
@@ -58,7 +58,7 @@ class R_Results(object):
         cur_dir = os.path.dirname(os.path.abspath(__file__))
         rdir = os.path.join(cur_dir, 'results')
         fname = os.path.join(rdir, "lme%02d.csv" % ds_ix)
-        with open(fname) as fid:
+        with open(fname, encoding="utf-8") as fid:
             rdr = csv.reader(fid)
             header = next(rdr)
             data = [[float(x) for x in line] for line in rdr]
@@ -85,7 +85,7 @@ def loglike_function(model, profile_fe, has_fe):
     return f
 
 
-class TestMixedLM(object):
+class TestMixedLM:
 
     # Test analytic scores and Hessian using numeric differentiation
     @pytest.mark.slow
@@ -759,7 +759,7 @@ class TestMixedLM(object):
 # ------------------------------------------------------------------
 
 
-class TestMixedLMSummary(object):
+class TestMixedLMSummary:
     # Test various aspects of the MixedLM summary
     @classmethod
     def setup_class(cls):
@@ -1189,7 +1189,7 @@ def check_smw_solver(p, q, r, s):
     assert_allclose(y1, y2)
 
 
-class TestSMWSolver(object):
+class TestSMWSolver:
     @classmethod
     def setup_class(cls):
         np.random.seed(23)
@@ -1225,7 +1225,7 @@ def check_smw_logdet(p, q, r, s):
     assert_allclose(d1, d2, rtol=rtol)
 
 
-class TestSMWLogdet(object):
+class TestSMWLogdet:
     @classmethod
     def setup_class(cls):
         np.random.seed(23)

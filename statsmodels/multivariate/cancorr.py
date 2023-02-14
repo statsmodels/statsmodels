@@ -150,7 +150,7 @@ class CanCorr(Model):
         return CanCorrTestResults(stats, stats_mv)
 
 
-class CanCorrTestResults(object):
+class CanCorrTestResults:
     """
     Canonical correlation results class
 

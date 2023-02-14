@@ -26,7 +26,11 @@ from numpy.linalg.linalg import LinAlgError
 
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
-from statsmodels.genmod._prediction import PredictionResults
+
+from statsmodels.base import _prediction_inference as pred
+from statsmodels.base._prediction_inference import PredictionResultsMean
+import statsmodels.base._parameter_inference as pinfer
+
 from statsmodels.graphics._regressionplots_doc import (
     _plot_added_variable_doc,
     _plot_ceres_residuals_doc,
@@ -39,17 +43,18 @@ from statsmodels.tools.decorators import (
     cached_data,
     cached_value,
 )
+from statsmodels.tools.docstring import Docstring
 from statsmodels.tools.sm_exceptions import (
     DomainWarning,
     HessianInversionWarning,
-    PerfectSeparationError,
+    PerfectSeparationWarning,
 )
 from statsmodels.tools.validation import float_like
 
 # need import in module instead of lazily to copy `__doc__`
-from . import _prediction as pred, families
+from . import families
 
-__all__ = ['GLM', 'PredictionResults']
+__all__ = ['GLM', 'PredictionResultsMean']
 
 
 def _check_convergence(criterion, iteration, atol, rtol):
@@ -213,6 +218,10 @@ class GLM(base.LikelihoodModel):
 
     Notes
     -----
+    Note: PerfectSeparationError exception has been converted to a
+    PerfectSeparationWarning and perfect separation or perfect prediction will
+    not raise an exception by default. (changed in version 0.14)
+
     Only the following combinations make sense for family and link:
 
      ============= ===== === ===== ====== ======= === ==== ====== ====== ====
@@ -629,7 +638,7 @@ class GLM(base.LikelihoodModel):
         The value of the derivative of the expected endog with respect
         to the parameter vector.
         """
-        lin_pred = self.predict(params, linear=True)
+        lin_pred = self.predict(params, which="linear")
         idl = self.family.link.inverse_deriv(lin_pred)
         dmat = self.exog * idl[:, None]
         return dmat
@@ -842,7 +851,7 @@ class GLM(base.LikelihoodModel):
         return power
 
     def predict(self, params, exog=None, exposure=None, offset=None,
-                linear=False):
+                which="mean", linear=None):
         """
         Return predicted values for a design matrix
 
@@ -857,10 +866,21 @@ class GLM(base.LikelihoodModel):
             function.  See notes for details.
         offset : array_like, optional
             Offset values.  See notes for details.
+        which : 'mean', 'linear', 'var'(optional)
+            Statitistic to predict. Default is 'mean'.
+
+            - 'mean' returns the conditional expectation of endog E(y | x),
+              i.e. inverse of the model's link function of linear predictor.
+            - 'linear' returns the linear predictor of the mean function.
+            - 'var_unscaled' variance of endog implied by the likelihood model.
+              This does not include scale or var_weights.
+
         linear : bool
-            If True, returns the linear predicted values.  If False,
-            returns the value of the inverse of the model's link function at
-            the linear predicted values.
+            The ``linear` keyword is deprecated and will be removed,
+            use ``which`` keyword instead.
+            If True, returns the linear predicted values.  If False or None,
+            then the statistic specified by ``which`` will be returned.
+
 
         Returns
         -------
@@ -875,6 +895,11 @@ class GLM(base.LikelihoodModel):
 
         Exposure values must be strictly positive.
         """
+        if linear is not None:
+            msg = 'linear keyword is deprecated, use which="linear"'
+            warnings.warn(msg, DeprecationWarning)
+            if linear is True:
+                which = "linear"
 
         # Use fit offset if appropriate
         if offset is None and exog is None and hasattr(self, 'offset'):
@@ -900,10 +925,17 @@ class GLM(base.LikelihoodModel):
             exog = self.exog
 
         linpred = np.dot(exog, params) + offset + exposure
-        if linear:
-            return linpred
-        else:
+
+        if which == "mean":
             return self.family.fitted(linpred)
+        elif which == "linear":
+            return linpred
+        elif which == "var_unscaled":
+            mean = self.family.fitted(linpred)
+            var_ = self.family.variance(mean)
+            return var_
+        else:
+            raise ValueError(f'The which value "{which}" is not recognized')
 
     def get_distribution(self, params, scale=None, exog=None, exposure=None,
                          offset=None, var_weights=1., n_trials=1.):
@@ -949,7 +981,7 @@ class GLM(base.LikelihoodModel):
                                     families.NegativeBinomial)):
             scale = 1.
 
-        mu = self.predict(params, exog, exposure, offset, linear=False)
+        mu = self.predict(params, exog, exposure, offset, which="mean")
 
         kwds = {}
         if (np.any(n_trials != 1) and
@@ -1220,8 +1252,9 @@ class GLM(base.LikelihoodModel):
             history = self._update_history(wls_results, mu, history)
             self.scale = self.estimate_scale(mu)
             if endog.squeeze().ndim == 1 and np.allclose(mu - endog, 0):
-                msg = "Perfect separation detected, results not available"
-                raise PerfectSeparationError(msg)
+                msg = ("Perfect separation or prediction detected, "
+                       "parameter may not be identified")
+                warnings.warn(msg, category=PerfectSeparationWarning)
             converged = _check_convergence(criterion, iteration + 1, atol,
                                            rtol)
             if converged:
@@ -1317,7 +1350,7 @@ class GLM(base.LikelihoodModel):
         from statsmodels.base.elastic_net import fit_elasticnet
 
         if method != "elastic_net":
-            raise ValueError("method for fit_regularied must be elastic_net")
+            raise ValueError("method for fit_regularized must be elastic_net")
 
         defaults = {"maxiter": 50, "L1_wt": 1, "cnvrg_tol": 1e-10,
                     "zero_tol": 1e-10}
@@ -1369,7 +1402,6 @@ class GLM(base.LikelihoodModel):
         params = mr.x
 
         if not mr.success:
-            import warnings
             ngrad = np.sqrt(np.sum(mr.jac**2))
             msg = "GLM ridge optimization may have failed, |grad|=%f" % ngrad
             warnings.warn(msg)
@@ -1443,6 +1475,10 @@ class GLM(base.LikelihoodModel):
         res._results.k_constr = k_constr
         res._results.results_constrained = res_constr
         return res
+
+
+get_prediction_doc = Docstring(pred.get_prediction_glm.__doc__)
+get_prediction_doc.remove_parameters("pred_kwds")
 
 
 class GLMResults(base.LikelihoodModelResults):
@@ -1523,14 +1559,12 @@ class GLMResults(base.LikelihoodModelResults):
         # temporary warning
         ct = (cov_type == 'nonrobust') or (cov_type.upper().startswith('HC'))
         if self.model._has_freq_weights and not ct:
-            import warnings
 
             from statsmodels.tools.sm_exceptions import SpecificationWarning
             warnings.warn('cov_type not fully supported with freq_weights',
                           SpecificationWarning)
 
         if self.model._has_var_weights and not ct:
-            import warnings
 
             from statsmodels.tools.sm_exceptions import SpecificationWarning
             warnings.warn('cov_type not fully supported with var_weights',
@@ -1661,18 +1695,23 @@ class GLMResults(base.LikelihoodModelResults):
 
         kwargs = model._get_init_kwds().copy()
         kwargs.pop('family')
+
         for key in getattr(model, '_null_drop_keys', []):
             del kwargs[key]
         start_params = np.atleast_1d(self.family.link(endog.mean()))
         oe = self.model._offset_exposure
         if not (np.size(oe) == 1 and oe == 0):
-            return GLM(endog, exog, family=self.family,
-                       **kwargs).fit(start_params=start_params).fittedvalues
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", DomainWarning)
+                mod = GLM(endog, exog, family=self.family, **kwargs)
+                fitted = mod.fit(start_params=start_params).fittedvalues
         else:
             # correct if fitted is identical across observations
             wls_model = lm.WLS(endog, exog,
                                weights=self._iweights * self._n_trials)
-            return wls_model.fit().fittedvalues
+            fitted = wls_model.fit().fittedvalues
+
+        return fitted
 
     @cache_readonly
     def deviance(self):
@@ -1786,7 +1825,7 @@ class GLMResults(base.LikelihoodModelResults):
 
         .. warning::
 
-            The current definition is base don the deviance rather than the
+            The current definition is based on the deviance rather than the
             log-likelihood. This is not consistent with the AIC definition,
             and after 0.13 both will make use of the log-likelihood definition.
 
@@ -1851,7 +1890,9 @@ class GLMResults(base.LikelihoodModelResults):
             scale parameter is not included in the parameter count.
             Use ``dk_params=1`` to include scale in the parameter count.
 
-        Returns the given information criterion value.
+        Returns
+        -------
+        Value of information criterion.
 
         Notes
         -----
@@ -1890,28 +1931,164 @@ class GLMResults(base.LikelihoodModelResults):
             llf = self.llf_scaled(scale=1)
             return -2 * llf/scale + 2 * k_params
 
-    @Appender(pred.get_prediction_glm.__doc__)
+    # now explicit docs, old and new behavior, copied from generic classes
+    # @Appender(str(get_prediction_doc))
     def get_prediction(self, exog=None, exposure=None, offset=None,
-                       transform=True, linear=False,
+                       transform=True, which=None, linear=None,
+                       average=False, agg_weights=None,
                        row_labels=None):
+        """
+    Compute prediction results for GLM compatible models.
+
+    Options and return class depend on whether "which" is None or not.
+
+    Parameters
+    ----------
+    exog : array_like, optional
+        The values for which you want to predict.
+    exposure : array_like, optional
+        Exposure time values, only can be used with the log link
+        function.
+    offset : array_like, optional
+        Offset values.
+    transform : bool, optional
+        If the model was fit via a formula, do you want to pass
+        exog through the formula. Default is True. E.g., if you fit
+        a model y ~ log(x1) + log(x2), and transform is True, then
+        you can pass a data structure that contains x1 and x2 in
+        their original form. Otherwise, you'd need to log the data
+        first.
+    which : 'mean', 'linear', 'var'(optional)
+        Statitistic to predict. Default is 'mean'.
+        If which is None, then the deprecated keyword "linear" applies.
+        If which is not None, then a generic Prediction results class will
+        be returned. Some options are only available if which is not None.
+        See notes.
+
+        - 'mean' returns the conditional expectation of endog E(y | x),
+          i.e. inverse of the model's link function of linear predictor.
+        - 'linear' returns the linear predictor of the mean function.
+        - 'var_unscaled' variance of endog implied by the likelihood model.
+          This does not include scale or var_weights.
+
+    linear : bool
+        The ``linear` keyword is deprecated and will be removed,
+        use ``which`` keyword instead.
+        If which is None, then the linear keyword is used, otherwise it will
+        be ignored.
+        If True and which is None, the linear predicted values are returned.
+        If False or None, then the statistic specified by ``which`` will be
+        returned.
+    average : bool
+        Keyword is only used if ``which`` is not None.
+        If average is True, then the mean prediction is computed, that is,
+        predictions are computed for individual exog and then the average
+        over observation is used.
+        If average is False, then the results are the predictions for all
+        observations, i.e. same length as ``exog``.
+    agg_weights : ndarray, optional
+        Keyword is only used if ``which`` is not None.
+        Aggregation weights, only used if average is True.
+    row_labels : list of str or None
+        If row_lables are provided, then they will replace the generated
+        labels.
+
+    Returns
+    -------
+    prediction_results : instance of a PredictionResults class.
+        The prediction results instance contains prediction and prediction
+        variance and can on demand calculate confidence intervals and summary
+        tables for the prediction of the mean and of new observations.
+        The Results class of the return depends on the value of ``which``.
+
+    See Also
+    --------
+    GLM.predict
+    GLMResults.predict
+
+    Notes
+    -----
+    Changes in statsmodels 0.14: The ``which`` keyword has been added.
+    If ``which`` is None, then the behavior is the same as in previous
+    versions, and returns the mean and linear prediction results.
+    If the ``which`` keyword is not None, then a generic prediction results
+    class is returned and is not backwards compatible with the old prediction
+    results class, e.g. column names of summary_frame differs.
+    There are more choices for the returned predicted statistic using
+    ``which``. More choices will be added in the next release.
+    Two additional keyword, average and agg_weights options are now also
+    available if ``which`` is not None.
+    In a future version ``which`` will become not None and the backwards
+    compatible prediction results class will be removed.
+
+    """
 
         import statsmodels.regression._prediction as linpred
 
-        pred_kwds = {'exposure': exposure, 'offset': offset, 'linear': True}
+        pred_kwds = {'exposure': exposure, 'offset': offset, 'which': 'linear'}
 
-        # two calls to a get_prediction duplicates exog generation if patsy
-        res_linpred = linpred.get_prediction(self, exog=exog,
-                                             transform=transform,
-                                             row_labels=row_labels,
-                                             pred_kwds=pred_kwds)
+        if which is None:
+            # two calls to a get_prediction duplicates exog generation if patsy
+            res_linpred = linpred.get_prediction(self, exog=exog,
+                                                 transform=transform,
+                                                 row_labels=row_labels,
+                                                 pred_kwds=pred_kwds)
 
-        pred_kwds['linear'] = False
-        res = pred.get_prediction_glm(self, exog=exog, transform=transform,
-                                      row_labels=row_labels,
-                                      linpred=res_linpred,
-                                      link=self.model.family.link,
-                                      pred_kwds=pred_kwds)
+            pred_kwds['which'] = 'mean'
+            res = pred.get_prediction_glm(self, exog=exog, transform=transform,
+                                          row_labels=row_labels,
+                                          linpred=res_linpred,
+                                          link=self.model.family.link,
+                                          pred_kwds=pred_kwds)
+        else:
+            # new generic version, if 'which' is specified
 
+            pred_kwds = {'exposure': exposure, 'offset': offset}
+            # not yet, only applies to count families
+            # y_values is explicit so we can add it to the docstring
+            # if y_values is not None:
+            #    pred_kwds["y_values"] = y_values
+
+            res = pred.get_prediction(
+                self,
+                exog=exog,
+                which=which,
+                transform=transform,
+                row_labels=row_labels,
+                average=average,
+                agg_weights=agg_weights,
+                pred_kwds=pred_kwds
+                )
+
+        return res
+
+    @Appender(pinfer.score_test.__doc__)
+    def score_test(self, exog_extra=None, params_constrained=None,
+                   hypothesis='joint', cov_type=None, cov_kwds=None,
+                   k_constraints=None, observed=True):
+
+        if self.model._has_freq_weights is True:
+            warnings.warn("score test has not been verified with freq_weights",
+                          UserWarning)
+        if self.model._has_var_weights is True:
+            warnings.warn("score test has not been verified with var_weights",
+                          UserWarning)
+
+        # We need to temporarily change model.df_resid for scale computation
+        # TODO: find a nicer way. gh #7840
+        mod_df_resid = self.model.df_resid
+        self.model.df_resid = self.df_resid
+        if k_constraints is not None:
+            self.model.df_resid += k_constraints
+        res = pinfer.score_test(self, exog_extra=exog_extra,
+                                params_constrained=params_constrained,
+                                hypothesis=hypothesis,
+                                cov_type=cov_type, cov_kwds=cov_kwds,
+                                k_constraints=k_constraints,
+                                scale=None,
+                                observed=observed)
+
+        self.model.df_resid = mod_df_resid
         return res
 
     def get_hat_matrix_diag(self, observed=True):
@@ -1968,7 +2145,7 @@ class GLMResults(base.LikelihoodModelResults):
         # using get_hat_matrix_diag has duplicated computation
         hat_matrix_diag = self.get_hat_matrix_diag(observed=observed)
         infl = GLMInfluence(self, endog=wendog, exog=wexog,
-                         resid=self.resid_pearson,
+                         resid=self.resid_pearson / np.sqrt(self.scale),
                          hat_matrix_diag=hat_matrix_diag)
         return infl
 

@@ -1093,7 +1093,12 @@ class KalmanFilter(Representation):
         return llf_obs
 
     def simulate(self, nsimulations, measurement_shocks=None,
-                 state_shocks=None, initial_state=None):
+                 state_shocks=None, initial_state=None,
+                 pretransformed_measurement_shocks=True,
+                 pretransformed_state_shocks=True,
+                 pretransformed_initial_state=True,
+                 simulator=None, return_simulator=False,
+                 random_state=None):
         r"""
         Simulate a new time series following the state space model
 
@@ -1124,6 +1129,35 @@ class KalmanFilter(Representation):
             the model has not been initialized, then a vector of zeros is used.
             Note that this is not included in the returned `simulated_states`
             array.
+        pretransformed_measurement_shocks : bool, optional
+            If `measurement_shocks` is provided, this flag indicates whether it
+            should be directly used as the shocks. If False, then it is assumed
+            to contain draws from the standard Normal distribution that must be
+            transformed using the `obs_cov` covariance matrix. Default is True.
+        pretransformed_state_shocks : bool, optional
+            If `state_shocks` is provided, this flag indicates whether it
+            should be directly used as the shocks. If False, then it is assumed
+            to contain draws from the standard Normal distribution that must be
+            transformed using the `state_cov` covariance matrix. Default is
+            True.
+        pretransformed_initial_state : bool, optional
+            If `initial_state` is provided, this flag indicates whether it
+            should be directly used as the initial_state. If False, then it is
+            assumed to contain draws from the standard Normal distribution that
+            must be transformed using the `initial_state_cov` covariance
+            matrix. Default is True.
+        return_simulator : bool, optional
+            Whether or not to return the simulator object. Typically used to
+            improve performance when performing repeated sampling. Default is
+            False.
+        random_state : {None, int, `numpy.random.Generator`,
+                        `numpy.random.RandomState`}, optional
+            If `seed` is None (or `np.random`), the `numpy.random.RandomState`
+            singleton is used.
+            If `seed` is an int, a new ``RandomState`` instance is used,
+            seeded with `seed`.
+            If `seed` is already a ``Generator`` or ``RandomState`` instance
+            then that instance is used.
 
         Returns
         -------
@@ -1131,6 +1165,10 @@ class KalmanFilter(Representation):
             An (nsimulations x k_endog) array of simulated observations.
         simulated_states : ndarray
             An (nsimulations x k_states) array of simulated states.
+        simulator : SimulationSmoothResults
+            If `return_simulator=True`, then an instance of a simulator is
+            returned, which can be reused for additional simulations of the
+            same size.
         """
         time_invariant = self.time_invariant
         # Check for valid number of simulations
@@ -1138,85 +1176,22 @@ class KalmanFilter(Representation):
             raise ValueError('In a time-varying model, cannot create more'
                              ' simulations than there are observations.')
 
-        # Check / generate measurement shocks
-        if measurement_shocks is not None:
-            measurement_shocks = np.array(measurement_shocks)
-            if measurement_shocks.ndim == 0:
-                measurement_shocks = measurement_shocks[np.newaxis, np.newaxis]
-            elif measurement_shocks.ndim == 1:
-                measurement_shocks = measurement_shocks[:, np.newaxis]
-            required_shape = (nsimulations, self.k_endog)
-            try:
-                measurement_shocks = measurement_shocks.reshape(required_shape)
-            except ValueError:
-                raise ValueError('Provided measurement shocks are not of the'
-                                 ' appropriate shape. Required %s, got %s.'
-                                 % (str(required_shape),
-                                    str(measurement_shocks.shape)))
-        elif self.shapes['obs_cov'][-1] == 1:
-            measurement_shocks = np.random.multivariate_normal(
-                mean=np.zeros(self.k_endog), cov=self['obs_cov'],
-                size=nsimulations)
+        return self._simulate(
+            nsimulations,
+            measurement_disturbance_variates=measurement_shocks,
+            state_disturbance_variates=state_shocks,
+            initial_state_variates=initial_state,
+            pretransformed_measurement_disturbance_variates=(
+                pretransformed_measurement_shocks),
+            pretransformed_state_disturbance_variates=(
+                pretransformed_state_shocks),
+            pretransformed_initial_state_variates=(
+                pretransformed_initial_state),
+            simulator=simulator, return_simulator=return_simulator,
+            random_state=random_state)
 
-        # Check / generate state shocks
-        if state_shocks is not None:
-            state_shocks = np.array(state_shocks)
-            if state_shocks.ndim == 0:
-                state_shocks = state_shocks[np.newaxis, np.newaxis]
-            elif state_shocks.ndim == 1:
-                state_shocks = state_shocks[:, np.newaxis]
-            required_shape = (nsimulations, self.k_posdef)
-            try:
-                state_shocks = state_shocks.reshape(required_shape)
-            except ValueError:
-                raise ValueError('Provided state shocks are not of the'
-                                 ' appropriate shape. Required %s, got %s.'
-                                 % (str(required_shape),
-                                    str(state_shocks.shape)))
-        elif self.shapes['state_cov'][-1] == 1:
-            state_shocks = np.random.multivariate_normal(
-                mean=np.zeros(self.k_posdef), cov=self['state_cov'],
-                size=nsimulations)
-
-        # Handle time-varying case
-        tvp = (self.shapes['obs_cov'][-1] > 1 or
-               self.shapes['state_cov'][-1] > 1)
-        if tvp and measurement_shocks is None:
-            measurement_shocks = np.zeros((nsimulations, self.k_endog))
-            for i in range(nsimulations):
-                measurement_shocks[i] = np.random.multivariate_normal(
-                    mean=np.zeros(self.k_endog),
-                    cov=self['obs_cov', ..., i])
-        if tvp and state_shocks is None:
-            state_shocks = np.zeros((nsimulations, self.k_posdef))
-            for i in range(nsimulations):
-                state_shocks[i] = np.random.multivariate_normal(
-                    mean=np.zeros(self.k_posdef),
-                    cov=self['state_cov', ..., i])
-
-        # Get the initial states
-        if initial_state is not None:
-            initial_state = np.array(initial_state)
-            if initial_state.ndim == 0:
-                initial_state = initial_state[np.newaxis]
-            elif (initial_state.ndim > 1 and
-                  not initial_state.shape == (self.k_states, 1)):
-                raise ValueError('Invalid shape of provided initial state'
-                                 ' vector. Required (%d, 1)' % self.k_states)
-        elif self.initialization is not None:
-            out = self.initialization(model=self)
-            initial_state = out[0] + np.random.multivariate_normal(
-                np.zeros_like(out[0]), out[2])
-        else:
-            # TODO: deprecate this, since we really should not be simulating
-            # unless we have an initialization.
-            initial_state = np.zeros(self.k_states)
-
-        return self._simulate(nsimulations, measurement_shocks, state_shocks,
-                              initial_state)
-
-    def _simulate(self, nsimulations, measurement_shocks, state_shocks,
-                  initial_state):
+    def _simulate(self, nsimulations, simulator=None, random_state=None,
+                  **kwargs):
         raise NotImplementedError('Simulation only available through'
                                   ' the simulation smoother.')
 
@@ -1540,6 +1515,8 @@ class FilterResults(FrozenRepresentation):
         # Save Kalman filter output
         self.converged = bool(kalman_filter.converged)
         self.period_converged = kalman_filter.period_converged
+        self.univariate_filter = np.array(kalman_filter.univariate_filter,
+                                          copy=True)
 
         self.filtered_state = np.array(kalman_filter.filtered_state, copy=True)
         self.filtered_state_cov = np.array(
@@ -2038,19 +2015,20 @@ class FilterResults(FrozenRepresentation):
         # Kalman filter output
         if ndynamic == 0 and nforecast == 0:
             results = self
+            oos_results = None
         # If we have dynamic prediction or forecasting, then we need to
         # re-apply the Kalman filter
         else:
             # Figure out the period for which we need to run the Kalman filter
             if dynamic is not None:
-                kf_start = min(start, dynamic, self.nobs)
+                kf_start = min(dynamic, self.nobs)
             else:
-                kf_start = min(start, self.nobs)
+                kf_start = self.nobs
             kf_end = end
 
             # Make start, end consistent with the results that we're generating
-            start = max(start - kf_start, 0)
-            end = kf_end - kf_start
+            # start = max(start - kf_start, 0)
+            # end = kf_end - kf_start
 
             # We must at least store forecasts and predictions
             kwargs['conserve_memory'] = (
@@ -2061,6 +2039,9 @@ class FilterResults(FrozenRepresentation):
             kwargs['filter_method'] = (
                 self.model.filter_method & ~FILTER_CHANDRASEKHAR)
 
+            # TODO: there is a corner case here when the filter has not
+            #       exited the diffuse filter, in which case this known
+            #       initialization is not correct.
             # Even if we have not stored all predicted values (means and covs),
             # we can still do pure out-of-sample forecasting because we will
             # always have stored the last predicted values. In this case, we
@@ -2091,10 +2072,12 @@ class FilterResults(FrozenRepresentation):
                 model.endog[:, -(ndynamic + nforecast):] = np.nan
 
             with model.fixed_scale(self.scale):
-                results = model.filter()
+                oos_results = model.filter()
+
+            results = self
 
         return PredictionResults(results, start, end, nstatic, ndynamic,
-                                 nforecast)
+                                 nforecast, oos_results=oos_results)
 
 
 class PredictionResults(FilterResults):
@@ -2182,7 +2165,7 @@ class PredictionResults(FilterResults):
     returning the appropriate ranges for everything.
     """
     representation_attributes = [
-        'endog', 'design', 'design', 'obs_intercept',
+        'endog', 'design', 'obs_intercept',
         'obs_cov', 'transition', 'state_intercept', 'selection',
         'state_cov'
     ]
@@ -2191,10 +2174,15 @@ class PredictionResults(FilterResults):
         'predicted_state', 'predicted_state_cov',
         'forecasts', 'forecasts_error', 'forecasts_error_cov'
     ]
+    smoother_attributes = [
+        'smoothed_state', 'smoothed_state_cov',
+    ]
 
-    def __init__(self, results, start, end, nstatic, ndynamic, nforecast):
+    def __init__(self, results, start, end, nstatic, ndynamic, nforecast,
+                 oos_results=None):
         # Save the filter results object
         self.results = results
+        self.oos_results = oos_results
 
         # Save prediction ranges
         self.npredictions = start - end
@@ -2203,6 +2191,17 @@ class PredictionResults(FilterResults):
         self.nstatic = nstatic
         self.ndynamic = ndynamic
         self.nforecast = nforecast
+
+        self._predicted_signal = None
+        self._predicted_signal_cov = None
+        self._filtered_signal = None
+        self._filtered_signal_cov = None
+        self._smoothed_signal = None
+        self._smoothed_signal_cov = None
+        self._filtered_forecasts = None
+        self._filtered_forecasts_error_cov = None
+        self._smoothed_forecasts = None
+        self._smoothed_forecasts_error_cov = None
 
     def clear(self):
         attributes = (['endog'] + self.representation_attributes
@@ -2229,6 +2228,43 @@ class PredictionResults(FilterResults):
             if attr == 'endog' or attr in self.filter_attributes:
                 # Get a copy
                 value = getattr(self.results, attr).copy()
+                if self.ndynamic > 0:
+                    end = self.end - self.ndynamic - self.nforecast
+                    value = value[..., :end]
+                if self.oos_results is not None:
+                    oos_value = getattr(self.oos_results, attr).copy()
+
+                    # Note that the last element of the results predicted state
+                    # and state cov will overlap with the first element of the
+                    # oos predicted state and state cov, so eliminate the
+                    # last element of the results versions
+                    # But if we have dynamic prediction, then we have already
+                    # eliminated the last element of the predicted state, so
+                    # we do not need to do it here.
+                    if self.ndynamic == 0 and attr[:9] == 'predicted':
+                        value = value[..., :-1]
+
+                    value = np.concatenate([value, oos_value], axis=-1)
+
+                # Subset to the correct time frame
+                value = value[..., self.start:self.end]
+            elif attr in self.smoother_attributes:
+                if self.ndynamic > 0:
+                    raise NotImplementedError(
+                        'Cannot retrieve smoothed attributes when using'
+                        ' dynamic prediction, since the information set used'
+                        ' to compute the smoothed results differs from the'
+                        ' information set implied by the dynamic prediction.')
+                # Get a copy
+                value = getattr(self.results, attr).copy()
+
+                # The oos_results object is only dynamic or out-of-sample,
+                # so filtered == smoothed
+                if self.oos_results is not None:
+                    filtered_attr = 'filtered' + attr[8:]
+                    oos_value = getattr(self.oos_results, filtered_attr).copy()
+                    value = np.concatenate([value, oos_value], axis=-1)
+
                 # Subset to the correct time frame
                 value = value[..., self.start:self.end]
             elif attr in self.representation_attributes:
@@ -2238,6 +2274,13 @@ class PredictionResults(FilterResults):
                 if value.shape[-1] == 1:
                     value = value[..., 0]
                 else:
+                    if self.ndynamic > 0:
+                        end = self.end - self.ndynamic - self.nforecast
+                        value = value[..., :end]
+
+                    if self.oos_results is not None:
+                        oos_value = getattr(self.oos_results, attr).copy()
+                        value = np.concatenate([value, oos_value], axis=-1)
                     value = value[..., self.start:self.end]
             else:
                 raise AttributeError("'%s' object has no attribute '%s'" %
@@ -2246,6 +2289,125 @@ class PredictionResults(FilterResults):
             setattr(self, _attr, value)
 
         return getattr(self, _attr)
+
+    def _compute_forecasts(self, states, states_cov, signal_only=False):
+        d = self.obs_intercept
+        Z = self.design
+        H = self.obs_cov
+
+        if d.ndim == 1:
+            d = d[:, None]
+
+        if Z.ndim == 2:
+            if not signal_only:
+                forecasts = d + Z @ states
+                forecasts_error_cov = (
+                    Z[None, ...] @ states_cov.T @ Z.T[None, ...] + H.T).T
+            else:
+                forecasts = Z @ states
+                forecasts_error_cov = (
+                    Z[None, ...] @ states_cov.T @ Z.T[None, ...]).T
+        else:
+            if not signal_only:
+                forecasts = d + (Z * states[None, :, :]).sum(axis=1)
+                tmp = Z[:, None, ...] * states_cov[None, ...]
+                tmp = (tmp[:, :, :, None, :]
+                       * Z.transpose(1, 0, 2)[None, :, None, ...])
+                forecasts_error_cov = (tmp.sum(axis=1).sum(axis=1).T + H.T).T
+            else:
+                forecasts = (Z * states[None, :, :]).sum(axis=1)
+                tmp = Z[:, None, ...] * states_cov[None, ...]
+                tmp = (tmp[:, :, :, None, :]
+                       * Z.transpose(1, 0, 2)[None, :, None, ...])
+                forecasts_error_cov = tmp.sum(axis=1).sum(axis=1)
+
+        return forecasts, forecasts_error_cov
+
+    @property
+    def predicted_signal(self):
+        if self._predicted_signal is None:
+            self._predicted_signal, self._predicted_signal_cov = (
+                self._compute_forecasts(self.predicted_state,
+                                        self.predicted_state_cov,
+                                        signal_only=True))
+        return self._predicted_signal
+
+    @property
+    def predicted_signal_cov(self):
+        if self._predicted_signal_cov is None:
+            self._predicted_signal, self._predicted_signal_cov = (
+                self._compute_forecasts(self.predicted_state,
+                                        self.predicted_state_cov,
+                                        signal_only=True))
+        return self._predicted_signal_cov
+
+    @property
+    def filtered_signal(self):
+        if self._filtered_signal is None:
+            self._filtered_signal, self._filtered_signal_cov = (
+                self._compute_forecasts(self.filtered_state,
+                                        self.filtered_state_cov,
+                                        signal_only=True))
+        return self._filtered_signal
+
+    @property
+    def filtered_signal_cov(self):
+        if self._filtered_signal_cov is None:
+            self._filtered_signal, self._filtered_signal_cov = (
+                self._compute_forecasts(self.filtered_state,
+                                        self.filtered_state_cov,
+                                        signal_only=True))
+        return self._filtered_signal_cov
+
+    @property
+    def smoothed_signal(self):
+        if self._smoothed_signal is None:
+            self._smoothed_signal, self._smoothed_signal_cov = (
+                self._compute_forecasts(self.smoothed_state,
+                                        self.smoothed_state_cov,
+                                        signal_only=True))
+        return self._smoothed_signal
+
+    @property
+    def smoothed_signal_cov(self):
+        if self._smoothed_signal_cov is None:
+            self._smoothed_signal, self._smoothed_signal_cov = (
+                self._compute_forecasts(self.smoothed_state,
+                                        self.smoothed_state_cov,
+                                        signal_only=True))
+        return self._smoothed_signal_cov
+
+    @property
+    def filtered_forecasts(self):
+        if self._filtered_forecasts is None:
+            self._filtered_forecasts, self._filtered_forecasts_cov = (
+                self._compute_forecasts(self.filtered_state,
+                                        self.filtered_state_cov))
+        return self._filtered_forecasts
+
+    @property
+    def filtered_forecasts_error_cov(self):
+        if self._filtered_forecasts_cov is None:
+            self._filtered_forecasts, self._filtered_forecasts_cov = (
+                self._compute_forecasts(self.filtered_state,
+                                        self.filtered_state_cov))
+        return self._filtered_forecasts_cov
+
+    @property
+    def smoothed_forecasts(self):
+        if self._smoothed_forecasts is None:
+            self._smoothed_forecasts, self._smoothed_forecasts_cov = (
+                self._compute_forecasts(self.smoothed_state,
+                                        self.smoothed_state_cov))
+        return self._smoothed_forecasts
+
+    @property
+    def smoothed_forecasts_error_cov(self):
+        if self._smoothed_forecasts_cov is None:
+            self._smoothed_forecasts, self._smoothed_forecasts_cov = (
+                self._compute_forecasts(self.smoothed_state,
+                                        self.smoothed_state_cov))
+        return self._smoothed_forecasts_cov
 
 
 def _check_dynamic(dynamic, start, end, nobs):

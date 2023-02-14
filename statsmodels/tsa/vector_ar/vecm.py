@@ -11,14 +11,10 @@ from statsmodels.iolib.summary import Summary
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
+from statsmodels.tools.validation import string_like
 import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.coint_tables import c_sja, c_sjt
-from statsmodels.tsa.tsatools import (
-    duplication_matrix,
-    lagmat,
-    rename_trend,
-    vec,
-)
+from statsmodels.tsa.tsatools import duplication_matrix, lagmat, vec
 from statsmodels.tsa.vector_ar.hypothesis_test_results import (
     CausalityTestResults,
     WhitenessTestResults,
@@ -39,7 +35,12 @@ from statsmodels.tsa.vector_ar.var_model import (
 
 
 def select_order(
-    data, maxlags, deterministic="n", seasons=0, exog=None, exog_coint=None
+    data,
+    maxlags: int,
+    deterministic: str = "n",
+    seasons: int = 0,
+    exog=None,
+    exog_coint=None,
 ):
     """
     Compute lag order selections based on each of the available information
@@ -73,8 +74,8 @@ def select_order(
     -------
     selected_orders : :class:`statsmodels.tsa.vector_ar.var_model.LagOrderResults`
     """
-    deterministic = rename_trend(deterministic)
     ic = defaultdict(list)
+    deterministic = string_like(deterministic, "deterministic")
     for p in range(1, maxlags + 2):  # +2 because k_ar_VECM == k_ar_VAR - 1
         exogs = []
         if "co" in deterministic or "ci" in deterministic:
@@ -163,6 +164,7 @@ def _num_det_vars(det_string, seasons=0):
         terms.
     """
     num = 0
+    det_string = string_like(det_string, "det_string")
     if "ci" in det_string or "co" in det_string:
         num += 1
     if "li" in det_string or "lo" in det_string:
@@ -216,6 +218,7 @@ def _deterministic_to_exog(
         Otherwise, an ndarray representing these deterministic terms.
     """
     exogs = []
+    deterministic = string_like(deterministic, "deterministic")
     if "co" in deterministic or "ci" in deterministic:
         exogs.append(np.ones(nobs_tot))
     if exog_coint is not None:
@@ -317,6 +320,7 @@ def _endog_matrices(
     ----------
     .. [1] Lütkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
     """
+    deterministic = string_like(deterministic, "deterministic")
     # p. 286:
     p = diff_lags + 1
     y = endog
@@ -327,7 +331,6 @@ def _endog_matrices(
     delta_y_1_T = delta_y[:, p - 1 :]
 
     y_lag1 = y[:, p - 1 : -1]
-    deterministic = rename_trend(deterministic)
     if "co" in deterministic and "ci" in deterministic:
         raise ValueError(
             "Both 'co' and 'ci' as deterministic terms given. "
@@ -643,12 +646,14 @@ def coint_johansen(endog, det_order, k_ar_diff):
             "Critical values are only available for a det_order of "
             "-1, 0, or 1.",
             category=HypothesisTestWarning,
+            stacklevel=2,
         )
     if endog.shape[1] > 12:  # todo: test with a time series of 13 variables
         warnings.warn(
             "Critical values are only available for time series "
             "with 12 variables at most.",
             category=HypothesisTestWarning,
+            stacklevel=2,
         )
 
     from statsmodels.regression.linear_model import OLS
@@ -733,7 +738,7 @@ def coint_johansen(endog, det_order, k_ar_diff):
     return JohansenTestResult(rkt, r0t, a, d, lr1, lr2, cvt, cvm, aind)
 
 
-class JohansenTestResult(object):
+class JohansenTestResult:
     """
     Results class for Johansen's cointegration test
 
@@ -962,7 +967,7 @@ class VECM(tsbase.TimeSeriesModel):
         self.k_ar = k_ar_diff + 1
         self.k_ar_diff = k_ar_diff
         self.coint_rank = coint_rank
-        self.deterministic = rename_trend(deterministic)
+        self.deterministic = deterministic
         self.seasons = seasons
         self.first_season = first_season
         self.load_coef_repr = "ec"  # name for loading coef. (alpha) in summary
@@ -1172,7 +1177,7 @@ class VECM(tsbase.TimeSeriesModel):
         return param_names
 
 
-class VECMResults(object):
+class VECMResults:
     """Class for holding estimation related results of a vector error
     correction model (VECM).
 
@@ -1397,7 +1402,8 @@ class VECMResults(object):
         self.dates = dates
         self.neqs = endog.shape[0]
         self.k_ar = k_ar
-        self.deterministic = rename_trend(deterministic)
+        deterministic = string_like(deterministic, "deterministic")
+        self.deterministic = deterministic
         self.seasons = seasons
         self.first_season = first_season
 

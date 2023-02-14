@@ -5,7 +5,7 @@ State Space Model
 Author: Chad Fulton
 License: Simplified-BSD
 """
-from statsmodels.compat.pandas import NumericIndex, is_int_index
+from statsmodels.compat.pandas import is_int_index
 
 import contextlib
 import warnings
@@ -35,7 +35,7 @@ from .simulation_smoother import SimulationSmoother
 from .kalman_smoother import SmootherResults
 from .kalman_filter import INVERT_UNIVARIATE, SOLVE_LU, MEMORY_CONSERVE
 from .initialization import Initialization
-from .tools import prepare_exog, concat, _safe_cond
+from .tools import prepare_exog, concat, _safe_cond, get_impact_dates
 
 
 def _handle_args(names, defaults, *args, **kwargs):
@@ -230,7 +230,7 @@ class MLEModel(tsbase.TimeSeriesModel):
             # The only valid Int64Index is a full, incrementing index, so this
             # is general
             value = self._index[-1] + 1
-            index = NumericIndex(self._index.tolist() + [value])
+            index = pd.Index(self._index.tolist() + [value])
         else:
             raise NotImplementedError
         return index
@@ -1763,7 +1763,8 @@ class MLEModel(tsbase.TimeSeriesModel):
             A numpy array of shape (out_of_sample, k_exog) if the model
             contains an `exog` component, or None if it does not.
         """
-        if out_of_sample and self.k_exog > 0:
+        k_exog = getattr(self, 'k_exog', 0)
+        if out_of_sample and k_exog > 0:
             if exog is None:
                 raise ValueError('Out-of-sample operations in a model'
                                  ' with a regression component require'
@@ -1778,7 +1779,7 @@ class MLEModel(tsbase.TimeSeriesModel):
                                  ' appropriate shape. Required %s, got %s.'
                                  % (str(required_exog_shape),
                                     str(exog.shape)))
-        elif self.k_exog > 0 and exog is not None:
+        elif k_exog > 0 and exog is not None:
             exog = None
             warnings.warn('Exogenous array provided, but additional data'
                           ' is not required. `exog` argument ignored.',
@@ -1854,6 +1855,9 @@ class MLEModel(tsbase.TimeSeriesModel):
                  state_shocks=None, initial_state=None, anchor=None,
                  repetitions=None, exog=None, extend_model=None,
                  extend_kwargs=None, transformed=True, includes_fixed=False,
+                 pretransformed_measurement_shocks=True,
+                 pretransformed_state_shocks=True,
+                 pretransformed_initial_state=True, random_state=None,
                  **kwargs):
         r"""
         Simulate a new time series following the state space model
@@ -1911,6 +1915,31 @@ class MLEModel(tsbase.TimeSeriesModel):
             this argument describes whether or not `params` also includes
             the fixed parameters, in addition to the free parameters. Default
             is False.
+        pretransformed_measurement_shocks : bool, optional
+            If `measurement_shocks` is provided, this flag indicates whether it
+            should be directly used as the shocks. If False, then it is assumed
+            to contain draws from the standard Normal distribution that must be
+            transformed using the `obs_cov` covariance matrix. Default is True.
+        pretransformed_state_shocks : bool, optional
+            If `state_shocks` is provided, this flag indicates whether it
+            should be directly used as the shocks. If False, then it is assumed
+            to contain draws from the standard Normal distribution that must be
+            transformed using the `state_cov` covariance matrix. Default is
+            True.
+        pretransformed_initial_state : bool, optional
+            If `initial_state` is provided, this flag indicates whether it
+            should be directly used as the initial_state. If False, then it is
+            assumed to contain draws from the standard Normal distribution that
+            must be transformed using the `initial_state_cov` covariance
+            matrix. Default is True.
+        random_state : {None, int, Generator, RandomState}, optional
+            If `seed` is None (or `np.random`), the
+            class:``~numpy.random.RandomState`` singleton is used.
+            If `seed` is an int, a new class:``~numpy.random.RandomState``
+            instance is used, seeded with `seed`.
+            If `seed` is already a class:``~numpy.random.Generator`` or
+            class:``~numpy.random.RandomState`` instance then that instance is
+            used.
 
         Returns
         -------
@@ -1924,6 +1953,11 @@ class MLEModel(tsbase.TimeSeriesModel):
             be a Pandas DataFrame that has a MultiIndex for the columns, with
             the first level containing the names of the `endog` variables and
             the second level containing the repetition number.
+
+        See Also
+        --------
+        impulse_responses
+            Impulse response functions
         """
         # Make sure the model class has the current parameters
         self.update(params, transformed=transformed,
@@ -1967,12 +2001,13 @@ class MLEModel(tsbase.TimeSeriesModel):
         # Construct a model that represents the simulation period
         end = min(self.nobs, iloc + nsimulations)
         nextend = iloc + nsimulations - end
-        sim_model = self.ssm.extend(np.empty((nextend, self.k_endog)),
+        sim_model = self.ssm.extend(np.zeros((nextend, self.k_endog)),
                                     start=iloc, end=end, **kwargs)
 
         # Simulate the data
         _repetitions = 1 if repetitions is None else repetitions
         sim = np.zeros((nsimulations, self.k_endog, _repetitions))
+        simulator = None
 
         for i in range(_repetitions):
             initial_state_variates = None
@@ -1985,9 +2020,15 @@ class MLEModel(tsbase.TimeSeriesModel):
             # TODO: allow specifying measurement / state shocks for each
             # repetition?
 
-            out, _ = sim_model.simulate(
+            out, _, simulator = sim_model.simulate(
                 nsimulations, measurement_shocks, state_shocks,
-                initial_state_variates)
+                initial_state_variates,
+                pretransformed_measurement_shocks=(
+                    pretransformed_measurement_shocks),
+                pretransformed_state_shocks=pretransformed_state_shocks,
+                pretransformed_initial_state=pretransformed_initial_state,
+                simulator=simulator, return_simulator=True,
+                random_state=random_state)
 
             sim[:, :, i] = out
 
@@ -2089,6 +2130,12 @@ class MLEModel(tsbase.TimeSeriesModel):
             models the impulse responses are only given for `steps` elements
             (to avoid having to unexpectedly provide updated time-varying
             matrices).
+
+        See Also
+        --------
+        simulate
+            Simulate a time series according to the given state space model,
+            optionally with specified series for the innovations.
 
         Notes
         -----
@@ -3143,8 +3190,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             If lags is a list or array, then all lags are included up to the
             largest lag in the list, however only the tests for the lags in the
             list are reported.
-            If lags is None, then the default maxlag is 12*(nobs/100)^{1/4}.
-            After 0.12 the default maxlag will change to min(10, nobs // 5) for
+            If lags is None, then the default maxlag is min(10, nobs // 5) for
             non-seasonal models and min(2*m, nobs // 5) for seasonal time
             series where m is the seasonal period.
         df_adjust : bool, optional
@@ -3206,15 +3252,13 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             if df_adjust:
                 model_df = max(0, self.df_model - self.k_diffuse_states - 1)
 
+            cols = [2, 3] if method == 'boxpierce' else [0, 1]
             for i in range(self.model.k_endog):
                 results = acorr_ljungbox(
                     self.filter_results.standardized_forecasts_error[i][d:],
                     lags=lags, boxpierce=(method == 'boxpierce'),
-                    model_df=model_df, return_df=False)
-                if method == 'ljungbox':
-                    output.append(results[0:2])
-                else:
-                    output.append(results[2:])
+                    model_df=model_df)
+                output.append(np.asarray(results)[:, cols].T)
 
             output = np.c_[output]
         else:
@@ -3223,9 +3267,10 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         return output
 
     def get_prediction(self, start=None, end=None, dynamic=False,
+                       information_set='predicted', signal_only=False,
                        index=None, exog=None, extend_model=None,
                        extend_kwargs=None, **kwargs):
-        """
+        r"""
         In-sample prediction and out-of-sample forecasting
 
         Parameters
@@ -3249,6 +3294,25 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             prediction; starting with this observation and continuing through
             the end of prediction, forecasted endogenous values will be used
             instead.
+        information_set : str, optional
+            The information set to condition each prediction on. Default is
+            "predicted", which computes predictions of period t values
+            conditional on observed data through period t-1; these are
+            one-step-ahead predictions, and correspond with the typical
+            `fittedvalues` results attribute. Alternatives are "filtered",
+            which computes predictions of period t values conditional on
+            observed data through period t, and "smoothed", which computes
+            predictions of period t values conditional on the entire dataset
+            (including also future observations t+1, t+2, ...).
+        signal_only : bool, optional
+            Whether to compute predictions of only the "signal" component of
+            the observation equation. Default is False. For example, the
+            observation equation of a time-invariant model is
+            :math:`y_t = d + Z \alpha_t + \varepsilon_t`, and the "signal"
+            component is then :math:`Z \alpha_t`. If this argument is set to
+            True, then predictions of the "signal" :math:`Z \alpha_t` will be
+            returned. Otherwise, the default is for predictions of :math:`y_t`
+            to be returned.
         **kwargs
             Additional arguments may required for forecasting beyond the end
             of the sample. See `FilterResults.predict` for more details.
@@ -3256,8 +3320,17 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         Returns
         -------
         predictions : PredictionResults
-            PredictionResults instance containing in-sample predictions and
-            out-of-sample forecasts.
+            PredictionResults instance containing in-sample predictions /
+            out-of-sample forecasts and results including confidence intervals.
+
+        See Also
+        --------
+        forecast
+            Out-of-sample forecasts.
+        predict
+            In-sample predictions and out-of-sample forecasts.
+        get_forecast
+            Out-of-sample forecasts and results including confidence intervals.
         """
         if start is None:
             start = 0
@@ -3294,10 +3367,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         # Return a new mlemodel.PredictionResults object
         return PredictionResultsWrapper(PredictionResults(
-            self, prediction_results, row_labels=prediction_index))
+            self, prediction_results, information_set=information_set,
+            signal_only=signal_only, row_labels=prediction_index))
 
-    def get_forecast(self, steps=1, **kwargs):
-        """
+    def get_forecast(self, steps=1, signal_only=False, **kwargs):
+        r"""
         Out-of-sample forecasts and prediction intervals
 
         Parameters
@@ -3306,41 +3380,62 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             If an integer, the number of steps to forecast from the end of the
             sample. Can also be a date string to parse or a datetime type.
             However, if the dates index does not have a fixed frequency, steps
-            must be an integer. Default
+            must be an integer. Default is 1.
+        signal_only : bool, optional
+            Whether to compute forecasts of only the "signal" component of
+            the observation equation. Default is False. For example, the
+            observation equation of a time-invariant model is
+            :math:`y_t = d + Z \alpha_t + \varepsilon_t`, and the "signal"
+            component is then :math:`Z \alpha_t`. If this argument is set to
+            True, then forecasts of the "signal" :math:`Z \alpha_t` will be
+            returned. Otherwise, the default is for forecasts of :math:`y_t`
+            to be returned.
         **kwargs
             Additional arguments may required for forecasting beyond the end
             of the sample. See `FilterResults.predict` for more details.
 
         Returns
         -------
-        predictions : PredictionResults
-            PredictionResults instance containing in-sample predictions and
-            out-of-sample forecasts.
+        forecasts : PredictionResults
+            PredictionResults instance containing out-of-sample forecasts and
+            results including confidence intervals.
+
+        See also
+        --------
+        forecast
+            Out-of-sample forecasts.
+        predict
+            In-sample predictions and out-of-sample forecasts.
+        get_prediction
+            In-sample predictions / out-of-sample forecasts and results
+            including confidence intervals.
         """
         if isinstance(steps, int):
             end = self.nobs + steps - 1
         else:
             end = steps
-        return self.get_prediction(start=self.nobs, end=end, **kwargs)
+        return self.get_prediction(start=self.nobs, end=end,
+                                   signal_only=signal_only, **kwargs)
 
-    def predict(self, start=None, end=None, dynamic=False, **kwargs):
-        """
+    def predict(self, start=None, end=None, dynamic=False,
+                information_set='predicted', signal_only=False, **kwargs):
+        r"""
         In-sample prediction and out-of-sample forecasting
 
         Parameters
         ----------
-        start : int, str, or datetime, optional
+        start : {int, str,datetime}, optional
             Zero-indexed observation number at which to start forecasting,
             i.e., the first forecast is start. Can also be a date string to
-            parse or a datetime type. Default is the the zeroth observation.
-        end : int, str, or datetime, optional
+            parse or a datetime type. Default is the zeroth observation.
+        end : {int, str,datetime}, optional
             Zero-indexed observation number at which to end forecasting, i.e.,
             the last forecast is end. Can also be a date string to
             parse or a datetime type. However, if the dates index does not
             have a fixed frequency, end must be an integer index if you
             want out of sample prediction. Default is the last observation in
             the sample.
-        dynamic : bool, int, str, or datetime, optional
+        dynamic : {bool, int, str,datetime}, optional
             Integer offset relative to `start` at which to begin dynamic
             prediction. Can also be an absolute date string to parse or a
             datetime type (these are not interpreted as offsets).
@@ -3348,29 +3443,54 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             prediction; starting with this observation and continuing through
             the end of prediction, forecasted endogenous values will be used
             instead.
+        information_set : str, optional
+            The information set to condition each prediction on. Default is
+            "predicted", which computes predictions of period t values
+            conditional on observed data through period t-1; these are
+            one-step-ahead predictions, and correspond with the typical
+            `fittedvalues` results attribute. Alternatives are "filtered",
+            which computes predictions of period t values conditional on
+            observed data through period t, and "smoothed", which computes
+            predictions of period t values conditional on the entire dataset
+            (including also future observations t+1, t+2, ...).
+        signal_only : bool, optional
+            Whether to compute predictions of only the "signal" component of
+            the observation equation. Default is False. For example, the
+            observation equation of a time-invariant model is
+            :math:`y_t = d + Z \alpha_t + \varepsilon_t`, and the "signal"
+            component is then :math:`Z \alpha_t`. If this argument is set to
+            True, then predictions of the "signal" :math:`Z \alpha_t` will be
+            returned. Otherwise, the default is for predictions of :math:`y_t`
+            to be returned.
         **kwargs
-            Additional arguments may required for forecasting beyond the end
-            of the sample. See `FilterResults.predict` for more details.
+            Additional arguments may be required for forecasting beyond the end
+            of the sample. See ``FilterResults.predict`` for more details.
 
         Returns
         -------
-        forecast : array_like
-            Array of out of in-sample predictions and / or out-of-sample
-            forecasts. An (npredict x k_endog) array.
+        predictions : array_like
+            In-sample predictions / Out-of-sample forecasts. (Numpy array or
+            Pandas Series or DataFrame, depending on input and dimensions).
+            Dimensions are `(npredict x k_endog)`.
 
         See Also
         --------
         forecast
-            Out-of-sample forecasts
+            Out-of-sample forecasts.
+        get_forecast
+            Out-of-sample forecasts and results including confidence intervals.
         get_prediction
-            Prediction results and confidence intervals
+            In-sample predictions / out-of-sample forecasts and results
+            including confidence intervals.
         """
         # Perform the prediction
-        prediction_results = self.get_prediction(start, end, dynamic, **kwargs)
+        prediction_results = self.get_prediction(
+            start, end, dynamic, information_set=information_set,
+            signal_only=signal_only, **kwargs)
         return prediction_results.predicted_mean
 
-    def forecast(self, steps=1, **kwargs):
-        """
+    def forecast(self, steps=1, signal_only=False, **kwargs):
+        r"""
         Out-of-sample forecasts
 
         Parameters
@@ -3379,27 +3499,52 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             If an integer, the number of steps to forecast from the end of the
             sample. Can also be a date string to parse or a datetime type.
             However, if the dates index does not have a fixed frequency, steps
-            must be an integer. Default
+            must be an integer. Default is 1.
+        signal_only : bool, optional
+            Whether to compute forecasts of only the "signal" component of
+            the observation equation. Default is False. For example, the
+            observation equation of a time-invariant model is
+            :math:`y_t = d + Z \alpha_t + \varepsilon_t`, and the "signal"
+            component is then :math:`Z \alpha_t`. If this argument is set to
+            True, then forecasts of the "signal" :math:`Z \alpha_t` will be
+            returned. Otherwise, the default is for forecasts of :math:`y_t`
+            to be returned.
         **kwargs
             Additional arguments may required for forecasting beyond the end
             of the sample. See `FilterResults.predict` for more details.
 
         Returns
         -------
-        forecast : PredictionResults
-            PredictionResults instance containing in-sample predictions and
-            out-of-sample forecasts.
+        forecast : array_like
+            Out-of-sample forecasts (Numpy array or Pandas Series or DataFrame,
+            depending on input and dimensions).
+            Dimensions are `(steps x k_endog)`.
+
+        See Also
+        --------
+        predict
+            In-sample predictions and out-of-sample forecasts.
+        get_forecast
+            Out-of-sample forecasts and results including confidence intervals.
+        get_prediction
+            In-sample predictions / out-of-sample forecasts and results
+            including confidence intervals.
         """
         if isinstance(steps, int):
             end = self.nobs + steps - 1
         else:
             end = steps
-        return self.predict(start=self.nobs, end=end, **kwargs)
+        return self.predict(start=self.nobs, end=end, signal_only=signal_only,
+                            **kwargs)
 
     def simulate(self, nsimulations, measurement_shocks=None,
                  state_shocks=None, initial_state=None, anchor=None,
                  repetitions=None, exog=None, extend_model=None,
-                 extend_kwargs=None, **kwargs):
+                 extend_kwargs=None,
+                 pretransformed_measurement_shocks=True,
+                 pretransformed_state_shocks=True,
+                 pretransformed_initial_state=True,
+                 random_state=None, **kwargs):
         r"""
         Simulate a new time series following the state space model
 
@@ -3441,6 +3586,31 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             Number of simulated paths to generate. Default is 1 simulated path.
         exog : array_like, optional
             New observations of exogenous regressors, if applicable.
+        pretransformed_measurement_shocks : bool, optional
+            If `measurement_shocks` is provided, this flag indicates whether it
+            should be directly used as the shocks. If False, then it is assumed
+            to contain draws from the standard Normal distribution that must be
+            transformed using the `obs_cov` covariance matrix. Default is True.
+        pretransformed_state_shocks : bool, optional
+            If `state_shocks` is provided, this flag indicates whether it
+            should be directly used as the shocks. If False, then it is assumed
+            to contain draws from the standard Normal distribution that must be
+            transformed using the `state_cov` covariance matrix. Default is
+            True.
+        pretransformed_initial_state : bool, optional
+            If `initial_state` is provided, this flag indicates whether it
+            should be directly used as the initial_state. If False, then it is
+            assumed to contain draws from the standard Normal distribution that
+            must be transformed using the `initial_state_cov` covariance
+            matrix. Default is True.
+        random_state : {None, int, Generator, RandomState}, optional
+            If `seed` is None (or `np.random`), the
+            class:``~numpy.random.RandomState`` singleton is used.
+            If `seed` is an int, a new class:``~numpy.random.RandomState``
+            instance is used, seeded with `seed`.
+            If `seed` is already a class:``~numpy.random.Generator`` or
+            class:``~numpy.random.RandomState`` instance then that instance is
+            used.
 
         Returns
         -------
@@ -3454,6 +3624,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             be a Pandas DataFrame that has a MultiIndex for the columns, with
             the first level containing the names of the `endog` variables and
             the second level containing the repetition number.
+
+        See Also
+        --------
+        impulse_responses
+            Impulse response functions
         """
         # Get the starting location
         if anchor is None or anchor == 'start':
@@ -3490,7 +3665,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                 anchor=anchor, repetitions=repetitions, exog=exog,
                 transformed=True, includes_fixed=True,
                 extend_model=extend_model, extend_kwargs=extend_kwargs,
-                **kwargs)
+                pretransformed_measurement_shocks=(
+                    pretransformed_measurement_shocks),
+                pretransformed_state_shocks=pretransformed_state_shocks,
+                pretransformed_initial_state=pretransformed_initial_state,
+                random_state=random_state, **kwargs)
 
         return sim
 
@@ -3550,6 +3729,12 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             models the impulse responses are only given for `steps` elements
             (to avoid having to unexpectedly provide updated time-varying
             matrices).
+
+        See Also
+        --------
+        simulate
+            Simulate a time series according to the given state space model,
+            optionally with specified series for the innovations.
 
         Notes
         -----
@@ -3614,98 +3799,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         return res
 
-    def _news_previous_results(self, previous, start, end, periods):
-        # Compute the news
-        out = self.smoother_results.news(previous.smoother_results,
-                                         start=start, end=end)
-        return out
-
-    def _news_updated_results(self, updated, start, end, periods):
-        return updated._news_previous_results(self, start, end, periods)
-
-    def _news_previous_data(self, endog, start, end, periods, exog):
-        previous = self.apply(endog, exog=exog, copy_initialization=True)
-        return self._news_previous_results(previous, start, end, periods)
-
-    def _news_updated_data(self, endog, start, end, periods, exog):
-        updated = self.apply(endog, exog=exog, copy_initialization=True)
-        return self._news_updated_results(updated, start, end, periods)
-
-    def news(self, comparison, impact_date=None, impacted_variable=None,
-             start=None, end=None, periods=None, exog=None,
-             comparison_type=None, return_raw=False, tolerance=1e-10,
-             **kwargs):
-        """
-        Compute impacts from updated data (news and revisions)
-
-        Parameters
-        ----------
-        comparison : array_like or MLEResults
-            An updated dataset with updated and/or revised data from which the
-            news can be computed, or an updated or previous results object
-            to use in computing the news.
-        impact_date : int, str, or datetime, optional
-            A single specific period of impacts from news and revisions to
-            compute. Can also be a date string to parse or a datetime type.
-            This argument cannot be used in combination with `start`, `end`, or
-            `periods`. Default is the first out-of-sample observation.
-        impacted_variable : str, list, array, or slice, optional
-            Observation variable label or slice of labels specifying that only
-            specific impacted variables should be shown in the News output. The
-            impacted variable(s) describe the variables that were *affected* by
-            the news. If you do not know the labels for the variables, check
-            the `endog_names` attribute of the model instance.
-        start : int, str, or datetime, optional
-            The first period of impacts from news and revisions to compute.
-            Can also be a date string to parse or a datetime type. Default is
-            the first out-of-sample observation.
-        end : int, str, or datetime, optional
-            The last period of impacts from news and revisions to compute.
-            Can also be a date string to parse or a datetime type. Default is
-            the first out-of-sample observation.
-        periods : int, optional
-            The number of periods of impacts from news and revisions to
-            compute.
-        exog : array_like, optional
-            Array of exogenous regressors for the out-of-sample period, if
-            applicable.
-        comparison_type : {None, 'previous', 'updated'}
-            This denotes whether the `comparison` argument represents a
-            *previous* results object or dataset or an *updated* results object
-            or dataset. If not specified, then an attempt is made to determine
-            the comparison type.
-        return_raw : bool, optional
-            Whether or not to return only the specific output or a full
-            results object. Default is to return a full results object.
-        tolerance : float, optional
-            The numerical threshold for determining zero impact. Default is
-            that any impact less than 1e-10 is assumed to be zero.
-
-        Returns
-        -------
-        NewsResults
-            Impacts of data revisions and news on estimates
-
-        References
-        ----------
-        .. [1] Bańbura, Marta, and Michele Modugno.
-               "Maximum likelihood estimation of factor models on datasets with
-               arbitrary pattern of missing data."
-               Journal of Applied Econometrics 29, no. 1 (2014): 133-160.
-        .. [2] Bańbura, Marta, Domenico Giannone, and Lucrezia Reichlin.
-               "Nowcasting."
-               The Oxford Handbook of Economic Forecasting. July 8, 2011.
-        .. [3] Bańbura, Marta, Domenico Giannone, Michele Modugno, and Lucrezia
-               Reichlin.
-               "Now-casting and the real-time data flow."
-               In Handbook of economic forecasting, vol. 2, pp. 195-237.
-               Elsevier, 2013.
-        """
-        # Validate input
-        if self.smoother_results is None:
-            raise ValueError('Cannot compute news without Kalman smoother'
-                             ' results.')
-
+    def _get_previous_updated(self, comparison, exog=None,
+                              comparison_type=None, **kwargs):
         # If we were given data, create a new results object
         comparison_dataset = not isinstance(
             comparison, (MLEResults, MLEResultsWrapper))
@@ -3771,40 +3866,133 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                              ' news by comparing this results set to previous'
                              ' results objects.')
 
-        # Handle start, end, periods
-        # There doesn't seem to be any universal defaults that both (a) make
-        # sense for all data update combinations, and (b) work with both
-        # time-invariant and time-varying models. So we require that the user
-        # specify exactly two of start, end, periods.
-        if impact_date is not None:
-            if not (start is None and end is None and periods is None):
-                raise ValueError('Cannot use the `impact_date` argument in'
-                                 ' combination with `start`, `end`, or'
-                                 ' `periods`.')
-            start = impact_date
-            periods = 1
-        if start is None and end is None and periods is None:
-            start = previous.nobs - 1
-            end = previous.nobs - 1
-        if int(start is None) + int(end is None) + int(periods is None) != 1:
-            raise ValueError('Of the three parameters: start, end, and'
-                             ' periods, exactly two must be specified')
-        # If we have the `periods` object, we need to convert `start`/`end` to
-        # integers so that we can compute the other one. That's because
-        # _get_prediction_index doesn't support a `periods` argument
-        elif start is not None and periods is not None:
-            start, _, _, _ = self.model._get_prediction_index(start, start)
-            end = start + (periods - 1)
-        elif end is not None and periods is not None:
-            _, end, _, _ = self.model._get_prediction_index(end, end)
-            start = end - (periods - 1)
-        elif start is not None and end is not None:
-            pass
+        return previous, updated, comparison_dataset
 
-        # Get the integer-based start, end and the prediction index
-        start, end, out_of_sample, prediction_index = (
-            updated.model._get_prediction_index(start, end))
-        end = end + out_of_sample
+    def _news_previous_results(self, previous, start, end, periods,
+                               state_index=None):
+        # Compute the news
+        out = self.smoother_results.news(previous.smoother_results,
+                                         start=start, end=end,
+                                         state_index=state_index)
+        return out
+
+    def _news_updated_results(self, updated, start, end, periods,
+                              state_index=None):
+        return updated._news_previous_results(self, start, end, periods,
+                                              state_index=state_index)
+
+    def _news_previous_data(self, endog, start, end, periods, exog,
+                            state_index=None):
+        previous = self.apply(endog, exog=exog, copy_initialization=True)
+        return self._news_previous_results(previous, start, end, periods,
+                                           state_index=state_index)
+
+    def _news_updated_data(self, endog, start, end, periods, exog,
+                           state_index=None):
+        updated = self.apply(endog, exog=exog, copy_initialization=True)
+        return self._news_updated_results(updated, start, end, periods,
+                                          state_index=state_index)
+
+    def news(self, comparison, impact_date=None, impacted_variable=None,
+             start=None, end=None, periods=None, exog=None,
+             comparison_type=None, state_index=None, return_raw=False,
+             tolerance=1e-10, **kwargs):
+        """
+        Compute impacts from updated data (news and revisions)
+
+        Parameters
+        ----------
+        comparison : array_like or MLEResults
+            An updated dataset with updated and/or revised data from which the
+            news can be computed, or an updated or previous results object
+            to use in computing the news.
+        impact_date : int, str, or datetime, optional
+            A single specific period of impacts from news and revisions to
+            compute. Can also be a date string to parse or a datetime type.
+            This argument cannot be used in combination with `start`, `end`, or
+            `periods`. Default is the first out-of-sample observation.
+        impacted_variable : str, list, array, or slice, optional
+            Observation variable label or slice of labels specifying that only
+            specific impacted variables should be shown in the News output. The
+            impacted variable(s) describe the variables that were *affected* by
+            the news. If you do not know the labels for the variables, check
+            the `endog_names` attribute of the model instance.
+        start : int, str, or datetime, optional
+            The first period of impacts from news and revisions to compute.
+            Can also be a date string to parse or a datetime type. Default is
+            the first out-of-sample observation.
+        end : int, str, or datetime, optional
+            The last period of impacts from news and revisions to compute.
+            Can also be a date string to parse or a datetime type. Default is
+            the first out-of-sample observation.
+        periods : int, optional
+            The number of periods of impacts from news and revisions to
+            compute.
+        exog : array_like, optional
+            Array of exogenous regressors for the out-of-sample period, if
+            applicable.
+        comparison_type : {None, 'previous', 'updated'}
+            This denotes whether the `comparison` argument represents a
+            *previous* results object or dataset or an *updated* results object
+            or dataset. If not specified, then an attempt is made to determine
+            the comparison type.
+        state_index : array_like, optional
+            An optional index specifying a subset of states to use when
+            constructing the impacts of revisions and news. For example, if
+            `state_index=[0, 1]` is passed, then only the impacts to the
+            observed variables arising from the impacts to the first two
+            states will be returned. Default is to use all states.
+        return_raw : bool, optional
+            Whether or not to return only the specific output or a full
+            results object. Default is to return a full results object.
+        tolerance : float, optional
+            The numerical threshold for determining zero impact. Default is
+            that any impact less than 1e-10 is assumed to be zero.
+
+        Returns
+        -------
+        NewsResults
+            Impacts of data revisions and news on estimates
+
+        References
+        ----------
+        .. [1] Bańbura, Marta, and Michele Modugno.
+               "Maximum likelihood estimation of factor models on datasets with
+               arbitrary pattern of missing data."
+               Journal of Applied Econometrics 29, no. 1 (2014): 133-160.
+        .. [2] Bańbura, Marta, Domenico Giannone, and Lucrezia Reichlin.
+               "Nowcasting."
+               The Oxford Handbook of Economic Forecasting. July 8, 2011.
+        .. [3] Bańbura, Marta, Domenico Giannone, Michele Modugno, and Lucrezia
+               Reichlin.
+               "Now-casting and the real-time data flow."
+               In Handbook of economic forecasting, vol. 2, pp. 195-237.
+               Elsevier, 2013.
+        """
+        # Validate input
+        if self.smoother_results is None:
+            raise ValueError('Cannot compute news without Kalman smoother'
+                             ' results.')
+
+        if state_index is not None:
+            state_index = np.sort(np.array(state_index, dtype=int))
+            if state_index[0] < 0:
+                raise ValueError('Cannot include negative indexes in'
+                                 ' `state_index`.')
+            if state_index[-1] >= self.model.k_states:
+                raise ValueError(f'Given state index {state_index[-1]} is too'
+                                 ' large for the number of states in the model'
+                                 f' ({self.model.k_states}).')
+
+        # Get the previous and updated results objects from `self` and
+        # `comparison`:
+        previous, updated, comparison_dataset = self._get_previous_updated(
+            comparison, exog=exog, comparison_type=comparison_type, **kwargs)
+
+        # Handle start, end, periods
+        start, end, prediction_index = get_impact_dates(
+            previous_model=previous.model, updated_model=updated.model,
+            impact_date=impact_date, start=start, end=end, periods=periods)
 
         # News results will always use Pandas, so if the model's data was not
         # from Pandas, we'll create an index, as if the model's data had been
@@ -3858,13 +4046,149 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         # Compute the news
         news_results = (
-            updated._news_previous_results(previous, start, end + 1, periods))
+            updated._news_previous_results(previous, start, end + 1, periods,
+                                           state_index=state_index))
 
         if not return_raw:
             news_results = NewsResults(
                 news_results, self, updated, previous, impacted_variable,
                 tolerance, row_labels=prediction_index)
         return news_results
+
+    def get_smoothed_decomposition(self, decomposition_of='smoothed_state',
+                                   state_index=None):
+        r"""
+        Decompose smoothed output into contributions from observations
+
+        Parameters
+        ----------
+        decomposition_of : {"smoothed_state", "smoothed_signal"}
+            The object to perform a decomposition of. If it is set to
+            "smoothed_state", then the elements of the smoothed state vector
+            are decomposed into the contributions of each observation. If it
+            is set to "smoothed_signal", then the predictions of the
+            observation vector based on the smoothed state vector are
+            decomposed. Default is "smoothed_state".
+        state_index : array_like, optional
+            An optional index specifying a subset of states to use when
+            constructing the decomposition of the "smoothed_signal". For
+            example, if `state_index=[0, 1]` is passed, then only the
+            contributions of observed variables to the smoothed signal arising
+            from the first two states will be returned. Note that if not all
+            states are used, the contributions will not sum to the smoothed
+            signal. Default is to use all states.
+
+        Returns
+        -------
+        data_contributions : pd.DataFrame
+            Contributions of observations to the decomposed object. If the
+            smoothed state is being decomposed, then `data_contributions` is
+            shaped `(k_states x nobs, k_endog x nobs)` with a `pd.MultiIndex`
+            index corresponding to `state_to x date_to` and `pd.MultiIndex`
+            columns corresponding to `variable_from x date_from`. If the
+            smoothed signal is being decomposed, then `data_contributions` is
+            shaped `(k_endog x nobs, k_endog x nobs)` with `pd.MultiIndex`-es
+            corresponding to `variable_to x date_to` and
+            `variable_from x date_from`.
+        obs_intercept_contributions : pd.DataFrame
+            Contributions of the observation intercept to the decomposed
+            object. If the smoothed state is being decomposed, then
+            `obs_intercept_contributions` is
+            shaped `(k_states x nobs, k_endog x nobs)` with a `pd.MultiIndex`
+            index corresponding to `state_to x date_to` and `pd.MultiIndex`
+            columns corresponding to `obs_intercept_from x date_from`. If the
+            smoothed signal is being decomposed, then
+            `obs_intercept_contributions` is shaped
+            `(k_endog x nobs, k_endog x nobs)` with `pd.MultiIndex`-es
+            corresponding to `variable_to x date_to` and
+            `obs_intercept_from x date_from`.
+        state_intercept_contributions : pd.DataFrame
+            Contributions of the state intercept to the decomposed
+            object. If the smoothed state is being decomposed, then
+            `state_intercept_contributions` is
+            shaped `(k_states x nobs, k_states x nobs)` with a `pd.MultiIndex`
+            index corresponding to `state_to x date_to` and `pd.MultiIndex`
+            columns corresponding to `state_intercept_from x date_from`. If the
+            smoothed signal is being decomposed, then
+            `state_intercept_contributions` is shaped
+            `(k_endog x nobs, k_states x nobs)` with `pd.MultiIndex`-es
+            corresponding to `variable_to x date_to` and
+            `state_intercept_from x date_from`.
+        prior_contributions : pd.DataFrame
+            Contributions of the prior to the decomposed object. If the
+            smoothed state is being decomposed, then `prior_contributions` is
+            shaped `(nobs x k_states, k_states)`, with a `pd.MultiIndex`
+            index corresponding to `state_to x date_to` and columns
+            corresponding to elements of the prior mean (aka "initial state").
+            If the smoothed signal is being decomposed, then
+            `prior_contributions` is shaped `(nobs x k_endog, k_states)`,
+            with a `pd.MultiIndex` index corresponding to
+            `variable_to x date_to` and columns corresponding to elements of
+            the prior mean.
+
+        Notes
+        -----
+        Denote the smoothed state at time :math:`t` by :math:`\alpha_t`. Then
+        the smoothed signal is :math:`Z_t \alpha_t`, where :math:`Z_t` is the
+        design matrix operative at time :math:`t`.
+        """
+        (data_contributions, obs_intercept_contributions,
+         state_intercept_contributions, prior_contributions) = (
+            self.smoother_results.get_smoothed_decomposition(
+                decomposition_of=decomposition_of, state_index=state_index))
+
+        # Construct indexes
+        endog_names = self.model.endog_names
+        if self.model.k_endog == 1:
+            endog_names = [endog_names]
+
+        if decomposition_of == 'smoothed_state':
+            contributions_to = pd.MultiIndex.from_product(
+                [self.model.state_names, self.model._index],
+                names=['state_to', 'date_to'])
+        else:
+            contributions_to = pd.MultiIndex.from_product(
+                [endog_names, self.model._index],
+                names=['variable_to', 'date_to'])
+        contributions_from = pd.MultiIndex.from_product(
+            [endog_names, self.model._index],
+            names=['variable_from', 'date_from'])
+        obs_intercept_contributions_from = pd.MultiIndex.from_product(
+            [endog_names, self.model._index],
+            names=['obs_intercept_from', 'date_from'])
+        state_intercept_contributions_from = pd.MultiIndex.from_product(
+            [self.model.state_names, self.model._index],
+            names=['state_intercept_from', 'date_from'])
+        prior_contributions_from = pd.Index(self.model.state_names,
+                                            name='initial_state_from')
+
+        # Construct DataFrames
+        shape = data_contributions.shape
+        data_contributions = pd.DataFrame(
+            data_contributions.reshape(
+                shape[0] * shape[1], shape[2] * shape[3], order='F'),
+            index=contributions_to, columns=contributions_from)
+
+        shape = obs_intercept_contributions.shape
+        obs_intercept_contributions = pd.DataFrame(
+            obs_intercept_contributions.reshape(
+                shape[0] * shape[1], shape[2] * shape[3], order='F'),
+            index=contributions_to, columns=obs_intercept_contributions_from)
+
+        shape = state_intercept_contributions.shape
+        state_intercept_contributions = pd.DataFrame(
+            state_intercept_contributions.reshape(
+                shape[0] * shape[1], shape[2] * shape[3], order='F'),
+            index=contributions_to, columns=state_intercept_contributions_from)
+
+        shape = prior_contributions.shape
+        prior_contributions = pd.DataFrame(
+            prior_contributions.reshape(shape[0] * shape[1], shape[2],
+                                        order='F'),
+            index=contributions_to, columns=prior_contributions_from)
+
+        return (data_contributions, obs_intercept_contributions,
+                state_intercept_contributions, prior_contributions)
 
     def append(self, endog, exog=None, refit=False, fit_kwargs=None,
                copy_initialization=False, **kwargs):
@@ -3997,10 +4321,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                                         columns=self.model.exog_names)
 
         if copy_initialization:
-            res = self.filter_results
-            init = Initialization(
-                self.model.k_states, 'known', constant=res.initial_state,
-                stationary_cov=res.initial_state_cov)
+            init = Initialization.from_results(self.filter_results)
             kwargs.setdefault('initialization', init)
 
         mod = self.model.clone(new_endog, exog=new_exog, **kwargs)
@@ -4190,10 +4511,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         mod = self.model.clone(endog, exog=exog, **kwargs)
 
         if copy_initialization:
-            res = self.filter_results
-            init = Initialization(
-                self.model.k_states, 'known', constant=res.initial_state,
-                stationary_cov=res.initial_state_cov)
+            init = Initialization.from_results(self.filter_results)
             mod.ssm.initialization = init
 
         res = self._apply(mod, refit=refit, fit_kwargs=fit_kwargs, **kwargs)
@@ -4564,19 +4882,36 @@ wrap.populate_wrapper(MLEResultsWrapper, MLEResults)  # noqa:E305
 
 class PredictionResults(pred.PredictionResults):
     """
+    Prediction result from MLE models
 
     Parameters
     ----------
+    model : MLEModel
+        The models used to make the prediction
     prediction_results : kalman_filter.PredictionResults instance
         Results object from prediction after fitting or filtering a state space
         model.
     row_labels : iterable
         Row labels for the predicted data.
+    information_set : str
+        Name of information set
+    signal_only : bool
+        Whether the prediction is for the signal only
 
     Attributes
     ----------
+    model : MLEModel
+        The models used to make the prediction
+    prediction_results : kalman_filter.PredictionResults instance
+        Results object from prediction after fitting or filtering a state space
+        model.
+    information_set : str
+        Name of information set
+    signal_only : bool
+        Whether the prediction is for the signal only
     """
-    def __init__(self, model, prediction_results, row_labels=None):
+    def __init__(self, model, prediction_results, row_labels=None,
+                 information_set='predicted', signal_only=False):
         if model.model.k_endog == 1:
             endog = pd.Series(prediction_results.endog[0],
                               name=model.model.endog_names)
@@ -4587,10 +4922,27 @@ class PredictionResults(pred.PredictionResults):
             endog=endog, predict_dates=row_labels))
         self.prediction_results = prediction_results
 
+        self.information_set = information_set
+        self.signal_only = signal_only
+
         # Get required values
         k_endog, nobs = prediction_results.endog.shape
-        if not prediction_results.results.memory_no_forecast_mean:
-            predicted_mean = self.prediction_results.forecasts
+        res = self.prediction_results.results
+        if information_set == 'predicted' and not res.memory_no_forecast_mean:
+            if not signal_only:
+                predicted_mean = self.prediction_results.forecasts
+            else:
+                predicted_mean = self.prediction_results.predicted_signal
+        elif information_set == 'filtered' and not res.memory_no_filtered_mean:
+            if not signal_only:
+                predicted_mean = self.prediction_results.filtered_forecasts
+            else:
+                predicted_mean = self.prediction_results.filtered_signal
+        elif information_set == 'smoothed':
+            if not signal_only:
+                predicted_mean = self.prediction_results.smoothed_forecasts
+            else:
+                predicted_mean = self.prediction_results.smoothed_signal
         else:
             predicted_mean = np.zeros((k_endog, nobs)) * np.nan
 
@@ -4599,8 +4951,23 @@ class PredictionResults(pred.PredictionResults):
         else:
             predicted_mean = predicted_mean.transpose()
 
-        if not prediction_results.results.memory_no_forecast_cov:
-            var_pred_mean = self.prediction_results.forecasts_error_cov
+        if information_set == 'predicted' and not res.memory_no_forecast_cov:
+            if not signal_only:
+                var_pred_mean = self.prediction_results.forecasts_error_cov
+            else:
+                var_pred_mean = self.prediction_results.predicted_signal_cov
+        elif information_set == 'filtered' and not res.memory_no_filtered_mean:
+            if not signal_only:
+                var_pred_mean = (
+                    self.prediction_results.filtered_forecasts_error_cov)
+            else:
+                var_pred_mean = self.prediction_results.filtered_signal_cov
+        elif information_set == 'smoothed':
+            if not signal_only:
+                var_pred_mean = (
+                    self.prediction_results.smoothed_forecasts_error_cov)
+            else:
+                var_pred_mean = self.prediction_results.smoothed_signal_cov
         else:
             var_pred_mean = np.zeros((k_endog, k_endog, nobs)) * np.nan
 

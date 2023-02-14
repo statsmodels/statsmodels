@@ -21,6 +21,9 @@ from statsmodels.tsa.statespace import (
 from statsmodels.tsa.statespace.tests import test_dynamic_factor_mq_monte_carlo
 
 
+SKIP_MONTE_CARLO_TESTS = True
+
+
 def test_default():
     # Includes 2 monthly and 2 quarterly series
     # Default is factors=1, factor_orders=1, idiosyncratic_ar1=True
@@ -1257,7 +1260,7 @@ def test_ar6_no_quarterly(reset_randomstate):
     assert_allclose(llf_dfm, llf_ar)
 
     # Monte Carlo-type test, skipped by default
-    if False:
+    if not SKIP_MONTE_CARLO_TESTS:
         # Test for MLE fitting: this is a Monte Carlo test, which requires a
         # large sample size; e.g., use nobs=10000 for atol=1e-2
         res_dfm = mod_dfm.fit()
@@ -1324,7 +1327,7 @@ def test_idiosyncratic_ar1_False(reset_randomstate):
     # So instead, we'll just use a Monte Carlo-type test
 
     # Monte Carlo-type test, skipped by default
-    if False:
+    if not SKIP_MONTE_CARLO_TESTS:
         # Test for MLE fitting: this is a Monte Carlo test, which requires a
         # quite large sample size; e.g., use nobs=50000 for atol=1e-1
         res_dfm = mod_dfm.fit()
@@ -1895,8 +1898,8 @@ def test_standardized_MQ(reset_randomstate, idiosyncratic_ar1):
     endog2_M, endog2_Q, f2 = test_dynamic_factor_mq_monte_carlo.gen_k_factor2(
         nobs, k=k2, idiosyncratic_ar1=idiosyncratic_ar1)
 
-    endog_M = pd.concat([endog1_M, f2, endog2_M], axis=1)
-    endog_Q = pd.concat([endog1_Q, endog2_Q], axis=1)
+    endog_M = pd.concat([endog1_M, f2, endog2_M], axis=1, sort=True)
+    endog_Q = pd.concat([endog1_Q, endog2_Q], axis=1, sort=True)
 
     endog_M1 = endog_M.loc[:'1957-12']
     endog_Q1 = endog_Q.loc[:'1957Q4']

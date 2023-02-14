@@ -18,7 +18,7 @@ from .results.results_quantile_regression import (
 idx = ['income', 'Intercept']
 
 
-class CheckModelResultsMixin(object):
+class CheckModelResultsMixin:
     def test_params(self):
         assert_allclose(np.ravel(self.res1.params.loc[idx]),
                         self.res2.table[:, 0], rtol=1e-3)

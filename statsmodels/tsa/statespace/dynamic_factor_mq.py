@@ -1340,7 +1340,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             # TODO: test each of these options
             if endog_is_pandas:
                 ix = pd.period_range(endog.index[0] - 1, endog.index[-1],
-                                     freq='M')
+                                     freq=endog.index.freq)
                 endog = endog.reindex(ix)
             else:
                 endog = np.c_[[np.nan] * endog.shape[1], endog.T].T
@@ -1740,7 +1740,12 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         # - Endog / factor map -----------------------------------------------
         data = self.endog_factor_map.replace({True: 'X', False: ''})
         data.index = endog_names
-        for name, col in data.iteritems():
+        try:
+            items = data.items()
+        except AttributeError:
+            # Remove after pandas 1.5 is minimum
+            items = data.iteritems()
+        for name, col in items:
             data[name] = data[name] + (' ' * (len(name) // 2))
         data.index.name = 'Dep. variable'
         data = data.reset_index()
@@ -3571,9 +3576,10 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
         return fig
 
     def get_prediction(self, start=None, end=None, dynamic=False,
-                       index=None, exog=None, extend_model=None,
-                       extend_kwargs=None, original_scale=True, **kwargs):
-        """
+                       information_set='predicted', signal_only=False,
+                       original_scale=True, index=None, exog=None,
+                       extend_model=None, extend_kwargs=None, **kwargs):
+        r"""
         In-sample prediction and out-of-sample forecasting.
 
         Parameters
@@ -3597,6 +3603,25 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
             prediction; starting with this observation and continuing through
             the end of prediction, forecasted endogenous values will be used
             instead.
+        information_set : str, optional
+            The information set to condition each prediction on. Default is
+            "predicted", which computes predictions of period t values
+            conditional on observed data through period t-1; these are
+            one-step-ahead predictions, and correspond with the typical
+            `fittedvalues` results attribute. Alternatives are "filtered",
+            which computes predictions of period t values conditional on
+            observed data through period t, and "smoothed", which computes
+            predictions of period t values conditional on the entire dataset
+            (including also future observations t+1, t+2, ...).
+        signal_only : bool, optional
+            Whether to compute forecasts of only the "signal" component of
+            the observation equation. Default is False. For example, the
+            observation equation of a time-invariant model is
+            :math:`y_t = d + Z \alpha_t + \varepsilon_t`, and the "signal"
+            component is then :math:`Z \alpha_t`. If this argument is set to
+            True, then forecasts of the "signal" :math:`Z \alpha_t` will be
+            returned. Otherwise, the default is for forecasts of :math:`y_t`
+            to be returned.
         original_scale : bool, optional
             If the model specification standardized the data, whether or not
             to return predictions in the original scale of the data (i.e.
@@ -3613,6 +3638,8 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
         """
         # Get usual predictions (in the possibly-standardized scale)
         res = super().get_prediction(start=start, end=end, dynamic=dynamic,
+                                     information_set=information_set,
+                                     signal_only=signal_only,
                                      index=index, exog=exog,
                                      extend_model=extend_model,
                                      extend_kwargs=extend_kwargs, **kwargs)
@@ -3620,7 +3647,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
         # If applicable, convert predictions back to original space
         if self.model.standardize and original_scale:
             prediction_results = res.prediction_results
-            k_endog, nobs = prediction_results.endog.shape
+            k_endog, _ = prediction_results.endog.shape
 
             mean = np.array(self.model._endog_mean)
             std = np.array(self.model._endog_std)
@@ -3629,23 +3656,22 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
                 mean = mean[None, :]
                 std = std[None, :]
 
-            if not prediction_results.results.memory_no_forecast_mean:
-                res._results._predicted_mean = (
-                    res._results._predicted_mean * std + mean)
+            res._results._predicted_mean = (
+                res._results._predicted_mean * std + mean)
 
-            if not prediction_results.results.memory_no_forecast_cov:
-                if k_endog == 1:
-                    res._results._var_pred_mean *= std**2
-                else:
-                    res._results._var_pred_mean = (
-                        std * res._results._var_pred_mean * std.T)
+            if k_endog == 1:
+                res._results._var_pred_mean *= std**2
+            else:
+                res._results._var_pred_mean = (
+                    std * res._results._var_pred_mean * std.T)
 
         return res
 
     def news(self, comparison, impact_date=None, impacted_variable=None,
              start=None, end=None, periods=None, exog=None,
-             comparison_type=None, return_raw=False, tolerance=1e-10,
-             endog_quarterly=None, original_scale=True, **kwargs):
+             comparison_type=None, state_index=None, return_raw=False,
+             tolerance=1e-10, endog_quarterly=None, original_scale=True,
+             **kwargs):
         """
         Compute impacts from updated data (news and revisions).
 
@@ -3685,6 +3711,14 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
             *previous* results object or dataset or an *updated* results object
             or dataset. If not specified, then an attempt is made to determine
             the comparison type.
+        state_index : array_like or "common", optional
+            An optional index specifying a subset of states to use when
+            constructing the impacts of revisions and news. For example, if
+            `state_index=[0, 1]` is passed, then only the impacts to the
+            observed variables arising from the impacts to the first two
+            states will be returned. If the string "common" is passed and the
+            model includes idiosyncratic AR(1) components, news will only be
+            computed based on the common states. Default is to use all states.
         return_raw : bool, optional
             Whether or not to return only the specific output or a full
             results object. Default is to return a full results object.
@@ -3712,12 +3746,16 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
                In Handbook of economic forecasting, vol. 2, pp. 195-237.
                Elsevier, 2013.
         """
+        if state_index == 'common':
+            state_index = (
+                np.arange(self.model.k_states - self.model.k_endog))
+
         news_results = super().news(
             comparison, impact_date=impact_date,
             impacted_variable=impacted_variable, start=start, end=end,
             periods=periods, exog=exog, comparison_type=comparison_type,
-            return_raw=return_raw, tolerance=tolerance,
-            endog_quarterly=endog_quarterly, **kwargs)
+            state_index=state_index, return_raw=return_raw,
+            tolerance=tolerance, endog_quarterly=endog_quarterly, **kwargs)
 
         # If we have standardized the data, we may want to report the news in
         # the original scale. If so, we need to modify the data to "undo" the
@@ -3737,24 +3775,27 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
                     news_results.revision_impacts * endog_std)
 
             # Update forecasts
-            for name in ['prev_impacted_forecasts', 'news', 'update_realized',
-                         'update_forecasts', 'post_impacted_forecasts']:
+            for name in ['prev_impacted_forecasts', 'news', 'revisions',
+                         'update_realized', 'update_forecasts',
+                         'revised', 'revised_prev', 'post_impacted_forecasts']:
                 dta = getattr(news_results, name)
 
-                # for pd.Series, dta.multiply(...) removes the name attribute;
-                # save it now so that we can add it back in
+                # for pd.Series, dta.multiply(...) and (sometimes) dta.add(...)
+                # remove the name attribute; save it now so that we can add it
+                # back in
                 orig_name = None
                 if hasattr(dta, 'name'):
                     orig_name = dta.name
 
                 dta = dta.multiply(endog_std, level=1)
 
+                if name not in ['news', 'revisions']:
+                    dta = dta.add(endog_mean, level=1)
+
                 # add back in the name attribute if it was removed
                 if orig_name is not None:
                     dta.name = orig_name
 
-                if name != 'news':
-                    dta = dta.add(endog_mean, level=1)
                 setattr(news_results, name, dta)
 
             # For the weights: rows correspond to update (date, variable) and
@@ -3770,8 +3811,130 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
             news_results.weights = (
                 news_results.weights.divide(endog_std, axis=0, level=1)
                                     .multiply(endog_std, axis=1, level=1))
+            news_results.revision_weights = (
+                news_results.revision_weights
+                            .divide(endog_std, axis=0, level=1)
+                            .multiply(endog_std, axis=1, level=1))
 
         return news_results
+
+    def get_smoothed_decomposition(self, decomposition_of='smoothed_state',
+                                   state_index=None, original_scale=True):
+        r"""
+        Decompose smoothed output into contributions from observations
+
+        Parameters
+        ----------
+        decomposition_of : {"smoothed_state", "smoothed_signal"}
+            The object to perform a decomposition of. If it is set to
+            "smoothed_state", then the elements of the smoothed state vector
+            are decomposed into the contributions of each observation. If it
+            is set to "smoothed_signal", then the predictions of the
+            observation vector based on the smoothed state vector are
+            decomposed. Default is "smoothed_state".
+        state_index : array_like, optional
+            An optional index specifying a subset of states to use when
+            constructing the decomposition of the "smoothed_signal". For
+            example, if `state_index=[0, 1]` is passed, then only the
+            contributions of observed variables to the smoothed signal arising
+            from the first two states will be returned. Note that if not all
+            states are used, the contributions will not sum to the smoothed
+            signal. Default is to use all states.
+        original_scale : bool, optional
+            If the model specification standardized the data, whether or not
+            to return simulations in the original scale of the data (i.e.
+            before it was standardized by the model). Default is True.
+
+        Returns
+        -------
+        data_contributions : pd.DataFrame
+            Contributions of observations to the decomposed object. If the
+            smoothed state is being decomposed, then `data_contributions` is
+            shaped `(k_states x nobs, k_endog x nobs)` with a `pd.MultiIndex`
+            index corresponding to `state_to x date_to` and `pd.MultiIndex`
+            columns corresponding to `variable_from x date_from`. If the
+            smoothed signal is being decomposed, then `data_contributions` is
+            shaped `(k_endog x nobs, k_endog x nobs)` with `pd.MultiIndex`-es
+            corresponding to `variable_to x date_to` and
+            `variable_from x date_from`.
+        obs_intercept_contributions : pd.DataFrame
+            Contributions of the observation intercept to the decomposed
+            object. If the smoothed state is being decomposed, then
+            `obs_intercept_contributions` is
+            shaped `(k_states x nobs, k_endog x nobs)` with a `pd.MultiIndex`
+            index corresponding to `state_to x date_to` and `pd.MultiIndex`
+            columns corresponding to `obs_intercept_from x date_from`. If the
+            smoothed signal is being decomposed, then
+            `obs_intercept_contributions` is shaped
+            `(k_endog x nobs, k_endog x nobs)` with `pd.MultiIndex`-es
+            corresponding to `variable_to x date_to` and
+            `obs_intercept_from x date_from`.
+        state_intercept_contributions : pd.DataFrame
+            Contributions of the state intercept to the decomposed
+            object. If the smoothed state is being decomposed, then
+            `state_intercept_contributions` is
+            shaped `(k_states x nobs, k_states x nobs)` with a `pd.MultiIndex`
+            index corresponding to `state_to x date_to` and `pd.MultiIndex`
+            columns corresponding to `state_intercept_from x date_from`. If the
+            smoothed signal is being decomposed, then
+            `state_intercept_contributions` is shaped
+            `(k_endog x nobs, k_states x nobs)` with `pd.MultiIndex`-es
+            corresponding to `variable_to x date_to` and
+            `state_intercept_from x date_from`.
+        prior_contributions : pd.DataFrame
+            Contributions of the prior to the decomposed object. If the
+            smoothed state is being decomposed, then `prior_contributions` is
+            shaped `(nobs x k_states, k_states)`, with a `pd.MultiIndex`
+            index corresponding to `state_to x date_to` and columns
+            corresponding to elements of the prior mean (aka "initial state").
+            If the smoothed signal is being decomposed, then
+            `prior_contributions` is shaped `(nobs x k_endog, k_states)`,
+            with a `pd.MultiIndex` index corresponding to
+            `variable_to x date_to` and columns corresponding to elements of
+            the prior mean.
+
+        Notes
+        -----
+        Denote the smoothed state at time :math:`t` by :math:`\alpha_t`. Then
+        the smoothed signal is :math:`Z_t \alpha_t`, where :math:`Z_t` is the
+        design matrix operative at time :math:`t`.
+        """
+        # De-meaning the data is like putting the mean into the observation
+        # intercept. To compute the decomposition correctly in the original
+        # scale, we need to account for this, so we fill in the observation
+        # intercept temporarily
+        if self.model.standardize and original_scale:
+            cache_obs_intercept = self.model['obs_intercept']
+            self.model['obs_intercept'] = self.model._endog_mean
+
+        # Compute the contributions
+        (data_contributions, obs_intercept_contributions,
+         state_intercept_contributions, prior_contributions) = (
+            super().get_smoothed_decomposition(
+                decomposition_of=decomposition_of, state_index=state_index))
+
+        # Replace the original observation intercept
+        if self.model.standardize and original_scale:
+            self.model['obs_intercept'] = cache_obs_intercept
+
+        # Reverse the effect of dividing by the standard deviation
+        if (decomposition_of == 'smoothed_signal'
+                and self.model.standardize and original_scale):
+            endog_std = self.model._endog_std
+
+            data_contributions = (
+                data_contributions.multiply(endog_std, axis=0, level=0))
+            obs_intercept_contributions = (
+                obs_intercept_contributions.multiply(
+                    endog_std, axis=0, level=0))
+            state_intercept_contributions = (
+                state_intercept_contributions.multiply(
+                    endog_std, axis=0, level=0))
+            prior_contributions = (
+                prior_contributions.multiply(endog_std, axis=0, level=0))
+
+        return (data_contributions, obs_intercept_contributions,
+                state_intercept_contributions, prior_contributions)
 
     def append(self, endog, endog_quarterly=None, refit=False, fit_kwargs=None,
                copy_initialization=True, retain_standardization=True,
@@ -3985,10 +4148,8 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
                                retain_standardization=retain_standardization,
                                **kwargs)
         if copy_initialization:
-            res = self.filter_results
-            init = initialization.Initialization(
-                self.model.k_states, 'known', constant=res.initial_state,
-                stationary_cov=res.initial_state_cov)
+            init = initialization.Initialization.from_results(
+                self.filter_results)
             mod.ssm.initialization = init
 
         res = self._apply(mod, refit=refit, fit_kwargs=fit_kwargs, **kwargs)

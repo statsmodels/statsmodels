@@ -17,7 +17,7 @@ from statsmodels.tsa.statespace.tools import (
 from statsmodels.tsa.arima.tools import standardize_lag_order, validate_basic
 
 
-class SARIMAXSpecification(object):
+class SARIMAXSpecification:
     """
     SARIMAX specification.
 

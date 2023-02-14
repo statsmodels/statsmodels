@@ -87,7 +87,7 @@ def check_wrapper(results):
     assert_(isinstance(results._results.centered_resid, np.ndarray))
 
 
-class TestGEE(object):
+class TestGEE:
 
     def test_margins_gaussian(self):
         # Check marginal effects for a Gaussian GEE fit.  Marginal
@@ -112,6 +112,46 @@ class TestGEE(object):
 
         # smoke test
         marg.summary()
+
+    def test_margins_gaussian_lists_tuples(self):
+        # Check marginal effects for a Gaussian GEE fit using lists and
+        # tuples. Marginal effects and ordinary effects should be equal.
+
+        n = 40
+        np.random.seed(34234)
+        exog_arr = np.random.normal(size=(n, 3))
+        exog_arr[:, 0] = 1
+
+        groups_arr = np.kron(np.arange(n / 4), np.r_[1, 1, 1, 1])
+        endog_arr = exog_arr[:, 1] + np.random.normal(size=n)
+
+        # check that GEE accepts lists
+        exog_list = [list(row) for row in exog_arr]
+        groups_list = list(groups_arr)
+        endog_list = list(endog_arr)
+
+        model = gee.GEE(endog_list, exog_list, groups_list)
+        result = model.fit(
+            start_params=[-4.88085602e-04, 1.18501903, 4.78820100e-02])
+
+        marg = result.get_margeff()
+
+        assert_allclose(marg.margeff, result.params[1:])
+        assert_allclose(marg.margeff_se, result.bse[1:])
+
+        # check that GEE accepts tuples
+        exog_tuple = tuple(tuple(row) for row in exog_arr)
+        groups_tuple = tuple(groups_arr)
+        endog_tuple = tuple(endog_arr)
+
+        model = gee.GEE(endog_tuple, exog_tuple, groups_tuple)
+        result = model.fit(
+            start_params=[-4.88085602e-04, 1.18501903, 4.78820100e-02])
+
+        marg = result.get_margeff()
+
+        assert_allclose(marg.margeff, result.params[1:])
+        assert_allclose(marg.margeff_se, result.bse[1:])
 
     def test_margins_logistic(self):
         # Check marginal effects for a binomial GEE fit.  Comparison
@@ -1382,6 +1422,36 @@ class TestGEE(object):
         assert_allclose(pred1[-10:], pred5)
         assert_allclose(pred1[-10:], pred6)
 
+    def test_predict_exposure_lists(self):
+
+        n = 50
+        np.random.seed(34234)
+        exog = [[1, np.random.normal(), np.random.normal()] for _ in range(n)]
+        groups = list(np.kron(np.arange(25), np.r_[1, 1]))
+        offset = list(np.random.uniform(1, 2, size=n))
+        exposure = list(np.random.uniform(1, 2, size=n))
+        endog = [
+            np.random.poisson(
+                0.1 * (exog_i[1] + exog_i[2]) + offset_i + np.log(exposure_i)
+            )
+            for exog_i, offset_i, exposure_i in zip(exog, offset, exposure)
+        ]
+
+        model = gee.GEE(
+            endog,
+            exog,
+            groups=groups,
+            family=families.Poisson(),
+            offset=offset,
+            exposure=exposure,
+        )
+        result = model.fit()
+
+        pred1 = result.predict()
+        pred2 = result.predict(exog=exog, offset=offset, exposure=exposure)
+
+        assert_allclose(pred1, pred2)
+
     def test_offset_formula(self):
         # Test various ways of passing offset and exposure to `from_formula`.
 
@@ -1550,12 +1620,12 @@ class TestGEE(object):
             assert_allclose(sum(vl), m * (m + 1) / 2)
 
         # Check for duplicates.
-        ixs = set([])
+        ixs = set()
         for g in model1.group_labels:
             for v in eq.pairs[g].values():
                 for a, b in zip(v[0], v[1]):
                     ky = (a, b)
-                    assert(ky not in ixs)
+                    assert ky not in ixs
                     ixs.add(ky)
 
         # Smoke test  # TODO: pytest.mark.smoke?
@@ -1566,7 +1636,7 @@ class TestGEE(object):
             model1.fit(maxiter=2)
 
 
-class CheckConsistency(object):
+class CheckConsistency:
 
     start_params = None
 

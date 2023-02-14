@@ -3,6 +3,9 @@
 __all__ = [
     "BayesGaussMI",
     "BinomialBayesMixedGLM",
+    "ConditionalLogit",
+    "ConditionalMNLogit",
+    "ConditionalPoisson",
     "Factor",
     "GEE",
     "GLM",
@@ -10,6 +13,7 @@ __all__ = [
     "GLS",
     "GLSAR",
     "GeneralizedPoisson",
+    "HurdleCountModel",
     "Logit",
     "MANOVA",
     "MI",
@@ -32,6 +36,8 @@ __all__ = [
     "RLM",
     "RecursiveLS",
     "SurvfuncRight",
+    "TruncatedLFPoisson",
+    "TruncatedLFNegativeBinomialP",
     "WLS",
     "ZeroInflatedGeneralizedPoisson",
     "ZeroInflatedNegativeBinomialP",
@@ -65,11 +71,20 @@ __all__ = [
     "tools",
     "tsa",
     "webdoc",
+    "__version_info__"
 ]
 
 
 from . import datasets, distributions, iolib, regression, robust, tools
 from .__init__ import test
+from statsmodels._version import (
+    version as __version__, version_tuple as __version_info__
+)
+from .discrete.conditional_models import (
+    ConditionalLogit,
+    ConditionalMNLogit,
+    ConditionalPoisson,
+)
 from .discrete.count_model import (
     ZeroInflatedGeneralizedPoisson,
     ZeroInflatedNegativeBinomialP,
@@ -84,6 +99,11 @@ from .discrete.discrete_model import (
     Poisson,
     Probit,
 )
+from .discrete.truncated_model import (
+    TruncatedLFPoisson,
+    TruncatedLFNegativeBinomialP,
+    HurdleCountModel,
+    )
 from .duration import api as duration
 from .duration.hazard_regression import PHReg
 from .duration.survfunc import SurvfuncRight
@@ -122,9 +142,5 @@ from .tools.print_version import show_versions
 from .tools.tools import add_constant, categorical
 from .tools.web import webdoc
 from .tsa import api as tsa
-from ._version import get_versions
-
-__version__ = get_versions()["version"]
-del get_versions
 
 load = load_pickle

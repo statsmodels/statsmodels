@@ -6,7 +6,7 @@ import os
 import numpy as np
 
 
-class Namespace(object):
+class Namespace:
     pass
 
 
@@ -17,7 +17,7 @@ class Namespace(object):
 cur_dir = os.path.abspath(os.path.dirname(__file__))
 
 
-class Anes(object):
+class Anes:
     def __init__(self):
         """r
         Results are from Stata 11 (checked vs R nnet package).
@@ -246,7 +246,7 @@ class Anes(object):
     mnlogit_basezero = mnlogit_basezero()
 
 
-class DiscreteL1(object):
+class DiscreteL1:
     def __init__(self):
         """
         Special results for L1 models
@@ -434,7 +434,7 @@ class DiscreteL1(object):
     mnlogit = mnlogit()
 
 
-class Spector(object):
+class Spector:
     """
     Results are from Stata 11
     """
@@ -810,7 +810,7 @@ class Spector(object):
     probit = probit()
 
 
-class RandHIE(object):
+class RandHIE:
     """
     Results obtained from Stata 11
     """
@@ -1222,3 +1222,36 @@ class RandHIE(object):
         return obj
 
     zero_inflated_negative_binomial = zero_inflated_negative_binomial()
+
+    def truncated_poisson(self):
+        self.params = [.000241, -.0002085, .0059419, .0016508,  2.289668]
+        self.llf = -11091.36
+        self.bse = [.0042718, .0157994, .002791, .0023491, .0123182]
+        self.conf_int = [[-.0081316,  .0086136],
+                         [-.0311747,  .0307577],
+                         [0.0004716,  .0114122],
+                         [-.0029532,  .0062549],
+                         [2.265525,  2.313812]]
+        self.aic = 22192.72
+        self.bic = 22222.87
+
+    def zero_truncated_poisson(self):
+        self.params = [-.0095444, -.07581, .0080299, -.022879, 1.486142]
+        self.llf = -44570.853
+        self.bse = [.0029817, .0109677, .0019165, .0016393, .0085697]
+        self.conf_int = [[-.0153884, -0.0037005],
+                         [-.0973064, -0.0543137],
+                         [0.0042736,  0.0117861],
+                         [-.0260919, -0.019666],
+                         [1.469346,   1.502939]]
+        self.aic = 89151.71
+        self.bic = 89189.39
+
+    def zero_truncted_nbp(self):
+        self.params = [-0.0397571554, -0.1269997715, 0.0002753126,
+                       0.9294720085, 2.246603]
+        self.llf = -31565
+        self.bse = [0.0074415, 0.0308599, 0.0053180, 0.0342113,
+                    0.1030674]
+        self.aic = 63139.99
+        self.bic = 63177.69

@@ -2,6 +2,12 @@
 
 trigger:
 - main
+schedules:
+- cron: "0 6 * * 1"   # Each Monday at 06:00 UTC
+  displayName: Weekly scheduled run
+  branches:
+    include: [main, maintenance/0.13.x]
+  always: true
 
 variables:
   MKL_NUM_THREADS: 1
@@ -18,14 +24,14 @@ jobs:
 - template: tools/ci/azure/azure_template_windows.yml
   parameters:
     name: Windows
-    vmImage: windows-2019
+    vmImage: windows-latest
 
 - template: tools/ci/azure/azure_template_posix.yml
   parameters:
     name: macOS
-    vmImage: macOS-10.15
+    vmImage: macOS-latest
 
 - template: tools/ci/azure/azure_template_posix.yml
   parameters:
     name: Linux
-    vmImage: ubuntu-20.04
+    vmImage: ubuntu-latest

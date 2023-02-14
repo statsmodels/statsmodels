@@ -2,6 +2,8 @@
 Base tools for handling various kinds of data structures, attaching metadata to
 results, and doing data cleaning
 """
+from __future__ import annotations
+
 from statsmodels.compat.python import lmap
 
 from functools import reduce
@@ -49,7 +51,7 @@ def _nan_rows(*arrs):
     return reduce(_nan_row_maybe_two_inputs, arrs).squeeze()
 
 
-class ModelData(object):
+class ModelData:
     """
     Class responsible for handling input data and extracting metadata into the
     appropriate form
@@ -339,7 +341,7 @@ class ModelData(object):
             return list(ynames)
 
     @cache_writable()
-    def xnames(self):
+    def xnames(self) -> list[str] | None:
         exog = self.orig_exog
         if exog is not None:
             xnames = self._get_names(exog)

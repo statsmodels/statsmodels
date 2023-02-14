@@ -59,7 +59,7 @@ from statsmodels.discrete.discrete_margins import (
     _get_dummy_index, _get_count_index)
 
 
-class ParameterConstraint(object):
+class ParameterConstraint:
     """
     A class for managing linear equality constraints for a parameter
     vector.
@@ -522,8 +522,6 @@ class GEE(GLM):
                 exposure = exposure[ii]
             del kwargs["missing_idx"]
 
-        _check_args(endog, exog, groups, time, offset, exposure)
-
         self.missing = missing
         self.dep_data = dep_data
         self.constraint = constraint
@@ -541,6 +539,15 @@ class GEE(GLM):
                                   exposure=exposure, weights=weights,
                                   dep_data=dep_data, missing=missing,
                                   family=family, **kwargs)
+
+        _check_args(
+            self.endog,
+            self.exog,
+            self.groups,
+            self.time,
+            getattr(self, "offset", None),
+            getattr(self, "exposure", None),
+        )
 
         self._init_keys.extend(["update_dep", "constraint", "family",
                                 "cov_struct"])
@@ -1508,7 +1515,7 @@ class GEE(GLM):
             update, hm = self._update_regularized(
                               mean_params, pen_wt, scad_param, eps)
             if update is None:
-                msg = "Singular matrix encountered in regularized GEE update",
+                msg = "Singular matrix encountered in regularized GEE update"
                 warnings.warn(msg, ConvergenceWarning)
                 break
             if itr > miniter and np.sqrt(np.sum(update**2)) < ctol:
@@ -2978,7 +2985,7 @@ class _Multinomial(families.Family):
     variance = varfuncs.binary
     safe_links = [_MultinomialLogit, ]
 
-    def __init__(self, nlevels):
+    def __init__(self, nlevels, check_link=True):
         """
         Parameters
         ----------
@@ -2986,6 +2993,7 @@ class _Multinomial(families.Family):
             The number of distinct categories for the multinomial
             distribution.
         """
+        self._check_link = check_link
         self.initialize(nlevels)
 
     def initialize(self, nlevels):
@@ -2993,7 +3001,7 @@ class _Multinomial(families.Family):
         self.link = _MultinomialLogit(self.ncut)
 
 
-class GEEMargins(object):
+class GEEMargins:
     """
     Estimated marginal effects for a regression model fit with GEE.
 

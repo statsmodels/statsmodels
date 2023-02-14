@@ -2,6 +2,8 @@
 Author: Terence L van Zyl
 Modified: Kevin Sheppard
 """
+from statsmodels.compat.pytest import pytest_warns
+
 import os
 import re
 import warnings
@@ -12,10 +14,7 @@ import pandas as pd
 import pytest
 import scipy.stats
 
-from statsmodels.tools.sm_exceptions import (
-    ConvergenceWarning,
-    ValueWarning,
-)
+from statsmodels.tools.sm_exceptions import ConvergenceWarning, ValueWarning
 from statsmodels.tsa.holtwinters import (
     PY_SMOOTHERS,
     SMOOTHERS,
@@ -83,7 +82,7 @@ def _simple_dbl_exp_smoother(x, alpha, beta, l0, b0, nforecast=0):
     return lvals, b, f, err, xhat
 
 
-class TestHoltWinters(object):
+class TestHoltWinters:
     @classmethod
     def setup_class(cls):
         # Changed for backwards compatibility with pandas
@@ -535,6 +534,16 @@ class TestHoltWinters(object):
         for key in params.keys():
             assert_allclose(fit.params[key], params[key])
 
+        with mod.fix_params(params):
+            opt_fit = mod.fit(optimized=True)
+        assert_allclose(fit.sse, opt_fit.sse)
+        assert_allclose(
+            opt_fit.params["initial_trend"], params["initial_trend"]
+        )
+        alt_params = {k: v for k, v in params.items() if "level" not in k}
+        with mod.fix_params(alt_params):
+            alt_fit = mod.fit(optimized=True)
+        assert not np.allclose(alt_fit.trend[0], opt_fit.trend[0])
         # Summary output
         # print(res$mse)
         assert_allclose(fit.sse / mod.nobs, 195.4397924865488, atol=1e-3)
@@ -916,9 +925,8 @@ def test_equivalence_cython_python(trend, seasonal):
         initialization_method="estimated",
     )
 
-    with pytest.warns(None):
-        # Overflow in mul-mul case fixed
-        res = mod.fit()
+    # Overflow in mul-mul case fixed
+    res = mod.fit()
     assert isinstance(res.summary().as_text(), str)
 
     params = res.params
@@ -1027,11 +1035,15 @@ def test_damping_trend_zero():
 
 def test_different_inputs():
     array_input_add = [10, 20, 30, 40, 50]
-    series_index_add = pd.date_range(start="2000-1-1", periods=len(array_input_add))
+    series_index_add = pd.date_range(
+        start="2000-1-1", periods=len(array_input_add)
+    )
     series_input_add = pd.Series(array_input_add, series_index_add)
 
     array_input_mul = [2, 4, 8, 16, 32]
-    series_index_mul = pd.date_range(start="2000-1-1", periods=len(array_input_mul))
+    series_index_mul = pd.date_range(
+        start="2000-1-1", periods=len(array_input_mul)
+    )
     series_input_mul = pd.Series(array_input_mul, series_index_mul)
 
     fit1 = ExponentialSmoothing(array_input_add, trend="add").fit()
@@ -1039,22 +1051,18 @@ def test_different_inputs():
     fit3 = ExponentialSmoothing(array_input_mul, trend="mul").fit()
     fit4 = ExponentialSmoothing(series_input_mul, trend="mul").fit()
 
-    assert_almost_equal(fit1.predict(),
-                        [60], 1)
-    assert_almost_equal(fit1.predict(start=5, end=7),
-                        [60, 70, 80], 1)
-    assert_almost_equal(fit2.predict(),
-                        [60], 1)
-    assert_almost_equal(fit2.predict(start="2000-1-6", end="2000-1-8"),
-                        [60, 70, 80], 1)
-    assert_almost_equal(fit3.predict(),
-                        [64], 1)
-    assert_almost_equal(fit3.predict(start=5, end=7),
-                        [64, 128, 256], 1)
-    assert_almost_equal(fit4.predict(),
-                        [64], 1)
-    assert_almost_equal(fit4.predict(start="2000-1-6", end="2000-1-8"),
-                        [64, 128, 256], 1)
+    assert_almost_equal(fit1.predict(), [60], 1)
+    assert_almost_equal(fit1.predict(start=5, end=7), [60, 70, 80], 1)
+    assert_almost_equal(fit2.predict(), [60], 1)
+    assert_almost_equal(
+        fit2.predict(start="2000-1-6", end="2000-1-8"), [60, 70, 80], 1
+    )
+    assert_almost_equal(fit3.predict(), [64], 1)
+    assert_almost_equal(fit3.predict(start=5, end=7), [64, 128, 256], 1)
+    assert_almost_equal(fit4.predict(), [64], 1)
+    assert_almost_equal(
+        fit4.predict(start="2000-1-6", end="2000-1-8"), [64, 128, 256], 1
+    )
 
 
 @pytest.fixture
@@ -1999,7 +2007,7 @@ def test_forecast_index_types(ses, index_typ):
     ses = ses.copy()
     ses.index = index[:-36]
 
-    with pytest.warns(warning):
+    with pytest_warns(warning):
         res = ExponentialSmoothing(
             ses,
             trend="add",
@@ -2007,7 +2015,7 @@ def test_forecast_index_types(ses, index_typ):
             initialization_method="heuristic",
             **kwargs
         ).fit()
-    with pytest.warns(warning):
+    with pytest_warns(warning):
         fcast = res.forecast(36)
     assert isinstance(fcast, pd.Series)
     pd.testing.assert_index_equal(fcast.index, fcast_index)

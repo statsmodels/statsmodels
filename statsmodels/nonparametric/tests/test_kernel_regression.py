@@ -7,7 +7,7 @@ import statsmodels.api as sm
 nparam = sm.nonparametric
 
 
-class KernelRegressionTestBase(object):
+class KernelRegressionTestBase:
     @classmethod
     def setup_class(cls):
         nobs = 60
@@ -64,7 +64,7 @@ class KernelRegressionTestBase(object):
         """Write some data to a csv file.  Only use for debugging!"""
         import csv
 
-        data_file = csv.writer(open(file_name, "w"))
+        data_file = csv.writer(open(file_name, "w", encoding="utf-8"))
         data = np.column_stack(data)
         nobs = max(np.shape(data))
         K = min(np.shape(data))

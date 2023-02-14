@@ -489,7 +489,7 @@ class Factor(Model):
         return load
 
 
-class FactorResults(object):
+class FactorResults:
     """
     Factor results class
 

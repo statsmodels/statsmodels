@@ -109,7 +109,7 @@ def test_fleis_randolph():
     assert_allclose(fleiss_kappa(table, method='rand'), 0.785714, atol=6e-6)
 
 
-class CheckCohens(object):
+class CheckCohens:
 
     def test_results(self):
         res = self.res
@@ -319,7 +319,7 @@ def test_fleiss_kappa_irr():
     fleiss.stat_name = 'z'
     fleiss.statistic = 17.65183
     fleiss.p_value = 0
-    data_ = aggregate_raters(diagnoses)[0]
+    data_, _ = aggregate_raters(diagnoses)
     res1_kappa = fleiss_kappa(data_)
     assert_almost_equal(res1_kappa, fleiss.value, decimal=7)
 
@@ -347,6 +347,7 @@ def test_to_table():
 
 def test_aggregate_raters():
     data = diagnoses
-    resf = aggregate_raters(data)
+    data_, categories = aggregate_raters(data)
     colsum = np.array([26, 26, 30, 55, 43])
-    assert_equal(resf[0].sum(0), colsum)
+    assert_equal(data_.sum(0), colsum)
+    assert_equal(np.unique(diagnoses), categories)

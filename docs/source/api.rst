@@ -73,6 +73,10 @@ Discrete and Count Models
    ~statsmodels.discrete.count_model.ZeroInflatedPoisson
    ~statsmodels.discrete.count_model.ZeroInflatedNegativeBinomialP
    ~statsmodels.discrete.count_model.ZeroInflatedGeneralizedPoisson
+   ~statsmodels.discrete.conditional_models.ConditionalLogit
+   ~statsmodels.discrete.conditional_models.ConditionalMNLogit
+   ~statsmodels.discrete.conditional_models.ConditionalPoisson
+
 
 Multivariate Models
 ~~~~~~~~~~~~~~~~~~~
@@ -191,6 +195,7 @@ Filters and Decompositions
 
    ~statsmodels.tsa.seasonal.seasonal_decompose
    ~statsmodels.tsa.seasonal.STL
+   ~statsmodels.tsa.seasonal.MSTL
    ~statsmodels.tsa.filters.bk_filter.bkfilter
    ~statsmodels.tsa.filters.cf_filter.cffilter
    ~statsmodels.tsa.filters.hp_filter.hpfilter
@@ -263,3 +268,6 @@ details.
    ~statsmodels.formula.api.quantreg
    ~statsmodels.formula.api.phreg
    ~statsmodels.formula.api.glmgam
+   ~statsmodels.formula.api.conditional_logit
+   ~statsmodels.formula.api.conditional_mnlogit
+   ~statsmodels.formula.api.conditional_poisson

@@ -46,7 +46,7 @@ column have their own datatype.) This means that you can just specify
 ``len(datatypes)<ncols`` then datatype assignment will cycle across a
 row.  E.g., if you provide 10 columns of data with ``datatypes=[0,1]``
 then you will have 5 columns of datatype 0 and 5 columns of datatype
-1, alternating.  Correspoding to this specification, you should provide
+1, alternating.  Corresponding to this specification, you should provide
 a list of two ``data_fmts`` and a list of two ``data_aligns``.
 
 Cells can be assigned labels as their `datatype` attribute.
@@ -97,7 +97,7 @@ def csv2st(csvfile, headers=False, stubs=False, title=None):
     Can also supply headers and stubs as tuples of strings.
     """
     rows = list()
-    with open(csvfile, 'r') as fh:
+    with open(csvfile, 'r', encoding="utf-8") as fh:
         reader = csv.reader(fh)
         if headers is True:
             headers = next(reader)
@@ -115,9 +115,8 @@ def csv2st(csvfile, headers=False, stubs=False, title=None):
                     rows.append(row)
         if stubs is False:
             stubs = ()
-    nrows = len(rows)
     ncols = len(rows[0])
-    if any(nrows != ncols for row in rows):
+    if any(len(row) != ncols for row in rows):
         raise IOError('All rows of CSV file must have same length.')
     return SimpleTable(data=rows, headers=headers, stubs=stubs)
 
@@ -220,6 +219,9 @@ class SimpleTable(list):
 
     def _repr_html_(self, **fmt_dict):
         return self.as_html(**fmt_dict)
+
+    def _repr_latex_(self, center=True, **fmt_dict):
+        return self.as_latex_tabular(center, **fmt_dict)
 
     def _add_headers_stubs(self, headers, stubs):
         """Return None.  Adds headers and stubs to table,
@@ -629,7 +631,7 @@ class Row(list):
         return [cell.data for cell in self]
 
 
-class Cell(object):
+class Cell:
     """Provides a table cell.
     A cell can belong to a Row, but does not have to.
     """

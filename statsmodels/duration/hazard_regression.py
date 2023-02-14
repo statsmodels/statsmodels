@@ -82,7 +82,7 @@ _predict_cov_params_docstring = """
 
 
 
-class PHSurvivalTime(object):
+class PHSurvivalTime:
 
     def __init__(self, time, status, exog, strata=None, entry=None,
                  offset=None):
@@ -533,7 +533,7 @@ class PHReg(model.LikelihoodModel):
         from statsmodels.base.elastic_net import fit_elasticnet
 
         if method != "elastic_net":
-            raise ValueError("method for fit_regularied must be elastic_net")
+            raise ValueError("method for fit_regularized must be elastic_net")
 
         defaults = {"maxiter" : 50, "L1_wt" : 1, "cnvrg_tol" : 1e-10,
                     "zero_tol" : 1e-10}
@@ -997,7 +997,7 @@ class PHReg(model.LikelihoodModel):
             linpred -= linpred.max()
             e_linpred = np.exp(linpred)
 
-            at_risk_ix = set([])
+            at_risk_ix = set()
 
             # Iterate backward through the unique failure times.
             for i in range(nuft)[::-1]:
@@ -1665,7 +1665,7 @@ class PHRegResults(base.LikelihoodModelResults):
         return smry
 
 
-class rv_discrete_float(object):
+class rv_discrete_float:
     """
     A class representing a collection of discrete distributions.
 

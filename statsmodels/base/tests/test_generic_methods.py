@@ -10,6 +10,7 @@ Created on Wed Oct 30 14:01:27 2013
 
 Author: Josef Perktold
 """
+from statsmodels.compat.pytest import pytest_warns
 from statsmodels.compat.pandas import assert_index_equal, assert_series_equal
 from statsmodels.compat.platform import (
     PLATFORM_LINUX32,
@@ -34,7 +35,7 @@ import statsmodels.tools._testing as smt
 from statsmodels.tools.sm_exceptions import HessianInversionWarning
 
 
-class CheckGenericMixin(object):
+class CheckGenericMixin:
 
     @classmethod
     def setup_class(cls):
@@ -217,18 +218,18 @@ class CheckGenericMixin(object):
                     sp[self.transform_index] = np.exp(sp[self.transform_index])
 
                 start_params[keep_index_p] = sp
-                with pytest.warns(warn_cls):
+                with pytest_warns(warn_cls):
                     res1 = mod._fit_collinear(cov_type=cov_type,
                                               start_params=start_params,
                                               method=method, disp=0)
                 if cov_type != 'nonrobust':
                     # reestimate original model to get robust cov
-                    with pytest.warns(warn_cls):
+                    with pytest_warns(warn_cls):
                         res2 = self.results.model.fit(cov_type=cov_type,
                                                       start_params=sp,
                                                       method=method, disp=0)
             else:
-                with pytest.warns(warn_cls):
+                with pytest_warns(warn_cls):
                     # more special casing RLM
                     if (isinstance(self.results.model, (sm.RLM))):
                         res1 = mod._fit_collinear()
@@ -293,7 +294,7 @@ class CheckGenericMixin(object):
 
 class TestGenericOLS(CheckGenericMixin):
 
-    def setup(self):
+    def setup_method(self):
         #fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
@@ -304,7 +305,7 @@ class TestGenericOLS(CheckGenericMixin):
 class TestGenericOLSOneExog(CheckGenericMixin):
     # check with single regressor (no constant)
 
-    def setup(self):
+    def setup_method(self):
         #fit for each test, because results will be changed by test
         x = self.exog[:, 1]
         np.random.seed(987689)
@@ -319,7 +320,7 @@ class TestGenericOLSOneExog(CheckGenericMixin):
 
 class TestGenericWLS(CheckGenericMixin):
 
-    def setup(self):
+    def setup_method(self):
         #fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
@@ -329,7 +330,7 @@ class TestGenericWLS(CheckGenericMixin):
 
 class TestGenericPoisson(CheckGenericMixin):
 
-    def setup(self):
+    def setup_method(self):
         #fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
@@ -343,7 +344,7 @@ class TestGenericPoisson(CheckGenericMixin):
 
 class TestGenericPoissonOffset(CheckGenericMixin):
 
-    def setup(self):
+    def setup_method(self):
         #fit for each test, because results will be changed by test
         x = self.exog
         nobs = x.shape[0]
@@ -362,7 +363,7 @@ class TestGenericPoissonOffset(CheckGenericMixin):
 
 class TestGenericNegativeBinomial(CheckGenericMixin):
 
-    def setup(self):
+    def setup_method(self):
         #fit for each test, because results will be changed by test
         np.random.seed(987689)
         data = sm.datasets.randhie.load()
@@ -379,7 +380,7 @@ class TestGenericNegativeBinomial(CheckGenericMixin):
 
 class TestGenericLogit(CheckGenericMixin):
 
-    def setup(self):
+    def setup_method(self):
         #fit for each test, because results will be changed by test
         x = self.exog
         nobs = x.shape[0]
@@ -396,7 +397,7 @@ class TestGenericLogit(CheckGenericMixin):
 
 class TestGenericRLM(CheckGenericMixin):
 
-    def setup(self):
+    def setup_method(self):
         #fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
@@ -406,7 +407,7 @@ class TestGenericRLM(CheckGenericMixin):
 
 class TestGenericGLM(CheckGenericMixin):
 
-    def setup(self):
+    def setup_method(self):
         #fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
@@ -416,7 +417,7 @@ class TestGenericGLM(CheckGenericMixin):
 
 class TestGenericGLMPoissonOffset(CheckGenericMixin):
 
-    def setup(self):
+    def setup_method(self):
         #fit for each test, because results will be changed by test
         x = self.exog
         nobs = x.shape[0]
@@ -436,7 +437,7 @@ class TestGenericGLMPoissonOffset(CheckGenericMixin):
 
 class TestGenericGEEPoisson(CheckGenericMixin):
 
-    def setup(self):
+    def setup_method(self):
         #fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
@@ -453,7 +454,7 @@ class TestGenericGEEPoisson(CheckGenericMixin):
 
 class TestGenericGEEPoissonNaive(CheckGenericMixin):
 
-    def setup(self):
+    def setup_method(self):
         #fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
@@ -472,7 +473,7 @@ class TestGenericGEEPoissonNaive(CheckGenericMixin):
 
 class TestGenericGEEPoissonBC(CheckGenericMixin):
 
-    def setup(self):
+    def setup_method(self):
         #fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
@@ -492,7 +493,7 @@ class TestGenericGEEPoissonBC(CheckGenericMixin):
 
 # Other test classes
 
-class CheckAnovaMixin(object):
+class CheckAnovaMixin:
 
     @classmethod
     def setup_class(cls):
@@ -506,7 +507,7 @@ class CheckAnovaMixin(object):
 
     def test_combined(self):
         res = self.res
-        wa = res.wald_test_terms(skip_single=False, combine_terms=['Duration', 'Weight'])
+        wa = res.wald_test_terms(skip_single=False, combine_terms=['Duration', 'Weight'], scalar=True)
         eye = np.eye(len(res.params))
         c_const = eye[0]
         c_w = eye[[2,3]]
@@ -520,7 +521,7 @@ class CheckAnovaMixin(object):
     def test_categories(self):
         # test only multicolumn terms
         res = self.res
-        wa = res.wald_test_terms(skip_single=True)
+        wa = res.wald_test_terms(skip_single=True, scalar=True)
         eye = np.eye(len(res.params))
         c_w = eye[[2,3]]
         c_dw = eye[[4,5]]
@@ -530,7 +531,7 @@ class CheckAnovaMixin(object):
 
 def compare_waldres(res, wa, constrasts):
     for i, c in enumerate(constrasts):
-        wt = res.wald_test(c)
+        wt = res.wald_test(c, scalar=True)
         assert_allclose(wa.table.values[i, 0], wt.statistic)
         assert_allclose(wa.table.values[i, 1], wt.pvalue)
         df = c.shape[0] if c.ndim == 2 else 1
@@ -572,7 +573,8 @@ class TestWaldAnovaOLS(CheckAnovaMixin):
 
         res = sm.OLS(endog, exog).fit()
         wa = res.wald_test_terms(skip_single=False,
-                                 combine_terms=['Duration', 'Weight'])
+                                 combine_terms=['Duration', 'Weight'],
+                                 scalar=True)
         eye = np.eye(len(res.params))
 
         c_single = [row for row in eye]
@@ -600,7 +602,7 @@ class TestWaldAnovaOLSF(CheckAnovaMixin):
         predicted2 = self.res.predict(ex[1:])
 
         assert_index_equal(predicted1.index, ex.index)
-        assert_series_equal(predicted1[1:], predicted2)
+        assert_series_equal(predicted1.iloc[1:], predicted2)
         assert_equal(predicted1.values[0], np.nan)
 
 
@@ -646,7 +648,7 @@ class TestWaldAnovaNegBin1(CheckAnovaMixin):
         cls.res = mod.fit(cov_type='HC0')
 
 
-class CheckPairwise(object):
+class CheckPairwise:
 
     def test_default(self):
         res = self.res

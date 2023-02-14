@@ -121,7 +121,7 @@ aust = pd.Series([
     index=pd.period_range(start='2005Q1', end='2010Q4', freq='Q'))
 
 
-class CheckExponentialSmoothing(object):
+class CheckExponentialSmoothing:
     @classmethod
     def setup_class(cls, name, res):
         cls.name = name
@@ -131,8 +131,8 @@ class CheckExponentialSmoothing(object):
         cls.forecast = res.get_forecast(cls.nforecast)
 
     def test_fitted(self):
-        assert_allclose(self.res.fittedvalues,
-                        results_predict['%s_mean' % self.name][:self.nobs])
+        predicted = results_predict['%s_mean' % self.name]
+        assert_allclose(self.res.fittedvalues, predicted.iloc[:self.nobs])
 
     def test_output(self):
         # There are two types of output, depending on some internal switch of
@@ -153,16 +153,20 @@ class CheckExponentialSmoothing(object):
 
     def test_forecasts(self):
         # Forecast mean
-        assert_allclose(self.forecast.predicted_mean,
-                        results_predict['%s_mean' % self.name][self.nobs:])
+        predicted = results_predict['%s_mean' % self.name]
+        assert_allclose(
+            self.forecast.predicted_mean,
+            predicted.iloc[self.nobs:]
+        )
 
     def test_conf_int(self):
         # Forecast confidence intervals
         ci_95 = self.forecast.conf_int(alpha=0.05)
-        assert_allclose(ci_95['lower y'],
-                        results_predict['%s_lower' % self.name][self.nobs:])
-        assert_allclose(ci_95['upper y'],
-                        results_predict['%s_upper' % self.name][self.nobs:])
+        lower = results_predict['%s_lower' % self.name]
+        upper = results_predict['%s_upper' % self.name]
+
+        assert_allclose(ci_95['lower y'], lower.iloc[self.nobs:])
+        assert_allclose(ci_95['upper y'], upper.iloc[self.nobs:])
 
     def test_initial_states(self):
         mask = results_states.columns.str.startswith(self.name)
@@ -430,11 +434,12 @@ class TestHoltWintersNoTrendETSEstimated(CheckExponentialSmoothing):
     def test_mle_estimates(self):
         # Test that our fitted coefficients are at least as good as those from
         # `ets`
-        mle_res = self.res.model.fit(disp=0, maxiter=100)
+        start_params = [0.5, 0.4, 4, 32, 2.3, -2, -9]
+        mle_res = self.res.model.fit(start_params, disp=0, maxiter=100)
         assert_(self.res.llf <= mle_res.llf)
 
 
-class CheckKnownInitialization(object):
+class CheckKnownInitialization:
     @classmethod
     def setup_class(cls, mod, start_params):
         # Base model, with estimated initialization
@@ -450,9 +455,10 @@ class CheckKnownInitialization(object):
         cls.initial_trend = cls.res.params.get('initial_trend', None)
         cls.initial_seasonal = None
         if cls.mod.seasonal:
-            cls.initial_seasonal = [
-                cls.res.params['initial_seasonal.%d' % i]
-                for i in range(cls.mod.seasonal_periods - 1)]
+            cls.initial_seasonal = (
+                [cls.res.params['initial_seasonal']]
+                + [cls.res.params['initial_seasonal.L%d' % i]
+                   for i in range(1, cls.mod.seasonal_periods - 1)])
 
         # Get the estimated parameters
         cls.params = cls.res.params[:'initial_level'].drop('initial_level')
@@ -552,7 +558,7 @@ class TestHoltWintersNoTrendKnownInitialization(CheckKnownInitialization):
         super().setup_class(mod, start_params)
 
 
-class CheckHeuristicInitialization(object):
+class CheckHeuristicInitialization:
     @classmethod
     def setup_class(cls, mod):
         cls.mod = mod
@@ -569,8 +575,6 @@ class CheckHeuristicInitialization(object):
         # Create a model with the given known initialization
         endog = cls.mod.data.orig_endog
         initial_seasonal = cls.mod._initial_seasonal
-        if initial_seasonal is not None:
-            initial_seasonal = initial_seasonal[:-1]
         cls.known_mod = cls.mod.clone(endog, initialization_method='known',
                                       initial_level=cls.mod._initial_level,
                                       initial_trend=cls.mod._initial_trend,
@@ -640,6 +644,11 @@ class TestHoltWintersHeuristicInitialization(CheckHeuristicInitialization):
         # Get seasonal initial states
         detrended = aust - trend
         initial_seasonal = np.nanmean(detrended.values.reshape(6, 4), axis=0)
+        # The above command gets seasonals for observations 1, 2, 3, 4.
+        # Lagging these four periods gives us initial seasonals for lags
+        # L3, L2, L1, L0, but the state vector is ordered L0, L1, L2, L3, so we
+        # need to reverse the order of this vector.
+        initial_seasonal = initial_seasonal[::-1]
         desired = np.r_[desired, initial_seasonal - np.mean(initial_seasonal)]
 
         assert_allclose(self.init_heuristic, desired)
@@ -688,7 +697,7 @@ def test_concentrated_initialization():
     assert_allclose(res1.initial_state, res2.initial_state, rtol=1e-5)
 
 
-class CheckConcentratedInitialization(object):
+class CheckConcentratedInitialization:
     @classmethod
     def setup_class(cls, mod, start_params=None, atol=0, rtol=1e-7):
         # Note: because of the different computations methods (linear
@@ -734,7 +743,7 @@ class CheckConcentratedInitialization(object):
 
     def test_estimated_params(self):
         # Alternatively, estimate the remaining parameters
-        res = self.mod.fit(disp=0, maxiter=100)
+        res = self.mod.fit(self.start_params, disp=0, maxiter=100)
         np.set_printoptions(suppress=True)
         conc_res = self.conc_mod.fit(self.start_params[:len(self.params)],
                                      disp=0)
@@ -748,7 +757,7 @@ class TestSESConcentratedInitialization(CheckConcentratedInitialization):
     @classmethod
     def setup_class(cls):
         mod = ExponentialSmoothing(oildata)
-        start_params = pd.Series([0.85, 445.], index=mod.param_names)
+        start_params = pd.Series([0.85, 447.], index=mod.param_names)
         super().setup_class(mod, start_params=start_params, rtol=1e-5)
 
 
@@ -777,7 +786,7 @@ class TestHoltWintersConcentratedInitialization(
     def setup_class(cls):
         mod = ExponentialSmoothing(aust, trend=True, seasonal=4)
         start_params = pd.Series(
-            [0.0005, 0.0004, 0.5, 33., 0.4, 2.5, -2., -9.],
+            [0.0005, 0.0004, 0.0002, 33., 0.4, 2.2, -2., -9.3],
             index=mod.param_names)
         super().setup_class(mod, start_params=start_params, rtol=1e-3)
 
@@ -800,7 +809,7 @@ class TestHoltWintersNoTrendConcentratedInitialization(
     def setup_class(cls):
         mod = ExponentialSmoothing(aust, seasonal=4)
         start_params = pd.Series(
-            [0.5, 0.49, 30., 2., -2, -9], index=mod.param_names)
+            [0.5, 0.49, 32., 2.3, -2.1, -9.3], index=mod.param_names)
         super().setup_class(mod, start_params=start_params, rtol=1e-4)
 
 
@@ -818,10 +827,10 @@ class TestMultiIndex(CheckExponentialSmoothing):
     def test_conf_int(self):
         # Forecast confidence intervals
         ci_95 = self.forecast.conf_int(alpha=0.05)
-        assert_allclose(ci_95["lower ('oil', 'data')"],
-                        results_predict['%s_lower' % self.name][self.nobs:])
-        assert_allclose(ci_95["upper ('oil', 'data')"],
-                        results_predict['%s_upper' % self.name][self.nobs:])
+        lower = results_predict['%s_lower' % self.name]
+        upper = results_predict['%s_upper' % self.name]
+        assert_allclose(ci_95["lower ('oil', 'data')"], lower.iloc[self.nobs:])
+        assert_allclose(ci_95["upper ('oil', 'data')"], upper.iloc[self.nobs:])
 
 
 def test_invalid():

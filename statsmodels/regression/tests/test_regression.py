@@ -44,7 +44,7 @@ except ImportError:
     has_cvxopt = False
 
 
-class CheckRegressionResults(object):
+class CheckRegressionResults:
     """
     res2 contains results from Rmodelwrap or were obtained from a statistical
     packages such as R, Stata, or SAS and were written to model_results
@@ -86,7 +86,8 @@ class CheckRegressionResults(object):
 
     def test_conf_int_subset(self):
         if len(self.res1.params) > 1:
-            ci1 = self.res1.conf_int(cols=(1, 2))
+            with pytest.warns(FutureWarning, match="cols is"):
+                ci1 = self.res1.conf_int(cols=(1, 2))
             ci2 = self.res1.conf_int()[1:3]
             assert_almost_equal(ci1, ci2, self.decimal_conf_int_subset)
         else:
@@ -333,7 +334,12 @@ class TestOLS(CheckRegressionResults):
 
     def test_summary_slim(self):
         # check that slim summary is smaller, does not verify content
-        summ = self.res1.summary(slim=True)
+        with warnings.catch_warnings():
+            msg = "kurtosistest only valid for n>=20"
+            warnings.filterwarnings("ignore", message=msg,
+                                    category=UserWarning)
+
+            summ = self.res1.summary(slim=True)
         assert len(summ.tables) == 2
         assert len(str(summ)) < 6700
 
@@ -363,7 +369,7 @@ class TestRTO(CheckRegressionResults):
         cls.res_qr = res_qr
 
 
-class TestFtest(object):
+class TestFtest:
     """
     Tests f_test vs. RegressionResults
     """
@@ -389,7 +395,7 @@ class TestFtest(object):
         assert_equal(self.Ftest.df_num, 6)
 
 
-class TestFTest2(object):
+class TestFTest2:
     """
     A joint test that the coefficient on
     GNP = the coefficient on UNEMP  and that the coefficient on
@@ -428,7 +434,7 @@ class TestFTest2(object):
         assert_equal(self.Ftest1.df_num, 2)
 
 
-class TestFtestQ(object):
+class TestFtestQ:
     """
     A joint hypothesis test that Rb = q.  Coefficient tests are essentially
     made up.  Test values taken from Stata.
@@ -464,7 +470,7 @@ class TestFtestQ(object):
         assert_equal(self.Ftest1.df_num, 5)
 
 
-class TestTtest(object):
+class TestTtest:
     """
     Test individual t-tests.  Ie., are the coefficients significantly
     different than zero.
@@ -506,7 +512,7 @@ class TestTtest(object):
         assert_almost_equal(self.Ttest.effect, self.res1.params)
 
 
-class TestTtest2(object):
+class TestTtest2:
     """
     Tests the hypothesis that the coefficients on POP and YEAR
     are equal.
@@ -541,7 +547,7 @@ class TestTtest2(object):
         assert_almost_equal(self.Ttest1.effect, -1829.2025687186533, DECIMAL_4)
 
 
-class TestGLS(object):
+class TestGLS:
     """
     These test results were obtained by replication with R.
     """
@@ -650,13 +656,22 @@ class TestGLS_alt_sigma(CheckRegressionResults):
             sigma=np.ones((n - 1, n - 1)),
         )
 
+    @pytest.mark.skip("Test does not raise but should")
+    def test_singular_sigma(self):
+        n = len(self.endog)
+        sigma = np.ones((n, n)) + np.diag(np.ones(n))
+        sigma[0, 1] = sigma[1, 0] = 2
+        assert np.linalg.matrix_rank(sigma) == n - 1
+        with pytest.raises(np.linalg.LinAlgError):
+            GLS(self.endog, self.exog, sigma=sigma)
+
 
 # FIXME: do not leave commented-out, use or move/remove
 #    def check_confidenceintervals(self, conf1, conf2):
 #        assert_almost_equal(conf1, conf2, DECIMAL_4)
 
 
-class TestLM(object):
+class TestLM:
     @classmethod
     def setup_class(cls):
         # TODO: Test HAC method
@@ -741,7 +756,7 @@ class TestLM(object):
         )
 
 
-class TestOLS_GLS_WLS_equivalence(object):
+class TestOLS_GLS_WLS_equivalence:
     @classmethod
     def setup_class(cls):
         data = longley.load()
@@ -807,7 +822,7 @@ class TestGLS_WLS_equivalence(TestOLS_GLS_WLS_equivalence):
         cls.results.append(GLS(y, x, np.diag(0.1 * w_inv)).fit())
 
 
-class TestNonFit(object):
+class TestNonFit:
     @classmethod
     def setup_class(cls):
         data = longley.load()
@@ -821,7 +836,7 @@ class TestNonFit(object):
         assert_equal(self.ols_model.df_resid, 9)
 
 
-class TestWLS_CornerCases(object):
+class TestWLS_CornerCases:
     @classmethod
     def setup_class(cls):
         cls.exog = np.ones((1,))
@@ -967,7 +982,7 @@ class TestGLS_OLS(CheckRegressionResults):
 # FIXME: do not leave this commented-out sitting here
 # TODO: test AR
 # why the two-stage in AR?
-# class TestAR(object):
+# class TestAR:
 #     from statsmodels.datasets.sunspots import load
 #     data = load()
 #     model = AR(data.endog, rho=4).fit()
@@ -982,7 +997,7 @@ class TestGLS_OLS(CheckRegressionResults):
 #        pass
 
 
-class TestYuleWalker(object):
+class TestYuleWalker:
     @classmethod
     def setup_class(cls):
         from statsmodels.datasets.sunspots import load
@@ -1085,7 +1100,8 @@ def test_bad_size():
 def test_const_indicator():
     rs = np.random.RandomState(12345)
     x = rs.randint(0, 3, size=30)
-    x = pd.get_dummies(pd.Series(x, dtype="category"), drop_first=False)
+    x = pd.get_dummies(pd.Series(x, dtype="category"), drop_first=False,
+                       dtype=float)
     y = np.dot(x, [1.0, 2.0, 3.0]) + rs.normal(size=30)
     resc = OLS(y, add_constant(x.iloc[:, 1:], prepend=True)).fit()
     res = OLS(y, x, hasconst=True).fit()
@@ -1097,8 +1113,9 @@ def test_const_indicator():
 def test_fvalue_const_only():
     rs = np.random.RandomState(12345)
     x = rs.randint(0, 3, size=30)
-    x = pd.get_dummies(pd.Series(x, dtype="category"), drop_first=False)
-    x.iloc[:, 0] = 1
+    x = pd.get_dummies(pd.Series(x, dtype="category"), drop_first=False,
+                       dtype=float)
+    x[x.columns[0]] = 1
     y = np.dot(x, [1.0, 2.0, 3.0]) + rs.normal(size=30)
     res = OLS(y, x, hasconst=True).fit(cov_type="HC1")
     assert not np.isnan(res.fvalue)
@@ -1183,7 +1200,7 @@ Notes: \\newline
     assert_equal(table, expected)
 
 
-class TestRegularizedFit(object):
+class TestRegularizedFit:
 
     # Make sure there are no problems when no variables are selected.
     def test_empty_model(self):
@@ -1586,7 +1603,7 @@ def test_ols_constant(reset_randomstate):
     y = np.random.standard_normal((200))
     x = np.ones((200, 1))
     res = OLS(y, x).fit()
-    with pytest.warns(None) as recording:
+    with warnings.catch_warnings(record=True) as recording:
         assert np.isnan(res.fvalue)
         assert np.isnan(res.f_pvalue)
     assert len(recording) == 0
@@ -1598,3 +1615,26 @@ def test_summary_no_constant():
     y = rs.standard_normal(100)
     summary = OLS(y, x).fit().summary()
     assert "R² is computed " in summary.as_text()
+
+
+def test_condition_number(reset_randomstate):
+    y = np.random.standard_normal(100)
+    x = np.random.standard_normal((100, 1))
+    x = x + np.random.standard_normal((100, 5))
+    res = OLS(y, x).fit()
+    assert_allclose(res.condition_number, np.sqrt(np.linalg.cond(x.T @ x)))
+    assert_allclose(res.condition_number, np.linalg.cond(x))
+
+
+def test_slim_summary(reset_randomstate):
+    y = np.random.standard_normal(100)
+    x = np.random.standard_normal((100, 1))
+    x = x + np.random.standard_normal((100, 5))
+    res = OLS(y, x).fit()
+    import copy
+    summ = copy.deepcopy(res.summary())
+    slim_summ = copy.deepcopy(res.summary(slim=True))
+    assert len(summ.tables) == 3
+    assert len(slim_summ.tables) == 2
+    assert summ.tables[0].as_text() != slim_summ.tables[0].as_text()
+    assert slim_summ.tables[1].as_text() == summ.tables[1].as_text()

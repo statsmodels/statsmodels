@@ -3,7 +3,7 @@ from statsmodels.robust import mad
 from scipy.optimize import minimize_scalar
 
 
-class BoxCox(object):
+class BoxCox:
     """
     Mixin class to allow for a Box-Cox transformation.
     """

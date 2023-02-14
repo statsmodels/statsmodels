@@ -1,11 +1,17 @@
 [build-system]
+# These are strictly build requirements. Runtime requirements are listed in
+# INSTALL_REQUIRES in setup.py
 requires = [
-    "setuptools",
-    "wheel",
-    "cython>=0.29.22",
-    "numpy==1.17.4; python_version=='3.7'",
-    "numpy==1.17.4; python_version=='3.8'",
-    "numpy==1.19.4; python_version=='3.9'",
-    "numpy; python_version>'3.9'",
-    "scipy>=1.3",
+    "setuptools>=59.2.0",
+    "cython>=0.29.26,<3",  # Sync with CYTHON_MIN_VER in setup
+    # Workaround for oldest supported numpy using 1.21.6, but SciPy 1.9.2+ requiring 1.22.3+
+    "oldest-supported-numpy; python_version!='3.10' or platform_system!='Windows' or platform_python_implementation=='PyPy'",
+    "numpy==1.22.3; python_version=='3.10' and platform_system=='Windows' and platform_python_implementation != 'PyPy'",
+    "numpy; python_version>='3.11'",
+    "scipy>=1.4",
+    "setuptools_scm[toml]~=7.0.0"
 ]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+write_to = "statsmodels/_version.py"

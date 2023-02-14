@@ -16,7 +16,7 @@ from statsmodels.distributions.tools import (
         _eval_bernstein_dd, _eval_bernstein_2d, _eval_bernstein_1d)
 
 
-class BernsteinDistribution(object):
+class BernsteinDistribution:
     """Distribution based on Bernstein Polynomials on unit hypercube.
 
     Parameters

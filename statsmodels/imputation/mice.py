@@ -131,7 +131,7 @@ _mice_data_example_1 = """
     ...     imp.data.to_csv('data%02d.csv' % j)"""
 
 
-class PatsyFormula(object):
+class PatsyFormula:
     """
     A simple wrapper for a string to be interpreted as a Patsy formula.
     """
@@ -139,7 +139,7 @@ class PatsyFormula(object):
         self.formula = "0 + " + formula
 
 
-class MICEData(object):
+class MICEData:
 
     __doc__ = """\
     Wrap a data set to allow missing data handling with MICE.
@@ -221,8 +221,8 @@ class MICEData(object):
 
         # Map from variable names to init/fit args of the conditional
         # models.
-        self.init_kwds = defaultdict(lambda: dict())
-        self.fit_kwds = defaultdict(lambda: dict())
+        self.init_kwds = defaultdict(dict)
+        self.fit_kwds = defaultdict(dict)
 
         # Map from variable names to the model class.
         self.model_class = {}
@@ -724,7 +724,7 @@ class MICEData(object):
 
         ha, la = ax.get_legend_handles_labels()
         pad = 0.0001 if plot_points else 0.5
-        leg = fig.legend(ha, la, 'center right', numpoints=1,
+        leg = fig.legend(ha, la, loc='center right', numpoints=1,
                          handletextpad=pad)
         leg.draw_frame(False)
 
@@ -821,7 +821,7 @@ class MICEData(object):
                     alpha=0.6, lw=4, label=lak[ky])
 
         ha, la = ax.get_legend_handles_labels()
-        leg = fig.legend(ha, la, 'center right', numpoints=1)
+        leg = fig.legend(ha, la, loc='center right', numpoints=1)
         leg.draw_frame(False)
 
         ax.set_xlabel(col_name + " observed or imputed")
@@ -892,7 +892,7 @@ class MICEData(object):
         ha.extend([h1[-1][0], h2[-1][0]])
         la.extend(["Obs", "All"])
 
-        leg = fig.legend(ha, la, 'center right', numpoints=1)
+        leg = fig.legend(ha, la, loc='center right', numpoints=1)
         leg.draw_frame(False)
 
         ax.set_xlabel(col_name)
@@ -1094,7 +1094,7 @@ _mice_example_2 = """
     """
 
 
-class MICE(object):
+class MICE:
 
     __doc__ = """\
     Multiple Imputation with Chained Equations.

@@ -4,8 +4,6 @@ Tests for SARIMAX models
 Author: Chad Fulton
 License: Simplified-BSD
 """
-from statsmodels.compat.pandas import NumericIndex
-
 import os
 import warnings
 
@@ -33,7 +31,7 @@ coverage_path = os.path.join('results', 'results_sarimax_coverage.csv')
 coverage_results = pd.read_csv(os.path.join(current_path, coverage_path))
 
 
-class TestSARIMAXStatsmodels(object):
+class TestSARIMAXStatsmodels:
     """
     Test ARIMA model using SARIMAX class against statsmodels ARIMA class
 
@@ -95,7 +93,7 @@ class TestSARIMAXStatsmodels(object):
         smt.check_ftest_pvalues(self.result_b)
 
 
-class TestRealGDPARStata(object):
+class TestRealGDPARStata:
     """
     Includes tests of filtered states and standardized forecast errors.
 
@@ -133,7 +131,7 @@ class TestRealGDPARStata(object):
         )
 
 
-class SARIMAXStataTests(object):
+class SARIMAXStataTests:
     def test_loglike(self):
         assert_almost_equal(
             self.result.llf,
@@ -951,7 +949,7 @@ class TestFriedmanForecast(Friedman):
         )
 
 
-class SARIMAXCoverageTest(object):
+class SARIMAXCoverageTest:
     @classmethod
     def setup_class(cls, i, decimal=4, endog=None, *args, **kwargs):
         # Dataset
@@ -2701,7 +2699,7 @@ def test_start_params_small_nobs():
 
 def test_simple_differencing_int64index():
     values = np.log(realgdp_results['value']).values
-    endog = pd.Series(values, index=NumericIndex(range(len(values))))
+    endog = pd.Series(values, index=pd.Index(range(len(values))))
     mod = sarimax.SARIMAX(endog, order=(1, 1, 0), simple_differencing=True)
 
     assert_(mod._index.equals(endog.index[1:]))
@@ -2726,7 +2724,7 @@ def test_simple_differencing_dateindex():
 
 def test_simple_differencing_strindex():
     values = np.log(realgdp_results['value']).values
-    index = NumericIndex(range(len(values))).map(str)
+    index = pd.Index(range(len(values))).map(str)
     endog = pd.Series(values, index=index)
     with pytest.warns(UserWarning):
         mod = sarimax.SARIMAX(endog, order=(1, 1, 0), simple_differencing=True)
@@ -2808,6 +2806,24 @@ def test_sarimax_starting_values_few_obsevations(reset_randomstate):
 
     sarimax_model = sarimax.SARIMAX(
         endog=y, order=(1, 1, 1), seasonal_order=(0, 1, 0, 12), trend="n"
+    ).fit(disp=False)
+
+    assert np.all(
+        np.isfinite(sarimax_model.predict(start=len(y), end=len(y) + 11))
+    )
+
+
+def test_sarimax_starting_values_few_obsevations_long_ma(reset_randomstate):
+    # GH 8232
+    y = np.random.standard_normal(9)
+    y = [
+        3066.3, 3260.2, 3573.7, 3423.6, 3598.5, 3802.8, 3353.4, 4026.1,
+        4684. , 4099.1, 3883.1, 3801.5, 3104. , 3574. , 3397.2, 3092.9,
+        3083.8, 3106.7, 2939.6
+    ]
+
+    sarimax_model = sarimax.SARIMAX(
+        endog=y, order=(0, 1, 5), trend="n"
     ).fit(disp=False)
 
     assert np.all(

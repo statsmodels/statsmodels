@@ -288,7 +288,7 @@ def oildata():
 
 
 def obtain_R_results(path):
-    with path.open("r") as f:
+    with path.open("r", encoding="utf-8") as f:
         R_results = json.load(f)
 
     # remove invalid models
@@ -742,7 +742,8 @@ def statespace_comparison(austourists):
         initialization_method="known",
         initial_level=ets_results.initial_level,
         initial_trend=ets_results.initial_trend,
-        initial_seasonal=ets_results.initial_seasonal,
+        # See GH 7893
+        initial_seasonal=ets_results.initial_seasonal[::-1],
     )
     with statespace_model.fix_params(
         {
@@ -753,7 +754,8 @@ def statespace_comparison(austourists):
         }
     ):
         statespace_results = statespace_model.fit()
-
+    ets_results.test_serial_correlation("ljungbox")
+    statespace_results.test_serial_correlation("ljungbox")
     return ets_results, statespace_results
 
 
@@ -1047,3 +1049,40 @@ def test_estimated_initialization_short_data(oildata, trend, seasonal, nobs):
         initialization_method='estimated'
     ).fit()
     assert ~np.any(np.isnan(res.params))
+
+
+@pytest.mark.parametrize("method", ["estimated", "heuristic"])
+def test_seasonal_order(reset_randomstate, method):
+    seasonal = np.arange(12.0)
+    time_series = np.array(list(seasonal) * 100)
+    res = ETSModel(
+        time_series,
+        seasonal="add",
+        seasonal_periods=12,
+        initialization_method=method,
+    ).fit()
+    assert_allclose(
+        res.initial_seasonal + res.initial_level,
+        seasonal,
+        atol=1e-4,
+        rtol=1e-4,
+    )
+    assert res.mae < 1e-6
+
+
+def test_aicc_0_dof():
+    # GH8172
+    endog = [109.0, 101.0, 104.0, 90.0, 105.0]
+
+    model = ETSModel(
+        endog=endog,
+        initialization_method='known',
+        initial_level=100.0,
+        initial_trend=0.0,
+        error='add',
+        trend='add',
+        damped_trend=True
+    )
+    aicc = model.fit().aicc
+    assert not np.isfinite(aicc)
+    assert aicc > 0

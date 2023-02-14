@@ -86,7 +86,7 @@ def test_gq():
     assert_equal(gq[-1], "increasing")
 
 
-class TestDiagnosticG(object):
+class TestDiagnosticG:
     @classmethod
     def setup_class(cls):
         d = macrodata.load_pandas().data
@@ -243,6 +243,19 @@ class TestDiagnosticG(object):
 
         bp = smsdia.het_breuschpagan(res.resid, res.model.exog)
         compare_to_reference(bp, bptest, decimal=(12, 12))
+
+    def test_het_breusch_pagan_1d_err(self):
+        res = self.res
+        x = np.asarray(res.model.exog)[:, -1]
+        with pytest.raises(ValueError, match="The Breusch-Pagan"):
+            smsdia.het_breuschpagan(res.resid, x)
+        x = np.ones_like(x)
+        with pytest.raises(ValueError, match="The Breusch-Pagan"):
+            smsdia.het_breuschpagan(res.resid, x)
+        x = np.asarray(res.model.exog).copy()
+        x[:, 0] = 0
+        with pytest.raises(ValueError, match="The Breusch-Pagan"):
+            smsdia.het_breuschpagan(res.resid, x)
 
     def test_het_breusch_pagan_nonrobust(self):
         res = self.res
@@ -402,14 +415,16 @@ class TestDiagnosticG(object):
             distr="chi2",
         )
 
-        lb, lbpval, bp, bppval = smsdia.acorr_ljungbox(
-            res.resid, 4, boxpierce=True, return_df=False
+        df = smsdia.acorr_ljungbox(res.resid, 4, boxpierce=True)
+        compare_to_reference(
+            [df.loc[4, "lb_stat"], df.loc[4, "lb_pvalue"]],
+            ljung_box_4,
+            decimal=(12, 12),
         )
         compare_to_reference(
-            [lb[-1], lbpval[-1]], ljung_box_4, decimal=(12, 12)
-        )
-        compare_to_reference(
-            [bp[-1], bppval[-1]], ljung_box_bp_4, decimal=(12, 12)
+            [df.loc[4, "bp_stat"], df.loc[4, "bp_pvalue"]],
+            ljung_box_bp_4,
+            decimal=(12, 12),
         )
 
     def test_acorr_ljung_box_big_default(self):
@@ -427,14 +442,17 @@ class TestDiagnosticG(object):
             statistic=45.12238537034000, pvalue=0.26638168491464, distr="chi2"
         )
         lags = min(40, res.resid.shape[0] // 2 - 2)
-        lb, lbpval, bp, bppval = smsdia.acorr_ljungbox(
-            res.resid, boxpierce=True, lags=lags, return_df=False
+        df = smsdia.acorr_ljungbox(res.resid, boxpierce=True, lags=lags)
+        idx = df.index.max()
+        compare_to_reference(
+            [df.loc[idx, "lb_stat"], df.loc[idx, "lb_pvalue"]],
+            ljung_box_none,
+            decimal=(12, 12),
         )
         compare_to_reference(
-            [lb[-1], lbpval[-1]], ljung_box_none, decimal=(12, 12)
-        )
-        compare_to_reference(
-            [bp[-1], bppval[-1]], ljung_box_bp_none, decimal=(12, 12)
+            [df.loc[idx, "bp_stat"], df.loc[idx, "bp_pvalue"]],
+            ljung_box_bp_none,
+            decimal=(12, 12),
         )
 
     def test_acorr_ljung_box_small_default(self):
@@ -457,15 +475,23 @@ class TestDiagnosticG(object):
             parameters=(0,),
             distr="chi2",
         )
-
-        lb, lbpval, bp, bppval = smsdia.acorr_ljungbox(
-            res.resid[:30], boxpierce=True, lags=13, return_df=False
+        if isinstance(res.resid, np.ndarray):
+            resid = res.resid[:30]
+        else:
+            resid = res.resid.iloc[:30]
+        df = smsdia.acorr_ljungbox(
+            resid, boxpierce=True, lags=13
+        )
+        idx = df.index.max()
+        compare_to_reference(
+            [df.loc[idx, "lb_stat"], df.loc[idx, "lb_pvalue"]],
+            ljung_box_small,
+            decimal=(12, 12),
         )
         compare_to_reference(
-            [lb[-1], lbpval[-1]], ljung_box_small, decimal=(12, 12)
-        )
-        compare_to_reference(
-            [bp[-1], bppval[-1]], ljung_box_bp_small, decimal=(12, 12)
+            [df.loc[idx, "bp_stat"], df.loc[idx, "bp_pvalue"]],
+            ljung_box_bp_small,
+            decimal=(12, 12),
         )
 
     def test_acorr_ljung_box_against_r(self, reset_randomstate):
@@ -489,8 +515,8 @@ class TestDiagnosticG(object):
             [3.8104, 5, 0.577],
             [8.4779, 10, 0.5823],
         ]
-        res_y1 = smsdia.acorr_ljungbox(y1, 10, return_df=True)
-        res_y2 = smsdia.acorr_ljungbox(y2, 10, return_df=True)
+        res_y1 = smsdia.acorr_ljungbox(y1, 10)
+        res_y2 = smsdia.acorr_ljungbox(y2, 10)
         for i, loc in enumerate((1, 5, 10)):
             row = res_y1.loc[loc]
             assert_allclose(
@@ -508,13 +534,11 @@ class TestDiagnosticG(object):
                 r_results_y2_lb[i][2], row.loc["lb_pvalue"], rtol=1e-3
             )
 
-        res = smsdia.acorr_ljungbox(y2, 10, boxpierce=True, return_df=True)
+        res = smsdia.acorr_ljungbox(y2, 10, boxpierce=True)
         assert_allclose(res.loc[10, "bp_stat"], 7.8935, rtol=1e-3)
         assert_allclose(res.loc[10, "bp_pvalue"], 0.639, rtol=1e-3)
 
-        res = smsdia.acorr_ljungbox(
-            y2, 10, boxpierce=True, return_df=True, model_df=1
-        )
+        res = smsdia.acorr_ljungbox(y2, 10, boxpierce=True, model_df=1)
         assert_allclose(res.loc[10, "bp_pvalue"], 0.5449, rtol=1e-3)
 
     def test_harvey_collier(self):
@@ -975,7 +999,11 @@ class TestDiagnosticG(object):
 
         lf1 = smsdia.lilliefors(res.resid, pvalmethod="approx")
         lf2 = smsdia.lilliefors(res.resid ** 2, pvalmethod="approx")
-        lf3 = smsdia.lilliefors(res.resid[:20], pvalmethod="approx")
+        if isinstance(res.resid, np.ndarray):
+            resid = res.resid[:20]
+        else:
+            resid = res.resid.iloc[:20]
+        lf3 = smsdia.lilliefors(resid, pvalmethod="approx")
 
         compare_to_reference(lf1, lilliefors1, decimal=(12, 12))
         compare_to_reference(
@@ -1010,7 +1038,7 @@ class TestDiagnosticG(object):
         compare_to_reference(ad1, adr1, decimal=(11, 13))
         ad2 = smsdia.normal_ad(res.resid ** 2)
         assert_(np.isinf(ad2[0]))
-        ad3 = smsdia.normal_ad(res.resid[:20])
+        ad3 = smsdia.normal_ad(resid)
         compare_to_reference(ad3, adr3, decimal=(11, 12))
 
     def test_influence(self):
@@ -1020,7 +1048,7 @@ class TestDiagnosticG(object):
         infl = oi.OLSInfluence(res)
 
         path = os.path.join(cur_dir, "results", "influence_lsdiag_R.json")
-        with open(path, "r") as fp:
+        with open(path, "r", encoding="utf-8") as fp:
             lsdiag = json.load(fp)
 
         # basic
@@ -1219,7 +1247,7 @@ def test_influence_wrapped():
 
     # this test is slow
     path = os.path.join(cur_dir, "results", "influence_lsdiag_R.json")
-    with open(path, "r") as fp:
+    with open(path, "r", encoding="utf-8") as fp:
         lsdiag = json.load(fp)
 
     c0, c1 = infl.cooks_distance  # TODO: what's c1, it's pvalues? -ss
@@ -1666,24 +1694,34 @@ def test_ljungbox_dof_adj():
     data = sunspots.load_pandas().data["SUNACTIVITY"]
     res = AutoReg(data, 4, old_names=False).fit()
     resid = res.resid
-    res1 = smsdia.acorr_ljungbox(resid, lags=10, return_df=False)
-    res2 = smsdia.acorr_ljungbox(resid, lags=10, model_df=4, return_df=False)
-    assert_allclose(res1[0], res2[0])
-    assert np.all(np.isnan(res2[1][:4]))
-    assert np.all(res2[1][4:] <= res1[1][4:])
+    res1 = smsdia.acorr_ljungbox(resid, lags=10)
+    res2 = smsdia.acorr_ljungbox(resid, lags=10, model_df=4)
+    assert_allclose(res1.iloc[:, 0], res2.iloc[:, 0])
+    assert np.all(np.isnan(res2.iloc[:4, 1]))
+    assert np.all(res2.iloc[4:, 1] <= res1.iloc[4:, 1])
 
 
-def test_ljungbox_auto_lag_selection():
+def test_ljungbox_auto_lag_selection(reset_randomstate):
     data = sunspots.load_pandas().data["SUNACTIVITY"]
     res = AutoReg(data, 4, old_names=False).fit()
     resid = res.resid
-    res1 = smsdia.acorr_ljungbox(resid, return_df=False, auto_lag=True)
-    res2 = smsdia.acorr_ljungbox(
-        resid, model_df=4, return_df=False, auto_lag=True
-    )
-    assert_allclose(res1[0], res2[0])
-    assert np.all(np.isnan(res2[1][:4]))
-    assert np.all(res2[1][4:] <= res1[1][4:])
+    res1 = smsdia.acorr_ljungbox(resid, auto_lag=True)
+    res2 = smsdia.acorr_ljungbox(resid, model_df=4, auto_lag=True)
+    assert_allclose(res1.iloc[:, 0], res2.iloc[:, 0])
+    # TODO: compare selected lags with Stata/ R to confirm
+    # that corect auto_lag is selected
+    assert res1.shape[0] >= 1
+    assert res2.shape[0] >= 1
+    assert np.all(np.isnan(res2.iloc[:4, 1]))
+    assert np.all(res2.iloc[4:, 1] <= res1.iloc[4:, 1])
+
+
+def test_ljungbox_auto_lag_whitenoise(reset_randomstate):
+    data = np.random.randn(1000)  # white noise process
+    res = smsdia.acorr_ljungbox(data, auto_lag=True)
+    # TODO: compare selected lags with Stata/ R to confirm
+    # that correct auto_lag is selected
+    assert res.shape[0] >= 1  # auto lag selected must be at least 1
 
 
 def test_ljungbox_errors_warnings():
@@ -1694,7 +1732,7 @@ def test_ljungbox_errors_warnings():
         smsdia.acorr_ljungbox(data, model_df=-1, period=1)
     with pytest.raises(ValueError, match="period must"):
         smsdia.acorr_ljungbox(data, model_df=-1, period=-2)
-    smsdia.acorr_ljungbox(data, return_df=False)
+    smsdia.acorr_ljungbox(data)
     ret = smsdia.acorr_ljungbox(data, lags=10)
     assert isinstance(ret, pd.DataFrame)
 
@@ -1702,8 +1740,8 @@ def test_ljungbox_errors_warnings():
 def test_ljungbox_period():
     data = sunspots.load_pandas().data["SUNACTIVITY"]
     ar_res = AutoReg(data, 4, old_names=False).fit()
-    res = smsdia.acorr_ljungbox(ar_res.resid, period=13, return_df=True)
-    res2 = smsdia.acorr_ljungbox(ar_res.resid, lags=26, return_df=True)
+    res = smsdia.acorr_ljungbox(ar_res.resid, period=13)
+    res2 = smsdia.acorr_ljungbox(ar_res.resid, lags=26)
     assert_frame_equal(res, res2)
 
 
@@ -1723,7 +1761,7 @@ def test_encompasing_direct(cov_type, reset_randomstate):
     direct1 = OLS(y, np.hstack([x1, x[:, 1:], z_extra])).fit(cov_type=cov_type)
     r1 = np.zeros((4, 3 + 1 + 3))
     r1[:, -4:] = np.eye(4)
-    direct_test_1 = direct1.wald_test(r1, use_f=True)
+    direct_test_1 = direct1.wald_test(r1, use_f=True, scalar=True)
     expected = (
         float(np.squeeze(direct_test_1.statistic)),
         float(np.squeeze(direct_test_1.pvalue)),
@@ -1735,7 +1773,7 @@ def test_encompasing_direct(cov_type, reset_randomstate):
     direct2 = OLS(y, np.hstack([z1, x_extra])).fit(cov_type=cov_type)
     r2 = np.zeros((2, 2 + 3 + 2))
     r2[:, -2:] = np.eye(2)
-    direct_test_2 = direct2.wald_test(r2, use_f=True)
+    direct_test_2 = direct2.wald_test(r2, use_f=True, scalar=True)
     expected = (
         float(np.squeeze(direct_test_2.statistic)),
         float(np.squeeze(direct_test_2.pvalue)),
@@ -1802,7 +1840,7 @@ def test_acorr_lm_smoke(store, ddof, cov, reset_randomstate):
 
 def test_acorr_lm_smoke_no_autolag(reset_randomstate):
     e = np.random.standard_normal(250)
-    smsdia.acorr_lm(e, nlags=6, autolag=None, store=False, ddof=0)
+    smsdia.acorr_lm(e, nlags=6, store=False, ddof=0)
 
 
 @pytest.mark.parametrize("frac", [0.25, 0.5, 0.75])

@@ -21,6 +21,9 @@ from statsmodels.distributions.bernstein import (
 
 def test_bernstein_distribution_1d():
     grid = dt._Grid([501])
+    loc = grid.x_flat == 0
+    grid.x_flat[loc] = grid.x_flat[~loc].min() / 2
+    grid.x_flat[grid.x_flat == 1] = 1 - grid.x_flat.min()
 
     distr = stats.beta(3, 5)
     cdf_g = distr.cdf(np.squeeze(grid.x_flat))
@@ -107,7 +110,7 @@ def test_bernstein_distribution_2d():
     assert_allclose(pdf_m, np.ones(len(xx)), atol=1e-13)
 
 
-class TestBernsteinBeta2d(object):
+class TestBernsteinBeta2d:
 
     @classmethod
     def setup_class(cls):

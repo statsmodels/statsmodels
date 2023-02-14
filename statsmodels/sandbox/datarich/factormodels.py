@@ -15,7 +15,7 @@ from statsmodels.sandbox.tools.cross_val import LeaveOneOut
 #from sandbox/example_pca_regression.py
 
 
-class FactorModelUnivariate(object):
+class FactorModelUnivariate:
     '''
 
     Todo:

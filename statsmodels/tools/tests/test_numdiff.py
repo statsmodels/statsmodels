@@ -44,7 +44,7 @@ def fun2(beta, y, x):
 
 
 #ravel() added because of MNLogit 2d params
-class CheckGradLoglikeMixin(object):
+class CheckGradLoglikeMixin:
     def test_score(self):
         for test_params in self.params:
             sc = self.mod.score(test_params)
@@ -158,7 +158,7 @@ class TestGradLogit(CheckGradLoglikeMixin):
         ##hess = mod.hessian
 
 
-class CheckDerivativeMixin(object):
+class CheckDerivativeMixin:
     @classmethod
     def setup_class(cls):
         nobs = 200

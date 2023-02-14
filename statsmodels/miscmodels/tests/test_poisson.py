@@ -18,7 +18,7 @@ DEC = 4
 DEC4 = 4
 DEC5 = 5
 
-class CompareMixin(object):
+class CompareMixin:
 
     def test_params(self):
         assert_almost_equal(self.res.params, self.res_glm.params, DEC5)
@@ -44,6 +44,14 @@ class CompareMixin(object):
         pvalue = stats.norm.sf(np.abs(tt.tvalue)) * 2
         assert_almost_equal(tt.tvalue, self.res.tvalues, DEC)
         assert_almost_equal(pvalue, self.res.pvalues, DEC)
+
+    def test_df(self):
+        res = self.res
+        k_extra = getattr(self, "k_extra", 0)
+        nobs, k_vars = res.model.exog.shape
+        assert res.df_resid == nobs - k_vars - k_extra
+        assert res.df_model == k_vars - 1  # -1 for constant
+        assert len(res.params) == k_vars + k_extra
 
     @pytest.mark.smoke
     def test_summary(self):
@@ -144,6 +152,7 @@ class TestPoissonOffset(CompareMixin):
         #assert_almost_equal(self.res.tval, self.res_glm.t()[1:], DEC)
         #assert_almost_equal(self.res.params, self.res_discrete.params)
 
+
 #DEC = DEC - 1
 class TestPoissonZi(CompareMixin):
     #this uses the first exog to construct an offset variable
@@ -158,7 +167,7 @@ class TestPoissonZi(CompareMixin):
         data_exog = sm.add_constant(data_exog, prepend=False)
         xbeta = 1 + 0.1*rvs.sum(1)
         data_endog = np.random.poisson(np.exp(xbeta))
-
+        cls.k_extra = 1
 
         mod_glm = sm.GLM(data_endog, data_exog, family=sm.families.Poisson())
         cls.res_glm = mod_glm.fit()

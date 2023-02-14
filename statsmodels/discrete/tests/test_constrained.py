@@ -16,7 +16,7 @@ import pytest
 
 from statsmodels import datasets
 from statsmodels.base._constraints import fit_constrained
-from statsmodels.discrete.discrete_model import Poisson
+from statsmodels.discrete.discrete_model import Poisson, Logit
 from statsmodels.genmod import families
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.tools.tools import add_constant
@@ -52,7 +52,7 @@ data = data.astype(int)
 data['logpyears'] = np.log(data['pyears'])
 
 
-class CheckPoissonConstrainedMixin(object):
+class CheckPoissonConstrainedMixin:
 
     def test_basic(self):
         res1 = self.res1
@@ -393,7 +393,8 @@ class TestGLMPoissonConstrained1b(CheckPoissonConstrainedMixin):
         assert_allclose(predicted, res2.predict(), rtol=1e-10)
         assert_allclose(res1.mu, predicted, rtol=1e-10)
         assert_allclose(res1.fittedvalues, predicted, rtol=1e-10)
-        assert_allclose(res2.predict(linear=True), res2.predict(linear=True),
+        assert_allclose(res2.predict(which="linear"),
+                        res2.predict(which="linear"),
                         rtol=1e-10)
 
 
@@ -404,7 +405,6 @@ class CheckGLMConstrainedMixin(CheckPoissonConstrainedMixin):
         res2 = self.res2  # reference results
         res1 = self.res1m
 
-        # FIXME: dont leave commented-out
         # assert_allclose(res1.aic, res2.aic, rtol=1e-10)  # far away
         # Stata aic in ereturn and in estat ic are very different
         # we have the same as estat ic
@@ -418,10 +418,8 @@ class CheckGLMConstrainedMixin(CheckPoissonConstrainedMixin):
             # FutureWarning for BIC changes
             assert_allclose(res1.bic, res2.bic, rtol=1e-10)
         # bic is deviance based
-        # FIXME: dont leave commented-out
         #  assert_allclose(res1.bic, res2.infocrit[5], rtol=1e-10)
         assert_allclose(res1.deviance, res2.deviance, rtol=1e-10)
-        # FIXME: dont leave commented-out
         # TODO: which chi2 are these
         # assert_allclose(res1.pearson_chi2, res2.chi2, rtol=1e-10)
 
@@ -444,6 +442,31 @@ class TestGLMLogitConstrained1(CheckGLMConstrainedMixin):
 
         R, q = cls.res1m.constraints
         cls.res1 = fit_constrained(mod1, R, q)
+
+
+class TestLogitConstrained1(CheckGLMConstrainedMixin):
+
+    @classmethod
+    def setup_class(cls):
+        cls.idx = slice(None)
+        # params sequence same as Stata, but Stata reports param = nan
+        # and we have param = value = 0
+
+        # res1ul = Logit(data.endog, data.exog).fit(method="newton", disp=0)
+        cls.res2 = reslogit.results_constraint1
+
+        mod1 = Logit(spector_data.endog, spector_data.exog)
+
+        constr = 'x1 = 2.8'
+        # newton doesn't work, raises hessian singular
+        cls.res1m = mod1.fit_constrained(constr, method='bfgs')
+
+        R, q = cls.res1m.constraints.coefs, cls.res1m.constraints.constants
+        cls.res1 = fit_constrained(mod1, R, q, fit_kwds={'method': 'bfgs'})
+
+    @pytest.mark.skip(reason='not a GLM')
+    def test_glm(self):
+        return
 
 
 class TestGLMLogitConstrained2(CheckGLMConstrainedMixin):
@@ -530,6 +553,38 @@ class TestGLMLogitConstrained2HC(CheckGLMConstrainedMixin):
                                                          'cov_type': cov_type,
                                                          'cov_kwds': cov_kwds})
         cls.constraints_rq = (R, q)
+
+
+class TestLogitConstrained2HC(CheckGLMConstrainedMixin):
+
+    @classmethod
+    def setup_class(cls):
+        cls.idx = slice(None)  # params sequence same as Stata
+        # res1ul = Logit(data.endog, data.exog).fit(method="newton", disp=0)
+        cls.res2 = reslogit.results_constraint2_robust
+
+        mod1 = Logit(spector_data.endog, spector_data.exog)
+
+        # not used to match Stata for HC
+        # nobs, k_params = mod1.exog.shape
+        # k_params -= 1   # one constraint
+        cov_type = 'HC0'
+        cov_kwds = {'scaling_factor': 32/31}
+        # looks like nobs / (nobs - 1) and not (nobs - 1.) / (nobs - k_params)}
+        constr = 'x1 - x3 = 0'
+        cls.res1m = mod1.fit_constrained(constr, cov_type=cov_type,
+                                         cov_kwds=cov_kwds, tol=1e-10,
+                                         )
+
+        R, q = cls.res1m.constraints.coefs, cls.res1m.constraints.constants
+        cls.res1 = fit_constrained(mod1, R, q, fit_kwds={'tol': 1e-10,
+                                                         'cov_type': cov_type,
+                                                         'cov_kwds': cov_kwds})
+        cls.constraints_rq = (R, q)
+
+    @pytest.mark.skip(reason='not a GLM')
+    def test_glm(self):
+        return
 
 
 def junk():  # FIXME: make this into a test, or move/remove

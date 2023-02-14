@@ -42,7 +42,7 @@ def test_loglaplace():
     cdftr = loglaplaceexpg._cdf(3,0,1./3)
     assert_almost_equal(cdfst, cdftr, 14)
 
-class CheckDistEquivalence(object):
+class CheckDistEquivalence:
 
     #no args, kwds yet
 

@@ -64,21 +64,21 @@ def assert_close(a, b, eps):
     assert np.allclose(a, b, rtol=0.01, atol=eps), (list(a), list(b))
 
 
-class TestBetaModel(object):
+class TestBetaModel:
 
     @classmethod
-    def setup_class(self):
+    def setup_class(cls):
         model = "I(food/income) ~ income + persons"
-        self.income_fit = BetaModel.from_formula(model, income).fit()
+        cls.income_fit = BetaModel.from_formula(model, income).fit()
 
-        model = self.model = "methylation ~ gender + CpG"
-        Z = self.Z = patsy.dmatrix("~ age", methylation)
+        model = cls.model = "methylation ~ gender + CpG"
+        Z = cls.Z = patsy.dmatrix("~ age", methylation)
         mod = BetaModel.from_formula(model, methylation, exog_precision=Z,
-                                     link_precision=links.identity())
-        self.meth_fit = mod.fit()
+                                     link_precision=links.Identity())
+        cls.meth_fit = mod.fit()
         mod = BetaModel.from_formula(model, methylation, exog_precision=Z,
                                      link_precision=links.Log())
-        self.meth_log_fit = mod.fit()
+        cls.meth_log_fit = mod.fit()
 
     def test_income_coefficients(self):
         rslt = self.income_fit
@@ -121,14 +121,14 @@ class TestBetaModel(object):
     def test_precision_formula(self):
         m = BetaModel.from_formula(self.model, methylation,
                                    exog_precision_formula='~ age',
-                                   link_precision=links.identity())
+                                   link_precision=links.Identity())
         rslt = m.fit()
         assert_close(rslt.params, self.meth_fit.params, 1e-10)
         assert isinstance(rslt.params, pd.Series)
 
     def test_scores(self):
         model, Z = self.model, self.Z
-        for link in (links.identity(), links.log()):
+        for link in (links.Identity(), links.Log()):
             mod2 = BetaModel.from_formula(model, methylation, exog_precision=Z,
                                           link_precision=link)
             rslt_m = mod2.fit()
@@ -146,7 +146,7 @@ class TestBetaModel(object):
         distr = rslt.get_distribution()
         mean, var = distr.stats()
         assert_allclose(rslt.fittedvalues, mean, rtol=1e-13)
-        assert_allclose(rslt.model.predict_var(rslt.params), var, rtol=1e-13)
+        assert_allclose(rslt.model._predict_var(rslt.params), var, rtol=1e-13)
         resid = rslt.model.endog - mean
         assert_allclose(rslt.resid, resid, rtol=1e-12)
         assert_allclose(rslt.resid_pearson, resid / np.sqrt(var), rtol=1e-12)
@@ -235,7 +235,7 @@ class TestBetaMeth():
     def test_predict_distribution(self):
         res1 = self.res1
         mean = res1.predict()
-        var_ = res1.model.predict_var(res1.params)
+        var_ = res1.model._predict_var(res1.params)
         distr = res1.get_distribution()
         m2, v2 = distr.stats()
         assert_allclose(mean, m2, rtol=1e-13)
@@ -255,8 +255,8 @@ class TestBetaMeth():
         # todo: prec6 wrong exog if not used as keyword, no exception raised
         prec6 = res1.predict(exog_precision=ex_prec, which="precision",
                              transform=False)
-        var6 = res1.model.predict_var(res1.params, exog=ex,
-                                      exog_precision=ex_prec)
+        var6 = res1.model._predict_var(res1.params, exog=ex,
+                                       exog_precision=ex_prec)
 
         assert_allclose(mean6, mean[:n], rtol=1e-13)
         assert_allclose(prec6, prec[:n], rtol=1e-13)
@@ -290,3 +290,100 @@ class TestBetaMeth():
         assert_allclose(v26, v2[:n], rtol=1e-13)
         # check that we don't have pandas in distr
         assert isinstance(distr6f.args[0], np.ndarray)
+
+        # minimal checks for get_prediction
+        pma = res1.get_prediction(which="mean", average=True)
+        dfma = pma.summary_frame()
+        assert_allclose(pma.predicted, mean.mean(), rtol=1e-13)
+        assert_equal(dfma.shape, (1, 4))
+        pm = res1.get_prediction(exog=df6, which="mean", average=False)
+        dfm = pm.summary_frame()
+        assert_allclose(pm.predicted, mean6, rtol=1e-13)
+        assert_equal(dfm.shape, (6, 4))
+        pv = res1.get_prediction(exog=df6, exog_precision=ex_prec,
+                                 which="var", average=False)
+        dfv = pv.summary_frame()
+        assert_allclose(pv.predicted, var6, rtol=1e-13)
+        assert_equal(dfv.shape, (6, 4))
+        # smoke tests
+        res1.get_prediction(which="linear", average=False)
+        res1.get_prediction(which="precision", average=True)
+        res1.get_prediction(exog_precision=ex_prec, which="precision",
+                            average=False)
+        res1.get_prediction(which="linear-precision", average=True)
+
+        # test agg_weights
+        pm = res1.get_prediction(exog=df6, which="mean", average=True)
+        dfm = pm.summary_frame()
+        aw = np.zeros(len(res1.model.endog))
+        aw[:6] = 1
+        aw /= aw.mean()
+        pm6 = res1.get_prediction(exog=df6, which="mean", average=True)
+        dfm6 = pm6.summary_frame()
+        pmw = res1.get_prediction(which="mean", average=True, agg_weights=aw)
+        dfmw = pmw.summary_frame()
+        assert_allclose(pmw.predicted, pm6.predicted, rtol=1e-13)
+        assert_allclose(dfmw, dfm6, rtol=1e-13)
+
+
+class TestBetaIncome():
+
+    @classmethod
+    def setup_class(cls):
+
+        formula = "I(food/income) ~ income + persons"
+        exog_prec = patsy.dmatrix("~ persons", income)
+        mod_income = BetaModel.from_formula(
+            formula,
+            income,
+            exog_precision=exog_prec,
+            link_precision=links.Log()
+            )
+        res_income = mod_income.fit(method="newton")
+
+        mod_restricted = BetaModel.from_formula(
+            formula,
+            income,
+            link_precision=links.Log()
+            )
+        res_restricted = mod_restricted.fit(method="newton")
+
+        cls.res1 = res_income
+        cls.resr = res_restricted
+
+    def test_score_test(self):
+        res1 = self.res1
+        resr = self.resr
+        params_restr = np.concatenate([resr.params, [0]])
+        r_matrix = np.zeros((1, len(params_restr)))
+        r_matrix[0, -1] = 1
+        exog_prec_extra = res1.model.exog_precision[:, 1:]
+
+        from statsmodels.base._parameter_inference import score_test
+        sc1 = score_test(res1, params_constrained=params_restr,
+                         k_constraints=1)
+        sc2 = score_test(resr, exog_extra=(None, exog_prec_extra))
+        assert_allclose(sc2[:2], sc1[:2])
+
+        sc1_hc = score_test(res1, params_constrained=params_restr,
+                            k_constraints=1, r_matrix=r_matrix, cov_type="HC0")
+        sc2_hc = score_test(resr, exog_extra=(None, exog_prec_extra),
+                            cov_type="HC0")
+        assert_allclose(sc2_hc[:2], sc1_hc[:2])
+
+    def test_influence(self):
+        # currently only smoke test
+        res1 = self.res1
+        from statsmodels.stats.outliers_influence import MLEInfluence
+
+        influ0 = MLEInfluence(res1)
+        influ = res1.get_influence()
+        attrs = ['cooks_distance', 'd_fittedvalues', 'd_fittedvalues_scaled',
+                 'd_params', 'dfbetas', 'hat_matrix_diag', 'resid_studentized'
+                 ]
+        for attr in attrs:
+            getattr(influ, attr)
+
+        frame = influ.summary_frame()
+        frame0 = influ0.summary_frame()
+        assert_allclose(frame, frame0, rtol=1e-13, atol=1e-13)

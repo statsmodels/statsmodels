@@ -44,7 +44,7 @@ import numpy as np
 
 sqr2 = np.sqrt(2.)
 
-class FPoly(object):
+class FPoly:
     '''Orthonormal (for weight=1) Fourier Polynomial on [0,1]
 
     orthonormal polynomial but density needs corfactor that I do not see what
@@ -69,7 +69,7 @@ class FPoly(object):
         else:
             return sqr2 * np.cos(np.pi * self.order * x)
 
-class F2Poly(object):
+class F2Poly:
     '''Orthogonal (for weight=1) Fourier Polynomial on [0,pi]
 
     is orthogonal but first component does not square-integrate to 1
@@ -95,7 +95,7 @@ class F2Poly(object):
         else:
             return sqr2 * np.cos(self.order * x) / np.sqrt(np.pi)
 
-class ChebyTPoly(object):
+class ChebyTPoly:
     '''Orthonormal (for weight=1) Chebychev Polynomial on (-1,1)
 
 
@@ -129,7 +129,7 @@ class ChebyTPoly(object):
 
 logpi2 = np.log(np.pi)/2
 
-class HPoly(object):
+class HPoly:
     '''Orthonormal (for weight=1) Hermite Polynomial, uses finite bounds
 
     for current use with DensityOrthoPoly domain is defined as [-6,6]
@@ -269,7 +269,7 @@ def is_orthonormal_cont(polys, lower, upper, rtol=0, atol=1e-08):
 #new versions
 
 
-class DensityOrthoPoly(object):
+class DensityOrthoPoly:
     '''Univariate density estimation by orthonormal series expansion
 
 

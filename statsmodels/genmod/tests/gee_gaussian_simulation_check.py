@@ -14,7 +14,7 @@ from statsmodels.genmod.families import Gaussian
 from statsmodels.genmod.generalized_estimating_equations import GEE
 from statsmodels.genmod.cov_struct import Autoregressive, Nested
 
-class GEE_simulator(object):
+class GEE_simulator:
 
     #
     # Parameters that must be defined
@@ -245,7 +245,7 @@ if __name__ == "__main__":
         # older numpy versions do not have formatter option
         pass
 
-    OUT = open("gee_gaussian_simulation_check.txt", "w")
+    OUT = open("gee_gaussian_simulation_check.txt", "w", encoding="utf-8")
 
     nrep = 100
 

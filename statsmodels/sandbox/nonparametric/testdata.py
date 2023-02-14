@@ -7,7 +7,7 @@ Created on Fri Mar 04 07:36:28 2011
 
 import numpy as np
 
-class kdetest(object):
+class kdetest:
 
 
     Hpi = np.matrix([[ 0.05163034, 0.5098923 ],

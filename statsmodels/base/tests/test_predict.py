@@ -13,7 +13,7 @@ from statsmodels.regression.linear_model import OLS
 from statsmodels.genmod.generalized_linear_model import GLM
 
 
-class CheckPredictReturns(object):
+class CheckPredictReturns:
 
     def test_2d(self):
         res = self.res

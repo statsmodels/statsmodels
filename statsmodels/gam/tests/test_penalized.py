@@ -58,7 +58,7 @@ df_autos_ = pd.read_csv(file_path)
 df_autos = df_autos_[['city_mpg', 'fuel', 'drive', 'weight', 'hp']].dropna()
 
 
-class CheckGAMMixin(object):
+class CheckGAMMixin:
 
     @classmethod
     def _init(cls):
@@ -215,7 +215,7 @@ class TestGAM5Bfgs(CheckGAMMixin):
                         rtol=self.rtol_fitted)
 
 
-class TestGAM6Pirls(object):
+class TestGAM6Pirls:
 
     @classmethod
     def setup_class(cls):
@@ -246,7 +246,7 @@ class TestGAM6Pirls(object):
                         rtol=self.rtol_fitted)
 
 
-class TestGAM6Bfgs(object):
+class TestGAM6Bfgs:
 
     @classmethod
     def setup_class(cls):
@@ -273,7 +273,7 @@ class TestGAM6Bfgs(object):
                         rtol=self.rtol_fitted)
 
 
-class TestGAM6Bfgs0(object):
+class TestGAM6Bfgs0:
 
     @classmethod
     def setup_class(cls):
@@ -328,7 +328,7 @@ pls6_exog = np.array([
     ]).reshape(10, 6, order='F')
 
 
-class TestGAM6ExogBfgs(object):
+class TestGAM6ExogBfgs:
 
     @classmethod
     def setup_class(cls):
@@ -356,7 +356,7 @@ class TestGAM6ExogBfgs(object):
                         rtol=1e-13)
 
 
-class TestGAM6ExogPirls(object):
+class TestGAM6ExogPirls:
 
     @classmethod
     def setup_class(cls):
@@ -384,7 +384,7 @@ class TestGAM6ExogPirls(object):
                         rtol=1e-13)
 
 
-class TestGAMMPG(object):
+class TestGAMMPG:
 
     @classmethod
     def setup_class(cls):
@@ -596,7 +596,7 @@ class TestGAMMPGBSPoisson(CheckGAMMixin):
         #                        linear=True)
         xp = pd.DataFrame(res1.model.smoother.x[2:4])
         linpred = res1.predict(df_autos.iloc[2:4], xp,
-                               linear=True)
+                               which="linear")
         assert_allclose(linpred, res2.linear_predictors[2:4],
                         rtol=self.rtol_fitted)
 
@@ -608,7 +608,8 @@ class TestGAMMPGBSPoisson(CheckGAMMixin):
         res2 = self.res2
         wtt = res1.wald_test_terms(skip_single=True,
                                    combine_terms=['fuel', 'drive',
-                                                  'weight', 'hp'])
+                                                  'weight', 'hp'],
+                                   scalar=True)
         # mgcv has term test for linear part
         assert_allclose(wtt.statistic[:2], res2.pTerms_chi_sq, rtol=1e-7)
         assert_allclose(wtt.pvalues[:2], res2.pTerms_pv, rtol=1e-6)
@@ -666,7 +667,7 @@ class TestGAMMPGBSPoissonFormula(TestGAMMPGBSPoisson):
         assert_equal(res1a.model.design_info_linear.column_names,
                      xnames[:4])
 
-        assert_equal(res1a.fittedvalues[2:4].index.values, [2, 3])
+        assert_equal(res1a.fittedvalues.iloc[2:4].index.values, [2, 3])
         assert_equal(res1a.params.index.values, xnames)
         assert_(isinstance(res1a.params, pd.Series))
 

@@ -14,7 +14,7 @@ import warnings
 
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_allclose, assert_raises,
-                           assert_equal, assert_warns)
+                           assert_equal, assert_warns, assert_array_equal)
 import pytest
 
 import statsmodels.stats.power as smp
@@ -27,7 +27,7 @@ except ImportError:
     pass
 
 
-class CheckPowerMixin(object):
+class CheckPowerMixin:
 
     def test_power(self):
         #test against R results
@@ -88,7 +88,7 @@ class CheckPowerMixin(object):
 
     @pytest.mark.matplotlib
     def test_power_plot(self, close_figures):
-        if self.cls == smp.FTestPower:
+        if self.cls in [smp.FTestPower, smp.FTestPowerF2]:
             pytest.skip('skip FTestPower plot_power')
         fig = plt.figure()
         ax = fig.add_subplot(2,1,1)
@@ -688,6 +688,46 @@ class TestFtestPower(CheckPowerMixin):
         # precision for test_power
         cls.decimal = 5
 
+    def test_kwargs(self):
+
+        with pytest.warns(UserWarning):
+            smp.FTestPower().solve_power(
+                effect_size=0.3, alpha=0.1, power=0.9, df_denom=2,
+                nobs=None)
+
+        with pytest.raises(ValueError):
+            smp.FTestPower().solve_power(
+                effect_size=0.3, alpha=0.1, power=0.9, df_denom=2,
+                junk=3)
+
+
+class TestFtestPowerF2(CheckPowerMixin):
+
+    @classmethod
+    def setup_class(cls):
+        res2 = Holder()
+        #> rf = pwr.f2.test(u=5, v=19, f2=0.3**2, sig.level=0.1)
+        #> cat_items(rf, "res2.")
+        res2.u = 5
+        res2.v = 19
+        res2.f2 = 0.09
+        res2.sig_level = 0.1
+        res2.power = 0.235454222377575
+        res2.method = 'Multiple regression power calculation'
+
+        cls.res2 = res2
+        cls.kwds = {'effect_size': res2.f2, 'df_num': res2.u,
+                     'df_denom': res2.v, 'alpha': res2.sig_level,
+                     'power': res2.power}
+        # keyword for which we do not look for root:
+        # solving for n_bins does not work, will not be used in regular usage
+        cls.kwds_extra = {}
+        cls.args_names = ['effect_size', 'df_num', 'df_denom', 'alpha']
+        cls.cls = smp.FTestPowerF2
+        # precision for test_power
+        cls.decimal = 5
+
+
 
 def test_power_solver():
     # messing up the solver to trigger backup
@@ -772,3 +812,22 @@ def test_power_solver_warn():
                               alternative='larger')
         assert_equal(nip.cache_fit_res[0], 0)
         assert_equal(len(nip.cache_fit_res), 3)
+
+
+def test_normal_sample_size_one_tail():
+    # Test that using default value of std_alternative does not raise an
+    # exception. A power of 0.8 and alpha of 0.05 were chosen to reflect
+    # commonly used values in hypothesis testing. Difference in means and
+    # standard deviation of null population were chosen somewhat arbitrarily --
+    # there's nothing special about those values. Return value doesn't matter
+    # for this "test", so long as an exception is not raised.
+    smp.normal_sample_size_one_tail(5, 0.8, 0.05, 2, std_alternative=None)
+
+    # Test that zero is returned in the correct elements if power is less
+    # than alpha.
+    alphas = np.asarray([0.01, 0.05, 0.1, 0.5, 0.8])
+    powers = np.asarray([0.99, 0.95, 0.9, 0.5, 0.2])
+    # zero_mask = np.where(alphas - powers > 0, 0.0, alphas - powers)
+    nobs_with_zeros = smp.normal_sample_size_one_tail(5, powers, alphas, 2, 2)
+    # check_nans = np.isnan(zero_mask) == np.isnan(nobs_with_nans)
+    assert_array_equal(nobs_with_zeros[powers <= alphas], 0)

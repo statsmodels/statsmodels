@@ -112,7 +112,7 @@ xo = array([[ -419,  -731, -1306, -1294],
 
 x = xo/1000.
 
-class HoldIt(object):
+class HoldIt:
     def __init__(self, name):
         self.name = name
     def save(self, what=None, filename=None, header=True, useinstant=True,
@@ -139,7 +139,7 @@ class HoldIt(object):
             txt.append('%s%s = %s' % (prefix, x, repr(getattr(self,x))))
         txt.extend(['','']) #add empty lines at end
         if filename is not None:
-            with open(filename, 'a+') as fd:
+            with open(filename, 'a+', encoding="utf-8") as fd:
                 fd.write('\n'.join(txt))
         return txt
 

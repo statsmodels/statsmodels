@@ -96,9 +96,9 @@ def test_fit_ml_em_random_state():
         Factor(endog=epsilon, n_factor=2, method='ml').fit()
     final = np.random.get_state()
 
-    assert(initial[0] == final[0])
+    assert initial[0] == final[0]
     assert_equal(initial[1], final[1])
-    assert(initial[2:] == final[2:])
+    assert initial[2:] == final[2:]
 
 
 def test_em():

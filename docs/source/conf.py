@@ -13,7 +13,7 @@
 # serve to show the default.
 
 import contextlib
-from distutils.version import LooseVersion
+from packaging.version import parse
 import os
 from os.path import dirname, join
 import sys
@@ -98,13 +98,13 @@ autoclass_content = 'class'
 
 release = __version__
 
-lv = LooseVersion(release)
+parsed_version = parse(release)
 commit = ''
 full_version = short_version = version = release
-if '+' in lv.version:
-    short_version = lv.vstring[:lv.vstring.index('+')]
-    commit = lv.version[lv.version.index('+') + 1]
-    version = short_version + ' (+{0})'.format(commit)
+if parsed_version.is_devrelease:
+    short_version = parsed_version.base_version
+    commit = parsed_version.dev
+    version = short_version + f' (+{commit})'
 
 # Remove release to prevent it triggering a conf change
 del release
@@ -405,7 +405,7 @@ plot_basedir = join(dirname(dirname(os.path.abspath(__file__))), 'source')
 # ghissue config
 github_project_url = 'https://github.com/statsmodels/statsmodels'
 
-example_context = yaml.safe_load(open('examples/landing.yml'))
+example_context = yaml.safe_load(open('examples/landing.yml', encoding="utf-8"))
 html_context.update({'examples': example_context})
 
 # --------------- DOCTEST -------------------
@@ -420,9 +420,9 @@ import pandas as pd
 """
 
 extlinks = {'pr': ('https://github.com/statsmodels/statsmodels/pull/%s',
-                   'PR #'),
+                   'PR #%s'),
             'issue': ('https://github.com/statsmodels/statsmodels/issues/%s',
-                      'Issue #')
+                      'Issue #%s')
             }
 
 autosectionlabel_prefix_document = True

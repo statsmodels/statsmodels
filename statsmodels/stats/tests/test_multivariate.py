@@ -215,7 +215,7 @@ def test_confint_simult():
     assert_allclose(res_constr2[1], upps, rtol=1e-13)
 
 
-class TestCovStructure(object):
+class TestCovStructure:
 
     @classmethod
     def setup_class(cls):

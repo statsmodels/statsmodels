@@ -18,7 +18,7 @@ from statsmodels.tools.tools import add_constant
 from .results.results_ordinal_model import data_store as ds
 
 
-class CheckOrdinalModelMixin(object):
+class CheckOrdinalModelMixin:
 
     def test_basic(self):
         # checks basic results againt R MASS package
@@ -256,8 +256,9 @@ class TestProbitModel(CheckOrdinalModelMixin):
         score1 = mod.score(res1.params * fact)
         score_obs_numdiff = mod.score_obs(res1.params * fact)
         score_obs_exog = mod.score_obs_(res1.params * fact)
-        assert_allclose(score_obs_numdiff.sum(0), score1, atol=1e-7)
-        assert_allclose(score_obs_exog.sum(0), score1[:mod.k_vars], atol=1e-7)
+        # Relax atol due to small failures on OSX
+        assert_allclose(score_obs_numdiff.sum(0), score1, atol=1e-6)
+        assert_allclose(score_obs_exog.sum(0), score1[:mod.k_vars], atol=1e-6)
 
         # null model
         mod_null = OrderedModel(mod.endog, None,

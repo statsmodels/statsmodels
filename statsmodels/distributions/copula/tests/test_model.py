@@ -68,7 +68,7 @@ def get_data(nobs):
 data_ev = get_data(500)
 
 
-class CheckEVfit1(object):
+class CheckEVfit1:
 
     def test(self):
         cop = self.copula
@@ -121,7 +121,7 @@ class CheckEVfit1(object):
 
 
 # temporarily split for copulas that only have fixed cop_args
-class CheckEVfit0(object):
+class CheckEVfit0:
 
     def test0(self):
         # test with fixed copula params

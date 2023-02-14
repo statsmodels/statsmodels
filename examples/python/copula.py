@@ -34,7 +34,9 @@ sns.mpl.rc("figure", figsize=(8, 8))
 # In this case, we are using the Gumbel copula and fix its hyperparameter
 # `theta=2`. We can visualize it's 2-dimensional PDF.
 
-from statsmodels.distributions.copula.api import CopulaDistribution, GumbelCopula
+from statsmodels.distributions.copula.api import (CopulaDistribution,
+                                                  GumbelCopula,
+                                                  IndependenceCopula)
 
 copula = GumbelCopula(theta=2)
 _ = copula.plot_pdf()  # returns a matplotlib figure
@@ -66,7 +68,8 @@ _ = h.set_axis_labels("X1", "X2", fontsize=16)
 # generated.
 
 marginals = [stats.gamma(2), stats.norm]
-joint_dist = CopulaDistribution(marginals=marginals, copula=None)
+joint_dist = CopulaDistribution(copula=IndependenceCopula(),
+                                marginals=marginals)
 sample = joint_dist.rvs(512, random_state=20210801)
 h = sns.jointplot(x=sample[:, 0], y=sample[:, 1], kind="scatter")
 _ = h.set_axis_labels("X1", "X2", fontsize=16)
@@ -75,7 +78,7 @@ _ = h.set_axis_labels("X1", "X2", fontsize=16)
 # a copula, we can use this copula to sample a new set of observation with
 # the same convenient class.
 
-joint_dist = CopulaDistribution(marginals=marginals, copula=copula)
+joint_dist = CopulaDistribution(copula, marginals)
 # Use an initialized Generator object
 rng = np.random.default_rng([2, 0, 2, 1, 0, 8, 0, 1])
 sample = joint_dist.rvs(512, random_state=rng)

@@ -157,7 +157,6 @@ class RankCompareResult(HolderTuple):
         # TODO: use var_prob
         std_diff = np.sqrt(self.var / self.nobs)
 
-        # TODO: return HolderTuple
         # corresponds to a one-sample test and either p0 or diff could be used
         if not self.use_t:
             stat, pv = _zstat_generic(self.prob1, p0, std_diff, alternative,
@@ -220,7 +219,7 @@ class RankCompareResult(HolderTuple):
         t1 = self.test_prob_superior(low, alternative='larger')
         t2 = self.test_prob_superior(upp, alternative='smaller')
 
-        # idx_max = 0 if t1.pvalue < t2.pvalue else 1
+        # idx_max = 1 if t1.pvalue < t2.pvalue else 0
         idx_max = np.asarray(t1.pvalue < t2.pvalue, int)
         title = "Equivalence test for Prob(x1 > x2) + 0.5 Prob(x1 = x2) "
         res = HolderTuple(statistic=np.choose(idx_max,
@@ -331,7 +330,7 @@ class RankCompareResult(HolderTuple):
             pvalue = self.pvalue
             statistic = self.statistic
         pvalues = np.atleast_1d(pvalue)
-        ci = np.atleast_2d(self.conf_int(alpha))
+        ci = np.atleast_2d(self.conf_int(alpha=alpha))
         if ci.shape[0] > 1:
             ci = ci.T
         use_t = self.use_t
@@ -375,7 +374,7 @@ def rank_compare_2indep(x1, x2, use_t=True):
     ----------
     x1, x2 : array_like
         Array of samples, should be one-dimensional.
-    use_t : poolean
+    use_t : boolean
         If use_t is true, the t distribution with Welch-Satterthwaite type
         degrees of freedom is used for p-value and confidence interval.
         If use_t is false, then the normal distribution is used.

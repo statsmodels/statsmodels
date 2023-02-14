@@ -412,6 +412,7 @@ Lowess
 Lumley
 Lutkepohl
 MANOVA
+MSTL
 MICEData
 MLEInfluence
 MLEModel
@@ -2458,7 +2459,6 @@ wo
 worN
 wresid
 wts
-wusing
 www
 xdist
 xfail

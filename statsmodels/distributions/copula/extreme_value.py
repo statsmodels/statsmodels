@@ -56,6 +56,8 @@ class ExtremeValueCopula(Copula):
         self.transform = transform
         self.k_args = transform.k_args
         self.args = args
+        if k_dim != 2:
+            raise ValueError("Only bivariate EV copulas are available.")
 
     def _handle_args(self, args):
         # TODO: how to we handle non-tuple args? two we allow single values?
@@ -156,4 +158,7 @@ class ExtremeValueCopula(Copula):
 
         where t = np.log(v)/np.log(u*v)
         """
+        raise NotImplementedError
+
+    def fit_corr_param(self, data):
         raise NotImplementedError

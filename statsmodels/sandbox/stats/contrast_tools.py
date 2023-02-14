@@ -350,7 +350,7 @@ def dummy_nested(d1, d2, method='full'):
     return dd, col_dropf, col_dropl
 
 
-class DummyTransform(object):
+class DummyTransform:
     '''Conversion between full rank dummy encodings
 
 
@@ -450,7 +450,7 @@ def groupmean_d(x, d):
 
 
 
-class TwoWay(object):
+class TwoWay:
     '''a wrapper class for two way anova type of analysis with OLS
 
 
@@ -553,7 +553,7 @@ class TwoWay(object):
 # --------------- tests
 # TODO: several tests still missing, several are in the example with print
 
-class TestContrastTools(object):
+class TestContrastTools:
 
     def __init__(self):
         self.v1name = ['a0', 'a1', 'a2']

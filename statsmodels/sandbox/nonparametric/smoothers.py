@@ -12,7 +12,7 @@ import numpy as np
 from . import kernels
 
 
-class KernelSmoother(object):
+class KernelSmoother:
     """
     1D Kernel Density Regression/Kernel Smoother
 
@@ -81,7 +81,7 @@ class KernelSmoother(object):
     def std(self, x):
         return np.sqrt(self.var(x))
 
-class PolySmoother(object):
+class PolySmoother:
     """
     Polynomial smoother up to a given order.
     Fit based on weighted least squares.

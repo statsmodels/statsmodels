@@ -25,6 +25,7 @@ from statsmodels.tools.sm_exceptions import (
     InfeasibleTestError,
     InterpolationWarning,
     MissingDataError,
+    ValueWarning,
 )
 # Remove imports when range unit root test gets an R implementation
 from statsmodels.tools.validation import array_like, bool_like
@@ -69,7 +70,15 @@ def acovf_data():
     return rnd.randn(250)
 
 
-class CheckADF(object):
+@pytest.fixture(scope="module")
+def gc_data():
+    mdata = macrodata.load_pandas().data
+    mdata = mdata[["realgdp", "realcons"]].values
+    data = mdata.astype(float)
+    return np.diff(np.log(data), axis=0)
+
+
+class CheckADF:
     """
     Test Augmented Dickey-Fuller
 
@@ -129,8 +138,6 @@ class TestADFNoConstant(CheckADF):
 
     @classmethod
     def setup_class(cls):
-        with pytest.warns(FutureWarning):
-            adfuller(cls.x, regression="nc", autolag=None, maxlag=4)
         cls.res1 = adfuller(cls.x, regression="n", autolag=None, maxlag=4)
         cls.teststat = 3.5227498
 
@@ -182,7 +189,13 @@ class TestADFNoConstant2(CheckADF):
         )
 
 
-class CheckCorrGram(object):
+@pytest.mark.parametrize("x", [np.full(8, 5.0)])
+def test_adfuller_resid_variance_zero(x):
+    with pytest.raises(ValueError):
+        adfuller(x)
+
+
+class CheckCorrGram:
     """
     Set up for ACF, PACF tests.
     """
@@ -334,6 +347,10 @@ class TestPACF(CheckCorrGram):
         pacfyw = pacf_yw(self.x, nlags=40, method="mle")
         assert_almost_equal(pacfyw[1:], self.pacfyw, DECIMAL_8)
 
+    def test_yw_singular(self):
+        with pytest.warns(ValueWarning):
+            pacf(np.ones(30), nlags=6)
+
     def test_ld(self):
         pacfyw = pacf_yw(self.x, nlags=40, method="mle")
         pacfld = pacf(self.x, nlags=40, method="ldb")
@@ -343,8 +360,12 @@ class TestPACF(CheckCorrGram):
         pacfld = pacf(self.x, nlags=40, method="lda")
         assert_almost_equal(pacfyw, pacfld, DECIMAL_8)
 
+    def test_burg(self):
+        pacfburg_, _ = pacf_burg(self.x, nlags=40)
+        pacfburg = pacf(self.x, nlags=40, method="burg")
+        assert_almost_equal(pacfburg_, pacfburg, DECIMAL_8)
 
-class TestBreakvarHeteroskedasticityTest(object):
+class TestBreakvarHeteroskedasticityTest:
     from scipy.stats import chi2, f
 
     def test_1d_input(self):
@@ -464,7 +485,7 @@ class TestBreakvarHeteroskedasticityTest(object):
         assert actual_pvalue == expected_pvalue
 
 
-class CheckCoint(object):
+class CheckCoint:
     """
     Test Cointegration Test Results for 2-variable system
 
@@ -596,10 +617,6 @@ def test_coint():
     res[2] = [-1.6865000791270679, nan, nan, nan]
     res[3] = [-3.7991270451873675, nan, nan, nan]
 
-    with pytest.warns(FutureWarning):
-        # Ensure warning raised for nc rather than n
-        coint(y[:, 0], y[:, 1], trend="nc", maxlag=4, autolag=None)
-
     for trend in ["c", "ct", "ctt", "n"]:
         res1 = {}
         res1[0] = coint(y[:, 0], y[:, 1], trend=trend, maxlag=4, autolag=None)
@@ -655,7 +672,7 @@ def test_coint_perfect_collinearity():
     assert_(np.isneginf(c[0]))
 
 
-class TestGrangerCausality(object):
+class TestGrangerCausality:
     def test_grangercausality(self):
         # some example data
         mdata = macrodata.load_pandas().data
@@ -665,7 +682,8 @@ class TestGrangerCausality(object):
 
         # R: lmtest:grangertest
         r_result = [0.243097, 0.7844328, 195, 2]  # f_test
-        gr = grangercausalitytests(data[:, 1::-1], 2, verbose=False)
+        with pytest.warns(FutureWarning, match="verbose is"):
+            gr = grangercausalitytests(data[:, 1::-1], 2, verbose=False)
         assert_almost_equal(r_result, gr[2][0]["ssr_ftest"], decimal=7)
         assert_almost_equal(
             gr[2][0]["params_ftest"], gr[2][0]["ssr_ftest"], decimal=7
@@ -676,8 +694,10 @@ class TestGrangerCausality(object):
         mdata = mdata[["realgdp", "realcons"]].values
         data = mdata.astype(float)
         data = np.diff(np.log(data), axis=0)
-        gr = grangercausalitytests(data[:, 1::-1], 2, verbose=False)
-        gr2 = grangercausalitytests(data[:, 1::-1], [2], verbose=False)
+        with pytest.warns(FutureWarning, match="verbose is"):
+            gr = grangercausalitytests(data[:, 1::-1], 2, verbose=False)
+        with pytest.warns(FutureWarning, match="verbose is"):
+            gr2 = grangercausalitytests(data[:, 1::-1], [2], verbose=False)
         assert 1 in gr
         assert 1 not in gr2
         assert_almost_equal(
@@ -690,9 +710,11 @@ class TestGrangerCausality(object):
     def test_granger_fails_on_nobs_check(self, reset_randomstate):
         # Test that if maxlag is too large, Granger Test raises a clear error.
         x = np.random.rand(10, 2)
-        grangercausalitytests(x, 2, verbose=False)  # This should pass.
+        with pytest.warns(FutureWarning, match="verbose is"):
+            grangercausalitytests(x, 2, verbose=False)  # This should pass.
         with pytest.raises(ValueError):
-            grangercausalitytests(x, 3, verbose=False)
+            with pytest.warns(FutureWarning, match="verbose is"):
+                grangercausalitytests(x, 3, verbose=False)
 
     def test_granger_fails_on_finite_check(self, reset_randomstate):
         x = np.random.rand(1000, 2)
@@ -1381,7 +1403,7 @@ def test_adfuller_maxlag_too_large(reset_randomstate):
         adfuller(y, maxlag=51)
 
 
-class SetupZivotAndrews(object):
+class SetupZivotAndrews:
     # test directory
     cur_dir = CURR_DIR
     run_dir = os.path.join(cur_dir, "results")
@@ -1518,4 +1540,17 @@ gc_data_sets = [df1, df2, df3, df4]
 @pytest.mark.parametrize("dataset", gc_data_sets)
 def test_granger_causality_exceptions(dataset):
     with pytest.raises(InfeasibleTestError):
-        grangercausalitytests(dataset, 4)
+        with pytest.warns(FutureWarning, match="verbose"):
+            grangercausalitytests(dataset, 4, verbose=False)
+
+
+def test_granger_causality_exception_maxlag(gc_data):
+    with pytest.raises(ValueError, match="maxlag must be"):
+        grangercausalitytests(gc_data, maxlag=-1)
+    with pytest.raises(NotImplementedError):
+        grangercausalitytests(gc_data, 3, addconst=False)
+
+
+def test_granger_causality_verbose(gc_data):
+    with pytest.warns(FutureWarning, match="verbose"):
+        grangercausalitytests(gc_data, 3, verbose=True)

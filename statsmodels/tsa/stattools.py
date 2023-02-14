@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from statsmodels.compat.numpy import lstsq
 from statsmodels.compat.pandas import deprecate_kwarg
-from statsmodels.compat.python import lzip, Literal
+from statsmodels.compat.python import Literal, lzip
 from statsmodels.compat.scipy import _next_regular
 
 from typing import Tuple
@@ -24,6 +24,7 @@ from statsmodels.tools.sm_exceptions import (
     InfeasibleTestError,
     InterpolationWarning,
     MissingDataError,
+    ValueWarning,
 )
 from statsmodels.tools.tools import Bunch, add_constant
 from statsmodels.tools.validation import (
@@ -37,7 +38,7 @@ from statsmodels.tools.validation import (
 from statsmodels.tsa._bds import bds
 from statsmodels.tsa._innovations import innovations_algo, innovations_filter
 from statsmodels.tsa.adfvalues import mackinnoncrit, mackinnonp
-from statsmodels.tsa.tsatools import add_trend, lagmat, lagmat2ds, rename_trend
+from statsmodels.tsa.tsatools import add_trend, lagmat, lagmat2ds
 
 __all__ = [
     "acovf",
@@ -239,6 +240,10 @@ def adfuller(
 
     The autolag option and maxlag for it are described in Greene.
 
+    See the notebook `Stationarity and detrending (ADF/KPSS)
+    <../examples/notebooks/generated/stationarity_detrending_adf_kpss.html>`__
+    for an overview.
+
     References
     ----------
     .. [1] W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
@@ -252,14 +257,9 @@ def adfuller(
     .. [4] MacKinnon, J.G. 2010. "Critical Values for Cointegration Tests."  Queen"s
         University, Dept of Economics, Working Papers.  Available at
         http://ideas.repec.org/p/qed/wpaper/1227.html
-
-    Examples
-    --------
-    See example notebook
     """
     x = array_like(x, "x")
     maxlag = int_like(maxlag, "maxlag", optional=True)
-    regression = rename_trend(regression)
     regression = string_like(
         regression, "regression", options=("c", "ct", "ctt", "n")
     )
@@ -268,6 +268,9 @@ def adfuller(
     )
     store = bool_like(store, "store")
     regresults = bool_like(regresults, "regresults")
+
+    if x.max() == x.min():
+        raise ValueError("Invalid input, x is constant")
 
     if regresults:
         store = True
@@ -426,7 +429,7 @@ def acovf(x, adjusted=False, demean=True, fft=True, missing="none", nlag=None):
         The estimated autocovariances.
 
     References
-    -----------
+    ----------
     .. [1] Parzen, E., 1963. On spectral analysis with missing observations
            and amplitude modulation. Sankhya: The Indian Journal of
            Statistics, Series A, pp.383-392.
@@ -545,6 +548,13 @@ def q_stat(x, nobs):
     p-value : ndarray
         P-value of the Q statistic.
 
+    See Also
+    --------
+    statsmodels.stats.diagnostic.acorr_ljungbox
+        Ljung-Box Q-test for autocorrelation in time series based
+        on a time series rather than the estimated autocorrelation
+        function.
+
     Notes
     -----
     Designed to be used with acf.
@@ -585,7 +595,8 @@ def acf(
        If True, then denominators for autocovariance are n-k, otherwise n.
     nlags : int, optional
         Number of lags to return autocorrelation for. If not provided,
-        uses min(10 * np.log10(nobs), nobs - 1).
+        uses min(10 * np.log10(nobs), nobs - 1). The returned value
+        includes lag 0 (ie., 1) so size of the acf vector is (nlags + 1,).
     qstat : bool, default False
         If True, returns the Ljung-Box q statistic for each autocorrelation
         coefficient.  See q_stat for more information.
@@ -628,14 +639,17 @@ def acf(
     Returns
     -------
     acf : ndarray
-        The autocorrelation function.
+        The autocorrelation function for lags 0, 1, ..., nlags. Shape
+        (nlags+1,).
     confint : ndarray, optional
-        Confidence intervals for the ACF. Returned if alpha is not None.
+        Confidence intervals for the ACF at lags 0, 1, ..., nlags. Shape
+        (nlags + 1, 2). Returned if alpha is not None.
     qstat : ndarray, optional
-        The Ljung-Box Q-Statistic.  Returned if q_stat is True.
+        The Ljung-Box Q-Statistic for lags 1, 2, ..., nlags (excludes lag
+        zero). Returned if q_stat is True.
     pvalues : ndarray, optional
-        The p-values associated with the Q-statistics.  Returned if q_stat is
-        True.
+        The p-values associated with the Q-statistics for lags 1, 2, ...,
+        nlags (excludes lag zero). Returned if q_stat is True.
 
     Notes
     -----
@@ -677,24 +691,23 @@ def acf(
     acf = avf[: nlags + 1] / avf[0]
     if not (qstat or alpha):
         return acf
+    _alpha = alpha if alpha is not None else 0.05
+    if bartlett_confint:
+        varacf = np.ones_like(acf) / nobs
+        varacf[0] = 0
+        varacf[1] = 1.0 / nobs
+        varacf[2:] *= 1 + 2 * np.cumsum(acf[1:-1] ** 2)
+    else:
+        varacf = 1.0 / len(x)
+    interval = stats.norm.ppf(1 - _alpha / 2.0) * np.sqrt(varacf)
+    confint = np.array(lzip(acf - interval, acf + interval))
+    if not qstat:
+        return acf, confint
+    qstat, pvalue = q_stat(acf[1:], nobs=nobs)  # drop lag 0
     if alpha is not None:
-        if bartlett_confint:
-            varacf = np.ones_like(acf) / nobs
-            varacf[0] = 0
-            varacf[1] = 1.0 / nobs
-            varacf[2:] *= 1 + 2 * np.cumsum(acf[1:-1] ** 2)
-        else:
-            varacf = 1.0 / len(x)
-        interval = stats.norm.ppf(1 - alpha / 2.0) * np.sqrt(varacf)
-        confint = np.array(lzip(acf - interval, acf + interval))
-        if not qstat:
-            return acf, confint
-    if qstat:
-        qstat, pvalue = q_stat(acf[1:], nobs=nobs)  # drop lag 0
-        if alpha is not None:
-            return acf, confint, qstat, pvalue
-        else:
-            return acf, qstat, pvalue
+        return acf, confint, qstat, pvalue
+    else:
+        return acf, qstat, pvalue
 
 
 def pacf_yw(x, nlags=None, method="adjusted"):
@@ -738,8 +751,10 @@ def pacf_yw(x, nlags=None, method="adjusted"):
 
     method = string_like(method, "method", options=("adjusted", "mle"))
     pacf = [1.0]
-    for k in range(1, nlags + 1):
-        pacf.append(yule_walker(x, k, method=method)[0][-1])
+    with warnings.catch_warnings():
+        warnings.simplefilter("once", ValueWarning)
+        for k in range(1, nlags + 1):
+            pacf.append(yule_walker(x, k, method=method)[0][-1])
     return np.array(pacf)
 
 
@@ -905,7 +920,8 @@ def pacf(x, nlags=None, method="ywadjusted", alpha=None):
         Observations of time series for which pacf is calculated.
     nlags : int, optional
         Number of lags to return autocorrelation for. If not provided,
-        uses min(10 * np.log10(nobs), nobs // 2 - 1).
+        uses min(10 * np.log10(nobs), nobs // 2 - 1). The returned value
+        includes lag 0 (ie., 1) so size of the pacf vector is (nlags + 1,).
     method : str, default "ywunbiased"
         Specifies which method for the calculations to use.
 
@@ -921,6 +937,7 @@ def pacf(x, nlags=None, method="ywadjusted", alpha=None):
           correction.
         - "ldb" or "ldbiased" : Levinson-Durbin recursion without bias
           correction.
+        - "burg" :  Burg"s partial autocorrelation estimator.
 
     alpha : float, optional
         If a number is given, the confidence intervals for the given level are
@@ -931,9 +948,11 @@ def pacf(x, nlags=None, method="ywadjusted", alpha=None):
     Returns
     -------
     pacf : ndarray
-        Partial autocorrelations, nlags elements, including lag zero.
+        The partial autocorrelations for lags 0, 1, ..., nlags. Shape
+        (nlags+1,).
     confint : ndarray, optional
-        Confidence intervals for the PACF. Returned if confint is not None.
+        Confidence intervals for the PACF at lags 0, 1, ..., nlags. Shape
+        (nlags + 1, 2). Returned if alpha is not None.
 
     See Also
     --------
@@ -977,6 +996,7 @@ def pacf(x, nlags=None, method="ywadjusted", alpha=None):
         "ldb",
         "ldbiased",
         "ld_biased",
+        "burg"
     )
     x = array_like(x, "x", maxdim=2)
     method = string_like(method, "method", options=methods)
@@ -1004,6 +1024,8 @@ def pacf(x, nlags=None, method="ywadjusted", alpha=None):
         acv = acovf(x, adjusted=True, fft=False)
         ld_ = levinson_durbin(acv, nlags=nlags, isacov=True)
         ret = ld_[2]
+    elif method == "burg":
+        ret, _ = pacf_burg(x, nlags=nlags, demean=True)
     # inconsistent naming with ywmle
     else:  # method in ("ldb", "ldbiased", "ld_biased")
         acv = acovf(x, adjusted=False, fft=False)
@@ -1320,7 +1342,8 @@ def breakvar_heteroskedasticity_test(
             warnings.warn(
                 "Early subset of data for variable %d"
                 " has too few non-missing observations to"
-                " calculate test statistic." % i
+                " calculate test statistic." % i,
+                stacklevel=2,
             )
             numer_squared_sum[i] = np.nan
 
@@ -1332,7 +1355,8 @@ def breakvar_heteroskedasticity_test(
             warnings.warn(
                 "Later subset of data for variable %d"
                 " has too few non-missing observations to"
-                " calculate test statistic." % i
+                " calculate test statistic." % i,
+                stacklevel=2,
             )
             denom_squared_sum[i] = np.nan
 
@@ -1378,7 +1402,7 @@ def breakvar_heteroskedasticity_test(
     return test_statistic, p_value
 
 
-def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
+def grangercausalitytests(x, maxlag, addconst=True, verbose=None):
     """
     Four tests for granger non causality of 2 time series.
 
@@ -1388,7 +1412,7 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
     Parameters
     ----------
     x : array_like
-        The data for test whether the time series in the second column Granger
+        The data for testing whether the time series in the second column Granger
         causes the time series in the first column. Missing values are not
         supported.
     maxlag : {int, Iterable[int]}
@@ -1397,7 +1421,13 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
     addconst : bool
         Include a constant in the model.
     verbose : bool
-        Print results.
+        Print results. Deprecated
+
+        .. deprecated: 0.14
+
+           verbose is deprecated and will be removed after 0.15 is released
+
+
 
     Returns
     -------
@@ -1442,20 +1472,30 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
     >>> data = data.data[["realgdp", "realcons"]].pct_change().dropna()
 
     All lags up to 4
+
     >>> gc_res = grangercausalitytests(data, 4)
 
     Only lag 4
+
     >>> gc_res = grangercausalitytests(data, [4])
     """
     x = array_like(x, "x", ndim=2)
     if not np.isfinite(x).all():
         raise ValueError("x contains NaN or inf values.")
     addconst = bool_like(addconst, "addconst")
-    verbose = bool_like(verbose, "verbose")
+    if verbose is not None:
+        verbose = bool_like(verbose, "verbose")
+        warnings.warn(
+            "verbose is deprecated since functions should not print results",
+            FutureWarning,
+        )
+    else:
+        verbose = True  # old default
+
     try:
         maxlag = int_like(maxlag, "maxlag")
         if maxlag <= 0:
-            raise ValueError("maxlag must a a positive integer")
+            raise ValueError("maxlag must be a positive integer")
         lags = np.arange(1, maxlag + 1)
     except TypeError:
         lags = np.array([int(lag) for lag in maxlag])
@@ -1514,7 +1554,7 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
         if res2djoint.model.k_constant:
             tss = res2djoint.centered_tss
         else:
-            tss = res2djoint.centered_tss
+            tss = res2djoint.uncentered_tss
         if (
             tss == 0
             or res2djoint.ssr == 0
@@ -1687,7 +1727,6 @@ def coint(
     """
     y0 = array_like(y0, "y0")
     y1 = array_like(y1, "y1", ndim=2)
-    trend = rename_trend(trend)
     trend = string_like(trend, "trend", options=("c", "n", "ct", "ctt"))
     string_like(method, "method", options=("aeg",))
     maxlag = int_like(maxlag, "maxlag", optional=True)
@@ -1715,6 +1754,7 @@ def coint(
             "y0 and y1 are (almost) perfectly colinear."
             "Cointegration test is not reliable in this case.",
             CollinearityWarning,
+            stacklevel=2,
         )
         # Edge case where series are too similar
         res_adf = (-np.inf,)
@@ -1855,8 +1895,10 @@ def arma_order_select_ic(
     # add the minimums to the results dict
     min_res = {}
     for i, result in res.items():
-        mins = np.where(result.min().min() == result)
-        min_res.update({i + "_min_order": (mins[0][0], mins[1][0])})
+        delta = np.ascontiguousarray(np.abs(result.min().min() - result))
+        ncols = delta.shape[1]
+        loc = np.argmin(delta)
+        min_res.update({i + "_min_order": (loc // ncols, loc % ncols)})
     res.update(min_res)
 
     return Bunch(**res)
@@ -1929,6 +1971,10 @@ def kpss(
 
     Missing values are not handled.
 
+    See the notebook `Stationarity and detrending (ADF/KPSS)
+    <../examples/notebooks/generated/stationarity_detrending_adf_kpss.html>`__
+    for an overview.
+
     References
     ----------
     .. [1] Andrews, D.W.K. (1991). Heteroskedasticity and autocorrelation
@@ -1981,6 +2027,7 @@ def kpss(
                 "None is not a valid value for nlags. It must be an integer, "
                 "'auto' or 'legacy'. None will raise starting in 0.14",
                 FutureWarning,
+                stacklevel=2,
             )
         # autolag method of Hobijn et al. (1998)
         nlags = _kpss_autolag(resids, nobs)
@@ -2009,11 +2056,15 @@ look-up table. The actual p-value is {direction} than the p-value returned.
 """
     if p_value == pvals[-1]:
         warnings.warn(
-            warn_msg.format(direction="smaller"), InterpolationWarning
+            warn_msg.format(direction="smaller"),
+            InterpolationWarning,
+            stacklevel=2,
         )
     elif p_value == pvals[0]:
         warnings.warn(
-            warn_msg.format(direction="greater"), InterpolationWarning
+            warn_msg.format(direction="greater"),
+            InterpolationWarning,
+            stacklevel=2,
         )
 
     crit_dict = {"10%": crit[0], "5%": crit[1], "2.5%": crit[2], "1%": crit[3]}
@@ -2180,7 +2231,9 @@ look-up table. The actual p-value is {direction} than the p-value returned.
 
     if direction:
         warnings.warn(
-            warn_msg.format(direction=direction), InterpolationWarning
+            warn_msg.format(direction=direction),
+            InterpolationWarning,
+            stacklevel=2,
         )
 
     crit_dict = {
@@ -2204,7 +2257,7 @@ look-up table. The actual p-value is {direction} than the p-value returned.
         return rur_stat, p_value, crit_dict
 
 
-class ZivotAndrewsUnitRoot(object):
+class ZivotAndrewsUnitRoot:
     """
     Class wrapper for Zivot-Andrews structural-break unit-root test
     """
@@ -2508,11 +2561,11 @@ class ZivotAndrewsUnitRoot(object):
         cvdict : dict
             The critical values for the test statistic at the 1%, 5%, and 10%
             levels.
+        baselag : int
+            The number of lags used for period regressions.
         bpidx : int
             The index of x corresponding to endogenously calculated break period
             with values in the range [0..nobs-1].
-        baselag : int
-            The number of lags used for period regressions.
 
         Notes
         -----

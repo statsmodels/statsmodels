@@ -121,6 +121,11 @@ class ARIMA(sarimax.SARIMAX):
     not be changed on the fly. This is why they are not instead included as
     arguments to the `fit` method.
 
+    See the notebook `ARMA: Sunspots Data
+    <../examples/notebooks/generated/tsa_arma_0.html>`__ and
+    `ARMA: Artificial Data <../examples/notebooks/generated/tsa_arma_1.html>`__
+    for an overview.
+
     .. todo:: should concentrate_scale=True by default
 
     Examples
@@ -322,7 +327,7 @@ class ARIMA(sarimax.SARIMAX):
         methods_with_fixed_params = ['statespace', 'hannan_rissanen']
         if self._has_fixed_params and method not in methods_with_fixed_params:
             raise ValueError(
-                f"When parameters have been fixed, only the methods "
+                "When parameters have been fixed, only the methods "
                 f"{methods_with_fixed_params} can be used; got '{method}'."
             )
 
@@ -402,7 +407,8 @@ class ARIMA(sarimax.SARIMAX):
             if self._spec_arima.is_integrated:
                 warnings.warn('Provided `endog` series has been differenced'
                               ' to eliminate integration prior to parameter'
-                              ' estimation by method "%s".' % method)
+                              ' estimation by method "%s".' % method,
+                              stacklevel=2,)
                 endog = diff(
                     endog, k_diff=self._spec_arima.diff,
                     k_seasonal_diff=self._spec_arima.seasonal_diff,

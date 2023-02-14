@@ -68,7 +68,7 @@ mm.date = np.array([
     ])
 
 
-class CheckTLinearModelMixin(object):
+class CheckTLinearModelMixin:
 
     def test_basic(self):
         res1 = self.res1
@@ -116,6 +116,14 @@ class CheckTLinearModelMixin(object):
         assert_allclose(res1.model.endog, resf.model.endog, rtol=1e-10)
         assert_allclose(res1.model.exog, resf.model.exog, rtol=1e-10)
 
+    def test_df(self):
+        res = self.res1
+        k_extra = getattr(self, "k_extra", 0)
+        nobs, k_vars = res.model.exog.shape
+        assert res.df_resid == nobs - k_vars - k_extra
+        assert res.df_model == k_vars - 1  # -1 for constant
+        assert len(res.params) == k_vars + k_extra
+
     @pytest.mark.smoke
     def test_smoke(self):  # TODO: break into well-scoped tests
         res1 = self.res1
@@ -147,9 +155,10 @@ class TestTModel(CheckTLinearModelMixin):
         cls.res2 = res2
         cls.res1 = res  # take from module scope temporarily
         cls.resf = resf
+        cls.k_extra = 2
 
 
-class TestTModelFixed(object):
+class TestTModelFixed:
 
     @classmethod
     def setup_class(cls):
@@ -166,6 +175,7 @@ class TestTModelFixed(object):
         #cls.res2 = res2
         cls.res1 = res  # take from module scope temporarily
         cls.resf = resf
+        cls.k_extra = 1
 
     @pytest.mark.smoke
     def test_smoke(self):  # TODO: break into well-scoped tests

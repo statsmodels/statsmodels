@@ -86,7 +86,7 @@ def opt_wrapper(func):
     return f
 
 
-class _OptConfig(object):
+class _OptConfig:
     alpha: float
     beta: float
     phi: float
@@ -193,6 +193,10 @@ class ExponentialSmoothing(TimeSeriesModel):
     per [1]_. This includes all the unstable methods as well as the stable
     methods. The implementation of the library covers the functionality of the
     R library as much as possible whilst still being Pythonic.
+
+    See the notebook `Exponential Smoothing
+    <../examples/notebooks/generated/exponential_smoothing.html>`__
+    for an overview.
 
     References
     ----------
@@ -386,7 +390,7 @@ class ExponentialSmoothing(TimeSeriesModel):
                 valid = ", ".join(valid_keys[:-1]) + ", and " + valid_keys[-1]
                 raise KeyError(
                     f"{key} if not allowed. Only {valid} are supported in "
-                    f"this specification."
+                    "this specification."
                 )
 
         if "smoothing_level" in values:
@@ -659,7 +663,7 @@ class ExponentialSmoothing(TimeSeriesModel):
             gamma = fixed.get("smoothing_seasonal", gamma)
             phi = fixed.get("damping_trend", phi)
             l0 = fixed.get("initial_level", l0)
-            b0 = fixed.get("initial_trend", l0)
+            b0 = fixed.get("initial_trend", b0)
             for i in range(self.seasonal_periods):
                 s0[i] = fixed.get(f"initial_seasonal.{i}", s0[i])
         return sel, alpha, beta, gamma, phi, l0, b0, s0
@@ -822,7 +826,7 @@ class ExponentialSmoothing(TimeSeriesModel):
                 "Model has no free parameters to estimate. Set "
                 "optimized=False to suppress this warning"
             )
-            warnings.warn(message, EstimationWarning)
+            warnings.warn(message, EstimationWarning, stacklevel=3)
             data = data.unpack_parameters(params)
             data.params = params
             data.mask = sel
@@ -1407,8 +1411,9 @@ class ExponentialSmoothing(TimeSeriesModel):
         # (s0 + gamma) + (b0 + beta) + (l0 + alpha) + phi
         k = m * has_seasonal + 2 * has_trend + 2 + 1 * damped
         aic = self.nobs * np.log(sse / self.nobs) + k * 2
-        if self.nobs - k - 3 > 0:
-            aicc_penalty = (2 * (k + 2) * (k + 3)) / (self.nobs - k - 3)
+        dof_eff = self.nobs - k - 3
+        if dof_eff > 0:
+            aicc_penalty = (2 * (k + 2) * (k + 3)) / dof_eff
         else:
             aicc_penalty = np.inf
         aicc = aic + aicc_penalty
@@ -1523,6 +1528,10 @@ class SimpleExpSmoothing(ExponentialSmoothing):
     This is a full implementation of the simple exponential smoothing as
     per [1]_.  `SimpleExpSmoothing` is a restricted version of
     :class:`ExponentialSmoothing`.
+
+    See the notebook `Exponential Smoothing
+    <../examples/notebooks/generated/exponential_smoothing.html>`__
+    for an overview.
 
     References
     ----------
@@ -1673,6 +1682,10 @@ class Holt(ExponentialSmoothing):
     -----
     This is a full implementation of the Holt's exponential smoothing as
     per [1]_. `Holt` is a restricted version of :class:`ExponentialSmoothing`.
+
+    See the notebook `Exponential Smoothing
+    <../examples/notebooks/generated/exponential_smoothing.html>`__
+    for an overview.
 
     References
     ----------

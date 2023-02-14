@@ -14,7 +14,7 @@ from statsmodels.iolib.summary import Summary
 from statsmodels.iolib.tableformatting import fmt_params
 
 
-class NewsResults(object):
+class NewsResults:
     """
     Impacts of data revisions and news on estimates of variables of interest
 
@@ -60,12 +60,23 @@ class NewsResults(object):
         E[y^u | post] - E[y^u | revisions] where y^u are the updated variables.
     weights : pd.Series
         Weights describing the effect of news on variables of interest.
+    revisions : pd.Series
+        The revisions betwen the current and previously observed data
+        y^r_{revised} - y^r_{previous} where y^r are the revised variables.
+    revision_weights : pd.Series
+        Weights describing the effect of revisions on variables of interest.
     update_forecasts : pd.Series
         Forecasts based on the previous dataset of the variables that were
         updated, E[y^u | previous].
     update_realized : pd.Series
         Actual observed data associated with the variables that were
         updated, y^u
+    revised_prev : pd.Series
+        Previously observed data associated with the variables that were
+        revised, y^r_{previous}
+    revised : pd.Series
+        Currently observed data associated with the variables that were
+        revised, y^r_{revised}
     prev_impacted_forecasts : pd.Series
         Previous forecast of the variables of interest, E[y^i | previous].
     post_impacted_forecasts : pd.Series
@@ -79,6 +90,8 @@ class NewsResults(object):
         The integer locations of the updated data points.
     updates_ix : pd.DataFrame
         The label-based locations of updated data points.
+    state_index : array_like
+        Index of state variables used to compute impacts.
 
     References
     ----------
@@ -110,7 +123,11 @@ class NewsResults(object):
         self.row_labels = row_labels
         self.params = []  # required for `summary` to work
 
-        columns = np.atleast_1d(self.updated.model.endog_names)
+        self.endog_names = self.updated.model.endog_names
+        self.k_endog = len(self.endog_names)
+
+        index = self.updated.model._index
+        columns = np.atleast_1d(self.endog_names)
 
         # E[y^i | post]
         self.post_impacted_forecasts = pd.DataFrame(
@@ -133,7 +150,6 @@ class NewsResults(object):
                               self.prev_impacted_forecasts)
 
         # Indices of revisions and updates
-        index = self.updated.model._index
         self.revisions_iloc = pd.DataFrame(
             list(zip(*news_results.revisions_ix)),
             index=['revision date', 'revised variable']).T
@@ -156,39 +172,78 @@ class NewsResults(object):
         else:
             self.updates_ix = iloc.copy()
 
-        # Wrap forecasts and forecasts errors
-        ix = pd.MultiIndex.from_arrays([self.updates_ix['update date'],
-                                        self.updates_ix['updated variable']])
+        # Index of the state variables used
+        self.state_index = news_results.state_index
 
-        # E[y^u | post] - E[y^u | previous]
+        # Wrap forecasts and forecasts errors
+        r_ix = pd.MultiIndex.from_arrays([
+            self.revisions_ix['revision date'],
+            self.revisions_ix['revised variable']])
+        u_ix = pd.MultiIndex.from_arrays([
+            self.updates_ix['update date'],
+            self.updates_ix['updated variable']])
+
+        # E[y^u | post] - E[y^u | revisions]
         if news_results.news is None:
-            self.news = pd.Series([], index=ix, name='news',
+            self.news = pd.Series([], index=u_ix, name='news',
                                   dtype=model.params.dtype)
         else:
-            self.news = pd.Series(news_results.news, index=ix, name='news')
-        # E[y^u | previous]
+            self.news = pd.Series(news_results.news, index=u_ix, name='news')
+        # E[y^u | revisions] - E[y^u | previous]
+        if news_results.revisions is None:
+            self.revisions = pd.Series([], index=r_ix, name='revision',
+                                       dtype=model.params.dtype)
+        else:
+            self.revisions = pd.Series(news_results.revisions, index=r_ix,
+                                       name='revision')
+        # E[y^u | revised]
         if news_results.update_forecasts is None:
-            self.update_forecasts = pd.Series([], index=ix,
+            self.update_forecasts = pd.Series([], index=u_ix,
                                               dtype=model.params.dtype)
         else:
             self.update_forecasts = pd.Series(
-                news_results.update_forecasts, index=ix)
+                news_results.update_forecasts, index=u_ix)
+        # y^r_{revised}
+        if news_results.revised is None:
+            self.revised = pd.Series([], index=r_ix, dtype=model.params.dtype,
+                                     name='revised')
+        else:
+            self.revised = pd.Series(news_results.revised, index=r_ix,
+                                     name='revised')
+        # y^r_{previous}
+        if news_results.revised_prev is None:
+            self.revised_prev = pd.Series([], index=r_ix,
+                                          dtype=model.params.dtype)
+        else:
+            self.revised_prev = pd.Series(
+                news_results.revised_prev, index=r_ix)
         # y^u
         if news_results.update_realized is None:
-            self.update_realized = pd.Series([], index=ix,
+            self.update_realized = pd.Series([], index=u_ix,
                                              dtype=model.params.dtype)
         else:
             self.update_realized = pd.Series(
-                news_results.update_realized, index=ix)
+                news_results.update_realized, index=u_ix)
         cols = pd.MultiIndex.from_product([self.row_labels, columns])
         # reshaped version of gain matrix E[y A'] E[A A']^{-1}
         if len(self.updates_iloc):
-            weights = news_results.gain.transpose(0, 1, 2).reshape(
-                len(cols), len(ix))
+            weights = news_results.gain.reshape(
+                len(cols), len(u_ix))
         else:
-            weights = np.zeros((len(cols), len(ix)))
-        self.weights = pd.DataFrame(weights, index=cols, columns=ix).T
+            weights = np.zeros((len(cols), len(u_ix)))
+        self.weights = pd.DataFrame(weights, index=cols, columns=u_ix).T
         self.weights.columns.names = ['impact date', 'impacted variable']
+
+        # reshaped version of revision_weights
+        if len(self.revisions_iloc):
+            revision_weights = news_results.revision_weights.reshape(
+                len(cols), len(r_ix))
+        else:
+            revision_weights = np.zeros((len(cols), len(r_ix)))
+        self.revision_weights = pd.DataFrame(
+            revision_weights, index=cols, columns=r_ix).T
+        self.revision_weights.columns.names = [
+            'impact date', 'impacted variable']
 
     @property
     def impacted_variable(self):
@@ -227,17 +282,10 @@ class NewsResults(object):
         data_updates
         """
         # Save revisions data
-        data = self.revisions_ix.copy()
-        data['observed (prev)'] = [
-            self.previous.model.endog[row[0], row[1]]
-            for _, row in self.revisions_iloc.iterrows()]
-        data['revised'] = [
-            self.updated.model.endog[row[0], row[1]]
-            for _, row in self.revisions_iloc.iterrows()]
-        data.index = pd.MultiIndex.from_arrays([data['revision date'],
-                                                data['revised variable']])
-        data = data.sort_index().drop(['revision date',
-                                       'revised variable'], axis=1)
+        data = pd.concat([
+            self.revised.rename('revised'),
+            self.revised_prev.rename('observed (prev)')
+        ], axis=1).sort_index()
         return data
 
     @property
@@ -260,16 +308,12 @@ class NewsResults(object):
 
         See also
         --------
-        data_updates
+        data_revisions
         """
-        data = pd.concat([self.update_realized, self.update_forecasts],
-                         axis=1).sort_index().reset_index()
-        data.columns = (data.columns[:2].tolist() +
-                        ['observed', 'forecast (prev)'])
-        data.index = pd.MultiIndex.from_arrays([data['update date'],
-                                                data['updated variable']])
-        data = data.sort_index().drop(['update date',
-                                       'updated variable'], axis=1)
+        data = pd.concat([
+            self.update_realized.rename('observed'),
+            self.update_forecasts.rename('forecast (prev)')
+        ], axis=1).sort_index()
         return data
 
     @property
@@ -309,7 +353,8 @@ class NewsResults(object):
         release.
 
         This table does not summarize the impacts or show the effect of
-        revisions. That information can be found in the `impacts` table.
+        revisions. That information can be found in the `impacts` or
+        `revision_details_by_impact` tables.
 
         This form of the details table is organized so that the impacted
         dates / variables are first in the index. This is convenient for
@@ -327,6 +372,7 @@ class NewsResults(object):
         See Also
         --------
         details_by_update
+        revision_details_by_update
         impacts
         """
         df = self.weights.stack(level=[0, 1]).rename('weight').to_frame()
@@ -341,6 +387,81 @@ class NewsResults(object):
             df['news'] = []
             df['impact'] = []
         df = df[['observed', 'forecast (prev)', 'news', 'weight', 'impact']]
+        df = df.reorder_levels([2, 3, 0, 1]).sort_index()
+
+        if self.impacted_variable is not None and len(df) > 0:
+            df = df.loc[np.s_[:, self.impacted_variable], :]
+
+        mask = np.abs(df['weight']) > self.tolerance
+        return df[mask]
+
+    @property
+    def revision_details_by_impact(self):
+        """
+        Details of forecast revisions from revised data, organized by impacts
+
+        Returns
+        -------
+        details : pd.DataFrame
+            Index is as MultiIndex consisting of:
+
+            - `impact date`: the date of the impact on the variable of interest
+            - `impacted variable`: the variable that is being impacted
+            - `revision date`: the date of the data revision, that results in
+              `revision` that impacts the forecast of variables of interest
+            - `revised variable`: the variable being revised, that results in
+              `news` that impacts the forecast of variables of interest
+
+            The columns are:
+
+            - `observed (prev)`: the previous value of the observation, as it
+              was given in the previous dataset
+            - `revised`: the value of the revised entry, as it is observed in
+              the new dataset
+            - `revision`: the revision (this is `revised` - `observed (prev)`)
+            - `weight`: the weight describing how the `revision` effects the
+              forecast of the variable of interest
+            - `impact`: the impact of the `revision` on the forecast of the
+              variable of interest
+
+        Notes
+        -----
+        This table decomposes updated forecasts of variables of interest from
+        the `revision` associated with each revised datapoint from the new data
+        release.
+
+        This table does not summarize the impacts or show the effect of
+        new datapoints. That information can be found in the
+        `impacts` or `details_by_impact` tables.
+
+        This form of the details table is organized so that the impacted
+        dates / variables are first in the index. This is convenient for
+        slicing by impacted variables / dates to view the details of data
+        updates for a particular variable or date.
+
+        However, since the `observed (prev)` and `revised` columns have a lot
+        of duplication, printing the entire table gives a result that is less
+        easy to parse than that produced by the `details_by_revision` property.
+        `details_by_revision` contains the same information but is organized to
+        be more convenient for displaying the entire table of detailed
+        revisions. At the same time, `details_by_revision` is less convenient
+        for subsetting.
+
+        See Also
+        --------
+        details_by_revision
+        details_by_impact
+        impacts
+        """
+        weights = self.revision_weights.stack(level=[0, 1])
+        df = pd.concat([
+            self.revised.reindex(weights.index),
+            self.revised_prev.rename('observed (prev)').reindex(weights.index),
+            self.revisions.reindex(weights.index),
+            weights.rename('weight'),
+            (self.revisions * weights).rename('impact'),
+        ], axis=1)
+
         df = df.reorder_levels([2, 3, 0, 1]).sort_index()
 
         if self.impacted_variable is not None and len(df) > 0:
@@ -374,7 +495,7 @@ class NewsResults(object):
 
             - `news`: the news associated with the update (this is just the
               forecast error: `observed` - `forecast (prev)`)
-            - `weight`: the weight describing how the `news` effects the
+            - `weight`: the weight describing how the `news` affects the
               forecast of the variable of interest
             - `impact`: the impact of the `news` on the forecast of the
               variable of interest
@@ -424,6 +545,86 @@ class NewsResults(object):
                 'forecast (prev)', 'impact date', 'impacted variable']
         df.index = pd.MultiIndex.from_arrays([df[key] for key in keys])
         details = df.drop(keys, axis=1).sort_index()
+
+        if self.impacted_variable is not None and len(df) > 0:
+            details = details.loc[
+                np.s_[:, :, :, :, :, self.impacted_variable], :]
+
+        mask = np.abs(details['weight']) > self.tolerance
+        return details[mask]
+
+    @property
+    def revision_details_by_update(self):
+        """
+        Details of forecast revisions from revisions, organized by updates
+
+        Returns
+        -------
+        details : pd.DataFrame
+            Index is as MultiIndex consisting of:
+
+            - `revision date`: the date of the data revision, that results in
+              `revision` that impacts the forecast of variables of interest
+            - `revised variable`: the variable being revised, that results in
+              `news` that impacts the forecast of variables of interest
+            - `observed (prev)`: the previous value of the observation, as it
+              was given in the previous dataset
+            - `revised`: the value of the revised entry, as it is observed in
+              the new dataset
+            - `impact date`: the date of the impact on the variable of interest
+            - `impacted variable`: the variable that is being impacted
+
+            The columns are:
+
+            - `revision`: the revision (this is `revised` - `observed (prev)`)
+            - `weight`: the weight describing how the `revision` affects the
+              forecast of the variable of interest
+            - `impact`: the impact of the `revision` on the forecast of the
+              variable of interest
+
+        Notes
+        -----
+        This table decomposes updated forecasts of variables of interest from
+        the `revision` associated with each revised datapoint from the new data
+        release.
+
+        This table does not summarize the impacts or show the effect of
+        revisions. That information can be found in the `impacts` table.
+
+        This form of the details table is organized so that the revision
+        dates / variables are first in the index, and in this table the index
+        also contains the previously observed and revised values. This is
+        convenient for displaying the entire table of detailed revisions
+        because it allows sparsifying duplicate entries.
+
+        However, since it includes previous observations and revisions in the
+        index of the table, it is not convenient for subsetting by the variable
+        of interest. Instead, the `revision_details_by_impact` property is
+        organized to make slicing by impacted variables / dates easy. This
+        allows, for example, viewing the details of data revisions on a
+        particular variable or date of interest.
+
+        See Also
+        --------
+        details_by_impact
+        impacts
+        """
+        weights = self.revision_weights.stack(level=[0, 1])
+
+        df = pd.concat([
+            self.revised_prev.rename('observed (prev)').reindex(weights.index),
+            self.revised.reindex(weights.index),
+            self.revisions.reindex(weights.index),
+            weights.rename('weight'),
+            (self.revisions * weights).rename('impact'),
+        ], axis=1)
+
+        details = (df.set_index(['observed (prev)', 'revised'], append=True)
+                     .reorder_levels([
+                         'revision date', 'revised variable', 'revised',
+                         'observed (prev)', 'impact date',
+                         'impacted variable'])
+                     .sort_index())
 
         if self.impacted_variable is not None and len(df) > 0:
             details = details.loc[
@@ -549,8 +750,8 @@ class NewsResults(object):
         impacts
         """
         # Squeeze for univariate models
-        if impacted_variable is None and self.updated.model.k_endog == 1:
-            impacted_variable = self.updated.model.endog_names
+        if impacted_variable is None and self.k_endog == 1:
+            impacted_variable = self.endog_names[0]
 
         # Default is to only show the revisions columns if there were any
         # revisions (otherwise it would just be a column of zeros)
@@ -621,15 +822,18 @@ class NewsResults(object):
 
         return impacts_table
 
-    def summary_details(self, impact_date=None, impacted_variable=None,
-                        update_date=None, updated_variable=None,
-                        groupby='update date', sparsify=True,
-                        float_format='%.2f', multiple_tables=False):
+    def summary_details(self, source='news', impact_date=None,
+                        impacted_variable=None, update_date=None,
+                        updated_variable=None, groupby='update date',
+                        sparsify=True, float_format='%.2f',
+                        multiple_tables=False):
         """
-        Create summary table with detailed impacts from news; by date, variable
+        Create summary table with detailed impacts; by date, variable
 
         Parameters
         ----------
+        source : {news, revisions}
+            The source of impacts to summarize. Default is "news".
         impact_date : int, str, datetime, list, array, or slice, optional
             Observation index label or slice of labels specifying particular
             impact periods to display. The impact date(s) describe the periods
@@ -717,11 +921,11 @@ class NewsResults(object):
         details_by_update
         """
         # Squeeze for univariate models
-        if self.updated.model.k_endog == 1:
+        if self.k_endog == 1:
             if impacted_variable is None:
-                impacted_variable = self.updated.model.endog_names
+                impacted_variable = self.endog_names[0]
             if updated_variable is None:
-                updated_variable = self.updated.model.endog_names
+                updated_variable = self.endog_names[0]
 
         # Select only the variables / dates of interest
         s = list(np.s_[:, :, :, :, :, :])
@@ -734,7 +938,28 @@ class NewsResults(object):
         if updated_variable is not None:
             s[3] = np.s_[updated_variable]
         s = tuple(s)
-        details = self.details_by_impact.loc[s, :]
+
+        if source == 'news':
+            details = self.details_by_impact.loc[s, :]
+            columns = {
+                'current': 'observed',
+                'prev': 'forecast (prev)',
+                'update date': 'update date',
+                'updated variable': 'updated variable',
+                'news': 'news',
+            }
+        elif source == 'revisions':
+            details = self.revision_details_by_impact.loc[s, :]
+            columns = {
+                'current': 'revised',
+                'prev': 'observed (prev)',
+                'update date': 'revision date',
+                'updated variable': 'revised variable',
+                'news': 'revision',
+            }
+        else:
+            raise ValueError(f'Invalid `source`: {source}. Must be "news" or'
+                             ' "impacts".')
 
         # Make the first index level the groupby level
         groupby = groupby.lower().replace('_', ' ')
@@ -761,8 +986,8 @@ class NewsResults(object):
         # observed into the index
         base_levels = [0, 1, 2, 3]
         if groupby_overall == 'update':
-            details.set_index(['observed', 'forecast (prev)'], append=True,
-                              inplace=True)
+            details.set_index([columns['current'], columns['prev']],
+                              append=True, inplace=True)
             details.index = details.index.reorder_levels([0, 1, 4, 5, 2, 3])
             base_levels = [0, 1, 4, 5]
 
@@ -777,13 +1002,15 @@ class NewsResults(object):
                     name = tmp_index.names[i]
                     value = tmp_index.levels[i][0]
                     can_drop = (
-                        (name == 'update date' and update_date is not None) or
-                        (name == 'updated variable' and
-                            updated_variable is not None) or
-                        (name == 'impact date' and impact_date is not None) or
-                        (name == 'impacted variable' and
-                            (impacted_variable is not None or
-                             self.impacted_variable is not None)))
+                        (name == columns['update date']
+                            and update_date is not None) or
+                        (name == columns['updated variable']
+                            and updated_variable is not None) or
+                        (name == 'impact date'
+                            and impact_date is not None) or
+                        (name == 'impacted variable'
+                            and (impacted_variable is not None or
+                                 self.impacted_variable is not None)))
                     if can_drop or not multiple_tables:
                         removed_levels.insert(0, f'{name} = {value}')
                         details.index = tmp_index = tmp_index.droplevel(i)
@@ -806,8 +1033,8 @@ class NewsResults(object):
         # Function to create the table
         def create_table(details, removed_levels):
             # Convert everything to strings
-            for key in ['observed', 'forecast (prev)', 'news', 'weight',
-                        'impact']:
+            for key in [columns['current'], columns['prev'], columns['news'],
+                        'weight', 'impact']:
                 if key in details:
                     args = (
                         # mark_ones
@@ -815,27 +1042,38 @@ class NewsResults(object):
                         # mark_zeroes
                         True if key in ['weight', 'impact'] else False)
                     details[key] = details[key].apply(str_format, args=args)
-            for key in ['update date', 'impact date']:
+            for key in [columns['update date'], 'impact date']:
                 if key in details:
                     details[key] = details[key].apply(str)
 
             # Sparsify index columns
             if sparsify:
-                sparsify_cols = ['update date', 'updated variable',
-                                 'impact date', 'impacted variable']
+                sparsify_cols = [columns['update date'],
+                                 columns['updated variable'], 'impact date',
+                                 'impacted variable']
+                data_cols = [columns['current'], columns['prev']]
                 if groupby_overall == 'update':
-                    sparsify_cols += ['observed', 'forecast (prev)']
+                    # Put data columns first, since we need to do an additional
+                    # check based on the other columns before sparsifying
+                    sparsify_cols = data_cols + sparsify_cols
 
                 for key in sparsify_cols:
                     if key in details:
                         mask = details[key] == details[key].shift(1)
+                        if key in data_cols:
+                            if columns['update date'] in details:
+                                tmp = details[columns['update date']]
+                                mask &= tmp == tmp.shift(1)
+                            if columns['updated variable'] in details:
+                                tmp = details[columns['updated variable']]
+                                mask &= tmp == tmp.shift(1)
                         details.loc[mask, key] = ''
 
             params_data = details.values
-            params_header = details.columns.tolist()
+            params_header = [str(x) for x in details.columns.tolist()]
             params_stubs = None
 
-            title = 'Details'
+            title = f"Details of {source}"
             if len(removed_levels):
                 title += ' for [' + ', '.join(removed_levels) + ']'
             return SimpleTable(params_data, params_header, params_stubs,
@@ -873,8 +1111,11 @@ class NewsResults(object):
             - `revised variable` : variable that was revised at `revision date`
             - `observed (prev)` : the observed value prior to the revision
             - `revised` : the new value after the revision
+            - `revision` : the new value after the revision
         """
-        data = self.data_revisions.sort_index().reset_index()
+        data = pd.merge(
+            self.data_revisions, self.revisions, left_index=True,
+            right_index=True).sort_index().reset_index()
         data[['revision date', 'revised variable']] = (
             data[['revision date', 'revised variable']].applymap(str))
         data.iloc[:, 2:] = data.iloc[:, 2:].applymap(
@@ -950,6 +1191,7 @@ class NewsResults(object):
 
     def summary(self, impact_date=None, impacted_variable=None,
                 update_date=None, updated_variable=None,
+                revision_date=None, revised_variable=None,
                 impacts_groupby='impact date', details_groupby='update date',
                 show_revisions_columns=None, sparsify=True,
                 include_details_tables=None, include_revisions_tables=False,
@@ -984,9 +1226,20 @@ class NewsResults(object):
         updated_variable : str, list, array, or slice, optional
             Observation variable label or slice of labels specifying particular
             updated variables to display. The updated variable(s) describe the
-            variables that were *affected* by the news. If you do not know the
-            labels for the variables, check the `endog_names` attribute of the
-            model instance.
+            variables that newly added in the updated dataset and which
+            generated the news. If you do not know the labels for the
+            variables, check the `endog_names` attribute of the model instance.
+        revision_date : int, str, datetime, list, array, or slice, optional
+            Observation index label or slice of labels specifying particular
+            revision periods to display. The revision date(s) describe the
+            periods in which the data points were revised. See the note on
+            `impact_date` for details about what these labels are.
+        revised_variable : str, list, array, or slice, optional
+            Observation variable label or slice of labels specifying particular
+            revised variables to display. The updated variable(s) describe the
+            variables that were *revised*. If you do not know the labels for
+            the variables, check the `endog_names` attribute of the model
+            instance.
         impacts_groupby : {impact date, impacted date}
             The primary variable for grouping results in the impacts table. The
             default is to group by update date.
@@ -1040,7 +1293,7 @@ class NewsResults(object):
         """
         # Default for include_details_tables
         if include_details_tables is None:
-            include_details_tables = self.updated.model.k_endog == 1
+            include_details_tables = (self.k_endog == 1)
 
         # Model specification results
         model = self.model.model
@@ -1048,7 +1301,8 @@ class NewsResults(object):
 
         def get_sample(model):
             if model._index_dates:
-                ix = model._index
+                mask = ~np.isnan(model.endog).all(axis=1)
+                ix = model._index[mask]
                 d = ix[0]
                 sample = ['%s' % d]
                 d = ix[-1]
@@ -1067,13 +1321,17 @@ class NewsResults(object):
         top_left = [('Model:', [model_name]),
                     ('Date:', None),
                     ('Time:', None)]
+        if self.state_index is not None:
+            k_states_used = len(self.state_index)
+            if k_states_used != self.model.model.k_states:
+                top_left.append(('# of included states:', [k_states_used]))
 
         top_right = [
             ('Original sample:', [previous_sample[0]]),
             ('', [previous_sample[1]]),
             ('Update through:', [revised_sample[1][2:]]),
-            ('No. Revisions:', [len(self.revisions_ix)]),
-            ('No. New datapoints:', [len(self.updates_ix)])]
+            ('# of revisions:', [len(self.revisions_ix)]),
+            ('# of new datapoints:', [len(self.updates_ix)])]
 
         summary = Summary()
         self.model.endog_names = self.model.model.endog_names
@@ -1096,9 +1354,11 @@ class NewsResults(object):
             table_ix += 1
 
         # Detail tables
-        multiple_tables = self.updated.model.k_endog > 1
+        multiple_tables = (self.k_endog > 1)
         details_tables = self.summary_details(
+            source='news',
             impact_date=impact_date, impacted_variable=impacted_variable,
+            update_date=update_date, updated_variable=updated_variable,
             groupby=details_groupby, sparsify=sparsify,
             float_format=float_format, multiple_tables=multiple_tables)
         if not multiple_tables:
@@ -1115,4 +1375,55 @@ class NewsResults(object):
                 table_ix, self.summary_revisions(sparsify=sparsify))
             table_ix += 1
 
+            # Revision detail tables
+            revision_details_tables = self.summary_details(
+                source='revisions',
+                impact_date=impact_date, impacted_variable=impacted_variable,
+                update_date=revision_date, updated_variable=revised_variable,
+                groupby=details_groupby, sparsify=sparsify,
+                float_format=float_format, multiple_tables=multiple_tables)
+            if not multiple_tables:
+                revision_details_tables = [revision_details_tables]
+
+            if include_details_tables:
+                for table in revision_details_tables:
+                    summary.tables.insert(table_ix, table)
+                    table_ix += 1
+
         return summary
+
+    def get_details(self, include_revisions=True, include_updates=True):
+        details = []
+        if include_updates:
+            details.append(self.details_by_impact.rename(
+                columns={'forecast (prev)': 'previous'}))
+        if include_revisions:
+            tmp = self.revision_details_by_impact.rename_axis(
+                index={'revision date': 'update date',
+                       'revised variable': 'updated variable'})
+            tmp = tmp.rename(columns={'revised': 'observed',
+                                      'observed (prev)': 'previous',
+                                      'revision': 'news'})
+            details.append(tmp)
+        if not (include_updates or include_revisions):
+            details.append(self.details_by_impact.rename(
+                columns={'forecast (prev)': 'previous'}).iloc[:0])
+
+        return pd.concat(details)
+
+    def get_impacts(self, groupby=None, include_revisions=True,
+                    include_updates=True):
+        details = self.get_details(include_revisions=include_revisions,
+                                   include_updates=include_updates)
+
+        impacts = details['impact'].unstack(['impact date',
+                                             'impacted variable'])
+
+        if groupby is not None:
+            impacts = (impacts.unstack('update date')
+                              .groupby(groupby).sum(min_count=1)
+                              .stack('update date')
+                              .swaplevel()
+                              .sort_index())
+
+        return impacts

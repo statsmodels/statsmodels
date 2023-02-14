@@ -146,7 +146,8 @@ import datetime as dt
 
 import numpy as np
 import pandas as pd
-from scipy.stats import _distn_infrastructure, norm, rv_continuous, rv_discrete
+from scipy.stats import norm, rv_continuous, rv_discrete
+from scipy.stats.distributions import rv_frozen
 
 from statsmodels.base.covtype import descriptions
 import statsmodels.base.wrapper as wrap
@@ -654,6 +655,8 @@ class ETSModel(base.StateSpaceMLEModel):
         endog = np.array(data.orig_endog, order="C")
         if endog.ndim != 1:
             raise ValueError("endog must be 1-dimensional")
+        if endog.dtype != np.double:
+            endog = np.asarray(data.orig_endog, order="C", dtype=float)
         return endog, None
 
     @property
@@ -789,7 +792,11 @@ class ETSModel(base.StateSpaceMLEModel):
         if self.initialization_method != "estimated":
             internal[4] = self.initial_level
             internal[5] = self.initial_trend
-            internal[6:] = self.initial_seasonal
+            if np.isscalar(self.initial_seasonal):
+                internal[6:] = self.initial_seasonal
+            else:
+                # See GH 7893
+                internal[6:] = self.initial_seasonal[::-1]
         return internal
 
     def _model_params(self, internal):
@@ -1158,7 +1165,7 @@ class ETSModel(base.StateSpaceMLEModel):
             # parameterizations, we clip negative values to very small positive
             # values so that the log-transformation yields very large negative
             # values.
-            yhat[yhat <= 0] = 1 / (1e-8 * (1 + np.abs(yhat[yhat < 0])))
+            yhat[yhat <= 0] = 1 / (1e-8 * (1 + np.abs(yhat[yhat <= 0])))
             logL -= np.sum(np.log(yhat))
         return logL
 
@@ -1194,7 +1201,7 @@ class ETSModel(base.StateSpaceMLEModel):
 
         .. math::
 
-           s^2 = \frac{1}{n}\sum\limits_{t=1}^n \frac{\hat{y}_t - y_t}{k_t}
+           s^2 = \frac{1}{n}\sum\limits_{t=1}^n \frac{(\hat{y}_t - y_t)^2}{k_t}
 
         where :math:`k_t = 1` for the additive error model and :math:`k_t =
         y_t` for the multiplicative error model.
@@ -1407,7 +1414,8 @@ class ETSResults(base.StateSpaceMLEResults):
             self.smoothing_trend = self.beta
         if self.has_seasonal:
             self.season = states[:, self.model._seasonal_index]
-            self.initial_seasonal = internal_params[6:]
+            # See GH 7893
+            self.initial_seasonal = internal_params[6:][::-1]
             self.initial_state[
                 self.model._seasonal_index :
             ] = self.initial_seasonal
@@ -1813,7 +1821,7 @@ class ETSResults(base.StateSpaceMLEResults):
         elif isinstance(random_errors, (rv_continuous, rv_discrete)):
             params = random_errors.fit(self.resid)
             eps = random_errors.rvs(*params, size=(nsimulations, repetitions))
-        elif isinstance(random_errors, _distn_infrastructure.rv_frozen):
+        elif isinstance(random_errors, rv_frozen):
             eps = random_errors.rvs(size=(nsimulations, repetitions))
         else:
             raise ValueError("Argument random_errors has unexpected value!")

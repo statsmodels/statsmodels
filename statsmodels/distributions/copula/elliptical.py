@@ -93,6 +93,35 @@ class EllipticalCopula(Copula):
         corr = np.sin(tau * np.pi / 2)
         return corr
 
+    def fit_corr_param(self, data):
+        """Copula correlation parameter using Kendall's tau of sample data.
+
+        Parameters
+        ----------
+        data : array_like
+            Sample data used to fit `theta` using Kendall's tau.
+
+        Returns
+        -------
+        corr_param : float
+            Correlation parameter of the copula, ``theta`` in Archimedean and
+            pearson correlation in elliptical.
+            If k_dim > 2, then average tau is used.
+        """
+        x = np.asarray(data)
+
+        if x.shape[1] == 2:
+            tau = stats.kendalltau(x[:, 0], x[:, 1])[0]
+        else:
+            k = self.k_dim
+            tau = np.eye(k)
+            for i in range(k):
+                for j in range(i+1, k):
+                    tau_ij = stats.kendalltau(x[..., i], x[..., j])[0]
+                    tau[i, j] = tau[j, i] = tau_ij
+
+        return self._arg_from_tau(tau)
+
 
 class GaussianCopula(EllipticalCopula):
     r"""Gaussian copula.
@@ -124,6 +153,12 @@ class GaussianCopula(EllipticalCopula):
         matrix is the identity matrix.
     k_dim : int
         Dimension, number of components in the multivariate random variable.
+    allow_singular : bool
+        Allow singular correlation matrix.
+        The behavior when the correlation matrix is singular is determined by
+        `scipy.stats.multivariate_normal`` and might not be appropriate for
+        all copula or copula distribution metnods. Behavior might change in
+        future versions.
 
     Notes
     -----
@@ -141,7 +176,7 @@ class GaussianCopula(EllipticalCopula):
 
     """
 
-    def __init__(self, corr=None, k_dim=2):
+    def __init__(self, corr=None, k_dim=2, allow_singular=False):
         super().__init__(k_dim=k_dim)
         if corr is None:
             corr = np.eye(k_dim)
@@ -149,8 +184,10 @@ class GaussianCopula(EllipticalCopula):
             corr = np.array([[1., corr], [corr, 1.]])
 
         self.corr = np.asarray(corr)
+        self.args = (self.corr,)
         self.distr_uv = stats.norm
-        self.distr_mv = stats.multivariate_normal(cov=corr)
+        self.distr_mv = stats.multivariate_normal(
+            cov=corr, allow_singular=allow_singular)
 
     def dependence_tail(self, corr=None):
         """
@@ -216,6 +253,7 @@ class StudentTCopula(EllipticalCopula):
 
         self.df = df
         self.corr = np.asarray(corr)
+        self.args = (corr, df)
         # both uv and mv are frozen distributions
         self.distr_uv = stats.t(df=df)
         self.distr_mv = multivariate_t(shape=corr, df=df)

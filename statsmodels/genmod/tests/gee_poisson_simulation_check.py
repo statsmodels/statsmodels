@@ -178,7 +178,7 @@ if __name__ == "__main__":
     np.set_printoptions(formatter={'all': lambda x: "%8.3f" % x},
                         suppress=True)
 
-    OUT = open("gee_poisson_simulation_check.txt", "w")
+    OUT = open("gee_poisson_simulation_check.txt", "w", encoding="utf-8")
 
     nrep = 100
 
