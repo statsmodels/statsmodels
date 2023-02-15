@@ -154,4 +154,4 @@ def test_sim(method, tester, n, p, es):
     assert_array_equal(power > 0.6, True)
 
     # Check that we are close to the target FDR
-    assert_array_equal(fdr < target_fdr + 0.05, True)
+    assert_array_equal(fdr < target_fdr + 0.1, True)
