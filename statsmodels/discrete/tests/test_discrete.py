@@ -1706,6 +1706,10 @@ def test_mnlogit_factor():
     params = res.params
     summary = res.summary()
     predicted = res.predict(exog.iloc[:5, :])
+    # check endog is series with no name #8672
+    endogn = dta['endog']
+    endogn.name = None
+    mod = sm.MNLogit(endogn, exog)
 
     # with patsy
     mod = smf.mnlogit('PID ~ ' + ' + '.join(dta.exog.columns), dta.data)

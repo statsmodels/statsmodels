@@ -136,11 +136,13 @@ def _pandas_to_dummies(endog):
         if endog.shape[1] == 1:
             yname = endog.columns[0]
             endog_dummies = get_dummies(endog.iloc[:, 0])
-        else:  # series
+        else:  # assume already dummies
             yname = 'y'
             endog_dummies = endog
     else:
         yname = endog.name
+        if yname is None:
+            yname = 'y'
         endog_dummies = get_dummies(endog)
     ynames = endog_dummies.columns.tolist()
 
