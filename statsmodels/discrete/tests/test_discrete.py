@@ -1552,6 +1552,19 @@ class TestMNLogitLBFGSBaseZero(CheckMNLogitBaseZero):
         cls.res2 = res2
 
 
+def test_mnlogit_basinhopping():
+    def callb(*args):
+        return 1
+
+    x = np.random.randint(0, 100, 1000)
+    y = np.random.randint(0, 3, 1000)
+    model = MNLogit(y, sm.add_constant(x))
+    # smoke tests for basinhopping and callback #8665
+    model.fit(method='basinhopping')
+    model.fit(method='basinhopping', callback=callb)
+
+
+
 def test_perfect_prediction():
     cur_dir = os.path.dirname(os.path.abspath(__file__))
     iris_dir = os.path.join(cur_dir, '..', '..', 'genmod', 'tests', 'results')
@@ -1693,6 +1706,10 @@ def test_mnlogit_factor():
     params = res.params
     summary = res.summary()
     predicted = res.predict(exog.iloc[:5, :])
+    # check endog is series with no name #8672
+    endogn = dta['endog']
+    endogn.name = None
+    mod = sm.MNLogit(endogn, exog)
 
     # with patsy
     mod = smf.mnlogit('PID ~ ' + ' + '.join(dta.exog.columns), dta.data)

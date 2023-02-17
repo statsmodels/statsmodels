@@ -136,11 +136,13 @@ def _pandas_to_dummies(endog):
         if endog.shape[1] == 1:
             yname = endog.columns[0]
             endog_dummies = get_dummies(endog.iloc[:, 0])
-        else:  # series
+        else:  # assume already dummies
             yname = 'y'
             endog_dummies = endog
     else:
         yname = endog.name
+        if yname is None:
+            yname = 'y'
         endog_dummies = get_dummies(endog)
     ynames = endog_dummies.columns.tolist()
 
@@ -213,7 +215,7 @@ class DiscreteModel(base.LikelihoodModel):
 
     def _check_perfect_pred(self, params, *args):
         endog = self.endog
-        fittedvalues = self.cdf(np.dot(self.exog, params[:self.exog.shape[1]]))
+        fittedvalues = self.predict(params)
         if np.allclose(fittedvalues - endog, 0):
             if self.raise_on_perfect_prediction:
                 # backwards compatibility for attr raise_on_perfect_prediction
@@ -770,7 +772,10 @@ class MultinomialModel(BinaryModel):
             start_params = np.zeros((self.K * (self.J-1)))
         else:
             start_params = np.asarray(start_params)
-        callback = lambda x : None # placeholder until check_perfect_pred
+
+        if callback is None:
+            # placeholder until check_perfect_pred
+            callback = lambda x, *args : None
         # skip calling super to handle results from LikelihoodModel
         mnfit = base.LikelihoodModel.fit(self, start_params = start_params,
                 method=method, maxiter=maxiter, full_output=full_output,
