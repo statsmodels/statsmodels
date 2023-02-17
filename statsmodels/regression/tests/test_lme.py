@@ -803,7 +803,7 @@ class TestMixedLMSummary:
 # ------------------------------------------------------------------
 
 
-class TestMixedLMSummaryRegularized:
+class TestMixedLMSummaryRegularized(TestMixedLMSummary):
     # Test various aspects of the MixedLM summary
     # after fitting model with fit_regularized function
     @classmethod
@@ -819,30 +819,6 @@ class TestMixedLMSummaryRegularized:
         exog = df[["x0", "x1", "x2"]].values
         groups = df["pid"].values
         cls.res = MixedLM(endog, exog, groups=groups).fit_regularized()
-
-    def test_summary(self):
-        # Test that the summary correctly includes all variables.
-        summ = self.res.summary()
-        desired = ["const", "x1", "x2", "Group Var"]
-        # Second table is summary of params
-        actual = summ.tables[1].index.values
-        assert_equal(actual, desired)
-
-    def test_summary_xname_fe(self):
-        # Test that the `xname_fe` argument is reflected in the summary table.
-        summ = self.res.summary(xname_fe=["Constant", "Age", "Weight"])
-        desired = ["Constant", "Age", "Weight", "Group Var"]
-        actual = summ.tables[
-            1].index.values  # Second table is summary of params
-        assert_equal(actual, desired)
-
-    def test_summary_xname_re(self):
-        # Test that the `xname_re` argument is reflected in the summary table.
-        summ = self.res.summary(xname_re=["Random Effects"])
-        desired = ["const", "x1", "x2", "Random Effects"]
-        actual = summ.tables[
-            1].index.values  # Second table is summary of params
-        assert_equal(actual, desired)
 
 
 # ------------------------------------------------------------------
