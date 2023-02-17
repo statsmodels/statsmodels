@@ -144,7 +144,6 @@ def multipletests(pvals, alpha=0.05, method='hs',
     Method='hommel' is very slow for large arrays, since it requires the
     evaluation of n partitions, where n is the number of p-values.
     """
-    import gc
     pvals = np.asarray(pvals)
     alphaf = alpha  # Notation ?
 
