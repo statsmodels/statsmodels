@@ -804,7 +804,7 @@ class TestMixedLMSummary:
 
 
 class TestMixedLMSummaryRegularized:
-    # Test various aspects of the MixedLM summary 
+    # Test various aspects of the MixedLM summary
     # after fitting model with fit_regularized function
     @classmethod
     def setup_class(cls):
