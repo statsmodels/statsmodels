@@ -803,6 +803,27 @@ class TestMixedLMSummary:
 # ------------------------------------------------------------------
 
 
+class TestMixedLMSummaryRegularized(TestMixedLMSummary):
+    # Test various aspects of the MixedLM summary
+    # after fitting model with fit_regularized function
+    @classmethod
+    def setup_class(cls):
+        # Setup the model and estimate it.
+        pid = np.repeat([0, 1], 5)
+        x0 = np.repeat([1], 10)
+        x1 = [1, 5, 7, 3, 5, 1, 2, 6, 9, 8]
+        x2 = [6, 2, 1, 0, 1, 4, 3, 8, 2, 1]
+        y = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+        df = pd.DataFrame({"y": y, "pid": pid, "x0": x0, "x1": x1, "x2": x2})
+        endog = df["y"].values
+        exog = df[["x0", "x1", "x2"]].values
+        groups = df["pid"].values
+        cls.res = MixedLM(endog, exog, groups=groups).fit_regularized()
+
+
+# ------------------------------------------------------------------
+
+
 # TODO: better name
 def do1(reml, irf, ds_ix):
 

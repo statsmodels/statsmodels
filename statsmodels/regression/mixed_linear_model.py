@@ -1254,6 +1254,7 @@ class MixedLM(base.LikelihoodModel):
         results.params_object = params_object
         results.fe_params = fe_params
         results.cov_re = cov_re
+        results.vcomp = vcomp
         results.scale = scale
         results.cov_re_unscaled = mdf.cov_re_unscaled
         results.method = mdf.method
