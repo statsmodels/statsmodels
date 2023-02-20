@@ -316,7 +316,7 @@ def _HCCM2(hessian_inv, scale):
     H = np.dot(np.dot(xxi, scale), xxi.T)
     return H
 
-def _cluster_jackknife(results, group, clusters, k_params, n_groups):
+def _cluster_jackknife(results, group, clusters, k_params, n_groups, center):
 
     '''
     Computes CRV3 Variance-Covariance Matrix Via a Cluster Jackknife. 
@@ -336,6 +336,11 @@ def _cluster_jackknife(results, group, clusters, k_params, n_groups):
         number of model coefficients
     n_groups: int
         the number of clusters 
+    center: str
+        character specifying how to center the coefficients from all jacknife samples
+        (each dropping one observational unit/cluster). By default the coefficients are 
+        centered by the original full-sample "estimate", or alternatively by their 
+        "mean" across the sample.
 
     Returns
     -------
@@ -363,9 +368,13 @@ def _cluster_jackknife(results, group, clusters, k_params, n_groups):
             np.linalg.pinv(tXX - tXgXg) @ (tXy - np.transpose(Xg) @ Yg)
         ).flatten()
               
-    
+
     # optional: beta_bar in MNW (2022)
-    beta_center = beta_hat       
+    if center == 'estimate':
+        beta_center = beta_hat       
+    else:
+        beta_center = np.mean(beta_jack, axis = 0)
+
     H = np.zeros((k_params, k_params))
     for ixg, g in enumerate(clusters):
         beta_centered = beta_jack[ixg,:] - beta_center
@@ -557,7 +566,7 @@ def cov_crosssection_0(results, group):
     cov = _HCCM1(results, scale)
     return cov
 
-def cov_cluster(results, group, use_correction=True, jackknife=False):
+def cov_cluster(results, group, use_correction=True, crv_type = 'cluster'):
     '''cluster robust covariance matrix
 
     Calculates sandwich covariance matrix for a single cluster, i.e. grouped
@@ -572,9 +581,10 @@ def cov_cluster(results, group, use_correction=True, jackknife=False):
         Integer-valued index of clusters or groups.
     use_correction : bool
        If true (default), then the small sample correction factor is used.
-    jackknife : bool
-       If false (default), computes a CRV1 cluster robust variance covariance matrix. 
-       If true, runs the cluster jackknife to compute a CRV3 robust variance covariance matrix. 
+    crv_type : str
+       If 'cluster' (default), compute a CRV1 robust variance covariance matrix.  
+       If 'cluster-crv3', compute a CRV3 robust variance covariance matrix. 
+       If 'cluster-jackknife', compute a variance covariance matrix via the cluster jackknife. 
 
 
     Returns
@@ -598,7 +608,7 @@ def cov_cluster(results, group, use_correction=True, jackknife=False):
     nobs, k_params = xu.shape
     n_groups = len(clusters) #replace with stored group attributes if available
 
-    if jackknife == False:
+    if crv_type == 'cluster':
 
         scale = S_crosssection(xu, group)
         cov_c = _HCCM2(hessian_inv, scale)
@@ -607,15 +617,23 @@ def cov_cluster(results, group, use_correction=True, jackknife=False):
             cov_c *= (n_groups / (n_groups - 1.) *
                     ((nobs-1.) / float(nobs - k_params)))
 
-    else: 
-        cov_c = _cluster_jackknife(results, group, clusters, k_params, n_groups)
+    else:
+
+        if crv_type == 'cluster-crv3':
+            center = 'estimate'
+        elif crv_type == 'cluster-jackknife': 
+            center = 'mean'
+        else: 
+            raise Exception("'crv_type' not supported.")
+
+        cov_c = _cluster_jackknife(results, group, clusters, k_params, n_groups, center)
 
         if use_correction: 
             cov_c *= (n_groups / (n_groups - 1.))
 
     return cov_c
 
-def cov_cluster_2groups(results, group, group2=None, use_correction=True, jackknife = False):
+def cov_cluster_2groups(results, group, group2=None, use_correction=True, crv_type = 'cluster'):
     '''cluster robust covariance matrix for two groups/clusters
 
     Parameters
@@ -625,9 +643,10 @@ def cov_cluster_2groups(results, group, group2=None, use_correction=True, jackkn
        TODO: this should use wexog instead
     use_correction : bool
        If true (default), then the small sample correction factor is used.
-    jackknife : bool
-       If false (default), computes a CRV1 cluster robust variance covariance matrix. 
-       If true, runs the cluster jackknife to compute a CRV3 robust variance covariance matrix. 
+    crv_type : str
+       If 'cluster' (default), compute a CRV1 robust variance covariance matrix.  
+       If 'cluster-crv3', compute a CRV3 robust variance covariance matrix. 
+       If 'cluster-jackknife', compute a variance covariance matrix via the cluster jackknife. 
 
 
     Returns
@@ -660,15 +679,15 @@ def cov_cluster_2groups(results, group, group2=None, use_correction=True, jackkn
         group = (group0, group1)
 
 
-    cov0 = cov_cluster(results, group0, use_correction=use_correction, jackknife=jackknife)
+    cov0 = cov_cluster(results, group0, use_correction=use_correction, crv_type=crv_type)
     #[0] because we get still also returns bse
-    cov1 = cov_cluster(results, group1, use_correction=use_correction, jackknife=jackknife)
+    cov1 = cov_cluster(results, group1, use_correction=use_correction, crv_type=crv_type)
 
     # cov of cluster formed by intersection of two groups
     cov01 = cov_cluster(results,
                         combine_indices(group)[0],
                         use_correction=use_correction, 
-                        jackknife=jackknife)
+                        crv_type=crv_type)
 
     #robust cov matrix for union of groups
     cov_both = cov0 + cov1 - cov01
