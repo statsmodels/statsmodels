@@ -277,6 +277,7 @@ class RegressionModel(base.LikelihoodModel):
                 "hac-groupsum",
                 "cluster",
                 "cluster-jackknife",
+                "cluster-crv3",
             ] = "nonrobust",
             cov_kwds=None,
             use_t: bool | None = None,
