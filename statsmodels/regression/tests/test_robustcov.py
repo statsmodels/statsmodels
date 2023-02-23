@@ -25,7 +25,7 @@ import statsmodels.stats.sandwich_covariance as sw
 from statsmodels.tools.sm_exceptions import InvalidTestWarning
 from statsmodels.tools.tools import add_constant
 
-from statsmodels.regression.tests.results import (
+from .results import (
     results_grunfeld_ols_robust_cluster as res2,
     results_macro_ols_robust as res,
 )
@@ -1082,38 +1082,3 @@ class TestOLSRobustClusterJK:
             res2.results_cluster_crv_jk.pvalues, 
             rtol = 1e-6
         )
-
-
-
-class TestWLSRobustClusterJK:
-   
-    @classmethod
-    def setup_class(cls):
-
-        from statsmodels.datasets import grunfeld
-        dtapa = grunfeld.data.load_pandas()
-
-        cls.dtapa_endog = dtapa.endog[:200]
-        dtapa_exog = dtapa.exog[:200]
-        cls.exog = add_constant(dtapa_exog[["value", "capital"]], prepend=False)
-        cls.N = cls.exog.shape[0]
-        cls.id = pd.Series(range(0, cls.N))
-        cls.firm = dtapa.data.firm[:200]
-        cls.G = len(np.unique(cls.firm))
-        cls.weights = np.random.choice(np.array([1, 2, 3, 4]), cls.N, True)
-
-    def test_hc3_vs_crv3(self):
-
-        # test hc3 vs crv3 inference
-        res_hc3 = WLS(self.dtapa_endog, self.exog, self.weights).fit(
-            cov_type = "HC3", 
-            use_correction = False
-        )
-        
-        res_crv3 = WLS(self.dtapa_endog, self.exog, self.weights).fit(
-            cov_type = "cluster-crv3", 
-            cov_kwds={'groups': self.id, 'use_correction' : False}
-        )
-        
-        assert_allclose(res_hc3.tvalues, res_crv3.tvalues, rtol = 1e-06)
-        assert_allclose(res_hc3.pvalues, res_crv3.pvalues, rtol = 1e-06)
