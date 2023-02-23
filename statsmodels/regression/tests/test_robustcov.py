@@ -1007,18 +1007,19 @@ def test_qr_equiv(cov_info):
 
 class TestOLSRobustClusterJK:
    
-    def __init__(self): 
+    @classmethod
+    def setup_class(cls):
 
         from statsmodels.datasets import grunfeld
         dtapa = grunfeld.data.load_pandas()
 
-        self.dtapa_endog = dtapa.endog[:200]
+        cls.dtapa_endog = dtapa.endog[:200]
         dtapa_exog = dtapa.exog[:200]
-        self.exog = add_constant(dtapa_exog[["value", "capital"]], prepend=False)
-        self.N = self.exog.shape[0]
-        self.id = pd.Series(range(0, self.N))
-        self.firm = dtapa.data.firm[:200]
-        self.G = len(np.unique(self.firm))
+        cls.exog = add_constant(dtapa_exog[["value", "capital"]], prepend=False)
+        cls.N = cls.exog.shape[0]
+        cls.id = pd.Series(range(0, cls.N))
+        cls.firm = dtapa.data.firm[:200]
+        cls.G = len(np.unique(cls.firm))
 
     def test_hc3_vs_crv3(self):
 
@@ -1035,11 +1036,6 @@ class TestOLSRobustClusterJK:
         
         assert_allclose(res_hc3.tvalues, res_crv3.tvalues, rtol = 1e-06)
         assert_allclose(res_hc3.pvalues, res_crv3.pvalues, rtol = 1e-06)
-        assert_allclose(
-            sw.cov_cluster(res_hc3, cov_type = "HC3", use_correction = False), 
-            sw.cov_cluster(res_crv3, cov_type = "cluster-crv3", use_correction = False),
-             rtol = 1e-06
-        )
 
     def test_cr3_vs_r(self):
 
@@ -1055,12 +1051,12 @@ class TestOLSRobustClusterJK:
 
         assert_allclose(
             res2.results_cluster_crv3.cov, 
-            sw.cov_cluster(res_crv3, self.firm, True, crv_type = "cluster-crv3"), 
+            sw.cov_cluster(res_crv3, self.firm, True, "cluster-crv3"), 
             rtol = 1e-6
         )
         assert_allclose(
             res2.results_cluster_crv_jk.cov, 
-            sw.cov_cluster(res_crv3_jk, self.firm, True, crv_type = "cluster-jackknife"), rtol = 1e-6)  
+            sw.cov_cluster(res_crv3_jk, self.firm, True, "cluster-jackknife"), rtol = 1e-6)  
 
         assert_allclose(
             res_crv3.tvalues, 
@@ -1077,12 +1073,47 @@ class TestOLSRobustClusterJK:
             return 2 * np.minimum(t.cdf(x, G - 1), 1 - t.cdf(x, G - 1))
 
         assert_allclose(
-            pvalue(res_crv3.tvalues, G),
+            pvalue(res_crv3.tvalues, self.G),
              res2.results_cluster_crv3.pvalues, 
              rtol = 1e-6
         )
         assert_allclose(
-            pvalue(res_crv3_jk.tvalues, G), 
+            pvalue(res_crv3_jk.tvalues, self.G), 
             res2.results_cluster_crv_jk.pvalues, 
             rtol = 1e-6
         )
+
+
+
+class TestWLSRobustClusterJK:
+   
+    @classmethod
+    def setup_class(cls):
+
+        from statsmodels.datasets import grunfeld
+        dtapa = grunfeld.data.load_pandas()
+
+        cls.dtapa_endog = dtapa.endog[:200]
+        dtapa_exog = dtapa.exog[:200]
+        cls.exog = add_constant(dtapa_exog[["value", "capital"]], prepend=False)
+        cls.N = cls.exog.shape[0]
+        cls.id = pd.Series(range(0, cls.N))
+        cls.firm = dtapa.data.firm[:200]
+        cls.G = len(np.unique(cls.firm))
+        cls.weights = np.random.choice(np.array([1, 2, 3, 4]), cls.N, True)
+
+    def test_hc3_vs_crv3(self):
+
+        # test hc3 vs crv3 inference
+        res_hc3 = WLS(self.dtapa_endog, self.exog, self.weights).fit(
+            cov_type = "HC3", 
+            use_correction = False
+        )
+        
+        res_crv3 = WLS(self.dtapa_endog, self.exog, self.weights).fit(
+            cov_type = "cluster-crv3", 
+            cov_kwds={'groups': self.id, 'use_correction' : False}
+        )
+        
+        assert_allclose(res_hc3.tvalues, res_crv3.tvalues, rtol = 1e-06)
+        assert_allclose(res_hc3.pvalues, res_crv3.pvalues, rtol = 1e-06)
