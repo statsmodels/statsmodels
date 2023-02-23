@@ -5,6 +5,7 @@ Created on Mon Oct 28 15:25:14 2013
 
 Author: Josef Perktold
 """
+PY_IGNORE_IMPORTMISMATCH=1
 
 import numpy as np
 from numpy.testing import (
@@ -15,6 +16,8 @@ from numpy.testing import (
 )
 import pytest
 from scipy import stats
+from scipy.stats import t
+import pandas as pd 
 
 from statsmodels.datasets import macrodata
 from statsmodels.regression.linear_model import OLS, WLS
@@ -22,7 +25,7 @@ import statsmodels.stats.sandwich_covariance as sw
 from statsmodels.tools.sm_exceptions import InvalidTestWarning
 from statsmodels.tools.tools import add_constant
 
-from .results import (
+from statsmodels.regression.tests.results import (
     results_grunfeld_ols_robust_cluster as res2,
     results_macro_ols_robust as res,
 )
@@ -469,6 +472,9 @@ class TestOLSRobustCluster2Fit(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
         self.res1 = res_ols
         self.bse_robust = res_ols.bse
         self.cov_robust = res_ols.cov_params()
+
+        
+
         cov1 = sw.cov_cluster(self.res1, self.groups, use_correction=True)
         se1 = sw.se_cov(cov1)
         self.bse_robust2 = se1
@@ -982,6 +988,8 @@ def test_cov_type_fixed_scale():
         ("HC3", {}),
         ("HAC", {"maxlags": 7}),
         ("cluster", {"groups": (np.arange(500) % 27)}),
+        ("cluster-jackknife", {"groups": (np.arange(500) % 27)}),
+
     ],
 )
 def test_qr_equiv(cov_info):
@@ -994,3 +1002,87 @@ def test_qr_equiv(cov_info):
     pinv_fit = mod.fit(cov_type=cov_type, cov_kwds=cov_kwds)
     qr_fit = mod.fit(cov_type=cov_type, cov_kwds=cov_kwds, method="qr")
     assert_allclose(pinv_fit.bse, qr_fit.bse)
+
+
+
+class TestOLSRobustClusterJK:
+   
+    def __init__(self): 
+
+        from statsmodels.datasets import grunfeld
+        dtapa = grunfeld.data.load_pandas()
+
+        self.dtapa_endog = dtapa.endog[:200]
+        dtapa_exog = dtapa.exog[:200]
+        self.exog = add_constant(dtapa_exog[["value", "capital"]], prepend=False)
+        self.N = self.exog.shape[0]
+        self.id = pd.Series(range(0, self.N))
+        self.firm = dtapa.data.firm[:200]
+        self.G = len(np.unique(self.firm))
+
+    def test_hc3_vs_crv3(self):
+
+        # test hc3 vs crv3 inference
+        res_hc3 = OLS(self.dtapa_endog, self.exog).fit(
+            cov_type = "HC3", 
+            use_correction = False
+        )
+        
+        res_crv3 = OLS(self.dtapa_endog, self.exog).fit(
+            cov_type = "cluster-crv3", 
+            cov_kwds={'groups': self.id, 'use_correction' : False}
+        )
+        
+        assert_allclose(res_hc3.tvalues, res_crv3.tvalues, rtol = 1e-06)
+        assert_allclose(res_hc3.pvalues, res_crv3.pvalues, rtol = 1e-06)
+        assert_allclose(
+            sw.cov_cluster(res_hc3, cov_type = "HC3", use_correction = False), 
+            sw.cov_cluster(res_crv3, cov_type = "cluster-crv3", use_correction = False),
+             rtol = 1e-06
+        )
+
+    def test_cr3_vs_r(self):
+
+        res_crv3 = OLS(self.dtapa_endog, self.exog).fit(
+            cov_type = "cluster-crv3", 
+            cov_kwds={'groups': self.firm, 'use_correction':True, 'use_t':True}
+        )
+
+        res_crv3_jk = OLS(self.dtapa_endog, self.exog).fit(
+            cov_type = "cluster-jackknife", 
+            cov_kwds={'groups': self.firm, 'use_correction':True, 'use_t':True}
+        )
+
+        assert_allclose(
+            res2.results_cluster_crv3.cov, 
+            sw.cov_cluster(res_crv3, self.firm, True, crv_type = "cluster-crv3"), 
+            rtol = 1e-6
+        )
+        assert_allclose(
+            res2.results_cluster_crv_jk.cov, 
+            sw.cov_cluster(res_crv3_jk, self.firm, True, crv_type = "cluster-jackknife"), rtol = 1e-6)  
+
+        assert_allclose(
+            res_crv3.tvalues, 
+            res2.results_cluster_crv3.tvalues, 
+            rtol = 1e-6
+        )
+        assert_allclose(
+            res_crv3_jk.tvalues, 
+            res2.results_cluster_crv_jk.tvalues,
+            rtol = 1e-6
+        )  
+
+        def pvalue(x,G): 
+            return 2 * np.minimum(t.cdf(x, G - 1), 1 - t.cdf(x, G - 1))
+
+        assert_allclose(
+            pvalue(res_crv3.tvalues, G),
+             res2.results_cluster_crv3.pvalues, 
+             rtol = 1e-6
+        )
+        assert_allclose(
+            pvalue(res_crv3_jk.tvalues, G), 
+            res2.results_cluster_crv_jk.pvalues, 
+            rtol = 1e-6
+        )
