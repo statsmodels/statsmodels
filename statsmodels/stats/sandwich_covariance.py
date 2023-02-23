@@ -621,10 +621,9 @@ def cov_cluster(results, group, use_correction=True, crv_type = 'cluster'):
 
         if crv_type == 'cluster-crv3':
             center = 'estimate'
-        elif crv_type == 'cluster-jackknife': 
-            center = 'mean'
+        # cluster-jackknife
         else: 
-            raise Exception("'crv_type' not supported.")
+            center = 'mean'
 
         cov_c = _cluster_jackknife(results, group, center)
 
