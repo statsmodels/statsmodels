@@ -144,7 +144,6 @@ def multipletests(pvals, alpha=0.05, method='hs',
     Method='hommel' is very slow for large arrays, since it requires the
     evaluation of n partitions, where n is the number of p-values.
     """
-    import gc
     pvals = np.asarray(pvals)
     alphaf = alpha  # Notation ?
 
@@ -200,7 +199,6 @@ def multipletests(pvals, alpha=0.05, method='hs',
         pvals_corrected_raw = pvals * np.arange(ntests, 0, -1)
         pvals_corrected = np.maximum.accumulate(pvals_corrected_raw)
         del pvals_corrected_raw
-        gc.collect()
 
     elif method.lower() in ['sh', 'simes-hochberg']:
         alphash = alphaf / np.arange(ntests, 0, -1)
