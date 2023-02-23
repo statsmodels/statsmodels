@@ -316,7 +316,7 @@ def _HCCM2(hessian_inv, scale):
     H = np.dot(np.dot(xxi, scale), xxi.T)
     return H
 
-def _cluster_jackknife(results, group, clusters, k_params, n_groups, center):
+def _cluster_jackknife(results, group, center):
 
     '''
     Computes CRV3 Variance-Covariance Matrix Via a Cluster Jackknife. 
@@ -330,12 +330,6 @@ def _cluster_jackknife(results, group, clusters, k_params, n_groups, center):
         need to contain regression results, uses ...
     group : pd.Series
         pd.Series containing the clustering variable
-    clusters : 
-        unique clusters
-    k_params : int
-        number of model coefficients
-    n_groups: int
-        the number of clusters 
     center: str
         character specifying how to center the coefficients from all jacknife samples
         (each dropping one observational unit/cluster). By default the coefficients are 
@@ -351,17 +345,23 @@ def _cluster_jackknife(results, group, clusters, k_params, n_groups, center):
     X = results.model.wexog
     Y = results.model.wendog
 
-    beta_jack = np.zeros((n_groups, k_params))
+    k_params = X.shape[1]
+
     # inverse hessian precomputed?
     tXX = np.transpose(X) @ X
     tXy = np.transpose(X) @ Y
     beta_hat = results.params
 
+    clusters = np.unique(group)
+    n_groups = len(clusters)
+
+    beta_jack = np.zeros((n_groups, k_params))
+
     # compute leave-one-out regression coefficients (aka clusterjacks')        
     for ixg, g in enumerate(clusters):
               
-        Xg = X[np.where(group == g)]
-        Yg = Y[np.where(group == g)]
+        Xg = X[np.equal(ixg, group)]
+        Yg = Y[np.equal(ixg, group)]
         tXgXg = np.transpose(Xg) @ Xg
         # jackknife regression coefficient
         beta_jack[ixg,:] = (
@@ -626,10 +626,10 @@ def cov_cluster(results, group, use_correction=True, crv_type = 'cluster'):
         else: 
             raise Exception("'crv_type' not supported.")
 
-        cov_c = _cluster_jackknife(results, group, clusters, k_params, n_groups, center)
+        cov_c = _cluster_jackknife(results, group, center)
 
         if use_correction: 
-            cov_c *= (n_groups / (n_groups - 1.))
+            cov_c *= (n_groups -1.) / n_groups 
 
     return cov_c
 
