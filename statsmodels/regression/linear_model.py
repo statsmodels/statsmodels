@@ -2429,7 +2429,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
         - 'HAC': heteroskedasticity-autocorrelation robust covariance
 
-          ``maxlag`` :  integer, required
+          ``maxlags`` :  integer, required
             number of lags to use
 
           ``kernel`` : {callable, str}, optional
@@ -2471,7 +2471,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
           ``time`` : array_like, required
             index of time periods
-          ``maxlag`` : integer, required
+          ``maxlags`` : integer, required
             number of lags to use
           ``kernel`` : {callable, str}, optional
             The available kernels are ['bartlett', 'uniform']. The default is
@@ -2495,7 +2495,7 @@ class RegressionResults(base.LikelihoodModelResults):
             indicator for groups
           ``time`` : array_like[int]
             index of time periods
-          ``maxlag`` : int, required
+          ``maxlags`` : int, required
             number of lags to use
           ``kernel`` : {callable, str}, optional
             Available kernels are ['bartlett', 'uniform'], default
