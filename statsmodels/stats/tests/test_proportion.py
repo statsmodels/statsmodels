@@ -98,6 +98,12 @@ def test_confint_proportion_ndim(method):
                                  method=method)
     assert_allclose((ci_arr2[0][1, 2], ci_arr[1][1, 2]), ci12, rtol=1e-13)
 
+    # check floating point values
+    ci_arr2 = proportion_confint(count + 1e-4, nobs[1, 2], alpha=0.05,
+                                 method=method)
+    # should be close to values with integer values
+    assert_allclose((ci_arr2[0][1, 2], ci_arr[1][1, 2]), ci12, rtol=1e-4)
+
 
 def test_samplesize_confidenceinterval_prop():
     #consistency test for samplesize to achieve confidence_interval
@@ -966,12 +972,14 @@ def test_ci_symmetry_binom_test(nobs, count, array_like):
 
 
 def test_int_check():
+    # integer values are required only if method="binom_test"
     with pytest.raises(ValueError):
-        proportion_confint(10.5, 20)
+        proportion_confint(10.5, 20, method="binom_test")
     with pytest.raises(ValueError):
-        proportion_confint(10, 20.5)
+        proportion_confint(10, 20.5, method="binom_test")
     with pytest.raises(ValueError):
-        proportion_confint(np.array([10.3]), 20)
+        proportion_confint(np.array([10.3]), 20, method="binom_test")
+
     a = proportion_confint(21.0, 47, method="binom_test")
     b = proportion_confint(21, 47, method="binom_test")
     c = proportion_confint(21, 47.0, method="binom_test")

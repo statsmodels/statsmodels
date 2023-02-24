@@ -115,11 +115,12 @@ def proportion_confint(count, nobs, alpha:float=0.05, method="normal"):
 
     Parameters
     ----------
-    count : {int, array_like}
+    count : {int or float, array_like}
         number of successes, can be pandas Series or DataFrame. Arrays
-        must contain integer values.
-    nobs : {int, array_like}
-        total number of trials.  Arrays must contain integer values.
+        must contain integer values if method is "binom_test".
+    nobs : {int or float, array_like}
+        total number of trials.  Arrays must contain integer values if method
+        is "binom_test".
     alpha : float
         Significance level, default 0.05. Must be in (0, 1)
     method : {"normal", "agresti_coull", "beta", "wilson", "binom_test"}
@@ -183,8 +184,9 @@ def proportion_confint(count, nobs, alpha:float=0.05, method="normal"):
             )
         return y
 
-    count_a = _check(np.asarray(count_a), "count")
-    nobs_a = _check(np.asarray(nobs_a), "count")
+    if method == "binom_test":
+        count_a = _check(np.asarray(count_a), "count")
+        nobs_a = _check(np.asarray(nobs_a), "count")
 
     q_ = count_a / nobs_a
     alpha_2 = 0.5 * alpha
