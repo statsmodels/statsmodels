@@ -1056,7 +1056,9 @@ class TestOLSRobustClusterJK:
         )
         assert_allclose(
             res2.results_cluster_crv_jk.cov, 
-            sw.cov_cluster(res_crv3_jk, self.firm, True, "cluster-jackknife"), rtol = 1e-6)  
+            sw.cov_cluster(res_crv3_jk, self.firm, True, "cluster-jackknife"), 
+            rtol = 1e-6
+        )  
 
         assert_allclose(
             res_crv3.tvalues, 
@@ -1080,5 +1082,87 @@ class TestOLSRobustClusterJK:
         assert_allclose(
             pvalue(res_crv3_jk.tvalues, self.G), 
             res2.results_cluster_crv_jk.pvalues, 
+            rtol = 1e-6
+        )
+
+
+class TestWLSRobustClusterJK:
+   
+    @classmethod
+    def setup_class(cls):
+
+        from statsmodels.datasets import grunfeld
+        dtapa = grunfeld.data.load_pandas()
+
+        cls.dtapa_endog = dtapa.endog[:200]
+        dtapa_exog = dtapa.exog[:200]
+        cls.exog = add_constant(dtapa_exog[["value", "capital"]], prepend=False)
+        cls.N = cls.exog.shape[0]
+        cls.id = pd.Series(range(0, cls.N))
+        cls.firm = dtapa.data.firm[:200]
+        cls.G = len(np.unique(cls.firm))
+        cls.weights = np.arange(1, cls.N+1, 1)
+
+    def test_hc3_vs_crv3(self):
+
+        # test hc3 vs crv3 inference
+        res_hc3 = WLS(self.dtapa_endog, self.exog, self.weights).fit(
+            cov_type = "HC3", 
+            use_correction = False
+        )
+        
+        res_crv3 = WLS(self.dtapa_endog, self.exog, self.weights).fit(
+            cov_type = "cluster-crv3", 
+            cov_kwds={'groups': self.id, 'use_correction' : False}
+        )
+        
+        assert_allclose(res_hc3.tvalues, res_crv3.tvalues, rtol = 1e-06)
+        assert_allclose(res_hc3.pvalues, res_crv3.pvalues, rtol = 1e-06)
+
+    def test_cr3_vs_r(self):
+
+        res_crv3_wls = WLS(self.dtapa_endog, self.exog, self.weights).fit(
+            cov_type = "cluster-crv3", 
+            cov_kwds={'groups': self.firm, 'use_correction':True, 'use_t':True}
+        )
+
+        res_crv3_jk_wls = WLS(self.dtapa_endog, self.exog, self.weights).fit(
+            cov_type = "cluster-jackknife", 
+            cov_kwds={'groups': self.firm, 'use_correction':True, 'use_t':True}
+        )
+
+        assert_allclose(
+            res2.results_cluster_crv3_wls.cov, 
+            res_crv3_wls.cov_params(),
+            rtol = 1e-6
+        )
+        assert_allclose(
+            res2.results_cluster_crv_jk_wls.cov, 
+            res_crv3_jk_wls.cov_params(),
+              rtol = 1e-6
+        )  
+
+        assert_allclose(
+            res_crv3_wls.tvalues, 
+            res2.results_cluster_crv3_wls.tvalues, 
+            rtol = 1e-6
+        )
+        assert_allclose(
+            res_crv3_jk_wls.tvalues, 
+            res2.results_cluster_crv_jk_wls.tvalues,
+            rtol = 1e-6
+        )  
+
+        def pvalue(x,G): 
+            return 2 * np.minimum(t.cdf(x, G - 1), 1 - t.cdf(x, G - 1))
+
+        assert_allclose(
+            pvalue(res_crv3_wls.tvalues, self.G),
+             res2.results_cluster_crv3_wls.pvalues, 
+             rtol = 1e-6
+        )
+        assert_allclose(
+            pvalue(res_crv3_jk_wls.tvalues, self.G), 
+            res2.results_cluster_crv_jk_wls.pvalues, 
             rtol = 1e-6
         )
