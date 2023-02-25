@@ -171,8 +171,8 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
         p-values based on the normal is the number of groups is
         small.
         If False, then `df_resid` of the results instance is not
-        adjusted.    
-        
+        adjusted.
+
     - 'cluster-jk': clustered covariance estimator via the cluster-jk
 
       ``groups`` : array_like[int], required :

@@ -319,9 +319,9 @@ def _HCCM2(hessian_inv, scale):
 def _cluster_jackknife(results, group, center):
 
     '''
-    Computes CRV3 Variance-Covariance Matrix Via a Cluster Jackknife. 
+    Computes CRV3 Variance-Covariance Matrix Via a Cluster Jackknife.
     For reference, see "Fast and Reliable Jackknife and Bootstrap
-    Methods for Cluster-Robust Inference", MacKinnon, Nielsen & Webb, Queens 
+    Methods for Cluster-Robust Inference", MacKinnon, Nielsen & Webb, Queens
     University Working Paper No. 1485
 
     Parameters
@@ -332,8 +332,8 @@ def _cluster_jackknife(results, group, center):
         pd.Series containing the clustering variable
     center: str
         character specifying how to center the coefficients from all jacknife samples
-        (each dropping one observational unit/cluster). By default the coefficients are 
-        centered by the original full-sample "estimate", or alternatively by their 
+        (each dropping one observational unit/cluster). By default the coefficients are
+        centered by the original full-sample "estimate", or alternatively by their
         "mean" across the sample.
 
     Returns
@@ -357,9 +357,9 @@ def _cluster_jackknife(results, group, center):
 
     beta_jack = np.zeros((n_groups, k_params))
 
-    # compute leave-one-out regression coefficients (aka clusterjacks')        
+    # compute leave-one-out regression coefficients (aka clusterjacks')
     for ixg, g in enumerate(clusters):
-              
+
         Xg = X[np.equal(ixg, group)]
         Yg = Y[np.equal(ixg, group)]
         tXgXg = np.transpose(Xg) @ Xg
@@ -367,11 +367,11 @@ def _cluster_jackknife(results, group, center):
         beta_jack[ixg,:] = (
             np.linalg.pinv(tXX - tXgXg) @ (tXy - np.transpose(Xg) @ Yg)
         ).flatten()
-              
+
 
     # optional: beta_bar in MNW (2022)
     if center == 'estimate':
-        beta_center = beta_hat       
+        beta_center = beta_hat
     else:
         beta_center = np.mean(beta_jack, axis = 0)
 
@@ -379,8 +379,8 @@ def _cluster_jackknife(results, group, center):
     for ixg, g in enumerate(clusters):
         beta_centered = beta_jack[ixg,:] - beta_center
         H += np.outer(beta_centered, beta_centered)
-            
-    return H 
+
+    return H
 
 
 #TODO: other kernels, move ?
@@ -582,9 +582,9 @@ def cov_cluster(results, group, use_correction=True, crv_type = 'cluster'):
     use_correction : bool
        If true (default), then the small sample correction factor is used.
     crv_type : str
-       If 'cluster' (default), compute a CRV1 robust variance covariance matrix.  
-       If 'cluster-crv3', compute a CRV3 robust variance covariance matrix. 
-       If 'cluster-jk', compute a variance covariance matrix via the cluster jackknife. 
+       If 'cluster' (default), compute a CRV1 robust variance covariance matrix.
+       If 'cluster-crv3', compute a CRV3 robust variance covariance matrix.
+       If 'cluster-jk', compute a variance covariance matrix via the cluster jackknife.
 
 
     Returns
@@ -622,13 +622,13 @@ def cov_cluster(results, group, use_correction=True, crv_type = 'cluster'):
         if crv_type == 'cluster-crv3':
             center = 'estimate'
         # cluster-jk
-        else: 
+        else:
             center = 'mean'
 
         cov_c = _cluster_jackknife(results, group, center)
 
-        if use_correction: 
-            cov_c *= (n_groups -1.) / n_groups 
+        if use_correction:
+            cov_c *= (n_groups -1.) / n_groups
 
     return cov_c
 
@@ -643,9 +643,9 @@ def cov_cluster_2groups(results, group, group2=None, use_correction=True, crv_ty
     use_correction : bool
        If true (default), then the small sample correction factor is used.
     crv_type : str
-       If 'cluster' (default), compute a CRV1 robust variance covariance matrix.  
-       If 'cluster-crv3', compute a CRV3 robust variance covariance matrix. 
-       If 'cluster-jk', compute a variance covariance matrix via the cluster jackknife. 
+       If 'cluster' (default), compute a CRV1 robust variance covariance matrix.
+       If 'cluster-crv3', compute a CRV3 robust variance covariance matrix.
+       If 'cluster-jk', compute a variance covariance matrix via the cluster jackknife.
 
 
     Returns
@@ -685,7 +685,7 @@ def cov_cluster_2groups(results, group, group2=None, use_correction=True, crv_ty
     # cov of cluster formed by intersection of two groups
     cov01 = cov_cluster(results,
                         combine_indices(group)[0],
-                        use_correction=use_correction, 
+                        use_correction=use_correction,
                         crv_type=crv_type)
 
     #robust cov matrix for union of groups

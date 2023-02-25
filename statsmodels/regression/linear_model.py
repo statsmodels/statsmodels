@@ -2459,9 +2459,9 @@ class RegressionResults(base.LikelihoodModelResults):
             small.
             If False, then `df_resid` of the results instance is not
             adjusted.
-        
 
-        - 'cluster-crv3': clustered covariance estimator (CRV3) 
+
+        - 'cluster-crv3': clustered covariance estimator (CRV3)
 
           ``groups`` : array_like[int], required :
             Integer-valued index of clusters or groups.
@@ -2487,7 +2487,7 @@ class RegressionResults(base.LikelihoodModelResults):
             If False, then `df_resid` of the results instance is not
             adjusted.
 
-        - 'cluster-jk': clustered covariance estimator via a cluster-jk 
+        - 'cluster-jk': clustered covariance estimator via a cluster-jk
 
           ``groups`` : array_like[int], required :
             Integer-valued index of clusters or groups.
@@ -2634,7 +2634,7 @@ class RegressionResults(base.LikelihoodModelResults):
                 crv_type = 'cluster-jk'
             elif cov_type.lower() == 'cluster-crv3':
                 crv_type = 'cluster-crv3'
-            else: 
+            else:
                 crv_type = 'cluster'
 
             groups = kwargs['groups']
