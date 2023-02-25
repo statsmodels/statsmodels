@@ -1543,7 +1543,6 @@ def score_test_proportions_2indep(count1, nobs1, count2, nobs2, value=None,
             prop0 = 2 * p * np.cos(a) - tmp2 / (3 * tmp3)
             prop1 = prop0 + diff
 
-        correction = True
         var = prop1 * (1 - prop1) / nobs1 + prop0 * (1 - prop0) / nobs0
         if correction:
             var *= nobs / (nobs - 1)

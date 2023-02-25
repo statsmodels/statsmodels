@@ -699,7 +699,7 @@ def test_confint_2indep_propcis():
     ci = 0.0270416, 0.3452912
     ci1 = confint_proportions_2indep(count1, nobs1, count2, nobs2,
                                      compare="diff",
-                                     method="score", correction=False)
+                                     method="score", correction=True)
     assert_allclose(ci1, ci, atol=0.002)  # lower agreement (iterative)
     # > wald2ci(7, 34, 1, 34, 0.95, adjust="AC")
     ci = 0.01161167, 0.32172166
