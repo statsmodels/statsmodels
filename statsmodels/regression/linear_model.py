@@ -3296,4 +3296,3 @@ class RegressionResultsWrapper(wrap.ResultsWrapper):
 
 wrap.populate_wrapper(RegressionResultsWrapper,
                       RegressionResults)
-

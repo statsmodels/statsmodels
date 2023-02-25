@@ -1,23 +1,15 @@
-# -*- coding: utf-8 -*-
-"""Testing OLS robust covariance matrices against STATA
-
-Created on Mon Oct 28 15:25:14 2013
-
-Author: Josef Perktold
-"""
-PY_IGNORE_IMPORTMISMATCH=1
-
+import pytest
+import pandas as pd
 import numpy as np
+
+from scipy import stats
+from scipy.stats import t
 from numpy.testing import (
     assert_allclose,
     assert_equal,
     assert_raises,
     assert_warns,
 )
-import pytest
-from scipy import stats
-from scipy.stats import t
-import pandas as pd
 
 from statsmodels.datasets import macrodata
 from statsmodels.regression.linear_model import OLS, WLS
@@ -29,6 +21,16 @@ from .results import (
     results_grunfeld_ols_robust_cluster as res2,
     results_macro_ols_robust as res,
 )
+
+
+# -*- coding: utf-8 -*-
+"""Testing OLS robust covariance matrices against STATA
+
+Created on Mon Oct 28 15:25:14 2013
+
+Author: Josef Perktold
+"""
+PY_IGNORE_IMPORTMISMATCH=1
 
 # TODO: implement test_hac_simple
 
@@ -1076,8 +1078,8 @@ class TestOLSRobustClusterJK:
 
         assert_allclose(
             pvalue(res_crv3.tvalues, self.G),
-             res2.results_cluster_crv3.pvalues,
-             rtol = 1e-6
+            res2.results_cluster_crv3.pvalues,
+            rtol = 1e-6
         )
         assert_allclose(
             pvalue(res_crv3_jk.tvalues, self.G),
@@ -1139,7 +1141,7 @@ class TestWLSRobustClusterJK:
         assert_allclose(
             res2.results_cluster_crv_jk_wls.cov,
             res_crv3_jk_wls.cov_params(),
-              rtol = 1e-6
+            rtol = 1e-6
         )
 
         assert_allclose(
@@ -1158,8 +1160,8 @@ class TestWLSRobustClusterJK:
 
         assert_allclose(
             pvalue(res_crv3_wls.tvalues, self.G),
-             res2.results_cluster_crv3_wls.pvalues,
-             rtol = 1e-6
+            res2.results_cluster_crv3_wls.pvalues,
+            rtol = 1e-6
         )
         assert_allclose(
             pvalue(res_crv3_jk_wls.tvalues, self.G),
