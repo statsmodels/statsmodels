@@ -988,7 +988,7 @@ def test_cov_type_fixed_scale():
         ("HC3", {}),
         ("HAC", {"maxlags": 7}),
         ("cluster", {"groups": (np.arange(500) % 27)}),
-        ("cluster-jackknife", {"groups": (np.arange(500) % 27)}),
+        ("cluster-jk", {"groups": (np.arange(500) % 27)}),
 
     ],
 )
@@ -1045,7 +1045,7 @@ class TestOLSRobustClusterJK:
         )
 
         res_crv3_jk = OLS(self.dtapa_endog, self.exog).fit(
-            cov_type = "cluster-jackknife", 
+            cov_type = "cluster-jk", 
             cov_kwds={'groups': self.firm, 'use_correction':True, 'use_t':True}
         )
 
@@ -1056,7 +1056,7 @@ class TestOLSRobustClusterJK:
         )
         assert_allclose(
             res2.results_cluster_crv_jk.cov, 
-            sw.cov_cluster(res_crv3_jk, self.firm, True, "cluster-jackknife"), 
+            sw.cov_cluster(res_crv3_jk, self.firm, True, "cluster-jk"), 
             rtol = 1e-6
         )  
 
@@ -1127,7 +1127,7 @@ class TestWLSRobustClusterJK:
         )
 
         res_crv3_jk_wls = WLS(self.dtapa_endog, self.exog, self.weights).fit(
-            cov_type = "cluster-jackknife", 
+            cov_type = "cluster-jk", 
             cov_kwds={'groups': self.firm, 'use_correction':True, 'use_t':True}
         )
 

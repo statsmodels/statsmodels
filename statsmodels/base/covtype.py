@@ -22,7 +22,7 @@ descriptions = {
     'fixed_scale': 'Standard Errors are based on fixed scale',
     'cluster': 'Standard Errors are robust to cluster correlation (CRV1)',
     'cluster-crv3': 'Standard Errors are robust to cluster correlation (CRV3)',
-    'cluster-jackknife': 'Standard Errors are robust to cluster correlation',
+    'cluster-jk': 'Standard Errors are robust to cluster correlation',
     'HAC-Panel': 'Standard Errors are robust to '
                  'cluster correlation (HAC-Panel)',
     'HAC-Groupsum': 'Driscoll and Kraay Standard Errors are robust to '
@@ -173,7 +173,7 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
         If False, then `df_resid` of the results instance is not
         adjusted.    
         
-    - 'cluster-jackknife': clustered covariance estimator via the cluster-jackknife
+    - 'cluster-jk': clustered covariance estimator via the cluster-jk
 
       ``groups`` : array_like[int], required :
         Integer-valued index of clusters or groups.

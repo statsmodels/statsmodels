@@ -276,7 +276,7 @@ class RegressionModel(base.LikelihoodModel):
                 "hac-panel",
                 "hac-groupsum",
                 "cluster",
-                "cluster-jackknife",
+                "cluster-jk",
                 "cluster-crv3",
             ] = "nonrobust",
             cov_kwds=None,
@@ -2487,7 +2487,7 @@ class RegressionResults(base.LikelihoodModelResults):
             If False, then `df_resid` of the results instance is not
             adjusted.
 
-        - 'cluster-jackknife': clustered covariance estimator via a cluster-jackknife 
+        - 'cluster-jk': clustered covariance estimator via a cluster-jk 
 
           ``groups`` : array_like[int], required :
             Integer-valued index of clusters or groups.
@@ -2627,11 +2627,11 @@ class RegressionResults(base.LikelihoodModelResults):
             res.cov_params_default = sw.cov_hac_simple(
                 self, nlags=maxlags, weights_func=weights_func,
                 use_correction=use_correction)
-        elif cov_type.lower() in ['cluster', 'cluster-crv3','cluster-jackknife']:
+        elif cov_type.lower() in ['cluster', 'cluster-crv3','cluster-jk']:
             # cluster robust standard errors, one- or two-way
 
-            if cov_type.lower() == 'cluster-jackknife':
-                crv_type = 'cluster-jackknife'
+            if cov_type.lower() == 'cluster-jk':
+                crv_type = 'cluster-jk'
             elif cov_type.lower() == 'cluster-crv3':
                 crv_type = 'cluster-crv3'
             else: 

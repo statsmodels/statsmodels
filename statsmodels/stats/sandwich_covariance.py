@@ -584,7 +584,7 @@ def cov_cluster(results, group, use_correction=True, crv_type = 'cluster'):
     crv_type : str
        If 'cluster' (default), compute a CRV1 robust variance covariance matrix.  
        If 'cluster-crv3', compute a CRV3 robust variance covariance matrix. 
-       If 'cluster-jackknife', compute a variance covariance matrix via the cluster jackknife. 
+       If 'cluster-jk', compute a variance covariance matrix via the cluster jackknife. 
 
 
     Returns
@@ -621,7 +621,7 @@ def cov_cluster(results, group, use_correction=True, crv_type = 'cluster'):
 
         if crv_type == 'cluster-crv3':
             center = 'estimate'
-        # cluster-jackknife
+        # cluster-jk
         else: 
             center = 'mean'
 
@@ -645,7 +645,7 @@ def cov_cluster_2groups(results, group, group2=None, use_correction=True, crv_ty
     crv_type : str
        If 'cluster' (default), compute a CRV1 robust variance covariance matrix.  
        If 'cluster-crv3', compute a CRV3 robust variance covariance matrix. 
-       If 'cluster-jackknife', compute a variance covariance matrix via the cluster jackknife. 
+       If 'cluster-jk', compute a variance covariance matrix via the cluster jackknife. 
 
 
     Returns
