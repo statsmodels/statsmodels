@@ -80,11 +80,9 @@ class Penalty:
         as in DiscreteModels.
         TODO: check other models
         """
-        if np.size(self.weights) > 1:
-            if len(params) == 1:
+        if np.size(self.weights) > 1 and len(params) == 1:
                 raise  # raise to identify models where this would be needed
                 return 0.
-
         return self.weights
 
 
