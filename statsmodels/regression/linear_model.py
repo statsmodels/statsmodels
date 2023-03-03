@@ -32,8 +32,6 @@ W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
 """
 from __future__ import annotations
 
-import pdb
-
 from statsmodels.compat.pandas import Appender
 from statsmodels.compat.python import Literal, lrange, lzip
 
