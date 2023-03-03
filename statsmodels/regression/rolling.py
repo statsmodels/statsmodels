@@ -135,7 +135,7 @@ expanding scheme until window observation, and the roll.
     extra_parameters=extra_parameters,
 )
 @Appender(_doc)
-class RollingWLS:
+class RollingWLS(object):
     def __init__(
         self,
         endog,
@@ -462,7 +462,7 @@ class RollingOLS(RollingWLS):
         )
 
 
-class RollingRegressionResults:
+class RollingRegressionResults(object):
     """
     Results from rolling regressions
 
@@ -618,6 +618,11 @@ class RollingRegressionResults:
     @Appender(get_cached_doc(RegressionResults.mse_total))
     def mse_total(self):
         return self._wrap(call_cached_func(RegressionResults.mse_total, self))
+
+    @cache_readonly
+    @Appender(get_cached_doc(RegressionResults.qlike))
+    def qlike(self):
+        return self._wrap(call_cached_func(RegressionResults.qlike, self))
 
     @cache_readonly
     def _cov_params(self):
