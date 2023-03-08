@@ -684,7 +684,9 @@ class ZeroInflatedPoisson(GenericZeroInflated):
         return var_
 
     def _get_start_params(self):
-        start_params = self.model_main.fit(disp=0, method="nm").params
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=ConvergenceWarning)
+            start_params = self.model_main.fit(disp=0, method="nm").params
         start_params = np.append(np.ones(self.k_inflate) * 0.1, start_params)
         return start_params
 
