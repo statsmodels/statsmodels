@@ -1097,6 +1097,7 @@ class Results:
                 else:
                     # assume we need a row
                     exog = pd.DataFrame(exog).T
+                exog_index = exog.index
             orig_exog_len = len(exog)
             is_dict = isinstance(exog, dict)
             try:
