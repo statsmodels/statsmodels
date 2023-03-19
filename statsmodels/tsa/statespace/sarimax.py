@@ -760,7 +760,7 @@ class SARIMAX(MLEModel):
                 transition[start:end, start:end] = seasonal_companion
 
                 # i
-                for i in range(d + 1, self._k_seasonal_diff):
+                if d < self._k_seasonal_diff - 1:
                     transition[start, end + self.seasonal_periods - 1] = 1
 
                 # \iota
