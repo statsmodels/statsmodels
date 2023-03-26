@@ -94,7 +94,7 @@ def plot_fit(results, exog_idx, y_true=None, ax=None, vlines=True, **kwargs):
         If given, this subplot is used to plot in instead of a new figure being
         created.
     vlines : bool, optional
-        If this not True, then the uncertainty of the fit is not
+        If this not True, then the uncertainty (pointwise prediction intervals) of the fit is not
         plotted.
     **kwargs
         The keyword arguments are passed to the plot command for the fitted
@@ -123,7 +123,8 @@ def plot_fit(results, exog_idx, y_true=None, ax=None, vlines=True, **kwargs):
     >>> model = sm.OLS(y, X)
     >>> results = model.fit()
 
-    Create a plot just for the variable 'Poverty':
+    Create a plot just for the variable 'Poverty.'
+    Note that vertical bars representing uncertainty are plotted since vlines is true
 
     >>> fig, ax = plt.subplots()
     >>> fig = sm.graphics.plot_fit(results, 0, ax=ax)
