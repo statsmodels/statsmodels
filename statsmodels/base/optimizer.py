@@ -428,8 +428,9 @@ def _fit_newton(f, score, start_params, fargs, kwargs, disp=True,
         information returned from the solver used. If it is False, this is
         None.
     """
-    check_kwargs(kwargs, ("tol",), "newton")
+    check_kwargs(kwargs, ("tol", "ridge_factor"), "newton")
     tol = kwargs.setdefault('tol', 1e-8)
+    ridge_factor = kwargs.setdefault('ridge_factor', 1e-10)
     iterations = 0
     oldparams = np.inf
     newparams = np.asarray(start_params)
