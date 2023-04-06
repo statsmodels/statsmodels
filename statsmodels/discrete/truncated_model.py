@@ -3,6 +3,7 @@ from __future__ import division
 __all__ = ["TruncatedLFPoisson", "TruncatedLFNegativeBinomialP",
            "HurdleCountModel"]
 
+import warnings
 import numpy as np
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
@@ -23,6 +24,7 @@ from statsmodels.discrete.discrete_model import (
     )
 from statsmodels.tools.numdiff import approx_hess
 from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools.sm_exceptions import ConvergenceWarning
 from copy import deepcopy
 
 
@@ -184,7 +186,9 @@ class TruncatedLFGeneric(CountModel):
                 offset = None
             model = self.model_main.__class__(self.endog, self.exog,
                                               offset=offset)
-            start_params = model.fit(disp=0).params
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=ConvergenceWarning)
+                start_params = model.fit(disp=0).params
 
         # Todo: check how we can to this in __init__
         k_params = self.df_model + 1 + self.k_extra
@@ -748,7 +752,9 @@ class _RCensoredGeneric(CountModel):
                 offset = None
             model = self.model_main.__class__(self.endog, self.exog,
                                               offset=offset)
-            start_params = model.fit(disp=0).params
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=ConvergenceWarning)
+                start_params = model.fit(disp=0).params
         mlefit = super(_RCensoredGeneric, self).fit(
             start_params=start_params,
             method=method,

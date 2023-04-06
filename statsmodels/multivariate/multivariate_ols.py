@@ -423,13 +423,19 @@ class _MultivariateOLSResults:
         return self.summary().__str__()
 
     @Substitution(hypotheses_doc=_hypotheses_doc)
-    def mv_test(self, hypotheses=None):
+    def mv_test(self, hypotheses=None, skip_intercept_test=False):
         """
         Linear hypotheses testing
 
         Parameters
         ----------
         %(hypotheses_doc)s
+        skip_intercept_test : bool
+            If true, then testing the intercept is skipped, the model is not
+            changed.
+            Note: If a term has a numerically insignificant effect, then
+            an exception because of emtpy arrays may be raised. This can
+            happen for the intercept if the data has been demeaned.
 
         Returns
         -------
@@ -451,6 +457,8 @@ class _MultivariateOLSResults:
                 terms = self.design_info.term_name_slices
                 hypotheses = []
                 for key in terms:
+                    if skip_intercept_test and key == 'Intercept':
+                        continue
                     L_contrast = np.eye(k_xvar)[terms[key], :]
                     hypotheses.append([key, L_contrast, None])
             else:
