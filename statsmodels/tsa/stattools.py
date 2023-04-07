@@ -1045,14 +1045,14 @@ def pacf(x, nlags=None, method="ywadjusted", alpha=None):
 @deprecate_kwarg("unbiased", "adjusted")
 def ccovf(x, y, adjusted=True, demean=True, fft=True):
     """
-    Calculate the crosscovariance between two series.
+    Calculate the cross-covariance between two series.
 
     Parameters
     ----------
     x, y : array_like
        The time series data to use in the calculation.
     adjusted : bool, optional
-       If True, then denominators for crosscovariance is n-k, otherwise n.
+       If True, then denominators for cross-covariance are n-k, otherwise n.
     demean : bool, optional
         Flag indicating whether to demean x and y.
     fft : bool, default True
@@ -1062,7 +1062,9 @@ def ccovf(x, y, adjusted=True, demean=True, fft=True):
     Returns
     -------
     ndarray
-        The estimated crosscovariance function.
+        The estimated cross-covariance function: the element at index k
+        is the covariance between {x[k], x[k+1], ..., x[n]} and {y[0], y[1], ..., y[m-k]},
+        where n and m are the lengths of x and y, respectively.
     """
     x = array_like(x, "x")
     y = array_like(y, "y")
@@ -1083,11 +1085,11 @@ def ccovf(x, y, adjusted=True, demean=True, fft=True):
         d = n
 
     method = "fft" if fft else "direct"
-    return correlate(xo, yo, "full", method=method)[n - 1 :] / d
+    return correlate(xo, yo, "full", method=method)[n - 1:] / d
 
 
 @deprecate_kwarg("unbiased", "adjusted")
-def ccf(x, y, adjusted=True, fft=True):
+def ccf(x, y, adjusted=True, fft=True, *, nlags=None, alpha=None):
     """
     The cross-correlation function.
 
@@ -1096,19 +1098,38 @@ def ccf(x, y, adjusted=True, fft=True):
     x, y : array_like
         The time series data to use in the calculation.
     adjusted : bool
-        If True, then denominators for cross-correlation is n-k, otherwise n.
+        If True, then denominators for cross-correlation are n-k, otherwise n.
     fft : bool, default True
         If True, use FFT convolution.  This method should be preferred
         for long time series.
+    nlags : int, optional
+        Number of lags to return cross-correlations for. If not provided,
+        the number of lags equals len(x).
+    alpha : float, optional
+        If a number is given, the confidence intervals for the given level are
+        returned. For instance if alpha=.05, 95 % confidence intervals are
+        returned where the standard deviation is computed according to
+        1/sqrt(len(x)).
 
     Returns
     -------
     ndarray
-        The cross-correlation function of x and y.
+        The cross-correlation function of x and y: the element at index k
+        is the correlation between {x[k], x[k+1], ..., x[n]} and {y[0], y[1], ..., y[m-k]},
+        where n and m are the lengths of x and y, respectively.
+    confint : ndarray, optional
+        Confidence intervals for the CCF at lags 0, 1, ..., nlags-1 using the level given by
+        alpha and the standard deviation calculated as 1/sqrt(len(x)) [1]. Shape (nlags, 2).
+        Returned if alpha is not None.
 
     Notes
     -----
-    If adjusted is true, the denominator for the autocovariance is adjusted.
+    If adjusted is True, the denominator for the cross-correlation is adjusted.
+
+    References
+    ----------
+    .. [1] Brockwell and Davis, 2016. Introduction to Time Series and
+       Forecasting, 3rd edition, p. 242.
     """
     x = array_like(x, "x")
     y = array_like(y, "y")
@@ -1116,7 +1137,15 @@ def ccf(x, y, adjusted=True, fft=True):
     fft = bool_like(fft, "fft", optional=False)
 
     cvf = ccovf(x, y, adjusted=adjusted, demean=True, fft=fft)
-    return cvf / (np.std(x) * np.std(y))
+    ret = cvf / (np.std(x) * np.std(y))
+    ret = ret[:nlags]
+
+    if alpha is not None:
+        interval = stats.norm.ppf(1.0 - alpha / 2.0) / np.sqrt(len(x))
+        confint = ret.reshape(-1, 1) + interval * np.array([-1, 1])
+        return ret, confint
+    else:
+        return ret
 
 
 # moved from sandbox.tsa.examples.try_ld_nitime, via nitime
