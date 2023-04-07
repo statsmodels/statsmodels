@@ -677,7 +677,8 @@ class BinaryModel(DiscreteModel):
         Instance of frozen scipy distribution.
         """
         mu = self.predict(params, exog=exog, offset=offset)
-        distr = stats.bernoulli(mu[:, None])
+        # distr = stats.bernoulli(mu[:, None])
+        distr = stats.bernoulli(mu)
         return distr
 
 
@@ -2281,7 +2282,8 @@ class GeneralizedPoisson(CountModel):
         """
         mu = self.predict(params, exog=exog, exposure=exposure, offset=offset)
         p = self.parameterization + 1
-        distr = genpoisson_p(mu[:, None], params[-1], p)
+        # distr = genpoisson_p(mu[:, None], params[-1], p)
+        distr = genpoisson_p(mu, params[-1], p)
         return distr
 
 
@@ -3757,7 +3759,8 @@ class NegativeBinomial(CountModel):
         """
         mu = self.predict(params, exog=exog, exposure=exposure, offset=offset)
         if self.loglike_method == 'geometric':
-            distr = stats.geom(1 / (1 + mu[:, None]), loc=-1)
+            # distr = stats.geom(1 / (1 + mu[:, None]), loc=-1)
+            distr = stats.geom(1 / (1 + mu), loc=-1)
         else:
             if self.loglike_method == 'nb2':
                 p = 2
@@ -3768,7 +3771,8 @@ class NegativeBinomial(CountModel):
             q = 2 - p
             size = 1. / alpha * mu**q
             prob = size / (size + mu)
-            distr = nbinom(size[:, None], prob[:, None])
+            # distr = nbinom(size[:, None], prob[:, None])
+            distr = nbinom(size, prob)
 
         return distr
 
@@ -4343,7 +4347,8 @@ class NegativeBinomialP(CountModel):
         """
         mu = self.predict(params, exog=exog, exposure=exposure, offset=offset)
         size, prob = self.convert_params(params, mu)
-        distr = nbinom(size[:, None], prob[:, None])
+        # distr = nbinom(size[:, None], prob[:, None])
+        distr = nbinom(size, prob)
         return distr
 
 

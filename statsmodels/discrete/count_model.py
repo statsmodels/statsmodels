@@ -727,7 +727,8 @@ class ZeroInflatedPoisson(GenericZeroInflated):
         w = self.predict(params, exog=exog, exog_infl=exog_infl,
                          exposure=exposure, offset=offset, which="prob-main")
 
-        distr = self.distribution(mu[:, None], 1 - w[:, None])
+        # distr = self.distribution(mu[:, None], 1 - w[:, None])
+        distr = self.distribution(mu, 1 - w)
         return distr
 
 
@@ -842,7 +843,8 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
                           exposure=exposure, offset=offset, which="mean-main")
         w = self.predict(params, exog=exog, exog_infl=exog_infl,
                          exposure=exposure, offset=offset, which="prob-main")
-        distr = self.distribution(mu[:, None], params[-1], p, 1 - w[:, None])
+        # distr = self.distribution(mu[:, None], params[-1], p, 1 - w[:, None])
+        distr = self.distribution(mu, params[-1], p, 1 - w)
         return distr
 
 
@@ -958,7 +960,8 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
         w = self.predict(params, exog=exog, exog_infl=exog_infl,
                          exposure=exposure, offset=offset, which="prob-main")
 
-        distr = self.distribution(mu[:, None], params[-1], p, 1 - w[:, None])
+        # distr = self.distribution(mu[:, None], params[-1], p, 1 - w[:, None])
+        distr = self.distribution(mu, params[-1], p, 1 - w)
         return distr
 
 

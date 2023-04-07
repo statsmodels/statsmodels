@@ -359,6 +359,7 @@ def test_distr(case):
     # res = mod.fit()
     params_dgp = params
     distr = mod.get_distribution(params_dgp)
+    assert distr.pmf(1).ndim == 1
     try:
         y2 = distr.rvs(size=(nobs, 1)).squeeze()
     except ValueError:
