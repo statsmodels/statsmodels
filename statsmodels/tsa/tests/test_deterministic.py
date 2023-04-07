@@ -571,7 +571,7 @@ def test_range_index_basic():
 
 
 def test_range_casting():
-    idx = np.arange(120)
+    idx = np.arange(120).astype(np.int64)
     dp = DeterministicProcess(
         idx, constant=True, order=1, seasonal=True, period=12
     )

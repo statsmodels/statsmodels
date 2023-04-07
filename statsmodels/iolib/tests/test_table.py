@@ -1,4 +1,4 @@
-import numpy as np
+
 from numpy.testing import assert_equal
 from statsmodels.iolib.table import SimpleTable, default_txt_fmt
 from statsmodels.iolib.table import default_latex_fmt
@@ -207,8 +207,8 @@ stub R2 C2  40.95038  40.65765
         exo = df.join(x)
         endo_groups = endo.groupby("i")
         exo_groups = exo.groupby("i")
-        exo_df = exo_groups.agg([np.sum, np.max])
-        endo_df = endo_groups.agg([np.sum, np.max])
+        exo_df = exo_groups.agg(['sum', 'max'])
+        endo_df = endo_groups.agg(['sum', 'max'])
         reg = OLS(exo_df[[("x", "sum")]], endo_df).fit()
         interesting_lines = []
         import warnings
@@ -221,7 +221,7 @@ stub R2 C2  40.95038  40.65765
 
         desired = ["Dep. Variable:                  x_sum ",
                    "y_sum          1.4595      0.209      ",
-                   "y_amax         0.2432      0.035      "]
+                   "y_max          0.2432      0.035      "]
 
         assert_equal(sorted(desired), sorted(interesting_lines))
 

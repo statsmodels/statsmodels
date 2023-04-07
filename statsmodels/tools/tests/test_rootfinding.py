@@ -80,14 +80,14 @@ def test_brentq_expanding():
     assert_allclose(val, a, rtol=1e-5)
     info1 = {'iterations': 63, 'start_bounds': (-1, 1),
              'brentq_bounds': (100, 1000), 'flag': 'converged',
-             'function_calls': 64, 'iterations_expand': 3, 'converged': True}
+             'function_calls': 64, 'iterations_expand': 3, 'converged': True,
+             }
 
-    # adjustments for scipy 0.8.0 with changed convergence criteria
-    assert_array_less(info.__dict__['iterations'], 70)
-    assert_array_less(info.__dict__['function_calls'], 70)
+    assert_array_less(info.iterations, 70)
+    assert_array_less(info.function_calls, 70)
     for k in info1:
         if k in ['iterations', 'function_calls']:
             continue
-        assert_equal(info1[k], info.__dict__[k])
+        assert_equal(info1[k], getattr(info, k))
 
     assert_allclose(info.root, a, rtol=1e-5)
