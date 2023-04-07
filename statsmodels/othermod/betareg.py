@@ -134,6 +134,8 @@ class BetaModel(GenericLikelihoodModel):
             self._init_keys.extend(['exog_precision'])
         self._init_keys.extend(['link', 'link_precision'])
         self._null_drop_keys = ['exog_precision']
+        del kwds['extra_params_names']
+        self._check_kwargs(kwds)
         self.results_class = BetaResults
         self.results_class_wrapper = BetaResultsWrapper
 
