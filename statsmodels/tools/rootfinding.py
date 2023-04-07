@@ -212,10 +212,10 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
             converged=res[1].converged,
             flag=res[1].flag,
             # ours:
-            iterations_expand = n_it,
-            start_bounds = (sl, su),
-            brentq_bounds = (left, right),
-            increasing = increasing,
+            iterations_expand=n_it,
+            start_bounds=(sl, su),
+            brentq_bounds=(left, right),
+            increasing=increasing,
             )
         return val, info
     else:
