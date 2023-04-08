@@ -12,7 +12,9 @@ import pytest
 from statsmodels.datasets import elnino, macrodata
 from statsmodels.graphics.tsaplots import (
     month_plot,
+    plot_accf_grid,
     plot_acf,
+    plot_ccf,
     plot_pacf,
     plot_predict,
     quarter_plot,
@@ -188,6 +190,55 @@ def test_plot_pacf_irregular(close_figures):
     plot_pacf(pacf, ax=ax, lags=np.arange(1, 11))
     plot_pacf(pacf, ax=ax, lags=10, zero=False)
     plot_pacf(pacf, ax=ax, alpha=None, zero=False)
+
+
+@pytest.mark.matplotlib
+def test_plot_ccf(close_figures):
+    # Just test that it runs.
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+
+    ar = np.r_[1.0, -0.9]
+    ma = np.r_[1.0, 0.9]
+    armaprocess = tsp.ArmaProcess(ar, ma)
+    rs = np.random.RandomState(1234)
+    x1 = armaprocess.generate_sample(100, distrvs=rs.standard_normal)
+    x2 = armaprocess.generate_sample(100, distrvs=rs.standard_normal)
+    plot_ccf(x1, x2)
+    plot_ccf(x1, x2, ax=ax, lags=10)
+    plot_ccf(x1, x2, ax=ax)
+    plot_ccf(x1, x2, ax=ax, alpha=None)
+    plot_ccf(x1, x2, ax=ax, negative_lags=True)
+    plot_ccf(x1, x2, ax=ax, adjusted=True)
+    plot_ccf(x1, x2, ax=ax, fft=True)
+    plot_ccf(x1, x2, ax=ax, title='CCF')
+    plot_ccf(x1, x2, ax=ax, auto_ylims=True)
+    plot_ccf(x1, x2, ax=ax, use_vlines=False)
+
+
+@pytest.mark.matplotlib
+def test_plot_accf_grid(close_figures):
+    # Just test that it runs.
+    fig = plt.figure()
+
+    ar = np.r_[1.0, -0.9]
+    ma = np.r_[1.0, 0.9]
+    armaprocess = tsp.ArmaProcess(ar, ma)
+    rs = np.random.RandomState(1234)
+    x = np.vstack([
+        armaprocess.generate_sample(100, distrvs=rs.standard_normal),
+        armaprocess.generate_sample(100, distrvs=rs.standard_normal),
+    ]).T
+    plot_accf_grid(x)
+    plot_accf_grid(pd.DataFrame({'x': x[:, 0], 'y': x[:, 1]}))
+    plot_accf_grid(x, fig=fig, lags=10)
+    plot_accf_grid(x, fig=fig)
+    plot_accf_grid(x, fig=fig, negative_lags=False)
+    plot_accf_grid(x, fig=fig, alpha=None)
+    plot_accf_grid(x, fig=fig, adjusted=True)
+    plot_accf_grid(x, fig=fig, fft=True)
+    plot_accf_grid(x, fig=fig, auto_ylims=True)
+    plot_accf_grid(x, fig=fig, use_vlines=False)
 
 
 @pytest.mark.matplotlib
