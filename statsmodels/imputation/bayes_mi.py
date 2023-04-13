@@ -135,7 +135,7 @@ class BayesGaussMI:
 
             r = self._data[ix, :][:, ix_obs] - mo
             cm = mm + np.dot(vmo, np.linalg.solve(voo, r.T)).T
-            cv = vmm - np.dot(vmo, np.linalg.solve(voo, vmo.T))
+            cv = vmm - np.dot(vmo.T, np.linalg.solve(voo, vmo))
 
             cs = np.linalg.cholesky(cv)
             u = np.random.normal(size=(len(ix), len(ix_miss)))
