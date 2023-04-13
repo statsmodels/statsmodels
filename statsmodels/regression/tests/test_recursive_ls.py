@@ -4,22 +4,22 @@ Tests for recursive least squares models
 Author: Chad Fulton
 License: Simplified-BSD
 """
+import os
 
 import numpy as np
+from numpy.testing import assert_allclose, assert_equal, assert_raises
 import pandas as pd
 import pytest
 from scipy.stats import norm
-import os
 
 from statsmodels.datasets import macrodata
-from statsmodels.regression.linear_model import OLS
 from statsmodels.genmod.api import GLM
-from statsmodels.tools.eval_measures import aic, bic
+from statsmodels.regression.linear_model import OLS
 from statsmodels.regression.recursive_ls import RecursiveLS
 from statsmodels.stats.diagnostic import recursive_olsresiduals
 from statsmodels.tools import add_constant
+from statsmodels.tools.eval_measures import aic, bic
 from statsmodels.tools.sm_exceptions import ValueWarning
-from numpy.testing import assert_equal, assert_raises, assert_allclose
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 

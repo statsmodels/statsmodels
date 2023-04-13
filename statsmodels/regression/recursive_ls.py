@@ -91,12 +91,15 @@ class RecursiveLS(MLEModel):
             self._r_matrix, self._q_matrix = LC.coefs, LC.constants
             self.k_constraints = self._r_matrix.shape[0]
 
-            constraint_endog = np.zeros((len(endog), len(self._r_matrix)))
+            nobs = len(endog)
+            constraint_endog = np.zeros((nobs, len(self._r_matrix)))
             if endog_using_pandas:
                 constraint_endog = pd.DataFrame(constraint_endog,
                                                 index=endog.index)
                 endog = concat([endog, constraint_endog], axis=1)
-                endog.values[:, 1:] = self._q_matrix[:, 0]
+                # Complexity needed to handle multiple version of pandas
+                # Pandas >= 2 can use endog.iloc[:, 1:] = self._q_matrix.T
+                endog.iloc[:, 1:] = np.tile(self._q_matrix.T, (nobs, 1))
             else:
                 endog[:, 1:] = self._q_matrix[:, 0]
 
