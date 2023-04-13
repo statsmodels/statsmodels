@@ -395,7 +395,9 @@ class Description:
             if SP_LT_19:
                 mode_res = stats.mode(ser.dropna().to_numpy())
             else:
-                mode_res = stats.mode(ser.dropna().to_numpy(), keepdims=True)
+                if ser.dtype is pd.Int32Dtype():
+                    ser2 = ser.dropna().to_numpy(dtype=int)
+                mode_res = stats.mode(ser2, keepdims=True)
             # Changes in SciPy 1.10
             if np.isscalar(mode_res[0]):
                 return float(mode_res[0]), mode_res[1]
