@@ -383,12 +383,13 @@ class TruncatedLFGeneric(CountModel):
             return probs
         elif which == 'prob-base':
             if y_values is not None:
-                counts = np.atleast_2d(y_values)
+                counts = np.asarray(y_values)
             else:
-                counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
+                counts = np.arange(0, np.max(self.endog)+1)
+
             probs = self.model_main.predict(
                 params, exog=exog, exposure=np.exp(exposure),
-                offset=offset, which="prob", y_values=counts)[:, None]
+                offset=offset, which="prob", y_values=counts)
             return probs
         elif which == 'var':
             mu = np.exp(linpred)

@@ -1660,7 +1660,7 @@ class Poisson(CountModel):
                               exposure=exposure, offset=offset,
                               )[:, None]
             # uses broadcasting
-            return stats.poisson.pmf(y_values, mu)
+            return stats.poisson._pmf(y_values, mu)
         else:
             raise ValueError('Value of the `which` option is not recognized')
 
@@ -3589,8 +3589,13 @@ class NegativeBinomial(CountModel):
                 offset=offset
                 )
             if y_values is None:
-                y_values = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
-            return distr.pmf(y_values)
+                y_values = np.arange(0, np.max(self.endog) + 1)
+            else:
+                y_values = np.asarray(y_values)
+
+            assert y_values.ndim == 1
+            y_values = y_values[..., None]
+            return distr.pmf(y_values).T
 
         exog, offset, exposure = self._get_predict_arrays(
             exog=exog,

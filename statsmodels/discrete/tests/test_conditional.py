@@ -20,12 +20,12 @@ def test_logit_1d():
     for x in -1, 0, 1, 2:
         params = np.r_[x, ]
         _, grad = model._denom_grad(0, params)
-        ngrad = approx_fprime(params, lambda x: model._denom(0, x))
+        ngrad = approx_fprime(params, lambda x: model._denom(0, x)).squeeze()
         assert_allclose(grad, ngrad)
 
     # Check the gradient for the loglikelihood
     for x in -1, 0, 1, 2:
-        grad = approx_fprime(np.r_[x, ], model.loglike)
+        grad = approx_fprime(np.r_[x, ], model.loglike).squeeze()
         score = model.score(np.r_[x, ])
         assert_allclose(grad, score, rtol=1e-4)
 
@@ -117,7 +117,7 @@ def test_poisson_1d():
 
     # Check the gradient for the loglikelihood
     for x in -1, 0, 1, 2:
-        grad = approx_fprime(np.r_[x, ], model.loglike)
+        grad = approx_fprime(np.r_[x, ], model.loglike).squeeze()
         score = model.score(np.r_[x, ])
         assert_allclose(grad, score, rtol=1e-4)
 
