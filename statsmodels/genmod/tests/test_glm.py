@@ -255,6 +255,15 @@ class CheckModelResultsMixin:
         var_ = res1.predict(which="var_unscaled")
         assert_allclose(var_ * res_scale, var_endog, rtol=1e-13)
 
+        # check get_distribution of results instance
+        if getattr(self, "has_edispersion", False):
+            with pytest.warns(UserWarning, match="using scale=1"):
+                distr3 = res1.get_distribution()
+        else:
+            distr3 = res1.get_distribution()
+        for k in distr2.kwds:
+            assert_allclose(distr3.kwds[k], distr2.kwds[k], rtol=1e-13)
+
 
 class CheckComparisonMixin:
 
@@ -865,6 +874,7 @@ class TestGlmNegbinomial(CheckModelResultsMixin):
         res2 = Committee()
         res2.aic_R += 2 # They do not count a degree of freedom for the scale
         cls.res2 = res2
+        cls.has_edispersion = True
 
 # FIXME: enable or delete
 #    def setup_method(self):

@@ -2149,6 +2149,68 @@ class GLMResults(base.LikelihoodModelResults):
                          hat_matrix_diag=hat_matrix_diag)
         return infl
 
+    def get_distribution(self, exog=None, exposure=None,
+                         offset=None, var_weights=1., n_trials=1.):
+        """
+        Return a instance of the predictive distribution.
+
+        Parameters
+        ----------
+        scale : scalar
+            The scale parameter.
+        exog : array_like
+            The predictor variable matrix.
+        offset : array_like or None
+            Offset variable for predicted mean.
+        exposure : array_like or None
+            Log(exposure) will be added to the linear prediction.
+        var_weights : array_like
+            1d array of variance (analytic) weights. The default is None.
+        n_trials : int
+            Number of trials for the binomial distribution. The default is 1
+            which corresponds to a Bernoulli random variable.
+
+        Returns
+        -------
+        gen
+            Instance of a scipy frozen distribution based on estimated
+            parameters.
+            Use the ``rvs`` method to generate random values.
+
+        Notes
+        -----
+        Due to the behavior of ``scipy.stats.distributions objects``, the
+        returned random number generator must be called with ``gen.rvs(n)``
+        where ``n`` is the number of observations in the data set used
+        to fit the model.  If any other value is used for ``n``, misleading
+        results will be produced.
+        """
+        # Note this is mostly a copy of GLM.get_prediction
+        # calling here results.predict avoids the exog check and trasnform
+
+        if isinstance(self.model.family, (families.Binomial, families.Poisson,
+                                    families.NegativeBinomial)):
+            # use scale=1, independent of QMLE scale for discrete
+            scale = 1.
+            if self.scale != 1.:
+                msg = "using scale=1, no exess dispersion in distribution"
+                warnings.warn(msg, UserWarning)
+        else:
+            scale = self.scale
+
+        mu = self.predict(exog, exposure, offset, which="mean")
+
+        kwds = {}
+        if (np.any(n_trials != 1) and
+                isinstance(self.model.family, families.Binomial)):
+
+            kwds["n_trials"] = n_trials
+
+        distr = self.model.family.get_distribution(
+            mu, scale, var_weights=var_weights, **kwds)
+        return distr
+
+
     @Appender(base.LikelihoodModelResults.remove_data.__doc__)
     def remove_data(self):
         # GLM has alias/reference in result instance

@@ -359,6 +359,7 @@ def test_distr(case):
     # res = mod.fit()
     params_dgp = params
     distr = mod.get_distribution(params_dgp)
+    assert distr.pmf(1).ndim == 1
     try:
         y2 = distr.rvs(size=(nobs, 1)).squeeze()
     except ValueError:
@@ -378,7 +379,14 @@ def test_distr(case):
     assert_allclose(res.resid_pearson, (y2 - mean) / np.sqrt(var_), rtol=1e-13)
 
     if not issubclass(cls_model, BinaryModel):
+        # smoke, shape, consistency test
+        probs = res.predict(which="prob", y_values=np.arange(5))
+        assert probs.shape == (len(mod.endog), 5)
+        probs2 = res.get_prediction(
+            which="prob", y_values=np.arange(5), average=True)
+        assert_allclose(probs2.predicted, probs.mean(0), rtol=1e-10)
         dia = res.get_diagnostic()
+        dia.probs_predicted
         # fig = dia.plot_probs();
         # fig.suptitle(cls_model.__name__ + repr(kwds), fontsize=16)
 
