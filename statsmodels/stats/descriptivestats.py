@@ -1,11 +1,17 @@
 from statsmodels.compat.pandas import Appender, is_numeric_dtype
 from statsmodels.compat.scipy import SP_LT_19
-
+from statsmodels.compat.pandas import PD_LT_2
 from typing import Sequence, Union
 
 import numpy as np
 import pandas as pd
-from pandas.core.dtypes.common import is_categorical_dtype
+if PD_LT_2:
+    from pandas.core.dtypes.common import is_categorical_dtype
+else:
+    # After pandas 2 is the minium, use the isinstance check
+    def is_categorical_dtype(dtype):
+        return isinstance(dtype, pd.CategoricalDtype)
+
 from scipy import stats
 
 from statsmodels.iolib.table import SimpleTable
