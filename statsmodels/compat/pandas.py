@@ -31,12 +31,14 @@ __all__ = [
     "get_cached_doc",
     "call_cached_func",
     "PD_LT_1_4",
+    "PD_LT_2",
 ]
 
 version = parse(pd.__version__)
 
 PD_LT_1_0_0 = version < Version("1.0.0")
 PD_LT_1_4 = version < Version("1.3.99")
+PD_LT_2 = version < Version("1.9.99")
 
 try:
     from pandas.api.types import is_numeric_dtype

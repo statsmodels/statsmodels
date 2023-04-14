@@ -121,7 +121,9 @@ class TestMICEData:
             with warnings.catch_warnings(record=True) as ws:
                 warnings.simplefilter('always')
                 miceData.update_all()
-
+                # Only include pandas warnings. There are many from patsy
+                # and sometimes warnings from other packages here
+                ws = [w for w in ws if "\\pandas\\" in w.filename]
                 assert len(ws) == 0
 
     def test_next_sample(self):
