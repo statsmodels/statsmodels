@@ -629,15 +629,21 @@ class Hampel(RobustNorm):
         """
 
         z = np.abs(z)
-        a = self.a
-        b = self.b
-        c = self.c
+        z_isscalar = np.isscalar(z)
+        z = np.atleast_1d(z)
+        a = self.a; b = self.b; c = self.c
         t1, t2, t3 = self._subset(z)
-        v = (t1 * z**2 * 0.5 +
-             t2 * (a * z - a**2 * 0.5) +
-             t3 * (a * (c * z - z**2 * 0.5) / (c - b) - 7 * a**2 / 6.) +
-             (1 - t1 + t2 + t3) * a * (b + c - a))
-        return v
+        t34 = ~(t1 | t2 )
+        v = np.zeros(z.shape, float)
+        v[t1] = z[t1]**2 * 0.5
+        v[t2] = (a * (z[t2] - a) + a**2 * 0.5)
+        v[t3] = a * (c - z[t3])**2  / (c - b) * (-0.5)
+        v[t34] += a * (b + c - a) * 0.5
+
+        if z_isscalar:
+            return v[0]
+        else:
+            return v
 
     def psi(self, z):
         r"""
@@ -662,13 +668,11 @@ class Hampel(RobustNorm):
             psi(z) = 0                            for \|z\| > c
         """
         z = np.asarray(z)
-        a = self.a
-        b = self.b
-        c = self.c
+        a = self.a; b = self.b; c = self.c
         t1, t2, t3 = self._subset(z)
         s = np.sign(z)
         z = np.abs(z)
-        v = s * (t1 * z +
+        v =  (t1 * z*s +
                  t2 * a*s +
                  t3 * a*s * (c - z) / (c - b))
         return v
@@ -711,13 +715,16 @@ class Hampel(RobustNorm):
         return v
 
     def psi_deriv(self, z):
+        """Derivative of psi function, second derivative of rho function.
+        """
         t1, _, t3 = self._subset(z)
         a, b, c = self.a, self.b, self.c
+        z = np.atleast_1d(z)
         # default is t1
         d = np.zeros_like(z)
         d[t1] = 1.0
         zt3 = z[t3]
-        d[t3] = (a * np.sign(zt3) * zt3) / (np.abs(zt3) * (c - b))
+        d[t3] = -(a * np.sign(zt3) * zt3) / (np.abs(zt3) * (c - b))
         return d
 
 
