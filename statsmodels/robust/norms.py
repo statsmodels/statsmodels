@@ -806,7 +806,8 @@ class TukeyBiweight(RobustNorm):
             rho(z) = 0                              for \|z\| > R
         """
         subset = self._subset(z)
-        return -(1 - (z / self.c)**2)**3 * subset * self.c**2 / 6.
+        factor = self.c**2 / 6.
+        return -(1 - (z / self.c)**2)**3 * subset * factor + factor
 
     def psi(self, z):
         r"""

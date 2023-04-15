@@ -11,7 +11,8 @@ from statsmodels.tools.numdiff import (
 from .results import results_norms as res_r
 
 cases = [
-    (norms.Hampel, (1.5, 3.5, 8.), res_r.res_hampel)
+    (norms.Hampel, (1.5, 3.5, 8.), res_r.res_hampel),
+    (norms.TukeyBiweight, (4,), res_r.res_biweight),
     ]
 
 dtypes = ["int", np.float64, np.complex128]
