@@ -3,6 +3,16 @@ import numpy as np
 # TODO: add plots to weighting functions for online docs.
 
 
+def _cabs(x):
+    """absolute value function that changes complex sign based on real sign
+
+    This could be useful for complex step derivatives of functions that
+    need abs. Not yet used.
+    """
+    sign = (x.real >= 0) * 2 - 1
+    return sign * x
+
+
 class RobustNorm:
     """
     The parent class for the norms used for robust regression.
@@ -627,23 +637,25 @@ class Hampel(RobustNorm):
 
             rho(z) = a*(b + c - a)                  for \|z\| > c
         """
+        a, b, c = self.a, self.b, self.c
 
-        z = np.abs(z)
         z_isscalar = np.isscalar(z)
         z = np.atleast_1d(z)
-        a = self.a; b = self.b; c = self.c
+
         t1, t2, t3 = self._subset(z)
-        t34 = ~(t1 | t2 )
-        v = np.zeros(z.shape, float)
+        t34 = ~(t1 | t2)
+        dt = np.promote_types(z.dtype, "float")
+        v = np.zeros(z.shape, dtype=dt)
+        z = np.abs(z)
         v[t1] = z[t1]**2 * 0.5
         v[t2] = (a * (z[t2] - a) + a**2 * 0.5)
-        v[t3] = a * (c - z[t3])**2  / (c - b) * (-0.5)
+        v[t3] = a * (c - z[t3])**2 / (c - b) * (-0.5)
         v[t34] += a * (b + c - a) * 0.5
 
         if z_isscalar:
-            return v[0]
-        else:
-            return v
+            v = v[0]
+
+        return v
 
     def psi(self, z):
         r"""
@@ -667,14 +679,26 @@ class Hampel(RobustNorm):
 
             psi(z) = 0                            for \|z\| > c
         """
-        z = np.asarray(z)
-        a = self.a; b = self.b; c = self.c
+        a, b, c = self.a, self.b, self.c
+
+        z_isscalar = np.isscalar(z)
+        z = np.atleast_1d(z)
+
         t1, t2, t3 = self._subset(z)
+        dt = np.promote_types(z.dtype, "float")
+        v = np.zeros(z.shape, dtype=dt)
         s = np.sign(z)
         z = np.abs(z)
-        v =  (t1 * z*s +
-                 t2 * a*s +
-                 t3 * a*s * (c - z) / (c - b))
+
+        v[t1] = z[t1] * s[t1]
+        v[t2] = a * s[t2]
+        v[t3] = a * s[t3] * (c - z[t3]) / (c - b)
+        # v = (t1 * z*s +
+        #          t2 * a*s +
+        #          t3 * a*s * (c - z) / (c - b))
+
+        if z_isscalar:
+            v = v[0]
         return v
 
     def weights(self, z):
@@ -699,32 +723,43 @@ class Hampel(RobustNorm):
 
             weights(z) = 0                            for \|z\| > c
         """
-        z = np.asarray(z)
-        a = self.a
-        b = self.b
-        c = self.c
+        a, b, c = self.a, self.b, self.c
+
+        z_isscalar = np.isscalar(z)
+        z = np.atleast_1d(z)
+
         t1, t2, t3 = self._subset(z)
 
-        v = np.zeros_like(z)
+        dt = np.promote_types(z.dtype, "float")
+        v = np.zeros(z.shape, dtype=dt)
         v[t1] = 1.0
         abs_z = np.abs(z)
         v[t2] = a / abs_z[t2]
         abs_zt3 = abs_z[t3]
         v[t3] = a * (c - abs_zt3) / (abs_zt3 * (c - b))
-        v[np.where(np.isnan(v))] = 1.  # TODO: for some reason 0 returns a nan?
+
+        if z_isscalar:
+            v = v[0]
         return v
 
     def psi_deriv(self, z):
         """Derivative of psi function, second derivative of rho function.
         """
-        t1, _, t3 = self._subset(z)
         a, b, c = self.a, self.b, self.c
+
+        z_isscalar = np.isscalar(z)
         z = np.atleast_1d(z)
-        # default is t1
-        d = np.zeros_like(z)
+
+        t1, _, t3 = self._subset(z)
+
+        dt = np.promote_types(z.dtype, "float")
+        d = np.zeros(z.shape, dtype=dt)
         d[t1] = 1.0
         zt3 = z[t3]
         d[t3] = -(a * np.sign(zt3) * zt3) / (np.abs(zt3) * (c - b))
+
+        if z_isscalar:
+            d = d[0]
         return d
 
 
