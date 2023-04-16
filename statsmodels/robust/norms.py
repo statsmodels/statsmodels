@@ -255,11 +255,17 @@ class HuberT(RobustNorm):
 
             weights(z) = t/\|z\|      for \|z\| > t
         """
-        z = np.asarray(z)
+        z_isscalar = np.isscalar(z)
+        z = np.atleast_1d(z)
+
         test = self._subset(z)
         absz = np.abs(z)
         absz[test] = 1.0
-        return test + (1 - test) * self.t / absz
+        v = test + (1 - test) * self.t / absz
+
+        if z_isscalar:
+            v = v[0]
+        return v
 
     def psi_deriv(self, z):
         """
@@ -269,7 +275,7 @@ class HuberT(RobustNorm):
         -----
         Used to estimate the robust covariance matrix.
         """
-        return np.less_equal(np.abs(z), self.t)
+        return np.less_equal(np.abs(z), self.t).astype(float)
 
 
 # TODO: untested, but looks right.  RamsayE not available in R or SAS?
@@ -408,7 +414,7 @@ class AndrewWave(RobustNorm):
         a = self.a
         z = np.asarray(z)
         test = self._subset(z)
-        return (test * a * (1 - np.cos(z / a)) +
+        return (test * a**2 * (0 - np.cos(z / a)) +
                 (1 - test) * 2 * a)
 
     def psi(self, z):
@@ -433,7 +439,7 @@ class AndrewWave(RobustNorm):
         a = self.a
         z = np.asarray(z)
         test = self._subset(z)
-        return test * np.sin(z / a)
+        return test * a * np.sin(z / a)
 
     def weights(self, z):
         r"""
@@ -477,7 +483,7 @@ class AndrewWave(RobustNorm):
         """
 
         test = self._subset(z)
-        return test*np.cos(z / self.a)/self.a
+        return test * np.cos(z / self.a)
 
 
 # TODO: this is untested

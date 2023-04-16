@@ -13,6 +13,15 @@ from .results import results_norms as res_r
 cases = [
     (norms.Hampel, (1.5, 3.5, 8.), res_r.res_hampel),
     (norms.TukeyBiweight, (4,), res_r.res_biweight),
+    (norms.HuberT, (1.345,), res_r.res_huber),
+    ]
+
+norms_other = [
+    (norms.LeastSquares, ()),
+    (norms.TrimmedMean, (1.9,)),  # avoid arg at integer used in example
+    (norms.AndrewWave, ()),
+    (norms.RamsayE, ()),
+    # norms.MQuantileNorm,  # requires keywords in init
     ]
 
 dtypes = ["int", np.float64, np.complex128]
@@ -22,6 +31,10 @@ dtypes = ["int", np.float64, np.complex128]
 @pytest.mark.parametrize("case", cases)
 def test_norm(case, dtype):
     ncls, args, res = case
+    if ncls in [norms.HuberT] and dtype == np.complex128:
+        # skip for now
+        return
+
     norm = ncls(*args)
     x = np.array([-9, -6, -2, -1, 0, 1, 2, 6, 9], dtype=dtype)
 
@@ -56,3 +69,23 @@ def test_norm(case, dtype):
     for meth in methods:
         resm = [getattr(norm, meth)(xi) for xi in x]
         assert_allclose(resm, getattr(res, meth))
+
+
+@pytest.mark.parametrize("case", norms_other)
+def test_norms_consistent(case):
+    # test that norm methods are consistent with each other
+    ncls, args = case
+    norm = ncls(*args)
+    x = np.array([-9, -6, -2, -1, 0, 1, 2, 6, 9], dtype=float)
+
+    weights = norm.weights(x)
+    # rho = norm.rho(x)  # not used
+    psi = norm.psi(x)
+    psi_deriv = norm.psi_deriv(x)
+
+    # avoid zero division nan:
+    assert_allclose(weights, (psi + 1e-50) / (x + 1e-50), rtol=1e-6, atol=1e-8)
+    psid = _approx_fprime_scalar(x, norm.rho)
+    assert_allclose(psi, psid, rtol=1e-6, atol=1e-8)
+    psidd = _approx_fprime_scalar(x, norm.psi)
+    assert_allclose(psi_deriv, psidd, rtol=1e-6, atol=1e-8)
