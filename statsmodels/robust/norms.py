@@ -3,6 +3,16 @@ import numpy as np
 # TODO: add plots to weighting functions for online docs.
 
 
+def _cabs(x):
+    """absolute value function that changes complex sign based on real sign
+
+    This could be useful for complex step derivatives of functions that
+    need abs. Not yet used.
+    """
+    sign = (x.real >= 0) * 2 - 1
+    return sign * x
+
+
 class RobustNorm:
     """
     The parent class for the norms used for robust regression.
@@ -245,11 +255,17 @@ class HuberT(RobustNorm):
 
             weights(z) = t/\|z\|      for \|z\| > t
         """
-        z = np.asarray(z)
+        z_isscalar = np.isscalar(z)
+        z = np.atleast_1d(z)
+
         test = self._subset(z)
         absz = np.abs(z)
         absz[test] = 1.0
-        return test + (1 - test) * self.t / absz
+        v = test + (1 - test) * self.t / absz
+
+        if z_isscalar:
+            v = v[0]
+        return v
 
     def psi_deriv(self, z):
         """
@@ -259,7 +275,7 @@ class HuberT(RobustNorm):
         -----
         Used to estimate the robust covariance matrix.
         """
-        return np.less_equal(np.abs(z), self.t)
+        return np.less_equal(np.abs(z), self.t).astype(float)
 
 
 # TODO: untested, but looks right.  RamsayE not available in R or SAS?
@@ -390,16 +406,16 @@ class AndrewWave(RobustNorm):
         Returns
         -------
         rho : ndarray
-            rho(z) = a*(1-cos(z/a))     for \|z\| <= a*pi
+            rho(z) = a**2 *(1-cos(z/a))     for \|z\| <= a*pi
 
-            rho(z) = 2*a                for \|z\| > a*pi
+            rho(z) = 2*a                    for \|z\| > a*pi
         """
 
         a = self.a
         z = np.asarray(z)
         test = self._subset(z)
-        return (test * a * (1 - np.cos(z / a)) +
-                (1 - test) * 2 * a)
+        return (test * a**2 * (1 - np.cos(z / a)) +
+                (1 - test) * a**2 * 2)
 
     def psi(self, z):
         r"""
@@ -415,7 +431,7 @@ class AndrewWave(RobustNorm):
         Returns
         -------
         psi : ndarray
-            psi(z) = sin(z/a)       for \|z\| <= a*pi
+            psi(z) = a * sin(z/a)   for \|z\| <= a*pi
 
             psi(z) = 0              for \|z\| > a*pi
         """
@@ -423,7 +439,7 @@ class AndrewWave(RobustNorm):
         a = self.a
         z = np.asarray(z)
         test = self._subset(z)
-        return test * np.sin(z / a)
+        return test * a * np.sin(z / a)
 
     def weights(self, z):
         r"""
@@ -439,9 +455,9 @@ class AndrewWave(RobustNorm):
         Returns
         -------
         weights : ndarray
-            weights(z) = sin(z/a)/(z/a)     for \|z\| <= a*pi
+            weights(z) = sin(z/a) / (z/a)     for \|z\| <= a*pi
 
-            weights(z) = 0                  for \|z\| > a*pi
+            weights(z) = 0                    for \|z\| > a*pi
         """
         a = self.a
         z = np.asarray(z)
@@ -467,7 +483,7 @@ class AndrewWave(RobustNorm):
         """
 
         test = self._subset(z)
-        return test*np.cos(z / self.a)/self.a
+        return test * np.cos(z / self.a)
 
 
 # TODO: this is untested
@@ -511,12 +527,12 @@ class TrimmedMean(RobustNorm):
         rho : ndarray
             rho(z) = (1/2.)*z**2    for \|z\| <= c
 
-            rho(z) = 0              for \|z\| > c
+            rho(z) = (1/2.)*c**2              for \|z\| > c
         """
 
         z = np.asarray(z)
         test = self._subset(z)
-        return test * z**2 * 0.5
+        return test * z**2 * 0.5 + (1 - test) * self.c**2 * 0.5
 
     def psi(self, z):
         r"""
@@ -619,24 +635,33 @@ class Hampel(RobustNorm):
         Returns
         -------
         rho : ndarray
-            rho(z) = (1/2.)*z**2                    for \|z\| <= a
+            rho(z) = z**2 / 2                     for \|z\| <= a
 
-            rho(z) = a*\|z\| - 1/2.*a**2              for a < \|z\| <= b
+            rho(z) = a*\|z\| - 1/2.*a**2               for a < \|z\| <= b
 
-            rho(z) = a*(c*\|z\|-(1/2.)*z**2)/(c-b)    for b < \|z\| <= c
+            rho(z) = a*(c - \|z\|)**2 / (c - b) / 2    for b < \|z\| <= c
 
-            rho(z) = a*(b + c - a)                  for \|z\| > c
+            rho(z) = a*(b + c - a) / 2                 for \|z\| > c
         """
+        a, b, c = self.a, self.b, self.c
 
-        z = np.abs(z)
-        a = self.a
-        b = self.b
-        c = self.c
+        z_isscalar = np.isscalar(z)
+        z = np.atleast_1d(z)
+
         t1, t2, t3 = self._subset(z)
-        v = (t1 * z**2 * 0.5 +
-             t2 * (a * z - a**2 * 0.5) +
-             t3 * (a * (c * z - z**2 * 0.5) / (c - b) - 7 * a**2 / 6.) +
-             (1 - t1 + t2 + t3) * a * (b + c - a))
+        t34 = ~(t1 | t2)
+        dt = np.promote_types(z.dtype, "float")
+        v = np.zeros(z.shape, dtype=dt)
+        z = np.abs(z)
+        v[t1] = z[t1]**2 * 0.5
+        # v[t2] = (a * (z[t2] - a) + a**2 * 0.5)
+        v[t2] = (a * z[t2] - a**2 * 0.5)
+        v[t3] = a * (c - z[t3])**2 / (c - b) * (-0.5)
+        v[t34] += a * (b + c - a) * 0.5
+
+        if z_isscalar:
+            v = v[0]
+
         return v
 
     def psi(self, z):
@@ -661,16 +686,23 @@ class Hampel(RobustNorm):
 
             psi(z) = 0                            for \|z\| > c
         """
-        z = np.asarray(z)
-        a = self.a
-        b = self.b
-        c = self.c
+        a, b, c = self.a, self.b, self.c
+
+        z_isscalar = np.isscalar(z)
+        z = np.atleast_1d(z)
+
         t1, t2, t3 = self._subset(z)
+        dt = np.promote_types(z.dtype, "float")
+        v = np.zeros(z.shape, dtype=dt)
         s = np.sign(z)
-        z = np.abs(z)
-        v = s * (t1 * z +
-                 t2 * a*s +
-                 t3 * a*s * (c - z) / (c - b))
+        za = np.abs(z)
+
+        v[t1] = z[t1]
+        v[t2] = a * s[t2]
+        v[t3] = a * s[t3] * (c - za[t3]) / (c - b)
+
+        if z_isscalar:
+            v = v[0]
         return v
 
     def weights(self, z):
@@ -687,37 +719,51 @@ class Hampel(RobustNorm):
         Returns
         -------
         weights : ndarray
-            weights(z) = 1                            for \|z\| <= a
+            weights(z) = 1                                for \|z\| <= a
 
-            weights(z) = a/\|z\|                        for a < \|z\| <= b
+            weights(z) = a/\|z\|                          for a < \|z\| <= b
 
             weights(z) = a*(c - \|z\|)/(\|z\|*(c-b))      for b < \|z\| <= c
 
-            weights(z) = 0                            for \|z\| > c
+            weights(z) = 0                                for \|z\| > c
         """
-        z = np.asarray(z)
-        a = self.a
-        b = self.b
-        c = self.c
+        a, b, c = self.a, self.b, self.c
+
+        z_isscalar = np.isscalar(z)
+        z = np.atleast_1d(z)
+
         t1, t2, t3 = self._subset(z)
 
-        v = np.zeros_like(z)
+        dt = np.promote_types(z.dtype, "float")
+        v = np.zeros(z.shape, dtype=dt)
         v[t1] = 1.0
         abs_z = np.abs(z)
         v[t2] = a / abs_z[t2]
         abs_zt3 = abs_z[t3]
         v[t3] = a * (c - abs_zt3) / (abs_zt3 * (c - b))
-        v[np.where(np.isnan(v))] = 1.  # TODO: for some reason 0 returns a nan?
+
+        if z_isscalar:
+            v = v[0]
         return v
 
     def psi_deriv(self, z):
-        t1, _, t3 = self._subset(z)
+        """Derivative of psi function, second derivative of rho function.
+        """
         a, b, c = self.a, self.b, self.c
-        # default is t1
-        d = np.zeros_like(z)
+
+        z_isscalar = np.isscalar(z)
+        z = np.atleast_1d(z)
+
+        t1, _, t3 = self._subset(z)
+
+        dt = np.promote_types(z.dtype, "float")
+        d = np.zeros(z.shape, dtype=dt)
         d[t1] = 1.0
         zt3 = z[t3]
-        d[t3] = (a * np.sign(zt3) * zt3) / (np.abs(zt3) * (c - b))
+        d[t3] = -(a * np.sign(zt3) * zt3) / (np.abs(zt3) * (c - b))
+
+        if z_isscalar:
+            d = d[0]
         return d
 
 
@@ -764,7 +810,8 @@ class TukeyBiweight(RobustNorm):
             rho(z) = 0                              for \|z\| > R
         """
         subset = self._subset(z)
-        return -(1 - (z / self.c)**2)**3 * subset * self.c**2 / 6.
+        factor = self.c**2 / 6.
+        return -(1 - (z / self.c)**2)**3 * subset * factor + factor
 
     def psi(self, z):
         r"""
