@@ -79,9 +79,14 @@ def test_norms_consistent(case):
     x = np.array([-9, -6, -2, -1, 0, 1, 2, 6, 9], dtype=float)
 
     weights = norm.weights(x)
-    # rho = norm.rho(x)  # not used
+    rho = norm.rho(x)  # not used
     psi = norm.psi(x)
     psi_deriv = norm.psi_deriv(x)
+
+    # check location and u-shape of rho
+    assert rho[4] == 0
+    assert np.all(np.diff(rho[4:]) >= 0)
+    assert np.all(np.diff(rho[:4]) <= 0)
 
     # avoid zero division nan:
     assert_allclose(weights, (psi + 1e-50) / (x + 1e-50), rtol=1e-6, atol=1e-8)

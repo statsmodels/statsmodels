@@ -406,16 +406,16 @@ class AndrewWave(RobustNorm):
         Returns
         -------
         rho : ndarray
-            rho(z) = a*(1-cos(z/a))     for \|z\| <= a*pi
+            rho(z) = a**2 *(1-cos(z/a))     for \|z\| <= a*pi
 
-            rho(z) = 2*a                for \|z\| > a*pi
+            rho(z) = 2*a                    for \|z\| > a*pi
         """
 
         a = self.a
         z = np.asarray(z)
         test = self._subset(z)
-        return (test * a**2 * (0 - np.cos(z / a)) +
-                (1 - test) * 2 * a)
+        return (test * a**2 * (1 - np.cos(z / a)) +
+                (1 - test) * a**2 * 2)
 
     def psi(self, z):
         r"""
@@ -431,7 +431,7 @@ class AndrewWave(RobustNorm):
         Returns
         -------
         psi : ndarray
-            psi(z) = sin(z/a)       for \|z\| <= a*pi
+            psi(z) = a * sin(z/a)   for \|z\| <= a*pi
 
             psi(z) = 0              for \|z\| > a*pi
         """
@@ -455,9 +455,9 @@ class AndrewWave(RobustNorm):
         Returns
         -------
         weights : ndarray
-            weights(z) = sin(z/a)/(z/a)     for \|z\| <= a*pi
+            weights(z) = sin(z/a) / (z/a)     for \|z\| <= a*pi
 
-            weights(z) = 0                  for \|z\| > a*pi
+            weights(z) = 0                    for \|z\| > a*pi
         """
         a = self.a
         z = np.asarray(z)
@@ -527,12 +527,12 @@ class TrimmedMean(RobustNorm):
         rho : ndarray
             rho(z) = (1/2.)*z**2    for \|z\| <= c
 
-            rho(z) = 0              for \|z\| > c
+            rho(z) = (1/2.)*c**2              for \|z\| > c
         """
 
         z = np.asarray(z)
         test = self._subset(z)
-        return test * z**2 * 0.5
+        return test * z**2 * 0.5 + (1 - test) * self.c**2 * 0.5
 
     def psi(self, z):
         r"""
@@ -635,13 +635,13 @@ class Hampel(RobustNorm):
         Returns
         -------
         rho : ndarray
-            rho(z) = (1/2.)*z**2                    for \|z\| <= a
+            rho(z) = z**2 / 2                     for \|z\| <= a
 
-            rho(z) = a*\|z\| - 1/2.*a**2              for a < \|z\| <= b
+            rho(z) = a*\|z\| - 1/2.*a**2               for a < \|z\| <= b
 
-            rho(z) = a*(c*\|z\|-(1/2.)*z**2)/(c-b)    for b < \|z\| <= c
+            rho(z) = a*(c - \|z\|)**2 / (c - b) / 2    for b < \|z\| <= c
 
-            rho(z) = a*(b + c - a)                  for \|z\| > c
+            rho(z) = a*(b + c - a) / 2                 for \|z\| > c
         """
         a, b, c = self.a, self.b, self.c
 
@@ -654,7 +654,8 @@ class Hampel(RobustNorm):
         v = np.zeros(z.shape, dtype=dt)
         z = np.abs(z)
         v[t1] = z[t1]**2 * 0.5
-        v[t2] = (a * (z[t2] - a) + a**2 * 0.5)
+        # v[t2] = (a * (z[t2] - a) + a**2 * 0.5)
+        v[t2] = (a * z[t2] - a**2 * 0.5)
         v[t3] = a * (c - z[t3])**2 / (c - b) * (-0.5)
         v[t34] += a * (b + c - a) * 0.5
 
@@ -694,14 +695,11 @@ class Hampel(RobustNorm):
         dt = np.promote_types(z.dtype, "float")
         v = np.zeros(z.shape, dtype=dt)
         s = np.sign(z)
-        z = np.abs(z)
+        za = np.abs(z)
 
-        v[t1] = z[t1] * s[t1]
+        v[t1] = z[t1]
         v[t2] = a * s[t2]
-        v[t3] = a * s[t3] * (c - z[t3]) / (c - b)
-        # v = (t1 * z*s +
-        #          t2 * a*s +
-        #          t3 * a*s * (c - z) / (c - b))
+        v[t3] = a * s[t3] * (c - za[t3]) / (c - b)
 
         if z_isscalar:
             v = v[0]
@@ -721,13 +719,13 @@ class Hampel(RobustNorm):
         Returns
         -------
         weights : ndarray
-            weights(z) = 1                            for \|z\| <= a
+            weights(z) = 1                                for \|z\| <= a
 
-            weights(z) = a/\|z\|                        for a < \|z\| <= b
+            weights(z) = a/\|z\|                          for a < \|z\| <= b
 
             weights(z) = a*(c - \|z\|)/(\|z\|*(c-b))      for b < \|z\| <= c
 
-            weights(z) = 0                            for \|z\| > c
+            weights(z) = 0                                for \|z\| > c
         """
         a, b, c = self.a, self.b, self.c
 
