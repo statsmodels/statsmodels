@@ -895,7 +895,7 @@ results_cluster_crv3 = ParamsTableTestBunch(
     )
 
 
-#' CRV-jackknife
+#' CRV-jackknife.
 #' library(AER)
 #' library(summclust)
 #' data(Grunfeld)
