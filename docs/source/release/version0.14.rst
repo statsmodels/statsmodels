@@ -108,7 +108,6 @@ release 0.14.0 includes bug fixes, refactorings and improvements in many areas.
 Submodules
 ----------
 
-
 ``Documentation``
 ~~~~~~~~~~~~~~~~~
 - Fix ZivotAndrewsUnitRoot.run() docstring  (:pr:`7812`)
@@ -131,41 +130,6 @@ Submodules
 
 
 
-``backport``
-~~~~~~~~~~~~
-- Denominator needs to be a vector  (:pr:`8086`)
-- Use nobs ratio in power and samplesize proportions_2indep  (:pr:`8093`)
-- Ensure pinv_wexog is available  (:pr:`8161`)
-
-
-
-``backport maintenance/0.13.x``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-- [maintenance/0.13.x] Merge pull request #7991 from ChadFulton/ss-exp-smth-seasonals  (:pr:`8062`)
-- Use nobs ratio in power and samplesize proportions_2indep  (:pr:`8093`)
-
-
-
-``backport.manual``
-~~~~~~~~~~~~~~~~~~~
-- Future NumPy compat  (:pr:`7940`)
-- Remove DataFrame.append usage  (:pr:`7986`)
-- Fix issues in future pandas  (:pr:`7996`)
-- Correct prop ci  (:pr:`7998`)
-- Update binom_test to binomtest  (:pr:`8001`)
-- Protect against future pandas changes  (:pr:`8037`)
-- Fix missing reference  (:pr:`8038`)
-
-
-
-``backwards.incompat``
-~~~~~~~~~~~~~~~~~~~~~~
-- Get_prediction for more models and cases  (:pr:`7900`)
-- Scoretest betareg  (:pr:`7907`)
-- GenericLikelihood Results hasattr for df_resid is always true, s…  (:pr:`8476`)
-- PerfectSeparation, warn by default instead of raise, GLM, discrete  (:pr:`8552`)
-
-
 
 ``base``
 ~~~~~~~~
@@ -181,28 +145,6 @@ Submodules
 - Add notebook for Poisson post-estimation overview  (:pr:`8420`)
 - GenericLikelihood Results hasattr for df_resid is always true, s…  (:pr:`8476`)
 - Nelder-Mead and Powell has bounds in scipy  (:pr:`8545`)
-
-
-
-``build``
-~~~~~~~~~
-- Update pyproject for 3.10  (:pr:`7880`)
-- Simplify pyproject using oldest supported numpy  (:pr:`7989`)
-- Update doc builder to Python 3.9  (:pr:`7997`)
-- Resore doct build to 3.8  (:pr:`7999`)
-- Switch to single threaded doc build  (:pr:`8012`)
-
-
-
-``corner.case``
-~~~~~~~~~~~~~~~
-- Dickey Fuller constant values (issue #8471 )  (:pr:`8537`)
-
-
-
-``dependencies``
-~~~~~~~~~~~~~~~~
-- Bump actions/setup-python from 3 to 4  (:pr:`8500`)
 
 
 
@@ -247,14 +189,39 @@ Submodules
 - Release 0.13.1 documentation  (:pr:`7881`)
 - Issue #7889  (:pr:`7890`)
 - Fix heading level  (:pr:`7954`)
+- DEV Guide modify redundant text  (:pr:`8104`)
+- Fix spelling in ARDL  (:pr:`8127`)
+- Fix typos in docstring  (:pr:`8169`)
+- Improve docs for using fleiss_kappa  (:pr:`8203`)
+- Fix docs std_null twice instead of std_alternative  (:pr:`8228`)
+- Missing `f` prefix on f-strings fix  (:pr:`8245`)
+- Updated duration.rst to display output  (:pr:`8259`)
+- Small doc fixes  (:pr:`8264`)
+- Update book reference in ETS example  (:pr:`8282`)
+- Easy PR! Fix minor typos  (:pr:`8316`)
+- Added detailed ValueError to prepare_trend_spec()  (:pr:`8365`)
 - Fix typo in documentation  (:pr:`8386`)
 - Use pandas loc in contrasts notebook  (:pr:`8433`)
+- Fix warnings  (:pr:`8483`)
+- Add release note for 0.13.3  (:pr:`8485`)
+- Final 0.13.3 docs  (:pr:`8493`)
+- Add release notes for .4 and .5  (:pr:`8501`)
 - Fix typo in gmm.py  (:pr:`8527`)
+- Orthographic fix  (:pr:`8555`)
+- Changes made in the documentation on endogeneity  (:pr:`8557`)
 - Add to rst docs, fix docstrings  (:pr:`8559`)
+- Add Statsmodels logo to Readme  (:pr:`8571`)
+- Added notebook links to TSA documentation and doc strings  (:pr:`8585`)
 - Fix docstring typo in rank_compare_2indep  (:pr:`8593`)
+- Fix doc build  (:pr:`8608`)
+- Fix indent  (:pr:`8613`)
+- Remove dupe section  (:pr:`8618`)
+- Fix extlinks  (:pr:`8621`)
 - Various doc fixes and improvements  (:pr:`8648`)
 - Fix typo in examples/notebooks/mixed_lm_example.ipynb  (:pr:`8684`)
 - Fix developer page linting requirements  (:pr:`8744`)
+- Add old release notes and draft of 0.14  (:pr:`8798`)
+- Merge existing highlights  (:pr:`8799`)
 
 
 
@@ -272,6 +239,7 @@ Submodules
 - GLM score_test, use correct df_resid  (:pr:`7843`)
 - ENH/REF generic get_prediction  (:pr:`7870`)
 - Fix prediction docstrings  (:pr:`7970`)
+- Handle lists and tuples  (:pr:`8010`)
 - Adding logc link  (:pr:`8155`)
 - GLM negative binomial warns if default used for parameter alpha  (:pr:`8371`)
 - GLM predict which and get_prediction  (:pr:`8505`)
@@ -279,7 +247,9 @@ Submodules
 - PerfectSeparation, warn by default instead of raise, GLM, discrete  (:pr:`8552`)
 - Tweedie loglike  (:pr:`8560`)
 - Glm links  (:pr:`8569`)
-
+- ENH/REF generic get_prediction  (:pr:`7870`)
+- Get_prediction for more models and cases  (:pr:`7900`)
+- Add start_params to TestPenalizedPoissonOraclePenalized2  (:pr:`7868`)
 
 
 ``graphics``
@@ -294,6 +264,7 @@ Submodules
 
 ``io``
 ~~~~~~
+- Add _repr_latex_ methods to iolib tables  (:pr:`8134`)
 - Determine if all rows have same length  (:pr:`8257`)
 - Possibility of not printing r-squared in summary_col  (:pr:`8658`)
 - Adding extra text in html of summary2.Summary #8663  (:pr:`8664`)
@@ -328,54 +299,83 @@ Submodules
 - Relax tolerance on VAR test  (:pr:`7988`)
 - Modify setup requirements  (:pr:`7993`)
 - Add slim to summary docstring  (:pr:`8004`)
+- Add conditional models to API  (:pr:`8011`)
+- Add stacklevel to warnings  (:pr:`8014`)
 - Pin numpydoc  (:pr:`8041`)
 - Unpin numpydoc  (:pr:`8043`)
-- [maintenance/0.13.x] Merge pull request #7989 from bashtage/try-oldest-supported-numpy  (:pr:`8054`)
-- [maintenance/0.13.x] Merge pull request #7906 from bashtage/reverse-seasonal  (:pr:`8055`)
-- [maintenance/0.13.x] Merge pull request #7939 from bashtage/test-pandas-compat  (:pr:`8058`)
-- [maintenance/0.13.x] Merge pull request #8000 from bashtage/unsigned-int-comparrison  (:pr:`8064`)
-- [maintenance/0.13.x] Merge pull request #8003 from pkaf/ets-loglike-doc  (:pr:`8065`)
-- [maintenance/0.13.x] Merge pull request #8007 from rambam613/patch-1  (:pr:`8066`)
-- [maintenance/0.13.x] Merge pull request #8015 from ChadFulton/ss-docs  (:pr:`8068`)
-- [maintenance/0.13.x] Merge pull request #8023 from MichaelChirico/patch-1  (:pr:`8069`)
-- [maintenance/0.13.x] Merge pull request #8026 from wirkuttis/bugfix_statstools  (:pr:`8070`)
-- [maintenance/0.13.x] Merge pull request #8047 from bashtage/fix-lowess-8046  (:pr:`8073`)
+- Add backport action  (:pr:`8052`)
 - Correct upstream target  (:pr:`8074`)
-- [maintenance/0.13.x] Merge pull request #7916 from zprobs/main  (:pr:`8075`)
-- [maintenance/0.13.x] Merge pull request #8037 from bashtage/future-pandas  (:pr:`8077`)
-- [maintenance/0.13.x] Merge pull request #8004 from bashtage/doc-slim  (:pr:`8079`)
-- [maintenance/0.13.x] Merge pull request #7946 from bashtage/remove-looseversion  (:pr:`8082`)
 - Cleanup CI  (:pr:`8083`)
 - [maintenance/0.13.x] Merge pull request #7950 from bashtage/cond-number  (:pr:`8084`)
 - Correct backport errors  (:pr:`8085`)
+- Stop using conda temporarily  (:pr:`8088`)
 - Correct small future issues  (:pr:`8089`)
 - Correct setup for oldest supported  (:pr:`8092`)
+- Release note for 0.13.2  (:pr:`8107`)
+- Use correct setuptools backend  (:pr:`8109`)
+- Update examples in python  (:pr:`8146`)
+- Avoid divide by 0 in aicc  (:pr:`8176`)
 - Correct linting  (:pr:`8181`)
+- Use requirements  (:pr:`8210`)
+- Relax overly tight tolerance  (:pr:`8215`)
 - Auto bug report  (:pr:`8244`)
+- Small code quality and modernizations  (:pr:`8246`)
 - Further class clean  (:pr:`8247`)
+- Upper bound on Cython for CI  (:pr:`8258`)
+- Remove distutils  (:pr:`8266`)
+- Correct clean command  (:pr:`8268`)
+- Update used actions, cache pip deps, Python 3.10  (:pr:`8278`)
 - Correct requirements-dev  (:pr:`8285`)
+- Update lint  (:pr:`8296`)
 - Remove pandas warning from pytest errors  (:pr:`8320`)
+- Remove unintended print statements  (:pr:`8347`)
+- Fix lint and upstream induced changes  (:pr:`8366`)
+- Relax tolerance due to Scipy changes  (:pr:`8368`)
+- GitHub Workflows security hardening  (:pr:`8411`)
+- Fix Matplotlib deprecation of `loc` as a positional keyword in legend functions  (:pr:`8429`)
+- Add a weekly scheduled run to the Azure pipelines  (:pr:`8430`)
+- Add Python 3.11 jobs  (:pr:`8431`)
 - Fix future warnings  (:pr:`8434`)
+- Fix Windows and SciPy issues  (:pr:`8455`)
+- Fix develop installs  (:pr:`8462`)
+- Refactor doc build  (:pr:`8464`)
+- Use stable Python 3.11 on macOS  (:pr:`8466`)
 - Replave setup with setup_method in tests  (:pr:`8469`)
+- Relax tolerance on tests that marginally fail  (:pr:`8470`)
+- Future fixes for 0.13  (:pr:`8473`)
+- Try to fix object issue  (:pr:`8474`)
+- Update doc build instructions  (:pr:`8479`)
+- Update doc build instructions  (:pr:`8480`)
 - Backport Python 3.11 to 0.13.x branch  (:pr:`8484`)
+- Set some Pins  (:pr:`8489`)
+- Refine pins  (:pr:`8491`)
+- Refine pins  (:pr:`8492`)
 - Remove redundant wheel dep from pyproject.toml  (:pr:`8498`)
 - Add Dependabot configuration for GitHub Actions updates  (:pr:`8499`)
+- Bump actions/setup-python from 3 to 4  (:pr:`8500`)
 - Add CodeQL workflow  (:pr:`8509`)
+- Fix pre testing errors  (:pr:`8540`)
+- Remove deprecated alias  (:pr:`8566`)
+- Clean up deprecations  (:pr:`8588`)
+- Disable failing random test, imputation, mediation  (:pr:`8597`)
+- Fix style in sandbox/distributions  (:pr:`8603`)
+- Fix test change due to pandas  (:pr:`8604`)
+- Pin sphinx  (:pr:`8611`)
+- Relax test tol for OSX fail  (:pr:`8612`)
 - Update copyright date in docs/source/conf.py  (:pr:`8694`)
 - MAINT/TST  unit test failures, compatibility changes  (:pr:`8777`)
-
-
-
-``needs.release.note``
-~~~~~~~~~~~~~~~~~~~~~~
-- Add MSTL algorithm for multi-seasonal time series decomposition  (:pr:`8160`)
-
+- Update pyproject for 3.10  (:pr:`7880`)
+- Simplify pyproject using oldest supported numpy  (:pr:`7989`)
+- Update doc builder to Python 3.9  (:pr:`7997`)
+- Resore doct build to 3.8  (:pr:`7999`)
+- Switch to single threaded doc build  (:pr:`8012`)
 
 
 ``nonparametric``
 ~~~~~~~~~~~~~~~~~
 - Check dtype for xvals in lowess  (:pr:`8047`)
 - Correct description of `cut` parameter for `KDEUnivariate`  (:pr:`8340`)
+- Improve specificity of warning check  (:pr:`8797`)
 
 
 
@@ -386,19 +386,14 @@ Submodules
 - MLEInfluence for two-part models, extra params, BetaModel  (:pr:`7912`)
 
 
-
-``pandas.integration``
-~~~~~~~~~~~~~~~~~~~~~~
-- Improve specificity of warning check  (:pr:`8797`)
-
-
-
 ``regression``
 ~~~~~~~~~~~~~~
 - Robust add MQuantileNorm  (:pr:`3183`)
 - Update maxlag to maxlags  (:pr:`7916`)
 - Ensure pinv_wexog is available  (:pr:`8161`)
 - Enforce type check in recursive_olsresiduals  (:pr:`8225`)
+- Faster whitening matrix calculation for sm.GLS()  (:pr:`8373`)
+- Add GLS singular test  (:pr:`8375`)
 - Adding extra text in html of summary2.Summary #8663  (:pr:`8664`)
 - Mixedlm fit_regularized, missing vcomp in results  (:pr:`8682`)
 - Correct assignment in different versions of pandas  (:pr:`8793`)
@@ -408,6 +403,7 @@ Submodules
 ``robust``
 ~~~~~~~~~~
 - Robust add MQuantileNorm  (:pr:`3183`)
+- Fix robust.norm.Hampel  (:pr:`8801`)
 
 
 
@@ -436,6 +432,7 @@ Submodules
 - REF/DOC Poisson diagnostic  (:pr:`8502`)
 - Normal_sample_size_one_tail, fix std_alt default, minimum nobs  (:pr:`8544`)
 - Ref/ENH misc, smaller fixes or enhancements  (:pr:`8567`)
+- Correct ContrastResults  (:pr:`8615`)
 - Fix fdrcorrection_twostage, order, pvals>1  (:pr:`8623`)
 - Add FTestPowerF2 as corrected version of FTestPower  (:pr:`8656`)
 - Fix test_knockoff.py::test_sim failures and link  (:pr:`8673`)
@@ -449,19 +446,6 @@ Submodules
 - MLEInfluence for two-part models, extra params, BetaModel  (:pr:`7912`)
 - Add get_influence to DiscreteResults  (:pr:`7951`)
 - REF/DOC Poisson diagnostic  (:pr:`8502`)
-
-
-
-``topic.penalization``
-~~~~~~~~~~~~~~~~~~~~~~
-- Add start_params to TestPenalizedPoissonOraclePenalized2  (:pr:`7868`)
-
-
-
-``topic.predict``
-~~~~~~~~~~~~~~~~~
-- ENH/REF generic get_prediction  (:pr:`7870`)
-- Get_prediction for more models and cases  (:pr:`7900`)
 
 
 
@@ -492,6 +476,7 @@ Submodules
 - Improve testing of grangercausality  (:pr:`8036`)
 - Add burg as an option for method to pacf  (:pr:`8113`)
 - Fix ValueError output in lagmat when using pandas  (:pr:`8118`)
+- Add typing support classes  (:pr:`8152`)
 - Add MSTL algorithm for multi-seasonal time series decomposition  (:pr:`8160`)
 - Move STL and MSTL tests to STL subpackage  (:pr:`8179`)
 - Clarify difference between q_stat and acorr_ljungbox  (:pr:`8191`)
@@ -510,7 +495,6 @@ Submodules
 - X13.py option for location of temporary files  (:pr:`8564`)
 - Ref/ENH misc, smaller fixes or enhancements  (:pr:`8567`)
 - AR/MA creation with ArmaProcess.from_roots  (:pr:`8742`)
-
 
 
 ``tsa.statespace``
@@ -536,6 +520,7 @@ Submodules
 ~~~~~~~~~~~~~~~~~
 - Option of initial values whe simulating VAR model  (:pr:`7930`)
 - Number of simulations on simualte var  (:pr:`7958`)
+
 
 
 
