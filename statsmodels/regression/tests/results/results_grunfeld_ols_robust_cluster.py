@@ -817,8 +817,6 @@ results_cluster_wls_large = ParamsTableTestBunch(
     **est
 )
 
-
-
 # new CRV types
 # CRV3
 # library(AER)
