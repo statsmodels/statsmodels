@@ -818,6 +818,7 @@ results_cluster_wls_large = ParamsTableTestBunch(
 )
 
 
+
 # new CRV types
 # CRV3
 # library(AER)
@@ -825,14 +826,14 @@ results_cluster_wls_large = ParamsTableTestBunch(
 # data(Grunfeld)
 # Grunfeld <- Grunfeld[1:200, ]
 # lm_fit <- lm(
-#  invest ~ value + capital,
-#  data = Grunfeld)
+# invest ~ value + capital,
+# data = Grunfeld)
 # summclust_res <- summclust(
 # obj = lm_fit,
-#  cluster = ~firm,
-#  params = c("value", "capital", "(Intercept)"),
-#  type = "CRV3"
-#)
+# cluster = ~firm,
+# params = c("value", "capital", "(Intercept)"),
+# type = "CRV3"
+# )
 # tidy(summclust_res)
 # summclust_res$vcov[c(2, 3, 1), c(2, 3, 1)]
 
@@ -902,13 +903,13 @@ results_cluster_crv3 = ParamsTableTestBunch(
 # data(Grunfeld)
 # Grunfeld <- Grunfeld[1:200, ]
 # lm_fit <- lm(
-#  invest ~ value + capital,
-#  data = Grunfeld)
+# invest ~ value + capital,
+# data = Grunfeld)
 # summclust_res <- summclust(
-#  obj = lm_fit,
-#  cluster = ~firm,
-#  params = c("value", "capital", "(Intercept)"),
-#  type = "CRV3J"
+# obj = lm_fit,
+# cluster = ~firm,
+# params = c("value", "capital", "(Intercept)"),
+# type = "CRV3J"
 # )
 # tidy(summclust_res)
 # summclust_res$vcov[c(2, 3, 1), c(2, 3, 1)]
@@ -1077,8 +1078,8 @@ est = dict(
     )
 
 params_table = np.array([
-    0.1155455,  0.04609157,  2.506868 ,0.03348236,   0.011279124,
-     0.2198119, 0.1322743 , 0.05461995,  2.421720, 0.03850184,
+    0.1155455,  0.04609157,  2.506868, 0.03348236,   0.011279124,
+    0.2198119, 0.1322743 , 0.05461995,  2.421720, 0.03850184,
     0.008715339 , 0.2558332, -22.8586442, 21.66885303, -1.054908,
     0.31896217, -71.876995329, 26.1597069
     ]).reshape(3, 6)
