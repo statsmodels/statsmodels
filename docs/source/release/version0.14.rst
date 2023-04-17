@@ -31,6 +31,73 @@ Stats
 The Highlights
 ==============
 
+New cross-sectional models and extensions to models
+---------------------------------------------------
+
+Treatment Effect
+~~~~~~~~~~~~~~~~
+:class:`~statsmodels.treatment.TreatmentEffect` estimates treatment effect
+for a binary treatment and potential outcome for a continuous outcome variable
+using 5 different methods, ipw, ra, aipw, aipw-wls, ipw-ra.
+Standard errors and inference are based on the joint GMM representation of
+selection or treatment model, outcome model and effect functions.
+
+Hurdle and Truncated Count Regression
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+:class:`statsmodels.discrete.truncated_model.HurdleModel` implements
+hurdle models for count data.
+
+Extended Postestimation methods for models
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Results methods for post-estimation have been added or extended.
+
+``get_distribution`` returns a scipy or scipy compatible distribution instance
+with parameters based on the estimated model. This is available for
+GLM, discrete models and BetaModel.
+
+``get_prediction`` returns predicted statistics including inferential
+statistics, standard errors and confidence intervals. The ``which`` keyword
+selects which statistic is predicted. Inference for statistics that are
+nonlinear in the estimated parameters are based on the delta-method for
+standard errors.
+
+``get_diagnostic`` returns a Diagnostic class with additional specification
+statistics, tests and plots. Currently only available for count models.
+
+``get_influence`` returns a class with outlier and influence diagnostics.
+(This was mostly added in previous releases.)
+
+``score_test`` makes score test available as alternative to Wald tests.
+Currently available for GLM and discrete models.
+
+
+Stats
+~~~~~
+
+Hypothesis tests, confidence intervals and other inferential statistics are
+now available for one and two sample Poisson rates.
+
+Distributions
+~~~~~~~~~~~~~
+
+Methods of Archimedean copulas have been extended to multivariate copulas with
+dimension larger than 2. The ``pdf`` method of Frank and Gumbel has been
+extended only to dimensions 3 and 4.
+
+New class ECDFDiscrete for empirical distribution function when observations
+are not unique as in discrete distributions.
+
+
+Other Notable Enhancments
+-------------------------
+
+- burg option in pacf #8113
+- new link for GLM: logc #8155
+- rename class names for links for GLM, lower case names are deprecated #8569?
+- allow singular covariance in gaussian copula #8504
+- GLM: Tweedie full loglikelihood #8560
+- x13: option for location of temporary files #8564
 
 What's new - an overview
 ========================
