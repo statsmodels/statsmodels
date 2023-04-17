@@ -45,9 +45,17 @@ selection or treatment model, outcome model and effect functions.
 Hurdle and Truncated Count Regression
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 :class:`statsmodels.discrete.truncated_model.HurdleModel` implements
-hurdle models for count data.
+hurdle models for count data with either Poisson or NegativeBinomialP as
+submodels.
+Three left truncated models used for zero truncation are available,
+:class:`statsmodels.discrete.truncated_model.TruncatedLFPoisson`,
+:class:`statsmodels.discrete.truncated_model.TruncatedLFNegativeBinomialP`
+and
+:class:`statsmodels.discrete.truncated_model.TruncatedLFGeneralized Poisson`.
+Models for right censoring at one are implemented but only as support for
+the hurdle models.
 
-Extended Postestimation methods for models
+Extended postestimation methods for models
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Results methods for post-estimation have been added or extended.
@@ -68,8 +76,10 @@ statistics, tests and plots. Currently only available for count models.
 ``get_influence`` returns a class with outlier and influence diagnostics.
 (This was mostly added in previous releases.)
 
-``score_test`` makes score test available as alternative to Wald tests.
-Currently available for GLM and discrete models.
+``score_test`` makes score (LM) test available as alternative to Wald tests.
+This is currently available for GLM and some discrete models. The score tests
+can optionally be robust to misspecification similar to ``cov_type`` for wald
+tests.
 
 
 Stats
