@@ -148,8 +148,7 @@ class ExponentialSmoothing(MLEModel):
     def __init__(self, endog, trend=False, damped_trend=False, seasonal=None,
                  initialization_method='estimated', initial_level=None,
                  initial_trend=None, initial_seasonal=None, bounds=None,
-                 concentrate_scale=True, dates=None, freq=None,
-                 missing='none'):
+                 concentrate_scale=True, dates=None, freq=None):
         # Model definition
         self.trend = bool_like(trend, 'trend')
         self.damped_trend = bool_like(damped_trend, 'damped_trend')
@@ -207,7 +206,7 @@ class ExponentialSmoothing(MLEModel):
                                       constant=[0] * k_states)
         super(ExponentialSmoothing, self).__init__(
             endog, k_states=k_states, k_posdef=k_posdef,
-            initialization=init, dates=dates, freq=freq, missing=missing)
+            initialization=init, dates=dates, freq=freq)
 
         # Concentrate the scale out of the likelihood function
         if self.concentrate_scale:
@@ -307,7 +306,7 @@ class ExponentialSmoothing(MLEModel):
         self._init_keys += ['trend', 'damped_trend', 'seasonal',
                             'initialization_method', 'initial_level',
                             'initial_trend', 'initial_seasonal', 'bounds',
-                            'concentrate_scale', 'dates', 'freq', 'missing']
+                            'concentrate_scale', 'dates', 'freq']
 
     def _get_init_kwds(self):
         kwds = super()._get_init_kwds()

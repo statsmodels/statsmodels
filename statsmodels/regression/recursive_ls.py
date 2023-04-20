@@ -106,6 +106,12 @@ class RecursiveLS(MLEModel):
         # Handle coefficient initialization
         kwargs.setdefault('initialization', 'diffuse')
 
+        # Remove some formula-specific kwargs
+        formula_kwargs = ['missing', 'missing_idx', 'formula', 'design_info']
+        for name in formula_kwargs:
+            if name in kwargs:
+                del kwargs[name]
+
         # Initialize the state space representation
         super(RecursiveLS, self).__init__(
             endog, k_states=self.k_exog, exog=exog, **kwargs)
@@ -507,6 +513,7 @@ class RecursiveLSResults(MLEResults):
 
     @Appender(MLEResults.get_prediction.__doc__)
     def get_prediction(self, start=None, end=None, dynamic=False,
+                       information_set='predicted', signal_only=False,
                        index=None, **kwargs):
         # Note: need to override this, because we currently do not support
         # dynamic prediction or forecasts when there are constraints.
@@ -534,6 +541,8 @@ class RecursiveLSResults(MLEResults):
 
         # Return a new mlemodel.PredictionResults object
         res_obj = PredictionResults(self, prediction_results,
+                                    information_set=information_set,
+                                    signal_only=signal_only,
                                     row_labels=prediction_index)
         return PredictionResultsWrapper(res_obj)
 

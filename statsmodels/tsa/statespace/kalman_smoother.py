@@ -106,6 +106,15 @@ class KalmanSmoother(KalmanFilter):
         if results_class is None:
             results_class = SmootherResults
 
+        # Extract keyword arguments to-be-used later
+        keys = ['smoother_output'] + KalmanSmoother.smoother_outputs
+        smoother_output_kwargs = {key: kwargs.pop(key) for key in keys
+                                  if key in kwargs}
+        keys = ['smooth_method'] + KalmanSmoother.smooth_methods
+        smooth_method_kwargs = {key: kwargs.pop(key) for key in keys
+                                if key in kwargs}
+
+        # Initialize the base class
         super(KalmanSmoother, self).__init__(
             k_endog, k_states, k_posdef, results_class=results_class, **kwargs
         )
@@ -120,8 +129,8 @@ class KalmanSmoother(KalmanFilter):
         self._kalman_smoothers = {}
 
         # Set the smoother options
-        self.set_smoother_output(**kwargs)
-        self.set_smooth_method(**kwargs)
+        self.set_smoother_output(**smoother_output_kwargs)
+        self.set_smooth_method(**smooth_method_kwargs)
 
     def _clone_kwargs(self, endog, **kwargs):
         # See Representation._clone_kwargs for docstring

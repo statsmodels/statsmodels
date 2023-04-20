@@ -1225,3 +1225,11 @@ def test_states_index_rangeindex():
     cols = pd.Index(['state.0', 'state.1'])
 
     check_states_index(res.states, ix, predicted_ix, cols)
+
+
+def test_invalid_kwargs():
+    endog = [0, 0, 1.]
+    # Make sure we can create basic SARIMAX
+    sarimax.SARIMAX(endog)
+    # Now check that it raises an error if we add an invalid keyword argument
+    assert_raises(TypeError, sarimax.SARIMAX, endog, invalid_kwarg=True)
