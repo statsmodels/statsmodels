@@ -5,6 +5,7 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 
+import warnings
 import numpy as np
 from .tools import (
     find_best_blas_type, validate_matrix_shape, validate_vector_shape
@@ -365,8 +366,12 @@ class Representation:
         
         # Check for unused kwargs
         if len(kwargs):
-            raise TypeError(f'{__class__} constructor got unexpected keyword'
-                            f' argument(s): {kwargs}.')
+            # raise TypeError(f'{__class__} constructor got unexpected keyword'
+            #                 f' argument(s): {kwargs}.')
+            msg = (f'Unknown keyword arguments: {kwargs.keys()}.'
+                   'Passing unknown keyword arguments will raise a TypeError'
+                   ' beginning in version 0.15.')
+            warnings.warn(msg, FutureWarning)
 
 
         # Matrix representations storage

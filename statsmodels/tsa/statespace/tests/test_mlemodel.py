@@ -1231,5 +1231,9 @@ def test_invalid_kwargs():
     endog = [0, 0, 1.]
     # Make sure we can create basic SARIMAX
     sarimax.SARIMAX(endog)
-    # Now check that it raises an error if we add an invalid keyword argument
-    assert_raises(TypeError, sarimax.SARIMAX, endog, invalid_kwarg=True)
+    # Now check that it raises a warning if we add an invalid keyword argument
+    with pytest.warns(FutureWarning):
+        sarimax.SARIMAX(endog, invalid_kwarg=True)
+    # (Note: once deprectation is completed in v0.15, switch to checking for
+    # a TypeError, as below)
+    # assert_raises(TypeError, sarimax.SARIMAX, endog, invalid_kwarg=True)
