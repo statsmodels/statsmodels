@@ -363,7 +363,7 @@ class Representation:
         elif (not isinstance(self.initialization, Initialization) and
                 self.initialization is not None):
             raise ValueError("Invalid state space initialization method.")
-        
+
         # Check for unused kwargs
         if len(kwargs):
             # raise TypeError(f'{__class__} constructor got unexpected keyword'
@@ -372,7 +372,6 @@ class Representation:
                    'Passing unknown keyword arguments will raise a TypeError'
                    ' beginning in version 0.15.')
             warnings.warn(msg, FutureWarning)
-
 
         # Matrix representations storage
         self._representations = {}
