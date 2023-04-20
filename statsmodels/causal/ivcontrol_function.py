@@ -29,13 +29,19 @@ def momcond(params, modelcf=None):
 
 
 class GMMIVCF(GMM):
+    """GMM for model with with 2-stage control function approach
+    """
     def momcond(self, params):
         return momcond(params, modelcf=self.model)
 
 
 class GLMIVCF(LikelihoodModel):
+    """GLM with endogenous regressor with 2-stage control function approach
+    """
 
-    def __init__(self, endog, explan, endog_explan, instruments, family=None
+    def __init__(self, endog, explan, endog_explan, instruments,
+                 family=None,
+                 family_first=None,
                  ):
         super().__init__(
             endog,
@@ -45,10 +51,11 @@ class GLMIVCF(LikelihoodModel):
             )
 
         self.family = family
+        self.family_first = family_first
 
         y1 = self.endog_explan
         x1 = self.instruments
-        self.model_first = GLM(y1, x1)
+        self.model_first = GLM(y1, x1, family=family_first)
 
     def fit(self):
         y2 = self.endog

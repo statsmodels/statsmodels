@@ -47,3 +47,15 @@ def test_basic():
     assert_allclose(res.bse, bse2, rtol=1e-6)
     assert_allclose(res.tvalues, tvalues2, rtol=1e-5)
     assert_allclose(res.pvalues, pvalues2, rtol=1e-5)
+
+    # with probit in first stage, control function is still resid_reponse
+    mod = GLMIVCF(endog, explan, endog_explan, instruments,
+                  family=families.Binomial(),
+                  family_first=families.Binomial(link=families.links.Probit()),
+                  )
+    res = mod.fit()
+    sli = slice(-3, None, None)
+    assert_allclose(res.params[sli], params2[sli], rtol=1e-7)
+    assert_allclose(res.bse[sli], bse2[sli], rtol=1e-6)
+    assert_allclose(res.tvalues[sli], tvalues2[sli], rtol=1e-5)
+    assert_allclose(res.pvalues[sli], pvalues2[sli], rtol=1e-5)
