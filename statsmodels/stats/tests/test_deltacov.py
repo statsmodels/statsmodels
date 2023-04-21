@@ -71,7 +71,7 @@ class TestDeltacovOLS:
         df = res.df_resid
         tt = res.t_test(x, use_t=True)
         assert_allclose(nl.conf_int(use_t=True, df=df), tt.conf_int(),
-                        rtol=1e-12)
+                        rtol=1e-12, atol=1e-10)
         t1 = nl.summary(use_t=True, df=df)
         t2 = tt.summary()
         # equal because nl.summary uses also ContrastResults

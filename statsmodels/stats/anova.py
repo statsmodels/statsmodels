@@ -371,7 +371,7 @@ def anova_lm(*args, **kwargs):
         table[pr_test] = stats.f.sf(table["F"], table["df_diff"],
                                     table["df_resid"])
         # for earlier scipy - stats.f.sf(np.nan, 10, 2) -> 0 not nan
-        table[pr_test][table['F'].isnull()] = np.nan
+        table.loc[table['F'].isnull(), pr_test] = np.nan
 
     return table
 

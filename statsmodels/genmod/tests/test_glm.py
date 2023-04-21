@@ -340,8 +340,8 @@ class TestGlmGaussian(CheckModelResultsMixin):
 
         from statsmodels.datasets.longley import load
         cls.data = load()
-        cls.data.endog = np.asarray(cls.data.endog)
-        cls.data.exog = np.asarray(cls.data.exog)
+        cls.data.endog = np.require(cls.data.endog, requirements="W")
+        cls.data.exog = np.require(cls.data.exog, requirements="W")
         cls.data.exog = add_constant(cls.data.exog, prepend=False)
         cls.res1 = GLM(cls.data.endog, cls.data.exog,
                         family=sm.families.Gaussian()).fit()
@@ -409,8 +409,8 @@ class TestGlmGaussianGradient(TestGlmGaussian):
 
         from statsmodels.datasets.longley import load
         cls.data = load()
-        cls.data.endog = np.asarray(cls.data.endog)
-        cls.data.exog = np.asarray(cls.data.exog)
+        cls.data.endog = np.require(cls.data.endog, requirements="W")
+        cls.data.exog = np.require(cls.data.exog, requirements="W")
         cls.data.exog = add_constant(cls.data.exog, prepend=False)
         cls.res1 = GLM(cls.data.endog, cls.data.exog,
                        family=sm.families.Gaussian()).fit(method='newton')
@@ -493,8 +493,8 @@ class TestGlmBinomial(CheckModelResultsMixin):
 
         from .results.results_glm import Star98
         data = load()
-        data.endog = np.asarray(data.endog)
-        data.exog = np.asarray(data.exog)
+        data.endog = np.require(data.endog, requirements="W")
+        data.exog = np.require(data.exog, requirements="W")
         data.exog = add_constant(data.exog, prepend=False)
         cls.res1 = GLM(data.endog, data.exog,
                        family=sm.families.Binomial()).fit()
@@ -740,8 +740,8 @@ class TestGlmPoisson(CheckModelResultsMixin, CheckComparisonMixin):
         '''
         from .results.results_glm import Cpunish
         cls.data = cpunish.load()
-        cls.data.endog = np.asarray(cls.data.endog)
-        cls.data.exog = np.asarray(cls.data.exog)
+        cls.data.endog = np.require(cls.data.endog, requirements="W")
+        cls.data.exog = np.require(cls.data.exog, requirements="W")
         cls.data.exog[:, 3] = np.log(cls.data.exog[:, 3])
         cls.data.exog = add_constant(cls.data.exog, prepend=False)
         cls.res1 = GLM(cls.data.endog, cls.data.exog,
@@ -857,8 +857,8 @@ class TestGlmNegbinomial(CheckModelResultsMixin):
 
         from statsmodels.datasets.committee import load
         cls.data = load()
-        cls.data.endog = np.asarray(cls.data.endog)
-        cls.data.exog = np.asarray(cls.data.exog)
+        cls.data.endog = np.require(cls.data.endog, requirements="W")
+        cls.data.exog = np.require(cls.data.exog, requirements="W")
         cls.data.exog[:,2] = np.log(cls.data.exog[:,2])
         interaction = cls.data.exog[:,2]*cls.data.exog[:,1]
         cls.data.exog = np.column_stack((cls.data.exog,interaction))
@@ -1897,8 +1897,8 @@ class TestWtdTweediePower15(CheckWtdDuplicationMixin):
 def test_wtd_patsy_missing():
     import pandas as pd
     data = cpunish.load()
-    data.endog = np.asarray(data.endog)
-    data.exog = np.asarray(data.exog)
+    data.endog = np.require(data.endog, requirements="W")
+    data.exog = np.require(data.exog, requirements="W")
     data.exog[0, 0] = np.nan
     data.endog[[2, 4, 6, 8]] = np.nan
     data.pandas = pd.DataFrame(data.exog, columns=data.exog_name)

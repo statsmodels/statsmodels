@@ -1540,12 +1540,12 @@ def test_simulate_expected_r(
     )
 
     # set the same final state as in R
-    fit.level[-1] = state["l"]
-    fit.trend[-1] = state["b"]
-    fit.season[-1] = state["s1"]
-    fit.season[-2] = state["s2"]
-    fit.season[-3] = state["s3"]
-    fit.season[-4] = state["s4"]
+    fit._level[-1] = state["l"]
+    fit._trend[-1] = state["b"]
+    fit._season[-1] = state["s1"]
+    fit._season[-2] = state["s2"]
+    fit._season[-3] = state["s3"]
+    fit._season[-4] = state["s4"]
 
     # for MMM with damped trend the fit fails
     if np.any(np.isnan(fit.fittedvalues)):

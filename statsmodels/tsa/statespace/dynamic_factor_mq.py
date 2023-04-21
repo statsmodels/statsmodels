@@ -1864,9 +1864,10 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         # TODO: what about factors that only load on quarterly variables?
         endog_factor_map_M = self.endog_factor_map.iloc[:self.k_endog_M]
         factors = []
-        endog = (pd.DataFrame(self.endog).interpolate()
-                                         .fillna(method='backfill')
-                                         .values)
+        endog = np.require(
+            pd.DataFrame(self.endog).interpolate().fillna(method='backfill'),
+            requirements="W"
+        )
         for name in self.factor_names:
             # Try to retrieve this from monthly variables, which is most
             # consistent

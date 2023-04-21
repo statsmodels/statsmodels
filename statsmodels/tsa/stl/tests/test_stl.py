@@ -170,7 +170,7 @@ def test_parameter_checks_period(default_kwargs):
     endog = class_kwargs["endog"]
     endog2 = np.hstack((endog[:, None], endog[:, None]))
     period = class_kwargs["period"]
-    with pytest.raises(ValueError, match="y must be a 1d array"):
+    with pytest.raises(ValueError, match="endog must have ndim <= 1"):
         STL(endog=endog2, period=period)
     match = "period must be a positive integer >= 2"
     with pytest.raises(ValueError, match=match):

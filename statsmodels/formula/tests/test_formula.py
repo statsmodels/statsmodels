@@ -180,7 +180,7 @@ def test_patsy_lazy_dict():
     npt.assert_allclose(res.fittedvalues, res2)
 
     data = cpunish.load_pandas().data
-    data['INCOME'].loc[0] = None
+    data.loc[0, 'INCOME'] = np.nan
 
     data = LazyDict(data)
     data.index = cpunish.load_pandas().data.index
@@ -194,7 +194,7 @@ def test_patsy_lazy_dict():
 def test_patsy_missing_data():
     # Test pandas-style first
     data = cpunish.load_pandas().data
-    data['INCOME'].loc[0] = None
+    data.loc[0, 'INCOME'] = np.nan
     res = ols('EXECUTIONS ~ SOUTH + INCOME', data=data).fit()
     res2 = res.predict(data)
     # First record will be dropped during fit, but not during predict
@@ -202,14 +202,14 @@ def test_patsy_missing_data():
 
     # Non-pandas version
     data = cpunish.load_pandas().data
-    data['INCOME'].loc[0] = None
+    data.loc[0, 'INCOME'] = None
     data = data.to_records(index=False)
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("always")
         res2 = res.predict(data)
         assert 'ValueWarning' in repr(w[-1].message)
         assert 'nan values have been dropped' in repr(w[-1].message)
-    # Frist record will be dropped in both cases
+    # First record will be dropped in both cases
     assert_equal(res.fittedvalues, res2, check_index_type=False)
 
 

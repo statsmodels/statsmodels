@@ -663,7 +663,7 @@ class TestHandleMissing:
     def test_pandas(self):
 
         df = make_dataframe()
-        df.values[[2, 5, 10], [2, 3, 1]] = np.nan
+        df.iloc[[2, 5, 10], [2, 3, 1]] = np.nan
         y, X = df[df.columns[0]], df[df.columns[1:]]
         data, _ = sm_data.handle_missing(y, X, missing='drop')
 
@@ -687,7 +687,7 @@ class TestHandleMissing:
 
     def test_pandas_array(self):
         df = make_dataframe()
-        df.values[[2, 5, 10], [2, 3, 1]] = np.nan
+        df.iloc[[2, 5, 10], [2, 3, 1]] = np.nan
         y, X = df[df.columns[0]], df[df.columns[1:]].values
         data, _ = sm_data.handle_missing(y, X, missing='drop')
 
@@ -698,7 +698,7 @@ class TestHandleMissing:
 
     def test_array_pandas(self):
         df = make_dataframe()
-        df.values[[2, 5, 10], [2, 3, 1]] = np.nan
+        df.iloc[[2, 5, 10], [2, 3, 1]] = np.nan
         y, X = df[df.columns[0]].values, df[df.columns[1:]]
         data, _ = sm_data.handle_missing(y, X, missing='drop')
 
@@ -709,7 +709,7 @@ class TestHandleMissing:
 
     def test_noop(self):
         df = make_dataframe()
-        df.values[[2, 5, 10], [2, 3, 1]] = np.nan
+        df.iloc[[2, 5, 10], [2, 3, 1]] = np.nan
         y, X = df[df.columns[0]], df[df.columns[1:]]
         data, _ = sm_data.handle_missing(y, X, missing='none')
 
