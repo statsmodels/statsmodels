@@ -459,7 +459,7 @@ def test_varmax_validate():
 
     # Now, with enforce_stationarity=False, we can fix any of the AR
     # coefficients
-    mod5 = varmax.VARMAX(endog[['cpi']], ar_order=(2, 0),
+    mod5 = varmax.VARMAX(endog[['cpi']], order=(1, 0),
                          enforce_stationarity=False)
     with mod5.fix_params({'L1.cpi.cpi': 0.6}):
         assert_(mod5._has_fixed_params)
@@ -469,7 +469,7 @@ def test_varmax_validate():
 
     # Now, with enforce_stationarity=False, we can fix any of the AR
     # coefficients
-    mod6 = varmax.VARMAX(endog, ar_order=(1, 0),
+    mod6 = varmax.VARMAX(endog, order=(1, 0),
                          enforce_stationarity=False)
     with mod6.fix_params({'L1.cpi.cpi': 0.6}):
         assert_(mod6._has_fixed_params)

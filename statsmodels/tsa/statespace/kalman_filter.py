@@ -374,6 +374,24 @@ class KalmanFilter(Representation):
     def __init__(self, k_endog, k_states, k_posdef=None,
                  loglikelihood_burn=0, tolerance=1e-19, results_class=None,
                  kalman_filter_classes=None, **kwargs):
+        # Extract keyword arguments to-be-used later
+        keys = ['filter_method'] + KalmanFilter.filter_methods
+        filter_method_kwargs = {key: kwargs.pop(key) for key in keys
+                                if key in kwargs}
+        keys = ['inversion_method'] + KalmanFilter.inversion_methods
+        inversion_method_kwargs = {key: kwargs.pop(key) for key in keys
+                                   if key in kwargs}
+        keys = ['stability_method'] + KalmanFilter.stability_methods
+        stability_method_kwargs = {key: kwargs.pop(key) for key in keys
+                                   if key in kwargs}
+        keys = ['conserve_memory'] + KalmanFilter.memory_options
+        conserve_memory_kwargs = {key: kwargs.pop(key) for key in keys
+                                  if key in kwargs}
+        keys = ['alternate_timing'] + KalmanFilter.timing_options
+        filter_timing_kwargs = {key: kwargs.pop(key) for key in keys
+                                if key in kwargs}
+
+        # Initialize the base class
         super(KalmanFilter, self).__init__(
             k_endog, k_states, k_posdef, **kwargs
         )
@@ -392,11 +410,11 @@ class KalmanFilter(Representation):
             if kalman_filter_classes is not None
             else tools.prefix_kalman_filter_map.copy())
 
-        self.set_filter_method(**kwargs)
-        self.set_inversion_method(**kwargs)
-        self.set_stability_method(**kwargs)
-        self.set_conserve_memory(**kwargs)
-        self.set_filter_timing(**kwargs)
+        self.set_filter_method(**filter_method_kwargs)
+        self.set_inversion_method(**inversion_method_kwargs)
+        self.set_stability_method(**stability_method_kwargs)
+        self.set_conserve_memory(**conserve_memory_kwargs)
+        self.set_filter_timing(**filter_timing_kwargs)
 
         self.tolerance = tolerance
 
@@ -421,7 +439,7 @@ class KalmanFilter(Representation):
         kwargs.setdefault('inversion_method', self.inversion_method)
         kwargs.setdefault('stability_method', self.stability_method)
         kwargs.setdefault('conserve_memory', self.conserve_memory)
-        kwargs.setdefault('filter_timing', self.filter_timing)
+        kwargs.setdefault('alternate_timing', bool(self.filter_timing))
         kwargs.setdefault('tolerance', self.tolerance)
         kwargs.setdefault('loglikelihood_burn', self.loglikelihood_burn)
 

@@ -3294,8 +3294,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             orthogonalized=orthogonalized, cumulative=cumulative,
             anchor=anchor, exog=exog, extend_model=extend_model,
             extend_kwargs=extend_kwargs, transformed=transformed,
-            includes_fixed=includes_fixed, original_scale=original_scale,
-            **kwargs)
+            includes_fixed=includes_fixed, **kwargs)
 
         # If applicable, convert predictions back to original space
         if self.standardize and original_scale:
@@ -4152,7 +4151,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
                 self.filter_results)
             mod.ssm.initialization = init
 
-        res = self._apply(mod, refit=refit, fit_kwargs=fit_kwargs, **kwargs)
+        res = self._apply(mod, refit=refit, fit_kwargs=fit_kwargs)
 
         return res
 

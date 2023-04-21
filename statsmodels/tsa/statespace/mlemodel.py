@@ -3751,7 +3751,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                 irfs = irfs.values
         return irfs
 
-    def _apply(self, mod, refit=False, fit_kwargs=None, **kwargs):
+    def _apply(self, mod, refit=False, fit_kwargs=None):
         if fit_kwargs is None:
             fit_kwargs = {}
 
@@ -4325,7 +4325,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             kwargs.setdefault('initialization', init)
 
         mod = self.model.clone(new_endog, exog=new_exog, **kwargs)
-        res = self._apply(mod, refit=refit, fit_kwargs=fit_kwargs, **kwargs)
+        res = self._apply(mod, refit=refit, fit_kwargs=fit_kwargs)
 
         return res
 
@@ -4421,7 +4421,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         mod.ssm.initialization = Initialization(
             mod.k_states, 'known', constant=self.predicted_state[..., -1],
             stationary_cov=self.predicted_state_cov[..., -1])
-        res = self._apply(mod, refit=False, fit_kwargs=fit_kwargs, **kwargs)
+        res = self._apply(mod, refit=False, fit_kwargs=fit_kwargs)
 
         return res
 
@@ -4514,7 +4514,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             init = Initialization.from_results(self.filter_results)
             mod.ssm.initialization = init
 
-        res = self._apply(mod, refit=refit, fit_kwargs=fit_kwargs, **kwargs)
+        res = self._apply(mod, refit=refit, fit_kwargs=fit_kwargs)
 
         return res
 

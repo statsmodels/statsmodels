@@ -5,6 +5,7 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 
+import warnings
 import numpy as np
 from .tools import (
     find_best_blas_type, validate_matrix_shape, validate_vector_shape
@@ -334,25 +335,25 @@ class Representation:
                                       else tools.prefix_statespace_map.copy())
 
         # State-space initialization data
-        self.initialization = kwargs.get('initialization', None)
+        self.initialization = kwargs.pop('initialization', None)
         basic_inits = ['diffuse', 'approximate_diffuse', 'stationary']
 
         if self.initialization in basic_inits:
             self.initialize(self.initialization)
         elif self.initialization == 'known':
             if 'constant' in kwargs:
-                constant = kwargs['constant']
+                constant = kwargs.pop('constant')
             elif 'initial_state' in kwargs:
                 # TODO deprecation warning
-                constant = kwargs['initial_state']
+                constant = kwargs.pop('initial_state')
             else:
                 raise ValueError('Initial state must be provided when "known"'
                                  ' is the specified initialization method.')
             if 'stationary_cov' in kwargs:
-                stationary_cov = kwargs['stationary_cov']
+                stationary_cov = kwargs.pop('stationary_cov')
             elif 'initial_state_cov' in kwargs:
                 # TODO deprecation warning
-                stationary_cov = kwargs['initial_state_cov']
+                stationary_cov = kwargs.pop('initial_state_cov')
             else:
                 raise ValueError('Initial state covariance matrix must be'
                                  ' provided when "known" is the specified'
@@ -362,6 +363,15 @@ class Representation:
         elif (not isinstance(self.initialization, Initialization) and
                 self.initialization is not None):
             raise ValueError("Invalid state space initialization method.")
+
+        # Check for unused kwargs
+        if len(kwargs):
+            # raise TypeError(f'{__class__} constructor got unexpected keyword'
+            #                 f' argument(s): {kwargs}.')
+            msg = (f'Unknown keyword arguments: {kwargs.keys()}.'
+                   'Passing unknown keyword arguments will raise a TypeError'
+                   ' beginning in version 0.15.')
+            warnings.warn(msg, FutureWarning)
 
         # Matrix representations storage
         self._representations = {}
