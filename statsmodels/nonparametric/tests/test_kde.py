@@ -2,6 +2,7 @@ import os
 
 import numpy.testing as npt
 import numpy as np
+import pandas as pd
 import pytest
 from scipy import stats
 
@@ -121,6 +122,15 @@ class TestKDEGauss(CheckKDE):
         kde = self.res1
         icdf = KCDEResults['gau_icdf']
         npt.assert_allclose(icdf, kde.icdf)
+
+
+class TestKDEGaussPandas(TestKDEGauss):
+    @classmethod
+    def setup_class(cls):
+        res1 = KDE(pd.Series(Xi))
+        res1.fit(kernel="gau", fft=False, bw="silverman")
+        cls.res1 = res1
+        cls.res_density = KDEResults["gau_d"]
 
 
 class TestKDEEpanechnikov(CheckKDE):
