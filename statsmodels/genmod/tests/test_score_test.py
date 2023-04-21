@@ -13,6 +13,7 @@ from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.genmod import families
 from statsmodels.discrete.discrete_model import Poisson
 import statsmodels.stats._diagnostic_other as diao
+import statsmodels.discrete._diagnostics_count as diac
 from statsmodels.base._parameter_inference import score_test
 
 
@@ -110,11 +111,11 @@ class TestScoreTest(CheckScoreTest):
         cls.model_full = GLM(y, xx, family=families.Poisson())
         cls.model_drop = GLM(y, x, family=families.Poisson())
 
-
     def test_dispersion(self):
         res_drop = self.model_drop.fit()
-        res_test = diao.dispersion_poisson(res_drop)
-        assert_allclose(res_test[0], self.res_disptest, rtol=1e-6, atol=1e-14)
+        res_test = diac.test_poisson_dispersion(res_drop)
+        res_test_ = np.column_stack((res_test.statistic, res_test.pvalue))
+        assert_allclose(res_test_, self.res_disptest, rtol=1e-6, atol=1e-14)
         # constant only dispersion
         ex = np.ones((res_drop.model.endog.shape[0], 1))
         # ex = np.column_stack((np.ones(res_drop.model.endog.shape[0]),
@@ -122,7 +123,7 @@ class TestScoreTest(CheckScoreTest):
         # dispersion_poisson_generic might not be correct
         # or not clear what the alternative hypothesis is
         # choosing different `ex` implies different alternative hypotheses
-        res_test = diao.dispersion_poisson_generic(res_drop, ex)
+        res_test = diac._test_poisson_dispersion_generic(res_drop, ex)
         assert_allclose(res_test, self.res_disptest_g, rtol=1e-6, atol=1e-14)
 
 

@@ -287,6 +287,39 @@ class TestArmaProcess:
         assert_almost_equal(process.isinvertible, process_direct.isinvertible)
         assert_almost_equal(process.isstationary, process_direct.isstationary)
 
+        process_direct = ArmaProcess(ar=ar_p)
+        process = ArmaProcess.from_roots(arroots=np.array(process_direct.arroots))
+
+        assert_almost_equal(process.arcoefs, process_direct.arcoefs)
+        assert_almost_equal(process.macoefs, process_direct.macoefs)
+        assert_almost_equal(process.nobs, process_direct.nobs)
+        assert_almost_equal(process.maroots, process_direct.maroots)
+        assert_almost_equal(process.arroots, process_direct.arroots)
+        assert_almost_equal(process.isinvertible, process_direct.isinvertible)
+        assert_almost_equal(process.isstationary, process_direct.isstationary)
+
+        process_direct = ArmaProcess(ma=ma_p)
+        process = ArmaProcess.from_roots(maroots=np.array(process_direct.maroots))
+
+        assert_almost_equal(process.arcoefs, process_direct.arcoefs)
+        assert_almost_equal(process.macoefs, process_direct.macoefs)
+        assert_almost_equal(process.nobs, process_direct.nobs)
+        assert_almost_equal(process.maroots, process_direct.maroots)
+        assert_almost_equal(process.arroots, process_direct.arroots)
+        assert_almost_equal(process.isinvertible, process_direct.isinvertible)
+        assert_almost_equal(process.isstationary, process_direct.isstationary)
+
+        process_direct = ArmaProcess()
+        process = ArmaProcess.from_roots()
+
+        assert_almost_equal(process.arcoefs, process_direct.arcoefs)
+        assert_almost_equal(process.macoefs, process_direct.macoefs)
+        assert_almost_equal(process.nobs, process_direct.nobs)
+        assert_almost_equal(process.maroots, process_direct.maroots)
+        assert_almost_equal(process.arroots, process_direct.arroots)
+        assert_almost_equal(process.isinvertible, process_direct.isinvertible)
+        assert_almost_equal(process.isstationary, process_direct.isstationary)
+
     def test_from_coeff(self):
         ar = [1.8, -0.9]
         ma = [0.3]

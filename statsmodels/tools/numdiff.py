@@ -158,7 +158,10 @@ def approx_fprime(x, f, epsilon=None, args=(), kwargs={}, centered=False):
                           f(*((x-ei,)+args), **kwargs))/(2 * epsilon[k])
             ei[k] = 0.0
 
-    return grad.squeeze().T
+    if n == 1:
+        return grad.T
+    else:
+        return grad.squeeze().T
 
 
 def _approx_fprime_scalar(x, f, epsilon=None, args=(), kwargs={},

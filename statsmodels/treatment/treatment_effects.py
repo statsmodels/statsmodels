@@ -526,9 +526,27 @@ class _IPWRAGMM(_TEGMMGeneric1):
 
 
 class TreatmentEffectResults(ContrastResults):
+    """
+    Results class for treatment effect estimation
+
+    Parameters
+    ----------
+    teff : instance of TreatmentEffect class
+    results_gmm : instance of GMMResults class
+    method : string
+        Method and estimator of treatment effect.
+    kwds: dict
+        Other keywords with additional information.
+
+    Notes
+    -----
+    This class is a subclass of ContrastResults and inherits methods like
+    summary, summary_frame and conf_int. Attributes correspond to a z-test
+    given by ``GMMResults.t_test``.
+    """
 
     def __init__(self, teff, results_gmm, method, **kwds):
-
+        super().__init__()
         k_params = len(results_gmm.params)
         constraints = np.zeros((3, k_params))
         constraints[0, 0] = 1
@@ -609,10 +627,13 @@ class TreatmentEffect(object):
 
     Notes
     -----
-    The outcome model is currently limited to a linear model based on OLS or
-    WLS.
+    The outcome model is currently limited to a linear model based on OLS.
     Other outcome models, like Logit and Poisson, will become available in
     future.
+
+    See `Treatment Effect notebook
+    <../examples/notebooks/generated/treatment_effect.html>`__
+    for an overview.
 
     """
 
@@ -668,7 +689,7 @@ class TreatmentEffect(object):
             ``effectgroup`` determines for which population the effects are
             estimated.
             If effect_group is "all", then sample average treatment effect and
-            potential outcomes are returned
+            potential outcomes are returned.
             If effect_group is 1 or "treated", then effects on treated are
             returned.
             If effect_group is 0, "treated" or "control", then effects on

@@ -13,6 +13,10 @@ import warnings
 import numpy as np
 from scipy import special, stats
 
+from statsmodels.compat.scipy import SP_LT_17
+from statsmodels.tools.sm_exceptions import (
+    ValueWarning,
+    )
 from . import links as L, varfuncs as V
 
 FLOAT_EPS = np.finfo(float).eps
@@ -30,6 +34,10 @@ class Family:
     variance : a variance function
         Measures the variance as a function of the mean probabilities.
         See the individual families for the default variance function.
+    check_link : bool
+        If True (default), then and exception is raised if the link is invalid
+        for the family.
+        If False, then the link is not checked.
 
     See Also
     --------
@@ -58,13 +66,14 @@ class Family:
         #  <statsmodels.family.links.Power object at 0x9a4236c>]
         # for Poisson...
         self._link = link
-        if not isinstance(link, L.Link):
-            raise TypeError("The input should be a valid Link object.")
-        if hasattr(self, "links"):
-            validlink = max([isinstance(link, _) for _ in self.links])
-            if not validlink:
-                errmsg = "Invalid link for family, should be in %s. (got %s)"
-                raise ValueError(errmsg % (repr(self.links), link))
+        if self._check_link:
+            if not isinstance(link, L.Link):
+                raise TypeError("The input should be a valid Link object.")
+            if hasattr(self, "links"):
+                validlink = max([isinstance(link, _) for _ in self.links])
+                if not validlink:
+                    msg = "Invalid link for family, should be in %s. (got %s)"
+                    raise ValueError(msg % (repr(self.links), link))
 
     def _getlink(self):
         """
@@ -75,15 +84,16 @@ class Family:
     # link property for each family is a pointer to link instance
     link = property(_getlink, _setlink, doc="Link function for family")
 
-    def __init__(self, link, variance):
+    def __init__(self, link, variance, check_link=True):
+        self._check_link = check_link
         if inspect.isclass(link):
             warnmssg = (
                 "Calling Family(..) with a link class is not allowed. Use an "
                 "instance of a link class instead."
             )
             raise TypeError(warnmssg)
-        else:
-            self.link = link
+
+        self.link = link
         self.variance = variance
 
     def starting_mu(self, y):
@@ -377,6 +387,10 @@ class Poisson(Family):
         The default link for the Poisson family is the log link. Available
         links are log, identity, and sqrt. See statsmodels.families.links for
         more information.
+    check_link : bool
+        If True (default), then and exception is raised if the link is invalid
+        for the family.
+        If False, then the link is not checked.
 
     Attributes
     ----------
@@ -391,15 +405,19 @@ class Poisson(Family):
     statsmodels.genmod.families.family.Family : Parent class for all links.
     :ref:`links` : Further details on links.
     """
-    links = [L.Log, L.identity, L.sqrt]
+    links = [L.Log, L.Identity, L.Sqrt]
     variance = V.mu
     valid = [0, np.inf]
     safe_links = [L.Log, ]
 
-    def __init__(self, link=None):
+    def __init__(self, link=None, check_link=True):
         if link is None:
             link = L.Log()
-        super(Poisson, self).__init__(link=link, variance=Poisson.variance)
+        super(Poisson, self).__init__(
+            link=link,
+            variance=Poisson.variance,
+            check_link=check_link
+            )
 
     def _resid_dev(self, endog, mu):
         r"""
@@ -525,6 +543,10 @@ class Gaussian(Family):
         The default link for the Gaussian family is the identity link.
         Available links are log, identity, and inverse.
         See statsmodels.genmod.families.links for more information.
+    check_link : bool
+        If True (default), then and exception is raised if the link is invalid
+        for the family.
+        If False, then the link is not checked.
 
     Attributes
     ----------
@@ -540,14 +562,18 @@ class Gaussian(Family):
     :ref:`links` : Further details on links.
     """
 
-    links = [L.Log, L.identity, L.inverse_power]
+    links = [L.Log, L.Identity, L.InversePower]
     variance = V.constant
     safe_links = links
 
-    def __init__(self, link=None):
+    def __init__(self, link=None, check_link=True):
         if link is None:
-            link = L.identity()
-        super(Gaussian, self).__init__(link=link, variance=Gaussian.variance)
+            link = L.Identity()
+        super(Gaussian, self).__init__(
+            link=link,
+            variance=Gaussian.variance,
+            check_link=check_link
+            )
 
     def _resid_dev(self, endog, mu):
         r"""
@@ -691,6 +717,10 @@ class Gamma(Family):
         The default link for the Gamma family is the inverse link.
         Available links are log, identity, and inverse.
         See statsmodels.genmod.families.links for more information.
+    check_link : bool
+        If True (default), then and exception is raised if the link is invalid
+        for the family.
+        If False, then the link is not checked.
 
     Attributes
     ----------
@@ -705,14 +735,18 @@ class Gamma(Family):
     statsmodels.genmod.families.family.Family : Parent class for all links.
     :ref:`links` : Further details on links.
     """
-    links = [L.Log, L.identity, L.inverse_power]
+    links = [L.Log, L.Identity, L.InversePower]
     variance = V.mu_squared
     safe_links = [L.Log, ]
 
-    def __init__(self, link=None):
+    def __init__(self, link=None, check_link=True):
         if link is None:
-            link = L.inverse_power()
-        super(Gamma, self).__init__(link=link, variance=Gamma.variance)
+            link = L.InversePower()
+        super(Gamma, self).__init__(
+            link=link,
+            variance=Gamma.variance,
+            check_link=check_link
+            )
 
     def _resid_dev(self, endog, mu):
         r"""
@@ -849,6 +883,10 @@ class Binomial(Family):
         The default link for the Binomial family is the logit link.
         Available links are logit, probit, cauchy, log, loglog, and cloglog.
         See statsmodels.genmod.families.links for more information.
+    check_link : bool
+        If True (default), then and exception is raised if the link is invalid
+        for the family.
+        If False, then the link is not checked.
 
     Attributes
     ----------
@@ -876,14 +914,14 @@ class Binomial(Family):
     number of trials for each row.
     """
 
-    links = [L.Logit, L.probit, L.cauchy, L.Log, L.CLogLog, L.LogLog,
-             L.identity]
+    links = [L.Logit, L.Probit, L.Cauchy, L.Log, L.LogC, L.CLogLog, L.LogLog,
+             L.Identity]
     variance = V.binary  # this is not used below in an effort to include n
 
     # Other safe links, e.g. cloglog and probit are subclasses
     safe_links = [L.Logit, L.CDFLink]
 
-    def __init__(self, link=None):  # , n=1.):
+    def __init__(self, link=None, check_link=True):  # , n=1.):
         if link is None:
             link = L.Logit()
         # TODO: it *should* work for a constant n>1 actually, if freq_weights
@@ -891,8 +929,11 @@ class Binomial(Family):
         self.n = 1
         # overwritten by initialize if needed but always used to initialize
         # variance since endog is assumed/forced to be (0,1)
-        super(Binomial, self).__init__(link=link,
-                                       variance=V.Binomial(n=self.n))
+        super(Binomial, self).__init__(
+            link=link,
+            variance=V.Binomial(n=self.n),
+            check_link=check_link
+            )
 
     def starting_mu(self, y):
         r"""
@@ -1113,8 +1154,12 @@ class InverseGaussian(Family):
     link : a link instance, optional
         The default link for the inverse Gaussian family is the
         inverse squared link.
-        Available links are inverse_squared, inverse, log, and identity.
+        Available links are InverseSquared, Inverse, Log, and Identity.
         See statsmodels.genmod.families.links for more information.
+    check_link : bool
+        If True (default), then and exception is raised if the link is invalid
+        for the family.
+        If False, then the link is not checked.
 
     Attributes
     ----------
@@ -1135,15 +1180,18 @@ class InverseGaussian(Family):
     literature as the Wald distribution.
     """
 
-    links = [L.inverse_squared, L.inverse_power, L.identity, L.Log]
+    links = [L.InverseSquared, L.InversePower, L.Identity, L.Log]
     variance = V.mu_cubed
-    safe_links = [L.inverse_squared, L.Log, ]
+    safe_links = [L.InverseSquared, L.Log, ]
 
-    def __init__(self, link=None):
+    def __init__(self, link=None, check_link=True):
         if link is None:
-            link = L.inverse_squared()
+            link = L.InverseSquared()
         super(InverseGaussian, self).__init__(
-            link=link, variance=InverseGaussian.variance)
+            link=link,
+            variance=InverseGaussian.variance,
+            check_link=check_link
+            )
 
     def _resid_dev(self, endog, mu):
         r"""
@@ -1275,6 +1323,10 @@ class NegativeBinomial(Family):
         The ancillary parameter for the negative binomial distribution.
         For now ``alpha`` is assumed to be nonstochastic.  The default value
         is 1.  Permissible values are usually assumed to be between .01 and 2.
+    check_link : bool
+        If True (default), then and exception is raised if the link is invalid
+        for the family.
+        If False, then the link is not checked.
 
     Attributes
     ----------
@@ -1303,21 +1355,25 @@ class NegativeBinomial(Family):
 
     with :math:`E[Y]=\mu\,` and :math:`Var[Y]=\mu+\alpha\mu^2`.
     """
-    links = [L.Log, L.CLogLog, L.identity, L.NegativeBinomial, L.Power]
+    links = [L.Log, L.CLogLog, L.Identity, L.NegativeBinomial, L.Power]
     # TODO: add the ability to use the power links with an if test
     # similar to below
     variance = V.nbinom
     safe_links = [L.Log, ]
 
-    def __init__(self, link=None, alpha=1.):
+    def __init__(self, link=None, alpha=1., check_link=True):
         self.alpha = 1. * alpha  # make it at least float
-        if alpha is self.__init__.__defaults__[1]:
+        if alpha is self.__init__.__defaults__[1]:  # `is` is intentional
             warnings.warn("Negative binomial dispersion parameter alpha not "
-                          f"set. Using default value alpha={alpha}.")
+                          f"set. Using default value alpha={alpha}.",
+                          ValueWarning)
         if link is None:
             link = L.Log()
         super(NegativeBinomial, self).__init__(
-            link=link, variance=V.NegativeBinomial(alpha=self.alpha))
+            link=link,
+            variance=V.NegativeBinomial(alpha=self.alpha),
+            check_link=check_link
+            )
 
     def _resid_dev(self, endog, mu):
         r"""
@@ -1487,8 +1543,13 @@ class Tweedie(Family):
         The variance power. The default is 1.
     eql : bool
         If True, the Extended Quasi-Likelihood is used, else the
-        likelihood is used (however the latter is not implemented).
-        If eql is True, var_power must be between 1 and 2.
+        likelihood is used.
+        In both cases, for likelihood computations the var_power
+        must be between 1 and 2.
+    check_link : bool
+        If True (default), then and exception is raised if the link is invalid
+        for the family.
+        If False, then the link is not checked.
 
     Attributes
     ----------
@@ -1516,7 +1577,7 @@ class Tweedie(Family):
     variance = V.Power(power=1.5)
     safe_links = [L.Log, L.Power]
 
-    def __init__(self, link=None, var_power=1., eql=False):
+    def __init__(self, link=None, var_power=1., eql=False, check_link=True):
         self.var_power = var_power
         self.eql = eql
         if eql and (var_power < 1 or var_power > 2):
@@ -1525,7 +1586,10 @@ class Tweedie(Family):
         if link is None:
             link = L.Log()
         super(Tweedie, self).__init__(
-            link=link, variance=V.Power(power=var_power * 1.))
+            link=link,
+            variance=V.Power(power=var_power * 1.),
+            check_link=check_link
+            )
 
     def _resid_dev(self, endog, mu):
         r"""
@@ -1629,24 +1693,68 @@ class Tweedie(Family):
         JA Nelder, D Pregibon (1987).  An extended quasi-likelihood function.
         Biometrika 74:2, pp 221-232.  https://www.jstor.org/stable/2336136
         """
-        if not self.eql:
-            # We have not yet implemented the actual likelihood
-            return np.nan
-
-        # Equations 4 of Kaas
         p = self.var_power
-        llf = np.log(2 * np.pi * scale) + p * np.log(endog)
-        llf -= np.log(var_weights)
-        llf /= -2
-
+        endog = np.atleast_1d(endog)
         if p == 1:
-            u = endog * np.log(endog / mu) - (endog - mu)
-            u *= var_weights / scale
+            return Poisson().loglike_obs(
+                endog=endog,
+                mu=mu,
+                var_weights=var_weights,
+                scale=scale
+            )
         elif p == 2:
-            yr = endog / mu
-            u = yr - np.log(yr) - 1
-            u *= var_weights / scale
+            return Gamma().loglike_obs(
+                endog=endog,
+                mu=mu,
+                var_weights=var_weights,
+                scale=scale
+            )
+
+        if not self.eql:
+            if p < 1 or p > 2:
+                # We have not yet implemented the actual likelihood
+                return np.nan
+
+            # scipy compat bessel_wright added in 1.7
+            if SP_LT_17:
+                # old return was nan
+                return np.nan
+
+            # See: Dunn, Smyth (2004) "Series evaluation of Tweedie
+            # exponential dispersion model densities"
+            # pdf(y, mu, p, phi) = f(y, theta, phi)
+            # = c(y, phi) * exp(1/phi (y theta - kappa(theta)))
+            # kappa = cumulant function
+            # theta = function of expectation mu and power p
+            # alpha = (2-p)/(1-p)
+            # phi = scale
+            # for 1<p<2:
+            # c(y, phi) = 1/y * wright_bessel(a, b, x)
+            # a = -alpha
+            # b = 0
+            # x = (p-1)**alpha/(2-p) / y**alpha / phi**(1-alpha)
+            scale = scale / var_weights
+            theta = mu ** (1 - p) / (1 - p)
+            kappa = mu ** (2 - p) / (2 - p)
+            alpha = (2 - p) / (1 - p)
+
+            ll_obs = (endog * theta - kappa) / scale
+            idx = endog > 0
+            if np.any(idx):
+                if not np.isscalar(endog):
+                    endog = endog[idx]
+                if not np.isscalar(scale):
+                    scale = scale[idx]
+                x = ((p - 1) * scale / endog) ** alpha
+                x /= (2 - p) * scale
+                wb = special.wright_bessel(-alpha, 0, x)
+                ll_obs[idx] += np.log(1/endog * wb)
+            return ll_obs
         else:
+            # Equations 4 of Kaas
+            llf = np.log(2 * np.pi * scale) + p * np.log(endog)
+            llf -= np.log(var_weights)
+            llf /= -2
             u = (endog ** (2 - p)
                  - (2 - p) * endog * mu ** (1 - p)
                  + (1 - p) * mu ** (2 - p))

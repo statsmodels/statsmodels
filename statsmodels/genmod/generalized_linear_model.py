@@ -47,7 +47,7 @@ from statsmodels.tools.docstring import Docstring
 from statsmodels.tools.sm_exceptions import (
     DomainWarning,
     HessianInversionWarning,
-    PerfectSeparationError,
+    PerfectSeparationWarning,
 )
 from statsmodels.tools.validation import float_like
 
@@ -218,6 +218,10 @@ class GLM(base.LikelihoodModel):
 
     Notes
     -----
+    Note: PerfectSeparationError exception has been converted to a
+    PerfectSeparationWarning and perfect separation or perfect prediction will
+    not raise an exception by default. (changed in version 0.14)
+
     Only the following combinations make sense for family and link:
 
      ============= ===== === ===== ====== ======= === ==== ====== ====== ====
@@ -634,7 +638,7 @@ class GLM(base.LikelihoodModel):
         The value of the derivative of the expected endog with respect
         to the parameter vector.
         """
-        lin_pred = self.predict(params, linear=True)
+        lin_pred = self.predict(params, which="linear")
         idl = self.family.link.inverse_deriv(lin_pred)
         dmat = self.exog * idl[:, None]
         return dmat
@@ -847,7 +851,7 @@ class GLM(base.LikelihoodModel):
         return power
 
     def predict(self, params, exog=None, exposure=None, offset=None,
-                linear=False):
+                which="mean", linear=None):
         """
         Return predicted values for a design matrix
 
@@ -862,10 +866,21 @@ class GLM(base.LikelihoodModel):
             function.  See notes for details.
         offset : array_like, optional
             Offset values.  See notes for details.
+        which : 'mean', 'linear', 'var'(optional)
+            Statitistic to predict. Default is 'mean'.
+
+            - 'mean' returns the conditional expectation of endog E(y | x),
+              i.e. inverse of the model's link function of linear predictor.
+            - 'linear' returns the linear predictor of the mean function.
+            - 'var_unscaled' variance of endog implied by the likelihood model.
+              This does not include scale or var_weights.
+
         linear : bool
-            If True, returns the linear predicted values.  If False,
-            returns the value of the inverse of the model's link function at
-            the linear predicted values.
+            The ``linear` keyword is deprecated and will be removed,
+            use ``which`` keyword instead.
+            If True, returns the linear predicted values.  If False or None,
+            then the statistic specified by ``which`` will be returned.
+
 
         Returns
         -------
@@ -880,6 +895,11 @@ class GLM(base.LikelihoodModel):
 
         Exposure values must be strictly positive.
         """
+        if linear is not None:
+            msg = 'linear keyword is deprecated, use which="linear"'
+            warnings.warn(msg, DeprecationWarning)
+            if linear is True:
+                which = "linear"
 
         # Use fit offset if appropriate
         if offset is None and exog is None and hasattr(self, 'offset'):
@@ -905,10 +925,17 @@ class GLM(base.LikelihoodModel):
             exog = self.exog
 
         linpred = np.dot(exog, params) + offset + exposure
-        if linear:
-            return linpred
-        else:
+
+        if which == "mean":
             return self.family.fitted(linpred)
+        elif which == "linear":
+            return linpred
+        elif which == "var_unscaled":
+            mean = self.family.fitted(linpred)
+            var_ = self.family.variance(mean)
+            return var_
+        else:
+            raise ValueError(f'The which value "{which}" is not recognized')
 
     def get_distribution(self, params, scale=None, exog=None, exposure=None,
                          offset=None, var_weights=1., n_trials=1.):
@@ -954,7 +981,7 @@ class GLM(base.LikelihoodModel):
                                     families.NegativeBinomial)):
             scale = 1.
 
-        mu = self.predict(params, exog, exposure, offset, linear=False)
+        mu = self.predict(params, exog, exposure, offset, which="mean")
 
         kwds = {}
         if (np.any(n_trials != 1) and
@@ -1225,8 +1252,9 @@ class GLM(base.LikelihoodModel):
             history = self._update_history(wls_results, mu, history)
             self.scale = self.estimate_scale(mu)
             if endog.squeeze().ndim == 1 and np.allclose(mu - endog, 0):
-                msg = "Perfect separation detected, results not available"
-                raise PerfectSeparationError(msg)
+                msg = ("Perfect separation or prediction detected, "
+                       "parameter may not be identified")
+                warnings.warn(msg, category=PerfectSeparationWarning)
             converged = _check_convergence(criterion, iteration + 1, atol,
                                            rtol)
             if converged:
@@ -1322,7 +1350,7 @@ class GLM(base.LikelihoodModel):
         from statsmodels.base.elastic_net import fit_elasticnet
 
         if method != "elastic_net":
-            raise ValueError("method for fit_regularied must be elastic_net")
+            raise ValueError("method for fit_regularized must be elastic_net")
 
         defaults = {"maxiter": 50, "L1_wt": 1, "cnvrg_tol": 1e-10,
                     "zero_tol": 1e-10}
@@ -1862,7 +1890,9 @@ class GLMResults(base.LikelihoodModelResults):
             scale parameter is not included in the parameter count.
             Use ``dk_params=1`` to include scale in the parameter count.
 
-        Returns the given information criterion value.
+        Returns
+        -------
+        Value of information criterion.
 
         Notes
         -----
@@ -1901,27 +1931,134 @@ class GLMResults(base.LikelihoodModelResults):
             llf = self.llf_scaled(scale=1)
             return -2 * llf/scale + 2 * k_params
 
-    @Appender(str(get_prediction_doc))
+    # now explicit docs, old and new behavior, copied from generic classes
+    # @Appender(str(get_prediction_doc))
     def get_prediction(self, exog=None, exposure=None, offset=None,
-                       transform=True, linear=False,
+                       transform=True, which=None, linear=None,
+                       average=False, agg_weights=None,
                        row_labels=None):
+        """
+    Compute prediction results for GLM compatible models.
+
+    Options and return class depend on whether "which" is None or not.
+
+    Parameters
+    ----------
+    exog : array_like, optional
+        The values for which you want to predict.
+    exposure : array_like, optional
+        Exposure time values, only can be used with the log link
+        function.
+    offset : array_like, optional
+        Offset values.
+    transform : bool, optional
+        If the model was fit via a formula, do you want to pass
+        exog through the formula. Default is True. E.g., if you fit
+        a model y ~ log(x1) + log(x2), and transform is True, then
+        you can pass a data structure that contains x1 and x2 in
+        their original form. Otherwise, you'd need to log the data
+        first.
+    which : 'mean', 'linear', 'var'(optional)
+        Statitistic to predict. Default is 'mean'.
+        If which is None, then the deprecated keyword "linear" applies.
+        If which is not None, then a generic Prediction results class will
+        be returned. Some options are only available if which is not None.
+        See notes.
+
+        - 'mean' returns the conditional expectation of endog E(y | x),
+          i.e. inverse of the model's link function of linear predictor.
+        - 'linear' returns the linear predictor of the mean function.
+        - 'var_unscaled' variance of endog implied by the likelihood model.
+          This does not include scale or var_weights.
+
+    linear : bool
+        The ``linear` keyword is deprecated and will be removed,
+        use ``which`` keyword instead.
+        If which is None, then the linear keyword is used, otherwise it will
+        be ignored.
+        If True and which is None, the linear predicted values are returned.
+        If False or None, then the statistic specified by ``which`` will be
+        returned.
+    average : bool
+        Keyword is only used if ``which`` is not None.
+        If average is True, then the mean prediction is computed, that is,
+        predictions are computed for individual exog and then the average
+        over observation is used.
+        If average is False, then the results are the predictions for all
+        observations, i.e. same length as ``exog``.
+    agg_weights : ndarray, optional
+        Keyword is only used if ``which`` is not None.
+        Aggregation weights, only used if average is True.
+    row_labels : list of str or None
+        If row_lables are provided, then they will replace the generated
+        labels.
+
+    Returns
+    -------
+    prediction_results : instance of a PredictionResults class.
+        The prediction results instance contains prediction and prediction
+        variance and can on demand calculate confidence intervals and summary
+        tables for the prediction of the mean and of new observations.
+        The Results class of the return depends on the value of ``which``.
+
+    See Also
+    --------
+    GLM.predict
+    GLMResults.predict
+
+    Notes
+    -----
+    Changes in statsmodels 0.14: The ``which`` keyword has been added.
+    If ``which`` is None, then the behavior is the same as in previous
+    versions, and returns the mean and linear prediction results.
+    If the ``which`` keyword is not None, then a generic prediction results
+    class is returned and is not backwards compatible with the old prediction
+    results class, e.g. column names of summary_frame differs.
+    There are more choices for the returned predicted statistic using
+    ``which``. More choices will be added in the next release.
+    Two additional keyword, average and agg_weights options are now also
+    available if ``which`` is not None.
+    In a future version ``which`` will become not None and the backwards
+    compatible prediction results class will be removed.
+
+    """
 
         import statsmodels.regression._prediction as linpred
 
-        pred_kwds = {'exposure': exposure, 'offset': offset, 'linear': True}
+        pred_kwds = {'exposure': exposure, 'offset': offset, 'which': 'linear'}
 
-        # two calls to a get_prediction duplicates exog generation if patsy
-        res_linpred = linpred.get_prediction(self, exog=exog,
-                                             transform=transform,
-                                             row_labels=row_labels,
-                                             pred_kwds=pred_kwds)
+        if which is None:
+            # two calls to a get_prediction duplicates exog generation if patsy
+            res_linpred = linpred.get_prediction(self, exog=exog,
+                                                 transform=transform,
+                                                 row_labels=row_labels,
+                                                 pred_kwds=pred_kwds)
 
-        pred_kwds['linear'] = False
-        res = pred.get_prediction_glm(self, exog=exog, transform=transform,
-                                      row_labels=row_labels,
-                                      linpred=res_linpred,
-                                      link=self.model.family.link,
-                                      pred_kwds=pred_kwds)
+            pred_kwds['which'] = 'mean'
+            res = pred.get_prediction_glm(self, exog=exog, transform=transform,
+                                          row_labels=row_labels,
+                                          linpred=res_linpred,
+                                          link=self.model.family.link,
+                                          pred_kwds=pred_kwds)
+        else:
+            # new generic version, if 'which' is specified
+
+            pred_kwds = {'exposure': exposure, 'offset': offset}
+            # not yet, only applies to count families
+            # y_values is explicit so we can add it to the docstring
+            # if y_values is not None:
+            #    pred_kwds["y_values"] = y_values
+
+            res = pred.get_prediction(
+                self,
+                exog=exog,
+                which=which,
+                transform=transform,
+                row_labels=row_labels,
+                average=average,
+                agg_weights=agg_weights,
+                pred_kwds=pred_kwds
+                )
 
         return res
 
@@ -2011,6 +2148,68 @@ class GLMResults(base.LikelihoodModelResults):
                          resid=self.resid_pearson / np.sqrt(self.scale),
                          hat_matrix_diag=hat_matrix_diag)
         return infl
+
+    def get_distribution(self, exog=None, exposure=None,
+                         offset=None, var_weights=1., n_trials=1.):
+        """
+        Return a instance of the predictive distribution.
+
+        Parameters
+        ----------
+        scale : scalar
+            The scale parameter.
+        exog : array_like
+            The predictor variable matrix.
+        offset : array_like or None
+            Offset variable for predicted mean.
+        exposure : array_like or None
+            Log(exposure) will be added to the linear prediction.
+        var_weights : array_like
+            1d array of variance (analytic) weights. The default is None.
+        n_trials : int
+            Number of trials for the binomial distribution. The default is 1
+            which corresponds to a Bernoulli random variable.
+
+        Returns
+        -------
+        gen
+            Instance of a scipy frozen distribution based on estimated
+            parameters.
+            Use the ``rvs`` method to generate random values.
+
+        Notes
+        -----
+        Due to the behavior of ``scipy.stats.distributions objects``, the
+        returned random number generator must be called with ``gen.rvs(n)``
+        where ``n`` is the number of observations in the data set used
+        to fit the model.  If any other value is used for ``n``, misleading
+        results will be produced.
+        """
+        # Note this is mostly a copy of GLM.get_prediction
+        # calling here results.predict avoids the exog check and trasnform
+
+        if isinstance(self.model.family, (families.Binomial, families.Poisson,
+                                    families.NegativeBinomial)):
+            # use scale=1, independent of QMLE scale for discrete
+            scale = 1.
+            if self.scale != 1.:
+                msg = "using scale=1, no exess dispersion in distribution"
+                warnings.warn(msg, UserWarning)
+        else:
+            scale = self.scale
+
+        mu = self.predict(exog, exposure, offset, which="mean")
+
+        kwds = {}
+        if (np.any(n_trials != 1) and
+                isinstance(self.model.family, families.Binomial)):
+
+            kwds["n_trials"] = n_trials
+
+        distr = self.model.family.get_distribution(
+            mu, scale, var_weights=var_weights, **kwds)
+        return distr
+
 
     @Appender(base.LikelihoodModelResults.remove_data.__doc__)
     def remove_data(self):

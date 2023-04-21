@@ -160,6 +160,11 @@ class AutoReg(tsa_model.TimeSeriesModel):
         Estimation of SARIMAX models using exact likelihood and the
         Kalman Filter.
 
+    Notes
+    -----
+    See the notebook `Autoregressions
+    <../examples/notebooks/generated/autoregressions.html>`__ for an overview.
+
     Examples
     --------
     >>> import statsmodels.api as sm

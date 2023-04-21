@@ -374,7 +374,7 @@ def rank_compare_2indep(x1, x2, use_t=True):
     ----------
     x1, x2 : array_like
         Array of samples, should be one-dimensional.
-    use_t : poolean
+    use_t : boolean
         If use_t is true, the t distribution with Welch-Satterthwaite type
         degrees of freedom is used for p-value and confidence interval.
         If use_t is false, then the normal distribution is used.

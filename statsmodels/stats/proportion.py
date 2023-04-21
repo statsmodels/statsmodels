@@ -115,11 +115,12 @@ def proportion_confint(count, nobs, alpha:float=0.05, method="normal"):
 
     Parameters
     ----------
-    count : {int, array_like}
+    count : {int or float, array_like}
         number of successes, can be pandas Series or DataFrame. Arrays
-        must contain integer values.
-    nobs : {int, array_like}
-        total number of trials.  Arrays must contain integer values.
+        must contain integer values if method is "binom_test".
+    nobs : {int or float, array_like}
+        total number of trials.  Arrays must contain integer values if method
+        is "binom_test".
     alpha : float
         Significance level, default 0.05. Must be in (0, 1)
     method : {"normal", "agresti_coull", "beta", "wilson", "binom_test"}
@@ -183,8 +184,9 @@ def proportion_confint(count, nobs, alpha:float=0.05, method="normal"):
             )
         return y
 
-    count_a = _check(np.asarray(count_a), "count")
-    nobs_a = _check(np.asarray(nobs_a), "count")
+    if method == "binom_test":
+        count_a = _check(np.asarray(count_a), "count")
+        nobs_a = _check(np.asarray(nobs_a), "count")
 
     q_ = count_a / nobs_a
     alpha_2 = 0.5 * alpha
@@ -1146,9 +1148,6 @@ def proportions_chisquare_allpairs(count, nobs, multitest_method='hs'):
         the number of successes in nobs trials.
     nobs : int
         the number of trials or observations.
-    prop : float, optional
-        The probability of success under the null hypothesis,
-        `0 <= prop <= 1`. The default value is `prop = 0.5`
     multitest_method : str
         This chooses the method for the multiple testing p-value correction,
         that is used as default in the results.
@@ -1189,9 +1188,6 @@ def proportions_chisquare_pairscontrol(count, nobs, value=None,
         the number of successes in nobs trials.
     nobs : int
         the number of trials or observations.
-    prop : float, optional
-        The probability of success under the null hypothesis,
-        `0 <= prop <= 1`. The default value is `prop = 0.5`
     multitest_method : str
         This chooses the method for the multiple testing p-value correction,
         that is used as default in the results.
@@ -1274,6 +1270,11 @@ def confint_proportions_2indep(count1, nobs1, count2, nobs2, method=None,
     Returns
     -------
     low, upp
+
+    See Also
+    --------
+    test_proportions_2indep
+    tost_proportions_2indep
 
     Notes
     -----
@@ -1542,7 +1543,6 @@ def score_test_proportions_2indep(count1, nobs1, count2, nobs2, value=None,
             prop0 = 2 * p * np.cos(a) - tmp2 / (3 * tmp3)
             prop1 = prop0 + diff
 
-        correction = True
         var = prop1 * (1 - prop1) / nobs1 + prop0 * (1 - prop0) / nobs0
         if correction:
             var *= nobs / (nobs - 1)
@@ -1663,7 +1663,7 @@ def test_proportions_2indep(count1, nobs1, count2, nobs2, value=None,
         Default is equal proportions, 0 for diff and 1 for risk-ratio and for
         odds-ratio.
     method : string
-        Method for computing confidence interval. If method is None, then a
+        Method for computing the hypothesis test. If method is None, then a
         default method is used. The default might change as more methods are
         added.
 
@@ -1694,11 +1694,11 @@ def test_proportions_2indep(count1, nobs1, count2, nobs2, value=None,
            correction ``nobs / (nobs - 1)`` as in Miettinen Nurminen 1985
 
     compare : {'diff', 'ratio' 'odds-ratio'}
-        If compare is `diff`, then the confidence interval is for
-        diff = p1 - p2.
-        If compare is `ratio`, then the confidence interval is for the
+        If compare is `diff`, then the hypothesis test is for the risk
+        difference diff = p1 - p2.
+        If compare is `ratio`, then the hypothesis test is for the
         risk ratio defined by ratio = p1 / p2.
-        If compare is `odds-ratio`, then the confidence interval is for the
+        If compare is `odds-ratio`, then the hypothesis test is for the
         odds-ratio defined by or = p1 / (1 - p1) / (p2 / (1 - p2)
     alternative : {'two-sided', 'smaller', 'larger'}
         alternative hypothesis, which can be two-sided or either one of the
@@ -1726,10 +1726,21 @@ def test_proportions_2indep(count1, nobs1, count2, nobs2, value=None,
         other attributes :
             additional information about the hypothesis test
 
+    See Also
+    --------
+    tost_proportions_2indep
+    confint_proportions_2indep
+
     Notes
     -----
     Status: experimental, API and defaults might still change.
         More ``methods`` will be added.
+
+    The current default methods are
+
+    - 'diff': 'agresti-caffo',
+    - 'ratio': 'log-adjusted',
+    - 'odds-ratio': 'logit-adjusted'
 
     """
     method_default = {'diff': 'agresti-caffo',
@@ -1921,7 +1932,7 @@ def tost_proportions_2indep(count1, nobs1, count2, nobs2, low, upp,
     low, upp :
         equivalence margin for diff, risk ratio or odds ratio
     method : string
-        method for computing confidence interval. If method is None, then a
+        method for computing the hypothesis test. If method is None, then a
         default method is used. The default might change as more methods are
         added.
 
@@ -1949,11 +1960,11 @@ def tost_proportions_2indep(count1, nobs1, count2, nobs2, low, upp,
             correction ``nobs / (nobs - 1)`` as in Miettinen Nurminen 1985
 
     compare : string in ['diff', 'ratio' 'odds-ratio']
-        If compare is `diff`, then the confidence interval is for
+        If compare is `diff`, then the hypothesis test is for
         diff = p1 - p2.
-        If compare is `ratio`, then the confidence interval is for the
+        If compare is `ratio`, then the hypothesis test is for the
         risk ratio defined by ratio = p1 / p2.
-        If compare is `odds-ratio`, then the confidence interval is for the
+        If compare is `odds-ratio`, then the hypothesis test is for the
         odds-ratio defined by or = p1 / (1 - p1) / (p2 / (1 - p2).
     correction : bool
         If correction is True (default), then the Miettinen and Nurminen
@@ -1969,9 +1980,17 @@ def tost_proportions_2indep(count1, nobs1, count2, nobs2, low, upp,
     t1 : test results
         results instance for one-sided hypothesis at the upper margin
 
+    See Also
+    --------
+    test_proportions_2indep
+    confint_proportions_2indep
+
     Notes
     -----
     Status: experimental, API and defaults might still change.
+
+    The TOST equivalence test delegates to `test_proportions_2indep` and has
+    the same method and comparison options.
 
     """
 
@@ -2044,7 +2063,7 @@ def power_proportions_2indep(diff, prop2, nobs1, ratio=1, alpha=0.05,
         difference between proportion 1 and 2 under the alternative
     prop2 : float
         proportion for the reference case, prop2, proportions for the
-        first case will be computing using p2 and diff
+        first case will be computed using p2 and diff
         p1 = p2 + diff
     nobs1 : float or int
         number of observations in sample 1

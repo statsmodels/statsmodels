@@ -25,6 +25,7 @@ from statsmodels.tools.sm_exceptions import (
     InfeasibleTestError,
     InterpolationWarning,
     MissingDataError,
+    ValueWarning,
 )
 # Remove imports when range unit root test gets an R implementation
 from statsmodels.tools.validation import array_like, bool_like
@@ -188,6 +189,12 @@ class TestADFNoConstant2(CheckADF):
         )
 
 
+@pytest.mark.parametrize("x", [np.full(8, 5.0)])
+def test_adfuller_resid_variance_zero(x):
+    with pytest.raises(ValueError):
+        adfuller(x)
+
+
 class CheckCorrGram:
     """
     Set up for ACF, PACF tests.
@@ -339,6 +346,10 @@ class TestPACF(CheckCorrGram):
     def test_yw(self):
         pacfyw = pacf_yw(self.x, nlags=40, method="mle")
         assert_almost_equal(pacfyw[1:], self.pacfyw, DECIMAL_8)
+
+    def test_yw_singular(self):
+        with pytest.warns(ValueWarning):
+            pacf(np.ones(30), nlags=6)
 
     def test_ld(self):
         pacfyw = pacf_yw(self.x, nlags=40, method="mle")

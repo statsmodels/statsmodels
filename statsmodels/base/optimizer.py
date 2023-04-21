@@ -7,6 +7,7 @@ from __future__ import annotations
 from typing import Any, Sequence
 import numpy as np
 from scipy import optimize
+from statsmodels.compat.scipy import SP_LT_15, SP_LT_17
 
 
 def check_kwargs(kwargs: dict[str, Any], allowed: Sequence[str], method: str):
@@ -343,6 +344,12 @@ def _fit_minimize(f, score, start_params, fargs, kwargs, disp=True,
 
     # Use bounds/constraints only if they're allowed by the method
     has_bounds = ['L-BFGS-B', 'TNC', 'SLSQP', 'trust-constr']
+    # Added in SP 1.5
+    if not SP_LT_15:
+        has_bounds += ['Powell']
+    # Added in SP 1.7
+    if not SP_LT_17:
+        has_bounds += ['Nelder-Mead']
     has_constraints = ['COBYLA', 'SLSQP', 'trust-constr']
 
     if 'bounds' in kwargs.keys() and kwargs['min_method'] in has_bounds:
@@ -421,8 +428,9 @@ def _fit_newton(f, score, start_params, fargs, kwargs, disp=True,
         information returned from the solver used. If it is False, this is
         None.
     """
-    check_kwargs(kwargs, ("tol",), "newton")
+    check_kwargs(kwargs, ("tol", "ridge_factor"), "newton")
     tol = kwargs.setdefault('tol', 1e-8)
+    ridge_factor = kwargs.setdefault('ridge_factor', 1e-10)
     iterations = 0
     oldparams = np.inf
     newparams = np.asarray(start_params)

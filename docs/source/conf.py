@@ -85,7 +85,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'statsmodels'
-copyright = u'2009-2019, Josef Perktold, Skipper Seabold, ' \
+copyright = u'2009-2023, Josef Perktold, Skipper Seabold, ' \
             u'Jonathan Taylor, statsmodels-developers'
 
 autosummary_generate = True
@@ -334,7 +334,7 @@ man_pages = [
 epub_title = u'statsmodels'
 epub_author = u'Josef Perktold, Skipper Seabold'
 epub_publisher = u'Josef Perktold, Skipper Seabold'
-epub_copyright = u'2009-2019, Josef Perktold, Skipper Seabold, ' \
+epub_copyright = u'2009-2023, Josef Perktold, Skipper Seabold, ' \
                  u'Jonathan Taylor, statsmodels-developers'
 
 # The language of the text. It defaults to the language option
@@ -420,9 +420,9 @@ import pandas as pd
 """
 
 extlinks = {'pr': ('https://github.com/statsmodels/statsmodels/pull/%s',
-                   'PR #'),
+                   'PR #%s'),
             'issue': ('https://github.com/statsmodels/statsmodels/issues/%s',
-                      'Issue #')
+                      'Issue #%s')
             }
 
 autosectionlabel_prefix_document = True

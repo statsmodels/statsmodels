@@ -1085,7 +1085,7 @@ function S = FIS(A, S)
 
 end
 
-    
+
 function [y,C,R,L]  = MissData(y,C,R)
 % Syntax:
 % Description:

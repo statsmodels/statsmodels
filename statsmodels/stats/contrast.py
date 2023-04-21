@@ -57,6 +57,8 @@ class ContrastResults:
                 self.pvalue = np.full_like(value, np.nan)
                 not_nan = ~np.isnan(value)
                 self.pvalue[not_nan] = self.dist.sf(np.abs(value[not_nan])) * 2
+        else:
+            self.pvalue = np.nan
 
         # cleanup
         # should we return python scalar?

@@ -369,7 +369,7 @@ class GenericZeroInflated(CountModel):
     def predict(self, params, exog=None, exog_infl=None, exposure=None,
                 offset=None, which='mean', y_values=None):
         """
-        Predict response variable or other statistic given exogenous variables.
+        Predict expected response or other statistic given exogenous variables.
 
         Parameters
         ----------
@@ -396,8 +396,8 @@ class GenericZeroInflated(CountModel):
         which : str (optional)
             Statitistic to predict. Default is 'mean'.
 
-            - 'mean' : the conditional expectation of endog E(y | x),
-              i.e. exp of linear predictor.
+            - 'mean' : the conditional expectation of endog E(y | x). This
+              takes inflated zeros into account.
             - 'linear' : the linear predictor of the mean function.
             - 'var' : returns the estimated variance of endog implied by the
               model.
@@ -684,7 +684,9 @@ class ZeroInflatedPoisson(GenericZeroInflated):
         return var_
 
     def _get_start_params(self):
-        start_params = self.model_main.fit(disp=0, method="nm").params
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=ConvergenceWarning)
+            start_params = self.model_main.fit(disp=0, method="nm").params
         start_params = np.append(np.ones(self.k_inflate) * 0.1, start_params)
         return start_params
 
@@ -725,7 +727,8 @@ class ZeroInflatedPoisson(GenericZeroInflated):
         w = self.predict(params, exog=exog, exog_infl=exog_infl,
                          exposure=exposure, offset=offset, which="prob-main")
 
-        distr = self.distribution(mu[:, None], 1 - w[:, None])
+        # distr = self.distribution(mu[:, None], 1 - w[:, None])
+        distr = self.distribution(mu, 1 - w)
         return distr
 
 
@@ -840,7 +843,8 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
                           exposure=exposure, offset=offset, which="mean-main")
         w = self.predict(params, exog=exog, exog_infl=exog_infl,
                          exposure=exposure, offset=offset, which="prob-main")
-        distr = self.distribution(mu[:, None], params[-1], p, 1 - w[:, None])
+        # distr = self.distribution(mu[:, None], params[-1], p, 1 - w[:, None])
+        distr = self.distribution(mu, params[-1], p, 1 - w)
         return distr
 
 
@@ -956,7 +960,8 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
         w = self.predict(params, exog=exog, exog_infl=exog_infl,
                          exposure=exposure, offset=offset, which="prob-main")
 
-        distr = self.distribution(mu[:, None], params[-1], p, 1 - w[:, None])
+        # distr = self.distribution(mu[:, None], params[-1], p, 1 - w[:, None])
+        distr = self.distribution(mu, params[-1], p, 1 - w)
         return distr
 
 

@@ -117,6 +117,10 @@ class STLForecast:
     * ``results`` may also exposes a method ``get_prediction`` that produces
       both in- and out-of-sample predictions.
 
+    See the notebook `Seasonal Decomposition
+    <../examples/notebooks/generated/stl_decomposition.html>`__ for an
+    overview.
+
     Examples
     --------
     >>> import numpy as np

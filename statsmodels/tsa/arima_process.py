@@ -750,10 +750,10 @@ class ArmaProcess:
 
         Parameters
         ----------
-        maroots : array_like
+        maroots : array_like, optional
             Roots for the MA polynomial
             1 + theta_1*z + theta_2*z^2 + ..... + theta_n*z^n
-        arroots : array_like
+        arroots : array_like, optional
             Roots for the AR polynomial
             1 - phi_1*z - phi_2*z^2 - ..... - phi_n*z^n
         nobs : int, optional
@@ -775,13 +775,21 @@ class ArmaProcess:
         >>> arma_process.isinvertible
         True
         """
-        arpoly = np.polynomial.polynomial.Polynomial.fromroots(arroots)
-        mapoly = np.polynomial.polynomial.Polynomial.fromroots(maroots)
+        if arroots is not None and len(arroots):
+            arpoly = np.polynomial.polynomial.Polynomial.fromroots(arroots)
+            arcoefs = arpoly.coef[1:] / arpoly.coef[0]
+        else:
+            arcoefs = []
+
+        if maroots is not None and len(maroots):
+            mapoly = np.polynomial.polynomial.Polynomial.fromroots(maroots)
+            macoefs = mapoly.coef[1:] / mapoly.coef[0]
+        else:
+            macoefs = []
+
         # As from_coeffs will create a polynomial with constant 1/-1,(MA/AR)
         # we need to scale the polynomial coefficients accordingly
-        return cls(np.r_[1, -np.asarray(-1 * arpoly.coef[1:] / arpoly.coef[0])],
-                   np.r_[1, np.asarray(mapoly.coef[1:] / mapoly.coef[0])],
-                   nobs=nobs)
+        return cls(np.r_[1, arcoefs], np.r_[1, macoefs], nobs=nobs)
 
     @classmethod
     def from_coeffs(cls, arcoefs=None, macoefs=None, nobs=100):

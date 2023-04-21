@@ -14,17 +14,20 @@ Treatment Effects :mod:`treatment`
 the estimation of treatment effects under conditional independence.
 
 Methods for for estimating treatment effects are available in as methods
-in the :class:`TreatmentEffect`. Standard Errors are computed using GMM from
+in the :class:`~statsmodels.treatment.treatment_effects.TreatmentEffect`. Standard Errors are computed using GMM from
 the moment conditions of the treatment model, outcome model and effects
 statistics, average treatment effect ATE, potential outcome means POM, and
 for some methods optionally average treatment effect on the treated ATT.
 
-.. module:: statsmodels.treatment.treatment_effects
-.. currentmodule:: statsmodels.treatment.treatment_effects
+See also overview notebook in
+`Treatment Effect <examples/notebooks/generated/treatment_effect.html>`__
+
+.. module:: statsmodels.treatment
+.. currentmodule:: statsmodels.treatment
 
 
 .. autosummary::
    :toctree: generated/
 
-   TreatmentEffect
-   TreatmentEffectResults
+   treatment_effects.TreatmentEffect
+   treatment_effects.TreatmentEffectResults

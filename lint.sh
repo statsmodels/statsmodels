@@ -21,7 +21,6 @@ if [ "$LINT" == true ]; then
         examples \
         setup.py \
         statsmodels/__init__.py \
-        statsmodels/_version.py \
         statsmodels/api.py \
         statsmodels/base/__init__.py \
         statsmodels/base/distributed_estimation.py \
@@ -75,6 +74,7 @@ if [ "$LINT" == true ]; then
         statsmodels/discrete/truncated_model.py \
         statsmodels/distributions/__init__.py \
         statsmodels/distributions/bernstein.py \
+        statsmodels/distributions/empirical_distribution.py \
         statsmodels/distributions/copula/__init__.py \
         statsmodels/distributions/copula/api.py \
         statsmodels/distributions/copula/archimedean.py \
@@ -88,6 +88,7 @@ if [ "$LINT" == true ]; then
         statsmodels/distributions/tests/__init__.py \
         statsmodels/distributions/tests/test_bernstein.py \
         statsmodels/distributions/tests/test_discrete.py \
+        statsmodels/distributions/tests/test_ecdf.py \
         statsmodels/distributions/tests/test_tools.py \
         statsmodels/duration/__init__.py \
         statsmodels/duration/_kernel_estimates.py \

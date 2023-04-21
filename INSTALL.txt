@@ -10,7 +10,7 @@ numpy >= 1.18
     www.numpy.org
 
 scipy >= 1.4
-    
+
     www.scipy.org
 
 pandas >= 1.0
@@ -85,7 +85,7 @@ On Ubuntu you can get dependencies through:
     python -m pip install cython pandas
 
 Alternatively, you can install from the NeuroDebian repository:
-    
+
     http://neuro.debian.net
 
 

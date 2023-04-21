@@ -49,7 +49,10 @@ from statsmodels.emplike.elregress import _ELRegOpts
 # need import in module instead of lazily to copy `__doc__`
 from statsmodels.regression._prediction import PredictionResults
 from statsmodels.tools.decorators import cache_readonly, cache_writable
-from statsmodels.tools.sm_exceptions import InvalidTestWarning, ValueWarning
+from statsmodels.tools.sm_exceptions import (
+    InvalidTestWarning,
+    ValueWarning,
+    )
 from statsmodels.tools.tools import pinv_extended
 from statsmodels.tools.typing import Float64Array
 from statsmodels.tools.validation import bool_like, float_like, string_like
@@ -718,7 +721,8 @@ class WLS(RegressionModel):
     >>> results.tvalues
     array([ 2.0652652 ,  0.35684428])
     >>> print(results.t_test([1, 0]))
-    <T test: effect=array([ 2.91666667]), sd=array([[ 1.41224801]]), t=array([[ 2.0652652]]), p=array([[ 0.04690139]]), df_denom=5>
+    <T test: effect=array([ 2.91666667]), sd=array([[ 1.41224801]]),
+     t=array([[ 2.0652652]]), p=array([[ 0.04690139]]), df_denom=5>
     >>> print(results.f_test([0, 1]))
     <F test: F=array([[ 0.12733784]]), p=[[ 0.73577409]], df_denom=5, df_num=1>
     """ % {'params': base._model_params_doc,
@@ -904,7 +908,8 @@ class OLS(WLS):
     ==============================================================================
 
     >>> print(results.f_test(np.identity(2)))
-    <F test: F=array([[159.63031026]]), p=1.2607168903696672e-20, df_denom=43, df_num=2>
+    <F test: F=array([[159.63031026]]), p=1.2607168903696672e-20,
+     df_denom=43, df_num=2>
     """ % {'params': base._model_params_doc,
            'extra_params': base._missing_param_doc + base._extra_param_doc}
 
@@ -1254,9 +1259,11 @@ class GLSAR(GLS):
     >>> results.tvalues
     array([ -2.10304127,  21.8047269 ])
     >>> print(results.t_test([1, 0]))
-    <T test: effect=array([-0.66661205]), sd=array([[ 0.31697526]]), t=array([[-2.10304127]]), p=array([[ 0.06309969]]), df_denom=3>
+    <T test: effect=array([-0.66661205]), sd=array([[ 0.31697526]]),
+     t=array([[-2.10304127]]), p=array([[ 0.06309969]]), df_denom=3>
     >>> print(results.f_test(np.identity(2)))
-    <F test: F=array([[ 1815.23061844]]), p=[[ 0.00002372]], df_denom=3, df_num=2>
+    <F test: F=array([[ 1815.23061844]]), p=[[ 0.00002372]],
+     df_denom=3, df_num=2>
 
     Or, equivalently
 
@@ -1475,9 +1482,20 @@ def yule_walker(x, order=1, method="adjusted", df=None, inv=False,
         r[k] = (x[0:-k] * x[k:]).sum() / (n - k * adj_needed)
     R = toeplitz(r[:-1])
 
-    rho = np.linalg.solve(R, r[1:])
+    try:
+        rho = np.linalg.solve(R, r[1:])
+    except np.linalg.LinAlgError as err:
+        if 'Singular matrix' in str(err):
+            warnings.warn("Matrix is singular. Using pinv.", ValueWarning)
+            rho = np.linalg.pinv(R) @ r[1:]
+        else:
+            raise
+
     sigmasq = r[0] - (r[1:]*rho).sum()
-    sigma = np.sqrt(sigmasq) if not np.isnan(sigmasq) and sigmasq > 0 else np.nan
+    if not np.isnan(sigmasq) and sigmasq > 0:
+        sigma = np.sqrt(sigmasq)
+    else:
+        sigma = np.nan
     if inv:
         return rho, sigma, np.linalg.inv(R)
     else:
@@ -1897,7 +1915,9 @@ class RegressionResults(base.LikelihoodModelResults):
             scale parameter is not included in the parameter count.
             Use ``dk_params=1`` to include scale in the parameter count.
 
-        Returns the given information criterion value.
+        Returns
+        -------
+        Value of information criterion.
 
         References
         ----------
@@ -2409,7 +2429,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
         - 'HAC': heteroskedasticity-autocorrelation robust covariance
 
-          ``maxlag`` :  integer, required
+          ``maxlags`` :  integer, required
             number of lags to use
 
           ``kernel`` : {callable, str}, optional
@@ -2451,7 +2471,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
           ``time`` : array_like, required
             index of time periods
-          ``maxlag`` : integer, required
+          ``maxlags`` : integer, required
             number of lags to use
           ``kernel`` : {callable, str}, optional
             The available kernels are ['bartlett', 'uniform']. The default is
@@ -2475,7 +2495,7 @@ class RegressionResults(base.LikelihoodModelResults):
             indicator for groups
           ``time`` : array_like[int]
             index of time periods
-          ``maxlag`` : int, required
+          ``maxlags`` : int, required
             number of lags to use
           ``kernel`` : {callable, str}, optional
             Available kernels are ['bartlett', 'uniform'], default
@@ -2624,9 +2644,13 @@ class RegressionResults(base.LikelihoodModelResults):
                 raise ValueError('either time or groups needs to be given')
             groupidx = lzip([0] + tt, tt + [nobs_])
             self.n_groups = n_groups = len(groupidx)
-            res.cov_params_default = sw.cov_nw_panel(self, maxlags, groupidx,
-                                                     weights_func=weights_func,
-                                                     use_correction=use_correction)
+            res.cov_params_default = sw.cov_nw_panel(
+                self,
+                maxlags,
+                groupidx,
+                weights_func=weights_func,
+                use_correction=use_correction
+            )
             res.cov_kwds['description'] = descriptions['HAC-Panel']
 
         elif cov_type.lower() == 'hac-groupsum':
@@ -2764,7 +2788,8 @@ class RegressionResults(base.LikelihoodModelResults):
             diagn_left = diagn_right = []
             top_left = [elem for elem in top_left if elem[0] in slimlist]
             top_right = [elem for elem in top_right if elem[0] in slimlist]
-            top_right = top_right + [("",[])] * (len(top_left) - len(top_right))
+            top_right = top_right + \
+                [("", [])] * (len(top_left) - len(top_right))
         else:
             diagn_left = [('Omnibus:', ["%#6.3f" % omni]),
                           ('Prob(Omnibus):', ["%#6.3f" % omnipv]),
@@ -2880,7 +2905,6 @@ class RegressionResults(base.LikelihoodModelResults):
         dw = durbin_watson(self.wresid)
         eigvals = self.eigenvals
         condno = self.condition_number
-        eigvals = np.sort(eigvals)  # in increasing order
         diagnostic = dict([
             ('Omnibus:',  "%.3f" % omni),
             ('Prob(Omnibus):', "%.3f" % omnipv),
@@ -2899,16 +2923,38 @@ class RegressionResults(base.LikelihoodModelResults):
                       xname=xname, yname=yname, title=title)
         smry.add_dict(diagnostic)
 
+        etext = []
+
+        if not self.k_constant:
+            etext.append(
+                "R² is computed without centering (uncentered) since the \
+                model does not contain a constant."
+            )
+        if hasattr(self, 'cov_type'):
+            etext.append(self.cov_kwds['description'])
+        if self.model.exog.shape[0] < self.model.exog.shape[1]:
+            wstr = "The input rank is higher than the number of observations."
+            etext.append(wstr)
+
         # Warnings
         if eigvals[-1] < 1e-10:
             warn = "The smallest eigenvalue is %6.3g. This might indicate that\
-            there are strong multicollinearity problems or that the design\
-            matrix is singular." % eigvals[-1]
-            smry.add_text(warn)
-        if condno > 1000:
-            warn = "* The condition number is large (%.g). This might indicate \
-            strong multicollinearity or other numerical problems." % condno
-            smry.add_text(warn)
+                there are strong multicollinearity problems or that the design\
+                matrix is singular." % eigvals[-1]
+            etext.append(warn)
+        elif condno > 1000:
+            warn = "The condition number is large, %6.3g. This might indicate\
+                that there are strong multicollinearity or other numerical\
+                problems." % condno
+            etext.append(warn)
+
+        if etext:
+            etext = ["[{0}] {1}".format(i + 1, text)
+                     for i, text in enumerate(etext)]
+            etext.insert(0, "Notes:")
+
+        for line in etext:
+            smry.add_text(line)
 
         return smry
 

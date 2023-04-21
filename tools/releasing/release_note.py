@@ -14,15 +14,15 @@ import datetime as dt
 import os
 
 import dateparser
-from github import Github
+from github import Github, GithubException
 from jinja2 import Template
 
 # Full release version
-RELEASE = "0.13.0"
+RELEASE = "0.14.0"
 # The current milestone and short version
-VERSION = MILESTONE = "0.13"
+VERSION = MILESTONE = "0.14"
 # This is the final commit from the previous release
-LAST_COMMIT_SHA = "da2099d330b01edcffcebadd4a980fbb4246ed4f"
+LAST_COMMIT_SHA = "f67fc16d581767c030b6f191cf650c3a69d9ed5d"
 # Branch, usually main but can be a maintenance branch as well
 BRANCH = "main"
 # Provide access token using command line to keep out of repo
@@ -93,7 +93,10 @@ for pull in merged_pull_data:
     for commit in pr.get_commits():
         name = commit.commit.author.name
         if name and commit.author:
-            names[commit.author.login].update([name])
+            try:
+                names[commit.author.login].update([name])
+            except GithubException:
+                pass
         elif name:
             extra_names.update([name])
 

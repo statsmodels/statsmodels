@@ -1,11 +1,17 @@
 from statsmodels.compat.pandas import Appender, is_numeric_dtype
 from statsmodels.compat.scipy import SP_LT_19
-
+from statsmodels.compat.pandas import PD_LT_2
 from typing import Sequence, Union
 
 import numpy as np
 import pandas as pd
-from pandas.core.dtypes.common import is_categorical_dtype
+if PD_LT_2:
+    from pandas.core.dtypes.common import is_categorical_dtype
+else:
+    # After pandas 2 is the minium, use the isinstance check
+    def is_categorical_dtype(dtype):
+        return isinstance(dtype, pd.CategoricalDtype)
+
 from scipy import stats
 
 from statsmodels.iolib.table import SimpleTable
@@ -392,10 +398,10 @@ class Description:
             q = stats.norm.ppf(1.0 - self._alpha / 2)
 
         def _mode(ser):
-            if SP_LT_19:
-                mode_res = stats.mode(ser.dropna())
-            else:
-                mode_res = stats.mode(ser.dropna(), keepdims=True)
+            dtype = ser.dtype if isinstance(ser.dtype, np.dtype) else ser.dtype.numpy_dtype
+            ser_no_missing = ser.dropna().to_numpy(dtype=dtype)
+            kwargs = {} if SP_LT_19 else {"keepdims": True}
+            mode_res = stats.mode(ser_no_missing, **kwargs)
             # Changes in SciPy 1.10
             if np.isscalar(mode_res[0]):
                 return float(mode_res[0]), mode_res[1]

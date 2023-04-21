@@ -1,9 +1,9 @@
-% Copyright (c) 2011, Roger Lew BSD [see LICENSE.txt]
-% This software is funded in part by NIH Grant P20 RR016454.
+# Copyright (c) 2011, Roger Lew BSD [see LICENSE.txt]
+# This software is funded in part by NIH Grant P20 RR016454.
 
 
-% This is a collection of scripts used to generate C-H comparisons
-% for qsturng. As you can probably guess, my R's skills are not all that good.
+# This is a collection of scripts used to generate C-H comparisons
+# for qsturng. As you can probably guess, my R's skills are not all that good.
 
 setwd('D:\\USERS\\roger\\programming\\python\\development\\qsturng')
 

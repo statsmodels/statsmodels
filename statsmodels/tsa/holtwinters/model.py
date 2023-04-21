@@ -194,6 +194,10 @@ class ExponentialSmoothing(TimeSeriesModel):
     methods. The implementation of the library covers the functionality of the
     R library as much as possible whilst still being Pythonic.
 
+    See the notebook `Exponential Smoothing
+    <../examples/notebooks/generated/exponential_smoothing.html>`__
+    for an overview.
+
     References
     ----------
     .. [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles
@@ -1525,6 +1529,10 @@ class SimpleExpSmoothing(ExponentialSmoothing):
     per [1]_.  `SimpleExpSmoothing` is a restricted version of
     :class:`ExponentialSmoothing`.
 
+    See the notebook `Exponential Smoothing
+    <../examples/notebooks/generated/exponential_smoothing.html>`__
+    for an overview.
+
     References
     ----------
     .. [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles
@@ -1674,6 +1682,10 @@ class Holt(ExponentialSmoothing):
     -----
     This is a full implementation of the Holt's exponential smoothing as
     per [1]_. `Holt` is a restricted version of :class:`ExponentialSmoothing`.
+
+    See the notebook `Exponential Smoothing
+    <../examples/notebooks/generated/exponential_smoothing.html>`__
+    for an overview.
 
     References
     ----------

@@ -1091,6 +1091,11 @@ class DeterministicProcess:
     CalendarSeasonality
     CalendarFourier
 
+    Notes
+    -----
+    See the notebook `Deterministic Terms in Time Series Models
+    <../examples/notebooks/generated/deterministics.html>`__ for an overview.
+
     Examples
     --------
     >>> from statsmodels.tsa.deterministic import DeterministicProcess

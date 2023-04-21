@@ -1552,25 +1552,42 @@ class TestMNLogitLBFGSBaseZero(CheckMNLogitBaseZero):
         cls.res2 = res2
 
 
+def test_mnlogit_basinhopping():
+    def callb(*args):
+        return 1
+
+    x = np.random.randint(0, 100, 1000)
+    y = np.random.randint(0, 3, 1000)
+    model = MNLogit(y, sm.add_constant(x))
+    # smoke tests for basinhopping and callback #8665
+    model.fit(method='basinhopping')
+    model.fit(method='basinhopping', callback=callb)
+
+
+
 def test_perfect_prediction():
     cur_dir = os.path.dirname(os.path.abspath(__file__))
     iris_dir = os.path.join(cur_dir, '..', '..', 'genmod', 'tests', 'results')
     iris_dir = os.path.abspath(iris_dir)
     iris = np.genfromtxt(os.path.join(iris_dir, 'iris.csv'), delimiter=",",
                          skip_header=1)
-    y = iris[:,-1]
-    X = iris[:,:-1]
+    y = iris[:, -1]
+    X = iris[:, :-1]
     X = X[y != 2]
     y = y[y != 2]
     X = sm.add_constant(X, prepend=True)
-    mod = Logit(y,X)
+    mod = Logit(y, X)
+    mod.raise_on_perfect_prediction = True
     assert_raises(PerfectSeparationError, mod.fit, maxiter=1000)
-    #turn off raise PerfectSeparationError
+    # turn off raise PerfectSeparationError
     mod.raise_on_perfect_prediction = False
     # this will raise if you set maxiter high enough with a singular matrix
     with pytest.warns(ConvergenceWarning):
         res = mod.fit(disp=False, maxiter=50)  # should not raise but does warn
     assert_(not res.mle_retvals['converged'])
+
+    # The following does not warn but message in summary()
+    mod.fit(method="bfgs", disp=False, maxiter=50)
 
 
 def test_poisson_predict():
@@ -1646,8 +1663,7 @@ def test_negative_binomial_default_alpha_param():
     with warnings.catch_warnings():
         warnings.simplefilter("error")
         sm.families.NegativeBinomial(alpha=1.0)
-    with warnings.catch_warnings():
-        warnings.simplefilter("error")
+    with pytest.warns(FutureWarning):
         sm.families.NegativeBinomial(link=sm.families.links.nbinom(alpha=1.0),
                                      alpha=1.0)
 
@@ -1690,6 +1706,10 @@ def test_mnlogit_factor():
     params = res.params
     summary = res.summary()
     predicted = res.predict(exog.iloc[:5, :])
+    # check endog is series with no name #8672
+    endogn = dta['endog']
+    endogn.name = None
+    mod = sm.MNLogit(endogn, exog)
 
     # with patsy
     mod = smf.mnlogit('PID ~ ' + ' + '.join(dta.exog.columns), dta.data)

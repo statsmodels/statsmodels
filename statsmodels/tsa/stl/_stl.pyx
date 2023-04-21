@@ -165,6 +165,9 @@ cdef class STL(object):
     used in the robust weighting. This version matches the fixed version that
     uses a correct partitioned sort to determine the median.
 
+    See the notebook `Seasonal Decomposition
+    <../examples/notebooks/generated/stl_decomposition.html>`__ for an overview.
+
     References
     ----------
     .. [1] R. B. Cleveland, W. S. Cleveland, J.E. McRae, and I. Terpenning

@@ -56,6 +56,9 @@ def hpfilter(x, lamb=1600):
     K[i,j] = -2 if i == j + 1
     K[i,j] = 0 otherwise
 
+    See the notebook `Time Series Filters
+    <../examples/notebooks/generated/tsa_filters.html>`__ for an overview.
+
     References
     ----------
     Hodrick, R.J, and E. C. Prescott. 1980. "Postwar U.S. Business Cycles: An

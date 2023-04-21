@@ -1932,14 +1932,14 @@ class MLEModel(tsbase.TimeSeriesModel):
             assumed to contain draws from the standard Normal distribution that
             must be transformed using the `initial_state_cov` covariance
             matrix. Default is True.
-        random_state : {None, int, `numpy.random.Generator`,
-                        `numpy.random.RandomState`}, optional
-            If `seed` is None (or `np.random`), the `numpy.random.RandomState`
-            singleton is used.
-            If `seed` is an int, a new ``RandomState`` instance is used,
-            seeded with `seed`.
-            If `seed` is already a ``Generator`` or ``RandomState`` instance
-            then that instance is used.
+        random_state : {None, int, Generator, RandomState}, optional
+            If `seed` is None (or `np.random`), the
+            class:``~numpy.random.RandomState`` singleton is used.
+            If `seed` is an int, a new class:``~numpy.random.RandomState``
+            instance is used, seeded with `seed`.
+            If `seed` is already a class:``~numpy.random.Generator`` or
+            class:``~numpy.random.RandomState`` instance then that instance is
+            used.
 
         Returns
         -------
@@ -3603,14 +3603,14 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             assumed to contain draws from the standard Normal distribution that
             must be transformed using the `initial_state_cov` covariance
             matrix. Default is True.
-        random_state : {None, int, `numpy.random.Generator`,
-                        `numpy.random.RandomState`}, optional
-            If `seed` is None (or `np.random`), the `numpy.random.RandomState`
-            singleton is used.
-            If `seed` is an int, a new ``RandomState`` instance is used,
-            seeded with `seed`.
-            If `seed` is already a ``Generator`` or ``RandomState`` instance
-            then that instance is used.
+        random_state : {None, int, Generator, RandomState}, optional
+            If `seed` is None (or `np.random`), the
+            class:``~numpy.random.RandomState`` singleton is used.
+            If `seed` is an int, a new class:``~numpy.random.RandomState``
+            instance is used, seeded with `seed`.
+            If `seed` is already a class:``~numpy.random.Generator`` or
+            class:``~numpy.random.RandomState`` instance then that instance is
+            used.
 
         Returns
         -------
@@ -3751,7 +3751,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                 irfs = irfs.values
         return irfs
 
-    def _apply(self, mod, refit=False, fit_kwargs=None, **kwargs):
+    def _apply(self, mod, refit=False, fit_kwargs=None):
         if fit_kwargs is None:
             fit_kwargs = {}
 
@@ -4325,7 +4325,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             kwargs.setdefault('initialization', init)
 
         mod = self.model.clone(new_endog, exog=new_exog, **kwargs)
-        res = self._apply(mod, refit=refit, fit_kwargs=fit_kwargs, **kwargs)
+        res = self._apply(mod, refit=refit, fit_kwargs=fit_kwargs)
 
         return res
 
@@ -4421,7 +4421,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         mod.ssm.initialization = Initialization(
             mod.k_states, 'known', constant=self.predicted_state[..., -1],
             stationary_cov=self.predicted_state_cov[..., -1])
-        res = self._apply(mod, refit=False, fit_kwargs=fit_kwargs, **kwargs)
+        res = self._apply(mod, refit=False, fit_kwargs=fit_kwargs)
 
         return res
 
@@ -4514,7 +4514,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             init = Initialization.from_results(self.filter_results)
             mod.ssm.initialization = init
 
-        res = self._apply(mod, refit=refit, fit_kwargs=fit_kwargs, **kwargs)
+        res = self._apply(mod, refit=refit, fit_kwargs=fit_kwargs)
 
         return res
 

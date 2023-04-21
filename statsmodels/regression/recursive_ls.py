@@ -91,17 +91,26 @@ class RecursiveLS(MLEModel):
             self._r_matrix, self._q_matrix = LC.coefs, LC.constants
             self.k_constraints = self._r_matrix.shape[0]
 
-            constraint_endog = np.zeros((len(endog), len(self._r_matrix)))
+            nobs = len(endog)
+            constraint_endog = np.zeros((nobs, len(self._r_matrix)))
             if endog_using_pandas:
                 constraint_endog = pd.DataFrame(constraint_endog,
                                                 index=endog.index)
                 endog = concat([endog, constraint_endog], axis=1)
-                endog.values[:, 1:] = self._q_matrix[:, 0]
+                # Complexity needed to handle multiple version of pandas
+                # Pandas >= 2 can use endog.iloc[:, 1:] = self._q_matrix.T
+                endog.iloc[:, 1:] = np.tile(self._q_matrix.T, (nobs, 1))
             else:
                 endog[:, 1:] = self._q_matrix[:, 0]
 
         # Handle coefficient initialization
         kwargs.setdefault('initialization', 'diffuse')
+
+        # Remove some formula-specific kwargs
+        formula_kwargs = ['missing', 'missing_idx', 'formula', 'design_info']
+        for name in formula_kwargs:
+            if name in kwargs:
+                del kwargs[name]
 
         # Initialize the state space representation
         super(RecursiveLS, self).__init__(
@@ -504,6 +513,7 @@ class RecursiveLSResults(MLEResults):
 
     @Appender(MLEResults.get_prediction.__doc__)
     def get_prediction(self, start=None, end=None, dynamic=False,
+                       information_set='predicted', signal_only=False,
                        index=None, **kwargs):
         # Note: need to override this, because we currently do not support
         # dynamic prediction or forecasts when there are constraints.
@@ -531,6 +541,8 @@ class RecursiveLSResults(MLEResults):
 
         # Return a new mlemodel.PredictionResults object
         res_obj = PredictionResults(self, prediction_results,
+                                    information_set=information_set,
+                                    signal_only=signal_only,
                                     row_labels=prediction_index)
         return PredictionResultsWrapper(res_obj)
 

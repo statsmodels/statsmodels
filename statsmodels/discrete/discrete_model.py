@@ -42,8 +42,9 @@ from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.numdiff import approx_fprime_cs
 from statsmodels.tools.sm_exceptions import (
     PerfectSeparationError,
+    PerfectSeparationWarning,
     SpecificationWarning,
-)
+    )
 
 
 try:
@@ -135,11 +136,13 @@ def _pandas_to_dummies(endog):
         if endog.shape[1] == 1:
             yname = endog.columns[0]
             endog_dummies = get_dummies(endog.iloc[:, 0])
-        else:  # series
+        else:  # assume already dummies
             yname = 'y'
             endog_dummies = endog
     else:
         yname = endog.name
+        if yname is None:
+            yname = 'y'
         endog_dummies = get_dummies(endog)
     ynames = endog_dummies.columns.tolist()
 
@@ -180,7 +183,7 @@ class DiscreteModel(base.LikelihoodModel):
     def __init__(self, endog, exog, check_rank=True, **kwargs):
         self._check_rank = check_rank
         super().__init__(endog, exog, **kwargs)
-        self.raise_on_perfect_prediction = True
+        self.raise_on_perfect_prediction = False  # keep for backwards compat
         self.k_extra = 0
 
     def initialize(self):
@@ -212,11 +215,16 @@ class DiscreteModel(base.LikelihoodModel):
 
     def _check_perfect_pred(self, params, *args):
         endog = self.endog
-        fittedvalues = self.cdf(np.dot(self.exog, params[:self.exog.shape[1]]))
-        if (self.raise_on_perfect_prediction and
-                np.allclose(fittedvalues - endog, 0)):
-            msg = "Perfect separation detected, results not available"
-            raise PerfectSeparationError(msg)
+        fittedvalues = self.predict(params)
+        if np.allclose(fittedvalues - endog, 0):
+            if self.raise_on_perfect_prediction:
+                # backwards compatibility for attr raise_on_perfect_prediction
+                msg = "Perfect separation detected, results not available"
+                raise PerfectSeparationError(msg)
+            else:
+                msg = ("Perfect separation or prediction detected, "
+                       "parameter may not be identified")
+                warnings.warn(msg, category=PerfectSeparationWarning)
 
     @Appender(base.LikelihoodModel.fit.__doc__)
     def fit(self, start_params=None, method='newton', maxiter=35,
@@ -669,7 +677,8 @@ class BinaryModel(DiscreteModel):
         Instance of frozen scipy distribution.
         """
         mu = self.predict(params, exog=exog, offset=offset)
-        distr = stats.bernoulli(mu[:, None])
+        # distr = stats.bernoulli(mu[:, None])
+        distr = stats.bernoulli(mu)
         return distr
 
 
@@ -764,7 +773,10 @@ class MultinomialModel(BinaryModel):
             start_params = np.zeros((self.K * (self.J-1)))
         else:
             start_params = np.asarray(start_params)
-        callback = lambda x : None # placeholder until check_perfect_pred
+
+        if callback is None:
+            # placeholder until check_perfect_pred
+            callback = lambda x, *args : None
         # skip calling super to handle results from LikelihoodModel
         mnfit = base.LikelihoodModel.fit(self, start_params = start_params,
                 method=method, maxiter=maxiter, full_output=full_output,
@@ -984,6 +996,8 @@ class CountModel(DiscreteModel):
             - 'mean' returns the conditional expectation of endog E(y | x),
               i.e. exp of linear predictor.
             - 'linear' returns the linear predictor of the mean function.
+            - 'var' variance of endog implied by the likelihood model
+            - 'prob' predicted probabilities for counts.
 
         linear : bool
             The ``linear` keyword is deprecated and will be removed,
@@ -1646,7 +1660,7 @@ class Poisson(CountModel):
                               exposure=exposure, offset=offset,
                               )[:, None]
             # uses broadcasting
-            return stats.poisson.pmf(y_values, mu)
+            return stats.poisson._pmf(y_values, mu)
         else:
             raise ValueError('Value of the `which` option is not recognized')
 
@@ -2268,7 +2282,8 @@ class GeneralizedPoisson(CountModel):
         """
         mu = self.predict(params, exog=exog, exposure=exposure, offset=offset)
         p = self.parameterization + 1
-        distr = genpoisson_p(mu[:, None], params[-1], p)
+        # distr = genpoisson_p(mu[:, None], params[-1], p)
+        distr = genpoisson_p(mu, params[-1], p)
         return distr
 
 
@@ -2586,7 +2601,7 @@ class Probit(BinaryModel):
     @cache_readonly
     def link(self):
         from statsmodels.genmod.families import links
-        link = links.probit()
+        link = links.Probit()
         return link
 
     def cdf(self, X):
@@ -3574,8 +3589,13 @@ class NegativeBinomial(CountModel):
                 offset=offset
                 )
             if y_values is None:
-                y_values = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
-            return distr.pmf(y_values)
+                y_values = np.arange(0, np.max(self.endog) + 1)
+            else:
+                y_values = np.asarray(y_values)
+
+            assert y_values.ndim == 1
+            y_values = y_values[..., None]
+            return distr.pmf(y_values).T
 
         exog, offset, exposure = self._get_predict_arrays(
             exog=exog,
@@ -3744,7 +3764,8 @@ class NegativeBinomial(CountModel):
         """
         mu = self.predict(params, exog=exog, exposure=exposure, offset=offset)
         if self.loglike_method == 'geometric':
-            distr = stats.geom(1 / (1 + mu[:, None]), loc=-1)
+            # distr = stats.geom(1 / (1 + mu[:, None]), loc=-1)
+            distr = stats.geom(1 / (1 + mu), loc=-1)
         else:
             if self.loglike_method == 'nb2':
                 p = 2
@@ -3755,7 +3776,8 @@ class NegativeBinomial(CountModel):
             q = 2 - p
             size = 1. / alpha * mu**q
             prob = size / (size + mu)
-            distr = nbinom(size[:, None], prob[:, None])
+            # distr = nbinom(size[:, None], prob[:, None])
+            distr = nbinom(size, prob)
 
         return distr
 
@@ -4330,7 +4352,8 @@ class NegativeBinomialP(CountModel):
         """
         mu = self.predict(params, exog=exog, exposure=exposure, offset=offset)
         size, prob = self.convert_params(params, mu)
-        distr = nbinom(size[:, None], prob[:, None])
+        # distr = nbinom(size[:, None], prob[:, None])
+        distr = nbinom(size, prob)
         return distr
 
 
@@ -4547,15 +4570,15 @@ class DiscreteResults(base.LikelihoodModelResults):
             One of 'aic', 'bic', 'tic' or 'gbic'.
         dk_params : int or float
             Correction to the number of parameters used in the information
-            criterion. By default, only mean parameters are included, the
-            scale parameter is not included in the parameter count.
-            Use ``dk_params=1`` to include scale in the parameter count.
+            criterion.
 
-        Returns the given information criterion value.
+        Returns
+        -------
+        Value of information criterion.
 
         Notes
         -----
-        Tic and bbic
+        Tic and gbic
 
         References
         ----------
@@ -5154,7 +5177,7 @@ class BinaryResults(DiscreteResults):
         etext = []
         if predclose_sum == len(fittedvalues):  # TODO: nobs?
             wstr = "Complete Separation: The results show that there is"
-            wstr += "complete separation.\n"
+            wstr += "complete separation or perfect prediction.\n"
             wstr += "In this case the Maximum Likelihood Estimator does "
             wstr += "not exist and the parameters\n"
             wstr += "are not identified."

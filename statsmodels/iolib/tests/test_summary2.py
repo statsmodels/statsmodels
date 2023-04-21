@@ -33,6 +33,8 @@ R-squared Adj. & 0.6930   & 0.5202    \\
 \end{tabular}
 \end{center}
 \end{table}
+\bigskip
+Standard errors in parentheses.
 '''
         x = [1, 5, 7, 3, 5]
         x = add_constant(x)
@@ -135,6 +137,8 @@ R-squared Adj. & 0.6930   & 0.5202    \\
 \end{tabular}
 \end{center}
 \end{table}
+\bigskip
+Standard errors in parentheses.
 '''
         x = [1, 5, 7, 3, 5]
         x = add_constant(x)
@@ -183,11 +187,23 @@ def test_ols_summary_rsquared_label():
         assert r2_str in str(reg_without_constant.summary())
 
 
-def test_summary_col_r2():
-    # GH 6578
-    y = [1, 1, 4, 2] * 4
-    x = add_constant([1, 2, 3, 4] * 4)
-    mod = OLS(endog=y, exog=x).fit()
-    table = summary_col(results=mod)
-    assert "R-squared  " in str(table)
-    assert "R-squared Adj." in str(table)
+class TestSummaryLabels:
+    """
+    Test that the labels are correctly set in the summary table"""
+
+    @classmethod
+    def setup_class(cls):
+        y = [1, 1, 4, 2] * 4
+        x = add_constant([1, 2, 3, 4] * 4)
+        cls.mod = OLS(endog=y, exog=x).fit()
+
+    def test_summary_col_r2(self,):
+        # GH 6578
+        table = summary_col(results=self.mod, include_r2=True)
+        assert "R-squared  " in str(table)
+        assert "R-squared Adj." in str(table)
+
+    def test_absence_of_r2(self,):
+        table = summary_col(results=self.mod, include_r2=False)
+        assert "R-squared" not in str(table)
+        assert "R-squared Adj." not in str(table)

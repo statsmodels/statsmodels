@@ -162,6 +162,9 @@ The distribution families currently implemented are
 Link Functions
 ^^^^^^^^^^^^^^
 
+Note: The lower case link classes have been deprecated and will be removed in
+future. Link classes now follow the Python class name convention.
+
 The link functions currently implemented are the following. Not all link
 functions are available for each distribution family. The list of
 available link functions can be obtained by
@@ -180,20 +183,16 @@ available link functions can be obtained by
    CDFLink
    CLogLog
    LogLog
+   LogC
    Log
    Logit
    NegativeBinomial
    Power
-   cauchy
-   cloglog
-   loglog
-   identity
-   inverse_power
-   inverse_squared
-   log
-   logit
-   nbinom
-   probit
+   Cauchy
+   Identity
+   InversePower
+   InverseSquared
+   Probit
 
 .. _varfuncs:
 

@@ -150,7 +150,7 @@ print(data2.endog.head())
 
 glm_gamma = sm.GLM(data2.endog,
                    data2.exog,
-                   family=sm.families.Gamma(sm.families.links.log()))
+                   family=sm.families.Gamma(sm.families.links.Log()))
 glm_results = glm_gamma.fit()
 print(glm_results.summary())
 
@@ -169,6 +169,6 @@ lny = np.exp(-(.03 * x + .0001 * x**2 - 1.0)) + .001 * np.random.rand(nobs2)
 
 gauss_log = sm.GLM(lny,
                    X,
-                   family=sm.families.Gaussian(sm.families.links.log()))
+                   family=sm.families.Gaussian(sm.families.links.Log()))
 gauss_log_results = gauss_log.fit()
 print(gauss_log_results.summary())

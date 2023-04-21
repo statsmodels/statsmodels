@@ -11,6 +11,9 @@ import numpy as np
 from scipy import stats
 from scipy.special import ncfdtrinc
 
+# functions that use scipy.special instead of boost based function in stats
+from statsmodels.stats.power import ncf_cdf, ncf_ppf
+
 from statsmodels.stats.robust_compare import TrimmedMean, scale_transform
 from statsmodels.tools.testing import Holder
 from statsmodels.stats.base import HolderTuple
@@ -774,7 +777,7 @@ def equivalence_oneway_generic(f_stat, n_groups, nobs, equiv_margin, df,
         type_effectsize = "Cohen's f_squared"
     else:
         raise ValueError('`margin_type` should be "f2" or "wellek"')
-    crit_f = stats.ncf.ppf(alpha, df[0], df[1], nc_null)
+    crit_f = ncf_ppf(alpha, df[0], df[1], nc_null)
 
     if margin_type == "wellek":
         # TODO: do we need a sqrt
@@ -784,8 +787,8 @@ def equivalence_oneway_generic(f_stat, n_groups, nobs, equiv_margin, df,
 
     reject = (es < crit_es)
 
-    pv = stats.ncf.cdf(f_stat, df[0], df[1], nc_null)
-    pwr = stats.ncf.cdf(crit_f, df[0], df[1], 1e-13)  # scipy, cannot be 0
+    pv = ncf_cdf(f_stat, df[0], df[1], nc_null)
+    pwr = ncf_cdf(crit_f, df[0], df[1], 1e-13)  # scipy, cannot be 0
     res = HolderTuple(statistic=f_stat,
                       pvalue=pv,
                       effectsize=es,  # match es type to margin_type
@@ -916,7 +919,7 @@ def _power_equivalence_oneway_emp(f_stat, n_groups, nobs, eps, df, alpha=0.05):
     nobs_mean = nobs.sum() / n_groups
     fn = f_stat  # post-hoc power, empirical power at estimate
     esn = fn * (n_groups - 1) / nobs_mean  # Wellek psi
-    pow_ = stats.ncf.cdf(res.crit_f, df[0], df[1], nobs_mean * esn)
+    pow_ = ncf_cdf(res.crit_f, df[0], df[1], nobs_mean * esn)
 
     return pow_
 
@@ -980,8 +983,8 @@ def power_equivalence_oneway(f2_alt, equiv_margin, nobs_t, n_groups=None,
     else:
         raise ValueError('`margin_type` should be "f2" or "wellek"')
 
-    crit_f_margin = stats.ncf.ppf(alpha, df[0], df[1], nobs_t * f2_null)
-    pwr_alt = stats.ncf.cdf(crit_f_margin, df[0], df[1], nobs_t * f2_alt)
+    crit_f_margin = ncf_ppf(alpha, df[0], df[1], nobs_t * f2_null)
+    pwr_alt = ncf_cdf(crit_f_margin, df[0], df[1], nobs_t * f2_alt)
     return pwr_alt
 
 

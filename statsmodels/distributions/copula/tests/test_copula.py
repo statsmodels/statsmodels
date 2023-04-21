@@ -6,6 +6,7 @@ Author: Josef Perktold
 License: BSD-3
 
 """
+import warnings
 from statsmodels.compat.pytest import pytest_warns
 
 from statsmodels.compat.scipy import SP_LT_15
@@ -20,6 +21,7 @@ from statsmodels.distributions.copula.archimedean import (
     ClaytonCopula,
     FrankCopula,
     GumbelCopula,
+    _debyem1_expansion,
 )
 from statsmodels.distributions.copula.copulas import CopulaDistribution
 import statsmodels.distributions.copula.depfunc_ev as trev
@@ -90,11 +92,42 @@ ev_dep_list = [
 
 
 cop_list = [
-    [tra.TransfFrank, 0.5, 0.9, (2,), 0.4710805107852225, 0.9257812360337806],
-    [tra.TransfGumbel, 0.5, 0.9, (2,), 0.4960348880595387, 0.3973548776136501],
-    [tra.TransfClayton, 0.5, 0.9, (2,), 0.485954322440435, 0.8921974147432954],
-    [tra.TransfIndep, 0.5, 0.5, (), 0.25, 1],
-]
+    [tra.TransfFrank, [0.5, 0.9], (2,), 0.4710805107852225,
+     0.9257812360337806, FrankCopula],
+    [tra.TransfGumbel, [0.5, 0.9], (2,), 0.4960348880595387,
+     0.3973548776136501, GumbelCopula],
+    [tra.TransfClayton, [0.5, 0.9], (2,), 0.485954322440435,
+     0.8921974147432954, ClaytonCopula],
+    [tra.TransfIndep, [0.5, 0.5], (), 0.25, 1, IndependenceCopula],
+    ]
+
+
+# separate mv list because test_copulas_distr not yet adjusted
+copk_list = [
+    # k_dim = 3
+    [tra.TransfGumbel, [0.6, 0.5, 0.9], (2,), 0.4200146617837097,
+     0.7507987484870147, GumbelCopula],
+    [tra.TransfClayton, [0.6, 0.5, 0.9], (2,), 0.4078289289864994,
+     1.430033358494079, ClaytonCopula],
+    [tra.TransfFrank, [0.6, 0.5, 0.9], (2,), 0.3397845258821868,
+     1.123811705698149, FrankCopula],
+    # k_dim = 4
+    [tra.TransfGumbel, [0.6, 0.5, 0.9, 0.1], (2,), 0.08538643946528957,
+     0.05130542596740889, GumbelCopula],
+    [tra.TransfClayton, [0.6, 0.5, 0.9, 0.1], (2,), 0.09758427058689817,
+     0.00428071573295176, ClaytonCopula],
+    [tra.TransfFrank, [0.6, 0.5, 0.9, 0.1], (2,), 0.05456579067435671,
+     0.4089534511841545, FrankCopula],
+    [tra.TransfIndep, [0.5, 0.5, 0.5, 0.5], (), 0.0625, 1, IndependenceCopula],
+    ]
+
+# archimedean with pdf only for k_dim <= 4
+cop_2d = [
+    [tra.TransfFrank, (2,), FrankCopula],
+    [tra.TransfGumbel, (2,), GumbelCopula],
+    # [tra.TransfClayton, (2,), ClaytonCopula],
+    # [tra.TransfIndep, (), IndependenceCopula],
+    ]
 
 gev_list = [
     # [cop.transform_tawn, 0.5, 0.9, (0.5, 0.5, 0.5), 0.4724570876035117],
@@ -122,13 +155,15 @@ gev_list = [
 def check_cop_rvs(cop, rvs=None, nobs=2000, k=10, use_pdf=True):
     if rvs is None:
         rvs = cop.rvs(nobs)
-    freq = frequencies_fromdata(rvs, k, use_ranks=True)
-    if use_pdf:
-        pdfg = approx_copula_pdf(cop, k_bins=k, force_uniform=True)
-        count_pdf = pdfg * nobs
     else:
-        # use copula cdf if available
-        raise NotImplementedError
+        nobs = rvs.shape[0]
+    freq = frequencies_fromdata(rvs, k, use_ranks=True)
+    pdfg = approx_copula_pdf(cop, k_bins=k, force_uniform=True,
+                             use_pdf=use_pdf)
+    count_pdf = pdfg * nobs
+
+    freq = freq.ravel()
+    count_pdf = count_pdf.ravel()
     mask = count_pdf < 2
     if mask.sum() > 5:
         cp = count_pdf[mask]
@@ -179,18 +214,31 @@ def test_ev_dep(case):
     assert_allclose(df, res2, rtol=1e-13)
 
 
-@pytest.mark.parametrize("case", cop_list)
+@pytest.mark.parametrize("case", cop_list + copk_list)
 def test_copulas(case):
     # check ev copulas, cdf and transform against R `copula` package
-    cop_tr, v1, v2, args, cdf2, pdf2 = case
-    ca = ArchimedeanCopula(cop_tr())
-    cdf1 = ca.cdf([v1, v2], args=args)
-    pdf1 = ca.pdf([v1, v2], args=args)
+    cop_tr, u, args, cdf2, pdf2, cop = case
+    k_dim = np.asarray(u).shape[-1]
+    ca = ArchimedeanCopula(cop_tr(), k_dim=k_dim)
+    cdf1 = ca.cdf(u, args=args)
+    pdf1 = ca.pdf(u, args=args)
     assert_allclose(cdf1, cdf2, rtol=1e-13)
     assert_allclose(pdf1, pdf2, rtol=1e-13)
+    assert cdf1.shape == ()
 
-    logpdf1 = ca.logpdf([v1, v2], args=args)
+    logpdf1 = ca.logpdf(u, args=args)
     assert_allclose(logpdf1, np.log(pdf2), rtol=1e-13)
+
+    # compare with specific copula class
+    ca2 = cop(k_dim=k_dim)
+    cdf3 = ca2.cdf(u, args=args)
+    pdf3 = ca2.pdf(u, args=args)
+    logpdf3 = ca2.logpdf(u, args=args)
+    assert_allclose(cdf3, cdf2, rtol=1e-13)
+    assert_allclose(pdf3, pdf2, rtol=1e-13)
+    assert_allclose(logpdf3, np.log(pdf2), rtol=1e-13)
+    assert cdf3.shape == ()
+    assert pdf3.shape == ()  # currently fails
 
 
 @pytest.mark.parametrize("case", ev_list)
@@ -223,16 +271,20 @@ def test_ev_copula_distr(case):
         assert cdfd.shape == (3,)
 
 
-@pytest.mark.parametrize("case", cop_list)
+@pytest.mark.parametrize("case", cop_list + copk_list)
 def test_copulas_distr(case):
     # check ev copulas, cdf and transform against R `copula` package
-    cop_tr, v1, v2, args, cdf2, pdf2 = case
-    u = [v1, v2]
-    ca = ArchimedeanCopula(cop_tr())
+    cop_tr, u, args, cdf2, pdf2, cop = case
+    k_dim = np.asarray(u).shape[-1]
+
+    ca = ArchimedeanCopula(cop_tr(), k_dim=k_dim)
     cdf1 = ca.cdf(u, args=args)
     pdf1 = ca.pdf(u, args=args)
 
-    cad = CopulaDistribution(ca, [uniform, uniform], cop_args=args)
+    marginals = [uniform] * k_dim
+    cad = CopulaDistribution(ca, marginals, cop_args=args)
+    # TODO: check also for specific archimedean classes
+    # cad = CopulaDistribution(cop(k_dim=k_dim), marginals, cop_args=args)
     cdfd = cad.cdf(np.array(u), cop_args=args)
     assert_allclose(cdfd, cdf1, rtol=1e-13)
     assert cdfd.shape == ()
@@ -256,9 +308,27 @@ def test_copulas_distr(case):
     assert cdfd.shape == (3,)
 
     # check mv, check at marginal cdf
-    cdfmv = ca.cdf([v1, v2, 1], args=args)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", FutureWarning)
+
+        cdfmv = ca.cdf(list(u) + [1], args=args)
     assert_allclose(cdfmv, cdf1, rtol=1e-13)
     assert cdfd.shape == (3,)
+
+
+@pytest.mark.parametrize("case", cop_2d)
+@pytest.mark.parametrize("k_dim", [5, 6])
+def test_copulas_raise(case, k_dim):
+    cop_tr, args, cop = case
+    u = [0.5] * k_dim
+
+    ca = ArchimedeanCopula(cop_tr(), k_dim=k_dim)
+
+    with pytest.raises(NotImplementedError):
+        ca.rvs(u, args=args)
+
+    with pytest.raises(NotImplementedError):
+        ca.pdf(u, args=args)
 
 
 @pytest.mark.parametrize("case", gev_list)
@@ -309,6 +379,23 @@ class TestFrank:
         cdfc = cop.cdfcond_2g1(u, args=args)
         ppfc = cop.ppfcond_2g1(cdfc, [0.6], args=args)
         assert_allclose(ppfc, u[1], rtol=1e-13)
+
+    def test_tau(self):
+        copula = FrankCopula(k_dim=2)
+
+        theta = [2, 1, 1e-2, 1e-4, 1e-5, 1e-6]
+        # > tau(frankCopula(param = 2, dim = 2))
+        tau_r = [0.2138945692196201, 0.110018536448993, 0.001111110000028503,
+                 1.111110992013664e-05, 1.111104651951855e-06,
+                 1.108825244955369e-07]
+
+        tau_cop = [copula.tau(th) for th in theta]
+        assert_allclose(tau_cop[:-1], tau_r[:-1], rtol=1e-5)
+        # relative precision at very small tau is not very high
+
+        # check debye function
+        taud = 1 + 4 * _debyem1_expansion(theta) / theta
+        assert_allclose(taud, tau_cop, rtol=1e-5)
 
 
 # The reference results are coming from the R package Copula.
@@ -423,6 +510,44 @@ class TestIndependenceCopula(CheckCopula):
     cdf_u = np.prod(CheckCopula.u, axis=1)
 
 
+class CheckRvsDim():
+    # class to check rvs for larger k_dim
+    def test_rvs(self):
+        nobs = 2000
+        use_pdf = getattr(self, "use_pdf", False)
+        # seed adjusted to avoid test failures with rvs numbers
+        rng = np.random.RandomState(97651629) #27658622)
+        rvs = self.copula.rvs(nobs, random_state=rng)
+        chi2t, rvs = check_cop_rvs(
+            self.copula, rvs=rvs, nobs=nobs, k=10, use_pdf=use_pdf
+            )
+        assert chi2t.pvalue > 0.1
+
+        k = self.dim
+        assert k == rvs.shape[1]
+
+        tau_cop = self.copula.tau()
+
+        if np.ndim(tau_cop) == 2:
+            # elliptical copula with tau matrix
+            tau = np.eye(k)
+            for i in range(k):
+                for j in range(i+1, k):
+                    tau_ij = stats.kendalltau(rvs[..., i], rvs[..., j])[0]
+                    tau[i, j] = tau[j, i] = tau_ij
+            atol = 0.05
+        else:
+            taus = [stats.kendalltau(rvs[..., i], rvs[..., j])[0]
+                    for i in range(k) for j in range(i+1, k)]
+            tau = np.mean(taus)
+            atol = 0
+
+        assert_allclose(tau, tau_cop, rtol=0.05, atol=atol)
+        theta_est = self.copula.fit_corr_param(rvs)
+        # specific to archimedean
+        assert_allclose(theta_est, self.copula.args[0], rtol=0.1, atol=atol)
+
+
 class TestGaussianCopula(CheckCopula):
     copula = GaussianCopula(corr=[[1.0, 0.8], [0.8, 1.0]])
     dim = 2
@@ -443,6 +568,18 @@ class TestGaussianCopula(CheckCopula):
         tau = stats.kendalltau(*rvs.T)[0]
         tau_cop = self.copula.tau()
         assert_allclose(tau, tau_cop, rtol=0.05)
+
+        corr_est = self.copula.fit_corr_param(rvs)
+        assert_allclose(corr_est, 0.8, rtol=0.1)
+
+
+class TestGaussianCopula3d(CheckRvsDim):
+    copula = GaussianCopula(corr=[[1.0, 0.8, 0.1],
+                                  [0.8, 1.0, 0.3],
+                                  [0.1, 0.3, 1.0]],
+                            k_dim=3)
+    dim = 3
+    use_pdf = False
 
 
 class TestStudentTCopula(CheckCopula):
@@ -468,6 +605,15 @@ class TestStudentTCopula(CheckCopula):
         assert_allclose(tau, tau_cop, rtol=0.05)
 
 
+class TestStudentTCopula3d(CheckRvsDim):
+    copula = StudentTCopula(corr=[[1.0, 0.8, 0.1],
+                                  [0.8, 1.0, 0.3],
+                                  [0.1, 0.3, 1.0]],
+                            k_dim=3, df=10)
+    dim = 3
+    use_pdf = True
+
+
 class TestClaytonCopula(CheckModernCopula):
     copula = ClaytonCopula(theta=1.2)
     dim = 2
@@ -475,6 +621,12 @@ class TestClaytonCopula(CheckModernCopula):
              0.6828507, 0.2040454, 0.2838497, 0.8197787, 1.1096360]
     cdf_u = [0.28520375, 0.06101690, 0.17703377, 0.36848218, 0.97772088,
              0.24082057, 0.05811908, 0.09343934, 0.33012582, 0.18738753]
+
+
+class TestClaytonCopula_3d(CheckRvsDim):
+    # currently only checks rvs
+    copula = ClaytonCopula(theta=1.2, k_dim=3)
+    dim = 3
 
 
 class TestFrankCopula(CheckModernCopula):
@@ -486,6 +638,11 @@ class TestFrankCopula(CheckModernCopula):
              0.23412757, 0.05196265, 0.08676979, 0.32803721, 0.16320730]
 
 
+class TestFrankCopula_3d(CheckRvsDim):
+    copula = FrankCopula(theta=3, k_dim=3)
+    dim = 3
+
+
 class TestGumbelCopula(CheckModernCopula):
     copula = GumbelCopula(theta=1.5)
     dim = 2
@@ -493,3 +650,8 @@ class TestGumbelCopula(CheckModernCopula):
              0.7542073, 0.6668307, 0.6275887, 0.7477991, 1.1564864]
     cdf_u = [0.27194634, 0.05484380, 0.15668190, 0.37098420, 0.98176346,
              0.23422865, 0.05188260, 0.08659615, 0.33086960, 0.15803914]
+
+
+class TestGumbelCopula_3d(CheckRvsDim):
+    copula = GumbelCopula(theta=1.5, k_dim=3)
+    dim = 3

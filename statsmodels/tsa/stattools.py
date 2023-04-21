@@ -24,6 +24,7 @@ from statsmodels.tools.sm_exceptions import (
     InfeasibleTestError,
     InterpolationWarning,
     MissingDataError,
+    ValueWarning,
 )
 from statsmodels.tools.tools import Bunch, add_constant
 from statsmodels.tools.validation import (
@@ -239,6 +240,10 @@ def adfuller(
 
     The autolag option and maxlag for it are described in Greene.
 
+    See the notebook `Stationarity and detrending (ADF/KPSS)
+    <../examples/notebooks/generated/stationarity_detrending_adf_kpss.html>`__
+    for an overview.
+
     References
     ----------
     .. [1] W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
@@ -252,10 +257,6 @@ def adfuller(
     .. [4] MacKinnon, J.G. 2010. "Critical Values for Cointegration Tests."  Queen"s
         University, Dept of Economics, Working Papers.  Available at
         http://ideas.repec.org/p/qed/wpaper/1227.html
-
-    Examples
-    --------
-    See example notebook
     """
     x = array_like(x, "x")
     maxlag = int_like(maxlag, "maxlag", optional=True)
@@ -267,6 +268,9 @@ def adfuller(
     )
     store = bool_like(store, "store")
     regresults = bool_like(regresults, "regresults")
+
+    if x.max() == x.min():
+        raise ValueError("Invalid input, x is constant")
 
     if regresults:
         store = True
@@ -747,8 +751,10 @@ def pacf_yw(x, nlags=None, method="adjusted"):
 
     method = string_like(method, "method", options=("adjusted", "mle"))
     pacf = [1.0]
-    for k in range(1, nlags + 1):
-        pacf.append(yule_walker(x, k, method=method)[0][-1])
+    with warnings.catch_warnings():
+        warnings.simplefilter("once", ValueWarning)
+        for k in range(1, nlags + 1):
+            pacf.append(yule_walker(x, k, method=method)[0][-1])
     return np.array(pacf)
 
 
@@ -1466,9 +1472,11 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=None):
     >>> data = data.data[["realgdp", "realcons"]].pct_change().dropna()
 
     All lags up to 4
+
     >>> gc_res = grangercausalitytests(data, 4)
 
     Only lag 4
+
     >>> gc_res = grangercausalitytests(data, [4])
     """
     x = array_like(x, "x", ndim=2)
@@ -1962,6 +1970,10 @@ def kpss(
     generated.
 
     Missing values are not handled.
+
+    See the notebook `Stationarity and detrending (ADF/KPSS)
+    <../examples/notebooks/generated/stationarity_detrending_adf_kpss.html>`__
+    for an overview.
 
     References
     ----------

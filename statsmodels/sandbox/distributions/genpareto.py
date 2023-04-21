@@ -15,42 +15,52 @@ import matplotlib.pyplot as plt
 from numpy import where, inf
 from numpy import abs as np_abs
 
+
 ## Generalized Pareto  with reversed sign of c as in literature
 class genpareto2_gen(rv_continuous):
     def _argcheck(self, c):
         c = np.asarray(c)
-        self.b = where(c > 0, 1.0/np_abs(c), inf)
-        return where(c==0, 0, 1)
+        self.b = where(c > 0, 1.0 / np_abs(c), inf)
+        return where(c == 0, 0, 1)
+
     def _pdf(self, x, c):
-        Px = np.power(1-c*x,-1.0+1.0/c)
+        Px = np.power(1 - c * x, -1.0 + 1.0 / c)
         return Px
+
     def _logpdf(self, x, c):
-        return (-1.0+1.0/c) * np.log1p(-c*x)
+        return (-1.0 + 1.0 / c) * np.log1p(-c * x)
+
     def _cdf(self, x, c):
-        return 1.0 - np.power(1-c*x,1.0/c)
+        return 1.0 - np.power(1 - c * x, 1.0 / c)
+
     def _ppf(self, q, c):
-        vals = -1.0/c * (np.power(1-q, c)-1)
+        vals = -1.0 / c * (np.power(1 - q, c) - 1)
         return vals
+
     def _munp(self, n, c):
-        k = np.arange(0,n+1)
-        val = (1.0/c)**n * np.sum(comb(n,k)*(-1)**k / (1.0+c*k),axis=0)
-        return where(c*n > -1, val, inf)
+        k = np.arange(0, n + 1)
+        val = (1.0 / c) ** n * np.sum(comb(n, k) * (-1) ** k / (1.0 + c * k), axis=0)
+        return where(c * n > -1, val, inf)
+
     def _entropy(self, c):
         if (c < 0):
-            return 1-c
+            return 1 - c
         else:
             self.b = 1.0 / c
             return rv_continuous._entropy(self, c)
 
-genpareto2 = genpareto2_gen(a=0.0,name='genpareto',
-                          longname="A generalized Pareto",
-                          shapes='c',extradoc="""
 
-Generalized Pareto distribution
-
-genpareto2.pdf(x,c) = (1+c*x)**(-1-1/c)
-for c != 0, and for x >= 0 for all c, and x < 1/abs(c) for c < 0.
-""")
+genpareto2 = genpareto2_gen(a=0.0, name='genpareto',
+                            longname="A generalized Pareto",
+                            shapes='c',
+                            #                           extradoc="""
+                            #
+                            # Generalized Pareto distribution
+                            #
+                            # genpareto2.pdf(x,c) = (1+c*x)**(-1-1/c)
+                            # for c != 0, and for x >= 0 for all c, and x < 1/abs(c) for c < 0.
+                            # """
+                            )
 
 shape, loc, scale = 0.5, 0, 1
 rv = np.arange(5)
@@ -76,14 +86,17 @@ def paramstopot(thresh, shape, scale):
     notation of de Zea Bermudez, Kotz
     k, sigma is shape, scale
     '''
-    return shape, scale - shape*thresh
+    return shape, scale - shape * thresh
+
 
 def paramsfrompot(thresh, shape, scalepot):
-    return shape, scalepot + shape*thresh
+    return shape, scalepot + shape * thresh
+
 
 def warnif(cond, msg):
     if not cond:
         print(msg, 'does not hold')
+
 
 def meanexcess(thresh, shape, scale):
     '''mean excess function of genpareto
@@ -91,23 +104,23 @@ def meanexcess(thresh, shape, scale):
     assert are inequality conditions in de Zea Bermudez, Kotz
     '''
     warnif(shape > -1, 'shape > -1')
-    warnif(thresh >= 0, 'thresh >= 0')  #make it weak inequality
-    warnif((scale - shape*thresh) > 0, '(scale - shape*thresh) > 0')
-    return (scale - shape*thresh) / (1 + shape)
+    warnif(thresh >= 0, 'thresh >= 0')  # make it weak inequality
+    warnif((scale - shape * thresh) > 0, '(scale - shape*thresh) > 0')
+    return (scale - shape * thresh) / (1 + shape)
 
 
 def meanexcess_plot(data, params=None, lidx=100, uidx=10, method='emp', plot=0):
     if method == 'est':
-        #does not make much sense yet,
-        #estimate the parameters and use theoretical meanexcess
+        # does not make much sense yet,
+        # estimate the parameters and use theoretical meanexcess
         if params is None:
             raise NotImplementedError
         else:
-            pass #estimate parames
+            pass  # estimate parames
     elif method == 'emp':
-        #calculate meanexcess from data
+        # calculate meanexcess from data
         datasorted = np.sort(data)
-        meanexcess = (datasorted[::-1].cumsum())/np.arange(1,len(data)+1) - datasorted[::-1]
+        meanexcess = (datasorted[::-1].cumsum()) / np.arange(1, len(data) + 1) - datasorted[::-1]
         meanexcess = meanexcess[::-1]
         if plot:
             plt.plot(datasorted[:-uidx], meanexcess[:-uidx])
@@ -121,31 +134,35 @@ print(meanexcess(5, -0.5, 10))
 print(meanexcess(5, -2, 10))
 
 data = genpareto2.rvs(-0.75, scale=5, size=1000)
-#data = np.random.uniform(50, size=1000)
-#data = stats.norm.rvs(0, np.sqrt(50), size=1000)
-#data = stats.pareto.rvs(1.5, np.sqrt(50), size=1000)
+# data = np.random.uniform(50, size=1000)
+# data = stats.norm.rvs(0, np.sqrt(50), size=1000)
+# data = stats.pareto.rvs(1.5, np.sqrt(50), size=1000)
 tmp = meanexcess_plot(data, params=(-0.75, 5), plot=1)
 print(tmp[1][-20:])
 print(tmp[0][-20:])
-#plt.show()
+
+
+# plt.show()
 
 def meanexcess_emp(data):
     datasorted = np.sort(data).astype(float)
-    meanexcess = (datasorted[::-1].cumsum())/np.arange(1,len(data)+1) - datasorted[::-1]
-    meancont = (datasorted[::-1].cumsum())/np.arange(1,len(data)+1)
+    meanexcess = (datasorted[::-1].cumsum()) / np.arange(1, len(data) + 1) - datasorted[::-1]
+    meancont = (datasorted[::-1].cumsum()) / np.arange(1, len(data) + 1)
     meanexcess = meanexcess[::-1]
     return datasorted, meanexcess, meancont[::-1]
 
+
 def meanexcess_dist(self, lb, *args, **kwds):
-    #default function in expect is identity
+    # default function in expect is identity
     # need args in call
     if np.ndim(lb) == 0:
         return self.expect(lb=lb, conditional=True)
     else:
         return np.array([self.expect(lb=lbb, conditional=True) for
-                    lbb in lb])
+                         lbb in lb])
 
-ds, me, mc = meanexcess_emp(1.*np.arange(1,10))
+
+ds, me, mc = meanexcess_emp(1. * np.arange(1, 10))
 print(ds)
 print(me)
 print(mc)
@@ -154,9 +171,7 @@ print(meanexcess_dist(stats.norm, lb=0.5))
 print(meanexcess_dist(stats.norm, lb=[-np.inf, -0.5, 0, 0.5]))
 rvs = stats.norm.rvs(size=100000)
 rvs = rvs - rvs.mean()
-print(rvs.mean(), rvs[rvs>-0.5].mean(), rvs[rvs>0].mean(), rvs[rvs>0.5].mean())
-
-
+print(rvs.mean(), rvs[rvs > -0.5].mean(), rvs[rvs > 0].mean(), rvs[rvs > 0.5].mean())
 
 '''
 [ 1.   0.5  0.   0.   0. ]

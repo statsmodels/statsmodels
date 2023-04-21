@@ -153,7 +153,7 @@ class CheckPredict():
         dia = res1.get_diagnostic(y_max=21)
         res_chi2 = dia.test_chisquare_prob(bin_edges=np.arange(4))
         assert_equal(res_chi2.diff1.shape[1], 3)
-        assert_equal(dia.probs_predicted.shape[1], 21)
+        assert_equal(dia.probs_predicted.shape[1], 22)
 
         try:
             dia.plot_probs(upp_xlim=20)
@@ -359,6 +359,7 @@ def test_distr(case):
     # res = mod.fit()
     params_dgp = params
     distr = mod.get_distribution(params_dgp)
+    assert distr.pmf(1).ndim == 1
     try:
         y2 = distr.rvs(size=(nobs, 1)).squeeze()
     except ValueError:
@@ -378,14 +379,21 @@ def test_distr(case):
     assert_allclose(res.resid_pearson, (y2 - mean) / np.sqrt(var_), rtol=1e-13)
 
     if not issubclass(cls_model, BinaryModel):
+        # smoke, shape, consistency test
+        probs = res.predict(which="prob", y_values=np.arange(5))
+        assert probs.shape == (len(mod.endog), 5)
+        probs2 = res.get_prediction(
+            which="prob", y_values=np.arange(5), average=True)
+        assert_allclose(probs2.predicted, probs.mean(0), rtol=1e-10)
         dia = res.get_diagnostic()
+        dia.probs_predicted
         # fig = dia.plot_probs();
         # fig.suptitle(cls_model.__name__ + repr(kwds), fontsize=16)
 
     if cls_model in models_influ:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=UserWarning)
-            # ZI models warn about missint hat_matrix_diag
+            # ZI models warn about missing hat_matrix_diag
             influ = res.get_influence()
             influ.summary_frame()
 
@@ -405,7 +413,7 @@ def test_distr(case):
 
         try:
             with warnings.catch_warnings():
-                # ZI models warn about missint hat_matrix_diag
+                # ZI models warn about missing hat_matrix_diag
                 warnings.simplefilter("ignore", category=UserWarning)
                 influ.plot_influence()
         except ImportError:

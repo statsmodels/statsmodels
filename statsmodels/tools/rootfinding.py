@@ -13,6 +13,8 @@ TODO:
 import numpy as np
 from scipy import optimize
 
+from statsmodels.tools.testing import Holder
+
 DEBUG = False
 
 
@@ -202,11 +204,19 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
                           full_output=full_output)
     if full_output:
         val = res[0]
-        info = res[1]
-        info.iterations_expand = n_it
-        info.start_bounds = (sl, su)
-        info.brentq_bounds = (left, right)
-        info.increasing = increasing
+        info = Holder(
+            # from brentq
+            root=res[1].root,
+            iterations=res[1].iterations,
+            function_calls=res[1].function_calls,
+            converged=res[1].converged,
+            flag=res[1].flag,
+            # ours:
+            iterations_expand=n_it,
+            start_bounds=(sl, su),
+            brentq_bounds=(left, right),
+            increasing=increasing,
+            )
         return val, info
     else:
         return res

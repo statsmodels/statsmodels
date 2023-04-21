@@ -161,7 +161,7 @@ def test_formula_predict_series():
 
     result = results.predict({"x": [1, 2, 3]})
     expected = pd.Series([1., 2., 3.], index=[0, 1, 2])
-    assert_series_equal(result, expected)
+    assert_series_equal(result, expected, check_index_type=False)
 
 
 def test_patsy_lazy_dict():
@@ -210,7 +210,7 @@ def test_patsy_missing_data():
         assert 'ValueWarning' in repr(w[-1].message)
         assert 'nan values have been dropped' in repr(w[-1].message)
     # Frist record will be dropped in both cases
-    assert_equal(res.fittedvalues, res2)
+    assert_equal(res.fittedvalues, res2, check_index_type=False)
 
 
 def test_predict_nondataframe():
