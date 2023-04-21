@@ -86,7 +86,7 @@ import numpy as np
 from libc.math cimport fabs, sqrt, isnan, NAN
 
 from statsmodels.tsa.tsatools import freq_to_period
-
+from statsmodels.tools.validation import array_like
 
 def _is_pos_int(x, odd):
     valid = (isinstance(x, (int, np.integer))
@@ -209,9 +209,7 @@ cdef class STL(object):
                  seasonal_deg=1, trend_deg=1, low_pass_deg=1,
                  robust=False, seasonal_jump=1, trend_jump=1, low_pass_jump=1):
         self.endog = endog
-        y = np.ascontiguousarray(np.squeeze(np.asarray(endog)), dtype=np.double)
-        if y.ndim != 1:
-            raise ValueError('y must be a 1d array')
+        y = array_like(endog, "endog", dtype=np.double, contiguous=True, writeable=True, maxdim=1)
         self._ya = y
         self.nobs = y.shape[0]  # n
         if period is None:

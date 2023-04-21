@@ -826,8 +826,8 @@ class TestBinomialVsVarWeights(CheckWeight):
     def setup_class(cls):
         from statsmodels.datasets.star98 import load
         data = load()
-        data.exog = np.asarray(data.exog)
-        data.endog = np.asarray(data.endog)
+        data.exog = np.require(data.exog, requirements="W")
+        data.endog = np.require(data.endog, requirements="W")
         data.exog /= data.exog.std(0)
         data.exog = add_constant(data.exog, prepend=False)
 

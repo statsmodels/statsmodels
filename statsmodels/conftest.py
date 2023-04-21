@@ -1,4 +1,8 @@
+import logging
+import os
+
 import numpy as np
+import pandas as pd
 import pytest
 
 try:
@@ -8,6 +12,16 @@ try:
     HAVE_MATPLOTLIB = True
 except ImportError:
     HAVE_MATPLOTLIB = False
+
+
+logger = logging.getLogger(__name__)
+
+try:
+    cow = bool(os.environ.get("SM_TEST_COPY_ON_WRITE", False))
+    pd.options.mode.copy_on_write = cow
+    logger.critical("Copy on Write Enabled!")
+except AttributeError:
+    logger.critical("Copy on Write disabled")
 
 
 def pytest_addoption(parser):

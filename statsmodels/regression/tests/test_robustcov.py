@@ -377,7 +377,7 @@ class CheckOLSRobustCluster(CheckOLSRobust):
         )
         cls.groups = firm_id
         # time indicator in range(max Ti)
-        time = np.asarray(dtapa_exog[["year"]])
+        time = np.require(dtapa_exog[["year"]], requirements="W")
         time -= time.min()
         cls.time = np.squeeze(time).astype(int)
         # nw_panel function requires interval bounds
@@ -777,7 +777,7 @@ class CheckWLSRobustCluster(CheckOLSRobust):
         )
         cls.groups = firm_id
         # time indicator in range(max Ti)
-        time = np.asarray(dtapa_exog[["year"]])
+        time = np.require(dtapa_exog[["year"]], requirements="W")
         time -= time.min()
         cls.time = np.squeeze(time).astype(int)
         # nw_panel function requires interval bounds
@@ -883,7 +883,7 @@ class TestWLSOLSRobustSmall:
         firm_names, firm_id = np.unique(ids, return_inverse=True)
         cls.groups = firm_id
         # time indicator in range(max Ti)
-        time = np.asarray(dtapa_exog[["year"]])
+        time = np.require(dtapa_exog[["year"]], requirements="W")
         time -= time.min()
         cls.time = np.squeeze(time).astype(int)
         # nw_panel function requires interval bounds

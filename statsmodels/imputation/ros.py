@@ -14,9 +14,9 @@ Date: 2016-06-14
 
 import warnings
 
-import numpy
-from scipy import stats
+import numpy as np
 import pandas as pd
+from scipy import stats
 
 
 def _ros_sort(df, observations, censorship, warn=False):
@@ -154,15 +154,15 @@ def cohn_numbers(df, observations, censorship):
     def set_upper_limit(cohn):
         """ Sets the upper_dl DL for each row of the Cohn dataframe. """
         if cohn.shape[0] > 1:
-            return cohn['lower_dl'].shift(-1).fillna(value=numpy.inf)
+            return cohn['lower_dl'].shift(-1).fillna(value=np.inf)
         else:
-            return [numpy.inf]
+            return [np.inf]
 
     def compute_PE(A, B):
         """ Computes the probability of excedance for each row of the
         Cohn dataframe. """
         N = len(A)
-        PE = numpy.empty(N, dtype='float64')
+        PE = np.empty(N, dtype='float64')
         PE[-1] = 0.0
         for j in range(N-2, -1, -1):
             PE[j] = PE[j+1] + (1 - PE[j+1]) * A[j] / (A[j] + B[j])
@@ -178,7 +178,7 @@ def cohn_numbers(df, observations, censorship):
     # add that value to the array
     if DLs.shape[0] > 0:
         if df[observations].min() < DLs.min():
-            DLs = numpy.hstack([df[observations].min(), DLs])
+            DLs = np.hstack([df[observations].min(), DLs])
 
         # create a dataframe
         # (editted for pandas 0.14 compatibility; see commit 63f162e
@@ -194,7 +194,7 @@ def cohn_numbers(df, observations, censorship):
     else:
         dl_cols = ['lower_dl', 'upper_dl', 'nuncen_above',
                    'nobs_below', 'ncen_equal', 'prob_exceedance']
-        cohn = pd.DataFrame(numpy.empty((0, len(dl_cols))), columns=dl_cols)
+        cohn = pd.DataFrame(np.empty((0, len(dl_cols))), columns=dl_cols)
 
     return cohn
 
@@ -225,7 +225,7 @@ def _detection_limit_index(obs, cohn):
     """
 
     if cohn.shape[0] > 0:
-        index, = numpy.where(cohn['lower_dl'] <= obs)
+        index, = np.where(cohn['lower_dl'] <= obs)
         det_limit_index = index[-1]
     else:
         det_limit_index = 0
@@ -256,7 +256,7 @@ def _ros_group_rank(df, dl_idx, censorship):
 
     Returns
     -------
-    ranks : numpy.array
+    ranks : ndarray
         Array of ranks for the dataset.
     """
 
@@ -363,8 +363,9 @@ def plotting_positions(df, censorship, cohn):
 
     # correctly sort the plotting positions of the ND data:
     ND_plotpos = plot_pos[df[censorship]]
-    ND_plotpos.values.sort()
-    plot_pos[df[censorship]] = ND_plotpos
+    ND_plotpos_arr = np.require(ND_plotpos, requirements="W")
+    ND_plotpos_arr.sort()
+    plot_pos.loc[df[censorship].index[df[censorship]]] = ND_plotpos_arr
 
     return plot_pos
 
@@ -390,7 +391,7 @@ def _impute(df, observations, censorship, transform_in, transform_out):
     transform_in, transform_out : callable
         Transformations to be applied to the data prior to fitting
         the line and after estimated values from that line. Typically,
-        `numpy.log` and `numpy.exp` are used, respectively.
+        `np.log` and `np.exp` are used, respectively.
 
     Returns
     -------
@@ -419,7 +420,7 @@ def _impute(df, observations, censorship, transform_in, transform_out):
     # (editted for pandas 0.14 compatibility; see commit 63f162e
     #  when `pipe` and `assign` are available)
     df.loc[:, 'estimated'] = transform_out(slope * df['Zprelim'][censored_mask] + intercept)
-    df.loc[:, 'final'] = numpy.where(df[censorship], df['estimated'], df[observations])
+    df.loc[:, 'final'] = np.where(df[censorship], df['estimated'], df[observations])
 
     return df
 
@@ -448,7 +449,7 @@ def _do_ros(df, observations, censorship, transform_in, transform_out):
     transform_in, transform_out : callable
         Transformations to be applied to the data prior to fitting
         the line and after estimated values from that line. Typically,
-        `numpy.log` and `numpy.exp` are used, respectively.
+        `np.log` and `np.exp` are used, respectively.
 
     Returns
     -------
@@ -476,7 +477,7 @@ def _do_ros(df, observations, censorship, transform_in, transform_out):
 
 def impute_ros(observations, censorship, df=None, min_uncensored=2,
                max_fraction_censored=0.8, substitution_fraction=0.5,
-               transform_in=numpy.log, transform_out=numpy.exp,
+               transform_in=np.log, transform_out=np.exp,
                as_array=True):
     """
     Impute censored dataset using Regression on Order Statistics (ROS).
@@ -516,11 +517,11 @@ def impute_ros(observations, censorship, df=None, min_uncensored=2,
         The fraction of the detection limit to be used during simple
         substitution of the censored values.
 
-    transform_in : callable (default is numpy.log)
+    transform_in : callable (default is np.log)
         Transformation to be applied to the values prior to fitting a
         line to the plotting positions vs. uncensored values.
 
-    transform_out : callable (default is numpy.exp)
+    transform_out : callable (default is np.exp)
         Transformation to be applied to the imputed censored values
         estimated from the previously computed best-fit line.
 

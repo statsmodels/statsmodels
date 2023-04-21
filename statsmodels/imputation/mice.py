@@ -276,13 +276,15 @@ class MICEData:
         For each variable, missing values are imputed as the observed
         value that is closest to the mean over all observed values.
         """
-
+        # Changed for pandas 2.0 copy-on-write behavior to use a single
+        # in-place fill
+        imp_values = {}
         for col in self.data.columns:
             di = self.data[col] - self.data[col].mean()
             di = np.abs(di)
             ix = di.idxmin()
-            imp = self.data[col].loc[ix]
-            self.data[col].fillna(imp, inplace=True)
+            imp_values[col] = self.data[col].loc[ix]
+        self.data.fillna(imp_values, inplace=True)
 
     def _split_indices(self, vec):
         null = pd.isnull(vec)
@@ -441,12 +443,12 @@ class MICEData:
 
         # Rows with observed endog
         ixo = self.ix_obs[vname]
-        endog_obs = np.asarray(endog.iloc[ixo])
-        exog_obs = np.asarray(exog.iloc[ixo, :])
+        endog_obs = np.require(endog.iloc[ixo], requirements="W")
+        exog_obs = np.require(exog.iloc[ixo, :], requirements="W")
 
         # Rows with missing endog
         ixm = self.ix_miss[vname]
-        exog_miss = np.asarray(exog.iloc[ixm, :])
+        exog_miss = np.require(exog.iloc[ixm, :], requirements="W")
 
         predict_obs_kwds = {}
         if vname in self.predict_kwds:
@@ -468,7 +470,7 @@ class MICEData:
             if isinstance(v, PatsyFormula):
                 mat = patsy.dmatrix(v.formula, self.data,
                                     return_type="dataframe")
-                mat = np.asarray(mat)[ix, :]
+                mat = np.require(mat, requirements="W")[ix, :]
                 if mat.shape[1] == 1:
                     mat = mat[:, 0]
                 kwds[k] = mat
@@ -511,8 +513,8 @@ class MICEData:
         endog, exog = patsy.dmatrices(formula, self.data,
                                       return_type="dataframe")
 
-        endog = np.asarray(endog.iloc[ix, 0])
-        exog = np.asarray(exog.iloc[ix, :])
+        endog = np.require(endog.iloc[ix, 0], requirements="W")
+        exog = np.require(exog.iloc[ix, :], requirements="W")
 
         init_kwds = self._process_kwds(self.init_kwds[vname], ix)
         fit_kwds = self._process_kwds(self.fit_kwds[vname], ix)
@@ -681,8 +683,8 @@ class MICEData:
         ix_oi = np.intersect1d(ix1o, ix2i)
         ix_oo = np.intersect1d(ix1o, ix2o)
 
-        vec1 = np.asarray(self.data[col1_name])
-        vec2 = np.asarray(self.data[col2_name])
+        vec1 = np.require(self.data[col1_name], requirements="W")
+        vec2 = np.require(self.data[col2_name], requirements="W")
 
         if jitter is not None:
             if np.isscalar(jitter):
@@ -779,7 +781,7 @@ class MICEData:
         ixi = self.ix_miss[col_name]
         ixo = self.ix_obs[col_name]
 
-        vec1 = np.asarray(self.data[col_name])
+        vec1 = np.require(self.data[col_name], requirements="W")
 
         # Fitted values
         formula = self.conditional_formula[col_name]

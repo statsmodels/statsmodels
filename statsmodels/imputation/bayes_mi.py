@@ -58,7 +58,7 @@ class BayesGaussMI:
         if type(data) is pd.DataFrame:
             self.exog_names = data.columns
 
-        data = np.asarray(data)
+        data = np.require(data, requirements="W")
         self.data = data
         self._data = data
         self.mask = np.isnan(data)

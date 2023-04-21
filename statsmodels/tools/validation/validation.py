@@ -43,6 +43,7 @@ def array_like(
     order=None,
     contiguous=False,
     optional=False,
+    writeable=True,
 ):
     """
     Convert array-like to a ndarray and check conditions
@@ -73,6 +74,8 @@ def array_like(
         Ensure that the array's data is contiguous with order ``order``
     optional : bool
         Flag indicating whether None is allowed
+    writeable : bool
+        Whether to ensure the returned array is writeable
 
     Returns
     -------
@@ -132,7 +135,12 @@ def array_like(
     """
     if optional and obj is None:
         return None
-    arr = np.asarray(obj, dtype=dtype, order=order)
+    reqs = ["W"] if writeable else []
+    if order == "C" or contiguous:
+        reqs += ["C"]
+    elif order == "F":
+        reqs += ["F"]
+    arr = np.require(obj, dtype=dtype, requirements=reqs)
     if maxdim is not None:
         if arr.ndim > maxdim:
             msg = "{0} must have ndim <= {1}".format(name, maxdim)
@@ -151,8 +159,6 @@ def array_like(
                 req_shape = str(shape).replace("None, ", "*, ")
                 msg = "{0} is required to have shape {1} but has shape {2}"
                 raise ValueError(msg.format(name, req_shape, arr.shape))
-    if contiguous:
-        arr = np.ascontiguousarray(arr, dtype=dtype)
     return arr
 
 

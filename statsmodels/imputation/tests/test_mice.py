@@ -53,12 +53,13 @@ def gendat():
 
     df["y"] = endog
 
-    df.x1[0:60] = np.nan
-    df.x2[0:40] = np.nan
-    df.x3[10:30:2] = np.nan
-    df.x4[20:50:3] = np.nan
-    df.x5[40:45] = np.nan
-    df.y[30:100:2] = np.nan
+    # loc is inclusive of right end, so needed to lower index by 1
+    df.loc[0:59, "x1"] = np.nan
+    df.loc[0:39, "x2"] = np.nan
+    df.loc[10:29:2, "x3"] = np.nan
+    df.loc[20:49:3, "x4"] = np.nan
+    df.loc[40:44, "x5"] = np.nan
+    df.loc[30:99:2, "y"] = np.nan
 
     return df
 
