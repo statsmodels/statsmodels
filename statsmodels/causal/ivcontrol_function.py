@@ -72,4 +72,13 @@ class GLMIVCF(LikelihoodModel):
                           param_names=[f"s{i}" for i in range(len(params))])
         mod_gmm.model = self
         res_gmm = mod_gmm.fit(start_params=params, maxiter=0)
+        res_out = res_outcome._results  # res_outcome is wrapped results
+        res_out._cache = {}
+        k_out = len(res_outcome.params)
+        cov2 = res_gmm.cov_params()[-k_out:, -k_out:]
+        res_out.cov_params_default = cov2
+        res_out.normalized_cov_params = None
+
+        res_gmm.results_outcome = res_outcome
+
         return res_gmm

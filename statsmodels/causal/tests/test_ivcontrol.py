@@ -7,7 +7,7 @@ License: BSD-3
 """
 
 import os
-# import numpy as np
+import numpy as np
 from numpy.testing import assert_allclose
 import pandas as pd
 
@@ -59,3 +59,22 @@ def test_basic():
     assert_allclose(res.bse[sli], bse2[sli], rtol=1e-6)
     assert_allclose(res.tvalues[sli], tvalues2[sli], rtol=1e-5)
     assert_allclose(res.pvalues[sli], pvalues2[sli], rtol=1e-5)
+
+    # check attached outcome model
+    res_out = res.results_outcome
+    assert_allclose(res_out.params, params2[sli], rtol=1e-7)
+    assert_allclose(res_out.bse, bse2[sli], rtol=1e-6)
+    assert_allclose(res_out.tvalues, tvalues2[sli], rtol=1e-5)
+    assert_allclose(res_out.pvalues, pvalues2[sli], rtol=1e-5)
+
+    mean = y2.mean()
+    assert_allclose(res_out.predict().mean(), mean, rtol=1e-10)
+    mout = res_out.get_prediction(which="mean", average=True).predicted
+    assert_allclose(mout, mean, rtol=1e-10)
+
+    # t_test for endogeneity
+    constr = np.zeros(len(res.params))
+    constr[-1] = 1
+    tt1 = res.t_test(constr).summary_frame().to_numpy()
+    tt2 = res_out.t_test("x2").summary_frame().to_numpy()
+    assert_allclose(tt1, tt2, rtol=1e-10)
