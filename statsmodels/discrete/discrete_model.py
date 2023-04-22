@@ -3543,7 +3543,7 @@ class NegativeBinomial(CountModel):
                 if j > i:
                     continue
                 hess_arr[i,j] = np.sum(-exog[:,i,None] * exog[:,j,None] *
-                                       const_arr, axis=0)
+                                       const_arr, axis=0).squeeze()
         tri_idx = np.triu_indices(dim, k=1)
         hess_arr[tri_idx] = hess_arr.T[tri_idx]
 
