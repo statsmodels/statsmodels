@@ -595,7 +595,10 @@ def _df_to_simpletable(df, align='r', float_format="%.4f", header=True,
                        index=True, table_dec_above='-', table_dec_below=None,
                        header_dec_below='-', pad_col=0, pad_index=0):
     dat = df.copy()
-    dat = dat.applymap(lambda x: _formatter(x, float_format))
+    try:
+        dat = dat.map(lambda x: _formatter(x, float_format))
+    except AttributeError:
+        dat = dat.applymap(lambda x: _formatter(x, float_format))
     if header:
         headers = [str(x) for x in dat.columns.tolist()]
     else:

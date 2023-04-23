@@ -482,7 +482,7 @@ class SmoothingSpline(BSpline):
 
         # throw out rows with zeros (this happens at boundary points!)
 
-        mask = np.flatnonzero(1 - np.alltrue(np.equal(bt, 0), axis=0))
+        mask = np.flatnonzero(1 - np.all(np.equal(bt, 0), axis=0))
 
         bt = bt[:,mask]
         y = y[mask]

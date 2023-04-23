@@ -215,7 +215,7 @@ class KDEUnivariate:
             a, b = kern.domain
 
         def func(x, s):
-            return kern.density(s, x)
+            return np.squeeze(kern.density(s, x))
 
         support = self.support
         support = np.r_[a, support]

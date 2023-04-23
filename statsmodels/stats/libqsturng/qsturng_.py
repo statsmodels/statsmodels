@@ -839,7 +839,10 @@ def _psturng(q, r, v):
         soln = 1. - fminbound(opt_func, .1, .999, args=(r,v))
         return np.atleast_1d(soln)
 
-_vpsturng = np.vectorize(_psturng)
+def _psturng_scalar(q, r, v):
+    return np.squeeze(_psturng(q, r, v))
+
+_vpsturng = np.vectorize(_psturng_scalar)
 _vpsturng.__doc__ = """vector version of psturng"""
 
 def psturng(q, r, v):

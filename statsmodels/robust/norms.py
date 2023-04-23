@@ -1059,7 +1059,7 @@ def estimate_location(a, scale, norm=None, axis=0, initial=None,
     for _ in range(maxiter):
         W = norm.weights((a-mu)/scale)
         nmu = np.sum(W*a, axis) / np.sum(W, axis)
-        if np.alltrue(np.less(np.abs(mu - nmu), scale * tol)):
+        if np.all(np.less(np.abs(mu - nmu), scale * tol)):
             return nmu
         else:
             mu = nmu
