@@ -40,7 +40,7 @@ class BernsteinDistribution:
         self.cdf_grid = cdf_grid = np.asarray(cdf_grid)
         self.k_dim = cdf_grid.ndim
         self.k_grid = cdf_grid.shape
-        self.k_grid_product = np.product([i-1 for i in self.k_grid])
+        self.k_grid_product = np.prod([i-1 for i in self.k_grid])
         self._grid = _Grid(self.k_grid)
 
     @classmethod
