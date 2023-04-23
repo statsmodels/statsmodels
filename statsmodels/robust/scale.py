@@ -297,10 +297,10 @@ class Huber:
             nscale = np.sqrt(scale_num / scale_denom)
             nscale = tools.unsqueeze(nscale, axis, a.shape)
 
-            test1 = np.alltrue(
+            test1 = np.all(
                 np.less_equal(np.abs(scale - nscale), nscale * self.tol)
             )
-            test2 = np.alltrue(
+            test2 = np.all(
                 np.less_equal(np.abs(mu - nmu), nscale * self.tol)
             )
             if not (test1 and test2):

@@ -48,7 +48,7 @@ class _Grid:
         x_marginal = [np.arange(ki) / (ki - 1) for ki in k_grid]
 
         idx_flat = np.column_stack(
-                np.unravel_index(np.arange(np.product(k_grid)), k_grid)
+                np.unravel_index(np.arange(np.prod(k_grid)), k_grid)
                 ).astype(float)
         x_flat = idx_flat / idx_flat.max(0)
         if eps != 0:

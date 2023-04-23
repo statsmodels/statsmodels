@@ -154,7 +154,7 @@ class ArchimedeanCopula(Copula):
 
         psi = self.transform.evaluate(u, *args).sum(axis)
 
-        pdfv = np.product(phi_d1(u, *args), axis)
+        pdfv = np.prod(phi_d1(u, *args), axis)
         pdfv *= (psi_d(psi, *args))
 
         # use abs, I'm not sure yet about where to add signs
