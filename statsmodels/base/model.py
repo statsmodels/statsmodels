@@ -1912,7 +1912,7 @@ class LikelihoodModelResults(Results):
             )
             scalar = False
         if scalar and F.size == 1:
-            F = float(F)
+            F = float(np.squeeze(F))
         if use_f:
             F /= J
             return ContrastResults(F=F, df_denom=df_resid,

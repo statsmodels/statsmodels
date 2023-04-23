@@ -326,7 +326,7 @@ def _normalize_dataframe(dataframe, index):
     #groupby the given keys, extract the same columns and count the element
     # then collapse them with a mean
     data = dataframe[index].dropna()
-    grouped = data.groupby(index, sort=False)
+    grouped = data.groupby(index, sort=False, observed=False)
     counted = grouped[index].count()
     averaged = counted.mean(axis=1)
     # Fill empty missing with 0, see GH5639

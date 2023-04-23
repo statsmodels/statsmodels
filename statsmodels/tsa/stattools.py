@@ -894,7 +894,7 @@ def pacf_ols(x, nlags=None, efficient=True, adjusted=False):
         xlags = add_constant(xlags)
         for k in range(1, nlags + 1):
             params = lstsq(xlags[k:, : k + 1], x0[k:], rcond=None)[0]
-            pacf[k] = params[-1]
+            pacf[k] = np.squeeze(params[-1])
     else:
         x = x - np.mean(x)
         # Create a single set of lags for multivariate OLS
@@ -902,7 +902,7 @@ def pacf_ols(x, nlags=None, efficient=True, adjusted=False):
         for k in range(1, nlags + 1):
             params = lstsq(xlags[:, :k], x0, rcond=None)[0]
             # Last coefficient corresponds to PACF value (see [1])
-            pacf[k] = params[-1]
+            pacf[k] = np.squeeze(params[-1])
 
     if adjusted:
         pacf *= nobs / (nobs - np.arange(nlags + 1))

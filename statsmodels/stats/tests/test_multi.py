@@ -322,7 +322,8 @@ def test_fdr_bky():
     # also alpha_star is the same as theirs for TST
 
     # alpha_star for stage 2
-    res_tst = fdrcorrection_twostage(pvals, alpha=0.05, iter=False)
+    with pytest.warns(FutureWarning, match="iter keyword"):
+        res_tst = fdrcorrection_twostage(pvals, alpha=0.05, iter=False)
     assert_almost_equal([0.047619, 0.0649], res_tst[-1][:2], 3)
     assert_equal(8, res_tst[0].sum())
 

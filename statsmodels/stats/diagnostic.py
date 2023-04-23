@@ -1480,9 +1480,9 @@ skip large enough to ensure that the first OLS estimator is well-defined.
 
         # get prediction error with previous beta
         yipred = np.dot(xi, beta)
-        rypred[i] = yipred
+        rypred[i] = np.squeeze(yipred)
         residi = yi - yipred
-        rresid[i] = residi
+        rresid[i] = np.squeeze(residi)
 
         # update beta and inverse(X'X)
         tmp = np.dot(xtxi, xi.T)
@@ -1492,7 +1492,7 @@ skip large enough to ensure that the first OLS estimator is well-defined.
 
         beta = beta + (tmp * residi / ft).ravel()  # BigJudge equ 5.5.14
         rparams[i] = beta
-        rvarraw[i] = ft
+        rvarraw[i] = np.squeeze(ft)
 
     rresid_scaled = rresid / np.sqrt(rvarraw)  # N(0,sigma2) distributed
     nrr = nobs - skip

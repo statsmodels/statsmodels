@@ -1538,8 +1538,9 @@ class SmootherResults(FilterResults):
 
                 acov = self.smoothed_state_autocovariance(
                     lag=t_i - t_j, t=t_i, extend_kwargs=extend_kwargs)
-                tmp2[i, j] = tmp2[j, i] = (
-                    Z_i[k_i:k_i + 1] @ acov @ Z_j[k_j:k_j + 1].T)
+                tmp2[i, j] = tmp2[j, i] = np.squeeze(
+                    Z_i[k_i:k_i + 1] @ acov @ Z_j[k_j:k_j + 1].T
+                )
 
                 if t_i == t_j:
                     H = get_mat('obs_cov', t_i)

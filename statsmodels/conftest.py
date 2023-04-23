@@ -16,11 +16,16 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+cow = False
 try:
     cow = bool(os.environ.get("SM_TEST_COPY_ON_WRITE", False))
     pd.options.mode.copy_on_write = cow
-    logger.critical("Copy on Write Enabled!")
 except AttributeError:
+    pass
+
+if cow:
+    logger.critical("Copy on Write Enabled!")
+else:
     logger.critical("Copy on Write disabled")
 
 

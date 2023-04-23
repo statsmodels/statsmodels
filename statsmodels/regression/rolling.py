@@ -673,7 +673,7 @@ class RollingRegressionResults:
                 rp = p[i : i + 1] @ r.T
                 denom = rp.shape[1]
                 inv_cov = np.linalg.inv(rvcvr[i])
-                stat[i] = (rp @ inv_cov @ rp.T) / denom
+                stat[i] = np.squeeze(rp @ inv_cov @ rp.T) / denom
             return stat
 
     @cache_readonly

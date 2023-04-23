@@ -1766,8 +1766,10 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         data = self.factor_block_orders.reset_index()
         data['block'] = data['block'].map(
             lambda factor_names: ', '.join(factor_names))
-        data[['order']] = (
-            data[['order']].applymap(str))
+        try:
+            data[['order']] = data[['order']].map(str)
+        except AttributeError:
+            data[['order']] = data[['order']].applymap(str)
 
         params_data = data.values
         params_header = data.columns.map(str).tolist()
@@ -4221,7 +4223,10 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
             data = pd.DataFrame(
                 self.filter_results.design[:, mod._s['factors_L1'], 0],
                 index=endog_names, columns=mod.factor_names)
-            data = data.applymap(lambda s: '%.2f' % s)
+            try:
+                data = data.map(lambda s: '%.2f' % s)
+            except AttributeError:
+                data = data.applymap(lambda s: '%.2f' % s)
 
             # Idiosyncratic terms
             # data['   '] = '   '
@@ -4231,8 +4236,12 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
                     self.params[mod._p['idiosyncratic_ar1']])
                 k_idio += 1
             data['var.'] = self.params[mod._p['idiosyncratic_var']]
-            data.iloc[:, -k_idio:] = data.iloc[:, -k_idio:].applymap(
-                lambda s: '%.2f' % s)
+            try:
+                data.iloc[:, -k_idio:] = data.iloc[:, -k_idio:].map(
+                    lambda s: f'{s:.2f}')
+            except AttributeError:
+                data.iloc[:, -k_idio:] = data.iloc[:, -k_idio:].applymap(
+                    lambda s: f'{s:.2f}')
 
             data.index.name = 'Factor loadings:'
 
@@ -4273,7 +4282,10 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
                                     index=block.factor_names,
                                     columns=lag_names)
                 data.index.name = ''
-                data = data.applymap(lambda s: '%.2f' % s)
+                try:
+                    data = data.map(lambda s: '%.2f' % s)
+                except AttributeError:
+                    data = data.applymap(lambda s: '%.2f' % s)
 
                 Q = self.filter_results.state_cov
                 # data[' '] = ''
@@ -4283,9 +4295,15 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
                     data['   error covariance'] = block.factor_names
                     for j in range(block.k_factors):
                         data[block.factor_names[j]] = Q[ix1:ix2, ix1 + j]
-                data.iloc[:, -block.k_factors:] = (
-                    data.iloc[:, -block.k_factors:].applymap(
-                        lambda s: '%.2f' % s))
+                try:
+                    formatted_vals = data.iloc[:, -block.k_factors:].map(
+                        lambda s: f'{s:.2f}'
+                    )
+                except AttributeError:
+                    formatted_vals = data.iloc[:, -block.k_factors:].applymap(
+                        lambda s: f'{s:.2f}'
+                    )
+                data.iloc[:, -block.k_factors:] = formatted_vals
 
                 data = data.reset_index()
 

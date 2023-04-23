@@ -51,7 +51,7 @@ class StandardizeTransform:
             if len(const_idx) == 0:
                 const_idx = 'n'
             else:
-                const_idx = int(const_idx)
+                const_idx = int(np.squeeze(const_idx))
 
         if const_idx != 'n':
             self.mean[const_idx] = 0

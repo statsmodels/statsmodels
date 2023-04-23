@@ -2390,7 +2390,7 @@ class OrdinalGEE(GEE):
             for thresh_ix, thresh in enumerate(endog_cuts):
 
                 exog_out[jrow, :] = exog_row
-                endog_out[jrow] = (int(endog_value > thresh))
+                endog_out[jrow] = int(np.squeeze(endog_value > thresh))
                 intercepts[jrow, thresh_ix] = 1
                 groups_out[jrow] = group_value
                 time_out[jrow] = time_value

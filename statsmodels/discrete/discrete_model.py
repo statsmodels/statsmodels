@@ -2080,7 +2080,7 @@ class GeneralizedPoisson(CountModel):
 
         for i in range(dim):
             for j in range(i + 1):
-                hess_arr[i,j] = np.sum(mu * exog[:,i,None] * exog[:,j,None] *
+                hess_val = np.sum(mu * exog[:,i,None] * exog[:,j,None] *
                     (mu * (a3 * a4 / a1**2 -
                            2 * a3**2 * a2 / a1**3 +
                            2 * a3 * (a4 + 1) / a1**2 -
@@ -2091,6 +2091,7 @@ class GeneralizedPoisson(CountModel):
                            a4 * (p - 1) / (a1 * mu)) +
                      ((y - 1) * (1 + a4) / a2 -
                       (1 + a4) / a1)), axis=0)
+                hess_arr[i, j] = np.squeeze(hess_val)
         tri_idx = np.triu_indices(dim, k=1)
         hess_arr[tri_idx] = hess_arr.T[tri_idx]
 
@@ -3447,8 +3448,11 @@ class NegativeBinomial(CountModel):
             for j in range(dim):
                 if j > i:
                     continue
-                hess_arr[i,j] = np.sum(-exog[:,i,None] * exog[:,j,None] *
-                                       const_arr, axis=0)
+                hess_arr[i,j] = np.squeeze(
+                    np.sum(-exog[:,i,None] * exog[:,j,None] * const_arr,
+                           axis=0
+                           )
+                )
         tri_idx = np.triu_indices(dim, k=1)
         hess_arr[tri_idx] = hess_arr.T[tri_idx]
         return hess_arr
@@ -3488,9 +3492,13 @@ class NegativeBinomial(CountModel):
             for j in range(dim):
                 if j > i:
                     continue
-                hess_arr[i,j] = np.sum(dparams[:,i,None] * dmudb[:,j,None] +
-                                 xmu_alpha[:,i,None] * xmu_alpha[:,j,None] *
-                                 trigamma, axis=0)
+                hess_arr[i,j] = np.squeeze(
+                    np.sum(
+                        dparams[:,i,None] * dmudb[:,j,None] +
+                        xmu_alpha[:,i,None] * xmu_alpha[:,j,None] * trigamma,
+                        axis=0
+                    )
+                )
         tri_idx = np.triu_indices(dim, k=1)
         hess_arr[tri_idx] = hess_arr.T[tri_idx]
 

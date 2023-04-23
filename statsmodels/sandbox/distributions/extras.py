@@ -817,7 +817,10 @@ class TransfTwo_gen(distributions.rv_continuous):
             return 1.0 - self._cdf(x, *args, **kwargs)
 
     def _munp(self, n, *args, **kwargs):
-        return self._mom0_sc(n, *args)
+        out = np.squeeze(self._mom0_sc(n, *args))
+        if np.isscalar(out):
+            return float(out)
+        return out
 
 
 # ppf might not be possible in general case?
