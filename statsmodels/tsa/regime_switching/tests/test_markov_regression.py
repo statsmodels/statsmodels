@@ -1284,10 +1284,12 @@ def test_exog_tvtp():
 
     params = np.r_[0.98209618, 0.05036498, 3.70877542, 9.55676298, 4.44181911]
     params_tvtp = params.copy()
-    params_tvtp[0] = mod2._untransform_logistic(
-        np.r_[0.], np.r_[1 - params[0]])
-    params_tvtp[1] = mod2._untransform_logistic(
-        np.r_[0.], np.r_[1 - params[1]])
+    params_tvtp[0] = np.squeeze(
+        mod2._untransform_logistic(np.r_[0.], np.r_[1 - params[0]])
+    )
+    params_tvtp[1] = np.squeeze(
+        mod2._untransform_logistic(np.r_[0.], np.r_[1 - params[1]])
+    )
 
     res1 = mod1.smooth(params)
     res2 = mod2.smooth(params_tvtp)

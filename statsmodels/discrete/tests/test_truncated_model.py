@@ -359,7 +359,7 @@ class TestHurdlePoissonR():
                         rtol=5e-4, atol=5e-4)
 
         prob_main = res1.results_count.predict(ex, which="prob")[0] * prob_nz
-        prob_main[0] = prob_zero
+        prob_main[0] = np.squeeze(prob_zero)
         assert_allclose(prob_main[:4], res2.predict_prob, rtol=5e-4, atol=5e-4)
 
         assert_allclose(mean_main * prob_nz, res2.predict_mean,

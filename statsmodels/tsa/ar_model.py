@@ -666,7 +666,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
                     # If before the start of the forecasts, use actual values
                     val = self.endog[fcast_loc + start]
                 _reg[h, det_col_idx + j] = val
-            forecasts[h] = _reg[h : h + 1] @ params
+            forecasts[h] = np.squeeze(_reg[h : h + 1] @ params)
         return self._wrap_prediction(forecasts, start, end + 1 + num_oos, adj)
 
     def _static_oos_predict(
@@ -682,8 +682,8 @@ class AutoReg(tsa_model.TimeSeriesModel):
             for j, lag in enumerate(self._lags):
                 loc = i - lag
                 val = self._y[loc] if loc < 0 else forecasts[loc]
-                new_x[i, ar_offset + j] = val
-            forecasts[i] = new_x[i : i + 1] @ params
+                new_x[i, ar_offset + j] = np.squeeze(val)
+            forecasts[i] = np.squeeze(new_x[i : i + 1] @ params)
         return forecasts
 
     def _static_predict(

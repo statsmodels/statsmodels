@@ -1979,9 +1979,9 @@ class MixedLM(base.LikelihoodModel):
                         vt += 2 * _dot(_multi_dot_three(
                             vir[None, :], matr2, le), vir[:, None])
 
-                    D[jj1, jj2] += vt
+                    D[jj1, jj2] += np.squeeze(vt)
                     if jj1 != jj2:
-                        D[jj2, jj1] += vt
+                        D[jj2, jj1] += np.squeeze(vt)
 
                     rt = _dotsum(vsl2, re.T) / 2
                     if not sym2:

@@ -985,7 +985,7 @@ def _fmt_probplot_axis(ax, dist, nobs):
     axis_qntls = dist.ppf(axis_probs)
     ax.set_xticks(axis_qntls)
     ax.set_xticklabels(
-        axis_probs * 100,
+        [str(lbl) for lbl in (axis_probs * 100)],
         rotation=45,
         rotation_mode="anchor",
         horizontalalignment="right",

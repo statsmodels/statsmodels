@@ -451,7 +451,7 @@ def test_normality(results, signif=0.05):
     lam_skew = results.nobs * np.dot(b1.T, b1) / 6
     lam_kurt = results.nobs * np.dot(b2.T, b2) / 24
 
-    lam_omni = float(lam_skew + lam_kurt)
+    lam_omni = float(np.squeeze(lam_skew + lam_kurt))
     omni_dist = stats.chi2(results.neqs * 2)
     omni_pvalue = float(omni_dist.sf(lam_omni))
     crit_omni = float(omni_dist.ppf(1 - signif))

@@ -336,9 +336,11 @@ def approx_hess_cs(x, f, epsilon=None, args=(), kwargs={}):
 
     for i in range(n):
         for j in range(i, n):
-            hess[i, j] = (f(*((x + 1j*ee[i, :] + ee[j, :],) + args), **kwargs)
+            hess[i, j] = np.squeeze(
+                (f(*((x + 1j*ee[i, :] + ee[j, :],) + args), **kwargs)
                           - f(*((x + 1j*ee[i, :] - ee[j, :],)+args),
                               **kwargs)).imag/2./hess[i, j]
+            )
             hess[j, i] = hess[i, j]
 
     return hess
@@ -447,11 +449,13 @@ def approx_hess3(x, f, epsilon=None, args=(), kwargs={}):
 
     for i in range(n):
         for j in range(i, n):
-            hess[i, j] = (f(*((x + ee[i, :] + ee[j, :],) + args), **kwargs)
-                          - f(*((x + ee[i, :] - ee[j, :],) + args), **kwargs)
-                          - (f(*((x - ee[i, :] + ee[j, :],) + args), **kwargs)
-                          - f(*((x - ee[i, :] - ee[j, :],) + args), **kwargs))
-                          )/(4.*hess[i, j])
+            hess[i, j] = np.squeeze(
+                (f(*((x + ee[i, :] + ee[j, :],) + args), **kwargs)
+                 - f(*((x + ee[i, :] - ee[j, :],) + args), **kwargs)
+                 - (f(*((x - ee[i, :] + ee[j, :],) + args), **kwargs)
+                    - f(*((x - ee[i, :] - ee[j, :],) + args), **kwargs))
+                 )/(4.*hess[i, j])
+            )
             hess[j, i] = hess[i, j]
     return hess
 

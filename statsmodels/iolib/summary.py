@@ -18,6 +18,7 @@ from .summary2 import _model_types
 
 
 def forg(x, prec=3):
+    x = np.squeeze(x)
     if prec == 3:
         # for 3 decimals
         if (abs(x) >= 1e4) or (abs(x) < 1e-4):

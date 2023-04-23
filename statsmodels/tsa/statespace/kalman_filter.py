@@ -1781,9 +1781,13 @@ class FilterResults(FrozenRepresentation):
                     (self.k_endog - nmissing - nsingular) * np.log(self.scale)
                     + scale_obs / self.scale)
             else:
-                self.llf_obs[0] += -0.5 * (np.sum(
-                    (self.k_endog - nmissing - nsingular) * np.log(self.scale))
-                    + scale_obs / self.scale)
+                self.llf_obs[0] += -0.5 * np.squeeze(
+                    np.sum(
+                        (self.k_endog - nmissing - nsingular)
+                        * np.log(self.scale)
+                    )
+                    + scale_obs / self.scale
+                )
 
             # Scale the filter output
             self.obs_cov = self.obs_cov * self.scale
