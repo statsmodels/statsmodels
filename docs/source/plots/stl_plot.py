@@ -1,3 +1,4 @@
+import numpy as np
 import matplotlib.pyplot as plt
 from pandas.plotting import register_matplotlib_converters
 
@@ -8,6 +9,6 @@ register_matplotlib_converters()
 data = co2.load().data
 data = data.resample('M').mean().ffill()
 
-res = STL(data).fit()
+res = STL(np.squeeze(data)).fit()
 res.plot()
 plt.show()
