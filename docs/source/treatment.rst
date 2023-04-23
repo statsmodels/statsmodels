@@ -1,7 +1,9 @@
 
 .. module:: statsmodels.treatment
-.. currentmodule:: statsmodels.treatment
    :synopsis: Treatment Effect
+
+.. currentmodule:: statsmodels.treatment
+
 
 
 .. _othermod:

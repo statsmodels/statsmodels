@@ -250,6 +250,7 @@ class OriginResults(RegressionResults):
         f = lambda b0:  self.el_test(np.array([b0]), param_num,
                                      method=method,
                                  stochastic_exog=stochastic_exog)[0] - r0
-        lowerl = optimize.brentq(f, lower_bound, self.params[param_num])
-        upperl = optimize.brentq(f, self.params[param_num], upper_bound)
+        _param = np.squeeze(self.params[param_num])
+        lowerl = optimize.brentq(f, np.squeeze(lower_bound), _param)
+        upperl = optimize.brentq(f, _param, np.squeeze(upper_bound))
         return (lowerl, upperl)
