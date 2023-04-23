@@ -100,8 +100,10 @@ def test_tweedie_loglike_obs(power):
     scale = 2.9
 
     def pdf(y):
-        return np.exp(tweedie.loglike_obs(
-                    endog=y, mu=mu, scale=scale
-        ))
+        return np.squeeze(
+            np.exp(
+                tweedie.loglike_obs(endog=y, mu=mu, scale=scale)
+            )
+        )
 
     assert_allclose(pdf(0) + integrate.quad(pdf, 0, 1e2)[0], 1, atol=1e-4)

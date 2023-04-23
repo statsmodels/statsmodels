@@ -101,7 +101,7 @@ class Test_Transf2:
 
     def test_equivalent(self):
         xx, ppfq = self.xx, self.ppfq
-        for d1,d2 in self.dist_equivalents:
+        for j,(d1,d2) in enumerate(self.dist_equivalents):
 ##            print d1.name
             assert_almost_equal(d1.cdf(xx), d2.cdf(xx), err_msg='cdf'+d1.name)
             assert_almost_equal(d1.pdf(xx), d2.pdf(xx),
@@ -122,6 +122,8 @@ class Test_Transf2:
                 d2mom = d2.dist.moment(3, *d2.args)
             else:
                 d2mom = d2.moment(3)
+            if j==3:
+                print("now")
             assert_almost_equal(d1.moment(3), d2mom,
                                 DECIMAL,
                                 err_msg='moment '+d1.name+d2.name)
