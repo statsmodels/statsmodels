@@ -133,3 +133,29 @@ def test_forecast_seasonal_alignment(data, period):
     index = np.arange(data.shape[0], data.shape[0] + comp.shape[0])
     expected = seasonal[index % period]
     np.testing.assert_allclose(comp.seasonal, expected)
+
+
+def test_auto(reset_randomstate):
+    m = 250
+    e = np.random.standard_normal(m)
+    s = 10 * np.sin(np.linspace(0, np.pi, 12))
+    s = np.tile(s, (m // 12 + 1))[:m]
+    idx = pd.period_range("2000-01-01", freq="M", periods=m)
+    x = e + s
+    y = pd.DataFrame(10 + x - x.min(), index=idx)
+
+    tm = ThetaModel(y, method="auto")
+    assert tm.method == "mul"
+    res = tm.fit()
+
+    tm = ThetaModel(y, method="mul")
+    assert tm.method == "mul"
+    res2 = tm.fit()
+
+    np.testing.assert_allclose(res.params, res2.params)
+
+    tm = ThetaModel(y - y.mean(), method="auto")
+    assert tm.method == "add"
+    res3 = tm.fit()
+
+    assert not np.allclose(res.params, res3.params)
