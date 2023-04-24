@@ -287,8 +287,8 @@ class ExponentialSmoothing(TimeSeriesModel):
         )
         estimated = self._initialization_method == "estimated"
         self._estimate_level = estimated
-        self._estimate_trend = estimated and self.trend
-        self._estimate_seasonal = estimated and self.seasonal
+        self._estimate_trend = estimated and self.trend is not None
+        self._estimate_seasonal = estimated and self.seasonal is not None
         self._bounds = self._check_bounds(bounds)
         self._use_boxcox = use_boxcox
         self._lambda = np.nan
@@ -765,8 +765,6 @@ class ExponentialSmoothing(TimeSeriesModel):
         beta = data.beta
         phi = data.phi
         gamma = data.gamma
-        initial_level = data.level
-        initial_trend = data.trend
         y = data.y
         start_params = data.params
 
@@ -796,11 +794,11 @@ class ExponentialSmoothing(TimeSeriesModel):
                 alpha is None,
                 has_trend and beta is None,
                 has_seasonal and gamma is None,
-                initial_level is None,
-                has_trend and initial_trend is None,
+                self._estimate_level,
+                self._estimate_trend,
                 damped_trend and phi is None,
             ]
-            + [has_seasonal] * m,
+            + [has_seasonal and self._estimate_seasonal] * m,
         )
         (
             sel,
