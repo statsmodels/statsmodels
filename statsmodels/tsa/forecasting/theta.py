@@ -183,9 +183,8 @@ class ThetaModel:
         y = self._y
         if not self._has_seasonality:
             return self._y, np.empty(0)
-        self._method = (
-            "mul" if self._method == "auto" and self._y.min() > 0 else "add"
-        )
+        if self._method == "auto":
+            self._method = "mul" if self._y.min() > 0 else "add"
 
         res = seasonal_decompose(y, model=self._method, period=self._period)
         if res.seasonal.min() <= 0:

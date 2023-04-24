@@ -133,3 +133,13 @@ def test_forecast_seasonal_alignment(data, period):
     index = np.arange(data.shape[0], data.shape[0] + comp.shape[0])
     expected = seasonal[index % period]
     np.testing.assert_allclose(comp.seasonal, expected)
+
+
+def test_auto(reset_randomstate):
+    e = np.random.standard_normal(100).cumsum()
+    y = 10 + e - e.min()
+    tm = ThetaModel(y, method="auto")
+    assert tm.method == "mul"
+
+    tm = ThetaModel(y - 20, method="auto")
+    assert tm.method == "add"
