@@ -43,6 +43,62 @@ housing_data = housing_data.asfreq("MS")
 SEASONALS = ("add", "mul", None)
 TRENDS = ("add", "mul", None)
 
+# aust = pd.read_json(aust_json, typ='Series').sort_index()
+data = [
+    41.727457999999999,
+    24.04185,
+    32.328102999999999,
+    37.328707999999999,
+    46.213152999999998,
+    29.346326000000001,
+    36.482909999999997,
+    42.977719,
+    48.901524999999999,
+    31.180221,
+    37.717880999999998,
+    40.420211000000002,
+    51.206862999999998,
+    31.887228,
+    40.978262999999998,
+    43.772491000000002,
+    55.558566999999996,
+    33.850915000000001,
+    42.076383,
+    45.642291999999998,
+    59.766779999999997,
+    35.191876999999998,
+    44.319737000000003,
+    47.913736,
+]
+index = [
+    "2005-03-01 00:00:00",
+    "2005-06-01 00:00:00",
+    "2005-09-01 00:00:00",
+    "2005-12-01 00:00:00",
+    "2006-03-01 00:00:00",
+    "2006-06-01 00:00:00",
+    "2006-09-01 00:00:00",
+    "2006-12-01 00:00:00",
+    "2007-03-01 00:00:00",
+    "2007-06-01 00:00:00",
+    "2007-09-01 00:00:00",
+    "2007-12-01 00:00:00",
+    "2008-03-01 00:00:00",
+    "2008-06-01 00:00:00",
+    "2008-09-01 00:00:00",
+    "2008-12-01 00:00:00",
+    "2009-03-01 00:00:00",
+    "2009-06-01 00:00:00",
+    "2009-09-01 00:00:00",
+    "2009-12-01 00:00:00",
+    "2010-03-01 00:00:00",
+    "2010-06-01 00:00:00",
+    "2010-09-01 00:00:00",
+    "2010-12-01 00:00:00",
+]
+idx = pd.to_datetime(index)
+aust = pd.Series(data, index=pd.DatetimeIndex(idx, freq=pd.infer_freq(idx)))
+
 
 @pytest.fixture(scope="module")
 def ses():
@@ -240,63 +296,6 @@ class TestHoltWinters:
         )
         cls.livestock2_livestock = livestock2_livestock
 
-        # aust = pd.read_json(aust_json, typ='Series').sort_index()
-        data = [
-            41.727457999999999,
-            24.04185,
-            32.328102999999999,
-            37.328707999999999,
-            46.213152999999998,
-            29.346326000000001,
-            36.482909999999997,
-            42.977719,
-            48.901524999999999,
-            31.180221,
-            37.717880999999998,
-            40.420211000000002,
-            51.206862999999998,
-            31.887228,
-            40.978262999999998,
-            43.772491000000002,
-            55.558566999999996,
-            33.850915000000001,
-            42.076383,
-            45.642291999999998,
-            59.766779999999997,
-            35.191876999999998,
-            44.319737000000003,
-            47.913736,
-        ]
-        index = [
-            "2005-03-01 00:00:00",
-            "2005-06-01 00:00:00",
-            "2005-09-01 00:00:00",
-            "2005-12-01 00:00:00",
-            "2006-03-01 00:00:00",
-            "2006-06-01 00:00:00",
-            "2006-09-01 00:00:00",
-            "2006-12-01 00:00:00",
-            "2007-03-01 00:00:00",
-            "2007-06-01 00:00:00",
-            "2007-09-01 00:00:00",
-            "2007-12-01 00:00:00",
-            "2008-03-01 00:00:00",
-            "2008-06-01 00:00:00",
-            "2008-09-01 00:00:00",
-            "2008-12-01 00:00:00",
-            "2009-03-01 00:00:00",
-            "2009-06-01 00:00:00",
-            "2009-09-01 00:00:00",
-            "2009-12-01 00:00:00",
-            "2010-03-01 00:00:00",
-            "2010-06-01 00:00:00",
-            "2010-09-01 00:00:00",
-            "2010-12-01 00:00:00",
-        ]
-        aust = pd.Series(data, index)
-        aust.index = pd.DatetimeIndex(
-            aust.index, freq=pd.infer_freq(aust.index)
-        )
         cls.aust = aust
         cls.start_params = [
             1.5520372162082909e-09,
@@ -519,7 +518,11 @@ class TestHoltWinters:
         # livestock2_livestock <- c(...)
         # res <- ets(livestock2_livestock, model='AAN', damped_trend=TRUE,
         #            phi=0.98)
-        mod = Holt(self.livestock2_livestock, damped_trend=True)
+        mod = Holt(
+            self.livestock2_livestock,
+            damped_trend=True,
+            initialization_method="estimated",
+        )
         params = {
             "smoothing_level": 0.97402626,
             "smoothing_trend": 0.00010006,
@@ -1646,11 +1649,11 @@ def test_error_boxcox():
     with pytest.raises(TypeError, match="use_boxcox must be True"):
         ExponentialSmoothing(y, use_boxcox="a", initialization_method="known")
 
-    mod = ExponentialSmoothing(y ** 2, use_boxcox=True)
+    mod = ExponentialSmoothing(y**2, use_boxcox=True)
     assert isinstance(mod, ExponentialSmoothing)
 
     mod = ExponentialSmoothing(
-        y ** 2, use_boxcox=True, initialization_method="legacy-heuristic"
+        y**2, use_boxcox=True, initialization_method="legacy-heuristic"
     )
     with pytest.raises(ValueError, match="use_boxcox was set"):
         mod.fit(use_boxcox=False)
@@ -1950,7 +1953,7 @@ def test_attributes(ses):
 
 def test_summary_boxcox(ses):
     mod = ExponentialSmoothing(
-        ses ** 2, use_boxcox=True, initialization_method="heuristic"
+        ses**2, use_boxcox=True, initialization_method="heuristic"
     )
     with pytest.raises(ValueError, match="use_boxcox was set at model"):
         mod.fit(use_boxcox=True)
@@ -2111,3 +2114,40 @@ def test_invalid_index(reset_randomstate):
     fitted = model.fit(optimized=True, use_brute=True)
     with pytest.warns(ValueWarning, match="No supported"):
         fitted.forecast(steps=157200)
+
+
+def test_initial_level():
+    # GH 8634
+    series = [0.0, 0.0, 0.0, 100.0, 0.0, 0.0, 0.0]
+    es = ExponentialSmoothing(
+        series, initialization_method="known", initial_level=20.0
+    )
+    es_fit = es.fit()
+    es_fit.params
+    assert_allclose(es_fit.params["initial_level"], 20.0)
+
+
+def test_all_initial_values():
+    fit1 = ExponentialSmoothing(
+        aust,
+        seasonal_periods=4,
+        trend="add",
+        seasonal="mul",
+        initialization_method="estimated",
+    ).fit()
+    lvl = np.round(fit1.params["initial_level"])
+    trend = np.round(fit1.params["initial_trend"], 1)
+    seas = np.round(fit1.params["initial_seasons"], 1)
+    fit2 = ExponentialSmoothing(
+        aust,
+        seasonal_periods=4,
+        trend="add",
+        seasonal="mul",
+        initialization_method="known",
+        initial_level=lvl,
+        initial_trend=trend,
+        initial_seasonal=seas,
+    ).fit()
+    assert_allclose(fit2.params["initial_level"], lvl)
+    assert_allclose(fit2.params["initial_trend"], trend)
+    assert_allclose(fit2.params["initial_seasons"], seas)

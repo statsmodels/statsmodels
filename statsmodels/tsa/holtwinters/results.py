@@ -668,7 +668,7 @@ class HoltWintersResults(Results):
             resid = self.model._y - fitted
         else:
             resid = (self.model._y - fitted) / fitted
-        sigma = np.sqrt(np.sum(resid ** 2) / (len(resid) - n_params))
+        sigma = np.sqrt(np.sum(resid**2) / (len(resid) - n_params))
 
         # get random error eps
         if isinstance(random_errors, np.ndarray):
