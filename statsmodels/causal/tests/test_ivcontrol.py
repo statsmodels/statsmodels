@@ -52,6 +52,7 @@ def test_basic():
     mod = GLMIVCF(endog, explan, endog_explan, instruments,
                   family=families.Binomial(),
                   family_first=families.Binomial(link=families.links.Probit()),
+                  cf_kwds = {"resid": "resid_response"},
                   )
     res = mod.fit()
     sli = slice(-3, None, None)
