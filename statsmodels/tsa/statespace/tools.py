@@ -256,9 +256,9 @@ def diff(series, k_diff=1, k_seasonal_diff=None, seasonal_periods=1):
     ----------
     series : array_like
         The series to be differenced.
-    diff : int, optional
+    k_diff : int, optional
         The number of simple differences to perform. Default is 1.
-    seasonal_diff : int or None, optional
+    k_seasonal_diff : int or None, optional
         The number of seasonal differences to perform. Default is no seasonal
         differencing.
     seasonal_periods : int, optional
