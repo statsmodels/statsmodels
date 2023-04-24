@@ -136,10 +136,26 @@ def test_forecast_seasonal_alignment(data, period):
 
 
 def test_auto(reset_randomstate):
-    e = np.random.standard_normal(100).cumsum()
-    y = 10 + e - e.min()
+    m = 250
+    e = np.random.standard_normal(m)
+    s = 10 * np.sin(np.linspace(0, np.pi, 12))
+    s = np.tile(s, (m // 12 + 1))[:m]
+    idx = pd.period_range("2000-01-01", freq="M", periods=m)
+    x = e + s
+    y = pd.DataFrame(10 + x - x.min(), index=idx)
+
     tm = ThetaModel(y, method="auto")
     assert tm.method == "mul"
+    res = tm.fit()
 
-    tm = ThetaModel(y - 20, method="auto")
+    tm = ThetaModel(y, method="mul")
+    assert tm.method == "mul"
+    res2 = tm.fit()
+
+    np.testing.assert_allclose(res.params, res2.params)
+
+    tm = ThetaModel(y - y.mean(), method="auto")
     assert tm.method == "add"
+    res3 = tm.fit()
+
+    assert not np.allclose(res.params, res3.params)
