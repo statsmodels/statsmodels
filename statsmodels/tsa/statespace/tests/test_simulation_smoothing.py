@@ -710,7 +710,7 @@ def test_deprecated_arguments_univariate():
                  initial_state_variates=np.zeros(1))
     desired = sim.simulated_state[0]
 
-    with pytest.deprecated_call():
+    with pytest.warns(FutureWarning):
         sim.simulate(disturbance_variates=np.r_[mds, sds],
                      initial_state_variates=np.zeros(1))
     actual = sim.simulated_state[0]
@@ -724,7 +724,7 @@ def test_deprecated_arguments_univariate():
                  pretransformed_state_disturbance_variates=True)
     desired = sim.simulated_state[0]
 
-    with pytest.deprecated_call():
+    with pytest.warns(FutureWarning):
         sim.simulate(measurement_disturbance_variates=mds,
                      state_disturbance_variates=sds,
                      pretransformed=True,
@@ -756,7 +756,7 @@ def test_deprecated_arguments_multivariate():
                  initial_state_variates=np.zeros(2))
     desired = sim.simulated_state[0]
 
-    with pytest.deprecated_call():
+    with pytest.warns(FutureWarning):
         sim.simulate(disturbance_variates=np.r_[mds.ravel(), sds.ravel()],
                      initial_state_variates=np.zeros(2))
     actual = sim.simulated_state[0]
@@ -770,7 +770,7 @@ def test_deprecated_arguments_multivariate():
                  pretransformed_state_disturbance_variates=True)
     desired = sim.simulated_state[0]
 
-    with pytest.deprecated_call():
+    with pytest.warns(FutureWarning):
         sim.simulate(measurement_disturbance_variates=mds,
                      state_disturbance_variates=sds,
                      pretransformed=True,

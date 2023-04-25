@@ -522,7 +522,7 @@ class BinaryModel(DiscreteModel):
         """
         if linear is not None:
             msg = 'linear keyword is deprecated, use which="linear"'
-            warnings.warn(msg, DeprecationWarning)
+            warnings.warn(msg, FutureWarning)
             if linear is True:
                 which = "linear"
 
@@ -752,7 +752,7 @@ class MultinomialModel(BinaryModel):
         """
         if linear is not None:
             msg = 'linear keyword is deprecated, use which="linear"'
-            warnings.warn(msg, DeprecationWarning)
+            warnings.warn(msg, FutureWarning)
             if linear is True:
                 which = "linear"
 
@@ -1012,7 +1012,7 @@ class CountModel(DiscreteModel):
         """
         if linear is not None:
             msg = 'linear keyword is deprecated, use which="linear"'
-            warnings.warn(msg, DeprecationWarning)
+            warnings.warn(msg, FutureWarning)
             if linear is True:
                 which = "linear"
 
@@ -1634,7 +1634,7 @@ class Poisson(CountModel):
 
         if linear is not None:
             msg = 'linear keyword is deprecated, use which="linear"'
-            warnings.warn(msg, DeprecationWarning)
+            warnings.warn(msg, FutureWarning)
             if linear is True:
                 which = "linear"
 
@@ -3584,7 +3584,7 @@ class NegativeBinomial(CountModel):
 
         if linear is not None:
             msg = 'linear keyword is deprecated, use which="linear"'
-            warnings.warn(msg, DeprecationWarning)
+            warnings.warn(msg, FutureWarning)
             if linear is True:
                 which = "linear"
 

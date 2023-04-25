@@ -203,7 +203,7 @@ def dispersion_poisson(results):
        alternative hypothesis.
     """
     msg = 'dispersion_poisson here is deprecated, use '
-    warnings.warn(msg, DeprecationWarning)
+    warnings.warn(msg, FutureWarning)
 
     from statsmodels.discrete._diagnostics_count import test_poisson_dispersion
     return test_poisson_dispersion(results, _old=True)
@@ -226,7 +226,7 @@ def dispersion_poisson_generic(results, exog_new_test, exog_new_control=None,
     Warning: insufficiently tested, especially for options
     """
     msg = 'dispersion_poisson here is deprecated, use '
-    warnings.warn(msg, DeprecationWarning)
+    warnings.warn(msg, FutureWarning)
 
     from statsmodels.discrete._diagnostics_count import (
         _test_poisson_dispersion_generic

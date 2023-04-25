@@ -626,7 +626,7 @@ class SimulationSmoothResults:
             msg = ('`disturbance_variates` keyword is deprecated, use'
                    ' `measurement_disturbance_variates` and'
                    ' `state_disturbance_variates` instead.')
-            warnings.warn(msg, DeprecationWarning)
+            warnings.warn(msg, FutureWarning)
             if (measurement_disturbance_variates is not None
                     or state_disturbance_variates is not None):
                 raise ValueError('Cannot use `disturbance_variates` in'
@@ -642,7 +642,7 @@ class SimulationSmoothResults:
             msg = ('`pretransformed` keyword is deprecated, use'
                    ' `pretransformed_measurement_disturbance_variates` and'
                    ' `pretransformed_state_disturbance_variates` instead.')
-            warnings.warn(msg, DeprecationWarning)
+            warnings.warn(msg, FutureWarning)
             if (pretransformed_measurement_disturbance_variates is not None
                     or pretransformed_state_disturbance_variates is not None):
                 raise ValueError(

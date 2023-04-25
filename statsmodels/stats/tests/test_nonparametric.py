@@ -92,22 +92,22 @@ def test_mcnemar_chisquare():
 
 def test_mcnemar_vectorized(reset_randomstate):
     ttk = np.random.randint(5,15, size=(2,2,3))
-    with pytest.deprecated_call():
+    with pytest.warns(FutureWarning):
         res = sbmcnemar(ttk, exact=False)
-    with pytest.deprecated_call():
+    with pytest.warns(FutureWarning):
         res1 = lzip(*[sbmcnemar(ttk[:, :, i], exact=False) for i in range(3)])
     assert_allclose(res, res1, rtol=1e-13)
 
-    with pytest.deprecated_call():
+    with pytest.warns(FutureWarning):
         res = sbmcnemar(ttk, exact=False, correction=False)
-    with pytest.deprecated_call():
+    with pytest.warns(FutureWarning):
         res1 = lzip(*[sbmcnemar(ttk[:, :, i], exact=False, correction=False)
                       for i in range(3)])
     assert_allclose(res, res1, rtol=1e-13)
 
-    with pytest.deprecated_call():
+    with pytest.warns(FutureWarning):
         res = sbmcnemar(ttk, exact=True)
-    with pytest.deprecated_call():
+    with pytest.warns(FutureWarning):
         res1 = lzip(*[sbmcnemar(ttk[:, :, i], exact=True) for i in range(3)])
     assert_allclose(res, res1, rtol=1e-13)
 
@@ -171,7 +171,7 @@ def test_cochransq():
     #equivalence of mcnemar and cochranq for 2 samples
     a,b = x[:,:2].T
     res = cochrans_q(x[:, :2])
-    with pytest.deprecated_call():
+    with pytest.warns(FutureWarning):
         assert_almost_equal(sbmcnemar(a, b, exact=False, correction=False),
                             [res.statistic, res.pvalue])
 

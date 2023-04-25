@@ -609,7 +609,7 @@ class MLEInfluence(_BaseInfluenceMixin):
         with warnings.catch_warnings():
             msg = 'linear keyword is deprecated, use which="linear"'
             warnings.filterwarnings("ignore", message=msg,
-                                    category=DeprecationWarning)
+                                    category=FutureWarning)
             pred = self.results.get_prediction()
         return pred
 

@@ -433,7 +433,7 @@ def get_prediction_index(
                 " version, calling this method in a model"
                 " without a supported index will result in an"
                 " exception.",
-                DeprecationWarning,
+                FutureWarning,
                 stacklevel=2,
             )
     elif index_none:

@@ -990,7 +990,7 @@ class TestGlmPoissonOffset(CheckModelResultsMixin):
         # Check that offset shifts the linear predictor
         mod3 = GLM(endog, exog, family=sm.families.Poisson()).fit()
         offset = np.random.uniform(1, 2, 10)
-        with pytest.warns(DeprecationWarning):
+        with pytest.warns(FutureWarning):
             # deprecation warning for linear keyword
             pred1 = mod3.predict(exog=exog1, offset=offset, linear=True)
         pred2 = mod3.predict(exog=exog1, offset=2*offset, which="linear")

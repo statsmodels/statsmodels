@@ -477,7 +477,7 @@ def cochrans_q(x):
 
     '''
 
-    warnings.warn("Deprecated, use stats.cochrans_q instead", DeprecationWarning)
+    warnings.warn("Deprecated, use stats.cochrans_q instead", FutureWarning)
 
     x = np.asarray(x)
     gruni = np.unique(x)
@@ -539,7 +539,7 @@ def mcnemar(x, y=None, exact=True, correction=True):
 
     '''
 
-    warnings.warn("Deprecated, use stats.TableSymmetry instead", DeprecationWarning)
+    warnings.warn("Deprecated, use stats.TableSymmetry instead", FutureWarning)
 
     x = np.asarray(x)
     if y is None and x.shape[0] == x.shape[1]:
@@ -605,7 +605,7 @@ def symmetry_bowker(table):
 
     '''
 
-    warnings.warn("Deprecated, use stats.TableSymmetry instead", DeprecationWarning)
+    warnings.warn("Deprecated, use stats.TableSymmetry instead", FutureWarning)
 
     table = np.asarray(table)
     k, k2 = table.shape

@@ -897,7 +897,7 @@ class GLM(base.LikelihoodModel):
         """
         if linear is not None:
             msg = 'linear keyword is deprecated, use which="linear"'
-            warnings.warn(msg, DeprecationWarning)
+            warnings.warn(msg, FutureWarning)
             if linear is True:
                 which = "linear"
 
