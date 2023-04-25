@@ -40,6 +40,16 @@ def test_smoke(data):
     assert hasattr(res.model_result, "forecast")
 
 
+@pytest.mark.matplotlib
+def test_sharex(data):
+    stlf = STLForecast(data, ARIMA, model_kwargs={"order": (2, 0, 0)})
+    res = stlf.fit(fit_kwargs={})
+    plt = res.result.plot()
+    grouper_view = plt.axes[0].get_shared_x_axes()
+    sibs = grouper_view.get_siblings(plt.axes[1])
+    assert len(sibs) == 4
+
+
 MODELS = [
     (ARIMA, {"order": (2, 0, 0), "trend": "c"}),
     (ExponentialSmoothing, {"trend": True}),
