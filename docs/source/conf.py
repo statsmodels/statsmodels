@@ -17,11 +17,11 @@ from packaging.version import parse
 import os
 from os.path import dirname, join
 import sys
+from jinja2 import FileSystemLoader, Environment
 
 import yaml
 from numpydoc.xref import DEFAULT_LINKS
 
-import sphinx_material
 from statsmodels import __version__
 
 # -- Monkey Patch ----------------------------------------------------------
@@ -56,6 +56,7 @@ extensions = ['sphinx.ext.autodoc',
               'matplotlib.sphinxext.plot_directive',
               'IPython.sphinxext.ipython_console_highlighting',
               'IPython.sphinxext.ipython_directive',
+              "sphinx_immaterial",
               ]
 
 try:
@@ -162,34 +163,117 @@ pygments_style = 'default'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-extensions.append('sphinx_material')
-html_theme_path = sphinx_material.html_theme_path()
-html_context = sphinx_material.get_html_context()
-html_theme = 'sphinx_material'
+
+html_theme = 'sphinx_immaterial'
 html_title = project
 html_short_title = project
 # material theme options (see theme.conf for more information)
 
-base_url = 'https://statsmodels.org/'
-base_url += 'stable/' if full_version == version else 'devel/'
+site_url = 'https://statsmodels.org/'
+site_url += 'stable/' if full_version == version else 'devel/'
+
+# sphinx_immaterial theme options
 html_theme_options = {
-    'base_url': base_url,
-    'repo_url': 'https://github.com/statsmodels/statsmodels',
-    'repo_name': 'statsmodels',
-    'globaltoc_depth': 3,
-    'globaltoc_collapse': True,
-    'globaltoc_includehidden': True,
-    'color_primary': 'indigo',
-    'color_accent': 'blue',
-    'nav_title': 'statsmodels {0}'.format(version),
-    'master_doc': False,
-    'nav_links': [],
-    'heroes': {'index': 'statistical models, hypothesis tests, and data '
-                        'exploration',
-               'examples/index': 'examples and tutorials to get started with '
-                                 'statsmodels'},
+    "icon": {"repo": "fontawesome/brands/github"},
+    "site_url": site_url,
+    "repo_url": "https://github.com/statsmodels/statsmodels/",
+    "repo_name": "statsmodels",
+    "repo_type": "github",
+    "palette": {"primary": "indigo", "accent": "blue"},
+    "globaltoc_collapse": True,
+    "toc_title": "Contents",
     "version_dropdown": True,
-    "version_json": "../versions-v2.json",
+    "version_info": [
+        {
+            "version": "https://statsmodels.org/stable/",
+            "title": "Release",
+            "aliases": [],
+        },
+        {
+            "version": "https://statsmodels.org/devel/",
+            "title": "Development",
+            "aliases": [],
+        },
+        {
+            "version": "https://statsmodels.org/0.13.0/",
+            "title": "Version v0.13.0",
+            "aliases": [],
+        },
+        {
+            "version": "https://statsmodels.org/0.12.2/",
+            "title": "Version v0.12.2",
+            "aliases": [],
+        },
+        {
+            "version": "https://statsmodels.org/0.12.1/",
+            "title": "Version v0.12.1",
+            "aliases": [],
+        },
+        {
+            "version": "https://statsmodels.org/0.12.0/",
+            "title": "Version v0.12.0",
+            "aliases": [],
+        },
+        {
+            "version": "https://statsmodels.org/0.11.1/",
+            "title": "Version v0.11.1",
+            "aliases": [],
+        },
+        {
+            "version": "https://statsmodels.org/0.11.0/",
+            "title": "Version v0.11.0",
+            "aliases": [],
+        },
+        {
+            "version": "https://statsmodels.org/0.10.2/",
+            "title": "Version v0.10.2",
+            "aliases": [],
+        },
+        {
+            "version": "https://statsmodels.org/0.10.1/",
+            "title": "Version v0.10.1",
+            "aliases": [],
+        },
+        {
+            "version": "https://statsmodels.org/0.10.0/",
+            "title": "Version v0.10.0",
+            "aliases": [],
+        },
+
+        {
+            "version": "https://statsmodels.org/0.9.0/",
+            "title": "Version 0.9.0",
+            "aliases": [],
+        },
+
+        {
+            "version": "https://statsmodels.org/0.8.0/",
+            "title": "Version 0.8.0",
+            "aliases": [],
+        },
+        {
+            "version": "https://statsmodels.org/0.6.1/",
+            "title": "Version 0.6.1",
+            "aliases": [],
+        },
+
+    ],
+    "toc_title_is_page_title": True,
+    "social": [
+        {
+            "icon": "fontawesome/brands/github",
+            "link": "https://github.com/statsmodels/statsmodels/",
+            "name": "Source on github.com",
+        },
+        {
+            "icon": "fontawesome/brands/python",
+            "link": "https://pypi.org/project/statsmodels/",
+        },
+        {
+            "icon": "fontawesome/solid/quote-left",
+            "link": "https://doi.org/10.5281/zenodo.593847",
+        },
+    ],
 }
 
 language = 'en'
@@ -406,7 +490,14 @@ plot_basedir = join(dirname(dirname(os.path.abspath(__file__))), 'source')
 github_project_url = 'https://github.com/statsmodels/statsmodels'
 
 example_context = yaml.safe_load(open('examples/landing.yml', encoding="utf-8"))
-html_context.update({'examples': example_context})
+
+example_loader = FileSystemLoader("examples")
+example_env = Environment(loader=example_loader)
+example_tmpl = example_env.get_template("index.jinja2")
+with open("examples/index.rst", "w") as example_index:
+    example_index.write(example_tmpl.render(examples=example_context))
+
+# html_context.update({'examples': example_context})
 
 # --------------- DOCTEST -------------------
 doctest_global_setup = """
