@@ -15,8 +15,8 @@ def _check_period_index(x, freq="M"):
     else:
         inferred_freq = pd.infer_freq(x.index)
     if not inferred_freq.startswith(freq):
-        raise ValueError("Expected frequency {}. Got {}".format(inferred_freq,
-                                                                freq))
+        raise ValueError("Expected frequency {}. Got {}".format(freq,
+                                                                inferred_freq))
 
 
 def is_data_frame(obj):
