@@ -98,16 +98,23 @@ extended only to dimensions 3 and 4.
 New class ECDFDiscrete for empirical distribution function when observations
 are not unique as in discrete distributions.
 
+Multiseason STL decomposition (MSTL)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The existing :class:`~statsmodels.tsa.seasonal.STL` class has been extended to handle multiple seasonal
+components in :class:`~statsmodels.tsa.seasonal.MSTL`
+
 
 Other Notable Enhancments
 -------------------------
 
-- burg option in pacf #8113
-- new link for GLM: logc #8155
-- rename class names for links for GLM, lower case names are deprecated #8569?
-- allow singular covariance in gaussian copula #8504
-- GLM: Tweedie full loglikelihood #8560
-- x13: option for location of temporary files #8564
+- burg option in pacf :pr:`8113`
+- new link for GLM: logc :pr:`8155`
+- rename class names for links for GLM, lower case names are deprecated :pr:`8569`
+- allow singular covariance in gaussian copula :pr:`8504`
+- GLM: Tweedie full loglikelihood :pr:`8560`
+- x13: option for location of temporary files :pr:`8564`
+- Added an information set argument to ``get_prediction`` and ``predict`` methods of statespace models
+  that lets the user decide on which information set to use when making forecasts.  :pr:`8002`
 
 What's new - an overview
 ========================
@@ -543,7 +550,7 @@ A new issue label `type-bug-wrong` indicates bugs that cause that incorrect
 numbers are returned without warnings.
 (Regular bugs are mostly usability bugs or bugs that raise an exception for
 unsupported use cases.)
-`see tagged issues <https://github.com/statsmodels/statsmodels/issues?q=is%3Aissue+label%3Atype-bug-wrong+is%3Aclosed+milestone%3A0.14/>`_
+`see tagged issues <https://github.com/statsmodels/statsmodels/issues?q=is%3Aissue+label%3Atype-bug-wrong+is%3Aclosed+milestone%3A0.14>`_
 
 
 Major Bugs Fixed
@@ -551,8 +558,8 @@ Major Bugs Fixed
 
 See github issues for a list of bug fixes included in this release
 
-- `Closed bugs <https://github.com/statsmodels/statsmodels/pulls?utf8=%E2%9C%93&q=is%3Apr+is%3Amerged+milestone%3A0.14+label%3Atype-bug/>`_
-- `Closed bugs (wrong result) <https://github.com/statsmodels/statsmodels/pulls?q=is%3Apr+is%3Amerged+milestone%3A0.14+label%3Atype-bug-wrong/>`_
+- `Closed bugs <https://github.com/statsmodels/statsmodels/pulls?utf8=%E2%9C%93&q=is%3Apr+is%3Amerged+milestone%3A0.14+label%3Atype-bug>`_
+- `Closed bugs (wrong result) <https://github.com/statsmodels/statsmodels/pulls?q=is%3Apr+is%3Amerged+milestone%3A0.14+label%3Atype-bug-wrong>`_
 
 
 Development summary and credits

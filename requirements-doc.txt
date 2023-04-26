@@ -1,8 +1,8 @@
 # Requirements for doc build, in addition to requirements.txt
-sphinx>=5,<6
+sphinx
 # Avoid warnings which break Sphinx by pinning pandas
 pandas>=2.0,<2.1
-sphinx-material
+sphinx-immaterial
 jupyter
 notebook
 nbsphinx
