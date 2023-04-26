@@ -752,7 +752,7 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, value=None,
             value = ratio_null = 1
         elif ratio_null is not None:
             warnings.warn("'ratio_null' is deprecated, use 'value' keyword",
-                          DeprecationWarning)
+                          FutureWarning)
             value = ratio_null
         else:
             # for results holder instance, it still contains ratio_null
@@ -979,7 +979,7 @@ def etest_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=None,
             value = 1
         elif ratio_null is not None:
             warnings.warn("'ratio_null' is deprecated, use 'value' keyword",
-                          DeprecationWarning)
+                          FutureWarning)
             value = ratio_null
 
         r = value  # rate1 / rate2
@@ -1037,7 +1037,7 @@ def etest_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=None,
     stat_sample = stat_func(y1, y2)
 
     if ygrid is not None:
-        warnings.warn("ygrid is deprecated, use y_grid", DeprecationWarning)
+        warnings.warn("ygrid is deprecated, use y_grid", FutureWarning)
     y_grid = y_grid if y_grid is not None else ygrid
 
     # The following uses a fixed truncation for evaluating the probabilities

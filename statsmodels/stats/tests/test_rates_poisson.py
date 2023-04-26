@@ -360,7 +360,7 @@ def test_twosample_poisson():
     assert_allclose(pv2, pv2r*2, rtol=0, atol=5e-4)
     assert_allclose(s2, 0.7056, atol=0, rtol=5e-4)
 
-    with pytest.warns(DeprecationWarning):
+    with pytest.warns(FutureWarning):
         s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2,
                                           method='score-log', ratio_null=1.5)
     pv2r = 0.2303
@@ -831,7 +831,7 @@ def test_invalid_y_grid():
     with warnings.catch_warnings(record=True) as w:
         etest_poisson_2indep(1, 1, 1, 1, ygrid=[1])
     assert len(w) == 1
-    assert issubclass(w[0].category, DeprecationWarning)
+    assert issubclass(w[0].category, FutureWarning)
     assert "ygrid" in str(w[0].message)
 
     # check y_grid validity
