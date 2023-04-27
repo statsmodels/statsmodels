@@ -120,13 +120,24 @@ class TruncatedLFGeneric(CountModel):
         """
         llf_main = self.model_main.loglikeobs(params)
 
-        pmf = np.zeros_like(self.endog, dtype=np.float64)
-        for i in range(self.trunc + 1):
-            model = self.model_main.__class__(np.ones_like(self.endog) * i,
-                                              self.exog)
-            pmf += np.exp(model.loglikeobs(params))
+        yt = self.trunc + 1
+
+        # equivalent ways to compute truncation probability
+        # pmf0 = np.zeros_like(self.endog, dtype=np.float64)
+        # for i in range(self.trunc + 1):
+        #     model = self.model_main.__class__(np.ones_like(self.endog) * i,
+        #                                       self.exog)
+        #     pmf0 += np.exp(model.loglikeobs(params))
+        #
+        # pmf1 = self.model_main.predict(
+        #     params, which="prob", y_values=np.arange(yt)).sum(-1)
+
+        pmf = self.predict(
+            params, which="prob-base", y_values=np.arange(yt)).sum(-1)
 
         llf = llf_main - np.log(1 - pmf)
+        # assert np.allclose(pmf0, pmf)
+        # assert np.allclose(pmf1, pmf)
 
         return llf
 
@@ -148,10 +159,15 @@ class TruncatedLFGeneric(CountModel):
         score_main = self.model_main.score_obs(params)
 
         pmf = np.zeros_like(self.endog, dtype=np.float64)
+        # TODO: can we rewrite to following without creating new models
         score_trunc = np.zeros_like(score_main, dtype=np.float64)
         for i in range(self.trunc + 1):
-            model = self.model_main.__class__(np.ones_like(self.endog) * i,
-                                              self.exog)
+            model = self.model_main.__class__(
+                np.ones_like(self.endog) * i,
+                self.exog,
+                offset=getattr(self, "offset", None),
+                exposure=getattr(self, "exposure", None),
+                )
             pmf_i = np.exp(model.loglikeobs(params))
             score_trunc += (model.score_obs(params).T * pmf_i).T
             pmf += pmf_i
@@ -451,8 +467,9 @@ class TruncatedLFPoisson(TruncatedLFGeneric):
             **kwargs
             )
         self.model_main = Poisson(self.endog, self.exog,
-                                  exposure=exposure,
-                                  offset=offset)
+                                  exposure=getattr(self, "exposure", None),
+                                  offset=getattr(self, "offset", None),
+                                  )
         self.model_dist = truncatedpoisson
 
         self.result_class = TruncatedLFPoissonResults
@@ -520,9 +537,13 @@ class TruncatedLFNegativeBinomialP(TruncatedLFGeneric):
             missing=missing,
             **kwargs
             )
-        self.model_main = NegativeBinomialP(self.endog, self.exog,
-                                            exposure=exposure,
-                                            offset=offset, p=p)
+        self.model_main = NegativeBinomialP(
+            self.endog,
+            self.exog,
+            exposure=getattr(self, "exposure", None),
+            offset=getattr(self, "offset", None),
+            p=p
+            )
         self.k_extra = self.model_main.k_extra
         self.exog_names.extend(self.model_main.exog_names[-self.k_extra:])
         self.model_dist = truncatednegbin
@@ -600,11 +621,13 @@ class TruncatedLFGeneralizedPoisson(TruncatedLFGeneric):
             missing=missing,
             **kwargs
             )
-        self.model_main = GeneralizedPoisson(self.endog,
-                                             self.exog,
-                                             exposure=exposure,
-                                             offset=offset,
-                                             p=p)
+        self.model_main = GeneralizedPoisson(
+            self.endog,
+            self.exog,
+            exposure=getattr(self, "exposure", None),
+            offset=getattr(self, "offset", None),
+            p=p
+            )
         self.k_extra = self.model_main.k_extra
         self.exog_names.extend(self.model_main.exog_names[-self.k_extra:])
         self.model_dist = None
