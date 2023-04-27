@@ -1082,6 +1082,10 @@ class HurdleCountModel(CountModel):
                  dist="poisson", zerodist="poisson",
                  p=2, pzero=2,
                  exposure=None, missing='none', **kwargs):
+
+        if (offset is not None) or (exposure is not None):
+            msg = "Offset and exposure are not yet implemented"
+            raise NotImplementedError(msg)
         super(HurdleCountModel, self).__init__(
             endog,
             exog,
