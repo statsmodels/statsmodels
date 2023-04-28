@@ -167,6 +167,7 @@ pygments_style = 'default'
 html_theme = 'sphinx_immaterial'
 html_title = project
 html_short_title = project
+html_extra_path = ['version_info/versions-v3.json']
 # material theme options (see theme.conf for more information)
 
 site_url = 'https://statsmodels.org/'
@@ -183,81 +184,7 @@ html_theme_options = {
     "globaltoc_collapse": True,
     "toc_title": "Contents",
     "version_dropdown": True,
-    "version_info": [
-        {
-            "version": "https://statsmodels.org/stable/",
-            "title": "Release",
-            "aliases": [],
-        },
-        {
-            "version": "https://statsmodels.org/devel/",
-            "title": "Development",
-            "aliases": [],
-        },
-        {
-            "version": "https://statsmodels.org/0.13.0/",
-            "title": "Version v0.13.0",
-            "aliases": [],
-        },
-        {
-            "version": "https://statsmodels.org/0.12.2/",
-            "title": "Version v0.12.2",
-            "aliases": [],
-        },
-        {
-            "version": "https://statsmodels.org/0.12.1/",
-            "title": "Version v0.12.1",
-            "aliases": [],
-        },
-        {
-            "version": "https://statsmodels.org/0.12.0/",
-            "title": "Version v0.12.0",
-            "aliases": [],
-        },
-        {
-            "version": "https://statsmodels.org/0.11.1/",
-            "title": "Version v0.11.1",
-            "aliases": [],
-        },
-        {
-            "version": "https://statsmodels.org/0.11.0/",
-            "title": "Version v0.11.0",
-            "aliases": [],
-        },
-        {
-            "version": "https://statsmodels.org/0.10.2/",
-            "title": "Version v0.10.2",
-            "aliases": [],
-        },
-        {
-            "version": "https://statsmodels.org/0.10.1/",
-            "title": "Version v0.10.1",
-            "aliases": [],
-        },
-        {
-            "version": "https://statsmodels.org/0.10.0/",
-            "title": "Version v0.10.0",
-            "aliases": [],
-        },
-
-        {
-            "version": "https://statsmodels.org/0.9.0/",
-            "title": "Version 0.9.0",
-            "aliases": [],
-        },
-
-        {
-            "version": "https://statsmodels.org/0.8.0/",
-            "title": "Version 0.8.0",
-            "aliases": [],
-        },
-        {
-            "version": "https://statsmodels.org/0.6.1/",
-            "title": "Version 0.6.1",
-            "aliases": [],
-        },
-
-    ],
+    "version_json": "../versions-v3.json",
     "toc_title_is_page_title": True,
     "social": [
         {
