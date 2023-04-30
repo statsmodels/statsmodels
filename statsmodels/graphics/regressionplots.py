@@ -1274,7 +1274,8 @@ def added_variable_resids(results, focus_exog, resid_type=None,
     if fit_kwargs is not None:
         args.update(fit_kwargs)
     new_result = new_model.fit(**args)
-    if not new_result.converged:
+    cnvrg = new_result.converged if isinstance(model, (GEE, GLM)) else True
+    if not cnvrg:
         raise ValueError("fit did not converge when calculating added variable residuals")
 
     try:
