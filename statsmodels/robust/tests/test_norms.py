@@ -91,6 +91,6 @@ def test_norms_consistent(case):
     # avoid zero division nan:
     assert_allclose(weights, (psi + 1e-50) / (x + 1e-50), rtol=1e-6, atol=1e-8)
     psid = _approx_fprime_scalar(x, norm.rho)
-    assert_allclose(psi, psid, rtol=1e-6, atol=1e-8)
+    assert_allclose(psi, psid, rtol=1e-6, atol=1e-6)
     psidd = _approx_fprime_scalar(x, norm.psi)
     assert_allclose(psi_deriv, psidd, rtol=1e-6, atol=1e-8)

@@ -4803,6 +4803,8 @@ class DiscreteResults(base.LikelihoodModelResults):
         When using after Poisson, returns the expected number of events per
         period, assuming that the model is loglinear.
         """
+        if getattr(self.model, "offset", None) is not None:
+            raise NotImplementedError("Margins with offset are not available.")
         from statsmodels.discrete.discrete_margins import DiscreteMargins
         return DiscreteMargins(self, (at, method, atexog, dummy, count))
 

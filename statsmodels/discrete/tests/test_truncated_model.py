@@ -271,6 +271,25 @@ class TestTruncatedLFPoissonSt(CheckTruncatedST):
                                                        maxiter=300)
         cls.res2 = results_ts.results_trunc_poisson
 
+        mod_offset = TruncatedLFPoisson(endog, exog, offset=DATA["aget"])
+        cls.res_offset = mod_offset.fit(method="bfgs", maxiter=300)
+
+    def test_offset(self):
+        res1 = self.res1
+        reso = self.res_offset
+
+        assert_allclose(reso.params[1:], res1.params[1:], rtol=1e-8)
+        assert_allclose(reso.params[0], res1.params[0] - 1, rtol=1e-8)
+        pred1 = res1.predict()
+        predo = reso.predict()
+        assert_allclose(predo, pred1, rtol=1e-8)
+
+        ex = res1.model.exog[:5]
+        offs = reso.model.offset[:5]
+        pred1 = res1.predict(ex, transform=False)
+        predo = reso.predict(ex, offset=offs, transform=False)
+        assert_allclose(predo, pred1, rtol=1e-8)
+
 
 class TestTruncatedNegBinSt(CheckTruncatedST):
     # test against R pscl
@@ -282,6 +301,27 @@ class TestTruncatedNegBinSt(CheckTruncatedST):
         cls.res1 = TruncatedLFNegativeBinomialP(endog, exog).fit(method="bfgs",
                                                                  maxiter=300)
         cls.res2 = results_ts.results_trunc_negbin
+
+        mod_offset = TruncatedLFNegativeBinomialP(endog, exog,
+                                                  offset=DATA["aget"])
+        cls.res_offset = mod_offset.fit(method="bfgs", maxiter=300)
+
+    def test_offset(self):
+        # identical, copy of method in TestTruncatedLFPoissonSt
+        res1 = self.res1
+        reso = self.res_offset
+
+        assert_allclose(reso.params[1:], res1.params[1:], rtol=1e-8)
+        assert_allclose(reso.params[0], res1.params[0] - 1, rtol=1e-8)
+        pred1 = res1.predict()
+        predo = reso.predict()
+        assert_allclose(predo, pred1, rtol=1e-8)
+
+        ex = res1.model.exog[:5]
+        offs = reso.model.offset[:5]
+        pred1 = res1.predict(ex, transform=False)
+        predo = reso.predict(ex, offset=offs, transform=False)
+        assert_allclose(predo, pred1, rtol=1e-8)
 
 
 class TestTruncatedLFPoisson1St(CheckTruncatedST):
