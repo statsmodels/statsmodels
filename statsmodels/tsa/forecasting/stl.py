@@ -140,6 +140,7 @@ class STLForecast:
     >>> forecasts = res.forecast(12)
 
     Generate forecasts from an Exponential Smoothing model with trend
+
     >>> from statsmodels.tsa.statespace import exponential_smoothing
     >>> ES = exponential_smoothing.ExponentialSmoothing
     >>> config = {"trend": True}
