@@ -415,7 +415,6 @@ class OrderedModel(GenericLikelihoodModel):
         xb = self._linpred(params, exog=exog, offset=offset)
         if which == "linpred":
             return xb
-
         xb = xb[:, None]
         low = thresh[:-1] - xb
         upp = thresh[1:] - xb
@@ -463,7 +462,9 @@ class OrderedModel(GenericLikelihoodModel):
             offset = np.asarray(offset)
 
         if exog is not None:
-            linpred = exog.dot(params[:-(self.k_levels - 1)])
+            _exog = np.asarray(exog)
+            _params = np.asarray(params)
+            linpred = _exog.dot(_params[:-(self.k_levels - 1)])
         else:  # means self.exog is also None
             linpred = np.zeros(self.nobs)
         if offset is not None:
