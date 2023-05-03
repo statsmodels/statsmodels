@@ -85,9 +85,8 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'statsmodels'
-copyright = u'2009-2023, Josef Perktold, Skipper Seabold, ' \
-            u'Jonathan Taylor, statsmodels-developers'
+project = 'statsmodels'
+copyright = '2009-2023, Josef Perktold, Skipper Seabold, Jonathan Taylor, statsmodels-developers'
 
 autosummary_generate = True
 autoclass_content = 'class'
@@ -106,7 +105,7 @@ if parsed_version.is_devrelease:
     short_version = parsed_version.base_version
     commit = parsed_version.dev
     version = short_version + f' (+{commit})'
-
+project = f"{project} {version}"
 # Remove release to prevent it triggering a conf change
 del release
 
