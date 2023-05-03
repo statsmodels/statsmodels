@@ -1168,8 +1168,7 @@ class KalmanFilter(Representation):
             Whether or not to return the simulator object. Typically used to
             improve performance when performing repeated sampling. Default is
             False.
-        random_state : {None, int, `numpy.random.Generator`,
-                        `numpy.random.RandomState`}, optional
+        random_state : {None, int, Generator, RandomState}, optionall
             If `seed` is None (or `np.random`), the `numpy.random.RandomState`
             singleton is used.
             If `seed` is an int, a new ``RandomState`` instance is used,
