@@ -406,9 +406,12 @@ class AndrewWave(RobustNorm):
         Returns
         -------
         rho : ndarray
-            rho(z) = a**2 *(1-cos(z/a))     for \|z\| <= a*pi
+            The elements of rho are defined as:
 
-            rho(z) = 2*a                    for \|z\| > a*pi
+            .. math::
+
+                rho(z) & = a^2 *(1-cos(z/a)), |z| \leq a\pi \\
+                rho(z) & = 2a, |z|>q\pi
         """
 
         a = self.a
@@ -878,7 +881,7 @@ class MQuantileNorm(RobustNorm):
     in QuantileRegression but replaces the L1 absolute value by a chosen
     base norm.
 
-        rho_q(u) = |q - I(q < 0)| * rho_base(u)
+        rho_q(u) = abs(q - I(q < 0)) * rho_base(u)
 
     or, equivalently,
 
@@ -919,8 +922,6 @@ class MQuantileNorm(RobustNorm):
     .. [*] Newey, Whitney K., and James L. Powell. 1987. “Asymmetric Least
        Squares Estimation and Testing.” Econometrica 55 (4): 819–47.
        doi:10.2307/1911031.
-    ...
-
     """
 
     def __init__(self, q, base_norm):

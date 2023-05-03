@@ -64,7 +64,7 @@ class CopulaDistribution:
             to be a list of tuples with the same length has the number of
             marginal distributions. The list can contain empty tuples for
             marginal distributions that do not take parameter arguments.
-        random_state : {None, int, `numpy.random.Generator`}, optional
+        random_state : {None, int, numpy.random.Generator}, optional
             If `seed` is None then the legacy singleton NumPy generator.
             This will change after 0.13 to use a fresh NumPy ``Generator``,
             so you should explicitly pass a seeded ``Generator`` if you
@@ -277,7 +277,7 @@ class Copula(ABC):
         args : tuple
             Arguments for copula parameters. The number of arguments depends
             on the copula.
-        random_state : {None, int, `numpy.random.Generator`}, optional
+        random_state : {None, int, numpy.random.Generator}, optional
             If `seed` is None then the legacy singleton NumPy generator.
             This will change after 0.13 to use a fresh NumPy ``Generator``,
             so you should explicitly pass a seeded ``Generator`` if you
@@ -371,7 +371,7 @@ class Copula(ABC):
             is generated.
         nobs : int, optional
             Number of samples to generate from the copula.
-        random_state : {None, int, `numpy.random.Generator`}, optional
+        random_state : {None, int, numpy.random.Generator}, optional
             If `seed` is None then the legacy singleton NumPy generator.
             This will change after 0.13 to use a fresh NumPy ``Generator``,
             so you should explicitly pass a seeded ``Generator`` if you

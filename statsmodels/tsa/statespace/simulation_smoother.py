@@ -24,13 +24,13 @@ def check_random_state(seed=None):
     """Turn `seed` into a `numpy.random.Generator` instance.
     Parameters
     ----------
-    seed : {None, int, `numpy.random.Generator`,
-            `numpy.random.RandomState`}, optional
-        If `seed` is None the `numpy.random.Generator` singleton is used.
-        If `seed` is an int, a new ``Generator`` instance is used,
-        seeded with `seed`.
-        If `seed` is already a ``Generator`` or ``RandomState`` instance then
-        that instance is used.
+    seed : {None, int, Generator, RandomState}, optional
+        If `seed` is None (or `np.random`), the `numpy.random.RandomState`
+        singleton is used.
+        If `seed` is an int, a new ``numpy.random.RandomState`` instance
+        is used, seeded with `seed`.
+        If `seed` is already a ``numpy.random.Generator`` or
+        ``numpy.random.RandomState`` instance then that instance is used.
     Returns
     -------
     seed : {`numpy.random.Generator`, `numpy.random.RandomState`}
@@ -210,14 +210,13 @@ class SimulationSmoother(KalmanSmoother):
             than -1, only simulation will be performed (i.e. simulation
             smoothing will not be performed), so that only the `generated_obs`
             and `generated_state` attributes will be available.
-        random_state : {None, int, `numpy.random.Generator`,
-                        `numpy.random.RandomState`}, optional
+        random_state : {None, int, Generator, RandomState}, optional
             If `seed` is None (or `np.random`), the `numpy.random.RandomState`
             singleton is used.
-            If `seed` is an int, a new ``RandomState`` instance is used,
-            seeded with `seed`.
-            If `seed` is already a ``Generator`` or ``RandomState`` instance
-            then that instance is used.
+            If `seed` is an int, a new ``numpy.random.RandomState`` instance
+            is used, seeded with `seed`.
+            If `seed` is already a ``numpy.random.Generator`` or
+            ``numpy.random.RandomState`` instance then that instance is used.
         **kwargs
             Additional keyword arguments, used to set the simulation output.
             See `set_simulation_output` for more details.
@@ -298,14 +297,13 @@ class SimulationSmoothResults:
         A Statespace representation
     simulation_smoother : {{prefix}}SimulationSmoother object
         The Cython simulation smoother object with which to simulation smooth.
-    random_state : {None, int, `numpy.random.Generator`,
-                        `numpy.random.RandomState`}, optional
+    random_state : {None, int, Generator, RandomState}, optional
         If `seed` is None (or `np.random`), the `numpy.random.RandomState`
         singleton is used.
-        If `seed` is an int, a new ``RandomState`` instance is used,
-        seeded with `seed`.
-        If `seed` is already a ``Generator`` or ``RandomState`` instance
-        then that instance is used.
+        If `seed` is an int, a new ``numpy.random.RandomState`` instance
+        is used, seeded with `seed`.
+        If `seed` is already a ``numpy.random.Generator`` or
+        ``numpy.random.RandomState`` instance then that instance is used.
 
     Attributes
     ----------
@@ -606,14 +604,13 @@ class SimulationSmoothResults:
             then it is assumed to contain draws from the standard Normal
             distribution that must be transformed using the `initial_state_cov`
             covariance matrix. Default is False.
-        random_state : {None, int, `numpy.random.Generator`,
-                        `numpy.random.RandomState`}, optional
+        random_state : {None, int, Generator, RandomState}, optional
             If `seed` is None (or `np.random`), the `numpy.random.RandomState`
             singleton is used.
-            If `seed` is an int, a new ``RandomState`` instance is used,
-            seeded with `seed`.
-            If `seed` is already a ``Generator`` or ``RandomState`` instance
-            then that instance is used.
+            If `seed` is an int, a new ``numpy.random.RandomState`` instance
+            is used, seeded with `seed`.
+            If `seed` is already a ``numpy.random.Generator`` or
+            ``numpy.random.RandomState`` instance then that instance is used.
         disturbance_variates : bool, optional
             Deprecated, please use pretransformed_measurement_shocks and
             pretransformed_state_shocks instead.
