@@ -873,8 +873,11 @@ class FactorResults:
                     """
                     color = 'white' if np.abs(val) < threshold else 'black'
                     return 'color: %s' % color
-
-                sty = loadings_df.style.applymap(color_white_small)
+                try:
+                    sty = loadings_df.style.map(color_white_small)
+                except AttributeError:
+                    # Deprecated in pandas 2.1
+                    sty = loadings_df.style.applymap(color_white_small)
 
             if highlight_max is True:
                 def highlight_max(s):
