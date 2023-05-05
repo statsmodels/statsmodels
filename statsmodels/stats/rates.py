@@ -1,4 +1,5 @@
-'''Test for ratio of Poisson intensities in two independent samples
+'''
+Test for ratio of Poisson intensities in two independent samples
 
 Author: Josef Perktold
 License: BSD-3
@@ -639,7 +640,7 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, value=None,
         Ratio of the two Poisson rates under the Null hypothesis. Default is 1.
         Deprecated, use ``value`` instead.
 
-        .. deprecaated:: 0.14.0
+        .. deprecated:: 0.14.0
 
             Use ``value`` instead.
 
@@ -908,12 +909,12 @@ def etest_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=None,
                          value=None, method='score', compare="ratio",
                          alternative='two-sided', ygrid=None,
                          y_grid=None):
-    """E-test for ratio of two sample Poisson rates.
+    """
+    E-test for ratio of two sample Poisson rates.
 
-        Rates are defined as expected count divided by exposure.
-
-    The Null and alternative hypothesis for the rates, rate1 and rate2, of two
-    independent Poisson samples are
+    Rates are defined as expected count divided by exposure. The Null and
+    alternative hypothesis for the rates, rate1 and rate2, of two independent
+    Poisson samples are:
 
     for compare = 'diff'
 
@@ -943,7 +944,7 @@ def etest_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=None,
         Ratio of the two Poisson rates under the Null hypothesis. Default is 1.
         Deprecated, use ``value`` instead.
 
-        .. deprecaated:: 0.14.0
+        .. deprecated:: 0.14.0
 
             Use ``value`` instead.
 
@@ -960,9 +961,9 @@ def etest_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=None,
     alternative : string
         The alternative hypothesis, H1, has to be one of the following
 
-           'two-sided': H1: ratio of rates is not equal to ratio_null (default)
-           'larger' :   H1: ratio of rates is larger than ratio_null
-           'smaller' :  H1: ratio of rates is smaller than ratio_null
+        - 'two-sided': H1: ratio of rates is not equal to ratio_null (default)
+        - 'larger' :   H1: ratio of rates is larger than ratio_null
+        - 'smaller' :  H1: ratio of rates is smaller than ratio_null
 
     y_grid : None or 1-D ndarray
         Grid values for counts of the Poisson distribution used for computing
@@ -973,7 +974,7 @@ def etest_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=None,
         Same as y_grid. Deprecated. If both y_grid and ygrid are provided,
         ygrid will be ignored.
 
-        .. deprecaated:: 0.14.0
+        .. deprecated:: 0.14.0
 
             Use ``y_grid`` instead.
 
