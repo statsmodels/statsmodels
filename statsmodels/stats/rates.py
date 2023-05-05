@@ -1,4 +1,5 @@
-'''Test for ratio of Poisson intensities in two independent samples
+'''
+Test for ratio of Poisson intensities in two independent samples
 
 Author: Josef Perktold
 License: BSD-3
@@ -638,9 +639,19 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, value=None,
     ratio_null: float
         Ratio of the two Poisson rates under the Null hypothesis. Default is 1.
         Deprecated, use ``value`` instead.
+
+        .. deprecated:: 0.14.0
+
+            Use ``value`` instead.
+
     value : float
         Value of the ratio or difference of 2 independent rates under the null
         hypothesis. Default is equal rates, i.e. 1 for ratio and 0 for diff.
+
+        .. versionadded:: 0.14.0
+
+            Replacement for ``ratio_null``.
+
     method : string
         Method for the test statistic and the p-value. Defaults to `'score'`.
         see Notes.
@@ -747,13 +758,13 @@ def test_poisson_2indep(count1, exposure1, count2, exposure2, value=None,
             # default method
             method = 'score'
 
-        if ratio_null is None and value is None:
-            # default value
-            value = ratio_null = 1
-        elif ratio_null is not None:
+        if ratio_null is not None:
             warnings.warn("'ratio_null' is deprecated, use 'value' keyword",
                           FutureWarning)
             value = ratio_null
+        if ratio_null is None and value is None:
+            # default value
+            value = ratio_null = 1
         else:
             # for results holder instance, it still contains ratio_null
             ratio_null = value
@@ -898,12 +909,12 @@ def etest_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=None,
                          value=None, method='score', compare="ratio",
                          alternative='two-sided', ygrid=None,
                          y_grid=None):
-    """E-test for ratio of two sample Poisson rates.
+    """
+    E-test for ratio of two sample Poisson rates.
 
-        Rates are defined as expected count divided by exposure.
-
-    The Null and alternative hypothesis for the rates, rate1 and rate2, of two
-    independent Poisson samples are
+    Rates are defined as expected count divided by exposure. The Null and
+    alternative hypothesis for the rates, rate1 and rate2, of two independent
+    Poisson samples are:
 
     for compare = 'diff'
 
@@ -932,17 +943,27 @@ def etest_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=None,
     ratio_null: float
         Ratio of the two Poisson rates under the Null hypothesis. Default is 1.
         Deprecated, use ``value`` instead.
+
+        .. deprecated:: 0.14.0
+
+            Use ``value`` instead.
+
     value : float
         Value of the ratio or diff of 2 independent rates under the null
         hypothesis. Default is equal rates, i.e. 1 for ratio and 0 for diff.
+
+        .. versionadded:: 0.14.0
+
+            Replacement for ``ratio_null``.
+
     method : {"score", "wald"}
         Method for the test statistic that defines the rejection region.
     alternative : string
         The alternative hypothesis, H1, has to be one of the following
 
-           'two-sided': H1: ratio of rates is not equal to ratio_null (default)
-           'larger' :   H1: ratio of rates is larger than ratio_null
-           'smaller' :  H1: ratio of rates is smaller than ratio_null
+        - 'two-sided': H1: ratio of rates is not equal to ratio_null (default)
+        - 'larger' :   H1: ratio of rates is larger than ratio_null
+        - 'smaller' :  H1: ratio of rates is smaller than ratio_null
 
     y_grid : None or 1-D ndarray
         Grid values for counts of the Poisson distribution used for computing
@@ -952,6 +973,10 @@ def etest_poisson_2indep(count1, exposure1, count2, exposure2, ratio_null=None,
     ygrid : None or 1-D ndarray
         Same as y_grid. Deprecated. If both y_grid and ygrid are provided,
         ygrid will be ignored.
+
+        .. deprecated:: 0.14.0
+
+            Use ``y_grid`` instead.
 
     Returns
     -------

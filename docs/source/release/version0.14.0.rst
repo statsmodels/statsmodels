@@ -21,11 +21,11 @@ was already in statsmodels main and how much usage it has already
 seen.  If there are specific known problems or limitations, then they
 are mentioned in the docstrings.
 
-Github Stats
-------------
-**Issues Closed**: 248
+Stats
+-----
+**Issues Closed**: 255
 
-**Pull Requests Merged**: 335
+**Pull Requests Merged**: 345
 
 
 The Highlights
@@ -44,14 +44,14 @@ selection or treatment model, outcome model and effect functions.
 
 Hurdle and Truncated Count Regression
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-:class:`statsmodels.discrete.truncated_model.HurdleModel` implements
+:class:`statsmodels.discrete.truncated_model.HurdleCountModel` implements
 hurdle models for count data with either Poisson or NegativeBinomialP as
 submodels.
 Three left truncated models used for zero truncation are available,
 :class:`statsmodels.discrete.truncated_model.TruncatedLFPoisson`,
 :class:`statsmodels.discrete.truncated_model.TruncatedLFNegativeBinomialP`
 and
-:class:`statsmodels.discrete.truncated_model.TruncatedLFGeneralized Poisson`.
+:class:`statsmodels.discrete.truncated_model.TruncatedLFGeneralizedPoisson`.
 Models for right censoring at one are implemented but only as support for
 the hurdle models.
 
@@ -108,7 +108,7 @@ Other Notable Enhancments
 -------------------------
 
 - burg option in pacf :pr:`8113`
-- new link for GLM: logc :pr:`8155`
+- new link for GLM: Logc :pr:`8155`
 - rename class names for links for GLM, lower case names are deprecated :pr:`8569`
 - allow singular covariance in gaussian copula :pr:`8504`
 - GLM: Tweedie full loglikelihood :pr:`8560`
@@ -144,7 +144,7 @@ Submodules
 - Fix a typo in the documentation  (:pr:`8275`)
 - Fix `histogram`  (:pr:`8299`)
 - Add notebook for Poisson post-estimation overview  (:pr:`8420`)
-
+- Add version  (:pr:`8863`)
 
 
 
@@ -186,6 +186,7 @@ Submodules
 - MNLogit if endog is series with no name   (:pr:`8674`)
 - Get_distribution, return 1-d instead of column frozen distribution  (:pr:`8780`)
 - Numpy compat, indexed assignment shape in NegativeBinomial  (:pr:`8822`)
+- Support offset in truncated count models  (:pr:`8845`)
 
 
 
@@ -245,6 +246,9 @@ Submodules
 - Update PRs in release note  (:pr:`8805`)
 - Improve release notes highlights  (:pr:`8806`)
 - Fix more deprecations and restore doc build  (:pr:`8826`)
+- Final changes for 0.14.0rc0 notes  (:pr:`8839`)
+- Fix internet address of dataset  (:pr:`8861`)
+- Small additional fixes  (:pr:`8862`)
 
 
 
@@ -616,7 +620,7 @@ Thanks to all of the contributors for the 0.14.0 release (based on git log):
 - Eva Maxfield Brown
 - Evgeny Zhurko
 - Ewout Ter Hoeven
-- Geoffrey M. Oxberry
+- Geoffrey Oxberry
 - Greg Mcmahan
 - Gregory Parkes
 - Guilherme Silveira
@@ -629,6 +633,7 @@ Thanks to all of the contributors for the 0.14.0 release (based on git log):
 - Josef Perktold
 - João Tanaka
 - Kees Mulder
+- Kerby Shedden
 - Kevin Sheppard
 - Kirill Milash
 - Kirill Ulanov
@@ -1019,3 +1024,14 @@ The following Pull Requests were merged since the last release:
 - :pr:`8831`: BUG: Correct initial level, treand and seasonal
 - :pr:`8834`: MAINT: Switch DeprecationWarn to FutureWarn
 - :pr:`8835`: ENH: Add sharex for seasonal decompose plots
+- :pr:`8839`: DOC: Final changes for 0.14.0rc0 notes
+- :pr:`8845`: BUG/ENH: support offset in truncated count models
+- :pr:`8847`: DOC: Use JSON for versioning
+- :pr:`8851`: BUG: Fix added variable plots to work with OLS
+- :pr:`8857`: DOC: Small fix for STLForecast example
+- :pr:`8858`: DOC: Fix example notebooks
+- :pr:`8861`: DOC: Fix internet address of dataset
+- :pr:`8862`: DOC: Small additional fixes
+- :pr:`8863`: DOC: Add version
+- :pr:`8865`: MAINT: Move from Styler.applymap to map
+- :pr:`8866`: DOC: Add admonitions for changes and deprecations

@@ -604,7 +604,10 @@ TreatmentEffectsResults instance or tuple (ATE, POM0, POM1)
 
 
 class TreatmentEffect(object):
-    """Estimate average treatment effect under conditional independence
+    """
+    Estimate average treatment effect under conditional independence
+
+    .. versionadded:: 0.14.0
 
     This class estimates treatment effect and potential outcome using 5
     different methods, ipw, ra, aipw, aipw-wls, ipw-ra.
