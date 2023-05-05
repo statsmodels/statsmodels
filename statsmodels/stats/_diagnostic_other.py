@@ -202,7 +202,10 @@ def dispersion_poisson(results):
        Each test has two strings a descriptive name and a string for the
        alternative hypothesis.
     """
-    msg = 'dispersion_poisson here is deprecated, use '
+    msg = (
+        'dispersion_poisson here is deprecated, use the version in '
+        'discrete._diagnostic_count'
+    )
     warnings.warn(msg, FutureWarning)
 
     from statsmodels.discrete._diagnostics_count import test_poisson_dispersion
@@ -225,7 +228,10 @@ def dispersion_poisson_generic(results, exog_new_test, exog_new_control=None,
 
     Warning: insufficiently tested, especially for options
     """
-    msg = 'dispersion_poisson here is deprecated, use '
+    msg = (
+        'dispersion_poisson_generic here is deprecated, use the version in '
+        'discrete._diagnostic_count'
+    )
     warnings.warn(msg, FutureWarning)
 
     from statsmodels.discrete._diagnostics_count import (

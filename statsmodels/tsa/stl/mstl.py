@@ -35,6 +35,8 @@ class MSTL:
 
     Season-Trend decomposition using LOESS for multiple seasonalities.
 
+    .. versionadded:: 0.14.0
+
     Parameters
     ----------
     endog : array_like

@@ -506,6 +506,11 @@ class BinaryModel(DiscreteModel):
             - 'var' returns the estimated variance of endog implied by the
               model.
 
+            .. versionadded: 0.14
+
+               ``which`` replaces and extends the deprecated ``linear``
+               argument.
+
         linear : bool
             If True, returns the linear predicted values.  If False or None,
             then the statistic specified by ``which`` will be returned.
@@ -741,9 +746,28 @@ class MultinomialModel(BinaryModel):
             it assumed to be 1 row of exogenous variables. If you only have
             one regressor and would like to do prediction, you must provide
             a 2d array with shape[1] == 1.
-        linear : bool, optional
-            If True, returns the linear predictor dot(exog,params).  Else,
-            returns the value of the cdf at the linear predictor.
+        which : {'mean', 'linear', 'var', 'prob'}, optional
+            Statistic to predict. Default is 'mean'.
+
+            - 'mean' returns the conditional expectation of endog E(y | x),
+              i.e. exp of linear predictor.
+            - 'linear' returns the linear predictor of the mean function.
+            - 'var' returns the estimated variance of endog implied by the
+              model.
+
+            .. versionadded: 0.14
+
+               ``which`` replaces and extends the deprecated ``linear``
+               argument.
+
+        linear : bool
+            If True, returns the linear predicted values.  If False or None,
+            then the statistic specified by ``which`` will be returned.
+
+            .. deprecated: 0.14
+
+               The ``linear` keyword is deprecated and will be removed,
+               use ``which`` keyword instead.
 
         Notes
         -----
@@ -999,11 +1023,20 @@ class CountModel(DiscreteModel):
             - 'var' variance of endog implied by the likelihood model
             - 'prob' predicted probabilities for counts.
 
+            .. versionadded: 0.14
+
+               ``which`` replaces and extends the deprecated ``linear``
+               argument.
+
         linear : bool
-            The ``linear` keyword is deprecated and will be removed,
-            use ``which`` keyword instead.
             If True, returns the linear predicted values.  If False or None,
             then the statistic specified by ``which`` will be returned.
+
+            .. deprecated: 0.14
+
+               The ``linear` keyword is deprecated and will be removed,
+               use ``which`` keyword instead.
+
 
         Notes
         -----
@@ -1621,11 +1654,22 @@ class Poisson(CountModel):
             - 'prob' return probabilities for counts from 0 to max(endog) or
               for y_values if those are provided.
 
+            .. versionadded: 0.14
+
+               ``which`` replaces and extends the deprecated ``linear``
+               argument.
+
         linear : bool
             The ``linear` keyword is deprecated and will be removed,
             use ``which`` keyword instead.
             If True, returns the linear predicted values.  If False or None,
             then the statistic specified by ``which`` will be returned.
+
+            .. deprecated: 0.14
+
+               The ``linear` keyword is deprecated and will be removed,
+               use ``which`` keyword instead.
+
         y_values : array_like
             Values of the random variable endog at which pmf is evaluated.
             Only used if ``which="prob"``

@@ -44,14 +44,14 @@ selection or treatment model, outcome model and effect functions.
 
 Hurdle and Truncated Count Regression
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-:class:`statsmodels.discrete.truncated_model.HurdleModel` implements
+:class:`statsmodels.discrete.truncated_model.HurdleCountModel` implements
 hurdle models for count data with either Poisson or NegativeBinomialP as
 submodels.
 Three left truncated models used for zero truncation are available,
 :class:`statsmodels.discrete.truncated_model.TruncatedLFPoisson`,
 :class:`statsmodels.discrete.truncated_model.TruncatedLFNegativeBinomialP`
 and
-:class:`statsmodels.discrete.truncated_model.TruncatedLFGeneralized Poisson`.
+:class:`statsmodels.discrete.truncated_model.TruncatedLFGeneralizedPoisson`.
 Models for right censoring at one are implemented but only as support for
 the hurdle models.
 
@@ -108,7 +108,7 @@ Other Notable Enhancments
 -------------------------
 
 - burg option in pacf :pr:`8113`
-- new link for GLM: logc :pr:`8155`
+- new link for GLM: Logc :pr:`8155`
 - rename class names for links for GLM, lower case names are deprecated :pr:`8569`
 - allow singular covariance in gaussian copula :pr:`8504`
 - GLM: Tweedie full loglikelihood :pr:`8560`

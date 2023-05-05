@@ -400,12 +400,20 @@ def fdrcorrection_twostage(pvals, alpha=0.05, method='bky',
         maxiter=False is two-stage fdr (maxiter=1)
         maxiter=True is full iteration (maxiter=-1 or maxiter=len(pvals))
 
+        .. versionadded:: 0.14
+
+            Replacement for ``iter`` with additional features.
+
     iter : bool
         ``iter`` is deprecated use ``maxiter`` instead.
         If iter is True, then only one iteration step is used, this is the
         two-step method.
         If iter is False, then iterations are stopped at convergence which
         occurs in a finite number of steps (at most len(pvals) steps).
+
+        .. deprecated:: 0.14
+
+            Use ``maxiter`` instead of ``iter``.
 
     Returns
     -------

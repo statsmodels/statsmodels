@@ -31,6 +31,8 @@ from copy import deepcopy
 class TruncatedLFGeneric(CountModel):
     __doc__ = """
     Generic Truncated model for count data
+    
+    .. versionadded:: 0.14.0
 
     %(params)s
     %(extra_params)s
@@ -433,6 +435,8 @@ class TruncatedLFPoisson(TruncatedLFGeneric):
     __doc__ = """
     Truncated Poisson model for count data
 
+    .. versionadded:: 0.14.0
+
     %(params)s
     %(extra_params)s
 
@@ -504,6 +508,8 @@ class TruncatedLFNegativeBinomialP(TruncatedLFGeneric):
     __doc__ = """
     Truncated Generalized Negative Binomial model for count data
 
+    .. versionadded:: 0.14.0
+    
     %(params)s
     %(extra_params)s
 
@@ -587,6 +593,8 @@ class TruncatedLFNegativeBinomialP(TruncatedLFGeneric):
 class TruncatedLFGeneralizedPoisson(TruncatedLFGeneric):
     __doc__ = """
     Truncated Generalized Poisson model for count data
+
+    .. versionadded:: 0.14.0
 
     %(params)s
     %(extra_params)s
@@ -1037,6 +1045,8 @@ class _RCensored(_RCensoredGeneric):
 class HurdleCountModel(CountModel):
     __doc__ = """
     Hurdle model for count data
+    
+    .. versionadded:: 0.14.0
 
     %(params)s
     %(extra_params)s

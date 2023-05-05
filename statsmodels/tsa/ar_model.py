@@ -148,7 +148,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
     old_names : bool
         Flag indicating whether to use the v0.11 names or the v0.12+ names.
 
-        .. deprecated:: 0.13
+        .. deprecated:: 0.13.0
 
            old_names is deprecated and will be removed after 0.14 is
            released. You must update any code reliant on the old variable

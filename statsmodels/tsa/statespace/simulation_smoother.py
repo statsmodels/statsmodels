@@ -614,9 +614,20 @@ class SimulationSmoothResults:
         disturbance_variates : bool, optional
             Deprecated, please use pretransformed_measurement_shocks and
             pretransformed_state_shocks instead.
+
+            .. deprecated:: 0.14.0
+
+               Use ``measurement_disturbance_variates`` and
+               ``state_disturbance_variates`` as replacements.
+
         pretransformed : bool, optional
             Deprecated, please use pretransformed_measurement_shocks and
             pretransformed_state_shocks instead.
+
+            .. deprecated:: 0.14.0
+
+               Use ``pretransformed_measurement_disturbance_variates`` and
+               ``pretransformed_state_disturbance_variates`` as replacements.
         """
         # Handle deprecated argumennts
         if disturbance_variates is not None:
