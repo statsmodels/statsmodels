@@ -126,6 +126,7 @@ ADDITIONAL_PACKAGE_DATA = {
     "statsmodels.datasets.tests": ["*.zip"],
     "statsmodels.iolib.tests.results": ["*.dta"],
     "statsmodels.stats.tests.results": ["*.json"],
+    "statsmodels.tsa.stl.tests.results": ["*.csv"],
     "statsmodels.tsa.vector_ar.tests.results": ["*.npz", "*.dat"],
     "statsmodels.stats.tests": ["*.txt"],
     "statsmodels.stats.libqsturng": ["*.r", "*.txt", "*.dat"],
