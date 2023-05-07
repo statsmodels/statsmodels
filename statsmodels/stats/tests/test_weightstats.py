@@ -695,6 +695,16 @@ class TestZTest:
         cls.d1 = DescrStatsW(cls.x1)
         cls.d2 = DescrStatsW(cls.x2)
         cls.cm = CompareMeans(cls.d1, cls.d2)
+        # data to test param-first methods
+        cls.s1 = {
+            'mean': 90,
+            'null_mean': 82,
+            'std': 20,
+            'sample_size': 81,
+            'tail': 'larger',
+            'expected': [3.6, 0.0001591457]
+        }
+
 
     def test(self):
         x1, x2 = self.x1, self.x2
@@ -761,6 +771,11 @@ class TestZTest:
             ci = d1.zconfint_mean(alternative=alternatives[tc.alternative])
             assert_allclose(ci, tc_conf_int, rtol=1e-10)
 
+        # test param-first methods
+        res = DescrStatsW(mean=self.s1['mean'],std=self.s1['std'],sample_size=self.s1['sample_size'])
+        z_score, p_value = res.ztest_mean(value=self.s1['null_mean'], alternative=self.s1['tail'])
+        assert_allclose(z_score, self.s1['expected'][0], rtol=1e-10)
+
 
 def test_weightstats_len_1():
     x1 = [1]
@@ -782,9 +797,3 @@ def test_weightstats_2d_w2():
     w1 = [[1]]
     d1 = DescrStatsW(x1, w1)
     assert (d1.quantile([0, 0.5, 1.0]) == 1).all().all()
-
-
-def test_weightstats_param_first():
-    d1 = DescrStatsW(mean=75.092, std=8.45, sample_size=50)
-    expected_std_mean = 8.45 / np.sqrt(50)
-    assert_allclose(d1.std_mean, expected_std_mean, rtol=1e-3)

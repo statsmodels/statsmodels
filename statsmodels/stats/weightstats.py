@@ -121,6 +121,8 @@ class DescrStatsW:
     @cache_readonly
     def sum_weights(self):
         """Sum of weights"""
+        if self.sample_size_p:
+            return self.sample_size_p
         return self.weights.sum(0)
 
     @cache_readonly
