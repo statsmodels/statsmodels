@@ -208,6 +208,10 @@ class DescrStatsW:
 
         used for statistical tests with controlled ddof
         """
+        if self.var_p:
+            return self.var_p
+        elif self.std_p:
+            return self.std_p ** 2
         return self.sumsquares / self.sum_weights
 
     @cache_readonly

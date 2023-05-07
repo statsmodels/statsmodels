@@ -705,6 +705,13 @@ class TestZTest:
             'expected': [3.6, 0.0001591457]
         }
 
+        cls.s2 = {
+            'mean': 75.092,
+            'std': 8.45,
+            'sample_size': 50,
+            'expected': [72.749, 77.434]
+        }
+
 
     def test(self):
         x1, x2 = self.x1, self.x2
@@ -775,6 +782,28 @@ class TestZTest:
         res = DescrStatsW(mean=self.s1['mean'],std=self.s1['std'],sample_size=self.s1['sample_size'])
         z_score, p_value = res.ztest_mean(value=self.s1['null_mean'], alternative=self.s1['tail'])
         assert_allclose(z_score, self.s1['expected'][0], rtol=1e-10)
+
+        # zconfint
+        res = DescrStatsW(mean=self.s2['mean'],std=self.s2['std'],sample_size=self.s2['sample_size'])
+        ci = res.zconfint_mean()
+        assert_allclose(ci, self.s2['expected'], rtol=0.0001)
+
+
+        # # TWOSAMPLE
+        a = DescrStatsW(mean=257, std=39, sample_size=1000)
+        b = DescrStatsW(mean=260, std=38, sample_size=1000)
+        comp = CompareMeans(a,b)
+        lower,upper = comp.zconfint_diff(usevar='unequal', alpha=0.1)
+        assert_allclose(lower, -5.832, rtol=0.001)
+        assert_allclose(upper, -0.16, rtol=0.1)
+
+
+
+
+
+
+
+
 
 
 def test_weightstats_len_1():

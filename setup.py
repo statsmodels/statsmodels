@@ -78,13 +78,13 @@ EXTRAS_REQUIRE = {
 ###############################################################################
 # Values that rarely change
 ###############################################################################
-DISTNAME = "statsmodels"
+DISTNAME = "statsmodelspf"
 DESCRIPTION = "Statistical computations and models for Python"
 README = SETUP_DIR.joinpath("README.rst").read_text()
 LONG_DESCRIPTION = README
-MAINTAINER = "statsmodels Developers"
-MAINTAINER_EMAIL = "pystatsmodels@googlegroups.com"
-URL = "https://www.statsmodels.org/"
+MAINTAINER = "Daniel Alves Rosel"
+MAINTAINER_EMAIL = "daniel@alves.world"
+URL = "https://github.com/velocitatem/statsmodels"
 LICENSE = "BSD License"
 DOWNLOAD_URL = ""
 PROJECT_URLS = {
