@@ -139,8 +139,8 @@ class BaseIRAnalysis:
         if plot_stderr is False:
             stderr = None
 
-        elif stderr_type not in ['asym', 'mc', 'sz1', 'sz2','sz3']:
-            raise ValueError("Error type must be either 'asym', 'mc','sz1','sz2', or 'sz3'")
+        elif stderr_type not in ['asym', 'mc', 'sz1', 'sz2','sz3', 'bootstrap']:
+            raise ValueError("Error type must be either 'asym', 'mc','sz1','sz2','sz3', or 'bootstrap'")
         else:
             if stderr_type == 'asym':
                 stderr = self.cov(orth=orth)
@@ -163,6 +163,10 @@ class BaseIRAnalysis:
                                            repl=repl, signif=signif,
                                            seed=seed,
                                            component=component)
+            if stderr_type == 'bootstrap':
+                stderr = self.err_band_bootstrap(orth=orth, svar=svar,
+                                           repl=repl, signif=signif,
+                                           seed=seed)
 
         fig = plotting.irf_grid_plot(irfs, stderr, impulse, response,
                                      self.model.names, title, signif=signif,
@@ -490,8 +494,8 @@ class IRAnalysis(BaseIRAnalysis):
                 for i in range(neqs):
                     gamma[p,1:,i,j] = W[j,k[j],i*periods:(i+1)*periods] * irf_resim[p,1:,i,j]
                     if i == neqs-1:
-                        gamma[p,1:,i,j] = W[j,k[j],i*periods:] * irf_resim[p,1:,i,j]
-
+                        gamma[p,1:,i,j] = W[j,k[j],i*pentiles
+        
         gamma_sort = np.sort(gamma, axis=0) #sort to get quantiles
         indx = round(signif/2*repl)-1,round((1-signif/2)*repl)-1
 
@@ -503,6 +507,72 @@ class IRAnalysis(BaseIRAnalysis):
                 upper[:,i,j] = irfs[:,i,j] + gamma_sort[indx[1],:,i,j]
 
         return lower, upper
+    
+    def err_band_bootstrap(self, orth=False, svar=False, repl=100, signif=0.05,
+                     seed=None):
+        """
+        Bootstrap asymmetric errors 
+
+        Parameters
+        ----------
+        orth : bool, default False
+            Compute orthogonalized impulse responses
+        repl : int, default 1000
+            Number of bootstrap replications
+        signif : float (0 < signif < 1)
+            Significance level for error bars, defaults to 95% CI
+        seed : int, default None
+            np.random seed
+
+        References
+        ----------
+        Hamilton, J. D. (1994). Time series analysis.
+        Princeton university press. Chapter 11
+        Runkle, David E. “Vector Autoregressions and Reality.”
+        Journal of Business & Economic Statistics, vol. 5, no. 4,
+        1987, pp. 437–442.
+        """
+        from statsmodels.tsa.api import VAR
+        if seed is not None:
+            np.random.seed(seed)
+        
+        def resample(e):
+            """Resample data randomly with replacement."""
+            ind = np.random.choice(len(e), size=len(e))
+            return e[ind]
+    
+        def simulate(resid, Y, intercept, coefs, k_ar):
+            """
+            Simulate VAR model with given residuals
+            """
+            e_hatb = resample(resid)
+            Yb = np.zeros(Y.shape)
+            Yb[:k_ar] = Y[:k_ar]
+            for t in range(k_ar, len(Yb)):
+                Yb[t,] = intercept
+                for k in range(k_ar):
+                    Yb[t,] += coefs[k] @ Yb[t-k-1,]
+                Yb[t,] += e_hatb[t-k_ar,]
+            return Yb
+
+        Psi_b = np.empty((repl, self.periods+1, self.model.neqs, self.model.neqs))
+        resid = self.model.resid
+        Y = self.model.endog
+        intercept = self.model.intercept
+        coefs = self.model.coefs
+        # bootstrap simulations
+        for b in range(repl):
+            Yb = simulate(resid, Y, intercept, coefs, self.model.k_ar)
+            # fit VAR to the bootstraped data
+            b_fit = VAR(Yb).fit(self.model.k_ar)
+            # save the results of the estimation with Cholesky decomposition
+            Psi_b[b] = b_fit.irf().orth_irfs
+        # calculate the percentiles of the bootstrap distribution
+        lower = np.percentile(Psi_b, signif/2, axis=0)
+        upper = np.percentile(Psi_b, 100 - signif/2, axis=0)
+        
+        return lower, upper
+        
 
     def _eigval_decomp_SZ(self, irf_resim):
         """
