@@ -101,10 +101,11 @@ class DescrStatsW:
 
     """
 
-    def __init__(self, data, weights=None, ddof=0):
-
-        self.data = np.asarray(data)
-        if weights is None:
+    def __init__(self, data=None, weights=None, ddof=0,
+                 mean=None, var=None, std=None, sample_size=None
+                 ):
+        self.data = data if data is None else np.asarray(data)
+        if weights is None and data is not None:
             self.weights = np.ones(self.data.shape[0])
         else:
             self.weights = np.asarray(weights).astype(float)
@@ -112,6 +113,10 @@ class DescrStatsW:
             if len(self.weights.shape) > 1 and len(self.weights) > 1:
                 self.weights = self.weights.squeeze()
         self.ddof = ddof
+        self.mean_p = mean
+        self.var_p = var
+        self.std_p = std
+        self.sample_size_p = sample_size
 
     @cache_readonly
     def sum_weights(self):
@@ -122,26 +127,36 @@ class DescrStatsW:
     def nobs(self):
         """alias for number of observations/cases, equal to sum of weights
         """
+        if self.sample_size_p:
+            return self.sample_size_p
         return self.sum_weights
 
     @cache_readonly
     def sum(self):
         """weighted sum of data"""
+        if self.data is None:
+            return None
         return np.dot(self.data.T, self.weights)
 
     @cache_readonly
     def mean(self):
         """weighted mean of data"""
+        if self.mean_p:
+            return self.mean_p
         return self.sum / self.sum_weights
 
     @cache_readonly
     def demeaned(self):
         """data with weighted mean subtracted"""
+        if self.data is None:
+            return None
         return self.data - self.mean
 
     @cache_readonly
     def sumsquares(self):
         """weighted sum of squares of demeaned data"""
+        if self.data is None:
+            return None
         return np.dot((self.demeaned ** 2).T, self.weights)
 
     # need memoize instead of cache decorator
@@ -179,6 +194,10 @@ class DescrStatsW:
     def var(self):
         """variance with default degrees of freedom correction
         """
+        if self.var_p:
+            return self.var_p
+        elif self.std_p:
+            return self.std_p ** 2
         return self.sumsquares / (self.sum_weights - self.ddof)
 
     @cache_readonly
@@ -218,6 +237,8 @@ class DescrStatsW:
     def std_mean(self):
         """standard deviation of weighted mean
         """
+        if self.std_p and self.sample_size_p:
+            return self.std_p / np.sqrt(self.sample_size_p)
         std = self.std
         if self.ddof != 0:
             # ddof correction,   (need copy of std)
@@ -275,6 +296,9 @@ class DescrStatsW:
 
         probs = np.asarray(probs)
         probs = np.atleast_1d(probs)
+
+        if self.data is None:
+            return None
 
         if self.data.ndim == 1:
             rslt = self._quantile(self.data, probs)
@@ -608,6 +632,8 @@ class DescrStatsW:
         observations with weight=0 are dropped
 
         """
+        if self.data is None:
+            raise ValueError("data must not be None")
         w_int = np.floor(self.weights).astype(int)
         return np.repeat(self.data, w_int, axis=0)
 

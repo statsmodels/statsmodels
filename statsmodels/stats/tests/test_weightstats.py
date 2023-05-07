@@ -782,3 +782,9 @@ def test_weightstats_2d_w2():
     w1 = [[1]]
     d1 = DescrStatsW(x1, w1)
     assert (d1.quantile([0, 0.5, 1.0]) == 1).all().all()
+
+
+def test_weightstats_param_first():
+    d1 = DescrStatsW(mean=75.092, std=8.45, sample_size=50)
+    expected_std_mean = 8.45 / np.sqrt(50)
+    assert_allclose(d1.std_mean, expected_std_mean, rtol=1e-3)
