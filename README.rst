@@ -11,6 +11,18 @@ statsmodels is a Python package that provides a complement to scipy for
 statistical computations including descriptive statistics and estimation
 and inference for statistical models.
 
+Parameter First
+===============
+
+The difference in this package is its ability to accept parameters rather
+than entire datasets for `DescrStatsW` statistical inference. You can now pass:
+- `mean`: The sample mean value
+- `std`: Standard deviation
+- `var`: Variance
+- `sample_size`: The sample size
+Ex: `DescrStatsW(mean=257, std=39, sample_size=1000)`
+
+Then you can apply all the various methods.
 
 Documentation
 =============

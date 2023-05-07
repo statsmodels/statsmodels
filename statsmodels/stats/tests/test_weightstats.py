@@ -794,6 +794,7 @@ class TestZTest:
         b = DescrStatsW(mean=260, std=38, sample_size=1000)
         comp = CompareMeans(a,b)
         lower,upper = comp.zconfint_diff(usevar='unequal', alpha=0.1)
+
         assert_allclose(lower, -5.832, rtol=0.001)
         assert_allclose(upper, -0.16, rtol=0.1)
 
