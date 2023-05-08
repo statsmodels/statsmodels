@@ -20,9 +20,14 @@ jobs:
         python_311_latest:
           python.version: '3.11'
           lint: true
-        python_310_latest:
+        python_310_latest_install:
           python.version: '3.10'
           lint: true
+          test.install: true
+        python_310_latest_install_sdist:
+          python.version: '3.10'
+          test.install: true
+          TEST_SDIST: true
         python_39:
           python.version: '3.9'
           USE_MATPLOTLIB: false
@@ -40,6 +45,7 @@ jobs:
           MATPLOTLIB: 3.2.2
           coverage: true
           PYTEST_OPTIONS: ''
+          lint: true
         python_38_legacy_blas:
           python.version: '3.8'
           use.conda: true
@@ -56,7 +62,6 @@ jobs:
           SCIPY: 1.6.3
           PANDAS: 1.1.5
           MATPLOTLIB: 3.4.3
-          lint: true
         python_311_pre:
           python.version: '3.11'
           pip.pre: true
@@ -90,9 +95,16 @@ jobs:
 
   - script: |
       echo "Installing to site packages"
-      python -m pip wheel .
-      WHL=$(ls -t dist)
-      python -m pip install ./dist/${WHL}
+      if [[ $TEST_SDIST ]]; then
+        python -m build . --sdist
+        TAIL=".tar.gz"
+      else
+        python -m pip wheel . -w ./dist -v
+        TAIL=".whl"
+      fi
+      ls -t dist/statsmodels*${TAIL}
+      PKG_NAME=$(ls -t dist/statsmodels*${TAIL})
+      python -m pip install ./${PKG_NAME}
     displayName: 'Install statsmodels (site-packages)'
     condition: eq(variables['test.install'], 'true')
 
@@ -115,7 +127,7 @@ jobs:
       echo "Testing site packages"
       mkdir test_run_dir
       pushd test_run_dir
-      python -c "import statsmodels; statsmodels.test(['-n', 'auto', '--junitxml=../junit/test-results.xml', '--skip-examples'])"
+      python -c "import statsmodels; statsmodels.test(['-n', 'auto', '--junitxml=../junit/test-results.xml', '--skip-examples', '--dist', 'loadscope', '--durations=25'], exit=True)"
       popd
     displayName: 'Run tests (site-packages)'
     condition: eq(variables['test.install'], 'true')
