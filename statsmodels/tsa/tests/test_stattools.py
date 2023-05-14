@@ -1047,7 +1047,8 @@ def test_compare_acovf_vs_ccovf(demean, adjusted, fft, reset_randomstate):
 
 @pytest.mark.smoke
 @pytest.mark.slow
-def test_arma_order_select_ic():
+@pytest.mark.parametrize("parallel", [False, True])
+def test_arma_order_select_ic(parallel):
     # smoke test, assumes info-criteria are right
     from statsmodels.tsa.arima_process import arma_generate_sample
 
@@ -1058,7 +1059,7 @@ def test_arma_order_select_ic():
     nobs = 250
     np.random.seed(2014)
     y = arma_generate_sample(arparams, maparams, nobs)
-    res = arma_order_select_ic(y, ic=["aic", "bic"], trend="n")
+    res = arma_order_select_ic(y, ic=["aic", "bic"], trend="n", parallel=parallel)
     # regression tests in case we change algorithm to minic in sas
     aic_x = np.array(
         [
