@@ -1801,7 +1801,7 @@ def _safe_arma_fit(y, order, model_kw, trend, fit_kw, start_params=None):
 
 
 def arma_order_select_ic(
-    y, max_ar=4, max_ma=2, ic="bic", trend="c", model_kw=None, fit_kw=None
+    y, max_ar=4, max_ma=2, ic="bic", trend="c", model_kw=None, fit_kw=None, parallel=False
 ):
     """
     Compute information criteria for many ARMA models.
@@ -1823,6 +1823,8 @@ def arma_order_select_ic(
         Keyword arguments to be passed to the ``ARMA`` model.
     fit_kw : dict
         Keyword arguments to be passed to ``ARMA.fit``.
+    parallel : bool
+        Whether to do the parameter search in parallel. Default False.
 
     Returns
     -------
@@ -1840,6 +1842,11 @@ def arma_order_select_ic(
     therefore a little slow. An implementation using approximate estimates
     will be provided in the future. In the meantime, consider passing
     {method : "css"} to fit_kw.
+
+    Parallel search can be enabled. In order to use that option, `joblib` must
+    be installed. Note, that it does not always make sense to parallelise the process.
+    For small search spaces, parallelsiation will makes the search slower. Be sure
+    to test both options before committing to parallel search only. 
 
     Examples
     --------
@@ -1859,6 +1866,11 @@ def arma_order_select_ic(
     >>> res.aic_min_order
     >>> res.bic_min_order
     """
+    if parallel:
+        try:
+            from joblib import Parallel, delayed
+        except ModuleNotFoundError:
+            raise ModuleNotFoundError("Parallel model search was requested. Please, make sure joblib is installed.")
     max_ar = int_like(max_ar, "max_ar")
     max_ma = int_like(max_ma, "max_ma")
     trend = string_like(trend, "trend", options=("n", "c"))
@@ -1876,15 +1888,23 @@ def arma_order_select_ic(
     model_kw = {} if model_kw is None else model_kw
     fit_kw = {} if fit_kw is None else fit_kw
     y_arr = array_like(y, "y", contiguous=True)
-    for ar in ar_range:
-        for ma in ma_range:
-            mod = _safe_arma_fit(y_arr, (ar, 0, ma), model_kw, trend, fit_kw)
-            if mod is None:
-                results[:, ar, ma] = np.nan
-                continue
 
-            for i, criteria in enumerate(ic):
-                results[i, ar, ma] = getattr(mod, criteria)
+    def get_ic_for_order(ar: int, ma: int, criteria: str):
+        mod = _safe_arma_fit(y_arr, (ar, 0, ma), model_kw, trend, fit_kw)
+        if mod is None:
+            return np.nan
+        return getattr(mod, criteria)
+    
+    def fit_order(ar, ma):
+        return [get_ic_for_order(ar, ma, criteria) for criteria in ic]
+
+    if parallel:
+        results_raw = Parallel(n_jobs=-1)(delayed(fit_order)(ar, ma) for ar in ar_range for ma in ma_range)
+        results = np.array(results_raw).T.reshape(len(ic), len(ar_range), len(ma_range))
+    else:
+        for ar in ar_range:
+            for ma in ma_range:
+                results[:, ar, ma] = fit_order(ar, ma)
 
     dfs = [
         pd.DataFrame(res, columns=ma_range, index=ar_range) for res in results
