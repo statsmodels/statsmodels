@@ -1843,9 +1843,9 @@ def arma_order_select_ic(
     will be provided in the future. In the meantime, consider passing
     {method : "css"} to fit_kw.
 
-    Parallel search can be enabled. In order to use that option, `joblib` must
-    be installed. Note, that it does not always make sense to parallelise the process.
-    For small search spaces, parallelsiation will makes the search slower. Be sure
+    Parallel search can be enabled. In order to use that option, joblib must be
+    installed. Note that it does not always make sense to parallelize the process.
+    For small search spaces, parallelization will make the search slower. Be sure
     to test both options before committing to parallel search only.
 
     Examples
