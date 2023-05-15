@@ -52,6 +52,12 @@ from statsmodels.tsa.stattools import (
     range_unit_root_test,
     zivot_andrews,
 )
+import pkgutil
+
+if pkgutil.find_loader("joblib") is not None:
+    HAS_JOBLIB = True
+else:
+    HAS_JOBLIB = False
 
 DECIMAL_8 = 8
 DECIMAL_6 = 6
@@ -1047,7 +1053,7 @@ def test_compare_acovf_vs_ccovf(demean, adjusted, fft, reset_randomstate):
 
 @pytest.mark.smoke
 @pytest.mark.slow
-@pytest.mark.parametrize("parallel", [False, True])
+@pytest.mark.parametrize("parallel", [False, True] if HAS_JOBLIB else [False])
 def test_arma_order_select_ic(parallel):
     # smoke test, assumes info-criteria are right
     from statsmodels.tsa.arima_process import arma_generate_sample
