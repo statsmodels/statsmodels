@@ -8,7 +8,7 @@ from statsmodels.compat.pandas import deprecate_kwarg
 from statsmodels.compat.python import Literal, lzip
 from statsmodels.compat.scipy import _next_regular
 
-from typing import Tuple
+from typing import Tuple, List
 import warnings
 
 import numpy as np
@@ -1846,7 +1846,7 @@ def arma_order_select_ic(
     Parallel search can be enabled. In order to use that option, `joblib` must
     be installed. Note, that it does not always make sense to parallelise the process.
     For small search spaces, parallelsiation will makes the search slower. Be sure
-    to test both options before committing to parallel search only. 
+    to test both options before committing to parallel search only.
 
     Examples
     --------
@@ -1889,22 +1889,19 @@ def arma_order_select_ic(
     fit_kw = {} if fit_kw is None else fit_kw
     y_arr = array_like(y, "y", contiguous=True)
 
-    def get_ic_for_order(ar: int, ma: int, criteria: str):
+    def get_ic_for_order(ar: int, ma: int, criteria: List[str]):
         mod = _safe_arma_fit(y_arr, (ar, 0, ma), model_kw, trend, fit_kw)
         if mod is None:
             return np.nan
-        return getattr(mod, criteria)
-    
-    def fit_order(ar, ma):
-        return [get_ic_for_order(ar, ma, criteria) for criteria in ic]
+        return [getattr(mod, criterion) for criterion in criteria]
 
     if parallel:
-        results_raw = Parallel(n_jobs=-1)(delayed(fit_order)(ar, ma) for ar in ar_range for ma in ma_range)
+        results_raw = Parallel(n_jobs=-1)(delayed(get_ic_for_order)(ar, ma, ic) for ar in ar_range for ma in ma_range)
         results = np.array(results_raw).T.reshape(len(ic), len(ar_range), len(ma_range))
     else:
         for ar in ar_range:
             for ma in ma_range:
-                results[:, ar, ma] = fit_order(ar, ma)
+                results[:, ar, ma] = get_ic_for_order(ar, ma, ic)
 
     dfs = [
         pd.DataFrame(res, columns=ma_range, index=ar_range) for res in results
