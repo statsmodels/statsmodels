@@ -30,7 +30,7 @@ Examples
 
 A more detailed example for `anova_lm` can be found here:
 
-*  `ANOVA <examples/notebooks/generated/interactions_anova.html>`__
+*  `ANOVA <examples/notebooks/generated/interactions_anova.ipynb>`_
 
 Module Reference
 ----------------
