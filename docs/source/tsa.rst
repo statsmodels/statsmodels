@@ -116,7 +116,7 @@ AR-X and related models can also be fitted with the `arima.ARIMA` class and the
 `SARIMAX` class (using full MLE via the Kalman Filter).
 
 See the notebook `Autoregressions
-<../examples/notebooks/generated/autoregressions.html>`__ for an overview.
+<examples/notebooks/generated/autoregressions.ipynb>`_ for an overview.
 
 
 Autoregressive Moving-Average Processes (ARMA) and Kalman Filter
@@ -140,8 +140,8 @@ number of inherited features from the :ref:`state space <statespace>` models
 impulse responses, etc.).
 
 See the notebooks `ARMA: Sunspots Data
-<../examples/notebooks/generated/tsa_arma_0.html>`__ and
-`ARMA: Artificial Data <../examples/notebooks/generated/tsa_arma_1.html>`__
+<examples/notebooks/generated/tsa_arma_0.ipynb>`_ and
+`ARMA: Artificial Data <examples/notebooks/generated/tsa_arma_1.ipynb>`_
 for an overview.
 
 
@@ -191,7 +191,7 @@ and impulse responses, etc.).
    statespace.exponential_smoothing.ExponentialSmoothingResults
 
 See the notebook `Exponential Smoothing
-<../examples/notebooks/generated/exponential_smoothing.html>`__
+<examples/notebooks/generated/exponential_smoothing.ipynb>`_
 for an overview.
 
 ARMA Process
@@ -255,7 +255,7 @@ AR-X and related models can also be fitted with
 the Kalman Filter).
 
 See the notebook `Autoregressive Distributed Lag Models
-<../examples/notebooks/generated/autoregressive_distributed_lag.html>`__
+<examples/notebooks/generated/autoregressive_distributed_lag.ipynb>`_
 for an overview.
 
 Error Correction Models (ECM)
@@ -300,9 +300,9 @@ Regime switching models
    MarkovAutoregression
 
 See the notebooks `Markov switching dynamic regression
-<../examples/notebooks/generated/markov_regression.html>`__ and
+<examples/notebooks/generated/markov_regression.ipynb>`_ and
 `Markov switching autoregression
-<../examples/notebooks/generated/markov_autoregression.html>`__
+<examples/notebooks/generated/markov_autoregression.ipynb>`_
 for an overview.
 
 Time Series Filters
@@ -347,7 +347,7 @@ Time Series Filters
    DecomposeResult
    
 See the notebook `Time Series Filters
-<../examples/notebooks/generated/tsa_filters.html>`__ for an overview.
+<examples/notebooks/generated/tsa_filters.ipynb>`_ for an overview.
 
 TSA Tools
 """""""""
@@ -412,7 +412,7 @@ Users who wish to write custom deterministic terms must use subclass
 :class:`~statsmodels.tsa.deterministic.DeterministicTerm`.
    
 See the notebook `Deterministic Terms in Time Series Models
-<../examples/notebooks/generated/deterministics.html>`__ for an overview.
+<examples/notebooks/generated/deterministics.ipynb>`_ for an overview.
 
 Forecasting Models
 """"""""""""""""""
@@ -460,7 +460,7 @@ a random-walk model.
    STLForecastResults
 
 See the notebook `Seasonal Decomposition
-<../examples/notebooks/generated/stl_decomposition.html>`__ for an overview.
+<examples/notebooks/generated/stl_decomposition.ipynb>`_ for an overview.
 
 Prediction Results
 """"""""""""""""""
