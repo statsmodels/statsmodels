@@ -797,7 +797,7 @@ class WLS(RegressionModel):
                   +\frac{1}{2}\log\left(\left|W\right|\right)
 
         where :math:`W` is a diagonal weight matrix matrix,
-        :math:`\leftW\right|` is its determinant, and
+        :math:`\left|W\right|` is its determinant, and
         :math:`SSR=\left(Y-\hat{Y}\right)^\prime W \left(Y-\hat{Y}\right)` is
         the sum of the squared weighted residuals.
         """
