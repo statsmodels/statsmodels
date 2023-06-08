@@ -629,7 +629,7 @@ class GLM(base.LikelihoodModel):
                          dummy_idx=None, count_idx=None,
                          offset=None, exposure=None):
         """
-        This should implement the derivative of the non-linear function
+        Derivative of mean, expected endog with respect to the parameters
         """
         if exog is None:
             exog = self.exog
@@ -642,8 +642,8 @@ class GLM(base.LikelihoodModel):
         k_extra = getattr(self, 'k_extra', 0)
         params_exog = params if k_extra == 0 else params[:-k_extra]
 
-        lin_pred = self.predict(params, which="linear")
-        margeff = self.family.link.inverse_deriv(lin_pred)[:, None] * params_exog
+        margeff = (self.family.link.inverse_deriv(lin_pred)[:, None] *
+                   params_exog)
         if 'ex' in transform:
             margeff *= exog
         if 'ey' in transform:
@@ -2299,6 +2299,9 @@ class GLMResults(base.LikelihoodModelResults):
             dummy=False, count=False):
         """Get marginal effects of the fitted model.
 
+        Warning: offset, exposure and weights (var_weights and freq_weights)
+        are not supported by margeff.
+
         Parameters
         ----------
         at : str, optional
@@ -2366,12 +2369,15 @@ class GLMResults(base.LikelihoodModelResults):
 
         When using after Poisson, returns the expected number of events per
         period, assuming that the model is loglinear.
+
+        Status : unsupported features offset, exposure and weights. Default
+        handling of freq_weights for average effect "overall" might change.
+
         """
         if getattr(self.model, "offset", None) is not None:
             raise NotImplementedError("Margins with offset are not available.")
         if (np.any(self.model.var_weights != 1) or
-                np.any(self.model.freq_weights != 1)
-                ):
+                np.any(self.model.freq_weights != 1)):
             warnings.warn("weights are not taken into account by margeff")
         from statsmodels.discrete.discrete_margins import DiscreteMargins
         return DiscreteMargins(self, (at, method, atexog, dummy, count))
