@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import os.path
 import numpy as np
 import pandas as pd
 import pytest
@@ -7,8 +8,17 @@ from statsmodels.multivariate.multivariate_ols import (
     _MultivariateOLS,
     MultivariateLS,
     )
-from numpy.testing import assert_array_almost_equal, assert_raises
+from numpy.testing import (
+    assert_allclose,
+    assert_array_almost_equal,
+    assert_raises,
+    )
 import patsy
+
+
+dir_path = os.path.dirname(os.path.abspath(__file__))
+csv_path = os.path.join(dir_path, 'results', 'mvreg.csv')
+data_mvreg = pd.read_csv(csv_path)
 
 data = pd.DataFrame([['Morphine', 'N', .04, .20, .10, .08],
                      ['Morphine', 'N', .02, .06, .02, .02],
@@ -214,3 +224,52 @@ def test_affine_hypothesis(model):
     assert_array_almost_equal(r0['test1']['stat'].values, a, decimal=4)
     r0.summary(show_contrast_L=True, show_transform_M=True,
                show_constant_C=True)
+
+
+class CheckMVConsistent:
+
+    def test(self):
+        res = self.res
+        tt = res.t_test(np.eye(res.params.size))
+        assert_allclose(tt.effect, res.params.to_numpy().ravel(order="F"),
+                        rtol=1e-13)
+        assert_allclose(tt.sd, res.bse.to_numpy().ravel(order="F"),
+                        rtol=1e-13)
+        assert_allclose(tt.tvalue, res.tvalues.to_numpy().ravel(order="F"),
+                        rtol=1e-13)
+        assert_allclose(tt.pvalue, res.pvalues.to_numpy().ravel(order="F"),
+                        rtol=1e-13)
+        assert_allclose(tt.conf_int(), res.conf_int().to_numpy(),
+                        rtol=1e-13)
+
+        exog_names = res.model.exog_names
+        endog_names = res.model.endog_names
+
+        # hypothesis test for one parameter:
+        for xn in exog_names:
+            cnx = []
+            for yn in endog_names:
+                cn = f"y{yn}_{xn}"
+                tt = res.t_test(cn)
+                mvt = res.mv_test(hypotheses=[("one", [xn], [yn])])
+                assert_allclose(tt.pvalue, mvt.summary_frame["Pr > F"][0],
+                                rtol=1e-10)
+                cnx.append(cn)
+
+            # wald test effect of an exog is zero across all endog
+            # test methods are only asymptotically equivalent
+            tt = res.wald_test(cnx, scalar=True)
+            mvt = res.mv_test(hypotheses=[(xn, [xn], endog_names)])
+            assert_allclose(tt.pvalue, mvt.summary_frame["Pr > F"][0],
+                            rtol=0.1, atol=1e-20)
+
+
+class TestMultivariateLS(CheckMVConsistent):
+
+    @classmethod
+    def setup_class(cls):
+        formula2 = ("locus_of_control + self_concept + motivation ~ "
+                    "read + write + science + prog")
+        mod = MultivariateLS.from_formula(formula2, data=data_mvreg)
+        cls.res = mod.fit()
+        ttn = cls.res.mv_test()
