@@ -2,7 +2,11 @@
 
 import numpy as np
 import pandas as pd
-from statsmodels.multivariate.multivariate_ols import _MultivariateOLS
+import pytest
+from statsmodels.multivariate.multivariate_ols import (
+    _MultivariateOLS,
+    MultivariateLS,
+    )
 from numpy.testing import assert_array_almost_equal, assert_raises
 import patsy
 
@@ -28,8 +32,10 @@ data = pd.DataFrame([['Morphine', 'N', .04, .20, .10, .08],
 for i in range(2, 6):
     data.iloc[:, i] = np.log(data.iloc[:, i])
 
+models = [_MultivariateOLS, MultivariateLS]
 
-def compare_r_output_dogs_data(method):
+
+def compare_r_output_dogs_data(method, model):
     ''' Testing within-subject effect interact with 2 between-subject effect
     Compares with R car library Anova(, type=3) output
 
@@ -43,7 +49,7 @@ def compare_r_output_dogs_data(method):
 
 
     # Repeated measures with orthogonal polynomial contrasts coding
-    mod = _MultivariateOLS.from_formula(
+    mod = model.from_formula(
         'Histamine0 + Histamine1 + Histamine3 + Histamine5 ~ Drug * Depleted',
         data)
     r = mod.fit(method=method)
@@ -70,13 +76,15 @@ def compare_r_output_dogs_data(method):
     assert_array_almost_equal(r['Drug:Depleted']['stat'].values, a, decimal=6)
 
 
-def test_glm_dogs_example():
-    compare_r_output_dogs_data(method='svd')
-    compare_r_output_dogs_data(method='pinv')
+@pytest.mark.parametrize("model", models)
+def test_glm_dogs_example(model):
+    compare_r_output_dogs_data(method='svd', model=model)
+    compare_r_output_dogs_data(method='pinv', model=model)
 
 
-def test_specify_L_M_by_string():
-    mod = _MultivariateOLS.from_formula(
+@pytest.mark.parametrize("model", models)
+def test_specify_L_M_by_string(model):
+    mod = model.from_formula(
         'Histamine0 + Histamine1 + Histamine3 + Histamine5 ~ Drug * Depleted',
         data)
     r = mod.fit()
@@ -99,21 +107,23 @@ def test_specify_L_M_by_string():
     assert_array_almost_equal(r1['a']['transform_M'].T, a, decimal=10)
 
 
-def test_independent_variable_singular():
+@pytest.mark.parametrize("model", models)
+def test_independent_variable_singular(model):
     data1 = data.copy()
     data1['dup'] = data1['Drug']
-    mod = _MultivariateOLS.from_formula(
+    mod = model.from_formula(
         'Histamine0 + Histamine1 + Histamine3 + Histamine5 ~ Drug * dup',
         data1)
     assert_raises(ValueError, mod.fit)
-    mod = _MultivariateOLS.from_formula(
+    mod = model.from_formula(
         'Histamine0 + Histamine1 + Histamine3 + Histamine5 ~ Drug * dup',
         data1)
     assert_raises(ValueError,  mod.fit)
 
 
-def test_from_formula_vs_no_formula():
-    mod = _MultivariateOLS.from_formula(
+@pytest.mark.parametrize("model", models)
+def test_from_formula_vs_no_formula(model):
+    mod = model.from_formula(
         'Histamine0 + Histamine1 + Histamine3 + Histamine5 ~ Drug * Depleted',
         data)
     r = mod.fit(method='svd')
@@ -123,12 +133,12 @@ def test_from_formula_vs_no_formula():
         data, return_type="dataframe")
     L = np.array([[1, 0, 0, 0, 0, 0]])
     # DataFrame input
-    r = _MultivariateOLS(endog, exog).fit(method='svd')
+    r = model(endog, exog).fit(method='svd')
     r1 = r.mv_test(hypotheses=[['Intercept', L, None]])
     assert_array_almost_equal(r1['Intercept']['stat'].values,
                               r0['Intercept']['stat'].values, decimal=6)
     # Numpy array input
-    r = _MultivariateOLS(endog.values, exog.values).fit(method='svd')
+    r = model(endog.values, exog.values).fit(method='svd')
     r1 = r.mv_test(hypotheses=[['Intercept', L, None]])
     assert_array_almost_equal(r1['Intercept']['stat'].values,
                               r0['Intercept']['stat'].values, decimal=6)
@@ -137,18 +147,20 @@ def test_from_formula_vs_no_formula():
                   ])
     r1 = r.mv_test(hypotheses=[['Drug', L, None]])
     # DataFrame input
-    r = _MultivariateOLS(endog, exog).fit(method='svd')
+    r = model(endog, exog).fit(method='svd')
     r1 = r.mv_test(hypotheses=[['Drug', L, None]])
     assert_array_almost_equal(r1['Drug']['stat'].values,
                               r0['Drug']['stat'].values, decimal=6)
     # Numpy array input
-    r = _MultivariateOLS(endog.values, exog.values).fit(method='svd')
+    r = model(endog.values, exog.values).fit(method='svd')
     r1 = r.mv_test(hypotheses=[['Drug', L, None]])
     assert_array_almost_equal(r1['Drug']['stat'].values,
                               r0['Drug']['stat'].values, decimal=6)
 
-def test_L_M_matrices_1D_array():
-    mod = _MultivariateOLS.from_formula(
+
+@pytest.mark.parametrize("model", models)
+def test_L_M_matrices_1D_array(model):
+    mod = model.from_formula(
         'Histamine0 + Histamine1 + Histamine3 + Histamine5 ~ Drug * Depleted',
         data)
     r = mod.fit(method='svd')
@@ -159,8 +171,9 @@ def test_L_M_matrices_1D_array():
     assert_raises(ValueError, r.mv_test, hypotheses=[['Drug', L, M]])
 
 
-def test_exog_1D_array():
-    mod = _MultivariateOLS.from_formula(
+@pytest.mark.parametrize("model", models)
+def test_exog_1D_array(model):
+    mod = model.from_formula(
         'Histamine0 + Histamine1 + Histamine3 + Histamine5 ~ 0 + Depleted',
         data)
     r = mod.fit(method='svd')
@@ -176,13 +189,15 @@ def test_endog_1D_array():
     assert_raises(ValueError, _MultivariateOLS.from_formula,
         'Histamine0 ~ 0 + Depleted', data)
 
-def test_affine_hypothesis():
+
+@pytest.mark.parametrize("model", models)
+def test_affine_hypothesis(model):
     # Testing affine hypothesis, compared with R car linearHypothesis
     # Note: The test statistis Phillai, Wilks, Hotelling-Lawley
     # and Roy are the same as R output but the approximate F and degree
     # of freedoms can be different. This is due to the fact that this
     # implementation is based on SAS formula [1]
-    mod = _MultivariateOLS.from_formula(
+    mod = model.from_formula(
         'Histamine0 + Histamine1 + Histamine3 + Histamine5 ~ Drug * Depleted',
         data)
     r = mod.fit(method='svd')

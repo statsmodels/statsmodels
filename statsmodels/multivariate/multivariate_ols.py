@@ -11,8 +11,13 @@ import pandas as pd
 from patsy import DesignInfo
 
 from statsmodels.compat.pandas import Substitution
-from statsmodels.base.model import Model
+from statsmodels.base.model import Model, LikelihoodModelResults
+import statsmodels.base.wrapper as wrap
+from statsmodels.regression.linear_model import RegressionResultsWrapper
+
 from statsmodels.iolib import summary2
+from statsmodels.tools.decorators import cache_readonly
+
 __docformat__ = 'restructuredtext en'
 
 _hypotheses_doc = \
@@ -34,14 +39,14 @@ _hypotheses_doc = \
         independent variable. At least 1 row
         (1 by k_exog, the number of independent variables) is required.
         If an array of strings, it will be passed to
-        patsy.DesignInfo().linear_constraint.
+        patsy.DesignInfo().linear_constraint based on exog_names.
 
     transform_M : 2D array or an array of strings or None, optional
         Left hand side transform matrix.
         If `None` or left out, it is set to a k_endog by k_endog
         identity matrix (i.e. do not transform y matrix).
         If an array of strings, it will be passed to
-        patsy.DesignInfo().linear_constraint.
+        patsy.DesignInfo().linear_constraint based on endog_names.
 
     constant_C : 2D array or None, optional
         Right-hand side constant matrix.
@@ -399,13 +404,18 @@ class _MultivariateOLS(Model):
         super(_MultivariateOLS, self).__init__(endog, exog, missing=missing,
                                                hasconst=hasconst, **kwargs)
 
+        self.nobs, self.k_endog = self.endog.shape
+        self.k_exog = self.exog.shape[1]
+        idx = pd.MultiIndex.from_product((self.endog_names, self.exog_names))
+        self.data.cov_names = idx
+
     def fit(self, method='svd'):
         self._fittedmod = _multivariate_ols_fit(
             self.endog, self.exog, method=method)
         return _MultivariateOLSResults(self)
 
 
-class _MultivariateOLSResults:
+class _MultivariateOLSResults(LikelihoodModelResults):
     """
     _MultivariateOLS results class
     """
@@ -466,7 +476,7 @@ class _MultivariateOLSResults:
                 for i in range(k_xvar):
                     name = 'x%d' % (i)
                     L = np.zeros([1, k_xvar])
-                    L[i] = 1
+                    L[0, i] = 1
                     hypotheses.append([name, L, None])
 
         results = _multivariate_ols_test(hypotheses, self._fittedmod,
@@ -476,8 +486,209 @@ class _MultivariateOLSResults:
                                        self.endog_names,
                                        self.exog_names)
 
-    def summary(self):
+
+    def _summary(self):
         raise NotImplementedError
+
+
+class MultivariateLS(_MultivariateOLS):
+    """Multivariate Linear Model estimated by least squares.
+
+    Parameters
+    ----------
+    endog : array_like
+        Dependent variables. A nobs x k_endog array where nobs is
+        the number of observations and k_endog is the number of dependent
+        variables
+    exog : array_like
+        Independent variables. A nobs x k_exog array where nobs is the
+        number of observations and k_exog is the number of independent
+        variables. An intercept is not included by default and should be added
+        by the user (models specified using a formula include an intercept by
+        default)
+    """
+
+
+    def fit(self, method='svd', use_t=True):
+        _fittedmod = _multivariate_ols_fit(
+            self.endog, self.exog, method=method)
+
+        params, df_resid, inv_cov, sscpr = _fittedmod
+        normalized_cov_params = np.kron(sscpr, inv_cov) / df_resid
+        self.df_resid = df_resid
+        res = MultivariateLSResults(
+            self,
+            params,
+            normalized_cov_params=normalized_cov_params,
+            scale=1,
+            use_t=use_t,
+            # extra kwargs are currently ignored
+            )
+
+        res.df_resid = self.df_resid = df_resid
+        res._fittedmod =_fittedmod
+        res.cov_resid = sscpr / df_resid
+        return MultivariateLSResultsWrapper(res)
+        return res
+
+
+class MultivariateLSResults(LikelihoodModelResults):
+    """Results for multivariate linear regression
+    """
+
+    def __init__(self, model, params, normalized_cov_params=None, scale=1.,
+                 **kwargs):
+        super().__init__(model, params,
+                         normalized_cov_params=normalized_cov_params,
+                         scale=scale,
+                         **kwargs)
+
+        self.method = "Least Squares"
+
+    @cache_readonly
+    def bse(self):
+        bse = np.sqrt(np.diag(self.cov_params()))
+        return bse.reshape(self.params.shape, order='F')
+
+    @Substitution(hypotheses_doc=_hypotheses_doc)
+    def mv_test(self, hypotheses=None, skip_intercept_test=False):
+        """
+        Linear hypotheses testing
+
+        Parameters
+        ----------
+        %(hypotheses_doc)s
+        skip_intercept_test : bool
+            If true, then testing the intercept is skipped, the model is not
+            changed.
+            Note: If a term has a numerically insignificant effect, then
+            an exception because of emtpy arrays may be raised. This can
+            happen for the intercept if the data has been demeaned.
+
+        Returns
+        -------
+        results: _MultivariateOLSResults
+
+        Notes
+        -----
+        Tests hypotheses of the form
+
+            L * params * M = C
+
+        where `params` is the regression coefficient matrix for the
+        linear model y = x * params, `L` is the contrast matrix, `M` is the
+        dependent variable transform matrix and C is the constant matrix.
+        """
+        k_xvar = len(self.model.exog_names)
+        if hypotheses is None:
+            if self.model.data.design_info is not None:
+                terms = self.model.data.design_info.term_name_slices
+                hypotheses = []
+                for key in terms:
+                    if skip_intercept_test and key == 'Intercept':
+                        continue
+                    L_contrast = np.eye(k_xvar)[terms[key], :]
+                    hypotheses.append([key, L_contrast, None])
+            else:
+                hypotheses = []
+                for i in range(k_xvar):
+                    name = 'x%d' % (i)
+                    L = np.zeros([1, k_xvar])
+                    L[0, i] = 1
+                    hypotheses.append([name, L, None])
+
+        results = _multivariate_ols_test(hypotheses, self._fittedmod,
+                                          self.model.exog_names, self.model.endog_names)
+
+        return MultivariateTestResults(results,
+                                       self.model.endog_names,
+                                       self.model.exog_names)
+
+    def conf_int(self, alpha=.05, cols=None):
+        confint = super().conf_int(alpha=alpha, cols=cols)
+        return confint.transpose(2,0,1)
+
+    # copied from discrete
+    def _get_endog_name(self, yname, yname_list):
+        if yname is None:
+            yname = self.model.endog_names
+        if yname_list is None:
+            yname_list = self.model.endog_names
+        return yname, yname_list
+
+    def summary(self, yname=None, xname=None, title=None, alpha=.05,
+            yname_list=None):
+        """
+        Summarize the Regression Results.
+
+        Parameters
+        ----------
+        yname : str, optional
+            The name of the endog variable in the tables. The default is `y`.
+        xname : list[str], optional
+            The names for the exogenous variables, default is "var_xx".
+            Must match the number of parameters in the model.
+        title : str, optional
+            Title for the top table. If not None, then this replaces the
+            default title.
+        alpha : float
+            The significance level for the confidence intervals.
+
+        Returns
+        -------
+        Summary
+            Class that holds the summary tables and text, which can be printed
+            or converted to various output formats.
+
+        See Also
+        --------
+        statsmodels.iolib.summary.Summary : Class that hold summary results.
+        """
+        # used in generic part of io summary
+        self.nobs = self.model.nobs
+        self.df_model = self.model.k_endog * (self.model.k_exog - 1)
+
+        top_left = [('Dep. Variable:', None),
+                     ('Model:', [self.model.__class__.__name__]),
+                     ('Method:', [self.method]),
+                     ('Date:', None),
+                     ('Time:', None),
+                     # ('converged:', ["%s" % self.mle_retvals['converged']]),
+                    ]
+
+        top_right = [('No. Observations:', None),
+                     ('Df Residuals:', None),
+                     ('Df Model:', None),
+                     # ('Pseudo R-squ.:', ["%#6.4g" % self.prsquared]),
+                     # ('Log-Likelihood:', None),
+                     # ('LL-Null:', ["%#8.5g" % self.llnull]),
+                     # ('LLR p-value:', ["%#6.4g" % self.llr_pvalue])
+                     ]
+
+        if hasattr(self, 'cov_type'):
+            top_left.append(('Covariance Type:', [self.cov_type]))
+
+        if title is None:
+            title = self.model.__class__.__name__ + ' ' + "Regression Results"
+
+        # boiler plate
+        from statsmodels.iolib.summary import Summary
+        smry = Summary()
+        yname, yname_list = self._get_endog_name(yname, yname_list)
+
+        # for top of table
+        smry.add_table_2cols(self, gleft=top_left, gright=top_right,
+                             yname=yname, xname=xname, title=title)
+
+        # for parameters, etc
+        smry.add_table_params(self, yname=yname_list, xname=xname, alpha=alpha,
+                              use_t=self.use_t)
+
+        if hasattr(self, 'constraints'):
+            smry.add_extra_txt(['Model has been estimated subject to linear '
+                                'equality constraints.'])
+
+        return smry
 
 
 class MultivariateTestResults:
@@ -590,3 +801,16 @@ class MultivariateTestResults:
                 df = pd.DataFrame(self.results[key]['constant_C'])
                 summ.add_df(df)
         return summ
+
+
+class MultivariateLSResultsWrapper(RegressionResultsWrapper):
+    # copied and adapted from Multinomial wrapper
+    _attrs = {"resid_misclassified": "rows"}
+    _wrap_attrs = wrap.union_dicts(RegressionResultsWrapper._wrap_attrs,
+                                   _attrs)
+    _methods = {'conf_int': 'multivariate_confint'}
+    _wrap_methods = wrap.union_dicts(RegressionResultsWrapper._wrap_methods,
+                                     _methods)
+
+
+wrap.populate_wrapper(MultivariateLSResultsWrapper, MultivariateLSResults)
