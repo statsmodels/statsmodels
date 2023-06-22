@@ -531,6 +531,13 @@ class MultivariateLS(_MultivariateOLS):
         return MultivariateLSResultsWrapper(res)
         return res
 
+    def predict(self, params, exog=None):
+        if exog is None:
+            exog = self.exog
+        else:
+            exog = np.asarray(exog)
+        return exog @ params
+
 
 class MultivariateLSResults(LikelihoodModelResults):
     """Results for multivariate linear regression
@@ -549,6 +556,34 @@ class MultivariateLSResults(LikelihoodModelResults):
     def bse(self):
         bse = np.sqrt(np.diag(self.cov_params()))
         return bse.reshape(self.params.shape, order='F')
+
+    @cache_readonly
+    def fittedvalues(self):
+        return self.predict()
+
+    @cache_readonly
+    def resid(self):
+        return self.model.endog - self.fittedvalues
+
+    @cache_readonly
+    def resid_distance(self):
+        resid = self.resid
+        cov = self.cov_resid
+        dist = (resid * np.linalg.solve(cov, resid.T).T).sum(1)
+        return dist
+
+    @cache_readonly
+    def _hat_matrix_diag(self):
+        """Diagonal of the hat_matrix for OLS
+
+        Notes
+        -----
+        temporarily calculated here, this should go to model or influence class
+        """
+        # computation base on OLSInfluence method
+        exog = self.model.exog
+        pinv_wexog = np.linalg.pinv(exog)
+        return (exog * pinv_wexog.T).sum(1)
 
     @Substitution(hypotheses_doc=_hypotheses_doc)
     def mv_test(self, hypotheses=None, skip_intercept_test=False):
@@ -805,7 +840,7 @@ class MultivariateTestResults:
 
 class MultivariateLSResultsWrapper(RegressionResultsWrapper):
     # copied and adapted from Multinomial wrapper
-    _attrs = {"resid_misclassified": "rows"}
+    _attrs = {"resid": "rows"}
     _wrap_attrs = wrap.union_dicts(RegressionResultsWrapper._wrap_attrs,
                                    _attrs)
     _methods = {'conf_int': 'multivariate_confint'}
