@@ -4,6 +4,8 @@ import os.path
 import numpy as np
 import pandas as pd
 import pytest
+
+from statsmodels.regression.linear_model import OLS
 from statsmodels.multivariate.multivariate_ols import (
     _MultivariateOLS,
     MultivariateLS,
@@ -228,7 +230,7 @@ def test_affine_hypothesis(model):
 
 class CheckMVConsistent:
 
-    def test(self):
+    def test_basic(self):
         res = self.res
         tt = res.t_test(np.eye(res.params.size))
         assert_allclose(tt.effect, res.params.to_numpy().ravel(order="F"),
@@ -262,6 +264,32 @@ class CheckMVConsistent:
             mvt = res.mv_test(hypotheses=[(xn, [xn], endog_names)])
             assert_allclose(tt.pvalue, mvt.summary_frame["Pr > F"][0],
                             rtol=0.1, atol=1e-20)
+
+    def test_ols(self):
+        res1 = self.res._results  # use numpy results, not pandas
+        endog = res1.model.endog
+        exog = res1.model.exog
+        k_endog = endog.shape[1]
+        k_exog = exog.shape[1]
+
+        for k in range(k_endog):
+            res_ols = OLS(endog[:, k], exog).fit()
+            assert_allclose(res1.params[:, k], res_ols.params, rtol=1e-13)
+            assert_allclose(res1.bse[:, k], res_ols.bse, rtol=1e-13)
+            assert_allclose(res1.tvalues[:, k], res_ols.tvalues, rtol=1e-13)
+            assert_allclose(res1.pvalues[:, k], res_ols.pvalues, rtol=1e-13)
+            # todo: why does conf_int have endog at axis=0
+            assert_allclose(res1.conf_int()[k], res_ols.conf_int(),
+                            rtol=1e-10)
+
+            idx0 = k * k_exog
+            idx1 = (k + 1) * k_exog
+            assert_allclose(res1.cov_params()[idx0:idx1, idx0:idx1],
+                            res_ols.cov_params(), rtol=1e-13)
+
+            assert_allclose(res1.resid[:, k], res_ols.resid, rtol=1e-10)
+            assert_allclose(res1.fittedvalues[:, k], res_ols.fittedvalues,
+                            rtol=1e-10)
 
 
 class TestMultivariateLS(CheckMVConsistent):
