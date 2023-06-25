@@ -108,7 +108,7 @@ relative to Poisson, that is the true model has the same dispersion as Poisson
 or is underdispersed, is inconsistent with the overdispersion assumption of
 the Negative Binomial distribution. The loglikelihood and its derivatives, as
 implemented in statsmodels, cannot be evaluated for dispersion parameter at
-zero dispersion or in a positve neighborhood of zero dispersion.
+zero dispersion or in a positive neighborhood of zero dispersion.
 
 Zero inflated models currently use either Logit or Probit as model for
 inflation. This means that no inflation is at the boundary of the parameter
