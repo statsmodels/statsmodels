@@ -246,11 +246,11 @@ cdef class STL(object):
         self.low_pass_deg = low_pass_deg  # ildeg
         self.robust = robust
         if not _is_pos_int(low_pass_jump, False):
-            raise ValueError('low_pass_jump must be a positve integer')
+            raise ValueError('low_pass_jump must be a positive integer')
         if not _is_pos_int(seasonal_jump, False):
-            raise ValueError('seasonal_jump must be a positve integer')
+            raise ValueError('seasonal_jump must be a positive integer')
         if not _is_pos_int(trend_jump, False):
-            raise ValueError('trend_jump must be a positve integer')
+            raise ValueError('trend_jump must be a positive integer')
         self.low_pass_jump = low_pass_jump
         self.seasonal_jump = seasonal_jump
         self.trend_jump = trend_jump
