@@ -423,11 +423,11 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
         #we need to give parameter alpha to conf_int
         results, params, std_err, tvalues, pvalues, conf_int = results
     else:
-        params = results.params
-        std_err = results.bse
-        tvalues = results.tvalues  # is this sometimes called zvalues
-        pvalues = results.pvalues
-        conf_int = results.conf_int(alpha)
+        params = np.asarray(results.params)
+        std_err = np.asarray(results.bse)
+        tvalues = np.asarray(results.tvalues)  # is this sometimes called zvalues
+        pvalues = np.asarray(results.pvalues)
+        conf_int = np.asarray(results.conf_int(alpha))
     if params.size == 0:
         return SimpleTable([['No Model Parameters']])
     # Dictionary to store the header names for the parameter part of the

@@ -69,7 +69,8 @@ def check_ttest_tvalues(results):
 
     tt = res.t_test(mat[0])
     tt.summary()   # smoke test for #1323
-    assert_allclose(tt.pvalue, res.pvalues[0], rtol=5e-10)
+    pvalues = np.asarray(res.pvalues)
+    assert_allclose(tt.pvalue, pvalues[0], rtol=5e-10)
     # TODO: Adapt more of test_generic_methods.test_ttest_values here?
 
 
