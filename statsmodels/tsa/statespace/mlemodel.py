@@ -3779,11 +3779,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                 fit_kwargs['cov_kwds'] = {
                     'custom_cov_type': self.cov_type,
                     'custom_cov_params': self.cov_params_default,
-                    'custom_description': ('Parameters and standard errors'
-                                           ' were estimated using a different'
-                                           ' dataset and were then applied to'
-                                           ' this dataset. %s'
-                                           % self.cov_kwds['description'])}
+                    'custom_description': (
+                        'Parameters and standard errors were estimated using a'
+                        ' different dataset and were then applied to this'
+                        ' dataset. %s'
+                        % self.cov_kwds.get('description', 'Unknown.'))}
 
             if self.smoother_results is not None:
                 func = mod.smooth
@@ -3869,34 +3869,42 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         return previous, updated, comparison_dataset
 
     def _news_previous_results(self, previous, start, end, periods,
+                               revisions_details_start=False,
                                state_index=None):
         # Compute the news
-        out = self.smoother_results.news(previous.smoother_results,
-                                         start=start, end=end,
-                                         state_index=state_index)
+        out = self.smoother_results.news(
+            previous.smoother_results, start=start, end=end,
+            revisions_details_start=revisions_details_start,
+            state_index=state_index)
         return out
 
     def _news_updated_results(self, updated, start, end, periods,
-                              state_index=None):
-        return updated._news_previous_results(self, start, end, periods,
-                                              state_index=state_index)
+                              revisions_details_start=False, state_index=None):
+        return updated._news_previous_results(
+            self, start, end, periods,
+            revisions_details_start=revisions_details_start,
+            state_index=state_index)
 
     def _news_previous_data(self, endog, start, end, periods, exog,
-                            state_index=None):
+                            revisions_details_start=False, state_index=None):
         previous = self.apply(endog, exog=exog, copy_initialization=True)
-        return self._news_previous_results(previous, start, end, periods,
-                                           state_index=state_index)
+        return self._news_previous_results(
+            previous, start, end, periods,
+            revisions_details_start=revisions_details_start,
+            state_index=state_index)
 
     def _news_updated_data(self, endog, start, end, periods, exog,
-                           state_index=None):
+                           revisions_details_start=False, state_index=None):
         updated = self.apply(endog, exog=exog, copy_initialization=True)
-        return self._news_updated_results(updated, start, end, periods,
-                                          state_index=state_index)
+        return self._news_updated_results(
+            updated, start, end, periods,
+            revisions_details_start=revisions_details_start,
+            state_index=state_index)
 
     def news(self, comparison, impact_date=None, impacted_variable=None,
              start=None, end=None, periods=None, exog=None,
-             comparison_type=None, state_index=None, return_raw=False,
-             tolerance=1e-10, **kwargs):
+             comparison_type=None, revisions_details_start=False,
+             state_index=None, return_raw=False, tolerance=1e-10, **kwargs):
         """
         Compute impacts from updated data (news and revisions)
 
@@ -3936,6 +3944,15 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             *previous* results object or dataset or an *updated* results object
             or dataset. If not specified, then an attempt is made to determine
             the comparison type.
+        revisions_details_start : bool, int, str, or datetime, optional
+            The period at which to beging computing the detailed impacts of
+            data revisions. Any revisions prior to this period will have their
+            impacts grouped together. If a negative integer, interpreted as
+            an offset from the end of the dataset. If set to True, detailed
+            impacts are computed for all revisions, while if set to False, all
+            revisions are grouped together. Default is False. Note that for
+            large models, setting this to be near the beginning of the sample
+            can cause this function to be slow.
         state_index : array_like, optional
             An optional index specifying a subset of states to use when
             constructing the impacts of revisions and news. For example, if
@@ -3983,6 +4000,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                 raise ValueError(f'Given state index {state_index[-1]} is too'
                                  ' large for the number of states in the model'
                                  f' ({self.model.k_states}).')
+        
+        if not isinstance(revisions_details_start, (int, bool)):
+            revisions_details_start, _, _, _ = (
+                self.model._get_prediction_index(
+                    revisions_details_start, revisions_details_start))
 
         # Get the previous and updated results objects from `self` and
         # `comparison`:
@@ -4046,8 +4068,10 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         # Compute the news
         news_results = (
-            updated._news_previous_results(previous, start, end + 1, periods,
-                                           state_index=state_index))
+            updated._news_previous_results(
+            previous, start, end + 1, periods,
+            revisions_details_start=revisions_details_start,
+            state_index=state_index))
 
         if not return_raw:
             news_results = NewsResults(
