@@ -1367,9 +1367,6 @@ class SmootherResults(FilterResults):
                     tools._compute_smoothed_state_weights(
                         rev_mod, compute_t=compute_t, compute_j=compute_j,
                         compute_prior_weights=False, scale=previous.scale))
-                ssw_t0 = min(compute_t[0], compute_j[0])
-                ix = np.ix_(compute_t - ssw_t0, compute_j - ssw_t0)
-                smoothed_state_weights = smoothed_state_weights[ix]
 
                 # Convert the weights in terms of smoothed forecasts
                 # t, j, m, p, i

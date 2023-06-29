@@ -1964,6 +1964,13 @@ def _compute_smoothed_state_weights(ssm, compute_t=None, compute_j=None,
     # Transpose m, l, t -> t, m, l
     prior_weights = prior_weights.transpose(2, 0, 1)
 
+    # Subset to the actual computed t, j elements
+    ix_tj = np.ix_(compute_t - t0, compute_j - t0)
+    weights = weights[ix_tj]
+    state_intercept_weights = state_intercept_weights[ix_tj]
+    if compute_prior_weights:
+        prior_weights = prior_weights[compute_t - t0]
+
     return weights, state_intercept_weights, prior_weights
 
 
