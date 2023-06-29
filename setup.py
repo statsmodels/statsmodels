@@ -10,13 +10,12 @@ from setuptools.dist import Distribution
 
 from collections import defaultdict
 import fnmatch
+import inspect
 import os
-from os.path import join as pjoin, relpath
+from os.path import dirname, join as pjoin, relpath
 from pathlib import Path
 import shutil
 import sys
-
-import pkg_resources
 
 SETUP_DIR = Path(__file__).parent.resolve()
 
@@ -224,7 +223,7 @@ def update_extension(extension, requires_math=True):
     import numpy as np
 
     numpy_includes = [np.get_include()]
-    extra_incl = pkg_resources.resource_filename("numpy", "core/include")
+    extra_incl = pjoin(dirname(inspect.getfile(np.core)), "include")
     numpy_includes += [extra_incl]
     numpy_includes = list(set(numpy_includes))
     numpy_math_libs = {
