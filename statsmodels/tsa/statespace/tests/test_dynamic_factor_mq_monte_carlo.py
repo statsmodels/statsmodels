@@ -230,7 +230,7 @@ def test_em_nonstationary(reset_randomstate):
            r' switched to diffuse for the following:  \["factor block:'
            r' \(\'global\',\)"\], and fitting was restarted.')
     with pytest.warns(UserWarning, match=msg):
-        return mod.fit(maxiter=2, em_initialization=False)
+        mod.fit(maxiter=2, em_initialization=False)
 
 
 def gen_k_factor1(nobs=10000, k=1, idiosyncratic_ar1=False,

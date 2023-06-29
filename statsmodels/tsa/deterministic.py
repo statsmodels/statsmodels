@@ -1243,7 +1243,7 @@ you can pass additional components using the additional_terms input."""
         if np.sum(is_constant) > 1:
             # Retain first
             const_locs = np.where(is_constant)[0]
-            is_constant[const_locs[:1]] = False
+            is_constant.iloc[const_locs[:1]] = False
             terms = terms.loc[:, ~is_constant]
         return terms
 

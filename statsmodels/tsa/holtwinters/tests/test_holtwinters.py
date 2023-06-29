@@ -546,7 +546,7 @@ class TestHoltWinters:
         alt_params = {k: v for k, v in params.items() if "level" not in k}
         with mod.fix_params(alt_params):
             alt_fit = mod.fit(optimized=True)
-        assert not np.allclose(alt_fit.trend[0], opt_fit.trend[0])
+        assert not np.allclose(alt_fit.trend.iloc[0], opt_fit.trend.iloc[0])
         # Summary output
         # print(res$mse)
         assert_allclose(fit.sse / mod.nobs, 195.4397924865488, atol=1e-3)

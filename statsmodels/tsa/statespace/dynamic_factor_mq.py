@@ -1867,7 +1867,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         endog_factor_map_M = self.endog_factor_map.iloc[:self.k_endog_M]
         factors = []
         endog = np.require(
-            pd.DataFrame(self.endog).interpolate().fillna(method='backfill'),
+            pd.DataFrame(self.endog).interpolate().bfill(),
             requirements="W"
         )
         for name in self.factor_names:
@@ -3193,7 +3193,8 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             if use_pandas:
                 # pd.Series (k_endog=1, replications=None)
                 if len(shape) == 1:
-                    sim = sim * self._endog_std[0] + self._endog_mean[0]
+                    sim *= self._endog_std.iloc[0]
+                    sim += self._endog_mean.iloc[0]
                 # pd.DataFrame (k_endog > 1, replications=None)
                 # [or]
                 # pd.DataFrame with MultiIndex (replications > 0)
@@ -3307,7 +3308,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             if use_pandas:
                 # pd.Series (k_endog=1, replications=None)
                 if len(shape) == 1:
-                    irfs = irfs * self._endog_std[0]
+                    irfs = irfs * self._endog_std.iloc[0]
                 # pd.DataFrame (k_endog > 1)
                 # [or]
                 # pd.DataFrame with MultiIndex (replications > 0)

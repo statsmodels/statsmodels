@@ -242,11 +242,11 @@ class OriginResults(RegressionResults):
         r0 = chi2.ppf(1 - sig, 1)
         param_num = np.array([param_num])
         if upper_bound is None:
-            upper_bound = (np.squeeze(self.model.fit().
-                                      conf_int(.0001)[param_num])[1])
+            ci = np.asarray(self.model.fit().conf_int(.0001))
+            upper_bound = (np.squeeze(ci[param_num])[1])
         if lower_bound is None:
-            lower_bound = (np.squeeze(self.model.fit().conf_int(.00001)
-                                      [param_num])[0])
+            ci = np.asarray(self.model.fit().conf_int(.0001))
+            lower_bound = (np.squeeze(ci[param_num])[0])
         f = lambda b0:  self.el_test(np.array([b0]), param_num,
                                      method=method,
                                  stochastic_exog=stochastic_exog)[0] - r0
