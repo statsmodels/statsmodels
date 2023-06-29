@@ -246,14 +246,18 @@ def get_covder2(smoother, k_points=4, integration_points=None,
     integral of the smoother derivative cross-product at knots plus k_points
     in between knots.
     """
-    from scipy.integrate import simps
+    try:
+        from scipy.integrate import simpson
+    except ImportError:
+        # Remove after SciPy 1.7 is the minimum version
+        from scipy.integrate import simps as simpson
     knots = smoother.knots
     x = _get_integration_points(knots, k_points=3)
     if integration_points is None:
         d2 = smoother.transform(x, deriv=deriv, skip_ctransf=skip_ctransf)
     else:
         x = integration_points
-    covd2 = simps(d2[:, :, None] * d2[:, None, :], x, axis=0)
+    covd2 = simpson(d2[:, :, None] * d2[:, None, :], x, axis=0)
     return covd2
 
 

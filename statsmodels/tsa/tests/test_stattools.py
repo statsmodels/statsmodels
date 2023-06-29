@@ -744,10 +744,9 @@ class TestKPSS:
     macrodata['realgdp'] series.
     """
 
-    @classmethod
-    def setup(cls):
-        cls.data = macrodata.load_pandas()
-        cls.x = cls.data.data["realgdp"].values
+    def setup_method(self):
+        self.data = macrodata.load_pandas()
+        self.x = self.data.data["realgdp"].values
 
     def test_fail_nonvector_input(self, reset_randomstate):
         # should be fine
@@ -865,10 +864,9 @@ class TestRUR:
     macrodata['realgdp'] series.
     """
 
-    @classmethod
-    def setup(cls):
-        cls.data = macrodata.load_pandas()
-        cls.x = cls.data.data["realgdp"].values
+    def setup_method(self):
+        self.data = macrodata.load_pandas()
+        self.x = self.data.data["realgdp"].values
 
     # To be removed when range unit test gets an R implementation
     def simple_rur(self, x, store=False):
