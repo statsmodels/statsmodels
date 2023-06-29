@@ -193,7 +193,7 @@ class NewsResults:
             - self.revision_detailed_impacts.fillna(0))
         if self.n_revisions_grouped == 0:
             self.revision_grouped_impacts[:] = 0
-            
+
         # E[y^i | post] - E[y^i | previous]
         self.total_impacts = (self.post_impacted_forecasts -
                               self.prev_impacted_forecasts)
@@ -211,7 +211,7 @@ class NewsResults:
                 'revised variable': columns[iloc['revised variable']]})
         else:
             self.revisions_ix = iloc.copy()
-        
+
         mask = iloc['revision date'] >= self.revisions_details_start
         self.revisions_iloc_detailed = self.revisions_iloc[mask]
         self.revisions_ix_detailed = self.revisions_ix[mask]
@@ -482,7 +482,7 @@ class NewsResults:
 
         mask = np.abs(df['impact']) > self.tolerance
         return df[mask]
-    
+
     @property
     def _revision_grouped_impacts(self):
         df = self.revision_grouped_impacts.stack().rename('impact').to_frame()
@@ -577,7 +577,7 @@ class NewsResults:
             df = df.loc[np.s_[:, self.impacted_variable], :]
 
         mask = np.abs(df['impact']) > self.tolerance
-        return df
+        return df[mask]
 
     @property
     def details_by_update(self):

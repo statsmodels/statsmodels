@@ -1080,7 +1080,7 @@ def test_detailed_revisions(revisions_details_start):
                     news.impacts['impact of revisions'])
 
     # Check the values for estimates
-    for name in ['cpi', 'realcons', 'realinv']:        
+    for name in ['cpi', 'realcons', 'realinv']:
         assert_allclose(
             news.impacts.loc[('2009Q3', name), 'estimate (new)'],
             y_revised.loc['2009Q3', name])
@@ -1095,7 +1095,7 @@ def test_detailed_revisions(revisions_details_start):
     assert_allclose(
         news.impacts.loc[('2009Q3', name), 'estimate (prev)'],
         y.loc['2009Q2', name] * ar_coeff[name])
-    
+
     # Check that the values of revision impacts sum up correctly
     assert_allclose(
         news.impacts['impact of revisions'],
@@ -1165,7 +1165,7 @@ def test_grouped_revisions(revisions_details_start):
                     revisions[('2009Q3', 'cpi')])
 
     # Check the values for estimates
-    for name in ['cpi', 'realcons', 'realinv']:        
+    for name in ['cpi', 'realcons', 'realinv']:
         assert_allclose(
             news.impacts.loc[('2009Q3', name), 'estimate (new)'],
             y_revised.loc['2009Q3', name])
@@ -1180,7 +1180,7 @@ def test_grouped_revisions(revisions_details_start):
     assert_allclose(
         news.impacts.loc[('2009Q3', name), 'estimate (prev)'],
         y.loc['2009Q2', name] * ar_coeff[name])
-    
+
     # Check that the values of revision impacts sum up correctly
     assert_allclose(
         news.impacts['impact of revisions'],
@@ -1232,7 +1232,7 @@ def test_mixed_revisions(revisions_details_start):
         # while revisions to 2009Q3 have detailed impacts computed
         expected_details_computed = key[0] == '2009Q3'
         assert_equal(data_revisions.loc[key, 'detailed impacts computed'],
-                     expected_details_computed)            
+                     expected_details_computed)
 
     # For grouped data, should not have any of revised, observed (prev),
     # revision, weight
@@ -1258,7 +1258,7 @@ def test_mixed_revisions(revisions_details_start):
                     revisions[('2009Q3', 'cpi')])
 
     # Check the values for estimates
-    for name in ['cpi', 'realcons', 'realinv']:        
+    for name in ['cpi', 'realcons', 'realinv']:
         assert_allclose(
             news.impacts.loc[('2009Q3', name), 'estimate (new)'],
             y_revised.loc['2009Q3', name])
@@ -1273,7 +1273,7 @@ def test_mixed_revisions(revisions_details_start):
     assert_allclose(
         news.impacts.loc[('2009Q3', name), 'estimate (prev)'],
         y.loc['2009Q2', name] * ar_coeff[name])
-    
+
     # Check that the values of revision impacts sum up correctly
     assert_allclose(
         news.impacts['impact of revisions'],

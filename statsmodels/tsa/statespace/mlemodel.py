@@ -4000,7 +4000,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                 raise ValueError(f'Given state index {state_index[-1]} is too'
                                  ' large for the number of states in the model'
                                  f' ({self.model.k_states}).')
-        
+
         if not isinstance(revisions_details_start, (int, bool)):
             revisions_details_start, _, _, _ = (
                 self.model._get_prediction_index(
@@ -4067,11 +4067,10 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             updated = updated_orig.append(extra, exog=exog, **kwargs)
 
         # Compute the news
-        news_results = (
-            updated._news_previous_results(
+        news_results = updated._news_previous_results(
             previous, start, end + 1, periods,
             revisions_details_start=revisions_details_start,
-            state_index=state_index))
+            state_index=state_index)
 
         if not return_raw:
             news_results = NewsResults(

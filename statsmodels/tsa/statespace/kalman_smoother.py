@@ -1299,7 +1299,7 @@ class SmootherResults(FilterResults):
         revision_detailed_impacts = None
         revision_results = None
         revision_impacts = None
-            
+
         # Get revisions datapoints for all revisions (regardless of whether
         # or not we are computing detailed impacts)
         if len(revisions_ix) > 0:
@@ -1440,7 +1440,7 @@ class SmootherResults(FilterResults):
                     (revised_impact_forecasts, p.forecasts), axis=1)
 
             revision_impacts = (revised_impact_forecasts -
-                                      prev_impacted_forecasts).T
+                                prev_impacted_forecasts).T
             if t is not None:
                 revision_impacts = revision_impacts[0]
 
