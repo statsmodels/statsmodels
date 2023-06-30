@@ -1,3 +1,6 @@
+#cython: boundscheck=False
+#cython: wraparound=False
+#cython: cdivision=False
 """
 State Space Model - Cython tools
 
