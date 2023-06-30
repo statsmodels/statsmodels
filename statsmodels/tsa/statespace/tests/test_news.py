@@ -1041,7 +1041,10 @@ def test_detailed_revisions(revisions_details_start):
         assert_allclose(data_revisions.loc[key, 'revised'], y_revised.loc[key])
         assert_allclose(data_revisions.loc[key, 'observed (prev)'], y.loc[key])
         assert_equal(
-            data_revisions.loc[key, 'detailed impacts computed'], True)
+            # Need to manually cast to numpy for compatibility with
+            # pandas==1.2.5
+            np.array(data_revisions.loc[key, 'detailed impacts computed']),
+            True)
         assert_allclose(revision_details.loc[key, 'revised'],
                         y_revised.loc[key])
         assert_allclose(revision_details.loc[key, 'observed (prev)'],
@@ -1146,7 +1149,10 @@ def test_grouped_revisions(revisions_details_start):
         assert_allclose(data_revisions.loc[key, 'revised'], y_revised.loc[key])
         assert_allclose(data_revisions.loc[key, 'observed (prev)'], y.loc[key])
         assert_equal(
-            data_revisions.loc[key, 'detailed impacts computed'], False)
+            # Need to manually cast to numpy for compatibility with
+            # pandas==1.2.5
+            np.array(data_revisions.loc[key, 'detailed impacts computed']),
+            False)
 
     # For grouped data, should not have any of revised, observed (prev),
     # revision, weight
@@ -1231,8 +1237,11 @@ def test_mixed_revisions(revisions_details_start):
         # Revisions to 2009Q2 are grouped (i.e. no details are computed),
         # while revisions to 2009Q3 have detailed impacts computed
         expected_details_computed = key[0] == '2009Q3'
-        assert_equal(data_revisions.loc[key, 'detailed impacts computed'],
-                     expected_details_computed)
+        assert_equal(
+            # Need to manually cast to numpy for compatibility with
+            # pandas==1.2.5
+            np.array(data_revisions.loc[key, 'detailed impacts computed']),
+            expected_details_computed)
 
     # For grouped data, should not have any of revised, observed (prev),
     # revision, weight

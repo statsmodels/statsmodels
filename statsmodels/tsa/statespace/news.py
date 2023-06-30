@@ -570,6 +570,10 @@ class NewsResults:
 
         if self.n_revisions_grouped > 0:
             df = pd.concat([df, self._revision_grouped_impacts])
+            # Explicitly set names for compatibility with pandas=1.2.5
+            df.index = df.index.set_names(
+                ['revision date', 'revised variable',
+                 'impact date', 'impacted variable'])
 
         df = df.reorder_levels([2, 3, 0, 1]).sort_index()
 
@@ -735,6 +739,10 @@ class NewsResults:
 
         if self.n_revisions_grouped > 0:
             df = pd.concat([df, self._revision_grouped_impacts])
+            # Explicitly set names for compatibility with pandas=1.2.5
+            df.index = df.index.set_names(
+                ['revision date', 'revised variable',
+                 'impact date', 'impacted variable'])
 
         details = (df.set_index(['observed (prev)', 'revised'], append=True)
                      .reorder_levels([
