@@ -565,7 +565,7 @@ class NewsResults:
             self.revised_prev.rename('observed (prev)').reindex(weights.index),
             self.revisions.reindex(weights.index),
             weights.rename('weight'),
-            (self.revisions * weights).rename('impact'),
+            (self.revisions.reindex(weights.index) * weights).rename('impact'),
         ], axis=1)
 
         if self.n_revisions_grouped > 0:
@@ -734,7 +734,7 @@ class NewsResults:
             self.revised.reindex(weights.index),
             self.revisions.reindex(weights.index),
             weights.rename('weight'),
-            (self.revisions * weights).rename('impact'),
+            (self.revisions.reindex(weights.index) * weights).rename('impact'),
         ], axis=1)
 
         if self.n_revisions_grouped > 0:
