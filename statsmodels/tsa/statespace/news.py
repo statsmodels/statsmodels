@@ -45,47 +45,76 @@ class NewsResults:
 
     Attributes
     ----------
-    total_impacts : pd.Series
+    total_impacts : pd.DataFrame
         Updates to forecasts of impacted variables from both news and data
         revisions, E[y^i | post] - E[y^i | previous].
-    update_impacts : pd.Series
+    update_impacts : pd.DataFrame
         Updates to forecasts of impacted variables from the news,
         E[y^i | post] - E[y^i | revisions] where y^i are the impacted variables
         of interest.
-    revision_impacts : pd.Series
-        Updates to forecasts of impacted variables from data revisions,
+    revision_impacts : pd.DataFrame
+        Updates to forecasts of impacted variables from all data revisions,
         E[y^i | revisions] - E[y^i | previous].
-    news : pd.Series
+    news : pd.DataFrame
         The unexpected component of the updated data,
         E[y^u | post] - E[y^u | revisions] where y^u are the updated variables.
-    weights : pd.Series
+    weights : pd.DataFrame
         Weights describing the effect of news on variables of interest.
-    revisions : pd.Series
-        The revisions betwen the current and previously observed data
+    revisions : pd.DataFrame
+        The revisions between the current and previously observed data, for
+        revisions for which detailed impacts were computed.
+    revisions_all : pd.DataFrame
+        The revisions between the current and previously observed data,
         y^r_{revised} - y^r_{previous} where y^r are the revised variables.
-    revision_weights : pd.Series
-        Weights describing the effect of revisions on variables of interest.
-    update_forecasts : pd.Series
+    revision_weights : pd.DataFrame
+        Weights describing the effect of revisions on variables of interest,
+        for revisions for which detailed impacts were computed.
+    revision_weights_all : pd.DataFrame
+        Weights describing the effect of revisions on variables of interest,
+        with a new entry that includes NaNs for the revisions for which
+        detailed impacts were not computed.
+    update_forecasts : pd.DataFrame
         Forecasts based on the previous dataset of the variables that were
         updated, E[y^u | previous].
-    update_realized : pd.Series
+    update_realized : pd.DataFrame
         Actual observed data associated with the variables that were
         updated, y^u
-    revised_prev : pd.Series
+    revisions_details_start : int
+        Integer index of first period in which detailed revision impacts were
+        computed.
+    revision_detailed_impacts : pd.DataFrame
+        Updates to forecasts of impacted variables from data revisions with
+        detailed impacts, E[y^i | revisions] - E[y^i | grouped revisions].
+    revision_grouped_impacts : pd.DataFrame
+        Updates to forecasts of impacted variables from data revisions that
+        were grouped together, E[y^i | grouped revisions] - E[y^i | previous].
+    revised_prev : pd.DataFrame
+        Previously observed data associated with the variables that were
+        revised, for revisions for which detailed impacts were computed.
+    revised_prev_all : pd.DataFrame
         Previously observed data associated with the variables that were
         revised, y^r_{previous}
-    revised : pd.Series
+    revised : pd.DataFrame
+        Currently observed data associated with the variables that were
+        revised, for revisions for which detailed impacts were computed.
+    revised_all : pd.DataFrame
         Currently observed data associated with the variables that were
         revised, y^r_{revised}
-    prev_impacted_forecasts : pd.Series
+    prev_impacted_forecasts : pd.DataFrame
         Previous forecast of the variables of interest, E[y^i | previous].
-    post_impacted_forecasts : pd.Series
+    post_impacted_forecasts : pd.DataFrame
         Forecast of the variables of interest after taking into account both
         revisions and updates, E[y^i | post].
     revisions_iloc : pd.DataFrame
         The integer locations of the data revisions in the dataset.
     revisions_ix : pd.DataFrame
         The label-based locations of the data revisions in the dataset.
+    revisions_iloc_detailed : pd.DataFrame
+        The integer locations of the data revisions in the dataset for which
+        detailed impacts were computed.
+    revisions_ix_detailed : pd.DataFrame
+        The label-based locations of the data revisions in the dataset for
+        which detailed impacts were computed.
     updates_iloc : pd.DataFrame
         The integer locations of the updated data points.
     updates_ix : pd.DataFrame
@@ -126,30 +155,52 @@ class NewsResults:
         self.endog_names = self.updated.model.endog_names
         self.k_endog = len(self.endog_names)
 
+        self.n_revisions = len(self.news_results.revisions_ix)
+        self.n_revisions_detailed = len(self.news_results.revisions_details)
+        self.n_revisions_grouped = len(self.news_results.revisions_grouped)
+
         index = self.updated.model._index
         columns = np.atleast_1d(self.endog_names)
 
         # E[y^i | post]
         self.post_impacted_forecasts = pd.DataFrame(
             news_results.post_impacted_forecasts.T,
-            index=self.row_labels, columns=columns)
+            index=self.row_labels, columns=columns).rename_axis(
+                index='impact date', columns='impacted variable')
         # E[y^i | previous]
         self.prev_impacted_forecasts = pd.DataFrame(
             news_results.prev_impacted_forecasts.T,
-            index=self.row_labels, columns=columns)
+            index=self.row_labels, columns=columns).rename_axis(
+                index='impact date', columns='impacted variable')
         # E[y^i | post] - E[y^i | revisions]
         self.update_impacts = pd.DataFrame(
             news_results.update_impacts,
-            index=self.row_labels, columns=columns)
+            index=self.row_labels, columns=columns).rename_axis(
+                index='impact date', columns='impacted variable')
+        # E[y^i | revisions] - E[y^i | grouped revisions]
+        self.revision_detailed_impacts = pd.DataFrame(
+            news_results.revision_detailed_impacts,
+            index=self.row_labels, columns=columns).rename_axis(
+                index='impact date', columns='impacted variable')
         # E[y^i | revisions] - E[y^i | previous]
         self.revision_impacts = pd.DataFrame(
             news_results.revision_impacts,
-            index=self.row_labels, columns=columns)
+            index=self.row_labels, columns=columns).rename_axis(
+                index='impact date', columns='impacted variable')
+        # E[y^i | grouped revisions] - E[y^i | previous]
+        self.revision_grouped_impacts = (
+            self.revision_impacts
+            - self.revision_detailed_impacts.fillna(0))
+        if self.n_revisions_grouped == 0:
+            self.revision_grouped_impacts[:] = 0
+
         # E[y^i | post] - E[y^i | previous]
         self.total_impacts = (self.post_impacted_forecasts -
                               self.prev_impacted_forecasts)
 
         # Indices of revisions and updates
+        self.revisions_details_start = news_results.revisions_details_start
+
         self.revisions_iloc = pd.DataFrame(
             list(zip(*news_results.revisions_ix)),
             index=['revision date', 'revised variable']).T
@@ -160,6 +211,10 @@ class NewsResults:
                 'revised variable': columns[iloc['revised variable']]})
         else:
             self.revisions_ix = iloc.copy()
+
+        mask = iloc['revision date'] >= self.revisions_details_start
+        self.revisions_iloc_detailed = self.revisions_iloc[mask]
+        self.revisions_ix_detailed = self.revisions_ix[mask]
 
         self.updates_iloc = pd.DataFrame(
             list(zip(*news_results.updates_ix)),
@@ -176,9 +231,12 @@ class NewsResults:
         self.state_index = news_results.state_index
 
         # Wrap forecasts and forecasts errors
-        r_ix = pd.MultiIndex.from_arrays([
+        r_ix_all = pd.MultiIndex.from_arrays([
             self.revisions_ix['revision date'],
             self.revisions_ix['revised variable']])
+        r_ix = pd.MultiIndex.from_arrays([
+            self.revisions_ix_detailed['revision date'],
+            self.revisions_ix_detailed['revised variable']])
         u_ix = pd.MultiIndex.from_arrays([
             self.updates_ix['update date'],
             self.updates_ix['updated variable']])
@@ -189,13 +247,21 @@ class NewsResults:
                                   dtype=model.params.dtype)
         else:
             self.news = pd.Series(news_results.news, index=u_ix, name='news')
-        # E[y^u | revisions] - E[y^u | previous]
+        # Revisions to data (y^r_{revised} - y^r_{previous})
+        if news_results.revisions_all is None:
+            self.revisions_all = pd.Series([], index=r_ix_all, name='revision',
+                                           dtype=model.params.dtype)
+        else:
+            self.revisions_all = pd.Series(news_results.revisions_all,
+                                           index=r_ix_all, name='revision')
+        # Revisions to data (y^r_{revised} - y^r_{previous}) for which detailed
+        # impacts were computed
         if news_results.revisions is None:
             self.revisions = pd.Series([], index=r_ix, name='revision',
                                        dtype=model.params.dtype)
         else:
-            self.revisions = pd.Series(news_results.revisions, index=r_ix,
-                                       name='revision')
+            self.revisions = pd.Series(news_results.revisions,
+                                       index=r_ix, name='revision')
         # E[y^u | revised]
         if news_results.update_forecasts is None:
             self.update_forecasts = pd.Series([], index=u_ix,
@@ -204,6 +270,14 @@ class NewsResults:
             self.update_forecasts = pd.Series(
                 news_results.update_forecasts, index=u_ix)
         # y^r_{revised}
+        if news_results.revised_all is None:
+            self.revised_all = pd.Series([], index=r_ix_all,
+                                         dtype=model.params.dtype,
+                                         name='revised')
+        else:
+            self.revised_all = pd.Series(news_results.revised_all,
+                                         index=r_ix_all, name='revised')
+        # y^r_{revised} for which detailed impacts were computed
         if news_results.revised is None:
             self.revised = pd.Series([], index=r_ix, dtype=model.params.dtype,
                                      name='revised')
@@ -211,6 +285,13 @@ class NewsResults:
             self.revised = pd.Series(news_results.revised, index=r_ix,
                                      name='revised')
         # y^r_{previous}
+        if news_results.revised_prev_all is None:
+            self.revised_prev_all = pd.Series([], index=r_ix_all,
+                                              dtype=model.params.dtype)
+        else:
+            self.revised_prev_all = pd.Series(
+                news_results.revised_prev_all, index=r_ix_all)
+        # y^r_{previous} for which detailed impacts were computed
         if news_results.revised_prev is None:
             self.revised_prev = pd.Series([], index=r_ix,
                                           dtype=model.params.dtype)
@@ -235,7 +316,7 @@ class NewsResults:
         self.weights.columns.names = ['impact date', 'impacted variable']
 
         # reshaped version of revision_weights
-        if len(self.revisions_iloc):
+        if self.n_revisions_detailed > 0:
             revision_weights = news_results.revision_weights.reshape(
                 len(cols), len(r_ix))
         else:
@@ -244,6 +325,9 @@ class NewsResults:
             revision_weights, index=cols, columns=r_ix).T
         self.revision_weights.columns.names = [
             'impact date', 'impacted variable']
+
+        self.revision_weights_all = self.revision_weights.reindex(
+            self.revised_all.index)
 
     @property
     def impacted_variable(self):
@@ -276,6 +360,8 @@ class NewsResults:
               in the previous dataset.
             - `revised`: the revised value of the data, as it is observed
               in the new dataset
+            - `detailed impacts computed`: whether or not detailed impacts have
+              been computed in these NewsResults for this revision
 
         See also
         --------
@@ -283,9 +369,11 @@ class NewsResults:
         """
         # Save revisions data
         data = pd.concat([
-            self.revised.rename('revised'),
-            self.revised_prev.rename('observed (prev)')
+            self.revised_all.rename('revised'),
+            self.revised_prev_all.rename('observed (prev)')
         ], axis=1).sort_index()
+        data['detailed impacts computed'] = (
+            self.revised_all.index.isin(self.revised.index))
         return data
 
     @property
@@ -392,8 +480,21 @@ class NewsResults:
         if self.impacted_variable is not None and len(df) > 0:
             df = df.loc[np.s_[:, self.impacted_variable], :]
 
-        mask = np.abs(df['weight']) > self.tolerance
+        mask = np.abs(df['impact']) > self.tolerance
         return df[mask]
+
+    @property
+    def _revision_grouped_impacts(self):
+        df = self.revision_grouped_impacts.stack().rename('impact').to_frame()
+        df = df.reindex(['revision date', 'revised variable', 'impact'],
+                        axis=1)
+        if self.revisions_details_start > 0:
+            df['revision date'] = (
+                self.updated.model._index[self.revisions_details_start - 1])
+            df['revised variable'] = 'all prior revisions'
+        df = (df.set_index(['revision date', 'revised variable'], append=True)
+                .reorder_levels([2, 3, 0, 1]))
+        return df
 
     @property
     def revision_details_by_impact(self):
@@ -434,6 +535,11 @@ class NewsResults:
         new datapoints. That information can be found in the
         `impacts` or `details_by_impact` tables.
 
+        Grouped impacts are shown in this table, with a "revision date" equal
+        to the last period prior to which detailed revisions were computed and
+        with "revised variable" set to the string "all prior revisions". For
+        these rows, all columns except "impact" will be set to NaNs.
+
         This form of the details table is organized so that the impacted
         dates / variables are first in the index. This is convenient for
         slicing by impacted variables / dates to view the details of data
@@ -459,15 +565,22 @@ class NewsResults:
             self.revised_prev.rename('observed (prev)').reindex(weights.index),
             self.revisions.reindex(weights.index),
             weights.rename('weight'),
-            (self.revisions * weights).rename('impact'),
+            (self.revisions.reindex(weights.index) * weights).rename('impact'),
         ], axis=1)
+
+        if self.n_revisions_grouped > 0:
+            df = pd.concat([df, self._revision_grouped_impacts])
+            # Explicitly set names for compatibility with pandas=1.2.5
+            df.index = df.index.set_names(
+                ['revision date', 'revised variable',
+                 'impact date', 'impacted variable'])
 
         df = df.reorder_levels([2, 3, 0, 1]).sort_index()
 
         if self.impacted_variable is not None and len(df) > 0:
             df = df.loc[np.s_[:, self.impacted_variable], :]
 
-        mask = np.abs(df['weight']) > self.tolerance
+        mask = np.abs(df['impact']) > self.tolerance
         return df[mask]
 
     @property
@@ -550,7 +663,7 @@ class NewsResults:
             details = details.loc[
                 np.s_[:, :, :, :, :, self.impacted_variable], :]
 
-        mask = np.abs(details['weight']) > self.tolerance
+        mask = np.abs(details['impact']) > self.tolerance
         return details[mask]
 
     @property
@@ -589,7 +702,12 @@ class NewsResults:
         release.
 
         This table does not summarize the impacts or show the effect of
-        revisions. That information can be found in the `impacts` table.
+        new datapoints, see `details_by_update` instead.
+
+        Grouped impacts are shown in this table, with a "revision date" equal
+        to the last period prior to which detailed revisions were computed and
+        with "revised variable" set to the string "all prior revisions". For
+        these rows, all columns except "impact" will be set to NaNs.
 
         This form of the details table is organized so that the revision
         dates / variables are first in the index, and in this table the index
@@ -616,8 +734,15 @@ class NewsResults:
             self.revised.reindex(weights.index),
             self.revisions.reindex(weights.index),
             weights.rename('weight'),
-            (self.revisions * weights).rename('impact'),
+            (self.revisions.reindex(weights.index) * weights).rename('impact'),
         ], axis=1)
+
+        if self.n_revisions_grouped > 0:
+            df = pd.concat([df, self._revision_grouped_impacts])
+            # Explicitly set names for compatibility with pandas=1.2.5
+            df.index = df.index.set_names(
+                ['revision date', 'revised variable',
+                 'impact date', 'impacted variable'])
 
         details = (df.set_index(['observed (prev)', 'revised'], append=True)
                      .reorder_levels([
@@ -630,7 +755,7 @@ class NewsResults:
             details = details.loc[
                 np.s_[:, :, :, :, :, self.impacted_variable], :]
 
-        mask = np.abs(details['weight']) > self.tolerance
+        mask = np.abs(details['impact']) > self.tolerance
         return details[mask]
 
     @property
@@ -756,7 +881,7 @@ class NewsResults:
         # Default is to only show the revisions columns if there were any
         # revisions (otherwise it would just be a column of zeros)
         if show_revisions_columns is None:
-            show_revisions_columns = len(self.revisions_iloc) > 0
+            show_revisions_columns = self.n_revisions > 0
 
         # Select only the variables / dates of interest
         s = list(np.s_[:, :])
@@ -959,7 +1084,7 @@ class NewsResults:
             }
         else:
             raise ValueError(f'Invalid `source`: {source}. Must be "news" or'
-                             ' "impacts".')
+                             ' "revisions".')
 
         # Make the first index level the groupby level
         groupby = groupby.lower().replace('_', ' ')
@@ -1081,10 +1206,11 @@ class NewsResults:
 
         if multiple_tables:
             details_table = []
-            for item in details[groupby].unique():
-                mask = details[groupby] == item
-                item_details = details[mask].drop(groupby, axis=1)
-                item_removed_levels = [f'{groupby} = {item}'] + removed_levels
+            for item in details[columns[groupby]].unique():
+                mask = details[columns[groupby]] == item
+                item_details = details[mask].drop(columns[groupby], axis=1)
+                item_removed_levels = (
+                    [f'{columns[groupby]} = {item}'] + removed_levels)
                 details_table.append(create_table(item_details,
                                                   item_removed_levels))
         else:
@@ -1112,13 +1238,17 @@ class NewsResults:
             - `observed (prev)` : the observed value prior to the revision
             - `revised` : the new value after the revision
             - `revision` : the new value after the revision
+            - `detailed impacts computed` : whether detailed impacts were
+              computed for this revision
         """
         data = pd.merge(
-            self.data_revisions, self.revisions, left_index=True,
+            self.data_revisions, self.revisions_all, left_index=True,
             right_index=True).sort_index().reset_index()
+        data = data[['revision date', 'revised variable', 'observed (prev)',
+                     'revision', 'detailed impacts computed']]
         data[['revision date', 'revised variable']] = (
             data[['revision date', 'revised variable']].applymap(str))
-        data.iloc[:, 2:] = data.iloc[:, 2:].applymap(
+        data.iloc[:, 2:-1] = data.iloc[:, 2:-1].applymap(
             lambda num: '' if pd.isnull(num) else '%.2f' % num)
 
         # Sparsify the date column
@@ -1370,7 +1500,7 @@ class NewsResults:
                 table_ix += 1
 
         # Revisions
-        if include_revisions_tables and len(self.revisions_iloc) > 0:
+        if include_revisions_tables and self.n_revisions > 0:
             summary.tables.insert(
                 table_ix, self.summary_revisions(sparsify=sparsify))
             table_ix += 1
