@@ -1,6 +1,7 @@
 #cython: boundscheck=False
 #cython: wraparound=False
 #cython: cdivision=False
+#cython: cpow=True
 """
 State Space Models
 
