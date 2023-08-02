@@ -177,7 +177,7 @@ def _eval_bspline_basis(
     if deriv in ("all", 0):
         basis = _splev_extended(x, (knots, coeffs, degree), outside=outside)
         if not include_intercept:
-            basis = basis[1:]
+            basis = basis[:,1:]
         if deriv == 0:
             return basis
 
@@ -186,7 +186,7 @@ def _eval_bspline_basis(
             x, (knots, coeffs, degree), der=1, outside=outside
         )
         if not include_intercept:
-            der1_basis = der1_basis[1:]
+            der1_basis = der1_basis[:,1:]
         if deriv == 1:
             return der1_basis
 
@@ -195,7 +195,7 @@ def _eval_bspline_basis(
             x, (knots, coeffs, degree), der=2, outside=outside
         )
         if not include_intercept:
-            der2_basis = der2_basis[1:]
+            der2_basis = der2_basis[:,1:]
         if deriv == 2:
             return der2_basis
 
