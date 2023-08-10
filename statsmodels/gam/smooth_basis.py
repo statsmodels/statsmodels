@@ -17,6 +17,7 @@ import pandas as pd
 from patsy import dmatrix
 from patsy.mgcv_cubic_splines import _get_all_sorted_knots
 from scipy.interpolate import splev
+from scipy.special import factorial
 
 from statsmodels.tools.linalg import transf_constraints
 
@@ -135,20 +136,26 @@ def _splev_extended(x, tck, der=0, outside="raise"):
 
     if extend_below:
         y_below = (
-            np.power(
-                x[is_below] - np.min(knots),
-                np.arange(outside + 1).reshape(-1, 1),
-            ).T
+            (
+                np.power(
+                    x[is_below] - np.min(knots),
+                    np.arange(outside + 1).reshape(-1, 1),
+                ).T
+                / factorial(np.arange(outside + 1))
+            )
             @ derivs[:, :, 0]
         )
         result_array[np.where(is_below)] = y_below
 
     if extend_above:
         y_above = (
-            np.power(
-                x[is_above] - np.max(knots),
-                np.arange(outside + 1).reshape(-1, 1),
-            ).T
+            (
+                np.power(
+                    x[is_above] - np.max(knots),
+                    np.arange(outside + 1).reshape(-1, 1),
+                ).T
+                / factorial(np.arange(outside + 1))
+            )
             @ derivs[:, :, 1]
         )
         result_array[np.where(is_above)] = y_above
