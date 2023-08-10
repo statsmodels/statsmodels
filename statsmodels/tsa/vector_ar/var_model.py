@@ -1392,7 +1392,7 @@ class VARResults(VARProcess):
     @property
     def df_model(self):
         """
-        Number of estimated parameters, including the intercept / trends
+        Number of estimated parameters per variable, including the intercept / trends
         """
         return self.neqs * self.k_ar + self.k_exog
 
