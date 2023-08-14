@@ -101,6 +101,12 @@ class LeastSquares(RobustNorm):
         """
         The least squares estimator rho function
 
+        .. math::
+
+            \rho: \mathbb{R}^n \to \mathbb{R}^n
+            
+            \rho(z) = \frac{z^2}{2}
+        
         Parameters
         ----------
         z : ndarray
@@ -119,6 +125,12 @@ class LeastSquares(RobustNorm):
         The psi function for the least squares estimator
 
         The analytic derivative of rho
+        
+        .. math::
+                
+            \psi: \mathbb{R}^n \to \mathbb{R}^n
+            
+            \psi(z) = z
 
         Parameters
         ----------
@@ -139,6 +151,12 @@ class LeastSquares(RobustNorm):
 
         The psi function scaled by the input z
 
+        .. math::
+                
+            \text{weights}: \mathbb{R}^n \to \mathbb{R}^n
+            
+            \text{weights}(z) = \frac{\psi(z)}{z}
+                      
         Parameters
         ----------
         z : array_like
@@ -198,6 +216,15 @@ class HuberT(RobustNorm):
         r"""
         The robust criterion function for Huber's t.
 
+        .. math::
+
+            \rho: \mathbb{R}^n \to \mathbb{R}^n
+            
+            \rho(z) = \begin{cases}
+                          \frac{z^2}{2} & \text{if } \lvert z \rvert \le t \\
+                          \lvert z \rvert t - \frac{z^2}{2} & \text{if } \lvert z \rvert \le t
+                      \end{cases}
+
         Parameters
         ----------
         z : array_like
@@ -206,9 +233,9 @@ class HuberT(RobustNorm):
         Returns
         -------
         rho : ndarray
-            rho(z) = .5*z**2            for \|z\| <= t
+            rho(z) = (1/2.)*z**2            for \|z\| <= t
 
-            rho(z) = \|z\|*t - .5*t**2    for \|z\| > t
+            rho(z) = \|z\|*t - (1/2.)*t**2    for \|z\| > t
         """
         z = np.asarray(z)
         test = self._subset(z)
@@ -221,6 +248,15 @@ class HuberT(RobustNorm):
 
         The analytic derivative of rho
 
+        .. math::
+                
+            \psi: \mathbb{R}^n \to \mathbb{R}^n
+            
+            \psi(z) = \begin{cases}
+                          z & \text{if } \lvert z \rvert \le t \\
+                          \text{sign}(z) \cdot t & \text{if } \lvert z \rvert \le t
+                      \end{cases}
+            
         Parameters
         ----------
         z : array_like
@@ -243,6 +279,15 @@ class HuberT(RobustNorm):
 
         The psi function scaled by z
 
+        .. math::
+                
+            \text{weights}: \mathbb{R}^n \to \mathbb{R}^n
+            
+            \text{weights}(z) = \begin{cases}
+                                    1 & \text{if } \lvert z \rvert \le t \\
+                                    \frac{t}{\lvert z \rvert} & \text{if } \lvert z \rvert \le t
+                                \end{cases}
+            
         Parameters
         ----------
         z : array_like
@@ -301,6 +346,12 @@ class RamsayE(RobustNorm):
         r"""
         The robust criterion function for Ramsay's Ea.
 
+        .. math::
+
+            \rho: \mathbb{R}^n \to \mathbb{R}^n
+            
+            \rho(z) = a^{-2} \cdot (1 - \exp(-1 \lvert z \rvert ) \cdot (1 + a \lvert z \rvert))
+        
         Parameters
         ----------
         z : array_like
@@ -321,6 +372,12 @@ class RamsayE(RobustNorm):
 
         The analytic derivative of rho
 
+        .. math::
+                
+            \psi: \mathbb{R}^n \to \mathbb{R}^n
+            
+            \psi(z) = z \cdot \exp(-a \cdot \lvert z \rvert)
+                      
         Parameters
         ----------
         z : array_like
@@ -340,6 +397,12 @@ class RamsayE(RobustNorm):
 
         The psi function scaled by z
 
+        .. math::
+                
+            \text{weights}: \mathbb{R}^n \to \mathbb{R}^n
+            
+            \text{weights}(z) = \exp(-a \cdot \lvert z \rvert)
+            
         Parameters
         ----------
         z : array_like
@@ -398,6 +461,15 @@ class AndrewWave(RobustNorm):
         r"""
         The robust criterion function for Andrew's wave.
 
+        .. math::
+
+            \rho: \mathbb{R}^n \to \mathbb{R}^n
+            
+            \rho(z) = \begin{cases}
+                          a^2 \cdot (1 - \cos(\frac{z}{a})) & \text{if } \lvert z \rvert \le a\pi \\
+                          2a & \text{if } \lvert z \rvert > a\pi
+                      \end{cases}
+            
         Parameters
         ----------
         z : array_like
@@ -411,7 +483,7 @@ class AndrewWave(RobustNorm):
             .. math::
 
                 rho(z) & = a^2 *(1-cos(z/a)), |z| \leq a\pi \\
-                rho(z) & = 2a, |z|>q\pi
+                rho(z) & = 2a, |z|>a\pi
         """
 
         a = self.a
@@ -426,6 +498,15 @@ class AndrewWave(RobustNorm):
 
         The analytic derivative of rho
 
+        .. math::
+                
+            \psi: \mathbb{R}^n \to \mathbb{R}^n
+            
+            \psi(z) = \begin{cases}
+                          a \cdot \sin(\frac{z}{a}) & \text{if } \lvert z \rvert \le a\pi \\
+                          0 & \text{if } \lvert z \rvert > a\pi
+                      \end{cases}
+                      
         Parameters
         ----------
         z : array_like
@@ -450,6 +531,15 @@ class AndrewWave(RobustNorm):
 
         The psi function scaled by z
 
+        .. math::
+                
+            \text{weights}: \mathbb{R}^n \to \mathbb{R}^n
+            
+            \text{weights}(z) = \begin{cases}
+                                    \frac{a}{z} \cdot \sin(\frac{z}{a}) & \text{if } \lvert z \rvert \le a\pi \\
+                                    0 & \text{if } \lvert z \rvert > a\pi
+                                \end{cases}
+            
         Parameters
         ----------
         z : array_like
@@ -520,6 +610,15 @@ class TrimmedMean(RobustNorm):
         r"""
         The robust criterion function for least trimmed mean.
 
+        .. math::
+        
+            \rho: \mathbb{R}^n \to \mathbb{R}^n
+            
+            \rho(z) = \begin{cases}
+                          \frac{z^2}{2} & \text{if } \lvert z \rvert \le c \\
+                          \frac{c^2}{2} & \text{if } \lvert z \rvert > c
+                      \end{cases}
+
         Parameters
         ----------
         z : array_like
@@ -543,6 +642,15 @@ class TrimmedMean(RobustNorm):
 
         The analytic derivative of rho
 
+        .. math::
+                
+            \psi: \mathbb{R}^n \to \mathbb{R}^n
+            
+            \psi(z) = \begin{cases}
+                          z & \text{if } \lvert z \rvert \le c \\
+                          0 & \text{if } \lvert z \rvert > c
+                      \end{cases}
+
         Parameters
         ----------
         z : array_like
@@ -564,6 +672,15 @@ class TrimmedMean(RobustNorm):
         Least trimmed mean weighting function for the IRLS algorithm
 
         The psi function scaled by z
+
+        .. math::
+                
+            \text{weights}: \mathbb{R}^n \to \mathbb{R}^n
+            
+            \text{weights}(z) = \begin{cases}
+                                    1 & \text{if } \lvert z \rvert \le c \\
+                                    0 & \text{if } \lvert z \rvert > c
+                                \end{cases}
 
         Parameters
         ----------
@@ -630,6 +747,17 @@ class Hampel(RobustNorm):
         r"""
         The robust criterion function for Hampel's estimator
 
+        .. math::
+        
+            \rho: \mathbb{R}^n \to \mathbb{R}^n
+            
+            \rho(z) = \begin{cases}
+                          \frac{z^2}{2} & \text{if } \lvert z \rvert \le a \\
+                          a \lvert z \rvert - \frac{a^2}{2} & \text{if } a < \lvert z \rvert \le b \\
+                          \frac{a}{2(c - b)} \cdot (c - \lvert z \rvert)^2  & \text{if } b < \lvert z \rvert \le c \\
+                          \frac{a}{2} \cdot (b + c - a) & \text{if } \lvert z \rvert > c                             
+                      \end{cases}
+
         Parameters
         ----------
         z : array_like
@@ -673,6 +801,17 @@ class Hampel(RobustNorm):
 
         The analytic derivative of rho
 
+        .. math::
+                
+            \psi: \mathbb{R}^n \to \mathbb{R}^n
+            
+            \psi(z) = \begin{cases}
+                          z & \text{if } \lvert z \rvert \le a \\
+                          a \cdot \text{sign}(z) & \text{if } a < \lvert z \rvert \le b \\
+                          \frac{a}{c - b} \cdot \text{sign}(z) \cdot (c - \lvert z \rvert) & \text{if } b < \lvert z \rvert \le c \\
+                          0 & \text{if } \lvert z \rvert > c \\                              
+                      \end{cases}
+                      
         Parameters
         ----------
         z : array_like
@@ -714,6 +853,17 @@ class Hampel(RobustNorm):
 
         The psi function scaled by z
 
+        .. math::
+                
+            \text{weights}: \mathbb{R}^n \to \mathbb{R}^n
+            
+            \text{weights}(z) = \begin{cases}
+                                    1 & \text{if } \lvert z \rvert \le a \\
+                                    \frac{a}{\lvert z \rvert} & \text{if } a < \lvert z \rvert \le b \\
+                                    \frac{a}{\lvert z \rvert (c - b)} \cdot (c - \lvert z \rvert) & \text{if } b < \lvert z \rvert \le c \\
+                                    0 & \text{if } \lvert z \rvert > c \\                              
+                                \end{cases}
+                      
         Parameters
         ----------
         z : array_like
@@ -800,6 +950,15 @@ class TukeyBiweight(RobustNorm):
         r"""
         The robust criterion function for Tukey's biweight estimator
 
+        .. math::
+        
+            \rho: \mathbb{R}^n \to \mathbb{R}^n
+            
+            \rho(z) = \begin{cases}
+                          -(1 - (\frac{z}{c})^2)^3 \cdot \frac{c^2}{6} & \text{if } \lvert z \rvert \le R \\
+                          0 & \text{if } \lvert z \rvert > R
+                      \end{cases}
+                        
         Parameters
         ----------
         z : array_like
@@ -822,6 +981,15 @@ class TukeyBiweight(RobustNorm):
 
         The analytic derivative of rho
 
+        .. math::
+                
+            \psi: \mathbb{R}^n \to \mathbb{R}^n
+            
+            \psi(z) = \begin{cases}
+                          z \cdot (1 - (\frac{z}{c})^2)^2 & \text{if } \lvert z \rvert \le R \\
+                          0 & \text{if } \lvert z \rvert > R
+                      \end{cases}
+            
         Parameters
         ----------
         z : array_like
@@ -845,6 +1013,15 @@ class TukeyBiweight(RobustNorm):
 
         The psi function scaled by z
 
+        .. math::
+                
+            \text{weights}: \mathbb{R}^n \to \mathbb{R}^n
+            
+            \text{weights}(z) = \begin{cases}
+                                    (1 - (\frac{z}{c})^2)^2 & \text{if } \lvert z \rvert \le R \\
+                                    0 & \text{if } \lvert z \rvert > R
+                                \end{cases}
+                                
         Parameters
         ----------
         z : array_like
