@@ -2152,7 +2152,7 @@ def range_unit_root_test(x, store=False):
     Range unit-root test for stationarity.
 
     Computes the Range Unit-Root (RUR) test for the null
-    hypothesis that x is stationary.
+    hypothesis that x has a single unit root.
 
     Parameters
     ----------
@@ -2254,9 +2254,9 @@ look-up table. The actual p-value is {direction} than the p-value returned.
 """
     direction = ""
     if p_value == pvals[-1]:
-        direction = "smaller"
-    elif p_value == pvals[0]:
         direction = "larger"
+    elif p_value == pvals[0]:
+        direction = "smaller"
 
     if direction:
         warnings.warn(

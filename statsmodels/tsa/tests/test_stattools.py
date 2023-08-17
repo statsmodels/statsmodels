@@ -971,9 +971,9 @@ class TestRUR:
         """
         direction = ""
         if p_value == pvals[-1]:
-            direction = "smaller"
-        elif p_value == pvals[0]:
             direction = "larger"
+        elif p_value == pvals[0]:
+            direction = "smaller"
 
         if direction:
             warnings.warn(
