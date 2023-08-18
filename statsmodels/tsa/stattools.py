@@ -2253,10 +2253,10 @@ The test statistic is outside of the range of p-values available in the
 look-up table. The actual p-value is {direction} than the p-value returned.
 """
     direction = ""
-    if p_value == pvals[-1]:
-        direction = "larger"
-    elif p_value == pvals[0]:
+    if rur_stat < inter_crit[0, 0]:
         direction = "smaller"
+    elif rur_stat > inter_crit[0, -1]:
+        direction = "larger"
 
     if direction:
         warnings.warn(
