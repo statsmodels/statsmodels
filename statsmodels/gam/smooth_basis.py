@@ -40,6 +40,42 @@ def _R_compat_quantile(x, probs):
     return quantiles.reshape(probs.shape, order="C")
 
 
+def taylor_expansion(x: np.ndarray, x0: float, derivs: np.ndarray) -> np.ndarray:
+    """Taylor expansion of functions `f_i(x)` at points `x`, based on the
+    derivatives of the `f_i` at `x0`
+
+    Parameters
+    ----------
+    x : array_like
+        x data, should be 1d
+    x0 : float
+        x value at which the derivatives of the `f_i` are provided
+    derivs : array_like
+        derivatives of the `f_i`
+    
+    Returns
+    -------
+    np.ndarray
+        2d numpy array of estimates of `f_i(x)`
+    """
+
+    if x.ndim != 1:
+        raise ValueError("`x` should be 1d")
+
+    if derivs.ndim != 2:
+        raise ValueError("`derivs` should be 2d")
+    
+    outside, _ = derivs.shape
+
+    powers = np.arange(outside + 1)
+
+    return np.matmul(
+        np.power(x - x0, powers.reshape(-1, 1)).T / factorial(powers),
+        derivs
+    )
+
+
+
 def _splev_extended(x, tck, der=0, outside="raise"):
     """Extended `splev` for handling `x` data outside the knots of `tck`
 
@@ -101,22 +137,19 @@ def _splev_extended(x, tck, der=0, outside="raise"):
 
     if outside > degree:
         raise ValueError(
-            "B-Spline has degree {}, {} derivative is zero!".format(
-                degree, outside
-            ),
+            f"B-Spline has degree {degree}, {outside} derivative is zero!"
         )
 
     if outside < der:
         raise ValueError(
-            "`outside` is set to {}, {} derivative is zero!".format(
-                outside, der
-            )
+            f"`outside` is set to {outside}, {der} derivative is zero!"
         )
 
     is_below = x < min_knot
     is_inside = (min_knot <= x) & (x <= max_knot)
     is_above = max_knot < x
 
+    # Evaluate the derivatives of the spline at the min and max knots
     derivs = np.array(
         [
             splev([min_knot, max_knot], (knots, coeffs, degree), der=deriv)
@@ -135,29 +168,11 @@ def _splev_extended(x, tck, der=0, outside="raise"):
     result_array[np.where(is_inside)] = y_inside
 
     if extend_below:
-        y_below = (
-            (
-                np.power(
-                    x[is_below] - np.min(knots),
-                    np.arange(outside + 1).reshape(-1, 1),
-                ).T
-                / factorial(np.arange(outside + 1))
-            )
-            @ derivs[:, :, 0]
-        )
+        y_below = taylor_expansion(x[is_below], min_knot, derivs[:, :, 0])
         result_array[np.where(is_below)] = y_below
 
     if extend_above:
-        y_above = (
-            (
-                np.power(
-                    x[is_above] - np.max(knots),
-                    np.arange(outside + 1).reshape(-1, 1),
-                ).T
-                / factorial(np.arange(outside + 1))
-            )
-            @ derivs[:, :, 1]
-        )
+        y_above = taylor_expansion(x[is_above], max_knot, derivs[:, :, 1])
         result_array[np.where(is_above)] = y_above
 
     return result_array
