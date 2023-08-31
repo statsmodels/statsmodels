@@ -2231,7 +2231,7 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         # Convert endog name to index
         use_pandas = isinstance(self.data, PandasData)
-        if type(impulse) == str:
+        if type(impulse) is str:
             if not use_pandas:
                 raise ValueError('Endog must be pd.DataFrame.')
             impulse = self.endog_names.index(impulse)
@@ -5030,7 +5030,7 @@ class PredictionResults(pred.PredictionResults):
 
             # Attach the endog names
             ynames = self.model.data.ynames
-            if not type(ynames) == list:
+            if type(ynames) is not list:
                 ynames = [ynames]
             names = (['lower {0}'.format(name) for name in ynames] +
                      ['upper {0}'.format(name) for name in ynames])
