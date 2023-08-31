@@ -836,7 +836,7 @@ def constrain_stationary_multivariate_python(unconstrained, error_variance,
        American Statistical Association
     """
 
-    use_list = type(unconstrained) == list
+    use_list = type(unconstrained) is list
     if not use_list:
         k_endog, order = unconstrained.shape
         order //= k_endog
@@ -872,7 +872,7 @@ def constrain_stationary_multivariate(unconstrained, variance,
                                       transform_variance=False,
                                       prefix=None):
 
-    use_list = type(unconstrained) == list
+    use_list = type(unconstrained) is list
     if use_list:
         unconstrained = np.concatenate(unconstrained, axis=1)
 
@@ -1078,7 +1078,7 @@ def _compute_multivariate_acovf_from_coefficients(
 
     # Convert coefficients to a list of matrices, for use in
     # `companion_matrix`; get dimensions
-    if type(coefficients) == list:
+    if type(coefficients) is list:
         order = len(coefficients)
         k_endog = coefficients[0].shape[0]
     else:
@@ -1357,7 +1357,7 @@ def _compute_multivariate_pacf_from_coefficients(constrained, error_variance,
         y_t = A_1 y_{t-1} + \dots + A_p y_{t-p} + \varepsilon_t
     """
 
-    if type(constrained) == list:
+    if type(constrained) is list:
         order = len(constrained)
         k_endog = constrained[0].shape[0]
     else:
@@ -1414,7 +1414,7 @@ def unconstrain_stationary_multivariate(constrained, error_variance):
        to Enforce Stationarity."
        Journal of Statistical Computation and Simulation 24 (2): 99-106.
     """
-    use_list = type(constrained) == list
+    use_list = type(constrained) is list
     if not use_list:
         k_endog, order = constrained.shape
         order //= k_endog

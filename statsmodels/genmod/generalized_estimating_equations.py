@@ -2401,14 +2401,14 @@ class OrdinalGEE(GEE):
 
         # exog column names, including intercepts
         xnames = ["I(y>%.1f)" % v for v in endog_cuts]
-        if type(self.exog_orig) == pd.DataFrame:
+        if type(self.exog_orig) is pd.DataFrame:
             xnames.extend(self.exog_orig.columns)
         else:
             xnames.extend(["x%d" % k for k in range(1, exog.shape[1] + 1)])
         exog_out = pd.DataFrame(exog_out, columns=xnames)
 
         # Preserve the endog name if there is one
-        if type(self.endog_orig) == pd.Series:
+        if type(self.endog_orig) is pd.Series:
             endog_out = pd.Series(endog_out, name=self.endog_orig.name)
 
         return endog_out, exog_out, groups_out, time_out, offset_out
