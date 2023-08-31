@@ -327,13 +327,13 @@ def test_instantiation_valid():
         endog.index = supported_increment_indexes[1][0]
 
         mod = tsa_model.TimeSeriesModel(endog)
-        assert_equal(type(mod._index) == pd.RangeIndex, True)
-        assert_equal(mod._index_none, False)
-        assert_equal(mod._index_dates, False)
-        assert_equal(mod._index_generated, False)
-        assert_equal(mod._index_freq, None)
-        assert_equal(mod.data.dates, None)
-        assert_equal(mod.data.freq, None)
+        assert type(mod._index) is pd.RangeIndex
+        assert not mod._index_none
+        assert not mod._index_dates
+        assert not mod._index_generated
+        assert mod._index_freq is None
+        assert mod.data.dates is None
+        assert mod.data.freq is None
 
         # Supported indexes *when a freq is given*, should not raise a warning
         with warnings.catch_warnings():
@@ -402,12 +402,12 @@ def test_instantiation_valid():
                     freq = ix.freq
                 if not isinstance(freq, str):
                     freq = freq.freqstr
-                assert_equal(type(mod._index) == pd.DatetimeIndex, True)
-                assert_equal(mod._index_none, False)
-                assert_equal(mod._index_dates, True)
-                assert_equal(mod._index_generated, False)
+                assert type(mod._index) is pd.DatetimeIndex
+                assert not mod._index_none
+                assert mod._index_dates
+                assert not mod._index_generated
                 assert_equal(mod._index.freq, mod._index_freq)
-                assert_equal(mod.data.dates.equals(mod._index), True)
+                assert mod.data.dates.equals(mod._index)
 
                 # Note: here, we need to hedge the test a little bit because
                 # inferred frequencies are not always the same as the original
