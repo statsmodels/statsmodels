@@ -2,7 +2,7 @@
 numpy>=1.22.3; python_version=="3.10" and platform_system=="Windows" and platform_python_implementation != "PyPy"
 numpy >=1.18  # released December 2019
 scipy>=1.4,!=1.9.2  # released December 2019
-scipy>=1.4,!=1.9.2; sys_platform == "win32"  # Blacklist 1.9.2 due to Windows issues
-pandas>=1.0  # released January 2020
+scipy>=1.4,!=1.9.2; sys_platform == "win32"  # Blocked  1.9.2 due to Windows issues
+pandas>=1.0,!=2.1.0  # released January 2020, 2.1.0 blocked due to bug
 patsy>=0.5.2  # released January 2018
 packaging>=21.3  # released Nov 2021
