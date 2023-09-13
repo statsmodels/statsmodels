@@ -306,8 +306,11 @@ def lagmat(x,
     ----------
     x : array_like
         Data; if 2d, observation in rows and variables in columns.
-    maxlag : int
-        All lags from zero to maxlag are included.
+    maxlag : {int, array_like}
+        The lags to be applied.
+
+        * int : All lags from zero to maxlag are included.
+        * array_like : All lags associated to the values in the array.
     trim : {'forward', 'backward', 'both', 'none', None}
         The trimming method to use.
 
