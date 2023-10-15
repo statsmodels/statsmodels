@@ -95,9 +95,10 @@ def seasonal_decompose(
         The concrete moving average method used in filtering is determined by
         two_sided.
     period : int, optional
-        Period of the series. Must be used if x is not a pandas object or if
-        the index of x does not have  a frequency. Overrides default
-        periodicity of x if x is a pandas object with a timeseries index.
+        Period of the series (e.g., 1 for annual, 4 for quarterly, etc). Must
+        be used if x is not a pandas object or if the index of x does not have
+        a frequency. Overrides default periodicity of x if x is a pandas
+        object with a timeseries index.
     two_sided : bool, optional
         The moving average method used in filtering.
         If True (default), a centered moving average is computed using the
