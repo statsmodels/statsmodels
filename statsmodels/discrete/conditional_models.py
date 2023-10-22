@@ -586,13 +586,20 @@ class ConditionalMNLogit(_ConditionalModel):
         lpr = np.dot(self.exog, pmat)
 
         ll = 0.0
+
+        # denom - immediately calculate the sums for the selected elements,
+        # obtaining exponential values, ultimately obtaining a final
+        # calculating the total amount
+
         for ii in self._grp_ix:
             x = lpr[ii, :]
             jj = np.arange(x.shape[0], dtype=int)
             y = self.endog[ii]
-            denom = 0.0
-            for p in itertools.permutations(y):
-                denom += np.exp(x[(jj, p)].sum())
+            denom = np.sum(
+                np.exp(
+                    np.sum(x[jj, list(itertools.permutations(y))], axis=1)
+                )
+            )
             ll += x[(jj, y)].sum() - np.log(denom)
 
         return ll
@@ -612,14 +619,21 @@ class ConditionalMNLogit(_ConditionalModel):
             x = lpr[ii, :]
             jj = np.arange(x.shape[0], dtype=int)
             y = self.endog[ii]
-            denom = 0.0
             denomg = np.zeros((q, c))
-            for p in itertools.permutations(y):
-                v = np.exp(x[(jj, p)].sum())
-                denom += v
-                for i, r in enumerate(p):
+
+            # Extract itertools.permutations(y) to the list
+            iter_ = list(itertools.permutations(y))
+
+            # Exponential values of sums of selected elements.
+            # Calculation everything at once and get the required
+            # values in a loop by number 'p'.
+            exp_sum = np.exp(np.sum(x[jj, iter_], axis=1))
+            denom = np.sum(exp_sum)
+
+            for p in range(len(iter_)):
+                for i, r in enumerate(iter_[p]):
                     if r != 0:
-                        denomg[:, r - 1] += v * self.exog[ii[i], :]
+                        denomg[:, r - 1] += exp_sum[p] * self.exog[ii[i], :]
 
             for i, r in enumerate(y):
                 if r != 0:
