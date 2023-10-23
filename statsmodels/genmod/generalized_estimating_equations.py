@@ -35,6 +35,7 @@ import statsmodels.base.model as base
 # used for wrapper:
 import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
+from statsmodels.formula.formulatools import advance_eval_env
 
 from statsmodels.genmod import families
 from statsmodels.genmod.generalized_linear_model import GLM, GLMResults
@@ -756,6 +757,7 @@ class GEE(GLM):
             family = kwargs["family"]
             del kwargs["family"]
 
+        advance_eval_env(kwargs)
         model = super(GEE, cls).from_formula(formula, data=data, subset=subset,
                                              groups=groups, time=time,
                                              offset=offset,

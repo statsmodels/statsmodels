@@ -8,6 +8,7 @@ from statsmodels.genmod.families import varfuncs
 import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
 from statsmodels.tools.decorators import cache_readonly
+from statsmodels.formula.formulatools import advance_eval_env
 
 
 class QIFCovariance:
@@ -330,6 +331,7 @@ class QIF(base.Model):
         if isinstance(groups, str):
             groups = data[groups]
 
+        advance_eval_env(kwargs)
         model = super(QIF, cls).from_formula(
                    formula, data=data, subset=subset,
                    groups=groups, *args, **kwargs)

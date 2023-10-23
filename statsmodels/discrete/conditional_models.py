@@ -8,6 +8,7 @@ import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
 from statsmodels.discrete.discrete_model import (MultinomialResults,
       MultinomialResultsWrapper)
+from statsmodels.formula.formulatools import advance_eval_env
 import collections
 import warnings
 import itertools
@@ -204,6 +205,7 @@ class _ConditionalModel(base.LikelihoodModel):
         if "0+" not in formula.replace(" ", ""):
             warnings.warn("Conditional models should not include an intercept")
 
+        advance_eval_env(kwargs)
         model = super(_ConditionalModel, cls).from_formula(
             formula, data=data, groups=groups, *args, **kwargs)
 

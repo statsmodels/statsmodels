@@ -111,3 +111,37 @@ def test_formula(cov_struct):
     if not isinstance(cov_struct, QIFIndependence):
         _ = result2.bic
         _ = result2.aic
+
+
+def test_formula_environment():
+    """Test that QIF uses the right environment for formulas."""
+
+    rng = np.random.default_rng(3423)
+
+    x1 = rng.normal(size=100)
+    y = x1 + rng.normal(size=100)
+    groups = np.kron(np.arange(25), np.ones(4))
+
+    def times_two(x):
+        return 2 * x
+
+    cov_struct = QIFIndependence()
+
+    result_direct = QIF(
+        y,
+        times_two(x1).reshape(-1, 1),
+        groups=groups,
+        cov_struct=cov_struct
+    ).fit()
+
+    df = pd.DataFrame({"y": y, "x1": x1, "groups": groups})
+
+    result_formula = QIF.from_formula(
+        "y ~ 0 + times_two(x1)",
+        groups="groups",
+        cov_struct=cov_struct,
+        data=df
+    ).fit()
+
+    assert_allclose(result_direct.params, result_formula.params)
+    assert_allclose(result_direct.bse, result_formula.bse)
