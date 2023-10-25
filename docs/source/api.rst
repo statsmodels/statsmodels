@@ -140,6 +140,7 @@ Statistics and Tests
    ~statsmodels.tsa.stattools.ccovf
    ~statsmodels.tsa.stattools.coint
    ~statsmodels.tsa.stattools.kpss
+   ~statsmodels.tsa.stattools.leybourne
    ~statsmodels.tsa.stattools.pacf
    ~statsmodels.tsa.stattools.pacf_ols
    ~statsmodels.tsa.stattools.pacf_yw
