@@ -48,6 +48,7 @@ from statsmodels.tsa.stattools import (
     kpss,
     levinson_durbin,
     levinson_durbin_pacf,
+    leybourne,
     pacf,
     pacf_burg,
     pacf_ols,
@@ -1628,3 +1629,80 @@ def test_zivot_andrews_change_data(reset_randomstate):
     zivot_andrews(df['variable1'])
     zivot_andrews(df['variable1'], regression='c')
     pd.testing.assert_frame_equal(df, df_original)
+
+
+class SetupLybourneMcCabe:
+    # test directory
+    cur_dir = CURR_DIR
+    run_dir = os.path.join(cur_dir, "results")
+
+
+class TestLeybourneMcCabe(SetupZivotAndrews):
+
+    # failure mode tests
+    def test_fail_inputs(self):
+        # use results/BAA.csv file for testing failure modes
+        fail_file = os.path.join(self.run_dir, "BAA.csv")
+        fail_mdl = np.asarray(pd.read_csv(fail_file))
+        with pytest.raises(ValueError):
+            leybourne(fail_mdl, regression="nc")
+        with pytest.raises(ValueError):
+            leybourne(fail_mdl, method="gls")
+        with pytest.raises(ValueError):
+            leybourne(fail_mdl, varest="var98")
+        with pytest.raises(ValueError):
+            leybourne([[1, 1], [2, 2]], regression="c")
+        with pytest.raises(ValueError):
+            leybourne(fail_mdl, arlags=250)
+        with pytest.raises(ValueError):
+            leybourne(fail_mdl, arlags="error")
+
+    # the following tests use data sets from Schwert (1987)
+    # and were verified against Matlab 9.13
+    def test_baa_results(self):
+        mdl_file = os.path.join(self.run_dir, "BAA.csv")
+        mdl = np.asarray(pd.read_csv(mdl_file))
+        res = leybourne(mdl, regression='ct')
+        assert_allclose(res[0:3], [5.4438, 0.0000, 3], rtol=1e-4, atol=1e-4)
+        res = leybourne(mdl, regression='ct', method='ols')
+        assert_allclose(res[0:3], [5.4757, 0.0000, 3], rtol=1e-4, atol=1e-4)
+
+    def test_dbaa_results(self):
+        mdl_file = os.path.join(self.run_dir, "DBAA.csv")
+        mdl = np.asarray(pd.read_csv(mdl_file))
+        res = leybourne(mdl)
+        assert_allclose(res[0:3], [0.1173, 0.5072, 2], rtol=1e-4, atol=1e-4)
+        res = leybourne(mdl, regression='ct')
+        assert_allclose(res[0:3], [0.1175, 0.1047, 2], rtol=1e-4, atol=1e-4)
+
+    def test_dsp500_results(self):
+        mdl_file = os.path.join(self.run_dir, "DSP500.csv")
+        mdl = np.asarray(pd.read_csv(mdl_file))
+        res = leybourne(mdl)
+        assert_allclose(res[0:3], [0.3118, 0.1256, 0], rtol=1e-4, atol=1e-4)
+        res = leybourne(mdl, varest='var99')
+        assert_allclose(res[0:3], [0.3145, 0.1235, 0], rtol=1e-4, atol=1e-4)
+
+    def test_dun_results(self):
+        mdl_file = os.path.join(self.run_dir, "DUN.csv")
+        mdl = np.asarray(pd.read_csv(mdl_file))
+        res = leybourne(mdl, regression='ct')
+        assert_allclose(res[0:3], [0.0255, 0.9281, 3], rtol=1e-4, atol=1e-4)
+        res = leybourne(mdl, regression='ct', method='ols')
+        assert_allclose(res[0:3], [0.0938, 0.1890, 3], rtol=1e-4, atol=1e-4)
+
+    def test_sp500_results(self):
+        mdl_file = os.path.join(self.run_dir, "SP500.csv")
+        mdl = np.asarray(pd.read_csv(mdl_file))
+        res = leybourne(mdl, arlags=4, regression='ct')
+        assert_allclose(res[0:2], [1.8761, 0.0000], rtol=1e-4, atol=1e-4)
+        res = leybourne(mdl, arlags=4, regression='ct', method='ols')
+        assert_allclose(res[0:2], [1.9053, 0.0000], rtol=1e-4, atol=1e-4)
+
+    def test_un_results(self):
+        mdl_file = os.path.join(self.run_dir, "UN.csv")
+        mdl = np.asarray(pd.read_csv(mdl_file))
+        res = leybourne(mdl, varest='var99')
+        assert_allclose(res[0:3], [285.5181, 0.0000, 4], rtol=1e-4, atol=1e-4)
+        res = leybourne(mdl, method='ols', varest='var99')
+        assert_allclose(res[0:3], [556.0444, 0.0000, 4], rtol=1e-4, atol=1e-4)
