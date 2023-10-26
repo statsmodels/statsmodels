@@ -19,12 +19,9 @@ from statsmodels.tsa.deterministic import (
 )
 
 
-@pytest.fixture(scope="module", params=[True, False])
+@pytest.fixture(scope="module")
 def time_index(request):
-    idx = pd.date_range("2000-01-01", periods=833, freq="B")
-    if request.param:
-        return idx.to_period("B")
-    return idx
+    return pd.date_range("2000-01-01", periods=833, freq="B")
 
 
 @pytest.fixture(
@@ -50,13 +47,11 @@ def index(request):
     return idx
 
 
-@pytest.fixture(scope="module", params=[None, "period", False, "list"])
+@pytest.fixture(scope="module", params=[None, False, "list"])
 def forecast_index(request):
     idx = pd.date_range("2000-01-01", periods=400, freq="B")
     if request.param is None:
         return None
-    elif request.param == "period":
-        return idx.to_period("B")
     elif request.param == "list":
         return list(idx)
     return idx

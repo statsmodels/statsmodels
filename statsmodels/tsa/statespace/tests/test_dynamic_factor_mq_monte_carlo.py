@@ -217,7 +217,7 @@ def test_em_nonstationary(reset_randomstate):
     # Test that when the EM algorithm estimates non-stationary parameters, that
     # it warns the user and switches to a diffuse initialization.
     ix = pd.period_range(start='2000', periods=20, freq='M')
-    endog_M = pd.Series(np.arange(20), index=ix)
+    endog_M = pd.Series(np.arange(20), index=ix, dtype=float)
     endog_M.iloc[10:12] += [0.4, -0.2]  # add in a little noise
     ix = pd.period_range(start='2000', periods=5, freq='Q')
     endog_Q = pd.Series(np.arange(5), index=ix)
