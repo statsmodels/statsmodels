@@ -118,7 +118,7 @@ aust = pd.Series([
     37.717881, 40.420211, 51.206863, 31.887228, 40.978263,
     43.772491, 55.558567, 33.850915, 42.076383, 45.642292,
     59.766780, 35.191877, 44.319737, 47.913736],
-    index=pd.period_range(start='2005Q1', end='2010Q4', freq='QS'))
+    index=pd.period_range(start='2005Q1', end='2010Q4', freq='Q-OCT'))
 
 
 class CheckExponentialSmoothing:

@@ -305,7 +305,7 @@ class DescrStatsW:
         df = pd.DataFrame(index=np.arange(len(self.weights)))
         df["weights"] = self.weights
         df["vec"] = vec
-        dfg = df.groupby("vec").agg(np.sum)
+        dfg = df.groupby("vec").agg("sum")
         weights = dfg.values[:, 0]
         values = np.asarray(dfg.index)
 
