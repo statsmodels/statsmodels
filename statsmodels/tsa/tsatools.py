@@ -806,9 +806,9 @@ def freq_to_period(freq: str | offsets.DateOffset) -> int:
 
     if freq in ("A", "Y") or freq.startswith(("A-", "AS-", "Y-", "YS-")):
         return 1
-    elif freq == "Q" or freq.startswith(("Q-", "QS")):
+    elif freq == "Q" or freq.startswith(("Q-", "QS", "QE")):
         return 4
-    elif freq == "M" or freq.startswith(("M-", "MS")):
+    elif freq == "M" or freq.startswith(("M-", "MS", "ME")):
         return 12
     elif freq == "W" or freq.startswith("W-"):
         return 52
