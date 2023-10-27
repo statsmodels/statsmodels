@@ -518,7 +518,7 @@ class LikelihoodModel(Model):
                 start_params = self.start_params
             elif self.exog is not None:
                 # fails for shape (K,)?
-                start_params = [0] * self.exog.shape[1]
+                start_params = [0.0] * self.exog.shape[1]
             else:
                 raise ValueError("If exog is None, then start_params should "
                                  "be specified")
