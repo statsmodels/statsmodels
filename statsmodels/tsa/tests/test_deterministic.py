@@ -619,7 +619,7 @@ def test_drop_two_consants(time_index):
     [
         pd.RangeIndex(0, 200),
         pd.Index(np.arange(200)),
-        pd.date_range("2000-1-1", freq="M", periods=200),
+        pd.date_range("2000-1-1", freq="MR", periods=200),
         pd.period_range("2000-1-1", freq="M", periods=200),
     ],
 )

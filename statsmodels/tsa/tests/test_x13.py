@@ -20,7 +20,7 @@ quarterly_data = dta.dropna()
 
 dta = co2.load_pandas().data
 dta['co2'] = dta.co2.interpolate()
-monthly_data = dta.resample('M')
+monthly_data = dta.resample('ME')
 # change in pandas 0.18 resample is deferred object
 if not isinstance(monthly_data, (pd.DataFrame, pd.Series)):
     monthly_data = monthly_data.mean()

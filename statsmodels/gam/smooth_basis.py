@@ -257,7 +257,7 @@ def get_covder2(smoother, k_points=3, integration_points=None,
     else:
         x = integration_points
     d2 = smoother.transform(x, deriv=deriv, skip_ctransf=skip_ctransf)
-    covd2 = simpson(d2[:, :, None] * d2[:, None, :], x, axis=0)
+    covd2 = simpson(d2[:, :, None] * d2[:, None, :], x=x, axis=0)
     return covd2
 
 
