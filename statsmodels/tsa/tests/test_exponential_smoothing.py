@@ -279,7 +279,7 @@ def oildata():
         549.8338076,
         542.3404698,
     ]
-    return pd.Series(data, index=pd.date_range("1965", "2013", freq="AS"))
+    return pd.Series(data, index=pd.date_range("1965", "2013", freq="YS"))
 
 
 #############################################################################

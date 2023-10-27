@@ -804,11 +804,11 @@ def freq_to_period(freq: str | offsets.DateOffset) -> int:
     assert isinstance(freq, offsets.DateOffset)
     freq = freq.rule_code.upper()
 
-    if freq == "A" or freq.startswith(("A-", "AS-")):
+    if freq in ("A", "Y") or freq.startswith(("A-", "AS-", "Y-", "YS-")):
         return 1
-    elif freq == "Q" or freq.startswith(("Q-", "QS-")):
+    elif freq == "Q" or freq.startswith(("Q-", "QS")):
         return 4
-    elif freq in ("M", "MS", "ME") or freq.startswith(("M-", "MS")):
+    elif freq == "M" or freq.startswith(("M-", "MS")):
         return 12
     elif freq == "W" or freq.startswith("W-"):
         return 52

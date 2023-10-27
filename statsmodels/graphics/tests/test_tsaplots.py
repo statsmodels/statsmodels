@@ -362,7 +362,7 @@ def test_predict_plot(use_pandas, model_and_args, alpha):
         y[i] += 1.8 * y[i - 1] - 0.9 * y[i - 2]
     y = y[100:]
     if use_pandas:
-        index = pd.date_range("1960-1-1", freq="ME", periods=y.shape[0] + 24)
+        index = pd.date_range("1960-1-1", freq="M", periods=y.shape[0] + 24)
         start = index[index.shape[0] // 2]
         end = index[-1]
         y = pd.Series(y, index=index[:-24])
