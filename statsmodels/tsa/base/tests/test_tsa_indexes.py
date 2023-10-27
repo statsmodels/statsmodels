@@ -34,11 +34,11 @@ base_date_indexes = [
     # (usual candidates)
     pd.date_range(start="1950-01-01", periods=nobs, freq="D"),
     pd.date_range(start="1950-01-01", periods=nobs, freq="W"),
-    pd.date_range(start="1950-01-01", periods=nobs, freq="M"),
-    pd.date_range(start="1950-01-01", periods=nobs, freq="Q"),
-    pd.date_range(start="1950-01-01", periods=nobs, freq="A"),
+    pd.date_range(start="1950-01-01", periods=nobs, freq="ME"),
+    pd.date_range(start="1950-01-01", periods=nobs, freq="QS"),
+    pd.date_range(start="1950-01-01", periods=nobs, freq="Y"),
     # (some more complicated frequencies)
-    pd.date_range(start="1950-01-01", periods=nobs, freq="2Q"),
+    pd.date_range(start="1950-01-01", periods=nobs, freq="2QE"),
     pd.date_range(start="1950-01-01", periods=nobs, freq="2QS"),
     pd.date_range(start="1950-01-01", periods=nobs, freq="5s"),
     pd.date_range(start="1950-01-01", periods=nobs, freq="1D10min"),

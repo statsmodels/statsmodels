@@ -43,11 +43,11 @@ def test_predict_freq():
 
     # there's a bug in pandas up to 0.10.2 for YearBegin
     #dates = date_range("1972-4-1", "2007-4-1", freq="AS-APR")
-    dates = pd.date_range("1972-4-30", "2006-4-30", freq="A-APR")
+    dates = pd.date_range("1972-4-30", "2006-4-30", freq="Y-APR")
     series = pd.Series(x, index=dates)
     model = TimeSeriesModel(series)
     #npt.assert_(model.data.freq == "AS-APR")
-    assert_equal(model._index.freqstr, "A-APR")
+    assert_equal(model._index.freqstr, "Y-APR")
 
     start, end, out_of_sample, _ = (
         model._get_prediction_index("2006-4-30", "2016-4-30"))
@@ -56,7 +56,7 @@ def test_predict_freq():
 
     #expected_dates = date_range("2006-12-31", "2016-12-31",
     #                            freq="AS-APR")
-    expected_dates = pd.date_range("2006-4-30", "2016-4-30", freq="A-APR")
+    expected_dates = pd.date_range("2006-4-30", "2016-4-30", freq="Y-APR")
     assert_equal(predict_dates, expected_dates)
     #ptesting.assert_series_equal(predict_dates, expected_dates)
 
@@ -65,7 +65,7 @@ def test_keyerror_start_date():
     x = np.arange(1,36.)
 
     # dates = date_range("1972-4-1", "2007-4-1", freq="AS-APR")
-    dates = pd.date_range("1972-4-30", "2006-4-30", freq="A-APR")
+    dates = pd.date_range("1972-4-30", "2006-4-30", freq="Y-APR")
     series = pd.Series(x, index=dates)
     model = TimeSeriesModel(series)
 

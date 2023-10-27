@@ -1578,7 +1578,7 @@ def test_pandas_univariate_rangeindex_repetitions():
 
 def test_pandas_univariate_dateindex():
     # Simulation will maintain have date index
-    ix = pd.date_range(start='2000', periods=2, freq='M')
+    ix = pd.date_range(start='2000', periods=2, freq='ME')
     endog = pd.Series(np.zeros(2), index=ix)
     mod = sarimax.SARIMAX(endog)
     res = mod.filter([0.5, 1.])
@@ -1601,7 +1601,7 @@ def test_pandas_univariate_dateindex():
 
 def test_pandas_univariate_dateindex_repetitions():
     # Simulation will maintain have date index
-    ix = pd.date_range(start='2000', periods=2, freq='M')
+    ix = pd.date_range(start='2000', periods=2, freq='ME')
     endog = pd.Series(np.zeros(2), index=ix)
     mod = sarimax.SARIMAX(endog)
     res = mod.filter([0.5, 1.])
@@ -1674,7 +1674,7 @@ def test_pandas_multivariate_rangeindex_repetitions():
 
 def test_pandas_multivariate_dateindex():
     # Simulate will also have RangeIndex
-    ix = pd.date_range(start='2000', periods=2, freq='M')
+    ix = pd.date_range(start='2000', periods=2, freq='ME')
     endog = pd.DataFrame(np.zeros((2, 2)), index=ix)
     mod = varmax.VARMAX(endog, trend='n')
     res = mod.filter([0.5, 0., 0., 0.2, 1., 0., 1.])
@@ -1696,7 +1696,7 @@ def test_pandas_multivariate_dateindex():
 
 def test_pandas_multivariate_dateindex_repetitions():
     # Simulate will also have RangeIndex
-    ix = pd.date_range(start='2000', periods=2, freq='M')
+    ix = pd.date_range(start='2000', periods=2, freq='ME')
     endog = pd.DataFrame(np.zeros((2, 2)), columns=['y1', 'y2'], index=ix)
     mod = varmax.VARMAX(endog, trend='n')
     res = mod.filter([0.5, 0., 0., 0.2, 1., 0., 1.])
@@ -1722,7 +1722,7 @@ def test_pandas_multivariate_dateindex_repetitions():
 
 def test_pandas_anchor():
     # Test that anchor with dates works
-    ix = pd.date_range(start='2000', periods=2, freq='M')
+    ix = pd.date_range(start='2000', periods=2, freq='ME')
     endog = pd.Series(np.zeros(2), index=ix)
     mod = sarimax.SARIMAX(endog)
     res = mod.filter([0.5, 1.])
