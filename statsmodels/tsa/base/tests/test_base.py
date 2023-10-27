@@ -47,7 +47,8 @@ def test_predict_freq():
     series = pd.Series(x, index=dates)
     model = TimeSeriesModel(series)
     #npt.assert_(model.data.freq == "AS-APR")
-    assert_equal(model._index.freqstr, "A-APR")
+    # two possabilities due to future changes in pandas 2.2+
+    assert model._index.freqstr in ("Y-APR", "A-APR")
 
     start, end, out_of_sample, _ = (
         model._get_prediction_index("2006-4-30", "2016-4-30"))

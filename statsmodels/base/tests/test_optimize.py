@@ -75,7 +75,7 @@ def test_full_output_false(reset_randomstate):
             xopt, retvals = func(
                 dummy_func,
                 dummy_score,
-                [1],
+                [1.0],
                 (),
                 {},
                 hess=dummy_hess,

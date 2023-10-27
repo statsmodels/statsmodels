@@ -313,7 +313,7 @@ def test_plot_quarter(close_figures):
     quarter_plot(dta.unemp)
 
     # w PeriodIndex
-    dta.index = pd.PeriodIndex(dates, freq="Q-Oct")
+    dta.index = pd.PeriodIndex(dates, freq="Q")
     quarter_plot(dta.unemp)
 
 
