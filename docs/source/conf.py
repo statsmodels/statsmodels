@@ -178,7 +178,6 @@ html_theme_options = {
     "site_url": site_url,
     "repo_url": "https://github.com/statsmodels/statsmodels/",
     "repo_name": "statsmodels",
-    "repo_type": "github",
     "palette": {"primary": "indigo", "accent": "blue"},
     "globaltoc_collapse": True,
     "toc_title": "Contents",

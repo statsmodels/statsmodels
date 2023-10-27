@@ -209,7 +209,7 @@ cdef class STL(object):
                  seasonal_deg=1, trend_deg=1, low_pass_deg=1,
                  robust=False, seasonal_jump=1, trend_jump=1, low_pass_jump=1):
         self.endog = endog
-        y = array_like(endog, "endog", dtype=np.double, contiguous=True, writeable=True, maxdim=1)
+        y = array_like(endog, "endog", dtype=np.double, contiguous=True, writeable=True, ndim=1)
         self._ya = y
         self.nobs = y.shape[0]  # n
         if period is None:

@@ -21,8 +21,8 @@ was already in statsmodels main and how much usage it has already
 seen.  If there are specific known problems or limitations, then they
 are mentioned in the docstrings.
 
-Stats
------
+Release Statistics
+------------------
 **Issues Closed**: 255
 
 **Pull Requests Merged**: 345
