@@ -209,7 +209,7 @@ cdef class STL(object):
                  seasonal_deg=1, trend_deg=1, low_pass_deg=1,
                  robust=False, seasonal_jump=1, trend_jump=1, low_pass_jump=1):
         self.endog = endog
-        y = array_like(endog, "endog", dtype=np.double, contiguous=True, writeable=True, maxdim=1)
+        y = array_like(endog, "endog", dtype=np.double, contiguous=True, writeable=True, ndim=1)
         self._ya = y
         self.nobs = y.shape[0]  # n
         if period is None:
@@ -246,11 +246,11 @@ cdef class STL(object):
         self.low_pass_deg = low_pass_deg  # ildeg
         self.robust = robust
         if not _is_pos_int(low_pass_jump, False):
-            raise ValueError('low_pass_jump must be a positve integer')
+            raise ValueError('low_pass_jump must be a positive integer')
         if not _is_pos_int(seasonal_jump, False):
-            raise ValueError('seasonal_jump must be a positve integer')
+            raise ValueError('seasonal_jump must be a positive integer')
         if not _is_pos_int(trend_jump, False):
-            raise ValueError('trend_jump must be a positve integer')
+            raise ValueError('trend_jump must be a positive integer')
         self.low_pass_jump = low_pass_jump
         self.seasonal_jump = seasonal_jump
         self.trend_jump = trend_jump

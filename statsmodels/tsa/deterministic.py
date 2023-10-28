@@ -743,10 +743,10 @@ class CalendarSeasonality(CalendarDeterministicTerm):
 
     # out_of: freq
     _supported = {
-        "W": {"H": 24 * 7, "B": 5, "D": 7},
-        "D": {"H": 24},
-        "Q": {"M": 3},
-        "A": {"M": 12, "Q": 4},
+        "W": {"H": 24 * 7, "B": 5, "D": 7, "h": 24 * 7},
+        "D": {"H": 24, "h": 24},
+        "Q": {"M": 3, "MS": 3},
+        "A": {"M": 12, "MS": 12, "Q": 4}
     }
 
     def __init__(self, freq: str, period: str) -> None:
@@ -1243,7 +1243,7 @@ you can pass additional components using the additional_terms input."""
         if np.sum(is_constant) > 1:
             # Retain first
             const_locs = np.where(is_constant)[0]
-            is_constant[const_locs[:1]] = False
+            is_constant.iloc[const_locs[:1]] = False
             terms = terms.loc[:, ~is_constant]
         return terms
 

@@ -18,6 +18,7 @@ import pandas as pd
 from pandas import DataFrame, Series, date_range
 import pytest
 from scipy.interpolate import interp1d
+from scipy import stats
 
 from statsmodels.datasets import macrodata, modechoice, nile, randhie, sunspots
 from statsmodels.tools.sm_exceptions import (
@@ -38,6 +39,7 @@ from statsmodels.tsa.stattools import (
     arma_order_select_ic,
     breakvar_heteroskedasticity_test,
     ccovf,
+    ccf,
     coint,
     grangercausalitytests,
     innovations_algo,
@@ -364,6 +366,36 @@ class TestPACF(CheckCorrGram):
         pacfburg_, _ = pacf_burg(self.x, nlags=40)
         pacfburg = pacf(self.x, nlags=40, method="burg")
         assert_almost_equal(pacfburg_, pacfburg, DECIMAL_8)
+
+
+class TestCCF:
+    """
+    Test cross-correlation function
+    """
+
+    data = macrodata.load_pandas()
+    x = data.data["unemp"].diff().dropna()
+    y = data.data["infl"].diff().dropna()
+    filename = os.path.join(CURR_DIR, "results", "results_ccf.csv")
+    results = pd.read_csv(filename, delimiter=",")
+    nlags = 20
+
+    @classmethod
+    def setup_class(cls):
+        cls.ccf = cls.results['ccf']
+        cls.res1 = ccf(cls.x, cls.y, nlags=cls.nlags, adjusted=False, fft=False)
+
+    def test_ccf(self):
+        assert_almost_equal(self.res1, self.ccf, DECIMAL_8)
+
+    def test_confint(self):
+        alpha = 0.05
+        res2, confint = ccf(self.x, self.y, nlags=self.nlags, adjusted=False, fft=False, alpha=alpha)
+        assert_equal(res2, self.res1)
+        assert_almost_equal(res2 - confint[:, 0], confint[:, 1] - res2, DECIMAL_8)
+        alpha1 = stats.norm.cdf(confint[:, 1] - res2, scale=1.0 / np.sqrt(len(self.x)))
+        assert_almost_equal(alpha1, np.repeat(1 - alpha / 2.0, self.nlags), DECIMAL_8)
+
 
 class TestBreakvarHeteroskedasticityTest:
     from scipy.stats import chi2, f
@@ -744,10 +776,9 @@ class TestKPSS:
     macrodata['realgdp'] series.
     """
 
-    @classmethod
-    def setup(cls):
-        cls.data = macrodata.load_pandas()
-        cls.x = cls.data.data["realgdp"].values
+    def setup_method(self):
+        self.data = macrodata.load_pandas()
+        self.x = self.data.data["realgdp"].values
 
     def test_fail_nonvector_input(self, reset_randomstate):
         # should be fine
@@ -865,10 +896,9 @@ class TestRUR:
     macrodata['realgdp'] series.
     """
 
-    @classmethod
-    def setup(cls):
-        cls.data = macrodata.load_pandas()
-        cls.x = cls.data.data["realgdp"].values
+    def setup_method(self):
+        self.data = macrodata.load_pandas()
+        self.x = self.data.data["realgdp"].values
 
     # To be removed when range unit test gets an R implementation
     def simple_rur(self, x, store=False):
@@ -1004,7 +1034,7 @@ def test_pandasacovf():
 
 def test_acovf2d(reset_randomstate):
     dta = sunspots.load_pandas().data
-    dta.index = date_range(start="1700", end="2009", freq="A")[:309]
+    dta.index = date_range(start="1700", end="2009", freq="Y")[:309]
     del dta["YEAR"]
     res = acovf(dta, fft=False)
     assert_equal(res, acovf(dta.values, fft=False))

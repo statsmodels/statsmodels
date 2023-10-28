@@ -36,8 +36,8 @@ Examples
 Detailed examples can be found here:
 
 
-* `Overview <examples/notebooks/generated/discrete_choice_overview.html>`__
-* `Examples <examples/notebooks/generated/discrete_choice_example.html>`__
+* `Overview <examples/notebooks/generated/discrete_choice_overview.ipynb>`_
+* `Examples <examples/notebooks/generated/discrete_choice_example.ipynb>`_
 
 Technical Documentation
 -----------------------

@@ -37,5 +37,5 @@ eval $CMD
 if [[ ${USE_CVXOPT} = true ]]; then python -m pip install cvxopt; fi
 
 if [ "${PIP_PRE}" = true ]; then
-  python -m pip install -i https://pypi.anaconda.org/scipy-wheels-nightly/simple numpy pandas scipy --upgrade --use-deprecated=legacy-resolver
+  python -m pip install -i https://pypi.anaconda.org/scientific-python-nightly-wheels/simple "numpy<2" pandas scipy --upgrade --use-deprecated=legacy-resolver
 fi

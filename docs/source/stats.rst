@@ -465,7 +465,7 @@ Rates
 Statistical functions for rates. This currently includes hypothesis tests for
 two independent samples.
 See also example notebook for an overview
-`Poisson Rates <examples/notebooks/generated/stats_poisson.html>`__
+`Poisson Rates <examples/notebooks/generated/stats_poisson.ipynb>`_
 
 Status: experimental, API might change, added in 0.12, refactored and enhanced
 in 0.14
@@ -738,7 +738,7 @@ Functions for basic meta-analysis of a collection of sample statistics.
 
 Examples can be found in the notebook
 
- * `Meta-Analysis <examples/notebooks/generated/metaanalysis1.html>`__
+ * `Meta-Analysis <examples/notebooks/generated/metaanalysis1.ipynb>`_
 
 Status: experimental, API might change, added in 0.12
 

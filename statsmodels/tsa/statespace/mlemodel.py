@@ -2231,7 +2231,7 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         # Convert endog name to index
         use_pandas = isinstance(self.data, PandasData)
-        if type(impulse) == str:
+        if type(impulse) is str:
             if not use_pandas:
                 raise ValueError('Endog must be pd.DataFrame.')
             impulse = self.endog_names.index(impulse)
@@ -4248,7 +4248,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Examples
         --------
-        >>> index = pd.period_range(start='2000', periods=2, freq='A')
+        >>> index = pd.period_range(start='2000', periods=2, freq='Y')
         >>> original_observations = pd.Series([1.2, 1.5], index=index)
         >>> mod = sm.tsa.SARIMAX(original_observations)
         >>> res = mod.fit()
@@ -4264,7 +4264,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         2002    1.4634
         Freq: A-DEC, dtype: float64
 
-        >>> new_index = pd.period_range(start='2002', periods=1, freq='A')
+        >>> new_index = pd.period_range(start='2002', periods=1, freq='Y')
         >>> new_observations = pd.Series([0.9], index=new_index)
         >>> updated_res = res.append(new_observations)
         >>> print(updated_res.params)
@@ -4374,7 +4374,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Examples
         --------
-        >>> index = pd.period_range(start='2000', periods=2, freq='A')
+        >>> index = pd.period_range(start='2000', periods=2, freq='Y')
         >>> original_observations = pd.Series([1.2, 1.5], index=index)
         >>> mod = sm.tsa.SARIMAX(original_observations)
         >>> res = mod.fit()
@@ -4390,7 +4390,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         2002    1.4634
         Freq: A-DEC, dtype: float64
 
-        >>> new_index = pd.period_range(start='2002', periods=1, freq='A')
+        >>> new_index = pd.period_range(start='2002', periods=1, freq='Y')
         >>> new_observations = pd.Series([0.9], index=new_index)
         >>> updated_res = res.extend(new_observations)
         >>> print(updated_res.params)
@@ -4475,7 +4475,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Examples
         --------
-        >>> index = pd.period_range(start='2000', periods=2, freq='A')
+        >>> index = pd.period_range(start='2000', periods=2, freq='Y')
         >>> original_observations = pd.Series([1.2, 1.5], index=index)
         >>> mod = sm.tsa.SARIMAX(original_observations)
         >>> res = mod.fit()
@@ -4491,7 +4491,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         2002    1.4634
         Freq: A-DEC, dtype: float64
 
-        >>> new_index = pd.period_range(start='1980', periods=3, freq='A')
+        >>> new_index = pd.period_range(start='1980', periods=3, freq='Y')
         >>> new_observations = pd.Series([1.4, 0.3, 1.2], index=new_index)
         >>> new_res = res.apply(new_observations)
         >>> print(new_res.params)
@@ -5007,7 +5007,7 @@ class PredictionResults(pred.PredictionResults):
 
             # Attach the endog names
             ynames = self.model.data.ynames
-            if not type(ynames) == list:
+            if type(ynames) is not list:
                 ynames = [ynames]
             names = (['lower {0}'.format(name) for name in ynames] +
                      ['upper {0}'.format(name) for name in ynames])

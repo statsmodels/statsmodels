@@ -33,11 +33,11 @@ Examples
 Detailed examples can be found here:
 
 
-* `OLS <examples/notebooks/generated/ols.html>`__
-* `WLS <examples/notebooks/generated/wls.html>`__
-* `GLS <examples/notebooks/generated/gls.html>`__
-* `Recursive LS <examples/notebooks/generated/recursive_ls.html>`__
-* `Rolling LS <examples/notebooks/generated/rolling_ls.html>`__
+* `OLS <examples/notebooks/generated/ols.ipynb>`_
+* `WLS <examples/notebooks/generated/wls.ipynb>`_
+* `GLS <examples/notebooks/generated/gls.ipynb>`_
+* `Recursive LS <examples/notebooks/generated/recursive_ls.ipynb>`_
+* `Rolling LS <examples/notebooks/generated/rolling_ls.ipynb>`_
 
 Technical Documentation
 -----------------------

@@ -28,8 +28,8 @@ Examples
 
 Detailed examples can be found here:
 
-* `GLM <examples/notebooks/generated/glm.html>`__
-* `Formula <examples/notebooks/generated/glm_formula.html>`__
+* `GLM <examples/notebooks/generated/glm.ipynb>`_
+* `Formula <examples/notebooks/generated/glm_formula.ipynb>`_
 
 Technical Documentation
 -----------------------

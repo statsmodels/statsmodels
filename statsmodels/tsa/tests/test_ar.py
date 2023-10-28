@@ -899,7 +899,9 @@ def test_predict_exog():
     c = res.params.iloc[0]
     ar = res.params.iloc[1:3]
     ex = np.asarray(res.params.iloc[3:])
-    direct = c + ar[0] * y[899:-1] + ar[1] * y[897:-3]
+    phi_1 = ar.iloc[0]
+    phi_2 = ar.iloc[1]
+    direct = c + phi_1 * y[899:-1] + phi_2 * y[897:-3]
     direct += ex[0] * x[900:, 0] + ex[1] * x[900:, 1]
     idx = pd.date_range(ys.index[900], periods=101, freq="M")
     direct = pd.Series(direct, index=idx)
@@ -908,11 +910,13 @@ def test_predict_exog():
 
     pred = res.predict(900, 1100, dynamic=True, exog_oos=exog_oos)
     direct = np.zeros(201)
-    direct[0] = c + ar[0] * y[899] + ar[1] * y[897] + x[900] @ ex
-    direct[1] = c + ar[0] * direct[0] + ar[1] * y[898] + x[901] @ ex
-    direct[2] = c + ar[0] * direct[1] + ar[1] * y[899] + x[902] @ ex
+    phi_1 = ar.iloc[0]
+    phi_2 = ar.iloc[1]
+    direct[0] = c + phi_1 * y[899] + phi_2 * y[897] + x[900] @ ex
+    direct[1] = c + phi_1 * direct[0] + phi_2 * y[898] + x[901] @ ex
+    direct[2] = c + phi_1 * direct[1] + phi_2 * y[899] + x[902] @ ex
     for i in range(3, 201):
-        direct[i] = c + ar[0] * direct[i - 1] + ar[1] * direct[i - 3]
+        direct[i] = c + phi_1 * direct[i - 1] + phi_2 * direct[i - 3]
         if 900 + i < x.shape[0]:
             direct[i] += x[900 + i] @ ex
         else:
@@ -1077,8 +1081,8 @@ def test_dynamic_predictions(ar2):
     reference = [np.nan, np.nan]
     p = np.asarray(res.params)
     for i in range(2, ar2.shape[0]):
-        lag1 = ar2[i - 1]
-        lag2 = ar2[i - 2]
+        lag1 = ar2.iloc[i - 1]
+        lag2 = ar2.iloc[i - 2]
         if i > 25:
             lag1 = reference[i - 1]
         if i > 26:
@@ -1111,8 +1115,8 @@ def test_dynamic_predictions_oos(ar2):
     p = np.asarray(res.params)
     for i in range(2, d25_end.shape[0]):
         if i < ar2.shape[0]:
-            lag1 = ar2[i - 1]
-            lag2 = ar2[i - 2]
+            lag1 = ar2.iloc[i - 1]
+            lag2 = ar2.iloc[i - 2]
         if i > 25:
             lag1 = reference[i - 1]
         if i > 26:

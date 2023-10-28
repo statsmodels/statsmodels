@@ -103,7 +103,7 @@ def _get_epsilon(x, s, epsilon, n):
             if h.shape != x.shape:
                 raise ValueError("If h is not a scalar it must have the same"
                                  " shape as x.")
-    return h
+    return np.asarray(h)
 
 
 def approx_fprime(x, f, epsilon=None, args=(), kwargs={}, centered=False):
