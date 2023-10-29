@@ -1279,8 +1279,11 @@ class TestGEE:
         ).fit()
         assert result_formula is not None
 
-        assert_almost_equal(result_direct.params, result_formula.params, decimal=8)
-
+        assert_almost_equal(
+            result_direct.params,
+            result_formula.params,
+            decimal=8,
+        )
 
     def test_compare_logit(self):
 
