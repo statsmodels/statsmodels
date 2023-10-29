@@ -4,8 +4,8 @@
 Release 0.13.4
 ==============
 
-Release summary
-===============
+Release 0.13.4 summary
+======================
 
 This release fixes a packaging issue with the 0.13.3 release. There are no other changes.
 
@@ -13,7 +13,7 @@ This release fixes a packaging issue with the 0.13.3 release. There are no other
 Release 0.13.5
 ==============
 
-Release summary
-===============
+Release 0.13.5 summary
+======================
 
 This release fixes a packaging issue with the 0.13.4 release. There are no other changes.

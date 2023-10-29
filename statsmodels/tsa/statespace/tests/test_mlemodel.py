@@ -528,7 +528,7 @@ def test_results(pandas=False):
 
 
 def test_predict():
-    dates = pd.date_range(start='1980-01-01', end='1981-01-01', freq='AS')
+    dates = pd.date_range(start='1980-01-01', end='1981-01-01', freq='YS')
     endog = pd.Series([1, 2], index=dates)
     mod = MLEModel(endog, **kwargs)
     res = mod.filter([])
@@ -570,7 +570,7 @@ def test_forecast():
 
 
 def test_summary():
-    dates = pd.date_range(start='1980-01-01', end='1984-01-01', freq='AS')
+    dates = pd.date_range(start='1980-01-01', end='1984-01-01', freq='YS')
     endog = pd.Series([1, 2, 3, 4, 5], index=dates)
     mod = MLEModel(endog, **kwargs)
     res = mod.filter([])
@@ -759,7 +759,7 @@ def test_pandas_endog():
     # assert_raises(ValueError, check_endog, endog, **kwargs)
 
     # Example : pandas.Series
-    dates = pd.date_range(start='1980-01-01', end='1981-01-01', freq='AS')
+    dates = pd.date_range(start='1980-01-01', end='1981-01-01', freq='YS')
     endog = pd.Series([1., 2.], index=dates)
     mod = check_endog(endog, **kwargs)
     mod.filter([])
@@ -857,7 +857,7 @@ def test_small_sample_serial_correlation_test():
     # checkresiduals(fit, lag=10)
     from statsmodels.tsa.statespace.sarimax import SARIMAX
     niledata = nile.data.load_pandas().data
-    niledata.index = pd.date_range('1871-01-01', '1970-01-01', freq='AS')
+    niledata.index = pd.date_range('1871-01-01', '1970-01-01', freq='YS')
     mod = SARIMAX(
         endog=niledata['volume'], order=(1, 0, 1), trend='n',
         freq=niledata.index.freq)
@@ -876,7 +876,7 @@ def test_diagnostics_nile_eviews():
     # For Ljung-Box and Jarque-Bera statistics and p-values, see Figure 5
     # The Heteroskedasticity statistic is not provided in this paper.
     niledata = nile.data.load_pandas().data
-    niledata.index = pd.date_range('1871-01-01', '1970-01-01', freq='AS')
+    niledata.index = pd.date_range('1871-01-01', '1970-01-01', freq='YS')
 
     mod = MLEModel(
         niledata['volume'], k_states=1,
@@ -904,7 +904,7 @@ def test_diagnostics_nile_durbinkoopman():
     # Durbin and Koopman (2012); parameter values reported on page 37; test
     # statistics on page 40
     niledata = nile.data.load_pandas().data
-    niledata.index = pd.date_range('1871-01-01', '1970-01-01', freq='AS')
+    niledata.index = pd.date_range('1871-01-01', '1970-01-01', freq='YS')
 
     mod = MLEModel(
         niledata['volume'], k_states=1,
@@ -1041,7 +1041,7 @@ def test_lutkepohl_information_criteria():
 def test_append_extend_apply_invalid():
     # Test for invalid options to append, extend, and apply
     niledata = nile.data.load_pandas().data['volume']
-    niledata.index = pd.date_range('1871-01-01', '1970-01-01', freq='AS')
+    niledata.index = pd.date_range('1871-01-01', '1970-01-01', freq='YS')
 
     endog1 = niledata.iloc[:20]
     endog2 = niledata.iloc[20:40]

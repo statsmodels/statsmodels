@@ -192,7 +192,7 @@ class NewsResults:
             self.revision_impacts
             - self.revision_detailed_impacts.fillna(0))
         if self.n_revisions_grouped == 0:
-            self.revision_grouped_impacts[:] = 0
+            self.revision_grouped_impacts.loc[:] = 0
 
         # E[y^i | post] - E[y^i | previous]
         self.total_impacts = (self.post_impacted_forecasts -

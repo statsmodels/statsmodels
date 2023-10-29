@@ -743,10 +743,10 @@ class CalendarSeasonality(CalendarDeterministicTerm):
 
     # out_of: freq
     _supported = {
-        "W": {"H": 24 * 7, "B": 5, "D": 7},
-        "D": {"H": 24},
-        "Q": {"M": 3},
-        "A": {"M": 12, "Q": 4},
+        "W": {"H": 24 * 7, "B": 5, "D": 7, "h": 24 * 7},
+        "D": {"H": 24, "h": 24},
+        "Q": {"M": 3, "MS": 3},
+        "A": {"M": 12, "MS": 12, "Q": 4}
     }
 
     def __init__(self, freq: str, period: str) -> None:

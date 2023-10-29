@@ -93,7 +93,7 @@ class TestDecompose:
         res_add = seasonal_decompose(self.data, period=4)
         freq_override_data = self.data.copy()
         freq_override_data.index = pd.date_range(
-            start='1/1/1951', periods=len(freq_override_data), freq='A')
+            start='1/1/1951', periods=len(freq_override_data), freq='Y')
         res_add_override = seasonal_decompose(freq_override_data, period=4)
 
         assert_almost_equal(res_add.seasonal.values.squeeze(), SEASONAL, 2)

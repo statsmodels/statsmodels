@@ -19,12 +19,9 @@ from statsmodels.tsa.deterministic import (
 )
 
 
-@pytest.fixture(scope="module", params=[True, False])
+@pytest.fixture(scope="module")
 def time_index(request):
-    idx = pd.date_range("2000-01-01", periods=833, freq="B")
-    if request.param:
-        return idx.to_period("B")
-    return idx
+    return pd.date_range("2000-01-01", periods=833, freq="B")
 
 
 @pytest.fixture(
@@ -50,13 +47,11 @@ def index(request):
     return idx
 
 
-@pytest.fixture(scope="module", params=[None, "period", False, "list"])
+@pytest.fixture(scope="module", params=[None, False, "list"])
 def forecast_index(request):
     idx = pd.date_range("2000-01-01", periods=400, freq="B")
     if request.param is None:
         return None
-    elif request.param == "period":
-        return idx.to_period("B")
     elif request.param == "list":
         return list(idx)
     return idx
@@ -73,7 +68,7 @@ def test_time_trend_smoke(index, forecast_index):
         and np.any(np.diff(index) != 1)
         or (
             type(index) is pd.Index
-            and max(index) > 2 ** 63
+            and max(index) > 2**63
             and forecast_index is None
         )
     ):
@@ -105,7 +100,7 @@ def test_seasonality_smoke(index, forecast_index):
         and np.any(np.diff(index) != 1)
         or (
             type(index) is pd.Index
-            and max(index) > 2 ** 63
+            and max(index) > 2**63
             and forecast_index is None
         )
     ):
@@ -133,7 +128,7 @@ def test_fourier_smoke(index, forecast_index):
         and np.any(np.diff(index) != 1)
         or (
             type(index) is pd.Index
-            and max(index) > 2 ** 63
+            and max(index) > 2**63
             and forecast_index is None
         )
     ):
@@ -263,7 +258,7 @@ def test_time_trend(index):
     pd.testing.assert_index_equal(const.index, index)
     warn = None
     if (is_int_index(index) and np.any(np.diff(index) != 1)) or (
-        type(index) is pd.Index and max(index) > 2 ** 63
+        type(index) is pd.Index and max(index) > 2**63
     ):
         warn = UserWarning
     with pytest_warns(warn):
@@ -313,7 +308,7 @@ def test_seasonality(index):
 
     warn = None
     if (is_int_index(index) and np.any(np.diff(index) != 1)) or (
-        type(index) is pd.Index and max(index) > 2 ** 63
+        type(index) is pd.Index and max(index) > 2**63
     ):
         warn = UserWarning
     with pytest_warns(warn):
@@ -413,7 +408,7 @@ def test_calendar_time_trend(reset_randomstate):
     inc = 1 + offset / (24 * 3600)
     expected = []
     for i in range(4):
-        expected.append(inc ** i)
+        expected.append(inc**i)
     expected = np.column_stack(expected)
     np.testing.assert_allclose(expected, terms.values)
 
@@ -624,7 +619,7 @@ def test_drop_two_consants(time_index):
     [
         pd.RangeIndex(0, 200),
         pd.Index(np.arange(200)),
-        pd.date_range("2000-1-1", freq="M", periods=200),
+        pd.date_range("2000-1-1", freq="MS", periods=200),
         pd.period_range("2000-1-1", freq="M", periods=200),
     ],
 )

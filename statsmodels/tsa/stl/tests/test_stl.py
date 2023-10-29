@@ -6,7 +6,8 @@ from numpy.testing import assert_allclose
 import pandas as pd
 import pytest
 
-from statsmodels.tsa.seasonal import STL
+from statsmodels.datasets import co2
+from statsmodels.tsa.seasonal import STL, DecomposeResult
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 file_path = os.path.join(cur_dir, "results", "stl_test_results.csv")
@@ -170,7 +171,7 @@ def test_parameter_checks_period(default_kwargs):
     endog = class_kwargs["endog"]
     endog2 = np.hstack((endog[:, None], endog[:, None]))
     period = class_kwargs["period"]
-    with pytest.raises(ValueError, match="endog must have ndim <= 1"):
+    with pytest.raises(ValueError, match="endog is required to have ndim 1"):
         STL(endog=endog2, period=period)
     match = "period must be a positive integer >= 2"
     with pytest.raises(ValueError, match=match):
@@ -331,3 +332,10 @@ def test_pickle(default_kwargs):
     assert_allclose(res.trend, res2.trend)
     assert_allclose(res.seasonal, res2.seasonal)
     assert mod.config == reloaded.config
+
+
+def test_squezable_to_1d():
+    data = co2.load().data
+    data = data.resample("M").mean().ffill()
+    res = STL(data).fit()
+    assert isinstance(res, DecomposeResult)

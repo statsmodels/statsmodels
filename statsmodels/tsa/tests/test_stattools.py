@@ -1034,7 +1034,7 @@ def test_pandasacovf():
 
 def test_acovf2d(reset_randomstate):
     dta = sunspots.load_pandas().data
-    dta.index = date_range(start="1700", end="2009", freq="A")[:309]
+    dta.index = date_range(start="1700", end="2009", freq="Y")[:309]
     del dta["YEAR"]
     res = acovf(dta, fft=False)
     assert_equal(res, acovf(dta.values, fft=False))

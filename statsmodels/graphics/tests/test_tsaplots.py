@@ -295,7 +295,7 @@ def test_plot_month(close_figures):
 def test_plot_quarter(close_figures):
     dta = macrodata.load_pandas().data
     dates = lmap(
-        "Q".join,
+        "-Q".join,
         zip(
             dta.year.astype(int).apply(str), dta.quarter.astype(int).apply(str)
         ),
@@ -304,16 +304,16 @@ def test_plot_quarter(close_figures):
     quarter_plot(dta.unemp.values, dates)
 
     # test with a DatetimeIndex with no freq
-    dta.set_index(pd.to_datetime(dates), inplace=True)
+    dta.set_index(pd.DatetimeIndex(dates, freq="QS-Oct"), inplace=True)
     quarter_plot(dta.unemp)
 
     # w freq
     # see pandas #6631
-    dta.index = pd.DatetimeIndex(pd.to_datetime(dates), freq="QS-Oct")
+    dta.index = pd.DatetimeIndex(dates, freq="QS-Oct")
     quarter_plot(dta.unemp)
 
     # w PeriodIndex
-    dta.index = pd.PeriodIndex(pd.to_datetime(dates), freq="Q")
+    dta.index = pd.PeriodIndex(dates, freq="Q")
     quarter_plot(dta.unemp)
 
 
