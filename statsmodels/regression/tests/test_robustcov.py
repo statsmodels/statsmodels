@@ -1,20 +1,15 @@
-# -*- coding: utf-8 -*-
-"""Testing OLS robust covariance matrices against STATA
-
-Created on Mon Oct 28 15:25:14 2013
-
-Author: Josef Perktold
-"""
-
+import pytest
+import pandas as pd
 import numpy as np
+
+from scipy import stats
+from scipy.stats import t
 from numpy.testing import (
     assert_allclose,
     assert_equal,
     assert_raises,
     assert_warns,
 )
-import pytest
-from scipy import stats
 
 from statsmodels.datasets import macrodata
 from statsmodels.regression.linear_model import OLS, WLS
@@ -26,6 +21,16 @@ from .results import (
     results_grunfeld_ols_robust_cluster as res2,
     results_macro_ols_robust as res,
 )
+
+
+# -*- coding: utf-8 -*-
+"""Testing OLS robust covariance matrices against STATA
+
+Created on Mon Oct 28 15:25:14 2013
+
+Author: Josef Perktold
+"""
+PY_IGNORE_IMPORTMISMATCH=1
 
 # TODO: implement test_hac_simple
 
@@ -469,6 +474,9 @@ class TestOLSRobustCluster2Fit(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
         self.res1 = res_ols
         self.bse_robust = res_ols.bse
         self.cov_robust = res_ols.cov_params()
+
+
+
         cov1 = sw.cov_cluster(self.res1, self.groups, use_correction=True)
         se1 = sw.se_cov(cov1)
         self.bse_robust2 = se1
@@ -982,6 +990,8 @@ def test_cov_type_fixed_scale():
         ("HC3", {}),
         ("HAC", {"maxlags": 7}),
         ("cluster", {"groups": (np.arange(500) % 27)}),
+        ("cluster-jk", {"groups": (np.arange(500) % 27)}),
+
     ],
 )
 def test_qr_equiv(cov_info):
@@ -994,3 +1004,167 @@ def test_qr_equiv(cov_info):
     pinv_fit = mod.fit(cov_type=cov_type, cov_kwds=cov_kwds)
     qr_fit = mod.fit(cov_type=cov_type, cov_kwds=cov_kwds, method="qr")
     assert_allclose(pinv_fit.bse, qr_fit.bse)
+
+
+
+class TestOLSRobustClusterJK:
+
+    @classmethod
+    def setup_class(cls):
+
+        from statsmodels.datasets import grunfeld
+        dtapa = grunfeld.data.load_pandas()
+
+        cls.dtapa_endog = dtapa.endog[:200]
+        dtapa_exog = dtapa.exog[:200]
+        cls.exog = add_constant(dtapa_exog[["value", "capital"]], prepend=False)
+        cls.N = cls.exog.shape[0]
+        cls.id = pd.Series(range(0, cls.N))
+        cls.firm = dtapa.data.firm[:200]
+        cls.G = len(np.unique(cls.firm))
+
+    def test_hc3_vs_crv3(self):
+
+        # test hc3 vs crv3 inference
+        res_hc3 = OLS(self.dtapa_endog, self.exog).fit(
+            cov_type = "HC3",
+            use_correction = False
+        )
+
+        res_crv3 = OLS(self.dtapa_endog, self.exog).fit(
+            cov_type = "cluster-crv3",
+            cov_kwds={'groups': self.id, 'use_correction' : False}
+        )
+
+        assert_allclose(res_hc3.tvalues, res_crv3.tvalues, rtol = 1e-06)
+        assert_allclose(res_hc3.pvalues, res_crv3.pvalues, rtol = 1e-06)
+
+    def test_cr3_vs_r(self):
+
+        res_crv3 = OLS(self.dtapa_endog, self.exog).fit(
+            cov_type = "cluster-crv3",
+            cov_kwds={'groups': self.firm, 'use_correction':True, 'use_t':True}
+        )
+
+        res_crv3_jk = OLS(self.dtapa_endog, self.exog).fit(
+            cov_type = "cluster-jk",
+            cov_kwds={'groups': self.firm, 'use_correction':True, 'use_t':True}
+        )
+
+        assert_allclose(
+            res2.results_cluster_crv3.cov,
+            sw.cov_cluster(res_crv3, self.firm, True, "cluster-crv3"),
+            rtol = 1e-6
+        )
+        assert_allclose(
+            res2.results_cluster_crv_jk.cov,
+            sw.cov_cluster(res_crv3_jk, self.firm, True, "cluster-jk"),
+            rtol = 1e-6
+        )
+
+        assert_allclose(
+            res_crv3.tvalues,
+            res2.results_cluster_crv3.tvalues,
+            rtol = 1e-6
+        )
+        assert_allclose(
+            res_crv3_jk.tvalues,
+            res2.results_cluster_crv_jk.tvalues,
+            rtol = 1e-6
+        )
+
+        def pvalue(x,G):
+            return 2 * np.minimum(t.cdf(x, G - 1), 1 - t.cdf(x, G - 1))
+
+        assert_allclose(
+            pvalue(res_crv3.tvalues, self.G),
+            res2.results_cluster_crv3.pvalues,
+            rtol = 1e-6
+        )
+        assert_allclose(
+            pvalue(res_crv3_jk.tvalues, self.G),
+            res2.results_cluster_crv_jk.pvalues,
+            rtol = 1e-6
+        )
+
+
+class TestWLSRobustClusterJK:
+
+    @classmethod
+    def setup_class(cls):
+
+        from statsmodels.datasets import grunfeld
+        dtapa = grunfeld.data.load_pandas()
+
+        cls.dtapa_endog = dtapa.endog[:200]
+        dtapa_exog = dtapa.exog[:200]
+        cls.exog = add_constant(dtapa_exog[["value", "capital"]], prepend=False)
+        cls.N = cls.exog.shape[0]
+        cls.id = pd.Series(range(0, cls.N))
+        cls.firm = dtapa.data.firm[:200]
+        cls.G = len(np.unique(cls.firm))
+        cls.weights = np.arange(1, cls.N+1, 1)
+
+    def test_hc3_vs_crv3(self):
+
+        # test hc3 vs crv3 inference
+        res_hc3 = WLS(self.dtapa_endog, self.exog, self.weights).fit(
+            cov_type = "HC3",
+            use_correction = False
+        )
+
+        res_crv3 = WLS(self.dtapa_endog, self.exog, self.weights).fit(
+            cov_type = "cluster-crv3",
+            cov_kwds={'groups': self.id, 'use_correction' : False}
+        )
+
+        assert_allclose(res_hc3.tvalues, res_crv3.tvalues, rtol = 1e-06)
+        assert_allclose(res_hc3.pvalues, res_crv3.pvalues, rtol = 1e-06)
+
+    def test_cr3_vs_r(self):
+
+        res_crv3_wls = WLS(self.dtapa_endog, self.exog, self.weights).fit(
+            cov_type = "cluster-crv3",
+            cov_kwds={'groups': self.firm, 'use_correction':True, 'use_t':True}
+        )
+
+        res_crv3_jk_wls = WLS(self.dtapa_endog, self.exog, self.weights).fit(
+            cov_type = "cluster-jk",
+            cov_kwds={'groups': self.firm, 'use_correction':True, 'use_t':True}
+        )
+
+        assert_allclose(
+            res2.results_cluster_crv3_wls.cov,
+            res_crv3_wls.cov_params(),
+            rtol = 1e-6
+        )
+        assert_allclose(
+            res2.results_cluster_crv_jk_wls.cov,
+            res_crv3_jk_wls.cov_params(),
+            rtol = 1e-6
+        )
+
+        assert_allclose(
+            res_crv3_wls.tvalues,
+            res2.results_cluster_crv3_wls.tvalues,
+            rtol = 1e-6
+        )
+        assert_allclose(
+            res_crv3_jk_wls.tvalues,
+            res2.results_cluster_crv_jk_wls.tvalues,
+            rtol = 1e-6
+        )
+
+        def pvalue(x,G):
+            return 2 * np.minimum(t.cdf(x, G - 1), 1 - t.cdf(x, G - 1))
+
+        assert_allclose(
+            pvalue(res_crv3_wls.tvalues, self.G),
+            res2.results_cluster_crv3_wls.pvalues,
+            rtol = 1e-6
+        )
+        assert_allclose(
+            pvalue(res_crv3_jk_wls.tvalues, self.G),
+            res2.results_cluster_crv_jk_wls.pvalues,
+            rtol = 1e-6
+        )

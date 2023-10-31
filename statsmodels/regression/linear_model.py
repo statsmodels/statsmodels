@@ -276,6 +276,8 @@ class RegressionModel(base.LikelihoodModel):
                 "hac-panel",
                 "hac-groupsum",
                 "cluster",
+                "cluster-jk",
+                "cluster-crv3",
             ] = "nonrobust",
             cov_kwds=None,
             use_t: bool | None = None,
@@ -2440,7 +2442,60 @@ class RegressionResults(base.LikelihoodModelResults):
           ``use_correction``: bool, optional
             If true, use small sample correction
 
-        - 'cluster': clustered covariance estimator
+        - 'cluster': clustered covariance estimator (CRV1)
+
+          ``groups`` : array_like[int], required :
+            Integer-valued index of clusters or groups.
+
+          ``use_correction``: bool, optional
+            If True the sandwich covariance is calculated with a small
+            sample correction.
+            If False the sandwich covariance is calculated without
+            small sample correction.
+
+          ``df_correction``: bool, optional
+            If True (default), then the degrees of freedom for the
+            inferential statistics and hypothesis tests, such as
+            pvalues, f_pvalue, conf_int, and t_test and f_test, are
+            based on the number of groups minus one instead of the
+            total number of observations minus the number of explanatory
+            variables. `df_resid` of the results instance is also
+            adjusted. When `use_t` is also True, then pvalues are
+            computed using the Student's t distribution using the
+            corrected values. These may differ substantially from
+            p-values based on the normal is the number of groups is
+            small.
+            If False, then `df_resid` of the results instance is not
+            adjusted.
+
+
+        - 'cluster-crv3': clustered covariance estimator (CRV3)
+
+          ``groups`` : array_like[int], required :
+            Integer-valued index of clusters or groups.
+
+          ``use_correction``: bool, optional
+            If True the sandwich covariance is calculated with a small
+            sample correction.
+            If False the sandwich covariance is calculated without
+            small sample correction.
+
+          ``df_correction``: bool, optional
+            If True (default), then the degrees of freedom for the
+            inferential statistics and hypothesis tests, such as
+            pvalues, f_pvalue, conf_int, and t_test and f_test, are
+            based on the number of groups minus one instead of the
+            total number of observations minus the number of explanatory
+            variables. `df_resid` of the results instance is also
+            adjusted. When `use_t` is also True, then pvalues are
+            computed using the Student's t distribution using the
+            corrected values. These may differ substantially from
+            p-values based on the normal is the number of groups is
+            small.
+            If False, then `df_resid` of the results instance is not
+            adjusted.
+
+        - 'cluster-jk': clustered covariance estimator via a cluster-jk
 
           ``groups`` : array_like[int], required :
             Integer-valued index of clusters or groups.
@@ -2580,8 +2635,16 @@ class RegressionResults(base.LikelihoodModelResults):
             res.cov_params_default = sw.cov_hac_simple(
                 self, nlags=maxlags, weights_func=weights_func,
                 use_correction=use_correction)
-        elif cov_type.lower() == 'cluster':
+        elif cov_type.lower() in ['cluster', 'cluster-crv3','cluster-jk']:
             # cluster robust standard errors, one- or two-way
+
+            if cov_type.lower() == 'cluster-jk':
+                crv_type = 'cluster-jk'
+            elif cov_type.lower() == 'cluster-crv3':
+                crv_type = 'cluster-crv3'
+            else:
+                crv_type = 'cluster'
+
             groups = kwargs['groups']
             if not hasattr(groups, 'shape'):
                 groups = np.asarray(groups).T
@@ -2598,7 +2661,7 @@ class RegressionResults(base.LikelihoodModelResults):
                     # duplicate work
                     self.n_groups = n_groups = len(np.unique(groups))
                 res.cov_params_default = sw.cov_cluster(
-                    self, groups, use_correction=use_correction)
+                    self, groups, use_correction=use_correction, crv_type = crv_type)
 
             elif groups.ndim == 2:
                 if hasattr(groups, 'values'):
@@ -2614,7 +2677,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
                 # Note: sw.cov_cluster_2groups has 3 returns
                 res.cov_params_default = sw.cov_cluster_2groups(
-                    self, groups, use_correction=use_correction)[0]
+                    self, groups, use_correction=use_correction, crv_type = crv_type)[0]
             else:
                 raise ValueError('only two groups are supported')
             res.cov_kwds['description'] = descriptions['cluster']
