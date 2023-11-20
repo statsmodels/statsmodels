@@ -44,7 +44,7 @@ class ARIMA(sarimax.SARIMAX):
 
     Parameters
     ----------
-    endog : array_like, optional
+    endog : array_like
         The observed time-series process :math:`y`.
     exog : array_like, optional
         Array of exogenous regressors.
