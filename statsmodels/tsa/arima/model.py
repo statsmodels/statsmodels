@@ -51,7 +51,10 @@ class ARIMA(sarimax.SARIMAX):
     order : tuple, optional
         The (p,d,q) order of the model for the autoregressive, differences, and
         moving average components. d is always an integer, while p and q may
-        either be integers or lists of integers.
+        either be integers or lists of integers. The order of differences is
+        to achieve stationnarity in the context of a sochastic trend or
+        seasonality. If your trend in deterministic, use the `trend` parameter
+        as it will provide better forecasts.
     seasonal_order : tuple, optional
         The (P,D,Q,s) order of the seasonal component of the model for the
         AR parameters, differences, MA parameters, and periodicity. Default
