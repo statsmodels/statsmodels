@@ -421,7 +421,7 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
         # for multivariate endog
         # TODO: check whether I do not want to refactor this
         #we need to give parameter alpha to conf_int
-        results, params, std_err, tvalues, pvalues, conf_int = results
+        results, params, std_err, tvalues, pvalues, conf_int =  results
     else:
         params = np.asarray(results.params)
         std_err = np.asarray(results.bse)
@@ -821,10 +821,15 @@ class Summary:
         None : table is attached
 
         '''
-        if res.params.ndim == 1:
+        if isinstance(res, tuple):
+            param_check = res[0].params.ndim
+        else:
+            param_check = res.params.ndim
+            
+        if param_check == 1:
             table = summary_params(res, yname=yname, xname=xname, alpha=alpha,
                                    use_t=use_t)
-        elif res.params.ndim == 2:
+        elif param_check == 2:
             _, table = summary_params_2dflat(res, endog_names=yname,
                                              exog_names=xname,
                                              alpha=alpha, use_t=use_t)
