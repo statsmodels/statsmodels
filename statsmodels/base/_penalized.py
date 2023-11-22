@@ -205,7 +205,14 @@ class PenalizedMixin:
         if trim is None:
             trim = False
 
-        res = super(PenalizedMixin, self).fit(method=method, **kwds)
+        if "start_params" not in kwds:
+            kwds_ = kwds.copy()
+            kwds_["maxiter"] = 1000
+            res_sp = super(PenalizedMixin, self).fit(method="nm", **kwds)
+            kwds["start_params"] = res_sp.params
+        else:
+            kwds_ = kwds
+        res = super(PenalizedMixin, self).fit(method=method, **kwds_)
 
         if trim is False:
             # note boolean check for "is False", not "False_like"
@@ -221,7 +228,7 @@ class PenalizedMixin:
 
             if drop_index.any():
                 # TODO: do we need to add results attributes?
-                res_aux = self._fit_zeros(keep_index, **kwds)
+                res_aux = self._fit_zeros(keep_index, **kwds)  # start_params=res.params,
                 return res_aux
             else:
                 return res
