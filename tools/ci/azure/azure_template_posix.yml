@@ -119,7 +119,7 @@ jobs:
     condition: eq(variables['test.install'], 'true')
 
   - script: |
-      python -m pip install -e . -v --no-build-isolation
+      python -m pip install -e . -vv --no-build-isolation
     displayName: 'Install statsmodels (editable)'
     condition: ne(variables['test.install'], 'true')
 
