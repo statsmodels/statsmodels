@@ -5,6 +5,7 @@ python -m pip install -e .
 pytest --cov=statsmodels statsmodels
 coverage html
 """
+import setuptools
 from setuptools import Command, Extension, find_packages, setup
 from setuptools.dist import Distribution
 
