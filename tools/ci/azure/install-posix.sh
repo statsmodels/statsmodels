@@ -22,6 +22,8 @@ CMD="$CMD scipy"
 if [[ -n ${SCIPY} ]]; then CMD="$CMD==${SCIPY}"; fi;
 CMD="$CMD pandas"
 if [[ -n ${PANDAS} ]]; then CMD="$CMD==${PANDAS}"; fi;
+CMD="$CMD cython"
+if [[ -n ${CYTHON} ]]; then CMD="$CMD==${CYTHON}"; fi;
 
 if [[ ${USE_MATPLOTLIB} == true ]]; then
   CMD="$CMD matplotlib"

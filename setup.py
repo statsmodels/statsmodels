@@ -8,6 +8,7 @@ coverage html
 from setuptools import Command, Extension, find_packages, setup
 from setuptools.dist import Distribution
 
+from packaging.version import parse
 from collections import defaultdict
 import fnmatch
 import inspect
@@ -25,15 +26,16 @@ try:
     FORCE_C = int(os.environ.get("SM_FORCE_C", 0))
     if FORCE_C:
         raise ImportError("Force import error for testing")
-    from Cython import Tempita
+    from Cython import Tempita, __version__ as cython_version
     from Cython.Build import cythonize
     from Cython.Distutils import build_ext
 
     HAS_CYTHON = True
+    CYTHON_3 = parse(cython_version) >= parse("3.0")
 except ImportError:
     from setuptools.command.build_ext import build_ext
 
-    HAS_CYTHON = False
+    HAS_CYTHON = CYTHON_3 = False
 
 try:
     import numpy  # noqa: F401
@@ -346,8 +348,9 @@ if HAS_NUMPY:
     for extension in extensions:
         requires_math = extension.name in EXT_REQUIRES_NUMPY_MATH_LIBS
         update_extension(extension, requires_math=requires_math)
-
 if HAS_CYTHON:
+    if CYTHON_3:
+        COMPILER_DIRECTIVES["cpow"] = True
     extensions = cythonize(
         extensions,
         compiler_directives=COMPILER_DIRECTIVES,

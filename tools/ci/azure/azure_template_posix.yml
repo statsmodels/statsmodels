@@ -17,9 +17,13 @@ jobs:
   strategy:
     matrix:
       ${{ if eq(parameters.name, 'Linux') }}:
+        python_312_latest:
+          python.version: '3.12'
+          lint: true
         python_311_latest:
           python.version: '3.11'
           lint: true
+          CYTHON: 3.0.6
         python_310_latest_install:
           python.version: '3.10'
           lint: true
@@ -35,6 +39,7 @@ jobs:
           SCIPY: 1.5.4
           PANDAS: 1.2.5
           NUMPY: 1.20.3
+          CYTHON: 0.29.33
           lint: true
         python38:
           python.version: '3.8'
@@ -45,6 +50,7 @@ jobs:
           MATPLOTLIB: 3.2.2
           coverage: true
           PYTEST_OPTIONS: ''
+          CYTHON: 0.29.36
           lint: true
         python_38_legacy_blas:
           python.version: '3.8'
