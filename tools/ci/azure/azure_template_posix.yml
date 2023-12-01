@@ -76,8 +76,12 @@ jobs:
           pip.pre: true
           SM_TEST_COPY_ON_WRITE: 1
       ${{ if eq(parameters.name, 'macOS') }}:
+        python310_macos_latest:
+          python.version: '3.10'
         python311_macos_latest:
           python.version: '3.11'
+        python312_macos_latest:
+          python.version: '3.12'
     maxParallel: 10
 
   steps:

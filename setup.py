@@ -59,7 +59,7 @@ with open("requirements-dev.txt", encoding="utf-8") as req:
     for line in req.readlines():
         DEVELOP_REQUIRES.append(line.split("#")[0].strip())
 
-CYTHON_MIN_VER = "0.29.26"  # released 2020
+CYTHON_MIN_VER = "0.29.33"  # released January 2023
 
 EXTRAS_REQUIRE = {
     "build": ["cython>=" + CYTHON_MIN_VER],
