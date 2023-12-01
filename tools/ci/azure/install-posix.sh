@@ -15,7 +15,8 @@ else
 fi
 
 python -m pip install --upgrade pip setuptools wheel build
-python -m pip install "cython>=0.29.33,<4.0.0" "pytest~=7.0" pytest-xdist coverage pytest-cov ipython jupyter notebook nbconvert isort flake8 nbconvert coveralls setuptools_scm[toml]~=8.0
+python -m pip install -r requirements-dev.txt
+
 
 if [[ -n ${NUMPY} ]]; then CMD="$CMD==${NUMPY}"; fi;
 CMD="$CMD scipy"
@@ -30,6 +31,9 @@ if [[ ${USE_MATPLOTLIB} == true ]]; then
   if [[ -n ${MATPLOTLIB} ]]; then
     CMD="$CMD==${MATPLOTLIB}";
   fi
+else
+  # Uninstall if not needed
+  python -m pip uninstall matplotlib -y || true
 fi
 
 CMD="${CMD} patsy ${BLAS}"
