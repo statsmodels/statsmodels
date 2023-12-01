@@ -1,5 +1,5 @@
 # build
-cython>=0.29.28,<3.0.0
+cython>=0.29.33,<4.0.0
 setuptools_scm[toml]~=7.0
 oldest-supported-numpy>=2022.4.18
 
