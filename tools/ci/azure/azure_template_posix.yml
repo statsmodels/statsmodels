@@ -19,7 +19,6 @@ jobs:
       ${{ if eq(parameters.name, 'Linux') }}:
         python_312_latest:
           python.version: '3.12'
-          lint: true
         python_311_latest:
           python.version: '3.11'
           lint: true
