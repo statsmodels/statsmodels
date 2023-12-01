@@ -2,7 +2,8 @@
 # These are strictly build requirements. Runtime requirements are listed in
 # INSTALL_REQUIRES in setup.py
 requires = [
-    "setuptools>=59.2.0",
+    "setuptools>=69.0.2; python_version>='3.12'",
+    "setuptools>=63.4.3",
     "cython>=0.29.33,<4",  # Sync with CYTHON_MIN_VER in setup
     # Workaround for oldest supported numpy using 1.21.6, but SciPy 1.9.2+ requiring 1.22.3+
     "oldest-supported-numpy; python_version!='3.10' or platform_system!='Windows' or platform_python_implementation=='PyPy'",
