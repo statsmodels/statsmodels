@@ -13,7 +13,7 @@ from scipy.signal import lfilter
 
 from .test_impulse_responses import TVSS
 from statsmodels.tools.sm_exceptions import SpecificationWarning, \
-    EstimationWarning
+    EstimationWarning, ValueWarning
 from statsmodels.tsa.statespace import (sarimax, structural, varmax,
                                         dynamic_factor)
 
@@ -1624,6 +1624,28 @@ def test_pandas_univariate_dateindex_repetitions():
     assert_allclose(actual, desired)
     assert_(actual.index.equals(desired.index))
     assert_(actual.columns.equals(desired.columns))
+
+
+def test_pandas_univariate_integer_index():
+    warning_text = (
+        "An unsupported integer index was provided and will be "
+        "converted to a range index with the same values."
+    )
+    index = pd.Index([i for i in range(3, 15)], dtype=int)
+    y = pd.DataFrame(data={0: np.arange(12)}, index=index)
+
+    # Fit the forecaster and ensure that the right warning is raised.
+    with pytest.warns(ValueWarning, match=warning_text):
+        forecaster = sarimax.SARIMAX(endog=y, order=(1, 0, 0))
+        forecaster = forecaster.smooth([0.5, 1.0])
+        simulations = forecaster.simulate(
+            nsimulations=5,
+            repetitions=2,
+            anchor="end"
+        )
+    # Assert that the index of the simulation is correct.
+    expected_index_values = np.arange(np.max(index)+1, np.max(index)+6)
+    assert np.all(simulations.index == expected_index_values)
 
 
 def test_pandas_multivariate_rangeindex():

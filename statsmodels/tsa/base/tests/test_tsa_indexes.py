@@ -102,10 +102,14 @@ supported_date_indexes = (
     + series_timestamp_indexes
 )
 
-# Unsupported (but still valid) indexes
-unsupported_indexes = [
-    # Non-incrementing-from-zero indexes
+# Non-incrementing-from-zero indexes in increasing order with step 1.
+not_starting_from_zero_int_indexes = [
     (np.arange(1, nobs + 1), None),
+]
+
+# Unsupported (but still valid) indexes
+other_unsupported_indexes = [
+    # Reverse order index
     (np.arange(nobs)[::-1], None),
     # Float indexes, even if they increment from zero
     (np.arange(nobs) * 1.0, None),
@@ -114,6 +118,10 @@ unsupported_indexes = [
     # Non-date-object indexes
     ([str, 1, "a", -30.1, {}], None),
 ]
+
+unsupported_indexes = (
+    not_starting_from_zero_int_indexes + other_unsupported_indexes
+)
 
 # Unsupported date indexes (i.e. those without inferrable frequency)
 unsupported_date_indexes = [
@@ -426,13 +434,37 @@ def test_instantiation_valid():
 
         # Unsupported (but valid) indexes, should all give warnings
         message = (
-            "An unsupported index was provided and will be"
-            " ignored when e.g. forecasting."
+            "An unsupported integer index was provided and will be "
+            "converted to a range index with the same values."
         )
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
 
-            for ix, freq in unsupported_indexes:
+            for ix, freq in not_starting_from_zero_int_indexes:
+                endog = base_endog.copy()
+                endog.index = ix
+                mod = tsa_model.TimeSeriesModel(endog)
+                assert_equal(
+                    isinstance(mod._index, (pd.Index, pd.RangeIndex)), True
+                )
+                assert_equal(mod._index_none, False)
+                assert_equal(mod._index_dates, False)
+                assert_equal(mod._index_generated, False)
+                assert_equal(mod._index_freq, None)
+                assert_equal(mod.data.dates, None)
+                assert_equal(mod.data.freq, None)
+
+                assert_equal(str(w[0].message), message)
+
+        # Unsupported (but valid) indexes, should all give warnings
+        message = (
+            "An unsupported index was provided and will be ignored when "
+            "e.g. forecasting."
+        )
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+
+            for ix, freq in other_unsupported_indexes:
                 endog = base_endog.copy()
                 endog.index = ix
                 mod = tsa_model.TimeSeriesModel(endog)

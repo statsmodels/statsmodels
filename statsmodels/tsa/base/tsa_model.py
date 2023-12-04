@@ -638,6 +638,22 @@ class TimeSeriesModel(base.LikelihoodModel):
                     " but `freq` argument was provided."
                 )
 
+        if (
+            isinstance(index, Index) and
+            not isinstance(index, RangeIndex) and
+            index.is_integer() and
+            index[0] != 0
+        ):
+            _index = RangeIndex(index[0], index[-1] + 1)
+            if _index.equals(index):
+                index = _index
+                warnings.warn(
+                    "An unsupported integer index was provided and will be"
+                    " converted to a range index with the same values.",
+                    ValueWarning,
+                    stacklevel=2,
+                )
+
         # Get attributes of the index
         has_index = index is not None
         date_index = isinstance(index, (DatetimeIndex, PeriodIndex))
@@ -694,6 +710,7 @@ class TimeSeriesModel(base.LikelihoodModel):
         else:
             _index = increment
             index_generated = True
+
         self._index = _index
         self._index_generated = index_generated
         self._index_none = index is None
