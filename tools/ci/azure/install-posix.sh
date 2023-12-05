@@ -1,10 +1,5 @@
 #!/usr/bin/env bash
 
-
-python -m pip install --upgrade pip setuptools wheel build
-python -m pip install -r requirements-dev.txt
-pip uninstall numpy scipy pandas cython -y
-
 if [[ ${USE_CONDA} == "true" ]]; then
   conda config --set always_yes true
   conda update --all --quiet
@@ -19,6 +14,10 @@ else
   CMD="python -m pip install numpy"
 fi
 
+echo "Python location: $(where python)"
+python -m pip install --upgrade pip setuptools wheel build
+python -m pip install -r requirements-dev.txt
+python -m pip uninstall numpy scipy pandas cython -y
 
 if [[ -n ${NUMPY} ]]; then CMD="$CMD==${NUMPY}"; fi;
 CMD="$CMD scipy"
