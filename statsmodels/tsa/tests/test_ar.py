@@ -897,7 +897,7 @@ def test_predict_exog():
 
     pred = res.predict(900)
     c = res.params.iloc[0]
-    ar = np.asarray(res.params.iloc[1:3])
+    ar = res.params.iloc[1:3]
     ex = np.asarray(res.params.iloc[3:])
     phi_1 = ar.iloc[0]
     phi_2 = ar.iloc[1]

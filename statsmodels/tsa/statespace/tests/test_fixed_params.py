@@ -679,8 +679,8 @@ def test_dynamic_factor_diag_error_cov():
     # Check that MLE finds the same parameters in either case
     # (need to account for the fact that diagonal params are variances but
     # unstructured params are standard deviations)
-    res1_params = np.asarray(res1.params)
-    params = np.r_[res1_params[:2], res1_params[2:4]**0.5, res1_params[4]]
+    param_vals = np.asarray(res1.params)
+    params = np.r_[param_vals[:2], param_vals[2:4]**0.5, param_vals[4]]
     desired = np.r_[params[:3], 0, params[3:]]
     assert_allclose(res2.params, desired, atol=1e-5)
 
