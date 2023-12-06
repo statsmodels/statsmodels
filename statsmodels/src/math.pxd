@@ -6,16 +6,16 @@ from libc.string cimport memcpy
 
 cdef extern from "numpy/npy_math.h":
     np.float64_t NPY_PI
-    np.float64_t npy_cabs(np.npy_cdouble z) nogil
-    np.npy_cdouble npy_clog(np.npy_cdouble z) nogil
-    np.npy_cdouble npy_cexp(np.npy_cdouble z) nogil
+    np.float64_t npy_cabs(np.npy_cdouble z) noexcept nogil
+    np.npy_cdouble npy_clog(np.npy_cdouble z) noexcept nogil
+    np.npy_cdouble npy_cexp(np.npy_cdouble z) noexcept nogil
 
-cdef inline np.float64_t zabs(np.complex128_t z) nogil:
+cdef inline np.float64_t zabs(np.complex128_t z) noexcept nogil:
     cdef np.npy_cdouble x
     memcpy(&x, &z, sizeof(z))
     return npy_cabs(x)
 
-cdef inline np.complex128_t zlog(np.complex128_t z) nogil:
+cdef inline np.complex128_t zlog(np.complex128_t z) noexcept nogil:
     cdef np.npy_cdouble x
     cdef np.complex128_t out
     memcpy(&x, &z, sizeof(z))
@@ -23,7 +23,7 @@ cdef inline np.complex128_t zlog(np.complex128_t z) nogil:
     memcpy(&out, &x, sizeof(x))
     return out
 
-cdef inline np.complex128_t zexp(np.complex128_t z) nogil:
+cdef inline np.complex128_t zexp(np.complex128_t z) noexcept nogil:
     cdef np.npy_cdouble x
     cdef np.complex128_t out
     memcpy(&x, &z, sizeof(z))

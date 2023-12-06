@@ -1,6 +1,6 @@
 # build
-cython>=0.29.28,<3.0.0
-setuptools_scm[toml]~=7.0
+cython>=0.29.33,<4.0.0
+setuptools_scm[toml]~=8.0
 oldest-supported-numpy>=2022.4.18
 
 # run
@@ -14,6 +14,7 @@ joblib
 pytest>=7.3.0
 pytest-randomly
 pytest-xdist
+pytest-cov
 
 # Pin on Win32
 pywinpty; os_name == "nt"

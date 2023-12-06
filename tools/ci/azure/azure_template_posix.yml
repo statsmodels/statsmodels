@@ -17,9 +17,14 @@ jobs:
   strategy:
     matrix:
       ${{ if eq(parameters.name, 'Linux') }}:
+        python_312_latest:
+          python.version: '3.12'
+          coverage: true
         python_311_latest:
           python.version: '3.11'
           lint: true
+          CYTHON: 3.0.6
+          coverage: true
         python_310_latest_install:
           python.version: '3.10'
           lint: true
@@ -35,6 +40,8 @@ jobs:
           SCIPY: 1.5.4
           PANDAS: 1.2.5
           NUMPY: 1.20.3
+          CYTHON: 0.29.33
+          coverage: true
           lint: true
         python38:
           python.version: '3.8'
@@ -45,6 +52,7 @@ jobs:
           MATPLOTLIB: 3.2.2
           coverage: true
           PYTEST_OPTIONS: ''
+          CYTHON: 0.29.36
           lint: true
         python_38_legacy_blas:
           python.version: '3.8'
@@ -70,8 +78,12 @@ jobs:
           pip.pre: true
           SM_TEST_COPY_ON_WRITE: 1
       ${{ if eq(parameters.name, 'macOS') }}:
+        python310_macos_latest:
+          python.version: '3.10'
         python311_macos_latest:
           python.version: '3.11'
+        python312_macos_latest:
+          python.version: '3.12'
     maxParallel: 10
 
   steps:
@@ -109,7 +121,7 @@ jobs:
     condition: eq(variables['test.install'], 'true')
 
   - script: |
-      python -m pip install -e . -v --no-build-isolation
+      python -m pip install -e . -vv --no-build-isolation
     displayName: 'Install statsmodels (editable)'
     condition: ne(variables['test.install'], 'true')
 
@@ -147,6 +159,8 @@ jobs:
       if [[ ${COVERAGE} == "true" ]]; then
         export COVERAGE_OPTS="--cov-config .coveragerc --cov=statsmodels --cov-report xml:coverage.xml --cov-report term"
       fi
+      echo pytest --help
+      pytest --help
       echo pytest -m "${PYTEST_PATTERN}" --skip-examples --junitxml=junit/test-results.xml -n auto --dist loadscope --durations=25 ${COVERAGE_OPTS} statsmodels
       pytest -m "${PYTEST_PATTERN}" --skip-examples --junitxml=junit/test-results.xml -n auto --dist loadscope --durations=25 ${COVERAGE_OPTS} statsmodels
     displayName: 'Run tests (pip pre)'

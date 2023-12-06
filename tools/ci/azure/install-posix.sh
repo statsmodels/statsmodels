@@ -14,20 +14,27 @@ else
   CMD="python -m pip install numpy"
 fi
 
+echo "Python location: $(where python)"
 python -m pip install --upgrade pip setuptools wheel build
-python -m pip install "cython>=0.29.28,<3.0.0" "pytest~=7.0.1" pytest-xdist coverage pytest-cov ipython jupyter notebook nbconvert "property_cached>=1.6.3" black==20.8b1 isort flake8 nbconvert==5.6.1 coveralls setuptools_scm[toml]~=7.0.0
+python -m pip install -r requirements-dev.txt
+python -m pip uninstall numpy scipy pandas cython -y
 
 if [[ -n ${NUMPY} ]]; then CMD="$CMD==${NUMPY}"; fi;
 CMD="$CMD scipy"
 if [[ -n ${SCIPY} ]]; then CMD="$CMD==${SCIPY}"; fi;
 CMD="$CMD pandas"
 if [[ -n ${PANDAS} ]]; then CMD="$CMD==${PANDAS}"; fi;
+CMD="$CMD cython"
+if [[ -n ${CYTHON} ]]; then CMD="$CMD==${CYTHON}"; fi;
 
 if [[ ${USE_MATPLOTLIB} == true ]]; then
   CMD="$CMD matplotlib"
   if [[ -n ${MATPLOTLIB} ]]; then
     CMD="$CMD==${MATPLOTLIB}";
   fi
+else
+  # Uninstall if not needed
+  python -m pip uninstall matplotlib -y || true
 fi
 
 CMD="${CMD} patsy ${BLAS}"
