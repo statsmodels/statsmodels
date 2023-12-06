@@ -156,6 +156,8 @@ jobs:
       if [[ ${COVERAGE} == "true" ]]; then
         export COVERAGE_OPTS="--cov-config .coveragerc --cov=statsmodels --cov-report xml:coverage.xml --cov-report term"
       fi
+      echo pytest --help
+      pytest --help
       echo pytest -m "${PYTEST_PATTERN}" --skip-examples --junitxml=junit/test-results.xml -n auto --dist loadscope --durations=25 ${COVERAGE_OPTS} statsmodels
       pytest -m "${PYTEST_PATTERN}" --skip-examples --junitxml=junit/test-results.xml -n auto --dist loadscope --durations=25 ${COVERAGE_OPTS} statsmodels
     displayName: 'Run tests (pip pre)'
