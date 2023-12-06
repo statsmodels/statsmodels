@@ -14,6 +14,7 @@ joblib
 pytest>=7.3.0
 pytest-randomly
 pytest-xdist
+pytest-cov
 
 # Pin on Win32
 pywinpty; os_name == "nt"

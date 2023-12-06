@@ -19,10 +19,12 @@ jobs:
       ${{ if eq(parameters.name, 'Linux') }}:
         python_312_latest:
           python.version: '3.12'
+          coverage: true
         python_311_latest:
           python.version: '3.11'
           lint: true
           CYTHON: 3.0.6
+          coverage: true
         python_310_latest_install:
           python.version: '3.10'
           lint: true
@@ -39,6 +41,7 @@ jobs:
           PANDAS: 1.2.5
           NUMPY: 1.20.3
           CYTHON: 0.29.33
+          coverage: true
           lint: true
         python38:
           python.version: '3.8'
