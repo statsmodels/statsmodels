@@ -1,6 +1,5 @@
 from statsmodels.compat.pandas import assert_frame_equal
 
-import numpy as np
 from numpy.testing import (
     assert_array_almost_equal,
     assert_equal,

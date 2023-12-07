@@ -245,6 +245,7 @@ class OriginResults(RegressionResults):
         if lower_bound is None:
             ci = np.asarray(self.model.fit().conf_int(.0001))
             lower_bound = (np.squeeze(ci[param_num])[0])
+
         def f(b0):
             b0 = np.array([b0])
             val = self.el_test(

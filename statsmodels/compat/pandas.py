@@ -33,6 +33,9 @@ __all__ = [
     "PD_LT_1_4",
     "PD_LT_2",
     "MONTH_END",
+    "QUARTER_END",
+    "YEAR_END",
+    "FUTURE_STACK",
 ]
 
 version = parse(pd.__version__)
@@ -178,7 +181,8 @@ def call_cached_func(cached_prop, *args, **kwargs):
 def get_cached_doc(cached_prop) -> Optional[str]:
     return get_cached_func(cached_prop).__doc__
 
+
 MONTH_END = "M" if PD_LT_2_2_0 else "ME"
 QUARTER_END = "Q" if PD_LT_2_2_0 else "QE"
 YEAR_END = "Y" if PD_LT_2_2_0 else "YE"
-FUTURE_STACK = {} if PD_LT_2_1_0 else {"future_stack":True}
+FUTURE_STACK = {} if PD_LT_2_1_0 else {"future_stack": True}

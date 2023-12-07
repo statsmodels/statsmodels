@@ -723,7 +723,9 @@ def test_ar_order_select():
     y = arma_generate_sample([1, -0.75, 0.3], [1], 100)
     ts = Series(
         y,
-        index=date_range(start=dt.datetime(1990, 1, 1), periods=100, freq=MONTH_END),
+        index=date_range(
+            start=dt.datetime(1990, 1, 1), periods=100, freq=MONTH_END
+        ),
     )
     res = ar_select_order(ts, maxlag=12, ic="aic")
     assert tuple(res.ar_lags) == (1, 2)
@@ -854,8 +856,12 @@ def test_predict_seasonal():
     for i in range(1, 1001):
         y[i] = 10 + 0.9 * y[i - 1] + e[i] + effects[i % 12]
     ys = pd.Series(
-        y, index=pd.date_range(dt.datetime(1950, 1, 1), periods=1001, freq=MONTH_END)
+        y,
+        index=pd.date_range(
+            dt.datetime(1950, 1, 1), periods=1001, freq=MONTH_END
+        ),
     )
+
     mod = AutoReg(ys, 1, seasonal=True)
     res = mod.fit()
     c = res.params.iloc[0]
@@ -889,7 +895,10 @@ def test_predict_exog():
     for i in range(3, 1001):
         y[i] = 10 + 0.9 * y[i - 1] - 0.5 * y[i - 3] + e[i] + x[i].sum()
     ys = pd.Series(
-        y, index=pd.date_range(dt.datetime(1950, 1, 1), periods=1001, freq=MONTH_END)
+        y,
+        index=pd.date_range(
+            dt.datetime(1950, 1, 1), periods=1001, freq=MONTH_END
+        ),
     )
     xdf = pd.DataFrame(x, columns=["x0", "x1"], index=ys.index)
     mod = AutoReg(ys, [1, 3], trend="c", exog=xdf)
@@ -937,7 +946,10 @@ def test_predict_irregular_ar():
     for i in range(3, 1001):
         y[i] = 10 + 0.9 * y[i - 1] - 0.5 * y[i - 3] + e[i]
     ys = pd.Series(
-        y, index=pd.date_range(dt.datetime(1950, 1, 1), periods=1001, freq=MONTH_END)
+        y,
+        index=pd.date_range(
+            dt.datetime(1950, 1, 1), periods=1001, freq=MONTH_END
+        )
     )
     mod = AutoReg(ys, [1, 3], trend="ct")
     res = mod.fit()
@@ -981,12 +993,20 @@ def test_forecast_start_end_equiv(dynamic):
     for i in range(1, 1001):
         y[i] = 10 + 0.9 * y[i - 1] + e[i] + effects[i % 12]
     ys = pd.Series(
-        y, index=pd.date_range(dt.datetime(1950, 1, 1), periods=1001, freq=MONTH_END)
+        y, index=pd.date_range(
+            dt.datetime(1950, 1, 1),
+            periods=1001,
+            freq=MONTH_END
+        )
     )
     mod = AutoReg(ys, 1, seasonal=True)
     res = mod.fit()
     pred_int = res.predict(1000, 1020, dynamic=dynamic)
-    dates = pd.date_range(dt.datetime(1950, 1, 1), periods=1021, freq=MONTH_END)
+    dates = pd.date_range(
+        dt.datetime(1950, 1, 1),
+        periods=1021,
+        freq=MONTH_END
+    )
     pred_dates = res.predict(dates[1000], dates[1020], dynamic=dynamic)
     assert_series_equal(pred_int, pred_dates)
 

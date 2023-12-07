@@ -842,7 +842,6 @@ def test_invalid_model_specification():
             dta_date_M, endog_quarterly=dta_date_W)
 
 
-
 @pytest.mark.parametrize(
     "freq_Q",
     [

@@ -256,16 +256,31 @@ def check_news(news, revisions, updates, impact_dates, impacted_variables,
     desired = ['impact date', 'impacted variable']
     assert_equal(impacts.index.names, desired)
 
-    assert_allclose(impacts.loc[:, 'estimate (prev)'],
-                    news.prev_impacted_forecasts.stack(**FUTURE_STACK), atol=1e-12)
-    assert_allclose(impacts.loc[:, 'impact of revisions'],
-                    news.revision_impacts.astype(float).fillna(0).stack(**FUTURE_STACK), atol=1e-12)
-    assert_allclose(impacts.loc[:, 'impact of news'],
-                    news.update_impacts.astype(float).fillna(0).stack(**FUTURE_STACK), atol=1e-12)
-    assert_allclose(impacts.loc[:, 'total impact'],
-                    news.total_impacts.stack(**FUTURE_STACK), atol=1e-12)
-    assert_allclose(impacts.loc[:, 'estimate (new)'],
-                    news.post_impacted_forecasts.stack(**FUTURE_STACK), atol=1e-12)
+    assert_allclose(
+        impacts.loc[:, "estimate (prev)"],
+        news.prev_impacted_forecasts.stack(**FUTURE_STACK),
+        atol=1e-12,
+    )
+    assert_allclose(
+        impacts.loc[:, "impact of revisions"],
+        news.revision_impacts.astype(float).fillna(0).stack(**FUTURE_STACK),
+        atol=1e-12,
+    )
+    assert_allclose(
+        impacts.loc[:, "impact of news"],
+        news.update_impacts.astype(float).fillna(0).stack(**FUTURE_STACK),
+        atol=1e-12,
+    )
+    assert_allclose(
+        impacts.loc[:, "total impact"],
+        news.total_impacts.stack(**FUTURE_STACK),
+        atol=1e-12,
+    )
+    assert_allclose(
+        impacts.loc[:, "estimate (new)"],
+        news.post_impacted_forecasts.stack(**FUTURE_STACK),
+        atol=1e-12,
+    )
 
 
 @pytest.mark.parametrize('revisions', [True, False])

@@ -468,7 +468,8 @@ class NewsResults:
         revision_details_by_update
         impacts
         """
-        df = self.weights.stack(level=[0, 1],**FUTURE_STACK).rename('weight').to_frame()
+        s = self.weights.stack(level=[0, 1], **FUTURE_STACK)
+        df = s.rename('weight').to_frame()
         if len(self.updates_iloc):
             df['forecast (prev)'] = self.update_forecasts
             df['observed'] = self.update_realized
@@ -490,7 +491,8 @@ class NewsResults:
 
     @property
     def _revision_grouped_impacts(self):
-        df = self.revision_grouped_impacts.stack(**FUTURE_STACK).rename('impact').to_frame()
+        s = self.revision_grouped_impacts.stack(**FUTURE_STACK)
+        df = s.rename('impact').to_frame()
         df = df.reindex(['revision date', 'revised variable', 'impact'],
                         axis=1)
         if self.revisions_details_start > 0:
@@ -564,7 +566,7 @@ class NewsResults:
         details_by_impact
         impacts
         """
-        weights = self.revision_weights.stack(level=[0, 1],**FUTURE_STACK)
+        weights = self.revision_weights.stack(level=[0, 1], **FUTURE_STACK)
         df = pd.concat([
             self.revised.reindex(weights.index),
             self.revised_prev.rename('observed (prev)').reindex(weights.index),
@@ -645,7 +647,8 @@ class NewsResults:
         details_by_impact
         impacts
         """
-        df = self.weights.stack(level=[0, 1],**FUTURE_STACK).rename('weight').to_frame()
+        s = self.weights.stack(level=[0, 1], **FUTURE_STACK)
+        df = s.rename('weight').to_frame()
         if len(self.updates_iloc):
             df['forecast (prev)'] = self.update_forecasts
             df['observed'] = self.update_realized

@@ -487,6 +487,8 @@ freqs = [
 ]
 expected = [1, 1, 4, 4, 4, 52, 52, 5, 7, 24]
 freq_expected = [(f, e) for f, e in zip(freqs, expected)]
+
+
 @pytest.mark.parametrize("freq_expected", freq_expected)
 def test_freq_to_period(freq_expected):
     freq, expected = freq_expected

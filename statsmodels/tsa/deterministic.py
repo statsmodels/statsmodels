@@ -757,8 +757,14 @@ class CalendarSeasonality(CalendarDeterministicTerm):
         "YE": {"MS": 12, "ME": 12, "QE": 4},
     }
     if PD_LT_2_2_0:
-        _supported.update({"W": {"H": 24 * 7}, "D": {"H": 24},"Q": {"M": 3},"A": {"M": 12,"Q": 4}})
-
+        _supported.update(
+            {
+                "W": {"H": 24 * 7},
+                "D": {"H": 24},
+                "Q": {"M": 3},
+                "A": {"M": 12, "Q": 4}
+            }
+        )
 
     def __init__(self, freq: str, period: str) -> None:
         freq_options: Set[str] = set()
