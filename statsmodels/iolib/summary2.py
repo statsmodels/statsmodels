@@ -1,3 +1,4 @@
+from statsmodels.compat.pandas import FUTURE_STACK
 from statsmodels.compat.python import lzip
 
 import datetime
@@ -416,7 +417,7 @@ def _col_params(result, float_format='%.4f', stars=True, include_r2=False):
         res.loc[idx, res.columns[0]] = res.loc[idx, res.columns[0]] + '*'
     # Stack Coefs and Std.Errors
     res = res.iloc[:, :2]
-    res = res.stack()
+    res = res.stack(**FUTURE_STACK)
 
     # Add R-squared
     if include_r2:

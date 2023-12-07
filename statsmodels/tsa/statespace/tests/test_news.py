@@ -5,6 +5,7 @@ Author: Chad Fulton
 License: BSD-3
 """
 from statsmodels.compat.pandas import (
+    FUTURE_STACK,
     assert_frame_equal,
     assert_series_equal,
 )
@@ -157,8 +158,8 @@ def check_news(news, revisions, updates, impact_dates, impacted_variables,
         assert_(np.all(news.revision_impacts.isnull()))
 
     # Total impacts
-    total_impacts = (news.revision_impacts.fillna(0) +
-                     news.update_impacts.fillna(0))
+    total_impacts = (news.revision_impacts.astype(float).fillna(0) +
+                     news.update_impacts.astype(float).fillna(0))
     assert_allclose(news.total_impacts, total_impacts, atol=1e-12)
 
     # - Impacted variable forecasts ------------------------------------------
@@ -256,15 +257,15 @@ def check_news(news, revisions, updates, impact_dates, impacted_variables,
     assert_equal(impacts.index.names, desired)
 
     assert_allclose(impacts.loc[:, 'estimate (prev)'],
-                    news.prev_impacted_forecasts.stack(), atol=1e-12)
+                    news.prev_impacted_forecasts.stack(**FUTURE_STACK), atol=1e-12)
     assert_allclose(impacts.loc[:, 'impact of revisions'],
-                    news.revision_impacts.fillna(0).stack(), atol=1e-12)
+                    news.revision_impacts.astype(float).fillna(0).stack(**FUTURE_STACK), atol=1e-12)
     assert_allclose(impacts.loc[:, 'impact of news'],
-                    news.update_impacts.fillna(0).stack(), atol=1e-12)
+                    news.update_impacts.astype(float).fillna(0).stack(**FUTURE_STACK), atol=1e-12)
     assert_allclose(impacts.loc[:, 'total impact'],
-                    news.total_impacts.stack(), atol=1e-12)
+                    news.total_impacts.stack(**FUTURE_STACK), atol=1e-12)
     assert_allclose(impacts.loc[:, 'estimate (new)'],
-                    news.post_impacted_forecasts.stack(), atol=1e-12)
+                    news.post_impacted_forecasts.stack(**FUTURE_STACK), atol=1e-12)
 
 
 @pytest.mark.parametrize('revisions', [True, False])

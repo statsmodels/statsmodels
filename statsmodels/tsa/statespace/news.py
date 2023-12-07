@@ -5,12 +5,13 @@ News for state space models
 Author: Chad Fulton
 License: BSD-3
 """
+from statsmodels.compat.pandas import FUTURE_STACK
 
 import numpy as np
 import pandas as pd
 
-from statsmodels.iolib.table import SimpleTable
 from statsmodels.iolib.summary import Summary
+from statsmodels.iolib.table import SimpleTable
 from statsmodels.iolib.tableformatting import fmt_params
 
 
@@ -180,13 +181,17 @@ class NewsResults:
         # E[y^i | revisions] - E[y^i | grouped revisions]
         self.revision_detailed_impacts = pd.DataFrame(
             news_results.revision_detailed_impacts,
-            index=self.row_labels, columns=columns).rename_axis(
-                index='impact date', columns='impacted variable')
+            index=self.row_labels,
+            columns=columns,
+            dtype=float,
+        ).rename_axis(index="impact date", columns="impacted variable")
         # E[y^i | revisions] - E[y^i | previous]
         self.revision_impacts = pd.DataFrame(
             news_results.revision_impacts,
-            index=self.row_labels, columns=columns).rename_axis(
-                index='impact date', columns='impacted variable')
+            index=self.row_labels,
+            columns=columns,
+            dtype=float,
+        ).rename_axis(index="impact date", columns="impacted variable")
         # E[y^i | grouped revisions] - E[y^i | previous]
         self.revision_grouped_impacts = (
             self.revision_impacts
@@ -463,7 +468,7 @@ class NewsResults:
         revision_details_by_update
         impacts
         """
-        df = self.weights.stack(level=[0, 1]).rename('weight').to_frame()
+        df = self.weights.stack(level=[0, 1],**FUTURE_STACK).rename('weight').to_frame()
         if len(self.updates_iloc):
             df['forecast (prev)'] = self.update_forecasts
             df['observed'] = self.update_realized
@@ -485,7 +490,7 @@ class NewsResults:
 
     @property
     def _revision_grouped_impacts(self):
-        df = self.revision_grouped_impacts.stack().rename('impact').to_frame()
+        df = self.revision_grouped_impacts.stack(**FUTURE_STACK).rename('impact').to_frame()
         df = df.reindex(['revision date', 'revised variable', 'impact'],
                         axis=1)
         if self.revisions_details_start > 0:
@@ -559,7 +564,7 @@ class NewsResults:
         details_by_impact
         impacts
         """
-        weights = self.revision_weights.stack(level=[0, 1])
+        weights = self.revision_weights.stack(level=[0, 1],**FUTURE_STACK)
         df = pd.concat([
             self.revised.reindex(weights.index),
             self.revised_prev.rename('observed (prev)').reindex(weights.index),
@@ -640,7 +645,7 @@ class NewsResults:
         details_by_impact
         impacts
         """
-        df = self.weights.stack(level=[0, 1]).rename('weight').to_frame()
+        df = self.weights.stack(level=[0, 1],**FUTURE_STACK).rename('weight').to_frame()
         if len(self.updates_iloc):
             df['forecast (prev)'] = self.update_forecasts
             df['observed'] = self.update_realized
@@ -727,7 +732,7 @@ class NewsResults:
         details_by_impact
         impacts
         """
-        weights = self.revision_weights.stack(level=[0, 1])
+        weights = self.revision_weights.stack(level=[0, 1], **FUTURE_STACK)
 
         df = pd.concat([
             self.revised_prev.rename('observed (prev)').reindex(weights.index),
@@ -807,9 +812,9 @@ class NewsResults:
             self.post_impacted_forecasts.unstack().rename('estimate (new)')],
             axis=1)
         impacts['impact of revisions'] = (
-            impacts['impact of revisions'].fillna(0))
+            impacts['impact of revisions'].astype(float).fillna(0))
         impacts['impact of news'] = (
-            impacts['impact of news'].fillna(0))
+            impacts['impact of news'].astype(float).fillna(0))
         impacts['total impact'] = (impacts['impact of revisions'] +
                                    impacts['impact of news'])
         impacts = impacts.reorder_levels([1, 0]).sort_index()
