@@ -747,24 +747,24 @@ class CalendarSeasonality(CalendarDeterministicTerm):
     _is_dummy = True
 
     # out_of: freq
-    _supported = {
-        "W": {"B": 5, "D": 7, "h": 24 * 7},
-        "D": {"h": 24},
-        "Q": {"MS": 3, "ME": 3},
-        "QE": {"MS": 3, "ME": 3},
-        "A": {"MS": 12, "ME": 12, "QE": 4},
-        "Y": {"MS": 12, "ME": 12, "QE": 4},
-        "YE": {"MS": 12, "ME": 12, "QE": 4},
-    }
     if PD_LT_2_2_0:
-        _supported.update(
-            {
-                "W": {"H": 24 * 7},
-                "D": {"H": 24},
-                "Q": {"M": 3},
-                "A": {"M": 12, "Q": 4}
-            }
-        )
+        _supported = {
+            "W": {"B": 5, "D": 7, "h": 24 * 7, "H": 24 * 7},
+            "D": {"h": 24, "H": 24},
+            "Q": {"MS": 3, "M": 3},
+            "A": {"MS": 12, "M": 12},
+            "Y": {"MS": 12, "Q": 4, "M": 12},
+        }
+    else:
+        _supported = {
+            "W": {"B": 5, "D": 7, "h": 24 * 7},
+            "D": {"h": 24},
+            "Q": {"MS": 3, "ME": 3},
+            "A": {"MS": 12, "ME": 12, "QE": 4},
+            "Y": {"MS": 12, "ME": 12, "QE": 4},
+            "QE": {"ME": 3},
+            "YE": {"ME": 12, "QE": 4},
+        }
 
     def __init__(self, freq: str, period: str) -> None:
         freq_options: Set[str] = set()
