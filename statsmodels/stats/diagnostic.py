@@ -32,12 +32,22 @@ import pandas as pd
 from scipy import stats
 
 from statsmodels.regression.linear_model import OLS, RegressionResultsWrapper
+from statsmodels.stats._adnorm import anderson_statistic, normal_ad
+from statsmodels.stats._lilliefors import (
+    kstest_exponential,
+    kstest_fit,
+    kstest_normal,
+    lilliefors,
+)
+from statsmodels.tools.validation import (
+    array_like,
+    bool_like,
+    dict_like,
+    float_like,
+    int_like,
+    string_like,
+)
 from statsmodels.tsa.tsatools import lagmat
-from statsmodels.tools.validation import (array_like, int_like, bool_like,
-                                          string_like, dict_like, float_like)
-from statsmodels.stats._lilliefors import (kstest_fit, lilliefors,
-                                           kstest_normal, kstest_exponential)
-from statsmodels.stats._adnorm import normal_ad, anderson_statistic
 
 __all__ = ["kstest_fit", "lilliefors", "kstest_normal", "kstest_exponential",
            "normal_ad", "compare_cox", "compare_j", "acorr_breusch_godfrey",
@@ -1609,7 +1619,7 @@ def breaks_cusumolsresid(resid, ddof=0):
     Ploberger, Werner, and Walter Kramer. “The Cusum Test with OLS Residuals.”
     Econometrica 60, no. 2 (March 1992): 271-285.
     """
-    resid = resid.ravel()
+    resid = np.asarray(resid).ravel()
     nobs = len(resid)
     nobssigma2 = (resid ** 2).sum()
     if ddof > 0:
