@@ -1,5 +1,5 @@
 from statsmodels.compat.numpy import lstsq
-from statsmodels.compat.pandas import YEAR_END, assert_index_equal
+from statsmodels.compat.pandas import MONTH_END, YEAR_END, assert_index_equal
 from statsmodels.compat.platform import PLATFORM_WIN
 from statsmodels.compat.python import lrange
 
@@ -1119,7 +1119,7 @@ def test_arma_order_select_ic():
     assert_(res.bic.index.equals(bic.index))
     assert_(res.bic.columns.equals(bic.columns))
 
-    index = pd.date_range("2000-1-1", freq="M", periods=len(y))
+    index = pd.date_range("2000-1-1", freq=MONTH_END, periods=len(y))
     y_series = pd.Series(y, index=index)
     res_pd = arma_order_select_ic(
         y_series, max_ar=2, max_ma=1, ic=["aic", "bic"], trend="n"

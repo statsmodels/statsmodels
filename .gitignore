@@ -18,10 +18,13 @@ examples/executed
 
 #setuptools-scm generated version file
 statsmodels/_version.py
-# generated c source and built extensions
+# Generated c source and built extensions
+# and Byte-compiled / optimized / DLL files
 *.c
 *.so
-*.pyd
+*.py[cod]
+__pycache__/
+
 
 # repository directories for bzr-git
 .bzr
@@ -104,3 +107,6 @@ statsmodels/tsa/statespace/_smoothers/_classical.pyx
 # Temporary copies for packaging
 statsmodels/setup.cfg
 statsmodels/LICENSE.txt
+
+# Dataset downloads
+statsmodels/datasets/tests/*.zip
