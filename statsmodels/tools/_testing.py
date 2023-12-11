@@ -40,6 +40,7 @@ class PytestTester:
             print('Running pytest ' + ' '.join(cmd))
             status = pytest.main(cmd)
             if exit:
+                print(f"Exit status: {status}")
                 sys.exit(status)
         except ImportError:
             raise ImportError('pytest>=3 required to run the test')
