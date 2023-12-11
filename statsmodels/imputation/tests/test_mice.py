@@ -73,10 +73,6 @@ class TestMICEData:
         orig = df.copy()
         mx = pd.notnull(df)
         imp_data = mice.MICEData(df)
-        print(f"test_default: {imp_data._cycle_order}")
-        vnames = list(imp_data.data.columns)
-        print([f"{v}: {len(imp_data.ix_miss[v])}" for v in vnames])
-
         nrow, ncol = df.shape
 
         assert_allclose(imp_data.ix_miss['x1'], np.arange(60))
@@ -101,12 +97,12 @@ class TestMICEData:
         fml = 'x1 ~ x2 + x3 + x4 + x5 + y'
         assert_equal(imp_data.conditional_formula['x1'], fml)
 
-        import hashlib
-        orig_hash = hashlib.md5(orig.to_numpy().tobytes())
-        print(f"test_default hash: {orig_hash.hexdigest()}")
-        print(f"test_default: {imp_data._cycle_order}")
-
-        assert_equal(imp_data._cycle_order, ['x5', 'x3', 'x4', 'y', 'x2', 'x1'])
+        # Order of 3 and 4 is not deterministic
+        # since both have 10 missing
+        assert tuple(imp_data._cycle_order) in (
+            ('x5', 'x3', 'x4', 'y', 'x2', 'x1'),
+            ('x5', 'x4', 'x3', 'y', 'x2', 'x1')
+        )
 
         # Should make a copy
         assert not (df is imp_data.data)
@@ -163,22 +159,19 @@ class TestMICEData:
         for pert_meth in "gaussian", "boot":
 
             imp_data = mice.MICEData(df, perturbation_method=pert_meth)
-            print(f"test_pertmeth {imp_data._cycle_order}")
-            vnames = list(imp_data.data.columns)
-            print([f"{v}: {len(imp_data.ix_miss[v])}" for v in vnames])
+
             for k in range(2):
                 imp_data.update_all()
                 assert_equal(imp_data.data.shape[0], nrow)
                 assert_equal(imp_data.data.shape[1], ncol)
                 assert_allclose(orig[mx], imp_data.data[mx])
 
-        import hashlib
-        orig_hash = hashlib.md5(orig.to_numpy().tobytes())
-        print(f"test_pertmeth hash: {orig_hash.hexdigest()}")
-        print(f"test_pertmeth: {imp_data._cycle_order}")
-
-        assert_equal(imp_data._cycle_order, ['x5', 'x3', 'x4', 'y', 'x2', 'x1'])
-
+        # Order of 3 and 4 is not deterministic
+        # since both have 10 missing
+        assert tuple(imp_data._cycle_order) in (
+            ('x5', 'x3', 'x4', 'y', 'x2', 'x1'),
+            ('x5', 'x4', 'x3', 'y', 'x2', 'x1')
+        )
 
     def test_phreg(self):
 
@@ -228,10 +221,6 @@ class TestMICEData:
         nrow, ncol = df.shape
 
         imp_data = mice.MICEData(df)
-        print(f"test_set_imputer: {imp_data._cycle_order}")
-        vnames = list(imp_data.data.columns)
-        print([f"{v}: {len(imp_data.ix_miss[v])}" for v in vnames])
-
         imp_data.set_imputer('x1', 'x3 + x4 + x3*x4')
         imp_data.set_imputer('x2', 'x4 + I(x5**2)')
         imp_data.set_imputer('x3', model_class=sm.GLM,
@@ -256,12 +245,13 @@ class TestMICEData:
         fml = 'x4 ~ x1 + x2 + x3 + x5 + y'
         assert_equal(imp_data.conditional_formula['x4'], fml)
 
-        import hashlib
-        orig_hash = hashlib.md5(orig.to_numpy().tobytes())
-        print(f"test_set_imputer hash: {orig_hash.hexdigest()}")
-        print(f"test_set_imputer: {imp_data._cycle_order}")
+        # Order of 3 and 4 is not deterministic
+        # since both have 10 missing
+        assert tuple(imp_data._cycle_order) in (
+            ('x5', 'x3', 'x4', 'y', 'x2', 'x1'),
+            ('x5', 'x4', 'x3', 'y', 'x2', 'x1')
+        )
 
-        assert_equal(imp_data._cycle_order, ['x5', 'x3', 'x4', 'y', 'x2', 'x1'])
 
 
     @pytest.mark.matplotlib
