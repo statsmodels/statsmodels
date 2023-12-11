@@ -36,17 +36,17 @@ def gendat():
     Create a data set with missing values.
     """
 
-    np.random.seed(34243)
+    gen = np.random.RandomState(34243)
 
     n = 200
     p = 5
 
-    exog = np.random.normal(size=(n, p))
+    exog = gen.normal(size=(n, p))
     exog[:, 0] = exog[:, 1] - exog[:, 2] + 2*exog[:, 4]
-    exog[:, 0] += np.random.normal(size=n)
+    exog[:, 0] += gen.normal(size=n)
     exog[:, 2] = 1*(exog[:, 2] > 0)
 
-    endog = exog.sum(1) + np.random.normal(size=n)
+    endog = exog.sum(1) + gen.normal(size=n)
 
     df = pd.DataFrame(exog)
     df.columns = ["x%d" % k for k in range(1, p+1)]
@@ -73,6 +73,10 @@ class TestMICEData:
         orig = df.copy()
         mx = pd.notnull(df)
         imp_data = mice.MICEData(df)
+        print(f"test_default: {imp_data._cycle_order}")
+        vnames = list(imp_data.data.columns)
+        print([f"{v}: {len(imp_data.ix_miss[v])}" for v in vnames])
+
         nrow, ncol = df.shape
 
         assert_allclose(imp_data.ix_miss['x1'], np.arange(60))
@@ -96,6 +100,11 @@ class TestMICEData:
 
         fml = 'x1 ~ x2 + x3 + x4 + x5 + y'
         assert_equal(imp_data.conditional_formula['x1'], fml)
+
+        import hashlib
+        orig_hash = hashlib.md5(orig.to_numpy().tobytes())
+        print(f"test_default hash: {orig_hash.hexdigest()}")
+        print(f"test_default: {imp_data._cycle_order}")
 
         assert_equal(imp_data._cycle_order, ['x5', 'x3', 'x4', 'y', 'x2', 'x1'])
 
@@ -154,24 +163,31 @@ class TestMICEData:
         for pert_meth in "gaussian", "boot":
 
             imp_data = mice.MICEData(df, perturbation_method=pert_meth)
-
+            print(f"test_pertmeth {imp_data._cycle_order}")
+            vnames = list(imp_data.data.columns)
+            print([f"{v}: {len(imp_data.ix_miss[v])}" for v in vnames])
             for k in range(2):
                 imp_data.update_all()
                 assert_equal(imp_data.data.shape[0], nrow)
                 assert_equal(imp_data.data.shape[1], ncol)
                 assert_allclose(orig[mx], imp_data.data[mx])
 
+        import hashlib
+        orig_hash = hashlib.md5(orig.to_numpy().tobytes())
+        print(f"test_pertmeth hash: {orig_hash.hexdigest()}")
+        print(f"test_pertmeth: {imp_data._cycle_order}")
+
         assert_equal(imp_data._cycle_order, ['x5', 'x3', 'x4', 'y', 'x2', 'x1'])
 
 
     def test_phreg(self):
 
-        np.random.seed(8742)
+        gen = np.random.RandomState(8742)
         n = 300
-        x1 = np.random.normal(size=n)
-        x2 = np.random.normal(size=n)
-        event_time = np.random.exponential(size=n) * np.exp(x1)
-        obs_time = np.random.exponential(size=n)
+        x1 = gen.normal(size=n)
+        x2 = gen.normal(size=n)
+        event_time = gen.exponential(size=n) * np.exp(x1)
+        obs_time = gen.exponential(size=n)
         time = np.where(event_time < obs_time, event_time, obs_time)
         status = np.where(time == event_time, 1, 0)
         df = pd.DataFrame({"time": time, "status": status, "x1": x1, "x2": x2})
@@ -212,6 +228,10 @@ class TestMICEData:
         nrow, ncol = df.shape
 
         imp_data = mice.MICEData(df)
+        print(f"test_set_imputer: {imp_data._cycle_order}")
+        vnames = list(imp_data.data.columns)
+        print([f"{v}: {len(imp_data.ix_miss[v])}" for v in vnames])
+
         imp_data.set_imputer('x1', 'x3 + x4 + x3*x4')
         imp_data.set_imputer('x2', 'x4 + I(x5**2)')
         imp_data.set_imputer('x3', model_class=sm.GLM,
@@ -235,6 +255,11 @@ class TestMICEData:
 
         fml = 'x4 ~ x1 + x2 + x3 + x5 + y'
         assert_equal(imp_data.conditional_formula['x4'], fml)
+
+        import hashlib
+        orig_hash = hashlib.md5(orig.to_numpy().tobytes())
+        print(f"test_set_imputer hash: {orig_hash.hexdigest()}")
+        print(f"test_set_imputer: {imp_data._cycle_order}")
 
         assert_equal(imp_data._cycle_order, ['x5', 'x3', 'x4', 'y', 'x2', 'x1'])
 
@@ -354,10 +379,10 @@ class TestMICE:
     @pytest.mark.slow
     def t_est_combine(self):
 
-        np.random.seed(3897)
-        x1 = np.random.normal(size=300)
-        x2 = np.random.normal(size=300)
-        y = x1 + x2 + np.random.normal(size=300)
+        gen = np.random.RandomState(3897)
+        x1 = gen.normal(size=300)
+        x2 = gen.normal(size=300)
+        y = x1 + x2 + gen.normal(size=300)
         x1[0:100] = np.nan
         x2[250:] = np.nan
         df = pd.DataFrame({"x1": x1, "x2": x2, "y": y})
@@ -377,8 +402,8 @@ class TestMICE:
 
 def test_micedata_miss1():
     # test for #4375
-    np.random.seed(0)
-    data = pd.DataFrame(np.random.rand(50, 4))
+    gen = np.random.RandomState(3897)
+    data = pd.DataFrame(gen.rand(50, 4))
     data.columns = ['var1', 'var2', 'var3', 'var4']
     # one column with a single missing value
     data.iloc[1, 1] = np.nan
