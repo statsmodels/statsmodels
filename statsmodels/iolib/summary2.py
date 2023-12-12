@@ -550,7 +550,7 @@ def summary_col(results, float_format='%.4f', model_names=(), stars=False,
         if drop_omitted:
             for uo in unordered:
                 new_order.remove(uo)
-        summ = summ.loc[new_order]
+        summ = summ.reindex(new_order, level=0)
 
     idx = []
     index = summ.index.get_level_values(0)
