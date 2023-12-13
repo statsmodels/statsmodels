@@ -1533,7 +1533,7 @@ def test_acf_conservate_nanops(reset_randomstate):
 
 
 def test_pacf_nlags_error(reset_randomstate):
-    e = np.random.standard_normal(100)
+    e = np.random.standard_normal(99)
     with pytest.raises(ValueError, match="Can only compute partial"):
         pacf(e, 50)
 
@@ -1584,3 +1584,27 @@ def test_granger_causality_exception_maxlag(gc_data):
 def test_granger_causality_verbose(gc_data):
     with pytest.warns(FutureWarning, match="verbose"):
         grangercausalitytests(gc_data, 3, verbose=True)
+
+@pytest.mark.parametrize("size",[3,5,7,9])
+def test_pacf_small_sample(size,reset_randomstate):
+    y = np.random.standard_normal(size)
+    a = pacf(y)
+    assert isinstance(a, np.ndarray)
+    a, b = pacf_burg(y)
+    assert isinstance(a, np.ndarray)
+    assert isinstance(b, np.ndarray)
+    a = pacf_ols(y)
+    assert isinstance(a, np.ndarray)
+    a = pacf_yw(y)
+    assert isinstance(a, np.ndarray)
+
+
+def test_pacf_1_obs(reset_randomstate):
+    y = np.random.standard_normal(1)
+    with pytest.raises(ValueError):
+        pacf(y)
+    with pytest.raises(ValueError):
+        pacf_burg(y)
+    with pytest.raises(ValueError):
+        pacf_ols(y)
+    pacf_yw(y)

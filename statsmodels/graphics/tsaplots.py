@@ -17,7 +17,7 @@ def _prepare_data_corr_plot(x, lags, zero):
     if lags is None:
         # GH 4663 - use a sensible default value
         nobs = x.shape[0]
-        lim = min(int(np.ceil(10 * np.log10(nobs))), nobs - 1)
+        lim = min(int(np.ceil(10 * np.log10(nobs))), nobs // 2)
         lags = np.arange(not zero, lim + 1)
     elif np.isscalar(lags):
         lags = np.arange(not zero, int(lags) + 1)  # +1 for zero lag

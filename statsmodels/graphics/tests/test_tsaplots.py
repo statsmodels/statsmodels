@@ -375,3 +375,14 @@ def test_predict_plot(use_pandas, model_and_args, alpha):
     res = model(y, **kwargs).fit()
     fig = plot_predict(res, start, end, alpha=alpha)
     assert isinstance(fig, plt.Figure)
+
+
+@pytest.mark.matplotlib
+def test_plot_pacf_small_sample():
+    idx = [pd.Timestamp.now() + pd.Timedelta(seconds=i) for i in range(10)]
+    df = pd.DataFrame(
+        index=idx,
+        columns=["a"],
+        data=list(range(10))
+    )
+    plot_pacf(df)
