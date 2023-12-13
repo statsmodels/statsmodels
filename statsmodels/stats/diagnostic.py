@@ -1072,7 +1072,7 @@ def linear_reset(res, power=3, test_type="fitted", use_f=False,
             raise ValueError("power must contains distinct integers all >= 2")
     exog = res.model.exog
     if test_type == "fitted":
-        aug = res.fittedvalues[:, None]
+        aug = np.asarray(res.fittedvalues)[:, None]
     elif test_type == "exog":
         # Remove constant and binary
         aug = res.model.exog
@@ -1293,7 +1293,7 @@ def linear_lm(resid, exog, func=None):
     if func is None:
         def func(x):
             return np.power(x, 2)
-
+    exog = np.asarray(exog)
     exog_aux = np.column_stack((exog, func(exog[:, 1:])))
 
     nobs, k_vars = exog.shape
