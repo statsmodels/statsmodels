@@ -1189,7 +1189,7 @@ cpdef _{{prefix}}compute_smoothed_state_weights(
         {{cython_type}} scale,
         int compute_prior_weights=False):
     cdef:
-        int t, i, j, n_t, n_j, min_j, max_j, p_t, p_j
+        int t, i, j, n_t, n_j, min_j, max_j, p_t, p_j, t0
         int n = model.nobs
         int p = model.k_endog
         int m = model.k_states
@@ -1231,26 +1231,31 @@ cpdef _{{prefix}}compute_smoothed_state_weights(
         t = compute_t[i]
         store_t[t] = True
 
+    # Determine the first index that we need to compute
+    t0 = min(min_j, compute_t[0])
+    # Let double-letters denote indexing that starts from t0
+    nn = n - t0
+
     # Flags
     filter_collapsed = kfilter.filter_method & 0x20
 
     # Create required storage and temporary matrices
-    # Hi_W = np.zeros((p, m, n), order='F')
-    # K = np.zeros((p, m, n), order='F')
-    # weights = np.zeros((m, p, n, n), order='F') * np.nan
-    # state_intercept_weights = np.zeros((m, m, n, n), order='F') * np.nan
+    # Hi_W = np.zeros((p, m, nn), order='F')
+    # K = np.zeros((p, m, nn), order='F')
+    # weights = np.zeros((m, p, nn, nn), order='F') * np.nan
+    # state_intercept_weights = np.zeros((m, m, nn, nn), order='F') * np.nan
     # tmp = np.zeros((m, m), order='F')
     # F = np.zeros((p, p), order='F')
     # Fi = np.zeros((p, p), order='F')
     # FiZ = np.zeros((p, m), order='F')
-    dim4[0] = m; dim4[1] = p; dim4[2] = n; dim4[3] = n;
+    dim4[0] = m; dim4[1] = p; dim4[2] = nn; dim4[3] = nn;
     weights = np.PyArray_ZEROS(4, dim4, {{typenum}}, FORTRAN) * np.nan
-    dim4[0] = m; dim4[1] = m; dim4[2] = n; dim4[3] = n;
+    dim4[0] = m; dim4[1] = m; dim4[2] = nn; dim4[3] = nn;
     state_intercept_weights = np.PyArray_ZEROS(4, dim4, {{typenum}}, FORTRAN) * np.nan
-    dim3[0] = p; dim3[1] = m; dim3[2] = n;
+    dim3[0] = p; dim3[1] = m; dim3[2] = nn;
     Hi_W = np.PyArray_ZEROS(3, dim3, {{typenum}}, FORTRAN)
     K = np.PyArray_ZEROS(3, dim3, {{typenum}}, FORTRAN)
-    dim3[0] = m; dim3[1] = m; dim3[2] = n;
+    dim3[0] = m; dim3[1] = m; dim3[2] = nn;
     # Note: the order here is (m, l, t), where the `l` dimension refers to the
     # element of the initial state vector, and the `m, t` dimensions refer to
     # the element / time point of the smoothed state vector.
@@ -1264,7 +1269,12 @@ cpdef _{{prefix}}compute_smoothed_state_weights(
     FiZ = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
 
     # First pass to compute required quantities, if necessary
-    for t in range(n):
+    for t in range(t0, n):
+        # Recall that double-letters denotes indexes that start from t0
+        # Hi_W[:, :, nn], K[:, :, nn], weights[:, :, nn, nn],
+        # state_intercept_weights[:, :, nn, nn], prior_weights[:, :, nn]
+        tt = t - t0
+
         p_t = p - model.nmissing[t]
 
         # Handling of exact diffuse periods is not currently available
@@ -1273,9 +1283,9 @@ cpdef _{{prefix}}compute_smoothed_state_weights(
         if (t < kfilter.nobs_diffuse
                 or (not store_t[t] and (t < min_j or t > max_j))):
             # No need to set this when using the dictionary
-            # K[t] = np.zeros((m, p_t)) * np.nan
-            # Hi_W[t] is already initialized to NaNs, so can skip:
-            # Hi_W[t, :] = np.nan
+            # K[tt] = np.zeros((m, p_t)) * np.nan
+            # Hi_W[tt] is already initialized to NaNs, so can skip:
+            # Hi_W[tt, :] = np.nan
             continue
 
         # Move the statespace representation to the time period, but do not
@@ -1286,8 +1296,8 @@ cpdef _{{prefix}}compute_smoothed_state_weights(
         if p_t == 0:
             # No need to set this when using the dictionary
             # K.append(np.zeros((m, 0)))
-            # Hi_W[t] is already initialized to NaNs, so can skip:
-            # Hi_W[t, :] = np.nan
+            # Hi_W[tt] is already initialized to NaNs, so can skip:
+            # Hi_W[tt, :] = np.nan
             continue
 
         # Get filtered objects
@@ -1329,10 +1339,10 @@ cpdef _{{prefix}}compute_smoothed_state_weights(
             blas.{{prefix}}gemm("N", "N", &model._k_states, &model._k_endog, &model._k_states,
                                 &alpha, model._transition, &kfilter.k_states,
                                         &tmp[0, 0], &kfilter.k_states,
-                                &beta, &K[0, 0, t], &kfilter.k_states)
+                                &beta, &K[0, 0, tt], &kfilter.k_states)
 
             _FiZ = &FiZ[0, 0]
-            _K = &K[0, 0, t]
+            _K = &K[0, 0, tt]
         else:
             _FiZ = &kfilter.tmp3[0, 0, t]
             _K = &kfilter.kalman_gain[0, 0, t]
@@ -1340,7 +1350,7 @@ cpdef _{{prefix}}compute_smoothed_state_weights(
         # Compute required quantites
         # W_j = H_j (F_j^{-1} Z_j - K_j' N_j L_j)
         # => H_j^{-1} W_j = F_j^{-1} Z_j - K_j' N_j L_j
-        blas.{{prefix}}copy(&pm, _FiZ, &inc, &Hi_W[0, 0, t], &inc)
+        blas.{{prefix}}copy(&pm, _FiZ, &inc, &Hi_W[0, 0, tt], &inc)
 
         scalar = 1. / scale
         blas.{{prefix}}gemm("N", "N", &model._k_states, &model._k_states, &model._k_states,
@@ -1351,11 +1361,16 @@ cpdef _{{prefix}}compute_smoothed_state_weights(
         blas.{{prefix}}gemm("T", "N", &model._k_endog, &model._k_states, &model._k_states,
                             &gamma, _K, &kfilter.k_states,
                                     kfilter._tmp0, &kfilter.k_states,
-                            &scalar, &Hi_W[0, 0, t], &model.k_endog)
+                            &scalar, &Hi_W[0, 0, tt], &model.k_endog)
 
     # Second pass to compute weights
     # for t in compute_t:
     for t in range(n):
+        # Recall that double-letters denotes indexes that start from t0
+        # Hi_W[:, :, nn], K[:, :, nn], weights[:, :, nn, nn],
+        # state_intercept_weights[:, :, nn, nn], prior_weights[:, :, nn]
+        tt = t - t0
+
         if t < kfilter.nobs_diffuse or not store_t[t]:
             continue
 
@@ -1374,9 +1389,13 @@ cpdef _{{prefix}}compute_smoothed_state_weights(
         # This is the weight of the prior on the smoothed state at
         # time t == 0
         if t == 0 and compute_prior_weights:
-            blas.{{prefix}}copy(&kfilter.k_states2, kfilter._tmp0, &inc, &prior_weights[0, 0, t], &inc)
+            blas.{{prefix}}copy(&kfilter.k_states2, kfilter._tmp0, &inc, &prior_weights[0, 0, tt], &inc)
 
         for j in range(t - 1, min_j - 1, -1):
+            # Again, recall that double-letters denotes indexes that start
+            # from t0
+            jj = j - t0
+
             # Since we are not handling any diffuse observations now, we can
             # stop as soon as we get to the diffuse periods
             if j < kfilter.nobs_diffuse:
@@ -1386,7 +1405,7 @@ cpdef _{{prefix}}compute_smoothed_state_weights(
 
             compute_K = kfilter.univariate_filter[t] or filter_collapsed
             if compute_K:
-                _K = &K[0, 0, j]
+                _K = &K[0, 0, jj]
             else:
                 _K = &kfilter.kalman_gain[0, 0, j]
 
@@ -1399,15 +1418,15 @@ cpdef _{{prefix}}compute_smoothed_state_weights(
             #   L[j] = \prod_i L_{j, i}
             if store_j[j]:
                 if p_j > 0:
-                    # weights[:, :p_j, t, j] = tmp @ K[j][:, :p_j]
+                    # weights[:, :p_j, tt, jj] = tmp @ K[jj][:, :p_j]
                     blas.{{prefix}}gemm("N", "N", &model._k_states, &p_j, &model._k_states,
                                         &alpha, kfilter._tmp0, &kfilter.k_states,
                                                 _K, &kfilter.k_states,
-                                        &beta, &weights[0, 0, t, j], &kfilter.k_states)
+                                        &beta, &weights[0, 0, tt, jj], &kfilter.k_states)
 
-                # state_intercept_weights[:, :, t, j] = -tmp
+                # state_intercept_weights[:, :, tt, jj] = -tmp
                 blas.{{prefix}}copy(&kfilter.k_states2, kfilter._tmp0, &inc,
-                                                        &state_intercept_weights[0, 0, t, j], &inc)
+                                                        &state_intercept_weights[0, 0, tt, jj], &inc)
 
             if j > min_j or (j == 0 and compute_prior_weights):
                 # tmp = tmp @ L
@@ -1421,7 +1440,7 @@ cpdef _{{prefix}}compute_smoothed_state_weights(
                 # This is the weight of the prior on the smoothed state at
                 # time t > 0
                 if j == 0 and compute_prior_weights:
-                    blas.{{prefix}}copy(&kfilter.k_states2, kfilter._tmp0, &inc, &prior_weights[0, 0, t], &inc)
+                    blas.{{prefix}}copy(&kfilter.k_states2, kfilter._tmp0, &inc, &prior_weights[0, 0, tt], &inc)
 
         # For j == t
         # For the univariate case, some notes:
@@ -1434,16 +1453,17 @@ cpdef _{{prefix}}compute_smoothed_state_weights(
         # incorporated all the information from time t. Then j = t but i < p_t
         # would follow the j < t formula.
         j = t
+        jj = tt
         p_j = p - model.nmissing[t]
         if store_j[j]:
             if p_j > 0:
-                # weights[:, :p_j, t, j] = Pt @ Hi_W[j, :p_j].T
+                # weights[:, :p_j, tt, jj] = Pt @ Hi_W[j, :p_j].T
                 blas.{{prefix}}gemm("N", "T", &model._k_states, &p_j, &model._k_states,
                                     &scale, &kfilter.predicted_state_cov[0, 0, t], &kfilter.k_states,
-                                            &Hi_W[0, 0, j], &model.k_endog,
-                                    &beta, &weights[0, 0, t, j], &kfilter.k_states)
+                                            &Hi_W[0, 0, jj], &model.k_endog,
+                                    &beta, &weights[0, 0, tt, jj], &kfilter.k_states)
 
-            # state_intercept_weights[:, :, t, j] = -(Pt @ Lt' @ Nt)
+            # state_intercept_weights[:, :, tt, jj] = -(Pt @ Lt' @ Nt)
             # Note: normally would need to multiply Pt by scale and divide Nt
             # by `scale`, but since they're being multiplied here, the scale terms
             # cancel out.
@@ -1454,7 +1474,7 @@ cpdef _{{prefix}}compute_smoothed_state_weights(
             blas.{{prefix}}gemm("N", "N", &model._k_states, &model._k_states, &model._k_states,
                             &alpha, &kfilter.predicted_state_cov[0, 0, t], &kfilter.k_states,
                                     kfilter._tmp00, &kfilter.k_states,
-                            &beta, &state_intercept_weights[0, 0, t, j], &kfilter.k_states)
+                            &beta, &state_intercept_weights[0, 0, tt, jj], &kfilter.k_states)
 
         # Forwards from j = t+1, t+2, ..., max_j
         # tmp = Pt
@@ -1471,14 +1491,17 @@ cpdef _{{prefix}}compute_smoothed_state_weights(
                                                         kfilter._tmp0, &inc)
 
         for j in range(t + 1, max_j + 1):
+            # Again, recall that double-letters denotes indexes that start
+            # from t0
+            jj = j - t0
             p_j = p - model.nmissing[j]
 
             if store_j[j] and p_j > 0:
-                # weights[:, :p_j, t, j] = tmp @ Hi_W[j, :p_j].T
+                # weights[:, :p_j, tt, jj] = tmp @ Hi_W[j, :p_j].T
                 blas.{{prefix}}gemm("N", "T", &model._k_states, &p_j, &model._k_states,
                                     &alpha, kfilter._tmp0, &kfilter.k_states,
-                                            &Hi_W[0, 0, j], &p,
-                                    &beta, &weights[0, 0, t, j], &kfilter.k_states)
+                                            &Hi_W[0, 0, jj], &p,
+                                    &beta, &weights[0, 0, tt, jj], &kfilter.k_states)
 
             # tmp = tmp @ L[j].T
             blas.{{prefix}}gemm("N", "T", &model._k_states, &model._k_states, &model._k_states,
@@ -1489,12 +1512,12 @@ cpdef _{{prefix}}compute_smoothed_state_weights(
                                                         kfilter._tmp0, &inc)
 
             if store_j[j]:
-                # state_intercept_weights[:, :, t, j] = -(tmp @ N_j)
+                # state_intercept_weights[:, :, tt, jj] = -(tmp @ N_j)
                 scalar = -1 / scale
                 blas.{{prefix}}gemm("N", "N", &model._k_states, &model._k_states, &model._k_states,
                                 &scalar, kfilter._tmp00, &kfilter.k_states,
                                         &smoother.scaled_smoothed_estimator_cov[0, 0, j + 1], &kfilter.k_states,
-                                &beta, &state_intercept_weights[0, 0, t, j], &kfilter.k_states)
+                                &beta, &state_intercept_weights[0, 0, tt, jj], &kfilter.k_states)
 
     return np.array(weights), np.array(state_intercept_weights), np.array(prior_weights), np.array(Hi_W)
 

@@ -3672,9 +3672,9 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
 
     def news(self, comparison, impact_date=None, impacted_variable=None,
              start=None, end=None, periods=None, exog=None,
-             comparison_type=None, state_index=None, return_raw=False,
-             tolerance=1e-10, endog_quarterly=None, original_scale=True,
-             **kwargs):
+             comparison_type=None, revisions_details_start=False,
+             state_index=None, return_raw=False, tolerance=1e-10,
+             endog_quarterly=None, original_scale=True, **kwargs):
         """
         Compute impacts from updated data (news and revisions).
 
@@ -3757,6 +3757,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
             comparison, impact_date=impact_date,
             impacted_variable=impacted_variable, start=start, end=end,
             periods=periods, exog=exog, comparison_type=comparison_type,
+            revisions_details_start=revisions_details_start,
             state_index=state_index, return_raw=return_raw,
             tolerance=tolerance, endog_quarterly=endog_quarterly, **kwargs)
 
@@ -3776,11 +3777,18 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
             if news_results.revision_impacts is not None:
                 news_results.revision_impacts = (
                     news_results.revision_impacts * endog_std)
+            if news_results.revision_detailed_impacts is not None:
+                news_results.revision_detailed_impacts = (
+                    news_results.revision_detailed_impacts * endog_std)
+            if news_results.revision_grouped_impacts is not None:
+                news_results.revision_grouped_impacts = (
+                    news_results.revision_grouped_impacts * endog_std)
 
             # Update forecasts
             for name in ['prev_impacted_forecasts', 'news', 'revisions',
                          'update_realized', 'update_forecasts',
-                         'revised', 'revised_prev', 'post_impacted_forecasts']:
+                         'revised', 'revised_prev', 'post_impacted_forecasts',
+                         'revisions_all', 'revised_all', 'revised_prev_all']:
                 dta = getattr(news_results, name)
 
                 # for pd.Series, dta.multiply(...) and (sometimes) dta.add(...)
