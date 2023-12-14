@@ -4,22 +4,35 @@ Tests for the generic MLEModel
 Author: Chad Fulton
 License: Simplified-BSD
 """
+from statsmodels.compat.pandas import MONTH_END
+
 import os
 import re
 import warnings
 
 import numpy as np
+from numpy.testing import (
+    assert_,
+    assert_allclose,
+    assert_almost_equal,
+    assert_equal,
+    assert_raises,
+)
 import pandas as pd
 import pytest
 
-from statsmodels.tsa.statespace import (sarimax, varmax, kalman_filter,
-                                        kalman_smoother)
-from statsmodels.tsa.statespace.mlemodel import MLEModel, MLEResultsWrapper
 from statsmodels.datasets import nile
-from numpy.testing import (
-    assert_, assert_almost_equal, assert_equal, assert_allclose, assert_raises)
+from statsmodels.tsa.statespace import (
+    kalman_filter,
+    kalman_smoother,
+    sarimax,
+    varmax,
+)
+from statsmodels.tsa.statespace.mlemodel import MLEModel, MLEResultsWrapper
 from statsmodels.tsa.statespace.tests.results import (
-    results_sarimax, results_var_misc)
+    results_sarimax,
+    results_var_misc,
+)
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -1173,13 +1186,13 @@ def test_states_index_periodindex():
 
 def test_states_index_dateindex():
     nobs = 10
-    ix = pd.date_range(start='2000', periods=nobs, freq='M')
+    ix = pd.date_range(start='2000', periods=nobs, freq=MONTH_END)
     endog = pd.Series(np.zeros(nobs), index=ix)
 
     mod = sarimax.SARIMAX(endog, order=(2, 0, 0))
     res = mod.smooth([0.5, 0.1, 1.0])
 
-    predicted_ix = pd.date_range(start=ix[0], periods=nobs + 1, freq='M')
+    predicted_ix = pd.date_range(start=ix[0], periods=nobs + 1, freq=MONTH_END)
     cols = pd.Index(['state.0', 'state.1'])
 
     check_states_index(res.states, ix, predicted_ix, cols)

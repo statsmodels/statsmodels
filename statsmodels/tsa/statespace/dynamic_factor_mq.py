@@ -3193,8 +3193,9 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             if use_pandas:
                 # pd.Series (k_endog=1, replications=None)
                 if len(shape) == 1:
-                    sim *= self._endog_std.iloc[0]
-                    sim += self._endog_mean.iloc[0]
+                    std = self._endog_std.iloc[0]
+                    mean = self._endog_mean.iloc[0]
+                    sim = sim * std + mean
                 # pd.DataFrame (k_endog > 1, replications=None)
                 # [or]
                 # pd.DataFrame with MultiIndex (replications > 0)
