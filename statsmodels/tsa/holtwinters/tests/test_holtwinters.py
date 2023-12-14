@@ -2,6 +2,7 @@
 Author: Terence L van Zyl
 Modified: Kevin Sheppard
 """
+from statsmodels.compat.pandas import MONTH_END
 from statsmodels.compat.pytest import pytest_warns
 
 import os
@@ -108,7 +109,7 @@ def ses():
     for i in range(1, 1200):
         y[i] = y[i - 1] + e[i] - 0.2 * e[i - 1]
     y = y[200:]
-    index = pd.date_range("2000-1-1", periods=y.shape[0], freq="M")
+    index = pd.date_range("2000-1-1", periods=y.shape[0], freq=MONTH_END)
     return pd.Series(y, index=index, name="y")
 
 
@@ -1995,7 +1996,7 @@ def test_forecast_index_types(ses, index_typ):
     if index_typ == "period":
         index = pd.period_range("2000-1-1", periods=nobs + 36, freq="M")
     elif index_typ == "date_range":
-        index = pd.date_range("2000-1-1", periods=nobs + 36, freq="M")
+        index = pd.date_range("2000-1-1", periods=nobs + 36, freq=MONTH_END)
     elif index_typ == "range":
         index = pd.RangeIndex(nobs + 36)
         kwargs["seasonal_periods"] = 12

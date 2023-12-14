@@ -506,14 +506,20 @@ def test_compute_t_compute_j(compute_j, compute_t, reset_randomstate):
     actual, _, _ = tools.compute_smoothed_state_weights(
         res, compute_t=compute_t, compute_j=compute_j)
 
-    compute_t = np.atleast_1d(compute_t)
-    compute_j = np.atleast_1d(compute_j)
+    compute_t = np.unique(np.atleast_1d(compute_t))
+    compute_t.sort()
+    compute_j = np.unique(np.atleast_1d(compute_j))
+    compute_j.sort()
     for t in np.arange(10):
         if t not in compute_t:
             desired[t, :] = np.nan
     for j in np.arange(10):
         if j not in compute_j:
             desired[:, j] = np.nan
+
+    # Subset to the actual required compute_t and compute_j
+    ix = np.ix_(compute_t, compute_j)
+    desired = desired[ix]
 
     assert_allclose(actual, desired, atol=1e-7)
 

@@ -9,7 +9,7 @@ Test index support in time series models
 Author: Chad Fulton
 License: BSD-3
 """
-from statsmodels.compat.pandas import is_int_index
+from statsmodels.compat.pandas import PD_LT_2_2_0, YEAR_END, is_int_index
 
 import warnings
 
@@ -30,15 +30,16 @@ dta = [
     pd.DataFrame(base_dta),
 ]
 
+TWO_QE_DEC = "2Q-DEC" if PD_LT_2_2_0 else "2QE-DEC"
 base_date_indexes = [
     # (usual candidates)
     pd.date_range(start="1950-01-01", periods=nobs, freq="D"),
     pd.date_range(start="1950-01-01", periods=nobs, freq="W"),
     pd.date_range(start="1950-01-01", periods=nobs, freq="MS"),
     pd.date_range(start="1950-01-01", periods=nobs, freq="QS"),
-    pd.date_range(start="1950-01-01", periods=nobs, freq="Y"),
+    pd.date_range(start="1950-01-01", periods=nobs, freq=YEAR_END),
     # (some more complicated frequencies)
-    pd.date_range(start="1950-01-01", periods=nobs, freq="2Q-DEC"),
+    pd.date_range(start="1950-01-01", periods=nobs, freq=TWO_QE_DEC),
     pd.date_range(start="1950-01-01", periods=nobs, freq="2QS"),
     pd.date_range(start="1950-01-01", periods=nobs, freq="5s"),
     pd.date_range(start="1950-01-01", periods=nobs, freq="1D10min"),
@@ -221,7 +222,7 @@ def test_instantiation_valid():
                 if freq is None:
                     freq = ix.freq
                 if not isinstance(freq, str):
-                    freq = freq.freqstr
+                    freq = ix.freqstr
                 assert_equal(
                     isinstance(mod._index, (pd.DatetimeIndex, pd.PeriodIndex)),
                     True,
@@ -242,7 +243,7 @@ def test_instantiation_valid():
                 if freq is None:
                     freq = ix.freq
                 if not isinstance(freq, str):
-                    freq = freq.freqstr
+                    freq = ix.freqstr
                 assert_equal(
                     isinstance(mod._index, (pd.DatetimeIndex, pd.PeriodIndex)),
                     True,
@@ -296,7 +297,7 @@ def test_instantiation_valid():
                 if freq is None:
                     freq = ix.freq
                 if not isinstance(freq, str):
-                    freq = freq.freqstr
+                    freq = ix.freqstr
                 assert_equal(
                     isinstance(mod._index, (pd.DatetimeIndex, pd.PeriodIndex)),
                     True,

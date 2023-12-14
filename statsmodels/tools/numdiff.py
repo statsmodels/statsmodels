@@ -93,7 +93,7 @@ _hessian_docs = """
 
 def _get_epsilon(x, s, epsilon, n):
     if epsilon is None:
-        h = EPS**(1. / s) * np.maximum(np.abs(x), 0.1)
+        h = EPS**(1. / s) * np.maximum(np.abs(np.asarray(x)), 0.1)
     else:
         if np.isscalar(epsilon):
             h = np.empty(n)

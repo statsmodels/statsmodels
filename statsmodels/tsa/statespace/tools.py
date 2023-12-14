@@ -1940,13 +1940,15 @@ def _compute_smoothed_state_weights(ssm, compute_t=None, compute_j=None,
 
     # Re-order missing entries correctly and transpose to the appropriate
     # shape
-    if np.any(_model.nmissing):
+    t0 = min(compute_t[0], compute_j[0])
+    missing = np.isnan(ssm.endog[:, t0:])
+    if np.any(missing):
         shape = weights.shape
         # Transpose m, p, t, j, -> t, m, p, j so that we can use the
         # `reorder_missing_matrix` function
         weights = np.asfortranarray(weights.transpose(2, 0, 1, 3).reshape(
             shape[2] * shape[0], shape[1], shape[3], order='C'))
-        missing = np.asfortranarray(np.isnan(ssm.endog).astype(np.int32))
+        missing = np.asfortranarray(missing.astype(np.int32))
         reorder_missing_matrix(weights, missing, reorder_cols=True,
                                inplace=True)
         # Transpose t, m, p, j -> t, j, m, p,
@@ -1961,6 +1963,13 @@ def _compute_smoothed_state_weights(ssm, compute_t=None, compute_j=None,
 
     # Transpose m, l, t -> t, m, l
     prior_weights = prior_weights.transpose(2, 0, 1)
+
+    # Subset to the actual computed t, j elements
+    ix_tj = np.ix_(compute_t - t0, compute_j - t0)
+    weights = weights[ix_tj]
+    state_intercept_weights = state_intercept_weights[ix_tj]
+    if compute_prior_weights:
+        prior_weights = prior_weights[compute_t - t0]
 
     return weights, state_intercept_weights, prior_weights
 

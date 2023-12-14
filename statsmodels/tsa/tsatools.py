@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from statsmodels.compat.python import lrange, Literal
+from statsmodels.compat.python import Literal, lrange
 
 import warnings
 
@@ -804,7 +804,8 @@ def freq_to_period(freq: str | offsets.DateOffset) -> int:
     assert isinstance(freq, offsets.DateOffset)
     freq = freq.rule_code.upper()
 
-    if freq in ("A", "Y") or freq.startswith(("A-", "AS-", "Y-", "YS-")):
+    yearly_freqs = ("A-", "AS-", "Y-", "YS-", "YE-")
+    if freq in ("A", "Y") or freq.startswith(yearly_freqs):
         return 1
     elif freq == "Q" or freq.startswith(("Q-", "QS", "QE")):
         return 4

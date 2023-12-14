@@ -1,3 +1,5 @@
+from statsmodels.compat.pandas import MONTH_END
+
 import os
 import pickle
 
@@ -274,7 +276,7 @@ def test_period_detection(default_kwargs):
 
     del class_kwargs["period"]
     endog = class_kwargs["endog"]
-    index = pd.date_range("1-1-1959", periods=348, freq="M")
+    index = pd.date_range("1-1-1959", periods=348, freq=MONTH_END)
     class_kwargs["endog"] = pd.Series(endog, index=index)
     mod = STL(**class_kwargs)
 
@@ -336,6 +338,6 @@ def test_pickle(default_kwargs):
 
 def test_squezable_to_1d():
     data = co2.load().data
-    data = data.resample("M").mean().ffill()
+    data = data.resample(MONTH_END).mean().ffill()
     res = STL(data).fit()
     assert isinstance(res, DecomposeResult)

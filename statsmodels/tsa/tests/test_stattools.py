@@ -1,5 +1,5 @@
 from statsmodels.compat.numpy import lstsq
-from statsmodels.compat.pandas import assert_index_equal
+from statsmodels.compat.pandas import MONTH_END, YEAR_END, assert_index_equal
 from statsmodels.compat.platform import PLATFORM_WIN
 from statsmodels.compat.python import lrange
 
@@ -17,8 +17,8 @@ from numpy.testing import (
 import pandas as pd
 from pandas import DataFrame, Series, date_range
 import pytest
-from scipy.interpolate import interp1d
 from scipy import stats
+from scipy.interpolate import interp1d
 
 from statsmodels.datasets import macrodata, modechoice, nile, randhie, sunspots
 from statsmodels.tools.sm_exceptions import (
@@ -38,8 +38,8 @@ from statsmodels.tsa.stattools import (
     adfuller,
     arma_order_select_ic,
     breakvar_heteroskedasticity_test,
-    ccovf,
     ccf,
+    ccovf,
     coint,
     grangercausalitytests,
     innovations_algo,
@@ -1034,7 +1034,7 @@ def test_pandasacovf():
 
 def test_acovf2d(reset_randomstate):
     dta = sunspots.load_pandas().data
-    dta.index = date_range(start="1700", end="2009", freq="Y")[:309]
+    dta.index = date_range(start="1700", end="2009", freq=YEAR_END)[:309]
     del dta["YEAR"]
     res = acovf(dta, fft=False)
     assert_equal(res, acovf(dta.values, fft=False))
@@ -1119,7 +1119,7 @@ def test_arma_order_select_ic():
     assert_(res.bic.index.equals(bic.index))
     assert_(res.bic.columns.equals(bic.columns))
 
-    index = pd.date_range("2000-1-1", freq="M", periods=len(y))
+    index = pd.date_range("2000-1-1", freq=MONTH_END, periods=len(y))
     y_series = pd.Series(y, index=index)
     res_pd = arma_order_select_ic(
         y_series, max_ar=2, max_ma=1, ic=["aic", "bic"], trend="n"
@@ -1533,7 +1533,7 @@ def test_acf_conservate_nanops(reset_randomstate):
 
 
 def test_pacf_nlags_error(reset_randomstate):
-    e = np.random.standard_normal(100)
+    e = np.random.standard_normal(99)
     with pytest.raises(ValueError, match="Can only compute partial"):
         pacf(e, 50)
 
@@ -1584,3 +1584,27 @@ def test_granger_causality_exception_maxlag(gc_data):
 def test_granger_causality_verbose(gc_data):
     with pytest.warns(FutureWarning, match="verbose"):
         grangercausalitytests(gc_data, 3, verbose=True)
+
+@pytest.mark.parametrize("size",[3,5,7,9])
+def test_pacf_small_sample(size,reset_randomstate):
+    y = np.random.standard_normal(size)
+    a = pacf(y)
+    assert isinstance(a, np.ndarray)
+    a, b = pacf_burg(y)
+    assert isinstance(a, np.ndarray)
+    assert isinstance(b, np.ndarray)
+    a = pacf_ols(y)
+    assert isinstance(a, np.ndarray)
+    a = pacf_yw(y)
+    assert isinstance(a, np.ndarray)
+
+
+def test_pacf_1_obs(reset_randomstate):
+    y = np.random.standard_normal(1)
+    with pytest.raises(ValueError):
+        pacf(y)
+    with pytest.raises(ValueError):
+        pacf_burg(y)
+    with pytest.raises(ValueError):
+        pacf_ols(y)
+    pacf_yw(y)

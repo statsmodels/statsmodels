@@ -1,3 +1,4 @@
+from statsmodels.compat.pandas import MONTH_END
 from statsmodels.compat.python import lmap
 
 import calendar
@@ -362,7 +363,9 @@ def test_predict_plot(use_pandas, model_and_args, alpha):
         y[i] += 1.8 * y[i - 1] - 0.9 * y[i - 2]
     y = y[100:]
     if use_pandas:
-        index = pd.date_range("1960-1-1", freq="M", periods=y.shape[0] + 24)
+        index = pd.date_range(
+            "1960-1-1", freq=MONTH_END, periods=y.shape[0] + 24
+        )
         start = index[index.shape[0] // 2]
         end = index[-1]
         y = pd.Series(y, index=index[:-24])
@@ -372,3 +375,14 @@ def test_predict_plot(use_pandas, model_and_args, alpha):
     res = model(y, **kwargs).fit()
     fig = plot_predict(res, start, end, alpha=alpha)
     assert isinstance(fig, plt.Figure)
+
+
+@pytest.mark.matplotlib
+def test_plot_pacf_small_sample():
+    idx = [pd.Timestamp.now() + pd.Timedelta(seconds=i) for i in range(10)]
+    df = pd.DataFrame(
+        index=idx,
+        columns=["a"],
+        data=list(range(10))
+    )
+    plot_pacf(df)

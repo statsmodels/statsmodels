@@ -21,7 +21,7 @@ patsy >= 0.5.2
 
     patsy.readthedocs.org
 
-cython >= 0.29.26
+cython >= 0.29.33 and < 4.0.0
 
     https://cython.org/
 
