@@ -91,7 +91,7 @@ def _multivariate_ols_fit(endog, exog, method='svd', tolerance=1e-8):
     """
     y = endog
     x = exog
-    nobs, k_endog = y.shape
+    nobs, k_endog = y.shape  #noqa: F841
     nobs1, k_exog= x.shape
     if nobs != nobs1:
         raise ValueError('x(n=%d) and y(n=%d) should have the same number of '
@@ -168,7 +168,7 @@ def multivariate_stats(eigenvals,
     q = r_contrast
     s = np.min([p, q])
     ind = eigenvals > tolerance
-    n_e = ind.sum()
+    # n_e = ind.sum()
     eigv2 = eigenvals[ind]
     eigv1 = np.array([i / (1 - i) for i in eigv2])
     m = (np.abs(p - q) - 1) / 2

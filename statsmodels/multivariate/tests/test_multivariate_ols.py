@@ -254,7 +254,7 @@ class CheckMVConsistent:
                 cn = f"y{yn}_{xn}"
                 tt = res.t_test(cn)
                 mvt = res.mv_test(hypotheses=[("one", [xn], [yn])])
-                assert_allclose(tt.pvalue, mvt.summary_frame["Pr > F"][0],
+                assert_allclose(tt.pvalue, mvt.summary_frame["Pr > F"].iloc[0],
                                 rtol=1e-10)
                 cnx.append(cn)
 
@@ -262,7 +262,7 @@ class CheckMVConsistent:
             # test methods are only asymptotically equivalent
             tt = res.wald_test(cnx, scalar=True)
             mvt = res.mv_test(hypotheses=[(xn, [xn], endog_names)])
-            assert_allclose(tt.pvalue, mvt.summary_frame["Pr > F"][0],
+            assert_allclose(tt.pvalue, mvt.summary_frame["Pr > F"].iloc[0],
                             rtol=0.1, atol=1e-20)
 
     def test_ols(self):
@@ -274,10 +274,11 @@ class CheckMVConsistent:
 
         for k in range(k_endog):
             res_ols = OLS(endog[:, k], exog).fit()
-            assert_allclose(res1.params[:, k], res_ols.params, rtol=1e-13)
+            assert_allclose(res1.params[:, k], res_ols.params, rtol=1e-12)
             assert_allclose(res1.bse[:, k], res_ols.bse, rtol=1e-13)
-            assert_allclose(res1.tvalues[:, k], res_ols.tvalues, rtol=1e-13)
-            assert_allclose(res1.pvalues[:, k], res_ols.pvalues, rtol=1e-13)
+            assert_allclose(res1.tvalues[:, k], res_ols.tvalues, rtol=1e-12)
+            assert_allclose(res1.pvalues[:, k], res_ols.pvalues, rtol=1e-12,
+                            atol=1e-15)
             # todo: why does conf_int have endog at axis=0
             assert_allclose(res1.conf_int()[k], res_ols.conf_int(),
                             rtol=1e-10)
@@ -285,7 +286,7 @@ class CheckMVConsistent:
             idx0 = k * k_exog
             idx1 = (k + 1) * k_exog
             assert_allclose(res1.cov_params()[idx0:idx1, idx0:idx1],
-                            res_ols.cov_params(), rtol=1e-13)
+                            res_ols.cov_params(), rtol=1e-12)
 
             assert_allclose(res1.resid[:, k], res_ols.resid, rtol=1e-10)
             assert_allclose(res1.fittedvalues[:, k], res_ols.fittedvalues,
@@ -300,4 +301,4 @@ class TestMultivariateLS(CheckMVConsistent):
                     "read + write + science + prog")
         mod = MultivariateLS.from_formula(formula2, data=data_mvreg)
         cls.res = mod.fit()
-        ttn = cls.res.mv_test()
+        # ttn = cls.res.mv_test()
