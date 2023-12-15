@@ -321,9 +321,7 @@ def test_scale_iter():
     x = x[:, 0]  # 1d only ?
     v = v[0]
 
-    c = 4.685
-    # c**2/6=3.6582041666667 shifts origin to zero BUG #1341
-    meef_scale = lambda x: rnorms.TukeyBiweight().rho(x) + (c**2 / 6)  # noqa
+    meef_scale = lambda x: rnorms.TukeyBiweight().rho(x)  # noqa
     scale_bias = 0.43684963023076195
     s = scale._scale_iter(x, meef_scale=meef_scale, scale_bias=scale_bias)
     assert_allclose(s, v, rtol=1e-1)
