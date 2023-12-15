@@ -109,3 +109,27 @@ def make_hypotheses_matrices(model_results, test_formula):
     exog_names = model_results.model.exog_names
     LC = linear_constraint(test_formula, exog_names)
     return LC
+
+
+def advance_eval_env(kwargs):
+    """
+    Adjusts the keyword arguments for from_formula to account for the patsy
+    eval environment being passed down once on the stack. Adjustments are
+    made in place.
+
+    Parameters
+    ----------
+    kwargs : dict
+        The dictionary of keyword arguments passed to `from_formula`.
+    """
+
+    eval_env = kwargs.get("eval_env", None)
+    if eval_env is None:
+        kwargs["eval_env"] = 2
+    elif eval_env == -1:
+        from patsy import EvalEnvironment
+        kwargs["eval_env"] = EvalEnvironment({})
+    elif isinstance(eval_env, int):
+        kwargs["eval_env"] += 1
+
+    return kwargs

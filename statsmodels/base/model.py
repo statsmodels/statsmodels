@@ -13,6 +13,7 @@ from statsmodels.base.data import handle_data
 from statsmodels.base.optimizer import Optimizer
 import statsmodels.base.wrapper as wrap
 from statsmodels.formula import handle_formula_data
+from statsmodels.formula.formulatools import advance_eval_env
 from statsmodels.stats.contrast import (
     ContrastResults,
     WaldTestResults,
@@ -188,14 +189,10 @@ class Model:
         # TODO: subset could use syntax. issue #469.
         if subset is not None:
             data = data.loc[subset]
-        eval_env = kwargs.pop('eval_env', None)
-        if eval_env is None:
-            eval_env = 2
-        elif eval_env == -1:
-            from patsy import EvalEnvironment
-            eval_env = EvalEnvironment({})
-        elif isinstance(eval_env, int):
-            eval_env += 1  # we're going down the stack again
+
+        advance_eval_env(kwargs)
+        eval_env = kwargs.pop('eval_env')
+
         missing = kwargs.get('missing', 'drop')
         if missing == 'none':  # with patsy it's drop or raise. let's raise.
             missing = 'raise'
