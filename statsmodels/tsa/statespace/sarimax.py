@@ -512,7 +512,7 @@ class SARIMAX(MLEModel):
 
         # Initialize the statespace
         super(SARIMAX, self).__init__(
-            endog, exog=exog, k_states=k_states, k_posdef=k_posdef, **kwargs
+            endog, exog=exog, k_states=k_states, k_posdef=k_posdef, freq=freq, **kwargs
         )
 
         # Set the filter to concentrate out the scale if requested
