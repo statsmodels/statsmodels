@@ -337,6 +337,7 @@ def test_scale_trimmed_approx():
 
     alpha = 0.2
     res = scale_trimmed(x, alpha)
+    assert_allclose(res.scale, 2, rtol=1e-1)
     s = scale_trimmed(np.column_stack((x, 2*x)), alpha).scale
     assert_allclose(s, [2, 4], rtol=1e-1)
     s = scale_trimmed(np.column_stack((x, 2*x)).T, alpha, axis=1).scale

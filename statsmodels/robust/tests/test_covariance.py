@@ -1,7 +1,7 @@
 
 import numpy as np
 from scipy import linalg
-from numpy.testing import assert_allclose, assert_equal, assert_
+from numpy.testing import assert_allclose, assert_equal
 
 from statsmodels import robust
 import statsmodels.robust.covariance as robcov
@@ -21,10 +21,11 @@ def test_mahalanobis():
     d4 = robcov.mahalanobis(x, cov_inv=2*np.eye(3))
     assert_allclose(d4, 2 * d1, rtol=1e-10)
 
+
 def test_outliers_gy():
     # regression test and basic properties
     # no test for tie warnings
-    seed = 567812 #123
+    seed = 567812  # 123
     np.random.seed(seed)
 
     nobs = 1000
@@ -44,7 +45,7 @@ def test_outliers_gy():
     assert_equal(int(reject_float), res[2])
     # tests for fixed cutoff at 0.975
     assert_equal((d2 > res[4]).sum(), res[3])
-    assert_allclose(res[3], nobs * 0.025  + n_outl, rtol=0.5)
+    assert_allclose(res[3], nobs * 0.025 + n_outl, rtol=0.5)
     # + n_outl because not under Null
 
     x3 = x[:-1].reshape(-1, 3)
@@ -65,12 +66,12 @@ def test_outliers_gy():
     assert_equal(int(reject_float), res[2])
     # tests for fixed cutoff at 0.975
     assert_equal((d3 > res[4]).sum(), res[3])
-    assert_allclose(res[3], nobs * 0.025  + n_outl, rtol=0.5)
+    assert_allclose(res[3], nobs * 0.025 + n_outl, rtol=0.5)
     # fixed cutoff at 0.975, + n_outl because not under Null
 
 
 def test_robcov_SMOKE():
-    # currently only smoke test
+    # currently only smoke test or very loose comparisons to dgp
     nobs, k_vars = 100, 3
 
     mean = np.zeros(k_vars)
@@ -79,14 +80,14 @@ def test_robcov_SMOKE():
     np.random.seed(187649)
     x = np.random.multivariate_normal(mean, cov, size=nobs)
     n_outliers = 1
-    x[0,:2] = 50
+    x[0, :2] = 50
 
-    xtx = x.T.dot(x)
-    cov_emp = np.cov(x.T)
+    # xtx = x.T.dot(x)
+    # cov_emp = np.cov(x.T)
     cov_clean = np.cov(x[n_outliers:].T)
 
     # GK, OGK
-    robcov.cov_gk1(x[:, 0], x[:,2])
+    robcov.cov_gk1(x[:, 0], x[:, 2])
     robcov.cov_gk(x)
     robcov.cov_ogk(x)
 
@@ -96,23 +97,31 @@ def test_robcov_SMOKE():
 
     x2 = np.array([x, x])
     x2_ = np.rollaxis(x2, 1)
-    robcov.cov_tyler_pairs_regularized(x2_,
-                                start_cov=np.diag(robust.mad(x)**2),
-                                shrinkage_factor=0.1,
-                                nobs=x.shape[0], k_vars=x.shape[1])
+    robcov.cov_tyler_pairs_regularized(
+        x2_,
+        start_cov=np.diag(robust.mad(x)**2),
+        shrinkage_factor=0.1,
+        nobs=x.shape[0],
+        k_vars=x.shape[1],
+        )
 
     # others, M-, ...
 
     # estimation for multivariate t
     r = robcov._cov_iter(x, robcov.weights_mvt, weights_args=(3, k_vars))
+    # rough comparison with DGP cov
+    assert_allclose(r.cov, cov, rtol=0.5)
+
     # trimmed sample covariance
     r = robcov._cov_iter(x, robcov.weights_quantile, weights_args=(0.50, ),
                          rescale="med")
+    # rough comparison with DGP cov
+    assert_allclose(r.cov, cov, rtol=0.5)
 
     # We use 0.75 quantile for truncation to get better efficiency
     # at q=0.5, cov is pretty noisy at nobs=100 and passes at rtol=1
     res_li = robcov._cov_starting(x, is_standardized=False, quantile=0.75)
-    for i, res in enumerate(res_li):
+    for _, res in enumerate(res_li):
         # note: basic cov are not properly scaled
         # check only those with _cov_iter rescaling
         if hasattr(res, 'cov'):
@@ -124,4 +133,5 @@ def test_robcov_SMOKE():
             assert_allclose(np.diag(c).sum(), np.diag(cov).sum(), rtol=0.25)
             c1, m1 = robcov._reweight(x, res.mean, res.cov)
             assert_allclose(c1, cov, rtol=0.5)
-            assert_allclose(c1, cov_clean, rtol=0.25) # oracle, w/o outliers
+            assert_allclose(c1, cov_clean, rtol=0.25)  # oracle, w/o outliers
+            assert_allclose(m1, mean, rtol=0.5, atol=0.2)

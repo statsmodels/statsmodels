@@ -1,20 +1,12 @@
 # -*- coding: utf-8 -*-
-"""robust location, scatter and covariance estimators
+r"""robust location, scatter and covariance estimators
 
 Author: Josef Perktold
 License: BSD-3
-
-
----  for Tyler
-copied from "M:\josef\eclipsegworkspace\statsmodels-git\local_scripts\local_scripts\try_cov_tyler.py"
 
 Created on Tue Nov 18 11:53:19 2014
 
-Author: Josef Perktold
-License: BSD-3
-
-
-based on iteration in equ. (14) in Soloveychik and Wiesel
+cov tyler based on iteration in equ. (14) in Soloveychik and Wiesel
 
 Soloveychik, I., and A. Wiesel. 2014. Tyler's Covariance Matrix Estimator in
 Elliptical Models With Convex Structure.
@@ -31,17 +23,14 @@ High-Dimensional Covariance Matrices.
 IEEE Transactions on Signal Processing 59 (9): 4097-4107.
 doi:10.1109/TSP.2011.2138698.
 
-
 """
 
 import numpy as np
-from scipy import linalg, stats
-from statsmodels import robust
-import statsmodels.robust as robust
+from scipy import stats
+from .scale import mad
 
-# shorthand functions
-mad = robust.mad
-mad0 = lambda x: mad(x, center=0)
+mad0 = lambda x: mad(x, center=0)  # noqa: E731
+
 
 class Holder(object):
     def __init__(self, **kwds):
@@ -77,12 +66,13 @@ def _naive_ledoit_wolf_shrinkage(x, center):
 # reweight adapted from OGK reweight step
 def _reweight(x, loc, cov, trim_frac=0.975, ddof=1):
     beta = trim_frac
-    nobs, k_vars = x.shape
-    #d = (((z - loc_z) / scale_z)**2).sum(1) # for orthogonal
+    nobs, k_vars = x.shape  # noqa: F841
+    # d = (((z - loc_z) / scale_z)**2).sum(1) # for orthogonal
     d = mahalanobis(x - loc, cov)
     # only hard thresholding right now
     dmed = np.median(d)
-    cutoff = dmed * stats.chi2.isf(1-beta, k_vars) / stats.chi2.ppf(0.5, k_vars)
+    cutoff = (dmed * stats.chi2.isf(1-beta, k_vars) /
+              stats.chi2.ppf(0.5, k_vars))
     mask = d <= cutoff
     sample = x[mask]
     loc = sample.mean(0)
@@ -169,12 +159,13 @@ def _outlier_gy(d, distr=None, k_endog=1, trim_prob=0.975):
     return frac, cutoff, ntail, ntail0, threshold
 
 
-### GK and OGK ###
+# ## GK and OGK ###
 
 def _weight_mean(x, c):
     x = np.asarray(x)
     w = (1 - (x / c)**2)**2 * (np.abs(x) <= c)
     return w
+
 
 def _winsor(x, c):
     return np.minimum(x**2, c**2)
@@ -218,6 +209,11 @@ def scale_tau(data, cm=4.5, cs=3, weight_mean=_weight_mean,
     The normalization has been added to match R robustbase.
     R robustbase uses by default ddof=0, with option to set it to 2.
 
+    References
+    ----------
+    .. [1] Maronna, Ricardo A, and Ruben H Zamar. “Robust Estimates of Location
+       and Dispersion for High-Dimensional Datasets.” Technometrics 44, no. 4
+       (November 1, 2002): 307–17. https://doi.org/10.1198/004017002188618509.
     """
 
     x = np.asarray(data)
@@ -228,16 +224,16 @@ def scale_tau(data, cm=4.5, cs=3, weight_mean=_weight_mean,
     mad_x = np.median(np.abs(xdm), 0)
     wm = weight_mean(xdm / mad_x, cm)
     mean = (wm * x).sum(0) / wm.sum(0)
-    var = mad_x**2 * weight_scale((x - mean) / mad_x, cs).sum(0) / (nobs - ddof)
+    var = (mad_x**2 * weight_scale((x - mean) / mad_x, cs).sum(0) /
+           (nobs - ddof))
 
     cf = 1
     if normalize:
-        c =  cs * stats.norm.ppf(0.75)
+        c = cs * stats.norm.ppf(0.75)
         cf = 2 * ((1 - c**2) * stats.norm.cdf(c) - c * stats.norm.pdf(c)
-                 + c**2) - 1
-    #return Holder(loc=mean, scale=np.sqrt(var / cf))
+                  + c**2) - 1
+    # return Holder(loc=mean, scale=np.sqrt(var / cf))
     return mean, np.sqrt(var / cf)
-
 
 
 def mahalanobis(data, cov=None, cov_inv=None):
@@ -273,7 +269,7 @@ def cov_gk(data, scale_func=mad):
     x = np.asarray(data)
     if x.ndim != 2:
         raise ValueError('data needs to be two dimensional')
-    nobs, k_vars = x.shape
+    nobs, k_vars = x.shape  # noqa: F841
     cov = np.diag(scale_func(x)**2)
     for i in range(k_vars):
         for j in range(i):
@@ -283,9 +279,8 @@ def cov_gk(data, scale_func=mad):
 
 
 def cov_ogk(data, maxiter=2, scale_func=mad, cov_func=cov_gk,
-            loc_func=lambda x:np.median(x, axis=0), reweight=0.9, ddof=1):
+            loc_func=lambda x: np.median(x, axis=0), reweight=0.9, ddof=1):
     """orthogonalized Gnanadesikan and Kettenring covariance estimator
-
 
     based on Maronna and Zamar 2002
 
@@ -320,23 +315,29 @@ def cov_ogk(data, maxiter=2, scale_func=mad, cov_func=cov_gk,
     given by tau_scale with normalization but ddof=0.
     CovOGK of R package rrcov does not agree with this in the default options.
 
+    References
+    ----------
+    .. [1] Maronna, Ricardo A, and Ruben H Zamar. “Robust Estimates of Location
+       and Dispersion for High-Dimensional Datasets.” Technometrics 44, no. 4
+       (November 1, 2002): 307–17. https://doi.org/10.1198/004017002188618509.
+
     """
-    beta = reweight  #alias, need more reweighting options
+    beta = reweight  # alias, need more reweighting options
     x = np.asarray(data)
     if x.ndim != 2:
         raise ValueError('data needs to be two dimensional')
-    nobs, k_vars = x.shape
+    nobs, k_vars = x.shape  # noqa: F841
     z = x
     transf0 = np.eye(k_vars)
-    for i in range(maxiter):
+    for _ in range(maxiter):
         scale = scale_func(z)
         zs = z / scale
         corr = cov_func(zs, scale_func=scale_func)
         # Maronna, Zamar set diagonal to 1, otherwise small difference to 1
         corr[np.arange(k_vars), np.arange(k_vars)] = 1
-        evals, evecs = np.linalg.eigh(corr)
-        transf = evecs * scale[:, None]   # A matrix in Maronna, Zamar
-        #z = np.linalg.solve(transf, z.T).T
+        evals, evecs = np.linalg.eigh(corr)  # noqa: F841
+        transf = evecs * scale[:, None]  # A matrix in Maronna, Zamar
+        # z = np.linalg.solve(transf, z.T).T
         z = zs.dot(evecs)
         transf0 = transf0.dot(transf)
 
@@ -352,10 +353,11 @@ def cov_ogk(data, maxiter=2, scale_func=mad, cov_func=cov_gk,
     d = None
     if reweight is not None:
         d = (((z - loc_z) / scale_z)**2).sum(1)
-        #d = mahalanobis(x - loc, cov)
+        # d = mahalanobis(x - loc, cov)
         # only hard thresholding right now
         dmed = np.median(d)
-        cutoff = dmed * stats.chi2.isf(1-beta, k_vars) / stats.chi2.ppf(0.5, k_vars)
+        cutoff = (dmed * stats.chi2.isf(1-beta, k_vars) /
+                  stats.chi2.ppf(0.5, k_vars))
         mask = d <= cutoff
         sample = x[mask]
         loc = sample.mean(0)
@@ -368,9 +370,8 @@ def cov_ogk(data, maxiter=2, scale_func=mad, cov_func=cov_gk,
 
     return res
 
-### Tyler ###
 
-
+# ## Tyler ###
 
 def cov_tyler(data, start_cov=None, normalize=False, maxiter=100, eps=1e-13):
     """Tyler's M-estimator for normalized covariance (scatter)
@@ -384,7 +385,7 @@ def cov_tyler(data, start_cov=None, normalize=False, maxiter=100, eps=1e-13):
     start_cov : None or ndarray
         starting covariance for iterative solution
     normalize : bool
-        If True, then the scatter matrix is normalized to have trace equalt
+        If True, then the scatter matrix is normalized to have trace equal
         to the number of columns in the data.
     maxiter : int
         maximum number of iterations to find the solution
@@ -400,6 +401,18 @@ def cov_tyler(data, start_cov=None, normalize=False, maxiter=100, eps=1e-13):
     iter : int
         number of iterations used in finding a solution. If iter is less than
         maxiter, then the iteration converged.
+
+
+    References
+    ----------
+    .. [1] Tyler, David E. “A Distribution-Free M-Estimator of Multivariate
+       Scatter.” The Annals of Statistics 15, no. 1 (March 1, 1987): 234–51.
+
+    .. [2] Soloveychik, I., and A. Wiesel. 2014. Tyler's Covariance Matrix
+       Estimator in Elliptical Models With Convex Structure.
+       IEEE Transactions on Signal Processing 62 (20): 5251-59.
+       doi:10.1109/TSP.2014.2348951.
+
     """
     x = np.asarray(data)
     nobs, k_vars = x.shape
@@ -407,15 +420,16 @@ def cov_tyler(data, start_cov=None, normalize=False, maxiter=100, eps=1e-13):
     if start_cov is not None:
         c = start_cov
     else:
-        c = np.diag(robust.mad(x, center=0)**2)
+        c = np.diag(mad(x, center=0)**2)
 
-    #Tyler's M-estimator of shape (scatter) matrix
+    # Tyler's M-estimator of shape (scatter) matrix
     for i in range(maxiter):
         c_inv = np.linalg.pinv(c)
         c_old = c
         # this could be vectorized but could use a lot of memory
         # TODO:  try to work in vectorized batches
-        c = kn * sum(np.outer(xi, xi) / np.inner(xi, c_inv.dot(xi)) for xi in x)
+        c = kn * sum(np.outer(xi, xi) / np.inner(xi, c_inv.dot(xi))
+                     for xi in x)
         diff = np.max(np.abs(c - c_old))
         if diff < eps:
             break
@@ -469,6 +483,14 @@ def cov_tyler_regularized(data, start_cov=None, normalize=False,
     Chen and Wiesel 2011. The required trace for a pilot scatter estimate is
     obtained by the covariance rescaled by MAD estimate for the variance.
 
+    References
+    ----------
+    .. [1] Chen, Yilun, A. Wiesel, and A.O. Hero. “Robust Shrinkage
+       Estimation of High-Dimensional Covariance Matrices.” IEEE Transactions
+       on Signal Processing 59, no. 9 (September 2011): 4097–4107.
+       https://doi.org/10.1109/TSP.2011.2138698.
+
+
     """
     x = np.asarray(data)
     nobs, k_vars = x.shape
@@ -476,12 +498,12 @@ def cov_tyler_regularized(data, start_cov=None, normalize=False,
 
     # calculate MAD only once if needed
     if start_cov is None or shrinkage_factor is None:
-        scale_mad = robust.mad(x, center=0)
+        scale_mad = mad(x, center=0)
 
     corr = None
     if shrinkage_factor is None:
         # maybe some things here are redundant
-        xd = x / x.std(0) #scale_mad
+        xd = x / x.std(0)  # scale_mad
         corr = xd.T.dot(xd)
         corr * np.outer(scale_mad, scale_mad)
         corr *= k_vars / np.trace(corr)
@@ -505,7 +527,8 @@ def cov_tyler_regularized(data, start_cov=None, normalize=False,
         c_old = c
         # this could be vectorized but could use a lot of memory
         # TODO:  try to work in vectorized batches
-        c0 = kn * sum(np.outer(xi, xi) / np.inner(xi, c_inv.dot(xi)) for xi in x)
+        c0 = kn * sum(np.outer(xi, xi) / np.inner(xi, c_inv.dot(xi))
+                      for xi in x)
         if shrinkage_factor != 0:
             c = (1 - shrinkage_factor) * c0 + shrinkage_factor * identity
         else:
@@ -523,8 +546,8 @@ def cov_tyler_regularized(data, start_cov=None, normalize=False,
 
 
 def cov_tyler_pairs_regularized(data_iterator, start_cov=None, normalize=False,
-                          shrinkage_factor=None, nobs=None, k_vars=None,
-                          maxiter=100, eps=1e-13):
+                                shrinkage_factor=None, nobs=None, k_vars=None,
+                                maxiter=100, eps=1e-13):
     """Tyler's M-estimator for normalized covariance (scatter)
 
     The underlying (population) mean of the data is assumed to be zero.
@@ -569,10 +592,17 @@ def cov_tyler_pairs_regularized(data_iterator, start_cov=None, normalize=False,
     Chen and Wiesel 2011. The required trace for a pilot scatter estimate is
     obtained by the covariance rescaled by MAD estimate for the variance.
 
+    References
+    ----------
+    .. [1] Chen, Yilun, A. Wiesel, and A.O. Hero. “Robust Shrinkage Estimation
+       of High-Dimensional Covariance Matrices.” IEEE Transactions on Signal
+       Processing 59, no. 9 (September 2011): 4097–4107.
+       https://doi.org/10.1109/TSP.2011.2138698.
+
     """
     x = data_iterator
-    #x = np.asarray(data)
-    #nobs, k_vars = x.shape
+    # x = np.asarray(data)
+    # nobs, k_vars = x.shape
 
     # calculate MAD only once if needed
     if start_cov is None or shrinkage_factor is None:
@@ -581,7 +611,7 @@ def cov_tyler_pairs_regularized(data_iterator, start_cov=None, normalize=False,
     corr = None
     if shrinkage_factor is None:
         # maybe some things here are redundant
-        xd = x / x.std(0) #scale_mad
+        xd = x / x.std(0)  # scale_mad
         corr = xd.T.dot(xd)
         corr * np.outer(scale_mad, scale_mad)
         corr *= k_vars / np.trace(corr)
@@ -606,8 +636,10 @@ def cov_tyler_pairs_regularized(data_iterator, start_cov=None, normalize=False,
         # this could be vectorized but could use a lot of memory
         # TODO:  try to work in vectorized batches
         # weights is a problem if iterator should be ndarray
-        #c0 = kn * sum(np.outer(xi, xj) / np.inner(xi, c_inv.dot(xj)) for xi, xj in x)
-        c0 = kn * sum(np.outer(xij[0], xij[1]) / np.inner(xij[0], c_inv.dot(xij[1])) for xij in x)
+        # c0 = kn * sum(np.outer(xi, xj) / np.inner(xi, c_inv.dot(xj))
+        #               for xi, xj in x)
+        c0 = kn * sum(np.outer(xij[0], xij[1]) /
+                      np.inner(xij[0], c_inv.dot(xij[1])) for xij in x)
         if shrinkage_factor != 0:
             c = (1 - shrinkage_factor) * c0 + shrinkage_factor * identity
         else:
@@ -624,7 +656,7 @@ def cov_tyler_pairs_regularized(data_iterator, start_cov=None, normalize=False,
     return res
 
 
-### iterative, M-estimators and related
+# ## iterative, M-estimators and related
 
 def cov_weighted(data, weights, center=None, weights_cov=None,
                  weights_cov_denom=None, ddof=1):
@@ -678,9 +710,10 @@ def cov_weighted(data, weights, center=None, weights_cov=None,
 
     References
     ----------
-    Rocke, D. M., and D. L. Woodruff. 1993. Computation of Robust Estimates
-    of Multivariate Location and Shape. Statistica Neerlandica 47 (1): 27-42.
-    doi:10.1111/j.1467-9574.1993.tb01404.x.
+    .. [1] Rocke, D. M., and D. L. Woodruff. 1993. Computation of Robust
+       Estimates of Multivariate Location and Shape.
+       Statistica Neerlandica 47 (1): 27-42.
+       doi:10.1111/j.1467-9574.1993.tb01404.x.
 
 
     """
@@ -732,30 +765,34 @@ def weights_mvt(distance, df, k_vars):
 
     References
     ----------
+    .. [1] Finegold, Michael A., and Mathias Drton. 2014. Robust Graphical
+       Modeling with T-Distributions. arXiv:1408.2033 [Cs, Stat], August.
+       http://arxiv.org/abs/1408.2033.
 
-    Finegold, Michael A., and Mathias Drton. 2014. Robust Graphical
-    Modeling with T-Distributions. arXiv:1408.2033 [Cs, Stat], August.
-    http://arxiv.org/abs/1408.2033.
-
-    Finegold, Michael, and Mathias Drton. 2011. ROBUST GRAPHICAL
-    MODELING OF GENE NETWORKS USING CLASSICAL AND ALTERNATIVE
-    T-DISTRIBUTIONS. The Annals of Applied Statistics 5 (2A): 1057-80.
-
-
+    .. [2] Finegold, Michael, and Mathias Drton. 2011. Robust graphical
+       modeling of gene networks using classical and alternative
+       t-distributions. The Annals of Applied Statistics 5 (2A): 1057-80.
     """
     w = (df + k_vars) / (df + distance)
     return w
 
 
 def weights_quantile(distance, frac=0.5, rescale=True):
+    """Weight function for cutoff weights.
+
+    The weight function is an indicator function for distances smaller then
+    the frac quantile.
+
+    rescale option is not supported.
+    """
     cutoff = np.percentile(distance, frac * 100)
     w = (distance < cutoff).astype(int)
     return w
 
 
 def _cov_iter(data, weights_func, weights_args=None, cov_init=None,
-             rescale='med', maxiter=3, atol=1e-14, rtol=1e-6):
-    """iterative robust covariance estimation using weights
+              rescale='med', maxiter=3, atol=1e-14, rtol=1e-6):
+    """Iterative robust covariance estimation using weights.
 
     This is in the style of M-estimators for given weight function.
 
@@ -783,8 +820,7 @@ def _cov_iter(data, weights_func, weights_args=None, cov_init=None,
 
     Returns
     -------
-    this will still change
-    cov, mean, w, dist, it, converged
+    Holder instance with attributes: cov, mean, w, dist, it, converged
 
     Notes
     -----
@@ -794,9 +830,15 @@ def _cov_iter(data, weights_func, weights_args=None, cov_init=None,
     their alternative t distribution which requires numerical or Monte Carlo
     integration.
 
+    References
+    ----------
+    .. [1] Finegold, Michael, and Mathias Drton. 2011. Robust graphical
+       modeling of gene networks using classical and alternative
+       t-distributions. Annals of Applied Statistics 5 (2A): 1057-80.
+
     """
     data = np.asarray(data)
-    nobs, k_vars = data.shape
+    nobs, k_vars = data.shape  # noqa: F841
 
     if cov_init is None:
         cov_init = np.cov(data.T)
@@ -828,7 +870,8 @@ def _cov_starting(data, is_standardized=True, quantile=0.5):
     """compute some robust starting covariances
 
     The returned covariance matrices are intended as starting values
-    for further processing. The main purpose is for DetXXX algorithms.
+    for further processing. The main purpose is for algorithms with high
+    breakdown point.
     The quality as standalone covariance matrices varies and might not
     be very good.
 
@@ -849,7 +892,7 @@ def _cov_starting(data, is_standardized=True, quantile=0.5):
     d = mahalanobis(xs, cov=None, cov_inv=np.eye(k_vars))
     cutoffs = np.percentile(d, [(k_vars+2) / nobs * 100, 25, 50])
     for cutoff in cutoffs:
-        xsp = xs[d<cutoff]
+        xsp = xs[d < cutoff]
         c0 = np.cov(xsp.T)
         c01 = _cov_iter(xs, weights_quantile, weights_args=(quantile,),
                         rescale="med", cov_init=c0, maxiter=100)
