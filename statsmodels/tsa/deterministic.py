@@ -1258,10 +1258,9 @@ you can pass additional components using the additional_terms input."""
             terms = terms.loc[:, ~all_zero]
         is_constant = terms.max(axis=0) == terms.min(axis=0)
         if np.sum(is_constant) > 1:
-            # Retain first
-            const_locs = np.where(is_constant)[0]
-            is_constant.iloc[const_locs[:1]] = False
-            terms = terms.loc[:, ~is_constant]
+            # flag surplus constant columns
+            surplus_consts = is_constant & is_constant.duplicated()
+            terms = terms.loc[:, ~surplus_consts]
         return terms
 
     @Appender(DeterministicTerm.in_sample.__doc__)
