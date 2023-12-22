@@ -10,7 +10,7 @@ cimport numpy as np
 import numpy as np
 
 ctypedef np.float64_t DOUBLE
-ctypedef np.int_t INT
+ctypedef np.int64_t INT
 
 def fast_linbin(np.ndarray[DOUBLE] X, double a, double b, int M, int trunc=1):
     """
