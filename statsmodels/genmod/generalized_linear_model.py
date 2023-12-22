@@ -22,7 +22,7 @@ from statsmodels.compat.pandas import Appender
 import warnings
 
 import numpy as np
-from numpy.linalg.linalg import LinAlgError
+from numpy.linalg import LinAlgError
 
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap

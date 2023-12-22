@@ -285,7 +285,7 @@ class IVRegressionResults(RegressionResults):
         #TODO: reuse condno from somewhere else ?
         #condno = np.linalg.cond(np.dot(self.wexog.T, self.wexog))
         wexog = self.model.wexog
-        eigvals = np.linalg.linalg.eigvalsh(np.dot(wexog.T, wexog))
+        eigvals = np.linalg.eigvalsh(np.dot(wexog.T, wexog))
         eigvals = np.sort(eigvals) #in increasing order
         condno = np.sqrt(eigvals[-1]/eigvals[0])
 

@@ -1949,7 +1949,7 @@ class RegressionResults(base.LikelihoodModelResults):
             eigvals = self._wexog_singular_values ** 2
         else:
             wx = self.model.wexog
-            eigvals = np.linalg.linalg.eigvalsh(wx.T @ wx)
+            eigvals = np.linalg.eigvalsh(wx.T @ wx)
         return np.sort(eigvals)[::-1]
 
     @cache_readonly
