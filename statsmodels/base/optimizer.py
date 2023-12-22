@@ -117,7 +117,7 @@ class Optimizer:
                 gtol : float
                     Stop when norm of gradient is less than gtol.
                 norm : float
-                    Order of norm (np.Inf is max, -np.Inf is min)
+                    Order of norm (np.inf is max, -np.inf is min)
                 epsilon
                     If fprime is approximated, use this value for the step
                     size. Only relevant if LikelihoodModel.score is None.
@@ -152,7 +152,7 @@ class Optimizer:
                 gtol : float
                     Stop when norm of gradient is less than gtol.
                 norm : float
-                    Order of norm (np.Inf is max, -np.Inf is min)
+                    Order of norm (np.inf is max, -np.inf is min)
                 epsilon : float
                     If fprime is approximated, use this value for the step
                     size. Can be scalar or vector.  Only relevant if
@@ -532,7 +532,7 @@ def _fit_bfgs(f, score, start_params, fargs, kwargs, disp=True,
     """
     check_kwargs(kwargs, ("gtol", "norm", "epsilon"), "bfgs")
     gtol = kwargs.setdefault('gtol', 1.0000000000000001e-05)
-    norm = kwargs.setdefault('norm', np.Inf)
+    norm = kwargs.setdefault('norm', np.inf)
     epsilon = kwargs.setdefault('epsilon', 1.4901161193847656e-08)
     retvals = optimize.fmin_bfgs(f, start_params, score, args=fargs,
                                  gtol=gtol, norm=norm, epsilon=epsilon,
@@ -804,7 +804,7 @@ def _fit_cg(f, score, start_params, fargs, kwargs, disp=True,
     """
     check_kwargs(kwargs, ("gtol", "norm", "epsilon"), "cg")
     gtol = kwargs.setdefault('gtol', 1.0000000000000001e-05)
-    norm = kwargs.setdefault('norm', np.Inf)
+    norm = kwargs.setdefault('norm', np.inf)
     epsilon = kwargs.setdefault('epsilon', 1.4901161193847656e-08)
     retvals = optimize.fmin_cg(f, start_params, score, gtol=gtol, norm=norm,
                                epsilon=epsilon, maxiter=maxiter,

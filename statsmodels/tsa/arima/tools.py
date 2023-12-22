@@ -119,7 +119,7 @@ def validate_basic(params, length, allow_infnan=False, title=None):
     length : int
         Expected length of the parameter vector.
     allow_infnan : bool, optional
-            Whether or not to allow `params` to contain -np.Inf, np.Inf, and
+            Whether or not to allow `params` to contain -np.inf, np.inf, and
             np.nan. Default is False.
     title : str, optional
         Description of the parameters (e.g. "autoregressive") to use in error
