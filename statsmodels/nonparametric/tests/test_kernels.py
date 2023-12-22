@@ -17,8 +17,7 @@ DEBUG = 0
 
 curdir = os.path.dirname(os.path.abspath(__file__))
 fname = 'results/results_kernel_regression.csv'
-# TODO: Remove recfromcsv
-results = np.recfromcsv(os.path.join(curdir, fname))
+results = np.genfromtxt(os.path.join(curdir, fname), delimiter=",")
 
 y = results['accident']
 x = results['service']
