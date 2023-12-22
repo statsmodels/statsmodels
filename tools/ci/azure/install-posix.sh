@@ -45,4 +45,7 @@ if [[ ${USE_CVXOPT} = true ]]; then python -m pip install cvxopt; fi
 
 if [ "${PIP_PRE}" = true ]; then
   python -m pip install -i https://pypi.anaconda.org/scientific-python-nightly-wheels/simple numpy pandas scipy --upgrade --use-deprecated=legacy-resolver
+  if [[ ${USE_MATPLOTLIB} == true ]]; then
+    python -m pip install -i https://pypi.anaconda.org/scientific-python-nightly-wheels/simple matplotlib --upgrade --use-deprecated=legacy-resolver
+  fi
 fi
