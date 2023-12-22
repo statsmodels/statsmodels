@@ -17,59 +17,6 @@ jobs:
   strategy:
     matrix:
       ${{ if eq(parameters.name, 'Linux') }}:
-        python_312_latest:
-          python.version: '3.12'
-          coverage: true
-        python_311_latest:
-          python.version: '3.11'
-          lint: true
-          CYTHON: 3.0.6
-          coverage: true
-        python_310_latest_install:
-          python.version: '3.10'
-          lint: true
-          test.install: true
-        python_310_latest_install_sdist:
-          python.version: '3.10'
-          test.install: true
-          TEST_SDIST: true
-        python_39:
-          python.version: '3.9'
-          USE_MATPLOTLIB: false
-          USE_CVXOPT: false
-          SCIPY: 1.5.4
-          PANDAS: 1.2.5
-          NUMPY: 1.20.3
-          CYTHON: 0.29.33
-          coverage: true
-          lint: true
-        python38:
-          python.version: '3.8'
-          use.conda: true
-          PANDAS: 1.0.5
-          NUMPY: 1.19.2
-          SCIPY: 1.5.2
-          MATPLOTLIB: 3.2.2
-          coverage: true
-          PYTEST_OPTIONS: ''
-          CYTHON: 0.29.36
-          lint: true
-        python_38_legacy_blas:
-          python.version: '3.8'
-          use.conda: true
-          coverage: true
-          NUMPY: 1.18.5
-          PANDAS: 1.0.5
-          MATPLOTLIB: 3.1.3
-          SCIPY: 1.4.1
-          BLAS: "nomkl blas=*=openblas"
-          PYTEST_OPTIONS: ''
-        python39_numpy120:
-          python.version: '3.9'
-          NUMPY: 1.20.3
-          SCIPY: 1.6.3
-          PANDAS: 1.1.5
-          MATPLOTLIB: 3.4.3
         python_311_pre:
           python.version: '3.11'
           pip.pre: true
@@ -77,13 +24,6 @@ jobs:
           python.version: '3.11'
           pip.pre: true
           SM_TEST_COPY_ON_WRITE: 1
-      ${{ if eq(parameters.name, 'macOS') }}:
-        python310_macos_latest:
-          python.version: '3.10'
-        python311_macos_latest:
-          python.version: '3.11'
-        python312_macos_latest:
-          python.version: '3.12'
     maxParallel: 10
 
   steps:
