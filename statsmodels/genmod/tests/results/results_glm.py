@@ -824,7 +824,7 @@ class Cancer:
     def __init__(self):
         filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                 "stata_cancer_glm.csv")
-        data = np.genfromtxt(open(filename, 'rb'), delimiter=",")
+        data = pd.read_csv(filename)
         self.endog = data.studytime
         dummies = pd.get_dummies(pd.Series(data.drug, dtype="category"),
                                  drop_first=True)
