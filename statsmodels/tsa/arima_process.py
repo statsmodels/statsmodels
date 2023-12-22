@@ -18,6 +18,7 @@ License: BSD
 """
 import warnings
 
+from statsmodels.compat.numpy import NP_LT_2
 from statsmodels.compat.pandas import Appender
 
 import numpy as np
@@ -25,6 +26,12 @@ from scipy import linalg, optimize, signal
 
 from statsmodels.tools.docstring import Docstring, remove_parameters
 from statsmodels.tools.validation import array_like
+
+if NP_LT_2:
+    ComplexWaring = np.ComplexWarning
+else:
+    class ComplexWarning(warnings.Warning):
+        pass
 
 __all__ = [
     "arma_acf",
@@ -500,7 +507,7 @@ def lpol2index(ar):
         index (lags) of lag polynomial with non-zero elements
     """
     with warnings.catch_warnings():
-        warnings.simplefilter("ignore", np.ComplexWarning)
+        warnings.simplefilter("ignore", ComplexWarning)
         ar = array_like(ar, "ar")
     index = np.nonzero(ar)[0]
     coeffs = ar[index]
@@ -734,7 +741,7 @@ class ArmaProcess:
         if ma is None:
             ma = np.array([1.0])
         with warnings.catch_warnings():
-            warnings.simplefilter("ignore", np.ComplexWarning)
+            warnings.simplefilter("ignore", ComplexWarning)
             self.ar = array_like(ar, "ar")
             self.ma = array_like(ma, "ma")
         self.arcoefs = -self.ar[1:]
