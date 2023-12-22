@@ -526,7 +526,7 @@ class TestClark1989PartialMissing(Clark1989):
     def setup_class(cls):
         super(TestClark1989PartialMissing, cls).setup_class()
         endog = cls.model.endog
-        endog[1, -51:] = np.NaN
+        endog[1, -51:] = np.nan
         cls.model.bind(endog)
 
         cls.results = cls.run_filter()

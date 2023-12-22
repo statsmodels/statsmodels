@@ -30,7 +30,7 @@ from statsmodels.tools.validation import array_like
 if NP_LT_2:
     ComplexWaring = np.ComplexWarning
 else:
-    class ComplexWarning(warnings.Warning):
+    class ComplexWarning(Warning):
         pass
 
 __all__ = [
