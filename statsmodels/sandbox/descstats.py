@@ -131,6 +131,7 @@ def descstats(data, cols=None, axis=0):
 #    import os
 #    loc='http://eagle1.american.edu/~js2796a/data/handguns_data.csv'
 #    relpath=(load_dataset(loc))
+#    TODO: Remove recfromcsv
 #    dta=np.recfromcsv(relpath)
 #    descstats(dta,['stpop'])
 #    raw_input('Hit enter for multivariate test')
@@ -163,6 +164,7 @@ if __name__ == '__main__':
     sum1a = descstats(data.exog[:,:1])
 
 #    loc='http://eagle1.american.edu/~js2796a/data/handguns_data.csv'
+#    TODO: Remove recfromcsv
 #    dta=np.recfromcsv(loc)
 #    summary2 = descstats(dta,['stpop'])
 #    summary3 =  descstats(dta,['stpop','avginc','vio'])
@@ -176,6 +178,7 @@ if __name__ == '__main__':
 
 ### This is *really* slow ###
     if os.path.isfile('./Econ724_PS_I_Data.csv'):
+        # TODO: Remove recfromcsv
         data2 = np.recfromcsv('./Econ724_PS_I_Data.csv')
         sum2 = descstats(data2.ahe)
         sum3 = descstats(np.column_stack((data2.ahe,data2.yrseduc)))
