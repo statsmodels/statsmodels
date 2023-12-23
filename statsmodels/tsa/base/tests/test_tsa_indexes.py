@@ -341,9 +341,16 @@ def test_instantiation_valid():
             warnings.simplefilter("error")
 
             for ix, freq in supported_date_indexes:
-                endog = pd.DataFrame(base_endog, index=ix)
+                for ix, freq in supported_date_indexes:
+                    # Avoid warnings due to Series with object dtype
+                    if isinstance(ix, pd.Series) and ix.dtype == object:
+                        with warnings.catch_warnings():
+                            warnings.simplefilter("ignore")
+                            endog = pd.DataFrame(base_endog, index=ix)
+                    else:
+                        endog = pd.DataFrame(base_endog, index=ix)
 
-                mod = tsa_model.TimeSeriesModel(endog, freq=freq)
+                    mod = tsa_model.TimeSeriesModel(endog, freq=freq)
                 if freq is None:
                     freq = ix.freq
                 if not isinstance(freq, str):
