@@ -342,7 +342,7 @@ def test_instantiation_valid():
 
             for ix, freq in supported_date_indexes:
                 endog = base_endog.copy()
-                endog.index = ix
+                endog.index = pd.Index(ix)
 
                 mod = tsa_model.TimeSeriesModel(endog, freq=freq)
                 if freq is None:
