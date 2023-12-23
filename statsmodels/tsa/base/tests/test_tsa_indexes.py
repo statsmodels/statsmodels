@@ -341,8 +341,7 @@ def test_instantiation_valid():
             warnings.simplefilter("error")
 
             for ix, freq in supported_date_indexes:
-                endog = base_endog.copy()
-                endog.index = pd.Index(ix)
+                endog = pd.DataFrame(base_endog, index=ix)
 
                 mod = tsa_model.TimeSeriesModel(endog, freq=freq)
                 if freq is None:
