@@ -28,7 +28,7 @@ from statsmodels.tools.docstring import Docstring, remove_parameters
 from statsmodels.tools.validation import array_like
 
 if NP_LT_2:
-    ComplexWaring = np.ComplexWarning
+    ComplexWarning = np.ComplexWarning
 else:
     class ComplexWarning(Warning):
         pass
