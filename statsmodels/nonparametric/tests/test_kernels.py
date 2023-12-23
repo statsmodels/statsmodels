@@ -9,7 +9,7 @@ import os
 import numpy as np
 from numpy.testing import assert_allclose, assert_array_less
 import pytest
-
+import pandas as pd
 from statsmodels.sandbox.nonparametric import kernels
 
 
