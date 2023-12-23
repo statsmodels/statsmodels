@@ -17,10 +17,10 @@ DEBUG = 0
 
 curdir = os.path.dirname(os.path.abspath(__file__))
 fname = 'results/results_kernel_regression.csv'
-results = np.genfromtxt(os.path.join(curdir, fname), delimiter=",")
+results = pd.read_csv(os.path.join(curdir, fname))
 
-y = results['accident']
-x = results['service']
+y = results['accident'].to_numpy(copy=True)
+x = results['service'].to_numpy(copy=True)
 positive = x >= 0
 x = np.log(x[positive])
 y = y[positive]
