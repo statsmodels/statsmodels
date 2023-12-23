@@ -172,7 +172,7 @@ class BaseIRAnalysis:
                                      stderr_type=stderr_type)
         return fig
 
-    def plot_cum_effects(self, orth=False, svar=False, *, impulse=None, response=None,
+    def plot_cum_effects(self, orth=False, *, impulse=None, response=None,
                          signif=0.05, plot_params=None, figsize=(10, 10),
                          subplot_params=None, plot_stderr=True,
                          stderr_type='asym', repl=1000, seed=None):
@@ -207,6 +207,8 @@ class BaseIRAnalysis:
             np.random.seed for Monte Carlo replications
         """
 
+        svar = self.svar
+                             
         if orth:
             title = 'Cumulative responses (orthogonalized)'
             cum_effects = self.orth_cum_effects
