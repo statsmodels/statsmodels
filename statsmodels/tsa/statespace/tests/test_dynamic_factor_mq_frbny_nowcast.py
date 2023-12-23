@@ -197,6 +197,7 @@ def matlab_results():
     def get_data(us_data, mean_M=None, std_M=None, mean_Q=None, std_Q=None):
         dta_M = us_data[['CPIAUCSL', 'UNRATE', 'PAYEMS', 'RSAFS', 'TTLCONS',
                          'TCU']].copy()
+        # TODO: Needs to be recase to DataTimeIndex before resample
         dta_Q = us_data[['GDPC1', 'ULCNFB']].copy().resample('Q').last()
 
         dta_M['CPIAUCSL'] = (dta_M['CPIAUCSL'] /

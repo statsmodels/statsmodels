@@ -38,6 +38,7 @@ def simulate_k_factor1(nobs=1000):
     levels_M.iloc[0] = 100
     levels_M = levels_M.cumprod()
     log_levels_M = np.log(levels_M) * 100
+    # TODO: Explicitly recast
     log_levels_Q = (np.log(levels_M).resample('Q', convention='e')
                                     .sum().iloc[:-1] * 100)
 
@@ -121,6 +122,7 @@ def simulate_k_factors3_blocks2(nobs=1000, idiosyncratic_ar1=False):
     levels_M.iloc[0] = 100
     levels_M = levels_M.cumprod()
     log_levels_M = np.log(levels_M) * 100
+    # TODO: Explicitly recast
     log_levels_Q = (np.log(levels_M).resample('Q', convention='e')
                                     .sum().iloc[:-1] * 100)
 
@@ -195,6 +197,7 @@ def gen_k_factor1_nonstationary(nobs=1000, k=1, idiosyncratic_ar1=False,
     levels_M.iloc[0] = 100
     levels_M = levels_M.cumprod()
     log_levels_M = np.log(levels_M) * 100
+    # TODO: Explicitly recast
     log_levels_Q = (np.log(levels_M).resample('Q', convention='e')
                                     .sum().iloc[:-1] * 100)
 
@@ -258,6 +261,7 @@ def gen_k_factor1(nobs=10000, k=1, idiosyncratic_ar1=False,
     levels_M.iloc[0] = 100
     levels_M = levels_M.cumprod()
     log_levels_M = np.log(levels_M) * 100
+    # TODO: Explicitly recast
     log_levels_Q = (np.log(levels_M).resample('Q', convention='e')
                                     .sum().iloc[:-1] * 100)
 
@@ -372,6 +376,7 @@ def gen_k_factor2(nobs=10000, k=2, idiosyncratic_ar1=False,
     levels_M.iloc[0] = 100
     levels_M = levels_M.cumprod()
     # log_levels_M = np.log(levels_M) * 100
+    # TODO: Explicitly recast
     log_levels_Q = (np.log(levels_M).resample('Q', convention='e')
                                     .sum().iloc[:-1] * 100)
 

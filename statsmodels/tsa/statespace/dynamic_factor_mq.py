@@ -1570,6 +1570,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             # Combine the datasets
             endog = pd.concat([
                 endog_monthly,
+                # TODO: Explicitly recast
                 endog_quarterly.resample('M', convention='end').first()],
                 axis=1)
 

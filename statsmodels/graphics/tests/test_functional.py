@@ -57,7 +57,7 @@ def test_hdr_basic(close_figures):
 
     assert_almost_equal(quant, quant_t, decimal=0)
 
-    labels_pos = np.all(np.in1d(data, hdr.outliers).reshape(data.shape),
+    labels_pos = np.all(np.isin(data, hdr.outliers).reshape(data.shape),
                         axis=1)
     outliers = labels[labels_pos]
     assert_equal([1982, 1983, 1997, 1998], outliers)
@@ -147,7 +147,7 @@ def test_hdr_threshold(close_figures):
     except WindowsError:
         pytest.xfail('Multiprocess randomly crashes in Windows testing')
 
-    labels_pos = np.all(np.in1d(data, hdr.outliers).reshape(data.shape),
+    labels_pos = np.all(np.isin(data, hdr.outliers).reshape(data.shape),
                         axis=1)
     outliers = labels[labels_pos]
     assert_equal([1968, 1982, 1983, 1997, 1998], outliers)

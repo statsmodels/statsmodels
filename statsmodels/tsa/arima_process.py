@@ -30,8 +30,7 @@ from statsmodels.tools.validation import array_like
 if NP_LT_2:
     ComplexWarning = np.ComplexWarning
 else:
-    class ComplexWarning(Warning):
-        pass
+    ComplexWarning = np.exceptions.ComplexWarning
 
 __all__ = [
     "arma_acf",
