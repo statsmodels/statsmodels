@@ -200,6 +200,7 @@ def matlab_results():
         dta_Q = us_data[['GDPC1', 'ULCNFB']].copy()
         dta_Q.index = dta_Q.index.to_timestamp()
         dta_Q = dta_Q.resample('Q').last()
+        dta_Q.index = dta_Q.index.to_period()
 
         dta_M['CPIAUCSL'] = (dta_M['CPIAUCSL'] /
                              dta_M['CPIAUCSL'].shift(1) - 1) * 100
