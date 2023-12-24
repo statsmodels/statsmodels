@@ -197,10 +197,11 @@ def matlab_results():
     def get_data(us_data, mean_M=None, std_M=None, mean_Q=None, std_Q=None):
         dta_M = us_data[['CPIAUCSL', 'UNRATE', 'PAYEMS', 'RSAFS', 'TTLCONS',
                          'TCU']].copy()
-        dta_Q = us_data[['GDPC1', 'ULCNFB']].copy()
-        dta_Q.index = dta_Q.index.to_timestamp()
-        dta_Q = dta_Q.resample('Q').last()
-        dta_Q.index = dta_Q.index.to_period()
+        # dta_Q = us_data[['GDPC1', 'ULCNFB']].copy()
+        # dta_Q.index = dta_Q.index.to_timestamp()
+        # dta_Q = dta_Q.resample('Q').last()
+        # dta_Q.index = dta_Q.index.to_period()
+        dta_Q = us_data[['GDPC1', 'ULCNFB']].copy().resample('Q').last()
 
         dta_M['CPIAUCSL'] = (dta_M['CPIAUCSL'] /
                              dta_M['CPIAUCSL'].shift(1) - 1) * 100

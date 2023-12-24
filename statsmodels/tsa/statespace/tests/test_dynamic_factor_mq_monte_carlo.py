@@ -17,8 +17,6 @@ from scipy.signal import lfilter
 from statsmodels.tsa.statespace import (
     dynamic_factor_mq, sarimax, varmax, dynamic_factor)
 
-def test_blah():
-    v = simulate_k_factor1()
 
 def simulate_k_factor1(nobs=1000):
     mod_sim = dynamic_factor.DynamicFactor(np.zeros((1, 4)), k_factors=1,
