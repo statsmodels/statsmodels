@@ -1,7 +1,7 @@
 """
 Monte Carlo-type tests for the BM model
 
-Note that that the actual tests that run are just regression tests against
+Note that the actual tests that run are just regression tests against
 previously estimated values with small sample sizes that can be run quickly
 for continuous integration. However, this file can be used to re-run (slow)
 large-sample Monte Carlo tests.
@@ -17,6 +17,8 @@ from scipy.signal import lfilter
 from statsmodels.tsa.statespace import (
     dynamic_factor_mq, sarimax, varmax, dynamic_factor)
 
+def test_blah():
+    v = simulate_k_factor1()
 
 def simulate_k_factor1(nobs=1000):
     mod_sim = dynamic_factor.DynamicFactor(np.zeros((1, 4)), k_factors=1,
@@ -38,9 +40,11 @@ def simulate_k_factor1(nobs=1000):
     levels_M.iloc[0] = 100
     levels_M = levels_M.cumprod()
     log_levels_M = np.log(levels_M) * 100
-    # TODO: Explicitly recast
-    log_levels_Q = (np.log(levels_M).resample('Q', convention='e')
-                                    .sum().iloc[:-1] * 100)
+    # Recast to datetime and then back to period to resample
+    log_levels_Q = np.log(levels_M)
+    log_levels_Q.index = log_levels_Q.index.to_timestamp()
+    log_levels_Q = log_levels_Q.resample('Q', convention='e').sum().iloc[:-1] * 100
+    log_levels_Q.index = log_levels_Q.index.to_period()
 
     # This is an alternative way to compute the quarterly levels
     # endog_M = endog.iloc[:, :3]
