@@ -126,9 +126,11 @@ def simulate_k_factors3_blocks2(nobs=1000, idiosyncratic_ar1=False):
     levels_M.iloc[0] = 100
     levels_M = levels_M.cumprod()
     log_levels_M = np.log(levels_M) * 100
-    # TODO: Explicitly recast
-    log_levels_Q = (np.log(levels_M).resample('Q', convention='e')
-                                    .sum().iloc[:-1] * 100)
+
+    log_levels_Q = np.log(levels_M)
+    log_levels_Q.index = log_levels_Q.index.to_timestamp()
+    log_levels_Q = log_levels_Q.resample('Q', convention='e').sum().iloc[:-1] * 100
+    log_levels_Q.index = log_levels_Q.index.to_period()
 
     # Compute the growth rate series that we'll actually run the model on
     endog_M = log_levels_M.iloc[:, :7].diff().iloc[1:]
@@ -201,9 +203,11 @@ def gen_k_factor1_nonstationary(nobs=1000, k=1, idiosyncratic_ar1=False,
     levels_M.iloc[0] = 100
     levels_M = levels_M.cumprod()
     log_levels_M = np.log(levels_M) * 100
-    # TODO: Explicitly recast
-    log_levels_Q = (np.log(levels_M).resample('Q', convention='e')
-                                    .sum().iloc[:-1] * 100)
+
+    log_levels_Q = np.log(levels_M)
+    log_levels_Q.index = log_levels_Q.index.to_timestamp()
+    log_levels_Q = log_levels_Q.resample('Q', convention='e').sum().iloc[:-1] * 100
+    log_levels_Q.index = log_levels_Q.index.to_period()
 
     # Compute the growth rate series that we'll actually run the model on
     endog_M = log_levels_M.diff().iloc[1:, :k]
@@ -265,9 +269,11 @@ def gen_k_factor1(nobs=10000, k=1, idiosyncratic_ar1=False,
     levels_M.iloc[0] = 100
     levels_M = levels_M.cumprod()
     log_levels_M = np.log(levels_M) * 100
-    # TODO: Explicitly recast
-    log_levels_Q = (np.log(levels_M).resample('Q', convention='e')
-                                    .sum().iloc[:-1] * 100)
+
+    log_levels_Q = np.log(levels_M)
+    log_levels_Q.index = log_levels_Q.index.to_timestamp()
+    log_levels_Q = log_levels_Q.resample('Q', convention='e').sum().iloc[:-1] * 100
+    log_levels_Q.index = log_levels_Q.index.to_period()
 
     # Compute the growth rate series that we'll actually run the model on
     endog_M = log_levels_M.diff().iloc[1:, :k]
@@ -380,9 +386,10 @@ def gen_k_factor2(nobs=10000, k=2, idiosyncratic_ar1=False,
     levels_M.iloc[0] = 100
     levels_M = levels_M.cumprod()
     # log_levels_M = np.log(levels_M) * 100
-    # TODO: Explicitly recast
-    log_levels_Q = (np.log(levels_M).resample('Q', convention='e')
-                                    .sum().iloc[:-1] * 100)
+    log_levels_Q = np.log(levels_M)
+    log_levels_Q.index = log_levels_Q.index.to_timestamp()
+    log_levels_Q = log_levels_Q.resample('Q', convention='e').sum().iloc[:-1] * 100
+    log_levels_Q.index = log_levels_Q.index.to_period()
 
     # Compute the quarterly growth rate series
     endog_Q = log_levels_Q.diff()
