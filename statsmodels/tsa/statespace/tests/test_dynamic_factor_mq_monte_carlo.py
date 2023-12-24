@@ -43,7 +43,7 @@ def simulate_k_factor1(nobs=1000):
     # Recast to datetime and then back to period to resample
     log_levels_Q = np.log(levels_M)
     log_levels_Q.index = log_levels_Q.index.to_timestamp()
-    log_levels_Q = log_levels_Q.resample('Q', convention='e').sum().iloc[:-1] * 100
+    log_levels_Q = log_levels_Q.resample('QE').sum().iloc[:-1] * 100
     log_levels_Q.index = log_levels_Q.index.to_period()
 
     # This is an alternative way to compute the quarterly levels
@@ -129,7 +129,7 @@ def simulate_k_factors3_blocks2(nobs=1000, idiosyncratic_ar1=False):
 
     log_levels_Q = np.log(levels_M)
     log_levels_Q.index = log_levels_Q.index.to_timestamp()
-    log_levels_Q = log_levels_Q.resample('Q', convention='e').sum().iloc[:-1] * 100
+    log_levels_Q = log_levels_Q.resample('QE').sum().iloc[:-1] * 100
     log_levels_Q.index = log_levels_Q.index.to_period()
 
     # Compute the growth rate series that we'll actually run the model on
@@ -206,7 +206,7 @@ def gen_k_factor1_nonstationary(nobs=1000, k=1, idiosyncratic_ar1=False,
 
     log_levels_Q = np.log(levels_M)
     log_levels_Q.index = log_levels_Q.index.to_timestamp()
-    log_levels_Q = log_levels_Q.resample('Q', convention='e').sum().iloc[:-1] * 100
+    log_levels_Q = log_levels_Q.resample('QE').sum().iloc[:-1] * 100
     log_levels_Q.index = log_levels_Q.index.to_period()
 
     # Compute the growth rate series that we'll actually run the model on
@@ -272,7 +272,7 @@ def gen_k_factor1(nobs=10000, k=1, idiosyncratic_ar1=False,
 
     log_levels_Q = np.log(levels_M)
     log_levels_Q.index = log_levels_Q.index.to_timestamp()
-    log_levels_Q = log_levels_Q.resample('Q', convention='e').sum().iloc[:-1] * 100
+    log_levels_Q = log_levels_Q.resample('QE').sum().iloc[:-1] * 100
     log_levels_Q.index = log_levels_Q.index.to_period()
 
     # Compute the growth rate series that we'll actually run the model on
