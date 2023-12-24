@@ -68,6 +68,7 @@ def lstsq(a, b, rcond=None):
         rcond = -1
     return np.linalg.lstsq(a, b, rcond=rcond)
 
+
 if not NP_LT_2:
     # Temporary workaround for patsy
     import numpy
