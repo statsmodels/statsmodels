@@ -1568,15 +1568,9 @@ class DynamicFactorMQ(mlemodel.MLEModel):
                 endog_quarterly = endog_quarterly.to_period('Q')
 
             # Combine the datasets
-            if isinstance(endog_quarterly.index, pd.PeriodIndex):
-                endog_quarterly.index = endog_quarterly.index.to_timestamp()
-            resampled_endog_quarterly = endog_quarterly.resample('M').first()
-            index = resampled_endog_quarterly.index.to_period()
-            resampled_endog_quarterly.index = index
             endog = pd.concat([
                 endog_monthly,
-                resampled_endog_quarterly,
-                ],
+                endog_quarterly.resample('M', convention='end').first()],
                 axis=1)
 
             # Make sure we didn't accidentally get duplicate column names
