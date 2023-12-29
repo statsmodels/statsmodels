@@ -163,7 +163,6 @@ def test_hdr_bw(close_figures):
         pytest.xfail('Multiprocess randomly crashes in Windows testing')
 
 
-
 @pytest.mark.slow
 @pytest.mark.matplotlib
 def test_hdr_ncomp(close_figures):

@@ -390,7 +390,7 @@ def gen_k_factor2(nobs=10000, k=2, idiosyncratic_ar1=False,
     # log_levels_M = np.log(levels_M) * 100
     log_levels_Q = np.log(levels_M)
     log_levels_Q.index = log_levels_Q.index.to_timestamp()
-    log_levels_Q = log_levels_Q.resample('Q', convention='e').sum().iloc[:-1] * 100
+    log_levels_Q = log_levels_Q.resample(QUARTER_END).sum().iloc[:-1] * 100
     log_levels_Q.index = log_levels_Q.index.to_period()
 
     # Compute the quarterly growth rate series

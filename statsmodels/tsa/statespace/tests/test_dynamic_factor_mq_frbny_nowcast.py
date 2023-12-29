@@ -1,3 +1,5 @@
+from statsmodels.compat.pandas import QUARTER_END
+
 import os
 
 import numpy as np
@@ -199,7 +201,7 @@ def matlab_results():
                          'TCU']].copy()
         dta_Q = us_data[['GDPC1', 'ULCNFB']].copy()
         dta_Q.index = dta_Q.index.to_timestamp()
-        dta_Q = dta_Q.resample('Q').last()
+        dta_Q = dta_Q.resample(QUARTER_END).last()
         dta_Q.index = dta_Q.index.to_period()
 
         dta_M['CPIAUCSL'] = (dta_M['CPIAUCSL'] /
