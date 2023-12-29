@@ -490,10 +490,10 @@ class TestHoltWinters:
         fit5 = mod5.fit()
         # We accept the below values as we getting a better SSE than text book
         assert_almost_equal(fit1.params["smoothing_level"], 1.00, 2)
-        assert_almost_equal(fit1.params["smoothing_trend"], np.NaN, 2)
-        assert_almost_equal(fit1.params["damping_trend"], np.NaN, 2)
+        assert_almost_equal(fit1.params["smoothing_trend"], np.nan, 2)
+        assert_almost_equal(fit1.params["damping_trend"], np.nan, 2)
         assert_almost_equal(fit1.params["initial_level"], 263.96, 1)
-        assert_almost_equal(fit1.params["initial_trend"], np.NaN, 2)
+        assert_almost_equal(fit1.params["initial_trend"], np.nan, 2)
         assert_almost_equal(fit1.sse, 6761.35, 2)  # 6080.26
         assert isinstance(fit1.summary().as_text(), str)
 

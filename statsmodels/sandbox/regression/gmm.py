@@ -53,13 +53,19 @@ from statsmodels.compat.python import lrange
 import numpy as np
 from scipy import optimize, stats
 
-from statsmodels.tools.numdiff import approx_fprime
-from statsmodels.base.model import (Model,
-                                    LikelihoodModel, LikelihoodModelResults)
-from statsmodels.regression.linear_model import (OLS, RegressionResults,
-                                                 RegressionResultsWrapper)
+from statsmodels.base.model import (
+    LikelihoodModel,
+    LikelihoodModelResults,
+    Model,
+)
+from statsmodels.regression.linear_model import (
+    OLS,
+    RegressionResults,
+    RegressionResultsWrapper,
+)
 import statsmodels.stats.sandwich_covariance as smcov
 from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools.numdiff import approx_fprime
 from statsmodels.tools.tools import _ensure_2d
 
 DEBUG = 0
@@ -277,15 +283,18 @@ class IVRegressionResults(RegressionResults):
         """
 
         #TODO: import where we need it (for now), add as cached attributes
-        from statsmodels.stats.stattools import (jarque_bera,
-                omni_normtest, durbin_watson)
+        from statsmodels.stats.stattools import (
+            durbin_watson,
+            jarque_bera,
+            omni_normtest,
+        )
         jb, jbpv, skew, kurtosis = jarque_bera(self.wresid)
         omni, omnipv = omni_normtest(self.wresid)
 
         #TODO: reuse condno from somewhere else ?
         #condno = np.linalg.cond(np.dot(self.wexog.T, self.wexog))
         wexog = self.model.wexog
-        eigvals = np.linalg.linalg.eigvalsh(np.dot(wexog.T, wexog))
+        eigvals = np.linalg.eigvalsh(np.dot(wexog.T, wexog))
         eigvals = np.sort(eigvals) #in increasing order
         condno = np.sqrt(eigvals[-1]/eigvals[0])
 

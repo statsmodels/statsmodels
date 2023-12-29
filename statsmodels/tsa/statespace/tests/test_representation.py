@@ -17,17 +17,25 @@ import os
 import warnings
 
 import numpy as np
+from numpy.testing import (
+    assert_allclose,
+    assert_almost_equal,
+    assert_equal,
+    assert_raises,
+)
 import pandas as pd
 import pytest
 
-from statsmodels.tsa.statespace.representation import Representation
+from statsmodels.tsa.statespace import sarimax, tools
 from statsmodels.tsa.statespace.kalman_filter import (
-    KalmanFilter, FilterResults, PredictionResults)
+    FilterResults,
+    KalmanFilter,
+    PredictionResults,
+)
+from statsmodels.tsa.statespace.representation import Representation
 from statsmodels.tsa.statespace.simulation_smoother import SimulationSmoother
-from statsmodels.tsa.statespace import tools, sarimax
+
 from .results import results_kalman_filter
-from numpy.testing import (
-    assert_equal, assert_almost_equal, assert_raises, assert_allclose)
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -526,7 +534,7 @@ class TestClark1989PartialMissing(Clark1989):
     def setup_class(cls):
         super(TestClark1989PartialMissing, cls).setup_class()
         endog = cls.model.endog
-        endog[1, -51:] = np.NaN
+        endog[1, -51:] = np.nan
         cls.model.bind(endog)
 
         cls.results = cls.run_filter()

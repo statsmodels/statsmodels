@@ -20,17 +20,17 @@ variables:
 
 jobs:
 
-- template: tools/ci/azure/azure_template_windows.yml
+- template: tools/ci/azure/azure_template_posix.yml
   parameters:
-    name: Windows
-    vmImage: windows-latest
+    name: Linux
+    vmImage: ubuntu-latest
 
 - template: tools/ci/azure/azure_template_posix.yml
   parameters:
     name: macOS
     vmImage: macOS-latest
 
-- template: tools/ci/azure/azure_template_posix.yml
+- template: tools/ci/azure/azure_template_windows.yml
   parameters:
-    name: Linux
-    vmImage: ubuntu-latest
+    name: Windows
+    vmImage: windows-latest

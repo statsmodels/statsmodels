@@ -49,10 +49,7 @@ from statsmodels.emplike.elregress import _ELRegOpts
 # need import in module instead of lazily to copy `__doc__`
 from statsmodels.regression._prediction import PredictionResults
 from statsmodels.tools.decorators import cache_readonly, cache_writable
-from statsmodels.tools.sm_exceptions import (
-    InvalidTestWarning,
-    ValueWarning,
-    )
+from statsmodels.tools.sm_exceptions import InvalidTestWarning, ValueWarning
 from statsmodels.tools.tools import pinv_extended
 from statsmodels.tools.typing import Float64Array
 from statsmodels.tools.validation import bool_like, float_like, string_like
@@ -1949,7 +1946,7 @@ class RegressionResults(base.LikelihoodModelResults):
             eigvals = self._wexog_singular_values ** 2
         else:
             wx = self.model.wexog
-            eigvals = np.linalg.linalg.eigvalsh(wx.T @ wx)
+            eigvals = np.linalg.eigvalsh(wx.T @ wx)
         return np.sort(eigvals)[::-1]
 
     @cache_readonly

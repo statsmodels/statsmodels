@@ -487,7 +487,7 @@ class AFTResults(OptAFT):
 
                 llr = res[1]
                 return llr, chi2.sf(llr, len(param_nums))
-            except np.linalg.linalg.LinAlgError:
+            except np.linalg.LinAlgError:
                 return np.inf, 0
 
     def ci_beta(self, param_num, beta_high, beta_low, sig=.05):
