@@ -9,15 +9,17 @@ large-sample Monte Carlo tests.
 from statsmodels.compat.pandas import QUARTER_END
 
 import numpy as np
-import pandas as pd
-
-import pytest
-
 from numpy.testing import assert_allclose
+import pandas as pd
+import pytest
 from scipy.signal import lfilter
 
 from statsmodels.tsa.statespace import (
-    dynamic_factor_mq, sarimax, varmax, dynamic_factor)
+    dynamic_factor,
+    dynamic_factor_mq,
+    sarimax,
+    varmax,
+)
 
 
 def simulate_k_factor1(nobs=1000):

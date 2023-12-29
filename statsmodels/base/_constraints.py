@@ -362,9 +362,9 @@ def fit_constrained_wrap(model, constraints, start_params=None, **fit_kwds):
     #       patched version
     # TODO: decide whether to move the imports
     from patsy import DesignInfo
+
     # we need this import if we copy it to a different module
     #from statsmodels.base._constraints import fit_constrained
-
     # same pattern as in base.LikelihoodModel.t_test
     lc = DesignInfo(self.exog_names).linear_constraint(constraints)
     R, q = lc.coefs, lc.constants

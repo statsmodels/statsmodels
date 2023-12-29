@@ -4,10 +4,12 @@ to untie these from LikelihoodModel so that they may be re-used generally.
 """
 from __future__ import annotations
 
+from statsmodels.compat.scipy import SP_LT_15, SP_LT_17
+
 from typing import Any, Sequence
+
 import numpy as np
 from scipy import optimize
-from statsmodels.compat.scipy import SP_LT_15, SP_LT_17
 
 
 def check_kwargs(kwargs: dict[str, Any], allowed: Sequence[str], method: str):

@@ -6,12 +6,13 @@ Created on Sat Dec 14 17:23:25 2013
 Author: Josef Perktold
 """
 import os
+
 import numpy as np
 from numpy.testing import assert_allclose, assert_array_less
-import pytest
 import pandas as pd
-from statsmodels.sandbox.nonparametric import kernels
+import pytest
 
+from statsmodels.sandbox.nonparametric import kernels
 
 DEBUG = 0
 

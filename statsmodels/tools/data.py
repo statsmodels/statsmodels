@@ -8,7 +8,7 @@ import pandas as pd
 
 
 def _check_period_index(x, freq="M"):
-    from pandas import PeriodIndex, DatetimeIndex
+    from pandas import DatetimeIndex, PeriodIndex
     if not isinstance(x.index, (DatetimeIndex, PeriodIndex)):
         raise ValueError("The index must be a DatetimeIndex or PeriodIndex")
 

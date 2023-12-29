@@ -24,13 +24,11 @@ import warnings
 import numpy as np
 from numpy.linalg import LinAlgError
 
+from statsmodels.base import _prediction_inference as pred
+import statsmodels.base._parameter_inference as pinfer
+from statsmodels.base._prediction_inference import PredictionResultsMean
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
-
-from statsmodels.base import _prediction_inference as pred
-from statsmodels.base._prediction_inference import PredictionResultsMean
-import statsmodels.base._parameter_inference as pinfer
-
 from statsmodels.graphics._regressionplots_doc import (
     _plot_added_variable_doc,
     _plot_ceres_residuals_doc,
@@ -53,7 +51,6 @@ from statsmodels.tools.validation import float_like
 
 # need import in module instead of lazily to copy `__doc__`
 from . import families
-
 
 __all__ = ['GLM', 'PredictionResultsMean']
 
@@ -661,7 +658,7 @@ class GLM(base.LikelihoodModel):
         from statsmodels.discrete.discrete_margins import (
             _get_count_effects,
             _get_dummy_effects,
-            )
+        )
 
         if count_idx is not None:
             margeff = _get_count_effects(margeff, exog, count_idx, transform,

@@ -16,10 +16,10 @@ Judge, ... (1985): The Theory and Practise of Econometrics
 Author: josefpktd
 License: BSD
 """
-import warnings
-
 from statsmodels.compat.numpy import NP_LT_2
 from statsmodels.compat.pandas import Appender
+
+import warnings
 
 import numpy as np
 from scipy import linalg, optimize, signal

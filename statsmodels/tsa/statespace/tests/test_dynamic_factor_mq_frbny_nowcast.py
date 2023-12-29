@@ -1,12 +1,12 @@
 import os
+
 import numpy as np
+from numpy.testing import assert_allclose
 import pandas as pd
+import pytest
 from scipy.io import matlab
 
-import pytest
-from numpy.testing import assert_allclose
-
-from statsmodels.tsa.statespace import initialization, dynamic_factor_mq
+from statsmodels.tsa.statespace import dynamic_factor_mq, initialization
 
 # Load dataset
 current_path = os.path.dirname(os.path.abspath(__file__))
