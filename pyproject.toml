@@ -7,9 +7,9 @@ requires = [
     "cython>=0.29.33,<4",  # Sync with CYTHON_MIN_VER in setup
     # Workaround for oldest supported numpy using 1.21.6, but SciPy 1.9.2+ requiring 1.22.3+
     "oldest-supported-numpy; python_version!='3.10' or platform_system!='Windows' or platform_python_implementation=='PyPy'",
-    "numpy>=1.22.3,<3; python_version=='3.10' and platform_system=='Windows' and platform_python_implementation != 'PyPy'",
-    "numpy<3; python_version>='3.12'",
-    "scipy>=1.4",
+    "numpy>=1.22.3,<3",
+    "numpy<3; python_version>='3.13'",
+    "scipy>=1.7",
     "setuptools_scm[toml]>=8,<9"
 ]
 build-backend = "setuptools.build_meta"

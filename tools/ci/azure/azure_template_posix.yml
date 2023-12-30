@@ -37,39 +37,29 @@ jobs:
           python.version: '3.9'
           USE_MATPLOTLIB: false
           USE_CVXOPT: false
-          SCIPY: 1.5.4
-          PANDAS: 1.2.5
-          NUMPY: 1.20.3
+          SCIPY: 1.8.1
+          PANDAS: 1.5.3
+          NUMPY: 1.23.5
           CYTHON: 0.29.33
           coverage: true
           lint: true
-        python38:
-          python.version: '3.8'
+        python_39_legacy_blas:
+          python.version: '3.9'
           use.conda: true
-          PANDAS: 1.0.5
-          NUMPY: 1.19.2
-          SCIPY: 1.5.2
-          MATPLOTLIB: 3.2.2
           coverage: true
-          PYTEST_OPTIONS: ''
+          NUMPY: 1.22.3
+          PANDAS: 1.3.5
+          MATPLOTLIB: 3.5.2
+          SCIPY: 1.7.3
           CYTHON: 0.29.36
-          lint: true
-        python_38_legacy_blas:
-          python.version: '3.8'
-          use.conda: true
-          coverage: true
-          NUMPY: 1.18.5
-          PANDAS: 1.0.5
-          MATPLOTLIB: 3.1.3
-          SCIPY: 1.4.1
           BLAS: "nomkl blas=*=openblas"
           PYTEST_OPTIONS: ''
-        python39_numpy120:
-          python.version: '3.9'
-          NUMPY: 1.20.3
-          SCIPY: 1.6.3
-          PANDAS: 1.1.5
-          MATPLOTLIB: 3.4.3
+        python310_numpy124:
+          python.version: '3.10'
+          NUMPY: 1.24.4
+          SCIPY: 1.9.3
+          PANDAS: 1.5.3
+          MATPLOTLIB: 3.6.0
         python_311_pre:
           python.version: '3.11'
           pip.pre: true
