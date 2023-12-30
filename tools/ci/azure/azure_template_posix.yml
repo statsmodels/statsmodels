@@ -47,10 +47,11 @@ jobs:
           python.version: '3.9'
           use.conda: true
           coverage: true
-          NUMPY: 1.22.4
+          NUMPY: 1.22.3
           PANDAS: 1.3.5
           MATPLOTLIB: 3.5.2
           SCIPY: 1.7.3
+          CYTHON: 0.29.36
           BLAS: "nomkl blas=*=openblas"
           PYTEST_OPTIONS: ''
         python310_numpy124:
@@ -93,6 +94,10 @@ jobs:
   - script: |
       source tools/ci/azure/install-posix.sh
     displayName: 'Install dependencies'
+
+  - script: ./lint.sh
+    displayName: 'Check style'
+    condition: eq(variables['lint'], 'true')
 
   - script: |
       echo "Installing to site packages"
@@ -162,10 +167,6 @@ jobs:
       testResultsFiles: '**/test-results.xml'
       testRunTitle: 'Python $(python.version)'
     condition: succeededOrFailed()
-
-  - script: ./lint.sh
-    displayName: 'Check style'
-    condition: eq(variables['lint'], 'true')
 
   - task: PublishCodeCoverageResults@1
     inputs:

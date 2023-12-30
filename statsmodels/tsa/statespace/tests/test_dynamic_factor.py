@@ -537,8 +537,10 @@ class TestDynamicFactor_general_errors(CheckDynamicFactor):
             # -> Check that we have the right coefficients
             for j in range(self.model.k_endog):
                 name = self.model.endog_names[j]
-                pattern = r'L1.e\({}\) +{}'.format(name, forg(params[offset + j],
-                                                          prec=4))
+                pattern = r'L1.e\({}\) +{}'.format(
+                    name,
+                    forg(params[offset + j], prec=4)
+                )
                 assert re.search(pattern, table)
 
         # Check the Error covariance matrix output

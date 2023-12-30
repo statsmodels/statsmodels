@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from typing import Tuple, Type, Union
 import warnings
 
 from _pytest.recwarn import WarningsChecker

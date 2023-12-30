@@ -172,10 +172,10 @@ class TransfGumbel(Transforms):
         p = phi  # shorthand
         b = theta
         d4 = ((6 * b**3 - 11 * b**2 + 6. * b - 1) * p**(1 / b) +
-               (11 * b**2 - 18 * b + 7) * p**(2 / b) +
-               (6 * (b - 1)) * p**(3 / b) +
-               p**(4 / b)
-              )/(p * b)**4
+              (11 * b**2 - 18 * b + 7) * p**(2 / b) +
+              (6 * (b - 1)) * p**(3 / b) +
+              p**(4 / b)
+              ) / (p * b)**4
 
         d4 *= np.exp(-p**(1 / b))
         return d4

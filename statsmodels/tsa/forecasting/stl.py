@@ -1,7 +1,7 @@
 from statsmodels.compat.pandas import Substitution, is_int_index
 
 import datetime as dt
-from typing import Any, Dict, Optional, Union
+from typing import Any, Optional, Union
 
 import numpy as np
 import pandas as pd

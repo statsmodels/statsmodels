@@ -11,7 +11,6 @@ from types import SimpleNamespace
 from typing import (
     TYPE_CHECKING,
     Any,
-    Dict,
     NamedTuple,
     Optional,
     Union,

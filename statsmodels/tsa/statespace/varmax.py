@@ -851,7 +851,7 @@ class VARMAXResults(MLEResults):
     def __init__(self, model, params, filter_results, cov_type=None,
                  cov_kwds=None, **kwargs):
         super().__init__(model, params, filter_results,
-                                            cov_type, cov_kwds, **kwargs)
+                         cov_type, cov_kwds, **kwargs)
 
         self.specification = Bunch(**{
             # Set additional model parameters

@@ -241,8 +241,7 @@ class TestClark1989:
 class TestClark1989Alternate(TestClark1989):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super().setup_class(alternate_timing=True,
-                                                       *args, **kwargs)
+        super().setup_class(alternate_timing=True, *args, **kwargs)
 
     def test_using_alterate(self):
         assert self.model._kalman_filter.filter_timing == 1

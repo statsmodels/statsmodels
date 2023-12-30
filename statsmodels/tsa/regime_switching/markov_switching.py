@@ -509,7 +509,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
 
         # Initialize the base model
         super().__init__(endog, exog, dates=dates,
-                                              freq=freq, missing=missing)
+                         freq=freq, missing=missing)
 
         # Dimensions
         self.nobs = self.endog.shape[0]
@@ -1122,11 +1122,11 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         # Maximum likelihood estimation by scoring
         fargs = (False,)
         mlefit = super().fit(start_params, method=method,
-                                                  fargs=fargs,
-                                                  maxiter=maxiter,
-                                                  full_output=full_output,
-                                                  disp=disp, callback=callback,
-                                                  skip_hessian=True, **kwargs)
+                             fargs=fargs,
+                             maxiter=maxiter,
+                             full_output=full_output,
+                             disp=disp, callback=callback,
+                             skip_hessian=True, **kwargs)
 
         # Just return the fitted parameters if requested
         if return_params:

@@ -74,10 +74,9 @@ class AllPairsResults:
         self.multitest_method = multitest_method
         self.levels = levels
         if levels is None:
-            self.all_pairs_names = ['{!r}'.format(pairs) for pairs in all_pairs]
+            self.all_pairs_names = [f'{pairs}' for pairs in all_pairs]
         else:
-            self.all_pairs_names = ['{}-{}'.format(levels[pairs[0]],
-                                               levels[pairs[1]])
+            self.all_pairs_names = [f'{levels[pairs[0]]}-{levels[pairs[1]]}'
                                     for pairs in all_pairs]
 
     def pval_corrected(self, method=None):

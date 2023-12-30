@@ -16,7 +16,7 @@ MSTL: A Seasonal-Trend Decomposition Algorithm for Time Series with Multiple
 Seasonal Patterns
 https://arxiv.org/pdf/2107.13462.pdf
 """
-from typing import Dict, Optional, Tuple, Union
+from typing import Optional, Union
 from collections.abc import Sequence
 import warnings
 

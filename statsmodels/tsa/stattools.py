@@ -8,7 +8,7 @@ from statsmodels.compat.pandas import deprecate_kwarg
 from statsmodels.compat.python import Literal, lzip
 from statsmodels.compat.scipy import _next_regular
 
-from typing import Union, List
+from typing import Union
 import warnings
 
 import numpy as np

@@ -168,9 +168,9 @@ class CheckLutkepohl(CheckVARMAX):
         super().test_predict(end='1982-10-01', **kwargs)
 
     def test_dynamic_predict(self, **kwargs):
-        super().test_dynamic_predict(end='1982-10-01',
-                                                         dynamic='1961-01-01',
-                                                         **kwargs)
+        super().test_dynamic_predict(
+            end='1982-10-01', dynamic='1961-01-01', **kwargs
+        )
 
 
 class TestVAR(CheckLutkepohl):
@@ -722,8 +722,7 @@ class TestVARMA(CheckFREDManufacturing):
         super().test_predict(end='2009-05-01', atol=1e-4)
 
     def test_dynamic_predict(self):
-        super().test_dynamic_predict(end='2009-05-01',
-                                                    dynamic='2000-01-01')
+        super().test_dynamic_predict(end='2009-05-01', dynamic='2000-01-01')
 
     def test_summary(self):
         summary = self.results.summary()
@@ -769,8 +768,7 @@ class TestVARMA(CheckFREDManufacturing):
         params = params[self.model._params_state_cov]
         names = self.model.param_names[self.model._params_state_cov]
         for i in range(len(names)):
-            assert re.search('{} +{}'.format(names[i], forg(params[i], prec=4)),
-                             table)
+            assert re.search(f'{names[i]} +{forg(params[i], prec=4)}', table)
 
 
 class TestVMA1(CheckFREDManufacturing):
@@ -821,8 +819,9 @@ class TestVMA1(CheckFREDManufacturing):
         super().test_predict(end='2009-05-01', atol=1e-4)
 
     def test_dynamic_predict(self):
-        super().test_dynamic_predict(end='2009-05-01',
-                                                   dynamic='2000-01-01')
+        super().test_dynamic_predict(
+            end='2009-05-01', dynamic='2000-01-01'
+        )
 
 
 def test_specifications():

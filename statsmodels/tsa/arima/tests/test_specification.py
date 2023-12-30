@@ -558,7 +558,7 @@ def test_valid_estimators(order, seasonal_order, enforce_stationarity,
         concentrate_scale=concentrate_scale)
 
     estimators = {'yule_walker', 'burg', 'innovations',
-                      'hannan_rissanen', 'innovations_mle', 'statespace'}
+                  'hannan_rissanen', 'innovations_mle', 'statespace'}
     desired = set(valid)
     assert_equal(spec.valid_estimators, desired)
     for estimator in desired:

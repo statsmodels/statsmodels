@@ -280,8 +280,7 @@ class TestARIMADiffuse(ARIMA):
         kwargs['initial_variance'] = (
             results_sarimax.wpi1_diffuse['initial_variance']
         )
-        super().setup_class(results_sarimax.wpi1_diffuse,
-                                                 **kwargs)
+        super().setup_class(results_sarimax.wpi1_diffuse, **kwargs)
 
     def test_bse(self):
         # test defaults

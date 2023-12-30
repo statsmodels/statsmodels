@@ -166,8 +166,9 @@ def _make_regression_options(trading, exog):
     if exog is not None:
         var_names = _make_var_names(exog)
         reg_spec += f"    user = ({var_names})\n"
-        reg_spec += "    data = ({})\n".format("\n".join(map(str,
-                                                exog.values.ravel().tolist())))
+        reg_spec += "    data = ({})\n".format("\n".join(
+            map(str, exog.values.ravel().tolist()))
+        )
 
     reg_spec += "}\n"  # close out regression spec
     return reg_spec
@@ -312,9 +313,13 @@ def pandas_to_series_spec(x):
         name = x.name or "Unnamed Series"
     else:
         name = 'Unnamed Series'
-    series_spec = SeriesSpec(data=data, name=name, period=period,
-                             title=name, start="{}.{}".format(year,
-                                                                stperiod))
+    series_spec = SeriesSpec(
+        data=data,
+        name=name,
+        period=period,
+        title=name,
+        start=f"{year}.{stperiod}"
+    )
     return series_spec
 
 

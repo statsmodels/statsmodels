@@ -2927,7 +2927,7 @@ class RegressionResults(base.LikelihoodModelResults):
         if not self.k_constant:
             etext.append(
                 "R² is computed without centering (uncentered) since the \
-                model does not contain a constant.""
+                model does not contain a constant."
             )
         if hasattr(self, 'cov_type'):
             etext.append(self.cov_kwds['description'])

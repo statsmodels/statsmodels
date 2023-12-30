@@ -3,7 +3,6 @@ import argparse
 import asyncio
 from functools import partial
 import hashlib
-import io
 import json
 import os
 import shutil

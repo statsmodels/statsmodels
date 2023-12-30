@@ -7,7 +7,7 @@ from statsmodels.compat.pandas import (
 
 from abc import ABC, abstractmethod
 import datetime as dt
-from typing import List, Optional, Set, Tuple, Type, Union
+from typing import Optional, Union
 from collections.abc import Hashable, Sequence
 
 import numpy as np

@@ -169,8 +169,8 @@ class RecursiveLS(MLEModel):
     def filter(self, return_ssm=False, **kwargs):
         # Get the state space output
         result = super().filter([], transformed=True,
-                                                 cov_type='none',
-                                                 return_ssm=True, **kwargs)
+                                cov_type='none',
+                                return_ssm=True, **kwargs)
 
         # Wrap in a results object
         if not return_ssm:
@@ -192,8 +192,8 @@ class RecursiveLS(MLEModel):
     def smooth(self, return_ssm=False, **kwargs):
         # Get the state space output
         result = super().smooth([], transformed=True,
-                                                 cov_type='none',
-                                                 return_ssm=True, **kwargs)
+                                cov_type='none',
+                                return_ssm=True, **kwargs)
 
         # Wrap in a results object
         if not return_ssm:

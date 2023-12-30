@@ -818,8 +818,7 @@ class PolynomialSmoother(AdditiveGamSmoother):
     """
     def __init__(self, x, degrees, variable_names=None):
         self.degrees = degrees
-        super().__init__(x,
-                                                 variable_names=variable_names)
+        super().__init__(x, variable_names=variable_names)
 
     def _make_smoothers_list(self):
         smoothers = []
@@ -930,7 +929,7 @@ class BSplines(AdditiveGamSmoother):
             include_intercept = True
 
         super().__init__(x, include_intercept=include_intercept,
-                                       variable_names=variable_names)
+                         variable_names=variable_names)
 
     def _make_smoothers_list(self):
         smoothers = []
@@ -959,7 +958,7 @@ class CubicSplines(AdditiveGamSmoother):
         self.constraints = constraints
         self.transform = transform
         super().__init__(x, constraints=constraints,
-                                           variable_names=variable_names)
+                         variable_names=variable_names)
 
     def _make_smoothers_list(self):
         smoothers = []
@@ -999,8 +998,7 @@ class CyclicCubicSplines(AdditiveGamSmoother):
         self.dfs = df
         # TODO: move attaching constraints to super call
         self.constraints = constraints
-        super().__init__(x,
-                                                 variable_names=variable_names)
+        super().__init__(x, variable_names=variable_names)
 
     def _make_smoothers_list(self):
         smoothers = []

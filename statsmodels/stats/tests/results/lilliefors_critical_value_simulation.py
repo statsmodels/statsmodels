@@ -4,7 +4,6 @@ and estimate asymptotic expansion parameters for the lilliefors tests
 """
 import datetime as dt
 import gzip
-import io
 import logging
 import pickle
 from collections import defaultdict
@@ -65,7 +64,7 @@ def simulations(sim_type, save=False):
             results[ss].append(d)
         logging.log(logging.INFO,
                     'Completed {}, remaining {}'.format(NUM_SIM - remaining,
-                                                          remaining))
+                                                        remaining))
         elapsed = dt.datetime.now() - start
         rem = elapsed.total_seconds() / (NUM_SIM - remaining) * remaining
         logging.log(logging.INFO,
