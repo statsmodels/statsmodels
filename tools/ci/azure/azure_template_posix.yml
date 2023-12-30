@@ -37,9 +37,9 @@ jobs:
           python.version: '3.9'
           USE_MATPLOTLIB: false
           USE_CVXOPT: false
-          SCIPY: 1.8.0
-          PANDAS: 1.5.0
-          NUMPY: 1.23.0
+          SCIPY: 1.8.1
+          PANDAS: 1.5.3
+          NUMPY: 1.23.5
           CYTHON: 0.29.33
           coverage: true
           lint: true
@@ -47,7 +47,7 @@ jobs:
           python.version: '3.9'
           use.conda: true
           coverage: true
-          NUMPY: 1.22.3
+          NUMPY: 1.22.4
           PANDAS: 1.3.5
           MATPLOTLIB: 3.5.2
           SCIPY: 1.7.3
@@ -55,9 +55,9 @@ jobs:
           PYTEST_OPTIONS: ''
         python310_numpy124:
           python.version: '3.10'
-          NUMPY: 1.24.0
-          SCIPY: 1.9.0
-          PANDAS: 1.5.0
+          NUMPY: 1.24.4
+          SCIPY: 1.9.3
+          PANDAS: 1.5.3
           MATPLOTLIB: 3.6.0
         python_311_pre:
           python.version: '3.11'
