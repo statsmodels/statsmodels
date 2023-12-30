@@ -126,11 +126,11 @@ Dependencies
 
 The current minimum dependencies are:
 
-* `Python <https://www.python.org>`__ >= 3.8
-* `NumPy <https://www.scipy.org/>`__ >= 1.18
-* `SciPy <https://www.scipy.org/>`__ >= 1.4
-* `Pandas <https://pandas.pydata.org/>`__ >= 1.0
-* `Patsy <https://patsy.readthedocs.io/en/latest/>`__ >= 0.5.2
+* `Python <https://www.python.org>`__ >= 3.9
+* `NumPy <https://www.scipy.org/>`__ >= 1.22
+* `SciPy <https://www.scipy.org/>`__ >= 1.7
+* `Pandas <https://pandas.pydata.org/>`__ >= 1.3
+* `Patsy <https://patsy.readthedocs.io/en/latest/>`__ >= 0.5.5
 
 Cython is required to build from a git checkout but not to run or install from PyPI:
 

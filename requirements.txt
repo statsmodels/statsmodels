@@ -1,8 +1,6 @@
 # Workaround for scipy build requirement
-numpy>=1.22.3,<3; python_version=="3.10" and platform_system=="Windows" and platform_python_implementation != "PyPy"
-numpy >=1.18,<3  # released December 2019
-scipy>=1.4,!=1.9.2  # released December 2019
-scipy>=1.4,!=1.9.2; sys_platform == "win32"  # Blocked  1.9.2 due to Windows issues
-pandas>=1.0,!=2.1.0  # released January 2020, 2.1.0 blocked due to bug
+numpy>=1.22.3,<3  # released December 2021
+scipy>=1.7.0,!=1.9.2  # released June 2021, 1.9.2 blocked due to bug
+pandas>=1.3.0,!=2.1.0  # released July 2021, 2.1.0 blocked due to bug
 patsy>=0.5.5  # released December 2023
 packaging>=21.3  # released Nov 2021

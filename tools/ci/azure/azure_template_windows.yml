@@ -16,9 +16,6 @@ jobs:
     vmImage: ${{ parameters.vmImage }}
   strategy:
     matrix:
-      python38_win_latest:
-        python.version: '3.8'
-        python.architecture: 'x64'
       python39_win_latest:
         python.version: '3.9'
         python.architecture: 'x64'

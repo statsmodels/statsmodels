@@ -4,7 +4,7 @@ setuptools_scm[toml]~=8.0
 oldest-supported-numpy>=2022.4.18
 
 # run
-matplotlib>=3
+matplotlib>=3.5
 colorama
 joblib
 # Remove due to failures on azure CI
