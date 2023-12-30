@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Fri Sep 15 13:38:13 2017
 
@@ -117,7 +116,7 @@ class TestPoissonDiagnosticClass():
         respoi = Poisson(self.endog, self.exog).fit(disp=0)
         dia = PoissonDiagnostic(respoi)
         t_disp = dia.test_dispersion()
-        res_disp = np.column_stack(((t_disp.statistic, t_disp.pvalue)))
+        res_disp = np.column_stack((t_disp.statistic, t_disp.pvalue))
         assert_allclose(res_disp, res_dispersion, rtol=1e-8)
 
         nobs = self.endog.shape[0]

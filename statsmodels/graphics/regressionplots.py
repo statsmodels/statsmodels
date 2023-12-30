@@ -819,7 +819,7 @@ def abline_plot(intercept=None, slope=None, horiz=None, vert=None,
 
     class ABLine2D(Line2D):
         def __init__(self, *args, **kwargs):
-            super(ABLine2D, self).__init__(*args, **kwargs)
+            super().__init__(*args, **kwargs)
             self.id_xlim_callback = None
             self.id_ylim_callback = None
 
@@ -829,7 +829,7 @@ def abline_plot(intercept=None, slope=None, horiz=None, vert=None,
                 ax.callbacks.disconnect(self.id_xlim_callback)
             if self.id_ylim_callback:
                 ax.callbacks.disconnect(self.id_ylim_callback)
-            super(ABLine2D, self).remove()
+            super().remove()
 
         def update_datalim(self, ax):
             ax.set_autoscale_on(False)

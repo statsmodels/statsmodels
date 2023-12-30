@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ Helper and filter functions for VAR and VARMA, and basic VAR class
 
 Created on Mon Jan 11 11:04:23 2010

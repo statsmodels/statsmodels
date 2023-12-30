@@ -42,7 +42,7 @@ tables, table_all = summary_params_2dflat(mlogit_res,
 print('\n\n')
 print(table_all)
 print('\n\n')
-print('\n'.join((str(t) for t in tables)))
+print('\n'.join(str(t) for t in tables))
 
 at = table_extend(tables)
 print(at)

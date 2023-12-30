@@ -515,8 +515,8 @@ License: BSD
 
 def get_u_argskwargs(**kwargs):
     # Todo: What's this? wrong spacing, used in Transf_gen TransfTwo_gen
-    u_kwargs = dict((k.replace('u_', '', 1), v) for k, v in kwargs.items()
-                    if k.startswith('u_'))
+    u_kwargs = {k.replace('u_', '', 1): v for k, v in kwargs.items()
+                    if k.startswith('u_')}
     u_args = u_kwargs.pop('u_args', None)
     return u_args, u_kwargs
 
@@ -549,7 +549,7 @@ class Transf_gen(distributions.rv_continuous):
         self.kls = kls  # (self.u_args, self.u_kwargs)
         # possible to freeze the underlying distribution
 
-        super(Transf_gen, self).__init__(a=a, b=b, name=name,
+        super().__init__(a=a, b=b, name=name,
                                          longname=longname,
                                          )
         # extradoc = extradoc)
@@ -638,7 +638,7 @@ class ExpTransf_gen(distributions.rv_continuous):
             a = kwargs['a']
         else:
             a = 0
-        super(ExpTransf_gen, self).__init__(a=0, name=name)
+        super().__init__(a=0, name=name)
         self.kls = kls
 
     def _cdf(self, x, *args):
@@ -673,7 +673,7 @@ class LogTransf_gen(distributions.rv_continuous):
         else:
             a = 0
 
-        super(LogTransf_gen, self).__init__(a=a, name=name)
+        super().__init__(a=a, name=name)
         self.kls = kls
 
     def _cdf(self, x, *args):
@@ -767,7 +767,7 @@ class TransfTwo_gen(distributions.rv_continuous):
         self.kls = kls  # (self.u_args, self.u_kwargs)
         # possible to freeze the underlying distribution
 
-        super(TransfTwo_gen, self).__init__(a=a, b=b, name=name,
+        super().__init__(a=a, b=b, name=name,
                                             shapes=kls.shapes,
                                             longname=longname,
                                             # extradoc = extradoc

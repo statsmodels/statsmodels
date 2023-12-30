@@ -60,7 +60,7 @@ def branch2(tree):
             #branchsum += branch2(b)
             branchsum = branchsum + branch2(b)
     else:
-        leavessum = sum((data2[bi] for bi in tree))
+        leavessum = sum(data2[bi] for bi in tree)
         print('final branch with', tree, ''.join(tree), leavessum) #sum(tree)
         if testxb:
             return leavessum  #sum(xb[tree])
@@ -116,13 +116,13 @@ paramsind = {
 #unique, parameter array names,
 #sorted alphabetically, order is/should be only internal
 
-paramsnames = sorted(set([i for j in paramsind.values() for i in j]))
+paramsnames = sorted({i for j in paramsind.values() for i in j})
 
 #mapping coefficient names to indices to unique/parameter array
-paramsidx = dict((name, idx) for (idx,name) in enumerate(paramsnames))
+paramsidx = {name: idx for (idx,name) in enumerate(paramsnames)}
 
 #mapping branch and leaf names to index in parameter array
-inddict = dict((k,[paramsidx[j] for j in v]) for k,v in paramsind.items())
+inddict = {k:[paramsidx[j] for j in v] for k,v in paramsind.items()}
 
 '''
 >>> paramsnames

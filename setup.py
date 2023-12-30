@@ -274,14 +274,14 @@ def check_source(source_name):
                 "C source not found.  You must have Cython installed to "
                 "build if the C source files have not been generated."
             )
-            raise IOError(msg)
+            raise OSError(msg)
     return source_name, source_ext
 
 
 def process_tempita(source_name):
     """Runs pyx.in files through tempita is needed"""
     if source_name.endswith("pyx.in"):
-        with open(source_name, "r", encoding="utf-8") as templated:
+        with open(source_name, encoding="utf-8") as templated:
             pyx_template = templated.read()
         pyx = Tempita.sub(pyx_template)
         pyx_filename = source_name[:-3]

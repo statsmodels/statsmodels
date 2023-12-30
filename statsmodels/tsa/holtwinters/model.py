@@ -14,7 +14,8 @@ Modified: Kevin Sheppard
 from statsmodels.compat.pandas import deprecate_kwarg
 
 import contextlib
-from typing import Any, Hashable, Sequence
+from typing import Any
+from collections.abc import Hashable, Sequence
 import warnings
 
 import numpy as np
@@ -1434,7 +1435,7 @@ class ExponentialSmoothing(TimeSeriesModel):
 
         # Format parameters into a DataFrame
         codes = ["alpha", "beta", "gamma", "l.0", "b.0", "phi"]
-        codes += ["s.{0}".format(i) for i in range(m)]
+        codes += [f"s.{i}" for i in range(m)]
         idx = [
             "smoothing_level",
             "smoothing_trend",
@@ -1443,7 +1444,7 @@ class ExponentialSmoothing(TimeSeriesModel):
             "initial_trend",
             "damping_trend",
         ]
-        idx += ["initial_seasons.{0}".format(i) for i in range(m)]
+        idx += [f"initial_seasons.{i}" for i in range(m)]
 
         formatted = [alpha, beta, gamma, lvls[0], b[0], phi]
         formatted += s[:m].tolist()

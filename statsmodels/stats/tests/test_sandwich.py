@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tests for sandwich robust covariance estimation
 
 see also in regression for cov_hac compared to Gretl and

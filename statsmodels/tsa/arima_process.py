@@ -889,7 +889,7 @@ class ArmaProcess:
         )
 
     def __str__(self):
-        return "ArmaProcess\nAR: {0}\nMA: {1}".format(
+        return "ArmaProcess\nAR: {}\nMA: {}".format(
             self.ar.tolist(), self.ma.tolist()
         )
 

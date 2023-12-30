@@ -1,4 +1,3 @@
-
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal
 import pytest
@@ -60,7 +59,7 @@ def test_hdr_basic(close_figures):
         outliers = labels[labels_pos]
         assert_equal([1982, 1983, 1997, 1998], outliers)
         assert_equal(labels[hdr.outliers_idx], outliers)
-    except WindowsError:
+    except OSError:
         pytest.xfail('Multiprocess randomly crashes in Windows testing')
 
 
@@ -74,7 +73,7 @@ def test_hdr_basic_brute(close_figures, reset_randomstate):
                     21.231, 20.366, 20.168, 20.434, 21.111, 22.299]
 
         assert_almost_equal(hdr.median, median_t, decimal=2)
-    except WindowsError:
+    except OSError:
         pytest.xfail('Multiprocess randomly crashes in Windows testing')
 
 
@@ -93,7 +92,7 @@ def test_hdr_plot(close_figures):
         ax.set_xticks(np.arange(13, step=3) - 1)
         ax.set_xticklabels(["", "Mar", "Jun", "Sep", "Dec"])
         ax.set_xlim([-0.2, 11.2])
-    except WindowsError:
+    except OSError:
         pytest.xfail('Multiprocess randomly crashes in Windows testing')
 
 
@@ -108,7 +107,7 @@ def test_hdr_alpha(close_figures):
                                    [23.4, 24.8, 25.0, 23.9, 22.4, 21.1,
                                     20.0, 19.3, 19.2, 19.4, 20.1, 21.3]])
         assert_almost_equal(hdr.extra_quantiles, extra_quant_t, decimal=0)
-    except WindowsError:
+    except OSError:
         pytest.xfail('Multiprocess randomly crashes in Windows testing')
 
 
@@ -132,7 +131,7 @@ def test_hdr_multiple_alpha(close_figures):
                           19.697, 19.951, 20.622, 21.858]]
         assert_almost_equal(hdr.extra_quantiles, np.vstack(extra_quant_t),
                             decimal=0)
-    except WindowsError:
+    except OSError:
         pytest.xfail('Multiprocess randomly crashes in Windows testing')
 
 
@@ -146,7 +145,7 @@ def test_hdr_threshold(close_figures):
                             axis=1)
         outliers = labels[labels_pos]
         assert_equal([1968, 1982, 1983, 1997, 1998], outliers)
-    except WindowsError:
+    except OSError:
         pytest.xfail('Multiprocess randomly crashes in Windows testing')
 
 
@@ -159,7 +158,7 @@ def test_hdr_bw(close_figures):
 
                     21.31, 20.44, 20.24, 20.51, 21.19, 22.38]
         assert_almost_equal(hdr.median, median_t, decimal=2)
-    except WindowsError:
+    except OSError:
         pytest.xfail('Multiprocess randomly crashes in Windows testing')
 
 
@@ -171,7 +170,7 @@ def test_hdr_ncomp(close_figures):
         median_t = [24.33, 25.71, 26.04, 25.08, 23.74, 22.40,
                     21.32, 20.45, 20.25, 20.53, 21.20, 22.39]
         assert_almost_equal(hdr.median, median_t, decimal=2)
-    except WindowsError:
+    except OSError:
         pytest.xfail('Multiprocess randomly crashes in Windows testing')
 
 

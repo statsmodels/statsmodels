@@ -1,4 +1,3 @@
-
 import warnings
 
 import numpy as np
@@ -169,7 +168,7 @@ class ExpandedNormal(rv_continuous):
 
         kwds.update({'name': name,
                      'momtype': 0})   # use pdf, not ppf in self.moment()
-        super(ExpandedNormal, self).__init__(**kwds)
+        super().__init__(**kwds)
 
     def _pdf(self, x):
         y = (x - self._mu) / self._sigma

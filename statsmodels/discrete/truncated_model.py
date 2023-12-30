@@ -1,5 +1,3 @@
-from __future__ import division
-
 __all__ = ["TruncatedLFPoisson", "TruncatedLFNegativeBinomialP",
            "HurdleCountModel"]
 
@@ -58,7 +56,7 @@ class TruncatedLFGeneric(CountModel):
 
     def __init__(self, endog, exog, truncation=0, offset=None,
                  exposure=None, missing='none', **kwargs):
-        super(TruncatedLFGeneric, self).__init__(
+        super().__init__(
             endog,
             exog,
             offset=offset,
@@ -212,7 +210,7 @@ class TruncatedLFGeneric(CountModel):
         k_params = self.df_model + 1 + self.k_extra
         self.df_resid = self.endog.shape[0] - k_params
 
-        mlefit = super(TruncatedLFGeneric, self).fit(
+        mlefit = super().fit(
             start_params=start_params,
             method=method,
             maxiter=maxiter,
@@ -461,7 +459,7 @@ class TruncatedLFPoisson(TruncatedLFGeneric):
 
     def __init__(self, endog, exog, offset=None, exposure=None,
                  truncation=0, missing='none', **kwargs):
-        super(TruncatedLFPoisson, self).__init__(
+        super().__init__(
             endog,
             exog,
             offset=offset,
@@ -534,7 +532,7 @@ class TruncatedLFNegativeBinomialP(TruncatedLFGeneric):
 
     def __init__(self, endog, exog, offset=None, exposure=None,
                  truncation=0, p=2, missing='none', **kwargs):
-        super(TruncatedLFNegativeBinomialP, self).__init__(
+        super().__init__(
             endog,
             exog,
             offset=offset,
@@ -620,7 +618,7 @@ class TruncatedLFGeneralizedPoisson(TruncatedLFGeneric):
 
     def __init__(self, endog, exog, offset=None, exposure=None,
                  truncation=0, p=2, missing='none', **kwargs):
-        super(TruncatedLFGeneralizedPoisson, self).__init__(
+        super().__init__(
             endog,
             exog,
             offset=offset,
@@ -673,7 +671,7 @@ class _RCensoredGeneric(CountModel):
                  missing='none', **kwargs):
         self.zero_idx = np.nonzero(endog == 0)[0]
         self.nonzero_idx = np.nonzero(endog)[0]
-        super(_RCensoredGeneric, self).__init__(
+        super().__init__(
             endog,
             exog,
             offset=offset,
@@ -787,7 +785,7 @@ class _RCensoredGeneric(CountModel):
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", category=ConvergenceWarning)
                 start_params = model.fit(disp=0).params
-        mlefit = super(_RCensoredGeneric, self).fit(
+        mlefit = super().fit(
             start_params=start_params,
             method=method,
             maxiter=maxiter,
@@ -894,7 +892,7 @@ class _RCensoredPoisson(_RCensoredGeneric):
 
     def __init__(self, endog, exog, offset=None,
                  exposure=None, missing='none', **kwargs):
-        super(_RCensoredPoisson, self).__init__(endog, exog, offset=offset,
+        super().__init__(endog, exog, offset=offset,
                                                 exposure=exposure,
                                                 missing=missing, **kwargs)
         self.model_main = Poisson(np.zeros_like(self.endog), self.exog)
@@ -930,7 +928,7 @@ class _RCensoredGeneralizedPoisson(_RCensoredGeneric):
 
     def __init__(self, endog, exog, offset=None, p=2,
                  exposure=None, missing='none', **kwargs):
-        super(_RCensoredGeneralizedPoisson, self).__init__(
+        super().__init__(
             endog, exog, offset=offset, exposure=exposure,
             missing=missing, **kwargs)
 
@@ -968,7 +966,7 @@ class _RCensoredNegativeBinomialP(_RCensoredGeneric):
 
     def __init__(self, endog, exog, offset=None, p=2,
                  exposure=None, missing='none', **kwargs):
-        super(_RCensoredNegativeBinomialP, self).__init__(
+        super().__init__(
             endog,
             exog,
             offset=offset,
@@ -1013,7 +1011,7 @@ class _RCensored(_RCensoredGeneric):
     def __init__(self, endog, exog, model=Poisson,
                  distribution=truncatedpoisson, offset=None,
                  exposure=None, missing='none', **kwargs):
-        super(_RCensored, self).__init__(
+        super().__init__(
             endog,
             exog,
             offset=offset,
@@ -1096,7 +1094,7 @@ class HurdleCountModel(CountModel):
         if (offset is not None) or (exposure is not None):
             msg = "Offset and exposure are not yet implemented"
             raise NotImplementedError(msg)
-        super(HurdleCountModel, self).__init__(
+        super().__init__(
             endog,
             exog,
             offset=offset,
@@ -1410,7 +1408,7 @@ class HurdleCountResults(CountResults):
 
     def __init__(self, model, mlefit, results_zero, results_count,
                  cov_type='nonrobust', cov_kwds=None, use_t=None):
-        super(HurdleCountResults, self).__init__(
+        super().__init__(
             model,
             mlefit,
             cov_type=cov_type,

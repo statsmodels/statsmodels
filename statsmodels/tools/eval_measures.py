@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """some measures for evaluation of prediction, tests and model selection
 
 Created on Tue Nov 08 15:23:20 2011

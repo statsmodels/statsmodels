@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 import argparse
 import glob
 import logging
@@ -104,7 +103,7 @@ def main():
             notebook = notebook + ".ipynb"
         notebook = os.path.abspath(os.path.join(full_path, notebook))
         if not os.path.exists(notebook):
-            raise FileNotFoundError("Notebook {0} not found.".format(notebook))
+            raise FileNotFoundError(f"Notebook {notebook} not found.")
         notebooks = [notebook]
     if not notebooks:
         import warnings
@@ -120,12 +119,12 @@ def main():
         out_file = os.path.join(out_file, "..", "python", py_name)
         if is_newer(out_file, nb) and not force:
             logger.info(
-                "Skipping {0}, exported version newer than "
+                "Skipping {}, exported version newer than "
                 "notebook".format(nb_name)
             )
             continue
-        logger.info("Converting {0}".format(nb_name))
-        with open(nb, "r", encoding="utf8") as nb_file:
+        logger.info(f"Converting {nb_name}")
+        with open(nb, encoding="utf8") as nb_file:
             converter = nbconvert.PythonExporter()
             python = converter.from_file(nb_file)
             code = python[0].split("\n")

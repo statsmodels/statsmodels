@@ -124,7 +124,7 @@ class TestArrayLike:
         data = np.empty((2, 1, 2))
         a = array_like(data, "a", ndim=3)
         assert a.shape == (2, 1, 2)
-        data = np.empty((2))
+        data = np.empty(2)
         a = array_like(data, "a", ndim=3)
         assert a.shape == (2, 1, 1)
         data = np.empty((2, 1))

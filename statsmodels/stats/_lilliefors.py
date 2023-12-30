@@ -166,7 +166,7 @@ def get_lilliefors_table(dist='norm'):
     crit_lf = crit_lf[:, ::-1]
 
     asym_params = np.array([acv_data[key] for key in sorted(acv_data)])
-    asymp_fn = _make_asymptotic_function((asym_params[::-1]))
+    asymp_fn = _make_asymptotic_function(asym_params[::-1])
 
     lf = TableDist(alpha, size, crit_lf, asymptotic=asymp_fn)
     return lf
@@ -289,7 +289,7 @@ def kstest_fit(x, dist='norm', pvalmethod="table"):
 
     min_nobs = 4 if dist == 'norm' else 3
     if nobs < min_nobs:
-        raise ValueError('Test for distribution {0} requires at least {1} '
+        raise ValueError('Test for distribution {} requires at least {} '
                          'observations'.format(dist, min_nobs))
 
     d_ks = ksstat(z, test_d, alternative='two_sided')

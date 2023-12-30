@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Create a plot of correlation among many variables in a grid
 

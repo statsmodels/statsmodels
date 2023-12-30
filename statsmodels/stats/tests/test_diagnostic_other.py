@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Unit tests for generic score/LM tests and conditional moment tests
 
 Created on Mon Nov 17 08:44:06 2014

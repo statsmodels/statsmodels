@@ -557,8 +557,8 @@ def test_valid_estimators(order, seasonal_order, enforce_stationarity,
         enforce_invertibility=enforce_invertibility,
         concentrate_scale=concentrate_scale)
 
-    estimators = set(['yule_walker', 'burg', 'innovations',
-                      'hannan_rissanen', 'innovations_mle', 'statespace'])
+    estimators = {'yule_walker', 'burg', 'innovations',
+                      'hannan_rissanen', 'innovations_mle', 'statespace'}
     desired = set(valid)
     assert_equal(spec.valid_estimators, desired)
     for estimator in desired:
@@ -575,7 +575,7 @@ def test_valid_estimators(order, seasonal_order, enforce_stationarity,
         enforce_invertibility=enforce_invertibility,
         concentrate_scale=concentrate_scale)
 
-    assert_equal(spec.valid_estimators, set(['statespace']))
+    assert_equal(spec.valid_estimators, {'statespace'})
     assert_equal(spec.validate_estimator('statespace'), None)
     for estimator in estimators.difference(['statespace']):
         assert_raises(ValueError, spec.validate_estimator, estimator)

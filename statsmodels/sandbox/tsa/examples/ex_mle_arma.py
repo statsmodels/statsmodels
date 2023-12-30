@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 TODO: broken because of changes to arguments and import paths
 fixing this needs a closer look

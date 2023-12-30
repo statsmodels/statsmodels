@@ -250,7 +250,7 @@ class CheckDerivativeMixin:
 class TestDerivativeFun(CheckDerivativeMixin):
     @classmethod
     def setup_class(cls):
-        super(TestDerivativeFun,cls).setup_class()
+        super().setup_class()
         xkols = np.dot(np.linalg.pinv(cls.x), cls.y)
         cls.params = [np.array([1.,1.,1.]), xkols]
         cls.args = (cls.x,)
@@ -266,7 +266,7 @@ class TestDerivativeFun(CheckDerivativeMixin):
 class TestDerivativeFun2(CheckDerivativeMixin):
     @classmethod
     def setup_class(cls):
-        super(TestDerivativeFun2,cls).setup_class()
+        super().setup_class()
         xkols = np.dot(np.linalg.pinv(cls.x), cls.y)
         cls.params = [np.array([1.,1.,1.]), xkols]
         cls.args = (cls.y, cls.x)
@@ -286,7 +286,7 @@ class TestDerivativeFun2(CheckDerivativeMixin):
 class TestDerivativeFun1(CheckDerivativeMixin):
     @classmethod
     def setup_class(cls):
-        super(TestDerivativeFun1, cls).setup_class()
+        super().setup_class()
         xkols = np.dot(np.linalg.pinv(cls.x), cls.y)
         cls.params = [np.array([1.,1.,1.]), xkols]
         cls.args = (cls.y, cls.x)

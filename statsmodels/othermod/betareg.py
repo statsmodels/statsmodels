@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
-
-u"""
+"""
 Beta regression for modeling rates and proportions.
 
 References
@@ -116,7 +114,7 @@ class BetaModel(GenericLikelihoodModel):
 
         kwds['extra_params_names'] = extra_names
 
-        super(BetaModel, self).__init__(endog, exog,
+        super().__init__(endog, exog,
                                         exog_precision=exog_precision,
                                         **kwds)
         self.link = link
@@ -150,7 +148,7 @@ class BetaModel(GenericLikelihoodModel):
                 Z = patsy.dmatrix(exog_precision_formula, data)
             kwargs['exog_precision'] = Z
 
-        return super(BetaModel, cls).from_formula(formula, data, *args,
+        return super().from_formula(formula, data, *args,
                                                   **kwargs)
 
     def _get_exogs(self):
@@ -364,7 +362,7 @@ class BetaModel(GenericLikelihoodModel):
         -------
         score based on numerical derivatives
         """
-        return super(BetaModel, self).score(params)
+        return super().score(params)
 
     def score_factor(self, params, endog=None):
         """Derivative of loglikelihood function w.r.t. linear predictors.
@@ -666,7 +664,7 @@ class BetaModel(GenericLikelihoodModel):
         else:
             self.hess_type = "oim"
 
-        res = super(BetaModel, self).fit(start_params=start_params,
+        res = super().fit(start_params=start_params,
                                          maxiter=maxiter, method=method,
                                          disp=disp, **kwds)
         if not isinstance(res, BetaResultsWrapper):

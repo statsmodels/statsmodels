@@ -27,14 +27,14 @@ dta = np.genfromtxt('dftest3.data')
 print(dta.shape)
 mask = np.isnan(dta)
 print("rows with missing values", mask.any(1).sum())
-vars = dict((v[0], (idx, v[1])) for idx, v in enumerate((('breed', int),
+vars = {v[0]: (idx, v[1]) for idx, v in enumerate((('breed', int),
                                                          ('sex', int),
                                                          ('litter', int),
                                                          ('pen', int),
                                                          ('pig', int),
                                                          ('age', float),
                                                          ('bage', float),
-                                                         ('y', float))))
+                                                         ('y', float)))}
 
 datavarnames = 'y sex age'.split()
 #possible to avoid temporary array ?
@@ -43,7 +43,7 @@ keeprows = ~np.isnan(dta_use).any(1)
 print('number of complete observations', keeprows.sum())
 dta_used = dta_use[keeprows,:]
 
-varsused = dict((k, [dta_used[:,idx], idx, vars[k][1]]) for idx, k in enumerate(datavarnames))
+varsused = {k: [dta_used[:,idx], idx, vars[k][1]] for idx, k in enumerate(datavarnames)}
 
 # use function for dummy
 #sexgroups = np.unique(dta_used[:,1])
@@ -251,7 +251,7 @@ if 0:
     xx, n = form2design('F:a',testdata)
     print(xx)
     print(form2design('P:a*b',testdata))
-    print(data2proddummy((np.c_[testdata['a'],testdata['b']])))
+    print(data2proddummy(np.c_[testdata['a'],testdata['b']]))
 
     xx, names = form2design('a F:b P:c*d',testdata)
 

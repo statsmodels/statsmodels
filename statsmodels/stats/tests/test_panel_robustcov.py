@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Test for panel robust covariance estimators after pooled ols
 this follows the example from xtscc paper/help
 

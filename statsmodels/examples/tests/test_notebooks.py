@@ -71,13 +71,13 @@ def test_notebook(notebook):
     filename, _ = os.path.splitext(filename)
 
     if filename in KNOWN_FAILURES:
-        pytest.skip('{0} is known to fail'.format(filename))
+        pytest.skip(f'{filename} is known to fail')
     if filename in RPY2_NOTEBOOKS and not HAS_RPY2:
-        pytest.skip('{0} since rpy2 is not installed'.format(filename))
+        pytest.skip(f'{filename} since rpy2 is not installed')
     if filename in JOBLIB_NOTEBOOKS and not JOBLIB_NOTEBOOKS:
-        pytest.skip('{0} since joblib is not installed'.format(filename))
+        pytest.skip(f'{filename} since joblib is not installed')
 
-    with io.open(fullfile, encoding='utf-8') as fp:
+    with open(fullfile, encoding='utf-8') as fp:
         nb = nbformat.read(fp, as_version=4)
 
     ep = ExecutePreprocessor(allow_errors=False,

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 This file contains analytic implementations of rotation methods.
 """

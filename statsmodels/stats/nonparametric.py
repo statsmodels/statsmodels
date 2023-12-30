@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Rank based methods for inferential statistics
 

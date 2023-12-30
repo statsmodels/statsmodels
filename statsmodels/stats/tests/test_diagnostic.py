@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tests for Regression Diagnostics and Specification Tests
 
 Created on Thu Feb 09 13:19:47 2012
@@ -1048,7 +1047,7 @@ class TestDiagnosticG:
         infl = oi.OLSInfluence(res)
 
         path = os.path.join(cur_dir, "results", "influence_lsdiag_R.json")
-        with open(path, "r", encoding="utf-8") as fp:
+        with open(path, encoding="utf-8") as fp:
             lsdiag = json.load(fp)
 
         # basic
@@ -1247,7 +1246,7 @@ def test_influence_wrapped():
 
     # this test is slow
     path = os.path.join(cur_dir, "results", "influence_lsdiag_R.json")
-    with open(path, "r", encoding="utf-8") as fp:
+    with open(path, encoding="utf-8") as fp:
         lsdiag = json.load(fp)
 
     c0, c1 = infl.cooks_distance  # TODO: what's c1, it's pvalues? -ss
@@ -1858,7 +1857,7 @@ def test_rainbow_smoke_order_by(frac, order_by, reset_randomstate):
     e = pd.DataFrame(np.random.standard_normal((500, 1)))
     x = pd.DataFrame(
         np.random.standard_normal((500, 3)),
-        columns=["x{0}".format(i) for i in range(3)],
+        columns=[f"x{i}" for i in range(3)],
     )
     y = x @ np.ones((3, 1)) + e
     res = OLS(y, x).fit()
@@ -1870,7 +1869,7 @@ def test_rainbow_smoke_centered(center, reset_randomstate):
     e = pd.DataFrame(np.random.standard_normal((500, 1)))
     x = pd.DataFrame(
         np.random.standard_normal((500, 3)),
-        columns=["x{0}".format(i) for i in range(3)],
+        columns=[f"x{i}" for i in range(3)],
     )
     y = x @ np.ones((3, 1)) + e
     res = OLS(y, x).fit()
@@ -1881,7 +1880,7 @@ def test_rainbow_exception(reset_randomstate):
     e = pd.DataFrame(np.random.standard_normal((500, 1)))
     x = pd.DataFrame(
         np.random.standard_normal((500, 3)),
-        columns=["x{0}".format(i) for i in range(3)],
+        columns=[f"x{i}" for i in range(3)],
     )
     y = x @ np.ones((3, 1)) + e
     res = OLS(y, x).fit()
