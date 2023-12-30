@@ -1,19 +1,19 @@
 Dependencies
 ------------
 
-python >= 3.8
+python >= 3.9
 
     www.python.org
 
-numpy >= 1.18
+numpy >= 1.22
 
     www.numpy.org
 
-scipy >= 1.4
+scipy >= 1.7
 
     www.scipy.org
 
-pandas >= 1.0
+pandas >= 1.3
 
     pandas.pydata.org
 
