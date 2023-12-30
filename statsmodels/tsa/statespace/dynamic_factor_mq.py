@@ -5,6 +5,8 @@ Dynamic factor model.
 Author: Chad Fulton
 License: BSD-3
 """
+from statsmodels.compat.pandas import MONTH_END, QUARTER_END
+
 from collections import OrderedDict
 from warnings import warn
 
@@ -1568,10 +1570,13 @@ class DynamicFactorMQ(mlemodel.MLEModel):
                 endog_quarterly = endog_quarterly.to_period('Q')
 
             # Combine the datasets
-            endog = pd.concat([
-                endog_monthly,
-                endog_quarterly.resample('M', convention='end').first()],
-                axis=1)
+            quarterly_resamp = endog_quarterly.copy()
+            quarterly_resamp.index = quarterly_resamp.index.to_timestamp()
+            quarterly_resamp = quarterly_resamp.resample(QUARTER_END).first()
+            quarterly_resamp = quarterly_resamp.resample(MONTH_END).first()
+            quarterly_resamp.index = quarterly_resamp.index.to_period()
+
+            endog = pd.concat([endog_monthly, quarterly_resamp], axis=1)
 
             # Make sure we didn't accidentally get duplicate column names
             column_counts = endog.columns.value_counts()
