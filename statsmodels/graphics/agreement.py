@@ -88,7 +88,7 @@ def mean_diff_plot(m1, m2, sd_limit=1.96, ax=None, scatter_kwds=None,
     if len(m1) != len(m2):
         raise ValueError('m1 does not have the same length as m2.')
     if sd_limit < 0:
-        raise ValueError('sd_limit ({}) is less than 0.'.format(sd_limit))
+        raise ValueError(f'sd_limit ({sd_limit}) is less than 0.')
 
     means = np.mean([m1, m2], axis=0)
     diffs = m1 - m2
@@ -114,7 +114,7 @@ def mean_diff_plot(m1, m2, sd_limit=1.96, ax=None, scatter_kwds=None,
     ax.axhline(mean_diff, **mean_line_kwds)  # draw mean line.
 
     # Annotate mean line with mean difference.
-    ax.annotate('mean diff:\n{}'.format(np.round(mean_diff, 2)),
+    ax.annotate(f'mean diff:\n{np.round(mean_diff, 2)}',
                 xy=(0.99, 0.5),
                 horizontalalignment='right',
                 verticalalignment='center',

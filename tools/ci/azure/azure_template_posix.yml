@@ -95,6 +95,10 @@ jobs:
       source tools/ci/azure/install-posix.sh
     displayName: 'Install dependencies'
 
+  - script: ./lint.sh
+    displayName: 'Check style'
+    condition: eq(variables['lint'], 'true')
+
   - script: |
       echo "Installing to site packages"
       if [[ $TEST_SDIST ]]; then
@@ -163,10 +167,6 @@ jobs:
       testResultsFiles: '**/test-results.xml'
       testRunTitle: 'Python $(python.version)'
     condition: succeededOrFailed()
-
-  - script: ./lint.sh
-    displayName: 'Check style'
-    condition: eq(variables['lint'], 'true')
 
   - task: PublishCodeCoverageResults@1
     inputs:

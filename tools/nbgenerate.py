@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 import argparse
 import asyncio
 from functools import partial
 import hashlib
-import io
 import json
 import os
 import shutil
@@ -68,7 +66,7 @@ def execute_nb(src, dst, allow_errors=False, timeout=1000, kernel_name=None):
     -------
     dst: str
     """
-    with io.open(src, encoding="utf-8") as f:
+    with open(src, encoding="utf-8") as f:
         nb = nbformat.read(f, as_version=4)
 
     ep = ExecutePreprocessor(
@@ -76,7 +74,7 @@ def execute_nb(src, dst, allow_errors=False, timeout=1000, kernel_name=None):
     )
     ep.preprocess(nb, {"metadata": {"path": SOURCE_DIR}})
 
-    with io.open(dst, "wt", encoding="utf-8") as f:
+    with open(dst, "w", encoding="utf-8") as f:
         nbformat.write(nb, f)
     return dst
 
@@ -96,7 +94,7 @@ def convert(src, dst, to="rst"):
     exporter = dispatch[to.lower()]()
 
     (body, resources) = exporter.from_filename(src)
-    with io.open(dst, "wt", encoding="utf-8") as f:
+    with open(dst, "w", encoding="utf-8") as f:
         f.write(body)
     return dst
 
@@ -134,17 +132,17 @@ def do_one(
     if os.path.exists(hash_file):
         with open(hash_file, encoding="utf-8") as hf:
             existing_hash = json.load(hf)
-    with io.open(nb, mode="rb") as f:
+    with open(nb, mode="rb") as f:
         current_hash = hashlib.sha512(f.read()).hexdigest()
     update_needed = existing_hash != current_hash
     # Update if dst missing
     update_needed = update_needed or not os.path.exists(dst)
     update_needed = update_needed or not skip_existing
     if not update_needed:
-        print("Skipping {0}".format(nb))
+        print(f"Skipping {nb}")
 
     if execute and update_needed:
-        print("Executing %s to %s" % (nb, dst))
+        print("Executing {} to {}".format(nb, dst))
         try:
             nb = execute_nb(nb, dst, timeout=timeout, kernel_name=kernel_name)
         except Exception as e:
@@ -159,7 +157,7 @@ def do_one(
             if error_fail:
                 raise
     elif not execute:
-        print("Copying (without executing) %s to %s" % (nb, dst))
+        print("Copying (without executing) {} to {}".format(nb, dst))
         shutil.copy(nb, dst)
 
     if execute_only:
@@ -168,7 +166,7 @@ def do_one(
         return dst
 
     dst = os.path.splitext(os.path.join(DST_DIR, name))[0] + "." + to
-    print("Converting %s to %s" % (nb, dst))
+    print("Converting {} to {}".format(nb, dst))
     try:
         convert(nb, dst, to=to)
         with open(hash_file, encoding="utf-8", mode="w") as hf:

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Create of grid of scatter plots with confidence ellipses from the statecrime
 dataset

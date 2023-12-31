@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ Transformation Classes as generators for Archimedean copulas
 
 
@@ -156,7 +155,7 @@ class TransfGumbel(Transforms):
 
     def deriv2_inverse(self, phi, theta):
         th = theta  # shorthand
-        d2 = ((phi**(2 / th) + (th - 1) * phi**(1 / th))) / (phi**2 * th**2)
+        d2 = (phi**(2 / th) + (th - 1) * phi**(1 / th)) / (phi**2 * th**2)
         d2 *= np.exp(-phi**(1 / th))
         return d2
 
@@ -172,11 +171,11 @@ class TransfGumbel(Transforms):
     def deriv4_inverse(self, phi, theta):
         p = phi  # shorthand
         b = theta
-        d4 = (((6 * b**3 - 11 * b**2 + 6. * b - 1) * p**(1 / b) +
-               (11 * b**2 - 18 * b + 7) * p**(2 / b) +
-               (6 * (b - 1)) * p**(3 / b) +
-               p**(4 / b))
-              )/(p * b)**4
+        d4 = ((6 * b**3 - 11 * b**2 + 6. * b - 1) * p**(1 / b) +
+              (11 * b**2 - 18 * b + 7) * p**(2 / b) +
+              (6 * (b - 1)) * p**(3 / b) +
+              p**(4 / b)
+              ) / (p * b)**4
 
         d4 *= np.exp(-p**(1 / b))
         return d4

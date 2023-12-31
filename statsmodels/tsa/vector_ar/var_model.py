@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Vector Autoregression (VAR) processes
 
@@ -653,7 +652,7 @@ class VAR(TimeSeriesModel):
         """
         lags = maxlags
         if trend not in ["c", "ct", "ctt", "n"]:
-            raise ValueError("trend '{}' not supported for VAR".format(trend))
+            raise ValueError(f"trend '{trend}' not supported for VAR")
 
         if ic is not None:
             selections = self.select_order(maxlags=maxlags)
@@ -824,9 +823,9 @@ class VAR(TimeSeriesModel):
             for k, v in result.info_criteria.items():
                 ics[k].append(v)
 
-        selected_orders = dict(
-            (k, np.array(v).argmin() + p_min) for k, v in ics.items()
-        )
+        selected_orders = {
+            k: np.array(v).argmin() + p_min for k, v in ics.items()
+        }
 
         return LagOrderResults(ics, selected_orders, vecm=False)
 

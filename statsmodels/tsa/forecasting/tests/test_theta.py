@@ -14,7 +14,7 @@ SMOKE_IDS = [f"type: {typ}, exponential: {exp}" for typ, exp in SMOKE_PARAMS]
 def data(request):
     rs = np.random.RandomState([3290328901, 323293105, 121029109])
     scale = 0.01 if request.param[1] else 1
-    y = np.cumsum(scale + scale * rs.standard_normal((300)))
+    y = np.cumsum(scale + scale * rs.standard_normal(300))
     if request.param[1]:
         y = np.exp(y)
     index = pd.date_range("2000-01-01", periods=300)
@@ -30,7 +30,7 @@ def data(request):
 def indexed_data(request):
     rs = np.random.RandomState([3290328901, 323293105, 121029109])
     scale = 0.01
-    y = np.cumsum(scale + scale * rs.standard_normal((300)))
+    y = np.cumsum(scale + scale * rs.standard_normal(300))
     y = np.exp(y)
     if request.param == "datetime":
         index = pd.date_range("2000-1-1", periods=300)

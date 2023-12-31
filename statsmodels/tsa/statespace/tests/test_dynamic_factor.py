@@ -161,7 +161,7 @@ class TestDynamicFactor(CheckDynamicFactor):
             'predict_dfm_1', 'predict_dfm_2', 'predict_dfm_3']]
         true['dynamic_predict'] = output_results.iloc[1:][[
             'dyn_predict_dfm_1', 'dyn_predict_dfm_2', 'dyn_predict_dfm_3']]
-        super(TestDynamicFactor, cls).setup_class(
+        super().setup_class(
             true, k_factors=1, factor_order=2)
 
     def test_bse_approx(self):
@@ -180,7 +180,7 @@ class TestDynamicFactor2(CheckDynamicFactor):
             'predict_dfm2_1', 'predict_dfm2_2', 'predict_dfm2_3']]
         true['dynamic_predict'] = output_results.iloc[1:][[
             'dyn_predict_dfm2_1', 'dyn_predict_dfm2_2', 'dyn_predict_dfm2_3']]
-        super(TestDynamicFactor2, cls).setup_class(
+        super().setup_class(
             true, k_factors=2, factor_order=1)
 
     def test_mle(self):
@@ -276,7 +276,7 @@ class TestDynamicFactor2(CheckDynamicFactor):
         for i in range(self.model.k_endog):
             iname = self.model.endog_names[i]
             iparam = forg(params[offset + i], prec=4)
-            assert re.search('sigma2.%s +%s' % (iname, iparam), table)
+            assert re.search('sigma2.{} +{}'.format(iname, iparam), table)
 
 
 class TestDynamicFactor_exog1(CheckDynamicFactor):
@@ -295,16 +295,16 @@ class TestDynamicFactor_exog1(CheckDynamicFactor):
             'dyn_predict_dfm_exog1_2',
             'dyn_predict_dfm_exog1_3']]
         exog = np.ones((75, 1))
-        super(TestDynamicFactor_exog1, cls).setup_class(
+        super().setup_class(
             true, k_factors=1, factor_order=1, exog=exog)
 
     def test_predict(self):
         exog = np.ones((16, 1))
-        super(TestDynamicFactor_exog1, self).test_predict(exog=exog)
+        super().test_predict(exog=exog)
 
     def test_dynamic_predict(self):
         exog = np.ones((16, 1))
-        super(TestDynamicFactor_exog1, self).test_dynamic_predict(exog=exog)
+        super().test_dynamic_predict(exog=exog)
 
     def test_bse_approx(self):
         bse = self.results._cov_params_approx().diagonal()**0.5
@@ -328,7 +328,7 @@ class TestDynamicFactor_exog2(CheckDynamicFactor):
             'dyn_predict_dfm_exog2_2',
             'dyn_predict_dfm_exog2_3']]
         exog = np.c_[np.ones((75, 1)), (np.arange(75) + 2)[:, np.newaxis]]
-        super(TestDynamicFactor_exog2, cls).setup_class(
+        super().setup_class(
             true, k_factors=1, factor_order=1, exog=exog)
 
     def test_bse_approx(self):
@@ -338,12 +338,12 @@ class TestDynamicFactor_exog2(CheckDynamicFactor):
     def test_predict(self):
         exog = np.c_[np.ones((16, 1)),
                      (np.arange(75, 75+16) + 2)[:, np.newaxis]]
-        super(TestDynamicFactor_exog2, self).test_predict(exog=exog)
+        super().test_predict(exog=exog)
 
     def test_dynamic_predict(self):
         exog = np.c_[np.ones((16, 1)),
                      (np.arange(75, 75+16) + 2)[:, np.newaxis]]
-        super(TestDynamicFactor_exog2, self).test_dynamic_predict(exog=exog)
+        super().test_dynamic_predict(exog=exog)
 
     def test_summary(self):
         with warnings.catch_warnings():
@@ -418,7 +418,7 @@ class TestDynamicFactor_exog2(CheckDynamicFactor):
         for i in range(self.model.k_endog):
             iname = self.model.endog_names[i]
             iparam = forg(params[offset + i], prec=4)
-            assert re.search('sigma2.%s +%s' % (iname, iparam), table)
+            assert re.search('sigma2.{} +{}'.format(iname, iparam), table)
 
 
 class TestDynamicFactor_general_errors(CheckDynamicFactor):
@@ -438,7 +438,7 @@ class TestDynamicFactor_general_errors(CheckDynamicFactor):
             'dyn_predict_dfm_gen_1',
             'dyn_predict_dfm_gen_2',
             'dyn_predict_dfm_gen_3']]
-        super(TestDynamicFactor_general_errors, cls).setup_class(
+        super().setup_class(
             true, k_factors=1, factor_order=1, error_var=True,
             error_order=1, error_cov_type='unstructured')
 
@@ -537,8 +537,10 @@ class TestDynamicFactor_general_errors(CheckDynamicFactor):
             # -> Check that we have the right coefficients
             for j in range(self.model.k_endog):
                 name = self.model.endog_names[j]
-                pattern = r'L1.e\(%s\) +%s' % (name, forg(params[offset + j],
-                                                          prec=4))
+                pattern = r'L1.e\({}\) +{}'.format(
+                    name,
+                    forg(params[offset + j], prec=4)
+                )
                 assert re.search(pattern, table)
 
         # Check the Error covariance matrix output
@@ -591,7 +593,7 @@ class TestDynamicFactor_ar2_errors(CheckDynamicFactor):
             'dyn_predict_dfm_ar2_1',
             'dyn_predict_dfm_ar2_2',
             'dyn_predict_dfm_ar2_3']]
-        super(TestDynamicFactor_ar2_errors, cls).setup_class(
+        super().setup_class(
             true, k_factors=1, factor_order=1, error_order=2)
 
     def test_bse_approx(self):
@@ -626,7 +628,7 @@ class TestDynamicFactor_scalar_error(CheckDynamicFactor):
             'dyn_predict_dfm_scalar_1', 'dyn_predict_dfm_scalar_2',
             'dyn_predict_dfm_scalar_3']]
         exog = np.ones((75, 1))
-        super(TestDynamicFactor_scalar_error, cls).setup_class(
+        super().setup_class(
             true, k_factors=1, factor_order=1,
             exog=exog, error_cov_type='scalar')
 
@@ -636,12 +638,11 @@ class TestDynamicFactor_scalar_error(CheckDynamicFactor):
 
     def test_predict(self):
         exog = np.ones((16, 1))
-        super(TestDynamicFactor_scalar_error, self).test_predict(exog=exog)
+        super().test_predict(exog=exog)
 
     def test_dynamic_predict(self):
         exog = np.ones((16, 1))
-        super(TestDynamicFactor_scalar_error,
-              self).test_dynamic_predict(exog=exog)
+        super().test_dynamic_predict(exog=exog)
 
 
 class TestStaticFactor(CheckDynamicFactor):
@@ -655,7 +656,7 @@ class TestStaticFactor(CheckDynamicFactor):
             'predict_sfm_1', 'predict_sfm_2', 'predict_sfm_3']]
         true['dynamic_predict'] = output_results.iloc[1:][[
             'dyn_predict_sfm_1', 'dyn_predict_sfm_2', 'dyn_predict_sfm_3']]
-        super(TestStaticFactor, cls).setup_class(
+        super().setup_class(
             true, k_factors=1, factor_order=0)
 
     def test_bse_approx(self):
@@ -681,7 +682,7 @@ class TestSUR(CheckDynamicFactor):
         true['dynamic_predict'] = output_results.iloc[1:][[
             'dyn_predict_sur_1', 'dyn_predict_sur_2', 'dyn_predict_sur_3']]
         exog = np.c_[np.ones((75, 1)), (np.arange(75) + 2)[:, np.newaxis]]
-        super(TestSUR, cls).setup_class(
+        super().setup_class(
             true, k_factors=0, factor_order=0,
             exog=exog, error_cov_type='unstructured')
 
@@ -692,12 +693,12 @@ class TestSUR(CheckDynamicFactor):
     def test_predict(self):
         exog = np.c_[np.ones((16, 1)),
                      (np.arange(75, 75+16) + 2)[:, np.newaxis]]
-        super(TestSUR, self).test_predict(exog=exog)
+        super().test_predict(exog=exog)
 
     def test_dynamic_predict(self):
         exog = np.c_[np.ones((16, 1)),
                      (np.arange(75, 75+16) + 2)[:, np.newaxis]]
-        super(TestSUR, self).test_dynamic_predict(exog=exog)
+        super().test_dynamic_predict(exog=exog)
 
 
 class TestSUR_autocorrelated_errors(CheckDynamicFactor):
@@ -713,7 +714,7 @@ class TestSUR_autocorrelated_errors(CheckDynamicFactor):
         true['dynamic_predict'] = output_results.iloc[1:][[
             'dyn_predict_sur_auto_1', 'dyn_predict_sur_auto_2']]
         exog = np.c_[np.ones((75, 1)), (np.arange(75) + 2)[:, np.newaxis]]
-        super(TestSUR_autocorrelated_errors, cls).setup_class(
+        super().setup_class(
             true, k_factors=0, factor_order=0, exog=exog,
             error_order=1, error_var=True,
             error_cov_type='diagonal',
@@ -726,16 +727,15 @@ class TestSUR_autocorrelated_errors(CheckDynamicFactor):
     def test_predict(self):
         exog = np.c_[np.ones((16, 1)),
                      (np.arange(75, 75+16) + 2)[:, np.newaxis]]
-        super(TestSUR_autocorrelated_errors, self).test_predict(exog=exog)
+        super().test_predict(exog=exog)
 
     def test_dynamic_predict(self):
         exog = np.c_[np.ones((16, 1)),
                      (np.arange(75, 75+16) + 2)[:, np.newaxis]]
-        super(TestSUR_autocorrelated_errors,
-              self).test_dynamic_predict(exog=exog)
+        super().test_dynamic_predict(exog=exog)
 
     def test_mle(self):
-        super(TestSUR_autocorrelated_errors, self).test_mle(init_powell=False)
+        super().test_mle(init_powell=False)
 
 
 def test_misspecification():

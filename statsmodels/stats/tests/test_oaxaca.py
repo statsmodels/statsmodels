@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # STATA adds a constant no matter if you want to or not,
 # so I cannot test for having no intercept. This also would make
 # no sense for Oaxaca. All of these stata_results

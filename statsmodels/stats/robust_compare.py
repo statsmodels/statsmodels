@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Anova k-sample comparison without and with trimming
 
 Created on Sun Jun 09 23:51:34 2013

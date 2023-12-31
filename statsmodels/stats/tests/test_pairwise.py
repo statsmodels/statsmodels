@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 
 Created on Wed Mar 28 15:34:18 2012
@@ -250,7 +249,7 @@ class TestTuckeyHSD2Pandas(TestTuckeyHSD2):
 
     @classmethod
     def setup_class(cls):
-        super(TestTuckeyHSD2Pandas, cls).setup_class()
+        super().setup_class()
 
         cls.endog = pd.Series(cls.endog)
         # we are working with bytes on python 3, not with strings in this case

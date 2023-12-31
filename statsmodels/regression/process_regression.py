@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 This module implements maximum likelihood-based estimation (MLE) of
 Gaussian regression models for finite-dimensional observations made on
@@ -250,7 +249,7 @@ class ProcessMLE(base.LikelihoodModel):
                  cov=None,
                  **kwargs):
 
-        super(ProcessMLE, self).__init__(
+        super().__init__(
             endog,
             exog,
             exog_scale=exog_scale,
@@ -296,7 +295,7 @@ class ProcessMLE(base.LikelihoodModel):
         _check_args(endog, exog, exog_scale, exog_smooth, exog_noise,
                     time, groups)
 
-        groups_ix = collections.defaultdict(lambda: [])
+        groups_ix = collections.defaultdict(list)
         for i, g in enumerate(groups):
             groups_ix[g].append(i)
         self._groups_ix = groups_ix
@@ -392,7 +391,7 @@ class ProcessMLE(base.LikelihoodModel):
             exog_noise, noise_design_info, noise_names, exog_noise =\
                 None, None, [], None
 
-        mod = super(ProcessMLE, cls).from_formula(
+        mod = super().from_formula(
             formula,
             data=data,
             subset=None,
@@ -770,7 +769,7 @@ class ProcessMLEResults(base.GenericLikelihoodModelResults):
 
     def __init__(self, model, mlefit):
 
-        super(ProcessMLEResults, self).__init__(
+        super().__init__(
             model, mlefit)
 
         pa = model.unpack(mlefit.params)

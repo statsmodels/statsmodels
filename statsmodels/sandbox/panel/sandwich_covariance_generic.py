@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """covariance with (nobs,nobs) loop and general kernel
 
 This is a general implementation that is not efficient for any special cases.

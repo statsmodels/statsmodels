@@ -794,7 +794,7 @@ class MultinomialModel(BinaryModel):
     def fit(self, start_params=None, method='newton', maxiter=35,
             full_output=1, disp=1, callback=None, **kwargs):
         if start_params is None:
-            start_params = np.zeros((self.K * (self.J-1)))
+            start_params = np.zeros(self.K * (self.J-1))
         else:
             start_params = np.asarray(start_params)
 
@@ -815,7 +815,7 @@ class MultinomialModel(BinaryModel):
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
             qc_tol=0.03, **kwargs):
         if start_params is None:
-            start_params = np.zeros((self.K * (self.J-1)))
+            start_params = np.zeros(self.K * (self.J-1))
         else:
             start_params = np.asarray(start_params)
         mnfit = DiscreteModel.fit_regularized(
@@ -2082,8 +2082,8 @@ class GeneralizedPoisson(CountModel):
         a1 = 1 + alpha * mu_p
         a2 = mu + alpha * mu_p * y
 
-        dp = np.sum((np.log(mu) * ((a2 - mu) * ((y - 1) / a2 - 2 / a1) +
-                                   (a1 - 1) * a2 / a1 ** 2)))
+        dp = np.sum(np.log(mu) * ((a2 - mu) * ((y - 1) / a2 - 2 / a1) +
+                                   (a1 - 1) * a2 / a1 ** 2))
         return dp
 
     def hessian(self, params):
@@ -2338,10 +2338,10 @@ class Logit(BinaryModel):
     __doc__ = """
     Logit Model
 
-    %(params)s
+    {params}
     offset : array_like
         Offset is added to the linear prediction with coefficient equal to 1.
-    %(extra_params)s
+    {extra_params}
 
     Attributes
     ----------
@@ -2349,8 +2349,8 @@ class Logit(BinaryModel):
         A reference to the endogenous response variable
     exog : ndarray
         A reference to the exogenous design.
-    """ % {'params': base._model_params_doc,
-           'extra_params': base._missing_param_doc + _check_rank_doc}
+    """.format(params=base._model_params_doc,
+           extra_params=base._missing_param_doc + _check_rank_doc)
 
     _continuous_ok = True
 
@@ -2631,10 +2631,10 @@ class Probit(BinaryModel):
     __doc__ = """
     Probit Model
 
-    %(params)s
+    {params}
     offset : array_like
         Offset is added to the linear prediction with coefficient equal to 1.
-    %(extra_params)s
+    {extra_params}
 
     Attributes
     ----------
@@ -2642,8 +2642,8 @@ class Probit(BinaryModel):
         A reference to the endogenous response variable
     exog : ndarray
         A reference to the exogenous design.
-    """ % {'params': base._model_params_doc,
-           'extra_params': base._missing_param_doc + _check_rank_doc}
+    """.format(params=base._model_params_doc,
+           extra_params=base._missing_param_doc + _check_rank_doc)
 
     @cache_readonly
     def link(self):
@@ -2958,7 +2958,7 @@ class MNLogit(MultinomialModel):
         A nobs x k array where `nobs` is the number of observations and `k`
         is the number of regressors. An intercept is not included by default
         and should be added by the user. See `statsmodels.tools.add_constant`.
-    %(extra_params)s
+    {extra_params}
 
     Attributes
     ----------
@@ -2984,7 +2984,7 @@ class MNLogit(MultinomialModel):
     Notes
     -----
     See developer notes for further information on `MNLogit` internals.
-    """ % {'extra_params': base._missing_param_doc + _check_rank_doc}
+    """.format(extra_params=base._missing_param_doc + _check_rank_doc)
 
     def __init__(self, endog, exog, check_rank=True, **kwargs):
         super().__init__(endog, exog, check_rank=check_rank, **kwargs)
@@ -4247,7 +4247,7 @@ class NegativeBinomialP(CountModel):
             # work around perfect separation callback #3895
             callback = lambda *x: x
 
-        mlefit = super(NegativeBinomialP, self).fit(start_params=start_params,
+        mlefit = super().fit(start_params=start_params,
                         maxiter=maxiter, method=method, disp=disp,
                         full_output=full_output, callback=callback,
                         **kwargs)
@@ -5080,7 +5080,7 @@ class L1CountResults(DiscreteResults):
             "extra_attr" : _l1_results_attr}
 
     def __init__(self, model, cntfit):
-        super(L1CountResults, self).__init__(model, cntfit)
+        super().__init__(model, cntfit)
         # self.trimmed is a boolean array with T/F telling whether or not that
         # entry in params has been set zero'd out.
         self.trimmed = cntfit.mle_retvals['trimmed']
@@ -5224,7 +5224,7 @@ class BinaryResults(DiscreteResults):
     @Appender(DiscreteResults.summary.__doc__)
     def summary(self, yname=None, xname=None, title=None, alpha=.05,
                 yname_list=None):
-        smry = super(BinaryResults, self).summary(yname, xname, title, alpha,
+        smry = super().summary(yname, xname, title, alpha,
                                                   yname_list)
         fittedvalues = self.model.cdf(self.fittedvalues)
         absprederror = np.abs(self.model.endog - fittedvalues)
@@ -5396,7 +5396,7 @@ class L1BinaryResults(BinaryResults):
     "Results instance for binary data fit by l1 regularization",
     "extra_attr" : _l1_results_attr}
     def __init__(self, model, bnryfit):
-        super(L1BinaryResults, self).__init__(model, bnryfit)
+        super().__init__(model, bnryfit)
         # self.trimmed is a boolean array with T/F telling whether or not that
         # entry in params has been set zero'd out.
         self.trimmed = bnryfit.mle_retvals['trimmed']
@@ -5410,7 +5410,7 @@ class MultinomialResults(DiscreteResults):
             "A results class for multinomial data", "extra_attr" : ""}
 
     def __init__(self, model, mlefit):
-        super(MultinomialResults, self).__init__(model, mlefit)
+        super().__init__(model, mlefit)
         self.J = model.J
         self.K = model.K
 
@@ -5567,7 +5567,7 @@ class L1MultinomialResults(MultinomialResults):
         "A results class for multinomial data fit by l1 regularization",
         "extra_attr" : _l1_results_attr}
     def __init__(self, model, mlefit):
-        super(L1MultinomialResults, self).__init__(model, mlefit)
+        super().__init__(model, mlefit)
         # self.trimmed is a boolean array with T/F telling whether or not that
         # entry in params has been set zero'd out.
         self.trimmed = mlefit.mle_retvals['trimmed']

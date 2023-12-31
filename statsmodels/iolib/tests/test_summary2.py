@@ -106,8 +106,8 @@ parentheses.
         reg1 = OLS(y1, x2).fit()
         reg2 = OLS(y2, x2).fit()
 
-        info_dict = {'R2': lambda x: '{:.3f}'.format(int(x.rsquared)),
-                     'N': lambda x: '{0:d}'.format(int(x.nobs))}
+        info_dict = {'R2': lambda x: f'{int(x.rsquared):.3f}',
+                     'N': lambda x: f'{int(x.nobs):d}'}
         original = actual = summary_col([reg1, reg2], float_format='%0.4f')
         actual = summary_col([reg1, reg2], regressor_order=['a', 'b'],
                              float_format='%0.4f',

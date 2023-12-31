@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Test VAR Model
 """
@@ -920,8 +919,8 @@ def test_var_cov_params_pandas(bivariate_var_data):
 def test_summaries_exog(reset_randomstate):
     y = np.random.standard_normal((500, 6))
     df = pd.DataFrame(y)
-    cols = ["endog_{0}".format(i) for i in range(2)] + [
-        "exog_{0}".format(i) for i in range(4)
+    cols = [f"endog_{i}" for i in range(2)] + [
+        f"exog_{i}" for i in range(4)
     ]
     df.columns = cols
     df.index = pd.date_range("1-1-1950", periods=500, freq="MS")

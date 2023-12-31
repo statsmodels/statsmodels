@@ -162,7 +162,7 @@ def _make_exog_from_formula(result, focus_var, summaries, values, num_points):
     # extra variables not referenced in the formula RHS, this may not
     # be a problem, so just warn.  There is no obvious way to extract
     # from a formula all the variable names that it references.
-    varl = set(exog.columns.tolist()) - set([model.endog_names])
+    varl = set(exog.columns.tolist()) - {model.endog_names}
     unmatched = varl - set(colnames)
     unmatched = list(unmatched)
     if len(unmatched) > 0:

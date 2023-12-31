@@ -1,4 +1,3 @@
-
 from numpy.testing import assert_equal
 from statsmodels.iolib.table import SimpleTable, default_txt_fmt
 from statsmodels.iolib.table import default_latex_fmt

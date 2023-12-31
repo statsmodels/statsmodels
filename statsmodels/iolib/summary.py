@@ -123,7 +123,7 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
         # GH 2298
         raise ValueError('User supplied xnames must have the same number of '
                          'entries as the number of model parameters '
-                         '({0})'.format(len(self.params)))
+                         '({})'.format(len(self.params)))
 
     yname, xname = _getnames(self, yname, xname)
 

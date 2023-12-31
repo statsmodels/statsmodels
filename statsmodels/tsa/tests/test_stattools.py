@@ -909,7 +909,7 @@ class TestRUR:
 
         # if m is not one, n != m * n
         if nobs != x.size:
-            raise ValueError("x of shape {0} not understood".format(x.shape))
+            raise ValueError(f"x of shape {x.shape} not understood")
 
         # Table from [1] has been replicated using 200,000 samples
         # Critical values for new n_obs values have been identified

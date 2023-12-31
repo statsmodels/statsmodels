@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ Distance dependence measure and the dCov test.
 
 Implementation of Székely et al. (2007) calculation of distance
@@ -125,7 +124,7 @@ def distance_covariance_test(x, y, B=None, method="auto"):
         test_statistic, pval = _asymptotic_pvalue(stats)
 
     else:
-        raise ValueError("Unknown 'method' parameter: {}".format(method))
+        raise ValueError(f"Unknown 'method' parameter: {method}")
 
     # In case we got an extreme p-value (0 or 1) when using the empirical
     # distribution of the test statistic under the null, we fall back

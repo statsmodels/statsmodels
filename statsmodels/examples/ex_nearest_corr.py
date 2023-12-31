@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Find near positive definite correlation and covariance matrices
 
 Created on Sun Aug 19 15:25:07 2012

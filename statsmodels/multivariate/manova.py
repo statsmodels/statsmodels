@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Multivariate analysis of variance
 
 author: Yichuan Liu
@@ -62,7 +60,7 @@ class MANOVA(Model):
         if len(endog.shape) == 1 or endog.shape[1] == 1:
             raise ValueError('There must be more than one dependent variable'
                              ' to fit MANOVA!')
-        super(MANOVA, self).__init__(endog, exog, missing=missing,
+        super().__init__(endog, exog, missing=missing,
                                      hasconst=hasconst, **kwargs)
         self._fittedmod = _multivariate_ols_fit(self.endog, self.exog)
 

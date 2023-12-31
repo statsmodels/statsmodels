@@ -415,7 +415,7 @@ class RollingWLS:
         if (endog.ndim > 1 and endog.shape[1] > 1) or endog.ndim > 2:
             raise ValueError(
                 "endog has evaluated to an array with multiple "
-                "columns that has shape {0}. This occurs when "
+                "columns that has shape {}. This occurs when "
                 "the variable converted to endog is non-numeric"
                 " (e.g., bool or str).".format(endog.shape)
             )
@@ -812,9 +812,9 @@ class RollingRegressionResults:
                     variable_idx.append(variable)
                 else:
                     msg = (
-                        "variable {0} is not an integer and was not found "
+                        "variable {} is not an integer and was not found "
                         "in the list of variable "
-                        "names: {1}".format(
+                        "names: {}".format(
                             variables[i], ", ".join(param_names)
                         )
                     )

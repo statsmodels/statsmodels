@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 from statsmodels.compat.pandas import (
@@ -12,7 +11,8 @@ from collections.abc import Iterable
 import datetime
 import datetime as dt
 from types import SimpleNamespace
-from typing import Any, Literal, Sequence, cast
+from typing import Any, Literal, cast
+from collections.abc import Sequence
 import warnings
 
 import numpy as np
@@ -354,7 +354,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
         endog_names = self.endog_names
         x, y = lagmat(self.endog, maxlag, original="sep")
         exog_names.extend(
-            [endog_names + ".L{0}".format(lag) for lag in self._lags]
+            [endog_names + f".L{lag}" for lag in self._lags]
         )
         if len(self._lags) < maxlag:
             x = x[:, np.asarray(self._lags) - 1]
@@ -371,7 +371,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
                 if self._seasonal:
                     period = self._period
                     assert isinstance(period, int)
-                    names = ["seasonal.{0}".format(i) for i in range(period)]
+                    names = [f"seasonal.{i}" for i in range(period)]
                     if "c" in self._trend:
                         names = names[1:]
                     deterministic_names.extend(names)
@@ -1502,7 +1502,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         if oos and alpha is not None:
             ci = np.asarray(predictions.conf_int(alpha))
             lower, upper = ci[-oos:, 0], ci[-oos:, 1]
-            label = "{0:.0%} confidence interval".format(1 - alpha)
+            label = f"{1 - alpha:.0%} confidence interval"
             x = ax.get_lines()[-1].get_xdata()
             ax.fill_between(
                 x[-oos:],
@@ -1688,7 +1688,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         if self.model.exog is not None:
             model += "-X"
 
-        order = "({0})".format(self._max_lag)
+        order = f"({self._max_lag})"
         dep_name = str(self.model.endog_names)
         top_left = [
             ("Dep. Variable:", [dep_name]),
@@ -2217,11 +2217,11 @@ class AROrderSelectionResults:
         self._seasonal = seasonal
         self._period = period
         aic = sorted(ics, key=lambda r: r[1][0])
-        self._aic = dict([(key, val[0]) for key, val in aic])
+        self._aic = {key: val[0] for key, val in aic}
         bic = sorted(ics, key=lambda r: r[1][1])
-        self._bic = dict([(key, val[1]) for key, val in bic])
+        self._bic = {key: val[1] for key, val in bic}
         hqic = sorted(ics, key=lambda r: r[1][2])
-        self._hqic = dict([(key, val[2]) for key, val in hqic])
+        self._hqic = {key: val[2] for key, val in hqic}
 
     @property
     def model(self) -> AutoReg:

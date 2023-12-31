@@ -7,7 +7,8 @@ from statsmodels.compat.pandas import (
 
 from abc import ABC, abstractmethod
 import datetime as dt
-from typing import Hashable, List, Optional, Sequence, Set, Tuple, Type, Union
+from typing import Optional, Union
+from collections.abc import Hashable, Sequence
 
 import numpy as np
 import pandas as pd
@@ -92,12 +93,12 @@ class DeterministicTerm(ABC):
         """A meaningful string representation of the term"""
 
     def __hash__(self) -> int:
-        name: Tuple[Hashable, ...] = (type(self).__name__,)
+        name: tuple[Hashable, ...] = (type(self).__name__,)
         return hash(name + self._eq_attr)
 
     @property
     @abstractmethod
-    def _eq_attr(self) -> Tuple[Hashable, ...]:
+    def _eq_attr(self) -> tuple[Hashable, ...]:
         """tuple of attributes that are used for equality comparison"""
 
     @staticmethod
@@ -192,7 +193,7 @@ class TimeTrendDeterministicTerm(DeterministicTerm, ABC):
         return self._order
 
     @property
-    def _columns(self) -> List[str]:
+    def _columns(self) -> list[str]:
         columns = []
         trend_names = {1: "trend", 2: "trend_squared", 3: "trend_cubed"}
         if self._constant:
@@ -310,7 +311,7 @@ class TimeTrend(TimeTrendDeterministicTerm):
         return pd.DataFrame(terms, columns=self._columns, index=fcast_index)
 
     @property
-    def _eq_attr(self) -> Tuple[Hashable, ...]:
+    def _eq_attr(self) -> tuple[Hashable, ...]:
         return self._constant, self._order
 
 
@@ -401,14 +402,14 @@ class Seasonality(DeterministicTerm):
         return cls(period=period)
 
     @property
-    def _eq_attr(self) -> Tuple[Hashable, ...]:
+    def _eq_attr(self) -> tuple[Hashable, ...]:
         return self._period, self._initial_period
 
     def __str__(self) -> str:
         return f"Seasonality(period={self._period})"
 
     @property
-    def _columns(self) -> List[str]:
+    def _columns(self) -> list[str]:
         period = self._period
         columns = []
         for i in range(1, period + 1):
@@ -521,7 +522,7 @@ class Fourier(FourierDeterministicTerm):
         return self._period
 
     @property
-    def _columns(self) -> List[str]:
+    def _columns(self) -> list[str]:
         period = self._period
         fmt_period = d_or_f(period).strip()
         columns = []
@@ -553,7 +554,7 @@ class Fourier(FourierDeterministicTerm):
         return pd.DataFrame(terms, index=fcast_index, columns=self._columns)
 
     @property
-    def _eq_attr(self) -> Tuple[Hashable, ...]:
+    def _eq_attr(self) -> tuple[Hashable, ...]:
         return self._period, self._order
 
     def __str__(self) -> str:
@@ -588,7 +589,7 @@ class CalendarDeterministicTerm(DeterministicTerm, ABC):
     def _check_index_type(
         self,
         index: pd.Index,
-        allowed: Union[Type, Tuple[Type, ...]] = (
+        allowed: Union[type, tuple[type, ...]] = (
             pd.DatetimeIndex,
             pd.PeriodIndex,
         ),
@@ -667,7 +668,7 @@ class CalendarFourier(CalendarDeterministicTerm, FourierDeterministicTerm):
         self._order = required_int_like(order, "terms")
 
     @property
-    def _columns(self) -> List[str]:
+    def _columns(self) -> list[str]:
         columns = []
         for i in range(1, self._order + 1):
             for typ in ("sin", "cos"):
@@ -701,7 +702,7 @@ class CalendarFourier(CalendarDeterministicTerm, FourierDeterministicTerm):
         return pd.DataFrame(terms, index=fcast_index, columns=self._columns)
 
     @property
-    def _eq_attr(self) -> Tuple[Hashable, ...]:
+    def _eq_attr(self) -> tuple[Hashable, ...]:
         return self._freq.freqstr, self._order
 
     def __str__(self) -> str:
@@ -767,7 +768,7 @@ class CalendarSeasonality(CalendarDeterministicTerm):
         }
 
     def __init__(self, freq: str, period: str) -> None:
-        freq_options: Set[str] = set()
+        freq_options: set[str] = set()
         freq_options.update(
             *[list(val.keys()) for val in self._supported.values()]
         )
@@ -850,7 +851,7 @@ class CalendarSeasonality(CalendarDeterministicTerm):
         return terms
 
     @property
-    def _columns(self) -> List[str]:
+    def _columns(self) -> list[str]:
         columns = []
         count = self._supported[self._period][self._freq_str]
         for i in range(count):
@@ -884,7 +885,7 @@ class CalendarSeasonality(CalendarDeterministicTerm):
         return pd.DataFrame(terms, index=fcast_index, columns=self._columns)
 
     @property
-    def _eq_attr(self) -> Tuple[Hashable, ...]:
+    def _eq_attr(self) -> tuple[Hashable, ...]:
         return self._period, self._freq_str
 
     def __str__(self) -> str:
@@ -1048,8 +1049,8 @@ class CalendarTimeTrend(CalendarDeterministicTerm, TimeTrendDeterministicTerm):
         return self._terms(fcast_index, ratio)
 
     @property
-    def _eq_attr(self) -> Tuple[Hashable, ...]:
-        attr: Tuple[Hashable, ...] = (
+    def _eq_attr(self) -> tuple[Hashable, ...]:
+        attr: tuple[Hashable, ...] = (
             self._constant,
             self._order,
             self._freq.freqstr,
@@ -1175,7 +1176,7 @@ class DeterministicProcess:
         if not isinstance(index, pd.Index):
             index = pd.Index(index)
         self._index = index
-        self._deterministic_terms: List[DeterministicTerm] = []
+        self._deterministic_terms: list[DeterministicTerm] = []
         self._extendable = False
         self._index_freq = None
         self._validate_index()
@@ -1221,7 +1222,7 @@ you can pass additional components using the additional_terms input."""
                     "be unique."
                 )
         self._period = period
-        self._retain_cols: Optional[List[Hashable]] = None
+        self._retain_cols: Optional[list[Hashable]] = None
 
     @property
     def index(self) -> pd.Index:
@@ -1229,11 +1230,11 @@ you can pass additional components using the additional_terms input."""
         return self._index
 
     @property
-    def terms(self) -> List[DeterministicTerm]:
+    def terms(self) -> list[DeterministicTerm]:
         """The deterministic terms included in the process"""
         return self._deterministic_terms
 
-    def _adjust_dummies(self, terms: List[pd.DataFrame]) -> List[pd.DataFrame]:
+    def _adjust_dummies(self, terms: list[pd.DataFrame]) -> list[pd.DataFrame]:
         has_const: Optional[bool] = None
         for dterm in self._deterministic_terms:
             if isinstance(dterm, (TimeTrend, CalendarTimeTrend)):

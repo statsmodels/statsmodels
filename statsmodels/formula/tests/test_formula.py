@@ -52,15 +52,15 @@ class TestFormulaPandas(CheckFormulaOLS):
     def setup_class(cls):
         data = load_pandas().data
         cls.model = ols(longley_formula, data)
-        super(TestFormulaPandas, cls).setup_class()
+        super().setup_class()
 
 
 class TestFormulaDict(CheckFormulaOLS):
     @classmethod
     def setup_class(cls):
-        data = dict((k, v.tolist()) for k, v in load_pandas().data.items())
+        data = {k: v.tolist() for k, v in load_pandas().data.items()}
         cls.model = ols(longley_formula, data)
-        super(TestFormulaDict, cls).setup_class()
+        super().setup_class()
 
 
 def test_tests():

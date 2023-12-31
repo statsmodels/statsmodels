@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tests for gam.AdditiveModel and GAM with Polynomials compared to OLS and GLM
 
 
@@ -166,7 +165,7 @@ class TestAdditiveModel(BaseAM, CheckAM):
 
     @classmethod
     def setup_class(cls):
-        super(TestAdditiveModel, cls).setup_class() #initialize DGP
+        super().setup_class() #initialize DGP
 
         nobs = cls.nobs
         y_true, x, exog = cls.y_true, cls.x, cls.exog
@@ -199,7 +198,7 @@ class TestAdditiveModel(BaseAM, CheckAM):
     def test_fitted(self):
         # We have to override the base class because this case does not fail,
         #  while all others in this module do (as of 2019-05-22)
-        super(TestAdditiveModel, self).test_fitted()
+        super().test_fitted()
 
 
 class BaseGAM(BaseAM, CheckGAM):
@@ -256,7 +255,7 @@ class TestGAMPoisson(BaseGAM):
 
     @classmethod
     def setup_class(cls):
-        super(TestGAMPoisson, cls).setup_class() #initialize DGP
+        super().setup_class() #initialize DGP
 
         cls.family = family.Poisson()
         cls.rvs = stats.poisson.rvs
@@ -267,7 +266,7 @@ class TestGAMBinomial(BaseGAM):
 
     @classmethod
     def setup_class(cls):
-        super(TestGAMBinomial, cls).setup_class() #initialize DGP
+        super().setup_class() #initialize DGP
 
         cls.family = family.Binomial()
         cls.rvs = stats.bernoulli.rvs
@@ -288,7 +287,7 @@ class TestGAMGaussianLogLink(BaseGAM):
 
     @classmethod
     def setup_class(cls):
-        super(TestGAMGaussianLogLink, cls).setup_class()  # initialize DGP
+        super().setup_class()  # initialize DGP
 
         cls.family = family.Gaussian(links.Log())
         cls.rvs = stats.norm.rvs
@@ -301,7 +300,7 @@ class TestGAMGamma(BaseGAM):
 
     @classmethod
     def setup_class(cls):
-        super(TestGAMGamma, cls).setup_class() #initialize DGP
+        super().setup_class() #initialize DGP
 
         cls.family = family.Gamma(links.Log())
         cls.rvs = stats.gamma.rvs
@@ -317,7 +316,7 @@ class TestGAMNegativeBinomial(BaseGAM):
 
     @classmethod
     def setup_class(cls):
-        super(TestGAMNegativeBinomial, cls).setup_class()  # initialize DGP
+        super().setup_class()  # initialize DGP
 
         cls.family = family.NegativeBinomial()
         cls.rvs = stats.nbinom.rvs
@@ -330,7 +329,7 @@ class TestGAMNegativeBinomial(BaseGAM):
     def test_fitted(self):
         # We have to override the base class method in order to correctly
         #  specify the type of failure we are expecting.
-        super(TestGAMNegativeBinomial, self).test_fitted()
+        super().test_fitted()
 
     @pytest.mark.xfail(reason="Passing wrong number of args/kwargs "
                               "to _parse_args_rvs",
@@ -338,4 +337,4 @@ class TestGAMNegativeBinomial(BaseGAM):
     def test_df(self):
         # We have to override the base class method in order to correctly
         #  specify the type of failure we are expecting.
-        super(TestGAMNegativeBinomial, self).test_df()
+        super().test_df()

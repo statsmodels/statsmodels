@@ -113,7 +113,7 @@ class RecursiveLS(MLEModel):
                 del kwargs[name]
 
         # Initialize the state space representation
-        super(RecursiveLS, self).__init__(
+        super().__init__(
             endog, k_states=self.k_exog, exog=exog, **kwargs)
 
         # Use univariate filtering by default
@@ -168,9 +168,9 @@ class RecursiveLS(MLEModel):
 
     def filter(self, return_ssm=False, **kwargs):
         # Get the state space output
-        result = super(RecursiveLS, self).filter([], transformed=True,
-                                                 cov_type='none',
-                                                 return_ssm=True, **kwargs)
+        result = super().filter([], transformed=True,
+                                cov_type='none',
+                                return_ssm=True, **kwargs)
 
         # Wrap in a results object
         if not return_ssm:
@@ -191,9 +191,9 @@ class RecursiveLS(MLEModel):
 
     def smooth(self, return_ssm=False, **kwargs):
         # Get the state space output
-        result = super(RecursiveLS, self).smooth([], transformed=True,
-                                                 cov_type='none',
-                                                 return_ssm=True, **kwargs)
+        result = super().smooth([], transformed=True,
+                                cov_type='none',
+                                return_ssm=True, **kwargs)
 
         # Wrap in a results object
         if not return_ssm:
@@ -214,7 +214,7 @@ class RecursiveLS(MLEModel):
 
     @property
     def endog_names(self):
-        endog_names = super(RecursiveLS, self).endog_names
+        endog_names = super().endog_names
         return endog_names[0] if isinstance(endog_names, list) else endog_names
 
     @property
@@ -272,7 +272,7 @@ class RecursiveLSResults(MLEResults):
 
     def __init__(self, model, params, filter_results, cov_type='opg',
                  **kwargs):
-        super(RecursiveLSResults, self).__init__(
+        super().__init__(
             model, params, filter_results, cov_type, **kwargs)
 
         # Since we are overriding params with things that are not MLE params,

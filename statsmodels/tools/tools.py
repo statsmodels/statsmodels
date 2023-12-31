@@ -457,7 +457,7 @@ class Bunch(dict):
         Keyword agument passed to dict constructor, key=value.
     """
     def __init__(self, *args, **kwargs):
-        super(Bunch, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.__dict__ = self
 
 

@@ -265,7 +265,7 @@ class ProbPlot:
             )
             raise TypeError(msg)
         except Exception as exc:
-            msg = "failed to compute the ppf of {0}".format(self.dist.name)
+            msg = f"failed to compute the ppf of {self.dist.name}"
             raise type(exc)(msg)
 
     @cache_readonly

@@ -371,7 +371,7 @@ class NumpyDocString(Mapping):
         self._parse_summary()
 
         sections = list(self._read_sections())
-        section_names = set([section for section, content in sections])
+        section_names = {section for section, content in sections}
 
         has_returns = "Returns" in section_names
         has_yields = "Yields" in section_names
@@ -424,7 +424,7 @@ class NumpyDocString(Mapping):
             except TypeError:
                 filename = None
             msg = msg + (
-                " in the docstring of %s in %s." % (self._obj, filename)
+                " in the docstring of {} in {}.".format(self._obj, filename)
             )
 
         raise ValueError(msg)
@@ -493,9 +493,9 @@ class NumpyDocString(Mapping):
             links = []
             for func, role in funcs:
                 if role:
-                    link = ":%s:`%s`" % (role, func)
+                    link = ":{}:`{}`".format(role, func)
                 elif func_role:
-                    link = ":%s:`%s`" % (func_role, func)
+                    link = ":{}:`{}`".format(func_role, func)
                 else:
                     link = "%s" % func
                 links.append(link)
@@ -524,7 +524,7 @@ class NumpyDocString(Mapping):
             if section == "default":
                 continue
             output_index = True
-            out += ["   :%s: %s" % (section, ", ".join(references))]
+            out += ["   :{}: {}".format(section, ", ".join(references))]
         if output_index:
             return out
         else:
@@ -638,7 +638,7 @@ class Docstring:
         block_name = " ".join(map(str.capitalize, block_name.split(" ")))
         if block_name not in self._ds:
             raise ValueError(
-                "{0} is not a block in the " "docstring".format(block_name)
+                "{} is not a block in the " "docstring".format(block_name)
             )
         if not isinstance(block, list) and isinstance(
             self._ds[block_name], list
@@ -656,7 +656,7 @@ class Docstring:
         missing = set(parameters).difference(ds_params.keys())
         if missing:
             raise ValueError(
-                "{0} were not found in the "
+                "{} were not found in the "
                 "docstring".format(",".join(missing))
             )
         final = [ds_params[param] for param in parameters]

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """groupmean, groupby in pandas, la and tabular from a scikits.timeseries
 
 after a question on the scipy-user mailing list I tried to do

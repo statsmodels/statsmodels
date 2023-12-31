@@ -1040,7 +1040,7 @@ class TestDataDimensions(CheckRegressionResults):
 class TestGLS_large_data(TestDataDimensions):
     @classmethod
     def setup_class(cls):
-        super(TestGLS_large_data, cls).setup_class()
+        super().setup_class()
         nobs = 1000
         y = np.random.randn(nobs, 1)
         x = np.random.randn(nobs, 20)
@@ -1067,7 +1067,7 @@ class TestGLS_large_data(TestDataDimensions):
 class TestNxNx(TestDataDimensions):
     @classmethod
     def setup_class(cls):
-        super(TestNxNx, cls).setup_class()
+        super().setup_class()
         cls.mod2 = OLS(cls.endog_n_, cls.exog_n_)
         cls.mod2.df_model += 1
         cls.res2 = cls.mod2.fit()
@@ -1076,7 +1076,7 @@ class TestNxNx(TestDataDimensions):
 class TestNxOneNx(TestDataDimensions):
     @classmethod
     def setup_class(cls):
-        super(TestNxOneNx, cls).setup_class()
+        super().setup_class()
         cls.mod2 = OLS(cls.endog_n_one, cls.exog_n_)
         cls.mod2.df_model += 1
         cls.res2 = cls.mod2.fit()
@@ -1085,7 +1085,7 @@ class TestNxOneNx(TestDataDimensions):
 class TestNxNxOne(TestDataDimensions):
     @classmethod
     def setup_class(cls):
-        super(TestNxNxOne, cls).setup_class()
+        super().setup_class()
         cls.mod2 = OLS(cls.endog_n_, cls.exog_n_one)
         cls.mod2.df_model += 1
         cls.res2 = cls.mod2.fit()
@@ -1600,7 +1600,7 @@ def test_bool_regressor(reset_randomstate):
 
 
 def test_ols_constant(reset_randomstate):
-    y = np.random.standard_normal((200))
+    y = np.random.standard_normal(200)
     x = np.ones((200, 1))
     res = OLS(y, x).fit()
     with warnings.catch_warnings(record=True) as recording:

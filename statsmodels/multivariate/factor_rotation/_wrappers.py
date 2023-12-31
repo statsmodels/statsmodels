@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-
-
 from ._analytic_rotation import target_rotation
 from ._gpa_rotation import oblimin_objective, orthomax_objective, CF_objective
 from ._gpa_rotation import ff_partial_target, ff_target
