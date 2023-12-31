@@ -182,7 +182,10 @@ class truncatedpoisson_gen(rv_discrete):
         for i in range(int(np.max(truncation)) + 1):
             pmf += poisson.pmf(i, mu)
 
-        logpmf_ = poisson.logpmf(x, mu) - np.log(1 - pmf)
+        log_1_m_pmf = -np.inf
+        loc = pmf < 1
+        log_1_m_pmf[loc] = np.log(1 - pmf[loc])
+        logpmf_ = poisson.logpmf(x, mu) - log_1_m_pmf
         #logpmf_[x < truncation + 1] = - np.inf
         return logpmf_
 
@@ -207,7 +210,10 @@ class truncatednegbin_gen(rv_discrete):
         for i in range(int(np.max(truncation)) + 1):
             pmf += nbinom.pmf(i, size, prob)
 
-        logpmf_ = nbinom.logpmf(x, size, prob) - np.log(1 - pmf)
+        log_1_m_pmf = -np.inf
+        loc = pmf < 1
+        log_1_m_pmf[loc] = np.log(1 - pmf[loc])
+        logpmf_ = nbinom.logpmf(x, size, prob) - log_1_m_pmf
         # logpmf_[x < truncation + 1] = - np.inf
         return logpmf_
 

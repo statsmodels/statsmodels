@@ -136,10 +136,11 @@ class TruncatedLFGeneric(CountModel):
 
         pmf = self.predict(
             params, which="prob-base", y_values=np.arange(yt)).sum(-1)
-
-        llf = llf_main - np.log(1 - pmf)
-        # assert np.allclose(pmf0, pmf)
-        # assert np.allclose(pmf1, pmf)
+        # Skip pmf = 1 to avoid warnings
+        log_1_m_pmf = -np.inf
+        loc = pmf < 1
+        log_1_m_pmf[loc] = np.log(1 - pmf[loc])
+        llf = llf_main - log_1_m_pmf
 
         return llf
 
