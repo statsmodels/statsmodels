@@ -1497,7 +1497,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
                 "in_sample is False but there are no"
                 "out-of-sample forecasts to plot."
             )
-        ax.plot(mean, zorder=2)
+        ax.plot(mean, zorder=2, label="Forecast")
 
         if oos and alpha is not None:
             ci = np.asarray(predictions.conf_int(alpha))
