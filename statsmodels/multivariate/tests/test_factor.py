@@ -6,10 +6,11 @@ import os
 
 import numpy as np
 import pandas as pd
-from statsmodels.multivariate.factor import Factor
+from statsmodels.multivariate.factor import Factor, CFABuilder
 from numpy.testing import (assert_equal, assert_array_almost_equal, assert_,
                            assert_raises, assert_array_equal,
                            assert_array_less, assert_allclose)
+import numdifftools as nd
 import pytest
 
 try:
@@ -190,6 +191,45 @@ id            0.2060        -0.5556
     actual = results.summary().as_text()
     actual = "\n".join(line.rstrip() for line in actual.splitlines()) + "\n"
     assert_equal(actual, desired)
+
+
+# Test the analytic gradient against a numeric derivative when using a pattern
+# matrix to constrain the factor structure as in a CFA.
+def test_pattern_gradent():
+    cfa = np.zeros((8, 4))
+    cfa[0:2, 0:2] = np.eye(2)
+    cfa[6:, 2:] = np.eye(2)
+    mod = Factor(X.iloc[:, 1:-1], 2, method="ml", cfa=cfa)
+    np.random.seed(1234)
+    for itr in range(10):
+        x = np.random.normal(size=8)
+        x[0:4] = np.abs(x[0:4])
+        ngrad = nd.Gradient(lambda z: mod.loglike(z))(x)
+        agrad = mod.score(x)
+        assert_allclose(ngrad, agrad, rtol=1e-5, atol=1e-5)
+
+
+def test_cfa():
+    n = 200
+    X = np.random.normal(size=(n, 4))
+    r = 0.8
+    X[:, 1] = r*X[:, 0] + np.sqrt(1-r**2)*X[:, 1]
+    X[:, 3] = r*X[:, 2] + np.sqrt(1-r**2)*X[:, 3]
+    X = pd.DataFrame(X, columns=["V1", "V2", "V3", "V4"])
+    cfa = CFABuilder.from_varlist(X, [["V1", "V2"], ["V3", "V4"]])
+    mod = Factor(X, 2, method="ml", cfa=cfa)
+    rslt = mod.fit()
+    l = rslt.loadings
+    u = rslt.uniqueness
+    par = mod._pack(l.T.flat, u)
+    par = rslt.mle_retvals.x
+    agrad = mod.score(par)
+    assert_allclose(agrad, 0, atol=1e-4, rtol=1e-4)
+    assert_allclose((l != 0).sum(0), [2, 2])
+    assert_allclose((l != 0).sum(1), [1, 1, 1, 1])
+    srmr, srmrv = rslt.srmr
+    assert_allclose(srmr < 0.05, True)
+    assert_allclose(srmrv < 0.05, True)
 
 
 @pytest.mark.skipif(missing_matplotlib, reason='matplotlib not available')

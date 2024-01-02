@@ -58,7 +58,7 @@ class Factor(Model):
         Variables in columns, observations in rows.  May be `None` if
         `corr` is not `None`.
     n_factor : int
-        The number of factors to extract
+        The number of factors to extract, not used if 'cfa' is provided.
     corr : array_like
         Directly specify the correlation matrix instead of estimating
         it from `endog`.  If provided, `endog` is not used for the
@@ -79,7 +79,12 @@ class Factor(Model):
         Missing value handling for endog, default is row-wise deletion 'drop'
         If 'none', no nan checking is done. If 'drop', any observations with
         nans are dropped. If 'raise', an error is raised.
-
+    cfa : None or array_like
+        Used to fit a confirmatory factor analysis model.  If provided, 'cfa' is a
+        'n_factor * k_endog x q' array such that a q-dimensional vector 'u' determines
+        the loadings via the construction 'load = reshape(cfa * u)', with 'reshape'
+        converting the 'n_factor * k_endog' dimensional vector to a 'k_endog x n_factor'
+        matrix, reshaped column-wise.
 
     Notes
     -----
@@ -95,6 +100,13 @@ class Factor(Model):
     where L are the loadings and U are the uniquenesses.  In addition,
     L' * diag(U)^{-1} L must be diagonal.
 
+    If 'cfa' is provided, elements of the factor loading matrix can be
+    set to zero, or constrained to equality.  For example, setting
+    'cfa = [1 0 0 0; 0 1 0 0; 0 0 0 0; 0 0 0 0; 0 0 0 0; 0 0 0 0;
+    0 0 1 0; 0 0 0 1]' defines a 2-factor model for 4-dimensional data
+    in which the first factor has structure [w x 0 0] and the second factor
+    has structure [0 0 y z].
+
     References
     ----------
     .. [*] Hofacker, C. (2004). Exploratory Factor Analysis, Mathematical
@@ -103,7 +115,8 @@ class Factor(Model):
        dimension.  Annals of Statistics. https://arxiv.org/pdf/1205.6617.pdf
     """
     def __init__(self, endog=None, n_factor=1, corr=None, method='pa',
-                 smc=True, endog_names=None, nobs=None, missing='drop'):
+                 smc=True, endog_names=None, nobs=None, missing='drop',
+                 cfa=None):
 
         _check_args_1(endog, n_factor, corr, nobs)
 
@@ -132,6 +145,11 @@ class Factor(Model):
         self.method = method
         self.corr = corr
         self.k_endog = k_endog
+
+        if cfa is not None and method == "ml":
+            self.cfa = cfa
+        elif cfa is not None:
+            raise ValueError("A cfa can only be used when fitting with method 'ml'")
 
         if endog_names is None:
             if hasattr(corr, 'index'):
@@ -280,13 +298,22 @@ class Factor(Model):
     # roots of the uniquenesses.  The remaining elements are the
     # factor loadings, packed one factor at a time.
     def _unpack(self, par):
-        return (par[0:self.k_endog]**2,
-                np.reshape(par[self.k_endog:], (-1, self.k_endog)).T)
+        if hasattr(self, "cfa"):
+            u = par[0:self.k_endog]**2
+            l = np.dot(self.cfa, par[self.k_endog:])
+            l = np.reshape(l, (-1, self.k_endog)).T
+            return (u, l)
+        else:
+            return (par[0:self.k_endog]**2,
+                    np.reshape(par[self.k_endog:], (-1, self.k_endog)).T)
 
     # Packs the model parameters into a flat parameter, used for ML
     # estimation.
     def _pack(self, load, uniq):
-        return np.concatenate((np.sqrt(uniq), load.T.flat))
+        if hasattr(self, "cfa"):
+            return np.concatenate((np.sqrt(uniq), load))
+        else:
+            return np.concatenate((np.sqrt(uniq), load.T.flat))
 
     def loglike(self, par):
         """
@@ -310,6 +337,9 @@ class Factor(Model):
             uniq, load = self._unpack(par)
         else:
             load, uniq = par[0], par[1]
+            if hasattr(self, "cfa"):
+                load = np.dot(self.cfa, load)
+                load = np.reshape(load, (-1, self.k_endog)).T
 
         loadu = load / uniq[:, None]
         lul = np.dot(load.T, loadu)
@@ -354,6 +384,9 @@ class Factor(Model):
             uniq, load = self._unpack(par)
         else:
             load, uniq = par[0], par[1]
+            if hasattr(self, "cfa"):
+                load = np.dot(self.cfa, load)
+                load = np.reshape(load, (-1, self.k_endog)).T
 
         # Center term of SMW
         loadu = load / uniq[:, None]
@@ -381,32 +414,47 @@ class Factor(Model):
         dl += 2*luz
         dl -= 2*np.dot(lud, luz)
 
-        # Cannot use _pack because we are working with the square root
-        # uniquenesses directly.
-        return -np.concatenate((du, dl.T.flat)) / (2*self.k_endog)
+        if hasattr(self, "cfa"):
+            # Apply the chain rule to get the derivative with respect to the parameters.
+            dp = np.dot(self.cfa.T, dl.T.flat)
+            return -np.concatenate((du, dp)) / (2*self.k_endog)
+        else:
+            # Cannot use _pack because we are working with the square root
+            # uniquenesses directly.
+            return -np.concatenate((du, dl.T.flat)) / (2*self.k_endog)
 
     # Maximum likelihood factor analysis.
     def _fit_ml(self, start, em_iter, opt_method, opt):
         """estimate Factor model using Maximum Likelihood
         """
 
+        def nloglike(par):
+            return -self.loglike(par)
+
+        def nscore(par):
+            return -self.score(par)
+
         # Starting values
         if start is None:
-            load, uniq = self._fit_ml_em(em_iter)
-            start = self._pack(load, uniq)
+            if hasattr(self, "cfa"):
+                # Use gradient-free optimization for starting values when a cfa is present.
+                d = self.k_endog + self.cfa.shape[1]
+                start = np.zeros(d)
+                start[0:self.k_endog] = 1
+                r = minimize(nloglike, start, method="powell", options={"maxiter": 10})
+                start = r.x
+            else:
+                # Use EM optimization for starting values when no cfa is present.
+                load, uniq = self._fit_ml_em(em_iter)
+                start = self._pack(load, uniq)
         elif len(start) == 2:
+            # Starting values were provided
             if len(start[1]) != start[0].shape[0]:
                 msg = "Starting values have incompatible dimensions"
                 raise ValueError(msg)
             start = self._pack(start[0], start[1])
         else:
             raise ValueError("Invalid starting values")
-
-        def nloglike(par):
-            return -self.loglike(par)
-
-        def nscore(par):
-            return -self.score(par)
 
         # Do the optimization
         if opt is None:
@@ -484,6 +532,10 @@ class Factor(Model):
         cm = np.dot(load.T, load / uniq[:, None]) / nobs
         _, f = np.linalg.eig(cm)
         load = np.dot(load, f)
+
+        for j in range(load.shape[1]):
+            if (load[:, j] < 0).mean() > 0.5:
+                load[:, j] *= -1
         return load
 
 
@@ -1035,3 +1087,49 @@ class FactorResults:
 
         v = np.outer(self.uniqueness, np.ones(self.loadings.shape[1]))
         return np.sqrt(v / self.nobs)
+
+    @cache_readonly
+    def srmr(self):
+        """
+        The standardized root mean square residual (SRMR).
+
+        Returns the SRMR and the variable-wise means of the SRMR values.
+        """
+        F = self.fitted_cov
+        O = self.model.corr
+        d = np.diag(O)
+        R = (O - F)**2 / np.outer(d, d)
+        ii, jj = np.tril_indices(F.shape[0])
+        return np.sqrt(np.mean(R[ii, jj])),np.sqrt(R.mean(0))
+
+class CFABuilder:
+    """
+    Specify a confirmatory factor analysis (CFA) model.
+    """
+
+    @staticmethod
+    def from_varlist(X, va):
+
+        # Convert variable names to positions if needed
+        if type(X) is pd.DataFrame:
+            vm = {v:k for (k,v) in enumerate(X.columns)}
+            va_ix = []
+            for v in va:
+                va_ix.append([vm[k] for k in v])
+        else:
+            va_ix = vars
+
+        k_endog = X.shape[1]
+        n_factor = len(va_ix)
+        q = sum([len(v) for v in va_ix])
+        p = k_endog * n_factor
+        cfa = np.zeros((p, q))
+
+        ii, jj = 0, 0
+        for v in va_ix:
+            for i in v:
+                cfa[ii+i, jj] = 1
+                jj += 1
+            ii += k_endog
+
+        return cfa
