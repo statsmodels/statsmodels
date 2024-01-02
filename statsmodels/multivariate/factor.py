@@ -81,10 +81,11 @@ class Factor(Model):
         nans are dropped. If 'raise', an error is raised.
     cfa : None or array_like
         Used to fit a confirmatory factor analysis model.  If provided, 'cfa' is a
-        'n_factor * k_endog x q' array such that a q-dimensional vector 'u' determines
+        '(n_factor * k_endog) x q' array such that a q-dimensional vector 'u' determines
         the loadings via the construction 'load = reshape(cfa * u)', with 'reshape'
         converting the 'n_factor * k_endog' dimensional vector to a 'k_endog x n_factor'
-        matrix, reshaped column-wise.
+        matrix, reshaped column-wise.  Use CFABuilder to construct cfa in a common
+        use-case.
 
     Notes
     -----
@@ -299,10 +300,10 @@ class Factor(Model):
     # factor loadings, packed one factor at a time.
     def _unpack(self, par):
         if hasattr(self, "cfa"):
-            u = par[0:self.k_endog]**2
-            l = np.dot(self.cfa, par[self.k_endog:])
-            l = np.reshape(l, (-1, self.k_endog)).T
-            return (u, l)
+            uq = par[0:self.k_endog]**2
+            ld = np.dot(self.cfa, par[self.k_endog:])
+            ld = np.reshape(ld, (-1, self.k_endog)).T
+            return (uq, ld)
         else:
             return (par[0:self.k_endog]**2,
                     np.reshape(par[self.k_endog:], (-1, self.k_endog)).T)
@@ -1095,11 +1096,11 @@ class FactorResults:
 
         Returns the SRMR and the variable-wise means of the SRMR values.
         """
-        F = self.fitted_cov
-        O = self.model.corr
-        d = np.diag(O)
-        R = (O - F)**2 / np.outer(d, d)
-        ii, jj = np.tril_indices(F.shape[0])
+        Fit = self.fitted_cov
+        Obs = self.model.corr
+        d = np.diag(Obs)
+        R = (Obs - Fit)**2 / np.outer(d, d)
+        ii, jj = np.tril_indices(Fit.shape[0])
         return np.sqrt(np.mean(R[ii, jj])),np.sqrt(R.mean(0))
 
 class CFABuilder:
