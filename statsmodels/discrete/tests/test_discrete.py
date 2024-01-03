@@ -1659,7 +1659,9 @@ def test_negative_binomial_default_alpha_param():
         sm.families.NegativeBinomial()
     with pytest.warns(UserWarning, match='Negative binomial'
                       ' dispersion parameter alpha not set'):
-        sm.families.NegativeBinomial(link=sm.families.links.nbinom(alpha=1.0))
+        sm.families.NegativeBinomial(
+            link=sm.families.links.NegativeBinomial(alpha=1.0)
+        )
     with warnings.catch_warnings():
         warnings.simplefilter("error")
         sm.families.NegativeBinomial(alpha=1.0)
