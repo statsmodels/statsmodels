@@ -2748,7 +2748,7 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
 
         if self.df_model + self.model.k_constant + k_extra != k_params:
             warnings.warn("df_model + k_constant + k_extra "
-                          "differs from k_params")
+                          "differs from k_params", UserWarning)
 
         if self.df_resid != self.nobs - k_params:
             warnings.warn("df_resid differs from nobs - k_params")

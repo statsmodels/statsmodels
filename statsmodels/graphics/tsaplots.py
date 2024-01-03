@@ -852,7 +852,7 @@ def plot_predict(
         mean.plot(ax=ax, label="forecast")
     else:
         x = np.arange(mean.shape[0])
-        ax.plot(x, mean)
+        ax.plot(x, mean, label="forecast")
 
     if alpha is not None:
         label = f"{1-alpha:.0%} confidence interval"
