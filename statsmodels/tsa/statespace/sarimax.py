@@ -976,7 +976,7 @@ class SARIMAX(MLEModel):
         )
         if invalid_ma:
             warn('Non-invertible starting MA parameters found.'
-                 ' Using zeros as starting parameters.')
+                 ' Using zeros as starting parameters.', UserWarning)
             params_ma *= 0
 
         # Seasonal Parameters

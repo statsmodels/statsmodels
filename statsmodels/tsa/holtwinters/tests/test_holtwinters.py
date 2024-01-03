@@ -1991,7 +1991,7 @@ def test_simulate(ses):
 def test_forecast_index_types(ses, index_typ):
     nobs = ses.shape[0]
     kwargs = {}
-    warning = None
+    model_warning = forecast_warning = None
     fcast_index = None
     if index_typ == "period":
         index = pd.period_range("2000-1-1", periods=nobs + 36, freq="M")
@@ -2003,7 +2003,8 @@ def test_forecast_index_types(ses, index_typ):
     elif index_typ == "irregular":
         rs = np.random.RandomState(0)
         index = pd.Index(np.cumsum(rs.randint(0, 4, size=nobs + 36)))
-        warning = ValueWarning
+        model_warning = ValueWarning
+        forecast_warning = FutureWarning
         kwargs["seasonal_periods"] = 12
         fcast_index = pd.RangeIndex(start=1000, stop=1036, step=1)
     if fcast_index is None:
@@ -2011,7 +2012,7 @@ def test_forecast_index_types(ses, index_typ):
     ses = ses.copy()
     ses.index = index[:-36]
 
-    with pytest_warns(warning):
+    with pytest_warns(model_warning):
         res = ExponentialSmoothing(
             ses,
             trend="add",
@@ -2019,7 +2020,7 @@ def test_forecast_index_types(ses, index_typ):
             initialization_method="heuristic",
             **kwargs
         ).fit()
-    with pytest_warns(warning):
+    with pytest_warns(forecast_warning):
         fcast = res.forecast(36)
     assert isinstance(fcast, pd.Series)
     pd.testing.assert_index_equal(fcast.index, fcast_index)
@@ -2113,7 +2114,7 @@ def test_invalid_index(reset_randomstate):
             initialization_method="heuristic",
         )
     fitted = model.fit(optimized=True, use_brute=True)
-    with pytest.warns(ValueWarning, match="No supported"):
+    with pytest.warns(FutureWarning, match="No supported"):
         fitted.forecast(steps=157200)
 
 

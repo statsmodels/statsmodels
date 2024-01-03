@@ -432,8 +432,9 @@ def test_instantiation_valid():
 
         # Unsupported (but valid) indexes, should all give warnings
         message = (
-            "An unsupported index was provided and will be"
-            " ignored when e.g. forecasting."
+            "An unsupported index was provided. As a result, forecasts "
+            "cannot be generated. To use the model for forecasting, use "
+            "on the the supported classes of index."
         )
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
@@ -563,9 +564,9 @@ def test_prediction_increment_unsupported():
     start_key = 1
     end_key = nobs
     message = (
-        "No supported index is available."
-        " Prediction results will be given with"
-        " an integer index beginning at `start`."
+        "No supported index is available. In the next version, calling this "
+        "method in a model without a supported index will result in an "
+        "exception."
     )
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("always")
@@ -1132,8 +1133,9 @@ def test_custom_index():
         np.random.normal(size=5), index=["a", "b", "c", "d", "e"]
     )
     message = (
-        "An unsupported index was provided and will be ignored when"
-        " e.g. forecasting."
+        "An unsupported index was provided. As a result, forecasts cannot be "
+        "generated. To use the model for forecasting, use on the the "
+        "supported classes of index."
     )
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("always")
@@ -1182,9 +1184,9 @@ def test_custom_index():
     start_key = 4
     end_key = 5
     message = (
-        "No supported index is available."
-        " Prediction results will be given with"
-        " an integer index beginning at `start`."
+        "No supported index is available. In the next version, calling this "
+        "method in a model without a supported index will result in an "
+        "exception."
     )
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("always")

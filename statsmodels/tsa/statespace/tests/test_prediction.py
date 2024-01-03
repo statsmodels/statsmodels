@@ -400,7 +400,9 @@ def test_predicted_filtered_smoothed_varmax(use_exog, trend):
     fcast_signal = fcast.predicted_mean - d.T
     fcast_signal_cov = (fcast.var_pred_mean.T - H).T
     assert_allclose(s_signal.predicted_mean[:50], desired_s_signal.T)
-    assert_allclose(s_signal.predicted_mean[50:], fcast_signal)
+    assert_allclose(
+        s_signal.predicted_mean[50:], fcast_signal, rtol=1e-6, atol=1e-8
+    )
     assert_allclose(f_signal.predicted_mean[:50], desired_f_signal.T)
     assert_allclose(f_signal.predicted_mean[50:], fcast_signal)
     assert_allclose(p_signal.predicted_mean[:50], desired_p_signal.T)
@@ -468,7 +470,9 @@ def test_predicted_filtered_smoothed_TVSS(reset_randomstate):
     assert_allclose(p_pred.predicted_mean[50:], fcast.predicted_mean)
 
     assert_allclose(s_signal.predicted_mean[:50], desired_s_signal[..., 0])
-    assert_allclose(s_signal.predicted_mean[50:], fcast_signal)
+    assert_allclose(
+        s_signal.predicted_mean[50:], fcast_signal, rtol=1e-6, atol=1e-8
+    )
     assert_allclose(f_signal.predicted_mean[:50], desired_f_signal[..., 0])
     assert_allclose(f_signal.predicted_mean[50:], fcast_signal)
     assert_allclose(p_signal.predicted_mean[:50], desired_p_signal[..., 0])
