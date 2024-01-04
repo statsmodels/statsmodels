@@ -219,14 +219,13 @@ def test_cfa():
     cfa = CFABuilder.from_varlist(X, [["V1", "V2"], ["V3", "V4"]])
     mod = Factor(X, 2, method="ml", cfa=cfa)
     rslt = mod.fit()
-    l = rslt.loadings
-    u = rslt.uniqueness
-    par = mod._pack(l.T.flat, u)
+    ld = rslt.loadings
+    uq = rslt.uniqueness
     par = rslt.mle_retvals.x
     agrad = mod.score(par)
     assert_allclose(agrad, 0, atol=1e-4, rtol=1e-4)
-    assert_allclose((l != 0).sum(0), [2, 2])
-    assert_allclose((l != 0).sum(1), [1, 1, 1, 1])
+    assert_allclose((ld != 0).sum(0), [2, 2])
+    assert_allclose((ld != 0).sum(1), [1, 1, 1, 1])
     srmr, srmrv = rslt.srmr
     assert_allclose(srmr < 0.05, True)
     assert_allclose(srmrv < 0.05, True)
