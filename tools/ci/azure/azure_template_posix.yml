@@ -60,13 +60,12 @@ jobs:
           SCIPY: 1.9.3
           PANDAS: 1.5.3
           MATPLOTLIB: 3.6.0
-        python_311_pre:
-          python.version: '3.11'
-          pip.pre: true
-        python_311_copy_on_write:
-          python.version: '3.11'
-          pip.pre: true
+        python_312_copy_on_write:
+          python.version: '3.12'
           SM_TEST_COPY_ON_WRITE: 1
+        python_312_pre:
+          python.version: '3.12'
+          pip.pre: true
       ${{ if eq(parameters.name, 'macOS') }}:
         python310_macos_latest:
           python.version: '3.10'
