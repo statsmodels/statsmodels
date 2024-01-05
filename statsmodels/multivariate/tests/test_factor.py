@@ -220,7 +220,6 @@ def test_cfa():
     mod = Factor(X, 2, method="ml", cfa=cfa)
     rslt = mod.fit()
     ld = rslt.loadings
-    uq = rslt.uniqueness
     par = rslt.mle_retvals.x
     agrad = mod.score(par)
     assert_allclose(agrad, 0, atol=1e-4, rtol=1e-4)
