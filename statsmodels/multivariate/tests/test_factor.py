@@ -211,12 +211,18 @@ def test_pattern_gradent():
 
 def test_cfa():
     n = 200
+    np.random.seed(123)
+
+    # Generate data with two factors, with each factor loading on two variables,
+    # and there are no crossloadings.
     X = np.random.normal(size=(n, 4))
     r = 0.8
     X[:, 1] = r*X[:, 0] + np.sqrt(1-r**2)*X[:, 1]
     X[:, 3] = r*X[:, 2] + np.sqrt(1-r**2)*X[:, 3]
     X = pd.DataFrame(X, columns=["V1", "V2", "V3", "V4"])
-    cfa = CFABuilder.from_varlist(X, [["V1", "V2"], ["V3", "V4"]])
+
+    # Build a CFA with no crossloadings
+    cfa = CFABuilder.no_crossload(X, [["V1", "V2"], ["V3", "V4"]])
     mod = Factor(X, 2, method="ml", cfa=cfa)
     rslt = mod.fit()
     ld = rslt.loadings
@@ -228,6 +234,35 @@ def test_cfa():
     srmr, srmrv = rslt.srmr
     assert_allclose(srmr < 0.05, True)
     assert_allclose(srmrv < 0.05, True)
+
+    # Fit the same CFA using ndarrays not dataframes.
+    cfa2 = CFABuilder.no_crossload(X.values, [[0, 1], [2, 3]])
+    assert_allclose(cfa, cfa2)
+
+
+def test_cfa_builder():
+    n = 10
+    np.random.seed(123)
+    X = np.random.normal(size=(n, 4))
+    X = pd.DataFrame(X, columns=["V1", "V2", "V3", "V4"])
+
+    # Build the same model using two approaches
+    cfa1 = CFABuilder.no_crossload(X, [["V1", "V2"], ["V3", "V4"]])
+    fvar = {"V1": [0], "V2": [0], "V3": [1], "V4": [1]}
+    cfa2 = CFABuilder.cfa(X, fvar)
+    assert_allclose(cfa1, cfa2, atol=1e-8, rtol=1e-8)
+
+    # Build the model using ndarrays instead of dataframes
+    fvari = {0: [0], 1: [0], 2: [1], 3: [1]}
+    cfa3 = CFABuilder.cfa(X.values, fvari)
+    assert_allclose(cfa2, cfa3, atol=1e-8, rtol=1e-8)
+
+    # Allow a crossloading
+    fvar = {"V1": [0], "V2": [0, 1], "V3": [1], "V4": [1]}
+    cfa4 = CFABuilder.cfa(X, fvar)
+    mod = Factor(X, 2, method="ml", cfa=cfa4)
+    rslt = mod.fit()
+    ld = rslt.loadings
 
 
 @pytest.mark.skipif(missing_matplotlib, reason='matplotlib not available')

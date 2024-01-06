@@ -148,6 +148,10 @@ class Factor(Model):
         self.k_endog = k_endog
 
         if cfa is not None and method == "ml":
+            self.n_factor = cfa.shape[0] // self.k_endog
+            if cfa.shape[0] != self.n_factor * self.k_endog:
+                1/0
+                raise ValueError("Leading dimension of 'cfa' must be divisible by number of variables")
             self.cfa = cfa
         elif cfa is not None:
             raise ValueError("A cfa can only be used when fitting with method 'ml'")
@@ -471,7 +475,8 @@ class Factor(Model):
             warnings.warn("Some uniquenesses are nearly zero")
 
         # Rotate solution to satisfy IC3 of Bai and Li
-        load = self._rotate(load, uniq)
+        if not hasattr(self, "cfa"):
+            load = self._rotate(load, uniq)
 
         self.uniqueness = uniq
         self.communality = 1 - uniq
@@ -1040,7 +1045,7 @@ class FactorResults:
         Notes
         -----
         If excess kurtosis is known, provide as `kurt`.  Standard
-        errors are only available if the model was fit using maximum
+        errors are only available for EFA models fit using maximum
         likelihood.  If `endog` is not provided, `nobs` must be
         provided to obtain standard errors.
 
@@ -1051,8 +1056,8 @@ class FactorResults:
         unrotated maximum likelihood solution.
         """
 
-        if self.fa_method.lower() != "ml":
-            msg = "Standard errors only available under ML estimation"
+        if self.fa_method.lower() != "ml" and not hasattr(self, "cfa"):
+            msg = "Standard errors are only available under ML estimation for EFA (cfa=None)"
             raise ValueError(msg)
 
         if self.nobs is None:
@@ -1067,7 +1072,7 @@ class FactorResults:
         """
         The standard errors of the loadings.
 
-        Standard errors are only available if the model was fit using
+        Standard errors are only available for EFA models fit using
         maximum likelihood.  If `endog` is not provided, `nobs` must be
         provided to obtain standard errors.
 
@@ -1078,8 +1083,8 @@ class FactorResults:
         unrotated maximum likelihood solution.
         """
 
-        if self.fa_method.lower() != "ml":
-            msg = "Standard errors only available under ML estimation"
+        if self.fa_method.lower() != "ml" and not hasattr(self, "cfa"):
+            msg = "Standard errors are only available under ML estimation for EFA (cfa=None)"
             raise ValueError(msg)
 
         if self.nobs is None:
@@ -1109,8 +1114,7 @@ class CFABuilder:
     """
 
     @staticmethod
-    def from_varlist(X, va):
-
+    def _vpos(X, va):
         # Convert variable names to positions if needed
         if type(X) is pd.DataFrame:
             vm = {v:k for (k,v) in enumerate(X.columns)}
@@ -1118,8 +1122,48 @@ class CFABuilder:
             for v in va:
                 va_ix.append([vm[k] for k in v])
         else:
-            va_ix = vars
+            va_ix = va
+        return va_ix
 
+
+    @staticmethod
+    def cfa(X, fmap):
+        """
+        Specify a CFA by providing a dictionary that maps variable names or
+        positions to the list of factors (numbered 0, 1, ...) on which the
+        variable loads.
+        """
+
+        k_endog = X.shape[1]
+        n_factor = max([max(x) for x in fmap.values()]) + 1
+        q = sum([len(v) for v in fmap.values()])
+        p = k_endog * n_factor
+        cfa = np.zeros((p, q))
+
+        if type(X) is pd.DataFrame:
+            vm = {v: i for i,v in enumerate(X.columns)}
+        else:
+            vm = {i: i for i in range(X.shape[1])}
+
+        jj = 0
+        for k,v in fmap.items():
+            for j in v:
+                ii = j * k_endog + vm[k]
+                cfa[ii, jj] = 1
+                jj += 1
+
+        return cfa
+
+    @staticmethod
+    def no_crossload(X, va):
+        """
+        Specify a CFA with no crossloadings.  'va' is a list of lists, where
+        va[i] contains the variables that load on factor 'i'.  If 'X' is a
+        dataframe then variables are provided by name, otherwise they are
+        provided by position.
+        """
+
+        va_ix = CFABuilder._vpos(X, va)
         k_endog = X.shape[1]
         n_factor = len(va_ix)
         q = sum([len(v) for v in va_ix])
