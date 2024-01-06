@@ -150,7 +150,6 @@ class Factor(Model):
         if cfa is not None and method == "ml":
             self.n_factor = cfa.shape[0] // self.k_endog
             if cfa.shape[0] != self.n_factor * self.k_endog:
-                1/0
                 raise ValueError("Leading dimension of 'cfa' must be divisible by number of variables")
             self.cfa = cfa
         elif cfa is not None:

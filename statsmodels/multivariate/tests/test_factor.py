@@ -263,6 +263,7 @@ def test_cfa_builder():
     mod = Factor(X, 2, method="ml", cfa=cfa4)
     rslt = mod.fit()
     ld = rslt.loadings
+    assert_allclose((np.abs(ld) > 1e-5).sum(), 5)
 
 
 @pytest.mark.skipif(missing_matplotlib, reason='matplotlib not available')
