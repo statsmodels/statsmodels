@@ -1431,6 +1431,7 @@ def cochrans_q(x, return_object=True):
 
     return q_stat, pvalue, df
 
+
 def confusion_matrix_statistics(table, actual_in_column=True, positive=None) -> Tuple[dict, pd.DataFrame]:
     """
     Calculate various performance metrics based on a confusion matrix.
@@ -1494,10 +1495,10 @@ def confusion_matrix_statistics(table, actual_in_column=True, positive=None) -> 
     total = np.sum(row_sum)
     expected = row_sum.dot(col_sum) / total
 
-    overall_stats = pd.Series({"Accuracy":  correct/total,
-                     "No Information Rate": max(col_sum) / total,
-                     "Kappa": (correct-expected)/(total-expected)
-               })
+    overall_stats = pd.Series({"Accuracy": correct / total,
+                               "No Information Rate": max(col_sum) / total,
+                               "Kappa": (correct - expected) / (total - expected)
+                               })
 
     metric_names = ["Sensitivity", "Specificity", "Pos Pred Value", "Neg Pred Value",
                     "Balanced Accuracy", "F1"]
@@ -1514,23 +1515,22 @@ def confusion_matrix_statistics(table, actual_in_column=True, positive=None) -> 
             FP = table.iloc[1, 0]
             TN = table.iloc[0, 0]
         else:
-            TP = table.iloc[i,i]
+            TP = table.iloc[i, i]
             FN = col_sum.iloc[i] - TP
             FP = row_sum.iloc[i] - TP
             TN = total - (TP + FN + FP)
 
         # Sensitivity
-        class_stats.iloc[i, 0] = TP/(TP+FN)
+        class_stats.iloc[i, 0] = TP / (TP + FN)
         # Specificity
-        class_stats.iloc[i, 1] = TN/(TN+FP)
+        class_stats.iloc[i, 1] = TN / (TN + FP)
         # Positive predictive value
-        class_stats.iloc[i, 2] = TP/(TP+FP)
+        class_stats.iloc[i, 2] = TP / (TP + FP)
         # Negative predictive value
-        class_stats.iloc[i, 3] = TN/(TN+FN)
+        class_stats.iloc[i, 3] = TN / (TN + FN)
         # Balanced Accuracy
         class_stats.iloc[i, 4] = (class_stats.iloc[i, 0] + class_stats.iloc[i, 1]) / 2
         # F1
-        class_stats.iloc[i, 5] = 2/(1/class_stats.iloc[i, 0] + 1/class_stats.iloc[i, 2])
+        class_stats.iloc[i, 5] = 2 / (1 / class_stats.iloc[i, 0] + 1 / class_stats.iloc[i, 2])
 
     return overall_stats, class_stats
-
