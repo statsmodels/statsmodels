@@ -1432,7 +1432,8 @@ def cochrans_q(x, return_object=True):
     return q_stat, pvalue, df
 
 
-def confusion_matrix_statistics(table, actual_in_column=True, positive=None) -> Tuple[dict, pd.DataFrame]:
+def confusion_matrix_statistics(table, actual_in_column=True, positive=None) -> \
+Tuple[dict, pd.DataFrame]:
     """
     Calculate various performance metrics based on a confusion matrix.
 
@@ -1467,8 +1468,10 @@ def confusion_matrix_statistics(table, actual_in_column=True, positive=None) -> 
 
     num_levels = table.shape[0]
 
-    if isinstance(table, pd.DataFrame) and not np.array_equal(table.index, table.columns):
-        raise ValueError("The table must have the same classes in the same order")
+    if isinstance(table, pd.DataFrame) and not np.array_equal(table.index,
+                                                              table.columns):
+        raise ValueError(
+            "The table must have the same classes in the same order")
 
     if isinstance(table, pd.DataFrame):
         class_levels = table.index
@@ -1497,14 +1500,17 @@ def confusion_matrix_statistics(table, actual_in_column=True, positive=None) -> 
 
     overall_stats = pd.Series({"Accuracy": correct / total,
                                "No Information Rate": max(col_sum) / total,
-                               "Kappa": (correct - expected) / (total - expected)
+                               "Kappa": (correct - expected) / (
+                                           total - expected)
                                })
 
-    metric_names = ["Sensitivity", "Specificity", "Pos Pred Value", "Neg Pred Value",
+    metric_names = ["Sensitivity", "Specificity", "Pos Pred Value",
+                    "Neg Pred Value",
                     "Balanced Accuracy", "F1"]
 
-    class_stats = pd.DataFrame(index=(class_levels if num_levels > 2 else ["prediction"]),
-                               columns=metric_names, dtype=np.float64)
+    class_stats = pd.DataFrame(
+        index=(class_levels if num_levels > 2 else ["prediction"]),
+        columns=metric_names, dtype=np.float64)
 
     # For binary classification, loop will end after the first iteration
     for i in range(num_levels if num_levels > 2 else 1):
@@ -1529,8 +1535,10 @@ def confusion_matrix_statistics(table, actual_in_column=True, positive=None) -> 
         # Negative predictive value
         class_stats.iloc[i, 3] = TN / (TN + FN)
         # Balanced Accuracy
-        class_stats.iloc[i, 4] = (class_stats.iloc[i, 0] + class_stats.iloc[i, 1]) / 2
+        class_stats.iloc[i, 4] = (class_stats.iloc[i, 0] + class_stats.iloc[
+            i, 1]) / 2
         # F1
-        class_stats.iloc[i, 5] = 2 / (1 / class_stats.iloc[i, 0] + 1 / class_stats.iloc[i, 2])
+        class_stats.iloc[i, 5] = 2 / (
+                    1 / class_stats.iloc[i, 0] + 1 / class_stats.iloc[i, 2])
 
     return overall_stats, class_stats
