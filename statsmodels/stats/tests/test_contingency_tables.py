@@ -267,9 +267,10 @@ def test_confusion_matrix_statistics_4_categories():
         'Pos Pred Value': [0.3721, 0.081633, 0.18182, 0.83333],
         'Neg Pred Value': [0.9773, 0.917840, 0.77602, 0.61620],
         'Balanced Accuracy': [0.6238, 0.499677, 0.49208, 0.51179],
-        'F1': [0.5403, 0.09091, 0.0870, 0.0524]},
-        columns=[f'class {i + 1}' for i in range(4)]
+        'F1': [0.5403, 0.09091, 0.0870, 0.0524]}
     )
+    expected_class_stats.index = [f'class {i + 1}' for i in range(4)]
+    assert_allclose(class_stats, expected_class_stats, atol=1e-4)
 
 
 def test_from_data_stratified():
