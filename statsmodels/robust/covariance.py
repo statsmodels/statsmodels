@@ -26,15 +26,12 @@ doi:10.1109/TSP.2011.2138698.
 """
 
 import numpy as np
-from scipy import stats
+from scipy import stats, linalg
+from scipy.linalg.lapack import dtrtri
 from .scale import mad
+from statsmodels.tools.testing import Holder
 
 mad0 = lambda x: mad(x, center=0)  # noqa: E731
-
-
-class Holder(object):
-    def __init__(self, **kwds):
-        self.__dict__.update(kwds)
 
 
 # from scikit-learn
@@ -60,11 +57,126 @@ def _naive_ledoit_wolf_shrinkage(x, center):
 
     beta = min(beta_, delta)
     shrinkage = beta / delta
-    return shrinkage * emp_cov
+    return Holder(cov=shrinkage * emp_cov, method="naive ledoit wolf")
+
+
+def coef_normalize_cov_truncated(frac, k_vars):
+    """factor for consistency of truncated cov at normal distribution
+
+    This is usually denoted by `b`. Here, it is calculated as `1 / b`.
+    Trimming threshold is based on chisquare distribution.
+
+    Parameters
+    ----------
+    frac: float in (0, 1)
+        fraction (probability) of observations that are not trimmed
+    k_vars : integer
+        number of variables, i.e. dimension of multivariate random variable
+
+    Returns
+    -------
+    fac : float
+        factor to multiply the raw trimmed covariance
+
+    Notes
+    -----
+    TODO: it might be better to use alpha = 1 - frac as argument instead.
+    Uses explicit formula from Riani, Cerioli and Torti (2014) equation (3)
+    which is also in Rocke and Woodroff (1996) Outliers equation (5).
+
+    References
+    ----------
+
+    .. [1] Riani, Marco, Andrea Cerioli, and Francesca Torti. “On Consistency
+       Factors and Efficiency of Robust S-Estimators.” TEST 23, no. 2 (February
+       4, 2014): 356–87. https://doi.org/10.1007/s11749-014-0357-7.
+
+    .. [2] Rocke, David M., and David L. Woodruff. “Identification of Outliers
+       in Multivariate Data.” Journal of the American Statistical
+       Association 91, no. 435 (1996): 1047–61.
+       https://doi.org/10.2307/2291724.
+
+    """
+    # todo: use isf(alpha, k_vars) instead?
+    fac = 1 / (stats.chi2.cdf(stats.chi2.ppf(frac, k_vars), k_vars + 2) / frac)
+    return fac
+
+
+def _coef_normalize_cov_truncated_(frac, k_vars):
+    # normalize cov_truncated (example ogk)
+    # currently not used except for verification
+    # I think it generalized to other weight/transform function than trimming
+    ct = k_vars / stats.chi2.expect(lambda x: x,
+                                    lb=0,
+                                    ub=stats.chi2.ppf(frac, k_vars),
+                                    args=(k_vars,)
+                                    )
+    # correction for using cov of truncated sample which uses nobs of subsample
+    # not full nobs
+    ct *= frac
+    return ct
+
+
+class _NormalizeTruncCov(object):
+    """Normalization factor for truncation with caching
+    """
+    _cache = {}
+
+    def __call__(self, frac, k_vars):
+
+        return self._cache.setdefault(
+            (frac, k_vars),
+            _coef_normalize_cov_truncated(frac, k_vars)
+            )
+
+
+_coef_normalize_cov_truncated = _NormalizeTruncCov()
 
 
 # reweight adapted from OGK reweight step
 def _reweight(x, loc, cov, trim_frac=0.975, ddof=1):
+    """Reweighting step, trims data and computes Pearson covariance
+
+    Parameters
+    ----------
+    x : ndarray
+        Multivariate data with observation in rows
+    loc : ndarray
+        Location, mean or center of the data.
+    cov : ndarray
+        Covariance for computing Mahalanobis distance
+    trim_frac : float in (0, 1)
+        # todo: change name
+        This is the coverage, (1 - trim_frac) is tail probability for chi2
+        distribution.
+    ddof : int or float
+        Delta degrees of freedom used for trimmed Pearson covariance
+        computed with `np.cov`.
+
+    Returns
+    -------
+    cov : ndarray
+        Covariance matrix of trimmed data, not rescaled to account for
+        trimming.
+    loc : ndarray
+        Mean of trimmed data.
+
+    See Also
+    --------
+    coef_normalize_cov_truncated
+
+    Notes
+    -----
+    This reweighting step is used in OGK and in literature also for MCD.
+    Trimming is metric with cutoff computed under the assumption that the
+    Mahalanobis distances are chi-square distributed.
+
+    References
+    ----------
+    ???
+
+
+    """
     beta = trim_frac
     nobs, k_vars = x.shape  # noqa: F841
     # d = (((z - loc_z) / scale_z)**2).sum(1) # for orthogonal
@@ -78,6 +190,41 @@ def _reweight(x, loc, cov, trim_frac=0.975, ddof=1):
     loc = sample.mean(0)
     cov = np.cov(sample.T, ddof=ddof)
     return cov, loc
+
+
+def _rescale(x, loc, cov, prob=0.5):
+    """rescale covariance to be consistent with normal distribution
+
+    This matches median of mahalanobis distance with the chi-square
+    distribution. This assumes that the data is normally distributed.
+
+    Parameters
+    ----------
+    x : array-like
+       sample data, 2-dim with observation in rows
+    loc : ndarray
+       mean or center of data
+    cov : ndarray
+       covariance estimate
+
+    Returns
+    -------
+    ndarray: rescaled covariance
+
+    Notes
+    -----
+    This rescaling is used in several functions to compute rescaled
+    Mahalanobis distances for trimming.
+    """
+    if prob != 0.5:
+        raise ValueError("currently only median prob=0.5 supported")
+
+    x = np.asarray(x)
+    k_vars = x.shape[1]
+    d = mahalanobis(x - loc, cov)
+    dmed = np.median(d)
+    fac = dmed / stats.chi2.ppf(prob, k_vars)
+    return cov * fac
 
 
 def _outlier_gy(d, distr=None, k_endog=1, trim_prob=0.975):
@@ -172,7 +319,7 @@ def _winsor(x, c):
 
 
 def scale_tau(data, cm=4.5, cs=3, weight_mean=_weight_mean,
-              weight_scale=_winsor, normalize=True, ddof=2):
+              weight_scale=_winsor, normalize=True, ddof=0):
     """tau estimator of univariate scale
 
     Experimental, API will change
@@ -237,7 +384,9 @@ def scale_tau(data, cm=4.5, cs=3, weight_mean=_weight_mean,
 
 
 def mahalanobis(data, cov=None, cov_inv=None):
-    """Mahalanobis distance
+    """Mahalanobis distance squared
+
+    Note: this is without taking the square root
 
     """
     x = np.asarray(data)
@@ -279,7 +428,8 @@ def cov_gk(data, scale_func=mad):
 
 
 def cov_ogk(data, maxiter=2, scale_func=mad, cov_func=cov_gk,
-            loc_func=lambda x: np.median(x, axis=0), reweight=0.9, ddof=1):
+            loc_func=lambda x: np.median(x, axis=0), reweight=0.9,
+            rescale=True, rescale_raw=True, ddof=1):
     """orthogonalized Gnanadesikan and Kettenring covariance estimator
 
     based on Maronna and Zamar 2002
@@ -287,12 +437,10 @@ def cov_ogk(data, maxiter=2, scale_func=mad, cov_func=cov_gk,
     Parameters
     ----------
     data : array_like, 2-D
-
     maxiter : int
-        number of iteration steps. According to Maronna and Zamar the
+        Number of iteration steps. According to Maronna and Zamar the
         estimate doesn't improve much after the second iteration and the
         iterations do not converge.
-
     scale_func : callable
 
     cov_func : callable
@@ -305,9 +453,24 @@ def cov_ogk(data, maxiter=2, scale_func=mad, cov_func=cov_gk,
         Otherwise, reweight is the chisquare probability beta for the
         trimming based on estimated robust distances.
         Hard-rejection is currently the only weight function.
+    rescale: bool
+        If rescale is true, then reweighted covariance is rescale to be
+        consistent at normal distribution.
+        This only applies if reweight is not None.
     ddof : int
         Degrees of freedom correction for the reweighted sample
         covariance.
+
+    Returns
+    -------
+    Holder instance with main attributes
+
+    - cov : covariance, either raw OGK or reweighted OGK
+    - loc (and alias mean) : mean, either from raw OGK or reweighted OGK
+    - cov_ogk_raw
+    - loc_ogk_raw
+
+    and extra attributes from intermediate results.
 
     Notes
     -----
@@ -347,26 +510,43 @@ def cov_ogk(data, maxiter=2, scale_func=mad, cov_func=cov_gk,
     loc_z = loc_func(z)
     loc = transf0.dot(loc_z)
     # prepare for results
-    cov_ogk_raw = cov
-    loc_ogk_raw = loc
+    cov_raw = cov
+    loc_raw = loc
+    # extra results are None if reweight is None
     mask = None
     d = None
-    if reweight is not None:
+    scale_factor_raw = 1.
+    scale_factor = 1.
+    n_trunc = 0
+    if (reweight is not None) or rescale_raw:
         d = (((z - loc_z) / scale_z)**2).sum(1)
         # d = mahalanobis(x - loc, cov)
         # only hard thresholding right now
         dmed = np.median(d)
-        cutoff = (dmed * stats.chi2.isf(1-beta, k_vars) /
-                  stats.chi2.ppf(0.5, k_vars))
+        scale_factor_raw = dmed / stats.chi2.ppf(0.5, k_vars)
+        cutoff = scale_factor_raw * stats.chi2.isf(1-beta, k_vars)
+    if reweight is not None:
         mask = d <= cutoff
+        n_trunc = nobs - sum(mask)
         sample = x[mask]
         loc = sample.mean(0)
         cov = np.cov(sample.T, ddof=ddof)
+        # do we use empirical or theoretical frac, inlier/nobs or 1-beta?
+        frac = beta  # n_inlier / nobs
+        scale_factor = coef_normalize_cov_truncated(frac, k_vars)
+        if rescale:
+            cov *= scale_factor
+    if rescale_raw:
+        cov_raw *= scale_factor_raw
 
     # duplicate name loc mean center, choose consistent naming
-    res = Holder(cov=cov, loc=loc, mean=loc, mask=mask, mahalanobis=d,
-                 cov_ogk_raw=cov_ogk_raw, loc_ogk_raw=loc_ogk_raw,
-                 transf0=transf0)
+    res = Holder(cov=cov, loc=loc, mean=loc, mask=mask, mahalanobis_raw=d,
+                 cov_raw=cov_raw, loc_raw=loc_raw,
+                 transf0=transf0, scale_factor=scale_factor,
+                 scale_factor_raw=scale_factor_raw,
+                 n_trunc=n_trunc,
+                 method="ogk"
+                 )
 
     return res
 
@@ -380,22 +560,36 @@ def cov_tyler(data, start_cov=None, normalize=False, maxiter=100, eps=1e-13):
 
     Parameters
     ----------
-    data : ndarray
+    data : array-like
         data array with observations in rows and variables in columns
     start_cov : None or ndarray
         starting covariance for iterative solution
-    normalize : bool
-        If True, then the scatter matrix is normalized to have trace equal
-        to the number of columns in the data.
+    normalize : False or string
+        If normalize is False (default), then the unscale tyler shape matrix
+        is returned.
+
+        Three types of normalization, i.e. rescaling are available by defining
+        string option:
+
+        - "trace" :
+          The scatter matrix is normalized to have trace equal to the number
+          of columns in the data.
+        - "det" :
+          The scatter matrix is normalized to have determinant equal to 1.
+        - "normal" :
+          The scatter matrix is rescaled to be consistent when data is normally
+          distributed. Rescaling is based on median of the mahalanobis
+          distances and assuming chisquare distribution of the distances.
+
     maxiter : int
-        maximum number of iterations to find the solution
+        maximum number of iterations to find the solution.
     eps : float
         convergence criterion. The maximum absolute distance needs to be
         smaller than eps for convergence.
 
     Returns
     -------
-    result instance with the following attributes
+    Holder instance with the following attributes
     cov : ndarray
         estimate of the scatter matrix
     iter : int
@@ -416,7 +610,7 @@ def cov_tyler(data, start_cov=None, normalize=False, maxiter=100, eps=1e-13):
     """
     x = np.asarray(data)
     nobs, k_vars = x.shape
-    kn = k_vars * 1. / nobs
+    # kn = k_vars * 1. / nobs
     if start_cov is not None:
         c = start_cov
     else:
@@ -424,17 +618,33 @@ def cov_tyler(data, start_cov=None, normalize=False, maxiter=100, eps=1e-13):
 
     # Tyler's M-estimator of shape (scatter) matrix
     for i in range(maxiter):
-        c_inv = np.linalg.pinv(c)
+        # this is old code, slower than new version, but more literal
+        # c_inv = np.linalg.pinv(c)
+        # c_old = c
+        # c = kn * sum(np.outer(xi, xi) / np.inner(xi, c_inv.dot(xi))
+        #              for xi in x)
         c_old = c
-        # this could be vectorized but could use a lot of memory
-        # TODO:  try to work in vectorized batches
-        c = kn * sum(np.outer(xi, xi) / np.inner(xi, c_inv.dot(xi))
-                     for xi in x)
+        ichol, _ = dtrtri(linalg.cholesky(c, lower=False), lower=0)
+        v = x @ ichol
+        dist_mahal_2 = np.einsum('ij,ji->i', v, v.T)
+        xw = np.sqrt(k_vars / dist_mahal_2[:, None]) * x
+        c = xw.T @ xw / nobs
+
         diff = np.max(np.abs(c - c_old))
         if diff < eps:
             break
-    if normalize:
+
+    if normalize is False or normalize is None:
+        pass
+    elif normalize == "trace":
         c /= np.trace(c) / k_vars
+    elif normalize == "det":
+        c /= np.linalg.det(c)**(1. / k_vars)
+    elif normalize == "normal":
+        _rescale(x, np.zeros(k_vars), c, prob=0.5)
+    else:
+        msg = 'normalize needs to be False, "trace", "det" or "normal"'
+        raise ValueError(msg)
 
     return Holder(cov=c, n_iter=i)
 
@@ -705,7 +915,7 @@ def cov_weighted(data, weights, center=None, weights_cov=None,
     residuals, and m is the mean.
 
     In the default case
-    wmean = ave (w_i x)i)
+    wmean = ave (w_i x_i)
     wcov = ave (w_i (x_i - m) (x_i - m)')
 
     References
@@ -855,7 +1065,7 @@ def _cov_iter(data, weights_func, weights_args=None, cov_init=None,
 
     if rescale == 'none':
         s = 1
-    if rescale == 'med':
+    elif rescale == 'med':
         s = np.median(dist) / stats.chi2.ppf(0.5, k_vars)
         cov *= s
     else:
@@ -886,18 +1096,23 @@ def _cov_starting(data, is_standardized=True, quantile=0.5):
         std = mad0(data)
         xs /= std
     else:
-        xs = x - np.median(data, axis=0)
+        center = np.median(data, axis=0)
+        xs = x - center
 
     cov_all = []
     d = mahalanobis(xs, cov=None, cov_inv=np.eye(k_vars))
-    cutoffs = np.percentile(d, [(k_vars+2) / nobs * 100, 25, 50])
-    for cutoff in cutoffs:
+    percentiles = [(k_vars+2) / nobs * 100 * 2, 25, 50]
+    cutoffs = np.percentile(d, percentiles)
+    for p, cutoff in zip(percentiles, cutoffs):
         xsp = xs[d < cutoff]
-        c0 = np.cov(xsp.T)
+        c = np.cov(xsp.T)
+        corr_factor = coef_normalize_cov_truncated(p / 100, k_vars)
+        c0 = Holder(cov=c * corr_factor, mean=xsp.mean(0) + center,
+                    method="pearson truncated")
         c01 = _cov_iter(xs, weights_quantile, weights_args=(quantile,),
-                        rescale="med", cov_init=c0, maxiter=100)
+                        rescale="med", cov_init=c0.cov, maxiter=100)
 
-        c02 = _naive_ledoit_wolf_shrinkage(xsp, 0)
+        c02 = _naive_ledoit_wolf_shrinkage(xsp, 0).cov
         c03 = _cov_iter(xs, weights_quantile, weights_args=(quantile,),
                         rescale="med", cov_init=c02, maxiter=100)
 

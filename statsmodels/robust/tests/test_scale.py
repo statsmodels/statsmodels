@@ -2,6 +2,8 @@
 Test functions for models.robust.scale
 """
 
+import os
+
 import numpy as np
 from numpy.random import standard_normal
 from numpy.testing import assert_almost_equal, assert_equal, assert_allclose
@@ -13,6 +15,8 @@ import statsmodels.api as sm
 import statsmodels.robust.scale as scale
 from statsmodels.robust.scale import mad
 import statsmodels.robust.norms as rnorms
+
+from statsmodels.robust.covariance import scale_tau  # TODO: will be moved
 
 # Example from Section 5.5, Venables & Ripley (2002)
 
@@ -309,6 +313,66 @@ def test_mad_axis_none():
 
     np.testing.assert_allclose(direct, custom)
     np.testing.assert_allclose(direct, axis0)
+
+
+def test_tau_scale1():
+    x = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 1000.0]
+
+    # from R robustbase
+    # > scaleTau2(x, mu.too = TRUE, consistency = FALSE)
+    res2 = [4.09988889476747, 2.82997006475080]
+    res1 = scale_tau(x, normalize=False, ddof=0)
+    assert_allclose(res1, res2, rtol=1e-13)
+
+    # > scaleTau2(x, mu.too = TRUE)
+    res2 = [4.09988889476747, 2.94291554004125]
+    res1 = scale_tau(x, ddof=0)
+    assert_allclose(res1, res2, rtol=1e-13)
+
+
+def test_tau_scale2():
+    import pandas as pd
+    cur_dir = os.path.abspath(os.path.dirname(__file__))
+    file_name = 'hbk.csv'
+    file_path = os.path.join(cur_dir, 'results', file_name)
+    dta_hbk = pd.read_csv(file_path)
+
+    # from R robustbase
+    # > scaleTau2(hbk[,1], mu.too = TRUE, consistency = FALSE)
+    # [1] 1.55545438650723 1.93522607240954
+    # > scaleTau2(hbk[,2], mu.too = TRUE, consistency = FALSE)
+    # [1] 1.87924505206092 1.72121373687210
+    # > scaleTau2(hbk[,3], mu.too = TRUE, consistency = FALSE)
+    # [1] 1.74163126730520 1.81045973143159
+    # > scaleTau2(hbk[,4], mu.too = TRUE, consistency = FALSE)
+    # [1] -0.0443521228044396  0.8343974588144727
+
+    res2 = np.array([
+        [1.55545438650723, 1.93522607240954],
+        [1.87924505206092, 1.72121373687210],
+        [1.74163126730520, 1.81045973143159],
+        [-0.0443521228044396, 0.8343974588144727]
+        ])
+    res1 = scale_tau(dta_hbk, normalize=False, ddof=0)
+    assert_allclose(np.asarray(res1).T, res2, rtol=1e-13)
+
+    # > scaleTau2(hbk[,1], mu.too = TRUE, consistency = TRUE)
+    # [1] 1.55545438650723 2.01246188181448
+    # > scaleTau2(hbk[,2], mu.too = TRUE, consistency = TRUE)
+    # [1] 1.87924505206092 1.78990821036102
+    # > scaleTau2(hbk[,3], mu.too = TRUE, consistency = TRUE)
+    # [1] 1.74163126730520 1.88271605576794
+    # > scaleTau2(hbk[,4], mu.too = TRUE, consistency = TRUE)
+    # [1] -0.0443521228044396  0.8676986653327993
+
+    res2 = np.array([
+        [1.55545438650723, 2.01246188181448],
+        [1.87924505206092, 1.78990821036102],
+        [1.74163126730520, 1.88271605576794],
+        [-0.0443521228044396, 0.8676986653327993]
+        ])
+    res1 = scale_tau(dta_hbk, ddof=0)
+    assert_allclose(np.asarray(res1).T, res2, rtol=1e-13)
 
 
 def test_scale_iter():
