@@ -24,13 +24,11 @@ import warnings
 import numpy as np
 from numpy.linalg.linalg import LinAlgError
 
+from statsmodels.base import _prediction_inference as pred
+import statsmodels.base._parameter_inference as pinfer
+from statsmodels.base._prediction_inference import PredictionResultsMean
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
-
-from statsmodels.base import _prediction_inference as pred
-from statsmodels.base._prediction_inference import PredictionResultsMean
-import statsmodels.base._parameter_inference as pinfer
-
 from statsmodels.graphics._regressionplots_doc import (
     _plot_added_variable_doc,
     _plot_ceres_residuals_doc,
@@ -47,6 +45,7 @@ from statsmodels.tools.docstring import Docstring
 from statsmodels.tools.sm_exceptions import (
     DomainWarning,
     HessianInversionWarning,
+    PerfectSeparationError,
     PerfectSeparationWarning,
 )
 from statsmodels.tools.validation import float_like
@@ -54,9 +53,9 @@ from statsmodels.tools.validation import float_like
 # need import in module instead of lazily to copy `__doc__`
 from . import families
 
-
 __all__ = ['GLM', 'PredictionResultsMean']
 
+DEFAULT = float()
 
 def _check_convergence(criterion, iteration, atol, rtol):
     return np.allclose(criterion[iteration], criterion[iteration + 1],
@@ -196,7 +195,7 @@ class GLM(base.LikelihoodModel):
     Instantiate a gamma family model with the default link function.
 
     >>> gamma_model = sm.GLM(data.endog, data.exog,
-    ...                      family=sm.families.Gamma())
+    ...                      family=families.Gamma())
 
     >>> gamma_results = gamma_model.fit()
     >>> gamma_results.params
@@ -661,7 +660,7 @@ class GLM(base.LikelihoodModel):
         from statsmodels.discrete.discrete_margins import (
             _get_count_effects,
             _get_dummy_effects,
-            )
+        )
 
         if count_idx is not None:
             margeff = _get_count_effects(margeff, exog, count_idx, transform,
@@ -1192,6 +1191,8 @@ class GLM(base.LikelihoodModel):
             return self._fit_irls(start_params=start_params, maxiter=maxiter,
                                   tol=tol, scale=scale, cov_type=cov_type,
                                   cov_kwds=cov_kwds, use_t=use_t, **kwargs)
+        if method.lower() == "birls":
+            return self._fit_birls()
         else:
             self._optim_hessian = kwargs.get('optim_hessian')
             if self._optim_hessian is not None:
@@ -1364,6 +1365,285 @@ class GLM(base.LikelihoodModel):
         if (maxiter > 0) and (attach_wls is True):
             glm_results.results_wls = wls_results
         history['iteration'] = iteration + 1
+        glm_results.fit_history = history
+        glm_results.converged = converged
+        return GLMResultsWrapper(glm_results)
+
+
+    def _fit_bayes_irls(
+        self,
+        start_params=None,
+        maxiter: int = 100,
+        tol: float = 1e-8,
+        cov_type: str = "nonrobust",
+        cov_kwds=None,
+        use_t=None,
+        weights: np.array = None,
+        perform_scale: bool = True,
+        prior_mean: float = 0,
+        prior_scale: float = DEFAULT,
+        prior_df: float = 1,
+        prior_mean_for_intercept: float = 0,
+        prior_scale_for_intercept: float = DEFAULT,
+        prior_df_for_intercept: float = 1,
+        **kwargs,
+    ):
+        """
+        Fits a Bayes generalized linear model for a given family using
+        iteratively reweighted least squares (IRLS). See Gelman (2008)
+        http://www.stat.columbia.edu/~gelman/research/published/priors11.pdf
+        """
+        attach_wls = kwargs.pop("attach_wls", False)
+        # sets up tolerances for convergence check see:
+        # https://numpy.org/doc/stable/reference/generated/numpy.allclose.html
+        atol = kwargs.get("atol")
+        rtol = kwargs.get("rtol", 0.0)
+        tol_criterion = kwargs.get("tol_criterion", "deviance")
+        wls_method = kwargs.get("wls_method", "lstsq")
+        atol = tol if atol is None else atol
+        endog = self.endog
+        wlsexog = self.exog
+
+        # ==== vars for BGLM ====
+        # Based on statsmodel's doc:
+        # https://www.statsmodels.org/dev/generated/statsmodels.regression.linear_model.OLS.html  # noqa
+        # "An intercept is not included by default and should be added by the user."
+        # An intercept is triggered by the exog's first col being a constant
+        # self.k_constant == 0 for no intercept, and self.k_constant == 1 for intercept
+        intercept = self.k_constant > 0
+        nvars = wlsexog.shape[1]
+        # Set default values
+        default_probit_scale_factor = (
+            1.6 if isinstance(self.family.link, families.links.probit) else 1
+        )
+        if prior_scale is DEFAULT:
+            prior_scale = 2.5 * default_probit_scale_factor
+        if prior_scale_for_intercept is DEFAULT:
+            prior_scale_for_intercept = 10 * default_probit_scale_factor
+        # Set start priors
+        if intercept is True:
+            prior_scales = np.array(
+                [prior_scale_for_intercept] + [prior_scale] * (nvars - 1)
+            )
+            prior_means = np.array(
+                [prior_mean_for_intercept] + [prior_mean] * (nvars - 1)
+            )
+            prior_dfs = np.array([prior_df_for_intercept] + [prior_df] * (nvars - 1))
+        else:
+            prior_scales = np.array([prior_scale] * nvars)
+            prior_means = np.array([prior_mean] * nvars)
+            prior_dfs = np.array([prior_df] * nvars)
+
+        # In R: scaled = True
+        if perform_scale is True:
+            # scales the prior_scales, which is then appended to the w* vector as sigma
+            if isinstance(self.family, families.Gaussian):
+                prior_scales = prior_scales * 2 * self.endog.std(ddof=1)
+                # retain the original prior to use later
+                prior_scales_original = prior_scales.copy()
+            for i in range(nvars):
+                x_obs = self.exog[:, i]
+                num_categories = len(np.unique(x_obs))
+                if num_categories == 2:
+                    x_scale = x_obs.max() - x_obs.min()
+                elif num_categories > 2:
+                    x_scale = 2 * x_obs.std(ddof=1)
+                else:
+                    x_scale = 1
+                prior_scales[i] = prior_scales[i] / x_scale
+
+        # this gets used to update w* later on
+        prior_standard_deviations = prior_scales.copy()
+
+        # In R we have 3 starting params: start, etastart, and mustart
+        # In R we have: mustart <- (weights * y + 0.5)/(weights + 1)
+        # Should be what eval() does in R
+        if start_params is None:
+            start_params = np.zeros(nvars)
+            # Starting mu is just mui = yi +.5/(2)
+            # https://www.statsmodels.org/dev/generated/statsmodels.genmod.families.family.Binomial.starting_mu.html
+            mu = self.family.starting_mu(y=self.endog)
+            # lin_pred here returns exact same values
+            # as self.family.link(mu) which returns exact same thing
+            # as in R where we call family$linkfun(mustart)
+            # so this IS `eta` in R.
+            # This is backed up by the documentation here:
+            # https://www.statsmodels.org/dev/generated/statsmodels.genmod.families.family.Binomial.predict.html
+            # that says that self.family.predict() returns:
+            # `lin_pred`` is a `ndarray`
+            # Linear predictors based on the mean response variables.
+            # The value of the link function at the given mu.
+            lin_pred = self.family.predict(mu)
+        else:
+            lin_pred = np.dot(wlsexog, start_params) + self._offset_exposure
+            mu = self.family.fitted(lin_pred)
+        # This is a default scale depending on family
+        # It's 1 for Binomials, Negative Binomials, and Poisson
+        # Else it's Pearson's chi-squared estimate
+        self.scale = self.estimate_scale(mu)
+        # This should match the dev.resids in R
+        # which similarily comes from a family attribute
+        # Starts as devold and then they update it in R.
+        dev = self.family.deviance(
+            self.endog, mu, self.var_weights, self.freq_weights, self.scale
+        )
+        if np.isnan(dev):
+            raise ValueError(
+                "The first guess on the deviance function "
+                "returned a nan.  This could be a boundary "
+                " problem and should be reported."
+            )
+
+        # first guess on the deviance is assumed to be scaled by 1.
+        # params are none to start, so they line up with the deviance
+        history = dict(params=[np.inf, start_params], deviance=[np.inf, dev])
+        converged = False
+        criterion = history[tol_criterion]
+
+        # For weights, in R we have
+        # w.star <- c(w, sqrt(dispersion)/prior.sd)
+        # so we need dispersion and prior.sd
+        # dispersion is always 1 for Binomial and Poisson
+        if isinstance(self.family, families.Binomial) or isinstance(
+            self.family, families.Poisson
+        ):
+            dispersion = 1
+        else:
+            dispersion = np.var(self.endog) / 10000
+        # This special case is used to get the likelihood for a specific
+        # params vector.
+        if maxiter == 0:
+            mu = self.family.fitted(lin_pred)
+            self.scale = self.estimate_scale(mu)
+            wls_results = lm.RegressionResults(self, start_params, None)
+            iteration = 0
+        for iteration in range(maxiter):
+            # Normal glm
+            weights = self.iweights * self.n_trials * self.family.weights(mu)
+            weights_square_rooted = np.sqrt(weights)
+            wlsendog = (
+                lin_pred
+                + self.family.link.deriv(mu) * (self.endog - mu)
+                - self._offset_exposure
+            )
+            # ==== data augmentation ====
+            # From the Gelman paper:
+            # Xstar = (X
+            #          Ij)
+            # So just create the identity matrix and stack it
+            # to get shape n+J x J
+            x_identity = np.identity(nvars)
+            if perform_scale and intercept:
+                x_identity[0] = np.mean(self.exog, axis=0)
+
+            x_star = np.vstack((self.exog, x_identity))
+            z_star = np.append(wlsendog, prior_means)
+            # Weights are squared inside of the WLS.fit step in python,
+            # but outside in R.
+            # So our w_star values are squared compared to the R values.
+            w_star = np.append(
+                weights, dispersion / np.square(prior_standard_deviations)
+            )
+            # ==== end of data augmentation ====
+
+            wls_mod = reg_tools._MinimalWLS(
+                endog=z_star,
+                exog=x_star,
+                weights=w_star,
+                check_endog=True,
+                check_weights=True,
+            )
+            # Same as GLM
+            wls_results = wls_mod.fit(method=wls_method)
+            lin_pred = np.dot(self.exog, wls_results.params)
+            lin_pred += self._offset_exposure
+            mu = self.family.fitted(lin_pred)
+            history = self._update_history(wls_results, mu, history)
+            self.scale = self.estimate_scale(mu)
+            if endog.squeeze().ndim == 1 and np.allclose(mu - endog, 0):
+                msg = "Perfect separation detected, results not available"
+                raise PerfectSeparationError(msg)
+
+            # ==== update the priors/the EM step in Gelman et al. 2008  ====
+            # Based on _MinimalWLS' fit implementation using the qr method
+            Q, R = np.linalg.qr(wls_mod.wexog)
+            # In R: V.coefs <- chol2inv(fit$qr$qr[1:NCOL(x.star), 1:NCOL(x.star), drop = FALSE])  # noqa
+            # chol2inv's docs say "Equivalently, compute (X'X)^-1 from the (R part) of
+            # the QR decomposition of X." X it the R matrix from QR decomp.
+            # There is no existing comparable method to chol2inv in Python.
+            v_coefs = np.linalg.inv(np.dot(R.T, R))
+
+            if isinstance(self.family, families.Gaussian) and perform_scale is True:
+                prior_scales = prior_scales_original.copy()
+
+            # In R:
+            # prior.sd <- ifelse(prior.df == Inf, prior.scale,
+            #            sqrt(((coefs.hat - prior.mean)^2 + diag(V.coefs) *
+            #            dispersion + prior.df * prior.scale^2)/(1 +
+            #            prior.df)))
+            if prior_df == np.Infinity:
+                prior_standard_deviations = prior_scales.copy()
+            else:
+                prior_standard_deviations = np.sqrt(
+                    (
+                        ((wls_results.params - prior_means) ** 2)
+                        + np.diag(v_coefs) * dispersion
+                        + prior_dfs * prior_scales**2
+                    )
+                    / (prior_dfs + 1)
+                )
+
+            # In R:
+            # mse.resid <- mean((w * (z - x %*% coefs.hat))^2)
+            # mse.uncertainty <- mean(rowSums((x %*% V.coefs) *
+            # x)) * dispersion
+            # dispersion <- mse.resid + mse.uncertainty
+            if not (
+                isinstance(self.family, families.Binomial)
+                or isinstance(self.family, families.Poisson)
+            ):
+                mse_resid = np.mean(
+                    (
+                        weights_square_rooted
+                        * (wlsendog - np.dot(self.exog, wls_results.params))
+                    )
+                    ** 2
+                )
+                mse_uncertainty = (
+                    np.mean(np.sum(np.dot(self.exog, v_coefs) * self.exog, axis=1))
+                    * dispersion
+                )
+                dispersion = mse_resid + mse_uncertainty
+
+            converged = _check_convergence(criterion, iteration + 1, atol, rtol)
+            if converged:
+                break
+        self.mu = mu
+
+        # Running lm.WLS.fit does not change the resulting params
+        # It simply calculates additional results, e.g. normalized_cov_params
+        if maxiter > 0:  # Only if iterative used
+            wls_method2 = "pinv" if wls_method == "lstsq" else wls_method
+            wls_model = lm.WLS(z_star, x_star, w_star)
+            wls_results = wls_model.fit(method=wls_method2)
+
+        glm_results = GLMResults(
+            self,
+            wls_results.params,
+            wls_results.normalized_cov_params,
+            self.scale,
+            cov_type=cov_type,
+            cov_kwds=cov_kwds,
+            use_t=use_t,
+        )
+
+        glm_results.method = "BIRLS"
+        glm_results.mle_settings = {}
+        glm_results.mle_settings["wls_method"] = wls_method
+        glm_results.mle_settings["optimizer"] = glm_results.method
+        if (maxiter > 0) and (attach_wls is True):
+            glm_results.results_wls = wls_results
+        history["iteration"] = iteration + 1
         glm_results.fit_history = history
         glm_results.converged = converged
         return GLMResultsWrapper(glm_results)
