@@ -114,7 +114,7 @@ def mean_diff_plot(m1, m2, sd_limit=1.96, ax=None, scatter_kwds=None,
     ax.axhline(mean_diff, **mean_line_kwds)  # draw mean line.
 
     # Annotate mean line with mean difference.
-    ax.annotate(f'mean diff:\n{np.round(mean_diff, 2)}',
+    ax.annotate(f'mean diff:\n{mean_diff:.2g})',
                 xy=(0.99, 0.5),
                 horizontalalignment='right',
                 verticalalignment='center',
