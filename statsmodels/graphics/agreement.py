@@ -1,17 +1,24 @@
-'''
+"""
 Bland-Altman mean-difference plots
 
 Author: Joses Ho
 License: BSD-3
-'''
+"""
 
 import numpy as np
 
 from . import utils
 
 
-def mean_diff_plot(m1, m2, sd_limit=1.96, ax=None, scatter_kwds=None,
-                   mean_line_kwds=None, limit_lines_kwds=None):
+def mean_diff_plot(
+    m1,
+    m2,
+    sd_limit=1.96,
+    ax=None,
+    scatter_kwds=None,
+    mean_line_kwds=None,
+    limit_lines_kwds=None,
+):
     """
     Construct a Tukey/Bland-Altman Mean Difference Plot.
 
@@ -86,69 +93,70 @@ def mean_diff_plot(m1, m2, sd_limit=1.96, ax=None, scatter_kwds=None,
     fig, ax = utils.create_mpl_ax(ax)
 
     if len(m1) != len(m2):
-        raise ValueError('m1 does not have the same length as m2.')
+        raise ValueError("m1 does not have the same length as m2.")
     if sd_limit < 0:
-        raise ValueError(f'sd_limit ({sd_limit}) is less than 0.')
-
+        raise ValueError(f"sd_limit ({sd_limit}) is less than 0.")
     means = np.mean([m1, m2], axis=0)
     diffs = m1 - m2
     mean_diff = np.mean(diffs)
     std_diff = np.std(diffs, axis=0)
 
     scatter_kwds = scatter_kwds or {}
-    if 's' not in scatter_kwds:
-        scatter_kwds['s'] = 20
+    if "s" not in scatter_kwds:
+        scatter_kwds["s"] = 20
     mean_line_kwds = mean_line_kwds or {}
     limit_lines_kwds = limit_lines_kwds or {}
     for kwds in [mean_line_kwds, limit_lines_kwds]:
-        if 'color' not in kwds:
-            kwds['color'] = 'gray'
-        if 'linewidth' not in kwds:
-            kwds['linewidth'] = 1
-    if 'linestyle' not in mean_line_kwds:
-        kwds['linestyle'] = '--'
-    if 'linestyle' not in limit_lines_kwds:
-        kwds['linestyle'] = ':'
-
-    ax.scatter(means, diffs, **scatter_kwds) # Plot the means against the diffs.
+        if "color" not in kwds:
+            kwds["color"] = "gray"
+        if "linewidth" not in kwds:
+            kwds["linewidth"] = 1
+    if "linestyle" not in mean_line_kwds:
+        kwds["linestyle"] = "--"
+    if "linestyle" not in limit_lines_kwds:
+        kwds["linestyle"] = ":"
+    ax.scatter(means, diffs, **scatter_kwds)  # Plot the means against the diffs.
     ax.axhline(mean_diff, **mean_line_kwds)  # draw mean line.
 
     # Annotate mean line with mean difference.
-    ax.annotate(f'mean diff:\n{np.round(mean_diff, 2)}',
-                xy=(0.99, 0.5),
-                horizontalalignment='right',
-                verticalalignment='center',
-                fontsize=14,
-                xycoords='axes fraction')
+
+    ax.annotate(
+        f"mean diff:\n{mean_diff:0.3g}",
+        xy=(0.99, 0.5),
+        horizontalalignment="right",
+        verticalalignment="center",
+        fontsize=14,
+        xycoords="axes fraction",
+    )
 
     if sd_limit > 0:
         half_ylim = (1.5 * sd_limit) * std_diff
-        ax.set_ylim(mean_diff - half_ylim,
-                    mean_diff + half_ylim)
+        ax.set_ylim(mean_diff - half_ylim, mean_diff + half_ylim)
         limit_of_agreement = sd_limit * std_diff
         lower = mean_diff - limit_of_agreement
         upper = mean_diff + limit_of_agreement
         for j, lim in enumerate([lower, upper]):
             ax.axhline(lim, **limit_lines_kwds)
-        ax.annotate(f'-{sd_limit} SD: {lower:0.2g}',
-                    xy=(0.99, 0.07),
-                    horizontalalignment='right',
-                    verticalalignment='bottom',
-                    fontsize=14,
-                    xycoords='axes fraction')
-        ax.annotate(f'+{sd_limit} SD: {upper:0.2g}',
-                    xy=(0.99, 0.92),
-                    horizontalalignment='right',
-                    fontsize=14,
-                    xycoords='axes fraction')
-
+        ax.annotate(
+            f"-{sd_limit} SD: {lower:0.2g}",
+            xy=(0.99, 0.07),
+            horizontalalignment="right",
+            verticalalignment="bottom",
+            fontsize=14,
+            xycoords="axes fraction",
+        )
+        ax.annotate(
+            f"+{sd_limit} SD: {upper:0.2g}",
+            xy=(0.99, 0.92),
+            horizontalalignment="right",
+            fontsize=14,
+            xycoords="axes fraction",
+        )
     elif sd_limit == 0:
         half_ylim = 3 * std_diff
-        ax.set_ylim(mean_diff - half_ylim,
-                    mean_diff + half_ylim)
-
-    ax.set_ylabel('Difference', fontsize=15)
-    ax.set_xlabel('Means', fontsize=15)
+        ax.set_ylim(mean_diff - half_ylim, mean_diff + half_ylim)
+    ax.set_ylabel("Difference", fontsize=15)
+    ax.set_xlabel("Means", fontsize=15)
     ax.tick_params(labelsize=13)
     fig.tight_layout()
     return fig
