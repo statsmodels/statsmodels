@@ -2582,6 +2582,7 @@ class RegressionResults(base.LikelihoodModelResults):
             # cluster robust standard errors, one- or two-way
             groups = kwargs['groups']
             if not hasattr(groups, 'shape'):
+                groups = [np.squeeze(np.asarray(group)) for group in groups]
                 groups = np.asarray(groups).T
 
             if groups.ndim >= 2:
