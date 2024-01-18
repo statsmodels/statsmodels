@@ -2661,3 +2661,62 @@ def test_tweedie_score():
             nhess = approx_hess_cs(pa, lambda x: model.loglike(x, scale=1))
             ahess = model.hessian(pa, scale=1)
             assert_allclose(nhess, ahess, atol=5e-8, rtol=5e-8)
+
+def test_names():
+    """Test the name properties if using a pandas series.
+
+    They should not be the defaults if the series has a name.
+
+    Don't care about the data here, only testing the name properties.
+    """
+    y = pd.Series([0, 1], name="endog_not_default")
+    x = pd.DataFrame({"a": [1, 1], "b": [1, 0]})
+    exposure = pd.Series([0, 0], name="exposure_not_default")
+    freq_weights = pd.Series([0, 0], name="freq_weights_not_default")
+    offset = pd.Series([0, 0], name="offset_not_default")
+    var_weights = pd.Series([0, 0], name="var_weights_not_default")
+
+    model = GLM(
+        endog=y,
+        exog=x,
+        exposure=exposure,
+        freq_weights=freq_weights,
+        offset=offset,
+        var_weights=var_weights,
+        family=sm.families.Tweedie(),
+    )
+    assert model.offset_name == "offset_not_default"
+    assert model.exposure_name == "exposure_not_default"
+    assert model.freq_weights_name == "freq_weights_not_default"
+    assert model.var_weights_name == "var_weights_not_default"
+    assert model.endog_names == "endog_not_default"
+    assert model.exog_names == ["a", "b"]
+
+
+def test_names_default():
+    """Test the name properties if using a numpy arrays.
+
+    Don't care about the data here, only testing the name properties.
+    """
+    y = np.array([0, 1])
+    x = np.array([[1, 1,], [1, 0]])
+    exposure = np.array([0, 0])
+    freq_weights = np.array([0, 0])
+    offset = np.array([0, 0])
+    var_weights = np.array([0, 0])
+
+    model = GLM(
+        endog=y,
+        exog=x,
+        exposure=exposure,
+        freq_weights=freq_weights,
+        offset=offset,
+        var_weights=var_weights,
+        family=sm.families.Tweedie(),
+    )
+    assert model.offset_name == "offset"
+    assert model.exposure_name == "exposure"
+    assert model.freq_weights_name == "freq_weights"
+    assert model.var_weights_name == "var_weights"
+    assert model.endog_names == "y"
+    assert model.exog_names == ["const", "x1"]
