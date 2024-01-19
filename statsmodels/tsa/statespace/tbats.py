@@ -11,7 +11,6 @@ from statsmodels.compat.collections import OrderedDict
 
 import numpy as np
 from numpy.linalg import LinAlgError
-import statsmodels.api as sm
 from scipy import linalg
 import pandas as pd
 from statsmodels.tools.data import _is_using_pandas
@@ -21,7 +20,7 @@ from statsmodels.regression.linear_model import OLS
 from statsmodels.tsa.statespace.kalman_filter import INVERT_UNIVARIATE, SOLVE_LU
 from statsmodels.tsa.statespace.mlemodel import MLEModel, MLEResults, MLEResultsWrapper
 import statsmodels.base.wrapper as wrap
-from statsmodels.tools.tools import Bunch
+from statsmodels.tools.tools import Bunch, add_constant
 from statsmodels.tools.decorators import cache_readonly
 from scipy.stats import boxcox, linregress
 from scipy.special import inv_boxcox
@@ -123,7 +122,7 @@ def _k_f_test(x, periods, ks, exog=None):
                 fourier(x, period, k, name='Seasonal' + str(i)),
                 how='outer'
             )
-    res = OLS(x, sm.add_constant(exog)).fit(cov_kwd={'use_t': True})
+    res = OLS(x, add_constant(exog)).fit(cov_kwd={'use_t': True})
     return res
 
 
@@ -713,7 +712,7 @@ class TBATSModel(InnnovationModel):
                 param_names += [
                     'beta.%s.coefs' % self.exog_names[i]
                     for i in range(self.k_exog)
-                ]
+                    ]
             else:
                 param_names.append(key)
         return param_names
@@ -743,8 +742,8 @@ class TBATSModel(InnnovationModel):
 
         if self.trend:
             constrained[offset] = (
-                1 / (1 + np.exp(-unconstrained[offset]))
-            ) * alpha
+                                      1 / (1 + np.exp(-unconstrained[offset]))
+                                  ) * alpha
             offset += 1
 
             if self.damping:
@@ -764,8 +763,8 @@ class TBATSModel(InnnovationModel):
                 low, high = 0, max_limit / k
                 gamma_sum = gamma1 + gamma2
                 limit = (
-                    1 / (1 + np.exp(-gamma_sum))
-                ) * (high - low) + low
+                            1 / (1 + np.exp(-gamma_sum))
+                        ) * (high - low) + low
 
                 max_limit -= limit * k
                 constrained[offset: offset + 2] = np.r_[gamma1 * limit / gamma_sum, gamma2 * limit / gamma_sum]
@@ -943,9 +942,9 @@ class TBATSModel(InnnovationModel):
                     self['transition', 1, matrix_offset: matrix_offset + p] = beta * ar
                 if self.seasonal:
                     self[
-                        'transition',
-                        1 + self.trend: col_indice,
-                        matrix_offset: matrix_offset + p
+                    'transition',
+                    1 + self.trend: col_indice,
+                    matrix_offset: matrix_offset + p
                     ] = gamma_selection[:, None] * ar
                 self['transition', matrix_offset, matrix_offset: matrix_offset + p] = ar
                 matrix_offset += p
@@ -967,7 +966,7 @@ class TBATSModel(InnnovationModel):
         if self.regression and self.mle_regression and True:
             self.ssm['obs_intercept'] = np.dot(
                 self.data.exog,
-                params[offset: offset+self.k_exog]
+                params[offset: offset + self.k_exog]
             )[None, :]
             offset += self.k_exog
 
