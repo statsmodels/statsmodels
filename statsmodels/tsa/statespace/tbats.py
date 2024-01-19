@@ -618,9 +618,10 @@ class TBATSModel(InnnovationModel, BoxCox):
         _start_params['obs_var'] = .001
 
         if np.any(np.isnan(endog)):
+            mask = ~np.isnan(endog).squeeze()
             endog = endog[~np.isnan(endog)]
             if exog is not None:
-                exog = exog[~np.isnan(endog)]
+                exog = exog[mask]
 
         if self.boxcox:
             endog, _start_params['boxcox'] = self.transform_boxcox(self.data.endog, method='loglik', bounds=(0, 1))
