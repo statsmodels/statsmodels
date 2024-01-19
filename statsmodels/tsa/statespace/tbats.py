@@ -457,7 +457,7 @@ class TBATSModel(InnnovationModel, BoxCox):
         )
 
         if self.boxcox and lmbda is not None:
-            y = self.transform_boxcox(self.data.endog, lmbda=lmbda)
+            y, lmbda = self.transform_boxcox(self.data.endog, lmbda=lmbda)
         else:
             y = self.data.endog
 
@@ -626,7 +626,7 @@ class TBATSModel(InnnovationModel, BoxCox):
             endog, lmbda = self.transform_boxcox(self.data.endog)
             if np.isnan(lmbda) or not (0 <= lmbda <= 1):
                 _start_params['boxcox'] = .975
-                endog = self.transform_boxcox(endog, .975)
+                endog, lmbda = self.transform_boxcox(endog, .975)
             else:
                 _start_params['boxcox'] = lmbda
 
@@ -873,7 +873,7 @@ class TBATSModel(InnnovationModel, BoxCox):
         if self.boxcox:
             lmbda = params[offset].astype(np.float)
             offset += 1
-            endog_touse = self.transform_boxcox(self.endog, lmbda)
+            endog_touse, lmbda = self.transform_boxcox(self.endog, lmbda)
             self.ssm.bind(endog_touse)
             self.ssm._representations = {}
             self.ssm._statespaces = {}
@@ -1228,9 +1228,9 @@ class TBATSResults(MLEResults):
 
             if spec.box_cox:
                 lmbda = self.params[1]
-                predict = self.untransform_boxcox(predict, lmbda)
-                ci_lower = self.untransform_boxcox(ci_lower, lmbda)
-                ci_upper = self.untransform_boxcox(ci_upper, lmbda)
+                predict = self.model.untransform_boxcox(predict, lmbda)
+                ci_lower = self.model.untransform_boxcox(ci_lower, lmbda)
+                ci_upper = self.model.untransform_boxcox(ci_upper, lmbda)
 
             # Plot
             ax.plot(dates[start:end], predict[start:end],
