@@ -623,13 +623,7 @@ class TBATSModel(InnnovationModel, BoxCox):
                 exog = exog[~np.isnan(endog)]
 
         if self.boxcox:
-            endog, lmbda = self.transform_boxcox(self.data.endog, method='loglik')
-            if np.isnan(lmbda) or not (0 <= lmbda <= 1):
-                _start_params['boxcox'] = .975
-                endog, lmbda = self.transform_boxcox(endog, .975)
-            else:
-                _start_params['boxcox'] = lmbda
-
+            endog, _start_params['boxcox'] = self.transform_boxcox(self.data.endog, method='loglik', bounds=(0, 1))
         _start_params['level_alpha'] = .1
 
         # trend beta
