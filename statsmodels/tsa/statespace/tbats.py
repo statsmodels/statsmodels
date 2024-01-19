@@ -18,12 +18,12 @@ from statsmodels.tools.eval_measures import aic
 from statsmodels.tsa.filters.hp_filter import hpfilter
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tsa.statespace.kalman_filter import INVERT_UNIVARIATE, SOLVE_LU
-from statsmodels.tsa.statespace.mlemodel import MLEModel, MLEResults, MLEResultsWrapper
+from statsmodels.tsa.statespace.mlemodel import MLEResults, MLEResultsWrapper
 import statsmodels.base.wrapper as wrap
 from statsmodels.tools.tools import Bunch, add_constant
 from statsmodels.tools.decorators import cache_readonly
-from scipy.stats import boxcox, linregress
-from scipy.special import inv_boxcox
+from statsmodels.base.transform import BoxCox
+from scipy.stats import linregress
 from statsmodels.tsa.statespace.tools import (
     constrain_stationary_univariate,
     unconstrain_stationary_univariate,
@@ -273,7 +273,7 @@ def tbats_k_order_select_ic(y, periods, use_trend=None, use_box_cox=None, damped
     return model_kw, best_model
 
 
-class TBATSModel(InnnovationModel):
+class TBATSModel(InnnovationModel, BoxCox):
     r"""
     Trigonometric, Box-Cox, ARMA Error, Trend and Seasonal(TBATS)
 
@@ -457,7 +457,7 @@ class TBATSModel(InnnovationModel):
         )
 
         if self.boxcox and lmbda is not None:
-            y = boxcox(self.data.endog, lmbda)
+            y = self.transform_boxcox(self.data.endog, lmbda=lmbda)
         else:
             y = self.data.endog
 
@@ -623,10 +623,10 @@ class TBATSModel(InnnovationModel):
                 exog = exog[~np.isnan(endog)]
 
         if self.boxcox:
-            endog, lmbda = boxcox(self.data.endog, None)
+            endog, lmbda = self.transform_boxcox(self.data.endog)
             if np.isnan(lmbda) or not (0 <= lmbda <= 1):
                 _start_params['boxcox'] = .975
-                endog = boxcox(endog, .975)
+                endog = self.transform_boxcox(endog, .975)
             else:
                 _start_params['boxcox'] = lmbda
 
@@ -873,7 +873,7 @@ class TBATSModel(InnnovationModel):
         if self.boxcox:
             lmbda = params[offset].astype(np.float)
             offset += 1
-            endog_touse = boxcox(self.endog, lmbda)
+            endog_touse = self.transform_boxcox(self.endog, lmbda)
             self.ssm.bind(endog_touse)
             self.ssm._representations = {}
             self.ssm._statespaces = {}
@@ -1019,7 +1019,7 @@ class TBATSResults(MLEResults):
     def fittedvalues(self):
         fittedvalues = super(TBATSResults, self).fittedvalues
         if self.model.boxcox:
-            fittedvalues = inv_boxcox(fittedvalues, float(self.params[1]))
+            fittedvalues = self.model.untransform_boxcox(fittedvalues, float(self.params[1]))
         return fittedvalues
 
     @cache_readonly
@@ -1228,9 +1228,9 @@ class TBATSResults(MLEResults):
 
             if spec.box_cox:
                 lmbda = self.params[1]
-                predict = inv_boxcox(predict, lmbda)
-                ci_lower = inv_boxcox(ci_lower, lmbda)
-                ci_upper = inv_boxcox(ci_upper, lmbda)
+                predict = self.untransform_boxcox(predict, lmbda)
+                ci_lower = self.untransform_boxcox(ci_lower, lmbda)
+                ci_upper = self.untransform_boxcox(ci_upper, lmbda)
 
             # Plot
             ax.plot(dates[start:end], predict[start:end],
@@ -1344,7 +1344,7 @@ class TBATSResults(MLEResults):
     def forecast(self, steps=1, **kwargs):
         forecast_values = super().forecast(steps, **kwargs)
         if self.model.boxcox:
-            forecast_values = inv_boxcox(forecast_values, self.params[1])
+            forecast_values = self.untransform_boxcox(forecast_values, self.params[1])
 
         return forecast_values
 
