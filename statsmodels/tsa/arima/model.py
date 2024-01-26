@@ -53,9 +53,7 @@ class ARIMA(sarimax.SARIMAX):
         moving average components. d is always an integer, while p and q may
         either be integers or lists of integers specifying exactly which lag
         orders are included. The order of differences is to achieve
-        stationnarity in the context of a sochastic trend or seasonality. If
-        your trend in deterministic, use the `trend` parameter as it will
-        provide better forecasts.
+        stationnarity in the context of a sochastic trend or seasonality.
     seasonal_order : tuple, default: (0, 0, 0, 0)
         The (P,D,Q,s) order of the seasonal component of the model for the
         AR parameters, differences, MA parameters, and periodicity. D and s
