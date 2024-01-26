@@ -56,9 +56,10 @@ class ARIMA(sarimax.SARIMAX):
         stationnarity in the context of a sochastic trend or seasonality.
     seasonal_order : tuple, default: (0, 0, 0, 0)
         The (P,D,Q,s) order of the seasonal component of the model for the
-        AR parameters, differences, MA parameters, and periodicity. D and s
-        are always integers, while P and Q may either be integers or lists
-        of positive integers specifying exactly which lag orders are included.
+        AR parameters, differences, MA parameters, and periodicity. D is a non-
+        negative integer, and s is an integer strictly greater than one. P and
+        Q may either be integers or lists of positive integers specifying
+        exactly which lag orders are included.
     trend : str{'n','c','t','ct'} or iterable, optional
         Parameter controlling the deterministic trend. Can be specified as a
         string where 'c' indicates a constant term, 't' indicates a
