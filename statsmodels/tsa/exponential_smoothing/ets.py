@@ -1164,10 +1164,14 @@ class ETSModel(base.StateSpaceMLEModel):
             # multiplicative model is no longer well-defined. In this case
             # we overwrite the log-likelihood to be -infinity so that these
             # models are never selected.
-            if np.any(yhat <= 0):
+            # if np.any(yhat <= 0):
+            #     logL = -np.inf
+            # else:
+            #     logL -= np.sum(np.log(yhat))
+            if np.any(yhat == 0):
                 logL = -np.inf
             else:
-                logL -= np.sum(np.log(yhat))
+                logL -= np.sum(np.log(np.abs(yhat)))
         return logL
 
     @contextlib.contextmanager
