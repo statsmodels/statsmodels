@@ -1160,18 +1160,13 @@ class ETSModel(base.StateSpaceMLEModel):
         res = self._residuals(yhat, data=data)
         logL = -self.nobs / 2 * (np.log(2 * np.pi * np.mean(res ** 2)) + 1)
         if self.error == "mul":
-            # In some cases, yhat can become negative, so that a
-            # multiplicative model is no longer well-defined. In this case
-            # we overwrite the log-likelihood to be -infinity so that these
-            # models are never selected.
-            # if np.any(yhat <= 0):
-            #     logL = -np.inf
-            # else:
-            #     logL -= np.sum(np.log(yhat))
-            if np.any(yhat == 0):
-                logL = -np.inf
-            else:
-                logL -= np.sum(np.log(np.abs(yhat)))
+            # In some cases, yhat can become negative or zero, so that a
+            # multiplicative model is no longer well-defined. Zero values
+            # are replaced with 10^-18 (a very small number) and we take
+            # the absolute of yhat to avoid computing the log of negative
+            # numbers.
+            yhat[yhat == 0] = 1e-18
+            logL -= np.sum(np.log(np.abs(yhat)))
         return logL
 
     @contextlib.contextmanager
