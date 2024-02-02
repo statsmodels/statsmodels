@@ -1162,7 +1162,7 @@ class ETSModel(base.StateSpaceMLEModel):
         if self.error == "mul":
             # In some cases, yhat can become negative or zero, so that a
             # multiplicative model is no longer well-defined. Zero values
-            # are replaced with 10^-18 (a very small number) and we take
+            # are replaced with 10^-32 (a very small number) and we take
             # the absolute of yhat to avoid computing the log of negative
             # numbers.
             yhat[yhat == 0] = 1e-32
