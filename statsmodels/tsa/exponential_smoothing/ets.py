@@ -1165,7 +1165,7 @@ class ETSModel(base.StateSpaceMLEModel):
             # are replaced with 10^-18 (a very small number) and we take
             # the absolute of yhat to avoid computing the log of negative
             # numbers.
-            yhat[yhat == 0] = 1e-18
+            yhat[yhat == 0] = 1e-32
             logL -= np.sum(np.log(np.abs(yhat)))
         return logL
 
