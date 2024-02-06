@@ -1,10 +1,15 @@
 """
 Test functions for models.GLM
 """
+from statsmodels.compat.scipy import SP_LT_17
+
+import json
 import os
+from typing import List, Tuple
 import warnings
 
 import numpy as np
+import numpy as npgit
 from numpy.testing import (
     assert_,
     assert_allclose,
@@ -19,7 +24,6 @@ import pytest
 from scipy import stats
 
 import statsmodels.api as sm
-from statsmodels.compat.scipy import SP_LT_17
 from statsmodels.datasets import cpunish, longley
 from statsmodels.discrete import discrete_model as discrete
 from statsmodels.genmod.generalized_linear_model import GLM, SET_USE_BIC_LLF
@@ -2661,3 +2665,145 @@ def test_tweedie_score():
             nhess = approx_hess_cs(pa, lambda x: model.loglike(x, scale=1))
             ahess = model.hessian(pa, scale=1)
             assert_allclose(nhess, ahess, atol=5e-8, rtol=5e-8)
+
+
+class TestBGLMDiscreteResults:
+    model_families = [("gaussian", sm.families.Gaussian()),
+                      ("logit", sm.families.Binomial()),  # Logit by default
+                      ("probit", sm.families.Binomial(link=sm.genmod.families.links.Probit())),
+                      ("poisson", sm.families.Poisson()),
+                      ]
+
+    @pytest.fixture
+    def get_test_data(self) -> pd.DataFrame:
+        # note this is static test data for comparing outputs
+        # between R and Python
+        # See the scripts in statsmodels_custom/documentation for more details
+        return pd.read_csv(f"{os.getcwd()}/statsmodels/genmod/tests/test_data/test_data.csv")
+
+    @pytest.fixture
+    def extract_json(self) -> dict[str, dict[str, List]]:
+        # note this is static test results for comparing outputs
+        # between R and Python
+        # See the scripts in statsmodels_custom/documentation for more details
+        with open(f"{os.getcwd()}/statsmodels/genmod/tests/test_data/R_model_results.json") as f:
+            json_data = json.load(f)
+        return json_data
+
+    @pytest.fixture
+    def get_test_data_with_constant(
+        self, get_test_data
+    ) -> Tuple[pd.DataFrame, pd.Series]:
+        X = get_test_data.drop(columns=["y"])
+        y = get_test_data["y"]
+
+        return X, y
+
+    @pytest.fixture
+    def get_test_data_without_constant(
+        self, get_test_data
+    ) -> Tuple[pd.DataFrame, pd.Series]:
+        X = get_test_data.drop(columns=["y", "const"])
+        y = get_test_data["y"]
+
+        return X, y
+
+    @pytest.mark.parametrize("family", model_families)
+    def test_every_family_runs_with_constant(
+        self, family, get_test_data_with_constant
+    ) -> None:
+        # Arrange
+        X, y = get_test_data_with_constant
+
+        # Act
+        model = GLM(method="birls", endog=y, exog=X, family=family[1])
+        training_result = model.fit(
+            weights=None,
+            perform_scale=True,
+        )
+        result = training_result.predict(X)
+
+        # Assert
+        assert len(result) == len(y)
+
+    @pytest.mark.parametrize("family", model_families)
+    def test_every_family_runs_without_constant(
+        self, family, get_test_data_without_constant
+    ) -> None:
+        # Arrange
+        X, y = get_test_data_without_constant
+
+        # Act
+        model = GLM(method="birls", endog=y, exog=X, family=family[1])
+        training_result = model.fit(
+            weights=None,
+            perform_scale=True,
+        )
+        result = training_result.predict(X)
+
+        # Assert
+        assert len(result) == len(y)
+
+    @pytest.mark.parametrize("family", model_families)
+    def test_for_expected_outputs_constants(
+        self, family, get_test_data_with_constant, extract_json
+    ) -> None:
+        # Arrange:
+        family_str = family[0] + "_constant"
+        X, y = get_test_data_with_constant
+
+        json_data = extract_json
+
+        # Act
+        model = GLM(method="birls", endog=y, exog=X, family=family[1])
+        training_result = model.fit(
+            weights=None,
+            perform_scale=True,
+        )
+
+        # Assert
+        assert np.isclose(
+            training_result.fittedvalues,
+            json_data[family_str]["fittedvalues"],
+            atol=1e-05,
+        ).all()
+        assert np.isclose(
+            training_result.resid_working,
+            json_data[family_str]["resid_working"],
+            atol=1e-05,
+        ).all()
+        assert np.isclose(
+            training_result.params, json_data[family_str]["params"], atol=1e-05
+        ).all()
+
+    @pytest.mark.parametrize("family", model_families)
+    def test_for_expected_outputs_no_constants(
+        self, family, get_test_data_without_constant, extract_json
+    ) -> None:
+        # Arrange:
+        family_str = family[0] + "_no_constant"
+        X, y = get_test_data_without_constant
+
+        json_data = extract_json
+
+        # Act
+        model = GLM(method="birls", endog=y, exog=X, family=family[1])
+        training_result = model.fit(
+            weights=None,
+            perform_scale=True,
+        )
+
+        # Assert
+        assert np.isclose(
+            training_result.fittedvalues,
+            json_data[family_str]["fittedvalues"],
+            atol=1e-05,
+        ).all()
+        assert np.isclose(
+            training_result.resid_working,
+            json_data[family_str]["resid_working"],
+            atol=1e-05,
+        ).all()
+        assert np.isclose(
+            training_result.params, json_data[family_str]["params"], atol=1e-05
+        ).all()
