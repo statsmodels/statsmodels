@@ -223,7 +223,7 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
         algorithm_kwargs.pop('algorithm')
     else:
         algorithm = 'gpa'
-    assert not ('rotation_method' in algorithm_kwargs), (
+    assert 'rotation_method' not in algorithm_kwargs, (
         'rotation_method cannot be provided as keyword argument')
     L = None
     T = None

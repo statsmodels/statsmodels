@@ -1491,7 +1491,7 @@ def validate_matrix_shape(name, shape, nrows, ncols, nobs):
                          ' explicity)' % name)
 
     # Enforce time-varying array size
-    if ndim == 3 and nobs is not None and not shape[-1] in [1, nobs]:
+    if ndim == 3 and nobs is not None and shape[-1] not in [1, nobs]:
         raise ValueError('Invalid dimensions for time-varying %s'
                          ' matrix. Requires shape (*,*,%d), got %s' %
                          (name, nobs, str(shape)))
@@ -1538,7 +1538,7 @@ def validate_vector_shape(name, shape, nrows, nobs):
                          ' explicity)' % name)
 
     # Enforce time-varying array size
-    if ndim == 2 and not shape[1] in [1, nobs]:
+    if ndim == 2 and shape[1] not in [1, nobs]:
         raise ValueError('Invalid dimensions for time-varying %s'
                          ' vector. Requires shape (*,%d), got %s' %
                          (name, nobs, str(shape)))

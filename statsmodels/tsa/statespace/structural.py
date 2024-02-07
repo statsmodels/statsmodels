@@ -422,7 +422,7 @@ class UnobservedComponents(MLEModel):
             trend_attributes = ['irregular', 'level', 'trend',
                                 'stochastic_level', 'stochastic_trend']
             for attribute in trend_attributes:
-                if not getattr(self, attribute) is False:
+                if getattr(self, attribute) is not False:
                     warn("Value of `%s` may be overridden when the trend"
                          " component is specified using a model string."
                          % attribute, SpecificationWarning)

@@ -105,7 +105,7 @@ class TestMICEData:
         )
 
         # Should make a copy
-        assert not (df is imp_data.data)
+        assert df is not imp_data.data
 
         (endog_obs, exog_obs, exog_miss,
          predict_obs_kwds, predict_miss_kwds) = imp_data.get_split_data('x3')
