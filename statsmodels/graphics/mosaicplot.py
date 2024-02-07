@@ -40,8 +40,10 @@ def _normalize_split(proportion):
         raise ValueError("proportions should be positive,"
                           "given value: {}".format(proportion))
     if np.allclose(proportion, 0):
-        raise ValueError("at least one proportion should be "
-                          "greater than zero".format(proportion))
+        raise ValueError(
+            "at least one proportion should be greater than zero"
+            "given value: {}".format(proportion)
+        )
     # ok, data are meaningful, so go on
     if len(proportion) < 2:
         return array([0.0, 1.0])
@@ -61,7 +63,7 @@ def _split_rect(x, y, width, height, proportion, horizontal=True, gap=0.05):
     x, y, w, h = float(x), float(y), float(width), float(height)
     if (w < 0) or (h < 0):
         raise ValueError("dimension of the square less than"
-                          "zero w={} h=()".format(w, h))
+                          "zero w={} h={}".format(w, h))
     proportions = _normalize_split(proportion)
 
     # extract the starting point and the dimension of each subdivision
