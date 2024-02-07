@@ -1307,7 +1307,7 @@ def test_gradient_irls():
                     mod_irls = sm.GLM(endog, exog, family=family_class(link=link()))
                 rslt_irls = mod_irls.fit(method="IRLS")
 
-                if not (family_class, link) in [(fam.Poisson, lnk.Sqrt),
+                if (family_class, link) not in [(fam.Poisson, lnk.Sqrt),
                                                 (fam.Gamma, lnk.InversePower),
                                                 (fam.InverseGaussian, lnk.Identity)
                                                 ]:

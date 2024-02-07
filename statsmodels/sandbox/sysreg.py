@@ -94,7 +94,7 @@ class SUR:
             raise ValueError("sys must be a list of pairs of endogenous and \
 exogenous variables.  Got length %s" % len(sys))
         if dfk:
-            if not dfk.lower() in ['dfk1','dfk2']:
+            if dfk.lower() not in ['dfk1','dfk2']:
                 raise ValueError("dfk option %s not understood" % (dfk))
         self._dfk = dfk
         M = len(sys[1::2])
