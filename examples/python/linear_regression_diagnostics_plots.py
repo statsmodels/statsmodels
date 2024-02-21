@@ -109,7 +109,7 @@ class Linear_Reg_Diagnostic():
         >>> df = pd.DataFrame({'x':x, 'y':y})
         >>> res = smf.ols(formula= "y ~ x", data=df).fit()
         >>> cls = Linear_Reg_Diagnostic(res)
-        >>> cls(plot_context="seaborn-paper")     
+        >>> cls(plot_context="seaborn-v0_8")     
 
         In case you do not need all plots you can also independently make an individual plot/table
         in following ways
@@ -143,7 +143,7 @@ class Linear_Reg_Diagnostic():
         self.cooks_distance = influence.cooks_distance[0]
         self.nparams = len(self.results.params)
 
-    def __call__(self, plot_context='seaborn-paper'):
+    def __call__(self, plot_context='seaborn-v0_8'):
         # print(plt.style.available)
         with plt.style.context(plot_context):
             fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(10, 10))
