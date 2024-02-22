@@ -1418,6 +1418,7 @@ class GLM(base.LikelihoodModel):
         # Set default values
         default_probit_scale_factor = (
             1.6 if isinstance(self.family.link, families.links.probit) else 1
+            1.6 if isinstance(self.family.link, families.links.Probit) else 1
         )
         if prior_scale is DEFAULT:
             prior_scale = 2.5 * default_probit_scale_factor
