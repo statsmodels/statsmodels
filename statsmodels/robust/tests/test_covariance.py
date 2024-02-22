@@ -227,8 +227,8 @@ def test_robcov_SMOKE():
 
     # We use 0.75 quantile for truncation to get better efficiency
     # at q=0.5, cov is pretty noisy at nobs=100 and passes at rtol=1
-    res_li = robcov._cov_starting(x, is_standardized=False, quantile=0.75)
-    for _, res in enumerate(res_li):
+    res_li = robcov._cov_starting(x, standardize=True, quantile=0.75)
+    for ii, res in enumerate(res_li):  # noqa  # keep ii for debugging
         # note: basic cov are not properly scaled
         # check only those with _cov_iter rescaling, `n_iter`
         # include also ogk
@@ -241,6 +241,6 @@ def test_robcov_SMOKE():
             # check average scaling
             assert_allclose(np.diag(c).sum(), np.diag(cov).sum(), rtol=0.25)
             c1, m1 = robcov._reweight(x, res.mean, res.cov)
-            assert_allclose(c1, cov, rtol=0.5)
-            assert_allclose(c1, cov_clean, rtol=0.25)  # oracle, w/o outliers
+            assert_allclose(c1, cov, rtol=0.4)
+            assert_allclose(c1, cov_clean, rtol=1e-8)  # oracle, w/o outliers
             assert_allclose(m1, mean, rtol=0.5, atol=0.2)

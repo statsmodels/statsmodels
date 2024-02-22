@@ -309,18 +309,44 @@ def _outlier_gy(d, distr=None, k_endog=1, trim_prob=0.975):
 # ## GK and OGK ###
 
 def _weight_mean(x, c):
+    """Tukey-biweight, bisquare weights used in tau scale.
+
+    Parameters
+    ----------
+    x : ndarray
+        Data
+    c : float
+        Parameter for bisquare weights
+
+    Returns
+    -------
+    ndarray : weights
+    """
     x = np.asarray(x)
     w = (1 - (x / c)**2)**2 * (np.abs(x) <= c)
     return w
 
 
 def _winsor(x, c):
+    """Winsorized squared data used in tau scale.
+
+    Parameters
+    ----------
+    x : ndarray
+        Data
+    c : float
+        threshold
+
+    Returns
+    -------
+    winsorized squared data, ``np.minimum(x**2, c**2)``
+    """
     return np.minimum(x**2, c**2)
 
 
 def scale_tau(data, cm=4.5, cs=3, weight_mean=_weight_mean,
               weight_scale=_winsor, normalize=True, ddof=0):
-    """tau estimator of univariate scale
+    """Tau estimator of univariate scale.
 
     Experimental, API will change
 
@@ -383,25 +409,61 @@ def scale_tau(data, cm=4.5, cs=3, weight_mean=_weight_mean,
     return mean, np.sqrt(var / cf)
 
 
-def mahalanobis(data, cov=None, cov_inv=None):
+def mahalanobis(data, cov=None, cov_inv=None, sqrt=False):
     """Mahalanobis distance squared
 
-    Note: this is without taking the square root
+    Note: this is without taking the square root.
 
+    Parameters
+    ----------
+    data : array-like
+        Multivariate data with observation in rows.
+    cov : None or ndarray
+        Covariance matrix used in computing distance.
+        This is only used if cov_inv is None.
+    cov_inv : None or ndarray
+        Inverse ovariance matrix used in computing distance.
+        One of cov and cov_inv needs to be provided.
+    sqrt : bool
+        If False, then the squared distance is returned.
+        If True, then the square root is returmend.
+
+    Return
+    ------
+    ndarray : Mahalanobis distances or squared distance.
     """
+    # another option would be to allow also cov^{-0.5) as keyword
     x = np.asarray(data)
     if cov_inv is not None:
+        # einsum might be a bit faster
         d = (x * cov_inv.dot(x.T).T).sum(1)
     elif cov is not None:
         d = (x * np.linalg.solve(cov, x.T).T).sum(1)
     else:
         raise ValueError('either cov or cov_inv needs to be given')
 
+    if sqrt:
+        d = np.sqrt(d)
+
     return d
 
 
 def cov_gk1(x, y, scale_func=mad):
-    """Gnanadesikan and Kettenring covariance between two variables
+    """Gnanadesikan and Kettenring covariance between two variables.
+
+    Parameters
+    ----------
+    x : ndarray
+        Data array.
+    y : ndarray
+        Data array
+    scale_func : callable
+        Scale function used in computing covariance.
+        Default is median absolute deviation, MAD.
+
+    Returns
+    -------
+    ndarray : GK covariance between x and y.
 
     """
     s1 = scale_func((x + y))
@@ -410,9 +472,24 @@ def cov_gk1(x, y, scale_func=mad):
 
 
 def cov_gk(data, scale_func=mad):
-    """Gnanadesikan and Kettenring covariance estimator
+    """Gnanadesikan and Kettenring covariance matrix estimator
 
-    uses loop with cov_gk1
+    Parameters
+    ----------
+    data : ndarray
+        Multivariate data array with observations in rows.
+    scale_func : callable
+        Scale function used in computing covariance.
+        Default is median absolute deviation, MAD.
+
+    Returns
+    -------
+    ndarray : GK covariance matrix of the data
+
+    Notes
+    -----
+    This uses a loop over pairs of variables with cov_gk1 to avoid large
+    intermediate arrays.
 
     """
     x = np.asarray(data)
@@ -432,7 +509,7 @@ def cov_ogk(data, maxiter=2, scale_func=mad, cov_func=cov_gk,
             rescale=True, rescale_raw=True, ddof=1):
     """orthogonalized Gnanadesikan and Kettenring covariance estimator
 
-    based on Maronna and Zamar 2002
+    Based on Maronna and Zamar 2002
 
     Parameters
     ----------
@@ -442,11 +519,12 @@ def cov_ogk(data, maxiter=2, scale_func=mad, cov_func=cov_gk,
         estimate doesn't improve much after the second iteration and the
         iterations do not converge.
     scale_func : callable
-
+        Scale function over axis=0 used in computing covariance.
+        Default is median absolute deviation, MAD.
     cov_func : callable
-
+        Bivariate covariance function. Default is GK.
     loc_func : callable
-
+        Function to compute mean or center over axis=0.
     reweight : float in (0, 1) or None
         API for this will change.
         If reweight is None, then the reweighting step is skipped.
@@ -465,10 +543,10 @@ def cov_ogk(data, maxiter=2, scale_func=mad, cov_func=cov_gk,
     -------
     Holder instance with main attributes
 
-    - cov : covariance, either raw OGK or reweighted OGK
-    - loc (and alias mean) : mean, either from raw OGK or reweighted OGK
-    - cov_ogk_raw
-    - loc_ogk_raw
+    - cov : covariance, either raw OGK or reweighted OGK.
+    - loc (and alias mean) : mean, either from raw OGK or reweighted OGK.
+    - cov_ogk_raw : OGK covariance without reweighting optionally rescaled.
+    - loc_ogk_raw : mean or center of OGK without reweighting.
 
     and extra attributes from intermediate results.
 
@@ -485,7 +563,13 @@ def cov_ogk(data, maxiter=2, scale_func=mad, cov_func=cov_gk,
        (November 1, 2002): 307–17. https://doi.org/10.1198/004017002188618509.
 
     """
-    beta = reweight  # alias, need more reweighting options
+    if reweight is False:
+        # treat false the same as None
+        reweight = None
+    if reweight is not None:
+        beta = reweight  # alias, need more reweighting options
+    else:
+        beta = 0.9
     x = np.asarray(data)
     if x.ndim != 2:
         raise ValueError('data needs to be two dimensional')
@@ -512,6 +596,8 @@ def cov_ogk(data, maxiter=2, scale_func=mad, cov_func=cov_gk,
     # prepare for results
     cov_raw = cov
     loc_raw = loc
+
+    # reweighting or rescaling
     # extra results are None if reweight is None
     mask = None
     d = None
@@ -519,12 +605,14 @@ def cov_ogk(data, maxiter=2, scale_func=mad, cov_func=cov_gk,
     scale_factor = 1.
     n_trunc = 0
     if (reweight is not None) or rescale_raw:
+        # compute scale_factor_raw and cutoff if needed
         d = (((z - loc_z) / scale_z)**2).sum(1)
         # d = mahalanobis(x - loc, cov)
         # only hard thresholding right now
         dmed = np.median(d)
         scale_factor_raw = dmed / stats.chi2.ppf(0.5, k_vars)
         cutoff = scale_factor_raw * stats.chi2.isf(1-beta, k_vars)
+
     if reweight is not None:
         mask = d <= cutoff
         n_trunc = nobs - sum(mask)
@@ -536,6 +624,7 @@ def cov_ogk(data, maxiter=2, scale_func=mad, cov_func=cov_gk,
         scale_factor = coef_normalize_cov_truncated(frac, k_vars)
         if rescale:
             cov *= scale_factor
+
     if rescale_raw:
         cov_raw *= scale_factor_raw
 
@@ -565,7 +654,7 @@ def cov_tyler(data, start_cov=None, normalize=False, maxiter=100, eps=1e-13):
     start_cov : None or ndarray
         starting covariance for iterative solution
     normalize : False or string
-        If normalize is False (default), then the unscale tyler shape matrix
+        If normalize is False (default), then the unscaled tyler scatter matrix
         is returned.
 
         Three types of normalization, i.e. rescaling are available by defining
@@ -580,6 +669,9 @@ def cov_tyler(data, start_cov=None, normalize=False, maxiter=100, eps=1e-13):
           The scatter matrix is rescaled to be consistent when data is normally
           distributed. Rescaling is based on median of the mahalanobis
           distances and assuming chisquare distribution of the distances.
+        - "weights" :
+          The scatter matrix is rescaled by the sum of weights.
+          see Ollila et al 2023
 
     maxiter : int
         maximum number of iterations to find the solution.
@@ -596,7 +688,6 @@ def cov_tyler(data, start_cov=None, normalize=False, maxiter=100, eps=1e-13):
         number of iterations used in finding a solution. If iter is less than
         maxiter, then the iteration converged.
 
-
     References
     ----------
     .. [1] Tyler, David E. “A Distribution-Free M-Estimator of Multivariate
@@ -606,6 +697,12 @@ def cov_tyler(data, start_cov=None, normalize=False, maxiter=100, eps=1e-13):
        Estimator in Elliptical Models With Convex Structure.
        IEEE Transactions on Signal Processing 62 (20): 5251-59.
        doi:10.1109/TSP.2014.2348951.
+
+    .. [3] Ollila, Esa, Daniel P. Palomar, and Frederic Pascal.
+       “Affine Equivariant Tyler’s M-Estimator Applied to Tail Parameter
+       Learning of Elliptical Distributions.” arXiv, May 7, 2023.
+       https://doi.org/10.48550/arXiv.2305.04330.
+
 
     """
     x = np.asarray(data)
@@ -627,7 +724,8 @@ def cov_tyler(data, start_cov=None, normalize=False, maxiter=100, eps=1e-13):
         ichol, _ = dtrtri(linalg.cholesky(c, lower=False), lower=0)
         v = x @ ichol
         dist_mahal_2 = np.einsum('ij,ji->i', v, v.T)
-        xw = np.sqrt(k_vars / dist_mahal_2[:, None]) * x
+        weights = k_vars / dist_mahal_2[:, None]
+        xw = np.sqrt(weights) * x
         c = xw.T @ xw / nobs
 
         diff = np.max(np.abs(c - c_old))
@@ -642,17 +740,19 @@ def cov_tyler(data, start_cov=None, normalize=False, maxiter=100, eps=1e-13):
         c /= np.linalg.det(c)**(1. / k_vars)
     elif normalize == "normal":
         _rescale(x, np.zeros(k_vars), c, prob=0.5)
+    elif normalize == "weights":
+        c /= weights.mean() / (np.trace(c) / k_vars)
     else:
         msg = 'normalize needs to be False, "trace", "det" or "normal"'
         raise ValueError(msg)
 
-    return Holder(cov=c, n_iter=i)
+    return Holder(cov=c, n_iter=i, method="tyler")
 
 
 def cov_tyler_regularized(data, start_cov=None, normalize=False,
                           shrinkage_factor=None,
                           maxiter=100, eps=1e-13):
-    """Tyler's M-estimator for normalized covariance (scatter)
+    """Regularized Tyler's M-estimator for normalized covariance (shape).
 
     The underlying (population) mean of the data is assumed to be zero.
 
@@ -894,11 +994,14 @@ def cov_weighted(data, weights, center=None, weights_cov=None,
         If None, then the same weights as for the mean are used.
     weights_cov_denom : None, float or "det" (optional)
         specified the denominator for the weighted covariance
-        If None, then the sum of weights are used and the covariance is
-        an average cross product
+        If None, then the sum of weights - ddof are used and the covariance is
+        an average cross product.
         If "det", then the weighted covariance is normalized such that
         det(wcov) is 1.
-        If float, then it is used directly as denominator.
+        If weights_cov_denom is 1, then the weighted cross product is returned
+        without averaging or scaling (sum of squares).
+        Otherwise it is used directly as denominator after subtracting
+        ddof.
     ddof : int or float
         covariance degrees of freedom correction, only used if
         weights_cov_denom is None or a float.
@@ -945,7 +1048,7 @@ def cov_weighted(data, weights, center=None, weights_cov=None,
     if weights_cov_denom is None:
         if wsum_cov is None:
             wsum_cov = weights_cov.sum()
-        wcov /= (wsum_cov - ddof)
+        wcov /= (wsum_cov - ddof)   # * np.sum(weights_cov**2) / wsum_cov)
     elif weights_cov_denom == "det":
         wcov /= np.linalg.det(wcov)**(1 / wcov.shape[0])
     elif weights_cov_denom == 1:
@@ -1063,6 +1166,9 @@ def _cov_iter(data, weights_func, weights_args=None, cov_init=None,
             converged = True
             break
 
+    # recompute maha distance at final estimate
+    dist = mahalanobis(data, cov=cov)
+
     if rescale == 'none':
         s = 1
     elif rescale == 'med':
@@ -1072,11 +1178,14 @@ def _cov_iter(data, weights_func, weights_args=None, cov_init=None,
         raise NotImplementedError('only rescale="med" is currently available')
 
     res = Holder(cov=cov, mean=mean, weights=w, mahalanobis=dist,
-                 scale_factor=s, n_iter=it, converged=converged)
+                 scale_factor=s, n_iter=it, converged=converged,
+                 method="m-estimator",
+                 weights_func=weights_func,
+                 )
     return res
 
 
-def _cov_starting(data, is_standardized=True, quantile=0.5):
+def _cov_starting(data, standardize=False, quantile=0.5):
     """compute some robust starting covariances
 
     The returned covariance matrices are intended as starting values
@@ -1085,11 +1194,29 @@ def _cov_starting(data, is_standardized=True, quantile=0.5):
     The quality as standalone covariance matrices varies and might not
     be very good.
 
+    Preliminary version. This will still be changed. Options and defaults can
+    change, additional covarince methods will be added and return extended.
+
+    Parameters
+    ----------
+    data : array-like
+        Multivariate data with observations in rows (axis=0).
+    standardize : bool
+        If False, then the data is only centered (by median).
+        If True, then the data is standardized using median and mad-scale.
+        This scaling is only intermediate, the returned covariance compensates
+        for the initial scaling.
+    quantile : float in [0.5, 1]
+        Parameter used for `_cov_iter` estimation.
+
+    Returns
+    -------
+    list of Holder instances with `cov` attribute.
 
     """
     x = np.asarray(data)
     nobs, k_vars = x.shape
-    if not is_standardized:
+    if standardize:
         # there should be a helper function/class
         center = np.median(data, axis=0)
         xs = (x - center)
@@ -1098,6 +1225,7 @@ def _cov_starting(data, is_standardized=True, quantile=0.5):
     else:
         center = np.median(data, axis=0)
         xs = x - center
+        std = 1
 
     cov_all = []
     d = mahalanobis(xs, cov=None, cov_inv=np.eye(k_vars))
@@ -1107,16 +1235,28 @@ def _cov_starting(data, is_standardized=True, quantile=0.5):
         xsp = xs[d < cutoff]
         c = np.cov(xsp.T)
         corr_factor = coef_normalize_cov_truncated(p / 100, k_vars)
-        c0 = Holder(cov=c * corr_factor, mean=xsp.mean(0) + center,
-                    method="pearson truncated")
+        c0 = Holder(
+            cov=c * corr_factor,
+            mean=xsp.mean(0) * std + center,
+            method="pearson truncated",
+            )
         c01 = _cov_iter(xs, weights_quantile, weights_args=(quantile,),
                         rescale="med", cov_init=c0.cov, maxiter=100)
 
-        c02 = _naive_ledoit_wolf_shrinkage(xsp, 0).cov
+        c02 = Holder(
+            cov=_naive_ledoit_wolf_shrinkage(xsp, 0).cov * corr_factor,
+            mean=xsp.mean(0) * std + center,
+            method="ledoit_wolf",
+            )
         c03 = _cov_iter(xs, weights_quantile, weights_args=(quantile,),
-                        rescale="med", cov_init=c02, maxiter=100)
+                        rescale="med", cov_init=c02.cov, maxiter=100)
 
-        cov_all.extend([c0, c01, c02, c03])
+        if standardize:
+            cov_all.extend([c0, c01, c02, c03])
+        else:
+            # compensate for initial rescaling
+            s = np.outer(std, std)
+            cov_all.extend([r.cov * s for r in [c0, c01, c02, c03]])
 
     c2 = cov_ogk(xs)
     cov_all.append(c2)
