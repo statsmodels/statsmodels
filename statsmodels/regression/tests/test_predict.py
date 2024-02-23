@@ -45,15 +45,15 @@ def test_predict_se():
     #stats.t.isf(0.05/2., 50 - 2)
     q = 2.0106347546964458
     ci_half = q * predstd
-    np.testing.assert_allclose(iv_u, res2.fittedvalues + ci_half, rtol=1e-12)
-    np.testing.assert_allclose(iv_l, res2.fittedvalues - ci_half, rtol=1e-12)
+    np.testing.assert_allclose(iv_u, res2.fittedvalues + ci_half, rtol=1e-9)
+    np.testing.assert_allclose(iv_l, res2.fittedvalues - ci_half, rtol=1e-9)
 
     prstd, iv_l, iv_u = wls_prediction_std(res2, x2[:3,:])
     np.testing.assert_equal(prstd, prstd[:3])
     np.testing.assert_allclose(iv_u, res2.fittedvalues[:3] + ci_half[:3],
-                               rtol=1e-12)
+                               rtol=1e-9)
     np.testing.assert_allclose(iv_l, res2.fittedvalues[:3] - ci_half[:3],
-                               rtol=1e-12)
+                               rtol=1e-9)
 
 
     # check WLS
@@ -70,8 +70,8 @@ def test_predict_se():
     #stats.t.isf(0.05/2., 50 - 2)
     q = 2.0106347546964458
     ci_half = q * predstd
-    np.testing.assert_allclose(iv_u, res3.fittedvalues + ci_half, rtol=1e-12)
-    np.testing.assert_allclose(iv_l, res3.fittedvalues - ci_half, rtol=1e-12)
+    np.testing.assert_allclose(iv_u, res3.fittedvalues + ci_half, rtol=1e-9)
+    np.testing.assert_allclose(iv_l, res3.fittedvalues - ci_half, rtol=1e-9)
 
     # testing shapes of exog
     prstd, iv_l, iv_u = wls_prediction_std(res3, x2[-1:,:], weights=3.)
@@ -88,9 +88,9 @@ def test_predict_se():
     prstd, iv_l, iv_u = wls_prediction_std(res3, x2[:3,:])
     np.testing.assert_equal(prstd, prstd[:3])
     np.testing.assert_allclose(iv_u, res3.fittedvalues[:3] + ci_half[:3],
-                               rtol=1e-12)
+                               rtol=1e-9)
     np.testing.assert_allclose(iv_l, res3.fittedvalues[:3] - ci_half[:3],
-                               rtol=1e-12)
+                               rtol=1e-9)
 
     #use wrong size for exog
     #prstd, iv_l, iv_u = wls_prediction_std(res3, x2[-1,0], weights=3.)

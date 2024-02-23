@@ -4250,6 +4250,9 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
                     self.params[mod._p['idiosyncratic_ar1']])
                 k_idio += 1
             data['var.'] = self.params[mod._p['idiosyncratic_var']]
+            # Ensure object dtype for string assignment
+            cols_to_cast = data.columns[-k_idio:]
+            data[cols_to_cast] = data[cols_to_cast].astype(object)
             try:
                 data.iloc[:, -k_idio:] = data.iloc[:, -k_idio:].map(
                     lambda s: f'{s:.2f}')
@@ -4309,6 +4312,8 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
                     data['   error covariance'] = block.factor_names
                     for j in range(block.k_factors):
                         data[block.factor_names[j]] = Q[ix1:ix2, ix1 + j]
+                cols_to_cast = data.columns[-block.k_factors:]
+                data[cols_to_cast] = data[cols_to_cast].astype(object)
                 try:
                     formatted_vals = data.iloc[:, -block.k_factors:].map(
                         lambda s: f'{s:.2f}'

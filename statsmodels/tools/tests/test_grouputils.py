@@ -275,7 +275,7 @@ def test_combine_indices():
                                        return_labels=True)
     uv, ux, u, label = combine_indices((group0, group1), prefix='', sep='.',
                                        return_labels=True)
-    group_joint = np.array(label)[uv]
+    group_joint = np.array(label)[uv.flat]
     group_joint_expected = np.array(['sector1.region0', 'sector0.region1',
                                      'sector0.region0', 'sector0.region1',
                                      'sector1.region1', 'sector0.region0',
