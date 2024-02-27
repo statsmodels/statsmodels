@@ -3644,6 +3644,10 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         if iloc > self.nobs:
             raise ValueError('Cannot anchor simulation outside of the sample.')
 
+        # GH 9162
+        from statsmodels.tsa.statespace import simulation_smoother
+        random_state = simulation_smoother.check_random_state(random_state)
+
         # Setup the initial state
         if initial_state is None:
             initial_state_moments = (
@@ -3652,7 +3656,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
             _repetitions = 1 if repetitions is None else repetitions
 
-            initial_state = np.random.multivariate_normal(
+            initial_state = random_state.multivariate_normal(
                 *initial_state_moments, size=_repetitions).T
 
         scale = self.scale if self.filter_results.filter_concentrated else None
