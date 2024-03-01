@@ -76,7 +76,7 @@ If your system is already set up with pip, a compiler, and git, you can try:
 
     python -m pip install git+https://github.com/statsmodels/statsmodels
 
-If you do not have pip installed or want to do the installation more manually,
+If you do not have git installed or want to do the installation more manually,
 you can also type:
 
 .. code-block:: bash
@@ -114,12 +114,16 @@ Python has been built using a variety of different Windows C compilers.
 `This guide <https://wiki.python.org/moin/WindowsCompilers>`_ should help
 clarify which version of Python uses which compiler by default.
 
-Mac
+macOS
 ^^^
 
-Installing statsmodels on MacOS requires installing `gcc` which provides
+Installing statsmodels on macOS requires installing `gcc` which provides
 a suitable C compiler. We recommend installing Xcode and the Command Line
-Tools.
+Tools, which can be done through the following command:
+
+.. code-block:: bash
+
+    xcode-select --install
 
 Dependencies
 ------------
@@ -159,3 +163,13 @@ Optional Dependencies
 * `joblib <https://joblib.readthedocs.io/>`__ >= 1.0can be used to accelerate distributed
   estimation for certain models.
 * `jupyter <https://jupyter.org/>`__ is needed to run the notebooks.
+
+The optional dependencies can be installed along with `statsmodels` by modifying
+the installation command:
+
+.. code-block:: bash
+
+    python -m pip install statsmodels[extras]
+
+where ``<extras>`` is a comma-separated list of extras to install (``build``,
+``develop``, ``docs``).
