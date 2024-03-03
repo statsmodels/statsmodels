@@ -20,6 +20,7 @@ from statsmodels.iolib.summary import forg
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tools.eval_measures import aic
+from statsmodels.tools.sm_exceptions import EstimationWarning, ValueWarning
 from statsmodels.tools.validation.validation import bool_like, string_like
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tsa.seasonal import seasonal_decompose
@@ -265,7 +266,8 @@ class TBATSModel(MLEModel, BoxCox):
     r"""
     Trigonometric, Box-Cox, ARMA Error, Trend and Seasonal(TBATS)
 
-    This model incorporates BoxCox transformations, Fourier representations with time varying coefﬁcients, and ARMA error correction.
+    This model incorporates BoxCox transformations, Fourier representations
+    with time varying coefﬁcients, and ARMA error correction.
 
     Parameters
     ----------
@@ -315,8 +317,8 @@ class TBATSModel(MLEModel, BoxCox):
         \begin{equation}     
         d_t = \sum^p_{i=1}\psi_id_{t-i} + \sum^q_{i-1}\theta_i\epsilon_{t-i}+\epsilon_t        
         \end{equation} \\
-            
-    where :math:`l_t` is the is the local level in period :math:`t`, :math: `b` is the long-run trend, :math:`b_t` is the short-run trend in period :math:`t`, :math:`s^{(i)}_t` represents the :math:`i`th seasonal component at time :math:`t`, :math:`d_t` denotes an ARMA(p, q) process and :math:`\epsilon_t` is a Gaussian white noise process with zero mean and constant variance :math:`\sigma^2`.
+
+    where :math:`l_t` is the is the local level in period :math:`t`, :math:`b` is the long-run trend, :math:`b_t` is the short-run trend in period :math:`t`, :math:`s^{(i)}_t` represents the :math:`i`th seasonal component at time :math:`t`, :math:`d_t` denotes an ARMA(p, q) process and :math:`\epsilon_t` is a Gaussian white noise process with zero mean and constant variance :math:`\sigma^2`.
 
     The smoothing parameters are given by :math:`\alpha, \beta` and :math:`\gamma_i` for :math:`i=1,...,T`. :math:`\phi` is daping parameter for damped trend.
 
@@ -676,7 +678,7 @@ class TBATSModel(MLEModel, BoxCox):
                 self["selection", start, 0] = 1
                 # self["state_cov", start, start] = 1
                 self.parameters["ma_coef"] = q
-                
+
                 # reuse cached residual
                 self["transition", start, 0] = 1
 
@@ -888,14 +890,14 @@ class TBATSModel(MLEModel, BoxCox):
             )
 
         if total_periods > 16:
-            _start_params["level_alpha"] = 1e-3
+            _start_params["level_alpha"] = 1e-5
         else:
             _start_params["level_alpha"] = 0.09
 
         # trend beta
         if self.trend:
             if total_periods > 16:
-                _start_params["trend_beta"] = 5e-4
+                _start_params["trend_beta"] = 5e-6
             else:
                 _start_params["trend_beta"] = 0.05
             if self.damping:
@@ -904,10 +906,9 @@ class TBATSModel(MLEModel, BoxCox):
         # seasonal gammas
         if self.seasonal:
             n = self.k_periods
-            _start_params["seasonal_gamma"] = [
-                np.clip(0.001, *bounds[3]),
-                np.clip(0.001, *bounds[3]),
-            ] * n
+            _start_params["seasonal_gamma"] = list()
+            for i in range(n):
+                _start_params["seasonal_gamma"].extend([0.001 / 10 ** i] * 2)
 
         # Regression
         if self.regression and self.mle_regression:
@@ -918,9 +919,9 @@ class TBATSModel(MLEModel, BoxCox):
             p, q = self.order
             # avoid transition to be singular
             if p:
-                _start_params["ar_coeff"] = [1e-5] * p
+                _start_params["ar_coeff"] = [0] * p
             if q:
-                _start_params["ma_coef"] = [1e-5] * q
+                _start_params["ma_coef"] = [0] * q
 
         start_params = []
         for key in self.parameters.keys():
@@ -952,19 +953,19 @@ class TBATSModel(MLEModel, BoxCox):
                 param_names.append("phi.damping")
             elif key == "seasonal_gamma":
                 for i, name in enumerate(self.period_names, 1):
-                    param_names.append("gamma1.{}".format(name))
-                    param_names.append("gamma2.{}".format(name))
+                    param_names.append(f"gamma1.{name}")
+                    param_names.append(f"gamma2.{name}")
             elif key == "ar_coeff":
                 for i in range(p):
-                    param_names.append("ar.L%d.coefs" % (i + 1))
+                    param_names.append(f"ar.L{i + 1:d}.coefs")
             elif key == "boxcox":
                 param_names.append("lambda.boxcox")
             elif key == "ma_coef":
                 for i in range(q):
-                    param_names.append("ma.L%d.coefs" % (i + 1))
+                    param_names.append(f"ma.L{i + 1:d}.coefs")
             elif key == "reg_coeff":
                 param_names += [
-                    "beta.%s.coefs" % self.exog_names[i] for i in range(self.k_exog)
+                    f"beta.{self.exog_names[i]}.coefs" for i in range(self.k_exog)
                 ]
             else:
                 param_names.append(key)
@@ -1135,6 +1136,14 @@ class TBATSModel(MLEModel, BoxCox):
         unconstrained[offset:] = constrained[offset:]
         return unconstrained / self._optim_param_scale
 
+    def _reset_boxcox_lambda(self, lmbda):
+        endog_touse, _ = self.transform_boxcox(
+            self.endog, lmbda, bounds=self.bounds[-1]
+        )
+        self.ssm.bind(endog_touse)
+        self.ssm._representations.clear()
+        self.ssm._statespaces.clear()
+
     @Appender(MLEModel.update.__doc__)
     def update(
         self, params, transformed=True, includes_fixed=False, complex_step=False
@@ -1160,17 +1169,11 @@ class TBATSModel(MLEModel, BoxCox):
 
         if self.boxcox:
             self._boxcox_lambda = params[offset]
-            offset += 1
-            endog_touse, _ = self.transform_boxcox(
-                self.endog, self._boxcox_lambda, bounds=self.bounds[-1]
-            )
-            self.ssm.bind(endog_touse)
-            self.ssm._representations = {}
-            self.ssm._statespaces = {}
+            self._reset_boxcox_lambda(self._boxcox_lambda)
 
         # reset pevious matrix
         self["selection", :, :] = 0
-        
+
         # residual cache
         self["selection", 0, 0] = 1
 
@@ -1242,7 +1245,7 @@ class TBATSModel(MLEModel, BoxCox):
                 - self.k_hidden_states
                 + p
             ]
-            
+
             s = np.s_[self._ar_state_offset : self._ar_state_offset + p]
             self["design", 0, s] = ar
             # # self["design", 0, col_indice+1] = 1
@@ -1264,7 +1267,7 @@ class TBATSModel(MLEModel, BoxCox):
             # the change apply into internal design
             s = np.s_[s.start - self.k_hidden_states : s.stop - self.k_hidden_states]
             self._internal_design[0, s] = ar
-            self["selection", state_offset, 0] = 1 
+            self["selection", state_offset, 0] = 1
 
             state_offset += p
 
@@ -1292,7 +1295,6 @@ class TBATSModel(MLEModel, BoxCox):
             )[None, :]
             offset += self.k_exog
 
-
         self.post_update()
 
     def post_update(self):
@@ -1300,7 +1302,7 @@ class TBATSModel(MLEModel, BoxCox):
         self['transition', 1:, 0] = self._internal_selection[:, 0]
         self['selection', 1:, 0] = 0
         self['design', 0, 0] = 1
-         # exclude ma from caculation.It's ok.
+        # exclude ma from caculation.It's ok.
         # p, q = self.ar_order, self.ma_order
         # total_arma = p + q
         # end = -q if q != 0 else None
@@ -1320,7 +1322,7 @@ class TBATSModel(MLEModel, BoxCox):
         # if q > 0:
         #     # we use state_0 as residual to avoid timing difference
         #     self["selection", self._ma_state_offset, 0] = 0
-            # self["transition", self._ma_state_offset, 0] = 1 / self["selection", 0, 0]
+        # self["transition", self._ma_state_offset, 0] = 1 / self["selection", 0, 0]
         # self["selection", self._ar_state_offset+1:self._ar_state_offset+q] = -1
         # self["selection", self._ar_state_offset+1:self._ar_state_offset+q] = -1
         # self.initialize_state(boxcox_lambda=float(lmbda) if lmbda else None)
@@ -1331,12 +1333,16 @@ class TBATSModel(MLEModel, BoxCox):
     def filter(
         self,
         params,
+        *args,
+        transformed=True,
+        includes_fixed=False,
+        complex_step=False,
         cov_type=None,
         cov_kwds=None,
         return_ssm=False,
         results_class=None,
         results_wrapper_class=None,
-        *args,
+        low_memory=False,
         **kwargs,
     ):
         if self.initialization_method == "concentrated":
@@ -1346,12 +1352,15 @@ class TBATSModel(MLEModel, BoxCox):
 
         results = super().filter(
             params,
+            transformed=transformed,
+            includes_fixed=includes_fixed,
+            complex_step=complex_step,
             cov_type=cov_type,
             cov_kwds=cov_kwds,
             return_ssm=return_ssm,
             results_class=results_class,
             results_wrapper_class=results_wrapper_class,
-            *args,
+            low_memory=low_memory,
             **kwargs,
         )
 
@@ -1363,12 +1372,12 @@ class TBATSModel(MLEModel, BoxCox):
     def smooth(
         self,
         params,
+        *args,
         cov_type=None,
         cov_kwds=None,
         return_ssm=False,
         results_class=None,
         results_wrapper_class=None,
-        *args,
         **kwargs,
     ):
         if self.initialization_method == "concentrated":
@@ -1378,12 +1387,12 @@ class TBATSModel(MLEModel, BoxCox):
 
         results = super().smooth(
             params,
+            *args,
             cov_type=cov_type,
             cov_kwds=cov_kwds,
             return_ssm=return_ssm,
             results_class=results_class,
             results_wrapper_class=results_wrapper_class,
-            *args,
             **kwargs,
         )
 
@@ -1402,10 +1411,13 @@ class TBATSModel(MLEModel, BoxCox):
                     )
                 )
             except ValueError:
-                warn(f"model is not admissive. parameters maybe unstable")
+                # warn(
+                #     "model is not admissive. parameters maybe unstable",
+                #     EstimationWarning,
+                # )
                 return -(10**10)
             sse = self.ssm.loglike()
-            # print(self.ssm.initialization.constant)
+            # reset the initial constant
             self.ssm.initialization.constant = np.zeros(self.k_states)
         else:
             sse = super().loglike(params, *args, **kwargs)
@@ -1549,12 +1561,12 @@ class TBATSResults(MLEResults):
         (float) The value of the log-likelihood function evaluated at `params`.
         """
         return self.model.loglike(self.params)
-    
+
     @cache_readonly
     def equiv_llf(self):
         """
         the loglikelihood without constant
-        $$ equiv_llf = nlog(SSE) - 2 * (\phi - 1) * log(y) $$
+        :math:`equiv_llf = nlog(SSE) - 2 * (\phi - 1) * log(y)`
         """
         llf = self.nobs * np.log(np.sum(self.filter_results.forecasts_error[0, self.loglikelihood_burn:] ** 2))
         if self.specification.boxcox:
@@ -1744,7 +1756,6 @@ class TBATSResults(MLEResults):
 
         plt = _import_mpl()
         register_matplotlib_converters()
-        # fig = create_mpl_fig(fig, figsize)
 
         # Determine which results we have
         if which is None:
@@ -1860,29 +1871,6 @@ class TBATSResults(MLEResults):
             # Plot
             state_label = "%s (%s)" % (component.title(), which)
             ax.plot(dates[start:end], value[start:end], label=state_label)
-
-            # Get confidence intervals
-            if which_cov in component_bunch:
-                std_errors = np.sqrt(component_bunch["%s_cov" % which])
-                ci_lower = value - critical_value * std_errors
-                ci_upper = value + critical_value * std_errors
-                ci_poly = ax.fill_between(
-                    dates[start:end],
-                    ci_lower[start:end],
-                    ci_upper[start:end],
-                    alpha=0.2,
-                )
-                ci_label = "$%.3g \\%%$ confidence interval" % ((1 - alpha) * 100)
-                # Proxy artist for fill_between legend entry
-                # See e.g. http://matplotlib.org/1.3.1/users/legend_guide.html
-                p = plt.Rectangle((0, 0), 1, 1, fc=ci_poly.get_facecolor()[0])
-
-                # Legend
-                handles, labels = ax.get_legend_handles_labels()
-                handles.append(p)
-                labels.append(ci_label)
-                ax.legend(handles, labels, loc=legend_loc)
-                # ax.set_title(name + " component")
 
             ax.set_title("%s component" % component.title())
 
@@ -2129,16 +2117,22 @@ wrap.populate_wrapper(TBATSResultsWrapper, TBATSResults)
 
 def _safe_tbats_fit(endog, model_kw, fit_kw, model_class=TBATSModel, **kwargs):
     try:
-        if True:
-            res = model_class(endog, **model_kw).fit(**fit_kw)
-            return res
+        mod = model_class(endog, **model_kw)
+        sp = kwargs.pop("start_params", None)
+        if sp is not None:
+            _sp = mod.start_params
+            # we assume the order is correct
+            _sp[:sp.shape[0]] = sp
+            sp = _sp
+        res = mod.fit(start_params=sp, **fit_kw)
+        return res
     except LinAlgError as e:
         # SVD convergence failure on badly misspecified models
         print(f"LinAlgError: {str(e)}", model_kw, fit_kw)
         return
     except Exception as e:  # no idea what happened
         print("error fits models:", model_kw, fit_kw)
-        print("error:", e)
+        # raise e
         # raise e
         return None
         # print(e.with_traceback())
@@ -2237,21 +2231,37 @@ def tbats_k_order_select_ic(
     else:
         model_kw["trend"] = False
 
-    order = getattr(
-        arma_order_select_ic(best_model.resid, max_ar=max_ar, max_ma=max_ma, ic=ic),
-        f"{ic}_min_order",
-    )
-    print(f"resid best arma order: {order}")
-    if order != (0, 0):
-        model_kw["order"] = order
-        mod = calc_aic(model_kw=model_kw)
-        if mod is not None:
-            print(f"arima {ic}: {_ic(mod)} for {order}, current best {ic}: {min_ic}")
-        if mod and _ic(mod) < min_ic:
-            best_model = mod
-            min_ic = _ic(mod)
-        else:
-            model_kw["order"] = (0, 0)
+    best_order = (0, 0)
+    ar_range = np.arange(0, max_ar+1)
+    ma_range = np.arange(0, max_ma+1)
+    for ma in ma_range:
+        for ar in ar_range:
+            if (ar, ma) == (0, 0):
+                continue
+            model_kw["order"] = (ar, ma)
+            mod = calc_aic(model_kw=model_kw, start_params=best_model.params)
+            if mod and _ic(mod) < min_ic:
+                best_model = mod
+                min_ic = _ic(mod)
+                best_order = (ar, ma)
+    model_kw["order"] = best_order
+    print(f"resid best arma order: {best_order}")
+
+    # order = getattr(
+    #     arma_order_select_ic(best_model.resid, max_ar=max_ar, max_ma=max_ma, ic=ic),
+    #     f"{ic}_min_order",
+    # )
+    # print(f"resid best arma order: {order}")
+    # if order != (0, 0):
+    #     model_kw["order"] = order
+    #     mod = calc_aic(model_kw=model_kw)
+    #     if mod is not None:
+    #         print(f"arima {ic}: {_ic(mod)} for {order}, current best {ic}: {min_ic}")
+    #     if mod and _ic(mod) < min_ic:
+    #         best_model = mod
+    #         min_ic = _ic(mod)
+    #     else:
+    #         model_kw["order"] = (0, 0)
         # model_kw.update(k=ks)
 
     if return_params:
