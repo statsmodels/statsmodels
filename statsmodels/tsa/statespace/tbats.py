@@ -15,6 +15,7 @@ from numpy.linalg import LinAlgError
 from scipy import linalg
 import pandas as pd
 from statsmodels.base.data import PandasData
+from statsmodels.base.model import LikelihoodModel
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.iolib.summary import forg
 from statsmodels.iolib.table import SimpleTable
@@ -24,8 +25,9 @@ from statsmodels.tools.sm_exceptions import EstimationWarning, ValueWarning
 from statsmodels.tools.validation.validation import bool_like, string_like
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tsa.seasonal import seasonal_decompose
-from statsmodels.tsa.statespace.initialization import Initialization
-from statsmodels.tsa.statespace.kalman_filter import (
+from .initialization import Initialization
+from .innovations import InnnovationsMLEModel
+from .kalman_filter import (
     MEMORY_CONSERVE,
     MEMORY_NO_FORECAST,
 )
@@ -262,7 +264,7 @@ def _initialization_simple(
     return initial_level, initial_trend, initial_seasonal
 
 
-class TBATSModel(MLEModel, BoxCox):
+class TBATSModel(InnnovationsMLEModel, BoxCox):
     r"""
     Trigonometric, Box-Cox, ARMA Error, Trend and Seasonal(TBATS)
 
@@ -296,33 +298,63 @@ class TBATSModel(MLEModel, BoxCox):
     These models take the general form (see [1]_ Chapter 2.2 for all details)
 
     .. math::
-        \begin{equation}
-        y^{(\omega)}_t = \begin{cases}
-        \frac{y^\omega_t - 1}{\omega};     \omega \ne 0 \\
-        log{y_t};     \omega = 0
-        \end{cases}        
-        \end{equation} \\
-        \begin{equation}
-        y^{(\omega)}_t = l_{t-1} + \phi b_{t-1} + \sum^{T}_{i=1}s^{(i)}_{t-m_i} + d_t \\
-        \end{equation} \\
-        \begin{equation}
-        l = l_{t-1} + \phi b_{t-1} + \alpha d_t \\        
-        \end{equation} \\
-        \begin{equation}
-        b_t = (1-\phi)b + \phi b_{t-1} + \beta d_t \\        
-        \end{equation} \\
-        \begin{equation}
-        s^{(i)}_t = s^{(i)}_{t-m_i} + \gamma_id_t \\   
-        \end{equation} \\
-        \begin{equation}     
-        d_t = \sum^p_{i=1}\psi_id_{t-i} + \sum^q_{i-1}\theta_i\epsilon_{t-i}+\epsilon_t        
-        \end{equation} \\
+        y^{(\omega)}_t = l_{t-1} + \phi b_{t-1} + \sum^{T}_{i=1}s^{(i)}_{t-m_i} + d_t
 
-    where :math:`l_t` is the is the local level in period :math:`t`, :math:`b` is the long-run trend, :math:`b_t` is the short-run trend in period :math:`t`, :math:`s^{(i)}_t` represents the :math:`i`th seasonal component at time :math:`t`, :math:`d_t` denotes an ARMA(p, q) process and :math:`\epsilon_t` is a Gaussian white noise process with zero mean and constant variance :math:`\sigma^2`.
+    **Box-Cox**
 
-    The smoothing parameters are given by :math:`\alpha, \beta` and :math:`\gamma_i` for :math:`i=1,...,T`. :math:`\phi` is daping parameter for damped trend.
+    To avoid the problems with non-linear models, Box-Cox transformation is introduced
+    to allow some types of non-linearity.
 
-    The damping factor is included in the level and measurement equations as well as the trend equation for consistency with [2]_, but identical predictions are obtained if it is excluded from the level and measurement equations.
+    .. math::
+        y^{(\omega)}_t = \begin{cases}
+        \frac{y^\omega_t - 1}{\omega};\quad \omega \ne 0 \\
+        log{y_t};\quad\omega = 0
+        \end{cases}
+
+    The notation :math:`y^{(\omega)}_t ` is used to represent Box-Cox transformed
+    observations with the parameter :math:`\omega`,
+    where :math:`y_t` is the observation at time :math:`t`.
+
+    **Level & Trend**
+
+    The trend component is a dynamic extension of a regression model that
+    includes an intercept and linear time-trend. It can be written:
+
+    .. math::
+        l = l_{t-1} + \phi b_{t-1} + \alpha d_t \\
+        b_t = (1-\phi)b + \phi b_{t-1} + \beta d_t
+
+    where the level is a generalization of the intercept term that can
+    dynamically vary across time, and the trend is a generalization of the
+    time-trend such that the slope can dynamically vary across time.
+
+    :math:`l_t` is the is the local level in period :math:`t`,
+    :math:`b` is the long-run trend,
+    :math:`b_t` is the short-run trend in period :math:`t`.
+
+    :math:`\alpha, \beta` are smoothing parameters for level and trend.
+    :math:`\phi` is daping parameter for damped trend.
+
+    The damping factor is included in the level and measurement equations
+    as well as the trend equation for consistency with [2]_,
+    but identical predictions are obtained if it is excluded
+    from the level and measurement equations.
+
+    **Trigonometric Season**
+
+    .. math::
+        s^{(i)}_t = s^{(i)}_{t-m_i} + \gamma_id_t \\
+
+    :math:`\gamma_i` for :math:`i=1,...,T` are seasonal smoothing parameters.
+
+    **ARMA Error**
+
+    .. math::
+        d_t = \sum^p_{i=1}\psi_id_{t-i} + \sum^q_{i-1}\theta_i\epsilon_{t-i}+\epsilon_t
+
+    :math:`d_t` denotes an ARMA(p, q) process and :math:`\epsilon_t` is a Gaussian
+    white noise process with zero mean and constant variance :math:`\sigma^2`.
+
 
     References
     ----------
@@ -347,7 +379,6 @@ class TBATSModel(MLEModel, BoxCox):
         mle_regression=True,
         enforce_stationarity=True,
         enforce_invertibility=True,
-        irregular=False,
         concentrate_scale=True,
         initialization_method="concentrated",
         initial_level=None,
@@ -371,7 +402,6 @@ class TBATSModel(MLEModel, BoxCox):
         self.periods = periods
         self.k = harmonics
         self.order = order
-        self.irregular = bool_like(irregular, "irregular")
         self.concentrate_scale = bool_like(concentrate_scale, "concentrate_scale")
         self.initialization_method = string_like(
             initialization_method, "initialization_method"
@@ -443,8 +473,8 @@ class TBATSModel(MLEModel, BoxCox):
         self.k_hidden_states = 1
 
         k_states = (
-            self.k_hidden_states
-            + 1  # level
+            # self.k_hidden_states
+            +1  # level
             + self.trend
             + self.k_harmonics
             + np.sum(self.order)
@@ -483,25 +513,19 @@ class TBATSModel(MLEModel, BoxCox):
                     ' initialization method is set to "known".'
                 )
 
-        init = Initialization(k_states, "known", constant=np.zeros(k_states))
+        # init = Initialization(k_states, "known", constant=np.zeros(k_states))
         # Initialize the model base
         super().__init__(
             endog=endog,
             exog=exog,
             k_states=k_states,
             k_posdef=k_posdef,
-            initialization=init,
+            initialization="known",
+            constant=np.zeros(k_states + 1),
+            stationary_cov=np.zeros((k_states + 1, k_states + 1)),
             **kwargs,
         )
         self._initial_state = None
-        # we have to cache the origin design matrix to avoid re-caculation
-        # see De Livera et al. (2011) P14
-        self._internal_design = np.zeros(
-            (1, self.k_states - self.k_hidden_states), dtype=self.ssm.dtype
-        )
-        self._internal_selection = np.zeros(
-            (self.k_states - self.k_hidden_states, 1), dtype=self.ssm.dtype
-        )
 
         if self.concentrate_scale:
             self.ssm.filter_concentrated = True
@@ -550,18 +574,12 @@ class TBATSModel(MLEModel, BoxCox):
     def _res_classes(self):
         return {"fit": (TBATSResults, TBATSResultsWrapper)}
 
+    @Appender(LikelihoodModel.initialize.__doc__)
     def initialize(self):
-        """
-        Initialize the TBATS model.
-
-        Notes
-        -----
-        These initialization steps must occur following the parent class
-        __init__ function calls.
-        """
         super().initialize()
         # cached components
-        offset = self.k_hidden_states
+        # offset = self.k_hidden_states
+        offset = 0
 
         # level
         self._level_state_offset = offset
@@ -583,8 +601,10 @@ class TBATSModel(MLEModel, BoxCox):
         if self.autoregressive:
             p, q = self.order
 
-            self._ar_state_offset = offset
-            offset += p
+            self._arma_state_offset = offset
+            if p:
+                self._ar_state_offset = offset
+                offset += p
             if q:
                 self._ma_state_offset = offset
                 offset += q
@@ -596,35 +616,18 @@ class TBATSModel(MLEModel, BoxCox):
 
         offset = 0
 
-        # Setup fixed elements of the system matrices
-        # Observation error
-        # self["design", 0, 0] = 1
-        self._internal_design[0, 0] = 1
-        # self["transition", 0, 0] = 1
-        # np.fill_diagonal(self['state_cov'], 0)
-        self["state_cov", 0, 0] = 1
-        # self["selection", 0, 0] = 1
-        offset += 1
-
         if self.concentrate_scale:
-
-            # np.fill_diagonal(self['selection'], 1)
-            np.fill_diagonal(self["state_cov"], 1)
-            # self["state_cov", 0, 0] = 1
+            self["cov"] = 1
         else:
-            # if not self.concentrate_scale:
             self.parameters["state_var"] = 1
-
-        if self.irregular:
-            self.parameters["obs_var"] = 1
 
         if self.boxcox:
             self.parameters["boxcox"] = 1
 
         # Level Setup
         self.parameters["level_alpha"] = 1
-        self["design", 0, offset] = 1
-        self["transition", offset, offset] = 1
+        self["w", 0, offset] = 1
+        self["F", offset, offset] = 1
         # self["selection", 0, 0] = 1
         offset += 1
 
@@ -633,11 +636,8 @@ class TBATSModel(MLEModel, BoxCox):
             self.parameters["trend_beta"] = 1
             # self.parameters["trend_intercept"] = 1
 
-            self["design", 0, offset] = 1
-            self["transition", offset - 1 : offset + 1, offset] = 1
-            self._internal_design[0, 1] = 1
-            # self["selection", 1, 0] = 1
-            # self["selection", 1, 1] = 1
+            self["w", 0, offset] = 1
+            self["F", offset - 1 : offset + 1, offset] = 1
             offset += 1
             if self.damping:
                 self.parameters["damping"] = 1
@@ -646,13 +646,8 @@ class TBATSModel(MLEModel, BoxCox):
             tau, season_design, season_transition = _tbats_seasonal_matrix(
                 self.periods, self.k
             )
-            self["design", 0, offset : offset + tau] = season_design
-            self["transition", offset : offset + tau, offset : offset + tau] = (
-                season_transition
-            )
-            self._internal_design[0, 1 + self.trend : 1 + self.trend + tau] = (
-                season_design
-            )
+            self["w", 0, offset : offset + tau] = season_design
+            self["F", offset : offset + tau, offset : offset + tau] = season_transition
             self.parameters["seasonal_gamma"] = 2 * self.k_periods
             offset += tau
 
@@ -662,9 +657,9 @@ class TBATSModel(MLEModel, BoxCox):
                 start = self._ar_state_offset
                 if p > 1:
                     np.fill_diagonal(
-                        self["transition", start + 1 : start + p, start : start + p], 1
+                        self["F", start + 1 : start + p, start : start + p], 1
                     )
-                self["selection", start, 0] = 1
+                self["g", start, 0] = 1
                 # self["state_cov", start, start] = 1
                 # self["selection", start, start] = 1
                 self.parameters["ar_coeff"] = p
@@ -673,14 +668,14 @@ class TBATSModel(MLEModel, BoxCox):
                 start = self._ma_state_offset
                 if q > 1:
                     np.fill_diagonal(
-                        self["transition", start + 1 : start + q, start : start + q], 1
+                        self["F", start + 1 : start + q, start : start + q], 1
                     )
-                self["selection", start, 0] = 1
+                self["g", start, 0] = 1
                 # self["state_cov", start, start] = 1
                 self.parameters["ma_coef"] = q
 
                 # reuse cached residual
-                self["transition", start, 0] = 1
+                self["F", start, 0] = 1
 
         if self.regression:
             if self.mle_regression:
@@ -778,13 +773,15 @@ class TBATSModel(MLEModel, BoxCox):
         y_tilde = np.array(self.ssm._kalman_filter.forecast_error[0], copy=True)
 
         # De Livera et al. (2011)
-        cutoff_offset = self.k_hidden_states
-        T = self["transition", cutoff_offset:, cutoff_offset:]
-        # R = self["selection", cutoff_offset:, :]
-        R = self._internal_selection
-        # g = self["selection", cutoff_offset:]
-        # R = g.dot(self["state_cov"]).dot(g.T)
-        Z = self._internal_design
+        # cutoff_offset = self.k_hidden_states
+        # T = self["transition", cutoff_offset:, cutoff_offset:]
+        # R = self._internal_selection
+        # # g = self["selection", cutoff_offset:]
+        # # R = g.dot(self["state_cov"]).dot(g.T)
+        # Z = self._internal_design
+        T = self["F"]
+        R = self["g"]
+        Z = self["w"]
 
         D = T - R.dot(Z)
         # We can constrain the estimation to the forecastibility region.
@@ -821,26 +818,26 @@ class TBATSModel(MLEModel, BoxCox):
                 f"there are {np.sum(nan_mask)} nan values in concentrated computation, params maybe unstable."
             )
             print(f"D: \n{D} \nZ@\n{Z}\n")
-            print("R:\n", R.T, "\n\nparams:", params, "\n\nw:\n", w, "\n\ny:\n", y_tilde)
+            print(
+                "R:\n", R.T, "\n\nparams:", params, "\n\nw:\n", w, "\n\ny:\n", y_tilde
+            )
             y_tilde = y_tilde[~nan_mask]
             w = w[~nan_mask]
 
         # constant is needed in auther's implementation
-        w = add_constant(w, prepend=False)
-        # w = w
+        # w = add_constant(w, prepend=False)
+        w = w
         # mod_ols = GLM(y_tilde, w, missing="drop")
         mod_ols = OLS(y_tilde, w, missing="drop")
         # mod_ols = RLM(y_tilde, w, missing="drop")
 
         res_ols = mod_ols.fit()
-        return res_ols.params[:-1]
+        return res_ols.params
 
     @cache_readonly
     def _optim_param_scale(self):
         scale = []
         if not self.concentrate_scale:
-            scale += [0.01]
-        if self.irregular:
             scale += [0.01]
         if self.boxcox:
             scale += [0.001]
@@ -875,9 +872,6 @@ class TBATSModel(MLEModel, BoxCox):
         if not self.concentrate_scale:
             _start_params["state_var"] = 1
 
-        if self.irregular:
-            _start_params["obs_var"] = 1
-
         if np.any(np.isnan(endog)):
             mask = ~np.isnan(endog).squeeze()
             endog = endog[~np.isnan(endog)]
@@ -890,14 +884,14 @@ class TBATSModel(MLEModel, BoxCox):
             )
 
         if total_periods > 16:
-            _start_params["level_alpha"] = 1e-5
+            _start_params["level_alpha"] = 1e-6
         else:
             _start_params["level_alpha"] = 0.09
 
         # trend beta
         if self.trend:
             if total_periods > 16:
-                _start_params["trend_beta"] = 5e-6
+                _start_params["trend_beta"] = 5e-7
             else:
                 _start_params["trend_beta"] = 0.05
             if self.damping:
@@ -906,9 +900,9 @@ class TBATSModel(MLEModel, BoxCox):
         # seasonal gammas
         if self.seasonal:
             n = self.k_periods
-            _start_params["seasonal_gamma"] = list()
+            _start_params["seasonal_gamma"] = []
             for i in range(n):
-                _start_params["seasonal_gamma"].extend([0.001 / 10 ** i] * 2)
+                _start_params["seasonal_gamma"].extend([0.001 / 10**i] * 2)
 
         # Regression
         if self.regression and self.mle_regression:
@@ -941,8 +935,6 @@ class TBATSModel(MLEModel, BoxCox):
         for key in self.parameters.keys():
             if key == "state_var":
                 param_names.append("state.var")
-            elif key == "obs_var":
-                param_names.append("irregular.var")
             elif key == "level_alpha":
                 param_names.append("alpha.level")
             elif key == "trend_beta":
@@ -981,10 +973,6 @@ class TBATSModel(MLEModel, BoxCox):
 
         # # Positive parameters: obs_cov, state_cov
         if not self.concentrate_scale:
-            constrained[offset] = unconstrained[offset] ** 2
-            offset += 1
-
-        if self.irregular:
             constrained[offset] = unconstrained[offset] ** 2
             offset += 1
 
@@ -1070,10 +1058,6 @@ class TBATSModel(MLEModel, BoxCox):
             unconstrained[0] = constrained[0] ** 0.5
             offset += 1
 
-        if self.irregular:
-            unconstrained[offset] = constrained[offset] ** 0.5
-            offset += 1
-
         if self.boxcox:
             bc_lower, bc_upper = self.bounds[4]
             unconstrained[offset] = unconstrain_bound(
@@ -1151,9 +1135,9 @@ class TBATSModel(MLEModel, BoxCox):
         params = super().update(
             params, transformed=transformed, includes_fixed=includes_fixed
         )
-        offset = 0
-        state_offset = self.k_hidden_states
-        s_dtype = self["selection"].dtype
+        param_offset = 0
+        state_offset = 0
+        s_dtype = self.ssm.dtype
 
         # cov
         if not self.concentrate_scale:
@@ -1161,57 +1145,48 @@ class TBATSModel(MLEModel, BoxCox):
             # self["obs_cov", 0, 0] = cov
             np.fill_diagonal(self["state_cov"], cov)
             # self["state_cov", 0, 0] = cov
-            offset += 1
-
-        if self.irregular:
-            self["obs_cov", 0, 0] = params[offset]
-            offset += 1
+            param_offset += 1
 
         if self.boxcox:
-            self._boxcox_lambda = params[offset]
+            self._boxcox_lambda = params[param_offset]
             self._reset_boxcox_lambda(self._boxcox_lambda)
-
-        # reset pevious matrix
-        self["selection", :, :] = 0
-
-        # residual cache
-        self["selection", 0, 0] = 1
+            param_offset += 1
 
         # level alpha
-        alpha = params[offset]
-        offset += 1
-        self["selection", self._level_state_offset, 0] = alpha
+        alpha = params[param_offset]
+        param_offset += 1
+        self["g", self._level_state_offset, 0] = alpha
         state_offset += 1
 
         if self.trend:
-            beta = params[offset]
-            offset += 1
+            beta = params[param_offset]
+            param_offset += 1
 
             # self["selection", matrix_offset, 0] = beta
-            self["selection", self._trend_state_offset, 0] = beta
-            state_offset += 1
+            self["g", self._trend_state_offset, 0] = beta
 
             # assign intercept b for trend
             # self["state_intercept", 1] = b
+            # state_offset += 1
 
             # damped
             if self.damping:
-                phi = params[offset]
+                phi = params[param_offset]
 
                 _offset = self._trend_state_offset
-                self["transition", _offset - 1 : _offset + 1, _offset] = phi
-                self["design", 0, _offset] = phi
+                self["F", _offset - 1 : _offset + 1, _offset] = phi
+                self["w", 0, _offset] = phi
                 # store in internal design matrix
-                self._internal_design[0, 1] = phi
-                offset += 1
+                param_offset += 1
 
         # Seasonal gamma
         if self.seasonal:
             n = self.k_periods
             tau = int(2 * np.sum(self.k))
-            gamma = params[offset : offset + 2 * n]
+            gamma = params[param_offset : param_offset + 2 * n]
+            param_offset += 2 * n
             _offset = self._seasonal_state_offset
-            offset += 2 * n
+            _seasonal_end_offset = self._seasonal_state_offset + tau
 
             j = 0
             gamma_selection = np.zeros(tau, dtype=s_dtype)
@@ -1226,106 +1201,59 @@ class TBATSModel(MLEModel, BoxCox):
 
             _indice = np.arange(_offset, _offset + tau)
 
-            self["selection", _indice, 0] = gamma_selection
+            self["g", _indice, 0] = gamma_selection
 
             state_offset += tau
 
         # if self.autoregressive:
         p, q = self.order
-        col_indice = state_offset
         # AR
         if p:
-            ar = params[offset : offset + p]
-
-            col_indice = state_offset
-            offset += p
-            s = np.s_[
-                self._ar_state_offset
-                - self.k_hidden_states : self._ar_state_offset
-                - self.k_hidden_states
-                + p
-            ]
-
+            ar = params[param_offset : param_offset + p]
+            param_offset += p
             s = np.s_[self._ar_state_offset : self._ar_state_offset + p]
-            self["design", 0, s] = ar
+
+            self["w", 0, s] = ar
             # # self["design", 0, col_indice+1] = 1
 
-            self["transition", self.k_hidden_states, s] = alpha * ar
+            self["F", 0, s] = alpha * ar
             if self.trend:
-                self["transition", self.k_hidden_states + 1, s] = beta * ar
+                self["F", 1, s] = beta * ar
             if self.seasonal:
-                self[
-                    "transition",
-                    self._seasonal_state_offset : self._ar_state_offset,
-                    s,
-                ] = (
+                self["F", self._seasonal_state_offset : self._ar_state_offset, s] = (
                     gamma_selection[:, None] * ar
                 )
 
-            self["transition", self._ar_state_offset, s] = ar
+            self["F", self._ar_state_offset, s] = ar
 
             # the change apply into internal design
-            s = np.s_[s.start - self.k_hidden_states : s.stop - self.k_hidden_states]
-            self._internal_design[0, s] = ar
-            self["selection", state_offset, 0] = 1
+            # s = np.s_[s.start: s.stop]
+            # self["g", state_offset, 0] = 1
 
             state_offset += p
 
         # MA
         if q:
-            ma = params[offset : offset + q]
-            self._internal_design[0, -q:] = ma
-            self["design", 0, -q:] = ma
-            self["transition", self.k_hidden_states, -q:] = alpha * ma
+            ma = params[param_offset : param_offset + q]
+            self["w", 0, -q:] = ma
+            self["F", 0, -q:] = alpha * ma
             if self.trend:
-                self["transition", self.k_hidden_states + 1, -q:] = beta * ma
+                self["F", 1, -q:] = beta * ma
             if self.seasonal:
-                self["transition", self._seasonal_state_offset : col_indice, -q:] = (
+                self["F", self._seasonal_state_offset : _seasonal_end_offset, -q:] = (
                     gamma_selection[:, None] * ma
                 )
-            self["transition", col_indice, -q:] = ma
+            self["F", _seasonal_end_offset, -q:] = ma
 
-            # the change apply into internal design
-            self["selection", state_offset, 0] = 1
-            offset += q
+            # # the change apply into internal design
+            # self["g", state_offset, 0] = 1
+            param_offset += q
 
         if self.regression and self.mle_regression and True:
             self.ssm["obs_intercept"] = np.dot(
-                self.data.exog, params[offset : offset + self.k_exog]
+                self.data.exog, params[param_offset : param_offset + self.k_exog]
             )[None, :]
-            offset += self.k_exog
-
-        self.post_update()
-
-    def post_update(self):
-        self._internal_selection[:, 0] = self["selection", self.k_hidden_states:, 0]
-        self['transition', 1:, 0] = self._internal_selection[:, 0]
-        self['selection', 1:, 0] = 0
-        self['design', 0, 0] = 1
-        # exclude ma from caculation.It's ok.
-        # p, q = self.ar_order, self.ma_order
-        # total_arma = p + q
-        # end = -q if q != 0 else None
-        # # we assume $TR = g $
-        # # so we have to resolve R from $R = T^ * g$
-        # self["selection", 1:end, 0] = la.solve(
-        #     self["transition", 1:end, 1:end],
-        #     self._internal_selection[:end, 0],
-        #     # assume_a="her",
-        #     check_finite=False,
-        # )
-        # # we need ensure $ ZR = 1 $. so the first value of selection matrix should be
-        # # caculate from others.
-        # self["design", 0, 0] = 1 - self["design", :, 1:end].dot(
-        #     self["selection", 1:end, :]
-        # )
-        # if q > 0:
-        #     # we use state_0 as residual to avoid timing difference
-        #     self["selection", self._ma_state_offset, 0] = 0
-        # self["transition", self._ma_state_offset, 0] = 1 / self["selection", 0, 0]
-        # self["selection", self._ar_state_offset+1:self._ar_state_offset+q] = -1
-        # self["selection", self._ar_state_offset+1:self._ar_state_offset+q] = -1
-        # self.initialize_state(boxcox_lambda=float(lmbda) if lmbda else None)
+            param_offset += self.k_exog
 
         self._initialize_stationary_cov_statespace()
 
@@ -1511,9 +1439,9 @@ class TBATSResults(MLEResults):
         # Save _init_kwds
         self._init_kwds = self.model._get_init_kwds()
         if model.autoregressive:
-            initial_state_slice = np.s_[model.k_hidden_states:model._ar_state_offset]
+            initial_state_slice = np.s_[model.k_hidden_states : model._ar_state_offset]
         else:
-            initial_state_slice = np.s_[model.k_hidden_states:]
+            initial_state_slice = np.s_[model.k_hidden_states :]
         self.initial_state = model._initial_state[initial_state_slice]
 
         if isinstance(self.data, PandasData):
@@ -1531,10 +1459,9 @@ class TBATSResults(MLEResults):
                 "level": True,
                 "k_hidden_states": self.model.k_hidden_states,
                 "trend": self.model.trend,
-                "irregular": self.model.irregular,
                 "seasonal": self.model.seasonal,
                 "arma_order": self.model.order,
-                "box_cox": self.model.boxcox,
+                "boxcox": self.model.boxcox,
                 "damped_trend": self.model.damping,
                 "autoregressive": self.model.autoregressive,
                 "concentrate_scale": self.model.concentrate_scale,
@@ -1568,14 +1495,22 @@ class TBATSResults(MLEResults):
         the loglikelihood without constant
         :math:`equiv_llf = nlog(SSE) - 2 * (\phi - 1) * log(y)`
         """
-        llf = self.nobs * np.log(np.sum(self.filter_results.forecasts_error[0, self.loglikelihood_burn:] ** 2))
+        llf = self.nobs * np.log(
+            np.sum(
+                self.filter_results.forecasts_error[0, self.loglikelihood_burn :] ** 2
+            )
+        )
         if self.specification.boxcox:
-            llf -= 2 * (self.model._boxcox_lambda - 1) * np.nansum(self.model.data.log_endog[self.loglikelihood_burn:])
+            llf -= (
+                2
+                * (self.model._boxcox_lambda - 1)
+                * np.nansum(self.model.data.log_endog[self.loglikelihood_burn :])
+            )
         return llf
 
     @property
     def level(self):
-        offset = self.model._level_state_offset
+        offset = self.model._level_state_offset + 1
         out = Bunch(
             filtered=self.filtered_state[offset],
             filtered_cov=self.filtered_state_cov[offset, offset],
@@ -1645,7 +1580,7 @@ class TBATSResults(MLEResults):
         out = None
         spec = self.specification
         if spec.trend:
-            offset = self.model._trend_state_offset
+            offset = self.model._trend_state_offset + 1
             # offset = int(spec.level)
             out = Bunch(
                 filtered=self.filtered_state[offset],
@@ -1666,7 +1601,7 @@ class TBATSResults(MLEResults):
         spec = self.specification
         if spec.seasonal:
             k = self.model.k
-            offset = self.model._seasonal_state_offset
+            offset = self.model._seasonal_state_offset + 1
             # offset = int(spec.level + spec.trend)
             filtered_state = []
             filtered_state_cov = []
@@ -1707,13 +1642,13 @@ class TBATSResults(MLEResults):
         spec = self.specification
         if spec.autoregressive:
             p, q = self.model.order
-            offset = int(self.model._ar_state_offset)
+            offset = int(self.model._arma_state_offset) + 1
 
             s = []
             if p > 0:
-                s = np.r_[s, self.model._ar_state_offset]
+                s = np.r_[s, offset]
             elif q > 0:
-                s = np.r_[s, self.model._ma_state_offset]
+                s = np.r_[s, offset]
 
             s = s.astype(int)
 
@@ -1817,7 +1752,7 @@ class TBATSResults(MLEResults):
             ci_lower = predict - critical_value * std_errors
             ci_upper = predict + critical_value * std_errors
 
-            if spec.box_cox:
+            if spec.boxcox:
                 lmbda = self.model._boxcox_lambda
                 predict = self.model.untransform_boxcox(
                     predict, lmbda, method=boxcox_method, variance=predict_cov
@@ -1863,8 +1798,6 @@ class TBATSResults(MLEResults):
             if which not in component_bunch:
                 raise ValueError("Invalid type of state estimate.")
 
-            which_cov = "%s_cov" % which
-
             # Get the predicted values
             value = component_bunch[which]
 
@@ -1883,37 +1816,14 @@ class TBATSResults(MLEResults):
                 ax = axes[plot_idx]
                 plot_idx += 1
 
-                which_cov = "%s_cov" % which
-
                 # Get the predicted values
                 value = component_bunch[which][i]
 
                 # Plot
-                state_label = "%s (%s, %s)" % (name, m, k)
+                state_label = "%s(%s, %s)" % (name, m, k)
                 ax.plot(dates[start:end], value[start:end], label=state_label)
 
-                # Get confidence intervals
-                if which_cov in component_bunch:
-                    std_errors = np.sqrt(component_bunch["%s_cov" % which][i])
-                    ci_lower = value - critical_value * std_errors
-                    ci_upper = value + critical_value * std_errors
-                    ci_poly = ax.fill_between(
-                        dates[start:end],
-                        ci_lower[start:end],
-                        ci_upper[start:end],
-                        alpha=0.2,
-                    )
-                    ci_label = "$%.3g \\%%$ confidence interval" % ((1 - alpha) * 100)
-                    # Proxy artist for fill_between legend entry
-                    # See e.g. http://matplotlib.org/1.3.1/users/legend_guide.html
-                    p = plt.Rectangle((0, 0), 1, 1, fc=ci_poly.get_facecolor()[0])
-
-                    # Legend
-                    handles, labels = ax.get_legend_handles_labels()
-                    handles.append(p)
-                    labels.append(ci_label)
-                    ax.legend(handles, labels, loc=legend_loc)
-                ax.set_title(name + " component")
+                ax.set_title(state_label + " component")
 
         if resid:
             ax = axes[plot_idx]
@@ -1921,11 +1831,7 @@ class TBATSResults(MLEResults):
 
             value = self.resid
             ax.vlines(
-                dates[start:end],
-                [0],
-                value[start:end],
-                color='C0',
-                label="Remainder"
+                dates[start:end], [0], value[start:end], color="C0", label="Remainder"
             )
             ax.legend(loc=legend_loc)
 
@@ -2038,10 +1944,7 @@ class TBATSResults(MLEResults):
             if not self.specification.concentrate_scale:
                 mask.append(offset)
                 offset += 1
-            if self.specification.irregular:
-                mask.append(offset)
-                offset += 1
-            if self.specification.box_cox:
+            if self.specification.boxcox:
                 mask.append(offset)
                 offset += 1
             table = make_table(self, mask, title, strip_end=False)
@@ -2122,13 +2025,13 @@ def _safe_tbats_fit(endog, model_kw, fit_kw, model_class=TBATSModel, **kwargs):
         if sp is not None:
             _sp = mod.start_params
             # we assume the order is correct
-            _sp[:sp.shape[0]] = sp
+            _sp[: sp.shape[0]] = sp
             sp = _sp
         res = mod.fit(start_params=sp, **fit_kw)
         return res
     except LinAlgError as e:
         # SVD convergence failure on badly misspecified models
-        print(f"LinAlgError: {str(e)}", model_kw, fit_kw)
+        warn(f"LinAlgError: {str(e)}, {model_kw}, {fit_kw}", RuntimeWarning)
         return
     except Exception as e:  # no idea what happened
         print("error fits models:", model_kw, fit_kw)
@@ -2145,8 +2048,8 @@ def tbats_k_order_select_ic(
     use_trend=None,
     use_box_cox=None,
     damped_trend=None,
-    max_ar=4,
-    max_ma=2,
+    max_ar=5,
+    max_ma=5,
     ic="aic",
     model_class=TBATSModel,
     return_params=False,
@@ -2231,38 +2134,44 @@ def tbats_k_order_select_ic(
     else:
         model_kw["trend"] = False
 
-    best_order = (0, 0)
-    ar_range = np.arange(0, max_ar+1)
-    ma_range = np.arange(0, max_ma+1)
-    for ma in ma_range:
-        for ar in ar_range:
-            if (ar, ma) == (0, 0):
-                continue
-            model_kw["order"] = (ar, ma)
-            mod = calc_aic(model_kw=model_kw, start_params=best_model.params)
-            if mod and _ic(mod) < min_ic:
-                best_model = mod
-                min_ic = _ic(mod)
-                best_order = (ar, ma)
-    model_kw["order"] = best_order
-    print(f"resid best arma order: {best_order}")
+    # best_order = (0, 0)
+    # ar_range = np.arange(0, max_ar + 1)
+    # ma_range = np.arange(0, max_ma + 1)
+    # for ma in ma_range:
+    #     for ar in ar_range:
+    #         if (ar, ma) == (0, 0):
+    #             continue
+    #         model_kw["order"] = (ar, ma)
+    #         mod = calc_aic(model_kw=model_kw, start_params=best_model.params)
+    #         if mod and _ic(mod) < min_ic:
+    #             best_model = mod
+    #             min_ic = _ic(mod)
+    #             best_order = (ar, ma)
+    # model_kw["order"] = best_order
+    # print(f"resid best arma order: {best_order}")
 
-    # order = getattr(
-    #     arma_order_select_ic(best_model.resid, max_ar=max_ar, max_ma=max_ma, ic=ic),
-    #     f"{ic}_min_order",
-    # )
-    # print(f"resid best arma order: {order}")
-    # if order != (0, 0):
-    #     model_kw["order"] = order
-    #     mod = calc_aic(model_kw=model_kw)
-    #     if mod is not None:
-    #         print(f"arima {ic}: {_ic(mod)} for {order}, current best {ic}: {min_ic}")
-    #     if mod and _ic(mod) < min_ic:
-    #         best_model = mod
-    #         min_ic = _ic(mod)
-    #     else:
-    #         model_kw["order"] = (0, 0)
-        # model_kw.update(k=ks)
+    order = getattr(
+        arma_order_select_ic(
+            best_model.resid,
+            max_ar=max_ar,
+            max_ma=max_ma,
+            ic=ic,
+            model_kw=dict(trend="n", concentrate_scale=True, missing='drop'),
+        ),
+        f"{ic}_min_order",
+    )
+    print(f"resid best arma order: {order}")
+    if order != (0, 0):
+        model_kw["order"] = order
+        mod = calc_aic(model_kw=model_kw)
+        if mod is not None:
+            print(f"arima {ic}: {_ic(mod)} for {order}, current best {ic}: {min_ic}")
+        if mod and _ic(mod) < min_ic:
+            best_model = mod
+            min_ic = _ic(mod)
+        else:
+            model_kw["order"] = (0, 0)
+    model_kw.update(k=ks)
 
     if return_params:
         return model_kw
