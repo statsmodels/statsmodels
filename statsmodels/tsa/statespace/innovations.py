@@ -1,3 +1,5 @@
+import numpy as np
+from numpy.linalg import LinAlgError, eigvals
 from statsmodels.tsa.statespace.mlemodel import MLEModel
 
 
@@ -54,9 +56,9 @@ class InnnovationsMLEModel(MLEModel):
 
     we wrap the SSOE formula into MSOE form.
     .. math::
-        y_t & = \begin{bmatrix} 1 & w \end{bmatrix} \alpha_t \\
-        \alpha_{t+1} & = \begin{bmatrix} 0 & \boldsymbol{0}_k \\ g & F \end{bmatrix}
-        \alpha_t + \begin{bmatrix} 1 \\ \boldsymbol{0}_k \end{bmatrix} \eta_t \\
+        y_t & = \begin{bmatrix} w & 1 \end{bmatrix} \alpha_t \\
+        \alpha_{t+1} & = \begin{bmatrix} \boldsymbol{0}_k & 0 \\ F & g \end{bmatrix}
+        \alpha_t + \begin{bmatrix} \boldsymbol{0}_k \\ 1 \end{bmatrix} \eta_t \\
 
     """
     def __init__(self, endog, k_states, **kwargs):
@@ -66,34 +68,34 @@ class InnnovationsMLEModel(MLEModel):
         k_states += 1
         super().__init__(endog, k_states, **kwargs)
         # single error form
-        self.ssm["design", 0, 0] = 1
+        self.ssm["design", 0, -1] = 1
         # for cached error
-        self.ssm["selection", 0, 0] = 1
+        self.ssm["selection", -1, 0] = 1
 
     def __setitem__(self, key, value):
 
         _type = type(key)
         if _type is str:
             if key == "cov":
-                self.ssm["state_cov", 0, 0] = value
+                self.ssm["state_cov", :, :] = value
             elif key == "F":
-                self.ssm["transition", 1:, 1:] = value
+                self.ssm["transition", :-1, :-1] = value
             elif key == "g":
-                self.ssm["transition", 1:, 0:1] = value
+                self.ssm["transition", -1, :-1] = value
             elif key == "w":
-                self.ssm["design", 0, 1:] = value
+                self.ssm["design", :, :-1] = value
             else:
                 return super().__setitem__(key, value)
         elif _type is tuple:
             name, slice_ = key[0], key[1:]
             if name == "cov":
-                self.ssm["state_cov", 0:1, 0:1] = value
+                self.ssm["state_cov", :, :] = value
             elif name == "F":
-                self.ssm["transition", 1:, 1:][slice_] = value
+                self.ssm["transition", :-1, :-1][slice_] = value
             elif name == "g":
-                self.ssm["transition", 1:, 0:1][slice_] = value
+                self.ssm["transition", :-1, -1:][slice_] = value
             elif name == "w":
-                self.ssm["design", 0:1, 1:][slice_] = value
+                self.ssm["design", :, :-1][slice_] = value
             else:
                 return super().__setitem__(name, slice_)
 
@@ -102,11 +104,11 @@ class InnnovationsMLEModel(MLEModel):
         _type = type(key)
         if _type is str:
             if key == "g":
-                return self.ssm["transition", 1:, 0:1]
+                return self.ssm["transition", :-1, -1:]
             elif key == "F":
-                return self.ssm["transition", 1:, 1:]
+                return self.ssm["transition", :-1, :-1]
             elif key == "w":
-                return self.ssm["design", :, 1:]
+                return self.ssm["design", :, :-1]
             elif key == "cov":
                 return self.ssm["state_cov", :, :]
             else:
@@ -114,12 +116,25 @@ class InnnovationsMLEModel(MLEModel):
         elif _type is tuple:
             name, slice_ = key[0], key[1:]
             if name == "g":
-                return self.ssm["transition", 1:, 0:1][slice_]
+                return self.ssm["transition", :-1, -1:][slice_]
             elif name == "F":
-                return self.ssm["transition", 1:, 1:][slice_]
+                return self.ssm["transition", :-1, :-1][slice_]
             elif name == "w":
-                return self.ssm["design", :, 1:][slice_]
+                return self.ssm["design", :, :-1][slice_]
             elif name == "cov":
                 return self.ssm["state_cov", :, :][slice_]
             else:
                 return super().__getitem__(key)
+
+    @property
+    def D(self):
+        return self["F"] - self["g"] @ self["w"]
+
+    def _check_admissible(self, D=None):
+        if D is None:
+            D = self.D
+        try:
+            eig = eigvals(D)
+        except LinAlgError:
+            return False
+        return np.all(np.abs(eig) < 1.01)

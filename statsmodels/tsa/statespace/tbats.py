@@ -163,17 +163,17 @@ def _k_f_test(x, periods, ks, exog=None, weights=None, robust=False):
     return res
 
 
-def seasonal_fourier_k_select_ic(y, periods, ic="aic", grid_search=False):
+def seasonal_fourier_k_select_ic(y, periods, ic="aic", grid_search=False, restrict_periods=True):
     periods = np.asarray(periods)
     ks = np.ones_like(periods, dtype=int)
     _ic = lambda obj: getattr(obj, ic)
-    result = dict()
+    result = {}
     max_k = np.ones_like(ks)
 
     for i, period in enumerate(periods):
 
         max_k[i] = period // 2
-        if i != 0:
+        if restrict_periods and i != 0:
             current_k = 2
             while current_k <= max_k[i]:
                 if period % current_k != 0:
@@ -185,8 +185,8 @@ def seasonal_fourier_k_select_ic(y, periods, ic="aic", grid_search=False):
                 if np.any(periods[:i] % latter == 0):
                     max_k[i] = current_k - 1
                     break
-                else:
-                    current_k += 1
+
+                current_k += 1
     print(max_k)
     resid = y
     current_resid = None
@@ -547,10 +547,9 @@ class TBATSModel(InnnovationsMLEModel, BoxCox):
 
     @property
     def state_names(self):
-        state_names = ["error"]
         # if self.seasonal:
         #     state_names += [f"sasonal{i}" for i in range(1, len(self.periods) + 1)]
-        state_names += ["level"]
+        state_names = ["level"]
         if self.trend:
             state_names += ["trend"]
         if self.seasonal:
@@ -568,6 +567,9 @@ class TBATSModel(InnnovationsMLEModel, BoxCox):
             state_names += [f"ar.L{i}" for i in range(1, self.ar_order + 1)]
         if self.ma_order:
             state_names += [f"ma.L{i}" for i in range(1, self.ma_order + 1)]
+
+        # hidden cached \epsilon
+        state_names += ["error"]
         return state_names
 
     @property
@@ -708,19 +710,11 @@ class TBATSModel(InnnovationsMLEModel, BoxCox):
         # the trend into the level in the "predicted_state" (only the
         # "filtered_state" corresponds to the timing of the exponential
         # smoothing models)
+        self._initial_state = initial_state
         constant = np.zeros_like(
             self.initialization.constant, dtype=initial_state.dtype
         )
-        start = self.k_hidden_states
-        end = start + initial_state.shape[0]
-        constant[start:end] = initial_state
-
-        self._initial_state = constant
-
-        # Apply the prediction step to get to what we need for our Kalman
-        # filter implementation
-        # This is not needed anymore because we compute within update step.
-        # constant = np.dot(self.ssm["transition"], constant)
+        constant[:initial_state.shape[0]] = initial_state
 
         self.initialization.constant = constant
 
@@ -752,21 +746,12 @@ class TBATSModel(InnnovationsMLEModel, BoxCox):
         # self.initialize_state(initialization=init)
         # self.initialization = init
 
-    def check_addmissive(self, D):
-        try:
-            eig = np.linalg.eigvals(D)
-        except LinAlgError:
-            return False
-        # print(self["transition"])
-        # print(D, self._initial_state)
-        # print(D.shape, eig)
-        return np.all(np.abs(eig) < 1.01)
-
     def _compute_concentrated_states(
-        self, params, *args, check_admissible=False, **kwargs
+        self, params, *args, **kwargs
     ):
         # Apply the usual filter, but keep forecasts
         kwargs["conserve_memory"] = MEMORY_CONSERVE & ~MEMORY_NO_FORECAST
+        # self.loglike(params, *args, skip_concentrate_state=True, **kwargs)
         super().loglike(params, *args, **kwargs)
 
         # Compute the initial state vector
@@ -779,14 +764,12 @@ class TBATSModel(InnnovationsMLEModel, BoxCox):
         # # g = self["selection", cutoff_offset:]
         # # R = g.dot(self["state_cov"]).dot(g.T)
         # Z = self._internal_design
-        T = self["F"]
-        R = self["g"]
+        # T = self["F"]
+        # R = self["g"]
         Z = self["w"]
 
-        D = T - R.dot(Z)
-        # We can constrain the estimation to the forecastibility region.
-        if check_admissible and not self.check_addmissive(D):
-            raise ValueError()
+        # D = T - R.dot(Z)
+        D = self.D
 
         w = np.zeros((self.nobs, Z.shape[-1]), dtype=D.dtype)
         w[0, :] = Z[0, :]
@@ -796,7 +779,6 @@ class TBATSModel(InnnovationsMLEModel, BoxCox):
         if self.autoregressive:
             # remove arma bits
             offset = np.sum(self.order)
-            # print("offset:", offset)
             w = w[:, :-offset]
 
         # this makes sure that coefficient for all zeroes dimension will be zero
@@ -812,15 +794,25 @@ class TBATSModel(InnnovationsMLEModel, BoxCox):
             np.isnan(y_tilde) | np.isinf(y_tilde)
         )
         if np.all(nan_mask):
+            # print("\n\nparams:", self.transform_params(params))
+            # # print(f"T: \n{T} \nR@\n{R}\n")
+            # # print(f"D: \n{D} \nZ@\n{Z}\n")
+            # print(
+            #     "R:\n", R.T, "\n\nw:\n", w, "\n\ny:\n", y_tilde
+            # )
             raise ValueError("something wrong with parameter, all weights being nan")
         elif np.any(nan_mask):
-            warn(
-                f"there are {np.sum(nan_mask)} nan values in concentrated computation, params maybe unstable."
-            )
-            print(f"D: \n{D} \nZ@\n{Z}\n")
-            print(
-                "R:\n", R.T, "\n\nparams:", params, "\n\nw:\n", w, "\n\ny:\n", y_tilde
-            )
+            print("\n\nparams:", self.transform_params(params))
+            # print(f"T: \n{T} \nR@\n{R}\n")
+            # print(f"D: \n{D} \nZ@\n{Z}\n")
+            # print("D:\n", D, "\n\nR:\n", R.T, "\n\nw:\n", w[:10])
+            # warn(
+            #     f"there are {np.sum(nan_mask)} nan values in concentrated computation, params maybe unstable."
+            # )
+            # print(f"D: \n{D} \nZ@\n{Z}\n")
+            # print(
+            #     "R:\n", R.T, "\n\nparams:", params, "\n\nw:\n", w, "\n\ny:\n", y_tilde
+            # )
             y_tilde = y_tilde[~nan_mask]
             w = w[~nan_mask]
 
@@ -884,14 +876,14 @@ class TBATSModel(InnnovationsMLEModel, BoxCox):
             )
 
         if total_periods > 16:
-            _start_params["level_alpha"] = 1e-6
+            _start_params["level_alpha"] = 1e-4
         else:
             _start_params["level_alpha"] = 0.09
 
         # trend beta
         if self.trend:
             if total_periods > 16:
-                _start_params["trend_beta"] = 5e-7
+                _start_params["trend_beta"] = 5e-4
             else:
                 _start_params["trend_beta"] = 0.05
             if self.damping:
@@ -901,8 +893,8 @@ class TBATSModel(InnnovationsMLEModel, BoxCox):
         if self.seasonal:
             n = self.k_periods
             _start_params["seasonal_gamma"] = []
-            for i in range(n):
-                _start_params["seasonal_gamma"].extend([0.001 / 10**i] * 2)
+            for i, k in enumerate(self.k):
+                _start_params["seasonal_gamma"].extend([0.001 / k / 10**i] * 2)
 
         # Regression
         if self.regression and self.mle_regression:
@@ -1014,9 +1006,9 @@ class TBATSModel(InnnovationsMLEModel, BoxCox):
             # high = min(high, (1 - alpha) / self.k)
             num_k = 2 * self.k_periods
             # _s = np.s_[offset:offset + num_k:2]
-            # constrained[_s] = constrain_bound(unconstrained[_s], low, high)
             _s = np.s_[offset : offset + num_k]
-            constrained[_s] = unconstrained[_s]
+            constrained[_s] = constrain_bound(unconstrained[_s], -1+1e-6, 1-1e-6)
+            # constrained[_s] = unconstrained[_s]
             offset += num_k
 
         if self.autoregressive:
@@ -1087,7 +1079,8 @@ class TBATSModel(InnnovationsMLEModel, BoxCox):
             low, high = self.bounds[3]
             num_k = 2 * len(self.periods)
             _s = np.s_[offset : offset + num_k]
-            unconstrained[_s] = constrained[_s]
+            # unconstrained[_s] = constrained[_s]
+            unconstrained[_s] = unconstrain_bound(constrained[_s], -1+1e-6, 1-1e-6)
             offset += num_k
 
         if self.autoregressive:
@@ -1235,15 +1228,16 @@ class TBATSModel(InnnovationsMLEModel, BoxCox):
         # MA
         if q:
             ma = params[param_offset : param_offset + q]
-            self["w", 0, -q:] = ma
-            self["F", 0, -q:] = alpha * ma
+            s = np.s_[self._ma_state_offset:self._ma_state_offset + q]
+            self["w", 0, s] = ma
+            self["F", 0, s] = alpha * ma
             if self.trend:
-                self["F", 1, -q:] = beta * ma
+                self["F", 1, s] = beta * ma
             if self.seasonal:
-                self["F", self._seasonal_state_offset : _seasonal_end_offset, -q:] = (
+                self["F", self._seasonal_state_offset : _seasonal_end_offset, s] = (
                     gamma_selection[:, None] * ma
                 )
-            self["F", _seasonal_end_offset, -q:] = ma
+            self["F", _seasonal_end_offset, s] = ma
 
             # # the change apply into internal design
             # self["g", state_offset, 0] = 1
@@ -1255,6 +1249,8 @@ class TBATSModel(InnnovationsMLEModel, BoxCox):
             )[None, :]
             param_offset += self.k_exog
 
+        if self.check_admissible:
+            self._check_admissible()
         self._initialize_stationary_cov_statespace()
 
     @Appender(MLEModel.filter.__doc__)
@@ -1330,12 +1326,12 @@ class TBATSModel(InnnovationsMLEModel, BoxCox):
 
     @Appender(MLEModel.loglike.__doc__)
     def loglike(self, params, *args, **kwargs):
-        if self.initialization_method == "concentrated":
-            check = kwargs.pop("check_admissible", self.check_admissible)
+        is_skip = kwargs.pop("skip_concentrate_state", False)
+        if not is_skip and self.initialization_method == "concentrated":
             try:
                 self._initialize_constant_statespace(
                     self._compute_concentrated_states(
-                        params, check_admissible=check, *args, **kwargs
+                        params, *args, **kwargs
                     )
                 )
             except ValueError:
@@ -1439,10 +1435,10 @@ class TBATSResults(MLEResults):
         # Save _init_kwds
         self._init_kwds = self.model._get_init_kwds()
         if model.autoregressive:
-            initial_state_slice = np.s_[model.k_hidden_states : model._ar_state_offset]
+            initial_state_slice = np.s_[:model._ar_state_offset]
         else:
-            initial_state_slice = np.s_[model.k_hidden_states :]
-        self.initial_state = model._initial_state[initial_state_slice]
+            initial_state_slice = np.s_[:-1]
+        self.initial_state = model._initial_state
 
         if isinstance(self.data, PandasData):
             # index = self.data.row_labels
@@ -1491,9 +1487,10 @@ class TBATSResults(MLEResults):
 
     @cache_readonly
     def equiv_llf(self):
-        """
+        r"""
         the loglikelihood without constant
-        :math:`equiv_llf = nlog(SSE) - 2 * (\phi - 1) * log(y)`
+
+        :math:`equiv_llf = nlog(SSE) - 2 * (\omega - 1) * log(y)`
         """
         llf = self.nobs * np.log(
             np.sum(
@@ -1510,7 +1507,7 @@ class TBATSResults(MLEResults):
 
     @property
     def level(self):
-        offset = self.model._level_state_offset + 1
+        offset = self.model._level_state_offset
         out = Bunch(
             filtered=self.filtered_state[offset],
             filtered_cov=self.filtered_state_cov[offset, offset],
@@ -1580,7 +1577,7 @@ class TBATSResults(MLEResults):
         out = None
         spec = self.specification
         if spec.trend:
-            offset = self.model._trend_state_offset + 1
+            offset = self.model._trend_state_offset
             # offset = int(spec.level)
             out = Bunch(
                 filtered=self.filtered_state[offset],
@@ -1601,7 +1598,7 @@ class TBATSResults(MLEResults):
         spec = self.specification
         if spec.seasonal:
             k = self.model.k
-            offset = self.model._seasonal_state_offset + 1
+            offset = self.model._seasonal_state_offset
             # offset = int(spec.level + spec.trend)
             filtered_state = []
             filtered_state_cov = []
@@ -1642,7 +1639,7 @@ class TBATSResults(MLEResults):
         spec = self.specification
         if spec.autoregressive:
             p, q = self.model.order
-            offset = int(self.model._arma_state_offset) + 1
+            offset = int(self.model._arma_state_offset)
 
             s = []
             if p > 0:
@@ -2034,7 +2031,7 @@ def _safe_tbats_fit(endog, model_kw, fit_kw, model_class=TBATSModel, **kwargs):
         warn(f"LinAlgError: {str(e)}, {model_kw}, {fit_kw}", RuntimeWarning)
         return
     except Exception as e:  # no idea what happened
-        print("error fits models:", model_kw, fit_kw)
+        print(f"error fits models, error: {e}", model_kw, fit_kw)
         # raise e
         # raise e
         return None
@@ -2053,6 +2050,7 @@ def tbats_k_order_select_ic(
     ic="aic",
     model_class=TBATSModel,
     return_params=False,
+    restrict_periods=True,
     **kwargs,
 ):
     from functools import partial
@@ -2100,7 +2098,11 @@ def tbats_k_order_select_ic(
         y2, period=int(np.max(periods)), extrapolate_trend="freq"
     )
     ks = seasonal_fourier_k_select_ic(
-        decomp_mod.seasonal, periods, grid_search=grid_search, ic=ic
+        decomp_mod.seasonal,
+        periods,
+        grid_search=grid_search,
+        ic=ic,
+        restrict_periods=restrict_periods,
     )
     model_kw["harmonics"] = ks
     resid = decomp_mod.resid
