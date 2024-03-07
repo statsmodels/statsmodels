@@ -90,12 +90,20 @@ class InnnovationsMLEModel(MLEModel):
             name, slice_ = key[0], key[1:]
             if name == "cov":
                 self.ssm["state_cov", :, :] = value
+            # TODO: very careful for out of range
             elif name == "F":
-                self.ssm["transition", :-1, :-1][slice_] = value
+                self.ssm["transition", slice_[0], slice_[1]] = value
             elif name == "g":
-                self.ssm["transition", :-1, -1:][slice_] = value
+                a, b  = slice_
+                if b == 0 or b is None:
+                    b = -1
+                if isinstance(a, slice) and a.end is None:
+                    a.end = -1
+                elif a is None:
+                    a = slice(end=-1)
+                self.ssm["transition", a, b] = value
             elif name == "w":
-                self.ssm["design", :, :-1][slice_] = value
+                self.ssm["design", slice_[0], slice_[1]] = value
             else:
                 return super().__setitem__(name, slice_)
 
