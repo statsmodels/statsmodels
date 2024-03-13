@@ -911,7 +911,7 @@ class TBATSModel(InnnovationsMLEModel, BoxCox):
                 start_params.append(_start_params[key])
             else:
                 start_params.extend(_start_params[key])
-        return start_params
+        return np.asarray(start_params, dtype=self.ssm.dtype)
 
     @property
     def param_names(self):
