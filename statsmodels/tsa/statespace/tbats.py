@@ -1722,8 +1722,10 @@ class TBATSResults(MLEResults):
             end = self.model._get_index_loc(end)[0] if end else None
             if isinstance(end, slice):
                 end = end.stop
+            xlim = (dates[start], dates[end or -1])
         else:
             dates = np.arange(len(self.resid))
+            xlim = (0, len(self.resid) - 1)
 
         # Get the critical value for confidence intervals
         critical_value = norm.ppf(1 - alpha / 2.0)
@@ -1781,6 +1783,7 @@ class TBATSResults(MLEResults):
             ax.legend(handles, labels, loc=legend_loc)
 
             ax.set_title("Predicted vs observed")
+            ax.set_xlim(xlim)
 
         for component, is_plotted in components.items():
             if not is_plotted:
@@ -1803,6 +1806,7 @@ class TBATSResults(MLEResults):
             ax.plot(dates[start:end], value[start:end], label=state_label)
 
             ax.set_title("%s component" % component.title())
+            ax.set_xlim(xlim)
 
         if seasonal:
             component_bunch = self.seasonal
@@ -1821,6 +1825,7 @@ class TBATSResults(MLEResults):
                 ax.plot(dates[start:end], value[start:end], label=state_label)
 
                 ax.set_title(state_label + " component")
+                ax.set_xlim(xlim)
 
         if resid:
             ax = axes[plot_idx]
@@ -1833,6 +1838,7 @@ class TBATSResults(MLEResults):
             ax.legend(loc=legend_loc)
 
             ax.set_title("Residuals")
+            ax.set_xlim(xlim)
             # ax.set_ylabel('Remainder')
 
         # Add a note if first observations excluded
