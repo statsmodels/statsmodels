@@ -1383,32 +1383,6 @@ class TBATSModel(InnnovationsMLEModel, BoxCox):
 
         return loglike
 
-    @Appender(MLEModel.loglikeobs.__doc__)
-    def loglikeobs(
-        self,
-        params,
-        transformed=True,
-        includes_fixed=False,
-        complex_step=False,
-        **kwargs,
-    ):
-        loglikeobs = super().loglikeobs(
-            params,
-            transformed=True,
-            complex_step=complex_step,
-            includes_fixed=includes_fixed,
-            **kwargs,
-        )
-
-        if self.boxcox:
-            bc_loglikeobs = (self._boxcox_lambda - 1) * self.data.log_endog
-            loglikelihood_burn = kwargs.get(
-                "loglikelihood_burn", self.loglikelihood_burn
-            )
-            bc_loglikeobs[:loglikelihood_burn] = 0
-            loglikeobs += bc_loglikeobs
-        return loglikeobs
-
     @Appender(MLEModel.fit.__doc__)
     def fit(self, *args, **kwargs):
         kwargs.setdefault("method", "nm")
