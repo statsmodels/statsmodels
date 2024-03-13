@@ -394,7 +394,7 @@ class TBATSModel(InnnovationsMLEModel, BoxCox):
         initial_trend=None,
         initial_seasonal=None,
         bounds=None,
-        biasadj=False,
+        biasadj=True,
         check_admissible=True,
         **kwargs,
     ):
@@ -1423,7 +1423,7 @@ class TBATSModel(InnnovationsMLEModel, BoxCox):
 
     @Appender(BoxCox.untransform_boxcox.__doc__)
     def untransform_boxcox(self, x, lmbda, method="naive", variance=None):
-        if method != "biasajd":
+        if method != "biasadj":
             return super().untransform_boxcox(x, lmbda, method)
 
         # Now compute the regression components as described in
