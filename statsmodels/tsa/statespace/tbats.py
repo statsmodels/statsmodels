@@ -1174,23 +1174,17 @@ class TBATSModel(InnnovationsMLEModel, BoxCox):
             gamma = params[param_offset : param_offset + 2 * n]
             param_offset += 2 * n
             _offset = self._seasonal_state_offset
-            _seasonal_end_offset = self._seasonal_state_offset + tau
 
             j = 0
             gamma_selection = []
             # gamma_design = np.zeros(tau)
             for i, k in enumerate(self.harmonics, 1):
-                gamma1, gamma2 = gamma[2 * i - 2 : 2 * i]
                 gamma_selection = np.r_[
-                    gamma_selection,
-                    np.full(k, gamma1),
-                    np.full(k, gamma2),
+                    gamma_selection, np.repeat(gamma[2 * i - 2 : 2 * i], k)
                 ]
                 j += 2 * k
 
-            _indice = np.arange(_offset, _offset + tau)
-
-            self["g", _indice, 0] = gamma_selection
+            self["g", _offset : _offset + tau, 0] = gamma_selection.astype(s_dtype)
 
             state_offset += tau
 
@@ -1225,10 +1219,10 @@ class TBATSModel(InnnovationsMLEModel, BoxCox):
             if self.trend:
                 self["F", 1, s] = beta * ma
             if self.seasonal:
-                self["F", self._seasonal_state_offset : _seasonal_end_offset, s] = (
+                self["F", self._seasonal_state_offset:self._arma_state_offset, s] = (
                     gamma_selection[:, None] * ma
                 )
-            self["F", _seasonal_end_offset, s] = ma
+            self["F", self._arma_state_offset, s] = ma
 
             # # the change apply into internal design
             # self["g", state_offset, 0] = 1
