@@ -5,31 +5,47 @@ Author: Leoyzen Liu
 License: Simplified-BSD
 """
 
-from __future__ import division, absolute_import, print_function
+from __future__ import absolute_import, division, print_function
 
-from warnings import warn
+from statsmodels.compat.pandas import Appender
+
 from collections import OrderedDict
+from warnings import warn
 
 import numpy as np
 from numpy.linalg import LinAlgError
-from scipy import linalg
 import pandas as pd
+from scipy import linalg
+
 from statsmodels.base.data import PandasData
 from statsmodels.base.model import LikelihoodModel
+from statsmodels.base.transform import BoxCox
+import statsmodels.base.wrapper as wrap
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.iolib.summary import forg
 from statsmodels.iolib.table import SimpleTable
+from statsmodels.iolib.tableformatting import fmt_params
+from statsmodels.regression.linear_model import OLS
+from statsmodels.robust.robust_linear_model import RLM
 from statsmodels.tools.data import _is_using_pandas
+from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.eval_measures import aic
 from statsmodels.tools.sm_exceptions import EstimationWarning, ValueWarning
+from statsmodels.tools.tools import Bunch, add_constant
 from statsmodels.tools.validation.validation import (
     array_like,
     bool_like,
     float_like,
     string_like,
 )
-from statsmodels.regression.linear_model import OLS
 from statsmodels.tsa.seasonal import seasonal_decompose
+from statsmodels.tsa.statespace.tools import (
+    companion_matrix,
+    constrain_stationary_univariate,
+    unconstrain_stationary_univariate,
+)
+
+from ._tbats_tools import _tbats_recursive_compute, _tbats_w_caculation
 from .innovations import InnnovationsMLEModel
 from .kalman_filter import (
     INVERT_UNIVARIATE,
@@ -38,20 +54,6 @@ from .kalman_filter import (
     MEMORY_NO_FORECAST_MEAN,
     SOLVE_LU,
 )
-import statsmodels.base.wrapper as wrap
-from statsmodels.tools.tools import Bunch, add_constant
-from statsmodels.tools.decorators import cache_readonly
-from statsmodels.base.transform import BoxCox
-from statsmodels.compat.pandas import Appender
-from statsmodels.tsa.statespace.tools import (
-    constrain_stationary_univariate,
-    unconstrain_stationary_univariate,
-    companion_matrix,
-)
-from statsmodels.iolib.tableformatting import fmt_params
-from ._tbats_tools import _tbats_w_caculation, _tbats_recursive_compute
-
-
 from .mlemodel import MLEModel, MLEResults, MLEResultsWrapper, _handle_args
 from .tools import fourier
 
@@ -719,9 +721,7 @@ class TBATSModel(InnnovationsMLEModel, BoxCox):
         # "filtered_state" corresponds to the timing of the exponential
         # smoothing models)
         self._initial_state = initial_state
-        constant = np.zeros_like(
-            self.initialization.constant, dtype=self.ssm.dtype
-        )
+        constant = np.zeros_like(self.initialization.constant, dtype=self.ssm.dtype)
         constant[:initial_state.shape[0]] = initial_state.astype(self.ssm.dtype)
 
         self.initialization.constant = constant
@@ -1682,9 +1682,10 @@ class TBATSResults(MLEResults):
         biasadj=None,
     ):
 
-        from scipy.stats import norm
-        from statsmodels.graphics.utils import _import_mpl
         from pandas.plotting import register_matplotlib_converters
+        from scipy.stats import norm
+
+        from statsmodels.graphics.utils import _import_mpl
 
         plt = _import_mpl()
         register_matplotlib_converters()
