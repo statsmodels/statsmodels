@@ -1260,7 +1260,7 @@ class TBATSModel(InnnovationsMLEModel, BoxCox):
                 )
                 self._need_recompute_state = False
             else:
-                initial_states = self._init_states
+                initial_states = self._initial_state
             self._initialize_constant_statespace(initial_states)
 
         results = super().filter(
