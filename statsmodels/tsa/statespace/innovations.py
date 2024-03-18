@@ -1,5 +1,6 @@
 import numpy as np
 from numpy.linalg import LinAlgError, eigvals
+
 from statsmodels.tsa.statespace.mlemodel import MLEModel
 
 
@@ -94,13 +95,13 @@ class InnnovationsMLEModel(MLEModel):
             elif name == "F":
                 self.ssm["transition", slice_[0], slice_[1]] = value
             elif name == "g":
-                a, b  = slice_
+                a, b = slice_
                 if b == 0 or b is None:
                     b = -1
-                if isinstance(a, slice) and a.end is None:
-                    a.end = -1
+                if isinstance(a, slice) and a.stop is None:
+                    a.stop = -1
                 elif a is None:
-                    a = slice(end=-1)
+                    a = slice(stop=-1)
                 self.ssm["transition", a, b] = value
             elif name == "w":
                 self.ssm["design", slice_[0], slice_[1]] = value
