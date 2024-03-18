@@ -1126,6 +1126,7 @@ class TBATSModel(InnnovationsMLEModel, BoxCox):
         )
         param_offset = 0
         state_offset = 0
+        s_dtype = params.dtype
 
         # cov
         if not self.concentrate_scale:
