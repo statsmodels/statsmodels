@@ -1162,7 +1162,7 @@ class ETSModel(base.StateSpaceMLEModel):
         if self.error == "mul":
             # In some cases, yhat can become negative or zero, so that a
             # multiplicative model is no longer well-defined. Zero values
-            # are replaced with 10^-32 (a very small number. For more
+            # are replaced with 10^-32 (a very small number). For more
             # information on the derivation of the log-likelihood for the
             # multiplicative error models see:
             # https://openforecast.org/adam/ADAMETSEstimationLikelihood.html
