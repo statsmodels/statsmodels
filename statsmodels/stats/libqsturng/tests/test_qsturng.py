@@ -184,6 +184,12 @@ class TestPsturng:
         for p,r,v,q in cases:
             assert_almost_equal(1.-p, psturng(q,r,v), 5)
 
+    def test_pstrung_boundary(self):
+        # Value the first 4 decimals from R. This is the expected level of agreement
+        # based on Gleason's paper referenced in the libqsturng docs. Values of function
+        # chosen as they previously caused a failure that was a bug.
+        assert_almost_equal(psturng(12, 12, 2.02), np.array(0.0729), decimal=4)
+
     @pytest.mark.slow
     def test_100_random_values(self, reset_randomstate):
         n = 100
