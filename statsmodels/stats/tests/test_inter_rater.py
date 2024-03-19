@@ -9,7 +9,8 @@ import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal, assert_allclose
 
 from statsmodels.stats.inter_rater import (fleiss_kappa, cohens_kappa,
-                                           to_table, aggregate_raters)
+                                           to_table, aggregate_raters,
+                                           gwets_ac1, gwets_ac1_multiple)
 from statsmodels.tools.testing import Holder
 
 
@@ -350,3 +351,43 @@ def test_aggregate_raters():
     colsum = np.array([26, 26, 30, 55, 43])
     assert_equal(data_.sum(0), colsum)
     assert_equal(np.unique(diagnoses), categories)
+
+def test_gwets_ac1_2r2c():
+    gwets = Holder()
+    gwets.method = "Gwet's AC_1 for Two Raters and Two Categories"
+    gwets.irr_name = 'Kappa'
+    gwets.value = 0.5012
+    data = np.asarray([[35, 20], [5, 40]])
+    res1_kappa = gwets_ac1(data)
+    assert_almost_equal(res1_kappa, gwets.value, decimal=4)
+
+def test_gwets_ac1_2rkc():
+    gwets = Holder()
+    gwets.method = "Gwet's AC1 for Two Raters and k Categories"
+    gwets.irr_name = 'Kappa'
+    gwets.value = 0.4756
+    data = np.asarray([[22, 10, 2],
+                       [6, 27, 11],
+                       [2, 5, 17]])
+    res1_kappa = gwets_ac1(data)
+    assert_almost_equal(res1_kappa, gwets.value, decimal=4)
+
+def test_gwets_ac1_multiple():
+    gwets = Holder()
+    gwets.method = "Gwet's AC1 for Multiple Raters and Multiple Categories"
+    gwets.irr_name = 'Kappa'
+    gwets.value = 0.7754
+    data = np.asarray([[3, 0, 0, 0, 0],
+                       [0, 3, 1, 0, 0],
+                       [0, 0, 4, 0, 0],
+                       [0, 0, 4, 0, 0],
+                       [0, 4, 0, 0, 0],
+                       [1, 1, 1, 1, 0],
+                       [0, 0, 0, 4, 0],
+                       [3, 1, 0, 0, 0],
+                       [0, 4, 0, 0, 0],
+                       [0, 0, 0, 0, 3],
+                       [2, 0, 0, 0, 0],
+                       [0, 0, 1, 0, 0]])
+    res1_kappa = gwets_ac1_multiple(data)
+    assert_almost_equal(res1_kappa, gwets.value, decimal=4)
