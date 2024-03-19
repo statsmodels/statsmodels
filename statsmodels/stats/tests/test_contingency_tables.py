@@ -230,6 +230,49 @@ def test_mcnemar():
     b4 = ctab.mcnemar(tables[0], exact=True)
     assert_allclose(b4.pvalue, r_results.loc[0, "homog_binom_p"])
 
+def test_confusion_matrix_statistics_2_categories():
+    overall_stats, class_stats = ctab.confusion_matrix_statistics(tables[0], positive=1)
+
+    expected_overall_stats = pd.Series({
+        'Accuracy': 0.6136,
+        'No Information Rate': 0.5227,
+        'Kappa': 0.2225
+    })
+    assert_allclose(overall_stats, expected_overall_stats, atol=1e-4)
+
+    expected_class_stats = pd.DataFrame(
+        {'Sensitivity': {'prediction': 0.6739},
+         'Specificity': {'prediction': 0.5476},
+         'Pos Pred Value': {'prediction': 0.6200},
+         'Neg Pred Value': {'prediction': 0.6053},
+         'Balanced Accuracy': {'prediction': 0.6108},
+         'F1': {'prediction': 0.6458}
+         })
+    assert_allclose(class_stats, expected_class_stats, atol=1e-4)
+
+
+def test_confusion_matrix_statistics_4_categories():
+    overall_stats, class_stats = ctab.confusion_matrix_statistics(tables[1])
+
+    expected_overall_stats = pd.Series({
+        'Accuracy': 0.3347,
+        'No Information Rate': 0.3895,
+        'Kappa': 0.0771
+    })
+    assert_allclose(overall_stats, expected_overall_stats, atol=1e-4)
+
+    expected_class_stats = pd.DataFrame(
+        {'Sensitivity': [0.9863, 0.102564, 0.05714, 0.02703],
+        'Specificity': [0.2614, 0.896789, 0.92703, 0.99655],
+        'Pos Pred Value': [0.3721, 0.081633, 0.18182, 0.83333],
+        'Neg Pred Value': [0.9773, 0.917840, 0.77602, 0.61620],
+        'Balanced Accuracy': [0.6238, 0.499677, 0.49208, 0.51179],
+        'F1': [0.5403, 0.09091, 0.0870, 0.0524]}
+    )
+    expected_class_stats.index = [f'class {i + 1}' for i in range(4)]
+    assert_allclose(class_stats, expected_class_stats, atol=1e-4)
+
+
 def test_from_data_stratified():
 
     df = pd.DataFrame([[1, 1, 1, 0, 1, 0, 1, 0], [0, 1, 0, 1, 0, 1, 0, 0],

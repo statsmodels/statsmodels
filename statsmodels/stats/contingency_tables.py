@@ -26,6 +26,7 @@ identically distributed.
 """
 
 import warnings
+from typing import Tuple
 
 import numpy as np
 import pandas as pd
@@ -1429,3 +1430,131 @@ def cochrans_q(x, return_object=True):
         return b
 
     return q_stat, pvalue, df
+
+
+def confusion_matrix_statistics(
+    table, actual_in_column=True, positive=None
+) -> Tuple[pd.Series, pd.DataFrame]:
+    """
+    Calculate various performance metrics based on a confusion matrix.
+
+    Parameters
+    ----------
+    table : ndarray, DataFrame, or square table
+        Confusion matrix representing the classification results.
+    positive : bool, default=None
+        This parameter is applicable only for binary classification.
+        If positive is not provided (None) or 0, the positive class is assumed
+        to be the first row/column.
+        If positive is 1, the second row/column are considered positive.
+    actual_in_column : bool, default=True
+        If True, it is assumed that the actual values are in the columns of
+        the confusion matrix. i.e., each column corresponds to an actual class.
+        If False, it is assumed that the actual values are in the rows.
+
+    Returns
+    -------
+    overall_stats : Series
+        A Series containing overall performance metrics.
+    class_stats : DataFrame
+        A DataFrame containing class-wise performance metrics.
+
+    Notes
+    -----
+    - This function calculates various performance metrics, including accuracy,
+      no information rate, kappa, sensitivity, specificity, positive predictive
+      value, negative predictive value, balanced accuracy, and F1 score.
+    - The function supports binary and multiclass classification.
+    """
+    if isinstance(table, Table):
+        table = table.table_orig
+
+    num_levels = table.shape[0]
+
+    if isinstance(table, pd.DataFrame) and not np.array_equal(
+        table.index, table.columns
+    ):
+        raise ValueError(
+            "The table must have the same classes in the same order"
+        )
+
+    if isinstance(table, pd.DataFrame):
+        class_levels = table.index
+    else:
+        class_levels = [f"class {i + 1}" for i in range(num_levels)]
+        table = pd.DataFrame(table, index=class_levels, columns=class_levels)
+
+    if positive is not None and positive not in (0, 1):
+        raise ValueError("Positive argument must be 0 or 1")
+
+    if num_levels < 2:
+        raise ValueError("There must be at least 2 factors levels in the data")
+
+    if not actual_in_column:
+        table = table.transpose()
+
+    # Table looks like
+    #    'TP FP
+    #     FN TN'
+
+    correct = np.trace(table)
+    row_sum = table.sum(axis=1)
+    col_sum = table.sum(axis=0)
+    total = np.sum(row_sum)
+    expected = row_sum.dot(col_sum) / total
+
+    overall_stats = pd.Series(
+        {
+            "Accuracy": correct / total,
+            "No Information Rate": max(col_sum) / total,
+            "Kappa": (correct - expected) / (total - expected),
+        }
+    )
+
+    metric_names = [
+        "Sensitivity",
+        "Specificity",
+        "Pos Pred Value",
+        "Neg Pred Value",
+        "Balanced Accuracy",
+        "F1",
+    ]
+
+    class_stats = pd.DataFrame(
+        index=(class_levels if num_levels > 2 else ["prediction"]),
+        columns=metric_names,
+        dtype=np.float64,
+    )
+
+    # For binary classification, loop will end after the first iteration
+    for i in range(num_levels if num_levels > 2 else 1):
+        # Handle binary classification scenario based on the positive argument
+        if num_levels == 2 and positive == 1:
+            TP = table.iloc[1, 1]
+            FN = table.iloc[0, 1]
+            FP = table.iloc[1, 0]
+            TN = table.iloc[0, 0]
+        else:
+            TP = table.iloc[i, i]
+            FN = col_sum.iloc[i] - TP
+            FP = row_sum.iloc[i] - TP
+            TN = total - (TP + FN + FP)
+
+        # Sensitivity
+        class_stats.iloc[i, 0] = TP / (TP + FN)
+        # Specificity
+        class_stats.iloc[i, 1] = TN / (TN + FP)
+        # Positive predictive value
+        class_stats.iloc[i, 2] = TP / (TP + FP)
+        # Negative predictive value
+        class_stats.iloc[i, 3] = TN / (TN + FN)
+        # Balanced Accuracy
+        class_stats.iloc[i, 4] = (
+            class_stats.iloc[i, 0] + class_stats.iloc[i, 1]
+        ) / 2
+        # F1
+        class_stats.iloc[i, 5] = 2 / (
+            1 / class_stats.iloc[i, 0] + 1 / class_stats.iloc[i, 2]
+        )
+
+    return overall_stats, class_stats
