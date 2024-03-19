@@ -7,10 +7,11 @@ Created on Jan. 27, 2023
 
 import numpy as np
 from scipy.special import factorial
+from mpmath import polylog
 
 
-class Sterling1():
-    """Stirling numbers of the first kind
+class Sterling1us:
+    """Stirling numbers of the first kind (unsigned)
     """
     # based on
     # https://rosettacode.org/wiki/Stirling_numbers_of_the_first_kind#Python
@@ -19,17 +20,14 @@ class Sterling1():
         self._cache = {}
 
     def __call__(self, n, k):
-        key = str(n) + "," + str(k)
-
-        if key in self._cache.keys():
+        key = (n, k)
+        if key in self._cache:
             return self._cache[key]
-        if n == k == 0:
+        if n == k:
             return 1
-        if n > 0 and k == 0:
+        if (n > 0 and k == 0) or k > n:
             return 0
-        if k > n:
-            return 0
-        result = sterling1(n - 1, k - 1) + (n - 1) * sterling1(n - 1, k)
+        result = self(n - 1, k - 1) + (n - 1) * self(n - 1, k)
         self._cache[key] = result
         return result
 
@@ -39,10 +37,16 @@ class Sterling1():
         self._cache = {}
 
 
-sterling1 = Sterling1()
+sterling1us = Sterling1us()
 
 
-class Sterling2():
+def sterling1s(n, k):
+    """Stirling numbers of the first kind (signed)
+    """
+    return sterling1us(n, k) * (-1) ** (n - k)
+
+
+class Sterling2:
     """Stirling numbers of the second kind
     """
     # based on
@@ -52,19 +56,14 @@ class Sterling2():
         self._cache = {}
 
     def __call__(self, n, k):
-        key = str(n) + "," + str(k)
-
-        if key in self._cache.keys():
+        key = (n, k)
+        if key in self._cache:
             return self._cache[key]
-        if n == k == 0:
-            return 1
-        if (n > 0 and k == 0) or (n == 0 and k > 0):
-            return 0
         if n == k:
             return 1
-        if k > n:
+        if (n > 0 and k == 0) or k > n:
             return 0
-        result = k * sterling2(n - 1, k) + sterling2(n - 1, k - 1)
+        result = k * self(n - 1, k) + self(n - 1, k - 1)
         self._cache[key] = result
         return result
 
@@ -103,8 +102,16 @@ def lin(n, z):
     if np.size(z) > 1:
         z = np.array(z)[..., None]
 
-    k = np.arange(n+1)
+    k = range(n + 1)
     st2 = np.array([sterling2(n + 1, ki + 1) for ki in k])
-    res = (-1)**(n+1) * np.sum(factorial(k) * st2 * (-1 / (1 - z))**(k+1),
-                               axis=-1)
+    res = (-1)**(n+1) * np.sum(factorial(k) * st2
+                                * (-1 / (1 - z))**(np.array(k)+1), axis=-1)
+    # this formula is numerically unstable for large n and low z
+    # e.g. lin(25,1e-9)
+    # better use mpmath.polylog
     return res
+
+
+"""Polylogarithm from mpmath, vectorized
+"""
+polylog_vec = np.vectorize(lambda n, z: float(polylog(n, z)))
