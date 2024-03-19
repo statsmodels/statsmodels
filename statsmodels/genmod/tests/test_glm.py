@@ -2661,3 +2661,31 @@ def test_tweedie_score():
             nhess = approx_hess_cs(pa, lambda x: model.loglike(x, scale=1))
             ahess = model.hessian(pa, scale=1)
             assert_allclose(nhess, ahess, atol=5e-8, rtol=5e-8)
+
+def test_names():
+    """Test the name properties if using a pandas series.
+
+    Don't care about the data here, only testing the name properties.
+    """
+    y = pd.Series([0, 1], name="endog")
+    x = pd.DataFrame({"a": [1, 1], "b": [1, 0]})
+    exposure = pd.Series([0, 0], name="exposure")
+    freq_weights = pd.Series([0, 0], name="freq_weights")
+    offset = pd.Series([0, 0], name="offset")
+    var_weights = pd.Series([0, 0], name="var_weights")
+
+    model = GLM(
+        endog=y,
+        exog=x,
+        exposure=exposure,
+        freq_weights=freq_weights,
+        offset=offset,
+        var_weights=var_weights,
+        family=sm.families.Tweedie(),
+    )
+    assert model.offset_name == "offset"
+    assert model.exposure_name == "exposure"
+    assert model.freq_weights_name == "freq_weights"
+    assert model.var_weights_name == "var_weights"
+    assert model.endog_names == "endog"
+    assert model.exog_names == ["a", "b"]
