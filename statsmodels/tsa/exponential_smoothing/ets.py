@@ -1164,7 +1164,7 @@ class ETSModel(base.StateSpaceMLEModel):
             # multiplicative model is no longer well-defined. Zero values
             # are replaced with 10^-32 (a very small number. For more
             # information on the derivation of the log-likelihood for the
-            # multiplicative error models see: 
+            # multiplicative error models see:
             # https://openforecast.org/adam/ADAMETSEstimationLikelihood.html
             yhat[yhat == 0] = 1e-32
             logL -= np.sum(np.log(np.abs(yhat)))
