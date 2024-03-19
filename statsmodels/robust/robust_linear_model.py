@@ -194,7 +194,8 @@ class RLM(base.LikelihoodModel):
             return scale.scale_est(self, resid) ** 2
 
     def fit(self, maxiter=50, tol=1e-8, scale_est='mad', init=None, cov='H1',
-            update_scale=True, conv='dev', start_params=None):
+            update_scale=True, conv='dev', start_params=None, weights=1.):
+
         """
         Fits the model using iteratively reweighted least squares.
 
@@ -252,20 +253,23 @@ class RLM(base.LikelihoodModel):
         self.scale_est = scale_est
 
         if start_params is None:
-            wls_results = lm.WLS(self.endog, self.exog).fit()
+            wls_results = lm.WLS(self.endog, self.exog, weights=weights).fit()
         else:
             start_params = np.asarray(start_params, dtype=np.double).squeeze()
             if (start_params.shape[0] != self.exog.shape[1] or
                     start_params.ndim != 1):
                 raise ValueError('start_params must by a 1-d array with {} '
                                  'values'.format(self.exog.shape[1]))
+            # TODO: use initial weights if given
             fake_wls = reg_tools._MinimalWLS(self.endog, self.exog,
                                              weights=np.ones_like(self.endog),
                                              check_weights=False)
             wls_results = fake_wls.results(start_params)
 
-        if not init:
+        if init is None:
             self.scale = self._estimate_scale(wls_results.resid)
+        else:
+            self.scale = init['scale']
 
         history = dict(params=[np.inf], scale=[])
         if conv == 'coefs':
