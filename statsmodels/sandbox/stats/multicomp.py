@@ -1281,7 +1281,7 @@ def tukeyhsd(mean_all, nobs_all, var_all, df=None, alpha=0.05, q_crit=None):
         var_pairs = var_all * varcorrection_pairs_unbalanced(nobs_all,
                                                              srange=True)
     elif np.size(var_all) > 1:
-        var_pairs, df_sum = varcorrection_pairs_unequal(nobs_all, var_all, df)
+        var_pairs, df_sum = varcorrection_pairs_unequal(var_all, nobs_all, df)
         var_pairs /= 2.
         #check division by two for studentized range
 
@@ -1414,7 +1414,7 @@ def distance_st_range(mean_all, nobs_all, var_all, df=None, triu=False):
         var_pairs = var_all * varcorrection_pairs_unbalanced(nobs_all,
                                                              srange=True)
     elif np.size(var_all) > 1:
-        var_pairs, df_sum = varcorrection_pairs_unequal(nobs_all, var_all, df)
+        var_pairs, df_sum = varcorrection_pairs_unequal(var_all, nobs_all, df)
         var_pairs /= 2.
         #check division by two for studentized range
 
