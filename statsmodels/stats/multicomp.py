@@ -10,7 +10,7 @@ from statsmodels.sandbox.stats.multicomp import (  # noqa:F401
 __all__ = ['tukeyhsd', 'MultiComparison']
 
 
-def pairwise_tukeyhsd(endog, groups, alpha=0.05):
+def pairwise_tukeyhsd(endog, groups, alpha=0.05, use_var='equal'):
     """
     Calculate all pairwise comparisons with TukeyHSD confidence intervals
 
@@ -22,6 +22,9 @@ def pairwise_tukeyhsd(endog, groups, alpha=0.05):
         array with groups, can be string or integers
     alpha : float
         significance level for the test
+    use_var : {"unequal", "equal"}
+        If ``use_var`` is "unequal", then degrees of freedom is
+        scalar, also known as Games-Howell Test.
 
     Returns
     -------
@@ -40,4 +43,5 @@ def pairwise_tukeyhsd(endog, groups, alpha=0.05):
     statsmodels.sandbox.stats.multicomp.TukeyHSDResults
     """
 
-    return MultiComparison(endog, groups).tukeyhsd(alpha=alpha)
+    return MultiComparison(endog, groups).tukeyhsd(alpha=alpha,
+                                                   use_var=use_var)
