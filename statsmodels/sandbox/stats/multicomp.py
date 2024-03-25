@@ -967,7 +967,7 @@ class MultiComparison:
         return results_table, (res, reject, pvals_corrected,
                                alphacSidak, alphacBonf), resarr
 
-    def tukeyhsd(self, alpha=0.05):
+    def tukeyhsd(self, alpha=0.05, use_var='equal'):
         """
         Tukey's range test to compare means of all pairs of groups
 
@@ -975,6 +975,9 @@ class MultiComparison:
         ----------
         alpha : float, optional
             Value of FWER at which to calculate HSD.
+        use_var : {"unequal", "equal"}
+            If ``use_var`` is "unequal", then degrees of freedom is
+            scalar, also known as Games-Howell Test.
 
         Returns
         -------
@@ -988,9 +991,13 @@ class MultiComparison:
 
         gmeans = self.groupstats.groupmean
         gnobs = self.groupstats.groupnobs
-        # var_ = self.groupstats.groupvarwithin()
-        # #possibly an error in varcorrection in this case
-        var_ = np.var(self.groupstats.groupdemean(), ddof=len(gmeans))
+        if use_var == 'unequal':
+            var_ = self.groupstats.groupvarwithin()
+        elif use_var == 'equal':
+            var_ = np.var(self.groupstats.groupdemean(), ddof=len(gmeans))
+        else:
+            raise ValueError('use_var should be "unequal" or "equal"')
+
         # res contains: 0:(idx1, idx2), 1:reject, 2:meandiffs, 3: std_pairs,
         # 4:confint, 5:q_crit, 6:df_total, 7:reject2, 8: pvals
         res = tukeyhsd(gmeans, gnobs, var_, df=None, alpha=alpha, q_crit=None)
@@ -1230,8 +1237,6 @@ def varcorrection_pairs_unequal(var_all, nobs_all, df_all):
     This needs to be multiplies by the joint variance estimate, means square
     error, MSE. To obtain the correction factor for the standard deviation,
     square root needs to be taken.
-
-    TODO: something looks wrong with dfjoint, is formula from SPSS
     '''
     #TODO: test and replace with broadcasting
     v1, v2 = np.meshgrid(var_all, var_all)
@@ -1240,7 +1245,7 @@ def varcorrection_pairs_unequal(var_all, nobs_all, df_all):
 
     varjoint = v1/n1 + v2/n2
 
-    dfjoint = varjoint**2 / (df1 * (v1/n1)**2 + df2 * (v2/n2)**2)
+    dfjoint = varjoint**2 / ((v1/n1)**2 / df1 + (v2/n2)**2 / df2)
 
     return varjoint, dfjoint
 
@@ -1272,6 +1277,7 @@ def tukeyhsd(mean_all, nobs_all, var_all, df=None, alpha=0.05, q_crit=None):
     else:
         df_total = np.sum(df)
 
+    df_pairs_ = None
     if (np.size(nobs_all) == 1) and (np.size(var_all) == 1):
         #balanced sample sizes and homogenous variance
         var_pairs = 1. * var_all / nobs_all * np.ones((n_means, n_means))
@@ -1281,7 +1287,7 @@ def tukeyhsd(mean_all, nobs_all, var_all, df=None, alpha=0.05, q_crit=None):
         var_pairs = var_all * varcorrection_pairs_unbalanced(nobs_all,
                                                              srange=True)
     elif np.size(var_all) > 1:
-        var_pairs, df_sum = varcorrection_pairs_unequal(nobs_all, var_all, df)
+        var_pairs, df_pairs_ = varcorrection_pairs_unequal(var_all, nobs_all, df)
         var_pairs /= 2.
         #check division by two for studentized range
 
@@ -1296,10 +1302,12 @@ def tukeyhsd(mean_all, nobs_all, var_all, df=None, alpha=0.05, q_crit=None):
     idx1, idx2 = np.triu_indices(n_means, 1)
     meandiffs = meandiffs_[idx1, idx2]
     std_pairs = std_pairs_[idx1, idx2]
+    if df_pairs_ is not None:
+        df_total = df_pairs_[idx1, idx2]
 
     st_range = np.abs(meandiffs) / std_pairs #studentized range statistic
 
-    df_total_ = max(df_total, 5)  #TODO: smallest df in table
+    df_total_ = np.maximum(df_total, 5)  #TODO: smallest df in table
     if q_crit is None:
         q_crit = get_tukeyQcrit2(n_means, df_total, alpha=alpha)
 
@@ -1414,7 +1422,7 @@ def distance_st_range(mean_all, nobs_all, var_all, df=None, triu=False):
         var_pairs = var_all * varcorrection_pairs_unbalanced(nobs_all,
                                                              srange=True)
     elif np.size(var_all) > 1:
-        var_pairs, df_sum = varcorrection_pairs_unequal(nobs_all, var_all, df)
+        var_pairs, df_sum = varcorrection_pairs_unequal(var_all, nobs_all, df)
         var_pairs /= 2.
         #check division by two for studentized range
 
