@@ -223,8 +223,8 @@ assert_almost_equal(meandiff1, meandiff2, decimal=14)
 
 # result in R: library(rstatix)
 # games_howell_test(df, StressReduction ~ Treatment, conf.level = 0.99)
-ss2_unequal = '''\    
-	.y.	group1	group2	estimate	conf.low	conf.high	p.adj	p.adj.signif
+ss2_unequal = '''\
+.y.	group1	group2	estimate	conf.low	conf.high	p.adj	p.adj.signif
 <chr>	<chr>	<chr>	<dbl>	<dbl>	<dbl>	<dbl>	<chr>
 1	StressReduction	medical	mental	1.8888889	0.7123348	3.0654430	0.000196	***
 2	StressReduction	medical	physical	0.8888889	-0.8105798	2.5883575	0.206000	ns
