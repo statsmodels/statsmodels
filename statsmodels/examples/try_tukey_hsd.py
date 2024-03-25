@@ -219,3 +219,34 @@ assert_equal(reject1, reject2)
 meandiff1 = res3.meandiffs
 meandiff2 = sas_['mean']
 assert_almost_equal(meandiff1, meandiff2, decimal=14)
+
+
+# result in R: library(rstatix)
+# games_howell_test(df, StressReduction ~ Treatment, conf.level = 0.99)
+ss2_unequal = '''\    
+	.y.	group1	group2	estimate	conf.low	conf.high	p.adj	p.adj.signif
+<chr>	<chr>	<chr>	<dbl>	<dbl>	<dbl>	<dbl>	<chr>
+1	StressReduction	medical	mental	1.8888889	0.7123348	3.0654430	0.000196	***
+2	StressReduction	medical	physical	0.8888889	-0.8105798	2.5883575	0.206000	ns
+3	StressReduction	mental	physical	-1.0000000	-2.6647461	0.6647461	0.127000	ns
+'''
+
+ss2_unequal = '''\
+1	StressReduction	medical	mental	1.8888889	0.7123348	3.0654430	0.000196	***
+2	StressReduction	medical	physical	0.8888889	-0.8105798	2.5883575	0.206000	ns
+3	StressReduction	mental	physical	-1.0000000	-2.6647461	0.6647461	0.127000	ns
+'''
+res2s_001_unequal = mc2s.tukeyhsd(alpha=0.01, use_var='unequal')
+dta2_unequal = np.recfromtxt(StringIO(ss2_unequal), names=('idx', 'y', 'group1', 'group2', 'meandiff', 'lower', 'upper', 'pvalue', 'sig'), delimiter='\t')
+meandiff1 = res2s_001_unequal.meandiffs
+meandiff2 = dta2_unequal['meandiff']
+assert_almost_equal(meandiff1, meandiff2, decimal=6)
+lower1 = res2s_001_unequal.confint[:, 0]
+lower2 = dta2_unequal['lower']
+assert_almost_equal(lower1, lower2, decimal=6)
+upper1 = res2s_001_unequal.confint[:, 1]
+upper2 = dta2_unequal['upper']
+assert_almost_equal(upper1, upper2, decimal=6)
+pvalue1 = res2s_001_unequal.pvalues
+pvalue2 = dta2_unequal['pvalue']
+assert_almost_equal(pvalue1, pvalue2, decimal=4)
