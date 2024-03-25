@@ -967,7 +967,7 @@ class MultiComparison:
         return results_table, (res, reject, pvals_corrected,
                                alphacSidak, alphacBonf), resarr
 
-    def tukeyhsd(self, alpha=0.05):
+    def tukeyhsd(self, alpha=0.05, use_var='equal'):
         """
         Tukey's range test to compare means of all pairs of groups
 
@@ -975,6 +975,9 @@ class MultiComparison:
         ----------
         alpha : float, optional
             Value of FWER at which to calculate HSD.
+        use_var : {"unequal", "equal"}
+            If ``use_var`` is "unequal", then the variances can differ across
+            samples and the effect size for Welch anova will be computed.
 
         Returns
         -------
@@ -988,9 +991,13 @@ class MultiComparison:
 
         gmeans = self.groupstats.groupmean
         gnobs = self.groupstats.groupnobs
-        # var_ = self.groupstats.groupvarwithin()
-        # #possibly an error in varcorrection in this case
-        var_ = np.var(self.groupstats.groupdemean(), ddof=len(gmeans))
+        if use_var == 'unequal':
+            var_ = self.groupstats.groupvarwithin()
+        elif use_var == 'equal':
+            var_ = np.var(self.groupstats.groupdemean(), ddof=len(gmeans))
+        else:
+            raise ValueError('use_var should be "unequal" or "equal"')
+
         # res contains: 0:(idx1, idx2), 1:reject, 2:meandiffs, 3: std_pairs,
         # 4:confint, 5:q_crit, 6:df_total, 7:reject2, 8: pvals
         res = tukeyhsd(gmeans, gnobs, var_, df=None, alpha=alpha, q_crit=None)
