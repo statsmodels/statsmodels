@@ -121,8 +121,13 @@ class _ConditionalModel(base.LikelihoodModel):
             full_output=full_output,
             disp=disp,
             skip_hessian=skip_hessian)
+        
+        if skip_hessian:
+            cov_params = None
+        else:
+            cov_params = rslt.cov_params()
 
-        crslt = ConditionalResults(self, rslt.params, rslt.cov_params(), 1)
+        crslt = ConditionalResults(self, rslt.params, cov_params, 1)
         crslt.method = method
         crslt.nobs = self.nobs
         crslt.n_groups = self._n_groups
