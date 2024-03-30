@@ -16,7 +16,7 @@ from statsmodels.robust.norms import (
     AndrewWave,
     TrimmedMean,
     TukeyBiweight,
-    # TukeyQuartic,
+    TukeyQuartic,
     Hampel,
     )
 
@@ -32,7 +32,7 @@ effs = [0.9, 0.95, 0.98, 0.99]
 
 results_menenez = [
     (TukeyBiweight, [3.8827, 4.6851, 5.9207, 7.0414]),
-    # (TukeyQuartic, [3.1576, 3.6175, 4.2103, 4.6664]),
+    (TukeyQuartic, [3.1576, 3.6175, 4.2103, 4.6664]),
     # (TukeyQuartic(k=2), [3.8827, 4.6851, 5.9207, 7.0414]),
     (AndrewWave, [1.1117, 1.338, 1.6930, 2.0170]),
     (TrimmedMean, [2.5003, 2.7955, 3.1365, 3.3682]),
