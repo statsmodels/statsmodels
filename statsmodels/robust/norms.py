@@ -97,6 +97,9 @@ class LeastSquares(RobustNorm):
     statsmodels.robust.norms.RobustNorm
     """
 
+    def max_rho(self):
+        return np.inf
+
     def rho(self, z):
         """
         The least squares estimator rho function
@@ -187,6 +190,16 @@ class HuberT(RobustNorm):
 
     def __init__(self, t=1.345):
         self.t = t
+
+    def _set_tuning_param(self, c):
+        """Set and change the tuning parameter of the Norm.
+
+        Warning: this needs to wipe cached attributes that depend on the param.
+        """
+        self.t = c
+
+    def max_rho(self):
+        return np.inf
 
     def _subset(self, z):
         """
@@ -298,6 +311,9 @@ class RamsayE(RobustNorm):
     def __init__(self, a=.3):
         self.a = a
 
+    def max_rho(self):
+        return np.inf
+
     def rho(self, z):
         r"""
         The robust criterion function for Ramsay's Ea.
@@ -388,6 +404,16 @@ class AndrewWave(RobustNorm):
     def __init__(self, a=1.339):
         self.a = a
 
+    def _set_tuning_param(self, a):
+        """Set and change the tuning parameter of the Norm.
+
+        Warning: this needs to wipe cached attributes that depend on the param.
+        """
+        self.a = a
+
+    def max_rho(self):
+        return 2 * self.a**2
+
     def _subset(self, z):
         """
         Andrew's wave is defined piecewise over the range of z.
@@ -412,7 +438,7 @@ class AndrewWave(RobustNorm):
             .. math::
 
                 rho(z) & = a^2 *(1-cos(z/a)), |z| \leq a\pi \\
-                rho(z) & = 2a, |z|>q\pi
+                rho(z) & = 2a^2, |z|>a\pi
         """
 
         a = self.a
@@ -508,6 +534,16 @@ class TrimmedMean(RobustNorm):
 
     def __init__(self, c=2.):
         self.c = c
+
+    def _set_tuning_param(self, c):
+        """Set and change the tuning parameter of the Norm.
+
+        Warning: this needs to wipe cached attributes that depend on the param.
+        """
+        self.c = c
+
+    def max_rho(self):
+        return self.rho(self.c)
 
     def _subset(self, z):
         """
@@ -616,6 +652,18 @@ class Hampel(RobustNorm):
         self.a = a
         self.b = b
         self.c = c
+
+    def _set_tuning_param(self, c):
+        """Set and change the tuning parameter of the Norm.
+
+        Warning: this needs to wipe cached attributes that depend on the param.
+        """
+        self.c = c
+        self.a = c / 4
+        self.b = c / 2
+
+    def max_rho(self):
+        return self.rho(self.c)
 
     def _subset(self, z):
         """
@@ -790,6 +838,16 @@ class TukeyBiweight(RobustNorm):
     def __init__(self, c=4.685):
         self.c = c
 
+    def _set_tuning_param(self, c):
+        """Set and change the tuning parameter of the Norm.
+
+        Warning: this needs to wipe cached attributes that depend on the param.
+        """
+        self.c = c
+
+    def max_rho(self):
+        return self.rho(self.c)
+
     def _subset(self, z):
         """
         Tukey's biweight is defined piecewise over the range of z
@@ -898,6 +956,16 @@ class TukeyQuartic(RobustNorm):
         self.c = c
         self.k = k
 
+    def _set_tuning_param(self, c):
+        """Set and change the tuning parameter of the Norm.
+
+        Warning: this needs to wipe cached attributes that depend on the param.
+        """
+        self.c = c
+
+    def max_rho(self):
+        return self.rho(self.c)
+
     def _subset(self, z):
         """
         TukeyQuartic is defined piecewise over the range of z
@@ -936,7 +1004,7 @@ class TukeyQuartic(RobustNorm):
         #     constant
         rh = (
             subset * 1 / 2 * z**2 *
-                (1 - 4 / (k + 2) * x**k + 1 / (k + 1) * x**(2 * k)) +
+                (1 - 4 / (k + 2) * x**k + 1 / (k + 1) * x**(2 * k)) +  # noqa
             (1 - subset) * rhoc
             )
         return rh
@@ -1021,6 +1089,17 @@ class StudentT(RobustNorm):
     def __init__(self, c=2.3849, df=4):
         self.c = c
         self.df = df
+
+    def _set_tuning_param(self, c):
+        """Set and change the tuning parameter of the Norm.
+
+        Warning: this needs to wipe cached attributes that depend on the param.
+        """
+        self.c = c
+
+    def max_rho(self):
+        return self.rho(self.c)
+
 
     def rho(self, z):
         """

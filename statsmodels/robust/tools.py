@@ -148,11 +148,13 @@ def _get_tuning_param(norm, eff, kwd="c", kwargs=None, use_jump=False,
 
     if not use_jump:
         def func(c):
-            kwds.update({kwd: c})
-            return _var_normal(norm(**kwds)) - 1 / eff
+            # kwds.update({kwd: c})
+            # return _var_normal(norm(**kwds)) - 1 / eff
+            norm._set_tuning_param(c)
+            return _var_normal(norm) - 1 / eff
     else:
         def func(c):
-            kwds.update({kwd: c})
+            norm._set_tuning_param(c)
             return _var_normal_jump(norm(**kwds) - 1 / eff)
 
     res = optimize.brentq(func, *bracket)
@@ -163,10 +165,11 @@ def tuning_s_estimator_mean(norm, breakdown=None):
     """Tuning parameter and scale bias correction for S-estimators of mean.
 
     The reference distribution is the normal distribution.
+    This requires a (hard) redescending norm, i.e. with finite max rho.
 
     Parameters
     ----------
-    norm : RobustNorm subclass
+    norm : instance of RobustNorm subclass
     breakdown : float or iterable of float in (0, 0.5]
         Desired breakdown point between 0 and 0.5.
         Default if breakdown is None is a list of breakdown points.
@@ -192,6 +195,7 @@ def tuning_s_estimator_mean(norm, breakdown=None):
     optimize.
 
     TODO: more options for details, numeric approximation and root finding.
+    There is currently no feasibility check in functions.
 
     Reference
     ---------
@@ -210,16 +214,17 @@ def tuning_s_estimator_mean(norm, breakdown=None):
             bps = [breakdown]
 
     def func(c):
-        norm_ = norm(c=c)
-        bp = stats.norm.expect(lambda x : norm_.rho(x)) / norm_.rho(norm_.c)
+        norm_ = norm
+        norm_._set_tuning_param(c)
+        bp = stats.norm.expect(lambda x : norm_.rho(x)) / norm_.max_rho()
         return bp
 
     res = []
     for bp in bps:
-        c_bp = optimize.brentq(lambda c0: func(c0) - bp, 0.5, 10)
-        norm_ = norm(c=c_bp)
-        eff = 1 / _var_normal(norm_)
-        b = stats.norm.expect(lambda x : norm_.rho(x))
+        c_bp = optimize.brentq(lambda c0: func(c0) - bp, 0.1, 10)
+        norm._set_tuning_param(c_bp)  # inplace modification
+        eff = 1 / _var_normal(norm)
+        b = stats.norm.expect(lambda x : norm.rho(x))
         res.append([bp, eff, c_bp, b])
 
     if np.size(bps) > 1:
