@@ -514,7 +514,7 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
 
         Parameters
         ----------
-        method : {'ljungbox','boxpierece', None}
+        method : {'ljungbox', 'boxpierce', None}
             The statistical test for serial correlation. If None, an attempt is
             made to select an appropriate test.
         lags : None, int or array_like

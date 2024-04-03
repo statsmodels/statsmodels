@@ -134,18 +134,11 @@ Merged Pull Requests
 
 The following Pull Requests were merged since the last release:
 
-- :pr:`8129`: ENH: Outlier robust covariance - rebased
-- :pr:`8919`: ENH: add MultivariateLS
 - :pr:`9029`: Update seasonal.py
 - :pr:`9098`: Bump github/codeql-action from 2 to 3
-- :pr:`9101`: refactor code to drop constant columns
-- :pr:`9106`: MAINT: Explore NumPy 2 compatability
 - :pr:`9110`: BLD: Update minimums
 - :pr:`9111`: MAINT: Fix future issues in pandas
-- :pr:`9112`: Update mins v2
-- :pr:`9113`: MAINT: Remove conditions producing warnings
 - :pr:`9115`: MAINT: Clean up and silence some warnings
-- :pr:`9116`: CI: Update pip pre to 3.12
 - :pr:`9117`: edited requirements.txt
 - :pr:`9124`: MAINT: Fix future issues due to array shapes
 - :pr:`9142`: Fix linting error
