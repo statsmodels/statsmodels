@@ -4,12 +4,9 @@
 requires = [
     "setuptools>=69.0.2; python_version>='3.12'",
     "setuptools>=63.4.3",
-    "cython>=0.29.33,<4",  # Sync with CYTHON_MIN_VER in setup
-    # Workaround for oldest supported numpy using 1.21.6, but SciPy 1.9.2+ requiring 1.22.3+
-    "oldest-supported-numpy; python_version!='3.10' or platform_system!='Windows' or platform_python_implementation=='PyPy'",
-    "numpy>=1.22.3,<2; python_version=='3.10' and platform_system=='Windows' and platform_python_implementation != 'PyPy'",
-    "numpy<2; python_version>='3.12'",
-    "scipy>=1.4",
+    "cython>=3.0.10,<4",  # Sync with CYTHON_MIN_VER in setup
+    "numpy>=2.0.0rc1,<3",
+    "scipy>=1.13",
     "setuptools_scm[toml]>=8,<9"
 ]
 build-backend = "setuptools.build_meta"

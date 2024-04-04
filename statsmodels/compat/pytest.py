@@ -29,8 +29,8 @@ class NoWarningsChecker:
 
 
 def pytest_warns(
-    warning: Type[Warning] | Tuple[Type[Warning], ...] | None
-) -> Union[WarningsChecker, NoWarningsChecker]:
+    warning: type[Warning] | tuple[type[Warning], ...] | None
+) -> WarningsChecker | NoWarningsChecker:
     """
 
     Parameters
