@@ -94,11 +94,11 @@ def descstats(data, cols=None, axis=0):
     -----------------------------
     Test                Statistic       Two-tailed probability
     -----------------+-----------------------------------------
-    Student's t      |  t %7.5f   Pr > |t|   <%.4f
-    Sign             |  M %8.2f   Pr >= |M|  <%.4f
-    Signed Rank      |  S %8.2f   Pr >= |S|  <%.4f
+    Student's t      |  t {:7.5f}   Pr > |t|   <{:.4f}
+    Sign             |  M {:8.2f}   Pr >= |M|  <{:.4f}
+    Signed Rank      |  S {:8.2f}   Pr >= |S|  <{:.4f}
 
-    ''' % (t,p_t,M,p_M,S,p_S)
+    '''.format(t,p_t,M,p_M,S,p_S)
 # Should this be part of a 'descstats'
 # in any event these should be split up, so that they can be called
 # individually and only returned together if someone calls summary
@@ -179,5 +179,5 @@ if __name__ == '__main__':
         data2 = np.recfromcsv('./Econ724_PS_I_Data.csv')
         sum2 = descstats(data2.ahe)
         sum3 = descstats(np.column_stack((data2.ahe,data2.yrseduc)))
-        sum4 = descstats(np.column_stack(([data2[_] for \
-                _ in data2.dtype.names])))
+        sum4 = descstats(np.column_stack([data2[_] for \
+                _ in data2.dtype.names]))

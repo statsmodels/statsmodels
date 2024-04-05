@@ -130,7 +130,7 @@ def check_fitted(results):
     results = getattr(results, '_results', results)
 
     if isinstance(results, (GLMResults, DiscreteResults)):
-        pytest.skip('Not supported for {0}'.format(type(results)))
+        pytest.skip(f'Not supported for {type(results)}')
 
     res = results
     fitted = res.fittedvalues

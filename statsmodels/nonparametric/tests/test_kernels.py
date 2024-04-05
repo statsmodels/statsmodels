@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 
 Created on Sat Dec 14 17:23:25 2013
@@ -142,7 +141,7 @@ class TestCosine(CheckKernelMixin):
     @pytest.mark.xfail(reason="NaN mismatch",
                        raises=AssertionError, strict=True)
     def test_smoothconf(self):
-        super(TestCosine, self).test_smoothconf()
+        super().test_smoothconf()
 
 
 class TestBiweight(CheckKernelMixin):

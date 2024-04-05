@@ -1,4 +1,3 @@
-
 """. regress totemp gnpdefl gnp unemp armed pop year
 
       Source |       SS       df       MS              Number of obs =      16

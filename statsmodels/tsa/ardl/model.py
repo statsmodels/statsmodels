@@ -12,13 +12,11 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Dict,
-    Hashable,
-    Mapping,
     NamedTuple,
     Optional,
-    Sequence,
     Union,
 )
+from collections.abc import Hashable, Mapping, Sequence
 import warnings
 
 import numpy as np
@@ -89,14 +87,14 @@ Alternative: {self.alternative}
 """
 
 
-_UECMOrder = Union[None, int, Dict[Hashable, Optional[int]]]
+_UECMOrder = Union[None, int, dict[Hashable, Optional[int]]]
 
 _ARDLOrder = Union[
     None,
     int,
     _UECMOrder,
     Sequence[int],
-    Dict[Hashable, Union[int, Sequence[int], None]],
+    dict[Hashable, Union[int, Sequence[int], None]],
 ]
 
 _INT_TYPES = (int, np.integer)
@@ -871,7 +869,7 @@ class ARDL(AutoReg):
         hold_back: int | None = None,
         period: int | None = None,
         missing: Literal["none", "raise"] = "none",
-    ) -> ARDL | "UECM":
+    ) -> ARDL | UECM:
         """
         Construct an ARDL from a formula
 
@@ -1208,9 +1206,9 @@ class ARDLResults(AutoRegResults):
         fixed_oos: NDArray | pd.DataFrame | None = None,
         alpha: float = 0.05,
         in_sample: bool = True,
-        fig: "matplotlib.figure.Figure" = None,
+        fig: matplotlib.figure.Figure = None,
         figsize: tuple[int, int] | None = None,
-    ) -> "matplotlib.figure.Figure":
+    ) -> matplotlib.figure.Figure:
         """
         Plot in- and out-of-sample predictions
 

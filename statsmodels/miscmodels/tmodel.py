@@ -81,7 +81,7 @@ class TLinearModel(GenericLikelihoodModel):
             self.fixed_paramsmask = np.isnan(fixdf)
             extra_params_names = ['scale']
 
-        super(TLinearModel, self).initialize()
+        super().initialize()
 
         # Note: this needs to be after super initialize
         # super initialize sets default df_resid,
@@ -223,7 +223,7 @@ class TArma(Arma):
             start_params = np.concatenate((0.05*np.ones(nar + nma), [5, 1]))
 
 
-        res = super(TArma, self).fit_mle(order=order,
+        res = super().fit_mle(order=order,
                                          start_params=start_params,
                                          method=method, maxiter=maxiter,
                                          tol=tol, **kwds)

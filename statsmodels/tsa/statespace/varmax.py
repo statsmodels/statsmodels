@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Vector Autoregressive Moving Average with eXogenous regressors model
 
@@ -197,7 +196,7 @@ class VARMAX(MLEModel):
         kwargs.setdefault('inversion_method', INVERT_UNIVARIATE | SOLVE_LU)
 
         # Initialize the state space model
-        super(VARMAX, self).__init__(
+        super().__init__(
             endog, exog=exog, k_states=k_states, k_posdef=k_posdef, **kwargs
         )
 
@@ -481,7 +480,7 @@ class VARMAX(MLEModel):
 
         # 4. Regression terms
         param_names += [
-            'beta.%s.%s' % (self.exog_names[j], endog_names[i])
+            'beta.{}.{}'.format(self.exog_names[j], endog_names[i])
             for i in range(self.k_endog)
             for j in range(self.k_exog)
         ]
@@ -495,7 +494,7 @@ class VARMAX(MLEModel):
         elif self.error_cov_type == 'unstructured':
             param_names += [
                 ('sqrt.var.%s' % endog_names[i] if i == j else
-                 'sqrt.cov.%s.%s' % (endog_names[j], endog_names[i]))
+                 'sqrt.cov.{}.{}'.format(endog_names[j], endog_names[i]))
                 for i in range(self.k_endog)
                 for j in range(i+1)
             ]
@@ -670,11 +669,11 @@ class VARMAX(MLEModel):
         return unconstrained
 
     def _validate_can_fix_params(self, param_names):
-        super(VARMAX, self)._validate_can_fix_params(param_names)
+        super()._validate_can_fix_params(param_names)
 
         ix = np.cumsum(list(self.parameters.values()))[:-1]
-        (_, ar_names, ma_names, _, _, _) = [
-            arr.tolist() for arr in np.array_split(self.param_names, ix)]
+        (_, ar_names, ma_names, _, _, _) = (
+            arr.tolist() for arr in np.array_split(self.param_names, ix))
 
         if self.enforce_stationarity and self.k_ar > 0:
             if self.k_endog > 1 or self.k_ar > 1:
@@ -814,7 +813,7 @@ class VARMAX(MLEModel):
                  extend_kwargs=None, transformed=True, includes_fixed=False,
                  **kwargs):
         with self._set_final_exog(exog):
-            out = super(VARMAX, self).simulate(
+            out = super().simulate(
                 params, nsimulations, measurement_shocks=measurement_shocks,
                 state_shocks=state_shocks, initial_state=initial_state,
                 anchor=anchor, repetitions=repetitions, exog=exog,
@@ -851,7 +850,7 @@ class VARMAXResults(MLEResults):
     """
     def __init__(self, model, params, filter_results, cov_type=None,
                  cov_kwds=None, **kwargs):
-        super(VARMAXResults, self).__init__(model, params, filter_results,
+        super().__init__(model, params, filter_results,
                                             cov_type, cov_kwds, **kwargs)
 
         self.specification = Bunch(**{
@@ -1022,7 +1021,7 @@ class VARMAXResults(MLEResults):
         # Get the prediction
         with self._set_final_exog(exog):
             with self._set_final_predicted_state(exog, out_of_sample):
-                out = super(VARMAXResults, self).get_prediction(
+                out = super().get_prediction(
                     start=start, end=end, dynamic=dynamic,
                     information_set=information_set, index=index, exog=exog,
                     extend_kwargs=extend_kwargs, **kwargs)
@@ -1052,7 +1051,7 @@ class VARMAXResults(MLEResults):
         exog = self.model._validate_out_of_sample_exog(exog, out_of_sample)
 
         with self._set_final_predicted_state(exog, out_of_sample):
-            out = super(VARMAXResults, self).simulate(
+            out = super().simulate(
                 nsimulations, measurement_shocks=measurement_shocks,
                 state_shocks=state_shocks, initial_state=initial_state,
                 anchor=anchor, repetitions=repetitions, exog=exog,
@@ -1098,7 +1097,7 @@ class VARMAXResults(MLEResults):
         spec = self.specification
         if spec.k_ar > 0 and spec.k_ma > 0:
             model_name = 'VARMA'
-            order = '(%s,%s)' % (spec.k_ar, spec.k_ma)
+            order = '({},{})'.format(spec.k_ar, spec.k_ma)
         elif spec.k_ar > 0:
             model_name = 'VAR'
             order = '(%s)' % (spec.k_ar)
@@ -1115,7 +1114,7 @@ class VARMAXResults(MLEResults):
         if spec.measurement_error:
             model_name.append('measurement error')
 
-        summary = super(VARMAXResults, self).summary(
+        summary = super().summary(
             alpha=alpha, start=start, model_name=model_name,
             display_params=not separate_params
         )

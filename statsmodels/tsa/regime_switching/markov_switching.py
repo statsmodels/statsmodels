@@ -508,7 +508,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         self.k_tvtp, self.exog_tvtp = prepare_exog(exog_tvtp)
 
         # Initialize the base model
-        super(MarkovSwitching, self).__init__(endog, exog, dates=dates,
+        super().__init__(endog, exog, dates=dates,
                                               freq=freq, missing=missing)
 
         # Dimensions
@@ -1121,7 +1121,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
 
         # Maximum likelihood estimation by scoring
         fargs = (False,)
-        mlefit = super(MarkovSwitching, self).fit(start_params, method=method,
+        mlefit = super().fit(start_params, method=method,
                                                   fargs=fargs,
                                                   maxiter=maxiter,
                                                   full_output=full_output,
@@ -1207,7 +1207,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             llf.append(out[0].llf)
             params.append(out[1])
             if i > 0:
-                delta = 2 * (llf[-1] - llf[-2]) / np.abs((llf[-1] + llf[-2]))
+                delta = 2 * (llf[-1] - llf[-2]) / np.abs(llf[-1] + llf[-2])
             i += 1
 
         # Just return the fitted parameters if requested
@@ -1635,7 +1635,7 @@ class KimSmootherResults(HamiltonFilterResults):
         The dimension of the unobserved state process.
     """
     def __init__(self, model, result):
-        super(KimSmootherResults, self).__init__(model, result)
+        super().__init__(model, result)
 
         attributes = ['smoothed_joint_probabilities',
                       'smoothed_marginal_probabilities']
@@ -2122,7 +2122,7 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
                          " unstable." % _safe_cond(self.cov_params()))
 
         if etext:
-            etext = ["[{0}] {1}".format(i + 1, text)
+            etext = [f"[{i + 1}] {text}"
                      for i, text in enumerate(etext)]
             etext.insert(0, "Warnings:")
             summary.add_extra_txt(etext)

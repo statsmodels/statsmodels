@@ -1,4 +1,3 @@
-
 from statsmodels.tsa.tests.test_stattools import TestCoint_t
 
 

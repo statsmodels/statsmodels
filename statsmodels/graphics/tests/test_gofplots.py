@@ -206,7 +206,7 @@ class TestProbPlotRandomNormalMinimal(BaseProbplotMixin):
         self.data = np.random.normal(loc=8.25, scale=3.25, size=37)
         self.prbplt = ProbPlot(self.data)
         self.line = None
-        super(TestProbPlotRandomNormalMinimal, self).setup_method()
+        super().setup_method()
 
 
 class TestProbPlotRandomNormalWithFit(BaseProbplotMixin):
@@ -215,7 +215,7 @@ class TestProbPlotRandomNormalWithFit(BaseProbplotMixin):
         self.data = np.random.normal(loc=8.25, scale=3.25, size=37)
         self.prbplt = ProbPlot(self.data, fit=True)
         self.line = "q"
-        super(TestProbPlotRandomNormalWithFit, self).setup_method()
+        super().setup_method()
 
 
 class TestProbPlotRandomNormalFullDist(BaseProbplotMixin):
@@ -271,7 +271,7 @@ class TestProbPlotRandomNormalLocScaleDist(BaseProbplotMixin):
         self.data = np.random.normal(loc=8.25, scale=3.25, size=37)
         self.prbplt = ProbPlot(self.data, loc=8, scale=3)
         self.line = "45"
-        super(TestProbPlotRandomNormalLocScaleDist, self).setup_method()
+        super().setup_method()
 
     def test_loc_set(self):
         assert self.prbplt.loc == 8

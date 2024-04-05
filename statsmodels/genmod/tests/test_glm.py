@@ -1597,7 +1597,7 @@ class TestWtdGlmPoisson(CheckWtdDuplicationMixin):
         '''
         Tests Poisson family with canonical log link.
         '''
-        super(TestWtdGlmPoisson, cls).setup_class()
+        super().setup_class()
         cls.endog = np.asarray(cls.endog)
         cls.exog = np.asarray(cls.exog)
 
@@ -1614,7 +1614,7 @@ class TestWtdGlmPoissonNewton(CheckWtdDuplicationMixin):
         '''
         Tests Poisson family with canonical log link.
         '''
-        super(TestWtdGlmPoissonNewton, cls).setup_class()
+        super().setup_class()
 
         start_params = np.array([1.82794424e-04, -4.76785037e-02,
                                  -9.48249717e-02, -2.92293226e-04,
@@ -1636,7 +1636,7 @@ class TestWtdGlmPoissonHC0(CheckWtdDuplicationMixin):
         '''
         Tests Poisson family with canonical log link.
         '''
-        super(TestWtdGlmPoissonHC0, cls).setup_class()
+        super().setup_class()
 
         start_params = np.array([1.82794424e-04, -4.76785037e-02,
                                  -9.48249717e-02, -2.92293226e-04,
@@ -1658,7 +1658,7 @@ class TestWtdGlmPoissonClu(CheckWtdDuplicationMixin):
         '''
         Tests Poisson family with canonical log link.
         '''
-        super(TestWtdGlmPoissonClu, cls).setup_class()
+        super().setup_class()
 
         start_params = np.array([1.82794424e-04, -4.76785037e-02,
                                  -9.48249717e-02, -2.92293226e-04,
@@ -1687,7 +1687,7 @@ class TestWtdGlmBinomial(CheckWtdDuplicationMixin):
         '''
         Tests Binomial family with canonical logit link.
         '''
-        super(TestWtdGlmBinomial, cls).setup_class()
+        super().setup_class()
         cls.endog = cls.endog / 100
         cls.endog_big = cls.endog_big / 100
         cls.res1 = GLM(cls.endog, cls.exog,
@@ -1705,7 +1705,7 @@ class TestWtdGlmNegativeBinomial(CheckWtdDuplicationMixin):
         Tests Negative Binomial family with canonical link
         g(p) = log(p/(p + 1/alpha))
         '''
-        super(TestWtdGlmNegativeBinomial, cls).setup_class()
+        super().setup_class()
         alpha = 1.
 
         with warnings.catch_warnings():
@@ -1727,7 +1727,7 @@ class TestWtdGlmGamma(CheckWtdDuplicationMixin):
         '''
         Tests Gamma family with log link.
         '''
-        super(TestWtdGlmGamma, cls).setup_class()
+        super().setup_class()
         family_link = sm.families.Gamma(sm.families.links.Log())
         cls.res1 = GLM(cls.endog, cls.exog,
                        freq_weights=cls.weight,
@@ -1742,7 +1742,7 @@ class TestWtdGlmGaussian(CheckWtdDuplicationMixin):
         '''
         Tests Gaussian family with log link.
         '''
-        super(TestWtdGlmGaussian, cls).setup_class()
+        super().setup_class()
         family_link = sm.families.Gaussian(sm.families.links.Log())
         cls.res1 = GLM(cls.endog, cls.exog,
                        freq_weights=cls.weight,
@@ -1757,7 +1757,7 @@ class TestWtdGlmInverseGaussian(CheckWtdDuplicationMixin):
         '''
         Tests InverseGaussian family with log link.
         '''
-        super(TestWtdGlmInverseGaussian, cls).setup_class()
+        super().setup_class()
         family_link = sm.families.InverseGaussian(sm.families.links.Log())
         cls.res1 = GLM(cls.endog, cls.exog,
                        freq_weights=cls.weight,
@@ -1772,7 +1772,7 @@ class TestWtdGlmGammaNewton(CheckWtdDuplicationMixin):
         '''
         Tests Gamma family with log link.
         '''
-        super(TestWtdGlmGammaNewton, cls).setup_class()
+        super().setup_class()
         family_link = sm.families.Gamma(sm.families.links.Log())
         cls.res1 = GLM(cls.endog, cls.exog,
                        freq_weights=cls.weight,
@@ -1797,7 +1797,7 @@ class TestWtdGlmGammaScale_X2(CheckWtdDuplicationMixin):
         '''
         Tests Gamma family with log link.
         '''
-        super(TestWtdGlmGammaScale_X2, cls).setup_class()
+        super().setup_class()
         family_link = sm.families.Gamma(sm.families.links.Log())
         cls.res1 = GLM(cls.endog, cls.exog,
                        freq_weights=cls.weight,
@@ -1814,7 +1814,7 @@ class TestWtdGlmGammaScale_dev(CheckWtdDuplicationMixin):
         '''
         Tests Gamma family with log link.
         '''
-        super(TestWtdGlmGammaScale_dev, cls).setup_class()
+        super().setup_class()
         family_link = sm.families.Gamma(sm.families.links.Log())
         cls.res1 = GLM(cls.endog, cls.exog,
                        freq_weights=cls.weight,
@@ -1846,7 +1846,7 @@ class TestWtdTweedieLog(CheckWtdDuplicationMixin):
         '''
         Tests Tweedie family with log link and var_power=1.
         '''
-        super(TestWtdTweedieLog, cls).setup_class()
+        super().setup_class()
         family_link = sm.families.Tweedie(link=sm.families.links.Log(),
                                           var_power=1)
         cls.res1 = GLM(cls.endog, cls.exog,
@@ -1884,7 +1884,7 @@ class TestWtdTweediePower15(CheckWtdDuplicationMixin):
         '''
         Tests Tweedie family with Power(0.5) link and var_power=1.5.
         '''
-        super(TestWtdTweediePower15, cls).setup_class()
+        super().setup_class()
         family_link = sm.families.Tweedie(link=sm.families.links.Power(0.5),
                                           var_power=1.5)
         cls.res1 = GLM(cls.endog, cls.exog,

@@ -321,7 +321,7 @@ class emplikeAFT:
         """
         nobs = self.nobs
         num = (nobs - (np.arange(nobs) + 1.))
-        denom = ((nobs - (np.arange(nobs) + 1.) + 1.))
+        denom = (nobs - (np.arange(nobs) + 1.) + 1.)
         km = (num / denom).reshape(nobs, 1)
         km = km ** np.abs(censors - 1.)
         km = np.cumprod(km)  # If no ties, this is kaplan-meier

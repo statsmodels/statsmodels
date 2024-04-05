@@ -289,7 +289,7 @@ def confint_poisson(count, exposure, method=None, alpha=0.05):
     elif method == "score":
         crit = stats.norm.isf(alpha)
         center = count + crit**2 / 2
-        whalf = crit * np.sqrt((count + crit**2 / 4))
+        whalf = crit * np.sqrt(count + crit**2 / 4)
         ci = ((center - whalf) / n, (center + whalf) / n)
 
     elif method == "midp-c":
@@ -307,7 +307,7 @@ def confint_poisson(count, exposure, method=None, alpha=0.05):
     elif method == "sqrt-cent":
         crit = stats.norm.isf(alpha)
         center = count + crit**2 / 4
-        whalf = crit * np.sqrt((count + 3 / 8))
+        whalf = crit * np.sqrt(count + 3 / 8)
         ci = ((center - whalf) / n, (center + whalf) / n)
 
     elif method == "sqrt-centcc":

@@ -7,7 +7,8 @@ from statsmodels.compat.pandas import (
 )
 from statsmodels.compat.pytest import pytest_warns
 
-from typing import Hashable, Tuple
+from typing import Tuple
+from collections.abc import Hashable
 
 import numpy as np
 import pandas as pd
@@ -641,7 +642,7 @@ def test_determintic_term_equiv(index):
 
 class DummyTerm(DeterministicTerm):
     @property
-    def _eq_attr(self) -> Tuple[Hashable, ...]:
+    def _eq_attr(self) -> tuple[Hashable, ...]:
         return ("Dummy",)
 
     def __str__(self) -> str:

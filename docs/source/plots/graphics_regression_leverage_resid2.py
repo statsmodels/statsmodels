@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 '''
     Using a model built from the the state crime dataset, plot the leverage
     statistics vs. normalized residuals squared.  Observations with

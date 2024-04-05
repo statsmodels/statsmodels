@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 '''
 Load the statewide dataset and plot partial regression of high school
 graduation on murder rate after removing the effects of rate of urbanization,

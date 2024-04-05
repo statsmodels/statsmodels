@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Various Statistical Tests
 
@@ -978,8 +977,8 @@ def het_goldfeldquandt(y, x, idx=None, split=None, drop=None,
         res.split = split
         res._str = """\
 The Goldfeld-Quandt test for null hypothesis that the variance in the second
-subsample is %s than in the first subsample:
-F-statistic =%8.4f and p-value =%8.4f""" % (ordering, fval, fpval)
+subsample is {} than in the first subsample:
+F-statistic ={:8.4f} and p-value ={:8.4f}""".format(ordering, fval, fpval)
 
         return fval, fpval, ordering, res
 

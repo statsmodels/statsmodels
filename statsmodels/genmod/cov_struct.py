@@ -235,7 +235,7 @@ class Unstructured(CovStruct):
 
     def __init__(self, cov_nearest_method="clipped"):
 
-        super(Unstructured, self).__init__(cov_nearest_method)
+        super().__init__(cov_nearest_method)
 
     def initialize(self, model):
 
@@ -314,7 +314,7 @@ class Exchangeable(CovStruct):
 
     def __init__(self):
 
-        super(Exchangeable, self).__init__()
+        super().__init__()
 
         # The correlation between any two values in the same cluster
         self.dep_params = 0.
@@ -446,7 +446,7 @@ class Nested(CovStruct):
         with the corresponding element of QY.
         """
 
-        super(Nested, self).initialize(model)
+        super().initialize(model)
 
         if self.model.weights is not None:
             warnings.warn("weights not implemented for nested cov_struct, "
@@ -600,7 +600,7 @@ class Stationary(CovStruct):
 
     def __init__(self, max_lag=1, grid=None):
 
-        super(Stationary, self).__init__()
+        super().__init__()
         grid = bool_like(grid, "grid", optional=True)
         if grid is None:
             warnings.warn(
@@ -614,7 +614,7 @@ class Stationary(CovStruct):
 
     def initialize(self, model):
 
-        super(Stationary, self).initialize(model)
+        super().initialize(model)
 
         # Time used as an index needs to be integer type.
         if not self.grid:
@@ -722,7 +722,7 @@ class Stationary(CovStruct):
     def covariance_matrix_solve(self, expval, index, stdev, rhs):
 
         if not self.grid:
-            return super(Stationary, self).covariance_matrix_solve(
+            return super().covariance_matrix_solve(
                 expval, index, stdev, rhs)
 
         from statsmodels.tools.linalg import stationary_solve
@@ -784,7 +784,7 @@ class Autoregressive(CovStruct):
 
     def __init__(self, dist_func=None, grid=None):
 
-        super(Autoregressive, self).__init__()
+        super().__init__()
         grid = bool_like(grid, "grid", optional=True)
         # The function for determining distances based on time
         if dist_func is None:
@@ -1009,7 +1009,7 @@ class CategoricalCovStruct(CovStruct):
 
     def initialize(self, model):
 
-        super(CategoricalCovStruct, self).initialize(model)
+        super().initialize(model)
 
         self.nlevel = len(model.endog_values)
         self._ncut = self.nlevel - 1
@@ -1056,13 +1056,13 @@ class GlobalOddsRatio(CategoricalCovStruct):
     """
 
     def __init__(self, endog_type):
-        super(GlobalOddsRatio, self).__init__()
+        super().__init__()
         self.endog_type = endog_type
         self.dep_params = 0.
 
     def initialize(self, model):
 
-        super(GlobalOddsRatio, self).initialize(model)
+        super().initialize(model)
 
         if self.model.weights is not None:
             warnings.warn("weights not implemented for GlobalOddsRatio "
@@ -1371,7 +1371,7 @@ class Equivalence(CovStruct):
 
     def __init__(self, pairs=None, labels=None, return_cov=False):
 
-        super(Equivalence, self).__init__()
+        super().__init__()
 
         if (pairs is None) and (labels is None):
             raise ValueError(
@@ -1471,7 +1471,7 @@ class Equivalence(CovStruct):
 
     def initialize(self, model):
 
-        super(Equivalence, self).initialize(model)
+        super().initialize(model)
 
         if self.model.weights is not None:
             warnings.warn("weights not implemented for equalence cov_struct, "
@@ -1483,7 +1483,7 @@ class Equivalence(CovStruct):
 
         # Initialize so that any equivalence class containing a
         # variance parameter has value 1.
-        self.dep_params = defaultdict(lambda: 0.)
+        self.dep_params = defaultdict(float)
         self._var_classes = set()
         for gp in self.model.group_labels:
             for lb in self.pairs[gp]:
@@ -1516,7 +1516,7 @@ class Equivalence(CovStruct):
         varfunc = self.model.family.variance
         cached_means = self.model.cached_means
         dep_params = defaultdict(lambda: [0., 0., 0.])
-        n_pairs = defaultdict(lambda: 0)
+        n_pairs = defaultdict(int)
         dim = len(params)
 
         for k, gp in enumerate(self.model.group_labels):

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 This models contains the Kernels for Kernel smoothing.
 

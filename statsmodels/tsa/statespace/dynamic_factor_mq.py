@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Dynamic factor model.
 
@@ -3336,7 +3335,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
     Results from fitting a dynamic factor model
     """
     def __init__(self, model, params, filter_results, cov_type=None, **kwargs):
-        super(DynamicFactorMQResults, self).__init__(
+        super().__init__(
             model, params, filter_results, cov_type, **kwargs)
 
     @property

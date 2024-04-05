@@ -63,9 +63,8 @@ def with_metaclass(meta, *bases):
     return type.__new__(metaclass, "temporary_class", (), {})
 
 
-if sys.version_info >= (3, 8):
-    from typing import Literal
-elif TYPE_CHECKING:
+from typing import Literal
+if TYPE_CHECKING:
     from typing_extensions import Literal
 else:
     from typing import Any as Literal

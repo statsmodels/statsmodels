@@ -431,7 +431,7 @@ class STLForecastResults:
         return seasonal
 
     def forecast(
-        self, steps: int = 1, **kwargs: Dict[str, Any]
+        self, steps: int = 1, **kwargs: dict[str, Any]
     ) -> Union[np.ndarray, pd.Series]:
         """
         Out-of-sample forecasts
@@ -462,7 +462,7 @@ class STLForecastResults:
         start: Optional[DateLike] = None,
         end: Optional[DateLike] = None,
         dynamic: Union[bool, DateLike] = False,
-        **kwargs: Dict[str, Any],
+        **kwargs: dict[str, Any],
     ):
         """
         In-sample prediction and out-of-sample forecasting

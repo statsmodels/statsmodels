@@ -4,7 +4,8 @@ to untie these from LikelihoodModel so that they may be re-used generally.
 """
 from __future__ import annotations
 
-from typing import Any, Sequence
+from typing import Any
+from collections.abc import Sequence
 import numpy as np
 from scipy import optimize
 from statsmodels.compat.scipy import SP_LT_15, SP_LT_17
@@ -622,7 +623,7 @@ def _fit_lbfgs(f, score, start_params, fargs, kwargs, disp=True, maxiter=100,
     # if they are present in kwargs, otherwise use the fmin_l_bfgs_b
     # default values.
     names = ('m', 'pgtol', 'factr', 'maxfun', 'epsilon', 'approx_grad')
-    extra_kwargs = dict((x, kwargs[x]) for x in names if x in kwargs)
+    extra_kwargs = {x: kwargs[x] for x in names if x in kwargs}
 
     # Extract values for the options related to the gradient.
     approx_grad = kwargs.get('approx_grad', False)

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from statsmodels.compat.platform import PLATFORM_OSX
 
 from statsmodels.regression.process_regression import (
@@ -60,7 +59,7 @@ def setup1(n, get_model, noise):
 
     gc = GaussianCovariance()
 
-    ix = collections.defaultdict(lambda: [])
+    ix = collections.defaultdict(list)
     for i, g in enumerate(groups):
         ix[g].append(i)
 

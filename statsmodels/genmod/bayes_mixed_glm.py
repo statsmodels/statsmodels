@@ -274,7 +274,7 @@ class _BayesMixedGLM(base.Model):
         # power might be better but not available in older scipy
         exog_vc2 = exog_vc.multiply(exog_vc)
 
-        super(_BayesMixedGLM, self).__init__(endog, exog, **kwargs)
+        super().__init__(endog, exog, **kwargs)
 
         self.exog_vc = exog_vc
         self.exog_vc2 = exog_vc2
@@ -451,7 +451,7 @@ class _BayesMixedGLM(base.Model):
 
         ident = np.concatenate(ident)
 
-        model = super(_BayesMixedGLM, cls).from_formula(
+        model = super().from_formula(
             formula,
             data=data,
             family=family,
@@ -1018,7 +1018,7 @@ class BinomialBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
                  vcp_names=None,
                  vc_names=None):
 
-        super(BinomialBayesMixedGLM, self).__init__(
+        super().__init__(
             endog,
             exog,
             exog_vc=exog_vc,
@@ -1110,7 +1110,7 @@ class PoissonBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
                  vcp_names=None,
                  vc_names=None):
 
-        super(PoissonBayesMixedGLM, self).__init__(
+        super().__init__(
             endog=endog,
             exog=exog,
             exog_vc=exog_vc,

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ Extreme Value Copulas
 Created on Fri Jan 29 19:19:45 2021
 

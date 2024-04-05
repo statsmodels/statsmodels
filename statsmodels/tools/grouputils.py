@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tools for working with groups
 
 This provides several functions to work with groups and a Group class that

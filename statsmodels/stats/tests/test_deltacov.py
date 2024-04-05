@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Unit tests for NonlinearDeltaCov and LikelihoodResults._get_wald_nonlinear
 Created on Sun Mar 01 01:05:35 2015
 

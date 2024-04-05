@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # some cut and paste characters are not ASCII
 '''density estimation based on orthogonal polynomials
 

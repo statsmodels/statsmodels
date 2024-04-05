@@ -15,7 +15,7 @@ from statsmodels.regression.rolling import RollingWLS, RollingOLS
 def gen_data(nobs, nvar, const, pandas=False, missing=0.0, weights=False):
     rs = np.random.RandomState(987499302)
     x = rs.standard_normal((nobs, nvar))
-    cols = ["x{0}".format(i) for i in range(nvar)]
+    cols = [f"x{i}" for i in range(nvar)]
     if const:
         x = tools.add_constant(x)
         cols = ["const"] + cols
@@ -87,7 +87,7 @@ def test_has_nan(data):
         _y = get_sub(y, i, 100)
         _x = get_sub(x, i, 100)
         has_nan[i - 1] = np.squeeze(
-            (np.any(np.isnan(_y)) or np.any(np.isnan(_x)))
+            np.any(np.isnan(_y)) or np.any(np.isnan(_x))
         )
     assert_array_equal(mod._has_nan, has_nan)
 

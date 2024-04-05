@@ -1,5 +1,3 @@
-# coding: utf-8
-
 #Load the El Nino dataset.  Consists of 60 years worth of Pacific Ocean sea
 #surface temperature data.
 

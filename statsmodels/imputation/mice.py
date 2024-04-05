@@ -178,8 +178,8 @@ class MICEData:
     mean structures containing main effects of all other variables in
     `data`.  The variable named `x1` has a conditional mean structure
     that includes an additional term for x2^2.
-    %(_mice_data_example_1)s
-    """ % {'_mice_data_example_1': _mice_data_example_1}
+    {_mice_data_example_1}
+    """.format(_mice_data_example_1=_mice_data_example_1)
 
     def __init__(self, data, perturbation_method='gaussian',
                  k_pmm=20, history_callback=None):
@@ -1129,13 +1129,13 @@ class MICE:
     Examples
     --------
     Run all MICE steps and obtain results:
-    %(mice_example_1)s
+    {mice_example_1}
 
     Obtain a sequence of fitted analysis models without combining
     to obtain summary::
-    %(mice_example_2)s
-    """ % {'mice_example_1': _mice_example_1,
-           'mice_example_2': _mice_example_2}
+    {mice_example_2}
+    """.format(mice_example_1=_mice_example_1,
+           mice_example_2=_mice_example_2)
 
     def __init__(self, model_formula, model_class, data, n_skip=3,
                  init_kwds=None, fit_kwds=None):
@@ -1270,7 +1270,7 @@ class MICEResults(LikelihoodModelResults):
 
     def __init__(self, model, params, normalized_cov_params):
 
-        super(MICEResults, self).__init__(model, params,
+        super().__init__(model, params,
                                           normalized_cov_params)
 
     def summary(self, title=None, alpha=.05):

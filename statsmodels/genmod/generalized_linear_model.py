@@ -122,7 +122,7 @@ class GLM(base.LikelihoodModel):
         array of 1's with length equal to the endog.
         WARNING: Using weights is not verified yet for all possible options
         and results, see Notes.
-    %(extra_params)s
+    {extra_params}
 
     Attributes
     ----------
@@ -291,7 +291,7 @@ class GLM(base.LikelihoodModel):
     interpretation. The loglikelihood is not correctly specified in this case,
     and statistics based on it, such AIC or likelihood ratio tests, are not
     appropriate.
-    """ % {'extra_params': base._missing_param_doc}
+    """.format(extra_params=base._missing_param_doc)
     # Maximum number of endogenous variables when using a formula
     _formula_max_endog = 2
 
@@ -323,7 +323,7 @@ class GLM(base.LikelihoodModel):
         self.freq_weights = freq_weights
         self.var_weights = var_weights
 
-        super(GLM, self).__init__(endog, exog, missing=missing,
+        super().__init__(endog, exog, missing=missing,
                                   offset=offset, exposure=exposure,
                                   freq_weights=freq_weights,
                                   var_weights=var_weights, **kwargs)
@@ -401,12 +401,12 @@ class GLM(base.LikelihoodModel):
         # internal flag to store whether freq_weights were not None
         self._has_freq_weights = (self.freq_weights is not None)
         if self.freq_weights is None:
-            self.freq_weights = np.ones((endog.shape[0]))
+            self.freq_weights = np.ones(endog.shape[0])
             # TODO: check do we want to keep None as sentinel for freq_weights
 
         if np.shape(self.freq_weights) == () and self.freq_weights > 1:
             self.freq_weights = (self.freq_weights *
-                                 np.ones((endog.shape[0])))
+                                 np.ones(endog.shape[0]))
 
         if var_weights is not None:
             if var_weights.shape[0] != endog.shape[0]:
@@ -417,14 +417,14 @@ class GLM(base.LikelihoodModel):
         # internal flag to store whether var_weights were not None
         self._has_var_weights = (var_weights is not None)
         if var_weights is None:
-            self.var_weights = np.ones((endog.shape[0]))
+            self.var_weights = np.ones(endog.shape[0])
             # TODO: check do we want to keep None as sentinel for var_weights
         self.iweights = np.asarray(self.freq_weights * self.var_weights)
 
     def _get_init_kwds(self):
         # this is a temporary fixup because exposure has been transformed
         # see #1609, copied from discrete_model.CountModel
-        kwds = super(GLM, self)._get_init_kwds()
+        kwds = super()._get_init_kwds()
         if 'exposure' in kwds and kwds['exposure'] is not None:
             kwds['exposure'] = np.exp(kwds['exposure'])
         return kwds
@@ -1082,7 +1082,7 @@ class GLM(base.LikelihoodModel):
         # this checks what kind of data is given for Binomial.
         # family will need a reference to endog if this is to be removed from
         # preprocessing
-        self.n_trials = np.ones((self.endog.shape[0]))  # For binomial
+        self.n_trials = np.ones(self.endog.shape[0])  # For binomial
         if isinstance(self.family, families.Binomial):
             tmp = self.family.initialize(self.endog, self.freq_weights)
             self.endog = tmp[0]
@@ -1232,7 +1232,7 @@ class GLM(base.LikelihoodModel):
                                        **kwargs)
             start_params = irls_rslt.params
             del irls_rslt
-        rslt = super(GLM, self).fit(start_params=start_params,
+        rslt = super().fit(start_params=start_params,
                                     maxiter=maxiter, full_output=full_output,
                                     method=method, disp=disp, **kwargs)
 
@@ -1606,7 +1606,7 @@ class GLMResults(base.LikelihoodModelResults):
 
     def __init__(self, model, params, normalized_cov_params, scale,
                  cov_type='nonrobust', cov_kwds=None, use_t=None):
-        super(GLMResults, self).__init__(
+        super().__init__(
                 model,
                 params,
                 normalized_cov_params=normalized_cov_params,

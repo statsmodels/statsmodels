@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Mon Mar  8 16:18:21 2021
 
@@ -122,15 +121,15 @@ class TestKernelsRplus(CheckKernels):
 
     @pytest.mark.parametrize('case', kernels_rplus)
     def test_kernels(self, case):
-        super(TestKernelsRplus, self).test_kernels(case)
+        super().test_kernels(case)
 
     @pytest.mark.parametrize('case', kernels_rplus)
     def test_kernels_vectorized(self, case):
-        super(TestKernelsRplus, self).test_kernels_vectorized(case)
+        super().test_kernels_vectorized(case)
 
     @pytest.mark.parametrize('case', kernels_rplus)
     def test_kernels_weights(self, case):
-        super(TestKernelsRplus, self).test_kernels_weights(case)
+        super().test_kernels_weights(case)
 
 
 class TestKernelsUnit(CheckKernels):
@@ -153,12 +152,12 @@ class TestKernelsUnit(CheckKernels):
 
     @pytest.mark.parametrize('case', kernels_unit)
     def test_kernels(self, case):
-        super(TestKernelsUnit, self).test_kernels(case)
+        super().test_kernels(case)
 
     @pytest.mark.parametrize('case', kernels_unit)
     def test_kernels_vectorized(self, case):
-        super(TestKernelsUnit, self).test_kernels_vectorized(case)
+        super().test_kernels_vectorized(case)
 
     @pytest.mark.parametrize('case', kernels_unit)
     def test_kernels_weights(self, case):
-        super(TestKernelsUnit, self).test_kernels_weights(case)
+        super().test_kernels_weights(case)

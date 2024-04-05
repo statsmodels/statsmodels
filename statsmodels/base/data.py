@@ -396,7 +396,7 @@ class ModelData:
         if isinstance(arr, DataFrame):
             if isinstance(arr.columns, MultiIndex):
                 # Flatten MultiIndexes into "simple" column names
-                return ['_'.join((level for level in c if level))
+                return ['_'.join(level for level in c if level)
                         for c in arr.columns]
             else:
                 return list(arr.columns)
@@ -508,21 +508,21 @@ class PandasData(ModelData):
         if endog.dtype == object or exog is not None and exog.dtype == object:
             raise ValueError("Pandas data cast to numpy dtype of object. "
                              "Check input data with np.asarray(data).")
-        return super(PandasData, self)._convert_endog_exog(endog, exog)
+        return super()._convert_endog_exog(endog, exog)
 
     @classmethod
     def _drop_nans(cls, x, nan_mask):
         if isinstance(x, (Series, DataFrame)):
             return x.loc[nan_mask]
         else:  # extra arguments could be plain ndarrays
-            return super(PandasData, cls)._drop_nans(x, nan_mask)
+            return super()._drop_nans(x, nan_mask)
 
     @classmethod
     def _drop_nans_2d(cls, x, nan_mask):
         if isinstance(x, (Series, DataFrame)):
             return x.loc[nan_mask].loc[:, nan_mask]
         else:  # extra arguments could be plain ndarrays
-            return super(PandasData, cls)._drop_nans_2d(x, nan_mask)
+            return super()._drop_nans_2d(x, nan_mask)
 
     def _check_integrity(self):
         endog, exog = self.orig_endog, self.orig_exog
@@ -531,7 +531,7 @@ class PandasData(ModelData):
                 (hasattr(endog, 'index') and hasattr(exog, 'index')) and
                 not self.orig_endog.index.equals(self.orig_exog.index)):
             raise ValueError("The indices for endog and exog are not aligned")
-        super(PandasData, self)._check_integrity()
+        super()._check_integrity()
 
     def _get_row_labels(self, arr):
         try:

@@ -216,7 +216,7 @@ class PHSurvivalTime:
 
             # Indices of cases that fail at each unique failure time
             #uft_map = {x:i for i,x in enumerate(uft)} # requires >=2.7
-            uft_map = dict([(x, i) for i,x in enumerate(uft)]) # 2.6
+            uft_map = {x: i for i,x in enumerate(uft)} # 2.6
             uft_ix = [[] for k in range(nuft)]
             for ix,ti in zip(ift,ft):
                 uft_ix[uft_map[ti]].append(ix)
@@ -320,7 +320,7 @@ class PHReg(model.LikelihoodModel):
         if status is None:
             status = np.ones(len(endog))
 
-        super(PHReg, self).__init__(endog, exog, status=status,
+        super().__init__(endog, exog, status=status,
                                     entry=entry, strata=strata,
                                     offset=offset, missing=missing,
                                     **kwargs)
@@ -424,7 +424,7 @@ class PHReg(model.LikelihoodModel):
                 import warnings
                 warnings.warn("PHReg formulas should not include any '0' or '1' terms")
 
-        mod = super(PHReg, cls).from_formula(formula, data,
+        mod = super().from_formula(formula, data,
                     status=status, entry=entry, strata=strata,
                     offset=offset, subset=subset, ties=ties,
                     missing=missing, drop_cols=["Intercept"], *args,
@@ -462,7 +462,7 @@ class PHReg(model.LikelihoodModel):
         if 'disp' not in args:
             args['disp'] = False
 
-        fit_rslts = super(PHReg, self).fit(**args)
+        fit_rslts = super().fit(**args)
 
         if self.groups is None:
             cov_params = fit_rslts.cov_params()
@@ -1412,7 +1412,7 @@ class PHRegResults(base.LikelihoodModelResults):
         self.df_resid = model.df_resid
         self.df_model = model.df_model
 
-        super(PHRegResults, self).__init__(model, params, scale=1.,
+        super().__init__(model, params, scale=1.,
            normalized_cov_params=cov_params)
 
     @cache_readonly
@@ -1451,7 +1451,7 @@ class PHRegResults(base.LikelihoodModelResults):
     @Appender(_predict_docstring % {'params_doc': '', 'cov_params_doc': ''})
     def predict(self, endog=None, exog=None, strata=None,
                 offset=None, transform=True, pred_type="lhr"):
-        return super(PHRegResults, self).predict(exog=exog,
+        return super().predict(exog=exog,
                                                  transform=transform,
                                                  cov_params=self.cov_params(),
                                                  endog=endog,
