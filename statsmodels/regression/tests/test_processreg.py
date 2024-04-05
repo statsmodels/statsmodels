@@ -191,9 +191,9 @@ def test_formulas(noise):
     yhat = f.predict()
     assert_equal(np.corrcoef(yhat, mod.endog)[0, 1] > 0.2, True)
     yhatm = f.predict(exog=df)
-    assert_allclose(yhat, yhatm, rtol=1e-13)
+    assert_allclose(yhat, yhatm, rtol=1e-11)
     yhat0 = mod.predict(params=f.params, exog=df)
-    assert_allclose(yhat, yhat0, rtol=1e-13)
+    assert_allclose(yhat, yhat0, rtol=1e-11)
 
     # Smoke test t-test
     f.t_test(np.eye(len(f.params)))

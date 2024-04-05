@@ -9,6 +9,7 @@ Test index support in time series models
 Author: Chad Fulton
 License: BSD-3
 """
+from statsmodels.compat.numpy import NP_LT_2
 from statsmodels.compat.pandas import PD_LT_2_2_0, YEAR_END, is_int_index
 
 import warnings
@@ -337,8 +338,10 @@ def test_instantiation_valid():
         assert mod.data.freq is None
 
         # Supported indexes *when a freq is given*, should not raise a warning
-        with warnings.catch_warnings():
+        with warnings.catch_warnings() as w:
             warnings.simplefilter("error")
+            # Ignore deprecation warnings that come from NumPy via pandas
+            warnings.simplefilter("ignore", category=DeprecationWarning)
 
             for ix, freq in supported_date_indexes:
                 # Avoid warnings due to Series with object dtype
