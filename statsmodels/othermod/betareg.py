@@ -114,9 +114,7 @@ class BetaModel(GenericLikelihoodModel):
 
         kwds['extra_params_names'] = extra_names
 
-        super().__init__(endog, exog,
-                                        exog_precision=exog_precision,
-                                        **kwds)
+        super().__init__(endog, exog, exog_precision=exog_precision, **kwds)
         self.link = link
         self.link_precision = link_precision
         # not needed, handled by super:
@@ -148,8 +146,7 @@ class BetaModel(GenericLikelihoodModel):
                 Z = patsy.dmatrix(exog_precision_formula, data)
             kwargs['exog_precision'] = Z
 
-        return super().from_formula(formula, data, *args,
-                                                  **kwargs)
+        return super().from_formula(formula, data, *args, **kwargs)
 
     def _get_exogs(self):
         return (self.exog, self.exog_precision)
@@ -665,8 +662,8 @@ class BetaModel(GenericLikelihoodModel):
             self.hess_type = "oim"
 
         res = super().fit(start_params=start_params,
-                                         maxiter=maxiter, method=method,
-                                         disp=disp, **kwds)
+                          maxiter=maxiter, method=method,
+                          disp=disp, **kwds)
         if not isinstance(res, BetaResultsWrapper):
             # currently GenericLikelihoodModel doe not add wrapper
             res = BetaResultsWrapper(res)

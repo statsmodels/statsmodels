@@ -62,9 +62,12 @@ def simulations(sim_type, save=False):
             d_minus = (cdf - minus[:, None]).max(0)
             d = np.max(np.abs(np.c_[d_plus, d_minus]), 1)
             results[ss].append(d)
-        logging.log(logging.INFO,
-                    'Completed {}, remaining {}'.format(NUM_SIM - remaining,
-                                                          remaining))
+        logging.log(
+            logging.INFO,
+            'Completed {}, remaining {}'.format(
+                NUM_SIM - remaining, remaining
+            )
+        )
         elapsed = dt.datetime.now() - start
         rem = elapsed.total_seconds() / (NUM_SIM - remaining) * remaining
         logging.log(logging.INFO,

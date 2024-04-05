@@ -131,9 +131,9 @@ class GLMGamResults(GLMResults):
         self.model.df_resid = self.df_resid
         mu = self.fittedvalues
         self.scale = scale = self.model.estimate_scale(mu)
-        super().__init__(model, params,
-                                            normalized_cov_params, scale,
-                                            **kwds)
+        super().__init__(
+            model, params, normalized_cov_params, scale, **kwds
+        )
 
     def _tranform_predict_exog(self, exog=None, exog_smooth=None,
                                transform=True):
@@ -214,9 +214,7 @@ class GLMGamResults(GLMResults):
         ex, exog_index = self._tranform_predict_exog(exog=exog,
                                                      exog_smooth=exog_smooth,
                                                      transform=transform)
-        predict_results = super().predict(ex,
-                                                             transform=False,
-                                                             **kwargs)
+        predict_results = super().predict(ex, transform=False, **kwargs)
         if exog_index is not None and not hasattr(
                 predict_results, 'predicted_values'):
             if predict_results.ndim == 1:
@@ -254,8 +252,7 @@ class GLMGamResults(GLMResults):
         ex, exog_index = self._tranform_predict_exog(exog=exog,
                                                      exog_smooth=exog_smooth,
                                                      transform=transform)
-        return super().get_prediction(ex, transform=False,
-                                                         **kwargs)
+        return super().get_prediction(ex, transform=False, **kwargs)
 
     def partial_values(self, smooth_index, include_constant=True):
         """contribution of a smooth term to the linear prediction
@@ -564,8 +561,8 @@ class GLMGam(PenalizedMixin, GLM):
                                 columns=xnames)
 
         super().__init__(endog, exog=exog, family=family,
-                                     offset=offset, exposure=exposure,
-                                     penal=penal, missing=missing, **kwargs)
+                         offset=offset, exposure=exposure,
+                         penal=penal, missing=missing, **kwargs)
 
         if not is_pandas:
             # set exog nanmes if not given by pandas DataFrame
@@ -646,13 +643,13 @@ class GLMGam(PenalizedMixin, GLM):
                 start_params = res.params
                 del res
             res = super().fit(start_params=start_params,
-                                          maxiter=maxiter, method=method,
-                                          tol=tol, scale=scale,
-                                          cov_type=cov_type, cov_kwds=cov_kwds,
-                                          use_t=use_t,
-                                          full_output=full_output, disp=disp,
-                                          max_start_irls=0,
-                                          **kwargs)
+                              maxiter=maxiter, method=method,
+                              tol=tol, scale=scale,
+                              cov_type=cov_type, cov_kwds=cov_kwds,
+                              use_t=use_t,
+                              full_output=full_output, disp=disp,
+                              max_start_irls=0,
+                              **kwargs)
         return res
 
     # pag 165 4.3 # pag 136 PIRLS
@@ -938,8 +935,7 @@ class LogitGam(PenalizedMixin, Logit):
         self.pen_weight = 1  # TODO: pen weight should not be defined here!!
         penal = MultivariateGamPenalty(smoother, alpha=alpha)
 
-        super().__init__(endog, smoother.basis, penal=penal,
-                                       *args, **kwargs)
+        super().__init__(endog, smoother.basis, penal=penal, *args, **kwargs)
 
 
 def penalized_wls(endog, exog, penalty_matrix, weights):

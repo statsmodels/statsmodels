@@ -892,9 +892,14 @@ class _RCensoredPoisson(_RCensoredGeneric):
 
     def __init__(self, endog, exog, offset=None,
                  exposure=None, missing='none', **kwargs):
-        super().__init__(endog, exog, offset=offset,
-                                                exposure=exposure,
-                                                missing=missing, **kwargs)
+        super().__init__(
+            endog,
+            exog,
+            offset=offset,
+            exposure=exposure,
+            missing=missing,
+            **kwargs
+        )
         self.model_main = Poisson(np.zeros_like(self.endog), self.exog)
         self.model_dist = None
         self.result_class = TruncatedLFGenericResults

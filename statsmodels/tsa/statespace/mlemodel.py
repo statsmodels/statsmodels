@@ -135,8 +135,8 @@ class MLEModel(tsbase.TimeSeriesModel):
                  **kwargs):
         # Initialize the model base
         super().__init__(endog=endog, exog=exog,
-                                       dates=dates, freq=freq,
-                                       missing='none')
+                         dates=dates, freq=freq,
+                         missing='none')
 
         # Store kwargs to recreate model
         self._init_kwargs = kwargs
@@ -701,11 +701,11 @@ class MLEModel(tsbase.TimeSeriesModel):
                 flags['hessian_method'] = optim_hessian
             fargs = (flags,)
             mlefit = super().fit(start_params, method=method,
-                                               fargs=fargs,
-                                               maxiter=maxiter,
-                                               full_output=full_output,
-                                               disp=disp, callback=callback,
-                                               skip_hessian=True, **kwargs)
+                                 fargs=fargs,
+                                 maxiter=maxiter,
+                                 full_output=full_output,
+                                 disp=disp, callback=callback,
+                                 skip_hessian=True, **kwargs)
 
         # Just return the fitted parameters if requested
         if return_params:
@@ -5000,8 +5000,8 @@ class PredictionResults(pred.PredictionResults):
 
         # Initialize
         super().__init__(predicted_mean, var_pred_mean,
-                                                dist='norm',
-                                                row_labels=row_labels)
+                         dist='norm',
+                         row_labels=row_labels)
 
     @property
     def se_mean(self):

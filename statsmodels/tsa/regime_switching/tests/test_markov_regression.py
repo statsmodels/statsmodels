@@ -910,8 +910,7 @@ class TestFedFundsConstShort(MarkovRegression):
             'llf_fit': -7.8553370,
             'llf_fit_em': -7.8554974
         }
-        super().setup_class(true, fedfunds[-10:],
-                                                       k_regimes=2)
+        super().setup_class(true, fedfunds[-10:], k_regimes=2)
 
     def test_filter_output(self, **kwargs):
         res = self.result
@@ -1045,7 +1044,8 @@ class TestFedFundsConstL1(MarkovRegression):
                              .0185031, np.nan]
         }
         super().setup_class(
-            true, fedfunds[1:], k_regimes=2, exog=fedfunds[:-1])
+            true, fedfunds[1:], k_regimes=2, exog=fedfunds[:-1]
+        )
 
     def test_bse(self):
         # Cannot compare last element of bse because we estimate sigma^2 rather

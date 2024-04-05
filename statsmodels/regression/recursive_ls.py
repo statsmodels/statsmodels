@@ -114,7 +114,8 @@ class RecursiveLS(MLEModel):
 
         # Initialize the state space representation
         super().__init__(
-            endog, k_states=self.k_exog, exog=exog, **kwargs)
+            endog, k_states=self.k_exog, exog=exog, **kwargs
+        )
 
         # Use univariate filtering by default
         self.ssm.filter_univariate = True
@@ -169,8 +170,8 @@ class RecursiveLS(MLEModel):
     def filter(self, return_ssm=False, **kwargs):
         # Get the state space output
         result = super().filter([], transformed=True,
-                                                 cov_type='none',
-                                                 return_ssm=True, **kwargs)
+                                cov_type='none',
+                                return_ssm=True, **kwargs)
 
         # Wrap in a results object
         if not return_ssm:
@@ -192,8 +193,8 @@ class RecursiveLS(MLEModel):
     def smooth(self, return_ssm=False, **kwargs):
         # Get the state space output
         result = super().smooth([], transformed=True,
-                                                 cov_type='none',
-                                                 return_ssm=True, **kwargs)
+                                cov_type='none',
+                                return_ssm=True, **kwargs)
 
         # Wrap in a results object
         if not return_ssm:
@@ -273,7 +274,8 @@ class RecursiveLSResults(MLEResults):
     def __init__(self, model, params, filter_results, cov_type='opg',
                  **kwargs):
         super().__init__(
-            model, params, filter_results, cov_type, **kwargs)
+            model, params, filter_results, cov_type, **kwargs
+        )
 
         # Since we are overriding params with things that are not MLE params,
         # need to adjust df's

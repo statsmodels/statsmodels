@@ -102,8 +102,9 @@ class RLM(base.LikelihoodModel):
     >>> rlm_hamp_hub = mod.fit(scale_est=sm.robust.scale.HuberScale())
     >>> rlm_hamp_hub.params
     array([  0.73175452,   1.25082038,  -0.14794399, -40.27122257])
-    """.format(params=base._model_params_doc,
-           extra_params=base._missing_param_doc)
+    """.format(
+        params=base._model_params_doc, extra_params=base._missing_param_doc
+    )
 
     def __init__(self, endog, exog, M=None, missing='none',
                  **kwargs):
@@ -400,8 +401,7 @@ class RLMResults(base.LikelihoodModelResults):
     """
 
     def __init__(self, model, params, normalized_cov_params, scale):
-        super().__init__(model, params,
-                                         normalized_cov_params, scale)
+        super().__init__(model, params, normalized_cov_params, scale)
         self.model = model
         self.df_model = model.df_model
         self.df_resid = model.df_resid

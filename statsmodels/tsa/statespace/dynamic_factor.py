@@ -981,9 +981,7 @@ class DynamicFactorResults(MLEResults):
     """
     def __init__(self, model, params, filter_results, cov_type=None,
                  **kwargs):
-        super().__init__(model, params,
-                                                   filter_results, cov_type,
-                                                   **kwargs)
+        super().__init__(model, params, filter_results, cov_type, **kwargs)
 
         self.df_resid = np.inf  # attribute required for wald tests
 

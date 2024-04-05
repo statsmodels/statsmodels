@@ -355,8 +355,7 @@ class UnivariateGenericSmoother(UnivariateGamSmoother):
         self.der2_basis = der2_basis
         self.cov_der2 = cov_der2
 
-        super().__init__(
-            x, variable_name=variable_name)
+        super().__init__(x, variable_name=variable_name)
 
     def _smooth_basis_for_single_variable(self):
         return self.basis, self.der_basis, self.der2_basis, self.cov_der2
@@ -367,8 +366,7 @@ class UnivariatePolynomialSmoother(UnivariateGamSmoother):
     """
     def __init__(self, x, degree, variable_name='x'):
         self.degree = degree
-        super().__init__(
-            x, variable_name=variable_name)
+        super().__init__(x, variable_name=variable_name)
 
     def _smooth_basis_for_single_variable(self):
         # TODO: unclear description
@@ -455,7 +453,8 @@ class UnivariateBSplines(UnivariateGamSmoother):
         self.covder2_kwds = (covder2_kwds if covder2_kwds is not None
                              else {})
         super().__init__(
-            x, constraints=constraints, variable_name=variable_name)
+            x, constraints=constraints, variable_name=variable_name
+        )
 
     def _smooth_basis_for_single_variable(self):
         basis, der_basis, der2_basis = _eval_bspline_basis(
@@ -520,7 +519,8 @@ class UnivariateCubicSplines(UnivariateGamSmoother):
         self.x = x = self.transform_data(x, initialize=True)
         self.knots = _equally_spaced_knots(x, df)
         super().__init__(
-            x, constraints=constraints, variable_name=variable_name)
+            x, constraints=constraints, variable_name=variable_name
+        )
 
     def transform_data(self, x, initialize=False):
         tm = self.transform_data_method
@@ -641,7 +641,8 @@ class UnivariateCubicCyclicSplines(UnivariateGamSmoother):
         self.x = x
         self.knots = _equally_spaced_knots(x, df)
         super().__init__(
-            x, constraints=constraints, variable_name=variable_name)
+            x, constraints=constraints, variable_name=variable_name
+        )
 
     def _smooth_basis_for_single_variable(self):
         basis = dmatrix("cc(x, df=" + str(self.df) + ") - 1", {"x": self.x})
@@ -818,8 +819,7 @@ class PolynomialSmoother(AdditiveGamSmoother):
     """
     def __init__(self, x, degrees, variable_names=None):
         self.degrees = degrees
-        super().__init__(x,
-                                                 variable_names=variable_names)
+        super().__init__(x, variable_names=variable_names)
 
     def _make_smoothers_list(self):
         smoothers = []
@@ -929,8 +929,11 @@ class BSplines(AdditiveGamSmoother):
         if constraints == 'center':
             include_intercept = True
 
-        super().__init__(x, include_intercept=include_intercept,
-                                       variable_names=variable_names)
+        super().__init__(
+            x,
+            include_intercept=include_intercept,
+            variable_names=variable_names
+        )
 
     def _make_smoothers_list(self):
         smoothers = []
@@ -958,8 +961,9 @@ class CubicSplines(AdditiveGamSmoother):
         self.dfs = df
         self.constraints = constraints
         self.transform = transform
-        super().__init__(x, constraints=constraints,
-                                           variable_names=variable_names)
+        super().__init__(
+            x, constraints=constraints, variable_names=variable_names
+        )
 
     def _make_smoothers_list(self):
         smoothers = []
@@ -999,8 +1003,7 @@ class CyclicCubicSplines(AdditiveGamSmoother):
         self.dfs = df
         # TODO: move attaching constraints to super call
         self.constraints = constraints
-        super().__init__(x,
-                                                 variable_names=variable_names)
+        super().__init__(x, variable_names=variable_names)
 
     def _make_smoothers_list(self):
         smoothers = []

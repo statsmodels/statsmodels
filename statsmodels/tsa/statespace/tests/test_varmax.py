@@ -772,8 +772,9 @@ class TestVARMA(CheckFREDManufacturing):
         params = params[self.model._params_state_cov]
         names = self.model.param_names[self.model._params_state_cov]
         for i in range(len(names)):
-            assert re.search('{} +{}'.format(names[i], forg(params[i], prec=4)),
-                             table)
+            assert re.search(
+                '{} +{}'.format(names[i], forg(params[i], prec=4)), table
+            )
 
 
 class TestVMA1(CheckFREDManufacturing):

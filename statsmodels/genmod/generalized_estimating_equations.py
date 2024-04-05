@@ -535,10 +535,10 @@ class GEE(GLM):
         # ndarrays and the original exog, endog, etc. are
         # self.data.endog, etc.
         super().__init__(endog, exog, groups=groups,
-                                  time=time, offset=offset,
-                                  exposure=exposure, weights=weights,
-                                  dep_data=dep_data, missing=missing,
-                                  family=family, **kwargs)
+                         time=time, offset=offset,
+                         exposure=exposure, weights=weights,
+                         dep_data=dep_data, missing=missing,
+                         family=family, **kwargs)
 
         _check_args(
             self.endog,
@@ -757,11 +757,11 @@ class GEE(GLM):
             del kwargs["family"]
 
         model = super().from_formula(formula, data=data, subset=subset,
-                                             groups=groups, time=time,
-                                             offset=offset,
-                                             exposure=exposure,
-                                             family=family,
-                                             *args, **kwargs)
+                                     groups=groups, time=time,
+                                     offset=offset,
+                                     exposure=exposure,
+                                     family=family,
+                                     *args, **kwargs)
 
         if dep_data_names is not None:
             model._dep_data_names = dep_data_names
@@ -1772,8 +1772,8 @@ class GEEResults(GLMResults):
                  **kwds):
 
         super().__init__(
-            model, params, normalized_cov_params=cov_params,
-            scale=scale)
+            model, params, normalized_cov_params=cov_params, scale=scale
+        )
 
         # not added by super
         self.df_resid = model.df_resid
@@ -2341,8 +2341,8 @@ class OrdinalGEE(GEE):
             endog, exog, groups, time, offset)
 
         super().__init__(endog, exog, groups, time,
-                                         family, cov_struct, missing,
-                                         offset, dep_data, constraint)
+                         family, cov_struct, missing,
+                         offset, dep_data, constraint)
 
     def setup_ordinal(self, endog, exog, groups, time, offset):
         """
@@ -2431,8 +2431,8 @@ class OrdinalGEE(GEE):
             cov_type='robust'):
 
         rslt = super().fit(maxiter, ctol, start_params,
-                                           params_niter, first_dep_update,
-                                           cov_type=cov_type)
+                           params_niter, first_dep_update,
+                           cov_type=cov_type)
 
         rslt = rslt._results   # use unwrapped instance
         res_kwds = {k: getattr(rslt, k) for k in rslt._props}
@@ -2816,8 +2816,8 @@ class NominalGEE(GEE):
             cov_type='robust'):
 
         rslt = super().fit(maxiter, ctol, start_params,
-                                           params_niter, first_dep_update,
-                                           cov_type=cov_type)
+                           params_niter, first_dep_update,
+                           cov_type=cov_type)
         if rslt is None:
             warnings.warn("GEE updates did not converge",
                           ConvergenceWarning)

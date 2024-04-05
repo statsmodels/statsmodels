@@ -151,8 +151,9 @@ class QIF(base.Model):
 
         groups = np.asarray(groups)
 
-        super().__init__(endog, exog, groups=groups,
-                                  missing=missing, **kwargs)
+        super().__init__(
+            endog, exog, groups=groups, missing=missing, **kwargs
+        )
 
         self.group_names = list(set(groups))
         self.nobs = len(self.endog)

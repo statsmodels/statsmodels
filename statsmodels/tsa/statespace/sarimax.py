@@ -1803,8 +1803,7 @@ class SARIMAXResults(MLEResults):
     """
     def __init__(self, model, params, filter_results, cov_type=None,
                  **kwargs):
-        super().__init__(model, params, filter_results,
-                                             cov_type, **kwargs)
+        super().__init__(model, params, filter_results, cov_type, **kwargs)
 
         self.df_resid = np.inf  # attribute required for wald tests
 
@@ -2015,11 +2014,11 @@ class SARIMAXResults(MLEResults):
                                self.model.seasonal_periods))
             if not order == '':
                 order += 'x'
-        model_name = (
-            '{}{}{}'.format(self.model.__class__.__name__, order, seasonal_order)
-            )
+        model_name = f"{self.model.__class__.__name__}{order}{seasonal_order}"
         return super().summary(
-            alpha=alpha, start=start, title='SARIMAX Results',
+            alpha=alpha,
+            start=start,
+            title='SARIMAX Results',
             model_name=model_name
         )
 

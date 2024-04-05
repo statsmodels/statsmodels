@@ -162,7 +162,8 @@ class TestDynamicFactor(CheckDynamicFactor):
         true['dynamic_predict'] = output_results.iloc[1:][[
             'dyn_predict_dfm_1', 'dyn_predict_dfm_2', 'dyn_predict_dfm_3']]
         super().setup_class(
-            true, k_factors=1, factor_order=2)
+            true, k_factors=1, factor_order=2
+        )
 
     def test_bse_approx(self):
         bse = self.results._cov_params_approx().diagonal()**0.5
@@ -181,7 +182,8 @@ class TestDynamicFactor2(CheckDynamicFactor):
         true['dynamic_predict'] = output_results.iloc[1:][[
             'dyn_predict_dfm2_1', 'dyn_predict_dfm2_2', 'dyn_predict_dfm2_3']]
         super().setup_class(
-            true, k_factors=2, factor_order=1)
+            true, k_factors=2, factor_order=1
+        )
 
     def test_mle(self):
         # Stata's MLE on this model does not converge, so no reason to check
@@ -296,7 +298,8 @@ class TestDynamicFactor_exog1(CheckDynamicFactor):
             'dyn_predict_dfm_exog1_3']]
         exog = np.ones((75, 1))
         super().setup_class(
-            true, k_factors=1, factor_order=1, exog=exog)
+            true, k_factors=1, factor_order=1, exog=exog
+        )
 
     def test_predict(self):
         exog = np.ones((16, 1))
@@ -329,7 +332,8 @@ class TestDynamicFactor_exog2(CheckDynamicFactor):
             'dyn_predict_dfm_exog2_3']]
         exog = np.c_[np.ones((75, 1)), (np.arange(75) + 2)[:, np.newaxis]]
         super().setup_class(
-            true, k_factors=1, factor_order=1, exog=exog)
+            true, k_factors=1, factor_order=1, exog=exog
+        )
 
     def test_bse_approx(self):
         bse = self.results._cov_params_approx().diagonal()**0.5
@@ -440,7 +444,8 @@ class TestDynamicFactor_general_errors(CheckDynamicFactor):
             'dyn_predict_dfm_gen_3']]
         super().setup_class(
             true, k_factors=1, factor_order=1, error_var=True,
-            error_order=1, error_cov_type='unstructured')
+            error_order=1, error_cov_type='unstructured'
+        )
 
     def test_bse_approx(self):
         bse = self.results._cov_params_approx().diagonal()
@@ -537,8 +542,9 @@ class TestDynamicFactor_general_errors(CheckDynamicFactor):
             # -> Check that we have the right coefficients
             for j in range(self.model.k_endog):
                 name = self.model.endog_names[j]
-                pattern = r'L1.e\({}\) +{}'.format(name, forg(params[offset + j],
-                                                          prec=4))
+                pattern = r'L1.e\({}\) +{}'.format(
+                    name, forg(params[offset + j], prec=4)
+                )
                 assert re.search(pattern, table)
 
         # Check the Error covariance matrix output
