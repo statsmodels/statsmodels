@@ -838,11 +838,9 @@ class GenericLikelihoodModel(LikelihoodModel):
         # TODO temporary solution, force approx normal
         # self.df_model = 9999
         # somewhere: CacheWriteWarning: 'df_model' cannot be overwritten
-        super().__init__(endog, exog,
-                                                     missing=missing,
-                                                     hasconst=hasconst,
-                                                     **kwds
-                                                     )
+        super().__init__(
+            endog, exog, missing=missing, hasconst=hasconst, **kwds
+        )
 
         # this will not work for ru2nmnl, maybe np.ndim of a dict?
         if exog is not None:

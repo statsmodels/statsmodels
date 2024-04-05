@@ -77,11 +77,9 @@ class Transf_gen(distributions.rv_continuous):
         self.kls = kls  # (self.u_args, self.u_kwargs)
         # possible to freeze the underlying distribution
 
-        super().__init__(a=a, b=b, name=name,
-                                         shapes=kls.shapes,
-                                         longname=longname,
-                                         # extradoc = extradoc
-                                         )
+        super().__init__(
+            a=a, b=b, name=name, shapes=kls.shapes, longname=longname,
+        )
 
     def _cdf(self, x, *args, **kwargs):
         # print(args
@@ -331,12 +329,9 @@ class TransfTwo_gen(distributions.rv_continuous):
         self.kls = kls  # (self.u_args, self.u_kwargs)
         # possible to freeze the underlying distribution
 
-        super().__init__(a=a, b=b,
-                                            name=name,
-                                            shapes=kls.shapes,
-                                            longname=longname,
-                                            # extradoc = extradoc
-                                            )
+        super().__init__(
+            a=a, b=b, name=name, shapes=kls.shapes, longname=longname
+        )
 
     def _rvs(self, *args):
         self.kls._size = self._size  # size attached to self, not function argument

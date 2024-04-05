@@ -81,10 +81,11 @@ class SkewNorm_gen(distributions.rv_continuous):
 
     def __init__(self):
         # super(SkewNorm_gen,self).__init__(
-        distributions.rv_continuous.__init__(self,
-                                             name='Skew Normal distribution', shapes='alpha',
-                                             # extradoc = ''' '''
-                                             )
+        distributions.rv_continuous.__init__(
+            self,
+            name='Skew Normal distribution',
+            shapes='alpha', # extradoc = ''' '''
+        )
 
     def _argcheck(self, alpha):
         return 1  # (alpha >= 0)
@@ -143,9 +144,11 @@ class ACSkewT_gen(distributions.rv_continuous):
 
     def __init__(self):
         # super(SkewT_gen,self).__init__(
-        distributions.rv_continuous.__init__(self,
-                                             name='Skew T distribution', shapes='df, alpha',
-                                             )
+        distributions.rv_continuous.__init__(
+            self,
+            name='Skew T distribution',
+            shapes='df, alpha',
+        )
 
     #             extradoc = '''
     # Skewed T distribution by Azzalini, A. & Capitanio, A. (2003)_
@@ -422,9 +425,11 @@ class NormExpan_gen(distributions.rv_continuous):
 
     def __init__(self, args, **kwds):
         # todo: replace with super call
-        distributions.rv_continuous.__init__(self,
-                                             name='Normal Expansion distribution', shapes=' ',
-                                             )
+        distributions.rv_continuous.__init__(
+            self,
+            name='Normal Expansion distribution',
+            shapes=' ',
+        )
         #     extradoc = '''
         # The distribution is defined as the Gram-Charlier expansion of
         # the normal distribution using the first four moments. The pdf
@@ -549,9 +554,7 @@ class Transf_gen(distributions.rv_continuous):
         self.kls = kls  # (self.u_args, self.u_kwargs)
         # possible to freeze the underlying distribution
 
-        super().__init__(a=a, b=b, name=name,
-                                         longname=longname,
-                                         )
+        super().__init__(a=a, b=b, name=name, longname=longname)
         # extradoc = extradoc)
 
     def _rvs(self, *args, **kwargs):
@@ -767,11 +770,9 @@ class TransfTwo_gen(distributions.rv_continuous):
         self.kls = kls  # (self.u_args, self.u_kwargs)
         # possible to freeze the underlying distribution
 
-        super().__init__(a=a, b=b, name=name,
-                                            shapes=kls.shapes,
-                                            longname=longname,
-                                            # extradoc = extradoc
-                                            )
+        super().__init__(
+            a=a, b=b, name=name, shapes=kls.shapes, longname=longname
+        )
 
         # add enough info for self.freeze() to be able to reconstruct the instance
         self._ctor_param.update(

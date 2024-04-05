@@ -168,9 +168,9 @@ class CheckLutkepohl(CheckVARMAX):
         super().test_predict(end='1982-10-01', **kwargs)
 
     def test_dynamic_predict(self, **kwargs):
-        super().test_dynamic_predict(end='1982-10-01',
-                                                         dynamic='1961-01-01',
-                                                         **kwargs)
+        super().test_dynamic_predict(
+            end='1982-10-01', dynamic='1961-01-01', **kwargs
+        )
 
 
 class TestVAR(CheckLutkepohl):
@@ -184,8 +184,8 @@ class TestVAR(CheckLutkepohl):
                                                         'dyn_predict_2',
                                                         'dyn_predict_3']]
         super().setup_class(
-            true,  order=(1, 0), trend='n',
-            error_cov_type="unstructured")
+            true,  order=(1, 0), trend='n', error_cov_type="unstructured"
+        )
 
     def test_bse_approx(self):
         bse = self.results._cov_params_approx().diagonal()**0.5
@@ -243,8 +243,8 @@ class TestVAR_diagonal(CheckLutkepohl):
                                                         'dyn_predict_diag2',
                                                         'dyn_predict_diag3']]
         super().setup_class(
-            true,  order=(1, 0), trend='n',
-            error_cov_type="diagonal")
+            true,  order=(1, 0), trend='n', error_cov_type="diagonal"
+        )
 
     def test_bse_approx(self):
         bse = self.results._cov_params_approx().diagonal()**0.5
@@ -314,8 +314,9 @@ class TestVAR_measurement_error(CheckLutkepohl):
                                                         'dyn_predict_diag2',
                                                         'dyn_predict_diag3']]
         super().setup_class(
-            true,  order=(1, 0), trend='n',
-            error_cov_type="diagonal", measurement_error=True)
+            true,  order=(1, 0), trend='n', error_cov_type="diagonal",
+            measurement_error=True
+        )
 
         # Create another filter results with positive measurement errors
         cls.true_measurement_error_variances = [1., 2., 3.]
@@ -413,7 +414,8 @@ class TestVAR_obs_intercept(CheckLutkepohl):
                                                         'dyn_predict_int3']]
         super().setup_class(
             true, order=(1, 0), trend='n',
-            error_cov_type="diagonal", obs_intercept=true['obs_intercept'])
+            error_cov_type="diagonal", obs_intercept=true['obs_intercept']
+        )
 
     def test_bse_approx(self):
         bse = self.results._cov_params_approx().diagonal()**0.5
@@ -451,7 +453,8 @@ class TestVAR_exog(CheckLutkepohl):
         super().setup_class(
             true, order=(1, 0), trend='n', error_cov_type='unstructured',
             exog=exog, initialization='approximate_diffuse',
-            loglikelihood_burn=1)
+            loglikelihood_burn=1
+        )
 
     def test_mle(self):
         pass
@@ -688,7 +691,8 @@ class TestVARMA(CheckFREDManufacturing):
             'dyn_predict_varma11_1', 'dyn_predict_varma11_2']]
 
         super().setup_class(
-              true, order=(1, 1), trend='n', error_cov_type='diagonal')
+              true, order=(1, 1), trend='n', error_cov_type='diagonal'
+        )
 
     def test_mle(self):
         # Since the VARMA model here is generic (we're just forcing zeros
@@ -722,8 +726,7 @@ class TestVARMA(CheckFREDManufacturing):
         super().test_predict(end='2009-05-01', atol=1e-4)
 
     def test_dynamic_predict(self):
-        super().test_dynamic_predict(end='2009-05-01',
-                                                    dynamic='2000-01-01')
+        super().test_dynamic_predict(end='2009-05-01', dynamic='2000-01-01')
 
     def test_summary(self):
         summary = self.results.summary()
@@ -787,7 +790,8 @@ class TestVMA1(CheckFREDManufacturing):
             'dyn_predict_vma1_1', 'dyn_predict_vma1_2']]
 
         super().setup_class(
-              true, order=(0, 1), trend='n', error_cov_type='diagonal')
+            true, order=(0, 1), trend='n', error_cov_type='diagonal'
+        )
 
     def test_mle(self):
         # Since the VARMA model here is generic (we're just forcing zeros
@@ -821,8 +825,7 @@ class TestVMA1(CheckFREDManufacturing):
         super().test_predict(end='2009-05-01', atol=1e-4)
 
     def test_dynamic_predict(self):
-        super().test_dynamic_predict(end='2009-05-01',
-                                                   dynamic='2000-01-01')
+        super().test_dynamic_predict(end='2009-05-01', dynamic='2000-01-01')
 
 
 def test_specifications():

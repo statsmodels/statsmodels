@@ -5,10 +5,10 @@ from __future__ import annotations
 
 from statsmodels.compat.numpy import lstsq
 from statsmodels.compat.pandas import deprecate_kwarg
-from statsmodels.compat.python import Literal, lzip
+from statsmodels.compat.python import lzip
 from statsmodels.compat.scipy import _next_regular
 
-from typing import Union, List
+from typing import Literal, Union
 import warnings
 
 import numpy as np

@@ -7,7 +7,6 @@ from statsmodels.compat.pandas import (
 )
 from statsmodels.compat.pytest import pytest_warns
 
-from typing import Tuple
 from collections.abc import Hashable
 
 import numpy as np

@@ -4,7 +4,6 @@ and estimate asymptotic expansion parameters for the lilliefors tests
 """
 import datetime as dt
 import gzip
-import io
 import logging
 import pickle
 from collections import defaultdict

@@ -8,7 +8,7 @@ License: BSD-3
 """
 
 from statsmodels.compat.python import lzip
-from typing import Callable, Tuple
+from typing import Callable
 import numpy as np
 import pandas as pd
 from scipy import optimize, stats
