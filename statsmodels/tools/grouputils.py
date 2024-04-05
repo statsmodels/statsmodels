@@ -91,6 +91,7 @@ def group_sums(x, group, use_bincount=True):
     for comparison, simple python loop
     """
     x = np.asarray(x)
+    group = np.asarray(group).squeeze()
     if x.ndim == 1:
         x = x[:, None]
     elif x.ndim > 2 and use_bincount:
@@ -102,8 +103,12 @@ def group_sums(x, group, use_bincount=True):
         if np.max(group) > 2 * x.shape[0]:
             group = pd.factorize(group)[0]
 
-        return np.array([np.bincount(group, weights=x[:, col])
-                         for col in range(x.shape[1])])
+        return np.array(
+            [
+                np.bincount(group, weights=x[:, col])
+                for col in range(x.shape[1])
+            ]
+        )
     else:
         uniques = np.unique(group)
         result = np.zeros([len(uniques)] + list(x.shape[1:]))

@@ -1949,7 +1949,7 @@ class RegressionResults(base.LikelihoodModelResults):
             eigvals = self._wexog_singular_values ** 2
         else:
             wx = self.model.wexog
-            eigvals = np.linalg.linalg.eigvalsh(wx.T @ wx)
+            eigvals = np.linalg.eigvalsh(wx.T @ wx)
         return np.sort(eigvals)[::-1]
 
     @cache_readonly
@@ -2584,6 +2584,7 @@ class RegressionResults(base.LikelihoodModelResults):
             # cluster robust standard errors, one- or two-way
             groups = kwargs['groups']
             if not hasattr(groups, 'shape'):
+                groups = [np.squeeze(np.asarray(group)) for group in groups]
                 groups = np.asarray(groups).T
 
             if groups.ndim >= 2:

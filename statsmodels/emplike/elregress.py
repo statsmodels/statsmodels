@@ -83,5 +83,5 @@ class _ELRegOpts(_OptFuncts):
             #    raise RuntimeError('weights do not sum to 1')
             llr = np.sum(np.log(nobs * self.new_weights))
             return -2 * llr
-        except np.linalg.linalg.LinAlgError:
+        except np.linalg.LinAlgError:
             return np.inf
