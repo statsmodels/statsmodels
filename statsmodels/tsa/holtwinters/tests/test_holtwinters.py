@@ -948,7 +948,7 @@ def test_equivalence_cython_python(trend, seasonal):
     p[:6] = alpha, beta, gamma, l0, b0, phi
     if seasonal:
         p[6:] = params["initial_seasons"]
-    xi = np.ones_like(p).astype(int)
+    xi = np.ones_like(p).astype(np.int64)
 
     p_copy = p.copy()
 
@@ -1759,7 +1759,7 @@ def test_to_restricted_equiv(params):
     bounds = np.array([[0.0, 1.0]] * 3)
     assert_allclose(
         to_restricted(params, sel, bounds),
-        _test_to_restricted(params, sel.astype(int), bounds),
+        _test_to_restricted(params, sel.astype(np.int64), bounds),
     )
 
 

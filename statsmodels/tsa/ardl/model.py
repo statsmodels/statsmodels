@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from statsmodels.compat.pandas import Appender, Substitution, call_cached_func
-from statsmodels.compat.python import Literal
 
 from collections import defaultdict
 import datetime as dt
@@ -11,6 +10,7 @@ from types import SimpleNamespace
 from typing import (
     TYPE_CHECKING,
     Any,
+    Literal,
     NamedTuple,
     Optional,
     Union,
