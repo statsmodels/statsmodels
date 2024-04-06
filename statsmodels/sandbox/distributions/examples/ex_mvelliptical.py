@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """examples for multivariate normal and t distributions
 
 

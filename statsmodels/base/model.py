@@ -64,8 +64,8 @@ class Model:
     __doc__ = """
     A (predictive) statistical model. Intended to be subclassed not used.
 
-    %(params_doc)s
-    %(extra_params_doc)s
+    {params_doc}
+    {extra_params_doc}
 
     Attributes
     ----------
@@ -77,8 +77,8 @@ class Model:
     `endog` and `exog` are references to any data provided.  So if the data is
     already stored in numpy arrays and it is changed then `endog` and `exog`
     will change as well.
-    """ % {'params_doc': _model_params_doc,
-           'extra_params_doc': _missing_param_doc + _extra_param_doc}
+    """.format(params_doc=_model_params_doc,
+           extra_params_doc=_missing_param_doc + _extra_param_doc)
 
     # Maximum number of endogenous variables when using a formula
     # Default is 1, which is more common. Override in models when needed
@@ -110,8 +110,8 @@ class Model:
     def _get_init_kwds(self):
         """return dictionary with extra keys used in model.__init__
         """
-        kwds = dict(((key, getattr(self, key, None))
-                     for key in self._init_keys))
+        kwds = {key: getattr(self, key, None)
+                     for key in self._init_keys}
 
         return kwds
 
@@ -207,7 +207,7 @@ class Model:
         if (max_endog is not None and
                 endog.ndim > 1 and endog.shape[1] > max_endog):
             raise ValueError('endog has evaluated to an array with multiple '
-                             'columns that has shape {0}. This occurs when '
+                             'columns that has shape {}. This occurs when '
                              'the variable converted to endog is non-numeric'
                              ' (e.g., bool or str).'.format(endog.shape))
         if drop_cols is not None and len(drop_cols) > 0:
@@ -427,7 +427,7 @@ class LikelihoodModel(Model):
                 gtol : float
                     Stop when norm of gradient is less than gtol.
                 norm : float
-                    Order of norm (np.Inf is max, -np.Inf is min)
+                    Order of norm (np.inf is max, -np.inf is min)
                 epsilon
                     If fprime is approximated, use this value for the step
                     size. Only relevant if LikelihoodModel.score is None.
@@ -452,7 +452,7 @@ class LikelihoodModel(Model):
                 gtol : float
                     Stop when norm of gradient is less than gtol.
                 norm : float
-                    Order of norm (np.Inf is max, -np.Inf is min)
+                    Order of norm (np.inf is max, -np.inf is min)
                 epsilon : float
                     If fprime is approximated, use this value for the step
                     size. Can be scalar or vector.  Only relevant if
@@ -838,11 +838,9 @@ class GenericLikelihoodModel(LikelihoodModel):
         # TODO temporary solution, force approx normal
         # self.df_model = 9999
         # somewhere: CacheWriteWarning: 'df_model' cannot be overwritten
-        super(GenericLikelihoodModel, self).__init__(endog, exog,
-                                                     missing=missing,
-                                                     hasconst=hasconst,
-                                                     **kwds
-                                                     )
+        super().__init__(
+            endog, exog, missing=missing, hasconst=hasconst, **kwds
+        )
 
         # this will not work for ru2nmnl, maybe np.ndim of a dict?
         if exog is not None:
@@ -890,7 +888,7 @@ class GenericLikelihoodModel(LikelihoodModel):
         else:
             self.df_model = np.nan
             self.df_resid = np.nan
-        super(GenericLikelihoodModel, self).initialize()
+        super().initialize()
 
     def expandparams(self, params):
         """
@@ -1013,7 +1011,7 @@ class GenericLikelihoodModel(LikelihoodModel):
             # this will add default cov_type name and description
             kwargs["cov_type"] = 'nonrobust'
 
-        fit_method = super(GenericLikelihoodModel, self).fit
+        fit_method = super().fit
         mlefit = fit_method(start_params=start_params,
                             method=method, maxiter=maxiter,
                             full_output=full_output,
@@ -1107,7 +1105,7 @@ class Results:
                        'predicting from a model\nthat was created using the '
                        'formula api.'
                        '\n\nThe original error message returned by patsy is:\n'
-                       '{0}'.format(str(str(exc))))
+                       '{}'.format(str(str(exc))))
                 raise exc.__class__(msg)
             if orig_exog_len > len(exog) and not is_dict:
                 if exog_index is None:
@@ -1355,7 +1353,7 @@ class LikelihoodModelResults(Results):
 
     def __init__(self, model, params, normalized_cov_params=None, scale=1.,
                  **kwargs):
-        super(LikelihoodModelResults, self).__init__(model, params)
+        super().__init__(model, params)
         self.normalized_cov_params = normalized_cov_params
         self.scale = scale
         self._use_t = False
@@ -1640,7 +1638,7 @@ class LikelihoodModelResults(Results):
         from patsy import DesignInfo
         use_t = bool_like(use_t, "use_t", strict=True, optional=True)
         if self.params.ndim == 2:
-            names = ['y{}_{}'.format(i[0], i[1])
+            names = [f'y{i[0]}_{i[1]}'
                      for i in self.model.data.cov_names]
         else:
             names = self.model.data.cov_names
@@ -1858,7 +1856,7 @@ class LikelihoodModelResults(Results):
 
         from patsy import DesignInfo
         if self.params.ndim == 2:
-            names = ['y{}_{}'.format(i[0], i[1])
+            names = [f'y{i[0]}_{i[1]}'
                      for i in self.model.data.cov_names]
         else:
             names = self.model.data.cov_names

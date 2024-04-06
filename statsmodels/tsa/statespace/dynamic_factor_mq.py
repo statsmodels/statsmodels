@@ -1,10 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 Dynamic factor model.
 
 Author: Chad Fulton
 License: BSD-3
 """
+from statsmodels.compat.pandas import MONTH_END, QUARTER_END
+
 from collections import OrderedDict
 from warnings import warn
 
@@ -1568,10 +1569,13 @@ class DynamicFactorMQ(mlemodel.MLEModel):
                 endog_quarterly = endog_quarterly.to_period('Q')
 
             # Combine the datasets
-            endog = pd.concat([
-                endog_monthly,
-                endog_quarterly.resample('M', convention='end').first()],
-                axis=1)
+            quarterly_resamp = endog_quarterly.copy()
+            quarterly_resamp.index = quarterly_resamp.index.to_timestamp()
+            quarterly_resamp = quarterly_resamp.resample(QUARTER_END).first()
+            quarterly_resamp = quarterly_resamp.resample(MONTH_END).first()
+            quarterly_resamp.index = quarterly_resamp.index.to_period()
+
+            endog = pd.concat([endog_monthly, quarterly_resamp], axis=1)
 
             # Make sure we didn't accidentally get duplicate column names
             column_counts = endog.columns.value_counts()
@@ -3331,7 +3335,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
     Results from fitting a dynamic factor model
     """
     def __init__(self, model, params, filter_results, cov_type=None, **kwargs):
-        super(DynamicFactorMQResults, self).__init__(
+        super().__init__(
             model, params, filter_results, cov_type, **kwargs)
 
     @property
@@ -4246,6 +4250,9 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
                     self.params[mod._p['idiosyncratic_ar1']])
                 k_idio += 1
             data['var.'] = self.params[mod._p['idiosyncratic_var']]
+            # Ensure object dtype for string assignment
+            cols_to_cast = data.columns[-k_idio:]
+            data[cols_to_cast] = data[cols_to_cast].astype(object)
             try:
                 data.iloc[:, -k_idio:] = data.iloc[:, -k_idio:].map(
                     lambda s: f'{s:.2f}')
@@ -4305,6 +4312,8 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
                     data['   error covariance'] = block.factor_names
                     for j in range(block.k_factors):
                         data[block.factor_names[j]] = Q[ix1:ix2, ix1 + j]
+                cols_to_cast = data.columns[-block.k_factors:]
+                data[cols_to_cast] = data[cols_to_cast].astype(object)
                 try:
                     formatted_vals = data.iloc[:, -block.k_factors:].map(
                         lambda s: f'{s:.2f}'

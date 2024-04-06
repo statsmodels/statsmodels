@@ -32,7 +32,7 @@ class igamma_gen(rv_continuous):
 #CDF
     def _munp(self, n, a, b):
         args = (a,b)
-        super(igamma_gen, self)._munp(self, n, *args)
+        super()._munp(self, n, *args)
 #TODO: is this robust for differential entropy in this case? closed form or
 #shortcuts in special?
     def _entropy(self, *args):
@@ -60,17 +60,17 @@ for x > 0, a > 0, b>0.
 # in inverted gamma
 
 palpha = np.random.gamma(400.,.005, size=10000)
-print("First moment: %s\nSecond moment: %s" % (palpha.mean(),palpha.std()))
+print("First moment: {}\nSecond moment: {}".format(palpha.mean(),palpha.std()))
 palpha = palpha[0]
 
 prho = np.random.beta(49.5,49.5, size=1e5)
 print("Beta Distribution")
-print("First moment: %s\nSecond moment: %s" % (prho.mean(),prho.std()))
+print("First moment: {}\nSecond moment: {}".format(prho.mean(),prho.std()))
 prho = prho[0]
 
 psigma = igamma.rvs(1.,4.**2/2, size=1e5)
 print("Inverse Gamma Distribution")
-print("First moment: %s\nSecond moment: %s" % (psigma.mean(),psigma.std()))
+print("First moment: {}\nSecond moment: {}".format(psigma.mean(),psigma.std()))
 
 # First do the univariate case
 # y_t = theta_t + epsilon_t
@@ -227,7 +227,7 @@ if pymc_installed:
 else:
     psigma2 = stats.invgamma.rvs(1., scale=4.0, size=1e6)
 nsims = 500
-y = np.zeros((nsims))
+y = np.zeros(nsims)
 #for i in range(1,nsims):
 #    y[i] = .9*y[i-1] + 1/(1-p1/alpha) + np.random.normal()
 

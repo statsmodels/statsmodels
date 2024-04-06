@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 '''
 Author: Vincent Arel-Bundock <varel@umich.edu>
 Date: 2012-08-25
@@ -126,7 +125,7 @@ class NBin(GenericLikelihoodModel):
         self.exog = np.array(exog)
         self.endog = np.array(endog)
         self.C = C
-        super(NBin, self).__init__(endog, exog, **kwds)
+        super().__init__(endog, exog, **kwds)
         # Check user input
         if ll_type not in ['nb2', 'nb1', 'nbp', 'nbt', 'geom']:
             raise NameError('Valid ll_type are: nb2, nb1, nbp,  nbt, geom')
@@ -169,10 +168,10 @@ class NBin(GenericLikelihoodModel):
 
     def fit(self, start_params=None, maxiter=10000, maxfun=5000, **kwds):
         if start_params is None:
-            countfit = super(NBin, self).fit(start_params=self.start_params_default,
+            countfit = super().fit(start_params=self.start_params_default,
                                              maxiter=maxiter, maxfun=maxfun, **kwds)
         else:
-            countfit = super(NBin, self).fit(start_params=start_params,
+            countfit = super().fit(start_params=start_params,
                                              maxiter=maxiter, maxfun=maxfun, **kwds)
         countfit = CountResults(self, countfit)
         return countfit

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Descriptive Statistics for Time Series
 
 Created on Sat Oct 30 14:24:08 2010

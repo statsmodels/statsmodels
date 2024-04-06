@@ -97,7 +97,7 @@ def csv2st(csvfile, headers=False, stubs=False, title=None):
     Can also supply headers and stubs as tuples of strings.
     """
     rows = list()
-    with open(csvfile, 'r', encoding="utf-8") as fh:
+    with open(csvfile, encoding="utf-8") as fh:
         reader = csv.reader(fh)
         if headers is True:
             headers = next(reader)
@@ -117,7 +117,7 @@ def csv2st(csvfile, headers=False, stubs=False, title=None):
             stubs = ()
     ncols = len(rows[0])
     if any(len(row) != ncols for row in rows):
-        raise IOError('All rows of CSV file must have same length.')
+        raise OSError('All rows of CSV file must have same length.')
     return SimpleTable(data=rows, headers=headers, stubs=stubs)
 
 

@@ -81,10 +81,11 @@ class SkewNorm_gen(distributions.rv_continuous):
 
     def __init__(self):
         # super(SkewNorm_gen,self).__init__(
-        distributions.rv_continuous.__init__(self,
-                                             name='Skew Normal distribution', shapes='alpha',
-                                             # extradoc = ''' '''
-                                             )
+        distributions.rv_continuous.__init__(
+            self,
+            name='Skew Normal distribution',
+            shapes='alpha', # extradoc = ''' '''
+        )
 
     def _argcheck(self, alpha):
         return 1  # (alpha >= 0)
@@ -143,9 +144,11 @@ class ACSkewT_gen(distributions.rv_continuous):
 
     def __init__(self):
         # super(SkewT_gen,self).__init__(
-        distributions.rv_continuous.__init__(self,
-                                             name='Skew T distribution', shapes='df, alpha',
-                                             )
+        distributions.rv_continuous.__init__(
+            self,
+            name='Skew T distribution',
+            shapes='df, alpha',
+        )
 
     #             extradoc = '''
     # Skewed T distribution by Azzalini, A. & Capitanio, A. (2003)_
@@ -422,9 +425,11 @@ class NormExpan_gen(distributions.rv_continuous):
 
     def __init__(self, args, **kwds):
         # todo: replace with super call
-        distributions.rv_continuous.__init__(self,
-                                             name='Normal Expansion distribution', shapes=' ',
-                                             )
+        distributions.rv_continuous.__init__(
+            self,
+            name='Normal Expansion distribution',
+            shapes=' ',
+        )
         #     extradoc = '''
         # The distribution is defined as the Gram-Charlier expansion of
         # the normal distribution using the first four moments. The pdf
@@ -515,8 +520,8 @@ License: BSD
 
 def get_u_argskwargs(**kwargs):
     # Todo: What's this? wrong spacing, used in Transf_gen TransfTwo_gen
-    u_kwargs = dict((k.replace('u_', '', 1), v) for k, v in kwargs.items()
-                    if k.startswith('u_'))
+    u_kwargs = {k.replace('u_', '', 1): v for k, v in kwargs.items()
+                    if k.startswith('u_')}
     u_args = u_kwargs.pop('u_args', None)
     return u_args, u_kwargs
 
@@ -549,9 +554,7 @@ class Transf_gen(distributions.rv_continuous):
         self.kls = kls  # (self.u_args, self.u_kwargs)
         # possible to freeze the underlying distribution
 
-        super(Transf_gen, self).__init__(a=a, b=b, name=name,
-                                         longname=longname,
-                                         )
+        super().__init__(a=a, b=b, name=name, longname=longname)
         # extradoc = extradoc)
 
     def _rvs(self, *args, **kwargs):
@@ -638,7 +641,7 @@ class ExpTransf_gen(distributions.rv_continuous):
             a = kwargs['a']
         else:
             a = 0
-        super(ExpTransf_gen, self).__init__(a=0, name=name)
+        super().__init__(a=0, name=name)
         self.kls = kls
 
     def _cdf(self, x, *args):
@@ -673,7 +676,7 @@ class LogTransf_gen(distributions.rv_continuous):
         else:
             a = 0
 
-        super(LogTransf_gen, self).__init__(a=a, name=name)
+        super().__init__(a=a, name=name)
         self.kls = kls
 
     def _cdf(self, x, *args):
@@ -767,11 +770,9 @@ class TransfTwo_gen(distributions.rv_continuous):
         self.kls = kls  # (self.u_args, self.u_kwargs)
         # possible to freeze the underlying distribution
 
-        super(TransfTwo_gen, self).__init__(a=a, b=b, name=name,
-                                            shapes=kls.shapes,
-                                            longname=longname,
-                                            # extradoc = extradoc
-                                            )
+        super().__init__(
+            a=a, b=b, name=name, shapes=kls.shapes, longname=longname
+        )
 
         # add enough info for self.freeze() to be able to reconstruct the instance
         self._ctor_param.update(

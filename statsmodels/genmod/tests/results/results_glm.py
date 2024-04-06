@@ -824,7 +824,7 @@ class Cancer:
     def __init__(self):
         filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                 "stata_cancer_glm.csv")
-        data = np.recfromcsv(open(filename, 'rb'))
+        data = pd.read_csv(filename)
         self.endog = data.studytime
         dummies = pd.get_dummies(pd.Series(data.drug, dtype="category"),
                                  drop_first=True)
@@ -837,7 +837,7 @@ class CancerLog(Cancer):
     CancerLog is used TestGlmGammaLog
     """
     def __init__(self):
-        super(CancerLog, self).__init__()
+        super().__init__()
 
         self.resids = np.array([
             [-8.52598100e-01, -1.45739100e+00, -3.92408100e+01,
@@ -974,7 +974,7 @@ class CancerIdentity(Cancer):
     CancerIdentity is used with TestGlmGammaIdentity
     """
     def __init__(self):
-        super(CancerIdentity, self).__init__()
+        super().__init__()
 
         self.resids = np.array([
             [-8.52598100e-01,  -1.45739100e+00, -3.92408100e+01,
@@ -1149,7 +1149,7 @@ class Cpunish_offset(Cpunish):
     Same model as Cpunish but with offset of 100.  Many things do not change.
     '''
     def __init__(self):
-        super(Cpunish_offset, self).__init__()
+        super().__init__()
 
         self.params = (
             -1.140665e+01, 2.611017e-04, 7.781801e-02,
@@ -1194,7 +1194,7 @@ class InvGauss:
         # set up data #
         filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                 "inv_gaussian.csv")
-        with open(filename, 'r', encoding="utf-8") as fd:
+        with open(filename, encoding="utf-8") as fd:
             data = np.genfromtxt(fd, delimiter=",", dtype=float)[1:]
         self.endog = data[:5000, 0]
         self.exog = data[:5000, 1:]
@@ -2243,7 +2243,7 @@ class InvGaussLog(Medpar1):
     InvGaussLog is used with TestGlmInvgaussLog
     """
     def __init__(self):
-        super(InvGaussLog, self).__init__()
+        super().__init__()
         filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                 "medparlogresids.csv")
         self.resids = pd.read_csv(filename, sep=',', header=None).values
@@ -3004,7 +3004,7 @@ class InvGaussIdentity(Medpar1):
     Accuracy is different for R vs Stata ML vs Stata IRLS, we are close.
     """
     def __init__(self):
-        super(InvGaussIdentity, self).__init__()
+        super().__init__()
         self.params = np.array([0.44538838, -1.05872706,  2.83947966])
         self.bse = np.array([0.02586783,  0.13830023,  0.20834864])
         filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),

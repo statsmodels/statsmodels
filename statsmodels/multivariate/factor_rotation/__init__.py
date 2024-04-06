@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Package with factor rotation algorithms.
 

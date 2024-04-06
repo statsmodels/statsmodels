@@ -67,7 +67,7 @@ def gen_ols_regressors(ar, seasonal, trend, exog):
         seasons = np.zeros((500, 12))
         for i in range(12):
             seasons[i::12, i] = 1
-        cols = ["s.{0}".format(i) for i in range(12)]
+        cols = [f"s.{i}" for i in range(12)]
         seasons = pd.DataFrame(seasons, columns=cols, index=y.index)
         if "c" in trend:
             seasons = seasons.iloc[:, 1:]
@@ -77,7 +77,7 @@ def gen_ols_regressors(ar, seasonal, trend, exog):
             reg.append(y.shift(lag))
     if exog:
         x = rs.standard_normal((nobs, exog))
-        cols = ["x.{0}".format(i) for i in range(exog)]
+        cols = [f"x.{i}" for i in range(exog)]
         x = pd.DataFrame(x, columns=cols, index=y.index)
         reg.append(x)
     else:
@@ -270,7 +270,7 @@ ids = [param_fmt.format(*param) for param in params]
 
 def gen_data(nobs, nexog, pandas, seed=92874765):
     rs = np.random.RandomState(seed)
-    endog = rs.standard_normal((nobs))
+    endog = rs.standard_normal(nobs)
     exog = rs.standard_normal((nobs, nexog)) if nexog else None
     if pandas:
         index = pd.date_range(
@@ -278,7 +278,7 @@ def gen_data(nobs, nexog, pandas, seed=92874765):
         )
         endog = pd.Series(endog, name="endog", index=index)
         if nexog:
-            cols = ["exog.{0}".format(i) for i in range(exog.shape[1])]
+            cols = [f"exog.{i}" for i in range(exog.shape[1])]
             exog = pd.DataFrame(exog, columns=cols, index=index)
 
     class DataSet(NamedTuple):

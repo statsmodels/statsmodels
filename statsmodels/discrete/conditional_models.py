@@ -29,7 +29,7 @@ class _ConditionalModel(base.LikelihoodModel):
             msg = "The leading dimension of 'exog' should equal the length of 'endog'"
             raise ValueError(msg)
 
-        super(_ConditionalModel, self).__init__(
+        super().__init__(
             endog, exog, missing=missing, **kwargs)
 
         if self.data.const_idx is not None:
@@ -114,7 +114,7 @@ class _ConditionalModel(base.LikelihoodModel):
             skip_hessian=False,
             **kwargs):
 
-        rslt = super(_ConditionalModel, self).fit(
+        rslt = super().fit(
             start_params=start_params,
             method=method,
             maxiter=maxiter,
@@ -204,7 +204,7 @@ class _ConditionalModel(base.LikelihoodModel):
         if "0+" not in formula.replace(" ", ""):
             warnings.warn("Conditional models should not include an intercept")
 
-        model = super(_ConditionalModel, cls).from_formula(
+        model = super().from_formula(
             formula, data=data, groups=groups, *args, **kwargs)
 
         return model
@@ -232,7 +232,7 @@ class ConditionalLogit(_ConditionalModel):
 
     def __init__(self, endog, exog, missing='none', **kwargs):
 
-        super(ConditionalLogit, self).__init__(
+        super().__init__(
             endog, exog, missing=missing, **kwargs)
 
         if np.any(np.unique(self.endog) != np.r_[0, 1]):
@@ -414,7 +414,7 @@ class ConditionalPoisson(_ConditionalModel):
 class ConditionalResults(base.LikelihoodModelResults):
     def __init__(self, model, params, normalized_cov_params, scale):
 
-        super(ConditionalResults, self).__init__(
+        super().__init__(
             model,
             params,
             normalized_cov_params=normalized_cov_params,
@@ -511,7 +511,7 @@ class ConditionalMNLogit(_ConditionalModel):
 
     def __init__(self, endog, exog, missing='none', **kwargs):
 
-        super(ConditionalMNLogit, self).__init__(
+        super().__init__(
             endog, exog, missing=missing, **kwargs)
 
         # endog must be integers

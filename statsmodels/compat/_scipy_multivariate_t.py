@@ -174,7 +174,7 @@ class multi_rv_generic:
 
     """
     def __init__(self, seed=None):
-        super(multi_rv_generic, self).__init__()
+        super().__init__()
         self._random_state = check_random_state(seed)
 
     @property
@@ -338,7 +338,7 @@ class multivariate_normal_gen(multi_rv_generic):
     """
 
     def __init__(self, seed=None):
-        super(multivariate_normal_gen, self).__init__(seed)
+        super().__init__(seed)
         self.__doc__ = doccer.docformat(self.__doc__, mvn_docdict_params)
 
     def __call__(self, mean=None, cov=1, allow_singular=False, seed=None):
@@ -879,7 +879,7 @@ class multivariate_t_gen(multi_rv_generic):
         seed : Random state.
 
         """
-        super(multivariate_t_gen, self).__init__(seed)
+        super().__init__(seed)
         self.__doc__ = doccer.docformat(self.__doc__, mvt_docdict_params)
         self._random_state = check_random_state(seed)
 

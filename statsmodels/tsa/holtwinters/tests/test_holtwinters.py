@@ -490,10 +490,10 @@ class TestHoltWinters:
         fit5 = mod5.fit()
         # We accept the below values as we getting a better SSE than text book
         assert_almost_equal(fit1.params["smoothing_level"], 1.00, 2)
-        assert_almost_equal(fit1.params["smoothing_trend"], np.NaN, 2)
-        assert_almost_equal(fit1.params["damping_trend"], np.NaN, 2)
+        assert_almost_equal(fit1.params["smoothing_trend"], np.nan, 2)
+        assert_almost_equal(fit1.params["damping_trend"], np.nan, 2)
         assert_almost_equal(fit1.params["initial_level"], 263.96, 1)
-        assert_almost_equal(fit1.params["initial_trend"], np.NaN, 2)
+        assert_almost_equal(fit1.params["initial_trend"], np.nan, 2)
         assert_almost_equal(fit1.sse, 6761.35, 2)  # 6080.26
         assert isinstance(fit1.summary().as_text(), str)
 
@@ -948,7 +948,7 @@ def test_equivalence_cython_python(trend, seasonal):
     p[:6] = alpha, beta, gamma, l0, b0, phi
     if seasonal:
         p[6:] = params["initial_seasons"]
-    xi = np.ones_like(p).astype(int)
+    xi = np.ones_like(p).astype(np.int64)
 
     p_copy = p.copy()
 
@@ -1759,7 +1759,7 @@ def test_to_restricted_equiv(params):
     bounds = np.array([[0.0, 1.0]] * 3)
     assert_allclose(
         to_restricted(params, sel, bounds),
-        _test_to_restricted(params, sel.astype(int), bounds),
+        _test_to_restricted(params, sel.astype(np.int64), bounds),
     )
 
 

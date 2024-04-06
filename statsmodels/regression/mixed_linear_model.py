@@ -244,7 +244,7 @@ def _get_exog_re_names(self, exog_re):
         return exog_re
 
     # Default names
-    defnames = ["x_re{0:1d}".format(k + 1) for k in range(exog_re.shape[1])]
+    defnames = [f"x_re{k + 1:1d}" for k in range(exog_re.shape[1])]
     return defnames
 
 
@@ -738,9 +738,9 @@ class MixedLM(base.LikelihoodModel):
 
         # Calling super creates self.endog, etc. as ndarrays and the
         # original exog, endog, etc. are self.data.endog, etc.
-        super(MixedLM, self).__init__(endog, exog, groups=groups,
-                                      exog_re=exog_re, missing=missing,
-                                      **kwargs)
+        super().__init__(endog, exog, groups=groups,
+                         exog_re=exog_re, missing=missing,
+                         **kwargs)
 
         self._init_keys.extend(["use_sqrt", "exog_vc"])
 
@@ -792,7 +792,7 @@ class MixedLM(base.LikelihoodModel):
         # list of arrays, corresponding to the groups.
         group_labels = list(set(groups))
         group_labels.sort()
-        row_indices = dict((s, []) for s in group_labels)
+        row_indices = {s: [] for s in group_labels}
         for i, g in enumerate(groups):
             row_indices[g].append(i)
         self.row_indices = row_indices
@@ -1043,8 +1043,7 @@ class MixedLM(base.LikelihoodModel):
         kwargs["exog_re"] = exog_re
         kwargs["exog_vc"] = exog_vc
         kwargs["groups"] = groups
-        mod = super(MixedLM, cls).from_formula(
-            formula, data, *args, **kwargs)
+        mod = super().from_formula(formula, data, *args, **kwargs)
 
         # expand re names to account for pairs of RE
         (param_names,
@@ -2189,10 +2188,10 @@ class MixedLM(base.LikelihoodModel):
 
             # Try optimizing one or more times
             for j in range(len(method)):
-                rslt = super(MixedLM, self).fit(start_params=packed,
-                                                skip_hessian=True,
-                                                method=method[j],
-                                                **fit_kwargs)
+                rslt = super().fit(start_params=packed,
+                                   skip_hessian=True,
+                                   method=method[j],
+                                   **fit_kwargs)
                 if rslt.mle_retvals['converged']:
                     break
                 packed = rslt.params
@@ -2411,8 +2410,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
 
     def __init__(self, model, params, cov_params):
 
-        super(MixedLMResults, self).__init__(model, params,
-                                             normalized_cov_params=cov_params)
+        super().__init__(model, params, normalized_cov_params=cov_params)
         self.nobs = self.model.nobs
         self.df_resid = self.nobs - np.linalg.matrix_rank(self.model.exog)
 
@@ -2482,7 +2480,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
 
         for j, v in enumerate(self.model.exog_vc.names):
             vg = self.model.exog_vc.colnames[j][group_ix]
-            na = ["%s[%s]" % (v, s) for s in vg]
+            na = ["{}[{}]".format(v, s) for s in vg]
             names.extend(na)
 
         return names
@@ -2622,7 +2620,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         d = self.k_re2 + self.k_vc
         z0 = np.zeros((r_matrix.shape[0], d))
         r_matrix = np.concatenate((r_matrix, z0), axis=1)
-        tst_rslt = super(MixedLMResults, self).t_test(r_matrix, use_t=use_t)
+        tst_rslt = super().t_test(r_matrix, use_t=use_t)
         return tst_rslt
 
     def summary(self, yname=None, xname_fe=None, xname_re=None,

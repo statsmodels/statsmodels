@@ -77,7 +77,7 @@ class TestArrays:
 class TestArrays2dEndog(TestArrays):
     @classmethod
     def setup_class(cls):
-        super(TestArrays2dEndog, cls).setup_class()
+        super().setup_class()
         cls.endog = np.random.random((10, 1))
         cls.exog = np.c_[np.ones(10), np.random.random((10, 2))]
         cls.data = sm_data.handle_data(cls.endog, cls.exog)
@@ -90,7 +90,7 @@ class TestArrays2dEndog(TestArrays):
 class TestArrays1dExog(TestArrays):
     @classmethod
     def setup_class(cls):
-        super(TestArrays1dExog, cls).setup_class()
+        super().setup_class()
         cls.endog = np.random.random(10)
         exog = np.random.random(10)
         cls.data = sm_data.handle_data(cls.endog, exog)
@@ -176,7 +176,7 @@ class TestDataFramesWithMultiIndex(TestDataFrames):
 class TestLists(TestArrays):
     @classmethod
     def setup_class(cls):
-        super(TestLists, cls).setup_class()
+        super().setup_class()
         cls.endog = np.random.random(10).tolist()
         cls.exog = np.c_[np.ones(10), np.random.random((10, 2))].tolist()
         cls.data = sm_data.handle_data(cls.endog, cls.exog)

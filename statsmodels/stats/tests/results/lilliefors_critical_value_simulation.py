@@ -4,7 +4,6 @@ and estimate asymptotic expansion parameters for the lilliefors tests
 """
 import datetime as dt
 import gzip
-import io
 import logging
 import pickle
 from collections import defaultdict
@@ -63,19 +62,22 @@ def simulations(sim_type, save=False):
             d_minus = (cdf - minus[:, None]).max(0)
             d = np.max(np.abs(np.c_[d_plus, d_minus]), 1)
             results[ss].append(d)
-        logging.log(logging.INFO,
-                    'Completed {0}, remaining {1}'.format(NUM_SIM - remaining,
-                                                          remaining))
+        logging.log(
+            logging.INFO,
+            'Completed {}, remaining {}'.format(
+                NUM_SIM - remaining, remaining
+            )
+        )
         elapsed = dt.datetime.now() - start
         rem = elapsed.total_seconds() / (NUM_SIM - remaining) * remaining
         logging.log(logging.INFO,
-                    '({0}) Time remaining {1:0.1f}s'.format(sim_type, rem))
+                    f'({sim_type}) Time remaining {rem:0.1f}s')
 
     for key in results:
         results[key] = np.concatenate(results[key])
 
     if save:
-        file_name = 'lilliefors-sim-{0}-results.pkl.gz'.format(sim_type)
+        file_name = f'lilliefors-sim-{sim_type}-results.pkl.gz'
         with gzip.open(file_name, 'wb', 5) as pkl:
             pickle.dump(results, pkl)
 
@@ -111,11 +113,11 @@ def simulations(sim_type, save=False):
     for col in df:
         asymp_crit_vals[col] = df[col].values
 
-    code = '{0}_crit_vals = '.format(sim_type)
+    code = f'{sim_type}_crit_vals = '
     code += str(crit_vals).strip() + '\n\n'
     code += '\n# Coefficients are model '
     code += 'log(cv) = b[0] + b[1] log(n) + b[2] log(n)**2\n'
-    code += '{0}_asymp_crit_vals = '.format(sim_type)
+    code += f'{sim_type}_asymp_crit_vals = '
     code += str(asymp_crit_vals) + '\n\n'
     return code
 
@@ -139,7 +141,7 @@ asymp_critical_values = {'normal': normal_asymp_crit_vals,
 
 """
     cv_filename = '../../_lilliefors_critical_values.py'
-    with io.open(cv_filename, 'w', newline='\n', encoding="utf-8") as cv:
+    with open(cv_filename, 'w', newline='\n', encoding="utf-8") as cv:
         cv.write(FormatCode(header)[0])
         cv.write(FormatCode(normal)[0])
         cv.write('\n\n')

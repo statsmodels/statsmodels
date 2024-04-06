@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
-
-u"""
+"""
 Beta regression for modeling rates and proportions.
 
 References
@@ -116,9 +114,7 @@ class BetaModel(GenericLikelihoodModel):
 
         kwds['extra_params_names'] = extra_names
 
-        super(BetaModel, self).__init__(endog, exog,
-                                        exog_precision=exog_precision,
-                                        **kwds)
+        super().__init__(endog, exog, exog_precision=exog_precision, **kwds)
         self.link = link
         self.link_precision = link_precision
         # not needed, handled by super:
@@ -150,8 +146,7 @@ class BetaModel(GenericLikelihoodModel):
                 Z = patsy.dmatrix(exog_precision_formula, data)
             kwargs['exog_precision'] = Z
 
-        return super(BetaModel, cls).from_formula(formula, data, *args,
-                                                  **kwargs)
+        return super().from_formula(formula, data, *args, **kwargs)
 
     def _get_exogs(self):
         return (self.exog, self.exog_precision)
@@ -364,7 +359,7 @@ class BetaModel(GenericLikelihoodModel):
         -------
         score based on numerical derivatives
         """
-        return super(BetaModel, self).score(params)
+        return super().score(params)
 
     def score_factor(self, params, endog=None):
         """Derivative of loglikelihood function w.r.t. linear predictors.
@@ -666,9 +661,9 @@ class BetaModel(GenericLikelihoodModel):
         else:
             self.hess_type = "oim"
 
-        res = super(BetaModel, self).fit(start_params=start_params,
-                                         maxiter=maxiter, method=method,
-                                         disp=disp, **kwds)
+        res = super().fit(start_params=start_params,
+                          maxiter=maxiter, method=method,
+                          disp=disp, **kwds)
         if not isinstance(res, BetaResultsWrapper):
             # currently GenericLikelihoodModel doe not add wrapper
             res = BetaResultsWrapper(res)

@@ -99,7 +99,7 @@ class IV2SLS(LikelihoodModel):
 
     def __init__(self, endog, exog, instrument=None):
         self.instrument, self.instrument_names = _ensure_2d(instrument, True)
-        super(IV2SLS, self).__init__(endog, exog)
+        super().__init__(endog, exog)
         # where is this supposed to be handled
         # Note: Greene p.77/78 dof correction is not necessary (because only
         #       asy results), but most packages do it anyway
@@ -285,7 +285,7 @@ class IVRegressionResults(RegressionResults):
         #TODO: reuse condno from somewhere else ?
         #condno = np.linalg.cond(np.dot(self.wexog.T, self.wexog))
         wexog = self.model.wexog
-        eigvals = np.linalg.linalg.eigvalsh(np.dot(wexog.T, wexog))
+        eigvals = np.linalg.eigvalsh(np.dot(wexog.T, wexog))
         eigvals = np.sort(eigvals) #in increasing order
         condno = np.sqrt(eigvals[-1]/eigvals[0])
 
@@ -480,7 +480,7 @@ class GMM(Model):
         TODO: GMM does not really care about the data, just the moment conditions
         '''
         instrument = self._check_inputs(instrument, endog) # attaches if needed
-        super(GMM, self).__init__(endog, exog, missing=missing,
+        super().__init__(endog, exog, missing=missing,
                 instrument=instrument)
 #         self.endog = endog
 #         self.exog = exog
@@ -1554,7 +1554,7 @@ class NonlinearIVGMM(IVGMM):
 
     def __init__(self, endog, exog, instrument, func, **kwds):
         self.func = func
-        super(NonlinearIVGMM, self).__init__(endog, exog, instrument, **kwds)
+        super().__init__(endog, exog, instrument, **kwds)
 
 
     def predict(self, params, exog=None):
@@ -1691,7 +1691,7 @@ class DistQuantilesGMM(GMM):
 
     def __init__(self, endog, exog, instrument, **kwds):
         #TODO: something wrong with super
-        super(DistQuantilesGMM, self).__init__(endog, exog, instrument)
+        super().__init__(endog, exog, instrument)
         #self.func = func
         self.epsilon_iter = 1e-5
 

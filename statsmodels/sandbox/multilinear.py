@@ -296,7 +296,7 @@ def multigroup(pvals, groups, exact=True, keep_all=True, alpha=0.05):
     >>> multigroup(pvals < 0.05, groups)
     """
     pvals = pd.Series(pvals)
-    if not (set(pvals.unique()) <= set([False, True])):
+    if not (set(pvals.unique()) <= {False, True}):
         raise ValueError("the series should be binary")
     if hasattr(pvals.index, 'is_unique') and not pvals.index.is_unique:
         raise ValueError("series with duplicated index is not accepted")

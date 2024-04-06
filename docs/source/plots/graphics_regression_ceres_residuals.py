@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 '''
     Using a model built from the the state crime dataset, make a CERES plot
     with the rate of Poverty as the focus variable.

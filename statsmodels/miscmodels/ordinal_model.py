@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Sat Aug 22 20:24:42 2015
 
@@ -130,7 +129,7 @@ class OrderedModel(GenericLikelihoodModel):
 
         endog, labels, is_pandas = self._check_inputs(endog, exog)
 
-        super(OrderedModel, self).__init__(endog, exog, **kwds)
+        super().__init__(endog, exog, **kwds)
         k_levels = None  # initialize
         if not is_pandas:
             if self.endog.ndim == 1:
@@ -253,7 +252,7 @@ class OrderedModel(GenericLikelihoodModel):
         endog_name = formula.split("~")[0].strip()
         original_endog = data[endog_name]
 
-        model = super(OrderedModel, cls).from_formula(
+        model = super().from_formula(
             formula, data=data, drop_cols=["Intercept"], *args, **kwargs)
 
         if model.endog.ndim == 2:
@@ -585,7 +584,7 @@ class OrderedModel(GenericLikelihoodModel):
     def fit(self, start_params=None, method='nm', maxiter=500, full_output=1,
             disp=1, callback=None, retall=0, **kwargs):
 
-        fit_method = super(OrderedModel, self).fit
+        fit_method = super().fit
         mlefit = fit_method(start_params=start_params,
                             method=method, maxiter=maxiter,
                             full_output=full_output,

@@ -149,7 +149,7 @@ class TestRlm(CheckRlmResultsMixin):
 class TestHampel(TestRlm):
     @classmethod
     def setup_class(cls):
-        super(TestHampel, cls).setup_class()
+        super().setup_class()
         # Test precisions
         cls.decimal_standarderrors = DECIMAL_2
         cls.decimal_scale = DECIMAL_3
@@ -171,7 +171,7 @@ class TestHampel(TestRlm):
 class TestRlmBisquare(TestRlm):
     @classmethod
     def setup_class(cls):
-        super(TestRlmBisquare, cls).setup_class()
+        super().setup_class()
         # Test precisions
         cls.decimal_standarderrors = DECIMAL_1
 
@@ -191,7 +191,7 @@ class TestRlmBisquare(TestRlm):
 class TestRlmAndrews(TestRlm):
     @classmethod
     def setup_class(cls):
-        super(TestRlmAndrews, cls).setup_class()
+        super().setup_class()
 
         model = RLM(cls.data.endog, cls.data.exog, M=norms.AndrewWave())
         results = model.fit()
@@ -231,7 +231,7 @@ class TestRlmHuber(CheckRlmResultsMixin):
 class TestHampelHuber(TestRlm):
     @classmethod
     def setup_class(cls):
-        super(TestHampelHuber, cls).setup_class()
+        super().setup_class()
 
         model = RLM(cls.data.endog, cls.data.exog, M=norms.Hampel())
         results = model.fit(scale_est=HuberScale())
@@ -249,7 +249,7 @@ class TestHampelHuber(TestRlm):
 class TestRlmBisquareHuber(TestRlm):
     @classmethod
     def setup_class(cls):
-        super(TestRlmBisquareHuber, cls).setup_class()
+        super().setup_class()
 
         model = RLM(cls.data.endog, cls.data.exog, M=norms.TukeyBiweight())
         results = model.fit(scale_est=HuberScale())
@@ -267,7 +267,7 @@ class TestRlmBisquareHuber(TestRlm):
 class TestRlmAndrewsHuber(TestRlm):
     @classmethod
     def setup_class(cls):
-        super(TestRlmAndrewsHuber, cls).setup_class()
+        super().setup_class()
 
         model = RLM(cls.data.endog, cls.data.exog, M=norms.AndrewWave())
         results = model.fit(scale_est=HuberScale())

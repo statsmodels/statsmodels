@@ -337,12 +337,19 @@ def test_instantiation_valid():
         assert mod.data.freq is None
 
         # Supported indexes *when a freq is given*, should not raise a warning
-        with warnings.catch_warnings():
+        with warnings.catch_warnings() as w:
             warnings.simplefilter("error")
+            # Ignore deprecation warnings that come from NumPy via pandas
+            warnings.simplefilter("ignore", category=DeprecationWarning)
 
             for ix, freq in supported_date_indexes:
-                endog = base_endog.copy()
-                endog.index = ix
+                # Avoid warnings due to Series with object dtype
+                if isinstance(ix, pd.Series) and ix.dtype == object:
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore")
+                        endog = pd.DataFrame(base_endog, index=ix)
+                else:
+                    endog = pd.DataFrame(base_endog, index=ix)
 
                 mod = tsa_model.TimeSeriesModel(endog, freq=freq)
                 if freq is None:

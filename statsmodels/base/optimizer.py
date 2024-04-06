@@ -4,7 +4,8 @@ to untie these from LikelihoodModel so that they may be re-used generally.
 """
 from __future__ import annotations
 
-from typing import Any, Sequence
+from typing import Any
+from collections.abc import Sequence
 import numpy as np
 from scipy import optimize
 from statsmodels.compat.scipy import SP_LT_15, SP_LT_17
@@ -117,7 +118,7 @@ class Optimizer:
                 gtol : float
                     Stop when norm of gradient is less than gtol.
                 norm : float
-                    Order of norm (np.Inf is max, -np.Inf is min)
+                    Order of norm (np.inf is max, -np.inf is min)
                 epsilon
                     If fprime is approximated, use this value for the step
                     size. Only relevant if LikelihoodModel.score is None.
@@ -152,7 +153,7 @@ class Optimizer:
                 gtol : float
                     Stop when norm of gradient is less than gtol.
                 norm : float
-                    Order of norm (np.Inf is max, -np.Inf is min)
+                    Order of norm (np.inf is max, -np.inf is min)
                 epsilon : float
                     If fprime is approximated, use this value for the step
                     size. Can be scalar or vector.  Only relevant if
@@ -532,7 +533,7 @@ def _fit_bfgs(f, score, start_params, fargs, kwargs, disp=True,
     """
     check_kwargs(kwargs, ("gtol", "norm", "epsilon"), "bfgs")
     gtol = kwargs.setdefault('gtol', 1.0000000000000001e-05)
-    norm = kwargs.setdefault('norm', np.Inf)
+    norm = kwargs.setdefault('norm', np.inf)
     epsilon = kwargs.setdefault('epsilon', 1.4901161193847656e-08)
     retvals = optimize.fmin_bfgs(f, start_params, score, args=fargs,
                                  gtol=gtol, norm=norm, epsilon=epsilon,
@@ -622,7 +623,7 @@ def _fit_lbfgs(f, score, start_params, fargs, kwargs, disp=True, maxiter=100,
     # if they are present in kwargs, otherwise use the fmin_l_bfgs_b
     # default values.
     names = ('m', 'pgtol', 'factr', 'maxfun', 'epsilon', 'approx_grad')
-    extra_kwargs = dict((x, kwargs[x]) for x in names if x in kwargs)
+    extra_kwargs = {x: kwargs[x] for x in names if x in kwargs}
 
     # Extract values for the options related to the gradient.
     approx_grad = kwargs.get('approx_grad', False)
@@ -804,7 +805,7 @@ def _fit_cg(f, score, start_params, fargs, kwargs, disp=True,
     """
     check_kwargs(kwargs, ("gtol", "norm", "epsilon"), "cg")
     gtol = kwargs.setdefault('gtol', 1.0000000000000001e-05)
-    norm = kwargs.setdefault('norm', np.Inf)
+    norm = kwargs.setdefault('norm', np.inf)
     epsilon = kwargs.setdefault('epsilon', 1.4901161193847656e-08)
     retvals = optimize.fmin_cg(f, start_params, score, gtol=gtol, norm=norm,
                                epsilon=epsilon, maxiter=maxiter,

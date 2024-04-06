@@ -151,8 +151,9 @@ class QIF(base.Model):
 
         groups = np.asarray(groups)
 
-        super(QIF, self).__init__(endog, exog, groups=groups,
-                                  missing=missing, **kwargs)
+        super().__init__(
+            endog, exog, groups=groups, missing=missing, **kwargs
+        )
 
         self.group_names = list(set(groups))
         self.nobs = len(self.endog)
@@ -330,7 +331,7 @@ class QIF(base.Model):
         if isinstance(groups, str):
             groups = data[groups]
 
-        model = super(QIF, cls).from_formula(
+        model = super().from_formula(
                    formula, data=data, subset=subset,
                    groups=groups, *args, **kwargs)
 
@@ -408,7 +409,7 @@ class QIFResults(base.LikelihoodModelResults):
     def __init__(self, model, params, cov_params, scale,
                  use_t=False, **kwds):
 
-        super(QIFResults, self).__init__(
+        super().__init__(
             model, params, normalized_cov_params=cov_params,
             scale=scale)
 

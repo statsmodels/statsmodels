@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Fri Nov 04 10:51:39 2011
 
@@ -54,7 +53,7 @@ class TestPolySmoother1(BasePolySmoother, CheckSmoother):
 
     @classmethod
     def setup_class(cls):
-        super(TestPolySmoother1, cls).setup_class() #initialize DGP
+        super().setup_class() #initialize DGP
 
         y, x, exog = cls.y, cls.x, cls.exog
 
@@ -69,7 +68,7 @@ class TestPolySmoother2(BasePolySmoother, CheckSmoother):
 
     @classmethod
     def setup_class(cls):
-        super(TestPolySmoother2, cls).setup_class() #initialize DGP
+        super().setup_class() #initialize DGP
 
         y, x, exog = cls.y, cls.x, cls.exog
 
@@ -85,7 +84,7 @@ class TestPolySmoother3(BasePolySmoother, CheckSmoother):
 
     @classmethod
     def setup_class(cls):
-        super(TestPolySmoother3, cls).setup_class() #initialize DGP
+        super().setup_class() #initialize DGP
 
         y, x, exog = cls.y, cls.x, cls.exog
         nobs = y.shape[0]

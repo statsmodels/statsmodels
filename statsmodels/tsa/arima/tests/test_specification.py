@@ -102,8 +102,14 @@ def check_methods(spec, order, seasonal_order, enforce_stationarity,
                   enforce_invertibility, concentrate_scale,
                   exog_params, ar_params, ma_params, seasonal_ar_params,
                   seasonal_ma_params, sigma2):
-    params = np.r_[exog_params, ar_params, ma_params, seasonal_ar_params,
-                   seasonal_ma_params, sigma2]
+    params = np.r_[
+        exog_params,
+        ar_params,
+        ma_params,
+        seasonal_ar_params,
+        seasonal_ma_params,
+        sigma2
+    ]
 
     # Test methods
     desired = {
@@ -135,33 +141,53 @@ def check_methods(spec, order, seasonal_order, enforce_stationarity,
 
     # Non-stationary / non-invertible
     if spec.max_ar_order > 0:
-        params = np.r_[exog_params, np.ones_like(ar_params), ma_params,
-                       np.zeros_like(seasonal_ar_params),
-                       seasonal_ma_params, sigma2]
+        params = np.r_[
+            exog_params,
+            np.ones_like(ar_params),
+            ma_params,
+            np.zeros_like(seasonal_ar_params),
+            seasonal_ma_params,
+            sigma2
+        ]
         if enforce_stationarity:
             assert_raises(ValueError, spec.validate_params, params)
         else:
             assert_equal(spec.validate_params(params), None)
     if spec.max_ma_order > 0:
-        params = np.r_[exog_params, ar_params, np.ones_like(ma_params),
-                       seasonal_ar_params, np.zeros_like(seasonal_ma_params),
-                       sigma2]
+        params = np.r_[
+            exog_params,
+            ar_params,
+            np.ones_like(ma_params),
+            seasonal_ar_params,
+            np.zeros_like(seasonal_ma_params),
+            sigma2
+        ]
         if enforce_invertibility:
             assert_raises(ValueError, spec.validate_params, params)
         else:
             assert_equal(spec.validate_params(params), None)
     if spec.max_seasonal_ar_order > 0:
-        params = np.r_[exog_params, np.zeros_like(ar_params), ma_params,
-                       np.ones_like(seasonal_ar_params), seasonal_ma_params,
-                       sigma2]
+        params = np.r_[
+            exog_params,
+            np.zeros_like(ar_params),
+            ma_params,
+            np.ones_like(seasonal_ar_params),
+            seasonal_ma_params,
+            sigma2
+        ]
         if enforce_stationarity:
             assert_raises(ValueError, spec.validate_params, params)
         else:
             assert_equal(spec.validate_params(params), None)
     if spec.max_seasonal_ma_order > 0:
-        params = np.r_[exog_params, ar_params, np.zeros_like(ma_params),
-                       seasonal_ar_params, np.ones_like(seasonal_ma_params),
-                       sigma2]
+        params = np.r_[
+            exog_params,
+            ar_params,
+            np.zeros_like(ma_params),
+            seasonal_ar_params,
+            np.ones_like(seasonal_ma_params),
+            sigma2
+        ]
         if enforce_invertibility:
             assert_raises(ValueError, spec.validate_params, params)
         else:
@@ -169,11 +195,23 @@ def check_methods(spec, order, seasonal_order, enforce_stationarity,
 
     # Invalid variances
     if not concentrate_scale:
-        params = np.r_[exog_params, ar_params, ma_params, seasonal_ar_params,
-                       seasonal_ma_params, 0.]
+        params = np.r_[
+            exog_params,
+            ar_params,
+            ma_params,
+            seasonal_ar_params,
+            seasonal_ma_params,
+            0.
+        ]
         assert_raises(ValueError, spec.validate_params, params)
-        params = np.r_[exog_params, ar_params, ma_params, seasonal_ar_params,
-                       seasonal_ma_params, -1]
+        params = np.r_[
+            exog_params,
+            ar_params,
+            ma_params,
+            seasonal_ar_params,
+            seasonal_ma_params,
+            -1
+        ]
         assert_raises(ValueError, spec.validate_params, params)
 
     # Constrain / unconstrain
@@ -194,14 +232,24 @@ def check_methods(spec, order, seasonal_order, enforce_stationarity,
         unconstrained_seasonal_ma_params = (
             unconstrain(-np.array(unconstrained_seasonal_ma_params)))
     if not concentrate_scale:
-        unconstrained_sigma2 = unconstrained_sigma2**0.5
+        unconstrained_sigma2 = unconstrained_sigma2 ** 0.5
 
     unconstrained_params = np.r_[
-        exog_params, unconstrained_ar_params, unconstrained_ma_params,
-        unconstrained_seasonal_ar_params, unconstrained_seasonal_ma_params,
-        unconstrained_sigma2]
-    params = np.r_[exog_params, ar_params, ma_params, seasonal_ar_params,
-                   seasonal_ma_params, sigma2]
+        exog_params,
+        unconstrained_ar_params,
+        unconstrained_ma_params,
+        unconstrained_seasonal_ar_params,
+        unconstrained_seasonal_ma_params,
+        unconstrained_sigma2
+    ]
+    params = np.r_[
+        exog_params,
+        ar_params,
+        ma_params,
+        seasonal_ar_params,
+        seasonal_ma_params,
+        sigma2
+    ]
 
     assert_allclose(spec.unconstrain_params(params), unconstrained_params)
 
@@ -277,7 +325,7 @@ def test_specification_ar_or_ma(n, d, D, s, params, which):
 
     # Test the spec created with order, seasonal_order
     spec = specification.SARIMAXSpecification(
-            order=(p, d, q), seasonal_order=(P, D, Q, s))
+        order=(p, d, q), seasonal_order=(P, D, Q, s))
 
     check_attributes(spec, *args, **kwargs)
     check_properties(spec, *args, **properties_kwargs)
@@ -285,8 +333,8 @@ def test_specification_ar_or_ma(n, d, D, s, params, which):
 
     # Test the spec created with ar_order, etc.
     spec = specification.SARIMAXSpecification(
-            ar_order=p, diff=d, ma_order=q, seasonal_ar_order=P,
-            seasonal_diff=D, seasonal_ma_order=Q, seasonal_periods=s)
+        ar_order=p, diff=d, ma_order=q, seasonal_ar_order=P,
+        seasonal_diff=D, seasonal_ma_order=Q, seasonal_periods=s)
 
     check_attributes(spec, *args, **kwargs)
     check_properties(spec, *args, **properties_kwargs)
@@ -521,32 +569,32 @@ def test_invalid():
     "enforce_invertibility,concentrate_scale,valid", [
         # Different orders
         ((0, 0, 0), (0, 0, 0, 0), None, None, None,
-            ['yule_walker', 'burg', 'innovations', 'hannan_rissanen',
-             'innovations_mle', 'statespace']),
+         ['yule_walker', 'burg', 'innovations', 'hannan_rissanen',
+          'innovations_mle', 'statespace']),
         ((1, 0, 0), (0, 0, 0, 0), None, None, None,
-            ['yule_walker', 'burg', 'hannan_rissanen',
-             'innovations_mle', 'statespace']),
+         ['yule_walker', 'burg', 'hannan_rissanen',
+          'innovations_mle', 'statespace']),
         ((0, 0, 1), (0, 0, 0, 0), None, None, None,
-            ['innovations', 'hannan_rissanen', 'innovations_mle',
-             'statespace']),
+         ['innovations', 'hannan_rissanen', 'innovations_mle',
+          'statespace']),
         ((1, 0, 1), (0, 0, 0, 0), None, None, None,
-            ['hannan_rissanen', 'innovations_mle', 'statespace']),
+         ['hannan_rissanen', 'innovations_mle', 'statespace']),
         ((0, 0, 0), (1, 0, 0, 4), None, None, None,
-            ['innovations_mle', 'statespace']),
+         ['innovations_mle', 'statespace']),
 
         # Different options
         ((1, 0, 0), (0, 0, 0, 0), True, None, None,
-            ['innovations_mle', 'statespace']),
+         ['innovations_mle', 'statespace']),
         ((1, 0, 0), (0, 0, 0, 0), False, None, None,
-            ['yule_walker', 'burg', 'hannan_rissanen', 'statespace']),
+         ['yule_walker', 'burg', 'hannan_rissanen', 'statespace']),
         ((1, 0, 0), (0, 0, 0, 0), None, True, None,
-            ['yule_walker', 'burg', 'hannan_rissanen', 'innovations_mle',
-             'statespace']),
+         ['yule_walker', 'burg', 'hannan_rissanen', 'innovations_mle',
+          'statespace']),
         ((1, 0, 0), (0, 0, 0, 0), None, False, None,
-            ['yule_walker', 'burg', 'hannan_rissanen', 'innovations_mle',
-             'statespace']),
+         ['yule_walker', 'burg', 'hannan_rissanen', 'innovations_mle',
+          'statespace']),
         ((1, 0, 0), (0, 0, 0, 0), None, None, True,
-            ['yule_walker', 'burg', 'hannan_rissanen', 'statespace']),
+         ['yule_walker', 'burg', 'hannan_rissanen', 'statespace']),
     ])
 def test_valid_estimators(order, seasonal_order, enforce_stationarity,
                           enforce_invertibility, concentrate_scale, valid):
@@ -557,8 +605,8 @@ def test_valid_estimators(order, seasonal_order, enforce_stationarity,
         enforce_invertibility=enforce_invertibility,
         concentrate_scale=concentrate_scale)
 
-    estimators = set(['yule_walker', 'burg', 'innovations',
-                      'hannan_rissanen', 'innovations_mle', 'statespace'])
+    estimators = {'yule_walker', 'burg', 'innovations',
+                  'hannan_rissanen', 'innovations_mle', 'statespace'}
     desired = set(valid)
     assert_equal(spec.valid_estimators, desired)
     for estimator in desired:
@@ -575,7 +623,7 @@ def test_valid_estimators(order, seasonal_order, enforce_stationarity,
         enforce_invertibility=enforce_invertibility,
         concentrate_scale=concentrate_scale)
 
-    assert_equal(spec.valid_estimators, set(['statespace']))
+    assert_equal(spec.valid_estimators, {'statespace'})
     assert_equal(spec.validate_estimator('statespace'), None)
     for estimator in estimators.difference(['statespace']):
         assert_raises(ValueError, spec.validate_estimator, estimator)

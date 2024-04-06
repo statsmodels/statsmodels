@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Sandwich covariance estimators
 
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Generate a random process with panel structure
 
 Created on Sat Dec 17 22:15:27 2011

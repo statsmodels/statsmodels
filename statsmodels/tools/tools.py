@@ -271,7 +271,7 @@ def pinv_extended(x, rcond=1e-15):
             s[i] = 1./s[i]
         else:
             s[i] = 0.
-    res = np.dot(np.transpose(vt), np.multiply(s[:, np.core.newaxis],
+    res = np.dot(np.transpose(vt), np.multiply(s[:, np.newaxis],
                                                np.transpose(u)))
     return res, s_orig
 
@@ -457,7 +457,7 @@ class Bunch(dict):
         Keyword agument passed to dict constructor, key=value.
     """
     def __init__(self, *args, **kwargs):
-        super(Bunch, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.__dict__ = self
 
 

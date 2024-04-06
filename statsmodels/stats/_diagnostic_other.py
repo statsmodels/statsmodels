@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Score, lagrange multiplier and conditional moment tests
 robust to misspecification or without specification of higher moments
 

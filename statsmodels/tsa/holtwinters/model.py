@@ -14,7 +14,8 @@ Modified: Kevin Sheppard
 from statsmodels.compat.pandas import deprecate_kwarg
 
 import contextlib
-from typing import Any, Hashable, Sequence
+from typing import Any
+from collections.abc import Hashable, Sequence
 import warnings
 
 import numpy as np
@@ -736,7 +737,7 @@ class ExponentialSmoothing(TimeSeriesModel):
             sv_sel = np.array([False] * (6 + m))
             sv_sel[:3] = True
             sv_sel &= sel
-            hw_args.xi = sv_sel.astype(int)
+            hw_args.xi = sv_sel.astype(np.int64)
             hw_args.transform = False
             # Setup the grid points, respecting constraints
             points = self._setup_brute(sv_sel, bounds, alpha)
@@ -834,7 +835,7 @@ class ExponentialSmoothing(TimeSeriesModel):
 
         bounds = np.array(orig_bounds[:3], dtype=float)
         hw_args = HoltWintersArgs(
-            sel.astype(int), params, bounds, y, m, self.nobs
+            sel.astype(np.int64), params, bounds, y, m, self.nobs
         )
         params = self._get_starting_values(
             params,
@@ -854,7 +855,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         lb, ub = bounds.T
         lb[np.isnan(lb)] = -np.inf
         ub[np.isnan(ub)] = np.inf
-        hw_args.xi = sel.astype(int)
+        hw_args.xi = sel.astype(np.int64)
 
         # Ensure strictly inbounds
         initial_p = self._enforce_bounds(params, sel, lb, ub)
@@ -1434,7 +1435,7 @@ class ExponentialSmoothing(TimeSeriesModel):
 
         # Format parameters into a DataFrame
         codes = ["alpha", "beta", "gamma", "l.0", "b.0", "phi"]
-        codes += ["s.{0}".format(i) for i in range(m)]
+        codes += [f"s.{i}" for i in range(m)]
         idx = [
             "smoothing_level",
             "smoothing_trend",
@@ -1443,7 +1444,7 @@ class ExponentialSmoothing(TimeSeriesModel):
             "initial_trend",
             "damping_trend",
         ]
-        idx += ["initial_seasons.{0}".format(i) for i in range(m)]
+        idx += [f"initial_seasons.{i}" for i in range(m)]
 
         formatted = [alpha, beta, gamma, lvls[0], b[0], phi]
         formatted += s[:m].tolist()

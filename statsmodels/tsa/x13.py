@@ -130,11 +130,11 @@ def run_spec(x12path, specpath, outname=None, meta=False, datameta=False):
 
 def _make_automdl_options(maxorder, maxdiff, diff):
     options = "\n"
-    options += "maxorder = ({0} {1})\n".format(maxorder[0], maxorder[1])
+    options += f"maxorder = ({maxorder[0]} {maxorder[1]})\n"
     if maxdiff is not None:  # maxdiff always takes precedence
-        options += "maxdiff = ({0} {1})\n".format(maxdiff[0], maxdiff[1])
+        options += f"maxdiff = ({maxdiff[0]} {maxdiff[1]})\n"
     else:
-        options += "diff = ({0} {1})\n".format(diff[0], diff[1])
+        options += f"diff = ({diff[0]} {diff[1]})\n"
     return options
 
 
@@ -165,9 +165,12 @@ def _make_regression_options(trading, exog):
         reg_spec += "    variables = (td)\n"
     if exog is not None:
         var_names = _make_var_names(exog)
-        reg_spec += "    user = ({0})\n".format(var_names)
-        reg_spec += "    data = ({0})\n".format("\n".join(map(str,
-                                                exog.values.ravel().tolist())))
+        reg_spec += f"    user = ({var_names})\n"
+        reg_spec += "    data = ({})\n".format(
+            "\n".join(
+                map(str, exog.values.ravel().tolist())
+            )
+        )
 
     reg_spec += "}\n"  # close out regression spec
     return reg_spec
@@ -177,7 +180,7 @@ def _make_forecast_options(forecast_periods):
     if forecast_periods is None:
         return ""
     forecast_spec = "forecast{\n"
-    forecast_spec += "maxlead = ({0})\n}}\n".format(forecast_periods)
+    forecast_spec += f"maxlead = ({forecast_periods})\n}}\n"
     return forecast_spec
 
 
@@ -203,7 +206,7 @@ def _convert_out_to_series(x, dates, name):
 
 def _open_and_read(fname):
     # opens a file, reads it, and make sure it's closed
-    with open(fname, 'r', encoding="utf-8") as fin:
+    with open(fname, encoding="utf-8") as fin:
         fout = fin.read()
     return fout
 
@@ -224,7 +227,7 @@ class Spec:
     def set_options(self, **kwargs):
         options = ""
         for key, value in kwargs.items():
-            options += "{0}={1}\n".format(key, value)
+            options += f"{key}={value}\n"
             self.__dict__.update({key: value})
         self.options = options
 
@@ -271,8 +274,8 @@ class SeriesSpec(Spec):
                                                        appendfcst,
                                                        ])
 
-        series_name = "\"{0}\"".format(name[:64])  # trim to 64 characters
-        title = "\"{0}\"".format(title[:79])  # trim to 79 characters
+        series_name = f"\"{name[:64]}\""  # trim to 64 characters
+        title = f"\"{title[:79]}\""  # trim to 79 characters
         self.set_options(data=data, appendbcst=appendbcst,
                          appendfcst=appendfcst, period=period, start=start,
                          title=title, name=series_name,
@@ -288,7 +291,7 @@ def pandas_to_series_spec(x):
                              "column")
         x = x[x.columns[0]]
 
-    data = "({0})".format("\n".join(map(str, x.values.tolist())))
+    data = "({})".format("\n".join(map(str, x.values.tolist())))
 
     # get periodicity
     # get start / first data
@@ -313,8 +316,7 @@ def pandas_to_series_spec(x):
     else:
         name = 'Unnamed Series'
     series_spec = SeriesSpec(data=data, name=name, period=period,
-                             title=name, start="{0}.{1}".format(year,
-                                                                stperiod))
+                             title=name, start="{}.{}".format(year, stperiod))
     return series_spec
 
 
@@ -427,11 +429,11 @@ def x13_arima_analysis(endog, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
                                                         freq=freq))
     spec_obj = pandas_to_series_spec(endog)
     spec = spec_obj.create_spec()
-    spec += "transform{{function={0}}}\n".format(_log_to_x12[log])
+    spec += f"transform{{function={_log_to_x12[log]}}}\n"
     if outlier:
         spec += "outlier{}\n"
     options = _make_automdl_options(maxorder, maxdiff, diff)
-    spec += "automdl{{{0}}}\n".format(options)
+    spec += f"automdl{{{options}}}\n"
     spec += _make_regression_options(trading, exog)
     spec += _make_forecast_options(forecast_periods)
     spec += "x11{ save=(d11 d12 d13) }"
@@ -469,10 +471,10 @@ def x13_arima_analysis(endog, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
             os.remove(ftempout.name)
         except OSError:
             if os.path.exists(ftempin.name):
-                warn("Failed to delete resource {0}".format(ftempin.name),
+                warn(f"Failed to delete resource {ftempin.name}",
                      IOWarning)
             if os.path.exists(ftempout.name):
-                warn("Failed to delete resource {0}".format(ftempout.name),
+                warn(f"Failed to delete resource {ftempout.name}",
                      IOWarning)
 
     seasadj = _convert_out_to_series(seasadj, endog.index, 'seasadj')

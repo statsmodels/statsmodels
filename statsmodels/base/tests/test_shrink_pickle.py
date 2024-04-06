@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 
 Created on Fri Mar 09 16:00:27 2012
@@ -112,19 +111,19 @@ class RemoveDataPickle:
 
         before = sorted(self.results.__dict__.keys())
         after = sorted(res_unpickled.__dict__.keys())
-        assert before == after, 'not equal %r and %r' % (before, after)
+        assert before == after, 'not equal {!r} and {!r}'.format(before, after)
 
         before = sorted(self.results._results.__dict__.keys())
         after = sorted(res_unpickled._results.__dict__.keys())
-        assert before == after, 'not equal %r and %r' % (before, after)
+        assert before == after, 'not equal {!r} and {!r}'.format(before, after)
 
         before = sorted(self.results.model.__dict__.keys())
         after = sorted(res_unpickled.model.__dict__.keys())
-        assert before == after, 'not equal %r and %r' % (before, after)
+        assert before == after, 'not equal {!r} and {!r}'.format(before, after)
 
         before = sorted(self.results._cache.keys())
         after = sorted(res_unpickled._cache.keys())
-        assert before == after, 'not equal %r and %r' % (before, after)
+        assert before == after, 'not equal {!r} and {!r}'.format(before, after)
 
 
 class TestRemoveDataPickleOLS(RemoveDataPickle):
@@ -260,7 +259,7 @@ class TestRemoveDataPickleGLMConstrained(RemoveDataPickle):
 class TestPickleFormula(RemoveDataPickle):
     @classmethod
     def setup_class(cls):
-        super(TestPickleFormula, cls).setup_class()
+        super().setup_class()
         nobs = 10000
         np.random.seed(987689)
         x = np.random.randn(nobs, 3)
@@ -282,7 +281,7 @@ class TestPickleFormula(RemoveDataPickle):
 class TestPickleFormula2(RemoveDataPickle):
     @classmethod
     def setup_class(cls):
-        super(TestPickleFormula2, cls).setup_class()
+        super().setup_class()
         nobs = 500
         np.random.seed(987689)
         data = np.random.randn(nobs, 4)

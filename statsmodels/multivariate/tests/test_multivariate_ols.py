@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import numpy as np
 import pandas as pd
 from statsmodels.multivariate.multivariate_ols import _MultivariateOLS

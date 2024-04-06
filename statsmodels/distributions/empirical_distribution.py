@@ -141,7 +141,7 @@ class ECDF(StepFunction):
         x.sort()
         nobs = len(x)
         y = np.linspace(1./nobs, 1, nobs)
-        super(ECDF, self).__init__(x, y, side=side, sorted=True)
+        super().__init__(x, y, side=side, sorted=True)
         # TODO: make `step` an arg and have a linear interpolation option?
         # This is the path with `step` is True
         # If `step` is False, a previous version of the code read
@@ -212,7 +212,7 @@ class ECDFDiscrete(StepFunction):
         x = x[ax]
         y = np.cumsum(w[ax])
         y = y / sw
-        super(ECDFDiscrete, self).__init__(x, y, side=side, sorted=True)
+        super().__init__(x, y, side=side, sorted=True)
 
 
 def monotone_fn_inverter(fn, x, vectorized=True, **keywords):

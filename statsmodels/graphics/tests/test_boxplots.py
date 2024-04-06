@@ -23,13 +23,6 @@ def age_and_labels():
     return age, labels
 
 
-# TODO: Remove once SciPy 1.5.0 is the minimum
-IGNORE_VISIBLE_DEPR = """\
-ignore:Creating an ndarray from ragged nested sequences:\
-numpy.VisibleDeprecationWarning:"""
-
-
-@pytest.mark.filterwarnings(IGNORE_VISIBLE_DEPR)
 @pytest.mark.matplotlib
 def test_violinplot(age_and_labels, close_figures):
     age, labels = age_and_labels
@@ -41,7 +34,6 @@ def test_violinplot(age_and_labels, close_figures):
                           'label_rotation': 30})
 
 
-@pytest.mark.filterwarnings(IGNORE_VISIBLE_DEPR)
 @pytest.mark.matplotlib
 def test_violinplot_bw_factor(age_and_labels, close_figures):
     age, labels = age_and_labels

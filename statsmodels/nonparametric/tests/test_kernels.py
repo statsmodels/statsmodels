@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 
 Created on Sat Dec 14 17:23:25 2013
@@ -6,21 +5,22 @@ Created on Sat Dec 14 17:23:25 2013
 Author: Josef Perktold
 """
 import os
+
 import numpy as np
 from numpy.testing import assert_allclose, assert_array_less
+import pandas as pd
 import pytest
 
 from statsmodels.sandbox.nonparametric import kernels
-
 
 DEBUG = 0
 
 curdir = os.path.dirname(os.path.abspath(__file__))
 fname = 'results/results_kernel_regression.csv'
-results = np.recfromcsv(os.path.join(curdir, fname))
+results = pd.read_csv(os.path.join(curdir, fname))
 
-y = results['accident']
-x = results['service']
+y = results['accident'].to_numpy(copy=True)
+x = results['service'].to_numpy(copy=True)
 positive = x >= 0
 x = np.log(x[positive])
 y = y[positive]
@@ -141,7 +141,7 @@ class TestCosine(CheckKernelMixin):
     @pytest.mark.xfail(reason="NaN mismatch",
                        raises=AssertionError, strict=True)
     def test_smoothconf(self):
-        super(TestCosine, self).test_smoothconf()
+        super().test_smoothconf()
 
 
 class TestBiweight(CheckKernelMixin):

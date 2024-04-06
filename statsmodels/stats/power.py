@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #pylint: disable-msg=W0142
 """Statistical power, solving for nobs, ... - trial version
 
@@ -476,7 +475,7 @@ class Power:
             start_value = 0.9
             import warnings
             from statsmodels.tools.sm_exceptions import ValueWarning
-            warnings.warn('Warning: using default start_value for {0}'.format(key), ValueWarning)
+            warnings.warn(f'Warning: using default start_value for {key}', ValueWarning)
 
         fit_kwds = self.start_bqexp[key]
         fit_res = []
@@ -722,7 +721,7 @@ class TTestPower(Power):
         '''
         # for debugging
         #print 'calling ttest solve with', (effect_size, nobs, alpha, power, alternative)
-        return super(TTestPower, self).solve_power(effect_size=effect_size,
+        return super().solve_power(effect_size=effect_size,
                                                       nobs=nobs,
                                                       alpha=alpha,
                                                       power=power,
@@ -836,7 +835,7 @@ class TTestIndPower(Power):
         where this fails.
 
         '''
-        return super(TTestIndPower, self).solve_power(effect_size=effect_size,
+        return super().solve_power(effect_size=effect_size,
                                                       nobs1=nobs1,
                                                       alpha=alpha,
                                                       power=power,
@@ -852,7 +851,7 @@ class NormalIndPower(Power):
 
     def __init__(self, ddof=0, **kwds):
         self.ddof = ddof
-        super(NormalIndPower, self).__init__(**kwds)
+        super().__init__(**kwds)
 
     def power(self, effect_size, nobs1, alpha, ratio=1,
               alternative='two-sided'):
@@ -957,7 +956,7 @@ class NormalIndPower(Power):
         where this fails.
 
         '''
-        return super(NormalIndPower, self).solve_power(effect_size=effect_size,
+        return super().solve_power(effect_size=effect_size,
                                                       nobs1=nobs1,
                                                       alpha=alpha,
                                                       power=power,
@@ -1127,7 +1126,7 @@ class FTestPower(Power):
                 warnings.warn("nobs is not used")
             else:
                 raise ValueError(f"incorrect keyword(s) {kwargs}")
-        return super(FTestPower, self).solve_power(effect_size=effect_size,
+        return super().solve_power(effect_size=effect_size,
                                                       df_num=df_num,
                                                       df_denom=df_denom,
                                                       alpha=alpha,
@@ -1271,7 +1270,7 @@ class FTestPowerF2(Power):
 
         '''
 
-        return super(FTestPowerF2, self).solve_power(effect_size=effect_size,
+        return super().solve_power(effect_size=effect_size,
                                                       df_num=df_num,
                                                       df_denom=df_denom,
                                                       alpha=alpha,
@@ -1372,7 +1371,7 @@ class FTestAnovaPower(Power):
                                            k_groups=k_groups,
                                            power=power)
 
-        return super(FTestAnovaPower, self).solve_power(effect_size=effect_size,
+        return super().solve_power(effect_size=effect_size,
                                                       nobs=nobs,
                                                       alpha=alpha,
                                                       k_groups=k_groups,
@@ -1477,7 +1476,7 @@ class GofChisquarePower(Power):
         where this fails.
 
         '''
-        return super(GofChisquarePower, self).solve_power(effect_size=effect_size,
+        return super().solve_power(effect_size=effect_size,
                                                       nobs=nobs,
                                                       n_bins=n_bins,
                                                       alpha=alpha,
@@ -1587,7 +1586,7 @@ class _GofChisquareIndPower(Power):
         where this fails.
 
         '''
-        return super(_GofChisquareIndPower, self).solve_power(effect_size=effect_size,
+        return super().solve_power(effect_size=effect_size,
                                                       nobs1=nobs1,
                                                       alpha=alpha,
                                                       power=power,

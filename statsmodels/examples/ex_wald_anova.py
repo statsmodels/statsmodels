@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Example for wald_test for terms - `wald_anova`
 
 Created on Mon Dec 15 11:19:23 2014

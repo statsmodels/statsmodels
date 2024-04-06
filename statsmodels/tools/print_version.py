@@ -22,7 +22,7 @@ def _show_versions_only():
     try:
         import os
         (sysname, nodename, release, version, machine) = os.uname()
-        print("OS: %s %s %s %s" % (sysname, release, version, machine))
+        print("OS: {} {} {} {}".format(sysname, release, version, machine))
         print("byteorder: %s" % sys.byteorder)
         print("LC_ALL: %s" % os.environ.get('LC_ALL', "None"))
         print("LANG: %s" % os.environ.get('LANG', "None"))
@@ -124,7 +124,7 @@ def _show_versions_only():
 
     try:
         import pytest
-        print("pytest: %s (%s)" % (safe_version(pytest), dirname(pytest.__file__)))
+        print("pytest: {} ({})".format(safe_version(pytest), dirname(pytest.__file__)))
     except ImportError:
         print("pytest: Not installed")
 
@@ -154,7 +154,7 @@ def show_versions(show_dirs=True):
     try:
         import os
         (sysname, nodename, release, version, machine) = os.uname()
-        print("OS: %s %s %s %s" % (sysname, release, version, machine))
+        print("OS: {} {} {} {}".format(sysname, release, version, machine))
         print("byteorder: %s" % sys.byteorder)
         print("LC_ALL: %s" % os.environ.get('LC_ALL', "None"))
         print("LANG: %s" % os.environ.get('LANG', "None"))
@@ -169,7 +169,7 @@ def show_versions(show_dirs=True):
 
     print('\nstatsmodels\n===========\n')
     if has_sm:
-        print('Installed: %s (%s)' % (safe_version(statsmodels),
+        print('Installed: {} ({})'.format(safe_version(statsmodels),
                                       dirname(statsmodels.__file__)))
     else:
         print('Not installed')
@@ -177,28 +177,28 @@ def show_versions(show_dirs=True):
     print("\nRequired Dependencies\n=====================\n")
     try:
         import Cython
-        print("cython: %s (%s)" % (safe_version(Cython),
+        print("cython: {} ({})".format(safe_version(Cython),
                                    dirname(Cython.__file__)))
     except ImportError:
         print("cython: Not installed")
 
     try:
         import numpy
-        print("numpy: %s (%s)" % (safe_version(numpy, ['version', 'version']),
+        print("numpy: {} ({})".format(safe_version(numpy, ['version', 'version']),
                                   dirname(numpy.__file__)))
     except ImportError:
         print("numpy: Not installed")
 
     try:
         import scipy
-        print("scipy: %s (%s)" % (safe_version(scipy, ['version', 'version']),
+        print("scipy: {} ({})".format(safe_version(scipy, ['version', 'version']),
                                   dirname(scipy.__file__)))
     except ImportError:
         print("scipy: Not installed")
 
     try:
         import pandas
-        print("pandas: %s (%s)" % (safe_version(pandas, ['version', 'version'],
+        print("pandas: {} ({})".format(safe_version(pandas, ['version', 'version'],
                                                 '__version__'),
                                    dirname(pandas.__file__)))
     except ImportError:
@@ -206,14 +206,14 @@ def show_versions(show_dirs=True):
 
     try:
         import dateutil
-        print("    dateutil: %s (%s)" % (safe_version(dateutil),
+        print("    dateutil: {} ({})".format(safe_version(dateutil),
                                          dirname(dateutil.__file__)))
     except ImportError:
         print("    dateutil: not installed")
 
     try:
         import patsy
-        print("patsy: %s (%s)" % (safe_version(patsy),
+        print("patsy: {} ({})".format(safe_version(patsy),
                                   dirname(patsy.__file__)))
     except ImportError:
         print("patsy: Not installed")
@@ -222,7 +222,7 @@ def show_versions(show_dirs=True):
 
     try:
         import matplotlib as mpl
-        print("matplotlib: %s (%s)" % (safe_version(mpl),
+        print("matplotlib: {} ({})".format(safe_version(mpl),
                                        dirname(mpl.__file__)))
         print("    backend: %s " % mpl.rcParams['backend'])
     except ImportError:
@@ -230,14 +230,14 @@ def show_versions(show_dirs=True):
 
     try:
         from cvxopt import info
-        print("cvxopt: %s (%s)" % (safe_version(info, 'version'),
+        print("cvxopt: {} ({})".format(safe_version(info, 'version'),
                                    dirname(info.__file__)))
     except ImportError:
         print("cvxopt: Not installed")
 
     try:
         import joblib
-        print("joblib: %s (%s)" % (safe_version(joblib),
+        print("joblib: {} ({})".format(safe_version(joblib),
                                    dirname(joblib.__file__)))
     except ImportError:
         print("joblib: Not installed")
@@ -246,40 +246,40 @@ def show_versions(show_dirs=True):
 
     try:
         import IPython
-        print("IPython: %s (%s)" % (safe_version(IPython),
+        print("IPython: {} ({})".format(safe_version(IPython),
                                     dirname(IPython.__file__)))
     except ImportError:
         print("IPython: Not installed")
     try:
         import jinja2
-        print("    jinja2: %s (%s)" % (safe_version(jinja2),
+        print("    jinja2: {} ({})".format(safe_version(jinja2),
                                        dirname(jinja2.__file__)))
     except ImportError:
         print("    jinja2: Not installed")
 
     try:
         import sphinx
-        print("sphinx: %s (%s)" % (safe_version(sphinx),
+        print("sphinx: {} ({})".format(safe_version(sphinx),
                                    dirname(sphinx.__file__)))
     except ImportError:
         print("sphinx: Not installed")
 
     try:
         import pygments
-        print("    pygments: %s (%s)" % (safe_version(pygments),
+        print("    pygments: {} ({})".format(safe_version(pygments),
                                          dirname(pygments.__file__)))
     except ImportError:
         print("    pygments: Not installed")
 
     try:
         import pytest
-        print("pytest: %s (%s)" % (safe_version(pytest), dirname(pytest.__file__)))
+        print("pytest: {} ({})".format(safe_version(pytest), dirname(pytest.__file__)))
     except ImportError:
         print("pytest: Not installed")
 
     try:
         import virtualenv
-        print("virtualenv: %s (%s)" % (safe_version(virtualenv),
+        print("virtualenv: {} ({})".format(safe_version(virtualenv),
                                        dirname(virtualenv.__file__)))
     except ImportError:
         print("virtualenv: Not installed")

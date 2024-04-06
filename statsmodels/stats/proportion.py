@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Tests and Confidence Intervals for Binomial Proportions
 
@@ -9,7 +8,7 @@ License: BSD-3
 """
 
 from statsmodels.compat.python import lzip
-from typing import Callable, Tuple
+from typing import Callable
 import numpy as np
 import pandas as pd
 from scipy import optimize, stats
@@ -60,7 +59,7 @@ def _bound_proportion_confint(
 
 def _bisection_search_conservative(
     func: Callable[[float], float], lb: float, ub: float, steps: int = 27
-) -> Tuple[float, float]:
+) -> tuple[float, float]:
     """
     Private function used as a fallback by proportion_confint
 
@@ -436,11 +435,11 @@ def multinomial_proportions_confint(counts, alpha=0.05, method='goodman'):
             """
             # Compute means and central moments of the truncated poisson
             # variables.
-            mu_r1, mu_r2, mu_r3, mu_r4 = [
+            mu_r1, mu_r2, mu_r3, mu_r4 = (
                 np.array([truncated_poisson_factorial_moment(interval, r, p)
                           for (interval, p) in zip(intervals, counts)])
                 for r in range(1, 5)
-            ]
+            )
             mu = mu_r1
             mu2 = mu_r2 + mu - mu ** 2
             mu3 = mu_r3 + mu_r2 * (3 - 3 * mu) + mu - 3 * mu ** 2 + 2 * mu ** 3

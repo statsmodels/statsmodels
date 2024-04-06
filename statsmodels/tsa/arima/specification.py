@@ -739,7 +739,7 @@ class SARIMAXSpecification:
         params : array_like
             Array of model parameters.
         allow_infnan : bool, optional
-            Whether or not to allow `params` to contain -np.Inf, np.Inf, and
+            Whether or not to allow `params` to contain -np.inf, np.inf, and
             np.nan. Default is False.
 
         Returns

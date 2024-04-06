@@ -534,11 +534,11 @@ class GEE(GLM):
         # Calling super creates self.exog, self.endog, etc. as
         # ndarrays and the original exog, endog, etc. are
         # self.data.endog, etc.
-        super(GEE, self).__init__(endog, exog, groups=groups,
-                                  time=time, offset=offset,
-                                  exposure=exposure, weights=weights,
-                                  dep_data=dep_data, missing=missing,
-                                  family=family, **kwargs)
+        super().__init__(endog, exog, groups=groups,
+                         time=time, offset=offset,
+                         exposure=exposure, weights=weights,
+                         dep_data=dep_data, missing=missing,
+                         family=family, **kwargs)
 
         _check_args(
             self.endog,
@@ -690,7 +690,7 @@ class GEE(GLM):
             is added to the offset (if any).  If a string, this is the
             name of a variable in `data` that contains the offset
             values.
-        %(missing_param_doc)s
+        {missing_param_doc}
         args : extra arguments
             These are passed to the model
         kwargs : extra keyword arguments
@@ -723,7 +723,7 @@ class GEE(GLM):
         terms args and kwargs are passed on to the model
         instantiation. E.g., a numpy structured or rec array, a
         dictionary, or a pandas DataFrame.
-        """ % {'missing_param_doc': base._missing_param_doc}
+        """.format(missing_param_doc=base._missing_param_doc)
 
         groups_name = "Groups"
         if isinstance(groups, str):
@@ -756,12 +756,12 @@ class GEE(GLM):
             family = kwargs["family"]
             del kwargs["family"]
 
-        model = super(GEE, cls).from_formula(formula, data=data, subset=subset,
-                                             groups=groups, time=time,
-                                             offset=offset,
-                                             exposure=exposure,
-                                             family=family,
-                                             *args, **kwargs)
+        model = super().from_formula(formula, data=data, subset=subset,
+                                     groups=groups, time=time,
+                                     offset=offset,
+                                     exposure=exposure,
+                                     family=family,
+                                     *args, **kwargs)
 
         if dep_data_names is not None:
             model._dep_data_names = dep_data_names
@@ -1771,9 +1771,9 @@ class GEEResults(GLMResults):
                  cov_type='robust', use_t=False, regularized=False,
                  **kwds):
 
-        super(GEEResults, self).__init__(
-            model, params, normalized_cov_params=cov_params,
-            scale=scale)
+        super().__init__(
+            model, params, normalized_cov_params=cov_params, scale=scale
+        )
 
         # not added by super
         self.df_resid = model.df_resid
@@ -2340,9 +2340,9 @@ class OrdinalGEE(GEE):
         endog, exog, groups, time, offset = self.setup_ordinal(
             endog, exog, groups, time, offset)
 
-        super(OrdinalGEE, self).__init__(endog, exog, groups, time,
-                                         family, cov_struct, missing,
-                                         offset, dep_data, constraint)
+        super().__init__(endog, exog, groups, time,
+                         family, cov_struct, missing,
+                         offset, dep_data, constraint)
 
     def setup_ordinal(self, endog, exog, groups, time, offset):
         """
@@ -2430,12 +2430,12 @@ class OrdinalGEE(GEE):
             params_niter=1, first_dep_update=0,
             cov_type='robust'):
 
-        rslt = super(OrdinalGEE, self).fit(maxiter, ctol, start_params,
-                                           params_niter, first_dep_update,
-                                           cov_type=cov_type)
+        rslt = super().fit(maxiter, ctol, start_params,
+                           params_niter, first_dep_update,
+                           cov_type=cov_type)
 
         rslt = rslt._results   # use unwrapped instance
-        res_kwds = dict(((k, getattr(rslt, k)) for k in rslt._props))
+        res_kwds = {k: getattr(rslt, k) for k in rslt._props}
         # Convert the GEEResults to an OrdinalGEEResults
         ord_rslt = OrdinalGEEResults(self, rslt.params,
                                      rslt.cov_params() / rslt.scale,
@@ -2622,7 +2622,7 @@ class NominalGEE(GEE):
         if cov_struct is None:
             cov_struct = cov_structs.NominalIndependence()
 
-        super(NominalGEE, self).__init__(
+        super().__init__(
             endog, exog, groups, time, family, cov_struct, missing,
             offset, dep_data, constraint)
 
@@ -2699,7 +2699,7 @@ class NominalGEE(GEE):
             xnames_in = ["x%d" % k for k in range(1, exog.shape[1] + 1)]
         xnames = []
         for tr in endog_cuts:
-            xnames.extend(["%s[%.1f]" % (v, tr) for v in xnames_in])
+            xnames.extend(["{}[{:.1f}]".format(v, tr) for v in xnames_in])
         exog_out = pd.DataFrame(exog_out, columns=xnames)
         exog_out = pd.DataFrame(exog_out, columns=xnames)
 
@@ -2815,16 +2815,16 @@ class NominalGEE(GEE):
             params_niter=1, first_dep_update=0,
             cov_type='robust'):
 
-        rslt = super(NominalGEE, self).fit(maxiter, ctol, start_params,
-                                           params_niter, first_dep_update,
-                                           cov_type=cov_type)
+        rslt = super().fit(maxiter, ctol, start_params,
+                           params_niter, first_dep_update,
+                           cov_type=cov_type)
         if rslt is None:
             warnings.warn("GEE updates did not converge",
                           ConvergenceWarning)
             return None
 
         rslt = rslt._results   # use unwrapped instance
-        res_kwds = dict(((k, getattr(rslt, k)) for k in rslt._props))
+        res_kwds = {k: getattr(rslt, k) for k in rslt._props}
         # Convert the GEEResults to a NominalGEEResults
         nom_rslt = NominalGEEResults(self, rslt.params,
                                      rslt.cov_params() / rslt.scale,

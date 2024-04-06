@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Thu Aug 30 12:26:38 2012
 Author: Josef Perktold

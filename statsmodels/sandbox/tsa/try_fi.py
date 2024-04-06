@@ -1,4 +1,3 @@
-
 '''
 using lfilter to get fractional integration polynomial (1-L)^d, d<1
 `ri` is (1-L)^(-d), d<1

@@ -368,7 +368,7 @@ class SysResults(LikelihoodModelResults):
     Not implemented yet.
     """
     def __init__(self, model, params, normalized_cov_params=None, scale=1.):
-        super(SysResults, self).__init__(model, params,
+        super().__init__(model, params,
                 normalized_cov_params, scale)
         self._get_results()
 

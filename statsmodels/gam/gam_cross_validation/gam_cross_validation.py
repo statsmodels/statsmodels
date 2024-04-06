@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Cross-validation classes for GAM
 
@@ -97,10 +96,8 @@ class MultivariateGAMCV(BaseCV):
         self.cv_iterator = cv_iterator
         # TODO: super does not do anything with endog, exog, except get nobs
         # refactor to clean up what where `exog` and `exog_linear` is attached
-        super(MultivariateGAMCV, self).__init__(cv_iterator,
-                                                endog,
-                                                # exog,  # not used in super
-                                                self.smoother.basis)
+        # exog is not used in super
+        super().__init__(cv_iterator, endog, self.smoother.basis)
 
     def _error(self, train_index, test_index, **kwargs):
         train_smoother, test_smoother = _split_train_test_smoothers(

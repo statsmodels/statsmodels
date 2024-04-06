@@ -253,7 +253,7 @@ class TestLocalLevelAnalytic:
 class TestLocalLevelAnalyticDirect(TestLocalLevelAnalytic):
     @classmethod
     def setup_class(cls):
-        super(TestLocalLevelAnalyticDirect, cls).setup_class(direct=True)
+        super().setup_class(direct=True)
 
 
 class TestLocalLinearTrendAnalytic:
@@ -301,7 +301,7 @@ class TestLocalLinearTrendAnalytic:
 class TestLocalLinearTrendAnalyticDirect(TestLocalLinearTrendAnalytic):
     @classmethod
     def setup_class(cls):
-        super(TestLocalLinearTrendAnalyticDirect, cls).setup_class(direct=True)
+        super().setup_class(direct=True)
 
 
 class TestLocalLinearTrendAnalyticMissing(TestLocalLinearTrendAnalytic):
@@ -311,7 +311,7 @@ class TestLocalLinearTrendAnalyticMissing(TestLocalLinearTrendAnalytic):
         y2 = np.nan
         y3 = 6.123123
         endog = np.r_[y1, y2, y3, [1] * 7]
-        super(TestLocalLinearTrendAnalyticMissing, cls).setup_class(
+        super().setup_class(
             endog=endog)
 
     def test_results(self):
@@ -627,7 +627,7 @@ class CheckApproximateDiffuseMixin:
     def setup_class(cls, *args, **kwargs):
         init_approx = kwargs.pop('init_approx', None)
 
-        super(CheckApproximateDiffuseMixin, cls).setup_class(*args, **kwargs)
+        super().setup_class(*args, **kwargs)
 
         # Get the approximate diffuse results
         kappa = cls.approximate_diffuse_variance
@@ -656,7 +656,7 @@ class CheckKFASMixin:
     @classmethod
     def setup_class(cls, *args, **kwargs):
         kwargs.setdefault('filter_univariate', True)
-        super(CheckKFASMixin, cls).setup_class(*args, **kwargs)
+        super().setup_class(*args, **kwargs)
 
         # Get the KFAS results objects
         cls.results_b = kfas_helpers.parse(cls.results_path, cls.ssm)
@@ -720,7 +720,7 @@ class CheckVAR1MeasurementError(CheckVAR1):
     @classmethod
     def setup_class(cls, **kwargs):
         kwargs['measurement_error'] = True
-        super(CheckVAR1MeasurementError, cls).setup_class(**kwargs)
+        super().setup_class(**kwargs)
 
 
 class TestVAR1MeasurementError_Approx(CheckApproximateDiffuseMixin,
@@ -740,8 +740,7 @@ class TestVAR1MeasurementError_Approx(CheckApproximateDiffuseMixin,
         #            [0.      , 4.221227]]])
         # y: array([[[ 3.355072, -0.600856],
         #            [-0.600856,  4.221227]]])
-        super(TestVAR1MeasurementError_Approx,
-              self).test_smoothed_measurement_disturbance_cov(
+        super().test_smoothed_measurement_disturbance_cov(
                 rtol_diffuse=rtol_diffuse)
 
 
@@ -763,7 +762,7 @@ class CheckVAR1Missing(CheckVAR1):
         endog.iloc[8:12, :] = np.nan
         kwargs['endog'] = endog
 
-        super(CheckVAR1Missing, cls).setup_class(**kwargs)
+        super().setup_class(**kwargs)
 
     def test_nobs_diffuse(self):
         assert_allclose(self.d, 2)
@@ -786,7 +785,7 @@ class TestVAR1Missing_Approx(CheckApproximateDiffuseMixin, CheckVAR1Missing):
         # ...
         # y: array([[[-12.083676,   0.      ],
         #            [  0.      ,   0.      ]],
-        super(TestVAR1Missing_Approx, self).test_smoothed_state_cov(
+        super().test_smoothed_state_cov(
             rtol_diffuse=rtol_diffuse)
 
 
@@ -807,7 +806,7 @@ class TestVAR1Missing_KFAS(CheckKFASMixin, CheckVAR1Missing):
         bak = self.results_a.forecasts_error_cov[:]
         self.results_a.forecasts_error_cov[0, 1, :] = 0
         self.results_a.forecasts_error_cov[1, 0, :] = 0
-        super(TestVAR1Missing_KFAS, self).test_forecasts_error_cov()
+        super().test_forecasts_error_cov()
         self.results_a.forecasts_error_cov = bak
 
 
@@ -829,7 +828,7 @@ class CheckVAR1Mixed(CheckVAR1):
             init_approx.set(1, 'stationary')
             kwargs['init_approx'] = init_approx
 
-        super(CheckVAR1Mixed, cls).setup_class(init=init, **kwargs)
+        super().setup_class(init=init, **kwargs)
 
     def test_nobs_diffuse(self):
         assert_allclose(self.d, 1)
@@ -847,7 +846,7 @@ class TestVAR1Mixed_Approx(CheckVAR1Mixed, CheckApproximateDiffuseMixin,
     @classmethod
     def setup_class(cls, **kwargs):
         kwargs['approx'] = True
-        super(TestVAR1Mixed_Approx, cls).setup_class(**kwargs)
+        super().setup_class(**kwargs)
 
     def test_initialization_approx(self):
         stationary_init = 3.5714285714285716
@@ -867,15 +866,15 @@ class TestVAR1Mixed_KFAS(CheckVAR1Mixed, CheckKFASMixin, CheckVAR1):
     # diffuse case agrees with us), so we should double-check against a third
     # package (RATS?)
     def test_predicted_state(self):
-        super(TestVAR1Mixed_KFAS, self).test_predicted_state(
+        super().test_predicted_state(
             rtol_diffuse=np.inf)
 
     def test_filtered_state(self):
-        super(TestVAR1Mixed_KFAS, self).test_filtered_state(
+        super().test_filtered_state(
             rtol_diffuse=np.inf)
 
     def test_smoothed_state(self):
-        super(TestVAR1Mixed_KFAS, self).test_smoothed_state(
+        super().test_smoothed_state(
             rtol_diffuse=np.inf)
 
 
@@ -916,13 +915,13 @@ class TestDFM_KFAS(CheckKFASMixin, CheckDFM):
     # diffuse case agrees with us), so we should double-check against a third
     # package (RATS?)
     def test_predicted_state(self):
-        super(TestDFM_KFAS, self).test_predicted_state(rtol_diffuse=np.inf)
+        super().test_predicted_state(rtol_diffuse=np.inf)
 
     def test_filtered_state(self):
-        super(TestDFM_KFAS, self).test_filtered_state(rtol_diffuse=np.inf)
+        super().test_filtered_state(rtol_diffuse=np.inf)
 
     def test_smoothed_state(self):
-        super(TestDFM_KFAS, self).test_smoothed_state(rtol_diffuse=np.inf)
+        super().test_smoothed_state(rtol_diffuse=np.inf)
 
 
 # - DFM + Collapsed ----------------------------------------------------------

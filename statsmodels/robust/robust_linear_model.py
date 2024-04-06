@@ -40,13 +40,13 @@ class RLM(base.LikelihoodModel):
     Estimate a robust linear model via iteratively reweighted least squares
     given a robust criterion estimator.
 
-    %(params)s
+    {params}
     M : statsmodels.robust.norms.RobustNorm, optional
         The robust criterion function for downweighting outliers.
         The current options are LeastSquares, HuberT, RamsayE, AndrewWave,
         TrimmedMean, Hampel, and TukeyBiweight.  The default is HuberT().
         See statsmodels.robust.norms for more information.
-    %(extra_params)s
+    {extra_params}
 
     Attributes
     ----------
@@ -102,8 +102,9 @@ class RLM(base.LikelihoodModel):
     >>> rlm_hamp_hub = mod.fit(scale_est=sm.robust.scale.HuberScale())
     >>> rlm_hamp_hub.params
     array([  0.73175452,   1.25082038,  -0.14794399, -40.27122257])
-    """ % {'params': base._model_params_doc,
-           'extra_params': base._missing_param_doc}
+    """.format(
+        params=base._model_params_doc, extra_params=base._missing_param_doc
+    )
 
     def __init__(self, endog, exog, M=None, missing='none',
                  **kwargs):
@@ -255,7 +256,7 @@ class RLM(base.LikelihoodModel):
             start_params = np.asarray(start_params, dtype=np.double).squeeze()
             if (start_params.shape[0] != self.exog.shape[1] or
                     start_params.ndim != 1):
-                raise ValueError('start_params must by a 1-d array with {0} '
+                raise ValueError('start_params must by a 1-d array with {} '
                                  'values'.format(self.exog.shape[1]))
             fake_wls = reg_tools._MinimalWLS(self.endog, self.exog,
                                              weights=np.ones_like(self.endog),
@@ -400,8 +401,7 @@ class RLMResults(base.LikelihoodModelResults):
     """
 
     def __init__(self, model, params, normalized_cov_params, scale):
-        super(RLMResults, self).__init__(model, params,
-                                         normalized_cov_params, scale)
+        super().__init__(model, params, normalized_cov_params, scale)
         self.model = model
         self.df_model = model.df_model
         self.df_resid = model.df_resid

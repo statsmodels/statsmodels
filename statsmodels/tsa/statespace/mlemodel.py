@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 State Space Model
 
@@ -135,9 +134,9 @@ class MLEModel(tsbase.TimeSeriesModel):
     def __init__(self, endog, k_states, exog=None, dates=None, freq=None,
                  **kwargs):
         # Initialize the model base
-        super(MLEModel, self).__init__(endog=endog, exog=exog,
-                                       dates=dates, freq=freq,
-                                       missing='none')
+        super().__init__(endog=endog, exog=exog,
+                         dates=dates, freq=freq,
+                         missing='none')
 
         # Store kwargs to recreate model
         self._init_kwargs = kwargs
@@ -243,7 +242,7 @@ class MLEModel(tsbase.TimeSeriesModel):
 
     def _get_init_kwds(self):
         # Get keywords based on model attributes
-        kwds = super(MLEModel, self)._get_init_kwds()
+        kwds = super()._get_init_kwds()
 
         for key, value in kwds.items():
             if value is None and hasattr(self.ssm, key):
@@ -502,9 +501,9 @@ class MLEModel(tsbase.TimeSeriesModel):
         # Set the new fixed parameters, keeping the order as given by
         # param_names
         self._fixed_params.update(params)
-        self._fixed_params = dict([
-            (name, self._fixed_params[name]) for name in self.param_names
-            if name in self._fixed_params])
+        self._fixed_params = {
+            name: self._fixed_params[name] for name in self.param_names
+            if name in self._fixed_params}
 
         # Update associated values
         self._has_fixed_params = True
@@ -701,12 +700,12 @@ class MLEModel(tsbase.TimeSeriesModel):
             if optim_hessian is not None:
                 flags['hessian_method'] = optim_hessian
             fargs = (flags,)
-            mlefit = super(MLEModel, self).fit(start_params, method=method,
-                                               fargs=fargs,
-                                               maxiter=maxiter,
-                                               full_output=full_output,
-                                               disp=disp, callback=callback,
-                                               skip_hessian=True, **kwargs)
+            mlefit = super().fit(start_params, method=method,
+                                 fargs=fargs,
+                                 maxiter=maxiter,
+                                 full_output=full_output,
+                                 disp=disp, callback=callback,
+                                 skip_hessian=True, **kwargs)
 
         # Just return the fitted parameters if requested
         if return_params:
@@ -4822,7 +4821,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
             if self.model.k_endog <= display_max_endog:
                 format_str = lambda array: [  # noqa:E731
-                    ', '.join(['{0:.2f}'.format(i) for i in array])
+                    ', '.join([f'{i:.2f}' for i in array])
                 ]
                 diagn_left = [
                     ('Ljung-Box (L1) (Q):', format_str(lb[:, 0, -1])),
@@ -4873,7 +4872,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                          " unstable." % _safe_cond(cov_params))
 
         if etext:
-            etext = ["[{0}] {1}".format(i + 1, text)
+            etext = [f"[{i + 1}] {text}"
                      for i, text in enumerate(etext)]
             etext.insert(0, "Warnings:")
             summary.add_extra_txt(etext)
@@ -5000,9 +4999,9 @@ class PredictionResults(pred.PredictionResults):
             var_pred_mean = var_pred_mean.transpose()
 
         # Initialize
-        super(PredictionResults, self).__init__(predicted_mean, var_pred_mean,
-                                                dist='norm',
-                                                row_labels=row_labels)
+        super().__init__(predicted_mean, var_pred_mean,
+                         dist='norm',
+                         row_labels=row_labels)
 
     @property
     def se_mean(self):
@@ -5021,7 +5020,7 @@ class PredictionResults(pred.PredictionResults):
         #       this use case.
         _use_pandas = self._use_pandas
         self._use_pandas = False
-        conf_int = super(PredictionResults, self).conf_int(alpha, **kwds)
+        conf_int = super().conf_int(alpha, **kwds)
         self._use_pandas = _use_pandas
 
         # Create a dataframe
@@ -5032,8 +5031,8 @@ class PredictionResults(pred.PredictionResults):
             ynames = self.model.data.ynames
             if type(ynames) is not list:
                 ynames = [ynames]
-            names = (['lower {0}'.format(name) for name in ynames] +
-                     ['upper {0}'.format(name) for name in ynames])
+            names = ([f'lower {name}' for name in ynames] +
+                     [f'upper {name}' for name in ynames])
             conf_int.columns = names
 
         return conf_int

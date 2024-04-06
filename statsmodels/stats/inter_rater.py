@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Inter Rater Agreement
 
 contains

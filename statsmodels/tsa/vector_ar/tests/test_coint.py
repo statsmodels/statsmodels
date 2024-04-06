@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Test Johansen's Cointegration test against jplv, Spatial Econometrics Toolbox
 
 Created on Thu Aug 30 21:51:08 2012
