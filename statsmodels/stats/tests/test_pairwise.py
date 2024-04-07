@@ -195,7 +195,8 @@ class CheckTuckeyHSDMixin:
         assert_equal(self.res.reject, self.reject2)
 
     def test_group_tukey(self):
-        if hasattr(self, 'use_var'):
+        if hasattr(self, 'use_var') and self.use_var == 'unequal':
+            # in unequal variance case, we feed groupvarwithin, no need to test total variance
             return
         res_t = get_thsd(self.mc, alpha=self.alpha)
         assert_almost_equal(res_t[4], self.confint2, decimal=2)
