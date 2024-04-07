@@ -537,7 +537,7 @@ def pairwise_product_kernel(bw, data, var_type, ckertype='gaussian',
             - c: continuous
             - u: unordered (discrete)
             - o: ordered (discrete)
-        
+
     ckertype : TYPE, optional
         The kernel used for the continuous variables. The default is
         'gaussian'.
@@ -573,7 +573,7 @@ def pairwise_product_kernel(bw, data, var_type, ckertype='gaussian',
                           ukertype=ukertype,
                           okertype=okertype,
                           tosum=False)
-        
+
             K[:, ii] = ker_ii
 
     return K
