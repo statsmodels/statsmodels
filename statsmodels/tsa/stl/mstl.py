@@ -86,7 +86,7 @@ class MSTL:
     >>> weekly_seasonality = 10 * np.sin(2 * np.pi * t / (24 * 7))
     >>> noise = np.random.randn(len(t))
     >>> y = trend + daily_seasonality + weekly_seasonality + noise
-    >>> index = pd.date_range(start='2000-01-01', periods=len(t), freq='H')
+    >>> index = pd.date_range(start='2000-01-01', periods=len(t), freq='h')
     >>> data = pd.DataFrame(data=y, index=index)
 
     Use MSTL to decompose the time series into two seasonal components

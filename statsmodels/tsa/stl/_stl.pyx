@@ -186,7 +186,7 @@ cdef class STL(object):
     >>> from pandas.plotting import register_matplotlib_converters
     >>> register_matplotlib_converters()
     >>> data = co2.load(True).data
-    >>> data = data.resample('M').mean().ffill()
+    >>> data = data.resample('ME').mean().ffill()
 
     The period (12) is automatically detected from the data's frequency ('M').
 
