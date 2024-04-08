@@ -270,31 +270,31 @@ lltrend_cycle_seasonal_reg_ar1_approx_diffuse = {
          'exog': True, 'mle_regression': False},
         # Verbose string specification
         {'level': 'local linear trend', 'autoregressive': 1, 'cycle': True,
-         'stochastic_cycle': True, 'seasonal': 4, 'autoregressive': 1,
+         'stochastic_cycle': True, 'seasonal': 4,
          'exog': True, 'mle_regression': False},
         # Abbreviated string specification
         {'level': 'lltrend', 'autoregressive': 1, 'cycle': True,
-         'stochastic_cycle': True, 'seasonal': 4, 'autoregressive': 1,
+         'stochastic_cycle': True, 'seasonal': 4,
          'exog': True, 'mle_regression': False},
         # Numpy exog dataset
         {'level': 'lltrend', 'autoregressive': 1, 'cycle': True,
-         'stochastic_cycle': True, 'seasonal': 4, 'autoregressive': 1,
+         'stochastic_cycle': True, 'seasonal': 4,
          'exog': 'numpy', 'mle_regression': False},
         # Annual frequency dataset
         {'level': 'lltrend', 'autoregressive': 1, 'cycle': True,
-         'stochastic_cycle': True, 'seasonal': 4, 'autoregressive': 1,
+         'stochastic_cycle': True, 'seasonal': 4,
          'exog': True, 'mle_regression': False, 'freq': 'YS'},
         # Quarterly frequency dataset
         {'level': 'lltrend', 'autoregressive': 1, 'cycle': True,
-         'stochastic_cycle': True, 'seasonal': 4, 'autoregressive': 1,
+         'stochastic_cycle': True, 'seasonal': 4,
          'exog': True, 'mle_regression': False, 'freq': 'QS'},
         # Monthly frequency dataset
         {'level': 'lltrend', 'autoregressive': 1, 'cycle': True,
-         'stochastic_cycle': True, 'seasonal': 4, 'autoregressive': 1,
+         'stochastic_cycle': True, 'seasonal': 4,
          'exog': True, 'mle_regression': False, 'freq': 'MS'},
         # Minutely frequency dataset
         {'level': 'lltrend', 'autoregressive': 1, 'cycle': True,
-         'stochastic_cycle': True, 'seasonal': 4, 'autoregressive': 1,
+         'stochastic_cycle': True, 'seasonal': 4,
          'exog': True, 'mle_regression': False, 'freq': 'min',
          'cycle_period_bounds': (1.5*12, 12*12)},
     ],

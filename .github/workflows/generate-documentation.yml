@@ -50,7 +50,7 @@ jobs:
     - name: Install pandoc
       uses: r-lib/actions/setup-pandoc@v2
     - name: Install graphviz
-      uses: ts-graphviz/setup-graphviz@v1
+      uses: ts-graphviz/setup-graphviz@v2
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
       with:
