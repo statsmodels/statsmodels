@@ -471,7 +471,7 @@ def _make_unique(list_of_names):
 
 def summary_col(results, float_format='%.4f', model_names=(), stars=False,
                 info_dict=None, regressor_order=(), drop_omitted=False,
-                include_r2=True, fixed_effects=None, fe_present='Yes', 
+                include_r2=True, fixed_effects=None, fe_present='Yes',
                 fe_absent=''):
     """
     Summarize multiple results instances side-by-side (coefs and SEs)
@@ -506,12 +506,12 @@ def summary_col(results, float_format='%.4f', model_names=(), stars=False,
     include_r2 : bool, optional
         Includes R2 and adjusted R2 in the summary table.
     fixed_effects : list[str], optional
-        List of categorical variables for which to indicate presence of 
+        List of categorical variables for which to indicate presence of
         fixed effects.
     fe_present : str, optional
         String to indicate the presence of fixed effects. Default is "Yes".
     fe_absent : str, optional
-        String to indicate the absence of fixed effects. Default is empty 
+        String to indicate the absence of fixed effects. Default is empty
         string.
     """
 
@@ -576,12 +576,12 @@ def summary_col(results, float_format='%.4f', model_names=(), stars=False,
         if not info_dict:
             info_dict = {}
         for fe in fixed_effects:
-            info_dict[fe + ' FE'] = (lambda x, 
-                                     fe=fe, 
-                                     fe_present=fe_present, 
-                                     fe_absent=fe_absent: fe_present 
-                                        if any(param.startswith(f'C({fe})') 
-                                            for param in x.params.index) 
+            info_dict[fe + ' FE'] = (lambda x,
+                                     fe=fe,
+                                     fe_present=fe_present,
+                                     fe_absent=fe_absent: fe_present
+                                        if any(param.startswith(f'C({fe})')
+                                            for param in x.params.index)
                                         else fe_absent)
 
     # add infos about the models.
@@ -606,7 +606,7 @@ def summary_col(results, float_format='%.4f', model_names=(), stars=False,
     # fixed effects processing
     if fixed_effects:
         index_series = pd.Series(summ.index, index=summ.index)
-        skip_flag = index_series.apply(lambda x: any(x.startswith(f'C({fe})') 
+        skip_flag = index_series.apply(lambda x: any(x.startswith(f'C({fe})')
                                                 for fe in fixed_effects))
         skip_next_flag = skip_flag.shift(fill_value=False)
         final_skip = skip_flag | skip_next_flag
