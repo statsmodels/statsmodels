@@ -39,6 +39,8 @@ class RobustNorm:
         Springer, New York, 2002.
     """
 
+    continuous = 1
+
     def rho(self, z):
         """
         The robust criterion estimator function.
@@ -96,6 +98,9 @@ class LeastSquares(RobustNorm):
     --------
     statsmodels.robust.norms.RobustNorm
     """
+
+    continuous = 2
+    redescending = "not"
 
     def max_rho(self):
         return np.inf
@@ -187,6 +192,9 @@ class HuberT(RobustNorm):
     --------
     statsmodels.robust.norms.RobustNorm
     """
+
+    continuous = 1
+    redescending = "not"
 
     def __init__(self, t=1.345):
         self.t = t
@@ -308,6 +316,9 @@ class RamsayE(RobustNorm):
     statsmodels.robust.norms.RobustNorm
     """
 
+    continuous = 2
+    redescending = "soft"
+
     def __init__(self, a=.3):
         self.a = a
 
@@ -401,6 +412,10 @@ class AndrewWave(RobustNorm):
     --------
     statsmodels.robust.norms.RobustNorm
     """
+
+    continuous = 1
+    redescending = "hard"
+
     def __init__(self, a=1.339):
         self.a = a
 
@@ -532,6 +547,9 @@ class TrimmedMean(RobustNorm):
     statsmodels.robust.norms.RobustNorm
     """
 
+    continuous = 0
+    redescending = "hard"
+
     def __init__(self, c=2.):
         self.c = c
 
@@ -647,6 +665,9 @@ class Hampel(RobustNorm):
     --------
     statsmodels.robust.norms.RobustNorm
     """
+
+    continuous = 1
+    redescending = "hard"
 
     def __init__(self, a=2., b=4., c=8.):
         self.a = a
@@ -835,6 +856,9 @@ class TukeyBiweight(RobustNorm):
     Tukey's biweight is sometime's called bisquare.
     """
 
+    continuous = 2
+    redescending = "hard"
+
     def __init__(self, c=4.685):
         self.c = c
 
@@ -916,7 +940,7 @@ class TukeyBiweight(RobustNorm):
 
             psi(z) = 0                          for \|z\| > R
         """
-
+        z = np.asarray(z)
         subset = self._subset(z)
         return (1 - (z / self.c)**2)**2 * subset
 
@@ -949,6 +973,9 @@ class TukeyQuartic(RobustNorm):
     This is a variation of Tukey's biweight (bisquare) function where
     the weight function has power 4 instead of power 2 in the inner term.
     """
+
+    continuous = 2
+    redescending = "hard"
 
     def __init__(self, c=3.61752, k=4):
         # TODO: c needs to be changed if k != 4
@@ -1051,6 +1078,7 @@ class TukeyQuartic(RobustNorm):
             psi(z) = 0                          for \|z\| > R
         """
         k = self.k
+        z = np.asarray(z)
         subset = self._subset(z)
         return (1 - (z / self.c)**k)**2 * subset
 
@@ -1086,6 +1114,9 @@ class StudentT(RobustNorm):
 
     """
 
+    continuous = 2
+    redescending = "soft"
+
     def __init__(self, c=2.3849, df=4):
         self.c = c
         self.df = df
@@ -1098,8 +1129,7 @@ class StudentT(RobustNorm):
         self.c = c
 
     def max_rho(self):
-        return self.rho(self.c)
-
+        return np.inf
 
     def rho(self, z):
         """
@@ -1113,12 +1143,14 @@ class StudentT(RobustNorm):
         Returns
         -------
         rho : ndarray
-            rho(z) = (c / 2.) * log(1 + (z / c)**2)
+            rho(z) = (c**2 * df / 2.) * log(df + (z / c)**2) - const
+            The ``const`` shifts the rho function so that rho(0) = 0.
         """
         c = self.c
         df = self.df
         z = np.asarray(z)
-        return (c**2 * df / 2.) * np.log(df + (z / c)**2)
+        const = (c**2 * df / 2.) * np.log(df) if df != 0 else 0
+        return (c**2 * df / 2.) * np.log(df + (z / c)**2) - const
 
     def psi(self, z):
         """
@@ -1232,6 +1264,8 @@ class MQuantileNorm(RobustNorm):
        Squares Estimation and Testing.” Econometrica 55 (4): 819–47.
        doi:10.2307/1911031.
     """
+
+    continuous = 1
 
     def __init__(self, q, base_norm):
         self.q = q

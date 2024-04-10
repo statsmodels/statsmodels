@@ -50,7 +50,7 @@ results_menenez = [
 def test_eff(case):
     norm, res2 = case
 
-    if not (isinstance(norm, TrimmedMean) or isinstance(norm, Hampel)):
+    if norm.continuous == 2:
         var_func = _var_normal
     else:
         var_func = _var_normal_jump
