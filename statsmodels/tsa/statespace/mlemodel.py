@@ -619,7 +619,7 @@ class MLEModel(tsbase.TimeSeriesModel):
             approximating the score; if False, finite difference approximation
             is used. Default is True. This keyword is only relevant if
             `optim_score` is set to 'harvey' or 'approx'.
-        optim_hessian : {'opg','oim','approx'}, optional
+        optim_hessian : {'opg', 'oim', 'approx'}, optional
             The method by which the Hessian is numerically approximated. 'opg'
             uses outer product of gradients, 'oim' uses the information
             matrix formula from Harvey (1989), and 'approx' uses numerical
@@ -3179,7 +3179,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Parameters
         ----------
-        method : {'ljungbox','boxpierece', None}
+        method : {'ljungbox', 'boxpierce', None}
             The statistical test for serial correlation. If None, an attempt is
             made to select an appropriate test.
         lags : None, int or array_like
