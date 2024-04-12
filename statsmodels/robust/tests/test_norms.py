@@ -18,8 +18,13 @@ cases = [
 norms_other = [
     (norms.LeastSquares, ()),
     (norms.TrimmedMean, (1.9,)),  # avoid arg at integer used in example
+    (norms.HuberT, ()),
     (norms.AndrewWave, ()),
     (norms.RamsayE, ()),
+    (norms.Hampel, ()),
+    (norms.TukeyBiweight, ()),
+    (norms.TukeyQuartic, ()),
+    (norms.StudentT, ()),
     # norms.MQuantileNorm,  # requires keywords in init
     ]
 
@@ -75,7 +80,8 @@ def test_norms_consistent(case):
     # test that norm methods are consistent with each other
     ncls, args = case
     norm = ncls(*args)
-    x = np.array([-9, -6, -2, -1, 0, 1, 2, 6, 9], dtype=float)
+    x = np.array([-9, -6, -2, -1, 0, 1, 2 - 1e-4, 6, 9], dtype=float)
+    # 2 - 1e-4 because Hample psi has discontinuity at 2, numdiff problem
 
     weights = norm.weights(x)
     rho = norm.rho(x)  # not used
@@ -87,9 +93,23 @@ def test_norms_consistent(case):
     assert np.all(np.diff(rho[4:]) >= 0)
     assert np.all(np.diff(rho[:4]) <= 0)
 
+    # check weights at and around zero
+    assert_allclose(weights[4], 1, atol=1e-12)
+    assert np.all(norm.weights([-1e-6, 1e-6]) >= 1 - 1e-5)
+
     # avoid zero division nan:
     assert_allclose(weights, (psi + 1e-50) / (x + 1e-50), rtol=1e-6, atol=1e-8)
     psid = _approx_fprime_scalar(x, norm.rho)
     assert_allclose(psi, psid, rtol=1e-6, atol=1e-6)
     psidd = _approx_fprime_scalar(x, norm.psi)
     assert_allclose(psi_deriv, psidd, rtol=1e-6, atol=1e-8)
+
+    # attributes
+    if norm.redescending == "hard":
+        assert_allclose(norm.max_rho(), norm.rho(100), rtol=1e-12)
+    else:
+        assert np.isposinf(norm.max_rho())
+
+    if norm.redescending == "soft":
+        # we don't have info where argmax psi is, use simple values for x
+        assert norm.psi(100) < norm.psi(2)
