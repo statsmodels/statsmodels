@@ -504,7 +504,7 @@ class PandasData(ModelData):
     def _convert_endog_exog(self, endog, exog=None):
         #TODO: remove this when we handle dtype systematically
         endog = np.asarray(endog)
-        exog = exog if exog is None else np.asarray(exog)
+        exog = exog if exog is None else np.asarray(exog, dtype=float)
         if endog.dtype == object or exog is not None and exog.dtype == object:
             raise ValueError("Pandas data cast to numpy dtype of object. "
                              "Check input data with np.asarray(data).")
