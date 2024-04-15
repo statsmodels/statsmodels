@@ -217,7 +217,7 @@ class MSTL:
         if any(period >= self.nobs / 2 for period in periods):
             warnings.warn(
                 "A period(s) is larger than half the length of time series."
-                " Removing these period(s)."
+                " Removing these period(s).", UserWarning
             )
             periods = tuple(
                 period for period in periods if period < self.nobs / 2

@@ -260,9 +260,7 @@ class ProbPlot:
         try:
             return self.dist.ppf(self.theoretical_percentiles)
         except TypeError:
-            msg = "%s requires more parameters to compute ppf".format(
-                self.dist.name,
-            )
+            msg = f"{self.dist.name} requires more parameters to compute ppf"
             raise TypeError(msg)
         except Exception as exc:
             msg = f"failed to compute the ppf of {self.dist.name}"
