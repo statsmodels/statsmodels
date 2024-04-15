@@ -248,11 +248,11 @@ class Huber:
         """
         a = np.asarray(a)
         if mu is None:
-            n = a.shape[0] - 1
+            n = a.shape[axis] - 1
             mu = np.median(a, axis=axis)
             est_mu = True
         else:
-            n = a.shape[0]
+            n = a.shape[axis]
             mu = mu
             est_mu = False
 
@@ -298,10 +298,10 @@ class Huber:
             nmu = tools.unsqueeze(nmu, axis, a.shape)
 
             subset = np.less_equal(np.abs((a - mu) / scale), self.c)
-            card = subset.sum(axis)
 
-            scale_num = np.sum(subset * (a - nmu) ** 2, axis)
-            scale_denom = n * self.gamma - (a.shape[axis] - card) * self.c ** 2
+            scale_num = np.sum(subset * (a - nmu) ** 2 +
+                               (1 - subset) * (scale * self.c)**2, axis)
+            scale_denom = n * self.gamma
             nscale = np.sqrt(scale_num / scale_denom)
             nscale = tools.unsqueeze(nscale, axis, a.shape)
 

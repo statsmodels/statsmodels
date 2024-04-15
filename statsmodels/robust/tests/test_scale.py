@@ -281,7 +281,7 @@ class TestHuberAxes:
     def setup_class(cls):
         np.random.seed(54321)
         cls.X = standard_normal((40, 10, 30))
-        cls.h = scale.Huber(maxiter=1000, tol=1.0e-05)
+        cls.h = scale.Huber(maxiter=100, tol=1.0e-05)
 
     def test_default(self):
         m, s = self.h(self.X, axis=0)
