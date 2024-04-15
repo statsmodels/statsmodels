@@ -408,6 +408,32 @@ class HuberScale:
 hubers_scale = HuberScale()
 
 
+class MScale:
+    """M-scale estimation.
+
+    experimental interface
+    """
+
+    def __init__(self, chi_func, scale_bias):
+        self.chi_func = chi_func
+        self.scale_bias = scale_bias
+
+    def __call__(self, data, **kwds):
+        return self.fit(data, **kwds)
+
+    def fit(self, data, scale0='mad', maxiter=100, rtol=1e-6, atol=1e-8):
+
+        scale = _scale_iter(
+            data,
+            scale0=scale0,
+            maxiter=maxiter, rtol=rtol, atol=atol,
+            meef_scale=self.chi_func,
+            scale_bias=self.scale_bias,
+            )
+
+        return scale
+
+
 def scale_trimmed(data, alpha, center='median', axis=0, distr=None,
                   distargs=None):
     """scale estimate based on symmetrically trimmed sample
@@ -534,7 +560,7 @@ def _scale_iter(data, scale0='mad', maxiter=10, rtol=1e-6, atol=1e-8,
     """
     x = np.asarray(data)
     if scale0 == 'mad':
-        scale0 = mad(x)
+        scale0 = mad(x, center=0)
 
     scale = scale0
     scale_old = scale

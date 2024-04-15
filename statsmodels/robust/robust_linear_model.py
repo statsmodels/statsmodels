@@ -191,7 +191,8 @@ class RLM(base.LikelihoodModel):
         elif isinstance(self.scale_est, scale.HuberScale):
             return self.scale_est(self.df_resid, self.nobs, resid)
         else:
-            return scale.scale_est(self, resid) ** 2
+            # use df correction to match HuberScale
+            return self.scale_est(resid) * np.sqrt(self.nobs / self.df_resid)
 
     def fit(self, maxiter=50, tol=1e-8, scale_est='mad', init=None, cov='H1',
             update_scale=True, conv='dev', start_params=None):
