@@ -918,15 +918,27 @@ class NewsResults:
             value = tmp_index.levels[1][0]
             removed_level = f'{name} = {value}'
             impacts.index = tmp_index.droplevel(1)
-            impacts = impacts.applymap(
-                lambda num: '' if pd.isnull(num) else float_format % num)
+            try:
+                impacts = impacts.applymap(
+                    lambda num: '' if pd.isnull(num) else float_format % num)
+            except AttributeError:
+                impacts = impacts.map(
+                    lambda num: '' if pd.isnull(num) else float_format % num)
+
             impacts = impacts.reset_index()
             impacts.iloc[:, 0] = impacts.iloc[:, 0].map(str)
         else:
             impacts = impacts.reset_index()
-            impacts.iloc[:, :2] = impacts.iloc[:, :2].applymap(str)
-            impacts.iloc[:, 2:] = impacts.iloc[:, 2:].applymap(
-                lambda num: '' if pd.isnull(num) else float_format % num)
+            try:
+                impacts.iloc[:, :2] = impacts.iloc[:, :2].applymap(str)
+                impacts.iloc[:, 2:] = impacts.iloc[:, 2:].applymap(
+                    lambda num: '' if pd.isnull(num) else float_format % num)
+            except AttributeError:
+                cols = impacts.columns[:2]
+                impacts[cols] = impacts[cols].map(str)
+                cols = impacts.columns[2:]
+                impacts[cols] = impacts[cols].map(
+                    lambda num: '' if pd.isnull(num) else float_format % num)
 
         # Sparsify the groupby column
         if sparsify and groupby in impacts:
@@ -1253,10 +1265,17 @@ class NewsResults:
             right_index=True).sort_index().reset_index()
         data = data[['revision date', 'revised variable', 'observed (prev)',
                      'revision', 'detailed impacts computed']]
-        data[['revision date', 'revised variable']] = (
-            data[['revision date', 'revised variable']].applymap(str))
-        data.iloc[:, 2:-1] = data.iloc[:, 2:-1].applymap(
-            lambda num: '' if pd.isnull(num) else '%.2f' % num)
+        try:
+            data[['revision date', 'revised variable']] = (
+                data[['revision date', 'revised variable']].applymap(str))
+            data.iloc[:, 2:-1] = data.iloc[:, 2:-1].applymap(
+                lambda num: '' if pd.isnull(num) else '%.2f' % num)
+        except AttributeError:
+            cols = ['revision date', 'revised variable']
+            data[cols] = data[cols].map(str)
+            cols = data.columns[2:-1]
+            data[cols] = data[cols].map(
+                lambda num: '' if pd.isnull(num) else '%.2f' % num)
 
         # Sparsify the date column
         if sparsify:
@@ -1305,10 +1324,17 @@ class NewsResults:
         data = pd.merge(
             self.data_updates, self.news, left_index=True,
             right_index=True).sort_index().reset_index()
-        data[['update date', 'updated variable']] = (
-            data[['update date', 'updated variable']].applymap(str))
-        data.iloc[:, 2:] = data.iloc[:, 2:].applymap(
-            lambda num: '' if pd.isnull(num) else '%.2f' % num)
+        try:
+            data[['update date', 'updated variable']] = (
+                data[['update date', 'updated variable']].applymap(str))
+            data.iloc[:, 2:] = data.iloc[:, 2:].applymap(
+                lambda num: '' if pd.isnull(num) else '%.2f' % num)
+        except AttributeError:
+            cols = ['update date', 'updated variable']
+            data[cols] = data[cols].map(str)
+            cols = data.columns[2:]
+            data[cols] = data[cols].map(
+                lambda num: '' if pd.isnull(num) else '%.2f' % num)
 
         # Sparsify the date column
         if sparsify:

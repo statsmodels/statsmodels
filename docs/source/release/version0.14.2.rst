@@ -30,6 +30,19 @@ Stats
 
 The Highlights
 ==============
+This release bring compatability with NumPy 2.0.0. This is the only key feature
+of this release. A number of minor patches have been backported. These either
+fix bugs that have been documented, improve documentation or are necessary for
+NumPy 2.0 compatability.
+
+NumPy 2.0 is only available for Python 3.9+. This means that the minimum Python
+has been increased to 3.9 to match. NumPy 2 is only required to build statsmodels,
+and statsmodels will continue to run on NumPy 1.22.3+.
+
+Note that when running using NumPy 2, all dependencies that use build against NumPy
+(e.g., Scipy and pandas) must be NumPy 2 compatible. You can continue to run against
+NumPy 1.22 - 1.26 along with other components of the scientific Python stack until
+all required dependencies have been updated.
 
 
 What's new - an overview
