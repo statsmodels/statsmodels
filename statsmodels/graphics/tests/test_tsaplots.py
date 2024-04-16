@@ -307,12 +307,14 @@ def test_plot_quarter(close_figures):
     quarter_plot(dta.unemp.values, dates)
 
     # test with a DatetimeIndex with no freq
-    dta.set_index(pd.DatetimeIndex(dates, freq="QS-OCT"), inplace=True)
+    from statsmodels.compat.pandas import PD_LT_2_2_0
+    FREQ = "QS-Oct" if PD_LT_2_2_0 else "QS-OCT"
+    dta.set_index(pd.DatetimeIndex(dates, freq=FREQ), inplace=True)
     quarter_plot(dta.unemp)
 
     # w freq
     # see pandas #6631
-    dta.index = pd.DatetimeIndex(dates, freq="QS-OCT")
+    dta.index = pd.DatetimeIndex(dates, freq=FREQ)
     quarter_plot(dta.unemp)
 
     # w PeriodIndex
