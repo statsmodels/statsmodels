@@ -1620,7 +1620,7 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=None):
             or res2djoint.params.shape[0] != dtajoint.shape[1]
         ):
             raise InfeasibleTestError(
-                "The Granger causality test statistic cannot be compute "
+                "The Granger causality test statistic cannot be computed "
                 "because the VAR has a perfect fit of the data."
             )
         fgc1 = (
