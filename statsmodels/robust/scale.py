@@ -553,32 +553,30 @@ def scale_trimmed(data, alpha, center='median', axis=0, distr=None,
 debug = 0
 
 
-def _scale_iter(data, scale0='mad', maxiter=10, rtol=1e-6, atol=1e-8,
-                meef_scale=None, scale_bias=None):
+def _scale_iter(data, scale0='mad', maxiter=100, rtol=1e-6, atol=1e-8,
+                meef_scale=None, scale_bias=None, iter_method="rho", ddof=0):
     """iterative scale estimate base on "rho" function
 
     """
     x = np.asarray(data)
+    nobs = x.shape[0]
     if scale0 == 'mad':
         scale0 = mad(x, center=0)
 
-    scale = scale0
-    scale_old = scale
     for i in range(maxiter):
-        x_scaled = x / scale
-        weights_scale = meef_scale(x_scaled) / (1e-50 + x_scaled**2)
-        if debug:
-            print('weights sum', weights_scale.sum(), end=" ")
-        scale_old = scale
-        scale2 = (weights_scale * x**2).mean()
-        if debug:
-            print(scale2, end=" ")
-        scale2 /= scale_bias
-        scale = np.sqrt(scale2)
+        x_scaled = x / scale0
+        if iter_method == "rho":
+            scale = scale0 * np.sqrt(
+                np.sum(meef_scale(x / scale0)) / scale_bias / (nobs - ddof))
+        else:
+            weights_scale = meef_scale(x_scaled) / (1e-50 + x_scaled**2)
+            scale2 = (weights_scale * x**2).sum() / (nobs - ddof)
+            scale2 /= scale_bias
+            scale = np.sqrt(scale2)
         if debug:
             print(scale)
-        if np.allclose(scale, scale_old, atol=atol, rtol=rtol):
+        if np.allclose(scale, scale0, atol=atol, rtol=rtol):
             break
-        scale_old = scale
+        scale0 = scale
 
     return scale

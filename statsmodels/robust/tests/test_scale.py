@@ -391,6 +391,36 @@ def test_scale_iter():
     assert_allclose(s, v, rtol=1e-1)
     assert_allclose(s, 1.0683298, rtol=1e-6)  # regression test number
 
+    chi = rnorms.TukeyBiweight()
+    scale_bias = 0.43684963023076195
+    mscale_biw = scale.MScale(chi, scale_bias)
+    s_biw = mscale_biw(x)
+    assert_allclose(s_biw, s, rtol=1e-10)
+
+    # regression test with 50% breakdown tuning
+    chi = rnorms.TukeyBiweight(c=1.547)
+    scale_bias = 0.1995
+    mscale_biw = scale.MScale(chi, scale_bias)
+    s_biw = mscale_biw(x)
+    assert_allclose(s_biw, 1.0326176662, rtol=1e-9)  # regression test number
+
+
+class TestMScale():
+    np.random.seed(54321)
+    nobs = 50
+    x = 1.5 * standard_normal(nobs)
+
+    # test equivalence of HuberScale and TrimmedMean M-scale
+    chi_tm = rnorms.TrimmedMean(c=2.5)
+    scale_bias_tm = 0.4887799917273257
+    mscale_tm = scale.MScale(chi_tm, scale_bias_tm)
+    s_tm = mscale_tm(x)
+
+    mscale_hub = scale.HuberScale()
+    s_hub = mscale_hub(nobs, nobs, x)
+
+    assert_allclose(s_tm, s_hub, rtol=1e-6)
+
 
 def test_scale_trimmed_approx():
     scale_trimmed = scale.scale_trimmed  # shorthand
