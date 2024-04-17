@@ -30,9 +30,9 @@ Stats
 
 The Highlights
 ==============
-This release bring compatability with NumPy 2.0.0. This is the only key feature
-of this release. A number of minor patches have been backported. These either
-fix bugs that have been documented, improve documentation or are necessary for
+This release brings compatibility with NumPy 2.0.0. This is the only key feature
+of this release. Several minor patches have been backported. These either
+fix bugs that have been documented, improve the documentation or are necessary for
 NumPy 2.0 compatability.
 
 NumPy 2.0 is only available for Python 3.9+. This means that the minimum Python
