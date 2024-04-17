@@ -1,5 +1,5 @@
 # build
-cython>=3.0.10,<4.0.0
+cython>=3.0.10,<4
 setuptools_scm[toml]~=8.0
 
 # run
@@ -10,7 +10,7 @@ joblib
 # cvxopt; os_name != "win32"
 
 # test
-pytest>=7.3.0
+pytest>=7.3.0,<8
 pytest-randomly
 pytest-xdist
 pytest-cov
