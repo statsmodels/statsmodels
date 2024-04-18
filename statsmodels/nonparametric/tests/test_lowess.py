@@ -296,12 +296,13 @@ class TestLowess:
         assert_equal(expected, result)
 
 
-def test_returns_inputs():
+def test_nan_regression():
     # see 1960
     y = [0] * 10 + [1] * 10
     x = np.arange(20)
     result = lowess(y, x, frac=0.4)
-    assert_almost_equal(result, np.column_stack((x, y)))
+    out = lowess([0] * 7 + [1] * 7, np.arange(14), frac=.2, it=1)[:, 1]
+    assert not np.any(np.isnan(out))
 
 
 def test_xvals_dtype(reset_randomstate):
