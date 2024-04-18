@@ -13,10 +13,9 @@ from scipy import stats
 
 import statsmodels.api as sm
 import statsmodels.robust.scale as scale
-from statsmodels.robust.scale import mad
+from statsmodels.robust.scale import mad, scale_tau
 import statsmodels.robust.norms as rnorms
 
-from statsmodels.robust.covariance import scale_tau  # TODO: will be moved
 
 # Example from Section 5.5, Venables & Ripley (2002)
 
