@@ -203,8 +203,12 @@ def lowess(np.ndarray[DTYPE_t, ndim = 1] endog,
             # Calculate the weights for the regression in this neighborhood.
             # Determine if at least some weights are positive, so a regression
             # is ok.
-            reg_ok = calculate_weights(x, weights, resid_weights, xval, left_end,
-                                       right_end, radius)
+            if radius > 1e-8:
+                reg_ok = calculate_weights(x, weights, resid_weights, xval,
+                                           left_end, right_end, radius)
+            else:  # no variance to scale weights
+                reg_ok = 0
+
 
             # If ok, run the regression
             calculate_y_fit(x, y, i, xval, y_fit, weights, left_end, right_end,
@@ -369,13 +373,11 @@ cdef bint calculate_weights(np.ndarray[DTYPE_t, ndim = 1] x,
                                       resid_weights[left_end:right_end])
 
     sum_weights = np.sum(weights[left_end:right_end])
-    for j in range(left_end, right_end):
-        num_nonzero_weights += weights[j] > 1e-12
-
-    if num_nonzero_weights < 2:
-        # Need at least 2 non-zero weights to get an okay regression fit
-        # see 1960
+    if sum_weights <= 1e-12:
+        # Need at least 1 non-zero weights to get regression fit
+        # see 1960/9220
         return 0  # False
+
     for j in range(left_end, right_end):
         weights[j] /= sum_weights
 
