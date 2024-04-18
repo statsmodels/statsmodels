@@ -195,7 +195,8 @@ class RLM(base.LikelihoodModel):
             return self.scale_est(resid) * np.sqrt(self.nobs / self.df_resid)
 
     def fit(self, maxiter=50, tol=1e-8, scale_est='mad', init=None, cov='H1',
-            update_scale=True, conv='dev', start_params=None):
+            update_scale=True, conv='dev', start_params=None, start_scale=None,
+            ):
         """
         Fits the model using iteratively reweighted least squares.
 
@@ -218,6 +219,7 @@ class RLM(base.LikelihoodModel):
             Specifies method for the initial estimates of the parameters.
             Default is None, which means that the least squares estimate
             is used.  Currently it is the only available choice.
+            Deprecated and will be removed. There is no choice here.
         maxiter : int
             The maximum number of iterations to try. Default is 50.
         scale_est : str or HuberScale()
@@ -237,6 +239,11 @@ class RLM(base.LikelihoodModel):
         start_params : array_like, optional
             Initial guess of the solution of the optimizer. If not provided,
             the initial parameters are computed using OLS.
+        start_scale : float, optional
+            Initial scale. If update_scale is False, then the scale will be
+            fixed at this level for the estimation of the mean parameters.
+            during iteration. If not provided, then the initial scale is
+            estimated from the OLS residuals
 
         Returns
         -------
@@ -265,8 +272,10 @@ class RLM(base.LikelihoodModel):
                                              check_weights=False)
             wls_results = fake_wls.results(start_params)
 
-        if not init:
+        if not init and not start_scale:
             self.scale = self._estimate_scale(wls_results.resid)
+        elif start_scale:
+            self.scale = start_scale
 
         history = dict(params=[np.inf], scale=[])
         if conv == 'coefs':
