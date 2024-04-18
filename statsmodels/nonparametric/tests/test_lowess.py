@@ -289,6 +289,12 @@ class TestLowess:
         with pytest.raises(ValueError):
             lowess(y, x, xvals=np.array([[5], [10]]))
 
+    def test_stop_iter(self):
+        # See GH-2108
+        expected = lowess([0] * 10 + [1] * 10, np.arange(20), it=1)
+        result = lowess([0] * 10 + [1] * 10, np.arange(20), it=2)
+        assert_equal(expected, result)
+
 
 def test_returns_inputs():
     # see 1960
