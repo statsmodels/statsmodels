@@ -311,3 +311,25 @@ def test_xvals_dtype(reset_randomstate):
     # Previously raised ValueError: Buffer dtype mismatch
     results_xvals = lowess(y, x, frac=0.4, xvals=x[:5])
     assert_allclose(results_xvals, np.zeros(5), atol=1e-12)
+
+
+def test_interpolated_output():
+    # see #7337
+    y = np.arange(5, 15, dtype=float)
+    x = np.arange(5, 15, dtype=float)
+    xvals = np.arange(0, 20, dtype=float)
+
+    result = lowess(y, x, xvals=xvals, frac=0.6)
+    assert_allclose(result, xvals, atol=1e-8)
+
+    result = lowess(y, x, xvals=xvals, frac=0.5)
+    assert_allclose(result, xvals, atol=1e-8)
+
+    result = lowess(y, x, xvals=xvals, frac=0.4)
+    assert_allclose(result, xvals, atol=1e-8)
+
+    result = lowess(y, x, xvals=xvals, frac=0.3)
+    assert_allclose(result, xvals, atol=1e-8)
+
+    result = lowess(y, x, xvals=x, frac=0.5)
+    assert_allclose(result, x, atol=1e-8)
