@@ -411,7 +411,15 @@ hubers_scale = HuberScale()
 class MScale:
     """M-scale estimation.
 
-    experimental interface
+    experimental interface, arguments and options will still change.
+
+    Parameters
+    ----------
+    chi_func : callable
+        The rho or chi function for the moment condition for estimating scale.
+    scale_bias : float
+        Factor in moment condition to obtain fisher consistency of the scale
+        estimate at the normal distribution.
     """
 
     def __init__(self, chi_func, scale_bias):
@@ -421,11 +429,34 @@ class MScale:
     def __call__(self, data, **kwds):
         return self.fit(data, **kwds)
 
-    def fit(self, data, scale0='mad', maxiter=100, rtol=1e-6, atol=1e-8):
+    def fit(self, data, start_scale='mad', maxiter=100, rtol=1e-6, atol=1e-8):
+        """
+        Estimate M-scale using iteration.
+
+        Parameters
+        ----------
+        data : array-like
+            Data, currently assumed to be 1-dimensional.
+        start_scale : string or float.
+            Starting value of scale or method to compute the starting value.
+            Default is using 'mad', no other string options are available.
+        maxiter : int
+            Maximum number of iterations.
+        rtol : float
+            Relative convergence tolerance.
+        atol : float
+            Absolute onvergence tolerance.
+
+        Returns
+        -------
+        float : Scale estimate. The estimated variance is scale squared.
+        Todo: switch to Holder instance with more information.
+
+        """
 
         scale = _scale_iter(
             data,
-            scale0=scale0,
+            scale0=start_scale,
             maxiter=maxiter, rtol=rtol, atol=atol,
             meef_scale=self.chi_func,
             scale_bias=self.scale_bias,

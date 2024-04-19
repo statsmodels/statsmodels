@@ -8,6 +8,9 @@ import numpy as np
 from numpy.random import standard_normal
 from numpy.testing import assert_almost_equal, assert_equal, assert_allclose
 import pytest
+
+import pandas as pd
+
 from scipy.stats import norm as Gaussian
 from scipy import stats
 
@@ -15,6 +18,12 @@ import statsmodels.api as sm
 import statsmodels.robust.scale as scale
 from statsmodels.robust.scale import mad, scale_tau
 import statsmodels.robust.norms as rnorms
+
+cur_dir = os.path.abspath(os.path.dirname(__file__))
+
+file_name = 'hbk.csv'
+file_path = os.path.join(cur_dir, 'results', file_name)
+dta_hbk = pd.read_csv(file_path)
 
 
 # Example from Section 5.5, Venables & Ripley (2002)
@@ -405,20 +414,33 @@ def test_scale_iter():
 
 
 class TestMScale():
-    np.random.seed(54321)
-    nobs = 50
-    x = 1.5 * standard_normal(nobs)
 
-    # test equivalence of HuberScale and TrimmedMean M-scale
-    chi_tm = rnorms.TrimmedMean(c=2.5)
-    scale_bias_tm = 0.4887799917273257
-    mscale_tm = scale.MScale(chi_tm, scale_bias_tm)
-    s_tm = mscale_tm(x)
+    def test_huber_equivalence(self):
+        np.random.seed(54321)
+        nobs = 50
+        x = 1.5 * standard_normal(nobs)
 
-    mscale_hub = scale.HuberScale()
-    s_hub = mscale_hub(nobs, nobs, x)
+        # test equivalence of HuberScale and TrimmedMean M-scale
+        chi_tm = rnorms.TrimmedMean(c=2.5)
+        scale_bias_tm = 0.4887799917273257
+        mscale_tm = scale.MScale(chi_tm, scale_bias_tm)
+        s_tm = mscale_tm(x)
 
-    assert_allclose(s_tm, s_hub, rtol=1e-6)
+        mscale_hub = scale.HuberScale()
+        s_hub = mscale_hub(nobs, nobs, x)
+
+        assert_allclose(s_tm, s_hub, rtol=1e-6)
+
+    def test_biweight(self):
+        y = dta_hbk["Y"].to_numpy()
+        ry = y - np.median(y)
+
+        chi = rnorms.TukeyBiweight(c=1.54764)
+        scale_bias = 0.19959963130721095
+        mscale_biw = scale.MScale(chi, scale_bias)
+        scale0 = mscale_biw(ry)
+        scale1 = 0.817260483784376   # from R RobStatTM scaleM
+        assert_allclose(scale0, scale1, rtol=1e-6)
 
 
 def test_scale_trimmed_approx():
