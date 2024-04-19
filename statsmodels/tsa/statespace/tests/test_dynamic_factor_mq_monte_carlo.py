@@ -31,7 +31,8 @@ def simulate_k_factor1(nobs=1000):
               0.5,
               [0.] * mod_sim.k_endog]
     ix = pd.period_range(start='1935-01', periods=nobs, freq='M')
-    endog = pd.DataFrame(mod_sim.simulate(p, nobs), index=ix)
+    endog = pd.DataFrame(mod_sim.simulate(p, nobs, random_state=1234),
+                         index=ix)
 
     true = pd.Series(p, index=mod_sim.param_names)
 
@@ -77,13 +78,13 @@ def simulate_k_factors3_blocks2(nobs=1000, idiosyncratic_ar1=False):
     endog = pd.DataFrame(np.zeros((1, 2)), columns=['f1', 'f2'], index=ix)
     mod_f_12 = varmax.VARMAX(endog, order=(1, 0), trend='n')
     params = [0.5, 0.1, -0.2, 0.9, 1.0, 0, 1.0]
-    f_12 = mod_f_12.simulate(params, nobs)
+    f_12 = mod_f_12.simulate(params, nobs, random_state=1234)
 
     # Simulate the third factor
     endog = pd.Series([0], name='f3', index=ix)
     mod_f_3 = sarimax.SARIMAX(endog, order=(2, 0, 0))
     params = [0.7, 0.1, 1.]
-    f_3 = mod_f_3.simulate(params, nobs)
+    f_3 = mod_f_3.simulate(params, nobs, random_state=1234)
 
     # Combine the factors
     f = pd.concat([f_12, f_3], axis=1)
@@ -188,12 +189,13 @@ def gen_k_factor1_nonstationary(nobs=1000, k=1, idiosyncratic_ar1=False,
     mod = sarimax.SARIMAX(faux, order=(k_ar, 0, 0), initialization='diffuse')
 
     params = np.r_[[0] * (k_ar - 1), [1.0001], 1.0]
-    factor = mod.simulate(params, nobs)
+    factor = mod.simulate(params, nobs, random_state=1234)
 
     if idiosyncratic_ar1:
         mod_idio = sarimax.SARIMAX(faux, order=(1, 0, 0))
         endog = pd.concat([
-            factor + mod_idio.simulate([0.7, idiosyncratic_var], nobs)
+            factor + mod_idio.simulate([0.7, idiosyncratic_var], nobs,
+                                       random_state=1234)
             for i in range(2 * k)], axis=1)
     else:
         endog = pd.concat([
@@ -226,6 +228,8 @@ def gen_k_factor1_nonstationary(nobs=1000, k=1, idiosyncratic_ar1=False,
     return endog_M, endog_Q, factor
 
 
+@pytest.mark.filterwarnings("ignore: divide by zero")
+@pytest.mark.filterwarnings("ignore: EM reached")
 def test_em_nonstationary(reset_randomstate):
     # Test that when the EM algorithm estimates non-stationary parameters, that
     # it warns the user and switches to a diffuse initialization.
@@ -254,12 +258,13 @@ def gen_k_factor1(nobs=10000, k=1, idiosyncratic_ar1=False,
     mod = sarimax.SARIMAX(faux, order=(k_ar, 0, 0))
 
     params = np.r_[[0] * (k_ar - 1), [0.5], 1.0]
-    factor = mod.simulate(params, nobs)
+    factor = mod.simulate(params, nobs, random_state=1234)
 
     if idiosyncratic_ar1:
         mod_idio = sarimax.SARIMAX(faux, order=(1, 0, 0))
         endog = pd.concat([
-            factor + mod_idio.simulate([0.7, idiosyncratic_var], nobs)
+            factor + mod_idio.simulate([0.7, idiosyncratic_var], nobs,
+                                       random_state=1234)
             for i in range(2 * k)], axis=1)
     else:
         endog = pd.concat([
@@ -355,7 +360,7 @@ def gen_k_factor2(nobs=10000, k=2, idiosyncratic_ar1=False,
     params = np.r_[A.ravel(), L[np.tril_indices_from(L)]]
 
     # Simulate the factors
-    factors = mod.simulate(params, nobs)
+    factors = mod.simulate(params, nobs, random_state=1234)
 
     # Add in the idiosyncratic part
     faux = pd.Series([0], index=ix)
@@ -369,7 +374,8 @@ def gen_k_factor2(nobs=10000, k=2, idiosyncratic_ar1=False,
     for i in range(k):
         endog_M.iloc[:, i] = (
             endog_M.iloc[:, i] +
-            mod_idio.simulate([phi[0], idiosyncratic_var], nobs))
+            mod_idio.simulate([phi[0], idiosyncratic_var], nobs,
+                              random_state=1234))
         columns += [f'yM{i + 1}_f2']
     endog_M.columns = columns
 
@@ -379,7 +385,8 @@ def gen_k_factor2(nobs=10000, k=2, idiosyncratic_ar1=False,
     for i in range(k):
         endog_Q_M.iloc[:, i] = (
             endog_Q_M.iloc[:, i] +
-            mod_idio.simulate([phi[0], idiosyncratic_var], nobs))
+            mod_idio.simulate([phi[0], idiosyncratic_var], nobs,
+                              random_state=1234))
         columns += [f'yQ{i + 1}_f2']
     endog_Q_M.columns = columns
 
