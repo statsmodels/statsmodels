@@ -248,11 +248,11 @@ class Huber:
         """
         a = np.asarray(a)
         if mu is None:
-            n = a.shape[0] - 1
+            n = a.shape[axis] - 1
             mu = np.median(a, axis=axis)
             est_mu = True
         else:
-            n = a.shape[0]
+            n = a.shape[axis]
             mu = mu
             est_mu = False
 
@@ -298,10 +298,10 @@ class Huber:
             nmu = tools.unsqueeze(nmu, axis, a.shape)
 
             subset = np.less_equal(np.abs((a - mu) / scale), self.c)
-            card = subset.sum(axis)
 
-            scale_num = np.sum(subset * (a - nmu) ** 2, axis)
-            scale_denom = n * self.gamma - (a.shape[axis] - card) * self.c ** 2
+            scale_num = np.sum(subset * (a - nmu) ** 2 +
+                               (1 - subset) * (scale * self.c)**2, axis)
+            scale_denom = n * self.gamma
             nscale = np.sqrt(scale_num / scale_denom)
             nscale = tools.unsqueeze(nscale, axis, a.shape)
 
@@ -406,6 +406,63 @@ class HuberScale:
 
 
 hubers_scale = HuberScale()
+
+
+class MScale:
+    """M-scale estimation.
+
+    experimental interface, arguments and options will still change.
+
+    Parameters
+    ----------
+    chi_func : callable
+        The rho or chi function for the moment condition for estimating scale.
+    scale_bias : float
+        Factor in moment condition to obtain fisher consistency of the scale
+        estimate at the normal distribution.
+    """
+
+    def __init__(self, chi_func, scale_bias):
+        self.chi_func = chi_func
+        self.scale_bias = scale_bias
+
+    def __call__(self, data, **kwds):
+        return self.fit(data, **kwds)
+
+    def fit(self, data, start_scale='mad', maxiter=100, rtol=1e-6, atol=1e-8):
+        """
+        Estimate M-scale using iteration.
+
+        Parameters
+        ----------
+        data : array-like
+            Data, currently assumed to be 1-dimensional.
+        start_scale : string or float.
+            Starting value of scale or method to compute the starting value.
+            Default is using 'mad', no other string options are available.
+        maxiter : int
+            Maximum number of iterations.
+        rtol : float
+            Relative convergence tolerance.
+        atol : float
+            Absolute onvergence tolerance.
+
+        Returns
+        -------
+        float : Scale estimate. The estimated variance is scale squared.
+        Todo: switch to Holder instance with more information.
+
+        """
+
+        scale = _scale_iter(
+            data,
+            scale0=start_scale,
+            maxiter=maxiter, rtol=rtol, atol=atol,
+            meef_scale=self.chi_func,
+            scale_bias=self.scale_bias,
+            )
+
+        return scale
 
 
 def scale_trimmed(data, alpha, center='median', axis=0, distr=None,
@@ -524,35 +581,134 @@ def scale_trimmed(data, alpha, center='median', axis=0, distr=None,
     return res
 
 
+def _weight_mean(x, c):
+    """Tukey-biweight, bisquare weights used in tau scale.
+
+    Parameters
+    ----------
+    x : ndarray
+        Data
+    c : float
+        Parameter for bisquare weights
+
+    Returns
+    -------
+    ndarray : weights
+    """
+    x = np.asarray(x)
+    w = (1 - (x / c)**2)**2 * (np.abs(x) <= c)
+    return w
+
+
+def _winsor(x, c):
+    """Winsorized squared data used in tau scale.
+
+    Parameters
+    ----------
+    x : ndarray
+        Data
+    c : float
+        threshold
+
+    Returns
+    -------
+    winsorized squared data, ``np.minimum(x**2, c**2)``
+    """
+    return np.minimum(x**2, c**2)
+
+
+def scale_tau(data, cm=4.5, cs=3, weight_mean=_weight_mean,
+              weight_scale=_winsor, normalize=True, ddof=0):
+    """Tau estimator of univariate scale.
+
+    Experimental, API will change
+
+    Parameters
+    ----------
+    data : array_like, 1-D or 2-D
+        If data is 2d, then the location and scale estimates
+        are calculated for each column
+    cm : float
+        constant used in call to weight_mean
+    cs : float
+        constant used in call to weight_scale
+    weight_mean : callable
+        function to calculate weights for weighted mean
+    weight_scale : callable
+        function to calculate scale, "rho" function
+    normalize : bool
+        rescale the scale estimate so it is consistent when the data is
+        normally distributed. The computation assumes winsorized (truncated)
+        variance.
+
+    Returns
+    -------
+    mean : nd_array
+        robust mean
+    std : nd_array
+        robust estimate of scale (standard deviation)
+
+    Notes
+    -----
+    Uses definition of Maronna and Zamar 2002, with weighted mean and
+    trimmed variance.
+    The normalization has been added to match R robustbase.
+    R robustbase uses by default ddof=0, with option to set it to 2.
+
+    References
+    ----------
+    .. [1] Maronna, Ricardo A, and Ruben H Zamar. “Robust Estimates of Location
+       and Dispersion for High-Dimensional Datasets.” Technometrics 44, no. 4
+       (November 1, 2002): 307–17. https://doi.org/10.1198/004017002188618509.
+    """
+
+    x = np.asarray(data)
+    nobs = x.shape[0]
+
+    med_x = np.median(x, 0)
+    xdm = x - med_x
+    mad_x = np.median(np.abs(xdm), 0)
+    wm = weight_mean(xdm / mad_x, cm)
+    mean = (wm * x).sum(0) / wm.sum(0)
+    var = (mad_x**2 * weight_scale((x - mean) / mad_x, cs).sum(0) /
+           (nobs - ddof))
+
+    cf = 1
+    if normalize:
+        c = cs * stats.norm.ppf(0.75)
+        cf = 2 * ((1 - c**2) * stats.norm.cdf(c) - c * stats.norm.pdf(c)
+                  + c**2) - 1
+    # return Holder(loc=mean, scale=np.sqrt(var / cf))
+    return mean, np.sqrt(var / cf)
+
+
 debug = 0
 
 
-def _scale_iter(data, scale0='mad', maxiter=10, rtol=1e-6, atol=1e-8,
-                meef_scale=None, scale_bias=None):
+def _scale_iter(data, scale0='mad', maxiter=100, rtol=1e-6, atol=1e-8,
+                meef_scale=None, scale_bias=None, iter_method="rho", ddof=0):
     """iterative scale estimate base on "rho" function
 
     """
     x = np.asarray(data)
+    nobs = x.shape[0]
     if scale0 == 'mad':
-        scale0 = mad(x)
+        scale0 = mad(x, center=0)
 
-    scale = scale0
-    scale_old = scale
     for i in range(maxiter):
-        x_scaled = x / scale
-        weights_scale = meef_scale(x_scaled) / (1e-50 + x_scaled**2)
-        if debug:
-            print('weights sum', weights_scale.sum(), end=" ")
-        scale_old = scale
-        scale2 = (weights_scale * x**2).mean()
-        if debug:
-            print(scale2, end=" ")
-        scale2 /= scale_bias
-        scale = np.sqrt(scale2)
+        x_scaled = x / scale0
+        if iter_method == "rho":
+            scale = scale0 * np.sqrt(
+                np.sum(meef_scale(x / scale0)) / scale_bias / (nobs - ddof))
+        else:
+            weights_scale = meef_scale(x_scaled) / (1e-50 + x_scaled**2)
+            scale2 = (weights_scale * x**2).sum() / (nobs - ddof)
+            scale2 /= scale_bias
+            scale = np.sqrt(scale2)
         if debug:
             print(scale)
-        if np.allclose(scale, scale_old, atol=atol, rtol=rtol):
+        if np.allclose(scale, scale0, atol=atol, rtol=rtol):
             break
-        scale_old = scale
+        scale0 = scale
 
     return scale

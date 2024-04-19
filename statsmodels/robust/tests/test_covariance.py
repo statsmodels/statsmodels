@@ -8,6 +8,7 @@ import pandas as pd
 
 from statsmodels import robust
 import statsmodels.robust.covariance as robcov
+import statsmodels.robust.scale as robscale
 
 from .results import results_cov as res_cov
 
@@ -107,7 +108,7 @@ class TestOGKTau(TestOGKMad):
     def setup_class(cls):
 
         def sfunc(x):
-            return robcov.scale_tau(x, normalize=False, ddof=0)[1]
+            return robscale.scale_tau(x, normalize=False, ddof=0)[1]
 
         cls.res1 = robcov.cov_ogk(dta_hbk,
                                   scale_func=sfunc,
