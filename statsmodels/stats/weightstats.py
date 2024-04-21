@@ -498,7 +498,7 @@ class DescrStatsW:
         tstat : float
             test statistic
         pvalue : float
-            pvalue of the t-test
+            pvalue of the z-test
 
         Notes
         -----
@@ -1524,7 +1524,7 @@ def ztest(
     tstat : float
         test statistic
     pvalue : float
-        pvalue of the t-test
+        pvalue of the z-test
 
     Notes
     -----
