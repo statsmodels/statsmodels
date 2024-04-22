@@ -31,6 +31,7 @@ from .scale import mad
 from statsmodels.tools.testing import Holder
 
 mad0 = lambda x: mad(x, center=0)  # noqa: E731
+median = lambda x: np.median(x, axis=0)  # noqa: E731
 
 
 # from scikit-learn
@@ -1161,3 +1162,256 @@ def _cov_starting(data, standardize=False, quantile=0.5):
 
     # TODO: rescale back to original space using center and std
     return cov_all
+
+
+# ####### Det, CovDet and helper functions, might be moved to separate module
+
+
+class _Standardize():
+    """Robust standardization of random variable
+
+    """
+
+    def __init__(self, x, func_center=None, func_scale=None):
+        # naming mean or center
+        # maybe also allow str func_scale for robust.scale, e.g. for not
+        #    vectorized Qn
+        if func_center is None:
+            center = np.median(x, axis=0)
+        else:
+            center = func_center(x)
+        xdm = x - center
+        if func_scale is None:
+            scale = mad(xdm, center=0)
+        else:
+            # assumes vectorized
+            scale = func_scale(x)
+
+        self.x_stand = xdm / scale
+
+        self.center = center
+        self.scale = scale
+
+    def transform(self, x):
+        return (x - self.center) / self.scale
+
+    def untransform_mom(self, m, c):
+        mean = self.center + m
+        cov = c * np.outer(self.scale, self.scale)
+        return mean, cov
+
+
+def _orthogonalize_det(z, corr, loc_func, scale_func):
+    """Orthogonalize
+
+    This is a simplified version of the OGK method.
+    version from DetMCD works on zscored data
+    (does not return mean and cov of original data)
+    so we drop the compensation for scaling in zscoring
+
+    z is the data here, zscored with robust estimators,
+    e.g. median and Qn in DetMCD
+    """
+    evals, evecs = np.linalg.eigh(corr)  # noqa: F841
+    z = z.dot(evecs)
+    transf0 = evecs
+
+    scale_z = scale_func(z)  # scale of principal components
+    cov = (transf0 * scale_z**2).dot(transf0.T)
+    # extra step in DetMCD, sphering data with new cov to compute center
+    # I think this is equivalent to scaling z
+    loc_z = loc_func(z / scale_z)  # center of principal components
+    loc = (transf0 * scale_z).dot(loc_z)
+
+    return loc, cov
+
+
+def _get_detcov_startidx(z, h, options_start=None, methods_cov="all"):
+    """Starting sets for deterministic robust covariance estimators.
+
+    These are intended as starting sets for DetMCD, DetS and DetMM.
+    """
+    if options_start is None:
+        options_start = {}
+
+    loc_func = options_start.get("loc_func", median)
+    scale_func = options_start.get("scale_func", mad)
+
+    cov_all = _cov_starting(z, standardize=True, quantile=0.5)
+
+    idx_all = []
+    for c in cov_all:
+        if not hasattr(c, "method"):
+            continue
+        method = c.method
+        mean, cov = _orthogonalize_det(z, c.cov, loc_func, scale_func)
+        d = mahalanobis(z, mean, cov)
+        idx_sel = np.argpartition(d, h)[:h]
+        idx_all.append((idx_sel, method))
+
+    return idx_all
+
+
+class CovDetMCD:
+    """Minimum covariance determinant estimator with deterministic starts.
+
+    preliminary version
+
+    reproducability:
+
+    This uses deterministic starting sets and there is no randomness in the
+    estimator.
+    However, this will not be reprodusible across statsmodels versions
+    when the methods for starting sets or tuning parameters for the
+    optimization change.
+    """
+
+    def __init__(self):
+        # no options yet, methods were written as functions
+        pass
+
+    def cstep_mcd(self, x, mean, cov, h, maxiter=2, tol=1e-8):
+        """C-step for mcd iteration
+
+        x is data, perc is percentile h / nobs, don't need perc when we
+        use np.argpartition
+        requires starting mean and cov
+        """
+
+        converged = False
+
+        for i in range(maxiter):
+            d = mahalanobis(x, mean, cov)
+            idx_sel = np.argpartition(d, h)[:h]
+            x_sel = x[idx_sel]
+            mean = x_sel.mean(0)
+            cov_new = np.cov(x_sel.T, ddof=1)
+
+            if ((cov - cov_new)**2).mean() < tol:
+                cov = cov_new
+                converged = True
+                break
+
+        return mean, cov
+
+    def _mcd_one(self, x, idx, h, maxiter=2, mean=None, cov=None):
+        """Compute mcd for one starting set of observations.
+
+        Parameters
+        ----------
+        x : ndarray
+            Data.
+        idx : ndarray
+            Indices or mask of observation in starting set, used as ``x[idx]``
+        h : int
+            Number of observations in evaluation set for cov.
+        maxiter : int
+            Maximum number of c-steps.
+
+        Returns
+        -------
+        mean : ndarray
+            Estimated mean.
+        cov : ndarray
+            Estimated covariance.
+        det : float
+            Determinant of estimated covariance matrix.
+
+        Notes
+        -----
+        This does not do any preprocessing of the data and returns the empirical mean
+        and covariance of evaluation set of the data ``x``.
+        """
+        x_sel = x[idx]
+        if mean is None:
+            mean = x_sel.mean(0)
+        if cov is None:
+            cov = np.cov(x_sel.T, ddof=1)
+
+        # updated with c-step
+        mean, cov = self.cstep_mcd(x, mean, cov, h, maxiter=maxiter)
+        det = np.linalg.det(cov)
+
+        return mean, cov, det
+
+    def mcd_det(self, x, h, *, h_start=None, mean_func=None, scale_func=None,
+                maxiter=100, options_start=None, reweight=True):
+        """
+        Compute minimum covariance determinant estimate of mean and covariance.
+
+        x : array-like
+            Data with observation in rows and variables in columns.
+        h : int
+            Number of observations in evaluation set for minimimizing
+            determinant.
+        h_start : int
+            Number of observations used in starting mean and covariance.
+        mean_func, scale_func : callable or None.
+            Mean and scale function for initial standardization.
+            Current defaults, if they are None, are median and mad, but
+            default scale_func will likely change.
+        options_start : None or dict
+           Options for the starting estimators.
+           TODO: which options? e.g. for OGK
+
+        Returns
+        -------
+        Holder instance with results
+        """
+
+        x = np.asarray(x)
+        nobs, k_vars = x.shape
+
+        if h is None:
+            h = (nobs + k_vars + 1) // 2  # check with literature
+        if mean_func is None:
+            mean_func = lambda x: np.median(x, axis=0)  # noqa
+        if scale_func is None:
+            scale_func = mad
+        if options_start is None:
+            options_start = {}
+        if h_start is None:
+            nobs, k_vars = x.shape
+            h_start = max(nobs // 2 + 1, k_vars + 1)
+
+        m = mean_func(x)
+        s = scale_func(x)
+        z = (x - m) / s
+        # get initial mean, cov of standardized data, we only need ranking
+        # of obs
+        starts = _get_detcov_startidx(z, h_start, options_start)
+
+        fac_trunc = coef_normalize_cov_truncated(h / nobs, k_vars)
+
+        res = {}
+        for ii, ini in enumerate(starts):
+            idx_sel, method = ini
+            mean, cov, det = self._mcd_one(x, idx_sel, h, maxiter=maxiter)
+            res[ii] = Holder(
+                mean=mean,
+                cov=cov * fac_trunc,
+                det_subset=det,
+                method=method
+                )
+
+        det_all = np.array([i.det_subset for i in res.values()])
+        idx_best = np.argmin(det_all)
+        best = res[idx_best]
+        # mean = best.mean
+        # cov = best.cov
+
+        # need to c-step to convergence for best,
+        # is with best 2 in original DetMCD
+        if maxiter < 100:
+            mean, cov, det = self._mcd_one(x, None, h, maxiter=100,
+                                           mean=best.mean, cov=best.cov)
+
+        # include extra info in returned Holder instance
+        best.det_all = det_all
+        best.idx_best = idx_best
+
+        best.tmean = m
+        best.tscale = s
+
+        #return Holder(mean=mean, cov=cov, start_best=best)
+        return best  # is Holder instance already
