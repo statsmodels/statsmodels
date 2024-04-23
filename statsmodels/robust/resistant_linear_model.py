@@ -45,7 +45,7 @@ class RLMDetS(Model):
             exog_start = self.exog[:, col_indices]
 
         if include_endog:
-            self.data_start = np.column_stack(endog, exog_start)
+            self.data_start = np.column_stack((endog, exog_start))
         else:
             self.data_start = exog_start
 
@@ -90,3 +90,32 @@ class RLMDetS(Model):
         # results instance of _fit_once has RLM as `model`
         res_best.model_dets = self
         return res_best
+
+
+class RLMDetSMM(RLMDetS):
+    """MM-estimator with S-estimator starting values
+
+    """
+
+    def fit(self, h=None, binding=False):
+        norm_m = rnorms.TukeyBiweight(c=4.685061)
+        res_s = super().fit(h)
+        mod_m = RLM(res_s.model.endog, res_s.model.exog, M=norm_m)
+        res_mm = mod_m.fit(
+            start_params=np.asarray(res_s.params),
+            start_scale=res_s.scale,
+            update_scale=False
+            )
+
+        if not binding:
+            # we can compute this first and skip MM if scale decrease
+            mod_sm = RLM(res_s.model.endog, res_s.model.exog, M=norm_m)
+            res_sm = mod_sm.fit(
+                start_params=res_s.params,
+                scale_est=self.mscale
+                )
+
+        if not binding and res_sm.scale < res_mm.scale:
+            return res_sm
+        else:
+            return res_mm
