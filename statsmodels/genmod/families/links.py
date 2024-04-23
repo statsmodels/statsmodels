@@ -192,7 +192,7 @@ class Logit(Link):
 
         Notes
         -----
-        g^(-1)(z) = exp(z)/(1+exp(z))
+        g^(-1)(z) = exp(z)/(1+exp(-z))
         """
         z = np.asarray(z)
         t = np.exp(-z)
