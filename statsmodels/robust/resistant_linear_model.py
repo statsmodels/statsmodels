@@ -60,18 +60,21 @@ class RLMDetS(Model):
             ]
         return start_params_all
 
-    def _fit_once(self, start_params, maxiter=100):
+    def _fit_one(self, start_params, maxiter=100):
         mod = RLM(self.endog, self.exog, M=self.norm)
         res = mod.fit(start_params=start_params,
                       scale_est=self.mscale,
                       maxiter=maxiter)
         return res
 
-    def fit(self, h, maxiter=100, maxiter_step=5):
+    def fit(self, h, maxiter=100, maxiter_step=5, start_params_extra=None):
 
+        start_params_all = self._get_start_params(h)
+        if start_params_extra:
+            start_params_all.extend(start_params_extra)
         res = {}
-        for ii, sp in enumerate(self._get_start_params(h)):
-            res_ii = self._fit_once(sp, maxiter=maxiter_step)
+        for ii, sp in enumerate(start_params_all):
+            res_ii = self._fit_one(sp, maxiter=maxiter_step)
             res[ii] = Holder(
                 scale=res_ii.scale,
                 params=res_ii.params,
@@ -83,7 +86,7 @@ class RLMDetS(Model):
         best_idx = scale_sorted[0]
 
         # TODO: iterate until convergence if start fits are not converged
-        res_best = self._fit_once(res[best_idx].params, maxiter=maxiter)
+        res_best = self._fit_one(res[best_idx].params, maxiter=maxiter)
 
         # TODO: add extra start and convergence info
         res_best._results.results_iter = res
@@ -97,25 +100,36 @@ class RLMDetSMM(RLMDetS):
 
     """
 
-    def fit(self, h=None, binding=False):
+    def fit(self, h=None, binding=False, start=None):
         norm_m = rnorms.TukeyBiweight(c=4.685061)
-        res_s = super().fit(h)
-        mod_m = RLM(res_s.model.endog, res_s.model.exog, M=norm_m)
+        if start is None:
+            res_s = super().fit(h)
+            start_params = np.asarray(res_s.params)
+            start_scale = res_s.scale
+        else:
+            start_params, start_scale = start
+            res_s = None
+
+        # mod_m = RLM(res_s.model.endog, res_s.model.exog, M=norm_m)
+        mod_m = RLM(self.endog, self.exog, M=norm_m)
         res_mm = mod_m.fit(
-            start_params=np.asarray(res_s.params),
-            start_scale=res_s.scale,
+            start_params=start_params,
+            start_scale=start_scale,
             update_scale=False
             )
 
         if not binding:
             # we can compute this first and skip MM if scale decrease
-            mod_sm = RLM(res_s.model.endog, res_s.model.exog, M=norm_m)
+            mod_sm = RLM(self.endog, self.exog, M=norm_m)
             res_sm = mod_sm.fit(
-                start_params=res_s.params,
+                start_params=start_params,
                 scale_est=self.mscale
                 )
 
         if not binding and res_sm.scale < res_mm.scale:
-            return res_sm
+            res = res_sm
         else:
-            return res_mm
+            res = res_mm
+
+        res._results.results_dets = res_s
+        return res

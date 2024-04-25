@@ -27,8 +27,10 @@ doi:10.1109/TSP.2011.2138698.
 import numpy as np
 from scipy import stats, linalg
 from scipy.linalg.lapack import dtrtri
-from .scale import mad
+from .scale import mad, qn_scale
 from statsmodels.tools.testing import Holder
+
+from statsmodels.stats.covariance import corr_rank, corr_normal_scores
 
 mad0 = lambda x: mad(x, center=0)  # noqa: E731
 median = lambda x: np.median(x, axis=0)  # noqa: E731
@@ -312,6 +314,7 @@ def mahalanobis(data, cov=None, cov_inv=None, sqrt=False):
     """Mahalanobis distance squared
 
     Note: this is without taking the square root.
+    assumes data is already centered.
 
     Parameters
     ----------
@@ -1084,7 +1087,7 @@ def _cov_iter(data, weights_func, weights_args=None, cov_init=None,
     return res
 
 
-def _cov_starting(data, standardize=False, quantile=0.5):
+def _cov_starting(data, standardize=False, quantile=0.5, retransform=False):
     """compute some robust starting covariances
 
     The returned covariance matrices are intended as starting values
@@ -1128,7 +1131,7 @@ def _cov_starting(data, standardize=False, quantile=0.5):
 
     cov_all = []
     d = mahalanobis(xs, cov=None, cov_inv=np.eye(k_vars))
-    percentiles = [(k_vars+2) / nobs * 100 * 2, 25, 50]
+    percentiles = [(k_vars+2) / nobs * 100 * 2, 25, 50, 85]
     cutoffs = np.percentile(d, percentiles)
     for p, cutoff in zip(percentiles, cutoffs):
         xsp = xs[d < cutoff]
@@ -1150,15 +1153,55 @@ def _cov_starting(data, standardize=False, quantile=0.5):
         c03 = _cov_iter(xs, weights_quantile, weights_args=(quantile,),
                         rescale="med", cov_init=c02.cov, maxiter=100)
 
-        if standardize:
+        if not standardize or not retransform:
             cov_all.extend([c0, c01, c02, c03])
         else:
             # compensate for initial rescaling
+            # TODO: this does not return list of Holder anymore
             s = np.outer(std, std)
             cov_all.extend([r.cov * s for r in [c0, c01, c02, c03]])
 
     c2 = cov_ogk(xs)
     cov_all.append(c2)
+
+    c2raw = Holder(
+            cov=c2.cov_raw,
+            mean=c2.loc_raw * std + center,
+            method="ogk_raw",
+            )
+    cov_all.append(c2raw)
+
+    z_tanh = np.tanh(xs)
+    c_th = Holder(
+            cov=np.corrcoef(z_tanh.T),  # not consistently scaled for cov
+            mean=center,  # TODO: do we add inverted mean z_tanh ?
+            method="tanh",
+            )
+    cov_all.append(c_th)
+
+    x_spatial = xs / np.sqrt(np.sum(xs**2, axis=1))[:, None]
+    c_th = Holder(
+            cov=np.cov(x_spatial.T),
+            mean=center,
+            method="spatial",
+            )
+    cov_all.append(c_th)
+
+    c_th = Holder(
+            # not consistently scaled for cov
+            # cov=stats.spearmanr(xs)[0], # not correct shape if k=1 or 2
+            cov=corr_rank(xs),  # always returns matrix, np.corrcoef result
+            mean=center,
+            method="spearman",
+            )
+    cov_all.append(c_th)
+
+    c_ns = Holder(
+            cov=corr_normal_scores(xs),  # not consistently scaled for cov
+            mean=center,  # TODO: do we add inverted mean z_tanh ?
+            method="normal-scores",
+            )
+    cov_all.append(c_ns)
 
     # TODO: rescale back to original space using center and std
     return cov_all
@@ -1201,7 +1244,7 @@ class _Standardize():
         return mean, cov
 
 
-def _orthogonalize_det(z, corr, loc_func, scale_func):
+def _orthogonalize_det(x, corr, loc_func, scale_func):
     """Orthogonalize
 
     This is a simplified version of the OGK method.
@@ -1213,15 +1256,20 @@ def _orthogonalize_det(z, corr, loc_func, scale_func):
     e.g. median and Qn in DetMCD
     """
     evals, evecs = np.linalg.eigh(corr)  # noqa: F841
-    z = z.dot(evecs)
+    z = x.dot(evecs)
     transf0 = evecs
 
     scale_z = scale_func(z)  # scale of principal components
     cov = (transf0 * scale_z**2).dot(transf0.T)
     # extra step in DetMCD, sphering data with new cov to compute center
     # I think this is equivalent to scaling z
-    loc_z = loc_func(z / scale_z)  # center of principal components
-    loc = (transf0 * scale_z).dot(loc_z)
+    #loc_z = loc_func(z / scale_z) * scale_z  # center of principal components
+    #loc = (transf0 * scale_z).dot(loc_z)
+    transf1 = (transf0 * scale_z).dot(transf0.T)
+    #transf1inv = (transf0 * scale_z**(-1)).dot(transf0.T)
+
+    #loc = loc_func(x @ transf1inv) @ transf1
+    loc = loc_func((z / scale_z).dot(transf0.T)) @ transf1
 
     return loc, cov
 
@@ -1231,13 +1279,15 @@ def _get_detcov_startidx(z, h, options_start=None, methods_cov="all"):
 
     These are intended as starting sets for DetMCD, DetS and DetMM.
     """
+
     if options_start is None:
         options_start = {}
 
     loc_func = options_start.get("loc_func", median)
     scale_func = options_start.get("scale_func", mad)
+    z = (z - loc_func(z)) / scale_func(z)
 
-    cov_all = _cov_starting(z, standardize=True, quantile=0.5)
+    cov_all = _cov_starting(z, standardize=False, quantile=0.5)
 
     idx_all = []
     for c in cov_all:

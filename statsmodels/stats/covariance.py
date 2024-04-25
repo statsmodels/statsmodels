@@ -149,6 +149,18 @@ def transform_corr_normal(corr, method, return_var=False, possdef=True):
         return corr_n
 
 
+def corr_rank(data):
+    """Spearman rank correlation
+
+    simplified version of scipy.stats.spearmanr
+    """
+    x = np.asarray(data)
+    axisout = 0
+    ar = np.apply_along_axis(stats.rankdata, axisout, x)
+    corr = np.corrcoef(ar, rowvar=False)
+    return corr
+
+
 def corr_normal_scores(data):
     """Gaussian rank (normal scores) correlation
 
