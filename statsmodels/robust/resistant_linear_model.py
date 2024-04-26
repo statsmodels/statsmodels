@@ -39,6 +39,7 @@ class RLMDetS(Model):
         # data for robust mahalanobis distance of starting sets
         self.breakdown_point = breakdown_point
 
+        # TODO: detect constant
         if col_indices is None:
             exog_start = self.exog[:, 1:]
         else:
@@ -51,6 +52,13 @@ class RLMDetS(Model):
 
     def _get_start_params(self, h):
         # I think we should use iterator with yield
+
+        if self.data_start.shape[1] == 0 and self.exog.shape[1] == 1:
+            quantiles = np.quantile(self.endog, [0.25, 0.5, 0.75])
+            start_params_all = [np.atleast_1d([q]) for q in quantiles]
+            return start_params_all
+
+
         starts = _get_detcov_startidx(
             self.data_start, h, options_start=None, methods_cov="all")
 

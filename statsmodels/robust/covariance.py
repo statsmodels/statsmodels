@@ -1287,6 +1287,18 @@ def _get_detcov_startidx(z, h, options_start=None, methods_cov="all"):
     scale_func = options_start.get("scale_func", mad)
     z = (z - loc_func(z)) / scale_func(z)
 
+    if np.squeeze(z).ndim == 1:
+        # only one random variable
+        z = np.squeeze(z)
+        nobs = z.shape[0]
+        idx_sel = np.argpartition(np.abs(z), h)[:h]
+        idx_all = [(idx_sel, "abs-resid")]
+        idx_sorted = np.argsort(z)
+        h_tail = (nobs - h) // 2
+        idx_all.append((idx_sorted[h_tail : h_tail + h], "trimmed-tail"))
+        return idx_all
+
+    # continue if more than 1 random variable
     cov_all = _cov_starting(z, standardize=False, quantile=0.5)
 
     idx_all = []
