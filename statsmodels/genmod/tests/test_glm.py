@@ -3,13 +3,11 @@ Test functions for models.GLM
 """
 from statsmodels.compat.scipy import SP_LT_17
 
-import json
 import os
-from typing import List, Tuple
+from typing import Tuple
 import warnings
 
 import numpy as np
-import numpy as npgit
 from numpy.testing import (
     assert_,
     assert_allclose,
@@ -22,6 +20,7 @@ import pandas as pd
 from pandas.testing import assert_series_equal
 import pytest
 from scipy import stats
+from scipy.special import expit
 
 import statsmodels.api as sm
 from statsmodels.datasets import cpunish, longley
@@ -2677,18 +2676,23 @@ class TestBGLMDiscreteResults:
     @pytest.fixture
     def get_test_data(self) -> pd.DataFrame:
         # note this is static test data for comparing outputs
-        # between R and Python
-        # See the scripts in statsmodels_custom/documentation for more details
-        return pd.read_csv(f"{os.getcwd()}/statsmodels/genmod/tests/test_data/test_data.csv")
+        # for behavior comparison tests, see the example notebook
+        np.random.seed(12345)
+        n = 100
+        x1 = np.random.normal(size=n)
+        x2 = np.random.binomial(1, 0.5, n)
+        b0 = 1
+        b1 = 1.5
+        b2 = 2
+        const = np.ones(n)
+        y = np.random.binomial(1, expit(b0 + b1 * x1 + b2 * x2), n)
+        X = np.transpose(np.vstack([const, x1, x2]))
 
-    @pytest.fixture
-    def extract_json(self) -> dict[str, dict[str, List]]:
-        # note this is static test results for comparing outputs
-        # between R and Python
-        # See the scripts in statsmodels_custom/documentation for more details
-        with open(f"{os.getcwd()}/statsmodels/genmod/tests/test_data/R_model_results.json") as f:
-            json_data = json.load(f)
-        return json_data
+        df = pd.DataFrame(
+            np.hstack((y.reshape(100, 1), X.reshape(100, 3))),
+            columns=["y", "const", "x1", "x2"],
+        )
+        return df
 
     @pytest.fixture
     def get_test_data_with_constant(
@@ -2743,67 +2747,3 @@ class TestBGLMDiscreteResults:
 
         # Assert
         assert len(result) == len(y)
-
-    @pytest.mark.parametrize("family", model_families)
-    def test_for_expected_outputs_constants(
-        self, family, get_test_data_with_constant, extract_json
-    ) -> None:
-        # Arrange:
-        family_str = family[0] + "_constant"
-        X, y = get_test_data_with_constant
-
-        json_data = extract_json
-
-        # Act
-        model = GLM(method="birls", endog=y, exog=X, family=family[1])
-        training_result = model.fit(
-            weights=None,
-            perform_scale=True,
-        )
-
-        # Assert
-        assert np.isclose(
-            training_result.fittedvalues,
-            json_data[family_str]["fittedvalues"],
-            atol=1e-05,
-        ).all()
-        assert np.isclose(
-            training_result.resid_working,
-            json_data[family_str]["resid_working"],
-            atol=1e-05,
-        ).all()
-        assert np.isclose(
-            training_result.params, json_data[family_str]["params"], atol=1e-05
-        ).all()
-
-    @pytest.mark.parametrize("family", model_families)
-    def test_for_expected_outputs_no_constants(
-        self, family, get_test_data_without_constant, extract_json
-    ) -> None:
-        # Arrange:
-        family_str = family[0] + "_no_constant"
-        X, y = get_test_data_without_constant
-
-        json_data = extract_json
-
-        # Act
-        model = GLM(method="birls", endog=y, exog=X, family=family[1])
-        training_result = model.fit(
-            weights=None,
-            perform_scale=True,
-        )
-
-        # Assert
-        assert np.isclose(
-            training_result.fittedvalues,
-            json_data[family_str]["fittedvalues"],
-            atol=1e-05,
-        ).all()
-        assert np.isclose(
-            training_result.resid_working,
-            json_data[family_str]["resid_working"],
-            atol=1e-05,
-        ).all()
-        assert np.isclose(
-            training_result.params, json_data[family_str]["params"], atol=1e-05
-        ).all()
