@@ -2747,3 +2747,4 @@ class TestBGLMDiscreteResults:
 
         # Assert
         assert len(result) == len(y)
+        
