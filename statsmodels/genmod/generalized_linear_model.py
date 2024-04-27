@@ -1192,7 +1192,6 @@ class GLM(base.LikelihoodModel):
                                   tol=tol, scale=scale, cov_type=cov_type,
                                   cov_kwds=cov_kwds, use_t=use_t, **kwargs)
         if method.lower() == "birls":
-            return self._fit_birls()
             return self._fit_bayes_irls( start_params=None, maxiter=100, tol=1e-8,
                   scale=None, cov_type='nonrobust', cov_kwds=None,
                   use_t=None, **kwargs)
@@ -1417,7 +1416,6 @@ class GLM(base.LikelihoodModel):
         nvars = wlsexog.shape[1]
         # Set default values
         default_probit_scale_factor = (
-            1.6 if isinstance(self.family.link, families.links.probit) else 1
             1.6 if isinstance(self.family.link, families.links.Probit) else 1
         )
         if prior_scale is DEFAULT:
