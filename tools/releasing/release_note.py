@@ -50,8 +50,8 @@ query_parts = (
     "repo:statsmodels/statsmodels",
     "is:pr",
     "is:merged",
-    "merged:>{}".format(first_commit_time_iso),
-    "base:{}".format(BRANCH),
+    f"merged:>{first_commit_time_iso}",
+    f"base:{BRANCH}",
 )
 query = " ".join(query_parts)
 merged_pull_data = []
@@ -63,7 +63,7 @@ for ms in statsmodels.get_milestones():
     if ms.title == MILESTONE:
         milestone = ms
 if milestone is None:
-    description = "Release {} issues and pull requests".format(MILESTONE)
+    description = f"Release {MILESTONE} issues and pull requests"
     milestone = statsmodels.create_milestone(
         MILESTONE, state="open", description=description
     )
@@ -108,7 +108,7 @@ for login in names:
 # Continue trying to resolve to human names
 contributors = []
 for login in names:
-    print("Reading user data for {}".format(login))
+    print(f"Reading user data for {login}")
     user_names = list(names[login])
     if len(user_names) == 1:
         name = user_names[0]
@@ -129,7 +129,7 @@ query_parts = (
     "repo:statsmodels/statsmodels",
     "is:issue",
     "is:closed",
-    "closed:>{}".format(first_commit_time_iso),
+    f"closed:>{first_commit_time_iso}",
 )
 query = " ".join(query_parts)
 closed_issues = g.search_issues(query)
@@ -183,6 +183,6 @@ with open("release_note.tmpl", encoding="utf-8") as tmpl:
     tmpl_data = tmpl.read()
     t = Template(tmpl_data)
     rendered = t.render(**variables)
-    file_name = "version{}.rst".format(VERSION)
+    file_name = f"version{VERSION}.rst"
     with open(file_name, encoding="utf-8", mode="w") as out:
         out.write(rendered)

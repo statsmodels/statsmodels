@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 (Internal) AR(1) model for monthly growth rates aggregated to quarterly freq.
 

@@ -70,6 +70,7 @@ coverage_html_report/
 
 # VS Code
 .vscode/
+.vs/
 
 # Project specific
 statsmodels/version.py

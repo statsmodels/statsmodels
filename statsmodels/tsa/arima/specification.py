@@ -8,13 +8,16 @@ import numpy as np
 import pandas as pd
 
 from statsmodels.tools.data import _is_using_pandas
+from statsmodels.tsa.arima.tools import standardize_lag_order, validate_basic
 from statsmodels.tsa.base.tsa_model import TimeSeriesModel
 from statsmodels.tsa.statespace.tools import (
-    is_invertible, constrain_stationary_univariate as constrain,
+    constrain_stationary_univariate as constrain,
+    is_invertible,
+    prepare_exog,
+    prepare_trend_data,
+    prepare_trend_spec,
     unconstrain_stationary_univariate as unconstrain,
-    prepare_exog, prepare_trend_spec, prepare_trend_data)
-
-from statsmodels.tsa.arima.tools import standardize_lag_order, validate_basic
+)
 
 
 class SARIMAXSpecification:
@@ -739,7 +742,7 @@ class SARIMAXSpecification:
         params : array_like
             Array of model parameters.
         allow_infnan : bool, optional
-            Whether or not to allow `params` to contain -np.Inf, np.Inf, and
+            Whether or not to allow `params` to contain -np.inf, np.inf, and
             np.nan. Default is False.
 
         Returns

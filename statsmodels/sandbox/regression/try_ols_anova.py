@@ -200,7 +200,7 @@ if __name__ == '__main__':
         xx, n = form2design('F:a',testdata)
         print(xx)
         print(form2design('P:a*b',testdata))
-        print(data2proddummy((np.c_[testdata['a'],testdata['b']])))
+        print(data2proddummy(np.c_[testdata['a'],testdata['b']]))
 
         xx, names = form2design('a F:b P:c*d',testdata)
 

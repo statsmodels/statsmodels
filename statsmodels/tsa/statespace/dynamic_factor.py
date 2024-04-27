@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Dynamic factor model
 
@@ -204,7 +203,7 @@ class DynamicFactor(MLEModel):
         kwargs.setdefault('initialization', 'stationary')
 
         # Initialize the state space model
-        super(DynamicFactor, self).__init__(
+        super().__init__(
             endog, exog=exog, k_states=k_states, k_posdef=k_posdef, **kwargs
         )
 
@@ -582,7 +581,7 @@ class DynamicFactor(MLEModel):
         # 2. Exog
         # Recall these are in the form: beta.x1.y1, beta.x2.y1, beta.x1.y2, ...
         param_names += [
-            'beta.%s.%s' % (self.exog_names[j], endog_names[i])
+            'beta.{}.{}'.format(self.exog_names[j], endog_names[i])
             for i in range(self.k_endog)
             for j in range(self.k_exog)
         ]
@@ -842,11 +841,11 @@ class DynamicFactor(MLEModel):
         return unconstrained
 
     def _validate_can_fix_params(self, param_names):
-        super(DynamicFactor, self)._validate_can_fix_params(param_names)
+        super()._validate_can_fix_params(param_names)
 
         ix = np.cumsum(list(self.parameters.values()))[:-1]
-        (_, _, _, factor_transition_names, error_transition_names) = [
-            arr.tolist() for arr in np.array_split(self.param_names, ix)]
+        (_, _, _, factor_transition_names, error_transition_names) = (
+            arr.tolist() for arr in np.array_split(self.param_names, ix))
 
         if self.enforce_stationarity and self.factor_order > 0:
             if self.k_factors > 1 or self.factor_order > 1:
@@ -982,9 +981,9 @@ class DynamicFactorResults(MLEResults):
     """
     def __init__(self, model, params, filter_results, cov_type=None,
                  **kwargs):
-        super(DynamicFactorResults, self).__init__(model, params,
-                                                   filter_results, cov_type,
-                                                   **kwargs)
+        super().__init__(model, params,
+                         filter_results, cov_type,
+                         **kwargs)
 
         self.df_resid = np.inf  # attribute required for wald tests
 
@@ -1207,7 +1206,7 @@ class DynamicFactorResults(MLEResults):
             error_type = 'VAR' if spec.error_var else 'AR'
             model_name.append('%s(%d) errors' % (error_type, spec.error_order))
 
-        summary = super(DynamicFactorResults, self).summary(
+        summary = super().summary(
             alpha=alpha, start=start, model_name=model_name,
             display_params=not separate_params
         )

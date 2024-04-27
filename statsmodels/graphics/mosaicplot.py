@@ -40,8 +40,10 @@ def _normalize_split(proportion):
         raise ValueError("proportions should be positive,"
                           "given value: {}".format(proportion))
     if np.allclose(proportion, 0):
-        raise ValueError("at least one proportion should be "
-                          "greater than zero".format(proportion))
+        raise ValueError(
+            "at least one proportion should be greater than zero"
+            "given value: {}".format(proportion)
+        )
     # ok, data are meaningful, so go on
     if len(proportion) < 2:
         return array([0.0, 1.0])
@@ -61,7 +63,7 @@ def _split_rect(x, y, width, height, proportion, horizontal=True, gap=0.05):
     x, y, w, h = float(x), float(y), float(width), float(height)
     if (w < 0) or (h < 0):
         raise ValueError("dimension of the square less than"
-                          "zero w={} h=()".format(w, h))
+                          "zero w={} h={}".format(w, h))
     proportions = _normalize_split(proportion)
 
     # extract the starting point and the dimension of each subdivision
@@ -138,7 +140,7 @@ def _categories_level(keys):
     res = []
     for i in zip(*(keys)):
         tuplefied = _tuplify(i)
-        res.append(list(dict([(j, None) for j in tuplefied])))
+        res.append(list({j: None for j in tuplefied}))
     return res
 
 
@@ -199,8 +201,8 @@ def _hierarchical_split(count_dict, horizontal=True, gap=0.05):
     gap = gap[:L]
     # put the count dictionay in order for the keys
     # this will allow some code simplification
-    count_ordered = dict([(k, count_dict[k])
-                        for k in list(product(*categories_levels))])
+    count_ordered = {k: count_dict[k]
+                        for k in list(product(*categories_levels))}
     for cat_idx, cat_enum in enumerate(categories_levels):
         # get the partial key up to the actual level
         base_keys = list(product(*categories_levels[:cat_idx]))
@@ -301,11 +303,11 @@ def _normalize_data(data, index):
         data = temp
         items = list(data.items())
     # make all the keys a tuple, even if simple numbers
-    data = dict([_tuplify(k), v] for k, v in items)
+    data = {_tuplify(k): v for k, v in items}
     categories_levels = _categories_level(list(data.keys()))
     # fill the void in the counting dictionary
     indexes = product(*categories_levels)
-    contingency = dict([(k, data.get(k, 0)) for k in indexes])
+    contingency = {k: data.get(k, 0) for k in indexes}
     data = contingency
     # reorder the keys order according to the one specified by the user
     # or if the index is None convert it into a simple list
@@ -366,7 +368,7 @@ def _statistical_coloring(data):
         expected[key] = base * total, np.sqrt(total * base * (1.0 - base))
     # now we have the standard deviation of distance from the
     # expected value for each tile. We create the colors from this
-    sigmas = dict((k, (data[k] - m) / s) for k, (m, s) in expected.items())
+    sigmas = {k: (data[k] - m) / s for k, (m, s) in expected.items()}
     props = {}
     for key, dev in sigmas.items():
         red = 0.0 if dev < 0 else (dev / (1 + dev))
@@ -442,8 +444,8 @@ def _create_labels(rects, horizontal, ax, rotation):
             basekey = tuple(categories[i][index_select[i]]
                             for i in range(level_idx))
             basekey = basekey + (value,)
-            subset = dict((k, v) for k, v in items
-                          if basekey == k[:level_idx + 1])
+            subset = {k: v for k, v in items
+                          if basekey == k[:level_idx + 1]}
             #now I extract the center of all the tiles and make a weighted
             #mean of all these center on the area of the tile
             #this should give me the (more or less) correct position

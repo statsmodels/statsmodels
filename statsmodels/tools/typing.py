@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Sequence, Union
+from typing import TYPE_CHECKING, Any, Union
+from collections.abc import Sequence
 
 from packaging.version import parse
 from pandas import DataFrame, Series

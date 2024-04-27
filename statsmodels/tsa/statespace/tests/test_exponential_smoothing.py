@@ -76,7 +76,6 @@ Author: Chad Fulton
 License: BSD-3
 """
 
-from __future__ import division, absolute_import, print_function
 
 import numpy as np
 import pandas as pd

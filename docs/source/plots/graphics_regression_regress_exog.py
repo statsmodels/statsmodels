@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 '''
 Load the Statewide Crime data set and build a model with regressors
 including the rate of high school graduation (hs_grad), population in urban

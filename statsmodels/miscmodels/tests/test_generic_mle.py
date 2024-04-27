@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 
 Created on Fri Jun 28 14:19:26 2013
@@ -21,7 +20,7 @@ class MyPareto(GenericLikelihoodModel):
     '''
 
     def initialize(self):   #TODO needed or not
-        super(MyPareto, self).initialize()
+        super().initialize()
         extra_params_names = ['shape', 'loc', 'scale']
         self._set_extra_params_names(extra_params_names)
 
@@ -187,7 +186,7 @@ class TwoPeakLLHNoExog(GenericLikelihoodModel):
         # so we re-use their PDFs here
         self.signal = signal
         self.background = background
-        super(TwoPeakLLHNoExog, self).__init__(
+        super().__init__(
             endog=endog,
             exog=exog,
             *args,

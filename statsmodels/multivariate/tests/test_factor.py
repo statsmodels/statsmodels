@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import warnings
 
 from statsmodels.compat.pandas import PD_LT_1_4

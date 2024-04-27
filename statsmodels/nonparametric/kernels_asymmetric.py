@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Asymmetric kernels for R+ and unit interval
 
 References

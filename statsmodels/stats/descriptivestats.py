@@ -1,7 +1,8 @@
 from statsmodels.compat.pandas import PD_LT_2, Appender, is_numeric_dtype
 from statsmodels.compat.scipy import SP_LT_19
 
-from typing import Sequence, Union
+from typing import Union
+from collections.abc import Sequence
 
 import numpy as np
 import pandas as pd

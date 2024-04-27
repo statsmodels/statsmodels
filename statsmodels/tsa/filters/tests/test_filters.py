@@ -349,7 +349,7 @@ def test_hpfilter():
         [-3.975570728533530200e+02, 1.329906107285335383e+04],
         [-3.331152428080622485e+02, 1.332345624280806260e+04]])
     dta = macrodata.load_pandas().data['realgdp'].values
-    res = column_stack((hpfilter(dta, 1600)))
+    res = column_stack(hpfilter(dta, 1600))
     assert_almost_equal(res, hpfilt_res, 6)
 
 

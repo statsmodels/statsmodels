@@ -413,3 +413,22 @@ def test_hannan_rissanen_with_fixed_params(ar_order, ma_order, fixed_params):
         res = mod.fit(method='hannan_rissanen')
 
     assert_allclose(res.params, desired_p.params)
+
+
+@pytest.mark.parametrize(
+    "random_state_type", [7, np.random.RandomState, np.random.default_rng]
+)
+def test_reproducible_simulation(random_state_type):
+    x = np.random.randn(100)
+    res = ARIMA(x, order=(1, 0, 0)).fit()
+
+    def get_random_state(val):
+        if isinstance(random_state_type, int):
+            return 7
+        return random_state_type(7)
+
+    random_state = get_random_state(random_state_type)
+    sim1 = res.simulate(1, random_state=random_state)
+    random_state = get_random_state(random_state_type)
+    sim2 = res.simulate(1, random_state=random_state)
+    assert_allclose(sim1, sim2)

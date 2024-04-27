@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Penalty classes for Generalized Additive Models
 

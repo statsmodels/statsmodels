@@ -282,7 +282,7 @@ def main():
     with open(out_file, "w", encoding="utf-8") as api:
         json.dump(current_api, api, indent=2, sort_keys=True)
     if args.diff is not None:
-        with open(args.diff, "r", encoding="utf-8") as other:
+        with open(args.diff, encoding="utf-8") as other:
             other_api = json.load(other)
         generate_diff(current_api, other_api)
 

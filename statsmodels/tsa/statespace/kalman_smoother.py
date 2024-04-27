@@ -115,7 +115,7 @@ class KalmanSmoother(KalmanFilter):
                                 if key in kwargs}
 
         # Initialize the base class
-        super(KalmanSmoother, self).__init__(
+        super().__init__(
             k_endog, k_states, k_posdef, results_class=results_class, **kwargs
         )
 
@@ -134,7 +134,7 @@ class KalmanSmoother(KalmanFilter):
 
     def _clone_kwargs(self, endog, **kwargs):
         # See Representation._clone_kwargs for docstring
-        kwargs = super(KalmanSmoother, self)._clone_kwargs(endog, **kwargs)
+        kwargs = super()._clone_kwargs(endog, **kwargs)
 
         # Get defaults for options
         kwargs.setdefault('smoother_output', self.smoother_output)
@@ -590,7 +590,7 @@ class SmootherResults(FilterResults):
         -----
         This method is rarely required except for internal usage.
         """
-        super(SmootherResults, self).update_representation(model, only_options)
+        super().update_representation(model, only_options)
 
         # Save the options as boolean variables
         for name in self._smoother_options:

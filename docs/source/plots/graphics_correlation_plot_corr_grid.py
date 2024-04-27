@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 '''
     In this example we just reuse the same correlation matrix several times.
     Of course in reality one would show a different correlation (measuring a

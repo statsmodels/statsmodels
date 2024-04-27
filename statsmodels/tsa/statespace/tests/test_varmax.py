@@ -165,12 +165,12 @@ class CheckLutkepohl(CheckVARMAX):
         cls.results = cls.model.smooth(true['params'], cov_type=cov_type)
 
     def test_predict(self, **kwargs):
-        super(CheckLutkepohl, self).test_predict(end='1982-10-01', **kwargs)
+        super().test_predict(end='1982-10-01', **kwargs)
 
     def test_dynamic_predict(self, **kwargs):
-        super(CheckLutkepohl, self).test_dynamic_predict(end='1982-10-01',
-                                                         dynamic='1961-01-01',
-                                                         **kwargs)
+        super().test_dynamic_predict(
+            end='1982-10-01', dynamic='1961-01-01', **kwargs
+        )
 
 
 class TestVAR(CheckLutkepohl):
@@ -183,7 +183,7 @@ class TestVAR(CheckLutkepohl):
         true['dynamic_predict'] = var_results.iloc[1:][['dyn_predict_1',
                                                         'dyn_predict_2',
                                                         'dyn_predict_3']]
-        super(TestVAR, cls).setup_class(
+        super().setup_class(
             true,  order=(1, 0), trend='n',
             error_cov_type="unstructured")
 
@@ -229,7 +229,7 @@ class TestVAR(CheckLutkepohl):
         params = params[self.model._params_state_cov]
         names = self.model.param_names[self.model._params_state_cov]
         for i in range(len(names)):
-            assert re.search('%s +%.4f' % (names[i], params[i]), table)
+            assert re.search('{} +{:.4f}'.format(names[i], params[i]), table)
 
 
 class TestVAR_diagonal(CheckLutkepohl):
@@ -242,7 +242,7 @@ class TestVAR_diagonal(CheckLutkepohl):
         true['dynamic_predict'] = var_results.iloc[1:][['dyn_predict_diag1',
                                                         'dyn_predict_diag2',
                                                         'dyn_predict_diag3']]
-        super(TestVAR_diagonal, cls).setup_class(
+        super().setup_class(
             true,  order=(1, 0), trend='n',
             error_cov_type="diagonal")
 
@@ -288,7 +288,7 @@ class TestVAR_diagonal(CheckLutkepohl):
         params = params[self.model._params_state_cov]
         names = self.model.param_names[self.model._params_state_cov]
         for i in range(len(names)):
-            assert re.search('%s +%.4f' % (names[i], params[i]), table)
+            assert re.search('{} +{:.4f}'.format(names[i], params[i]), table)
 
 
 class TestVAR_measurement_error(CheckLutkepohl):
@@ -313,7 +313,7 @@ class TestVAR_measurement_error(CheckLutkepohl):
         true['dynamic_predict'] = var_results.iloc[1:][['dyn_predict_diag1',
                                                         'dyn_predict_diag2',
                                                         'dyn_predict_diag3']]
-        super(TestVAR_measurement_error, cls).setup_class(
+        super().setup_class(
             true,  order=(1, 0), trend='n',
             error_cov_type="diagonal", measurement_error=True)
 
@@ -398,7 +398,7 @@ class TestVAR_measurement_error(CheckLutkepohl):
         params = params[self.model._params_state_cov]
         names = self.model.param_names[self.model._params_state_cov]
         for i in range(len(names)):
-            assert re.search('%s +%.4f' % (names[i], params[i]), table)
+            assert re.search('{} +{:.4f}'.format(names[i], params[i]), table)
 
 
 class TestVAR_obs_intercept(CheckLutkepohl):
@@ -411,7 +411,7 @@ class TestVAR_obs_intercept(CheckLutkepohl):
         true['dynamic_predict'] = var_results.iloc[1:][['dyn_predict_int1',
                                                         'dyn_predict_int2',
                                                         'dyn_predict_int3']]
-        super(TestVAR_obs_intercept, cls).setup_class(
+        super().setup_class(
             true, order=(1, 0), trend='n',
             error_cov_type="diagonal", obs_intercept=true['obs_intercept'])
 
@@ -448,7 +448,7 @@ class TestVAR_exog(CheckLutkepohl):
                                                'fcast_exog1_dln_inc',
                                                'fcast_exog1_dln_consump']]
         exog = np.arange(75) + 2
-        super(TestVAR_exog, cls).setup_class(
+        super().setup_class(
             true, order=(1, 0), trend='n', error_cov_type='unstructured',
             exog=exog, initialization='approximate_diffuse',
             loglikelihood_burn=1)
@@ -537,7 +537,7 @@ class TestVAR_exog(CheckLutkepohl):
         params = params[self.model._params_state_cov]
         names = self.model.param_names[self.model._params_state_cov]
         for i in range(len(names)):
-            assert re.search('%s +%.4f' % (names[i], params[i]), table)
+            assert re.search('{} +{:.4f}'.format(names[i], params[i]), table)
 
 
 class TestVAR_exog2(CheckLutkepohl):
@@ -556,7 +556,7 @@ class TestVAR_exog2(CheckLutkepohl):
                                                'fcast_exog2_dln_inc',
                                                'fcast_exog2_dln_consump']]
         exog = np.c_[np.ones((75, 1)), (np.arange(75) + 2)[:, np.newaxis]]
-        super(TestVAR_exog2, cls).setup_class(
+        super().setup_class(
             true, order=(1, 0), trend='n', error_cov_type='unstructured',
             exog=exog, initialization='approximate_diffuse',
             loglikelihood_burn=1)
@@ -600,7 +600,7 @@ class TestVAR2(CheckLutkepohl):
                                                 'predict_var2_2']]
         true['dynamic_predict'] = var_results.iloc[1:][['dyn_predict_var2_1',
                                                         'dyn_predict_var2_2']]
-        super(TestVAR2, cls).setup_class(
+        super().setup_class(
             true, order=(2, 0), trend='n', error_cov_type='unstructured',
             included_vars=['dln_inv', 'dln_inc'])
 
@@ -648,7 +648,7 @@ class TestVAR2(CheckLutkepohl):
         params = params[self.model._params_state_cov]
         names = self.model.param_names[self.model._params_state_cov]
         for i in range(len(names)):
-            assert re.search('%s +%.4f' % (names[i], params[i]), table)
+            assert re.search('{} +{:.4f}'.format(names[i], params[i]), table)
 
 
 class CheckFREDManufacturing(CheckVARMAX):
@@ -687,7 +687,7 @@ class TestVARMA(CheckFREDManufacturing):
         true['dynamic_predict'] = varmax_results.iloc[1:][[
             'dyn_predict_varma11_1', 'dyn_predict_varma11_2']]
 
-        super(TestVARMA, cls).setup_class(
+        super().setup_class(
               true, order=(1, 1), trend='n', error_cov_type='diagonal')
 
     def test_mle(self):
@@ -719,11 +719,10 @@ class TestVARMA(CheckFREDManufacturing):
         pass
 
     def test_predict(self):
-        super(TestVARMA, self).test_predict(end='2009-05-01', atol=1e-4)
+        super().test_predict(end='2009-05-01', atol=1e-4)
 
     def test_dynamic_predict(self):
-        super(TestVARMA, self).test_dynamic_predict(end='2009-05-01',
-                                                    dynamic='2000-01-01')
+        super().test_dynamic_predict(end='2009-05-01', dynamic='2000-01-01')
 
     def test_summary(self):
         summary = self.results.summary()
@@ -769,8 +768,7 @@ class TestVARMA(CheckFREDManufacturing):
         params = params[self.model._params_state_cov]
         names = self.model.param_names[self.model._params_state_cov]
         for i in range(len(names)):
-            assert re.search('%s +%s' % (names[i], forg(params[i], prec=4)),
-                             table)
+            assert re.search(f'{names[i]} +{forg(params[i], prec=4)}', table)
 
 
 class TestVMA1(CheckFREDManufacturing):
@@ -786,7 +784,7 @@ class TestVMA1(CheckFREDManufacturing):
         true['dynamic_predict'] = varmax_results.iloc[1:][[
             'dyn_predict_vma1_1', 'dyn_predict_vma1_2']]
 
-        super(TestVMA1, cls).setup_class(
+        super().setup_class(
               true, order=(0, 1), trend='n', error_cov_type='diagonal')
 
     def test_mle(self):
@@ -818,11 +816,12 @@ class TestVMA1(CheckFREDManufacturing):
         pass
 
     def test_predict(self):
-        super(TestVMA1, self).test_predict(end='2009-05-01', atol=1e-4)
+        super().test_predict(end='2009-05-01', atol=1e-4)
 
     def test_dynamic_predict(self):
-        super(TestVMA1, self).test_dynamic_predict(end='2009-05-01',
-                                                   dynamic='2000-01-01')
+        super().test_dynamic_predict(
+            end='2009-05-01', dynamic='2000-01-01'
+        )
 
 
 def test_specifications():

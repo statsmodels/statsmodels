@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-
-
 from ._analytic_rotation import target_rotation
 from ._gpa_rotation import oblimin_objective, orthomax_objective, CF_objective
 from ._gpa_rotation import ff_partial_target, ff_target
@@ -226,7 +223,7 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
         algorithm_kwargs.pop('algorithm')
     else:
         algorithm = 'gpa'
-    assert not ('rotation_method' in algorithm_kwargs), (
+    assert 'rotation_method' not in algorithm_kwargs, (
         'rotation_method cannot be provided as keyword argument')
     L = None
     T = None

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # pylint: disable=W0231, W0142
 """Tests for statistical power calculations
 

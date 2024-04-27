@@ -16,15 +16,21 @@ Judge, ... (1985): The Theory and Practise of Econometrics
 Author: josefpktd
 License: BSD
 """
-import warnings
-
+from statsmodels.compat.numpy import NP_LT_2
 from statsmodels.compat.pandas import Appender
+
+import warnings
 
 import numpy as np
 from scipy import linalg, optimize, signal
 
 from statsmodels.tools.docstring import Docstring, remove_parameters
 from statsmodels.tools.validation import array_like
+
+if NP_LT_2:
+    ComplexWarning = np.ComplexWarning
+else:
+    ComplexWarning = np.exceptions.ComplexWarning
 
 __all__ = [
     "arma_acf",
@@ -500,7 +506,7 @@ def lpol2index(ar):
         index (lags) of lag polynomial with non-zero elements
     """
     with warnings.catch_warnings():
-        warnings.simplefilter("ignore", np.ComplexWarning)
+        warnings.simplefilter("ignore", ComplexWarning)
         ar = array_like(ar, "ar")
     index = np.nonzero(ar)[0]
     coeffs = ar[index]
@@ -734,7 +740,7 @@ class ArmaProcess:
         if ma is None:
             ma = np.array([1.0])
         with warnings.catch_warnings():
-            warnings.simplefilter("ignore", np.ComplexWarning)
+            warnings.simplefilter("ignore", ComplexWarning)
             self.ar = array_like(ar, "ar")
             self.ma = array_like(ma, "ma")
         self.arcoefs = -self.ar[1:]
@@ -883,7 +889,7 @@ class ArmaProcess:
         )
 
     def __str__(self):
-        return "ArmaProcess\nAR: {0}\nMA: {1}".format(
+        return "ArmaProcess\nAR: {}\nMA: {}".format(
             self.ar.tolist(), self.ma.tolist()
         )
 

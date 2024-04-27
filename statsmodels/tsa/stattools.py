@@ -8,7 +8,7 @@ from statsmodels.compat.pandas import deprecate_kwarg
 from statsmodels.compat.python import Literal, lzip
 from statsmodels.compat.scipy import _next_regular
 
-from typing import Union, List
+from typing import Union
 import warnings
 
 import numpy as np
@@ -40,7 +40,7 @@ from statsmodels.tsa._innovations import innovations_algo, innovations_filter
 from statsmodels.tsa.adfvalues import mackinnoncrit, mackinnonp
 from statsmodels.tsa.tsatools import add_trend, lagmat, lagmat2ds
 
-ArrayLike1D = Union[np.ndarray, pd.Series, List[float]]
+ArrayLike1D = Union[np.ndarray, pd.Series, list[float]]
 
 __all__ = [
     "acovf",
@@ -1620,7 +1620,7 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=None):
             or res2djoint.params.shape[0] != dtajoint.shape[1]
         ):
             raise InfeasibleTestError(
-                "The Granger causality test statistic cannot be compute "
+                "The Granger causality test statistic cannot be computed "
                 "because the VAR has a perfect fit of the data."
             )
         fgc1 = (

@@ -210,11 +210,11 @@ class TestGlmPoissonPwNr(CheckWeight):
     # TODO: find more informative reasons why these fail
     @pytest.mark.xfail(reason='Known to fail', strict=True)
     def test_basic(self):
-        super(TestGlmPoissonPwNr, self).test_basic()
+        super().test_basic()
 
     @pytest.mark.xfail(reason='Known to fail', strict=True)
     def test_compare_optimizers(self):
-        super(TestGlmPoissonPwNr, self).test_compare_optimizers()
+        super().test_compare_optimizers()
 
 
 class TestGlmPoissonFwHC(CheckWeight):

@@ -247,7 +247,9 @@ def test_plot_month(close_figures):
     dta = elnino.load_pandas().data
     dta["YEAR"] = dta.YEAR.astype(int).apply(str)
     dta = dta.set_index("YEAR").T.unstack()
-    dates = pd.to_datetime(["-".join([x[1], x[0]]) for x in dta.index.values])
+    dates = pd.to_datetime(
+        ["-".join([x[1], x[0]]) for x in dta.index.values], format="%b-%Y"
+    )
 
     # test dates argument
     fig = month_plot(dta.values, dates=dates, ylabel="el nino")
@@ -305,12 +307,14 @@ def test_plot_quarter(close_figures):
     quarter_plot(dta.unemp.values, dates)
 
     # test with a DatetimeIndex with no freq
-    dta.set_index(pd.DatetimeIndex(dates, freq="QS-Oct"), inplace=True)
+    from statsmodels.compat.pandas import PD_LT_2_2_0
+    FREQ = "QS-Oct" if PD_LT_2_2_0 else "QS-OCT"
+    dta.set_index(pd.DatetimeIndex(dates, freq=FREQ), inplace=True)
     quarter_plot(dta.unemp)
 
     # w freq
     # see pandas #6631
-    dta.index = pd.DatetimeIndex(dates, freq="QS-Oct")
+    dta.index = pd.DatetimeIndex(dates, freq=FREQ)
     quarter_plot(dta.unemp)
 
     # w PeriodIndex

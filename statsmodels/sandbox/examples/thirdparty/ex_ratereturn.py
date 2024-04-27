@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Playing with correlation of DJ-30 stock returns
 
 this uses pickled data that needs to be created with findow.py

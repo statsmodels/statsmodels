@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 '''
     Load Sunspots Data and plot the partial autocorrelation of the number of
     sunspots per year.
