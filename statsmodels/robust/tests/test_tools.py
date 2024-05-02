@@ -57,14 +57,14 @@ def test_eff(case):
 
     res_eff = []
     for c in res2:
-        norm._set_tuning_param(c)
+        norm._set_tuning_param(c, inplace=True)
         res_eff.append(1 / var_func(norm))
 
     assert_allclose(res_eff, effs, atol=0.0005)
 
     for c in res2:
         # bp = stats.norm.expect(lambda x : norm.rho(x)) / norm.rho(norm.c)
-        norm._set_tuning_param(c)
+        norm._set_tuning_param(c, inplace=True)
         eff = 1 / _var_normal(norm)
         tune = _get_tuning_param(norm, eff)
         assert_allclose(tune, c, rtol=1e-6, atol=5e-4)

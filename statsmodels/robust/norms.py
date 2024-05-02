@@ -202,12 +202,16 @@ class HuberT(RobustNorm):
     def __init__(self, t=1.345):
         self.t = t
 
-    def _set_tuning_param(self, c):
+    def _set_tuning_param(self, c, inplace=False):
         """Set and change the tuning parameter of the Norm.
 
         Warning: this needs to wipe cached attributes that depend on the param.
         """
-        self.t = c
+        if inplace:
+            self.t = c
+            return self
+        else:
+            return self.__class__(t=c)
 
     def max_rho(self):
         return np.inf
@@ -325,6 +329,18 @@ class RamsayE(RobustNorm):
     def __init__(self, a=.3):
         self.a = a
 
+    def _set_tuning_param(self, c, inplace=False):
+        """Set and change the tuning parameter of the Norm.
+
+        Warning: this needs to wipe cached attributes that depend on the param.
+        """
+        # todo : change default to inplace=False, when tools are fixed
+        if inplace:
+            self.a = c
+            return self
+        else:
+            return self.__class__(a=c)
+
     def max_rho(self):
         return np.inf
 
@@ -422,12 +438,16 @@ class AndrewWave(RobustNorm):
     def __init__(self, a=1.339):
         self.a = a
 
-    def _set_tuning_param(self, a):
+    def _set_tuning_param(self, c, inplace=False):
         """Set and change the tuning parameter of the Norm.
 
         Warning: this needs to wipe cached attributes that depend on the param.
         """
-        self.a = a
+        if inplace:
+            self.a = c
+            return self
+        else:
+            return self.__class__(a=c)
 
     def max_rho(self):
         return 2 * self.a**2
@@ -556,12 +576,16 @@ class TrimmedMean(RobustNorm):
     def __init__(self, c=2.):
         self.c = c
 
-    def _set_tuning_param(self, c):
+    def _set_tuning_param(self, c, inplace=False):
         """Set and change the tuning parameter of the Norm.
 
         Warning: this needs to wipe cached attributes that depend on the param.
         """
-        self.c = c
+        if inplace:
+            self.c = c
+            return self
+        else:
+            return self.__class__(c=c)
 
     def max_rho(self):
         return self.rho(self.c)
@@ -677,14 +701,20 @@ class Hampel(RobustNorm):
         self.b = b
         self.c = c
 
-    def _set_tuning_param(self, c):
+    def _set_tuning_param(self, c, inplace=False):
         """Set and change the tuning parameter of the Norm.
 
         Warning: this needs to wipe cached attributes that depend on the param.
         """
-        self.c = c
-        self.a = c / 4
-        self.b = c / 2
+        a = c / 4
+        b = c / 2
+        if inplace:
+            self.c = c
+            self.a = a
+            self.b = b
+            return self
+        else:
+            return self.__class__(a=a, b=b, c=c)
 
     def max_rho(self):
         return self.rho(self.c)
@@ -897,7 +927,7 @@ class TukeyBiweight(RobustNorm):
         elif eff is not None:
             return rtools.tukeybiweight_eff[eff]
 
-    def _set_tuning_param(self, c, inplace=True):
+    def _set_tuning_param(self, c, inplace=False):
         """Set and change the tuning parameter of the Norm.
 
         Warning: this needs to wipe cached attributes that depend on the param.
@@ -1023,12 +1053,16 @@ class TukeyQuartic(RobustNorm):
         self.c = c
         self.k = k
 
-    def _set_tuning_param(self, c):
+    def _set_tuning_param(self, c, inplace=False):
         """Set and change the tuning parameter of the Norm.
 
         Warning: this needs to wipe cached attributes that depend on the param.
         """
-        self.c = c
+        if inplace:
+            self.c = c
+            return self
+        else:
+            return self.__class__(c=c, k=self.k)
 
     def max_rho(self):
         return self.rho(self.c)
@@ -1161,12 +1195,16 @@ class StudentT(RobustNorm):
         self.c = c
         self.df = df
 
-    def _set_tuning_param(self, c):
+    def _set_tuning_param(self, c, inplace=False):
         """Set and change the tuning parameter of the Norm.
 
         Warning: this needs to wipe cached attributes that depend on the param.
         """
-        self.c = c
+        if inplace:
+            self.c = c
+            return self
+        else:
+            return self.__class__(c=c, df=self.df)
 
     def max_rho(self):
         return np.inf

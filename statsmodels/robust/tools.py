@@ -150,11 +150,11 @@ def _get_tuning_param(norm, eff, kwd="c", kwargs=None, use_jump=False,
         def func(c):
             # kwds.update({kwd: c})
             # return _var_normal(norm(**kwds)) - 1 / eff
-            norm._set_tuning_param(c)
+            norm._set_tuning_param(c, inplace=True)
             return _var_normal(norm) - 1 / eff
     else:
         def func(c):
-            norm._set_tuning_param(c)
+            norm._set_tuning_param(c, inplace=True)
             return _var_normal_jump(norm(**kwds) - 1 / eff)
 
     res = optimize.brentq(func, *bracket)
@@ -215,14 +215,14 @@ def tuning_s_estimator_mean(norm, breakdown=None):
 
     def func(c):
         norm_ = norm
-        norm_._set_tuning_param(c)
+        norm_._set_tuning_param(c, inplace=True)
         bp = stats.norm.expect(lambda x : norm_.rho(x)) / norm_.max_rho()
         return bp
 
     res = []
     for bp in bps:
         c_bp = optimize.brentq(lambda c0: func(c0) - bp, 0.1, 10)
-        norm._set_tuning_param(c_bp)  # inplace modification
+        norm._set_tuning_param(c_bp, inplace=True)  # inplace modification
         eff = 1 / _var_normal(norm)
         b = stats.norm.expect(lambda x : norm.rho(x))
         res.append([bp, eff, c_bp, b])
