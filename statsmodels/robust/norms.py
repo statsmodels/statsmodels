@@ -1,6 +1,6 @@
 import numpy as np
 
-# TODO: add plots to weighting functions for online docs.
+from . import tools as rtools
 
 
 def _cabs(x):
@@ -40,6 +40,9 @@ class RobustNorm:
     """
 
     continuous = 1
+
+    def __repr__(self):
+        return self.__class__.__name__
 
     def rho(self, z):
         """
@@ -862,12 +865,49 @@ class TukeyBiweight(RobustNorm):
     def __init__(self, c=4.685):
         self.c = c
 
-    def _set_tuning_param(self, c):
+    def __repr__(self):
+        return f"{self.__class__.__name__}(c={self.c})"
+
+    @classmethod
+    def get_tuning(cls, bp=None, eff=None):
+        """Tuning parameter for given breakdown point or efficiency.
+
+        This currently only return values from a table.
+
+        Parameters
+        ----------
+        bp : float in [0.05, 0.5] or None
+            Required breakdown point
+            Either bp or eff has to be specified, but not both.
+        eff : float or None
+            Required asymptotic efficiency.
+            Either bp or eff has to be specified, but not both.
+
+        Returns
+        -------
+        float : tuning parameter.
+
+        """
+        if ((bp is None and eff is None) or
+            (bp is not None and eff is not None)):
+            raise ValueError("exactly one of bp and eff needs to be provided")
+
+        if bp is not None:
+            return rtools.tukeybiweight_bp[bp]
+        elif eff is not None:
+            return rtools.tukeybiweight_eff[eff]
+
+    def _set_tuning_param(self, c, inplace=True):
         """Set and change the tuning parameter of the Norm.
 
         Warning: this needs to wipe cached attributes that depend on the param.
         """
-        self.c = c
+        # todo : change default to inplace=False, when tools are fixed
+        if inplace:
+            self.c = c
+            return self
+        else:
+            return self.__class__(c=c)
 
     def max_rho(self):
         return self.rho(self.c)

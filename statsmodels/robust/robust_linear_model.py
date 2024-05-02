@@ -277,6 +277,8 @@ class RLM(base.LikelihoodModel):
             self.scale = self._estimate_scale(wls_results.resid)
         elif start_scale:
             self.scale = start_scale
+            if not update_scale:
+                self.scale_est = scale_est = "fixed"
 
         history = dict(params=[np.inf], scale=[])
         if conv == 'coefs':
