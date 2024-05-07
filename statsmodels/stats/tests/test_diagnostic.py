@@ -1805,8 +1805,8 @@ def test_encompasing_error(reset_randomstate):
 @pytest.mark.parametrize(
     "cov",
     [
-        dict(cov_type="nonrobust", cov_kwargs={}),
-        dict(cov_type="HC0", cov_kwargs={}),
+        dict(cov_type="nonrobust", cov_kwds={}),
+        dict(cov_type="HC0", cov_kwds={}),
     ],
 )
 def test_reset_smoke(power, test_type, use_f, cov, reset_randomstate):
@@ -1826,8 +1826,8 @@ def test_reset_smoke(power, test_type, use_f, cov, reset_randomstate):
 @pytest.mark.parametrize(
     "cov",
     [
-        dict(cov_type="nonrobust", cov_kwargs={}),
-        dict(cov_type="HC0", cov_kwargs={}),
+        dict(cov_type="nonrobust", cov_kwds={}),
+        dict(cov_type="HC0", cov_kwds={}),
     ],
 )
 def test_acorr_lm_smoke(store, ddof, cov, reset_randomstate):
@@ -1996,3 +1996,36 @@ def test_diagnostics_pandas(reset_randomstate):
         res, order_by=np.arange(y.shape[0] - 1, 0 - 1, -1)
     )
     smsdia.spec_white(res.resid, x)
+
+
+def test_deprecated_argument():
+    x = np.random.randn(100)
+    y = 2 * x + np.random.randn(100)
+    result = OLS(y, add_constant(x)).fit(
+        cov_type="HAC", cov_kwds={"maxlags": 2}
+    )
+    with pytest.warns(FutureWarning, match="the "):
+        smsdia.linear_reset(
+            result,
+            power=2,
+            test_type="fitted",
+            cov_type="HAC",
+            cov_kwargs={"maxlags": 2},
+        )
+
+
+def test_diagnostics_hac(reset_randomstate):
+    x = np.random.randn(100)
+    y = 2 * x + np.random.randn(100)
+    result = OLS(y, add_constant(x)).fit(
+        cov_type="HAC", cov_kwds={"maxlags": 2}
+    )
+    reset_test = smsdia.linear_reset(
+        result,
+        power=2,
+        test_type="fitted",
+        cov_type="HAC",
+        cov_kwds={"maxlags": 2},
+    )
+    assert reset_test.statistic > 0
+    assert 0 <= reset_test.pvalue <= 1
