@@ -73,6 +73,13 @@ def test_fleiss_kappa():
     assert_almost_equal(fleiss_kappa(table1), kappa_wp, decimal=3)
 
 
+def test_fleiss_kappa_variance():
+    table = aggregate_raters(diagnoses)[0]
+    kappa, zvalue, pvalue = fleiss_kappa(table, return_stat=True)
+    # from irr
+    assert_almost_equal(zvalue, 17.651830582991369)
+
+
 def test_fleis_randolph():
     # reference numbers from online calculator
     # http://justusrandolph.net/kappa/#dInfo
