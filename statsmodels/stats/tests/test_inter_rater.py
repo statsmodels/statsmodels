@@ -78,6 +78,7 @@ def test_fleiss_kappa_variance():
     kappa, zvalue, pvalue = fleiss_kappa(table, return_stat=True)
     # from irr
     assert_almost_equal(zvalue, 17.651830582991369)
+    assert_equal(pvalue, 0)
 
 
 def test_fleis_randolph():
