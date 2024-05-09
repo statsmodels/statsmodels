@@ -296,7 +296,7 @@ def fleiss_kappa(table, method='fleiss', return_stat=False):
 
     standard_error = _fleiss_standard_error(p_cat, n_sub, n_rat)
     zvalue = kappa / standard_error
-    pvalue = stats.norm.cdf(zvalue)
+    pvalue = 1 - stats.norm.cdf(zvalue)
     return kappa, zvalue, pvalue
 
 
