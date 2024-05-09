@@ -67,6 +67,13 @@ class FleissKappaResults(Holder):
         Z-value for the null that the overall Fleiss' kappa = 0.
     pvalue : float
         p-value for overall Z-value.
+    statistics: np.ndarray
+        If category-wise statistics were selected, category-wise Fleiss'
+        Kappas.
+    zvalues: np.ndarray
+        Z-values for category-wise Fleiss' Kappa.
+    pvalues: np.ndarray
+        p-values for category-wise Z-values.
     """
 
 
@@ -209,9 +216,46 @@ def to_table(data, bins=None):
     return tt[0], bins_
 
 
-def _fleiss_standard_error(p_cat, n_sub, n_rat):
-    p_complement = 1 - p_cat
+def _fleiss_kappa_category(table, p_cat, n_rat, n_sub, n_total, method,
+                           compute_se):
 
+    table_complement = table.sum(axis=1)[:, None] - table
+
+    p_rat_detail = (
+        ((table ** 2 + table_complement ** 2) - n_rat)
+        / (n_rat * (n_rat - 1))
+    )
+
+    p_mean_detail = p_rat_detail.mean(axis=0)
+
+    p_cat_detail = np.row_stack((
+        p_cat,
+        # marginal probability of all other categories
+        table_complement.sum(0) / n_total
+    ))
+
+
+    if method == 'fleiss':
+        p_mean_exp_detail = (p_cat_detail ** 2).sum(axis=0)
+    else:
+        p_mean_exp_detail = 1 / 2
+
+    kappa_detail = (p_mean_detail - p_mean_exp_detail) / (
+        1 - p_mean_exp_detail
+    )
+    if not compute_se or method != 'fleiss':
+        return kappa_detail
+
+    standard_error = (2 / (n_sub * n_rat * (n_rat - 1))) ** .5
+    zvalues = kappa_detail / standard_error
+    pvalues = 1 - stats.norm.cdf(zvalues)
+
+    return kappa_detail, zvalues, pvalues
+
+
+def _fleiss_standard_error(p_cat, n_sub, n_rat):
+
+    p_complement = 1 - p_cat
 
     return (
         (2 ** .5 / (
@@ -223,7 +267,7 @@ def _fleiss_standard_error(p_cat, n_sub, n_rat):
     )
 
 
-def fleiss_kappa(table, method='fleiss', return_results=False):
+def fleiss_kappa(table, method='fleiss', return_results=False, detail=False):
     """Fleiss' and Randolph's kappa multi-rater agreement measure
 
     Parameters
@@ -242,14 +286,19 @@ def fleiss_kappa(table, method='fleiss', return_results=False):
         If True and `method` is 'fleiss' then returns an object with the
         z-score and pvalue for Fleiss' kappa based on Fleiss, Nee, and Landis
         (1979).  Has no effect if method is not 'fleiss'.
+    detail : bool
+        If True, in addition to the overall Kappa value, return category-wise
+        Kappas.
 
     Returns
     -------
-    kappa : float or FleissKappaResults
-        Fleiss's or Randolph's kappa statistic for inter rater agreement if
-        return_results is False. If True and `method` is 'fleiss', returns an
-        object with the test statistic, zvalue, and pvalue testing the
-        null that the test statistic = 0.
+    kappa : float, tuple, or FleissKappaResults
+        A float equal to Fleiss's or Randolph's kappa statistic for inter rater
+        agreement if return_results is False. If return_results is True and
+        `method` is 'fleiss', returns an object with the test statistic,
+        zvalue, and pvalue testing the null that the test statistic = 0. If
+        `detail` is True, category-wise kappas and and hypothesis tests for
+        each category vs. all the others are also part of the return object.
 
     Notes
     -----
@@ -284,6 +333,9 @@ def fleiss_kappa(table, method='fleiss', return_results=False):
     Advances in Data Analysis and Classification 4 (4): 271-86.
     https://doi.org/10.1007/s11634-010-0073-4.
     """
+    if detail and method != 'fleiss':
+        raise ValueError("Randolph's Kappa does not allow for category-wise "
+                         "statistics")
 
     table = 1.0 * np.asarray(table)   #avoid integer division
     n_sub, n_cat =  table.shape
@@ -307,11 +359,27 @@ def fleiss_kappa(table, method='fleiss', return_results=False):
 
     kappa = (p_mean - p_mean_exp) / (1- p_mean_exp)
     if not return_results or method != 'fleiss':
+        if detail:
+            kappa_detail = _fleiss_kappa_category(table, p_cat, n_rat, n_sub, n_total,
+                                                  method, False)
+            return kappa, kappa_detail
         return kappa
 
     standard_error = _fleiss_standard_error(p_cat, n_sub, n_rat)
     zvalue = kappa / standard_error
     pvalue = 1 - stats.norm.cdf(zvalue)
+    if detail:
+        kappa_detail, zvalues, pvalues = _fleiss_kappa_category(
+            table, p_cat, n_rat, n_sub, n_total, method, True)
+        return FleissKappaResults(
+            statistic=kappa,
+            zvalue=zvalue,
+            pvalue=pvalue,
+            statistics=kappa_detail,
+            zvalues=zvalues,
+            pvalues=pvalues
+        )
+
     return FleissKappaResults(
         statistic=kappa,
         zvalue=zvalue,
