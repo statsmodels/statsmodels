@@ -961,7 +961,7 @@ class TukeyBiweight(RobustNorm):
         Returns
         -------
         rho : ndarray
-            rho(z) = -(1 - (z/c)**2)**3 * c**2/6.   for \|z\| <= R
+            rho(z) = -(1 - (z/c)**2)**3 * c**2/6 + c**2/6   for \|z\| <= R
 
             rho(z) = 0                              for \|z\| > R
         """

@@ -243,6 +243,65 @@ def tuning_s_estimator_mean(norm, breakdown=None):
 
     return res2
 
+
+def scale_bias_cov_biw(c, k_vars):
+    """Multivariate scale bias correction for TukeyBiweight norm.
+
+    This uses the chisquare distribution as reference distribution for the
+    squared Mahalanobis distance.
+    """
+    p = k_vars # alias for formula
+    chip, chip2, chip4, chip6 = stats.chi2.cdf(c**2, [p, p + 2, p + 4, p + 6])
+    b = p / 2 * chip2 -  p * (p + 2) / (2 * c**2) * chip4
+    b += p * (p + 2) * (p + 4) / (6 * c**4) * chip6 + c**2 / 6 * (1 - chip)
+    return b, b / (c**2 / 6)
+
+
+def scale_bias_cov(norm, k_vars):
+    """Multivariate scale bias correction.
+
+
+    Parameter
+    ---------
+    norm : norm instance
+        The rho function of the norm is used in the moment condition for
+        estimating scale.
+    k_vars : int
+        Number of random variables in the multivariate data.
+
+    Returns
+    -------
+    scale_bias: float
+    breakdown_point : float
+        Breakdown point computed as scale bias divided by max rho.
+    """
+
+    rho = lambda x: (norm.rho(np.sqrt(x)))  # noqa
+    scale_bias = stats.chi2.expect(rho, args=(k_vars,))
+    return scale_bias, scale_bias / norm.max_rho()
+
+
+def tuning_s_cov(norm, k_vars, breakdown_point=0.5, limits=()):
+    """Tuning parameter for multivariate S-estimator given breakdown point.
+    """
+    from .norms import TukeyBiweight  # avoid circular import
+
+    if not limits:
+        limits = (0.5, 30)
+
+    if isinstance(norm, TukeyBiweight):
+        def func(c):
+            return scale_bias_cov_biw(c, k_vars)[1] - breakdown_point
+    else:
+        norm = norm._set_tuning_param(2., inplace=False)  # create copy
+        def func(c):
+            norm._set_tuning_param(c, inplace=True)
+            return scale_bias_cov(norm, k_vars)[1] - breakdown_point
+
+    p_tune = optimize.brentq(func, limits[0], limits[1])
+    return p_tune
+
+
 #  ##### tables
 
 tukeybiweight_bp = {

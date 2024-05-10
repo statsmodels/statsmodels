@@ -177,6 +177,38 @@ def test_tyler():
     assert res1.n_iter == 55
 
 
+def test_cov_ms():
+    # use CovM as local Cov@
+
+    # > CovSest(x)  using package rrcov
+    mean_r = np.array([1.53420879676, 1.82865741024, 1.65565146981])
+    cov_r = np.array([
+        [1.8090846049573, 0.0479283121828, 0.2446369025717],
+        [0.0479283121828, 1.8189886310494, 0.2513025527579],
+        [0.2446369025717, 0.2513025527579, 1.7287983150484],
+        ])
+
+    scale2_r = np.linalg.det(cov_r) ** (1/3)
+    shape_r = cov_r / scale2_r
+    scale_r = np.sqrt(scale2_r)
+
+    exog_df = dta_hbk[["X1", "X2", "X3"]]
+    mod = robcov.CovM(exog_df)
+    # with default start, default start could get wrong local optimum
+    res = mod.fit()
+    assert_allclose(res.mean, mean_r, rtol=1e-5)
+    assert_allclose(res.shape, shape_r, rtol=1e-5)
+    assert_allclose(res.cov, cov_r, rtol=1e-5)
+    assert_allclose(res.scale, scale_r, rtol=1e-5)
+
+    # with results start
+    res = mod.fit(start_mean=mean_r, start_shape=shape_r, start_scale=scale_r)
+    assert_allclose(res.mean, mean_r, rtol=1e-5)
+    assert_allclose(res.shape, shape_r, rtol=1e-5)
+    assert_allclose(res.cov, cov_r, rtol=1e-5)
+    assert_allclose(res.scale, scale_r, rtol=1e-5)
+
+
 def test_robcov_SMOKE():
     # currently only smoke test or very loose comparisons to dgp
     nobs, k_vars = 100, 3

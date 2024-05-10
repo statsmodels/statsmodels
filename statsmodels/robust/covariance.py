@@ -27,7 +27,10 @@ doi:10.1109/TSP.2011.2138698.
 import numpy as np
 from scipy import stats, linalg
 from scipy.linalg.lapack import dtrtri
-from .scale import mad, qn_scale
+from .scale import mad, qn_scale, _scale_iter
+import statsmodels.robust.norms as rnorms
+import statsmodels.robust.scale as rscale
+import statsmodels.robust.tools as rtools
 from statsmodels.tools.testing import Holder
 
 from statsmodels.stats.covariance import corr_rank, corr_normal_scores
@@ -1312,6 +1315,126 @@ def _get_detcov_startidx(z, h, options_start=None, methods_cov="all"):
         idx_all.append((idx_sel, method))
 
     return idx_all
+
+
+class CovM:
+    """M-estimator for multivariate Mean and Scatter.
+    """
+
+    def __init__(self, data, norm_mean=None, norm_scatter=None,
+                 scale_bias=None):  #, method="S"):
+        # todo: method defines how norm_mean and norm_scatter are linked
+        #       currently I try for S-estimator
+
+        self.data = np.asarray(data)
+        self.k_vars = k_vars = self.data.shape[1]
+
+        # Todo: check interface for scale bias
+        self.scale_bias = scale_bias
+        if norm_mean is None:
+            norm_mean = rnorms.TukeyBiweight()
+            c = rtools.tuning_s_cov(norm_mean, k_vars, breakdown_point=0.5)
+            norm_mean._set_tuning_param(c, inplace=True)
+            self.scale_bias = rtools.scale_bias_cov_biw(c, k_vars)[0]
+
+        self.norm_mean = norm_mean
+        if norm_scatter is None:
+            self.norm_scatter = self.norm_mean
+        else:
+            self.norm_scatter = norm_scatter
+
+
+        self.weights_mean = self.norm_mean.weights
+        self.weights_scatter = self.weights_mean
+        # self.weights_scatter = lambda d: self.norm_mean.rho(d) / d**2
+        # this is for S-estimator, M-scale
+        self.rho = self.norm_scatter.rho
+
+    def _fit_mean_shape(self, mean, shape, scale):
+        d = mahalanobis(self.data - mean, shape, sqrt=True) / scale
+        weights_mean = self.weights_mean(d)
+        weights_cov = self.weights_scatter(d)
+
+        res = cov_weighted(
+            self.data,
+            weights=weights_mean,
+            center=None,
+            weights_cov=weights_cov,
+            weights_cov_denom="det",
+            ddof=1,
+            )
+        return res
+
+    def _fit_scale(self, maha, start_scale=None, maxiter=100, rtol=1e-5,
+                   atol=1e-5):
+        if start_scale is None:
+            start_scale = mad(maha)
+
+        scale = rscale._scale_iter(
+            maha,
+            scale0=start_scale,
+            maxiter=maxiter,
+            rtol=rtol,
+            atol=atol,
+            meef_scale=self.rho,
+            scale_bias=self.scale_bias,
+            )
+        return scale
+
+
+    def fit(self, start_mean=None, start_shape=None, start_scale=None,
+            maxiter=100, update_scale=True):
+
+        converged = False
+
+        if start_scale is not None:
+            scale_old = start_scale
+        else:
+            scale_old = 1
+        if start_mean is not None:
+            mean_old = start_mean
+        else:
+            mean_old = np.median(self.data, axis=0)
+        if start_shape is not None:
+            shape_old = start_shape
+        else:
+            shape_old = np.cov(self.data.T)
+            scale = np.linalg.det(shape_old) ** (1 / self.k_vars)
+            shape_old /= scale
+            if start_scale is not None:
+                scale_old = scale
+
+
+
+        for i in range(maxiter):
+            shape, mean = self._fit_mean_shape(mean_old, shape_old, scale_old)
+            # d = mahalanobis(self.data - mean, shape / scale_old**2, sqrt=True)
+            d = mahalanobis(self.data - mean, shape, sqrt=True)
+            if update_scale:
+                scale = self._fit_scale(d, start_scale=scale_old, maxiter=10)
+
+            if (np.allclose(scale, scale_old, rtol=1e-5) and
+                    np.allclose(mean, mean_old, rtol=1e-5) and
+                    np.allclose(shape, shape_old, rtol=1e-5)
+                    ):
+                converged = True
+                break
+            scale_old = scale
+            mean_old = mean
+            shape_old = shape
+
+        maha = mahalanobis(self.data - mean, shape / scale, sqrt=True)
+
+        res = Holder(
+            mean=mean,
+            shape=shape,
+            scale=scale,
+            cov=shape * scale**2,
+            converged=converged,
+            n_iter=i,
+            mahalanobis=maha,
+            )
+        return res
 
 
 class CovDetMCD:
