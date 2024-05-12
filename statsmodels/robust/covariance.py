@@ -1397,6 +1397,7 @@ class CovM:
             scale_old = start_scale
         else:
             scale_old = 1
+            # will be reset if start_shape is also None.
         if start_mean is not None:
             mean_old = start_mean
         else:
@@ -1531,7 +1532,8 @@ class CovDetMCD:
         return mean, cov, det
 
     def fit(self, h, *, h_start=None, mean_func=None, scale_func=None,
-                maxiter=100, options_start=None, reweight=True):
+                maxiter=100, options_start=None, reweight=True,
+                maxiter_step=2):
         """
         Compute minimum covariance determinant estimate of mean and covariance.
 
@@ -1582,7 +1584,7 @@ class CovDetMCD:
         res = {}
         for ii, ini in enumerate(starts):
             idx_sel, method = ini
-            mean, cov, det = self._fit_one(x, idx_sel, h, maxiter=maxiter)
+            mean, cov, det  = self._fit_one(x, idx_sel, h, maxiter=maxiter_step)
             res[ii] = Holder(
                 mean=mean,
                 cov=cov * fac_trunc,
@@ -1598,12 +1600,186 @@ class CovDetMCD:
 
         # need to c-step to convergence for best,
         # is with best 2 in original DetMCD
-        if maxiter < 100:
-            mean, cov, det = self._mcd_one(x, None, h, maxiter=100,
+        if maxiter_step < maxiter:
+            mean, cov, det = self._fit_one(x, None, h, maxiter=maxiter,
                                            mean=best.mean, cov=best.cov)
+            best = Holder(
+                mean=mean,
+                cov=cov,
+                det_subset=det,
+                method=method
+                )
 
         # include extra info in returned Holder instance
         best.det_all = det_all
+        best.idx_best = idx_best
+
+        best.tmean = m
+        best.tscale = s
+
+        #return Holder(mean=mean, cov=cov, start_best=best)
+        return best  # is Holder instance already
+
+
+class CovDetS:
+    """S-estimator for mean and covariance with deterministic starts.
+
+    preliminary version
+
+    reproducability:
+
+    This uses deterministic starting sets and there is no randomness in the
+    estimator.
+    However, this will not be reprodusible across statsmodels versions
+    when the methods for starting sets or tuning parameters for the
+    optimization change.
+    """
+
+    def __init__(self, data, norm=None, breakdown_point=0.5):
+        # no options yet, methods were written as functions
+        self.data = np.asarray(data)
+        self.nobs, k_vars = self.data.shape
+        self.k_vars = k_vars
+
+        # self.scale_bias = scale_bias
+        if norm is None:
+            norm = rnorms.TukeyBiweight()
+            c = rtools.tuning_s_cov(norm, k_vars, breakdown_point=0.5)
+            norm._set_tuning_param(c, inplace=True)
+            self.scale_bias = rtools.scale_bias_cov_biw(c, k_vars)[0]
+        else:
+            raise NotImplementedError("only Biweight norm is supported")
+
+        self.norm = norm
+
+        self.mod = CovM(data, norm_mean=norm, norm_scatter=norm,
+                        scale_bias=self.scale_bias, method="S")
+
+    def _get_start_params(self, idx):
+        x_sel = self.data[idx]
+        k = x_sel.shape[1]
+
+        mean = x_sel.mean(0)
+        cov = np.cov(x_sel.T)
+
+        scale2 = np.linalg.det(cov) ** (1 / k)
+        shape = cov / scale2
+        scale = np.sqrt(scale2)
+        return mean, shape, scale
+
+    def _fit_one(self, mean=None, shape=None, scale=None, maxiter=100):
+        """Compute local M-estimator for one starting set of observations.
+
+        Parameters
+        ----------
+        x : ndarray
+            Data.
+        idx : ndarray
+            Indices or mask of observation in starting set, used as ``x[idx]``
+        h : int
+            Number of observations in evaluation set for cov.
+        maxiter : int
+            Maximum number of c-steps.
+
+        Returns
+        -------
+        mean : ndarray
+            Estimated mean.
+        cov : ndarray
+            Estimated covariance.
+        det : float
+            Determinant of estimated covariance matrix.
+
+        Notes
+        -----
+        This uses CovM to solve for the local optimum for given starting
+        values.
+        """
+
+        res = self.mod.fit(
+            start_mean=mean,
+            start_shape=shape,
+            start_scale=scale,
+            maxiter=maxiter,
+            update_scale=True
+            )
+
+
+
+        return res
+
+    def fit(self, *, h_start=None, mean_func=None, scale_func=None,
+                maxiter=100, options_start=None, maxiter_step=5):
+        """
+        Compute minimum covariance determinant estimate of mean and covariance.
+
+        h_start : int
+            Number of observations used in starting mean and covariance.
+        mean_func, scale_func : callable or None.
+            Mean and scale function for initial standardization.
+            Current defaults, if they are None, are median and mad, but
+            default scale_func will likely change.
+        options_start : None or dict
+           Options for the starting estimators.
+           TODO: which options? e.g. for OGK
+
+        Returns
+        -------
+        Holder instance with results
+        """
+
+        x = self.data
+        nobs, k_vars = x.shape
+
+        if mean_func is None:
+            mean_func = lambda x: np.median(x, axis=0)  # noqa
+        if scale_func is None:
+            scale_func = mad
+        if options_start is None:
+            options_start = {}
+        if h_start is None:
+            nobs, k_vars = x.shape
+            h_start = max(nobs // 2 + 1, k_vars + 1)
+
+        m = mean_func(x)
+        s = scale_func(x)
+        z = (x - m) / s
+        # get initial mean, cov of standardized data, we only need ranking
+        # of obs
+        starts = _get_detcov_startidx(z, h_start, options_start)
+
+        res = {}
+        for ii, ini in enumerate(starts):
+            idx_sel, method = ini
+            mean0, shape0, scale0 = self._get_start_params(idx_sel)
+            res_i = self._fit_one(
+                mean=mean0,
+                shape=shape0,
+                scale=scale0,
+                maxiter=maxiter_step,
+                )
+
+            res_i.method = method
+            res[ii] = res_i
+
+        scale_all = np.array([i.scale for i in res.values()])
+        idx_best = np.argmin(scale_all)
+        best = res[idx_best]
+        # mean = best.mean
+        # cov = best.cov
+
+        # need to c-step to convergence for best,
+        # is with best 2 in original DetMCD
+        if maxiter_step < maxiter:
+            best = self._fit_one(
+                mean=best.mean,
+                shape=best.shape,
+                scale=best.scale,
+                maxiter=maxiter,
+                )
+
+        # include extra info in returned Holder instance
+        best.scale_all = scale_all
         best.idx_best = idx_best
 
         best.tmean = m

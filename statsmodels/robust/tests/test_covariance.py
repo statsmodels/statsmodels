@@ -210,6 +210,13 @@ def test_cov_ms():
     assert_allclose(res.cov, cov_r, rtol=1e-5)
     assert_allclose(res.scale, scale_r, rtol=1e-5)
 
+    mod_s = robcov.CovDetS(exog_df)
+    res = mod_s.fit()
+    assert_allclose(res.mean, mean_r, rtol=1e-5)
+    assert_allclose(res.shape, shape_r, rtol=1e-5)
+    assert_allclose(res.cov, cov_r, rtol=1e-5)
+    assert_allclose(res.scale, scale_r, rtol=1e-5)
+
 
 def test_covdetmcd():
 
@@ -228,7 +235,7 @@ def test_covdetmcd():
 
     mod = robcov.CovDetMCD(dta_hbk)
     # with default start, default start could get wrong local optimum
-    res = mod.fit(40)
+    res = mod.fit(40, maxiter_step=100)
     assert_allclose(res.mean, mean_dmcd_r, rtol=1e-5)
     assert_allclose(res.cov, cov_dmcd_r, rtol=1e-5)
 
