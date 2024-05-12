@@ -1296,6 +1296,7 @@ def _get_detcov_startidx(z, h, options_start=None, methods_cov="all"):
         nobs = z.shape[0]
         idx_sel = np.argpartition(np.abs(z), h)[:h]
         idx_all = [(idx_sel, "abs-resid")]
+        # next uses symmetric equal-tail trimming
         idx_sorted = np.argsort(z)
         h_tail = (nobs - h) // 2
         idx_all.append((idx_sorted[h_tail : h_tail + h], "trimmed-tail"))
@@ -1304,6 +1305,7 @@ def _get_detcov_startidx(z, h, options_start=None, methods_cov="all"):
     # continue if more than 1 random variable
     cov_all = _cov_starting(z, standardize=False, quantile=0.5)
 
+    # orthogonalization step
     idx_all = []
     for c in cov_all:
         if not hasattr(c, "method"):
@@ -1322,9 +1324,13 @@ class CovM:
     """
 
     def __init__(self, data, norm_mean=None, norm_scatter=None,
-                 scale_bias=None):  #, method="S"):
+                 scale_bias=None, method="S"):
         # todo: method defines how norm_mean and norm_scatter are linked
         #       currently I try for S-estimator
+
+        if method.lower() not in ["s"]:
+            msg = f"method {method} option not recognize or implemented"
+            raise ValueError(msg)
 
         self.data = np.asarray(data)
         self.k_vars = k_vars = self.data.shape[1]
@@ -1451,11 +1457,11 @@ class CovDetMCD:
     optimization change.
     """
 
-    def __init__(self):
+    def __init__(self, data):
         # no options yet, methods were written as functions
-        pass
+        self.data = np.asarray(data)
 
-    def cstep_mcd(self, x, mean, cov, h, maxiter=2, tol=1e-8):
+    def _cstep(self, x, mean, cov, h, maxiter=2, tol=1e-8):
         """C-step for mcd iteration
 
         x is data, perc is percentile h / nobs, don't need perc when we
@@ -1466,7 +1472,7 @@ class CovDetMCD:
         converged = False
 
         for i in range(maxiter):
-            d = mahalanobis(x, mean, cov)
+            d = mahalanobis(x - mean, cov)
             idx_sel = np.argpartition(d, h)[:h]
             x_sel = x[idx_sel]
             mean = x_sel.mean(0)
@@ -1477,9 +1483,11 @@ class CovDetMCD:
                 converged = True
                 break
 
+            cov = cov_new
+
         return mean, cov
 
-    def _mcd_one(self, x, idx, h, maxiter=2, mean=None, cov=None):
+    def _fit_one(self, x, idx, h, maxiter=2, mean=None, cov=None):
         """Compute mcd for one starting set of observations.
 
         Parameters
@@ -1507,19 +1515,22 @@ class CovDetMCD:
         This does not do any preprocessing of the data and returns the empirical mean
         and covariance of evaluation set of the data ``x``.
         """
-        x_sel = x[idx]
+        if idx is not None:
+            x_sel = x[idx]
+        else:
+            x_sel = x
         if mean is None:
             mean = x_sel.mean(0)
         if cov is None:
             cov = np.cov(x_sel.T, ddof=1)
 
         # updated with c-step
-        mean, cov = self.cstep_mcd(x, mean, cov, h, maxiter=maxiter)
+        mean, cov = self._cstep(x, mean, cov, h, maxiter=maxiter)
         det = np.linalg.det(cov)
 
         return mean, cov, det
 
-    def mcd_det(self, x, h, *, h_start=None, mean_func=None, scale_func=None,
+    def fit(self, h, *, h_start=None, mean_func=None, scale_func=None,
                 maxiter=100, options_start=None, reweight=True):
         """
         Compute minimum covariance determinant estimate of mean and covariance.
@@ -1544,7 +1555,7 @@ class CovDetMCD:
         Holder instance with results
         """
 
-        x = np.asarray(x)
+        x = self.data
         nobs, k_vars = x.shape
 
         if h is None:
@@ -1571,7 +1582,7 @@ class CovDetMCD:
         res = {}
         for ii, ini in enumerate(starts):
             idx_sel, method = ini
-            mean, cov, det = self._mcd_one(x, idx_sel, h, maxiter=maxiter)
+            mean, cov, det = self._fit_one(x, idx_sel, h, maxiter=maxiter)
             res[ii] = Holder(
                 mean=mean,
                 cov=cov * fac_trunc,

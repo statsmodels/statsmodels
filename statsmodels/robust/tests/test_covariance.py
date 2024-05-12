@@ -178,9 +178,11 @@ def test_tyler():
 
 
 def test_cov_ms():
-    # use CovM as local Cov@
+    # use CovM as local CovS
 
     # > CovSest(x)  using package rrcov
+    # same result with > CovSest(x, method="sdet")
+    # but scale difers with method="biweight"
     mean_r = np.array([1.53420879676, 1.82865741024, 1.65565146981])
     cov_r = np.array([
         [1.8090846049573, 0.0479283121828, 0.2446369025717],
@@ -208,6 +210,27 @@ def test_cov_ms():
     assert_allclose(res.cov, cov_r, rtol=1e-5)
     assert_allclose(res.scale, scale_r, rtol=1e-5)
 
+
+def test_covdetmcd():
+
+    # results from rrcov
+    # > cdet = CovMcd(x = hbk, raw.only = TRUE, nsamp = "deterministic",
+    #                 use.correction=FALSE)
+    cov_dmcd_r = np.array("""
+    2.2059619213639   0.0223939863695   0.7898958050933   0.4060613360808
+    0.0223939863695   1.1384166802155   0.4315534571891  -0.2344041030201
+    0.7898958050933   0.4315534571891   1.8930117467493  -0.3292893001459
+    0.4060613360808  -0.2344041030201  -0.3292893001459   0.6179686100845
+    """.split(),
+    float).reshape(4,4)
+
+    mean_dmcd_r = np.array([1.7725, 2.2050, 1.5375, -0.0575])
+
+    mod = robcov.CovDetMCD(dta_hbk)
+    # with default start, default start could get wrong local optimum
+    res = mod.fit(40)
+    assert_allclose(res.mean, mean_dmcd_r, rtol=1e-5)
+    assert_allclose(res.cov, cov_dmcd_r, rtol=1e-5)
 
 def test_robcov_SMOKE():
     # currently only smoke test or very loose comparisons to dgp
