@@ -73,7 +73,10 @@ class Clark1987:
         cls.loglikelihood_burn = loglikelihood_burn
 
         # Observed data
-        cls.obs = np.array(data['lgdp'], ndmin=2, dtype=dtype, order="F")
+        cls.obs = np.require(
+            np.array(data['lgdp'], ndmin=2, dtype=dtype, order="F"),
+            requirements="W"
+        )
 
         # Measurement equation
         cls.k_endog = k_endog = 1  # dimension of observed data

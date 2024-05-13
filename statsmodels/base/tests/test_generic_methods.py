@@ -297,7 +297,7 @@ class TestGenericOLS(CheckGenericMixin):
         #fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
-        y = x.sum(1) + np.random.randn(x.shape[0])
+        y = x.sum(axis=1) + np.random.randn(x.shape[0])
         self.results = sm.OLS(y, self.exog).fit()
 
 
@@ -323,7 +323,7 @@ class TestGenericWLS(CheckGenericMixin):
         #fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
-        y = x.sum(1) + np.random.randn(x.shape[0])
+        y = x.sum(axis=1) + np.random.randn(x.shape[0])
         self.results = sm.WLS(y, self.exog, weights=np.ones(len(y))).fit()
 
 
@@ -400,7 +400,7 @@ class TestGenericRLM(CheckGenericMixin):
         #fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
-        y = x.sum(1) + np.random.randn(x.shape[0])
+        y = x.sum(axis=1) + np.random.randn(x.shape[0])
         self.results = sm.RLM(y, self.exog).fit()
 
 
@@ -410,7 +410,7 @@ class TestGenericGLM(CheckGenericMixin):
         #fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
-        y = x.sum(1) + np.random.randn(x.shape[0])
+        y = x.sum(axis=1) + np.random.randn(x.shape[0])
         self.results = sm.GLM(y, self.exog).fit()
 
 

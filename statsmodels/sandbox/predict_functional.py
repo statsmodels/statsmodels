@@ -420,7 +420,7 @@ def _glm_basic_scr(result, exog, alpha):
     B = np.linalg.cholesky(A).T # Upper Cholesky triangle
 
     # The variance and SD of the linear predictor at each row of exog.
-    sigma2 = (np.dot(exog, cov) * exog).sum(1)
+    sigma2 = (np.dot(exog, cov) * exog).sum(axis=1)
     sigma = np.asarray(np.sqrt(sigma2))
 
     # Calculate kappa_0 (formula 42 from Sun et al)
