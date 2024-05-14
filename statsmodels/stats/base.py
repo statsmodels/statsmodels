@@ -30,8 +30,9 @@ class HolderTuple(Holder):
     def __len__(self):
         return len(self.tuple)
 
-    def __array__(self, dtype=None):
-        return np.asarray(list(self.tuple), dtype=dtype)
+    def __array__(self, dtype=None, copy=None):
+        copy = copy if copy is not None else True
+        return np.array(list(self.tuple), dtype=dtype, copy=copy)
 
 
 class AllPairsResults:
