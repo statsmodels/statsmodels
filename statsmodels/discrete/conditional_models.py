@@ -594,7 +594,6 @@ class ConditionalMNLogit(_ConditionalModel):
             x = lpr[ii, :]
             jj = np.arange(x.shape[0], dtype=int)
             y = self.endog[ii]
-              
             denom = np.sum(x[jj, list(itertools.permutations(y))], axis=1)
             ll += x[(jj, y)].sum() - logsumexp(denom)
 
