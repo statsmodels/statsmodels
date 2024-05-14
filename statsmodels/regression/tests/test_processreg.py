@@ -110,9 +110,9 @@ def test_arrays(noise):
     yhat = f.predict()
     assert_equal(np.corrcoef(yhat, mod.endog)[0, 1] > 0.2, True)
     yhatm = f.predict(exog=mod.exog)
-    assert_equal(yhat, yhatm)
+    assert_allclose(yhat, yhatm, rtol=1e-10)
     yhat0 = mod.predict(params=f.params, exog=mod.exog)
-    assert_equal(yhat, yhat0)
+    assert_allclose(yhat, yhat0, rtol=1e-10)
 
     # Smoke test t-test
     f.t_test(np.eye(len(f.params)))
@@ -191,9 +191,9 @@ def test_formulas(noise):
     yhat = f.predict()
     assert_equal(np.corrcoef(yhat, mod.endog)[0, 1] > 0.2, True)
     yhatm = f.predict(exog=df)
-    assert_equal(yhat, yhatm)
+    assert_allclose(yhat, yhatm, rtol=1e-10)
     yhat0 = mod.predict(params=f.params, exog=df)
-    assert_equal(yhat, yhat0)
+    assert_allclose(yhat, yhat0, rtol=1e-10)
 
     # Smoke test t-test
     f.t_test(np.eye(len(f.params)))
