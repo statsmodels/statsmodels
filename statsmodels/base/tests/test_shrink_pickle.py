@@ -132,7 +132,7 @@ class TestRemoveDataPickleOLS(RemoveDataPickle):
         # fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
-        y = x.sum(1) + np.random.randn(x.shape[0])
+        y = x.sum(axis=1) + np.random.randn(x.shape[0])
         self.results = sm.OLS(y, self.exog).fit()
 
 
@@ -142,7 +142,7 @@ class TestRemoveDataPickleWLS(RemoveDataPickle):
         # fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
-        y = x.sum(1) + np.random.randn(x.shape[0])
+        y = x.sum(axis=1) + np.random.randn(x.shape[0])
         self.results = sm.WLS(y, self.exog, weights=np.ones(len(y))).fit()
 
 
@@ -203,7 +203,7 @@ class TestRemoveDataPickleRLM(RemoveDataPickle):
         # fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
-        y = x.sum(1) + np.random.randn(x.shape[0])
+        y = x.sum(axis=1) + np.random.randn(x.shape[0])
         self.results = sm.RLM(y, self.exog).fit()
 
 
@@ -213,7 +213,7 @@ class TestRemoveDataPickleGLM(RemoveDataPickle):
         # fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
-        y = x.sum(1) + np.random.randn(x.shape[0])
+        y = x.sum(axis=1) + np.random.randn(x.shape[0])
         self.results = sm.GLM(y, self.exog).fit()
 
     def test_cached_data_removed(self):
@@ -252,7 +252,7 @@ class TestRemoveDataPickleGLMConstrained(RemoveDataPickle):
         # fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
-        y = x.sum(1) + np.random.randn(x.shape[0])
+        y = x.sum(axis=1) + np.random.randn(x.shape[0])
         self.results = sm.GLM(y, self.exog).fit_constrained("x1=x2")
 
 
@@ -271,7 +271,7 @@ class TestPickleFormula(RemoveDataPickle):
     def setup_method(self):
         x = self.exog
         np.random.seed(123)
-        y = x.sum(1) + np.random.randn(x.shape[0])
+        y = x.sum(axis=1) + np.random.randn(x.shape[0])
         y = pd.Series(y, name="Y")
         X = self.exog.copy()
         X["Y"] = y

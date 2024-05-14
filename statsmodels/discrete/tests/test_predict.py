@@ -278,7 +278,7 @@ class TestZINegativeBinomialPPredict(CheckPredict):
         res1 = mod_zinb.fit(start_params=sp, method="newton", maxiter=300)
         cls.res1 = res1
         cls.res2 = resp.results_zinb_docvis
-        cls.pred_kwds_mean = {"exog_infl": exog_infl.mean(0)}
+        cls.pred_kwds_mean = {"exog_infl": exog_infl.mean(axis=0)}
         cls.pred_kwds_6 = {"exog_infl": exog_infl[:6]}
         cls.k_infl = 2
         cls.rtol = 1e-4
