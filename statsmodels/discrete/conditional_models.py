@@ -8,6 +8,7 @@ import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
 from statsmodels.discrete.discrete_model import (MultinomialResults,
       MultinomialResultsWrapper)
+from scipy.special import logsumexp
 import collections
 import warnings
 import itertools
@@ -588,19 +589,14 @@ class ConditionalMNLogit(_ConditionalModel):
         ll = 0.0
 
         # denom - immediately calculate the sums for the selected elements,
-        # obtaining exponential values, ultimately obtaining a final
-        # calculating the total amount
 
         for ii in self._grp_ix:
             x = lpr[ii, :]
             jj = np.arange(x.shape[0], dtype=int)
             y = self.endog[ii]
-            denom = np.sum(
-                np.exp(
-                    np.sum(x[jj, list(itertools.permutations(y))], axis=1)
-                )
-            )
-            ll += x[(jj, y)].sum() - np.log(denom)
+              
+            denom = np.sum(x[jj, list(itertools.permutations(y))], axis=1)
+            ll += x[(jj, y)].sum() - logsumexp(denom)
 
         return ll
 
