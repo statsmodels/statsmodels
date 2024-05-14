@@ -69,7 +69,7 @@ def print_results(res):
 ##        else:
 ##            print ''
     from statsmodels.iolib import SimpleTable
-    print(SimpleTable([(['{!r}'.format(row[0])]
+    print(SimpleTable([([f'{row[0]!r}']
                         + list(row[1])
                         + ['*']*(row[1][1]>0.5).item() ) for row in ft[1]],
                       headers=['pair', 'F-statistic','p-value','df_denom',
@@ -147,7 +147,7 @@ standard dev', np.sqrt(res.sigmabygroup)
 
     from statsmodels.iolib import SimpleTable
     resvals = {}
-    resvals['tab'] = str(SimpleTable([(['{!r}'.format(row[0])]
+    resvals['tab'] = str(SimpleTable([([f'{row[0]!r}']
                         + list(row[1])
                         + ['*']*(row[1][1]>0.5).item() ) for row in ft[1]],
                       headers=['pair', 'F-statistic','p-value','df_denom',

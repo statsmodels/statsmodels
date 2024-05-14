@@ -4849,8 +4849,15 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                            'Jarque\nBera(JB)', 'Prob(JB)', 'Skew', 'Kurtosis']
                 data = pd.DataFrame(
                     np.c_[lb[:, :2, -1], het[:, :2], jb[:, :4]],
-                    index=endog_names, columns=columns).applymap(
-                        lambda num: '' if pd.isnull(num) else '%.2f' % num)
+                    index=endog_names, columns=columns)
+                try:
+                    data = data.map(
+                        lambda num: '' if pd.isnull(num) else '%.2f' % num
+                    )
+                except AttributeError:
+                    data = data.applymap(
+                        lambda num: '' if pd.isnull(num) else '%.2f' % num
+                    )
                 data.index.name = 'Residual of\nDep. variable'
                 data = data.reset_index()
 

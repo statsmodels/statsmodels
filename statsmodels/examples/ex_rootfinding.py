@@ -18,7 +18,7 @@ DEBUG = False #True
 def func(x, a):
     f = (x - a)**3
     if DEBUG:
-        print('evaluating at {:g}, fval = {:f}'.format(x, f))
+        print(f'evaluating at {x:g}, fval = {f:f}')
     return f
 
 
@@ -27,7 +27,7 @@ def func_nan(x, a, b):
     f = (x - 1.*a)**3
     f[x < b] = np.nan
     if DEBUG:
-        print('evaluating at {:f}, fval = {:f}'.format(x, f))
+        print(f'evaluating at {x:f}, fval = {f:f}')
     return f
 
 
@@ -35,13 +35,13 @@ def func_nan(x, a, b):
 def funcn(x, a):
     f = -(x - a)**3
     if DEBUG:
-        print('evaluating at {:g}, fval = {:g}'.format(x, f))
+        print(f'evaluating at {x:g}, fval = {f:g}')
     return f
 
 
 def func2(x, a):
     f = (x - a)**3
-    print('evaluating at {:g}, fval = {:f}'.format(x, f))
+    print(f'evaluating at {x:g}, fval = {f:f}')
     return f
 
 if __name__ == '__main__':

@@ -133,10 +133,10 @@ class HoldIt:
             prefix = ''
 
         if comment is not None:
-            txt.append("{}comment = '{}'".format(prefix, comment))
+            txt.append(f"{prefix}comment = '{comment}'")
 
         for x in what:
-            txt.append('{}{} = {}'.format(prefix, x, repr(getattr(self,x))))
+            txt.append(f'{prefix}{x} = {repr(getattr(self,x))}')
         txt.extend(['','']) #add empty lines at end
         if filename is not None:
             with open(filename, 'a+', encoding="utf-8") as fd:

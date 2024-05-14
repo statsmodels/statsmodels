@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 r"""robust location, scatter and covariance estimators
 
 Author: Josef Perktold
@@ -117,7 +116,7 @@ def _coef_normalize_cov_truncated_(frac, k_vars):
     return ct
 
 
-class _NormalizeTruncCov(object):
+class _NormalizeTruncCov:
     """Normalization factor for truncation with caching
     """
     _cache = {}
@@ -365,8 +364,8 @@ def cov_gk1(x, y, scale_func=mad):
     ndarray : GK covariance between x and y.
 
     """
-    s1 = scale_func((x + y))
-    s2 = scale_func((x - y))
+    s1 = scale_func(x + y)
+    s2 = scale_func(x - y)
     return (s1**2 - s2**2) / 4
 
 
