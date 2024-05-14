@@ -124,7 +124,7 @@ def test_confint_multinomial_proportions():
                                               method=method)
         assert_almost_equal(
             values.cis, cis, decimal=values.precision,
-            err_msg='"{}" method, {}'.format(method, description))
+            err_msg=f'"{method}" method, {description}')
 
 def test_multinomial_proportions_errors():
     # Out-of-bounds values for alpha raise a ValueError

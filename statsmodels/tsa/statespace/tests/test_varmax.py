@@ -229,7 +229,7 @@ class TestVAR(CheckLutkepohl):
         params = params[self.model._params_state_cov]
         names = self.model.param_names[self.model._params_state_cov]
         for i in range(len(names)):
-            assert re.search('{} +{:.4f}'.format(names[i], params[i]), table)
+            assert re.search(f'{names[i]} +{params[i]:.4f}', table)
 
 
 class TestVAR_diagonal(CheckLutkepohl):
@@ -288,7 +288,7 @@ class TestVAR_diagonal(CheckLutkepohl):
         params = params[self.model._params_state_cov]
         names = self.model.param_names[self.model._params_state_cov]
         for i in range(len(names)):
-            assert re.search('{} +{:.4f}'.format(names[i], params[i]), table)
+            assert re.search(f'{names[i]} +{params[i]:.4f}', table)
 
 
 class TestVAR_measurement_error(CheckLutkepohl):
@@ -398,7 +398,7 @@ class TestVAR_measurement_error(CheckLutkepohl):
         params = params[self.model._params_state_cov]
         names = self.model.param_names[self.model._params_state_cov]
         for i in range(len(names)):
-            assert re.search('{} +{:.4f}'.format(names[i], params[i]), table)
+            assert re.search(f'{names[i]} +{params[i]:.4f}', table)
 
 
 class TestVAR_obs_intercept(CheckLutkepohl):
@@ -537,7 +537,7 @@ class TestVAR_exog(CheckLutkepohl):
         params = params[self.model._params_state_cov]
         names = self.model.param_names[self.model._params_state_cov]
         for i in range(len(names)):
-            assert re.search('{} +{:.4f}'.format(names[i], params[i]), table)
+            assert re.search(f'{names[i]} +{params[i]:.4f}', table)
 
 
 class TestVAR_exog2(CheckLutkepohl):
@@ -648,7 +648,7 @@ class TestVAR2(CheckLutkepohl):
         params = params[self.model._params_state_cov]
         names = self.model.param_names[self.model._params_state_cov]
         for i in range(len(names)):
-            assert re.search('{} +{:.4f}'.format(names[i], params[i]), table)
+            assert re.search(f'{names[i]} +{params[i]:.4f}', table)
 
 
 class CheckFREDManufacturing(CheckVARMAX):
