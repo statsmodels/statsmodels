@@ -377,14 +377,17 @@ def fleiss_kappa(table, method='fleiss', return_results=False, detail=False):
             pvalue=pvalue,
             statistics=kappa_detail,
             zvalues=zvalues,
-            pvalues=pvalues
+            pvalues=pvalues,
+            method=method,
+            detail=True
         )
 
     return FleissKappaResults(
         statistic=kappa,
         zvalue=zvalue,
         pvalue=pvalue,
-        method=method
+        method=method,
+        detail=False
     )
 
 
