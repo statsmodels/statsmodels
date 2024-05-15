@@ -331,3 +331,16 @@ tukeybiweight_eff = {
     0.98: (5.920719, 0.078604),
     0.99: (7.041392, 0.056969),
     }
+
+# relative efficiency for M and MM estimator of multivariate location
+# Table 2 from Kudraszow and Maronna JMA 2011
+# k in [1, 2, 3, 4, 5, 10], eff in [0.8, 0.9, 0.95
+# TODO: need to replace with more larger table and more digits.
+tukeybiweight_mvmean_eff = {
+        (1, 0.8): 3.14, (2, 0.8): 3.51, (3, 0.8): 3.82, (4, 0.8): 4.1,
+        (5, 0.8): 4.34, (10, 0.8): 5.39,
+        (1, 0.9): 3.88, (2, 0.9): 4.28, (3, 0.9): 4.62, (4, 0.9): 4.91,
+        (5, 0.9): 5.18, (10, 0.9): 6.38,
+        (1, 0.95): 4.68, (2, 0.95): 5.12, (3, 0.95): 5.48, (4, 0.95): 5.76,
+        (5, 0.95): 6.1, (10, 0.95): 7.67,
+        }

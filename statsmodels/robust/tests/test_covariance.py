@@ -6,6 +6,7 @@ from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 
 from statsmodels import robust
+import statsmodels.robust.norms as robnorms
 import statsmodels.robust.covariance as robcov
 import statsmodels.robust.scale as robscale
 
@@ -238,6 +239,38 @@ def test_covdetmcd():
     res = mod.fit(40, maxiter_step=100)
     assert_allclose(res.mean, mean_dmcd_r, rtol=1e-5)
     assert_allclose(res.cov, cov_dmcd_r, rtol=1e-5)
+
+
+def test_covdetmm():
+
+    # results from rrcov
+    # CovMMest(x = hbk, eff.shape=FALSE,
+    #          control=CovControlMMest(sest=CovControlSest(method="sdet")))
+    cov_dmm_r = np.array("""
+        1.72174266670826 0.06925842715939 0.20781848922667 0.10749343153015
+        0.06925842715939 1.74566218886362 0.22161135221404 -0.00517023660647
+        0.20781848922667 0.22161135221404 1.63937749762534 -0.17217102475913
+        0.10749343153015 -0.00517023660647 -0.17217102475913 0.48174480967136
+        """.split(), float).reshape(4,4)
+
+    mean_dmm_r = np.array([1.5388643420460, 1.8027582110408, 1.6811517253521,
+                           -0.0755069488908])
+
+    # using same c as rrcov
+    c = 5.81031555752526
+    mod = robcov.CovDetMM(dta_hbk, norm=robnorms.TukeyBiweight(c=c))
+    res = mod.fit()
+
+    assert_allclose(res.mean, mean_dmm_r, rtol=1e-5)
+    assert_allclose(res.cov, cov_dmm_r, rtol=1e-5, atol=1e-5)
+
+    # using c from table,
+    mod = robcov.CovDetMM(dta_hbk)
+    res = mod.fit()
+
+    assert_allclose(res.mean, mean_dmm_r, rtol=1e-3)
+    assert_allclose(res.cov, cov_dmm_r, rtol=1e-3, atol=1e-3)
+
 
 def test_robcov_SMOKE():
     # currently only smoke test or very loose comparisons to dgp

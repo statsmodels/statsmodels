@@ -1411,7 +1411,8 @@ class CovM:
             if start_scale is not None:
                 scale_old = scale
 
-
+        if update_scale is False:
+            scale = start_scale
 
         for i in range(maxiter):
             shape, mean = self._fit_mean_shape(mean_old, shape_old, scale_old)
@@ -1605,7 +1606,7 @@ class CovDetMCD:
                                            mean=best.mean, cov=best.cov)
             best = Holder(
                 mean=mean,
-                cov=cov,
+                cov=cov * fac_trunc,
                 det_subset=det,
                 method=method
                 )
@@ -1787,3 +1788,56 @@ class CovDetS:
 
         #return Holder(mean=mean, cov=cov, start_best=best)
         return best  # is Holder instance already
+
+
+class CovDetMM():
+    """MM estimator using DetS as first stage estimator.
+
+    Note: The tuning parameter for second stage M estimator is currently only
+    available for a small number of variables and only three values of
+    efficiency. For other cases, the user has to provide the norm instance
+    with desirec tuning parameter.
+
+    """
+
+    def __init__(self, data, norm=None, breakdown_point=0.5, efficiency=0.95):
+        # no options yet, methods were written as functions
+        self.data = np.asarray(data)
+        self.nobs, k_vars = self.data.shape
+        self.k_vars = k_vars
+        self.breakdown_point = breakdown_point
+
+        # self.scale_bias = scale_bias
+        if norm is None:
+            norm = rnorms.TukeyBiweight()
+            c = rtools.tukeybiweight_mvmean_eff[k_vars, efficiency]
+            norm._set_tuning_param(c, inplace=True)
+            self.scale_bias = rtools.scale_bias_cov_biw(c, k_vars)[0]
+        elif not isinstance(norm, rnorms.TukeyBiweight):
+            raise NotImplementedError("only Biweight norm is supported")
+        # We allow tukeybiweight norm instance with user provided c
+
+        self.norm = norm
+
+        self.mod = CovM(data, norm_mean=norm, norm_scatter=norm,
+                        scale_bias=None, method="S")
+
+    def fit(self, maxiter=100):
+
+        # first stage estimate
+        mod_s = CovDetS(
+            self.data,
+            norm=None,
+            breakdown_point=self.breakdown_point
+            )
+        res_s = mod_s.fit()
+
+        res = self.mod.fit(
+            start_mean=res_s.mean,
+            start_shape=res_s.shape,
+            start_scale=res_s.scale,
+            maxiter=maxiter,
+            update_scale=False,
+            )
+
+        return res
