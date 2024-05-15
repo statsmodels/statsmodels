@@ -75,10 +75,10 @@ def test_fleiss_kappa():
 
 def test_fleiss_kappa_variance():
     table = aggregate_raters(diagnoses)[0]
-    kappa, zvalue, pvalue = fleiss_kappa(table, return_stat=True)
+    results = fleiss_kappa(table, return_results=True)
     # from irr
-    assert_almost_equal(zvalue, 17.651830582991369)
-    assert_equal(pvalue, 0)
+    assert_almost_equal(results.zvalue, 17.651830582991369)
+    assert_equal(results.pvalue, 0)
 
 
 def test_fleis_randolph():
