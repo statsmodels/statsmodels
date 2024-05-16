@@ -838,6 +838,9 @@ def test_infer_freq():
 
 @pytest.mark.parametrize("trend", TRENDS)
 @pytest.mark.parametrize("seasonal", SEASONALS)
+@pytest.mark.filterwarnings("ignore: overflow")
+@pytest.mark.filterwarnings("ignore: invalid value")
+@pytest.mark.filterwarnings("ignore: Optimization")
 def test_start_params(trend, seasonal):
     mod = ExponentialSmoothing(
         housing_data,
