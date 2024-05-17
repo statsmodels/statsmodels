@@ -124,7 +124,7 @@ class RLS(GLS):
             eps = np.diag((self.wendog - pred) ** 2)
             sigmaSq = np.sum(eps)
             pinvX = np.dot(self.rnorm_cov_params, self.wexog.T)
-            self._wncp = np.dot(np.dot(pinvX, eps), pinvX.T) * df / sigmaSq
+            self._wncp = np.linalg.multi_dot([pinvX, eps, pinvX.T]) * df / sigmaSq
         return self._wncp
 
     _coeffs = None
