@@ -155,7 +155,7 @@ def _get_tuning_param(norm, eff, kwd="c", kwargs=None, use_jump=False,
     else:
         def func(c):
             norm._set_tuning_param(c, inplace=True)
-            return _var_normal_jump(norm(**kwds) - 1 / eff)
+            return _var_normal_jump(norm) - 1 / eff
 
     res = optimize.brentq(func, *bracket)
     return res

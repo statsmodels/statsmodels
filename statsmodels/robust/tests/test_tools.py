@@ -49,11 +49,13 @@ results_menenez = [
 @pytest.mark.parametrize("case", results_menenez)
 def test_eff(case):
     norm, res2 = case
+    use_jump = False
 
     if norm.continuous == 2:
         var_func = _var_normal
     else:
         var_func = _var_normal_jump
+        use_jump = True
 
     res_eff = []
     for c in res2:
@@ -65,8 +67,8 @@ def test_eff(case):
     for c in res2:
         # bp = stats.norm.expect(lambda x : norm.rho(x)) / norm.rho(norm.c)
         norm._set_tuning_param(c, inplace=True)
-        eff = 1 / _var_normal(norm)
-        tune = _get_tuning_param(norm, eff)
+        eff = 1 / var_func(norm)
+        tune = _get_tuning_param(norm, eff, use_jump=use_jump)
         assert_allclose(tune, c, rtol=1e-6, atol=5e-4)
 
 
