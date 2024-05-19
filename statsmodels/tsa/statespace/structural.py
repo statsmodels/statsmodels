@@ -1730,7 +1730,7 @@ class UnobservedComponentsResults(MLEResults):
             value = component_bunch[which]
 
             # Plot
-            state_label = '{} ({})'.format(title, which)
+            state_label = f'{title} ({which})'
             ax.plot(dates[llb:], value[llb:], label=state_label)
 
             # Get confidence intervals

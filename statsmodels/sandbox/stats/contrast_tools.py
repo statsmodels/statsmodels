@@ -96,7 +96,7 @@ def contrast_labels(contrasts, names, reverse=False):
         sl = slice(None, None, -1)
     else:
         sl = slice(None)
-    labels = [''.join(['{}{}'.format(signstr(c, noplus=True),v)
+    labels = [''.join([f'{signstr(c, noplus=True)}{v}'
                           for c,v in zip(row, names)[sl] if c != 0])
                              for row in contrasts]
     return labels
@@ -126,7 +126,7 @@ def contrast_product(names1, names2, intgroup1=None, intgroup2=None, pairs=False
 
     n1 = len(names1)
     n2 = len(names2)
-    names_prod = ['{}_{}'.format(i,j) for i in names1 for j in names2]
+    names_prod = [f'{i}_{j}' for i in names1 for j in names2]
     ee1 = np.zeros((1,n1))
     ee1[0,0] = 1
     if not pairs:
@@ -136,7 +136,7 @@ def contrast_product(names1, names2, intgroup1=None, intgroup2=None, pairs=False
 
     contrast_prod = np.kron(dd[1:], np.eye(n2))
     names_contrast_prod0 = contrast_labels(contrast_prod, names_prod, reverse=True)
-    names_contrast_prod = [''.join(['{}{}'.format(signstr(c, noplus=True),v)
+    names_contrast_prod = [''.join([f'{signstr(c, noplus=True)}{v}'
                               for c,v in zip(row, names_prod)[::-1] if c != 0])
                                  for row in contrast_prod]
 
@@ -149,7 +149,7 @@ def contrast_product(names1, names2, intgroup1=None, intgroup2=None, pairs=False
         dd2 = np.r_[ee2, -contrast_allpairs(n2)]
 
     contrast_prod2 = np.kron(np.eye(n1), dd2[1:])
-    names_contrast_prod2 = [''.join(['{}{}'.format(signstr(c, noplus=True),v)
+    names_contrast_prod2 = [''.join([f'{signstr(c, noplus=True)}{v}'
                               for c,v in zip(row, names_prod)[::-1] if c != 0])
                                  for row in contrast_prod2]
 

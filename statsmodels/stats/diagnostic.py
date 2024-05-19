@@ -237,8 +237,9 @@ def compare_j(results_x, results_z, store=False):
     return tstat, pval
 
 
+@deprecate_kwarg("cov_kwargs", "cov_kwds")
 def compare_encompassing(results_x, results_z, cov_type="nonrobust",
-                         cov_kwargs=None):
+                         cov_kwds=None):
     r"""
     Davidson-MacKinnon encompassing test for comparing non-nested models
 
@@ -253,7 +254,7 @@ def compare_encompassing(results_x, results_z, cov_type="nonrobust",
         OLS covariance estimator. Specify one of "HC0", "HC1", "HC2", "HC3"
         to use White's covariance estimator. All covariance types supported
         by ``OLS.fit`` are accepted.
-    cov_kwargs : dict, default None
+    cov_kwds : dict, default None
         Dictionary of covariance options passed to ``OLS.fit``. See OLS.fit
         for more details.
 
@@ -317,8 +318,8 @@ def compare_encompassing(results_x, results_z, cov_type="nonrobust",
         df_num, df_denom = int(test.df_num), int(test.df_denom)
         return stat, pvalue, df_num, df_denom
 
-    x_nested = _test_nested(y, x, z, cov_type, cov_kwargs)
-    z_nested = _test_nested(y, z, x, cov_type, cov_kwargs)
+    x_nested = _test_nested(y, x, z, cov_type, cov_kwds)
+    z_nested = _test_nested(y, z, x, cov_type, cov_kwds)
     return pd.DataFrame([x_nested, z_nested],
                         index=["x", "z"],
                         columns=["stat", "pvalue", "df_num", "df_denom"])
@@ -479,9 +480,10 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
                         index=lags)
 
 
+@deprecate_kwarg("cov_kwargs", "cov_kwds")
 @deprecate_kwarg("maxlag", "nlags")
 def acorr_lm(resid, nlags=None, store=False, *, period=None,
-             ddof=0, cov_type="nonrobust", cov_kwargs=None):
+             ddof=0, cov_type="nonrobust", cov_kwds=None):
     """
     Lagrange Multiplier tests for autocorrelation.
 
@@ -510,7 +512,7 @@ def acorr_lm(resid, nlags=None, store=False, *, period=None,
         OLS covariance estimator. Specify one of "HC0", "HC1", "HC2", "HC3"
         to use White's covariance estimator. All covariance types supported
         by ``OLS.fit`` are accepted.
-    cov_kwargs : dict, default None
+    cov_kwds : dict, default None
         Dictionary of covariance options passed to ``OLS.fit``. See OLS.fit for
         more details.
 
@@ -545,8 +547,8 @@ def acorr_lm(resid, nlags=None, store=False, *, period=None,
     """
     resid = array_like(resid, "resid", ndim=1)
     cov_type = string_like(cov_type, "cov_type")
-    cov_kwargs = {} if cov_kwargs is None else cov_kwargs
-    cov_kwargs = dict_like(cov_kwargs, "cov_kwargs")
+    cov_kwds = {} if cov_kwds is None else cov_kwds
+    cov_kwds = dict_like(cov_kwds, "cov_kwds")
     nobs = resid.shape[0]
     if period is not None and nlags is None:
         maxlag = min(nobs // 5, 2 * period)
@@ -563,7 +565,7 @@ def acorr_lm(resid, nlags=None, store=False, *, period=None,
     usedlag = maxlag
 
     resols = OLS(xshort, xdall[:, :usedlag + 1]).fit(cov_type=cov_type,
-                                                     cov_kwargs=cov_kwargs)
+                                                     cov_kwds=cov_kwds)
     fval = float(resols.fvalue)
     fpval = float(resols.f_pvalue)
     if cov_type == "nonrobust":
@@ -985,9 +987,10 @@ F-statistic ={:8.4f} and p-value ={:8.4f}""".format(ordering, fval, fpval)
     return fval, fpval, ordering
 
 
+@deprecate_kwarg("cov_kwargs", "cov_kwds")
 @deprecate_kwarg("result", "res")
 def linear_reset(res, power=3, test_type="fitted", use_f=False,
-                 cov_type="nonrobust", cov_kwargs=None):
+                 cov_type="nonrobust", cov_kwds=None):
     r"""
     Ramsey's RESET test for neglected nonlinearity
 
@@ -1015,7 +1018,7 @@ def linear_reset(res, power=3, test_type="fitted", use_f=False,
         OLS covariance estimator. Specify one of "HC0", "HC1", "HC2", "HC3"
         to use White's covariance estimator. All covariance types supported
         by ``OLS.fit`` are accepted.
-    cov_kwargs : dict, default None
+    cov_kwds : dict, default None
         Dictionary of covariance options passed to ``OLS.fit``. See OLS.fit
         for more details.
 
@@ -1055,7 +1058,7 @@ def linear_reset(res, power=3, test_type="fitted", use_f=False,
                          "non-constant column.")
     test_type = string_like(test_type, "test_type",
                             options=("fitted", "exog", "princomp"))
-    cov_kwargs = dict_like(cov_kwargs, "cov_kwargs", optional=True)
+    cov_kwds = dict_like(cov_kwds, "cov_kwds", optional=True)
     use_f = bool_like(use_f, "use_f")
     if isinstance(power, int):
         if power < 2:
@@ -1093,8 +1096,8 @@ def linear_reset(res, power=3, test_type="fitted", use_f=False,
     aug_exog = np.hstack([exog] + [aug ** p for p in power])
     mod_class = res.model.__class__
     mod = mod_class(res.model.data.endog, aug_exog)
-    cov_kwargs = {} if cov_kwargs is None else cov_kwargs
-    res = mod.fit(cov_type=cov_type, cov_kwargs=cov_kwargs)
+    cov_kwds = {} if cov_kwds is None else cov_kwds
+    res = mod.fit(cov_type=cov_type, cov_kwds=cov_kwds)
     nrestr = aug_exog.shape[1] - exog.shape[1]
     nparams = aug_exog.shape[1]
     r_mat = np.eye(nrestr, nparams, k=nparams-nrestr)

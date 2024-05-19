@@ -305,7 +305,7 @@ def test_seasonality(index):
     assert s.is_dummy
     assert exog.shape == (index.shape[0], 12)
     pd.testing.assert_index_equal(exog.index, index)
-    assert np.all(exog.sum(1) == 1.0)
+    assert np.all(exog.sum(axis=1) == 1.0)
     assert list(exog.columns) == [f"s({i},12)" for i in range(1, 13)]
     expected = np.zeros((index.shape[0], 12))
     for i in range(12):
@@ -320,7 +320,7 @@ def test_seasonality(index):
     with pytest_warns(warn):
         fcast = s.out_of_sample(steps=12, index=index)
     assert fcast.iloc[0, len(index) % 12] == 1.0
-    assert np.all(fcast.sum(1) == 1)
+    assert np.all(fcast.sum(axis=1) == 1)
 
     s = Seasonality(period=7, initial_period=3)
     exog = s.in_sample(index)
@@ -438,21 +438,21 @@ def test_calendar_seasonal_period_w():
     index = pd.date_range("2000-01-03", freq="h", periods=600)
     cs = CalendarSeasonality("h", period=period)
     terms = cs.in_sample(index)
-    assert np.all(terms.sum(1) == 1.0)
+    assert np.all(terms.sum(axis=1) == 1.0)
     for i in range(index.shape[0]):
         assert terms.iloc[i, i % 168] == 1.0
 
     index = pd.date_range("2000-01-03", freq="B", periods=600)
     cs = CalendarSeasonality("B", period=period)
     terms = cs.in_sample(index)
-    assert np.all(terms.sum(1) == 1.0)
+    assert np.all(terms.sum(axis=1) == 1.0)
     for i in range(index.shape[0]):
         assert terms.iloc[i, i % 5] == 1.0
 
     index = pd.date_range("2000-01-03", freq="D", periods=600)
     cs = CalendarSeasonality("D", period=period)
     terms = cs.in_sample(index)
-    assert np.all(terms.sum(1) == 1.0)
+    assert np.all(terms.sum(axis=1) == 1.0)
     for i in range(index.shape[0]):
         assert terms.iloc[i, i % 7] == 1.0
 
@@ -462,7 +462,7 @@ def test_calendar_seasonal_period_d():
     index = pd.date_range("2000-01-03", freq="h", periods=600)
     cs = CalendarSeasonality("h", period=period)
     terms = cs.in_sample(index)
-    assert np.all(terms.sum(1) == 1.0)
+    assert np.all(terms.sum(axis=1) == 1.0)
     for i in range(index.shape[0]):
         assert terms.iloc[i, i % 24] == 1.0
 
@@ -472,7 +472,7 @@ def test_calendar_seasonal_period_q():
     index = pd.date_range("2000-01-01", freq=MONTH_END, periods=600)
     cs = CalendarSeasonality(MONTH_END, period=period)
     terms = cs.in_sample(index)
-    assert np.all(terms.sum(1) == 1.0)
+    assert np.all(terms.sum(axis=1) == 1.0)
     for i in range(index.shape[0]):
         assert terms.iloc[i, i % 3] == 1.0
 
@@ -482,13 +482,13 @@ def test_calendar_seasonal_period_a():
     index = pd.date_range("2000-01-01", freq=MONTH_END, periods=600)
     cs = CalendarSeasonality(MONTH_END, period=period)
     terms = cs.in_sample(index)
-    assert np.all(terms.sum(1) == 1.0)
+    assert np.all(terms.sum(axis=1) == 1.0)
     for i in range(index.shape[0]):
         assert terms.iloc[i, i % 12] == 1.0
 
     cs = CalendarSeasonality(QUARTER_END, period=period)
     terms = cs.in_sample(index)
-    assert np.all(terms.sum(1) == 1.0)
+    assert np.all(terms.sum(axis=1) == 1.0)
     for i in range(index.shape[0]):
         assert terms.iloc[i, (i % 12) // 3] == 1.0
 

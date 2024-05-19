@@ -39,7 +39,7 @@ for arcoef in arcoefs[:-1]:
         plotacf(acf, ax=ax)
 ##        ax.set_title('Autocorrelation \nar=%s, ma=%rs' % (ar, ma),
 ##                     size='xx-small')
-        ax.text(0.7, 0.6, 'ar ={} \nma={}'.format(ar, ma),
+        ax.text(0.7, 0.6, f'ar ={ar} \nma={ma}',
                 transform=ax.transAxes,
                 horizontalalignment='left', #'right',
                 size='xx-small')
@@ -49,7 +49,7 @@ for arcoef in arcoefs[:-1]:
         plotacf(pacf, ax=ax)
 ##        ax.set_title('Partial Autocorrelation \nar=%s, ma=%rs' % (ar, ma),
 ##                     size='xx-small')
-        ax.text(0.7, 0.6, 'ar ={} \nma={}'.format(ar, ma),
+        ax.text(0.7, 0.6, f'ar ={ar} \nma={ma}',
                 transform=ax.transAxes,
                 horizontalalignment='left', #'right',
                 size='xx-small')

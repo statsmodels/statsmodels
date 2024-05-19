@@ -269,7 +269,9 @@ class ProbPlot:
     @cache_readonly
     def sorted_data(self):
         """sorted data"""
-        sorted_data = np.array(self.data, copy=True)
+        sorted_data = np.array(
+            np.require(self.data, requirements="W"), copy=True
+        )
         sorted_data.sort()
         return sorted_data
 

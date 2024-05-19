@@ -2699,7 +2699,7 @@ class NominalGEE(GEE):
             xnames_in = ["x%d" % k for k in range(1, exog.shape[1] + 1)]
         xnames = []
         for tr in endog_cuts:
-            xnames.extend(["{}[{:.1f}]".format(v, tr) for v in xnames_in])
+            xnames.extend([f"{v}[{tr:.1f}]" for v in xnames_in])
         exog_out = pd.DataFrame(exog_out, columns=xnames)
         exog_out = pd.DataFrame(exog_out, columns=xnames)
 
