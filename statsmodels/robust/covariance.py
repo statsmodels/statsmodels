@@ -1810,9 +1810,10 @@ class CovDetMM():
         # self.scale_bias = scale_bias
         if norm is None:
             norm = rnorms.TukeyBiweight()
-            c = rtools.tukeybiweight_mvmean_eff[k_vars, efficiency]
+            c = rtools.tukeybiweight_mvmean_eff(k_vars, efficiency)
             norm._set_tuning_param(c, inplace=True)
-            self.scale_bias = rtools.scale_bias_cov_biw(c, k_vars)[0]
+            # scale_bias is not used for second stage MM norm
+            # self.scale_bias = rtools.scale_bias_cov_biw(c, k_vars)[0]
         elif not isinstance(norm, rnorms.TukeyBiweight):
             raise NotImplementedError("only Biweight norm is supported")
         # We allow tukeybiweight norm instance with user provided c
