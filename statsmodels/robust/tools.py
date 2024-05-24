@@ -4,7 +4,7 @@ Created on Mar. 11, 2024 10:41:37 p.m.
 Author: Josef Perktold
 License: BSD-3
 """
-
+# flake8: noqa E731
 import numpy as np
 from scipy import stats, integrate, optimize
 
@@ -57,8 +57,8 @@ def _var_normal(norm):
 
 
     """
-    num = stats.norm.expect(lambda x: norm.psi(x)**2)
-    denom = stats.norm.expect(lambda x: norm.psi_deriv(x))**2
+    num = stats.norm.expect(lambda x: norm.psi(x)**2)  #noqa E731
+    denom = stats.norm.expect(lambda x: norm.psi_deriv(x))**2  #noqa E731
     return num / denom
 
 
@@ -100,7 +100,7 @@ def _var_normal_jump(norm):
 
 
     """
-    num = stats.norm.expect(lambda x: norm.psi(x)**2)
+    num = stats.norm.expect(lambda x: norm.psi(x)**2)  #noqa E731
 
     def func(x):
         # derivative normal pdf
@@ -142,7 +142,6 @@ def _get_tuning_param(norm, eff, kwd="c", kwargs=None, use_jump=False,
         efficiency.
 
     """
-    kwds = {} if kwargs is None else kwargs
     if bracket is None:
         bracket = [0.1, 10]
 
@@ -216,12 +215,13 @@ def tuning_s_estimator_mean(norm, breakdown=None):
     def func(c):
         norm_ = norm
         norm_._set_tuning_param(c, inplace=True)
-        bp = stats.norm.expect(lambda x : norm_.rho(x)) / norm_.max_rho()
+        bp = (stats.norm.expect(lambda x : norm_.rho(x)) /  #noqa E731
+              norm_.max_rho())
         return bp
 
     res = []
     for bp in bps:
-        c_bp = optimize.brentq(lambda c0: func(c0) - bp, 0.1, 10)
+        c_bp = optimize.brentq(lambda c0: func(c0) - bp, 0.1, 10)  #noqa E731
         norm._set_tuning_param(c_bp, inplace=True)  # inplace modification
         eff = 1 / _var_normal(norm)
         b = stats.norm.expect(lambda x : norm.rho(x))
@@ -250,9 +250,9 @@ def scale_bias_cov_biw(c, k_vars):
     This uses the chisquare distribution as reference distribution for the
     squared Mahalanobis distance.
     """
-    p = k_vars # alias for formula
+    p = k_vars  # alias for formula
     chip, chip2, chip4, chip6 = stats.chi2.cdf(c**2, [p, p + 2, p + 4, p + 6])
-    b = p / 2 * chip2 -  p * (p + 2) / (2 * c**2) * chip4
+    b = p / 2 * chip2 - p * (p + 2) / (2 * c**2) * chip4
     b += p * (p + 2) * (p + 4) / (6 * c**4) * chip6 + c**2 / 6 * (1 - chip)
     return b, b / (c**2 / 6)
 
@@ -294,6 +294,7 @@ def tuning_s_cov(norm, k_vars, breakdown_point=0.5, limits=()):
             return scale_bias_cov_biw(c, k_vars)[1] - breakdown_point
     else:
         norm = norm._set_tuning_param(2., inplace=False)  # create copy
+
         def func(c):
             norm._set_tuning_param(c, inplace=True)
             return scale_bias_cov(norm, k_vars)[1] - breakdown_point
@@ -337,7 +338,8 @@ def eff_mvmean(norm, k_vars):
     """
     k = k_vars  # shortcut
     f_alpha = lambda d: norm.psi(d)**2 / k
-    f_beta = lambda d: (1 - 1 / k) * norm.weights(d) + 1 / k * norm.psi_deriv(d)
+    f_beta = lambda d: ((1 - 1 / k) * norm.weights(d) +
+                        1 / k * norm.psi_deriv(d))
     alpha = stats.chi(k).expect(f_alpha)
     beta = stats.chi(k).expect(f_beta)
     return beta**2 / alpha, alpha, beta
@@ -439,8 +441,6 @@ def tuning_m_cov_eff(norm, k_vars, efficiency=0.95, eff_mean=True, limits=()):
     return p_tune
 
 
-
-
 #  ##### tables
 
 tukeybiweight_bp = {
@@ -458,7 +458,7 @@ tukeybiweight_bp = {
     }
 
 tukeybiweight_eff = {
-    #efficiency : (tuning parameter, breakdown point)
+    # efficiency : (tuning parameter, breakdown point)
     0.65: (2.523102, 0.305646),
     0.70: (2.697221, 0.280593),
     0.75: (2.897166, 0.254790),
@@ -533,6 +533,7 @@ def _convert_to_dict_mvmean_effs(eff_mean=True):
             tp[(k, eff)] = table[i, j]
 
     return tp
+
 
 tukeybiweight_mvmean_eff_d = _convert_to_dict_mvmean_effs(eff_mean=True)
 tukeybiweight_mvshape_eff_d = _convert_to_dict_mvmean_effs(eff_mean=False)

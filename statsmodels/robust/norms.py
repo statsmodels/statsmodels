@@ -919,7 +919,7 @@ class TukeyBiweight(RobustNorm):
 
         """
         if ((bp is None and eff is None) or
-            (bp is not None and eff is not None)):
+                (bp is not None and eff is not None)):
             raise ValueError("exactly one of bp and eff needs to be provided")
 
         if bp is not None:

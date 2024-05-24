@@ -27,7 +27,7 @@ doi:10.1109/TSP.2011.2138698.
 import numpy as np
 from scipy import stats, linalg
 from scipy.linalg.lapack import dtrtri
-from .scale import mad, qn_scale, _scale_iter
+from .scale import mad
 import statsmodels.robust.norms as rnorms
 import statsmodels.robust.scale as rscale
 import statsmodels.robust.tools as rtools
@@ -1266,12 +1266,12 @@ def _orthogonalize_det(x, corr, loc_func, scale_func):
     cov = (transf0 * scale_z**2).dot(transf0.T)
     # extra step in DetMCD, sphering data with new cov to compute center
     # I think this is equivalent to scaling z
-    #loc_z = loc_func(z / scale_z) * scale_z  # center of principal components
-    #loc = (transf0 * scale_z).dot(loc_z)
+    # loc_z = loc_func(z / scale_z) * scale_z  # center of principal components
+    # loc = (transf0 * scale_z).dot(loc_z)
     transf1 = (transf0 * scale_z).dot(transf0.T)
-    #transf1inv = (transf0 * scale_z**(-1)).dot(transf0.T)
+    # transf1inv = (transf0 * scale_z**(-1)).dot(transf0.T)
 
-    #loc = loc_func(x @ transf1inv) @ transf1
+    # loc = loc_func(x @ transf1inv) @ transf1
     loc = loc_func((z / scale_z).dot(transf0.T)) @ transf1
 
     return loc, cov
@@ -1369,7 +1369,6 @@ class CovM:
         else:
             self.norm_scatter = norm_scatter
 
-
         self.weights_mean = self.norm_mean.weights
         self.weights_scatter = self.weights_mean
         # self.weights_scatter = lambda d: self.norm_mean.rho(d) / d**2
@@ -1443,7 +1442,6 @@ class CovM:
             )
         return scale
 
-
     def fit(self, start_mean=None, start_shape=None, start_scale=None,
             maxiter=100, update_scale=True):
         """Estimate mean, shape and scale parameters with MM-estimator.
@@ -1501,7 +1499,6 @@ class CovM:
 
         for i in range(maxiter):
             shape, mean = self._fit_mean_shape(mean_old, shape_old, scale_old)
-            # d = mahalanobis(self.data - mean, shape / scale_old**2, sqrt=True)
             d = mahalanobis(self.data - mean, shape, sqrt=True)
             if update_scale:
                 scale = self._fit_scale(d, start_scale=scale_old, maxiter=10)
@@ -1509,7 +1506,7 @@ class CovM:
             if (np.allclose(scale, scale_old, rtol=1e-5) and
                     np.allclose(mean, mean_old, rtol=1e-5) and
                     np.allclose(shape, shape_old, rtol=1e-5)
-                    ):
+                    ):  # noqa E124
                 converged = True
                 break
             scale_old = scale
@@ -1582,7 +1579,7 @@ class CovDetMCD:
 
         converged = False
 
-        for i in range(maxiter):
+        for _ in range(maxiter):
             d = mahalanobis(x - mean, cov)
             idx_sel = np.argpartition(d, h)[:h]
             x_sel = x[idx_sel]
@@ -1623,8 +1620,8 @@ class CovDetMCD:
 
         Notes
         -----
-        This does not do any preprocessing of the data and returns the empirical mean
-        and covariance of evaluation set of the data ``x``.
+        This does not do any preprocessing of the data and returns the
+        empirical mean and covariance of evaluation set of the data ``x``.
         """
         if idx is not None:
             x_sel = x[idx]
@@ -1642,8 +1639,8 @@ class CovDetMCD:
         return mean, cov, det, conv
 
     def fit(self, h, *, h_start=None, mean_func=None, scale_func=None,
-                maxiter=100, options_start=None, reweight=True,
-                trim_frac=0.975, maxiter_step=100):
+            maxiter=100, options_start=None, reweight=True,
+            trim_frac=0.975, maxiter_step=100):
         """
         Compute minimum covariance determinant estimate of mean and covariance.
 
@@ -1706,13 +1703,13 @@ class CovDetMCD:
         res = {}
         for ii, ini in enumerate(starts):
             idx_sel, method = ini
-            mean, cov, det, _  = self._fit_one(x, idx_sel, h,
-                                               maxiter=maxiter_step)
+            mean, cov, det, _ = self._fit_one(x, idx_sel, h,
+                                              maxiter=maxiter_step)
             res[ii] = Holder(
                 mean=mean,
                 cov=cov * fac_trunc,
                 det_subset=det,
-                method=method
+                method=method,
                 )
 
         det_all = np.array([i.det_subset for i in res.values()])
@@ -1725,7 +1722,7 @@ class CovDetMCD:
         # is with best 2 in original DetMCD
         if maxiter_step < maxiter:
             mean, cov, det, conv = self._fit_one(x, None, h, maxiter=maxiter,
-                                           mean=best.mean, cov=best.cov)
+                                                 mean=best.mean, cov=best.cov)
             best = Holder(
                 mean=mean,
                 cov=cov * fac_trunc,
@@ -1886,7 +1883,7 @@ class CovDetS:
         return res
 
     def fit(self, *, h_start=None, mean_func=None, scale_func=None,
-                maxiter=100, options_start=None, maxiter_step=5):
+            maxiter=100, options_start=None, maxiter_step=5):
         """Compute S-estimator of mean and covariance.
 
         Parameters

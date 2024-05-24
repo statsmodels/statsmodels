@@ -13,7 +13,7 @@ from statsmodels.tools.testing import Holder
 from statsmodels.robust.robust_linear_model import RLM
 import statsmodels.robust.norms as rnorms
 import statsmodels.robust.scale as rscale
-from statsmodels.robust.covariance import  _get_detcov_startidx
+from statsmodels.robust.covariance import _get_detcov_startidx
 
 
 class RLMDetS(Model):
@@ -86,7 +86,6 @@ class RLMDetS(Model):
             quantiles = np.quantile(self.endog, [0.25, 0.5, 0.75])
             start_params_all = [np.atleast_1d([q]) for q in quantiles]
             return start_params_all
-
 
         starts = _get_detcov_startidx(
             self.data_start, h, options_start=None, methods_cov="all")
