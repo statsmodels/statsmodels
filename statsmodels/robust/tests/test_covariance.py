@@ -229,16 +229,37 @@ def test_covdetmcd():
     0.0223939863695   1.1384166802155   0.4315534571891  -0.2344041030201
     0.7898958050933   0.4315534571891   1.8930117467493  -0.3292893001459
     0.4060613360808  -0.2344041030201  -0.3292893001459   0.6179686100845
-    """.split(),
-    float).reshape(4,4)
+    """.split(), float).reshape(4,4)
 
     mean_dmcd_r = np.array([1.7725, 2.2050, 1.5375, -0.0575])
 
     mod = robcov.CovDetMCD(dta_hbk)
-    # with default start, default start could get wrong local optimum
-    res = mod.fit(40, maxiter_step=100)
+    res = mod.fit(40, maxiter_step=100, reweight=False)
     assert_allclose(res.mean, mean_dmcd_r, rtol=1e-5)
     assert_allclose(res.cov, cov_dmcd_r, rtol=1e-5)
+
+    # with reweighting
+    # covMcd(x = hbk, nsamp = "deterministic", use.correction = FALSE)
+    # iBest: 5; C-step iterations: 7, 7, 7, 4, 6, 6
+    # Log(Det.):  -2.42931967153
+
+    mean_dmcdw_r = np.array([1.5338983050847, 1.8322033898305, 1.6745762711864,
+                            -0.0728813559322])
+    cov_dmcdw_r = np.array("""
+    1.5677744869295   0.09285770205078   0.252076010128   0.13873444408300
+    0.0928577020508   1.56769177397171   0.224929617385  -0.00516128856542
+    0.2520760101278   0.22492961738467   1.483829106079  -0.20275013775619
+    0.1387344440830  -0.00516128856542  -0.202750137756   0.43326701543885
+    """.split(), float).reshape(4,4)
+
+    mod = robcov.CovDetMCD(dta_hbk)
+    res = mod.fit(40, maxiter_step=100)  # default is reweight=True
+    assert_allclose(res.mean, mean_dmcdw_r, rtol=1e-5)
+    # R uses different trimming correction
+    # compare only shape (using trace for simplicity)
+    shape = res.cov / np.trace(res.cov)
+    shape_r = cov_dmcdw_r / np.trace(cov_dmcdw_r)
+    assert_allclose(shape, shape_r, rtol=1e-5)
 
 
 def test_covdetmm():

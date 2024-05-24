@@ -412,13 +412,15 @@ def cov_gk(data, scale_func=mad):
 def cov_ogk(data, maxiter=2, scale_func=mad, cov_func=cov_gk,
             loc_func=lambda x: np.median(x, axis=0), reweight=0.9,
             rescale=True, rescale_raw=True, ddof=1):
-    """orthogonalized Gnanadesikan and Kettenring covariance estimator
+    """Orthogonalized Gnanadesikan and Kettenring covariance estimator.
 
     Based on Maronna and Zamar 2002
 
     Parameters
     ----------
-    data : array_like, 2-D
+    data : array-like
+        Multivariate data set with observation in rows and variables in
+        columns.
     maxiter : int
         Number of iteration steps. According to Maronna and Zamar the
         estimate doesn't improve much after the second iteration and the
@@ -597,12 +599,10 @@ def cov_tyler(data, start_cov=None, normalize=False, maxiter=100, eps=1e-13):
     ----------
     .. [1] Tyler, David E. “A Distribution-Free M-Estimator of Multivariate
        Scatter.” The Annals of Statistics 15, no. 1 (March 1, 1987): 234–51.
-
     .. [2] Soloveychik, I., and A. Wiesel. 2014. Tyler's Covariance Matrix
        Estimator in Elliptical Models With Convex Structure.
        IEEE Transactions on Signal Processing 62 (20): 5251-59.
        doi:10.1109/TSP.2014.2348951.
-
     .. [3] Ollila, Esa, Daniel P. Palomar, and Frederic Pascal.
        “Affine Equivariant Tyler’s M-Estimator Applied to Tail Parameter
        Learning of Elliptical Distributions.” arXiv, May 7, 2023.
@@ -1321,6 +1321,26 @@ def _get_detcov_startidx(z, h, options_start=None, methods_cov="all"):
 
 class CovM:
     """M-estimator for multivariate Mean and Scatter.
+
+    Interface incomplete and experimental.
+
+    Parameters
+    ----------
+    data : array-like
+        Multivariate data set with observation in rows and variables in
+        columns.
+    norm_mean : norm instance
+        If None, then TukeyBiweight norm is used.
+        (Currently no other norms are supported for calling the initial
+        S-estimator)
+    norm_scatter : None or norm instance
+        If norm_scatter is None, then the norm_mean will be used.
+    breakdown_point : float in (0, 0.5]
+        Breakdown point for first stage S-estimator.
+    scale_bias : None or float
+        Must currently be provided if norm_mean is not None.
+    method : str
+        Currently only S-estimator has automatic selection of scale function.
     """
 
     def __init__(self, data, norm_mean=None, norm_scatter=None,
@@ -1357,6 +1377,23 @@ class CovM:
         self.rho = self.norm_scatter.rho
 
     def _fit_mean_shape(self, mean, shape, scale):
+        """Estimate mean and shape in iteration step.
+
+        This does only one step.
+
+        Parameters
+        ----------
+        mean : ndarray
+            Starting value for mean
+        shape : ndarray
+            Starting value for shape matrix.
+        scale : float
+            Starting value for scale.
+
+        Returns
+        -------
+        Holder instance with updated estimates.
+        """
         d = mahalanobis(self.data - mean, shape, sqrt=True) / scale
         weights_mean = self.weights_mean(d)
         weights_cov = self.weights_scatter(d)
@@ -1373,7 +1410,26 @@ class CovM:
 
     def _fit_scale(self, maha, start_scale=None, maxiter=100, rtol=1e-5,
                    atol=1e-5):
+        """Estimate iterated M-scale.
+
+        Parameters
+        ----------
+        maha : ndarray
+        start_scale : None or float
+            Starting scale. If it is None, the mad of maha wi
+        maxiter : int
+            Maximum iterations to compute M-scale
+        rtol, atol : float
+            Relative and absolute convergence criteria for scale used with
+            allclose.
+
+        Returns
+        -------
+        float : scale estimate
+        """
         if start_scale is None:
+            # TODO: this does not really make sense
+            # better scale to median of maha and chi or chi2
             start_scale = mad(maha)
 
         scale = rscale._scale_iter(
@@ -1390,6 +1446,35 @@ class CovM:
 
     def fit(self, start_mean=None, start_shape=None, start_scale=None,
             maxiter=100, update_scale=True):
+        """Estimate mean, shape and scale parameters with MM-estimator.
+
+        Parameters
+        ----------
+        start_mean : None or float
+            Starting value for mean, center.
+            If None, then median is used.
+        start_shape : None or 2-dim ndarray
+            Starting value of shape matrix, i.e. scatter matrix normalized
+            to det(scatter) = 1.
+            If None, then scaled covariance matrix of data is used.
+        start_scale : None or float.
+            Starting value of scale.
+        maxiter : int
+            Maximum number of iterations.
+        update_scale : bool
+            If update_scale is False, then
+
+        Returns
+        -------
+        results instance with mean, shape, scale, cov and other attributes.
+
+        Notes
+        -----
+        If start_scale is provided and update_scale is False, then this is
+        an M-estimator with a predetermined scale as used in the second
+        stage of an MM-estimator.
+
+        """
 
         converged = False
 
@@ -1457,6 +1542,30 @@ class CovDetMCD:
     However, this will not be reprodusible across statsmodels versions
     when the methods for starting sets or tuning parameters for the
     optimization change.
+
+    Parameters
+    ----------
+    data : array-like
+        Multivariate data set with observation in rows and variables in
+        columns.
+
+    Notes
+    -----
+    The correction to the scale to take account of trimming in the reweighting
+    estimator is based on the chisquare tail probability.
+    This differs from CovMcd in R which uses the observed fraction of
+    observations above the metric trimming threshold.
+
+    References
+    ----------
+    ..[1] Hubert, Mia, Peter Rousseeuw, Dina Vanpaemel, and Tim Verdonck. 2015.
+       “The DetS and DetMM Estimators for Multivariate Location and Scatter.”
+       Computational Statistics & Data Analysis 81 (January): 64–75.
+       https://doi.org/10.1016/j.csda.2014.07.013.
+    ..[2] Hubert, Mia, Peter J. Rousseeuw, and Tim Verdonck. 2012. “A
+       Deterministic Algorithm for Robust Location and Scatter.” Journal of
+       Computational and Graphical Statistics 21 (3): 618–37.
+       https://doi.org/10.1080/10618600.2012.672100.
     """
 
     def __init__(self, data):
@@ -1487,7 +1596,7 @@ class CovDetMCD:
 
             cov = cov_new
 
-        return mean, cov
+        return mean, cov, converged
 
     def _fit_one(self, x, idx, h, maxiter=2, mean=None, cov=None):
         """Compute mcd for one starting set of observations.
@@ -1527,14 +1636,14 @@ class CovDetMCD:
             cov = np.cov(x_sel.T, ddof=1)
 
         # updated with c-step
-        mean, cov = self._cstep(x, mean, cov, h, maxiter=maxiter)
+        mean, cov, conv = self._cstep(x, mean, cov, h, maxiter=maxiter)
         det = np.linalg.det(cov)
 
-        return mean, cov, det
+        return mean, cov, det, conv
 
     def fit(self, h, *, h_start=None, mean_func=None, scale_func=None,
                 maxiter=100, options_start=None, reweight=True,
-                maxiter_step=2):
+                trim_frac=0.975, maxiter_step=100):
         """
         Compute minimum covariance determinant estimate of mean and covariance.
 
@@ -1550,8 +1659,20 @@ class CovDetMCD:
             Current defaults, if they are None, are median and mad, but
             default scale_func will likely change.
         options_start : None or dict
-           Options for the starting estimators.
-           TODO: which options? e.g. for OGK
+            Options for the starting estimators.
+            currently not used
+            TODO: which options? e.g. for OGK
+        reweight : bool
+            If reweight is true, then a reweighted estimator is returned. The
+            reweighting is based on a chisquare trimming of Mahalanobis
+            distances. The raw results are in the ``results_raw`` attribute.
+        trim_frac : float in (0, 1)
+            Trim fraction used if reweight is true. Used to compute quantile
+            of chisquare distribution with tail probability 1 - trim_frac.
+        maxiter_step : int
+            Number of iteration in the c-step.
+            In the current implementation a small maxiter in the c-step does
+            not find the optimal solution.
 
         Returns
         -------
@@ -1585,7 +1706,8 @@ class CovDetMCD:
         res = {}
         for ii, ini in enumerate(starts):
             idx_sel, method = ini
-            mean, cov, det  = self._fit_one(x, idx_sel, h, maxiter=maxiter_step)
+            mean, cov, det, _  = self._fit_one(x, idx_sel, h,
+                                               maxiter=maxiter_step)
             res[ii] = Holder(
                 mean=mean,
                 cov=cov * fac_trunc,
@@ -1602,13 +1724,14 @@ class CovDetMCD:
         # need to c-step to convergence for best,
         # is with best 2 in original DetMCD
         if maxiter_step < maxiter:
-            mean, cov, det = self._fit_one(x, None, h, maxiter=maxiter,
+            mean, cov, det, conv = self._fit_one(x, None, h, maxiter=maxiter,
                                            mean=best.mean, cov=best.cov)
             best = Holder(
                 mean=mean,
                 cov=cov * fac_trunc,
                 det_subset=det,
-                method=method
+                method=method,
+                converged=conv,
                 )
 
         # include extra info in returned Holder instance
@@ -1618,22 +1741,59 @@ class CovDetMCD:
         best.tmean = m
         best.tscale = s
 
-        #return Holder(mean=mean, cov=cov, start_best=best)
-        return best  # is Holder instance already
+        if reweight:
+            cov, mean = _reweight(x, best.mean, best.cov, trim_frac=trim_frac,
+                                  ddof=1)
+            fac_trunc = coef_normalize_cov_truncated(trim_frac, k_vars)
+            best_w = Holder(
+                mean=mean,
+                cov=cov * fac_trunc,
+                # det_subset=det,
+                method=method,
+                results_raw=best,
+                )
+
+            return best_w
+        else:
+            return best  # is Holder instance already
 
 
 class CovDetS:
     """S-estimator for mean and covariance with deterministic starts.
 
-    preliminary version
+    Parameters
+    ----------
+    data : array-like
+        Multivariate data set with observation in rows and variables in
+        columns.
+    norm : norm instance
+        If None, then TukeyBiweight norm is used.
+        (Currently no other norms are supported for calling the initial
+        S-estimator)
+    breakdown_point : float in (0, 0.5]
+        Breakdown point for first stage S-estimator.
 
-    reproducability:
+    Notes
+    -----
+    Reproducability:
 
     This uses deterministic starting sets and there is no randomness in the
     estimator.
-    However, this will not be reprodusible across statsmodels versions
-    when the methods for starting sets or tuning parameters for the
-    optimization change.
+    However, the estimates may not be reproducable across statsmodels versions
+    when the methods for starting sets or default tuning parameters for the
+    optimization change. With different starting sets, the estimate can
+    converge to a different local optimum.
+
+    References
+    ----------
+    ..[1] Hubert, Mia, Peter Rousseeuw, Dina Vanpaemel, and Tim Verdonck. 2015.
+       “The DetS and DetMM Estimators for Multivariate Location and Scatter.”
+       Computational Statistics & Data Analysis 81 (January): 64–75.
+       https://doi.org/10.1016/j.csda.2014.07.013.
+    ..[2] Hubert, Mia, Peter J. Rousseeuw, and Tim Verdonck. 2012. “A
+       Deterministic Algorithm for Robust Location and Scatter.” Journal of
+       Computational and Graphical Statistics 21 (3): 618–37.
+       https://doi.org/10.1080/10618600.2012.672100.
     """
 
     def __init__(self, data, norm=None, breakdown_point=0.5):
@@ -1657,6 +1817,24 @@ class CovDetS:
                         scale_bias=self.scale_bias, method="S")
 
     def _get_start_params(self, idx):
+        """Starting parameters from a subsample given by index
+
+        Parameters
+        ----------
+        idx : ndarray
+            Index used to select observations from the data. The index is used
+            for numpy arrays, so it can be either a boolean mask or integers.
+
+        Returns
+        -------
+        mean : ndarray
+            Mean of subsample
+        shape : ndarray
+            The shape matrix of the subsample which is the covariance
+            normalized so that determinant of shape is one.
+        scale : float
+            Scale of subsample, computed so that cov = shape * scale.
+        """
         x_sel = self.data[idx]
         k = x_sel.shape[1]
 
@@ -1705,15 +1883,14 @@ class CovDetS:
             update_scale=True
             )
 
-
-
         return res
 
     def fit(self, *, h_start=None, mean_func=None, scale_func=None,
                 maxiter=100, options_start=None, maxiter_step=5):
-        """
-        Compute minimum covariance determinant estimate of mean and covariance.
+        """Compute S-estimator of mean and covariance.
 
+        Parameters
+        ----------
         h_start : int
             Number of observations used in starting mean and covariance.
         mean_func, scale_func : callable or None.
@@ -1786,7 +1963,6 @@ class CovDetS:
         best.tmean = m
         best.tscale = s
 
-        #return Holder(mean=mean, cov=cov, start_best=best)
         return best  # is Holder instance already
 
 
@@ -1798,10 +1974,57 @@ class CovDetMM():
     efficiency. For other cases, the user has to provide the norm instance
     with desirec tuning parameter.
 
+    Parameters
+    ----------
+    data : array-like
+        Multivariate data set with observation in rows and variables in
+        columns.
+    norm : norm instance
+        If None, then TukeyBiweight norm is used.
+        (Currently no other norms are supported for calling the initial
+        S-estimator)
+        If ``norm`` is an instance of TukeyBiweight, then it will be used in
+        the second stage M-estimation. The ``efficiency`` argument is ignored
+        and the tuning parameter of the user provided instance is not changed.
+    breakdown_point : float in (0, 0.5]
+        Breakdown point for first stage S-estimator.
+    efficiency : float
+        Asymptotic efficiency of second stage M estimator.
+
+    Notes
+    -----
+    Current limitation is that only TukeyBiweight is supported.
+
+    The tuning parameter for second stage M estimator uses a table of values
+    for number of variables up to 15 and efficiency in
+    [0.75, 0.8, 0.85, 0.9, 0.95, 0.975, 0.99]. The tuning parameter for other
+    cases needs to be computed by numerical integration and rootfinding.
+    Alternatively, the user can provide a norm instance with desired tuning
+    parameter.
+
+    References
+    ----------
+    ..[1] Hubert, Mia, Peter Rousseeuw, Dina Vanpaemel, and Tim Verdonck. 2015.
+       “The DetS and DetMM Estimators for Multivariate Location and Scatter.”
+       Computational Statistics & Data Analysis 81 (January): 64–75.
+       https://doi.org/10.1016/j.csda.2014.07.013.
+    ..[2] Hubert, Mia, Peter J. Rousseeuw, and Tim Verdonck. 2012. “A
+       Deterministic Algorithm for Robust Location and Scatter.” Journal of
+       Computational and Graphical Statistics 21 (3): 618–37.
+       https://doi.org/10.1080/10618600.2012.672100.
+    ..[3] Lopuhaä, Hendrik P. 1989. “On the Relation between S-Estimators and
+       M-Estimators of Multivariate Location and Covariance.” The Annals of
+       Statistics 17 (4): 1662–83.
+    ..[4] Salibián-Barrera, Matías, Stefan Van Aelst, and Gert Willems. 2006.
+       “Principal Components Analysis Based on Multivariate MM Estimators with
+       Fast and Robust Bootstrap.” Journal of the American Statistical
+       Association 101 (475): 1198–1211.
+    ..[5] Tatsuoka, Kay S., and David E. Tyler. 2000. “On the Uniqueness of
+       S-Functionals and M-Functionals under Nonelliptical Distributions.” The
+       Annals of Statistics 28 (4): 1219–43.
     """
 
     def __init__(self, data, norm=None, breakdown_point=0.5, efficiency=0.95):
-        # no options yet, methods were written as functions
         self.data = np.asarray(data)
         self.nobs, k_vars = self.data.shape
         self.k_vars = k_vars
@@ -1819,12 +2042,32 @@ class CovDetMM():
         # We allow tukeybiweight norm instance with user provided c
 
         self.norm = norm
-
+        # model for second stage M-estimator
         self.mod = CovM(data, norm_mean=norm, norm_scatter=norm,
                         scale_bias=None, method="S")
 
     def fit(self, maxiter=100):
+        """Estimate model parameters.
 
+        Parameters
+        ----------
+        maxiter : int
+            Maximum number of iterations in the second stage M-estimation.
+        fit args : dict
+            currently missing
+
+        Returns
+        -------
+        Instance of a results or holder class.
+
+        Notes
+        -----
+        This uses CovDetS for the first stage estimation and CovM with fixed
+        scale in the second stage MM-estimation.
+
+        TODO: fit options are missing.
+
+        """
         # first stage estimate
         mod_s = CovDetS(
             self.data,
