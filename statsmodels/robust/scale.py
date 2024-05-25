@@ -426,6 +426,9 @@ class MScale:
         self.chi_func = chi_func
         self.scale_bias = scale_bias
 
+    def __repr__(self):
+        return repr(self.chi_func)
+
     def __call__(self, data, **kwds):
         return self.fit(data, **kwds)
 

@@ -28,9 +28,15 @@ import numpy as np
 from scipy import stats, linalg
 from scipy.linalg.lapack import dtrtri
 from .scale import mad
+import statsmodels.robust.norms as rnorms
+import statsmodels.robust.scale as rscale
+import statsmodels.robust.tools as rtools
 from statsmodels.tools.testing import Holder
 
+from statsmodels.stats.covariance import corr_rank, corr_normal_scores
+
 mad0 = lambda x: mad(x, center=0)  # noqa: E731
+median = lambda x: np.median(x, axis=0)  # noqa: E731
 
 
 # from scikit-learn
@@ -311,6 +317,7 @@ def mahalanobis(data, cov=None, cov_inv=None, sqrt=False):
     """Mahalanobis distance squared
 
     Note: this is without taking the square root.
+    assumes data is already centered.
 
     Parameters
     ----------
@@ -405,13 +412,15 @@ def cov_gk(data, scale_func=mad):
 def cov_ogk(data, maxiter=2, scale_func=mad, cov_func=cov_gk,
             loc_func=lambda x: np.median(x, axis=0), reweight=0.9,
             rescale=True, rescale_raw=True, ddof=1):
-    """orthogonalized Gnanadesikan and Kettenring covariance estimator
+    """Orthogonalized Gnanadesikan and Kettenring covariance estimator.
 
     Based on Maronna and Zamar 2002
 
     Parameters
     ----------
-    data : array_like, 2-D
+    data : array-like
+        Multivariate data set with observation in rows and variables in
+        columns.
     maxiter : int
         Number of iteration steps. According to Maronna and Zamar the
         estimate doesn't improve much after the second iteration and the
@@ -590,12 +599,10 @@ def cov_tyler(data, start_cov=None, normalize=False, maxiter=100, eps=1e-13):
     ----------
     .. [1] Tyler, David E. “A Distribution-Free M-Estimator of Multivariate
        Scatter.” The Annals of Statistics 15, no. 1 (March 1, 1987): 234–51.
-
     .. [2] Soloveychik, I., and A. Wiesel. 2014. Tyler's Covariance Matrix
        Estimator in Elliptical Models With Convex Structure.
        IEEE Transactions on Signal Processing 62 (20): 5251-59.
        doi:10.1109/TSP.2014.2348951.
-
     .. [3] Ollila, Esa, Daniel P. Palomar, and Frederic Pascal.
        “Affine Equivariant Tyler’s M-Estimator Applied to Tail Parameter
        Learning of Elliptical Distributions.” arXiv, May 7, 2023.
@@ -1083,7 +1090,7 @@ def _cov_iter(data, weights_func, weights_args=None, cov_init=None,
     return res
 
 
-def _cov_starting(data, standardize=False, quantile=0.5):
+def _cov_starting(data, standardize=False, quantile=0.5, retransform=False):
     """compute some robust starting covariances
 
     The returned covariance matrices are intended as starting values
@@ -1127,7 +1134,7 @@ def _cov_starting(data, standardize=False, quantile=0.5):
 
     cov_all = []
     d = mahalanobis(xs, cov=None, cov_inv=np.eye(k_vars))
-    percentiles = [(k_vars+2) / nobs * 100 * 2, 25, 50]
+    percentiles = [(k_vars+2) / nobs * 100 * 2, 25, 50, 85]
     cutoffs = np.percentile(d, percentiles)
     for p, cutoff in zip(percentiles, cutoffs):
         xsp = xs[d < cutoff]
@@ -1149,15 +1156,929 @@ def _cov_starting(data, standardize=False, quantile=0.5):
         c03 = _cov_iter(xs, weights_quantile, weights_args=(quantile,),
                         rescale="med", cov_init=c02.cov, maxiter=100)
 
-        if standardize:
+        if not standardize or not retransform:
             cov_all.extend([c0, c01, c02, c03])
         else:
             # compensate for initial rescaling
+            # TODO: this does not return list of Holder anymore
             s = np.outer(std, std)
             cov_all.extend([r.cov * s for r in [c0, c01, c02, c03]])
 
     c2 = cov_ogk(xs)
     cov_all.append(c2)
 
+    c2raw = Holder(
+            cov=c2.cov_raw,
+            mean=c2.loc_raw * std + center,
+            method="ogk_raw",
+            )
+    cov_all.append(c2raw)
+
+    z_tanh = np.tanh(xs)
+    c_th = Holder(
+            cov=np.corrcoef(z_tanh.T),  # not consistently scaled for cov
+            mean=center,  # TODO: do we add inverted mean z_tanh ?
+            method="tanh",
+            )
+    cov_all.append(c_th)
+
+    x_spatial = xs / np.sqrt(np.sum(xs**2, axis=1))[:, None]
+    c_th = Holder(
+            cov=np.cov(x_spatial.T),
+            mean=center,
+            method="spatial",
+            )
+    cov_all.append(c_th)
+
+    c_th = Holder(
+            # not consistently scaled for cov
+            # cov=stats.spearmanr(xs)[0], # not correct shape if k=1 or 2
+            cov=corr_rank(xs),  # always returns matrix, np.corrcoef result
+            mean=center,
+            method="spearman",
+            )
+    cov_all.append(c_th)
+
+    c_ns = Holder(
+            cov=corr_normal_scores(xs),  # not consistently scaled for cov
+            mean=center,  # TODO: do we add inverted mean z_tanh ?
+            method="normal-scores",
+            )
+    cov_all.append(c_ns)
+
     # TODO: rescale back to original space using center and std
     return cov_all
+
+
+# ####### Det, CovDet and helper functions, might be moved to separate module
+
+
+class _Standardize():
+    """Robust standardization of random variable
+
+    """
+
+    def __init__(self, x, func_center=None, func_scale=None):
+        # naming mean or center
+        # maybe also allow str func_scale for robust.scale, e.g. for not
+        #    vectorized Qn
+        if func_center is None:
+            center = np.median(x, axis=0)
+        else:
+            center = func_center(x)
+        xdm = x - center
+        if func_scale is None:
+            scale = mad(xdm, center=0)
+        else:
+            # assumes vectorized
+            scale = func_scale(x)
+
+        self.x_stand = xdm / scale
+
+        self.center = center
+        self.scale = scale
+
+    def transform(self, x):
+        return (x - self.center) / self.scale
+
+    def untransform_mom(self, m, c):
+        mean = self.center + m
+        cov = c * np.outer(self.scale, self.scale)
+        return mean, cov
+
+
+def _orthogonalize_det(x, corr, loc_func, scale_func):
+    """Orthogonalize
+
+    This is a simplified version of the OGK method.
+    version from DetMCD works on zscored data
+    (does not return mean and cov of original data)
+    so we drop the compensation for scaling in zscoring
+
+    z is the data here, zscored with robust estimators,
+    e.g. median and Qn in DetMCD
+    """
+    evals, evecs = np.linalg.eigh(corr)  # noqa: F841
+    z = x.dot(evecs)
+    transf0 = evecs
+
+    scale_z = scale_func(z)  # scale of principal components
+    cov = (transf0 * scale_z**2).dot(transf0.T)
+    # extra step in DetMCD, sphering data with new cov to compute center
+    # I think this is equivalent to scaling z
+    # loc_z = loc_func(z / scale_z) * scale_z  # center of principal components
+    # loc = (transf0 * scale_z).dot(loc_z)
+    transf1 = (transf0 * scale_z).dot(transf0.T)
+    # transf1inv = (transf0 * scale_z**(-1)).dot(transf0.T)
+
+    # loc = loc_func(x @ transf1inv) @ transf1
+    loc = loc_func((z / scale_z).dot(transf0.T)) @ transf1
+
+    return loc, cov
+
+
+def _get_detcov_startidx(z, h, options_start=None, methods_cov="all"):
+    """Starting sets for deterministic robust covariance estimators.
+
+    These are intended as starting sets for DetMCD, DetS and DetMM.
+    """
+
+    if options_start is None:
+        options_start = {}
+
+    loc_func = options_start.get("loc_func", median)
+    scale_func = options_start.get("scale_func", mad)
+    z = (z - loc_func(z)) / scale_func(z)
+
+    if np.squeeze(z).ndim == 1:
+        # only one random variable
+        z = np.squeeze(z)
+        nobs = z.shape[0]
+        idx_sel = np.argpartition(np.abs(z), h)[:h]
+        idx_all = [(idx_sel, "abs-resid")]
+        # next uses symmetric equal-tail trimming
+        idx_sorted = np.argsort(z)
+        h_tail = (nobs - h) // 2
+        idx_all.append((idx_sorted[h_tail : h_tail + h], "trimmed-tail"))
+        return idx_all
+
+    # continue if more than 1 random variable
+    cov_all = _cov_starting(z, standardize=False, quantile=0.5)
+
+    # orthogonalization step
+    idx_all = []
+    for c in cov_all:
+        if not hasattr(c, "method"):
+            continue
+        method = c.method
+        mean, cov = _orthogonalize_det(z, c.cov, loc_func, scale_func)
+        d = mahalanobis(z, mean, cov)
+        idx_sel = np.argpartition(d, h)[:h]
+        idx_all.append((idx_sel, method))
+
+    return idx_all
+
+
+class CovM:
+    """M-estimator for multivariate Mean and Scatter.
+
+    Interface incomplete and experimental.
+
+    Parameters
+    ----------
+    data : array-like
+        Multivariate data set with observation in rows and variables in
+        columns.
+    norm_mean : norm instance
+        If None, then TukeyBiweight norm is used.
+        (Currently no other norms are supported for calling the initial
+        S-estimator)
+    norm_scatter : None or norm instance
+        If norm_scatter is None, then the norm_mean will be used.
+    breakdown_point : float in (0, 0.5]
+        Breakdown point for first stage S-estimator.
+    scale_bias : None or float
+        Must currently be provided if norm_mean is not None.
+    method : str
+        Currently only S-estimator has automatic selection of scale function.
+    """
+
+    def __init__(self, data, norm_mean=None, norm_scatter=None,
+                 scale_bias=None, method="S"):
+        # todo: method defines how norm_mean and norm_scatter are linked
+        #       currently I try for S-estimator
+
+        if method.lower() not in ["s"]:
+            msg = f"method {method} option not recognize or implemented"
+            raise ValueError(msg)
+
+        self.data = np.asarray(data)
+        self.k_vars = k_vars = self.data.shape[1]
+
+        # Todo: check interface for scale bias
+        self.scale_bias = scale_bias
+        if norm_mean is None:
+            norm_mean = rnorms.TukeyBiweight()
+            c = rtools.tuning_s_cov(norm_mean, k_vars, breakdown_point=0.5)
+            norm_mean._set_tuning_param(c, inplace=True)
+            self.scale_bias = rtools.scale_bias_cov_biw(c, k_vars)[0]
+
+        self.norm_mean = norm_mean
+        if norm_scatter is None:
+            self.norm_scatter = self.norm_mean
+        else:
+            self.norm_scatter = norm_scatter
+
+        self.weights_mean = self.norm_mean.weights
+        self.weights_scatter = self.weights_mean
+        # self.weights_scatter = lambda d: self.norm_mean.rho(d) / d**2
+        # this is for S-estimator, M-scale
+        self.rho = self.norm_scatter.rho
+
+    def _fit_mean_shape(self, mean, shape, scale):
+        """Estimate mean and shape in iteration step.
+
+        This does only one step.
+
+        Parameters
+        ----------
+        mean : ndarray
+            Starting value for mean
+        shape : ndarray
+            Starting value for shape matrix.
+        scale : float
+            Starting value for scale.
+
+        Returns
+        -------
+        Holder instance with updated estimates.
+        """
+        d = mahalanobis(self.data - mean, shape, sqrt=True) / scale
+        weights_mean = self.weights_mean(d)
+        weights_cov = self.weights_scatter(d)
+
+        res = cov_weighted(
+            self.data,
+            weights=weights_mean,
+            center=None,
+            weights_cov=weights_cov,
+            weights_cov_denom="det",
+            ddof=1,
+            )
+        return res
+
+    def _fit_scale(self, maha, start_scale=None, maxiter=100, rtol=1e-5,
+                   atol=1e-5):
+        """Estimate iterated M-scale.
+
+        Parameters
+        ----------
+        maha : ndarray
+        start_scale : None or float
+            Starting scale. If it is None, the mad of maha wi
+        maxiter : int
+            Maximum iterations to compute M-scale
+        rtol, atol : float
+            Relative and absolute convergence criteria for scale used with
+            allclose.
+
+        Returns
+        -------
+        float : scale estimate
+        """
+        if start_scale is None:
+            # TODO: this does not really make sense
+            # better scale to median of maha and chi or chi2
+            start_scale = mad(maha)
+
+        scale = rscale._scale_iter(
+            maha,
+            scale0=start_scale,
+            maxiter=maxiter,
+            rtol=rtol,
+            atol=atol,
+            meef_scale=self.rho,
+            scale_bias=self.scale_bias,
+            )
+        return scale
+
+    def fit(self, start_mean=None, start_shape=None, start_scale=None,
+            maxiter=100, update_scale=True):
+        """Estimate mean, shape and scale parameters with MM-estimator.
+
+        Parameters
+        ----------
+        start_mean : None or float
+            Starting value for mean, center.
+            If None, then median is used.
+        start_shape : None or 2-dim ndarray
+            Starting value of shape matrix, i.e. scatter matrix normalized
+            to det(scatter) = 1.
+            If None, then scaled covariance matrix of data is used.
+        start_scale : None or float.
+            Starting value of scale.
+        maxiter : int
+            Maximum number of iterations.
+        update_scale : bool
+            If update_scale is False, then
+
+        Returns
+        -------
+        results instance with mean, shape, scale, cov and other attributes.
+
+        Notes
+        -----
+        If start_scale is provided and update_scale is False, then this is
+        an M-estimator with a predetermined scale as used in the second
+        stage of an MM-estimator.
+
+        """
+
+        converged = False
+
+        if start_scale is not None:
+            scale_old = start_scale
+        else:
+            scale_old = 1
+            # will be reset if start_shape is also None.
+        if start_mean is not None:
+            mean_old = start_mean
+        else:
+            mean_old = np.median(self.data, axis=0)
+        if start_shape is not None:
+            shape_old = start_shape
+        else:
+            shape_old = np.cov(self.data.T)
+            scale = np.linalg.det(shape_old) ** (1 / self.k_vars)
+            shape_old /= scale
+            if start_scale is not None:
+                scale_old = scale
+
+        if update_scale is False:
+            scale = start_scale
+
+        for i in range(maxiter):
+            shape, mean = self._fit_mean_shape(mean_old, shape_old, scale_old)
+            d = mahalanobis(self.data - mean, shape, sqrt=True)
+            if update_scale:
+                scale = self._fit_scale(d, start_scale=scale_old, maxiter=10)
+
+            if (np.allclose(scale, scale_old, rtol=1e-5) and
+                    np.allclose(mean, mean_old, rtol=1e-5) and
+                    np.allclose(shape, shape_old, rtol=1e-5)
+                    ):  # noqa E124
+                converged = True
+                break
+            scale_old = scale
+            mean_old = mean
+            shape_old = shape
+
+        maha = mahalanobis(self.data - mean, shape / scale, sqrt=True)
+
+        res = Holder(
+            mean=mean,
+            shape=shape,
+            scale=scale,
+            cov=shape * scale**2,
+            converged=converged,
+            n_iter=i,
+            mahalanobis=maha,
+            )
+        return res
+
+
+class CovDetMCD:
+    """Minimum covariance determinant estimator with deterministic starts.
+
+    preliminary version
+
+    reproducability:
+
+    This uses deterministic starting sets and there is no randomness in the
+    estimator.
+    However, this will not be reprodusible across statsmodels versions
+    when the methods for starting sets or tuning parameters for the
+    optimization change.
+
+    Parameters
+    ----------
+    data : array-like
+        Multivariate data set with observation in rows and variables in
+        columns.
+
+    Notes
+    -----
+    The correction to the scale to take account of trimming in the reweighting
+    estimator is based on the chisquare tail probability.
+    This differs from CovMcd in R which uses the observed fraction of
+    observations above the metric trimming threshold.
+
+    References
+    ----------
+    ..[1] Hubert, Mia, Peter Rousseeuw, Dina Vanpaemel, and Tim Verdonck. 2015.
+       “The DetS and DetMM Estimators for Multivariate Location and Scatter.”
+       Computational Statistics & Data Analysis 81 (January): 64–75.
+       https://doi.org/10.1016/j.csda.2014.07.013.
+    ..[2] Hubert, Mia, Peter J. Rousseeuw, and Tim Verdonck. 2012. “A
+       Deterministic Algorithm for Robust Location and Scatter.” Journal of
+       Computational and Graphical Statistics 21 (3): 618–37.
+       https://doi.org/10.1080/10618600.2012.672100.
+    """
+
+    def __init__(self, data):
+        # no options yet, methods were written as functions
+        self.data = np.asarray(data)
+
+    def _cstep(self, x, mean, cov, h, maxiter=2, tol=1e-8):
+        """C-step for mcd iteration
+
+        x is data, perc is percentile h / nobs, don't need perc when we
+        use np.argpartition
+        requires starting mean and cov
+        """
+
+        converged = False
+
+        for _ in range(maxiter):
+            d = mahalanobis(x - mean, cov)
+            idx_sel = np.argpartition(d, h)[:h]
+            x_sel = x[idx_sel]
+            mean = x_sel.mean(0)
+            cov_new = np.cov(x_sel.T, ddof=1)
+
+            if ((cov - cov_new)**2).mean() < tol:
+                cov = cov_new
+                converged = True
+                break
+
+            cov = cov_new
+
+        return mean, cov, converged
+
+    def _fit_one(self, x, idx, h, maxiter=2, mean=None, cov=None):
+        """Compute mcd for one starting set of observations.
+
+        Parameters
+        ----------
+        x : ndarray
+            Data.
+        idx : ndarray
+            Indices or mask of observation in starting set, used as ``x[idx]``
+        h : int
+            Number of observations in evaluation set for cov.
+        maxiter : int
+            Maximum number of c-steps.
+
+        Returns
+        -------
+        mean : ndarray
+            Estimated mean.
+        cov : ndarray
+            Estimated covariance.
+        det : float
+            Determinant of estimated covariance matrix.
+
+        Notes
+        -----
+        This does not do any preprocessing of the data and returns the
+        empirical mean and covariance of evaluation set of the data ``x``.
+        """
+        if idx is not None:
+            x_sel = x[idx]
+        else:
+            x_sel = x
+        if mean is None:
+            mean = x_sel.mean(0)
+        if cov is None:
+            cov = np.cov(x_sel.T, ddof=1)
+
+        # updated with c-step
+        mean, cov, conv = self._cstep(x, mean, cov, h, maxiter=maxiter)
+        det = np.linalg.det(cov)
+
+        return mean, cov, det, conv
+
+    def fit(self, h, *, h_start=None, mean_func=None, scale_func=None,
+            maxiter=100, options_start=None, reweight=True,
+            trim_frac=0.975, maxiter_step=100):
+        """
+        Compute minimum covariance determinant estimate of mean and covariance.
+
+        x : array-like
+            Data with observation in rows and variables in columns.
+        h : int
+            Number of observations in evaluation set for minimimizing
+            determinant.
+        h_start : int
+            Number of observations used in starting mean and covariance.
+        mean_func, scale_func : callable or None.
+            Mean and scale function for initial standardization.
+            Current defaults, if they are None, are median and mad, but
+            default scale_func will likely change.
+        options_start : None or dict
+            Options for the starting estimators.
+            currently not used
+            TODO: which options? e.g. for OGK
+        reweight : bool
+            If reweight is true, then a reweighted estimator is returned. The
+            reweighting is based on a chisquare trimming of Mahalanobis
+            distances. The raw results are in the ``results_raw`` attribute.
+        trim_frac : float in (0, 1)
+            Trim fraction used if reweight is true. Used to compute quantile
+            of chisquare distribution with tail probability 1 - trim_frac.
+        maxiter_step : int
+            Number of iteration in the c-step.
+            In the current implementation a small maxiter in the c-step does
+            not find the optimal solution.
+
+        Returns
+        -------
+        Holder instance with results
+        """
+
+        x = self.data
+        nobs, k_vars = x.shape
+
+        if h is None:
+            h = (nobs + k_vars + 1) // 2  # check with literature
+        if mean_func is None:
+            mean_func = lambda x: np.median(x, axis=0)  # noqa
+        if scale_func is None:
+            scale_func = mad
+        if options_start is None:
+            options_start = {}
+        if h_start is None:
+            nobs, k_vars = x.shape
+            h_start = max(nobs // 2 + 1, k_vars + 1)
+
+        m = mean_func(x)
+        s = scale_func(x)
+        z = (x - m) / s
+        # get initial mean, cov of standardized data, we only need ranking
+        # of obs
+        starts = _get_detcov_startidx(z, h_start, options_start)
+
+        fac_trunc = coef_normalize_cov_truncated(h / nobs, k_vars)
+
+        res = {}
+        for ii, ini in enumerate(starts):
+            idx_sel, method = ini
+            mean, cov, det, _ = self._fit_one(x, idx_sel, h,
+                                              maxiter=maxiter_step)
+            res[ii] = Holder(
+                mean=mean,
+                cov=cov * fac_trunc,
+                det_subset=det,
+                method=method,
+                )
+
+        det_all = np.array([i.det_subset for i in res.values()])
+        idx_best = np.argmin(det_all)
+        best = res[idx_best]
+        # mean = best.mean
+        # cov = best.cov
+
+        # need to c-step to convergence for best,
+        # is with best 2 in original DetMCD
+        if maxiter_step < maxiter:
+            mean, cov, det, conv = self._fit_one(x, None, h, maxiter=maxiter,
+                                                 mean=best.mean, cov=best.cov)
+            best = Holder(
+                mean=mean,
+                cov=cov * fac_trunc,
+                det_subset=det,
+                method=method,
+                converged=conv,
+                )
+
+        # include extra info in returned Holder instance
+        best.det_all = det_all
+        best.idx_best = idx_best
+
+        best.tmean = m
+        best.tscale = s
+
+        if reweight:
+            cov, mean = _reweight(x, best.mean, best.cov, trim_frac=trim_frac,
+                                  ddof=1)
+            fac_trunc = coef_normalize_cov_truncated(trim_frac, k_vars)
+            best_w = Holder(
+                mean=mean,
+                cov=cov * fac_trunc,
+                # det_subset=det,
+                method=method,
+                results_raw=best,
+                )
+
+            return best_w
+        else:
+            return best  # is Holder instance already
+
+
+class CovDetS:
+    """S-estimator for mean and covariance with deterministic starts.
+
+    Parameters
+    ----------
+    data : array-like
+        Multivariate data set with observation in rows and variables in
+        columns.
+    norm : norm instance
+        If None, then TukeyBiweight norm is used.
+        (Currently no other norms are supported for calling the initial
+        S-estimator)
+    breakdown_point : float in (0, 0.5]
+        Breakdown point for first stage S-estimator.
+
+    Notes
+    -----
+    Reproducability:
+
+    This uses deterministic starting sets and there is no randomness in the
+    estimator.
+    However, the estimates may not be reproducable across statsmodels versions
+    when the methods for starting sets or default tuning parameters for the
+    optimization change. With different starting sets, the estimate can
+    converge to a different local optimum.
+
+    References
+    ----------
+    ..[1] Hubert, Mia, Peter Rousseeuw, Dina Vanpaemel, and Tim Verdonck. 2015.
+       “The DetS and DetMM Estimators for Multivariate Location and Scatter.”
+       Computational Statistics & Data Analysis 81 (January): 64–75.
+       https://doi.org/10.1016/j.csda.2014.07.013.
+    ..[2] Hubert, Mia, Peter J. Rousseeuw, and Tim Verdonck. 2012. “A
+       Deterministic Algorithm for Robust Location and Scatter.” Journal of
+       Computational and Graphical Statistics 21 (3): 618–37.
+       https://doi.org/10.1080/10618600.2012.672100.
+    """
+
+    def __init__(self, data, norm=None, breakdown_point=0.5):
+        # no options yet, methods were written as functions
+        self.data = np.asarray(data)
+        self.nobs, k_vars = self.data.shape
+        self.k_vars = k_vars
+
+        # self.scale_bias = scale_bias
+        if norm is None:
+            norm = rnorms.TukeyBiweight()
+            c = rtools.tuning_s_cov(norm, k_vars, breakdown_point=0.5)
+            norm._set_tuning_param(c, inplace=True)
+            self.scale_bias = rtools.scale_bias_cov_biw(c, k_vars)[0]
+        else:
+            raise NotImplementedError("only Biweight norm is supported")
+
+        self.norm = norm
+
+        self.mod = CovM(data, norm_mean=norm, norm_scatter=norm,
+                        scale_bias=self.scale_bias, method="S")
+
+    def _get_start_params(self, idx):
+        """Starting parameters from a subsample given by index
+
+        Parameters
+        ----------
+        idx : ndarray
+            Index used to select observations from the data. The index is used
+            for numpy arrays, so it can be either a boolean mask or integers.
+
+        Returns
+        -------
+        mean : ndarray
+            Mean of subsample
+        shape : ndarray
+            The shape matrix of the subsample which is the covariance
+            normalized so that determinant of shape is one.
+        scale : float
+            Scale of subsample, computed so that cov = shape * scale.
+        """
+        x_sel = self.data[idx]
+        k = x_sel.shape[1]
+
+        mean = x_sel.mean(0)
+        cov = np.cov(x_sel.T)
+
+        scale2 = np.linalg.det(cov) ** (1 / k)
+        shape = cov / scale2
+        scale = np.sqrt(scale2)
+        return mean, shape, scale
+
+    def _fit_one(self, mean=None, shape=None, scale=None, maxiter=100):
+        """Compute local M-estimator for one starting set of observations.
+
+        Parameters
+        ----------
+        x : ndarray
+            Data.
+        idx : ndarray
+            Indices or mask of observation in starting set, used as ``x[idx]``
+        h : int
+            Number of observations in evaluation set for cov.
+        maxiter : int
+            Maximum number of c-steps.
+
+        Returns
+        -------
+        mean : ndarray
+            Estimated mean.
+        cov : ndarray
+            Estimated covariance.
+        det : float
+            Determinant of estimated covariance matrix.
+
+        Notes
+        -----
+        This uses CovM to solve for the local optimum for given starting
+        values.
+        """
+
+        res = self.mod.fit(
+            start_mean=mean,
+            start_shape=shape,
+            start_scale=scale,
+            maxiter=maxiter,
+            update_scale=True
+            )
+
+        return res
+
+    def fit(self, *, h_start=None, mean_func=None, scale_func=None,
+            maxiter=100, options_start=None, maxiter_step=5):
+        """Compute S-estimator of mean and covariance.
+
+        Parameters
+        ----------
+        h_start : int
+            Number of observations used in starting mean and covariance.
+        mean_func, scale_func : callable or None.
+            Mean and scale function for initial standardization.
+            Current defaults, if they are None, are median and mad, but
+            default scale_func will likely change.
+        options_start : None or dict
+           Options for the starting estimators.
+           TODO: which options? e.g. for OGK
+
+        Returns
+        -------
+        Holder instance with results
+        """
+
+        x = self.data
+        nobs, k_vars = x.shape
+
+        if mean_func is None:
+            mean_func = lambda x: np.median(x, axis=0)  # noqa
+        if scale_func is None:
+            scale_func = mad
+        if options_start is None:
+            options_start = {}
+        if h_start is None:
+            nobs, k_vars = x.shape
+            h_start = max(nobs // 2 + 1, k_vars + 1)
+
+        m = mean_func(x)
+        s = scale_func(x)
+        z = (x - m) / s
+        # get initial mean, cov of standardized data, we only need ranking
+        # of obs
+        starts = _get_detcov_startidx(z, h_start, options_start)
+
+        res = {}
+        for ii, ini in enumerate(starts):
+            idx_sel, method = ini
+            mean0, shape0, scale0 = self._get_start_params(idx_sel)
+            res_i = self._fit_one(
+                mean=mean0,
+                shape=shape0,
+                scale=scale0,
+                maxiter=maxiter_step,
+                )
+
+            res_i.method = method
+            res[ii] = res_i
+
+        scale_all = np.array([i.scale for i in res.values()])
+        idx_best = np.argmin(scale_all)
+        best = res[idx_best]
+        # mean = best.mean
+        # cov = best.cov
+
+        # need to c-step to convergence for best,
+        # is with best 2 in original DetMCD
+        if maxiter_step < maxiter:
+            best = self._fit_one(
+                mean=best.mean,
+                shape=best.shape,
+                scale=best.scale,
+                maxiter=maxiter,
+                )
+
+        # include extra info in returned Holder instance
+        best.scale_all = scale_all
+        best.idx_best = idx_best
+
+        best.tmean = m
+        best.tscale = s
+
+        return best  # is Holder instance already
+
+
+class CovDetMM():
+    """MM estimator using DetS as first stage estimator.
+
+    Note: The tuning parameter for second stage M estimator is currently only
+    available for a small number of variables and only three values of
+    efficiency. For other cases, the user has to provide the norm instance
+    with desirec tuning parameter.
+
+    Parameters
+    ----------
+    data : array-like
+        Multivariate data set with observation in rows and variables in
+        columns.
+    norm : norm instance
+        If None, then TukeyBiweight norm is used.
+        (Currently no other norms are supported for calling the initial
+        S-estimator)
+        If ``norm`` is an instance of TukeyBiweight, then it will be used in
+        the second stage M-estimation. The ``efficiency`` argument is ignored
+        and the tuning parameter of the user provided instance is not changed.
+    breakdown_point : float in (0, 0.5]
+        Breakdown point for first stage S-estimator.
+    efficiency : float
+        Asymptotic efficiency of second stage M estimator.
+
+    Notes
+    -----
+    Current limitation is that only TukeyBiweight is supported.
+
+    The tuning parameter for second stage M estimator uses a table of values
+    for number of variables up to 15 and efficiency in
+    [0.75, 0.8, 0.85, 0.9, 0.95, 0.975, 0.99]. The tuning parameter for other
+    cases needs to be computed by numerical integration and rootfinding.
+    Alternatively, the user can provide a norm instance with desired tuning
+    parameter.
+
+    References
+    ----------
+    ..[1] Hubert, Mia, Peter Rousseeuw, Dina Vanpaemel, and Tim Verdonck. 2015.
+       “The DetS and DetMM Estimators for Multivariate Location and Scatter.”
+       Computational Statistics & Data Analysis 81 (January): 64–75.
+       https://doi.org/10.1016/j.csda.2014.07.013.
+    ..[2] Hubert, Mia, Peter J. Rousseeuw, and Tim Verdonck. 2012. “A
+       Deterministic Algorithm for Robust Location and Scatter.” Journal of
+       Computational and Graphical Statistics 21 (3): 618–37.
+       https://doi.org/10.1080/10618600.2012.672100.
+    ..[3] Lopuhaä, Hendrik P. 1989. “On the Relation between S-Estimators and
+       M-Estimators of Multivariate Location and Covariance.” The Annals of
+       Statistics 17 (4): 1662–83.
+    ..[4] Salibián-Barrera, Matías, Stefan Van Aelst, and Gert Willems. 2006.
+       “Principal Components Analysis Based on Multivariate MM Estimators with
+       Fast and Robust Bootstrap.” Journal of the American Statistical
+       Association 101 (475): 1198–1211.
+    ..[5] Tatsuoka, Kay S., and David E. Tyler. 2000. “On the Uniqueness of
+       S-Functionals and M-Functionals under Nonelliptical Distributions.” The
+       Annals of Statistics 28 (4): 1219–43.
+    """
+
+    def __init__(self, data, norm=None, breakdown_point=0.5, efficiency=0.95):
+        self.data = np.asarray(data)
+        self.nobs, k_vars = self.data.shape
+        self.k_vars = k_vars
+        self.breakdown_point = breakdown_point
+
+        # self.scale_bias = scale_bias
+        if norm is None:
+            norm = rnorms.TukeyBiweight()
+            c = rtools.tukeybiweight_mvmean_eff(k_vars, efficiency)
+            norm._set_tuning_param(c, inplace=True)
+            # scale_bias is not used for second stage MM norm
+            # self.scale_bias = rtools.scale_bias_cov_biw(c, k_vars)[0]
+        elif not isinstance(norm, rnorms.TukeyBiweight):
+            raise NotImplementedError("only Biweight norm is supported")
+        # We allow tukeybiweight norm instance with user provided c
+
+        self.norm = norm
+        # model for second stage M-estimator
+        self.mod = CovM(data, norm_mean=norm, norm_scatter=norm,
+                        scale_bias=None, method="S")
+
+    def fit(self, maxiter=100):
+        """Estimate model parameters.
+
+        Parameters
+        ----------
+        maxiter : int
+            Maximum number of iterations in the second stage M-estimation.
+        fit args : dict
+            currently missing
+
+        Returns
+        -------
+        Instance of a results or holder class.
+
+        Notes
+        -----
+        This uses CovDetS for the first stage estimation and CovM with fixed
+        scale in the second stage MM-estimation.
+
+        TODO: fit options are missing.
+
+        """
+        # first stage estimate
+        mod_s = CovDetS(
+            self.data,
+            norm=None,
+            breakdown_point=self.breakdown_point
+            )
+        res_s = mod_s.fit()
+
+        res = self.mod.fit(
+            start_mean=res_s.mean,
+            start_shape=res_s.shape,
+            start_scale=res_s.scale,
+            maxiter=maxiter,
+            update_scale=False,
+            )
+
+        return res

@@ -4,7 +4,7 @@ Created on Mar. 11, 2024 10:41:37 p.m.
 Author: Josef Perktold
 License: BSD-3
 """
-
+# flake8: noqa E731
 import numpy as np
 from scipy import stats, integrate, optimize
 
@@ -57,8 +57,8 @@ def _var_normal(norm):
 
 
     """
-    num = stats.norm.expect(lambda x: norm.psi(x)**2)
-    denom = stats.norm.expect(lambda x: norm.psi_deriv(x))**2
+    num = stats.norm.expect(lambda x: norm.psi(x)**2)  #noqa E731
+    denom = stats.norm.expect(lambda x: norm.psi_deriv(x))**2  #noqa E731
     return num / denom
 
 
@@ -100,7 +100,7 @@ def _var_normal_jump(norm):
 
 
     """
-    num = stats.norm.expect(lambda x: norm.psi(x)**2)
+    num = stats.norm.expect(lambda x: norm.psi(x)**2)  #noqa E731
 
     def func(x):
         # derivative normal pdf
@@ -142,7 +142,6 @@ def _get_tuning_param(norm, eff, kwd="c", kwargs=None, use_jump=False,
         efficiency.
 
     """
-    kwds = {} if kwargs is None else kwargs
     if bracket is None:
         bracket = [0.1, 10]
 
@@ -150,12 +149,12 @@ def _get_tuning_param(norm, eff, kwd="c", kwargs=None, use_jump=False,
         def func(c):
             # kwds.update({kwd: c})
             # return _var_normal(norm(**kwds)) - 1 / eff
-            norm._set_tuning_param(c)
+            norm._set_tuning_param(c, inplace=True)
             return _var_normal(norm) - 1 / eff
     else:
         def func(c):
-            norm._set_tuning_param(c)
-            return _var_normal_jump(norm(**kwds) - 1 / eff)
+            norm._set_tuning_param(c, inplace=True)
+            return _var_normal_jump(norm) - 1 / eff
 
     res = optimize.brentq(func, *bracket)
     return res
@@ -215,14 +214,15 @@ def tuning_s_estimator_mean(norm, breakdown=None):
 
     def func(c):
         norm_ = norm
-        norm_._set_tuning_param(c)
-        bp = stats.norm.expect(lambda x : norm_.rho(x)) / norm_.max_rho()
+        norm_._set_tuning_param(c, inplace=True)
+        bp = (stats.norm.expect(lambda x : norm_.rho(x)) /  #noqa E731
+              norm_.max_rho())
         return bp
 
     res = []
     for bp in bps:
-        c_bp = optimize.brentq(lambda c0: func(c0) - bp, 0.1, 10)
-        norm._set_tuning_param(c_bp)  # inplace modification
+        c_bp = optimize.brentq(lambda c0: func(c0) - bp, 0.1, 10)  #noqa E731
+        norm._set_tuning_param(c_bp, inplace=True)  # inplace modification
         eff = 1 / _var_normal(norm)
         b = stats.norm.expect(lambda x : norm.rho(x))
         res.append([bp, eff, c_bp, b])
@@ -242,3 +242,321 @@ def tuning_s_estimator_mean(norm, breakdown=None):
         )
 
     return res2
+
+
+def scale_bias_cov_biw(c, k_vars):
+    """Multivariate scale bias correction for TukeyBiweight norm.
+
+    This uses the chisquare distribution as reference distribution for the
+    squared Mahalanobis distance.
+    """
+    p = k_vars  # alias for formula
+    chip, chip2, chip4, chip6 = stats.chi2.cdf(c**2, [p, p + 2, p + 4, p + 6])
+    b = p / 2 * chip2 - p * (p + 2) / (2 * c**2) * chip4
+    b += p * (p + 2) * (p + 4) / (6 * c**4) * chip6 + c**2 / 6 * (1 - chip)
+    return b, b / (c**2 / 6)
+
+
+def scale_bias_cov(norm, k_vars):
+    """Multivariate scale bias correction.
+
+
+    Parameter
+    ---------
+    norm : norm instance
+        The rho function of the norm is used in the moment condition for
+        estimating scale.
+    k_vars : int
+        Number of random variables in the multivariate data.
+
+    Returns
+    -------
+    scale_bias: float
+    breakdown_point : float
+        Breakdown point computed as scale bias divided by max rho.
+    """
+
+    rho = lambda x: (norm.rho(np.sqrt(x)))  # noqa
+    scale_bias = stats.chi2.expect(rho, args=(k_vars,))
+    return scale_bias, scale_bias / norm.max_rho()
+
+
+def tuning_s_cov(norm, k_vars, breakdown_point=0.5, limits=()):
+    """Tuning parameter for multivariate S-estimator given breakdown point.
+    """
+    from .norms import TukeyBiweight  # avoid circular import
+
+    if not limits:
+        limits = (0.5, 30)
+
+    if isinstance(norm, TukeyBiweight):
+        def func(c):
+            return scale_bias_cov_biw(c, k_vars)[1] - breakdown_point
+    else:
+        norm = norm._set_tuning_param(2., inplace=False)  # create copy
+
+        def func(c):
+            norm._set_tuning_param(c, inplace=True)
+            return scale_bias_cov(norm, k_vars)[1] - breakdown_point
+
+    p_tune = optimize.brentq(func, limits[0], limits[1])
+    return p_tune
+
+
+def eff_mvmean(norm, k_vars):
+    """Efficiency for M-estimator of multivariate mean at normal distribution.
+
+    This also applies to estimators that are locally equivalent to an
+    M-estimator such as S- and MM-estimators.
+
+    Parameters
+    ----------
+    norm : instance of norm class
+    k_vars : int
+        Number of variables in multivariate random variable, i.e. dimension.
+
+    Returns
+    -------
+    eff : float
+        Asymptotic relative efficiency of mean at normal distribution.
+    alpha : float
+        Numerical integral. Efficiency is beta**2 / alpha
+    beta : float
+        Numerical integral.
+
+    Notes
+    -----
+    This implements equ. (5.3) p. 1671 in Lopuhaä 1989
+
+    References
+    ----------
+
+    .. [1] Lopuhaä, Hendrik P. 1989. “On the Relation between S-Estimators
+       and M-Estimators of Multivariate Location and Covariance.”
+       The Annals of Statistics 17 (4): 1662–83.
+
+    """
+    k = k_vars  # shortcut
+    f_alpha = lambda d: norm.psi(d)**2 / k
+    f_beta = lambda d: ((1 - 1 / k) * norm.weights(d) +
+                        1 / k * norm.psi_deriv(d))
+    alpha = stats.chi(k).expect(f_alpha)
+    beta = stats.chi(k).expect(f_beta)
+    return beta**2 / alpha, alpha, beta
+
+
+def eff_mvshape(norm, k_vars):
+    """Efficiency of M-estimator of multivariate shape at normal distribution.
+
+    This also applies to estimators that are locally equivalent to an
+    M-estimator such as S- and MM-estimators.
+
+    Parameters
+    ----------
+    norm : instance of norm class
+    k_vars : int
+        Number of variables in multivariate random variable, i.e. dimension.
+
+    Returns
+    -------
+    eff : float
+        Asymptotic relative efficiency of mean at normal distribution.
+    alpha : float
+        Numerical integral. Efficiency is beta**2 / alpha
+    beta : float
+        Numerical integral.
+
+    Notes
+    -----
+    This implements sigma_1 in equ. (5.5) p. 1671 in Lopuhaä 1989.
+    Efficiency of shape is approximately 1 / sigma1.
+
+    References
+    ----------
+
+    .. [1] Lopuhaä, Hendrik P. 1989. “On the Relation between S-Estimators
+       and M-Estimators of Multivariate Location and Covariance.”
+       The Annals of Statistics 17 (4): 1662–83.
+
+    """
+
+    k = k_vars  # shortcut
+    f_a = lambda d: k * (k + 2) * norm.psi(d)**2 * d**2
+    f_b = lambda d: norm.psi_deriv(d) * d**2 + (k + 1) * norm.psi(d) * d
+    a = stats.chi(k).expect(f_a)
+    b = stats.chi(k).expect(f_b)
+    return b**2 / a, a, b
+
+
+def tuning_m_cov_eff(norm, k_vars, efficiency=0.95, eff_mean=True, limits=()):
+    """Tuning parameter for multivariate M-estimator given efficiency.
+
+    This also applies to estimators that are locally equivalent to an
+    M-estimator such as S- and MM-estimators.
+
+    Parameters
+    ----------
+    norm : instance of norm class
+    k_vars : int
+        Number of variables in multivariate random variable, i.e. dimension.
+    efficiency : float < 1
+        Desired asymptotic relative efficiency of mean estimator.
+        Default is 0.95.
+    eff_mean : bool
+        If eff_mean is true (default), then tuning parameter is to achieve
+        efficiency of mean estimate.
+        If eff_mean is fale, then tuning parameter is to achieve efficiency
+        of shape estimate.
+    limits : tuple
+        Limits for rootfinding with scipy.optimize.brentq.
+        In some cases the interval limits for rootfinding can be too small
+        and not cover the root. Current default limits are (0.5, 30).
+
+    Returns
+    -------
+    float : Tuning parameter for the norm to achieve desired efficiency.
+        Asymptotic relative efficiency of mean at normal distribution.
+
+    Notes
+    -----
+    This uses numerical integration and rootfinding and will be
+    relatively slow.
+    """
+    if not limits:
+        limits = (0.5, 30)
+
+    # make copy of norm
+    norm = norm._set_tuning_param(1, inplace=False)
+
+    if eff_mean:
+        def func(c):
+            norm._set_tuning_param(c, inplace=True)
+            return eff_mvmean(norm, k_vars)[0] - efficiency
+    else:
+        def func(c):
+            norm._set_tuning_param(c, inplace=True)
+            return eff_mvshape(norm, k_vars)[0] - efficiency
+
+    p_tune = optimize.brentq(func, limits[0], limits[1])
+    return p_tune
+
+
+#  ##### tables
+
+tukeybiweight_bp = {
+    # breakdown point : (tuning parameter, efficiency, scale bias)
+    0.50: (1.547645, 0.286826, 0.199600),
+    0.45: (1.756059, 0.369761, 0.231281),
+    0.40: (1.987965, 0.461886, 0.263467),
+    0.35: (2.251831, 0.560447, 0.295793),
+    0.30: (2.560843, 0.661350, 0.327896),
+    0.25: (2.937015, 0.759040, 0.359419),
+    0.20: (3.420681, 0.846734, 0.390035),
+    0.15: (4.096255, 0.917435, 0.419483),
+    0.10: (5.182361, 0.966162, 0.447614),
+    0.05: (7.545252, 0.992424, 0.474424),
+    }
+
+tukeybiweight_eff = {
+    # efficiency : (tuning parameter, breakdown point)
+    0.65: (2.523102, 0.305646),
+    0.70: (2.697221, 0.280593),
+    0.75: (2.897166, 0.254790),
+    0.80: (3.136909, 0.227597),
+    0.85: (3.443690, 0.197957),
+    0.90: (3.882662, 0.163779),
+    0.95: (4.685065, 0.119414),
+    0.97: (5.596823, 0.087088),
+    0.98: (5.920719, 0.078604),
+    0.99: (7.041392, 0.056969),
+    }
+
+# relative efficiency for M and MM estimator of multivariate location
+# Table 2 from Kudraszow and Maronna JMA 2011
+# k in [1, 2, 3, 4, 5, 10], eff in [0.8, 0.9, 0.95
+# TODO: need to replace with more larger table and more digits.
+# (4, 0.95): 5.76 -. 5.81 to better match R rrcov and numerical integration
+tukeybiweight_mvmean_eff_km = {
+        (1, 0.8): 3.14, (2, 0.8): 3.51, (3, 0.8): 3.82, (4, 0.8): 4.1,
+        (5, 0.8): 4.34, (10, 0.8): 5.39,
+        (1, 0.9): 3.88, (2, 0.9): 4.28, (3, 0.9): 4.62, (4, 0.9): 4.91,
+        (5, 0.9): 5.18, (10, 0.9): 6.38,
+        (1, 0.95): 4.68, (2, 0.95): 5.12, (3, 0.95): 5.48, (4, 0.95): 5.81,
+        (5, 0.95): 6.1, (10, 0.95): 7.67,
+        }
+
+_table_biweight_mvmean_eff = np.array([
+    [2.89717, 3.13691, 3.44369, 3.88266, 4.68506, 5.59682, 7.04139],
+    [3.26396, 3.51006, 3.82643, 4.2821, 5.12299, 6.0869, 7.62344],
+    [3.5721, 3.82354, 4.14794, 4.61754, 5.49025, 6.49697, 8.10889],
+    [3.84155, 4.09757, 4.42889, 4.91044, 5.81032, 6.85346, 8.52956],
+    [4.08323, 4.34327, 4.68065, 5.17267, 6.09627, 7.17117, 8.90335],
+    [4.30385, 4.56746, 4.91023, 5.41157, 6.35622, 7.45933, 9.24141],
+    [4.50783, 4.77466, 5.12228, 5.63199, 6.59558, 7.72408, 9.5512],
+    [4.69828, 4.96802, 5.32006, 5.83738, 6.81817, 7.96977, 9.83797],
+    [4.87744, 5.14986, 5.506, 6.03022, 7.02679, 8.19958, 10.10558],
+    [5.04704, 5.32191, 5.68171, 6.21243, 7.22354, 8.41594, 10.35696],
+    [5.20839, 5.48554, 5.84879, 6.38547, 7.41008, 8.62071, 10.59439],
+    [5.36254, 5.64181, 6.00827, 6.55051, 7.58772, 8.81538, 10.81968],
+    [5.51034, 5.7916, 6.16106, 6.7085, 7.75752, 9.00118, 11.03428],
+    [5.65249, 5.9356, 6.3079, 6.86021, 7.92034, 9.17908, 11.23939],
+    ])
+
+_table_biweight_mvshape_eff = np.array([
+    [3.57210, 3.82354, 4.14794, 4.61754, 5.49025, 6.49697, 8.10889],
+    [3.84155, 4.09757, 4.42889, 4.91044, 5.81032, 6.85346, 8.52956],
+    [4.08323, 4.34327, 4.68065, 5.17267, 6.09627, 7.17117, 8.90335],
+    [4.30385, 4.56746, 4.91023, 5.41157, 6.35622, 7.45933, 9.24141],
+    [4.50783, 4.77466, 5.12228, 5.63199, 6.59558, 7.72408, 9.55120],
+    [4.69828, 4.96802, 5.32006, 5.83738, 6.81817, 7.96977, 9.83797],
+    [4.87744, 5.14986, 5.50600, 6.03022, 7.02679, 8.19958, 10.10558],
+    [5.04704, 5.32191, 5.68171, 6.21243, 7.22354, 8.41594, 10.35696],
+    [5.20839, 5.48554, 5.84879, 6.38547, 7.41008, 8.62071, 10.59439],
+    [5.36254, 5.64181, 6.00827, 6.55051, 7.58772, 8.81538, 10.81968],
+    [5.51034, 5.79160, 6.16106, 6.70849, 7.75752, 9.00118, 11.03428],
+    [5.65249, 5.93560, 6.30790, 6.86021, 7.92034, 9.17908, 11.23939],
+    [5.78957, 6.07443, 6.44938, 7.00630, 8.07692, 9.34991, 11.43603],
+    [5.92206, 6.20858, 6.58604, 7.14731, 8.22785, 9.51437, 11.62502],
+    ])
+
+
+def _convert_to_dict_mvmean_effs(eff_mean=True):
+    effs_mvmean = [0.75, 0.8, 0.85, 0.9, 0.95, 0.975, 0.99]
+    ks = list(range(1, 15))
+    if eff_mean:
+        table = _table_biweight_mvmean_eff
+    else:
+        table = _table_biweight_mvshape_eff
+    tp = {}
+    for i, k in enumerate(ks):
+        for j, eff in enumerate(effs_mvmean):
+            tp[(k, eff)] = table[i, j]
+
+    return tp
+
+
+tukeybiweight_mvmean_eff_d = _convert_to_dict_mvmean_effs(eff_mean=True)
+tukeybiweight_mvshape_eff_d = _convert_to_dict_mvmean_effs(eff_mean=False)
+
+
+def tukeybiweight_mvmean_eff(k, eff, eff_mean=True):
+    """tuning parameter for biweight norm to achieve efficiency for mv-mean.
+
+    Uses values from precomputed table if available, otherwise computes it
+    numerically and adds it to the module global dict.
+
+    """
+    if eff_mean:
+        table_dict = tukeybiweight_mvmean_eff_d
+    else:
+        table_dict = tukeybiweight_mvshape_eff_d
+
+    try:
+        tp = table_dict[(k, eff)]
+    except KeyError:
+        # compute and cache
+        from .norms import TukeyBiweight  # avoid circular import
+        norm = TukeyBiweight(c=1)
+        tp = tuning_m_cov_eff(norm, k, efficiency=eff, eff_mean=eff_mean)
+        table_dict[(k, eff)] = tp
+    return tp

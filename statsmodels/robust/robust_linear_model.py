@@ -263,6 +263,7 @@ class RLM(base.LikelihoodModel):
             wls_results = lm.WLS(self.endog, self.exog).fit()
         else:
             start_params = np.asarray(start_params, dtype=np.double).squeeze()
+            start_params = np.atleast_1d(start_params)
             if (start_params.shape[0] != self.exog.shape[1] or
                     start_params.ndim != 1):
                 raise ValueError('start_params must by a 1-d array with {} '
@@ -276,6 +277,8 @@ class RLM(base.LikelihoodModel):
             self.scale = self._estimate_scale(wls_results.resid)
         elif start_scale:
             self.scale = start_scale
+            if not update_scale:
+                self.scale_est = scale_est = "fixed"
 
         history = dict(params=[np.inf], scale=[])
         if conv == 'coefs':
