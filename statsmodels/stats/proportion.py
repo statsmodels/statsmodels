@@ -108,7 +108,7 @@ def _bisection_search_conservative(
     return best_pt, best
 
 
-def proportion_confint(count, nobs, alpha:float=0.05, method="normal"):
+def proportion_confint(count, nobs, alpha:float=0.05, method="normal", alternative:str='two-sided'):
     """
     Confidence interval for a binomial proportion
 
@@ -133,11 +133,16 @@ def proportion_confint(count, nobs, alpha:float=0.05, method="normal"):
          - `jeffreys` : Jeffreys Bayesian Interval
          - `binom_test` : Numerical inversion of binom_test
 
+    alternative : {"two-sided", "larger", "smaller"}
+        default: "two-sided"
+        specifies whether to calculate a two-sided or one-sided confidence interval.
+
     Returns
     -------
     ci_low, ci_upp : {float, ndarray, Series DataFrame}
-        lower and upper confidence level with coverage (approximately) 1-alpha.
+        larger and smaller confidence level with coverage (approximately) 1-alpha.
         When a pandas object is returned, then the index is taken from `count`.
+        When side is not "two-sided", lower or upper bound is set to 0 or 1 respectively.
 
     Notes
     -----
@@ -188,21 +193,24 @@ def proportion_confint(count, nobs, alpha:float=0.05, method="normal"):
         nobs_a = _check(np.asarray(nobs_a), "count")
 
     q_ = count_a / nobs_a
-    alpha_2 = 0.5 * alpha
+
+
+    if alternative == 'two-sided':
+        if method != "binom_test":
+            alpha = alpha / 2.0
+    elif alternative not in ['larger', 'smaller']:
+        raise NotImplementedError(f"alternative {alternative} is not available")
 
     if method == "normal":
         std_ = np.sqrt(q_ * (1 - q_) / nobs_a)
-        dist = stats.norm.isf(alpha / 2.0) * std_
+        dist = stats.norm.isf(alpha) * std_
         ci_low = q_ - dist
         ci_upp = q_ + dist
-    elif method == "binom_test":
-        # inverting the binomial test
+    elif method == "binom_test" and alternative == 'two-sided':
         def func_factory(count: int, nobs: int) -> Callable[[float], float]:
             if hasattr(stats, "binomtest"):
-
                 def func(qi):
                     return stats.binomtest(count, nobs, p=qi).pvalue - alpha
-
             else:
                 # Remove after min SciPy >= 1.7
                 def func(qi):
@@ -258,9 +266,9 @@ def proportion_confint(count, nobs, alpha:float=0.05, method="normal"):
                 ci_upp.flat[index] = 1 - ci_low.flat[index]
                 ci_low.flat[index] = 1 - temp
             index = bcast.index
-    elif method == "beta":
-        ci_low = stats.beta.ppf(alpha_2, count_a, nobs_a - count_a + 1)
-        ci_upp = stats.beta.isf(alpha_2, count_a + 1, nobs_a - count_a)
+    elif method == "beta" or (method == "binom_test" and alternative != 'two-sided'):
+        ci_low = stats.beta.ppf(alpha, count_a, nobs_a - count_a + 1)
+        ci_upp = stats.beta.isf(alpha, count_a + 1, nobs_a - count_a)
 
         if np.ndim(ci_low) > 0:
             ci_low.flat[q_.flat == 0] = 0
@@ -269,7 +277,7 @@ def proportion_confint(count, nobs, alpha:float=0.05, method="normal"):
             ci_low = 0 if q_ == 0 else ci_low
             ci_upp = 1 if q_ == 1 else ci_upp
     elif method == "agresti_coull":
-        crit = stats.norm.isf(alpha / 2.0)
+        crit = stats.norm.isf(alpha)
         nobs_c = nobs_a + crit**2
         q_c = (count_a + crit**2 / 2.0) / nobs_c
         std_c = np.sqrt(q_c * (1.0 - q_c) / nobs_c)
@@ -277,7 +285,7 @@ def proportion_confint(count, nobs, alpha:float=0.05, method="normal"):
         ci_low = q_c - dist
         ci_upp = q_c + dist
     elif method == "wilson":
-        crit = stats.norm.isf(alpha / 2.0)
+        crit = stats.norm.isf(alpha)
         crit2 = crit**2
         denom = 1 + crit2 / nobs_a
         center = (q_ + crit2 / (2 * nobs_a)) / denom
@@ -289,9 +297,8 @@ def proportion_confint(count, nobs, alpha:float=0.05, method="normal"):
         ci_upp = center + dist
     # method adjusted to be more forgiving of misspellings or incorrect option name
     elif method[:4] == "jeff":
-        ci_low, ci_upp = stats.beta.interval(
-            1 - alpha, count_a + 0.5, nobs_a - count_a + 0.5
-        )
+        ci_low = stats.beta.ppf(alpha, count_a + 0.5, nobs_a - count_a + 0.5)
+        ci_upp = stats.beta.isf(alpha, count_a + 0.5, nobs_a - count_a + 0.5)
     else:
         raise NotImplementedError(f"method {method} is not available")
     if method in ["normal", "agresti_coull"]:
@@ -301,6 +308,10 @@ def proportion_confint(count, nobs, alpha:float=0.05, method="normal"):
         container = pd.Series if isinstance(count, pd.Series) else pd.DataFrame
         ci_low = container(ci_low, index=count.index)
         ci_upp = container(ci_upp, index=count.index)
+    if alternative == 'larger':
+        ci_low = 0
+    elif alternative == 'smaller':
+        ci_upp = 1
     if is_scalar:
         return float(ci_low), float(ci_upp)
     return ci_low, ci_upp

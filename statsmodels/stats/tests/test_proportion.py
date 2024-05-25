@@ -995,3 +995,67 @@ def test_ci_symmetry_array(count, method):
     a = proportion_confint([count, count], n, method=method)
     b = proportion_confint([n - count, n - count], n, method=method)
     assert_allclose(np.array(a), 1.0 - np.array(b[::-1]))
+
+
+@pytest.mark.parametrize("count, nobs, alternative, expected", [
+    (1, 1, 'two-sided', [1.0, 1.0]),
+    (0, 1, 'two-sided', [0.0, 0.0]),
+    (1, 1, 'larger',   [0.0, 1.0]),
+    (0, 1, 'larger',   [0.0, 0.0]),
+    (1, 1, 'smaller',    [1.0, 1.0]),
+    (0, 1, 'smaller',    [0.0, 1.0]),
+])
+def test_proportion_confint_edge(count, nobs, alternative, expected):
+    # test against R 4.3.3 / DescTools / BinomCI and binom.test
+    ci_low, ci_upp = proportion_confint(count, nobs, alternative=alternative)
+    assert_allclose(np.array([ci_low, ci_upp]), np.array(expected))
+
+
+@pytest.mark.parametrize("count", [100])
+@pytest.mark.parametrize("nobs", [200])
+@pytest.mark.parametrize("method, alpha, alternative, expected", [
+    # two-sided
+    ("normal",          0.05, "two-sided",  [0.4307048, 0.5692952]),
+    ("normal",          0.01, "two-sided",  [0.4089307, 0.5910693]),
+    ("normal",          0.10, "two-sided",  [0.4418456, 0.5581544]),
+    ("agresti_coull",   0.05, "two-sided",  [0.4313609, 0.5686391]),
+    ("beta",            0.05, "two-sided",  [0.4286584, 0.5713416]),
+    ("wilson",          0.05, "two-sided",  [0.4313609, 0.5686391]),
+    ("jeffreys",        0.05, "two-sided",  [0.4311217, 0.5688783]),
+    # larger
+    ("normal",          0.05, "larger",    [0.0, 0.5581544]),
+    ("agresti_coull",   0.05, "larger",    [0.0, 0.557765]),
+    ("beta",            0.05, "larger",    [0.0, 0.560359]),
+    ("wilson",          0.05, "larger",    [0.0, 0.557765]),
+    ("jeffreys",        0.05, "larger",    [0.0, 0.5578862]),
+    # smaller
+    ("normal",          0.05, "smaller",     [0.4418456, 1.0]),
+    ("agresti_coull",   0.05, "smaller",     [0.442235, 1.0]),
+    ("beta",            0.05, "smaller",     [0.439641, 1.0]),
+    ("wilson",          0.05, "smaller",     [0.442235, 1.0]),
+    ("jeffreys",        0.05, "smaller",     [0.4421138, 1.0]),
+])
+def test_proportion_confint(count, nobs, method, alpha, alternative, expected):
+    # test against R 4.3.3 / DescTools / BinomCI and binom.test
+    ci_low, ci_upp = proportion_confint(count, nobs, alpha=alpha, method=method, alternative=alternative)
+    assert_allclose(np.array([ci_low, ci_upp]), np.array(expected))
+
+
+@pytest.mark.parametrize("count", [100])
+@pytest.mark.parametrize("nobs", [200])
+@pytest.mark.parametrize("alpha, alternative, expected, rtol", [
+    # binom.exact with method="two.sided" returns values with a precision of up to 4 decimal places.
+    (0.01, "two-sided",  [0.4094, 0.5906],  1e-4),
+    (0.05, "two-sided",  [0.4299, 0.5701],  1e-4),
+    (0.10, "two-sided",  [0.44, 0.56],      1e-4),
+    (0.01, "larger",    [0.0, 0.5840449],  1e-7),
+    (0.05, "larger",    [0.0, 0.560359],   1e-7),
+    (0.10, "larger",    [0.0, 0.5476422],  1e-7),
+    (0.01, "smaller",     [0.4159551, 1.0],  1e-7),
+    (0.05, "smaller",     [0.439641, 1.0],   1e-7),
+    (0.10, "smaller",     [0.4523578, 1.0],  1e-7),
+])
+def test_proportion_confint_binom_test(count, nobs, alpha, alternative, expected, rtol):
+    # test against R 4.3.3 / DescTools / exactci
+    ci_low, ci_upp = proportion_confint(count, nobs, alpha=alpha, method="binom_test", alternative=alternative)
+    assert_allclose(np.array([ci_low, ci_upp]), np.array(expected), rtol=rtol)
