@@ -6,6 +6,7 @@ from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 
 from statsmodels import robust
+import statsmodels.robust.norms as robnorms
 import statsmodels.robust.covariance as robcov
 import statsmodels.robust.scale as robscale
 
@@ -175,6 +176,121 @@ def test_tyler():
     cov_det = res1.cov / np.linalg.det(res1.cov)**(1. / k_vars)
     assert_allclose(cov_det, res2, rtol=1e-11)
     assert res1.n_iter == 55
+
+
+def test_cov_ms():
+    # use CovM as local CovS
+
+    # > CovSest(x)  using package rrcov
+    # same result with > CovSest(x, method="sdet")
+    # but scale difers with method="biweight"
+    mean_r = np.array([1.53420879676, 1.82865741024, 1.65565146981])
+    cov_r = np.array([
+        [1.8090846049573, 0.0479283121828, 0.2446369025717],
+        [0.0479283121828, 1.8189886310494, 0.2513025527579],
+        [0.2446369025717, 0.2513025527579, 1.7287983150484],
+        ])
+
+    scale2_r = np.linalg.det(cov_r) ** (1/3)
+    shape_r = cov_r / scale2_r
+    scale_r = np.sqrt(scale2_r)
+
+    exog_df = dta_hbk[["X1", "X2", "X3"]]
+    mod = robcov.CovM(exog_df)
+    # with default start, default start could get wrong local optimum
+    res = mod.fit()
+    assert_allclose(res.mean, mean_r, rtol=1e-5)
+    assert_allclose(res.shape, shape_r, rtol=1e-5)
+    assert_allclose(res.cov, cov_r, rtol=1e-5)
+    assert_allclose(res.scale, scale_r, rtol=1e-5)
+
+    # with results start
+    res = mod.fit(start_mean=mean_r, start_shape=shape_r, start_scale=scale_r)
+    assert_allclose(res.mean, mean_r, rtol=1e-5)
+    assert_allclose(res.shape, shape_r, rtol=1e-5)
+    assert_allclose(res.cov, cov_r, rtol=1e-5)
+    assert_allclose(res.scale, scale_r, rtol=1e-5)
+
+    mod_s = robcov.CovDetS(exog_df)
+    res = mod_s.fit()
+    assert_allclose(res.mean, mean_r, rtol=1e-5)
+    assert_allclose(res.shape, shape_r, rtol=1e-5)
+    assert_allclose(res.cov, cov_r, rtol=1e-5)
+    assert_allclose(res.scale, scale_r, rtol=1e-5)
+
+
+def test_covdetmcd():
+
+    # results from rrcov
+    # > cdet = CovMcd(x = hbk, raw.only = TRUE, nsamp = "deterministic",
+    #                 use.correction=FALSE)
+    cov_dmcd_r = np.array("""
+    2.2059619213639   0.0223939863695   0.7898958050933   0.4060613360808
+    0.0223939863695   1.1384166802155   0.4315534571891  -0.2344041030201
+    0.7898958050933   0.4315534571891   1.8930117467493  -0.3292893001459
+    0.4060613360808  -0.2344041030201  -0.3292893001459   0.6179686100845
+    """.split(), float).reshape(4, 4)
+
+    mean_dmcd_r = np.array([1.7725, 2.2050, 1.5375, -0.0575])
+
+    mod = robcov.CovDetMCD(dta_hbk)
+    res = mod.fit(40, maxiter_step=100, reweight=False)
+    assert_allclose(res.mean, mean_dmcd_r, rtol=1e-5)
+    assert_allclose(res.cov, cov_dmcd_r, rtol=1e-5)
+
+    # with reweighting
+    # covMcd(x = hbk, nsamp = "deterministic", use.correction = FALSE)
+    # iBest: 5; C-step iterations: 7, 7, 7, 4, 6, 6
+    # Log(Det.):  -2.42931967153
+
+    mean_dmcdw_r = np.array([1.5338983050847, 1.8322033898305, 1.6745762711864,
+                            -0.0728813559322])
+    cov_dmcdw_r = np.array("""
+    1.5677744869295   0.09285770205078   0.252076010128   0.13873444408300
+    0.0928577020508   1.56769177397171   0.224929617385  -0.00516128856542
+    0.2520760101278   0.22492961738467   1.483829106079  -0.20275013775619
+    0.1387344440830  -0.00516128856542  -0.202750137756   0.43326701543885
+    """.split(), float).reshape(4, 4)
+
+    mod = robcov.CovDetMCD(dta_hbk)
+    res = mod.fit(40, maxiter_step=100)  # default is reweight=True
+    assert_allclose(res.mean, mean_dmcdw_r, rtol=1e-5)
+    # R uses different trimming correction
+    # compare only shape (using trace for simplicity)
+    shape = res.cov / np.trace(res.cov)
+    shape_r = cov_dmcdw_r / np.trace(cov_dmcdw_r)
+    assert_allclose(shape, shape_r, rtol=1e-5)
+
+
+def test_covdetmm():
+
+    # results from rrcov
+    # CovMMest(x = hbk, eff.shape=FALSE,
+    #          control=CovControlMMest(sest=CovControlSest(method="sdet")))
+    cov_dmm_r = np.array("""
+        1.72174266670826 0.06925842715939 0.20781848922667 0.10749343153015
+        0.06925842715939 1.74566218886362 0.22161135221404 -0.00517023660647
+        0.20781848922667 0.22161135221404 1.63937749762534 -0.17217102475913
+        0.10749343153015 -0.00517023660647 -0.17217102475913 0.48174480967136
+        """.split(), float).reshape(4, 4)
+
+    mean_dmm_r = np.array([1.5388643420460, 1.8027582110408, 1.6811517253521,
+                           -0.0755069488908])
+
+    # using same c as rrcov
+    c = 5.81031555752526
+    mod = robcov.CovDetMM(dta_hbk, norm=robnorms.TukeyBiweight(c=c))
+    res = mod.fit()
+
+    assert_allclose(res.mean, mean_dmm_r, rtol=1e-5)
+    assert_allclose(res.cov, cov_dmm_r, rtol=1e-5, atol=1e-5)
+
+    # using c from table,
+    mod = robcov.CovDetMM(dta_hbk)
+    res = mod.fit()
+
+    assert_allclose(res.mean, mean_dmm_r, rtol=1e-3)
+    assert_allclose(res.cov, cov_dmm_r, rtol=1e-3, atol=1e-3)
 
 
 def test_robcov_SMOKE():

@@ -33,3 +33,16 @@ def test_patsy_577():
     np.testing.assert_(data._is_using_patsy(endog, None))
     exog = dmatrix("var2 - 1", df)
     np.testing.assert_(data._is_using_patsy(endog, exog))
+
+
+def test_as_array_with_name_series():
+    s = pandas.Series([1], name="hello")
+    arr, name = data._as_array_with_name(s, "not_used")
+    np.testing.assert_array_equal(np.array([1]), arr)
+    assert name == "hello"
+
+
+def test_as_array_with_name_array():
+    arr, name = data._as_array_with_name(np.array([1]), "default")
+    np.testing.assert_array_equal(np.array([1]), arr)
+    assert name == "default"

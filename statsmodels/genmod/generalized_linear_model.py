@@ -41,6 +41,7 @@ from statsmodels.tools.decorators import (
     cached_data,
     cached_value,
 )
+from statsmodels.tools.data import _as_array_with_name
 from statsmodels.tools.docstring import Docstring
 from statsmodels.tools.sm_exceptions import (
     DomainWarning,
@@ -307,15 +308,21 @@ class GLM(base.LikelihoodModel):
                            f"{type(family).__name__} family."),
                           DomainWarning)
 
+        self._exposure_name = None
+        self._offset_name = None
+        self._freq_weights_name = None
+        self._var_weights_name = None
+
         if exposure is not None:
-            exposure = np.log(exposure)
+            exposure_array, self._exposure_name = _as_array_with_name(exposure, "exposure")
+            exposure = np.log(exposure_array)
         if offset is not None:  # this should probably be done upstream
-            offset = np.asarray(offset)
+            offset, self._offset_name = _as_array_with_name(offset, "offset")
 
         if freq_weights is not None:
-            freq_weights = np.asarray(freq_weights)
+            freq_weights, self._freq_weights_name = _as_array_with_name(freq_weights, "freq_weights")
         if var_weights is not None:
-            var_weights = np.asarray(var_weights)
+            var_weights, self._var_weights_name = _as_array_with_name(var_weights, "var_weights")
 
         self.freq_weights = freq_weights
         self.var_weights = var_weights
@@ -1557,6 +1564,39 @@ class GLM(base.LikelihoodModel):
         res._results.k_constr = k_constr
         res._results.results_constrained = res_constr
         return res
+
+    @property
+    def offset_name(self):
+        """
+        Name of the offset variable if available. If offset is not a pd.Series,
+        defaults to 'offset'.
+        """
+        return self._offset_name
+
+    @property
+    def exposure_name(self):
+        """
+        Name of the exposure variable if available. If exposure is not a pd.Series,
+        defaults to 'exposure'.
+        """
+        return self._exposure_name
+
+    @property
+    def freq_weights_name(self):
+        """
+        Name of the freq weights variable if available. If freq_weights is not a
+        pd.Series, defaults to 'freq_weights'.
+        """
+        return self._freq_weights_name
+
+    @property
+    def var_weights_name(self):
+        """
+        Name of var weights variable if available. If var_weights is not a pd.Series,
+        defaults to 'var_weights'.
+
+        """
+        return self._var_weights_name
 
 
 get_prediction_doc = Docstring(pred.get_prediction_glm.__doc__)

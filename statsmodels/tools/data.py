@@ -19,7 +19,8 @@ def _check_period_index(x, freq="M"):
     if not inferred_freq.startswith(freq):
         raise ValueError("Expected frequency {}. Got {}".format(freq,
                                                                 inferred_freq))
-
+def is_series(obj):
+    return isinstance(obj, pd.Series)
 
 def is_data_frame(obj):
     return isinstance(obj, pd.DataFrame)
@@ -121,3 +122,24 @@ def _is_recarray(data):
         return isinstance(data, np.core.recarray)
     else:
         return isinstance(data, np.rec.recarray)
+
+def _as_array_with_name(obj, default_name):
+    """
+    Call np.asarray() on obj and attempt to get the name if its a Series.
+
+    Parameters
+    ----------
+    obj: pd.Series
+        Series to convert to an array
+    default_name: str
+        The default name to return in case the object isn't a pd.Series or has
+        no name attribute.
+
+    Returns
+    -------
+    array_and_name: tuple[np.ndarray, str]
+        The data casted to np.ndarra and the series name or None
+    """
+    if is_series(obj):
+        return (np.asarray(obj), obj.name)
+    return (np.asarray(obj), default_name)
