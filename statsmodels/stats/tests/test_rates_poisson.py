@@ -1146,3 +1146,24 @@ def test_power_negbin():
 
     assert_allclose(pow_p, pow1, atol=5e-2)
     assert_allclose(pow_p, pow_, rtol=1e-13)
+
+
+@pytest.mark.parametrize('count',    [0, 1, 10, 100])
+@pytest.mark.parametrize('exposure', [1, 10, 100, 1000])
+@pytest.mark.parametrize('alpha',    [0.01, 0.05, 0.1])
+@pytest.mark.parametrize('method',
+                         method_names_poisson_1samp['confint'])
+@pytest.mark.parametrize('alternative', ['larger', 'smaller'])
+def test_confint_poisson_alternative(count, exposure, method, alpha,
+                                     alternative):
+    # regression test
+    two_sided_ci = confint_poisson(count, exposure, method=method,
+                                   alpha=alpha * 2, alternative='two-sided')
+    one_sided_ci = confint_poisson(count, exposure, method=method,
+                                   alpha=alpha, alternative=alternative)
+    if alternative == 'larger':
+        two_sided_ci = (0, two_sided_ci[1])
+        assert_allclose(one_sided_ci, two_sided_ci, rtol=1e-12)
+    elif alternative == 'smaller':
+        two_sided_ci = (two_sided_ci[0], np.inf)
+        assert_allclose(one_sided_ci, two_sided_ci, rtol=1e-12)
