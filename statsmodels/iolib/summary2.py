@@ -1,10 +1,12 @@
+from statsmodels.base.wrapper import ResultsWrapper
 from statsmodels.compat.pandas import FUTURE_STACK
 from statsmodels.compat.python import lzip
 
 import datetime
-from functools import reduce
 import re
 import textwrap
+from functools import reduce
+from typing import Callable
 
 import numpy as np
 import pandas as pd
@@ -396,7 +398,12 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
 
 
 # Vertical summary instance for multiple models
-def _col_params(result, float_format='%.4f', stars=True, include_r2=False):
+def _col_params(
+    result: ResultsWrapper,
+    float_format: str = '%.4f',
+    stars: bool = True,
+    include_r2: bool = False
+):
     """Stack coefficients and standard errors in single column
     """
 
@@ -469,9 +476,16 @@ def _make_unique(list_of_names):
     return header
 
 
-def summary_col(results, float_format='%.4f', model_names=(), stars=False,
-                info_dict=None, regressor_order=(), drop_omitted=False,
-                include_r2=True):
+def summary_col(
+    results: ResultsWrapper | list[ResultsWrapper],
+    float_format: str = '%.4f',
+    model_names: list[str] | None = None,
+    stars: bool = False,
+    info_dict: dict[str, Callable | dict] | None = None,
+    regressor_order: list[str] | None = None,
+    drop_omitted: bool = False,
+    include_r2: bool = True
+):
     """
     Summarize multiple results instances side-by-side (coefs and SEs)
 
@@ -513,7 +527,7 @@ def summary_col(results, float_format='%.4f', model_names=(), stars=False,
                         include_r2=include_r2) for x in results]
 
     # Unique column names (pandas has problems merging otherwise)
-    if model_names:
+    if model_names is not None:
         colnames = _make_unique(model_names)
     else:
         colnames = _make_unique([x.columns[0] for x in cols])
@@ -537,7 +551,7 @@ def summary_col(results, float_format='%.4f', model_names=(), stars=False,
     summ = reduce(merg, cols)
     summ = summ.reindex(index)
 
-    if regressor_order:
+    if regressor_order is not None:
         varnames = summ.index.get_level_values(0).tolist()
         vc = pd.Series(varnames).value_counts()
         varnames = vc.loc[vc == 2].index.tolist()
