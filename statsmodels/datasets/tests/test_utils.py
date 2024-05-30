@@ -1,6 +1,8 @@
 import os
-from ssl import SSLError
+import sys
+import platform
 from socket import timeout
+
 from urllib.error import HTTPError, URLError
 
 import numpy as np
@@ -11,7 +13,13 @@ from statsmodels.datasets import get_rdataset, webuse, check_internet, utils
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 
-IGNORED_EXCEPTIONS = (HTTPError, URLError, SSLError,  UnicodeEncodeError,
+if not (sys.platform == "emscripten" or platform.machine() in ["wasm32", "wasm64"]):
+    from ssl import SSLError
+    IGNORED_EXCEPTIONS = (HTTPError, URLError, SSLError,  UnicodeEncodeError,
+                      timeout)
+
+else:
+    IGNORED_EXCEPTIONS = (HTTPError, URLError,  UnicodeEncodeError,
                       timeout)
 
 
