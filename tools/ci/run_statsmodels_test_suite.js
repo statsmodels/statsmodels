@@ -39,6 +39,7 @@ async function main() {
 
         await pyodide.runPythonAsync("import micropip; micropip.install('pytest')");
         await pyodide.runPythonAsync("import micropip; micropip.install('pytest-cov')");
+        await pyodide.runPythonAsync("import micropip; micropip.install('matplotlib')");
         let pytest = pyodide.pyimport("pytest");
         let args = process.argv.slice(2);
         console.log('pytest args:', args);
