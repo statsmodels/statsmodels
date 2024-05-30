@@ -21,15 +21,14 @@ class TestSummaryLatex:
 \begin{center}
 \begin{tabular}{lll}
 \hline
-                 & y I      & y II      \\
+               & y I      & y II      \\
 \hline
-const            & 7.7500   & 12.4231   \\
-                 & (1.1058) & (3.1872)  \\
-x1               & -0.7500  & -1.5769   \\
-                 & (0.2368) & (0.6826)  \\
-R-squared        & 0.7697   & 0.6401    \\
-R-squared Adj.   & 0.6930   & 0.5202    \\
-No. Observations & 5        & 5         \\
+const          & 7.7500   & 12.4231   \\
+               & (1.1058) & (3.1872)  \\
+x1             & -0.7500  & -1.5769   \\
+               & (0.2368) & (0.6826)  \\
+R-squared      & 0.7697   & 0.6401    \\
+R-squared Adj. & 0.6930   & 0.5202    \\
 \hline
 \end{tabular}
 \end{center}
@@ -43,24 +42,23 @@ Standard errors in parentheses.
         y2 = [8, 5, 0, 12, 4]
         reg1 = OLS(y1, x).fit()
         reg2 = OLS(y2, x).fit()
-        actual = summary_col([reg1, reg2], include_n=True).as_latex()
+        actual = summary_col([reg1, reg2]).as_latex()
         actual = '\n%s\n' % actual
         assert_equal(desired, actual)
 
     def test_summarycol_float_format(self):
         # Test for latex output of summary_col object
         desired = r"""
-============================
-                  y I   y II
-----------------------------
-const            7.7   12.4
-                 (1.1) (3.2)
-x1               -0.7  -1.6
-                 (0.2) (0.7)
-R-squared        0.8   0.6
-R-squared Adj.   0.7   0.5
-No. Observations 5     5
-============================
+==========================
+                y I   y II
+--------------------------
+const          7.7   12.4 
+               (1.1) (3.2)
+x1             -0.7  -1.6 
+               (0.2) (0.7)
+R-squared      0.8   0.6  
+R-squared Adj. 0.7   0.5  
+==========================
 Standard errors in
 parentheses.
 """  # noqa:W291
@@ -70,7 +68,7 @@ parentheses.
         y2 = [8, 5, 0, 12, 4]
         reg1 = OLS(y1, x).fit()
         reg2 = OLS(y2, x).fit()
-        actual = summary_col([reg1, reg2], float_format='%0.1f', include_n=True).as_text()
+        actual = summary_col([reg1, reg2], float_format='%0.1f').as_text()
         actual = '%s\n' % actual
 
         starred = summary_col([reg1, reg2], stars=True, float_format='%0.1f')
@@ -128,15 +126,14 @@ parentheses.
 \begin{center}
 \begin{tabular}{lll}
 \hline
-                 & y I      & y II      \\
+               & y I      & y II      \\
 \hline
-const            & 7.7500   & 12.4231   \\
-                 & (1.1058) & (3.1872)  \\
-x1               & -0.7500  & -1.5769   \\
-                 & (0.2368) & (0.6826)  \\
-R-squared        & 0.7697   & 0.6401    \\
-R-squared Adj.   & 0.6930   & 0.5202    \\
-No. Observations & 5        & 5         \\
+const          & 7.7500   & 12.4231   \\
+               & (1.1058) & (3.1872)  \\
+x1             & -0.7500  & -1.5769   \\
+               & (0.2368) & (0.6826)  \\
+R-squared      & 0.7697   & 0.6401    \\
+R-squared Adj. & 0.6930   & 0.5202    \\
 \hline
 \end{tabular}
 \end{center}
@@ -151,7 +148,7 @@ Standard errors in parentheses.
         reg1 = OLS(y1, x).fit()
         reg2 = OLS(y2, x).fit()
 
-        actual = summary_col([reg1, reg2], include_n=True)._repr_latex_()
+        actual = summary_col([reg1, reg2])._repr_latex_()
         actual = '\n%s\n' % actual
         assert_equal(actual, desired)
 
