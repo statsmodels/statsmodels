@@ -208,3 +208,15 @@ class TestSummaryLabels:
         table = summary_col(results=self.mod, include_r2=False)
         assert "R-squared" not in str(table)
         assert "R-squared Adj." not in str(table)
+
+    def test_summary_col_doesnt_show_nobs_by_default(self,):
+        table = summary_col(results=self.mod)
+        assert "No. Observations" not in str(table)
+
+    def test_summary_col_doesnt_show_nobs_when_turned_off(self,):
+        table = summary_col(results=self.mod, include_n=False)
+        assert "No. Observations" not in str(table)
+
+    def test_summary_col_shows_nobs_when_activated(self,):
+        table = summary_col(results=self.mod, include_n=True)
+        assert "No. Observations" in str(table)
