@@ -57,16 +57,9 @@ jobs:
       with:
         node-version: ${{ env.NODE_VERSION }}
 
-    - name: Set up Pyodide virtual environment
+    - name: Set up Pyodide virtual environment and test statsmodels for Pyodide
       run: |
         pyodide venv .venv-pyodide
         source .venv-pyodide/bin/activate
-        pip install dist/*.whl -vvv
-
-    - name: Test statsmodels for Pyodide
-      run: |
-        source .venv-pyodide/bin/activate
-        python -c "import statsmodels.api"
-        pip install pytest
-        pytest statsmodels
-
+        npm install pyodide@${{ env.PYODIDE_VERSION }}
+        node tools/emscripten/run_statsmodels_test_suite.js --pyargs statsmodels
