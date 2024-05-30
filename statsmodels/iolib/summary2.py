@@ -556,10 +556,8 @@ def summary_col(results, float_format='%.4f', model_names=(), stars=False,
     index = summ.index.get_level_values(0)
     for i in range(0, index.shape[0], 2):
         idx.append(index[i])
-        if (i + 1) < index.shape[0] and (index[i] == index[i + 1]):
-            idx.append("")
-        else:
-            idx.append(index[i + 1])
+        if (i + 1) < index.shape[0]:
+            idx.append(index[i + 1] if index[i] != index[i + 1] else "")
     summ.index = idx
 
     # add infos about the models.
