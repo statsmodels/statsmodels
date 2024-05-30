@@ -198,13 +198,13 @@ class TestSummaryLabels:
         x = add_constant([1, 2, 3, 4] * 4)
         cls.mod = OLS(endog=y, exog=x).fit()
 
-    def test_summary_col_r2(self,):
+    def test_summary_col_r2(self):
         # GH 6578
         table = summary_col(results=self.mod, include_r2=True)
         assert "R-squared  " in str(table)
         assert "R-squared Adj." in str(table)
 
-    def test_absence_of_r2(self,):
+    def test_absence_of_r2(self):
         table = summary_col(results=self.mod, include_r2=False)
         assert "R-squared" not in str(table)
         assert "R-squared Adj." not in str(table)
