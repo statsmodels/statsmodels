@@ -435,7 +435,7 @@ def _col_params(result, float_format='%.4f', stars=True, include_r2=False,
         nobs = getattr(result, 'nobs', np.nan)
         n = pd.Series({('No. Observations', ''): int(nobs)})
         if n.notnull().any():
-            n = n.apply(lambda x: "%d" % x) # nobs is an integer if exists
+            n = n.apply(lambda x: "%d" % x)  # nobs is an integer if exists
             res = pd.concat([res, n], axis=0)
 
     res = pd.DataFrame(res)
@@ -521,7 +521,7 @@ def summary_col(results, float_format='%.4f', model_names=(), stars=False,
 
     cols = [_col_params(x, stars=stars, float_format=float_format,
                         include_r2=include_r2, include_n=include_n)
-                for x in results
+            for x in results
             ]
 
     # Unique column names (pandas has problems merging otherwise)
@@ -541,7 +541,8 @@ def summary_col(results, float_format='%.4f', model_names=(), stars=False,
         for key in col.index:
             if key not in index:
                 index.append(key)
-    for special in (('R-squared', ''), ('R-squared Adj.', ''), ('No. Observations', '')):
+    for special in (('R-squared', ''), ('R-squared Adj.', ''),
+                    ('No. Observations', '')):
         if special in index:
             index.remove(special)
             index.insert(len(index), special)
