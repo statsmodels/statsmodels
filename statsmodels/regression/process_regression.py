@@ -108,14 +108,22 @@ class GaussianCovariance(ProcessCovariance):
     """
 
     def get_cov(self, time, sc, sm):
+        if time.ndim == 1:
+            da = np.subtract.outer(time, time)
+            ds = np.add.outer(sm, sm) / 2
 
-        da = np.subtract.outer(time, time)
-        ds = np.add.outer(sm, sm) / 2
+            qmat = da * da / ds
+            cm = np.exp(-qmat / 2) / np.sqrt(ds)
+            cm *= np.outer(sm, sm) ** 0.25
+            cm *= np.outer(sc, sc)
+        else:
+            da = time[:, :, np.newaxis] - time[:, np.newaxis]
+            ds = (sm[:, :, np.newaxis] + sm[:, np.newaxis]) / 2
 
-        qmat = da * da / ds
-        cm = np.exp(-qmat / 2) / np.sqrt(ds)
-        cm *= np.outer(sm, sm)**0.25
-        cm *= np.outer(sc, sc)
+            qmat = da * da / ds
+            cm = np.exp(-qmat / 2) / np.sqrt(ds)
+            cm *= (sm[:, :, np.newaxis] * sm[:, np.newaxis]) ** 0.25
+            cm *= (sc[:, :, np.newaxis] * sc[:, np.newaxis])
 
         return cm
 
@@ -163,6 +171,57 @@ class GaussianCovariance(ProcessCovariance):
             jsc.append(b)
 
         return jsc, jsm
+
+    def jac_all(self, time, sc, sm, rc):
+        rows = rc[0]
+        columns = rc[1]
+
+        da = time[:, :, np.newaxis] - time[:, np.newaxis]
+        ds = (sm[:, :, np.newaxis] + sm[:, np.newaxis]) / 2
+        sds = np.sqrt(ds)
+
+        daa = da * da
+        qmat = daa / ds
+        eqm = np.exp(-qmat / 2)
+        sm4 = (sm[:, :, np.newaxis] * sm[:, np.newaxis]) ** 0.25
+        cmx = eqm * sm4 / sds
+        dq0 = -daa / ds ** 2
+        scc = (sc[:, :, np.newaxis] * sc[:, np.newaxis])
+
+        di = np.zeros((rows, columns, columns, columns))
+        fi = np.zeros((rows, columns, columns, columns))
+        ind = np.arange(columns)
+
+        # Derivatives with respect to the smoothing parameters.
+        di[:, ind, ind, :] += 0.5
+        di[:, ind, :, ind] += 0.5
+
+        dbottom = 0.5 * di / sds[:, np.newaxis]
+        dtop = -0.5 * eqm[:, np.newaxis] * dq0[:, np.newaxis] * di
+        b = dtop / sds[:, np.newaxis] - eqm[:, np.newaxis] * dbottom / ds[:, np.newaxis]
+        c = eqm / sds
+        v = 0.25 * sm[:, np.newaxis] ** 0.25 / sm[:, :, np.newaxis] ** 0.75
+
+        fi[:, ind, ind, :] = v
+        fi[:, ind, :, ind] = v.transpose((1, 0, 2))
+        fi[:, ind, ind, ind] = 0.5 / sm ** 0.5
+
+        jacs = c[:, np.newaxis] * fi + b * sm4[:, np.newaxis]
+        jacs *= scc[:, np.newaxis]
+
+        # Derivatives with respect to the scaling parameters.
+        cmx_sc = cmx * sc[:, np.newaxis]
+        jacv = np.zeros((rows, columns, columns, columns))
+        jacv[:, ind, ind, :] = cmx_sc
+        jacv[:, ind, :, ind] += cmx_sc.transpose((1, 0, 2))
+
+        return jacv, jacs
+
+    def similar_code(self, jac, qm, x):
+        jq = (jac * qm[:, np.newaxis]).sum(axis=3).sum(axis=2)
+        jq_x = jq[:, :, np.newaxis] * x
+
+        return jq_x.sum(axis=1).sum(axis=0)
 
 
 def _check_args(endog, exog, exog_scale, exog_smooth, exog_noise, time,
@@ -478,24 +537,30 @@ class ProcessMLE(base.LikelihoodModel):
         # Smoothness parameters
         sm = np.exp(np.dot(self.exog_smooth, smpar))
 
-        # White noise standard deviation
-        if self._has_noise:
-            no = np.exp(np.dot(self.exog_noise, nopar))
+        ind = np.array([i[1] for i in self._groups_ix.items()])
 
         # Get the log-likelihood
         ll = 0.
-        for _, ix in self._groups_ix.items():
+        time_take = np.take(self.time, ind)
+        sc_take = np.take(sc, ind)
+        sm_take = np.take(sm, ind)
 
-            # Get the covariance matrix for this person.
-            cm = self.cov.get_cov(self.time[ix], sc[ix], sm[ix])
+        # Get the covariance matrix for this person.
+        cm = self.cov.get_cov(time_take, sc_take, sm_take)
 
-            # The variance of the additive noise, if present.
-            if self._has_noise:
-                cm.flat[::cm.shape[0] + 1] += no[ix]**2
+        # White noise standard deviation
+        # The variance of the additive noise, if present.
+        if self._has_noise:
+            no = np.exp(np.dot(self.exog_noise, nopar))
+            take_no = np.take(no, ind) ** 2
+            idiag = np.diag_indices(cm.shape[1])
+            cm[:, idiag[0], idiag[1]] += take_no
 
-            re = resid[ix]
-            ll -= 0.5 * np.linalg.slogdet(cm)[1]
-            ll -= 0.5 * np.dot(re, np.linalg.solve(cm, re))
+        resid_take = np.take(resid, ind)
+
+        ll -= np.sum(0.5 * np.linalg.slogdet(cm)[1])
+        ls = np.linalg.solve(cm, resid_take)
+        ll -= np.sum(0.5 * np.sum(resid_take * ls, axis=1))
 
         if self.verbose:
             print("L=", ll)
@@ -533,63 +598,75 @@ class ProcessMLE(base.LikelihoodModel):
         # Smoothness
         sm = np.exp(np.dot(self.exog_smooth, smpar))
 
+        # Get the log-likelihood
+        score = np.zeros(len(mnpar) + len(scpar) + len(smpar) + len(nopar))
+
+        ind = np.array([i[1] for i in self._groups_ix.items()])
+        time_take = np.take(self.time, ind)
+        sm_take = np.take(sm, ind)
+        sc_take = np.take(sc, ind)
+
+        # Get the covariance matrix for this person.
+        cm = self.cov.get_cov(time_take, sc_take, sm_take)
+
         # White noise standard deviation
         if self._has_noise:
             no = np.exp(np.dot(self.exog_noise, nopar))
+            take_no = np.take(no, ind)
+            idiag = np.diag_indices(cm.shape[1])
+            cm[:, idiag[0], idiag[1]] += take_no ** 2
 
-        # Get the log-likelihood
-        score = np.zeros(len(mnpar) + len(scpar) + len(smpar) + len(nopar))
-        for _, ix in self._groups_ix.items():
+        cmi = np.linalg.inv(cm)
 
-            sc_i = sc[ix]
-            sm_i = sm[ix]
-            resid_i = resid[ix]
-            time_i = self.time[ix]
-            exog_i = self.exog[ix, :]
-            exog_scale_i = self.exog_scale[ix, :]
-            exog_smooth_i = self.exog_smooth[ix, :]
+        rc = [len(self._groups_ix), len(self._groups_ix[0])]
+        jacv, jacs = self.cov.jac_all(time_take, sc_take, sm_take, rc)
 
-            # Get the covariance matrix for this person.
-            cm = self.cov.get_cov(time_i, sc_i, sm_i)
+        # The derivatives for the mean parameters.
+        resid_take = np.take(resid, ind)
+        dcr = np.linalg.solve(cm, resid_take)
+        exog_take = np.take(self.exog, ind, axis=0)
+        dot_exog_dcr = np.sum(exog_take.transpose((0, 2, 1))
+                              * dcr[:, np.newaxis], axis=2)
+        score[0:pm] += np.sum(dot_exog_dcr, axis=0)
 
-            if self._has_noise:
-                no_i = no[ix]
-                exog_noise_i = self.exog_noise[ix, :]
-                cm.flat[::cm.shape[0] + 1] += no[ix]**2
+        # The derivatives for the scaling parameters.
+        rx = (resid_take[:, :, np.newaxis] * resid_take[:, np.newaxis])
+        qm = np.linalg.solve(cm, rx)
+        qm = 0.5 * np.linalg.solve(cm, qm.transpose((0, 2, 1)))
 
-            cmi = np.linalg.inv(cm)
+        exog_scale_take = np.take(self.exog_scale, ind, axis=0)
+        scx = (sc_take[:, :, np.newaxis] * exog_scale_take)
 
-            jacv, jacs = self.cov.jac(time_i, sc_i, sm_i)
+        jacv_qm_scx = self.cov.similar_code(jacv, qm, scx)
+        score[pm:pm + pv] += jacv_qm_scx
+        jacv_cmi_scx = 0.5 * self.cov.similar_code(jacv, cmi, scx)
+        score[pm:pm + pv] -= jacv_cmi_scx
 
-            # The derivatives for the mean parameters.
-            dcr = np.linalg.solve(cm, resid_i)
-            score[0:pm] += np.dot(exog_i.T, dcr)
+        # The derivatives for the smoothness parameters.
+        exog_smooth_take = np.take(self.exog_smooth, ind, axis=0)
+        smx = sm_take[:, :, np.newaxis] * exog_smooth_take
 
-            # The derivatives for the scaling parameters.
-            rx = np.outer(resid_i, resid_i)
-            qm = np.linalg.solve(cm, rx)
-            qm = 0.5 * np.linalg.solve(cm, qm.T)
-            scx = sc_i[:, None] * exog_scale_i
-            for i, _ in enumerate(ix):
-                jq = np.sum(jacv[i] * qm)
-                score[pm:pm + pv] += jq * scx[i, :]
-                score[pm:pm + pv] -= 0.5 * np.sum(jacv[i] * cmi) * scx[i, :]
+        jacs_qm_smx = self.cov.similar_code(jacs, qm, smx)
+        score[pm + pv:pm + pv + ps] += jacs_qm_smx
+        jacs_cmi_smx = 0.5 * self.cov.similar_code(jacs, cmi, smx)
+        score[pm + pv:pm + pv + ps] -= jacs_cmi_smx
 
-            # The derivatives for the smoothness parameters.
-            smx = sm_i[:, None] * exog_smooth_i
-            for i, _ in enumerate(ix):
-                jq = np.sum(jacs[i] * qm)
-                score[pm + pv:pm + pv + ps] += jq * smx[i, :]
-                score[pm + pv:pm + pv + ps] -= (
-                         0.5 * np.sum(jacs[i] * cmi) * smx[i, :])
+        # The derivatives with respect to the standard deviation parameters
+        if self._has_noise:
+            exog_noise_take = np.take(self.exog_noise, ind, axis=0)
+            sno = take_no[:, :, np.newaxis] ** 2 * exog_noise_take
+            idiag = np.diag_indices(cmi.shape[1])
 
-            # The derivatives with respect to the standard deviation parameters
-            if self._has_noise:
-                sno = no_i[:, None]**2 * exog_noise_i
-                score[pm + pv + ps:] -= np.dot(cmi.flat[::cm.shape[0] + 1],
-                                               sno)
-                bm = np.dot(cmi, np.dot(rx, cmi))
-                score[pm + pv + ps:] += np.dot(bm.flat[::bm.shape[0] + 1], sno)
+            cmi_diag_sno = cmi[:, idiag[0], idiag[1]][:, :, np.newaxis] * sno
+            dot_cmi_sno = np.sum(cmi_diag_sno, axis=1)
+            score[pm + pv + ps:] -= np.sum(dot_cmi_sno, axis=0)
+
+            bm = np.matmul(cmi, np.matmul(rx, cmi))
+            idiag = np.diag_indices(bm.shape[1])
+
+            bm_diag_sno = bm[:, idiag[0], idiag[1]][:, :, np.newaxis] * sno
+            dot_bm_sno = np.sum(bm_diag_sno, axis=1)
+            score[pm + pv + ps:] += np.sum(dot_bm_sno, axis=0)
 
         if self.verbose:
             print("|G|=", np.sqrt(np.sum(score * score)))
