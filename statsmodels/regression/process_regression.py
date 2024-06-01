@@ -198,9 +198,8 @@ class GaussianCovariance(ProcessCovariance):
 
         dbottom = 0.5 * di / sds[:, np.newaxis]
         dtop = -0.5 * eqm[:, np.newaxis] * dq0[:, np.newaxis] * di
-        b = dtop / sds[:, np.newaxis] - eqm[:, np.newaxis] 
-        * dbottom / ds[:, np.newaxis]
-        
+        b = (dtop / sds[:, np.newaxis] - eqm[:, np.newaxis] 
+             * dbottom / ds[:, np.newaxis])
         c = eqm / sds
         v = 0.25 * sm[:, np.newaxis] ** 0.25 / sm[:, :, np.newaxis] ** 0.75
 
