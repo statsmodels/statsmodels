@@ -186,15 +186,15 @@ def test_poisson(count, nobs, value, method=None, alternative="two-sided",
     return res
 
 
-def confint_poisson(count, exposure, method=None, alpha=0.05):
+def confint_poisson(count, exposure, method=None, alpha=0.05,
+                    alternative="two-sided"):
     """Confidence interval for a Poisson mean or rate
 
     The function is vectorized for all methods except "midp-c", which uses
     an iterative method to invert the hypothesis test function.
 
     All current methods are central, that is the probability of each tail is
-    smaller or equal to alpha / 2. The one-sided interval limits can be
-    obtained by doubling alpha.
+    smaller or equal to alpha / 2.
 
     Parameters
     ----------
@@ -209,10 +209,16 @@ def confint_poisson(count, exposure, method=None, alpha=0.05):
     alpha : float in (0, 1)
         Significance level, nominal coverage of the confidence interval is
         1 - alpha.
+    alternative : {"two-sider", "larger", "smaller")
+        default: "two-sided"
+        Specifies whether to calculate a two-sided or one-sided confidence
+        interval.
 
     Returns
     -------
     tuple (low, upp) : confidence limits.
+        When alternative is not "two-sided", lower or upper bound is set to
+        0 or inf respectively.
 
     Notes
     -----
@@ -270,7 +276,12 @@ def confint_poisson(count, exposure, method=None, alpha=0.05):
     """
     n = exposure  # short hand
     rate = count / exposure
-    alpha = alpha / 2  # two-sided
+
+    if alternative == 'two-sided':
+        alpha = alpha / 2
+    elif alternative not in ['larger', 'smaller']:
+        raise NotImplementedError(
+            f"alternative {alternative} is not available")
 
     if method is None:
         msg = "method needs to be specified, currently no default method"
@@ -364,6 +375,11 @@ def confint_poisson(count, exposure, method=None, alpha=0.05):
 
     else:
         raise ValueError("unknown method %s" % method)
+
+    if alternative == "larger":
+        ci = (0, ci[1])
+    elif alternative == "smaller":
+        ci = (ci[0], np.inf)
 
     ci = (np.maximum(ci[0], 0), ci[1])
     return ci
