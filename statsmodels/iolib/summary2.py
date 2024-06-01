@@ -396,7 +396,8 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
 
 
 # Vertical summary instance for multiple models
-def _col_params(result, float_format='%.4f', stars=True, include_r2=False):
+def _col_params(result, float_format='%.4f', stars=True, include_r2=False,
+                include_n=False):
     """Stack coefficients and standard errors in single column
     """
 
@@ -429,6 +430,13 @@ def _col_params(result, float_format='%.4f', stars=True, include_r2=False):
         if r2.notnull().any():
             r2 = r2.apply(lambda x: float_format % x)
             res = pd.concat([res, r2], axis=0)
+    # Count of observations
+    if include_n:
+        nobs = getattr(result, 'nobs', np.nan)
+        n = pd.Series({('No. Observations', ''): int(nobs)})
+        if n.notnull().any():
+            n = n.apply(lambda x: "%d" % x)  # nobs is an integer if exists
+            res = pd.concat([res, n], axis=0)
 
     res = pd.DataFrame(res)
     res.columns = [str(result.model.endog_names)]
@@ -471,7 +479,7 @@ def _make_unique(list_of_names):
 
 def summary_col(results, float_format='%.4f', model_names=(), stars=False,
                 info_dict=None, regressor_order=(), drop_omitted=False,
-                include_r2=True):
+                include_r2=True, include_n=False):
     """
     Summarize multiple results instances side-by-side (coefs and SEs)
 
@@ -504,13 +512,17 @@ def summary_col(results, float_format='%.4f', model_names=(), stars=False,
         If True, only regressors in regressor_order will be included.
     include_r2 : bool, optional
         Includes R2 and adjusted R2 in the summary table.
+    include_n: bool, optional
+        Includes the number of observations in the summary table.
     """
 
     if not isinstance(results, list):
         results = [results]
 
     cols = [_col_params(x, stars=stars, float_format=float_format,
-                        include_r2=include_r2) for x in results]
+                        include_r2=include_r2, include_n=include_n)
+            for x in results
+            ]
 
     # Unique column names (pandas has problems merging otherwise)
     if model_names:
@@ -529,7 +541,8 @@ def summary_col(results, float_format='%.4f', model_names=(), stars=False,
         for key in col.index:
             if key not in index:
                 index.append(key)
-    for special in (('R-squared', ''), ('R-squared Adj.', '')):
+    for special in (('R-squared', ''), ('R-squared Adj.', ''),
+                    ('No. Observations', '')):
         if special in index:
             index.remove(special)
             index.insert(len(index), special)
@@ -556,10 +569,8 @@ def summary_col(results, float_format='%.4f', model_names=(), stars=False,
     index = summ.index.get_level_values(0)
     for i in range(0, index.shape[0], 2):
         idx.append(index[i])
-        if (i + 1) < index.shape[0] and (index[i] == index[i + 1]):
-            idx.append("")
-        else:
-            idx.append(index[i + 1])
+        if (i + 1) < index.shape[0]:
+            idx.append(index[i + 1] if index[i] != index[i + 1] else "")
     summ.index = idx
 
     # add infos about the models.
