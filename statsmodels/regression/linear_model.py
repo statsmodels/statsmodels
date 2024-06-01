@@ -2731,6 +2731,11 @@ class RegressionResults(base.LikelihoodModelResults):
         See Also
         --------
         statsmodels.iolib.summary.Summary : A class that holds summary results.
+
+        Notes
+        -----
+        For more information on regression results and diagnostic table,
+        see our documentation of `Examples/Linear Regression Models/Regression diagnostics`.
         """
         from statsmodels.stats.stattools import (
             durbin_watson,
