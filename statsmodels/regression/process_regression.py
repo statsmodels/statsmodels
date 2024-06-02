@@ -199,7 +199,7 @@ class GaussianCovariance(ProcessCovariance):
         dbottom = 0.5 * di / sds[:, np.newaxis]
         dtop = -0.5 * eqm[:, np.newaxis] * dq0[:, np.newaxis] * di
         b = (dtop / sds[:, np.newaxis] - eqm[:, np.newaxis] *
-	        dbottom / ds[:, np.newaxis])
+	     dbottom / ds[:, np.newaxis])
         c = eqm / sds
         v = 0.25 * sm[:, np.newaxis] ** 0.25 / sm[:, :, np.newaxis] ** 0.75
 
@@ -561,7 +561,7 @@ class ProcessMLE(base.LikelihoodModel):
 
         ll -= np.sum(0.5 * np.linalg.slogdet(cm)[1])
         ls = (np.linalg.solve(cm, resid_take.reshape(200, 5, 1))
-	        .reshape(200, 5))
+	      .reshape(200, 5))
         ll -= np.sum(0.5 * np.sum(resid_take * ls, axis=1))
 
         if self.verbose:
@@ -626,7 +626,7 @@ class ProcessMLE(base.LikelihoodModel):
         # The derivatives for the mean parameters.
         resid_take = np.take(resid, ind)
         dcr = (np.linalg.solve(cm, resid_take.reshape(200, 5, 1))
-	        .reshape(200, 5))
+	       .reshape(200, 5))
         exog_take = np.take(self.exog, ind, axis=0)
         dot_exog_dcr = np.sum(exog_take.transpose((0, 2, 1))
                               * dcr[:, np.newaxis], axis=2)
