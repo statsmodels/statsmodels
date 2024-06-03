@@ -1,3 +1,4 @@
+import re
 import warnings
 
 import numpy as np
@@ -6,8 +7,8 @@ import pytest
 from numpy.testing import assert_equal
 
 from statsmodels.iolib.summary2 import summary_col
-from statsmodels.tools.tools import add_constant
 from statsmodels.regression.linear_model import OLS
+from statsmodels.tools.tools import add_constant
 
 
 class TestSummaryLatex:
@@ -198,13 +199,88 @@ class TestSummaryLabels:
         x = add_constant([1, 2, 3, 4] * 4)
         cls.mod = OLS(endog=y, exog=x).fit()
 
-    def test_summary_col_r2(self,):
+    def test_summary_col_r2(self):
         # GH 6578
         table = summary_col(results=self.mod, include_r2=True)
         assert "R-squared  " in str(table)
         assert "R-squared Adj." in str(table)
 
-    def test_absence_of_r2(self,):
+    def test_absence_of_r2(self):
         table = summary_col(results=self.mod, include_r2=False)
         assert "R-squared" not in str(table)
         assert "R-squared Adj." not in str(table)
+
+    @pytest.mark.parametrize(
+        "coef_stat, expected_constant_stat, expected_x1_stat",
+        [
+            (None, 0.670820, 0.244949),  # default behavior
+            ("std_error", 0.670820, 0.244949),
+            ("t_stat", 0.745356, 2.449490),
+            ("z_stat", 0.745356, 2.449490),
+        ]
+    )
+    def test_coef_stats_parameter_return_correct_value(
+        self, coef_stat, expected_constant_stat, expected_x1_stat
+    ):
+        if coef_stat is None:
+            # Test the default behavior.
+            # N.B.: we don't pass None to the coef_stats parameter
+            table = summary_col(
+                results=self.mod,
+                float_format="%.5f",  # to avoid rounding errors
+            )
+        else:
+            table = summary_col(
+                results=self.mod,
+                float_format="%.5f",  # to avoid rounding errors
+                coef_stats=coef_stat
+            )
+
+        constant_stat = table.tables[0].iloc[1, 0]
+        # check that the stat is in parentheses
+        assert re.match(r"\(.*\)", constant_stat)
+        constant_stat_value = float(constant_stat.strip("()"))
+        assert np.isclose(constant_stat_value, expected_constant_stat)
+
+        x1_stat = table.tables[0].iloc[3, 0]
+        # check that the stat is in parentheses
+        assert re.match(r"\(.*\)", x1_stat)
+        x1_stat_value = float(x1_stat.strip("()"))
+        assert np.isclose(x1_stat_value, expected_x1_stat)
+
+    @pytest.mark.parametrize(
+        "coef_stat, expected_footer",
+        [
+            ("std_error", "Standard errors in parentheses."),
+            ("t_stat", "t-statistics in parentheses."),
+            ("z_stat", "z-statistics in parentheses."),
+        ]
+    )
+    def test_coef_stats_parameter_adds_correct_footer(
+        self, coef_stat, expected_footer
+    ):
+        table = summary_col(results=self.mod, coef_stats=coef_stat)
+        assert expected_footer in table.extra_txt
+
+    @pytest.mark.parametrize(
+        "coef_stat",
+        ["", None]
+    )
+    def test_no_coef_stats_parameter_deletes_stats(self, coef_stat):
+        table = summary_col(results=self.mod, coef_stats=coef_stat)
+        # ensure the table has no stats index
+        # stat index would be an empty string after 'const' and after 'x1'
+        assert all(table.tables[0].index == [
+            "const", "x1", "R-squared", "R-squared Adj."
+        ])
+        # ensure that the footer is not present
+        assert "in parentheses." not in str(table)
+        print(table)
+
+    @pytest.mark.parametrize(
+        "coef_stat",
+        ["invalid", 42, True]
+    )
+    def test_invalid_coef_stats_parameter_raises_error(self, coef_stat):
+        with pytest.raises(ValueError):
+            summary_col(results=self.mod, coef_stats=coef_stat)

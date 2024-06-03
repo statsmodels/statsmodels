@@ -1,10 +1,12 @@
+from statsmodels.base.wrapper import ResultsWrapper
 from statsmodels.compat.pandas import FUTURE_STACK
 from statsmodels.compat.python import lzip
 
 import datetime
-from functools import reduce
 import re
 import textwrap
+from functools import reduce
+from typing import Callable, Literal
 
 import numpy as np
 import pandas as pd
@@ -395,18 +397,32 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
     return data
 
 
+_CoefficientStats = Literal["std_error", "t_stat", "z_stat", ""]
+
+
 # Vertical summary instance for multiple models
-def _col_params(result, float_format='%.4f', stars=True, include_r2=False):
+def _col_params(
+    result: ResultsWrapper,
+    float_format: str = '%.4f',
+    stars: bool = True,
+    include_r2: bool = False,
+    coef_stats: _CoefficientStats | None = 'std_error'
+):
     """Stack coefficients and standard errors in single column
     """
-
     # Extract parameters
-    res = summary_params(result)
+    res = summary_params(result, use_t=coef_stats == 't_stat')
+
+    coef_column_index = 0
+    stat_column_index = 1 if coef_stats == 'std_error' else 2
     # Format float
-    for col in res.columns[:2]:
+    for col in res.columns[[coef_column_index, stat_column_index]]:
         res[col] = res[col].apply(lambda x: float_format % x)
-    # Std.Errors in parentheses
-    res.iloc[:, 1] = '(' + res.iloc[:, 1] + ')'
+    # Coefficient stats in parentheses
+    if coef_stats:
+        res.iloc[:, stat_column_index] = (
+            "(" + res.iloc[:, stat_column_index] + ")"
+        )
     # Significance stars
     if stars:
         idx = res.iloc[:, 3] < .1
@@ -415,8 +431,9 @@ def _col_params(result, float_format='%.4f', stars=True, include_r2=False):
         res.loc[idx, res.columns[0]] = res.loc[idx, res.columns[0]] + '*'
         idx = res.iloc[:, 3] < .01
         res.loc[idx, res.columns[0]] = res.loc[idx, res.columns[0]] + '*'
-    # Stack Coefs and Std.Errors
-    res = res.iloc[:, :2]
+    # Keep coefs and stats only, and stack them
+    res = (res.iloc[:, [coef_column_index, stat_column_index]] if coef_stats
+           else res.iloc[:, [coef_column_index]])
     res = res.stack(**FUTURE_STACK)
 
     # Add R-squared
@@ -469,9 +486,17 @@ def _make_unique(list_of_names):
     return header
 
 
-def summary_col(results, float_format='%.4f', model_names=(), stars=False,
-                info_dict=None, regressor_order=(), drop_omitted=False,
-                include_r2=True):
+def summary_col(
+    results: ResultsWrapper | list[ResultsWrapper],
+    float_format: str = '%.4f',
+    model_names: list[str] | None = None,
+    stars: bool = False,
+    info_dict: dict[str, Callable | dict] | None = None,
+    regressor_order: list[str] | None = None,
+    drop_omitted: bool = False,
+    include_r2: bool = True,
+    coef_stats: _CoefficientStats = 'std_error'
+):
     """
     Summarize multiple results instances side-by-side (coefs and SEs)
 
@@ -504,16 +529,27 @@ def summary_col(results, float_format='%.4f', model_names=(), stars=False,
         If True, only regressors in regressor_order will be included.
     include_r2 : bool, optional
         Includes R2 and adjusted R2 in the summary table.
+    coef_stats: str, optional
+        Specifies the type of statistics to show under the coefficients. Must
+        be one of 'std_error', 't_stat', or 'z_stat'. If None or an empty
+        string, no additional statistics are shown.
+        Default : 'std_error'
     """
 
     if not isinstance(results, list):
         results = [results]
 
+    if coef_stats not in ('std_error', 't_stat', 'z_stat', '', None):
+        raise ValueError("coef_stats must be one of 'std_error', 't_stat', "
+                         "'z_stat', or an empty string. "
+                         f"Got {coef_stats!r} instead.")
+
     cols = [_col_params(x, stars=stars, float_format=float_format,
-                        include_r2=include_r2) for x in results]
+                        include_r2=include_r2, coef_stats=coef_stats)
+            for x in results]
 
     # Unique column names (pandas has problems merging otherwise)
-    if model_names:
+    if model_names is not None:
         colnames = _make_unique(model_names)
     else:
         colnames = _make_unique([x.columns[0] for x in cols])
@@ -537,7 +573,7 @@ def summary_col(results, float_format='%.4f', model_names=(), stars=False,
     summ = reduce(merg, cols)
     summ = summ.reindex(index)
 
-    if regressor_order:
+    if regressor_order is not None:
         varnames = summ.index.get_level_values(0).tolist()
         vc = pd.Series(varnames).value_counts()
         varnames = vc.loc[vc == 2].index.tolist()
@@ -584,7 +620,14 @@ def summary_col(results, float_format='%.4f', model_names=(), stars=False,
     smry = Summary()
     smry._merge_latex = True
     smry.add_df(summ, header=True, align='l')
-    smry.add_text('Standard errors in parentheses.')
+
+    if coef_stats:
+        coef_stats_names = {
+            'std_error': 'Standard errors',
+            't_stat': 't-statistics',
+            'z_stat': 'z-statistics',
+        }
+        smry.add_text(f"{coef_stats_names.get(coef_stats)} in parentheses.")
     if stars:
         smry.add_text('* p<.1, ** p<.05, ***p<.01')
 
