@@ -36,6 +36,7 @@ convenience functions to create required data format from raw data
 
 import numpy as np
 from scipy import stats  #get rid of this? need only norm.sf
+from statsmodels.tools.testing import Holder
 
 
 class ResultsBunch(dict):
@@ -52,6 +53,22 @@ class ResultsBunch(dict):
 
     def __str__(self):
         return self.template % self
+
+
+class FleissKappaResults(Holder):
+    """
+    Results class for Fleiss' Kappa
+
+    Attributes
+    ----------
+    statistic: float
+        Fleiss' Kappa for overall inter-rater agreement.
+    zvalue : float
+        Z-value for the null that the overall Fleiss' kappa = 0.
+    pvalue : float
+        p-value for overall Z-value.
+    """
+
 
 def _int_ifclose(x, dec=1, width=4):
     '''helper function for creating result string for int or float
@@ -191,7 +208,22 @@ def to_table(data, bins=None):
 
     return tt[0], bins_
 
-def fleiss_kappa(table, method='fleiss'):
+
+def _fleiss_standard_error(p_cat, n_sub, n_rat):
+    p_complement = 1 - p_cat
+
+
+    return (
+        (2 ** .5 / (
+            p_cat.dot(p_complement) * np.sqrt(n_sub * n_rat * (n_rat - 1))))
+        * (
+            (p_cat.dot(p_complement) ** 2)
+            - np.sum(p_cat * p_complement * (p_complement - p_cat))
+        ) ** .5
+    )
+
+
+def fleiss_kappa(table, method='fleiss', return_results=False):
     """Fleiss' and Randolph's kappa multi-rater agreement measure
 
     Parameters
@@ -206,16 +238,21 @@ def fleiss_kappa(table, method='fleiss'):
         Method 'randolph' or 'uniform' (only first 4 letters are needed)
         returns Randolph's (2005) multirater kappa which assumes a uniform
         distribution of the categories to define the chance outcome.
+    return_results : bool
+        If True and `method` is 'fleiss' then returns an object with the
+        z-score and pvalue for Fleiss' kappa based on Fleiss, Nee, and Landis
+        (1979).  Has no effect if method is not 'fleiss'.
 
     Returns
     -------
-    kappa : float
-        Fleiss's or Randolph's kappa statistic for inter rater agreement
+    kappa : float or FleissKappaResults
+        Fleiss's or Randolph's kappa statistic for inter rater agreement if
+        return_results is False. If True and `method` is 'fleiss', returns an
+        object with the test statistic, zvalue, and pvalue testing the
+        null that the test statistic = 0.
 
     Notes
     -----
-    no variance or hypothesis tests yet
-
     Interrater agreement measures like Fleiss's kappa measure agreement relative
     to chance agreement. Different authors have proposed ways of defining
     these chance agreements. Fleiss' is based on the marginal sample distribution
@@ -232,6 +269,11 @@ def fleiss_kappa(table, method='fleiss'):
     Fleiss, Joseph L. 1971. "Measuring Nominal Scale Agreement among Many
     Raters." Psychological Bulletin 76 (5): 378-82.
     https://doi.org/10.1037/h0031619.
+
+    Fleiss, Joseph L., John C. Nee, and J. Richard Landis. "Large sample
+    variance of kappa in hte case of different sets of raters." Psychological
+    bulletin, 86(5), 974.
+    https://psycnet.apa.org/record/1979-32706-001
 
     Randolph, Justus J. 2005 "Free-Marginal Multirater Kappa (multirater
     K [free]): An Alternative to Fleiss' Fixed-Marginal Multirater Kappa."
@@ -264,7 +306,18 @@ def fleiss_kappa(table, method='fleiss'):
         p_mean_exp = 1 / n_cat
 
     kappa = (p_mean - p_mean_exp) / (1- p_mean_exp)
-    return kappa
+    if not return_results or method != 'fleiss':
+        return kappa
+
+    standard_error = _fleiss_standard_error(p_cat, n_sub, n_rat)
+    zvalue = kappa / standard_error
+    pvalue = 1 - stats.norm.cdf(zvalue)
+    return FleissKappaResults(
+        statistic=kappa,
+        zvalue=zvalue,
+        pvalue=pvalue,
+        method=method
+    )
 
 
 def cohens_kappa(table, weights=None, return_results=True, wt=None):
