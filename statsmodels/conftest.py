@@ -5,6 +5,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from statsmodels.tools.tools import is_wasm
+
 try:
     import matplotlib
 
@@ -141,3 +143,26 @@ def reset_randomstate():
     np.random.seed(1)
     yield
     np.random.set_state(state)
+
+
+# This is a special hook that converts all xfail marks to have strict=False
+# instead of strict=True. This is useful to have for Pyodide tests, where
+# some tests will consistently xfail due to missing functionality (such as
+# NotImplementedErrors) or floating point imprecisions, but we don't want
+# to mark them as strict xfails because they are more prominently expected
+# to fail in a Pyodide environment.
+def pytest_collection_modifyitems(config, items):
+    if is_wasm():
+        for item in items:
+            if 'xfail' in item.keywords:
+                mark = item.get_closest_marker('xfail')
+                if mark:
+                    # Modify the existing xfail mark if it exists
+                    # to set strict=False
+                    new_kwargs = dict(mark.kwargs)
+                    new_kwargs['strict'] = False
+                    new_mark = pytest.mark.xfail(**new_kwargs)
+                    item.add_marker(new_mark)
+                    item.keywords['xfail'] = new_mark
+    else:
+        pass
