@@ -4,7 +4,7 @@ from numpy.testing import assert_allclose, assert_equal
 from scipy import stats
 from scipy.stats import poisson, nbinom
 
-from statsmodels.tools.tools import Bunch
+from statsmodels.tools.tools import Bunch, is_wasm
 
 from statsmodels.distributions.discrete import (
     genpoisson_p,
@@ -330,6 +330,10 @@ class CheckDiscretized():
         dfr = mod.get_distr(res.params)
         nobs_rvs = 500
         rvs = dfr.rvs(size=nobs_rvs)
+        # TypeError: Cannot cast array data from dtype('int64') to dtype('int32') according to the rule 'safe',
+        # to fix this, change the dtype of rvs to int32 so that it can be passed to np.bincount
+        if is_wasm():
+            rvs = rvs.astype(np.int32)
         freq = np.bincount(rvs)
         p = mod.predict(res.params, which="probs", k_max=nobs_rvs)
         k = len(freq)
