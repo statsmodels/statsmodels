@@ -9,6 +9,7 @@ from statsmodels.graphics.functional import (
     hdrboxplot,
     rainbowplot,
 )
+from statsmodels.tools.tools import is_wasm
 
 try:
     import matplotlib.pyplot as plt
@@ -22,6 +23,7 @@ labels = data.raw_data[:, 0].astype(int)
 data = data.raw_data[:, 1:]
 
 
+@pytest.mark.skipif(is_wasm(), reason="Multiprocessing is not supported in WASM/Pyodide")
 @pytest.mark.matplotlib
 def test_hdr_basic(close_figures):
     try:
@@ -77,6 +79,7 @@ def test_hdr_basic_brute(close_figures, reset_randomstate):
         pytest.xfail('Multiprocess randomly crashes in Windows testing')
 
 
+@pytest.mark.skipif(is_wasm(), reason="Multiprocessing is not supported in WASM/Pyodide")
 @pytest.mark.slow
 @pytest.mark.matplotlib
 def test_hdr_plot(close_figures):
@@ -96,6 +99,7 @@ def test_hdr_plot(close_figures):
         pytest.xfail('Multiprocess randomly crashes in Windows testing')
 
 
+@pytest.mark.skipif(is_wasm(), reason="Multiprocessing is not supported in WASM/Pyodide")
 @pytest.mark.slow
 @pytest.mark.matplotlib
 def test_hdr_alpha(close_figures):
@@ -111,6 +115,7 @@ def test_hdr_alpha(close_figures):
         pytest.xfail('Multiprocess randomly crashes in Windows testing')
 
 
+@pytest.mark.skipif(is_wasm(), reason="Multiprocessing is not supported in WASM/Pyodide")
 @pytest.mark.slow
 @pytest.mark.matplotlib
 def test_hdr_multiple_alpha(close_figures):
@@ -135,6 +140,7 @@ def test_hdr_multiple_alpha(close_figures):
         pytest.xfail('Multiprocess randomly crashes in Windows testing')
 
 
+@pytest.mark.skipif(is_wasm(), reason="Multiprocessing is not supported in WASM/Pyodide")
 @pytest.mark.slow
 @pytest.mark.matplotlib
 def test_hdr_threshold(close_figures):
@@ -149,6 +155,7 @@ def test_hdr_threshold(close_figures):
         pytest.xfail('Multiprocess randomly crashes in Windows testing')
 
 
+@pytest.mark.skipif(is_wasm(), reason="Multiprocessing is not supported in WASM/Pyodide")
 @pytest.mark.matplotlib
 def test_hdr_bw(close_figures):
     try:
@@ -162,6 +169,7 @@ def test_hdr_bw(close_figures):
         pytest.xfail('Multiprocess randomly crashes in Windows testing')
 
 
+@pytest.mark.skipif(is_wasm(), reason="Multiprocessing is not supported in WASM/Pyodide")
 @pytest.mark.slow
 @pytest.mark.matplotlib
 def test_hdr_ncomp(close_figures):
