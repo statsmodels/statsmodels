@@ -26,6 +26,8 @@ from scipy.stats.distributions import norm
 import scipy
 from packaging import version
 
+from statsmodels.tools.tools import is_wasm
+
 pval0 = np.array([
     0.838541367553,  0.642193923795,  0.680845947633,
     0.967833824309,  0.71626938238,  0.177096952723,  5.23656777208e-005,
@@ -423,6 +425,7 @@ def test_floating_precision(method):
     assert multipletests(pvals, method=method)[1][0] > 1e-60
 
 
+@pytest.mark.xfail(is_wasm(), reason="Failing on Pyodide due to issues with scipy.optimize's solver")
 def test_tukeyhsd():
     # example multicomp in R p 83
 
