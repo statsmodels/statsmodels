@@ -29,6 +29,7 @@ from statsmodels.tools.sm_exceptions import (
     ValueWarning,
 )
 # Remove imports when range unit root test gets an R implementation
+from statsmodels.tools.tools import is_wasm
 from statsmodels.tools.validation import array_like, bool_like
 from statsmodels.tsa.arima_process import arma_acovf
 from statsmodels.tsa.statespace.sarimax import SARIMAX
@@ -350,8 +351,9 @@ class TestPACF(CheckCorrGram):
         assert_almost_equal(pacfyw[1:], self.pacfyw, DECIMAL_8)
 
     def test_yw_singular(self):
-        with pytest.warns(ValueWarning):
-            pacf(np.ones(30), nlags=6)
+        if not is_wasm():  # No fp exception support in WASM
+            with pytest.warns(ValueWarning):
+                pacf(np.ones(30), nlags=6)
 
     def test_ld(self):
         pacfyw = pacf_yw(self.x, nlags=40, method="mle")
