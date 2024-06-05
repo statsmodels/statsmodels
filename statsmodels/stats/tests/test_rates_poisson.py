@@ -23,6 +23,7 @@ from statsmodels.stats.rates import (
     method_names_poisson_1samp,
     method_names_poisson_2indep,
     )
+from statsmodels.tools.tools import is_wasm
 
 methods = ["wald", "score", "exact-c", "waldccv", "sqrt-a", "sqrt-v", "midp-c",
            "sqrt",
@@ -716,10 +717,12 @@ class TestMethodsCompare2indep():
         assert_allclose(tst2.pvalue, tst.pvalue, rtol=rtol)
 
         # check corner case count2 = 0, see issue #8313
-        with pytest.warns(RuntimeWarning):
-            tst = smr.test_poisson_2indep(count1, n1, 0, n2, method=meth,
-                                          compare=compare,
-                                          value=None, alternative='two-sided')
+        if not is_wasm():  # No fp exception support in WASM
+            with pytest.warns(RuntimeWarning):
+                tst = smr.test_poisson_2indep(
+                    count1, n1, 0, n2, method=meth,
+                    compare=compare,
+                    value=None, alternative='two-sided')
 
     @pytest.mark.parametrize(
         "compare, meth",
