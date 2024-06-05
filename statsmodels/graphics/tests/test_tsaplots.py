@@ -21,6 +21,7 @@ from statsmodels.graphics.tsaplots import (
     quarter_plot,
     seasonal_plot,
 )
+from statsmodels.tools.tools import is_wasm
 from statsmodels.tsa import arima_process as tsp
 from statsmodels.tsa.ar_model import AutoReg
 from statsmodels.tsa.arima.model import ARIMA
@@ -242,6 +243,7 @@ def test_plot_accf_grid(close_figures):
     plot_accf_grid(x, fig=fig, use_vlines=False)
 
 
+@pytest.mark.skipif(is_wasm(), reason="Matplotlib uses different backend in WASM")
 @pytest.mark.matplotlib
 def test_plot_month(close_figures):
     dta = elnino.load_pandas().data
