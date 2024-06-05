@@ -40,7 +40,13 @@ async function main() {
         await pyodide.runPythonAsync("import micropip; micropip.install('pytest')");
         await pyodide.runPythonAsync("import micropip; micropip.install('pytest-cov')");
         await pyodide.runPythonAsync("import micropip; micropip.install('matplotlib')");
-        await pyodide.runPythonAsync("import statsmodels; statsmodels.test(['-ra', '--skip-examples', '--skip-slow'])");
+        await pyodide.runPythonAsync(`
+        import sys
+        import statsmodels
+        res = statsmodels.test(['-ra', '--skip-examples', '--skip-slow'])
+        exit_code = int(res)
+        sys.exit(exit_code)
+        `);
     } catch (e) {
         console.error(e);
         // Arbitrary exit code here. I have seen this code reached instead of a
