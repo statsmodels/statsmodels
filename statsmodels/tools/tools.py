@@ -1,6 +1,8 @@
 """
 Utility functions models code
 """
+import platform
+import sys
 import numpy as np
 import pandas as pd
 import scipy.linalg
@@ -16,6 +18,10 @@ def asstr2(s):
         return s.decode('latin1')
     else:
         return str(s)
+
+
+def is_wasm():
+    return sys.platform == "emscripten" or platform.machine() in ["wasm32", "wasm64"]
 
 
 def _make_dictnames(tmp_arr, offset=0):
