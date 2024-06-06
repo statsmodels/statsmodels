@@ -62,4 +62,4 @@ jobs:
         pyodide venv .venv-pyodide
         source .venv-pyodide/bin/activate
         npm install pyodide@${{ env.PYODIDE_VERSION }}
-        node tools/ci/run_statsmodels_test_suite.js --pyargs statsmodels
+        node tools/ci/run_statsmodels_test_suite.js
