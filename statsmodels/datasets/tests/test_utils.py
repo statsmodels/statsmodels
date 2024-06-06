@@ -10,10 +10,11 @@ from numpy.testing import assert_, assert_array_equal
 import pytest
 
 from statsmodels.datasets import get_rdataset, webuse, check_internet, utils
+from statsmodels.tools.tools import is_wasm
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 
-if not (sys.platform == "emscripten" or platform.machine() in ["wasm32", "wasm64"]):
+if not is_wasm():
     from ssl import SSLError
     IGNORED_EXCEPTIONS = (HTTPError, URLError, SSLError,  UnicodeEncodeError,
                       timeout)
