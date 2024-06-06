@@ -425,7 +425,10 @@ def test_floating_precision(method):
     assert multipletests(pvals, method=method)[1][0] > 1e-60
 
 
-@pytest.mark.xfail(is_wasm(), reason="Failing on Pyodide due to issues with scipy.optimize's solver")
+@pytest.mark.xfail(
+    is_wasm(),
+    reason="Failing on Pyodide due to issues with scipy.optimize's solver"
+)
 def test_tukeyhsd():
     # example multicomp in R p 83
 

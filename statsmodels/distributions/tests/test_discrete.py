@@ -330,8 +330,10 @@ class CheckDiscretized():
         dfr = mod.get_distr(res.params)
         nobs_rvs = 500
         rvs = dfr.rvs(size=nobs_rvs)
-        # TypeError: Cannot cast array data from dtype('int64') to dtype('int32') according to the rule 'safe',
-        # to fix this, change the dtype of rvs to int32 so that it can be passed to np.bincount
+        # TypeError: Cannot cast array data from dtype('int64') to
+        # dtype('int32') according to the rule 'safe'.
+        # To fix this, change the dtype of rvs to int32 so that it
+        # can bepassed to np.bincount
         if is_wasm():
             rvs = rvs.astype(np.int32)
         freq = np.bincount(rvs)

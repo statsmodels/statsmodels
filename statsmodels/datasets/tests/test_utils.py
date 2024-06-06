@@ -14,12 +14,12 @@ cur_dir = os.path.dirname(os.path.abspath(__file__))
 
 if not is_wasm():
     from ssl import SSLError
-    IGNORED_EXCEPTIONS = (HTTPError, URLError, SSLError,  UnicodeEncodeError,
-                      timeout)
+    IGNORED_EXCEPTIONS = (
+        HTTPError, URLError, SSLError, UnicodeEncodeError, timeout
+    )
 
 else:
-    IGNORED_EXCEPTIONS = (HTTPError, URLError,  UnicodeEncodeError,
-                      timeout)
+    IGNORED_EXCEPTIONS = (HTTPError, URLError, UnicodeEncodeError, timeout)
 
 
 @pytest.mark.smoke
