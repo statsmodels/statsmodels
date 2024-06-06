@@ -1,4 +1,4 @@
-# Attreibuted to NumPy via https://github.com/numpy/numpy/pull/25894
+# Attributed to NumPy via https://github.com/numpy/numpy/pull/25894
 # https://github.com/numpy/numpy/blob/d2d2c25fa81b47810f5cbd85ea6485eb3a3ffec3/.github/workflows/emscripten.yml
 name: Test Emscripten/Pyodide build
 
