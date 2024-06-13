@@ -14,7 +14,7 @@ mkdir test-run
 cd test-run
 @echo PYTEST_DIRECTIVES is not defined, testing using install
 @echo Running test from %CD%
-@echo python -c "import statsmodels;statsmodels.test(['-r s', '-n 2', '--skip-examples'], exit=True)
-python -c "import statsmodels;statsmodels.test(['-r s', '-n 2', '--skip-examples'], exit=True)
+@echo python -c "import statsmodels;statsmodels.test(['-r s', '-n 2', '--skip-examples'])
+python -c "import statsmodels;statsmodels.test(['-r s', '-n 2', '--skip-examples'])
 
 :End

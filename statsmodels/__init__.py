@@ -16,7 +16,7 @@ if debug_warnings:
     # warnings.filterwarnings("error", message=".*integer.*")
 
 
-def test(extra_args=None, exit=False):
+def test(extra_args=None):
     """
     Run the test suite
 
@@ -36,7 +36,7 @@ def test(extra_args=None, exit=False):
     from .tools._testing import PytestTester
 
     tst = PytestTester(package_path=__file__)
-    return tst(extra_args=extra_args, exit=exit)
+    return tst(extra_args=extra_args)
 
 
 __all__ = ["__version__", "__version_info__", "__version_tuple__", "test"]
