@@ -162,7 +162,6 @@ class CheckGenericMixin:
         return res
 
 
-    @pytest.mark.xfail(is_wasm(), reason="Fails in WASM, not sure what to do with this yet")
     def test_zero_collinear(self):
         # not completely generic yet
         if isinstance(self.results.model, (sm.GEE)):
@@ -199,7 +198,12 @@ class CheckGenericMixin:
         # TODO: Can we choose a test case without this issue?
         #  If not, should we be getting this warning for all
         #  model subclasses?
+        # TODO: Investigate how to resolve unseen warnings for Pyodide
+        # Most likely coming from NumPy.linalg + lack of fp exceptions
+        # support under WASM
         warn_cls = HessianInversionWarning if isinstance(mod, sm.GLM) else None
+        if is_wasm():
+            warn_cls = None
 
         cov_types = ['nonrobust', 'HC0']
 
