@@ -13,7 +13,6 @@ from statsmodels.sandbox.regression import gmm
 import statsmodels.robust.norms as rnorms
 import statsmodels.robust.scale as rscale
 import statsmodels.robust.robust_linear_model as rlm
-from nltk.corpus.reader.rte import norm
 
 
 class MEstimator(GenericLikelihoodModel):
@@ -286,8 +285,7 @@ class _RobustGMM(gmm.GMM):
         if meef_scale is None:
             #stats.norm.expect(lambda x, *args: rnorms.TukeyBiweight(1).rho(x))
             scale_bias = 0.10903642477287441
-            # TODO: still the bug in TukeyBiweight  + 0.16666667 in this branch
-            meef_scale = lambda x: rnorms.TukeyBiweight(1).rho(x)-scale_bias + 0.16666667
+            meef_scale = lambda x: rnorms.TukeyBiweight(1).rho(x)-scale_bias
 
         self.norm = norm
         self.meef_scale = meef_scale
