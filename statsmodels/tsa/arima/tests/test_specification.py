@@ -584,3 +584,215 @@ def test_valid_estimators(order, seasonal_order, enforce_stationarity,
 def test_invalid_estimator():
     spec = specification.SARIMAXSpecification()
     assert_raises(ValueError, spec.validate_estimator, 'not_an_estimator')
+
+
+@pytest.mark.parametrize(
+    "spec_params, fixed_params, allow_fixed_sigma2, invalid_fixed_params",
+    [
+        # no fixed param
+        (
+            {"seasonal_ar_order": [0, 1], "seasonal_periods": 12},
+            {},
+            False,
+            None
+        ),
+        # invalid fixed params
+        (
+            {"order": (1, 1, 3)},
+            {"ar.L2": 0, "ma.L2": 0},
+            False,
+            ["ar.L2"]
+        ),
+        (
+            {"ar_order": [0, 1], "ma_order": [0, 0, 1]},
+            {"ma.L1": 0, "sigma2": 1},
+            False,
+            ["ma.L1", "sigma2"]
+        ),
+        (
+            {"order": (1, 1, 3), "concentrate_scale": True},
+            {"ar.L2": 0, "ma.L2": 0, "sigma2": 1},
+            True,
+            ["ar.L2", "sigma2"]
+        ),
+        (
+            {"exog": np.random.random(100)},
+            {"ma.L1": 0, "ar.L1": 0, "ma.S.L2": 0},
+            True,
+            ["ar.L1", "ma.L1", "ma.S.L2"]
+        ),
+        (
+            {"ar_order": 5, "seasonal_order": (1, 1, 3, 10)},
+            {"random_param": 0, "ar.L1": 0, "ar.S.L10": 0},
+            False,
+            ["random_param"]
+        ),
+        # valid fixed params
+        (
+            {"exog": np.ones(100), "ma_order": 2},
+            {"ma.L1": 0, "ma.L2": 0, "const": 0},
+            False,
+            None
+        ),
+        (
+            {
+                "exog": pd.Series(np.random.random(100), name="feature"),
+                "seasonal_order": (1, 0, 0, 2)
+            },
+            {"feature": 0, "ar.S.L2": 0},
+            False,
+            None
+        ),
+        (
+            {"ar_order": [1, 0, 1], "ma_order": 3},
+            {"ma.L2": 0, "ar.L3": 0, "sigma2": 1},
+            True,
+            None
+        ),
+        # all fixed
+        (
+            {"ar_order": 2, "ma_order": 2, "concentrate_scale": False},
+            {"ma.L1": 0, "ma.L2": 0, "ar.L1": 0, "ar.L2": 0, "sigma2": 2},
+            True,
+            None
+        )
+    ]
+)
+def test_validate_fixed_params_invalid_param_names(spec_params, fixed_params,
+                                                   allow_fixed_sigma2,
+                                                   invalid_fixed_params):
+
+    spec = specification.SARIMAXSpecification(**spec_params)
+
+    if invalid_fixed_params is None:
+        spec.validate_fixed_params(
+            fixed_params=fixed_params, allow_fixed_sigma2=allow_fixed_sigma2
+        )
+    else:
+        msg_prefix = f"Invalid fixed parameter(s): {invalid_fixed_params}."
+        # using direct `assert` to test error message instead of `match` since
+        # the error message contains regex characters
+        with pytest.raises(ValueError) as e:
+            spec.validate_fixed_params(
+                fixed_params=fixed_params,
+                allow_fixed_sigma2=allow_fixed_sigma2
+            )
+        assert str(e.value).startswith(msg_prefix)
+
+
+@pytest.mark.parametrize(
+    "spec_params, fixed_params, allow_fixed_sigma2, err_msg",
+    [
+        (
+            {"order": (1, 1, 3)},
+            {"ar.L2": 0, "ma.L2": 1},
+            False,
+            "Invalid fixed parameter"
+        ),
+        (
+            {"exog": np.ones(100), "ma_order": 2},
+            {"ma.L1": 1, "const": np.nan},
+            False,
+            (
+                "Parameters vector for fixed parameters includes "
+                "NaN or Inf values."
+            )
+        ),
+        (
+            {"ar_order": [1, 0, 1], "ma_order": 3},
+            {"ma.L2": np.inf, "ar.L3": 0},
+            True,
+            (
+                "Parameters vector for fixed parameters includes "
+                "NaN or Inf values."
+            )
+        ),
+        (
+            {"ar_order": [1, 0, 1], "ma_order": 2, "concentrate_scale": False},
+            {"ar.L3": 0, "sigma2": -1},
+            True,
+            "Fixed value for parameter 'sigma2' cannot be negative."
+        )
+    ]
+)
+def test_validate_fixed_params_invalid_param_values(spec_params, fixed_params,
+                                                    allow_fixed_sigma2,
+                                                    err_msg):
+    spec = specification.SARIMAXSpecification(**spec_params)
+    with pytest.raises(ValueError, match=err_msg):
+        spec.validate_fixed_params(
+            fixed_params=fixed_params, allow_fixed_sigma2=allow_fixed_sigma2
+        )
+
+
+@pytest.mark.parametrize(
+    "fixed_params, expected_split_fixed_params, expected_split_is_fixed_param",
+    [
+        (
+            {"ar.L1": 1, "ma.L2": 2, "ar.S.L5": 3, "x2": 4},
+            {
+                "exog_params": np.array([4.], dtype=np.float64),
+                "ar_params": np.array([1.], dtype=np.float64),
+                "ma_params": np.array([2.], dtype=np.float64),
+                "seasonal_ar_params": np.array([3.], dtype=np.float64),
+                "seasonal_ma_params": np.array([], dtype=np.float64),
+                "sigma2": None
+            },
+            {
+                "exog_params": np.array([False,  True], dtype=bool),
+                "ar_params": np.array([True, False], dtype=bool),
+                "ma_params": np.array([False,  True], dtype=bool),
+                "seasonal_ar_params": np.array([True, False], dtype=bool),
+                "seasonal_ma_params": np.array([], dtype=bool),
+                "sigma2": False
+            }
+        ),
+        (
+            {"ar.L1": 1, "ar.L3": 3, "ar.S.L10": 10, "sigma2": 2},
+            {
+                "exog_params": np.array([], dtype=np.float64),
+                "ar_params": np.array([1., 3.], dtype=np.float64),
+                "ma_params": np.array([], dtype=np.float64),
+                "seasonal_ar_params": np.array([10.], dtype=np.float64),
+                "seasonal_ma_params": np.array([], dtype=np.float64),
+                "sigma2": 2
+            },
+            {
+                "exog_params": np.array([False,  False], dtype=bool),
+                "ar_params": np.array([True, True], dtype=bool),
+                "ma_params": np.array([False,  False], dtype=bool),
+                "seasonal_ar_params": np.array([False, True], dtype=bool),
+                "seasonal_ma_params": np.array([], dtype=bool),
+                "sigma2": True
+            }
+        ),
+    ]
+)
+def test_split_fixed_params(fixed_params, expected_split_fixed_params,
+                            expected_split_is_fixed_param):
+    spec = specification.SARIMAXSpecification(
+        exog=np.random.random(size=(20, 2)),
+        ar_order=[1, 0, 1], ma_order=2,
+        seasonal_order=[2, 1, 0, 5],
+    )
+
+    actual_res = spec.split_fixed_params(fixed_params)
+    actual_split_fixed_params, actual_split_is_fixed_param = actual_res
+
+    assert (
+       actual_split_fixed_params.keys() ==
+       expected_split_fixed_params.keys()
+    )
+    assert (
+        actual_split_is_fixed_param.keys() ==
+        expected_split_is_fixed_param.keys()
+    )
+    for k in actual_split_fixed_params.keys():
+        assert_equal(
+            actual_split_fixed_params[k],
+            expected_split_fixed_params[k]
+        )
+        assert_equal(
+            actual_split_is_fixed_param[k],
+            expected_split_is_fixed_param[k],
+        )
