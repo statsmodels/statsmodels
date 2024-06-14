@@ -23,10 +23,6 @@ labels = data.raw_data[:, 0].astype(int)
 data = data.raw_data[:, 1:]
 
 
-@pytest.mark.skipif(
-        PYTHON_IMPL_WASM,
-        reason="Multiprocessing is not supported in WASM/Pyodide"
-    )
 @pytest.mark.matplotlib
 def test_hdr_basic(close_figures):
     try:
