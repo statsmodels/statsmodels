@@ -575,14 +575,14 @@ def summary_col(results, float_format='%.4f', model_names=(), stars=False,
     if fixed_effects:
         if not info_dict:
             info_dict = {}
+
         for fe in fixed_effects:
-            info_dict[fe + ' FE'] = (lambda x,
-                                     fe=fe,
-                                     fe_present=fe_present,
-                                     fe_absent=fe_absent: fe_present
-                                        if any(param.startswith(f'C({fe})')
-                                            for param in x.params.index)
-                                        else fe_absent)
+            info_dict[fe + ' FE'] = (
+                lambda x, fe=fe, fe_present=fe_present, fe_absent=fe_absent:
+                    fe_present
+                    if any((f'C({fe})' in param) for param in x.params.index)
+                    else fe_absent
+                )
 
     # add infos about the models.
     if info_dict:
@@ -606,8 +606,9 @@ def summary_col(results, float_format='%.4f', model_names=(), stars=False,
     # fixed effects processing
     if fixed_effects:
         index_series = pd.Series(summ.index, index=summ.index)
-        skip_flag = index_series.apply(lambda x: any(x.startswith(f'C({fe})')
-                                                for fe in fixed_effects))
+        skip_flag = index_series.apply(
+            lambda x: any((f'C({fe})' in x) for fe in fixed_effects)
+            )
         skip_next_flag = skip_flag.shift(fill_value=False)
         final_skip = skip_flag | skip_next_flag
         summ = summ[~final_skip]
