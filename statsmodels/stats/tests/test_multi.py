@@ -17,6 +17,7 @@ import numpy as np
 from numpy.testing import (assert_almost_equal, assert_equal,
                            assert_allclose)
 
+from statsmodels.compat.python import PYTHON_IMPL_WASM
 from statsmodels.stats.multitest import (multipletests, fdrcorrection,
                                          fdrcorrection_twostage,
                                          NullDistribution,
@@ -26,7 +27,6 @@ from scipy.stats.distributions import norm
 import scipy
 from packaging import version
 
-from statsmodels.tools.tools import is_wasm
 
 pval0 = np.array([
     0.838541367553,  0.642193923795,  0.680845947633,
@@ -426,7 +426,7 @@ def test_floating_precision(method):
 
 
 @pytest.mark.xfail(
-    is_wasm(),
+    PYTHON_IMPL_WASM,
     reason="Failing on Pyodide due to issues with scipy.optimize's solver"
 )
 def test_tukeyhsd():

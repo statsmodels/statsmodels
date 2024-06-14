@@ -5,6 +5,7 @@ import pytest
 from scipy import stats
 
 import statsmodels.api as sm
+from statsmodels.compat.python import PYTHON_IMPL_WASM
 from statsmodels.graphics import gofplots
 from statsmodels.graphics.gofplots import (
     ProbPlot,
@@ -13,7 +14,6 @@ from statsmodels.graphics.gofplots import (
     qqplot_2samples,
 )
 from statsmodels.graphics.utils import _import_mpl
-from statsmodels.tools.tools import is_wasm
 
 
 class BaseProbplotMixin:
@@ -72,7 +72,7 @@ class BaseProbplotMixin:
     @pytest.mark.xfail(strict=True)
     @pytest.mark.matplotlib
     @pytest.mark.skipif(
-        is_wasm(),
+        PYTHON_IMPL_WASM,
         reason="Matplotlib uses different backend in WASM/Pyodide"
     )
     def test_probplot_other_array(self, close_figures):
@@ -104,7 +104,7 @@ class BaseProbplotMixin:
     @pytest.mark.xfail(strict=True)
     @pytest.mark.matplotlib
     @pytest.mark.skipif(
-        is_wasm(),
+        PYTHON_IMPL_WASM,
         reason="Matplotlib uses different backend in WASM/Pyodide"
     )
     def test_probplot_other_prbplt(self, close_figures):
@@ -184,7 +184,7 @@ class BaseProbplotMixin:
 
 
 @pytest.mark.skipif(
-    is_wasm(),
+    PYTHON_IMPL_WASM,
     reason="Matplotlib uses different backend in WASM/Pyodide"
 )
 class TestProbPlotLongelyNoFit(BaseProbplotMixin):

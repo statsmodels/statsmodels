@@ -4,7 +4,8 @@ from numpy.testing import assert_allclose, assert_equal
 from scipy import stats
 from scipy.stats import poisson, nbinom
 
-from statsmodels.tools.tools import Bunch, is_wasm
+from statsmodels.compat.python import PYTHON_IMPL_WASM
+from statsmodels.tools.tools import Bunch
 
 from statsmodels.distributions.discrete import (
     genpoisson_p,
@@ -334,7 +335,7 @@ class CheckDiscretized():
         # dtype('int32') according to the rule 'safe'.
         # To fix this, change the dtype of rvs to int32 so that it
         # can bepassed to np.bincount
-        if is_wasm():
+        if PYTHON_IMPL_WASM:
             rvs = rvs.astype(np.int32)
         freq = np.bincount(rvs)
         p = mod.predict(res.params, which="probs", k_max=nobs_rvs)

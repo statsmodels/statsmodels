@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from statsmodels.tools.tools import is_wasm
+from statsmodels.compat.python import PYTHON_IMPL_WASM
 
 try:
     import matplotlib
@@ -152,7 +152,7 @@ def reset_randomstate():
 # to mark them as strict xfails because they are more prominently expected
 # to fail in a Pyodide environment.
 def pytest_collection_modifyitems(config, items):
-    if is_wasm():
+    if PYTHON_IMPL_WASM:
         for item in items:
             if 'xfail' in item.keywords:
                 mark = item.get_closest_marker('xfail')

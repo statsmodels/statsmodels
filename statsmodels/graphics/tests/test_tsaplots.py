@@ -10,6 +10,7 @@ from numpy.testing import assert_, assert_equal
 import pandas as pd
 import pytest
 
+from statsmodels.compat.python import PYTHON_IMPL_WASM
 from statsmodels.datasets import elnino, macrodata
 from statsmodels.graphics.tsaplots import (
     month_plot,
@@ -21,7 +22,6 @@ from statsmodels.graphics.tsaplots import (
     quarter_plot,
     seasonal_plot,
 )
-from statsmodels.tools.tools import is_wasm
 from statsmodels.tsa import arima_process as tsp
 from statsmodels.tsa.ar_model import AutoReg
 from statsmodels.tsa.arima.model import ARIMA
@@ -244,7 +244,7 @@ def test_plot_accf_grid(close_figures):
 
 
 @pytest.mark.skipif(
-    is_wasm(),
+    PYTHON_IMPL_WASM,
     reason="Matplotlib uses different backend in WASM"
 )
 @pytest.mark.matplotlib

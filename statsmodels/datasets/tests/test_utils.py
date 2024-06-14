@@ -7,17 +7,16 @@ import numpy as np
 from numpy.testing import assert_, assert_array_equal
 import pytest
 
+from statsmodels.compat.python import PYTHON_IMPL_WASM
 from statsmodels.datasets import get_rdataset, webuse, check_internet, utils
-from statsmodels.tools.tools import is_wasm
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 
-if not is_wasm():
+if not PYTHON_IMPL_WASM:
     from ssl import SSLError
     IGNORED_EXCEPTIONS = (
         HTTPError, URLError, SSLError, UnicodeEncodeError, timeout
     )
-
 else:
     IGNORED_EXCEPTIONS = (HTTPError, URLError, UnicodeEncodeError, timeout)
 

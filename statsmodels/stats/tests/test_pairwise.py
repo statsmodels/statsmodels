@@ -4,7 +4,6 @@ Created on Wed Mar 28 15:34:18 2012
 
 Author: Josef Perktold
 """
-from statsmodels.compat.python import asbytes
 
 from io import BytesIO
 import warnings
@@ -15,10 +14,10 @@ import pytest
 from numpy.testing import assert_, assert_allclose, assert_almost_equal, assert_equal, \
     assert_raises
 
+from statsmodels.compat.python import PYTHON_IMPL_WASM, asbytes
 from statsmodels.stats.libqsturng import qsturng
 from statsmodels.stats.multicomp import (tukeyhsd, pairwise_tukeyhsd,
                                          MultiComparison)
-from statsmodels.tools.tools import is_wasm
 
 ss = '''\
   43.9  1   1
@@ -197,7 +196,7 @@ class CheckTuckeyHSDMixin:
         self.res.plot_simultaneous(comparison_name=reference)
 
 
-@pytest.mark.xfail(is_wasm(), reason="Failing on Pyodide due to issues with scipy.optimize's solver")
+@pytest.mark.xfail(PYTHON_IMPL_WASM, reason="Failing on Pyodide due to issues with scipy.optimize's solver")
 class TestTuckeyHSD2(CheckTuckeyHSDMixin):
 
     @classmethod
@@ -247,7 +246,7 @@ class TestTuckeyHSD2(CheckTuckeyHSDMixin):
             assert_((first_group, second_group) == expected_order[i - 1])
 
 
-@pytest.mark.xfail(is_wasm(), reason="Failing on Pyodide due to issues with scipy.optimize's solver")
+@pytest.mark.xfail(PYTHON_IMPL_WASM, reason="Failing on Pyodide due to issues with scipy.optimize's solver")
 class TestTuckeyHSD2Pandas(TestTuckeyHSD2):
 
     @classmethod
@@ -305,7 +304,7 @@ class TestTuckeyHSD2Pandas(TestTuckeyHSD2):
                             err_msg=err_msg)
 
 
-@pytest.mark.xfail(is_wasm(), reason="Failing on Pyodide due to issues with scipy.optimize's solver")
+@pytest.mark.xfail(PYTHON_IMPL_WASM, reason="Failing on Pyodide due to issues with scipy.optimize's solver")
 class TestTuckeyHSD2s(CheckTuckeyHSDMixin):
     @classmethod
     def setup_class(cls):
@@ -327,7 +326,7 @@ class TestTuckeyHSD2s(CheckTuckeyHSDMixin):
         cls.reject2 = pvals < 0.01
 
 
-@pytest.mark.xfail(is_wasm(), reason="Failing on Pyodide due to issues with scipy.optimize's solver")
+@pytest.mark.xfail(PYTHON_IMPL_WASM, reason="Failing on Pyodide due to issues with scipy.optimize's solver")
 class TestTuckeyHSD3(CheckTuckeyHSDMixin):
 
     @classmethod
@@ -344,7 +343,7 @@ class TestTuckeyHSD3(CheckTuckeyHSDMixin):
         cls.reject2 = sas_['sig'] == asbytes('***')
 
 
-@pytest.mark.xfail(is_wasm(), reason="Failing on Pyodide due to issues with scipy.optimize's solver")
+@pytest.mark.xfail(PYTHON_IMPL_WASM, reason="Failing on Pyodide due to issues with scipy.optimize's solver")
 class TestTuckeyHSD4(CheckTuckeyHSDMixin):
 
     @classmethod
