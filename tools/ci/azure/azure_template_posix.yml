@@ -132,7 +132,7 @@ jobs:
       echo "Testing site packages"
       mkdir test_run_dir
       pushd test_run_dir
-      python -c "import statsmodels; statsmodels.test(['-n', 'auto', '--junitxml=../junit/test-results.xml', '--skip-examples', '--dist', 'loadscope', '--durations=25'])"
+      python -c "import statsmodels; statsmodels.test(['-n', 'auto', '--junitxml=../junit/test-results.xml', '--skip-examples', '--dist', 'loadscope', '--durations=25'], exit=True)"
       LAST_EXIT_CODE=$?
       echo "Status code: ${LAST_EXIT_CODE}"
       exit ${LAST_EXIT_CODE}
