@@ -350,10 +350,13 @@ class TestPACF(CheckCorrGram):
         pacfyw = pacf_yw(self.x, nlags=40, method="mle")
         assert_almost_equal(pacfyw[1:], self.pacfyw, DECIMAL_8)
 
+    @pytest.mark.skipif(
+        PYTHON_IMPL_WASM,
+        reason="No fp exception support in WASM"
+    )
     def test_yw_singular(self):
-        if not PYTHON_IMPL_WASM:  # No fp exception support in WASM
-            with pytest.warns(ValueWarning):
-                pacf(np.ones(30), nlags=6)
+        with pytest.warns(ValueWarning):
+            pacf(np.ones(30), nlags=6)
 
     def test_ld(self):
         pacfyw = pacf_yw(self.x, nlags=40, method="mle")
