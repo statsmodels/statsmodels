@@ -28,7 +28,7 @@ class PytestTester:
         self.package_path = os.path.dirname(package_path)
         self.package_name = f.f_locals.get('__name__', None)
 
-    def __call__(self, extra_args=None):
+    def __call__(self, extra_args=None, exit=False):
         import pytest
 
         if extra_args is None:
@@ -36,12 +36,11 @@ class PytestTester:
         cmd = [self.package_path] + extra_args
 
         print('Running pytest ' + ' '.join(cmd))
+        status = pytest.main(cmd)
 
-        try:
-            status = pytest.main(cmd)
-        except SystemExit:
-            status = SystemExit.code
+        if exit:
             print(f"Exit status: {status}")
+            sys.exit(status)
 
         return (status == 0)
 
