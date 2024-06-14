@@ -42,6 +42,7 @@ async function main() {
         import sys
         import statsmodels
         result = statsmodels.test(['-ra', '--skip-examples', '--skip-slow'], exit=True)
+        result
         `);
     } catch (e) {
         console.error(e);
