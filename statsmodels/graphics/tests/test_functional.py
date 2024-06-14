@@ -23,6 +23,10 @@ labels = data.raw_data[:, 0].astype(int)
 data = data.raw_data[:, 1:]
 
 
+@pytest.mark.skipif(
+    PYTHON_IMPL_WASM,
+    reason="Matplotlib uses different backend in WASM"
+)
 @pytest.mark.matplotlib
 def test_hdr_basic(close_figures):
     try:
