@@ -26,6 +26,8 @@ __all__ = [
     "lrange",
     "lfilter",
     "with_metaclass",
+    PY37,
+    PYTHON_IMPL_WASM,
 ]
 
 
