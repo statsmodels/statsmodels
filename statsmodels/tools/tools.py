@@ -1,8 +1,6 @@
 """
 Utility functions models code
 """
-import platform
-import sys
 import numpy as np
 import pandas as pd
 import scipy.linalg
@@ -18,21 +16,6 @@ def asstr2(s):
         return s.decode('latin1')
     else:
         return str(s)
-
-
-def is_wasm():
-    return sys.platform == "emscripten" or platform.machine() in ["wasm32", "wasm64"]
-
-
-def _make_dictnames(tmp_arr, offset=0):
-    """
-    Helper function to create a dictionary mapping a column number
-    to the name in tmp_arr.
-    """
-    col_map = {}
-    for i, col_name in enumerate(tmp_arr):
-        col_map[i + offset] = col_name
-    return col_map
 
 
 def drop_missing(Y, X=None, axis=1):
