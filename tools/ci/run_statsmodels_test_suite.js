@@ -15,8 +15,6 @@ async function main() {
     try {
         global.pyodide = await loadPyodide();
         let pyodide = global.pyodide;
-        const FS = pyodide.FS;
-        const NODEFS = FS.filesystems.NODEFS;
 
         let mountDir = "/mnt";
         pyodide.FS.mkdir(mountDir);
