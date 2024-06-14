@@ -41,8 +41,7 @@ async function main() {
         await pyodide.runPythonAsync(`
         import sys
         import statsmodels
-        result = statsmodels.test(['-ra', '--skip-examples', '--skip-slow'], exit=False)
-        sys.exit(result)
+        result = statsmodels.test(['-ra', '--skip-examples', '--skip-slow'], exit=True)
         `);
     } catch (e) {
         console.error(e);
