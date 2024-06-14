@@ -6,7 +6,10 @@ from statsmodels.compat.python import PYTHON_IMPL_WASM
 import pytest
 
 
-@pytest.mark.skipif(PYTHON_IMPL_WASM, reason="Can't start subprocess in WASM/Pyodide")
+@pytest.mark.skipif(
+    PYTHON_IMPL_WASM,
+    reason="Can't start subprocess in WASM/Pyodide"
+)
 def test_lazy_imports():
     # Check that when statsmodels.api is imported, matplotlib is _not_ imported
     cmd = ("import statsmodels.api as sm; "
@@ -20,7 +23,10 @@ def test_lazy_imports():
     assert rc == 0
 
 
-@pytest.mark.skipif(PYTHON_IMPL_WASM, reason="Can't start subprocess in WASM/Pyodide")
+@pytest.mark.skipif(
+    PYTHON_IMPL_WASM,
+    reason="Can't start subprocess in WASM/Pyodide"
+)
 def test_docstring_optimization_compat():
     # GH#5235 check that importing with stripped docstrings does not raise
     cmd = sys.executable + ' -OO -c "import statsmodels.api as sm"'
