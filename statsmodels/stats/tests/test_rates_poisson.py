@@ -719,10 +719,11 @@ class TestMethodsCompare2indep():
         # check corner case count2 = 0, see issue #8313
         if not PYTHON_IMPL_WASM:  # No fp exception support in WASM
             with pytest.warns(RuntimeWarning):
-                tst = smr.test_poisson_2indep(
+                smr.test_poisson_2indep(
                     count1, n1, 0, n2, method=meth,
                     compare=compare,
-                    value=None, alternative='two-sided')
+                    value=None, alternative='two-sided'
+                )
 
     @pytest.mark.parametrize(
         "compare, meth",
