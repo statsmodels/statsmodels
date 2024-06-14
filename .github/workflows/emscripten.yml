@@ -60,6 +60,11 @@ jobs:
     - name: Set up Pyodide virtual environment and test statsmodels for Pyodide
       run: |
         pyodide venv .venv-pyodide
+
+    - name: Install Pyodide package from npm registry
+      run: npm install pyodide@${{ env.PYODIDE_VERSION }}
+
+    - name: Test statsmodels for Pyodide in activated virtual environment
+      run: |
         source .venv-pyodide/bin/activate
-        npm install pyodide@${{ env.PYODIDE_VERSION }}
         node tools/ci/run_statsmodels_test_suite.js
