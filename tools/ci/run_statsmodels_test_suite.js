@@ -38,7 +38,7 @@ async function main() {
         await pyodide.runPythonAsync("import micropip; micropip.install('pytest')");
         await pyodide.runPythonAsync("import micropip; micropip.install('pytest-cov')");
         await pyodide.runPythonAsync("import micropip; micropip.install('matplotlib')");
-        pyodide.runPython(`
+        await pyodide.runPythonAsync(`
         import sys
         import statsmodels
         result = statsmodels.test(['-ra', '--skip-examples', '--skip-slow'], exit=True)
