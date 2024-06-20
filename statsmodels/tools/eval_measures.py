@@ -602,6 +602,155 @@ def hqic_sigma(sigma2, nobs, df_modelwc, islog=False):
     return sigma2 + hqic(0, nobs, df_modelwc) / nobs
 
 
+def precision(pred_table):
+    """classification precision
+
+    Parameters
+    ----------
+    pred_table : array-like
+        2 x 2 prediction table (aka confusion matrix). The actual class is
+        assumed to be the rows. The predicted class is in the columns.
+
+    Returns
+    -------
+    precision : float
+        The precision of the classification
+
+    Notes
+    -----
+    Analagous to (absence of) Type I errors. Probability that a randomly
+    selected document is classified correctly.
+    Binary classification only.
+    Assumes group 0 is the True.
+    """
+    pred_table = np.asarray(pred_table)
+    tn, fn, fp, tp = pred_table.flatten()
+
+    try:
+        return tp / (tp + fp)
+    except ZeroDivisionError:
+        return np.nan
+
+
+def recall(pred_table):
+    """classification recall
+
+    Parameters
+    ----------
+    pred_table : array-like
+        2 x 2 prediction table (aka confusion matrix). The actual class is
+        assumed to be the rows. The predicted class is in the columns.
+
+    Returns
+    -------
+    recall : float
+        The recall of the classification
+
+    Notes
+    -----
+    Analagous to (absence of) Type II errors. Out of all the ones that are
+    true, how many did you predict as true.
+    Binary classification only.
+    Assumes group 0 is the True.
+    """
+    pred_table = np.asarray(pred_table)
+    tn, fn, fp, tp = pred_table.flatten()
+
+    try:
+        return tp / (tp + fn)
+    except ZeroDivisionError:
+        return np.nan
+
+
+def specificity(pred_table):
+    """classification specificity
+
+    Parameters
+    ----------
+    pred_table : array-like
+       2 x 2 prediction table (aka confusion matrix). The actual class is
+       assumed to be the rows. The predicted class is in the columns.
+
+    Returns
+    -------
+    specificity : float
+        The specificity of the classification
+
+    Notes
+    -----
+    Analagous to (absence of) Type I errors. Out of all the ones that are
+    negative, how many did you predict as negative.
+    Binary classification only.
+    Assumes group 0 is the True.
+    """
+
+    pred_table = np.asarray(pred_table)
+    tn, fn, fp, tp = pred_table.flatten()
+
+    try:
+        return tn / (tp + fp)
+    except ZeroDivisionError:
+        return np.nan
+
+
+def accuracy(pred_table):
+    """classification accuracy
+
+    Parameters
+    ----------
+    pred_table : array-like
+        2 x 2 prediction table (aka confusion matrix). The actual class is
+        assumed to be the rows. The predicted class is in the columns.
+
+    Returns
+    -------
+    accuracy : float
+        The accuracy of the classification
+
+    Notes
+    -----
+    Sometimes called Rand Accuracy.
+    Binary classification only.
+    Assumes group 0 is the True.
+    """
+
+    pred_table = np.asarray(pred_table)
+    tn, fn, fp, tp = pred_table.flatten()
+
+    if tp == tn == fp == fn == 0:  # pragma: no cover
+        raise ValueError("Prediction table cannot be all zero")
+    return (tp + tn) / (tp + tn + fp + fn)
+
+
+def fscore_measure(pred_table, b=1):
+    """F-b measure
+
+    Parameters
+    ----------
+    pred_table : array-like
+        2 x 2 prediction table (aka confusion matrix). The actual class is
+        assumed to be the rows. The predicted class is in the columns.
+    b : float
+        b should be positive. It indicates the how much more importance is
+        attached to recall than precision. The default is 1, giving the
+        traditional F-measure. For example, if a user attached half as much
+        importance to recall as precision, b = .5. If twice as much, b = 2.
+    Returns
+    -------
+    F-b measure : float
+        The F-b measure of the classification
+
+    Notes
+    -----
+    Binary classification only.
+    Assumes group 0 is the True.
+    """
+
+    r = recall(pred_table)
+    p = precision(pred_table)
+    return (1 + b ** 2) * r * p / (b ** 2 * p + r)
+
+
 # from var_model.py, VAR only? separates neqs and k_vars per equation
 # def fpe_sigma():
 #     ((nobs + self.df_model) / self.df_resid) ** neqs * np.exp(ld)
@@ -627,4 +776,9 @@ __all__ = [
     hqic,
     hqic_sigma,
     iqr,
+    precision,
+    recall,
+    specificity,
+    accuracy,
+    fscore_measure,
 ]
