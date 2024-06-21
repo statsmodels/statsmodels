@@ -36,7 +36,9 @@ jobs:
       uses: pypa/cibuildwheel@v2.19.1
       env:
         CIBW_PLATFORM: pyodide
-        CIBW_BEFORE_BUILD: patch -d $EMSDK/upstream/emscripten/src/ -p1 < {project}/tools/ci/emscripten/0001-load-dependent-libs-globally.patch
+        CIBW_BEFORE_BUILD: |
+          EMSDK="/home/runner/.cache/cibuildwheel/emsdk-3.1.58/emsdk-3.1.58/upstream/emscripten"
+          patch -d $EMSDK/src/ -p1 < {project}/tools/ci/emscripten/0001-load-dependent-libs-globally.patch
         CIBW_TEST_COMMAND: python -c "import statsmodels as sm; sm.test(['-ra', '--skip-examples', '--skip-slow'], exit=True)"
 
     - name: Upload wheel artifact
