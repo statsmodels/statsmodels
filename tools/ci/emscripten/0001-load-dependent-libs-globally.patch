@@ -13,10 +13,10 @@ Pyodide project and the original author, Hood Chatham.
  src/library_dylink.js | 6 +++++-
  1 file changed, 5 insertions(+), 1 deletion(-)
 
-diff --git a/library_dylink.js b/library_dylink.js
+diff --git a/src/library_dylink.js b/src/library_dylink.js
 index e0fa4721c..502bc7b25 100644
---- a/library_dylink.js
-+++ b/library_dylink.js
+--- a/src/library_dylink.js
++++ b/src/library_dylink.js
 @@ -880,11 +880,15 @@ var LibraryDylink = {
 
      // now load needed libraries and the module itself.
