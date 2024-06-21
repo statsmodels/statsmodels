@@ -32,15 +32,39 @@ jobs:
     - name: Checkout statsmodels
       uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
 
-    - name: Build and test statsmodels for Pyodide
-      uses: pypa/cibuildwheel@v2.19.1
-      env:
-        CIBW_PLATFORM: pyodide
-        CIBW_BEFORE_BUILD: patch -d $EMSDK/upstream/emscripten/src/ -p1 < {project}/tools/ci/emscripten/0001-load-dependent-libs-globally.patch
-        CIBW_TEST_COMMAND: python -c "import statsmodels as sm; sm.test(['-ra', '--skip-examples', '--skip-slow'], exit=True)"
-
-    - name: Upload wheel artifact
-      uses: actions/upload-artifact@v4
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
+      id: setup-python
+      uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c  # v5.0.0
       with:
-        name: cp312-pyodide_wasm32
-        path: ./wheelhouse/*.whl
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Set up Emscripten toolchain
+      uses: mymindstorm/setup-emsdk@6ab9eb1bda2574c4ddb79809fc9247783eaf9021  # v14
+      with:
+        version: ${{ env.EMSCRIPTEN_VERSION }}
+        actions-cache-folder: emsdk-cache
+
+    - name: Install pyodide-build
+      run: pip install pyodide-build==${{ env.PYODIDE_VERSION }}
+
+    - name: Build statsmodels for Pyodide
+      run: |
+        # pass verbose option to pypa/build
+        pyodide build -C="--global-option=--verbose"
+
+    - name: Set up Node.js
+      uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8  # v4.0.2
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Set up Pyodide virtual environment and test statsmodels for Pyodide
+      run: |
+        pyodide venv .venv-pyodide
+
+    - name: Install Pyodide package from npm registry
+      run: npm install pyodide@${{ env.PYODIDE_VERSION }}
+
+    - name: Test statsmodels for Pyodide in activated virtual environment
+      run: |
+        source .venv-pyodide/bin/activate
+        node tools/ci/run_statsmodels_test_suite.js
