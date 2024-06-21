@@ -89,7 +89,6 @@ class TestBetaModel:
         assert_close(rslt.params[:-1], expected_income_mean['Estimate'], 1e-3)
         assert_close(rslt.tvalues[:-1], expected_income_mean['zvalue'], 0.1)
         assert_close(rslt.pvalues[:-1], expected_income_mean['Pr(>|z|)'], 1e-3)
-        pytest.fail("intentional failure")
 
     def test_income_precision(self):
 
