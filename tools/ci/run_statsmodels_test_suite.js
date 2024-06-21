@@ -46,9 +46,7 @@ async function main() {
         `);
     } catch (e) {
         console.error(e);
-        // Arbitrary exit code here. I have seen this code reached instead of a
-        // Pyodide fatal error sometimes
-        exit_code = 66;
+        exit_code = e
 
     } finally {
         process.exit(exit_code);
