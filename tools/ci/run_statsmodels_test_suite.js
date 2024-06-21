@@ -46,8 +46,7 @@ async function main() {
         `);
     } catch (e) {
         console.error(e);
-        exit_code = e
-
+        exit_code = e.status;
     } finally {
         process.exit(exit_code);
     }
