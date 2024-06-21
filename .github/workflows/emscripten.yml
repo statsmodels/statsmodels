@@ -3,12 +3,10 @@
 name: Test Emscripten/Pyodide build
 
 on:
-  # TODO: remove after ready to merge
   push:
-    # branches: [ 'main']
+    branches: [ 'main']
   pull_request:
-    # branches: [ 'main' ]
-  workflow_dispatch:
+    branches: [ 'main' ]
 
 # Cancel intermediate runs if a new run is queued
 concurrency:
