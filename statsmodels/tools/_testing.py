@@ -11,7 +11,6 @@ The first group of functions provide consistency checks
 
 import os
 import sys
-from packaging.version import Version, parse
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_
@@ -30,20 +29,20 @@ class PytestTester:
         self.package_name = f.f_locals.get('__name__', None)
 
     def __call__(self, extra_args=None, exit=False):
-        try:
-            import pytest
-            if not parse(pytest.__version__) >= Version('3.0'):
-                raise ImportError
-            if extra_args is None:
-                extra_args = ['--tb=short', '--disable-pytest-warnings']
-            cmd = [self.package_path] + extra_args
-            print('Running pytest ' + ' '.join(cmd))
-            status = pytest.main(cmd)
-            if exit:
-                print(f"Exit status: {status}")
-                sys.exit(status)
-        except ImportError:
-            raise ImportError('pytest>=3 required to run the test')
+        import pytest
+
+        if extra_args is None:
+            extra_args = ['--tb=short', '--disable-pytest-warnings']
+        cmd = [self.package_path] + extra_args
+
+        print('Running pytest ' + ' '.join(cmd))
+        status = pytest.main(cmd)
+
+        if exit:
+            print(f"Exit status: {status}")
+            sys.exit(status)
+
+        return (status == 0)
 
 
 def check_ttest_tvalues(results):
