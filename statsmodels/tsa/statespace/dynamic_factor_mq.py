@@ -2825,7 +2825,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
                 f_A = cho_solve(cho_factor(A), B.T).T
             except LinAlgError:
                 # Fall back to general solver if there are problems with
-                # postive-definiteness
+                # positive-definiteness
                 f_A = np.linalg.solve(A, B.T).T
 
             f_Q = (C - f_A @ B.T) / nobs
@@ -2895,7 +2895,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
                 Lambda[i, factor_ix] = cho_solve(cho_factor(A), B.T).T
             except LinAlgError:
                 # Fall back to general solver if there are problems with
-                # postive-definiteness
+                # positive-definiteness
                 Lambda[i, factor_ix] = np.linalg.solve(A, B.T).T
 
         # Compute new obs cov
@@ -2949,7 +2949,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
                 Lambda[i, factor_ix] = cho_solve(cho_factor(Ai), Bi.T).T
             except LinAlgError:
                 # Fall back to general solver if there are problems with
-                # postive-definiteness
+                # positive-definiteness
                 Lambda[i, factor_ix] = np.linalg.solve(Ai, Bi.T).T
 
         # Compute unrestricted design for quarterly
@@ -2993,7 +2993,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
                     restricted = unrestricted - AiiRT @ RAiiRTiR @ unrestricted
                 except LinAlgError:
                     # Fall back to slower method if there are problems with
-                    # postive-definiteness
+                    # positive-definiteness
                     Aii = np.linalg.inv(Ai)
                     unrestricted = (BiQ @ Aii)[0]
                     RARi = np.linalg.inv(R @ Aii @ R.T)
