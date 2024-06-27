@@ -11,7 +11,7 @@ cdef double LOWER_BOUND = np.sqrt(np.finfo(float).eps)
 
 
 cdef class HoltWintersArgs:
-    cdef long[::1] _xi
+    cdef np.int64_t[::1] _xi
     cdef const double[::1] _y
     cdef double[::1] _p, _l, _b, _s
     cdef double[:, ::1] _bounds
@@ -20,7 +20,7 @@ cdef class HoltWintersArgs:
 
     def __init__(
         self,
-        long[::1] xi,
+        np.int64_t[::1] xi,
         double[::1] p,
         double[:, ::1] bounds,
         const double[::1] y,
@@ -87,7 +87,7 @@ cdef class HoltWintersArgs:
     def transform(self, value):
         self._transform = value
 
-cdef to_restricted(double[::1] p, long[::1] sel, double[:, ::1] bounds):
+cdef to_restricted(double[::1] p, np.int64_t[::1] sel, double[:, ::1] bounds):
     """
     Transform parameters from the unrestricted [0,1] space
 
@@ -136,7 +136,7 @@ cdef object holt_init(double[::1] x, HoltWintersArgs hw_args):
     cdef double alpha, beta, phi, alphac, betac, l0, b0, _
     cdef Py_ssize_t i, n, idx = 0
     cdef double[::1] p
-    cdef long[::1] xi
+    cdef np.int64_t[::1] xi
 
     p = hw_args._p
     xi = hw_args._xi
@@ -241,7 +241,7 @@ cdef object holt_win_init(double[::1] x, HoltWintersArgs hw_args):
     cdef double alpha, beta, gamma, phi, alphac, betac, l0, b0
     cdef Py_ssize_t i, n, idx = 0
     cdef double[::1] p, s
-    cdef long[::1] xi
+    cdef np.int64_t[::1] xi
 
     p = hw_args._p
     xi = hw_args._xi
