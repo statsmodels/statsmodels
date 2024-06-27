@@ -49,7 +49,6 @@ jobs:
           coverage: true
           NUMPY: 2.0.0
           PANDAS: 2.2.2
-          MATPLOTLIB: 3.9.0
           SCIPY: 1.13.0
           CYTHON: 3.0.10
           BLAS: "nomkl blas=*=openblas"
