@@ -9,7 +9,7 @@ if [[ ${USE_CONDA} == "true" ]]; then
   source activate statsmodels-test
   echo ${PATH}
   which python
-  CMD="conda install numpy"
+  CMD="conda -c conda-forge install numpy"
 else
   CMD="python -m pip install numpy"
 fi
