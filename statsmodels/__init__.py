@@ -33,7 +33,7 @@ def test(extra_args=None, exit=False):
     int
         The status code from the test run if exit is False.
     """
-    from .tools._testing import PytestTester
+    from .tools._test_runner import PytestTester
 
     tst = PytestTester(package_path=__file__)
     return tst(extra_args=extra_args, exit=exit)
