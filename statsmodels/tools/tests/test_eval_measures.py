@@ -26,6 +26,11 @@ from statsmodels.tools.eval_measures import (
     rmse,
     rmspe,
     vare,
+    precision,
+    recall,
+    specificity,
+    accuracy,
+    fscore_measure,
 )
 
 
@@ -137,3 +142,17 @@ def test_iqr_axis(reset_randomstate):
     assert_almost_equal(ax_1, np.array(ax_1_direct))
 
     assert any(ax_0 != ax_1)
+
+
+def test_perf_measures():
+    x = np.arange(4).reshape(2, 2)
+
+    assert_equal(precision(x), 4 / (4 + 3))
+    assert_equal(recall(x), 4 / (4 + 2))
+    assert_equal(specificity(x), 1 / (4 + 3))
+    assert_equal(accuracy(x), (4 + 1) / (4 + 1 + 3 + 2))
+
+    r = recall(x)
+    p = precision(x)
+    assert_equal(fscore_measure(x, 5), (1 + 5 ** 2) * r * p / (5 ** 2 * p + r))
+    assert_equal(fscore_measure(x, 7), (1 + 7 ** 2) * r * p / (7 ** 2 * p + r))
