@@ -228,7 +228,7 @@ def update_extension(extension, requires_math=True):
     numpy_includes = [np.get_include()]
     extra_incl = pjoin(dirname(inspect.getfile(np.core)), "include")
     numpy_includes += [extra_incl]
-    numpy_includes = list(set(numpy_includes))
+    numpy_includes = sorted(set(numpy_includes))
     numpy_math_libs = {
         "include_dirs": [np.get_include()],
         "library_dirs": [os.path.join(np.get_include(), '..', 'lib')],
@@ -237,7 +237,9 @@ def update_extension(extension, requires_math=True):
 
     if not hasattr(extension, "include_dirs"):
         return
-    extension.include_dirs = list(set(extension.include_dirs + numpy_includes))
+    extension.include_dirs = sorted(
+        set(extension.include_dirs + numpy_includes)
+    )
     if requires_math:
         extension.include_dirs += numpy_math_libs["include_dirs"]
         extension.libraries += numpy_math_libs["libraries"]
