@@ -6,10 +6,11 @@ import os
 
 import numpy as np
 import pandas as pd
-from statsmodels.multivariate.factor import Factor
+from statsmodels.multivariate.factor import Factor, CFABuilder
 from numpy.testing import (assert_equal, assert_array_almost_equal, assert_,
                            assert_raises, assert_array_equal,
                            assert_array_less, assert_allclose)
+import numdifftools as nd
 import pytest
 
 try:
@@ -190,6 +191,79 @@ id            0.2060        -0.5556
     actual = results.summary().as_text()
     actual = "\n".join(line.rstrip() for line in actual.splitlines()) + "\n"
     assert_equal(actual, desired)
+
+
+# Test the analytic gradient against a numeric derivative when using a pattern
+# matrix to constrain the factor structure as in a CFA.
+def test_pattern_gradent():
+    cfa = np.zeros((8, 4))
+    cfa[0:2, 0:2] = np.eye(2)
+    cfa[6:, 2:] = np.eye(2)
+    mod = Factor(X.iloc[:, 1:-1], 2, method="ml", cfa=cfa)
+    np.random.seed(1234)
+    for itr in range(10):
+        x = np.random.normal(size=8)
+        x[0:4] = np.abs(x[0:4])
+        ngrad = nd.Gradient(lambda z: mod.loglike(z))(x)
+        agrad = mod.score(x)
+        assert_allclose(ngrad, agrad, rtol=1e-5, atol=1e-5)
+
+
+def test_cfa():
+    n = 200
+    np.random.seed(123)
+
+    # Generate data with two factors, with each factor loading on two variables,
+    # and there are no crossloadings.
+    X = np.random.normal(size=(n, 4))
+    r = 0.8
+    X[:, 1] = r*X[:, 0] + np.sqrt(1-r**2)*X[:, 1]
+    X[:, 3] = r*X[:, 2] + np.sqrt(1-r**2)*X[:, 3]
+    X = pd.DataFrame(X, columns=["V1", "V2", "V3", "V4"])
+
+    # Build a CFA with no crossloadings
+    cfa = CFABuilder.no_crossload(X, [["V1", "V2"], ["V3", "V4"]])
+    mod = Factor(X, 2, method="ml", cfa=cfa)
+    rslt = mod.fit()
+    ld = rslt.loadings
+    par = rslt.mle_retvals.x
+    agrad = mod.score(par)
+    assert_allclose(agrad, 0, atol=1e-4, rtol=1e-4)
+    assert_allclose((ld != 0).sum(0), [2, 2])
+    assert_allclose((ld != 0).sum(1), [1, 1, 1, 1])
+    srmr, srmrv = rslt.srmr
+    assert_allclose(srmr < 0.05, True)
+    assert_allclose(srmrv < 0.05, True)
+
+    # Fit the same CFA using ndarrays not dataframes.
+    cfa2 = CFABuilder.no_crossload(X.values, [[0, 1], [2, 3]])
+    assert_allclose(cfa, cfa2)
+
+
+def test_cfa_builder():
+    n = 10
+    np.random.seed(123)
+    X = np.random.normal(size=(n, 4))
+    X = pd.DataFrame(X, columns=["V1", "V2", "V3", "V4"])
+
+    # Build the same model using two approaches
+    cfa1 = CFABuilder.no_crossload(X, [["V1", "V2"], ["V3", "V4"]])
+    fvar = {"V1": [0], "V2": [0], "V3": [1], "V4": [1]}
+    cfa2 = CFABuilder.cfa(X, fvar)
+    assert_allclose(cfa1, cfa2, atol=1e-8, rtol=1e-8)
+
+    # Build the model using ndarrays instead of dataframes
+    fvari = {0: [0], 1: [0], 2: [1], 3: [1]}
+    cfa3 = CFABuilder.cfa(X.values, fvari)
+    assert_allclose(cfa2, cfa3, atol=1e-8, rtol=1e-8)
+
+    # Allow a crossloading
+    fvar = {"V1": [0], "V2": [0, 1], "V3": [1], "V4": [1]}
+    cfa4 = CFABuilder.cfa(X, fvar)
+    mod = Factor(X, 2, method="ml", cfa=cfa4)
+    rslt = mod.fit()
+    ld = rslt.loadings
+    assert_allclose((np.abs(ld) > 1e-5).sum(), 5)
 
 
 @pytest.mark.skipif(missing_matplotlib, reason='matplotlib not available')
