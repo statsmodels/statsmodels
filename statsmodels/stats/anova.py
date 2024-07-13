@@ -55,13 +55,13 @@ def anova_single(model, **kwargs):
     -----
     Use of this function is discouraged. Use anova_lm instead.
 
-    Type I: Sequential sum of squares. When the data is unbalanced, 
+    Type I: Sequential sum of squares. When the data is unbalanced,
     this type of sums of squares will give different results
     depending on which main effect is considered first.
-    
+
     Type II: Sum of Squares compares marginal contribution of terms.
     Thus, it is not particularly useful for models with significant interaction terms.
-    
+
     Type III: Sums of squares for a term are calculated with all other terms in the model.
     It is useful when the model has interaction terms.
     """
@@ -124,7 +124,7 @@ def anova1_lm_single(model, endog, exog, nobs, design_info, table, n_rows, test,
     -----
     Use of this function is discouraged. Use anova_lm instead.
 
-    Type I: Sequential sum of squares. When the data is unbalanced, 
+    Type I: Sequential sum of squares. When the data is unbalanced,
     this type of sums of squares will give different results
     depending on which main effect is considered first.
 
@@ -309,7 +309,7 @@ def anova_lm(*args, **kwargs):
         model. Default is None.
     test : str {"F", "Chisq", "Cp"} or None
         Test statistics to provide. Default is "F".
-    typ : str or int {"I","II","III"} or {1,2,3}, 
+    typ : str or int {"I","II","III"} or {1,2,3},
         The type of Anova test to perform. Default is I, more see notes.
     robust : {None, "hc0", "hc1", "hc2", "hc3"}
         Use heteroscedasticity-corrected coefficient covariance matrix.
@@ -349,13 +349,13 @@ def anova_lm(*args, **kwargs):
     Model statistics are given in the order of args. Models must have been fit
     using the formula api.
 
-    Type I: Sequential sum of squares. When the data is unbalanced, 
+    Type I: Sequential sum of squares. When the data is unbalanced,
     this type of sums of squares will give different results
     depending on which main effect is considered first.
-    
+
     Type II: Sum of Squares compares marginal contribution of terms.
     Thus, it is not particularly useful for models with significant interaction terms.
-    
+
     Type III: Sums of squares for a term are calculated with all other terms in the model.
     It is useful when the model has interaction terms.
 
