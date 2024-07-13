@@ -40,7 +40,7 @@ def anova_single(model, **kwargs):
     ----------
     model : fitted linear model results instance
         A fitted linear model
-    typ : int or str {1,2,3} or {"I","II","III"}
+    typ : int or str {1,2,3} or {"I","II","III"}, default is I
         Type of sum of squares to use.
 
     **kwargs**
@@ -113,6 +113,11 @@ def anova1_lm_single(model, endog, exog, nobs, design_info, table, n_rows, test,
     Notes
     -----
     Use of this function is discouraged. Use anova_lm instead.
+
+    Type I: Sequential sum of squares. When the data is unbalanced,
+        this type of sums of squares will give different results
+        depending on which main effect is considered first.
+
     """
     #maybe we should rethink using pinv > qr in OLS/linear models?
     effects = getattr(model, 'effects', None)
@@ -168,9 +173,9 @@ def anova2_lm_single(model, design_info, n_rows, test, pr_test, robust):
     -----
     Use of this function is discouraged. Use anova_lm instead.
 
-    Type II
-    Sum of Squares compares marginal contribution of terms. Thus, it is
-    not particularly useful for models with significant interaction terms.
+    Type II: Sum of Squares compares marginal contribution of terms.
+        Thus, it is not particularly useful for models with significant interaction terms.
+
     """
     terms_info = design_info.terms[:] # copy
     terms_info = _remove_intercept_patsy(terms_info)
@@ -236,6 +241,13 @@ def anova2_lm_single(model, design_info, n_rows, test, pr_test, robust):
     return table
 
 def anova3_lm_single(model, design_info, n_rows, test, pr_test, robust):
+    '''
+    Notes
+    -----
+    Type III: Sums of squares for a term are calculated with all other terms in the model.
+        It is useful when the model has interaction terms.
+
+    '''
     n_rows += _has_intercept(design_info)
     terms_info = design_info.terms
 
@@ -287,7 +299,7 @@ def anova_lm(*args, **kwargs):
         model. Default is None.
     test : str {"F", "Chisq", "Cp"} or None
         Test statistics to provide. Default is "F".
-    typ : str or int {"I","II","III"} or {1,2,3}
+    typ : str or int {"I","II","III"} or {1,2,3}, default is I
         The type of Anova test to perform. See notes.
     robust : {None, "hc0", "hc1", "hc2", "hc3"}
         Use heteroscedasticity-corrected coefficient covariance matrix.
@@ -327,9 +339,19 @@ def anova_lm(*args, **kwargs):
     Model statistics are given in the order of args. Models must have been fit
     using the formula api.
 
+    Type I: Sequential sum of squares. When the data is unbalanced,
+        this type of sums of squares will give different results
+        depending on which main effect is considered first.
+    Type II: Sum of Squares compares marginal contribution of terms.
+        Thus, it is not particularly useful for models with significant interaction terms.
+    Type III: Sums of squares for a term are calculated with all other terms in the model.
+        It is useful when the model has interaction terms.
+
     See Also
     --------
-    model_results.compare_f_test, model_results.compare_lm_test
+    statsmodels.regression.linear_model.RegressionResults.compare_f_test
+
+    statsmodels.regression.linear_model.RegressionResults.compare_lm_test
 
     Examples
     --------
