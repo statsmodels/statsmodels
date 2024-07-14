@@ -144,7 +144,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
         If 'raise', an error is raised. Default is 'none'.
     deterministic : DeterministicProcess
         A deterministic process.  If provided, trend and seasonal are ignored.
-        A warning is raised if trend is not "n" and seasonal is not False.
+        A warning is raised if trend is not "n" or seasonal is not False.
     old_names : bool
         Flag indicating whether to use the v0.11 names or the v0.12+ names.
 
