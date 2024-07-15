@@ -737,7 +737,7 @@ class ExponentialSmoothing(TimeSeriesModel):
             sv_sel = np.array([False] * (6 + m))
             sv_sel[:3] = True
             sv_sel &= sel
-            hw_args.xi = sv_sel.astype(int)
+            hw_args.xi = sv_sel.astype(np.int64)
             hw_args.transform = False
             # Setup the grid points, respecting constraints
             points = self._setup_brute(sv_sel, bounds, alpha)
@@ -835,7 +835,7 @@ class ExponentialSmoothing(TimeSeriesModel):
 
         bounds = np.array(orig_bounds[:3], dtype=float)
         hw_args = HoltWintersArgs(
-            sel.astype(int), params, bounds, y, m, self.nobs
+            sel.astype(np.int64), params, bounds, y, m, self.nobs
         )
         params = self._get_starting_values(
             params,
@@ -855,7 +855,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         lb, ub = bounds.T
         lb[np.isnan(lb)] = -np.inf
         ub[np.isnan(ub)] = np.inf
-        hw_args.xi = sel.astype(int)
+        hw_args.xi = sel.astype(np.int64)
 
         # Ensure strictly inbounds
         initial_p = self._enforce_bounds(params, sel, lb, ub)
