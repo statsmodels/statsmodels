@@ -2545,7 +2545,7 @@ class ZivotAndrewsUnitRoot:
         # first-diff y and standardize for numerical stability
         endog = np.diff(series, axis=0)
         endog /= np.sqrt(endog.T.dot(endog))
-        series /= np.sqrt(series.T.dot(series))
+        series = series / np.sqrt(series.T.dot(series))
         # reserve exog space
         exog = np.zeros((endog[lags:].shape[0], cols + lags))
         exog[:, 0] = const
@@ -2653,7 +2653,7 @@ class ZivotAndrewsUnitRoot:
            great crash, the oil-price shock, and the unit-root hypothesis.
            Journal of Business & Economic Studies, 10: 251-270.
         """
-        x = array_like(x, "x")
+        x = array_like(x, "x", dtype=np.double, ndim=1)
         trim = float_like(trim, "trim")
         maxlag = int_like(maxlag, "maxlag", optional=True)
         regression = string_like(

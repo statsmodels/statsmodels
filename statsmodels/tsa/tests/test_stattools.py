@@ -1608,3 +1608,19 @@ def test_pacf_1_obs(reset_randomstate):
     with pytest.raises(ValueError):
         pacf_ols(y)
     pacf_yw(y)
+
+
+def test_zivot_andrews_change_data(reset_randomstate):
+    # GH9307
+    years = pd.date_range(start='1990-01-01', end='2023-12-31', freq='YS')
+    df = pd.DataFrame(index=years)
+    df['variable1'] = np.where(df.index.year <= 2002, 10, 20)
+    df['variable2'] = np.where(df.index.year <= 2002, 10, 20)
+    df.iloc[-1] = 30
+
+    # Zivot-Andrews test with data with type float64
+    df = df.astype(float)
+    df_original = df.copy()
+    zivot_andrews(df['variable1'])
+    zivot_andrews(df['variable1'], regression='c')
+    pd.testing.assert_frame_equal(df, df_original)
