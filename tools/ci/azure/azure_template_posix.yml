@@ -43,17 +43,6 @@ jobs:
           CYTHON: 3.0.10
           coverage: true
           lint: true
-        python_39_legacy_blas:
-          python.version: '3.9'
-          use.conda: true
-          coverage: true
-          NUMPY: 1.22.3
-          PANDAS: 1.4.2
-          MATPLOTLIB: 3.5.2
-          SCIPY: 1.7.3
-          CYTHON: 3.0.6
-          BLAS: "nomkl blas=*=openblas"
-          PYTEST_OPTIONS: ''
         python310_numpy124:
           python.version: '3.10'
           NUMPY: 1.24.4
