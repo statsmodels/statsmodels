@@ -2567,7 +2567,6 @@ class GLMResults(base.LikelihoodModelResults):
         --------
         statsmodels.iolib.summary2.Summary : class to hold summary results
         """
-        self.method = 'IRLS'
         from statsmodels.iolib import summary2
         smry = summary2.Summary()
         with warnings.catch_warnings():
