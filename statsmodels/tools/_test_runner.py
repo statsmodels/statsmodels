@@ -4,7 +4,6 @@ Pytest runner that allows test to be run within python
 
 import os
 import sys
-from packaging.version import Version, parse
 
 
 class PytestTester:

@@ -9,9 +9,6 @@ The first group of functions provide consistency checks
 
 """
 
-import os
-import sys
-
 import numpy as np
 from numpy.testing import assert_allclose, assert_
 
