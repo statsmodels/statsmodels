@@ -16,6 +16,7 @@ from statsmodels.compat.platform import (
     PLATFORM_OSX,
     PLATFORM_WIN32,
 )
+from statsmodels.compat.python import PYTHON_IMPL_WASM
 from statsmodels.compat.scipy import SCIPY_GT_14
 
 import numpy as np
@@ -160,6 +161,7 @@ class CheckGenericMixin:
             res = mod.fit(maxiter=500)
         return res
 
+
     def test_zero_collinear(self):
         # not completely generic yet
         if isinstance(self.results.model, (sm.GEE)):
@@ -194,9 +196,12 @@ class CheckGenericMixin:
             k_extra = mod.k_extra
 
         # TODO: Can we choose a test case without this issue?
-        #  If not, should we be getting this warning for all
-        #  model subclasses?
-        warn_cls = HessianInversionWarning if isinstance(mod, sm.GLM) else None
+        # If not, should we be getting this warning for all
+        # model subclasses?
+        # TODO: Investigate how to resolve unseen warnings for Pyodide
+        # Most likely coming from NumPy.linalg + lack of fp exceptions
+        # support under WASM
+        warn_cls = HessianInversionWarning if (isinstance(mod, sm.GLM) and not PYTHON_IMPL_WASM) else None
 
         cov_types = ['nonrobust', 'HC0']
 
