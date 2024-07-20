@@ -32,7 +32,7 @@ ds.insert_parameters(
     "model",
     Parameter(
         "model_kwargs",
-        "Dict[str, Any]",
+        "dict[str, Any]",
         [
             "Any additional arguments needed to initialized the model using "
             "the residuals produced by subtracting the seasonality."
@@ -193,7 +193,7 @@ class STLForecast:
 
         Parameters
         ----------\n%(fit_params)s
-        fit_kwargs : Dict[str, Any]
+        fit_kwargs : dict[str, Any]
             Any additional keyword arguments to pass to ``model``'s ``fit``
             method when estimating the model on the decomposed residuals.
 

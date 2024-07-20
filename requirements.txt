@@ -1,6 +1,6 @@
 # Workaround for scipy build requirements
-numpy>=1.22.3,<3  # released December 2021
-scipy>=1.7.0,!=1.9.2  # released June 2021, 1.9.2 blocked due to bug
-pandas>=1.3.0,!=2.1.0  # released July 2021, 2.1.0 blocked due to bug
+numpy>=1.22.3,<3  # released March 2022
+scipy>=1.8,!=1.9.2  # released Feb 2022, 1.9.2 blocked due to bug
+pandas>=1.4,!=2.1.0  # released Feb 2022, 2.1.0 blocked due to bug
 patsy>=0.5.6  # released December 2023
 packaging>=21.3  # released Nov 2021

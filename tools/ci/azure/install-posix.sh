@@ -9,7 +9,7 @@ if [[ ${USE_CONDA} == "true" ]]; then
   source activate statsmodels-test
   echo ${PATH}
   which python
-  CMD="conda install numpy"
+  CMD="conda install -c conda-forge numpy"
 else
   CMD="python -m pip install numpy"
 fi
@@ -17,7 +17,10 @@ fi
 echo "Python location: $(where python)"
 python -m pip install --upgrade pip setuptools wheel build
 python -m pip install -r requirements-dev.txt
-python -m pip uninstall numpy scipy pandas cython -y
+
+if [[ ${USE_CONDA} != "true" ]]; then
+  python -m pip uninstall numpy scipy pandas cython -y
+fi
 
 if [[ -n ${NUMPY} ]]; then CMD="$CMD==${NUMPY}"; fi;
 CMD="$CMD scipy"
