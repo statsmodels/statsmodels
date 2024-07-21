@@ -100,6 +100,8 @@ Time Series Plots
 
    plot_acf
    plot_pacf
+   plot_ccf
+   plot_accf_grid
    month_plot
    quarter_plot
 
