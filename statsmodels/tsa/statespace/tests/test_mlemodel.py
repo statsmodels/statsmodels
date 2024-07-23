@@ -609,6 +609,23 @@ def test_summary():
         res.summary()
 
 
+def test_summary_rsquared():
+    from statsmodels.regression.linear_model import OLS
+    endog = np.array([1, 2, 4, 8, 16])
+    exog = np.array([1, 2, 4, 8, 16])
+
+    mod = sarimax.SARIMAX(endog, exog, order=(0, 0, 0), trend='c')
+    res = mod.fit(disp=-1)
+    benchmark = OLS(endog, exog)
+    benchmark_res = benchmark.fit()
+
+    assert_equal(round(res.rsquared_mean, 6),
+                 round(benchmark_res.rsquared, 6))
+    assert_equal(0 <= res.rsquared_rwdrift <= 1, True)
+    assert_raises(ValueError, res.rsquared_seasonal)
+    assert_raises(NotImplementedError, res.rsquared)
+
+
 def check_endog(endog, nobs=2, k_endog=1, **kwargs):
     # create the model
     mod = MLEModel(endog, **kwargs)
