@@ -1050,6 +1050,182 @@ class SARIMAXSpecification:
                 names.append('trend.%d' % i)
         return names
 
+    def validate_fixed_params(self, fixed_params, allow_fixed_sigma2=True):
+        """
+        Validate fixed parameter names and values.
+
+        Parameters
+        ----------
+        fixed_params : dict
+            Dictionary with names of fixed parameters as keys (e.g. 'ar.L1',
+            'ma.L2'), which correspond to `SARIMAXSpecification.param_names`.
+            Dictionary values are the values of the associated fixed
+            parameters.
+        allow_fixed_sigma2 : bool, optional
+            Whether to allow 'sigma2' as one of the fixed parameters, which
+            is valid for select estimation algorithms (e.g. statespace,
+            innovation MLE). This parameter only takes effect when `sigma2`
+            is indeed a model parameter, and will be superceded when
+            `concentrate_scale=True`.
+
+        Raises
+        ------
+        ValueError
+            If `fixed_params` has an unexpected type, or includes invalid param
+            names or values.
+
+        Notes
+        -----
+        Checks that 1) the parameter values are valid (e.g. not NaN or Inf),
+        2) the parameter names are a subset of parameters that can be fixed.
+        Use `validate_params` for validation on parameter values against
+        invertibility and stationarity contraints.
+
+        Examples
+        --------
+        >>> spec = SARIMAXSpecification(ar_order=1)
+        >>> spec.validate_params({"ar.L1": 1})
+        # valid
+        >>> spec.validate_params({"ar.L2": 1})
+        ValueError: Invalid fixed parameter(s): ['ar.L2'].
+        >>> spec.validate_params({"sigma2": 1}, allow_fixed_sigma2=True)
+        # valid
+        >>> spec.validate_params({"sigma2": 1}, allow_fixed_sigma2=False)
+        ValueError: Invalid fixed parameter(s): ['sigma2'].
+        >>> spec.validate_params({"ar.L1": np.nan})
+        ValueError: Parameters vector for fixed parameters includes NaN or
+        Inf values.
+        """
+        # 1. validate type
+        if not isinstance(fixed_params, dict):
+            raise ValueError(
+                'Invalid `fixed_params` argument: must be a dictionary.'
+            )
+
+        if len(fixed_params) == 0:
+            return
+
+        # 2. validate names
+        fixed_param_names = set(fixed_params.keys())
+        valid_param_names = set(self.param_names)
+
+        if 'sigma2' not in self.param_names or not allow_fixed_sigma2:
+            valid_param_names = valid_param_names - {'sigma2'}
+
+        invalid_param_names = fixed_param_names - valid_param_names
+
+        if len(invalid_param_names) > 0:
+            sorted_invalid_param_names = sorted(list(invalid_param_names))
+            sorted_valid_param_names = sorted(list(valid_param_names))
+            raise ValueError(
+                f"Invalid fixed parameter(s): {sorted_invalid_param_names}."
+                f" Please select among {sorted_valid_param_names}."
+            )
+
+        # 3. validate values
+        validate_basic(
+            list(fixed_params.values()), len(fixed_params),
+            allow_infnan=False, title='fixed parameters'
+        )
+        if 'sigma2' in fixed_params and fixed_params['sigma2'] < 0:
+            raise ValueError(
+                "Fixed value for parameter 'sigma2' cannot be negative."
+            )
+
+    def split_fixed_params(self, fixed_params):
+        """
+        Split fixed parameter dictionary by type.
+
+        Parameters
+        ----------
+        fixed_params : dict
+            Dictionary with names of fixed parameters as keys (e.g. 'ar.L1',
+            'ma.L2'), which correspond to `SARIMAXSpecification.param_names`.
+            Dictionary values are the values of the associated fixed
+            parameters.
+
+        Returns
+        -------
+        split_fixed_params : dict
+            Dictionary with keys 'exog_params', 'ar_params', 'ma_params',
+            'seasonal_ar_params', 'seasonal_ma_params', and (unless
+            `concentrate_scale=True`) 'sigma2'. Values are, excpet for
+            'sigma2', arrays of fixed parameters associated with the key,
+            based on the `fixed_params` argument. The value associated with
+            key 'sigma2', if present, is either a single parameter value or
+            None (if not fixed).
+        split_is_fixed_param : dict
+            Dictionary with keys 'exog_params', 'ar_params', 'ma_params',
+            'seasonal_ar_params', and 'seasonal_ma_params', and (unless
+            `concentrate_scale=True`) 'sigma2'. Values are, excpet for
+            'sigma2', boolean arrays indicating whether the corresponding
+            parameters of that type are fixed. The value associated with key
+            'sigma2', if present, is a bool. Returned when
+            `return_is_fixed_bool=True`.
+
+        Examples
+        --------
+        >>> spec = SARIMAXSpecification(ar_order=1, ma_order=2)
+        >>> spec.split_fixed_params({'ar.L1': 1, 'ma.L2': 1})
+        ({'exog_params': array([], dtype=float64),
+          'ar_params': array([1.], dtype=float64),
+          'ma_params': array([2.], dtype=float64),
+          'seasonal_ar_params': array([], dtype=float64),
+          'seasonal_ma_params': array([], dtype=float64),
+          'sigma2': None},
+         {'exog_params': array([], dtype=bool),
+          'ar_params': array([True], dtype=bool),
+          'ma_params': array([False,  True], dtype=bool),
+          'seasonal_ar_params': array([], dtype=bool),
+          'seasonal_ma_params': array([], dtype=bool)
+          'sigma2': False})
+        >>> spec = SARIMAXSpecification(ar_order=3, concentrate_scale=True)
+        >>> spec.split_fixed_params({'ar.L1': 1})
+        ({'exog_params': array([], dtype=float64),
+          'ar_params': array([1.], dtype=float64),
+          'ma_params': array([], dtype=float64),
+          'seasonal_ar_params': array([], dtype=float64),
+          'seasonal_ma_params': array([], dtype=float64)},
+         {'exog_params': array([], dtype=bool),
+          'ar_params': array([True, False, False], dtype=bool),
+          'ma_params': array([], dtype=bool),
+          'seasonal_ar_params': array([], dtype=bool),
+          'seasonal_ma_params': array([], dtype=bool)})
+        """
+        # build dictionaries
+        is_fixed_param = [
+            param_name in fixed_params
+            for param_name in self.param_names
+        ]
+        split_is_fixed_param = {
+            name: val.astype(bool)
+            for name, val in self.split_params(is_fixed_param).items()
+            if name != 'sigma2'
+        }
+
+        dense_fixed_params = [
+            fixed_params.get(param_name, np.nan)
+            for param_name in self.param_names
+        ]
+        split_dense_fixed_params = {
+            name: val for name, val
+            in self.split_params(dense_fixed_params, allow_infnan=True).items()
+            if name != 'sigma2'
+        }
+
+        # keep only the fixed values
+        split_fixed_params = {
+            name: val[split_is_fixed_param[name]] for name, val
+            in split_dense_fixed_params.items()
+        }
+
+        # handle sigma2 separately
+        if 'sigma2' in self.param_names:
+            split_is_fixed_param['sigma2'] = 'sigma2' in fixed_params
+            split_fixed_params['sigma2'] = fixed_params.get('sigma2', None)
+
+        return split_fixed_params, split_is_fixed_param
+
     def __repr__(self):
         """Represent SARIMAXSpecification object as a string."""
         components = []

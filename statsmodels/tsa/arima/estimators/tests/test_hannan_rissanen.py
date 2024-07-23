@@ -5,13 +5,7 @@ from numpy.testing import assert_allclose
 
 from statsmodels.tsa.innovations.arma_innovations import arma_innovations
 from statsmodels.tsa.arima.datasets.brockwell_davis_2002 import lake
-from statsmodels.tsa.arima.estimators.hannan_rissanen import (
-    hannan_rissanen, _validate_fixed_params,
-    _package_fixed_and_free_params_info,
-    _stitch_fixed_and_free_params
-)
-from statsmodels.tsa.arima.specification import SARIMAXSpecification
-from statsmodels.tools.tools import Bunch
+from statsmodels.tsa.arima.estimators.hannan_rissanen import hannan_rissanen
 
 
 @pytest.mark.low_precision('Test against Example 5.1.7 in Brockwell and Davis'
@@ -134,16 +128,19 @@ def test_set_default_unbiased():
 
 
 @pytest.mark.parametrize(
-    "ar_order, ma_order, fixed_params, invalid_fixed_params",
+    "ar_order, ma_order, fixed_params, err_msg",
     [
         # no fixed param
         (2, [1, 0, 1], None, None),
         ([0, 1], 0, {}, None),
-        # invalid fixed params
-        (1, 3, {"ar.L2": 1, "ma.L2": 0}, ["ar.L2"]),
-        ([0, 1], [0, 0, 1], {"ma.L1": 0, "sigma2": 1}, ["ma.L2", "sigma2"]),
-        (0, 0, {"ma.L1": 0, "ar.L1": 0}, ["ar.L1", "ma.L1"]),
-        (5, [1, 0], {"random_param": 0, "ar.L1": 0}, ["random_param"]),
+        # invalid fixed param names
+        (1, 3, {"ar.L2": 1, "ma.L2": 0}, "Invalid fixed parameter"),
+        ([0, 1], [0, 1], {"sigma2": 1}, "Invalid fixed parameter"),
+        (0, 0, {"ma.L1": 0, "ar.L1": 0}, "Invalid fixed parameter"),
+        (5, [1], {"random_param": 0, "ar.L1": 0}, "Invalid fixed parameter"),
+        # invalid fixed param values
+        (1, 3, {"ar.L1": np.nan, "ma.L2": 0}, "includes NaN or Inf values"),
+        ([0, 1], 3, {"ma.L3": np.inf}, "includes NaN or Inf values"),
         # valid fixed params
         (0, 2, {"ma.L1": -1, "ma.L2": 1}, None),
         (1, 0, {"ar.L1": 0}, None),
@@ -152,133 +149,22 @@ def test_set_default_unbiased():
         (2, 2, {"ma.L1": 1, "ma.L2": 1, "ar.L1": 1, "ar.L2": 1}, None)
     ]
 )
-def test_validate_fixed_params(ar_order, ma_order, fixed_params,
-                               invalid_fixed_params):
-    # test validation with both _validate_fixed_params and directly with
-    # hannan_rissanen
+def test_validate_fixed_params(ar_order, ma_order, fixed_params, err_msg):
+    # test validation with hannan_rissanen
 
     endog = np.random.normal(size=100)
-    spec = SARIMAXSpecification(endog, ar_order=ar_order, ma_order=ma_order)
 
-    if invalid_fixed_params is None:
-        _validate_fixed_params(fixed_params, spec.param_names)
+    if err_msg is None:
         hannan_rissanen(
             endog, ar_order=ar_order, ma_order=ma_order,
             fixed_params=fixed_params, unbiased=False
         )
     else:
-        valid_params = sorted(list(set(spec.param_names) - {'sigma2'}))
-        msg = (
-            f"Invalid fixed parameter(s): {invalid_fixed_params}. "
-            f"Please select among {valid_params}."
-        )
-        # using direct `assert` to test error message instead of `match` since
-        # the error message contains regex characters
-        with pytest.raises(ValueError) as e:
-            _validate_fixed_params(fixed_params, spec.param_names)
-            assert e.msg == msg
-        with pytest.raises(ValueError) as e:
+        with pytest.raises(ValueError, match=err_msg):
             hannan_rissanen(
                 endog, ar_order=ar_order, ma_order=ma_order,
                 fixed_params=fixed_params, unbiased=False
             )
-            assert e.msg == msg
-
-
-@pytest.mark.parametrize(
-    "fixed_params, spec_ar_lags, spec_ma_lags, expected_bunch",
-    [
-        ({}, [1], [], Bunch(
-            # lags
-            fixed_ar_lags=[], fixed_ma_lags=[],
-            free_ar_lags=[1], free_ma_lags=[],
-            # ixs
-            fixed_ar_ix=np.array([], dtype=int),
-            fixed_ma_ix=np.array([], dtype=int),
-            free_ar_ix=np.array([0], dtype=int),
-            free_ma_ix=np.array([], dtype=int),
-            # fixed params
-            fixed_ar_params=np.array([]), fixed_ma_params=np.array([]),
-        )),
-        ({"ar.L2": 0.1, "ma.L1": 0.2}, [2], [1, 3], Bunch(
-            # lags
-            fixed_ar_lags=[2], fixed_ma_lags=[1],
-            free_ar_lags=[], free_ma_lags=[3],
-            # ixs
-            fixed_ar_ix=np.array([1], dtype=int),
-            fixed_ma_ix=np.array([0], dtype=int),
-            free_ar_ix=np.array([], dtype=int),
-            free_ma_ix=np.array([2], dtype=int),
-            # fixed params
-            fixed_ar_params=np.array([0.1]), fixed_ma_params=np.array([0.2]),
-        )),
-        ({"ma.L5": 0.1, "ma.L10": 0.2}, [], [5, 10], Bunch(
-            # lags
-            fixed_ar_lags=[], fixed_ma_lags=[5, 10],
-            free_ar_lags=[], free_ma_lags=[],
-            # ixs
-            fixed_ar_ix=np.array([], dtype=int),
-            fixed_ma_ix=np.array([4, 9], dtype=int),
-            free_ar_ix=np.array([], dtype=int),
-            free_ma_ix=np.array([], dtype=int),
-            # fixed params
-            fixed_ar_params=np.array([]), fixed_ma_params=np.array([0.1, 0.2]),
-        )),
-    ]
-)
-def test_package_fixed_and_free_params_info(fixed_params, spec_ar_lags,
-                                            spec_ma_lags, expected_bunch):
-    actual_bunch = _package_fixed_and_free_params_info(
-        fixed_params, spec_ar_lags, spec_ma_lags
-    )
-    assert isinstance(actual_bunch, Bunch)
-    assert len(actual_bunch) == len(expected_bunch)
-    assert actual_bunch.keys() == expected_bunch.keys()
-
-    # check lags
-    lags = ['fixed_ar_lags', 'fixed_ma_lags', 'free_ar_lags', 'free_ma_lags']
-    for k in lags:
-        assert isinstance(actual_bunch[k], list)
-        assert actual_bunch[k] == expected_bunch[k]
-
-    # check lags
-    ixs = ['fixed_ar_ix', 'fixed_ma_ix', 'free_ar_ix', 'free_ma_ix']
-    for k in ixs:
-        assert isinstance(actual_bunch[k], np.ndarray)
-        assert actual_bunch[k].dtype in [np.int64, np.int32]
-        np.testing.assert_array_equal(actual_bunch[k], expected_bunch[k])
-
-    params = ['fixed_ar_params', 'fixed_ma_params']
-    for k in params:
-        assert isinstance(actual_bunch[k], np.ndarray)
-        np.testing.assert_array_equal(actual_bunch[k], expected_bunch[k])
-
-
-@pytest.mark.parametrize(
-    "fixed_lags, free_lags, fixed_params, free_params, "
-    "spec_lags, expected_all_params",
-    [
-        ([], [], [], [], [], []),
-        ([2], [], [0.2], [], [2], [0.2]),
-        ([], [1], [], [0.2], [1], [0.2]),
-        ([1], [3], [0.2], [-0.2], [1, 3],  [0.2, -0.2]),
-        ([3], [1, 2], [0.2], [0.3, -0.2], [1, 2, 3], [0.3, -0.2, 0.2]),
-        ([3, 1], [2, 4], [0.3, 0.1], [0.5, 0.],
-         [1, 2, 3, 4], [0.1, 0.5, 0.3, 0.]),
-        ([3, 10], [1, 2], [0.2, 0.5], [0.3, -0.2],
-         [1, 2, 3, 10], [0.3, -0.2, 0.2, 0.5]),
-        # edge case where 'spec_lags' is somehow not sorted
-        ([3, 10], [1, 2], [0.2, 0.5], [0.3, -0.2],
-         [3, 1, 10, 2], [0.2, 0.3, 0.5, -0.2]),
-    ]
-)
-def test_stitch_fixed_and_free_params(fixed_lags, free_lags, fixed_params,
-                                      free_params, spec_lags,
-                                      expected_all_params):
-    actual_all_params = _stitch_fixed_and_free_params(
-        fixed_lags, fixed_params, free_lags, free_params, spec_lags
-    )
-    assert actual_all_params == expected_all_params
 
 
 @pytest.mark.parametrize(

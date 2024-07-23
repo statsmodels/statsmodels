@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import pytest
 
 from numpy.testing import assert_, assert_equal, assert_allclose, assert_raises
 
@@ -569,3 +570,392 @@ def test_repr_str():
                           ' sigma2=10.123)')
     # assert_equal(str(p), '[ 1.0000e+00  2.0000e+00  5.0000e-01  2.0000e-01'
     #                      '  1.0000e-03 -1.0000e-03\n  1.0123e+01]')
+
+
+@pytest.mark.parametrize(
+    'fixed_params, expected_params',
+    [
+        # empty fixed_params
+        (
+            {},
+            np.full(9, np.nan)
+        ),
+        # fix partial parameters for each parameter type
+        (
+            {'x1': 0, 'ar.L1': 1, 'ma.L2': -1, 'ar.S.L10': 10},
+            np.array([0, np.nan, 1, np.nan, np.nan, -1, np.nan, 10, np.nan])
+        ),
+        # fix all parameters for select parameter types
+        (
+            {'x1': 0, 'x2': 4, 'ma.L1': 0, 'ma.L2': 3},
+            np.array([0, 4, np.nan, np.nan, 0, 3, np.nan, np.nan, np.nan])
+        ),
+        # all parameters are fixed
+        (
+            {
+                'x1': 0, 'x2': 1,
+                'ar.L1': 2, 'ar.L3': 3,
+                'ma.L1': 4, 'ma.L2': 5,
+                'ar.S.L5': 6, 'ar.S.L10': 7,
+                'sigma2': 8
+            },
+            np.array(list(range(9)))
+        )
+    ]
+)
+def test_set_fixed_params(fixed_params, expected_params):
+    spec = specification.SARIMAXSpecification(
+        exog=np.random.random(size=(20, 2)),
+        ar_order=[1, 0, 1], ma_order=2,
+        seasonal_order=[2, 1, 0, 5],
+    )
+    p = params.SARIMAXParams(spec=spec)
+    p.set_fixed_params(fixed_params)
+
+    # use spec.split_params to speed up simplify the code
+    expected_params_split = spec.split_params(
+        expected_params, allow_infnan=True
+    )
+
+    # test fixed + free params
+    assert_equal(p.params, expected_params)
+    assert_equal(p.exog_params, expected_params_split['exog_params'])
+    assert_equal(p.ar_params, expected_params_split['ar_params'])
+    assert_equal(p.ma_params, expected_params_split['ma_params'])
+    assert_equal(
+        p.seasonal_ar_params, expected_params_split['seasonal_ar_params']
+    )
+    assert_equal(
+        p.seasonal_ma_params, expected_params_split['seasonal_ma_params']
+    )
+    assert_equal(p.sigma2, expected_params_split['sigma2'])
+
+    # test is_fixed bool
+    assert_equal(p.is_param_fixed, ~np.isnan(expected_params))
+    assert_equal(
+        p.is_exog_param_fixed,
+        ~np.isnan(expected_params_split['exog_params'])
+    )
+    assert_equal(
+        p.is_ar_param_fixed,
+        ~np.isnan(expected_params_split['ar_params'])
+    )
+    assert_equal(
+        p.is_ma_param_fixed,
+        ~np.isnan(expected_params_split['ma_params'])
+    )
+    assert_equal(
+        p.is_seasonal_ar_param_fixed,
+        ~np.isnan(expected_params_split['seasonal_ar_params'])
+    )
+    assert_equal(
+        p.is_seasonal_ma_param_fixed,
+        ~np.isnan(expected_params_split['seasonal_ma_params'])
+    )
+
+    # test fixed params
+    assert_equal(p.fixed_params, expected_params[p.is_param_fixed])
+    assert_equal(
+        p.fixed_exog_params,
+        expected_params_split['exog_params'][p.is_exog_param_fixed]
+    )
+    assert_equal(
+        p.fixed_ar_params,
+        expected_params_split['ar_params'][p.is_ar_param_fixed]
+    )
+    assert_equal(
+        p.fixed_ma_params,
+        expected_params_split['ma_params'][p.is_ma_param_fixed]
+    )
+    assert_equal(
+        p.fixed_seasonal_ar_params,
+        expected_params_split['seasonal_ar_params'][
+            p.is_seasonal_ar_param_fixed
+        ]
+    )
+    assert_equal(
+        p.fixed_seasonal_ma_params,
+        expected_params_split['seasonal_ma_params'][
+            p.is_seasonal_ma_param_fixed
+        ]
+    )
+
+    # test free params
+    assert_equal(p.free_params, expected_params[~p.is_param_fixed])
+    assert_equal(
+        p.free_exog_params,
+        expected_params_split['exog_params'][~p.is_exog_param_fixed]
+    )
+    assert_equal(
+        p.free_ar_params,
+        expected_params_split['ar_params'][~p.is_ar_param_fixed]
+    )
+    assert_equal(
+        p.free_ma_params,
+        expected_params_split['ma_params'][~p.is_ma_param_fixed]
+    )
+    assert_equal(
+        p.free_seasonal_ar_params,
+        expected_params_split['seasonal_ar_params'][
+            ~p.is_seasonal_ar_param_fixed
+        ]
+    )
+    assert_equal(
+        p.free_seasonal_ma_params,
+        expected_params_split['seasonal_ma_params'][
+            ~p.is_seasonal_ma_param_fixed
+        ]
+    )
+
+
+def test_set_invalid_fixed_params():
+    spec = specification.SARIMAXSpecification(
+        exog=np.random.random(size=(20, 2)),
+        ar_order=[1, 0, 1], ma_order=2,
+        seasonal_order=[2, 1, 0, 5],
+        concentrate_scale=True
+    )
+    p = params.SARIMAXParams(spec=spec)
+    invalid_fixed_params = {'sigma2': 1}
+    with pytest.raises(ValueError, match='Invalid fixed parameter'):
+        p.set_fixed_params(invalid_fixed_params, validate=True)
+
+
+def test_overwriting_fixed_params():
+    # 1. directly test `_warn_fixed_overwrite` private method
+    with pytest.warns(UserWarning, match='Overwriting 1'):
+        params.SARIMAXParams._warn_fixed_overwrite(
+            original_value=np.array([1, 1./7., np.nan, np.nan]),
+            new_value=np.array([2, 1./7, np.nan, np.nan]),
+            is_fixed_bool=np.array([True, True, True, False])
+        )
+
+    # 2. test with param setters (e.g. `set_fixed_params`, `params`,
+    # `free_params`)
+    spec = specification.SARIMAXSpecification(
+        exog=np.random.random(size=(20, 2)),
+        ar_order=[1, 0, 1], ma_order=2,
+        seasonal_order=[2, 1, 0, 5],
+    )
+    p = params.SARIMAXParams(spec=spec)
+
+    # 2.1 set fixed params once, and check results
+    fixed_params_1 = {'x1': 10, 'ar.L1': 5}
+    p.set_fixed_params(fixed_params_1)
+    assert_equal(
+        p.is_param_fixed,
+        [True, False, True, False, False, False, False, False, False]
+    )
+    assert_equal(
+        p.params,
+        [10, np.nan, 5, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan]
+    )
+    assert_equal(p.fixed_params, [10, 5])
+    assert_equal(p.free_params, [np.nan] * 7)
+
+    # 2.2 call `set_fixed_params` a second time with different parameters, and
+    # check that no warnings are raised
+    fixed_params_2 = {'ma.L2': -0.1, 'sigma2': 2}
+    with pytest.warns(None) as warning_record:
+        p.set_fixed_params(fixed_params_2)
+    assert len(warning_record) == 0   # no warnings
+    assert_equal(
+        p.is_param_fixed,
+        [True, False, True, False, False, True, False, False, True]
+    )
+    assert_equal(
+        p.params,
+        [10, np.nan, 5, np.nan, np.nan, -0.1, np.nan, np.nan, 2]
+    )
+    assert_equal(p.fixed_params, [10, 5, -0.1, 2])
+    assert_equal(p.free_params, [np.nan] * 5)
+
+    # 2.3 call `set_fixed_params` a third time which overwrites some previously
+    # fixed parameters with different values and check that no warnings are
+    # raised
+    fixed_params_3 = {'x1': 10, 'x2': 99, 'ar.L1': np.e}
+    with pytest.warns(None) as warning_record:
+        p.set_fixed_params(fixed_params_3)
+    assert len(warning_record) == 0   # no warnings
+    assert_equal(
+        p.is_param_fixed,
+        [True, True, True, False, False, True, False, False, True]
+    )
+    assert_equal(
+        p.params,
+        [10, 99, np.e, np.nan, np.nan, -0.1, np.nan, np.nan, 2]
+    )
+    assert_equal(p.fixed_params, [10, 99, np.e, -0.1, 2])
+    assert_equal(p.free_params, [np.nan] * 4)
+
+    # 2.4 call a few param setters, and check that no warnings are raised
+    with pytest.warns(None) as warning_record:
+        p.free_ar_params = [1]
+        p.free_seasonal_ar_params = [1. / 7., 0]
+    assert len(warning_record) == 0   # no warnings
+    assert_equal(
+        p.is_param_fixed,
+        [True, True, True, False, False, True, False, False, True]
+    )  # is_fixed status does not change
+    assert_equal(p.params, [10, 99, np.e, 1, np.nan, -0.1, 1./7., 0, 2])
+    assert_equal(p.fixed_params, [10, 99, np.e, -0.1, 2])
+    assert_equal(p.free_params, [1, np.nan, 1./7., 0])
+
+    # 2.5 call sigma2 setter to overwrite previously fixed sigma2
+    with pytest.warns(UserWarning, match='Overwriting 1'):
+        p.sigma2 = 4
+    assert_equal(
+        p.is_param_fixed,
+        [True, True, True, False, False, True, False, False, True]
+    )  # is_fixed status does not change
+    assert_equal(p.params, [10, 99, np.e, 1, np.nan, -0.1, 1./7., 0, 4])
+    assert_equal(p.fixed_params, [10, 99, np.e, -0.1, 4])
+    assert_equal(p.free_params, [1, np.nan, 1./7., 0])
+
+    # 2.6 call full param setter to overwrite some fixed params with different
+    # values
+    with pytest.warns(UserWarning, match='Overwriting 3'):
+        p.params = [10, 1, 2, 3, 4, -0.1, 5, 6, 7]
+    assert_equal(
+        p.is_param_fixed,
+        [True, True, True, False, False, True, False, False, True]
+    )  # is_fixed status does not change
+    assert_equal(p.params, [10, 1, 2, 3, 4, -0.1, 5, 6, 7])
+    assert_equal(p.fixed_params, [10, 1, 2, -0.1, 7])
+    assert_equal(p.free_params, [3, 4, 5, 6])
+
+
+def test_reset_fixed_params():
+    spec = specification.SARIMAXSpecification(
+        exog=np.random.random(size=(20, 2)),
+        ar_order=[1, 0, 1], ma_order=2,
+        seasonal_order=[2, 1, 0, 5],
+    )
+    fixed_params = {'x1': 0, 'ar.L1': 1, 'ma.L2': -1, 'ar.S.L10': 10,
+                    'sigma2': 1}
+
+    # check that with `keep_param_value=True`, the previously fixed params'
+    # statuses are correctly reset, while the values are kept
+    p = params.SARIMAXParams(spec=spec)
+    p.set_fixed_params(fixed_params, validate=False)
+    p.reset_fixed_params(keep_param_value=True)
+    assert_equal(p.is_param_fixed, [False] * p.k_params)
+    assert_equal(
+        p.params,
+        [0, np.nan, 1, np.nan, np.nan, -1, np.nan, 10, 1]
+    )
+
+    # check that with `keep_param_value=False`, the previously fixed params'
+    # are also correctly set back to np.nan
+    p = params.SARIMAXParams(spec=spec)
+    p.set_fixed_params(fixed_params, validate=False)
+    p.reset_fixed_params(keep_param_value=False)
+    assert_equal(p.is_param_fixed, [False] * 9)
+    assert_equal(p.params, [np.nan] * 9)
+
+
+def test_set_free_params():
+    spec = specification.SARIMAXSpecification(
+        exog=np.random.random(size=(20, 2)),
+        ar_order=[1, 0, 1], ma_order=2,
+        seasonal_order=[2, 1, 3, 5],
+    )
+    full_params = list(range(12))
+    full_param_split = spec.split_params(full_params)
+
+    def check_params_equal(actual_p, expected_p):
+        # exog params
+        assert_equal(actual_p.free_exog_params, expected_p.free_exog_params)
+        assert_equal(actual_p.exog_params, expected_p.exog_params)
+        assert_equal(actual_p.exog_params, full_param_split['exog_params'])
+        # ar params
+        assert_equal(actual_p.free_ar_params, expected_p.free_ar_params)
+        assert_equal(actual_p.ar_params, expected_p.ar_params)
+        assert_equal(actual_p.ar_params, full_param_split['ar_params'])
+        # ma params
+        assert_equal(actual_p.free_ma_params, expected_p.free_ma_params)
+        assert_equal(actual_p.ma_params, expected_p.ma_params)
+        assert_equal(actual_p.ma_params, full_param_split['ma_params'])
+        # seasonal ar params
+        assert_equal(
+            actual_p.free_seasonal_ar_params,
+            expected_p.free_seasonal_ar_params
+        )
+        assert_equal(
+            actual_p.seasonal_ar_params,
+            expected_p.seasonal_ar_params
+        )
+        assert_equal(
+            actual_p.seasonal_ar_params,
+            full_param_split['seasonal_ar_params']
+        )
+        # seasonal ma params
+        assert_equal(
+            actual_p.free_seasonal_ma_params,
+            expected_p.free_seasonal_ma_params)
+        assert_equal(
+            actual_p.seasonal_ma_params,
+            expected_p.seasonal_ma_params
+        )
+        assert_equal(
+            actual_p.seasonal_ma_params,
+            full_param_split['seasonal_ma_params']
+        )
+        # full params
+        assert_equal(actual_p.free_params, expected_p.free_params)
+        assert_equal(actual_p.params, expected_p.params)
+        assert_equal(actual_p.params, full_params)
+
+    # 1. before setting any fixed params, using free param setters and using
+    # full param setters should be equivalent
+
+    # 1.1 setting entire param array
+    p_1 = params.SARIMAXParams(spec=spec)   # to be set with free param setters
+    p_2 = params.SARIMAXParams(spec=spec)   # to be set with full param setters
+
+    p_1.free_params = full_params
+    p_2.params = full_params
+
+    check_params_equal(p_1, p_2)
+
+    # 1.2 setting specific param arrays
+    p_1 = params.SARIMAXParams(spec=spec)  # to be set with free param setters
+    p_2 = params.SARIMAXParams(spec=spec)  # to be set with full param setters
+
+    p_1.free_exog_params = full_param_split['exog_params']
+    p_1.free_ar_params = full_param_split['ar_params']
+    p_1.free_ma_params = full_param_split['ma_params']
+    p_1.free_seasonal_ar_params = full_param_split['seasonal_ar_params']
+    p_1.free_seasonal_ma_params = full_param_split['seasonal_ma_params']
+    p_1.sigma2 = full_param_split['sigma2']
+
+    p_2.exog_params = full_param_split['exog_params']
+    p_2.ar_params = full_param_split['ar_params']
+    p_2.ma_params = full_param_split['ma_params']
+    p_2.seasonal_ar_params = full_param_split['seasonal_ar_params']
+    p_2.seasonal_ma_params = full_param_split['seasonal_ma_params']
+    p_2.sigma2 = full_param_split['sigma2']
+
+    check_params_equal(p_1, p_2)
+
+    # 2. setting some fixed params before setting free params
+    fixed_params = {
+        'x1': 0, 'ar.L1': 2, 'ma.L1': 4,
+        'ar.S.L5': 6, 'ma.S.L5': 8, 'ma.S.L15': 10
+    }
+
+    p_1 = params.SARIMAXParams(spec=spec)  # to be set with free param setters
+    p_2 = params.SARIMAXParams(spec=spec)  # to be set with full param setters
+
+    p_1.set_fixed_params(fixed_params)
+    p_1.free_exog_params = full_param_split['exog_params'][1:]
+    p_1.free_ar_params = full_param_split['ar_params'][1:]
+    p_1.free_ma_params = full_param_split['ma_params'][1:]
+    p_1.free_seasonal_ar_params = full_param_split['seasonal_ar_params'][1:]
+    p_1.free_seasonal_ma_params = full_param_split['seasonal_ma_params'][1:-1]
+    p_1.sigma2 = full_param_split['sigma2']
+
+    p_2.set_fixed_params(fixed_params)
+    p_2.params = full_params
+
+    check_params_equal(p_1, p_2)

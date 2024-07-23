@@ -95,13 +95,16 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
     """
     spec = SARIMAXSpecification(endog, ar_order=ar_order, ma_order=ma_order)
 
-    fixed_params = _validate_fixed_params(fixed_params, spec.param_names)
+    if fixed_params is None:
+        fixed_params = dict()
+    spec.validate_fixed_params(fixed_params, allow_fixed_sigma2=False)
 
     endog = spec.endog
     if demean:
         endog = endog - endog.mean()
 
     p = SARIMAXParams(spec=spec)
+    p.set_fixed_params(fixed_params, validate=False)
 
     nobs = len(endog)
     max_ar_order = spec.max_ar_order
@@ -114,13 +117,13 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
     # Create a spec, just to validate the initial autoregressive order
     _ = SARIMAXSpecification(endog, ar_order=initial_ar_order)
 
-    # Unpack fixed and free ar/ma lags, ix, and params (fixed only)
-    params_info = _package_fixed_and_free_params_info(
-        fixed_params, spec.ar_lags, spec.ma_lags
-    )
-
     # Compute lagged endog
     lagged_endog = lagmat(endog, max_ar_order, trim='both')
+
+    # Compute free and fixed ar ix for indexing lagged_endog
+    ar_ix = np.array(spec.ar_lags, dtype=int) - 1
+    fixed_ar_ix = ar_ix[p.is_ar_param_fixed]
+    free_ar_ix = ar_ix[~p.is_ar_param_fixed]
 
     # If no AR or MA components, this is just a variance computation
     mod = None
@@ -131,15 +134,14 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
     elif max_ma_order == 0:
         # extract 1) lagged_endog with free params; 2) lagged_endog with fixed
         # params; 3) endog residual after applying fixed params if applicable
-        X_with_free_params = lagged_endog[:, params_info.free_ar_ix]
-        X_with_fixed_params = lagged_endog[:, params_info.fixed_ar_ix]
+        X_with_free_params = lagged_endog[:, free_ar_ix]
+        X_with_fixed_params = lagged_endog[:, fixed_ar_ix]
         y = endog[max_ar_order:]
         if X_with_fixed_params.shape[1] != 0:
-            y = y - X_with_fixed_params.dot(params_info.fixed_ar_params)
+            y = y - X_with_fixed_params.dot(p.fixed_ar_params)
 
         # no free ar params -> variance computation on the endog residual
         if X_with_free_params.shape[1] == 0:
-            p.ar_params = params_info.fixed_ar_params
             p.sigma2 = np.var(y, ddof=0)
             resid = y.copy()
         # otherwise OLS with endog residual (after applying fixed params) as y,
@@ -149,13 +151,7 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
             res = mod.fit()
             resid = res.resid
             p.sigma2 = res.scale
-            p.ar_params = _stitch_fixed_and_free_params(
-                fixed_ar_or_ma_lags=params_info.fixed_ar_lags,
-                fixed_ar_or_ma_params=params_info.fixed_ar_params,
-                free_ar_or_ma_lags=params_info.free_ar_lags,
-                free_ar_or_ma_params=res.params,
-                spec_ar_or_ma_lags=spec.ar_lags
-            )
+            p.free_ar_params = res.params
     # Otherwise ARMA model
     else:
         # Step 1: Compute long AR model via Yule-Walker, get residuals
@@ -168,27 +164,30 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
         # Get lagged residuals for `exog` in least-squares regression
         lagged_resid = lagmat(resid, max_ma_order, trim='both')
 
+        # Compute free and fixed ma ix for indexing lagged_resid
+        ma_ix = np.array(spec.ma_lags, dtype=int) - 1
+        fixed_ma_ix = ma_ix[p.is_ma_param_fixed]
+        free_ma_ix = ma_ix[~p.is_ma_param_fixed]
+
         # Step 2: estimate ARMA model via least squares
         ix = initial_ar_order + max_ma_order - max_ar_order
         X_with_free_params = np.c_[
-            lagged_endog[ix:, params_info.free_ar_ix],
-            lagged_resid[:, params_info.free_ma_ix]
+            lagged_endog[ix:, free_ar_ix],
+            lagged_resid[:, free_ma_ix]
         ]
         X_with_fixed_params = np.c_[
-            lagged_endog[ix:, params_info.fixed_ar_ix],
-            lagged_resid[:, params_info.fixed_ma_ix]
+            lagged_endog[ix:, fixed_ar_ix],
+            lagged_resid[:, fixed_ma_ix]
         ]
         y = endog[initial_ar_order + max_ma_order:]
         if X_with_fixed_params.shape[1] != 0:
             y = y - X_with_fixed_params.dot(
-                np.r_[params_info.fixed_ar_params, params_info.fixed_ma_params]
+                np.r_[p.fixed_ar_params, p.fixed_ma_params]
             )
 
         # Step 2.1: no free ar params -> variance computation on the endog
         # residual
         if X_with_free_params.shape[1] == 0:
-            p.ar_params = params_info.fixed_ar_params
-            p.ma_params = params_info.fixed_ma_params
             p.sigma2 = np.var(y, ddof=0)
             resid = y.copy()
         # Step 2.2: otherwise OLS with endog residual (after applying fixed
@@ -196,21 +195,9 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
         else:
             mod = OLS(y, X_with_free_params)
             res = mod.fit()
-            k_free_ar_params = len(params_info.free_ar_lags)
-            p.ar_params = _stitch_fixed_and_free_params(
-                fixed_ar_or_ma_lags=params_info.fixed_ar_lags,
-                fixed_ar_or_ma_params=params_info.fixed_ar_params,
-                free_ar_or_ma_lags=params_info.free_ar_lags,
-                free_ar_or_ma_params=res.params[:k_free_ar_params],
-                spec_ar_or_ma_lags=spec.ar_lags
-            )
-            p.ma_params = _stitch_fixed_and_free_params(
-                fixed_ar_or_ma_lags=params_info.fixed_ma_lags,
-                fixed_ar_or_ma_params=params_info.fixed_ma_params,
-                free_ar_or_ma_lags=params_info.free_ma_lags,
-                free_ar_or_ma_params=res.params[k_free_ar_params:],
-                spec_ar_or_ma_lags=spec.ma_lags
-            )
+            k_free_ar_params = sum(~p.is_ar_param_fixed)
+            p.free_ar_params = res.params[:k_free_ar_params]
+            p.free_ma_params = res.params[k_free_ar_params:]
             resid = res.resid
             p.sigma2 = res.scale
 
@@ -265,14 +252,8 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
             lagged_W = lagmat(W, max_ma_order, trim='both')
 
             exog = np.c_[
-                lagged_V[
-                    max(max_ma_order - max_ar_order, 0):,
-                    params_info.free_ar_ix
-                ],
-                lagged_W[
-                    max(max_ar_order - max_ma_order, 0):,
-                    params_info.free_ma_ix
-                ]
+                lagged_V[max(max_ma_order - max_ar_order, 0):, free_ar_ix],
+                lagged_W[max(max_ar_order - max_ma_order, 0):, free_ma_ix]
             ]
 
             mod_unbias = OLS(Z[max(max_ar_order, max_ma_order):], exog)
@@ -298,133 +279,3 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0, demean=True,
         'resid': resid
     })
     return p, other_results
-
-
-def _validate_fixed_params(fixed_params, spec_param_names):
-    """
-    Check that keys in fixed_params are a subset of spec.param_names except
-    "sigma2"
-
-    Parameters
-    ----------
-    fixed_params : dict
-    spec_param_names : list of string
-        SARIMAXSpecification.param_names
-    """
-    if fixed_params is None:
-        fixed_params = {}
-
-    assert isinstance(fixed_params, dict)
-
-    fixed_param_names = set(fixed_params.keys())
-    valid_param_names = set(spec_param_names) - {"sigma2"}
-
-    invalid_param_names = fixed_param_names - valid_param_names
-
-    if len(invalid_param_names) > 0:
-        raise ValueError(
-            f"Invalid fixed parameter(s): {sorted(list(invalid_param_names))}."
-            f" Please select among {sorted(list(valid_param_names))}."
-        )
-
-    return fixed_params
-
-
-def _package_fixed_and_free_params_info(fixed_params, spec_ar_lags,
-                                        spec_ma_lags):
-    """
-    Parameters
-    ----------
-    fixed_params : dict
-    spec_ar_lags : list of int
-        SARIMAXSpecification.ar_lags
-    spec_ma_lags : list of int
-        SARIMAXSpecification.ma_lags
-
-    Returns
-    -------
-    Bunch with
-    (lags) fixed_ar_lags, fixed_ma_lags, free_ar_lags, free_ma_lags;
-    (ix) fixed_ar_ix, fixed_ma_ix, free_ar_ix, free_ma_ix;
-    (params) fixed_ar_params, free_ma_params
-    """
-    # unpack fixed lags and params
-    fixed_ar_lags_and_params = []
-    fixed_ma_lags_and_params = []
-    for key, val in fixed_params.items():
-        lag = int(key.split(".")[-1].lstrip("L"))
-        if key.startswith("ar"):
-            fixed_ar_lags_and_params.append((lag, val))
-        elif key.startswith("ma"):
-            fixed_ma_lags_and_params.append((lag, val))
-
-    fixed_ar_lags_and_params.sort()
-    fixed_ma_lags_and_params.sort()
-
-    fixed_ar_lags = [lag for lag, _ in fixed_ar_lags_and_params]
-    fixed_ar_params = np.array([val for _, val in fixed_ar_lags_and_params])
-
-    fixed_ma_lags = [lag for lag, _ in fixed_ma_lags_and_params]
-    fixed_ma_params = np.array([val for _, val in fixed_ma_lags_and_params])
-
-    # unpack free lags
-    free_ar_lags = [lag for lag in spec_ar_lags
-                    if lag not in set(fixed_ar_lags)]
-    free_ma_lags = [lag for lag in spec_ma_lags
-                    if lag not in set(fixed_ma_lags)]
-
-    # get ix for indexing purposes: `ar_ix`, and `ma_ix` below, are to account
-    # for non-consecutive lags; for indexing purposes, must have dtype int
-    free_ar_ix = np.array(free_ar_lags, dtype=int) - 1
-    free_ma_ix = np.array(free_ma_lags, dtype=int) - 1
-    fixed_ar_ix = np.array(fixed_ar_lags, dtype=int) - 1
-    fixed_ma_ix = np.array(fixed_ma_lags, dtype=int) - 1
-
-    return Bunch(
-        # lags
-        fixed_ar_lags=fixed_ar_lags, fixed_ma_lags=fixed_ma_lags,
-        free_ar_lags=free_ar_lags, free_ma_lags=free_ma_lags,
-        # ixs
-        fixed_ar_ix=fixed_ar_ix, fixed_ma_ix=fixed_ma_ix,
-        free_ar_ix=free_ar_ix, free_ma_ix=free_ma_ix,
-        # fixed params
-        fixed_ar_params=fixed_ar_params, fixed_ma_params=fixed_ma_params,
-    )
-
-
-def _stitch_fixed_and_free_params(fixed_ar_or_ma_lags, fixed_ar_or_ma_params,
-                                  free_ar_or_ma_lags, free_ar_or_ma_params,
-                                  spec_ar_or_ma_lags):
-    """
-    Stitch together fixed and free params, by the order of lags, for setting
-    SARIMAXParams.ma_params or SARIMAXParams.ar_params
-
-    Parameters
-    ----------
-    fixed_ar_or_ma_lags : list or np.array
-    fixed_ar_or_ma_params : list or np.array
-        fixed_ar_or_ma_params corresponds with fixed_ar_or_ma_lags
-    free_ar_or_ma_lags : list or np.array
-    free_ar_or_ma_params : list or np.array
-        free_ar_or_ma_params corresponds with free_ar_or_ma_lags
-    spec_ar_or_ma_lags : list
-        SARIMAXSpecification.ar_lags or SARIMAXSpecification.ma_lags
-
-    Returns
-    -------
-    list of fixed and free params by the order of lags
-    """
-    assert len(fixed_ar_or_ma_lags) == len(fixed_ar_or_ma_params)
-    assert len(free_ar_or_ma_lags) == len(free_ar_or_ma_params)
-
-    all_lags = np.r_[fixed_ar_or_ma_lags, free_ar_or_ma_lags]
-    all_params = np.r_[fixed_ar_or_ma_params, free_ar_or_ma_params]
-    assert set(all_lags) == set(spec_ar_or_ma_lags)
-
-    lag_to_param_map = dict(zip(all_lags, all_params))
-
-    # Sort params by the order of their corresponding lags in
-    # spec_ar_or_ma_lags (e.g. SARIMAXSpecification.ar_lags or
-    # SARIMAXSpecification.ma_lags)
-    all_params_sorted = [lag_to_param_map[lag] for lag in spec_ar_or_ma_lags]
-    return all_params_sorted
