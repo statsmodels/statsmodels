@@ -1747,8 +1747,7 @@ class Tweedie(Family):
                     scale = scale[idx]
                 x = ((p - 1) * scale / endog) ** alpha
                 x /= (2 - p) * scale
-                wb = special.wright_bessel(-alpha, 0, x)
-                ll_obs[idx] += np.log(1/endog * wb)
+                ll_obs[idx] += np.log(1 / endog) + special.log_wright_bessel(-alpha, 0, x)
             return ll_obs
         else:
             # Equations 4 of Kaas
