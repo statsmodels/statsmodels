@@ -774,12 +774,12 @@ def qqplot_2samples(
         data2 = ProbPlot(data2)
     if data2.data.shape[0] > data1.data.shape[0]:
         fig = data1.qqplot(
-            xlabel=ylabel, ylabel=xlabel, line=line, other=data2, ax=ax
+            xlabel=xlabel, ylabel=ylabel, line=line, other=data2, ax=ax
         )
     else:
         fig = data2.qqplot(
-            xlabel=ylabel,
-            ylabel=xlabel,
+            xlabel=xlabel,
+            ylabel=ylabel,
             line=line,
             other=data1,
             ax=ax,
