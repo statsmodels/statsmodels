@@ -163,8 +163,8 @@ class MLEModel(tsbase.TimeSeriesModel):
         Prepare data for use in the state space representation
         """
         endog = np.require(
-            np.array(self.data.orig_endog, order="C"), requirements="W"
-        )
+            np.array(self.data.orig_endog, copy=True), requirements="CW"
+        ).copy()
         exog = self.data.orig_exog
         if exog is not None:
             exog = np.array(exog)

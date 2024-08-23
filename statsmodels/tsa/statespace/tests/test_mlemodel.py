@@ -1113,7 +1113,7 @@ def test_append_extend_apply_invalid():
 
     # # Test for problems with non-date indexes
     endog3 = pd.Series(niledata.iloc[:20].values)
-    endog4 = pd.Series(niledata.iloc[:40].values)[20:]
+    endog4 = pd.Series(niledata.iloc[:40].values).iloc[20:]
     mod2 = sarimax.SARIMAX(endog3, order=(1, 0, 0), exog=endog3,
                            concentrate_scale=True)
     res2 = mod2.smooth([0.2, 0.5])
