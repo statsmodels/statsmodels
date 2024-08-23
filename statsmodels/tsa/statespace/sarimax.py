@@ -1027,7 +1027,10 @@ class SARIMAX(MLEModel):
         params_measurement_variance = 1 if self.measurement_error else []
 
         # We want to bound the starting variance away from zero
-        params_variance = np.atleast_1d(max(np.array(params_variance), 1e-10))
+        params_variance = np.atleast_1d(np.array(params_variance))
+        if params_variance.size:
+            # Avoid comparisons with empty arrays due to changes in NumPy 2.2
+            params_variance = np.atleast_1d(max(params_variance[0], 1e-10))
 
         # Remove state variance as parameter if scale is concentrated out
         if self.concentrate_scale:
