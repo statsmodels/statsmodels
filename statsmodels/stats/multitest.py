@@ -10,6 +10,7 @@ License: BSD-3
 import numpy as np
 
 from statsmodels.stats._knockoff import RegressionFDR
+from sklearn.isotonic import isotonic_regression
 
 __all__ = ['fdrcorrection', 'fdrcorrection_twostage', 'local_fdr',
            'multipletests', 'NullDistribution', 'RegressionFDR']
@@ -37,7 +38,8 @@ multitest_methods_names = {'b': 'Bonferroni',
                            'fdr_by': 'FDR Benjamini-Yekutieli',
                            'fdr_tsbh': 'FDR 2-stage Benjamini-Hochberg',
                            'fdr_tsbky': 'FDR 2-stage Benjamini-Krieger-Yekutieli',
-                           'fdr_gbs': 'FDR adaptive Gavrilov-Benjamini-Sarkar'
+                           'fdr_gbs': 'FDR adaptive Gavrilov-Benjamini-Sarkar',
+                           'lfdr' : 'lfdr support line procedure',
                            }
 
 _alias_list = [['b', 'bonf', 'bonferroni'],
@@ -50,7 +52,8 @@ _alias_list = [['b', 'bonf', 'bonferroni'],
                ['fdr_by', 'fdr_n', 'fdr_c', 'fdrn', 'fdrcorr'],
                ['fdr_tsbh', 'fdr_2sbh'],
                ['fdr_tsbky', 'fdr_2sbky', 'fdr_twostage'],
-               ['fdr_gbs']
+               ['fdr_gbs'],
+               ['lfdr', 'lfdr_sl'],
                ]
 
 
@@ -87,6 +90,7 @@ def multipletests(pvals, alpha=0.05, method='hs',
         - `fdr_by` : Benjamini/Yekutieli (negative)
         - `fdr_tsbh` : two stage fdr correction (non-negative)
         - `fdr_tsbky` : two stage fdr correction (non-negative)
+        - `lfdr` : support line
 
     maxiter : int or bool
         Maximum number of iterations for two-stage fdr, `fdr_tsbh` and
@@ -261,6 +265,9 @@ def multipletests(pvals, alpha=0.05, method='hs',
         del pvals_corrected_raw
         reject = pvals_corrected <= alpha
 
+    elif method.lower() in ['lfdr', 'lfdr_sl']:
+        lfdrcorrection(pvals, alpha=alpha, is_sorted=True)
+
     else:
         raise ValueError('method not recognized')
 
@@ -366,6 +373,91 @@ def fdrcorrection(pvals, alpha=0.05, method='indep', is_sorted=False):
     else:
         return reject, pvals_corrected
 
+def lfdrcorrection(pvals, pi_0_est=1., alpha=0.2, is_sorted=False):
+    '''
+    p-value correction for the local false discovery rate (lfdr).
+
+    Uses the support line (SL) procedure based on the Grenander estimator.
+
+    Parameters
+    ----------
+    pvals : array_like, 1d
+        List of p-values of the individual tests.
+    pi_0_est : float, optional
+        estimate of the null proportion. Defaults to conservative choice ``1.``.
+    alpha : float, optional
+        lfdr tolerance. Defaults to ``0.2``.
+    is_sorted : bool, optional
+        If False (default), the p-values will be sorted, but the corrected
+        p-values are in the original order. If True, then it assumed that the
+        p-values are already sorted in ascending order.
+
+    Returns
+    -------
+    rejected : ndarray, bool
+        True if a hypothesis is rejected, False if not
+    pvalue-corrected : ndarray
+        estimated lfdr values, i.e. adjusted p-values 
+
+    Examples
+    --------
+
+    >>> from statsmodels.stats.multitest import lfdrcorrection
+    >>> import numpy as np
+    >>> pvals = np.random.rand(30)
+    >>> rejected, lvals = lfdrcorrection(pvals)
+
+
+    References
+    ----------
+
+    U Grenander (1956). On the theory of mortality measurement: part II. 
+    Scandinavian Actuarial Journal, 39, 125-153.
+
+    B Efron, R Tibshirani, J D Storey, and V Tusher (2001). Empirical Bayes 
+    analysis of a microarray experiment. Journal of the American Statistical 
+    Association, 96:456, 1151-1160.
+
+    K Strimmer (2008). A unified approach to false discovery rate estimation. 
+    BMC Bioinformatics, 9, 1-14.
+
+    J A Soloff, D Xiang, and W Fithian (2024). The edge of discovery: 
+    Controlling the local false discovery rate at the margin. The Annals of 
+    Statistics, 52:2, 580-601.
+
+    Notes
+    -----
+
+    Assumes p-values are uniformly distributed under the null and have a
+    decreasing density under the alternative.
+
+    '''
+    pvals = np.asarray(pvals)
+    assert pvals.ndim == 1, "pvals must be 1-dimensional, that is of shape (n,)"
+
+    nobs = len(pvals)
+    
+    if not is_sorted:
+        pvals_sortind = np.argsort(pvals)
+        pvals_sorted = np.take(pvals, pvals_sortind)
+    else:
+        pvals_sorted = pvals  # alias
+
+    # domain of empirical cdf of p-values
+    W = np.hstack([0, pvals_sorted])
+
+    # compute left-hand slopes of least concave majorant of empirical cdf
+    w = W[1:] - W[:-1]
+    slopes = isotonic_regression(np.ones(nobs)/(nobs*w), 
+                                sample_weight=w.copy(), 
+                                increasing=False)
+
+    # return fitted values in original order
+    if not is_sorted:
+        slopes = slopes[pvals_sortind.argsort()]
+    ell_values = np.minimum(1, pi_0_est/slopes)
+
+    return (ell_values <= alpha), ell_values
 
 def fdrcorrection_twostage(pvals, alpha=0.05, method='bky',
                            maxiter=1,
