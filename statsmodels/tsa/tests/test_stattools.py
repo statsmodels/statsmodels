@@ -20,6 +20,7 @@ import pytest
 from scipy import stats
 from scipy.interpolate import interp1d
 
+from statsmodels.compat.python import PYTHON_IMPL_WASM
 from statsmodels.datasets import macrodata, modechoice, nile, randhie, sunspots
 from statsmodels.tools.sm_exceptions import (
     CollinearityWarning,
@@ -349,6 +350,10 @@ class TestPACF(CheckCorrGram):
         pacfyw = pacf_yw(self.x, nlags=40, method="mle")
         assert_almost_equal(pacfyw[1:], self.pacfyw, DECIMAL_8)
 
+    @pytest.mark.skipif(
+        PYTHON_IMPL_WASM,
+        reason="No fp exception support in WASM"
+    )
     def test_yw_singular(self):
         with pytest.warns(ValueWarning):
             pacf(np.ones(30), nlags=6)
@@ -1084,7 +1089,6 @@ def test_arma_order_select_ic():
     arparams = np.array([0.75, -0.25])
     maparams = np.array([0.65, 0.35])
     arparams = np.r_[1, -arparams]
-    maparam = np.r_[1, maparams]  # FIXME: Never used
     nobs = 250
     np.random.seed(2014)
     y = arma_generate_sample(arparams, maparams, nobs)

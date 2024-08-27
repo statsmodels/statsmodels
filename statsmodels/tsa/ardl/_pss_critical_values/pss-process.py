@@ -158,7 +158,7 @@ crit_percentiles = {quantiles}
 crit_vals = {crit_vals}
 """
 
-    targets = {TargetVersion.PY37, TargetVersion.PY38, TargetVersion.PY39}
+    targets = {TargetVersion.PY38, TargetVersion.PY39}
     fm = FileMode(target_versions=targets, line_length=79)
     formatted_code = format_file_contents(raw_code, fast=False, mode=fm)
 
