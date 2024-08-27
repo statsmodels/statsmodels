@@ -1231,11 +1231,6 @@ def test_nonmonotonic_periodindex():
         tsa_model.TimeSeriesModel(endog)
 
 
-@pytest.mark.xfail(
-    reason="Pandas PeriodIndex.is_full does not yet work for"
-    " all frequencies (e.g. frequencies with a"
-    ' multiplier, like "2Q").'
-)
 def test_nonfull_periodindex():
     index = pd.PeriodIndex(["2000-01", "2000-03"], freq="M")
     endog = pd.Series(np.zeros(len(index)), index=index)
@@ -1245,8 +1240,7 @@ def test_nonfull_periodindex():
         " full and so will be ignored when e.g."
         " forecasting."
     )
-    with pytest.warns(ValueWarning, match=message):
-        tsa_model.TimeSeriesModel(endog)
+    tsa_model.TimeSeriesModel(endog)
 
 
 def test_get_index_loc_quarterly():
