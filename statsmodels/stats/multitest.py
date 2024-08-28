@@ -12,6 +12,7 @@ from sklearn.isotonic import isotonic_regression
 
 from statsmodels.stats._knockoff import RegressionFDR
 from scipy.optimize import isotonic_regression
+from statsmodels.tools.testing import Holder
 
 from statsmodels.stats._knockoff import RegressionFDR
 
@@ -314,7 +315,7 @@ def multipletests(
         reject = pvals_corrected <= alpha
 
     elif method.lower() in ['lfdr', 'lfdr_sl']:
-        pvals_corrected = lfdrcorrection(pvals, is_sorted=True)
+        pvals_corrected = lfdrcorrection(pvals, is_sorted=True).lfdr
         reject = pvals_corrected <= alpha
 
     else:
@@ -442,8 +443,9 @@ def lfdrcorrection(pvals, null_proportion=1.0, is_sorted=False):
 
     Returns
     -------
-    pvalue-corrected : ndarray
-        estimated lfdr values, i.e. adjusted p-values
+    results : Holder
+        contains estimated tail fdr values (`results.fdr`) and estimated local
+        fdr values (`results.lfdr`)
 
     Examples
     --------
@@ -451,7 +453,7 @@ def lfdrcorrection(pvals, null_proportion=1.0, is_sorted=False):
     >>> from statsmodels.stats.multitest import lfdrcorrection
     >>> import numpy as np
     >>> pvals = np.random.rand(30)
-    >>> lvals = lfdrcorrection(pvals)
+    >>> lfdr = lfdrcorrection(pvals).lfdr
 
     References
     ----------
@@ -500,12 +502,20 @@ def lfdrcorrection(pvals, null_proportion=1.0, is_sorted=False):
         np.ones(nobs)/(nobs*w), weights=w.copy(), increasing=False)
     slopes = slope_reg.x
 
+    # compute LCM of empirical cdf
+    keep = np.ones(nobs, dtype=bool)
+    keep[:-1] = ~np.isclose(slopes[:-1], slopes[1:])
+    knots_  = np.hstack([0, pvals_sorted[keep]])
+    heights_= np.hstack([0, (np.where(keep)[0]+1)/m])
+    lcm_cdf = np.interp(pvals_sorted, knots_, heights_)
+    fdr = pvals_sorted/lcm_cdf
+
     # return fitted values in original order
     if not is_sorted:
         slopes = np.take(slopes, pvals_sortind.argsort())
-    ell_values = np.minimum(1, null_proportion/slopes)
+    lfdr = np.minimum(1, null_proportion/slopes)
 
-    return ell_values
+    return Holder(fdr=fdr, lfdr=lfdr)
 
 
 def fdrcorrection_twostage(
