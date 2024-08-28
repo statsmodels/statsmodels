@@ -377,9 +377,14 @@ def fdrcorrection(pvals, alpha=0.05, method='indep', is_sorted=False):
 
 def lfdrcorrection(pvals, null_proportion=1.0, is_sorted=False):
     '''
-    p-value correction for the local false discovery rate (lfdr).
+    Estimate local and tail FDR values for a list of p-values.
 
-    Uses the support line (SL) procedure based on the Grenander estimator.
+    Estimates the marginal density of the p-values using the Grenander estimator
+    of a monotone density. Combined with an estimate of the null proportion, 
+    this yields (by Bayes' rule) estimates of two posterior quantities:
+    1. The tail false discovery rate, given by fdr(t) = Prob{null | p ≤ t}
+    2. The local false discovery rate, given by lfdr(t) = Prob{null | p = t}
+    This function estimates fdr and lfdr for each input p-value.
 
     Parameters
     ----------
@@ -395,26 +400,29 @@ def lfdrcorrection(pvals, null_proportion=1.0, is_sorted=False):
     Returns
     -------
     results : Holder
-        contains estimated tail fdr values (`results.fdr`) and estimated local
-        fdr values (`results.lfdr`)
+        contains estimated tail FDR values (`results.fdr`) and estimated local
+        FDR values (`results.lfdr`)
 
-    Examples
+    See also
     --------
+    local_fdr
 
-    >>> from statsmodels.stats.multitest import lfdrcorrection
-    >>> import numpy as np
-    >>> pvals = np.random.rand(30)
-    >>> lfdr = lfdrcorrection(pvals).lfdr
+    Notes
+    -----
+    Assumes p-values are independent, uniformly distributed under the null and
+    have decreasing densities under the alternative.
 
     References
     ----------
-
     U Grenander (1956). On the theory of mortality measurement: part II.
     Scandinavian Actuarial Journal, 39, 125-153.
 
     B Efron, R Tibshirani, J D Storey, and V Tusher (2001). Empirical Bayes
     analysis of a microarray experiment. Journal of the American Statistical
     Association, 96:456, 1151-1160.
+
+    B Efron (2007). Size, Power and False Discovery Rates. The Annals of
+    Statistics, 35:4, 1351-1377.
 
     K Strimmer (2008). A unified approach to false discovery rate estimation.
     BMC Bioinformatics, 9, 1-14.
@@ -423,12 +431,12 @@ def lfdrcorrection(pvals, null_proportion=1.0, is_sorted=False):
     Controlling the local false discovery rate at the margin. The Annals of
     Statistics, 52:2, 580-601.
 
-    Notes
-    -----
-
-    Assumes p-values are independent, uniformly distributed under the null and
-    have decreasing densities under the alternative.
-
+    Examples
+    --------
+    >>> from statsmodels.stats.multitest import lfdrcorrection
+    >>> import numpy as np
+    >>> pvals = np.random.rand(30)
+    >>> lfdr = lfdrcorrection(pvals).lfdr
     '''
     pvals = np.asarray(pvals)
     assert pvals.ndim == 1, "pvals must be 1-dimensional, that is of shape (n,)"
