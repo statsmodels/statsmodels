@@ -2032,7 +2032,8 @@ def tost_proportions_2indep(count1, nobs1, count2, nobs2, low, upp,
     return res
 
 
-def _std_2prop_power(diff, p2, ratio=1, alpha=0.05, value=0):
+def _std_2prop_power(diff, p2, ratio=1, alpha=0.05, value=0,
+                     null_var="pooled"):
     """
     Compute standard error under null and alternative for 2 proportions
 
@@ -2047,7 +2048,16 @@ def _std_2prop_power(diff, p2, ratio=1, alpha=0.05, value=0):
     p1 = p2 + diff
     # The following contains currently redundant variables that will
     # be useful for different options for the null variance
-    p_pooled = (p1 + p2 * ratio) / (1 + ratio)
+    if null_var == "pooled":
+        p_pooled = (p1 + p2 * ratio) / (1 + ratio)
+    elif null_var == "prop2":
+        p_pooled = p2
+    elif null_var == "prop1":
+        p_pooled = p1
+    else:
+        # assume it's a prop
+        p_pooled = null_var
+
     # probabilities for the variance for the null statistic
     p1_vnull, p2_vnull = p_pooled, p_pooled
     p2_alt = p2
@@ -2142,7 +2152,8 @@ def power_proportions_2indep(diff, prop2, nobs1, ratio=1, alpha=0.05,
 
 def samplesize_proportions_2indep_onetail(diff, prop2, power, ratio=1,
                                           alpha=0.05, value=0,
-                                          alternative='two-sided'):
+                                          alternative='two-sided',
+                                          null_var="pooled"):
     """
     Required sample size assuming normal distribution based on one tail
 
@@ -2186,7 +2197,8 @@ def samplesize_proportions_2indep_onetail(diff, prop2, power, ratio=1,
         alpha = alpha / 2
 
     _, std_null, std_alt = _std_2prop_power(diff, prop2, ratio=ratio,
-                                            alpha=alpha, value=value)
+                                            alpha=alpha, value=value,
+                                            null_var=null_var)
 
     nobs = normal_sample_size_one_tail(diff, power, alpha, std_null=std_null,
                                        std_alternative=std_alt)
