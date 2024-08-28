@@ -474,8 +474,8 @@ def lfdrcorrection(pvals, pi_0_est=1., is_sorted=False):
     Notes
     -----
 
-    Assumes p-values are independent, uniformly distributed under the null and 
-    have decreasing densities under the alternative. 
+    Assumes p-values are independent, uniformly distributed under the null and
+    have decreasing densities under the alternative.
 
     '''
     pvals = np.asarray(pvals)
@@ -489,9 +489,6 @@ def lfdrcorrection(pvals, pi_0_est=1., is_sorted=False):
     else:
         pvals_sorted = pvals  # alias
 
-    # domain of empirical cdf of p-values
-    W = np.hstack([0, pvals_sorted])
-
     # compute left-hand slopes of least concave majorant of empirical cdf
     w = W[1:] - W[:-1]
 
@@ -499,10 +496,10 @@ def lfdrcorrection(pvals, pi_0_est=1., is_sorted=False):
         np.ones(nobs)/(nobs*w), sample_weight=w.copy(), increasing=False
     )
 
+    gaps = np.diff(pvals_sorted, prepend=0)
     slope_reg = isotonic_regression(
         np.ones(nobs)/(nobs*w), weights=w.copy(), increasing=False)
     slopes = slope_reg.x
-
 
     # return fitted values in original order
     if not is_sorted:
