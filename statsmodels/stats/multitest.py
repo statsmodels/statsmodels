@@ -453,12 +453,14 @@ def lfdrcorrection(pvals, null_proportion=1.0, is_sorted=False):
     knots_  = np.hstack([0, pvals_sorted[keep]])
     heights_= np.hstack([0, (np.where(keep)[0]+1)/m])
     lcm_cdf = np.interp(pvals_sorted, knots_, heights_)
-    fdr = pvals_sorted/lcm_cdf
 
     # return fitted values in original order
     if not is_sorted:
-        slopes = np.take(slopes, pvals_sortind.argsort())
+        pvals_unsortind = pvals_sortind.argsort()
+        slopes = np.take(slopes, pvals_unsortind)
+        lcm_cdf = np.take(lcm_cdf, pvals_unsortind)
     lfdr = np.minimum(1, null_proportion/slopes)
+    fdr = np.minimum(1, null_proportion*pvals/lcm_cdf)
 
     return Holder(fdr=fdr, lfdr=lfdr)
 
