@@ -10,7 +10,7 @@ License: BSD-3
 import numpy as np
 
 from statsmodels.stats._knockoff import RegressionFDR
-from sklearn.isotonic import isotonic_regression
+from scipy.optimize import isotonic_regression
 
 __all__ = ['fdrcorrection', 'fdrcorrection_twostage', 'local_fdr',
            'multipletests', 'NullDistribution', 'RegressionFDR']
@@ -266,7 +266,8 @@ def multipletests(pvals, alpha=0.05, method='hs',
         reject = pvals_corrected <= alpha
 
     elif method.lower() in ['lfdr', 'lfdr_sl']:
-        lfdrcorrection(pvals, alpha=alpha, is_sorted=True)
+        pvals_corrected = lfdrcorrection(pvals, is_sorted=True)
+        reject = pvals_corrected <= alpha
 
     else:
         raise ValueError('method not recognized')
@@ -373,7 +374,7 @@ def fdrcorrection(pvals, alpha=0.05, method='indep', is_sorted=False):
     else:
         return reject, pvals_corrected
 
-def lfdrcorrection(pvals, pi_0_est=1., alpha=0.2, is_sorted=False):
+def lfdrcorrection(pvals, pi_0_est=1., is_sorted=False):
     '''
     p-value correction for the local false discovery rate (lfdr).
 
@@ -385,8 +386,6 @@ def lfdrcorrection(pvals, pi_0_est=1., alpha=0.2, is_sorted=False):
         List of p-values of the individual tests.
     pi_0_est : float, optional
         estimate of the null proportion. Defaults to conservative choice ``1.``.
-    alpha : float, optional
-        lfdr tolerance. Defaults to ``0.2``.
     is_sorted : bool, optional
         If False (default), the p-values will be sorted, but the corrected
         p-values are in the original order. If True, then it assumed that the
@@ -394,8 +393,6 @@ def lfdrcorrection(pvals, pi_0_est=1., alpha=0.2, is_sorted=False):
 
     Returns
     -------
-    rejected : ndarray, bool
-        True if a hypothesis is rejected, False if not
     pvalue-corrected : ndarray
         estimated lfdr values, i.e. adjusted p-values 
 
@@ -405,7 +402,7 @@ def lfdrcorrection(pvals, pi_0_est=1., alpha=0.2, is_sorted=False):
     >>> from statsmodels.stats.multitest import lfdrcorrection
     >>> import numpy as np
     >>> pvals = np.random.rand(30)
-    >>> rejected, lvals = lfdrcorrection(pvals)
+    >>> lvals = lfdrcorrection(pvals)
 
 
     References
@@ -428,8 +425,8 @@ def lfdrcorrection(pvals, pi_0_est=1., alpha=0.2, is_sorted=False):
     Notes
     -----
 
-    Assumes p-values are uniformly distributed under the null and have a
-    decreasing density under the alternative.
+    Assumes p-values are independent, uniformly distributed under the null and 
+    have decreasing densities under the alternative. 
 
     '''
     pvals = np.asarray(pvals)
@@ -449,15 +446,15 @@ def lfdrcorrection(pvals, pi_0_est=1., alpha=0.2, is_sorted=False):
     # compute left-hand slopes of least concave majorant of empirical cdf
     w = W[1:] - W[:-1]
     slopes = isotonic_regression(np.ones(nobs)/(nobs*w), 
-                                sample_weight=w.copy(), 
-                                increasing=False)
+                                weights=w.copy(), 
+                                increasing=False).x
 
     # return fitted values in original order
     if not is_sorted:
-        slopes = slopes[pvals_sortind.argsort()]
+        slopes = np.take(slopes, pvals_sortind.argsort())
     ell_values = np.minimum(1, pi_0_est/slopes)
 
-    return (ell_values <= alpha), ell_values
+    return ell_values
 
 def fdrcorrection_twostage(pvals, alpha=0.05, method='bky',
                            maxiter=1,
