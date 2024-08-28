@@ -374,7 +374,7 @@ def fdrcorrection(pvals, alpha=0.05, method='indep', is_sorted=False):
     else:
         return reject, pvals_corrected
 
-def lfdrcorrection(pvals, pi_0_est=1., is_sorted=False):
+def lfdrcorrection(pvals, null_proportion=1.0, is_sorted=False):
     '''
     p-value correction for the local false discovery rate (lfdr).
 
@@ -384,7 +384,7 @@ def lfdrcorrection(pvals, pi_0_est=1., is_sorted=False):
     ----------
     pvals : array_like, 1d
         List of p-values of the individual tests.
-    pi_0_est : float, optional
+    null_proportion : float, optional
         estimate of the null proportion. Defaults to conservative choice ``1.``.
     is_sorted : bool, optional
         If False (default), the p-values will be sorted, but the corrected
@@ -403,7 +403,6 @@ def lfdrcorrection(pvals, pi_0_est=1., is_sorted=False):
     >>> import numpy as np
     >>> pvals = np.random.rand(30)
     >>> lvals = lfdrcorrection(pvals)
-
 
     References
     ----------
@@ -449,7 +448,7 @@ def lfdrcorrection(pvals, pi_0_est=1., is_sorted=False):
     # return fitted values in original order
     if not is_sorted:
         slopes = np.take(slopes, pvals_sortind.argsort())
-    ell_values = np.minimum(1, pi_0_est/slopes)
+    ell_values = np.minimum(1, null_proportion/slopes)
 
     return ell_values
 
