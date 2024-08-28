@@ -394,7 +394,7 @@ def lfdrcorrection(pvals, pi_0_est=1., is_sorted=False):
     Returns
     -------
     pvalue-corrected : ndarray
-        estimated lfdr values, i.e. adjusted p-values 
+        estimated lfdr values, i.e. adjusted p-values
 
     Examples
     --------
@@ -408,45 +408,42 @@ def lfdrcorrection(pvals, pi_0_est=1., is_sorted=False):
     References
     ----------
 
-    U Grenander (1956). On the theory of mortality measurement: part II. 
+    U Grenander (1956). On the theory of mortality measurement: part II.
     Scandinavian Actuarial Journal, 39, 125-153.
 
-    B Efron, R Tibshirani, J D Storey, and V Tusher (2001). Empirical Bayes 
-    analysis of a microarray experiment. Journal of the American Statistical 
+    B Efron, R Tibshirani, J D Storey, and V Tusher (2001). Empirical Bayes
+    analysis of a microarray experiment. Journal of the American Statistical
     Association, 96:456, 1151-1160.
 
-    K Strimmer (2008). A unified approach to false discovery rate estimation. 
+    K Strimmer (2008). A unified approach to false discovery rate estimation.
     BMC Bioinformatics, 9, 1-14.
 
-    J A Soloff, D Xiang, and W Fithian (2024). The edge of discovery: 
-    Controlling the local false discovery rate at the margin. The Annals of 
+    J A Soloff, D Xiang, and W Fithian (2024). The edge of discovery:
+    Controlling the local false discovery rate at the margin. The Annals of
     Statistics, 52:2, 580-601.
 
     Notes
     -----
 
-    Assumes p-values are independent, uniformly distributed under the null and 
-    have decreasing densities under the alternative. 
+    Assumes p-values are independent, uniformly distributed under the null and
+    have decreasing densities under the alternative.
 
     '''
     pvals = np.asarray(pvals)
     assert pvals.ndim == 1, "pvals must be 1-dimensional, that is of shape (n,)"
 
     nobs = len(pvals)
-    
+
     if not is_sorted:
         pvals_sortind = np.argsort(pvals)
         pvals_sorted = np.take(pvals, pvals_sortind)
     else:
         pvals_sorted = pvals  # alias
 
-    # domain of empirical cdf of p-values
-    W = np.hstack([0, pvals_sorted])
-
     # compute left-hand slopes of least concave majorant of empirical cdf
-    w = W[1:] - W[:-1]
-    slopes = isotonic_regression(np.ones(nobs)/(nobs*w), 
-                                weights=w.copy(), 
+    gaps = np.diff(pvals_sorted, prepend=0)
+    slopes = isotonic_regression(np.ones(nobs)/(nobs*gaps),
+                                weights=gaps.copy(),
                                 increasing=False).x
 
     # return fitted values in original order
