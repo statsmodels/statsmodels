@@ -64,4 +64,5 @@ jobs:
         source .venv-pyodide/bin/activate
         pip install dist/*.whl
         pip install pytest matplotlib
-        python -c "import statsmodels; statsmodels.test(['-ra', '--skip-examples', '--skip-slow'], exit=True)"
+        pushd docs
+        python -c "import statsmodels; statsmodels.test(['-svra', '--skip-examples', '--skip-slow'], exit=True)"
