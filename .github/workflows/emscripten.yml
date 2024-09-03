@@ -18,7 +18,7 @@ jobs:
     name: Build statsmodels distribution for Pyodide
     runs-on: ubuntu-latest
     env:
-      PYODIDE_VERSION: 0.26.1
+      PYODIDE_VERSION: 0.27.0a2
       # PYTHON_VERSION and EMSCRIPTEN_VERSION are determined by PYODIDE_VERSION.
       # The appropriate versions can be found in the Pyodide repodata.json
       # "info" field, or in Makefile.envs:
@@ -65,4 +65,6 @@ jobs:
     - name: Test statsmodels for Pyodide in activated virtual environment
       run: |
         source .venv-pyodide/bin/activate
-        node tools/ci/run_statsmodels_test_suite.js
+        pip install dist/*.whl
+        pip install pytest matplotlib
+        python -c "import statsmodels; statsmodels.test(['-ra', '--skip-examples', '--skip-slow'], exit=True)"
