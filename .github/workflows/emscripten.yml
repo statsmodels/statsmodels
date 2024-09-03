@@ -43,7 +43,7 @@ jobs:
         actions-cache-folder: emsdk-cache
 
     - name: Install pyodide-build
-      run: pip install pyodide-build==${{ env.PYODIDE_VERSION }}
+      run: pip install pyodide-build
 
     - name: Build statsmodels for Pyodide
       run: |
@@ -58,9 +58,6 @@ jobs:
     - name: Set up Pyodide virtual environment and test statsmodels for Pyodide
       run: |
         pyodide venv .venv-pyodide
-
-    - name: Install Pyodide package from npm registry
-      run: npm install pyodide@${{ env.PYODIDE_VERSION }}
 
     - name: Test statsmodels for Pyodide in activated virtual environment
       run: |
