@@ -13,12 +13,14 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
 
+env:
+  FORCE_COLOR: 3
+
 jobs:
   build-wasm-emscripten:
     name: Build statsmodels distribution for Pyodide
     runs-on: ubuntu-latest
     env:
-      PYODIDE_VERSION: 0.26.1
       # PYTHON_VERSION and EMSCRIPTEN_VERSION are determined by PYODIDE_VERSION.
       # The appropriate versions can be found in the Pyodide repodata.json
       # "info" field, or in Makefile.envs:
@@ -31,7 +33,6 @@ jobs:
       uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
 
     - name: Set up Python ${{ env.PYTHON_VERSION }}
-      id: setup-python
       uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c  # v5.0.0
       with:
         python-version: ${{ env.PYTHON_VERSION }}
@@ -43,7 +44,7 @@ jobs:
         actions-cache-folder: emsdk-cache
 
     - name: Install pyodide-build
-      run: pip install pyodide-build==${{ env.PYODIDE_VERSION }}
+      run: pip install pyodide-build
 
     - name: Build statsmodels for Pyodide
       run: |
@@ -59,10 +60,10 @@ jobs:
       run: |
         pyodide venv .venv-pyodide
 
-    - name: Install Pyodide package from npm registry
-      run: npm install pyodide@${{ env.PYODIDE_VERSION }}
-
     - name: Test statsmodels for Pyodide in activated virtual environment
       run: |
         source .venv-pyodide/bin/activate
-        node tools/ci/run_statsmodels_test_suite.js
+        pip install dist/*.whl
+        pip install pytest pytest-cov matplotlib
+        pushd docs
+        python -c "import statsmodels; statsmodels.test(['-svra', '--skip-examples', '--skip-slow'], exit=True)"
