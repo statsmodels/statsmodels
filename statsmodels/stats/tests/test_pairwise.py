@@ -14,7 +14,7 @@ import pytest
 from numpy.testing import assert_, assert_allclose, assert_almost_equal, assert_equal, \
     assert_raises
 
-from statsmodels.compat.python import PYTHON_IMPL_WASM, asbytes
+from statsmodels.compat.python import asbytes
 from statsmodels.stats.libqsturng import qsturng
 from statsmodels.stats.multicomp import (tukeyhsd, pairwise_tukeyhsd,
                                          MultiComparison)
