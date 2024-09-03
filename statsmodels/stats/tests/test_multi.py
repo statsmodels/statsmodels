@@ -17,7 +17,6 @@ import numpy as np
 from numpy.testing import (assert_almost_equal, assert_equal,
                            assert_allclose)
 
-from statsmodels.compat.python import PYTHON_IMPL_WASM
 from statsmodels.stats.multitest import (multipletests, fdrcorrection,
                                          fdrcorrection_twostage,
                                          NullDistribution,
@@ -425,10 +424,6 @@ def test_floating_precision(method):
     assert multipletests(pvals, method=method)[1][0] > 1e-60
 
 
-@pytest.mark.xfail(
-    PYTHON_IMPL_WASM,
-    reason="Failing on Pyodide due to issues with scipy.optimize's solver"
-)
 def test_tukeyhsd():
     # example multicomp in R p 83
 
