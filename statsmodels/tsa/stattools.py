@@ -645,7 +645,9 @@ def acf(
         (nlags+1,).
     confint : ndarray, optional
         Confidence intervals for the ACF at lags 0, 1, ..., nlags. Shape
-        (nlags + 1, 2). Returned if alpha is not None.
+        (nlags + 1, 2). Returned if alpha is not None. The confidence
+        intervals are centered on the estimated ACF values. This behavior
+        differs from plot_acf which centers the confidence intervals on 0.
     qstat : ndarray, optional
         The Ljung-Box Q-Statistic for lags 1, 2, ..., nlags (excludes lag
         zero). Returned if q_stat is True.
@@ -674,6 +676,13 @@ def acf(
     .. [2] Brockwell and Davis, 1987. Time Series Theory and Methods
     .. [3] Brockwell and Davis, 2010. Introduction to Time Series and
        Forecasting, 2nd edition.
+
+    See Also
+    --------
+    statsmodels.tsa.stattools.acf
+        Estimate the autocorrelation function.
+    statsmodels.graphics.tsaplots.plot_acf
+        Plot autocorrelations and confidence intervals.
     """
     adjusted = bool_like(adjusted, "adjusted")
     nlags = int_like(nlags, "nlags", optional=True)
@@ -994,7 +1003,9 @@ def pacf(
     statsmodels.tsa.stattools.pacf_ols
         Partial autocorrelation estimation using OLS.
     statsmodels.tsa.stattools.pacf_burg
-        Partial autocorrelation estimation using Burg"s method.
+        Partial autocorrelation estimation using Burg's method.
+    statsmodels.graphics.tsaplots.plot_pacf
+        Plot partial autocorrelations and confidence intervals.
 
     Notes
     -----
