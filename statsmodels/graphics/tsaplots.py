@@ -118,7 +118,9 @@ def plot_acf(
         If a number is given, the confidence intervals for the given level are
         returned. For instance if alpha=.05, 95 % confidence intervals are
         returned where the standard deviation is computed according to
-        Bartlett's formula. If None, no confidence intervals are plotted.
+        Bartlett's formula. The confidence intervals centered at 0 to simplify
+        detecting which estaimated autocorrelations are significantly
+        different from 0. If None, no confidence intervals are plotted.
     use_vlines : bool, optional
         If True, vertical lines and markers are plotted.
         If False, only markers are plotted.  The default marker is 'o'; it can
@@ -170,6 +172,7 @@ def plot_acf(
 
     See Also
     --------
+    statsmodels.tsa.stattools.acf
     matplotlib.pyplot.xcorr
     matplotlib.pyplot.acorr
 
@@ -312,6 +315,7 @@ def plot_pacf(
 
     See Also
     --------
+    statsmodels.tsa.stattools.pacf
     matplotlib.pyplot.xcorr
     matplotlib.pyplot.acorr
 
