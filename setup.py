@@ -21,9 +21,6 @@ import sys
 import numpy as np
 from packaging.version import parse
 
-SETUP_DIR = Path(__file__).parent.resolve()
-
-
 try:
     # SM_FORCE_C is a testing shim to force setup to use C source files
     FORCE_C = int(os.environ.get("SM_FORCE_C", 0))
@@ -36,9 +33,11 @@ try:
     HAS_CYTHON = True
     CYTHON_3 = parse(cython_version) >= parse("3.0")
 except ImportError:
-    from setuptools.command.build_ext import build_ext
+    from setuptools.command.build_ext import build_ext  # noqa: F401
 
     HAS_CYTHON = CYTHON_3 = False
+
+SETUP_DIR = Path(__file__).parent.resolve()
 
 ###############################################################################
 # Key Values that Change Each Release
