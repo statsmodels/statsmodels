@@ -426,7 +426,7 @@ class TVPVAR(sm.tsa.statespace.MLEModel):
         for i in range(self.k_endog):
             endog_name = self.endog_names[i]
             state_names[i] = (['intercept.%s' % endog_name] + [
-                'L1.{}->{}'.format(other_name, endog_name)
+                f'L1.{other_name}->{endog_name}'
                 for other_name in self.endog_names
             ])
         return state_names.ravel().tolist()

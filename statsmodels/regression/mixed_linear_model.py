@@ -2480,7 +2480,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
 
         for j, v in enumerate(self.model.exog_vc.names):
             vg = self.model.exog_vc.colnames[j][group_ix]
-            na = ["{}[{}]".format(v, s) for s in vg]
+            na = [f"{v}[{s}]" for s in vg]
             names.extend(na)
 
         return names

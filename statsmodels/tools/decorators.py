@@ -56,7 +56,7 @@ def deprecated_alias(old_name, new_name, remove_version=None, msg=None,
     """
 
     if msg is None:
-        msg = '{} is a deprecated alias for {}'.format(old_name, new_name)
+        msg = f'{old_name} is a deprecated alias for {new_name}'
         if remove_version is not None:
             msg += ', will be removed in version %s' % remove_version
 

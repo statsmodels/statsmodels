@@ -142,7 +142,7 @@ def do_one(
         print(f"Skipping {nb}")
 
     if execute and update_needed:
-        print("Executing {} to {}".format(nb, dst))
+        print(f"Executing {nb} to {dst}")
         try:
             nb = execute_nb(nb, dst, timeout=timeout, kernel_name=kernel_name)
         except Exception as e:
@@ -157,7 +157,7 @@ def do_one(
             if error_fail:
                 raise
     elif not execute:
-        print("Copying (without executing) {} to {}".format(nb, dst))
+        print(f"Copying (without executing) {nb} to {dst}")
         shutil.copy(nb, dst)
 
     if execute_only:
@@ -166,7 +166,7 @@ def do_one(
         return dst
 
     dst = os.path.splitext(os.path.join(DST_DIR, name))[0] + "." + to
-    print("Converting {} to {}".format(nb, dst))
+    print(f"Converting {nb} to {dst}")
     try:
         convert(nb, dst, to=to)
         with open(hash_file, encoding="utf-8", mode="w") as hf:

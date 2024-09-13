@@ -60,17 +60,17 @@ for x > 0, a > 0, b>0.
 # in inverted gamma
 
 palpha = np.random.gamma(400.,.005, size=10000)
-print("First moment: {}\nSecond moment: {}".format(palpha.mean(),palpha.std()))
+print(f"First moment: {palpha.mean()}\nSecond moment: {palpha.std()}")
 palpha = palpha[0]
 
 prho = np.random.beta(49.5,49.5, size=1e5)
 print("Beta Distribution")
-print("First moment: {}\nSecond moment: {}".format(prho.mean(),prho.std()))
+print(f"First moment: {prho.mean()}\nSecond moment: {prho.std()}")
 prho = prho[0]
 
 psigma = igamma.rvs(1.,4.**2/2, size=1e5)
 print("Inverse Gamma Distribution")
-print("First moment: {}\nSecond moment: {}".format(psigma.mean(),psigma.std()))
+print(f"First moment: {psigma.mean()}\nSecond moment: {psigma.std()}")
 
 # First do the univariate case
 # y_t = theta_t + epsilon_t

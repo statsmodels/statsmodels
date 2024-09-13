@@ -111,19 +111,19 @@ class RemoveDataPickle:
 
         before = sorted(self.results.__dict__.keys())
         after = sorted(res_unpickled.__dict__.keys())
-        assert before == after, 'not equal {!r} and {!r}'.format(before, after)
+        assert before == after, f'not equal {before!r} and {after!r}'
 
         before = sorted(self.results._results.__dict__.keys())
         after = sorted(res_unpickled._results.__dict__.keys())
-        assert before == after, 'not equal {!r} and {!r}'.format(before, after)
+        assert before == after, f'not equal {before!r} and {after!r}'
 
         before = sorted(self.results.model.__dict__.keys())
         after = sorted(res_unpickled.model.__dict__.keys())
-        assert before == after, 'not equal {!r} and {!r}'.format(before, after)
+        assert before == after, f'not equal {before!r} and {after!r}'
 
         before = sorted(self.results._cache.keys())
         after = sorted(res_unpickled._cache.keys())
-        assert before == after, 'not equal {!r} and {!r}'.format(before, after)
+        assert before == after, f'not equal {before!r} and {after!r}'
 
 
 class TestRemoveDataPickleOLS(RemoveDataPickle):
