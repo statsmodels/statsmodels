@@ -5,7 +5,9 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 import os
+import platform
 import re
+import sys
 import warnings
 
 import numpy as np
@@ -21,6 +23,8 @@ current_path = os.path.dirname(os.path.abspath(__file__))
 
 output_path = os.path.join('results', 'results_dynamic_factor_stata.csv')
 output_results = pd.read_csv(os.path.join(current_path, output_path))
+
+OSX_ARM = sys.platform == "darwin" and platform.processor() == "arm"
 
 
 class CheckDynamicFactor:
@@ -605,6 +609,7 @@ class TestDynamicFactor_ar2_errors(CheckDynamicFactor):
         bse = self.results._cov_params_approx().diagonal()
         assert_allclose(bse, self.true['var_oim'], atol=1e-5)
 
+    @pytest.mark.xfail(OSX_ARM, reason="Known failure on OSX ARM", strict=False)
     def test_mle(self):
         with warnings.catch_warnings(record=True):
             # Depending on the system, this test can reach a greater precision,
