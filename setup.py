@@ -258,7 +258,7 @@ def process_tempita(source_name):
 
 
 NUMPY_INCLUDES = sorted(
-    set([np.get_include(), pjoin(dirname(inspect.getfile(np.core)), "include")])
+    {np.get_include(), pjoin(dirname(inspect.getfile(np.core)), "include")}
 )
 NUMPY_MATH_LIBS = {
     "include_dirs": [np.get_include()],
