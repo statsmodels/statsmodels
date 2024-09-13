@@ -13,7 +13,7 @@ These families are described in
 from statsmodels.genmod.families import links
 from .family import Gaussian, Family, Poisson, Gamma, \
     InverseGaussian, Binomial, NegativeBinomial, Tweedie
-from statsmodels.tools._testing import PytestTester
+from statsmodels.tools._test_runner import PytestTester
 
 __all__ = ['test', 'links', 'Family', 'Gamma', 'Gaussian', 'Poisson',
            'InverseGaussian', 'Binomial', 'NegativeBinomial', 'Tweedie']

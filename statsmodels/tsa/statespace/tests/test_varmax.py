@@ -229,7 +229,7 @@ class TestVAR(CheckLutkepohl):
         params = params[self.model._params_state_cov]
         names = self.model.param_names[self.model._params_state_cov]
         for i in range(len(names)):
-            assert re.search('{} +{:.4f}'.format(names[i], params[i]), table)
+            assert re.search(f'{names[i]} +{params[i]:.4f}', table)
 
 
 class TestVAR_diagonal(CheckLutkepohl):
@@ -288,7 +288,7 @@ class TestVAR_diagonal(CheckLutkepohl):
         params = params[self.model._params_state_cov]
         names = self.model.param_names[self.model._params_state_cov]
         for i in range(len(names)):
-            assert re.search('{} +{:.4f}'.format(names[i], params[i]), table)
+            assert re.search(f'{names[i]} +{params[i]:.4f}', table)
 
 
 class TestVAR_measurement_error(CheckLutkepohl):
@@ -399,7 +399,7 @@ class TestVAR_measurement_error(CheckLutkepohl):
         params = params[self.model._params_state_cov]
         names = self.model.param_names[self.model._params_state_cov]
         for i in range(len(names)):
-            assert re.search('{} +{:.4f}'.format(names[i], params[i]), table)
+            assert re.search(f'{names[i]} +{params[i]:.4f}', table)
 
 
 class TestVAR_obs_intercept(CheckLutkepohl):
@@ -540,7 +540,7 @@ class TestVAR_exog(CheckLutkepohl):
         params = params[self.model._params_state_cov]
         names = self.model.param_names[self.model._params_state_cov]
         for i in range(len(names)):
-            assert re.search('{} +{:.4f}'.format(names[i], params[i]), table)
+            assert re.search(f'{names[i]} +{params[i]:.4f}', table)
 
 
 class TestVAR_exog2(CheckLutkepohl):
@@ -651,7 +651,7 @@ class TestVAR2(CheckLutkepohl):
         params = params[self.model._params_state_cov]
         names = self.model.param_names[self.model._params_state_cov]
         for i in range(len(names)):
-            assert re.search('{} +{:.4f}'.format(names[i], params[i]), table)
+            assert re.search(f'{names[i]} +{params[i]:.4f}', table)
 
 
 class CheckFREDManufacturing(CheckVARMAX):
@@ -772,9 +772,7 @@ class TestVARMA(CheckFREDManufacturing):
         params = params[self.model._params_state_cov]
         names = self.model.param_names[self.model._params_state_cov]
         for i in range(len(names)):
-            assert re.search(
-                '{} +{}'.format(names[i], forg(params[i], prec=4)), table
-            )
+            assert re.search(f'{names[i]} +{forg(params[i], prec=4)}', table)
 
 
 class TestVMA1(CheckFREDManufacturing):
@@ -826,7 +824,9 @@ class TestVMA1(CheckFREDManufacturing):
         super().test_predict(end='2009-05-01', atol=1e-4)
 
     def test_dynamic_predict(self):
-        super().test_dynamic_predict(end='2009-05-01', dynamic='2000-01-01')
+        super().test_dynamic_predict(
+            end='2009-05-01', dynamic='2000-01-01'
+        )
 
 
 def test_specifications():

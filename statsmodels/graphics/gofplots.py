@@ -269,9 +269,7 @@ class ProbPlot:
     @cache_readonly
     def sorted_data(self):
         """sorted data"""
-        sorted_data = np.array(self.data, copy=True)
-        sorted_data.sort()
-        return sorted_data
+        return np.sort(np.array(self.data))
 
     @cache_readonly
     def sample_quantiles(self):

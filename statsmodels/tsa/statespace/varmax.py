@@ -480,7 +480,7 @@ class VARMAX(MLEModel):
 
         # 4. Regression terms
         param_names += [
-            'beta.{}.{}'.format(self.exog_names[j], endog_names[i])
+            f'beta.{self.exog_names[j]}.{endog_names[i]}'
             for i in range(self.k_endog)
             for j in range(self.k_exog)
         ]
@@ -494,7 +494,7 @@ class VARMAX(MLEModel):
         elif self.error_cov_type == 'unstructured':
             param_names += [
                 ('sqrt.var.%s' % endog_names[i] if i == j else
-                 'sqrt.cov.{}.{}'.format(endog_names[j], endog_names[i]))
+                 f'sqrt.cov.{endog_names[j]}.{endog_names[i]}')
                 for i in range(self.k_endog)
                 for j in range(i+1)
             ]
@@ -1098,7 +1098,7 @@ class VARMAXResults(MLEResults):
         spec = self.specification
         if spec.k_ar > 0 and spec.k_ma > 0:
             model_name = 'VARMA'
-            order = '({},{})'.format(spec.k_ar, spec.k_ma)
+            order = f'({spec.k_ar},{spec.k_ma})'
         elif spec.k_ar > 0:
             model_name = 'VAR'
             order = '(%s)' % (spec.k_ar)

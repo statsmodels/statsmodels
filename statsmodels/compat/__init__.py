@@ -1,4 +1,4 @@
-from statsmodels.tools._testing import PytestTester
+from statsmodels.tools._test_runner import PytestTester
 
 from .python import (
     asunicode,

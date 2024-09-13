@@ -45,7 +45,7 @@ def arma_innovations(endog, ar_params=None, ma_params=None, sigma2=1,
         Mean square error for the innovations.
     """
     # Parameters
-    endog = np.array(endog)
+    endog = np.require(endog,  requirements="WC")
     squeezed = endog.ndim == 1
     if squeezed:
         endog = endog[:, None]

@@ -581,7 +581,7 @@ class DynamicFactor(MLEModel):
         # 2. Exog
         # Recall these are in the form: beta.x1.y1, beta.x2.y1, beta.x1.y2, ...
         param_names += [
-            'beta.{}.{}'.format(self.exog_names[j], endog_names[i])
+            f'beta.{self.exog_names[j]}.{endog_names[i]}'
             for i in range(self.k_endog)
             for j in range(self.k_exog)
         ]
