@@ -134,7 +134,7 @@ def scatter_ellipse(data, level=0.9, varnames=None, ell_kwds=None,
                          **ell_kwds_)
 
             if add_titles:
-                ax.set_title('{}-{}'.format(varnames[i], varnames[j]))
+                ax.set_title(f'{varnames[i]}-{varnames[j]}')
             if not ax.get_subplotspec().is_first_col():
                 if not keep_ticks:
                     ax.set_yticks([])

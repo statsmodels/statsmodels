@@ -22,7 +22,7 @@ def _show_versions_only():
     try:
         import os
         (sysname, nodename, release, version, machine) = os.uname()
-        print("OS: {} {} {} {}".format(sysname, release, version, machine))
+        print(f"OS: {sysname} {release} {version} {machine}")
         print("byteorder: %s" % sys.byteorder)
         print("LC_ALL: %s" % os.environ.get('LC_ALL', "None"))
         print("LANG: %s" % os.environ.get('LANG', "None"))
@@ -124,7 +124,7 @@ def _show_versions_only():
 
     try:
         import pytest
-        print("pytest: {} ({})".format(safe_version(pytest), dirname(pytest.__file__)))
+        print(f"pytest: {safe_version(pytest)} ({dirname(pytest.__file__)})")
     except ImportError:
         print("pytest: Not installed")
 
@@ -154,7 +154,7 @@ def show_versions(show_dirs=True):
     try:
         import os
         (sysname, nodename, release, version, machine) = os.uname()
-        print("OS: {} {} {} {}".format(sysname, release, version, machine))
+        print(f"OS: {sysname} {release} {version} {machine}")
         print("byteorder: %s" % sys.byteorder)
         print("LC_ALL: %s" % os.environ.get('LC_ALL', "None"))
         print("LANG: %s" % os.environ.get('LANG', "None"))
@@ -273,7 +273,7 @@ def show_versions(show_dirs=True):
 
     try:
         import pytest
-        print("pytest: {} ({})".format(safe_version(pytest), dirname(pytest.__file__)))
+        print(f"pytest: {safe_version(pytest)} ({dirname(pytest.__file__)})")
     except ImportError:
         print("pytest: Not installed")
 

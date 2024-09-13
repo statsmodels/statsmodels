@@ -75,7 +75,7 @@ class AllPairsResults:
         self.levels = levels
         if levels is None:
             self.all_pairs_names = [
-                '{!r}'.format(pairs) for pairs in all_pairs
+                f'{pairs!r}' for pairs in all_pairs
             ]
         else:
             self.all_pairs_names = [
@@ -123,6 +123,6 @@ class AllPairsResults:
         text = ('Corrected p-values using %s p-value correction\n\n'
                 % smt.multitest_methods_names[self.multitest_method])
         text += 'Pairs' + (' ' * (maxlevel - 5 + 1)) + 'p-values\n'
-        text += '\n'.join('{}  {:6.4g}'.format(pairs, pv) for (pairs, pv) in
+        text += '\n'.join(f'{pairs}  {pv:6.4g}' for (pairs, pv) in
                           zip(self.all_pairs_names, self.pval_corrected()))
         return text

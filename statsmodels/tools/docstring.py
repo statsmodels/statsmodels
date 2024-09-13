@@ -424,7 +424,7 @@ class NumpyDocString(Mapping):
             except TypeError:
                 filename = None
             msg = msg + (
-                " in the docstring of {} in {}.".format(self._obj, filename)
+                f" in the docstring of {self._obj} in {filename}."
             )
 
         raise ValueError(msg)
@@ -493,9 +493,9 @@ class NumpyDocString(Mapping):
             links = []
             for func, role in funcs:
                 if role:
-                    link = ":{}:`{}`".format(role, func)
+                    link = f":{role}:`{func}`"
                 elif func_role:
-                    link = ":{}:`{}`".format(func_role, func)
+                    link = f":{func_role}:`{func}`"
                 else:
                     link = "%s" % func
                 links.append(link)
