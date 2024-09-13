@@ -1,7 +1,7 @@
 """
 Monte Carlo-type tests for the BM model
 
-Note that that the actual tests that run are just regression tests against
+Note that the actual tests that run are just regression tests against
 previously estimated values with small sample sizes that can be run quickly
 for continuous integration. However, this file can be used to re-run (slow)
 large-sample Monte Carlo tests.

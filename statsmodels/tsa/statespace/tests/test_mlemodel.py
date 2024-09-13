@@ -624,7 +624,10 @@ def check_endog(endog, nobs=2, k_endog=1, **kwargs):
     assert_equal(mod.ssm.endog.ndim, 2)
     assert_equal(mod.ssm.endog.flags['F_CONTIGUOUS'], True)
     assert_equal(mod.ssm.endog.shape, (k_endog, nobs))
-    assert_equal(mod.ssm.endog.base is mod.endog, True)
+    assert_equal(
+        mod.ssm.endog.base is mod.endog or not mod.endog.flags.writeable,
+        True
+    )
 
     return mod
 
@@ -1110,7 +1113,7 @@ def test_append_extend_apply_invalid():
 
     # # Test for problems with non-date indexes
     endog3 = pd.Series(niledata.iloc[:20].values)
-    endog4 = pd.Series(niledata.iloc[:40].values)[20:]
+    endog4 = pd.Series(niledata.iloc[:40].values).iloc[20:]
     mod2 = sarimax.SARIMAX(endog3, order=(1, 0, 0), exog=endog3,
                            concentrate_scale=True)
     res2 = mod2.smooth([0.2, 0.5])

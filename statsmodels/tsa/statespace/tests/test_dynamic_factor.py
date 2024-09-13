@@ -278,7 +278,7 @@ class TestDynamicFactor2(CheckDynamicFactor):
         for i in range(self.model.k_endog):
             iname = self.model.endog_names[i]
             iparam = forg(params[offset + i], prec=4)
-            assert re.search('sigma2.{} +{}'.format(iname, iparam), table)
+            assert re.search(f'sigma2.{iname} +{iparam}', table)
 
 
 class TestDynamicFactor_exog1(CheckDynamicFactor):
@@ -422,7 +422,7 @@ class TestDynamicFactor_exog2(CheckDynamicFactor):
         for i in range(self.model.k_endog):
             iname = self.model.endog_names[i]
             iparam = forg(params[offset + i], prec=4)
-            assert re.search('sigma2.{} +{}'.format(iname, iparam), table)
+            assert re.search(f'sigma2.{iname} +{iparam}', table)
 
 
 class TestDynamicFactor_general_errors(CheckDynamicFactor):
@@ -543,7 +543,8 @@ class TestDynamicFactor_general_errors(CheckDynamicFactor):
             for j in range(self.model.k_endog):
                 name = self.model.endog_names[j]
                 pattern = r'L1.e\({}\) +{}'.format(
-                    name, forg(params[offset + j], prec=4)
+                    name,
+                    forg(params[offset + j], prec=4)
                 )
                 assert re.search(pattern, table)
 

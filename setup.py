@@ -9,7 +9,6 @@ coverage html
 from setuptools import Command, Extension, find_packages, setup
 from setuptools.dist import Distribution
 
-from packaging.version import parse
 from collections import defaultdict
 import fnmatch
 import inspect

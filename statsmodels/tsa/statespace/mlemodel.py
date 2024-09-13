@@ -162,7 +162,9 @@ class MLEModel(tsbase.TimeSeriesModel):
         """
         Prepare data for use in the state space representation
         """
-        endog = np.array(self.data.orig_endog, order='C')
+        endog = np.require(
+            np.array(self.data.orig_endog, copy=True), requirements="CW"
+        ).copy()
         exog = self.data.orig_exog
         if exog is not None:
             exog = np.array(exog)
@@ -619,7 +621,7 @@ class MLEModel(tsbase.TimeSeriesModel):
             approximating the score; if False, finite difference approximation
             is used. Default is True. This keyword is only relevant if
             `optim_score` is set to 'harvey' or 'approx'.
-        optim_hessian : {'opg','oim','approx'}, optional
+        optim_hessian : {'opg', 'oim', 'approx'}, optional
             The method by which the Hessian is numerically approximated. 'opg'
             uses outer product of gradients, 'oim' uses the information
             matrix formula from Harvey (1989), and 'approx' uses numerical
@@ -3179,7 +3181,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Parameters
         ----------
-        method : {'ljungbox','boxpierece', None}
+        method : {'ljungbox', 'boxpierce', None}
             The statistical test for serial correlation. If None, an attempt is
             made to select an appropriate test.
         lags : None, int or array_like
@@ -4847,8 +4849,15 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                            'Jarque\nBera(JB)', 'Prob(JB)', 'Skew', 'Kurtosis']
                 data = pd.DataFrame(
                     np.c_[lb[:, :2, -1], het[:, :2], jb[:, :4]],
-                    index=endog_names, columns=columns).applymap(
-                        lambda num: '' if pd.isnull(num) else '%.2f' % num)
+                    index=endog_names, columns=columns)
+                try:
+                    data = data.map(
+                        lambda num: '' if pd.isnull(num) else '%.2f' % num
+                    )
+                except AttributeError:
+                    data = data.applymap(
+                        lambda num: '' if pd.isnull(num) else '%.2f' % num
+                    )
                 data.index.name = 'Residual of\nDep. variable'
                 data = data.reset_index()
 

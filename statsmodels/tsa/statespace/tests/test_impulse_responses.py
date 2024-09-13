@@ -367,8 +367,12 @@ class TVSS(mlemodel.MLEModel):
         # Allow subcasses to add additional states
         if _k_states is None:
             _k_states = k_states
-        super().__init__(endog, k_states=_k_states,
-                         k_posdef=k_posdef, initialization='diffuse')
+        super().__init__(
+            endog,
+            k_states=_k_states,
+            k_posdef=k_posdef,
+            initialization='diffuse'
+        )
 
         self['obs_intercept'] = np.random.normal(
             size=(self.k_endog, self.nobs))
