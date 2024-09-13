@@ -315,8 +315,13 @@ def pandas_to_series_spec(x):
         name = x.name or "Unnamed Series"
     else:
         name = 'Unnamed Series'
-    series_spec = SeriesSpec(data=data, name=name, period=period,
-                             title=name, start="{}.{}".format(year, stperiod))
+    series_spec = SeriesSpec(
+        data=data,
+        name=name,
+        period=period,
+        title=name,
+        start=f"{year}.{stperiod}"
+    )
     return series_spec
 
 

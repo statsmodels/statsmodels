@@ -50,10 +50,7 @@ from statsmodels.emplike.elregress import _ELRegOpts
 # need import in module instead of lazily to copy `__doc__`
 from statsmodels.regression._prediction import PredictionResults
 from statsmodels.tools.decorators import cache_readonly, cache_writable
-from statsmodels.tools.sm_exceptions import (
-    InvalidTestWarning,
-    ValueWarning,
-    )
+from statsmodels.tools.sm_exceptions import InvalidTestWarning, ValueWarning
 from statsmodels.tools.tools import pinv_extended
 from statsmodels.tools.typing import Float64Array
 from statsmodels.tools.validation import bool_like, float_like, string_like
@@ -1470,6 +1467,8 @@ def yule_walker(x, order=1, method="adjusted", df=None, inv=False,
         raise ValueError("ACF estimation method must be 'adjusted' or 'MLE'")
     x = np.array(x, dtype=np.float64)
     if demean:
+        if not x.flags.writeable:
+            x = np.require(x, requirements="W")
         x -= x.mean()
     n = df or x.shape[0]
 

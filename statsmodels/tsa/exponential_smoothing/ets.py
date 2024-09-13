@@ -652,11 +652,13 @@ class ETSModel(base.StateSpaceMLEModel):
         """
         Prepare data for use in the state space representation
         """
-        endog = np.array(data.orig_endog, order="C")
+        endog = np.require(data.orig_endog, requirements="WC")
         if endog.ndim != 1:
             raise ValueError("endog must be 1-dimensional")
         if endog.dtype != np.double:
-            endog = np.asarray(data.orig_endog, order="C", dtype=float)
+            endog = np.require(
+                data.orig_endog, requirements="WC", dtype=float
+            )
         return endog, None
 
     @property
@@ -2308,7 +2310,7 @@ class PredictionResults:
                 self.simulation_results = pd.concat(sim_results, axis=0)
             else:
                 self.simulation_results = np.concatenate(sim_results, axis=0)
-            self.forecast_variance = self.simulation_results.var(1)
+            self.forecast_variance = self.simulation_results.var(axis=1)
         else:  # method == 'exact'
             steps = np.ones(ndynamic + nsmooth)
             if ndynamic > 0:

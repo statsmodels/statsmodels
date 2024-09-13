@@ -612,7 +612,7 @@ class TimeSeriesModel(base.LikelihoodModel):
                     resampled_index = date_range(
                         start=index[0], end=index[-1], freq=freq
                     )
-                    if not inferred_freq and not resampled_index.equals(index):
+                    if not inferred_freq and not (resampled_index == index).all():
                         raise ValueError(
                             "The given frequency argument could"
                             " not be matched to the given index."
@@ -659,8 +659,9 @@ class TimeSeriesModel(base.LikelihoodModel):
         # Issue warnings for unsupported indexes
         if has_index and not (date_index or range_index or is_increment):
             warnings.warn(
-                "An unsupported index was provided and will be"
-                " ignored when e.g. forecasting.",
+                "An unsupported index was provided. As a result, forecasts "
+                "cannot be generated. To use the model for forecasting, use one "
+                "of the supported classes of index.",
                 ValueWarning,
                 stacklevel=2,
             )

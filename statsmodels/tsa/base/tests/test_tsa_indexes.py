@@ -337,10 +337,8 @@ def test_instantiation_valid():
         assert mod.data.freq is None
 
         # Supported indexes *when a freq is given*, should not raise a warning
-        with warnings.catch_warnings() as w:
+        with warnings.catch_warnings():
             warnings.simplefilter("error")
-            # Ignore deprecation warnings that come from NumPy via pandas
-            warnings.simplefilter("ignore", category=DeprecationWarning)
 
             for ix, freq in supported_date_indexes:
                 # Avoid warnings due to Series with object dtype
@@ -434,8 +432,9 @@ def test_instantiation_valid():
 
         # Unsupported (but valid) indexes, should all give warnings
         message = (
-            "An unsupported index was provided and will be"
-            " ignored when e.g. forecasting."
+            "An unsupported index was provided. As a result, forecasts "
+            "cannot be generated. To use the model for forecasting, use "
+            "one of the supported classes of index."
         )
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
@@ -1134,8 +1133,9 @@ def test_custom_index():
         np.random.normal(size=5), index=["a", "b", "c", "d", "e"]
     )
     message = (
-        "An unsupported index was provided and will be ignored when"
-        " e.g. forecasting."
+        "An unsupported index was provided. As a result, forecasts cannot be "
+        "generated. To use the model for forecasting, use one of the "
+        "supported classes of index."
     )
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("always")
