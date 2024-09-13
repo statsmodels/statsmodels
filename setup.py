@@ -5,6 +5,7 @@ python -m pip install -e .
 pytest --cov=statsmodels statsmodels
 coverage html
 """
+
 from setuptools import Command, Extension, find_packages, setup
 from setuptools.dist import Distribution
 
@@ -18,8 +19,8 @@ from pathlib import Path
 import shutil
 import sys
 
-SETUP_DIR = Path(__file__).parent.resolve()
-
+import numpy as np
+from packaging.version import parse
 
 try:
     # SM_FORCE_C is a testing shim to force setup to use C source files
@@ -33,16 +34,11 @@ try:
     HAS_CYTHON = True
     CYTHON_3 = parse(cython_version) >= parse("3.0")
 except ImportError:
-    from setuptools.command.build_ext import build_ext
+    from setuptools.command.build_ext import build_ext  # noqa: F401
 
     HAS_CYTHON = CYTHON_3 = False
 
-try:
-    import numpy  # noqa: F401
-
-    HAS_NUMPY = True
-except ImportError:
-    HAS_NUMPY = False
+SETUP_DIR = Path(__file__).parent.resolve()
 
 ###############################################################################
 # Key Values that Change Each Release
@@ -59,7 +55,7 @@ with open("requirements-dev.txt", encoding="utf-8") as req:
     for line in req.readlines():
         DEVELOP_REQUIRES.append(line.split("#")[0].strip())
 
-CYTHON_MIN_VER = "0.29.33"  # released January 2023
+CYTHON_MIN_VER = "3.0.10"  # released January 2023
 
 EXTRAS_REQUIRE = {
     "build": ["cython>=" + CYTHON_MIN_VER],
@@ -222,44 +218,7 @@ Use one of:
         sys.exit(1)
 
 
-def update_extension(extension, requires_math=True):
-    import numpy as np
-
-    numpy_includes = [np.get_include()]
-    extra_incl = pjoin(dirname(inspect.getfile(np.core)), "include")
-    numpy_includes += [extra_incl]
-    numpy_includes = list(set(numpy_includes))
-    numpy_math_libs = {
-        "include_dirs": [np.get_include()],
-        "library_dirs": [os.path.join(np.get_include(), '..', 'lib')],
-        "libraries": ["npymath"]
-    }
-
-    if not hasattr(extension, "include_dirs"):
-        return
-    extension.include_dirs = list(set(extension.include_dirs + numpy_includes))
-    if requires_math:
-        extension.include_dirs += numpy_math_libs["include_dirs"]
-        extension.libraries += numpy_math_libs["libraries"]
-        extension.library_dirs += numpy_math_libs["library_dirs"]
-
-
-class DeferredBuildExt(build_ext):
-    """build_ext command for use when numpy headers are needed."""
-
-    def build_extensions(self):
-        self._update_extensions()
-        build_ext.build_extensions(self)
-
-    def _update_extensions(self):
-        for extension in self.extensions:
-            requires_math = extension.name in EXT_REQUIRES_NUMPY_MATH_LIBS
-            update_extension(extension, requires_math=requires_math)
-
-
 cmdclass = {"clean": CleanCommand}
-if not HAS_NUMPY:
-    cmdclass["build_ext"] = DeferredBuildExt
 
 
 def check_source(source_name):
@@ -299,10 +258,18 @@ def process_tempita(source_name):
     return source_name
 
 
-EXT_REQUIRES_NUMPY_MATH_LIBS = []
+NUMPY_INCLUDES = sorted(
+    set([np.get_include(), pjoin(dirname(inspect.getfile(np.core)), "include")])
+)
+NUMPY_MATH_LIBS = {
+    "include_dirs": [np.get_include()],
+    "library_dirs": [os.path.join(np.get_include(), "..", "lib")],
+    "libraries": ["npymath"],
+}
+
+
 extensions = []
 for config in exts.values():
-    uses_blas = True
     source, ext = check_source(config["source"])
     source = process_tempita(source)
     name = source.replace("/", ".").replace(ext, "")
@@ -310,10 +277,11 @@ for config in exts.values():
     depends = config.get("depends", [])
     libraries = config.get("libraries", [])
     library_dirs = config.get("library_dirs", [])
-
     uses_numpy_libraries = config.get("numpy_libraries", False)
-    if uses_blas or uses_numpy_libraries:
-        EXT_REQUIRES_NUMPY_MATH_LIBS.append(name)
+
+    include_dirs = sorted(set(include_dirs + NUMPY_MATH_LIBS["include_dirs"]))
+    libraries = sorted(set(libraries + NUMPY_MATH_LIBS["libraries"]))
+    library_dirs = sorted(set(library_dirs + NUMPY_MATH_LIBS["library_dirs"]))
 
     ext = Extension(
         name,
@@ -331,31 +299,24 @@ for source in statespace_exts:
     source = process_tempita(source)
     name = source.replace("/", ".").replace(ext, "")
 
-    EXT_REQUIRES_NUMPY_MATH_LIBS.append(name)
     ext = Extension(
         name,
         [source],
-        include_dirs=["statsmodels/src"],
+        include_dirs=["statsmodels/src"] + NUMPY_MATH_LIBS["include_dirs"],
         depends=[],
-        libraries=[],
-        library_dirs=[],
+        libraries=NUMPY_MATH_LIBS["libraries"],
+        library_dirs=NUMPY_MATH_LIBS["library_dirs"],
         define_macros=DEFINE_MACROS,
     )
     extensions.append(ext)
 
-if HAS_NUMPY:
-    for extension in extensions:
-        requires_math = extension.name in EXT_REQUIRES_NUMPY_MATH_LIBS
-        update_extension(extension, requires_math=requires_math)
-if HAS_CYTHON:
-    if CYTHON_3:
-        COMPILER_DIRECTIVES["cpow"] = True
-    extensions = cythonize(
-        extensions,
-        compiler_directives=COMPILER_DIRECTIVES,
-        language_level=3,
-        force=CYTHON_COVERAGE,
-    )
+COMPILER_DIRECTIVES["cpow"] = True
+extensions = cythonize(
+    extensions,
+    compiler_directives=COMPILER_DIRECTIVES,
+    language_level=3,
+    force=CYTHON_COVERAGE,
+)
 
 ##############################################################################
 # Construct package data

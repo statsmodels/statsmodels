@@ -4,7 +4,7 @@
 requires = [
     "setuptools>=69.0.2",
     "cython>=3.0.10,<4",  # Sync with CYTHON_MIN_VER in setup
-    "numpy>=2.0.0rc1,<3",
+    "numpy>=2.0.0,<3",
     "scipy>=1.13,<2",
     "setuptools_scm[toml]>=8,<9"
 ]

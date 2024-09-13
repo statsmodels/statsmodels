@@ -17,7 +17,9 @@ if [ "$LINT" == true ]; then
     # pass _all_ flake8 checks
     echo "Linting known clean files with strict rules"
     # Default flake8 rules plus the additional rules from setup.cfg
-    flake8 --isolated --ignore=E121,E123,E126,E226,E24,E704,W503,W504,E741,E203 \
+    flake8 --isolated  \
+        --max-line-length 88 \
+        --ignore=E121,E123,E126,E226,E24,E704,W503,W504,E741,E203 \
         examples \
         setup.py \
         statsmodels/__init__.py \
@@ -373,11 +375,11 @@ if [ "$LINT" == true ]; then
     fi
     git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
     git fetch origin --quiet
-    NEW_FILES=$(git diff origin/maintenance/0.14.x --name-status -u -- "*.py" | grep ^A | cut -c 3- | paste -sd " " -)
+    NEW_FILES=$(git diff origin/main --name-status -u -- "*.py" | grep ^A | cut -c 3- | paste -sd " " -)
     if [ -n "$NEW_FILES" ]; then
         echo "Linting newly added files with strict rules"
         echo "New files: $NEW_FILES"
-        flake8 --isolated --ignore=E121,E123,E126,E226,E24,E704,W503,W504,E741,E203 $(eval echo $NEW_FILES)
+        flake8 --isolated --max-line-length 88 --ignore=E121,E123,E126,E226,E24,E704,W503,W504,E741,E203 $(eval echo $NEW_FILES)
         if [ $? -ne "0" ]; then
             echo "New files failed linting."
             RET=1
