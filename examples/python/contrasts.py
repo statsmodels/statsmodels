@@ -109,7 +109,7 @@ from patsy.contrasts import ContrastMatrix
 
 
 def _name_levels(prefix, levels):
-    return ["[{}{}]".format(prefix, level) for level in levels]
+    return [f"[{prefix}{level}]" for level in levels]
 
 
 class Simple:
