@@ -159,3 +159,13 @@ Optional Dependencies
 * `joblib <https://joblib.readthedocs.io/>`__ >= 1.0can be used to accelerate distributed
   estimation for certain models.
 * `jupyter <https://jupyter.org/>`__ is needed to run the notebooks.
+
+The optional dependencies can be installed along with `statsmodels` by modifying
+the installation command:
+
+.. code-block:: bash
+
+    python -m pip install statsmodels[extras]
+
+where ``<extras>`` is a comma-separated list of extras to install (``build``,
+``develop``, ``docs``).

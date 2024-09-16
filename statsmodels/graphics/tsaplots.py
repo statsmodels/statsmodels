@@ -437,7 +437,7 @@ def plot_ccf(
 
     See Also
     --------
-    See notes and references for statsmodels.graphics.tsaplots.plot_acf
+    statsmodels.graphics.tsaplots.plot_acf
 
     Examples
     --------
@@ -568,7 +568,7 @@ def plot_accf_grid(
 
     See Also
     --------
-    See notes and references for statsmodels.graphics.tsaplots
+    statsmodels.graphics.tsaplots
 
     Examples
     --------
