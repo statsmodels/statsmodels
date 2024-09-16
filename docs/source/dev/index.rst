@@ -50,7 +50,9 @@ greatly helps the job of maintaining and releasing the software a shared effort.
     make html
 
   Check that the build output does not have *any* warnings due to your changes.
-- Follow `PEP8 <https://www.python.org/dev/peps/pep-0008/>`_ style guidelines wherever possible. 
+
+  Generating the docs requires additional dependencies, see ``docs/README.md`` for details.
+- Follow `PEP8 <https://www.python.org/dev/peps/pep-0008/>`_ style guidelines wherever possible.
   Lint your code by running ``LINT=true ./lint.sh``. 
 - Compare your changes to what’s in main by running ``git diff upstream/main``.
 - Finally, please add your changes to the release notes. Open the

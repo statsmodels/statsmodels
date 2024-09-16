@@ -25,7 +25,7 @@ Stats
 -----
 **Issues Closed**: 1
 
-**Pull Requests Merged**: 3
+**Pull Requests Merged**: 4
 
 
 The Highlights
@@ -98,3 +98,4 @@ The following Pull Requests were merged since the last release:
 - :pr:`9356`: MAINT: Backport changes needed for 0.14.3 release
 - :pr:`9358`: TST: Relax tolerance on test that fails for dynamic factor
 - :pr:`9359`: MAINT: Run pyupgrade on 0.14 branch
+- :pr:`9363`: DOC: Add release note for 0.14.3

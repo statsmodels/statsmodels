@@ -44,7 +44,7 @@ Technical Documentation
 
 The statistical model is assumed to be
 
- :math:`Y = X\beta + \mu`,  where :math:`\mu\sim N\left(0,\Sigma\right).`
+ :math:`Y = X\beta + \epsilon`,  where :math:`\epsilon\sim N\left(0,\Sigma\right).`
 
 Depending on the properties of :math:`\Sigma`, we have currently four classes available:
 
@@ -120,7 +120,7 @@ normalized_cov_params : array
     A `p` x `p` array equal to :math:`(X^{T}\Sigma^{-1}X)^{-1}`.
 sigma : array
     The `n` x `n` covariance matrix of the error terms:
-    :math:`\mu\sim N\left(0,\Sigma\right)`.
+    :math:`\epsilon\sim N\left(0,\Sigma\right)`.
 wexog : array
     The whitened design matrix :math:`\Psi^{T}X`.
 wendog : array
