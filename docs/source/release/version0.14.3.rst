@@ -25,7 +25,7 @@ Stats
 -----
 **Issues Closed**: 1
 
-**Pull Requests Merged**: 4
+**Pull Requests Merged**: 5
 
 
 The Highlights
@@ -33,7 +33,7 @@ The Highlights
 This release if a packaging and modernization release. It solves two key issues:
 
 1. Corrects the build procedure for MacOS on both x86_64 and arm64
-2. Improves compatability with recent pandas releases
+2. Improves compatibility with recent pandas releases
 
 This release is NumPy 2.0 compatible. NumPy 2.0 is only available for Python 3.9+.
 This means that the minimum Python
@@ -99,3 +99,4 @@ The following Pull Requests were merged since the last release:
 - :pr:`9358`: TST: Relax tolerance on test that fails for dynamic factor
 - :pr:`9359`: MAINT: Run pyupgrade on 0.14 branch
 - :pr:`9363`: DOC: Add release note for 0.14.3
+- :pr:`9364`: DOC: Spelling
