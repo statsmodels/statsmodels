@@ -1,5 +1,4 @@
 import os
-from ssl import SSLError
 from socket import timeout
 from urllib.error import HTTPError, URLError
 
