@@ -6,8 +6,7 @@ on:
   push:
     branches: [ 'main']
   pull_request:
-    # TODO: remove when all tests pass and ready to merge
-    # branches: [ 'main' ]
+    branches: [ 'main' ]
 
 # Cancel intermediate runs if a new run is queued
 concurrency:
