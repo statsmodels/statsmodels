@@ -1,5 +1,5 @@
 from statsmodels.compat.pandas import MONTH_END
-from statsmodels.compat.python import lmap
+from statsmodels.compat.python import PYTHON_IMPL_WASM, lmap
 
 import calendar
 from io import BytesIO
@@ -242,6 +242,10 @@ def test_plot_accf_grid(close_figures):
     plot_accf_grid(x, fig=fig, use_vlines=False)
 
 
+@pytest.mark.skipif(
+    PYTHON_IMPL_WASM,
+    reason="Matplotlib uses different backend in WASM"
+)
 @pytest.mark.matplotlib
 def test_plot_month(close_figures):
     dta = elnino.load_pandas().data
