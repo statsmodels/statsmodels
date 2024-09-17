@@ -699,3 +699,16 @@ def test_axis_order(close_figures):
     y_range = np.diff(ax.get_ylim())[0]
     x_range = np.diff(ax.get_xlim())[0]
     assert x_range < y_range
+
+@pytest.mark.matplotlib
+def test_qqplot_2samples_labels():
+    try:
+        import matplotlib.pyplot as plt
+    except ImportError:
+        pass
+    data1 = np.random.normal(0, 1, 100)
+    data2 = np.random.normal(0, 1, 100)
+    ax = qqplot_2samples(data1, data2, xlabel='Sample 1', ylabel='Sample 2')
+    assert ax.get_xlabel() == 'Sample 1'
+    assert ax.get_ylabel() == 'Sample 2'
+    plt.close(ax.figure)
