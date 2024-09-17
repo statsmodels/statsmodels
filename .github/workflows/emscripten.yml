@@ -1,0 +1,69 @@
+# Attributed to NumPy via https://github.com/numpy/numpy/pull/25894
+# https://github.com/numpy/numpy/blob/d2d2c25fa81b47810f5cbd85ea6485eb3a3ffec3/.github/workflows/emscripten.yml
+name: Test Emscripten/Pyodide build
+
+on:
+  push:
+    branches: [ 'main']
+  pull_request:
+    branches: [ 'main' ]
+
+# Cancel intermediate runs if a new run is queued
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+env:
+  FORCE_COLOR: 3
+
+jobs:
+  build-wasm-emscripten:
+    name: Build statsmodels distribution for Pyodide
+    runs-on: ubuntu-latest
+    env:
+      # PYTHON_VERSION and EMSCRIPTEN_VERSION are determined by PYODIDE_VERSION.
+      # The appropriate versions can be found in the Pyodide repodata.json
+      # "info" field, or in Makefile.envs:
+      # https://github.com/pyodide/pyodide/blob/main/Makefile.envs#L2
+      PYTHON_VERSION: 3.12.1
+      EMSCRIPTEN_VERSION: 3.1.58
+      NODE_VERSION: 20
+    steps:
+    - name: Checkout statsmodels
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c  # v5.0.0
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Set up Emscripten toolchain
+      uses: mymindstorm/setup-emsdk@6ab9eb1bda2574c4ddb79809fc9247783eaf9021  # v14
+      with:
+        version: ${{ env.EMSCRIPTEN_VERSION }}
+        actions-cache-folder: emsdk-cache
+
+    - name: Install pyodide-build
+      run: pip install pyodide-build
+
+    - name: Build statsmodels for Pyodide
+      run: |
+        # pass verbose option to pypa/build
+        pyodide build -C="--global-option=--verbose"
+
+    - name: Set up Node.js
+      uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b  # v4.0.3
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Set up Pyodide virtual environment and test statsmodels for Pyodide
+      run: |
+        pyodide venv .venv-pyodide
+
+    - name: Test statsmodels for Pyodide in activated virtual environment
+      run: |
+        source .venv-pyodide/bin/activate
+        pip install dist/*.whl
+        pip install pytest pytest-cov matplotlib
+        pushd docs
+        python -c "import statsmodels; statsmodels.test(['-svra', '--skip-examples', '--skip-slow'], exit=True)"

@@ -1,7 +1,7 @@
 from statsmodels.compat.numpy import lstsq
 from statsmodels.compat.pandas import MONTH_END, YEAR_END, assert_index_equal
 from statsmodels.compat.platform import PLATFORM_WIN
-from statsmodels.compat.python import lrange
+from statsmodels.compat.python import PYTHON_IMPL_WASM, lrange
 
 import os
 import warnings
@@ -349,6 +349,10 @@ class TestPACF(CheckCorrGram):
         pacfyw = pacf_yw(self.x, nlags=40, method="mle")
         assert_almost_equal(pacfyw[1:], self.pacfyw, DECIMAL_8)
 
+    @pytest.mark.skipif(
+        PYTHON_IMPL_WASM,
+        reason="No fp exception support in WASM"
+    )
     def test_yw_singular(self):
         with pytest.warns(ValueWarning):
             pacf(np.ones(30), nlags=6)

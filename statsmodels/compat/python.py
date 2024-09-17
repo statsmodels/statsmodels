@@ -1,8 +1,15 @@
 """
 Compatibility tools for differences between Python 2 and 3
 """
+
+import platform
+import sys
+
 asunicode = lambda x, _: str(x)  # noqa:E731
 
+PYTHON_IMPL_WASM = (
+    sys.platform == "emscripten" or platform.machine() in ["wasm32", "wasm64"]
+)
 
 __all__ = [
     "asunicode",
@@ -13,6 +20,7 @@ __all__ = [
     "lrange",
     "lfilter",
     "with_metaclass",
+    "PYTHON_IMPL_WASM",
 ]
 
 
