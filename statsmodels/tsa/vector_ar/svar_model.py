@@ -29,7 +29,7 @@ class SVAR(tsbase.TimeSeriesModel):
     r"""
     Fit VAR and then estimate structural components of A and B, defined:
 
-    .. math:: Ay_t = A_1 y_{t-1} + \ldots + A_p y_{t-p} + B\var(\epsilon_t)
+    .. math:: Ay_t = A_1 y_{t-1} + \ldots + A_p y_{t-p} + B \varepsilon_t
 
     Parameters
     ----------
