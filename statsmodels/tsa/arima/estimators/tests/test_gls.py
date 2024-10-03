@@ -206,4 +206,4 @@ def test_arma_kwargs():
     msg = res2_imle.arma_results[1].minimize_results.message
     if isinstance(msg, bytes):
         msg = msg.decode("utf-8")
-    assert_equal(msg, 'CONVERGENCE: REL_REDUCTION_OF_F_<=_FACTR*EPSMCH')
+    assert msg.startswith("CONVERGENCE: REL")

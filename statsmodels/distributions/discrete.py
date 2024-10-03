@@ -61,7 +61,10 @@ class zipoisson_gen(rv_discrete):
         q_mod = (q - w) / (1 - w)
         x = poisson(mu=mu).ppf(q_mod)
         # set to zero if in the zi range
-        x[q < w] = 0
+        if isinstance(x, np.ndarray):
+            x[q < w] = 0
+        elif np.isscalar(x) and q < w:
+            return 0.0
         return x
 
     def mean(self, mu, w):
@@ -139,7 +142,10 @@ class zinegativebinomial_gen(rv_discrete):
         q_mod = (q - w) / (1 - w)
         x = nbinom.ppf(q_mod, s, p)
         # set to zero if in the zi range
-        x[q < w] = 0
+        if isinstance(x, np.ndarray):
+            x[q < w] = 0
+        elif np.isscalar(x) and q < w:
+            return 0.0
         return x
 
     def mean(self, mu, alpha, p, w):
