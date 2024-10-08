@@ -6,6 +6,7 @@ from statsmodels.distributions import ECDFDiscrete
 from statsmodels.distributions.empirical_distribution import ECDF
 import pandas as pd
 
+
 class TestDistributions:
 
     def test_StepFunction(self):
@@ -65,7 +66,6 @@ class TestDistributions:
         testdata['values'] = np.random.randint(0, 100, size=(weeks * 7))
         testdata['othervalues'] = np.random.randint(0, 100, size=(weeks * 7))
         orig_testadata = testdata.copy()
-
 
         ECDF(testdata['values'])
         pd.testing.assert_frame_equal(orig_testadata, testdata)
