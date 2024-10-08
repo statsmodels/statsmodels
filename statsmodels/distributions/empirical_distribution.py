@@ -137,8 +137,7 @@ class ECDF(StepFunction):
     array([ 0.75,  1.  ,  0.  ,  0.25])
     """
     def __init__(self, x, side='right'):
-        x = np.array(x, copy=True)
-        x.sort()
+        x = np.sort(np.asarray(x))
         nobs = len(x)
         y = np.linspace(1./nobs, 1, nobs)
         super().__init__(x, y, side=side, sorted=True)
