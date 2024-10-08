@@ -48,9 +48,8 @@ def _eval_bspline_basis(x, knots, degree, deriv='all', include_intercept=True):
     # 'knots' are assumed to be already pre-processed. E.g. usually you
     # want to include duplicate copies of boundary knots; you should do
     # that *before* calling this constructor.
-    knots = np.atleast_1d(np.asarray(knots, dtype=float))
+    knots = np.sort(np.atleast_1d(np.asarray(knots, dtype=float)))
     assert knots.ndim == 1
-    knots.sort()
     degree = int(degree)
     x = np.atleast_1d(x)
     if x.ndim == 2 and x.shape[1] == 1:

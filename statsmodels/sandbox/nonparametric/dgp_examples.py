@@ -83,7 +83,7 @@ class _UnivariateFunction:
                 x = np.random.normal(loc=0, scale=self.s_x, size=nobs)
             else:
                 x = distr_x.rvs(size=nobs)
-            x.sort()
+            x = np.sort(x)
 
         self.x = x
 
