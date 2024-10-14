@@ -662,3 +662,92 @@ def cohensd2problarger(d):
     """
 
     return stats.norm.cdf(d / np.sqrt(2))
+
+
+def rank_compare_sample_size(
+    reference_sample,
+    synthetic_sample,
+    alpha,
+    power,
+    ratio=0.5,
+) -> dict[str, float]:
+    """
+    Compute the required sample size for the non-parametric Mann-Whitney U test.
+
+    Parameters
+    ----------
+    reference_sample : array_like
+        Advance information for the reference group.
+    synthetic_sample : array_like
+        Generated `synthetic` data representing the treatment group under 
+        the research hypothesis.
+    alpha : float
+        The type I error rate for the test (two-sided).
+    power : float
+        The desired power of the test.
+    ratio : float, optional
+        The percentage of the total sample size that should be allocated to 
+        the reference group, by default 0.5.
+
+    Returns
+    -------
+    dict
+        A hash map containing the following keys:
+            - `n_total` : The total sample size required for the experiment.
+            - `n_ref` : Sample size for the reference group.
+            - `n_syn` : Sample size for the synthetic group.
+            - `relative_effect` : The estimated relative effect size.
+            - `power` : The desired power for the test.
+            - `alpha` : The type I error rate for the test.
+    """
+    reference_sample = np.asarray(reference_sample)
+    synthetic_sample = np.asarray(synthetic_sample)
+
+    if not (len(reference_sample) > 0 and len(synthetic_sample) > 0):
+        raise ValueError("Both `reference_sample` and `synthetic_sample` must have at least one element.")
+    if not (np.all(np.isfinite(reference_sample)) and np.all(np.isfinite(synthetic_sample))):
+        raise ValueError("All elements of `reference_sample` and `synthetic_sample` must be finite; check for missing values.")
+    if not (0 < alpha < 1):
+        raise ValueError("Alpha must be between 0 and 1 non-inclusive.")
+    if not (0 < power < 1):
+        raise ValueError("Power must be between 0 and 1 non-inclusive.")
+    if not (0 < ratio < 1):
+        raise ValueError("Ratio must be between 0 and 1 non-inclusive.")
+    
+    n_ref = len(reference_sample)
+    n_syn = len(synthetic_sample)
+    
+    # Overall ranks for each obs among combined sample
+    overall_ranks = rankdata(np.r_[reference_sample, synthetic_sample], method="average")
+    overall_ranks_ref = overall_ranks[:n_ref]
+    overall_ranks_syn = overall_ranks[n_ref:]
+    # Within group ranks for each obs
+    within_group_ranks_ref = rankdata(reference_sample, method="average")
+    within_group_ranks_syn = rankdata(synthetic_sample, method="average")
+    
+    placements_ref = overall_ranks_ref - within_group_ranks_ref
+    placements_syn = overall_ranks_syn - within_group_ranks_syn
+    
+    relative_effect = (np.mean(overall_ranks_syn) - np.mean(overall_ranks_ref)) / (n_ref + n_syn) + 0.5
+    sd_overall = np.sqrt(np.sum((overall_ranks - (n_ref + n_syn + 1) / 2) ** 2) / (n_ref + n_syn) ** 3)
+    var_ref = np.sum((placements_ref - np.mean(placements_ref)) ** 2) / (n_ref * (n_syn ** 2))
+    var_syn = np.sum((placements_syn - np.mean(placements_syn)) ** 2) / ((n_ref ** 2) * n_syn)
+    
+    quantile_alpha = stats.norm.ppf(1 - alpha / 2, loc=0, scale=1)
+    quantile_power = stats.norm.ppf(power, loc=0, scale=1)
+
+    var_terms = np.sqrt(ratio * var_syn + (1 - ratio) * var_ref)
+    quantiles_terms = sd_overall * quantile_alpha + quantile_power * var_terms
+    # Add a small epsilon to avoid division by zero when there is no treatment effect, i.e. p_hat = 0.5
+    n_total = np.ceil((quantiles_terms ** 2) / (ratio * (1 - ratio) * (relative_effect - 0.5 + 1e-12) ** 2))
+    n_ref = np.ceil(n_total * ratio)
+    n_syn = np.ceil(n_total * (1 - ratio))
+
+    return {
+        "n_total": n_total.item(),
+        "n_1": n_ref.item(),
+        "n_2": n_syn.item(),
+        "relative_effect": relative_effect.item(),
+        "power": power,
+        "alpha": alpha,
+    }
