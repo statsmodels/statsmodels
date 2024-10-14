@@ -679,14 +679,14 @@ def rank_compare_sample_size(
     reference_sample : array_like
         Advance information for the reference group.
     synthetic_sample : array_like
-        Generated `synthetic` data representing the treatment group under 
+        Generated `synthetic` data representing the treatment group under
         the research hypothesis.
     alpha : float
         The type I error rate for the test (two-sided).
     power : float
         The desired power of the test.
     ratio : float, optional
-        The percentage of the total sample size that should be allocated to 
+        The percentage of the total sample size that should be allocated to
         the reference group, by default 0.5.
 
     Returns
@@ -713,10 +713,10 @@ def rank_compare_sample_size(
         raise ValueError("Power must be between 0 and 1 non-inclusive.")
     if not (0 < ratio < 1):
         raise ValueError("Ratio must be between 0 and 1 non-inclusive.")
-    
+
     n_ref = len(reference_sample)
     n_syn = len(synthetic_sample)
-    
+
     # Overall ranks for each obs among combined sample
     overall_ranks = rankdata(np.r_[reference_sample, synthetic_sample], method="average")
     overall_ranks_ref = overall_ranks[:n_ref]
@@ -724,15 +724,15 @@ def rank_compare_sample_size(
     # Within group ranks for each obs
     within_group_ranks_ref = rankdata(reference_sample, method="average")
     within_group_ranks_syn = rankdata(synthetic_sample, method="average")
-    
+
     placements_ref = overall_ranks_ref - within_group_ranks_ref
     placements_syn = overall_ranks_syn - within_group_ranks_syn
-    
+
     relative_effect = (np.mean(overall_ranks_syn) - np.mean(overall_ranks_ref)) / (n_ref + n_syn) + 0.5
     sd_overall = np.sqrt(np.sum((overall_ranks - (n_ref + n_syn + 1) / 2) ** 2) / (n_ref + n_syn) ** 3)
     var_ref = np.sum((placements_ref - np.mean(placements_ref)) ** 2) / (n_ref * (n_syn ** 2))
     var_syn = np.sum((placements_syn - np.mean(placements_syn)) ** 2) / ((n_ref ** 2) * n_syn)
-    
+
     quantile_alpha = stats.norm.ppf(1 - alpha / 2, loc=0, scale=1)
     quantile_power = stats.norm.ppf(power, loc=0, scale=1)
 

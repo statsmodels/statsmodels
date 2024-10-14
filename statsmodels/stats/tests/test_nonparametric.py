@@ -499,17 +499,16 @@ def test_rank_compare_vectorized():
 
 @pytest.fixture(scope="function")
 def reference_implementation_results():
-    """ 
+    """
     Results from R's rankFD::WMWSSP function.
-    """ 
+    """
     parent_dir = Path(__file__).resolve().parent
     results = pd.read_csv(parent_dir / "results/results_rank_compare_sample_size.csv")
     return results
-
 def test_rank_compare_sample_size(reference_implementation_results):
-    """ 
-    Test the `rank_compare_sample_size` function against the reference implementation from R's 
-    rankFD package. Examples are taken from the reference paper directly. The reference 
+    """
+    Test the `rank_compare_sample_size` function against the reference implementation from R's
+    rankFD package. Examples are taken from the reference paper directly. The reference
     implementation results are generated using the `generate_results_rank_compare_sample_size.R`
     script.
     """
@@ -547,7 +546,6 @@ def test_rank_compare_sample_size(reference_implementation_results):
         (np.array([1, 2, 3]), np.array([]), 0.05, 0.8, 0.5, ValueError, "Both `reference_sample` and `synthetic_sample` must have at least one element"),
     ]
 )
-
 def test_rank_compare_sample_size_invalid(reference_sample, synthetic_sample, alpha, power, ratio, expected_exception, exception_msg):
     """
     Test the rank_compare_sample_size function with various invalid inputs.
