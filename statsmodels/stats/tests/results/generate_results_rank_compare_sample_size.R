@@ -12,12 +12,12 @@ matrix_row_names <- c(
   "power",
   "relative_effect",
   "n_total",
-  "ratio",
-  "n_1",
-  "n_2",
+  "prop_reference",
+  "nobs1",
+  "nobs2",
   "n_total_rounded",
-  "n_1_rounded",
-  "n_2_rounded"
+  "nobs1_rounded",
+  "nobs2_rounded"
 )
 
 # Seizure example ---------------------------------------------------------

@@ -503,50 +503,155 @@ def reference_implementation_results():
     Results from R's rankFD::WMWSSP function.
     """
     parent_dir = Path(__file__).resolve().parent
-    results = pd.read_csv(parent_dir / "results/results_rank_compare_sample_size.csv")
+    results = pd.read_csv(
+        parent_dir / "results/results_rank_compare_sample_size.csv"
+    )
     return results
+
 def test_rank_compare_sample_size(reference_implementation_results):
     """
-    Test the `rank_compare_sample_size` function against the reference implementation from R's
-    rankFD package. Examples are taken from the reference paper directly. The reference
-    implementation results are generated using the `generate_results_rank_compare_sample_size.R`
+    Test the `rank_compare_sample_size` function against the reference
+    implementation from R's rankFD package. Examples are taken from the
+    reference paper directly. The reference implementation results are
+    generated using the `generate_results_rank_compare_sample_size.R`
     script.
     """
     for _, r_result in reference_implementation_results.iterrows():
-        reference_sample = np.array(r_result["reference_sample"].split(","), dtype=np.float64)
-        synthetic_sample = np.array(r_result["synthetic_sample"].split(","), dtype=np.float64)
+        reference_sample = np.array(
+            r_result["reference_sample"].split(","), dtype=np.float64
+        )
+        synthetic_sample = np.array(
+            r_result["synthetic_sample"].split(","), dtype=np.float64
+        )
         py_result = rank_compare_sample_size(
             reference_sample=reference_sample,
             synthetic_sample=synthetic_sample,
             alpha=r_result["alpha"],
             power=r_result["power"],
-            ratio=r_result["ratio"],
+            prop_reference=r_result["prop_reference"],
         )
         # Integers can be compared directly
-        assert py_result["n_total"] == np.ceil(r_result["n_total"]).item()
-        assert py_result["n_1"] == np.ceil(r_result["n_1"]).item()
-        assert py_result["n_2"] == np.ceil(r_result["n_2"]).item()
-        assert_allclose(py_result["relative_effect"], r_result["relative_effect"], rtol=1e-9, atol=0)
+        assert_allclose(
+            py_result.n_total,
+            r_result["n_total"],
+            rtol=1e-9,
+            atol=0,
+        )
+        assert_allclose(
+            py_result.nobs1,
+            r_result["nobs1"],
+            rtol=1e-9,
+        )
+        assert_allclose(
+            py_result.nobs2,
+            r_result["nobs2"],
+            rtol=1e-9,
+        )
+        assert_allclose(
+            py_result.relative_effect,
+            r_result["relative_effect"],
+            rtol=1e-9,
+            atol=0,
+        )
+
 
 @pytest.mark.parametrize(
-    "reference_sample, synthetic_sample, alpha, power, ratio, expected_exception, exception_msg",
+    "reference_sample, synthetic_sample, alpha, power, prop_reference,"
+    " expected_exception, exception_msg",
     [
         # Invalid alpha (0 or 1 is not allowed)
-        (np.array([1, 2, 3]), np.array([1, 2, 3]), 0.0, 0.8, 0.5, ValueError, "Alpha must be between 0 and 1"),
-        (np.array([1, 2, 3]), np.array([1, 2, 3]), 1.0, 0.8, 0.5, ValueError, "Alpha must be between 0 and 1"),
+        (
+            np.array([1, 2, 3]),
+            np.array([1, 2, 3]),
+            0.0,
+            0.8,
+            0.5,
+            ValueError,
+            "Alpha must be between 0 and 1",
+        ),
+        (
+            np.array([1, 2, 3]),
+            np.array([1, 2, 3]),
+            1.0,
+            0.8,
+            0.5,
+            ValueError,
+            "Alpha must be between 0 and 1",
+        ),
         # Invalid power (0 or 1 is not allowed)
-        (np.array([1, 2, 3]), np.array([1, 2, 3]), 0.05, 0.0, 0.5, ValueError, "Power must be between 0 and 1"),
-        (np.array([1, 2, 3]), np.array([1, 2, 3]), 0.05, 1.0, 0.5, ValueError, "Power must be between 0 and 1"),
-        # Invalid ratio (0 or 1 is not allowed)
-        (np.array([1, 2, 3]), np.array([1, 2, 3]), 0.05, 0.8, 0.0, ValueError, "Ratio must be between 0 and 1"),
-        (np.array([1, 2, 3]), np.array([1, 2, 3]), 0.05, 0.8, 1.0, ValueError, "Ratio must be between 0 and 1"),
+        (
+            np.array([1, 2, 3]),
+            np.array([1, 2, 3]),
+            0.05,
+            0.0,
+            0.5,
+            ValueError,
+            "Power must be between 0 and 1",
+        ),
+        (
+            np.array([1, 2, 3]),
+            np.array([1, 2, 3]),
+            0.05,
+            1.0,
+            0.5,
+            ValueError,
+            "Power must be between 0 and 1",
+        ),
+        # Invalid proportion allocation (0 or 1 is not allowed)
+        (
+            np.array([1, 2, 3]),
+            np.array([1, 2, 3]),
+            0.05,
+            0.8,
+            0.0,
+            ValueError,
+            "Proportion allocated to the reference group"
+            " must be between 0 and 1 non-inclusive.",
+        ),
+        (
+            np.array([1, 2, 3]),
+            np.array([1, 2, 3]),
+            0.05,
+            0.8,
+            1.0,
+            ValueError,
+            "Proportion allocated to the reference group"
+            " must be between 0 and 1 non-inclusive.",
+        ),
         # Invalid reference sample with missing values (NaN)
-        (np.array([1, 2, np.nan]), np.array([1, 2, 3]), 0.05, 0.8, 0.5, ValueError, "All elements of `reference_sample` and `synthetic_sample` must be finite"),
+        (
+            np.array([1, 2, np.nan]),
+            np.array([1, 2, 3]),
+            0.05,
+            0.8,
+            0.5,
+            ValueError,
+            "All elements of `reference_sample` and `synthetic_sample`"
+            " must be finite",
+        ),
         # Empty synthetic sample
-        (np.array([1, 2, 3]), np.array([]), 0.05, 0.8, 0.5, ValueError, "Both `reference_sample` and `synthetic_sample` must have at least one element"),
-    ]
+        (
+            np.array([1, 2, 3]),
+            np.array([]),
+            0.05,
+            0.8,
+            0.5,
+            ValueError,
+            "Both `reference_sample` and `synthetic_sample` must have"
+            " at least one element",
+        ),
+    ],
+    scope="function",
 )
-def test_rank_compare_sample_size_invalid(reference_sample, synthetic_sample, alpha, power, ratio, expected_exception, exception_msg):
+def test_rank_compare_sample_size_invalid(
+    reference_sample,
+    synthetic_sample,
+    alpha,
+    power,
+    prop_reference,
+    expected_exception,
+    exception_msg,
+):
     """
     Test the rank_compare_sample_size function with various invalid inputs.
     """
@@ -556,5 +661,5 @@ def test_rank_compare_sample_size_invalid(reference_sample, synthetic_sample, al
             synthetic_sample=synthetic_sample,
             alpha=alpha,
             power=power,
-            ratio=ratio,
+            prop_reference=prop_reference,
         )
