@@ -709,11 +709,34 @@ def rank_compare_sample_size(
         alpha : float
             The type I error rate for the test.
 
+    Example
+    -------
+    The data for the placebo group of a clinical trial published in
+    Thall and Vail [2] is shown below. A relevant effect for the treatment
+    under investigation is considered to be a 50% reduction in the number
+    of seizures. To compute the required sample size with a power of 0.8
+    and holding the type I error rate at 0.05, we generate synthetic data
+    for the treatment group under the alternative assuming this reduction.
+
+    >>> from statsmodels.stats.nonparametric import rank_compare_sample_size
+    >>> import numpy as np
+    >>> reference_sample = np.array([3, 3, 5, 4, 21, 7, 2, 12, 5, 0, 22, 4, 2, 12,
+    ...                              9, 5, 3, 29, 5, 7, 4, 4, 5, 8, 25, 1, 2, 12])
+    >>> # Apply 50% reduction in seizure counts and floor operation
+    >>> synthetic_sample = np.floor(reference_sample / 2)
+    >>> result = rank_compare_sample_size(reference_sample, synthetic_sample,
+    ...                                   alpha=0.05, power=0.8)
+    >>> print(f"Total sample size: {result.n_total}, "
+    ...       f"Reference group: {result.nobs1}, "
+    ...       f"Treatment group: {result.nobs2}")
+
     References
     ----------
     .. [1] Happ, M., Bathke, A. C., and Brunner, E. "Optimal sample size
-           planning for the Wilcoxon-Mann-Whitney test". Statistics in Medicine.
-           Vol. 38(2019): 363-375. https://doi.org/10.1002/sim.7983.
+        planning for the Wilcoxon-Mann-Whitney test". Statistics in Medicine.
+        Vol. 38(2019): 363-375. https://doi.org/10.1002/sim.7983.
+    .. [2] Thall, P. F., and Vail, S. C. "Some covariance models for longitudinal
+        count data with overdispersion". Biometrics, pp. 657-671, 1990.
     """
     reference_sample = np.asarray(reference_sample)
     synthetic_sample = np.asarray(synthetic_sample)
