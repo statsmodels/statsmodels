@@ -13,6 +13,7 @@ import numpy as np
 from scipy import stats
 from scipy.stats import rankdata
 
+from statsmodels.tools.testing import Holder
 from statsmodels.stats.base import HolderTuple
 from statsmodels.stats.weightstats import (
     _tconfint_generic,
@@ -662,3 +663,235 @@ def cohensd2problarger(d):
     """
 
     return stats.norm.cdf(d / np.sqrt(2))
+
+
+def _compute_rank_placements(x1, x2) -> Holder:
+    """
+    Compute ranks and placements for two samples.
+
+    This internal function is used by `rank_compare_sample_size`
+    to calculate rank-based statistics for two input samples.
+    It assumes that the input data has been validated beforehand.
+
+    Parameters
+    ----------
+    x1, x2 : array_like
+        Data samples used to compute ranks and placements.
+
+    Returns
+    -------
+    res : Holder
+        An instance of Holder containing the following attributes:
+
+        n_1 : int
+            Number of observations in the first sample.
+        n_2 : int
+            Number of observations in the second sample.
+        overall_ranks : ndarray
+            Ranks of the pooled sample.
+        overall_ranks_1 : ndarray
+            Ranks of the first sample in the pooled sample.
+        overall_ranks_2 : ndarray
+            Ranks of the second sample in the pooled sample.
+        within_group_ranks_1 : ndarray
+            Internal ranks of the first sample.
+        within_group_ranks_2 : ndarray
+            Internal ranks of the second sample.
+        placements_1 : ndarray
+            Placements of the first sample in the pooled sample.
+        placements_2 : ndarray
+            Placements of the second sample in the pooled sample.
+
+    Notes
+    -----
+    * The overall rank for each observation is determined
+    by ranking all data points from both samples combined
+    (`x1` and `x2`) in ascending order, with ties averaged.
+
+    * The within-group rank for each observation is determined
+    by ranking the data points within each sample separately,
+
+    * The placement of each observation is calculated by
+    taking the difference between the overall rank and the
+    within-group rank of the observation. Placements can be
+    thought of as measuress of the degree of overlap or
+    separation between two samples.
+    """
+    n_1 = len(x1)
+    n_2 = len(x2)
+
+    # Overall ranks for each obs among combined sample
+    overall_ranks_pooled = rankdata(
+        np.r_[x1, x2], method="average"
+    )
+    overall_ranks_1 = overall_ranks_pooled[:n_1]
+    overall_ranks_2 = overall_ranks_pooled[n_1:]
+    # Within group ranks for each obs
+    within_group_ranks_1 = rankdata(x1, method="average")
+    within_group_ranks_2 = rankdata(x2, method="average")
+
+    placements_1 = overall_ranks_1 - within_group_ranks_1
+    placements_2 = overall_ranks_2 - within_group_ranks_2
+
+    return Holder(
+        n_1=n_1,
+        n_2=n_2,
+        overall_ranks_pooled=overall_ranks_pooled,
+        overall_ranks_1=overall_ranks_1,
+        overall_ranks_2=overall_ranks_2,
+        within_group_ranks_1=within_group_ranks_1,
+        within_group_ranks_2=within_group_ranks_2,
+        placements_1=placements_1,
+        placements_2=placements_2,
+    )
+
+
+def rank_compare_sample_size(
+    reference_sample,
+    synthetic_sample,
+    alpha,
+    power,
+    prop_reference=0.5,
+) -> Holder:
+    """
+    Compute the required sample size for the non-parametric
+    Mann-Whitney U test.
+
+    Parameters
+    ----------
+    reference_sample : array_like
+        Advance information for the reference group.
+    synthetic_sample : array_like
+        Generated `synthetic` data representing the treatment
+        group under the research hypothesis.
+    alpha : float
+        The type I error rate for the test (two-sided).
+    power : float
+        The desired power of the test.
+    prop_reference : float, optional
+        The proportion of the total sample size allocated to the
+        reference group, by default 0.5 (balanced).
+
+    Returns
+    -------
+    res : Holder
+        An instance of Holder containing the following attributes:
+
+        n_total : float
+            The total sample size required for the experiment.
+        nobs1 : float
+            Sample size for the reference group.
+        nobs2 : float
+            Sample size for the treatment group.
+        relative_effect : float
+            The estimated relative effect size.
+        power : float
+            The desired power for the test.
+        alpha : float
+            The type I error rate for the test.
+
+    Example
+    -------
+    The data for the placebo group of a clinical trial published in
+    Thall and Vail [2] is shown below. A relevant effect for the treatment
+    under investigation is considered to be a 50% reduction in the number
+    of seizures. To compute the required sample size with a power of 0.8
+    and holding the type I error rate at 0.05, we generate synthetic data
+    for the treatment group under the alternative assuming this reduction.
+
+    >>> from statsmodels.stats.nonparametric import rank_compare_sample_size
+    >>> import numpy as np
+    >>> reference_sample = np.array([3, 3, 5, 4, 21, 7, 2, 12, 5, 0, 22, 4, 2, 12,
+    ...                              9, 5, 3, 29, 5, 7, 4, 4, 5, 8, 25, 1, 2, 12])
+    >>> # Apply 50% reduction in seizure counts and floor operation
+    >>> synthetic_sample = np.floor(reference_sample / 2)
+    >>> result = rank_compare_sample_size(reference_sample, synthetic_sample,
+    ...                                   alpha=0.05, power=0.8)
+    >>> print(f"Total sample size: {result.n_total}, "
+    ...       f"Reference group: {result.nobs1}, "
+    ...       f"Treatment group: {result.nobs2}")
+
+    References
+    ----------
+    .. [1] Happ, M., Bathke, A. C., and Brunner, E. "Optimal sample size
+        planning for the Wilcoxon-Mann-Whitney test". Statistics in Medicine.
+        Vol. 38(2019): 363-375. https://doi.org/10.1002/sim.7983.
+    .. [2] Thall, P. F., and Vail, S. C. "Some covariance models for longitudinal
+        count data with overdispersion". Biometrics, pp. 657-671, 1990.
+    """
+    reference_sample = np.asarray(reference_sample)
+    synthetic_sample = np.asarray(synthetic_sample)
+
+    if not (len(reference_sample) > 0 and len(synthetic_sample) > 0):
+        raise ValueError(
+            "Both `reference_sample` and `synthetic_sample`"
+            " must have at least one element."
+        )
+    if not (
+        np.all(np.isfinite(reference_sample))
+        and np.all(np.isfinite(synthetic_sample))
+    ):
+        raise ValueError(
+            "All elements of `reference_sample` and `synthetic_sample`"
+            " must be finite; check for missing values."
+        )
+    if not (0 < alpha < 1):
+        raise ValueError("Alpha must be between 0 and 1 non-inclusive.")
+    if not (0 < power < 1):
+        raise ValueError("Power must be between 0 and 1 non-inclusive.")
+    if not (0 < prop_reference < 1):
+        raise ValueError(
+            "Proportion allocated to the reference group must be between"
+            " 0 and 1 non-inclusive."
+        )
+
+    # Group 1 is the reference group, Group 2 is the treatment group
+    rank_place = _compute_rank_placements(
+        reference_sample,
+        synthetic_sample
+    )
+    relative_effect = (
+        np.mean(rank_place.overall_ranks_2)
+        - np.mean(rank_place.overall_ranks_1)
+    ) / (rank_place.n_1 + rank_place.n_2) + 0.5
+    sd_overall = np.sqrt(
+        np.sum((rank_place.overall_ranks_pooled
+        - (rank_place.n_1 + rank_place.n_2 + 1) / 2) ** 2)
+        / (rank_place.n_1 + rank_place.n_2) ** 3
+    )
+    var_ref = (
+        np.sum(
+            (rank_place.placements_1 - np.mean(rank_place.placements_1)) ** 2
+        ) / (rank_place.n_1 * (rank_place.n_2 ** 2))
+    )
+    var_syn = (
+        np.sum(
+            (rank_place.placements_2 - np.mean(rank_place.placements_2)) ** 2
+        ) / ((rank_place.n_1 ** 2) * rank_place.n_2)
+    )
+
+    quantile_alpha = stats.norm.ppf(1 - alpha / 2, loc=0, scale=1)
+    quantile_power = stats.norm.ppf(power, loc=0, scale=1)
+
+    var_terms = np.sqrt(
+        prop_reference * var_syn + (1 - prop_reference) * var_ref
+    )
+    quantiles_terms = sd_overall * quantile_alpha + quantile_power * var_terms
+    # Add a small epsilon to avoid division by zero when there is no
+    # treatment effect, i.e. p_hat = 0.5
+    n_total = (quantiles_terms**2) / (
+        prop_reference
+        * (1 - prop_reference)
+        * (relative_effect - 0.5 + 1e-12) ** 2
+    )
+    nobs1 = n_total * prop_reference
+    nobs2 = n_total * (1 - prop_reference)
+
+    return Holder(
+        n_total=n_total.item(),
+        nobs1=nobs1.item(),
+        nobs2=nobs2.item(),
+        relative_effect=relative_effect.item(),
+        power=power,
+        alpha=alpha,
+    )
