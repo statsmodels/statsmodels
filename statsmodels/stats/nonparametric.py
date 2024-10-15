@@ -665,6 +665,87 @@ def cohensd2problarger(d):
     return stats.norm.cdf(d / np.sqrt(2))
 
 
+def _compute_rank_placements(x1, x2) -> Holder:
+    """
+    Compute ranks and placements for two samples.
+
+    This internal function is used by `rank_compare_sample_size`
+    to calculate rank-based statistics for two input samples.
+    It assumes that the input data has been validated beforehand.
+
+    Parameters
+    ----------
+    x1, x2 : array_like
+        Data samples used to compute ranks and placements.
+
+    Returns
+    -------
+    res : Holder
+        An instance of Holder containing the following attributes:
+
+        n_1 : int
+            Number of observations in the first sample.
+        n_2 : int
+            Number of observations in the second sample.
+        overall_ranks : ndarray
+            Ranks of the pooled sample.
+        overall_ranks_1 : ndarray
+            Ranks of the first sample in the pooled sample.
+        overall_ranks_2 : ndarray
+            Ranks of the second sample in the pooled sample.
+        within_group_ranks_1 : ndarray
+            Internal ranks of the first sample.
+        within_group_ranks_2 : ndarray
+            Internal ranks of the second sample.
+        placements_1 : ndarray
+            Placements of the first sample in the pooled sample.
+        placements_2 : ndarray
+            Placements of the second sample in the pooled sample.
+
+    Notes
+    -----
+    * The overall rank for each observation is determined
+    by ranking all data points from both samples combined
+    (`x1` and `x2`) in ascending order, with ties averaged.
+
+    * The within-group rank for each observation is determined
+    by ranking the data points within each sample separately,
+
+    * The placement of each observation is calculated by
+    taking the difference between the overall rank and the
+    within-group rank of the observation. Placements can be
+    thought of as measuress of the degree of overlap or
+    separation between two samples.
+    """
+    n_1 = len(x1)
+    n_2 = len(x2)
+
+    # Overall ranks for each obs among combined sample
+    overall_ranks_pooled = rankdata(
+        np.r_[x1, x2], method="average"
+    )
+    overall_ranks_1 = overall_ranks_pooled[:n_1]
+    overall_ranks_2 = overall_ranks_pooled[n_1:]
+    # Within group ranks for each obs
+    within_group_ranks_1 = rankdata(x1, method="average")
+    within_group_ranks_2 = rankdata(x2, method="average")
+
+    placements_1 = overall_ranks_1 - within_group_ranks_1
+    placements_2 = overall_ranks_2 - within_group_ranks_2
+
+    return Holder(
+        n_1=n_1,
+        n_2=n_2,
+        overall_ranks_pooled=overall_ranks_pooled,
+        overall_ranks_1=overall_ranks_1,
+        overall_ranks_2=overall_ranks_2,
+        within_group_ranks_1=within_group_ranks_1,
+        within_group_ranks_2=within_group_ranks_2,
+        placements_1=placements_1,
+        placements_2=placements_2,
+    )
+
+
 def rank_compare_sample_size(
     reference_sample,
     synthetic_sample,
@@ -764,34 +845,29 @@ def rank_compare_sample_size(
             " 0 and 1 non-inclusive."
         )
 
-    n_ref = len(reference_sample)
-    n_syn = len(synthetic_sample)
-
-    # Overall ranks for each obs among combined sample
-    overall_ranks = rankdata(
-        np.r_[reference_sample, synthetic_sample], method="average"
+    # Group 1 is the reference group, Group 2 is the treatment group
+    rank_place = _compute_rank_placements(
+        reference_sample,
+        synthetic_sample
     )
-    overall_ranks_ref = overall_ranks[:n_ref]
-    overall_ranks_syn = overall_ranks[n_ref:]
-    # Within group ranks for each obs
-    within_group_ranks_ref = rankdata(reference_sample, method="average")
-    within_group_ranks_syn = rankdata(synthetic_sample, method="average")
-
-    placements_ref = overall_ranks_ref - within_group_ranks_ref
-    placements_syn = overall_ranks_syn - within_group_ranks_syn
-
     relative_effect = (
-        np.mean(overall_ranks_syn) - np.mean(overall_ranks_ref)
-    ) / (n_ref + n_syn) + 0.5
+        np.mean(rank_place.overall_ranks_2)
+        - np.mean(rank_place.overall_ranks_1)
+    ) / (rank_place.n_1 + rank_place.n_2) + 0.5
     sd_overall = np.sqrt(
-        np.sum((overall_ranks - (n_ref + n_syn + 1) / 2) ** 2)
-        / (n_ref + n_syn) ** 3
+        np.sum((rank_place.overall_ranks_pooled
+        - (rank_place.n_1 + rank_place.n_2 + 1) / 2) ** 2)
+        / (rank_place.n_1 + rank_place.n_2) ** 3
     )
-    var_ref = np.sum((placements_ref - np.mean(placements_ref)) ** 2) / (
-        n_ref * (n_syn**2)
+    var_ref = (
+        np.sum(
+            (rank_place.placements_1 - np.mean(rank_place.placements_1)) ** 2
+        ) / (rank_place.n_1 * (rank_place.n_2 ** 2))
     )
-    var_syn = np.sum((placements_syn - np.mean(placements_syn)) ** 2) / (
-        (n_ref**2) * n_syn
+    var_syn = (
+        np.sum(
+            (rank_place.placements_2 - np.mean(rank_place.placements_2)) ** 2
+        ) / ((rank_place.n_1 ** 2) * rank_place.n_2)
     )
 
     quantile_alpha = stats.norm.ppf(1 - alpha / 2, loc=0, scale=1)
