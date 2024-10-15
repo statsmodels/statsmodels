@@ -28,18 +28,15 @@ Residual Diagnostics and Specification Tests
 .. module:: statsmodels.stats.stattools
    :synopsis: Statistical methods and tests that do not fit into other categories
 
+Autocorrelation
+~~~~~~~~~~~~~~~
+
 .. currentmodule:: statsmodels.stats.stattools
 
 .. autosummary::
    :toctree: generated/
 
    durbin_watson
-   jarque_bera
-   omni_normtest
-   medcouple
-   robust_skewness
-   robust_kurtosis
-   expected_robust_kurtosis
 
 .. module:: statsmodels.stats.diagnostic
    :synopsis: Statistical methods and tests to diagnose model fit problems
@@ -53,28 +50,43 @@ Residual Diagnostics and Specification Tests
    acorr_ljungbox
    acorr_lm
 
-   breaks_cusumolsresid
-   breaks_hansen
-   recursive_olsresiduals
+Heteroscedasticity
+~~~~~~~~~~~~~~~~~~
 
-   compare_cox
-   compare_encompassing
-   compare_j
+.. currentmodule:: statsmodels.stats.diagnostic
 
+.. autosummary::
+   :toctree: generated/
+   
    het_arch
    het_breuschpagan
    het_goldfeldquandt
    het_white
-   spec_white
 
-   linear_harvey_collier
-   linear_lm
-   linear_rainbow
-   linear_reset
+Kurtosis
+~~~~~~~~
 
+.. currentmodule:: statsmodels.stats.stattools
 
-Outliers and influence measures
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autosummary::
+   :toctree: generated/
+
+   robust_kurtosis
+   expected_robust_kurtosis
+
+Normality
+~~~~~~~~~
+
+.. currentmodule:: statsmodels.stats.stattools
+
+.. autosummary::
+   :toctree: generated/
+
+   jarque_bera
+   omni_normtest
+
+Outliers and Influence
+~~~~~~~~~~~~~~~~~~~~~~
 
 .. module:: statsmodels.stats.outliers_influence
    :synopsis: Statistical methods and measures for outliers and influence
@@ -88,6 +100,46 @@ Outliers and influence measures
    GLMInfluence
    MLEInfluence
    variance_inflation_factor
+
+Skewness
+~~~~~~~~
+
+.. currentmodule:: statsmodels.stats.stattools
+
+.. autosummary::
+   :toctree: generated/
+   
+   medcouple
+   robust_skewness
+
+Stability
+~~~~~~~~~
+
+.. currentmodule:: statsmodels.stats.diagnostic
+
+.. autosummary::
+   :toctree: generated/
+
+   breaks_cusumolsresid
+   breaks_hansen
+   recursive_olsresiduals
+
+Specification test
+~~~~~~~~~~~~~~~~~~
+
+.. currentmodule:: statsmodels.stats.diagnostic
+
+.. autosummary::
+   :toctree: generated/
+
+   compare_cox
+   compare_encompassing
+   compare_j
+   spec_white
+   linear_harvey_collier
+   linear_lm
+   linear_rainbow
+   linear_reset
 
 See also the notes on :ref:`notes on regression diagnostics <diagnostics>`
 
