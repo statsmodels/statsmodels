@@ -625,7 +625,7 @@ def test_whiteness():
             obtained = results_sm[ds][dt].test_whiteness(nlags=lags)
             # test statistic
             err_msg = build_err_msg(
-                ds, dt, "WHITENESS OF RESIDUALS - " "TEST STATISTIC"
+                ds, dt, "WHITENESS OF RESIDUALS - TEST STATISTIC"
             )
             desired = results_ref[ds][dt]["whiteness"]["test statistic"]
             assert_allclose(
@@ -633,7 +633,7 @@ def test_whiteness():
             )
             # p-value
             err_msg = build_err_msg(
-                ds, dt, "WHITENESS OF RESIDUALS - " "P-VALUE"
+                ds, dt, "WHITENESS OF RESIDUALS - P-VALUE"
             )
             desired = results_ref[ds][dt]["whiteness"]["p-value"]
             assert_allclose(
@@ -647,7 +647,7 @@ def test_whiteness():
             err_msg = build_err_msg(
                 ds,
                 dt,
-                "WHITENESS OF RESIDUALS - " "TEST STATISTIC (ADJUSTED TEST)",
+                "WHITENESS OF RESIDUALS - TEST STATISTIC (ADJUSTED TEST)",
             )
             desired = results_ref[ds][dt]["whiteness"]["test statistic adj."]
             assert_allclose(
@@ -655,7 +655,7 @@ def test_whiteness():
             )
             # p-value (adjusted Portmanteau test)
             err_msg = build_err_msg(
-                ds, dt, "WHITENESS OF RESIDUALS - " "P-VALUE (ADJUSTED TEST)"
+                ds, dt, "WHITENESS OF RESIDUALS - P-VALUE (ADJUSTED TEST)"
             )
             desired = results_ref[ds][dt]["whiteness"]["p-value adjusted"]
             assert_allclose(

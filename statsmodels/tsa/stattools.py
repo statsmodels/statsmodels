@@ -379,7 +379,7 @@ def adfuller(
         resstore.critvalues = critvalues
         resstore.nobs = nobs
         resstore.H0 = (
-            "The coefficient on the lagged level equals 1 - " "unit root"
+            "The coefficient on the lagged level equals 1 - unit root"
         )
         resstore.HA = "The coefficient on the lagged level < 1 - stationary"
         resstore.icbest = icbest

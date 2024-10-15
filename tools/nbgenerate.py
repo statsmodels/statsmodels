@@ -320,7 +320,7 @@ parser.add_argument(
     "--fail-on-error",
     dest="error_fail",
     action="store_true",
-    help="Fail when an error occurs when executing a cell " "in a notebook.",
+    help="Fail when an error occurs when executing a cell in a notebook.",
 )
 parser.add_argument(
     "--skip-existing",
