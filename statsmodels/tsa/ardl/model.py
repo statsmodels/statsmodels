@@ -737,7 +737,7 @@ class ARDL(AutoReg):
                     )
                 if sorted(arr.columns) != sorted(self.data.orig_exog.columns):
                     raise ValueError(
-                        f"{name} must have the same columns as the original " "exog"
+                        f"{name} must have the same columns as the original exog"
                     )
             else:
                 arr = array_like(arr, name, ndim=2, optional=False)
