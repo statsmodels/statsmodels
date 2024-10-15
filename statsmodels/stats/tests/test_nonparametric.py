@@ -22,7 +22,7 @@ from statsmodels.sandbox.stats.runs import (Runs,
 from statsmodels.sandbox.stats.runs import mcnemar as sbmcnemar
 from statsmodels.stats.nonparametric import (
     rank_compare_2indep, rank_compare_2ordinal, prob_larger_continuous,
-    cohensd2problarger, rank_compare_sample_size)
+    cohensd2problarger, rank_compare_sample_size, _compute_rank_placements)
 from statsmodels.tools.testing import Holder
 
 
@@ -495,6 +495,75 @@ def test_rank_compare_vectorized():
         tost_i = res_i.tost_prob_superior(0.4, 0.6)
         assert_allclose(tost.statistic[i], tost_i.statistic, rtol=1e-14)
         assert_allclose(tost.pvalue[i], tost_i.pvalue, rtol=1e-14)
+
+@pytest.mark.parametrize(
+    "x1, x2, expected_holder",
+    [
+        # No ties continuous data
+        (
+            np.array([1.1, 2.2, 3.3, 4.4, 5.5]),
+            np.array([6.6, 7.7, 8.8, 9.9, 10.1]),
+            Holder(
+                n_1=5,
+                n_2=5,
+                overall_ranks_pooled=np.arange(1, 11),
+                overall_ranks_1=np.arange(1, 6),
+                overall_ranks_2=np.arange(6, 11),
+                within_group_ranks_1=np.arange(1, 6),
+                within_group_ranks_2=np.arange(1, 6),
+                placements_1=np.repeat(0, 5),
+                placements_2=np.repeat(5, 5),
+            ),
+        ),
+        # Ties ordinal data
+        (
+            np.array([1, 1, 2, 2, 3]),
+            np.array([4, 5, 6, 7, 8]),
+            Holder(
+                n_1=5,
+                n_2=5,
+                # First two ties are (1+2)/2=1.5, next two are (3+4)/2=3.5
+                overall_ranks_pooled=np.array(
+                    [1.5, 1.5, 3.5, 3.5, 5, 6, 7, 8, 9, 10]
+                ),
+                overall_ranks_1=np.array([1.5, 1.5, 3.5, 3.5, 5]),
+                overall_ranks_2=np.arange(6, 11),
+                within_group_ranks_1=np.array([1.5, 1.5, 3.5, 3.5, 5]),
+                within_group_ranks_2=np.arange(1, 6),
+                placements_1=np.repeat(0, 5),
+                placements_2=np.repeat(5, 5),
+            ),
+        ),
+    ],
+)
+def test_compute_rank_placements(x1, x2, expected_holder):
+    """
+    Test the `_compute_rank_placements` helper for
+    computing ranks and placements based on two
+    input samples. Data validation logic is assumed
+    to be handled by the caller and is not necessary
+    to test here.
+    """
+    res = _compute_rank_placements(x1, x2)
+    assert_allclose(res.n_1, expected_holder.n_1)
+    assert_allclose(res.n_2, expected_holder.n_2)
+    assert_allclose(
+        res.overall_ranks_pooled, expected_holder.overall_ranks_pooled
+    )
+    assert_allclose(
+        res.overall_ranks_1, expected_holder.overall_ranks_1
+    )
+    assert_allclose(
+        res.overall_ranks_2, expected_holder.overall_ranks_2
+    )
+    assert_allclose(
+        res.within_group_ranks_1, expected_holder.within_group_ranks_1
+    )
+    assert_allclose(
+        res.within_group_ranks_2, expected_holder.within_group_ranks_2
+    )
+    assert_allclose(res.placements_1, expected_holder.placements_1)
+    assert_allclose(res.placements_2, expected_holder.placements_2)
 
 
 @pytest.fixture(scope="function")
