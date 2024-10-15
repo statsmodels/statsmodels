@@ -4,18 +4,12 @@ from statsmodels.compat.pandas import Appender, Substitution, call_cached_func
 from statsmodels.compat.python import Literal
 
 from collections import defaultdict
+from collections.abc import Hashable, Mapping, Sequence
 import datetime as dt
 from itertools import combinations, product
 import textwrap
 from types import SimpleNamespace
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    NamedTuple,
-    Optional,
-    Union,
-)
-from collections.abc import Hashable, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, NamedTuple, Optional, Union
 import warnings
 
 import numpy as np
@@ -111,14 +105,10 @@ def _check_order(order: int | Sequence[int] | None, causal: bool) -> bool:
         return True
     for v in order:
         if not isinstance(v, (int, np.integer)):
-            raise TypeError(
-                "sequence orders must contain non-negative integer values"
-            )
+            raise TypeError("sequence orders must contain non-negative integer values")
     order = [int(v) for v in order]
     if len(set(order)) != len(order) or min(order) < 0:
-        raise ValueError(
-            "sequence orders must contain distinct non-negative values"
-        )
+        raise ValueError("sequence orders must contain distinct non-negative values")
     if int(causal) and min(order) < 1:
         raise ValueError(
             "sequence orders must be strictly positive when causal is True"
@@ -362,9 +352,7 @@ class ARDL(AutoReg):
             if isinstance(fixed, pd.DataFrame):
                 self._fixed_names = list(fixed.columns)
             else:
-                self._fixed_names = [
-                    f"z.{i}" for i in range(fixed_arr.shape[1])
-                ]
+                self._fixed_names = [f"z.{i}" for i in range(fixed_arr.shape[1])]
             self._fixed = fixed_arr
         else:
             self._fixed = np.empty((self.data.endog.shape[0], 0))
@@ -463,9 +451,7 @@ class ARDL(AutoReg):
         if self._x.shape[1] == 0:
             return np.empty((0,)), np.empty((0, 0)), np.empty((0, 0))
         ols_mod = OLS(self._y, self._x)
-        ols_res = ols_mod.fit(
-            cov_type=cov_type, cov_kwds=cov_kwds, use_t=use_t
-        )
+        ols_res = ols_mod.fit(cov_type=cov_type, cov_kwds=cov_kwds, use_t=use_t)
         cov_params = ols_res.cov_params()
         use_t = ols_res.use_t
         if cov_type == "nonrobust" and not use_t:
@@ -542,9 +528,7 @@ class ARDL(AutoReg):
         params, cov_params, norm_cov_params = self._fit(
             cov_type=cov_type, cov_kwds=cov_kwds, use_t=use_t
         )
-        res = ARDLResults(
-            self, params, cov_params, norm_cov_params, use_t=use_t
-        )
+        res = ARDLResults(self, params, cov_params, norm_cov_params, use_t=use_t)
         return ARDLResultsWrapper(res)
 
     def _construct_regressors(
@@ -553,9 +537,7 @@ class ARDL(AutoReg):
         """Construct and format model regressors"""
         # TODO: Missing adjustment
         self._maxlag = max(self._lags) if self._lags else 0
-        _endog_reg, _endog = lagmat(
-            self.data.endog, self._maxlag, original="sep"
-        )
+        _endog_reg, _endog = lagmat(self.data.endog, self._maxlag, original="sep")
         assert isinstance(_endog, np.ndarray)
         assert isinstance(_endog_reg, np.ndarray)
         self._endog_reg, self._endog = _endog_reg, _endog
@@ -649,9 +631,7 @@ class ARDL(AutoReg):
 
         if (end + 1) < self.endog.shape[0] and exog is None and fixed is None:
             adjusted_start = max(start - self._hold_back, 0)
-            return pad_x(
-                self._x[adjusted_start : end + 1 - self._hold_back], pad
-            )
+            return pad_x(self._x[adjusted_start : end + 1 - self._hold_back], pad)
 
         # If anything changed, rebuild x array
         exog = self.data.exog if exog is None else np.asarray(exog)
@@ -757,8 +737,7 @@ class ARDL(AutoReg):
                     )
                 if sorted(arr.columns) != sorted(self.data.orig_exog.columns):
                     raise ValueError(
-                        f"{name} must have the same columns as the original "
-                        "exog"
+                        f"{name} must have the same columns as the original " "exog"
                     )
             else:
                 arr = array_like(arr, name, ndim=2, optional=False)
@@ -778,9 +757,7 @@ class ARDL(AutoReg):
         if exog is not None:
             exog = check_exog(exog, "exog", self.data.orig_exog, True)
         if exog_oos is not None:
-            exog_oos = check_exog(
-                exog_oos, "exog_oos", self.data.orig_exog, False
-            )
+            exog_oos = check_exog(exog_oos, "exog_oos", self.data.orig_exog, False)
         if fixed is not None:
             fixed = check_exog(fixed, "fixed", self._fixed, True)
         if fixed_oos is not None:
@@ -824,12 +801,8 @@ class ARDL(AutoReg):
         if self.exog is not None and exog_oos is None and num_oos:
             exog_oos = np.full((num_oos, self.exog.shape[1]), np.nan)
             if isinstance(self.data.orig_exog, pd.DataFrame):
-                exog_oos = pd.DataFrame(
-                    exog_oos, columns=self.data.orig_exog.columns
-                )
-        x = self._forecasting_x(
-            start, end, num_oos, exog, exog_oos, fixed, fixed_oos
-        )
+                exog_oos = pd.DataFrame(exog_oos, columns=self.data.orig_exog.columns)
+        x = self._forecasting_x(start, end, num_oos, exog, exog_oos, fixed, fixed_oos)
         if dynamic is False:
             dynamic_start = end + 1 - start
         else:
@@ -1018,9 +991,7 @@ class ARDLResults(AutoRegResults):
         scale: float = 1.0,
         use_t: bool = False,
     ):
-        super().__init__(
-            model, params, normalized_cov_params, scale, use_t=use_t
-        )
+        super().__init__(model, params, normalized_cov_params, scale, use_t=use_t)
         self._cache = {}
         self._params = params
         self._nobs = model.nobs
@@ -1301,9 +1272,7 @@ class ARDLResults(AutoRegResults):
         ]
 
         smry = Summary()
-        smry.add_table_2cols(
-            self, gleft=top_left, gright=top_right, title=title
-        )
+        smry.add_table_2cols(self, gleft=top_left, gright=top_right, title=title)
         smry.add_table_params(self, alpha=alpha, use_t=False)
 
         return smry
@@ -1337,15 +1306,11 @@ class ARDLOrderSelectionResults(AROrderSelectionResults):
         def _to_dict(d):
             return d[0], dict(d[1:])
 
-        self._aic = pd.Series(
-            {v[0]: _to_dict(k) for k, v in ics.items()}, dtype=object
-        )
+        self._aic = pd.Series({v[0]: _to_dict(k) for k, v in ics.items()}, dtype=object)
         self._aic.index.name = self._aic.name = "AIC"
         self._aic = self._aic.sort_index()
 
-        self._bic = pd.Series(
-            {v[1]: _to_dict(k) for k, v in ics.items()}, dtype=object
-        )
+        self._bic = pd.Series({v[1]: _to_dict(k) for k, v in ics.items()}, dtype=object)
         self._bic.index.name = self._bic.name = "BIC"
         self._bic = self._bic.sort_index()
 
@@ -1789,9 +1754,7 @@ class UECM(ARDL):
         if isinstance(order, Mapping):
             for k, v in order.items():
                 if not isinstance(v, _INT_TYPES) and v is not None:
-                    raise TypeError(
-                        "order values must be positive integers or None"
-                    )
+                    raise TypeError("order values must be positive integers or None")
         elif not (isinstance(order, _INT_TYPES) or order is None):
             raise TypeError(
                 "order must be None, a positive integer, or a dict "
@@ -1800,9 +1763,7 @@ class UECM(ARDL):
         # TODO: Check order is >= 1
         order = super()._check_order(order)
         if not order:
-            raise ValueError(
-                "Model must contain at least one exogenous variable"
-            )
+            raise ValueError("Model must contain at least one exogenous variable")
         for key, val in order.items():
             if val == [0]:
                 raise ValueError(
@@ -1935,15 +1896,11 @@ class UECM(ARDL):
         params, cov_params, norm_cov_params = self._fit(
             cov_type=cov_type, cov_kwds=cov_kwds, use_t=use_t
         )
-        res = UECMResults(
-            self, params, cov_params, norm_cov_params, use_t=use_t
-        )
+        res = UECMResults(self, params, cov_params, norm_cov_params, use_t=use_t)
         return UECMResultsWrapper(res)
 
     @classmethod
-    def from_ardl(
-        cls, ardl: ARDL, missing: Literal["none", "drop", "raise"] = "none"
-    ):
+    def from_ardl(cls, ardl: ARDL, missing: Literal["none", "drop", "raise"] = "none"):
         """
         Construct a UECM from an ARDL model
 
@@ -2068,9 +2025,7 @@ class UECM(ARDL):
             params, exog, exog_oos, start, end
         )
         if num_oos != 0:
-            raise NotImplementedError(
-                "Out-of-sample forecasts are not supported"
-            )
+            raise NotImplementedError("Out-of-sample forecasts are not supported")
         pred = np.full(self.endog.shape[0], np.nan)
         pred[-self._x.shape[0] :] = self._x @ params
         return pred[start : end + 1]
@@ -2143,6 +2098,14 @@ class UECMResults(ARDLResults):
         if val.ndim == 2:
             return pd.DataFrame(val, columns=lbls, index=lbls)
         return pd.Series(val, index=lbls, name=name)
+
+    @cache_readonly
+    def resid(self):
+        """
+        The residuals of the model.
+        """
+        model = self.model
+        return model._y - self.fittedvalues
 
     @cache_readonly
     def ci_params(self) -> np.ndarray | pd.Series:
@@ -2272,11 +2235,9 @@ class UECMResults(ARDLResults):
         use_t: bool = True,
         asymptotic: bool = True,
         nsim: int = 100_000,
-        seed: int
-        | Sequence[int]
-        | np.random.RandomState
-        | np.random.Generator
-        | None = None,
+        seed: (
+            int | Sequence[int] | np.random.RandomState | np.random.Generator | None
+        ) = None,
     ):
         r"""
         Cointegration bounds test of Pesaran, Shin, and Smith
@@ -2461,11 +2422,7 @@ def _pss_simulate(
     case: Literal[1, 2, 3, 4, 5],
     nobs: int,
     nsim: int,
-    seed: int
-    | Sequence[int]
-    | np.random.RandomState
-    | np.random.Generator
-    | None,
+    seed: int | Sequence[int] | np.random.RandomState | np.random.Generator | None,
 ) -> tuple[pd.DataFrame, pd.Series]:
     rs: np.random.RandomState | np.random.Generator
     if not isinstance(seed, np.random.RandomState):
