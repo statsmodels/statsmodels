@@ -669,7 +669,7 @@ def _compute_rank_placements(x1, x2) -> Holder:
     """
     Compute ranks and placements for two samples.
 
-    This internal function is used by `rank_compare_sample_size`
+    This helper is used by `samplesize_rank_compare_onetail`
     to calculate rank-based statistics for two input samples.
     It assumes that the input data has been validated beforehand.
 
@@ -687,7 +687,7 @@ def _compute_rank_placements(x1, x2) -> Holder:
             Number of observations in the first sample.
         n_2 : int
             Number of observations in the second sample.
-        overall_ranks : ndarray
+        overall_ranks_pooled : ndarray
             Ranks of the pooled sample.
         overall_ranks_1 : ndarray
             Ranks of the first sample in the pooled sample.
@@ -746,49 +746,90 @@ def _compute_rank_placements(x1, x2) -> Holder:
     )
 
 
-def rank_compare_sample_size(
-    reference_sample,
+def samplesize_rank_compare_onetail(
     synthetic_sample,
+    reference_sample,
     alpha,
     power,
-    prop_reference=0.5,
+    nobs_ratio=1,
+    alternative="two-sided",
 ) -> Holder:
     """
     Compute the required sample size for the non-parametric
-    Mann-Whitney U test.
+    Mann-Whitney U test. This function implements the method
+    of Happ et al (2019).
 
     Parameters
     ----------
-    reference_sample : array_like
-        Advance information for the reference group.
     synthetic_sample : array_like
         Generated `synthetic` data representing the treatment
         group under the research hypothesis.
+    reference_sample : array_like
+        Advance information for the reference group.
     alpha : float
         The type I error rate for the test (two-sided).
     power : float
         The desired power of the test.
-    prop_reference : float, optional
-        The proportion of the total sample size allocated to the
-        reference group, by default 0.5 (balanced).
+    nobs_ratio : float, optional
+        Sample size ratio, `nobs_ref` = `nobs_ratio` *
+        `nobs_treat`. This is the ratio of the reference
+        group sample size to the treatment group sample
+        size, by default 1 (balanced design). See Notes.
+    alternative : str, ‘two-sided’ (default), ‘larger’, or ‘smaller’
+        Extra argument to choose whether the sample size is
+        calculated for a two-sided (default) or one-sided test.
+        See Notes.
 
     Returns
     -------
     res : Holder
         An instance of Holder containing the following attributes:
 
-        n_total : float
+        nobs_total : float
             The total sample size required for the experiment.
-        nobs1 : float
-            Sample size for the reference group.
-        nobs2 : float
+        nobs_treat : float
             Sample size for the treatment group.
+        nobs_ref : float
+            Sample size for the reference group.
         relative_effect : float
             The estimated relative effect size.
         power : float
             The desired power for the test.
         alpha : float
             The type I error rate for the test.
+
+    Notes
+    -----
+    In the context of the two-sample Wilcoxon Mann-Whitney
+    U test, the `reference_sample` typically represents data
+    from the control group or previous studies. The
+    `synthetic_sample` is generated based on this reference
+    data and a prespecified relative effect size that is
+    meaningful for the research question. This effect size
+    is often determined in collaboration with subject matter
+    experts to reflect a significant difference worth detecting.
+    By comparing the reference and synthetic samples, this
+    function estimates the sample size needed to acheve the
+    desired power at the specified Type-I error rate.
+
+    Choosing between `one-sided` and `two-sided` tests has
+    important implications for sample size planning. A
+    `two-sided` test is more conservative and requires a
+    larger sample size but covers effects in both directions.
+    In contrast, a `larger` (`relative_effect > 0.5`) or `smaller`
+    (`relative_effect < 0.5`) one-sided test assumes the effect
+    occurs only in one direction, leading to a smaller required
+    sample size. However, if the true effect is in the opposite
+    direction, the `one-sided` test have virtually no power to
+    detect it. Additionally, if a two-sided test ends up being
+    used instead of the planned one-sided test, the original
+    sample size may be insufficient, resulting in an underpowered
+    study. It is important to carefully consider these trade-offs
+    when planning a study.
+
+    For `nobs_ratio > 1`, `nobs_ratio = 1`, or `nobs_ratio < 1`,
+    the reference group sample size is larger, equal to, or smaller
+    than the treatment group sample size, respectively.
 
     Example
     -------
@@ -799,17 +840,20 @@ def rank_compare_sample_size(
     and holding the type I error rate at 0.05, we generate synthetic data
     for the treatment group under the alternative assuming this reduction.
 
-    >>> from statsmodels.stats.nonparametric import rank_compare_sample_size
+    >>> from statsmodels.stats.nonparametric import samplesize_rank_compare_onetail
     >>> import numpy as np
     >>> reference_sample = np.array([3, 3, 5, 4, 21, 7, 2, 12, 5, 0, 22, 4, 2, 12,
     ...                              9, 5, 3, 29, 5, 7, 4, 4, 5, 8, 25, 1, 2, 12])
     >>> # Apply 50% reduction in seizure counts and floor operation
     >>> synthetic_sample = np.floor(reference_sample / 2)
-    >>> result = rank_compare_sample_size(reference_sample, synthetic_sample,
-    ...                                   alpha=0.05, power=0.8)
-    >>> print(f"Total sample size: {result.n_total}, "
-    ...       f"Reference group: {result.nobs1}, "
-    ...       f"Treatment group: {result.nobs2}")
+    >>> result = samplesize_rank_compare_onetail(
+    ...              synthetic_sample=synthetic_sample,
+    ...              reference_sample=reference_sample,
+    ...              alpha=0.05, power=0.8
+    ...          )
+    >>> print(f"Total sample size: {result.nobs_total}, "
+    ...       f"Treatment group: {result.nobs_treat}, "
+    ...       f"Reference group: {result.nobs_ref}")
 
     References
     ----------
@@ -819,12 +863,12 @@ def rank_compare_sample_size(
     .. [2] Thall, P. F., and Vail, S. C. "Some covariance models for longitudinal
         count data with overdispersion". Biometrics, pp. 657-671, 1990.
     """
-    reference_sample = np.asarray(reference_sample)
     synthetic_sample = np.asarray(synthetic_sample)
+    reference_sample = np.asarray(reference_sample)
 
-    if not (len(reference_sample) > 0 and len(synthetic_sample) > 0):
+    if not (len(synthetic_sample) > 0 and len(reference_sample) > 0):
         raise ValueError(
-            "Both `reference_sample` and `synthetic_sample`"
+            "Both `synthetic_sample` and `reference_sample`"
             " must have at least one element."
         )
     if not (
@@ -832,65 +876,110 @@ def rank_compare_sample_size(
         and np.all(np.isfinite(synthetic_sample))
     ):
         raise ValueError(
-            "All elements of `reference_sample` and `synthetic_sample`"
+            "All elements of `synthetic_sample` and `reference_sample`"
             " must be finite; check for missing values."
         )
     if not (0 < alpha < 1):
         raise ValueError("Alpha must be between 0 and 1 non-inclusive.")
     if not (0 < power < 1):
         raise ValueError("Power must be between 0 and 1 non-inclusive.")
-    if not (0 < prop_reference < 1):
+    if not (0 < nobs_ratio):
         raise ValueError(
-            "Proportion allocated to the reference group must be between"
-            " 0 and 1 non-inclusive."
+            "Ratio of reference group to treatment group must be"
+            " strictly positive."
+        )
+    if alternative not in ("two-sided", "larger", "smaller"):
+        raise ValueError(
+            "Alternative must be one of `two-sided`, `larger`, or `smaller`."
         )
 
-    # Group 1 is the reference group, Group 2 is the treatment group
+    # Group 1 is the treatment group, Group 2 is the reference group
     rank_place = _compute_rank_placements(
+        synthetic_sample,
         reference_sample,
-        synthetic_sample
     )
+    # Extra few bytes of name binding for explicitness & readability
+    n_syn = rank_place.n_1
+    n_ref = rank_place.n_2
+    overall_ranks_pooled = rank_place.overall_ranks_pooled
+    placements_syn = rank_place.placements_1
+    placements_ref = rank_place.placements_2
+
     relative_effect = (
-        np.mean(rank_place.overall_ranks_2)
-        - np.mean(rank_place.overall_ranks_1)
-    ) / (rank_place.n_1 + rank_place.n_2) + 0.5
+        np.mean(placements_syn) - np.mean(placements_ref)
+    ) / (n_syn + n_ref) + 0.5
+
+    # Values [0.499, 0.501] considered 'practically' = 0.5 (0.1% atol)
+    if np.isclose(relative_effect, 0.5, atol=1e-3):
+        raise ValueError(
+            "Estimated relative effect is effectively 0.5, i.e."
+            " stochastic equality between `synthetic_sample` and"
+            " `reference_sample`. Given null hypothesis is true,"
+            " sample size cannot be calculated. Please review data"
+            " samples to ensure they reflect appropriate relative"
+            " effect size assumptions."
+        )
+    if relative_effect < 0.5 and alternative == "larger":
+        raise ValueError(
+            "Estimated relative effect is smaller than 0.5;"
+            " `synthetic_sample` is stochastically smaller than"
+            " `reference_sample`. No sample size can be calculated"
+            " for `alternative == 'larger'`. Please review data"
+            " samples to ensure they reflect appropriate relative"
+            " effect size assumptions."
+        )
+    if relative_effect > 0.5 and alternative == "smaller":
+        raise ValueError(
+            "Estimated relative effect is larger than 0.5;"
+            " `synthetic_sample` is stochastically larger than"
+            " `reference_sample`. No sample size can be calculated"
+            " for `alternative == 'smaller'`. Please review data"
+            " samples to ensure they reflect appropriate relative"
+            " effect size assumptions."
+        )
+
     sd_overall = np.sqrt(
-        np.sum((rank_place.overall_ranks_pooled
-        - (rank_place.n_1 + rank_place.n_2 + 1) / 2) ** 2)
-        / (rank_place.n_1 + rank_place.n_2) ** 3
+        np.sum(
+            (overall_ranks_pooled - (n_syn + n_ref + 1) / 2) ** 2
+        )
+        / (n_syn + n_ref) ** 3
     )
     var_ref = (
         np.sum(
-            (rank_place.placements_1 - np.mean(rank_place.placements_1)) ** 2
-        ) / (rank_place.n_1 * (rank_place.n_2 ** 2))
+            (placements_ref - np.mean(placements_ref)) ** 2
+        ) / (n_ref * (n_syn ** 2))
     )
     var_syn = (
         np.sum(
-            (rank_place.placements_2 - np.mean(rank_place.placements_2)) ** 2
-        ) / ((rank_place.n_1 ** 2) * rank_place.n_2)
+            (placements_syn - np.mean(placements_syn)) ** 2
+        ) / ((n_ref ** 2) * n_syn)
     )
 
-    quantile_alpha = stats.norm.ppf(1 - alpha / 2, loc=0, scale=1)
+    quantile_prob = (1 - alpha / 2) if alternative == "two-sided" else (1 - alpha)
+    quantile_alpha = stats.norm.ppf(quantile_prob, loc=0, scale=1)
     quantile_power = stats.norm.ppf(power, loc=0, scale=1)
 
+    # Convert `nobs_ratio` to proportion of total allocated to reference group
+    prop_treatment = 1 / (1 + nobs_ratio)
+    prop_reference = 1 - prop_treatment
     var_terms = np.sqrt(
         prop_reference * var_syn + (1 - prop_reference) * var_ref
     )
     quantiles_terms = sd_overall * quantile_alpha + quantile_power * var_terms
     # Add a small epsilon to avoid division by zero when there is no
     # treatment effect, i.e. p_hat = 0.5
-    n_total = (quantiles_terms**2) / (
+    nobs_total = (quantiles_terms**2) / (
         prop_reference
         * (1 - prop_reference)
         * (relative_effect - 0.5 + 1e-12) ** 2
     )
-    nobs1 = n_total * prop_reference
-    nobs2 = n_total * (1 - prop_reference)
+    nobs_treat = nobs_total * (1 - prop_reference)
+    nobs_ref = nobs_total * prop_reference
 
     return Holder(
-        n_total=n_total.item(),
-        nobs1=nobs1.item(),
-        nobs2=nobs2.item(),
+        nobs_total=nobs_total.item(),
+        nobs_treat=nobs_treat.item(),
+        nobs_ref=nobs_ref.item(),
         relative_effect=relative_effect.item(),
         power=power,
         alpha=alpha,

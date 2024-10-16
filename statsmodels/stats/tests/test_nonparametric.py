@@ -22,7 +22,7 @@ from statsmodels.sandbox.stats.runs import (Runs,
 from statsmodels.sandbox.stats.runs import mcnemar as sbmcnemar
 from statsmodels.stats.nonparametric import (
     rank_compare_2indep, rank_compare_2ordinal, prob_larger_continuous,
-    cohensd2problarger, rank_compare_sample_size, _compute_rank_placements)
+    cohensd2problarger, samplesize_rank_compare_onetail, _compute_rank_placements)
 from statsmodels.tools.testing import Holder
 
 
@@ -496,47 +496,81 @@ def test_rank_compare_vectorized():
         assert_allclose(tost.statistic[i], tost_i.statistic, rtol=1e-14)
         assert_allclose(tost.pvalue[i], tost_i.pvalue, rtol=1e-14)
 
+
+cases_continuous = [
+    (
+        # X1 and X2 continuous with no ties
+        np.array([1.1, 2.2, 3.3, 4.4, 5.5]),
+        np.array([6.6, 7.7, 8.8, 9.9, 10.1]),
+        # Expected ranks and placements
+        Holder(
+            n_1=5,
+            n_2=5,
+            overall_ranks_pooled=np.arange(1, 11),
+            overall_ranks_1=np.arange(1, 6),
+            overall_ranks_2=np.arange(6, 11),
+            within_group_ranks_1=np.arange(1, 6),
+            within_group_ranks_2=np.arange(1, 6),
+            placements_1=np.repeat(0, 5),
+            placements_2=np.repeat(5, 5),
+        ),
+    )
+]
+cases_ordinal = [
+    (
+        # X1 and X2 with ties within a group
+        np.array([1, 1, 2, 2, 3]),
+        np.array([4, 5, 6, 7, 8]),
+        # Expected ranks and placements
+        Holder(
+            n_1=5,
+            n_2=5,
+            # First two ties are (1+2)/2=1.5, next two are (3+4)/2=3.5
+            overall_ranks_pooled=np.array(
+                [1.5, 1.5, 3.5, 3.5, 5, 6, 7, 8, 9, 10]
+            ),
+            overall_ranks_1=np.array([1.5, 1.5, 3.5, 3.5, 5]),
+            overall_ranks_2=np.arange(6, 11),
+            within_group_ranks_1=np.array([1.5, 1.5, 3.5, 3.5, 5]),
+            within_group_ranks_2=np.arange(1, 6),
+            placements_1=np.repeat(0, 5),
+            placements_2=np.repeat(5, 5),
+        ),
+    ),
+    (
+        # X1 and X2 with ties within and across groups
+        np.array([1, 2, 2, 4, 5]),
+        np.array([4, 5, 6, 7, 8]),
+        # Expected ranks and placements
+        Holder(
+            n_1=5,
+            n_2=5,
+            # Ties at (2+3)/2=2.5, (4+5)/2=4.5, (6+7)/2=6.5
+            # So 2 -> 2.5, 4 -> 4.5, 5 -> 6.5
+            overall_ranks_pooled=np.array(
+                # Sorted: 1, (2, 2), (4, 4), (5, 5),  6,  7,  8
+                # From:  x1, x1, x2, x1, x2, x1, x2, x2, x2, x2
+                [1, 2.5, 2.5, 4.5, 6.5,
+                 4.5, 6.5, 8, 9, 10]
+            ),
+            overall_ranks_1=np.array([1, 2.5, 2.5, 4.5, 6.5]),
+            overall_ranks_2=np.array([4.5, 6.5, 8, 9, 10]),
+            # Ties in X1 between positions 2 and 3
+            within_group_ranks_1=np.array([1, 2.5, 2.5, 4, 5]),
+            # No within-group ties in X2
+            within_group_ranks_2=np.arange(1, 6),
+            placements_1=np.array([0, 0, 0, 4.5 - 4, 6.5 - 5]),
+            placements_2=np.array([4.5 - 1, 6.5 - 2, 5, 5, 5]),
+        )
+    )
+]
+
+
 @pytest.mark.parametrize(
-    "x1, x2, expected_holder",
-    [
-        # No ties continuous data
-        (
-            np.array([1.1, 2.2, 3.3, 4.4, 5.5]),
-            np.array([6.6, 7.7, 8.8, 9.9, 10.1]),
-            Holder(
-                n_1=5,
-                n_2=5,
-                overall_ranks_pooled=np.arange(1, 11),
-                overall_ranks_1=np.arange(1, 6),
-                overall_ranks_2=np.arange(6, 11),
-                within_group_ranks_1=np.arange(1, 6),
-                within_group_ranks_2=np.arange(1, 6),
-                placements_1=np.repeat(0, 5),
-                placements_2=np.repeat(5, 5),
-            ),
-        ),
-        # Ties ordinal data
-        (
-            np.array([1, 1, 2, 2, 3]),
-            np.array([4, 5, 6, 7, 8]),
-            Holder(
-                n_1=5,
-                n_2=5,
-                # First two ties are (1+2)/2=1.5, next two are (3+4)/2=3.5
-                overall_ranks_pooled=np.array(
-                    [1.5, 1.5, 3.5, 3.5, 5, 6, 7, 8, 9, 10]
-                ),
-                overall_ranks_1=np.array([1.5, 1.5, 3.5, 3.5, 5]),
-                overall_ranks_2=np.arange(6, 11),
-                within_group_ranks_1=np.array([1.5, 1.5, 3.5, 3.5, 5]),
-                within_group_ranks_2=np.arange(1, 6),
-                placements_1=np.repeat(0, 5),
-                placements_2=np.repeat(5, 5),
-            ),
-        ),
-    ],
+        "test_cases",
+        cases_continuous + cases_ordinal
 )
-def test_compute_rank_placements(x1, x2, expected_holder):
+def test_compute_rank_placements(test_cases):
     """
     Test the `_compute_rank_placements` helper for
     computing ranks and placements based on two
@@ -544,6 +578,7 @@ def test_compute_rank_placements(x1, x2, expected_holder):
     to be handled by the caller and is not necessary
     to test here.
     """
+    x1, x2, expected_holder = test_cases
     res = _compute_rank_placements(x1, x2)
     assert_allclose(res.n_1, expected_holder.n_1)
     assert_allclose(res.n_2, expected_holder.n_2)
@@ -573,47 +608,50 @@ def reference_implementation_results():
     """
     parent_dir = Path(__file__).resolve().parent
     results = pd.read_csv(
-        parent_dir / "results/results_rank_compare_sample_size.csv"
+        parent_dir / "results/results_samplesize_rank_compare_onetail.csv"
     )
     return results
 
-def test_rank_compare_sample_size(reference_implementation_results):
+def test_samplesize_rank_compare_onetail(reference_implementation_results):
     """
-    Test the `rank_compare_sample_size` function against the reference
+    Test the `samplesize_rank_compare_onetail` function against the reference
     implementation from R's rankFD package. Examples are taken from the
     reference paper directly. The reference implementation results are
-    generated using the `generate_results_rank_compare_sample_size.R`
+    generated using the `generate_results_samplesize_rank_compare_onetail.R`
     script.
     """
     for _, r_result in reference_implementation_results.iterrows():
-        reference_sample = np.array(
-            r_result["reference_sample"].split(","), dtype=np.float64
-        )
         synthetic_sample = np.array(
             r_result["synthetic_sample"].split(","), dtype=np.float64
         )
-        py_result = rank_compare_sample_size(
-            reference_sample=reference_sample,
+        reference_sample = np.array(
+            r_result["reference_sample"].split(","), dtype=np.float64
+        )
+        # Convert `prop_reference` to `nobs_ratio`
+        nobs_ratio = r_result["prop_reference"] / (1 - r_result["prop_reference"])
+        py_result = samplesize_rank_compare_onetail(
             synthetic_sample=synthetic_sample,
+            reference_sample=reference_sample,
             alpha=r_result["alpha"],
             power=r_result["power"],
-            prop_reference=r_result["prop_reference"],
+            nobs_ratio=nobs_ratio,
+            alternative=r_result["alternative"],
         )
         # Integers can be compared directly
         assert_allclose(
-            py_result.n_total,
-            r_result["n_total"],
+            py_result.nobs_total,
+            r_result["nobs_total"],
             rtol=1e-9,
             atol=0,
         )
         assert_allclose(
-            py_result.nobs1,
-            r_result["nobs1"],
+            py_result.nobs_ref,
+            r_result["nobs_ref"],
             rtol=1e-9,
         )
         assert_allclose(
-            py_result.nobs2,
-            r_result["nobs2"],
+            py_result.nobs_treat,
+            r_result["nobs_treat"],
             rtol=1e-9,
         )
         assert_allclose(
@@ -625,8 +663,12 @@ def test_rank_compare_sample_size(reference_implementation_results):
 
 
 @pytest.mark.parametrize(
-    "reference_sample, synthetic_sample, alpha, power, prop_reference,"
-    " expected_exception, exception_msg",
+    (
+        "synthetic_sample, reference_sample,"
+        "alpha, power, "
+        "nobs_ratio, alternative, "
+        "expected_exception, exception_msg"
+    ),
     [
         # Invalid alpha (0 or 1 is not allowed)
         (
@@ -634,7 +676,8 @@ def test_rank_compare_sample_size(reference_implementation_results):
             np.array([1, 2, 3]),
             0.0,
             0.8,
-            0.5,
+            1.0,
+            "two-sided",
             ValueError,
             "Alpha must be between 0 and 1",
         ),
@@ -643,7 +686,8 @@ def test_rank_compare_sample_size(reference_implementation_results):
             np.array([1, 2, 3]),
             1.0,
             0.8,
-            0.5,
+            1.0,
+            "two-sided",
             ValueError,
             "Alpha must be between 0 and 1",
         ),
@@ -653,7 +697,8 @@ def test_rank_compare_sample_size(reference_implementation_results):
             np.array([1, 2, 3]),
             0.05,
             0.0,
-            0.5,
+            1.0,
+            "one-sided",
             ValueError,
             "Power must be between 0 and 1",
         ),
@@ -662,73 +707,102 @@ def test_rank_compare_sample_size(reference_implementation_results):
             np.array([1, 2, 3]),
             0.05,
             1.0,
-            0.5,
+            1.0,
+            "one-sided",
             ValueError,
             "Power must be between 0 and 1",
         ),
-        # Invalid proportion allocation (0 or 1 is not allowed)
+        # Invalid nobs_ratio (must be strictly positive)
         (
             np.array([1, 2, 3]),
             np.array([1, 2, 3]),
             0.05,
             0.8,
             0.0,
+            "one-sided",
             ValueError,
-            "Proportion allocated to the reference group"
-            " must be between 0 and 1 non-inclusive.",
+            "Ratio of reference group to treatment group must be"
+            " strictly positive."
         ),
         (
             np.array([1, 2, 3]),
             np.array([1, 2, 3]),
             0.05,
             0.8,
-            1.0,
+            -1.0,
+            "one-sided",
             ValueError,
-            "Proportion allocated to the reference group"
-            " must be between 0 and 1 non-inclusive.",
+            "Ratio of reference group to treatment group must be"
+            " strictly positive."
         ),
-        # Invalid reference sample with missing values (NaN)
+        # Invalid synthetic sample with missing values (NaN)
         (
             np.array([1, 2, np.nan]),
             np.array([1, 2, 3]),
             0.05,
             0.8,
             0.5,
+            "one-sided",
             ValueError,
-            "All elements of `reference_sample` and `synthetic_sample`"
-            " must be finite",
+            "All elements of `synthetic_sample` and `reference_sample`"
+            " must be finite; check for missing values."
         ),
-        # Empty synthetic sample
+        # Empty reference sample
         (
             np.array([1, 2, 3]),
             np.array([]),
             0.05,
             0.8,
             0.5,
+            "one-sided",
             ValueError,
-            "Both `reference_sample` and `synthetic_sample` must have"
+            "Both `synthetic_sample` and `reference_sample` must have"
             " at least one element",
+        ),
+        # Invalid alternative type
+        (
+            np.array([1, 2, 3]),
+            np.array([1, 2, 3]),
+            0.05,
+            0.8,
+            0.5,
+            False,
+            ValueError,
+            "Alternative must be one of `two-sided` or `one-sided`.",
+        ),
+        # Invalid alternative value
+        (
+            np.array([1, 2, 3]),
+            np.array([1, 2, 3]),
+            0.05,
+            0.8,
+            0.5,
+            "invalid-alternative",
+            ValueError,
+            "Alternative must be one of `two-sided` or `one-sided`.",
         ),
     ],
     scope="function",
 )
-def test_rank_compare_sample_size_invalid(
-    reference_sample,
+def test_samplesize_rank_compare_onetail_invalid(
     synthetic_sample,
+    reference_sample,
     alpha,
     power,
-    prop_reference,
+    nobs_ratio,
+    alternative,
     expected_exception,
     exception_msg,
 ):
     """
-    Test the rank_compare_sample_size function with various invalid inputs.
+    Test the samplesize_rank_compare_onetail function with various invalid inputs.
     """
     with pytest.raises(expected_exception, match=exception_msg):
-        rank_compare_sample_size(
-            reference_sample=reference_sample,
+        samplesize_rank_compare_onetail(
             synthetic_sample=synthetic_sample,
+            reference_sample=reference_sample,
             alpha=alpha,
             power=power,
-            prop_reference=prop_reference,
+            nobs_ratio=nobs_ratio,
+            alternative=alternative,
         )
