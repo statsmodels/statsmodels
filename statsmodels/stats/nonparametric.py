@@ -687,7 +687,7 @@ def _compute_rank_placements(x1, x2) -> Holder:
             Number of observations in the first sample.
         n_2 : int
             Number of observations in the second sample.
-        overall_ranks : ndarray
+        overall_ranks_pooled : ndarray
             Ranks of the pooled sample.
         overall_ranks_1 : ndarray
             Ranks of the first sample in the pooled sample.
@@ -747,8 +747,8 @@ def _compute_rank_placements(x1, x2) -> Holder:
 
 
 def rank_compare_sample_size(
-    reference_sample,
     synthetic_sample,
+    reference_sample,
     alpha,
     power,
     prop_reference=0.5,
@@ -756,15 +756,16 @@ def rank_compare_sample_size(
 ) -> Holder:
     """
     Compute the required sample size for the non-parametric
-    Mann-Whitney U test.
+    Mann-Whitney U test. This function implements the method
+    of Happ et al (2019).
 
     Parameters
     ----------
-    reference_sample : array_like
-        Advance information for the reference group.
     synthetic_sample : array_like
         Generated `synthetic` data representing the treatment
         group under the research hypothesis.
+    reference_sample : array_like
+        Advance information for the reference group.
     alpha : float
         The type I error rate for the test (two-sided).
     power : float
@@ -782,12 +783,12 @@ def rank_compare_sample_size(
     res : Holder
         An instance of Holder containing the following attributes:
 
-        n_total : float
+        nobs_total : float
             The total sample size required for the experiment.
-        nobs1 : float
-            Sample size for the reference group.
-        nobs2 : float
+        nobs_treat : float
             Sample size for the treatment group.
+        nobs_ref : float
+            Sample size for the reference group.
         relative_effect : float
             The estimated relative effect size.
         power : float
@@ -798,7 +799,7 @@ def rank_compare_sample_size(
     Note
     ----
     In the context of the two-sample Wilcoxon Mann-Whitney
-    test, the `reference_sample` typically represents data
+    U test, the `reference_sample` typically represents data
     from the control group or previous studies. The
     `synthetic_sample` is generated based on this reference
     data and a prespecified relative effect size that is
@@ -838,11 +839,14 @@ def rank_compare_sample_size(
     ...                              9, 5, 3, 29, 5, 7, 4, 4, 5, 8, 25, 1, 2, 12])
     >>> # Apply 50% reduction in seizure counts and floor operation
     >>> synthetic_sample = np.floor(reference_sample / 2)
-    >>> result = rank_compare_sample_size(reference_sample, synthetic_sample,
-    ...                                   alpha=0.05, power=0.8)
-    >>> print(f"Total sample size: {result.n_total}, "
-    ...       f"Reference group: {result.nobs1}, "
-    ...       f"Treatment group: {result.nobs2}")
+    >>> result = rank_compare_sample_size(
+    ...              synthetic_sample=synthetic_sample,
+    ...              reference_sample=reference_sample,
+    ...              alpha=0.05, power=0.8
+    ...          )
+    >>> print(f"Total sample size: {result.nobs_total}, "
+    ...       f"Treatment group: {result.nobs_treat}, "
+    ...       f"Reference group: {result.nobs_ref}")
 
     References
     ----------
@@ -852,12 +856,12 @@ def rank_compare_sample_size(
     .. [2] Thall, P. F., and Vail, S. C. "Some covariance models for longitudinal
         count data with overdispersion". Biometrics, pp. 657-671, 1990.
     """
-    reference_sample = np.asarray(reference_sample)
     synthetic_sample = np.asarray(synthetic_sample)
+    reference_sample = np.asarray(reference_sample)
 
-    if not (len(reference_sample) > 0 and len(synthetic_sample) > 0):
+    if not (len(synthetic_sample) > 0 and len(reference_sample) > 0):
         raise ValueError(
-            "Both `reference_sample` and `synthetic_sample`"
+            "Both `synthetic_sample` and `reference_sample`"
             " must have at least one element."
         )
     if not (
@@ -865,7 +869,7 @@ def rank_compare_sample_size(
         and np.all(np.isfinite(synthetic_sample))
     ):
         raise ValueError(
-            "All elements of `reference_sample` and `synthetic_sample`"
+            "All elements of `synthetic_sample` and `reference_sample`"
             " must be finite; check for missing values."
         )
     if not (0 < alpha < 1):
@@ -882,29 +886,36 @@ def rank_compare_sample_size(
             "Alternative must be one of `two-sided` or `one-sided`."
         )
 
-    # Group 1 is the reference group, Group 2 is the treatment group
+    # Group 1 is the treatment group, Group 2 is the reference group
     rank_place = _compute_rank_placements(
+        synthetic_sample,
         reference_sample,
-        synthetic_sample
     )
+    # Extra few bytes of name binding for explicitness & readability
+    n_syn = rank_place.n_1
+    n_ref = rank_place.n_2
+    overall_ranks_pooled = rank_place.overall_ranks_pooled
+    placements_syn = rank_place.placements_1
+    placements_ref = rank_place.placements_2
+
     relative_effect = (
-        np.mean(rank_place.overall_ranks_2) - np.mean(rank_place.overall_ranks_1)
-    ) / (rank_place.n_1 + rank_place.n_2) + 0.5
+        np.mean(placements_syn) - np.mean(placements_ref)
+    ) / (n_syn + n_ref) + 0.5
     sd_overall = np.sqrt(
         np.sum(
-            (rank_place.overall_ranks_pooled - (rank_place.n_1 + rank_place.n_2 + 1) / 2) ** 2
+            (overall_ranks_pooled - (n_syn + n_ref + 1) / 2) ** 2
         )
-        / (rank_place.n_1 + rank_place.n_2) ** 3
+        / (n_syn + n_ref) ** 3
     )
     var_ref = (
         np.sum(
-            (rank_place.placements_1 - np.mean(rank_place.placements_1)) ** 2
-        ) / (rank_place.n_1 * (rank_place.n_2 ** 2))
+            (placements_ref - np.mean(placements_ref)) ** 2
+        ) / (n_ref * (n_syn ** 2))
     )
     var_syn = (
         np.sum(
-            (rank_place.placements_2 - np.mean(rank_place.placements_2)) ** 2
-        ) / ((rank_place.n_1 ** 2) * rank_place.n_2)
+            (placements_syn - np.mean(placements_syn)) ** 2
+        ) / ((n_ref ** 2) * n_syn)
     )
 
     quantile_prob = (1 - alpha / 2) if alternative == "two-sided" else (1 - alpha)
@@ -917,18 +928,18 @@ def rank_compare_sample_size(
     quantiles_terms = sd_overall * quantile_alpha + quantile_power * var_terms
     # Add a small epsilon to avoid division by zero when there is no
     # treatment effect, i.e. p_hat = 0.5
-    n_total = (quantiles_terms**2) / (
+    nobs_total = (quantiles_terms**2) / (
         prop_reference
         * (1 - prop_reference)
         * (relative_effect - 0.5 + 1e-12) ** 2
     )
-    nobs1 = n_total * prop_reference
-    nobs2 = n_total * (1 - prop_reference)
+    nobs_treat = nobs_total * (1 - prop_reference)
+    nobs_ref = nobs_total * prop_reference
 
     return Holder(
-        n_total=n_total.item(),
-        nobs1=nobs1.item(),
-        nobs2=nobs2.item(),
+        nobs_total=nobs_total.item(),
+        nobs_treat=nobs_treat.item(),
+        nobs_ref=nobs_ref.item(),
         relative_effect=relative_effect.item(),
         power=power,
         alpha=alpha,
