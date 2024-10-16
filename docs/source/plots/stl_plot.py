@@ -7,7 +7,7 @@ from statsmodels.tsa.seasonal import STL
 
 register_matplotlib_converters()
 data = co2.load().data
-data = data.resample('M').mean().ffill()
+data = data.resample('ME').mean().ffill()
 
 res = STL(np.squeeze(data)).fit()
 res.plot()
