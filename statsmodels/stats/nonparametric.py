@@ -888,12 +888,12 @@ def rank_compare_sample_size(
         synthetic_sample
     )
     relative_effect = (
-        np.mean(rank_place.overall_ranks_2)
-        - np.mean(rank_place.overall_ranks_1)
+        np.mean(rank_place.overall_ranks_2) - np.mean(rank_place.overall_ranks_1)
     ) / (rank_place.n_1 + rank_place.n_2) + 0.5
     sd_overall = np.sqrt(
-        np.sum((rank_place.overall_ranks_pooled
-        - (rank_place.n_1 + rank_place.n_2 + 1) / 2) ** 2)
+        np.sum(
+            (rank_place.overall_ranks_pooled - (rank_place.n_1 + rank_place.n_2 + 1) / 2) ** 2
+        )
         / (rank_place.n_1 + rank_place.n_2) ** 3
     )
     var_ref = (
