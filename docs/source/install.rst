@@ -131,14 +131,14 @@ Dependencies
 The current minimum dependencies are:
 
 * `Python <https://www.python.org>`__ >= 3.9
-* `NumPy <https://www.scipy.org/>`__ >= 1.22
-* `SciPy <https://www.scipy.org/>`__ >= 1.7
-* `Pandas <https://pandas.pydata.org/>`__ >= 1.3
-* `Patsy <https://patsy.readthedocs.io/en/latest/>`__ >= 0.5.5
+* `NumPy <https://www.scipy.org/>`__ >= 1.22.3
+* `SciPy <https://www.scipy.org/>`__ >= 1.8
+* `Pandas <https://pandas.pydata.org/>`__ >= 1.4
+* `Patsy <https://patsy.readthedocs.io/en/latest/>`__ >= 0.5.6
 
 Cython is required to build from a git checkout but not to run or install from PyPI:
 
-* `Cython <https://cython.org/>`__ >= 0.29.33 is required to build the code from
+* `Cython <https://cython.org/>`__ >= 3.0.10 is required to build the code from
   github but not from a source distribution.
 
 Given the long release cycle, statsmodels follows a loose time-based policy for
