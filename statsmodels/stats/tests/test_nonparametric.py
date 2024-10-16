@@ -598,6 +598,7 @@ def test_rank_compare_sample_size(reference_implementation_results):
             alpha=r_result["alpha"],
             power=r_result["power"],
             prop_reference=r_result["prop_reference"],
+            alternative=r_result["alternative"],
         )
         # Integers can be compared directly
         assert_allclose(
@@ -625,8 +626,12 @@ def test_rank_compare_sample_size(reference_implementation_results):
 
 
 @pytest.mark.parametrize(
-    "reference_sample, synthetic_sample, alpha, power, prop_reference,"
-    " expected_exception, exception_msg",
+    (
+        "reference_sample, synthetic_sample, "
+        "alpha, power, "
+        "prop_reference, alternative, "
+        "expected_exception, exception_msg"
+    ),
     [
         # Invalid alpha (0 or 1 is not allowed)
         (
@@ -635,6 +640,7 @@ def test_rank_compare_sample_size(reference_implementation_results):
             0.0,
             0.8,
             0.5,
+            "two-sided",
             ValueError,
             "Alpha must be between 0 and 1",
         ),
@@ -644,6 +650,7 @@ def test_rank_compare_sample_size(reference_implementation_results):
             1.0,
             0.8,
             0.5,
+            "two-sided",
             ValueError,
             "Alpha must be between 0 and 1",
         ),
@@ -654,6 +661,7 @@ def test_rank_compare_sample_size(reference_implementation_results):
             0.05,
             0.0,
             0.5,
+            "one-sided",
             ValueError,
             "Power must be between 0 and 1",
         ),
@@ -663,6 +671,7 @@ def test_rank_compare_sample_size(reference_implementation_results):
             0.05,
             1.0,
             0.5,
+            "one-sided",
             ValueError,
             "Power must be between 0 and 1",
         ),
@@ -673,6 +682,7 @@ def test_rank_compare_sample_size(reference_implementation_results):
             0.05,
             0.8,
             0.0,
+            "one-sided",
             ValueError,
             "Proportion allocated to the reference group"
             " must be between 0 and 1 non-inclusive.",
@@ -683,6 +693,7 @@ def test_rank_compare_sample_size(reference_implementation_results):
             0.05,
             0.8,
             1.0,
+            "one-sided",
             ValueError,
             "Proportion allocated to the reference group"
             " must be between 0 and 1 non-inclusive.",
@@ -694,6 +705,7 @@ def test_rank_compare_sample_size(reference_implementation_results):
             0.05,
             0.8,
             0.5,
+            "one-sided",
             ValueError,
             "All elements of `reference_sample` and `synthetic_sample`"
             " must be finite",
@@ -705,9 +717,32 @@ def test_rank_compare_sample_size(reference_implementation_results):
             0.05,
             0.8,
             0.5,
+            "one-sided",
             ValueError,
             "Both `reference_sample` and `synthetic_sample` must have"
             " at least one element",
+        ),
+        # Invalid alternative type
+        (
+            np.array([1, 2, 3]),
+            np.array([1, 2, 3]),
+            0.05,
+            0.8,
+            0.5,
+            False,
+            ValueError,
+            "Alternative must be one of `two-sided` or `one-sided`.",
+        ),
+        # Invalid alternative value
+        (
+            np.array([1, 2, 3]),
+            np.array([1, 2, 3]),
+            0.05,
+            0.8,
+            0.5,
+            "invalid-alternative",
+            ValueError,
+            "Alternative must be one of `two-sided` or `one-sided`.",
         ),
     ],
     scope="function",
@@ -718,6 +753,7 @@ def test_rank_compare_sample_size_invalid(
     alpha,
     power,
     prop_reference,
+    alternative,
     expected_exception,
     exception_msg,
 ):
@@ -731,4 +767,5 @@ def test_rank_compare_sample_size_invalid(
             alpha=alpha,
             power=power,
             prop_reference=prop_reference,
+            alternative=alternative,
         )
