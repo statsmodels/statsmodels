@@ -586,15 +586,15 @@ def test_rank_compare_sample_size(reference_implementation_results):
     script.
     """
     for _, r_result in reference_implementation_results.iterrows():
-        reference_sample = np.array(
-            r_result["reference_sample"].split(","), dtype=np.float64
-        )
         synthetic_sample = np.array(
             r_result["synthetic_sample"].split(","), dtype=np.float64
         )
+        reference_sample = np.array(
+            r_result["reference_sample"].split(","), dtype=np.float64
+        )
         py_result = rank_compare_sample_size(
-            reference_sample=reference_sample,
             synthetic_sample=synthetic_sample,
+            reference_sample=reference_sample,
             alpha=r_result["alpha"],
             power=r_result["power"],
             prop_reference=r_result["prop_reference"],
@@ -602,19 +602,19 @@ def test_rank_compare_sample_size(reference_implementation_results):
         )
         # Integers can be compared directly
         assert_allclose(
-            py_result.n_total,
-            r_result["n_total"],
+            py_result.nobs_total,
+            r_result["nobs_total"],
             rtol=1e-9,
             atol=0,
         )
         assert_allclose(
-            py_result.nobs1,
-            r_result["nobs1"],
+            py_result.nobs_ref,
+            r_result["nobs_ref"],
             rtol=1e-9,
         )
         assert_allclose(
-            py_result.nobs2,
-            r_result["nobs2"],
+            py_result.nobs_treat,
+            r_result["nobs_treat"],
             rtol=1e-9,
         )
         assert_allclose(
@@ -627,7 +627,7 @@ def test_rank_compare_sample_size(reference_implementation_results):
 
 @pytest.mark.parametrize(
     (
-        "reference_sample, synthetic_sample, "
+        "synthetic_sample, reference_sample,"
         "alpha, power, "
         "prop_reference, alternative, "
         "expected_exception, exception_msg"
@@ -698,7 +698,7 @@ def test_rank_compare_sample_size(reference_implementation_results):
             "Proportion allocated to the reference group"
             " must be between 0 and 1 non-inclusive.",
         ),
-        # Invalid reference sample with missing values (NaN)
+        # Invalid synthetic sample with missing values (NaN)
         (
             np.array([1, 2, np.nan]),
             np.array([1, 2, 3]),
@@ -707,10 +707,10 @@ def test_rank_compare_sample_size(reference_implementation_results):
             0.5,
             "one-sided",
             ValueError,
-            "All elements of `reference_sample` and `synthetic_sample`"
+            "All elements of `synthetic_sample` and `reference_sample`"
             " must be finite",
         ),
-        # Empty synthetic sample
+        # Empty reference sample
         (
             np.array([1, 2, 3]),
             np.array([]),
@@ -719,7 +719,7 @@ def test_rank_compare_sample_size(reference_implementation_results):
             0.5,
             "one-sided",
             ValueError,
-            "Both `reference_sample` and `synthetic_sample` must have"
+            "Both `synthetic_sample` and `reference_sample` must have"
             " at least one element",
         ),
         # Invalid alternative type
@@ -748,8 +748,8 @@ def test_rank_compare_sample_size(reference_implementation_results):
     scope="function",
 )
 def test_rank_compare_sample_size_invalid(
-    reference_sample,
     synthetic_sample,
+    reference_sample,
     alpha,
     power,
     prop_reference,
@@ -762,8 +762,8 @@ def test_rank_compare_sample_size_invalid(
     """
     with pytest.raises(expected_exception, match=exception_msg):
         rank_compare_sample_size(
-            reference_sample=reference_sample,
             synthetic_sample=synthetic_sample,
+            reference_sample=reference_sample,
             alpha=alpha,
             power=power,
             prop_reference=prop_reference,

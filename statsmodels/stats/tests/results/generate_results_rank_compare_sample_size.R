@@ -79,20 +79,20 @@ generate_result_matrices <- function() {
     "alpha",
     "power",
     "relative_effect",
-    "n_total",
+    "nobs_total",
     "prop_reference",
-    "nobs1",
-    "nobs2",
-    "n_total_rounded",
-    "nobs1_rounded",
-    "nobs2_rounded",
+    "nobs_ref",
+    "nobs_treat",
+    "nobs_total_rounded",
+    "nobs_ref_rounded",
+    "nobs_treat_rounded",
     "reference_sample",
     "synthetic_sample",
     "alternative"
   ))
 
   # Keep only columns needed for testing
-  data[, c("n_total_rounded", "nobs1_rounded", "nobs2_rounded") := NULL]
+  data[, c("nobs_total_rounded", "nobs_ref_rounded", "nobs_treat_rounded") := NULL]
 
   return(data)
 }
