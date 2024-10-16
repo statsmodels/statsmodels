@@ -752,6 +752,7 @@ def rank_compare_sample_size(
     alpha,
     power,
     prop_reference=0.5,
+    alternative="two-sided",
 ) -> Holder:
     """
     Compute the required sample size for the non-parametric
@@ -771,6 +772,10 @@ def rank_compare_sample_size(
     prop_reference : float, optional
         The proportion of the total sample size allocated to the
         reference group, by default 0.5 (balanced).
+    alternative : str, ‘two-sided’ (default) or ‘one-sided’
+        Extra argument to choose whether the sample size is
+        calculated for a two-sided (default) or one sided test.
+        ‘one-sided’ assumes we are in the relevant tail.
 
     Returns
     -------
@@ -789,6 +794,34 @@ def rank_compare_sample_size(
             The desired power for the test.
         alpha : float
             The type I error rate for the test.
+
+    Note
+    ----
+    In the context of the two-sample Wilcoxon Mann-Whitney
+    test, the `reference_sample` typically represents data
+    from the control group or previous studies. The
+    `synthetic_sample` is generated based on this reference
+    data and a prespecified relative effect size that is
+    meaningful for the research question. This effect size
+    is often determined in collaboration with subject matter
+    experts to reflect a significant difference worth detecting.
+    By comparing the reference and synthetic samples, this
+    function estimates the sample size needed to acheve the
+    desired power at the specified Type-I error rate.
+
+    Choosing between `one-sided` and `two-sided` tests has
+    important implications for sample size planning. A
+    `two-sided` test is more conservative and requires a
+    larger sample size but covers effects in both directions.
+    In contrast, a `one-sided` test assumes the effect occurs
+    only in one direction, leading to a smaller required sample
+    size. However, if the true effect is in the opposite direction,
+    the `one-sided` test may have virtually no power to detect it.
+    Additionally, if a two-sided test ends up being used instead
+    of the planned one-sided test, the original sample size may
+    be insufficient, resulting in an underpowered study. It is
+    important to carefully consider these trade-offs when planning
+    a study.
 
     Example
     -------
@@ -844,6 +877,10 @@ def rank_compare_sample_size(
             "Proportion allocated to the reference group must be between"
             " 0 and 1 non-inclusive."
         )
+    if alternative not in ("two-sided", "one-sided"):
+        raise ValueError(
+            "Alternative must be one of `two-sided` or `one-sided`."
+        )
 
     # Group 1 is the reference group, Group 2 is the treatment group
     rank_place = _compute_rank_placements(
@@ -870,7 +907,8 @@ def rank_compare_sample_size(
         ) / ((rank_place.n_1 ** 2) * rank_place.n_2)
     )
 
-    quantile_alpha = stats.norm.ppf(1 - alpha / 2, loc=0, scale=1)
+    quantile_prob = (1 - alpha / 2) if alternative == "two-sided" else (1 - alpha)
+    quantile_alpha = stats.norm.ppf(quantile_prob, loc=0, scale=1)
     quantile_power = stats.norm.ppf(power, loc=0, scale=1)
 
     var_terms = np.sqrt(
