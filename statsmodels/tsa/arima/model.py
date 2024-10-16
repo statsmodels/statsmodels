@@ -48,18 +48,19 @@ class ARIMA(sarimax.SARIMAX):
         The observed time-series process :math:`y`.
     exog : array_like, optional
         Array of exogenous regressors.
-    order : tuple, default: (0, 0, 0)
+    order : tuple, optioanl.
         The (p,d,q) order of the model for the autoregressive, differences, and
         moving average components. d is always an integer, while p and q may
         either be integers or lists of integers specifying exactly which lag
         orders are included. The order of differences is to achieve
         stationnarity in the context of a sochastic trend or seasonality.
-    seasonal_order : tuple, default: (0, 0, 0, 0)
+        The default is (0, 0, 0).
+    seasonal_order : tuple, optional
         The (P,D,Q,s) order of the seasonal component of the model for the
         AR parameters, differences, MA parameters, and periodicity. D is a non-
         negative integer, and s is an integer strictly greater than one. P and
         Q may either be integers or lists of positive integers specifying
-        exactly which lag orders are included.
+        exactly which lag orders are included. The default is (0, 0, 0, 0).
     trend : str{'n','c','t','ct'} or iterable, optional
         Parameter controlling the deterministic trend. Can be specified as a
         string where 'c' indicates a constant term, 't' indicates a
@@ -71,18 +72,18 @@ class ARIMA(sarimax.SARIMAX):
         regressors, which differs from how trends are included in ``SARIMAX``
         models.  See the Notes section for a precise definition of the
         treatment of trend terms.
-    enforce_stationarity : bool, default: True
+    enforce_stationarity : bool, optional
         Whether or not to require the autoregressive parameters to correspond
-        to a stationarity process.
-    enforce_invertibility : bool, default: True
+        to a stationarity process. Default is True.
+    enforce_invertibility : bool, optional
         Whether or not to require the moving average parameters to correspond
-        to an invertible process.
-    concentrate_scale : bool, default: False
+        to an invertible process. Default is True.
+    concentrate_scale : bool, optional
         Whether or not to concentrate the scale (variance of the error term)
         out of the likelihood. This reduces the number of parameters by one.
         This is only applicable when considering estimation by numerical
-        maximum likelihood.
-    trend_offset : int, default: 1
+        maximum likelihood. Default is False.
+    trend_offset : int, optional
         The offset at which to start time trend values. Default is 1, so that
         if `trend='t'` the trend is equal to 1, 2, ..., nobs. Typically is only
         set when the model created by extending a previous dataset.
@@ -92,10 +93,10 @@ class ARIMA(sarimax.SARIMAX):
     freq : str, optional
         If no index is given by `endog` or `exog`, the frequency of the
         time-series may be specified here as a Pandas offset or offset string.
-    missing : str, default: 'none'
+    missing : str, optional
         Available options are 'none', 'drop', and 'raise'. If 'none', no nan
         checking is done. If 'drop', any observations with nans are dropped.
-        If 'raise', an error is raised.
+        If 'raise', an error is raised. Default is 'none'.
 
     Notes
     -----

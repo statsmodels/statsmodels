@@ -976,7 +976,7 @@ class ExponentialSmoothing(TimeSeriesModel):
             starting values are determined using a combination of grid search
             and reasonable values based on the initial values of the data. See
             the notes for the structure of the model parameters.
-        method : str, default "SLSQP"
+        method : str, optional
             The minimizer used. Valid options are "L-BFGS-B" , "TNC",
             "SLSQP" (default), "Powell", "trust-constr", "basinhopping" (also
             "bh") and "least_squares" (also "ls"). basinhopping tries multiple
