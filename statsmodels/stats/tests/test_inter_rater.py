@@ -73,6 +73,30 @@ def test_fleiss_kappa():
     assert_almost_equal(fleiss_kappa(table1), kappa_wp, decimal=3)
 
 
+def test_fleiss_kappa_variance():
+    table = aggregate_raters(diagnoses)[0]
+    results = fleiss_kappa(table, return_results=True)
+    # from irr
+    assert_almost_equal(results.zvalue, 17.651830582991369)
+    assert_equal(results.pvalue, 0)
+
+
+def test_fleiss_kappa_detail():
+    table = aggregate_raters(diagnoses)[0]
+    kappa, kappas = fleiss_kappa(table, detail=True)
+    assert_almost_equal(kappa, 0.43024452006)
+    # irr appears to round these things
+    assert_allclose(kappas, [0.245, 0.245, 0.520, 0.471, 0.566], rtol=.001)
+
+    results = fleiss_kappa(
+        table, return_results=True, detail=True
+    )
+    assert_almost_equal(results.statistic, 0.43024452006)
+    assert_allclose(results.statistics, [0.245, 0.245, 0.520, 0.471, 0.566], rtol=.001)
+    assert_almost_equal(results.pvalues, [0, 0, 0, 0, 0])
+    assert_allclose(results.zvalues, [5.192, 5.192, 11.031, 9.994, 12.009], rtol=.001)
+
+
 def test_fleis_randolph():
     # reference numbers from online calculator
     # http://justusrandolph.net/kappa/#dInfo
