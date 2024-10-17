@@ -751,7 +751,7 @@ def rank_compare_sample_size(
     reference_sample,
     alpha,
     power,
-    prop_reference=0.5,
+    nobs_ratio=1,
     alternative="two-sided",
 ) -> Holder:
     """
@@ -770,13 +770,16 @@ def rank_compare_sample_size(
         The type I error rate for the test (two-sided).
     power : float
         The desired power of the test.
-    prop_reference : float, optional
-        The proportion of the total sample size allocated to the
-        reference group, by default 0.5 (balanced).
+    nobs_ratio : float, optional
+        Sample size ratio, `nobs_ref` = `nobs_ratio` *
+        `nobs_treat`. This is the ratio of the reference
+        group sample size to the treatment group sample
+        size, by default 1 (balanced design). See Notes.
     alternative : str, ‘two-sided’ (default) or ‘one-sided’
         Extra argument to choose whether the sample size is
         calculated for a two-sided (default) or one sided test.
-        ‘one-sided’ assumes we are in the relevant tail.
+        ‘one-sided’ assumes we are in the relevant tail. See
+        Notes.
 
     Returns
     -------
@@ -796,8 +799,8 @@ def rank_compare_sample_size(
         alpha : float
             The type I error rate for the test.
 
-    Note
-    ----
+    Notes
+    -----
     In the context of the two-sample Wilcoxon Mann-Whitney
     U test, the `reference_sample` typically represents data
     from the control group or previous studies. The
@@ -823,6 +826,10 @@ def rank_compare_sample_size(
     be insufficient, resulting in an underpowered study. It is
     important to carefully consider these trade-offs when planning
     a study.
+
+    For `nobs_ratio > 1`, `nobs_ratio = 1`, or `nobs_ratio < 1`,
+    the reference group sample size is larger, equal to, or smaller
+    than the treatment group sample size, respectively.
 
     Example
     -------
@@ -876,10 +883,10 @@ def rank_compare_sample_size(
         raise ValueError("Alpha must be between 0 and 1 non-inclusive.")
     if not (0 < power < 1):
         raise ValueError("Power must be between 0 and 1 non-inclusive.")
-    if not (0 < prop_reference < 1):
+    if not (0 < nobs_ratio):
         raise ValueError(
-            "Proportion allocated to the reference group must be between"
-            " 0 and 1 non-inclusive."
+            "Ratio of reference group to treatment group must be"
+            " strictly positive."
         )
     if alternative not in ("two-sided", "one-sided"):
         raise ValueError(
@@ -922,6 +929,9 @@ def rank_compare_sample_size(
     quantile_alpha = stats.norm.ppf(quantile_prob, loc=0, scale=1)
     quantile_power = stats.norm.ppf(power, loc=0, scale=1)
 
+    # Convert `nobs_ratio` to proportion of total allocated to reference group
+    prop_treatment = 1 / (1 + nobs_ratio)
+    prop_reference = 1 - prop_treatment
     var_terms = np.sqrt(
         prop_reference * var_syn + (1 - prop_reference) * var_ref
     )
