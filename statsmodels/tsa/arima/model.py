@@ -48,7 +48,7 @@ class ARIMA(sarimax.SARIMAX):
         The observed time-series process :math:`y`.
     exog : array_like, optional
         Array of exogenous regressors.
-    order : tuple, optioanl.
+    order : tuple, optional
         The (p,d,q) order of the model for the autoregressive, differences, and
         moving average components. d is always an integer, while p and q may
         either be integers or lists of integers specifying exactly which lag
