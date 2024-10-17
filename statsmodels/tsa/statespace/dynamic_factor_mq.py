@@ -440,8 +440,8 @@ class DynamicFactorMQStates(dict):
                           tupleize_cols=False, name='block')
             default_block_orders = pd.Series(np.ones(len(ix), dtype=int),
                                              index=ix, name='order')
-            self.factor_block_orders = (
-                self.factor_block_orders.append(default_block_orders))
+            self.factor_block_orders = pd.concat(
+                [self.factor_block_orders, default_block_orders])
             factor_names = pd.Series(
                 np.concatenate(list(self.factor_block_orders.index)))
         duplicates = factor_names.duplicated()
