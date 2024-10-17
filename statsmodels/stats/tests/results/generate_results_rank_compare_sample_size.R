@@ -1,4 +1,4 @@
-# Run as: Rscript generate_results_rank_compare_sample_size.R --output_path path/to/results_rank_compare_sample_size.csv
+# Run as: Rscript generate_results_samplesize_rank_compare_onetail.R --output_path path/to/results_samplesize_rank_compare_onetail.csv
 if (!require(rankFD)) {
   install.packages("rankFD")
   library(rankFD)
@@ -102,6 +102,6 @@ test_data <- generate_result_matrices()
 # Save results -----------------------------------------------------------
 
 parser <- ArgumentParser(description = "Generate reference implementation results for rank compare sample size")
-parser$add_argument("--output_path", help = "Absolute output file path", default = "results_rank_compare_sample_size.csv")
+parser$add_argument("--output_path", help = "Absolute output file path", default = "results_samplesize_rank_compare_onetail.csv")
 args <- parser$parse_known_args()[[1]]
 fwrite(x = test_data, file = args$output_path, row.names = FALSE)

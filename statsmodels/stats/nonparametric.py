@@ -669,7 +669,7 @@ def _compute_rank_placements(x1, x2) -> Holder:
     """
     Compute ranks and placements for two samples.
 
-    This internal function is used by `rank_compare_sample_size`
+    This helper is used by `samplesize_rank_compare_onetail`
     to calculate rank-based statistics for two input samples.
     It assumes that the input data has been validated beforehand.
 
@@ -746,7 +746,7 @@ def _compute_rank_placements(x1, x2) -> Holder:
     )
 
 
-def rank_compare_sample_size(
+def samplesize_rank_compare_onetail(
     synthetic_sample,
     reference_sample,
     alpha,
@@ -840,13 +840,13 @@ def rank_compare_sample_size(
     and holding the type I error rate at 0.05, we generate synthetic data
     for the treatment group under the alternative assuming this reduction.
 
-    >>> from statsmodels.stats.nonparametric import rank_compare_sample_size
+    >>> from statsmodels.stats.nonparametric import samplesize_rank_compare_onetail
     >>> import numpy as np
     >>> reference_sample = np.array([3, 3, 5, 4, 21, 7, 2, 12, 5, 0, 22, 4, 2, 12,
     ...                              9, 5, 3, 29, 5, 7, 4, 4, 5, 8, 25, 1, 2, 12])
     >>> # Apply 50% reduction in seizure counts and floor operation
     >>> synthetic_sample = np.floor(reference_sample / 2)
-    >>> result = rank_compare_sample_size(
+    >>> result = samplesize_rank_compare_onetail(
     ...              synthetic_sample=synthetic_sample,
     ...              reference_sample=reference_sample,
     ...              alpha=0.05, power=0.8

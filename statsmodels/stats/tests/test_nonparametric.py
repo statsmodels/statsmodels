@@ -22,7 +22,7 @@ from statsmodels.sandbox.stats.runs import (Runs,
 from statsmodels.sandbox.stats.runs import mcnemar as sbmcnemar
 from statsmodels.stats.nonparametric import (
     rank_compare_2indep, rank_compare_2ordinal, prob_larger_continuous,
-    cohensd2problarger, rank_compare_sample_size, _compute_rank_placements)
+    cohensd2problarger, samplesize_rank_compare_onetail, _compute_rank_placements)
 from statsmodels.tools.testing import Holder
 
 
@@ -608,16 +608,16 @@ def reference_implementation_results():
     """
     parent_dir = Path(__file__).resolve().parent
     results = pd.read_csv(
-        parent_dir / "results/results_rank_compare_sample_size.csv"
+        parent_dir / "results/results_samplesize_rank_compare_onetail.csv"
     )
     return results
 
-def test_rank_compare_sample_size(reference_implementation_results):
+def test_samplesize_rank_compare_onetail(reference_implementation_results):
     """
-    Test the `rank_compare_sample_size` function against the reference
+    Test the `samplesize_rank_compare_onetail` function against the reference
     implementation from R's rankFD package. Examples are taken from the
     reference paper directly. The reference implementation results are
-    generated using the `generate_results_rank_compare_sample_size.R`
+    generated using the `generate_results_samplesize_rank_compare_onetail.R`
     script.
     """
     for _, r_result in reference_implementation_results.iterrows():
@@ -629,7 +629,7 @@ def test_rank_compare_sample_size(reference_implementation_results):
         )
         # Convert `prop_reference` to `nobs_ratio`
         nobs_ratio = r_result["prop_reference"] / (1 - r_result["prop_reference"])
-        py_result = rank_compare_sample_size(
+        py_result = samplesize_rank_compare_onetail(
             synthetic_sample=synthetic_sample,
             reference_sample=reference_sample,
             alpha=r_result["alpha"],
@@ -784,7 +784,7 @@ def test_rank_compare_sample_size(reference_implementation_results):
     ],
     scope="function",
 )
-def test_rank_compare_sample_size_invalid(
+def test_samplesize_rank_compare_onetail_invalid(
     synthetic_sample,
     reference_sample,
     alpha,
@@ -795,10 +795,10 @@ def test_rank_compare_sample_size_invalid(
     exception_msg,
 ):
     """
-    Test the rank_compare_sample_size function with various invalid inputs.
+    Test the samplesize_rank_compare_onetail function with various invalid inputs.
     """
     with pytest.raises(expected_exception, match=exception_msg):
-        rank_compare_sample_size(
+        samplesize_rank_compare_onetail(
             synthetic_sample=synthetic_sample,
             reference_sample=reference_sample,
             alpha=alpha,
