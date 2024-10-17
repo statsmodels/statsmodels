@@ -121,7 +121,7 @@ class _ConditionalModel(base.LikelihoodModel):
             full_output=full_output,
             disp=disp,
             skip_hessian=skip_hessian)
-        
+
         if skip_hessian:
             cov_params = None
         else:
@@ -237,8 +237,7 @@ class ConditionalLogit(_ConditionalModel):
 
     def __init__(self, endog, exog, missing='none', **kwargs):
 
-        super().__init__(
-            endog, exog, missing=missing, **kwargs)
+        super().__init__(endog, exog, missing=missing, **kwargs)
 
         if np.any(np.unique(self.endog) != np.r_[0, 1]):
             msg = "endog must be coded as 0, 1"
