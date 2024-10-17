@@ -592,12 +592,14 @@ def test_rank_compare_sample_size(reference_implementation_results):
         reference_sample = np.array(
             r_result["reference_sample"].split(","), dtype=np.float64
         )
+        # Convert `prop_reference` to `nobs_ratio`
+        nobs_ratio = r_result["prop_reference"] / (1 - r_result["prop_reference"])
         py_result = rank_compare_sample_size(
             synthetic_sample=synthetic_sample,
             reference_sample=reference_sample,
             alpha=r_result["alpha"],
             power=r_result["power"],
-            prop_reference=r_result["prop_reference"],
+            nobs_ratio=nobs_ratio,
             alternative=r_result["alternative"],
         )
         # Integers can be compared directly
@@ -629,7 +631,7 @@ def test_rank_compare_sample_size(reference_implementation_results):
     (
         "synthetic_sample, reference_sample,"
         "alpha, power, "
-        "prop_reference, alternative, "
+        "nobs_ratio, alternative, "
         "expected_exception, exception_msg"
     ),
     [
@@ -639,7 +641,7 @@ def test_rank_compare_sample_size(reference_implementation_results):
             np.array([1, 2, 3]),
             0.0,
             0.8,
-            0.5,
+            1.0,
             "two-sided",
             ValueError,
             "Alpha must be between 0 and 1",
@@ -649,7 +651,7 @@ def test_rank_compare_sample_size(reference_implementation_results):
             np.array([1, 2, 3]),
             1.0,
             0.8,
-            0.5,
+            1.0,
             "two-sided",
             ValueError,
             "Alpha must be between 0 and 1",
@@ -660,7 +662,7 @@ def test_rank_compare_sample_size(reference_implementation_results):
             np.array([1, 2, 3]),
             0.05,
             0.0,
-            0.5,
+            1.0,
             "one-sided",
             ValueError,
             "Power must be between 0 and 1",
@@ -670,12 +672,12 @@ def test_rank_compare_sample_size(reference_implementation_results):
             np.array([1, 2, 3]),
             0.05,
             1.0,
-            0.5,
+            1.0,
             "one-sided",
             ValueError,
             "Power must be between 0 and 1",
         ),
-        # Invalid proportion allocation (0 or 1 is not allowed)
+        # Invalid nobs_ratio (must be strictly positive)
         (
             np.array([1, 2, 3]),
             np.array([1, 2, 3]),
@@ -684,19 +686,19 @@ def test_rank_compare_sample_size(reference_implementation_results):
             0.0,
             "one-sided",
             ValueError,
-            "Proportion allocated to the reference group"
-            " must be between 0 and 1 non-inclusive.",
+            "Ratio of reference group to treatment group must be"
+            " strictly positive."
         ),
         (
             np.array([1, 2, 3]),
             np.array([1, 2, 3]),
             0.05,
             0.8,
-            1.0,
+            -1.0,
             "one-sided",
             ValueError,
-            "Proportion allocated to the reference group"
-            " must be between 0 and 1 non-inclusive.",
+            "Ratio of reference group to treatment group must be"
+            " strictly positive."
         ),
         # Invalid synthetic sample with missing values (NaN)
         (
@@ -708,7 +710,7 @@ def test_rank_compare_sample_size(reference_implementation_results):
             "one-sided",
             ValueError,
             "All elements of `synthetic_sample` and `reference_sample`"
-            " must be finite",
+            " must be finite; check for missing values."
         ),
         # Empty reference sample
         (
@@ -752,7 +754,7 @@ def test_rank_compare_sample_size_invalid(
     reference_sample,
     alpha,
     power,
-    prop_reference,
+    nobs_ratio,
     alternative,
     expected_exception,
     exception_msg,
@@ -766,6 +768,6 @@ def test_rank_compare_sample_size_invalid(
             reference_sample=reference_sample,
             alpha=alpha,
             power=power,
-            prop_reference=prop_reference,
+            nobs_ratio=nobs_ratio,
             alternative=alternative,
         )

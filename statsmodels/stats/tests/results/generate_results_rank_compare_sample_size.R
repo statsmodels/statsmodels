@@ -44,7 +44,7 @@ generate_result_matrices <- function() {
     ),
     input_alpha = c(0.05, 0.05, 0.05),
     power = c(0.8, 0.8, 0.8),
-    t = c(0.5, 0.5, 0.5)
+    t = c(0.5, 0.55, 0.45)
   )
 
   data <- pmap(
