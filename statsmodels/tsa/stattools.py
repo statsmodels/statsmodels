@@ -1845,7 +1845,7 @@ def _safe_arma_fit(y, order, model_kw, trend, fit_kw, start_params=None):
             return _safe_arma_fit(y, order, model_kw, trend, fit_kw, start_params)
         else:
             return
-    except:  # no idea what happened
+    except Exception:  # no idea what happened
         return
 
 

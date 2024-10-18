@@ -690,7 +690,7 @@ def test_coint_perfect_collinearity():
     x = scale_e * np.random.randn(nobs, 2)
     y = 1 + x.sum(axis=1) + 1e-7 * np.random.randn(nobs)
     warnings.simplefilter("always", CollinearityWarning)
-    with warnings.catch_warnings(record=True) as w:
+    with warnings.catch_warnings(record=True):
         c = coint(y, x, trend="c", maxlag=0, autolag=None)
     assert_equal(c[1], 0.0)
     assert_(np.isneginf(c[0]))
@@ -1146,7 +1146,7 @@ def test_arma_order_select_ic_failure():
     with warnings.catch_warnings():
         # catch a hessian inversion and convergence failure warning
         warnings.simplefilter("ignore")
-        res = arma_order_select_ic(y)
+        arma_order_select_ic(y)
 
 
 def test_acf_fft_dataframe():
