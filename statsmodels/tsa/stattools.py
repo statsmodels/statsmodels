@@ -2947,6 +2947,7 @@ class LeybourneMcCabeStationarity:
                 reg = "t"
             else:
                 reg = None
+
             from statsmodels.tsa.arima.model import ARIMA
 
             arfit = ARIMA(x, order=(arlags, 1, 1), trend=reg).fit()
