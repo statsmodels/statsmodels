@@ -755,9 +755,9 @@ def samplesize_rank_compare_onetail(
     alternative="two-sided",
 ) -> Holder:
     """
-    Compute the required sample size for the non-parametric
-    Mann-Whitney U test. This function implements the method
-    of Happ et al (2019).
+    Compute sample size for the non-parametric Mann-Whitney U test.
+
+    This function implements the method of Happ et al (2019).
 
     Parameters
     ----------

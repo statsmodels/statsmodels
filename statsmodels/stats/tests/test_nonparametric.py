@@ -768,7 +768,8 @@ def test_samplesize_rank_compare_onetail(reference_implementation_results):
             0.5,
             False,
             ValueError,
-            "Alternative must be one of `two-sided` or `one-sided`.",
+            "Alternative must be one of `two-sided`, `larger`,"
+            " or `smaller`.",
         ),
         # Invalid alternative value
         (
@@ -779,7 +780,41 @@ def test_samplesize_rank_compare_onetail(reference_implementation_results):
             0.5,
             "invalid-alternative",
             ValueError,
-            "Alternative must be one of `two-sided` or `one-sided`.",
+            "Alternative must be one of `two-sided`, `larger`,"
+            " or `smaller`.",
+        ),
+        # Relative effect > 0.5 but alternative is smaller
+        (
+            np.array([4, 5, 6]), # Synthetic sample
+            np.array([1, 2, 3]), # Reference sample
+            0.05,
+            0.8,
+            1.0,
+            "smaller",
+            ValueError,
+            "Estimated relative effect is larger than 0.5"
+        ),
+        # Relative effect < 0.5 but alternative is larger
+        (
+            np.array([1, 2, 3]), # Synthetic sample
+            np.array([4, 6, 8]), # Reference sample
+            0.05,
+            0.8,
+            1.0,
+            "larger",
+            ValueError,
+            "Estimated relative effect is smaller than 0.5"
+        ),
+        # Relative effect = 0.5
+        (
+            np.array([1, 2, 3 - 1e-16]),
+            np.array([1, 2 + 1e-16, 3]),
+            0.05,
+            0.80,
+            1.0,
+            "two-sided",
+            ValueError,
+            "Estimated relative effect is effectively 0.5"
         ),
     ],
     scope="function",
