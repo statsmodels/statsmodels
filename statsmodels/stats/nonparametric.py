@@ -775,11 +775,10 @@ def samplesize_rank_compare_onetail(
         `nobs_treat`. This is the ratio of the reference
         group sample size to the treatment group sample
         size, by default 1 (balanced design). See Notes.
-    alternative : str, ‘two-sided’ (default) or ‘one-sided’
+    alternative : str, ‘two-sided’ (default), ‘larger’, or ‘smaller’
         Extra argument to choose whether the sample size is
-        calculated for a two-sided (default) or one sided test.
-        ‘one-sided’ assumes we are in the relevant tail. See
-        Notes.
+        calculated for a two-sided (default) or one-sided test.
+        See Notes.
 
     Returns
     -------
@@ -817,15 +816,16 @@ def samplesize_rank_compare_onetail(
     important implications for sample size planning. A
     `two-sided` test is more conservative and requires a
     larger sample size but covers effects in both directions.
-    In contrast, a `one-sided` test assumes the effect occurs
-    only in one direction, leading to a smaller required sample
-    size. However, if the true effect is in the opposite direction,
-    the `one-sided` test may have virtually no power to detect it.
-    Additionally, if a two-sided test ends up being used instead
-    of the planned one-sided test, the original sample size may
-    be insufficient, resulting in an underpowered study. It is
-    important to carefully consider these trade-offs when planning
-    a study.
+    In contrast, a `larger` (`relative_effect > 0.5`) or `smaller`
+    (`relative_effect < 0.5`) one-sided test assumes the effect
+    occurs only in one direction, leading to a smaller required
+    sample size. However, if the true effect is in the opposite
+    direction, the `one-sided` test have virtually no power to
+    detect it. Additionally, if a two-sided test ends up being
+    used instead of the planned one-sided test, the original
+    sample size may be insufficient, resulting in an underpowered
+    study. It is important to carefully consider these trade-offs
+    when planning a study.
 
     For `nobs_ratio > 1`, `nobs_ratio = 1`, or `nobs_ratio < 1`,
     the reference group sample size is larger, equal to, or smaller
@@ -888,9 +888,9 @@ def samplesize_rank_compare_onetail(
             "Ratio of reference group to treatment group must be"
             " strictly positive."
         )
-    if alternative not in ("two-sided", "one-sided"):
+    if alternative not in ("two-sided", "larger", "smaller"):
         raise ValueError(
-            "Alternative must be one of `two-sided` or `one-sided`."
+            "Alternative must be one of `two-sided`, `larger`, or `smaller`."
         )
 
     # Group 1 is the treatment group, Group 2 is the reference group
@@ -908,6 +908,36 @@ def samplesize_rank_compare_onetail(
     relative_effect = (
         np.mean(placements_syn) - np.mean(placements_ref)
     ) / (n_syn + n_ref) + 0.5
+
+    # Values [0.499, 0.501] considered 'practically' = 0.5 (0.1% atol)
+    if np.isclose(relative_effect, 0.5, atol=1e-3):
+        raise ValueError(
+            "Estimated relative effect is effectively 0.5, i.e."
+            " stochastic equality between `synthetic_sample` and"
+            " `reference_sample`. Given null hypothesis is true,"
+            " sample size cannot be calculated. Please review data"
+            " samples to ensure they reflect appropriate relative"
+            " effect size assumptions."
+        )
+    if relative_effect < 0.5 and alternative == "larger":
+        raise ValueError(
+            "Estimated relative effect is smaller than 0.5;"
+            " `synthetic_sample` is stochastically smaller than"
+            " `reference_sample`. No sample size can be calculated"
+            " for `alternative == 'larger'`. Please review data"
+            " samples to ensure they reflect appropriate relative"
+            " effect size assumptions."
+        )
+    if relative_effect > 0.5 and alternative == "smaller":
+        raise ValueError(
+            "Estimated relative effect is larger than 0.5;"
+            " `synthetic_sample` is stochastically larger than"
+            " `reference_sample`. No sample size can be calculated"
+            " for `alternative == 'smaller'`. Please review data"
+            " samples to ensure they reflect appropriate relative"
+            " effect size assumptions."
+        )
+
     sd_overall = np.sqrt(
         np.sum(
             (overall_ranks_pooled - (n_syn + n_ref + 1) / 2) ** 2
