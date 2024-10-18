@@ -1164,13 +1164,14 @@ class ETSModel(base.StateSpaceMLEModel):
         res = self._residuals(yhat, data=data)
         logL = -self.nobs / 2 * (np.log(2 * np.pi * np.mean(res ** 2)) + 1)
         if self.error == "mul":
-            # GH-7331: in some cases, yhat can become negative, so that a
-            # multiplicative model is no longer well-defined. To avoid these
-            # parameterizations, we clip negative values to very small positive
-            # values so that the log-transformation yields very large negative
-            # values.
-            yhat[yhat <= 0] = 1 / (1e-8 * (1 + np.abs(yhat[yhat <= 0])))
-            logL -= np.sum(np.log(yhat))
+            # In some cases, yhat can become negative or zero, so that a
+            # multiplicative model is no longer well-defined. Zero values
+            # are replaced with 10^-32 (a very small number). For more
+            # information on the derivation of the log-likelihood for the
+            # multiplicative error models see:
+            # https://openforecast.org/adam/ADAMETSEstimationLikelihood.html
+            yhat[yhat == 0] = 1e-32
+            logL -= np.sum(np.log(np.abs(yhat)))
         return logL
 
     @contextlib.contextmanager
