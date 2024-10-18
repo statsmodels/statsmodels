@@ -15,6 +15,8 @@ import numpy as np
 import pandas as pd
 from patsy import dmatrix
 from patsy.mgcv_cubic_splines import _get_all_sorted_knots
+from scipy.interpolate import splev
+from scipy.special import factorial
 
 from statsmodels.tools.linalg import transf_constraints
 
@@ -37,14 +39,147 @@ def _R_compat_quantile(x, probs):
     return quantiles.reshape(probs.shape, order="C")
 
 
-# FIXME: is this copy/pasted?  If so, why do we need it?  If not, get
-#  rid of the try/except for scipy import
-# from patsy splines.py
-def _eval_bspline_basis(x, knots, degree, deriv='all', include_intercept=True):
-    try:
-        from scipy.interpolate import splev
-    except ImportError:
-        raise ImportError("spline functionality requires scipy")
+def taylor_expansion(x: np.ndarray, x0: float, derivs: np.ndarray) -> np.ndarray:
+    """Taylor expansion of functions `f_i(x)` at points `x`, based on the
+    derivatives of the `f_i` at `x0`
+
+    Parameters
+    ----------
+    x : array_like
+        x data, should be 1d
+    x0 : float
+        x value at which the derivatives of the `f_i` are provided
+    derivs : array_like
+        derivatives of the `f_i`
+    
+    Returns
+    -------
+    np.ndarray
+        2d numpy array of estimates of `f_i(x)`
+    """
+
+    if x.ndim != 1:
+        raise ValueError("`x` should be 1d")
+
+    if derivs.ndim != 2:
+        raise ValueError("`derivs` should be 2d")
+    
+    outside, _ = derivs.shape
+
+    powers = np.arange(outside + 1)
+
+    return np.matmul(
+        np.power(x - x0, powers.reshape(-1, 1)).T / factorial(powers),
+        derivs
+    )
+
+
+
+def _splev_extended(x, tck, der=0, outside="raise"):
+    """Extended `splev` for handling `x` data outside the knots of `tck`
+
+    Parameters
+    ----------
+    x : array_like
+        x data
+    tck
+        Tuple of knots, coefficients, and degree that define the B-spline
+    der : int
+        Derivative to calculate the spline values for
+    outside : str, int, default `"raise"`
+        Rule for handling `x` data which lies outside the knots:
+
+        - If `raise`, raises a `ValueError`
+        - If an integer >= 0, continues the spline based on the
+          derivative at the minimum and maximum knots. So `0` results
+          in a constant, `1` is linear, and so forth
+
+    Returns
+    -------
+    ndarray
+        Array of spline data; if the coefficients are 2-d, then
+        a 2-d array with shape `(len(x), len(coeffs))`; otherwise
+        a 1-d array with length equal to `x`
+
+    Notes
+    -----
+    The result of this function is different to that of `splev`, as
+    it always returns an array
+
+    Raises
+    ------
+    ValueError
+        In the following cases:
+
+        - If `outside` is `raise` and the `x` data fall outside the knots
+          (this preserves legacy behaviour)
+        - If `outside` is greater than the degree of the spline
+        - If `outside` is less than `der`
+    """
+
+    knots, coeffs, degree = tck
+
+    min_knot = np.min(knots)
+    max_knot = np.max(knots)
+
+    extend_below = np.min(x) < min_knot
+    extend_above = max_knot < np.max(x)
+
+    if not extend_below and not extend_above:
+        return np.array(splev(x, (knots, coeffs, degree), der=der)).T
+
+    if outside == "raise":
+        raise ValueError(
+            "`x` values fall outside the outermost knots; change "
+            "the value of `outside` or correct `x`"
+        )
+
+    if outside > degree:
+        raise ValueError(
+            f"B-Spline has degree {degree}, {outside} derivative is zero!"
+        )
+
+    if outside < der:
+        raise ValueError(
+            f"`outside` is set to {outside}, {der} derivative is zero!"
+        )
+
+    is_below = x < min_knot
+    is_inside = (min_knot <= x) & (x <= max_knot)
+    is_above = max_knot < x
+
+    # Evaluate the derivatives of the spline at the min and max knots
+    derivs = np.array(
+        [
+            splev([min_knot, max_knot], (knots, coeffs, degree), der=deriv)
+            for deriv in range(der, outside + 1)
+        ]
+    )
+
+    if coeffs.ndim == 2:
+        result_array = np.zeros((len(x), len(coeffs)))
+    else:
+        result_array = np.zeros(len(x))
+
+    y_inside = np.array(
+        splev(x[is_inside], (knots, coeffs, degree), der=der)
+    ).T
+    result_array[np.where(is_inside)] = y_inside
+
+    if extend_below:
+        y_below = taylor_expansion(x[is_below], min_knot, derivs[:, :, 0])
+        result_array[np.where(is_below)] = y_below
+
+    if extend_above:
+        y_above = taylor_expansion(x[is_above], max_knot, derivs[:, :, 1])
+        result_array[np.where(is_above)] = y_above
+
+    return result_array
+
+
+def _eval_bspline_basis(
+    x, knots, degree, deriv="all", outside="raise", include_intercept=True
+):
     # 'knots' are assumed to be already pre-processed. E.g. usually you
     # want to include duplicate copies of boundary knots; you should do
     # that *before* calling this constructor.
@@ -55,55 +190,36 @@ def _eval_bspline_basis(x, knots, degree, deriv='all', include_intercept=True):
     if x.ndim == 2 and x.shape[1] == 1:
         x = x[:, 0]
     assert x.ndim == 1
-    # XX FIXME: when points fall outside of the boundaries, splev and R seem
-    # to handle them differently. I do not know why yet. So until we understand
-    # this and decide what to do with it, I'm going to play it safe and
-    # disallow such points.
-    if np.min(x) < np.min(knots) or np.max(x) > np.max(knots):
-        raise NotImplementedError("some data points fall outside the "
-                                  "outermost knots, and I'm not sure how "
-                                  "to handle them. (Patches accepted!)")
-    # Thanks to Charles Harris for explaining splev. It's not well
-    # documented, but basically it computes an arbitrary b-spline basis
-    # given knots and degree on some specificed points (or derivatives
-    # thereof, but we do not use that functionality), and then returns some
-    # linear combination of these basis functions. To get out the basis
-    # functions themselves, we use linear combinations like [1, 0, 0], [0,
-    # 1, 0], [0, 0, 1].
-    # NB: This probably makes it rather inefficient (though I have not checked
-    # to be sure -- maybe the fortran code actually skips computing the basis
-    # function for coefficients that are zero).
-    # Note: the order of a spline is the same as its degree + 1.
-    # Note: there are (len(knots) - order) basis functions.
 
-    k_const = 1 - int(include_intercept)
-    n_bases = len(knots) - (degree + 1) - k_const
-    if deriv in ['all', 0]:
-        basis = np.empty((x.shape[0], n_bases), dtype=float)
-        ret = basis
-    if deriv in ['all', 1]:
-        der1_basis = np.empty((x.shape[0], n_bases), dtype=float)
-        ret = der1_basis
-    if deriv in ['all', 2]:
-        der2_basis = np.empty((x.shape[0], n_bases), dtype=float)
-        ret = der2_basis
+    n_bases = len(knots) - degree - 1
+    coeffs = np.eye(n_bases)
 
-    for i in range(n_bases):
-        coefs = np.zeros((n_bases + k_const,))
-        # we are skipping the first column of the basis to drop constant
-        coefs[i + k_const] = 1
-        ii = i
-        if deriv in ['all', 0]:
-            basis[:, ii] = splev(x, (knots, coefs, degree))
-        if deriv in ['all', 1]:
-            der1_basis[:, ii] = splev(x, (knots, coefs, degree), der=1)
-        if deriv in ['all', 2]:
-            der2_basis[:, ii] = splev(x, (knots, coefs, degree), der=2)
+    if deriv in ("all", 0):
+        basis = _splev_extended(x, (knots, coeffs, degree), outside=outside)
+        if not include_intercept:
+            basis = basis[:,1:]
+        if deriv == 0:
+            return basis
 
-    if deriv == 'all':
-        return basis, der1_basis, der2_basis
-    else:
-        return ret
+    if deriv in ("all", 1):
+        der1_basis = _splev_extended(
+            x, (knots, coeffs, degree), der=1, outside=outside
+        )
+        if not include_intercept:
+            der1_basis = der1_basis[:,1:]
+        if deriv == 1:
+            return der1_basis
+
+    if deriv in ("all", 2):
+        der2_basis = _splev_extended(
+            x, (knots, coeffs, degree), der=2, outside=outside
+        )
+        if not include_intercept:
+            der2_basis = der2_basis[:,1:]
+        if deriv == 2:
+            return der2_basis
+
+    return basis, der1_basis, der2_basis
 
 
 def compute_all_knots(x, df, degree):
