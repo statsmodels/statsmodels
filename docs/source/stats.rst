@@ -240,6 +240,7 @@ Non-Parametric Tests
 
    rank_compare_2indep
    rank_compare_2ordinal
+   samplesize_rank_compare_onetail
    RankCompareResult
    cohensd2problarger
    prob_larger_continuous
