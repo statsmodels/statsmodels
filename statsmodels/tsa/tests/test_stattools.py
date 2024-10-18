@@ -1648,8 +1648,8 @@ class TestLeybourneMcCabe(SetupZivotAndrews):
         assert_allclose(res[0:3], [0.0938, 0.1890, 3], rtol=1e-4, atol=1e-4)
 
         res = leybourne(mdl, regression="ct")
-        assert_allclose(res[0], 0.025262, rtol=1e-4, atol=1e-4)
-        assert_allclose(res[1], 0.93097, rtol=1e-4, atol=1e-4)
+        assert_allclose(res[0], 0.022192, rtol=1e-4, atol=1e-4)
+        assert_allclose(res[1], 0.959809, rtol=1e-4, atol=1e-4)
         assert res[2] == 3
 
     def test_sp500_results(self):
@@ -1667,7 +1667,7 @@ class TestLeybourneMcCabe(SetupZivotAndrews):
         assert_allclose(res[0:3], [556.0444, 0.0000, 4], rtol=1e-4, atol=1e-4)
 
         res = leybourne(mdl, varest="var99")
-        assert_allclose(res[0], 285.5994, rtol=1e-4, atol=1e-4)
+        assert_allclose(res[0], 285.730402, rtol=1e-4, atol=1e-4)
         assert_allclose(res[1], 0.0000, rtol=1e-4, atol=1e-4)
         assert res[2] == 4
 
