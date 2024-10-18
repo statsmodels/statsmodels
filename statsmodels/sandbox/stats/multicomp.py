@@ -665,8 +665,53 @@ class TukeyHSDResults:
                             self._multicomp.groupstats.groupnobs,
                             self._multicomp.pairindices)
 
-    def plot_simultaneous(self, comparison_name=None, ax=None, figsize=(10,6),
-                          xlabel=None, ylabel=None):
+    def _plot_error_bars(self, indices, color, ecolor, means, ax1, orientation="h"):
+        err = self.halfwidths[indices]
+        data_points = means[indices]
+        if orientation == "h":
+            ax1.errorbar(
+                data_points,
+                indices,
+                xerr=err,
+                marker="o",
+                linestyle="None",
+                color=color,
+                ecolor=ecolor,
+            )
+        else:
+            ax1.errorbar(
+                indices,
+                data_points,
+                yerr=err,
+                marker="o",
+                linestyle="None",
+                color=color,
+                ecolor=ecolor,
+            )
+
+    def _process_comparison(self, comparison_name, minrange, maxrange):
+        sigidx, nsigidx = [], []
+        if comparison_name not in self.groupsunique:
+            raise ValueError("comparison_name not found in group names.")
+        midx = np.where(self.groupsunique == comparison_name)[0][0]
+        for i, (min_val, max_val) in enumerate(zip(minrange, maxrange)):
+            if self.groupsunique[i] == comparison_name:
+                continue
+            if min(max_val, maxrange[midx]) - max(min_val, minrange[midx]) < 0:
+                sigidx.append(i)
+            else:
+                nsigidx.append(i)
+        return sigidx, nsigidx, midx
+
+    def plot_simultaneous(
+        self,
+        comparison_name=None,
+        ax=None,
+        figsize=(10, 6),
+        xlabel=None,
+        ylabel=None,
+        vertical=False,
+    ):
         """Plot a universal confidence interval of each group mean
 
         Visualize significant differences in a plot with one confidence
@@ -687,6 +732,11 @@ class TukeyHSDResults:
             Name to be displayed on x axis
         ylabel : str, optional
             Name to be displayed on y axis
+        vertical : bool, optional
+            If True, the error bars will be vertical with groups on the
+            x-axis and the mean differences on the y-axis. Default is
+            False, which plots horizontal bars.
+
 
         Returns
         -------
@@ -733,60 +783,79 @@ class TukeyHSDResults:
         fig, ax1 = utils.create_mpl_ax(ax)
         if figsize is not None:
             fig.set_size_inches(figsize)
-        if getattr(self, 'halfwidths', None) is None:
+        if getattr(self, "halfwidths", None) is None:
             self._simultaneous_ci()
         means = self._multicomp.groupstats.groupmean
 
+        minrange = [mean - hw for mean, hw in zip(means, self.halfwidths)]
+        maxrange = [mean + hw for mean, hw in zip(means, self.halfwidths)]
 
-        sigidx = []
-        nsigidx = []
-        minrange = [means[i] - self.halfwidths[i] for i in range(len(means))]
-        maxrange = [means[i] + self.halfwidths[i] for i in range(len(means))]
+        if comparison_name:
+            sigidx, nsigidx, midx = self._process_comparison(
+                comparison_name, minrange, maxrange
+            )
 
-        if comparison_name is None:
-            ax1.errorbar(means, lrange(len(means)), xerr=self.halfwidths,
-                         marker='o', linestyle='None', color='k', ecolor='k')
+        if vertical:
+            if comparison_name:
+                self._plot_error_bars([midx], "b", "b", means, ax1, orientation="v")
+                ax1.plot(
+                    [-1, self._multicomp.ngroups],
+                    [minrange[midx]] * 2,
+                    linestyle="--",
+                    color="0.7",
+                )
+                ax1.plot(
+                    [-1, self._multicomp.ngroups],
+                    [maxrange[midx]] * 2,
+                    linestyle="--",
+                    color="0.7",
+                )
+                self._plot_error_bars(sigidx, "r", "r", means, ax1, orientation="v")
+                self._plot_error_bars(
+                    nsigidx, "0.5", "0.5", means, ax1, orientation="v"
+                )
+            else:
+                self._plot_error_bars(
+                    range(len(means)), "k", "k", means, ax1, orientation="v"
+                )
+            ax1.set_xlim([-1, self._multicomp.ngroups])
+            ax1.set_xticks(range(len(means)))
+            ax1.set_xticklabels(self.groupsunique.astype(str).tolist(), rotation=90)
+            ax1.set_xlabel(ylabel if ylabel is not None else "")
+            ax1.set_ylabel(xlabel if xlabel is not None else "")
         else:
-            if comparison_name not in self.groupsunique:
-                raise ValueError('comparison_name not found in group names.')
-            midx = np.where(self.groupsunique==comparison_name)[0][0]
-            for i in range(len(means)):
-                if self.groupsunique[i] == comparison_name:
-                    continue
-                if (min(maxrange[i], maxrange[midx]) -
-                                         max(minrange[i], minrange[midx]) < 0):
-                    sigidx.append(i)
-                else:
-                    nsigidx.append(i)
-            #Plot the main comparison
-            ax1.errorbar(means[midx], midx, xerr=self.halfwidths[midx],
-                         marker='o', linestyle='None', color='b', ecolor='b')
-            ax1.plot([minrange[midx]]*2, [-1, self._multicomp.ngroups],
-                     linestyle='--', color='0.7')
-            ax1.plot([maxrange[midx]]*2, [-1, self._multicomp.ngroups],
-                     linestyle='--', color='0.7')
-            #Plot those that are significantly different
-            if len(sigidx) > 0:
-                ax1.errorbar(means[sigidx], sigidx,
-                             xerr=self.halfwidths[sigidx], marker='o',
-                             linestyle='None', color='r', ecolor='r')
-            #Plot those that are not significantly different
-            if len(nsigidx) > 0:
-                ax1.errorbar(means[nsigidx], nsigidx,
-                             xerr=self.halfwidths[nsigidx], marker='o',
-                             linestyle='None', color='0.5', ecolor='0.5')
+            if comparison_name:
+                self._plot_error_bars([midx], "b", "b", means, ax1)
+                ax1.plot(
+                    [minrange[midx]] * 2,
+                    [-1, self._multicomp.ngroups],
+                    linestyle="--",
+                    color="0.7",
+                )
+                ax1.plot(
+                    [maxrange[midx]] * 2,
+                    [-1, self._multicomp.ngroups],
+                    linestyle="--",
+                    color="0.7",
+                )
+                self._plot_error_bars(sigidx, "r", "r", means, ax1)
+                self._plot_error_bars(nsigidx, "0.5", "0.5", means, ax1)
+            else:
+                self._plot_error_bars(range(len(means)), "k", "k", means, ax1)
+            ax1.set_ylim([-1, self._multicomp.ngroups])
+            ax1.set_yticks(range(len(means)))
+            ax1.set_yticklabels(self.groupsunique.astype(str).tolist())
+            ax1.set_xlabel(xlabel if xlabel is not None else "")
+            ax1.set_ylabel(ylabel if ylabel is not None else "")
 
-        ax1.set_title('Multiple Comparisons Between All Pairs (Tukey)')
+        ax1.set_title("Multiple Comparisons Between All Pairs (Tukey)")
         r = np.max(maxrange) - np.min(minrange)
-        ax1.set_ylim([-1, self._multicomp.ngroups])
-        ax1.set_xlim([np.min(minrange) - r / 10., np.max(maxrange) + r / 10.])
-        ylbls = [""] + self.groupsunique.astype(str).tolist() + [""]
-        ax1.set_yticks(np.arange(-1, len(means) + 1))
-        ax1.set_yticklabels(ylbls)
-        ax1.set_xlabel(xlabel if xlabel is not None else '')
-        ax1.set_ylabel(ylabel if ylabel is not None else '')
-        return fig
+        if vertical:
+            ax1.set_ylim([np.min(minrange) - r / 10.0, np.max(maxrange) + r / 10.0])
+        else:
+            ax1.set_xlim([np.min(minrange) - r / 10.0, np.max(maxrange) + r / 10.0])
 
+        return fig
 
 class MultiComparison:
     '''Tests for multiple comparisons
