@@ -1,7 +1,7 @@
 from statsmodels.compat.numpy import lstsq
 from statsmodels.compat.pandas import MONTH_END, YEAR_END, assert_index_equal
 from statsmodels.compat.platform import PLATFORM_WIN
-from statsmodels.compat.python import lrange
+from statsmodels.compat.python import PYTHON_IMPL_WASM, lrange
 
 import os
 import warnings
@@ -20,7 +20,6 @@ import pytest
 from scipy import stats
 from scipy.interpolate import interp1d
 
-from statsmodels.compat.python import PYTHON_IMPL_WASM
 from statsmodels.datasets import macrodata, modechoice, nile, randhie, sunspots
 from statsmodels.tools.sm_exceptions import (
     CollinearityWarning,
@@ -29,6 +28,7 @@ from statsmodels.tools.sm_exceptions import (
     MissingDataError,
     ValueWarning,
 )
+
 # Remove imports when range unit root test gets an R implementation
 from statsmodels.tools.validation import array_like, bool_like
 from statsmodels.tsa.arima_process import arma_acovf
@@ -48,6 +48,7 @@ from statsmodels.tsa.stattools import (
     kpss,
     levinson_durbin,
     levinson_durbin_pacf,
+    leybourne,
     pacf,
     pacf_burg,
     pacf_ols,
@@ -187,9 +188,7 @@ class TestADFNoConstant2(CheckADF):
         )
 
     def test_store_str(self):
-        assert_equal(
-            self.store.__str__(), "Augmented Dickey-Fuller Test Results"
-        )
+        assert_equal(self.store.__str__(), "Augmented Dickey-Fuller Test Results")
 
 
 @pytest.mark.parametrize("x", [np.full(8, 5.0)])
@@ -297,9 +296,7 @@ class TestACFMissing(CheckCorrGram):
         assert_almost_equal(self.res_drop[0][1:41], self.acf, DECIMAL_8)
 
     def test_acf_conservative(self):
-        assert_almost_equal(
-            self.res_conservative[0][1:41], self.acf, DECIMAL_8
-        )
+        assert_almost_equal(self.res_conservative[0][1:41], self.acf, DECIMAL_8)
 
     def test_qstat_none(self):
         # todo why is res1/qstat 1 short
@@ -350,10 +347,7 @@ class TestPACF(CheckCorrGram):
         pacfyw = pacf_yw(self.x, nlags=40, method="mle")
         assert_almost_equal(pacfyw[1:], self.pacfyw, DECIMAL_8)
 
-    @pytest.mark.skipif(
-        PYTHON_IMPL_WASM,
-        reason="No fp exception support in WASM"
-    )
+    @pytest.mark.skipif(PYTHON_IMPL_WASM, reason="No fp exception support in WASM")
     def test_yw_singular(self):
         with pytest.warns(ValueWarning):
             pacf(np.ones(30), nlags=6)
@@ -387,7 +381,7 @@ class TestCCF:
 
     @classmethod
     def setup_class(cls):
-        cls.ccf = cls.results['ccf']
+        cls.ccf = cls.results["ccf"]
         cls.res1 = ccf(cls.x, cls.y, nlags=cls.nlags, adjusted=False, fft=False)
 
     def test_ccf(self):
@@ -395,7 +389,9 @@ class TestCCF:
 
     def test_confint(self):
         alpha = 0.05
-        res2, confint = ccf(self.x, self.y, nlags=self.nlags, adjusted=False, fft=False, alpha=alpha)
+        res2, confint = ccf(
+            self.x, self.y, nlags=self.nlags, adjusted=False, fft=False, alpha=alpha
+        )
         assert_equal(res2, self.res1)
         assert_almost_equal(res2 - confint[:, 0], confint[:, 1] - res2, DECIMAL_8)
         alpha1 = stats.norm.cdf(confint[:, 1] - res2, scale=1.0 / np.sqrt(len(self.x)))
@@ -408,7 +404,7 @@ class TestBreakvarHeteroskedasticityTest:
     def test_1d_input(self):
 
         input_residuals = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]
-        expected_statistic = (4.0 ** 2 + 5.0 ** 2) / (0.0 ** 2 + 1.0 ** 2)
+        expected_statistic = (4.0**2 + 5.0**2) / (0.0**2 + 1.0**2)
         # ~ F(2, 2), two-sided test
         expected_pvalue = 2 * min(
             self.f.cdf(expected_statistic, 2, 2),
@@ -438,9 +434,8 @@ class TestBreakvarHeteroskedasticityTest:
         )
         expected_statistic = np.array(
             [
-                (8.0 ** 2 + 7.0 ** 2 + 6.0 ** 2)
-                / (0.0 ** 2 + 1.0 ** 2 + 2.0 ** 2),
-                (8.0 ** 2 + 7.0 ** 2 + 6.0 ** 2) / (0.0 ** 2 + 2.0 ** 2),
+                (8.0**2 + 7.0**2 + 6.0**2) / (0.0**2 + 1.0**2 + 2.0**2),
+                (8.0**2 + 7.0**2 + 6.0**2) / (0.0**2 + 2.0**2),
                 np.nan,
             ]
         )
@@ -473,9 +468,7 @@ class TestBreakvarHeteroskedasticityTest:
             (0.5, 10, 2 * min(f.cdf(10, 3, 3), f.sf(10, 3, 3))),
         ],
     )
-    def test_subset_length(
-        self, subset_length, expected_statistic, expected_pvalue
-    ):
+    def test_subset_length(self, subset_length, expected_statistic, expected_pvalue):
 
         input_residuals = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]
         actual_statistic, actual_pvalue = breakvar_heteroskedasticity_test(
@@ -494,9 +487,7 @@ class TestBreakvarHeteroskedasticityTest:
             ("increasing", 41, f.sf(41, 2, 2)),
         ],
     )
-    def test_alternative(
-        self, alternative, expected_statistic, expected_pvalue
-    ):
+    def test_alternative(self, alternative, expected_statistic, expected_pvalue):
 
         input_residuals = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]
         actual_statistic, actual_pvalue = breakvar_heteroskedasticity_test(
@@ -509,7 +500,7 @@ class TestBreakvarHeteroskedasticityTest:
     def test_use_chi2(self):
 
         input_residuals = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]
-        expected_statistic = (4.0 ** 2 + 5.0 ** 2) / (0.0 ** 2 + 1.0 ** 2)
+        expected_statistic = (4.0**2 + 5.0**2) / (0.0**2 + 1.0**2)
         expected_pvalue = 2 * min(
             self.chi2.cdf(2 * expected_statistic, 2),
             self.chi2.sf(2 * expected_statistic, 2),
@@ -547,9 +538,7 @@ class TestCoint_t(CheckCoint):
     @classmethod
     def setup_class(cls):
         # cls.coint_t = coint(cls.y1, cls.y2, trend="c")[0]
-        cls.coint_t = coint(cls.y1, cls.y2, trend="c", maxlag=0, autolag=None)[
-            0
-        ]
+        cls.coint_t = coint(cls.y1, cls.y2, trend="c", maxlag=0, autolag=None)[0]
         cls.teststat = -1.8208817
         cls.teststat = -1.830170986148
 
@@ -657,9 +646,7 @@ def test_coint():
     for trend in ["c", "ct", "ctt", "n"]:
         res1 = {}
         res1[0] = coint(y[:, 0], y[:, 1], trend=trend, maxlag=4, autolag=None)
-        res1[1] = coint(
-            y[:, 0], y[:, 1:3], trend=trend, maxlag=4, autolag=None
-        )
+        res1[1] = coint(y[:, 0], y[:, 1:3], trend=trend, maxlag=4, autolag=None)
         res1[2] = coint(y[:, 0], y[:, 2:], trend=trend, maxlag=4, autolag=None)
         res1[3] = coint(y[:, 0], y[:, 1:], trend=trend, maxlag=4, autolag=None)
 
@@ -703,7 +690,7 @@ def test_coint_perfect_collinearity():
     x = scale_e * np.random.randn(nobs, 2)
     y = 1 + x.sum(axis=1) + 1e-7 * np.random.randn(nobs)
     warnings.simplefilter("always", CollinearityWarning)
-    with warnings.catch_warnings(record=True) as w:
+    with warnings.catch_warnings(record=True):
         c = coint(y, x, trend="c", maxlag=0, autolag=None)
     assert_equal(c[1], 0.0)
     assert_(np.isneginf(c[0]))
@@ -722,9 +709,7 @@ class TestGrangerCausality:
         with pytest.warns(FutureWarning, match="verbose is"):
             gr = grangercausalitytests(data[:, 1::-1], 2, verbose=False)
         assert_almost_equal(r_result, gr[2][0]["ssr_ftest"], decimal=7)
-        assert_almost_equal(
-            gr[2][0]["params_ftest"], gr[2][0]["ssr_ftest"], decimal=7
-        )
+        assert_almost_equal(gr[2][0]["params_ftest"], gr[2][0]["ssr_ftest"], decimal=7)
 
     def test_grangercausality_single(self):
         mdata = macrodata.load_pandas().data
@@ -737,12 +722,8 @@ class TestGrangerCausality:
             gr2 = grangercausalitytests(data[:, 1::-1], [2], verbose=False)
         assert 1 in gr
         assert 1 not in gr2
-        assert_almost_equal(
-            gr[2][0]["ssr_ftest"], gr2[2][0]["ssr_ftest"], decimal=7
-        )
-        assert_almost_equal(
-            gr[2][0]["params_ftest"], gr2[2][0]["ssr_ftest"], decimal=7
-        )
+        assert_almost_equal(gr[2][0]["ssr_ftest"], gr2[2][0]["ssr_ftest"], decimal=7)
+        assert_almost_equal(gr[2][0]["params_ftest"], gr2[2][0]["ssr_ftest"], decimal=7)
 
     def test_granger_fails_on_nobs_check(self, reset_randomstate):
         # Test that if maxlag is too large, Granger Test raises a clear error.
@@ -804,9 +785,7 @@ class TestKPSS:
         with pytest.warns(InterpolationWarning):
             kpss(self.x, "CT", nlags="legacy")
 
-        assert_raises(
-            ValueError, kpss, self.x, "unclear hypothesis", nlags="legacy"
-        )
+        assert_raises(ValueError, kpss, self.x, "unclear hypothesis", nlags="legacy")
 
     def test_teststat(self):
         with pytest.warns(InterpolationWarning):
@@ -861,9 +840,7 @@ class TestKPSS:
         # clear error
         # GH5925
         nobs = len(self.x)
-        msg = r"lags \({}\) must be < number of observations \({}\)".format(
-            nobs, nobs
-        )
+        msg = r"lags \({}\) must be < number of observations \({}\)".format(nobs, nobs)
         with pytest.raises(ValueError, match=msg):
             kpss(self.x, "c", nlags=nobs)
 
@@ -919,9 +896,7 @@ class TestRUR:
         # Table from [1] has been replicated using 200,000 samples
         # Critical values for new n_obs values have been identified
         pvals = [0.01, 0.025, 0.05, 0.10, 0.90, 0.95]
-        n = np.array(
-            [25, 50, 100, 150, 200, 250, 500, 1000, 2000, 3000, 4000, 5000]
-        )
+        n = np.array([25, 50, 100, 150, 200, 250, 500, 1000, 2000, 3000, 4000, 5000])
         crit = np.array(
             [
                 [0.6626, 0.8126, 0.9192, 1.0712, 2.4863, 2.7312],
@@ -981,9 +956,7 @@ class TestRUR:
             direction = "larger"
 
         if direction:
-            warnings.warn(
-                warn_msg.format(direction=direction), InterpolationWarning
-            )
+            warnings.warn(warn_msg.format(direction=direction), InterpolationWarning)
 
         crit_dict = {
             "10%": inter_crit[0, 3],
@@ -1173,15 +1146,13 @@ def test_arma_order_select_ic_failure():
     with warnings.catch_warnings():
         # catch a hessian inversion and convergence failure warning
         warnings.simplefilter("ignore")
-        res = arma_order_select_ic(y)
+        arma_order_select_ic(y)
 
 
 def test_acf_fft_dataframe():
     # regression test #322
 
-    result = acf(
-        sunspots.load_pandas().data[["SUNACTIVITY"]], fft=True, nlags=20
-    )
+    result = acf(sunspots.load_pandas().data[["SUNACTIVITY"]], fft=True, nlags=20)
     assert_equal(result.ndim, 1)
 
 
@@ -1190,7 +1161,7 @@ def test_levinson_durbin_acov():
     m = 20
     acov = rho ** np.arange(200)
     sigma2_eps, ar, pacf, _, _ = levinson_durbin(acov, m, isacov=True)
-    assert_allclose(sigma2_eps, 1 - rho ** 2)
+    assert_allclose(sigma2_eps, 1 - rho**2)
     assert_allclose(ar, np.array([rho] + [0] * (m - 1)), atol=1e-8)
     assert_allclose(pacf, np.array([1, rho] + [0] * (m - 1)), atol=1e-8)
 
@@ -1200,9 +1171,7 @@ def test_levinson_durbin_acov():
 @pytest.mark.parametrize("demean", [True, False])
 @pytest.mark.parametrize("adjusted", [True, False])
 def test_acovf_nlags(acovf_data, adjusted, demean, fft, missing):
-    full = acovf(
-        acovf_data, adjusted=adjusted, demean=demean, fft=fft, missing=missing
-    )
+    full = acovf(acovf_data, adjusted=adjusted, demean=demean, fft=fft, missing=missing)
     limited = acovf(
         acovf_data,
         adjusted=adjusted,
@@ -1221,9 +1190,7 @@ def test_acovf_nlags(acovf_data, adjusted, demean, fft, missing):
 def test_acovf_nlags_missing(acovf_data, adjusted, demean, fft, missing):
     acovf_data = acovf_data.copy()
     acovf_data[1:3] = np.nan
-    full = acovf(
-        acovf_data, adjusted=adjusted, demean=demean, fft=fft, missing=missing
-    )
+    full = acovf(acovf_data, adjusted=adjusted, demean=demean, fft=fft, missing=missing)
     limited = acovf(
         acovf_data,
         adjusted=adjusted,
@@ -1301,7 +1268,7 @@ def test_pacf_burg():
     ye = y - y.mean()
     s2y = ye.dot(ye) / 10000
     pacf[0] = 0
-    sigma2_direct = s2y * np.cumprod(1 - pacf ** 2)
+    sigma2_direct = s2y * np.cumprod(1 - pacf**2)
     assert_allclose(sigma2, sigma2_direct, atol=1e-3)
 
 
@@ -1314,7 +1281,7 @@ def test_pacf_burg_error():
 
 def test_innovations_algo_brockwell_davis():
     ma = -0.9
-    acovf = np.array([1 + ma ** 2, ma])
+    acovf = np.array([1 + ma**2, ma])
     theta, sigma2 = innovations_algo(acovf, nobs=4)
     exp_theta = np.array([[0], [-0.4972], [-0.6606], [-0.7404]])
     assert_allclose(theta, exp_theta, rtol=1e-4)
@@ -1327,7 +1294,7 @@ def test_innovations_algo_brockwell_davis():
 
 def test_innovations_algo_rtol():
     ma = np.array([-0.9, 0.5])
-    acovf = np.array([1 + (ma ** 2).sum(), ma[0] + ma[1] * ma[0], ma[1]])
+    acovf = np.array([1 + (ma**2).sum(), ma[0] + ma[1] * ma[0], ma[1]])
     theta, sigma2 = innovations_algo(acovf, nobs=500)
     theta_2, sigma2_2 = innovations_algo(acovf, nobs=500, rtol=1e-8)
     assert_allclose(theta, theta_2)
@@ -1336,7 +1303,7 @@ def test_innovations_algo_rtol():
 
 def test_innovations_errors():
     ma = -0.9
-    acovf = np.array([1 + ma ** 2, ma])
+    acovf = np.array([1 + ma**2, ma])
     with pytest.raises(TypeError):
         innovations_algo(acovf, nobs=2.2)
     with pytest.raises(ValueError):
@@ -1349,7 +1316,7 @@ def test_innovations_errors():
 
 def test_innovations_filter_brockwell_davis(reset_randomstate):
     ma = -0.9
-    acovf = np.array([1 + ma ** 2, ma])
+    acovf = np.array([1 + ma**2, ma])
     theta, _ = innovations_algo(acovf, nobs=4)
     e = np.random.randn(5)
     endog = e[1:] + ma * e[:-1]
@@ -1363,7 +1330,7 @@ def test_innovations_filter_brockwell_davis(reset_randomstate):
 
 def test_innovations_filter_pandas(reset_randomstate):
     ma = np.array([-0.9, 0.5])
-    acovf = np.array([1 + (ma ** 2).sum(), ma[0] + ma[1] * ma[0], ma[1]])
+    acovf = np.array([1 + (ma**2).sum(), ma[0] + ma[1] * ma[0], ma[1]])
     theta, _ = innovations_algo(acovf, nobs=10)
     endog = np.random.randn(10)
     endog_pd = pd.Series(endog, index=pd.date_range("2000-01-01", periods=10))
@@ -1375,7 +1342,7 @@ def test_innovations_filter_pandas(reset_randomstate):
 
 def test_innovations_filter_errors():
     ma = -0.9
-    acovf = np.array([1 + ma ** 2, ma])
+    acovf = np.array([1 + ma**2, ma])
     theta, _ = innovations_algo(acovf, nobs=4)
     with pytest.raises(ValueError):
         innovations_filter(np.empty((2, 2)), theta)
@@ -1398,13 +1365,11 @@ def test_innovations_algo_filter_kalman_filter(reset_randomstate):
     endog = np.random.normal(size=10)
 
     # Innovations algorithm approach
-    acovf = arma_acovf(
-        np.r_[1, -ar_params], np.r_[1, ma_params], nobs=len(endog)
-    )
+    acovf = arma_acovf(np.r_[1, -ar_params], np.r_[1, ma_params], nobs=len(endog))
 
     theta, v = innovations_algo(acovf)
     u = innovations_filter(endog, theta)
-    llf_obs = -0.5 * u ** 2 / (sigma2 * v) - 0.5 * np.log(2 * np.pi * v)
+    llf_obs = -0.5 * u**2 / (sigma2 * v) - 0.5 * np.log(2 * np.pi * v)
 
     # Kalman filter apparoach
     mod = SARIMAX(endog, order=(len(ar_params), 0, len(ma_params)))
@@ -1413,9 +1378,7 @@ def test_innovations_algo_filter_kalman_filter(reset_randomstate):
     # Test that the two approaches are identical
     atol = 1e-6 if PLATFORM_WIN else 0.0
     assert_allclose(u, res.forecasts_error[0], rtol=1e-6, atol=atol)
-    assert_allclose(
-        theta[1:, 0], res.filter_results.kalman_gain[0, 0, :-1], atol=atol
-    )
+    assert_allclose(theta[1:, 0], res.filter_results.kalman_gain[0, 0, :-1], atol=atol)
     assert_allclose(llf_obs, res.llf_obs, atol=atol)
 
 
@@ -1472,12 +1435,8 @@ class TestZivotAndrews(SetupZivotAndrews):
 
     # following tests compare results to R package urca.ur.za (1.13-0)
     def test_rgnp_case(self):
-        res = zivot_andrews(
-            self.fail_mdl, maxlag=8, regression="c", autolag=None
-        )
-        assert_allclose(
-            [res[0], res[1], res[4]], [-5.57615, 0.00312, 20], rtol=1e-3
-        )
+        res = zivot_andrews(self.fail_mdl, maxlag=8, regression="c", autolag=None)
+        assert_allclose([res[0], res[1], res[4]], [-5.57615, 0.00312, 20], rtol=1e-3)
 
     def test_gnpdef_case(self):
         mdlfile = os.path.join(self.run_dir, "gnpdef.csv")
@@ -1589,8 +1548,9 @@ def test_granger_causality_verbose(gc_data):
     with pytest.warns(FutureWarning, match="verbose"):
         grangercausalitytests(gc_data, 3, verbose=True)
 
-@pytest.mark.parametrize("size",[3,5,7,9])
-def test_pacf_small_sample(size,reset_randomstate):
+
+@pytest.mark.parametrize("size", [3, 5, 7, 9])
+def test_pacf_small_sample(size, reset_randomstate):
     y = np.random.standard_normal(size)
     a = pacf(y)
     assert isinstance(a, np.ndarray)
@@ -1616,15 +1576,108 @@ def test_pacf_1_obs(reset_randomstate):
 
 def test_zivot_andrews_change_data(reset_randomstate):
     # GH9307
-    years = pd.date_range(start='1990-01-01', end='2023-12-31', freq='YS')
+    years = pd.date_range(start="1990-01-01", end="2023-12-31", freq="YS")
     df = pd.DataFrame(index=years)
-    df['variable1'] = np.where(df.index.year <= 2002, 10, 20)
-    df['variable2'] = np.where(df.index.year <= 2002, 10, 20)
+    df["variable1"] = np.where(df.index.year <= 2002, 10, 20)
+    df["variable2"] = np.where(df.index.year <= 2002, 10, 20)
     df.iloc[-1] = 30
 
     # Zivot-Andrews test with data with type float64
     df = df.astype(float)
     df_original = df.copy()
-    zivot_andrews(df['variable1'])
-    zivot_andrews(df['variable1'], regression='c')
+    zivot_andrews(df["variable1"])
+    zivot_andrews(df["variable1"], regression="c")
     pd.testing.assert_frame_equal(df, df_original)
+
+
+class TestLeybourneMcCabe:
+    cur_dir = CURR_DIR
+    run_dir = os.path.join(cur_dir, "results")
+
+    # failure mode tests
+    def test_fail_inputs(self):
+        # use results/BAA.csv file for testing failure modes
+        fail_file = os.path.join(self.run_dir, "BAA.csv")
+        fail_mdl = np.asarray(pd.read_csv(fail_file))
+        with pytest.raises(ValueError):
+            leybourne(fail_mdl, regression="nc")
+        with pytest.raises(ValueError):
+            leybourne(fail_mdl, method="gls")
+        with pytest.raises(ValueError):
+            leybourne(fail_mdl, varest="var98")
+        with pytest.raises(ValueError):
+            leybourne([[1, 1], [2, 2]], regression="c")
+        with pytest.raises(ValueError):
+            leybourne(fail_mdl, arlags=250)
+        with pytest.raises(ValueError):
+            leybourne(fail_mdl, arlags="error")
+
+    # the following tests use data sets from Schwert (1987)
+    # and were verified against Matlab 9.13
+    def test_baa_results(self):
+        mdl_file = os.path.join(self.run_dir, "BAA.csv")
+        mdl = np.asarray(pd.read_csv(mdl_file))
+        res = leybourne(mdl, regression="ct", method="mle")
+        assert_allclose(res[0:3], [5.4438, 0.0000, 3], rtol=1e-4, atol=1e-4)
+        res = leybourne(mdl, regression="ct")
+        assert_allclose(res[0:3], [5.4757, 0.0000, 3], rtol=1e-4, atol=1e-4)
+
+    def test_dbaa_results(self):
+        mdl_file = os.path.join(self.run_dir, "DBAA.csv")
+        mdl = np.asarray(pd.read_csv(mdl_file))
+        res = leybourne(mdl, method="mle")
+        assert_allclose(res[0:3], [0.096534, 0.602535, 2], rtol=1e-4, atol=1e-4)
+        res = leybourne(mdl, regression="ct", method="mle")
+        assert_allclose(res[0:3], [0.047924, 0.601817, 2], rtol=1e-4, atol=1e-4)
+
+    def test_dsp500_results(self):
+        mdl_file = os.path.join(self.run_dir, "DSP500.csv")
+        mdl = np.asarray(pd.read_csv(mdl_file))
+        res = leybourne(mdl, method="mle")
+        assert_allclose(res[0:3], [0.3118, 0.1256, 0], rtol=1e-4, atol=1e-4)
+        res = leybourne(mdl, varest="var99", method="mle")
+        assert_allclose(res[0:3], [0.306886, 0.129934, 0], rtol=1e-4, atol=1e-4)
+
+    def test_dun_results(self):
+        mdl_file = os.path.join(self.run_dir, "DUN.csv")
+        mdl = np.asarray(pd.read_csv(mdl_file))
+        res = leybourne(mdl, regression="ct", method="ols")
+        assert_allclose(res[0:3], [0.0938, 0.1890, 3], rtol=1e-4, atol=1e-4)
+
+    @pytest.mark.xfail(reason="Fails due to numerical issues", strict=False)
+    def test_dun_results_arima(self):
+        mdl_file = os.path.join(self.run_dir, "DUN.csv")
+        mdl = np.asarray(pd.read_csv(mdl_file))
+        res = leybourne(mdl, regression="ct")
+        assert_allclose(res[0], 0.024083, rtol=1e-4, atol=1e-4)
+        assert_allclose(res[1], 0.943151, rtol=1e-4, atol=1e-4)
+        assert res[2] == 3
+
+    def test_sp500_results(self):
+        mdl_file = os.path.join(self.run_dir, "SP500.csv")
+        mdl = np.asarray(pd.read_csv(mdl_file))
+        res = leybourne(mdl, arlags=4, regression="ct", method="mle")
+        assert_allclose(res[0:2], [1.8761, 0.0000], rtol=1e-4, atol=1e-4)
+        res = leybourne(mdl, arlags=4, regression="ct")
+        assert_allclose(res[0:2], [1.9053, 0.0000], rtol=1e-4, atol=1e-4)
+
+    def test_un_results(self):
+        mdl_file = os.path.join(self.run_dir, "UN.csv")
+        mdl = np.asarray(pd.read_csv(mdl_file))
+        res = leybourne(mdl, method="ols", varest="var99")
+        assert_allclose(res[0:3], [556.0444, 0.0000, 4], rtol=1e-4, atol=1e-4)
+
+    @pytest.mark.xfail(reason="Fails due to numerical issues", strict=False)
+    def test_un_results_arima(self):
+        mdl_file = os.path.join(self.run_dir, "UN.csv")
+        mdl = np.asarray(pd.read_csv(mdl_file))
+        res = leybourne(mdl, varest="var99")
+        assert_allclose(res[0], 285.5181, rtol=1e-4, atol=1e-4)
+        assert_allclose(res[1], 0.0000, rtol=1e-4, atol=1e-4)
+        assert res[2] == 4
+
+    def test_lm_whitenoise(self):
+        rg = np.random.RandomState(0)
+        y = rg.standard_normal(250)
+        res = leybourne(y, method="ols", varest="var99")
+        assert res[2] == 0
