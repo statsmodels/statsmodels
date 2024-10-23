@@ -12,6 +12,7 @@ from scipy import stats, integrate, optimize
 
 from . import transforms
 from .copulas import Copula
+from ._special import sterling1s, sterling2, polylog_vec
 from statsmodels.tools.rng_qrng import check_random_state
 
 
@@ -300,23 +301,6 @@ class FrankCopula(ArchimedeanCopula):
         return -1. / th * np.log(1. + np.exp(-(-np.log(x) / v))
                                  * (np.exp(-th) - 1.))
 
-    # explicit BV formulas copied from Joe 1997 p. 141
-    # todo: check expm1 and log1p for improved numerical precision
-
-    def pdf(self, u, args=()):
-        u = self._handle_u(u)
-        th, = self._handle_args(args)
-        if u.shape[-1] != 2:
-            return super().pdf(u, th)
-
-        g_ = np.exp(-th * np.sum(u, axis=-1)) - 1
-        g1 = np.exp(-th) - 1
-
-        num = -th * g1 * (1 + g_)
-        aux = np.prod(np.exp(-th * u) - 1, axis=-1) + g1
-        den = aux ** 2
-        return num / den
-
     def cdf(self, u, args=()):
         u = self._handle_u(u)
         th, = self._handle_args(args)
@@ -327,21 +311,29 @@ class FrankCopula(ArchimedeanCopula):
 
         return -1.0 / th * np.log(1 - num / den)
 
+
+    def pdf(self, u, args=()):
+        u = self._handle_u(u)
+        th, = self._handle_args(args)
+        dim = u.shape[-1]
+
+        # multivariate density from https://arxiv.org/abs/1207.1708
+        a = (th / -np.expm1(-th)) ** (dim - 1)
+        b = np.exp(-th * np.sum(u, axis=-1))
+        hf = (-np.expm1(-th)) ** (1 - dim) * np.prod(-np.expm1(-th * u),
+                                                     axis=-1)
+        return a * b * polylog_vec(1 - dim, hf) / hf
+
     def logpdf(self, u, args=()):
         u = self._handle_u(u)
         th, = self._handle_args(args)
-        if u.shape[-1] == 2:
-            # bivariate case
-            u1, u2 = u[..., 0], u[..., 1]
-            b = 1 - np.exp(-th)
-            pdf = np.log(th * b) - th * (u1 + u2)
-            pdf -= 2 * np.log(b - (1 - np.exp(- th * u1)) *
-                              (1 - np.exp(- th * u2)))
-            return pdf
-        else:
-            # for now use generic from base Copula class, log(self.pdf(...))
-            # we skip Archimedean logpdf, that uses numdiff
-            return super().logpdf(u, args)
+        dim = u.shape[-1]
+
+        a = (dim - 1) * (np.log(th) - np.log1p(-np.exp(-th)))
+        b = -th * np.sum(u, axis=-1)
+        hf = (-np.expm1(-th)) ** (1 - dim) * np.prod(-np.expm1(-th * u),
+                                                     axis=-1)
+        return a + b + np.log(polylog_vec(1 - dim, hf)) - np.log(hf)
 
     def cdfcond_2g1(self, u, args=()):
         """Conditional cdf of second component given the value of first.
@@ -436,26 +428,6 @@ class GumbelCopula(ArchimedeanCopula):
             rv = self.transform.inverse(- np.log(x) / v, th)
         return rv
 
-    def pdf(self, u, args=()):
-        u = self._handle_u(u)
-        th, = self._handle_args(args)
-        if u.shape[-1] == 2:
-            xy = -np.log(u)
-            xy_theta = xy ** th
-
-            sum_xy_theta = np.sum(xy_theta, axis=-1)
-            sum_xy_theta_theta = sum_xy_theta ** (1.0 / th)
-
-            a = np.exp(-sum_xy_theta_theta)
-            b = sum_xy_theta_theta + th - 1.0
-            c = sum_xy_theta ** (1.0 / th - 2)
-            d = np.prod(xy, axis=-1) ** (th - 1.0)
-            e = np.prod(u, axis=-1) ** (- 1.0)
-
-            return a * b * c * d * e
-        else:
-            return super().pdf(u, args)
-
     def cdf(self, u, args=()):
         u = self._handle_u(u)
         th, = self._handle_args(args)
@@ -463,9 +435,61 @@ class GumbelCopula(ArchimedeanCopula):
         cdf = np.exp(-h ** (1.0 / th))
         return cdf
 
+
+    def pdf(self, u, args=()):
+        u = self._handle_u(u)
+        th, = self._handle_args(args)
+        dim = u.shape[-1]
+
+        # multivariate density from https://arxiv.org/abs/1207.1708
+        mlnui = -np.log(u)
+        psiinv = mlnui ** th
+        t = np.sum(psiinv, axis=-1)
+        ta = t ** (1 / th)
+
+        a = th ** dim
+        b = np.exp(-ta)
+        c = np.prod(mlnui ** (th - 1), axis=-1)
+        d = np.prod(u, axis=-1) ** (-1)
+        e = t ** (-dim)
+
+        thj = (1 / th) ** np.arange(dim + 1)  # precalculation
+        adk = lambda k: (-1) ** (dim - k) * sum(
+            thj[j] * sterling1s(dim, j) * sterling2(j, k)
+            for j in range(k, dim + 1))
+        # be careful with np.arange because it returns int32 which can lead
+        # to overflow in sterling
+        kr = range(1, dim + 1)
+        pda = np.sum([adk(k) for k in kr] * np.power(
+            (np.ones([dim, *ta.shape]) * ta).T, kr), axis=-1)
+
+        return a * b * c * d * e * pda
+
     def logpdf(self, u, args=()):
-        # we skip Archimedean logpdf, that uses numdiff
-        return super().logpdf(u, args=args)
+        u = self._handle_u(u)
+        th, = self._handle_args(args)
+        dim = u.shape[-1]
+
+        mlnui = -np.log(u)
+        psiinv = mlnui ** th
+        t = np.sum(psiinv, axis=-1)
+        ta = t ** (1 / th)
+
+        a = dim * np.log(th)
+        b = -ta
+        c = (th - 1) * np.sum(np.log(mlnui), axis=-1)
+        d = -dim * np.log(t)
+        e = np.sum(mlnui, axis=-1)
+
+        thj = (1 / th) ** np.arange(dim + 1)  # precalculation
+        adk = lambda k: (-1) ** (dim - k) * sum(
+            thj[j] * sterling1s(dim, j) * sterling2(j, k)
+            for j in range(k, dim + 1))
+        kr = range(1, dim + 1)
+        pda = np.sum([adk(k) for k in kr] * np.power(
+            (np.ones([dim, *ta.shape]) * ta).T, kr), axis=-1)
+
+        return a + b + c + d + e + np.log(pda)
 
     def tau(self, theta=None):
         # Joe 2014 p. 172
