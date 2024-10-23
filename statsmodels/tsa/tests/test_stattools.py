@@ -1617,26 +1617,26 @@ class TestLeybourneMcCabe:
     def test_baa_results(self):
         mdl_file = os.path.join(self.run_dir, "BAA.csv")
         mdl = np.asarray(pd.read_csv(mdl_file))
-        res = leybourne(mdl, regression="ct")
+        res = leybourne(mdl, regression="ct", method="mle")
         assert_allclose(res[0:3], [5.4438, 0.0000, 3], rtol=1e-4, atol=1e-4)
-        res = leybourne(mdl, regression="ct", method="ols")
+        res = leybourne(mdl, regression="ct")
         assert_allclose(res[0:3], [5.4757, 0.0000, 3], rtol=1e-4, atol=1e-4)
 
     def test_dbaa_results(self):
         mdl_file = os.path.join(self.run_dir, "DBAA.csv")
         mdl = np.asarray(pd.read_csv(mdl_file))
-        res = leybourne(mdl)
-        assert_allclose(res[0:3], [0.1173, 0.5072, 2], rtol=1e-4, atol=1e-4)
-        res = leybourne(mdl, regression="ct")
-        assert_allclose(res[0:3], [0.1175, 0.1047, 2], rtol=1e-4, atol=1e-4)
+        res = leybourne(mdl, method="mle")
+        assert_allclose(res[0:3], [0.096534, 0.602535, 2], rtol=1e-4, atol=1e-4)
+        res = leybourne(mdl, regression="ct", method="mle")
+        assert_allclose(res[0:3], [0.047924, 0.601817, 2], rtol=1e-4, atol=1e-4)
 
     def test_dsp500_results(self):
         mdl_file = os.path.join(self.run_dir, "DSP500.csv")
         mdl = np.asarray(pd.read_csv(mdl_file))
-        res = leybourne(mdl)
+        res = leybourne(mdl, method="mle")
         assert_allclose(res[0:3], [0.3118, 0.1256, 0], rtol=1e-4, atol=1e-4)
-        res = leybourne(mdl, varest="var99")
-        assert_allclose(res[0:3], [0.3145, 0.1235, 0], rtol=1e-4, atol=1e-4)
+        res = leybourne(mdl, varest="var99", method="mle")
+        assert_allclose(res[0:3], [0.306886, 0.129934, 0], rtol=1e-4, atol=1e-4)
 
     def test_dun_results(self):
         mdl_file = os.path.join(self.run_dir, "DUN.csv")
@@ -1644,23 +1644,21 @@ class TestLeybourneMcCabe:
         res = leybourne(mdl, regression="ct", method="ols")
         assert_allclose(res[0:3], [0.0938, 0.1890, 3], rtol=1e-4, atol=1e-4)
 
-    @pytest.mark.xfail(
-        reason="ARIMA estimation is not reliable enough across platforms"
-    )
+    @pytest.mark.xfail(reason="Fails due to numerical issues", strict=False)
     def test_dun_results_arima(self):
         mdl_file = os.path.join(self.run_dir, "DUN.csv")
         mdl = np.asarray(pd.read_csv(mdl_file))
         res = leybourne(mdl, regression="ct")
-        assert_allclose(res[0], 0.0255, rtol=1e-4, atol=1e-4)
-        assert_allclose(res[1], 0.9281, rtol=1e-4, atol=1e-4)
+        assert_allclose(res[0], 0.024083, rtol=1e-4, atol=1e-4)
+        assert_allclose(res[1], 0.943151, rtol=1e-4, atol=1e-4)
         assert res[2] == 3
 
     def test_sp500_results(self):
         mdl_file = os.path.join(self.run_dir, "SP500.csv")
         mdl = np.asarray(pd.read_csv(mdl_file))
-        res = leybourne(mdl, arlags=4, regression="ct")
+        res = leybourne(mdl, arlags=4, regression="ct", method="mle")
         assert_allclose(res[0:2], [1.8761, 0.0000], rtol=1e-4, atol=1e-4)
-        res = leybourne(mdl, arlags=4, regression="ct", method="ols")
+        res = leybourne(mdl, arlags=4, regression="ct")
         assert_allclose(res[0:2], [1.9053, 0.0000], rtol=1e-4, atol=1e-4)
 
     def test_un_results(self):
@@ -1669,10 +1667,8 @@ class TestLeybourneMcCabe:
         res = leybourne(mdl, method="ols", varest="var99")
         assert_allclose(res[0:3], [556.0444, 0.0000, 4], rtol=1e-4, atol=1e-4)
 
-    @pytest.mark.xfail(
-        reason="ARIMA estimation is not reliable enough across platforms"
-    )
-    def test_un_results_arims(self):
+    @pytest.mark.xfail(reason="Fails due to numerical issues", strict=False)
+    def test_un_results_arima(self):
         mdl_file = os.path.join(self.run_dir, "UN.csv")
         mdl = np.asarray(pd.read_csv(mdl_file))
         res = leybourne(mdl, varest="var99")

@@ -2864,8 +2864,8 @@ class LeybourneMcCabeStationarity:
             * 'ct' : constant and trend
         method : {'mle','ols'}
             Method used to estimate ARIMA(p, 1, 1) filter model
-            * 'mle' : condition sum of squares maximum likelihood (default)
-            * 'ols' : two-stage least squares
+            * 'mle' : condition sum of squares maximum likelihood
+            * 'ols' : two-stage least squares (default)
         varest : {'var94','var99'}
             Method used for residual variance estimation
             * 'var94' : method used in original Leybourne-McCabe paper (1994)
@@ -2950,7 +2950,10 @@ class LeybourneMcCabeStationarity:
 
             from statsmodels.tsa.arima.model import ARIMA
 
-            arfit = ARIMA(x, order=(arlags, 1, 1), trend=reg).fit()
+            arima = ARIMA(
+                x, order=(arlags, 1, 1), trend=reg, enforce_invertibility=False
+            )
+            arfit = arima.fit()
             resids = arfit.resid
             arcoeffs = []
             if arlags > 0:
@@ -2985,7 +2988,7 @@ class LeybourneMcCabeStationarity:
         lmpval, cvdict = self.__leybourne_crit(lmstat, regression)
         return lmstat, lmpval, arlags, cvdict
 
-    def __call__(self, x, arlags=None, regression="c", method="mle", varest="var94"):
+    def __call__(self, x, arlags=None, regression="c", method="ols", varest="var94"):
         return self.run(
             x, arlags=arlags, regression=regression, method=method, varest=varest
         )
