@@ -1,0 +1,70 @@
+This file has automatically been generated.
+Wed Sep 11 00:51:59 2013
+Michel Bierlaire, EPFL
+
+biogeme 2.3 [mar ago 13 00:04:12 CEST 2013]
+Michel Bierlaire, EPFL
+
+[00:51:59]patFileNames.cc:49  Travelmodechoice.par does not exist
+[00:51:59]patFileNames.cc:53  Trying default.par instead
+[00:51:59]patBiogeme.cc:136  File default.par does not exist. Default values will be used
+[00:51:59]patBiogeme.cc:138  A file default.par has been created
+ Read headers in Travelmodechoice.dat
+ 14 headers read in Travelmodechoice.dat
+ Total number of different headers: 14
+ Read file Travelmodechoice.mod
+ Opening file Travelmodechoice.dat
+ Total obs.:   209
+ Total memory: 47.9883 Kb
+ Detailed info in Travelmodechoice.sta
+ Nbr of attributes: 15
+ Nbr of alternatives: 4
+ Sample size: 210
+ Nbr of groups: 1
+ Nbr of betas: 7
+ Run time for data processing: 00:00
+ Dimension of the optimisation problem = 6
+ Utility function: Linear-in-parameters
+ Init loglike=-291.122
+     gmax Iter   radius        f(x)     Status       rhok nFree
+ +3.43e-02    1 1.00e+00 +2.9112182e+02 ****Converg  +1.00e+00 6  ++ P
+ +3.44e-02    2 2.00e+00 +2.5387416e+02 ****OutTrReg +9.56e-01 6  ++ P
+ +4.68e-02    3 4.00e+00 +2.2231568e+02 ****Converg  +1.00e+00 6  ++ P
+ +5.19e-02    4 8.00e+00 +2.1632567e+02 ****Converg  +1.09e+00 6  ++ P
+ +3.43e-02    5 1.60e+01 +1.9988503e+02 ****Converg  +1.01e+00 6  ++ P
+ +3.00e-02    6 3.20e+01 +1.9976654e+02 ****Converg  +1.05e+00 6  ++ P
+ +1.04e-02    7 6.40e+01 +1.9913199e+02 ****Converg  +1.00e+00 6  ++ P
+ +9.56e-04    8 1.28e+02 +1.9913107e+02 ****Converg  +1.00e+00 6  ++ P
+ +4.71e-05    9 2.56e+02 +1.9912837e+02 ****Converg  +1.00e+00 6  ++ P
+ Convergence reached...
+ Run time: 00:00
+ Solution = (5.20717	3.16304	3.86889	-0.0155013	0.0132882	-0.0961214	)
+ Gradient = (-0.00024437	-0.000251562	-0.000248987	0.000112021	0.000201291	-0.000703405	)
+ Final log-likelihood=-199.128
+ Be patient... BIOGEME is preparing the output files
+ Run time for var/covar computation: 00:00
+ BIOGEME Input files
+ ===================
+ Parameters:			default.par
+ Model specification:		Travelmodechoice.mod
+ Sample 1 :				Travelmodechoice.dat
+ BIOGEME Output files
+ ====================
+ Estimation results:		Travelmodechoice.rep
+ Estimation results (HTML):	Travelmodechoice.html
+ Estimation results (Latex):	Travelmodechoice.tex
+ Estimation results (ALogit):	Travelmodechoice.F12
+ Result model spec. file:	Travelmodechoice.res
+ Sample statistics:		Travelmodechoice.sta
+ BIOGEME Debug files
+ ===================
+ Log file:			Travelmodechoice.log
+ Parameters debug:		parameters.out
+ Model debug:			model.debug
+ Model spec. file debug:		__specFile.debug
+ Model informations: Logit Model
+ ==================
+ The minimum argument of exp was -7.71214
+
+ Run time for estimation:      00:00
+ Total run time:               00:00
