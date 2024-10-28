@@ -1951,6 +1951,100 @@ def arma_order_select_ic(
     return Bunch(**res)
 
 
+def diebold_mariano_test(y, forecast1, forecast2, horizon=1,
+                         criterion="MSE", power=2, harvey_adj=False):
+    """
+    Performs a Diebold-Mariano test under the null hypothesis of
+    equal predictive accuracy between two forecasts.
+
+    Parameters
+    ----------
+    y : array_like
+        Array of the observed variable.
+    forecast1 : array_like
+        Array of the forecasted values.
+    forecast2 : array_like
+        Array of the forecasted values.
+    horizon : int
+        Horizon of the forecast. Default is horizon=1.
+    criterion : str
+        Criterion for the difference of residuals. Default is 'MSE'.
+        Implemented criterions are 'MSE', 'MAD', 'MAPE', 'poly'.
+    power : int, optional
+        Keyword arguments to be passed when criterion='poly'.
+    harvey_adj: bool
+        indicates if Harvey-Leybourne-Newbold correction for small samples
+        should be used. Default is False.
+
+    Returns
+    -------
+    Out
+        Dictionary containing the the DM test statistic and p-values with
+        adjustments based on Harvey et. al (1997).
+
+    References
+    -----
+    1. Diebold, Francis X. "Comparing predictive accuracy, twenty years later:
+       A personal perspective on the use and abuse of Diebold–Mariano tests."
+       Journal of Business & Economic Statistics 33, no. 1 (2015): 1-1.
+    2. Harvey, David, Stephen Leybourne, and Paul Newbold. "Testing the equality
+       of prediction mean squared errors." International Journal of forecasting 13,
+       no. 2 (1997): 281-291.
+    """
+
+    horizon = int_like(horizon, 'horizon')
+
+    if horizon < 1:
+        raise ValueError("horizon argument sould be greater than 0.")
+
+    y =  array_like(y, 'y')
+    forecast1 = array_like(forecast1, 'forecast1')
+    forecast2 = array_like(forecast2, 'forecast2')
+
+    T = len(y)
+    if any(len(arr) != T for arr in [y, forecast1, forecast2]):
+        raise ValueError("All arrays should be of  equal lenght.")
+
+    # calculate d based on criterion
+    if (criterion == "MSE"):
+        resid1 = np.power(forecast1 - y, 2)
+        resid2 = np.power(forecast2 - y, 2)
+        d = resid1 - resid2
+
+    elif (criterion == "MAD"):
+        resid1 = np.absolute(forecast1 - y)
+        resid2 = np.absolute(forecast2 - y)
+        d = resid1 - resid2
+
+    elif (criterion == "MAPE"):
+        resid1 = np.absolute((y-forecast1)/y)
+        resid2 = np.absolute((y-forecast2)/y)
+        d = resid1 - resid2
+
+    elif (criterion == "poly"):
+        resid1 = np.power(forecast1 - y, power)
+        resid2 = np.power(forecast2 - y, power)
+        d = resid1 - resid2
+
+    # calculate test statistics
+    mean_d = d.mean()
+    gamma = acovf(d, nlag=(horizon-1))
+    V_d = (gamma[0] + 2*sum(gamma[1:]))/T
+    DM_stat=V_d**(-0.5)*mean_d
+
+    # Harvey adjustment based on Harvey et. al (1997)
+    if harvey_adj:
+        adj=((T+1 - 2*horizon + horizon*(horizon-1)/T)/T)**(0.5)
+        DM_stat = adj*DM_stat
+
+    # Find p-value & format output
+    p_value = 2*stats.t.cdf(-np.abs(DM_stat), df = T - 1)
+    out = {'DM test statistic': DM_stat,
+           'p value': p_value}
+
+    return out
+
+
 def has_missing(data):
     """
     Returns True if "data" contains missing entries, otherwise False

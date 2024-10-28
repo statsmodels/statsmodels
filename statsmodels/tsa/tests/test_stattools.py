@@ -38,6 +38,7 @@ from statsmodels.tsa.stattools import (
     acovf,
     adfuller,
     arma_order_select_ic,
+    diebold_mariano_test,
     breakvar_heteroskedasticity_test,
     ccf,
     ccovf,
@@ -1111,6 +1112,34 @@ def test_arma_order_select_ic():
     assert_(res.aic.index.equals(aic.index))
     assert_(res.aic.columns.equals(aic.columns))
     assert_equal(res.aic_min_order, (1, 2))
+
+
+def test_diebold_mariano_test():
+    y = np.array([0.7905291971644244, 1.3165423213858396, 2.629194824493898, 2.274163381390831,
+                  2.3350897900078773, 4.309556160533848, 3.2008616600117854, 3.0279620894948263,
+                  2.567645423157318, 0.8342527751292501, 2.0985671460216464, 3.408247061676925,
+                  2.9699882967078457, 3.6732582708103863, 3.4609292040029644])
+    f1 = np.array([0.9824387126880363, 3.347555830856235, 1.8132440948000608, 4.501884323116638,
+                  0.993073450965922, 0.988116816888287, 3.7834883570834847, 2.498189378576747,
+                  4.8566413245270965, 1.7412497391486617, 3.4637323882747384, 3.101483832900048,
+                  3.0411384793663037, 3.2500575506493394, 3.199491151189982])
+    f2 = np.array([0.8002551776387801, 2.35554283908294, 2.5017107565163754, 2.9709840260800897,
+                  2.031947528256514, 2.044069317891979, 1.8690271476061573, 2.541558191277514,
+                  3.0762879697739653, 3.420942734113572,3.9529070460967226, 3.036772850400313,
+                  3.898343203105889, 4.397338510819033, 4.699775884928464])
+
+    res1 = diebold_mariano_test(y, f1, f2, criterion='MSE')
+    res2 = diebold_mariano_test(y, f1, f2, horizon=2, criterion='MSE')
+    res3 = diebold_mariano_test(y, f1, f2, harvey_adj=True)
+    res4 = diebold_mariano_test(y, f1, f2, criterion='MAD')
+
+
+    assert_almost_equal(res1['DM test statistic'], 0.816, DECIMAL_3)
+    assert_almost_equal(res1['p value'], 0.428, DECIMAL_3)
+    assert_almost_equal(res2['DM test statistic'], 0.901, DECIMAL_3)
+    assert_almost_equal(res2['p value'], 0.382, DECIMAL_3)
+    assert_almost_equal(res3['DM test statistic'], 0.788, DECIMAL_3)
+    assert_almost_equal(res3['p value'], 0.443, DECIMAL_3)
 
 
 def test_arma_order_select_ic_failure():
