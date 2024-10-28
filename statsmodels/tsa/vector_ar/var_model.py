@@ -5,6 +5,7 @@ References
 ----------
 Lütkepohl (2005) New Introduction to Multiple Time Series Analysis
 """
+
 from __future__ import annotations
 
 from statsmodels.compat.python import lrange
@@ -226,12 +227,13 @@ def forecast(y, coefs, trend_coefs, steps, exog=None):
     -----
     Lütkepohl p. 37
     """
-    p = len(coefs)
-    k = len(coefs[0])
+    coefs = np.asarray(coefs)
+    if coefs.ndim != 3:
+        raise ValueError("coefs must be an array with 3 dimensions")
+    p, k = coefs.shape[:2]
     if y.shape[0] < p:
         raise ValueError(
-            f"y must by have at least order ({p}) observations. "
-            f"Got {y.shape[0]}."
+            f"y must by have at least order ({p}) observations. " f"Got {y.shape[0]}."
         )
     # initial value
     forcs = np.zeros((steps, k))
@@ -286,9 +288,7 @@ def _forecast_vars(steps, ma_coefs, sig_u):
     return covs[:, inds, inds]
 
 
-def forecast_interval(
-    y, coefs, trend_coefs, sig_u, steps=5, alpha=0.05, exog=1
-):
+def forecast_interval(y, coefs, trend_coefs, sig_u, steps=5, alpha=0.05, exog=1):
     assert 0 < alpha < 1
     q = util.norm_signif_level(alpha)
 
@@ -362,9 +362,7 @@ def _reordered(self, order):
             params_new_inc[0, i] = params[0, i]
             endog_lagged_new[:, 0] = endog_lagged[:, 0]
         for j in range(k_ar):
-            params_new_inc[i + j * num_end + k, :] = self.params[
-                c + j * num_end + k, :
-            ]
+            params_new_inc[i + j * num_end + k, :] = self.params[c + j * num_end + k, :]
             endog_lagged_new[:, i + j * num_end + k] = endog_lagged[
                 :, c + j * num_end + k
             ]
@@ -444,8 +442,8 @@ def test_normality(results, signif=0.05):
     Pinv = np.linalg.inv(np.linalg.cholesky(sig))
 
     w = np.dot(Pinv, resid_c.T)
-    b1 = (w ** 3).sum(1)[:, None] / results.nobs
-    b2 = (w ** 4).sum(1)[:, None] / results.nobs - 3
+    b1 = (w**3).sum(1)[:, None] / results.nobs
+    b2 = (w**4).sum(1)[:, None] / results.nobs - 3
 
     lam_skew = results.nobs * np.dot(b1.T, b1) / 6
     lam_kurt = results.nobs * np.dot(b2.T, b2) / 24
@@ -544,9 +542,7 @@ class VAR(TimeSeriesModel):
 
     y = deprecated_alias("y", "endog", remove_version="0.11.0")
 
-    def __init__(
-        self, endog, exog=None, dates=None, freq=None, missing="none"
-    ):
+    def __init__(self, endog, exog=None, dates=None, freq=None, missing="none"):
         super().__init__(endog, exog, dates, freq, missing=missing)
         if self.endog.ndim == 1:
             raise ValueError("Only gave one variable to VAR")
@@ -658,8 +654,7 @@ class VAR(TimeSeriesModel):
             selections = self.select_order(maxlags=maxlags)
             if not hasattr(selections, ic):
                 raise ValueError(
-                    "%s not recognized, must be among %s"
-                    % (ic, sorted(selections))
+                    "%s not recognized, must be among %s" % (ic, sorted(selections))
                 )
             lags = getattr(selections, ic)
             if verbose:
@@ -680,13 +675,9 @@ class VAR(TimeSeriesModel):
             if orig_exog_names:
                 x_names_to_add = orig_exog_names
             else:
-                x_names_to_add = [
-                    ("exog%d" % i) for i in range(self.exog.shape[1])
-                ]
+                x_names_to_add = [("exog%d" % i) for i in range(self.exog.shape[1])]
             self.data.xnames = (
-                self.data.xnames[:k_trend]
-                + x_names_to_add
-                + self.data.xnames[k_trend:]
+                self.data.xnames[:k_trend] + x_names_to_add + self.data.xnames[k_trend:]
             )
         self.data.cov_names = pd.MultiIndex.from_product(
             (self.data.xnames, self.data.ynames)
@@ -716,9 +707,7 @@ class VAR(TimeSeriesModel):
         if exog is not None:
             # TODO: currently only deterministic terms supported (exoglags==0)
             # and since exoglags==0, x will be an array of size 0.
-            x = util.get_var_endog(
-                exog[-nobs:], 0, trend="n", has_constant="raise"
-            )
+            x = util.get_var_endog(exog[-nobs:], 0, trend="n", has_constant="raise")
             x_inst = exog[-nobs:]
             x = np.column_stack((x, x_inst))
             del x_inst  # free memory
@@ -823,16 +812,12 @@ class VAR(TimeSeriesModel):
             for k, v in result.info_criteria.items():
                 ics[k].append(v)
 
-        selected_orders = {
-            k: np.array(v).argmin() + p_min for k, v in ics.items()
-        }
+        selected_orders = {k: np.array(v).argmin() + p_min for k, v in ics.items()}
 
         return LagOrderResults(ics, selected_orders, vecm=False)
 
     @classmethod
-    def from_formula(
-        cls, formula, data, subset=None, drop_cols=None, *args, **kwargs
-    ):
+    def from_formula(cls, formula, data, subset=None, drop_cols=None, *args, **kwargs):
         """
         Not implemented. Formulas are not supported for VAR models.
         """
@@ -860,9 +845,7 @@ class VARProcess:
         trend.
     """
 
-    def __init__(
-        self, coefs, coefs_exog, sigma_u, names=None, _params_info=None
-    ):
+    def __init__(self, coefs, coefs_exog, sigma_u, names=None, _params_info=None):
         self.k_ar = len(coefs)
         self.neqs = coefs.shape[1]
         self.coefs = coefs
@@ -920,7 +903,9 @@ class VARProcess:
         """
         return is_stable(self.coefs, verbose=verbose)
 
-    def simulate_var(self, steps=None, offset=None, seed=None, initial_values=None, nsimulations=None):
+    def simulate_var(
+        self, steps=None, offset=None, seed=None, initial_values=None, nsimulations=None
+    ):
         """
         simulate the VAR(p) process for the desired number of steps
 
@@ -963,9 +948,7 @@ class VARProcess:
                 # if more than intercept
                 # endog_lagged contains all regressors, trend, exog_user
                 # and lagged endog, trimmed initial observations
-                offset = self.endog_lagged[:, : self.k_exog].dot(
-                    self.coefs_exog.T
-                )
+                offset = self.endog_lagged[:, : self.k_exog].dot(self.coefs_exog.T)
                 steps_ = self.endog_lagged.shape[0]
             else:
                 offset = self.intercept
@@ -992,7 +975,7 @@ class VARProcess:
             steps=steps,
             seed=seed,
             initial_values=initial_values,
-            nsimulations=nsimulations
+            nsimulations=nsimulations,
         )
         return y
 
@@ -1111,9 +1094,7 @@ class VARProcess:
 
     def plot_acorr(self, nlags=10, linewidth=8):
         """Plot theoretical autocorrelation function"""
-        fig = plotting.plot_full_acorr(
-            self.acorr(nlags=nlags), linewidth=linewidth
-        )
+        fig = plotting.plot_full_acorr(self.acorr(nlags=nlags), linewidth=linewidth)
         return fig
 
     def forecast(self, y, steps, exog_future=None):
@@ -1135,18 +1116,14 @@ class VARProcess:
         """
         if self.exog is None and exog_future is not None:
             raise ValueError(
-                "No exog in model, so no exog_future supported "
-                "in forecast method."
+                "No exog in model, so no exog_future supported " "in forecast method."
             )
         if self.exog is not None and exog_future is None:
             raise ValueError(
-                "Please provide an exog_future argument to "
-                "the forecast method."
+                "Please provide an exog_future argument to " "the forecast method."
             )
 
-        exog_future = array_like(
-            exog_future, "exog_future", optional=True, ndim=2
-        )
+        exog_future = array_like(exog_future, "exog_future", optional=True, ndim=2)
         if exog_future is not None:
             if exog_future.shape[0] != steps:
                 err_msg = f"""\
@@ -1159,13 +1136,11 @@ steps ({steps}) observations.
         exogs = []
         if self.trend.startswith("c"):  # constant term
             exogs.append(np.ones(steps))
-        exog_lin_trend = np.arange(
-            self.n_totobs + 1, self.n_totobs + 1 + steps
-        )
+        exog_lin_trend = np.arange(self.n_totobs + 1, self.n_totobs + 1 + steps)
         if "t" in self.trend:
             exogs.append(exog_lin_trend)
         if "tt" in self.trend:
-            exogs.append(exog_lin_trend ** 2)
+            exogs.append(exog_lin_trend**2)
         if exog_future is not None:
             exogs.append(exog_future)
 
@@ -1384,9 +1359,7 @@ class VARResults(VARProcess):
 
     def plot(self):
         """Plot input time series"""
-        return plotting.plot_mts(
-            self.endog, names=self.names, index=self.dates
-        )
+        return plotting.plot_mts(self.endog, names=self.names, index=self.dates)
 
     @property
     def df_model(self):
@@ -1662,7 +1635,7 @@ class VARResults(VARProcess):
                 warnings.warn(
                     "forecast cov takes parameter uncertainty into" "account",
                     OutputWarning,
-                    stacklevel = 2,
+                    stacklevel=2,
                 )
         else:
             raise ValueError("method has to be either 'mse' or 'auto'")
@@ -1766,9 +1739,7 @@ class VARResults(VARProcess):
 
         def fill_coll(sim):
             ret = VAR(sim, exog=self.exog).fit(maxlags=k_ar, trend=self.trend)
-            ret = (
-                ret.orth_ma_rep(maxn=steps) if orth else ret.ma_rep(maxn=steps)
-            )
+            ret = ret.orth_ma_rep(maxn=steps) if orth else ret.ma_rep(maxn=steps)
             return ret.cumsum(axis=0) if cum else ret
 
         for i in range(repl):
@@ -1989,13 +1960,13 @@ class VARResults(VARProcess):
         num_det_terms = self.k_exog
 
         # Make restriction matrix
-        C = np.zeros((num_restr, k * num_det_terms + k ** 2 * p), dtype=float)
+        C = np.zeros((num_restr, k * num_det_terms + k**2 * p), dtype=float)
         cols_det = k * num_det_terms
         row = 0
         for j in range(p):
             for ing_ind in causing_ind:
                 for ed_ind in caused_ind:
-                    C[row, cols_det + ed_ind + k * ing_ind + k ** 2 * j] = 1
+                    C[row, cols_det + ed_ind + k * ing_ind + k**2 * j] = 1
                     row += 1
 
         # Lütkepohl 3.6.5
@@ -2111,7 +2082,7 @@ class VARResults(VARProcess):
         caused = [self.names[c] for c in caused_ind]
 
         # Note: JMulTi seems to be using k_ar+1 instead of k_ar
-        k, t, p = self.neqs, self.nobs, self.k_ar
+        k, t = self.neqs, self.nobs
 
         num_restr = len(causing) * len(caused)  # called N in Lütkepohl
 
@@ -2198,8 +2169,8 @@ class VARResults(VARProcess):
             if adjusted:
                 to_add /= self.nobs - t
             statistic += to_add
-        statistic *= self.nobs ** 2 if adjusted else self.nobs
-        df = self.neqs ** 2 * (nlags - self.k_ar)
+        statistic *= self.nobs**2 if adjusted else self.nobs
+        df = self.neqs**2 * (nlags - self.k_ar)
         dist = stats.chi2(df)
         pvalue = dist.sf(statistic)
         crit_value = dist.ppf(1 - signif)
@@ -2284,7 +2255,7 @@ class VARResults(VARProcess):
         nobs = self.nobs
         neqs = self.neqs
         lag_order = self.k_ar
-        free_params = lag_order * neqs ** 2 + neqs * self.k_exog
+        free_params = lag_order * neqs**2 + neqs * self.k_exog
         if self.df_resid:
             ld = logdet_symm(self.sigma_u_mle)
         else:
@@ -2355,13 +2326,9 @@ class VARResultsWrapper(wrap.ResultsWrapper):
         "sigma_u_mle": "cov_eq",
         "stderr": "columns_eq",
     }
-    _wrap_attrs = wrap.union_dicts(
-        TimeSeriesResultsWrapper._wrap_attrs, _attrs
-    )
+    _wrap_attrs = wrap.union_dicts(TimeSeriesResultsWrapper._wrap_attrs, _attrs)
     _methods = {"conf_int": "multivariate_confint"}
-    _wrap_methods = wrap.union_dicts(
-        TimeSeriesResultsWrapper._wrap_methods, _methods
-    )
+    _wrap_methods = wrap.union_dicts(TimeSeriesResultsWrapper._wrap_methods, _methods)
 
 
 wrap.populate_wrapper(VARResultsWrapper, VARResults)  # noqa:E305
