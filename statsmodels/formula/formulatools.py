@@ -1,5 +1,6 @@
 import statsmodels.tools.data as data_util
 from patsy import dmatrices, NAAction
+import narwhals as nw
 import numpy as np
 
 # if users want to pass in a different formula framework, they can
@@ -63,6 +64,10 @@ def handle_formula_data(Y, X, formula, depth=0, missing='drop'):
             result = dmatrices(formula, Y, depth, return_type='dataframe',
                                NA_action=na_action)
         else:
+            try:
+                Y = nw.from_native(Y).to_pandas()
+            except:
+                pass
             result = dmatrices(formula, Y, depth, return_type='dataframe',
                                NA_action=na_action)
 
