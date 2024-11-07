@@ -16,6 +16,7 @@ from statsmodels.compat.python import lrange, lzip
 import numpy as np
 import pandas as pd
 from patsy import dmatrix
+from formulaic import model_matrix
 
 from statsmodels.genmod.generalized_estimating_equations import GEE
 from statsmodels.genmod.generalized_linear_model import GLM
@@ -391,13 +392,16 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
 
     # strings, use patsy to transform to data
     if isinstance(endog, str):
-        endog = dmatrix(endog + "-1", data, eval_env=eval_env)
+        # endog = dmatrix(endog + "-1", data, eval_env=eval_env)
+        endog = model_matrix(endog + "-1", data, context=eval_env)
 
     if isinstance(exog_others, str):
-        RHS = dmatrix(exog_others, data, eval_env=eval_env)
+        # RHS = dmatrix(exog_others, data, eval_env=eval_env)
+        RHS = model_matrix(exog_others, data, contaxt=eval_env)
     elif isinstance(exog_others, list):
         RHS = "+".join(exog_others)
-        RHS = dmatrix(RHS, data, eval_env=eval_env)
+        # RHS = dmatrix(RHS, data, eval_env=eval_env)
+        RHS = model_matrix(RHS, data, context=eval_env)
     else:
         RHS = exog_others
     RHS_isemtpy = False
@@ -406,7 +410,9 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
     elif isinstance(RHS, pd.DataFrame) and RHS.empty:
         RHS_isemtpy = True
     if isinstance(exog_i, str):
-        exog_i = dmatrix(exog_i + "-1", data, eval_env=eval_env)
+        # exog_i = dmatrix(exog_i + "-1", data, eval_env=eval_env)
+        exog_i = model_matrix(exog_i + "-1", data, context=eval_env)
+
 
     # all arrays or pandas-like
 

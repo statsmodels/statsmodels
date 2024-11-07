@@ -77,6 +77,12 @@ def _show_versions_only():
     except ImportError:
         print("patsy: Not installed")
 
+    try:
+        import formulaic
+        print(f"formulaic: {safe_version(formulaic)}")
+    except ImportError:
+        print("formulaic: Not installed")
+
     print("\nOptional Dependencies\n=====================\n")
 
     try:

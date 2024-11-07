@@ -34,6 +34,16 @@ def test_patsy_577():
     exog = dmatrix("var2 - 1", df)
     np.testing.assert_(data._is_using_patsy(endog, exog))
 
+def test_formulaic_577():
+    X = np.random.random((10, 2))
+    df = pandas.DataFrame(X, columns=["var1", "var2"])
+    from formulaic import model_matrix
+
+    endog = model_matrix("var1 - 1", df)
+    np.testing.assert_(data._is_using_formulaic(endog, None))
+    exog = model_matrix("var2 - 1", df)
+    np.testing.assert_(data._is_using_formulaic(endog, exog))
+
 
 def test_as_array_with_name_series():
     s = pandas.Series([1], name="hello")
