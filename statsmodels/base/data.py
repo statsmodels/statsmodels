@@ -103,7 +103,9 @@ class ModelData:
     def __setstate__(self, d):
         if "restore_design_info" in d:
             # NOTE: there may be a more performant way to do this
-            from patsy import PatsyError, dmatrices
+            from statsmodels.formula._manager import FormulaManager
+            from patsy import PatsyError
+            mgr = FormulaManager()
 
             exc = []
             try:
@@ -113,8 +115,8 @@ class ModelData:
 
             for depth in [2, 3, 1, 0, 4]:  # sequence is a guess where to likely find it
                 try:
-                    _, design = dmatrices(
-                        d["formula"], data, eval_env=depth, return_type="dataframe"
+                    _, design = mgr.get_arrays(
+                        d["formula"], data, eval_env=depth, pandas=True, attach_spec=True
                     )
                     break
                 except (NameError, PatsyError) as e:
@@ -123,7 +125,7 @@ class ModelData:
             else:
                 raise exc[-1]
 
-            self.design_info = design.design_info
+            self.design_info = mgr.spec
             del d["restore_design_info"]
         self.__dict__.update(d)
 

@@ -382,10 +382,11 @@ def _get_exog_predict(self, exog=None, transform=True, row_labels=None):
 
     # prepare exog and row_labels, based on base Results.predict
     if transform and hasattr(self.model, 'formula') and exog is not None:
-        from patsy import dmatrix
+        from statsmodels.formula._manager import FormulaManager
+        mgr = FormulaManager()
         if isinstance(exog, pd.Series):
             exog = pd.DataFrame(exog)
-        exog = dmatrix(self.model.data.design_info, exog)
+        exog = mgr.get_arrays(self.model.data.design_info, exog)
 
     if exog is not None:
         if row_labels is None:

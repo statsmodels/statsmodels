@@ -1087,7 +1087,8 @@ class Results:
             # allow both location of design_info, see #7043
             design_info = (getattr(self.model, "design_info", None) or
                            self.model.data.design_info)
-            from patsy import dmatrix
+            from statsmodels.formula._manager import FormulaManager
+            mgr = FormulaManager()
             if isinstance(exog, pd.Series):
                 # we are guessing whether it should be column or row
                 if (hasattr(exog, 'name') and isinstance(exog.name, str) and
@@ -1101,7 +1102,7 @@ class Results:
             orig_exog_len = len(exog)
             is_dict = isinstance(exog, dict)
             try:
-                exog = dmatrix(design_info, exog, return_type="dataframe")
+                exog = mgr.get_arrays(design_info, exog, pandas=True)
             except Exception as exc:
                 msg = ('predict requires that you use a DataFrame when '
                        'predicting from a model\nthat was created using the '
@@ -1637,7 +1638,7 @@ class LikelihoodModelResults(Results):
         c2             1.0001      0.249      0.000      1.000       0.437       1.563
         ==============================================================================
         """
-        from patsy import DesignInfo
+        from patsy.design_info import DesignInfo
         use_t = bool_like(use_t, "use_t", strict=True, optional=True)
         if self.params.ndim == 2:
             names = [f'y{i[0]}_{i[1]}'
@@ -1856,7 +1857,7 @@ class LikelihoodModelResults(Results):
             # switch to use_t false if undefined
             use_f = (hasattr(self, 'use_t') and self.use_t)
 
-        from patsy import DesignInfo
+        from patsy.design_info import DesignInfo
         if self.params.ndim == 2:
             names = [f'y{i[0]}_{i[1]}'
                      for i in self.model.data.cov_names]

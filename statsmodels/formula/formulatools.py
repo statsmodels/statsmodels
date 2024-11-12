@@ -1,7 +1,7 @@
 import statsmodels.tools.data as data_util
-from patsy import dmatrices, NAAction
+from patsy import NAAction
 import numpy as np
-
+from statsmodels.formula._manager import FormulaManager
 # if users want to pass in a different formula framework, they can
 # add their handler here. how to do it interactively?
 
@@ -50,28 +50,18 @@ def handle_formula_data(Y, X, formula, depth=0, missing='drop'):
         return formula_handler[type(formula)]
 
     na_action = NAAction(on_NA=missing)
-
+    mgr = FormulaManager()
     if X is not None:
-        if data_util._is_using_pandas(Y, X):
-            result = dmatrices(formula, (Y, X), depth,
-                               return_type='dataframe', NA_action=na_action)
-        else:
-            result = dmatrices(formula, (Y, X), depth,
-                               return_type='dataframe', NA_action=na_action)
+        result = mgr.get_arrays(formula, (Y, X), eval_env=depth, pandas=True, na_action=na_action, attach_spec=True)
     else:
-        if data_util._is_using_pandas(Y, None):
-            result = dmatrices(formula, Y, depth, return_type='dataframe',
-                               NA_action=na_action)
-        else:
-            result = dmatrices(formula, Y, depth, return_type='dataframe',
-                               NA_action=na_action)
+        result = mgr.get_arrays(formula, Y, eval_env=depth, pandas=True, na_action=na_action, attach_spec=True)
 
     # if missing == 'raise' there's not missing_mask
     missing_mask = getattr(na_action, 'missing_mask', None)
     if not np.any(missing_mask):
         missing_mask = None
     if len(result) > 1:  # have RHS design
-        design_info = result[1].design_info  # detach it from DataFrame
+        design_info = mgr.spec  # detach it from DataFrame
     else:
         design_info = None
     # NOTE: is there ever a case where we'd need LHS design_info?
