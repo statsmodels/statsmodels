@@ -76,7 +76,7 @@ class LinearConstraints:
         return '\n'.join(constraints_strings)
 
     @classmethod
-    def from_patsy(cls, lc):
+    def from_formula_parser(cls, lc):
         """class method to create instance from patsy instance
 
         Parameters
@@ -90,7 +90,10 @@ class LinearConstraints:
         instance of this class
 
         """
-        return cls(lc.coefs, lc.constants, lc.variable_names)
+        try:
+            return cls(lc.constraint_matrix, lc.constraint_values, lc.variable_names)
+        except AttributeError:
+            return cls(lc.coefs, lc.constants, lc.variable_names)
 
 
 class TransformRestriction:
@@ -360,13 +363,15 @@ def fit_constrained_wrap(model, constraints, start_params=None, **fit_kwds):
     # TODO: temporary trailing underscore to not overwrite the monkey
     #       patched version
     # TODO: decide whether to move the imports
-    from patsy import DesignInfo
+    from statsmodels.formula._manager import FormulaManager
 
     # we need this import if we copy it to a different module
     #from statsmodels.base._constraints import fit_constrained
     # same pattern as in base.LikelihoodModel.t_test
-    lc = DesignInfo(self.exog_names).linear_constraint(constraints)
-    R, q = lc.coefs, lc.constants
+    mgr = FormulaManager()
+    lc = mgr.get_linear_constraints(constraints, self.exog_names)
+    # lc = DesignInfo(self.exog_names).linear_constraint(constraints)
+    R, q = lc.constraint_matrix, lc.constraint_values
 
     # TODO: add start_params option, need access to tranformation
     #       fit_constrained needs to do the transformation
@@ -387,7 +392,7 @@ def fit_constrained_wrap(model, constraints, start_params=None, **fit_kwds):
     k_constr = len(q)
     res._results.df_resid += k_constr
     res._results.df_model -= k_constr
-    res._results.constraints = LinearConstraints.from_patsy(lc)
+    res._results.constraints = LinearConstraints.from_formula_parser(lc)
     res._results.k_constr = k_constr
     res._results.results_constrained = res_constr
     return res

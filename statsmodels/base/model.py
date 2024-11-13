@@ -192,8 +192,10 @@ class Model:
         if eval_env is None:
             eval_env = 2
         elif eval_env == -1:
-            from patsy import EvalEnvironment
-            eval_env = EvalEnvironment({})
+            from statsmodels.formula._manager import FormulaManager
+            mgr = FormulaManager()
+
+            eval_env = mgr.get_empty_eval_env()
         elif isinstance(eval_env, int):
             eval_env += 1  # we're going down the stack again
         missing = kwargs.get('missing', 'drop')
@@ -1638,15 +1640,16 @@ class LikelihoodModelResults(Results):
         c2             1.0001      0.249      0.000      1.000       0.437       1.563
         ==============================================================================
         """
-        from patsy.design_info import DesignInfo
         use_t = bool_like(use_t, "use_t", strict=True, optional=True)
         if self.params.ndim == 2:
             names = [f'y{i[0]}_{i[1]}'
                      for i in self.model.data.cov_names]
         else:
             names = self.model.data.cov_names
-        LC = DesignInfo(names).linear_constraint(r_matrix)
-        r_matrix, q_matrix = LC.coefs, LC.constants
+        from statsmodels.formula._manager import FormulaManager
+        mgr = FormulaManager()
+        lc = mgr.get_linear_constraints(r_matrix, names)
+        r_matrix, q_matrix = lc.constraint_matrix, lc.constraint_values
         num_ttests = r_matrix.shape[0]
         num_params = r_matrix.shape[1]
 
@@ -1857,15 +1860,18 @@ class LikelihoodModelResults(Results):
             # switch to use_t false if undefined
             use_f = (hasattr(self, 'use_t') and self.use_t)
 
-        from patsy.design_info import DesignInfo
+        from statsmodels.formula._manager import FormulaManager
+
         if self.params.ndim == 2:
             names = [f'y{i[0]}_{i[1]}'
                      for i in self.model.data.cov_names]
         else:
             names = self.model.data.cov_names
         params = self.params.ravel(order="F")
-        LC = DesignInfo(names).linear_constraint(r_matrix)
-        r_matrix, q_matrix = LC.coefs, LC.constants
+
+        mgr = FormulaManager()
+        lc = mgr.get_linear_constraints(r_matrix, names)
+        r_matrix, q_matrix = lc.constraint_matrix, lc.constraint_values
 
         if (self.normalized_cov_params is None and cov_p is None and
                 invcov is None and not hasattr(self, 'cov_params_default')):

@@ -7,8 +7,8 @@ License: BSD-3
 """
 
 import numpy as np
-from scipy import stats
 import pandas as pd
+from scipy import stats
 
 
 # this is similar to ContrastResults after t_test, partially copied, adjusted

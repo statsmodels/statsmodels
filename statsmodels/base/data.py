@@ -103,8 +103,9 @@ class ModelData:
     def __setstate__(self, d):
         if "restore_design_info" in d:
             # NOTE: there may be a more performant way to do this
-            from statsmodels.formula._manager import FormulaManager
             from patsy import PatsyError
+
+            from statsmodels.formula._manager import FormulaManager
             mgr = FormulaManager()
 
             exc = []
@@ -506,6 +507,11 @@ class PatsyData(ModelData):
         return arr.design_info.column_names
 
 
+class FormulaicData(ModelData):
+    def _get_names(self, arr):
+        return arr.model_spec.column_names
+
+
 class PandasData(ModelData):
     """
     Data handling class which knows how to reattach pandas metadata to model
@@ -670,6 +676,8 @@ def handle_data_class_factory(endog, exog):
         klass = PandasData
     elif data_util._is_using_patsy(endog, exog):
         klass = PatsyData
+    elif data_util._is_using_formulaic(endog, exog):
+        klass = FormulaicData
     # keep this check last
     elif data_util._is_using_ndarray(endog, exog):
         klass = ModelData

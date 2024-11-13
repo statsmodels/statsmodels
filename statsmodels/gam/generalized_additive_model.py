@@ -11,27 +11,32 @@ from collections.abc import Iterable
 import copy  # check if needed when dropping python 2.7
 
 import numpy as np
-from scipy import optimize
 import pandas as pd
-
-import statsmodels.base.wrapper as wrap
-
-from statsmodels.discrete.discrete_model import Logit
-from statsmodels.genmod.generalized_linear_model import (
-    GLM, GLMResults, GLMResultsWrapper, _check_convergence)
-import statsmodels.regression.linear_model as lm
-# import statsmodels.regression._tools as reg_tools  # TODO: use this for pirls
-from statsmodels.tools.sm_exceptions import (PerfectSeparationError,
-                                             ValueWarning)
-from statsmodels.tools.decorators import cache_readonly
-from statsmodels.tools.data import _is_using_pandas
-from statsmodels.tools.linalg import matrix_sqrt
+from scipy import optimize
 
 from statsmodels.base._penalized import PenalizedMixin
-from statsmodels.gam.gam_penalties import MultivariateGamPenalty
-from statsmodels.gam.gam_cross_validation.gam_cross_validation import (
-    MultivariateGAMCVPath)
+import statsmodels.base.wrapper as wrap
+from statsmodels.discrete.discrete_model import Logit
 from statsmodels.gam.gam_cross_validation.cross_validators import KFold
+from statsmodels.gam.gam_cross_validation.gam_cross_validation import (
+    MultivariateGAMCVPath,
+)
+from statsmodels.gam.gam_penalties import MultivariateGamPenalty
+from statsmodels.genmod.generalized_linear_model import (
+    GLM,
+    GLMResults,
+    GLMResultsWrapper,
+    _check_convergence,
+)
+import statsmodels.regression.linear_model as lm
+from statsmodels.tools.data import _is_using_pandas
+from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools.linalg import matrix_sqrt
+# import statsmodels.regression._tools as reg_tools  # TODO: use this for pirls
+from statsmodels.tools.sm_exceptions import (
+    PerfectSeparationError,
+    ValueWarning,
+)
 
 
 def _transform_predict_exog(model, exog, design_info=None):
@@ -49,7 +54,8 @@ def _transform_predict_exog(model, exog, design_info=None):
         design_info = getattr(model.data, 'design_info', None)
 
     if design_info is not None and (exog is not None):
-        from patsy import dmatrix
+        from statsmodels.formula._manager import FormulaManager
+
         if isinstance(exog, pd.Series):
             # we are guessing whether it should be column or row
             if (hasattr(exog, 'name') and isinstance(exog.name, str) and
@@ -61,7 +67,9 @@ def _transform_predict_exog(model, exog, design_info=None):
                 exog = pd.DataFrame(exog).T
         orig_exog_len = len(exog)
         is_dict = isinstance(exog, dict)
-        exog = dmatrix(design_info, exog, return_type="dataframe")
+
+
+        exog = FormulaManager().get_arrays(design_info, exog, pandas=True)
         if orig_exog_len > len(exog) and not is_dict:
             import warnings
             if exog_index is None:

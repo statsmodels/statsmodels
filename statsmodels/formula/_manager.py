@@ -1,9 +1,15 @@
 from __future__ import annotations
 
-from typing import Literal
+from typing import Literal, NamedTuple
 
 import numpy as np
 import pandas as pd
+
+
+class LinearConstraintValues(NamedTuple):
+    constraint_matrix: np.ndarray
+    constraint_values: np.ndarray
+    variable_names: list[str]
 
 
 class FormulaManager:
@@ -11,27 +17,31 @@ class FormulaManager:
         self._engine = self._get_engine(engine)
         self._spec = None
 
-    def _get_engine(self, engine: Literal["patsy", "formulaic"] | None = None) -> str:
+    def _get_engine(
+        self, engine: Literal["patsy", "formulaic"] | None = None
+    ) -> Literal["patsy", "formulaic"]:
         # Patsy for now, to be changed to a user-settable variable before release
-        engine = engine or "patsy"
-
-        if engine not in ("patsy", "formulaic"):
+        _engine: Literal["patsy", "formulaic"]
+        _engine = engine if engine is not None else "patsy"
+        assert _engine is not None
+        if _engine not in ("patsy", "formulaic"):
             raise ValueError(
-                f"Unknown engine: {engine}. Only "
-                "patsy"
-                " and "
-                "formulaic"
-                " "
-                "are supported."
+                f"Unknown engine: {_engine}. Only patsy and formulaic are supported."
             )
-        return engine
+        return _engine
 
     @property
     def spec(self):
         return self._spec
 
     def get_arrays(
-        self, formula, data, eval_env=0, pandas=True, attach_spec=True, na_action=None,
+        self,
+        formula,
+        data,
+        eval_env=0,
+        pandas=True,
+        attach_spec=True,
+        na_action=None,
     ) -> (
         np.ndarray
         | tuple[np.ndarray, np.ndarray]
@@ -46,7 +56,7 @@ class FormulaManager:
             import patsy
 
             return_type = "dataframe" if pandas else "matrix"
-            kwargs ={}
+            kwargs = {}
             if na_action:
                 kwargs["NA_action"] = na_action
             if isinstance(formula, patsy.design_info.DesignInfo) or "~" not in formula:
@@ -79,3 +89,35 @@ class FormulaManager:
                 else:
                     self._spec = output.model_spec
             return output
+
+    def get_linear_constraints(
+        self, constraints: np.ndarray, variable_names: list[str]
+    ):
+        if self._engine == "patsy":
+            from patsy.design_info import DesignInfo
+
+            lc = DesignInfo(variable_names).linear_constraint(constraints)
+            return LinearConstraintValues(
+                constraint_matrix=lc.coefs,
+                constraint_values=lc.constants,
+                variable_names=lc.variable_names,
+            )
+        else:  # self._engine == "formulaic"
+            import formulaic.utils.constraints
+
+            values = np.zeros(constraints.shape[0])
+            lc_f = formulaic.utils.constraints.LinearConstraints(
+                constraints, values, variable_names=variable_names
+            )
+            return LinearConstraintValues(
+                constraint_matrix=lc_f.constraint_matrix,
+                constraint_values=lc_f.constraint_values,
+                variable_names=lc_f.variable_names,
+            )
+
+    def get_empty_eval_env(self):
+        if self._engine == "patsy":
+            from patsy.eval import EvalEnvironment
+            return EvalEnvironment({})
+        else:
+            return {}

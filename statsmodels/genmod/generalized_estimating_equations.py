@@ -22,41 +22,48 @@ http://www.sph.umn.edu/faculty1/wp-content/uploads/2012/11/rr2002-013.pdf
 LA Mancl LA, TA DeRouen (2001). A covariance estimator for GEE with
 improved small-sample properties.  Biometrics. 2001 Mar;57(1):126-34.
 """
-from statsmodels.compat.python import lzip
 from statsmodels.compat.pandas import Appender
+from statsmodels.compat.python import lzip
 
-import numpy as np
-from scipy import stats
-import pandas as pd
-import patsy
 from collections import defaultdict
-from statsmodels.tools.decorators import cache_readonly
-import statsmodels.base.model as base
-# used for wrapper:
-import statsmodels.regression.linear_model as lm
-import statsmodels.base.wrapper as wrap
-
-from statsmodels.genmod import families
-from statsmodels.genmod.generalized_linear_model import GLM, GLMResults
-from statsmodels.genmod import cov_struct as cov_structs
-
-import statsmodels.genmod.families.varfuncs as varfuncs
-from statsmodels.genmod.families.links import Link
-
-from statsmodels.tools.sm_exceptions import (ConvergenceWarning,
-                                             DomainWarning,
-                                             IterationLimitWarning,
-                                             ValueWarning)
 import warnings
 
+import numpy as np
+import pandas as pd
+from scipy import stats
+
+import statsmodels.base.model as base
+import statsmodels.base.wrapper as wrap
+from statsmodels.discrete.discrete_margins import (
+    _check_at_is_all,
+    _check_discrete_args,
+    _check_margeff_args,
+    _effects_at,
+    _get_count_index,
+    _get_dummy_index,
+    _get_margeff_exog,
+    _transform_names,
+    margeff_cov_with_se,
+)
+from statsmodels.formula._manager import FormulaManager
+from statsmodels.genmod import cov_struct as cov_structs, families
+from statsmodels.genmod.families.links import Link
+import statsmodels.genmod.families.varfuncs as varfuncs
+from statsmodels.genmod.generalized_linear_model import GLM, GLMResults
 from statsmodels.graphics._regressionplots_doc import (
     _plot_added_variable_doc,
+    _plot_ceres_residuals_doc,
     _plot_partial_residuals_doc,
-    _plot_ceres_residuals_doc)
-from statsmodels.discrete.discrete_margins import (
-    _get_margeff_exog, _check_margeff_args, _effects_at, margeff_cov_with_se,
-    _check_at_is_all, _transform_names, _check_discrete_args,
-    _get_dummy_index, _get_count_index)
+)
+# used for wrapper:
+import statsmodels.regression.linear_model as lm
+from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools.sm_exceptions import (
+    ConvergenceWarning,
+    DomainWarning,
+    IterationLimitWarning,
+    ValueWarning,
+)
 
 
 class ParameterConstraint:
@@ -743,8 +750,7 @@ class GEE(GLM):
         dep_data_names = None
         if dep_data is not None:
             if isinstance(dep_data, str):
-                dep_data = patsy.dmatrix(dep_data, data,
-                                         return_type='dataframe')
+                dep_data = FormulaManager().get_arrays(dep_data, data, pandas=True)
                 dep_data_names = dep_data.columns.tolist()
             else:
                 dep_data_names = list(dep_data)
@@ -1660,12 +1666,14 @@ class GEE(GLM):
             margeff /= self.predict(params, exog)[:, None]
         if count_idx is not None:
             from statsmodels.discrete.discrete_margins import (
-                _get_count_effects)
+                _get_count_effects,
+            )
             margeff = _get_count_effects(margeff, exog, count_idx, transform,
                                          self, params)
         if dummy_idx is not None:
             from statsmodels.discrete.discrete_margins import (
-                _get_dummy_effects)
+                _get_dummy_effects,
+            )
             margeff = _get_dummy_effects(margeff, exog, dummy_idx, transform,
                                          self, params)
         return margeff
@@ -3113,8 +3121,11 @@ class GEEMargins:
                     ('Method:', [method]),
                     ('At:', [self.margeff_options['at']]), ]
 
-        from statsmodels.iolib.summary import (Summary, summary_params,
-                                               table_extend)
+        from statsmodels.iolib.summary import (
+            Summary,
+            summary_params,
+            table_extend,
+        )
         exog_names = model.exog_names[:]  # copy
         smry = Summary()
 

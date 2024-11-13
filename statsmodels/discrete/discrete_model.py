@@ -28,13 +28,13 @@ from scipy import special, stats
 from scipy.special import digamma, gammaln, loggamma, polygamma
 from scipy.stats import nbinom
 
+from statsmodels.base import _prediction_inference as pred
+from statsmodels.base._constraints import fit_constrained_wrap
+import statsmodels.base._parameter_inference as pinfer
 from statsmodels.base.data import handle_data  # for mnlogit
 from statsmodels.base.l1_slsqp import fit_l1_slsqp
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
-from statsmodels.base._constraints import fit_constrained_wrap
-import statsmodels.base._parameter_inference as pinfer
-from statsmodels.base import _prediction_inference as pred
 from statsmodels.distributions import genpoisson_p
 import statsmodels.regression.linear_model as lm
 from statsmodels.tools import data as data_tools, tools
@@ -44,8 +44,7 @@ from statsmodels.tools.sm_exceptions import (
     PerfectSeparationError,
     PerfectSeparationWarning,
     SpecificationWarning,
-    )
-
+)
 
 try:
     import cvxopt  # noqa:F401
@@ -1414,13 +1413,15 @@ class Poisson(CountModel):
         # TODO: temporary trailing underscore to not overwrite the monkey
         #       patched version
         # TODO: decide whether to move the imports
-        from patsy import DesignInfo
-        from statsmodels.base._constraints import (fit_constrained,
-                                                   LinearConstraints)
-
+        from statsmodels.base._constraints import (
+            LinearConstraints,
+            fit_constrained,
+        )
         # same pattern as in base.LikelihoodModel.t_test
-        lc = DesignInfo(self.exog_names).linear_constraint(constraints)
-        R, q = lc.coefs, lc.constants
+        from statsmodels.formula._manager import FormulaManager
+        mgr = FormulaManager()
+        lc = mgr.get_linear_constraints(constraints, self.exog_names)
+        R, q = lc.constraint_matrix, lc.constraint_values
 
         # TODO: add start_params option, need access to tranformation
         #       fit_constrained needs to do the transformation
@@ -1444,7 +1445,7 @@ class Poisson(CountModel):
         k_constr = len(q)
         res._results.df_resid += k_constr
         res._results.df_model -= k_constr
-        res._results.constraints = LinearConstraints.from_patsy(lc)
+        res._results.constraints = LinearConstraints.from_formula_parser(lc)
         res._results.k_constr = k_constr
         res._results.results_constrained = res_constr
         return res
@@ -5179,8 +5180,7 @@ class PoissonResults(CountResults):
         --------
         statsmodels.statsmodels.discrete.diagnostic.PoissonDiagnostic
         """
-        from statsmodels.discrete.diagnostic import (
-            PoissonDiagnostic)
+        from statsmodels.discrete.diagnostic import PoissonDiagnostic
         return PoissonDiagnostic(self, y_max=y_max)
 
 

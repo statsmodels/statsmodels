@@ -1,7 +1,9 @@
-import statsmodels.tools.data as data_util
-from patsy import NAAction
 import numpy as np
+from patsy import NAAction
+
 from statsmodels.formula._manager import FormulaManager
+import statsmodels.tools.data as data_util
+
 # if users want to pass in a different formula framework, they can
 # add their handler here. how to do it interactively?
 
@@ -87,8 +89,8 @@ def _intercept_idx(design_info):
     """
     Returns boolean array index indicating which column holds the intercept.
     """
-    from patsy.desc import INTERCEPT
     from numpy import array
+    from patsy.desc import INTERCEPT
     return array([INTERCEPT == i for i in design_info.terms])
 
 

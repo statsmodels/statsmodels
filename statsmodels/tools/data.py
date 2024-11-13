@@ -27,8 +27,21 @@ def is_data_frame(obj):
 
 
 def is_design_matrix(obj):
-    from patsy import DesignMatrix
+    try:
+        from patsy import DesignMatrix
+    except ImportError:
+        return False
+
     return isinstance(obj, DesignMatrix)
+
+
+def is_model_matrix(obj):
+    try:
+        from formulaic import ModelMatrix
+    except ImportError:
+        return False
+
+    return isinstance(obj, ModelMatrix)
 
 
 def _is_structured_ndarray(obj):
@@ -112,6 +125,11 @@ def _is_using_patsy(endog, exog):
     # we get this when a structured array is passed through a formula
     return (is_design_matrix(endog) and
             (is_design_matrix(exog) or exog is None))
+
+def _is_using_formulaic(endog, exog):
+    # we get this when a structured array is passed through a formula
+    return (is_model_matrix(endog) and
+            (is_model_matrix(exog) or exog is None))
 
 
 def _is_recarray(data):

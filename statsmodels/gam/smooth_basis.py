@@ -7,17 +7,17 @@ Author: Josef Perktold
 Created on Fri Jun  5 16:32:00 2015
 """
 
+from statsmodels.compat.python import with_metaclass
+
 # import useful only for development
 from abc import ABCMeta, abstractmethod
-from statsmodels.compat.python import with_metaclass
 
 import numpy as np
 import pandas as pd
-from patsy import dmatrix
 from patsy.mgcv_cubic_splines import _get_all_sorted_knots
 
+from statsmodels.formula._manager import FormulaManager
 from statsmodels.tools.linalg import transf_constraints
-
 
 # Obtain b splines from patsy
 
@@ -643,8 +643,9 @@ class UnivariateCubicCyclicSplines(UnivariateGamSmoother):
             x, constraints=constraints, variable_name=variable_name)
 
     def _smooth_basis_for_single_variable(self):
-        basis = dmatrix("cc(x, df=" + str(self.df) + ") - 1", {"x": self.x})
-        self.design_info = basis.design_info
+        mgr = FormulaManager()
+        basis = mgr.get_arrays("cc(x, df=" + str(self.df) + ") - 1", {"x": self.x}, pandas=False, attach_spec=True)
+        self.design_info = mgr.spec
         n_inner_knots = self.df - 2 + 1  # +n_constraints
         # TODO: from CubicRegressionSplines class
         all_knots = _get_all_sorted_knots(self.x, n_inner_knots=n_inner_knots,
@@ -713,7 +714,7 @@ class UnivariateCubicCyclicSplines(UnivariateGamSmoother):
         return d.T.dot(np.linalg.inv(b)).dot(d)
 
     def transform(self, x_new):
-        exog = dmatrix(self.design_info, {"x": x_new})
+        exog = FormulaManager().get_arrays(self.design_info, {"x": x_new}, pandas=False)
         if self.ctransf is not None:
             exog = exog.dot(self.ctransf)
         return exog
