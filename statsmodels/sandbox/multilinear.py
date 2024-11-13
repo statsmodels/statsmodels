@@ -10,12 +10,14 @@ multigroup:
     rest. It allows to test if the variables in the group are significantly
     more significant than outside the group.
 """
-from patsy import dmatrix
-import pandas as pd
-from statsmodels.api import OLS
-from statsmodels.api import stats
-import numpy as np
 import logging
+
+import numpy as np
+import pandas as pd
+
+from statsmodels.api import OLS, stats
+from statsmodels.formula._manager import FormulaManager
+
 
 def _model2dataframe(model_endog, model_exog, model_type=OLS, **kwargs):
     """return a series containing the summary of a linear model
@@ -154,7 +156,9 @@ def multiOLS(model, dataframe, column_list=None, method='fdr_bh',
     col_results = {}
     # as the model will use always the same endogenous variables
     # we can create them once and reuse
-    model_exog = dmatrix(model, data=dataframe, return_type="dataframe")
+
+    mgr = FormulaManager()
+    model_exog = mgr.get_arrays(model, dataframe, pandas=True)
     for col_name in column_list:
         # it will try to interpret the column name as a valid dataframe
         # index as it can be several times faster. If it fails it
@@ -162,7 +166,7 @@ def multiOLS(model, dataframe, column_list=None, method='fdr_bh',
         try:
             model_endog = dataframe[col_name]
         except KeyError:
-            model_endog = dmatrix(col_name + ' + 0', data=dataframe)
+            model_endog = mgr.get_arrays(col_name + ' + 0', data=dataframe, pandas=True)
         # retrieve the result and store them
         res = _model2dataframe(model_endog, model_exog, model_type, **kwargs)
         col_results[col_name] = res
@@ -190,7 +194,7 @@ def _test_group(pvalues, group_name, group, exact=True):
     The test is performed on the pvalues set (ad a pandas series) over
     the group specified via a fisher exact test.
     """
-    from scipy.stats import fisher_exact, chi2_contingency
+    from scipy.stats import chi2_contingency, fisher_exact
 
     totals = 1.0 * len(pvalues)
     total_significant = 1.0 * np.sum(pvalues)

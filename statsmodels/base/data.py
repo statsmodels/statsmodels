@@ -103,6 +103,7 @@ class ModelData:
     def __setstate__(self, d):
         if "restore_design_info" in d:
             # NOTE: there may be a more performant way to do this
+            # TODO: patsy migration
             from patsy import PatsyError
 
             from statsmodels.formula._manager import FormulaManager

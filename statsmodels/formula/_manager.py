@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Literal, NamedTuple
+from typing import Literal, NamedTuple, Sequence
 
 import numpy as np
 import pandas as pd
@@ -59,7 +59,13 @@ class FormulaManager:
             kwargs = {}
             if na_action:
                 kwargs["NA_action"] = na_action
-            if isinstance(formula, patsy.design_info.DesignInfo) or "~" not in formula:
+            if (
+                isinstance(
+                    formula, (patsy.design_info.DesignInfo, patsy.desc.ModelDesc)
+                )
+                or "~" not in formula
+                or formula.strip().startswith("~")
+            ):
                 output = patsy.dmatrix(
                     formula, data, eval_env=eval_env, return_type=return_type, **kwargs
                 )
@@ -91,7 +97,7 @@ class FormulaManager:
             return output
 
     def get_linear_constraints(
-        self, constraints: np.ndarray, variable_names: list[str]
+        self, constraints: np.ndarray | str | Sequence[str], variable_names: list[str]
     ):
         if self._engine == "patsy":
             from patsy.design_info import DesignInfo
@@ -118,6 +124,7 @@ class FormulaManager:
     def get_empty_eval_env(self):
         if self._engine == "patsy":
             from patsy.eval import EvalEnvironment
+
             return EvalEnvironment({})
         else:
             return {}
@@ -128,6 +135,7 @@ class FormulaManager:
         """
         if self._engine == "patsy":
             from patsy.desc import INTERCEPT
+
             if INTERCEPT in terms:
                 terms.remove(INTERCEPT)
             return terms
@@ -136,24 +144,25 @@ class FormulaManager:
                 "Removing intercept is not implemented for formulaic engine."
             )
 
-
     def has_intercept(self, spec):
         if self._engine == "patsy":
             from patsy.desc import INTERCEPT
+
             return INTERCEPT in spec.terms
         else:
             raise NotImplementedError(
                 "Checking for intercept is not implemented for formulaic engine."
             )
 
-
     def intercept_idx(self, spec):
         """
         Returns boolean array index indicating which column holds the intercept.
         """
         from numpy import array
+
         if self._engine == "patsy":
             from patsy.desc import INTERCEPT
+
             return array([INTERCEPT == i for i in spec.terms])
         else:
             raise NotImplementedError(

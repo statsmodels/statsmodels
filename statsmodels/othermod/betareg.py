@@ -14,15 +14,17 @@ Psychological methods 11.1 (2006): 54.
 
 import numpy as np
 from scipy.special import gammaln as lgamma
-import patsy
 
+from statsmodels.base.model import (
+    GenericLikelihoodModel,
+    GenericLikelihoodModelResults,
+    _LLRMixin,
+)
 import statsmodels.base.wrapper as wrap
+from statsmodels.formula._manager import FormulaManager
+from statsmodels.genmod import families
 import statsmodels.regression.linear_model as lm
 from statsmodels.tools.decorators import cache_readonly
-from statsmodels.base.model import (
-    GenericLikelihoodModel, GenericLikelihoodModelResults, _LLRMixin)
-from statsmodels.genmod import families
-
 
 _init_example = """
 
@@ -141,11 +143,13 @@ class BetaModel(GenericLikelihoodModel):
     def from_formula(cls, formula, data, exog_precision_formula=None,
                      *args, **kwargs):
         if exog_precision_formula is not None:
+
+            mgr = FormulaManager()
             if 'subset' in kwargs:
                 d = data.ix[kwargs['subset']]
-                Z = patsy.dmatrix(exog_precision_formula, d)
+                Z = mgr.get_arrays(exog_precision_formula, d, pandas=False)
             else:
-                Z = patsy.dmatrix(exog_precision_formula, data)
+                Z = mgr.get_arrays(exog_precision_formula, data, pandas=False)
             kwargs['exog_precision'] = Z
 
         return super().from_formula(formula, data, *args,

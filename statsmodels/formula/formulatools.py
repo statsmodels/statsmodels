@@ -10,7 +10,7 @@ import statsmodels.tools.data as data_util
 # this is a mutable object, so editing it should show up in the below
 formula_handler = {}
 
-
+# TODO: patsy migration
 class NAAction(NAAction):
     # monkey-patch so we can handle missing values in 'extra' arrays later
     def _handle_NA_drop(self, values, is_NAs, origins):
@@ -75,7 +75,9 @@ def handle_formula_data(Y, X, formula, depth=0, missing='drop'):
 def make_hypotheses_matrices(model_results, test_formula):
     """
     """
-    from patsy.constraint import linear_constraint
+    from statsmodels.formula._manager import FormulaManager
+    mgr = FormulaManager()
+
     exog_names = model_results.model.exog_names
-    LC = linear_constraint(test_formula, exog_names)
-    return LC
+    lc = mgr.get_linear_constraints(test_formula, exog_names)
+    return lc

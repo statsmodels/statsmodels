@@ -68,13 +68,13 @@ def test_tests():
     dta = load_pandas().data
     results = ols(formula, dta).fit()
     test_formula = '(GNPDEFL = GNP), (UNEMP = 2), (YEAR/1829 = 1)'
-    LC = make_hypotheses_matrices(results, test_formula)
-    R = LC.coefs
-    Q = LC.constants
-    npt.assert_almost_equal(R, [[0, 1, -1, 0, 0, 0, 0],
+    lc = make_hypotheses_matrices(results, test_formula)
+    r = lc.constraint_matrix
+    q = lc.constraint_values
+    npt.assert_almost_equal(r, [[0, 1, -1, 0, 0, 0, 0],
                                 [0, 0, 0, 1, 0, 0, 0],
                                 [0, 0, 0, 0, 0, 0, 1./1829]], 8)
-    npt.assert_array_equal(Q, [[0], [2], [1]])
+    npt.assert_array_equal(q, [[0], [2], [1]])
 
 
 def test_formula_labels():

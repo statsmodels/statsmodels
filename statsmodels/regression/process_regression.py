@@ -12,17 +12,19 @@ measures occur at arbitrary real-valued time points.
 The mean structure is specified as a linear model.  The covariance
 parameters depend on covariates via a link function.
 """
+import collections
+import warnings
+from xmlrpc.client import FastParser
 
 import numpy as np
 import pandas as pd
-import patsy
-import statsmodels.base.model as base
-from statsmodels.regression.linear_model import OLS
-import collections
 from scipy.optimize import minimize
+
+import statsmodels.base.model as base
+from statsmodels.formula._manager import FormulaManager
 from statsmodels.iolib import summary2
+from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.numdiff import approx_fprime
-import warnings
 
 
 class ProcessCovariance:
@@ -371,20 +373,20 @@ class ProcessMLE(base.LikelihoodModel):
 
         if isinstance(groups, str):
             groups = np.asarray(data[groups])
-
-        exog_scale = patsy.dmatrix(scale_formula, data)
-        scale_design_info = exog_scale.design_info
+        mgr = FormulaManager()
+        exog_scale = mgr.get_arrays(scale_formula, data)
+        scale_design_info = mgr.spec
         scale_names = scale_design_info.column_names
         exog_scale = np.asarray(exog_scale)
 
-        exog_smooth = patsy.dmatrix(smooth_formula, data)
-        smooth_design_info = exog_smooth.design_info
+        exog_smooth = mgr.get_arrays(smooth_formula, data)
+        smooth_design_info = mgr.spec
         smooth_names = smooth_design_info.column_names
         exog_smooth = np.asarray(exog_smooth)
 
         if noise_formula is not None:
-            exog_noise = patsy.dmatrix(noise_formula, data)
-            noise_design_info = exog_noise.design_info
+            exog_noise = mgr.get_arrays(noise_formula, data)
+            noise_design_info = mgr.spec
             noise_names = noise_design_info.column_names
             exog_noise = np.asarray(exog_noise)
         else:
@@ -729,8 +731,9 @@ class ProcessMLE(base.LikelihoodModel):
             sca = np.dot(scale_data, scale_params)
             smo = np.dot(smooth_data, smooth_params)
         else:
-            sc = patsy.dmatrix(self.data.scale_design_info, scale_data)
-            sm = patsy.dmatrix(self.data.smooth_design_info, smooth_data)
+            mgr = FormulaManager()
+            sc = mgr.get_arrays(self.data.scale_design_info, scale_data, pandas=False)
+            sm = mgr.get_arrays(self.data.smooth_design_info, smooth_data, pandas=False)
             sca = np.exp(np.dot(sc, scale_params))
             smo = np.exp(np.dot(sm, smooth_params))
 
@@ -754,7 +757,8 @@ class ProcessMLE(base.LikelihoodModel):
             exog = self.exog
         elif hasattr(self.data, "design_info"):
             # Run the provided data through the formula if present
-            exog = patsy.dmatrix(self.data.design_info, exog)
+            mgr = FormulaManager()
+            exog = mgr.get_arrays(self.data.design_info, exog)
 
         if len(params) > exog.shape[1]:
             params = params[0:exog.shape[1]]

@@ -2,18 +2,18 @@
 
 author: Yichuan Liu
 """
-import numpy as np
-from numpy.linalg import eigvals, inv, solve, matrix_rank, pinv, svd
-from scipy import stats
-import pandas as pd
-from patsy import DesignInfo
-
 from statsmodels.compat.pandas import Substitution
-from statsmodels.base.model import Model, LikelihoodModelResults
-import statsmodels.base.wrapper as wrap
-from statsmodels.regression.linear_model import RegressionResultsWrapper
 
+import numpy as np
+from numpy.linalg import eigvals, inv, matrix_rank, pinv, solve, svd
+import pandas as pd
+from scipy import stats
+
+from statsmodels.base.model import LikelihoodModelResults, Model
+import statsmodels.base.wrapper as wrap
+from statsmodels.formula._manager import FormulaManager
 from statsmodels.iolib import summary2
+from statsmodels.regression.linear_model import RegressionResultsWrapper
 from statsmodels.tools.decorators import cache_readonly
 
 __docformat__ = 'restructuredtext en'
@@ -319,8 +319,9 @@ def _multivariate_test(hypotheses, exog_names, endog_names, fn):
         else:
             raise ValueError('hypotheses must be a tuple of length 2, 3 or 4.'
                              ' len(hypotheses)=%d' % len(hypo))
+        mgr = FormulaManager()
         if any(isinstance(j, str) for j in L):
-            L = DesignInfo(exog_names).linear_constraint(L).coefs
+            L = mgr.get_linear_constraints(L, variable_names=exog_names).constraint_matrix
         else:
             if not isinstance(L, np.ndarray) or len(L.shape) != 2:
                 raise ValueError('Contrast matrix L must be a 2-d array!')
@@ -331,7 +332,7 @@ def _multivariate_test(hypotheses, exog_names, endog_names, fn):
         if M is None:
             M = np.eye(k_yvar)
         elif any(isinstance(j, str) for j in M):
-            M = DesignInfo(endog_names).linear_constraint(M).coefs.T
+            M = mgr.get_linear_constraints(M, variable_names=endog_names).constraint_matrix.T
         else:
             if M is not None:
                 if not isinstance(M, np.ndarray) or len(M.shape) != 2:

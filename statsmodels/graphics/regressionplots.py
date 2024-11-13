@@ -15,8 +15,8 @@ from statsmodels.compat.python import lrange, lzip
 
 import numpy as np
 import pandas as pd
-from statsmodels.formula._manager import FormulaManager
 
+from statsmodels.formula._manager import FormulaManager
 from statsmodels.genmod.generalized_estimating_equations import GEE
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.graphics import utils

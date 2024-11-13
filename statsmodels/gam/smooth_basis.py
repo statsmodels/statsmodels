@@ -14,6 +14,7 @@ from abc import ABCMeta, abstractmethod
 
 import numpy as np
 import pandas as pd
+# TODO: patsy migration
 from patsy.mgcv_cubic_splines import _get_all_sorted_knots
 
 from statsmodels.formula._manager import FormulaManager

@@ -4,8 +4,8 @@ import numpy as np
 import pandas as pd
 from pandas import DataFrame, Index
 from scipy import stats
-from statsmodels.formula._manager import FormulaManager
 
+from statsmodels.formula._manager import FormulaManager
 from statsmodels.iolib import summary2
 from statsmodels.regression.linear_model import OLS
 

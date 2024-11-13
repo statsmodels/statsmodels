@@ -152,6 +152,7 @@ from scipy.stats.distributions import norm
 
 from statsmodels.base._penalties import Penalty
 import statsmodels.base.model as base
+from statsmodels.formula._manager import FormulaManager
 from statsmodels.tools import data as data_tools
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
@@ -987,9 +988,10 @@ class MixedLM(base.LikelihoodModel):
                 if eval_env is None:
                     eval_env = 1
                 elif eval_env == -1:
-                    from patsy import EvalEnvironment
-                    eval_env = EvalEnvironment({})
-                exog_re = patsy.dmatrix(re_formula, data, eval_env=eval_env)
+                    mgr = FormulaManager()
+                    eval_env = mgr.get_empty_eval_env()
+                mgr = FormulaManager()
+                exog_re = mgr.get_arrays(re_formula, data, eval_env=eval_env)
                 exog_re_names = exog_re.design_info.column_names
                 exog_re_names = [x.replace("Intercept", group_name)
                                  for x in exog_re_names]
@@ -1008,8 +1010,8 @@ class MixedLM(base.LikelihoodModel):
             if eval_env is None:
                 eval_env = 1
             elif eval_env == -1:
-                from patsy import EvalEnvironment
-                eval_env = EvalEnvironment({})
+                mgr = FormulaManager()
+                eval_env = mgr.get_empty_eval_env()
 
             vc_mats = []
             vc_colnames = []
@@ -1017,17 +1019,19 @@ class MixedLM(base.LikelihoodModel):
             gb = data.groupby(groups)
             kylist = sorted(gb.groups.keys())
             vcf = sorted(vc_formula.keys())
+            mgr = FormulaManager()
             for vc_name in vcf:
+                # TODO: patsy migration
                 md = patsy.ModelDesc.from_formula(vc_formula[vc_name])
                 vc_names.append(vc_name)
                 evc_mats, evc_colnames = [], []
                 for group_ix, group in enumerate(kylist):
                     ii = gb.groups[group]
-                    mat = patsy.dmatrix(
+                    mat = mgr.get_arrays(
                              md,
                              data.loc[ii, :],
                              eval_env=eval_env,
-                             return_type='dataframe')
+                             pandas=True)
                     evc_colnames.append(mat.columns.tolist())
                     if use_sparse:
                         evc_mats.append(sparse.csr_matrix(mat))

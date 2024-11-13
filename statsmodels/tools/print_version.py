@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from functools import reduce
-import sys
 from os.path import dirname
+import sys
 
 
 def safe_version(module, attr='__version__', *others):
