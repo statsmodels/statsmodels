@@ -3,14 +3,9 @@ from statsmodels.compat.python import lrange
 import numpy as np
 import pandas as pd
 from pandas import DataFrame, Index
-import patsy
 from scipy import stats
+from statsmodels.formula._manager import FormulaManager
 
-from statsmodels.formula.formulatools import (
-    _has_intercept,
-    _intercept_idx,
-    _remove_intercept_patsy,
-)
 from statsmodels.iolib import summary2
 from statsmodels.regression.linear_model import OLS
 
@@ -70,7 +65,8 @@ def anova_single(model, **kwargs):
     design_info = model.model.data.design_info
     exog_names = model.model.exog_names
     # +1 for resids
-    n_rows = (len(design_info.terms) - _has_intercept(design_info) + 1)
+    mgr = FormulaManager()
+    n_rows = (len(design_info.terms) - mgr.has_intercept(design_info) + 1)
 
     pr_test = "PR(>%s)" % test
     names = ['df', 'sum_sq', 'mean_sq', test, pr_test]
@@ -127,7 +123,8 @@ def anova1_lm_single(model, endog, exog, nobs, design_info, table, n_rows, test,
 
     sum_sq = np.dot(arr, effects**2)
     #NOTE: assumes intercept is first column
-    idx = _intercept_idx(design_info)
+    mgr = FormulaManager()
+    idx = mgr.intercept_idx(design_info)
     sum_sq = sum_sq[~idx]
     term_names = np.array(design_info.term_names) # want boolean indexing
     term_names = term_names[~idx]
@@ -172,8 +169,9 @@ def anova2_lm_single(model, design_info, n_rows, test, pr_test, robust):
     Sum of Squares compares marginal contribution of terms. Thus, it is
     not particularly useful for models with significant interaction terms.
     """
+    mgr = FormulaManager()
     terms_info = design_info.terms[:] # copy
-    terms_info = _remove_intercept_patsy(terms_info)
+    terms_info = mgr.remove_intercept(terms_info)
 
     names = ['sum_sq', 'df', test, pr_test]
 
@@ -236,7 +234,8 @@ def anova2_lm_single(model, design_info, n_rows, test, pr_test, robust):
     return table
 
 def anova3_lm_single(model, design_info, n_rows, test, pr_test, robust):
-    n_rows += _has_intercept(design_info)
+    mgr = FormulaManager()
+    n_rows += mgr.has_intercept(design_info)
     terms_info = design_info.terms
 
     names = ['sum_sq', 'df', test, pr_test]
@@ -560,7 +559,8 @@ class AnovaRM:
         within = ['C(%s, Sum)' % i for i in self.within]
         subject = 'C(%s, Sum)' % self.subject
         factors = within + [subject]
-        x = patsy.dmatrix('*'.join(factors), data=self.data)
+        mgr = FormulaManager()
+        x = mgr.get_arrays('*'.join(factors), data=self.data, pandas=False)
         term_slices = x.design_info.term_name_slices
         for key in term_slices:
             ind = np.array([False]*x.shape[1])

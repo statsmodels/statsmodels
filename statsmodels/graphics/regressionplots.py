@@ -15,7 +15,7 @@ from statsmodels.compat.python import lrange, lzip
 
 import numpy as np
 import pandas as pd
-from patsy import dmatrix
+from statsmodels.formula._manager import FormulaManager
 
 from statsmodels.genmod.generalized_estimating_equations import GEE
 from statsmodels.genmod.generalized_linear_model import GLM
@@ -391,13 +391,14 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
 
     # strings, use patsy to transform to data
     if isinstance(endog, str):
-        endog = dmatrix(endog + "-1", data, eval_env=eval_env)
+        endog = FormulaManager().get_arrays(endog + "-1", data, eval_env=eval_env, pandas=False)
 
+    mgr = FormulaManager()
     if isinstance(exog_others, str):
-        RHS = dmatrix(exog_others, data, eval_env=eval_env)
+        RHS = mgr.get_arrays(exog_others, data, eval_env=eval_env, pandas=False)
     elif isinstance(exog_others, list):
         RHS = "+".join(exog_others)
-        RHS = dmatrix(RHS, data, eval_env=eval_env)
+        RHS = mgr.get_arrays(RHS, data, eval_env=eval_env, pandas=False)
     else:
         RHS = exog_others
     RHS_isemtpy = False
@@ -406,7 +407,7 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
     elif isinstance(RHS, pd.DataFrame) and RHS.empty:
         RHS_isemtpy = True
     if isinstance(exog_i, str):
-        exog_i = dmatrix(exog_i + "-1", data, eval_env=eval_env)
+        exog_i = mgr.get_arrays(exog_i + "-1", data, eval_env=eval_env, pandas=False)
 
     # all arrays or pandas-like
 

@@ -70,28 +70,6 @@ def handle_formula_data(Y, X, formula, depth=0, missing='drop'):
     return result, missing_mask, design_info
 
 
-def _remove_intercept_patsy(terms):
-    """
-    Remove intercept from Patsy terms.
-    """
-    from patsy.desc import INTERCEPT
-    if INTERCEPT in terms:
-        terms.remove(INTERCEPT)
-    return terms
-
-
-def _has_intercept(design_info):
-    from patsy.desc import INTERCEPT
-    return INTERCEPT in design_info.terms
-
-
-def _intercept_idx(design_info):
-    """
-    Returns boolean array index indicating which column holds the intercept.
-    """
-    from numpy import array
-    from patsy.desc import INTERCEPT
-    return array([INTERCEPT == i for i in design_info.terms])
 
 
 def make_hypotheses_matrices(model_results, test_formula):

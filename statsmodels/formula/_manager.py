@@ -121,3 +121,41 @@ class FormulaManager:
             return EvalEnvironment({})
         else:
             return {}
+
+    def remove_intercept(self, terms):
+        """
+        Remove intercept from Patsy terms.
+        """
+        if self._engine == "patsy":
+            from patsy.desc import INTERCEPT
+            if INTERCEPT in terms:
+                terms.remove(INTERCEPT)
+            return terms
+        else:
+            raise NotImplementedError(
+                "Removing intercept is not implemented for formulaic engine."
+            )
+
+
+    def has_intercept(self, spec):
+        if self._engine == "patsy":
+            from patsy.desc import INTERCEPT
+            return INTERCEPT in spec.terms
+        else:
+            raise NotImplementedError(
+                "Checking for intercept is not implemented for formulaic engine."
+            )
+
+
+    def intercept_idx(self, spec):
+        """
+        Returns boolean array index indicating which column holds the intercept.
+        """
+        from numpy import array
+        if self._engine == "patsy":
+            from patsy.desc import INTERCEPT
+            return array([INTERCEPT == i for i in spec.terms])
+        else:
+            raise NotImplementedError(
+                "Intercpet idx has not been implemented for formulaic"
+            )

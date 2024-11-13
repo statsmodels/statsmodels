@@ -468,8 +468,9 @@ class MICEData:
         for k in kwds:
             v = kwds[k]
             if isinstance(v, PatsyFormula):
-                mat = patsy.dmatrix(v.formula, self.data,
-                                    return_type="dataframe")
+                from statsmodels.formula._manager import FormulaManager
+                mgr = FormulaManager()
+                mat = mgr.get_arrays(v.formula, self.data, pandas=True)
                 mat = np.require(mat, requirements="W")[ix, :]
                 if mat.shape[1] == 1:
                     mat = mat[:, 0]
