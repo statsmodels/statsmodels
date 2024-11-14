@@ -698,7 +698,7 @@ class MixedLM(base.LikelihoodModel):
                  exog_vc=None, use_sqrt=True, missing='none',
                  **kwargs):
 
-        _allowed_kwargs = ["missing_idx", "design_info", "formula"]
+        _allowed_kwargs = ["missing_idx", "model_spec", "formula"]
         for x in kwargs.keys():
             if x not in _allowed_kwargs:
                 raise ValueError(
@@ -991,7 +991,7 @@ class MixedLM(base.LikelihoodModel):
                     eval_env = mgr.get_empty_eval_env()
                 mgr = FormulaManager()
                 exog_re = mgr.get_arrays(re_formula, data, eval_env=eval_env)
-                exog_re_names = exog_re.design_info.column_names
+                exog_re_names = mgr.get_column_names(exog_re)
                 exog_re_names = [x.replace("Intercept", group_name)
                                  for x in exog_re_names]
                 exog_re = np.asarray(exog_re)

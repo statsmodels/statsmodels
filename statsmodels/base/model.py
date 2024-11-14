@@ -86,7 +86,7 @@ class Model:
     _formula_max_endog = 1
     # kwargs that are generically allowed, maybe not supported in all models
     _kwargs_allowed = [
-        "missing", 'missing_idx', 'formula', 'design_info', "hasconst",
+        "missing", 'missing_idx', 'formula', 'model_spec', "hasconst",
         ]
 
     def __init__(self, endog, exog=None, **kwargs):
@@ -118,7 +118,7 @@ class Model:
     def _check_kwargs(self, kwargs, keys_extra=None, error=ERROR_INIT_KWARGS):
 
         kwargs_allowed = [
-            "missing", 'missing_idx', 'formula', 'design_info', "hasconst",
+            "missing", 'missing_idx', 'formula', 'model_spec', "hasconst",
             ]
         if keys_extra:
             kwargs_allowed.extend(keys_extra)
@@ -135,7 +135,7 @@ class Model:
         data = handle_data(endog, exog, missing, hasconst, **kwargs)
         # kwargs arrays could have changed, easier to just attach here
         for key in kwargs:
-            if key in ['design_info', 'formula']:  # leave attached to data
+            if key in ['model_spec', 'formula']:  # leave attached to data
                 continue
             # pop so we do not start keeping all these twice or references
             try:
@@ -204,7 +204,7 @@ class Model:
 
         tmp = handle_formula_data(data, None, formula, depth=eval_env,
                                   missing=missing)
-        ((endog, exog), missing_idx, design_info) = tmp
+        ((endog, exog), missing_idx, model_spec) = tmp
         max_endog = cls._formula_max_endog
         if (max_endog is not None and
                 endog.ndim > 1 and endog.shape[1] > max_endog):
@@ -216,18 +216,18 @@ class Model:
             cols = [x for x in exog.columns if x not in drop_cols]
             if len(cols) < len(exog.columns):
                 exog = exog[cols]
-                cols = list(design_info.term_names)
+                cols = list(model_spec.term_names)
                 for col in drop_cols:
                     try:
                         cols.remove(col)
                     except ValueError:
                         pass  # OK if not present
-                design_info = design_info.subset(cols)
+                model_spec = model_spec.subset(cols)
 
         kwargs.update({'missing_idx': missing_idx,
                        'missing': missing,
                        'formula': formula,  # attach formula for unpckling
-                       'design_info': design_info})
+                       'model_spec': model_spec})
         mod = cls(endog, exog, *args, **kwargs)
         mod.formula = formula
         # since we got a dataframe, attach the original
@@ -1086,15 +1086,15 @@ class Results:
                 exog_index = [exog.index.name]
 
         if transform and hasattr(self.model, 'formula') and (exog is not None):
-            # allow both location of design_info, see #7043
-            design_info = (getattr(self.model, "design_info", None) or
-                           self.model.data.design_info)
+            # allow both location of model_spec, see #7043
+            model_spec = (getattr(self.model, "model_spec", None) or
+                           self.model.data.model_spec)
             from statsmodels.formula._manager import FormulaManager
             mgr = FormulaManager()
             if isinstance(exog, pd.Series):
                 # we are guessing whether it should be column or row
                 if (hasattr(exog, 'name') and isinstance(exog.name, str) and
-                        exog.name in design_info.describe()):
+                        exog.name in model_spec.describe()):
                     # assume we need one column
                     exog = pd.DataFrame(exog)
                 else:
@@ -1104,7 +1104,7 @@ class Results:
             orig_exog_len = len(exog)
             is_dict = isinstance(exog, dict)
             try:
-                exog = mgr.get_arrays(design_info, exog, pandas=True)
+                exog = mgr.get_arrays(model_spec, exog, pandas=True)
             except Exception as exc:
                 msg = ('predict requires that you use a DataFrame when '
                        'predicting from a model\nthat was created using the '
@@ -2005,17 +2005,17 @@ class LikelihoodModelResults(Results):
             extra_constraints = []
         if combine_terms is None:
             combine_terms = []
-        design_info = getattr(result.model.data, 'design_info', None)
+        model_spec = getattr(result.model.data, 'model_spec', None)
 
-        if design_info is None and extra_constraints is None:
+        if model_spec is None and extra_constraints is None:
             raise ValueError('no constraints, nothing to do')
 
         identity = np.eye(len(result.params))
         constraints = []
         combined = defaultdict(list)
-        if design_info is not None:
-            for term in design_info.terms:
-                cols = design_info.slice(term)
+        if model_spec is not None:
+            for term in model_spec.terms:
+                cols = model_spec.slice(term)
                 name = term.name()
                 constraint_matrix = identity[cols]
 
@@ -2083,7 +2083,7 @@ class LikelihoodModelResults(Results):
         """
         Perform pairwise t_test with multiple testing corrected p-values.
 
-        This uses the formula design_info encoding contrast matrix and should
+        This uses the formula's model_spec encoding contrast matrix and should
         work for all encodings of a main effect.
 
         Parameters
@@ -2099,7 +2099,7 @@ class LikelihoodModelResults(Results):
             The significance level for multiple testing reject decision.
         factor_labels : {list[str], None}
             Labels for the factor levels used for pairwise labels. If not
-            provided, then the labels from the formula design_info are used.
+            provided, then the labels from the formula's model_spec are used.
 
         Returns
         -------

@@ -417,7 +417,7 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
         ax.plot(endog, exog_i, 'o', **kwargs)
         fitted_line = OLS(endog, exog_i).fit()
         x_axis_endog_name = 'x' if isinstance(exog_i, np.ndarray) else exog_i.name
-        y_axis_endog_name = 'y' if isinstance(endog, np.ndarray) else endog.design_info.column_names[0]
+        y_axis_endog_name = 'y' if isinstance(endog, np.ndarray) else endog.model_spec.column_names[0]
     else:
         res_yaxis = OLS(endog, RHS).fit()
         res_xaxis = OLS(exog_i, RHS).fit()

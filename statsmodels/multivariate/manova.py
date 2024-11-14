@@ -2,13 +2,18 @@
 
 author: Yichuan Liu
 """
+from statsmodels.compat.pandas import Substitution
+
 import numpy as np
 
-from statsmodels.compat.pandas import Substitution
 from statsmodels.base.model import Model
-from .multivariate_ols import MultivariateTestResults
-from .multivariate_ols import _multivariate_ols_fit
-from .multivariate_ols import _multivariate_ols_test, _hypotheses_doc
+
+from .multivariate_ols import (
+    MultivariateTestResults,
+    _hypotheses_doc,
+    _multivariate_ols_fit,
+    _multivariate_ols_test,
+)
 
 __docformat__ = 'restructuredtext en'
 
@@ -104,8 +109,8 @@ class MANOVA(Model):
         """
         if hypotheses is None:
             if (hasattr(self, 'data') and self.data is not None and
-                        hasattr(self.data, 'design_info')):
-                terms = self.data.design_info.term_name_slices
+                        hasattr(self.data, 'model_spec')):
+                terms = self.data.model_spec.term_name_slices
                 hypotheses = []
                 for key in terms:
                     if skip_intercept_test and key == 'Intercept':

@@ -5,23 +5,10 @@ from typing import Any, Literal, NamedTuple, Sequence
 import numpy as np
 import pandas as pd
 
-
-class _Default:
-    def __init__(self, name=""):
-        self._name = ""
-
-    def __str__(self):
-        return self._name
-
-    def __repr__(self):
-        return self._name
-
-
-_NoDefault = _Default("<no default value>")
-
-
 try:
     from patsy.missing import NAAction
+
+    DEFAULT_ENGINE = "patsy"
 
     class NAAction(NAAction):
         # monkey-patch so we can handle missing values in 'extra' arrays later
@@ -35,10 +22,55 @@ try:
             return [v[good_mask, ...] for v in values]
 
 except ImportError:
+    DEFAULT_ENGINE = "formulaic"
 
     class NAAction:
         def __init__(self, on_NA="", NA_types=("",)):
             pass
+
+
+class _FormulaOption:
+    def __init__(self, default_engine: Literal["patsy", "formulaic"] | None = None):
+        if default_engine is None:
+            default_engine = DEFAULT_ENGINE
+
+        self._formula_engine = default_engine
+        self._allowed_options = ("patsy", "formulaic")
+
+    @property
+    def formula_engine(self) -> Literal["patsy", "formulaic"]:
+        return self._formula_engine
+
+    @formula_engine.setter
+    def formula_engine(self, value: Literal["patsy", "formulaic"]) -> None:
+        if value not in self._allowed_options:
+            msg = "Invalid formula engine option. Must be "
+            if len(self._allowed_options) == 1:
+                msg += f"{self._allowed_options[0]}"
+            else:
+                allowed = list(self._allowed_options)
+                allowed[-1] = f"or {allowed[-1]}"
+                if len(allowed) > 2:
+                    msg += ", ".join(allowed)
+                else:
+                    msg += " ".join(allowed)
+            raise ValueError(f"{msg}.")
+
+        self._formula_engine = value
+
+
+class _Default:
+    def __init__(self, name=""):
+        self._name = ""
+
+    def __str__(self):
+        return self._name
+
+    def __repr__(self):
+        return self._name
+
+
+_NoDefault = _Default("<no default value>")
 
 
 class LinearConstraintValues(NamedTuple):
@@ -57,13 +89,24 @@ class FormulaManager:
     ) -> Literal["patsy", "formulaic"]:
         # Patsy for now, to be changed to a user-settable variable before release
         _engine: Literal["patsy", "formulaic"]
-        _engine = engine if engine is not None else "patsy"
+
+        if engine is not None:
+            _engine = engine
+        else:
+            import statsmodels.formula
+
+            _engine = statsmodels.formula.options.formula_engine
+
         assert _engine is not None
         if _engine not in ("patsy", "formulaic"):
             raise ValueError(
                 f"Unknown engine: {_engine}. Only patsy and formulaic are supported."
             )
         return _engine
+
+    @property
+    def engine(self):
+        return self._engine
 
     @property
     def spec(self):
@@ -220,3 +263,19 @@ class FormulaManager:
             import formulaic
 
             return formulaic.ModelSpec(formula)
+
+    def get_column_names(self, frame):
+        return self.get_model_spec(frame).column_names
+
+    def get_term_name_slices(self, frame):
+        return self.get_model_spec(frame).term_name_slices
+
+    def get_model_spec(self, frame, optional=False):
+        if self._engine == "patsy":
+            if optional and not hasattr(frame, "design_info"):
+                return None
+            return frame.design_info
+        else:
+            if optional and not hasattr(frame, "model_spec"):
+                return None
+            return frame.model_spec

@@ -48,11 +48,11 @@ def handle_formula_data(Y, X, formula, depth=0, missing='drop'):
     if not np.any(missing_mask):
         missing_mask = None
     if len(result) > 1:  # have RHS design
-        design_info = mgr.spec  # detach it from DataFrame
+        model_spec = mgr.spec  # detach it from DataFrame
     else:
-        design_info = None
-    # NOTE: is there ever a case where we'd need LHS design_info?
-    return result, missing_mask, design_info
+        model_spec = None
+    # NOTE: is there ever a case where we'd need LHS's model_spec?
+    return result, missing_mask, model_spec
 
 
 

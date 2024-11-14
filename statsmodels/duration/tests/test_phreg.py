@@ -2,18 +2,18 @@ import itertools
 import os
 
 import numpy as np
-from statsmodels.duration.hazard_regression import PHReg
-from numpy.testing import (assert_allclose,
-                           assert_equal, assert_)
+from numpy.testing import assert_, assert_allclose, assert_equal
 import pandas as pd
 import pytest
+
+from statsmodels.duration.hazard_regression import PHReg
+
+# All the R results
+from .results import survival_enet_r_results, survival_r_results
 
 # TODO: Include some corner cases: data sets with empty strata, strata
 #      with no events, entry times after censoring times, etc.
 
-# All the R results
-from .results import survival_r_results
-from .results import survival_enet_r_results
 
 """
 Tests of PHReg against R coxph.
@@ -189,7 +189,7 @@ class TestPHReg:
         result1 = model1.fit()
 
         from patsy import dmatrix
-        dfp = dmatrix(model1.data.design_info, df)
+        dfp = dmatrix(model1.data.model_spec, df)
 
         pr1 = result1.predict()
         pr2 = result1.predict(exog=df)
@@ -356,11 +356,11 @@ class TestPHReg:
 
         dist = rslt.get_distribution()
 
-        fitted_means = dist.mean()
-        true_means = elin_pred
-        fitted_var = dist.var()
-        fitted_sd = dist.std()
-        sample = dist.rvs()
+        # Smoke checks
+        dist.mean()
+        dist.var()
+        dist.std()
+        dist.rvs()
 
     def test_fit_regularized(self):
 

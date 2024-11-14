@@ -111,7 +111,7 @@ class RecursiveLS(MLEModel):
         kwargs.setdefault('initialization', 'diffuse')
 
         # Remove some formula-specific kwargs
-        formula_kwargs = ['missing', 'missing_idx', 'formula', 'design_info']
+        formula_kwargs = ['missing', 'missing_idx', 'formula', 'model_spec']
         for name in formula_kwargs:
             if name in kwargs:
                 del kwargs[name]

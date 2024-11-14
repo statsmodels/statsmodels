@@ -420,10 +420,10 @@ class _MultivariateOLSResults(LikelihoodModelResults):
     """
     def __init__(self, fitted_mv_ols):
         if (hasattr(fitted_mv_ols, 'data') and
-                hasattr(fitted_mv_ols.data, 'design_info')):
-            self.design_info = fitted_mv_ols.data.design_info
+                hasattr(fitted_mv_ols.data, 'model_spec')):
+            self.model_spec = fitted_mv_ols.data.model_spec
         else:
-            self.design_info = None
+            self.model_spec = None
         self.exog_names = fitted_mv_ols.exog_names
         self.endog_names = fitted_mv_ols.endog_names
         self._fittedmod = fitted_mv_ols._fittedmod
@@ -462,8 +462,8 @@ class _MultivariateOLSResults(LikelihoodModelResults):
         """
         k_xvar = len(self.exog_names)
         if hypotheses is None:
-            if self.design_info is not None:
-                terms = self.design_info.term_name_slices
+            if self.model_spec is not None:
+                terms = self.model_spec.term_name_slices
                 hypotheses = []
                 for key in terms:
                     if skip_intercept_test and key == 'Intercept':
@@ -615,8 +615,8 @@ class MultivariateLSResults(LikelihoodModelResults):
         """
         k_xvar = len(self.model.exog_names)
         if hypotheses is None:
-            if self.model.data.design_info is not None:
-                terms = self.model.data.design_info.term_name_slices
+            if self.model.data.model_spec is not None:
+                terms = self.model.data.model_spec.term_name_slices
                 hypotheses = []
                 for key in terms:
                     if skip_intercept_test and key == 'Intercept':

@@ -386,7 +386,7 @@ def _get_exog_predict(self, exog=None, transform=True, row_labels=None):
         mgr = FormulaManager()
         if isinstance(exog, pd.Series):
             exog = pd.DataFrame(exog)
-        exog = mgr.get_arrays(self.model.data.design_info, exog)
+        exog = mgr.get_arrays(self.model.data.model_spec, exog)
 
     if exog is not None:
         if row_labels is None:

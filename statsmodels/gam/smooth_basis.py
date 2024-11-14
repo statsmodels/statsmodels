@@ -645,7 +645,7 @@ class UnivariateCubicCyclicSplines(UnivariateGamSmoother):
     def _smooth_basis_for_single_variable(self):
         mgr = FormulaManager()
         basis = mgr.get_arrays("cc(x, df=" + str(self.df) + ") - 1", {"x": self.x}, pandas=False, attach_spec=True)
-        self.design_info = mgr.spec
+        self.model_spec = mgr.spec
         n_inner_knots = self.df - 2 + 1  # +n_constraints
         # TODO: from CubicRegressionSplines class
         all_knots = get_all_sorted_knots(
@@ -718,7 +718,7 @@ class UnivariateCubicCyclicSplines(UnivariateGamSmoother):
         return d.T.dot(np.linalg.inv(b)).dot(d)
 
     def transform(self, x_new):
-        exog = FormulaManager().get_arrays(self.design_info, {"x": x_new}, pandas=False)
+        exog = FormulaManager().get_arrays(self.model_spec, {"x": x_new}, pandas=False)
         if self.ctransf is not None:
             exog = exog.dot(self.ctransf)
         return exog

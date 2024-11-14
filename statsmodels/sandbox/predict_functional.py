@@ -192,7 +192,7 @@ def _make_exog_from_formula(result, focus_var, summaries, values, num_points):
     for ky in values.keys():
         fexog[ky] = values[ky]
 
-    dexog = FormulaManager().get_arrays(model.data.design_info, fexog, pandas=True)
+    dexog = FormulaManager().get_arrays(model.data.model_spec, fexog, pandas=True)
     return dexog, fexog, fvals
 
 
@@ -307,12 +307,12 @@ def predict_functional(result, focus_var, summaries=None, values=None,
                              "provide `summaries` or `values`")
 
         fexog = exog
-        dexog = FormulaManager().get_arrays(model.data.design_info, fexog, pandas=True)
+        dexog = FormulaManager().get_arrays(model.data.model_spec, fexog, pandas=True)
         fvals = exog[focus_var]
 
         if exog2 is not None:
             fexog2 = exog
-            FormulaManager().get_arrays(model.data.design_info, fexog2, pandas=True)
+            FormulaManager().get_arrays(model.data.model_spec, fexog2, pandas=True)
             fvals2 = fvals
 
     else:

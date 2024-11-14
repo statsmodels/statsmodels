@@ -374,22 +374,22 @@ class ProcessMLE(base.LikelihoodModel):
             groups = np.asarray(data[groups])
         mgr = FormulaManager()
         exog_scale = mgr.get_arrays(scale_formula, data)
-        scale_design_info = mgr.spec
-        scale_names = scale_design_info.column_names
+        scale_model_spec = mgr.spec
+        scale_names = scale_model_spec.column_names
         exog_scale = np.asarray(exog_scale)
 
         exog_smooth = mgr.get_arrays(smooth_formula, data)
-        smooth_design_info = mgr.spec
-        smooth_names = smooth_design_info.column_names
+        smooth_model_spec = mgr.spec
+        smooth_names = smooth_model_spec.column_names
         exog_smooth = np.asarray(exog_smooth)
 
         if noise_formula is not None:
             exog_noise = mgr.get_arrays(noise_formula, data)
-            noise_design_info = mgr.spec
-            noise_names = noise_design_info.column_names
+            noise_model_spec = mgr.spec
+            noise_names = noise_model_spec.column_names
             exog_noise = np.asarray(exog_noise)
         else:
-            exog_noise, noise_design_info, noise_names, exog_noise =\
+            exog_noise, noise_model_spec, noise_names, exog_noise =\
                 None, None, [], None
 
         mod = super().from_formula(
@@ -402,11 +402,11 @@ class ProcessMLE(base.LikelihoodModel):
             time=time,
             groups=groups)
 
-        mod.data.scale_design_info = scale_design_info
-        mod.data.smooth_design_info = smooth_design_info
+        mod.data.scale_model_spec = scale_model_spec
+        mod.data.smooth_model_spec = smooth_model_spec
 
         if mod._has_noise:
-            mod.data.noise_design_info = noise_design_info
+            mod.data.noise_model_spec = noise_model_spec
 
         mod.data.param_names = (mod.exog_names + scale_names +
                                 smooth_names + noise_names)
@@ -726,13 +726,13 @@ class ProcessMLE(base.LikelihoodModel):
         the white noise variance.
         """
 
-        if not hasattr(self.data, "scale_design_info"):
+        if not hasattr(self.data, "scale_model_spec"):
             sca = np.dot(scale_data, scale_params)
             smo = np.dot(smooth_data, smooth_params)
         else:
             mgr = FormulaManager()
-            sc = mgr.get_arrays(self.data.scale_design_info, scale_data, pandas=False)
-            sm = mgr.get_arrays(self.data.smooth_design_info, smooth_data, pandas=False)
+            sc = mgr.get_arrays(self.data.scale_model_spec, scale_data, pandas=False)
+            sm = mgr.get_arrays(self.data.smooth_model_spec, smooth_data, pandas=False)
             sca = np.exp(np.dot(sc, scale_params))
             smo = np.exp(np.dot(sm, smooth_params))
 
@@ -754,10 +754,10 @@ class ProcessMLE(base.LikelihoodModel):
 
         if exog is None:
             exog = self.exog
-        elif hasattr(self.data, "design_info"):
+        elif hasattr(self.data, "model_spec"):
             # Run the provided data through the formula if present
             mgr = FormulaManager()
-            exog = mgr.get_arrays(self.data.design_info, exog)
+            exog = mgr.get_arrays(self.data.model_spec, exog)
 
         if len(params) > exog.shape[1]:
             params = params[0:exog.shape[1]]

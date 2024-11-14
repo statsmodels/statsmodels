@@ -1,9 +1,9 @@
 import numpy as np
-from scipy.stats import f as fdist
-from scipy.stats import t as student_t
 from scipy import stats
-from statsmodels.tools.tools import clean0, fullrank
+from scipy.stats import f as fdist, t as student_t
+
 from statsmodels.stats.multitest import multipletests
+from statsmodels.tools.tools import clean0, fullrank
 
 
 #TODO: should this be public if it's just a container?
@@ -281,7 +281,7 @@ class Contrast:
         self._contrast_matrix = contrastfromcols(self.T, self.D)
         try:
             self.rank = self.matrix.shape[1]
-        except:
+        except (AttributeError, IndexError):
             self.rank = 1
 
 #TODO: fix docstring after usage is settled
@@ -427,7 +427,7 @@ def _contrast_pairs(k_params, k_level, idx_start):
 
     currently not used,
     using encoding contrast matrix is more general, but requires requires
-    factor information from patsy design_info.
+    factor information from a formula's model_spec.
 
 
     Parameters
@@ -599,7 +599,7 @@ def t_test_pairwise(result, term_name, method='hs', alpha=0.05,
     """
     Perform pairwise t_test with multiple testing corrected p-values.
 
-    This uses the formula design_info encoding contrast matrix and should
+    This uses the formula's model_spec encoding contrast matrix and should
     work for all encodings of a main effect.
 
     Parameters
@@ -617,7 +617,7 @@ def t_test_pairwise(result, term_name, method='hs', alpha=0.05,
         significance level for multiple testing reject decision.
     factor_labels : {list[str], None}
         Labels for the factor levels used for pairwise labels. If not
-        provided, then the labels from the formula design_info are used.
+        provided, then the labels from the formula's model_spec are used.
     ignore : bool
         Turn off some of the exceptions raised by input checks.
 
@@ -643,7 +643,7 @@ def t_test_pairwise(result, term_name, method='hs', alpha=0.05,
     available.
     """
 
-    desinfo = result.model.data.design_info
+    desinfo = result.model.data.model_spec
     term_idx = desinfo.term_names.index(term_name)
     term = desinfo.terms[term_idx]
     idx_start = desinfo.term_slices[term].start

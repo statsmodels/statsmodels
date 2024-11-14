@@ -39,8 +39,8 @@ from statsmodels.tools.sm_exceptions import (
 )
 
 
-def _transform_predict_exog(model, exog, design_info=None):
-    """transform exog for predict using design_info
+def _transform_predict_exog(model, exog, model_spec=None):
+    """transform exog for predict using the formula's model_spec
 
     Note: this is copied from base.model.Results.predict and converted to
     standalone function with additional options.
@@ -50,16 +50,16 @@ def _transform_predict_exog(model, exog, design_info=None):
 
     exog_index = exog.index if is_pandas else None
 
-    if design_info is None:
-        design_info = getattr(model.data, 'design_info', None)
+    if model_spec is None:
+        model_spec = getattr(model.data, 'model_spec', None)
 
-    if design_info is not None and (exog is not None):
+    if model_spec is not None and (exog is not None):
         from statsmodels.formula._manager import FormulaManager
 
         if isinstance(exog, pd.Series):
             # we are guessing whether it should be column or row
             if (hasattr(exog, 'name') and isinstance(exog.name, str) and
-                    exog.name in design_info.describe()):
+                    exog.name in model_spec.describe()):
                 # assume we need one column
                 exog = pd.DataFrame(exog)
             else:
@@ -69,7 +69,7 @@ def _transform_predict_exog(model, exog, design_info=None):
         is_dict = isinstance(exog, dict)
 
 
-        exog = FormulaManager().get_arrays(design_info, exog, pandas=True)
+        exog = FormulaManager().get_arrays(model_spec, exog, pandas=True)
         if orig_exog_len > len(exog) and not is_dict:
             import warnings
             if exog_index is None:
@@ -180,9 +180,9 @@ class GLMGamResults(GLMResults):
                     ex = np.column_stack((exog, exog_smooth))
         else:
             # transform exog_linear if needed
-            if exog is not None and hasattr(self.model, 'design_info_linear'):
+            if exog is not None and hasattr(self.model, 'model_spec_linear'):
                 exog, exog_index = _transform_predict_exog(
-                    self.model, exog, self.model.design_info_linear)
+                    self.model, exog, self.model.model_spec_linear)
 
             # create smooth basis
             if exog_smooth is not None:
@@ -525,9 +525,13 @@ class GLMGam(PenalizedMixin, GLM):
         # TODO: check usage of hasconst
         hasconst = kwargs.get('hasconst', None)
         xnames_linear = None
-        if hasattr(exog, 'design_info'):
-            self.design_info_linear = exog.design_info
-            xnames_linear = self.design_info_linear.column_names
+        # TODO: Patsy migration hard assumption that exog is a patsy generated DF, so has design_info
+        from statsmodels.formula._manager import FormulaManager
+        mgr = FormulaManager()
+        model_spec = mgr.get_model_spec(exog, optional=True)
+        if model_spec:
+            self.model_spec_linear = model_spec
+            xnames_linear = self.model_spec_linear.column_names
 
         is_pandas = _is_using_pandas(exog, None)
 
@@ -578,12 +582,12 @@ class GLMGam(PenalizedMixin, GLM):
             # set exog nanmes if not given by pandas DataFrame
             self.exog_names[:] = xnames
 
-        # TODO: the generic data handling might attach the design_info from the
+        # TODO: the generic data handling might attach the model_spec from the
         #       linear part, but this is incorrect for the full model and
         #       causes problems in wald_test_terms
 
-        if hasattr(self.data, 'design_info'):
-            del self.data.design_info
+        if hasattr(self.data, 'model_spec'):
+            del self.data.model_spec
         # formula also might be attached which causes problems in predict
         if hasattr(self, 'formula'):
             self.formula_linear = self.formula

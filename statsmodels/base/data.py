@@ -68,8 +68,8 @@ class ModelData:
             from statsmodels.tools.sm_exceptions import recarray_exception
 
             raise NotImplementedError(recarray_exception)
-        if "design_info" in kwargs:
-            self.design_info = kwargs.pop("design_info")
+        if "model_spec" in kwargs:
+            self.model_spec = kwargs.pop("model_spec")
         if "formula" in kwargs:
             self.formula = kwargs.pop("formula")
         if missing != "none":
@@ -95,13 +95,13 @@ class ModelData:
         from copy import copy
 
         d = copy(self.__dict__)
-        if "design_info" in d:
-            del d["design_info"]
-            d["restore_design_info"] = True
+        if "model_spec" in d:
+            del d["model_spec"]
+            d["restore_model_spec"] = True
         return d
 
     def __setstate__(self, d):
-        if "restore_design_info" in d:
+        if "restore_model_spec" in d:
             # NOTE: there may be a more performant way to do this
             # TODO: patsy migration
             from patsy import PatsyError
@@ -127,8 +127,8 @@ class ModelData:
             else:
                 raise exc[-1]
 
-            self.design_info = mgr.spec
-            del d["restore_design_info"]
+            self.model_spec = mgr.spec
+            del d["restore_model_spec"]
         self.__dict__.update(d)
 
     def _handle_constant(self, hasconst):

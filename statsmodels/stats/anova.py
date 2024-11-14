@@ -60,10 +60,10 @@ def anova_single(model, **kwargs):
     exog = model.model.exog
     nobs = exog.shape[0]
 
-    design_info = model.model.data.design_info
+    model_spec = model.model.data.model_spec
     # +1 for resids
     mgr = FormulaManager()
-    n_rows = (len(design_info.terms) - mgr.has_intercept(design_info) + 1)
+    n_rows = (len(model_spec.terms) - mgr.has_intercept(model_spec) + 1)
 
     pr_test = "PR(>%s)" % test
     names = ['df', 'sum_sq', 'mean_sq', test, pr_test]
@@ -71,13 +71,13 @@ def anova_single(model, **kwargs):
     table = DataFrame(np.zeros((n_rows, 5)), columns=names)
 
     if typ in [1, "I"]:
-        return anova1_lm_single(model, endog, exog, nobs, design_info, table,
+        return anova1_lm_single(model, endog, exog, nobs, model_spec, table,
                                 n_rows, test, pr_test, robust)
     elif typ in [2, "II"]:
-        return anova2_lm_single(model, design_info, n_rows, test, pr_test,
+        return anova2_lm_single(model, model_spec, n_rows, test, pr_test,
                                 robust)
     elif typ in [3, "III"]:
-        return anova3_lm_single(model, design_info, n_rows, test, pr_test,
+        return anova3_lm_single(model, model_spec, n_rows, test, pr_test,
                                 robust)
     elif typ in [4, "IV"]:
         raise NotImplementedError("Type IV not yet implemented")
@@ -85,7 +85,7 @@ def anova_single(model, **kwargs):
         raise ValueError("Type %s not understood" % str(typ))
 
 
-def anova1_lm_single(model, endog, exog, nobs, design_info, table, n_rows, test,
+def anova1_lm_single(model, endog, exog, nobs, model_spec, table, n_rows, test,
                      pr_test, robust):
     """
     Anova table for one fitted linear model.
@@ -113,17 +113,17 @@ def anova1_lm_single(model, endog, exog, nobs, design_info, table, n_rows, test,
         q,r = np.linalg.qr(exog)
         effects = np.dot(q.T, endog)
 
-    arr = np.zeros((len(design_info.terms), len(design_info.column_names)))
-    slices = [design_info.slice(name) for name in design_info.term_names]
+    arr = np.zeros((len(model_spec.terms), len(model_spec.column_names)))
+    slices = [model_spec.slice(name) for name in model_spec.term_names]
     for i,slice_ in enumerate(slices):
         arr[i, slice_] = 1
 
     sum_sq = np.dot(arr, effects**2)
     #NOTE: assumes intercept is first column
     mgr = FormulaManager()
-    idx = mgr.intercept_idx(design_info)
+    idx = mgr.intercept_idx(model_spec)
     sum_sq = sum_sq[~idx]
-    term_names = np.array(design_info.term_names) # want boolean indexing
+    term_names = np.array(model_spec.term_names) # want boolean indexing
     term_names = term_names[~idx]
 
     index = term_names.tolist()
@@ -141,7 +141,7 @@ def anova1_lm_single(model, endog, exog, nobs, design_info, table, n_rows, test,
     return table
 
 #NOTE: the below is not agnostic about formula...
-def anova2_lm_single(model, design_info, n_rows, test, pr_test, robust):
+def anova2_lm_single(model, model_spec, n_rows, test, pr_test, robust):
     """
     Anova type II table for one fitted linear model.
 
@@ -167,7 +167,7 @@ def anova2_lm_single(model, design_info, n_rows, test, pr_test, robust):
     not particularly useful for models with significant interaction terms.
     """
     mgr = FormulaManager()
-    terms_info = design_info.terms[:] # copy
+    terms_info = model_spec.terms[:] # copy
     terms_info = mgr.remove_intercept(terms_info)
 
     names = ['sum_sq', 'df', test, pr_test]
@@ -180,14 +180,14 @@ def anova2_lm_single(model, design_info, n_rows, test, pr_test, robust):
         # grab all varaibles except interaction effects that contain term
         # need two hypotheses matrices L1 is most restrictive, ie., term==0
         # L2 is everything except term==0
-        cols = design_info.slice(term)
+        cols = model_spec.slice(term)
         L1 = lrange(cols.start, cols.stop)
         L2 = []
         term_set = set(term.factors)
         for t in terms_info: # for the term you have
             other_set = set(t.factors)
             if term_set.issubset(other_set) and not term_set == other_set:
-                col = design_info.slice(t)
+                col = model_spec.slice(t)
                 # on a higher order term containing current `term`
                 L1.extend(lrange(col.start, col.stop))
                 L2.extend(lrange(col.start, col.stop))
@@ -229,10 +229,10 @@ def anova2_lm_single(model, design_info, n_rows, test, pr_test, robust):
 
     return table
 
-def anova3_lm_single(model, design_info, n_rows, test, pr_test, robust):
+def anova3_lm_single(model, model_spec, n_rows, test, pr_test, robust):
     mgr = FormulaManager()
-    n_rows += mgr.has_intercept(design_info)
-    terms_info = design_info.terms
+    n_rows += mgr.has_intercept(model_spec)
+    terms_info = model_spec.terms
 
     names = ['sum_sq', 'df', test, pr_test]
 
@@ -241,7 +241,7 @@ def anova3_lm_single(model, design_info, n_rows, test, pr_test, robust):
     index = []
     for i, term in enumerate(terms_info):
         # grab term, hypothesis is that term == 0
-        cols = design_info.slice(term)
+        cols = model_spec.slice(term)
         L1 = np.eye(model.model.exog.shape[1])[cols]
         L12 = L1
         r = L1.shape[0]
@@ -556,7 +556,7 @@ class AnovaRM:
         factors = within + [subject]
         mgr = FormulaManager()
         x = mgr.get_arrays('*'.join(factors), data=self.data, pandas=False)
-        term_slices = x.design_info.term_name_slices
+        term_slices = mgr.get_term_name_slices(x)
         for key in term_slices:
             ind = np.array([False]*x.shape[1])
             ind[term_slices[key]] = True

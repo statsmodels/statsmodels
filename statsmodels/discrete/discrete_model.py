@@ -710,7 +710,7 @@ class MultinomialModel(BinaryModel):
 
         # repeating from upstream...
         for key in kwargs:
-            if key in ['design_info', 'formula']:  # leave attached to data
+            if key in ['model_spec', 'formula']:  # leave attached to data
                 continue
             try:
                 setattr(self, key, data.__dict__.pop(key))
