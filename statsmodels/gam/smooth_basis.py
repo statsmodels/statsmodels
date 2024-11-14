@@ -7,6 +7,7 @@ Author: Josef Perktold
 Created on Fri Jun  5 16:32:00 2015
 """
 
+from statsmodels.compat.patsy import get_all_sorted_knots
 from statsmodels.compat.python import with_metaclass
 
 # import useful only for development
@@ -14,8 +15,6 @@ from abc import ABCMeta, abstractmethod
 
 import numpy as np
 import pandas as pd
-# TODO: patsy migration
-from patsy.mgcv_cubic_splines import _get_all_sorted_knots
 
 from statsmodels.formula._manager import FormulaManager
 from statsmodels.tools.linalg import transf_constraints
@@ -649,9 +648,13 @@ class UnivariateCubicCyclicSplines(UnivariateGamSmoother):
         self.design_info = mgr.spec
         n_inner_knots = self.df - 2 + 1  # +n_constraints
         # TODO: from CubicRegressionSplines class
-        all_knots = _get_all_sorted_knots(self.x, n_inner_knots=n_inner_knots,
-                                          inner_knots=None,
-                                          lower_bound=None, upper_bound=None)
+        all_knots = get_all_sorted_knots(
+            self.x,
+            n_inner_knots=n_inner_knots,
+            inner_knots=None,
+            lower_bound=None,
+            upper_bound=None,
+        )
 
         b, d = self._get_b_and_d(all_knots)
         s = self._get_s(b, d)

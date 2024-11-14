@@ -1,9 +1,44 @@
 from __future__ import annotations
 
-from typing import Literal, NamedTuple, Sequence
+from typing import Any, Literal, NamedTuple, Sequence
 
 import numpy as np
 import pandas as pd
+
+
+class _Default:
+    def __init__(self, name=""):
+        self._name = ""
+
+    def __str__(self):
+        return self._name
+
+    def __repr__(self):
+        return self._name
+
+
+_NoDefault = _Default("<no default value>")
+
+
+try:
+    from patsy.missing import NAAction
+
+    class NAAction(NAAction):
+        # monkey-patch so we can handle missing values in 'extra' arrays later
+        def _handle_NA_drop(self, values, is_NAs, origins):
+            total_mask = np.zeros(is_NAs[0].shape[0], dtype=bool)
+            for is_NA in is_NAs:
+                total_mask |= is_NA
+            good_mask = ~total_mask
+            self.missing_mask = total_mask
+            # "..." to handle 1- versus 2-dim indexing
+            return [v[good_mask, ...] for v in values]
+
+except ImportError:
+
+    class NAAction:
+        def __init__(self, on_NA="", NA_types=("",)):
+            pass
 
 
 class LinearConstraintValues(NamedTuple):
@@ -168,3 +203,20 @@ class FormulaManager:
             raise NotImplementedError(
                 "Intercpet idx has not been implemented for formulaic"
             )
+
+    def get_na_action(self, action: str = "drop", types: Sequence[Any] = _NoDefault):
+        types = ["None", "NaN"] if types is _NoDefault else types
+        if self._engine == "patsy":
+            return NAAction(on_NA=action, NA_types=types)
+        else:
+            return action
+
+    def get_spec(self, formula):
+        if self._engine == "patsy":
+            import patsy
+
+            return patsy.ModelDesc.from_formula(formula)
+        else:
+            import formulaic
+
+            return formulaic.ModelSpec(formula)

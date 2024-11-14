@@ -1,5 +1,4 @@
 import numpy as np
-from patsy import NAAction
 
 from statsmodels.formula._manager import FormulaManager
 import statsmodels.tools.data as data_util
@@ -9,19 +8,6 @@ import statsmodels.tools.data as data_util
 
 # this is a mutable object, so editing it should show up in the below
 formula_handler = {}
-
-# TODO: patsy migration
-class NAAction(NAAction):
-    # monkey-patch so we can handle missing values in 'extra' arrays later
-    def _handle_NA_drop(self, values, is_NAs, origins):
-        total_mask = np.zeros(is_NAs[0].shape[0], dtype=bool)
-        for is_NA in is_NAs:
-            total_mask |= is_NA
-        good_mask = ~total_mask
-        self.missing_mask = total_mask
-        # "..." to handle 1- versus 2-dim indexing
-        return [v[good_mask, ...] for v in values]
-
 
 def handle_formula_data(Y, X, formula, depth=0, missing='drop'):
     """
@@ -51,7 +37,7 @@ def handle_formula_data(Y, X, formula, depth=0, missing='drop'):
     if isinstance(formula, tuple(formula_handler.keys())):
         return formula_handler[type(formula)]
 
-    na_action = NAAction(on_NA=missing)
+    na_action = FormulaManager().get_na_action(action=missing)
     mgr = FormulaManager()
     if X is not None:
         result = mgr.get_arrays(formula, (Y, X), eval_env=depth, pandas=True, na_action=na_action, attach_spec=True)

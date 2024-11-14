@@ -400,9 +400,8 @@ class RollingWLS:
         else:
             eval_env += 1  # we're going down the stack again
         missing = kwargs.get("missing", "skip")
-        # TODO: patsy migration
-        from patsy.missing import NAAction
-        na_action = NAAction(on_NA="raise", NA_types=[])
+
+        na_action = FormulaManager().get_na_action(action="raise", types=[])
 
         mgr = FormulaManager()
         result = mgr.get_arrays(

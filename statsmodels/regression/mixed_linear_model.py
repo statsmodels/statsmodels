@@ -146,7 +146,6 @@ import warnings
 
 import numpy as np
 import pandas as pd
-import patsy
 from scipy import sparse
 from scipy.stats.distributions import norm
 
@@ -1022,16 +1021,14 @@ class MixedLM(base.LikelihoodModel):
             mgr = FormulaManager()
             for vc_name in vcf:
                 # TODO: patsy migration
-                md = patsy.ModelDesc.from_formula(vc_formula[vc_name])
+                model_spec = mgr.get_spec(vc_formula[vc_name])
                 vc_names.append(vc_name)
                 evc_mats, evc_colnames = [], []
                 for group_ix, group in enumerate(kylist):
                     ii = gb.groups[group]
                     mat = mgr.get_arrays(
-                             md,
-                             data.loc[ii, :],
-                             eval_env=eval_env,
-                             pandas=True)
+                        model_spec, data.loc[ii, :], eval_env=eval_env, pandas=True
+                    )
                     evc_colnames.append(mat.columns.tolist())
                     if use_sparse:
                         evc_mats.append(sparse.csr_matrix(mat))
