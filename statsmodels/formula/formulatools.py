@@ -55,7 +55,6 @@ def handle_formula_data(Y, X, formula, depth=0, missing="drop"):
             eval_env=depth,
             pandas=True,
             na_action=na_action,
-            attach_spec=True,
         )
 
     # if missing == 'raise' there's not missing_mask

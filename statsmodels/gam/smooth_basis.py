@@ -649,7 +649,6 @@ class UnivariateCubicCyclicSplines(UnivariateGamSmoother):
             "cc(x, df=" + str(self.df) + ") - 1",
             {"x": self.x},
             pandas=False,
-            attach_spec=True
         )
         self.model_spec = mgr.spec
         n_inner_knots = self.df - 2 + 1  # +n_constraints

@@ -102,6 +102,20 @@ class FormulaManager:
             raise ValueError(
                 f"Unknown engine: {_engine}. Only patsy and formulaic are supported."
             )
+        # Ensure selected engine is available
+        if _engine == "patsy":
+            try:
+                import patsy
+            except ImportError:
+                raise ImportError("patsy is not available. Please install patsy.")
+        if _engine == "formulaic":
+            try:
+                import formulaic
+            except ImportError:
+                raise ImportError(
+                    "formulaic is not available. Please install formulaic."
+                )
+
         return _engine
 
     @property
@@ -118,7 +132,6 @@ class FormulaManager:
         data,
         eval_env=0,
         pandas=True,
-        attach_spec=True,
         na_action=None,
     ) -> (
         np.ndarray
@@ -149,11 +162,10 @@ class FormulaManager:
                 output = patsy.dmatrices(
                     formula, data, eval_env=eval_env, return_type=return_type, **kwargs
                 )
-            if attach_spec:
-                if isinstance(output, tuple):
-                    self._spec = output[1].design_info
-                else:
-                    self._spec = output.design_info
+            if isinstance(output, tuple):
+                self._spec = output[1].design_info
+            else:
+                self._spec = output.design_info
             return output
 
         else:  # self._engine == "formulaic":
@@ -165,11 +177,12 @@ class FormulaManager:
             if na_action:
                 kwargs["na_action"] = na_action
             output = formulaic.model_matrix(formula, data, context=eval_env, **kwargs)
-            if attach_spec:
-                if hasattr(output, "rhs"):
-                    self._spec = output.rhs.model_spec
-                else:
-                    self._spec = output.model_spec
+            if isinstance(output, formulaic.ModelMatrices):
+                self._spec = output.rhs.model_spec
+                return output.lhs, output.rhs
+
+            self._spec = output.model_spec
+
             return output
 
     def get_linear_constraints(
@@ -263,7 +276,7 @@ class FormulaManager:
             return formulaic.ModelSpec(formula)
 
     def get_column_names(self, frame):
-        return self.get_model_spec(frame).column_names
+        return list(self.get_model_spec(frame).column_names)
 
     def get_term_name_slices(self, frame):
         return self.get_model_spec(frame).term_name_slices
