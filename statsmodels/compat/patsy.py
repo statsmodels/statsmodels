@@ -16,6 +16,7 @@ def monkey_patch_cat_dtype():
 
         patsy.util.safe_is_pandas_categorical_dtype = _safe_is_pandas_categorical_dtype
     except ImportError:
+        # Future protection is using formulaic for formulas without patsy
         pass
 
 

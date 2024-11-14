@@ -126,10 +126,8 @@ class FormulaManager:
         | pd.DataFrame
         | tuple[pd.DataFrame, pd.DataFrame]
     ):
-        try:
+        if isinstance(eval_env, (int, np.integer)):
             eval_env = int(eval_env) + 1
-        except Exception:
-            pass
         if self._engine == "patsy":
             import patsy
 
@@ -158,7 +156,7 @@ class FormulaManager:
                     self._spec = output.design_info
             return output
 
-        elif self._engine == "formulaic":
+        else:  # self._engine == "formulaic":
             import formulaic
 
             kwargs = {}
