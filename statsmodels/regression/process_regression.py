@@ -14,7 +14,6 @@ parameters depend on covariates via a link function.
 """
 import collections
 import warnings
-from xmlrpc.client import FastParser
 
 import numpy as np
 import pandas as pd

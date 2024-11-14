@@ -6,7 +6,7 @@ License: BSD-3
 """
 
 import numpy as np
-from scipy import stats, integrate, optimize
+from scipy import integrate, optimize, stats
 
 from statsmodels.tools.testing import Holder
 

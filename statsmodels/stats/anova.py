@@ -51,7 +51,6 @@ def anova_single(model, **kwargs):
     Use of this function is discouraged. Use anova_lm instead.
     """
     test = kwargs.get("test", "F")
-    scale = kwargs.get("scale", None)
     typ = kwargs.get("typ", 1)
     robust = kwargs.get("robust", None)
     if robust:
@@ -61,9 +60,7 @@ def anova_single(model, **kwargs):
     exog = model.model.exog
     nobs = exog.shape[0]
 
-    response_name = model.model.endog_names
     design_info = model.model.data.design_info
-    exog_names = model.model.exog_names
     # +1 for resids
     mgr = FormulaManager()
     n_rows = (len(design_info.terms) - mgr.has_intercept(design_info) + 1)
@@ -176,7 +173,6 @@ def anova2_lm_single(model, design_info, n_rows, test, pr_test, robust):
     names = ['sum_sq', 'df', test, pr_test]
 
     table = DataFrame(np.zeros((n_rows, 4)), columns = names)
-    cov = _get_covariance(model, None)
     robust_cov = _get_covariance(model, robust)
     col_order = []
     index = []
@@ -213,7 +209,7 @@ def anova2_lm_single(model, design_info, n_rows, test, pr_test, robust):
         #from IPython.core.debugger import Pdb; Pdb().set_trace()
         if test == 'F':
             f = model.f_test(L12, cov_p=robust_cov)
-            table.loc[table.index[i], test] = test_value = f.fvalue
+            table.loc[table.index[i], test] = f.fvalue
             table.loc[table.index[i], pr_test] = f.pvalue
 
         # need to back out SSR from f_test
@@ -242,7 +238,6 @@ def anova3_lm_single(model, design_info, n_rows, test, pr_test, robust):
 
     table = DataFrame(np.zeros((n_rows, 4)), columns = names)
     cov = _get_covariance(model, robust)
-    col_order = []
     index = []
     for i, term in enumerate(terms_info):
         # grab term, hypothesis is that term == 0
@@ -253,7 +248,7 @@ def anova3_lm_single(model, design_info, n_rows, test, pr_test, robust):
 
         if test == 'F':
             f = model.f_test(L12, cov_p=cov)
-            table.loc[table.index[i], test] = test_value = f.fvalue
+            table.loc[table.index[i], test] = f.fvalue
             table.loc[table.index[i], pr_test] = f.pvalue
 
         # need to back out SSR from f_test

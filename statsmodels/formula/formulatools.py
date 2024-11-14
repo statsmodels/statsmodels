@@ -1,7 +1,6 @@
 import numpy as np
 
 from statsmodels.formula._manager import FormulaManager
-import statsmodels.tools.data as data_util
 
 # if users want to pass in a different formula framework, they can
 # add their handler here. how to do it interactively?

@@ -236,7 +236,6 @@ def _score_nbp(y, X, beta, thet, Q):
     lamb = np.exp(np.dot(X, beta))
     g = thet * lamb**Q
     w = g / (g + lamb)
-    r = thet / (thet+lamb)
     A = digamma(y+g) - digamma(g) + np.log(w)
     B = g*(1-w) - y*w
     dl = (A+B) * Q/lamb - B * 1/lamb

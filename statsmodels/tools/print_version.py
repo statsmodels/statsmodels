@@ -19,15 +19,13 @@ def _show_versions_only():
     print("\nINSTALLED VERSIONS")
     print("------------------")
     print("Python: %d.%d.%d.%s.%s" % sys.version_info[:])
-    try:
-        import os
-        (sysname, nodename, release, version, machine) = os.uname()
-        print(f"OS: {sysname} {release} {version} {machine}")
-        print("byteorder: %s" % sys.byteorder)
-        print("LC_ALL: %s" % os.environ.get('LC_ALL', "None"))
-        print("LANG: %s" % os.environ.get('LANG', "None"))
-    except:
-        pass
+
+    import os
+    (sysname, nodename, release, version, machine) = os.uname()
+    print(f"OS: {sysname} {release} {version} {machine}")
+    print("byteorder: %s" % sys.byteorder)
+    print("LC_ALL: %s" % os.environ.get('LC_ALL', "None"))
+    print("LANG: %s" % os.environ.get('LANG', "None"))
     try:
         import statsmodels
         has_sm = True
@@ -157,15 +155,13 @@ def show_versions(show_dirs=True):
     print("\nINSTALLED VERSIONS")
     print("------------------")
     print("Python: %d.%d.%d.%s.%s" % sys.version_info[:])
-    try:
-        import os
-        (sysname, nodename, release, version, machine) = os.uname()
-        print(f"OS: {sysname} {release} {version} {machine}")
-        print("byteorder: %s" % sys.byteorder)
-        print("LC_ALL: %s" % os.environ.get('LC_ALL', "None"))
-        print("LANG: %s" % os.environ.get('LANG', "None"))
-    except:
-        pass
+
+    import os
+    (sysname, nodename, release, version, machine) = os.uname()
+    print(f"OS: {sysname} {release} {version} {machine}")
+    print("byteorder: %s" % sys.byteorder)
+    print("LC_ALL: %s" % os.environ.get('LC_ALL', "None"))
+    print("LANG: %s" % os.environ.get('LANG', "None"))
 
     try:
         import statsmodels
