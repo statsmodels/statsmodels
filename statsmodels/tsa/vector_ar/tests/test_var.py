@@ -982,8 +982,8 @@ def test_irf_err_bands():
 
 def test_0_lag(reset_randomstate):
     # GH 9412
-    y = np.random.rand(300, 2)
-    results = VAR(y).fit(maxlags=1, ic="aic", trend="c")
+    y = np.random.rand(500, 2)
+    results = VAR(y).fit(maxlags=1, ic="bic", trend="c")
     assert results.params.shape == (1, 2)
     fcasts = results.forecast(y, steps=5)
     assert_allclose(fcasts, np.ones((5, 1)) * results.params)
