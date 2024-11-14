@@ -301,10 +301,13 @@ class ModelData:
 
         elif missing == "drop":
             nan_mask = ~nan_mask
+
             def drop_nans(x):
                 return cls._drop_nans(x, nan_mask)
+
             def drop_nans_2d(x):
                 return cls._drop_nans_2d(x, nan_mask)
+
             combined = dict(zip(combined_names, lmap(drop_nans, combined)))
 
             if missing_idx is not None:

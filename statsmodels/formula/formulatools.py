@@ -8,7 +8,8 @@ from statsmodels.formula._manager import FormulaManager
 # this is a mutable object, so editing it should show up in the below
 formula_handler = {}
 
-def handle_formula_data(Y, X, formula, depth=0, missing='drop'):
+
+def handle_formula_data(Y, X, formula, depth=0, missing="drop"):
     """
     Returns endog, exog, and the model specification from arrays and formula.
 
@@ -39,12 +40,26 @@ def handle_formula_data(Y, X, formula, depth=0, missing='drop'):
     na_action = FormulaManager().get_na_action(action=missing)
     mgr = FormulaManager()
     if X is not None:
-        result = mgr.get_arrays(formula, (Y, X), eval_env=depth, pandas=True, na_action=na_action, attach_spec=True)
+        result = mgr.get_arrays(
+            formula,
+            (Y, X),
+            eval_env=depth,
+            pandas=True,
+            na_action=na_action,
+            attach_spec=True,
+        )
     else:
-        result = mgr.get_arrays(formula, Y, eval_env=depth, pandas=True, na_action=na_action, attach_spec=True)
+        result = mgr.get_arrays(
+            formula,
+            Y,
+            eval_env=depth,
+            pandas=True,
+            na_action=na_action,
+            attach_spec=True,
+        )
 
     # if missing == 'raise' there's not missing_mask
-    missing_mask = getattr(na_action, 'missing_mask', None)
+    missing_mask = getattr(na_action, "missing_mask", None)
     if not np.any(missing_mask):
         missing_mask = None
     if len(result) > 1:  # have RHS design
@@ -55,12 +70,10 @@ def handle_formula_data(Y, X, formula, depth=0, missing='drop'):
     return result, missing_mask, model_spec
 
 
-
-
 def make_hypotheses_matrices(model_results, test_formula):
-    """
-    """
+    """ """
     from statsmodels.formula._manager import FormulaManager
+
     mgr = FormulaManager()
 
     exog_names = model_results.model.exog_names

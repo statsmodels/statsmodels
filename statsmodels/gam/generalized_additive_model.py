@@ -17,6 +17,7 @@ from scipy import optimize
 from statsmodels.base._penalized import PenalizedMixin
 import statsmodels.base.wrapper as wrap
 from statsmodels.discrete.discrete_model import Logit
+from statsmodels.formula._manager import FormulaManager
 from statsmodels.gam.gam_cross_validation.cross_validators import KFold
 from statsmodels.gam.gam_cross_validation.gam_cross_validation import (
     MultivariateGAMCVPath,
@@ -67,7 +68,6 @@ def _transform_predict_exog(model, exog, model_spec=None):
                 exog = pd.DataFrame(exog).T
         orig_exog_len = len(exog)
         is_dict = isinstance(exog, dict)
-
 
         exog = FormulaManager().get_arrays(model_spec, exog, pandas=True)
         if orig_exog_len > len(exog) and not is_dict:
@@ -525,8 +525,6 @@ class GLMGam(PenalizedMixin, GLM):
         # TODO: check usage of hasconst
         hasconst = kwargs.get('hasconst', None)
         xnames_linear = None
-        # TODO: Patsy migration hard assumption that exog is a patsy generated DF, so has design_info
-        from statsmodels.formula._manager import FormulaManager
         mgr = FormulaManager()
         model_spec = mgr.get_model_spec(exog, optional=True)
         if model_spec:

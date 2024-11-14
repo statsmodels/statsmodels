@@ -21,6 +21,7 @@ from statsmodels.tools.linalg import transf_constraints
 
 # Obtain b splines from patsy
 
+
 def _equally_spaced_knots(x, df):
     n_knots = df - 2
     x_min = x.min()
@@ -644,7 +645,12 @@ class UnivariateCubicCyclicSplines(UnivariateGamSmoother):
 
     def _smooth_basis_for_single_variable(self):
         mgr = FormulaManager()
-        basis = mgr.get_arrays("cc(x, df=" + str(self.df) + ") - 1", {"x": self.x}, pandas=False, attach_spec=True)
+        basis = mgr.get_arrays(
+            "cc(x, df=" + str(self.df) + ") - 1",
+            {"x": self.x},
+            pandas=False,
+            attach_spec=True
+        )
         self.model_spec = mgr.spec
         n_inner_knots = self.df - 2 + 1  # +n_constraints
         # TODO: from CubicRegressionSplines class
