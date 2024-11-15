@@ -1,5 +1,3 @@
-import copy
-
 import numpy as np
 import pandas as pd
 import pytest
@@ -15,6 +13,8 @@ try:
     import patsy
 
 except ImportError:
+    # Tests are skipped if formulaic or patsy are not installed, but the
+    # module must be importable
     pass
 
 

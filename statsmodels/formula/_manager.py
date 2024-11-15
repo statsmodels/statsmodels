@@ -112,6 +112,23 @@ class LinearConstraintValues(NamedTuple):
 
 
 class FormulaManager:
+    """
+    Abstraction class that provides a common interface to patsy and formulaic.
+
+    Designed to aid in the transition from patsy to formulaic.
+
+    Parameters
+    ----------
+    engine : {"patsy", "formulaic"} or None
+        The formula engine to use. If None, the default engine, which appears
+        in the attribute statsmodels.formula.formula_options.engine, is used.
+
+    Raises
+    ------
+    ValueError
+        If the selected engine is not available.
+    """
+
     def __init__(self, engine: Literal["patsy", "formulaic"] | None = None):
         self._engine = self._get_engine(engine)
         self._spec = None
@@ -119,6 +136,26 @@ class FormulaManager:
     def _get_engine(
         self, engine: Literal["patsy", "formulaic"] | None = None
     ) -> Literal["patsy", "formulaic"]:
+        """
+        Check user engine selection or get the default engine to use.
+
+        Parameters
+        ----------
+        engine : {"patsy", "formulaic"} or None
+            The formula engine to use. If None, the default engine, which appears
+            in the attribute statsmodels.formula.formula_options.engine, is used.
+
+        Returns
+        -------
+        engine : {"patsy", "formulaic"}
+            The selected engine
+
+
+        Raises
+        ------
+        ValueError
+            If the selected engine is not available.
+        """
         # Patsy for now, to be changed to a user-settable variable before release
         _engine: Literal["patsy", "formulaic"]
 
@@ -145,10 +182,14 @@ class FormulaManager:
 
     @property
     def engine(self):
+        """Get the formula engine."""
         return self._engine
 
     @property
     def spec(self):
+        """
+        Get the model specification. Only available after calling get_arrays.
+        """
         return self._spec
 
     def get_arrays(
@@ -164,6 +205,21 @@ class FormulaManager:
         | pd.DataFrame
         | tuple[pd.DataFrame, pd.DataFrame]
     ):
+        """
+        Get the design matrix and response vector from the formula and data.
+
+        Parameters
+        ----------
+        formula
+        data
+        eval_env
+        pandas
+        na_action
+
+        Returns
+        -------
+
+        """
         if isinstance(eval_env, (int, np.integer)):
             eval_env = int(eval_env) + 1
         if self._engine == "patsy":
@@ -214,6 +270,19 @@ class FormulaManager:
     def get_linear_constraints(
         self, constraints: np.ndarray | str | Sequence[str], variable_names: list[str]
     ):
+        """
+        Get the linear constraints from the constraints and variable names.
+
+        Parameters
+        ----------
+        constraints
+        variable_names
+
+        Returns
+        -------
+        LinearConstraintValues
+            The constraint matrix, constraint values, and variable names.
+        """
         if self._engine == "patsy":
             from patsy.design_info import DesignInfo
 
@@ -244,6 +313,14 @@ class FormulaManager:
             )
 
     def get_empty_eval_env(self):
+        """
+        Get an empty evaluation environment.
+
+        Returns
+        -------
+        {EvalEnvironment, dict}
+            A formula-engine-dependent empty evaluation environment.
+        """
         if self._engine == "patsy":
             from patsy.eval import EvalEnvironment
 
@@ -253,6 +330,14 @@ class FormulaManager:
 
     @property
     def intercept_term(self):
+        """
+        Get the formula-engine-specific intercept term.
+
+        Returns
+        -------
+        Term
+            The intercept term.
+        """
         if self._engine == "patsy":
             from patsy.desc import INTERCEPT
 
@@ -266,6 +351,16 @@ class FormulaManager:
     def remove_intercept(self, terms):
         """
         Remove intercept from Patsy terms.
+
+        Parameters
+        ----------
+        terms : list[Term]
+            A list of terms that might have an intercept
+
+        Returns
+        -------
+        list[Term]
+            The terms with the intercept removed, if present.
         """
         intercept = self.intercept_term
         if intercept in terms:
@@ -273,11 +368,33 @@ class FormulaManager:
         return terms
 
     def has_intercept(self, spec):
+        """
+        Check if the model specification has an intercept term.
+
+        Parameters
+        ----------
+        spec
+
+        Returns
+        -------
+        bool
+            True if the model specification has an intercept term, False otherwise.
+        """
+
         return self.intercept_term in spec.terms
 
     def intercept_idx(self, spec):
         """
         Returns boolean array index indicating which column holds the intercept.
+
+        Parameters
+        ----------
+        spec
+
+        Returns
+        -------
+        ndarray
+            Boolean array index indicating which column holds the intercept.
         """
         from numpy import array
 
@@ -285,6 +402,23 @@ class FormulaManager:
         return array([intercept == i for i in spec.terms])
 
     def get_na_action(self, action: str = "drop", types: Sequence[Any] = _NoDefault):
+        """
+        Get the NA action for the formula engine.
+
+        Parameters
+        ----------
+        action
+        types
+
+        Returns
+        -------
+        NAAction | str
+            The formula-engine-specific NA action.
+
+        Notes
+        -----
+        types is ignored when using formulaic.
+        """
         types = ["None", "NaN"] if types is _NoDefault else types
         if self._engine == "patsy":
             return NAAction(on_NA=action, NA_types=types)
