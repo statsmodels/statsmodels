@@ -81,7 +81,7 @@ def test_tests():
         [[0, 1, -1, 0, 0, 0, 0], [0, 0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 0, 0, 1.0 / 1829]],
         8,
     )
-    npt.assert_array_equal(Q, [[0], [2], [1]])
+    npt.assert_array_equal(q, [[0], [2], [1]])
     test_formula = "(GNPDEFL = GNP), (UNEMP = 2), (YEAR/1829 = 1)"
     lc = make_hypotheses_matrices(results, test_formula)
     r = lc.constraint_matrix

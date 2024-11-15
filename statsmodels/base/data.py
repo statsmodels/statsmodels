@@ -118,7 +118,7 @@ class ModelData:
             for depth in [2, 3, 1, 0, 4]:  # sequence is a guess where to likely find it
                 try:
                     _, design = mgr.get_arrays(
-                        d["formula"], data, eval_env=depth, pandas=True, attach_spec=True
+                        d["formula"], data, eval_env=depth, pandas=True
                     )
                     break
                 except (NameError, PatsyError) as e:
