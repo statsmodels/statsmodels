@@ -7,11 +7,15 @@ import pytest
 import statsmodels.formula
 from statsmodels.formula._manager import FormulaManager, LinearConstraintValues
 
+pytest.importorskip("formulaic")
+pytest.importorskip("patsy")
+
 try:
     import formulaic
     import patsy
+
 except ImportError:
-    pytestmark = pytest.mark.skip(reason="patsy or formulaic not installed")
+    pass
 
 
 @pytest.fixture(params=["patsy", "formulaic"])
