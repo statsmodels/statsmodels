@@ -114,6 +114,7 @@ def anova1_lm_single(model, endog, exog, nobs, model_spec, table, n_rows, test,
         effects = np.dot(q.T, endog)
 
     arr = np.zeros((len(model_spec.terms), len(model_spec.column_names)))
+    # TODO: patsy migration, no attribute slice
     slices = [model_spec.slice(name) for name in model_spec.term_names]
     for i,slice_ in enumerate(slices):
         arr[i, slice_] = 1
@@ -180,6 +181,7 @@ def anova2_lm_single(model, model_spec, n_rows, test, pr_test, robust):
         # grab all variables except interaction effects that contain term
         # need two hypotheses matrices L1 is most restrictive, ie., term==0
         # L2 is everything except term==0
+        # TODO: patsy migration, no attribute slice
         cols = model_spec.slice(term)
         L1 = lrange(cols.start, cols.stop)
         L2 = []
@@ -187,6 +189,7 @@ def anova2_lm_single(model, model_spec, n_rows, test, pr_test, robust):
         for t in terms_info: # for the term you have
             other_set = set(t.factors)
             if term_set.issubset(other_set) and not term_set == other_set:
+                # TODO: patsy migration, no attribute slice
                 col = model_spec.slice(t)
                 # on a higher order term containing current `term`
                 L1.extend(lrange(col.start, col.stop))
@@ -241,6 +244,7 @@ def anova3_lm_single(model, model_spec, n_rows, test, pr_test, robust):
     index = []
     for i, term in enumerate(terms_info):
         # grab term, hypothesis is that term == 0
+        # TODO: patsy migration, no attribute slice
         cols = model_spec.slice(term)
         L1 = np.eye(model.model.exog.shape[1])[cols]
         L12 = L1

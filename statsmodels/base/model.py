@@ -2016,6 +2016,7 @@ class LikelihoodModelResults(Results):
         combined = defaultdict(list)
         if model_spec is not None:
             for term in model_spec.terms:
+                # TODO: patsy migration, no attribute slice
                 cols = model_spec.slice(term)
                 name = term.name()
                 constraint_matrix = identity[cols]

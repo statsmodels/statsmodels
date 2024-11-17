@@ -264,7 +264,12 @@ class FormulaManager:
 
             _ordering = statsmodels.formula.options.ordering
             _formula = formulaic.formula.Formula(formula, _ordering=_ordering)
-            output = formulaic.model_matrix(_formula, data, context=eval_env, **kwargs)
+            if isinstance(data, dict):
+                # Work around for no dict support in formulaic
+                _data = pd.DataFrame(data)
+            else:
+                _data = data
+            output = formulaic.model_matrix(_formula, _data, context=eval_env, **kwargs)
             if isinstance(output, formulaic.ModelMatrices):
                 if (
                     len(output) == 2

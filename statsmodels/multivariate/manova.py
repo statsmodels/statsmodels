@@ -110,6 +110,7 @@ class MANOVA(Model):
         if hypotheses is None:
             if (hasattr(self, 'data') and self.data is not None and
                         hasattr(self.data, 'model_spec')):
+                # TODO: patsy migration
                 terms = self.data.model_spec.term_name_slices
                 hypotheses = []
                 for key in terms:
