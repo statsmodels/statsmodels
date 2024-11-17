@@ -18,17 +18,27 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-cow = False
 try:
-    cow = bool(os.environ.get("SM_TEST_COPY_ON_WRITE", False))
+    default = pd.options.mode.copy_on_write
+    cow = os.environ.get("SM_TEST_COPY_ON_WRITE", "")
+    if cow:
+        cow = default
+    else:
+        cow = cow.lower() in ("true", "1")
     pd.options.mode.copy_on_write = cow
+    if cow != default:
+        logger.critical(f"TEST CONFIGURATION: Copy on Write {cow}")
 except AttributeError:
     pass
 
-if cow:
-    logger.critical("Copy on Write Enabled!")
-else:
-    logger.critical("Copy on Write disabled")
+formula_engine = os.environ.get("SM_DEFAULT_FORMULA_ENGINE", "patsy")
+if formula_engine == "formulaic":
+    logger.critical("TEST CONFIGURATION: Tests running using formulaic as the default formula engine.")
+
+    import statsmodels.formula
+
+    statsmodels.formula.options.formula_engine = "formulaic"
+
 
 
 def pytest_addoption(parser):

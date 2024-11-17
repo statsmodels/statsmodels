@@ -529,7 +529,7 @@ class GLMGam(PenalizedMixin, GLM):
         model_spec = mgr.get_model_spec(exog, optional=True)
         if model_spec:
             self.model_spec_linear = model_spec
-            xnames_linear = self.model_spec_linear.column_names
+            xnames_linear = list(self.model_spec_linear.column_names)
 
         is_pandas = _is_using_pandas(exog, None)
 

@@ -10,6 +10,10 @@ HAVE_PATSY = False
 HAVE_FORMULAIC = False
 
 DEFAULT_FORMULA_ENGINE = os.environ.get("SM_DEFAULT_FORMULA_ENGINE", None)
+if DEFAULT_FORMULA_ENGINE not in ("formulaic", "patsy", None):
+    raise ValueError(
+        f"Invalid value for SM_DEFAULT_FORMULA_ENGINE: {DEFAULT_FORMULA_ENGINE}"
+    )
 
 try:
     import patsy
@@ -177,7 +181,7 @@ class FormulaManager:
         msg_base = " is not available. Please install patsy."
         if _engine == "patsy" and not HAVE_PATSY:
             raise ImportError(f"patsy {msg_base}.")
-        elif not HAVE_FORMULAIC:
+        if _engine == "formulaic" and not HAVE_FORMULAIC:
             raise ImportError(f"formulaic {msg_base}.")
 
         return _engine
@@ -314,6 +318,8 @@ class FormulaManager:
                 _constraints = ", ".join(str(v) for v in constraints)
             else:
                 _constraints = constraints
+            if isinstance(_constraints, tuple):
+                _constraints = (_constraints[0], np.atleast_1d(np.squeeze(_constraints[1])))
             lc_f = formulaic.utils.constraints.LinearConstraints.from_spec(
                 _constraints, variable_names=list(variable_names)
             )

@@ -29,6 +29,8 @@ has_patsy = pytest.mark.skipif(
     HAS_PATSY, reason="can only run when formulaic is installed and patsy is not."
 )
 
+require_formulaic = pytest.mark.skipif(not HAS_FORMULAIC, reason="Requires formulaic")
+
 ENGINES = ["patsy"]
 if HAS_FORMULAIC:
     ENGINES += ["formulaic"]
@@ -113,6 +115,7 @@ def test_engine_options_order(ordering):
         statsmodels.formula.options.ordering = "unknown"
 
 
+@require_formulaic
 def test_engine_options_order_effect(data):
     default = statsmodels.formula.options.ordering
     statsmodels.formula.options.ordering = "degree"
@@ -198,7 +201,7 @@ def test_get_empty_eval_patsy(data):
     with pytest.raises(patsy.PatsyError):
         mgr.get_arrays(fmla, data, eval_env=eval_env)
 
-@pytest.mark.skipif(not HAS_FORMULAIC, reason="Requires formulaic")
+@require_formulaic
 def test_get_empty_eval_formulaic(data):
     mgr = FormulaManager(engine="formulaic")
     fmla = "y ~ 1 + x + g(z)"
@@ -400,10 +403,10 @@ def test_bad_constraint(engine, data):
 
 @has_formulaic
 def test_formula_manager_no_formulaic():
-    with pytest.raises(ValueError):
+    with pytest.raises(ImportError):
         FormulaManager(engine="formulaic")
 
 @has_patsy
-def test_formula_manager_no_formulaic():
-    with pytest.raises(ValueError):
+def test_formula_manager_no_patsy():
+    with pytest.raises(ImportError):
         FormulaManager(engine="patsy")

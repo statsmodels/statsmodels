@@ -216,12 +216,13 @@ class Model:
             cols = [x for x in exog.columns if x not in drop_cols]
             if len(cols) < len(exog.columns):
                 exog = exog[cols]
-                cols = list(model_spec.term_names)
+                cols = list(model_spec.column_names)
                 for col in drop_cols:
                     try:
                         cols.remove(col)
                     except ValueError:
                         pass  # OK if not present
+                # TODO: Patsy migration, need to add method to handle
                 model_spec = model_spec.subset(cols)
 
         kwargs.update({'missing_idx': missing_idx,
