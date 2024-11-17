@@ -177,7 +177,7 @@ def anova2_lm_single(model, model_spec, n_rows, test, pr_test, robust):
     col_order = []
     index = []
     for i, term in enumerate(terms_info):
-        # grab all varaibles except interaction effects that contain term
+        # grab all variables except interaction effects that contain term
         # need two hypotheses matrices L1 is most restrictive, ie., term==0
         # L2 is everything except term==0
         cols = model_spec.slice(term)

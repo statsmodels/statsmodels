@@ -1,4 +1,5 @@
 from __future__ import annotations
+import os
 
 from typing import Any, Literal, NamedTuple, Sequence
 
@@ -8,12 +9,13 @@ import pandas as pd
 HAVE_PATSY = False
 HAVE_FORMULAIC = False
 
+DEFAULT_FORMULA_ENGINE = os.environ.get("SM_DEFAULT_FORMULA_ENGINE", None)
+
 try:
     import patsy
     import patsy.missing
 
-    DEFAULT_ENGINE = "patsy"
-
+    DEFAULT_FORMULA_ENGINE = DEFAULT_FORMULA_ENGINE or "patsy"
     class NAAction(patsy.missing.NAAction):
         # monkey-patch so we can handle missing values in 'extra' arrays later
         def _handle_NA_drop(self, values, is_NAs, origins):
@@ -28,7 +30,7 @@ try:
     HAVE_PATSY = True
 
 except ImportError:
-    DEFAULT_ENGINE = "formulaic"
+    DEFAULT_FORMULA_ENGINE = DEFAULT_FORMULA_ENGINE or "formulaic"
 
     class NAAction:
         def __init__(self, on_NA="", NA_types=("",)):
@@ -47,7 +49,7 @@ except ImportError:
 class _FormulaOption:
     def __init__(self, default_engine: Literal["patsy", "formulaic"] | None = None):
         if default_engine is None:
-            default_engine = DEFAULT_ENGINE
+            default_engine = DEFAULT_FORMULA_ENGINE
 
         self._formula_engine = default_engine
         self._allowed_options = tuple()
@@ -260,8 +262,17 @@ class FormulaManager:
             _formula = formulaic.formula.Formula(formula, _ordering=_ordering)
             output = formulaic.model_matrix(_formula, data, context=eval_env, **kwargs)
             if isinstance(output, formulaic.ModelMatrices):
-                self._spec = output.rhs.model_spec
-                return output.lhs, output.rhs
+                if (
+                    len(output) == 2
+                    and hasattr(output, "lhs")
+                    and hasattr(output, "rhs")
+                ):
+                    self._spec = output.rhs.model_spec
+                    return output.lhs, output.rhs
+                else:
+                    raise ValueError(
+                        "The formula has produced matrices that are not currently supported."
+                    )
 
             self._spec = output.model_spec
 

@@ -4,21 +4,36 @@ import pytest
 
 import statsmodels.formula
 from statsmodels.formula._manager import FormulaManager, LinearConstraintValues
+from statsmodels.formula._manager import FormulaManager
 
-pytest.importorskip("formulaic")
-pytest.importorskip("patsy")
+HAS_FORMULAIC = HAS_PATSY = False
+try:
+    import patsy
+
+    HAS_PATSY = True
+except ImportError:
+    pass
 
 try:
     import formulaic
-    import patsy
 
+    HAS_FORMULAIC = True
 except ImportError:
-    # Tests are skipped if formulaic or patsy are not installed, but the
-    # module must be importable
     pass
 
+has_formulaic = pytest.mark.skipif(
+    HAS_FORMULAIC, reason="can only run when patsy is installed and formulaic is not."
+)
 
-@pytest.fixture(params=["patsy", "formulaic"])
+has_patsy = pytest.mark.skipif(
+    HAS_PATSY, reason="can only run when formulaic is installed and patsy is not."
+)
+
+ENGINES = ["patsy"]
+if HAS_FORMULAIC:
+    ENGINES += ["formulaic"]
+
+@pytest.fixture(params=ENGINES)
 def engine(request):
     return request.param
 
@@ -62,6 +77,25 @@ def test_engine_options_engine():
 
     mgr = FormulaManager(engine="patsy")
     assert mgr.engine == "patsy"
+
+    statsmodels.formula.options.formula_engine = default
+
+
+def test_engine_options_engine(engine):
+    default = statsmodels.formula.options.formula_engine
+    assert default in ("patsy", "formulaic")
+
+    statsmodels.formula.options.formula_engine = engine
+    mgr = FormulaManager()
+    assert mgr.engine == engine
+
+    if HAS_FORMULAIC:
+        statsmodels.formula.options.formula_engine = "formulaic"
+        mgr = FormulaManager()
+        assert mgr.engine == "formulaic"
+        if HAS_PATSY:
+            mgr = FormulaManager(engine="patsy")
+            assert mgr.engine == "patsy"
 
     statsmodels.formula.options.formula_engine = default
 
@@ -164,7 +198,7 @@ def test_get_empty_eval_patsy(data):
     with pytest.raises(patsy.PatsyError):
         mgr.get_arrays(fmla, data, eval_env=eval_env)
 
-
+@pytest.mark.skipif(not HAS_FORMULAIC, reason="Requires formulaic")
 def test_get_empty_eval_formulaic(data):
     mgr = FormulaManager(engine="formulaic")
     fmla = "y ~ 1 + x + g(z)"
@@ -363,3 +397,13 @@ def test_bad_constraint(engine, data):
     mgr = FormulaManager(engine=engine)
     with pytest.raises(ValueError):
         mgr.get_linear_constraints(["x = 0", 7], ["Intercept", "x", "z", "c"])
+
+@has_formulaic
+def test_formula_manager_no_formulaic():
+    with pytest.raises(ValueError):
+        FormulaManager(engine="formulaic")
+
+@has_patsy
+def test_formula_manager_no_formulaic():
+    with pytest.raises(ValueError):
+        FormulaManager(engine="patsy")
