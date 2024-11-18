@@ -108,14 +108,14 @@ def anova1_lm_single(model, endog, exog, nobs, model_spec, table, n_rows, test,
     Use of this function is discouraged. Use anova_lm instead.
     """
     #maybe we should rethink using pinv > qr in OLS/linear models?
+    mgr = FormulaManager()
     effects = getattr(model, 'effects', None)
     if effects is None:
         q,r = np.linalg.qr(exog)
         effects = np.dot(q.T, endog)
 
     arr = np.zeros((len(model_spec.terms), len(model_spec.column_names)))
-    # TODO: patsy migration, no attribute slice
-    slices = [model_spec.slice(name) for name in model_spec.term_names]
+    slices = [mgr.get_slice(model_spec, name) for name in mgr.get_column_names(model_spec)]
     for i,slice_ in enumerate(slices):
         arr[i, slice_] = 1
 
@@ -124,7 +124,7 @@ def anova1_lm_single(model, endog, exog, nobs, model_spec, table, n_rows, test,
     mgr = FormulaManager()
     idx = mgr.intercept_idx(model_spec)
     sum_sq = sum_sq[~idx]
-    term_names = np.array(model_spec.term_names) # want boolean indexing
+    term_names = np.array(mgr.get_column_names(model_spec)) # want boolean indexing
     term_names = term_names[~idx]
 
     index = term_names.tolist()
@@ -181,16 +181,14 @@ def anova2_lm_single(model, model_spec, n_rows, test, pr_test, robust):
         # grab all variables except interaction effects that contain term
         # need two hypotheses matrices L1 is most restrictive, ie., term==0
         # L2 is everything except term==0
-        # TODO: patsy migration, no attribute slice
-        cols = model_spec.slice(term)
+        cols = mgr.get_slice(model_spec, term)
         L1 = lrange(cols.start, cols.stop)
         L2 = []
         term_set = set(term.factors)
         for t in terms_info: # for the term you have
             other_set = set(t.factors)
             if term_set.issubset(other_set) and not term_set == other_set:
-                # TODO: patsy migration, no attribute slice
-                col = model_spec.slice(t)
+                col = mgr.get_slice(model_spec, t)
                 # on a higher order term containing current `term`
                 L1.extend(lrange(col.start, col.stop))
                 L2.extend(lrange(col.start, col.stop))
@@ -218,7 +216,7 @@ def anova2_lm_single(model, model_spec, n_rows, test, pr_test, robust):
         # need to back out SSR from f_test
         table.loc[table.index[i], 'df'] = r
         col_order.append(cols.start)
-        index.append(term.name())
+        index.append(mgr.get_term_name(term))
 
     table.index = Index(index + ['Residual'])
     table = table.iloc[np.argsort(col_order + [model.model.exog.shape[1]+1])]
@@ -244,8 +242,7 @@ def anova3_lm_single(model, model_spec, n_rows, test, pr_test, robust):
     index = []
     for i, term in enumerate(terms_info):
         # grab term, hypothesis is that term == 0
-        # TODO: patsy migration, no attribute slice
-        cols = model_spec.slice(term)
+        cols = mgr.get_slice(model_spec, term)
         L1 = np.eye(model.model.exog.shape[1])[cols]
         L12 = L1
         r = L1.shape[0]

@@ -1,11 +1,11 @@
+from statsmodels.compat.python import PYTHON_IMPL_WASM
+
 import logging
 import os
 
 import numpy as np
 import pandas as pd
 import pytest
-
-from statsmodels.compat.python import PYTHON_IMPL_WASM
 
 try:
     import matplotlib

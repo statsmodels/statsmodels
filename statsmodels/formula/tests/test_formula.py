@@ -11,6 +11,7 @@ import pytest
 
 from statsmodels.datasets import cpunish
 from statsmodels.datasets.longley import load, load_pandas
+import statsmodels.formula
 from statsmodels.formula.api import ols
 from statsmodels.formula.formulatools import make_hypotheses_matrices
 from statsmodels.tools import add_constant
@@ -193,7 +194,9 @@ def test_patsy_lazy_dict():
             return np.array(self.data[key])
 
     data = cpunish.load_pandas().data
-    data = LazyDict(data)
+
+    if statsmodels.formula.options.formula_engine == "patsy":
+        data = LazyDict(data)
     res = ols("EXECUTIONS ~ SOUTH + INCOME", data=data).fit()
 
     res2 = res.predict(data)
@@ -202,7 +205,8 @@ def test_patsy_lazy_dict():
     data = cpunish.load_pandas().data
     data.loc[0, "INCOME"] = np.nan
 
-    data = LazyDict(data)
+    if statsmodels.formula.options.formula_engine == "patsy":
+        data = LazyDict(data)
     data.index = cpunish.load_pandas().data.index
     res = ols("EXECUTIONS ~ SOUTH + INCOME", data=data).fit()
 

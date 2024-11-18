@@ -4,7 +4,6 @@ import pytest
 
 import statsmodels.formula
 from statsmodels.formula._manager import FormulaManager, LinearConstraintValues
-from statsmodels.formula._manager import FormulaManager
 
 HAS_FORMULAIC = HAS_PATSY = False
 try:

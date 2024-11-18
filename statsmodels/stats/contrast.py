@@ -1,7 +1,10 @@
+from logging import Formatter
+
 import numpy as np
 from scipy import stats
 from scipy.stats import f as fdist, t as student_t
 
+from statsmodels.formula._manager import FormulaManager
 from statsmodels.stats.multitest import multipletests
 from statsmodels.tools.tools import clean0, fullrank
 
@@ -643,14 +646,15 @@ def t_test_pairwise(result, term_name, method='hs', alpha=0.05,
     available.
     """
 
-    desinfo = result.model.data.model_spec
-    term_idx = desinfo.term_names.index(term_name)
-    term = desinfo.terms[term_idx]
-    idx_start = desinfo.term_slices[term].start
+    mgr = FormulaManager()
+    model_spec = result.model.data.model_spec
+    term_idx = mgr.get_column_names(model_spec).index(term_name)
+    term = model_spec.terms[term_idx]
+    idx_start = model_spec.term_slices[term].start
     if not ignore and len(term.factors) > 1:
         raise ValueError('interaction effects not yet supported')
     factor = term.factors[0]
-    cat = desinfo.factor_infos[factor].categories
+    cat = model_spec.factor_infos[factor].categories
     if factor_labels is not None:
         if len(factor_labels) == len(cat):
             cat = factor_labels
@@ -659,7 +663,7 @@ def t_test_pairwise(result, term_name, method='hs', alpha=0.05,
 
 
     k_level = len(cat)
-    cm = desinfo.term_codings[term][0].contrast_matrices[factor].matrix
+    cm = model_spec.term_codings[term][0].contrast_matrices[factor].matrix
 
     k_params = len(result.params)
     labels = _get_pairs_labels(k_level, cat)

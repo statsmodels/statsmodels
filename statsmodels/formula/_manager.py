@@ -1,6 +1,6 @@
 from __future__ import annotations
-import os
 
+import os
 from typing import Any, Literal, NamedTuple, Sequence
 
 import numpy as np
@@ -263,7 +263,10 @@ class FormulaManager:
                 kwargs["na_action"] = na_action
 
             _ordering = statsmodels.formula.options.ordering
-            _formula = formulaic.formula.Formula(formula, _ordering=_ordering)
+            if isinstance(formula, self.model_spec_type):
+                _formula = formula
+            else:
+                _formula = formulaic.formula.Formula(formula, _ordering=_ordering)
             if isinstance(data, dict):
                 # Work around for no dict support in formulaic
                 _data = pd.DataFrame(data)
@@ -316,11 +319,17 @@ class FormulaManager:
 
             # Handle list of constraints, which is not supported by formulaic
             if isinstance(constraints, list):
-                if not all(isinstance(c, str) for c in constraints):
-                    raise ValueError(
-                        "All constraints must be strings when passed as a list."
-                    )
-                _constraints = ", ".join(str(v) for v in constraints)
+                if len(constraints) == 0:
+                    raise ValueError("Constraints must be non-empty")
+
+                if isinstance(constraints[0], str):
+                    if not all(isinstance(c, str) for c in constraints):
+                        raise ValueError(
+                            "All constraints must be strings when passed as a list."
+                        )
+                    _constraints = ", ".join(str(v) for v in constraints)
+                else:
+                    _constraints = np.array(constraints)
             else:
                 _constraints = constraints
             if isinstance(_constraints, tuple):
@@ -453,8 +462,22 @@ class FormulaManager:
         else:
             return formulaic.Formula(formula)
 
-    def get_column_names(self, frame):
+    def get_column_names(self, spec_or_frame):
+        if isinstance(spec_or_frame, self.model_spec_type):
+            if self._engine == "patsy":
+                return list(spec_or_frame.term_names)
+            else:
+                return list(spec_or_frame.column_names)
+
+        frame = spec_or_frame
         return list(self.get_model_spec(frame).column_names)
+
+    @property
+    def model_spec_type(self):
+        if self._engine == "patsy":
+            return patsy.design_info.DesignInfo
+        else:
+            return formulaic.model_spec.ModelSpec
 
     def get_term_name_slices(self, frame):
         spec = self.get_model_spec(frame)
@@ -472,3 +495,21 @@ class FormulaManager:
             if optional and not hasattr(frame, "model_spec"):
                 return None
             return frame.model_spec
+
+    def get_slice(self, model_spec, term):
+        if self._engine == "patsy":
+            return model_spec.slice(term)
+        else:
+            return model_spec.get_slice(term)
+
+    def get_term_name(self, term):
+        if self._engine == "patsy":
+            return term.name()
+        else:
+            return str(term)
+
+    def get_description(self, model_spec):
+        if self._engine == "patsy":
+            return model_spec.describe()
+        else:
+            return str(model_spec.formula)

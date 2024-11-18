@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from statsmodels.compat.python import lzip
 
+from collections import defaultdict
 from functools import reduce
 import warnings
 
@@ -13,6 +14,7 @@ from statsmodels.base.data import handle_data
 from statsmodels.base.optimizer import Optimizer
 import statsmodels.base.wrapper as wrap
 from statsmodels.formula import handle_formula_data
+from statsmodels.formula._manager import FormulaManager
 from statsmodels.stats.contrast import (
     ContrastResults,
     WaldTestResults,
@@ -186,15 +188,13 @@ class Model:
         """
         # TODO: provide a docs template for args/kwargs from child models
         # TODO: subset could use syntax. issue #469.
+        mgr = FormulaManager()
         if subset is not None:
             data = data.loc[subset]
         eval_env = kwargs.pop('eval_env', None)
         if eval_env is None:
             eval_env = 2
         elif eval_env == -1:
-            from statsmodels.formula._manager import FormulaManager
-            mgr = FormulaManager()
-
             eval_env = mgr.get_empty_eval_env()
         elif isinstance(eval_env, int):
             eval_env += 1  # we're going down the stack again
@@ -216,14 +216,14 @@ class Model:
             cols = [x for x in exog.columns if x not in drop_cols]
             if len(cols) < len(exog.columns):
                 exog = exog[cols]
-                cols = list(model_spec.column_names)
+                spec_cols = list(mgr.get_column_names(model_spec))
                 for col in drop_cols:
                     try:
-                        cols.remove(col)
+                        spec_cols.remove(col)
                     except ValueError:
                         pass  # OK if not present
                 # TODO: Patsy migration, need to add method to handle
-                model_spec = model_spec.subset(cols)
+                model_spec = model_spec.subset(spec_cols)
 
         kwargs.update({'missing_idx': missing_idx,
                        'missing': missing,
@@ -1090,12 +1090,11 @@ class Results:
             # allow both location of model_spec, see #7043
             model_spec = (getattr(self.model, "model_spec", None) or
                            self.model.data.model_spec)
-            from statsmodels.formula._manager import FormulaManager
             mgr = FormulaManager()
             if isinstance(exog, pd.Series):
                 # we are guessing whether it should be column or row
                 if (hasattr(exog, 'name') and isinstance(exog.name, str) and
-                        exog.name in model_spec.describe()):
+                        exog.name in mgr.get_description(model_spec)):
                     # assume we need one column
                     exog = pd.DataFrame(exog)
                 else:
@@ -1647,7 +1646,6 @@ class LikelihoodModelResults(Results):
                      for i in self.model.data.cov_names]
         else:
             names = self.model.data.cov_names
-        from statsmodels.formula._manager import FormulaManager
         mgr = FormulaManager()
         lc = mgr.get_linear_constraints(r_matrix, names)
         r_matrix, q_matrix = lc.constraint_matrix, lc.constraint_values
@@ -1861,8 +1859,6 @@ class LikelihoodModelResults(Results):
             # switch to use_t false if undefined
             use_f = (hasattr(self, 'use_t') and self.use_t)
 
-        from statsmodels.formula._manager import FormulaManager
-
         if self.params.ndim == 2:
             names = [f'y{i[0]}_{i[1]}'
                      for i in self.model.data.cov_names]
@@ -1999,7 +1995,8 @@ class LikelihoodModelResults(Results):
         Weight                 30.263368  4.32586407145e-06              4
         """
         # lazy import
-        from collections import defaultdict
+        mgr = FormulaManager()
+
 
         result = self
         if extra_constraints is None:
@@ -2016,8 +2013,7 @@ class LikelihoodModelResults(Results):
         combined = defaultdict(list)
         if model_spec is not None:
             for term in model_spec.terms:
-                # TODO: patsy migration, no attribute slice
-                cols = model_spec.slice(term)
+                cols = mgr.get_slice(model_spec, term)
                 name = term.name()
                 constraint_matrix = identity[cols]
 
