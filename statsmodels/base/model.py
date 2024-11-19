@@ -2014,7 +2014,7 @@ class LikelihoodModelResults(Results):
         if model_spec is not None:
             for term in model_spec.terms:
                 cols = mgr.get_slice(model_spec, term)
-                name = term.name()
+                name = mgr.get_term_name(term)
                 constraint_matrix = identity[cols]
 
                 # check if in combined
