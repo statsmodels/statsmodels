@@ -5,7 +5,7 @@ from typing import Any, Literal, NamedTuple, Sequence
 
 import numpy as np
 import pandas as pd
-
+from typing import Mapping
 HAVE_PATSY = False
 HAVE_FORMULAIC = False
 
@@ -269,10 +269,30 @@ class FormulaManager:
                 _formula = formulaic.formula.Formula(formula, _ordering=_ordering)
             if isinstance(data, dict):
                 # Work around for no dict support in formulaic
-                _data = pd.DataFrame(data)
+                if all(np.isscalar(v) for v in data.values()):
+                    # Handle dict of scalars
+                    _data = pd.DataFrame(data, index=[0])
+                else:
+                    _data = pd.DataFrame(data)
             else:
                 _data = data
-            output = formulaic.model_matrix(_formula, _data, context=eval_env, **kwargs)
+            if isinstance(eval_env, (int, Mapping)) or not HAVE_PATSY:
+                _eval_env = eval_env
+            elif HAVE_PATSY:
+                from patsy.eval import EvalEnvironment
+                if isinstance(eval_env, EvalEnvironment):
+                    ns = eval_env._namespaces
+                    _eval_env = {}
+                    for val in ns:
+                        _eval_env.update(val)
+                else:
+                    _eval_env = eval_env
+            else:
+                _eval_env = eval_env
+            if not isinstance(_eval_env, (int, dict)):
+                raise TypeError('context (eval_env) must be an int or a dict.')
+
+            output = formulaic.model_matrix(_formula, _data, context=_eval_env, **kwargs)
             if isinstance(output, formulaic.ModelMatrices):
                 if (
                     len(output) == 2

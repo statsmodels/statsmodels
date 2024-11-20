@@ -1108,9 +1108,9 @@ class Results:
             except Exception as exc:
                 msg = ('predict requires that you use a DataFrame when '
                        'predicting from a model\nthat was created using the '
-                       'formula api.'
-                       '\n\nThe original error message returned by patsy is:\n'
-                       '{}'.format(str(str(exc))))
+                       'formula api. \n\nThe original error message returned '
+                       f'by {mgr.engine} is:\n {str(str(exc))}'
+                       )
                 raise exc.__class__(msg)
             if orig_exog_len > len(exog) and not is_dict:
                 if exog_index is None:

@@ -251,7 +251,7 @@ def test_predict_nondataframe():
 
 def test_formula_environment():
     df = pd.DataFrame({"x": [1, 2, 3], "y": [2, 4, 6]})
-    env = patsy.EvalEnvironment([{"z": [3, 6, 9]}])
+    env = patsy.eval.EvalEnvironment([{"z": [3, 6, 9]}])
     model = ols("y ~ x + z", eval_env=env, data=df)
     assert "z" in model.exog_names
     with pytest.raises(TypeError):
