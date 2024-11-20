@@ -14,6 +14,7 @@ from .multivariate_ols import (
     _multivariate_ols_fit,
     _multivariate_ols_test,
 )
+from statsmodels.formula._manager import FormulaManager
 
 __docformat__ = 'restructuredtext en'
 
@@ -111,7 +112,9 @@ class MANOVA(Model):
             if (hasattr(self, 'data') and self.data is not None and
                         hasattr(self.data, 'model_spec')):
                 # TODO: patsy migration
-                terms = self.data.model_spec.term_name_slices
+
+                mgr = FormulaManager()
+                terms = mgr.get_term_name_slices(self.data.model_spec)
                 hypotheses = []
                 for key in terms:
                     if skip_intercept_test and key == 'Intercept':

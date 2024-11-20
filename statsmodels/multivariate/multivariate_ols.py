@@ -460,10 +460,12 @@ class _MultivariateOLSResults(LikelihoodModelResults):
         linear model y = x * params, `L` is the contrast matrix, `M` is the
         dependent variable transform matrix and C is the constant matrix.
         """
+        mgr = FormulaManager()
         k_xvar = len(self.exog_names)
         if hypotheses is None:
             if self.model_spec is not None:
-                terms = self.model_spec.term_name_slices
+                mgr = FormulaManager()
+                terms = mgr.get_term_name_slices(self.model_spec)
                 hypotheses = []
                 for key in terms:
                     if skip_intercept_test and key == 'Intercept':
@@ -616,7 +618,8 @@ class MultivariateLSResults(LikelihoodModelResults):
         k_xvar = len(self.model.exog_names)
         if hypotheses is None:
             if self.model.data.model_spec is not None:
-                terms = self.model.data.model_spec.term_name_slices
+                mgr = FormulaManager()
+                terms = mgr.get_term_name_slices(self.model.data.model_spec)
                 hypotheses = []
                 for key in terms:
                     if skip_intercept_test and key == 'Intercept':

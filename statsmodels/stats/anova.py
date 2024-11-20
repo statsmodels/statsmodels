@@ -255,7 +255,7 @@ def anova3_lm_single(model, model_spec, n_rows, test, pr_test, robust):
         # need to back out SSR from f_test
         table.loc[table.index[i], 'df'] = r
         #col_order.append(cols.start)
-        index.append(term.name())
+        index.append(mgr.get_term_name(term))
 
     table.index = Index(index + ['Residual'])
     #NOTE: Do not need to sort because terms are an ordered dict now

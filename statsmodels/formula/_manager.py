@@ -43,6 +43,7 @@ except ImportError:
 
 try:
     import formulaic  # noqa: F401
+    import formulaic.parser
     import formulaic.utils.constraints
 
     HAVE_FORMULAIC = True
@@ -256,6 +257,8 @@ class FormulaManager:
         else:  # self._engine == "formulaic":
             import statsmodels.formula
 
+            formulaic.parser.DefaultParserFeatureFlag
+
             kwargs = {}
             if pandas:
                 kwargs["output"] = "pandas"
@@ -266,7 +269,10 @@ class FormulaManager:
             if isinstance(formula, self.model_spec_type):
                 _formula = formula
             else:
-                _formula = formulaic.formula.Formula(formula, _ordering=_ordering)
+                feature_flags = formulaic.parser.DefaultParserFeatureFlag.TWOSIDED
+                parser = formulaic.parser.DefaultFormulaParser(feature_flags=feature_flags)
+                _formula = formulaic.formula.Formula(formula, _ordering=_ordering,
+                                                     _parser=parser)
             if isinstance(data, dict):
                 # Work around for no dict support in formulaic
                 if all(np.isscalar(v) for v in data.values()):
@@ -499,8 +505,11 @@ class FormulaManager:
         else:
             return formulaic.model_spec.ModelSpec
 
-    def get_term_name_slices(self, frame):
-        spec = self.get_model_spec(frame)
+    def get_term_name_slices(self, spec_or_frame):
+        if not isinstance(spec_or_frame, self.model_spec_type):
+            spec = self.get_model_spec(spec_or_frame)
+        else:
+            spec = spec_or_frame
         if self._engine == "patsy":
             return spec.term_name_slices
         else:
