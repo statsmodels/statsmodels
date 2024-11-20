@@ -370,7 +370,6 @@ def fit_constrained_wrap(model, constraints, start_params=None, **fit_kwds):
     # same pattern as in base.LikelihoodModel.t_test
     mgr = FormulaManager()
     lc = mgr.get_linear_constraints(constraints, self.exog_names)
-    # lc = DesignInfo(self.exog_names).linear_constraint(constraints)
     R, q = lc.constraint_matrix, lc.constraint_values
 
     # TODO: add start_params option, need access to tranformation

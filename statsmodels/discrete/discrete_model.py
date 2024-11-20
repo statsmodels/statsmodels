@@ -1422,6 +1422,7 @@ class Poisson(CountModel):
         from statsmodels.formula._manager import FormulaManager
         mgr = FormulaManager()
         lc = mgr.get_linear_constraints(constraints, self.exog_names)
+
         R, q = lc.constraint_matrix, lc.constraint_values
 
         # TODO: add start_params option, need access to tranformation

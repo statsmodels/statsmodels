@@ -262,6 +262,9 @@ class FormulaManager:
             kwargs = {}
             if pandas:
                 kwargs["output"] = "pandas"
+            else:
+                kwargs["output"] = "numpy"
+
             if na_action:
                 kwargs["na_action"] = na_action
 
@@ -542,3 +545,8 @@ class FormulaManager:
             return model_spec.describe()
         else:
             return str(model_spec.formula)
+
+    def escape_variable_names(self, names):
+        if self._engine == "formulaic":
+            return [f"`{name}`" for name in names]
+        return names

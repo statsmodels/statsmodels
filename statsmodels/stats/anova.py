@@ -583,25 +583,25 @@ class AnovaRM:
         anova_table = pd.DataFrame(np.zeros((0, 4)), columns=columns)
 
         for key in term_slices:
-            if self.subject not in key and key != 'Intercept':
-                #  Independen variables are orthogonal
+            if self.subject not in str(key) and str(key) not in ('Intercept', "1"):
+                #  Independent variables are orthogonal
                 ssr1, df_resid1 = _ssr_reduced_model(
                     y, x, term_slices, params, [key])
                 df1 = df_resid1 - df_resid
                 msm = (ssr1 - ssr) / df1
-                if (key == ':'.join(factors[:-1]) or
-                        (key + ':' + subject not in term_slices)):
+                if (str(key) == ':'.join(factors[:-1]) or
+                        (str(key) + ':' + subject not in term_slices)):
                     mse = ssr / df_resid
                     df2 = df_resid
                 else:
                     ssr1, df_resid1 = _ssr_reduced_model(
                         y, x, term_slices, params,
-                        [key + ':' + subject])
+                        [str(key) + ':' + subject])
                     df2 = df_resid1 - df_resid
                     mse = (ssr1 - ssr) / df2
                 F = msm / mse
                 p = stats.f.sf(F, df1, df2)
-                term = key.replace('C(', '').replace(', Sum)', '')
+                term = str(key).replace('C(', '').replace(', Sum)', '')
                 anova_table.loc[term, 'F Value'] = F
                 anova_table.loc[term, 'Num DF'] = df1
                 anova_table.loc[term, 'Den DF'] = df2
