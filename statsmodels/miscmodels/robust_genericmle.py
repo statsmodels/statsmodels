@@ -7,12 +7,15 @@ Author: Josef Perktold
 """
 
 import numpy as np
+from scipy import stats
+
 from statsmodels.base.model import GenericLikelihoodModel
 from statsmodels.sandbox.regression import gmm
 
 import statsmodels.robust.norms as rnorms
 import statsmodels.robust.scale as rscale
 import statsmodels.robust.robust_linear_model as rlm
+import statsmodels.tools.func_nonlinear as prednl
 
 
 class MEstimator(GenericLikelihoodModel):
@@ -40,11 +43,14 @@ class MEstimator(GenericLikelihoodModel):
         params_loc, scale = self.transform_params(params)
 
         #nobs = len(self.endog)
-        resid_scaled = (self.endog - np.dot(self.exog, params_loc)) / scale
+        resid_scaled = (self.endog - self.predict(params_loc)) / scale
         scale_fac = 0.491
         rho_fac = scale * scale_fac
         objective = (rho_fac * self.norm(resid_scaled / scale_fac) +
-                      rho_fac * np.log(scale * scale_fac))
+                     rho_fac * np.log(scale * scale_fac))
+        #rho_fac = 1
+        #objective = (rho_fac * self.norm(resid_scaled / scale_fac) +
+        #              scale_fac * np.log(scale / scale_fac))
         return objective
 
     def score(self, params):
@@ -54,8 +60,8 @@ class MEstimator(GenericLikelihoodModel):
         # Todo   verify signs,  derivative of loglike or nloglike ?
         params_loc, scale = self.transform_params(params)
 
-        resid_scaled = (self.endog - np.dot(self.exog, params_loc)) / scale / 0.491
-        score_obs = -self.norm.psi(resid_scaled)[:,None] * self.exog #/ scale
+        resid_scaled = (self.endog - self.predict(params_loc)) / scale / 0.491
+        score_obs = -self.norm.psi(resid_scaled)[:,None] * self.predict_jac(params_loc) #/ scale
         # note: extra scale cancels between nominator and denominator
 
         if self.scale_fixed is None:
@@ -79,17 +85,24 @@ class MEstimator(GenericLikelihoodModel):
 
 
 class MEstimatorHD(GenericLikelihoodModel):
+    """Huber-Dutter estimation of robust nonlinear model.
+
+    Currently subclass of GenericLikelihoodModel.
+    """
 
     def __init__(self, *args, **kwds):
-        self.norm = kwds.get('norm', rnorms.HuberT())
+        self.norm = norm = kwds.get('norm', rnorms.HuberT())
+        self.prednl = kwds.get('predictor', prednl.Linear())
         super(MEstimatorHD, self).__init__(*args, **kwds)
         self.scale_fixed = None
         # TODO verify scale_fac
-        # stats.norm.expect(lambda t: t*norm.psi(t) - norm.rho(t))
-        self.scale_fac = 0.35508
-        if isinstance(self.norm, rnorms.TukeyBiweight):
-            # hardcoded for default shape/tuning parameter
-            self.scale_fac = 3.97913
+        self.scale_fac = stats.norm.expect(
+            lambda t: t*norm.psi(t) - norm.rho(t)
+            )
+        # self.scale_fac = 0.35508
+        # if isinstance(self.norm, rnorms.TukeyBiweight):
+        #    # hardcoded for default shape/tuning parameter
+        #    self.scale_fac = 3.97913
 
     def transform_params(self, params):
 
@@ -111,30 +124,42 @@ class MEstimatorHD(GenericLikelihoodModel):
         #nobs = len(self.endog)
         resid_scaled = (self.endog - self.predict(params_loc)) / scale
         scale_fac = self.scale_fac
-        objective = (scale * self.norm(resid_scaled) + scale_fac * scale)
+        objective = ((scale * self.norm(resid_scaled) + scale_fac * scale)
+                     # + 1 * (self.score(params)[-1]**2).sum()
+                     )
         return objective
 
     def score(self, params):
         return self.jac(params).sum(0)
 
     def jac(self, params): #, **kwds):
+        """Derivatives of negative loss function w.r.t. parameters.
+
+        Same as score_obs in MLE (derivatives of loglike)
+        """
         # Todo   verify signs,  derivative of loglike or nloglike ?
         params_loc, scale = self.transform_params(params)
 
         resid_scaled = (self.endog - self.predict(params_loc)) / scale
+        # Note: score_obs here is derivatives of loss funtion nloglikeobs
         score_obs = -self.norm.psi(resid_scaled)[:,None] * self.predict_jac(params_loc) #/ scale
         # note: extra scale cancels between nominator and denominator
 
         if self.scale_fixed is None:
             def func(s):
                 s = np.atleast_1d(s)
-                #for derivative wrt. scale
+                # for derivative wrt. scale
                 p = np.concatenate((params_loc, s))
-                return self.loglikeobs(p)
+                return self.nloglikeobs(p)
 
-            import statsmodels.tools.numdiff as nd
-            grad_scale = nd.approx_fprime(np.atleast_1d(scale), func)
-            return -np.column_stack((score_obs, -grad_scale))
+            # import statsmodels.tools.numdiff as nd
+            # grad_scale0 = nd.approx_fprime(np.atleast_1d(scale), func)
+            grad_scale = -(self.norm.psi(resid_scaled) * resid_scaled -
+                           self.norm.rho(resid_scaled)) + self.scale_fac
+            # Todo: delete numdiff before finishing PR, unit tests
+            # assert np.allclose(grad_scale, np.squeeze(grad_scale0), rtol=5e-5,
+            #                   atol=1e-6)
+            return -np.column_stack((score_obs, grad_scale))
 
         else:
             return -score_obs
@@ -142,16 +167,30 @@ class MEstimatorHD(GenericLikelihoodModel):
     def predict(self, params, exog=None):
         if exog is None:
             exog = self.exog
-        return np.dot(exog, params[:self.exog.shape[1]])
+
+        # todo: should this be params[:-1] to exclude scale?
+        return self.predictor.predict(params, exog)
+        # return np.dot(exog, params[:self.exog.shape[1]])
 
     def predict_jac(self, params, exog=None):
         if exog is None:
             exog = self.exog
-        return exog
+        # todo: should this be params[:-1] to exclude scale?
+        return self.predictor.predict_deriv(params, exog)
+
+    def fit(self, start_params=None, maxiter=1000, disp=False,
+            method='bfgs', **kwds):
+        res = super().fit(start_params=start_params,
+                          maxiter=maxiter, method=method,
+                          disp=disp, **kwds)
+
+        return res
 
     def fit_iterative(self, start_params=None, **kwds):
         """
         iterative fit with MAD scale updating
+
+        possibly delete this method, or use by default HD scale function.
 
         """
         # TODO add fit keywords, method is hardcoded
@@ -161,13 +200,18 @@ class MEstimatorHD(GenericLikelihoodModel):
             if hasattr(self, 'start_params'):
                 start_params = self.start_params(self.endog, self.exog)
             else:
+                # k_params will not be equal to exog.schape[1] if nonlinear
                 start_params = 0.1 * np.ones(self.exog.shape[1])
 
+        # todo; fit option for fixed scale
+        scale_old = self.scale_fixed
+        self.scale_fixed = rscale.mad(self.endog)
         res_it = self.fit(start_params, method='nm')
         history = []
         #self.scale_fixed = rscale.mad(res_it.resid, center=0)
-        for i in range(10):
+        for i in range(10):  # todo: maxiter
             fittedvalues = res_it.predict()
+            # todo replace hardcode mad by options, e.g M-scale
             self.scale_fixed = rscale.mad(self.endog - fittedvalues, center=0)
             res_it = self.fit(res_it.params, method='bfgs')
             history.append(np.concatenate((res_it.params, [self.scale_fixed])))
@@ -181,12 +225,72 @@ class MEstimatorHD(GenericLikelihoodModel):
         #TODO: update res_it with iteration results
         res_it.converged = converged
         res_it.history = history
+        res_it.scale = self.scale_fixed
+        # todo loglike in summary faila if scale not in params and
+        # scale_fixed is Nonw
+        res_it.summary(xname=self.exog_names[:-1])
+        self.scale_fixed = scale_old
 
         return res_it
 
 
+class MEstimatorLLL(MEstimatorHD):
 
-class RLMIterative(rlm.RLM):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.scale_fac = stats.norm.expect(
+            lambda t: t * self.norm.psi(t)
+            )
+
+    def nloglikeobs(self, params):
+
+        params_loc, scale = self.transform_params(params)
+
+        #nobs = len(self.endog)
+        resid_scaled = (self.endog - self.predict(params_loc)) / scale
+        scale_fac = self.scale_fac
+        objective = self.norm(resid_scaled) + scale_fac * np.log(scale)
+        return objective
+
+    def jac(self, params): #, **kwds):
+        """Derivatives of negative loss function w.r.t. parameters.
+
+        Same as score_obs in MLE (derivatives of loglike)
+        """
+        # Todo   verify signs,  derivative of loglike or nloglike ?
+        params_loc, scale = self.transform_params(params)
+
+        resid_scaled = (self.endog - self.predict(params_loc)) / scale
+        # Note: score_obs here is derivatives of loss funtion nloglikeobs
+        score_obs = (-self.norm.psi(resid_scaled)[:,None] / scale *
+                     self.predict_jac(params_loc))
+
+
+        if self.scale_fixed is None:
+            def func(s):
+                s = np.atleast_1d(s)
+                # for derivative wrt. scale
+                p = np.concatenate((params_loc, s))
+                return self.nloglikeobs(p)
+
+            import statsmodels.tools.numdiff as nd
+            grad_scale0 = nd.approx_fprime(np.atleast_1d(scale), func)
+            grad_scale = -(self.norm.psi(resid_scaled) * resid_scaled -
+                          self.scale_fac) / scale
+            # Todo: delete numdiff before finishing PR, unit tests
+            assert np.allclose(grad_scale, np.squeeze(grad_scale0), rtol=5e-5,
+                               atol=1e-6)
+            return -np.column_stack((score_obs, grad_scale))
+
+        else:
+            return -score_obs
+
+
+
+class RNLMIterative(rlm.RLM):
+    """Robust Nonlinear Model
+    """
 
     def __init__(self, *args, **kwds):
         self.weights_prior = kwds.pop('weights', None)
@@ -194,7 +298,7 @@ class RLMIterative(rlm.RLM):
         self.meef_scale = kwds.pop('meef_scale', None)
         self.update_scale = kwds.pop('update_scale', True)
 
-        super(RLMIterative, self).__init__(*args, **kwds)
+        super(RNLMIterative, self).__init__(*args, **kwds)
         # linear to get started
         from statsmodels.regression.linear_model import WLS
         self.fit_loc = WLS
@@ -226,7 +330,7 @@ class RLMIterative(rlm.RLM):
         else:
             scale = start_scale
 
-        for i in range(maxiter):
+        for i in range(maxiter):  # noqa: F841
             # update location
             weights = self.norm_loc.weights(resid / scale)
             if self.weights_prior is not None:
@@ -317,7 +421,6 @@ class _ExpRobustGMM(_RobustGMM):
         return fittedvalues
 
 
-
 # examples: special cases of non-linear functions
 
 def func_menten(params, x):
@@ -372,7 +475,7 @@ def sigmoid(params, x):
 
 
 def sigmoid_deriv(params, x):
-    x0, y0, c, k = params
+    x0, y0, c, k = params  # noqa
     term = np.exp(-k * (x - x0))
     denom = 1. / (1 + term)
     denom2 = denom**2
