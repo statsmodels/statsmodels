@@ -1,5 +1,6 @@
 import numpy as np
 
+from statsmodels.base.l1_slsqp import fit_l1_slsqp
 from statsmodels.base.model import Results
 import statsmodels.base.wrapper as wrap
 from statsmodels.tools._decorators import cache_readonly
@@ -85,88 +86,18 @@ def _gen_npfuncs(k, L1_wt, alpha, loglike_kwds, score_kwds, hess_kwds):
     return nploglike, npscore, nphess
 
 
-def fit_elasticnet(model, method="coord_descent", maxiter=100,
-                   alpha=0., L1_wt=1., start_params=None, cnvrg_tol=1e-7,
-                   zero_tol=1e-8, refit=False, check_step=True,
-                   loglike_kwds=None, score_kwds=None, hess_kwds=None):
+def _coord_descent(model, alpha, L1_wt, start_params, maxiter, cnvrg_tol,
+                   zero_tol, check_step, loglike_kwds, score_kwds,
+                   hess_kwds):
     """
-    Return an elastic net regularized fit to a regression model.
+    Minimize the penalized negative log-likelihood using coordinate
+    descent.
 
-    Parameters
-    ----------
-    model : model object
-        A statsmodels object implementing ``loglike``, ``score``, and
-        ``hessian``.
-    method : {'coord_descent'}
-        Only the coordinate descent algorithm is implemented.
-    maxiter : int
-        The maximum number of iteration cycles (an iteration cycle
-        involves running coordinate descent on all variables).
-    alpha : scalar or array_like
-        The penalty weight.  If a scalar, the same penalty weight
-        applies to all variables in the model.  If a vector, it
-        must have the same length as `params`, and contains a
-        penalty weight for each coefficient.
-    L1_wt : scalar
-        The fraction of the penalty given to the L1 penalty term.
-        Must be between 0 and 1 (inclusive).  If 0, the fit is
-        a ridge fit, if 1 it is a lasso fit.
-    start_params : array_like
-        Starting values for `params`.
-    cnvrg_tol : scalar
-        If `params` changes by less than this amount (in sup-norm)
-        in one iteration cycle, the algorithm terminates with
-        convergence.
-    zero_tol : scalar
-        Any estimated coefficient smaller than this value is
-        replaced with zero.
-    refit : bool
-        If True, the model is refit using only the variables that have
-        non-zero coefficients in the regularized fit.  The refitted
-        model is not regularized.
-    check_step : bool
-        If True, confirm that the first step is an improvement and search
-        further if it is not.
-    loglike_kwds : dict-like or None
-        Keyword arguments for the log-likelihood function.
-    score_kwds : dict-like or None
-        Keyword arguments for the score function.
-    hess_kwds : dict-like or None
-        Keyword arguments for the Hessian function.
-
-    Returns
-    -------
-    Results
-        A results object.
-
-    Notes
-    -----
-    The ``elastic net`` penalty is a combination of L1 and L2
-    penalties.
-
-    The function that is minimized is:
-
-    -loglike/n + alpha*((1-L1_wt)*|params|_2^2/2 + L1_wt*|params|_1)
-
-    where |*|_1 and |*|_2 are the L1 and L2 norms.
-
-    The computational approach used here is to obtain a quadratic
-    approximation to the smooth part of the target function:
-
-    -loglike/n + alpha*(1-L1_wt)*|params|_2^2/2
-
-    then repeatedly optimize the L1 penalized version of this function
-    along coordinate axes.
+    Helper for `fit_elasticnet`; ``alpha`` must be a vector with one
+    penalty weight per coefficient.  Returns the estimated parameters,
+    the number of iterations, and the convergence status.
     """
-
     k_exog = model.exog.shape[1]
-
-    loglike_kwds = {} if loglike_kwds is None else loglike_kwds
-    score_kwds = {} if score_kwds is None else score_kwds
-    hess_kwds = {} if hess_kwds is None else hess_kwds
-
-    if np.isscalar(alpha):
-        alpha = alpha * np.ones(k_exog)
 
     # Define starting params
     if start_params is None:
@@ -237,6 +168,191 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
 
     # Set approximate zero coefficients to be exactly zero
     params[np.abs(params) < zero_tol] = 0
+
+    return params, itr, converged
+
+
+def _l1_slsqp(model, alpha, start_params, maxiter, loglike_kwds, score_kwds,
+              trim_mode="auto", auto_trim_tol=0.01, size_trim_tol=1e-4,
+              qc_tol=0.03, qc_verbose=False, acc=1e-10):
+    """
+    Minimize the L1 penalized negative log-likelihood using slsqp.
+
+    Helper for `fit_elasticnet`; ``alpha`` must be a vector with one
+    penalty weight per coefficient.  The non-smooth L1 problem is
+    reformulated as a smooth constrained problem that is solved with
+    slsqp (an interior point style method), in contrast to the
+    coordinate descent algorithm of `_coord_descent`.  Returns the
+    estimated parameters, the number of iterations, and the
+    convergence status.
+    """
+    if np.min(alpha) < 0:
+        raise ValueError("alpha must be non-negative")
+
+    if start_params is None:
+        start_params = np.zeros(model.exog.shape[1])
+
+    nobs = model.nobs
+
+    def f(params, *args):
+        return -model.loglike(params, **loglike_kwds) / nobs
+
+    def score(params, *args):
+        return -model.score(params, **score_kwds) / nobs
+
+    # The objective function is the average (per observation) penalized
+    # negative log-likelihood, so alpha does not need to be rescaled.
+    kwargs = {
+        "alpha": alpha,
+        "alpha_rescaled": alpha,
+        "trim_mode": trim_mode,
+        "size_trim_tol": size_trim_tol,
+        "auto_trim_tol": auto_trim_tol,
+        "qc_tol": qc_tol,
+        "qc_verbose": qc_verbose,
+        "acc": acc,
+    }
+
+    params, retvals = fit_l1_slsqp(
+        f, score, start_params, args=(), kwargs=kwargs, maxiter=maxiter,
+        full_output=1)
+
+    return params, retvals["iterations"], retvals["converged"]
+
+
+def fit_elasticnet(model, method="coord_descent", maxiter=100,
+                   alpha=0., L1_wt=1., start_params=None, cnvrg_tol=1e-7,
+                   zero_tol=1e-8, refit=False, check_step=True,
+                   loglike_kwds=None, score_kwds=None, hess_kwds=None,
+                   trim_mode="auto", auto_trim_tol=0.01, size_trim_tol=1e-4,
+                   qc_tol=0.03, qc_verbose=False, acc=1e-10):
+    """
+    Return an elastic net regularized fit to a regression model.
+
+    Parameters
+    ----------
+    model : model object
+        A statsmodels object implementing ``loglike``, ``score``, and
+        ``hessian``.
+    method : {'coord_descent', 'l1_slsqp'}
+        The algorithm used to fit the model.  'coord_descent' (with
+        'elastic_net' accepted as a synonym) uses coordinate descent
+        and supports the full elastic net penalty.  'l1_slsqp' solves a
+        smooth constrained reformulation of the L1 problem with slsqp,
+        an interior point style method, and only supports the lasso
+        penalty (``L1_wt`` must be 1).
+    maxiter : int
+        The maximum number of iteration cycles (an iteration cycle
+        involves running coordinate descent on all variables).
+    alpha : scalar or array_like
+        The penalty weight.  If a scalar, the same penalty weight
+        applies to all variables in the model.  If a vector, it
+        must have the same length as `params`, and contains a
+        penalty weight for each coefficient.
+    L1_wt : scalar
+        The fraction of the penalty given to the L1 penalty term.
+        Must be between 0 and 1 (inclusive).  If 0, the fit is
+        a ridge fit, if 1 it is a lasso fit.
+    start_params : array_like
+        Starting values for `params`.
+    cnvrg_tol : scalar
+        If `params` changes by less than this amount (in sup-norm)
+        in one iteration cycle, the algorithm terminates with
+        convergence.
+    zero_tol : scalar
+        Any estimated coefficient smaller than this value is
+        replaced with zero.
+    refit : bool
+        If True, the model is refit using only the variables that have
+        non-zero coefficients in the regularized fit.  The refitted
+        model is not regularized.
+    check_step : bool
+        If True, confirm that the first step is an improvement and search
+        further if it is not.
+    loglike_kwds : dict-like or None
+        Keyword arguments for the log-likelihood function.
+    score_kwds : dict-like or None
+        Keyword arguments for the score function.
+    hess_kwds : dict-like or None
+        Keyword arguments for the Hessian function.
+    trim_mode : {'auto', 'size', 'off'}
+        (for method='l1_slsqp')
+        If not 'off', trim (set to zero) parameters that would have
+        been zero if the solver reached the theoretical minimum.  If
+        'auto', trim params using the theoretical optimality
+        conditions.  If 'size', trim params if they have very small
+        absolute value.
+    auto_trim_tol : float
+        (for method='l1_slsqp')
+        Tolerance used when trim_mode is 'auto'.
+    size_trim_tol : float
+        (for method='l1_slsqp')
+        Tolerance used when trim_mode is 'size'.
+    qc_tol : float
+        (for method='l1_slsqp')
+        Print warning and do not allow auto trim when the optimality
+        conditions are violated by this much.
+    qc_verbose : bool
+        (for method='l1_slsqp')
+        If True, print out a full QC report upon failure.
+    acc : float
+        (for method='l1_slsqp')
+        Requested accuracy for slsqp.
+
+    Returns
+    -------
+    Results
+        A results object.
+
+    Notes
+    -----
+    The ``elastic net`` penalty is a combination of L1 and L2
+    penalties.
+
+    The function that is minimized is:
+
+    -loglike/n + alpha*((1-L1_wt)*|params|_2^2/2 + L1_wt*|params|_1)
+
+    where |*|_1 and |*|_2 are the L1 and L2 norms.
+
+    When ``method`` is 'coord_descent', the computational approach
+    used is to obtain a quadratic approximation to the smooth part of
+    the target function:
+
+    -loglike/n + alpha*(1-L1_wt)*|params|_2^2/2
+
+    then repeatedly optimize the L1 penalized version of this function
+    along coordinate axes.
+
+    When ``method`` is 'l1_slsqp', the L1 penalized problem (L1_wt
+    must be 1) is reformulated as a smooth constrained problem in
+    twice as many variables that is solved with slsqp.
+    """
+
+    k_exog = model.exog.shape[1]
+
+    loglike_kwds = {} if loglike_kwds is None else loglike_kwds
+    score_kwds = {} if score_kwds is None else score_kwds
+    hess_kwds = {} if hess_kwds is None else hess_kwds
+
+    if np.isscalar(alpha):
+        alpha = alpha * np.ones(k_exog)
+
+    if method in ("coord_descent", "elastic_net"):
+        params, itr, converged = _coord_descent(
+            model, alpha, L1_wt, start_params, maxiter, cnvrg_tol,
+            zero_tol, check_step, loglike_kwds, score_kwds, hess_kwds)
+    elif method == "l1_slsqp":
+        if L1_wt != 1.:
+            raise ValueError("L1_wt must be 1 when method is 'l1_slsqp'")
+        params, itr, converged = _l1_slsqp(
+            model, alpha, start_params, maxiter, loglike_kwds, score_kwds,
+            trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
+            size_trim_tol=size_trim_tol, qc_tol=qc_tol,
+            qc_verbose=qc_verbose, acc=acc)
+    else:
+        raise ValueError(
+            "method must be 'coord_descent' or 'l1_slsqp'")
 
     if not refit:
         results = RegularizedResults(model, params)

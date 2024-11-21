@@ -1542,8 +1542,12 @@ class GLM(base.LikelihoodModel):
 
         Parameters
         ----------
-        method : {'elastic_net'}
-            Only the `elastic_net` approach is currently implemented.
+        method : {'elastic_net', 'l1_slsqp'}
+            'elastic_net' uses coordinate descent and supports the full
+            elastic net penalty.  'l1_slsqp' solves a smooth constrained
+            reformulation of the L1 problem with slsqp, an interior
+            point style method, and only supports the lasso penalty
+            (L1_wt must be 1).
         alpha : scalar or array_like
             The penalty weight.  If a scalar, the same penalty weight
             applies to all variables in the model.  If a vector, it
@@ -1593,6 +1597,28 @@ class GLM(base.LikelihoodModel):
             one sweep through all coefficients.
         zero_tol : float
             Coefficients below this threshold are treated as zero.
+
+        The l1_slsqp method uses the following keyword arguments:
+
+        maxiter : int
+            Maximum number of iterations (default 1000).
+        trim_mode : {'auto', 'size', 'off'}
+            If not 'off', trim (set to zero) parameters that would have
+            been zero if the solver reached the theoretical minimum.
+            If 'auto', trim params using the theoretical optimality
+            conditions.  If 'size', trim params if they have very small
+            absolute value.
+        size_trim_tol : float or 'auto'
+            Tolerance used when trim_mode is 'size'.
+        auto_trim_tol : float
+            Tolerance used when trim_mode is 'auto'.
+        qc_tol : float
+            Print warning and do not allow auto trim when the
+            optimality conditions are violated by this much.
+        qc_verbose : bool
+            If True, print out a full QC report upon failure.
+        acc : float
+            Requested accuracy as used by slsqp (default 1e-10).
         """
 
         if kwargs.get("L1_wt", 1) == 0:
@@ -1600,10 +1626,22 @@ class GLM(base.LikelihoodModel):
 
         from statsmodels.base.elastic_net import fit_elasticnet
 
-        if method != "elastic_net":
-            raise ValueError("method for fit_regularized must be elastic_net")
+        if method == "elastic_net":
+            defaults = {
+                "maxiter": 50,
+                "L1_wt": 1,
+                "cnvrg_tol": 1e-10,
+                "zero_tol": 1e-10,
+            }
+        elif method == "l1_slsqp":
+            # l1_slsqp uses an interior point style method, in contrast
+            # to the coordinate descent used by elastic_net.
+            defaults = {"maxiter": 1000}
+        else:
+            raise ValueError(
+                "method for fit_regularized must be elastic_net or l1_slsqp"
+            )
 
-        defaults = {"maxiter": 50, "L1_wt": 1, "cnvrg_tol": 1e-10, "zero_tol": 1e-10}
         defaults.update(kwargs)
 
         llkw = kwargs.get("loglike_kwds", {})
@@ -1630,7 +1668,9 @@ class GLM(base.LikelihoodModel):
 
         if not result.converged:
             warnings.warn(
-                "Elastic net fitting did not converge", ConvergenceWarning, stacklevel=2
+                "Regularized fitting did not converge",
+                ConvergenceWarning,
+                stacklevel=2,
             )
 
         return result
