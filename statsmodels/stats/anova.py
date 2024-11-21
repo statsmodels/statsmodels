@@ -115,8 +115,10 @@ def anova1_lm_single(model, endog, exog, nobs, model_spec, table, n_rows, test,
         effects = np.dot(q.T, endog)
 
     arr = np.zeros((len(model_spec.terms), len(model_spec.column_names)))
-    slices = [mgr.get_slice(model_spec, name) for name in mgr.get_column_names(model_spec)]
-    for i,slice_ in enumerate(slices):
+    slices = [
+        mgr.get_slice(model_spec, name) for name in mgr.get_term_names(model_spec)
+    ]
+    for i, slice_ in enumerate(slices):
         arr[i, slice_] = 1
 
     sum_sq = np.dot(arr, effects**2)
@@ -124,7 +126,7 @@ def anova1_lm_single(model, endog, exog, nobs, model_spec, table, n_rows, test,
     mgr = FormulaManager()
     idx = mgr.intercept_idx(model_spec)
     sum_sq = sum_sq[~idx]
-    term_names = np.array(mgr.get_column_names(model_spec)) # want boolean indexing
+    term_names = np.array(mgr.get_term_names(model_spec)) # want boolean indexing
     term_names = term_names[~idx]
 
     index = term_names.tolist()

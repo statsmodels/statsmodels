@@ -6,6 +6,7 @@ from typing import Any, Literal, NamedTuple, Sequence
 import numpy as np
 import pandas as pd
 from typing import Mapping
+
 HAVE_PATSY = False
 HAVE_FORMULAIC = False
 
@@ -20,6 +21,7 @@ try:
     import patsy.missing
 
     DEFAULT_FORMULA_ENGINE = DEFAULT_FORMULA_ENGINE or "patsy"
+
     class NAAction(patsy.missing.NAAction):
         # monkey-patch so we can handle missing values in 'extra' arrays later
         def _handle_NA_drop(self, values, is_NAs, origins):
@@ -273,9 +275,12 @@ class FormulaManager:
                 _formula = formula
             else:
                 feature_flags = formulaic.parser.DefaultParserFeatureFlag.TWOSIDED
-                parser = formulaic.parser.DefaultFormulaParser(feature_flags=feature_flags)
-                _formula = formulaic.formula.Formula(formula, _ordering=_ordering,
-                                                     _parser=parser)
+                parser = formulaic.parser.DefaultFormulaParser(
+                    feature_flags=feature_flags
+                )
+                _formula = formulaic.formula.Formula(
+                    formula, _ordering=_ordering, _parser=parser
+                )
             if isinstance(data, dict):
                 # Work around for no dict support in formulaic
                 if all(np.isscalar(v) for v in data.values()):
@@ -289,6 +294,7 @@ class FormulaManager:
                 _eval_env = eval_env
             elif HAVE_PATSY:
                 from patsy.eval import EvalEnvironment
+
                 if isinstance(eval_env, EvalEnvironment):
                     ns = eval_env._namespaces
                     _eval_env = {}
@@ -299,9 +305,11 @@ class FormulaManager:
             else:
                 _eval_env = eval_env
             if not isinstance(_eval_env, (int, dict)):
-                raise TypeError('context (eval_env) must be an int or a dict.')
+                raise TypeError("context (eval_env) must be an int or a dict.")
 
-            output = formulaic.model_matrix(_formula, _data, context=_eval_env, **kwargs)
+            output = formulaic.model_matrix(
+                _formula, _data, context=_eval_env, **kwargs
+            )
             if isinstance(output, formulaic.ModelMatrices):
                 if (
                     len(output) == 2
@@ -362,7 +370,10 @@ class FormulaManager:
             else:
                 _constraints = constraints
             if isinstance(_constraints, tuple):
-                _constraints = (_constraints[0], np.atleast_1d(np.squeeze(_constraints[1])))
+                _constraints = (
+                    _constraints[0],
+                    np.atleast_1d(np.squeeze(_constraints[1])),
+                )
             lc_f = formulaic.utils.constraints.LinearConstraints.from_spec(
                 _constraints, variable_names=list(variable_names)
             )
@@ -491,15 +502,22 @@ class FormulaManager:
         else:
             return formulaic.Formula(formula)
 
-    def get_column_names(self, spec_or_frame):
-        if isinstance(spec_or_frame, self.model_spec_type):
-            if self._engine == "patsy":
-                return list(spec_or_frame.term_names)
-            else:
-                return list(spec_or_frame.column_names)
+    def get_term_names(self, spec_or_frame):
+        if not isinstance(spec_or_frame, self.model_spec_type):
+            _spec = self.get_model_spec(spec_or_frame)
+        else:
+            _spec = spec_or_frame
+        if self._engine == "patsy":
+            return list(spec_or_frame.term_names)
+        else:
+            return [str(term) for term in spec_or_frame.terms]
 
-        frame = spec_or_frame
-        return list(self.get_model_spec(frame).column_names)
+    def get_column_names(self, spec_or_frame):
+        if not isinstance(spec_or_frame, self.model_spec_type):
+            spec = self.get_model_spec(spec_or_frame)
+        else:
+            spec = spec_or_frame
+        return list(spec.column_names)
 
     @property
     def model_spec_type(self):
@@ -550,3 +568,26 @@ class FormulaManager:
         if self._engine == "formulaic":
             return [f"`{name}`" for name in names]
         return names
+
+    def get_factor_categories(self, factor, model_spec):
+        if self._engine == "patsy":
+            return model_spec.factor_infos[factor].categories
+        else:
+            return model_spec.encoder_state[factor][1]["categories"]
+
+    def get_contrast_matrix(self, term, factor, model_spec):
+        if self._engine == "patsy":
+            return model_spec.term_codings[term][0].contrast_matrices[factor].matrix
+        else:
+            cat = self.get_factor_categories(factor, model_spec)
+            reduced_rank = True
+            for ts in model_spec.structure:
+                if ts.term == term:
+                    reduced_rank = len(ts.columns) != len(cat)
+                    break
+
+            return np.asarray(
+                model_spec.encoder_state[factor][1]["contrasts"].get_coding_matrix(
+                    reduced_rank=reduced_rank
+                )
+            )

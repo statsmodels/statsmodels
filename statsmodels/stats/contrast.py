@@ -648,13 +648,15 @@ def t_test_pairwise(result, term_name, method='hs', alpha=0.05,
 
     mgr = FormulaManager()
     model_spec = result.model.data.model_spec
-    term_idx = mgr.get_column_names(model_spec).index(term_name)
+    term_idx = mgr.get_term_names(model_spec).index(term_name)
     term = model_spec.terms[term_idx]
     idx_start = model_spec.term_slices[term].start
     if not ignore and len(term.factors) > 1:
         raise ValueError('interaction effects not yet supported')
     factor = term.factors[0]
-    cat = model_spec.factor_infos[factor].categories
+    cat = mgr.get_factor_categories(factor, model_spec)
+    # cat = model_spec.encoder_state[factor][1]["categories"]
+    # model_spec.factor_infos[factor].categories
     if factor_labels is not None:
         if len(factor_labels) == len(cat):
             cat = factor_labels
@@ -663,7 +665,7 @@ def t_test_pairwise(result, term_name, method='hs', alpha=0.05,
 
 
     k_level = len(cat)
-    cm = model_spec.term_codings[term][0].contrast_matrices[factor].matrix
+    cm = mgr.get_contrast_matrix(term, factor, model_spec)
 
     k_params = len(result.params)
     labels = _get_pairs_labels(k_level, cat)

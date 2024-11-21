@@ -216,7 +216,7 @@ class Model:
             cols = [x for x in exog.columns if x not in drop_cols]
             if len(cols) < len(exog.columns):
                 exog = exog[cols]
-                spec_cols = list(mgr.get_column_names(model_spec))
+                spec_cols = list(mgr.get_term_names(model_spec))
                 for col in drop_cols:
                     try:
                         spec_cols.remove(col)
