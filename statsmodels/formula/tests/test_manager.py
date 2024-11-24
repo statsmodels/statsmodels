@@ -34,8 +34,29 @@ ENGINES = ["patsy"]
 if HAS_FORMULAIC:
     ENGINES += ["formulaic"]
 
+
 @pytest.fixture(params=ENGINES)
 def engine(request):
+    return request.param
+
+
+FORMULAS = [
+    "y ~ 1 + C(d):a + b + a + C(e)",
+    "y ~ 1 + a + C(e) + a:C(e) + C(f)",
+    "y ~ 1 + a + C(e) + a:C(e) + C(f) + C(f):C(d)",
+    "y ~ 1 + C(e) + C(f):C(e) + a + a:b + C(d):a:b + b + C(d)",
+    "y ~ a - 1",
+    "y ~ a + C(e) - 1",
+    "y ~ a + C(e) + a:C(e) + C(f)  - 1",
+    "y ~ a + C(e) + a:C(e) + C(f) + C(f):C(d)  - 1",
+    "y ~ a + C(d):a:b + a:b + b + C(d) + C(e) + C(f):C(e)  - 1",
+    "y ~ d:f:c:b + C(f):c:b + a:b + a + C(d):a:b + c:b + b + C(d) + C(e) + C(f):C(e) - 1",
+    "y ~ 1 + C(f):C(d):a +  C(d):a + c + a:b + C(e):b + C(f):a + a + C(d) + b  +C(f):C(d) + C(d):C(e) + C(f)",
+]
+
+
+@pytest.fixture(params=FORMULAS)
+def formula(request):
     return request.param
 
 
@@ -101,10 +122,10 @@ def test_engine_options_engine(engine):
     statsmodels.formula.options.formula_engine = default
 
 
-@pytest.mark.parametrize("ordering", ["degree", "sort", "none"])
+@pytest.mark.parametrize("ordering", ["degree", "sort", "none", "legacy"])
 def test_engine_options_order(ordering):
     default = statsmodels.formula.options.ordering
-    assert default in ("degree", "sort", "none")
+    assert default in ("degree", "sort", "none", "legacy")
 
     statsmodels.formula.options.ordering = ordering
     assert statsmodels.formula.options.ordering == ordering
@@ -199,6 +220,7 @@ def test_get_empty_eval_patsy(data):
 
     with pytest.raises(patsy.PatsyError):
         mgr.get_arrays(fmla, data, eval_env=eval_env)
+
 
 @require_formulaic
 def test_get_empty_eval_formulaic(data):
@@ -400,12 +422,42 @@ def test_bad_constraint(engine, data):
     with pytest.raises(ValueError):
         mgr.get_linear_constraints(["x = 0", 7], ["Intercept", "x", "z", "c"])
 
+
 @has_formulaic
 def test_formula_manager_no_formulaic():
     with pytest.raises(ImportError):
         FormulaManager(engine="formulaic")
 
+
 @has_patsy
 def test_formula_manager_no_patsy():
     with pytest.raises(ImportError):
         FormulaManager(engine="patsy")
+
+
+def test_legacy_orderer(formula):
+    np.random.seed(0)
+    n = 100
+    data = pd.DataFrame(
+        {
+            "y": np.random.standard_normal(n),
+            "a": np.random.standard_normal(n),
+            "b": np.random.standard_normal(n),
+            "c": np.random.standard_normal(n),
+            "d": pd.Series(np.random.choice(["a", "b", "c"], size=n), dtype="category"),
+            "e": pd.Series(np.random.choice(["a", "b", "c"], size=n), dtype="category"),
+            "f": pd.Series(np.random.choice(["a", "b", "c"], size=n), dtype="category"),
+        }
+    )
+    mgr = FormulaManager(engine="formulaic")
+    ordered_formula = mgr._legacy_orderer(formula, data)
+    mm = mgr.get_arrays(ordered_formula, data)
+    _, patsy_rhs = patsy.dmatrices(formula, data, return_type="dataframe")
+
+    index = list(patsy_rhs.columns)
+    for i, term in enumerate(index):
+        for letter in ("a", "b", "c"):
+            term = term.replace(f"[{letter}]", f"[T.{letter}]")
+        index[i] = term
+    patsy_rhs.columns = index
+    assert list(mm[1].columns) == list(patsy_rhs.columns)

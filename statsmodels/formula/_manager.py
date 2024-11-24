@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+from collections import defaultdict
 import os
-from typing import Any, Literal, NamedTuple, Sequence
+from typing import Any, Literal, Mapping, NamedTuple, Sequence
 
 import numpy as np
 import pandas as pd
-from typing import Mapping
 
 HAVE_PATSY = False
 HAVE_FORMULAIC = False
@@ -64,7 +64,7 @@ class _FormulaOption:
             self._allowed_options += ("patsy",)
         if HAVE_FORMULAIC:
             self._allowed_options += ("formulaic",)
-        self.ordering = "none"
+        self.ordering = "legacy"
 
     @property
     def formula_engine(self) -> Literal["patsy", "formulaic"]:
@@ -93,9 +93,9 @@ class _FormulaOption:
 
     @ordering.setter
     def ordering(self, value: str):
-        if value not in ("degree", "sort", "none"):
+        if value not in ("degree", "sort", "none", "legacy"):
             raise ValueError(
-                "Invalid ordering option. Must be 'degree', 'sort', or 'none'."
+                "Invalid ordering option. Must be 'degree', 'sort', 'none', or 'legacy."
             )
         self._ordering = value
 
@@ -201,6 +201,62 @@ class FormulaManager:
         """
         return self._spec
 
+    def _legacy_orderer(self, formula: str, data: pd.DataFrame, context=0) -> formulaic.Formula:
+        if isinstance(context, int):
+            context += 1
+        mm = formulaic.model_matrix(formula, data, context=context)
+        feature_flags = formulaic.parser.DefaultParserFeatureFlag.TWOSIDED
+        parser = formulaic.parser.DefaultFormulaParser(feature_flags=feature_flags)
+        _formula = formulaic.Formula(formula, _parser=parser, _ordering="none")
+        if isinstance(mm, formulaic.ModelMatrices):
+            rhs = mm.rhs
+            rhs_formula = _formula.rhs
+            lhs_formula = _formula.lhs
+        else:
+            rhs = mm
+            rhs_formula = _formula
+            lhs_formula = None
+        include_intercept = any(
+            [(term.degree == 0 and str(term) == "1") for term in rhs_formula.root]
+        )
+        parser = formulaic.parser.DefaultFormulaParser(
+            feature_flags=feature_flags, include_intercept=include_intercept
+        )
+        original = list(parser.get_terms(str(rhs_formula)).root)
+        categorical_variables = list(rhs.model_spec.factor_contrasts.keys())
+
+        def all_cat(term):
+            return all([f in categorical_variables for f in term.factors])
+
+        def drop_terms(term_list, terms):
+            for term in terms:
+                term_list.remove(term)
+
+        intercept = [term for term in original if term.degree == 0]
+        drop_terms(original, intercept)
+        cats = sorted(
+            [term for term in original if all_cat(term)], key=lambda term: term.degree
+        )
+        drop_terms(original, cats)
+        conts = defaultdict(list)
+        for term in original:
+            cont = [
+                factor for factor in term.factors if factor not in categorical_variables
+            ]
+            conts[tuple(sorted(cont))].append((term, term.degree))
+        final_conts = []
+        for key, value in conts.items():
+            tmp = sorted(value, key=lambda term_degree: term_degree[1])
+            final_conts.extend([value[0] for value in tmp])
+        if lhs_formula is not None:
+            return formulaic.Formula(
+                lhs=formulaic.Formula(lhs_formula, _ordering="none"),
+                rhs=formulaic.Formula(intercept + cats + final_conts, _ordering="none"),
+                _ordering="none",
+            )
+        else:
+            return formulaic.Formula(intercept + cats + final_conts, _ordering="none")
+
     def get_arrays(
         self,
         formula,
@@ -259,7 +315,7 @@ class FormulaManager:
         else:  # self._engine == "formulaic":
             import statsmodels.formula
 
-            formulaic.parser.DefaultParserFeatureFlag
+
 
             kwargs = {}
             if pandas:
@@ -273,6 +329,8 @@ class FormulaManager:
             _ordering = statsmodels.formula.options.ordering
             if isinstance(formula, self.model_spec_type):
                 _formula = formula
+            if _ordering == "legacy":
+                _formula = self._legacy_orderer(formula, data, context=eval_env)
             else:
                 feature_flags = formulaic.parser.DefaultParserFeatureFlag.TWOSIDED
                 parser = formulaic.parser.DefaultFormulaParser(
