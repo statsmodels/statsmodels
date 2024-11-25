@@ -201,7 +201,11 @@ class FormulaManager:
         """
         return self._spec
 
-    def _legacy_orderer(self, formula: str, data: pd.DataFrame, context=0) -> formulaic.Formula:
+    def _legacy_orderer(
+        self, formula: str, data: pd.DataFrame, context=0
+    ) -> formulaic.Formula:
+        if isinstance(formula, (formulaic.Formula, formulaic.ModelSpec)):
+            return formula
         if isinstance(context, int):
             context += 1
         mm = formulaic.model_matrix(formula, data, context=context)
@@ -264,6 +268,7 @@ class FormulaManager:
         eval_env=0,
         pandas=True,
         na_action=None,
+        prediction=False,
     ) -> (
         np.ndarray
         | tuple[np.ndarray, np.ndarray]
@@ -364,7 +369,9 @@ class FormulaManager:
                 _eval_env = eval_env
             if not isinstance(_eval_env, (int, dict)):
                 raise TypeError("context (eval_env) must be an int or a dict.")
-
+            if prediction:
+                if hasattr(_formula, "rhs"):
+                    _formula = _formula.rhs
             output = formulaic.model_matrix(
                 _formula, _data, context=_eval_env, **kwargs
             )

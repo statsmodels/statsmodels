@@ -1104,7 +1104,7 @@ class Results:
             orig_exog_len = len(exog)
             is_dict = isinstance(exog, dict)
             try:
-                exog = mgr.get_arrays(model_spec, exog, pandas=True)
+                exog = mgr.get_arrays(model_spec, exog, pandas=True, prediction=True)
             except Exception as exc:
                 msg = ('predict requires that you use a DataFrame when '
                        'predicting from a model\nthat was created using the '
