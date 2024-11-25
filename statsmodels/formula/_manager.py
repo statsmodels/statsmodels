@@ -1,12 +1,13 @@
 from __future__ import annotations
-import uuid
+
 from collections import defaultdict
 import os
 from typing import Any, Literal, Mapping, NamedTuple, Sequence
+import uuid
 
+from formulaic import ModelMatrices
 import numpy as np
 import pandas as pd
-from formulaic import ModelMatrices
 
 HAVE_PATSY = False
 HAVE_FORMULAIC = False
@@ -392,50 +393,39 @@ class FormulaManager:
             if prediction:
                 if hasattr(_formula, "rhs"):
                     _formula = _formula.rhs
-            has_sentinel = False
             original_index = _data.index
-            if "na_action" in kwargs and kwargs["na_action"] == "drop":
-                has_sentinel = True
-                sentinel_name = f"missing_{uuid.uuid4()}".replace("-", "")
-                while sentinel_name in _data.columns:
-                    sentinel_name = f"missing_{uuid.uuid4()}".replace("-", "")
-                sentinel_values = np.arange(_data.shape[0], dtype=float)
-                if _data is data:
-                    _data = _data.copy()
-                _data[sentinel_name] = sentinel_values
+            na_drop = "na_action" in kwargs and kwargs["na_action"] == "drop"
+            if na_drop:
+                _data = _data.copy(deep=False)
                 _data.index = pd.RangeIndex(_data.shape[0])
-                sentinel_formula = formulaic.Formula(f"0 + {sentinel_name}", _ordering="none")
-                if hasattr(_formula, "rhs"):
-                    _formula = formulaic.Formula(lhs=_formula.lhs, rhs=_formula.rhs, sentinel=sentinel_formula)
-                else:
-                    _formula = formulaic.Formula(root=_formula.rhs, sentinel=sentinel_formula)
 
             output = formulaic.model_matrix(
                 _formula, _data, context=_eval_env, **kwargs
             )
-            if has_sentinel:
-                sentinel = output.sentinel[sentinel_name]
-                sentinel = sentinel.reindex(pd.RangeIndex(start=0, stop=_data.shape[0]))
-                if not sentinel.isna().any():
-                    self._missing_mask = pd.Series(np.full(sentinel.shape[0], False), index=original_index)
+            if na_drop:
+                if isinstance(output, ModelMatrices):
+                    rhs = output.rhs
                 else:
-                    missing_mask = pd.Series(sentinel.isna(), index=original_index, name=None)
-                    self._missing_mask = missing_mask
-
-                    for key in ("lhs", "rhs", "root"):
-                        if hasattr(output, key):
-                            df = getattr(output, key)
-                            df.index = original_index[df.index]
-
+                    rhs = output
+                if rhs.shape[0] == _data.shape[0]:
+                    replacement_index = original_index
+                    self._missing_mask = pd.Series(
+                        np.full(rhs.shape[0], False), index=original_index, name=None
+                    )
+                else:
+                    replacement_index = original_index[rhs.index]
+                    self._missing_mask = (
+                        pd.Series(rhs.index, index=rhs.index)
+                        .reindex(pd.RangeIndex(_data.shape[0]))
+                        .isna()
+                    )
+                for key in ("lhs", "rhs", "root"):
+                    if hasattr(output, key):
+                        df = getattr(output, key)
+                        df.index = replacement_index
             if isinstance(output, formulaic.ModelMatrices):
                 if (
-                    len(output) == (1 + has_sentinel)
-                    and hasattr(output, "root")
-                ):
-                    self._spec = output.root.model_spec
-                    return output.root
-                elif (
-                    len(output) == (2 + has_sentinel)
+                    len(output) == 2
                     and hasattr(output, "lhs")
                     and hasattr(output, "rhs")
                 ):
@@ -447,7 +437,6 @@ class FormulaManager:
                     )
 
             self._spec = output.model_spec
-
             return output
 
     def get_linear_constraints(
