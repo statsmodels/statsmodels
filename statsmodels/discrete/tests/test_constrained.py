@@ -556,7 +556,7 @@ class TestGLMLogitConstrained2(CheckGLMConstrainedMixin):
         assert_('linear equality constraints' in summ.extra_txt)
 
         lc_string = str(self.res1m.constraints)
-        assert lc_string == "x1 - x3 = 0.0"
+        assert lc_string.startswith("x1 - x3 = 0")
 
     @pytest.mark.smoke
     def test_summary2(self):

@@ -1,11 +1,12 @@
 from __future__ import annotations
-
+import uuid
 from collections import defaultdict
 import os
 from typing import Any, Literal, Mapping, NamedTuple, Sequence
 
 import numpy as np
 import pandas as pd
+from formulaic import ModelMatrices
 
 HAVE_PATSY = False
 HAVE_FORMULAIC = False
@@ -141,6 +142,7 @@ class FormulaManager:
     def __init__(self, engine: Literal["patsy", "formulaic"] | None = None):
         self._engine = self._get_engine(engine)
         self._spec = None
+        self._missing_mask = None
 
     def _get_engine(
         self, engine: Literal["patsy", "formulaic"] | None = None
@@ -201,8 +203,19 @@ class FormulaManager:
         """
         return self._spec
 
+    @property
+    def factor_evaluation_error(self):
+        if self._engine == "patsy":
+            return patsy.PatsyError
+        else:
+            return formulaic.errors.FactorEvaluationError
+
+    @property
+    def missing_mask(self):
+        return self._missing_mask
+
     def _legacy_orderer(
-        self, formula: str, data: pd.DataFrame, context=0
+        self, formula: str, data: pd.DataFrame, context: int | Mapping[str, Any]
     ) -> formulaic.Formula:
         if isinstance(formula, (formulaic.Formula, formulaic.ModelSpec)):
             return formula
@@ -315,6 +328,8 @@ class FormulaManager:
                 self._spec = output[1].design_info
             else:
                 self._spec = output.design_info
+            if isinstance(na_action, NAAction):
+                self._missing_mask = getattr(na_action, "missing_mask", None)
             return output
 
         else:  # self._engine == "formulaic":
@@ -331,28 +346,19 @@ class FormulaManager:
             if na_action:
                 kwargs["na_action"] = na_action
 
-            _ordering = statsmodels.formula.options.ordering
-            if isinstance(formula, self.model_spec_type):
-                _formula = formula
-            if _ordering == "legacy":
-                _formula = self._legacy_orderer(formula, data, context=eval_env)
-            else:
-                feature_flags = formulaic.parser.DefaultParserFeatureFlag.TWOSIDED
-                parser = formulaic.parser.DefaultFormulaParser(
-                    feature_flags=feature_flags
-                )
-                _formula = formulaic.formula.Formula(
-                    formula, _ordering=_ordering, _parser=parser
-                )
-            if isinstance(data, dict):
+            if isinstance(data, (dict, Mapping)):
                 # Work around for no dict support in formulaic
                 if all(np.isscalar(v) for v in data.values()):
                     # Handle dict of scalars
                     _data = pd.DataFrame(data, index=[0])
                 else:
                     _data = pd.DataFrame(data)
+            elif isinstance(data, np.rec.recarray):
+                # workaround no recarray support in formulaic
+                _data = pd.DataFrame.from_records(data)
             else:
                 _data = data
+
             if isinstance(eval_env, (int, Mapping)) or not HAVE_PATSY:
                 _eval_env = eval_env
             elif HAVE_PATSY:
@@ -369,15 +375,67 @@ class FormulaManager:
                 _eval_env = eval_env
             if not isinstance(_eval_env, (int, dict)):
                 raise TypeError("context (eval_env) must be an int or a dict.")
+
+            _ordering = statsmodels.formula.options.ordering
+            if isinstance(formula, self.model_spec_type):
+                _formula = formula
+            if _ordering == "legacy":
+                _formula = self._legacy_orderer(formula, _data, context=_eval_env)
+            else:
+                feature_flags = formulaic.parser.DefaultParserFeatureFlag.TWOSIDED
+                parser = formulaic.parser.DefaultFormulaParser(
+                    feature_flags=feature_flags
+                )
+                _formula = formulaic.formula.Formula(
+                    formula, _ordering=_ordering, _parser=parser
+                )
             if prediction:
                 if hasattr(_formula, "rhs"):
                     _formula = _formula.rhs
+            has_sentinel = False
+            original_index = _data.index
+            if "na_action" in kwargs and kwargs["na_action"] == "drop":
+                has_sentinel = True
+                sentinel_name = f"missing_{uuid.uuid4()}".replace("-", "")
+                while sentinel_name in _data.columns:
+                    sentinel_name = f"missing_{uuid.uuid4()}".replace("-", "")
+                sentinel_values = np.arange(_data.shape[0], dtype=float)
+                if _data is data:
+                    _data = _data.copy()
+                _data[sentinel_name] = sentinel_values
+                _data.index = pd.RangeIndex(_data.shape[0])
+                sentinel_formula = formulaic.Formula(f"0 + {sentinel_name}", _ordering="none")
+                if hasattr(_formula, "rhs"):
+                    _formula = formulaic.Formula(lhs=_formula.lhs, rhs=_formula.rhs, sentinel=sentinel_formula)
+                else:
+                    _formula = formulaic.Formula(root=_formula.rhs, sentinel=sentinel_formula)
+
             output = formulaic.model_matrix(
                 _formula, _data, context=_eval_env, **kwargs
             )
+            if has_sentinel:
+                sentinel = output.sentinel[sentinel_name]
+                sentinel = sentinel.reindex(pd.RangeIndex(start=0, stop=_data.shape[0]))
+                if not sentinel.isna().any():
+                    self._missing_mask = pd.Series(np.full(sentinel.shape[0], False), index=original_index)
+                else:
+                    missing_mask = pd.Series(sentinel.isna(), index=original_index, name=None)
+                    self._missing_mask = missing_mask
+
+                    for key in ("lhs", "rhs", "root"):
+                        if hasattr(output, key):
+                            df = getattr(output, key)
+                            df.index = original_index[df.index]
+
             if isinstance(output, formulaic.ModelMatrices):
                 if (
-                    len(output) == 2
+                    len(output) == (1 + has_sentinel)
+                    and hasattr(output, "root")
+                ):
+                    self._spec = output.root.model_spec
+                    return output.root
+                elif (
+                    len(output) == (2 + has_sentinel)
                     and hasattr(output, "lhs")
                     and hasattr(output, "rhs")
                 ):

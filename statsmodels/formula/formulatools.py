@@ -57,8 +57,7 @@ def handle_formula_data(Y, X, formula, depth=0, missing="drop"):
             na_action=na_action,
         )
 
-    # if missing == 'raise' there's not missing_mask
-    missing_mask = getattr(na_action, "missing_mask", None)
+    missing_mask = mgr.missing_mask
     if not np.any(missing_mask):
         missing_mask = None
     if len(result) > 1:  # have RHS design

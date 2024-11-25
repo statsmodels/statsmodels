@@ -464,14 +464,16 @@ class _MultivariateOLSResults(LikelihoodModelResults):
         k_xvar = len(self.exog_names)
         if hypotheses is None:
             if self.model_spec is not None:
-                mgr = FormulaManager()
                 terms = mgr.get_term_name_slices(self.model_spec)
                 hypotheses = []
                 for key in terms:
-                    if skip_intercept_test and key == 'Intercept':
+                    if skip_intercept_test and key == mgr.intercept_term:
                         continue
                     L_contrast = np.eye(k_xvar)[terms[key], :]
-                    hypotheses.append([key, L_contrast, None])
+                    test_name = str(key)
+                    if key == mgr.intercept_term:
+                        test_name = 'Intercept'
+                    hypotheses.append([test_name, L_contrast, None])
             else:
                 hypotheses = []
                 for i in range(k_xvar):
@@ -622,14 +624,17 @@ class MultivariateLSResults(LikelihoodModelResults):
                 terms = mgr.get_term_name_slices(self.model.data.model_spec)
                 hypotheses = []
                 for key in terms:
-                    if skip_intercept_test and key == 'Intercept':
+                    if skip_intercept_test and key == mgr.intercept_term:
                         continue
                     L_contrast = np.eye(k_xvar)[terms[key], :]
-                    hypotheses.append([key, L_contrast, None])
+                    test_name = str(key)
+                    if key == mgr.intercept_term:
+                        test_name = 'Intercept'
+                    hypotheses.append([test_name, L_contrast, None])
             else:
                 hypotheses = []
                 for i in range(k_xvar):
-                    name = 'x%d' % (i)
+                    name = f'x{i:d}'
                     L = np.zeros([1, k_xvar])
                     L[0, i] = 1
                     hypotheses.append([name, L, None])

@@ -12,6 +12,7 @@ import pytest
 from statsmodels.datasets import cpunish
 from statsmodels.datasets.longley import load, load_pandas
 import statsmodels.formula
+from statsmodels.formula._manager import FormulaManager
 from statsmodels.formula.api import ols
 from statsmodels.formula.formulatools import make_hypotheses_matrices
 from statsmodels.tools import add_constant
@@ -211,8 +212,13 @@ def test_patsy_lazy_dict():
     res = ols("EXECUTIONS ~ SOUTH + INCOME", data=data).fit()
 
     res2 = res.predict(data)
-    assert_equal(res.fittedvalues, res2)  # Should lose a record
-    assert_equal(len(res2) + 1, len(cpunish.load_pandas().data))
+    if statsmodels.formula.options.formula_engine == "patsy":
+        # Only happens with LazyDict input
+        assert_equal(res.fittedvalues, res2)  # Should lose a record
+        assert_equal(len(res2) + 1, len(cpunish.load_pandas().data))
+    else:
+        assert_equal(res.fittedvalues, res2.iloc[1:])  # Should lose a record
+        assert_equal(len(res2), len(cpunish.load_pandas().data))
 
 
 def test_patsy_missing_data():
@@ -244,8 +250,8 @@ def test_predict_nondataframe():
 
     model = ols("Absorbance ~ BSA", data=df)
     fit = model.fit()
-    error = patsy.PatsyError
-    with pytest.raises(error):
+    mgr = FormulaManager()
+    with pytest.raises(mgr.factor_evaluation_error):
         fit.predict([0.25])
 
 

@@ -20,11 +20,11 @@ try:
 except ImportError:
     pass
 
-has_formulaic = pytest.mark.skipif(
+no_formulaic = pytest.mark.skipif(
     HAS_FORMULAIC, reason="can only run when patsy is installed and formulaic is not."
 )
 
-has_patsy = pytest.mark.skipif(
+no_patsy = pytest.mark.skipif(
     HAS_PATSY, reason="can only run when formulaic is installed and patsy is not."
 )
 
@@ -423,13 +423,13 @@ def test_bad_constraint(engine, data):
         mgr.get_linear_constraints(["x = 0", 7], ["Intercept", "x", "z", "c"])
 
 
-@has_formulaic
+@no_formulaic
 def test_formula_manager_no_formulaic():
     with pytest.raises(ImportError):
         FormulaManager(engine="formulaic")
 
 
-@has_patsy
+@no_patsy
 def test_formula_manager_no_patsy():
     with pytest.raises(ImportError):
         FormulaManager(engine="patsy")
@@ -450,7 +450,7 @@ def test_legacy_orderer(formula):
         }
     )
     mgr = FormulaManager(engine="formulaic")
-    ordered_formula = mgr._legacy_orderer(formula, data)
+    ordered_formula = mgr._legacy_orderer(formula, data, 0)
     mm = mgr.get_arrays(ordered_formula, data)
     _, patsy_rhs = patsy.dmatrices(formula, data, return_type="dataframe")
 
