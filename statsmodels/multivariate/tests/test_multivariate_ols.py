@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from statsmodels.formula._manager import FormulaManager
 from statsmodels.regression.linear_model import OLS
 from statsmodels.multivariate.multivariate_ols import (
     _MultivariateOLS,
@@ -13,7 +14,6 @@ from numpy.testing import (
     assert_array_almost_equal,
     assert_raises,
     )
-import patsy
 
 
 dir_path = os.path.dirname(os.path.abspath(__file__))
@@ -138,9 +138,8 @@ def test_from_formula_vs_no_formula(model):
         data)
     r = mod.fit(method='svd')
     r0 = r.mv_test()
-    endog, exog = patsy.dmatrices(
-        'Histamine0 + Histamine1 + Histamine3 + Histamine5 ~ Drug * Depleted',
-        data, return_type="dataframe")
+    mgr = FormulaManager()
+    endog, exog = mgr.get_arrays('Histamine0 + Histamine1 + Histamine3 + Histamine5 ~ Drug * Depleted', data)
     L = np.array([[1, 0, 0, 0, 0, 0]])
     # DataFrame input
     r = model(endog, exog).fit(method='svd')

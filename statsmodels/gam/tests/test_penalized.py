@@ -10,7 +10,6 @@ import os
 import numpy as np
 from numpy.testing import assert_, assert_allclose, assert_equal
 import pandas as pd
-import patsy
 import pytest
 
 from statsmodels.base._penalized import PenalizedMixin
@@ -28,7 +27,7 @@ from statsmodels.sandbox.regression.penalized import TheilGLS
 from statsmodels.tools.linalg import matrix_sqrt, transf_constraints
 
 from .results import results_mpg_bs, results_mpg_bs_poisson, results_pls
-
+from statsmodels.formula._manager import FormulaManager
 
 class PoissonPenalized(PenalizedMixin, Poisson):
     pass
@@ -391,7 +390,8 @@ class TestGAMMPG:
         s_scale = np.array([2.95973613706629e-07, 0.000126203730141359])
 
         x_spline = df_autos[['weight', 'hp']].values
-        exog = patsy.dmatrix('fuel + drive', data=df_autos)
+        mgr = FormulaManager()
+        exog = mgr.get_arrays('fuel + drive', data=df_autos, pandas=mgr.engine == "formulaic")
         cc = CyclicCubicSplines(x_spline, df=[6, 5], constraints='center')
         # TODO alpha needs to be list
         gam_cc = GLMGam(df_autos['city_mpg'], exog=exog, smoother=cc,
@@ -446,7 +446,8 @@ class TestGAMMPGBS(CheckGAMMixin):
         # We need asarray to remove the formula's custom class
         # If model_spec is attached,
         #     then exog_linear will also be transformed in predict.
-        cls.exog = np.asarray(patsy.dmatrix('fuel + drive', data=df_autos))
+        mgr = FormulaManager()
+        cls.exog = np.asarray(mgr.get_arrays('fuel + drive', data=df_autos))
         bs = BSplines(x_spline, df=[12, 10], degree=[3, 3],
                       variable_names=['weight', 'hp'],
                       constraints='center',
@@ -534,7 +535,8 @@ class TestGAMMPGBSPoisson(CheckGAMMixin):
         cls.s_scale = s_scale = np.array([2.443955e-06, 0.007945455])
 
         x_spline = df_autos[['weight', 'hp']].values
-        cls.exog = patsy.dmatrix('fuel + drive', data=df_autos)
+        mgr = FormulaManager()
+        cls.exog = mgr.get_arrays('fuel + drive', data=df_autos, pandas=mgr.engine == "formulaic")
         bs = BSplines(x_spline, df=[12, 10], degree=[3, 3],
                       variable_names=['weight', 'hp'],
                       constraints='center',
@@ -544,7 +546,7 @@ class TestGAMMPGBSPoisson(CheckGAMMixin):
         gam_bs = GLMGam(df_autos['city_mpg'], exog=cls.exog, smoother=bs,
                         family=family.Poisson(), alpha=alpha0)
 
-        xnames = cls.exog.design_info.column_names + gam_bs.smoother.col_names
+        xnames = mgr.get_column_names(cls.exog) + gam_bs.smoother.col_names
         gam_bs.exog_names[:] = xnames
         cls.res1a = gam_bs.fit(use_t=False)
 
@@ -630,7 +632,8 @@ class TestGAMMPGBSPoissonFormula(TestGAMMPGBSPoisson):
         # s_scale is same as before
         cls.s_scale = s_scale = np.array([2.443955e-06, 0.007945455])
 
-        cls.exog = patsy.dmatrix('fuel + drive', data=df_autos)
+        mgr = FormulaManager()
+        cls.exog = mgr.get_arrays('fuel + drive', data=df_autos, pandas=mgr.engine == "formulaic")
 
         x_spline = df_autos[['weight', 'hp']].values
         bs = BSplines(x_spline, df=[12, 10], degree=[3, 3],

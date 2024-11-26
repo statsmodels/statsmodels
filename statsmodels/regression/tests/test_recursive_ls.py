@@ -7,6 +7,7 @@ License: Simplified-BSD
 import os
 
 import numpy as np
+from docutils.utils.math.math2html import Formula
 from numpy.testing import assert_allclose, assert_equal, assert_raises
 import pandas as pd
 import pytest
@@ -20,6 +21,7 @@ from statsmodels.stats.diagnostic import recursive_olsresiduals
 from statsmodels.tools import add_constant
 from statsmodels.tools.eval_measures import aic, bic
 from statsmodels.tools.sm_exceptions import ValueWarning
+from statsmodels.formula._manager import FormulaManager
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -304,7 +306,11 @@ def test_plots(close_figures):
 
 
 def test_from_formula():
-    with pytest.warns(ValueWarning, match="No frequency information"):
+    mgr = FormulaManager()
+    if mgr.engine == 'patsy':
+        with pytest.warns(ValueWarning, match="No frequency information"):
+            mod = RecursiveLS.from_formula('cpi ~ m1', data=dta)
+    else:
         mod = RecursiveLS.from_formula('cpi ~ m1', data=dta)
 
     res = mod.fit()

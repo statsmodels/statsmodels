@@ -38,7 +38,7 @@ from statsmodels.tools.sm_exceptions import (
     ValueWarning,
 )
 from statsmodels.tools.tools import add_constant
-
+from statsmodels.formula._manager import FormulaManager
 # Test Precisions
 DECIMAL_4 = 4
 DECIMAL_3 = 3
@@ -2993,7 +2993,8 @@ def test_qaic():
     df["SF"] = df["numdead"]
 
     y = df[["numalive", "numdead"]].values
-    x = patsy.dmatrix("sex*ldose", data=df, return_type="dataframe")
+    mgr = FormulaManager()
+    x = mgr.get_arrays("sex*ldose", data=df)
     m = GLM(y, x, family=sm.families.Binomial())
     r = m.fit()
     scale = 2.412699

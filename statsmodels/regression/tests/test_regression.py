@@ -28,6 +28,7 @@ from statsmodels.regression.linear_model import (
     yule_walker,
 )
 from statsmodels.tools.tools import add_constant
+from statsmodels.formula._manager import FormulaManager
 
 DECIMAL_4 = 4
 DECIMAL_3 = 3
@@ -1326,8 +1327,6 @@ class TestRegularizedFit:
 def test_formula_missing_cat():
     # gh-805
 
-    from patsy import PatsyError
-
     import statsmodels.api as sm
     from statsmodels.formula.api import ols
 
@@ -1339,18 +1338,19 @@ def test_formula_missing_cat():
     )
     res = mod.fit()
 
+    mgr = FormulaManager()
     mod2 = ols(formula="value ~ invest + capital + firm + year", data=dta)
     res2 = mod2.fit()
 
     assert_almost_equal(res.params.values, res2.params.values)
+    if mgr.engine == "patsy":
+        from patsy import PatsyError
+        error = PatsyError
+    else:
+        error = ValueError
 
-    assert_raises(
-        PatsyError,
-        ols,
-        "value ~ invest + capital + firm + year",
-        data=dta,
-        missing="raise",
-    )
+    with pytest.raises(error):
+        ols("value ~ invest + capital + firm + year", data=dta,missing="raise")
 
 
 def test_missing_formula_predict():

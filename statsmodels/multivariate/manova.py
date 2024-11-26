@@ -116,11 +116,15 @@ class MANOVA(Model):
                 mgr = FormulaManager()
                 terms = mgr.get_term_name_slices(self.data.model_spec)
                 hypotheses = []
+
                 for key in terms:
-                    if skip_intercept_test and key == 'Intercept':
+                    if skip_intercept_test and (key == 'Intercept' or key == mgr.intercept_term):
                         continue
                     L_contrast = np.eye(self.exog.shape[1])[terms[key], :]
-                    hypotheses.append([key, L_contrast, None])
+                    test_name = str(key)
+                    if key == mgr.intercept_term:
+                        test_name = 'Intercept'
+                    hypotheses.append([test_name, L_contrast, None])
             else:
                 hypotheses = []
                 for i in range(self.exog.shape[1]):

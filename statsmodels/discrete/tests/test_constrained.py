@@ -10,7 +10,6 @@ from io import StringIO
 import numpy as np
 from numpy.testing import assert_, assert_allclose, assert_equal
 import pandas as pd
-import patsy
 import pytest
 
 import statsmodels.formula
@@ -275,7 +274,7 @@ class TestPoissonConstrained2a(CheckPoissonConstrainedMixin):
 
         constr = 'C(agecat)[T.5] - C(agecat)[T.4] = 0.5'
         if statsmodels.formula.options.formula_engine == "formulaic":
-            constr = '`C(agecat)[T.4]` = `C(agecat)[T.5]`'
+            constr = '`C(agecat)[T.4]` = `C(agecat)[T.5]` = 0.5'
         mgr = FormulaManager()
         lc = mgr.get_linear_constraints(constr, mod.exog_names)
         cls.res1 = fit_constrained(

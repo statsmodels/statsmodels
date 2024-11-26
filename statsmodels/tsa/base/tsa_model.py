@@ -575,9 +575,8 @@ class TimeSeriesModel(base.LikelihoodModel):
                         inferred_freq = True
                         if freq is not None:
                             warnings.warn(
-                                "No frequency information was"
-                                " provided, so inferred frequency %s"
-                                " will be used." % freq,
+                                "No frequency information was provided, so inferred "
+                                f"frequency {freq} will be used.",
                                 ValueWarning,
                                 stacklevel = 2,
                             )
