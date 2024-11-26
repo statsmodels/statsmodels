@@ -375,18 +375,18 @@ class ProcessMLE(base.LikelihoodModel):
         mgr = FormulaManager()
         exog_scale = mgr.get_arrays(scale_formula, data)
         scale_model_spec = mgr.spec
-        scale_names = scale_model_spec.column_names
+        scale_names = list(scale_model_spec.column_names)
         exog_scale = np.asarray(exog_scale)
 
         exog_smooth = mgr.get_arrays(smooth_formula, data)
         smooth_model_spec = mgr.spec
-        smooth_names = smooth_model_spec.column_names
+        smooth_names = list(smooth_model_spec.column_names)
         exog_smooth = np.asarray(exog_smooth)
 
         if noise_formula is not None:
             exog_noise = mgr.get_arrays(noise_formula, data)
             noise_model_spec = mgr.spec
-            noise_names = noise_model_spec.column_names
+            noise_names = list(noise_model_spec.column_names)
             exog_noise = np.asarray(exog_noise)
         else:
             exog_noise, noise_model_spec, noise_names, exog_noise =\
