@@ -5,19 +5,19 @@ python >= 3.8
 
     www.python.org
 
-numpy >= 1.18
+numpy >= 1.22.3, < 3
 
     www.numpy.org
 
-scipy >= 1.4
+scipy >= 1.8, != 1.9.2
 
     www.scipy.org
 
-pandas >= 1.0
+pandas >= 1.4, != 2.1.0
 
     pandas.pydata.org
 
-patsy >= 0.5.2
+patsy >= 0.5.6
 
     patsy.readthedocs.org
 
