@@ -11,14 +11,13 @@ Author: Josef Perktold
 """
 from __future__ import annotations
 
-import statsmodels.formula
-from statsmodels.compat.pytest import pytest_warns
 from statsmodels.compat.pandas import assert_index_equal, assert_series_equal
 from statsmodels.compat.platform import (
     PLATFORM_LINUX32,
     PLATFORM_OSX,
     PLATFORM_WIN32,
 )
+from statsmodels.compat.pytest import pytest_warns
 from statsmodels.compat.python import PYTHON_IMPL_WASM
 from statsmodels.compat.scipy import SCIPY_GT_14
 
@@ -36,18 +35,6 @@ import statsmodels.api as sm
 from statsmodels.formula.api import glm, ols
 import statsmodels.tools._testing as smt
 from statsmodels.tools.sm_exceptions import HessianInversionWarning
-
-def fix_constraints(constraints: list[str]):
-    if statsmodels.formula.options.formula_engine == "patsy":
-        return constraints
-
-    def fix(constraint):
-        if "-" in constraint:
-            return " - ".join([f"`{part.strip()}`" for part in constraint.split("-")])
-        return f"`{constraint}`"
-
-    return [fix(constraint) for constraint in constraints]
-
 
 
 class CheckGenericMixin:
@@ -71,8 +58,10 @@ class CheckGenericMixin:
         mat = np.eye(len(res.params))
 
         tt = res.t_test(mat[0])
-        string_confint = lambda alpha: "[{:4.3F}      {:4.3F}]".format(
-                                       alpha / 2, 1- alpha / 2)
+
+        def string_confint(alpha):
+            return f"[{(alpha / 2):4.3F}      {(1- alpha / 2):4.3F}]"
+
         summ = tt.summary()   # smoke test for #1323
         assert_allclose(tt.pvalue, res.pvalues[0], rtol=5e-10)
         assert_(string_confint(0.05) in str(summ))
@@ -697,7 +686,6 @@ class TestTTestPairwiseOLS(CheckPairwise):
         cls.constraints = ['C(Weight)[T.2]',
                            'C(Weight)[T.3]',
                            'C(Weight)[T.3] - C(Weight)[T.2]']
-        cls.constraints = fix_constraints(cls.constraints)
 
     def test_alpha(self):
         pw1 = self.res.t_test_pairwise(self.term_name, method='hommel',
@@ -732,7 +720,6 @@ class TestTTestPairwiseOLS2(CheckPairwise):
         cls.constraints = ['C(Weight)[T.2]',
                            'C(Weight)[T.3]',
                            'C(Weight)[T.3] - C(Weight)[T.2]']
-        cls.constraints = fix_constraints(cls.constraints)
 
 
 class TestTTestPairwiseOLS3(CheckPairwise):
@@ -752,11 +739,6 @@ class TestTTestPairwiseOLS3(CheckPairwise):
         cls.constraints = ['C(Weight)[2] - C(Weight)[1]',
                            'C(Weight)[3] - C(Weight)[1]',
                            'C(Weight)[3] - C(Weight)[2]']
-        if statsmodels.formula.options.formula_engine == "formulaic":
-            for i in range(len(cls.constraints)):
-                for v in range(1,4):
-                    cls.constraints[i] = cls.constraints[i].replace(f"[{v}]", f"[T.{v}]")
-        cls.constraints = fix_constraints(cls.constraints)
 
 
 class TestTTestPairwiseOLS4(CheckPairwise):
@@ -776,7 +758,6 @@ class TestTTestPairwiseOLS4(CheckPairwise):
         cls.constraints = ['-C(Weight, Treatment(2))[T.1]',
                            'C(Weight, Treatment(2))[T.3] - C(Weight, Treatment(2))[T.1]',
                            'C(Weight, Treatment(2))[T.3]',]
-        cls.constraints = fix_constraints(cls.constraints)
 
 
 class TestTTestPairwisePoisson(CheckPairwise):
@@ -796,4 +777,3 @@ class TestTTestPairwisePoisson(CheckPairwise):
         cls.constraints = ['C(Weight)[T.2]',
                            'C(Weight)[T.3]',
                            'C(Weight)[T.3] - C(Weight)[T.2]']
-        cls.constraints = fix_constraints(cls.constraints)

@@ -25,6 +25,7 @@ from scipy import stats
 import statsmodels.api as sm
 from statsmodels.datasets import cpunish, longley
 from statsmodels.discrete import discrete_model as discrete
+from statsmodels.formula._manager import FormulaManager
 from statsmodels.genmod.generalized_linear_model import GLM, SET_USE_BIC_LLF
 from statsmodels.tools.numdiff import (
     approx_fprime,
@@ -38,7 +39,7 @@ from statsmodels.tools.sm_exceptions import (
     ValueWarning,
 )
 from statsmodels.tools.tools import add_constant
-from statsmodels.formula._manager import FormulaManager
+
 # Test Precisions
 DECIMAL_4 = 4
 DECIMAL_3 = 3
@@ -541,7 +542,7 @@ class TestGaussianInverse(CheckModelResultsMixin):
         nobs = 100
         x = np.arange(nobs)
         np.random.seed(54321)
-        y = 1.0 + 2.0 * x + x**2 + 0.1 * np.random.randn(nobs)
+        cls.y = 1.0 + 2.0 * x + x**2 + 0.1 * np.random.randn(nobs)
         cls.X = np.c_[np.ones((nobs, 1)), x, x**2]
         cls.y_inv = (1.0 + 0.02 * x + 0.001 * x**2) ** -1 + 0.001 * np.random.randn(
             nobs
@@ -722,6 +723,7 @@ class TestGlmBernoulli(CheckModelResultsMixin, CheckComparisonMixin):
         s = glm.scoretest(mod, data["lwt"]**2)
         s**2
         """
+        assert isinstance(cmd_r, str)
 
 
 # class TestGlmBernoulliIdentity(CheckModelResultsMixin):
@@ -1361,7 +1363,7 @@ def test_summary():
         fa = sm.families.Gaussian()
         model = sm.GLM(endog, exog, family=fa)
         rslt = model.fit(method=method)
-        s = rslt.summary()
+        rslt.summary()
 
 
 def check_score_hessian(results):
@@ -2983,8 +2985,6 @@ def test_output_exposure_null(reset_randomstate):
 def test_qaic():
 
     # Example from documentation of R package MuMIn
-    import patsy
-
     ldose = np.concatenate((np.arange(6), np.arange(6)))
     sex = ["M"] * 6 + ["F"] * 6
     numdead = [10, 4, 9, 12, 18, 20, 0, 2, 6, 10, 12, 16]

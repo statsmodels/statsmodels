@@ -20,6 +20,7 @@ from scipy.linalg import toeplitz
 from scipy.stats import t as student_t
 
 from statsmodels.datasets import longley
+from statsmodels.formula._manager import FormulaManager
 from statsmodels.regression.linear_model import (
     GLS,
     OLS,
@@ -28,7 +29,6 @@ from statsmodels.regression.linear_model import (
     yule_walker,
 )
 from statsmodels.tools.tools import add_constant
-from statsmodels.formula._manager import FormulaManager
 
 DECIMAL_4 = 4
 DECIMAL_3 = 3
@@ -834,7 +834,7 @@ class TestNonFit:
 
     def test_df_resid(self):
         df_resid = self.endog.shape[0] - self.exog.shape[1]
-        assert_equal(self.ols_model.df_resid, 9)
+        assert_equal(self.ols_model.df_resid, df_resid)
 
 
 class TestWLS_CornerCases:

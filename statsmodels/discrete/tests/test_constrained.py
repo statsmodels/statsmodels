@@ -12,10 +12,10 @@ from numpy.testing import assert_, assert_allclose, assert_equal
 import pandas as pd
 import pytest
 
-import statsmodels.formula
 from statsmodels import datasets
 from statsmodels.base._constraints import fit_constrained
-from statsmodels.discrete.discrete_model import Poisson, Logit
+from statsmodels.discrete.discrete_model import Logit, Poisson
+from statsmodels.formula._manager import FormulaManager
 from statsmodels.genmod import families
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.tools.tools import add_constant
@@ -24,7 +24,6 @@ from .results import (
     results_glm_logit_constrained as reslogit,
     results_poisson_constrained as results,
 )
-from statsmodels.formula._manager import FormulaManager
 
 spector_data = datasets.spector.load()
 spector_data.endog = np.asarray(spector_data.endog)
@@ -145,8 +144,6 @@ class TestPoissonConstrained1a(CheckPoissonConstrainedMixin):
         #                2.71338891, 0.57966535,  0.97254074])
 
         constr = 'C(agecat)[T.4] = C(agecat)[T.5]'
-        if statsmodels.formula.options.formula_engine == "formulaic":
-            constr = '`C(agecat)[T.4]` = `C(agecat)[T.5]`'
         mgr = FormulaManager()
         lc = mgr.get_linear_constraints(constr, mod.exog_names)
 
@@ -187,8 +184,6 @@ class TestPoissonConstrained1b(CheckPoissonConstrainedMixin):
         mod = Poisson.from_formula(formula, data=data,
                                    exposure=data['pyears'].values)
         constr = 'C(agecat)[T.4] = C(agecat)[T.5]'
-        if statsmodels.formula.options.formula_engine == "formulaic":
-            constr = '`C(agecat)[T.4]` = `C(agecat)[T.5]`'
         mgr = FormulaManager()
         lc = mgr.get_linear_constraints(constr, mod.exog_names)
         cls.res1 = fit_constrained(
@@ -216,8 +211,6 @@ class TestPoissonConstrained1c(CheckPoissonConstrainedMixin):
         mod = Poisson.from_formula(formula, data=data,
                                    offset=np.log(data['pyears'].values))
         constr = 'C(agecat)[T.4] = C(agecat)[T.5]'
-        if statsmodels.formula.options.formula_engine == "formulaic":
-            constr = '`C(agecat)[T.4]` = `C(agecat)[T.5]`'
         mgr = FormulaManager()
         lc = mgr.get_linear_constraints(constr, mod.exog_names)
         cls.res1 = fit_constrained(
@@ -273,8 +266,6 @@ class TestPoissonConstrained2a(CheckPoissonConstrainedMixin):
         #                4.08730007,  1.15987869,  0.12111539])
 
         constr = 'C(agecat)[T.5] - C(agecat)[T.4] = 0.5'
-        if statsmodels.formula.options.formula_engine == "formulaic":
-            constr = '`C(agecat)[T.4]` = `C(agecat)[T.5]` = 0.5'
         mgr = FormulaManager()
         lc = mgr.get_linear_constraints(constr, mod.exog_names)
         cls.res1 = fit_constrained(
@@ -304,8 +295,6 @@ class TestPoissonConstrained2b(CheckPoissonConstrainedMixin):
         mod = Poisson.from_formula(formula, data=data,
                                    exposure=data['pyears'].values)
         constr = 'C(agecat)[T.5] - C(agecat)[T.4] = 0.5'
-        if statsmodels.formula.options.formula_engine == "formulaic":
-            constr = '`C(agecat)[T.5]` - `C(agecat)[T.4]` = 0.5'
         mgr = FormulaManager()
         lc = mgr.get_linear_constraints(constr, mod.exog_names)
         cls.res1 = fit_constrained(
@@ -336,8 +325,6 @@ class TestPoissonConstrained2c(CheckPoissonConstrainedMixin):
                                    offset=np.log(data['pyears'].values))
 
         constr = 'C(agecat)[T.5] - C(agecat)[T.4] = 0.5'
-        if statsmodels.formula.options.formula_engine == "formulaic":
-            constr = '`C(agecat)[T.5]` - `C(agecat)[T.4]` = 0.5'
         mgr = FormulaManager()
         lc = mgr.get_linear_constraints(constr, mod.exog_names)
         cls.res1 = fit_constrained(
@@ -371,8 +358,6 @@ class TestGLMPoissonConstrained1a(CheckPoissonConstrainedMixin):
                                family=families.Poisson())
 
         constr = 'C(agecat)[T.4] = C(agecat)[T.5]'
-        if statsmodels.formula.options.formula_engine == "formulaic":
-            constr = '`C(agecat)[T.4]` = `C(agecat)[T.5]`'
         mgr = FormulaManager()
         lc = mgr.get_linear_constraints(constr, mod.exog_names)
         cls.res1 = fit_constrained(
@@ -403,8 +388,6 @@ class TestGLMPoissonConstrained1b(CheckPoissonConstrainedMixin):
                                offset=np.log(data['pyears'].values))
 
         constr = 'C(agecat)[T.4] = C(agecat)[T.5]'
-        if statsmodels.formula.options.formula_engine == "formulaic":
-            constr = '`C(agecat)[T.4]` = `C(agecat)[T.5]`'
         mgr = FormulaManager()
         lc = mgr.get_linear_constraints(constr, mod.exog_names)
 
@@ -426,8 +409,6 @@ class TestGLMPoissonConstrained1b(CheckPoissonConstrainedMixin):
                                    exposure=data['pyears'].values)
 
         constr = 'C(agecat)[T.4] = C(agecat)[T.5]'
-        if statsmodels.formula.options.formula_engine == "formulaic":
-            constr = '`C(agecat)[T.4]` = `C(agecat)[T.5]`'
         res2 = mod.fit_constrained(constr, start_params=self.res1m.params,
                                    method='newton', warn_convergence=False,
                                    disp=0)
@@ -663,8 +644,6 @@ def junk():  # FIXME: make this into a test, or move/remove
 
     mod1a.fit()
     constr = 'C(agecat)[T.4] = C(agecat)[T.5]'
-    if statsmodels.formula.options.formula_engine == "formulaic":
-        '`C(agecat)[T.4]` = `C(agecat)[T.5]`'
     lc_1a = mgr.get_linear_constraints(constr, mod1a.exog_names)
     mod1a.fit_constrained(lc_1a.coefs, lc_1a.constants,
                           fit_kwds={'method': 'newton'})

@@ -7,6 +7,7 @@ import pandas as pd
 import pytest
 
 from statsmodels.duration.hazard_regression import PHReg
+from statsmodels.formula._manager import FormulaManager
 
 # All the R results
 from .results import survival_enet_r_results, survival_r_results
@@ -184,12 +185,12 @@ class TestPHReg:
                            "exog1": exog[:, 0], "exog2": exog[:, 1]})
 
         # Works with "0 +" on RHS but issues warning
-        fml = "time ~ exog1 + np.log(exog2) + exog1*exog2"
+        fml = "time ~ 0 + exog1 + np.log(exog2) + exog1*exog2"
         model1 = PHReg.from_formula(fml, df, status=status)
         result1 = model1.fit()
 
-        from patsy import dmatrix
-        dfp = dmatrix(model1.data.model_spec, df)
+        mgr = FormulaManager()
+        dfp = mgr.get_arrays(model1.data.model_spec, df)
 
         pr1 = result1.predict()
         pr2 = result1.predict(exog=df)

@@ -277,7 +277,7 @@ def get_index_label_loc(key, index, row_labels):
 
             index = row_labels[: loc + 1]
             index_was_expanded = False
-        except:
+        except Exception:
             raise e
     return loc, index, index_was_expanded
 
@@ -554,7 +554,7 @@ class TimeSeriesModel(base.LikelihoodModel):
                     if not isinstance(_index, Index):
                         raise ValueError("Could not coerce to date index")
                     index = _index
-                except:
+                except Exception:
                     # Only want to actually raise an exception if `dates` was
                     # provided but cannot be coerced. If we got the index from
                     # the row_labels, we'll just ignore it and use the integer
@@ -632,7 +632,6 @@ class TimeSeriesModel(base.LikelihoodModel):
         # Get attributes of the index
         has_index = index is not None
         date_index = isinstance(index, (DatetimeIndex, PeriodIndex))
-        period_index = isinstance(index, PeriodIndex)
         int_index = is_int_index(index)
         range_index = isinstance(index, RangeIndex)
         has_freq = index.freq is not None if date_index else None

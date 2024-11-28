@@ -1,5 +1,3 @@
-from logging import Formatter
-
 import numpy as np
 from scipy import stats
 from scipy.stats import f as fdist, t as student_t

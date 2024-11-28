@@ -7,6 +7,7 @@ from statsmodels.compat.pandas import Substitution
 import numpy as np
 
 from statsmodels.base.model import Model
+from statsmodels.formula._manager import FormulaManager
 
 from .multivariate_ols import (
     MultivariateTestResults,
@@ -14,7 +15,6 @@ from .multivariate_ols import (
     _multivariate_ols_fit,
     _multivariate_ols_test,
 )
-from statsmodels.formula._manager import FormulaManager
 
 __docformat__ = 'restructuredtext en'
 

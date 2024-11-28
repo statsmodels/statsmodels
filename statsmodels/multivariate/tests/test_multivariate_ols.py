@@ -1,20 +1,20 @@
 import os.path
-import numpy as np
-import pandas as pd
-import pytest
 
-from statsmodels.formula._manager import FormulaManager
-from statsmodels.regression.linear_model import OLS
-from statsmodels.multivariate.multivariate_ols import (
-    _MultivariateOLS,
-    MultivariateLS,
-    )
+import numpy as np
 from numpy.testing import (
     assert_allclose,
     assert_array_almost_equal,
     assert_raises,
-    )
+)
+import pandas as pd
+import pytest
 
+from statsmodels.formula._manager import FormulaManager
+from statsmodels.multivariate.multivariate_ols import (
+    MultivariateLS,
+    _MultivariateOLS,
+)
+from statsmodels.regression.linear_model import OLS
 
 dir_path = os.path.dirname(os.path.abspath(__file__))
 csv_path = os.path.join(dir_path, 'results', 'mvreg.csv')

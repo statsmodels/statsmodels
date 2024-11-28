@@ -83,26 +83,6 @@ def check_type(arr, engine):
         return isinstance(arr, formulaic.ModelMatrix)
 
 
-def test_engine_options_engine():
-    default = statsmodels.formula.options.formula_engine
-    assert default in ("patsy", "formulaic")
-
-    statsmodels.formula.options.formula_engine = "patsy"
-    mgr = FormulaManager()
-    assert mgr.engine == "patsy"
-    mgr = FormulaManager(engine="formulaic")
-    assert mgr.engine == "formulaic"
-
-    statsmodels.formula.options.formula_engine = "formulaic"
-    mgr = FormulaManager()
-    assert mgr.engine == "formulaic"
-
-    mgr = FormulaManager(engine="patsy")
-    assert mgr.engine == "patsy"
-
-    statsmodels.formula.options.formula_engine = default
-
-
 def test_engine_options_engine(engine):
     default = statsmodels.formula.options.formula_engine
     assert default in ("patsy", "formulaic")

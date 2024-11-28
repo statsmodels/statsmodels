@@ -15,6 +15,7 @@ import pytest
 from statsmodels.base._penalized import PenalizedMixin
 import statsmodels.base._penalties as smpen
 from statsmodels.discrete.discrete_model import Logit, Poisson, Probit
+from statsmodels.formula._manager import FormulaManager
 from statsmodels.gam.generalized_additive_model import (
     GLMGam,
     GLMGamResults,
@@ -27,7 +28,7 @@ from statsmodels.sandbox.regression.penalized import TheilGLS
 from statsmodels.tools.linalg import matrix_sqrt, transf_constraints
 
 from .results import results_mpg_bs, results_mpg_bs_poisson, results_pls
-from statsmodels.formula._manager import FormulaManager
+
 
 class PoissonPenalized(PenalizedMixin, Poisson):
     pass

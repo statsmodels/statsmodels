@@ -3,7 +3,6 @@ from __future__ import annotations
 from collections import defaultdict
 import os
 from typing import Any, Literal, Mapping, NamedTuple, Sequence
-import uuid
 
 from formulaic import ModelMatrices
 import numpy as np
@@ -620,9 +619,9 @@ class FormulaManager:
         else:
             _spec = spec_or_frame
         if self._engine == "patsy":
-            return list(spec_or_frame.term_names)
+            return list(_spec.term_names)
         else:
-            return [str(term) for term in spec_or_frame.terms]
+            return [str(term) for term in _spec.terms]
 
     def get_column_names(self, spec_or_frame):
         if not isinstance(spec_or_frame, self.model_spec_type):

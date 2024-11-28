@@ -219,6 +219,8 @@ class Model:
                 spec_cols = list(mgr.get_term_names(model_spec))
                 for col in drop_cols:
                     try:
+                        if mgr.engine == "formulaic" and col == "Intercept":
+                            col = "1"
                         spec_cols.remove(col)
                     except ValueError:
                         pass  # OK if not present

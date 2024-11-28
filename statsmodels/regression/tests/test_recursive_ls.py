@@ -7,13 +7,13 @@ License: Simplified-BSD
 import os
 
 import numpy as np
-from docutils.utils.math.math2html import Formula
 from numpy.testing import assert_allclose, assert_equal, assert_raises
 import pandas as pd
 import pytest
 from scipy.stats import norm
 
 from statsmodels.datasets import macrodata
+from statsmodels.formula._manager import FormulaManager
 from statsmodels.genmod.api import GLM
 from statsmodels.regression.linear_model import OLS
 from statsmodels.regression.recursive_ls import RecursiveLS
@@ -21,7 +21,6 @@ from statsmodels.stats.diagnostic import recursive_olsresiduals
 from statsmodels.tools import add_constant
 from statsmodels.tools.eval_measures import aic, bic
 from statsmodels.tools.sm_exceptions import ValueWarning
-from statsmodels.formula._manager import FormulaManager
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -270,39 +269,39 @@ def test_plots(close_figures):
         register_matplotlib_converters()
     except ImportError:
         pass
-    fig = res.plot_recursive_coefficient()
+    res.plot_recursive_coefficient()
 
     # Specific variable
-    fig = res.plot_recursive_coefficient(variables=['m1'])
+    res.plot_recursive_coefficient(variables=['m1'])
 
     # All variables
-    fig = res.plot_recursive_coefficient(variables=[0, 'm1', 'pop'])
+    res.plot_recursive_coefficient(variables=[0, 'm1', 'pop'])
 
     # Basic plot
-    fig = res.plot_cusum()
+    res.plot_cusum()
 
     # Other alphas
     for alpha in [0.01, 0.10]:
-        fig = res.plot_cusum(alpha=alpha)
+        res.plot_cusum(alpha=alpha)
 
     # Invalid alpha
     assert_raises(ValueError, res.plot_cusum, alpha=0.123)
 
     # Basic plot
-    fig = res.plot_cusum_squares()
+    res.plot_cusum_squares()
 
     # Numpy input (no dates)
     mod = RecursiveLS(endog.values, exog.values)
     res = mod.fit()
 
     # Basic plot
-    fig = res.plot_recursive_coefficient()
+    res.plot_recursive_coefficient()
 
     # Basic plot
-    fig = res.plot_cusum()
+    res.plot_cusum()
 
     # Basic plot
-    fig = res.plot_cusum_squares()
+    res.plot_cusum_squares()
 
 
 def test_from_formula():
