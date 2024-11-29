@@ -40,7 +40,7 @@ def handle_formula_data(Y, X, formula, depth=0, missing="drop"):
     na_action = FormulaManager().get_na_action(action=missing)
     mgr = FormulaManager()
     if X is not None:
-        result = mgr.get_arrays(
+        result = mgr.get_matrices(
             formula,
             (Y, X),
             eval_env=depth,
@@ -49,7 +49,7 @@ def handle_formula_data(Y, X, formula, depth=0, missing="drop"):
             attach_spec=True,
         )
     else:
-        result = mgr.get_arrays(
+        result = mgr.get_matrices(
             formula,
             Y,
             eval_env=depth,

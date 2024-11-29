@@ -282,7 +282,7 @@ class FormulaManager:
         else:
             return formulaic.Formula(intercept + cats + final_conts, _ordering="none")
 
-    def get_arrays(
+    def get_matrices(
         self,
         formula,
         data,
@@ -685,22 +685,21 @@ class FormulaManager:
         else:
             return str(term)
 
-    def get_description(self, model_spec):
-        if self._engine == "patsy":
-            return model_spec.describe()
+    def get_description(self, spec_or_frame):
+        if not isinstance(spec_or_frame, self.model_spec_type):
+            _spec = self.get_model_spec(spec_or_frame)
         else:
-            return str(model_spec.formula)
-
-    def escape_variable_names(self, names):
-        if self._engine == "formulaic":
-            return [f"`{name}`" for name in names]
-        return names
+            _spec = spec_or_frame
+        if self._engine == "patsy":
+            return _spec.describe()
+        else:
+            return str(_spec.formula)
 
     def get_factor_categories(self, factor, model_spec):
         if self._engine == "patsy":
             return model_spec.factor_infos[factor].categories
         else:
-            return model_spec.encoder_state[factor][1]["categories"]
+            return tuple(model_spec.encoder_state[factor][1]["categories"])
 
     def get_contrast_matrix(self, term, factor, model_spec):
         if self._engine == "patsy":

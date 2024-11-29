@@ -2994,7 +2994,7 @@ def test_qaic():
 
     y = df[["numalive", "numdead"]].values
     mgr = FormulaManager()
-    x = mgr.get_arrays("sex*ldose", data=df)
+    x = mgr.get_matrices("sex*ldose", data=df)
     m = GLM(y, x, family=sm.families.Binomial())
     r = m.fit()
     scale = 2.412699

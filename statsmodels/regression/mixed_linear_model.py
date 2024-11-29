@@ -990,7 +990,7 @@ class MixedLM(base.LikelihoodModel):
                     mgr = FormulaManager()
                     eval_env = mgr.get_empty_eval_env()
                 mgr = FormulaManager()
-                exog_re = mgr.get_arrays(re_formula, data, eval_env=eval_env)
+                exog_re = mgr.get_matrices(re_formula, data, eval_env=eval_env)
                 exog_re_names = mgr.get_column_names(exog_re)
                 exog_re_names = [x.replace("Intercept", group_name)
                                  for x in exog_re_names]
@@ -1026,7 +1026,7 @@ class MixedLM(base.LikelihoodModel):
                 evc_mats, evc_colnames = [], []
                 for group_ix, group in enumerate(kylist):
                     ii = gb.groups[group]
-                    mat = mgr.get_arrays(
+                    mat = mgr.get_matrices(
                         model_spec, data.loc[ii, :], eval_env=eval_env, pandas=True
                     )
                     evc_colnames.append(mat.columns.tolist())

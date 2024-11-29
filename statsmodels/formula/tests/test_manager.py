@@ -120,11 +120,11 @@ def test_engine_options_order_effect(data):
     default = statsmodels.formula.options.ordering
     statsmodels.formula.options.ordering = "degree"
     mgr = FormulaManager(engine="formulaic")
-    _, rhs0 = mgr.get_arrays("y ~ 1 + x + z + c", data)
+    _, rhs0 = mgr.get_matrices("y ~ 1 + x + z + c", data)
     statsmodels.formula.options.ordering = "sort"
-    _, rhs1 = mgr.get_arrays("y ~ 1 + x + z + c", data)
+    _, rhs1 = mgr.get_matrices("y ~ 1 + x + z + c", data)
     statsmodels.formula.options.ordering = "none"
-    _, rhs2 = mgr.get_arrays("y ~ 1 + x + c + z", data)
+    _, rhs2 = mgr.get_matrices("y ~ 1 + x + c + z", data)
     assert len(rhs0.columns) == 4
     assert len(rhs1.columns) == 4
     assert len(rhs2.columns) == 4
@@ -150,14 +150,14 @@ def test_engine(engine):
 def test_single_array(engine, data):
     mgr = FormulaManager(engine=engine)
     fmla = "1 + x + z"
-    output = mgr.get_arrays(fmla, data)
+    output = mgr.get_matrices(fmla, data)
     assert check_type(output, engine)
 
 
 def test_two_arrays(engine, data):
     mgr = FormulaManager(engine=engine)
     fmla = "y ~ 1 + x + z"
-    output = mgr.get_arrays(fmla, data)
+    output = mgr.get_matrices(fmla, data)
     assert isinstance(output, tuple)
     assert len(output) == 2
     assert check_type(output[0], engine)
@@ -167,18 +167,21 @@ def test_two_arrays(engine, data):
 def test_get_column_names(engine, data):
     mgr = FormulaManager(engine=engine)
     fmla = "y ~ 1 + x + z"
-    output = mgr.get_arrays(fmla, data)
+    output = mgr.get_matrices(fmla, data)
     names = mgr.get_column_names(output[0])
     assert names == ["y"]
 
     names = mgr.get_column_names(output[1])
     assert names == ["Intercept", "x", "z"]
 
+    names = mgr.get_column_names(mgr.get_model_spec(output[1]))
+    assert names == ["Intercept", "x", "z"]
+
 
 def test_get_empty_eval_patsy(data):
     mgr = FormulaManager(engine="patsy")
     fmla = "y ~ 1 + x + g(z)"
-    output = mgr.get_arrays(fmla, data)
+    output = mgr.get_matrices(fmla, data)
     assert check_type(output[0], "patsy")
     assert check_type(output[1], "patsy")
     names = mgr.get_column_names(output[0])
@@ -186,7 +189,7 @@ def test_get_empty_eval_patsy(data):
     names = mgr.get_column_names(output[1])
     assert names == ["Intercept", "x", "g(z)"]
 
-    output = mgr.get_arrays(fmla, data, eval_env=0)
+    output = mgr.get_matrices(fmla, data, eval_env=0)
     assert check_type(output[0], "patsy")
     assert check_type(output[1], "patsy")
     names = mgr.get_column_names(output[0])
@@ -196,22 +199,22 @@ def test_get_empty_eval_patsy(data):
 
     eval_env = mgr.get_empty_eval_env()
     with pytest.raises(patsy.PatsyError):
-        mgr.get_arrays(fmla, data, eval_env=7)
+        mgr.get_matrices(fmla, data, eval_env=7)
 
     with pytest.raises(patsy.PatsyError):
         with pytest.warns(FutureWarning, match="EvalEnvironment is deprecate"):
-            mgr.get_arrays(fmla, data, eval_env=eval_env)
+            mgr.get_matrices(fmla, data, eval_env=eval_env)
 
 
 @require_formulaic
 def test_get_empty_eval_formulaic(data):
     mgr = FormulaManager(engine="formulaic")
     fmla = "y ~ 1 + x + g(z)"
-    output = mgr.get_arrays(fmla, data)
+    output = mgr.get_matrices(fmla, data)
     assert check_type(output[0], "formulaic")
     assert check_type(output[1], "formulaic")
 
-    output = mgr.get_arrays(fmla, data, eval_env=0)
+    output = mgr.get_matrices(fmla, data, eval_env=0)
     assert check_type(output[0], "formulaic")
     assert check_type(output[1], "formulaic")
     names = mgr.get_column_names(output[0])
@@ -221,7 +224,7 @@ def test_get_empty_eval_formulaic(data):
 
     eval_env = mgr.get_empty_eval_env()
     eval_env["g"] = g
-    output = mgr.get_arrays(fmla, data, eval_env=eval_env)
+    output = mgr.get_matrices(fmla, data, eval_env=eval_env)
     assert check_type(output[0], "formulaic")
     assert check_type(output[1], "formulaic")
     names = mgr.get_column_names(output[0])
@@ -233,12 +236,12 @@ def test_get_empty_eval_formulaic(data):
 def test_has_intercept(engine, data):
     mgr = FormulaManager(engine=engine)
     fmla = "y ~ 1 + x + z"
-    output = mgr.get_arrays(fmla, data)
+    output = mgr.get_matrices(fmla, data)
     assert mgr.has_intercept(mgr.spec)
     assert mgr.has_intercept(mgr.get_model_spec(output[1]))
 
     fmla = "y ~ x + z - 1"
-    output = mgr.get_arrays(fmla, data)
+    output = mgr.get_matrices(fmla, data)
     assert not mgr.has_intercept(mgr.spec)
     assert not mgr.has_intercept(mgr.get_model_spec(output[1]))
 
@@ -246,14 +249,14 @@ def test_has_intercept(engine, data):
 def test_get_intercept_idx(engine, data):
     mgr = FormulaManager(engine=engine)
     fmla = "y ~ 1 + x + z"
-    output = mgr.get_arrays(fmla, data)
+    output = mgr.get_matrices(fmla, data)
     result = mgr.intercept_idx(mgr.spec)
     np.testing.assert_equal(result, np.array([True, False, False]))
     result = mgr.intercept_idx(mgr.get_model_spec(output[1]))
     np.testing.assert_equal(result, np.array([True, False, False]))
 
     fmla = "y ~ x + z - 1"
-    output = mgr.get_arrays(fmla, data)
+    output = mgr.get_matrices(fmla, data)
     result = mgr.intercept_idx(mgr.spec)
     np.testing.assert_equal(result, np.array([False, False]))
     result = mgr.intercept_idx(mgr.get_model_spec(output[1]))
@@ -263,7 +266,7 @@ def test_get_intercept_idx(engine, data):
 def test_remove_intercept(engine, data):
     mgr = FormulaManager(engine=engine)
     fmla = "y ~ 1 + x + z"
-    output = mgr.get_arrays(fmla, data)
+    output = mgr.get_matrices(fmla, data)
     orig = mgr.spec.terms[:]
     result = mgr.remove_intercept(mgr.spec.terms)
     assert result == orig[1:]
@@ -272,7 +275,7 @@ def test_remove_intercept(engine, data):
     assert result == orig[1:]
 
     fmla = "y ~ x + z - 1"
-    output = mgr.get_arrays(fmla, data)
+    output = mgr.get_matrices(fmla, data)
     orig = mgr.spec.terms[:]
     result = mgr.remove_intercept(mgr.spec.terms)
     assert result == orig
@@ -324,7 +327,7 @@ def test_get_na_action(engine, data):
 def test_get_model_spec(engine, data):
     mgr = FormulaManager(engine=engine)
     fmla = "y ~ 1 + x + z"
-    lhs, rhs = mgr.get_arrays(fmla, data)
+    lhs, rhs = mgr.get_matrices(fmla, data)
     result = mgr.get_model_spec(rhs)
     if engine == "patsy":
         assert isinstance(result, patsy.design_info.DesignInfo)
@@ -341,7 +344,7 @@ def test_na_action(engine, data):
     missing = data.copy()
     missing.iloc[::3, 1] = np.nan
     dropper = mgr.get_na_action("drop")
-    lhs, rhs = mgr.get_arrays(fmla, missing, na_action=dropper)
+    lhs, rhs = mgr.get_matrices(fmla, missing, na_action=dropper)
     assert rhs.shape[0] == lhs.shape[0]
     assert rhs.shape[0] == 4
 
@@ -352,12 +355,12 @@ def test_na_action(engine, data):
         exception = ValueError
 
     with pytest.raises(exception):
-        mgr.get_arrays(fmla, missing, na_action=raiser)
+        mgr.get_matrices(fmla, missing, na_action=raiser)
 
     if engine == "patsy":
         return
     ignorer = mgr.get_na_action("ignore")
-    lhs, rhs = mgr.get_arrays(fmla, missing, na_action=ignorer)
+    lhs, rhs = mgr.get_matrices(fmla, missing, na_action=ignorer)
     assert lhs.shape[0] == rhs.shape[0]
     assert rhs.shape[0] == missing.shape[0]
 
@@ -365,8 +368,12 @@ def test_na_action(engine, data):
 def test_get_term_name_slices(engine, data):
     mgr = FormulaManager(engine=engine)
     fmla = "y ~ 1 + x + z + c"
-    lhs, rhs = mgr.get_arrays(fmla, data)
+    lhs, rhs = mgr.get_matrices(fmla, data)
     slices = mgr.get_term_name_slices(rhs)
+    for i, key in enumerate(slices):
+        assert slices[key] == slice(i, i + 1, None)
+
+    slices = mgr.get_term_name_slices(mgr.get_model_spec(rhs))
     for i, key in enumerate(slices):
         assert slices[key] == slice(i, i + 1, None)
 
@@ -384,7 +391,7 @@ def test_get_term_name_slices(engine, data):
 def test_get_linear_constraints(engine, data, constraint):
     mgr = FormulaManager(engine=engine)
     fmla = "y ~ 1 + x + z + c"
-    lhs, rhs = mgr.get_arrays(fmla, data)
+    lhs, rhs = mgr.get_matrices(fmla, data)
     constraints = mgr.get_linear_constraints(constraint, rhs.columns)
     assert isinstance(constraints[0], np.ndarray)
     assert isinstance(constraints[1], np.ndarray)
@@ -432,9 +439,94 @@ def test_legacy_orderer(formula):
     )
     mgr = FormulaManager(engine="formulaic")
     ordered_formula = mgr._legacy_orderer(formula, data, 0)
-    mm = mgr.get_arrays(ordered_formula, data)
+    mm = mgr.get_matrices(ordered_formula, data)
     _, patsy_rhs = patsy.dmatrices(formula, data, return_type="dataframe")
 
     index = list(patsy_rhs.columns)
     patsy_rhs.columns = index
     assert list(mm[1].columns) == list(patsy_rhs.columns)
+
+
+def test_get_term_name(engine, data):
+    mgr = FormulaManager(engine=engine)
+    fomula = "y ~ 1 + x + z + c"
+    _, rhs = mgr.get_matrices(fomula, data)
+    names = mgr.get_term_names(rhs)
+    assert isinstance(names, list)
+    for name in names:
+        assert isinstance(name, str)
+
+
+def test_get_description(engine, data):
+    mgr = FormulaManager(engine=engine)
+    fomula = "y ~ 1 + x + z + c"
+    _, rhs = mgr.get_matrices(fomula, data)
+    description = mgr.get_description(rhs)
+    assert isinstance(description, str)
+    description = mgr.get_description(mgr.get_model_spec(rhs))
+    assert isinstance(description, str)
+
+
+def test_get_factor_categories(engine, data):
+    mgr = FormulaManager(engine=engine)
+    fomula = "y ~ 1 + x + z + c"
+    _, rhs = mgr.get_matrices(fomula, data)
+    spec = mgr.get_model_spec(rhs)
+
+    term_idx = mgr.get_term_names(spec).index("c")
+    term = spec.terms[term_idx]
+    factor = term.factors[0]
+    cats = mgr.get_factor_categories(factor, spec)
+    assert cats == ("a", "b")
+
+
+def test_get_contrast_matrix(engine, data):
+    mgr = FormulaManager(engine=engine)
+    fomula = "y ~ 1 + x + z + c"
+    _, rhs = mgr.get_matrices(fomula, data)
+    spec = mgr.get_model_spec(rhs)
+
+    term_idx = mgr.get_term_names(spec).index("c")
+    term = spec.terms[term_idx]
+    factor = term.factors[0]
+    cm = mgr.get_contrast_matrix(term, factor, spec)
+    assert isinstance(cm, np.ndarray)
+    np.testing.assert_allclose(cm, np.array([[0.0], [1.0]]))
+
+
+def test_get_slice(engine, data):
+    mgr = FormulaManager(engine=engine)
+    fomula = "y ~ 1 + x + z + c"
+    _, rhs = mgr.get_matrices(fomula, data)
+    spec = mgr.get_model_spec(rhs)
+    _slice = mgr.get_slice(spec, "c")
+    assert _slice == slice(1, 2, None)
+
+
+def test_get_term_name_slices_alt(engine, data):
+    mgr = FormulaManager(engine=engine)
+    fomula = "y ~ 1 + x + z + c"
+    _, rhs = mgr.get_matrices(fomula, data)
+    tns = mgr.get_term_name_slices(rhs)
+    keys = ("c", "x", "z")
+    keys += ("Intercept",) if engine == "patsy" else ("1",)
+    for key in keys:
+        assert key in tns
+        assert isinstance(tns[key], slice)
+    tns = mgr.get_term_name_slices(mgr.get_model_spec(rhs))
+    for key in keys:
+        assert key in tns
+        assert isinstance(tns[key], slice)
+
+
+def test_get_term_name_alt(engine, data):
+    mgr = FormulaManager(engine=engine)
+    fomula = "y ~ 1 + x + z + c"
+    _, rhs = mgr.get_matrices(fomula, data)
+    model_spec = mgr.get_model_spec(rhs)
+    terms = model_spec.terms[:]  # copy
+    names = ("Intercept",) if engine == "patsy" else ("1",)
+    names += ("c", "x", "z")
+    for term, name in zip(terms, names):
+        term_name = mgr.get_term_name(term)
+        assert term_name == name

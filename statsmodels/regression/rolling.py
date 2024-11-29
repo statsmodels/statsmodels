@@ -404,7 +404,7 @@ class RollingWLS:
         na_action = FormulaManager().get_na_action(action="raise", types=[])
 
         mgr = FormulaManager()
-        result = mgr.get_arrays(
+        result = mgr.get_matrices(
             formula,
             data,
             eval_env=eval_env,

@@ -33,10 +33,10 @@ def test_formula_engine_use_detection_577():
         test_func = data._is_using_patsy
     else:
         test_func = data._is_using_formulaic
-    endog = mgr.get_arrays("var1 - 1", df)
+    endog = mgr.get_matrices("var1 - 1", df)
     assert test_func(endog, None)
 
-    exog = mgr.get_arrays("var2 - 1", df)
+    exog = mgr.get_matrices("var2 - 1", df)
     assert test_func(endog, exog)
 
 

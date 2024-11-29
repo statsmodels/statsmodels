@@ -139,7 +139,7 @@ def test_from_formula_vs_no_formula(model):
     r = mod.fit(method='svd')
     r0 = r.mv_test()
     mgr = FormulaManager()
-    endog, exog = mgr.get_arrays('Histamine0 + Histamine1 + Histamine3 + Histamine5 ~ Drug * Depleted', data)
+    endog, exog = mgr.get_matrices('Histamine0 + Histamine1 + Histamine3 + Histamine5 ~ Drug * Depleted', data)
     L = np.array([[1, 0, 0, 0, 0, 0]])
     # DataFrame input
     r = model(endog, exog).fit(method='svd')

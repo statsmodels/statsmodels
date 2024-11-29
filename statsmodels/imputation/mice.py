@@ -440,7 +440,7 @@ class MICEData:
 
         formula = self.conditional_formula[vname]
         mgr = FormulaManager()
-        endog, exog = mgr.get_arrays(formula, self.data, pandas=True)
+        endog, exog = mgr.get_matrices(formula, self.data, pandas=True)
 
         # Rows with observed endog
         ixo = self.ix_obs[vname]
@@ -470,7 +470,7 @@ class MICEData:
             v = kwds[k]
             if isinstance(v, PatsyFormula):
                 mgr = FormulaManager()
-                mat = mgr.get_arrays(v.formula, self.data, pandas=True)
+                mat = mgr.get_matrices(v.formula, self.data, pandas=True)
                 mat = np.require(mat, requirements="W")[ix, :]
                 if mat.shape[1] == 1:
                     mat = mat[:, 0]
@@ -512,7 +512,7 @@ class MICEData:
 
         formula = self.conditional_formula[vname]
         mgr = FormulaManager()
-        endog, exog = mgr.get_arrays(formula, self.data, pandas=True)
+        endog, exog = mgr.get_matrices(formula, self.data, pandas=True)
 
         endog = np.require(endog.iloc[ix, 0], requirements="W")
         exog = np.require(exog.iloc[ix, :], requirements="W")
@@ -788,7 +788,7 @@ class MICEData:
         # Fitted values
         formula = self.conditional_formula[col_name]
         mgr = FormulaManager()
-        endog, exog = mgr.get_arrays(formula, self.data, pandas=True)
+        endog, exog = mgr.get_matrices(formula, self.data, pandas=True)
         results = self.results[col_name]
         vec2 = results.predict(exog=exog)
         vec2 = self._get_predicted(vec2)

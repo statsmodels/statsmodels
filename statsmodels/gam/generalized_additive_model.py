@@ -69,7 +69,7 @@ def _transform_predict_exog(model, exog, model_spec=None):
         orig_exog_len = len(exog)
         is_dict = isinstance(exog, dict)
 
-        exog = FormulaManager().get_arrays(model_spec, exog, pandas=True)
+        exog = FormulaManager().get_matrices(model_spec, exog, pandas=True)
         if orig_exog_len > len(exog) and not is_dict:
             import warnings
             if exog_index is None:

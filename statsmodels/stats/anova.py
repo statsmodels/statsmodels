@@ -558,7 +558,7 @@ class AnovaRM:
         subject = 'C(%s, Sum)' % self.subject
         factors = within + [subject]
         mgr = FormulaManager()
-        x = mgr.get_arrays('*'.join(factors), data=self.data, pandas=False)
+        x = mgr.get_matrices('*'.join(factors), data=self.data, pandas=False)
         term_slices = mgr.get_term_name_slices(x)
         for key in term_slices:
             ind = np.array([False]*x.shape[1])

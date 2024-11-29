@@ -177,7 +177,6 @@ def show_versions(show_dirs=True):
     print("Python: %d.%d.%d.%s.%s" % sys.version_info[:])
     uname = platform.uname()
     sysname = uname.system
-    nodename = uname.node
     release = uname.release
     version = uname.version
     machine = uname.machine

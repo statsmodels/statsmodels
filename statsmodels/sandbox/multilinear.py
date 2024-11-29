@@ -158,7 +158,7 @@ def multiOLS(model, dataframe, column_list=None, method='fdr_bh',
     # we can create them once and reuse
 
     mgr = FormulaManager()
-    model_exog = mgr.get_arrays(model, dataframe, pandas=True)
+    model_exog = mgr.get_matrices(model, dataframe, pandas=True)
     for col_name in column_list:
         # it will try to interpret the column name as a valid dataframe
         # index as it can be several times faster. If it fails it
@@ -166,7 +166,7 @@ def multiOLS(model, dataframe, column_list=None, method='fdr_bh',
         try:
             model_endog = dataframe[col_name]
         except KeyError:
-            model_endog = mgr.get_arrays(col_name + ' + 0', data=dataframe, pandas=True)
+            model_endog = mgr.get_matrices(col_name + ' + 0', data=dataframe, pandas=True)
         # retrieve the result and store them
         res = _model2dataframe(model_endog, model_exog, model_type, **kwargs)
         col_results[col_name] = res

@@ -645,7 +645,7 @@ class UnivariateCubicCyclicSplines(UnivariateGamSmoother):
 
     def _smooth_basis_for_single_variable(self):
         mgr = FormulaManager()
-        basis = mgr.get_arrays(
+        basis = mgr.get_matrices(
             "cc(x, df=" + str(self.df) + ") - 1",
             {"x": self.x},
             pandas=False,
@@ -723,7 +723,7 @@ class UnivariateCubicCyclicSplines(UnivariateGamSmoother):
         return d.T.dot(np.linalg.inv(b)).dot(d)
 
     def transform(self, x_new):
-        exog = FormulaManager().get_arrays(self.model_spec, {"x": x_new}, pandas=False)
+        exog = FormulaManager().get_matrices(self.model_spec, {"x": x_new}, pandas=False)
         if self.ctransf is not None:
             exog = exog.dot(self.ctransf)
         return exog

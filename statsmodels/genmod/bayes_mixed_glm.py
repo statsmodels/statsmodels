@@ -444,7 +444,7 @@ class _BayesMixedGLM(base.Model):
         j = 0
         for na, fml in vc_formulas.items():
             mgr = FormulaManager()
-            mat = mgr.get_arrays(fml, data, pandas=True)
+            mat = mgr.get_matrices(fml, data, pandas=True)
             exog_vc.append(mat)
             vcp_names.append(na)
             ident.append(j * np.ones(mat.shape[1], dtype=np.int_))

@@ -52,3 +52,7 @@ if [ "${PIP_PRE}" = true ]; then
     python -m pip install -i https://pypi.anaconda.org/scientific-python-nightly-wheels/simple matplotlib --upgrade --use-deprecated=legacy-resolver
   fi
 fi
+
+# Special for formulaic install
+# TODO: Remove after formulaic is standard
+python -m pip install -r requirements.txt

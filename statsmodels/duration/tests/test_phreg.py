@@ -190,7 +190,7 @@ class TestPHReg:
         result1 = model1.fit()
 
         mgr = FormulaManager()
-        dfp = mgr.get_arrays(model1.data.model_spec, df)
+        dfp = mgr.get_matrices(model1.data.model_spec, df)
 
         pr1 = result1.predict()
         pr2 = result1.predict(exog=df)

@@ -163,7 +163,7 @@ def get_prediction(self, exog=None, transform=True, weights=None,
         if isinstance(exog, pd.Series):
             # GH-6509
             exog = pd.DataFrame(exog)
-        exog = FormulaManager().get_arrays(self.model.data.model_spec, exog)
+        exog = FormulaManager().get_matrices(self.model.data.model_spec, exog)
 
     if exog is not None:
         if row_labels is None:

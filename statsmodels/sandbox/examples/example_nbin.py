@@ -294,7 +294,7 @@ Number of Fisher Scoring iterations: 1
 '''
 
 def test_nb2():
-    y, X = FormulaManager().get_arrays("los ~ C(type) + hmo + white", medpar)
+    y, X = FormulaManager().get_matrices("los ~ C(type) + hmo + white", medpar)
     y = np.array(y)[:, 0]
     nb2 = NBin(y, X, "nb2").fit(maxiter=10000, maxfun=5000)
     assert_almost_equal(

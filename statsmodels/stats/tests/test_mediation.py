@@ -61,7 +61,7 @@ def test_framing_example():
 
     mgr = FormulaManager()
     outcome = np.asarray(data["cong_mesg"])
-    outcome_exog = mgr.get_arrays("emo + treat + age + educ + gender + income", data)
+    outcome_exog = mgr.get_matrices("emo + treat + age + educ + gender + income", data)
     outcome_model = sm.GLM(
         outcome,
         outcome_exog,
@@ -69,7 +69,7 @@ def test_framing_example():
     )
 
     mediator = np.asarray(data["emo"])
-    mediator_exog = mgr.get_arrays("treat + age + educ + gender + income", data)
+    mediator_exog = mgr.get_matrices("treat + age + educ + gender + income", data)
     mediator_model = sm.OLS(mediator, mediator_exog)
 
     tx_pos = [outcome_exog.columns.tolist().index("treat"),
@@ -99,7 +99,7 @@ def test_framing_example_moderator():
 
     mgr = FormulaManager()
     outcome = np.asarray(data["cong_mesg"])
-    outcome_exog = mgr.get_arrays("emo + treat + age + educ + gender + income", data)
+    outcome_exog = mgr.get_matrices("emo + treat + age + educ + gender + income", data)
     outcome_model = sm.GLM(
         outcome,
         outcome_exog,
@@ -107,7 +107,7 @@ def test_framing_example_moderator():
     )
 
     mediator = np.asarray(data["emo"])
-    mediator_exog = mgr.get_arrays("treat + age + educ + gender + income", data)
+    mediator_exog = mgr.get_matrices("treat + age + educ + gender + income", data)
     mediator_model = sm.OLS(mediator, mediator_exog)
 
     tx_pos = [outcome_exog.columns.tolist().index("treat"),
@@ -122,7 +122,7 @@ def test_framing_example_moderator():
 
     # Just a smoke test
     np.random.seed(4231)
-    med_rslt = med.fit(method='parametric', n_rep=100)
+    med.fit(method='parametric', n_rep=100)
 
 
 @pytest.mark.slow

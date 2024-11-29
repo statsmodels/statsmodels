@@ -750,7 +750,7 @@ class GEE(GLM):
         dep_data_names = None
         if dep_data is not None:
             if isinstance(dep_data, str):
-                dep_data = FormulaManager().get_arrays(dep_data, data, pandas=True)
+                dep_data = FormulaManager().get_matrices(dep_data, data, pandas=True)
                 dep_data_names = dep_data.columns.tolist()
             else:
                 dep_data_names = list(dep_data)

@@ -373,18 +373,18 @@ class ProcessMLE(base.LikelihoodModel):
         if isinstance(groups, str):
             groups = np.asarray(data[groups])
         mgr = FormulaManager()
-        exog_scale = mgr.get_arrays(scale_formula, data)
+        exog_scale = mgr.get_matrices(scale_formula, data)
         scale_model_spec = mgr.spec
         scale_names = list(scale_model_spec.column_names)
         exog_scale = np.asarray(exog_scale)
 
-        exog_smooth = mgr.get_arrays(smooth_formula, data)
+        exog_smooth = mgr.get_matrices(smooth_formula, data)
         smooth_model_spec = mgr.spec
         smooth_names = list(smooth_model_spec.column_names)
         exog_smooth = np.asarray(exog_smooth)
 
         if noise_formula is not None:
-            exog_noise = mgr.get_arrays(noise_formula, data)
+            exog_noise = mgr.get_matrices(noise_formula, data)
             noise_model_spec = mgr.spec
             noise_names = list(noise_model_spec.column_names)
             exog_noise = np.asarray(exog_noise)
@@ -731,8 +731,8 @@ class ProcessMLE(base.LikelihoodModel):
             smo = np.dot(smooth_data, smooth_params)
         else:
             mgr = FormulaManager()
-            sc = mgr.get_arrays(self.data.scale_model_spec, scale_data, pandas=False)
-            sm = mgr.get_arrays(self.data.smooth_model_spec, smooth_data, pandas=False)
+            sc = mgr.get_matrices(self.data.scale_model_spec, scale_data, pandas=False)
+            sm = mgr.get_matrices(self.data.smooth_model_spec, smooth_data, pandas=False)
             sca = np.exp(np.dot(sc, scale_params))
             smo = np.exp(np.dot(sm, smooth_params))
 
@@ -757,7 +757,7 @@ class ProcessMLE(base.LikelihoodModel):
         elif hasattr(self.data, "model_spec"):
             # Run the provided data through the formula if present
             mgr = FormulaManager()
-            exog = mgr.get_arrays(self.data.model_spec, exog)
+            exog = mgr.get_matrices(self.data.model_spec, exog)
 
         if len(params) > exog.shape[1]:
             params = params[0:exog.shape[1]]

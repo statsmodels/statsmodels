@@ -109,7 +109,7 @@ def setup_fun(kernel='gau', bandwidth='bofinger'):
     data = sm.datasets.engel.load_pandas().data
 
     mgr = FormulaManager()
-    y, X = mgr.get_arrays('foodexp ~ income', data)
+    y, X = mgr.get_matrices('foodexp ~ income', data)
     statsm = QuantReg(y, X).fit(vcov='iid', kernel=kernel, bandwidth=bandwidth)
     stata = d[(kernel, bandwidth)]
     return statsm, stata
@@ -119,7 +119,7 @@ def test_fitted_residuals():
     data = sm.datasets.engel.load_pandas().data
 
     mgr = FormulaManager()
-    y, X = mgr.get_arrays('foodexp ~ income', data)
+    y, X = mgr.get_matrices('foodexp ~ income', data)
 
     res = QuantReg(y, X).fit(q=.1)
     # Note: maxabs relative error with fitted is 1.789e-09
@@ -134,7 +134,7 @@ class TestEpanechnikovHsheatherQ75(CheckModelResultsMixin):
     def setup_class(cls):
         data = sm.datasets.engel.load_pandas().data
         mgr = FormulaManager()
-        y, X = mgr.get_arrays('foodexp ~ income', data)
+        y, X = mgr.get_matrices('foodexp ~ income', data)
         cls.res1 = QuantReg(y, X).fit(q=.75, vcov='iid', kernel='epa',
                                       bandwidth='hsheather')
         cls.res2 = epanechnikov_hsheather_q75

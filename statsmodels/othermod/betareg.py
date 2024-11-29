@@ -147,9 +147,9 @@ class BetaModel(GenericLikelihoodModel):
             mgr = FormulaManager()
             if 'subset' in kwargs:
                 d = data.ix[kwargs['subset']]
-                Z = mgr.get_arrays(exog_precision_formula, d, pandas=False)
+                Z = mgr.get_matrices(exog_precision_formula, d, pandas=False)
             else:
-                Z = mgr.get_arrays(exog_precision_formula, data, pandas=False)
+                Z = mgr.get_matrices(exog_precision_formula, data, pandas=False)
             kwargs['exog_precision'] = Z
 
         return super().from_formula(formula, data, *args,

@@ -76,7 +76,7 @@ class TestBetaModel:
 
         model = cls.model = "methylation ~ gender + CpG"
         mgr = FormulaManager()
-        Z = cls.Z = mgr.get_arrays("~ age", methylation, pandas=False)
+        Z = cls.Z = mgr.get_matrices("~ age", methylation, pandas=False)
         mod = BetaModel.from_formula(model, methylation, exog_precision=Z,
                                      link_precision=links.Identity())
         cls.meth_fit = mod.fit()
@@ -343,7 +343,7 @@ class TestBetaIncome():
 
         formula = "I(food/income) ~ income + persons"
         mgr = FormulaManager()
-        exog_prec = mgr.get_arrays("~ persons", income)
+        exog_prec = mgr.get_matrices("~ persons", income)
         mod_income = BetaModel.from_formula(
             formula,
             income,
