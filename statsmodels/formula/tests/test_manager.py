@@ -435,9 +435,5 @@ def test_legacy_orderer(formula):
     _, patsy_rhs = patsy.dmatrices(formula, data, return_type="dataframe")
 
     index = list(patsy_rhs.columns)
-    for i, term in enumerate(index):
-        for letter in ("a", "b", "c"):
-            term = term.replace(f"[{letter}]", f"[T.{letter}]")
-        index[i] = term
     patsy_rhs.columns = index
     assert list(mm[1].columns) == list(patsy_rhs.columns)
