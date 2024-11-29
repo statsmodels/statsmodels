@@ -55,4 +55,5 @@ fi
 
 # Special for formulaic install
 # TODO: Remove after formulaic is standard
+python -m pip install hatchling hatch-vcs
 python -m pip install -r requirements.txt
