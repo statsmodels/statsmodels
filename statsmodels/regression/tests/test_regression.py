@@ -1344,8 +1344,7 @@ def test_formula_missing_cat():
 
     assert_almost_equal(res.params.values, res2.params.values)
     if mgr.engine == "patsy":
-        from patsy import PatsyError
-        error = PatsyError
+        error = mgr.factor_evaluation_error
     else:
         error = ValueError
 

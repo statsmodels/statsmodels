@@ -3,6 +3,7 @@ numpy>=1.22.3,<3  # released March 2022
 scipy>=1.8,!=1.9.2  # released Feb 2022, 1.9.2 blocked due to bug
 pandas>=1.4,!=2.1.0  # released Feb 2022, 2.1.0 blocked due to bug
 patsy>=0.5.6  # released December 2023
-formulaic>=1.0.2  # released June 2024
 packaging>=21.3  # released Nov 2021
-formulaic @ git+https://github.com/bashtage/formulaic@preserve-formula-order
+formulaic @ git+https://github.com/bashtage/formulaic@statsmodels-testing
+# Enable once formulaic 1.1 is out
+# formulaic>=1.1.0  # released December 2024

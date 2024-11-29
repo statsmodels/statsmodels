@@ -24,15 +24,20 @@ def test_dataframe():
     np.testing.assert_equal(cnames, df.columns.tolist())
 
 
-def test_patsy_577():
+def test_formula_engine_use_detection_577():
     X = np.random.random((10, 2))
     df = pandas.DataFrame(X, columns=["var1", "var2"])
-    from patsy import dmatrix
+    from statsmodels.formula._manager import FormulaManager
+    mgr = FormulaManager()
+    if mgr.engine == "patsy":
+        test_func = data._is_using_patsy
+    else:
+        test_func = data._is_using_formulaic
+    endog = mgr.get_arrays("var1 - 1", df)
+    assert test_func(endog, None)
 
-    endog = dmatrix("var1 - 1", df)
-    np.testing.assert_(data._is_using_patsy(endog, None))
-    exog = dmatrix("var2 - 1", df)
-    np.testing.assert_(data._is_using_patsy(endog, exog))
+    exog = mgr.get_arrays("var2 - 1", df)
+    assert test_func(endog, exog)
 
 
 def test_as_array_with_name_series():

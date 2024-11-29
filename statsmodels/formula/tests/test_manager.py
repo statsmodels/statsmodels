@@ -199,7 +199,8 @@ def test_get_empty_eval_patsy(data):
         mgr.get_arrays(fmla, data, eval_env=7)
 
     with pytest.raises(patsy.PatsyError):
-        mgr.get_arrays(fmla, data, eval_env=eval_env)
+        with pytest.warns(FutureWarning, match="EvalEnvironment is deprecate"):
+            mgr.get_arrays(fmla, data, eval_env=eval_env)
 
 
 @require_formulaic

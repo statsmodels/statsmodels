@@ -103,11 +103,10 @@ class ModelData:
     def __setstate__(self, d):
         if "restore_model_spec" in d:
             # NOTE: there may be a more performant way to do this
-            # TODO: patsy migration
-            from patsy import PatsyError
 
             from statsmodels.formula._manager import FormulaManager
             mgr = FormulaManager()
+
 
             exc = []
             try:
@@ -121,7 +120,7 @@ class ModelData:
                         d["formula"], data, eval_env=depth, pandas=True
                     )
                     break
-                except (NameError, PatsyError) as e:
+                except (NameError, mgr.factor_evaluation_error) as e:
                     exc.append(e)  # why do I need a reference from outside except block
                     pass
             else:

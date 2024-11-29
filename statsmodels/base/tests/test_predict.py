@@ -4,12 +4,11 @@ Tests for Results.predict
 from statsmodels.compat.pandas import testing as pdt
 
 import numpy as np
+from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 
-from numpy.testing import assert_allclose, assert_equal
-
-from statsmodels.regression.linear_model import OLS
 from statsmodels.genmod.generalized_linear_model import GLM
+from statsmodels.regression.linear_model import OLS
 
 
 class CheckPredictReturns:
@@ -57,7 +56,7 @@ class CheckPredictReturns:
         assert_equal(pred.index, np.arange(1))
         assert_allclose(pred.values, fittedm, rtol=1e-13)
 
-    def test_nopatsy(self):
+    def test_without_formula(self):
         res = self.res
         data = self.data
         fitted = res.fittedvalues.iloc[1:10:2]

@@ -1,11 +1,13 @@
-import numpy as np
-import statsmodels.api as sm
 import os
-from statsmodels.stats.mediation import Mediation
-import pandas as pd
+
+import numpy as np
 from numpy.testing import assert_allclose
-import patsy
+import pandas as pd
 import pytest
+
+import statsmodels.api as sm
+from statsmodels.formula._manager import FormulaManager
+from statsmodels.stats.mediation import Mediation
 
 # Compare to mediation R package vignette
 df = [['index', 'Estimate', 'Lower CI bound', 'Upper CI bound', 'P-value'],
@@ -57,9 +59,9 @@ def test_framing_example():
     cur_dir = os.path.dirname(os.path.abspath(__file__))
     data = pd.read_csv(os.path.join(cur_dir, 'results', "framing.csv"))
 
+    mgr = FormulaManager()
     outcome = np.asarray(data["cong_mesg"])
-    outcome_exog = patsy.dmatrix("emo + treat + age + educ + gender + income", data,
-                                  return_type='dataframe')
+    outcome_exog = mgr.get_arrays("emo + treat + age + educ + gender + income", data)
     outcome_model = sm.GLM(
         outcome,
         outcome_exog,
@@ -67,8 +69,7 @@ def test_framing_example():
     )
 
     mediator = np.asarray(data["emo"])
-    mediator_exog = patsy.dmatrix("treat + age + educ + gender + income", data,
-                                 return_type='dataframe')
+    mediator_exog = mgr.get_arrays("treat + age + educ + gender + income", data)
     mediator_model = sm.OLS(mediator, mediator_exog)
 
     tx_pos = [outcome_exog.columns.tolist().index("treat"),
@@ -96,9 +97,9 @@ def test_framing_example_moderator():
     cur_dir = os.path.dirname(os.path.abspath(__file__))
     data = pd.read_csv(os.path.join(cur_dir, 'results', "framing.csv"))
 
+    mgr = FormulaManager()
     outcome = np.asarray(data["cong_mesg"])
-    outcome_exog = patsy.dmatrix("emo + treat + age + educ + gender + income", data,
-                                  return_type='dataframe')
+    outcome_exog = mgr.get_arrays("emo + treat + age + educ + gender + income", data)
     outcome_model = sm.GLM(
         outcome,
         outcome_exog,
@@ -106,8 +107,7 @@ def test_framing_example_moderator():
     )
 
     mediator = np.asarray(data["emo"])
-    mediator_exog = patsy.dmatrix("treat + age + educ + gender + income", data,
-                                 return_type='dataframe')
+    mediator_exog = mgr.get_arrays("treat + age + educ + gender + income", data)
     mediator_model = sm.OLS(mediator, mediator_exog)
 
     tx_pos = [outcome_exog.columns.tolist().index("treat"),

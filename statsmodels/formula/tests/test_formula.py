@@ -221,7 +221,7 @@ def test_patsy_lazy_dict():
         assert_equal(len(res2), len(cpunish.load_pandas().data))
 
 
-def test_patsy_missing_data():
+def test_formula_missing_data():
     # Test pandas-style first
     data = cpunish.load_pandas().data
     data.loc[0, "INCOME"] = np.nan
@@ -258,7 +258,8 @@ def test_predict_nondataframe():
 def test_formula_environment():
     df = pd.DataFrame({"x": [1, 2, 3], "y": [2, 4, 6]})
     env = patsy.eval.EvalEnvironment([{"z": [3, 6, 9]}])
-    model = ols("y ~ x + z", eval_env=env, data=df)
+    with pytest.warns(FutureWarning, match="EvalEnvironment is deprecated"):
+        model = ols("y ~ x + z", eval_env=env, data=df)
     assert "z" in model.exog_names
     with pytest.raises(TypeError):
         ols("y ~ x", eval_env="env", data=df)

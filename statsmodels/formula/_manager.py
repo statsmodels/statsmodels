@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections import defaultdict
 import os
 from typing import Any, Literal, Mapping, NamedTuple, Sequence
+import warnings
 
 from formulaic import ModelMatrices
 import numpy as np
@@ -52,6 +53,13 @@ try:
     HAVE_FORMULAIC = True
 except ImportError:
     pass
+
+
+EVAL_ENV_WARNING = """\
+EvalEnvironment is deprecated and support be removed in a future version. You can 
+pass variables using a dict[str, value] where str is the variable name and the 
+value is the array of values.
+"""
 
 
 class _FormulaOption:
@@ -310,6 +318,14 @@ class FormulaManager:
             kwargs = {}
             if na_action:
                 kwargs["NA_action"] = na_action
+            if isinstance(eval_env, Mapping):
+                _eval_env = patsy.eval.EvalEnvironment(
+                    [{key: val} for key, val in eval_env.items()]
+                )
+            else:
+                _eval_env = eval_env
+                if isinstance(eval_env, patsy.eval.EvalEnvironment):
+                    warnings.warn(EVAL_ENV_WARNING, FutureWarning)
             if (
                 isinstance(
                     formula, (patsy.design_info.DesignInfo, patsy.desc.ModelDesc)
@@ -334,8 +350,6 @@ class FormulaManager:
 
         else:  # self._engine == "formulaic":
             import statsmodels.formula
-
-
 
             kwargs = {}
             if pandas:
@@ -365,6 +379,8 @@ class FormulaManager:
                 from patsy.eval import EvalEnvironment
 
                 if isinstance(eval_env, EvalEnvironment):
+                    warnings.warn(EVAL_ENV_WARNING, FutureWarning)
+
                     ns = eval_env._namespaces
                     _eval_env = {}
                     for val in ns:

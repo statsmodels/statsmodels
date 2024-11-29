@@ -2171,7 +2171,7 @@ class TestWtdTweediePower15(CheckWtdDuplicationMixin):
         cls.res2 = GLM(cls.endog_big, cls.exog_big, family=family_link).fit()
 
 
-def test_wtd_patsy_missing():
+def test_wtd_formula_with_missing():
     import pandas as pd
 
     data = cpunish.load()
