@@ -56,8 +56,8 @@ except ImportError:
 
 
 EVAL_ENV_WARNING = """\
-EvalEnvironment is deprecated and support be removed in a future version. You can 
-pass variables using a dict[str, value] where str is the variable name and the 
+EvalEnvironment is deprecated and support be removed in a future version. You can
+pass variables using a dict[str, value] where str is the variable name and the
 value is the array of values.
 """
 
@@ -448,7 +448,8 @@ class FormulaManager:
                     return output.lhs, output.rhs
                 else:
                     raise ValueError(
-                        "The formula has produced matrices that are not currently supported."
+                        "The formula has produced matrices that are not currently "
+                        "supported."
                     )
 
             self._spec = output.model_spec

@@ -50,8 +50,14 @@ FORMULAS = [
     "y ~ a + C(e) + a:C(e) + C(f)  - 1",
     "y ~ a + C(e) + a:C(e) + C(f) + C(f):C(d)  - 1",
     "y ~ a + C(d):a:b + a:b + b + C(d) + C(e) + C(f):C(e)  - 1",
-    "y ~ d:f:c:b + C(f):c:b + a:b + a + C(d):a:b + c:b + b + C(d) + C(e) + C(f):C(e) - 1",
-    "y ~ 1 + C(f):C(d):a +  C(d):a + c + a:b + C(e):b + C(f):a + a + C(d) + b  +C(f):C(d) + C(d):C(e) + C(f)",
+    (
+        "y ~ d:f:c:b + C(f):c:b + a:b + a + C(d):a:b + c:b + "
+        "b + C(d) + C(e) + C(f):C(e) - 1"
+    ),
+    (
+        "y ~ 1 + C(f):C(d):a +  C(d):a + c + a:b + C(e):b + "
+        "C(f):a + a + C(d) + b  +C(f):C(d) + C(d):C(e) + C(f)"
+    ),
 ]
 
 
@@ -432,9 +438,18 @@ def test_legacy_orderer(formula):
             "a": np.random.standard_normal(n),
             "b": np.random.standard_normal(n),
             "c": np.random.standard_normal(n),
-            "d": pd.Series(np.random.choice(["a", "b", "c"], size=n), dtype="category"),
-            "e": pd.Series(np.random.choice(["a", "b", "c"], size=n), dtype="category"),
-            "f": pd.Series(np.random.choice(["a", "b", "c"], size=n), dtype="category"),
+            "d": pd.Series(
+                np.random.choice(["a", "b", "c"], size=n),
+                dtype="category",
+            ),
+            "e": pd.Series(
+                np.random.choice(["a", "b", "c"], size=n),
+                dtype="category",
+            ),
+            "f": pd.Series(
+                np.random.choice(["a", "b", "c"], size=n),
+                dtype="category",
+            ),
         }
     )
     mgr = FormulaManager(engine="formulaic")

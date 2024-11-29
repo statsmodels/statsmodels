@@ -10,7 +10,7 @@ import pytest
 try:
     import matplotlib
 
-    matplotlib.use('agg')
+    matplotlib.use("agg")
     HAVE_MATPLOTLIB = True
 except ImportError:
     HAVE_MATPLOTLIB = False
@@ -33,59 +33,62 @@ except AttributeError:
 
 formula_engine = os.environ.get("SM_DEFAULT_FORMULA_ENGINE", "patsy")
 if formula_engine == "formulaic":
-    logger.critical("TEST CONFIGURATION: Tests running using formulaic as the default formula engine.")
+    logger.critical(
+        "TEST CONFIGURATION: Tests running using formulaic as the default "
+        "formula engine."
+    )
 
     import statsmodels.formula
 
     statsmodels.formula.options.formula_engine = "formulaic"
 
 
-
 def pytest_addoption(parser):
-    parser.addoption("--skip-slow", action="store_true",
-                     help="skip slow tests")
-    parser.addoption("--only-slow", action="store_true",
-                     help="run only slow tests")
-    parser.addoption("--skip-examples", action="store_true",
-                     help="skip tests of examples")
-    parser.addoption("--skip-matplotlib", action="store_true",
-                     help="skip tests that depend on matplotlib")
-    parser.addoption("--skip-smoke", action="store_true",
-                     help="skip smoke tests")
-    parser.addoption("--only-smoke", action="store_true",
-                     help="run only smoke tests")
+    parser.addoption("--skip-slow", action="store_true", help="skip slow tests")
+    parser.addoption("--only-slow", action="store_true", help="run only slow tests")
+    parser.addoption(
+        "--skip-examples", action="store_true", help="skip tests of examples"
+    )
+    parser.addoption(
+        "--skip-matplotlib",
+        action="store_true",
+        help="skip tests that depend on matplotlib",
+    )
+    parser.addoption("--skip-smoke", action="store_true", help="skip smoke tests")
+    parser.addoption("--only-smoke", action="store_true", help="run only smoke tests")
 
 
 def pytest_runtest_setup(item):
-    if 'slow' in item.keywords and item.config.getoption("--skip-slow"):
+    if "slow" in item.keywords and item.config.getoption("--skip-slow"):
         pytest.skip("skipping due to --skip-slow")
 
-    if 'slow' not in item.keywords and item.config.getoption("--only-slow"):
+    if "slow" not in item.keywords and item.config.getoption("--only-slow"):
         pytest.skip("skipping due to --only-slow")
 
-    if 'example' in item.keywords and item.config.getoption("--skip-examples"):
+    if "example" in item.keywords and item.config.getoption("--skip-examples"):
         pytest.skip("skipping due to --skip-examples")
 
-    if 'matplotlib' in item.keywords and \
-            item.config.getoption("--skip-matplotlib"):
+    if "matplotlib" in item.keywords and item.config.getoption("--skip-matplotlib"):
         pytest.skip("skipping due to --skip-matplotlib")
 
-    if 'matplotlib' in item.keywords and not HAVE_MATPLOTLIB:
+    if "matplotlib" in item.keywords and not HAVE_MATPLOTLIB:
         pytest.skip("skipping since matplotlib is not intalled")
 
-    if 'smoke' in item.keywords and item.config.getoption("--skip-smoke"):
+    if "smoke" in item.keywords and item.config.getoption("--skip-smoke"):
         pytest.skip("skipping due to --skip-smoke")
 
-    if 'smoke' not in item.keywords and item.config.getoption('--only-smoke'):
+    if "smoke" not in item.keywords and item.config.getoption("--only-smoke"):
         pytest.skip("skipping due to --only-smoke")
 
 
 def pytest_configure(config):
     try:
         import matplotlib
-        matplotlib.use('agg')
+
+        matplotlib.use("agg")
         try:
             from pandas.plotting import register_matplotlib_converters
+
             register_matplotlib_converters()
         except ImportError:
             pass
@@ -124,9 +127,10 @@ def close_figures():
         import matplotlib.pyplot
 
         def close():
-            matplotlib.pyplot.close('all')
+            matplotlib.pyplot.close("all")
 
     except ImportError:
+
         def close():
             pass
 
@@ -164,15 +168,15 @@ def reset_randomstate():
 def pytest_collection_modifyitems(config, items):
     if PYTHON_IMPL_WASM:
         for item in items:
-            if 'xfail' in item.keywords:
-                mark = item.get_closest_marker('xfail')
+            if "xfail" in item.keywords:
+                mark = item.get_closest_marker("xfail")
                 if mark:
                     # Modify the existing xfail mark if it exists
                     # to set strict=False
                     new_kwargs = dict(mark.kwargs)
-                    new_kwargs['strict'] = False
+                    new_kwargs["strict"] = False
                     new_mark = pytest.mark.xfail(**new_kwargs)
                     item.add_marker(new_mark)
-                    item.keywords['xfail'] = new_mark
+                    item.keywords["xfail"] = new_mark
     else:
         pass

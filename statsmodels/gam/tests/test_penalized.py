@@ -392,7 +392,9 @@ class TestGAMMPG:
 
         x_spline = df_autos[['weight', 'hp']].values
         mgr = FormulaManager()
-        exog = mgr.get_matrices('fuel + drive', data=df_autos, pandas=mgr.engine == "formulaic")
+        exog = mgr.get_matrices(
+            'fuel + drive', data=df_autos, pandas=mgr.engine == "formulaic"
+        )
         cc = CyclicCubicSplines(x_spline, df=[6, 5], constraints='center')
         # TODO alpha needs to be list
         gam_cc = GLMGam(df_autos['city_mpg'], exog=exog, smoother=cc,
@@ -537,7 +539,10 @@ class TestGAMMPGBSPoisson(CheckGAMMixin):
 
         x_spline = df_autos[['weight', 'hp']].values
         mgr = FormulaManager()
-        cls.exog = mgr.get_matrices('fuel + drive', data=df_autos, pandas=mgr.engine == "formulaic")
+        cls.exog = mgr.get_matrices(
+            'fuel + drive',
+            data=df_autos,
+            pandas=mgr.engine == "formulaic")
         bs = BSplines(x_spline, df=[12, 10], degree=[3, 3],
                       variable_names=['weight', 'hp'],
                       constraints='center',
@@ -634,7 +639,9 @@ class TestGAMMPGBSPoissonFormula(TestGAMMPGBSPoisson):
         cls.s_scale = s_scale = np.array([2.443955e-06, 0.007945455])
 
         mgr = FormulaManager()
-        cls.exog = mgr.get_matrices('fuel + drive', data=df_autos, pandas=mgr.engine == "formulaic")
+        cls.exog = mgr.get_matrices(
+            'fuel + drive', data=df_autos, pandas=mgr.engine == "formulaic"
+        )
 
         x_spline = df_autos[['weight', 'hp']].values
         bs = BSplines(x_spline, df=[12, 10], degree=[3, 3],

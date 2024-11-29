@@ -732,7 +732,9 @@ class ProcessMLE(base.LikelihoodModel):
         else:
             mgr = FormulaManager()
             sc = mgr.get_matrices(self.data.scale_model_spec, scale_data, pandas=False)
-            sm = mgr.get_matrices(self.data.smooth_model_spec, smooth_data, pandas=False)
+            sm = mgr.get_matrices(
+                self.data.smooth_model_spec, smooth_data, pandas=False
+            )
             sca = np.exp(np.dot(sc, scale_params))
             smo = np.exp(np.dot(sm, smooth_params))
 

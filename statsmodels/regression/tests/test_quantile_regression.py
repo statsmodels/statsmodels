@@ -6,7 +6,7 @@ import statsmodels.api as sm
 from statsmodels.formula._manager import FormulaManager
 from statsmodels.regression.quantile_regression import QuantReg
 
-from .results.results_quantile_regression import (  # rectangle_chamberlain, rectangle_hsheather, rectangle_bofinger,; triangle_chamberlain, triangle_hsheather, triangle_bofinger,; epanechnikov_chamberlain, epanechnikov_hsheather, epanechnikov_bofinger,
+from .results.results_quantile_regression import (
     Rquantreg,
     biweight_bofinger,
     biweight_chamberlain,

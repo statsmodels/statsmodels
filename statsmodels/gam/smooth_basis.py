@@ -723,7 +723,8 @@ class UnivariateCubicCyclicSplines(UnivariateGamSmoother):
         return d.T.dot(np.linalg.inv(b)).dot(d)
 
     def transform(self, x_new):
-        exog = FormulaManager().get_matrices(self.model_spec, {"x": x_new}, pandas=False)
+        mgr = FormulaManager()
+        exog = mgr.get_matrices(self.model_spec, {"x": x_new}, pandas=False)
         if self.ctransf is not None:
             exog = exog.dot(self.ctransf)
         return exog
