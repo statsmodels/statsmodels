@@ -52,6 +52,7 @@ try:
 
     HAVE_FORMULAIC = True
 except ImportError:
+    # Nothing to do if formulaic is not available
     pass
 
 
@@ -380,9 +381,8 @@ class FormulaManager:
             else:
                 _data = data
 
-            if isinstance(eval_env, (int, Mapping)) or not HAVE_PATSY:
-                _eval_env = eval_env
-            elif HAVE_PATSY:
+            _eval_env = eval_env
+            if HAVE_PATSY:
                 from patsy.eval import EvalEnvironment
 
                 if isinstance(eval_env, EvalEnvironment):
@@ -392,10 +392,6 @@ class FormulaManager:
                     _eval_env = {}
                     for val in ns:
                         _eval_env.update(val)
-                else:
-                    _eval_env = eval_env
-            else:
-                _eval_env = eval_env
             if not isinstance(_eval_env, (int, dict)):
                 raise TypeError("context (eval_env) must be an int or a dict.")
 
