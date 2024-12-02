@@ -25,18 +25,18 @@ def test_dataframe():
 
 
 def test_formula_engine_use_detection_577():
-    X = np.random.random((10, 2))
-    df = pandas.DataFrame(X, columns=["var1", "var2"])
+    x = np.random.random((10, 2))
+    df = pandas.DataFrame(x, columns=["var1", "var2"])
     from statsmodels.formula._manager import FormulaManager
     mgr = FormulaManager()
     if mgr.engine == "patsy":
         test_func = data._is_using_patsy
     else:
         test_func = data._is_using_formulaic
-    endog = mgr.get_matrices("var1 - 1", df)
+    endog = mgr.get_matrices("var1 - 1", df, pandas=False)
     assert test_func(endog, None)
 
-    exog = mgr.get_matrices("var2 - 1", df)
+    exog = mgr.get_matrices("var2 - 1", df, pandas=False)
     assert test_func(endog, exog)
 
 

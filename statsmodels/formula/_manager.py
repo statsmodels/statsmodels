@@ -12,10 +12,10 @@ import pandas as pd
 HAVE_PATSY = False
 HAVE_FORMULAIC = False
 
-DEFAULT_FORMULA_ENGINE = os.environ.get("SM_DEFAULT_FORMULA_ENGINE", None)
+DEFAULT_FORMULA_ENGINE = os.environ.get("SM_FORMULA_ENGINE", None)
 if DEFAULT_FORMULA_ENGINE not in ("formulaic", "patsy", None):
     raise ValueError(
-        f"Invalid value for SM_DEFAULT_FORMULA_ENGINE: {DEFAULT_FORMULA_ENGINE}"
+        f"Invalid value for SM_FORMULA_ENGINE: {DEFAULT_FORMULA_ENGINE}"
     )
 
 try:
@@ -219,6 +219,13 @@ class FormulaManager:
             return formulaic.errors.FactorEvaluationError
 
     @property
+    def formula_materializer_error(self):
+        if self._engine == "patsy":
+            return patsy.PatsyError
+        else:
+            return formulaic.errors.FormulaMaterializerNotFoundError
+
+    @property
     def missing_mask(self):
         return self._missing_mask
 
@@ -242,7 +249,7 @@ class FormulaManager:
             rhs_formula = _formula
             lhs_formula = None
         include_intercept = any(
-            [(term.degree == 0 and str(term) == "1") for term in rhs_formula.root]
+            [(term.degree == 0 and str(term) == "1") for term in rhs_formula]
         )
         parser = formulaic.parser.DefaultFormulaParser(
             feature_flags=feature_flags, include_intercept=include_intercept

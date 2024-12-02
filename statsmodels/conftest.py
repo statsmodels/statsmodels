@@ -31,7 +31,7 @@ try:
 except AttributeError:
     pass
 
-formula_engine = os.environ.get("SM_DEFAULT_FORMULA_ENGINE", "patsy")
+formula_engine = os.environ.get("SM_FORMULA_ENGINE", "patsy")
 if formula_engine == "formulaic":
     logger.critical(
         "TEST CONFIGURATION: Tests running using formulaic as the default "

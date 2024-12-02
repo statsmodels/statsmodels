@@ -251,7 +251,7 @@ def test_predict_nondataframe():
     model = ols("Absorbance ~ BSA", data=df)
     fit = model.fit()
     mgr = FormulaManager()
-    with pytest.raises(mgr.factor_evaluation_error):
+    with pytest.raises(mgr.formula_materializer_error):
         fit.predict([0.25])
 
 
