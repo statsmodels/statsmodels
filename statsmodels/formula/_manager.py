@@ -14,9 +14,7 @@ HAVE_FORMULAIC = False
 
 DEFAULT_FORMULA_ENGINE = os.environ.get("SM_FORMULA_ENGINE", None)
 if DEFAULT_FORMULA_ENGINE not in ("formulaic", "patsy", None):
-    raise ValueError(
-        f"Invalid value for SM_FORMULA_ENGINE: {DEFAULT_FORMULA_ENGINE}"
-    )
+    raise ValueError(f"Invalid value for SM_FORMULA_ENGINE: {DEFAULT_FORMULA_ENGINE}")
 
 try:
     import patsy
@@ -238,7 +236,7 @@ class FormulaManager:
         if isinstance(context, int):
             context += 1
         mm = formulaic.model_matrix(formula, data, context=context)
-        feature_flags = formulaic.parser.DefaultParserFeatureFlag.TWOSIDED
+        feature_flags = formulaic.parser.DefaultFormulaParser.FeatureFlags.TWOSIDED
         parser = formulaic.parser.DefaultFormulaParser(feature_flags=feature_flags)
         _formula = formulaic.Formula(formula, _parser=parser, _ordering="none")
         if isinstance(mm, formulaic.ModelMatrices):
@@ -368,15 +366,21 @@ class FormulaManager:
             if na_action:
                 kwargs["na_action"] = na_action
 
+            if not isinstance(data, pd.DataFrame):
+                warnings.warn(
+                    f"Using {type(data)} with formula is deprecated and will "
+                    f"be removed in a future version of statsmodels. DataFrames are "
+                    f"the only supported data structure.",
+                    DeprecationWarning,
+                )
             if isinstance(data, (dict, Mapping)):
-                # Work around for no dict support in formulaic
+                # Require a DataFrame to ensure that we can handle dropped
                 if all(np.isscalar(v) for v in data.values()):
                     # Handle dict of scalars
                     _data = pd.DataFrame(data, index=[0])
                 else:
                     _data = pd.DataFrame(data)
             elif isinstance(data, np.rec.recarray):
-                # workaround no recarray support in formulaic
                 _data = pd.DataFrame.from_records(data)
             else:
                 _data = data
@@ -401,7 +405,9 @@ class FormulaManager:
             if _ordering == "legacy":
                 _formula = self._legacy_orderer(formula, _data, context=_eval_env)
             else:
-                feature_flags = formulaic.parser.DefaultParserFeatureFlag.TWOSIDED
+                feature_flags = (
+                    formulaic.parser.DefaultFormulaParser.FeatureFlags.TWOSIDED
+                )
                 parser = formulaic.parser.DefaultFormulaParser(
                     feature_flags=feature_flags
                 )
@@ -441,7 +447,7 @@ class FormulaManager:
                     if hasattr(output, key):
                         df = getattr(output, key)
                         df.index = replacement_index
-            if isinstance(output, formulaic.ModelMatrices):
+            if not isinstance(output, formulaic.ModelMatrix):
                 if (
                     len(output) == 2
                     and hasattr(output, "lhs")
@@ -717,7 +723,7 @@ class FormulaManager:
                     break
 
             return np.asarray(
-                model_spec.encoder_state[factor][1]["contrasts"].get_coding_matrix(
+                model_spec.factor_contrasts[factor].get_coding_matrix(
                     reduced_rank=reduced_rank
                 )
             )
