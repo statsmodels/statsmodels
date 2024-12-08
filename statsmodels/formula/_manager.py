@@ -61,6 +61,16 @@ value is the array of values.
 """
 
 
+def _check_data(data):
+    if not isinstance(data, pd.DataFrame):
+        warnings.warn(
+            f"Using {type(data).__name__} data structures with formula is "
+            "deprecated and will be removed in a future version of statsmodels. "
+            "DataFrames are the only supported data structure.",
+            DeprecationWarning,
+        )
+
+
 class _FormulaOption:
     def __init__(self, default_engine: Literal["patsy", "formulaic"] | None = None):
         if default_engine is None:
@@ -317,6 +327,7 @@ class FormulaManager:
         -------
 
         """
+        _check_data(data)
         if isinstance(eval_env, (int, np.integer)):
             eval_env = int(eval_env) + 1
         if self._engine == "patsy":
@@ -365,14 +376,6 @@ class FormulaManager:
 
             if na_action:
                 kwargs["na_action"] = na_action
-
-            if not isinstance(data, pd.DataFrame):
-                warnings.warn(
-                    f"Using {type(data)} with formula is deprecated and will "
-                    f"be removed in a future version of statsmodels. DataFrames are "
-                    f"the only supported data structure.",
-                    DeprecationWarning,
-                )
             if isinstance(data, (dict, Mapping)):
                 # Require a DataFrame to ensure that we can handle dropped
                 if all(np.isscalar(v) for v in data.values()):
@@ -712,6 +715,23 @@ class FormulaManager:
             return tuple(model_spec.encoder_state[factor][1]["categories"])
 
     def get_contrast_matrix(self, term, factor, model_spec):
+        """
+        Get the contrast matrix for a term and factor.
+
+        Parameters
+        ----------
+        term : Term
+            Either a formulaic Term or a patsy Term.
+        factor : EvalFactor or Factor
+            Either a formulaic Factor or a patsy EvalFactor
+        model_spec : engine-specific model specification
+            Either a formulaic ModelSpec or a patsy DesignInfo.
+
+        Returns
+        -------
+        ndarray
+            The contract matrix to use for hypothesis testing.
+        """
         if self._engine == "patsy":
             return model_spec.term_codings[term][0].contrast_matrices[factor].matrix
         else:

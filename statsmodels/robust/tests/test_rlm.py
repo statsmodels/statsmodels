@@ -5,6 +5,7 @@ import warnings
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal
+import pandas as pd
 import pytest
 from scipy import stats
 
@@ -310,7 +311,7 @@ def test_missing():
     # see GH#2083
     import statsmodels.formula.api as smf
 
-    d = {'Foo': [1, 2, 10, 149], 'Bar': [1, 2, 3, np.nan]}
+    d = pd.DataFrame({'Foo': [1, 2, 10, 149], 'Bar': [1, 2, 3, np.nan]})
     smf.rlm('Foo ~ Bar', data=d)
 
 

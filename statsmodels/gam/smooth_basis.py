@@ -647,7 +647,7 @@ class UnivariateCubicCyclicSplines(UnivariateGamSmoother):
         mgr = FormulaManager()
         basis = mgr.get_matrices(
             "cc(x, df=" + str(self.df) + ") - 1",
-            {"x": self.x},
+            pd.DataFrame({"x": self.x}),
             pandas=False,
         )
         self.model_spec = mgr.spec
@@ -724,7 +724,9 @@ class UnivariateCubicCyclicSplines(UnivariateGamSmoother):
 
     def transform(self, x_new):
         mgr = FormulaManager()
-        exog = mgr.get_matrices(self.model_spec, {"x": x_new}, pandas=False)
+        exog = mgr.get_matrices(
+            self.model_spec,pd.DataFrame({"x": x_new}), pandas=False
+        )
         if self.ctransf is not None:
             exog = exog.dot(self.ctransf)
         return exog

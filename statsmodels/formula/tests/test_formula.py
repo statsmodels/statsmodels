@@ -66,7 +66,8 @@ class TestFormulaDict(CheckFormulaOLS):
     @classmethod
     def setup_class(cls):
         data = {k: v.tolist() for k, v in load_pandas().data.items()}
-        cls.model = ols(longley_formula, data)
+        with pytest.warns(DeprecationWarning, match="Using"):
+            cls.model = ols(longley_formula, data)
         super().setup_class()
 
 
@@ -181,7 +182,8 @@ def test_formula_predict_series():
     expected = pd.Series([1.0, 2.0, 3.0], index=[1, 2, 3])
     assert_series_equal(result, expected)
 
-    result = results.predict({"x": [1, 2, 3]})
+    with pytest.warns(DeprecationWarning, match="Using"):
+        result = results.predict({"x": [1, 2, 3]})
     expected = pd.Series([1.0, 2.0, 3.0], index=[0, 1, 2])
     assert_series_equal(result, expected, check_index_type=False)
 
