@@ -79,13 +79,13 @@ if __name__ == '__main__':
     #assert_allclose(x2, x, rtol=1e-14)
 
 
-    from patsy import DesignInfo
+    from statsmodels.formula._manager import FormulaManager
 
+    mgr = FormulaManager()
     names = 'a b c d'.split()
-    LC = DesignInfo(names).linear_constraint('a + b = 0')
-    LC = DesignInfo(names).linear_constraint(['a + b = 0', 'a + 2*c = 1', 'b-a', 'c-a', 'd-a'])
-    #LC = DesignInfo(self.model.exog_names).linear_constraint(r_matrix)
-    r_matrix, q_matrix = LC.coefs, LC.constants
+    lc = mgr.get_linear_constraints('a + b = 0', names)
+    lc = mgr.get_linear_constraints(['a + b = 0', 'a + 2*c = 1', 'b-a', 'c-a', 'd-a'], names)
+    r_matrix, q_matrix = lc.constraint_matrix, lc.constraint_values
 
     np.random.seed(123)
     nobs = 20

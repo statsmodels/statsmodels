@@ -5,14 +5,13 @@ Created on Sun Jun 30 20:25:22 2013
 Author: Josef Perktold
 """
 
-import pytest
 import numpy as np
 from numpy.testing import assert_allclose
+import pytest
 
-from statsmodels.tools.tools import add_constant
-from statsmodels.tools.testing import Holder
 from statsmodels.miscmodels.tmodel import TLinearModel
-
+from statsmodels.tools.testing import Holder
+from statsmodels.tools.tools import add_constant
 
 mm = Holder()
 mm.date_label = ["Apr.1982",  "Apr.1983", "Apr.1984", "Apr.1985", "Apr.1986",
@@ -147,8 +146,10 @@ class TestTModel(CheckTLinearModelMixin):
         exog = add_constant(mm.CRSP)
         mod = TLinearModel(endog, exog)
         res = mod.fit(method='bfgs', disp=False)
-        modf = TLinearModel.from_formula("price ~ CRSP",
-                                data={"price":mm.m_marietta, "CRSP":mm.CRSP})
+        with pytest.warns(DeprecationWarning, match="Using"):
+            modf = TLinearModel.from_formula(
+                "price ~ CRSP", data={"price":mm.m_marietta, "CRSP":mm.CRSP}
+            )
         resf = modf.fit(method='bfgs', disp=False)
         from .results_tmodel import res_t_dfest as res2
         cls.res2 = res2
@@ -165,9 +166,10 @@ class TestTModelFixed:
         exog = add_constant(mm.CRSP)
         mod = TLinearModel(endog, exog, fix_df=3)
         res = mod.fit(method='bfgs', disp=False)
-        modf = TLinearModel.from_formula("price ~ CRSP",
-                                data={"price":mm.m_marietta, "CRSP":mm.CRSP},
-                                fix_df=3)
+        with pytest.warns(DeprecationWarning, match="Using"):
+            modf = TLinearModel.from_formula("price ~ CRSP",
+                                    data={"price":mm.m_marietta, "CRSP":mm.CRSP},
+                                    fix_df=3)
         resf = modf.fit(method='bfgs', disp=False)
         #TODO: no reference results yet
         #from results_tmodel import res_t_dfest as res2

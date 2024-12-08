@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from statsmodels.compat.python import Literal, lrange
+from statsmodels.compat.python import lrange
 
+from typing import Literal
 import warnings
 
 import numpy as np

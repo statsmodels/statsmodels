@@ -12,17 +12,18 @@ measures occur at arbitrary real-valued time points.
 The mean structure is specified as a linear model.  The covariance
 parameters depend on covariates via a link function.
 """
+import collections
+import warnings
 
 import numpy as np
 import pandas as pd
-import patsy
-import statsmodels.base.model as base
-from statsmodels.regression.linear_model import OLS
-import collections
 from scipy.optimize import minimize
+
+import statsmodels.base.model as base
+from statsmodels.formula._manager import FormulaManager
 from statsmodels.iolib import summary2
+from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.numdiff import approx_fprime
-import warnings
 
 
 class ProcessCovariance:
@@ -371,24 +372,24 @@ class ProcessMLE(base.LikelihoodModel):
 
         if isinstance(groups, str):
             groups = np.asarray(data[groups])
-
-        exog_scale = patsy.dmatrix(scale_formula, data)
-        scale_design_info = exog_scale.design_info
-        scale_names = scale_design_info.column_names
+        mgr = FormulaManager()
+        exog_scale = mgr.get_matrices(scale_formula, data)
+        scale_model_spec = mgr.spec
+        scale_names = list(scale_model_spec.column_names)
         exog_scale = np.asarray(exog_scale)
 
-        exog_smooth = patsy.dmatrix(smooth_formula, data)
-        smooth_design_info = exog_smooth.design_info
-        smooth_names = smooth_design_info.column_names
+        exog_smooth = mgr.get_matrices(smooth_formula, data)
+        smooth_model_spec = mgr.spec
+        smooth_names = list(smooth_model_spec.column_names)
         exog_smooth = np.asarray(exog_smooth)
 
         if noise_formula is not None:
-            exog_noise = patsy.dmatrix(noise_formula, data)
-            noise_design_info = exog_noise.design_info
-            noise_names = noise_design_info.column_names
+            exog_noise = mgr.get_matrices(noise_formula, data)
+            noise_model_spec = mgr.spec
+            noise_names = list(noise_model_spec.column_names)
             exog_noise = np.asarray(exog_noise)
         else:
-            exog_noise, noise_design_info, noise_names, exog_noise =\
+            exog_noise, noise_model_spec, noise_names, exog_noise =\
                 None, None, [], None
 
         mod = super().from_formula(
@@ -401,11 +402,11 @@ class ProcessMLE(base.LikelihoodModel):
             time=time,
             groups=groups)
 
-        mod.data.scale_design_info = scale_design_info
-        mod.data.smooth_design_info = smooth_design_info
+        mod.data.scale_model_spec = scale_model_spec
+        mod.data.smooth_model_spec = smooth_model_spec
 
         if mod._has_noise:
-            mod.data.noise_design_info = noise_design_info
+            mod.data.noise_model_spec = noise_model_spec
 
         mod.data.param_names = (mod.exog_names + scale_names +
                                 smooth_names + noise_names)
@@ -725,12 +726,15 @@ class ProcessMLE(base.LikelihoodModel):
         the white noise variance.
         """
 
-        if not hasattr(self.data, "scale_design_info"):
+        if not hasattr(self.data, "scale_model_spec"):
             sca = np.dot(scale_data, scale_params)
             smo = np.dot(smooth_data, smooth_params)
         else:
-            sc = patsy.dmatrix(self.data.scale_design_info, scale_data)
-            sm = patsy.dmatrix(self.data.smooth_design_info, smooth_data)
+            mgr = FormulaManager()
+            sc = mgr.get_matrices(self.data.scale_model_spec, scale_data, pandas=False)
+            sm = mgr.get_matrices(
+                self.data.smooth_model_spec, smooth_data, pandas=False
+            )
             sca = np.exp(np.dot(sc, scale_params))
             smo = np.exp(np.dot(sm, smooth_params))
 
@@ -752,9 +756,10 @@ class ProcessMLE(base.LikelihoodModel):
 
         if exog is None:
             exog = self.exog
-        elif hasattr(self.data, "design_info"):
+        elif hasattr(self.data, "model_spec"):
             # Run the provided data through the formula if present
-            exog = patsy.dmatrix(self.data.design_info, exog)
+            mgr = FormulaManager()
+            exog = mgr.get_matrices(self.data.model_spec, exog)
 
         if len(params) > exog.shape[1]:
             params = params[0:exog.shape[1]]

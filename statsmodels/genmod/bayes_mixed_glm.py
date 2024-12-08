@@ -46,15 +46,17 @@ within and between values of the `ident` array).  The model
 :math:`p(y | vc, fep)` depends on the specific GLM being fit.
 """
 
-import numpy as np
-from scipy.optimize import minimize
-from scipy import sparse
-import statsmodels.base.model as base
-from statsmodels.iolib import summary2
-from statsmodels.genmod import families
-import pandas as pd
 import warnings
-import patsy
+
+import numpy as np
+import pandas as pd
+from scipy import sparse
+from scipy.optimize import minimize
+
+import statsmodels.base.model as base
+from statsmodels.formula._manager import FormulaManager
+from statsmodels.genmod import families
+from statsmodels.iolib import summary2
 
 # Gauss-Legendre weights
 glw = [
@@ -441,7 +443,8 @@ class _BayesMixedGLM(base.Model):
         vcp_names = []
         j = 0
         for na, fml in vc_formulas.items():
-            mat = patsy.dmatrix(fml, data, return_type='dataframe')
+            mgr = FormulaManager()
+            mat = mgr.get_matrices(fml, data, pandas=True)
             exog_vc.append(mat)
             vcp_names.append(na)
             ident.append(j * np.ones(mat.shape[1], dtype=np.int_))

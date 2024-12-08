@@ -289,7 +289,7 @@ class TestPickleFormula2(RemoveDataPickle):
         cls.data = pd.DataFrame(data, columns=["Y", "A", "B", "C"])
         cls.xf = pd.DataFrame(0.25 * np.ones((2, 3)),
                               columns=cls.data.columns[1:])
-        cls.reduction_factor = 0.5
+        cls.reduction_factor = 0.666
 
     def setup_method(self):
         self.results = sm.OLS.from_formula("Y ~ A + B + C",

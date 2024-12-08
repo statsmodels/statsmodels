@@ -5,19 +5,23 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 
+from statsmodels.compat.pandas import Appender
+
 import numpy as np
 import pandas as pd
 
-from statsmodels.compat.pandas import Appender
-
-from statsmodels.tools.data import _is_using_pandas
-from statsmodels.tsa.statespace.mlemodel import (
-    MLEModel, MLEResults, MLEResultsWrapper, PredictionResults,
-    PredictionResultsWrapper)
-from statsmodels.tsa.statespace.tools import concat
-from statsmodels.tools.tools import Bunch
-from statsmodels.tools.decorators import cache_readonly
 import statsmodels.base.wrapper as wrap
+from statsmodels.tools.data import _is_using_pandas
+from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools.tools import Bunch
+from statsmodels.tsa.statespace.mlemodel import (
+    MLEModel,
+    MLEResults,
+    MLEResultsWrapper,
+    PredictionResults,
+    PredictionResultsWrapper,
+)
+from statsmodels.tsa.statespace.tools import concat
 
 # Columns are alpha = 0.1, 0.05, 0.025, 0.01, 0.005
 _cusum_squares_scalars = np.array([
@@ -83,12 +87,12 @@ class RecursiveLS(MLEModel):
         self.k_constraints = 0
         self._r_matrix = self._q_matrix = None
         if constraints is not None:
-            from patsy import DesignInfo
             from statsmodels.base.data import handle_data
+            from statsmodels.formula._manager import FormulaManager
             data = handle_data(endog, exog, **kwargs)
             names = data.param_names
-            LC = DesignInfo(names).linear_constraint(constraints)
-            self._r_matrix, self._q_matrix = LC.coefs, LC.constants
+            lc = FormulaManager().get_linear_constraints(constraints, names)
+            self._r_matrix, self._q_matrix = lc.constraint_matrix, lc.constraint_values
             self.k_constraints = self._r_matrix.shape[0]
 
             nobs = len(endog)
@@ -107,7 +111,7 @@ class RecursiveLS(MLEModel):
         kwargs.setdefault('initialization', 'diffuse')
 
         # Remove some formula-specific kwargs
-        formula_kwargs = ['missing', 'missing_idx', 'formula', 'design_info']
+        formula_kwargs = ['missing', 'missing_idx', 'formula', 'model_spec']
         for name in formula_kwargs:
             if name in kwargs:
                 del kwargs[name]
@@ -588,6 +592,7 @@ class RecursiveLSResults(MLEResults):
 
         # Create the plot
         from scipy.stats import norm
+
         from statsmodels.graphics.utils import _import_mpl, create_mpl_fig
         plt = _import_mpl()
         fig = create_mpl_fig(fig, figsize)

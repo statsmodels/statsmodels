@@ -23,13 +23,15 @@ from urllib.request import urlopen
 
 import numpy as np
 from numpy.testing import assert_almost_equal
+import pandas
 from scipy.special import digamma
 from scipy.stats import nbinom
-import pandas
-import patsy
 
-from statsmodels.base.model import GenericLikelihoodModel
-from statsmodels.base.model import GenericLikelihoodModelResults
+from statsmodels.base.model import (
+    GenericLikelihoodModel,
+    GenericLikelihoodModelResults,
+)
+from statsmodels.formula._manager import FormulaManager
 
 
 #### Negative Binomial Log-likelihoods ####
@@ -234,7 +236,6 @@ def _score_nbp(y, X, beta, thet, Q):
     lamb = np.exp(np.dot(X, beta))
     g = thet * lamb**Q
     w = g / (g + lamb)
-    r = thet / (thet+lamb)
     A = digamma(y+g) - digamma(g) + np.log(w)
     B = g*(1-w) - y*w
     dl = (A+B) * Q/lamb - B * 1/lamb
@@ -293,15 +294,23 @@ Number of Fisher Scoring iterations: 1
 '''
 
 def test_nb2():
-    y, X = patsy.dmatrices('los ~ C(type) + hmo + white', medpar)
-    y = np.array(y)[:,0]
-    nb2 = NBin(y,X,'nb2').fit(maxiter=10000, maxfun=5000)
-    assert_almost_equal(nb2.params,
-                        [2.31027893349935, 0.221248978197356, 0.706158824346228,
-                         -0.067955221930748, -0.129065442248951, 0.4457567],
-                        decimal=2)
+    y, X = FormulaManager().get_matrices("los ~ C(type) + hmo + white", medpar)
+    y = np.array(y)[:, 0]
+    nb2 = NBin(y, X, "nb2").fit(maxiter=10000, maxfun=5000)
+    assert_almost_equal(
+        nb2.params,
+        [
+            2.31027893349935,
+            0.221248978197356,
+            0.706158824346228,
+            -0.067955221930748,
+            -0.129065442248951,
+            0.4457567,
+        ],
+        decimal=2,
+    )
 
-# NB-1
+    # NB-1
 '''
 # R v2.15.1
 # COUNT v1.2.3

@@ -2,18 +2,18 @@
 
 author: Yichuan Liu
 """
-import numpy as np
-from numpy.linalg import eigvals, inv, solve, matrix_rank, pinv, svd
-from scipy import stats
-import pandas as pd
-from patsy import DesignInfo
-
 from statsmodels.compat.pandas import Substitution
-from statsmodels.base.model import Model, LikelihoodModelResults
-import statsmodels.base.wrapper as wrap
-from statsmodels.regression.linear_model import RegressionResultsWrapper
 
+import numpy as np
+from numpy.linalg import eigvals, inv, matrix_rank, pinv, solve, svd
+import pandas as pd
+from scipy import stats
+
+from statsmodels.base.model import LikelihoodModelResults, Model
+import statsmodels.base.wrapper as wrap
+from statsmodels.formula._manager import FormulaManager
 from statsmodels.iolib import summary2
+from statsmodels.regression.linear_model import RegressionResultsWrapper
 from statsmodels.tools.decorators import cache_readonly
 
 __docformat__ = 'restructuredtext en'
@@ -319,8 +319,9 @@ def _multivariate_test(hypotheses, exog_names, endog_names, fn):
         else:
             raise ValueError('hypotheses must be a tuple of length 2, 3 or 4.'
                              ' len(hypotheses)=%d' % len(hypo))
+        mgr = FormulaManager()
         if any(isinstance(j, str) for j in L):
-            L = DesignInfo(exog_names).linear_constraint(L).coefs
+            L = mgr.get_linear_constraints(L, variable_names=exog_names).constraint_matrix
         else:
             if not isinstance(L, np.ndarray) or len(L.shape) != 2:
                 raise ValueError('Contrast matrix L must be a 2-d array!')
@@ -331,7 +332,7 @@ def _multivariate_test(hypotheses, exog_names, endog_names, fn):
         if M is None:
             M = np.eye(k_yvar)
         elif any(isinstance(j, str) for j in M):
-            M = DesignInfo(endog_names).linear_constraint(M).coefs.T
+            M = mgr.get_linear_constraints(M, variable_names=endog_names).constraint_matrix.T
         else:
             if M is not None:
                 if not isinstance(M, np.ndarray) or len(M.shape) != 2:
@@ -419,10 +420,10 @@ class _MultivariateOLSResults(LikelihoodModelResults):
     """
     def __init__(self, fitted_mv_ols):
         if (hasattr(fitted_mv_ols, 'data') and
-                hasattr(fitted_mv_ols.data, 'design_info')):
-            self.design_info = fitted_mv_ols.data.design_info
+                hasattr(fitted_mv_ols.data, 'model_spec')):
+            self.model_spec = fitted_mv_ols.data.model_spec
         else:
-            self.design_info = None
+            self.model_spec = None
         self.exog_names = fitted_mv_ols.exog_names
         self.endog_names = fitted_mv_ols.endog_names
         self._fittedmod = fitted_mv_ols._fittedmod
@@ -459,16 +460,20 @@ class _MultivariateOLSResults(LikelihoodModelResults):
         linear model y = x * params, `L` is the contrast matrix, `M` is the
         dependent variable transform matrix and C is the constant matrix.
         """
+        mgr = FormulaManager()
         k_xvar = len(self.exog_names)
         if hypotheses is None:
-            if self.design_info is not None:
-                terms = self.design_info.term_name_slices
+            if self.model_spec is not None:
+                terms = mgr.get_term_name_slices(self.model_spec)
                 hypotheses = []
                 for key in terms:
-                    if skip_intercept_test and key == 'Intercept':
+                    if skip_intercept_test and (key == 'Intercept' or key == mgr.intercept_term):
                         continue
                     L_contrast = np.eye(k_xvar)[terms[key], :]
-                    hypotheses.append([key, L_contrast, None])
+                    test_name = str(key)
+                    if key == mgr.intercept_term:
+                        test_name = 'Intercept'
+                    hypotheses.append([test_name, L_contrast, None])
             else:
                 hypotheses = []
                 for i in range(k_xvar):
@@ -614,18 +619,22 @@ class MultivariateLSResults(LikelihoodModelResults):
         """
         k_xvar = len(self.model.exog_names)
         if hypotheses is None:
-            if self.model.data.design_info is not None:
-                terms = self.model.data.design_info.term_name_slices
+            if self.model.data.model_spec is not None:
+                mgr = FormulaManager()
+                terms = mgr.get_term_name_slices(self.model.data.model_spec)
                 hypotheses = []
                 for key in terms:
-                    if skip_intercept_test and key == 'Intercept':
+                    if skip_intercept_test and (key == 'Intercept' or key == mgr.intercept_term):
                         continue
                     L_contrast = np.eye(k_xvar)[terms[key], :]
-                    hypotheses.append([key, L_contrast, None])
+                    test_name = str(key)
+                    if key == mgr.intercept_term:
+                        test_name = 'Intercept'
+                    hypotheses.append([test_name, L_contrast, None])
             else:
                 hypotheses = []
                 for i in range(k_xvar):
-                    name = 'x%d' % (i)
+                    name = f'x{i:d}'
                     L = np.zeros([1, k_xvar])
                     L[0, i] = 1
                     hypotheses.append([name, L, None])

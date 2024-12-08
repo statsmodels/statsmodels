@@ -2,13 +2,19 @@
 
 author: Yichuan Liu
 """
+from statsmodels.compat.pandas import Substitution
+
 import numpy as np
 
-from statsmodels.compat.pandas import Substitution
 from statsmodels.base.model import Model
-from .multivariate_ols import MultivariateTestResults
-from .multivariate_ols import _multivariate_ols_fit
-from .multivariate_ols import _multivariate_ols_test, _hypotheses_doc
+from statsmodels.formula._manager import FormulaManager
+
+from .multivariate_ols import (
+    MultivariateTestResults,
+    _hypotheses_doc,
+    _multivariate_ols_fit,
+    _multivariate_ols_test,
+)
 
 __docformat__ = 'restructuredtext en'
 
@@ -104,14 +110,21 @@ class MANOVA(Model):
         """
         if hypotheses is None:
             if (hasattr(self, 'data') and self.data is not None and
-                        hasattr(self.data, 'design_info')):
-                terms = self.data.design_info.term_name_slices
+                        hasattr(self.data, 'model_spec')):
+                # TODO: patsy migration
+
+                mgr = FormulaManager()
+                terms = mgr.get_term_name_slices(self.data.model_spec)
                 hypotheses = []
+
                 for key in terms:
-                    if skip_intercept_test and key == 'Intercept':
+                    if skip_intercept_test and (key == 'Intercept' or key == mgr.intercept_term):
                         continue
                     L_contrast = np.eye(self.exog.shape[1])[terms[key], :]
-                    hypotheses.append([key, L_contrast, None])
+                    test_name = str(key)
+                    if key == mgr.intercept_term:
+                        test_name = 'Intercept'
+                    hypotheses.append([test_name, L_contrast, None])
             else:
                 hypotheses = []
                 for i in range(self.exog.shape[1]):
