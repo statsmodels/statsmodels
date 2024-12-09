@@ -788,7 +788,11 @@ class Autoregressive(CovStruct):
         grid = bool_like(grid, "grid", optional=True)
         # The function for determining distances based on time
         if dist_func is None:
-            self.dist_func = lambda x, y: np.abs(x - y).sum()
+
+            def _dist_func(x, y):
+                return np.abs(x - y).sum()
+
+            self.dist_func = _dist_func
         else:
             self.dist_func = dist_func
 
