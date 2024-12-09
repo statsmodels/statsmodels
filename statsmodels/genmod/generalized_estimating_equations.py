@@ -1372,7 +1372,7 @@ class GEE(GLM):
 
         return GEEResultsWrapper(results)
 
-    def _update_regularized(self, params, pen_wt, scad_param, eps):
+    def _update_regularized(self, params, pen_wt, gamma, method, eps):
 
         sn, hm = 0, 0
 
@@ -1393,12 +1393,21 @@ class GEE(GLM):
         # Wang et al. divide sn here by num_group, but that
         # seems to be incorrect
 
+        # MCP ref: Zhang 2010a, DOI: 10.1214/09-AOS729
+
         ap = np.abs(params)
-        clipped = np.clip(scad_param * pen_wt - ap, 0, np.inf)
-        en = pen_wt * clipped * (ap > pen_wt)
-        en /= (scad_param - 1) * pen_wt
-        en += pen_wt * (ap <= pen_wt)
-        en /= eps + ap
+        clipped = np.clip(gamma * pen_wt - ap, 0, np.inf) 
+        if method == 'scad':
+            en = pen_wt * clipped * (ap > pen_wt) 
+            en /= (gamma - 1) * pen_wt 
+            en += pen_wt * (ap <= pen_wt)
+        elif method == 'mcp':
+            sign = np.sign(params) 
+            en = sign*(pen_wt - (clipped/gamma)) * (ap <= pen_wt)
+        else:
+            raise ValueError("method must be 'scad' or 'mcp' or None")
+        
+        en /= eps + ap # Penalty Normalization
 
         hm.flat[::hm.shape[0] + 1] += self.num_group * en
         sn -= self.num_group * en * params
@@ -1432,7 +1441,7 @@ class GEE(GLM):
 
         return ma
 
-    def fit_regularized(self, pen_wt, scad_param=3.7, maxiter=100,
+    def fit_regularized(self, pen_wt, gamma=3.7, method='scad', maxiter=100,
                         ddof_scale=None, update_assoc=5,
                         ctol=1e-5, ztol=1e-3, eps=1e-6, scale=None):
         """
@@ -1442,9 +1451,11 @@ class GEE(GLM):
         ----------
         pen_wt : float
             The penalty weight (a non-negative scalar).
-        scad_param : float
-            Non-negative scalar determining the shape of the Scad
-            penalty.
+        gamma : float
+            Non-negative scalar determining the shape of the SCAD/MCP
+            penalty. If SCAD is used, gamma will be set to 3.7.
+        method : string
+            The penalty method to use.  Either 'scad' or 'mcp'.
         maxiter : int
             The maximum number of iterations.
         ddof_scale : int
@@ -1513,7 +1524,7 @@ class GEE(GLM):
         for itr in range(maxiter):
 
             update, hm = self._update_regularized(
-                              mean_params, pen_wt, scad_param, eps)
+                              mean_params, pen_wt, gamma, method, eps)
             if update is None:
                 msg = "Singular matrix encountered in regularized GEE update"
                 warnings.warn(msg, ConvergenceWarning)
