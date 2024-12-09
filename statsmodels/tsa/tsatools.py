@@ -126,7 +126,7 @@ def add_trend(x, trend="c", prepend=False, has_constant="skip"):
             def safe_is_const(s):
                 try:
                     return np.ptp(s) == 0.0 and np.any(s != 0.0)
-                except:
+                except Exception:
                     return False
 
             col_const = x.apply(safe_is_const, 0)
