@@ -7,8 +7,8 @@ License: BSD-3
 """
 
 import numpy as np
-from scipy import stats
 import pandas as pd
+from scipy import stats
 
 
 # this is similar to ContrastResults after t_test, partially copied, adjusted
@@ -382,10 +382,11 @@ def _get_exog_predict(self, exog=None, transform=True, row_labels=None):
 
     # prepare exog and row_labels, based on base Results.predict
     if transform and hasattr(self.model, 'formula') and exog is not None:
-        from patsy import dmatrix
+        from statsmodels.formula._manager import FormulaManager
+        mgr = FormulaManager()
         if isinstance(exog, pd.Series):
             exog = pd.DataFrame(exog)
-        exog = dmatrix(self.model.data.design_info, exog)
+        exog = mgr.get_matrices(self.model.data.model_spec, exog)
 
     if exog is not None:
         if row_labels is None:
@@ -760,7 +761,7 @@ def get_prediction(self, exog=None, transform=True, which="mean",
             pred_kwds=pred_kwds,
             )
 
-    elif (which == "mean")and (use_endpoint is True) and (average is False):
+    elif (which == "mean") and (use_endpoint is True) and (average is False):
         # endpoint transformation
         k1 = self.model.exog.shape[1]
         if len(self.params > k1):

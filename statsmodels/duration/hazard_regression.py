@@ -1235,7 +1235,7 @@ class PHReg(model.LikelihoodModel):
             ret_val.predicted_values = lhr
             if cov_params is not None:
                 mat = np.dot(exog, cov_params)
-                va = (mat * exog).sum(1)
+                va = (mat * exog).sum(axis=1)
                 ret_val.standard_errors = np.sqrt(va)
             if pred_only:
                 return ret_val.predicted_values

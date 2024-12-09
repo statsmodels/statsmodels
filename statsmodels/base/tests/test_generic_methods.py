@@ -9,13 +9,15 @@ Created on Wed Oct 30 14:01:27 2013
 
 Author: Josef Perktold
 """
-from statsmodels.compat.pytest import pytest_warns
+from __future__ import annotations
+
 from statsmodels.compat.pandas import assert_index_equal, assert_series_equal
 from statsmodels.compat.platform import (
     PLATFORM_LINUX32,
     PLATFORM_OSX,
     PLATFORM_WIN32,
 )
+from statsmodels.compat.pytest import pytest_warns
 from statsmodels.compat.python import PYTHON_IMPL_WASM
 from statsmodels.compat.scipy import SCIPY_GT_14
 
@@ -56,8 +58,10 @@ class CheckGenericMixin:
         mat = np.eye(len(res.params))
 
         tt = res.t_test(mat[0])
-        string_confint = lambda alpha: "[{:4.3F}      {:4.3F}]".format(
-                                       alpha / 2, 1- alpha / 2)
+
+        def string_confint(alpha):
+            return f"[{(alpha / 2):4.3F}      {(1- alpha / 2):4.3F}]"
+
         summ = tt.summary()   # smoke test for #1323
         assert_allclose(tt.pvalue, res.pvalues[0], rtol=5e-10)
         assert_(string_confint(0.05) in str(summ))

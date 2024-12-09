@@ -115,13 +115,14 @@ Opening Windows into the Black Box', Journal of Statistical Software,
 2009.
 """
 
-import pandas as pd
-import numpy as np
-import patsy
-from statsmodels.base.model import LikelihoodModelResults
-from statsmodels.regression.linear_model import OLS
 from collections import defaultdict
 
+import numpy as np
+import pandas as pd
+
+from statsmodels.base.model import LikelihoodModelResults
+from statsmodels.formula._manager import FormulaManager
+from statsmodels.regression.linear_model import OLS
 
 _mice_data_example_1 = """
     >>> imp = mice.MICEData(data)
@@ -438,8 +439,8 @@ class MICEData:
         """
 
         formula = self.conditional_formula[vname]
-        endog, exog = patsy.dmatrices(formula, self.data,
-                                      return_type="dataframe")
+        mgr = FormulaManager()
+        endog, exog = mgr.get_matrices(formula, self.data, pandas=True)
 
         # Rows with observed endog
         ixo = self.ix_obs[vname]
@@ -468,8 +469,8 @@ class MICEData:
         for k in kwds:
             v = kwds[k]
             if isinstance(v, PatsyFormula):
-                mat = patsy.dmatrix(v.formula, self.data,
-                                    return_type="dataframe")
+                mgr = FormulaManager()
+                mat = mgr.get_matrices(v.formula, self.data, pandas=True)
                 mat = np.require(mat, requirements="W")[ix, :]
                 if mat.shape[1] == 1:
                     mat = mat[:, 0]
@@ -510,8 +511,8 @@ class MICEData:
         ix = self.ix_obs[vname]
 
         formula = self.conditional_formula[vname]
-        endog, exog = patsy.dmatrices(formula, self.data,
-                                      return_type="dataframe")
+        mgr = FormulaManager()
+        endog, exog = mgr.get_matrices(formula, self.data, pandas=True)
 
         endog = np.require(endog.iloc[ix, 0], requirements="W")
         exog = np.require(exog.iloc[ix, :], requirements="W")
@@ -597,8 +598,9 @@ class MICEData:
             miss = miss[:, ix]
             cols = [cols[i] for i in ix]
 
-        from statsmodels.graphics import utils as gutils
         from matplotlib.colors import LinearSegmentedColormap
+
+        from statsmodels.graphics import utils as gutils
 
         if ax is None:
             fig, ax = gutils.create_mpl_ax(ax)
@@ -785,8 +787,8 @@ class MICEData:
 
         # Fitted values
         formula = self.conditional_formula[col_name]
-        endog, exog = patsy.dmatrices(formula, self.data,
-                                      return_type="dataframe")
+        mgr = FormulaManager()
+        endog, exog = mgr.get_matrices(formula, self.data, pandas=True)
         results = self.results[col_name]
         vec2 = results.predict(exog=exog)
         vec2 = self._get_predicted(vec2)
@@ -1134,8 +1136,7 @@ class MICE:
     Obtain a sequence of fitted analysis models without combining
     to obtain summary::
     {mice_example_2}
-    """.format(mice_example_1=_mice_example_1,
-           mice_example_2=_mice_example_2)
+    """.format(mice_example_1=_mice_example_1, mice_example_2=_mice_example_2)
 
     def __init__(self, model_formula, model_class, data, n_skip=3,
                  init_kwds=None, fit_kwds=None):
@@ -1270,8 +1271,7 @@ class MICEResults(LikelihoodModelResults):
 
     def __init__(self, model, params, normalized_cov_params):
 
-        super().__init__(model, params,
-                                          normalized_cov_params)
+        super().__init__(model, params, normalized_cov_params)
 
     def summary(self, title=None, alpha=.05):
         """

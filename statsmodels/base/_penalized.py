@@ -100,7 +100,8 @@ class PenalizedMixin:
         if pen_weight is None:
             pen_weight = self.pen_weight
 
-        loglike = lambda p: self.loglike(p, pen_weight=pen_weight, **kwds)
+        def loglike(p):
+            return self.loglike(p, pen_weight=pen_weight, **kwds)
 
         if method == 'cs':
             return approx_fprime_cs(params, loglike)
@@ -143,7 +144,9 @@ class PenalizedMixin:
         """
         if pen_weight is None:
             pen_weight = self.pen_weight
-        loglike = lambda p: self.loglike(p, pen_weight=pen_weight, **kwds)
+
+        def loglike(p):
+            return self.loglike(p, pen_weight=pen_weight, **kwds)
 
         from statsmodels.tools.numdiff import approx_hess
         return approx_hess(params, loglike)

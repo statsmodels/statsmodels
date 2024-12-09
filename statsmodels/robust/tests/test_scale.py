@@ -393,7 +393,9 @@ def test_scale_iter():
     x = x[:, 0]  # 1d only ?
     v = v[0]
 
-    meef_scale = lambda x: rnorms.TukeyBiweight().rho(x)  # noqa
+    def meef_scale(x):
+        return rnorms.TukeyBiweight().rho(x)
+
     scale_bias = 0.43684963023076195
     s = scale._scale_iter(x, meef_scale=meef_scale, scale_bias=scale_bias)
     assert_allclose(s, v, rtol=1e-1)

@@ -1,9 +1,10 @@
 import numpy as np
-from scipy.stats import f as fdist
-from scipy.stats import t as student_t
 from scipy import stats
-from statsmodels.tools.tools import clean0, fullrank
+from scipy.stats import f as fdist, t as student_t
+
+from statsmodels.formula._manager import FormulaManager
 from statsmodels.stats.multitest import multipletests
+from statsmodels.tools.tools import clean0, fullrank
 
 
 #TODO: should this be public if it's just a container?
@@ -281,7 +282,7 @@ class Contrast:
         self._contrast_matrix = contrastfromcols(self.T, self.D)
         try:
             self.rank = self.matrix.shape[1]
-        except:
+        except (AttributeError, IndexError):
             self.rank = 1
 
 #TODO: fix docstring after usage is settled
@@ -427,7 +428,7 @@ def _contrast_pairs(k_params, k_level, idx_start):
 
     currently not used,
     using encoding contrast matrix is more general, but requires requires
-    factor information from patsy design_info.
+    factor information from a formula's model_spec.
 
 
     Parameters
@@ -599,7 +600,7 @@ def t_test_pairwise(result, term_name, method='hs', alpha=0.05,
     """
     Perform pairwise t_test with multiple testing corrected p-values.
 
-    This uses the formula design_info encoding contrast matrix and should
+    This uses the formula's model_spec encoding contrast matrix and should
     work for all encodings of a main effect.
 
     Parameters
@@ -617,7 +618,7 @@ def t_test_pairwise(result, term_name, method='hs', alpha=0.05,
         significance level for multiple testing reject decision.
     factor_labels : {list[str], None}
         Labels for the factor levels used for pairwise labels. If not
-        provided, then the labels from the formula design_info are used.
+        provided, then the labels from the formula's model_spec are used.
     ignore : bool
         Turn off some of the exceptions raised by input checks.
 
@@ -643,14 +644,17 @@ def t_test_pairwise(result, term_name, method='hs', alpha=0.05,
     available.
     """
 
-    desinfo = result.model.data.design_info
-    term_idx = desinfo.term_names.index(term_name)
-    term = desinfo.terms[term_idx]
-    idx_start = desinfo.term_slices[term].start
+    mgr = FormulaManager()
+    model_spec = result.model.data.model_spec
+    term_idx = mgr.get_term_names(model_spec).index(term_name)
+    term = model_spec.terms[term_idx]
+    idx_start = model_spec.term_slices[term].start
     if not ignore and len(term.factors) > 1:
         raise ValueError('interaction effects not yet supported')
     factor = term.factors[0]
-    cat = desinfo.factor_infos[factor].categories
+    cat = mgr.get_factor_categories(factor, model_spec)
+    # cat = model_spec.encoder_state[factor][1]["categories"]
+    # model_spec.factor_infos[factor].categories
     if factor_labels is not None:
         if len(factor_labels) == len(cat):
             cat = factor_labels
@@ -659,7 +663,7 @@ def t_test_pairwise(result, term_name, method='hs', alpha=0.05,
 
 
     k_level = len(cat)
-    cm = desinfo.term_codings[term][0].contrast_matrices[factor].matrix
+    cm = mgr.get_contrast_matrix(term, factor, model_spec)
 
     k_params = len(result.params)
     labels = _get_pairs_labels(k_level, cat)

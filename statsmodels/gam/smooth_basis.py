@@ -7,19 +7,20 @@ Author: Josef Perktold
 Created on Fri Jun  5 16:32:00 2015
 """
 
+from statsmodels.compat.patsy import get_all_sorted_knots
+from statsmodels.compat.python import with_metaclass
+
 # import useful only for development
 from abc import ABCMeta, abstractmethod
-from statsmodels.compat.python import with_metaclass
 
 import numpy as np
 import pandas as pd
-from patsy import dmatrix
-from patsy.mgcv_cubic_splines import _get_all_sorted_knots
 
+from statsmodels.formula._manager import FormulaManager
 from statsmodels.tools.linalg import transf_constraints
 
-
 # Obtain b splines from patsy
+
 
 def _equally_spaced_knots(x, df):
     n_knots = df - 2
@@ -643,13 +644,22 @@ class UnivariateCubicCyclicSplines(UnivariateGamSmoother):
             x, constraints=constraints, variable_name=variable_name)
 
     def _smooth_basis_for_single_variable(self):
-        basis = dmatrix("cc(x, df=" + str(self.df) + ") - 1", {"x": self.x})
-        self.design_info = basis.design_info
+        mgr = FormulaManager()
+        basis = mgr.get_matrices(
+            "cc(x, df=" + str(self.df) + ") - 1",
+            pd.DataFrame({"x": self.x}),
+            pandas=False,
+        )
+        self.model_spec = mgr.spec
         n_inner_knots = self.df - 2 + 1  # +n_constraints
         # TODO: from CubicRegressionSplines class
-        all_knots = _get_all_sorted_knots(self.x, n_inner_knots=n_inner_knots,
-                                          inner_knots=None,
-                                          lower_bound=None, upper_bound=None)
+        all_knots = get_all_sorted_knots(
+            self.x,
+            n_inner_knots=n_inner_knots,
+            inner_knots=None,
+            lower_bound=None,
+            upper_bound=None,
+        )
 
         b, d = self._get_b_and_d(all_knots)
         s = self._get_s(b, d)
@@ -713,7 +723,10 @@ class UnivariateCubicCyclicSplines(UnivariateGamSmoother):
         return d.T.dot(np.linalg.inv(b)).dot(d)
 
     def transform(self, x_new):
-        exog = dmatrix(self.design_info, {"x": x_new})
+        mgr = FormulaManager()
+        exog = mgr.get_matrices(
+            self.model_spec, pd.DataFrame({"x": x_new}), pandas=False
+        )
         if self.ctransf is not None:
             exog = exog.dot(self.ctransf)
         return exog

@@ -25,6 +25,7 @@ from scipy import stats
 import statsmodels.api as sm
 from statsmodels.datasets import cpunish, longley
 from statsmodels.discrete import discrete_model as discrete
+from statsmodels.formula._manager import FormulaManager
 from statsmodels.genmod.generalized_linear_model import GLM, SET_USE_BIC_LLF
 from statsmodels.tools.numdiff import (
     approx_fprime,
@@ -541,7 +542,7 @@ class TestGaussianInverse(CheckModelResultsMixin):
         nobs = 100
         x = np.arange(nobs)
         np.random.seed(54321)
-        y = 1.0 + 2.0 * x + x**2 + 0.1 * np.random.randn(nobs)
+        cls.y = 1.0 + 2.0 * x + x**2 + 0.1 * np.random.randn(nobs)
         cls.X = np.c_[np.ones((nobs, 1)), x, x**2]
         cls.y_inv = (1.0 + 0.02 * x + 0.001 * x**2) ** -1 + 0.001 * np.random.randn(
             nobs
@@ -722,6 +723,7 @@ class TestGlmBernoulli(CheckModelResultsMixin, CheckComparisonMixin):
         s = glm.scoretest(mod, data["lwt"]**2)
         s**2
         """
+        assert isinstance(cmd_r, str)
 
 
 # class TestGlmBernoulliIdentity(CheckModelResultsMixin):
@@ -1361,7 +1363,7 @@ def test_summary():
         fa = sm.families.Gaussian()
         model = sm.GLM(endog, exog, family=fa)
         rslt = model.fit(method=method)
-        s = rslt.summary()
+        rslt.summary()
 
 
 def check_score_hessian(results):
@@ -1472,7 +1474,8 @@ def test_gradient_irls():
                     skip_one = True
                 # the following fails with Identity link, because endog < 0
                 # elif family_class == fam.Gamma:
-                #     lin_pred = 0.5 * exog.sum(1) + np.random.uniform(size=exog.shape[0])
+                #     lin_pred = 0.5 * exog.sum(1) + \
+                #     np.random.uniform(size=exog.shape[0])
                 else:
                     lin_pred = np.random.uniform(size=exog.shape[0])
 
@@ -2169,7 +2172,7 @@ class TestWtdTweediePower15(CheckWtdDuplicationMixin):
         cls.res2 = GLM(cls.endog_big, cls.exog_big, family=family_link).fit()
 
 
-def test_wtd_patsy_missing():
+def test_wtd_formula_with_missing():
     import pandas as pd
 
     data = cpunish.load()
@@ -2983,8 +2986,6 @@ def test_output_exposure_null(reset_randomstate):
 def test_qaic():
 
     # Example from documentation of R package MuMIn
-    import patsy
-
     ldose = np.concatenate((np.arange(6), np.arange(6)))
     sex = ["M"] * 6 + ["F"] * 6
     numdead = [10, 4, 9, 12, 18, 20, 0, 2, 6, 10, 12, 16]
@@ -2993,7 +2994,8 @@ def test_qaic():
     df["SF"] = df["numdead"]
 
     y = df[["numalive", "numdead"]].values
-    x = patsy.dmatrix("sex*ldose", data=df, return_type="dataframe")
+    mgr = FormulaManager()
+    x = mgr.get_matrices("sex*ldose", data=df)
     m = GLM(y, x, family=sm.families.Binomial())
     r = m.fit()
     scale = 2.412699
