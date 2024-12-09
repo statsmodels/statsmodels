@@ -24,9 +24,9 @@ try:
 
     class NAAction(patsy.missing.NAAction):
         # monkey-patch so we can handle missing values in 'extra' arrays later
-        def _handle_NA_drop(self, values, is_NAs, origins):
-            total_mask = np.zeros(is_NAs[0].shape[0], dtype=bool)
-            for is_NA in is_NAs:
+        def _handle_NA_drop(self, values, is_nas, origins):
+            total_mask = np.zeros(is_nas[0].shape[0], dtype=bool)
+            for is_NA in is_nas:
                 total_mask |= is_NA
             good_mask = ~total_mask
             self.missing_mask = total_mask
@@ -39,7 +39,7 @@ except ImportError:
     DEFAULT_FORMULA_ENGINE = DEFAULT_FORMULA_ENGINE or "formulaic"
 
     class NAAction:
-        def __init__(self, on_NA="", NA_types=("",)):
+        def __init__(self, on_na="", na_types=("",)):
             pass
 
 
@@ -62,6 +62,18 @@ value is the array of values.
 
 
 def _check_data(data):
+    """
+    Check if data is a DataFrame and issue a warning if it is not.
+
+    Parameters
+    ----------
+    data : {dict, list, recarray, DataFrame}
+        The data used to create a formula.
+
+    Notes
+    -----
+    Warns if data is not a DataFrame.
+    """
     if not isinstance(data, pd.DataFrame):
         warnings.warn(
             f"Using {type(data).__name__} data structures with formula is "
@@ -86,6 +98,14 @@ class _FormulaOption:
 
     @property
     def formula_engine(self) -> Literal["patsy", "formulaic"]:
+        """
+        Get or set the formula engine
+
+        Returns
+        -------
+        str: {"patsy", "formulaic"}
+            The name of the formula engine.
+        """
         return self._formula_engine
 
     @formula_engine.setter
@@ -107,6 +127,14 @@ class _FormulaOption:
 
     @property
     def ordering(self):
+        """
+        Get or set the ordering.
+
+        Returns
+        -------
+        {"degree", "sort", "none", "legacy"}
+            The name of the ordering. Only used if engine is formulaic.
+        """
         return self._ordering
 
     @ordering.setter
@@ -158,11 +186,13 @@ class FormulaManager:
 
     def __init__(self, engine: Literal["patsy", "formulaic"] | None = None):
         self._engine = self._get_engine(engine)
+        self._using_patsy = self._engine == "patsy"
         self._spec = None
         self._missing_mask = None
 
+    @staticmethod
     def _get_engine(
-        self, engine: Literal["patsy", "formulaic"] | None = None
+        engine: Literal["patsy", "formulaic"] | None = None
     ) -> Literal["patsy", "formulaic"]:
         """
         Check user engine selection or get the default engine to use.
@@ -177,7 +207,6 @@ class FormulaManager:
         -------
         engine : {"patsy", "formulaic"}
             The selected engine
-
 
         Raises
         ------
@@ -222,25 +251,93 @@ class FormulaManager:
 
     @property
     def factor_evaluation_error(self):
-        if self._engine == "patsy":
+        """
+        Get the engine-specific error that may occur when evaluating a factor.
+        """
+        if self._using_patsy:
             return patsy.PatsyError
         else:
             return formulaic.errors.FactorEvaluationError
 
     @property
     def formula_materializer_error(self):
-        if self._engine == "patsy":
+        """
+        Get the engine-specific error that may occur when materializing a formula.
+        """
+        if self._using_patsy:
             return patsy.PatsyError
         else:
             return formulaic.errors.FormulaMaterializerNotFoundError
 
     @property
     def missing_mask(self):
+        """
+        Get a mask indicating if data are missing.
+
+        Returns
+        -------
+        ndarray
+            A boolean array indicating if data are missing. True if missing.
+        """
         return self._missing_mask
 
+    @property
+    def intercept_term(self):
+        """
+        Get the formula-engine-specific intercept term.
+
+        Returns
+        -------
+        Term
+            The intercept term.
+        """
+        if self._using_patsy:
+            from patsy.desc import INTERCEPT
+
+            return INTERCEPT
+        else:
+            from formulaic.parser.types.factor import Factor
+            from formulaic.parser.types.term import Term
+
+            return Term((Factor("1"),))
+
+    @property
+    def model_spec_type(self):
+        """
+        Returns the engine-specific model specification type.
+
+        Returns
+        -------
+        {type[ModelSpect], type[DesignInto]}
+            The model specification type of formulaic is ModelSpec.
+            patsy uses DesignInfo.
+        """
+        if self._using_patsy:
+            return patsy.design_info.DesignInfo
+        else:
+            return formulaic.model_spec.ModelSpec
+
+    @staticmethod
     def _legacy_orderer(
-        self, formula: str, data: pd.DataFrame, context: int | Mapping[str, Any]
+        formula: str, data: pd.DataFrame, context: int | Mapping[str, Any]
     ) -> formulaic.Formula:
+        """
+        Function to order a formulaic formula so when materialized it matches patsy.
+
+        Parameters
+        ----------
+        formula : str
+            The string formula. If not a string, it is returned as is.
+        data : DataFrame
+            The data used to materialize the formula.
+        context
+            The context used to evaluate the formula.
+
+        Returns
+        -------
+        Formula
+            The ordered formula.
+        """
         if isinstance(formula, (formulaic.Formula, formulaic.ModelSpec)):
             return formula
         if isinstance(context, int):
@@ -312,25 +409,35 @@ class FormulaManager:
         | pd.DataFrame
         | tuple[pd.DataFrame, pd.DataFrame]
     ):
-        """
-        Get the design matrix and response vector from the formula and data.
+        f"""
+        Get the model matrices or design matrices from a formula and data.
 
         Parameters
         ----------
-        formula
-        data
-        eval_env
-        pandas
-        na_action
+        formula : str, Formula
+            The formula to use.
+        data : DataFrame, dict, list, recarray
+            The data to use when evaluating the formula.
+        eval_env : {int, dict}
+            Additional context to use when evaluating the formula.
+        pandas : bool
+            Return a DataFrame if true, otherwise return a numpy array.
+        na_action : {NAAction, str}
+            The action to take on missing values.
+        prediction : bool
+            True if using the formula for prediction. In this case, only the
+            rhs is evaluated using data.
 
         Returns
         -------
-
+        tuple[DataFrame, ...], tuple[ndarray, ...], tuple[DesignMatrix, ...]
+            If pandas is True, returns one or more DataFrames. If False,
+            returns a NumPy ndarray (formulaic) or a DesignMatrix (patsy).
         """
         _check_data(data)
         if isinstance(eval_env, (int, np.integer)):
             eval_env = int(eval_env) + 1
-        if self._engine == "patsy":
+        if self._using_patsy:
             return_type = "dataframe" if pandas else "matrix"
             kwargs = {}
             if na_action:
@@ -436,8 +543,9 @@ class FormulaManager:
                     rhs = output
                 if rhs.shape[0] == _data.shape[0]:
                     replacement_index = original_index
+                    empty_mask = np.full(rhs.shape[0], False)
                     self._missing_mask = pd.Series(
-                        np.full(rhs.shape[0], False), index=original_index, name=None
+                        empty_mask, index=original_index, name=None
                     )
                 else:
                     replacement_index = original_index[rhs.index]
@@ -475,15 +583,19 @@ class FormulaManager:
 
         Parameters
         ----------
-        constraints
-        variable_names
+        constraints : ndarray, str, list[str]
+            The constraints either as an array, a string, or a list of strings.
+            Single strings can be comma-separated so that multiple constraints
+            can be passed in this format.
+        variable_names : list[str]
+            The ordered list of variable names.
 
         Returns
         -------
         LinearConstraintValues
             The constraint matrix, constraint values, and variable names.
         """
-        if self._engine == "patsy":
+        if self._using_patsy:
             from patsy.design_info import DesignInfo
 
             lc = DesignInfo(variable_names).linear_constraint(constraints)
@@ -532,32 +644,12 @@ class FormulaManager:
         {EvalEnvironment, dict}
             A formula-engine-dependent empty evaluation environment.
         """
-        if self._engine == "patsy":
+        if self._using_patsy:
             from patsy.eval import EvalEnvironment
 
             return EvalEnvironment({})
         else:
             return {}
-
-    @property
-    def intercept_term(self):
-        """
-        Get the formula-engine-specific intercept term.
-
-        Returns
-        -------
-        Term
-            The intercept term.
-        """
-        if self._engine == "patsy":
-            from patsy.desc import INTERCEPT
-
-            return INTERCEPT
-        else:
-            from formulaic.parser.types.factor import Factor
-            from formulaic.parser.types.term import Term
-
-            return Term((Factor("1"),))
 
     def remove_intercept(self, terms):
         """
@@ -631,53 +723,112 @@ class FormulaManager:
         types is ignored when using formulaic.
         """
         types = ["None", "NaN"] if types is _NoDefault else types
-        if self._engine == "patsy":
+        if self._using_patsy:
             return NAAction(on_NA=action, NA_types=types)
         else:
             return action
 
     def get_spec(self, formula):
-        if self._engine == "patsy":
+        """
+        Get the model specification from a formula.
+
+        Parameters
+        ----------
+        formula : str
+            The formula to parse.
+
+        Returns
+        -------
+        {ModelDesc, Formula}
+            The engine-specific model specification.
+        """
+        if self._using_patsy:
             return patsy.ModelDesc.from_formula(formula)
         else:
             return formulaic.Formula(formula)
 
-    def get_term_names(self, spec_or_frame):
+    def _ensure_spec(self, spec_or_frame):
         if not isinstance(spec_or_frame, self.model_spec_type):
-            _spec = self.get_model_spec(spec_or_frame)
+            return self.get_model_spec(spec_or_frame)
+        if not isinstance(spec_or_frame, self.model_spec_type):
+            raise TypeError(
+                "spec_or_frame must be a ModelSpec or a DesignInfo when not a "
+                f"DataFrame. Expected a {self.model_spec_type.__name__}, got a "
+                f"{type(spec_or_frame).__name__}."
+            )
+        return spec_or_frame
+
+    def get_term_names(self, spec_or_frame):
+        """
+        Get the term names from a model specification or DataFrame.
+
+        Parameters
+        ----------
+        spec_or_frame
+
+        Returns
+        -------
+
+        """
+        spec = self._ensure_spec(spec_or_frame)
+        if self._using_patsy:
+            return list(spec.term_names)
         else:
-            _spec = spec_or_frame
-        if self._engine == "patsy":
-            return list(_spec.term_names)
-        else:
-            return [str(term) for term in _spec.terms]
+            return [str(term) for term in spec.terms]
 
     def get_column_names(self, spec_or_frame):
-        if not isinstance(spec_or_frame, self.model_spec_type):
-            spec = self.get_model_spec(spec_or_frame)
-        else:
-            spec = spec_or_frame
+        """
+        Returns a list of column names from a model specification or DataFrame.
+
+        Parameters
+        ----------
+        spec_or_frame : {DataFrame, ModelSpec, DesignInfo
+
+        Returns
+        -------
+        list[str]
+            The column names.
+        """
+        spec = self._ensure_spec(spec_or_frame)
         return list(spec.column_names)
 
-    @property
-    def model_spec_type(self):
-        if self._engine == "patsy":
-            return patsy.design_info.DesignInfo
-        else:
-            return formulaic.model_spec.ModelSpec
-
     def get_term_name_slices(self, spec_or_frame):
-        if not isinstance(spec_or_frame, self.model_spec_type):
-            spec = self.get_model_spec(spec_or_frame)
-        else:
-            spec = spec_or_frame
-        if self._engine == "patsy":
-            return spec.term_name_slices
+        """
+        Get a dictionary containing the term names and their location in the formula.
+
+        Parameters
+        ----------
+        spec_or_frame : {DataFrame, ModelSpec, DesignInfo}
+            The DataFrame with a model specification attached or the model
+            specification.
+
+        Returns
+        -------
+        dict[str, slice]
+            A dictionary mapping term names to location in the materialized formula.
+        """
+        spec = self._ensure_spec(spec_or_frame)
+        if self._using_patsy:
+            return dict(spec.term_name_slices)
         else:
             return spec.term_slices
 
     def get_model_spec(self, frame, optional=False):
-        if self._engine == "patsy":
+        """
+
+        Parameters
+        ----------
+        frame : DataFrame
+            The frame to get the model specification from.
+        optional : bool
+            Whether to return None if the frame does not have a model specification.
+
+        Returns
+        -------
+        {ModelSpec, DesignInfo}
+            The engine-specific model specification
+        """
+        if self._using_patsy:
             if optional and not hasattr(frame, "design_info"):
                 return None
             return frame.design_info
@@ -687,29 +838,79 @@ class FormulaManager:
             return frame.model_spec
 
     def get_slice(self, model_spec, term):
-        if self._engine == "patsy":
+        """
+
+        Parameters
+        ----------
+        model_spec : {ModelSpec, DesignInfo}
+            The model specification.
+        term : Term
+            The model term.
+
+        Returns
+        -------
+        slice
+            The slice indicating the variables connected to a specific model term.
+        """
+        if self._using_patsy:
             return model_spec.slice(term)
         else:
             return model_spec.get_slice(term)
 
     def get_term_name(self, term):
-        if self._engine == "patsy":
+        """
+        Gets the string name of a term
+
+        Parameters
+        ----------
+        term : Term
+
+        Returns
+        -------
+        str
+            The term's name.
+        """
+        if self._using_patsy:
             return term.name()
         else:
             return str(term)
 
     def get_description(self, spec_or_frame):
-        if not isinstance(spec_or_frame, self.model_spec_type):
-            _spec = self.get_model_spec(spec_or_frame)
+        """
+        Gets a string representation of the model specification.
+
+        Parameters
+        ----------
+        spec_or_frame : {DataFrame, ModelSpec, DesignInfo
+
+        Returns
+        -------
+        str
+            The human-readable description of the model specification.,
+        """
+        spec = self._ensure_spec(spec_or_frame)
+        if self._using_patsy:
+            return spec.describe()
         else:
-            _spec = spec_or_frame
-        if self._engine == "patsy":
-            return _spec.describe()
-        else:
-            return str(_spec.formula)
+            return str(spec.formula)
 
     def get_factor_categories(self, factor, model_spec):
-        if self._engine == "patsy":
+        """
+        Get the list of categories for a factor.
+
+        Parameters
+        ----------
+        factor : {EvalFactor, Factor}
+            The factor to get the categories for.
+        model_spec : {ModelSpec, DesignInfo}
+            The model specification.
+
+        Returns
+        -------
+        tuple
+            The categories for the factor.
+        """
+        if self._using_patsy:
             return model_spec.factor_infos[factor].categories
         else:
             return tuple(model_spec.encoder_state[factor][1]["categories"])
@@ -732,7 +933,7 @@ class FormulaManager:
         ndarray
             The contract matrix to use for hypothesis testing.
         """
-        if self._engine == "patsy":
+        if self._using_patsy:
             return model_spec.term_codings[term][0].contrast_matrices[factor].matrix
         else:
             cat = self.get_factor_categories(factor, model_spec)

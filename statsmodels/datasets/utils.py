@@ -282,7 +282,7 @@ def check_internet(url=None):
     url = "https://github.com" if url is None else url
     try:
         urlopen(url)
-    except URLError as err:
+    except URLError:
         return False
     return True
 

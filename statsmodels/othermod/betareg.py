@@ -480,7 +480,9 @@ class BetaModel(GenericLikelihoodModel):
         sf2 = h * (mu * ymu_star + yt - mut)
 
         if return_hessian:
-            trigamma = lambda x: special.polygamma(1, x)  # noqa
+            def trigamma(x):
+                return special.polygamma(1, x)
+
             trig_beta = trigamma(beta)
             var_star = trigamma(alpha) + trig_beta
             var_t = trig_beta - trigamma(phi)

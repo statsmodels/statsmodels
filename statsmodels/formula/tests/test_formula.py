@@ -1,4 +1,5 @@
 from statsmodels.compat.pandas import assert_series_equal
+
 import contextlib
 from io import StringIO
 import warnings
