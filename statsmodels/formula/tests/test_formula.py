@@ -1,5 +1,5 @@
 from statsmodels.compat.pandas import assert_series_equal
-
+import contextlib
 from io import StringIO
 import warnings
 
@@ -200,9 +200,14 @@ def test_patsy_lazy_dict():
 
     if statsmodels.formula.options.formula_engine == "patsy":
         data = LazyDict(data)
-    res = ols("EXECUTIONS ~ SOUTH + INCOME", data=data).fit()
+        ctx_mgr = pytest.deprecated_call
+    else:
+        ctx_mgr = contextlib.nullcontext
 
-    res2 = res.predict(data)
+    with ctx_mgr():
+        res = ols("EXECUTIONS ~ SOUTH + INCOME", data=data).fit()
+    with ctx_mgr():
+        res2 = res.predict(data)
     npt.assert_allclose(res.fittedvalues, res2)
 
     data = cpunish.load_pandas().data
@@ -211,9 +216,10 @@ def test_patsy_lazy_dict():
     if statsmodels.formula.options.formula_engine == "patsy":
         data = LazyDict(data)
     data.index = cpunish.load_pandas().data.index
-    res = ols("EXECUTIONS ~ SOUTH + INCOME", data=data).fit()
-
-    res2 = res.predict(data)
+    with ctx_mgr():
+        res = ols("EXECUTIONS ~ SOUTH + INCOME", data=data).fit()
+    with ctx_mgr():
+        res2 = res.predict(data)
     if statsmodels.formula.options.formula_engine == "patsy":
         # Only happens with LazyDict input
         assert_equal(res.fittedvalues, res2)  # Should lose a record
@@ -254,7 +260,8 @@ def test_predict_nondataframe():
     fit = model.fit()
     mgr = FormulaManager()
     with pytest.raises(mgr.formula_materializer_error):
-        fit.predict([0.25])
+        with pytest.deprecated_call():
+            fit.predict([0.25])
 
 
 def test_formula_environment():
