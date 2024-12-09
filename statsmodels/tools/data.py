@@ -19,8 +19,11 @@ def _check_period_index(x, freq="M"):
     if not inferred_freq.startswith(freq):
         raise ValueError("Expected frequency {}. Got {}".format(freq,
                                                                 inferred_freq))
+
+
 def is_series(obj):
     return isinstance(obj, pd.Series)
+
 
 def is_data_frame(obj):
     return isinstance(obj, pd.DataFrame)
@@ -117,6 +120,7 @@ def _is_using_patsy(endog, exog):
     return (is_design_matrix(endog) and
             (is_design_matrix(exog) or exog is None))
 
+
 def _is_using_formulaic(endog, exog):
     # we get this when a structured array is passed through a formula
     return (is_model_matrix(endog) and
@@ -131,6 +135,7 @@ def _is_recarray(data):
         return isinstance(data, np.core.recarray)
     else:
         return isinstance(data, np.rec.recarray)
+
 
 def _as_array_with_name(obj, default_name):
     """

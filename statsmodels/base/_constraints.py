@@ -151,17 +151,17 @@ class TransformRestriction:
         # It makes it easier to interpret simple restrictions, e.g. b1 + b2 = 0
         # TODO: make this work, there is something wrong, does not round-trip
         #       need to adjust constant
-        #evecs_maxabs = np.max(np.abs(evecs), 0)
-        #evecs = evecs / evecs_maxabs
+        # evecs_maxabs = np.max(np.abs(evecs), 0)
+        # evecs = evecs / evecs_maxabs
 
         self.evals = evals
-        self.evecs = evecs # temporarily attach as attribute
+        self.evecs = evecs  # temporarily attach as attribute
         L = self.L = evecs[:, :k_constr]
         self.transf_mat = evecs[:, k_constr:]
 
         if q is not None:
             # use solve instead of inv
-            #self.constant = q.T.dot(np.linalg.inv(L.T.dot(R.T)).dot(L.T))
+            # self.constant = q.T.dot(np.linalg.inv(L.T.dot(R.T)).dot(L.T))
             try:
                 self.constant = q.T.dot(np.linalg.solve(L.T.dot(R.T), L.T))
             except np.linalg.LinAlgError as e:
@@ -324,9 +324,9 @@ def fit_constrained(model, constraint_matrix, constraint_values,
         offset += self.offset
 
     if start_params is not None:
-        start_params =  transf.reduce(start_params)
+        start_params = transf.reduce(start_params)
 
-    #need copy, because we do not want to change it, we do not need deepcopy
+    # need copy, because we do not want to change it, we do not need deepcopy
     import copy
     init_kwds = copy.copy(self._get_init_kwds())
 
@@ -359,14 +359,14 @@ def fit_constrained_wrap(model, constraints, start_params=None, **fit_kwds):
 
     self = model  # alias for use as method
 
-    #constraints = (R, q)
+    # constraints = (R, q)
     # TODO: temporary trailing underscore to not overwrite the monkey
     #       patched version
     # TODO: decide whether to move the imports
     from statsmodels.formula._manager import FormulaManager
 
     # we need this import if we copy it to a different module
-    #from statsmodels.base._constraints import fit_constrained
+    # from statsmodels.base._constraints import fit_constrained
     # same pattern as in base.LikelihoodModel.t_test
     mgr = FormulaManager()
     lc = mgr.get_linear_constraints(constraints, self.exog_names)
@@ -377,7 +377,7 @@ def fit_constrained_wrap(model, constraints, start_params=None, **fit_kwds):
     params, cov, res_constr = fit_constrained(self, R, q,
                                               start_params=start_params,
                                               fit_kwds=fit_kwds)
-    #create dummy results Instance, TODO: wire up properly
+    # create dummy results Instance, TODO: wire up properly
     res = self.fit(start_params=params, maxiter=0,
                    warn_convergence=False)  # we get a wrapper back
     res._results.params = params

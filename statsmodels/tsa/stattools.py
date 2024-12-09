@@ -1093,8 +1093,9 @@ def ccovf(x, y, adjusted=True, demean=True, fft=True):
     -------
     ndarray
         The estimated cross-covariance function: the element at index k
-        is the covariance between {x[k], x[k+1], ..., x[n]} and {y[0], y[1], ..., y[m-k]},
-        where n and m are the lengths of x and y, respectively.
+        is the covariance between {x[k], x[k+1], ..., x[n]} and
+        {y[0], y[1], ..., y[m-k]}, where n and m are the lengths of x and y,
+        respectively.
     """
     x = array_like(x, "x")
     y = array_like(y, "y")
@@ -1145,12 +1146,13 @@ def ccf(x, y, adjusted=True, fft=True, *, nlags=None, alpha=None):
     -------
     ndarray
         The cross-correlation function of x and y: the element at index k
-        is the correlation between {x[k], x[k+1], ..., x[n]} and {y[0], y[1], ..., y[m-k]},
-        where n and m are the lengths of x and y, respectively.
+        is the correlation between {x[k], x[k+1], ..., x[n]} and
+        {y[0], y[1], ..., y[m-k]}, where n and m are the lengths of x and y,
+        respectively.
     confint : ndarray, optional
-        Confidence intervals for the CCF at lags 0, 1, ..., nlags-1 using the level given by
-        alpha and the standard deviation calculated as 1/sqrt(len(x)) [1]. Shape (nlags, 2).
-        Returned if alpha is not None.
+        Confidence intervals for the CCF at lags 0, 1, ..., nlags-1 using the
+        level given by alpha and the standard deviation calculated as
+        1/sqrt(len(x)) [1]. Shape (nlags, 2). Returned if alpha is not None.
 
     Notes
     -----

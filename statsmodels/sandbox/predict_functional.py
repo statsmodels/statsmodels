@@ -143,6 +143,8 @@ def _make_exog_from_formula(result, focus_var, summaries, values, num_points):
         are fixed at specified or computed values.
     fexog : data frame
         The data frame `dexog` processed through the model formula.
+    fvals : ndarray
+        The values of the focus variable at which the prediction is made.
     """
 
     model = result.model
@@ -252,14 +254,16 @@ def _make_exog_from_arrays(result, focus_var, summaries, values, num_points):
 def _make_exog(result, focus_var, summaries, values, num_points):
 
     # Branch depending on whether the model was fit with a formula.
-    if hasattr(result.model.data, "frame"):
-        dexog, fexog, fvals = _make_exog_from_formula(result, focus_var,
-                                       summaries, values, num_points)
-    else:
-        exog, fvals = _make_exog_from_arrays(result, focus_var, summaries,
-                                 values, num_points)
-        dexog, fexog = exog, exog
 
+    if hasattr(result.model.data, "frame"):
+        dexog, fexog, fvals = _make_exog_from_formula(
+            result, focus_var, summaries, values, num_points
+        )
+    else:
+        exog, fvals = _make_exog_from_arrays(
+            result, focus_var, summaries, values, num_points
+        )
+        dexog, fexog = exog, exog
     return dexog, fexog, fvals
 
 
@@ -274,12 +278,14 @@ def _check_args(values, summaries, values2, summaries2):
     if summaries2 is None:
         summaries2 = {}
 
-    for (s,v) in (summaries, values), (summaries2, values2):
+    for (s, v) in (summaries, values), (summaries2, values2):
         ky = set(v.keys()) & set(s.keys())
         ky = list(ky)
         if len(ky) > 0:
-            raise ValueError("One or more variable names are contained in both `summaries` and `values`:" +
-                             ", ".join(ky))
+            raise ValueError(
+                "One or more variable names are contained in both `summaries` and "
+                "`values`:" + ", ".join(ky)
+            )
 
     return values, summaries, values2, summaries2
 
@@ -416,7 +422,7 @@ def _glm_basic_scr(result, exog, alpha):
 
     # Proposition 3.1 of Sun et al.
     A = hess / n
-    B = np.linalg.cholesky(A).T # Upper Cholesky triangle
+    B = np.linalg.cholesky(A).T  # Upper Cholesky triangle
 
     # The variance and SD of the linear predictor at each row of exog.
     sigma2 = (np.dot(exog, cov) * exog).sum(axis=1)

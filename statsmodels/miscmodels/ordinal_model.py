@@ -271,7 +271,6 @@ class OrderedModel(GenericLikelihoodModel):
 
     from_formula.__func__.__doc__ = Model.from_formula.__doc__
 
-
     def cdf(self, x):
         """Cdf evaluated at x.
 

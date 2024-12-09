@@ -761,7 +761,7 @@ def get_prediction(self, exog=None, transform=True, which="mean",
             pred_kwds=pred_kwds,
             )
 
-    elif (which == "mean")and (use_endpoint is True) and (average is False):
+    elif (which == "mean") and (use_endpoint is True) and (average is False):
         # endpoint transformation
         k1 = self.model.exog.shape[1]
         if len(self.params > k1):

@@ -38,7 +38,6 @@ df = [['index', 'Estimate', 'Lower CI bound', 'Upper CI bound', 'P-value'],
 framing_para_4231 = pd.DataFrame(df[1:], columns=df[0]).set_index('index')
 
 
-
 df = [['index', 'Estimate', 'Lower CI bound', 'Upper CI bound', 'P-value'],
       ['ACME (control)', 0.065989, 0.003366, 0.152261, 0.04],
       ['ACME (treated)', 0.081424, 0.008888, 0.199853, 0.04],
@@ -76,8 +75,13 @@ def test_framing_example():
               mediator_exog.columns.tolist().index("treat")]
     med_pos = outcome_exog.columns.tolist().index("emo")
 
-    med = Mediation(outcome_model, mediator_model, tx_pos, med_pos,
-                    outcome_fit_kwargs={'atol':1e-11})
+    med = Mediation(
+        outcome_model,
+        mediator_model,
+        tx_pos,
+        med_pos,
+        outcome_fit_kwargs={"atol": 1e-11},
+    )
 
     np.random.seed(4231)
     para_rslt = med.fit(method='parametric', n_rep=100)
@@ -88,7 +92,6 @@ def test_framing_example():
     boot_rslt = med.fit(method='boot', n_rep=100)
     diff = np.asarray(boot_rslt.summary() - framing_boot_4231)
     assert_allclose(diff, 0, atol=1e-6)
-
 
 
 def test_framing_example_moderator():
@@ -137,8 +140,9 @@ def test_framing_example_formula():
         family=sm.families.Binomial(link=sm.families.links.Probit())
     )
 
-    mediator_model = sm.OLS.from_formula("emo ~ treat + age + educ + gender + income", data)
-
+    mediator_model = sm.OLS.from_formula(
+        "emo ~ treat + age + educ + gender + income", data
+    )
     med = Mediation(outcome_model, mediator_model, "treat", "emo",
                     outcome_fit_kwargs={'atol': 1e-11})
 
@@ -165,8 +169,9 @@ def test_framing_example_moderator_formula():
         family=sm.families.Binomial(link=sm.families.links.Probit())
     )
 
-    mediator_model = sm.OLS.from_formula("emo ~ treat*age + educ + gender + income", data)
-
+    mediator_model = sm.OLS.from_formula(
+        "emo ~ treat*age + educ + gender + income", data
+    )
     moderators = {"age" : 20}
     med = Mediation(outcome_model, mediator_model, "treat", "emo",
                     moderators=moderators)

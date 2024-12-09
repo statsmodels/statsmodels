@@ -62,12 +62,12 @@ class MANOVA(Model):
     """
     _formula_max_endog = None
 
-    def __init__(self, endog, exog, missing='none', hasconst=None, **kwargs):
+    def __init__(self, endog, exog, missing="none", hasconst=None, **kwargs):
         if len(endog.shape) == 1 or endog.shape[1] == 1:
-            raise ValueError('There must be more than one dependent variable'
-                             ' to fit MANOVA!')
-        super().__init__(endog, exog, missing=missing,
-                                     hasconst=hasconst, **kwargs)
+            raise ValueError(
+                "There must be more than one dependent variable" " to fit MANOVA!"
+            )
+        super().__init__(endog, exog, missing=missing, hasconst=hasconst, **kwargs)
         self._fittedmod = _multivariate_ols_fit(self.endog, self.exog)
 
     def fit(self):
@@ -109,8 +109,11 @@ class MANOVA(Model):
         provides knowledge about the model when specifying the hypotheses.
         """
         if hypotheses is None:
-            if (hasattr(self, 'data') and self.data is not None and
-                        hasattr(self.data, 'model_spec')):
+            if (
+                hasattr(self, "data")
+                and self.data is not None
+                and hasattr(self.data, "model_spec")
+            ):
                 # TODO: patsy migration
 
                 mgr = FormulaManager()
@@ -118,23 +121,25 @@ class MANOVA(Model):
                 hypotheses = []
 
                 for key in terms:
-                    if skip_intercept_test and (key == 'Intercept' or key == mgr.intercept_term):
+                    if skip_intercept_test and (
+                        key == "Intercept" or key == mgr.intercept_term
+                    ):
                         continue
                     L_contrast = np.eye(self.exog.shape[1])[terms[key], :]
                     test_name = str(key)
                     if key == mgr.intercept_term:
-                        test_name = 'Intercept'
+                        test_name = "Intercept"
                     hypotheses.append([test_name, L_contrast, None])
             else:
                 hypotheses = []
                 for i in range(self.exog.shape[1]):
-                    name = 'x%d' % (i)
+                    name = "x%d" % (i)
                     L = np.zeros([1, self.exog.shape[1]])
                     L[0, i] = 1
                     hypotheses.append([name, L, None])
 
-        results = _multivariate_ols_test(hypotheses, self._fittedmod,
-                                         self.exog_names, self.endog_names)
+        results = _multivariate_ols_test(
+            hypotheses, self._fittedmod, self.exog_names, self.endog_names
+        )
 
-        return MultivariateTestResults(results, self.endog_names,
-                                       self.exog_names)
+        return MultivariateTestResults(results, self.endog_names, self.exog_names)

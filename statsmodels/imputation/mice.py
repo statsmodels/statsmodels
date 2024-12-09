@@ -1136,8 +1136,7 @@ class MICE:
     Obtain a sequence of fitted analysis models without combining
     to obtain summary::
     {mice_example_2}
-    """.format(mice_example_1=_mice_example_1,
-           mice_example_2=_mice_example_2)
+    """.format(mice_example_1=_mice_example_1, mice_example_2=_mice_example_2)
 
     def __init__(self, model_formula, model_class, data, n_skip=3,
                  init_kwds=None, fit_kwds=None):
@@ -1272,8 +1271,7 @@ class MICEResults(LikelihoodModelResults):
 
     def __init__(self, model, params, normalized_cov_params):
 
-        super().__init__(model, params,
-                                          normalized_cov_params)
+        super().__init__(model, params, normalized_cov_params)
 
     def summary(self, title=None, alpha=.05):
         """

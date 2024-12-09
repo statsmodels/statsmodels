@@ -1474,7 +1474,8 @@ def test_gradient_irls():
                     skip_one = True
                 # the following fails with Identity link, because endog < 0
                 # elif family_class == fam.Gamma:
-                #     lin_pred = 0.5 * exog.sum(1) + np.random.uniform(size=exog.shape[0])
+                #     lin_pred = 0.5 * exog.sum(1) + \
+                #     np.random.uniform(size=exog.shape[0])
                 else:
                     lin_pred = np.random.uniform(size=exog.shape[0])
 

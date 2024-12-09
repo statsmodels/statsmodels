@@ -106,8 +106,6 @@ class ModelData:
 
             from statsmodels.formula._manager import FormulaManager
             mgr = FormulaManager()
-
-
             exc = []
             try:
                 data = d["frame"]

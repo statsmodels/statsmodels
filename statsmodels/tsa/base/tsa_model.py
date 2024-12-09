@@ -578,7 +578,7 @@ class TimeSeriesModel(base.LikelihoodModel):
                                 "No frequency information was provided, so inferred "
                                 f"frequency {freq} will be used.",
                                 ValueWarning,
-                                stacklevel = 2,
+                                stacklevel=2,
                             )
 
                 # Convert the passed freq to a pandas offset object
@@ -767,7 +767,9 @@ class TimeSeriesModel(base.LikelihoodModel):
             base_index = self._index
         return get_index_label_loc(key, base_index, self.data.row_labels)
 
-    def _get_prediction_index(self, start, end, index=None, silent=False) -> tuple[int, int, int, Index | None]:
+    def _get_prediction_index(
+        self, start, end, index=None, silent=False
+    ) -> tuple[int, int, int, Index | None]:
         """
         Get the location of a specific key in an index or model row labels
 

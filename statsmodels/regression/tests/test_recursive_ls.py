@@ -56,6 +56,7 @@ def test_endog():
     res_ols = mod_ols.fit()
     assert_allclose(res.params, res_ols.params)
 
+
 def test_ols():
     # More comprehensive tests against OLS estimates
     mod = RecursiveLS(endog, dta['m1'])
@@ -218,6 +219,7 @@ def test_glm(constraints=None):
     # actual_bic = bic(llf_alternative, res.nobs_effective, res.df_model)
     # assert_allclose(actual_bic, res_glm.bic)
 
+
 def test_glm_constrained():
     test_glm(constraints='m1 + unemp = 1')
 
@@ -239,7 +241,6 @@ def test_estimates():
 
     # Test for start_params
     assert_equal(mod.start_params, 0)
-
 
     # Test the RLS coefficient estimates against those from R (quantreg)
     # Due to initialization issues, we get more agreement as we get
@@ -349,7 +350,7 @@ def test_recursive_olsresiduals_bad_input(reset_randomstate):
     y = e.copy()
     for i in range(1, y.shape[0]):
         y[i] += 0.1 + 0.8 * y[i - 1] + e[i]
-    res = ARIMA(y[20:], order=(1,0,0), trend="c").fit()
+    res = ARIMA(y[20:], order=(1, 0, 0), trend="c").fit()
     with pytest.raises(TypeError, match="res a regression results instance"):
         recursive_olsresiduals(res)
 
