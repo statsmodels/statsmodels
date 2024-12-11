@@ -380,7 +380,7 @@ def _isfloat(x):
     """
     try:
         float(x)
-    except:
+    except Exception:
         return False
 
     return True

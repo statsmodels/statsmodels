@@ -27,7 +27,7 @@ def getnist(filename):
     with open(fname, encoding="utf-8") as fd:
         content = fd.read().split('\n')
 
-    data = [line.split() for line in content[60:]]
+    [line.split() for line in content[60:]]
     certified = [line.split() for line in content[40:48] if line]
     dataf = np.loadtxt(fname, skiprows=60)
     y,x = dataf.T

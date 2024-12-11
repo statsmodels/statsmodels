@@ -288,7 +288,7 @@ def Tukeythreegene2(genes): #Performing the Tukey HSD post-hoc test for three ge
     #mserrornum = firsts2*2+seconds2*2+thirds2*2 #numerator for mean square error
     mserrornum = sum(stds2)*2
     mserrorden = (len(genes[0])+len(genes[1])+len(genes[2]))-3 #denominator for mean square error
-    mserror = mserrornum/mserrorden #mean square error
+    mserrornum/mserrorden #mean square error
 
 
 def catstack(args):
@@ -431,7 +431,7 @@ def fdrcorrection_bak(pvals, alpha=0.05, method='indep'):
 def mcfdr(nrepl=100, nobs=50, ntests=10, ntrue=6, mu=0.5, alpha=0.05, rho=0.):
     '''MonteCarlo to test fdrcorrection
     '''
-    nfalse = ntests - ntrue
+    ntests - ntrue
     locs = np.array([0.]*ntrue + [mu]*(ntests - ntrue))
     results = []
     for i in range(nrepl):
@@ -547,7 +547,7 @@ class GroupsStats:
 
         self.uni = uni
         self.intlab = intlab
-        self.groupnobs = groupnobs = np.bincount(intlab)
+        self.groupnobs = np.bincount(intlab)
 
         #temporary until separated and made all lazy
         self.runbasic(useranks=useranks)
@@ -1026,7 +1026,7 @@ def rankdata(x):
     uni, intlab = np.unique(x[:,0], return_inverse=True)
     groupnobs = np.bincount(intlab)
     groupxsum = np.bincount(intlab, weights=X[:,0])
-    groupxmean = groupxsum * 1.0 / groupnobs
+    groupxsum * 1.0 / groupnobs
 
     rankraw = x[:,0].argsort().argsort()
     groupranksum = np.bincount(intlab, weights=rankraw)
@@ -1046,10 +1046,9 @@ def compare_ordered(vals, alpha):
     incomplete, no return, not used yet
     '''
     vals = np.asarray(vals)
-    alphaf = alpha  # Notation ?
     sortind = np.argsort(vals)
-    pvals = vals[sortind]
-    sortrevind = sortind.argsort()
+    vals[sortind]
+    sortind.argsort()
     ntests = len(vals)
     #alphacSidak = 1 - np.power((1. - alphaf), 1./ntests)
     #alphacBonf = alphaf / float(ntests)
@@ -1299,7 +1298,7 @@ def tukeyhsd(mean_all, nobs_all, var_all, df=None, alpha=0.05, q_crit=None):
 
     st_range = np.abs(meandiffs) / std_pairs #studentized range statistic
 
-    df_total_ = max(df_total, 5)  #TODO: smallest df in table
+    max(df_total, 5)  #TODO: smallest df in table
     if q_crit is None:
         q_crit = get_tukeyQcrit2(n_means, df_total, alpha=alpha)
 
@@ -1401,9 +1400,9 @@ def distance_st_range(mean_all, nobs_all, var_all, df=None, triu=False):
         df = nobs_all - 1
 
     if np.size(df) == 1:   # assumes balanced samples with df = n - 1, n_i = n
-        df_total = n_means * df
+        n_means * df
     else:
-        df_total = np.sum(df)
+        np.sum(df)
 
     if (np.size(nobs_all) == 1) and (np.size(var_all) == 1):
         #balanced sample sizes and homogenous variance
@@ -1511,7 +1510,7 @@ def multicontrast_pvalues(tstat, tcorr, df=None, dist='t', alternative='two-side
     pval_global = 1 - mvstdtprob(-cc,cc, tcorr, df)
     pvals = []
     for ti in cc:
-        limits = ti*np.ones(ntests)
+        ti*np.ones(ntests)
         pvals.append(1 - mvstdtprob(-cc,cc, tcorr, df))
 
     return pval_global, np.asarray(pvals)

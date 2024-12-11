@@ -199,7 +199,7 @@ class TestGlmPoissonPwNr(CheckWeight):
         fweights = np.array(fweights)
         wsum = fweights.sum()
         nobs = len(cpunish_data.endog)
-        aweights = fweights / wsum * nobs
+        fweights / wsum * nobs
 
         cls.res1 = GLM(cpunish_data.endog, cpunish_data.exog,
                        family=sm.families.Poisson(), freq_weights=fweights
@@ -225,7 +225,7 @@ class TestGlmPoissonFwHC(CheckWeight):
         fweights = np.array(fweights)
         wsum = fweights.sum()
         nobs = len(cpunish_data.endog)
-        aweights = fweights / wsum * nobs
+        fweights / wsum * nobs
         cls.corr_fact = np.sqrt((wsum - 1.) / wsum)
 
         mod = GLM(cpunish_data.endog, cpunish_data.exog,
@@ -270,7 +270,7 @@ class TestGlmPoissonFwClu(CheckWeight):
         fweights = np.array(fweights)
         wsum = fweights.sum()
         nobs = len(cpunish_data.endog)
-        aweights = fweights / wsum * nobs
+        fweights / wsum * nobs
 
         gid = np.arange(1, 17 + 1) // 2
         n_groups = len(np.unique(gid))
@@ -896,7 +896,7 @@ def test_poisson_residuals():
     x = add_constant(x)
 
     y_true = x.sum(1) / 2
-    y = y_true + 2 * np.random.randn(nobs)
+    y_true + 2 * np.random.randn(nobs)
     exposure = 1 + np.arange(nobs) // 4
 
     yp = np.random.poisson(np.exp(y_true) * exposure)

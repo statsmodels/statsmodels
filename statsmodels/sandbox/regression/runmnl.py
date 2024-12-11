@@ -75,7 +75,7 @@ class TryCLogit:
 
         #for testing only
         beta = np.arange(7)
-        betaidx_bychoices = [beta[idx] for idx in beta_indices]
+        [beta[idx] for idx in beta_indices]
 
 
     def xbetas(self, params):
@@ -92,7 +92,7 @@ class TryCLogit:
         #normalization ?
         xb = self.xbetas(params)
         expxb = np.exp(xb)
-        sumexpxb = expxb.sum(1)#[:,None]
+        expxb.sum(1)#[:,None]
         probs = expxb/expxb.sum(1)[:,None]  #we do not really need this for all
         loglike = (self.endog * np.log(probs)).sum(1)
         #is this the same: YES
@@ -131,7 +131,7 @@ class TryNCLogit:
 
         #for testing only
         beta = np.arange(7)
-        betaidx_bychoices = [beta[idx] for idx in beta_indices]
+        [beta[idx] for idx in beta_indices]
 
 
     def xbetas(self, params):
@@ -150,7 +150,7 @@ class TryNCLogit:
         xb = self.xbetas(params)
         expxb = np.exp(xb/tau)
         sumexpxb = expxb.sum(1)#[:,None]
-        logsumexpxb = np.log(sumexpxb)
+        np.log(sumexpxb)
         #loglike = (self.endog * xb).sum(1) - logsumexpxb
         probs = expxb/sumexpxb[:,None]
         return probs, logsumexpxp  # noqa:F821  See GH#5756
@@ -168,8 +168,8 @@ class TryNCLogit:
         ivs = np.column_stack(ivs) # this way ?
         exptiv = np.exp(tau*ivs)
         sumexptiv = exptiv.sum(1)
-        logsumexpxb = np.log(sumexpxb)  # noqa:F821  See GH#5756
-        probs = exptiv/sumexptiv[:,None]
+        np.log(sumexpxb)  # noqa:F821  See GH#5756
+        exptiv/sumexptiv[:,None]
 
 
 ####### obsolete version to try out attaching data,
@@ -194,9 +194,7 @@ class RU2NMNL:
     def calc_prob(self, tree, keys=None):
         '''walking a tree bottom-up based on dictionary
         '''
-        endog = self.endog
         datadict = self.datadict
-        paramsind = self.paramsind
         branchsum = self.branchsum
 
 

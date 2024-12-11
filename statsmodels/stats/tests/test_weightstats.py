@@ -182,11 +182,9 @@ class TestWeightstats:
 
     def test_weightstats_1(self):
         x1, x2 = self.x1, self.x2
-        w1, w2 = self.w1, self.w2
         w1_ = 2. * np.ones(len(x1))
         w2_ = 2. * np.ones(len(x2))
 
-        d1 = DescrStatsW(x1)
         #        print ttest_ind(x1, x2)
         #        print ttest_ind(x1, x2, usevar='unequal')
         #        #print ttest_ind(x1, x2, usevar='unequal')

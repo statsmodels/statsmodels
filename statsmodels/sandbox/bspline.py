@@ -604,7 +604,7 @@ class SmoothingSpline(BSpline):
 
         df = df or self.target_df
 
-        olddf = y.shape[0] - self.m
+        y.shape[0] - self.m
 
         if hasattr(self, "pen"):
             self.fit(y, x=x, weights=weights, pen=self.pen)
@@ -660,4 +660,4 @@ class SmoothingSpline(BSpline):
             a = self.gcv()
             return a
 
-        a = golden(_gcv, args=(y,x), brack=brack, tol=tol)
+        golden(_gcv, args=(y,x), brack=brack, tol=tol)

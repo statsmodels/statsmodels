@@ -674,7 +674,6 @@ class GMM(Model):
 
             params = self.fitgmm(start, weights=weights,
                                  optim_method=optim_method, optim_args=optim_args)
-            weights_ = weights  # temporary alias used in jval
         else:
             params, weights = self.fititer(start,
                                            maxiter=maxiter,
@@ -685,7 +684,7 @@ class GMM(Model):
                                            optim_args=optim_args)
             # TODO weights returned by fititer is inv_weights - not true anymore
             # weights_ currently not necessary and used anymore
-            weights_ = np.linalg.pinv(weights)
+            np.linalg.pinv(weights)
 
         if maxiter == 'cue':
             #we have params from maxiter= 0 as starting value

@@ -38,9 +38,9 @@ def plothist(x,distfn, args, loc, scale, right=1):
     #yt = stats.norm.pdf( bins, loc=loc, scale=scale)
     yt = distfn.pdf( bins, loc=loc, scale=scale, *args)
     yt[yt>maxheight]=maxheight
-    lt = plt.plot(bins, yt, 'r--', linewidth=1)
+    plt.plot(bins, yt, 'r--', linewidth=1)
     ys = stats.t.pdf( bins, 10,scale=10,)*right
-    ls = plt.plot(bins, ys, 'b-', linewidth=1)
+    plt.plot(bins, ys, 'b-', linewidth=1)
 
     plt.xlabel('Smarts')
     plt.ylabel('Probability')

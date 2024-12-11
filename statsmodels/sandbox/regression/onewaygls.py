@@ -292,7 +292,6 @@ class OneWayLS:
             summtable = self.summarytable
         else:
             _, summtable = res.ftest_summary()
-        txt = ''
         #print ft[0]  #skip because table is nicer
         templ = \
 '''Table of F-tests for overall or pairwise equality of coefficients'

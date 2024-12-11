@@ -83,7 +83,7 @@ def default_smoother(x, s_arg=None):
             nknots = 2**(a3 + (a4 - a3) * (n - 800)/2400.)
         else:
             nknots = 200 + (n - 3200.)**0.2
-    knots = _x[np.linspace(0, n-1, nknots).astype(np.int32)]
+    _x[np.linspace(0, n-1, nknots).astype(np.int32)]
 
     #s = SmoothingSpline(knots, x=x.copy())
     #when I set order=2, I get nans in the GAM prediction

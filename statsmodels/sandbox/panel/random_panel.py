@@ -121,7 +121,6 @@ class PanelSample:
 
         '''
 
-        random = self.random_state
 
         if self.y_true is None:
             self.get_y_true()

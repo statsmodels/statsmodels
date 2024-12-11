@@ -108,8 +108,6 @@ def test_em():
 
     fa = Factor(corr=cor, n_factor=n_factor, method='ml')
     rslt = fa.fit(opt={'gtol': 1e-3})
-    load_opt = rslt.loadings
-    uniq_opt = rslt.uniqueness
 
     load_em, uniq_em = fa._fit_ml_em(1000)
     cc = np.dot(load_em, load_em.T)

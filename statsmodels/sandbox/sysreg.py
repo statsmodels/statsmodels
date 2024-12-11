@@ -309,7 +309,7 @@ exogenous variables.  Got length %s" % len(sys))
         for eq_key in indep_endog:
             try:
                 iter(indep_endog[eq_key])
-            except:
+            except Exception:
 #                eq_key = [eq_key]
                 raise TypeError("The values of the indep_exog dict must be "
                                 "iterable. Got type %s for converter %s"
@@ -340,7 +340,6 @@ exogenous variables.  Got length %s" % len(sys))
         wexog = []
         indep_endog = self._indep_endog # this has the col mapping
 #        fullexog = self.fullexog
-        instruments = self.instruments
         for eq in range(self._M): # need to go through all equations regardless
             instr_eq = Y.get(eq, None) # Y has the eq to ind endog array map
             newRHS = self.exog[eq].copy()

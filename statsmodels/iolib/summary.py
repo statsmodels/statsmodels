@@ -318,7 +318,7 @@ def summary_top(results, title=None, gleft=None, gright=None, yname=None, xname=
         try:
             llf = results.llf  # noqa: F841
             gen_left.append(('Log-Likelihood', None))
-        except: # AttributeError, NotImplementedError
+        except (AttributeError, NotImplementedError):
             pass
 
         gen_right = []
@@ -646,9 +646,9 @@ def summary_params_2dflat(result, endog_names=None, exog_names=None, alpha=0.05,
     if not isinstance(endog_names, list):
         # TODO: this might be specific to multinomial logit type, move?
         if endog_names is None:
-            endog_basename = 'endog'
+            pass
         else:
-            endog_basename = endog_names
+            pass
         # TODO: note, the [1:] is specific to current MNLogit
         endog_names = res.model.endog_names[1:]
 
@@ -721,7 +721,8 @@ def table_extend(tables, keep_headers=True):
 def summary_return(tables, return_fmt='text'):
     # join table parts then print
     if return_fmt == 'text':
-        strdrop = lambda x: str(x).rsplit('\n',1)[0]
+        def strdrop(x):
+            return str(x).rsplit('\n', 1)[0]
         # convert to string drop last line
         return '\n'.join(lmap(strdrop, tables[:-1]) + [str(tables[-1])])
     elif return_fmt == 'tables':

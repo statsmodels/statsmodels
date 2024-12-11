@@ -124,9 +124,10 @@ def _get_margeff_exog(exog, at, atexog, ind):
                 k_vars = atexog.shape[1]
             try:
                 assert k_vars == exog.shape[1]
-            except:
-                raise ValueError("atexog does not have the same number "
-                        "of variables as exog")
+            except AssertionError:
+                raise ValueError(
+                    "atexog does not have the same number of variables as exog"
+                )
             exog = atexog
 
     #NOTE: we should fill in atexog after we process at

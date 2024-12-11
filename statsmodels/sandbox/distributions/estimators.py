@@ -341,7 +341,10 @@ def hess_ndt(fun, pars, args, options):
     import numdifftools as ndt
     if not ('stepMax' in options or 'stepFix' in options):
         options['stepMax'] = 1e-5
-    f = lambda params: fun(params, *args)
+
+    def f(params):
+        return fun(params, *args)
+
     h = ndt.Hessian(f, **options)
     return h(pars), h
 
@@ -655,7 +658,8 @@ if __name__ == '__main__':
     #the results for the following look strange, maybe refactoring error
     he, h = hess_ndt(logmps, parsgpd, argsgpd, options)
     print(np.linalg.eigh(he)[0])
-    f = lambda params: logmps(params, *argsgpd)
+    def f(params):
+        return logmps(params, *argsgpd)
     print(f(parsgpd))
     #add binned
     fp2, bp2 = np.histogram(p2rvs, bins=50)

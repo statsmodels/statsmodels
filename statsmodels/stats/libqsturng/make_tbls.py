@@ -442,7 +442,8 @@ def qhat(a, p, r, v):
 
     return math.sqrt(2) * (f - 1.) * _tinv(p_, v)
 
-errfunc = lambda a, p, r, v, q: qhat(a, p, r, v) - q
+def errfunc(a, p, r, v, q):
+    return qhat(a, p, r, v) - q
 
 A = {} # this is the error matrix
 for p in T:

@@ -63,7 +63,6 @@ def labelmeanfilter_str(ys, x):
 def groupstatsbin(factors, values):
     '''uses np.bincount, assumes factors/labels are integers
     '''
-    n = len(factors)
     ix,rind = np.unique(factors, return_inverse=1)
     gcount = np.bincount(rind)
     gmean = np.bincount(rind, weights=values)/ (1.0*gcount)

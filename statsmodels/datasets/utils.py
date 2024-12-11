@@ -57,7 +57,7 @@ class Dataset(dict):
         # attribute you must create this in the dataset's load function.
         try:  # some datasets have string variables
             self.raw_data = self.data.astype(float)
-        except:
+        except Exception:
             pass
 
     def __repr__(self):
@@ -149,7 +149,7 @@ def _urlopen_cached(url, cache):
         try:
             data = _open_cache(cache_path)
             from_cache = True
-        except:
+        except Exception:
             pass
 
     # not using the cache or did not find it in cache

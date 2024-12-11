@@ -115,7 +115,7 @@ def ks_2samp(data1, data2):
     en = np.sqrt(n1*n2/float(n1+n2))
     try:
         prob = ksprob((en+0.12+0.11/en)*d)
-    except:
+    except Exception:
         prob = 1.0
     return d, prob
 

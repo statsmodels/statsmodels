@@ -299,7 +299,7 @@ class TestKDEMultivariateConditional(KDETestBase):
 
     @pytest.mark.slow
     def test_unordered_CV_LS(self):
-        dens_ls = nparam.KDEMultivariateConditional(endog=[self.oecd],
+        nparam.KDEMultivariateConditional(endog=[self.oecd],
                                                     exog=[self.growth],
                                                     dep_type='u',
                                                     indep_type='c', bw='cv_ls')

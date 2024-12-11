@@ -329,7 +329,8 @@ def lm_test_glm(result, exog_extra, mean_deriv=None):
     dlinkinv = mod.family.link.inverse_deriv
 
     # derivative of mean function w.r.t. beta (linear params)
-    dm = lambda x, linpred: dlinkinv(linpred)[:,None] * x
+    def dm(x, linpred):
+        return dlinkinv(linpred)[:,None] * x
 
     var_func = mod.family.variance
 

@@ -282,7 +282,7 @@ class DensityOrthoPoly:
     def __init__(self, polybase=None, order=5):
         if polybase is not None:
             self.polybase = polybase
-            self.polys = polys = [polybase(i) for i in range(order)]
+            self.polys = [polybase(i) for i in range(order)]
         #try:
         #self.offsetfac = 0.05
         #self.offsetfac = polys[0].offsetfactor #polys maybe not defined yet

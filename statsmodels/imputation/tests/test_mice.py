@@ -328,7 +328,7 @@ class TestMICE:
         assert issubclass(result.__class__, mice.MICEResults)
 
         # Smoke test for results
-        smr = result.summary()
+        result.summary()
 
 
     def test_MICE1(self):

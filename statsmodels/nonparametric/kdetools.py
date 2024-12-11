@@ -45,11 +45,8 @@ def counts(x, v):
     Using np.digitize and np.bincount
     """
     idx = np.digitize(x, v)
-    try: # numpy 1.6
-        return np.bincount(idx, minlength=len(v))
-    except:
-        bc = np.bincount(idx)
-        return np.r_[bc, np.zeros(len(v) - len(bc))]
+    return np.bincount(idx, minlength=len(v))
+
 
 def kdesum(x, axis=0):
     return np.asarray([np.sum(x[i] - x, axis) for i in range(len(x))])

@@ -641,7 +641,6 @@ def printresults(sample, arg, bres, kind='bootstrap'):
     print(argest)
     if kind == 'bootstrap':
         #bootstrap compares to estimate from sample
-        argorig = arg
         arg = argest
 
     print('%s distribution of parameter estimate (nrepl=%d)'% (kind, nrepl))

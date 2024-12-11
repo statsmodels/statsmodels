@@ -132,8 +132,8 @@ class TestExpandedNormal:
     def test_pdf_no_roots(self):
         with warnings.catch_warnings():
             warnings.simplefilter("error", RuntimeWarning)
-            ne = ExpandedNormal([0, 1])
-            ne = ExpandedNormal([0, 1, 0.1, 0.1])
+            ExpandedNormal([0, 1])
+            ExpandedNormal([0, 1, 0.1, 0.1])
 
     def test_pdf_has_roots(self):
         with warnings.catch_warnings():

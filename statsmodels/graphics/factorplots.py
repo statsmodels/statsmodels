@@ -105,7 +105,7 @@ def interaction_plot(x, trace, response, func="mean", ax=None, plottype='b',
 
     x_values = x_levels = None
     if isinstance(x[0], str):
-        x_levels = [l for l in np.unique(x)]
+        x_levels = [val for val in np.unique(x)]
         x_values = lrange(len(x_levels))
         x = _recode(x, dict(zip(x_levels, x_values)))
 

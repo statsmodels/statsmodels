@@ -100,9 +100,8 @@ class CheckKernelMixin:
     @pytest.mark.smoke  # TOOD: make this an actual test?
     def test_smoothconf_data(self):
         kern = self.kern
-        crit = 1.9599639845400545  # norm.isf(0.05 / 2)
         # no reference results saved to csv yet
-        fitted_x = np.array([kern.smoothconf(x, y, xi) for xi in x])
+        np.array([kern.smoothconf(x, y, xi) for xi in x])
 
 
 class TestEpan(CheckKernelMixin):

@@ -655,7 +655,6 @@ class FactorResults:
         statsmodels.multivariate.factor.FactorResults.factor_scoring
         """
         L = self.loadings
-        T = self.rotation_matrix.T
         #TODO: check row versus column convention for T
         uni = 1 - self.communality #self.uniqueness
 

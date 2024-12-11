@@ -6,7 +6,7 @@
 try:
     import pymc
     pymc_installed = 1
-except:
+except ImportError:
     print("pymc not imported")
     pymc_installed = 0
 

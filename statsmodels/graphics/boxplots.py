@@ -418,7 +418,7 @@ def _show_legend(ax):
                     borderpad=0.15)
     ltext  = leg.get_texts()
     llines = leg.get_lines()
-    frame  = leg.get_frame()
+    leg.get_frame()
 
     from matplotlib.artist import setp
     setp(ltext, fontsize='small')

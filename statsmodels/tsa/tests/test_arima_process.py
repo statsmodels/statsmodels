@@ -230,9 +230,6 @@ def test_spectrum(ar, ma):
 @pytest.mark.parametrize("ma", malist)
 def test_armafft(ar, ma):
     # test other methods
-    nfreq = 20
-    w = np.linspace(0, np.pi, nfreq, endpoint=False)
-
     arma = ArmaFft(ar, ma, 20)
     ac1 = arma.invpowerspd(1024)[:10]
     ac2 = arma.acovf(10)[:10]

@@ -197,7 +197,7 @@ def test_plots(close_figures):
     mod = Factor(X.iloc[:, 1:], 3)
     results = mod.fit()
     results.rotate('oblimin')
-    fig = results.plot_scree()
+    results.plot_scree()
 
     fig_loadings = results.plot_loadings()
     assert_equal(3, len(fig_loadings))

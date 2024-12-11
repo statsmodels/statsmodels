@@ -188,7 +188,7 @@ class ExpandedNormal(rv_continuous):
         # scale cumulants by \sigma
         mu, sigma = cum[0], np.sqrt(cum[1])
         lam = np.asarray(cum)
-        for j, l in enumerate(lam):
+        for j in range(lam.shape[0]):
             lam[j] /= cum[1]**j
 
         coef = np.zeros(lam.size * 3 - 5)

@@ -735,7 +735,6 @@ def test_ml_c():  # test deterministic terms outside coint relation
                 p_const_obt_exog = p_C_obt_exog[:, 0][:, None]
                 p_C_obt_exog = p_C_obt_exog[:, 1:]
                 p_const_obt_exog_coint = p_C_obt_exog_coint[:, 0][:, None]
-                p_C_obt_exo_cointg = p_C_obt_exog_coint[:, 1:]
                 p_const_des = p_desired[:, 0][:, None]
                 p_desired = p_desired[:, 1:]
                 assert_allclose(
@@ -1557,7 +1556,6 @@ def test_lag_order_selection():
             deterministic = dt[0]
             endog_tot = data[ds]
 
-            trend = "n" if dt[0] == "nc" else dt[0]
             obtained_all = select_order(
                 endog_tot, 10, deterministic=dt[0], seasons=dt[1]
             )

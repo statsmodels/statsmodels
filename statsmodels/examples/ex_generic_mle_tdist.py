@@ -226,7 +226,6 @@ class MyPareto(GenericLikelihoodModel):
         '''
         self.nobs = self.endog.shape[0]
         rvs = np.sort(self.endog)
-        rvsmin = rvs.min()
 
         def pareto_ks(loc, rvs):
             #start_scale = rvs.min() - loc # not used yet
@@ -238,7 +237,7 @@ class MyPareto(GenericLikelihoodModel):
         maxind = min(np.floor(self.nobs*0.95).astype(int), self.nobs-10)
         res = []
         for trimidx in range(self.nobs//2, maxind):
-            xmin = loc = rvs[trimidx]
+            loc = rvs[trimidx]
             res.append([trimidx, pareto_ks(loc-1e-10, rvs[trimidx:])])
         res = np.array(res)
         bestidx = res[np.argmin(res[:,1]),0].astype(int)

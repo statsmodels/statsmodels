@@ -27,7 +27,7 @@ class TestTheilTextile:
                                 "theil_textile_predict.csv")
         cls.res_predict = pd.read_csv(filepath, sep=",")
 
-        names = "year	lconsump	lincome	lprice".split()
+        "year	lconsump	lincome	lprice".split()
 
         data = np.array('''\
         1923	1.99651	1.98543	2.00432

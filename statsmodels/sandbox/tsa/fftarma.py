@@ -205,7 +205,7 @@ class ArmaFft(ArmaProcess):
         hw = fft.fft(fft.fftshift(mapadded)) / fft.fft(fft.fftshift(arpadded))
         #return np.abs(spd)[n//2-1:]
         w = fft.fftfreq(n) * 2 * np.pi
-        wslice = slice(n//2-1, None, None)
+        slice(n//2-1, None, None)
         #return (hw*hw.conj()).real[wslice], w[wslice]
         return (hw*hw.conj()).real, w
 
@@ -218,8 +218,6 @@ class ArmaFft(ArmaProcess):
         #abs looks wrong
         hw = fft.fft(self.ma, n) / fft.fft(self.ar, n)
         w = fft.fftfreq(n) * 2 * np.pi
-        wslice = slice(None, n//2, None)
-        #return (np.abs(hw)**2)[wslice], w[wslice]
         return (np.abs(hw)**2) * 0.5/np.pi, w
 
     def _spddirect2(self, n):

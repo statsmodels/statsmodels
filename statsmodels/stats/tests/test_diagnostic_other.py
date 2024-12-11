@@ -112,10 +112,7 @@ class TestCMTOLS(CheckCMT):
         res_ols = self.res_ols
         nobs = self.nobs
         moms = self.moms
-        moms_obs = self.moms_obs
         cov_moms = self.cov_moms
-        covm = self.covm
-        moms_deriv = self.moms_deriv
         weights = self.weights
         L = self.L
         x = self.exog_full  # for auxiliary regression only
@@ -148,7 +145,6 @@ class TestCMTOLS(CheckCMT):
         moms = self.moms
         moms_obs = self.moms_obs
         covm = self.covm
-        moms_deriv = self.moms_deriv
         weights = self.weights
         L = self.L
         x = self.exog_full
@@ -188,7 +184,6 @@ class TestCMTOLS(CheckCMT):
 
     def res_hc0(self):
         res_ols = self.res_ols
-        nobs = self.nobs
         moms = self.moms
         moms_obs = self.moms_obs
         cov_moms = self.cov_moms   # Hessian with scale

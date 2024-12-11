@@ -106,7 +106,6 @@ def print_results2(res):
     groupind = res.groups
     #res.fitjoint()  #not really necessary, because called by ftest_summary
     ft = res.ftest_summary()
-    txt = ''
     #print ft[0]  #skip because table is nicer
     templ = \
 '''Table of F-tests for overall or pairwise equality of coefficients'

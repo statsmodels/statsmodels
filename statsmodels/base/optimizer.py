@@ -652,7 +652,8 @@ def _fit_lbfgs(f, score, start_params, fargs, kwargs, disp=True, maxiter=100,
                          'even though an analytic loglike_and_score function '
                          'was given')
     if loglike_and_score:
-        func = lambda p, *a: tuple(-x for x in loglike_and_score(p, *a))
+        def func(p, *a):
+            return tuple(-x for x in loglike_and_score(p, *a))
     elif score:
         func = f
         extra_kwargs['fprime'] = score

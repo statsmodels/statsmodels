@@ -143,7 +143,7 @@ class TestLowess:
         rfile = os.path.join(rpath, "test_lowess_simple.csv")
         test_data = np.genfromtxt(open(rfile, "rb"), delimiter=",", names=True)
         y, x = test_data["y"], test_data["x"]
-        res1_fitted = test_data["out"]
+        test_data["out"]
         expected_lowess = np.array([test_data["x"], test_data["out"]]).T
 
         # check skip sorting

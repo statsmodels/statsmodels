@@ -122,13 +122,20 @@ def normal_ad(x, axis=0):
     else:
         bounds = np.array([0.0, 0.200, 0.340, 0.600])
 
-        pval0 = lambda ad2a: np.nan * np.ones_like(ad2a)
-        pval1 = lambda ad2a: 1 - np.exp(
-            -13.436 + 101.14 * ad2a - 223.73 * ad2a ** 2)
-        pval2 = lambda ad2a: 1 - np.exp(
-            -8.318 + 42.796 * ad2a - 59.938 * ad2a ** 2)
-        pval3 = lambda ad2a: np.exp(0.9177 - 4.279 * ad2a - 1.38 * ad2a ** 2)
-        pval4 = lambda ad2a: np.exp(1.2937 - 5.709 * ad2a + 0.0186 * ad2a ** 2)
+        def pval0(ad2a):
+            return np.nan * np.ones_like(ad2a)
+
+        def pval1(ad2a):
+            return 1 - np.exp(-13.436 + 101.14 * ad2a - 223.73 * ad2a ** 2)
+
+        def pval2(ad2a):
+            return 1 - np.exp(-8.318 + 42.796 * ad2a - 59.938 * ad2a ** 2)
+
+        def pval3(ad2a):
+            return np.exp(0.9177 - 4.279 * ad2a - 1.38 * ad2a ** 2)
+
+        def pval4(ad2a):
+            return np.exp(1.2937 - 5.709 * ad2a + 0.0186 * ad2a ** 2)
 
         pvalli = [pval0, pval1, pval2, pval3, pval4]
 

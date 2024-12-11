@@ -169,10 +169,10 @@ def ar_generator(N=512, sigma=1.):
     v = np.random.normal(size=N, scale=sigma**0.5)
     u = np.zeros(N)
     P = len(taps)
-    for l in range(P):
-        u[l] = v[l] + np.dot(u[:l][::-1], taps[:l])
-    for l in range(P,N):
-        u[l] = v[l] + np.dot(u[l-P:l][::-1], taps)
+    for lag in range(P):
+        u[lag] = v[lag] + np.dot(u[:lag][::-1], taps[:lag])
+    for lag in range(P,N):
+        u[lag] = v[lag] + np.dot(u[lag-P:lag][::-1], taps)
     return u, v, taps
 
 #JP: small differences to using np.correlate, because assumes mean(s)=0
@@ -351,7 +351,7 @@ def pltxcorr(self, x, y, normed=True, detrend=detrend_none,
         b = self.axhline(**kwargs)
         kwargs.setdefault('marker', 'o')
         kwargs.setdefault('linestyle', 'None')
-        d = self.plot(lags, c, **kwargs)
+        self.plot(lags, c, **kwargs)
     else:
 
         kwargs.setdefault('marker', 'o')

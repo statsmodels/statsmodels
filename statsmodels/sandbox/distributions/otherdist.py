@@ -95,7 +95,7 @@ class ParametricMixtureD:
         #TODO: check strange cases ? this assumes continous integers
         mrvs_idx = (np.clip(mrvs, self.ma, self.mb) - self.ma).astype(int)
 
-        bd_args = tuple(md[mrvs_idx] for md in self.bd_args)
+        tuple(md[mrvs_idx] for md in self.bd_args)
         bd_kwds = {k: self.bd_kwds[k][mrvs_idx] for k in self.bd_kwds}
         kwds = {'size':size}
         kwds.update(bd_kwds)
@@ -256,9 +256,11 @@ if __name__ == '__main__':
     #*********** Poisson-Normal Mixture
     mdist = stats.poisson(2.)
     bdist = stats.norm
-    bd_args_fn = lambda x: ()
+    def bd_args_fn(x):
+        return ()
     #bd_kwds_fn = lambda x: {'loc': np.atleast_2d(10./(1+x))}
-    bd_kwds_fn = lambda x: {'loc': x, 'scale': 0.1*np.ones_like(x)} #10./(1+x)}
+    def bd_kwds_fn(x):
+        return {'loc': x, 'scale': 0.1 * np.ones_like(x)} #10./(1+x)}
 
 
     pd = ParametricMixtureD(mdist, bdist, bd_args_fn, bd_kwds_fn)

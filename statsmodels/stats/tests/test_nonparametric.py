@@ -200,16 +200,6 @@ def test_cochransq2():
 def test_cochransq3():
     # another example compared to SAS
     # in frequency weight format
-    dt = [('A', 'S1'), ('B', 'S1'), ('C', 'S1'), ('count', int)]
-    dta = np.array([('F', 'F', 'F', 6),
-                    ('U', 'F', 'F', 2),
-                    ('F', 'F', 'U', 16),
-                    ('U', 'F', 'U', 4),
-                    ('F', 'U', 'F', 2),
-                    ('U', 'U', 'F', 6),
-                    ('F', 'U', 'U', 4),
-                    ('U', 'U', 'U', 6)], dt)
-
     cases = np.array([[0, 0, 0],
                       [1, 0, 0],
                       [0, 0, 1],
@@ -231,12 +221,6 @@ def test_runstest(reset_randomstate):
 
     z_twosided = 1.386750
     pvalue_twosided = 0.1655179
-
-    z_greater = 1.386750
-    pvalue_greater = 0.08275893
-
-    z_less = 1.386750
-    pvalue_less = 0.917241
 
     #print Runs(x).runs_test(correction=False)
     assert_almost_equal(np.array(Runs(x).runs_test(correction=False)),
@@ -268,7 +252,6 @@ def test_runstest_2sample():
     x = [31.8, 32.8, 39.2, 36, 30, 34.5, 37.4]
     y = [35.5, 27.6, 21.3, 24.8, 36.7, 30]
     y[-1] += 1e-6  #avoid tie that creates warning
-    groups = np.concatenate((np.zeros(len(x)), np.ones(len(y))))
 
     res = runstest_2samp(x, y)
     res1 = (0.022428065200812752, 0.98210649318649212)

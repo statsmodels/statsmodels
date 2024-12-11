@@ -204,7 +204,6 @@ class NonlinearLS(Model):  #or subclass a model
 ##        if not weights is None
 ##            fitres.wexogw = self.weights * self.jacpredict(popt)
         from statsmodels.regression import RegressionResults
-        results = RegressionResults
 
         beta = popt
         lfit = RegressionResults(self, beta,

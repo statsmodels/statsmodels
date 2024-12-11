@@ -182,7 +182,8 @@ class GenericZeroInflated(CountModel):
 
         if callback is None:
             # work around perfect separation callback #3895
-            callback = lambda *x: x
+            def callback(*x):
+                return x
 
         mlefit = super().fit(start_params=start_params,
                        maxiter=maxiter, disp=disp, method=method,
@@ -260,7 +261,7 @@ class GenericZeroInflated(CountModel):
         zero_idx = np.nonzero(y == 0)[0]
         nonzero_idx = np.nonzero(y)[0]
 
-        mu = self.model_main.predict(params_main)
+        self.model_main.predict(params_main)
 
         # TODO: need to allow for complex to use CS numerical derivatives
         dldp = np.zeros((self.exog.shape[0], self.k_exog), dtype=np.float64)
@@ -618,7 +619,7 @@ class ZeroInflatedPoisson(GenericZeroInflated):
         y = self.endog
         w = self.model_infl.predict(params_infl)
         w = np.clip(w, np.finfo(float).eps, 1 - np.finfo(float).eps)
-        score = self.score(params)
+        self.score(params)
         zero_idx = np.nonzero(y == 0)[0]
         nonzero_idx = np.nonzero(y)[0]
 
