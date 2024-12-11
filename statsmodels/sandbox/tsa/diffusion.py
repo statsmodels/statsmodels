@@ -484,7 +484,9 @@ if __name__ == '__main__':
             tmp = plt.plot(ws[0].mean(0), linewidth=2)
             plt.title('Standard Brownian Motion (Wiener Process)')
 
-        func = lambda t, W: np.exp(t + 0.5*W)
+        def func(t, W):
+            return np.exp(t + 0.5*W)
+
         us = w.expectedsim(func, nobs=500, nrepl=nrepl)
         if doplot:
             plt.figure()

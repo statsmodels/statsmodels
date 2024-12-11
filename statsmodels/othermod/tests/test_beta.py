@@ -1,17 +1,16 @@
 import io
 import os
 
-import pytest
-
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
-import patsy
+import pytest
+
 from statsmodels.api import families
-from statsmodels.tools.sm_exceptions import (
-    ValueWarning,
-    )
+from statsmodels.formula._manager import FormulaManager
 from statsmodels.othermod.betareg import BetaModel
+from statsmodels.tools.sm_exceptions import ValueWarning
+
 from .results import results_betareg as resultsb
 
 links = families.links
@@ -76,7 +75,8 @@ class TestBetaModel:
         cls.income_fit = BetaModel.from_formula(model, income).fit()
 
         model = cls.model = "methylation ~ gender + CpG"
-        Z = cls.Z = patsy.dmatrix("~ age", methylation)
+        mgr = FormulaManager()
+        Z = cls.Z = mgr.get_matrices("~ age", methylation, pandas=False)
         mod = BetaModel.from_formula(model, methylation, exog_precision=Z,
                                      link_precision=links.Identity())
         cls.meth_fit = mod.fit()
@@ -342,7 +342,8 @@ class TestBetaIncome():
     def setup_class(cls):
 
         formula = "I(food/income) ~ income + persons"
-        exog_prec = patsy.dmatrix("~ persons", income)
+        mgr = FormulaManager()
+        exog_prec = mgr.get_matrices("~ persons", income)
         mod_income = BetaModel.from_formula(
             formula,
             income,

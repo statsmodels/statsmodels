@@ -146,12 +146,12 @@ import warnings
 
 import numpy as np
 import pandas as pd
-import patsy
 from scipy import sparse
 from scipy.stats.distributions import norm
 
 from statsmodels.base._penalties import Penalty
 import statsmodels.base.model as base
+from statsmodels.formula._manager import FormulaManager
 from statsmodels.tools import data as data_tools
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
@@ -698,7 +698,7 @@ class MixedLM(base.LikelihoodModel):
                  exog_vc=None, use_sqrt=True, missing='none',
                  **kwargs):
 
-        _allowed_kwargs = ["missing_idx", "design_info", "formula"]
+        _allowed_kwargs = ["missing_idx", "model_spec", "formula"]
         for x in kwargs.keys():
             if x not in _allowed_kwargs:
                 raise ValueError(
@@ -987,10 +987,11 @@ class MixedLM(base.LikelihoodModel):
                 if eval_env is None:
                     eval_env = 1
                 elif eval_env == -1:
-                    from patsy import EvalEnvironment
-                    eval_env = EvalEnvironment({})
-                exog_re = patsy.dmatrix(re_formula, data, eval_env=eval_env)
-                exog_re_names = exog_re.design_info.column_names
+                    mgr = FormulaManager()
+                    eval_env = mgr.get_empty_eval_env()
+                mgr = FormulaManager()
+                exog_re = mgr.get_matrices(re_formula, data, eval_env=eval_env)
+                exog_re_names = mgr.get_column_names(exog_re)
                 exog_re_names = [x.replace("Intercept", group_name)
                                  for x in exog_re_names]
                 exog_re = np.asarray(exog_re)
@@ -1008,8 +1009,8 @@ class MixedLM(base.LikelihoodModel):
             if eval_env is None:
                 eval_env = 1
             elif eval_env == -1:
-                from patsy import EvalEnvironment
-                eval_env = EvalEnvironment({})
+                mgr = FormulaManager()
+                eval_env = mgr.get_empty_eval_env()
 
             vc_mats = []
             vc_colnames = []
@@ -1017,17 +1018,17 @@ class MixedLM(base.LikelihoodModel):
             gb = data.groupby(groups)
             kylist = sorted(gb.groups.keys())
             vcf = sorted(vc_formula.keys())
+            mgr = FormulaManager()
             for vc_name in vcf:
-                md = patsy.ModelDesc.from_formula(vc_formula[vc_name])
+                # TODO: patsy migration
+                model_spec = mgr.get_spec(vc_formula[vc_name])
                 vc_names.append(vc_name)
                 evc_mats, evc_colnames = [], []
                 for group_ix, group in enumerate(kylist):
                     ii = gb.groups[group]
-                    mat = patsy.dmatrix(
-                             md,
-                             data.loc[ii, :],
-                             eval_env=eval_env,
-                             return_type='dataframe')
+                    mat = mgr.get_matrices(
+                        model_spec, data.loc[ii, :], eval_env=eval_env, pandas=True
+                    )
                     evc_colnames.append(mat.columns.tolist())
                     if use_sparse:
                         evc_mats.append(sparse.csr_matrix(mat))

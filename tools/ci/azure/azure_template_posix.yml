@@ -65,6 +65,15 @@ jobs:
         python_312_pre:
           python.version: '3.12'
           pip.pre: true
+        python_312_formulaic:
+          python.version: '3.12'
+          SM_FORMULA_ENGINE: "formulaic"
+        python_312_no_patsy:
+          python.version: '3.12'
+          PIP_UNINSTALL: "patsy"
+        python_312_no_formulaic:
+          python.version: '3.12'
+          PIP_UNINSTALL: "formulaic"
       ${{ if eq(parameters.name, 'macOS') }}:
         python310_macos_latest:
           python.version: '3.10'
@@ -119,6 +128,13 @@ jobs:
       python -m pip install -e . -vv --no-build-isolation --upgrade-strategy only-if-needed
     displayName: 'Install statsmodels (editable)'
     condition: ne(variables['test.install'], 'true')
+
+  - script: |
+      if [[ -n ${PIP_UNINSTALL} ]]; then
+        python -m pip uninstall ${PIP_UNINSTALL} -y
+      fi
+    displayName: 'Optionally Uninstall Packages'
+    condition: eq(variables['use.conda'], 'true')
 
   - script: python -m pip list
     displayName: 'List Configuration (PyPI)'

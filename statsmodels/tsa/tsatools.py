@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from statsmodels.compat.python import Literal, lrange
+from statsmodels.compat.python import lrange
 
+from typing import Literal
 import warnings
 
 import numpy as np
@@ -125,7 +126,7 @@ def add_trend(x, trend="c", prepend=False, has_constant="skip"):
             def safe_is_const(s):
                 try:
                     return np.ptp(s) == 0.0 and np.any(s != 0.0)
-                except:
+                except Exception:
                     return False
 
             col_const = x.apply(safe_is_const, 0)
@@ -148,8 +149,10 @@ def add_trend(x, trend="c", prepend=False, has_constant="skip"):
                         "x contains one or more constant columns. Column(s) "
                         f"{const_cols} are constant."
                     )
-                msg = f"{base_err} Adding a constant with trend='{trend}' is not allowed."
-                raise ValueError(msg)
+                raise ValueError(
+                    f"{base_err} Adding a constant with trend='{trend}' is "
+                    "not allowed."
+                )
             elif has_constant == "skip":
                 columns = columns[1:]
                 trendarr = trendarr[:, 1:]
@@ -293,12 +296,13 @@ def detrend(x, order=1, axis=0):
     return resid
 
 
-def lagmat(x,
-           maxlag: int,
-           trim: Literal["forward", "backward", "both", "none"]='forward',
-           original: Literal["ex", "sep", "in"]="ex",
-           use_pandas: bool=False
-           )-> NDArray | DataFrame | tuple[NDArray, NDArray] | tuple[DataFrame, DataFrame]:
+def lagmat(
+    x,
+    maxlag: int,
+    trim: Literal["forward", "backward", "both", "none"] = "forward",
+    original: Literal["ex", "sep", "in"] = "ex",
+    use_pandas: bool = False,
+) -> NDArray | DataFrame | tuple[NDArray, NDArray] | tuple[DataFrame, DataFrame]:
     """
     Create 2d array of lags.
 
@@ -397,8 +401,8 @@ def lagmat(x,
     lm = np.zeros((nobs + maxlag, nvar * (maxlag + 1)))
     for k in range(0, int(maxlag + 1)):
         lm[
-        maxlag - k: nobs + maxlag - k,
-        nvar * (maxlag - k): nvar * (maxlag - k + 1),
+            maxlag - k : nobs + maxlag - k,
+            nvar * (maxlag - k) : nvar * (maxlag - k + 1),
         ] = x
 
     if trim in ("none", "forward"):

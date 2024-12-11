@@ -4,9 +4,9 @@ Created on Mar. 11, 2024 10:41:37 p.m.
 Author: Josef Perktold
 License: BSD-3
 """
-# flake8: noqa E731
+
 import numpy as np
-from scipy import stats, integrate, optimize
+from scipy import integrate, optimize, stats
 
 from statsmodels.tools.testing import Holder
 
@@ -57,8 +57,8 @@ def _var_normal(norm):
 
 
     """
-    num = stats.norm.expect(lambda x: norm.psi(x)**2)  #noqa E731
-    denom = stats.norm.expect(lambda x: norm.psi_deriv(x))**2  #noqa E731
+    num = stats.norm.expect(lambda x: norm.psi(x) ** 2)
+    denom = stats.norm.expect(lambda x: norm.psi_deriv(x))**2
     return num / denom
 
 
@@ -100,7 +100,7 @@ def _var_normal_jump(norm):
 
 
     """
-    num = stats.norm.expect(lambda x: norm.psi(x)**2)  #noqa E731
+    num = stats.norm.expect(lambda x: norm.psi(x)**2)
 
     def func(x):
         # derivative normal pdf
@@ -215,13 +215,12 @@ def tuning_s_estimator_mean(norm, breakdown=None):
     def func(c):
         norm_ = norm
         norm_._set_tuning_param(c, inplace=True)
-        bp = (stats.norm.expect(lambda x : norm_.rho(x)) /  #noqa E731
-              norm_.max_rho())
+        bp = stats.norm.expect(lambda x: norm_.rho(x)) / norm_.max_rho()
         return bp
 
     res = []
     for bp in bps:
-        c_bp = optimize.brentq(lambda c0: func(c0) - bp, 0.1, 10)  #noqa E731
+        c_bp = optimize.brentq(lambda c0: func(c0) - bp, 0.1, 10)
         norm._set_tuning_param(c_bp, inplace=True)  # inplace modification
         eff = 1 / _var_normal(norm)
         b = stats.norm.expect(lambda x : norm.rho(x))
@@ -276,7 +275,8 @@ def scale_bias_cov(norm, k_vars):
         Breakdown point computed as scale bias divided by max rho.
     """
 
-    rho = lambda x: (norm.rho(np.sqrt(x)))  # noqa
+    def rho(x):
+        return norm.rho(np.sqrt(x))
     scale_bias = stats.chi2.expect(rho, args=(k_vars,))
     return scale_bias, scale_bias / norm.max_rho()
 
@@ -337,9 +337,13 @@ def eff_mvmean(norm, k_vars):
 
     """
     k = k_vars  # shortcut
-    f_alpha = lambda d: norm.psi(d)**2 / k
-    f_beta = lambda d: ((1 - 1 / k) * norm.weights(d) +
-                        1 / k * norm.psi_deriv(d))
+
+    def f_alpha(d):
+        return norm.psi(d) ** 2 / k
+
+    def f_beta(d):
+        return (1 - 1 / k) * norm.weights(d) + 1 / k * norm.psi_deriv(d)
+
     alpha = stats.chi(k).expect(f_alpha)
     beta = stats.chi(k).expect(f_beta)
     return beta**2 / alpha, alpha, beta
@@ -381,8 +385,13 @@ def eff_mvshape(norm, k_vars):
     """
 
     k = k_vars  # shortcut
-    f_a = lambda d: k * (k + 2) * norm.psi(d)**2 * d**2
-    f_b = lambda d: norm.psi_deriv(d) * d**2 + (k + 1) * norm.psi(d) * d
+
+    def f_a(d):
+        return k * (k + 2) * norm.psi(d) ** 2 * d**2
+
+    def f_b(d):
+        return norm.psi_deriv(d) * d**2 + (k + 1) * norm.psi(d) * d
+
     a = stats.chi(k).expect(f_a)
     b = stats.chi(k).expect(f_b)
     return b**2 / a, a, b

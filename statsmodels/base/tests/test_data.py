@@ -894,7 +894,7 @@ def test_formula_missing_extra_arrays():
 
     formula = "y_missing ~ X_missing"
 
-    ((endog, exog), missing_idx, design_info) = handle_formula_data(
+    ((endog, exog), missing_idx, model_spec) = handle_formula_data(
         data, None, formula, depth=2, missing="drop"
     )
 
@@ -911,7 +911,7 @@ def test_formula_missing_extra_arrays():
     assert_equal(data_nona["weights"].values, model_data.weights)
 
     tmp = handle_formula_data(data, None, formula, depth=2, missing="drop")
-    (endog, exog), missing_idx, design_info = tmp
+    (endog, exog), missing_idx, model_spec = tmp
     weights_2d = np.random.randn(10, 10)
     weights_2d[[8, 7], [7, 8]] = np.nan  # symmetric missing values
     kwargs.update({"weights": weights_2d, "missing_idx": missing_idx})
@@ -924,7 +924,7 @@ def test_formula_missing_extra_arrays():
     assert_equal(weights_2d[good_idx][:, good_idx], model_data2.weights)
 
     tmp = handle_formula_data(data, None, formula, depth=2, missing="drop")
-    (endog, exog), missing_idx, design_info = tmp
+    (endog, exog), missing_idx, model_spec = tmp
 
     kwargs.update({"weights": weights_wrong_size, "missing_idx": missing_idx})
     assert_raises(ValueError, sm_data.handle_data, endog, exog, **kwargs)

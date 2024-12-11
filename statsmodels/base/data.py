@@ -68,8 +68,8 @@ class ModelData:
             from statsmodels.tools.sm_exceptions import recarray_exception
 
             raise NotImplementedError(recarray_exception)
-        if "design_info" in kwargs:
-            self.design_info = kwargs.pop("design_info")
+        if "model_spec" in kwargs:
+            self.model_spec = kwargs.pop("model_spec")
         if "formula" in kwargs:
             self.formula = kwargs.pop("formula")
         if missing != "none":
@@ -95,16 +95,17 @@ class ModelData:
         from copy import copy
 
         d = copy(self.__dict__)
-        if "design_info" in d:
-            del d["design_info"]
-            d["restore_design_info"] = True
+        if "model_spec" in d:
+            del d["model_spec"]
+            d["restore_model_spec"] = True
         return d
 
     def __setstate__(self, d):
-        if "restore_design_info" in d:
+        if "restore_model_spec" in d:
             # NOTE: there may be a more performant way to do this
-            from patsy import PatsyError, dmatrices
 
+            from statsmodels.formula._manager import FormulaManager
+            mgr = FormulaManager()
             exc = []
             try:
                 data = d["frame"]
@@ -113,18 +114,18 @@ class ModelData:
 
             for depth in [2, 3, 1, 0, 4]:  # sequence is a guess where to likely find it
                 try:
-                    _, design = dmatrices(
-                        d["formula"], data, eval_env=depth, return_type="dataframe"
+                    _, design = mgr.get_matrices(
+                        d["formula"], data, eval_env=depth, pandas=True
                     )
                     break
-                except (NameError, PatsyError) as e:
+                except (NameError, mgr.factor_evaluation_error) as e:
                     exc.append(e)  # why do I need a reference from outside except block
                     pass
             else:
                 raise exc[-1]
 
-            self.design_info = design.design_info
-            del d["restore_design_info"]
+            self.model_spec = mgr.spec
+            del d["restore_model_spec"]
         self.__dict__.update(d)
 
     def _handle_constant(self, hasconst):
@@ -297,8 +298,13 @@ class ModelData:
 
         elif missing == "drop":
             nan_mask = ~nan_mask
-            drop_nans = lambda x: cls._drop_nans(x, nan_mask)
-            drop_nans_2d = lambda x: cls._drop_nans_2d(x, nan_mask)
+
+            def drop_nans(x):
+                return cls._drop_nans(x, nan_mask)
+
+            def drop_nans_2d(x):
+                return cls._drop_nans_2d(x, nan_mask)
+
             combined = dict(zip(combined_names, lmap(drop_nans, combined)))
 
             if missing_idx is not None:
@@ -504,6 +510,11 @@ class PatsyData(ModelData):
         return arr.design_info.column_names
 
 
+class FormulaicData(ModelData):
+    def _get_names(self, arr):
+        return arr.model_spec.column_names
+
+
 class PandasData(ModelData):
     """
     Data handling class which knows how to reattach pandas metadata to model
@@ -668,6 +679,8 @@ def handle_data_class_factory(endog, exog):
         klass = PandasData
     elif data_util._is_using_patsy(endog, exog):
         klass = PatsyData
+    elif data_util._is_using_formulaic(endog, exog):
+        klass = FormulaicData
     # keep this check last
     elif data_util._is_using_ndarray(endog, exog):
         klass = ModelData

@@ -3,14 +3,9 @@ from statsmodels.compat.python import lrange
 import numpy as np
 import pandas as pd
 from pandas import DataFrame, Index
-import patsy
 from scipy import stats
 
-from statsmodels.formula.formulatools import (
-    _has_intercept,
-    _intercept_idx,
-    _remove_intercept_patsy,
-)
+from statsmodels.formula._manager import FormulaManager
 from statsmodels.iolib import summary2
 from statsmodels.regression.linear_model import OLS
 
@@ -56,7 +51,6 @@ def anova_single(model, **kwargs):
     Use of this function is discouraged. Use anova_lm instead.
     """
     test = kwargs.get("test", "F")
-    scale = kwargs.get("scale", None)
     typ = kwargs.get("typ", 1)
     robust = kwargs.get("robust", None)
     if robust:
@@ -66,11 +60,10 @@ def anova_single(model, **kwargs):
     exog = model.model.exog
     nobs = exog.shape[0]
 
-    response_name = model.model.endog_names
-    design_info = model.model.data.design_info
-    exog_names = model.model.exog_names
+    model_spec = model.model.data.model_spec
     # +1 for resids
-    n_rows = (len(design_info.terms) - _has_intercept(design_info) + 1)
+    mgr = FormulaManager()
+    n_rows = (len(model_spec.terms) - mgr.has_intercept(model_spec) + 1)
 
     pr_test = "PR(>%s)" % test
     names = ['df', 'sum_sq', 'mean_sq', test, pr_test]
@@ -78,13 +71,13 @@ def anova_single(model, **kwargs):
     table = DataFrame(np.zeros((n_rows, 5)), columns=names)
 
     if typ in [1, "I"]:
-        return anova1_lm_single(model, endog, exog, nobs, design_info, table,
+        return anova1_lm_single(model, endog, exog, nobs, model_spec, table,
                                 n_rows, test, pr_test, robust)
     elif typ in [2, "II"]:
-        return anova2_lm_single(model, design_info, n_rows, test, pr_test,
+        return anova2_lm_single(model, model_spec, n_rows, test, pr_test,
                                 robust)
     elif typ in [3, "III"]:
-        return anova3_lm_single(model, design_info, n_rows, test, pr_test,
+        return anova3_lm_single(model, model_spec, n_rows, test, pr_test,
                                 robust)
     elif typ in [4, "IV"]:
         raise NotImplementedError("Type IV not yet implemented")
@@ -92,7 +85,7 @@ def anova_single(model, **kwargs):
         raise ValueError("Type %s not understood" % str(typ))
 
 
-def anova1_lm_single(model, endog, exog, nobs, design_info, table, n_rows, test,
+def anova1_lm_single(model, endog, exog, nobs, model_spec, table, n_rows, test,
                      pr_test, robust):
     """
     Anova table for one fitted linear model.
@@ -115,21 +108,25 @@ def anova1_lm_single(model, endog, exog, nobs, design_info, table, n_rows, test,
     Use of this function is discouraged. Use anova_lm instead.
     """
     #maybe we should rethink using pinv > qr in OLS/linear models?
+    mgr = FormulaManager()
     effects = getattr(model, 'effects', None)
     if effects is None:
         q,r = np.linalg.qr(exog)
         effects = np.dot(q.T, endog)
 
-    arr = np.zeros((len(design_info.terms), len(design_info.column_names)))
-    slices = [design_info.slice(name) for name in design_info.term_names]
-    for i,slice_ in enumerate(slices):
+    arr = np.zeros((len(model_spec.terms), len(model_spec.column_names)))
+    slices = [
+        mgr.get_slice(model_spec, name) for name in mgr.get_term_names(model_spec)
+    ]
+    for i, slice_ in enumerate(slices):
         arr[i, slice_] = 1
 
     sum_sq = np.dot(arr, effects**2)
     #NOTE: assumes intercept is first column
-    idx = _intercept_idx(design_info)
+    mgr = FormulaManager()
+    idx = mgr.intercept_idx(model_spec)
     sum_sq = sum_sq[~idx]
-    term_names = np.array(design_info.term_names) # want boolean indexing
+    term_names = np.array(mgr.get_term_names(model_spec)) # want boolean indexing
     term_names = term_names[~idx]
 
     index = term_names.tolist()
@@ -147,7 +144,7 @@ def anova1_lm_single(model, endog, exog, nobs, design_info, table, n_rows, test,
     return table
 
 #NOTE: the below is not agnostic about formula...
-def anova2_lm_single(model, design_info, n_rows, test, pr_test, robust):
+def anova2_lm_single(model, model_spec, n_rows, test, pr_test, robust):
     """
     Anova type II table for one fitted linear model.
 
@@ -172,28 +169,28 @@ def anova2_lm_single(model, design_info, n_rows, test, pr_test, robust):
     Sum of Squares compares marginal contribution of terms. Thus, it is
     not particularly useful for models with significant interaction terms.
     """
-    terms_info = design_info.terms[:] # copy
-    terms_info = _remove_intercept_patsy(terms_info)
+    mgr = FormulaManager()
+    terms_info = model_spec.terms[:] # copy
+    terms_info = mgr.remove_intercept(terms_info)
 
     names = ['sum_sq', 'df', test, pr_test]
 
     table = DataFrame(np.zeros((n_rows, 4)), columns = names)
-    cov = _get_covariance(model, None)
     robust_cov = _get_covariance(model, robust)
     col_order = []
     index = []
     for i, term in enumerate(terms_info):
-        # grab all varaibles except interaction effects that contain term
+        # grab all variables except interaction effects that contain term
         # need two hypotheses matrices L1 is most restrictive, ie., term==0
         # L2 is everything except term==0
-        cols = design_info.slice(term)
+        cols = mgr.get_slice(model_spec, term)
         L1 = lrange(cols.start, cols.stop)
         L2 = []
         term_set = set(term.factors)
         for t in terms_info: # for the term you have
             other_set = set(t.factors)
             if term_set.issubset(other_set) and not term_set == other_set:
-                col = design_info.slice(t)
+                col = mgr.get_slice(model_spec, t)
                 # on a higher order term containing current `term`
                 L1.extend(lrange(col.start, col.stop))
                 L2.extend(lrange(col.start, col.stop))
@@ -215,13 +212,13 @@ def anova2_lm_single(model, design_info, n_rows, test, pr_test, robust):
         #from IPython.core.debugger import Pdb; Pdb().set_trace()
         if test == 'F':
             f = model.f_test(L12, cov_p=robust_cov)
-            table.loc[table.index[i], test] = test_value = f.fvalue
+            table.loc[table.index[i], test] = f.fvalue
             table.loc[table.index[i], pr_test] = f.pvalue
 
         # need to back out SSR from f_test
         table.loc[table.index[i], 'df'] = r
         col_order.append(cols.start)
-        index.append(term.name())
+        index.append(mgr.get_term_name(term))
 
     table.index = Index(index + ['Residual'])
     table = table.iloc[np.argsort(col_order + [model.model.exog.shape[1]+1])]
@@ -235,32 +232,32 @@ def anova2_lm_single(model, design_info, n_rows, test, pr_test, robust):
 
     return table
 
-def anova3_lm_single(model, design_info, n_rows, test, pr_test, robust):
-    n_rows += _has_intercept(design_info)
-    terms_info = design_info.terms
+def anova3_lm_single(model, model_spec, n_rows, test, pr_test, robust):
+    mgr = FormulaManager()
+    n_rows += mgr.has_intercept(model_spec)
+    terms_info = model_spec.terms
 
     names = ['sum_sq', 'df', test, pr_test]
 
     table = DataFrame(np.zeros((n_rows, 4)), columns = names)
     cov = _get_covariance(model, robust)
-    col_order = []
     index = []
     for i, term in enumerate(terms_info):
         # grab term, hypothesis is that term == 0
-        cols = design_info.slice(term)
+        cols = mgr.get_slice(model_spec, term)
         L1 = np.eye(model.model.exog.shape[1])[cols]
         L12 = L1
         r = L1.shape[0]
 
         if test == 'F':
             f = model.f_test(L12, cov_p=cov)
-            table.loc[table.index[i], test] = test_value = f.fvalue
+            table.loc[table.index[i], test] = f.fvalue
             table.loc[table.index[i], pr_test] = f.pvalue
 
         # need to back out SSR from f_test
         table.loc[table.index[i], 'df'] = r
         #col_order.append(cols.start)
-        index.append(term.name())
+        index.append(mgr.get_term_name(term))
 
     table.index = Index(index + ['Residual'])
     #NOTE: Do not need to sort because terms are an ordered dict now
@@ -560,8 +557,9 @@ class AnovaRM:
         within = ['C(%s, Sum)' % i for i in self.within]
         subject = 'C(%s, Sum)' % self.subject
         factors = within + [subject]
-        x = patsy.dmatrix('*'.join(factors), data=self.data)
-        term_slices = x.design_info.term_name_slices
+        mgr = FormulaManager()
+        x = mgr.get_matrices('*'.join(factors), data=self.data, pandas=False)
+        term_slices = mgr.get_term_name_slices(x)
         for key in term_slices:
             ind = np.array([False]*x.shape[1])
             ind[term_slices[key]] = True
@@ -587,25 +585,25 @@ class AnovaRM:
         anova_table = pd.DataFrame(np.zeros((0, 4)), columns=columns)
 
         for key in term_slices:
-            if self.subject not in key and key != 'Intercept':
-                #  Independen variables are orthogonal
+            if self.subject not in str(key) and str(key) not in ('Intercept', "1"):
+                #  Independent variables are orthogonal
                 ssr1, df_resid1 = _ssr_reduced_model(
                     y, x, term_slices, params, [key])
                 df1 = df_resid1 - df_resid
                 msm = (ssr1 - ssr) / df1
-                if (key == ':'.join(factors[:-1]) or
-                        (key + ':' + subject not in term_slices)):
+                if (str(key) == ':'.join(factors[:-1]) or
+                        (str(key) + ':' + subject not in term_slices)):
                     mse = ssr / df_resid
                     df2 = df_resid
                 else:
                     ssr1, df_resid1 = _ssr_reduced_model(
                         y, x, term_slices, params,
-                        [key + ':' + subject])
+                        [str(key) + ':' + subject])
                     df2 = df_resid1 - df_resid
                     mse = (ssr1 - ssr) / df2
                 F = msm / mse
                 p = stats.f.sf(F, df1, df2)
-                term = key.replace('C(', '').replace(', Sum)', '')
+                term = str(key).replace('C(', '').replace(', Sum)', '')
                 anova_table.loc[term, 'F Value'] = F
                 anova_table.loc[term, 'Num DF'] = df1
                 anova_table.loc[term, 'Den DF'] = df2

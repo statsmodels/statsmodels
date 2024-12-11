@@ -1,20 +1,20 @@
 import os.path
-import numpy as np
-import pandas as pd
-import pytest
 
-from statsmodels.regression.linear_model import OLS
-from statsmodels.multivariate.multivariate_ols import (
-    _MultivariateOLS,
-    MultivariateLS,
-    )
+import numpy as np
 from numpy.testing import (
     assert_allclose,
     assert_array_almost_equal,
     assert_raises,
-    )
-import patsy
+)
+import pandas as pd
+import pytest
 
+from statsmodels.formula._manager import FormulaManager
+from statsmodels.multivariate.multivariate_ols import (
+    MultivariateLS,
+    _MultivariateOLS,
+)
+from statsmodels.regression.linear_model import OLS
 
 dir_path = os.path.dirname(os.path.abspath(__file__))
 csv_path = os.path.join(dir_path, 'results', 'mvreg.csv')
@@ -54,9 +54,9 @@ def compare_r_output_dogs_data(method, model):
           of freedoms can be different. This is due to the fact that this
           implementation is based on SAS formula [1]
 
-    .. [*] https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_introreg_sect012.htm
+    .. [*] https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/
+           viewer.htm#statug_introreg_sect012.htm
     '''
-
 
     # Repeated measures with orthogonal polynomial contrasts coding
     mod = model.from_formula(
@@ -138,9 +138,10 @@ def test_from_formula_vs_no_formula(model):
         data)
     r = mod.fit(method='svd')
     r0 = r.mv_test()
-    endog, exog = patsy.dmatrices(
-        'Histamine0 + Histamine1 + Histamine3 + Histamine5 ~ Drug * Depleted',
-        data, return_type="dataframe")
+    mgr = FormulaManager()
+    endog, exog = mgr.get_matrices(
+        "Histamine0 + Histamine1 + Histamine3 + Histamine5 ~ Drug * Depleted", data
+    )
     L = np.array([[1, 0, 0, 0, 0, 0]])
     # DataFrame input
     r = model(endog, exog).fit(method='svd')
@@ -196,8 +197,9 @@ def test_exog_1D_array(model):
 
 
 def test_endog_1D_array():
-    assert_raises(ValueError, _MultivariateOLS.from_formula,
-        'Histamine0 ~ 0 + Depleted', data)
+    assert_raises(
+        ValueError, _MultivariateOLS.from_formula, 'Histamine0 ~ 0 + Depleted', data
+    )
 
 
 @pytest.mark.parametrize("model", models)

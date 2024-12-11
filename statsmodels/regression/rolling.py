@@ -24,6 +24,7 @@ from scipy import stats
 
 from statsmodels.base import model
 from statsmodels.base.model import LikelihoodModelResults, Model
+from statsmodels.formula._manager import FormulaManager
 from statsmodels.regression.linear_model import (
     RegressionModel,
     RegressionResults,
@@ -394,21 +395,21 @@ class RollingWLS:
         if eval_env is None:
             eval_env = 2
         elif eval_env == -1:
-            from patsy import EvalEnvironment
-
-            eval_env = EvalEnvironment({})
+            mgr = FormulaManager()
+            eval_env = mgr.get_empty_eval_env()
         else:
             eval_env += 1  # we're going down the stack again
         missing = kwargs.get("missing", "skip")
-        from patsy import NAAction, dmatrices
 
-        na_action = NAAction(on_NA="raise", NA_types=[])
-        result = dmatrices(
+        na_action = FormulaManager().get_na_action(action="raise", types=[])
+
+        mgr = FormulaManager()
+        result = mgr.get_matrices(
             formula,
             data,
-            eval_env,
-            return_type="dataframe",
-            NA_action=na_action,
+            eval_env=eval_env,
+            pandas=True,
+            na_action=na_action,
         )
 
         endog, exog = result

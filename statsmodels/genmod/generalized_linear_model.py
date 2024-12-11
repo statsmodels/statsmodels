@@ -36,12 +36,12 @@ from statsmodels.graphics._regressionplots_doc import (
 )
 import statsmodels.regression._tools as reg_tools
 import statsmodels.regression.linear_model as lm
+from statsmodels.tools.data import _as_array_with_name
 from statsmodels.tools.decorators import (
     cache_readonly,
     cached_data,
     cached_value,
 )
-from statsmodels.tools.data import _as_array_with_name
 from statsmodels.tools.docstring import Docstring
 from statsmodels.tools.sm_exceptions import (
     DomainWarning,
@@ -1531,16 +1531,15 @@ class GLM(base.LikelihoodModel):
         results : Results instance
         """
 
-        from patsy import DesignInfo
-
         from statsmodels.base._constraints import (
             LinearConstraints,
             fit_constrained,
         )
+        from statsmodels.formula._manager import FormulaManager
 
         # same pattern as in base.LikelihoodModel.t_test
-        lc = DesignInfo(self.exog_names).linear_constraint(constraints)
-        R, q = lc.coefs, lc.constants
+        lc = FormulaManager().get_linear_constraints(constraints, self.exog_names)
+        R, q = lc.constraint_matrix, lc.constraint_values
 
         # TODO: add start_params option, need access to tranformation
         #       fit_constrained needs to do the transformation
@@ -1560,7 +1559,7 @@ class GLM(base.LikelihoodModel):
         k_constr = len(q)
         res._results.df_resid += k_constr
         res._results.df_model -= k_constr
-        res._results.constraints = LinearConstraints.from_patsy(lc)
+        res._results.constraints = LinearConstraints.from_formula_parser(lc)
         res._results.k_constr = k_constr
         res._results.results_constrained = res_constr
         return res

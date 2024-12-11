@@ -1,19 +1,30 @@
-import scipy.stats
 import numpy as np
-from numpy.testing import assert_allclose, assert_equal, assert_almost_equal
-from patsy import dmatrices  # pylint: disable=E0611
+from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
+import scipy.stats
+
 import statsmodels.api as sm
+from statsmodels.formula._manager import FormulaManager
 from statsmodels.regression.quantile_regression import QuantReg
+
 from .results.results_quantile_regression import (
-    biweight_chamberlain, biweight_hsheather, biweight_bofinger,
-    cosine_chamberlain, cosine_hsheather, cosine_bofinger,
-    gaussian_chamberlain, gaussian_hsheather, gaussian_bofinger,
-    epan2_chamberlain, epan2_hsheather, epan2_bofinger,
-    parzen_chamberlain, parzen_hsheather, parzen_bofinger,
-    # rectangle_chamberlain, rectangle_hsheather, rectangle_bofinger,
-    # triangle_chamberlain, triangle_hsheather, triangle_bofinger,
-    # epanechnikov_chamberlain, epanechnikov_hsheather, epanechnikov_bofinger,
-    epanechnikov_hsheather_q75, Rquantreg)
+    Rquantreg,
+    biweight_bofinger,
+    biweight_chamberlain,
+    biweight_hsheather,
+    cosine_bofinger,
+    cosine_chamberlain,
+    cosine_hsheather,
+    epan2_bofinger,
+    epan2_chamberlain,
+    epan2_hsheather,
+    epanechnikov_hsheather_q75,
+    gaussian_bofinger,
+    gaussian_chamberlain,
+    gaussian_hsheather,
+    parzen_bofinger,
+    parzen_chamberlain,
+    parzen_hsheather,
+)
 
 idx = ['income', 'Intercept']
 
@@ -96,7 +107,9 @@ d = {('biw', 'bofinger'): biweight_bofinger,
 
 def setup_fun(kernel='gau', bandwidth='bofinger'):
     data = sm.datasets.engel.load_pandas().data
-    y, X = dmatrices('foodexp ~ income', data, return_type='dataframe')
+
+    mgr = FormulaManager()
+    y, X = mgr.get_matrices('foodexp ~ income', data)
     statsm = QuantReg(y, X).fit(vcov='iid', kernel=kernel, bandwidth=bandwidth)
     stata = d[(kernel, bandwidth)]
     return statsm, stata
@@ -104,7 +117,10 @@ def setup_fun(kernel='gau', bandwidth='bofinger'):
 
 def test_fitted_residuals():
     data = sm.datasets.engel.load_pandas().data
-    y, X = dmatrices('foodexp ~ income', data, return_type='dataframe')
+
+    mgr = FormulaManager()
+    y, X = mgr.get_matrices('foodexp ~ income', data)
+
     res = QuantReg(y, X).fit(q=.1)
     # Note: maxabs relative error with fitted is 1.789e-09
     assert_almost_equal(np.array(res.fittedvalues), Rquantreg.fittedvalues, 5)
@@ -117,7 +133,8 @@ class TestEpanechnikovHsheatherQ75(CheckModelResultsMixin):
     @classmethod
     def setup_class(cls):
         data = sm.datasets.engel.load_pandas().data
-        y, X = dmatrices('foodexp ~ income', data, return_type='dataframe')
+        mgr = FormulaManager()
+        y, X = mgr.get_matrices('foodexp ~ income', data)
         cls.res1 = QuantReg(y, X).fit(q=.75, vcov='iid', kernel='epa',
                                       bandwidth='hsheather')
         cls.res2 = epanechnikov_hsheather_q75

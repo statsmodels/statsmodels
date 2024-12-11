@@ -146,13 +146,17 @@ class TestLogitModel(CheckOrdinalModelMixin):
                             distr='logit')
         resp = modp.fit(method='bfgs', disp=False)
         # fit with formula
-        modf = OrderedModel.from_formula(
-            "apply ~ pared + public + gpa - 1",
-            data={"apply": data['apply'].values.codes,
-                  "pared": data['pared'],
-                  "public": data['public'],
-                  "gpa": data['gpa']},
-            distr='logit')
+        with pytest.warns(DeprecationWarning, match="Using"):
+            modf = OrderedModel.from_formula(
+                "apply ~ pared + public + gpa - 1",
+                data={
+                    "apply": data["apply"].values.codes,
+                    "pared": data["pared"],
+                    "public": data["public"],
+                    "gpa": data["gpa"],
+                },
+                distr="logit",
+            )
         resf = modf.fit(method='bfgs', disp=False)
         # fit on data with ordered=False
         modu = OrderedModel(
@@ -218,13 +222,14 @@ class TestProbitModel(CheckOrdinalModelMixin):
                             distr='probit')
         resp = modp.fit(method='bfgs', disp=False)
 
-        modf = OrderedModel.from_formula(
-            "apply ~ pared + public + gpa - 1",
-            data={"apply": data['apply'].values.codes,
-                  "pared": data['pared'],
-                  "public": data['public'],
-                  "gpa": data['gpa']},
-            distr='probit')
+        with pytest.warns(DeprecationWarning, match="Using"):
+            modf = OrderedModel.from_formula(
+                "apply ~ pared + public + gpa - 1",
+                data={"apply": data['apply'].values.codes,
+                      "pared": data['pared'],
+                      "public": data['public'],
+                      "gpa": data['gpa']},
+                distr='probit')
         resf = modf.fit(method='bfgs', disp=False)
 
         modu = OrderedModel(
@@ -284,17 +289,21 @@ class TestProbitModel(CheckOrdinalModelMixin):
         assert hasattr(modf2.data, "frame")
         assert not hasattr(modf2, "frame")
 
-        msg = "Only ordered pandas Categorical"
-        with pytest.raises(ValueError, match=msg):
+        with pytest.raises(ValueError, match="Only ordered pandas Categorical"):
             # only ordered categorical or numerical endog are allowed
             # string endog raises ValueError
-            OrderedModel.from_formula(
-                "apply ~ pared + public + gpa - 1",
-                data={"apply": np.asarray(data['apply']),
-                      "pared": data['pared'],
-                      "public": data['public'],
-                      "gpa": data['gpa']},
-                distr='probit')
+
+            with pytest.warns(DeprecationWarning, match="Using"):
+                OrderedModel.from_formula(
+                    "apply ~ pared + public + gpa - 1",
+                    data={
+                        "apply": np.asarray(data["apply"]),
+                        "pared": data["pared"],
+                        "public": data["public"],
+                        "gpa": data["gpa"],
+                    },
+                    distr="probit",
+                )
 
     def test_offset(self):
 
@@ -419,15 +428,17 @@ class TestCLogLogModel(CheckOrdinalModelMixin):
                             data[['pared', 'public', 'gpa']],
                             distr=cloglog)
         resp = modp.fit(method='bfgs', disp=False)
-
-        # with pytest.warns(UserWarning):
-        modf = OrderedModel.from_formula(
-            "apply ~ pared + public + gpa - 1",
-            data={"apply": data['apply'].values.codes,
-                  "pared": data['pared'],
-                  "public": data['public'],
-                  "gpa": data['gpa']},
-            distr=cloglog)
+        with pytest.warns(DeprecationWarning, match="Using"):
+            modf = OrderedModel.from_formula(
+                "apply ~ pared + public + gpa - 1",
+                data={
+                    "apply": data["apply"].values.codes,
+                    "pared": data["pared"],
+                    "public": data["public"],
+                    "gpa": data["gpa"],
+                },
+                distr=cloglog,
+            )
         resf = modf.fit(method='bfgs', disp=False)
 
         modu = OrderedModel(

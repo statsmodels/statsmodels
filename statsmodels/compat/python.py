@@ -4,8 +4,6 @@ Compatibility tools for differences between Python 2 and 3
 
 import platform
 import sys
-from typing import Literal
-
 
 PYTHON_IMPL_WASM = (
     sys.platform == "emscripten" or platform.machine() in ["wasm32", "wasm64"]
@@ -19,7 +17,6 @@ __all__ = [
     "asunicode",
     "asstr",
     "asbytes",
-    "Literal",
     "lmap",
     "lzip",
     "lrange",

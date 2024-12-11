@@ -20,6 +20,7 @@ from scipy.linalg import toeplitz
 from scipy.stats import t as student_t
 
 from statsmodels.datasets import longley
+from statsmodels.formula._manager import FormulaManager
 from statsmodels.regression.linear_model import (
     GLS,
     OLS,
@@ -833,7 +834,7 @@ class TestNonFit:
 
     def test_df_resid(self):
         df_resid = self.endog.shape[0] - self.exog.shape[1]
-        assert_equal(self.ols_model.df_resid, 9)
+        assert_equal(self.ols_model.df_resid, df_resid)
 
 
 class TestWLS_CornerCases:
@@ -1326,8 +1327,6 @@ class TestRegularizedFit:
 def test_formula_missing_cat():
     # gh-805
 
-    from patsy import PatsyError
-
     import statsmodels.api as sm
     from statsmodels.formula.api import ols
 
@@ -1339,18 +1338,18 @@ def test_formula_missing_cat():
     )
     res = mod.fit()
 
+    mgr = FormulaManager()
     mod2 = ols(formula="value ~ invest + capital + firm + year", data=dta)
     res2 = mod2.fit()
 
     assert_almost_equal(res.params.values, res2.params.values)
+    if mgr.engine == "patsy":
+        error = mgr.factor_evaluation_error
+    else:
+        error = ValueError
 
-    assert_raises(
-        PatsyError,
-        ols,
-        "value ~ invest + capital + firm + year",
-        data=dta,
-        missing="raise",
-    )
+    with pytest.raises(error):
+        ols("value ~ invest + capital + firm + year", data=dta,missing="raise")
 
 
 def test_missing_formula_predict():

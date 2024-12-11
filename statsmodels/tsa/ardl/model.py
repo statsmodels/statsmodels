@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from statsmodels.compat.pandas import Appender, Substitution, call_cached_func
-from statsmodels.compat.python import Literal
 
 from collections import defaultdict
 from collections.abc import Hashable, Mapping, Sequence
@@ -9,7 +8,7 @@ import datetime as dt
 from itertools import combinations, product
 import textwrap
 from types import SimpleNamespace
-from typing import TYPE_CHECKING, Any, NamedTuple, Optional, Union
+from typing import TYPE_CHECKING, Any, Literal, NamedTuple, Optional, Union
 import warnings
 
 import numpy as np

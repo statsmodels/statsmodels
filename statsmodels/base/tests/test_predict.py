@@ -4,12 +4,12 @@ Tests for Results.predict
 from statsmodels.compat.pandas import testing as pdt
 
 import numpy as np
-import pandas as pd
-
 from numpy.testing import assert_allclose, assert_equal
+import pandas as pd
+import pytest
 
-from statsmodels.regression.linear_model import OLS
 from statsmodels.genmod.generalized_linear_model import GLM
+from statsmodels.regression.linear_model import OLS
 
 
 class CheckPredictReturns:
@@ -26,7 +26,8 @@ class CheckPredictReturns:
 
         # plain dict
         xd = dict(zip(data.columns, data.iloc[1:10:2].values.T))
-        pred = res.predict(xd)
+        with pytest.warns(DeprecationWarning, match="Using"):
+            pred = res.predict(xd)
         assert_equal(pred.index, np.arange(len(pred)))
         assert_allclose(pred.values, fitted.values, rtol=1e-13)
 
@@ -53,11 +54,12 @@ class CheckPredictReturns:
 
         # dict with scalar value (is plain dict)
         # Note: this warns about dropped nan, even though there are None -FIXED
-        pred = res.predict(data.mean().to_dict())
+        with pytest.warns(DeprecationWarning, match="Using"):
+            pred = res.predict(data.mean().to_dict())
         assert_equal(pred.index, np.arange(1))
         assert_allclose(pred.values, fittedm, rtol=1e-13)
 
-    def test_nopatsy(self):
+    def test_without_formula(self):
         res = self.res
         data = self.data
         fitted = res.fittedvalues.iloc[1:10:2]
@@ -68,7 +70,7 @@ class CheckPredictReturns:
 
         # pandas DataFrame
         x = pd.DataFrame(res.model.exog[1:10:2],
-                         index = data.index[1:10:2],
+                         index=data.index[1:10:2],
                          columns=res.model.exog_names)
         pred = res.predict(x)
         pdt.assert_index_equal(pred.index, fitted.index)
@@ -131,7 +133,8 @@ class TestPredictGLM(CheckPredictReturns):
 
         # plain dict
         xd = dict(zip(data.columns, data.iloc[1:10:2].values.T))
-        pred = res.predict(xd, offset=offset)
+        with pytest.warns(DeprecationWarning, match="Using"):
+            pred = res.predict(xd, offset=offset)
         assert_equal(pred.index, np.arange(len(pred)))
         assert_allclose(pred.values, fitted.values, rtol=1e-13)
 
