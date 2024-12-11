@@ -5,7 +5,6 @@ import os
 from typing import Any, Literal, Mapping, NamedTuple, Sequence
 import warnings
 
-from formulaic import ModelMatrices
 import numpy as np
 import pandas as pd
 
@@ -192,7 +191,7 @@ class FormulaManager:
 
     @staticmethod
     def _get_engine(
-        engine: Literal["patsy", "formulaic"] | None = None
+        engine: Literal["patsy", "formulaic"] | None = None,
     ) -> Literal["patsy", "formulaic"]:
         """
         Check user engine selection or get the default engine to use.
@@ -537,7 +536,7 @@ class FormulaManager:
                 _formula, _data, context=_eval_env, **kwargs
             )
             if na_drop:
-                if isinstance(output, ModelMatrices):
+                if isinstance(output, formulaic.ModelMatrices):
                     rhs = output.rhs
                 else:
                     rhs = output
@@ -605,7 +604,6 @@ class FormulaManager:
                 variable_names=lc.variable_names,
             )
         else:  # self._engine == "formulaic"
-
             # Handle list of constraints, which is not supported by formulaic
             if isinstance(constraints, list):
                 if len(constraints) == 0:

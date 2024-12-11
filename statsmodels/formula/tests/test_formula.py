@@ -7,7 +7,6 @@ import warnings
 import numpy as np
 import numpy.testing as npt
 import pandas as pd
-import patsy
 import pytest
 
 from statsmodels.datasets import cpunish
@@ -19,11 +18,18 @@ from statsmodels.formula.formulatools import make_hypotheses_matrices
 from statsmodels.tools import add_constant
 from statsmodels.tools.testing import assert_equal
 
+try:
+    import patsy
+
+    PATSY_MISSING = False
+except ImportError:
+    PATSY_MISSING = True
+
+
 longley_formula = "TOTEMP ~ GNPDEFL + GNP + UNEMP + ARMED + POP + YEAR"
 
 
 class CheckFormulaOLS:
-
     @classmethod
     def setup_class(cls):
         cls.data = load()
@@ -265,6 +271,7 @@ def test_predict_nondataframe():
             fit.predict([0.25])
 
 
+@pytest.mark.skipif(PATSY_MISSING, reason="patsy is required")
 def test_formula_environment():
     df = pd.DataFrame({"x": [1, 2, 3], "y": [2, 4, 6]})
     env = patsy.eval.EvalEnvironment([{"z": [3, 6, 9]}])

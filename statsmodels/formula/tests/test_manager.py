@@ -29,10 +29,10 @@ no_patsy = pytest.mark.skipif(
 )
 
 require_formulaic = pytest.mark.skipif(not HAS_FORMULAIC, reason="Requires formulaic")
+require_patsy = pytest.mark.skipif(not HAS_PATSY, reason="Requires formulaic")
 
-ENGINES = ["patsy"]
-if HAS_FORMULAIC:
-    ENGINES += ["formulaic"]
+ENGINES = ["patsy"] if HAS_PATSY else []
+ENGINES += ["formulaic"] if HAS_FORMULAIC else []
 
 
 @pytest.fixture(params=ENGINES)
@@ -184,6 +184,7 @@ def test_get_column_names(engine, data):
     assert names == ["Intercept", "x", "z"]
 
 
+@require_patsy
 def test_get_empty_eval_patsy(data):
     mgr = FormulaManager(engine="patsy")
     fmla = "y ~ 1 + x + g(z)"
@@ -429,6 +430,8 @@ def test_formula_manager_no_patsy():
         FormulaManager(engine="patsy")
 
 
+@require_formulaic
+@require_patsy
 def test_legacy_orderer(formula):
     np.random.seed(0)
     n = 100
