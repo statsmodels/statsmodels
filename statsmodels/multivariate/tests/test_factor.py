@@ -1,16 +1,22 @@
-import warnings
-
 from statsmodels.compat.pandas import PD_LT_1_4
 
 import os
+import warnings
 
 import numpy as np
+from numpy.testing import (
+    assert_,
+    assert_allclose,
+    assert_array_almost_equal,
+    assert_array_equal,
+    assert_array_less,
+    assert_equal,
+    assert_raises,
+)
 import pandas as pd
-from statsmodels.multivariate.factor import Factor
-from numpy.testing import (assert_equal, assert_array_almost_equal, assert_,
-                           assert_raises, assert_array_equal,
-                           assert_array_less, assert_allclose)
 import pytest
+
+from statsmodels.multivariate.factor import Factor
 
 try:
     import matplotlib.pyplot as plt

@@ -1,8 +1,9 @@
 import numpy as np
 import numpy.random
 from numpy.testing import assert_almost_equal, assert_equal
-from statsmodels.stats.contrast import Contrast
+
 import statsmodels.stats.contrast as smc
+from statsmodels.stats.contrast import Contrast
 
 
 class TestContrast:

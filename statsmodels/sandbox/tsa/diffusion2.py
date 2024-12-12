@@ -83,9 +83,10 @@ CumS is empty array, Events == -1
 """
 
 
-import numpy as np
 #from scipy import stats  # currently only uses np.random
 import matplotlib.pyplot as plt
+import numpy as np
+
 
 class JumpDiffusionMerton:
     '''
@@ -317,7 +318,6 @@ class CIRSubordinatedBrownian:
         pass
 
     def simulate(self, m, kappa, T_dot,lambd,sigma, ts, nrepl):
-        ts[-1]
         nobs = len(ts)
         dtarr = np.zeros(nobs) #/tratio
         dtarr[0] = ts[0]-0

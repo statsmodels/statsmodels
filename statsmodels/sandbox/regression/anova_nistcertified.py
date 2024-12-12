@@ -3,11 +3,15 @@
 compares my implementations, stats.f_oneway and anova using statsmodels.OLS
 '''
 from statsmodels.compat.python import lmap
+
 import os
+
 import numpy as np
 from scipy import stats
-from statsmodels.tools.tools import add_constant
+
 from statsmodels.regression.linear_model import OLS
+from statsmodels.tools.tools import add_constant
+
 from .try_ols_anova import data2dummy
 
 filenameli = ['SiRstv.dat', 'SmLs01.dat', 'SmLs02.dat', 'SmLs03.dat', 'AtmWtAg.dat',

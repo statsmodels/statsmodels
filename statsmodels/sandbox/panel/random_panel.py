@@ -15,6 +15,7 @@ Notes
 """
 
 import numpy as np
+
 from . import correlation_structures as cs
 
 

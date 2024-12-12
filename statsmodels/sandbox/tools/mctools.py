@@ -24,9 +24,11 @@ two-sided tests basend on t or normal distribution use the absolute value.
 
 '''
 from statsmodels.compat.python import lrange
+
 import numpy as np
 
 from statsmodels.iolib.table import SimpleTable
+
 
 #copied from stattools
 class StatTestMC:
@@ -329,6 +331,7 @@ class StatTestMC:
 
 
         import matplotlib.pyplot as plt
+
         #I do not want to figure this out now
 #        if ax=None:
 #            fig = plt.figure()

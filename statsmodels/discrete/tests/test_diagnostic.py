@@ -8,9 +8,9 @@ import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 import pytest
 
-from statsmodels.discrete.discrete_model import Poisson
 import statsmodels.discrete._diagnostics_count as dia
 from statsmodels.discrete.diagnostic import PoissonDiagnostic
+from statsmodels.discrete.discrete_model import Poisson
 
 
 class TestCountDiagnostic:

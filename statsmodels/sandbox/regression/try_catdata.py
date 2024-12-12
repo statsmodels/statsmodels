@@ -12,8 +12,8 @@ scipy.ndimage stats is missing count
 new: np.bincount can also be used for calculating values per label
 '''
 from statsmodels.compat.python import lrange
-import numpy as np
 
+import numpy as np
 from scipy import ndimage
 
 #problem: ndimage does not allow axis argument,

@@ -102,8 +102,8 @@ Statistics 90, no. 3 (2008): 414–427.
 """
 import numpy as np
 
-from statsmodels.tools.grouputils import combine_indices, group_sums
 from statsmodels.stats.moment_helpers import se_cov
+from statsmodels.tools.grouputils import combine_indices, group_sums
 
 __all__ = ['cov_cluster', 'cov_cluster_2groups', 'cov_hac', 'cov_nw_panel',
            'cov_white_simple',

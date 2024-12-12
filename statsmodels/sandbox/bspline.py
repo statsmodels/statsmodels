@@ -15,15 +15,15 @@ General references:
     Numerische Mathematik, 47(1), 99-106.
 '''
 
-import numpy as np
-import numpy.linalg as L
-
-from scipy.linalg import solveh_banded
-from scipy.optimize import golden
-from models import _hbspline     #removed because this was segfaulting
-
 # Issue warning regarding heavy development status of this module
 import warnings
+
+from models import _hbspline  # removed because this was segfaulting
+import numpy as np
+import numpy.linalg as L
+from scipy.linalg import solveh_banded
+from scipy.optimize import golden
+
 _msg = """
 The bspline code is technology preview and requires significant work
 on the public API and documentation. The API will likely change in the future

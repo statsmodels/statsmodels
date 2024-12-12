@@ -10,15 +10,13 @@ Note: uncomment plt.show() to display graphs
 
 import time
 
+import matplotlib.pyplot as plt
 import numpy as np
 import numpy.random as R
-import matplotlib.pyplot as plt
 import scipy.stats
 
-from statsmodels.sandbox.gam import AdditiveModel
-from statsmodels.sandbox.gam import Model as GAM #?
 from statsmodels.genmod import families
-
+from statsmodels.sandbox.gam import AdditiveModel, Model as GAM  # ?
 
 example = 2 #3  # 1,2 or 3
 

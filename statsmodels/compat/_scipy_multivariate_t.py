@@ -4,12 +4,10 @@
 #
 
 import numpy as np
-import scipy.linalg
 from scipy._lib import doccer
-from scipy.special import gammaln
-
 from scipy._lib._util import check_random_state
-
+import scipy.linalg
+from scipy.special import gammaln
 from scipy.stats import mvn
 
 _LOG_2PI = np.log(2 * np.pi)

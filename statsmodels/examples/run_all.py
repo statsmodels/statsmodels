@@ -7,8 +7,9 @@ manually, at least in my setup.
 uncomment plt.show() to show all plot windows
 
 '''
-from statsmodels.compat.python import lzip, input
-import matplotlib.pyplot as plt #matplotlib is required for many examples
+from statsmodels.compat.python import input, lzip
+
+import matplotlib.pyplot as plt  # matplotlib is required for many examples
 
 stop_on_error = True
 

@@ -22,9 +22,8 @@ Idea for second part
 
 
 
-from numpy.testing import assert_equal
-
 import numpy as np
+from numpy.testing import assert_equal
 
 #next 3 functions copied from multicomp.py
 

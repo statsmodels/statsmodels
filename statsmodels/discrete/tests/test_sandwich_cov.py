@@ -6,23 +6,21 @@ Author: Josef Perktold
 """
 
 import os
+
 import numpy as np
+from numpy.testing import assert_, assert_allclose, assert_equal
 import pandas as pd
 import pytest
 
+from statsmodels.base.covtype import get_robustcov_results
 import statsmodels.discrete.discrete_model as smd
-from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.genmod import families
 from statsmodels.genmod.families import links
+from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.regression.linear_model import OLS
-from statsmodels.base.covtype import get_robustcov_results
 import statsmodels.stats.sandwich_covariance as sw
-from statsmodels.tools.tools import add_constant
-
-
-from numpy.testing import assert_allclose, assert_equal, assert_
 import statsmodels.tools._testing as smt
-
+from statsmodels.tools.tools import add_constant
 
 # get data and results as module global for now, TODO: move to class
 from .results import results_count_robust_cluster as results_st

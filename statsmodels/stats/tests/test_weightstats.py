@@ -16,12 +16,17 @@ License: BSD (3-clause)
 '''
 
 import numpy as np
-from scipy import stats
+from numpy.testing import assert_, assert_allclose, assert_almost_equal
 import pandas as pd
-from numpy.testing import assert_, assert_almost_equal, assert_allclose
+from scipy import stats
 
-from statsmodels.stats.weightstats import (DescrStatsW, CompareMeans,
-                                           ttest_ind, ztest, zconfint)
+from statsmodels.stats.weightstats import (
+    CompareMeans,
+    DescrStatsW,
+    ttest_ind,
+    zconfint,
+    ztest,
+)
 from statsmodels.tools.testing import Holder
 
 

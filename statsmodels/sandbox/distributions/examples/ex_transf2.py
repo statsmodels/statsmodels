@@ -4,12 +4,17 @@ Author: josef-pktd
 Licese: BSD
 """
 import numpy as np
-
 from numpy.testing import assert_almost_equal
 from scipy import stats
+
 from statsmodels.sandbox.distributions.extras import (
-    ExpTransf_gen, LogTransf_gen,
-    squarenormalg, absnormalg, negsquarenormalg, squaretg)
+    ExpTransf_gen,
+    LogTransf_gen,
+    absnormalg,
+    negsquarenormalg,
+    squarenormalg,
+    squaretg,
+)
 
 #define these as module globals
 loc, s = 0.0, 1.0

@@ -24,6 +24,7 @@ existing distributions by transformation, mixing, compounding
 import numpy as np
 from scipy import stats
 
+
 class ParametricMixtureD:
     '''mixtures with a discrete distribution
 
@@ -234,6 +235,7 @@ class ClippedContinuous:
         mass = self.pdf(clip_lower, *args, **kwds)
         xr = np.concatenate(([clip_lower+1e-6], x[x>clip_lower]))
         import matplotlib.pyplot as plt
+
         #x = np.linspace(-4, 4, 21)
         #plt.figure()
         plt.xlim(clip_lower-0.1, x.max())

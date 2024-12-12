@@ -1,9 +1,9 @@
 from optparse import OptionParser
-import statsmodels.api as sm
-import scipy as sp
-from scipy import linalg
-from scipy import stats
 
+import scipy as sp
+from scipy import linalg, stats
+
+import statsmodels.api as sm
 
 docstr = """
 Demonstrates l1 regularization for likelihood models.
@@ -309,7 +309,6 @@ def get_probit_endog(true_params, exog, noise_level):
     ### Create the probability of entering the different classes,
     ### given exog and true_params
     Xdotparams = sp.dot(exog, true_params)
-    noise_level * sp.randn(*Xdotparams.shape)
 
     ### Create the endog
     cdf = stats.norm._cdf(-Xdotparams)

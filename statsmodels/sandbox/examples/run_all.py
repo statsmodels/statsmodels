@@ -8,6 +8,7 @@ uncomment plt.show() to show all plot windows
 
 '''
 from statsmodels.compat.python import input
+
 stop_on_error = True
 
 

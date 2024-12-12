@@ -441,7 +441,8 @@ class RU2NMNL:
                     tau = self.recursionparams[self.paramsidx['tau_'+name]]
                 else:
                     tau = 1
-                branchxb + tau * branchsum #which tau: name or parent???
+                # Unused result commented out
+                # branchxb + tau * branchsum #which tau: name or parent???
                 return branchxb + tau * np.log(branchsum) #iv
                 #branchsum is now IV, TODO: add effect of branch variables
 

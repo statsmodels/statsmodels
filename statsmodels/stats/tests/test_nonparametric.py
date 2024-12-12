@@ -6,23 +6,39 @@ Aug 15 2020: add brunnermunzel, rank_compare_2indep
 Author: Josef Perktold
 """
 from statsmodels.compat.python import lzip
-import numpy as np
-from numpy.testing import (assert_allclose, assert_almost_equal,
-                           assert_approx_equal, assert_)
-import pandas as pd
+
 from pathlib import Path
 
-from scipy import stats
+import numpy as np
+from numpy.testing import (
+    assert_,
+    assert_allclose,
+    assert_almost_equal,
+    assert_approx_equal,
+)
+import pandas as pd
 import pytest
+from scipy import stats
 
+from statsmodels.sandbox.stats.runs import (
+    Runs,
+    mcnemar as sbmcnemar,
+    runstest_1samp,
+    runstest_2samp,
+)
 from statsmodels.stats.contingency_tables import (
-    mcnemar, cochrans_q, SquareTable)
-from statsmodels.sandbox.stats.runs import (Runs,
-                                            runstest_1samp, runstest_2samp)
-from statsmodels.sandbox.stats.runs import mcnemar as sbmcnemar
+    SquareTable,
+    cochrans_q,
+    mcnemar,
+)
 from statsmodels.stats.nonparametric import (
-    rank_compare_2indep, rank_compare_2ordinal, prob_larger_continuous,
-    cohensd2problarger, samplesize_rank_compare_onetail, _compute_rank_placements)
+    _compute_rank_placements,
+    cohensd2problarger,
+    prob_larger_continuous,
+    rank_compare_2indep,
+    rank_compare_2ordinal,
+    samplesize_rank_compare_onetail,
+)
 from statsmodels.tools.testing import Holder
 
 

@@ -5,15 +5,15 @@ TestGMMMultTwostepDefault() has lower precision
 '''
 
 from statsmodels.compat.python import lmap
+
 import numpy as np
+from numpy.testing import assert_allclose, assert_equal
 import pandas
-from scipy import stats
 import pytest
+from scipy import stats
 
 from statsmodels.regression.linear_model import OLS
 from statsmodels.sandbox.regression import gmm
-
-from numpy.testing import assert_allclose, assert_equal
 
 
 def get_data():

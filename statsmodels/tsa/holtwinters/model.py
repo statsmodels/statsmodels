@@ -13,9 +13,9 @@ Modified: Kevin Sheppard
 """
 from statsmodels.compat.pandas import deprecate_kwarg
 
+from collections.abc import Hashable, Sequence
 import contextlib
 from typing import Any
-from collections.abc import Hashable, Sequence
 import warnings
 
 import numpy as np

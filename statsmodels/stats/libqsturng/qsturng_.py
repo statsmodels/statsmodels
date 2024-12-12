@@ -23,11 +23,12 @@ see:
     http://www.stata.com/stb/stb46/dm64/sturng.pdf
 """
 from statsmodels.compat.python import lrange
-import math
-import scipy.stats
-import numpy as np
 
+import math
+
+import numpy as np
 from scipy.optimize import fminbound
+import scipy.stats
 
 inf = np.inf
 

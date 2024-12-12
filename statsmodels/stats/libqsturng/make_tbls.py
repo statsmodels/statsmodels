@@ -1,12 +1,13 @@
 """this script builds the T table and A table for the upper
    quantile stundentized range algorithm"""
-from statsmodels.compat.python import lrange, lmap
+from statsmodels.compat.python import lmap, lrange
+
 import math
-import scipy.stats
-from scipy.optimize import leastsq
 
 import numpy as np
 from numpy.random import random
+from scipy.optimize import leastsq
+import scipy.stats
 
 # The values for p in [.5, .75, .9, .95, .975, .99, .995, .999]
 # were pulled from:

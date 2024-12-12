@@ -2,9 +2,9 @@ import warnings
 
 import numpy as np
 from numpy.polynomial.hermite_e import HermiteE
+import scipy.special as special
 from scipy.special import factorial
 from scipy.stats import rv_continuous
-import scipy.special as special
 
 # TODO:
 # * actually solve (31) of Blinnikov & Moessner

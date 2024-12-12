@@ -1,9 +1,9 @@
 '''Kernel Ridge Regression for local non-parametric regression'''
 
 
+import matplotlib.pylab as plt
 import numpy as np
 from scipy import spatial as ssp
-import matplotlib.pylab as plt
 
 
 def kernel_rbf(x,y,scale=1, **kwds):

@@ -1,8 +1,10 @@
 #Splitting out maringal effects to see if they can be generalized
 
 from statsmodels.compat.python import lzip
+
 import numpy as np
 from scipy.stats import norm
+
 from statsmodels.tools.decorators import cache_readonly
 
 #### margeff helper functions ####
@@ -542,8 +544,11 @@ class DiscreteMargins:
                 ('Method:', [method]),
                 ('At:', [self.margeff_options['at']]),]
 
-        from statsmodels.iolib.summary import (Summary, summary_params,
-                                                table_extend)
+        from statsmodels.iolib.summary import (
+            Summary,
+            summary_params,
+            table_extend,
+        )
         exog_names = model.exog_names[:] # copy
         smry = Summary()
 

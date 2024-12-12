@@ -2,6 +2,7 @@
 Holds files for l1 regularization of LikelihoodModel, using cvxopt.
 """
 import numpy as np
+
 import statsmodels.base.l1_solvers_common as l1_solvers_common
 
 
@@ -53,7 +54,7 @@ def fit_l1_cvxopt_cp(
         number of iterative refinement steps when solving KKT equations
         (default: 1).
     """
-    from cvxopt import solvers, matrix
+    from cvxopt import matrix, solvers
 
     start_params = np.array(start_params).ravel('F')
 

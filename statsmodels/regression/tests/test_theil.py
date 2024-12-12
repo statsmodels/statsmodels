@@ -7,13 +7,11 @@ Author: Josef Perktold
 import os
 
 import numpy as np
+from numpy.testing import assert_allclose
 import pandas as pd
 import pytest
 
-from numpy.testing import assert_allclose
-
-from statsmodels.regression.linear_model import OLS, GLS
-
+from statsmodels.regression.linear_model import GLS, OLS
 from statsmodels.sandbox.regression.penalized import TheilGLS
 
 
@@ -27,8 +25,8 @@ class TestTheilTextile:
                                 "theil_textile_predict.csv")
         cls.res_predict = pd.read_csv(filepath, sep=",")
 
-        "year	lconsump	lincome	lprice".split()
-
+        # Data col names:
+        # year, lconsump, lincome, lprice
         data = np.array('''\
         1923	1.99651	1.98543	2.00432
         1924	1.99564	1.99167	2.00043

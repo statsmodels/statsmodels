@@ -4,6 +4,7 @@ likelihood estimation and inference in linear regression models.
 """
 
 import numpy as np
+
 import statsmodels.api as sm
 
 # Let's generate some regression data

@@ -47,7 +47,6 @@ def test_all(close_figures, reset_randomstate):
     # Tall and skinny
     plt.figure(figsize=(4,12))
     ax = plt.axes()
-    np.arange(40)
     fig = dot_plot(points, ax=ax)
     ax.set_title("Tall and skinny dotplot")
     ax.set_xlabel("x axis label")
@@ -56,7 +55,6 @@ def test_all(close_figures, reset_randomstate):
     # Short and wide
     plt.figure(figsize=(12,4))
     ax = plt.axes()
-    np.arange(40)
     fig = dot_plot(points, ax=ax, horizontal=False)
     ax.set_title("Short and wide dotplot")
     ax.set_ylabel("y axis label")

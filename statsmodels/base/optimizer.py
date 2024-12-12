@@ -6,8 +6,8 @@ from __future__ import annotations
 
 from statsmodels.compat.scipy import SP_LT_15, SP_LT_17
 
-from typing import Any
 from collections.abc import Sequence
+from typing import Any
 
 import numpy as np
 from scipy import optimize

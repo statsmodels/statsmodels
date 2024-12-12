@@ -4,18 +4,16 @@ Created on Wed Jul 28 08:28:04 2010
 Author: josef-pktd
 """
 import numpy as np
+from scipy import optimize, special, stats
 
-from scipy import stats, special, optimize
 import statsmodels.api as sm
 from statsmodels.base.model import GenericLikelihoodModel
-from statsmodels.tools.numdiff import approx_hess
-
 #import for kstest based estimation
 #should be replace
 # FIXME: importing these patches scipy distribution classes in-place.
 #  Do not do this.
 import statsmodels.sandbox.distributions.sppatch  # noqa:F401
-
+from statsmodels.tools.numdiff import approx_hess
 
 #redefine some shortcuts
 np_log = np.log

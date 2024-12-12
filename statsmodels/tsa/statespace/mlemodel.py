@@ -15,6 +15,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import norm
 
+from statsmodels.tsa.stattools._stattools import breakvar_heteroskedasticity_test
 from statsmodels.tools.tools import pinv_extended, Bunch
 from statsmodels.tools.sm_exceptions import PrecisionWarning, ValueWarning
 from statsmodels.tools.numdiff import (_get_epsilon, approx_hess_cs,
@@ -3142,9 +3143,6 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                              ' forecast errors have not been computed.')
 
         if method == 'breakvar':
-            from statsmodels.tsa.stattools import (
-                breakvar_heteroskedasticity_test
-                )
             # Store some values
             resid = self.filter_results.standardized_forecasts_error
             d = np.maximum(self.loglikelihood_burn, self.nobs_diffuse)

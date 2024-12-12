@@ -15,11 +15,13 @@ General References:
 Owen, A. (2001). "Empirical Likelihood." Chapman and Hall
 
 """
+import itertools
+
 import numpy as np
 from scipy import optimize
-from scipy.stats import chi2, skew, kurtosis
+from scipy.stats import chi2, kurtosis, skew
+
 from statsmodels.base.optimizer import _fit_newton
-import itertools
 from statsmodels.graphics import utils
 
 

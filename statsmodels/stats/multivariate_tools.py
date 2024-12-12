@@ -18,6 +18,7 @@ import numpy as np
 
 from statsmodels.tools.tools import Bunch
 
+
 def partial_project(endog, exog):
     '''helper function to get linear projection or partialling out of variables
 

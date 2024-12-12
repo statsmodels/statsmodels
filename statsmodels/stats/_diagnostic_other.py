@@ -163,9 +163,8 @@ import warnings
 import numpy as np
 from scipy import stats
 
-from statsmodels.tools.decorators import cache_readonly
 from statsmodels.regression.linear_model import OLS
-
+from statsmodels.tools.decorators import cache_readonly
 
 # deprecated dispersion functions, moved to discrete._diagnostic_count
 
@@ -234,8 +233,8 @@ def dispersion_poisson_generic(results, exog_new_test, exog_new_control=None,
     warnings.warn(msg, FutureWarning)
 
     from statsmodels.discrete._diagnostics_count import (
-        _test_poisson_dispersion_generic
-        )
+        _test_poisson_dispersion_generic,
+    )
 
     res_test = _test_poisson_dispersion_generic(
         results, exog_new_test, exog_new_control= exog_new_control,

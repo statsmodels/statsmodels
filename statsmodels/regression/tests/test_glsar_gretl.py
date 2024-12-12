@@ -10,16 +10,19 @@ License: BSD-3
 import os
 
 import numpy as np
-from numpy.testing import (assert_almost_equal, assert_equal,
-                           assert_allclose, assert_array_less)
+from numpy.testing import (
+    assert_allclose,
+    assert_almost_equal,
+    assert_array_less,
+    assert_equal,
+)
 
-from statsmodels.regression.linear_model import OLS, GLSAR
-from statsmodels.tools.tools import add_constant
 from statsmodels.datasets import macrodata
-
-import statsmodels.stats.sandwich_covariance as sw
+from statsmodels.regression.linear_model import GLSAR, OLS
 import statsmodels.stats.diagnostic as smsdia
 import statsmodels.stats.outliers_influence as oi
+import statsmodels.stats.sandwich_covariance as sw
+from statsmodels.tools.tools import add_constant
 
 
 def compare_ftest(contrast_res, other, decimal=(5,4)):
@@ -41,10 +44,6 @@ class TestGLSARGretl:
         #growth rates
         gs_l_realinv = 400 * np.diff(np.log(d['realinv'].values))
         gs_l_realgdp = 400 * np.diff(np.log(d['realgdp'].values))
-
-        #simple diff, not growthrate, I want heteroscedasticity later for testing
-        np.diff(d['realinv'])
-        add_constant(np.c_[np.diff(d['realgdp'].values), d['realint'][:-1].values])
 
         endogg = gs_l_realinv
         exogg = add_constant(np.c_[gs_l_realgdp, d['realint'][:-1].values])

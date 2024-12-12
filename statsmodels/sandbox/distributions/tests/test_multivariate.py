@@ -3,10 +3,12 @@ Created on Sat Apr 16 15:02:13 2011
 @author: Josef Perktold
 """
 import numpy as np
-from numpy.testing import assert_almost_equal,  assert_allclose
+from numpy.testing import assert_allclose, assert_almost_equal
 
 from statsmodels.sandbox.distributions.multivariate import (
-    mvstdtprob, mvstdnormcdf)
+    mvstdnormcdf,
+    mvstdtprob,
+)
 from statsmodels.sandbox.distributions.mv_normal import MVT, MVNormal
 
 

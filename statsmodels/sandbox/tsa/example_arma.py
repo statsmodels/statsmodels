@@ -4,16 +4,20 @@ explicit functions for autocovariance functions of ARIMA(1,1), MA(1), MA(2)
 plus 3 functions from nitime.utils
 
 '''
+import matplotlib.pyplot as plt
 import numpy as np
 from numpy.testing import assert_array_almost_equal
-import matplotlib.pyplot as plt
 
 from statsmodels import regression
-from statsmodels.tsa.arima_process import arma_generate_sample, arma_impulse_response
-from statsmodels.tsa.arima_process import arma_acovf, arma_acf
-from statsmodels.tsa.arima.model import ARIMA
-from statsmodels.tsa.stattools import acf, acovf
 from statsmodels.graphics.tsaplots import plot_acf
+from statsmodels.tsa.arima.model import ARIMA
+from statsmodels.tsa.arima_process import (
+    arma_acf,
+    arma_acovf,
+    arma_generate_sample,
+    arma_impulse_response,
+)
+from statsmodels.tsa.stattools import acf, acovf
 
 ar = [1., -0.6]
 #ar = [1., 0.]

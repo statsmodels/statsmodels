@@ -18,6 +18,7 @@ changes
 
 '''
 from statsmodels.compat.python import lrange
+
 import numpy as np
 from scipy import stats
 
@@ -144,13 +145,16 @@ def powerdiscrepancy(observed, expected, lambd=0.0, axis=0, ddof=0):
             if axis == 0:
                 e = e.T
 
-    if np.allclose(np.sum(e, axis=axis), n, rtol=1e-8, atol=0):
-        e/(1.0*nt)
-    elif np.allclose(np.sum(e, axis=axis), 1, rtol=1e-8, atol=0):
+    if np.allclose(np.sum(e, axis=axis), 1, rtol=1e-8, atol=0):
         e = nt * e
-    else:
+        # Could add this to return later if someone cares about it
+        # p = e
+    elif not np.allclose(np.sum(e, axis=axis), n, rtol=1e-8, atol=0):
         raise ValueError('observed and expected need to have the same '
                          'number of observations, or e needs to add to 1')
+    # p in the other case, if added to return later
+    # else:
+    #     p = e/(1.0*nt)
     k = o.shape[axis]
     if e.shape[axis] != k:
         raise ValueError('observed and expected need to have the same '

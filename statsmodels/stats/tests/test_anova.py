@@ -1,10 +1,10 @@
 from io import StringIO
 
 import numpy as np
-
-from statsmodels.stats.anova import anova_lm
-from statsmodels.formula.api import ols
 from pandas import read_csv
+
+from statsmodels.formula.api import ols
+from statsmodels.stats.anova import anova_lm
 
 kidney_table = StringIO("""Days      Duration Weight ID
     0.0      1      1      1

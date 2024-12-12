@@ -5,12 +5,12 @@ Created on Wed Jul 03 23:01:44 2013
 Author: Josef Perktold
 """
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 
-from statsmodels.tsa.arima_process import arma_generate_sample, ArmaProcess
 from statsmodels.miscmodels.tmodel import TArma
 from statsmodels.tsa.arima_model import ARMA
+from statsmodels.tsa.arima_process import ArmaProcess, arma_generate_sample
 from statsmodels.tsa.arma_mle import Arma
 
 nobs = 500

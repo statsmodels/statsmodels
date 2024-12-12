@@ -36,9 +36,9 @@ Author: josef-pktd
 License: BSD
 
 '''
+import numpy as np
 from scipy import stats
 from scipy.stats import distributions
-import numpy as np
 
 
 def get_u_argskwargs(**kwargs):

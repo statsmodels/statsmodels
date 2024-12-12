@@ -1,9 +1,9 @@
 import math
+
 import numpy as np
-from scipy import linalg, stats, special
+from scipy import linalg, special, stats
 
 from .linalg_decomp_1 import SvdArray
-
 
 #univariate standard normal distribution
 #following from scipy.stats.distributions with adjustments

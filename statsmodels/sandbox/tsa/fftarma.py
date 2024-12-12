@@ -32,9 +32,9 @@ import numpy as np
 import numpy.fft as fft
 #import scipy.fftpack as fft
 from scipy import signal
+
 #from try_var_convolve import maxabs
 from statsmodels.tsa.arima_process import ArmaProcess
-
 
 #trying to convert old experiments to a class
 
@@ -521,6 +521,7 @@ if __name__ == '__main__':
     plt.title('matplotlib')
 
     from nitime.algorithms import LD_AR_est
+
     #yule_AR_est(s, order, Nfreqs)
     wnt, spdnt = LD_AR_est(rvs, 10, 512)
     plt.figure()

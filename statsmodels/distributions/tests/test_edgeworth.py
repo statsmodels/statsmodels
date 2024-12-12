@@ -1,15 +1,17 @@
 import warnings
 
 import numpy as np
-from numpy.testing import (assert_equal, assert_raises,
-                           assert_allclose)
 import numpy.testing as npt
-
-from scipy.special import gamma, factorial, factorial2
+from numpy.testing import assert_allclose, assert_equal, assert_raises
+from scipy.special import factorial, factorial2, gamma
 import scipy.stats as stats
 
-from statsmodels.distributions.edgeworth import (_faa_di_bruno_partitions,
-        cumulant_from_moments, ExpandedNormal)
+from statsmodels.distributions.edgeworth import (
+    ExpandedNormal,
+    _faa_di_bruno_partitions,
+    cumulant_from_moments,
+)
+
 
 class TestFaaDiBruno:
     def test_neg_arg(self):

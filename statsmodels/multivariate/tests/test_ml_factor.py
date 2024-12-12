@@ -1,8 +1,11 @@
+import warnings
+
 import numpy as np
-from statsmodels.multivariate.factor import Factor
 from numpy.testing import assert_allclose, assert_equal
 from scipy.optimize import approx_fprime
-import warnings
+
+from statsmodels.multivariate.factor import Factor
+
 
 # A small model for basic testing
 def _toy():

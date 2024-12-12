@@ -1,6 +1,7 @@
 #### Convenience Functions to be moved to kerneltools ####
 import numpy as np
 
+
 def forrt(X, m=None):
     """
     RFFT with order like Munro (1976) FORTT routine.

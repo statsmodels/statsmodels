@@ -201,8 +201,8 @@ class NonlinearLS(Model):  #or subclass a model
         #maybe not anymore, I'm not using pcov of leastsq
         #direct calculation with jac_predict misses the weights
 
-##        if not weights is None
-##            fitres.wexogw = self.weights * self.jacpredict(popt)
+        # if not weights is None
+        #     fitres.wexogw = self.weights * self.jacpredict(popt)
         from statsmodels.regression import RegressionResults
 
         beta = popt

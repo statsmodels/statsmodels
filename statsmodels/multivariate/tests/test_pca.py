@@ -3,13 +3,16 @@ from statsmodels.compat.platform import PLATFORM_WIN32
 import warnings
 
 import numpy as np
+from numpy.testing import assert_allclose, assert_equal, assert_raises
 import pandas as pd
 import pytest
-from numpy.testing import assert_allclose, assert_equal, assert_raises
 
 from statsmodels.multivariate.pca import PCA, pca
-from statsmodels.multivariate.tests.results.datamlw import (data, princomp1,
-                                                            princomp2)
+from statsmodels.multivariate.tests.results.datamlw import (
+    data,
+    princomp1,
+    princomp2,
+)
 from statsmodels.tools.sm_exceptions import EstimationWarning
 
 DECIMAL_5 = .00001

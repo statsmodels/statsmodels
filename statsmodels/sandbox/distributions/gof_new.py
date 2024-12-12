@@ -18,13 +18,13 @@ References
 
 '''
 from statsmodels.compat.python import lmap
-import numpy as np
 
+import numpy as np
+from scipy.special import kolmogorov as ksprob
 from scipy.stats import distributions
 
 from statsmodels.tools.decorators import cache_readonly
 
-from scipy.special import kolmogorov as ksprob
 
 #from scipy.stats unchanged
 def ks_2samp(data1, data2):
@@ -638,6 +638,7 @@ class NewNorm:
 
 if __name__ == '__main__':
     from scipy import stats
+
     #rvs = np.random.randn(1000)
     rvs = stats.t.rvs(3, size=200)
     print('scipy kstest')

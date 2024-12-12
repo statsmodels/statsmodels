@@ -3,7 +3,9 @@
 Author: josef-pktd
 '''
 from statsmodels.compat.python import lmap
+
 import numpy as np
+
 
 def prob_bv_rectangle(lower, upper, cdf):
     '''helper function for probability of a rectangle in a bivariate distribution

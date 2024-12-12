@@ -36,10 +36,8 @@ enhancements:
 
 
 '''
-from scipy import stats, integrate, special
-
 import numpy as np
-
+from scipy import integrate, special, stats
 
 sqr2 = np.sqrt(2.)
 
@@ -421,8 +419,11 @@ if __name__ == '__main__':
     nobs = 10000
 
     import matplotlib.pyplot as plt
+
     from statsmodels.distributions.mixture_rvs import (
-                                                mixture_rvs, MixtureDistribution)
+        MixtureDistribution,
+        mixture_rvs,
+    )
 
     #np.random.seed(12345)
 ##    obs_dist = mixture_rvs([1/3.,2/3.], size=nobs, dist=[stats.norm, stats.norm],
@@ -550,7 +551,7 @@ if __name__ == '__main__':
     print(np.max(np.abs(inn - np.eye(5))))
     print((inn*100000).astype(int))
 
-    from scipy.special import hermite, chebyt
+    from scipy.special import chebyt, hermite
     htpolys = [hermite(i) for i in range(5)]
     innt = inner_cont(htpolys, -10, 10)[0]
     print((innt*100000).astype(int))

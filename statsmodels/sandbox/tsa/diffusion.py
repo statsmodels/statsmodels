@@ -48,9 +48,9 @@ finance applications ? option pricing, interest rate models
 
 
 '''
-import numpy as np
-from scipy import stats, signal
 import matplotlib.pyplot as plt
+import numpy as np
+from scipy import signal, stats
 
 #np.random.seed(987656789)
 
@@ -126,12 +126,7 @@ class AffineDiffusion(Diffusion):
         # _drift, _sig independent of dt is wrong
         if xzero is None:
             xzero = self.xzero
-        if dt is None:
-            dt = T*1.0/nobs
-        W, t = self.simulateW(nobs=nobs, T=T, dt=dt, nrepl=nrepl)
         dW = self.dW
-        np.linspace(dt, 1, nobs)
-        Tratio*dt
         L = nobs/Tratio        # L EM steps of size Dt = R*dt
         Xem = np.zeros((nrepl,L))    # preallocate for efficiency
         Xtemp = xzero
@@ -295,6 +290,7 @@ class OUprocess(AffineDiffusion):
         normrvs = np.random.normal(size=(nrepl,nobs))
         #do I need lfilter here AR(1) ? lfilter does not handle 2d arrays, it does?
         from scipy import signal
+
         #xzero * expnt
         inc = ( self.mu * (1-expddt) +
                 self.sigma * np.sqrt((1-expddt*expddt)/2./self.lambd) * normrvs )

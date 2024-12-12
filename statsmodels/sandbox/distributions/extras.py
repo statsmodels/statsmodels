@@ -51,13 +51,12 @@ License: BSD
 """
 
 import numpy as np
-from numpy import poly1d, sqrt, exp
-
+from numpy import exp, poly1d, sqrt
 import scipy
-from scipy import stats, special
+from scipy import special, stats
 from scipy.stats import distributions
 
-from statsmodels.stats.moment_helpers import mvsk2mc, mc2mvsk
+from statsmodels.stats.moment_helpers import mc2mvsk, mvsk2mc
 
 try:
     from scipy.stats._mvn import mvndst
@@ -631,10 +630,6 @@ class ExpTransf_gen(distributions.rv_continuous):
             name = kwargs['name']
         else:
             name = 'Log transformed distribution'
-        if 'a' in kwargs:
-            kwargs['a']
-        else:
-            pass
         super().__init__(a=0, name=name)
         self.kls = kls
 

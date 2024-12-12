@@ -11,8 +11,8 @@ import numpy as np
 from numpy.testing import assert_allclose
 
 from statsmodels.regression.linear_model import OLS
-from statsmodels.stats._diagnostic_other import CMTNewey, CMTTauchen
 import statsmodels.stats._diagnostic_other as diao
+from statsmodels.stats._diagnostic_other import CMTNewey, CMTTauchen
 
 
 class CheckCMT:

@@ -1,12 +1,21 @@
 import unittest
+
 import numpy as np
 
-from statsmodels.multivariate.factor_rotation._wrappers import rotate_factors
-from statsmodels.multivariate.factor_rotation._gpa_rotation import (
-    ff_partial_target, vgQ_partial_target, ff_target, vgQ_target, CF_objective,
-    orthomax_objective, oblimin_objective, GPA)
 from statsmodels.multivariate.factor_rotation._analytic_rotation import (
-    target_rotation)
+    target_rotation,
+)
+from statsmodels.multivariate.factor_rotation._gpa_rotation import (
+    GPA,
+    CF_objective,
+    ff_partial_target,
+    ff_target,
+    oblimin_objective,
+    orthomax_objective,
+    vgQ_partial_target,
+    vgQ_target,
+)
+from statsmodels.multivariate.factor_rotation._wrappers import rotate_factors
 
 
 class TestAnalyticRotation(unittest.TestCase):

@@ -11,9 +11,9 @@ Author: josef-pktd
 License: Simplified BSD
 '''
 from statsmodels.compat.python import lmap
-import numpy as np
-from scipy import stats, optimize, integrate
 
+import numpy as np
+from scipy import integrate, optimize, stats
 
 ########## patching scipy
 

@@ -6,11 +6,11 @@ not written as a test, prints results, renamed to prevent test runner from runni
 '''
 import numpy as np
 from scipy import stats
+
 #from statsmodels.stats.moment_helpers import mnc2mvsk
 from statsmodels.sandbox.distributions.sppatch import expect_v2
 
 from .distparams import distcont
-
 
 specialcases = {'ncf':{'ub':1000} # diverges if it's too large, checked for mean
                 }

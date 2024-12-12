@@ -14,13 +14,13 @@ B Gillespie (2006).  Checking the assumptions in the Cox proportional
 hazards model.
 http://www.mwsug.org/proceedings/2006/stats/MWSUG-2006-SD08.pdf
 """
+from statsmodels.compat.pandas import Appender
+
 import numpy as np
 
 from statsmodels.base import model
 import statsmodels.base.model as base
 from statsmodels.tools.decorators import cache_readonly
-from statsmodels.compat.pandas import Appender
-
 
 _predict_docstring = """
     Returns predicted values from the proportional hazards

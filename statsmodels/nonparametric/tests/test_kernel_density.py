@@ -1,7 +1,7 @@
 import numpy as np
 import numpy.testing as npt
-import pytest
 from numpy.testing import assert_allclose, assert_equal
+import pytest
 
 import statsmodels.api as sm
 
