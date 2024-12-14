@@ -573,6 +573,23 @@ class Log(Link):
             the exponential function
         """
         return np.exp(z)
+    
+    def inverse_deriv2(self, z):
+        """
+        Second derivative of the inverse of the log transform link function
+
+        Parameters
+        ----------
+        z : array_like
+            The inverse of the link function at `p`
+
+        Returns
+        -------
+        g^(-1)''(z) : ndarray
+            The value of the second derivative of the inverse of the log function,
+            the exponential function
+        """
+        return np.exp(z)
 
 
 class log(Log):
