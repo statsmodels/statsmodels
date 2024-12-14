@@ -244,6 +244,24 @@ class Logit(Link):
         """
         v = p * (1 - p)
         return (2*p - 1) / v**2
+    
+    def inverse_deriv2(self, z):
+        """
+        Second derivative of the inverse of the logit transform
+
+        Parameters
+        ----------
+        z : array_like
+            `z` is usually the linear predictor for a GLM or GEE model.
+
+        Returns
+        -------
+        g^(-1)''(z) : ndarray
+            The value of the second derivative of the inverse of the logit function
+        """
+        t = self.inverse_deriv(z)
+        t_2 = (1-2*self.inverse(z))
+        return t*t_2
 
 
 class logit(Logit):

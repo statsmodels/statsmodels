@@ -28,7 +28,7 @@ Links = [logit, inverse_power, sqrt, inverse_squared, identity,
          log, probit, cauchy, cloglog, loglog, negbinom]
 
 # links with defined second derivative of inverse link.
-LinksISD = [inverse_power, sqrt, inverse_squared, identity,
+LinksISD = [logit, inverse_power, sqrt, inverse_squared, identity,
             log, cauchy, probit, loglog]
 
 
