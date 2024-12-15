@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ Helper and filter functions for VAR and VARMA, and basic VAR class
 
 Created on Mon Jan 11 11:04:23 2010
@@ -320,7 +319,7 @@ def ar2lhs(ar):
     return -ar[1:]
 
 
-class _Var(object):
+class _Var:
     '''obsolete VAR class, use tsa.VAR instead, for internal use only
 
 
@@ -435,7 +434,7 @@ class _Var(object):
         return vargenerate(self.arhat, u, initvalues=self.y)
 
 
-class VarmaPoly(object):
+class VarmaPoly:
     '''class to keep track of Varma polynomial format
 
 

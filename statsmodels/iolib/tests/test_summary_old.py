@@ -66,7 +66,7 @@ def test_regression_summary():
 ##    print('###')
     actual = r_summary
     import numpy as np
-    actual = '\n'.join((line.rstrip() for line in actual.split('\n')))
+    actual = '\n'.join(line.rstrip() for line in actual.split('\n'))
 #    print len(actual), len(desired)
 #    print repr(actual)
 #    print repr(desired)

@@ -1,4 +1,3 @@
-from io import open
 import itertools
 import os
 import re
@@ -80,7 +79,7 @@ def sublists(lst, min_elmts=0, max_elmts=None):
     result = itertools.chain.from_iterable(
                 itertools.combinations(lst, sublist_len)
                 for sublist_len in range(min_elmts, max_elmts+1))
-    if type(result) != list:
+    if type(result) is not list:
         result = list(result)
     return result
 
@@ -159,12 +158,12 @@ def load_results_jmulti(dataset):
         if "co" not in dt_string and "lo" not in dt_string \
                 and "s" not in dt_string:
             # JMulTi: no deterministic terms section in VEC representation
-            del(section_header[1])
-            del(sections[1])
+            del section_header[1]
+            del sections[1]
             if "ci" not in dt_string and "li" not in dt_string:
                 # JMulTi: no deterministic section in VAR repr.
-                del(section_header[-1])
-                del(sections[-1])
+                del section_header[-1]
+                del sections[-1]
         results = dict()
         results["est"] = dict.fromkeys(sections)
         results["se"] = dict.fromkeys(sections)
@@ -183,7 +182,7 @@ def load_results_jmulti(dataset):
         # ---------------------------------------------------------------------
         # parse information about \alpha, \beta, \Gamma, deterministic of VECM
         # and A_i and deterministic of corresponding VAR:
-        params_file = open(params_file)
+        params_file = open(params_file, encoding="latin_1")
         for line in params_file:
             if section == -1 and section_header[section+1] not in line:
                 continue
@@ -280,7 +279,7 @@ def load_results_jmulti(dataset):
         # all numbers of Sigma_u in notation with e (e.g. 2.283862e-05)
         regex_est = re.compile(r"\s+\S+e\S+")
         sigmau_section_reached = False
-        sigmau_file = open(sigmau_file)
+        sigmau_file = open(sigmau_file, encoding="latin_1")
         for line in sigmau_file:
             if line.startswith("Log Likelihood:"):
                 line = line.split("Log Likelihood:")[1]
@@ -344,7 +343,7 @@ def load_results_jmulti(dataset):
                 + stringify_var_names(causing) + "_" \
                 + stringify_var_names(caused) + ".txt"
             granger_file = os.path.join(here, granger_file)
-            granger_file = open(granger_file)
+            granger_file = open(granger_file, encoding="latin_1")
             granger_results = []
             for line in granger_file:
                 str_number = r"\d+\.\d{4}"
@@ -383,7 +382,7 @@ def load_results_jmulti(dataset):
                 + stringify_var_names(causing) + "_" \
                 + stringify_var_names(caused) + ".txt"
             inst_file = os.path.join(here, inst_file)
-            inst_file = open(inst_file)
+            inst_file = open(inst_file, encoding="latin_1")
             inst_results = []
             for line in inst_file:
                 str_number = r"\d+\.\d{4}"

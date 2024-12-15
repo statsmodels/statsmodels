@@ -7,7 +7,7 @@ from statsmodels.emplike.originregress import ELOriginRegress
 from .results.el_results import OriginResults
 
 
-class GenRes(object):
+class GenRes:
     """
     Loads data and creates class instance ot be tested.
     """

@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from statsmodels.compat.python import lrange, Literal
+from statsmodels.compat.python import lrange
 
+from typing import Literal
 import warnings
 
 import numpy as np
@@ -125,7 +126,7 @@ def add_trend(x, trend="c", prepend=False, has_constant="skip"):
             def safe_is_const(s):
                 try:
                     return np.ptp(s) == 0.0 and np.any(s != 0.0)
-                except:
+                except Exception:
                     return False
 
             col_const = x.apply(safe_is_const, 0)
@@ -148,8 +149,10 @@ def add_trend(x, trend="c", prepend=False, has_constant="skip"):
                         "x contains one or more constant columns. Column(s) "
                         f"{const_cols} are constant."
                     )
-                msg = f"{base_err} Adding a constant with trend='{trend}' is not allowed."
-                raise ValueError(msg)
+                raise ValueError(
+                    f"{base_err} Adding a constant with trend='{trend}' is "
+                    "not allowed."
+                )
             elif has_constant == "skip":
                 columns = columns[1:]
                 trendarr = trendarr[:, 1:]
@@ -293,12 +296,13 @@ def detrend(x, order=1, axis=0):
     return resid
 
 
-def lagmat(x,
-           maxlag: int,
-           trim: Literal["forward", "backward", "both", "none"]='forward',
-           original: Literal["ex", "sep", "in"]="ex",
-           use_pandas: bool=False
-           )-> NDArray | DataFrame | tuple[NDArray, NDArray] | tuple[DataFrame, DataFrame]:
+def lagmat(
+    x,
+    maxlag: int,
+    trim: Literal["forward", "backward", "both", "none"] = "forward",
+    original: Literal["ex", "sep", "in"] = "ex",
+    use_pandas: bool = False,
+) -> NDArray | DataFrame | tuple[NDArray, NDArray] | tuple[DataFrame, DataFrame]:
     """
     Create 2d array of lags.
 
@@ -415,7 +419,15 @@ def lagmat(x,
 
     if is_pandas:
         x = orig
-        x_columns = x.columns if isinstance(x, DataFrame) else [x.name]
+        if isinstance(x, DataFrame):
+            x_columns = [str(c) for c in x.columns]
+            if len(set(x_columns)) != x.shape[1]:
+                raise ValueError(
+                    "Columns names must be distinct after conversion to string "
+                    "(if not already strings)."
+                )
+        else:
+            x_columns = [str(x.name)]
         columns = [str(col) for col in x_columns]
         for lag in range(maxlag):
             lag_str = str(lag + 1)
@@ -796,11 +808,12 @@ def freq_to_period(freq: str | offsets.DateOffset) -> int:
     assert isinstance(freq, offsets.DateOffset)
     freq = freq.rule_code.upper()
 
-    if freq == "A" or freq.startswith(("A-", "AS-")):
+    yearly_freqs = ("A-", "AS-", "Y-", "YS-", "YE-")
+    if freq in ("A", "Y") or freq.startswith(yearly_freqs):
         return 1
-    elif freq == "Q" or freq.startswith(("Q-", "QS-")):
+    elif freq == "Q" or freq.startswith(("Q-", "QS", "QE")):
         return 4
-    elif freq == "M" or freq.startswith(("M-", "MS")):
+    elif freq == "M" or freq.startswith(("M-", "MS", "ME")):
         return 12
     elif freq == "W" or freq.startswith("W-"):
         return 52

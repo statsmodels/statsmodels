@@ -6,11 +6,18 @@ import pandas as pd
 from pandas.core.nanops import nanmean as pd_nanmean
 
 from statsmodels.tools.validation import PandasWrapper, array_like
-from statsmodels.tsa._stl import STL
+from statsmodels.tsa.stl._stl import STL
 from statsmodels.tsa.filters.filtertools import convolution_filter
+from statsmodels.tsa.stl.mstl import MSTL
 from statsmodels.tsa.tsatools import freq_to_period
 
-__all__ = ["STL", "seasonal_decompose", "seasonal_mean", "DecomposeResult"]
+__all__ = [
+    "STL",
+    "seasonal_decompose",
+    "seasonal_mean",
+    "DecomposeResult",
+    "MSTL",
+]
 
 
 def _extrapolate_trend(trend, npoints):
@@ -88,9 +95,10 @@ def seasonal_decompose(
         The concrete moving average method used in filtering is determined by
         two_sided.
     period : int, optional
-        Period of the series. Must be used if x is not a pandas object or if
-        the index of x does not have  a frequency. Overrides default
-        periodicity of x if x is a pandas object with a timeseries index.
+        Period of the series (eg, 1 for annual, 4 for quarterly, etc). Must be
+        used if x is not a pandas object or if the index of x does not have a
+        frequency. Overrides default periodicity of x if x is a pandas object
+        with a timeseries index.
     two_sided : bool, optional
         The moving average method used in filtering.
         If True (default), a centered moving average is computed using the
@@ -213,7 +221,7 @@ def seasonal_decompose(
     )
 
 
-class DecomposeResult(object):
+class DecomposeResult:
     """
     Results class for seasonal decompositions
 
@@ -311,7 +319,21 @@ class DecomposeResult(object):
         register_matplotlib_converters()
         series = [(self._observed, "Observed")] if observed else []
         series += [(self.trend, "trend")] if trend else []
-        series += [(self.seasonal, "seasonal")] if seasonal else []
+
+        if self.seasonal.ndim == 1:
+            series += [(self.seasonal, "seasonal")] if seasonal else []
+        elif self.seasonal.ndim > 1:
+            if isinstance(self.seasonal, pd.DataFrame):
+                for col in self.seasonal.columns:
+                    series += (
+                        [(self.seasonal[col], "seasonal")] if seasonal else []
+                    )
+            else:
+                for i in range(self.seasonal.shape[1]):
+                    series += (
+                        [(self.seasonal[:, i], "seasonal")] if seasonal else []
+                    )
+
         series += [(self.resid, "residual")] if resid else []
         series += [(self.weights, "weights")] if weights else []
 
@@ -321,7 +343,7 @@ class DecomposeResult(object):
         else:
             xlim = (0, self._observed.shape[0] - 1)
 
-        fig, axs = plt.subplots(len(series), 1)
+        fig, axs = plt.subplots(len(series), 1, sharex=True)
         for i, (ax, (series, def_name)) in enumerate(zip(axs, series)):
             if def_name != "residual":
                 ax.plot(series)

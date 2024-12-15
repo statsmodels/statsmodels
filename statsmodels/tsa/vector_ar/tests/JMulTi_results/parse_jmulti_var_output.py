@@ -1,4 +1,3 @@
-from io import open
 import os
 import re
 
@@ -251,7 +250,7 @@ def load_results_jmulti(dataset, dt_s_list):
                 + dt_string + "_granger_causality_" \
                 + stringify_var_names(causing, "_") + ".txt"
             causality_file = os.path.join(here, causality_file)
-            causality_file = open(causality_file)
+            causality_file = open(causality_file, encoding="latin_1")
             causality_results = []
             for line in causality_file:
                 str_number = r"\d+\.\d{4}"

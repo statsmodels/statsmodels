@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Sun Oct 16 17:33:56 2011
 
@@ -114,13 +113,10 @@ def test_moment_conversion_types(func_name):
     func = getattr(moment_helpers, func_name)
 
     assert (isinstance(func([1.0, 1, 0, 3]), list) or
-            isinstance(func(np.array([1.0, 1, 0, 3])), tuple) or
-            isinstance(func(np.array([1.0, 1, 0, 3])), np.ndarray))
+            isinstance(func(np.array([1.0, 1, 0, 3])), (tuple, np.ndarray)))
 
     assert (isinstance(func(np.array([1.0, 1, 0, 3])), list) or
-            isinstance(func(np.array([1.0, 1, 0, 3])), tuple) or
-            isinstance(func(np.array([1.0, 1, 0, 3])), np.ndarray))
+            isinstance(func(np.array([1.0, 1, 0, 3])), (tuple, np.ndarray)))
 
     assert (isinstance(func(tuple([1.0, 1, 0, 3])), list) or
-            isinstance(func(np.array([1.0, 1, 0, 3])), tuple) or
-            isinstance(func(np.array([1.0, 1, 0, 3])), np.ndarray))
+            isinstance(func(np.array([1.0, 1, 0, 3])), (tuple, np.ndarray)))

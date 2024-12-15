@@ -147,7 +147,7 @@ def get_index_loc(key, index):
                 key = index[key]
         # Other key types (i.e. string date or some datetime-like object)
         else:
-            # Covert the key to the appropriate date-like object
+            # Convert the key to the appropriate date-like object
             if index_class is PeriodIndex:
                 date_key = Period(key, freq=base_index.freq)
             else:
@@ -277,7 +277,7 @@ def get_index_label_loc(key, index, row_labels):
 
             index = row_labels[: loc + 1]
             index_was_expanded = False
-        except:
+        except Exception:
             raise e
     return loc, index, index_was_expanded
 
@@ -420,20 +420,12 @@ def get_prediction_index(
             prediction_index = data.row_labels[start : end + 1]
         # Otherwise, warn the user that they will get an NumericIndex
         else:
-            if not silent:
-                warnings.warn(
-                    "No supported index is available."
-                    " Prediction results will be given with"
-                    " an integer index beginning at `start`.",
-                    ValueWarning,
-                    stacklevel=2,
-                )
             warnings.warn(
                 "No supported index is available. In the next"
                 " version, calling this method in a model"
                 " without a supported index will result in an"
                 " exception.",
-                DeprecationWarning,
+                FutureWarning,
                 stacklevel=2,
             )
     elif index_none:
@@ -562,7 +554,7 @@ class TimeSeriesModel(base.LikelihoodModel):
                     if not isinstance(_index, Index):
                         raise ValueError("Could not coerce to date index")
                     index = _index
-                except:
+                except Exception:
                     # Only want to actually raise an exception if `dates` was
                     # provided but cannot be coerced. If we got the index from
                     # the row_labels, we'll just ignore it and use the integer
@@ -583,11 +575,10 @@ class TimeSeriesModel(base.LikelihoodModel):
                         inferred_freq = True
                         if freq is not None:
                             warnings.warn(
-                                "No frequency information was"
-                                " provided, so inferred frequency %s"
-                                " will be used." % freq,
+                                "No frequency information was provided, so inferred "
+                                f"frequency {freq} will be used.",
                                 ValueWarning,
-                                stacklevel = 2,
+                                stacklevel=2,
                             )
 
                 # Convert the passed freq to a pandas offset object
@@ -612,7 +603,7 @@ class TimeSeriesModel(base.LikelihoodModel):
                     resampled_index = date_range(
                         start=index[0], end=index[-1], freq=freq
                     )
-                    if not inferred_freq and not resampled_index.equals(index):
+                    if not inferred_freq and not (resampled_index == index).all():
                         raise ValueError(
                             "The given frequency argument could"
                             " not be matched to the given index."
@@ -641,7 +632,6 @@ class TimeSeriesModel(base.LikelihoodModel):
         # Get attributes of the index
         has_index = index is not None
         date_index = isinstance(index, (DatetimeIndex, PeriodIndex))
-        period_index = isinstance(index, PeriodIndex)
         int_index = is_int_index(index)
         range_index = isinstance(index, RangeIndex)
         has_freq = index.freq is not None if date_index else None
@@ -659,8 +649,9 @@ class TimeSeriesModel(base.LikelihoodModel):
         # Issue warnings for unsupported indexes
         if has_index and not (date_index or range_index or is_increment):
             warnings.warn(
-                "An unsupported index was provided and will be"
-                " ignored when e.g. forecasting.",
+                "An unsupported index was provided. As a result, forecasts "
+                "cannot be generated. To use the model for forecasting, use on the "
+                "the supported classes of index.",
                 ValueWarning,
                 stacklevel=2,
             )
@@ -776,7 +767,9 @@ class TimeSeriesModel(base.LikelihoodModel):
             base_index = self._index
         return get_index_label_loc(key, base_index, self.data.row_labels)
 
-    def _get_prediction_index(self, start, end, index=None, silent=False) -> tuple[int, int, int, Index | None]:
+    def _get_prediction_index(
+        self, start, end, index=None, silent=False
+    ) -> tuple[int, int, int, Index | None]:
         """
         Get the location of a specific key in an index or model row labels
 

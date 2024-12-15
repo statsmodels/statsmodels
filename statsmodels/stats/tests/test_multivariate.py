@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Sun Nov  5 14:48:19 2017
 
@@ -215,7 +214,7 @@ def test_confint_simult():
     assert_allclose(res_constr2[1], upps, rtol=1e-13)
 
 
-class TestCovStructure(object):
+class TestCovStructure:
 
     @classmethod
     def setup_class(cls):

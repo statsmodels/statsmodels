@@ -15,7 +15,7 @@ __all__ = ['SUR', 'Sem2SLS']
 #TODO: make a dictionary that holds equation specific information
 #rather than these cryptic lists?  Slower to get a dict value?
 #TODO: refine sigma definition
-class SUR(object):
+class SUR:
     """
     Seemingly Unrelated Regression
 
@@ -94,7 +94,7 @@ class SUR(object):
             raise ValueError("sys must be a list of pairs of endogenous and \
 exogenous variables.  Got length %s" % len(sys))
         if dfk:
-            if not dfk.lower() in ['dfk1','dfk2']:
+            if dfk.lower() not in ['dfk1','dfk2']:
                 raise ValueError("dfk option %s not understood" % (dfk))
         self._dfk = dfk
         M = len(sys[1::2])
@@ -255,7 +255,7 @@ exogenous variables.  Got length %s" % len(sys))
 #TODO: Should just have a general 2SLS estimator to subclass
 # for IV, FGLS, etc.
 # Also should probably have SEM class and estimators as subclasses
-class Sem2SLS(object):
+class Sem2SLS:
     """
     Two-Stage Least Squares for Simultaneous equations
 
@@ -368,7 +368,7 @@ class SysResults(LikelihoodModelResults):
     Not implemented yet.
     """
     def __init__(self, model, params, normalized_cov_params=None, scale=1.):
-        super(SysResults, self).__init__(model, params,
+        super().__init__(model, params,
                 normalized_cov_params, scale)
         self._get_results()
 

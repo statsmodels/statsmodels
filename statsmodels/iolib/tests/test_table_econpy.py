@@ -52,7 +52,7 @@ def custom_labeller(cell):
         return 'missing'
 
 
-class TestCell(object):
+class TestCell:
     def test_celldata(self):
         celldata = cell0data, cell1data, row1data[0], row1data[1]
         cells = [Cell(datum, datatype=i % 2)
@@ -61,7 +61,7 @@ class TestCell(object):
             assert_equal(cell.data, datum)
 
 
-class TestSimpleTable(object):
+class TestSimpleTable:
     def test_txt_fmt1(self):
         # Limited test of custom txt_fmt
         desired = """
@@ -115,7 +115,7 @@ class TestSimpleTable(object):
         #the previous has significant trailing whitespace that got removed
         #desired = '''\n<table class="simpletable">\n<tr>\n    <td></td>    <th>header1</th> <th>header2</th>\n</tr>\n<tr>\n  <th>stub1</th>   <td>0.0</td>      <td>1</td>   \n</tr>\n<tr>\n  <th>stub2</th>    <td>2</td>     <td>3.333</td> \n</tr>\n</table>\n'''
         actual = '\n%s\n' % tbl.as_html()
-        actual = '\n'.join((line.rstrip() for line in actual.split('\n')))
+        actual = '\n'.join(line.rstrip() for line in actual.split('\n'))
         #print(actual)
         #print(desired)
         #print len(actual), len(desired)

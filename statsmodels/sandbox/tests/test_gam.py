@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tests for gam.AdditiveModel and GAM with Polynomials compared to OLS and GLM
 
 
@@ -88,10 +87,10 @@ from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.regression.linear_model import OLS
 
 
-class Dummy(object):
+class Dummy:
     pass
 
-class CheckAM(object):
+class CheckAM:
 
     def test_predict(self):
         assert_almost_equal(self.res1.y_pred,
@@ -139,7 +138,7 @@ class CheckGAM(CheckAM):
                             self.res2.y_pred[:10], decimal=2)
 
 
-class BaseAM(object):
+class BaseAM:
 
     @classmethod
     def setup_class(cls):
@@ -166,7 +165,7 @@ class TestAdditiveModel(BaseAM, CheckAM):
 
     @classmethod
     def setup_class(cls):
-        super(TestAdditiveModel, cls).setup_class() #initialize DGP
+        super().setup_class() #initialize DGP
 
         nobs = cls.nobs
         y_true, x, exog = cls.y_true, cls.x, cls.exog
@@ -199,7 +198,7 @@ class TestAdditiveModel(BaseAM, CheckAM):
     def test_fitted(self):
         # We have to override the base class because this case does not fail,
         #  while all others in this module do (as of 2019-05-22)
-        super(TestAdditiveModel, self).test_fitted()
+        super().test_fitted()
 
 
 class BaseGAM(BaseAM, CheckGAM):
@@ -238,12 +237,12 @@ class BaseGAM(BaseAM, CheckGAM):
         cls.res2 = res2 = res_glm  #reuse existing glm results, will add additional
 
         #eta in GLM terminology
-        res2.y_pred = res_glm.model.predict(res_glm.params, exog, linear=True)
+        res2.y_pred = res_glm.model.predict(res_glm.params, exog, which="linear")
         res1.y_pred = res_gam.predict(x)
         res1.y_predshort = res_gam.predict(x[:10]) #, linear=True)
 
         #mu
-        res2.mu_pred = res_glm.model.predict(res_glm.params, exog, linear=False)
+        res2.mu_pred = res_glm.model.predict(res_glm.params, exog, which="mean")
         res1.mu_pred = res_gam.mu
 
         #parameters
@@ -256,7 +255,7 @@ class TestGAMPoisson(BaseGAM):
 
     @classmethod
     def setup_class(cls):
-        super(TestGAMPoisson, cls).setup_class() #initialize DGP
+        super().setup_class() #initialize DGP
 
         cls.family = family.Poisson()
         cls.rvs = stats.poisson.rvs
@@ -267,7 +266,7 @@ class TestGAMBinomial(BaseGAM):
 
     @classmethod
     def setup_class(cls):
-        super(TestGAMBinomial, cls).setup_class() #initialize DGP
+        super().setup_class() #initialize DGP
 
         cls.family = family.Binomial()
         cls.rvs = stats.bernoulli.rvs
@@ -288,9 +287,9 @@ class TestGAMGaussianLogLink(BaseGAM):
 
     @classmethod
     def setup_class(cls):
-        super(TestGAMGaussianLogLink, cls).setup_class()  # initialize DGP
+        super().setup_class()  # initialize DGP
 
-        cls.family = family.Gaussian(links.log())
+        cls.family = family.Gaussian(links.Log())
         cls.rvs = stats.norm.rvs
         cls.scale = 5
 
@@ -301,9 +300,9 @@ class TestGAMGamma(BaseGAM):
 
     @classmethod
     def setup_class(cls):
-        super(TestGAMGamma, cls).setup_class() #initialize DGP
+        super().setup_class() #initialize DGP
 
-        cls.family = family.Gamma(links.log())
+        cls.family = family.Gamma(links.Log())
         cls.rvs = stats.gamma.rvs
 
         cls.init()
@@ -317,7 +316,7 @@ class TestGAMNegativeBinomial(BaseGAM):
 
     @classmethod
     def setup_class(cls):
-        super(TestGAMNegativeBinomial, cls).setup_class()  # initialize DGP
+        super().setup_class()  # initialize DGP
 
         cls.family = family.NegativeBinomial()
         cls.rvs = stats.nbinom.rvs
@@ -330,7 +329,7 @@ class TestGAMNegativeBinomial(BaseGAM):
     def test_fitted(self):
         # We have to override the base class method in order to correctly
         #  specify the type of failure we are expecting.
-        super(TestGAMNegativeBinomial, self).test_fitted()
+        super().test_fitted()
 
     @pytest.mark.xfail(reason="Passing wrong number of args/kwargs "
                               "to _parse_args_rvs",
@@ -338,4 +337,4 @@ class TestGAMNegativeBinomial(BaseGAM):
     def test_df(self):
         # We have to override the base class method in order to correctly
         #  specify the type of failure we are expecting.
-        super(TestGAMNegativeBinomial, self).test_df()
+        super().test_df()

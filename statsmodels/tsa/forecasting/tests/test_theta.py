@@ -14,7 +14,7 @@ SMOKE_IDS = [f"type: {typ}, exponential: {exp}" for typ, exp in SMOKE_PARAMS]
 def data(request):
     rs = np.random.RandomState([3290328901, 323293105, 121029109])
     scale = 0.01 if request.param[1] else 1
-    y = np.cumsum(scale + scale * rs.standard_normal((300)))
+    y = np.cumsum(scale + scale * rs.standard_normal(300))
     if request.param[1]:
         y = np.exp(y)
     index = pd.date_range("2000-01-01", periods=300)
@@ -30,7 +30,7 @@ def data(request):
 def indexed_data(request):
     rs = np.random.RandomState([3290328901, 323293105, 121029109])
     scale = 0.01
-    y = np.cumsum(scale + scale * rs.standard_normal((300)))
+    y = np.cumsum(scale + scale * rs.standard_normal(300))
     y = np.exp(y)
     if request.param == "datetime":
         index = pd.date_range("2000-1-1", periods=300)
@@ -133,3 +133,29 @@ def test_forecast_seasonal_alignment(data, period):
     index = np.arange(data.shape[0], data.shape[0] + comp.shape[0])
     expected = seasonal[index % period]
     np.testing.assert_allclose(comp.seasonal, expected)
+
+
+def test_auto(reset_randomstate):
+    m = 250
+    e = np.random.standard_normal(m)
+    s = 10 * np.sin(np.linspace(0, np.pi, 12))
+    s = np.tile(s, (m // 12 + 1))[:m]
+    idx = pd.period_range("2000-01-01", freq="M", periods=m)
+    x = e + s
+    y = pd.DataFrame(10 + x - x.min(), index=idx)
+
+    tm = ThetaModel(y, method="auto")
+    assert tm.method == "mul"
+    res = tm.fit()
+
+    tm = ThetaModel(y, method="mul")
+    assert tm.method == "mul"
+    res2 = tm.fit()
+
+    np.testing.assert_allclose(res.params, res2.params)
+
+    tm = ThetaModel(y - y.mean(), method="auto")
+    assert tm.method == "add"
+    res3 = tm.fit()
+
+    assert not np.allclose(res.params, res3.params)

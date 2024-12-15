@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # statsmodels documentation build configuration file, created by
 # sphinx-quickstart on Sat Jan 22 11:17:58 2011.
@@ -13,15 +12,15 @@
 # serve to show the default.
 
 import contextlib
-from distutils.version import LooseVersion
+from packaging.version import parse
 import os
 from os.path import dirname, join
 import sys
+from jinja2 import FileSystemLoader, Environment
 
 import yaml
 from numpydoc.xref import DEFAULT_LINKS
 
-import sphinx_material
 from statsmodels import __version__
 
 # -- Monkey Patch ----------------------------------------------------------
@@ -56,6 +55,7 @@ extensions = ['sphinx.ext.autodoc',
               'matplotlib.sphinxext.plot_directive',
               'IPython.sphinxext.ipython_console_highlighting',
               'IPython.sphinxext.ipython_directive',
+              "sphinx_immaterial",
               ]
 
 try:
@@ -84,9 +84,8 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'statsmodels'
-copyright = u'2009-2019, Josef Perktold, Skipper Seabold, ' \
-            u'Jonathan Taylor, statsmodels-developers'
+project = 'statsmodels'
+copyright = '2009-2023, Josef Perktold, Skipper Seabold, Jonathan Taylor, statsmodels-developers'
 
 autosummary_generate = True
 autoclass_content = 'class'
@@ -98,14 +97,14 @@ autoclass_content = 'class'
 
 release = __version__
 
-lv = LooseVersion(release)
+parsed_version = parse(release)
 commit = ''
 full_version = short_version = version = release
-if '+' in lv.version:
-    short_version = lv.vstring[:lv.vstring.index('+')]
-    commit = lv.version[lv.version.index('+') + 1]
-    version = short_version + ' (+{0})'.format(commit)
-
+if parsed_version.is_devrelease:
+    short_version = parsed_version.base_version
+    commit = parsed_version.dev
+    version = short_version + f' (+{commit})'
+project = f"{project} {version}"
 # Remove release to prevent it triggering a conf change
 del release
 
@@ -162,34 +161,43 @@ pygments_style = 'default'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-extensions.append('sphinx_material')
-html_theme_path = sphinx_material.html_theme_path()
-html_context = sphinx_material.get_html_context()
-html_theme = 'sphinx_material'
+
+html_theme = 'sphinx_immaterial'
 html_title = project
 html_short_title = project
+html_extra_path = ['version_info/versions-v3.json']
 # material theme options (see theme.conf for more information)
 
-base_url = 'https://statsmodels.org/'
-base_url += 'stable/' if full_version == version else 'devel/'
+site_url = 'https://statsmodels.org/'
+site_url += 'stable/' if full_version == version else 'devel/'
+
+# sphinx_immaterial theme options
 html_theme_options = {
-    'base_url': base_url,
-    'repo_url': 'https://github.com/statsmodels/statsmodels',
-    'repo_name': 'statsmodels',
-    'globaltoc_depth': 3,
-    'globaltoc_collapse': True,
-    'globaltoc_includehidden': True,
-    'color_primary': 'indigo',
-    'color_accent': 'blue',
-    'nav_title': 'statsmodels {0}'.format(version),
-    'master_doc': False,
-    'nav_links': [],
-    'heroes': {'index': 'statistical models, hypothesis tests, and data '
-                        'exploration',
-               'examples/index': 'examples and tutorials to get started with '
-                                 'statsmodels'},
+    "icon": {"repo": "fontawesome/brands/github"},
+    "site_url": site_url,
+    "repo_url": "https://github.com/statsmodels/statsmodels/",
+    "repo_name": "statsmodels",
+    "palette": {"primary": "indigo", "accent": "blue"},
+    "globaltoc_collapse": True,
+    "toc_title": "Contents",
     "version_dropdown": True,
-    "version_json": "../versions-v2.json",
+    "version_json": "../versions-v3.json",
+    "toc_title_is_page_title": True,
+    "social": [
+        {
+            "icon": "fontawesome/brands/github",
+            "link": "https://github.com/statsmodels/statsmodels/",
+            "name": "Source on github.com",
+        },
+        {
+            "icon": "fontawesome/brands/python",
+            "link": "https://pypi.org/project/statsmodels/",
+        },
+        {
+            "icon": "fontawesome/solid/quote-left",
+            "link": "https://doi.org/10.5281/zenodo.593847",
+        },
+    ],
 }
 
 language = 'en'
@@ -287,8 +295,8 @@ htmlhelp_basename = 'statsmodelsdoc'
 # (source start file, target name, title, author,
 # documentclass [howto/manual]).
 latex_documents = [
-    ('index', 'statsmodels.tex', u'statsmodels Documentation',
-     u'Josef Perktold, Skipper Seabold', 'manual'),
+    ('index', 'statsmodels.tex', 'statsmodels Documentation',
+     'Josef Perktold, Skipper Seabold', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -324,18 +332,18 @@ imgmath_use_preview = True
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'statsmodels', u'statsmodels Documentation',
-     [u'Josef Perktold, Skipper Seabold, Jonathan Taylor'], 1)
+    ('index', 'statsmodels', 'statsmodels Documentation',
+     ['Josef Perktold, Skipper Seabold, Jonathan Taylor'], 1)
 ]
 
 # Options for Epub output
 
 # Bibliographic Dublin Core info.
-epub_title = u'statsmodels'
-epub_author = u'Josef Perktold, Skipper Seabold'
-epub_publisher = u'Josef Perktold, Skipper Seabold'
-epub_copyright = u'2009-2019, Josef Perktold, Skipper Seabold, ' \
-                 u'Jonathan Taylor, statsmodels-developers'
+epub_title = 'statsmodels'
+epub_author = 'Josef Perktold, Skipper Seabold'
+epub_publisher = 'Josef Perktold, Skipper Seabold'
+epub_copyright = '2009-2023, Josef Perktold, Skipper Seabold, ' \
+                 'Jonathan Taylor, statsmodels-developers'
 
 # The language of the text. It defaults to the language option
 # or en if the language is not set.
@@ -405,8 +413,15 @@ plot_basedir = join(dirname(dirname(os.path.abspath(__file__))), 'source')
 # ghissue config
 github_project_url = 'https://github.com/statsmodels/statsmodels'
 
-example_context = yaml.safe_load(open('examples/landing.yml'))
-html_context.update({'examples': example_context})
+example_context = yaml.safe_load(open('examples/landing.yml', encoding="utf-8"))
+
+example_loader = FileSystemLoader("examples")
+example_env = Environment(loader=example_loader)
+example_tmpl = example_env.get_template("index.jinja2")
+with open("examples/index.rst", "w") as example_index:
+    example_index.write(example_tmpl.render(examples=example_context))
+
+# html_context.update({'examples': example_context})
 
 # --------------- DOCTEST -------------------
 doctest_global_setup = """
@@ -420,9 +435,9 @@ import pandas as pd
 """
 
 extlinks = {'pr': ('https://github.com/statsmodels/statsmodels/pull/%s',
-                   'PR #'),
+                   'PR #%s'),
             'issue': ('https://github.com/statsmodels/statsmodels/issues/%s',
-                      'Issue #')
+                      'Issue #%s')
             }
 
 autosectionlabel_prefix_document = True

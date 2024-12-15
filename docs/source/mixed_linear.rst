@@ -91,7 +91,7 @@ Examples
 
 Detailed examples can be found here
 
-* `Mixed LM <examples/notebooks/generated/mixed_lm_example.html>`__
+* `Mixed LM <examples/notebooks/generated/mixed_lm_example.ipynb>`_
 
 There are some notebook examples on the Wiki:
 `Wiki notebooks for MixedLM <https://github.com/statsmodels/statsmodels/wiki/Examples#linear-mixed-models>`_

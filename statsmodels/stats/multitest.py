@@ -60,7 +60,9 @@ for m in _alias_list:
     for a in m[1:]:
         multitest_alias[a] = m[0]
 
-def multipletests(pvals, alpha=0.05, method='hs', is_sorted=False,
+def multipletests(pvals, alpha=0.05, method='hs',
+                  maxiter=1,
+                  is_sorted=False,
                   returnsorted=False):
     """
     Test results and p-value correction for multiple tests
@@ -86,6 +88,13 @@ def multipletests(pvals, alpha=0.05, method='hs', is_sorted=False,
         - `fdr_tsbh` : two stage fdr correction (non-negative)
         - `fdr_tsbky` : two stage fdr correction (non-negative)
 
+    maxiter : int or bool
+        Maximum number of iterations for two-stage fdr, `fdr_tsbh` and
+        `fdr_tsbky`. It is ignored by all other methods.
+        maxiter=1 (default) corresponds to the two stage method.
+        maxiter=-1 corresponds to full iterations which is maxiter=len(pvals).
+        maxiter=0 uses only a single stage fdr correction using a 'bh' or 'bky'
+        prior fraction of assumed true hypotheses.
     is_sorted : bool
         If False (default), the p_values will be sorted, but the corrected
         pvalues are in the original order. If True, then it assumed that the
@@ -228,11 +237,13 @@ def multipletests(pvals, alpha=0.05, method='hs', is_sorted=False,
         # delegate, call with sorted pvals
         reject, pvals_corrected = fdrcorrection_twostage(pvals, alpha=alpha,
                                                          method='bky',
+                                                         maxiter=maxiter,
                                                          is_sorted=True)[:2]
     elif method.lower() in ['fdr_tsbh', 'fdr_2sbh']:
         # delegate, call with sorted pvals
         reject, pvals_corrected = fdrcorrection_twostage(pvals, alpha=alpha,
                                                          method='bh',
+                                                         maxiter=maxiter,
                                                          is_sorted=True)[:2]
 
     elif method.lower() in ['fdr_gbs']:
@@ -356,7 +367,9 @@ def fdrcorrection(pvals, alpha=0.05, method='indep', is_sorted=False):
         return reject, pvals_corrected
 
 
-def fdrcorrection_twostage(pvals, alpha=0.05, method='bky', iter=False,
+def fdrcorrection_twostage(pvals, alpha=0.05, method='bky',
+                           maxiter=1,
+                           iter=None,
                            is_sorted=False):
     '''(iterated) two stage linear step-up procedure with estimation of number of true
     hypotheses
@@ -376,7 +389,31 @@ def fdrcorrection_twostage(pvals, alpha=0.05, method='bky', iter=False,
            and Yekuteli 2006
         * 'bh' - the two stage method of Benjamini and Hochberg
 
+    maxiter : int or bool
+        Maximum number of iterations.
+        maxiter=1 (default) corresponds to the two stage method.
+        maxiter=-1 corresponds to full iterations which is maxiter=len(pvals).
+        maxiter=0 uses only a single stage fdr correction using a 'bh' or 'bky'
+        prior fraction of assumed true hypotheses.
+        Boolean maxiter is allowed for backwards compatibility with the
+        deprecated ``iter`` keyword.
+        maxiter=False is two-stage fdr (maxiter=1)
+        maxiter=True is full iteration (maxiter=-1 or maxiter=len(pvals))
+
+        .. versionadded:: 0.14
+
+            Replacement for ``iter`` with additional features.
+
     iter : bool
+        ``iter`` is deprecated use ``maxiter`` instead.
+        If iter is True, then only one iteration step is used, this is the
+        two-step method.
+        If iter is False, then iterations are stopped at convergence which
+        occurs in a finite number of steps (at most len(pvals) steps).
+
+        .. deprecated:: 0.14
+
+            Use ``maxiter`` instead of ``iter``.
 
     Returns
     -------
@@ -385,7 +422,7 @@ def fdrcorrection_twostage(pvals, alpha=0.05, method='bky', iter=False,
     pvalue-corrected : ndarray
         pvalues adjusted for multiple hypotheses testing to limit FDR
     m0 : int
-        ntest - rej, estimated number of true hypotheses
+        ntest - rej, estimated number of true (not rejected) hypotheses
     alpha_stages : list of floats
         A list of alphas that have been used at each stage
 
@@ -411,6 +448,18 @@ def fdrcorrection_twostage(pvals, alpha=0.05, method='bky', iter=False,
     '''
     pvals = np.asarray(pvals)
 
+    if iter is not None:
+        import warnings
+        msg = "iter keyword is deprecated, use maxiter keyword instead."
+        warnings.warn(msg, FutureWarning)
+
+    if iter is False:
+        maxiter = 1
+    elif iter is True or maxiter in [-1, None] :
+        maxiter = len(pvals)
+    # otherwise we use maxiter
+
+
     if not is_sorted:
         pvals_sortind = np.argsort(pvals)
         pvals = np.take(pvals, pvals_sortind)
@@ -430,30 +479,36 @@ def fdrcorrection_twostage(pvals, alpha=0.05, method='bky', iter=False,
                                    is_sorted=True)
     r1 = rej.sum()
     if (r1 == 0) or (r1 == ntests):
-        return rej, pvalscorr * fact, ntests - r1, alpha_stages
-    ri_old = r1
+        # return rej, pvalscorr * fact, ntests - r1, alpha_stages
+        reject = rej
+        pvalscorr *= fact
+        ri = r1
+    else:
+        ri_old = ri = r1
+        ntests0 = ntests # needed if maxiter=0
+        # while True:
+        for it in range(maxiter):
+            ntests0 = 1.0 * ntests - ri_old
+            alpha_star = alpha_prime * ntests / ntests0
+            alpha_stages.append(alpha_star)
+            #print ntests0, alpha_star
+            rej, pvalscorr = fdrcorrection(pvals, alpha=alpha_star, method='indep',
+                                           is_sorted=True)
+            ri = rej.sum()
+            if (it >= maxiter - 1) or ri == ri_old:
+                break
+            elif ri < ri_old:
+                # prevent cycles and endless loops
+                raise RuntimeError(" oops - should not be here")
+            ri_old = ri
 
-    while True:
-        ntests0 = 1.0 * ntests - ri_old
-        alpha_star = alpha_prime * ntests / ntests0
-        alpha_stages.append(alpha_star)
-        #print ntests0, alpha_star
-        rej, pvalscorr = fdrcorrection(pvals, alpha=alpha_star, method='indep',
-                                       is_sorted=True)
-        ri = rej.sum()
-        if (not iter) or ri == ri_old:
-            break
-        elif ri < ri_old:
-            # prevent cycles and endless loops
-            raise RuntimeError(" oops - should not be here")
-        ri_old = ri
+        # make adjustment to pvalscorr to reflect estimated number of Non-Null cases
+        # decision is then pvalscorr < alpha  (or <=)
+        pvalscorr *= ntests0 * 1.0 /  ntests
+        if method == 'bky':
+            pvalscorr *= (1. + alpha)
 
-    # make adjustment to pvalscorr to reflect estimated number of Non-Null cases
-    # decision is then pvalscorr < alpha  (or <=)
-    pvalscorr *= ntests0 * 1.0 /  ntests
-    if method == 'bky':
-        pvalscorr *= (1. + alpha)
-
+    pvalscorr[pvalscorr>1] = 1
     if not is_sorted:
         pvalscorr_ = np.empty_like(pvalscorr)
         pvalscorr_[pvals_sortind] = pvalscorr
@@ -566,7 +621,7 @@ def local_fdr(zscores, null_proportion=1.0, null_pdf=None, deg=7,
     return fdr
 
 
-class NullDistribution(object):
+class NullDistribution:
     """
     Estimate a Gaussian distribution for the null Z-scores.
 

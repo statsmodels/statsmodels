@@ -565,7 +565,7 @@ cdef void {{prefix}}companion_predicted_state_cov({{prefix}}KalmanFilter kfilter
         {{cython_type}} tmp
 
     # $P_{t+1} = T_t P_{t,n} T_t' + Q_t^*$
-    
+
     # `tmp0` array used here, dimension $(p \times m)$  
     # $\\#_0 = \phi_t P_{t|t} $
 

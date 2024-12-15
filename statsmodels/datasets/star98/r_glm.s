@@ -21,7 +21,7 @@ m1 <-  glm(cbind(PR50M,MATHTOT-PR50M) ~ LOWINC + PERASIAN + PERBLACK + PERHISP +
 #as.numeric(m1$coef)
 #as.numeric(sqrt(diag(vcov(m1))))
 results <- summary.glm(m1)
-    
+
 #star.logit.fit3 <- glm(cbind(PR50M,MATHTOT-PR50M) ~ LOWINC + PERASIAN + PERBLACK + PERHISP +
 #    PERMINTE + AVYRSEXP + AVSAL + PERSPEN + PTRATIO + PCTAF + PCTCHRT + PCTYRRND +
 #    PERMINTE.AVYRSEXP + PERMINTE.AVSAL + AVYRSEXP.AVSAL + PERSPEN.PTRATIO + PERSPEN.PCTAF + 

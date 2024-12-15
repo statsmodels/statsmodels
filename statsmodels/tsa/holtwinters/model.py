@@ -14,7 +14,8 @@ Modified: Kevin Sheppard
 from statsmodels.compat.pandas import deprecate_kwarg
 
 import contextlib
-from typing import Any, Hashable, Sequence
+from typing import Any
+from collections.abc import Hashable, Sequence
 import warnings
 
 import numpy as np
@@ -86,7 +87,7 @@ def opt_wrapper(func):
     return f
 
 
-class _OptConfig(object):
+class _OptConfig:
     alpha: float
     beta: float
     phi: float
@@ -194,6 +195,10 @@ class ExponentialSmoothing(TimeSeriesModel):
     methods. The implementation of the library covers the functionality of the
     R library as much as possible whilst still being Pythonic.
 
+    See the notebook `Exponential Smoothing
+    <../examples/notebooks/generated/exponential_smoothing.html>`__
+    for an overview.
+
     References
     ----------
     .. [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles
@@ -283,8 +288,8 @@ class ExponentialSmoothing(TimeSeriesModel):
         )
         estimated = self._initialization_method == "estimated"
         self._estimate_level = estimated
-        self._estimate_trend = estimated and self.trend
-        self._estimate_seasonal = estimated and self.seasonal
+        self._estimate_trend = estimated and self.trend is not None
+        self._estimate_seasonal = estimated and self.seasonal is not None
         self._bounds = self._check_bounds(bounds)
         self._use_boxcox = use_boxcox
         self._lambda = np.nan
@@ -386,7 +391,7 @@ class ExponentialSmoothing(TimeSeriesModel):
                 valid = ", ".join(valid_keys[:-1]) + ", and " + valid_keys[-1]
                 raise KeyError(
                     f"{key} if not allowed. Only {valid} are supported in "
-                    f"this specification."
+                    "this specification."
                 )
 
         if "smoothing_level" in values:
@@ -732,7 +737,7 @@ class ExponentialSmoothing(TimeSeriesModel):
             sv_sel = np.array([False] * (6 + m))
             sv_sel[:3] = True
             sv_sel &= sel
-            hw_args.xi = sv_sel.astype(int)
+            hw_args.xi = sv_sel.astype(np.int64)
             hw_args.transform = False
             # Setup the grid points, respecting constraints
             points = self._setup_brute(sv_sel, bounds, alpha)
@@ -761,8 +766,6 @@ class ExponentialSmoothing(TimeSeriesModel):
         beta = data.beta
         phi = data.phi
         gamma = data.gamma
-        initial_level = data.level
-        initial_trend = data.trend
         y = data.y
         start_params = data.params
 
@@ -792,11 +795,11 @@ class ExponentialSmoothing(TimeSeriesModel):
                 alpha is None,
                 has_trend and beta is None,
                 has_seasonal and gamma is None,
-                initial_level is None,
-                has_trend and initial_trend is None,
+                self._estimate_level,
+                self._estimate_trend,
                 damped_trend and phi is None,
             ]
-            + [has_seasonal] * m,
+            + [has_seasonal and self._estimate_seasonal] * m,
         )
         (
             sel,
@@ -832,7 +835,7 @@ class ExponentialSmoothing(TimeSeriesModel):
 
         bounds = np.array(orig_bounds[:3], dtype=float)
         hw_args = HoltWintersArgs(
-            sel.astype(int), params, bounds, y, m, self.nobs
+            sel.astype(np.int64), params, bounds, y, m, self.nobs
         )
         params = self._get_starting_values(
             params,
@@ -852,7 +855,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         lb, ub = bounds.T
         lb[np.isnan(lb)] = -np.inf
         ub[np.isnan(ub)] = np.inf
-        hw_args.xi = sel.astype(int)
+        hw_args.xi = sel.astype(np.int64)
 
         # Ensure strictly inbounds
         initial_p = self._enforce_bounds(params, sel, lb, ub)
@@ -973,7 +976,7 @@ class ExponentialSmoothing(TimeSeriesModel):
             starting values are determined using a combination of grid search
             and reasonable values based on the initial values of the data. See
             the notes for the structure of the model parameters.
-        method : str, default "L-BFGS-B"
+        method : str, optional
             The minimizer used. Valid options are "L-BFGS-B" , "TNC",
             "SLSQP" (default), "Powell", "trust-constr", "basinhopping" (also
             "bh") and "least_squares" (also "ls"). basinhopping tries multiple
@@ -1407,8 +1410,9 @@ class ExponentialSmoothing(TimeSeriesModel):
         # (s0 + gamma) + (b0 + beta) + (l0 + alpha) + phi
         k = m * has_seasonal + 2 * has_trend + 2 + 1 * damped
         aic = self.nobs * np.log(sse / self.nobs) + k * 2
-        if self.nobs - k - 3 > 0:
-            aicc_penalty = (2 * (k + 2) * (k + 3)) / (self.nobs - k - 3)
+        dof_eff = self.nobs - k - 3
+        if dof_eff > 0:
+            aicc_penalty = (2 * (k + 2) * (k + 3)) / dof_eff
         else:
             aicc_penalty = np.inf
         aicc = aic + aicc_penalty
@@ -1431,7 +1435,7 @@ class ExponentialSmoothing(TimeSeriesModel):
 
         # Format parameters into a DataFrame
         codes = ["alpha", "beta", "gamma", "l.0", "b.0", "phi"]
-        codes += ["s.{0}".format(i) for i in range(m)]
+        codes += [f"s.{i}" for i in range(m)]
         idx = [
             "smoothing_level",
             "smoothing_trend",
@@ -1440,7 +1444,7 @@ class ExponentialSmoothing(TimeSeriesModel):
             "initial_trend",
             "damping_trend",
         ]
-        idx += ["initial_seasons.{0}".format(i) for i in range(m)]
+        idx += [f"initial_seasons.{i}" for i in range(m)]
 
         formatted = [alpha, beta, gamma, lvls[0], b[0], phi]
         formatted += s[:m].tolist()
@@ -1523,6 +1527,10 @@ class SimpleExpSmoothing(ExponentialSmoothing):
     This is a full implementation of the simple exponential smoothing as
     per [1]_.  `SimpleExpSmoothing` is a restricted version of
     :class:`ExponentialSmoothing`.
+
+    See the notebook `Exponential Smoothing
+    <../examples/notebooks/generated/exponential_smoothing.html>`__
+    for an overview.
 
     References
     ----------
@@ -1673,6 +1681,10 @@ class Holt(ExponentialSmoothing):
     -----
     This is a full implementation of the Holt's exponential smoothing as
     per [1]_. `Holt` is a restricted version of :class:`ExponentialSmoothing`.
+
+    See the notebook `Exponential Smoothing
+    <../examples/notebooks/generated/exponential_smoothing.html>`__
+    for an overview.
 
     References
     ----------

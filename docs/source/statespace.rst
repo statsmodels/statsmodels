@@ -117,7 +117,7 @@ arbitrary trend polynomials.
    sarimax.SARIMAXResults
 
 For an example of the use of this model, see the
-`SARIMAX example notebook <examples/notebooks/generated/statespace_sarimax_stata.html>`__
+`SARIMAX example notebook <examples/notebooks/generated/statespace_sarimax_stata.ipynb>`_
 or the very brief code snippet below:
 
 
@@ -168,7 +168,7 @@ The `UnobservedComponents` class is another example of a statespace model.
    structural.UnobservedComponents
    structural.UnobservedComponentsResults
 
-For examples of the use of this model, see the `example notebook <examples/notebooks/generated/statespace_structural_harvey_jaeger.html>`__ or a notebook on using the unobserved components model to `decompose a time series into a trend and cycle <examples/notebooks/generated/statespace_cycles.html>`__ or the very brief code snippet below:
+For examples of the use of this model, see the `example notebook <examples/notebooks/generated/statespace_structural_harvey_jaeger.ipynb>`_ or a notebook on using the unobserved components model to `decompose a time series into a trend and cycle <examples/notebooks/generated/statespace_cycles.ipynb>`_ or the very brief code snippet below:
 
 .. code-block:: python
 
@@ -215,7 +215,7 @@ The `VARMAX` class is an example of a multivariate statespace model.
    varmax.VARMAX
    varmax.VARMAXResults
 
-For an example of the use of this model, see the `VARMAX example notebook <examples/notebooks/generated/statespace_varmax.html>`__ or the very brief code snippet below:
+For an example of the use of this model, see the `VARMAX example notebook <examples/notebooks/generated/statespace_varmax.ipynb>`_ or the very brief code snippet below:
 
 .. code-block:: python
 
@@ -293,7 +293,7 @@ observed variables
    dynamic_factor.DynamicFactorResults
 
 For an example of the use of the `DynamicFactor` model, see the
-`Dynamic Factor example notebook <examples/notebooks/generated/statespace_dfm_coincident.html>`__ 
+`Dynamic Factor example notebook <examples/notebooks/generated/statespace_dfm_coincident.ipynb>`_
 
 Linear Exponential Smoothing Models
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -382,7 +382,7 @@ likelihood fitting functionality for estimation and results output.
    mlemodel.PredictionResults
 
 For a basic example demonstrating creating and estimating a custom state space
-model, see the `Local Linear Trend example notebook <examples/notebooks/generated/statespace_local_linear_trend.html>`__.
+model, see the `Local Linear Trend example notebook <examples/notebooks/generated/statespace_local_linear_trend.ipynb>`_.
 For a more sophisticated example, see the source code for the `SARIMAX` and
 `SARIMAXResults` classes, which are built by extending `MLEModel` and
 `MLEResults`.

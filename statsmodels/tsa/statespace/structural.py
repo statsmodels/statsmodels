@@ -422,7 +422,7 @@ class UnobservedComponents(MLEModel):
             trend_attributes = ['irregular', 'level', 'trend',
                                 'stochastic_level', 'stochastic_trend']
             for attribute in trend_attributes:
-                if not getattr(self, attribute) is False:
+                if getattr(self, attribute) is not False:
                     warn("Value of `%s` may be overridden when the trend"
                          " component is specified using a model string."
                          % attribute, SpecificationWarning)
@@ -580,7 +580,7 @@ class UnobservedComponents(MLEModel):
             k_posdef = 1
 
         # Setup the representation
-        super(UnobservedComponents, self).__init__(
+        super().__init__(
             endog, k_states, k_posdef=k_posdef, exog=exog, **kwargs
         )
         self.setup()
@@ -597,7 +597,7 @@ class UnobservedComponents(MLEModel):
         # of the data.
         if cycle_period_bounds is None:
             freq = self.data.freq[0] if self.data.freq is not None else ''
-            if freq == 'A':
+            if freq in ('A', 'Y'):
                 cycle_period_bounds = (1.5, 12)
             elif freq == 'Q':
                 cycle_period_bounds = (1.5*4, 12*4)
@@ -626,7 +626,7 @@ class UnobservedComponents(MLEModel):
 
     def _get_init_kwds(self):
         # Get keywords based on model attributes
-        kwds = super(UnobservedComponents, self)._get_init_kwds()
+        kwds = super()._get_init_kwds()
 
         # Modifications
         if self.trend_specification is not None:
@@ -713,7 +713,7 @@ class UnobservedComponents(MLEModel):
 
                 if self.stochastic_freq_seasonal[ix]:
                     self.ssm['selection', i:i + n, j:j + n] = np.eye(n)
-                    cov_key = 'freq_seasonal_var_{!r}'.format(ix)
+                    cov_key = f'freq_seasonal_var_{ix!r}'
                     self.parameters_state_cov[cov_key] = 1
                     j += n
                 i += n
@@ -781,7 +781,7 @@ class UnobservedComponents(MLEModel):
                 if is_stochastic:
                     num_harmonics = self.freq_seasonal_harmonics[ix]
                     repeat_times = 2 * num_harmonics
-                    cov_key = 'freq_seasonal_var_{!r}'.format(ix)
+                    cov_key = f'freq_seasonal_var_{ix!r}'
                     cov_ix = param_keys.index(cov_key)
                     self._var_repetitions[cov_ix] = repeat_times
 
@@ -895,7 +895,7 @@ class UnobservedComponents(MLEModel):
 
         # Frequency domain seasonal
         for ix, is_stochastic in enumerate(self.stochastic_freq_seasonal):
-            cov_key = 'freq_seasonal_var_{!r}'.format(ix)
+            cov_key = f'freq_seasonal_var_{ix!r}'
             _start_params[cov_key] = var_resid
 
         # Cyclical
@@ -1099,7 +1099,7 @@ class UnobservedComponents(MLEModel):
         return unconstrained
 
     def _validate_can_fix_params(self, param_names):
-        super(UnobservedComponents, self)._validate_can_fix_params(param_names)
+        super()._validate_can_fix_params(param_names)
 
         if 'ar_coeff' in self.parameters:
             ar_names = ['ar.L%d' % (i+1) for i in range(self.ar_order)]
@@ -1184,7 +1184,7 @@ class UnobservedComponentsResults(MLEResults):
 
     def __init__(self, model, params, filter_results, cov_type=None,
                  **kwargs):
-        super(UnobservedComponentsResults, self).__init__(
+        super().__init__(
             model, params, filter_results, cov_type, **kwargs)
 
         self.df_resid = np.inf  # attribute required for wald tests
@@ -1638,7 +1638,7 @@ class UnobservedComponentsResults(MLEResults):
 
         if freq_seasonal and spec.freq_seasonal:
             for ix, _ in enumerate(spec.freq_seasonal_periods):
-                key = 'freq_seasonal_{!r}'.format(ix)
+                key = f'freq_seasonal_{ix!r}'
                 comp.append((key, True))
 
         comp.extend(
@@ -1730,7 +1730,7 @@ class UnobservedComponentsResults(MLEResults):
             value = component_bunch[which]
 
             # Plot
-            state_label = '%s (%s)' % (title, which)
+            state_label = f'{title} ({which})'
             ax.plot(dates[llb:], value[llb:], label=state_label)
 
             # Get confidence intervals
@@ -1794,7 +1794,7 @@ class UnobservedComponentsResults(MLEResults):
             autoregressive_name = 'AR(%d)' % self.specification.ar_order
             model_name.append(autoregressive_name)
 
-        return super(UnobservedComponentsResults, self).summary(
+        return super().summary(
             alpha=alpha, start=start, title='Unobserved Components Results',
             model_name=model_name
         )

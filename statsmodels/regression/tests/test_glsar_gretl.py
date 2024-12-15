@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tests of GLSAR and diagnostics against Gretl
 
 Created on Thu Feb 02 21:15:47 2012
@@ -31,7 +30,7 @@ def compare_ftest(contrast_res, other, decimal=(5,4)):
     assert_equal("f", other[4])
 
 
-class TestGLSARGretl(object):
+class TestGLSARGretl:
 
     def test_all(self):
 

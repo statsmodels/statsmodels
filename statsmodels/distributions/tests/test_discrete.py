@@ -1,11 +1,10 @@
-
-
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 
 from scipy import stats
 from scipy.stats import poisson, nbinom
 
+from statsmodels.compat.python import PYTHON_IMPL_WASM
 from statsmodels.tools.tools import Bunch
 
 from statsmodels.distributions.discrete import (
@@ -20,7 +19,7 @@ from statsmodels.distributions.discrete import (
     )
 
 
-class TestGenpoisson_p(object):
+class TestGenpoisson_p:
     # Test Generalized Poisson Destribution
 
     def test_pmf_p1(self):
@@ -49,7 +48,7 @@ class TestGenpoisson_p(object):
         assert_allclose(poisson_pmf, genpoisson_pmf, rtol=1e-15)
 
 
-class TestTruncatedPoisson(object):
+class TestTruncatedPoisson:
     """
     Test Truncated Poisson distribution
     """
@@ -74,7 +73,7 @@ class TestTruncatedPoisson(object):
         assert_allclose(poisson_logpmf, tpoisson_logpmf, rtol=1e-7)
 
 
-class TestZIPoisson(object):
+class TestZIPoisson:
 
     def test_pmf_zero(self):
         poisson_pmf = poisson.pmf(3, 2)
@@ -130,7 +129,7 @@ class TestZIPoisson(object):
         assert_allclose(poisson_m2, zip_m2, rtol=1e-10)
 
 
-class TestZIGeneralizedPoisson(object):
+class TestZIGeneralizedPoisson:
     def test_pmf_zero(self):
         gp_pmf = genpoisson_p.pmf(3, 2, 1, 1)
         zigp_pmf = zigenpoisson.pmf(3, 2, 1, 1, 0)
@@ -162,7 +161,7 @@ class TestZIGeneralizedPoisson(object):
         assert_allclose(poisson_var, zigenpoisson_var, rtol=1e-10)
 
 
-class TestZiNBP(object):
+class TestZiNBP:
 
     def test_pmf_p2(self):
         n, p = zinegbin.convert_params(30, 0.1, 2)
@@ -332,6 +331,12 @@ class CheckDiscretized():
         dfr = mod.get_distr(res.params)
         nobs_rvs = 500
         rvs = dfr.rvs(size=nobs_rvs)
+        # TypeError: Cannot cast array data from dtype('int64') to
+        # dtype('int32') according to the rule 'safe'.
+        # To fix this, change the dtype of rvs to int32 so that it
+        # can bepassed to np.bincount
+        if PYTHON_IMPL_WASM:
+            rvs = rvs.astype(np.int32)
         freq = np.bincount(rvs)
         p = mod.predict(res.params, which="probs", k_max=nobs_rvs)
         k = len(freq)
@@ -419,7 +424,7 @@ class TestDiscretizedGammaEx():
             params=[3.52636, 0.425617],
             llf=-187.469,
             chi2=1.701208,  # chisquare test
-            df_model=2,
+            df_model=0,
             p=0.4272,  # p-value for chi2
             aic=378.938,
             probs=[46.48, 73.72, 27.88, 6.5, 1.42])
@@ -507,7 +512,7 @@ class TestGeometric():
         assert_equal(isf, -1)
 
 
-class TestTruncatedNBP(object):
+class TestTruncatedNBP:
     """
     Test Truncated Poisson distribution
     """

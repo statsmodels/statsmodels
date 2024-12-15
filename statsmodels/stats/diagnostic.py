@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Various Statistical Tests
 
@@ -32,12 +31,22 @@ import pandas as pd
 from scipy import stats
 
 from statsmodels.regression.linear_model import OLS, RegressionResultsWrapper
+from statsmodels.stats._adnorm import anderson_statistic, normal_ad
+from statsmodels.stats._lilliefors import (
+    kstest_exponential,
+    kstest_fit,
+    kstest_normal,
+    lilliefors,
+)
+from statsmodels.tools.validation import (
+    array_like,
+    bool_like,
+    dict_like,
+    float_like,
+    int_like,
+    string_like,
+)
 from statsmodels.tsa.tsatools import lagmat
-from statsmodels.tools.validation import (array_like, int_like, bool_like,
-                                          string_like, dict_like, float_like)
-from statsmodels.stats._lilliefors import (kstest_fit, lilliefors,
-                                           kstest_normal, kstest_exponential)
-from statsmodels.stats._adnorm import normal_ad, anderson_statistic
 
 __all__ = ["kstest_fit", "lilliefors", "kstest_normal", "kstest_exponential",
            "normal_ad", "compare_cox", "compare_j", "acorr_breusch_godfrey",
@@ -95,7 +104,7 @@ def _check_nested_results(results_x, results_z):
     return nested
 
 
-class ResultsStore(object):
+class ResultsStore:
     def __str__(self):
         return getattr(self, '_str', self.__class__.__name__)
 
@@ -228,8 +237,9 @@ def compare_j(results_x, results_z, store=False):
     return tstat, pval
 
 
+@deprecate_kwarg("cov_kwargs", "cov_kwds")
 def compare_encompassing(results_x, results_z, cov_type="nonrobust",
-                         cov_kwargs=None):
+                         cov_kwds=None):
     r"""
     Davidson-MacKinnon encompassing test for comparing non-nested models
 
@@ -244,7 +254,7 @@ def compare_encompassing(results_x, results_z, cov_type="nonrobust",
         OLS covariance estimator. Specify one of "HC0", "HC1", "HC2", "HC3"
         to use White's covariance estimator. All covariance types supported
         by ``OLS.fit`` are accepted.
-    cov_kwargs : dict, default None
+    cov_kwds : dict, default None
         Dictionary of covariance options passed to ``OLS.fit``. See OLS.fit
         for more details.
 
@@ -308,8 +318,8 @@ def compare_encompassing(results_x, results_z, cov_type="nonrobust",
         df_num, df_denom = int(test.df_num), int(test.df_denom)
         return stat, pvalue, df_num, df_denom
 
-    x_nested = _test_nested(y, x, z, cov_type, cov_kwargs)
-    z_nested = _test_nested(y, z, x, cov_type, cov_kwargs)
+    x_nested = _test_nested(y, x, z, cov_type, cov_kwds)
+    z_nested = _test_nested(y, z, x, cov_type, cov_kwds)
     return pd.DataFrame([x_nested, z_nested],
                         index=["x", "z"],
                         columns=["stat", "pvalue", "df_num", "df_denom"])
@@ -373,6 +383,9 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
         Regression model fitting.
     statsmodels.regression.linear_model.RegressionResults
         Results from linear regression models.
+    statsmodels.stats.stattools.q_stat
+        Ljung-Box test statistic computed from estimated
+        autocorrelations.
 
     Notes
     -----
@@ -396,23 +409,6 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
            lb_stat     lb_pvalue
     10  214.106992  1.827374e-40
     """
-    def get_optimal_length(threshold_metric, threshold, maxlag, func):
-        optimal_lag = 0
-        least_penalised = 0
-
-        for lags in range(1, maxlag + 1):
-            if (threshold_metric <= threshold):
-                penalty = lags * np.log(nobs)
-            else:
-                penalty = 2 * lags
-
-            test_statistic = func(lags)
-            penalised = test_statistic - penalty
-            if (penalised > least_penalised):
-                optimal_lag = lags
-                least_penalised = penalised
-
-        return optimal_lag
     # Avoid cyclic import
     from statsmodels.tsa.stattools import acf
     x = array_like(x, "x")
@@ -426,25 +422,30 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
     if auto_lag:
         maxlag = nobs - 1
 
-        # Compute threshold metrics
+        # Compute sum of squared autocorrelations
         sacf = acf(x, nlags=maxlag, fft=False)
-        sacf2 = sacf[1:maxlag + 1] ** 2 / (nobs - np.arange(1, maxlag + 1))
-        q = 2.4
-        threshold = np.sqrt(q * np.log(nobs))
-        threshold_metric = max(np.abs(sacf)) * np.sqrt(nobs)
 
         if not boxpierce:
-            lags = get_optimal_length(
-                threshold_metric,
-                threshold, maxlag,
-                lambda p: nobs * (nobs + 2) * np.cumsum(sacf2)[p - 1])
+            q_sacf = (nobs * (nobs + 2) *
+                      np.cumsum(sacf[1:maxlag + 1] ** 2
+                                / (nobs - np.arange(1, maxlag + 1))))
         else:
-            lags = get_optimal_length(
-                threshold_metric,
-                threshold,
-                maxlag,
-                lambda p: nobs * np.cumsum(sacf[1:maxlag + 1] ** 2)[p - 1])
+            q_sacf = nobs * np.cumsum(sacf[1:maxlag + 1] ** 2)
 
+        # obtain thresholds
+        q = 2.4
+        threshold = np.sqrt(q * np.log(nobs))
+        threshold_metric = np.abs(sacf).max() * np.sqrt(nobs)
+
+        # compute penalized sum of squared autocorrelations
+        if (threshold_metric <= threshold):
+            q_sacf = q_sacf - (np.arange(1, nobs) * np.log(nobs))
+        else:
+            q_sacf = q_sacf - (2 * np.arange(1, nobs))
+
+        # note: np.argmax returns first (i.e., smallest) index of largest value
+        lags = np.argmax(q_sacf)
+        lags = max(1, lags)  # optimal lag has to be at least 1
         lags = int_like(lags, "lags")
         lags = np.arange(1, lags + 1)
     elif period is not None:
@@ -479,9 +480,10 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
                         index=lags)
 
 
+@deprecate_kwarg("cov_kwargs", "cov_kwds")
 @deprecate_kwarg("maxlag", "nlags")
 def acorr_lm(resid, nlags=None, store=False, *, period=None,
-             ddof=0, cov_type="nonrobust", cov_kwargs=None):
+             ddof=0, cov_type="nonrobust", cov_kwds=None):
     """
     Lagrange Multiplier tests for autocorrelation.
 
@@ -510,7 +512,7 @@ def acorr_lm(resid, nlags=None, store=False, *, period=None,
         OLS covariance estimator. Specify one of "HC0", "HC1", "HC2", "HC3"
         to use White's covariance estimator. All covariance types supported
         by ``OLS.fit`` are accepted.
-    cov_kwargs : dict, default None
+    cov_kwds : dict, default None
         Dictionary of covariance options passed to ``OLS.fit``. See OLS.fit for
         more details.
 
@@ -545,8 +547,8 @@ def acorr_lm(resid, nlags=None, store=False, *, period=None,
     """
     resid = array_like(resid, "resid", ndim=1)
     cov_type = string_like(cov_type, "cov_type")
-    cov_kwargs = {} if cov_kwargs is None else cov_kwargs
-    cov_kwargs = dict_like(cov_kwargs, "cov_kwargs")
+    cov_kwds = {} if cov_kwds is None else cov_kwds
+    cov_kwds = dict_like(cov_kwds, "cov_kwds")
     nobs = resid.shape[0]
     if period is not None and nlags is None:
         maxlag = min(nobs // 5, 2 * period)
@@ -563,7 +565,7 @@ def acorr_lm(resid, nlags=None, store=False, *, period=None,
     usedlag = maxlag
 
     resols = OLS(xshort, xdall[:, :usedlag + 1]).fit(cov_type=cov_type,
-                                                     cov_kwargs=cov_kwargs)
+                                                     cov_kwds=cov_kwds)
     fval = float(resols.fvalue)
     fpval = float(resols.f_pvalue)
     if cov_type == "nonrobust":
@@ -977,17 +979,18 @@ def het_goldfeldquandt(y, x, idx=None, split=None, drop=None,
         res.split = split
         res._str = """\
 The Goldfeld-Quandt test for null hypothesis that the variance in the second
-subsample is %s than in the first subsample:
-F-statistic =%8.4f and p-value =%8.4f""" % (ordering, fval, fpval)
+subsample is {} than in the first subsample:
+F-statistic ={:8.4f} and p-value ={:8.4f}""".format(ordering, fval, fpval)
 
         return fval, fpval, ordering, res
 
     return fval, fpval, ordering
 
 
+@deprecate_kwarg("cov_kwargs", "cov_kwds")
 @deprecate_kwarg("result", "res")
 def linear_reset(res, power=3, test_type="fitted", use_f=False,
-                 cov_type="nonrobust", cov_kwargs=None):
+                 cov_type="nonrobust", cov_kwds=None):
     r"""
     Ramsey's RESET test for neglected nonlinearity
 
@@ -1015,7 +1018,7 @@ def linear_reset(res, power=3, test_type="fitted", use_f=False,
         OLS covariance estimator. Specify one of "HC0", "HC1", "HC2", "HC3"
         to use White's covariance estimator. All covariance types supported
         by ``OLS.fit`` are accepted.
-    cov_kwargs : dict, default None
+    cov_kwds : dict, default None
         Dictionary of covariance options passed to ``OLS.fit``. See OLS.fit
         for more details.
 
@@ -1055,7 +1058,7 @@ def linear_reset(res, power=3, test_type="fitted", use_f=False,
                          "non-constant column.")
     test_type = string_like(test_type, "test_type",
                             options=("fitted", "exog", "princomp"))
-    cov_kwargs = dict_like(cov_kwargs, "cov_kwargs", optional=True)
+    cov_kwds = dict_like(cov_kwds, "cov_kwds", optional=True)
     use_f = bool_like(use_f, "use_f")
     if isinstance(power, int):
         if power < 2:
@@ -1071,7 +1074,7 @@ def linear_reset(res, power=3, test_type="fitted", use_f=False,
             raise ValueError("power must contains distinct integers all >= 2")
     exog = res.model.exog
     if test_type == "fitted":
-        aug = res.fittedvalues[:, None]
+        aug = np.asarray(res.fittedvalues)[:, None]
     elif test_type == "exog":
         # Remove constant and binary
         aug = res.model.exog
@@ -1093,8 +1096,8 @@ def linear_reset(res, power=3, test_type="fitted", use_f=False,
     aug_exog = np.hstack([exog] + [aug ** p for p in power])
     mod_class = res.model.__class__
     mod = mod_class(res.model.data.endog, aug_exog)
-    cov_kwargs = {} if cov_kwargs is None else cov_kwargs
-    res = mod.fit(cov_type=cov_type, cov_kwargs=cov_kwargs)
+    cov_kwds = {} if cov_kwds is None else cov_kwds
+    res = mod.fit(cov_type=cov_type, cov_kwds=cov_kwds)
     nrestr = aug_exog.shape[1] - exog.shape[1]
     nparams = aug_exog.shape[1]
     r_mat = np.eye(nrestr, nparams, k=nparams-nrestr)
@@ -1292,7 +1295,7 @@ def linear_lm(resid, exog, func=None):
     if func is None:
         def func(x):
             return np.power(x, 2)
-
+    exog = np.asarray(exog)
     exog_aux = np.column_stack((exog, func(exog[:, 1:])))
 
     nobs, k_vars = exog.shape
@@ -1447,6 +1450,8 @@ def recursive_olsresiduals(res, skip=None, lamda=0.0, alpha=0.95,
     Journal of the Royal Statistical Society. Series B (Methodological) 37,
     no. 2 (1975): 149-192.
     """
+    if not isinstance(res, RegressionResultsWrapper):
+        raise TypeError("res a regression results instance")
     y = res.model.endog
     x = res.model.exog
     order_by = array_like(order_by, "order_by", dtype="int", optional=True,
@@ -1487,9 +1492,9 @@ skip large enough to ensure that the first OLS estimator is well-defined.
 
         # get prediction error with previous beta
         yipred = np.dot(xi, beta)
-        rypred[i] = yipred
+        rypred[i] = np.squeeze(yipred)
         residi = yi - yipred
-        rresid[i] = residi
+        rresid[i] = np.squeeze(residi)
 
         # update beta and inverse(X'X)
         tmp = np.dot(xtxi, xi.T)
@@ -1499,7 +1504,7 @@ skip large enough to ensure that the first OLS estimator is well-defined.
 
         beta = beta + (tmp * residi / ft).ravel()  # BigJudge equ 5.5.14
         rparams[i] = beta
-        rvarraw[i] = ft
+        rvarraw[i] = np.squeeze(ft)
 
     rresid_scaled = rresid / np.sqrt(rvarraw)  # N(0,sigma2) distributed
     nrr = nobs - skip
@@ -1568,7 +1573,7 @@ def breaks_hansen(olsresults):
     f = nobs * (ft[:, :, None] * ft[:, None, :]).sum(0)
     s = (score[:, :, None] * score[:, None, :]).sum(0)
     h = np.trace(np.dot(np.linalg.inv(f), s))
-    crit95 = np.array([(2, 1.9), (6, 3.75), (15, 3.75), (19, 4.52)],
+    crit95 = np.array([(2, 1.01), (6, 1.9), (15, 3.75), (19, 4.52)],
                       dtype=[("nobs", int), ("crit", float)])
     # TODO: get critical values from Bruce Hansen's 1992 paper
     return h, crit95
@@ -1616,7 +1621,7 @@ def breaks_cusumolsresid(resid, ddof=0):
     Ploberger, Werner, and Walter Kramer. “The Cusum Test with OLS Residuals.”
     Econometrica 60, no. 2 (March 1992): 271-285.
     """
-    resid = resid.ravel()
+    resid = np.asarray(resid).ravel()
     nobs = len(resid)
     nobssigma2 = (resid ** 2).sum()
     if ddof > 0:

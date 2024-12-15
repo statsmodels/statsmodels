@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from statsmodels.compat.python import lzip
 
+from collections import defaultdict
 from functools import reduce
 import warnings
 
@@ -13,6 +14,7 @@ from statsmodels.base.data import handle_data
 from statsmodels.base.optimizer import Optimizer
 import statsmodels.base.wrapper as wrap
 from statsmodels.formula import handle_formula_data
+from statsmodels.formula._manager import FormulaManager
 from statsmodels.stats.contrast import (
     ContrastResults,
     WaldTestResults,
@@ -60,12 +62,12 @@ _extra_param_doc = """
         formula interface."""
 
 
-class Model(object):
+class Model:
     __doc__ = """
     A (predictive) statistical model. Intended to be subclassed not used.
 
-    %(params_doc)s
-    %(extra_params_doc)s
+    {params_doc}
+    {extra_params_doc}
 
     Attributes
     ----------
@@ -77,8 +79,8 @@ class Model(object):
     `endog` and `exog` are references to any data provided.  So if the data is
     already stored in numpy arrays and it is changed then `endog` and `exog`
     will change as well.
-    """ % {'params_doc': _model_params_doc,
-           'extra_params_doc': _missing_param_doc + _extra_param_doc}
+    """.format(params_doc=_model_params_doc,
+           extra_params_doc=_missing_param_doc + _extra_param_doc)
 
     # Maximum number of endogenous variables when using a formula
     # Default is 1, which is more common. Override in models when needed
@@ -86,7 +88,7 @@ class Model(object):
     _formula_max_endog = 1
     # kwargs that are generically allowed, maybe not supported in all models
     _kwargs_allowed = [
-        "missing", 'missing_idx', 'formula', 'design_info', "hasconst",
+        "missing", 'missing_idx', 'formula', 'model_spec', "hasconst",
         ]
 
     def __init__(self, endog, exog=None, **kwargs):
@@ -110,15 +112,15 @@ class Model(object):
     def _get_init_kwds(self):
         """return dictionary with extra keys used in model.__init__
         """
-        kwds = dict(((key, getattr(self, key, None))
-                     for key in self._init_keys))
+        kwds = {key: getattr(self, key, None)
+                     for key in self._init_keys}
 
         return kwds
 
     def _check_kwargs(self, kwargs, keys_extra=None, error=ERROR_INIT_KWARGS):
 
         kwargs_allowed = [
-            "missing", 'missing_idx', 'formula', 'design_info', "hasconst",
+            "missing", 'missing_idx', 'formula', 'model_spec', "hasconst",
             ]
         if keys_extra:
             kwargs_allowed.extend(keys_extra)
@@ -135,7 +137,7 @@ class Model(object):
         data = handle_data(endog, exog, missing, hasconst, **kwargs)
         # kwargs arrays could have changed, easier to just attach here
         for key in kwargs:
-            if key in ['design_info', 'formula']:  # leave attached to data
+            if key in ['model_spec', 'formula']:  # leave attached to data
                 continue
             # pop so we do not start keeping all these twice or references
             try:
@@ -186,14 +188,14 @@ class Model(object):
         """
         # TODO: provide a docs template for args/kwargs from child models
         # TODO: subset could use syntax. issue #469.
+        mgr = FormulaManager()
         if subset is not None:
             data = data.loc[subset]
         eval_env = kwargs.pop('eval_env', None)
         if eval_env is None:
             eval_env = 2
         elif eval_env == -1:
-            from patsy import EvalEnvironment
-            eval_env = EvalEnvironment({})
+            eval_env = mgr.get_empty_eval_env()
         elif isinstance(eval_env, int):
             eval_env += 1  # we're going down the stack again
         missing = kwargs.get('missing', 'drop')
@@ -202,30 +204,33 @@ class Model(object):
 
         tmp = handle_formula_data(data, None, formula, depth=eval_env,
                                   missing=missing)
-        ((endog, exog), missing_idx, design_info) = tmp
+        ((endog, exog), missing_idx, model_spec) = tmp
         max_endog = cls._formula_max_endog
         if (max_endog is not None and
                 endog.ndim > 1 and endog.shape[1] > max_endog):
             raise ValueError('endog has evaluated to an array with multiple '
-                             'columns that has shape {0}. This occurs when '
+                             'columns that has shape {}. This occurs when '
                              'the variable converted to endog is non-numeric'
                              ' (e.g., bool or str).'.format(endog.shape))
         if drop_cols is not None and len(drop_cols) > 0:
             cols = [x for x in exog.columns if x not in drop_cols]
             if len(cols) < len(exog.columns):
                 exog = exog[cols]
-                cols = list(design_info.term_names)
+                spec_cols = list(mgr.get_term_names(model_spec))
                 for col in drop_cols:
                     try:
-                        cols.remove(col)
+                        if mgr.engine == "formulaic" and col == "Intercept":
+                            col = "1"
+                        spec_cols.remove(col)
                     except ValueError:
                         pass  # OK if not present
-                design_info = design_info.subset(cols)
+                # TODO: Patsy migration, need to add method to handle
+                model_spec = model_spec.subset(spec_cols)
 
         kwargs.update({'missing_idx': missing_idx,
                        'missing': missing,
                        'formula': formula,  # attach formula for unpckling
-                       'design_info': design_info})
+                       'model_spec': model_spec})
         mod = cls(endog, exog, *args, **kwargs)
         mod.formula = formula
         # since we got a dataframe, attach the original
@@ -427,7 +432,7 @@ class LikelihoodModel(Model):
                 gtol : float
                     Stop when norm of gradient is less than gtol.
                 norm : float
-                    Order of norm (np.Inf is max, -np.Inf is min)
+                    Order of norm (np.inf is max, -np.inf is min)
                 epsilon
                     If fprime is approximated, use this value for the step
                     size. Only relevant if LikelihoodModel.score is None.
@@ -452,7 +457,7 @@ class LikelihoodModel(Model):
                 gtol : float
                     Stop when norm of gradient is less than gtol.
                 norm : float
-                    Order of norm (np.Inf is max, -np.Inf is min)
+                    Order of norm (np.inf is max, -np.inf is min)
                 epsilon : float
                     If fprime is approximated, use this value for the step
                     size. Can be scalar or vector.  Only relevant if
@@ -518,7 +523,7 @@ class LikelihoodModel(Model):
                 start_params = self.start_params
             elif self.exog is not None:
                 # fails for shape (K,)?
-                start_params = [0] * self.exog.shape[1]
+                start_params = [0.0] * self.exog.shape[1]
             else:
                 raise ValueError("If exog is None, then start_params should "
                                  "be specified")
@@ -838,11 +843,11 @@ class GenericLikelihoodModel(LikelihoodModel):
         # TODO temporary solution, force approx normal
         # self.df_model = 9999
         # somewhere: CacheWriteWarning: 'df_model' cannot be overwritten
-        super(GenericLikelihoodModel, self).__init__(endog, exog,
-                                                     missing=missing,
-                                                     hasconst=hasconst,
-                                                     **kwds
-                                                     )
+        super().__init__(endog, exog,
+                         missing=missing,
+                         hasconst=hasconst,
+                         **kwds
+                         )
 
         # this will not work for ru2nmnl, maybe np.ndim of a dict?
         if exog is not None:
@@ -858,6 +863,10 @@ class GenericLikelihoodModel(LikelihoodModel):
                 self.exog_names.extend(extra_params_names)
             else:
                 self.data.xnames = extra_params_names
+
+            self.k_extra = len(extra_params_names)
+            if hasattr(self, "df_resid"):
+                self.df_resid -= self.k_extra
 
         self.nparams = len(self.exog_names)
 
@@ -886,7 +895,7 @@ class GenericLikelihoodModel(LikelihoodModel):
         else:
             self.df_model = np.nan
             self.df_resid = np.nan
-        super(GenericLikelihoodModel, self).initialize()
+        super().initialize()
 
     def expandparams(self, params):
         """
@@ -1009,7 +1018,7 @@ class GenericLikelihoodModel(LikelihoodModel):
             # this will add default cov_type name and description
             kwargs["cov_type"] = 'nonrobust'
 
-        fit_method = super(GenericLikelihoodModel, self).fit
+        fit_method = super().fit
         mlefit = fit_method(start_params=start_params,
                             method=method, maxiter=maxiter,
                             full_output=full_output,
@@ -1033,7 +1042,7 @@ class GenericLikelihoodModel(LikelihoodModel):
         return genericmlefit
 
 
-class Results(object):
+class Results:
     """
     Class to contain model results
 
@@ -1080,29 +1089,30 @@ class Results(object):
                 exog_index = [exog.index.name]
 
         if transform and hasattr(self.model, 'formula') and (exog is not None):
-            # allow both location of design_info, see #7043
-            design_info = (getattr(self.model, "design_info", None) or
-                           self.model.data.design_info)
-            from patsy import dmatrix
+            # allow both location of model_spec, see #7043
+            model_spec = (getattr(self.model, "model_spec", None) or
+                           self.model.data.model_spec)
+            mgr = FormulaManager()
             if isinstance(exog, pd.Series):
                 # we are guessing whether it should be column or row
                 if (hasattr(exog, 'name') and isinstance(exog.name, str) and
-                        exog.name in design_info.describe()):
+                        exog.name in mgr.get_description(model_spec)):
                     # assume we need one column
                     exog = pd.DataFrame(exog)
                 else:
                     # assume we need a row
                     exog = pd.DataFrame(exog).T
+                exog_index = exog.index
             orig_exog_len = len(exog)
             is_dict = isinstance(exog, dict)
             try:
-                exog = dmatrix(design_info, exog, return_type="dataframe")
+                exog = mgr.get_matrices(model_spec, exog, pandas=True, prediction=True)
             except Exception as exc:
                 msg = ('predict requires that you use a DataFrame when '
                        'predicting from a model\nthat was created using the '
-                       'formula api.'
-                       '\n\nThe original error message returned by patsy is:\n'
-                       '{0}'.format(str(str(exc))))
+                       'formula api. \n\nThe original error message returned '
+                       f'by {mgr.engine} is:\n {str(str(exc))}'
+                       )
                 raise exc.__class__(msg)
             if orig_exog_len > len(exog) and not is_dict:
                 if exog_index is None:
@@ -1350,7 +1360,7 @@ class LikelihoodModelResults(Results):
 
     def __init__(self, model, params, normalized_cov_params=None, scale=1.,
                  **kwargs):
-        super(LikelihoodModelResults, self).__init__(model, params)
+        super().__init__(model, params)
         self.normalized_cov_params = normalized_cov_params
         self.scale = scale
         self._use_t = False
@@ -1632,11 +1642,15 @@ class LikelihoodModelResults(Results):
         c2             1.0001      0.249      0.000      1.000       0.437       1.563
         ==============================================================================
         """
-        from patsy import DesignInfo
         use_t = bool_like(use_t, "use_t", strict=True, optional=True)
-        names = self.model.data.cov_names
-        LC = DesignInfo(names).linear_constraint(r_matrix)
-        r_matrix, q_matrix = LC.coefs, LC.constants
+        if self.params.ndim == 2:
+            names = [f'y{i[0]}_{i[1]}'
+                     for i in self.model.data.cov_names]
+        else:
+            names = self.model.data.cov_names
+        mgr = FormulaManager()
+        lc = mgr.get_linear_constraints(r_matrix, names)
+        r_matrix, q_matrix = lc.constraint_matrix, lc.constraint_values
         num_ttests = r_matrix.shape[0]
         num_params = r_matrix.shape[1]
 
@@ -1644,7 +1658,7 @@ class LikelihoodModelResults(Results):
                 not hasattr(self, 'cov_params_default')):
             raise ValueError('Need covariance of parameters for computing '
                              'T statistics')
-        params = self.params.ravel()
+        params = self.params.ravel(order="F")
         if num_params != params.shape[0]:
             raise ValueError('r_matrix and params are not aligned')
         if q_matrix is None:
@@ -1847,11 +1861,16 @@ class LikelihoodModelResults(Results):
             # switch to use_t false if undefined
             use_f = (hasattr(self, 'use_t') and self.use_t)
 
-        from patsy import DesignInfo
-        names = self.model.data.cov_names
-        params = self.params.ravel()
-        LC = DesignInfo(names).linear_constraint(r_matrix)
-        r_matrix, q_matrix = LC.coefs, LC.constants
+        if self.params.ndim == 2:
+            names = [f'y{i[0]}_{i[1]}'
+                     for i in self.model.data.cov_names]
+        else:
+            names = self.model.data.cov_names
+        params = self.params.ravel(order="F")
+
+        mgr = FormulaManager()
+        lc = mgr.get_linear_constraints(r_matrix, names)
+        r_matrix, q_matrix = lc.constraint_matrix, lc.constraint_values
 
         if (self.normalized_cov_params is None and cov_p is None and
                 invcov is None and not hasattr(self, 'cov_params_default')):
@@ -1907,7 +1926,7 @@ class LikelihoodModelResults(Results):
             )
             scalar = False
         if scalar and F.size == 1:
-            F = float(F)
+            F = float(np.squeeze(F))
         if use_f:
             F /= J
             return ContrastResults(F=F, df_denom=df_resid,
@@ -1978,25 +1997,26 @@ class LikelihoodModelResults(Results):
         Weight                 30.263368  4.32586407145e-06              4
         """
         # lazy import
-        from collections import defaultdict
+        mgr = FormulaManager()
+
 
         result = self
         if extra_constraints is None:
             extra_constraints = []
         if combine_terms is None:
             combine_terms = []
-        design_info = getattr(result.model.data, 'design_info', None)
+        model_spec = getattr(result.model.data, 'model_spec', None)
 
-        if design_info is None and extra_constraints is None:
+        if model_spec is None and extra_constraints is None:
             raise ValueError('no constraints, nothing to do')
 
         identity = np.eye(len(result.params))
         constraints = []
         combined = defaultdict(list)
-        if design_info is not None:
-            for term in design_info.terms:
-                cols = design_info.slice(term)
-                name = term.name()
+        if model_spec is not None:
+            for term in model_spec.terms:
+                cols = mgr.get_slice(model_spec, term)
+                name = mgr.get_term_name(term)
                 constraint_matrix = identity[cols]
 
                 # check if in combined
@@ -2063,7 +2083,7 @@ class LikelihoodModelResults(Results):
         """
         Perform pairwise t_test with multiple testing corrected p-values.
 
-        This uses the formula design_info encoding contrast matrix and should
+        This uses the formula's model_spec encoding contrast matrix and should
         work for all encodings of a main effect.
 
         Parameters
@@ -2079,7 +2099,7 @@ class LikelihoodModelResults(Results):
             The significance level for multiple testing reject decision.
         factor_labels : {list[str], None}
             Labels for the factor levels used for pairwise labels. If not
-            provided, then the labels from the formula design_info are used.
+            provided, then the labels from the formula's model_spec are used.
 
         Returns
         -------
@@ -2374,13 +2394,14 @@ wrap.populate_wrapper(LikelihoodResultsWrapper,  # noqa:E305
                       LikelihoodModelResults)
 
 
-class ResultMixin(object):
+class ResultMixin:
 
     @cache_readonly
     def df_modelwc(self):
         """Model WC"""
         # collect different ways of defining the number of parameters, used for
         # aic, bic
+        k_extra = getattr(self.model, "k_extra", 0)
         if hasattr(self, 'df_model'):
             if hasattr(self, 'k_constant'):
                 hasconst = self.k_constant
@@ -2389,7 +2410,7 @@ class ResultMixin(object):
             else:
                 # default assumption
                 hasconst = 1
-            return self.df_model + hasconst
+            return self.df_model + hasconst + k_extra
         else:
             return self.params.size
 
@@ -2710,17 +2731,19 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
 
         # TODO: possibly move to model.fit()
         #       and outsource together with patching names
-        if hasattr(model, 'df_model'):
+        k_extra = getattr(self.model, "k_extra", 0)
+        if hasattr(model, 'df_model') and not np.isnan(model.df_model):
             self.df_model = model.df_model
         else:
-            self.df_model = len(mlefit.params)
+            df_model = len(mlefit.params) - self.model.k_constant - k_extra
+            self.df_model = df_model
             # retrofitting the model, used in t_test TODO: check design
-            self.model.df_model = self.df_model
+            self.model.df_model = df_model
 
-        if hasattr(model, 'df_resid'):
+        if hasattr(model, 'df_resid') and not np.isnan(model.df_resid):
             self.df_resid = model.df_resid
         else:
-            self.df_resid = self.endog.shape[0] - self.df_model
+            self.df_resid = self.endog.shape[0] - self.df_model - k_extra
             # retrofitting the model, used in t_test TODO: check design
             self.model.df_resid = self.df_resid
 
@@ -2729,10 +2752,13 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
 
         k_params = len(mlefit.params)
         # checks mainly for adding new models or subclassing
-        if self.df_model + self.model.k_constant != k_params:
-            warnings.warn("df_model + k_constant differs from nparams")
+
+        if self.df_model + self.model.k_constant + k_extra != k_params:
+            warnings.warn("df_model + k_constant + k_extra "
+                          "differs from k_params", UserWarning)
+
         if self.df_resid != self.nobs - k_params:
-            warnings.warn("df_resid differs from nobs - nparams")
+            warnings.warn("df_resid differs from nobs - k_params")
 
     def get_prediction(
             self,

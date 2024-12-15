@@ -389,7 +389,7 @@ class KernelReg(GenericKDE):
         for i in range(N_data_predict):
             mean_mfx = func(self.bw, self.endog, self.exog,
                             data_predict=data_predict[i, :])
-            mean[i] = mean_mfx[0]
+            mean[i] = np.squeeze(mean_mfx[0])
             mfx_c = np.squeeze(mean_mfx[1])
             mfx[i, :] = mfx_c
 
@@ -688,14 +688,14 @@ class KernelCensoredReg(KernelReg):
             mean_mfx = func(self.bw, self.endog, self.exog,
                             data_predict=data_predict[i, :],
                             W=self.W_in)
-            mean[i] = mean_mfx[0]
+            mean[i] = np.squeeze(mean_mfx[0])
             mfx_c = np.squeeze(mean_mfx[1])
             mfx[i, :] = mfx_c
 
         return mean, mfx
 
 
-class TestRegCoefC(object):
+class TestRegCoefC:
     """
     Significance test for continuous variables in a nonparametric regression.
 

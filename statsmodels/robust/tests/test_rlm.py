@@ -5,6 +5,7 @@ import warnings
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal
+import pandas as pd
 import pytest
 from scipy import stats
 
@@ -27,7 +28,7 @@ def load_stackloss():
     return data
 
 
-class CheckRlmResultsMixin(object):
+class CheckRlmResultsMixin:
     '''
     res2 contains  results from Rmodelwrap or were obtained from a statistical
     packages such as R, Stata, or SAS and written to results.results_rlm
@@ -125,7 +126,7 @@ class TestRlm(CheckRlmResultsMixin):
         cls.res1.h2 = h2
         cls.res1.h3 = h3
 
-    def setup(self):
+    def setup_method(self):
         from .results.results_rlm import Huber
         self.res2 = Huber()
 
@@ -149,7 +150,7 @@ class TestRlm(CheckRlmResultsMixin):
 class TestHampel(TestRlm):
     @classmethod
     def setup_class(cls):
-        super(TestHampel, cls).setup_class()
+        super().setup_class()
         # Test precisions
         cls.decimal_standarderrors = DECIMAL_2
         cls.decimal_scale = DECIMAL_3
@@ -163,7 +164,7 @@ class TestHampel(TestRlm):
         cls.res1.h2 = h2
         cls.res1.h3 = h3
 
-    def setup(self):
+    def setup_method(self):
         from .results.results_rlm import Hampel
         self.res2 = Hampel()
 
@@ -171,7 +172,7 @@ class TestHampel(TestRlm):
 class TestRlmBisquare(TestRlm):
     @classmethod
     def setup_class(cls):
-        super(TestRlmBisquare, cls).setup_class()
+        super().setup_class()
         # Test precisions
         cls.decimal_standarderrors = DECIMAL_1
 
@@ -183,7 +184,7 @@ class TestRlmBisquare(TestRlm):
         cls.res1.h2 = h2
         cls.res1.h3 = h3
 
-    def setup(self):
+    def setup_method(self):
         from .results.results_rlm import BiSquare
         self.res2 = BiSquare()
 
@@ -191,7 +192,7 @@ class TestRlmBisquare(TestRlm):
 class TestRlmAndrews(TestRlm):
     @classmethod
     def setup_class(cls):
-        super(TestRlmAndrews, cls).setup_class()
+        super().setup_class()
 
         model = RLM(cls.data.endog, cls.data.exog, M=norms.AndrewWave())
         results = model.fit()
@@ -201,7 +202,7 @@ class TestRlmAndrews(TestRlm):
         cls.res1.h2 = h2
         cls.res1.h3 = h3
 
-    def setup(self):
+    def setup_method(self):
         from .results.results_rlm import Andrews
         self.res2 = Andrews()
 
@@ -223,7 +224,7 @@ class TestRlmHuber(CheckRlmResultsMixin):
         cls.res1.h2 = h2
         cls.res1.h3 = h3
 
-    def setup(self):
+    def setup_method(self):
         from .results.results_rlm import HuberHuber
         self.res2 = HuberHuber()
 
@@ -231,7 +232,7 @@ class TestRlmHuber(CheckRlmResultsMixin):
 class TestHampelHuber(TestRlm):
     @classmethod
     def setup_class(cls):
-        super(TestHampelHuber, cls).setup_class()
+        super().setup_class()
 
         model = RLM(cls.data.endog, cls.data.exog, M=norms.Hampel())
         results = model.fit(scale_est=HuberScale())
@@ -241,7 +242,7 @@ class TestHampelHuber(TestRlm):
         cls.res1.h2 = h2
         cls.res1.h3 = h3
 
-    def setup(self):
+    def setup_method(self):
         from .results.results_rlm import HampelHuber
         self.res2 = HampelHuber()
 
@@ -249,7 +250,7 @@ class TestHampelHuber(TestRlm):
 class TestRlmBisquareHuber(TestRlm):
     @classmethod
     def setup_class(cls):
-        super(TestRlmBisquareHuber, cls).setup_class()
+        super().setup_class()
 
         model = RLM(cls.data.endog, cls.data.exog, M=norms.TukeyBiweight())
         results = model.fit(scale_est=HuberScale())
@@ -259,7 +260,7 @@ class TestRlmBisquareHuber(TestRlm):
         cls.res1.h2 = h2
         cls.res1.h3 = h3
 
-    def setup(self):
+    def setup_method(self):
         from .results.results_rlm import BisquareHuber
         self.res2 = BisquareHuber()
 
@@ -267,7 +268,7 @@ class TestRlmBisquareHuber(TestRlm):
 class TestRlmAndrewsHuber(TestRlm):
     @classmethod
     def setup_class(cls):
-        super(TestRlmAndrewsHuber, cls).setup_class()
+        super().setup_class()
 
         model = RLM(cls.data.endog, cls.data.exog, M=norms.AndrewWave())
         results = model.fit(scale_est=HuberScale())
@@ -277,7 +278,7 @@ class TestRlmAndrewsHuber(TestRlm):
         cls.res1.h2 = h2
         cls.res1.h3 = h3
 
-    def setup(self):
+    def setup_method(self):
         from .results.results_rlm import AndrewsHuber
         self.res2 = AndrewsHuber()
 
@@ -300,7 +301,7 @@ class TestRlmSresid(CheckRlmResultsMixin):
         cls.res1.h2 = h2
         cls.res1.h3 = h3
 
-    def setup(self):
+    def setup_method(self):
         from .results.results_rlm import Huber
         self.res2 = Huber()
 
@@ -310,7 +311,7 @@ def test_missing():
     # see GH#2083
     import statsmodels.formula.api as smf
 
-    d = {'Foo': [1, 2, 10, 149], 'Bar': [1, 2, 3, np.nan]}
+    d = pd.DataFrame({'Foo': [1, 2, 10, 149], 'Bar': [1, 2, 3, np.nan]})
     smf.rlm('Foo ~ Bar', data=d)
 
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Fri Jan 29 19:19:45 2021
 
@@ -52,10 +51,11 @@ class IndependenceCopula(Copula):
         return x
 
     def pdf(self, u, args=()):
-        return np.ones(len(u))
+        u = np.asarray(u)
+        return np.ones(u.shape[:-1])
 
     def cdf(self, u, args=()):
-        return np.prod(u, axis=1)
+        return np.prod(u, axis=-1)
 
     def tau(self):
         return 0

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from statsmodels.compat.python import lzip
 
 import numpy as np
@@ -8,7 +7,7 @@ from . import kernels
 
 
 #TODO: should this be a function?
-class KDE(object):
+class KDE:
     """
     Kernel Density Estimator
 

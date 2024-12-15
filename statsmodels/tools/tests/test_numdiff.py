@@ -44,7 +44,7 @@ def fun2(beta, y, x):
 
 
 #ravel() added because of MNLogit 2d params
-class CheckGradLoglikeMixin(object):
+class CheckGradLoglikeMixin:
     def test_score(self):
         for test_params in self.params:
             sc = self.mod.score(test_params)
@@ -158,7 +158,7 @@ class TestGradLogit(CheckGradLoglikeMixin):
         ##hess = mod.hessian
 
 
-class CheckDerivativeMixin(object):
+class CheckDerivativeMixin:
     @classmethod
     def setup_class(cls):
         nobs = 200
@@ -250,7 +250,7 @@ class CheckDerivativeMixin(object):
 class TestDerivativeFun(CheckDerivativeMixin):
     @classmethod
     def setup_class(cls):
-        super(TestDerivativeFun,cls).setup_class()
+        super().setup_class()
         xkols = np.dot(np.linalg.pinv(cls.x), cls.y)
         cls.params = [np.array([1.,1.,1.]), xkols]
         cls.args = (cls.x,)
@@ -266,7 +266,7 @@ class TestDerivativeFun(CheckDerivativeMixin):
 class TestDerivativeFun2(CheckDerivativeMixin):
     @classmethod
     def setup_class(cls):
-        super(TestDerivativeFun2,cls).setup_class()
+        super().setup_class()
         xkols = np.dot(np.linalg.pinv(cls.x), cls.y)
         cls.params = [np.array([1.,1.,1.]), xkols]
         cls.args = (cls.y, cls.x)
@@ -286,7 +286,7 @@ class TestDerivativeFun2(CheckDerivativeMixin):
 class TestDerivativeFun1(CheckDerivativeMixin):
     @classmethod
     def setup_class(cls):
-        super(TestDerivativeFun1, cls).setup_class()
+        super().setup_class()
         xkols = np.dot(np.linalg.pinv(cls.x), cls.y)
         cls.params = [np.array([1.,1.,1.]), xkols]
         cls.args = (cls.y, cls.x)

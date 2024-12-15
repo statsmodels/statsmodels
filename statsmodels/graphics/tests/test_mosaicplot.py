@@ -155,7 +155,7 @@ def test_mosaic_very_complex(close_figures):
     _, axes = plt.subplots(L, L)
     for i in range(L):
         for j in range(L):
-            m = set(range(L)).difference(set((i, j)))
+            m = set(range(L)).difference({i, j})
             if i == j:
                 axes[i, i].text(0.5, 0.5, key_name[i],
                                 ha='center', va='center')
@@ -166,8 +166,8 @@ def test_mosaic_very_complex(close_figures):
             else:
                 ji = max(i, j)
                 ij = min(i, j)
-                temp_data = dict([((k[ij], k[ji]) + tuple(k[r] for r in m), v)
-                                  for k, v in data.items()])
+                temp_data = {(k[ij], k[ji]) + tuple(k[r] for r in m): v
+                                  for k, v in data.items()}
 
                 keys = list(temp_data.keys())
                 for k in keys:

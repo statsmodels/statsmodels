@@ -21,7 +21,7 @@ dta.index = pd.period_range('1959Q1', '2009Q3', freq='Q')
 dta = np.log(dta[['realcons', 'realgdp', 'cpi']]).diff().iloc[1:] * 400
 
 
-class CheckPosteriorMoments(object):
+class CheckPosteriorMoments:
     @classmethod
     def setup_class(cls, model_class, missing=None, mean_atol=0, cov_atol=0,
                     use_complex=False, *args, **kwargs):

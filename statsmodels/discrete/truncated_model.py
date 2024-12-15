@@ -1,8 +1,7 @@
-from __future__ import division
-
 __all__ = ["TruncatedLFPoisson", "TruncatedLFNegativeBinomialP",
            "HurdleCountModel"]
 
+import warnings
 import numpy as np
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
@@ -23,12 +22,15 @@ from statsmodels.discrete.discrete_model import (
     )
 from statsmodels.tools.numdiff import approx_hess
 from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools.sm_exceptions import ConvergenceWarning
 from copy import deepcopy
 
 
 class TruncatedLFGeneric(CountModel):
     __doc__ = """
     Generic Truncated model for count data
+
+    .. versionadded:: 0.14.0
 
     %(params)s
     %(extra_params)s
@@ -54,7 +56,7 @@ class TruncatedLFGeneric(CountModel):
 
     def __init__(self, endog, exog, truncation=0, offset=None,
                  exposure=None, missing='none', **kwargs):
-        super(TruncatedLFGeneric, self).__init__(
+        super().__init__(
             endog,
             exog,
             offset=offset,
@@ -118,13 +120,28 @@ class TruncatedLFGeneric(CountModel):
         """
         llf_main = self.model_main.loglikeobs(params)
 
-        pmf = np.zeros_like(self.endog, dtype=np.float64)
-        for i in range(self.trunc + 1):
-            model = self.model_main.__class__(np.ones_like(self.endog) * i,
-                                              self.exog)
-            pmf += np.exp(model.loglikeobs(params))
+        yt = self.trunc + 1
 
-        llf = llf_main - np.log(1 - pmf)
+        # equivalent ways to compute truncation probability
+        # pmf0 = np.zeros_like(self.endog, dtype=np.float64)
+        # for i in range(self.trunc + 1):
+        #     model = self.model_main.__class__(np.ones_like(self.endog) * i,
+        #                                       self.exog)
+        #     pmf0 += np.exp(model.loglikeobs(params))
+        #
+        # pmf1 = self.model_main.predict(
+        #     params, which="prob", y_values=np.arange(yt)).sum(-1)
+
+        pmf = self.predict(
+            params, which="prob-base", y_values=np.arange(yt)).sum(-1)
+
+        # Skip pmf = 1 to avoid warnings
+        log_1_m_pmf = np.full_like(pmf, -np.inf)
+        loc = pmf > 1
+        log_1_m_pmf[loc] = np.nan
+        loc = pmf < 1
+        log_1_m_pmf[loc] = np.log(1 - pmf[loc])
+        llf = llf_main - log_1_m_pmf
 
         return llf
 
@@ -146,10 +163,15 @@ class TruncatedLFGeneric(CountModel):
         score_main = self.model_main.score_obs(params)
 
         pmf = np.zeros_like(self.endog, dtype=np.float64)
+        # TODO: can we rewrite to following without creating new models
         score_trunc = np.zeros_like(score_main, dtype=np.float64)
         for i in range(self.trunc + 1):
-            model = self.model_main.__class__(np.ones_like(self.endog) * i,
-                                              self.exog)
+            model = self.model_main.__class__(
+                np.ones_like(self.endog) * i,
+                self.exog,
+                offset=getattr(self, "offset", None),
+                exposure=getattr(self, "exposure", None),
+                )
             pmf_i = np.exp(model.loglikeobs(params))
             score_trunc += (model.score_obs(params).T * pmf_i).T
             pmf += pmf_i
@@ -184,13 +206,15 @@ class TruncatedLFGeneric(CountModel):
                 offset = None
             model = self.model_main.__class__(self.endog, self.exog,
                                               offset=offset)
-            start_params = model.fit(disp=0).params
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=ConvergenceWarning)
+                start_params = model.fit(disp=0).params
 
         # Todo: check how we can to this in __init__
         k_params = self.df_model + 1 + self.k_extra
         self.df_resid = self.endog.shape[0] - k_params
 
-        mlefit = super(TruncatedLFGeneric, self).fit(
+        mlefit = super().fit(
             start_params=start_params,
             method=method,
             maxiter=maxiter,
@@ -274,14 +298,56 @@ class TruncatedLFGeneric(CountModel):
     def predict(self, params, exog=None, exposure=None, offset=None,
                 which='mean', y_values=None):
         """
-        Paramaters
-        ----------
-        y_values : array-like or int
-            The counts for which you want the probabilities. If y_values is
-            None then the probabilities for each count from 0 to max(y) are
-            given.
+        Predict response variable or other statistic given exogenous variables.
 
-        Predict response variable of a count model given exogenous variables.
+        Parameters
+        ----------
+        params : array_like
+            The parameters of the model.
+        exog : ndarray, optional
+            Explanatory variables for the main count model.
+            If ``exog`` is None, then the data from the model will be used.
+        offset : ndarray, optional
+            Offset is added to the linear predictor of the mean function with
+            coefficient equal to 1.
+            Default is zero if exog is not None, and the model offset if exog
+            is None.
+        exposure : ndarray, optional
+            Log(exposure) is added to the linear predictor with coefficient
+            equal to 1. If exposure is specified, then it will be logged by
+            the method. The user does not need to log it first.
+            Default is one if exog is is not None, and it is the model exposure
+            if exog is None.
+        which : str (optional)
+            Statitistic to predict. Default is 'mean'.
+
+            - 'mean' : the conditional expectation of endog E(y | x)
+            - 'mean-main' : mean parameter of truncated count model.
+              Note, this is not the mean of the truncated distribution.
+            - 'linear' : the linear predictor of the truncated count model.
+            - 'var' : returns the estimated variance of endog implied by the
+              model.
+            - 'prob-trunc' : probability of truncation. This is the probability
+              of observing a zero count implied
+              by the truncation model.
+            - 'prob' : probabilities of each count from 0 to max(endog), or
+              for y_values if those are provided. This is a multivariate
+              return (2-dim when predicting for several observations).
+              The probabilities in the truncated region are zero.
+            - 'prob-base' : probabilities for untruncated base distribution.
+              The probabilities are for each count from 0 to max(endog), or
+              for y_values if those are provided. This is a multivariate
+              return (2-dim when predicting for several observations).
+
+
+        y_values : array_like
+            Values of the random variable endog at which pmf is evaluated.
+            Only used if ``which="prob"``
+
+        Returns
+        -------
+        predicted values
+
         Notes
         -----
         If exposure is specified, then it will be logged by the method.
@@ -313,6 +379,8 @@ class TruncatedLFGeneric(CountModel):
                 mean_tregion = (np.arange(self.truncation + 1) * probs).sum(1)
                 mean = (mu - mean_tregion) / (1 - prob_tregion)
                 return mean
+            else:
+                raise ValueError("unsupported self.truncation")
         elif which == 'linear':
             return linpred
         elif which == 'mean-main':
@@ -333,14 +401,15 @@ class TruncatedLFGeneric(CountModel):
             else:
                 raise ValueError("k_extra is not 0 or 1")
             return probs
-        elif which == 'prob-main':
+        elif which == 'prob-base':
             if y_values is not None:
-                counts = np.atleast_2d(y_values)
+                counts = np.asarray(y_values)
             else:
-                counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
+                counts = np.arange(0, np.max(self.endog)+1)
+
             probs = self.model_main.predict(
                 params, exog=exog, exposure=np.exp(exposure),
-                offset=offset, which="prob", y_values=counts)[:, None]
+                offset=offset, which="prob", y_values=counts)
             return probs
         elif which == 'var':
             mu = np.exp(linpred)
@@ -360,19 +429,21 @@ class TruncatedLFGeneric(CountModel):
             v = mnc2 - mean**2
             return v
         else:
-            raise TypeError(
+            raise ValueError(
                 "argument which == %s not handled" % which)
 
 
 class TruncatedLFPoisson(TruncatedLFGeneric):
-    """
+    __doc__ = """
     Truncated Poisson model for count data
+
+    .. versionadded:: 0.14.0
 
     %(params)s
     %(extra_params)s
 
     Attributes
-    -----------
+    ----------
     endog : array
         A reference to the endogenous response variable
     exog : array
@@ -392,7 +463,7 @@ class TruncatedLFPoisson(TruncatedLFGeneric):
 
     def __init__(self, endog, exog, offset=None, exposure=None,
                  truncation=0, missing='none', **kwargs):
-        super(TruncatedLFPoisson, self).__init__(
+        super().__init__(
             endog,
             exog,
             offset=offset,
@@ -402,9 +473,11 @@ class TruncatedLFPoisson(TruncatedLFGeneric):
             **kwargs
             )
         self.model_main = Poisson(self.endog, self.exog,
-                                  exposure=exposure,
-                                  offset=offset)
+                                  exposure=getattr(self, "exposure", None),
+                                  offset=getattr(self, "offset", None),
+                                  )
         self.model_dist = truncatedpoisson
+
         self.result_class = TruncatedLFPoissonResults
         self.result_class_wrapper = TruncatedLFGenericResultsWrapper
         self.result_class_reg = L1TruncatedLFGenericResults
@@ -434,14 +507,16 @@ class TruncatedLFPoisson(TruncatedLFGeneric):
 
 
 class TruncatedLFNegativeBinomialP(TruncatedLFGeneric):
-    """
+    __doc__ = """
     Truncated Generalized Negative Binomial model for count data
+
+    .. versionadded:: 0.14.0
 
     %(params)s
     %(extra_params)s
 
     Attributes
-    -----------
+    ----------
     endog : array
         A reference to the endogenous response variable
     exog : array
@@ -461,7 +536,7 @@ class TruncatedLFNegativeBinomialP(TruncatedLFGeneric):
 
     def __init__(self, endog, exog, offset=None, exposure=None,
                  truncation=0, p=2, missing='none', **kwargs):
-        super(TruncatedLFNegativeBinomialP, self).__init__(
+        super().__init__(
             endog,
             exog,
             offset=offset,
@@ -470,12 +545,17 @@ class TruncatedLFNegativeBinomialP(TruncatedLFGeneric):
             missing=missing,
             **kwargs
             )
-        self.model_main = NegativeBinomialP(self.endog, self.exog,
-                                            exposure=exposure,
-                                            offset=offset, p=p)
+        self.model_main = NegativeBinomialP(
+            self.endog,
+            self.exog,
+            exposure=getattr(self, "exposure", None),
+            offset=getattr(self, "offset", None),
+            p=p
+            )
         self.k_extra = self.model_main.k_extra
         self.exog_names.extend(self.model_main.exog_names[-self.k_extra:])
         self.model_dist = truncatednegbin
+
         self.result_class = TruncatedNegativeBinomialResults
         self.result_class_wrapper = TruncatedLFGenericResultsWrapper
         self.result_class_reg = L1TruncatedLFGenericResults
@@ -513,14 +593,16 @@ class TruncatedLFNegativeBinomialP(TruncatedLFGeneric):
 
 
 class TruncatedLFGeneralizedPoisson(TruncatedLFGeneric):
-    """
+    __doc__ = """
     Truncated Generalized Poisson model for count data
+
+    .. versionadded:: 0.14.0
 
     %(params)s
     %(extra_params)s
 
     Attributes
-    -----------
+    ----------
     endog : array
         A reference to the endogenous response variable
     exog : array
@@ -540,7 +622,7 @@ class TruncatedLFGeneralizedPoisson(TruncatedLFGeneric):
 
     def __init__(self, endog, exog, offset=None, exposure=None,
                  truncation=0, p=2, missing='none', **kwargs):
-        super(TruncatedLFGeneralizedPoisson, self).__init__(
+        super().__init__(
             endog,
             exog,
             offset=offset,
@@ -549,15 +631,18 @@ class TruncatedLFGeneralizedPoisson(TruncatedLFGeneric):
             missing=missing,
             **kwargs
             )
-        self.model_main = GeneralizedPoisson(self.endog,
-                                             self.exog,
-                                             exposure=exposure,
-                                             offset=offset,
-                                             p=p)
+        self.model_main = GeneralizedPoisson(
+            self.endog,
+            self.exog,
+            exposure=getattr(self, "exposure", None),
+            offset=getattr(self, "offset", None),
+            p=p
+            )
         self.k_extra = self.model_main.k_extra
         self.exog_names.extend(self.model_main.exog_names[-self.k_extra:])
         self.model_dist = None
         self.result_class = TruncatedNegativeBinomialResults
+
         self.result_class_wrapper = TruncatedLFGenericResultsWrapper
         self.result_class_reg = L1TruncatedLFGenericResults
         self.result_class_reg_wrapper = L1TruncatedLFGenericResultsWrapper
@@ -571,7 +656,7 @@ class _RCensoredGeneric(CountModel):
     %(extra_params)s
 
     Attributes
-    -----------
+    ----------
     endog : array
         A reference to the endogenous response variable
     exog : array
@@ -590,7 +675,7 @@ class _RCensoredGeneric(CountModel):
                  missing='none', **kwargs):
         self.zero_idx = np.nonzero(endog == 0)[0]
         self.nonzero_idx = np.nonzero(endog)[0]
-        super(_RCensoredGeneric, self).__init__(
+        super().__init__(
             endog,
             exog,
             offset=offset,
@@ -701,8 +786,10 @@ class _RCensoredGeneric(CountModel):
                 offset = None
             model = self.model_main.__class__(self.endog, self.exog,
                                               offset=offset)
-            start_params = model.fit(disp=0).params
-        mlefit = super(_RCensoredGeneric, self).fit(
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=ConvergenceWarning)
+                start_params = model.fit(disp=0).params
+        mlefit = super().fit(
             start_params=start_params,
             method=method,
             maxiter=maxiter,
@@ -785,7 +872,7 @@ class _RCensoredGeneric(CountModel):
 
 
 class _RCensoredPoisson(_RCensoredGeneric):
-    """
+    __doc__ = """
     Censored Poisson model for count data
 
     %(params)s
@@ -809,9 +896,9 @@ class _RCensoredPoisson(_RCensoredGeneric):
 
     def __init__(self, endog, exog, offset=None,
                  exposure=None, missing='none', **kwargs):
-        super(_RCensoredPoisson, self).__init__(endog, exog, offset=offset,
-                                                exposure=exposure,
-                                                missing=missing, **kwargs)
+        super().__init__(endog, exog, offset=offset,
+                         exposure=exposure,
+                         missing=missing, **kwargs)
         self.model_main = Poisson(np.zeros_like(self.endog), self.exog)
         self.model_dist = None
         self.result_class = TruncatedLFGenericResults
@@ -821,7 +908,7 @@ class _RCensoredPoisson(_RCensoredGeneric):
 
 
 class _RCensoredGeneralizedPoisson(_RCensoredGeneric):
-    """
+    __doc__ = """
     Censored Generalized Poisson model for count data
 
     %(params)s
@@ -845,7 +932,7 @@ class _RCensoredGeneralizedPoisson(_RCensoredGeneric):
 
     def __init__(self, endog, exog, offset=None, p=2,
                  exposure=None, missing='none', **kwargs):
-        super(_RCensoredGeneralizedPoisson, self).__init__(
+        super().__init__(
             endog, exog, offset=offset, exposure=exposure,
             missing=missing, **kwargs)
 
@@ -859,7 +946,7 @@ class _RCensoredGeneralizedPoisson(_RCensoredGeneric):
 
 
 class _RCensoredNegativeBinomialP(_RCensoredGeneric):
-    """
+    __doc__ = """
     Censored Negative Binomial model for count data
 
     %(params)s
@@ -883,7 +970,7 @@ class _RCensoredNegativeBinomialP(_RCensoredGeneric):
 
     def __init__(self, endog, exog, offset=None, p=2,
                  exposure=None, missing='none', **kwargs):
-        super(_RCensoredNegativeBinomialP, self).__init__(
+        super().__init__(
             endog,
             exog,
             offset=offset,
@@ -903,7 +990,7 @@ class _RCensoredNegativeBinomialP(_RCensoredGeneric):
 
 
 class _RCensored(_RCensoredGeneric):
-    """
+    __doc__ = """
     Censored model for count data
 
     %(params)s
@@ -928,7 +1015,7 @@ class _RCensored(_RCensoredGeneric):
     def __init__(self, endog, exog, model=Poisson,
                  distribution=truncatedpoisson, offset=None,
                  exposure=None, missing='none', **kwargs):
-        super(_RCensored, self).__init__(
+        super().__init__(
             endog,
             exog,
             offset=offset,
@@ -958,8 +1045,10 @@ class _RCensored(_RCensoredGeneric):
 
 
 class HurdleCountModel(CountModel):
-    """
+    __doc__ = """
     Hurdle model for count data
+
+    .. versionadded:: 0.14.0
 
     %(params)s
     %(extra_params)s
@@ -1005,7 +1094,11 @@ class HurdleCountModel(CountModel):
                  dist="poisson", zerodist="poisson",
                  p=2, pzero=2,
                  exposure=None, missing='none', **kwargs):
-        super(HurdleCountModel, self).__init__(
+
+        if (offset is not None) or (exposure is not None):
+            msg = "Offset and exposure are not yet implemented"
+            raise NotImplementedError(msg)
+        super().__init__(
             endog,
             exog,
             offset=offset,
@@ -1159,7 +1252,7 @@ class HurdleCountModel(CountModel):
             - 'var' : returns the estimated variance of endog implied by the
               model.
             - 'prob-main' : probability of selecting the main model which is
-                the probability of observing a nonzero count P(y > 0 | x).
+              the probability of observing a nonzero count P(y > 0 | x).
             - 'prob-zero' : probability of observing a zero count. P(y=0 | x).
               This is equal to is ``1 - prob-main``
             - 'prob-trunc' : probability of truncation of the truncated count
@@ -1175,8 +1268,8 @@ class HurdleCountModel(CountModel):
             Values of the random variable endog at which pmf is evaluated.
             Only used if ``which="prob"``
 
-        Return
-        ------
+        Returns
+        -------
         predicted values
 
         Notes
@@ -1319,7 +1412,7 @@ class HurdleCountResults(CountResults):
 
     def __init__(self, model, mlefit, results_zero, results_count,
                  cov_type='nonrobust', cov_kwds=None, use_t=None):
-        super(HurdleCountResults, self).__init__(
+        super().__init__(
             model,
             mlefit,
             cov_type=cov_type,

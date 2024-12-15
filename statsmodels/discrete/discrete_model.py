@@ -28,13 +28,13 @@ from scipy import special, stats
 from scipy.special import digamma, gammaln, loggamma, polygamma
 from scipy.stats import nbinom
 
+from statsmodels.base import _prediction_inference as pred
+from statsmodels.base._constraints import fit_constrained_wrap
+import statsmodels.base._parameter_inference as pinfer
 from statsmodels.base.data import handle_data  # for mnlogit
 from statsmodels.base.l1_slsqp import fit_l1_slsqp
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
-from statsmodels.base._constraints import fit_constrained_wrap
-import statsmodels.base._parameter_inference as pinfer
-from statsmodels.base import _prediction_inference as pred
 from statsmodels.distributions import genpoisson_p
 import statsmodels.regression.linear_model as lm
 from statsmodels.tools import data as data_tools, tools
@@ -42,9 +42,9 @@ from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.numdiff import approx_fprime_cs
 from statsmodels.tools.sm_exceptions import (
     PerfectSeparationError,
+    PerfectSeparationWarning,
     SpecificationWarning,
 )
-
 
 try:
     import cvxopt  # noqa:F401
@@ -135,11 +135,13 @@ def _pandas_to_dummies(endog):
         if endog.shape[1] == 1:
             yname = endog.columns[0]
             endog_dummies = get_dummies(endog.iloc[:, 0])
-        else:  # series
+        else:  # assume already dummies
             yname = 'y'
             endog_dummies = endog
     else:
         yname = endog.name
+        if yname is None:
+            yname = 'y'
         endog_dummies = get_dummies(endog)
     ynames = endog_dummies.columns.tolist()
 
@@ -180,7 +182,7 @@ class DiscreteModel(base.LikelihoodModel):
     def __init__(self, endog, exog, check_rank=True, **kwargs):
         self._check_rank = check_rank
         super().__init__(endog, exog, **kwargs)
-        self.raise_on_perfect_prediction = True
+        self.raise_on_perfect_prediction = False  # keep for backwards compat
         self.k_extra = 0
 
     def initialize(self):
@@ -212,11 +214,16 @@ class DiscreteModel(base.LikelihoodModel):
 
     def _check_perfect_pred(self, params, *args):
         endog = self.endog
-        fittedvalues = self.cdf(np.dot(self.exog, params[:self.exog.shape[1]]))
-        if (self.raise_on_perfect_prediction and
-                np.allclose(fittedvalues - endog, 0)):
-            msg = "Perfect separation detected, results not available"
-            raise PerfectSeparationError(msg)
+        fittedvalues = self.predict(params)
+        if np.allclose(fittedvalues - endog, 0):
+            if self.raise_on_perfect_prediction:
+                # backwards compatibility for attr raise_on_perfect_prediction
+                msg = "Perfect separation detected, results not available"
+                raise PerfectSeparationError(msg)
+            else:
+                msg = ("Perfect separation or prediction detected, "
+                       "parameter may not be identified")
+                warnings.warn(msg, category=PerfectSeparationWarning)
 
     @Appender(base.LikelihoodModel.fit.__doc__)
     def fit(self, start_params=None, method='newton', maxiter=35,
@@ -498,6 +505,11 @@ class BinaryModel(DiscreteModel):
             - 'var' returns the estimated variance of endog implied by the
               model.
 
+            .. versionadded: 0.14
+
+               ``which`` replaces and extends the deprecated ``linear``
+               argument.
+
         linear : bool
             If True, returns the linear predicted values.  If False or None,
             then the statistic specified by ``which`` will be returned.
@@ -514,7 +526,7 @@ class BinaryModel(DiscreteModel):
         """
         if linear is not None:
             msg = 'linear keyword is deprecated, use which="linear"'
-            warnings.warn(msg, DeprecationWarning)
+            warnings.warn(msg, FutureWarning)
             if linear is True:
                 which = "linear"
 
@@ -669,7 +681,8 @@ class BinaryModel(DiscreteModel):
         Instance of frozen scipy distribution.
         """
         mu = self.predict(params, exog=exog, offset=offset)
-        distr = stats.bernoulli(mu[:, None])
+        # distr = stats.bernoulli(mu[:, None])
+        distr = stats.bernoulli(mu)
         return distr
 
 
@@ -697,7 +710,7 @@ class MultinomialModel(BinaryModel):
 
         # repeating from upstream...
         for key in kwargs:
-            if key in ['design_info', 'formula']:  # leave attached to data
+            if key in ['model_spec', 'formula']:  # leave attached to data
                 continue
             try:
                 setattr(self, key, data.__dict__.pop(key))
@@ -732,9 +745,28 @@ class MultinomialModel(BinaryModel):
             it assumed to be 1 row of exogenous variables. If you only have
             one regressor and would like to do prediction, you must provide
             a 2d array with shape[1] == 1.
-        linear : bool, optional
-            If True, returns the linear predictor dot(exog,params).  Else,
-            returns the value of the cdf at the linear predictor.
+        which : {'mean', 'linear', 'var', 'prob'}, optional
+            Statistic to predict. Default is 'mean'.
+
+            - 'mean' returns the conditional expectation of endog E(y | x),
+              i.e. exp of linear predictor.
+            - 'linear' returns the linear predictor of the mean function.
+            - 'var' returns the estimated variance of endog implied by the
+              model.
+
+            .. versionadded: 0.14
+
+               ``which`` replaces and extends the deprecated ``linear``
+               argument.
+
+        linear : bool
+            If True, returns the linear predicted values.  If False or None,
+            then the statistic specified by ``which`` will be returned.
+
+            .. deprecated: 0.14
+
+               The ``linear` keyword is deprecated and will be removed,
+               use ``which`` keyword instead.
 
         Notes
         -----
@@ -743,7 +775,7 @@ class MultinomialModel(BinaryModel):
         """
         if linear is not None:
             msg = 'linear keyword is deprecated, use which="linear"'
-            warnings.warn(msg, DeprecationWarning)
+            warnings.warn(msg, FutureWarning)
             if linear is True:
                 which = "linear"
 
@@ -761,10 +793,14 @@ class MultinomialModel(BinaryModel):
     def fit(self, start_params=None, method='newton', maxiter=35,
             full_output=1, disp=1, callback=None, **kwargs):
         if start_params is None:
-            start_params = np.zeros((self.K * (self.J-1)))
+            start_params = np.zeros(self.K * (self.J-1))
         else:
             start_params = np.asarray(start_params)
-        callback = lambda x : None # placeholder until check_perfect_pred
+
+        if callback is None:
+            # placeholder until check_perfect_pred
+            def callback(x, *args):
+                return
         # skip calling super to handle results from LikelihoodModel
         mnfit = base.LikelihoodModel.fit(self, start_params = start_params,
                 method=method, maxiter=maxiter, full_output=full_output,
@@ -779,7 +815,7 @@ class MultinomialModel(BinaryModel):
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
             qc_tol=0.03, **kwargs):
         if start_params is None:
-            start_params = np.zeros((self.K * (self.J-1)))
+            start_params = np.zeros(self.K * (self.J-1))
         else:
             start_params = np.asarray(start_params)
         mnfit = DiscreteModel.fit_regularized(
@@ -984,12 +1020,23 @@ class CountModel(DiscreteModel):
             - 'mean' returns the conditional expectation of endog E(y | x),
               i.e. exp of linear predictor.
             - 'linear' returns the linear predictor of the mean function.
+            - 'var' variance of endog implied by the likelihood model
+            - 'prob' predicted probabilities for counts.
+
+            .. versionadded: 0.14
+
+               ``which`` replaces and extends the deprecated ``linear``
+               argument.
 
         linear : bool
-            The ``linear` keyword is deprecated and will be removed,
-            use ``which`` keyword instead.
             If True, returns the linear predicted values.  If False or None,
             then the statistic specified by ``which`` will be returned.
+
+            .. deprecated: 0.14
+
+               The ``linear` keyword is deprecated and will be removed,
+               use ``which`` keyword instead.
+
 
         Notes
         -----
@@ -998,7 +1045,7 @@ class CountModel(DiscreteModel):
         """
         if linear is not None:
             msg = 'linear keyword is deprecated, use which="linear"'
-            warnings.warn(msg, DeprecationWarning)
+            warnings.warn(msg, FutureWarning)
             if linear is True:
                 which = "linear"
 
@@ -1367,13 +1414,16 @@ class Poisson(CountModel):
         # TODO: temporary trailing underscore to not overwrite the monkey
         #       patched version
         # TODO: decide whether to move the imports
-        from patsy import DesignInfo
-        from statsmodels.base._constraints import (fit_constrained,
-                                                   LinearConstraints)
-
+        from statsmodels.base._constraints import (
+            LinearConstraints,
+            fit_constrained,
+        )
         # same pattern as in base.LikelihoodModel.t_test
-        lc = DesignInfo(self.exog_names).linear_constraint(constraints)
-        R, q = lc.coefs, lc.constants
+        from statsmodels.formula._manager import FormulaManager
+        mgr = FormulaManager()
+        lc = mgr.get_linear_constraints(constraints, self.exog_names)
+
+        R, q = lc.constraint_matrix, lc.constraint_values
 
         # TODO: add start_params option, need access to tranformation
         #       fit_constrained needs to do the transformation
@@ -1397,7 +1447,7 @@ class Poisson(CountModel):
         k_constr = len(q)
         res._results.df_resid += k_constr
         res._results.df_model -= k_constr
-        res._results.constraints = LinearConstraints.from_patsy(lc)
+        res._results.constraints = LinearConstraints.from_formula_parser(lc)
         res._results.k_constr = k_constr
         res._results.results_constrained = res_constr
         return res
@@ -1607,11 +1657,22 @@ class Poisson(CountModel):
             - 'prob' return probabilities for counts from 0 to max(endog) or
               for y_values if those are provided.
 
+            .. versionadded: 0.14
+
+               ``which`` replaces and extends the deprecated ``linear``
+               argument.
+
         linear : bool
             The ``linear` keyword is deprecated and will be removed,
             use ``which`` keyword instead.
             If True, returns the linear predicted values.  If False or None,
             then the statistic specified by ``which`` will be returned.
+
+            .. deprecated: 0.14
+
+               The ``linear` keyword is deprecated and will be removed,
+               use ``which`` keyword instead.
+
         y_values : array_like
             Values of the random variable endog at which pmf is evaluated.
             Only used if ``which="prob"``
@@ -1620,7 +1681,7 @@ class Poisson(CountModel):
 
         if linear is not None:
             msg = 'linear keyword is deprecated, use which="linear"'
-            warnings.warn(msg, DeprecationWarning)
+            warnings.warn(msg, FutureWarning)
             if linear is True:
                 which = "linear"
 
@@ -1646,7 +1707,7 @@ class Poisson(CountModel):
                               exposure=exposure, offset=offset,
                               )[:, None]
             # uses broadcasting
-            return stats.poisson.pmf(y_values, mu)
+            return stats.poisson._pmf(y_values, mu)
         else:
             raise ValueError('Value of the `which` option is not recognized')
 
@@ -1871,7 +1932,8 @@ class GeneralizedPoisson(CountModel):
 
         if callback is None:
             # work around perfect separation callback #3895
-            callback = lambda *x: x
+            def callback(*x):
+                return x
 
         mlefit = super().fit(start_params=start_params,
                              maxiter=maxiter,
@@ -1971,6 +2033,7 @@ class GeneralizedPoisson(CountModel):
             return score
 
     def score_factor(self, params, endog=None):
+        params = np.asarray(params)
         if self._transparams:
             alpha = np.exp(params[-1])
         else:
@@ -2023,8 +2086,8 @@ class GeneralizedPoisson(CountModel):
         a1 = 1 + alpha * mu_p
         a2 = mu + alpha * mu_p * y
 
-        dp = np.sum((np.log(mu) * ((a2 - mu) * ((y - 1) / a2 - 2 / a1) +
-                                   (a1 - 1) * a2 / a1 ** 2)))
+        dp = np.sum(np.log(mu) * ((a2 - mu) * ((y - 1) / a2 - 2 / a1) +
+                                   (a1 - 1) * a2 / a1 ** 2))
         return dp
 
     def hessian(self, params):
@@ -2066,7 +2129,7 @@ class GeneralizedPoisson(CountModel):
 
         for i in range(dim):
             for j in range(i + 1):
-                hess_arr[i,j] = np.sum(mu * exog[:,i,None] * exog[:,j,None] *
+                hess_val = np.sum(mu * exog[:,i,None] * exog[:,j,None] *
                     (mu * (a3 * a4 / a1**2 -
                            2 * a3**2 * a2 / a1**3 +
                            2 * a3 * (a4 + 1) / a1**2 -
@@ -2077,6 +2140,7 @@ class GeneralizedPoisson(CountModel):
                            a4 * (p - 1) / (a1 * mu)) +
                      ((y - 1) * (1 + a4) / a2 -
                       (1 + a4) / a1)), axis=0)
+                hess_arr[i, j] = np.squeeze(hess_val)
         tri_idx = np.triu_indices(dim, k=1)
         hess_arr[tri_idx] = hess_arr.T[tri_idx]
 
@@ -2123,6 +2187,7 @@ class GeneralizedPoisson(CountModel):
             parameter.
 
         """
+        params = np.asarray(params)
         if self._transparams:
             alpha = np.exp(params[-1])
         else:
@@ -2268,7 +2333,8 @@ class GeneralizedPoisson(CountModel):
         """
         mu = self.predict(params, exog=exog, exposure=exposure, offset=offset)
         p = self.parameterization + 1
-        distr = genpoisson_p(mu[:, None], params[-1], p)
+        # distr = genpoisson_p(mu[:, None], params[-1], p)
+        distr = genpoisson_p(mu, params[-1], p)
         return distr
 
 
@@ -2276,10 +2342,10 @@ class Logit(BinaryModel):
     __doc__ = """
     Logit Model
 
-    %(params)s
+    {params}
     offset : array_like
         Offset is added to the linear prediction with coefficient equal to 1.
-    %(extra_params)s
+    {extra_params}
 
     Attributes
     ----------
@@ -2287,8 +2353,8 @@ class Logit(BinaryModel):
         A reference to the endogenous response variable
     exog : ndarray
         A reference to the exogenous design.
-    """ % {'params': base._model_params_doc,
-           'extra_params': base._missing_param_doc + _check_rank_doc}
+    """.format(params=base._model_params_doc,
+           extra_params=base._missing_param_doc + _check_rank_doc)
 
     _continuous_ok = True
 
@@ -2569,10 +2635,10 @@ class Probit(BinaryModel):
     __doc__ = """
     Probit Model
 
-    %(params)s
+    {params}
     offset : array_like
         Offset is added to the linear prediction with coefficient equal to 1.
-    %(extra_params)s
+    {extra_params}
 
     Attributes
     ----------
@@ -2580,13 +2646,13 @@ class Probit(BinaryModel):
         A reference to the endogenous response variable
     exog : ndarray
         A reference to the exogenous design.
-    """ % {'params': base._model_params_doc,
-           'extra_params': base._missing_param_doc + _check_rank_doc}
+    """.format(params=base._model_params_doc,
+           extra_params=base._missing_param_doc + _check_rank_doc)
 
     @cache_readonly
     def link(self):
         from statsmodels.genmod.families import links
-        link = links.probit()
+        link = links.Probit()
         return link
 
     def cdf(self, X):
@@ -2896,7 +2962,7 @@ class MNLogit(MultinomialModel):
         A nobs x k array where `nobs` is the number of observations and `k`
         is the number of regressors. An intercept is not included by default
         and should be added by the user. See `statsmodels.tools.add_constant`.
-    %(extra_params)s
+    {extra_params}
 
     Attributes
     ----------
@@ -2922,7 +2988,7 @@ class MNLogit(MultinomialModel):
     Notes
     -----
     See developer notes for further information on `MNLogit` internals.
-    """ % {'extra_params': base._missing_param_doc + _check_rank_doc}
+    """.format(extra_params=base._missing_param_doc + _check_rank_doc)
 
     def __init__(self, endog, exog, check_rank=True, **kwargs):
         super().__init__(endog, exog, check_rank=check_rank, **kwargs)
@@ -3432,8 +3498,11 @@ class NegativeBinomial(CountModel):
             for j in range(dim):
                 if j > i:
                     continue
-                hess_arr[i,j] = np.sum(-exog[:,i,None] * exog[:,j,None] *
-                                       const_arr, axis=0)
+                hess_arr[i,j] = np.squeeze(
+                    np.sum(-exog[:,i,None] * exog[:,j,None] * const_arr,
+                           axis=0
+                           )
+                )
         tri_idx = np.triu_indices(dim, k=1)
         hess_arr[tri_idx] = hess_arr.T[tri_idx]
         return hess_arr
@@ -3473,9 +3542,13 @@ class NegativeBinomial(CountModel):
             for j in range(dim):
                 if j > i:
                     continue
-                hess_arr[i,j] = np.sum(dparams[:,i,None] * dmudb[:,j,None] +
-                                 xmu_alpha[:,i,None] * xmu_alpha[:,j,None] *
-                                 trigamma, axis=0)
+                hess_arr[i,j] = np.squeeze(
+                    np.sum(
+                        dparams[:,i,None] * dmudb[:,j,None] +
+                        xmu_alpha[:,i,None] * xmu_alpha[:,j,None] * trigamma,
+                        axis=0
+                    )
+                )
         tri_idx = np.triu_indices(dim, k=1)
         hess_arr[tri_idx] = hess_arr.T[tri_idx]
 
@@ -3528,7 +3601,7 @@ class NegativeBinomial(CountModel):
                 if j > i:
                     continue
                 hess_arr[i,j] = np.sum(-exog[:,i,None] * exog[:,j,None] *
-                                       const_arr, axis=0)
+                                       const_arr, axis=0).squeeze()
         tri_idx = np.triu_indices(dim, k=1)
         hess_arr[tri_idx] = hess_arr.T[tri_idx]
 
@@ -3561,7 +3634,7 @@ class NegativeBinomial(CountModel):
 
         if linear is not None:
             msg = 'linear keyword is deprecated, use which="linear"'
-            warnings.warn(msg, DeprecationWarning)
+            warnings.warn(msg, FutureWarning)
             if linear is True:
                 which = "linear"
 
@@ -3574,8 +3647,13 @@ class NegativeBinomial(CountModel):
                 offset=offset
                 )
             if y_values is None:
-                y_values = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
-            return distr.pmf(y_values)
+                y_values = np.arange(0, np.max(self.endog) + 1)
+            else:
+                y_values = np.asarray(y_values)
+
+            assert y_values.ndim == 1
+            y_values = y_values[..., None]
+            return distr.pmf(y_values).T
 
         exog, offset, exposure = self._get_predict_arrays(
             exog=exog,
@@ -3666,7 +3744,8 @@ class NegativeBinomial(CountModel):
 
         if callback is None:
             # work around perfect separation callback #3895
-            callback = lambda *x: x
+            def callback(*x):
+                return x
 
         mlefit = super().fit(start_params=start_params,
                              maxiter=maxiter, method=method, disp=disp,
@@ -3744,7 +3823,8 @@ class NegativeBinomial(CountModel):
         """
         mu = self.predict(params, exog=exog, exposure=exposure, offset=offset)
         if self.loglike_method == 'geometric':
-            distr = stats.geom(1 / (1 + mu[:, None]), loc=-1)
+            # distr = stats.geom(1 / (1 + mu[:, None]), loc=-1)
+            distr = stats.geom(1 / (1 + mu), loc=-1)
         else:
             if self.loglike_method == 'nb2':
                 p = 2
@@ -3755,7 +3835,8 @@ class NegativeBinomial(CountModel):
             q = 2 - p
             size = 1. / alpha * mu**q
             prob = size / (size + mu)
-            distr = nbinom(size[:, None], prob[:, None])
+            # distr = nbinom(size[:, None], prob[:, None])
+            distr = nbinom(size, prob)
 
         return distr
 
@@ -3944,6 +4025,7 @@ class NegativeBinomialP(CountModel):
             The score vector of the model, i.e. the first derivative of the
             loglikelihood function, evaluated at `params`
         """
+        params = np.asarray(params)
         if self._transparams:
             alpha = np.exp(params[-1])
         else:
@@ -4061,6 +4143,7 @@ class NegativeBinomialP(CountModel):
         hessian : ndarray, 2-D
             The hessian matrix of the model.
         """
+        params = np.asarray(params)
         if self._transparams:
             alpha = np.exp(params[-1])
         else:
@@ -4167,9 +4250,10 @@ class NegativeBinomialP(CountModel):
 
         if callback is None:
             # work around perfect separation callback #3895
-            callback = lambda *x: x
+            def callback(*x):
+                return x
 
-        mlefit = super(NegativeBinomialP, self).fit(start_params=start_params,
+        mlefit = super().fit(start_params=start_params,
                         maxiter=maxiter, method=method, disp=disp,
                         full_output=full_output, callback=callback,
                         **kwargs)
@@ -4330,7 +4414,8 @@ class NegativeBinomialP(CountModel):
         """
         mu = self.predict(params, exog=exog, exposure=exposure, offset=offset)
         size, prob = self.convert_params(params, mu)
-        distr = nbinom(size[:, None], prob[:, None])
+        # distr = nbinom(size[:, None], prob[:, None])
+        distr = nbinom(size, prob)
         return distr
 
 
@@ -4346,11 +4431,13 @@ class DiscreteResults(base.LikelihoodModelResults):
         #super(DiscreteResults, self).__init__(model, params,
         #        np.linalg.inv(-hessian), scale=1.)
         self.model = model
+        self.method = "MLE"
         self.df_model = model.df_model
         self.df_resid = model.df_resid
         self._cache = {}
         self.nobs = model.exog.shape[0]
         self.__dict__.update(mlefit.__dict__)
+        self.converged = mlefit.mle_retvals["converged"]
 
         if not hasattr(self, 'cov_type'):
             # do this only if super, i.e. mlefit did not already add cov_type
@@ -4545,15 +4632,15 @@ class DiscreteResults(base.LikelihoodModelResults):
             One of 'aic', 'bic', 'tic' or 'gbic'.
         dk_params : int or float
             Correction to the number of parameters used in the information
-            criterion. By default, only mean parameters are included, the
-            scale parameter is not included in the parameter count.
-            Use ``dk_params=1`` to include scale in the parameter count.
+            criterion.
 
-        Returns the given information criterion value.
+        Returns
+        -------
+        Value of information criterion.
 
         Notes
         -----
-        Tic and bbic
+        Tic and gbic
 
         References
         ----------
@@ -4770,6 +4857,8 @@ class DiscreteResults(base.LikelihoodModelResults):
         When using after Poisson, returns the expected number of events per
         period, assuming that the model is loglinear.
         """
+        if getattr(self.model, "offset", None) is not None:
+            raise NotImplementedError("Margins with offset are not available.")
         from statsmodels.discrete.discrete_margins import DiscreteMargins
         return DiscreteMargins(self, (at, method, atexog, dummy, count))
 
@@ -4821,7 +4910,7 @@ class DiscreteResults(base.LikelihoodModelResults):
 
         top_left = [('Dep. Variable:', None),
                      ('Model:', [self.model.__class__.__name__]),
-                     ('Method:', ['MLE']),
+                     ('Method:', [self.method]),
                      ('Date:', None),
                      ('Time:', None),
                      ('converged:', ["%s" % self.mle_retvals['converged']]),
@@ -4997,7 +5086,7 @@ class L1CountResults(DiscreteResults):
             "extra_attr" : _l1_results_attr}
 
     def __init__(self, model, cntfit):
-        super(L1CountResults, self).__init__(model, cntfit)
+        super().__init__(model, cntfit)
         # self.trimmed is a boolean array with T/F telling whether or not that
         # entry in params has been set zero'd out.
         self.trimmed = cntfit.mle_retvals['trimmed']
@@ -5096,8 +5185,7 @@ class PoissonResults(CountResults):
         --------
         statsmodels.statsmodels.discrete.diagnostic.PoissonDiagnostic
         """
-        from statsmodels.discrete.diagnostic import (
-            PoissonDiagnostic)
+        from statsmodels.discrete.diagnostic import PoissonDiagnostic
         return PoissonDiagnostic(self, y_max=y_max)
 
 
@@ -5141,7 +5229,7 @@ class BinaryResults(DiscreteResults):
     @Appender(DiscreteResults.summary.__doc__)
     def summary(self, yname=None, xname=None, title=None, alpha=.05,
                 yname_list=None):
-        smry = super(BinaryResults, self).summary(yname, xname, title, alpha,
+        smry = super().summary(yname, xname, title, alpha,
                                                   yname_list)
         fittedvalues = self.model.cdf(self.fittedvalues)
         absprederror = np.abs(self.model.endog - fittedvalues)
@@ -5152,7 +5240,7 @@ class BinaryResults(DiscreteResults):
         etext = []
         if predclose_sum == len(fittedvalues):  # TODO: nobs?
             wstr = "Complete Separation: The results show that there is"
-            wstr += "complete separation.\n"
+            wstr += "complete separation or perfect prediction.\n"
             wstr += "In this case the Maximum Likelihood Estimator does "
             wstr += "not exist and the parameters\n"
             wstr += "are not identified."
@@ -5313,7 +5401,7 @@ class L1BinaryResults(BinaryResults):
     "Results instance for binary data fit by l1 regularization",
     "extra_attr" : _l1_results_attr}
     def __init__(self, model, bnryfit):
-        super(L1BinaryResults, self).__init__(model, bnryfit)
+        super().__init__(model, bnryfit)
         # self.trimmed is a boolean array with T/F telling whether or not that
         # entry in params has been set zero'd out.
         self.trimmed = bnryfit.mle_retvals['trimmed']
@@ -5327,7 +5415,7 @@ class MultinomialResults(DiscreteResults):
             "A results class for multinomial data", "extra_attr" : ""}
 
     def __init__(self, model, mlefit):
-        super(MultinomialResults, self).__init__(model, mlefit)
+        super().__init__(model, mlefit)
         self.J = model.J
         self.K = model.K
 
@@ -5484,7 +5572,7 @@ class L1MultinomialResults(MultinomialResults):
         "A results class for multinomial data fit by l1 regularization",
         "extra_attr" : _l1_results_attr}
     def __init__(self, model, mlefit):
-        super(L1MultinomialResults, self).__init__(model, mlefit)
+        super().__init__(model, mlefit)
         # self.trimmed is a boolean array with T/F telling whether or not that
         # entry in params has been set zero'd out.
         self.trimmed = mlefit.mle_retvals['trimmed']

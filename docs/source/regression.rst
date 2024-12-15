@@ -33,18 +33,18 @@ Examples
 Detailed examples can be found here:
 
 
-* `OLS <examples/notebooks/generated/ols.html>`__
-* `WLS <examples/notebooks/generated/wls.html>`__
-* `GLS <examples/notebooks/generated/gls.html>`__
-* `Recursive LS <examples/notebooks/generated/recursive_ls.html>`__
-* `Rolling LS <examples/notebooks/generated/rolling_ls.html>`__
+* `OLS <examples/notebooks/generated/ols.ipynb>`_
+* `WLS <examples/notebooks/generated/wls.ipynb>`_
+* `GLS <examples/notebooks/generated/gls.ipynb>`_
+* `Recursive LS <examples/notebooks/generated/recursive_ls.ipynb>`_
+* `Rolling LS <examples/notebooks/generated/rolling_ls.ipynb>`_
 
 Technical Documentation
 -----------------------
 
 The statistical model is assumed to be
 
- :math:`Y = X\beta + \mu`,  where :math:`\mu\sim N\left(0,\Sigma\right).`
+ :math:`Y = X\beta + \epsilon`,  where :math:`\epsilon\sim N\left(0,\Sigma\right).`
 
 Depending on the properties of :math:`\Sigma`, we have currently four classes available:
 
@@ -120,7 +120,7 @@ normalized_cov_params : array
     A `p` x `p` array equal to :math:`(X^{T}\Sigma^{-1}X)^{-1}`.
 sigma : array
     The `n` x `n` covariance matrix of the error terms:
-    :math:`\mu\sim N\left(0,\Sigma\right)`.
+    :math:`\epsilon\sim N\left(0,\Sigma\right)`.
 wexog : array
     The whitened design matrix :math:`\Psi^{T}X`.
 wendog : array

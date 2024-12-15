@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Test for panel robust covariance estimators after pooled ols
 this follows the example from xtscc paper/help
 
@@ -28,7 +27,7 @@ def test_panel_robust_cov():
               prepend=False)).fit()
 
     #time indicator in range(max Ti)
-    time = np.asarray(dtapa_exog[['year']])
+    time = np.require(dtapa_exog[['year']], requirements="W")
     time -= time.min()
     time = np.squeeze(time).astype(int)
 

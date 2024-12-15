@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Sun May 10 12:39:33 2015
 
@@ -35,7 +34,7 @@ class GLMPenalized(PenalizedMixin, GLM):
     pass
 
 
-class CheckPenalizedPoisson(object):
+class CheckPenalizedPoisson:
 
     @classmethod
     def setup_class(cls):
@@ -67,7 +66,7 @@ class CheckPenalizedPoisson(object):
         cls._initialize()
 
     @classmethod
-    def _generate_endog(self, linpred):
+    def _generate_endog(cls, linpred):
         mu = np.exp(linpred)
         np.random.seed(999)
         y = np.random.poisson(mu)
@@ -404,7 +403,7 @@ class TestPenalizedPoissonOraclePenalized2HC(CheckPenalizedPoisson):
 class CheckPenalizedLogit(CheckPenalizedPoisson):
 
     @classmethod
-    def _generate_endog(self, linpred):
+    def _generate_endog(cls, linpred):
         mu = 1 / (1 + np.exp(-linpred + linpred.mean() - 0.5))
         np.random.seed(999)
         y = np.random.rand(len(mu)) < mu
@@ -517,7 +516,7 @@ class TestPenalizedLogitOraclePenalized2(CheckPenalizedLogit):
 class CheckPenalizedBinomCount(CheckPenalizedPoisson):
 
     @classmethod
-    def _generate_endog(self, linpred):
+    def _generate_endog(cls, linpred):
         mu = 1 / (1 + np.exp(-linpred + linpred.mean() - 0.5))
         np.random.seed(999)
         n_trials = 5 * np.ones(len(mu), int)
@@ -614,7 +613,7 @@ class TestPenalizedGLMBinomCountOracleHC2(CheckPenalizedBinomCount):
 class CheckPenalizedGaussian(CheckPenalizedPoisson):
 
     @classmethod
-    def _generate_endog(self, linpred):
+    def _generate_endog(cls, linpred):
         sig_e = np.sqrt(0.1)
         np.random.seed(999)
         y = linpred + sig_e * np.random.rand(len(linpred))

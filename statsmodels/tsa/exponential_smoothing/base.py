@@ -514,7 +514,7 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
 
         Parameters
         ----------
-        method : {'ljungbox','boxpierece', None}
+        method : {'ljungbox', 'boxpierce', None}
             The statistical test for serial correlation. If None, an attempt is
             made to select an appropriate test.
         lags : None, int or array_like
@@ -937,7 +937,7 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
             top_left.append(("Covariance Type:", [self.cov_type]))
 
         format_str = lambda array: [  # noqa:E731
-            ", ".join(["{0:.2f}".format(i) for i in array])
+            ", ".join([f"{i:.2f}" for i in array])
         ]
         diagn_left = [
             ("Ljung-Box (Q):", format_str(lb[:, 0, -1])),
@@ -982,7 +982,7 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
 
         if etext:
             etext = [
-                "[{0}] {1}".format(i + 1, text) for i, text in enumerate(etext)
+                f"[{i + 1}] {text}" for i, text in enumerate(etext)
             ]
             etext.insert(0, "Warnings:")
             summary.add_extra_txt(etext)

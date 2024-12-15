@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """linear model with Theil prior probabilistic restrictions, generalized Ridge
 
 Created on Tue Dec 20 00:10:10 2011
@@ -124,7 +123,7 @@ class TheilGLS(GLS):
 
     def __init__(self, endog, exog, r_matrix=None, q_matrix=None,
                  sigma_prior=None, sigma=None):
-        super(TheilGLS, self).__init__(endog, exog, sigma=sigma)
+        super().__init__(endog, exog, sigma=sigma)
 
         if r_matrix is not None:
             r_matrix = np.asarray(r_matrix)
@@ -303,7 +302,7 @@ class TheilGLS(GLS):
 class TheilRegressionResults(RegressionResults):
 
     def __init__(self, *args, **kwds):
-        super(TheilRegressionResults, self).__init__(*args, **kwds)
+        super().__init__(*args, **kwds)
 
         # overwrite df_model and df_resid
         self.df_model = self.hatmatrix_trace() - 1 #assume constant
@@ -361,9 +360,12 @@ class TheilRegressionResults(RegressionResults):
     @cache_readonly
     def aicc(self):
         aic = np.log(self.mse_resid) + 1
-        aic += 2 * (1. + self.hatmatrix_trace()) / (self.nobs - self.hatmatrix_trace() -2)
-        return aic
-
+        eff_dof = self.nobs - self.hatmatrix_trace() - 2
+        if eff_dof > 0:
+            adj = 2 * (1. + self.hatmatrix_trace()) / eff_dof
+        else:
+            adj = np.inf
+        return aic + adj
 
     def test_compatibility(self):
         """Hypothesis test for the compatibility of prior mean with data
@@ -382,7 +384,6 @@ class TheilRegressionResults(RegressionResults):
         pvalue = stats.chi2.sf(statistic, df)
         # TODO: return results class
         return statistic, pvalue, df
-
 
     def share_data(self):
         """a measure for the fraction of the data in the estimation result
@@ -415,6 +416,7 @@ def coef_restriction_meandiff(n_coeffs, n_vars=None, position=0):
         full[:, position:position+n_coeffs] = reduced
         return full
 
+
 def coef_restriction_diffbase(n_coeffs, n_vars=None, position=0, base_idx=0):
 
     reduced = -np.eye(n_coeffs)  #make all rows, drop one row later
@@ -431,8 +433,10 @@ def coef_restriction_diffbase(n_coeffs, n_vars=None, position=0, base_idx=0):
         full[:, position:position+n_coeffs] = reduced
         return full
 
+
 def next_odd(d):
     return d + (1 - d % 2)
+
 
 def coef_restriction_diffseq(n_coeffs, degree=1, n_vars=None, position=0, base_idx=0):
     #check boundaries, returns "valid" ?

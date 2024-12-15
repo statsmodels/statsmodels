@@ -16,15 +16,21 @@ Judge, ... (1985): The Theory and Practise of Econometrics
 Author: josefpktd
 License: BSD
 """
-import warnings
-
+from statsmodels.compat.numpy import NP_LT_2
 from statsmodels.compat.pandas import Appender
+
+import warnings
 
 import numpy as np
 from scipy import linalg, optimize, signal
 
 from statsmodels.tools.docstring import Docstring, remove_parameters
 from statsmodels.tools.validation import array_like
+
+if NP_LT_2:
+    ComplexWarning = np.ComplexWarning
+else:
+    ComplexWarning = np.exceptions.ComplexWarning
 
 __all__ = [
     "arma_acf",
@@ -301,7 +307,7 @@ def arma_periodogram(ar, ma, worN=None, whole=0):
         import warnings
 
         warnings.warn(
-            "Warning: nan in frequency response h, maybe a unit " "root",
+            "Warning: nan in frequency response h, maybe a unit root",
             RuntimeWarning,
             stacklevel=2,
         )
@@ -500,7 +506,7 @@ def lpol2index(ar):
         index (lags) of lag polynomial with non-zero elements
     """
     with warnings.catch_warnings():
-        warnings.simplefilter("ignore", np.ComplexWarning)
+        warnings.simplefilter("ignore", ComplexWarning)
         ar = array_like(ar, "ar")
     index = np.nonzero(ar)[0]
     coeffs = ar[index]
@@ -658,7 +664,7 @@ _generate_sample_doc.replace_block("Notes", [])
 _generate_sample_doc.replace_block("Examples", [])
 
 
-class ArmaProcess(object):
+class ArmaProcess:
     r"""
     Theoretical properties of an ARMA process for specified lag-polynomials.
 
@@ -734,7 +740,7 @@ class ArmaProcess(object):
         if ma is None:
             ma = np.array([1.0])
         with warnings.catch_warnings():
-            warnings.simplefilter("ignore", np.ComplexWarning)
+            warnings.simplefilter("ignore", ComplexWarning)
             self.ar = array_like(ar, "ar")
             self.ma = array_like(ma, "ma")
         self.arcoefs = -self.ar[1:]
@@ -750,10 +756,10 @@ class ArmaProcess(object):
 
         Parameters
         ----------
-        maroots : array_like
+        maroots : array_like, optional
             Roots for the MA polynomial
             1 + theta_1*z + theta_2*z^2 + ..... + theta_n*z^n
-        arroots : array_like
+        arroots : array_like, optional
             Roots for the AR polynomial
             1 - phi_1*z - phi_2*z^2 - ..... - phi_n*z^n
         nobs : int, optional
@@ -775,13 +781,21 @@ class ArmaProcess(object):
         >>> arma_process.isinvertible
         True
         """
-        arpoly = np.polynomial.polynomial.Polynomial.fromroots(arroots)
-        mapoly = np.polynomial.polynomial.Polynomial.fromroots(maroots)
+        if arroots is not None and len(arroots):
+            arpoly = np.polynomial.polynomial.Polynomial.fromroots(arroots)
+            arcoefs = arpoly.coef[1:] / arpoly.coef[0]
+        else:
+            arcoefs = []
+
+        if maroots is not None and len(maroots):
+            mapoly = np.polynomial.polynomial.Polynomial.fromroots(maroots)
+            macoefs = mapoly.coef[1:] / mapoly.coef[0]
+        else:
+            macoefs = []
+
         # As from_coeffs will create a polynomial with constant 1/-1,(MA/AR)
         # we need to scale the polynomial coefficients accordingly
-        return cls(np.r_[1, -np.asarray(-1 * arpoly.coef[1:] / arpoly.coef[0])],
-                   np.r_[1, np.asarray(mapoly.coef[1:] / mapoly.coef[0])],
-                   nobs=nobs)
+        return cls(np.r_[1, arcoefs], np.r_[1, macoefs], nobs=nobs)
 
     @classmethod
     def from_coeffs(cls, arcoefs=None, macoefs=None, nobs=100):
@@ -875,7 +889,7 @@ class ArmaProcess(object):
         )
 
     def __str__(self):
-        return "ArmaProcess\nAR: {0}\nMA: {1}".format(
+        return "ArmaProcess\nAR: {}\nMA: {}".format(
             self.ar.tolist(), self.ma.tolist()
         )
 

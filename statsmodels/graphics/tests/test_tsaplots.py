@@ -1,3 +1,4 @@
+from statsmodels.compat.pandas import MONTH_END
 from statsmodels.compat.python import lmap
 
 import calendar
@@ -9,10 +10,13 @@ from numpy.testing import assert_, assert_equal
 import pandas as pd
 import pytest
 
+from statsmodels.compat.python import PYTHON_IMPL_WASM
 from statsmodels.datasets import elnino, macrodata
 from statsmodels.graphics.tsaplots import (
     month_plot,
+    plot_accf_grid,
     plot_acf,
+    plot_ccf,
     plot_pacf,
     plot_predict,
     quarter_plot,
@@ -191,11 +195,66 @@ def test_plot_pacf_irregular(close_figures):
 
 
 @pytest.mark.matplotlib
+def test_plot_ccf(close_figures):
+    # Just test that it runs.
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+
+    ar = np.r_[1.0, -0.9]
+    ma = np.r_[1.0, 0.9]
+    armaprocess = tsp.ArmaProcess(ar, ma)
+    rs = np.random.RandomState(1234)
+    x1 = armaprocess.generate_sample(100, distrvs=rs.standard_normal)
+    x2 = armaprocess.generate_sample(100, distrvs=rs.standard_normal)
+    plot_ccf(x1, x2)
+    plot_ccf(x1, x2, ax=ax, lags=10)
+    plot_ccf(x1, x2, ax=ax)
+    plot_ccf(x1, x2, ax=ax, alpha=None)
+    plot_ccf(x1, x2, ax=ax, negative_lags=True)
+    plot_ccf(x1, x2, ax=ax, adjusted=True)
+    plot_ccf(x1, x2, ax=ax, fft=True)
+    plot_ccf(x1, x2, ax=ax, title='CCF')
+    plot_ccf(x1, x2, ax=ax, auto_ylims=True)
+    plot_ccf(x1, x2, ax=ax, use_vlines=False)
+
+
+@pytest.mark.matplotlib
+def test_plot_accf_grid(close_figures):
+    # Just test that it runs.
+    fig = plt.figure()
+
+    ar = np.r_[1.0, -0.9]
+    ma = np.r_[1.0, 0.9]
+    armaprocess = tsp.ArmaProcess(ar, ma)
+    rs = np.random.RandomState(1234)
+    x = np.vstack([
+        armaprocess.generate_sample(100, distrvs=rs.standard_normal),
+        armaprocess.generate_sample(100, distrvs=rs.standard_normal),
+    ]).T
+    plot_accf_grid(x)
+    plot_accf_grid(pd.DataFrame({'x': x[:, 0], 'y': x[:, 1]}))
+    plot_accf_grid(x, fig=fig, lags=10)
+    plot_accf_grid(x, fig=fig)
+    plot_accf_grid(x, fig=fig, negative_lags=False)
+    plot_accf_grid(x, fig=fig, alpha=None)
+    plot_accf_grid(x, fig=fig, adjusted=True)
+    plot_accf_grid(x, fig=fig, fft=True)
+    plot_accf_grid(x, fig=fig, auto_ylims=True)
+    plot_accf_grid(x, fig=fig, use_vlines=False)
+
+
+@pytest.mark.skipif(
+    PYTHON_IMPL_WASM,
+    reason="Matplotlib uses different backend in WASM"
+)
+@pytest.mark.matplotlib
 def test_plot_month(close_figures):
     dta = elnino.load_pandas().data
     dta["YEAR"] = dta.YEAR.astype(int).apply(str)
     dta = dta.set_index("YEAR").T.unstack()
-    dates = pd.to_datetime(["-".join([x[1], x[0]]) for x in dta.index.values])
+    dates = pd.to_datetime(
+        ["-".join([x[1], x[0]]) for x in dta.index.values], format="%b-%Y"
+    )
 
     # test dates argument
     fig = month_plot(dta.values, dates=dates, ylabel="el nino")
@@ -244,7 +303,7 @@ def test_plot_month(close_figures):
 def test_plot_quarter(close_figures):
     dta = macrodata.load_pandas().data
     dates = lmap(
-        "Q".join,
+        "-Q".join,
         zip(
             dta.year.astype(int).apply(str), dta.quarter.astype(int).apply(str)
         ),
@@ -253,16 +312,18 @@ def test_plot_quarter(close_figures):
     quarter_plot(dta.unemp.values, dates)
 
     # test with a DatetimeIndex with no freq
-    dta.set_index(pd.to_datetime(dates), inplace=True)
+    from statsmodels.compat.pandas import PD_LT_2_2_0
+    FREQ = "QS-Oct" if PD_LT_2_2_0 else "QS-OCT"
+    dta.set_index(pd.DatetimeIndex(dates, freq=FREQ), inplace=True)
     quarter_plot(dta.unemp)
 
     # w freq
     # see pandas #6631
-    dta.index = pd.DatetimeIndex(pd.to_datetime(dates), freq="QS-Oct")
+    dta.index = pd.DatetimeIndex(dates, freq=FREQ)
     quarter_plot(dta.unemp)
 
     # w PeriodIndex
-    dta.index = pd.PeriodIndex(pd.to_datetime(dates), freq="Q")
+    dta.index = pd.PeriodIndex(dates, freq="Q")
     quarter_plot(dta.unemp)
 
 
@@ -311,7 +372,9 @@ def test_predict_plot(use_pandas, model_and_args, alpha):
         y[i] += 1.8 * y[i - 1] - 0.9 * y[i - 2]
     y = y[100:]
     if use_pandas:
-        index = pd.date_range("1960-1-1", freq="M", periods=y.shape[0] + 24)
+        index = pd.date_range(
+            "1960-1-1", freq=MONTH_END, periods=y.shape[0] + 24
+        )
         start = index[index.shape[0] // 2]
         end = index[-1]
         y = pd.Series(y, index=index[:-24])
@@ -321,3 +384,14 @@ def test_predict_plot(use_pandas, model_and_args, alpha):
     res = model(y, **kwargs).fit()
     fig = plot_predict(res, start, end, alpha=alpha)
     assert isinstance(fig, plt.Figure)
+
+
+@pytest.mark.matplotlib
+def test_plot_pacf_small_sample():
+    idx = [pd.Timestamp.now() + pd.Timedelta(seconds=i) for i in range(10)]
+    df = pd.DataFrame(
+        index=idx,
+        columns=["a"],
+        data=list(range(10))
+    )
+    plot_pacf(df)

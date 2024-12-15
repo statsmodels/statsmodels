@@ -174,7 +174,7 @@ Releasing
 
 5. Build a sdist to ensure that that the build is clean::
 
-    python setup.py sdist --formats=gztar
+    python -m build --sdist .
 
    It is important that the build on the tar.gz file is the same as the tag. It must not be **dirty**
 
@@ -238,7 +238,7 @@ Once any patches have been backported to a maintenance branch, the release steps
 
 5. Build a sdist to ensure that that the build is clean::
 
-    python setup.py sdist --formats=gztar
+    python -m build --sdist .
 
    It is important that the build on the tar.gz file is the same as the tag. It must not be **dirty**.
 

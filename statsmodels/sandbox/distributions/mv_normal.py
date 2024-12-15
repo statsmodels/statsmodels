@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Multivariate Normal and t distributions
 
 
@@ -324,7 +323,7 @@ def bivariate_normal(x, mu, cov):
 
 
 
-class BivariateNormal(object):
+class BivariateNormal:
 
 
     #TODO: make integration limits more flexible
@@ -377,7 +376,7 @@ class BivariateNormal(object):
         rvs = self.rvs(size=size)
         return fun(rvs).mean()
 
-class MVElliptical(object):
+class MVElliptical:
     '''Base Class for multivariate elliptical distributions, normal and t
 
     contains common initialization, and some common methods
@@ -682,7 +681,7 @@ class MVElliptical(object):
 
 
 #parts taken from linear_model, but heavy adjustments
-class MVNormal0(object):
+class MVNormal0:
     '''Class for Multivariate Normal Distribution
 
     original full version, kept for testing, new version inherits from
@@ -1025,7 +1024,7 @@ class MVT(MVElliptical):
             currently not used
 
         '''
-        super(MVT, self).__init__(mean, sigma)
+        super().__init__(mean, sigma)
         self.extra_args = ['df']  #overwrites extra_args of super
         self.df = df
 

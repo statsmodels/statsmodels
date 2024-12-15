@@ -4,7 +4,12 @@ Basic tests for the BM model
 These test standard that the state space model is set up as desired, that
 expected exceptions are raised, etc.
 """
-from statsmodels.compat.pandas import assert_frame_equal, assert_series_equal
+from statsmodels.compat.pandas import (
+    MONTH_END,
+    QUARTER_END,
+    assert_frame_equal,
+    assert_series_equal,
+)
 
 import numpy as np
 from numpy.testing import assert_, assert_allclose, assert_equal
@@ -19,6 +24,8 @@ from statsmodels.tsa.statespace import (
     sarimax,
 )
 from statsmodels.tsa.statespace.tests import test_dynamic_factor_mq_monte_carlo
+
+SKIP_MONTE_CARLO_TESTS = True
 
 
 def test_default():
@@ -418,6 +425,78 @@ def test_factor_order_gt1():
     assert_allclose(mod['state_cov'], desired)
 
 
+def test_factor_order_12():
+    # Includes 2 monthly and 2 quarterly series
+    # This case: factors= 2, factor_orders=(1,2), idiosyncratic_ar1=True
+
+    # Create the datasets
+    index_M = pd.period_range(start='2000', periods=12, freq='M')
+    index_Q = pd.period_range(start='2000', periods=4, freq='Q')
+
+    dta_M = pd.DataFrame(np.zeros((12, 2)), index=index_M,
+                         columns=['M0', 'M1'])
+    dta_Q = pd.DataFrame(np.zeros((4, 2)), index=index_Q, columns=['Q0', 'Q1'])
+    # Add some noise so the variables aren't constants
+    dta_M.iloc[0] = 1.
+    dta_Q.iloc[1] = 1.
+
+    # Create the model instance
+    mod = dynamic_factor_mq.DynamicFactorMQ(
+        dta_M, endog_quarterly=dta_Q, factors=2, factor_orders={'0': 2},
+        idiosyncratic_ar1=True)
+
+    # Test dimensions
+    assert_equal(mod.k_endog, 2 + 2)
+    assert_equal(mod.k_states, 5 * 2 + 2 + 2 * 5)
+    assert_equal(mod.ssm.k_posdef, 2 + 2 + 2)
+
+    # Test names
+    assert_equal(mod.endog_names, ['M0', 'M1', 'Q0', 'Q1'])
+    desired = (['0', 'L1.0', 'L2.0', 'L3.0', 'L4.0', '1',
+                'L1.1', 'L2.1', 'L3.1', 'L4.1'] +
+               ['eps_M.M0', 'eps_M.M1', 'eps_Q.Q0', 'eps_Q.Q1'] +
+               ['L1.eps_Q.Q0', 'L1.eps_Q.Q1'] +
+               ['L2.eps_Q.Q0', 'L2.eps_Q.Q1'] +
+               ['L3.eps_Q.Q0', 'L3.eps_Q.Q1'] +
+               ['L4.eps_Q.Q0', 'L4.eps_Q.Q1'])
+    assert_equal(mod.state_names, desired)
+    desired = [
+        'loading.0->M0', 'loading.1->M0', 'loading.0->M1', 'loading.1->M1',
+        'loading.0->Q0', 'loading.1->Q0', 'loading.0->Q1', 'loading.1->Q1',
+        'L1.0->0', 'L2.0->0', 'L1.1->1',
+        'fb(0).cov.chol[1,1]', 'fb(1).cov.chol[1,1]',
+        'L1.eps_M.M0', 'L1.eps_M.M1',
+        'L1.eps_Q.Q0', 'L1.eps_Q.Q1',
+        'sigma2.M0', 'sigma2.M1', 'sigma2.Q0', 'sigma2.Q1']
+    assert_equal(mod.param_names, desired)
+
+    # Test fixed elements of state space representation
+    assert_allclose(mod['obs_intercept'], 0)
+
+    assert_allclose(mod['design', :2, 10:12], np.eye(2))
+    assert_allclose(mod['design', 2:, 12:14], np.eye(2))
+    assert_allclose(mod['design', 2:, 14:16], 2 * np.eye(2))
+    assert_allclose(mod['design', 2:, 16:18], 3 * np.eye(2))
+    assert_allclose(mod['design', 2:, 18:20], 2 * np.eye(2))
+    assert_allclose(mod['design', 2:, 20:22], np.eye(2))
+    assert_allclose(np.sum(mod['design']), 20)
+
+    assert_allclose(mod['obs_cov'], 0)
+    assert_allclose(mod['state_intercept'], 0)
+
+    assert_allclose(mod['transition', 1:5, :4], np.eye(4))
+    assert_allclose(mod['transition', 14:22, 12:20], np.eye(2 * 4))
+    assert_allclose(np.sum(mod['transition']), 16)
+
+    assert_allclose(mod['selection', :2, :2], np.array([[1, 0], [0, 0]]))
+    assert_allclose(mod['selection', 4:6, :2], np.array([[0, 0], [0, 1]]))
+    assert_allclose(mod['selection', 10:12, 2:4], np.eye(2))
+    assert_allclose(mod['selection', 12:14, 4:6], np.eye(2))
+    assert_allclose(np.sum(mod['selection']), 6)
+
+    assert_allclose(mod['state_cov'], 0)
+
+
 def test_k_factors_gt1_factor_order_gt1():
     # Includes 2 monthly and 2 quarterly series
     # This case: kactors=2, factor_orders=6, idiosyncratic_ar1=True
@@ -727,7 +806,7 @@ def test_invalid_model_specification():
     dta_period_M = pd.DataFrame(
         dta, index=pd.period_range(start='2000', periods=10, freq='M'))
     dta_date_M = pd.DataFrame(
-        dta, index=pd.date_range(start='2000', periods=10, freq='M'))
+        dta, index=pd.date_range(start='2000', periods=10, freq=MONTH_END))
     dta_period_Q = pd.DataFrame(
         dta, index=pd.period_range(start='2000', periods=10, freq='Q'))
 
@@ -835,9 +914,18 @@ def test_invalid_model_specification():
             dta_date_M, endog_quarterly=dta_date_W)
 
 
-@pytest.mark.parametrize('freq_Q', ['Q', 'Q-DEC', 'Q-JAN', 'QS',
-                                    'QS-DEC', 'QS-APR'])
-@pytest.mark.parametrize('freq_M', ['M', 'MS'])
+@pytest.mark.parametrize(
+    "freq_Q",
+    [
+        QUARTER_END,
+        f"{QUARTER_END}-DEC",
+        f"{QUARTER_END}-JAN",
+        "QS",
+        "QS-DEC",
+        "QS-APR",
+    ],
+)
+@pytest.mark.parametrize("freq_M", [MONTH_END, "MS"])
 def test_date_indexes(reset_randomstate, freq_M, freq_Q):
     # Test that using either PeriodIndex or DatetimeIndex for monthly or
     # quarterly data, with a variety of DatetimeIndex frequencies, works
@@ -1257,7 +1345,7 @@ def test_ar6_no_quarterly(reset_randomstate):
     assert_allclose(llf_dfm, llf_ar)
 
     # Monte Carlo-type test, skipped by default
-    if False:
+    if not SKIP_MONTE_CARLO_TESTS:
         # Test for MLE fitting: this is a Monte Carlo test, which requires a
         # large sample size; e.g., use nobs=10000 for atol=1e-2
         res_dfm = mod_dfm.fit()
@@ -1324,7 +1412,7 @@ def test_idiosyncratic_ar1_False(reset_randomstate):
     # So instead, we'll just use a Monte Carlo-type test
 
     # Monte Carlo-type test, skipped by default
-    if False:
+    if not SKIP_MONTE_CARLO_TESTS:
         # Test for MLE fitting: this is a Monte Carlo test, which requires a
         # quite large sample size; e.g., use nobs=50000 for atol=1e-1
         res_dfm = mod_dfm.fit()

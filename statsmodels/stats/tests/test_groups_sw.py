@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Test for a helper function for PanelHAC robust covariance
 
 the functions should be rewritten to make it more efficient
@@ -13,7 +12,7 @@ import statsmodels.stats.sandwich_covariance as sw
 from statsmodels.tools.grouputils import GroupSorted
 
 
-class CheckPanelLagMixin(object):
+class CheckPanelLagMixin:
 
     @classmethod
     def calculate(cls):

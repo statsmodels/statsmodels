@@ -6,7 +6,7 @@ from pathlib import Path
 from numpy.lib._iotools import _is_string_like
 
 
-class EmptyContextManager(object):
+class EmptyContextManager:
     """
     This class is needed to allow file-like object to be used as
     context manager, but without getting closed.

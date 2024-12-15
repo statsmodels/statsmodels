@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Tue Jun 12 13:18:12 2018
 
@@ -51,7 +50,7 @@ def test_influence_glm_bernoulli():
     assert_allclose(c_bar, results_sas[:, 9], atol=6e-5)
 
 
-class InfluenceCompareExact(object):
+class InfluenceCompareExact:
     # Mixin to compare and test two Influence instances
 
     def test_basics(self):
@@ -273,7 +272,7 @@ class TestInfluenceProbitCompare(InfluenceCompareExact):
     def setup_class(cls):
         df = data_bin
         mod = GLM(df['constrict'], df[['const', 'log_rate', 'log_volumne']],
-                  family=families.Binomial(link=families.links.probit()))
+                  family=families.Binomial(link=families.links.Probit()))
         res = mod.fit(method="newton", tol=1e-10)
         from statsmodels.discrete.discrete_model import Probit
         mod2 = Probit(df['constrict'], df[['const', 'log_rate', 'log_volumne']])

@@ -9,16 +9,22 @@ docs/source/generated
 docs/source/dev/generated
 docs/source/examples/generated
 docs/source/datasets/generated
+docs/source/examples/index.rst
 docs/source/examples/notebooks/generated
 docs/source/datasets/statsmodels.datasets.*
 docs/source/savefig
 docs/gettingstarted_0.png
 examples/executed
 
-# generated c source and built extensions
+#setuptools-scm generated version file
+statsmodels/_version.py
+# Generated c source and built extensions
+# and Byte-compiled / optimized / DLL files
 *.c
 *.so
-*.pyd
+*.py[cod]
+__pycache__/
+
 
 # repository directories for bzr-git
 .bzr
@@ -64,6 +70,7 @@ coverage_html_report/
 
 # VS Code
 .vscode/
+.vs/
 
 # Project specific
 statsmodels/version.py
@@ -101,3 +108,6 @@ statsmodels/tsa/statespace/_smoothers/_classical.pyx
 # Temporary copies for packaging
 statsmodels/setup.cfg
 statsmodels/LICENSE.txt
+
+# Dataset downloads
+statsmodels/datasets/tests/*.zip

@@ -1,7 +1,13 @@
 """tests for some time series analysis functions
 
 """
-from statsmodels.compat.pandas import assert_frame_equal, assert_series_equal
+from statsmodels.compat.pandas import (
+    PD_LT_2_2_0,
+    QUARTER_END,
+    YEAR_END,
+    assert_frame_equal,
+    assert_series_equal,
+)
 
 import numpy as np
 from numpy.testing import (
@@ -11,6 +17,7 @@ from numpy.testing import (
     assert_raises,
 )
 import pandas as pd
+from pandas.tseries.frequencies import to_offset
 import pytest
 
 from statsmodels import regression
@@ -121,7 +128,7 @@ def test_ar_transparams():
     assert not np.isnan(tools._ar_transparams(arr)).any()
 
 
-class TestLagmat(object):
+class TestLagmat:
     @classmethod
     def setup_class(cls):
         data = macrodata.load_pandas()
@@ -449,18 +456,47 @@ class TestLagmat(object):
         assert_frame_equal(lead, expected.iloc[:, :1])
         assert_frame_equal(lags, expected.iloc[:, 1:])
 
+    def test_range_index_columns(self):
+        # GH 8377
+        df = pd.DataFrame(np.arange(200).reshape((-1, 2)))
+        df.columns = pd.RangeIndex(2)
+        result = stattools.lagmat(df, maxlag=2, use_pandas=True)
+        assert result.shape == (100, 4)
+        assert list(result.columns) == ["0.L.1", "1.L.1", "0.L.2", "1.L.2"]
 
-def test_freq_to_period():
-    from pandas.tseries.frequencies import to_offset
-
-    freqs = ["A", "AS-MAR", "Q", "QS", "QS-APR", "W", "W-MON", "B", "D", "H"]
-    expected = [1, 1, 4, 4, 4, 52, 52, 5, 7, 24]
-    for i, j in zip(freqs, expected):
-        assert_equal(tools.freq_to_period(i), j)
-        assert_equal(tools.freq_to_period(to_offset(i)), j)
+    def test_duplicate_column_names(self):
+        # GH 8377
+        df = pd.DataFrame(np.arange(200).reshape((-1, 2)))
+        df.columns = [0, "0"]
+        with pytest.raises(ValueError, match="Columns names must be"):
+            stattools.lagmat(df, maxlag=2, use_pandas=True)
 
 
-class TestDetrend(object):
+ANNUAL = "A" if PD_LT_2_2_0 else YEAR_END
+freqs = [
+    YEAR_END,
+    f"{ANNUAL}-MAR",
+    QUARTER_END,
+    "QS",
+    "QS-APR",
+    "W",
+    "W-MON",
+    "B",
+    "D",
+    "h",
+]
+expected = [1, 1, 4, 4, 4, 52, 52, 5, 7, 24]
+freq_expected = [(f, e) for f, e in zip(freqs, expected)]
+
+
+@pytest.mark.parametrize("freq_expected", freq_expected)
+def test_freq_to_period(freq_expected):
+    freq, expected = freq_expected
+    assert_equal(tools.freq_to_period(freq), expected)
+    assert_equal(tools.freq_to_period(to_offset(freq)), expected)
+
+
+class TestDetrend:
     @classmethod
     def setup_class(cls):
         cls.data_1d = np.arange(5.0)
@@ -535,7 +571,7 @@ class TestDetrend(object):
         assert_raises(NotImplementedError, tools.detrend, np.ones((3, 3, 3)))
 
 
-class TestAddTrend(object):
+class TestAddTrend:
     @classmethod
     def setup_class(cls):
         cls.n = 200
@@ -676,7 +712,7 @@ class TestAddTrend(object):
         assert tools.add_trend(self.arr_2d, "n") is not self.arr_2d
 
 
-class TestLagmat2DS(object):
+class TestLagmat2DS:
     @classmethod
     def setup_class(cls):
         data = macrodata.load_pandas()

@@ -62,6 +62,12 @@
   - img: ../_static/images/ordered_model.png
     target: notebooks/generated/ordinal_regression.html
     text: Ordinal Regression
+  - img: ../_static/images/count_hurdle.png
+    target: notebooks/generated/count_hurdle.html
+    text: Hurdel count Models
+  - img: ../_static/images/post_estimation.png
+    target: notebooks/generated/postestimation_poisson.html
+    text: Post-estimation for Poisson Regression
 - header: Nonparametric Statistics
   id: nonparametric
   links:
@@ -113,12 +119,21 @@
   - img: ../_static/images/anova.png
     target: notebooks/generated/interactions_anova.html
     text: ANOVA
+  - img: ../_static/images/stats_poisson.png
+    target: notebooks/generated/stats_poisson.html
+    text: Poisson rates
+  - img: ../_static/images/rank_compare.png
+    target: notebooks/generated/stats_rankcompare.html
+    text: Rank Comparison
   - img: ../_static/images/metaanalysis1.png
     target: notebooks/generated/metaanalysis1.html
     text: Meta-Analysis in statsmodels
   - img: ../_static/images/mediation_survival.png
     target: notebooks/generated/mediation_survival.html
     text: Mediation analysis with duration data
+  - img: ../_static/images/treatment_effect.png
+    target: notebooks/generated/treatment_effect.html
+    text: Treatment Effect Estimation
   - img: ../_static/images/copula.png
     target: notebooks/generated/copula.html
     text: Copulas
@@ -155,6 +170,9 @@
   - img: ../_static/images/stl_decomposition.png
     target: notebooks/generated/stl_decomposition.html
     text: Seasonal Decomposition
+  - img: ../_static/images/mstl_decomposition.png
+    target: notebooks/generated/mstl_decomposition.html
+    text: Multi-seasonal Decomposition
   - img: ../_static/images/stationarity_detrending_adf_kpss.png
     target: notebooks/generated/stationarity_detrending_adf_kpss.html
     text: Stationarity and detrending (ADF/KPSS)
@@ -230,6 +248,9 @@
   - img: ../_static/images/pca_fertility_factors.png
     target: notebooks/generated/pca_fertility_factors.html
     text: Principal Component Analysis
+  - img: ../_static/images/multivariate_ls.png
+    target: notebooks/generated/multivariate_ls.html
+    text: Multivariate Least Squares
 - header: User Notes
   id: user
   links:

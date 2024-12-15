@@ -1,10 +1,19 @@
-from statsmodels.compat.pandas import Appender, is_numeric_dtype
+from statsmodels.compat.pandas import PD_LT_2, Appender, is_numeric_dtype
+from statsmodels.compat.scipy import SP_LT_19
 
-from typing import Sequence, Union
+from typing import Union
+from collections.abc import Sequence
 
 import numpy as np
 import pandas as pd
-from pandas.core.dtypes.common import is_categorical_dtype
+
+if PD_LT_2:
+    from pandas.core.dtypes.common import is_categorical_dtype
+else:
+    # After pandas 2 is the minium, use the isinstance check
+    def is_categorical_dtype(dtype):
+        return isinstance(dtype, pd.CategoricalDtype)
+
 from scipy import stats
 
 from statsmodels.iolib.table import SimpleTable
@@ -291,7 +300,7 @@ class Description:
         if self._data.shape[1] == 0:
 
             raise ValueError(
-                "Selecting {col_types} results in an empty DataFrame"
+                f"Selecting {col_types} results in an empty DataFrame"
             )
         self._is_numeric = [is_numeric_dtype(dt) for dt in self._data.dtypes]
         self._is_cat_like = [
@@ -384,14 +393,20 @@ class Description:
         mean = df.mean()
         mad = (df - mean).abs().mean()
         std_err = std.copy()
-        std_err.loc[count > 0] /= count.loc[count > 0]
+        std_err.loc[count > 0] /= count.loc[count > 0] ** 0.5
         if self._use_t:
             q = stats.t(count - 1).ppf(1.0 - self._alpha / 2)
         else:
             q = stats.norm.ppf(1.0 - self._alpha / 2)
 
         def _mode(ser):
-            mode_res = stats.mode(ser.dropna())
+            dtype = ser.dtype if isinstance(ser.dtype, np.dtype) else ser.dtype.numpy_dtype
+            ser_no_missing = ser.dropna().to_numpy(dtype=dtype)
+            kwargs = {} if SP_LT_19 else {"keepdims": True}
+            mode_res = stats.mode(ser_no_missing, **kwargs)
+            # Changes in SciPy 1.10
+            if np.isscalar(mode_res[0]):
+                return float(mode_res[0]), mode_res[1]
             if mode_res[0].shape[0] > 0:
                 return [float(val) for val in mode_res]
             return np.nan, np.nan
@@ -425,7 +440,8 @@ class Description:
             _df = df.copy()
             for col in df:
                 if is_extension_array_dtype(df[col].dtype):
-                    _df[col] = _df[col].astype(object).fillna(np.nan)
+                    if _df[col].isnull().any():
+                        _df[col] = _df[col].fillna(np.nan)
         except ImportError:
             pass
 
@@ -574,7 +590,8 @@ class Description:
             A table instance supporting export to text, csv and LaTeX
         """
         df = self.frame.astype(object)
-        df = df.fillna("")
+        if df.isnull().any().any():
+            df = df.fillna("")
         cols = [str(col) for col in df.columns]
         stubs = [str(idx) for idx in df.index]
         data = []
@@ -645,7 +662,7 @@ def describe(
     ).frame
 
 
-class Describe(object):
+class Describe:
     """
     Removed.
     """

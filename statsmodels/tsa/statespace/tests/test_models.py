@@ -26,7 +26,7 @@ class Intercepts(mlemodel.MLEModel):
     def __init__(self, endog, **kwargs):
         k_states = 3
         k_posdef = 3
-        super(Intercepts, self).__init__(
+        super().__init__(
             endog, k_states=k_states, k_posdef=k_posdef, **kwargs)
         self['design'] = np.eye(3)
         self['obs_cov'] = np.eye(3)
@@ -44,13 +44,13 @@ class Intercepts(mlemodel.MLEModel):
         return np.arange(6)
 
     def update(self, params, **kwargs):
-        params = super(Intercepts, self).update(params, **kwargs)
+        params = super().update(params, **kwargs)
 
         self['obs_intercept'] = params[:3]
         self['state_intercept'] = params[3:]
 
 
-class TestIntercepts(object):
+class TestIntercepts:
     @classmethod
     def setup_class(cls, which='mixed', **kwargs):
         # Results
@@ -203,7 +203,7 @@ class LargeStateCovAR1(mlemodel.MLEModel):
     def __init__(self, endog, **kwargs):
         k_states = 1
         k_posdef = 2
-        super(LargeStateCovAR1, self).__init__(
+        super().__init__(
             endog, k_states=k_states, k_posdef=k_posdef, **kwargs)
         self['design', 0, 0] = 1
         self['selection', 0, 0] = 1
@@ -219,7 +219,7 @@ class LargeStateCovAR1(mlemodel.MLEModel):
         return [0.5, 1]
 
     def update(self, params, **kwargs):
-        params = super(LargeStateCovAR1, self).update(params, **kwargs)
+        params = super().update(params, **kwargs)
 
         self['transition', 0, 0] = params[0]
         self['state_cov', 0, 0] = params[1]
@@ -229,7 +229,7 @@ def test_large_kposdef():
     assert_raises(ValueError, LargeStateCovAR1, np.arange(10))
 
 
-class TestLargeStateCovAR1(object):
+class TestLargeStateCovAR1:
     @classmethod
     def setup_class(cls):
         pytest.skip(

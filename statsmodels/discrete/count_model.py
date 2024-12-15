@@ -54,7 +54,7 @@ class GenericZeroInflated(CountModel):
 
     def __init__(self, endog, exog, exog_infl=None, offset=None,
                  inflation='logit', exposure=None, missing='none', **kwargs):
-        super(GenericZeroInflated, self).__init__(endog, exog, offset=offset,
+        super().__init__(endog, exog, offset=offset,
                                                   exposure=exposure,
                                                   missing=missing, **kwargs)
 
@@ -184,7 +184,7 @@ class GenericZeroInflated(CountModel):
             # work around perfect separation callback #3895
             callback = lambda *x: x
 
-        mlefit = super(GenericZeroInflated, self).fit(start_params=start_params,
+        mlefit = super().fit(start_params=start_params,
                        maxiter=maxiter, disp=disp, method=method,
                        full_output=full_output, callback=callback,
                        **kwargs)
@@ -369,7 +369,7 @@ class GenericZeroInflated(CountModel):
     def predict(self, params, exog=None, exog_infl=None, exposure=None,
                 offset=None, which='mean', y_values=None):
         """
-        Predict response variable or other statistic given exogenous variables.
+        Predict expected response or other statistic given exogenous variables.
 
         Parameters
         ----------
@@ -396,8 +396,8 @@ class GenericZeroInflated(CountModel):
         which : str (optional)
             Statitistic to predict. Default is 'mean'.
 
-            - 'mean' : the conditional expectation of endog E(y | x),
-              i.e. exp of linear predictor.
+            - 'mean' : the conditional expectation of endog E(y | x). This
+              takes inflated zeros into account.
             - 'linear' : the linear predictor of the mean function.
             - 'var' : returns the estimated variance of endog implied by the
               model.
@@ -460,7 +460,7 @@ class GenericZeroInflated(CountModel):
         tmp_offset = getattr(self.model_main, 'offset', False)
         tmp_exposure = getattr(self.model_main, 'exposure', False)
         self.model_main.exog = exog
-        self.model_main.endog = np.zeros((exog.shape[0]))
+        self.model_main.endog = np.zeros(exog.shape[0])
         self.model_main.offset = offset
         self.model_main.exposure = exposure
         llf = self.model_main.loglikeobs(params_main)
@@ -598,7 +598,7 @@ class ZeroInflatedPoisson(GenericZeroInflated):
 
     def __init__(self, endog, exog, exog_infl=None, offset=None, exposure=None,
                  inflation='logit', missing='none', **kwargs):
-        super(ZeroInflatedPoisson, self).__init__(endog, exog, offset=offset,
+        super().__init__(endog, exog, offset=offset,
                                                   inflation=inflation,
                                                   exog_infl=exog_infl,
                                                   exposure=exposure,
@@ -684,7 +684,9 @@ class ZeroInflatedPoisson(GenericZeroInflated):
         return var_
 
     def _get_start_params(self):
-        start_params = self.model_main.fit(disp=0, method="nm").params
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=ConvergenceWarning)
+            start_params = self.model_main.fit(disp=0, method="nm").params
         start_params = np.append(np.ones(self.k_inflate) * 0.1, start_params)
         return start_params
 
@@ -725,7 +727,8 @@ class ZeroInflatedPoisson(GenericZeroInflated):
         w = self.predict(params, exog=exog, exog_infl=exog_infl,
                          exposure=exposure, offset=offset, which="prob-main")
 
-        distr = self.distribution(mu[:, None], 1 - w[:, None])
+        # distr = self.distribution(mu[:, None], 1 - w[:, None])
+        distr = self.distribution(mu, 1 - w)
         return distr
 
 
@@ -755,7 +758,7 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
 
     def __init__(self, endog, exog, exog_infl=None, offset=None, exposure=None,
                  inflation='logit', p=2, missing='none', **kwargs):
-        super(ZeroInflatedGeneralizedPoisson, self).__init__(endog, exog,
+        super().__init__(endog, exog,
                                                   offset=offset,
                                                   inflation=inflation,
                                                   exog_infl=exog_infl,
@@ -773,7 +776,7 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
         self.result_class_reg_wrapper = L1ZeroInflatedGeneralizedPoissonResultsWrapper
 
     def _get_init_kwds(self):
-        kwds = super(ZeroInflatedGeneralizedPoisson, self)._get_init_kwds()
+        kwds = super()._get_init_kwds()
         kwds['p'] = self.model_main.parameterization + 1
         return kwds
 
@@ -840,7 +843,8 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
                           exposure=exposure, offset=offset, which="mean-main")
         w = self.predict(params, exog=exog, exog_infl=exog_infl,
                          exposure=exposure, offset=offset, which="prob-main")
-        distr = self.distribution(mu[:, None], params[-1], p, 1 - w[:, None])
+        # distr = self.distribution(mu[:, None], params[-1], p, 1 - w[:, None])
+        distr = self.distribution(mu, params[-1], p, 1 - w)
         return distr
 
 
@@ -871,7 +875,7 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
 
     def __init__(self, endog, exog, exog_infl=None, offset=None, exposure=None,
                  inflation='logit', p=2, missing='none', **kwargs):
-        super(ZeroInflatedNegativeBinomialP, self).__init__(endog, exog,
+        super().__init__(endog, exog,
                                                   offset=offset,
                                                   inflation=inflation,
                                                   exog_infl=exog_infl,
@@ -889,7 +893,7 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
         self.result_class_reg_wrapper = L1ZeroInflatedNegativeBinomialResultsWrapper
 
     def _get_init_kwds(self):
-        kwds = super(ZeroInflatedNegativeBinomialP, self)._get_init_kwds()
+        kwds = super()._get_init_kwds()
         kwds['p'] = self.model_main.parameterization
         return kwds
 
@@ -956,7 +960,8 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
         w = self.predict(params, exog=exog, exog_infl=exog_infl,
                          exposure=exposure, offset=offset, which="prob-main")
 
-        distr = self.distribution(mu[:, None], params[-1], p, 1 - w[:, None])
+        # distr = self.distribution(mu[:, None], params[-1], p, 1 - w[:, None])
+        distr = self.distribution(mu, params[-1], p, 1 - w)
         return distr
 
 

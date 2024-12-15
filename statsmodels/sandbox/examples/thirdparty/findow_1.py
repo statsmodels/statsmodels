@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """A quick look at volatility of stock returns for 2009
 
 Just an exercise to find my way around the pandas methods.

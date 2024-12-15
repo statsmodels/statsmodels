@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Wed Feb 17 15:35:23 2021
 
@@ -16,7 +15,7 @@ from statsmodels.distributions.tools import (
         _eval_bernstein_dd, _eval_bernstein_2d, _eval_bernstein_1d)
 
 
-class BernsteinDistribution(object):
+class BernsteinDistribution:
     """Distribution based on Bernstein Polynomials on unit hypercube.
 
     Parameters
@@ -40,7 +39,7 @@ class BernsteinDistribution(object):
         self.cdf_grid = cdf_grid = np.asarray(cdf_grid)
         self.k_dim = cdf_grid.ndim
         self.k_grid = cdf_grid.shape
-        self.k_grid_product = np.product([i-1 for i in self.k_grid])
+        self.k_grid_product = np.prod([i-1 for i in self.k_grid])
         self._grid = _Grid(self.k_grid)
 
     @classmethod

@@ -1,6 +1,7 @@
 """
 Author: Samuel Scherrer
 """
+from statsmodels.compat.pandas import QUARTER_END
 from statsmodels.compat.platform import PLATFORM_LINUX32, PLATFORM_WIN
 
 from itertools import product
@@ -220,7 +221,7 @@ def austourists():
         61.09776802,
         66.05576122,
     ]
-    index = pd.date_range("1999-01-01", "2015-12-31", freq="Q")
+    index = pd.date_range("1999-01-01", "2015-12-31", freq=QUARTER_END)
     return pd.Series(data, index)
 
 
@@ -279,7 +280,7 @@ def oildata():
         549.8338076,
         542.3404698,
     ]
-    return pd.Series(data, index=pd.date_range("1965", "2013", freq="AS"))
+    return pd.Series(data, index=pd.date_range("1965", "2013", freq="YS"))
 
 
 #############################################################################
@@ -288,7 +289,7 @@ def oildata():
 
 
 def obtain_R_results(path):
-    with path.open("r") as f:
+    with path.open("r", encoding="utf-8") as f:
         R_results = json.load(f)
 
     # remove invalid models
@@ -1068,3 +1069,21 @@ def test_seasonal_order(reset_randomstate, method):
         rtol=1e-4,
     )
     assert res.mae < 1e-6
+
+
+def test_aicc_0_dof():
+    # GH8172
+    endog = [109.0, 101.0, 104.0, 90.0, 105.0]
+
+    model = ETSModel(
+        endog=endog,
+        initialization_method='known',
+        initial_level=100.0,
+        initial_trend=0.0,
+        error='add',
+        trend='add',
+        damped_trend=True
+    )
+    aicc = model.fit().aicc
+    assert not np.isfinite(aicc)
+    assert aicc > 0

@@ -85,6 +85,10 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
     if `trend='c'`, the passed `exog` array should not already have a column of
     ones.
 
+    See the notebook `Markov switching autoregression
+    <../examples/notebooks/generated/markov_autoregression.html>`__
+    for an overview.
+
     References
     ----------
     Kim, Chang-Jin, and Charles R. Nelson. 1999.
@@ -406,7 +410,7 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
             evaluation.
         """
         # Inherited parameters
-        constrained = super(MarkovAutoregression, self).transform_params(
+        constrained = super().transform_params(
             unconstrained)
 
         # Autoregressive
@@ -436,7 +440,7 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
             Array of unconstrained parameters used by the optimizer.
         """
         # Inherited parameters
-        unconstrained = super(MarkovAutoregression, self).untransform_params(
+        unconstrained = super().untransform_params(
             constrained)
 
         # Autoregressive

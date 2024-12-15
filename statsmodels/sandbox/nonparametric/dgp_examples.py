@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Examples of non-linear functions for non-parametric regression
 
 Created on Sat Jan 05 20:21:22 2013
@@ -44,7 +43,7 @@ doc = {'description':
 ''',
 'ref': ''}
 
-class _UnivariateFunction(object):
+class _UnivariateFunction:
     #Base Class for Univariate non-linear example.
     #Does not work on it's own. needs additionally at least self.func
     __doc__ = '''%(description)s
@@ -84,7 +83,7 @@ class _UnivariateFunction(object):
                 x = np.random.normal(loc=0, scale=self.s_x, size=nobs)
             else:
                 x = distr_x.rvs(size=nobs)
-            x.sort()
+            x = np.sort(x)
 
         self.x = x
 
@@ -205,7 +204,7 @@ class UnivariateFunc1(_UnivariateFunction):
             nobs = x.shape[0]
         self.s_noise = 2.
         self.func = func1
-        super(UnivariateFunc1, self).__init__(nobs=nobs, x=x,
+        super().__init__(nobs=nobs, x=x,
                                              distr_x=distr_x,
                                              distr_noise=distr_noise)
 

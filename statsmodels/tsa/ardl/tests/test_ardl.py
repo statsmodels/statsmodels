@@ -159,9 +159,7 @@ def _convert_to_numpy(data, fixed, order, seasonal, use_numpy):
 def test_model_init(
     data: Dataset, lags, order, trend, causal, fixed, use_numpy, seasonal
 ):
-    y, x, z, order, period = _convert_to_numpy(
-        data, fixed, order, seasonal, use_numpy
-    )
+    y, x, z, order, period = _convert_to_numpy(data, fixed, order, seasonal, use_numpy)
 
     mod = ARDL(
         y,
@@ -194,23 +192,15 @@ def test_model_init(
 def test_ardl_order_exceptions(data):
     with pytest.raises(ValueError, match="lags must be a non-negative"):
         ARDL(data.y, -1)
-    with pytest.raises(
-        ValueError, match="All values in lags must be positive"
-    ):
+    with pytest.raises(ValueError, match="All values in lags must be positive"):
         ARDL(data.y, [-1, 0, 2])
     with pytest.raises(ValueError, match="integer orders must be at least"):
         ARDL(data.y, 2, data.x, order=0, causal=True)
     with pytest.raises(ValueError, match="integer orders must be at least"):
         ARDL(data.y, 2, data.x, -1, causal=False)
-    with pytest.raises(
-        ValueError, match="sequence orders must be strictly positive"
-    ):
-        ARDL(
-            data.y, 2, data.x, {"lry": [0, 1], "ibo": 3, "ide": 0}, causal=True
-        )
-    with pytest.raises(
-        TypeError, match="sequence orders must contain non-negative"
-    ):
+    with pytest.raises(ValueError, match="sequence orders must be strictly positive"):
+        ARDL(data.y, 2, data.x, {"lry": [0, 1], "ibo": 3, "ide": 0}, causal=True)
+    with pytest.raises(TypeError, match="sequence orders must contain non-negative"):
         ARDL(
             data.y,
             2,
@@ -218,9 +208,7 @@ def test_ardl_order_exceptions(data):
             {"lry": [1, "apple"], "ibo": 3, "ide": 1},
             causal=True,
         )
-    with pytest.raises(
-        ValueError, match="sequence orders must contain distinct"
-    ):
+    with pytest.raises(ValueError, match="sequence orders must contain distinct"):
         ARDL(
             data.y,
             2,
@@ -228,9 +216,7 @@ def test_ardl_order_exceptions(data):
             {"lry": [1, 1, 2, 3], "ibo": 3, "ide": [1, 1, 1]},
             causal=True,
         )
-    with pytest.raises(
-        ValueError, match="sequence orders must be strictly positive"
-    ):
+    with pytest.raises(ValueError, match="sequence orders must be strictly positive"):
         ARDL(data.y, 2, data.x, [0, 1, 2], causal=True)
 
 
@@ -245,21 +231,15 @@ def test_ardl_order_keys_exceptions(data):
             {"lry": [1, 2], "ibo": 3, "other": 4},
             causal=False,
         )
-    with pytest.warns(
-        SpecificationWarning, match="exog contains variables that"
-    ):
+    with pytest.warns(SpecificationWarning, match="exog contains variables that"):
         ARDL(data.y, 2, data.x, {"lry": [1, 2]}, causal=False)
 
 
 def test_ardl_deterministic_exceptions(data):
     with pytest.raises(TypeError):
         ARDL(data.y, 2, data.x, 2, deterministic="seasonal")
-    with pytest.warns(
-        SpecificationWarning, match="When using deterministic, trend"
-    ):
-        deterministic = DeterministicProcess(
-            data.y.index, constant=True, order=1
-        )
+    with pytest.warns(SpecificationWarning, match="When using deterministic, trend"):
+        deterministic = DeterministicProcess(data.y.index, constant=True, order=1)
         ARDL(data.y, 2, data.x, 2, deterministic=deterministic, trend="ct")
 
 
@@ -335,9 +315,7 @@ def test_ardl_only_y_lag(data):
 
 
 def test_ardl_only_x(data):
-    res = ARDL(
-        data.y, None, data.x, {"lry": 1, "ibo": 2, "ide": 3}, trend="n"
-    ).fit()
+    res = ARDL(data.y, None, data.x, {"lry": 1, "ibo": 2, "ide": 3}, trend="n").fit()
     assert res.params.shape[0] == 9
     res = ARDL(
         data.y,
@@ -365,9 +343,7 @@ def test_ardl_only_seasonal(data):
 
 def test_ardl_only_deterministic(data):
     deterministic = DeterministicProcess(data.y.index, constant=True, order=3)
-    res = ARDL(
-        data.y, None, data.x, None, trend="n", deterministic=deterministic
-    ).fit()
+    res = ARDL(data.y, None, data.x, None, trend="n", deterministic=deterministic).fit()
     assert res.params.shape[0] == 4
     check_results(res)
 
@@ -398,9 +374,7 @@ def test_ardl_parameter_names(data):
         "ide.L2",
     ]
     assert mod.exog_names == expected
-    mod = ARDL(
-        np.asarray(data.y), 2, np.asarray(data.x), 2, causal=False, trend="ct"
-    )
+    mod = ARDL(np.asarray(data.y), 2, np.asarray(data.x), 2, causal=False, trend="ct")
     expected = [
         "const",
         "trend",
@@ -472,9 +446,7 @@ def test_against_autoreg(data, trend, seasonal):
 @pytest.mark.parametrize("start", [None, 0, 2, 4])
 @pytest.mark.parametrize("end", [None, 20])
 @pytest.mark.parametrize("dynamic", [20, True])
-def test_against_autoreg_predict_start_end(
-    data, trend, seasonal, start, end, dynamic
-):
+def test_against_autoreg_predict_start_end(data, trend, seasonal, start, end, dynamic):
     ar = AutoReg(data.y, 3, trend=trend, seasonal=seasonal)
     ardl = ARDL(data.y, 3, trend=trend, seasonal=seasonal)
     ar_res = ar.fit()
@@ -489,13 +461,9 @@ def test_against_autoreg_predict_start_end(
 def test_invalid_init(data):
     with pytest.raises(ValueError, match="lags must be a non-negative"):
         ARDL(data.y, -1)
-    with pytest.raises(
-        ValueError, match="All values in lags must be positive"
-    ):
+    with pytest.raises(ValueError, match="All values in lags must be positive"):
         ARDL(data.y, [-1, 1, 2])
-    with pytest.raises(
-        ValueError, match="All values in lags must be positive"
-    ):
+    with pytest.raises(ValueError, match="All values in lags must be positive"):
         ARDL(data.y, [1, 2, 2, 3])
     with pytest.raises(ValueError, match="hold_back must be "):
         ARDL(data.y, 3, data.x, 4, hold_back=3)
@@ -517,9 +485,7 @@ def test_prediction_exceptions(data, fixed, use_numpy):
         res.forecast(1)
     if isinstance(x, pd.DataFrame):
         exog_oos = np.asarray(data.x)[:12]
-        with pytest.raises(
-            TypeError, match="exog_oos must be a DataFrame when"
-        ):
+        with pytest.raises(TypeError, match="exog_oos must be a DataFrame when"):
             res.forecast(12, exog=exog_oos)
         with pytest.raises(ValueError, match="must have the same columns"):
             res.forecast(12, exog=data.x.iloc[:12, :1])
@@ -544,16 +510,12 @@ def test_prediction_wrong_shape(data):
     res = ARDL(data.y, 4, x, [1, 3]).fit()
     with pytest.raises(ValueError, match="exog must have the same number"):
         res.predict(exog=np.asarray(data.x)[:, :1])
-    with pytest.raises(
-        ValueError, match="exog must have the same number of rows"
-    ):
+    with pytest.raises(ValueError, match="exog must have the same number of rows"):
         res.predict(exog=np.asarray(data.x)[:-2])
     res = ARDL(data.y, 4, data.x, [1, 3]).fit()
     with pytest.raises(ValueError, match="exog must have the same columns"):
         res.predict(exog=data.x.iloc[:, :1])
-    with pytest.raises(
-        ValueError, match="exog must have the same number of rows"
-    ):
+    with pytest.raises(ValueError, match="exog must have the same number of rows"):
         res.predict(exog=data.x.iloc[:-2])
 
 
@@ -562,16 +524,12 @@ def test_prediction_wrong_shape_fixed(data):
     res = ARDL(data.y, 4, fixed=x).fit()
     with pytest.raises(ValueError, match="fixed must have the same number"):
         res.predict(fixed=np.asarray(data.x)[:, :1])
-    with pytest.raises(
-        ValueError, match="fixed must have the same number of rows"
-    ):
+    with pytest.raises(ValueError, match="fixed must have the same number of rows"):
         res.predict(fixed=np.asarray(data.x)[:-2])
     res = ARDL(data.y, 4, fixed=data.x).fit()
     with pytest.raises(ValueError, match="fixed must have the same number"):
         res.predict(fixed=data.x.iloc[:, :1])
-    with pytest.raises(
-        ValueError, match="fixed must have the same number of rows"
-    ):
+    with pytest.raises(ValueError, match="fixed must have the same number of rows"):
         res.predict(fixed=data.x.iloc[:-2])
 
 
@@ -682,9 +640,7 @@ def test_uecm_model_init(
 
 def test_from_ardl_none(data):
     with pytest.warns(SpecificationWarning):
-        mod = UECM.from_ardl(
-            ARDL(data.y, 2, data.x, {"lry": 2, "ide": 2, "ibo": None})
-        )
+        mod = UECM.from_ardl(ARDL(data.y, 2, data.x, {"lry": 2, "ide": 2, "ibo": None}))
     assert mod.ardl_order == (2, 2, 2)
 
 
@@ -825,9 +781,7 @@ def test_bounds_test_seed(seed):
         {"lry": 1, "ibo": 3, "ide": 2},
     )
     res = mod.fit()
-    bounds_result = res.bounds_test(
-        case=3, asymptotic=False, seed=seed, nsim=10_000
-    )
+    bounds_result = res.bounds_test(case=3, asymptotic=False, seed=seed, nsim=10_000)
     assert (bounds_result.p_values >= 0.0).all()
     assert (bounds_result.p_values <= 1.0).all()
     assert (bounds_result.crit_vals > 0.0).all().all()
@@ -848,3 +802,22 @@ def test_bounds_test_simulate_order():
     )
     assert_allclose(bounds_result.stat, bounds_result_sim.stat)
     assert (bounds_result_sim.p_values > bounds_result.p_values).all()
+
+
+def test_resids_ardl_uecm():
+    ardl_mod = ARDL(
+        dane_data.lrm,
+        3,
+        dane_data[["lry", "ibo", "ide"]],
+        {"lry": 1, "ibo": 3, "ide": 2},
+    )
+    ardl_res = ardl_mod.fit()
+    uecm_mod = UECM(
+        dane_data.lrm,
+        3,
+        dane_data[["lry", "ibo", "ide"]],
+        {"lry": 1, "ibo": 3, "ide": 2},
+    )
+    uecm_res = uecm_mod.fit()
+
+    assert_allclose(uecm_res.resid, ardl_res.resid)

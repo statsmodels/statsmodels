@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Sun Nov 14 08:21:41 2010
 
@@ -15,7 +14,7 @@ from statsmodels.sandbox.tools.cross_val import LeaveOneOut
 #from sandbox/example_pca_regression.py
 
 
-class FactorModelUnivariate(object):
+class FactorModelUnivariate:
     '''
 
     Todo:

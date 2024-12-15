@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Kernel Regression and Significance Test
 
 Warning: SLOW, 11 minutes on my computer

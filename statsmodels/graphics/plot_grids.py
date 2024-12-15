@@ -28,7 +28,7 @@ def _make_ellipse(mean, cov, ax, level=0.95, color=None):
     angle = np.arctan(u[1]/u[0])
     angle = 180 * angle / np.pi # convert to degrees
     v = 2 * np.sqrt(v * stats.chi2.ppf(level, 2)) #get size corresponding to level
-    ell = Ellipse(mean[:2], v[0], v[1], 180 + angle, facecolor='none',
+    ell = Ellipse(mean[:2], v[0], v[1], angle=180 + angle, facecolor='none',
                   edgecolor=color,
                   #ls='dashed',  #for debugging
                   lw=1.5)
@@ -85,7 +85,7 @@ def scatter_ellipse(data, level=0.9, varnames=None, ell_kwds=None,
     >>> scatter_ellipse(data, varnames=data.columns, fig=fig)
     >>> plt.show()
 
-    ..plot :: plots/graphics_correlation_plot_corr_grid.py
+    .. plot:: plots/graphics_plot_grids_scatter_ellipse.py
     """
     fig = utils.create_mpl_fig(fig)
     import matplotlib.ticker as mticker
@@ -134,15 +134,15 @@ def scatter_ellipse(data, level=0.9, varnames=None, ell_kwds=None,
                          **ell_kwds_)
 
             if add_titles:
-                ax.set_title('%s-%s' % (varnames[i], varnames[j]))
-            if not ax.is_first_col():
+                ax.set_title(f'{varnames[i]}-{varnames[j]}')
+            if not ax.get_subplotspec().is_first_col():
                 if not keep_ticks:
                     ax.set_yticks([])
                 else:
                     ax.yaxis.set_major_locator(mticker.MaxNLocator(3))
             else:
                 ax.set_ylabel(varnames[i])
-            if ax.is_last_row():
+            if ax.get_subplotspec().is_last_row():
                 ax.set_xlabel(varnames[j])
             else:
                 if not keep_ticks:
@@ -169,9 +169,9 @@ def scatter_ellipse(data, level=0.9, varnames=None, ell_kwds=None,
             ax.text(xt, yt, '$\\rho=%0.2f$'% dc[1,0])
 
     for ax in fig.axes:
-        if ax.is_last_row(): # or ax.is_first_col():
+        if ax.get_subplotspec().is_last_row(): # or ax.is_first_col():
             ax.xaxis.set_major_locator(mticker.MaxNLocator(3))
-        if ax.is_first_col():
+        if ax.get_subplotspec().is_first_col():
             ax.yaxis.set_major_locator(mticker.MaxNLocator(3))
 
     return fig

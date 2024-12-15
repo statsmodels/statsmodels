@@ -17,49 +17,73 @@ jobs:
   strategy:
     matrix:
       ${{ if eq(parameters.name, 'Linux') }}:
-        python_310_latest:
+        python_312_latest:
+          python.version: '3.12'
+          coverage: true
+        python_311_latest:
+          python.version: '3.11'
+          lint: true
+          CYTHON: 3.0.10
+          coverage: true
+        python_310_latest_install:
           python.version: '3.10'
           lint: true
+          test.install: true
+        python_310_latest_install_sdist:
+          python.version: '3.10'
+          test.install: true
+          TEST_SDIST: true
         python_39:
           python.version: '3.9'
           USE_MATPLOTLIB: false
           USE_CVXOPT: false
-          SCIPY: 1.5.4
-          PANDAS: 1.2.5
-          NUMPY: 1.20.3
+          SCIPY: 1.8.1
+          PANDAS: 1.5.3
+          NUMPY: 1.23.5
+          CYTHON: 3.0.10
+          coverage: true
           lint: true
-        python38:
-          python.version: '3.8'
-          use.conda: true
-          PANDAS: 1.0.5
-          NUMPY: 1.19.2
-          SCIPY: 1.5.2
-          MATPLOTLIB: 3.2.2
-          coverage: true
-          PYTEST_OPTIONS: ''
-        python_38_legacy_blas:
-          python.version: '3.8'
+        python_310_legacy_blas:
+          python.version: '3.10'
           use.conda: true
           coverage: true
-          NUMPY: 1.18.5
-          PANDAS: 1.0.5
-          MATPLOTLIB: 3.1.3
-          SCIPY: 1.4.1
+          NUMPY: 2.0.0
+          PANDAS: 2.2.2
+          SCIPY: 1.13.0
+          CYTHON: 3.0.10
           BLAS: "nomkl blas=*=openblas"
           PYTEST_OPTIONS: ''
-        python39_numpy120:
-          python.version: '3.9'
-          NUMPY: 1.20.3
-          SCIPY: 1.6.3
-          PANDAS: 1.1.5
-          MATPLOTLIB: 3.4.3
-          lint: true
-        python_310_pre:
+        python310_numpy124:
           python.version: '3.10'
+          NUMPY: 1.24.4
+          SCIPY: 1.9.3
+          PANDAS: 1.5.3
+          MATPLOTLIB: 3.6.0
+        python_312_copy_on_write:
+          python.version: '3.12'
+          SM_TEST_COPY_ON_WRITE: 1
+        python_312_pre:
+          python.version: '3.12'
           pip.pre: true
+        python_312_formulaic:
+          python.version: '3.12'
+          SM_FORMULA_ENGINE: "formulaic"
+        python_312_no_patsy:
+          python.version: '3.12'
+          PIP_UNINSTALL: "patsy"
+        python_312_no_formulaic:
+          python.version: '3.12'
+          PIP_UNINSTALL: "formulaic"
       ${{ if eq(parameters.name, 'macOS') }}:
-        python39_macos_latest:
-          python.version: '3.9'
+        python310_macos_latest:
+          python.version: '3.10'
+        python311_macos_latest:
+          python.version: '3.11'
+        python312_macos_latest:
+          python.version: '3.12'
+        python312_macos_latest_install:
+          python.version: '3.12'
+          test.install: true
     maxParallel: 10
 
   steps:
@@ -81,18 +105,36 @@ jobs:
       source tools/ci/azure/install-posix.sh
     displayName: 'Install dependencies'
 
+  - script: ./lint.sh
+    displayName: 'Check style'
+    condition: eq(variables['lint'], 'true')
+
   - script: |
       echo "Installing to site packages"
-      python setup.py bdist_wheel
-      WHL=$(ls -t dist)
-      pip install ./dist/${WHL}
+      if [[ $TEST_SDIST ]]; then
+        python -m build . --sdist
+        TAIL=".tar.gz"
+      else
+        python -m pip wheel . -w ./dist -v
+        TAIL=".whl"
+      fi
+      ls -t dist/statsmodels*${TAIL}
+      PKG_NAME=$(ls -t dist/statsmodels*${TAIL})
+      python -m pip install ./${PKG_NAME}
     displayName: 'Install statsmodels (site-packages)'
     condition: eq(variables['test.install'], 'true')
 
   - script: |
-      python -m pip install -e . -v --no-build-isolation
+      python -m pip install -e . -vv --no-build-isolation --upgrade-strategy only-if-needed
     displayName: 'Install statsmodels (editable)'
     condition: ne(variables['test.install'], 'true')
+
+  - script: |
+      if [[ -n ${PIP_UNINSTALL} ]]; then
+        python -m pip uninstall ${PIP_UNINSTALL} -y
+      fi
+    displayName: 'Optionally Uninstall Packages'
+    condition: eq(variables['use.conda'], 'true')
 
   - script: python -m pip list
     displayName: 'List Configuration (PyPI)'
@@ -108,7 +150,10 @@ jobs:
       echo "Testing site packages"
       mkdir test_run_dir
       pushd test_run_dir
-      python -c "import statsmodels; statsmodels.test(['-n', 'auto', '--junitxml=../junit/test-results.xml', '--skip-examples'])"
+      python -c "import statsmodels; statsmodels.test(['-n', 'auto', '--junitxml=../junit/test-results.xml', '--skip-examples', '--dist', 'loadscope', '--durations=25'], exit=True)"
+      LAST_EXIT_CODE=$?
+      echo "Status code: ${LAST_EXIT_CODE}"
+      exit ${LAST_EXIT_CODE}
       popd
     displayName: 'Run tests (site-packages)'
     condition: eq(variables['test.install'], 'true')
@@ -140,13 +185,8 @@ jobs:
       testRunTitle: 'Python $(python.version)'
     condition: succeededOrFailed()
 
-  - script: ./lint.sh
-    displayName: 'Check style'
-    condition: eq(variables['lint'], 'true')
-
-  - task: PublishCodeCoverageResults@1
+  - task: PublishCodeCoverageResults@2
     inputs:
-      codeCoverageTool: Cobertura
       summaryFileLocation: '$(System.DefaultWorkingDirectory)/**/coverage.xml'
     condition: and(eq(variables['coverage'], 'true'), ne(variables['test.install'], 'true'))
 

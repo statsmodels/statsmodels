@@ -33,7 +33,7 @@ def test_wrong_len_xname(reset_randomstate):
         res.summary(xname=['x1', 'x2', 'x3'])
 
 
-class TestSummaryLatex(object):
+class TestSummaryLatex:
     def test__repr_latex_(self):
         desired = r'''
 \begin{center}

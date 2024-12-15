@@ -7,7 +7,7 @@ from statsmodels.emplike.elanova import ANOVA
 from .results.el_results import ANOVAResults
 
 
-class TestANOVA(object):
+class TestANOVA:
     """
     Tests ANOVA difference in means
     """

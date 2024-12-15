@@ -67,7 +67,7 @@ def write_formula_api(directory):
     ]
 
     path = os.path.join(directory, "statsmodels", "formula", "api.py")
-    fout = open(path, "w")
+    fout = open(path, "w", encoding="utf-8")
     for model in iter_subclasses(Model, template_classes=template_classes):
         print("Generating API for %s" % model.__name__)
         fout.write(

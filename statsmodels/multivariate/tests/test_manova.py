@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
-
 import numpy as np
 import pandas as pd
 import pytest
-from numpy.testing import assert_almost_equal, assert_raises
+from numpy.testing import assert_almost_equal, assert_raises, assert_allclose
 
 from statsmodels.multivariate.manova import MANOVA
 from statsmodels.multivariate.multivariate_ols import MultivariateTestResults
@@ -78,7 +76,8 @@ def test_manova_sas_example():
 
 def test_manova_no_formula():
     # Same as previous test only skipping formula interface
-    exog = add_constant(pd.get_dummies(X[['Loc']], drop_first=True))
+    exog = add_constant(pd.get_dummies(X[['Loc']], drop_first=True,
+                                       dtype=float))
     endog = X[['Basal', 'Occ', 'Max']]
     mod = MANOVA(endog, exog)
     intercept = np.zeros((1, 3))
@@ -137,7 +136,8 @@ def test_manova_no_formula():
 @pytest.mark.smoke
 def test_manova_no_formula_no_hypothesis():
     # Same as previous test only skipping formula interface
-    exog = add_constant(pd.get_dummies(X[['Loc']], drop_first=True))
+    exog = add_constant(pd.get_dummies(X[['Loc']], drop_first=True,
+                                       dtype=float))
     endog = X[['Basal', 'Occ', 'Max']]
     mod = MANOVA(endog, exog)
     r = mod.mv_test()
@@ -169,3 +169,29 @@ def test_manova_test_input_validation():
 
 def test_endog_1D_array():
     assert_raises(ValueError, MANOVA.from_formula, 'Basal ~ Loc', X)
+
+
+def test_manova_demeaned():
+    # see last example in #8713
+    # If a term has no effect, all eigenvalues below threshold, then computaion
+    # raised numpy exception with empty arrays.
+    # currently we have an option to skip the intercept test, but don't handle
+    # empty arrays directly
+    ng = 5
+    loc = ["Basal", "Occ", "Max"] * ng
+    y1 = (np.random.randn(ng, 3) + [0, 0.5, 1]).ravel()
+    y2 = (np.random.randn(ng, 3) + [0.25, 0.75, 1]).ravel()
+    y3 = (np.random.randn(ng, 3) + [0.3, 0.6, 1]).ravel()
+    dta = pd.DataFrame(dict(Loc=loc, Basal=y1, Occ=y2, Max=y3))
+    mod = MANOVA.from_formula('Basal + Occ + Max ~ C(Loc, Helmert)', data=dta)
+    res1 = mod.mv_test()
+
+    # subtract sample means to have insignificant intercept
+    means = dta[["Basal", "Occ", "Max"]].mean()
+    dta[["Basal", "Occ", "Max"]] = dta[["Basal", "Occ", "Max"]] - means
+    mod = MANOVA.from_formula('Basal + Occ + Max ~ C(Loc, Helmert)', data=dta)
+    res2 = mod.mv_test(skip_intercept_test=True)
+
+    stat1 = res1.results["C(Loc, Helmert)"]["stat"].to_numpy(float)
+    stat2 = res2.results["C(Loc, Helmert)"]["stat"].to_numpy(float)
+    assert_allclose(stat1, stat2, rtol=1e-10)

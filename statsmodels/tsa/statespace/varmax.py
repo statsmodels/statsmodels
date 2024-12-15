@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Vector Autoregressive Moving Average with eXogenous regressors model
 
@@ -197,7 +196,7 @@ class VARMAX(MLEModel):
         kwargs.setdefault('inversion_method', INVERT_UNIVARIATE | SOLVE_LU)
 
         # Initialize the state space model
-        super(VARMAX, self).__init__(
+        super().__init__(
             endog, exog=exog, k_states=k_states, k_posdef=k_posdef, **kwargs
         )
 
@@ -323,7 +322,7 @@ class VARMAX(MLEModel):
         # A. Run a multivariate regression to get beta estimates
         endog = pd.DataFrame(self.endog.copy())
         endog = endog.interpolate()
-        endog = endog.fillna(method='backfill').values
+        endog = np.require(endog.bfill(), requirements="W")
         exog = None
         if self.k_trend > 0 and self.k_exog > 0:
             exog = np.c_[self._trend_data, self.exog]
@@ -481,7 +480,7 @@ class VARMAX(MLEModel):
 
         # 4. Regression terms
         param_names += [
-            'beta.%s.%s' % (self.exog_names[j], endog_names[i])
+            f'beta.{self.exog_names[j]}.{endog_names[i]}'
             for i in range(self.k_endog)
             for j in range(self.k_exog)
         ]
@@ -495,7 +494,7 @@ class VARMAX(MLEModel):
         elif self.error_cov_type == 'unstructured':
             param_names += [
                 ('sqrt.var.%s' % endog_names[i] if i == j else
-                 'sqrt.cov.%s.%s' % (endog_names[j], endog_names[i]))
+                 f'sqrt.cov.{endog_names[j]}.{endog_names[i]}')
                 for i in range(self.k_endog)
                 for j in range(i+1)
             ]
@@ -670,11 +669,11 @@ class VARMAX(MLEModel):
         return unconstrained
 
     def _validate_can_fix_params(self, param_names):
-        super(VARMAX, self)._validate_can_fix_params(param_names)
+        super()._validate_can_fix_params(param_names)
 
         ix = np.cumsum(list(self.parameters.values()))[:-1]
-        (_, ar_names, ma_names, _, _, _) = [
-            arr.tolist() for arr in np.array_split(self.param_names, ix)]
+        (_, ar_names, ma_names, _, _, _) = (
+            arr.tolist() for arr in np.array_split(self.param_names, ix))
 
         if self.enforce_stationarity and self.k_ar > 0:
             if self.k_endog > 1 or self.k_ar > 1:
@@ -814,7 +813,7 @@ class VARMAX(MLEModel):
                  extend_kwargs=None, transformed=True, includes_fixed=False,
                  **kwargs):
         with self._set_final_exog(exog):
-            out = super(VARMAX, self).simulate(
+            out = super().simulate(
                 params, nsimulations, measurement_shocks=measurement_shocks,
                 state_shocks=state_shocks, initial_state=initial_state,
                 anchor=anchor, repetitions=repetitions, exog=exog,
@@ -851,8 +850,8 @@ class VARMAXResults(MLEResults):
     """
     def __init__(self, model, params, filter_results, cov_type=None,
                  cov_kwds=None, **kwargs):
-        super(VARMAXResults, self).__init__(model, params, filter_results,
-                                            cov_type, cov_kwds, **kwargs)
+        super().__init__(model, params, filter_results,
+                         cov_type, cov_kwds, **kwargs)
 
         self.specification = Bunch(**{
             # Set additional model parameters
@@ -1022,7 +1021,7 @@ class VARMAXResults(MLEResults):
         # Get the prediction
         with self._set_final_exog(exog):
             with self._set_final_predicted_state(exog, out_of_sample):
-                out = super(VARMAXResults, self).get_prediction(
+                out = super().get_prediction(
                     start=start, end=end, dynamic=dynamic,
                     information_set=information_set, index=index, exog=exog,
                     extend_kwargs=extend_kwargs, **kwargs)
@@ -1052,7 +1051,7 @@ class VARMAXResults(MLEResults):
         exog = self.model._validate_out_of_sample_exog(exog, out_of_sample)
 
         with self._set_final_predicted_state(exog, out_of_sample):
-            out = super(VARMAXResults, self).simulate(
+            out = super().simulate(
                 nsimulations, measurement_shocks=measurement_shocks,
                 state_shocks=state_shocks, initial_state=initial_state,
                 anchor=anchor, repetitions=repetitions, exog=exog,
@@ -1062,7 +1061,15 @@ class VARMAXResults(MLEResults):
         return out
 
     def _news_previous_results(self, previous, start, end, periods,
+                               revisions_details_start=False,
                                state_index=None):
+        # TODO: tests for:
+        # - the model cloning used in `kalman_smoother.news` works when we
+        #   have time-varying exog (i.e. or do we need to somehow explicitly
+        #   call the _set_final_exog and _set_final_predicted_state methods
+        #   on the rev_mod / revision_results)
+        # - in the case of revisions to `endog`, should the revised model use
+        #   the `previous` exog? or the `revised` exog?
         # We need to figure out the out-of-sample exog, so that we can add back
         # in the last exog, predicted state
         exog = None
@@ -1070,34 +1077,16 @@ class VARMAXResults(MLEResults):
         if self.model.k_exog > 0 and out_of_sample > 0:
             exog = self.model.exog[-out_of_sample:]
 
-        # We also need to manually compute the `revised` results,
-        rev_endog = self.model.endog[:previous.nobs].copy()
-        rev_endog[previous.filter_results.missing.astype(bool).T] = np.nan
-        has_revisions = not np.allclose(rev_endog, previous.model.endog,
-                                        equal_nan=True)
-        revised_results = None
-        if has_revisions:
-            rev_exog = None
-            if self.model.exog is not None:
-                rev_exog = self.model.exog[:previous.nobs].copy()
-            rev_mod = previous.model.clone(rev_endog, exog=rev_exog)
-            revised = rev_mod.smooth(self.params)
-
         # Compute the news
         with contextlib.ExitStack() as stack:
             stack.enter_context(previous.model._set_final_exog(exog))
             stack.enter_context(previous._set_final_predicted_state(
                 exog, out_of_sample))
 
-            if has_revisions:
-                stack.enter_context(revised.model._set_final_exog(exog))
-                stack.enter_context(revised._set_final_predicted_state(
-                    exog, out_of_sample))
-                revised_results = revised.smoother_results
-
             out = self.smoother_results.news(
                 previous.smoother_results, start=start, end=end,
-                revised=revised_results, state_index=state_index)
+                revisions_details_start=revisions_details_start,
+                state_index=state_index)
         return out
 
     @Appender(MLEResults.summary.__doc__)
@@ -1108,7 +1097,7 @@ class VARMAXResults(MLEResults):
         spec = self.specification
         if spec.k_ar > 0 and spec.k_ma > 0:
             model_name = 'VARMA'
-            order = '(%s,%s)' % (spec.k_ar, spec.k_ma)
+            order = f'({spec.k_ar},{spec.k_ma})'
         elif spec.k_ar > 0:
             model_name = 'VAR'
             order = '(%s)' % (spec.k_ar)
@@ -1125,7 +1114,7 @@ class VARMAXResults(MLEResults):
         if spec.measurement_error:
             model_name.append('measurement error')
 
-        summary = super(VARMAXResults, self).summary(
+        summary = super().summary(
             alpha=alpha, start=start, model_name=model_name,
             display_params=not separate_params
         )

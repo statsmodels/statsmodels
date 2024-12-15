@@ -45,7 +45,7 @@ def _checkisfit(self):
 
 
 # Kernel Density Estimator Class
-class KDEUnivariate(object):
+class KDEUnivariate:
     """
     Univariate Kernel Density Estimator.
 
@@ -140,7 +140,7 @@ class KDEUnivariate(object):
         cut : float
             Defines the length of the grid past the lowest and highest values
             of x so that the kernel goes to zero. The end points are
-            -/+ cut*bw*{min(x) or max(x)}
+            ``min(x) - cut * adjust * bw`` and ``max(x) + cut * adjust * bw``.
         adjust : float
             An adjustment factor for the bw. Bandwidth becomes bw * adjust.
 
@@ -215,7 +215,7 @@ class KDEUnivariate(object):
             a, b = kern.domain
 
         def func(x, s):
-            return kern.density(s, x)
+            return np.squeeze(kern.density(s, x))
 
         support = self.support
         support = np.r_[a, support]

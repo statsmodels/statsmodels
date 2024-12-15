@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Fri Nov 04 10:51:39 2011
 
@@ -13,7 +12,7 @@ from statsmodels.sandbox.nonparametric import smoothers
 from statsmodels.regression.linear_model import OLS, WLS
 
 
-class CheckSmoother(object):
+class CheckSmoother:
 
     def test_predict(self):
         assert_almost_equal(self.res_ps.predict(self.x),
@@ -34,7 +33,7 @@ class CheckSmoother(object):
 
 
 
-class BasePolySmoother(object):
+class BasePolySmoother:
 
     @classmethod
     def setup_class(cls):
@@ -54,7 +53,7 @@ class TestPolySmoother1(BasePolySmoother, CheckSmoother):
 
     @classmethod
     def setup_class(cls):
-        super(TestPolySmoother1, cls).setup_class() #initialize DGP
+        super().setup_class() #initialize DGP
 
         y, x, exog = cls.y, cls.x, cls.exog
 
@@ -69,7 +68,7 @@ class TestPolySmoother2(BasePolySmoother, CheckSmoother):
 
     @classmethod
     def setup_class(cls):
-        super(TestPolySmoother2, cls).setup_class() #initialize DGP
+        super().setup_class() #initialize DGP
 
         y, x, exog = cls.y, cls.x, cls.exog
 
@@ -85,7 +84,7 @@ class TestPolySmoother3(BasePolySmoother, CheckSmoother):
 
     @classmethod
     def setup_class(cls):
-        super(TestPolySmoother3, cls).setup_class() #initialize DGP
+        super().setup_class() #initialize DGP
 
         y, x, exog = cls.y, cls.x, cls.exog
         nobs = y.shape[0]

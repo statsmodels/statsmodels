@@ -200,7 +200,7 @@ def companion_matrix(polynomial):
             raise ValueError("Companion matrix polynomials must include at"
                              " least two terms.")
 
-        if isinstance(polynomial, list) or isinstance(polynomial, tuple):
+        if isinstance(polynomial, (list, tuple)):
             try:
                 # Note: cannot use polynomial[0] because of the special
                 # behavior associated with matrix polynomials and the constant
@@ -256,9 +256,9 @@ def diff(series, k_diff=1, k_seasonal_diff=None, seasonal_periods=1):
     ----------
     series : array_like
         The series to be differenced.
-    diff : int, optional
+    k_diff : int, optional
         The number of simple differences to perform. Default is 1.
-    seasonal_diff : int or None, optional
+    k_seasonal_diff : int or None, optional
         The number of seasonal differences to perform. Default is no seasonal
         differencing.
     seasonal_periods : int, optional
@@ -836,7 +836,7 @@ def constrain_stationary_multivariate_python(unconstrained, error_variance,
        American Statistical Association
     """
 
-    use_list = type(unconstrained) == list
+    use_list = type(unconstrained) is list
     if not use_list:
         k_endog, order = unconstrained.shape
         order //= k_endog
@@ -872,7 +872,7 @@ def constrain_stationary_multivariate(unconstrained, variance,
                                       transform_variance=False,
                                       prefix=None):
 
-    use_list = type(unconstrained) == list
+    use_list = type(unconstrained) is list
     if use_list:
         unconstrained = np.concatenate(unconstrained, axis=1)
 
@@ -1078,7 +1078,7 @@ def _compute_multivariate_acovf_from_coefficients(
 
     # Convert coefficients to a list of matrices, for use in
     # `companion_matrix`; get dimensions
-    if type(coefficients) == list:
+    if type(coefficients) is list:
         order = len(coefficients)
         k_endog = coefficients[0].shape[0]
     else:
@@ -1357,7 +1357,7 @@ def _compute_multivariate_pacf_from_coefficients(constrained, error_variance,
         y_t = A_1 y_{t-1} + \dots + A_p y_{t-p} + \varepsilon_t
     """
 
-    if type(constrained) == list:
+    if type(constrained) is list:
         order = len(constrained)
         k_endog = constrained[0].shape[0]
     else:
@@ -1414,7 +1414,7 @@ def unconstrain_stationary_multivariate(constrained, error_variance):
        to Enforce Stationarity."
        Journal of Statistical Computation and Simulation 24 (2): 99-106.
     """
-    use_list = type(constrained) == list
+    use_list = type(constrained) is list
     if not use_list:
         k_endog, order = constrained.shape
         order //= k_endog
@@ -1491,7 +1491,7 @@ def validate_matrix_shape(name, shape, nrows, ncols, nobs):
                          ' explicity)' % name)
 
     # Enforce time-varying array size
-    if ndim == 3 and nobs is not None and not shape[-1] in [1, nobs]:
+    if ndim == 3 and nobs is not None and shape[-1] not in [1, nobs]:
         raise ValueError('Invalid dimensions for time-varying %s'
                          ' matrix. Requires shape (*,*,%d), got %s' %
                          (name, nobs, str(shape)))
@@ -1538,7 +1538,7 @@ def validate_vector_shape(name, shape, nrows, nobs):
                          ' explicity)' % name)
 
     # Enforce time-varying array size
-    if ndim == 2 and not shape[1] in [1, nobs]:
+    if ndim == 2 and shape[1] not in [1, nobs]:
         raise ValueError('Invalid dimensions for time-varying %s'
                          ' vector. Requires shape (*,%d), got %s' %
                          (name, nobs, str(shape)))
@@ -1863,7 +1863,12 @@ def prepare_trend_spec(trend):
         if trend.ndim > 0:
             polynomial_trend = (trend > 0).astype(int)
         else:
-            raise ValueError('Invalid trend method.')
+            raise ValueError(
+                "Valid trend inputs are 'c' (constant), 't' (linear trend in "
+                "time), 'ct' (both), 'ctt' (both with trend squared) or an "
+                "interable defining a polynomial, e.g., [1, 1, 0, 1] is `a + "
+                f"b*t + ct**3`. Received {trend}"
+            )
 
     # Note: k_trend is not the degree of the trend polynomial, because e.g.
     # k_trend = 1 corresponds to the degree zero polynomial (with only a
@@ -1935,13 +1940,15 @@ def _compute_smoothed_state_weights(ssm, compute_t=None, compute_j=None,
 
     # Re-order missing entries correctly and transpose to the appropriate
     # shape
-    if np.any(_model.nmissing):
+    t0 = min(compute_t[0], compute_j[0])
+    missing = np.isnan(ssm.endog[:, t0:])
+    if np.any(missing):
         shape = weights.shape
         # Transpose m, p, t, j, -> t, m, p, j so that we can use the
         # `reorder_missing_matrix` function
         weights = np.asfortranarray(weights.transpose(2, 0, 1, 3).reshape(
             shape[2] * shape[0], shape[1], shape[3], order='C'))
-        missing = np.asfortranarray(np.isnan(ssm.endog).astype(np.int32))
+        missing = np.asfortranarray(missing.astype(np.int32))
         reorder_missing_matrix(weights, missing, reorder_cols=True,
                                inplace=True)
         # Transpose t, m, p, j -> t, j, m, p,
@@ -1956,6 +1963,13 @@ def _compute_smoothed_state_weights(ssm, compute_t=None, compute_j=None,
 
     # Transpose m, l, t -> t, m, l
     prior_weights = prior_weights.transpose(2, 0, 1)
+
+    # Subset to the actual computed t, j elements
+    ix_tj = np.ix_(compute_t - t0, compute_j - t0)
+    weights = weights[ix_tj]
+    state_intercept_weights = state_intercept_weights[ix_tj]
+    if compute_prior_weights:
+        prior_weights = prior_weights[compute_t - t0]
 
     return weights, state_intercept_weights, prior_weights
 

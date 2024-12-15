@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Thu Aug  3 21:08:49 2017
 
@@ -26,7 +25,7 @@ exog = add_constant(cpunish_data.exog, prepend=False)
 endog = cpunish_data.endog - 1 # avoid zero-truncation
 exog /= np.round(exog.max(0), 3)
 
-class CheckMarginMixin(object):
+class CheckMarginMixin:
     rtol_fac = 1
 
     def test_margins_table(self):

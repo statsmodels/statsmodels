@@ -8,7 +8,7 @@ from statsmodels.stats._lilliefors import lilliefors, get_lilliefors_table, \
     kstest_fit, ksstat
 
 
-class TestLilliefors(object):
+class TestLilliefors:
 
     def test_normal(self):
         np.random.seed(3975)

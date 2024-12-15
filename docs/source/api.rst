@@ -140,6 +140,7 @@ Statistics and Tests
    ~statsmodels.tsa.stattools.ccovf
    ~statsmodels.tsa.stattools.coint
    ~statsmodels.tsa.stattools.kpss
+   ~statsmodels.tsa.stattools.leybourne
    ~statsmodels.tsa.stattools.pacf
    ~statsmodels.tsa.stattools.pacf_ols
    ~statsmodels.tsa.stattools.pacf_yw
@@ -195,6 +196,7 @@ Filters and Decompositions
 
    ~statsmodels.tsa.seasonal.seasonal_decompose
    ~statsmodels.tsa.seasonal.STL
+   ~statsmodels.tsa.seasonal.MSTL
    ~statsmodels.tsa.filters.bk_filter.bkfilter
    ~statsmodels.tsa.filters.cf_filter.cffilter
    ~statsmodels.tsa.filters.hp_filter.hpfilter

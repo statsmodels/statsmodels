@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """trying out VAR filtering and multidimensional fft
 
 Note: second half is copy and paste and does not run as script

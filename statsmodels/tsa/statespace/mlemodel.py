@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 State Space Model
 
@@ -135,9 +134,9 @@ class MLEModel(tsbase.TimeSeriesModel):
     def __init__(self, endog, k_states, exog=None, dates=None, freq=None,
                  **kwargs):
         # Initialize the model base
-        super(MLEModel, self).__init__(endog=endog, exog=exog,
-                                       dates=dates, freq=freq,
-                                       missing='none')
+        super().__init__(endog=endog, exog=exog,
+                         dates=dates, freq=freq,
+                         missing='none')
 
         # Store kwargs to recreate model
         self._init_kwargs = kwargs
@@ -163,7 +162,9 @@ class MLEModel(tsbase.TimeSeriesModel):
         """
         Prepare data for use in the state space representation
         """
-        endog = np.array(self.data.orig_endog, order='C')
+        endog = np.require(
+            np.array(self.data.orig_endog, copy=True), requirements="CW"
+        ).copy()
         exog = self.data.orig_exog
         if exog is not None:
             exog = np.array(exog)
@@ -243,7 +244,7 @@ class MLEModel(tsbase.TimeSeriesModel):
 
     def _get_init_kwds(self):
         # Get keywords based on model attributes
-        kwds = super(MLEModel, self)._get_init_kwds()
+        kwds = super()._get_init_kwds()
 
         for key, value in kwds.items():
             if value is None and hasattr(self.ssm, key):
@@ -502,9 +503,9 @@ class MLEModel(tsbase.TimeSeriesModel):
         # Set the new fixed parameters, keeping the order as given by
         # param_names
         self._fixed_params.update(params)
-        self._fixed_params = dict([
-            (name, self._fixed_params[name]) for name in self.param_names
-            if name in self._fixed_params])
+        self._fixed_params = {
+            name: self._fixed_params[name] for name in self.param_names
+            if name in self._fixed_params}
 
         # Update associated values
         self._has_fixed_params = True
@@ -620,7 +621,7 @@ class MLEModel(tsbase.TimeSeriesModel):
             approximating the score; if False, finite difference approximation
             is used. Default is True. This keyword is only relevant if
             `optim_score` is set to 'harvey' or 'approx'.
-        optim_hessian : {'opg','oim','approx'}, optional
+        optim_hessian : {'opg', 'oim', 'approx'}, optional
             The method by which the Hessian is numerically approximated. 'opg'
             uses outer product of gradients, 'oim' uses the information
             matrix formula from Harvey (1989), and 'approx' uses numerical
@@ -701,12 +702,12 @@ class MLEModel(tsbase.TimeSeriesModel):
             if optim_hessian is not None:
                 flags['hessian_method'] = optim_hessian
             fargs = (flags,)
-            mlefit = super(MLEModel, self).fit(start_params, method=method,
-                                               fargs=fargs,
-                                               maxiter=maxiter,
-                                               full_output=full_output,
-                                               disp=disp, callback=callback,
-                                               skip_hessian=True, **kwargs)
+            mlefit = super().fit(start_params, method=method,
+                                 fargs=fargs,
+                                 maxiter=maxiter,
+                                 full_output=full_output,
+                                 disp=disp, callback=callback,
+                                 skip_hessian=True, **kwargs)
 
         # Just return the fitted parameters if requested
         if return_params:
@@ -1855,6 +1856,9 @@ class MLEModel(tsbase.TimeSeriesModel):
                  state_shocks=None, initial_state=None, anchor=None,
                  repetitions=None, exog=None, extend_model=None,
                  extend_kwargs=None, transformed=True, includes_fixed=False,
+                 pretransformed_measurement_shocks=True,
+                 pretransformed_state_shocks=True,
+                 pretransformed_initial_state=True, random_state=None,
                  **kwargs):
         r"""
         Simulate a new time series following the state space model
@@ -1912,6 +1916,31 @@ class MLEModel(tsbase.TimeSeriesModel):
             this argument describes whether or not `params` also includes
             the fixed parameters, in addition to the free parameters. Default
             is False.
+        pretransformed_measurement_shocks : bool, optional
+            If `measurement_shocks` is provided, this flag indicates whether it
+            should be directly used as the shocks. If False, then it is assumed
+            to contain draws from the standard Normal distribution that must be
+            transformed using the `obs_cov` covariance matrix. Default is True.
+        pretransformed_state_shocks : bool, optional
+            If `state_shocks` is provided, this flag indicates whether it
+            should be directly used as the shocks. If False, then it is assumed
+            to contain draws from the standard Normal distribution that must be
+            transformed using the `state_cov` covariance matrix. Default is
+            True.
+        pretransformed_initial_state : bool, optional
+            If `initial_state` is provided, this flag indicates whether it
+            should be directly used as the initial_state. If False, then it is
+            assumed to contain draws from the standard Normal distribution that
+            must be transformed using the `initial_state_cov` covariance
+            matrix. Default is True.
+        random_state : {None, int, Generator, RandomState}, optional
+            If `seed` is None (or `np.random`), the
+            class:``~numpy.random.RandomState`` singleton is used.
+            If `seed` is an int, a new class:``~numpy.random.RandomState``
+            instance is used, seeded with `seed`.
+            If `seed` is already a class:``~numpy.random.Generator`` or
+            class:``~numpy.random.RandomState`` instance then that instance is
+            used.
 
         Returns
         -------
@@ -1973,12 +2002,13 @@ class MLEModel(tsbase.TimeSeriesModel):
         # Construct a model that represents the simulation period
         end = min(self.nobs, iloc + nsimulations)
         nextend = iloc + nsimulations - end
-        sim_model = self.ssm.extend(np.empty((nextend, self.k_endog)),
+        sim_model = self.ssm.extend(np.zeros((nextend, self.k_endog)),
                                     start=iloc, end=end, **kwargs)
 
         # Simulate the data
         _repetitions = 1 if repetitions is None else repetitions
         sim = np.zeros((nsimulations, self.k_endog, _repetitions))
+        simulator = None
 
         for i in range(_repetitions):
             initial_state_variates = None
@@ -1991,9 +2021,15 @@ class MLEModel(tsbase.TimeSeriesModel):
             # TODO: allow specifying measurement / state shocks for each
             # repetition?
 
-            out, _ = sim_model.simulate(
+            out, _, simulator = sim_model.simulate(
                 nsimulations, measurement_shocks, state_shocks,
-                initial_state_variates)
+                initial_state_variates,
+                pretransformed_measurement_shocks=(
+                    pretransformed_measurement_shocks),
+                pretransformed_state_shocks=pretransformed_state_shocks,
+                pretransformed_initial_state=pretransformed_initial_state,
+                simulator=simulator, return_simulator=True,
+                random_state=random_state)
 
             sim[:, :, i] = out
 
@@ -2196,7 +2232,7 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         # Convert endog name to index
         use_pandas = isinstance(self.data, PandasData)
-        if type(impulse) == str:
+        if type(impulse) is str:
             if not use_pandas:
                 raise ValueError('Endog must be pd.DataFrame.')
             impulse = self.endog_names.index(impulse)
@@ -3145,7 +3181,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Parameters
         ----------
-        method : {'ljungbox','boxpierece', None}
+        method : {'ljungbox', 'boxpierce', None}
             The statistical test for serial correlation. If None, an attempt is
             made to select an appropriate test.
         lags : None, int or array_like
@@ -3505,7 +3541,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
     def simulate(self, nsimulations, measurement_shocks=None,
                  state_shocks=None, initial_state=None, anchor=None,
                  repetitions=None, exog=None, extend_model=None,
-                 extend_kwargs=None, **kwargs):
+                 extend_kwargs=None,
+                 pretransformed_measurement_shocks=True,
+                 pretransformed_state_shocks=True,
+                 pretransformed_initial_state=True,
+                 random_state=None, **kwargs):
         r"""
         Simulate a new time series following the state space model
 
@@ -3547,6 +3587,31 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             Number of simulated paths to generate. Default is 1 simulated path.
         exog : array_like, optional
             New observations of exogenous regressors, if applicable.
+        pretransformed_measurement_shocks : bool, optional
+            If `measurement_shocks` is provided, this flag indicates whether it
+            should be directly used as the shocks. If False, then it is assumed
+            to contain draws from the standard Normal distribution that must be
+            transformed using the `obs_cov` covariance matrix. Default is True.
+        pretransformed_state_shocks : bool, optional
+            If `state_shocks` is provided, this flag indicates whether it
+            should be directly used as the shocks. If False, then it is assumed
+            to contain draws from the standard Normal distribution that must be
+            transformed using the `state_cov` covariance matrix. Default is
+            True.
+        pretransformed_initial_state : bool, optional
+            If `initial_state` is provided, this flag indicates whether it
+            should be directly used as the initial_state. If False, then it is
+            assumed to contain draws from the standard Normal distribution that
+            must be transformed using the `initial_state_cov` covariance
+            matrix. Default is True.
+        random_state : {None, int, Generator, RandomState}, optional
+            If `seed` is None (or `np.random`), the
+            class:``~numpy.random.RandomState`` singleton is used.
+            If `seed` is an int, a new class:``~numpy.random.RandomState``
+            instance is used, seeded with `seed`.
+            If `seed` is already a class:``~numpy.random.Generator`` or
+            class:``~numpy.random.RandomState`` instance then that instance is
+            used.
 
         Returns
         -------
@@ -3581,6 +3646,10 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         if iloc > self.nobs:
             raise ValueError('Cannot anchor simulation outside of the sample.')
 
+        # GH 9162
+        from statsmodels.tsa.statespace import simulation_smoother
+        random_state = simulation_smoother.check_random_state(random_state)
+
         # Setup the initial state
         if initial_state is None:
             initial_state_moments = (
@@ -3589,7 +3658,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
             _repetitions = 1 if repetitions is None else repetitions
 
-            initial_state = np.random.multivariate_normal(
+            initial_state = random_state.multivariate_normal(
                 *initial_state_moments, size=_repetitions).T
 
         scale = self.scale if self.filter_results.filter_concentrated else None
@@ -3601,7 +3670,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                 anchor=anchor, repetitions=repetitions, exog=exog,
                 transformed=True, includes_fixed=True,
                 extend_model=extend_model, extend_kwargs=extend_kwargs,
-                **kwargs)
+                pretransformed_measurement_shocks=(
+                    pretransformed_measurement_shocks),
+                pretransformed_state_shocks=pretransformed_state_shocks,
+                pretransformed_initial_state=pretransformed_initial_state,
+                random_state=random_state, **kwargs)
 
         return sim
 
@@ -3683,7 +3756,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                 irfs = irfs.values
         return irfs
 
-    def _apply(self, mod, refit=False, fit_kwargs=None, **kwargs):
+    def _apply(self, mod, refit=False, fit_kwargs=None):
         if fit_kwargs is None:
             fit_kwargs = {}
 
@@ -3711,11 +3784,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                 fit_kwargs['cov_kwds'] = {
                     'custom_cov_type': self.cov_type,
                     'custom_cov_params': self.cov_params_default,
-                    'custom_description': ('Parameters and standard errors'
-                                           ' were estimated using a different'
-                                           ' dataset and were then applied to'
-                                           ' this dataset. %s'
-                                           % self.cov_kwds['description'])}
+                    'custom_description': (
+                        'Parameters and standard errors were estimated using a'
+                        ' different dataset and were then applied to this'
+                        ' dataset. %s'
+                        % self.cov_kwds.get('description', 'Unknown.'))}
 
             if self.smoother_results is not None:
                 func = mod.smooth
@@ -3801,34 +3874,42 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         return previous, updated, comparison_dataset
 
     def _news_previous_results(self, previous, start, end, periods,
+                               revisions_details_start=False,
                                state_index=None):
         # Compute the news
-        out = self.smoother_results.news(previous.smoother_results,
-                                         start=start, end=end,
-                                         state_index=state_index)
+        out = self.smoother_results.news(
+            previous.smoother_results, start=start, end=end,
+            revisions_details_start=revisions_details_start,
+            state_index=state_index)
         return out
 
     def _news_updated_results(self, updated, start, end, periods,
-                              state_index=None):
-        return updated._news_previous_results(self, start, end, periods,
-                                              state_index=state_index)
+                              revisions_details_start=False, state_index=None):
+        return updated._news_previous_results(
+            self, start, end, periods,
+            revisions_details_start=revisions_details_start,
+            state_index=state_index)
 
     def _news_previous_data(self, endog, start, end, periods, exog,
-                            state_index=None):
+                            revisions_details_start=False, state_index=None):
         previous = self.apply(endog, exog=exog, copy_initialization=True)
-        return self._news_previous_results(previous, start, end, periods,
-                                           state_index=state_index)
+        return self._news_previous_results(
+            previous, start, end, periods,
+            revisions_details_start=revisions_details_start,
+            state_index=state_index)
 
     def _news_updated_data(self, endog, start, end, periods, exog,
-                           state_index=None):
+                           revisions_details_start=False, state_index=None):
         updated = self.apply(endog, exog=exog, copy_initialization=True)
-        return self._news_updated_results(updated, start, end, periods,
-                                          state_index=state_index)
+        return self._news_updated_results(
+            updated, start, end, periods,
+            revisions_details_start=revisions_details_start,
+            state_index=state_index)
 
     def news(self, comparison, impact_date=None, impacted_variable=None,
              start=None, end=None, periods=None, exog=None,
-             comparison_type=None, state_index=None, return_raw=False,
-             tolerance=1e-10, **kwargs):
+             comparison_type=None, revisions_details_start=False,
+             state_index=None, return_raw=False, tolerance=1e-10, **kwargs):
         """
         Compute impacts from updated data (news and revisions)
 
@@ -3868,6 +3949,15 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             *previous* results object or dataset or an *updated* results object
             or dataset. If not specified, then an attempt is made to determine
             the comparison type.
+        revisions_details_start : bool, int, str, or datetime, optional
+            The period at which to beging computing the detailed impacts of
+            data revisions. Any revisions prior to this period will have their
+            impacts grouped together. If a negative integer, interpreted as
+            an offset from the end of the dataset. If set to True, detailed
+            impacts are computed for all revisions, while if set to False, all
+            revisions are grouped together. Default is False. Note that for
+            large models, setting this to be near the beginning of the sample
+            can cause this function to be slow.
         state_index : array_like, optional
             An optional index specifying a subset of states to use when
             constructing the impacts of revisions and news. For example, if
@@ -3915,6 +4005,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                 raise ValueError(f'Given state index {state_index[-1]} is too'
                                  ' large for the number of states in the model'
                                  f' ({self.model.k_states}).')
+
+        if not isinstance(revisions_details_start, (int, bool)):
+            revisions_details_start, _, _, _ = (
+                self.model._get_prediction_index(
+                    revisions_details_start, revisions_details_start))
 
         # Get the previous and updated results objects from `self` and
         # `comparison`:
@@ -3977,9 +4072,10 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             updated = updated_orig.append(extra, exog=exog, **kwargs)
 
         # Compute the news
-        news_results = (
-            updated._news_previous_results(previous, start, end + 1, periods,
-                                           state_index=state_index))
+        news_results = updated._news_previous_results(
+            previous, start, end + 1, periods,
+            revisions_details_start=revisions_details_start,
+            state_index=state_index)
 
         if not return_raw:
             news_results = NewsResults(
@@ -4180,7 +4276,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Examples
         --------
-        >>> index = pd.period_range(start='2000', periods=2, freq='A')
+        >>> index = pd.period_range(start='2000', periods=2, freq='Y')
         >>> original_observations = pd.Series([1.2, 1.5], index=index)
         >>> mod = sm.tsa.SARIMAX(original_observations)
         >>> res = mod.fit()
@@ -4196,7 +4292,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         2002    1.4634
         Freq: A-DEC, dtype: float64
 
-        >>> new_index = pd.period_range(start='2002', periods=1, freq='A')
+        >>> new_index = pd.period_range(start='2002', periods=1, freq='Y')
         >>> new_observations = pd.Series([0.9], index=new_index)
         >>> updated_res = res.append(new_observations)
         >>> print(updated_res.params)
@@ -4257,7 +4353,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             kwargs.setdefault('initialization', init)
 
         mod = self.model.clone(new_endog, exog=new_exog, **kwargs)
-        res = self._apply(mod, refit=refit, fit_kwargs=fit_kwargs, **kwargs)
+        res = self._apply(mod, refit=refit, fit_kwargs=fit_kwargs)
 
         return res
 
@@ -4306,7 +4402,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Examples
         --------
-        >>> index = pd.period_range(start='2000', periods=2, freq='A')
+        >>> index = pd.period_range(start='2000', periods=2, freq='Y')
         >>> original_observations = pd.Series([1.2, 1.5], index=index)
         >>> mod = sm.tsa.SARIMAX(original_observations)
         >>> res = mod.fit()
@@ -4322,7 +4418,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         2002    1.4634
         Freq: A-DEC, dtype: float64
 
-        >>> new_index = pd.period_range(start='2002', periods=1, freq='A')
+        >>> new_index = pd.period_range(start='2002', periods=1, freq='Y')
         >>> new_observations = pd.Series([0.9], index=new_index)
         >>> updated_res = res.extend(new_observations)
         >>> print(updated_res.params)
@@ -4353,7 +4449,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         mod.ssm.initialization = Initialization(
             mod.k_states, 'known', constant=self.predicted_state[..., -1],
             stationary_cov=self.predicted_state_cov[..., -1])
-        res = self._apply(mod, refit=False, fit_kwargs=fit_kwargs, **kwargs)
+        res = self._apply(mod, refit=False, fit_kwargs=fit_kwargs)
 
         return res
 
@@ -4407,7 +4503,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Examples
         --------
-        >>> index = pd.period_range(start='2000', periods=2, freq='A')
+        >>> index = pd.period_range(start='2000', periods=2, freq='Y')
         >>> original_observations = pd.Series([1.2, 1.5], index=index)
         >>> mod = sm.tsa.SARIMAX(original_observations)
         >>> res = mod.fit()
@@ -4423,7 +4519,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         2002    1.4634
         Freq: A-DEC, dtype: float64
 
-        >>> new_index = pd.period_range(start='1980', periods=3, freq='A')
+        >>> new_index = pd.period_range(start='1980', periods=3, freq='Y')
         >>> new_observations = pd.Series([1.4, 0.3, 1.2], index=new_index)
         >>> new_res = res.apply(new_observations)
         >>> print(new_res.params)
@@ -4446,7 +4542,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             init = Initialization.from_results(self.filter_results)
             mod.ssm.initialization = init
 
-        res = self._apply(mod, refit=refit, fit_kwargs=fit_kwargs, **kwargs)
+        res = self._apply(mod, refit=refit, fit_kwargs=fit_kwargs)
 
         return res
 
@@ -4730,9 +4826,10 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                 jb = np.zeros((self.model.k_endog, 4)) * np.nan
 
             if self.model.k_endog <= display_max_endog:
-                format_str = lambda array: [  # noqa:E731
-                    ', '.join(['{0:.2f}'.format(i) for i in array])
-                ]
+
+                def format_str(array):
+                    return [', '.join([f'{i:.2f}' for i in array])]
+
                 diagn_left = [
                     ('Ljung-Box (L1) (Q):', format_str(lb[:, 0, -1])),
                     ('Prob(Q):', format_str(lb[:, 1, -1])),
@@ -4753,8 +4850,15 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                            'Jarque\nBera(JB)', 'Prob(JB)', 'Skew', 'Kurtosis']
                 data = pd.DataFrame(
                     np.c_[lb[:, :2, -1], het[:, :2], jb[:, :4]],
-                    index=endog_names, columns=columns).applymap(
-                        lambda num: '' if pd.isnull(num) else '%.2f' % num)
+                    index=endog_names, columns=columns)
+                try:
+                    data = data.map(
+                        lambda num: '' if pd.isnull(num) else '%.2f' % num
+                    )
+                except AttributeError:
+                    data = data.applymap(
+                        lambda num: '' if pd.isnull(num) else '%.2f' % num
+                    )
                 data.index.name = 'Residual of\nDep. variable'
                 data = data.reset_index()
 
@@ -4782,7 +4886,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                          " unstable." % _safe_cond(cov_params))
 
         if etext:
-            etext = ["[{0}] {1}".format(i + 1, text)
+            etext = [f"[{i + 1}] {text}"
                      for i, text in enumerate(etext)]
             etext.insert(0, "Warnings:")
             summary.add_extra_txt(etext)
@@ -4814,17 +4918,33 @@ wrap.populate_wrapper(MLEResultsWrapper, MLEResults)  # noqa:E305
 
 class PredictionResults(pred.PredictionResults):
     """
+    Prediction result from MLE models
 
     Parameters
     ----------
+    model : MLEModel
+        The models used to make the prediction
     prediction_results : kalman_filter.PredictionResults instance
         Results object from prediction after fitting or filtering a state space
         model.
     row_labels : iterable
         Row labels for the predicted data.
+    information_set : str
+        Name of information set
+    signal_only : bool
+        Whether the prediction is for the signal only
 
     Attributes
     ----------
+    model : MLEModel
+        The models used to make the prediction
+    prediction_results : kalman_filter.PredictionResults instance
+        Results object from prediction after fitting or filtering a state space
+        model.
+    information_set : str
+        Name of information set
+    signal_only : bool
+        Whether the prediction is for the signal only
     """
     def __init__(self, model, prediction_results, row_labels=None,
                  information_set='predicted', signal_only=False):
@@ -4893,9 +5013,9 @@ class PredictionResults(pred.PredictionResults):
             var_pred_mean = var_pred_mean.transpose()
 
         # Initialize
-        super(PredictionResults, self).__init__(predicted_mean, var_pred_mean,
-                                                dist='norm',
-                                                row_labels=row_labels)
+        super().__init__(predicted_mean, var_pred_mean,
+                         dist='norm',
+                         row_labels=row_labels)
 
     @property
     def se_mean(self):
@@ -4914,7 +5034,7 @@ class PredictionResults(pred.PredictionResults):
         #       this use case.
         _use_pandas = self._use_pandas
         self._use_pandas = False
-        conf_int = super(PredictionResults, self).conf_int(alpha, **kwds)
+        conf_int = super().conf_int(alpha, **kwds)
         self._use_pandas = _use_pandas
 
         # Create a dataframe
@@ -4923,10 +5043,10 @@ class PredictionResults(pred.PredictionResults):
 
             # Attach the endog names
             ynames = self.model.data.ynames
-            if not type(ynames) == list:
+            if type(ynames) is not list:
                 ynames = [ynames]
-            names = (['lower {0}'.format(name) for name in ynames] +
-                     ['upper {0}'.format(name) for name in ynames])
+            names = ([f'lower {name}' for name in ynames] +
+                     [f'upper {name}' for name in ynames])
             conf_int.columns = names
 
         return conf_int

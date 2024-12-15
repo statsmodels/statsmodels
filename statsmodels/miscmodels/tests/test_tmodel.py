@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 
 Created on Sun Jun 30 20:25:22 2013
@@ -6,14 +5,13 @@ Created on Sun Jun 30 20:25:22 2013
 Author: Josef Perktold
 """
 
-import pytest
 import numpy as np
 from numpy.testing import assert_allclose
+import pytest
 
-from statsmodels.tools.tools import add_constant
-from statsmodels.tools.testing import Holder
 from statsmodels.miscmodels.tmodel import TLinearModel
-
+from statsmodels.tools.testing import Holder
+from statsmodels.tools.tools import add_constant
 
 mm = Holder()
 mm.date_label = ["Apr.1982",  "Apr.1983", "Apr.1984", "Apr.1985", "Apr.1986",
@@ -68,7 +66,7 @@ mm.date = np.array([
     ])
 
 
-class CheckTLinearModelMixin(object):
+class CheckTLinearModelMixin:
 
     def test_basic(self):
         res1 = self.res1
@@ -116,6 +114,14 @@ class CheckTLinearModelMixin(object):
         assert_allclose(res1.model.endog, resf.model.endog, rtol=1e-10)
         assert_allclose(res1.model.exog, resf.model.exog, rtol=1e-10)
 
+    def test_df(self):
+        res = self.res1
+        k_extra = getattr(self, "k_extra", 0)
+        nobs, k_vars = res.model.exog.shape
+        assert res.df_resid == nobs - k_vars - k_extra
+        assert res.df_model == k_vars - 1  # -1 for constant
+        assert len(res.params) == k_vars + k_extra
+
     @pytest.mark.smoke
     def test_smoke(self):  # TODO: break into well-scoped tests
         res1 = self.res1
@@ -140,16 +146,19 @@ class TestTModel(CheckTLinearModelMixin):
         exog = add_constant(mm.CRSP)
         mod = TLinearModel(endog, exog)
         res = mod.fit(method='bfgs', disp=False)
-        modf = TLinearModel.from_formula("price ~ CRSP",
-                                data={"price":mm.m_marietta, "CRSP":mm.CRSP})
+        with pytest.warns(DeprecationWarning, match="Using"):
+            modf = TLinearModel.from_formula(
+                "price ~ CRSP", data={"price":mm.m_marietta, "CRSP":mm.CRSP}
+            )
         resf = modf.fit(method='bfgs', disp=False)
         from .results_tmodel import res_t_dfest as res2
         cls.res2 = res2
         cls.res1 = res  # take from module scope temporarily
         cls.resf = resf
+        cls.k_extra = 2
 
 
-class TestTModelFixed(object):
+class TestTModelFixed:
 
     @classmethod
     def setup_class(cls):
@@ -157,15 +166,17 @@ class TestTModelFixed(object):
         exog = add_constant(mm.CRSP)
         mod = TLinearModel(endog, exog, fix_df=3)
         res = mod.fit(method='bfgs', disp=False)
-        modf = TLinearModel.from_formula("price ~ CRSP",
-                                data={"price":mm.m_marietta, "CRSP":mm.CRSP},
-                                fix_df=3)
+        with pytest.warns(DeprecationWarning, match="Using"):
+            modf = TLinearModel.from_formula("price ~ CRSP",
+                                    data={"price":mm.m_marietta, "CRSP":mm.CRSP},
+                                    fix_df=3)
         resf = modf.fit(method='bfgs', disp=False)
         #TODO: no reference results yet
         #from results_tmodel import res_t_dfest as res2
         #cls.res2 = res2
         cls.res1 = res  # take from module scope temporarily
         cls.resf = resf
+        cls.k_extra = 1
 
     @pytest.mark.smoke
     def test_smoke(self):  # TODO: break into well-scoped tests

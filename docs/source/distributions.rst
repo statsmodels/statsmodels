@@ -24,6 +24,7 @@ Empirical Distributions
    :toctree: generated/
 
    ECDF
+   ECDFDiscrete
    StepFunction
    monotone_fn_inverter
 

@@ -1,12 +1,14 @@
+from statsmodels.compat.pandas import QUARTER_END
+
 import os
+
 import numpy as np
+from numpy.testing import assert_allclose
 import pandas as pd
+import pytest
 from scipy.io import matlab
 
-import pytest
-from numpy.testing import assert_allclose
-
-from statsmodels.tsa.statespace import initialization, dynamic_factor_mq
+from statsmodels.tsa.statespace import dynamic_factor_mq, initialization
 
 # Load dataset
 current_path = os.path.dirname(os.path.abspath(__file__))
@@ -197,7 +199,10 @@ def matlab_results():
     def get_data(us_data, mean_M=None, std_M=None, mean_Q=None, std_Q=None):
         dta_M = us_data[['CPIAUCSL', 'UNRATE', 'PAYEMS', 'RSAFS', 'TTLCONS',
                          'TCU']].copy()
-        dta_Q = us_data[['GDPC1', 'ULCNFB']].copy().resample('Q').last()
+        dta_Q = us_data[['GDPC1', 'ULCNFB']].copy()
+        dta_Q.index = dta_Q.index.to_timestamp()
+        dta_Q = dta_Q.resample(QUARTER_END).last()
+        dta_Q.index = dta_Q.index.to_period()
 
         dta_M['CPIAUCSL'] = (dta_M['CPIAUCSL'] /
                              dta_M['CPIAUCSL'].shift(1) - 1) * 100
@@ -359,7 +364,7 @@ def test_emstep_methods_nonmissing(matlab_results, k_factors, factor_orders,
     # so we have to only provide monthly series
     dta_M = matlab_results[0].iloc[:, :8]
     dta_M = (dta_M - dta_M.mean()) / dta_M.std()
-    endog_M = dta_M.interpolate().fillna(method='backfill')
+    endog_M = dta_M.interpolate().bfill()
 
     # Remove the quarterly endog->factor maps
     if isinstance(k_factors, dict):

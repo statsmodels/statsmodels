@@ -1,4 +1,3 @@
-
 import numpy as np
 from scipy import sparse
 from scipy.sparse.linalg import spsolve
@@ -55,6 +54,9 @@ def hpfilter(x, lamb=1600):
     K[i,j] = 1 if i == j or i == j + 2
     K[i,j] = -2 if i == j + 1
     K[i,j] = 0 otherwise
+
+    See the notebook `Time Series Filters
+    <../examples/notebooks/generated/tsa_filters.html>`__ for an overview.
 
     References
     ----------

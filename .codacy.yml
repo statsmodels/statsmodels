@@ -5,4 +5,3 @@ engines:
    python_version: 3
 exclude_paths:
   - '**/_version.py'
-  - 'versioneer.py'

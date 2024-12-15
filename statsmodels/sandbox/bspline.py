@@ -179,7 +179,7 @@ def _zero_triband(a, lower=0):
     return a
 
 
-class BSpline(object):
+class BSpline:
 
     '''
 
@@ -482,7 +482,7 @@ class SmoothingSpline(BSpline):
 
         # throw out rows with zeros (this happens at boundary points!)
 
-        mask = np.flatnonzero(1 - np.alltrue(np.equal(bt, 0), axis=0))
+        mask = np.flatnonzero(1 - np.all(np.equal(bt, 0), axis=0))
 
         bt = bt[:,mask]
         y = y[mask]
@@ -497,7 +497,7 @@ class SmoothingSpline(BSpline):
             _g = _band2array(self.g, lower=1, symmetric=True)
             self.coef, _, self.rank = L.lstsq(self.btb + pen*_g, bty)[0:3]
             self.rank = min(self.rank, self.btb.shape[0])
-            del(_g)
+            del _g
         else:
             self.btb = np.zeros(self.g.shape, np.float64)
             nband, nbasis = self.g.shape
@@ -515,9 +515,9 @@ class SmoothingSpline(BSpline):
         self.resid = y * self.weights - np.dot(self.coef, bt)
         self.pen = pen
 
-        del(bty)
-        del(mask)
-        del(bt)
+        del bty
+        del mask
+        del bt
 
     def smooth(self, y, x=None, weights=None):
 

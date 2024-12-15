@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Sun May 10 08:23:48 2015
 
@@ -11,7 +10,7 @@ from ._penalties import NonePenalty
 from statsmodels.tools.numdiff import approx_fprime_cs, approx_fprime
 
 
-class PenalizedMixin(object):
+class PenalizedMixin:
     """Mixin class for Maximum Penalized Likelihood
 
     Parameters
@@ -36,7 +35,7 @@ class PenalizedMixin(object):
         self.penal = kwds.pop('penal', None)
         self.pen_weight =  kwds.pop('pen_weight', None)
 
-        super(PenalizedMixin, self).__init__(*args, **kwds)
+        super().__init__(*args, **kwds)
 
         # TODO: define pen_weight as average pen_weight? i.e. per observation
         # I would have prefered len(self.endog) * kwds.get('pen_weight', 1)
@@ -72,7 +71,7 @@ class PenalizedMixin(object):
         if pen_weight is None:
             pen_weight = self.pen_weight
 
-        llf = super(PenalizedMixin, self).loglike(params, **kwds)
+        llf = super().loglike(params, **kwds)
         if pen_weight != 0:
             scale = self._handle_scale(params, **kwds)
             llf -= 1/scale * pen_weight * self.penal.func(params)
@@ -86,7 +85,7 @@ class PenalizedMixin(object):
         if pen_weight is None:
             pen_weight = self.pen_weight
 
-        llf = super(PenalizedMixin, self).loglikeobs(params, **kwds)
+        llf = super().loglikeobs(params, **kwds)
         nobs_llf = float(llf.shape[0])
 
         if pen_weight != 0:
@@ -101,7 +100,8 @@ class PenalizedMixin(object):
         if pen_weight is None:
             pen_weight = self.pen_weight
 
-        loglike = lambda p: self.loglike(p, pen_weight=pen_weight, **kwds)
+        def loglike(p):
+            return self.loglike(p, pen_weight=pen_weight, **kwds)
 
         if method == 'cs':
             return approx_fprime_cs(params, loglike)
@@ -117,7 +117,7 @@ class PenalizedMixin(object):
         if pen_weight is None:
             pen_weight = self.pen_weight
 
-        sc = super(PenalizedMixin, self).score(params, **kwds)
+        sc = super().score(params, **kwds)
         if pen_weight != 0:
             scale = self._handle_scale(params, **kwds)
             sc -= 1/scale * pen_weight * self.penal.deriv(params)
@@ -131,7 +131,7 @@ class PenalizedMixin(object):
         if pen_weight is None:
             pen_weight = self.pen_weight
 
-        sc = super(PenalizedMixin, self).score_obs(params, **kwds)
+        sc = super().score_obs(params, **kwds)
         nobs_sc = float(sc.shape[0])
         if pen_weight != 0:
             scale = self._handle_scale(params, **kwds)
@@ -144,7 +144,9 @@ class PenalizedMixin(object):
         """
         if pen_weight is None:
             pen_weight = self.pen_weight
-        loglike = lambda p: self.loglike(p, pen_weight=pen_weight, **kwds)
+
+        def loglike(p):
+            return self.loglike(p, pen_weight=pen_weight, **kwds)
 
         from statsmodels.tools.numdiff import approx_hess
         return approx_hess(params, loglike)
@@ -156,7 +158,7 @@ class PenalizedMixin(object):
         if pen_weight is None:
             pen_weight = self.pen_weight
 
-        hess = super(PenalizedMixin, self).hessian(params, **kwds)
+        hess = super().hessian(params, **kwds)
         if pen_weight != 0:
             scale = self._handle_scale(params, **kwds)
             h = self.penal.deriv2(params)
@@ -205,7 +207,7 @@ class PenalizedMixin(object):
         if trim is None:
             trim = False
 
-        res = super(PenalizedMixin, self).fit(method=method, **kwds)
+        res = super().fit(method=method, **kwds)
 
         if trim is False:
             # note boolean check for "is False", not "False_like"

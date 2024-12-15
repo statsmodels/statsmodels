@@ -511,7 +511,7 @@ class SARIMAX(MLEModel):
         self.k_posdef = k_posdef
 
         # Initialize the statespace
-        super(SARIMAX, self).__init__(
+        super().__init__(
             endog, exog=exog, k_states=k_states, k_posdef=k_posdef, **kwargs
         )
 
@@ -545,7 +545,7 @@ class SARIMAX(MLEModel):
             self.initialize_default()
 
     def prepare_data(self):
-        endog, exog = super(SARIMAX, self).prepare_data()
+        endog, exog = super().prepare_data()
 
         # Perform simple differencing if requested
         if (self.simple_differencing and
@@ -595,7 +595,7 @@ class SARIMAX(MLEModel):
         These initialization steps must occur following the parent class
         __init__ function calls.
         """
-        super(SARIMAX, self).initialize()
+        super().initialize()
 
         # Cache the indexes of included polynomial orders (for update below)
         # (but we do not want the index of the constant term, so exclude the
@@ -760,7 +760,7 @@ class SARIMAX(MLEModel):
                 transition[start:end, start:end] = seasonal_companion
 
                 # i
-                for i in range(d + 1, self._k_seasonal_diff):
+                if d < self._k_seasonal_diff - 1:
                     transition[start, end + self.seasonal_periods - 1] = 1
 
                 # \iota
@@ -898,7 +898,7 @@ class SARIMAX(MLEModel):
             params_ma = params[offset:k_params_ma + offset]
             offset += k_params_ma
         if residuals is not None:
-            if len(residuals) > 1:
+            if len(residuals) > max(1, k_params_ma):
                 params_variance = (residuals[k_params_ma:] ** 2).mean()
             else:
                 params_variance = np.var(endog)
@@ -976,7 +976,7 @@ class SARIMAX(MLEModel):
         )
         if invalid_ma:
             warn('Non-invertible starting MA parameters found.'
-                 ' Using zeros as starting parameters.')
+                 ' Using zeros as starting parameters.', UserWarning)
             params_ma *= 0
 
         # Seasonal Parameters
@@ -1015,9 +1015,9 @@ class SARIMAX(MLEModel):
         if self.state_regression and self.time_varying_regression:
             # TODO how to set the initial variance parameters?
             params_exog_variance = [1] * self._k_exog
-        if (self.state_error and type(params_variance) == list and
+        if (self.state_error and type(params_variance) is list and
                 len(params_variance) == 0):
-            if not (type(params_seasonal_variance) == list and
+            if not (type(params_seasonal_variance) is list and
                     len(params_seasonal_variance) == 0):
                 params_variance = params_seasonal_variance
             elif self._k_exog > 0:
@@ -1027,7 +1027,10 @@ class SARIMAX(MLEModel):
         params_measurement_variance = 1 if self.measurement_error else []
 
         # We want to bound the starting variance away from zero
-        params_variance = np.atleast_1d(max(np.array(params_variance), 1e-10))
+        params_variance = np.atleast_1d(np.array(params_variance))
+        if params_variance.size:
+            # Avoid comparisons with empty arrays due to changes in NumPy 2.2
+            params_variance = np.atleast_1d(max(params_variance[0], 1e-10))
 
         # Remove state variance as parameter if scale is concentrated out
         if self.concentrate_scale:
@@ -1489,7 +1492,7 @@ class SARIMAX(MLEModel):
         return unconstrained
 
     def _validate_can_fix_params(self, param_names):
-        super(SARIMAX, self)._validate_can_fix_params(param_names)
+        super()._validate_can_fix_params(param_names)
         model_names = self.model_names
 
         items = [
@@ -1803,8 +1806,8 @@ class SARIMAXResults(MLEResults):
     """
     def __init__(self, model, params, filter_results, cov_type=None,
                  **kwargs):
-        super(SARIMAXResults, self).__init__(model, params, filter_results,
-                                             cov_type, **kwargs)
+        super().__init__(model, params, filter_results,
+                         cov_type, **kwargs)
 
         self.df_resid = np.inf  # attribute required for wald tests
 
@@ -1889,7 +1892,7 @@ class SARIMAXResults(MLEResults):
 
     def extend(self, endog, exog=None, **kwargs):
         kwargs.setdefault('trend_offset', self.nobs + 1)
-        return super(SARIMAXResults, self).extend(endog, exog=exog, **kwargs)
+        return super().extend(endog, exog=exog, **kwargs)
 
     @cache_readonly
     def arroots(self):
@@ -2015,10 +2018,9 @@ class SARIMAXResults(MLEResults):
                                self.model.seasonal_periods))
             if not order == '':
                 order += 'x'
-        model_name = (
-            '%s%s%s' % (self.model.__class__.__name__, order, seasonal_order)
-            )
-        return super(SARIMAXResults, self).summary(
+        model_name = f'{self.model.__class__.__name__}{order}{seasonal_order}'
+
+        return super().summary(
             alpha=alpha, start=start, title='SARIMAX Results',
             model_name=model_name
         )

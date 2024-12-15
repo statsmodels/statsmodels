@@ -21,7 +21,7 @@ def _norm(x):
     return np.sqrt(np.sum(x * x))
 
 
-class PCA(object):
+class PCA:
     """
     Principal Component Analysis
 
@@ -247,7 +247,7 @@ class PCA(object):
         self._method = method
         # Workaround to avoid instance methods in __dict__
         if self._method not in ('eig', 'svd', 'nipals'):
-            raise ValueError('method {0} is not known.'.format(method))
+            raise ValueError(f'method {method} is not known.')
         if self._method == 'svd':
             self._svd_full_matrices = True
 

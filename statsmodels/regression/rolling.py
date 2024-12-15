@@ -24,6 +24,7 @@ from scipy import stats
 
 from statsmodels.base import model
 from statsmodels.base.model import LikelihoodModelResults, Model
+from statsmodels.formula._manager import FormulaManager
 from statsmodels.regression.linear_model import (
     RegressionModel,
     RegressionResults,
@@ -135,7 +136,7 @@ expanding scheme until window observation, and the roll.
     extra_parameters=extra_parameters,
 )
 @Appender(_doc)
-class RollingWLS(object):
+class RollingWLS:
     def __init__(
         self,
         endog,
@@ -394,28 +395,28 @@ class RollingWLS(object):
         if eval_env is None:
             eval_env = 2
         elif eval_env == -1:
-            from patsy import EvalEnvironment
-
-            eval_env = EvalEnvironment({})
+            mgr = FormulaManager()
+            eval_env = mgr.get_empty_eval_env()
         else:
             eval_env += 1  # we're going down the stack again
         missing = kwargs.get("missing", "skip")
-        from patsy import NAAction, dmatrices
 
-        na_action = NAAction(on_NA="raise", NA_types=[])
-        result = dmatrices(
+        na_action = FormulaManager().get_na_action(action="raise", types=[])
+
+        mgr = FormulaManager()
+        result = mgr.get_matrices(
             formula,
             data,
-            eval_env,
-            return_type="dataframe",
-            NA_action=na_action,
+            eval_env=eval_env,
+            pandas=True,
+            na_action=na_action,
         )
 
         endog, exog = result
         if (endog.ndim > 1 and endog.shape[1] > 1) or endog.ndim > 2:
             raise ValueError(
                 "endog has evaluated to an array with multiple "
-                "columns that has shape {0}. This occurs when "
+                "columns that has shape {}. This occurs when "
                 "the variable converted to endog is non-numeric"
                 " (e.g., bool or str).".format(endog.shape)
             )
@@ -462,7 +463,7 @@ class RollingOLS(RollingWLS):
         )
 
 
-class RollingRegressionResults(object):
+class RollingRegressionResults:
     """
     Results from rolling regressions
 
@@ -673,7 +674,7 @@ class RollingRegressionResults(object):
                 rp = p[i : i + 1] @ r.T
                 denom = rp.shape[1]
                 inv_cov = np.linalg.inv(rvcvr[i])
-                stat[i] = (rp @ inv_cov @ rp.T) / denom
+                stat[i] = np.squeeze(rp @ inv_cov @ rp.T) / denom
             return stat
 
     @cache_readonly
@@ -812,9 +813,9 @@ class RollingRegressionResults(object):
                     variable_idx.append(variable)
                 else:
                     msg = (
-                        "variable {0} is not an integer and was not found "
+                        "variable {} is not an integer and was not found "
                         "in the list of variable "
-                        "names: {1}".format(
+                        "names: {}".format(
                             variables[i], ", ".join(param_names)
                         )
                     )

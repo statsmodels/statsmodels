@@ -145,7 +145,7 @@ def check_distr(res):
     assert_allclose(v, np.squeeze(v2), rtol=1e-10)
 
 
-class CheckModelMixin(object):
+class CheckModelMixin:
     # Assertions about the Model object, as opposed to the Results
     # Assumes that mixed-in class implements:
     #   res1
@@ -263,7 +263,7 @@ class CheckBinaryResults(CheckModelResults):
         self.res1.resid_response
 
 
-class CheckMargEff(object):
+class CheckMargEff:
     """
     Test marginal effects (margeff) and its options
     """
@@ -591,7 +591,7 @@ class TestProbitMinimizeAdditionalOptions(CheckBinaryResults):
                                                      min_method='Nelder-Mead',
                                                      xatol=1e-4, fatol=1e-4)
 
-class CheckLikelihoodModelL1(object):
+class CheckLikelihoodModelL1:
     """
     For testing results generated with L1 regularization
     """
@@ -673,7 +673,7 @@ class TestLogitL1(CheckLikelihoodModelL1):
 
 @pytest.mark.skipif(not has_cvxopt, reason='Skipped test_cvxopt since cvxopt '
                                            'is not available')
-class TestCVXOPT(object):
+class TestCVXOPT:
 
     @classmethod
     def setup_class(cls):
@@ -696,7 +696,7 @@ class TestCVXOPT(object):
         assert_almost_equal(res_slsqp.params, res_cvxopt.params, DECIMAL_4)
 
 
-class TestSweepAlphaL1(object):
+class TestSweepAlphaL1:
 
     @classmethod
     def setup_class(cls):
@@ -718,7 +718,7 @@ class TestSweepAlphaL1(object):
             assert_almost_equal(res2.params, self.res1.params[i], DECIMAL_4)
 
 
-class CheckL1Compatability(object):
+class CheckL1Compatability:
     """
     Tests compatability between l1 and unregularized by setting alpha such
     that certain parameters should be effectively unregularized, and others
@@ -913,7 +913,7 @@ class TestProbitL1Compatability(CheckL1Compatability):
         cls.res_unreg = Probit(data.endog, exog_no_PSI).fit(disp=0, tol=1e-15)
 
 
-class CompareL1(object):
+class CompareL1:
     """
     For checking results for l1 regularization.
     Assumes self.res1 and self.res2 are two legitimate models to be compared.
@@ -1162,10 +1162,10 @@ class TestPoissonNewton(CheckModelResults):
     @pytest.mark.xfail(reason="res2.cov_params is a zero-dim array of None",
                        strict=True)
     def test_cov_params(self):
-        super(TestPoissonNewton, self).test_cov_params()
+        super().test_cov_params()
 
 
-class CheckNegBinMixin(object):
+class CheckNegBinMixin:
     # Test methods shared by TestNegativeBinomialXYZ classes
 
     @pytest.mark.xfail(reason="pvalues do not match, in some cases wrong size",
@@ -1516,7 +1516,7 @@ class CheckMNLogitBaseZero(CheckModelResults):
     @pytest.mark.xfail(reason="res2.cov_params is a zero-dim array of None",
                        strict=True)
     def test_cov_params(self):
-        super(CheckMNLogitBaseZero, self).test_cov_params()
+        super().test_cov_params()
 
     @pytest.mark.xfail(reason="Test has not been implemented for this class.",
                        strict=True, raises=NotImplementedError)
@@ -1552,25 +1552,42 @@ class TestMNLogitLBFGSBaseZero(CheckMNLogitBaseZero):
         cls.res2 = res2
 
 
+def test_mnlogit_basinhopping():
+    def callb(*args):
+        return 1
+
+    x = np.random.randint(0, 100, 1000)
+    y = np.random.randint(0, 3, 1000)
+    model = MNLogit(y, sm.add_constant(x))
+    # smoke tests for basinhopping and callback #8665
+    model.fit(method='basinhopping')
+    model.fit(method='basinhopping', callback=callb)
+
+
+
 def test_perfect_prediction():
     cur_dir = os.path.dirname(os.path.abspath(__file__))
     iris_dir = os.path.join(cur_dir, '..', '..', 'genmod', 'tests', 'results')
     iris_dir = os.path.abspath(iris_dir)
     iris = np.genfromtxt(os.path.join(iris_dir, 'iris.csv'), delimiter=",",
                          skip_header=1)
-    y = iris[:,-1]
-    X = iris[:,:-1]
+    y = iris[:, -1]
+    X = iris[:, :-1]
     X = X[y != 2]
     y = y[y != 2]
     X = sm.add_constant(X, prepend=True)
-    mod = Logit(y,X)
+    mod = Logit(y, X)
+    mod.raise_on_perfect_prediction = True
     assert_raises(PerfectSeparationError, mod.fit, maxiter=1000)
-    #turn off raise PerfectSeparationError
+    # turn off raise PerfectSeparationError
     mod.raise_on_perfect_prediction = False
     # this will raise if you set maxiter high enough with a singular matrix
     with pytest.warns(ConvergenceWarning):
         res = mod.fit(disp=False, maxiter=50)  # should not raise but does warn
     assert_(not res.mle_retvals['converged'])
+
+    # The following does not warn but message in summary()
+    mod.fit(method="bfgs", disp=False, maxiter=50)
 
 
 def test_poisson_predict():
@@ -1617,7 +1634,7 @@ def test_issue_339():
     smry = "\n".join(res1.summary().as_text().split('\n')[9:])
     cur_dir = os.path.dirname(os.path.abspath(__file__))
     test_case_file = os.path.join(cur_dir, 'results', 'mn_logit_summary.txt')
-    with open(test_case_file, 'r') as fd:
+    with open(test_case_file, encoding="utf-8") as fd:
         test_case = fd.read()
     np.testing.assert_equal(smry, test_case[:-1])
     # smoke test for summary2
@@ -1634,6 +1651,23 @@ def test_issue_341():
     x = exog[0]
     np.testing.assert_equal(res1.predict(x).shape, (1,7))
     np.testing.assert_equal(res1.predict(x[None]).shape, (1,7))
+
+
+def test_negative_binomial_default_alpha_param():
+    with pytest.warns(UserWarning, match='Negative binomial'
+                      ' dispersion parameter alpha not set'):
+        sm.families.NegativeBinomial()
+    with pytest.warns(UserWarning, match='Negative binomial'
+                      ' dispersion parameter alpha not set'):
+        sm.families.NegativeBinomial(
+            link=sm.families.links.NegativeBinomial(alpha=1.0)
+        )
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        sm.families.NegativeBinomial(alpha=1.0)
+    with pytest.warns(FutureWarning):
+        sm.families.NegativeBinomial(link=sm.families.links.nbinom(alpha=1.0),
+                                     alpha=1.0)
 
 
 def test_iscount():
@@ -1674,6 +1708,10 @@ def test_mnlogit_factor():
     params = res.params
     summary = res.summary()
     predicted = res.predict(exog.iloc[:5, :])
+    # check endog is series with no name #8672
+    endogn = dta['endog']
+    endogn.name = None
+    mod = sm.MNLogit(endogn, exog)
 
     # with patsy
     mod = smf.mnlogit('PID ~ ' + ' + '.join(dta.exog.columns), dta.data)
@@ -1760,7 +1798,7 @@ def test_binary_pred_table_zeros():
     assert_equal(res.pred_table(), expected)
 
 
-class TestGeneralizedPoisson_p2(object):
+class TestGeneralizedPoisson_p2:
     # Test Generalized Poisson model
 
     @classmethod
@@ -1817,7 +1855,7 @@ class TestGeneralizedPoisson_p2(object):
         check_distr(self.res1)
 
 
-class TestGeneralizedPoisson_transparams(object):
+class TestGeneralizedPoisson_transparams:
     # Test Generalized Poisson model
 
     @classmethod
@@ -1857,7 +1895,7 @@ class TestGeneralizedPoisson_transparams(object):
         assert_allclose(self.res1.llf, self.res2.llf)
 
 
-class TestGeneralizedPoisson_p1(object):
+class TestGeneralizedPoisson_p1:
     # Test Generalized Poisson model
 
     @classmethod
@@ -1932,7 +1970,7 @@ class TestGeneralizedPoisson_p1(object):
         check_distr(self.res1)
 
 
-class TestGeneralizedPoisson_underdispersion(object):
+class TestGeneralizedPoisson_underdispersion:
 
     @classmethod
     def setup_class(cls):
@@ -2245,7 +2283,7 @@ class TestNegativeBinomialPL1Compatability(CheckL1Compatability):
         cls.k_extra = 1  # 1 extra parameter in nb2
 
 
-class TestNegativeBinomialPPredictProb(object):
+class TestNegativeBinomialPPredictProb:
 
     def test_predict_prob_p1(self):
         expected_params = [1, -0.5]
@@ -2296,7 +2334,7 @@ class TestNegativeBinomialPPredictProb(object):
             atol=1e-2, rtol=1e-2)
 
 
-class CheckNull(object):
+class CheckNull:
 
     @classmethod
     def _get_data(cls):
@@ -2550,16 +2588,15 @@ def test_cov_confint_pandas():
     assert isinstance(ci.index, pd.MultiIndex)
 
 
-def test_t_test():
+def test_mlogit_t_test():
     # GH669, check t_test works in multivariate model
-    data = load_anes96()
+    data = sm.datasets.anes96.load()
     exog = sm.add_constant(data.exog, prepend=False)
     res1 = sm.MNLogit(data.endog, exog).fit(disp=0)
     r = np.ones(res1.cov_params().shape[0])
     t1 = res1.t_test(r)
     f1 = res1.f_test(r)
 
-    data = sm.datasets.anes96.load()
     exog = sm.add_constant(data.exog, prepend=False)
     endog, exog = np.asarray(data.endog), np.asarray(exog)
     res2 = sm.MNLogit(endog, exog).fit(disp=0)
@@ -2568,3 +2605,20 @@ def test_t_test():
 
     assert_allclose(t1.effect, t2.effect)
     assert_allclose(f1.statistic, f2.statistic)
+
+    tt = res1.t_test(np.eye(np.size(res2.params)))
+    assert_allclose(tt.tvalue.reshape(6,6, order="F"), res1.tvalues.to_numpy())
+    tt = res2.t_test(np.eye(np.size(res2.params)))
+    assert_allclose(tt.tvalue.reshape(6,6, order="F"), res2.tvalues)
+
+    wt = res1.wald_test(np.eye(np.size(res2.params))[0], scalar=True)
+    assert_allclose(wt.pvalue, res1.pvalues.to_numpy()[0, 0])
+
+
+    tt = res1.t_test("y1_logpopul")
+    wt = res1.wald_test("y1_logpopul", scalar=True)
+    assert_allclose(tt.pvalue, wt.pvalue)
+
+    wt = res1.wald_test("y1_logpopul, y2_logpopul", scalar=True)
+    # regression test
+    assert_allclose(wt.statistic, 5.68660562, rtol=1e-8)

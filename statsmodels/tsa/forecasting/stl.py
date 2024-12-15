@@ -1,7 +1,7 @@
 from statsmodels.compat.pandas import Substitution, is_int_index
 
 import datetime as dt
-from typing import Any, Dict, Optional, Union
+from typing import Any, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -32,7 +32,7 @@ ds.insert_parameters(
     "model",
     Parameter(
         "model_kwargs",
-        "Dict[str, Any]",
+        "dict[str, Any]",
         [
             "Any additional arguments needed to initialized the model using "
             "the residuals produced by subtracting the seasonality."
@@ -117,6 +117,10 @@ class STLForecast:
     * ``results`` may also exposes a method ``get_prediction`` that produces
       both in- and out-of-sample predictions.
 
+    See the notebook `Seasonal Decomposition
+    <../examples/notebooks/generated/stl_decomposition.html>`__ for an
+    overview.
+
     Examples
     --------
     >>> import numpy as np
@@ -136,6 +140,7 @@ class STLForecast:
     >>> forecasts = res.forecast(12)
 
     Generate forecasts from an Exponential Smoothing model with trend
+
     >>> from statsmodels.tsa.statespace import exponential_smoothing
     >>> ES = exponential_smoothing.ExponentialSmoothing
     >>> config = {"trend": True}
@@ -188,7 +193,7 @@ class STLForecast:
 
         Parameters
         ----------\n%(fit_params)s
-        fit_kwargs : Dict[str, Any]
+        fit_kwargs : dict[str, Any]
             Any additional keyword arguments to pass to ``model``'s ``fit``
             method when estimating the model on the decomposed residuals.
 
@@ -426,7 +431,7 @@ class STLForecastResults:
         return seasonal
 
     def forecast(
-        self, steps: int = 1, **kwargs: Dict[str, Any]
+        self, steps: int = 1, **kwargs: dict[str, Any]
     ) -> Union[np.ndarray, pd.Series]:
         """
         Out-of-sample forecasts
@@ -457,7 +462,7 @@ class STLForecastResults:
         start: Optional[DateLike] = None,
         end: Optional[DateLike] = None,
         dynamic: Union[bool, DateLike] = False,
-        **kwargs: Dict[str, Any],
+        **kwargs: dict[str, Any],
     ):
         """
         In-sample prediction and out-of-sample forecasting
@@ -508,7 +513,7 @@ class STLForecastResults:
             import warnings
 
             warnings.warn(
-                f"The variance of the predicted mean is not available using "
+                "The variance of the predicted mean is not available using "
                 f"the {self.model.__class__.__name__} model class.",
                 UserWarning,
                 stacklevel=2,

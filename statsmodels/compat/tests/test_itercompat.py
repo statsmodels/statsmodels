@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 
 Created on Wed Feb 29 10:34:00 2012
@@ -29,7 +28,7 @@ def test_zip_longest():
 
     assert_(
         list(zip_longest(*lili)) == transposed,
-        "%r not equal %r" % (zip_longest(*lili), transposed),
+        f"{zip_longest(*lili)!r} not equal {transposed!r}",
     )
 
 
@@ -43,8 +42,8 @@ def test_combinations():
         ("B", "D"),
         ("C", "D"),
     ]
-    assert_(actual == desired, "%r not equal %r" % (actual, desired))
+    assert_(actual == desired, f"{actual!r} not equal {desired!r}")
 
     actual = list(combinations(lrange(4), 3))
     desired = [(0, 1, 2), (0, 1, 3), (0, 2, 3), (1, 2, 3)]
-    assert_(actual == desired, "%r not equal %r" % (actual, desired))
+    assert_(actual == desired, f"{actual!r} not equal {desired!r}")

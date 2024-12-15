@@ -55,7 +55,7 @@ from statsmodels.tsa.statespace.simulation_smoother import (
 from numpy.testing import assert_equal
 
 
-class Options(object):
+class Options:
     @classmethod
     def setup_class(cls, *args, **kwargs):
 

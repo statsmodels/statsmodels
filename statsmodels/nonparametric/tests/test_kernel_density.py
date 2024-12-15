@@ -8,8 +8,8 @@ import statsmodels.api as sm
 nparam = sm.nonparametric
 
 
-class KDETestBase(object):
-    def setup(self):
+class KDETestBase:
+    def setup_method(self):
         nobs = 60
         np.random.seed(123456)
         self.o = np.random.binomial(2, 0.7, size=(nobs, 1))

@@ -13,7 +13,7 @@ cimport numpy as np
 cdef class sStatespace(object):
     # Statespace dimensions
     cdef readonly int nobs, k_endog, k_states, k_posdef
-    
+
     # Statespace representation matrices
     cdef readonly np.float32_t [::1,:] obs, obs_intercept, state_intercept
     cdef readonly np.float32_t [:] initial_state
@@ -30,7 +30,7 @@ cdef class sStatespace(object):
     cdef public int diagonal_obs_cov
     cdef readonly int _diagonal_obs_cov
     cdef public int subset_design
-    cdef public int companion_transition
+    cdef public int companion_transition, identity_transition
 
     # Temporary arrays
     cdef np.float32_t [::1,:] tmp
@@ -90,7 +90,7 @@ cdef class sStatespace(object):
 cdef class dStatespace(object):
     # Statespace dimensions
     cdef readonly int nobs, k_endog, k_states, k_posdef
-    
+
     # Statespace representation matrices
     cdef readonly np.float64_t [::1,:] obs, obs_intercept, state_intercept
     cdef readonly np.float64_t [:] initial_state
@@ -107,7 +107,7 @@ cdef class dStatespace(object):
     cdef public int diagonal_obs_cov
     cdef readonly int _diagonal_obs_cov
     cdef public int subset_design
-    cdef public int companion_transition
+    cdef public int companion_transition, identity_transition
 
     # Temporary arrays
     cdef np.float64_t [::1,:] tmp
@@ -167,7 +167,7 @@ cdef class dStatespace(object):
 cdef class cStatespace(object):
     # Statespace dimensions
     cdef readonly int nobs, k_endog, k_states, k_posdef
-    
+
     # Statespace representation matrices
     cdef readonly np.complex64_t [::1,:] obs, obs_intercept, state_intercept
     cdef readonly np.complex64_t [:] initial_state
@@ -184,7 +184,7 @@ cdef class cStatespace(object):
     cdef public int diagonal_obs_cov
     cdef readonly int _diagonal_obs_cov
     cdef public int subset_design
-    cdef public int companion_transition
+    cdef public int companion_transition, identity_transition
 
     # Temporary arrays
     cdef np.complex64_t [::1,:] tmp
@@ -244,7 +244,7 @@ cdef class cStatespace(object):
 cdef class zStatespace(object):
     # Statespace dimensions
     cdef readonly int nobs, k_endog, k_states, k_posdef
-    
+
     # Statespace representation matrices
     cdef readonly np.complex128_t [::1,:] obs, obs_intercept, state_intercept
     cdef readonly np.complex128_t [:] initial_state
@@ -261,7 +261,7 @@ cdef class zStatespace(object):
     cdef public int diagonal_obs_cov
     cdef readonly int _diagonal_obs_cov
     cdef public int subset_design
-    cdef public int companion_transition
+    cdef public int companion_transition, identity_transition
 
     # Temporary arrays
     cdef np.complex128_t [::1,:] tmp

@@ -35,12 +35,14 @@ from __future__ import annotations
 from statsmodels.compat.pandas import Appender
 from statsmodels.compat.python import lrange, lzip
 
-from typing import Sequence
+from typing import Literal
+from collections.abc import Sequence
 import warnings
 
 import numpy as np
 from scipy import optimize, stats
-from scipy.linalg import toeplitz
+from scipy.linalg import cholesky, toeplitz
+from scipy.linalg.lapack import dtrtri
 
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
@@ -50,6 +52,7 @@ from statsmodels.regression._prediction import PredictionResults
 from statsmodels.tools.decorators import cache_readonly, cache_writable
 from statsmodels.tools.sm_exceptions import InvalidTestWarning, ValueWarning
 from statsmodels.tools.tools import pinv_extended
+from statsmodels.tools.typing import Float64Array
 from statsmodels.tools.validation import bool_like, float_like, string_like
 
 from . import _prediction as pred
@@ -177,7 +180,13 @@ def _get_sigma(sigma, nobs):
         if sigma.shape != (nobs, nobs):
             raise ValueError("Sigma must be a scalar, 1d of length %s or a 2d "
                              "array of shape %s x %s" % (nobs, nobs, nobs))
-        cholsigmainv = np.linalg.cholesky(np.linalg.inv(sigma)).T
+        cholsigmainv, info = dtrtri(cholesky(sigma, lower=True),
+                                    lower=True, overwrite_c=True)
+        if info > 0:
+            raise np.linalg.LinAlgError('Cholesky decomposition of sigma '
+                                        'yields a singular matrix')
+        elif info < 0:
+            raise ValueError('Invalid input to dtrtri (info = %d)' % info)
     return sigma, cholsigmainv
 
 
@@ -188,7 +197,8 @@ class RegressionModel(base.LikelihoodModel):
     Intended for subclassing.
     """
     def __init__(self, endog, exog, **kwargs):
-        super(RegressionModel, self).__init__(endog, exog, **kwargs)
+        super().__init__(endog, exog, **kwargs)
+        self.pinv_wexog: Float64Array | None = None
         self._data_attr.extend(['pinv_wexog', 'wendog', 'wexog', 'weights'])
 
     def initialize(self):
@@ -250,8 +260,25 @@ class RegressionModel(base.LikelihoodModel):
         """
         raise NotImplementedError("Subclasses must implement.")
 
-    def fit(self, method="pinv", cov_type='nonrobust', cov_kwds=None,
-            use_t=None, **kwargs):
+    def fit(
+            self,
+            method: Literal["pinv", "qr"] = "pinv",
+            cov_type: Literal[
+                "nonrobust",
+                "fixed scale",
+                "HC0",
+                "HC1",
+                "HC2",
+                "HC3",
+                "HAC",
+                "hac-panel",
+                "hac-groupsum",
+                "cluster",
+            ] = "nonrobust",
+            cov_kwds=None,
+            use_t: bool | None = None,
+            **kwargs
+    ):
         """
         Full fit of the model.
 
@@ -327,7 +354,8 @@ class RegressionModel(base.LikelihoodModel):
                 self.rank = np.linalg.matrix_rank(R)
             else:
                 Q, R = self.exog_Q, self.exog_R
-
+            # Needed for some covariance estimators, see GH #8157
+            self.pinv_wexog = np.linalg.pinv(self.wexog)
             # used in ANOVA
             self.effects = effects = np.dot(Q.T, self.wendog)
             beta = np.linalg.solve(R, effects)
@@ -424,7 +452,7 @@ class GLS(RegressionModel):
     __doc__ = r"""
     Generalized Least Squares
 
-    %(params)s
+    {params}
     sigma : scalar or array
         The array or scalar `sigma` is the weighting matrix of the covariance.
         The default is None for no scaling.  If `sigma` is a scalar, it is
@@ -433,7 +461,7 @@ class GLS(RegressionModel):
         is an n-length vector, then `sigma` is assumed to be a diagonal
         matrix with the given `sigma` on the diagonal.  This should be the
         same as WLS.
-    %(extra_params)s
+    {extra_params}
 
     Attributes
     ----------
@@ -451,7 +479,7 @@ class GLS(RegressionModel):
     nobs : float
         The number of observations n.
     normalized_cov_params : ndarray
-        p x p array :math:`(X^{T}\Sigma^{-1}X)^{-1}`
+        p x p array :math:`(X^{{T}}\Sigma^{{-1}}X)^{{-1}}`
     results : RegressionResults instance
         A property that returns the RegressionResults class if fit.
     sigma : ndarray
@@ -494,8 +522,8 @@ class GLS(RegressionModel):
     >>> gls_model = sm.GLS(data.endog, data.exog, sigma=sigma)
     >>> gls_results = gls_model.fit()
     >>> print(gls_results.summary())
-    """ % {'params': base._model_params_doc,
-           'extra_params': base._missing_param_doc + base._extra_param_doc}
+    """.format(params=base._model_params_doc,
+           extra_params=base._missing_param_doc + base._extra_param_doc)
 
     def __init__(self, endog, exog, sigma=None, missing='none', hasconst=None,
                  **kwargs):
@@ -505,7 +533,7 @@ class GLS(RegressionModel):
         # TODO: default if sigma is none should be two-step GLS
         sigma, cholsigmainv = _get_sigma(sigma, len(endog))
 
-        super(GLS, self).__init__(endog, exog, missing=missing,
+        super().__init__(endog, exog, missing=missing,
                                   hasconst=hasconst, sigma=sigma,
                                   cholsigmainv=cholsigmainv, **kwargs)
 
@@ -655,12 +683,12 @@ class WLS(RegressionModel):
     the variance of the observations.  That is, if the variables are
     to be transformed by 1/sqrt(W) you must supply weights = 1/W.
 
-    %(params)s
+    {params}
     weights : array_like, optional
         A 1d array of weights.  If you supply 1/W then the variables are
         pre- multiplied by 1/sqrt(W).  If no weights are supplied the
         default value is 1 and WLS results are the same as OLS.
-    %(extra_params)s
+    {extra_params}
 
     Attributes
     ----------
@@ -691,11 +719,12 @@ class WLS(RegressionModel):
     >>> results.tvalues
     array([ 2.0652652 ,  0.35684428])
     >>> print(results.t_test([1, 0]))
-    <T test: effect=array([ 2.91666667]), sd=array([[ 1.41224801]]), t=array([[ 2.0652652]]), p=array([[ 0.04690139]]), df_denom=5>
+    <T test: effect=array([ 2.91666667]), sd=array([[ 1.41224801]]),
+     t=array([[ 2.0652652]]), p=array([[ 0.04690139]]), df_denom=5>
     >>> print(results.f_test([0, 1]))
     <F test: F=array([[ 0.12733784]]), p=[[ 0.73577409]], df_denom=5, df_num=1>
-    """ % {'params': base._model_params_doc,
-           'extra_params': base._missing_param_doc + base._extra_param_doc}
+    """.format(params=base._model_params_doc,
+           extra_params=base._missing_param_doc + base._extra_param_doc)
 
     def __init__(self, endog, exog, weights=1., missing='none', hasconst=None,
                  **kwargs):
@@ -714,7 +743,7 @@ class WLS(RegressionModel):
             weights = np.array([weights.squeeze()])
         else:
             weights = weights.squeeze()
-        super(WLS, self).__init__(endog, exog, missing=missing,
+        super().__init__(endog, exog, missing=missing,
                                   weights=weights, hasconst=hasconst, **kwargs)
         nobs = self.exog.shape[0]
         weights = self.weights
@@ -763,9 +792,10 @@ class WLS(RegressionModel):
         -----
         .. math:: -\frac{n}{2}\log SSR
                   -\frac{n}{2}\left(1+\log\left(\frac{2\pi}{n}\right)\right)
-                  -\frac{1}{2}\log\left(\left|W\right|\right)
+                  +\frac{1}{2}\log\left(\left|W\right|\right)
 
-        where :math:`W` is a diagonal weight matrix matrix and
+        where :math:`W` is a diagonal weight matrix matrix,
+        :math:`\left|W\right|` is its determinant, and
         :math:`SSR=\left(Y-\hat{Y}\right)^\prime W \left(Y-\hat{Y}\right)` is
         the sum of the squared weighted residuals.
         """
@@ -831,8 +861,8 @@ class OLS(WLS):
     __doc__ = """
     Ordinary Least Squares
 
-    %(params)s
-    %(extra_params)s
+    {params}
+    {extra_params}
 
     Attributes
     ----------
@@ -877,9 +907,10 @@ class OLS(WLS):
     ==============================================================================
 
     >>> print(results.f_test(np.identity(2)))
-    <F test: F=array([[159.63031026]]), p=1.2607168903696672e-20, df_denom=43, df_num=2>
-    """ % {'params': base._model_params_doc,
-           'extra_params': base._missing_param_doc + base._extra_param_doc}
+    <F test: F=array([[159.63031026]]), p=1.2607168903696672e-20,
+     df_denom=43, df_num=2>
+    """.format(params=base._model_params_doc,
+           extra_params=base._missing_param_doc + base._extra_param_doc)
 
     def __init__(self, endog, exog=None, missing='none', hasconst=None,
                  **kwargs):
@@ -887,7 +918,7 @@ class OLS(WLS):
             msg = ("Weights are not supported in OLS and will be ignored"
                    "An exception will be raised in the next version.")
             warnings.warn(msg, ValueWarning)
-        super(OLS, self).__init__(endog, exog, missing=missing,
+        super().__init__(endog, exog, missing=missing,
                                   hasconst=hasconst, **kwargs)
         if "weights" in self._init_keys:
             self._init_keys.remove("weights")
@@ -1191,10 +1222,10 @@ class GLSAR(GLS):
     __doc__ = """
     Generalized Least Squares with AR covariance structure
 
-    %(params)s
+    {params}
     rho : int
         The order of the autoregressive covariance.
-    %(extra_params)s
+    {extra_params}
 
     Notes
     -----
@@ -1211,7 +1242,7 @@ class GLSAR(GLS):
     >>> model = sm.GLSAR(Y, X, rho=2)
     >>> for i in range(6):
     ...     results = model.fit()
-    ...     print("AR coefficients: {0}".format(model.rho))
+    ...     print("AR coefficients: {{0}}".format(model.rho))
     ...     rho, sigma = sm.regression.yule_walker(results.resid,
     ...                                            order=model.order)
     ...     model = sm.GLSAR(Y, X, rho)
@@ -1227,9 +1258,11 @@ class GLSAR(GLS):
     >>> results.tvalues
     array([ -2.10304127,  21.8047269 ])
     >>> print(results.t_test([1, 0]))
-    <T test: effect=array([-0.66661205]), sd=array([[ 0.31697526]]), t=array([[-2.10304127]]), p=array([[ 0.06309969]]), df_denom=3>
+    <T test: effect=array([-0.66661205]), sd=array([[ 0.31697526]]),
+     t=array([[-2.10304127]]), p=array([[ 0.06309969]]), df_denom=3>
     >>> print(results.f_test(np.identity(2)))
-    <F test: F=array([[ 1815.23061844]]), p=[[ 0.00002372]], df_denom=3, df_num=2>
+    <F test: F=array([[ 1815.23061844]]), p=[[ 0.00002372]],
+     df_denom=3, df_num=2>
 
     Or, equivalently
 
@@ -1237,8 +1270,8 @@ class GLSAR(GLS):
     >>> res = model2.iterative_fit(maxiter=6)
     >>> model2.rho
     array([-0.60479146, -0.85841922])
-    """ % {'params': base._model_params_doc,
-           'extra_params': base._missing_param_doc + base._extra_param_doc}
+    """.format(params=base._model_params_doc,
+           extra_params=base._missing_param_doc + base._extra_param_doc)
     # TODO: Complete docstring
 
     def __init__(self, endog, exog=None, rho=1, missing='none', hasconst=None,
@@ -1258,11 +1291,11 @@ class GLSAR(GLS):
             # JP this looks wrong, should be a regression on constant
             # results for rho estimate now identical to yule-walker on y
             # super(AR, self).__init__(endog, add_constant(endog))
-            super(GLSAR, self).__init__(endog, np.ones((endog.shape[0], 1)),
+            super().__init__(endog, np.ones((endog.shape[0], 1)),
                                         missing=missing, hasconst=None,
                                         **kwargs)
         else:
-            super(GLSAR, self).__init__(endog, exog, missing=missing,
+            super().__init__(endog, exog, missing=missing,
                                         **kwargs)
 
     def iterative_fit(self, maxiter=3, rtol=1e-4, **kwargs):
@@ -1432,8 +1465,11 @@ def yule_walker(x, order=1, method="adjusted", df=None, inv=False,
 
     if method not in ("adjusted", "mle"):
         raise ValueError("ACF estimation method must be 'adjusted' or 'MLE'")
+    # TODO: Require??
     x = np.array(x, dtype=np.float64)
     if demean:
+        if not x.flags.writeable:
+            x = np.require(x, requirements="W")
         x -= x.mean()
     n = df or x.shape[0]
 
@@ -1448,9 +1484,20 @@ def yule_walker(x, order=1, method="adjusted", df=None, inv=False,
         r[k] = (x[0:-k] * x[k:]).sum() / (n - k * adj_needed)
     R = toeplitz(r[:-1])
 
-    rho = np.linalg.solve(R, r[1:])
+    try:
+        rho = np.linalg.solve(R, r[1:])
+    except np.linalg.LinAlgError as err:
+        if 'Singular matrix' in str(err):
+            warnings.warn("Matrix is singular. Using pinv.", ValueWarning)
+            rho = np.linalg.pinv(R) @ r[1:]
+        else:
+            raise
+
     sigmasq = r[0] - (r[1:]*rho).sum()
-    sigma = np.sqrt(sigmasq) if not np.isnan(sigmasq) and sigmasq > 0 else np.nan
+    if not np.isnan(sigmasq) and sigmasq > 0:
+        sigma = np.sqrt(sigmasq)
+    else:
+        sigma = np.nan
     if inv:
         return rho, sigma, np.linalg.inv(R)
     else:
@@ -1574,7 +1621,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
     def __init__(self, model, params, normalized_cov_params=None, scale=1.,
                  cov_type='nonrobust', cov_kwds=None, use_t=None, **kwargs):
-        super(RegressionResults, self).__init__(
+        super().__init__(
             model, params, normalized_cov_params, scale)
 
         self._cache = {}
@@ -1631,7 +1678,7 @@ class RegressionResults(base.LikelihoodModelResults):
         The confidence interval is based on Student's t-distribution.
         """
         # keep method for docstring for now
-        ci = super(RegressionResults, self).conf_int(alpha=alpha, cols=cols)
+        ci = super().conf_int(alpha=alpha, cols=cols)
         return ci
 
     @cache_readonly
@@ -1870,7 +1917,9 @@ class RegressionResults(base.LikelihoodModelResults):
             scale parameter is not included in the parameter count.
             Use ``dk_params=1`` to include scale in the parameter count.
 
-        Returns the given information criterion value.
+        Returns
+        -------
+        Value of information criterion.
 
         References
         ----------
@@ -1901,7 +1950,7 @@ class RegressionResults(base.LikelihoodModelResults):
             eigvals = self._wexog_singular_values ** 2
         else:
             wx = self.model.wexog
-            eigvals = np.linalg.linalg.eigvalsh(wx.T @ wx)
+            eigvals = np.linalg.eigvalsh(wx.T @ wx)
         return np.sort(eigvals)[::-1]
 
     @cache_readonly
@@ -2382,7 +2431,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
         - 'HAC': heteroskedasticity-autocorrelation robust covariance
 
-          ``maxlag`` :  integer, required
+          ``maxlags`` :  integer, required
             number of lags to use
 
           ``kernel`` : {callable, str}, optional
@@ -2424,7 +2473,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
           ``time`` : array_like, required
             index of time periods
-          ``maxlag`` : integer, required
+          ``maxlags`` : integer, required
             number of lags to use
           ``kernel`` : {callable, str}, optional
             The available kernels are ['bartlett', 'uniform']. The default is
@@ -2448,7 +2497,7 @@ class RegressionResults(base.LikelihoodModelResults):
             indicator for groups
           ``time`` : array_like[int]
             index of time periods
-          ``maxlag`` : int, required
+          ``maxlags`` : int, required
             number of lags to use
           ``kernel`` : {callable, str}, optional
             Available kernels are ['bartlett', 'uniform'], default
@@ -2536,6 +2585,7 @@ class RegressionResults(base.LikelihoodModelResults):
             # cluster robust standard errors, one- or two-way
             groups = kwargs['groups']
             if not hasattr(groups, 'shape'):
+                groups = [np.squeeze(np.asarray(group)) for group in groups]
                 groups = np.asarray(groups).T
 
             if groups.ndim >= 2:
@@ -2597,9 +2647,13 @@ class RegressionResults(base.LikelihoodModelResults):
                 raise ValueError('either time or groups needs to be given')
             groupidx = lzip([0] + tt, tt + [nobs_])
             self.n_groups = n_groups = len(groupidx)
-            res.cov_params_default = sw.cov_nw_panel(self, maxlags, groupidx,
-                                                     weights_func=weights_func,
-                                                     use_correction=use_correction)
+            res.cov_params_default = sw.cov_nw_panel(
+                self,
+                maxlags,
+                groupidx,
+                weights_func=weights_func,
+                use_correction=use_correction
+            )
             res.cov_kwds['description'] = descriptions['HAC-Panel']
 
         elif cov_type.lower() == 'hac-groupsum':
@@ -2677,6 +2731,11 @@ class RegressionResults(base.LikelihoodModelResults):
         See Also
         --------
         statsmodels.iolib.summary.Summary : A class that holds summary results.
+
+        Notes
+        -----
+        For more information on regression results and diagnostic table,
+        see our documentation of `Examples/Linear Regression Models/Regression diagnostics`.
         """
         from statsmodels.stats.stattools import (
             durbin_watson,
@@ -2737,6 +2796,8 @@ class RegressionResults(base.LikelihoodModelResults):
             diagn_left = diagn_right = []
             top_left = [elem for elem in top_left if elem[0] in slimlist]
             top_right = [elem for elem in top_right if elem[0] in slimlist]
+            top_right = top_right + \
+                [("", [])] * (len(top_left) - len(top_right))
         else:
             diagn_left = [('Omnibus:', ["%#6.3f" % omni]),
                           ('Prob(Omnibus):', ["%#6.3f" % omnipv]),
@@ -2795,7 +2856,7 @@ class RegressionResults(base.LikelihoodModelResults):
             etext.append(wstr)
 
         if etext:
-            etext = ["[{0}] {1}".format(i + 1, text)
+            etext = [f"[{i + 1}] {text}"
                      for i, text in enumerate(etext)]
             etext.insert(0, "Notes:")
             smry.add_extra_txt(etext)
@@ -2852,7 +2913,6 @@ class RegressionResults(base.LikelihoodModelResults):
         dw = durbin_watson(self.wresid)
         eigvals = self.eigenvals
         condno = self.condition_number
-        eigvals = np.sort(eigvals)  # in increasing order
         diagnostic = dict([
             ('Omnibus:',  "%.3f" % omni),
             ('Prob(Omnibus):', "%.3f" % omnipv),
@@ -2871,16 +2931,38 @@ class RegressionResults(base.LikelihoodModelResults):
                       xname=xname, yname=yname, title=title)
         smry.add_dict(diagnostic)
 
+        etext = []
+
+        if not self.k_constant:
+            etext.append(
+                "R² is computed without centering (uncentered) since the \
+                model does not contain a constant."
+            )
+        if hasattr(self, 'cov_type'):
+            etext.append(self.cov_kwds['description'])
+        if self.model.exog.shape[0] < self.model.exog.shape[1]:
+            wstr = "The input rank is higher than the number of observations."
+            etext.append(wstr)
+
         # Warnings
         if eigvals[-1] < 1e-10:
             warn = "The smallest eigenvalue is %6.3g. This might indicate that\
-            there are strong multicollinearity problems or that the design\
-            matrix is singular." % eigvals[-1]
-            smry.add_text(warn)
-        if condno > 1000:
-            warn = "* The condition number is large (%.g). This might indicate \
-            strong multicollinearity or other numerical problems." % condno
-            smry.add_text(warn)
+                there are strong multicollinearity problems or that the design\
+                matrix is singular." % eigvals[-1]
+            etext.append(warn)
+        elif condno > 1000:
+            warn = "The condition number is large, %6.3g. This might indicate\
+                that there are strong multicollinearity or other numerical\
+                problems." % condno
+            etext.append(warn)
+
+        if etext:
+            etext = [f"[{i + 1}] {text}"
+                     for i, text in enumerate(etext)]
+            etext.insert(0, "Notes:")
+
+        for line in etext:
+            smry.add_text(line)
 
         return smry
 

@@ -23,8 +23,9 @@ class CopulaDistribution:
 
     Parameters
     ----------
-    copula : str, instance of copula class
-        String name or instance of a copula class
+    copula : :class:`Copula` instance
+        An instance of :class:`Copula`, e.g. :class:`GaussianCopula`,
+        :class:`FrankCopula`, etc.
     marginals : list of distribution instances
         Marginal distributions.
     copargs : tuple
@@ -64,7 +65,7 @@ class CopulaDistribution:
             to be a list of tuples with the same length has the number of
             marginal distributions. The list can contain empty tuples for
             marginal distributions that do not take parameter arguments.
-        random_state : {None, int, `numpy.random.Generator`}, optional
+        random_state : {None, int, numpy.random.Generator}, optional
             If `seed` is None then the legacy singleton NumPy generator.
             This will change after 0.13 to use a fresh NumPy ``Generator``,
             so you should explicitly pass a seeded ``Generator`` if you
@@ -264,9 +265,6 @@ class Copula(ABC):
 
     def __init__(self, k_dim=2):
         self.k_dim = k_dim
-        if k_dim > 2:
-            import warnings
-            warnings.warn("copulas for more than 2 dimension is untested")
 
     def rvs(self, nobs=1, args=(), random_state=None):
         """Draw `n` in the half-open interval ``[0, 1)``.
@@ -280,7 +278,7 @@ class Copula(ABC):
         args : tuple
             Arguments for copula parameters. The number of arguments depends
             on the copula.
-        random_state : {None, int, `numpy.random.Generator`}, optional
+        random_state : {None, int, numpy.random.Generator}, optional
             If `seed` is None then the legacy singleton NumPy generator.
             This will change after 0.13 to use a fresh NumPy ``Generator``,
             so you should explicitly pass a seeded ``Generator`` if you
@@ -374,7 +372,7 @@ class Copula(ABC):
             is generated.
         nobs : int, optional
             Number of samples to generate from the copula.
-        random_state : {None, int, `numpy.random.Generator`}, optional
+        random_state : {None, int, numpy.random.Generator}, optional
             If `seed` is None then the legacy singleton NumPy generator.
             This will change after 0.13 to use a fresh NumPy ``Generator``,
             so you should explicitly pass a seeded ``Generator`` if you
@@ -490,13 +488,17 @@ class Copula(ABC):
         corr_param : float
             Correlation parameter of the copula, ``theta`` in Archimedean and
             pearson correlation in elliptical.
+            If k_dim > 2, then average tau is used.
         """
         x = np.asarray(data)
-        if x.shape[1] != 2:
-            import warnings
-            warnings.warn("currently only first pair of data are used"
-                          " to compute kendall's tau")
-        tau = stats.kendalltau(x[:, 0], x[:, 1])[0]
+
+        if x.shape[1] == 2:
+            tau = stats.kendalltau(x[:, 0], x[:, 1])[0]
+        else:
+            k = self.k_dim
+            taus = [stats.kendalltau(x[..., i], x[..., j])[0]
+                    for i in range(k) for j in range(i+1, k)]
+            tau = np.mean(taus)
         return self._arg_from_tau(tau)
 
     def _arg_from_tau(self, tau):

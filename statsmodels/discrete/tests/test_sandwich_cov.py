@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 
 Created on Mon Dec 09 21:29:20 2013
@@ -9,6 +8,8 @@ Author: Josef Perktold
 import os
 import numpy as np
 import pandas as pd
+import pytest
+
 import statsmodels.discrete.discrete_model as smd
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.genmod import families
@@ -42,7 +43,7 @@ exposure = np.asarray(data['service'])
 
 
 # TODO get the test methods from regression/tests
-class CheckCountRobustMixin(object):
+class CheckCountRobustMixin:
 
 
     def test_basic(self):
@@ -437,7 +438,7 @@ class TestNegbinCluExposureFit(CheckCountRobustMixin):
         cls.corr_fact = cls.get_correction_factor(cls.res1)
 
 
-class CheckDiscreteGLM(object):
+class CheckDiscreteGLM:
     # compare GLM with other models, no verified reference results
 
     def test_basic(self):
@@ -499,6 +500,21 @@ class CheckDiscreteGLM(object):
         res_lm2 = res2.score_test(exog_extra, cov_type='nonrobust')
         assert_allclose(np.hstack(res_lm1), np.hstack(res_lm2), rtol=5e-7)
 
+    def test_margeff(self):
+        if (isinstance(self.res2.model, OLS) or
+                hasattr(self.res1.model, "offset")):
+            pytest.skip("not available yet")
+
+        marg1 = self.res1.get_margeff()
+        marg2 = self.res2.get_margeff()
+        assert_allclose(marg1.margeff, marg2.margeff, rtol=1e-10)
+        assert_allclose(marg1.margeff_se, marg2.margeff_se, rtol=1e-10)
+
+        marg1 = self.res1.get_margeff(count=True, dummy=True)
+        marg2 = self.res2.get_margeff(count=True, dummy=True)
+        assert_allclose(marg1.margeff, marg2.margeff, rtol=1e-10)
+        assert_allclose(marg1.margeff_se, marg2.margeff_se, rtol=1e-10)
+
 
 class TestGLMPoisson(CheckDiscreteGLM):
 
@@ -552,7 +568,7 @@ class TestGLMProbit(CheckDiscreteGLM):
         endog_bin = (endog > endog.mean()).astype(int)
         cls.cov_type = 'cluster'
 
-        mod1 = GLM(endog_bin, exog, family=families.Binomial(link=links.probit()))
+        mod1 = GLM(endog_bin, exog, family=families.Binomial(link=links.Probit()))
         cls.res1 = mod1.fit(method='newton',
                             cov_type='cluster', cov_kwds=dict(groups=group))
 
@@ -582,7 +598,7 @@ class TestGLMProbitOffset(CheckDiscreteGLM):
         offset = np.ones(endog_bin.shape[0])
 
         mod1 = GLM(endog_bin, exog,
-                   family=families.Binomial(link=links.probit()),
+                   family=families.Binomial(link=links.Probit()),
                    offset=offset)
         cls.res1 = mod1.fit(method='newton',
                             cov_type='cluster', cov_kwds=dict(groups=group))

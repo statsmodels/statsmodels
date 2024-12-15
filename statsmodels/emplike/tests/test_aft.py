@@ -9,7 +9,7 @@ from statsmodels.tools import add_constant
 from .results.el_results import AFTRes
 
 
-class GenRes(object):
+class GenRes:
     @classmethod
     def setup_class(cls):
         data = heart.load()

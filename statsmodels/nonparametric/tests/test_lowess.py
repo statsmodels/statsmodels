@@ -22,6 +22,7 @@ from numpy.testing import (
 import pytest
 
 from statsmodels.nonparametric.smoothers_lowess import lowess
+import pandas as pd
 
 # Number of decimals to test equality with.
 # The default is 7.
@@ -29,7 +30,7 @@ curdir = os.path.dirname(os.path.abspath(__file__))
 rpath = os.path.join(curdir, "results")
 
 
-class TestLowess(object):
+class TestLowess:
     def test_import(self):
         # this does not work
         # from statsmodels.api.nonparametric import lowess as lowess1
@@ -38,12 +39,15 @@ class TestLowess(object):
         lowess1 = sm.nonparametric.lowess
         assert_(lowess is lowess1)
 
-    def test_flat(self):
+    @pytest.mark.parametrize("use_pandas",[False, True])
+    def test_flat(self, use_pandas):
         test_data = {
             "x": np.arange(20),
             "y": np.zeros(20),
             "out": np.zeros(20),
         }
+        if use_pandas:
+            test_data = {k: pd.Series(test_data[k]) for k in test_data}
         expected_lowess = np.array([test_data["x"], test_data["out"]]).T
         actual_lowess = lowess(test_data["y"], test_data["x"])
         assert_almost_equal(expected_lowess, actual_lowess, 7)
@@ -144,6 +148,11 @@ class TestLowess(object):
 
         # check skip sorting
         actual_lowess1 = lowess(y, x, is_sorted=True)
+        assert_almost_equal(actual_lowess1, expected_lowess, decimal=13)
+
+        # check skip sorting - DataFrame
+        df = pd.DataFrame({"y": y, "x": x})
+        actual_lowess1 = lowess(df["y"], df["x"], is_sorted=True)
         assert_almost_equal(actual_lowess1, expected_lowess, decimal=13)
 
         # check skip missing

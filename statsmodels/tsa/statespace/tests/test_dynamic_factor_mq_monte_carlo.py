@@ -1,21 +1,25 @@
 """
 Monte Carlo-type tests for the BM model
 
-Note that that the actual tests that run are just regression tests against
+Note that the actual tests that run are just regression tests against
 previously estimated values with small sample sizes that can be run quickly
 for continuous integration. However, this file can be used to re-run (slow)
 large-sample Monte Carlo tests.
 """
+from statsmodels.compat.pandas import QUARTER_END
+
 import numpy as np
-import pandas as pd
-
-import pytest
-
 from numpy.testing import assert_allclose
+import pandas as pd
+import pytest
 from scipy.signal import lfilter
 
 from statsmodels.tsa.statespace import (
-    dynamic_factor_mq, sarimax, varmax, dynamic_factor)
+    dynamic_factor,
+    dynamic_factor_mq,
+    sarimax,
+    varmax,
+)
 
 
 def simulate_k_factor1(nobs=1000):
@@ -38,8 +42,11 @@ def simulate_k_factor1(nobs=1000):
     levels_M.iloc[0] = 100
     levels_M = levels_M.cumprod()
     log_levels_M = np.log(levels_M) * 100
-    log_levels_Q = (np.log(levels_M).resample('Q', convention='e')
-                                    .sum().iloc[:-1] * 100)
+    # Recast to datetime and then back to period to resample
+    log_levels_Q = np.log(levels_M)
+    log_levels_Q.index = log_levels_Q.index.to_timestamp()
+    log_levels_Q = log_levels_Q.resample(QUARTER_END).sum().iloc[:-1] * 100
+    log_levels_Q.index = log_levels_Q.index.to_period()
 
     # This is an alternative way to compute the quarterly levels
     # endog_M = endog.iloc[:, :3]
@@ -121,8 +128,11 @@ def simulate_k_factors3_blocks2(nobs=1000, idiosyncratic_ar1=False):
     levels_M.iloc[0] = 100
     levels_M = levels_M.cumprod()
     log_levels_M = np.log(levels_M) * 100
-    log_levels_Q = (np.log(levels_M).resample('Q', convention='e')
-                                    .sum().iloc[:-1] * 100)
+
+    log_levels_Q = np.log(levels_M)
+    log_levels_Q.index = log_levels_Q.index.to_timestamp()
+    log_levels_Q = log_levels_Q.resample(QUARTER_END).sum().iloc[:-1] * 100
+    log_levels_Q.index = log_levels_Q.index.to_period()
 
     # Compute the growth rate series that we'll actually run the model on
     endog_M = log_levels_M.iloc[:, :7].diff().iloc[1:]
@@ -195,8 +205,11 @@ def gen_k_factor1_nonstationary(nobs=1000, k=1, idiosyncratic_ar1=False,
     levels_M.iloc[0] = 100
     levels_M = levels_M.cumprod()
     log_levels_M = np.log(levels_M) * 100
-    log_levels_Q = (np.log(levels_M).resample('Q', convention='e')
-                                    .sum().iloc[:-1] * 100)
+
+    log_levels_Q = np.log(levels_M)
+    log_levels_Q.index = log_levels_Q.index.to_timestamp()
+    log_levels_Q = log_levels_Q.resample(QUARTER_END).sum().iloc[:-1] * 100
+    log_levels_Q.index = log_levels_Q.index.to_period()
 
     # Compute the growth rate series that we'll actually run the model on
     endog_M = log_levels_M.diff().iloc[1:, :k]
@@ -217,7 +230,7 @@ def test_em_nonstationary(reset_randomstate):
     # Test that when the EM algorithm estimates non-stationary parameters, that
     # it warns the user and switches to a diffuse initialization.
     ix = pd.period_range(start='2000', periods=20, freq='M')
-    endog_M = pd.Series(np.arange(20), index=ix)
+    endog_M = pd.Series(np.arange(20), index=ix, dtype=float)
     endog_M.iloc[10:12] += [0.4, -0.2]  # add in a little noise
     ix = pd.period_range(start='2000', periods=5, freq='Q')
     endog_Q = pd.Series(np.arange(5), index=ix)
@@ -230,7 +243,7 @@ def test_em_nonstationary(reset_randomstate):
            r' switched to diffuse for the following:  \["factor block:'
            r' \(\'global\',\)"\], and fitting was restarted.')
     with pytest.warns(UserWarning, match=msg):
-        return mod.fit(maxiter=2, em_initialization=False)
+        mod.fit(maxiter=2, em_initialization=False)
 
 
 def gen_k_factor1(nobs=10000, k=1, idiosyncratic_ar1=False,
@@ -258,8 +271,11 @@ def gen_k_factor1(nobs=10000, k=1, idiosyncratic_ar1=False,
     levels_M.iloc[0] = 100
     levels_M = levels_M.cumprod()
     log_levels_M = np.log(levels_M) * 100
-    log_levels_Q = (np.log(levels_M).resample('Q', convention='e')
-                                    .sum().iloc[:-1] * 100)
+
+    log_levels_Q = np.log(levels_M)
+    log_levels_Q.index = log_levels_Q.index.to_timestamp()
+    log_levels_Q = log_levels_Q.resample(QUARTER_END).sum().iloc[:-1] * 100
+    log_levels_Q.index = log_levels_Q.index.to_period()
 
     # Compute the growth rate series that we'll actually run the model on
     endog_M = log_levels_M.diff().iloc[1:, :k]
@@ -372,8 +388,10 @@ def gen_k_factor2(nobs=10000, k=2, idiosyncratic_ar1=False,
     levels_M.iloc[0] = 100
     levels_M = levels_M.cumprod()
     # log_levels_M = np.log(levels_M) * 100
-    log_levels_Q = (np.log(levels_M).resample('Q', convention='e')
-                                    .sum().iloc[:-1] * 100)
+    log_levels_Q = np.log(levels_M)
+    log_levels_Q.index = log_levels_Q.index.to_timestamp()
+    log_levels_Q = log_levels_Q.resample(QUARTER_END).sum().iloc[:-1] * 100
+    log_levels_Q.index = log_levels_Q.index.to_period()
 
     # Compute the quarterly growth rate series
     endog_Q = log_levels_Q.diff()

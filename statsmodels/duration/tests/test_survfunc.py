@@ -234,7 +234,7 @@ def test_plot_km(close_figures):
     ha, lb = ax.get_legend_handles_labels()
     fig.legend([ha[k] for k in (0, 2, 4)],
                [lb[k] for k in (0, 2, 4)],
-               'center right')
+               loc='center right')
     close_or_save(pdf, fig)
 
     # Simultaneous CB for BMT data

@@ -23,7 +23,7 @@ import numpy.linalg as L
 from statsmodels.base.model import LikelihoodModelResults
 from statsmodels.tools.decorators import cache_readonly
 
-class Unit(object):
+class Unit:
     """
     Individual experimental unit for
     EM implementation of (repeated measures)
@@ -172,7 +172,7 @@ class Unit(object):
         return - 2 * self.logL(ML=ML)
 
 
-class OneWayMixed(object):
+class OneWayMixed:
     """
     Model for
     EM implementation of (repeated measures)

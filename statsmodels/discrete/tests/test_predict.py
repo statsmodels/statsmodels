@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Sat Nov 13 12:48:37 2021
 
@@ -53,8 +52,9 @@ class CheckPredict():
         sl2 = slice(0, -(self.k_infl + 1), None)
         assert_allclose(res1.params[sl1], res2.params[sl2], rtol=self.rtol)
         assert_allclose(res1.bse[sl1], res2.bse[sl2], rtol=30 * self.rtol)
-        assert_allclose(res1.params[-1], np.exp(res2.params[-1]),
-                        rtol=self.rtol)
+        params1 = np.asarray(res1.params)
+        params2 = np.asarray(res2.params)
+        assert_allclose(params1[-1], np.exp(params2[-1]), rtol=self.rtol)
 
     def test_predict(self):
         res1 = self.res1
@@ -64,42 +64,42 @@ class CheckPredict():
         # test for which="mean"
         rdf = res2.results_margins_atmeans
         pred = res1.get_prediction(ex, **self.pred_kwds_mean)
-        assert_allclose(pred.predicted, rdf["b"][0], rtol=1e-4)
-        assert_allclose(pred.se, rdf["se"][0], rtol=1e-4,  atol=1e-4)
+        assert_allclose(pred.predicted, rdf["b"].iloc[0], rtol=1e-4)
+        assert_allclose(pred.se, rdf["se"].iloc[0], rtol=1e-4,  atol=1e-4)
         if isinstance(pred, PredictionResultsMonotonic):
             # default method is endpoint transformation for non-ZI models
             ci = pred.conf_int()[0]
-            assert_allclose(ci[0], rdf["ll"][0], rtol=1e-3,  atol=1e-4)
-            assert_allclose(ci[1], rdf["ul"][0], rtol=1e-3,  atol=1e-4)
+            assert_allclose(ci[0], rdf["ll"].iloc[0], rtol=1e-3,  atol=1e-4)
+            assert_allclose(ci[1], rdf["ul"].iloc[0], rtol=1e-3,  atol=1e-4)
 
             ci = pred.conf_int(method="delta")[0]
-            assert_allclose(ci[0], rdf["ll"][0], rtol=1e-4,  atol=1e-4)
-            assert_allclose(ci[1], rdf["ul"][0], rtol=1e-4,  atol=1e-4)
+            assert_allclose(ci[0], rdf["ll"].iloc[0], rtol=1e-4,  atol=1e-4)
+            assert_allclose(ci[1], rdf["ul"].iloc[0], rtol=1e-4,  atol=1e-4)
         else:
             ci = pred.conf_int()[0]
-            assert_allclose(ci[0], rdf["ll"][0], rtol=1e-4,  atol=1e-4)
-            assert_allclose(ci[1], rdf["ul"][0], rtol=1e-4,  atol=1e-4)
+            assert_allclose(ci[0], rdf["ll"].iloc[0], rtol=1e-4,  atol=1e-4)
+            assert_allclose(ci[1], rdf["ul"].iloc[0], rtol=1e-4,  atol=1e-4)
 
         stat, _ = pred.t_test()
         assert_allclose(stat, pred.tvalues, rtol=1e-4,  atol=1e-4)
 
         rdf = res2.results_margins_mean
         pred = res1.get_prediction(average=True, **self.pred_kwds_mean)
-        assert_allclose(pred.predicted, rdf["b"][0], rtol=3e-4)  # self.rtol)
-        assert_allclose(pred.se, rdf["se"][0], rtol=3e-3,  atol=1e-4)
+        assert_allclose(pred.predicted, rdf["b"].iloc[0], rtol=3e-4)  # self.rtol)
+        assert_allclose(pred.se, rdf["se"].iloc[0], rtol=3e-3,  atol=1e-4)
         if isinstance(pred, PredictionResultsMonotonic):
             # default method is endpoint transformation for non-ZI models
             ci = pred.conf_int()[0]
-            assert_allclose(ci[0], rdf["ll"][0], rtol=1e-3,  atol=1e-4)
-            assert_allclose(ci[1], rdf["ul"][0], rtol=1e-3,  atol=1e-4)
+            assert_allclose(ci[0], rdf["ll"].iloc[0], rtol=1e-3,  atol=1e-4)
+            assert_allclose(ci[1], rdf["ul"].iloc[0], rtol=1e-3,  atol=1e-4)
 
             ci = pred.conf_int(method="delta")[0]
-            assert_allclose(ci[0], rdf["ll"][0], rtol=1e-4,  atol=1e-4)
-            assert_allclose(ci[1], rdf["ul"][0], rtol=1e-4,  atol=1e-4)
+            assert_allclose(ci[0], rdf["ll"].iloc[0], rtol=1e-4,  atol=1e-4)
+            assert_allclose(ci[1], rdf["ul"].iloc[0], rtol=1e-4,  atol=1e-4)
         else:
             ci = pred.conf_int()[0]
-            assert_allclose(ci[0], rdf["ll"][0], rtol=5e-4,  atol=1e-4)
-            assert_allclose(ci[1], rdf["ul"][0], rtol=5e-4,  atol=1e-4)
+            assert_allclose(ci[0], rdf["ll"].iloc[0], rtol=5e-4,  atol=1e-4)
+            assert_allclose(ci[1], rdf["ul"].iloc[0], rtol=5e-4,  atol=1e-4)
 
         stat, _ = pred.t_test()
         assert_allclose(stat, pred.tvalues, rtol=1e-4,  atol=1e-4)
@@ -108,12 +108,12 @@ class CheckPredict():
         rdf = res2.results_margins_atmeans
         pred = res1.get_prediction(ex, which="prob", y_values=np.arange(2),
                                    **self.pred_kwds_mean)
-        assert_allclose(pred.predicted, rdf["b"][1:3], rtol=3e-4)  # self.rtol)
-        assert_allclose(pred.se, rdf["se"][1:3], rtol=3e-3,  atol=1e-4)
+        assert_allclose(pred.predicted, rdf["b"].iloc[1:3], rtol=3e-4)  # self.rtol)
+        assert_allclose(pred.se, rdf["se"].iloc[1:3], rtol=3e-3,  atol=1e-4)
 
         ci = pred.conf_int()
-        assert_allclose(ci[:, 0], rdf["ll"][1:3], rtol=5e-4,  atol=1e-4)
-        assert_allclose(ci[:, 1], rdf["ul"][1:3], rtol=5e-4,  atol=1e-4)
+        assert_allclose(ci[:, 0], rdf["ll"].iloc[1:3], rtol=5e-4,  atol=1e-4)
+        assert_allclose(ci[:, 1], rdf["ul"].iloc[1:3], rtol=5e-4,  atol=1e-4)
 
         stat, _ = pred.t_test()
         assert_allclose(stat, pred.tvalues, rtol=1e-4,  atol=1e-4)
@@ -121,12 +121,12 @@ class CheckPredict():
         rdf = res2.results_margins_mean
         pred = res1.get_prediction(which="prob", y_values=np.arange(2),
                                    average=True, **self.pred_kwds_mean)
-        assert_allclose(pred.predicted, rdf["b"][1:3], rtol=5e-3)  # self.rtol)
-        assert_allclose(pred.se, rdf["se"][1:3], rtol=3e-3,  atol=5e-4)
+        assert_allclose(pred.predicted, rdf["b"].iloc[1:3], rtol=5e-3)  # self.rtol)
+        assert_allclose(pred.se, rdf["se"].iloc[1:3], rtol=3e-3,  atol=5e-4)
 
         ci = pred.conf_int()
-        assert_allclose(ci[:, 0], rdf["ll"][1:3], rtol=5e-4,  atol=1e-3)
-        assert_allclose(ci[:, 1], rdf["ul"][1:3], rtol=5e-4,  atol=5e-3)
+        assert_allclose(ci[:, 0], rdf["ll"].iloc[1:3], rtol=5e-4,  atol=1e-3)
+        assert_allclose(ci[:, 1], rdf["ul"].iloc[1:3], rtol=5e-4,  atol=5e-3)
 
         stat, _ = pred.t_test()
         assert_allclose(stat, pred.tvalues, rtol=1e-4,  atol=1e-4)
@@ -153,7 +153,7 @@ class CheckPredict():
         dia = res1.get_diagnostic(y_max=21)
         res_chi2 = dia.test_chisquare_prob(bin_edges=np.arange(4))
         assert_equal(res_chi2.diff1.shape[1], 3)
-        assert_equal(dia.probs_predicted.shape[1], 21)
+        assert_equal(dia.probs_predicted.shape[1], 22)
 
         try:
             dia.plot_probs(upp_xlim=20)
@@ -278,7 +278,7 @@ class TestZINegativeBinomialPPredict(CheckPredict):
         res1 = mod_zinb.fit(start_params=sp, method="newton", maxiter=300)
         cls.res1 = res1
         cls.res2 = resp.results_zinb_docvis
-        cls.pred_kwds_mean = {"exog_infl": exog_infl.mean(0)}
+        cls.pred_kwds_mean = {"exog_infl": exog_infl.mean(axis=0)}
         cls.pred_kwds_6 = {"exog_infl": exog_infl[:6]}
         cls.k_infl = 2
         cls.rtol = 1e-4
@@ -355,11 +355,11 @@ def test_distr(case):
     if issubclass(cls_model, BinaryModel):
         y = (y > 0.5).astype(float)
 
-    print("\n\n", cls_model, kwds)
     mod = cls_model(y, x, **kwds)
     # res = mod.fit()
     params_dgp = params
     distr = mod.get_distribution(params_dgp)
+    assert distr.pmf(1).ndim == 1
     try:
         y2 = distr.rvs(size=(nobs, 1)).squeeze()
     except ValueError:
@@ -379,14 +379,21 @@ def test_distr(case):
     assert_allclose(res.resid_pearson, (y2 - mean) / np.sqrt(var_), rtol=1e-13)
 
     if not issubclass(cls_model, BinaryModel):
+        # smoke, shape, consistency test
+        probs = res.predict(which="prob", y_values=np.arange(5))
+        assert probs.shape == (len(mod.endog), 5)
+        probs2 = res.get_prediction(
+            which="prob", y_values=np.arange(5), average=True)
+        assert_allclose(probs2.predicted, probs.mean(0), rtol=1e-10)
         dia = res.get_diagnostic()
+        dia.probs_predicted
         # fig = dia.plot_probs();
         # fig.suptitle(cls_model.__name__ + repr(kwds), fontsize=16)
 
     if cls_model in models_influ:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=UserWarning)
-            # ZI models warn about missint hat_matrix_diag
+            # ZI models warn about missing hat_matrix_diag
             influ = res.get_influence()
             influ.summary_frame()
 
@@ -406,7 +413,7 @@ def test_distr(case):
 
         try:
             with warnings.catch_warnings():
-                # ZI models warn about missint hat_matrix_diag
+                # ZI models warn about missing hat_matrix_diag
                 warnings.simplefilter("ignore", category=UserWarning)
                 influ.plot_influence()
         except ImportError:

@@ -52,7 +52,7 @@ from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.tools import add_constant
 
 
-class OaxacaBlinder(object):
+class OaxacaBlinder:
     """
     Class to perform Oaxaca-Blinder Decomposition.
 

@@ -1,3 +1,6 @@
+.. image:: docs/source/images/statsmodels-logo-v2-horizontal.svg
+  :alt: Statsmodels logo
+
 |PyPI Version| |Conda Version| |License| |Azure CI Build Status|
 |Codecov Coverage| |Coveralls Coverage| |PyPI downloads| |Conda downloads|
 
@@ -132,8 +135,19 @@ Binaries can be installed in Anaconda
 conda install statsmodels
 
 
-Installing from sources
+Getting the latest code
 =======================
+
+Installing the most recent nightly wheel
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The most recent nightly wheel can be installed using pip.
+
+.. code:: bash
+
+   python -m pip install -i https://pypi.anaconda.org/scientific-python-nightly-wheels/simple statsmodels --upgrade --use-deprecated=legacy-resolver
+
+Installing from sources
+~~~~~~~~~~~~~~~~~~~~~~~
 
 See INSTALL.txt for requirements or see the documentation
 

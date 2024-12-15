@@ -60,6 +60,11 @@ def load():
 
 def _get_data():
     data = du.load_csv(__file__, "data.csv")
+    for i, val in enumerate(data.period):
+        parts = val.split("Q")
+        month = (int(parts[1]) - 1) * 3 + 1
+
+        data.loc[data.index[i], "period"] = f"{parts[0]}-{month:02d}-01"
     data["period"] = pd.to_datetime(data.period)
     return data.set_index("period").astype(float)
 

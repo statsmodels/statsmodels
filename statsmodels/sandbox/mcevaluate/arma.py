@@ -1,4 +1,3 @@
-
 import numpy as np
 from statsmodels.tsa.arima_process import arma_generate_sample
 from statsmodels.tsa.arma_mle import Arma

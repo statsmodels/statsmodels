@@ -74,6 +74,7 @@ Descriptive Statistics and Tests
    stattools.ccf
    stattools.adfuller
    stattools.kpss
+   stattools.leybourne
    stattools.range_unit_root_test
    stattools.zivot_andrews
    stattools.coint
@@ -115,6 +116,9 @@ and supports exogenous regressors (an AR-X model) and seasonal effects.
 AR-X and related models can also be fitted with the `arima.ARIMA` class and the
 `SARIMAX` class (using full MLE via the Kalman Filter).
 
+See the notebook `Autoregressions
+<examples/notebooks/generated/autoregressions.ipynb>`_ for an overview.
+
 
 Autoregressive Moving-Average Processes (ARMA) and Kalman Filter
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -135,6 +139,12 @@ filter). It is a special case of the `SARIMAX` model, and it includes a large
 number of inherited features from the :ref:`state space <statespace>` models
 (including prediction / forecasting, residual diagnostics, simulation and
 impulse responses, etc.).
+
+See the notebooks `ARMA: Sunspots Data
+<examples/notebooks/generated/tsa_arma_0.ipynb>`_ and
+`ARMA: Artificial Data <examples/notebooks/generated/tsa_arma_1.ipynb>`_
+for an overview.
+
 
 Exponential Smoothing
 ~~~~~~~~~~~~~~~~~~~~~
@@ -180,6 +190,10 @@ and impulse responses, etc.).
 
    statespace.exponential_smoothing.ExponentialSmoothing
    statespace.exponential_smoothing.ExponentialSmoothingResults
+
+See the notebook `Exponential Smoothing
+<examples/notebooks/generated/exponential_smoothing.ipynb>`_
+for an overview.
 
 ARMA Process
 """"""""""""
@@ -241,6 +255,10 @@ AR-X and related models can also be fitted with
 :class:`~statsmodels.tsa.statespace.sarimax.SARIMAX` class (using full MLE via
 the Kalman Filter).
 
+See the notebook `Autoregressive Distributed Lag Models
+<examples/notebooks/generated/autoregressive_distributed_lag.ipynb>`_
+for an overview.
+
 Error Correction Models (ECM)
 """""""""""""""""""""""""""""
 Error correction models are reparameterizations of ARDL models that
@@ -282,6 +300,11 @@ Regime switching models
 
    MarkovAutoregression
 
+See the notebooks `Markov switching dynamic regression
+<examples/notebooks/generated/markov_regression.ipynb>`_ and
+`Markov switching autoregression
+<examples/notebooks/generated/markov_autoregression.ipynb>`_
+for an overview.
 
 Time Series Filters
 """""""""""""""""""
@@ -321,7 +344,11 @@ Time Series Filters
 
    seasonal_decompose
    STL
+   MSTL
    DecomposeResult
+   
+See the notebook `Time Series Filters
+<examples/notebooks/generated/tsa_filters.ipynb>`_ for an overview.
 
 TSA Tools
 """""""""
@@ -382,14 +409,11 @@ deterministic dynamics and to forecast without constructing exogenous trends.
    FourierDeterministicTerm
    TimeTrendDeterministicTerm
 
-Users who wish to write custom deterministic terms must subclass
+Users who wish to write custom deterministic terms must use subclass
 :class:`~statsmodels.tsa.deterministic.DeterministicTerm`.
-
-.. currentmodule:: statsmodels.tsa.deterministic
-.. autosummary::
-   :toctree: generated/
-
-   DeterministicTerm
+   
+See the notebook `Deterministic Terms in Time Series Models
+<examples/notebooks/generated/deterministics.ipynb>`_ for an overview.
 
 Forecasting Models
 """"""""""""""""""
@@ -435,6 +459,9 @@ a random-walk model.
 
    STLForecast
    STLForecastResults
+
+See the notebook `Seasonal Decomposition
+<examples/notebooks/generated/stl_decomposition.ipynb>`_ for an overview.
 
 Prediction Results
 """"""""""""""""""

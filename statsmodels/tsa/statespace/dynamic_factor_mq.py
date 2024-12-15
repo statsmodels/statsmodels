@@ -1,10 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 Dynamic factor model.
 
 Author: Chad Fulton
 License: BSD-3
 """
+from statsmodels.compat.pandas import MONTH_END, QUARTER_END
+
 from collections import OrderedDict
 from warnings import warn
 
@@ -439,8 +440,8 @@ class DynamicFactorMQStates(dict):
                           tupleize_cols=False, name='block')
             default_block_orders = pd.Series(np.ones(len(ix), dtype=int),
                                              index=ix, name='order')
-            self.factor_block_orders = (
-                self.factor_block_orders.append(default_block_orders))
+            self.factor_block_orders = pd.concat(
+                [self.factor_block_orders, default_block_orders])
             factor_names = pd.Series(
                 np.concatenate(list(self.factor_block_orders.index)))
         duplicates = factor_names.duplicated()
@@ -1568,10 +1569,13 @@ class DynamicFactorMQ(mlemodel.MLEModel):
                 endog_quarterly = endog_quarterly.to_period('Q')
 
             # Combine the datasets
-            endog = pd.concat([
-                endog_monthly,
-                endog_quarterly.resample('M', convention='end').first()],
-                axis=1)
+            quarterly_resamp = endog_quarterly.copy()
+            quarterly_resamp.index = quarterly_resamp.index.to_timestamp()
+            quarterly_resamp = quarterly_resamp.resample(QUARTER_END).first()
+            quarterly_resamp = quarterly_resamp.resample(MONTH_END).first()
+            quarterly_resamp.index = quarterly_resamp.index.to_period()
+
+            endog = pd.concat([endog_monthly, quarterly_resamp], axis=1)
 
             # Make sure we didn't accidentally get duplicate column names
             column_counts = endog.columns.value_counts()
@@ -1766,8 +1770,10 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         data = self.factor_block_orders.reset_index()
         data['block'] = data['block'].map(
             lambda factor_names: ', '.join(factor_names))
-        data[['order']] = (
-            data[['order']].applymap(str))
+        try:
+            data[['order']] = data[['order']].map(str)
+        except AttributeError:
+            data[['order']] = data[['order']].applymap(str)
 
         params_data = data.values
         params_header = data.columns.map(str).tolist()
@@ -1864,9 +1870,10 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         # TODO: what about factors that only load on quarterly variables?
         endog_factor_map_M = self.endog_factor_map.iloc[:self.k_endog_M]
         factors = []
-        endog = (pd.DataFrame(self.endog).interpolate()
-                                         .fillna(method='backfill')
-                                         .values)
+        endog = np.require(
+            pd.DataFrame(self.endog).interpolate().bfill(),
+            requirements="W"
+        )
         for name in self.factor_names:
             # Try to retrieve this from monthly variables, which is most
             # consistent
@@ -2818,7 +2825,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
                 f_A = cho_solve(cho_factor(A), B.T).T
             except LinAlgError:
                 # Fall back to general solver if there are problems with
-                # postive-definiteness
+                # positive-definiteness
                 f_A = np.linalg.solve(A, B.T).T
 
             f_Q = (C - f_A @ B.T) / nobs
@@ -2888,7 +2895,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
                 Lambda[i, factor_ix] = cho_solve(cho_factor(A), B.T).T
             except LinAlgError:
                 # Fall back to general solver if there are problems with
-                # postive-definiteness
+                # positive-definiteness
                 Lambda[i, factor_ix] = np.linalg.solve(A, B.T).T
 
         # Compute new obs cov
@@ -2942,7 +2949,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
                 Lambda[i, factor_ix] = cho_solve(cho_factor(Ai), Bi.T).T
             except LinAlgError:
                 # Fall back to general solver if there are problems with
-                # postive-definiteness
+                # positive-definiteness
                 Lambda[i, factor_ix] = np.linalg.solve(Ai, Bi.T).T
 
         # Compute unrestricted design for quarterly
@@ -2986,7 +2993,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
                     restricted = unrestricted - AiiRT @ RAiiRTiR @ unrestricted
                 except LinAlgError:
                     # Fall back to slower method if there are problems with
-                    # postive-definiteness
+                    # positive-definiteness
                     Aii = np.linalg.inv(Ai)
                     unrestricted = (BiQ @ Aii)[0]
                     RARi = np.linalg.inv(R @ Aii @ R.T)
@@ -3190,7 +3197,9 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             if use_pandas:
                 # pd.Series (k_endog=1, replications=None)
                 if len(shape) == 1:
-                    sim = sim * self._endog_std[0] + self._endog_mean[0]
+                    std = self._endog_std.iloc[0]
+                    mean = self._endog_mean.iloc[0]
+                    sim = sim * std + mean
                 # pd.DataFrame (k_endog > 1, replications=None)
                 # [or]
                 # pd.DataFrame with MultiIndex (replications > 0)
@@ -3294,8 +3303,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             orthogonalized=orthogonalized, cumulative=cumulative,
             anchor=anchor, exog=exog, extend_model=extend_model,
             extend_kwargs=extend_kwargs, transformed=transformed,
-            includes_fixed=includes_fixed, original_scale=original_scale,
-            **kwargs)
+            includes_fixed=includes_fixed, **kwargs)
 
         # If applicable, convert predictions back to original space
         if self.standardize and original_scale:
@@ -3305,7 +3313,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             if use_pandas:
                 # pd.Series (k_endog=1, replications=None)
                 if len(shape) == 1:
-                    irfs = irfs * self._endog_std[0]
+                    irfs = irfs * self._endog_std.iloc[0]
                 # pd.DataFrame (k_endog > 1)
                 # [or]
                 # pd.DataFrame with MultiIndex (replications > 0)
@@ -3327,7 +3335,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
     Results from fitting a dynamic factor model
     """
     def __init__(self, model, params, filter_results, cov_type=None, **kwargs):
-        super(DynamicFactorMQResults, self).__init__(
+        super().__init__(
             model, params, filter_results, cov_type, **kwargs)
 
     @property
@@ -3669,9 +3677,9 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
 
     def news(self, comparison, impact_date=None, impacted_variable=None,
              start=None, end=None, periods=None, exog=None,
-             comparison_type=None, state_index=None, return_raw=False,
-             tolerance=1e-10, endog_quarterly=None, original_scale=True,
-             **kwargs):
+             comparison_type=None, revisions_details_start=False,
+             state_index=None, return_raw=False, tolerance=1e-10,
+             endog_quarterly=None, original_scale=True, **kwargs):
         """
         Compute impacts from updated data (news and revisions).
 
@@ -3754,6 +3762,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
             comparison, impact_date=impact_date,
             impacted_variable=impacted_variable, start=start, end=end,
             periods=periods, exog=exog, comparison_type=comparison_type,
+            revisions_details_start=revisions_details_start,
             state_index=state_index, return_raw=return_raw,
             tolerance=tolerance, endog_quarterly=endog_quarterly, **kwargs)
 
@@ -3773,11 +3782,18 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
             if news_results.revision_impacts is not None:
                 news_results.revision_impacts = (
                     news_results.revision_impacts * endog_std)
+            if news_results.revision_detailed_impacts is not None:
+                news_results.revision_detailed_impacts = (
+                    news_results.revision_detailed_impacts * endog_std)
+            if news_results.revision_grouped_impacts is not None:
+                news_results.revision_grouped_impacts = (
+                    news_results.revision_grouped_impacts * endog_std)
 
             # Update forecasts
             for name in ['prev_impacted_forecasts', 'news', 'revisions',
                          'update_realized', 'update_forecasts',
-                         'revised', 'revised_prev', 'post_impacted_forecasts']:
+                         'revised', 'revised_prev', 'post_impacted_forecasts',
+                         'revisions_all', 'revised_all', 'revised_prev_all']:
                 dta = getattr(news_results, name)
 
                 # for pd.Series, dta.multiply(...) and (sometimes) dta.add(...)
@@ -4152,7 +4168,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
                 self.filter_results)
             mod.ssm.initialization = init
 
-        res = self._apply(mod, refit=refit, fit_kwargs=fit_kwargs, **kwargs)
+        res = self._apply(mod, refit=refit, fit_kwargs=fit_kwargs)
 
         return res
 
@@ -4221,7 +4237,10 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
             data = pd.DataFrame(
                 self.filter_results.design[:, mod._s['factors_L1'], 0],
                 index=endog_names, columns=mod.factor_names)
-            data = data.applymap(lambda s: '%.2f' % s)
+            try:
+                data = data.map(lambda s: '%.2f' % s)
+            except AttributeError:
+                data = data.applymap(lambda s: '%.2f' % s)
 
             # Idiosyncratic terms
             # data['   '] = '   '
@@ -4231,8 +4250,15 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
                     self.params[mod._p['idiosyncratic_ar1']])
                 k_idio += 1
             data['var.'] = self.params[mod._p['idiosyncratic_var']]
-            data.iloc[:, -k_idio:] = data.iloc[:, -k_idio:].applymap(
-                lambda s: '%.2f' % s)
+            # Ensure object dtype for string assignment
+            cols_to_cast = data.columns[-k_idio:]
+            data[cols_to_cast] = data[cols_to_cast].astype(object)
+            try:
+                data.iloc[:, -k_idio:] = data.iloc[:, -k_idio:].map(
+                    lambda s: f'{s:.2f}')
+            except AttributeError:
+                data.iloc[:, -k_idio:] = data.iloc[:, -k_idio:].applymap(
+                    lambda s: f'{s:.2f}')
 
             data.index.name = 'Factor loadings:'
 
@@ -4273,7 +4299,10 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
                                     index=block.factor_names,
                                     columns=lag_names)
                 data.index.name = ''
-                data = data.applymap(lambda s: '%.2f' % s)
+                try:
+                    data = data.map(lambda s: '%.2f' % s)
+                except AttributeError:
+                    data = data.applymap(lambda s: '%.2f' % s)
 
                 Q = self.filter_results.state_cov
                 # data[' '] = ''
@@ -4283,9 +4312,17 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
                     data['   error covariance'] = block.factor_names
                     for j in range(block.k_factors):
                         data[block.factor_names[j]] = Q[ix1:ix2, ix1 + j]
-                data.iloc[:, -block.k_factors:] = (
-                    data.iloc[:, -block.k_factors:].applymap(
-                        lambda s: '%.2f' % s))
+                cols_to_cast = data.columns[-block.k_factors:]
+                data[cols_to_cast] = data[cols_to_cast].astype(object)
+                try:
+                    formatted_vals = data.iloc[:, -block.k_factors:].map(
+                        lambda s: f'{s:.2f}'
+                    )
+                except AttributeError:
+                    formatted_vals = data.iloc[:, -block.k_factors:].applymap(
+                        lambda s: f'{s:.2f}'
+                    )
+                data.iloc[:, -block.k_factors:] = formatted_vals
 
                 data = data.reset_index()
 

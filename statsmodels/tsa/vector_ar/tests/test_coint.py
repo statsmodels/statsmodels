@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Test Johansen's Cointegration test against jplv, Spatial Econometrics Toolbox
 
 Created on Thu Aug 30 21:51:08 2012
@@ -22,7 +21,7 @@ with open(dta_path, "rb") as fd:
     dta = np.genfromtxt(fd)
 
 
-class CheckCointJoh(object):
+class CheckCointJoh:
 
     def test_basic(self):
         assert_equal(self.res.ind, np.arange(len(self.res.ind), dtype=int))

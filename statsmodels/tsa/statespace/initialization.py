@@ -11,7 +11,7 @@ import numpy as np
 from . import tools
 
 
-class Initialization(object):
+class Initialization:
     r"""
     State space initialization
 

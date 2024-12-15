@@ -10,7 +10,7 @@ cimport numpy as np
 import numpy as np
 
 ctypedef np.float64_t DOUBLE
-ctypedef np.int_t INT
+ctypedef np.int64_t INT
 
 def fast_linbin(np.ndarray[DOUBLE] X, double a, double b, int M, int trunc=1):
     """
@@ -22,7 +22,7 @@ def fast_linbin(np.ndarray[DOUBLE] X, double a, double b, int M, int trunc=1):
         double delta = (b - a)/(M - 1)
         np.ndarray[DOUBLE] gcnts = np.zeros(M, float)
         np.ndarray[DOUBLE] lxi = (X - a)/delta
-        np.ndarray[INT] li = lxi.astype(int)
+        np.ndarray[INT] li = lxi.astype(np.int64)
         np.ndarray[DOUBLE] rem = lxi - li
 
 

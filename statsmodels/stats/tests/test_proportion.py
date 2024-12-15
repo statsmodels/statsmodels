@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 
 Created on Fri Mar 01 14:56:56 2013
@@ -29,6 +28,7 @@ from statsmodels.stats.proportion import (
 )
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
 from statsmodels.tools.testing import Holder
+from statsmodels.stats.tests.results.results_proportion import res_binom, res_binom_methods
 
 probci_methods = {'agresti_coull': 'agresti-coull',
                   'normal': 'asymptotic',
@@ -37,31 +37,27 @@ probci_methods = {'agresti_coull': 'agresti-coull',
                   'jeffreys': 'bayes'
                   }
 
-
-def test_confint_proportion():
-    from .results.results_proportion import res_binom, res_binom_methods
-
-
-    for case in res_binom:
-        count, nobs = case
-        for method in probci_methods:
-            idx = res_binom_methods.index(probci_methods[method])
-            res_low = res_binom[case].ci_low[idx]
-            res_upp = res_binom[case].ci_upp[idx]
-            if np.isnan(res_low) or np.isnan(res_upp):
-                continue
-            if (count == 0 or count == nobs) and method == 'jeffreys':
-                # maybe a bug or different corner case definition
-                continue
-            if method == 'jeffreys' and nobs == 30:
-                # something is strange in extreme case e.g 0/30 or 1/30
-                continue
-            ci = proportion_confint(count, nobs, alpha=0.05, method=method)
-            # we impose that confint is in [0, 1]
-            res_low = max(res_low, 0)
-            res_upp = min(res_upp, 1)
-            assert_almost_equal(ci, [res_low, res_upp], decimal=6,
-                                err_msg=repr(case) + method)
+@pytest.mark.parametrize("case",res_binom)
+@pytest.mark.parametrize("method",probci_methods)
+def test_confint_proportion(method, case):
+    count, nobs = case
+    idx = res_binom_methods.index(probci_methods[method])
+    res_low = res_binom[case].ci_low[idx]
+    res_upp = res_binom[case].ci_upp[idx]
+    if np.isnan(res_low) or np.isnan(res_upp):
+        pytest.skip("Skipping due to NaN value")
+    if (count == 0 or count == nobs) and method == 'jeffreys':
+        # maybe a bug or different corner case definition
+        pytest.skip("Skipping nobs 0 or count and jeffreys")
+    if method == 'jeffreys' and nobs == 30:
+        # something is strange in extreme case e.g 0/30 or 1/30
+        pytest.skip("Skipping nobs is 30 and jeffreys due to extreme case problem")
+    ci = proportion_confint(count, nobs, alpha=0.05, method=method)
+    # we impose that confint is in [0, 1]
+    res_low = max(res_low, 0)
+    res_upp = min(res_upp, 1)
+    assert_almost_equal(ci, [res_low, res_upp], decimal=6,
+                        err_msg=repr(case) + method)
 
 
 @pytest.mark.parametrize('method', probci_methods)
@@ -101,6 +97,12 @@ def test_confint_proportion_ndim(method):
                                  method=method)
     assert_allclose((ci_arr2[0][1, 2], ci_arr[1][1, 2]), ci12, rtol=1e-13)
 
+    # check floating point values
+    ci_arr2 = proportion_confint(count + 1e-4, nobs[1, 2], alpha=0.05,
+                                 method=method)
+    # should be close to values with integer values
+    assert_allclose((ci_arr2[0][1, 2], ci_arr[1][1, 2]), ci12, rtol=1e-4)
+
 
 def test_samplesize_confidenceinterval_prop():
     #consistency test for samplesize to achieve confidence_interval
@@ -122,7 +124,7 @@ def test_confint_multinomial_proportions():
                                               method=method)
         assert_almost_equal(
             values.cis, cis, decimal=values.precision,
-            err_msg='"%s" method, %s' % (method, description))
+            err_msg=f'"{method}" method, {description}')
 
 def test_multinomial_proportions_errors():
     # Out-of-bounds values for alpha raise a ValueError
@@ -175,7 +177,7 @@ def test_confint_multinomial_proportions_zeros():
     assert_allclose(ci_01, ci_0, atol=5e-4)
 
 
-class CheckProportionMixin(object):
+class CheckProportionMixin:
     def test_proptest(self):
         # equality of k-samples
         pt = smprop.proportions_chisquare(self.n_success, self.nobs, value=None)
@@ -219,7 +221,7 @@ class CheckProportionMixin(object):
 
 
 class TestProportion(CheckProportionMixin):
-    def setup(self):
+    def setup_method(self):
         self.n_success = np.array([ 73,  90, 114,  75])
         self.nobs = np.array([ 86,  93, 136,  82])
 
@@ -427,7 +429,7 @@ def test_binom_tost():
     # vectorized, TODO: observed proportion = 0 returns nan
     ci = smprop.proportion_confint(np.arange(1, 20), 20, method='beta',
                                    alpha=0.05)
-    bt = smprop.binom_tost(np.arange(1, 20), 20, *ci)
+    bt = smprop.binom_tost(np.arange(1, 20), 20, ci[0], ci[1])
     bt = np.asarray(bt)
     assert_almost_equal(bt, 0.025 * np.ones(bt.shape), decimal=12)
 
@@ -696,7 +698,7 @@ def test_confint_2indep_propcis():
     ci = 0.0270416, 0.3452912
     ci1 = confint_proportions_2indep(count1, nobs1, count2, nobs2,
                                      compare="diff",
-                                     method="score", correction=False)
+                                     method="score", correction=True)
     assert_allclose(ci1, ci, atol=0.002)  # lower agreement (iterative)
     # > wald2ci(7, 34, 1, 34, 0.95, adjust="AC")
     ci = 0.01161167, 0.32172166
@@ -819,6 +821,8 @@ def test_equivalence_2indep():
     alpha = 0.05
     count1, nobs1 = 7, 34
     count2, nobs2 = 1, 34
+    count1v, nobs1v = [7, 1], 34
+    count2v, nobs2v = [1, 7], 34
 
     methods_both = [
                     ('diff', 'agresti-caffo'),
@@ -840,10 +844,26 @@ def test_equivalence_2indep():
                                               alpha=2 * alpha,
                                               correction=False)
 
+        # Note: test should have only one margin at confint
         res = smprop.tost_proportions_2indep(
-                count1, nobs1, count2, nobs2, low, upp, compare=co,
+                count1, nobs1, count2, nobs2, low, upp * 1.05, compare=co,
                 method=method, correction=False)
         assert_allclose(res.pvalue, alpha, atol=1e-10)
+
+        res = smprop.tost_proportions_2indep(
+                count1, nobs1, count2, nobs2, low * 0.95, upp, compare=co,
+                method=method, correction=False)
+        assert_allclose(res.pvalue, alpha, atol=1e-10)
+
+        # vectorized
+        if method == 'logit-smoothed':
+            # not correctly vectorized
+            return
+        res1 = res  # for debugging  # noqa
+        res = smprop.tost_proportions_2indep(
+                count1v, nobs1v, count2v, nobs2v, low * 0.95, upp, compare=co,
+                method=method, correction=False)
+        assert_allclose(res.pvalue[0], alpha, atol=1e-10)
 
 
 def test_score_confint_koopman_nam():
@@ -927,8 +947,12 @@ def test_power_2indep():
 
 
 @pytest.mark.parametrize("count", np.arange(10, 90, 5))
-@pytest.mark.parametrize("method", list(probci_methods.keys()) + ["binom_test"])
-def test_ci_symmetry(count, method):
+@pytest.mark.parametrize(
+    "method", list(probci_methods.keys()) + ["binom_test"]
+)
+@pytest.mark.parametrize("array_like", [False, True])
+def test_ci_symmetry(count, method, array_like):
+    _count = [count] * 3 if array_like else count
     n = 100
     a = proportion_confint(count, n, method=method)
     b = proportion_confint(n - count, n, method=method)
@@ -937,21 +961,101 @@ def test_ci_symmetry(count, method):
 
 @pytest.mark.parametrize("nobs", [47, 50])
 @pytest.mark.parametrize("count", np.arange(48))
-def test_ci_symmetry_binom_test(nobs, count):
-    a = proportion_confint(count, nobs, method="binom_test")
-    b = proportion_confint(nobs - count, nobs, method="binom_test")
+@pytest.mark.parametrize("array_like", [False, True])
+def test_ci_symmetry_binom_test(nobs, count, array_like):
+    _count = [count] * 3 if array_like else count
+    nobs_m_count = [nobs - count] * 3 if array_like else nobs - count
+    a = proportion_confint(_count, nobs, method="binom_test")
+    b = proportion_confint(nobs_m_count, nobs, method="binom_test")
     assert_allclose(np.array(a), 1.0 - np.array(b[::-1]))
 
 
 def test_int_check():
+    # integer values are required only if method="binom_test"
     with pytest.raises(ValueError):
-        proportion_confint(10.5, 20)
+        proportion_confint(10.5, 20, method="binom_test")
     with pytest.raises(ValueError):
-        proportion_confint(10, 20.5)
+        proportion_confint(10, 20.5, method="binom_test")
     with pytest.raises(ValueError):
-        proportion_confint(np.array([10.3]), 20)
+        proportion_confint(np.array([10.3]), 20, method="binom_test")
+
     a = proportion_confint(21.0, 47, method="binom_test")
     b = proportion_confint(21, 47, method="binom_test")
     c = proportion_confint(21, 47.0, method="binom_test")
     assert_allclose(a, b)
     assert_allclose(a, c)
+
+
+@pytest.mark.parametrize("count", np.arange(10, 90, 5))
+@pytest.mark.parametrize(
+    "method", list(probci_methods.keys()) + ["binom_test"]
+)
+def test_ci_symmetry_array(count, method):
+    n = 100
+    a = proportion_confint([count, count], n, method=method)
+    b = proportion_confint([n - count, n - count], n, method=method)
+    assert_allclose(np.array(a), 1.0 - np.array(b[::-1]))
+
+
+@pytest.mark.parametrize("count, nobs, alternative, expected", [
+    (1, 1, 'two-sided', [1.0, 1.0]),
+    (0, 1, 'two-sided', [0.0, 0.0]),
+    (1, 1, 'larger',   [0.0, 1.0]),
+    (0, 1, 'larger',   [0.0, 0.0]),
+    (1, 1, 'smaller',    [1.0, 1.0]),
+    (0, 1, 'smaller',    [0.0, 1.0]),
+])
+def test_proportion_confint_edge(count, nobs, alternative, expected):
+    # test against R 4.3.3 / DescTools / BinomCI and binom.test
+    ci_low, ci_upp = proportion_confint(count, nobs, alternative=alternative)
+    assert_allclose(np.array([ci_low, ci_upp]), np.array(expected))
+
+
+@pytest.mark.parametrize("count", [100])
+@pytest.mark.parametrize("nobs", [200])
+@pytest.mark.parametrize("method, alpha, alternative, expected", [
+    # two-sided
+    ("normal",          0.05, "two-sided",  [0.4307048, 0.5692952]),
+    ("normal",          0.01, "two-sided",  [0.4089307, 0.5910693]),
+    ("normal",          0.10, "two-sided",  [0.4418456, 0.5581544]),
+    ("agresti_coull",   0.05, "two-sided",  [0.4313609, 0.5686391]),
+    ("beta",            0.05, "two-sided",  [0.4286584, 0.5713416]),
+    ("wilson",          0.05, "two-sided",  [0.4313609, 0.5686391]),
+    ("jeffreys",        0.05, "two-sided",  [0.4311217, 0.5688783]),
+    # larger
+    ("normal",          0.05, "larger",    [0.0, 0.5581544]),
+    ("agresti_coull",   0.05, "larger",    [0.0, 0.557765]),
+    ("beta",            0.05, "larger",    [0.0, 0.560359]),
+    ("wilson",          0.05, "larger",    [0.0, 0.557765]),
+    ("jeffreys",        0.05, "larger",    [0.0, 0.5578862]),
+    # smaller
+    ("normal",          0.05, "smaller",     [0.4418456, 1.0]),
+    ("agresti_coull",   0.05, "smaller",     [0.442235, 1.0]),
+    ("beta",            0.05, "smaller",     [0.439641, 1.0]),
+    ("wilson",          0.05, "smaller",     [0.442235, 1.0]),
+    ("jeffreys",        0.05, "smaller",     [0.4421138, 1.0]),
+])
+def test_proportion_confint(count, nobs, method, alpha, alternative, expected):
+    # test against R 4.3.3 / DescTools / BinomCI and binom.test
+    ci_low, ci_upp = proportion_confint(count, nobs, alpha=alpha, method=method, alternative=alternative)
+    assert_allclose(np.array([ci_low, ci_upp]), np.array(expected))
+
+
+@pytest.mark.parametrize("count", [100])
+@pytest.mark.parametrize("nobs", [200])
+@pytest.mark.parametrize("alpha, alternative, expected, rtol", [
+    # binom.exact with method="two.sided" returns values with a precision of up to 4 decimal places.
+    (0.01, "two-sided",  [0.4094, 0.5906],  1e-4),
+    (0.05, "two-sided",  [0.4299, 0.5701],  1e-4),
+    (0.10, "two-sided",  [0.44, 0.56],      1e-4),
+    (0.01, "larger",    [0.0, 0.5840449],  1e-7),
+    (0.05, "larger",    [0.0, 0.560359],   1e-7),
+    (0.10, "larger",    [0.0, 0.5476422],  1e-7),
+    (0.01, "smaller",     [0.4159551, 1.0],  1e-7),
+    (0.05, "smaller",     [0.439641, 1.0],   1e-7),
+    (0.10, "smaller",     [0.4523578, 1.0],  1e-7),
+])
+def test_proportion_confint_binom_test(count, nobs, alpha, alternative, expected, rtol):
+    # test against R 4.3.3 / DescTools / exactci
+    ci_low, ci_upp = proportion_confint(count, nobs, alpha=alpha, method="binom_test", alternative=alternative)
+    assert_allclose(np.array([ci_low, ci_upp]), np.array(expected), rtol=rtol)

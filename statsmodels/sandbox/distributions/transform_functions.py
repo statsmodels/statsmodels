@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Nonlinear Transformation classes
 
 
@@ -10,7 +9,7 @@ License : BSD
 import numpy as np
 
 
-class TransformFunction(object):
+class TransformFunction:
 
     def __call__(self, x):
         self.func(x)

@@ -231,6 +231,14 @@ class CollinearityWarning(ModelWarning):
     pass
 
 
+class PerfectSeparationWarning(ModelWarning):
+    """
+    Perfect separation or prediction
+    """
+
+    pass
+
+
 class InfeasibleTestError(RuntimeError):
     """
     Test statistic cannot be computed

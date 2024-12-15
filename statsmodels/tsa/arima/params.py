@@ -12,7 +12,7 @@ from statsmodels.tsa.statespace.tools import is_invertible
 from statsmodels.tsa.arima.tools import validate_basic
 
 
-class SARIMAXParams(object):
+class SARIMAXParams:
     """
     SARIMAX parameters.
 

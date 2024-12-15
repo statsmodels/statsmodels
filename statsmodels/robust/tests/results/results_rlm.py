@@ -13,7 +13,7 @@ def _shift_intercept(arr):
     return np.roll(np.roll(arr.reshape(side, side), -1, axis=1), -1, axis=0)
 
 
-class Huber(object):
+class Huber:
     """
     """
     def __init__(self):
@@ -74,7 +74,7 @@ class Huber(object):
     h3 = _shift_intercept(huber_h3)
 
 
-class Hampel(object):
+class Hampel:
     """
     """
     def __init__(self):
@@ -133,7 +133,7 @@ class Hampel(object):
     h3 = _shift_intercept(hampel_h3)
 
 
-class BiSquare(object):
+class BiSquare:
     def __init__(self):
         self.params = np.array([0.9275471,   0.65073222,
                                 -0.11233103, -42.28525369])
@@ -193,7 +193,7 @@ class BiSquare(object):
     h3 = _shift_intercept(bisquare_h3)
 
 
-class Andrews(object):
+class Andrews:
     def __init__(self):
         self.params = [0.9282, 0.6492, -.1123, -42.2930]
         self.bse = [.1061, .2894, .1229, 9.3561]
@@ -250,7 +250,7 @@ class Andrews(object):
 # RLM Results with Huber's Proposal 2
 # Obtained from SAS
 
-class HuberHuber(object):
+class HuberHuber:
     def __init__(self):
         self.h1 = [
             114.4936, 0.232675, -0.52734, -1.35624, 0.232675, 0.014714,
@@ -295,7 +295,7 @@ class HuberHuber(object):
                 (-.4106, .1405), (-62.0611, -20.1172)]
 
 
-class HampelHuber(object):
+class HampelHuber:
     def __init__(self):
         self.h1 = [
             147.4727, 0.299695, -0.67924, -1.7469, 0.299695, 0.018952,
@@ -341,7 +341,7 @@ class HampelHuber(object):
                 (-.4607, .1648), (-64.0727, -16.4697)]
 
 
-class BisquareHuber(object):
+class BisquareHuber:
     def __init__(self):
         self.h1 = [
             129.9556, 0.264097, -0.59855, -1.5394, 0.264097,
@@ -387,7 +387,7 @@ class BisquareHuber(object):
                 (-.4271, .1600), (-63.2381, -18.5517)]
 
 
-class AndrewsHuber(object):
+class AndrewsHuber:
     def __init__(self):
         self.h1 = [
             129.9124, 0.264009, -0.59836, -1.53888, 0.264009,

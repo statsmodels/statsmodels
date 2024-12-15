@@ -10,7 +10,7 @@ import numpy as np
 from . import tools
 
 
-class CFASimulationSmoother(object):
+class CFASimulationSmoother:
     r"""
     "Cholesky Factor Algorithm" (CFA) simulation smoother
 

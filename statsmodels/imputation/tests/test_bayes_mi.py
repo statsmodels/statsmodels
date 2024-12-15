@@ -131,11 +131,11 @@ def test_MI_stat():
 
         # Check the SE
         d = np.abs(r.bse[0] - exp[j]) / exp[j]
-        assert(d < 0.03)
+        assert d < 0.03
 
         # Check the FMI
         d = np.abs(r.fmi[0] - fmi[j])
-        assert(d < 0.05)
+        assert d < 0.05
 
 
 def test_mi_formula():
@@ -158,7 +158,8 @@ def test_mi_formula():
     mi = MI(imp, sm.OLS, formula=fml, burn=0,
             model_kwds_fn=model_kwds_fn)
 
-    results_cb = lambda x: x
+    def results_cb(x):
+        return x
 
     r = mi.fit(results_cb=results_cb)
     r.summary()  # smoke test

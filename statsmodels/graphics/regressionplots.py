@@ -15,8 +15,8 @@ from statsmodels.compat.python import lrange, lzip
 
 import numpy as np
 import pandas as pd
-from patsy import dmatrix
 
+from statsmodels.formula._manager import FormulaManager
 from statsmodels.genmod.generalized_estimating_equations import GEE
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.graphics import utils
@@ -94,7 +94,7 @@ def plot_fit(results, exog_idx, y_true=None, ax=None, vlines=True, **kwargs):
         If given, this subplot is used to plot in instead of a new figure being
         created.
     vlines : bool, optional
-        If this not True, then the uncertainty of the fit is not
+        If this not True, then the uncertainty (pointwise prediction intervals) of the fit is not
         plotted.
     **kwargs
         The keyword arguments are passed to the plot command for the fitted
@@ -123,7 +123,8 @@ def plot_fit(results, exog_idx, y_true=None, ax=None, vlines=True, **kwargs):
     >>> model = sm.OLS(y, X)
     >>> results = model.fit()
 
-    Create a plot just for the variable 'Poverty':
+    Create a plot just for the variable 'Poverty.'
+    Note that vertical bars representing uncertainty are plotted since vlines is true
 
     >>> fig, ax = plt.subplots()
     >>> fig = sm.graphics.plot_fit(results, 0, ax=ax)
@@ -203,7 +204,7 @@ def plot_regress_exog(results, exog_idx, fig=None):
     and CCPR plot for poverty rate.
 
     >>> import statsmodels.api as sm
-    >>> import matplotlib.pyplot as plot
+    >>> import matplotlib.pyplot as plt
     >>> import statsmodels.formula.api as smf
 
     >>> fig = plt.figure(figsize=(8, 6))
@@ -387,16 +388,17 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
     #NOTE: there is no interaction between possible missing data and
     #obs_labels yet, so this will need to be tweaked a bit for this case
     fig, ax = utils.create_mpl_ax(ax)
-    print("eval_env:", eval_env)
+
     # strings, use patsy to transform to data
     if isinstance(endog, str):
-        endog = dmatrix(endog + "-1", data, eval_env=eval_env)
+        endog = FormulaManager().get_matrices(endog + "-1", data, eval_env=eval_env, pandas=False)
 
+    mgr = FormulaManager()
     if isinstance(exog_others, str):
-        RHS = dmatrix(exog_others, data, eval_env=eval_env)
+        RHS = mgr.get_matrices(exog_others, data, eval_env=eval_env, pandas=False)
     elif isinstance(exog_others, list):
         RHS = "+".join(exog_others)
-        RHS = dmatrix(RHS, data, eval_env=eval_env)
+        RHS = mgr.get_matrices(RHS, data, eval_env=eval_env, pandas=False)
     else:
         RHS = exog_others
     RHS_isemtpy = False
@@ -405,7 +407,7 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
     elif isinstance(RHS, pd.DataFrame) and RHS.empty:
         RHS_isemtpy = True
     if isinstance(exog_i, str):
-        exog_i = dmatrix(exog_i + "-1", data, eval_env=eval_env)
+        exog_i = mgr.get_matrices(exog_i + "-1", data, eval_env=eval_env, pandas=False)
 
     # all arrays or pandas-like
 
@@ -415,7 +417,7 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
         ax.plot(endog, exog_i, 'o', **kwargs)
         fitted_line = OLS(endog, exog_i).fit()
         x_axis_endog_name = 'x' if isinstance(exog_i, np.ndarray) else exog_i.name
-        y_axis_endog_name = 'y' if isinstance(endog, np.ndarray) else endog.design_info.column_names[0]
+        y_axis_endog_name = 'y' if isinstance(endog, np.ndarray) else endog.model_spec.column_names[0]
     else:
         res_yaxis = OLS(endog, RHS).fit()
         res_xaxis = OLS(exog_i, RHS).fit()
@@ -426,7 +428,7 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
         ax.plot(xaxis_resid, yaxis_resid, 'o', **kwargs)
         fitted_line = OLS(yaxis_resid, xaxis_resid).fit()
 
-    fig = abline_plot(0, fitted_line.params[0], color='k', ax=ax)
+    fig = abline_plot(0, np.asarray(fitted_line.params)[0], color='k', ax=ax)
 
     if x_axis_endog_name == 'y':  # for no names regression will just get a y
         x_axis_endog_name = 'x'  # this is misleading, so use x
@@ -619,7 +621,7 @@ def plot_ccpr(results, exog_idx, ax=None):
     of poverty ('poverty').
 
     >>> import statsmodels.api as sm
-    >>> import matplotlib.pyplot as plot
+    >>> import matplotlib.pyplot as plt
     >>> import statsmodels.formula.api as smf
 
     >>> crime_data = sm.datasets.statecrime.load_pandas()
@@ -818,7 +820,7 @@ def abline_plot(intercept=None, slope=None, horiz=None, vert=None,
 
     class ABLine2D(Line2D):
         def __init__(self, *args, **kwargs):
-            super(ABLine2D, self).__init__(*args, **kwargs)
+            super().__init__(*args, **kwargs)
             self.id_xlim_callback = None
             self.id_ylim_callback = None
 
@@ -828,7 +830,7 @@ def abline_plot(intercept=None, slope=None, horiz=None, vert=None,
                 ax.callbacks.disconnect(self.id_xlim_callback)
             if self.id_ylim_callback:
                 ax.callbacks.disconnect(self.id_ylim_callback)
-            super(ABLine2D, self).remove()
+            super().remove()
 
         def update_datalim(self, ax):
             ax.set_autoscale_on(False)
@@ -1273,7 +1275,7 @@ def added_variable_resids(results, focus_exog, resid_type=None,
     if fit_kwargs is not None:
         args.update(fit_kwargs)
     new_result = new_model.fit(**args)
-    if not new_result.converged:
+    if not getattr(new_result, "converged", True):
         raise ValueError("fit did not converge when calculating added variable residuals")
 
     try:

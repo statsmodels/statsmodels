@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Tue May 27 13:23:24 2014
 
@@ -10,7 +9,7 @@ License: BSD-3
 import numpy as np
 
 
-class StandardizeTransform(object):
+class StandardizeTransform:
     """class to reparameterize a model for standardized exog
 
     Parameters
@@ -51,7 +50,7 @@ class StandardizeTransform(object):
             if len(const_idx) == 0:
                 const_idx = 'n'
             else:
-                const_idx = int(const_idx)
+                const_idx = int(np.squeeze(const_idx))
 
         if const_idx != 'n':
             self.mean[const_idx] = 0

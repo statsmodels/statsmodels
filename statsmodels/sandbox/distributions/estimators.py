@@ -443,9 +443,9 @@ if __name__ == '__main__':
     pq = [0.1, 0.9]
     print(stats.gamma.ppf(pq, alpha))
     xq = stats.gamma.ppf(pq, alpha)
-    print(np.diff((stats.gamma.ppf(pq, np.linspace(0.01,4,10)[:,None])*xq[::-1])))
+    print(np.diff(stats.gamma.ppf(pq, np.linspace(0.01,4,10)[:,None])*xq[::-1]))
     #optimize.bisect(lambda alpha: np.diff((stats.gamma.ppf(pq, alpha)*xq[::-1])))
-    print(optimize.fsolve(lambda alpha: np.diff((stats.gamma.ppf(pq, alpha)*xq[::-1])), 3.))
+    print(optimize.fsolve(lambda alpha: np.diff(stats.gamma.ppf(pq, alpha)*xq[::-1]), 3.))
 
     distfn = stats.gamma
     mcond = gammamomentcond(distfn, [5.,10], mom2=stats.gamma.stats(alpha, 0.,1.), quantile=None)

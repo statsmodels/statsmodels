@@ -10,7 +10,7 @@ from statsmodels.tools.tools import add_constant
 from statsmodels.regression.linear_model import OLS
 
 
-class TestSummaryLatex(object):
+class TestSummaryLatex:
 
     def test_summarycol(self):
         # Test for latex output of summary_col object
@@ -33,6 +33,8 @@ R-squared Adj. & 0.6930   & 0.5202    \\
 \end{tabular}
 \end{center}
 \end{table}
+\bigskip
+Standard errors in parentheses.
 '''
         x = [1, 5, 7, 3, 5]
         x = add_constant(x)
@@ -68,12 +70,13 @@ parentheses.
         reg2 = OLS(y2, x).fit()
         actual = summary_col([reg1, reg2], float_format='%0.1f').as_text()
         actual = '%s\n' % actual
-        assert_equal(actual, desired)
 
         starred = summary_col([reg1, reg2], stars=True, float_format='%0.1f')
         assert "7.7***" in str(starred)
         assert "12.4**" in str(starred)
         assert "12.4***" not in str(starred)
+
+        assert_equal(actual, desired)
 
     def test_summarycol_drop_omitted(self):
         # gh-3702
@@ -103,8 +106,8 @@ parentheses.
         reg1 = OLS(y1, x2).fit()
         reg2 = OLS(y2, x2).fit()
 
-        info_dict = {'R2': lambda x: '{:.3f}'.format(int(x.rsquared)),
-                     'N': lambda x: '{0:d}'.format(int(x.nobs))}
+        info_dict = {'R2': lambda x: f'{int(x.rsquared):.3f}',
+                     'N': lambda x: f'{int(x.nobs):d}'}
         original = actual = summary_col([reg1, reg2], float_format='%0.4f')
         actual = summary_col([reg1, reg2], regressor_order=['a', 'b'],
                              float_format='%0.4f',
@@ -135,6 +138,8 @@ R-squared Adj. & 0.6930   & 0.5202    \\
 \end{tabular}
 \end{center}
 \end{table}
+\bigskip
+Standard errors in parentheses.
 '''
         x = [1, 5, 7, 3, 5]
         x = add_constant(x)
@@ -163,6 +168,72 @@ R-squared Adj. & 0.6930   & 0.5202    \\
         result = string_to_find in actual
         assert (result is True)
 
+    def test_summarycol_fixed_effects(self):
+        desired1 = r"""
+======================================
+               model_0 model_1 model_2
+--------------------------------------
+Intercept      1.35    1.32    1.48   
+               (0.19)  (0.42)  (0.73) 
+yrs_married    -0.03   -0.02   -0.02  
+               (0.00)  (0.00)  (0.00) 
+educ           -0.03   -0.02   -0.02  
+               (0.01)  (0.02)  (0.02) 
+occupation FE          Yes     Yes    
+religious FE           Yes     Yes    
+R-squared      0.01    0.02    0.03   
+R-squared Adj. 0.01    0.02    0.02   
+======================================
+Standard errors in parentheses."""  # noqa:W291
+
+        desired2 = r"""
+========================================
+                     mod0   mod1   mod2 
+----------------------------------------
+Intercept           1.35   1.32   1.48  
+                    (0.19) (0.42) (0.73)
+yrs_married         -0.03  -0.02  -0.02 
+                    (0.00) (0.00) (0.00)
+educ                -0.03  -0.02  -0.02 
+                    (0.01) (0.02) (0.02)
+C(religious)[T.2.0]        -0.46  -0.86 
+                           (0.08) (0.87)
+C(religious)[T.3.0]        -0.66  -0.71 
+                           (0.08) (1.13)
+C(religious)[T.4.0]        -0.91  -0.92 
+                           (0.11) (1.03)
+occupation FE              Yes    Yes   
+R-squared           0.01   0.02   0.03  
+R-squared Adj.      0.01   0.02   0.02  
+========================================
+Standard errors in parentheses."""  # noqa:W291
+
+        from statsmodels.datasets.fair import load_pandas
+        df_fair = load_pandas().data
+
+        res0 = OLS.from_formula("affairs ~ yrs_married + educ", df_fair).fit()
+        form1 = "affairs ~ yrs_married + educ + C(occupation) + C(religious)"
+        res1 = OLS.from_formula(form1, df_fair).fit()
+        form2 = "affairs ~ yrs_married + educ + C(occupation) : C(religious)"
+        res2 = OLS.from_formula(form2, df_fair).fit()
+
+        regressions = [res0, res1, res2]
+        summary1 = summary_col(
+            regressions,
+            model_names=[f'model_{i}' for i, _ in enumerate(regressions)],
+            fixed_effects=['occupation', "religious"],
+            float_format='%0.2f',)
+
+        assert_equal(summary1.as_text(), desired1)
+
+        summary2 = summary_col(
+            regressions,
+            model_names=[f'mod{i}' for i, _ in enumerate(regressions)],
+            fixed_effects=['occupation'],
+            float_format='%0.2f',)
+
+        assert_equal(summary2.as_text(), desired2)
+
 
 def test_ols_summary_rsquared_label():
     # Check that the "uncentered" label is correctly added after rsquared
@@ -183,11 +254,23 @@ def test_ols_summary_rsquared_label():
         assert r2_str in str(reg_without_constant.summary())
 
 
-def test_summary_col_r2():
-    # GH 6578
-    y = [1, 1, 4, 2] * 4
-    x = add_constant([1, 2, 3, 4] * 4)
-    mod = OLS(endog=y, exog=x).fit()
-    table = summary_col(results=mod)
-    assert "R-squared  " in str(table)
-    assert "R-squared Adj." in str(table)
+class TestSummaryLabels:
+    """
+    Test that the labels are correctly set in the summary table"""
+
+    @classmethod
+    def setup_class(cls):
+        y = [1, 1, 4, 2] * 4
+        x = add_constant([1, 2, 3, 4] * 4)
+        cls.mod = OLS(endog=y, exog=x).fit()
+
+    def test_summary_col_r2(self,):
+        # GH 6578
+        table = summary_col(results=self.mod, include_r2=True)
+        assert "R-squared  " in str(table)
+        assert "R-squared Adj." in str(table)
+
+    def test_absence_of_r2(self,):
+        table = summary_col(results=self.mod, include_r2=False)
+        assert "R-squared" not in str(table)
+        assert "R-squared Adj." not in str(table)

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 
 
@@ -8,7 +7,7 @@ License: BSD
 
 todo:
 change moment calculation, (currently uses default _ppf method - I think)
->>> lognormalg.moment(4)
+# >>> lognormalg.moment(4)
 Warning: The algorithm does not converge.  Roundoff error is detected
   in the extrapolation table.  It is assumed that the requested tolerance
   cannot be achieved, and that the returned result (if full_output = 1) is
@@ -78,7 +77,7 @@ stats.foldnorm.__class__._stats = foldnorm_stats
 
 DECIMAL = 5
 
-class Test_Transf2(object):
+class Test_Transf2:
 
     @classmethod
     def setup_class(cls):
@@ -101,7 +100,7 @@ class Test_Transf2(object):
 
     def test_equivalent(self):
         xx, ppfq = self.xx, self.ppfq
-        for d1,d2 in self.dist_equivalents:
+        for j,(d1,d2) in enumerate(self.dist_equivalents):
 ##            print d1.name
             assert_almost_equal(d1.cdf(xx), d2.cdf(xx), err_msg='cdf'+d1.name)
             assert_almost_equal(d1.pdf(xx), d2.pdf(xx),
@@ -122,6 +121,8 @@ class Test_Transf2(object):
                 d2mom = d2.dist.moment(3, *d2.args)
             else:
                 d2mom = d2.moment(3)
+            if j==3:
+                print("now")
             assert_almost_equal(d1.moment(3), d2mom,
                                 DECIMAL,
                                 err_msg='moment '+d1.name+d2.name)

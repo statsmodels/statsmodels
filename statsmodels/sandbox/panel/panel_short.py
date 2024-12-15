@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Panel data analysis for short T and large N
 
 Created on Sat Dec 17 19:32:00 2011
@@ -77,7 +76,7 @@ def whiten_individuals_loop(x, transform, group_iter):
 
 
 
-class ShortPanelGLS2(object):
+class ShortPanelGLS2:
     '''Short Panel with general intertemporal within correlation
 
     assumes data is stacked by individuals, panel is balanced and

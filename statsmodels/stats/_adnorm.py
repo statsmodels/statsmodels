@@ -1,10 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 Created on Sun Sep 25 21:23:38 2011
 
 Author: Josef Perktold and Scipy developers
 License : BSD-3
 """
+import warnings
+
 import numpy as np
 from scipy import stats
 
@@ -46,12 +47,9 @@ def anderson_statistic(x, dist='norm', fit=True, params=(), axis=0):
             s = np.expand_dims(np.std(x, ddof=1, axis=axis), axis)
             w = (y - xbar) / s
             z = stats.norm.cdf(w)
-            # print z
         elif callable(dist):
             params = dist.fit(x)
-            # print params
             z = dist.cdf(y, *params)
-            print(z)
         else:
             raise ValueError("dist must be 'norm' or a Callable")
     else:
@@ -67,8 +65,12 @@ def anderson_statistic(x, dist='norm', fit=True, params=(), axis=0):
     sl2 = [slice(None)] * x.ndim
     sl2[axis] = slice(None, None, -1)
     sl2 = tuple(sl2)
-    s = np.sum((2 * i[sl1] - 1.0) / nobs * (np.log(z) + np.log1p(-z[sl2])),
-               axis=axis)
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore", message="divide by zero encountered in log1p"
+        )
+        ad_values = (2 * i[sl1] - 1.0) / nobs * (np.log(z) + np.log1p(-z[sl2]))
+        s = np.sum(ad_values, axis=axis)
     a2 = -nobs - s
     return a2
 

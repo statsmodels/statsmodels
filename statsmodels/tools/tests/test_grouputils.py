@@ -11,7 +11,7 @@ from statsmodels.tools.grouputils import (dummy_sparse, Grouping, Group,
 from statsmodels.datasets import grunfeld, anes96
 
 
-class CheckGrouping(object):
+class CheckGrouping:
 
     @pytest.mark.smoke
     def test_reindex(self):
@@ -111,21 +111,20 @@ class CheckGrouping(object):
         names = self.data.index.names
         transformed_slices = self.grouping.transform_slices(
                                             self.data.values,
-                                            lambda x, idx : x.mean(0),
+                                            lambda x, idx : x.mean(0),  # noqa
                                             level=0)
-        expected = self.data.reset_index().groupby(names[0]).mean()[
-                                                    self.data.columns]
+        expected = self.data.reset_index().groupby(
+            names[0])[self.data.columns].mean()
         np.testing.assert_allclose(transformed_slices, expected.values,
                                    rtol=1e-12, atol=1e-25)
 
         if len(names) > 1:
             transformed_slices = self.grouping.transform_slices(
                                             self.data.values,
-                                            lambda x, idx : x.mean(0),
+                                            lambda x, idx : x.mean(0),  # noqa
                                             level=1)
-            expected = self.data.reset_index().groupby(names[1]
-                                                       ).mean()[
-                                                        self.data.columns]
+            expected = self.data.reset_index().groupby(
+                names[1])[self.data.columns].mean()
             np.testing.assert_allclose(transformed_slices, expected.values,
                                        rtol=1e-12, atol=1e-25)
 
@@ -276,7 +275,7 @@ def test_combine_indices():
                                        return_labels=True)
     uv, ux, u, label = combine_indices((group0, group1), prefix='', sep='.',
                                        return_labels=True)
-    group_joint = np.array(label)[uv]
+    group_joint = np.array(label)[uv.squeeze()]
     group_joint_expected = np.array(['sector1.region0', 'sector0.region1',
                                      'sector0.region0', 'sector0.region1',
                                      'sector1.region1', 'sector0.region0',

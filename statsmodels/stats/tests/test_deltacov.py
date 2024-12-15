@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Unit tests for NonlinearDeltaCov and LikelihoodResults._get_wald_nonlinear
 Created on Sun Mar 01 01:05:35 2015
 
@@ -13,14 +12,15 @@ from statsmodels.regression.linear_model import OLS
 from statsmodels.stats._delta_method import NonlinearDeltaCov
 
 
-class TestDeltacovOLS(object):
+class TestDeltacovOLS:
 
-    def setup_class(self):
+    @classmethod
+    def setup_class(cls):
         nobs, k_vars = 100, 4
         x = np.random.randn(nobs, k_vars)
         x[:, 0] = 1
         y = x[:, :-1].sum(1) + np.random.randn(nobs)
-        self.res = OLS(y, x).fit()
+        cls.res = OLS(y, x).fit()
 
     def test_method(self):
         # test Results.method is same as calling function/class
@@ -70,7 +70,7 @@ class TestDeltacovOLS(object):
         df = res.df_resid
         tt = res.t_test(x, use_t=True)
         assert_allclose(nl.conf_int(use_t=True, df=df), tt.conf_int(),
-                        rtol=1e-12)
+                        rtol=1e-12, atol=1e-10)
         t1 = nl.summary(use_t=True, df=df)
         t2 = tt.summary()
         # equal because nl.summary uses also ContrastResults

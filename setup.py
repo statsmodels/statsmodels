@@ -1,74 +1,64 @@
 """
 To build with coverage of Cython files
 export SM_CYTHON_COVERAGE=1
-python setup.py develop
+python -m pip install -e .
 pytest --cov=statsmodels statsmodels
 coverage html
 """
-from setuptools import Extension, find_packages, setup
+
+from setuptools import Command, Extension, find_packages, setup
 from setuptools.dist import Distribution
 
 from collections import defaultdict
-from distutils.command.clean import clean
 import fnmatch
+import inspect
 import os
-from os.path import join as pjoin, relpath
+from os.path import dirname, join as pjoin, relpath
 from pathlib import Path
 import shutil
 import sys
 
-import pkg_resources
-
-SETUP_DIR = Path(__file__).parent.resolve()
-
-sys.path.append(str(SETUP_DIR))
-import versioneer  # noqa: E402
-
-del sys.path[-1]
-
+import numpy as np
+from packaging.version import parse
 
 try:
     # SM_FORCE_C is a testing shim to force setup to use C source files
     FORCE_C = int(os.environ.get("SM_FORCE_C", 0))
     if FORCE_C:
         raise ImportError("Force import error for testing")
-    from Cython import Tempita
+    from Cython import Tempita, __version__ as cython_version
     from Cython.Build import cythonize
     from Cython.Distutils import build_ext
 
     HAS_CYTHON = True
+    CYTHON_3 = parse(cython_version) >= parse("3.0")
 except ImportError:
-    from setuptools.command.build_ext import build_ext
+    from setuptools.command.build_ext import build_ext  # noqa: F401
 
-    HAS_CYTHON = False
+    HAS_CYTHON = CYTHON_3 = False
 
-try:
-    import numpy  # noqa: F401
-
-    HAS_NUMPY = True
-except ImportError:
-    HAS_NUMPY = False
+SETUP_DIR = Path(__file__).parent.resolve()
 
 ###############################################################################
 # Key Values that Change Each Release
 ###############################################################################
 # These are strictly installation requirements. Builds requirements are
 # managed in pyproject.toml
-INSTALL_REQUIREMENTS = {
-    "numpy": "1.18",  # released December 2019
-    "scipy": "1.4",  # released December 2019
-    "pandas": "1.0",  # released January 2020
-    "patsy": "0.5.2",  # released January 2018
-    "packaging": "21.3",  # released Nov 2021
-}
+INSTALL_REQUIRES = []
+with open("requirements.txt", encoding="utf-8") as req:
+    for line in req.readlines():
+        INSTALL_REQUIRES.append(line.split("#")[0].strip())
 
-CYTHON_MIN_VER = "0.29.26"  # released 2020
+DEVELOP_REQUIRES = []
+with open("requirements-dev.txt", encoding="utf-8") as req:
+    for line in req.readlines():
+        DEVELOP_REQUIRES.append(line.split("#")[0].strip())
 
-INSTALL_REQUIRES = [k + ">=" + v for k, v in INSTALL_REQUIREMENTS.items()]
+CYTHON_MIN_VER = "3.0.10"  # released January 2023
 
 EXTRAS_REQUIRE = {
     "build": ["cython>=" + CYTHON_MIN_VER],
-    "develop": ["cython>=" + CYTHON_MIN_VER],
+    "develop": ["cython>=" + CYTHON_MIN_VER] + DEVELOP_REQUIRES,
     "docs": [
         "sphinx",
         "nbconvert",
@@ -103,9 +93,10 @@ CLASSIFIERS = [
     "Development Status :: 4 - Beta",
     "Environment :: Console",
     "Programming Language :: Cython",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Operating System :: OS Independent",
     "Intended Audience :: End Users/Desktop",
     "Intended Audience :: Developers",
@@ -132,6 +123,7 @@ ADDITIONAL_PACKAGE_DATA = {
     "statsmodels.datasets.tests": ["*.zip"],
     "statsmodels.iolib.tests.results": ["*.dta"],
     "statsmodels.stats.tests.results": ["*.json"],
+    "statsmodels.tsa.stl.tests.results": ["*.csv"],
     "statsmodels.tsa.vector_ar.tests.results": ["*.npz", "*.dat"],
     "statsmodels.stats.tests": ["*.txt"],
     "statsmodels.stats.libqsturng": ["*.r", "*.txt", "*.dat"],
@@ -158,7 +150,7 @@ DEFINE_MACROS = [
 
 
 exts = dict(
-    _stl={"source": "statsmodels/tsa/_stl.pyx"},
+    _stl={"source": "statsmodels/tsa/stl/_stl.pyx"},
     _exponential_smoothers={
         "source": "statsmodels/tsa/holtwinters/_exponential_smoothers.pyx"
     },  # noqa: E501
@@ -202,8 +194,16 @@ statespace_exts = [
 ]
 
 
-class CleanCommand(clean):
-    def run(self):
+class CleanCommand(Command):
+    user_options = []
+
+    def initialize_options(self) -> None:
+        pass
+
+    def finalize_options(self) -> None:
+        pass
+
+    def run(self) -> None:
         msg = """
 
 python setup.py clean is not supported.
@@ -217,45 +217,7 @@ Use one of:
         sys.exit(1)
 
 
-def update_extension(extension, requires_math=True):
-    import numpy  # noqa: F811
-    from numpy.distutils.log import set_verbosity
-    from numpy.distutils.misc_util import get_info
-
-    set_verbosity(1)
-
-    numpy_includes = [numpy.get_include()]
-    extra_incl = pkg_resources.resource_filename("numpy", "core/include")
-    numpy_includes += [extra_incl]
-    numpy_includes = list(set(numpy_includes))
-    numpy_math_libs = get_info("npymath")
-
-    if not hasattr(extension, "include_dirs"):
-        return
-    extension.include_dirs = list(set(extension.include_dirs + numpy_includes))
-    if requires_math:
-        extension.include_dirs += numpy_math_libs["include_dirs"]
-        extension.libraries += numpy_math_libs["libraries"]
-        extension.library_dirs += numpy_math_libs["library_dirs"]
-
-
-class DeferredBuildExt(build_ext):
-    """build_ext command for use when numpy headers are needed."""
-
-    def build_extensions(self):
-        self._update_extensions()
-        build_ext.build_extensions(self)
-
-    def _update_extensions(self):
-        for extension in self.extensions:
-            requires_math = extension.name in EXT_REQUIRES_NUMPY_MATH_LIBS
-            update_extension(extension, requires_math=requires_math)
-
-
-cmdclass = versioneer.get_cmdclass()
-if not HAS_NUMPY:
-    cmdclass["build_ext"] = DeferredBuildExt
-cmdclass["clean"] = CleanCommand
+cmdclass = {"clean": CleanCommand}
 
 
 def check_source(source_name):
@@ -270,18 +232,18 @@ def check_source(source_name):
                 "C source not found.  You must have Cython installed to "
                 "build if the C source files have not been generated."
             )
-            raise IOError(msg)
+            raise OSError(msg)
     return source_name, source_ext
 
 
 def process_tempita(source_name):
     """Runs pyx.in files through tempita is needed"""
     if source_name.endswith("pyx.in"):
-        with open(source_name, "r") as templated:
+        with open(source_name, encoding="utf-8") as templated:
             pyx_template = templated.read()
         pyx = Tempita.sub(pyx_template)
         pyx_filename = source_name[:-3]
-        with open(pyx_filename, "w") as pyx_file:
+        with open(pyx_filename, "w", encoding="utf-8") as pyx_file:
             pyx_file.write(pyx)
         file_stats = os.stat(source_name)
         try:
@@ -295,10 +257,18 @@ def process_tempita(source_name):
     return source_name
 
 
-EXT_REQUIRES_NUMPY_MATH_LIBS = []
+NUMPY_INCLUDES = sorted(
+    {np.get_include(), pjoin(dirname(inspect.getfile(np.core)), "include")}
+)
+NUMPY_MATH_LIBS = {
+    "include_dirs": [np.get_include()],
+    "library_dirs": [os.path.join(np.get_include(), "..", "lib")],
+    "libraries": ["npymath"],
+}
+
+
 extensions = []
 for config in exts.values():
-    uses_blas = True
     source, ext = check_source(config["source"])
     source = process_tempita(source)
     name = source.replace("/", ".").replace(ext, "")
@@ -306,10 +276,11 @@ for config in exts.values():
     depends = config.get("depends", [])
     libraries = config.get("libraries", [])
     library_dirs = config.get("library_dirs", [])
-
     uses_numpy_libraries = config.get("numpy_libraries", False)
-    if uses_blas or uses_numpy_libraries:
-        EXT_REQUIRES_NUMPY_MATH_LIBS.append(name)
+
+    include_dirs = sorted(set(include_dirs + NUMPY_MATH_LIBS["include_dirs"]))
+    libraries = sorted(set(libraries + NUMPY_MATH_LIBS["libraries"]))
+    library_dirs = sorted(set(library_dirs + NUMPY_MATH_LIBS["library_dirs"]))
 
     ext = Extension(
         name,
@@ -327,30 +298,24 @@ for source in statespace_exts:
     source = process_tempita(source)
     name = source.replace("/", ".").replace(ext, "")
 
-    EXT_REQUIRES_NUMPY_MATH_LIBS.append(name)
     ext = Extension(
         name,
         [source],
-        include_dirs=["statsmodels/src"],
+        include_dirs=["statsmodels/src"] + NUMPY_MATH_LIBS["include_dirs"],
         depends=[],
-        libraries=[],
-        library_dirs=[],
+        libraries=NUMPY_MATH_LIBS["libraries"],
+        library_dirs=NUMPY_MATH_LIBS["library_dirs"],
         define_macros=DEFINE_MACROS,
     )
     extensions.append(ext)
 
-if HAS_NUMPY:
-    for extension in extensions:
-        requires_math = extension.name in EXT_REQUIRES_NUMPY_MATH_LIBS
-        update_extension(extension, requires_math=requires_math)
-
-if HAS_CYTHON:
-    extensions = cythonize(
-        extensions,
-        compiler_directives=COMPILER_DIRECTIVES,
-        language_level=3,
-        force=CYTHON_COVERAGE,
-    )
+COMPILER_DIRECTIVES["cpow"] = True
+extensions = cythonize(
+    extensions,
+    compiler_directives=COMPILER_DIRECTIVES,
+    language_level=3,
+    force=CYTHON_COVERAGE,
+)
 
 ##############################################################################
 # Construct package data
@@ -384,7 +349,6 @@ class BinaryDistribution(Distribution):
 
 setup(
     name=DISTNAME,
-    version=versioneer.get_version(),
     maintainer=MAINTAINER,
     ext_modules=extensions,
     maintainer_email=MAINTAINER_EMAIL,
@@ -404,7 +368,7 @@ setup(
     install_requires=INSTALL_REQUIRES,
     extras_require=EXTRAS_REQUIRE,
     zip_safe=False,
-    python_requires=">=3.8",
+    python_requires=">=3.9",
 )
 
 # Clean-up copied files

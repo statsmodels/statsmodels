@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Fri Feb 12 10:42:00 2021
 
@@ -148,7 +147,7 @@ def test_bernstein_2d():
         x2d /= x2d.max(0)
 
         res_bp = evalbp(x2d, cd2d)
-        assert_allclose(res_bp, np.product(x2d, axis=1), atol=1e-12)
+        assert_allclose(res_bp, np.prod(x2d, axis=1), atol=1e-12)
 
         # check univariate margins
         x2d = np.column_stack((np.arange(k_x) / (k_x - 1), np.ones(k_x)))

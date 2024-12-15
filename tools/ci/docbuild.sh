@@ -76,5 +76,5 @@ echo '=                        Checking Doc Strings                          ='
 echo '========================================================================'
 
 cd "$SRCDIR"
-pip install numpydoc --upgrade
+python -m pip install numpydoc --upgrade
 python "$SRCDIR"/tools/validate_docstrings.py --errors=GL03,GL04,GL05,GL06,GL07,GL08,GL09,SS01,SS04,SS05,SS06,PR01,PR02,PR03,PR04,PR05,PR06,PR07,PR08,PR10,EX04,RT01,RT02,RT03,RT04,RT05,SA05,EX04 || true

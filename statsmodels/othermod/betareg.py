@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
-
-u"""
+"""
 Beta regression for modeling rates and proportions.
 
 References
@@ -16,15 +14,17 @@ Psychological methods 11.1 (2006): 54.
 
 import numpy as np
 from scipy.special import gammaln as lgamma
-import patsy
 
+from statsmodels.base.model import (
+    GenericLikelihoodModel,
+    GenericLikelihoodModelResults,
+    _LLRMixin,
+)
 import statsmodels.base.wrapper as wrap
+from statsmodels.formula._manager import FormulaManager
+from statsmodels.genmod import families
 import statsmodels.regression.linear_model as lm
 from statsmodels.tools.decorators import cache_readonly
-from statsmodels.base.model import (
-    GenericLikelihoodModel, GenericLikelihoodModelResults, _LLRMixin)
-from statsmodels.genmod import families
-
 
 _init_example = """
 
@@ -116,16 +116,17 @@ class BetaModel(GenericLikelihoodModel):
 
         kwds['extra_params_names'] = extra_names
 
-        super(BetaModel, self).__init__(endog, exog,
-                                        exog_precision=exog_precision,
-                                        **kwds)
+        super().__init__(endog, exog,
+                         exog_precision=exog_precision,
+                         **kwds)
         self.link = link
         self.link_precision = link_precision
         # not needed, handled by super:
         # self.exog_precision = exog_precision
         # inherited df do not account for precision params
         self.nobs = self.endog.shape[0]
-        self.df_model = self.nparams - 1
+        self.k_extra = 1
+        self.df_model = self.nparams - 2
         self.df_resid = self.nobs - self.nparams
         assert len(self.exog_precision) == len(self.endog)
         self.hess_type = "oim"
@@ -133,6 +134,8 @@ class BetaModel(GenericLikelihoodModel):
             self._init_keys.extend(['exog_precision'])
         self._init_keys.extend(['link', 'link_precision'])
         self._null_drop_keys = ['exog_precision']
+        del kwds['extra_params_names']
+        self._check_kwargs(kwds)
         self.results_class = BetaResults
         self.results_class_wrapper = BetaResultsWrapper
 
@@ -140,15 +143,17 @@ class BetaModel(GenericLikelihoodModel):
     def from_formula(cls, formula, data, exog_precision_formula=None,
                      *args, **kwargs):
         if exog_precision_formula is not None:
+
+            mgr = FormulaManager()
             if 'subset' in kwargs:
                 d = data.ix[kwargs['subset']]
-                Z = patsy.dmatrix(exog_precision_formula, d)
+                Z = mgr.get_matrices(exog_precision_formula, d, pandas=False)
             else:
-                Z = patsy.dmatrix(exog_precision_formula, data)
+                Z = mgr.get_matrices(exog_precision_formula, data, pandas=False)
             kwargs['exog_precision'] = Z
 
-        return super(BetaModel, cls).from_formula(formula, data, *args,
-                                                  **kwargs)
+        return super().from_formula(formula, data, *args,
+                                    **kwargs)
 
     def _get_exogs(self):
         return (self.exog, self.exog_precision)
@@ -361,7 +366,7 @@ class BetaModel(GenericLikelihoodModel):
         -------
         score based on numerical derivatives
         """
-        return super(BetaModel, self).score(params)
+        return super().score(params)
 
     def score_factor(self, params, endog=None):
         """Derivative of loglikelihood function w.r.t. linear predictors.
@@ -475,7 +480,9 @@ class BetaModel(GenericLikelihoodModel):
         sf2 = h * (mu * ymu_star + yt - mut)
 
         if return_hessian:
-            trigamma = lambda x: special.polygamma(1, x)  # noqa
+            def trigamma(x):
+                return special.polygamma(1, x)
+
             trig_beta = trigamma(beta)
             var_star = trigamma(alpha) + trig_beta
             var_t = trig_beta - trigamma(phi)
@@ -663,9 +670,9 @@ class BetaModel(GenericLikelihoodModel):
         else:
             self.hess_type = "oim"
 
-        res = super(BetaModel, self).fit(start_params=start_params,
-                                         maxiter=maxiter, method=method,
-                                         disp=disp, **kwds)
+        res = super().fit(start_params=start_params,
+                          maxiter=maxiter, method=method,
+                          disp=disp, **kwds)
         if not isinstance(res, BetaResultsWrapper):
             # currently GenericLikelihoodModel doe not add wrapper
             res = BetaResultsWrapper(res)

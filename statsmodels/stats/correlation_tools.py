@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 
 Created on Fri Aug 17 13:10:52 2012
@@ -635,7 +634,7 @@ def corr_nearest_factor(corr, rank, ctol=1e-6, lam_min=1e-30,
 
     # Zero the diagonal
     corr1 = corr.copy()
-    if type(corr1) == np.ndarray:
+    if type(corr1) is np.ndarray:
         np.fill_diagonal(corr1, 0)
     elif sparse.issparse(corr1):
         corr1.setdiag(np.zeros(corr1.shape[0]))
@@ -647,7 +646,7 @@ def corr_nearest_factor(corr, rank, ctol=1e-6, lam_min=1e-30,
     # The gradient, from lemma 4.1 of BHR.
     def grad(X):
         gr = np.dot(X, np.dot(X.T, X))
-        if type(corr1) == np.ndarray:
+        if type(corr1) is np.ndarray:
             gr -= np.dot(corr1, X)
         else:
             gr -= corr1.dot(X)
@@ -657,7 +656,7 @@ def corr_nearest_factor(corr, rank, ctol=1e-6, lam_min=1e-30,
     # The objective function (sum of squared deviations between fitted
     # and observed arrays).
     def func(X):
-        if type(corr1) == np.ndarray:
+        if type(corr1) is np.ndarray:
             M = np.dot(X, X.T)
             np.fill_diagonal(M, 0)
             M -= corr1
@@ -862,7 +861,7 @@ def corr_thresholded(data, minabs=None, max_elt=1e7):
     return cmat
 
 
-class MultivariateKernel(object):
+class MultivariateKernel:
     """
     Base class for multivariate kernels.
 

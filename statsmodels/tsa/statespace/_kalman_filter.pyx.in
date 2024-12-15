@@ -366,7 +366,7 @@ cdef class {{prefix}}KalmanFilter(object):
     # ### Define some constants
     # cdef readonly int k_endog, k_states, k_posdef, k_endog2, k_states2, k_endogstates
     # cdef readonly ldwork
-    
+
     def __init__(self,
                  {{prefix}}Statespace model,
                  int filter_method=FILTER_CONVENTIONAL,

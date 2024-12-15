@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import warnings
 
 import numpy as np
@@ -110,7 +108,7 @@ class Factor(Model):
         _check_args_1(endog, n_factor, corr, nobs)
 
         if endog is not None:
-            super(Factor, self).__init__(endog, exog=None, missing=missing)
+            super().__init__(endog, exog=None, missing=missing)
             endog = self.endog   # after preprocessing like missing, asarray
             k_endog = endog.shape[1]
             nobs = endog.shape[0]
@@ -489,7 +487,7 @@ class Factor(Model):
         return load
 
 
-class FactorResults(object):
+class FactorResults:
     """
     Factor results class
 
@@ -662,7 +660,7 @@ class FactorResults(object):
         uni = 1 - self.communality #self.uniqueness
 
         if method == 'bartlett':
-            s_mat = np.linalg.inv(L.T.dot(L/(uni[:,None]))).dot((L.T / uni)).T
+            s_mat = np.linalg.inv(L.T.dot(L/(uni[:,None]))).dot(L.T / uni).T
         elif method.startswith('reg'):
             corr = self.model.corr
             corr_f = self._corr_factors()
@@ -873,8 +871,11 @@ class FactorResults(object):
                     """
                     color = 'white' if np.abs(val) < threshold else 'black'
                     return 'color: %s' % color
-
-                sty = loadings_df.style.applymap(color_white_small)
+                try:
+                    sty = loadings_df.style.map(color_white_small)
+                except AttributeError:
+                    # Deprecated in pandas 2.1
+                    sty = loadings_df.style.applymap(color_white_small)
 
             if highlight_max is True:
                 def highlight_max(s):

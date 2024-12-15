@@ -471,7 +471,7 @@ def randmvn(rho, size=(1, 2), standardize=False):
     nobs, nvars = size
     if 0 < rho and rho < 1:
         rvs = np.random.randn(nobs, nvars+1)
-        rvs2 = rvs[:,:-1] * np.sqrt((1-rho)) + rvs[:,-1:] * np.sqrt(rho)
+        rvs2 = rvs[:,:-1] * np.sqrt(1-rho) + rvs[:,-1:] * np.sqrt(rho)
     elif rho ==0:
         rvs2 = np.random.randn(nobs, nvars)
     elif rho < 0:
@@ -506,7 +506,7 @@ def tiecorrect(xranks):
     return tiecorrection
 
 
-class GroupsStats(object):
+class GroupsStats:
     '''
     statistics by groups (another version)
 
@@ -606,7 +606,7 @@ class GroupsStats(object):
         """groupvarwithin"""
         return self.groupsswithin()/(self.groupnobs-1) #.sum()
 
-class TukeyHSDResults(object):
+class TukeyHSDResults:
     """Results from Tukey HSD test, with additional plot methods
 
     Can also compute and plot additional post-hoc evaluations using this
@@ -788,7 +788,7 @@ class TukeyHSDResults(object):
         return fig
 
 
-class MultiComparison(object):
+class MultiComparison:
     '''Tests for multiple comparisons
 
     Parameters
@@ -944,7 +944,7 @@ class MultiComparison(object):
                               ('group2', object),
                               ('stat',float),
                               ('pval',float),
-                              ('reject', np.bool8)])
+                              ('reject', np.bool_)])
         else:
             resarr = np.array(lzip(self.groupsunique[i1], self.groupsunique[i2],
                                   np.round(res[:,0],4),
@@ -956,7 +956,7 @@ class MultiComparison(object):
                               ('stat',float),
                               ('pval',float),
                               ('pval_corr',float),
-                              ('reject', np.bool8)])
+                              ('reject', np.bool_)])
         results_table = SimpleTable(resarr, headers=resarr.dtype.names)
         results_table.title = (
             'Test Multiple Comparison %s \n%s%4.2f method=%s'
@@ -1008,7 +1008,7 @@ class MultiComparison(object):
                                  ('p-adj', float),
                                  ('lower', float),
                                  ('upper', float),
-                                 ('reject', np.bool8)])
+                                 ('reject', np.bool_)])
         results_table = SimpleTable(resarr, headers=resarr.dtype.names)
         results_table.title = 'Multiple Comparison of Means - Tukey HSD, ' + \
                               'FWER=%4.2f' % alpha
@@ -1520,7 +1520,7 @@ def multicontrast_pvalues(tstat, tcorr, df=None, dist='t', alternative='two-side
 
 
 
-class StepDown(object):
+class StepDown:
     '''a class for step down methods
 
     This is currently for simple tree subset descend, similar to homogeneous_subsets,
@@ -1746,8 +1746,8 @@ def set_partition(ssli):
             part.append(s)
         #else: print(part
 
-    missing = list(set(i for ll in ssli for i in ll)
-                   - set(i for ll in part for i in ll))
+    missing = list({i for ll in ssli for i in ll}
+                   - {i for ll in part for i in ll})
     return part, missing
 
 

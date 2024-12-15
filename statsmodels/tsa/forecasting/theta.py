@@ -12,7 +12,7 @@ Journal of Forecasting, 19(2), 287-290.
 Fioruci, J. A., Pellegrini, T. R., Louzada, F., & Petropoulos, F. (2015).
 The optimized theta method. arXiv preprint arXiv:1503.03529.
 """
-from typing import TYPE_CHECKING, Optional, Tuple
+from typing import TYPE_CHECKING, Optional
 
 import numpy as np
 import pandas as pd
@@ -151,6 +151,8 @@ class ThetaModel:
             "model",
             options=("auto", "additive", "multiplicative", "mul", "add"),
         )
+        if self._method == "auto":
+            self._method = "mul" if self._y.min() > 0 else "add"
         if self._period is None and self._deseasonalize:
             idx = getattr(endog, "index", None)
             pfreq = None
@@ -179,13 +181,10 @@ class ThetaModel:
         # CV is 10% from a chi2(1), 1.645**2
         self._has_seasonality = stat > 2.705543454095404
 
-    def _deseasonalize_data(self) -> Tuple[np.ndarray, np.ndarray]:
+    def _deseasonalize_data(self) -> tuple[np.ndarray, np.ndarray]:
         y = self._y
         if not self._has_seasonality:
             return self._y, np.empty(0)
-        self._method = (
-            "mul" if self._method == "auto" and self._y.min() > 0 else "add"
-        )
 
         res = seasonal_decompose(y, model=self._method, period=self._period)
         if res.seasonal.min() <= 0:
@@ -577,7 +576,7 @@ class ThetaModelResults:
         :math:`\sigma^2(1 + (h-1)(1 + (\alpha-1)^2)`. The prediction interval
         assumes that innovations are normally distributed.
         """
-        model_alpha = self.params[1]
+        model_alpha = self.params.iloc[1]
         sigma2_h = (
             1 + np.arange(steps) * (1 + (model_alpha - 1) ** 2)
         ) * self.sigma2
@@ -598,7 +597,7 @@ class ThetaModelResults:
         alpha: Optional[float] = 0.05,
         in_sample: bool = False,
         fig: Optional["matplotlib.figure.Figure"] = None,
-        figsize: Tuple[float, float] = None,
+        figsize: tuple[float, float] = None,
     ) -> "matplotlib.figure.Figure":
         r"""
         Plot forecasts, prediction intervals and in-sample values
@@ -654,7 +653,7 @@ class ThetaModelResults:
         ax.plot(pred_index, predictions)
         if alpha is not None:
             pi = self.prediction_intervals(steps, theta, alpha)
-            label = "{0:.0%} confidence interval".format(1 - alpha)
+            label = f"{1 - alpha:.0%} confidence interval"
             ax.fill_between(
                 pred_index,
                 pi["lower"],

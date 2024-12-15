@@ -31,7 +31,7 @@ from statsmodels.tsa.statespace.kalman_smoother import (
 current_path = os.path.dirname(os.path.abspath(__file__))
 
 
-class TestStatesAR3(object):
+class TestStatesAR3:
     @classmethod
     def setup_class(cls, alternate_timing=False, *args, **kwargs):
         # Dataset / Stata comparison
@@ -72,12 +72,13 @@ class TestStatesAR3(object):
                 cls.results.smoother_results.smoothed_state_cov[:, :, i])
 
         # Perform simulation smoothing
-        n_disturbance_variates = (
-            (cls.model.k_endog + cls.model.ssm.k_posdef) * cls.model.nobs
-        )
+        nobs = cls.model.nobs
+        k_endog = cls.model.k_endog
+        k_posdef = cls.model.ssm.k_posdef
         cls.sim = cls.model.simulation_smoother(filter_timing=0)
         cls.sim.simulate(
-            disturbance_variates=np.zeros(n_disturbance_variates),
+            measurement_disturbance_variates=np.zeros(nobs * k_endog),
+            state_disturbance_variates=np.zeros(nobs * k_posdef),
             initial_state_variates=np.zeros(cls.model.k_states)
         )
 
@@ -160,14 +161,14 @@ class TestStatesAR3(object):
 class TestStatesAR3AlternateTiming(TestStatesAR3):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super(TestStatesAR3AlternateTiming, cls).setup_class(
+        super().setup_class(
             alternate_timing=True, *args, **kwargs)
 
 
 class TestStatesAR3AlternativeSmoothing(TestStatesAR3):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super(TestStatesAR3AlternativeSmoothing, cls).setup_class(
+        super().setup_class(
             smooth_method=SMOOTH_ALTERNATIVE, *args, **kwargs)
 
     def test_smoothed_states(self):
@@ -199,7 +200,7 @@ class TestStatesAR3AlternativeSmoothing(TestStatesAR3):
 class TestStatesAR3UnivariateSmoothing(TestStatesAR3):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super(TestStatesAR3UnivariateSmoothing, cls).setup_class(
+        super().setup_class(
             filter_method=FILTER_UNIVARIATE, *args, **kwargs)
 
     def test_smooth_method(self):
@@ -209,7 +210,7 @@ class TestStatesAR3UnivariateSmoothing(TestStatesAR3):
                      SMOOTH_UNIVARIATE)
 
 
-class TestStatesMissingAR3(object):
+class TestStatesMissingAR3:
     @classmethod
     def setup_class(cls, alternate_timing=False, *args, **kwargs):
         # Dataset
@@ -257,12 +258,13 @@ class TestStatesMissingAR3(object):
                 cls.results.smoothed_state_cov[:, :, i])
 
         # Perform simulation smoothing
-        n_disturbance_variates = (
-            (cls.model.k_endog + cls.model.k_posdef) * cls.model.nobs
-        )
+        nobs = cls.model.nobs
+        k_endog = cls.model.k_endog
+        k_posdef = cls.model.ssm.k_posdef
         cls.sim = cls.model.simulation_smoother()
         cls.sim.simulate(
-            disturbance_variates=np.zeros(n_disturbance_variates),
+            measurement_disturbance_variates=np.zeros(nobs * k_endog),
+            state_disturbance_variates=np.zeros(nobs * k_posdef),
             initial_state_variates=np.zeros(cls.model.k_states)
         )
 
@@ -332,14 +334,13 @@ class TestStatesMissingAR3(object):
 class TestStatesMissingAR3AlternateTiming(TestStatesMissingAR3):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super(TestStatesMissingAR3AlternateTiming,
-              cls).setup_class(alternate_timing=True, *args, **kwargs)
+        super().setup_class(alternate_timing=True, *args, **kwargs)
 
 
 class TestStatesMissingAR3AlternativeSmoothing(TestStatesMissingAR3):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super(TestStatesMissingAR3AlternativeSmoothing, cls).setup_class(
+        super().setup_class(
             smooth_method=SMOOTH_ALTERNATIVE, *args, **kwargs)
 
     def test_smooth_method(self):
@@ -353,7 +354,7 @@ class TestStatesMissingAR3AlternativeSmoothing(TestStatesMissingAR3):
 class TestStatesMissingAR3UnivariateSmoothing(TestStatesMissingAR3):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super(TestStatesMissingAR3UnivariateSmoothing, cls).setup_class(
+        super().setup_class(
             filter_method=FILTER_UNIVARIATE, *args, **kwargs)
 
     def test_smooth_method(self):
@@ -363,7 +364,7 @@ class TestStatesMissingAR3UnivariateSmoothing(TestStatesMissingAR3):
                      SMOOTH_UNIVARIATE)
 
 
-class TestMultivariateMissing(object):
+class TestMultivariateMissing:
     """
     Tests for most filtering and smoothing variables against output from the
     R library KFAS.
@@ -515,7 +516,7 @@ class TestMultivariateMissing(object):
 class TestMultivariateMissingClassicalSmoothing(TestMultivariateMissing):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super(TestMultivariateMissingClassicalSmoothing, cls).setup_class(
+        super().setup_class(
             smooth_method=SMOOTH_CLASSICAL, *args, **kwargs)
 
     def test_smooth_method(self):
@@ -529,7 +530,7 @@ class TestMultivariateMissingClassicalSmoothing(TestMultivariateMissing):
 class TestMultivariateMissingAlternativeSmoothing(TestMultivariateMissing):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super(TestMultivariateMissingAlternativeSmoothing, cls).setup_class(
+        super().setup_class(
             smooth_method=SMOOTH_ALTERNATIVE, *args, **kwargs)
 
     def test_smooth_method(self):
@@ -543,7 +544,7 @@ class TestMultivariateMissingAlternativeSmoothing(TestMultivariateMissing):
 class TestMultivariateMissingUnivariateSmoothing(TestMultivariateMissing):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super(TestMultivariateMissingUnivariateSmoothing, cls).setup_class(
+        super().setup_class(
             filter_method=FILTER_UNIVARIATE, *args, **kwargs)
 
     def test_smooth_method(self):
@@ -553,7 +554,7 @@ class TestMultivariateMissingUnivariateSmoothing(TestMultivariateMissing):
                      SMOOTH_UNIVARIATE)
 
 
-class TestMultivariateVAR(object):
+class TestMultivariateVAR:
     """
     Tests for most filtering and smoothing variables against output from the
     R library KFAS.
@@ -711,7 +712,7 @@ class TestMultivariateVAR(object):
 class TestMultivariateVARAlternativeSmoothing(TestMultivariateVAR):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super(TestMultivariateVARAlternativeSmoothing, cls).setup_class(
+        super().setup_class(
             smooth_method=SMOOTH_ALTERNATIVE, *args, **kwargs)
 
     def test_smooth_method(self):
@@ -725,7 +726,7 @@ class TestMultivariateVARAlternativeSmoothing(TestMultivariateVAR):
 class TestMultivariateVARClassicalSmoothing(TestMultivariateVAR):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super(TestMultivariateVARClassicalSmoothing, cls).setup_class(
+        super().setup_class(
             smooth_method=SMOOTH_CLASSICAL, *args, **kwargs)
 
     def test_smooth_method(self):
@@ -736,7 +737,7 @@ class TestMultivariateVARClassicalSmoothing(TestMultivariateVAR):
                      SMOOTH_CLASSICAL)
 
 
-class TestMultivariateVARUnivariate(object):
+class TestMultivariateVARUnivariate:
     """
     Tests for most filtering and smoothing variables against output from the
     R library KFAS.
@@ -895,7 +896,7 @@ class TestMultivariateVARUnivariate(object):
 class TestMultivariateVARUnivariateSmoothing(TestMultivariateVARUnivariate):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super(TestMultivariateVARUnivariateSmoothing, cls).setup_class(
+        super().setup_class(
             filter_method=FILTER_UNIVARIATE, *args, **kwargs)
 
     def test_filter_method(self):
@@ -910,7 +911,7 @@ class TestMultivariateVARUnivariateSmoothing(TestMultivariateVARUnivariate):
                      SMOOTH_UNIVARIATE)
 
 
-class TestVARAutocovariances(object):
+class TestVARAutocovariances:
     @classmethod
     def setup_class(cls, which='mixed', *args, **kwargs):
         # Data
@@ -990,7 +991,7 @@ class TestVARAutocovariances(object):
 class TestVARAutocovariancesAlternativeSmoothing(TestVARAutocovariances):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super(TestVARAutocovariancesAlternativeSmoothing, cls).setup_class(
+        super().setup_class(
             smooth_method=SMOOTH_ALTERNATIVE, *args, **kwargs)
 
     def test_smooth_method(self):
@@ -1004,7 +1005,7 @@ class TestVARAutocovariancesAlternativeSmoothing(TestVARAutocovariances):
 class TestVARAutocovariancesClassicalSmoothing(TestVARAutocovariances):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super(TestVARAutocovariancesClassicalSmoothing, cls).setup_class(
+        super().setup_class(
             smooth_method=SMOOTH_CLASSICAL, *args, **kwargs)
 
     def test_smooth_method(self):
@@ -1018,7 +1019,7 @@ class TestVARAutocovariancesClassicalSmoothing(TestVARAutocovariances):
 class TestVARAutocovariancesUnivariateSmoothing(TestVARAutocovariances):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super(TestVARAutocovariancesUnivariateSmoothing, cls).setup_class(
+        super().setup_class(
             filter_method=FILTER_UNIVARIATE, *args, **kwargs)
 
     def test_filter_method(self):

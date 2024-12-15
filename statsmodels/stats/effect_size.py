@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Mon Oct  5 12:36:54 2020
 
@@ -43,8 +42,8 @@ def _noncentrality_chisquare(chi2_stat, df, alpha=0.05):
         https://doi.org/10.2307/3315657.
 
     .. [2] Li, Qizhai, Junjian Zhang, and Shuai Dai. 2009. “On Estimating the
-        Non-Centrality Parameter of a Chi-Squared Distribution.” S
-        tatistics & Probability Letters 79 (1): 98–104.
+        Non-Centrality Parameter of a Chi-Squared Distribution.”
+        Statistics & Probability Letters 79 (1): 98–104.
         https://doi.org/10.1016/j.spl.2008.07.025.
 
     """

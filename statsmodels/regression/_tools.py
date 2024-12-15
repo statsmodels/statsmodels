@@ -2,7 +2,7 @@ import numpy as np
 from statsmodels.tools.tools import Bunch
 
 
-class _MinimalWLS(object):
+class _MinimalWLS:
     """
     Minimal implementation of WLS optimized for performance.
 

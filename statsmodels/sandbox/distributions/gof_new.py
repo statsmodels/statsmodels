@@ -363,7 +363,7 @@ gof_pvals['scipy'] = {
 gof_pvals['scipy_approx'] = {
     'd' : pval_kstest_approx }
 
-class GOF(object):
+class GOF:
     '''One Sample Goodness of Fit tests
 
     includes Kolmogorov-Smirnov D, D+, D-, Kuiper V, Cramer-von Mises W^2, U^2 and
@@ -530,7 +530,7 @@ def asquare(cdfvals, axis=0):
     return asqu
 
 
-#class OneSGOFFittedVec(object):
+#class OneSGOFFittedVec:
 #    '''for vectorized fitting'''
     # currently I use the bootstrap as function instead of full class
 
@@ -617,7 +617,7 @@ def bootstrap2(value, distr, args=(), nobs=200, nrep=100):
     return count * 1. / nrep
 
 
-class NewNorm(object):
+class NewNorm:
     '''just a holder for modified distributions
     '''
 

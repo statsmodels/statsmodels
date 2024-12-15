@@ -20,7 +20,7 @@ Reference
 ---------
 Rina Foygel Barber, Emmanuel Candes (2015).  Controlling the False
 Discovery Rate via Knockoffs.  Annals of Statistics 43:5.
-http://statweb.stanford.edu/~candes/papers/FDR_regression.pdf
+https://candes.su.domains/publications/downloads/FDR_regression.pdf
 """
 
 import numpy as np
@@ -28,7 +28,7 @@ import pandas as pd
 from statsmodels.iolib import summary2
 
 
-class RegressionFDR(object):
+class RegressionFDR:
     """
     Control FDR in a regression procedure.
 

@@ -11,7 +11,9 @@ R Venables, B Ripley. 'Modern Applied Statistics in S'
 C Croux, PJ Rousseeuw, 'Time-efficient algorithms for two highly robust
 estimators of scale' Computational statistics. Physica, Heidelberg, 1992.
 """
+
 import numpy as np
+from scipy import stats
 from scipy.stats import norm as Gaussian
 
 from statsmodels.tools import tools
@@ -21,7 +23,13 @@ from . import norms
 from ._qn import _qn
 
 
+class Holder():
+    def __init__(self, **kwds):
+        self.__dict__.update(kwds)
+
+
 def mad(a, c=Gaussian.ppf(3 / 4.0), axis=0, center=np.median):
+    # c \approx .6745
     """
     The Median Absolute Deviation along given axis of an array
 
@@ -172,7 +180,7 @@ def _qn_naive(a, c=1 / (np.sqrt(2) * Gaussian.ppf(5 / 8))):
         return output
 
 
-class Huber(object):
+class Huber:
     """
     Huber's proposal 2 for estimating location and scale jointly.
 
@@ -240,11 +248,11 @@ class Huber(object):
         """
         a = np.asarray(a)
         if mu is None:
-            n = a.shape[0] - 1
+            n = a.shape[axis] - 1
             mu = np.median(a, axis=axis)
             est_mu = True
         else:
-            n = a.shape[0]
+            n = a.shape[axis]
             mu = mu
             est_mu = False
 
@@ -290,17 +298,17 @@ class Huber(object):
             nmu = tools.unsqueeze(nmu, axis, a.shape)
 
             subset = np.less_equal(np.abs((a - mu) / scale), self.c)
-            card = subset.sum(axis)
 
-            scale_num = np.sum(subset * (a - nmu) ** 2, axis)
-            scale_denom = n * self.gamma - (a.shape[axis] - card) * self.c ** 2
+            scale_num = np.sum(subset * (a - nmu) ** 2 +
+                               (1 - subset) * (scale * self.c)**2, axis)
+            scale_denom = n * self.gamma
             nscale = np.sqrt(scale_num / scale_denom)
             nscale = tools.unsqueeze(nscale, axis, a.shape)
 
-            test1 = np.alltrue(
+            test1 = np.all(
                 np.less_equal(np.abs(scale - nscale), nscale * self.tol)
             )
-            test2 = np.alltrue(
+            test2 = np.all(
                 np.less_equal(np.abs(mu - nmu), nscale * self.tol)
             )
             if not (test1 and test2):
@@ -398,3 +406,312 @@ class HuberScale:
 
 
 hubers_scale = HuberScale()
+
+
+class MScale:
+    """M-scale estimation.
+
+    experimental interface, arguments and options will still change.
+
+    Parameters
+    ----------
+    chi_func : callable
+        The rho or chi function for the moment condition for estimating scale.
+    scale_bias : float
+        Factor in moment condition to obtain fisher consistency of the scale
+        estimate at the normal distribution.
+    """
+
+    def __init__(self, chi_func, scale_bias):
+        self.chi_func = chi_func
+        self.scale_bias = scale_bias
+
+    def __repr__(self):
+        return repr(self.chi_func)
+
+    def __call__(self, data, **kwds):
+        return self.fit(data, **kwds)
+
+    def fit(self, data, start_scale='mad', maxiter=100, rtol=1e-6, atol=1e-8):
+        """
+        Estimate M-scale using iteration.
+
+        Parameters
+        ----------
+        data : array-like
+            Data, currently assumed to be 1-dimensional.
+        start_scale : string or float.
+            Starting value of scale or method to compute the starting value.
+            Default is using 'mad', no other string options are available.
+        maxiter : int
+            Maximum number of iterations.
+        rtol : float
+            Relative convergence tolerance.
+        atol : float
+            Absolute onvergence tolerance.
+
+        Returns
+        -------
+        float : Scale estimate. The estimated variance is scale squared.
+        Todo: switch to Holder instance with more information.
+
+        """
+
+        scale = _scale_iter(
+            data,
+            scale0=start_scale,
+            maxiter=maxiter, rtol=rtol, atol=atol,
+            meef_scale=self.chi_func,
+            scale_bias=self.scale_bias,
+            )
+
+        return scale
+
+
+def scale_trimmed(data, alpha, center='median', axis=0, distr=None,
+                  distargs=None):
+    """scale estimate based on symmetrically trimmed sample
+
+    The scale estimate is robust to a fraction alpha of outliers on each
+    tail.
+    The scale is normalized to correspond to a reference distribution, which
+    is the normal distribution by default.
+
+    Parameters
+    ----------
+    data : array_like
+        dataset, by default (axis=0) observations are assumed to be in rows
+        and variables in columns.
+    alpha : float in interval (0, 1)
+        Trimming fraction in each tail. The floor(nobs * alpha) smallest
+        observations are trimmed, and the same number of the largest
+        observations are trimmed. scale estimate is base on a fraction
+        (1 - 2 * alpha) of observations.
+    center : 'median', 'mean', 'tmean' or number
+        `center` defines how the trimmed sample is centered. 'median' and
+        'mean' are calculated on the full sample. `tmean` is the trimmed
+        mean, calculated with the trimmed sample. If `center` is array_like
+        then it needs to be scalar or correspond to the shape of the data
+        reduced by axis.
+    axis : int, default is 0
+        axis along which scale is estimated.
+    distr : None, 'raw' or a distribution instance
+        Default if distr is None is the normal distribution `scipy.stats.norm`.
+        This is the reference distribution to normalize the scale.
+        Note: This cannot be a frozen instance, since it does not have an
+        `expect` method.
+        If distr is 'raw', then the scale is not normalized.
+    distargs :
+        Arguments for the distribution.
+
+    Returns
+    -------
+    scale : float or array
+        the estimated scale normalized for the reference distribution.
+
+    Examples
+    --------
+    for normal distribution
+
+    >>> np.random.seed(1)
+    >>> x = 2 * np.random.randn(100)
+    >>> scale_trimmed(x, 0.1)
+    1.7479516739879672
+
+    for t distribution
+    >>> xt = stats.t.rvs(3, size=1000, scale=2)
+    >>> print scale_trimmed(xt, alpha, distr=stats.t, distargs=(3,))
+    2.06574778599
+
+    compare to standard deviation of sample
+    >>> xt.std()
+    3.1457788359130481
+
+    """
+
+    if distr is None:
+        distr = stats.norm
+        if distargs is None:
+            distargs = ()
+
+    x = np.array(data)  # make copy for inplace sort
+    if axis is None:
+        x = x.ravel()
+        axis = 0
+
+    # TODO: latest numpy has partial sort
+    x.sort(axis)
+    nobs = x.shape[axis]
+
+    if distr == 'raw':
+        c_inv = 1
+    else:
+        bound = distr.ppf(1 - alpha, *distargs)
+        c_inv = distr.expect(lambda x: x*x, lb=-bound, ub=bound, args=distargs)
+
+    cut_idx = np.floor(nobs * alpha).astype(int)
+    sl = [slice(None, None, None)] * x.ndim
+    sl[axis] = slice(cut_idx, -cut_idx)
+    # x_trimmed = x[cut_idx:-cut_idx]
+    # cut in axis
+    x_trimmed = x[tuple(sl)]
+
+    center_type = center
+    if center in ['med', 'median']:
+        center = np.median(x, axis=axis)
+    elif center == 'mean':
+        center = np.mean(x, axis=axis)
+    elif center == 'tmean':
+        center = np.mean(x_trimmed, axis=axis)
+    else:
+        # assume number
+        center_type = 'user'
+
+    center_ndim = np.ndim(center)
+    if (center_ndim > 0) and (center_ndim < x.ndim):
+        center = np.expand_dims(center, axis)
+
+    s_raw = ((x_trimmed - center)**2).sum(axis)
+    scale = np.sqrt(s_raw / nobs / c_inv)
+
+    res = Holder(scale=scale,
+                 center=center,
+                 center_type=center_type,
+                 trim_idx=cut_idx,
+                 nobs=nobs,
+                 distr=distr,
+                 scale_correction=1. / c_inv)
+    return res
+
+
+def _weight_mean(x, c):
+    """Tukey-biweight, bisquare weights used in tau scale.
+
+    Parameters
+    ----------
+    x : ndarray
+        Data
+    c : float
+        Parameter for bisquare weights
+
+    Returns
+    -------
+    ndarray : weights
+    """
+    x = np.asarray(x)
+    w = (1 - (x / c)**2)**2 * (np.abs(x) <= c)
+    return w
+
+
+def _winsor(x, c):
+    """Winsorized squared data used in tau scale.
+
+    Parameters
+    ----------
+    x : ndarray
+        Data
+    c : float
+        threshold
+
+    Returns
+    -------
+    winsorized squared data, ``np.minimum(x**2, c**2)``
+    """
+    return np.minimum(x**2, c**2)
+
+
+def scale_tau(data, cm=4.5, cs=3, weight_mean=_weight_mean,
+              weight_scale=_winsor, normalize=True, ddof=0):
+    """Tau estimator of univariate scale.
+
+    Experimental, API will change
+
+    Parameters
+    ----------
+    data : array_like, 1-D or 2-D
+        If data is 2d, then the location and scale estimates
+        are calculated for each column
+    cm : float
+        constant used in call to weight_mean
+    cs : float
+        constant used in call to weight_scale
+    weight_mean : callable
+        function to calculate weights for weighted mean
+    weight_scale : callable
+        function to calculate scale, "rho" function
+    normalize : bool
+        rescale the scale estimate so it is consistent when the data is
+        normally distributed. The computation assumes winsorized (truncated)
+        variance.
+
+    Returns
+    -------
+    mean : nd_array
+        robust mean
+    std : nd_array
+        robust estimate of scale (standard deviation)
+
+    Notes
+    -----
+    Uses definition of Maronna and Zamar 2002, with weighted mean and
+    trimmed variance.
+    The normalization has been added to match R robustbase.
+    R robustbase uses by default ddof=0, with option to set it to 2.
+
+    References
+    ----------
+    .. [1] Maronna, Ricardo A, and Ruben H Zamar. “Robust Estimates of Location
+       and Dispersion for High-Dimensional Datasets.” Technometrics 44, no. 4
+       (November 1, 2002): 307–17. https://doi.org/10.1198/004017002188618509.
+    """
+
+    x = np.asarray(data)
+    nobs = x.shape[0]
+
+    med_x = np.median(x, 0)
+    xdm = x - med_x
+    mad_x = np.median(np.abs(xdm), 0)
+    wm = weight_mean(xdm / mad_x, cm)
+    mean = (wm * x).sum(0) / wm.sum(0)
+    var = (mad_x**2 * weight_scale((x - mean) / mad_x, cs).sum(0) /
+           (nobs - ddof))
+
+    cf = 1
+    if normalize:
+        c = cs * stats.norm.ppf(0.75)
+        cf = 2 * ((1 - c**2) * stats.norm.cdf(c) - c * stats.norm.pdf(c)
+                  + c**2) - 1
+    # return Holder(loc=mean, scale=np.sqrt(var / cf))
+    return mean, np.sqrt(var / cf)
+
+
+debug = 0
+
+
+def _scale_iter(data, scale0='mad', maxiter=100, rtol=1e-6, atol=1e-8,
+                meef_scale=None, scale_bias=None, iter_method="rho", ddof=0):
+    """iterative scale estimate base on "rho" function
+
+    """
+    x = np.asarray(data)
+    nobs = x.shape[0]
+    if scale0 == 'mad':
+        scale0 = mad(x, center=0)
+
+    for i in range(maxiter):
+        x_scaled = x / scale0
+        if iter_method == "rho":
+            scale = scale0 * np.sqrt(
+                np.sum(meef_scale(x / scale0)) / scale_bias / (nobs - ddof))
+        else:
+            weights_scale = meef_scale(x_scaled) / (1e-50 + x_scaled**2)
+            scale2 = (weights_scale * x**2).sum() / (nobs - ddof)
+            scale2 /= scale_bias
+            scale = np.sqrt(scale2)
+        if debug:
+            print(scale)
+        if np.allclose(scale, scale0, atol=atol, rtol=rtol):
+            break
+        scale0 = scale
+
+    return scale

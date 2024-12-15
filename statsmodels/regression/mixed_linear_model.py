@@ -146,12 +146,12 @@ import warnings
 
 import numpy as np
 import pandas as pd
-import patsy
 from scipy import sparse
 from scipy.stats.distributions import norm
 
 from statsmodels.base._penalties import Penalty
 import statsmodels.base.model as base
+from statsmodels.formula._manager import FormulaManager
 from statsmodels.tools import data as data_tools
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
@@ -206,7 +206,7 @@ def _dotsum(x, y):
         return np.dot(x.ravel(), y.ravel())
 
 
-class VCSpec(object):
+class VCSpec:
     """
     Define the variance component structure of a multilevel model.
 
@@ -244,11 +244,11 @@ def _get_exog_re_names(self, exog_re):
         return exog_re
 
     # Default names
-    defnames = ["x_re{0:1d}".format(k + 1) for k in range(exog_re.shape[1])]
+    defnames = [f"x_re{k + 1:1d}" for k in range(exog_re.shape[1])]
     return defnames
 
 
-class MixedLMParams(object):
+class MixedLMParams:
     """
     This class represents a parameter state for a mixed linear model.
 
@@ -580,7 +580,7 @@ def _convert_vc(exog_vc):
     vc_mats = []
 
     # Get the groups in sorted order
-    groups = set([])
+    groups = set()
     for k, v in exog_vc.items():
         groups |= set(v.keys())
     groups = list(groups)
@@ -698,7 +698,7 @@ class MixedLM(base.LikelihoodModel):
                  exog_vc=None, use_sqrt=True, missing='none',
                  **kwargs):
 
-        _allowed_kwargs = ["missing_idx", "design_info", "formula"]
+        _allowed_kwargs = ["missing_idx", "model_spec", "formula"]
         for x in kwargs.keys():
             if x not in _allowed_kwargs:
                 raise ValueError(
@@ -738,9 +738,9 @@ class MixedLM(base.LikelihoodModel):
 
         # Calling super creates self.endog, etc. as ndarrays and the
         # original exog, endog, etc. are self.data.endog, etc.
-        super(MixedLM, self).__init__(endog, exog, groups=groups,
-                                      exog_re=exog_re, missing=missing,
-                                      **kwargs)
+        super().__init__(endog, exog, groups=groups,
+                         exog_re=exog_re, missing=missing,
+                         **kwargs)
 
         self._init_keys.extend(["use_sqrt", "exog_vc"])
 
@@ -792,7 +792,7 @@ class MixedLM(base.LikelihoodModel):
         # list of arrays, corresponding to the groups.
         group_labels = list(set(groups))
         group_labels.sort()
-        row_indices = dict((s, []) for s in group_labels)
+        row_indices = {s: [] for s in group_labels}
         for i, g in enumerate(groups):
             row_indices[g].append(i)
         self.row_indices = row_indices
@@ -987,10 +987,11 @@ class MixedLM(base.LikelihoodModel):
                 if eval_env is None:
                     eval_env = 1
                 elif eval_env == -1:
-                    from patsy import EvalEnvironment
-                    eval_env = EvalEnvironment({})
-                exog_re = patsy.dmatrix(re_formula, data, eval_env=eval_env)
-                exog_re_names = exog_re.design_info.column_names
+                    mgr = FormulaManager()
+                    eval_env = mgr.get_empty_eval_env()
+                mgr = FormulaManager()
+                exog_re = mgr.get_matrices(re_formula, data, eval_env=eval_env)
+                exog_re_names = mgr.get_column_names(exog_re)
                 exog_re_names = [x.replace("Intercept", group_name)
                                  for x in exog_re_names]
                 exog_re = np.asarray(exog_re)
@@ -1008,8 +1009,8 @@ class MixedLM(base.LikelihoodModel):
             if eval_env is None:
                 eval_env = 1
             elif eval_env == -1:
-                from patsy import EvalEnvironment
-                eval_env = EvalEnvironment({})
+                mgr = FormulaManager()
+                eval_env = mgr.get_empty_eval_env()
 
             vc_mats = []
             vc_colnames = []
@@ -1017,17 +1018,17 @@ class MixedLM(base.LikelihoodModel):
             gb = data.groupby(groups)
             kylist = sorted(gb.groups.keys())
             vcf = sorted(vc_formula.keys())
+            mgr = FormulaManager()
             for vc_name in vcf:
-                md = patsy.ModelDesc.from_formula(vc_formula[vc_name])
+                # TODO: patsy migration
+                model_spec = mgr.get_spec(vc_formula[vc_name])
                 vc_names.append(vc_name)
                 evc_mats, evc_colnames = [], []
                 for group_ix, group in enumerate(kylist):
                     ii = gb.groups[group]
-                    mat = patsy.dmatrix(
-                             md,
-                             data.loc[ii, :],
-                             eval_env=eval_env,
-                             return_type='dataframe')
+                    mat = mgr.get_matrices(
+                        model_spec, data.loc[ii, :], eval_env=eval_env, pandas=True
+                    )
                     evc_colnames.append(mat.columns.tolist())
                     if use_sparse:
                         evc_mats.append(sparse.csr_matrix(mat))
@@ -1043,7 +1044,7 @@ class MixedLM(base.LikelihoodModel):
         kwargs["exog_re"] = exog_re
         kwargs["exog_vc"] = exog_vc
         kwargs["groups"] = groups
-        mod = super(MixedLM, cls).from_formula(
+        mod = super().from_formula(
             formula, data, *args, **kwargs)
 
         # expand re names to account for pairs of RE
@@ -1254,6 +1255,7 @@ class MixedLM(base.LikelihoodModel):
         results.params_object = params_object
         results.fe_params = fe_params
         results.cov_re = cov_re
+        results.vcomp = vcomp
         results.scale = scale
         results.cov_re_unscaled = mdf.cov_re_unscaled
         results.method = mdf.method
@@ -1978,9 +1980,9 @@ class MixedLM(base.LikelihoodModel):
                         vt += 2 * _dot(_multi_dot_three(
                             vir[None, :], matr2, le), vir[:, None])
 
-                    D[jj1, jj2] += vt
+                    D[jj1, jj2] += np.squeeze(vt)
                     if jj1 != jj2:
-                        D[jj2, jj1] += vt
+                        D[jj2, jj1] += np.squeeze(vt)
 
                     rt = _dotsum(vsl2, re.T) / 2
                     if not sym2:
@@ -2188,10 +2190,10 @@ class MixedLM(base.LikelihoodModel):
 
             # Try optimizing one or more times
             for j in range(len(method)):
-                rslt = super(MixedLM, self).fit(start_params=packed,
-                                                skip_hessian=True,
-                                                method=method[j],
-                                                **fit_kwargs)
+                rslt = super().fit(start_params=packed,
+                                   skip_hessian=True,
+                                   method=method[j],
+                                   **fit_kwargs)
                 if rslt.mle_retvals['converged']:
                     break
                 packed = rslt.params
@@ -2287,7 +2289,7 @@ class MixedLM(base.LikelihoodModel):
         return _mixedlm_distribution(self, params, scale, exog)
 
 
-class _mixedlm_distribution(object):
+class _mixedlm_distribution:
     """
     A private class for simulating data from a given mixed linear model.
 
@@ -2410,8 +2412,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
 
     def __init__(self, model, params, cov_params):
 
-        super(MixedLMResults, self).__init__(model, params,
-                                             normalized_cov_params=cov_params)
+        super().__init__(model, params, normalized_cov_params=cov_params)
         self.nobs = self.model.nobs
         self.df_resid = self.nobs - np.linalg.matrix_rank(self.model.exog)
 
@@ -2481,7 +2482,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
 
         for j, v in enumerate(self.model.exog_vc.names):
             vg = self.model.exog_vc.colnames[j][group_ix]
-            na = ["%s[%s]" % (v, s) for s in vg]
+            na = [f"{v}[{s}]" for s in vg]
             names.extend(na)
 
         return names
@@ -2621,7 +2622,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         d = self.k_re2 + self.k_vc
         z0 = np.zeros((r_matrix.shape[0], d))
         r_matrix = np.concatenate((r_matrix, z0), axis=1)
-        tst_rslt = super(MixedLMResults, self).t_test(r_matrix, use_t=use_t)
+        tst_rslt = super().t_test(r_matrix, use_t=use_t)
         return tst_rslt
 
     def summary(self, yname=None, xname_fe=None, xname_re=None,
@@ -2918,7 +2919,7 @@ class MixedLMResultsWrapper(base.LikelihoodResultsWrapper):
 
 def _handle_missing(data, groups, formula, re_formula, vc_formula):
 
-    tokens = set([])
+    tokens = set()
 
     forms = [formula]
     if re_formula is not None:
@@ -2947,7 +2948,7 @@ def _handle_missing(data, groups, formula, re_formula, vc_formula):
 
     data = data[tokens]
     ii = pd.notnull(data).all(1)
-    if type(groups) != "str":
+    if type(groups) is not str:
         ii &= pd.notnull(groups)
 
     return data.loc[ii, :], groups[np.asarray(ii)]

@@ -81,7 +81,7 @@ cdef class {{prefix}}Statespace(object):
     # `k_posdef` $\equiv r$ is the dimension of the state shocks  
     # *Old notation: T, n, k, g*
     # cdef readonly int nobs, k_endog, k_states, k_posdef
-    
+
     # `obs` $\equiv y_t$ is the **observation vector** $(p \times T)$  
     # `design` $\equiv Z_t$ is the **design vector** $(p \times m \times T)$  
     # `obs_intercept` $\equiv d_t$ is the **observation intercept** $(p \times T)$  

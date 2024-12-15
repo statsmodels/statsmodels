@@ -3,7 +3,7 @@ import pandas as pd
 from statsmodels.base.model import LikelihoodModelResults
 
 
-class BayesGaussMI(object):
+class BayesGaussMI:
     """
     Bayesian Imputation using a Gaussian model.
 
@@ -58,7 +58,7 @@ class BayesGaussMI(object):
         if type(data) is pd.DataFrame:
             self.exog_names = data.columns
 
-        data = np.asarray(data)
+        data = np.require(data, requirements="W")
         self.data = data
         self._data = data
         self.mask = np.isnan(data)
@@ -190,7 +190,7 @@ class BayesGaussMI(object):
         self.cov = np.linalg.inv(ma)
 
 
-class MI(object):
+class MI:
     """
     MI performs multiple imputation using a provided imputer object.
 
@@ -385,7 +385,7 @@ class MIResults(LikelihoodModelResults):
 
     def __init__(self, mi, model, params, normalized_cov_params):
 
-        super(MIResults, self).__init__(model, params, normalized_cov_params)
+        super().__init__(model, params, normalized_cov_params)
         self.mi = mi
         self._model = model
 

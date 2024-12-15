@@ -63,7 +63,7 @@ def mixture_rvs(prob, size, dist, kwargs=None):
     return sample
 
 
-class MixtureDistribution(object):
+class MixtureDistribution:
     '''univariate mixture distribution
 
     for simple case for now (unbound support)

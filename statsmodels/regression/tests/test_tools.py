@@ -6,7 +6,7 @@ from statsmodels.regression.linear_model import WLS
 from statsmodels.regression._tools import _MinimalWLS
 
 
-class TestMinimalWLS(object):
+class TestMinimalWLS:
     @classmethod
     def setup_class(cls):
         rs = np.random.RandomState(1234)

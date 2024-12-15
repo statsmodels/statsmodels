@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Impulse reponse-related code
 """
@@ -15,7 +14,7 @@ import statsmodels.tsa.vector_ar.util as util
 mat = np.array
 
 
-class BaseIRAnalysis(object):
+class BaseIRAnalysis:
     """
     Base class for plotting and computing IRF-related statistics, want to be
     able to handle known and estimated processes

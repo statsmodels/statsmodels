@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Wed Feb 17 23:44:18 2021
 
@@ -110,7 +109,7 @@ def test_bernstein_distribution_2d():
     assert_allclose(pdf_m, np.ones(len(xx)), atol=1e-13)
 
 
-class TestBernsteinBeta2d(object):
+class TestBernsteinBeta2d:
 
     @classmethod
     def setup_class(cls):

@@ -28,18 +28,15 @@ Residual Diagnostics and Specification Tests
 .. module:: statsmodels.stats.stattools
    :synopsis: Statistical methods and tests that do not fit into other categories
 
+Autocorrelation
+~~~~~~~~~~~~~~~
+
 .. currentmodule:: statsmodels.stats.stattools
 
 .. autosummary::
    :toctree: generated/
 
    durbin_watson
-   jarque_bera
-   omni_normtest
-   medcouple
-   robust_skewness
-   robust_kurtosis
-   expected_robust_kurtosis
 
 .. module:: statsmodels.stats.diagnostic
    :synopsis: Statistical methods and tests to diagnose model fit problems
@@ -53,28 +50,43 @@ Residual Diagnostics and Specification Tests
    acorr_ljungbox
    acorr_lm
 
-   breaks_cusumolsresid
-   breaks_hansen
-   recursive_olsresiduals
+Heteroscedasticity
+~~~~~~~~~~~~~~~~~~
 
-   compare_cox
-   compare_encompassing
-   compare_j
+.. currentmodule:: statsmodels.stats.diagnostic
 
+.. autosummary::
+   :toctree: generated/
+   
    het_arch
    het_breuschpagan
    het_goldfeldquandt
    het_white
-   spec_white
 
-   linear_harvey_collier
-   linear_lm
-   linear_rainbow
-   linear_reset
+Kurtosis
+~~~~~~~~
 
+.. currentmodule:: statsmodels.stats.stattools
 
-Outliers and influence measures
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autosummary::
+   :toctree: generated/
+
+   robust_kurtosis
+   expected_robust_kurtosis
+
+Normality
+~~~~~~~~~
+
+.. currentmodule:: statsmodels.stats.stattools
+
+.. autosummary::
+   :toctree: generated/
+
+   jarque_bera
+   omni_normtest
+
+Outliers and Influence
+~~~~~~~~~~~~~~~~~~~~~~
 
 .. module:: statsmodels.stats.outliers_influence
    :synopsis: Statistical methods and measures for outliers and influence
@@ -88,6 +100,46 @@ Outliers and influence measures
    GLMInfluence
    MLEInfluence
    variance_inflation_factor
+
+Skewness
+~~~~~~~~
+
+.. currentmodule:: statsmodels.stats.stattools
+
+.. autosummary::
+   :toctree: generated/
+   
+   medcouple
+   robust_skewness
+
+Stability
+~~~~~~~~~
+
+.. currentmodule:: statsmodels.stats.diagnostic
+
+.. autosummary::
+   :toctree: generated/
+
+   breaks_cusumolsresid
+   breaks_hansen
+   recursive_olsresiduals
+
+Specification test
+~~~~~~~~~~~~~~~~~~
+
+.. currentmodule:: statsmodels.stats.diagnostic
+
+.. autosummary::
+   :toctree: generated/
+
+   compare_cox
+   compare_encompassing
+   compare_j
+   spec_white
+   linear_harvey_collier
+   linear_lm
+   linear_rainbow
+   linear_reset
 
 See also the notes on :ref:`notes on regression diagnostics <diagnostics>`
 
@@ -188,6 +240,7 @@ Non-Parametric Tests
 
    rank_compare_2indep
    rank_compare_2ordinal
+   samplesize_rank_compare_onetail
    RankCompareResult
    cohensd2problarger
    prob_larger_continuous
@@ -464,20 +517,48 @@ Rates
 
 Statistical functions for rates. This currently includes hypothesis tests for
 two independent samples.
+See also example notebook for an overview
+`Poisson Rates <examples/notebooks/generated/stats_poisson.ipynb>`_
 
-Status: experimental, API might change, added in 0.12
+Status: experimental, API might change, added in 0.12, refactored and enhanced
+in 0.14
 
 .. module:: statsmodels.stats.rates
    :synopsis: Tests for Poisson rates
 
 .. currentmodule:: statsmodels.stats.rates
 
+statistical function for one sample
+
+.. autosummary::
+   :toctree: generated
+
+   test_poisson
+   confint_poisson
+   confint_quantile_poisson
+   tolerance_int_poisson
+
+statistical function for two independent samples
+
 .. autosummary::
    :toctree: generated
 
    test_poisson_2indep
    etest_poisson_2indep
+   confint_poisson_2indep
    tost_poisson_2indep
+   nonequivalence_poisson_2indep
+
+functions for statistical power
+
+.. autosummary::
+   :toctree: generated
+
+   power_poisson_ratio_2indep
+   power_equivalence_poisson_2indep
+   power_poisson_diff_2indep
+   power_negbin_ratio_2indep
+   power_equivalence_neginb_2indep
 
 
 Multivariate
@@ -710,7 +791,7 @@ Functions for basic meta-analysis of a collection of sample statistics.
 
 Examples can be found in the notebook
 
- * `Meta-Analysis <examples/notebooks/generated/metaanalysis1.html>`__
+ * `Meta-Analysis <examples/notebooks/generated/metaanalysis1.ipynb>`_
 
 Status: experimental, API might change, added in 0.12
 

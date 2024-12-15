@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Mon May 05 17:29:56 2014
 
@@ -18,7 +17,7 @@ from statsmodels.regression.linear_model import OLS, GLS
 from statsmodels.sandbox.regression.penalized import TheilGLS
 
 
-class TestTheilTextile(object):
+class TestTheilTextile:
 
     @classmethod
     def setup_class(cls):
@@ -123,7 +122,7 @@ class TestTheilTextile(object):
             self.res1.summary()
 
 
-class CheckEquivalenceMixin(object):
+class CheckEquivalenceMixin:
 
     tol = {'default': (1e-4, 1e-20)}
 
@@ -264,7 +263,7 @@ class TestTheilLinRestrictionApprox(CheckEquivalenceMixin):
         cls.tol = tol
 
 
-class TestTheilPanel(object):
+class TestTheilPanel:
 
     @classmethod
     def setup_class(cls):

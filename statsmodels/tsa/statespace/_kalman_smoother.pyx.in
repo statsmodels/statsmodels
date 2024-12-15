@@ -237,7 +237,7 @@ cdef class {{prefix}}KalmanSmoother(object):
 
     # ### Define some constants
     # cdef readonly int k_endog, k_states, k_posdef, k_endog2, k_states2, k_posdef2, k_endogstates, k_statesposdef
-    
+
     def __init__(self,
                  {{prefix}}Statespace model,
                  {{prefix}}KalmanFilter kfilter,

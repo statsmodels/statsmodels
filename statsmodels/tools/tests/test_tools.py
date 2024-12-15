@@ -37,7 +37,7 @@ def string_var():
     return series
 
 
-class TestTools(object):
+class TestTools:
     def test_add_constant_list(self):
         x = lrange(1, 5)
         x = tools.add_constant(x)
@@ -193,7 +193,7 @@ def test_pandas_const_series():
     series = dta.exog["GNP"]
     series = tools.add_constant(series, prepend=False)
     assert_string_equal("const", series.columns[1])
-    assert_equal(series.var(0)[1], 0)
+    assert_equal(series.var(axis=0).iloc[1], 0)
 
 
 def test_pandas_const_series_prepend():
@@ -201,14 +201,14 @@ def test_pandas_const_series_prepend():
     series = dta.exog["GNP"]
     series = tools.add_constant(series, prepend=True)
     assert_string_equal("const", series.columns[0])
-    assert_equal(series.var(0)[0], 0)
+    assert_equal(series.var(axis=0).iloc[0], 0)
 
 
 def test_pandas_const_df():
     dta = longley.load_pandas().exog
     dta = tools.add_constant(dta, prepend=False)
     assert_string_equal("const", dta.columns[-1])
-    assert_equal(dta.var(0)[-1], 0)
+    assert_equal(dta.var(axis=0).iloc[-1], 0)
 
 
 def test_pandas_const_df_prepend():
@@ -217,10 +217,10 @@ def test_pandas_const_df_prepend():
     dta["UNEMP"] /= dta["UNEMP"].std()
     dta = tools.add_constant(dta, prepend=True)
     assert_string_equal("const", dta.columns[0])
-    assert_equal(dta.var(0)[0], 0)
+    assert_equal(dta.var(axis=0).iloc[0], 0)
 
 
-class TestNanDot(object):
+class TestNanDot:
     @classmethod
     def setup_class(cls):
         nan = np.nan
@@ -291,7 +291,7 @@ class TestNanDot(object):
         assert_array_equal(test_res, expected_res)
 
 
-class TestEnsure2d(object):
+class TestEnsure2d:
     @classmethod
     def setup_class(cls):
         x = np.arange(400.0).reshape((100, 4))

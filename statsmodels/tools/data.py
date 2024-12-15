@@ -1,12 +1,14 @@
 """
 Compatibility tools for various data structure inputs
 """
+from statsmodels.compat.numpy import NP_LT_2
+
 import numpy as np
 import pandas as pd
 
 
 def _check_period_index(x, freq="M"):
-    from pandas import PeriodIndex, DatetimeIndex
+    from pandas import DatetimeIndex, PeriodIndex
     if not isinstance(x.index, (DatetimeIndex, PeriodIndex)):
         raise ValueError("The index must be a DatetimeIndex or PeriodIndex")
 
@@ -15,8 +17,12 @@ def _check_period_index(x, freq="M"):
     else:
         inferred_freq = pd.infer_freq(x.index)
     if not inferred_freq.startswith(freq):
-        raise ValueError("Expected frequency {}. Got {}".format(inferred_freq,
-                                                                freq))
+        raise ValueError("Expected frequency {}. Got {}".format(freq,
+                                                                inferred_freq))
+
+
+def is_series(obj):
+    return isinstance(obj, pd.Series)
 
 
 def is_data_frame(obj):
@@ -24,8 +30,21 @@ def is_data_frame(obj):
 
 
 def is_design_matrix(obj):
-    from patsy import DesignMatrix
+    try:
+        from patsy import DesignMatrix
+    except ImportError:
+        return False
+
     return isinstance(obj, DesignMatrix)
+
+
+def is_model_matrix(obj):
+    try:
+        from formulaic import ModelMatrix
+    except ImportError:
+        return False
+
+    return isinstance(obj, ModelMatrix)
 
 
 def _is_structured_ndarray(obj):
@@ -96,23 +115,45 @@ def _is_using_pandas(endog, exog):
     return (isinstance(endog, klasses) or isinstance(exog, klasses))
 
 
-def _is_array_like(endog, exog):
-    try:  # do it like this in case of mixed types, ie., ndarray and list
-        endog = np.asarray(endog)
-        exog = np.asarray(exog)
-        return True
-    except:
-        return False
-
-
 def _is_using_patsy(endog, exog):
     # we get this when a structured array is passed through a formula
     return (is_design_matrix(endog) and
             (is_design_matrix(exog) or exog is None))
 
 
+def _is_using_formulaic(endog, exog):
+    # we get this when a structured array is passed through a formula
+    return (is_model_matrix(endog) and
+            (is_model_matrix(exog) or exog is None))
+
+
 def _is_recarray(data):
     """
     Returns true if data is a recarray
     """
-    return isinstance(data, np.core.recarray)
+    if NP_LT_2:
+        return isinstance(data, np.core.recarray)
+    else:
+        return isinstance(data, np.rec.recarray)
+
+
+def _as_array_with_name(obj, default_name):
+    """
+    Call np.asarray() on obj and attempt to get the name if its a Series.
+
+    Parameters
+    ----------
+    obj: pd.Series
+        Series to convert to an array
+    default_name: str
+        The default name to return in case the object isn't a pd.Series or has
+        no name attribute.
+
+    Returns
+    -------
+    array_and_name: tuple[np.ndarray, str]
+        The data casted to np.ndarra and the series name or None
+    """
+    if is_series(obj):
+        return (np.asarray(obj), obj.name)
+    return (np.asarray(obj), default_name)

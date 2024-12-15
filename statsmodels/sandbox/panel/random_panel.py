@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Generate a random process with panel structure
 
 Created on Sat Dec 17 22:15:27 2011
@@ -19,7 +18,7 @@ import numpy as np
 from . import correlation_structures as cs
 
 
-class PanelSample(object):
+class PanelSample:
     '''data generating process for panel with within correlation
 
     allows various within correlation structures, but no random intercept yet

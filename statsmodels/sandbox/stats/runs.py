@@ -25,7 +25,7 @@ from scipy.special import comb
 import warnings
 from statsmodels.tools.validation import array_like
 
-class Runs(object):
+class Runs:
     '''class for runs in a binary sequence
 
 
@@ -250,7 +250,7 @@ def runstest_2samp(x, y=None, groups=None, correction=True):
         return Runs(xindicator).runs_test(correction=correction)
 
 
-class TotalRunsProb(object):
+class TotalRunsProb:
     '''class for the probability distribution of total runs
 
     This is the exact probability distribution for the (Wald-Wolfowitz)
@@ -314,7 +314,7 @@ class TotalRunsProb(object):
         return cdfval
 
 
-class RunsProb(object):
+class RunsProb:
     '''distribution of success runs of length k or more (classical definition)
 
     The underlying process is assumed to be a sequence of Bernoulli trials
@@ -477,7 +477,7 @@ def cochrans_q(x):
 
     '''
 
-    warnings.warn("Deprecated, use stats.cochrans_q instead", DeprecationWarning)
+    warnings.warn("Deprecated, use stats.cochrans_q instead", FutureWarning)
 
     x = np.asarray(x)
     gruni = np.unique(x)
@@ -539,7 +539,7 @@ def mcnemar(x, y=None, exact=True, correction=True):
 
     '''
 
-    warnings.warn("Deprecated, use stats.TableSymmetry instead", DeprecationWarning)
+    warnings.warn("Deprecated, use stats.TableSymmetry instead", FutureWarning)
 
     x = np.asarray(x)
     if y is None and x.shape[0] == x.shape[1]:
@@ -605,7 +605,7 @@ def symmetry_bowker(table):
 
     '''
 
-    warnings.warn("Deprecated, use stats.TableSymmetry instead", DeprecationWarning)
+    warnings.warn("Deprecated, use stats.TableSymmetry instead", FutureWarning)
 
     table = np.asarray(table)
     k, k2 = table.shape

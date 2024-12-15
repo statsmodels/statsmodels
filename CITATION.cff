@@ -1,0 +1,38 @@
+cff-version: 1.2.0
+title: statsmodels
+message: >-
+  Please use following citation to cite statsmodels in
+  scientific publications
+type: software
+authors:
+  - given-names: Seabold
+    family-names: Skipper
+  - given-names: Perktold
+    family-names: Josef
+repository-code: 'https://github.com/statsmodels/statsmodels'
+url: 'https://www.statsmodels.org/'
+keywords:
+  - python
+  - data-science
+  - statistics
+  - prediction
+  - econometrics
+  - forecasting
+  - data-analysis
+  - regression-models
+  - hypothesis-testing
+  - generalized-linear-models
+  - timeseries-analysis
+  - robust-estimation
+  - count-model
+license: BSD-3-Clause
+preferred-citation:
+  type: article
+  authors:
+    - given-names: Seabold
+      family-names: Skipper
+    - given-names: Perktold
+      family-names: Josef
+  title: "statsmodels: Econometric and statistical modeling with python"
+  journal: "9th Python in Science Conference"
+  year: 2010

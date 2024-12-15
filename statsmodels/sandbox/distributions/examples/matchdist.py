@@ -44,7 +44,7 @@ def plothist(x,distfn, args, loc, scale, right=1):
 
     plt.xlabel('Smarts')
     plt.ylabel('Probability')
-    plt.title(r'$\mathrm{Testing: %s :}\ \mu=%f,\ \sigma=%f$' % (distfn.name,loc,scale))
+    plt.title(fr'$\mathrm{{Testing: {distfn.name} :}}\ \mu={loc:f},\ \sigma={scale:f}$')
 
     #plt.axis([bins[0], bins[-1], 0, 0.134+0.05])
 

@@ -1,13 +1,16 @@
-from __future__ import print_function
 import io
 import os
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
-import patsy
+import pytest
+
 from statsmodels.api import families
+from statsmodels.formula._manager import FormulaManager
 from statsmodels.othermod.betareg import BetaModel
+from statsmodels.tools.sm_exceptions import ValueWarning
+
 from .results import results_betareg as resultsb
 
 links = families.links
@@ -17,25 +20,25 @@ res_dir = os.path.join(cur_dir, "results")
 
 
 # betareg(I(food/income) ~ income + persons, data = FoodExpenditure)
-_income_estimates_mean = u"""\
+_income_estimates_mean = """\
 varname        Estimate  StdError   zvalue     Pr(>|z|)
 (Intercept) -0.62254806 0.223853539 -2.781051 5.418326e-03
 income      -0.01229884 0.003035585 -4.051556 5.087819e-05
 persons      0.11846210 0.035340667  3.352005 8.022853e-04"""
 
-_income_estimates_precision = u"""\
+_income_estimates_precision = """\
 varname  Estimate StdError  zvalue     Pr(>|z|)
 (phi) 35.60975   8.079598 4.407366 1.046351e-05
 """
 
-_methylation_estimates_mean = u"""\
+_methylation_estimates_mean = """\
 varname      Estimate StdError zvalue Pr(>|z|)
 (Intercept)  1.44224    0.03401  42.404   2e-16
 genderM      0.06986    0.04359   1.603    0.109
 CpGCpG_1     0.60735    0.04834  12.563   2e-16
 CpGCpG_2     0.97355    0.05311  18.331   2e-16"""
 
-_methylation_estimates_precision = u"""\
+_methylation_estimates_precision = """\
 varname Estimate StdError zvalue Pr(>|z|)
 (Intercept)  8.22829    1.79098   4.594 4.34e-06
 age         -0.03471    0.03276  -1.059    0.289"""
@@ -64,21 +67,22 @@ def assert_close(a, b, eps):
     assert np.allclose(a, b, rtol=0.01, atol=eps), (list(a), list(b))
 
 
-class TestBetaModel(object):
+class TestBetaModel:
 
     @classmethod
-    def setup_class(self):
+    def setup_class(cls):
         model = "I(food/income) ~ income + persons"
-        self.income_fit = BetaModel.from_formula(model, income).fit()
+        cls.income_fit = BetaModel.from_formula(model, income).fit()
 
-        model = self.model = "methylation ~ gender + CpG"
-        Z = self.Z = patsy.dmatrix("~ age", methylation)
+        model = cls.model = "methylation ~ gender + CpG"
+        mgr = FormulaManager()
+        Z = cls.Z = mgr.get_matrices("~ age", methylation, pandas=False)
         mod = BetaModel.from_formula(model, methylation, exog_precision=Z,
-                                     link_precision=links.identity())
-        self.meth_fit = mod.fit()
+                                     link_precision=links.Identity())
+        cls.meth_fit = mod.fit()
         mod = BetaModel.from_formula(model, methylation, exog_precision=Z,
                                      link_precision=links.Log())
-        self.meth_log_fit = mod.fit()
+        cls.meth_log_fit = mod.fit()
 
     def test_income_coefficients(self):
         rslt = self.income_fit
@@ -121,14 +125,20 @@ class TestBetaModel(object):
     def test_precision_formula(self):
         m = BetaModel.from_formula(self.model, methylation,
                                    exog_precision_formula='~ age',
-                                   link_precision=links.identity())
+                                   link_precision=links.Identity())
         rslt = m.fit()
         assert_close(rslt.params, self.meth_fit.params, 1e-10)
         assert isinstance(rslt.params, pd.Series)
 
+        with pytest.warns(ValueWarning, match="unknown kwargs"):
+            BetaModel.from_formula(self.model, methylation,
+                                   exog_precision_formula='~ age',
+                                   link_precision=links.Identity(),
+                                   junk=False)
+
     def test_scores(self):
         model, Z = self.model, self.Z
-        for link in (links.identity(), links.log()):
+        for link in (links.Identity(), links.Log()):
             mod2 = BetaModel.from_formula(model, methylation, exog_precision=Z,
                                           link_precision=link)
             rslt_m = mod2.fit()
@@ -332,7 +342,8 @@ class TestBetaIncome():
     def setup_class(cls):
 
         formula = "I(food/income) ~ income + persons"
-        exog_prec = patsy.dmatrix("~ persons", income)
+        mgr = FormulaManager()
+        exog_prec = mgr.get_matrices("~ persons", income)
         mod_income = BetaModel.from_formula(
             formula,
             income,

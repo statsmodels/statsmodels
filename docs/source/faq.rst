@@ -55,7 +55,7 @@ You might also try cleaning up your source directory by running:
 .. code-block:: bash
 
     pip uninstall statsmodels
-    python setup.py clean
+    git clean -xfd
 
 And then attempting to re-compile. If you want to be more aggressive, you
 could also reset git to a prior version by:

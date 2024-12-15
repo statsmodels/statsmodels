@@ -20,7 +20,7 @@ import pandas as pd
 from statsmodels.graphics.utils import maybe_name_or_idx
 
 
-class Mediation(object):
+class Mediation:
     """
     Conduct a mediation analysis.
 
@@ -72,9 +72,11 @@ class Mediation(object):
 
     >>> import statsmodels.api as sm
     >>> import statsmodels.genmod.families.links as links
-    >>> probit = links.probit
+    >>> from statsmodels.stats.mediation import Mediation
+    >>> data = sm.datasets.get_rdataset("framing", "mediation")
+    >>> probit = links.probit()
     >>> outcome_model = sm.GLM.from_formula("cong_mesg ~ emo + treat + age + educ + gender + income",
-    ...                                     data, family=sm.families.Binomial(link=probit()))
+    ...                                     data, family=sm.families.Binomial(link=probit))
     >>> mediator_model = sm.OLS.from_formula("emo ~ treat + age + educ + gender + income", data)
     >>> med = Mediation(outcome_model, mediator_model, "treat", "emo").fit()
     >>> med.summary()
@@ -89,7 +91,7 @@ class Mediation(object):
     >>> outcome_exog = patsy.dmatrix("emo + treat + age + educ + gender + income", data,
     ...                              return_type='dataframe')
     >>> probit = sm.families.links.probit
-    >>> outcome_model = sm.GLM(outcome, outcome_exog, family=sm.families.Binomial(link=probit()))
+    >>> outcome_model = sm.GLM(outcome, outcome_exog, family=sm.families.Binomial(link=Probit()))
     >>> mediator = np.asarray(data["emo"])
     >>> mediator_exog = patsy.dmatrix("treat + age + educ + gender + income", data,
     ...                               return_type='dataframe')
@@ -208,7 +210,7 @@ class Mediation(object):
         else:
             # Need to regenerate the model exog
             df = self.mediator_model.data.frame.copy()
-            df.loc[:, self.exposure] = exposure
+            df[self.exposure] = exposure
             for vname in self.moderators:
                 v = self.moderators[vname]
                 df.loc[:, vname] = v
@@ -236,11 +238,11 @@ class Mediation(object):
         else:
             # Need to regenerate the model exog
             df = self.outcome_model.data.frame.copy()
-            df.loc[:, self.exposure] = exposure
-            df.loc[:, self.mediator] = mediator
+            df[self.exposure] = exposure
+            df[self.mediator] = mediator
             for vname in self.moderators:
                 v = self.moderators[vname]
-                df.loc[:, vname] = v
+                df[vname] = v
             klass = self.outcome_model.__class__
             init_kwargs = self.outcome_model._get_init_kwds()
             model = klass.from_formula(data=df, **init_kwargs)
@@ -281,7 +283,9 @@ class Mediation(object):
             outcome_result = self._fit_model(self.outcome_model, self._outcome_fit_kwargs)
             mediator_result = self._fit_model(self.mediator_model, self._mediator_fit_kwargs)
         elif not method.startswith("boot"):
-            raise("method must be either 'parametric' or 'bootstrap'")
+            raise ValueError(
+                "method must be either 'parametric' or 'bootstrap'"
+            )
 
         indirect_effects = [[], []]
         direct_effects = [[], []]
@@ -341,7 +345,7 @@ def _pvalue(vec):
     return 2 * min(sum(vec > 0), sum(vec < 0)) / float(len(vec))
 
 
-class MediationResults(object):
+class MediationResults:
     """
     A class for holding the results of a mediation analysis.
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Wed Mar 18 17:45:51 2020
 
@@ -155,7 +154,7 @@ def test_scale_transform(center):
     assert_allclose(xt0, xtt[0, :], rtol=1e-13)
 
 
-class TestOnewayEquivalenc(object):
+class TestOnewayEquivalenc:
 
     @classmethod
     def setup_class(cls):
@@ -263,7 +262,7 @@ class TestOnewayEquivalenc(object):
         assert_allclose(pow_, 0.1552, atol=0.007)
 
 
-class TestOnewayScale(object):
+class TestOnewayScale:
 
     @classmethod
     def setup_class(cls):
@@ -432,7 +431,7 @@ class TestOnewayScale(object):
         assert_allclose(res.df, res2.df)
 
 
-class TestOnewayOLS(object):
+class TestOnewayOLS:
 
     @classmethod
     def setup_class(cls):

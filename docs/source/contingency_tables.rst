@@ -50,6 +50,7 @@ contingency table cell counts:
     import statsmodels.api as sm
 
     df = sm.datasets.get_rdataset("Arthritis", "vcd").data
+    df.fillna({"Improved":"None"}, inplace=True)
 
     tab = pd.crosstab(df['Treatment'], df['Improved'])
     tab = tab.loc[:, ["None", "Some", "Marked"]]

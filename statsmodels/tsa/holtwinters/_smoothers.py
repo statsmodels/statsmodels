@@ -192,7 +192,7 @@ def holt_mul_dam(x, hw_args: HoltWintersArgs):
     for i in range(1, hw_args.n):
         lvl[i] = (y_alpha[i - 1]) + (alphac * (lvl[i - 1] * b[i - 1] ** phi))
         b[i] = (beta * (lvl[i] / lvl[i - 1])) + (betac * b[i - 1] ** phi)
-    return hw_args.y - lvl * b ** phi
+    return hw_args.y - lvl * b**phi
 
 
 def holt_add_dam(x, hw_args: HoltWintersArgs):
@@ -337,7 +337,7 @@ def holt_win_mul_mul_dam(x, hw_args: HoltWintersArgs):
         s[i + m - 1] = (y_gamma[i - 1] / (lvl[i - 1] * b[i - 1] ** phi)) + (
             gammac * s[i - 1]
         )
-    return hw_args.y - (lvl * b ** phi) * s[: -(m - 1)]
+    return hw_args.y - (lvl * b**phi) * s[: -(m - 1)]
 
 
 def holt_win_add_add_dam(x, hw_args: HoltWintersArgs):

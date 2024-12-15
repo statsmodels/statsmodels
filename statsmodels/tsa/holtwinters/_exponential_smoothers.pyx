@@ -11,18 +11,19 @@ cdef double LOWER_BOUND = np.sqrt(np.finfo(float).eps)
 
 
 cdef class HoltWintersArgs:
-    cdef long[::1] _xi
-    cdef double[::1] _p, _y, _l, _b, _s
+    cdef np.int64_t[::1] _xi
+    cdef const double[::1] _y
+    cdef double[::1] _p, _l, _b, _s
     cdef double[:, ::1] _bounds
     cdef Py_ssize_t _m, _n
     cdef bint _transform
 
     def __init__(
         self,
-        long[::1] xi,
+        np.int64_t[::1] xi,
         double[::1] p,
         double[:, ::1] bounds,
-        double[::1] y,
+        const double[::1] y,
         Py_ssize_t m,
         Py_ssize_t n,
         bint transform=False,
@@ -86,7 +87,7 @@ cdef class HoltWintersArgs:
     def transform(self, value):
         self._transform = value
 
-cdef to_restricted(double[::1] p, long[::1] sel, double[:, ::1] bounds):
+cdef to_restricted(double[::1] p, np.int64_t[::1] sel, double[:, ::1] bounds):
     """
     Transform parameters from the unrestricted [0,1] space
 
@@ -135,7 +136,7 @@ cdef object holt_init(double[::1] x, HoltWintersArgs hw_args):
     cdef double alpha, beta, phi, alphac, betac, l0, b0, _
     cdef Py_ssize_t i, n, idx = 0
     cdef double[::1] p
-    cdef long[::1] xi
+    cdef np.int64_t[::1] xi
 
     p = hw_args._p
     xi = hw_args._xi
@@ -170,7 +171,8 @@ def holt__(double[::1] x, HoltWintersArgs hw_args):
         Array containing model errors
     """
     cdef double alpha, beta, phi, betac, alphac
-    cdef double[::1] err, l, y
+    cdef double[::1] err, l
+    cdef const double[::1] y
     cdef Py_ssize_t i
 
     l = hw_args._l
@@ -192,7 +194,8 @@ def holt_mul_dam(double[::1] x, HoltWintersArgs hw_args):
     (M,) & (Md,)
     """
     cdef double alpha, beta, phi, betac, alphac
-    cdef double[::1] err, l, b, y
+    cdef double[::1] err, l, b
+    cdef const double[::1] y
     cdef Py_ssize_t i
 
     err = np.empty(hw_args._n)
@@ -215,7 +218,8 @@ def holt_add_dam(double[::1] x, HoltWintersArgs hw_args):
     (A,) & (Ad,)
     """
     cdef double alpha, beta, phi, betac, alphac
-    cdef double[::1] err, l, b, y
+    cdef double[::1] err, l, b
+    cdef const double[::1] y
     cdef Py_ssize_t i
 
     err = np.empty(hw_args._n)
@@ -237,8 +241,8 @@ cdef object holt_win_init(double[::1] x, HoltWintersArgs hw_args):
     cdef double alpha, beta, gamma, phi, alphac, betac, l0, b0
     cdef Py_ssize_t i, n, idx = 0
     cdef double[::1] p, s
-    cdef long[::1] xi
-    
+    cdef np.int64_t[::1] xi
+
     p = hw_args._p
     xi = hw_args._xi
     n = p.shape[0]
@@ -276,7 +280,8 @@ def holt_win_add_add_dam(double[::1] x, HoltWintersArgs hw_args):
     (A,A) & (Ad,A)
     """
     cdef double alpha, beta, gamma, phi, alphac, betac, gammac
-    cdef double[::1] err, l, s, b, y
+    cdef double[::1] err, l, s, b
+    cdef const double[::1] y
     cdef Py_ssize_t i, m
 
     err = np.empty(hw_args._n)
@@ -305,7 +310,8 @@ def holt_win__add(double[::1] x, HoltWintersArgs hw_args):
     (,A)
     """
     cdef double alpha, beta, gamma, phi, alphac, betac, gammac
-    cdef double[::1] err, y, l, s
+    cdef double[::1] err, l, s
+    cdef const double[::1] y
     cdef Py_ssize_t i, m
 
     err = np.empty(hw_args._n)
@@ -331,7 +337,8 @@ def holt_win__mul(double[::1] x, HoltWintersArgs hw_args):
     (,M)
     """
     cdef double alpha, beta, gamma, phi, alphac, betac, gammac
-    cdef double[::1] err, y, l, s
+    cdef double[::1] err, l, s
+    cdef const double[::1] y
     cdef Py_ssize_t i, m
 
     err = np.empty(hw_args._n)
@@ -356,7 +363,8 @@ def holt_win_mul_mul_dam(double[::1] x, HoltWintersArgs hw_args):
     (M,M) & (Md,M)
     """
     cdef double alpha, beta, gamma, phi, alphac, betac, gammac
-    cdef double[::1] err, y, l, b, s
+    cdef double[::1] err, l, b, s
+    cdef const double[::1] y
     cdef Py_ssize_t i, m
 
     err = np.empty(hw_args._n)
@@ -387,7 +395,8 @@ def holt_win_add_mul_dam(double[::1] x, HoltWintersArgs hw_args):
     (A,M) & (Ad,M)
     """
     cdef double alpha, beta, gamma, phi, alphac, betac, gammac
-    cdef double[::1] err, l, s, b, y
+    cdef double[::1] err, l, s, b
+    cdef const double[::1] y
     cdef Py_ssize_t i, m
 
     err = np.empty(hw_args._n)
@@ -418,7 +427,8 @@ def holt_win_mul_add_dam(double[::1] x, HoltWintersArgs hw_args):
     (M,A) & (M,Ad)
     """
     cdef double alpha, beta, gamma, phi, alphac, betac, gammac
-    cdef double[::1] err, l, s, b, y
+    cdef double[::1] err, l, s, b
+    cdef const double[::1] y
     cdef Py_ssize_t i, m
 
     err = np.empty(hw_args._n)

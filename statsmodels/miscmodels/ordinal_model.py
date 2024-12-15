@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Sat Aug 22 20:24:42 2015
 
@@ -6,9 +5,9 @@ Author: Josef Perktold
 License: BSD-3
 """
 
-import warnings
-
 from statsmodels.compat.pandas import Appender
+
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -16,10 +15,10 @@ from pandas.api.types import CategoricalDtype
 from scipy import stats
 
 from statsmodels.base.model import (
-    Model,
-    LikelihoodModel,
     GenericLikelihoodModel,
     GenericLikelihoodModelResults,
+    LikelihoodModel,
+    Model,
 )
 import statsmodels.base.wrapper as wrap
 # for results wrapper:
@@ -130,7 +129,7 @@ class OrderedModel(GenericLikelihoodModel):
 
         endog, labels, is_pandas = self._check_inputs(endog, exog)
 
-        super(OrderedModel, self).__init__(endog, exog, **kwds)
+        super().__init__(endog, exog, **kwds)
         k_levels = None  # initialize
         if not is_pandas:
             if self.endog.ndim == 1:
@@ -142,7 +141,7 @@ class OrderedModel(GenericLikelihoodModel):
                            "Missing values need to be removed.")
                     raise ValueError(msg)
             elif self.endog.ndim == 2:
-                if not hasattr(self, "design_info"):
+                if not hasattr(self, "model_spec"):
                     raise ValueError("2-dim endog not supported")
                 # this branch is currently only in support of from_formula
                 # we need to initialize k_levels correctly for df_resid
@@ -158,8 +157,8 @@ class OrderedModel(GenericLikelihoodModel):
 
         # adjust df
         self.k_extra = self.k_levels - 1
-        self.df_model = self.k_vars + self.k_extra
-        self.df_resid = self.nobs - self.df_model
+        self.df_model = self.k_vars
+        self.df_resid = self.nobs - (self.k_vars + self.k_extra)
 
         self.results_class = OrderedResults
 
@@ -253,7 +252,7 @@ class OrderedModel(GenericLikelihoodModel):
         endog_name = formula.split("~")[0].strip()
         original_endog = data[endog_name]
 
-        model = super(OrderedModel, cls).from_formula(
+        model = super().from_formula(
             formula, data=data, drop_cols=["Intercept"], *args, **kwargs)
 
         if model.endog.ndim == 2:
@@ -271,7 +270,6 @@ class OrderedModel(GenericLikelihoodModel):
         return model
 
     from_formula.__func__.__doc__ = Model.from_formula.__doc__
-
 
     def cdf(self, x):
         """Cdf evaluated at x.
@@ -404,7 +402,7 @@ class OrderedModel(GenericLikelihoodModel):
             observations in rows and one column for each category or level of
             the categorical dependent variable.
             If which is "cumprob", then "prob" ar cumulatively added to get the
-            cdf at k, i.e. probaibility of observing choice k or lower.
+            cdf at k, i.e. probability of observing choice k or lower.
             If which is "linpred", then the conditional prediction of the
             latent variable is returned. In this case, the return is
             one-dimensional.
@@ -415,7 +413,6 @@ class OrderedModel(GenericLikelihoodModel):
         xb = self._linpred(params, exog=exog, offset=offset)
         if which == "linpred":
             return xb
-
         xb = xb[:, None]
         low = thresh[:-1] - xb
         upp = thresh[1:] - xb
@@ -463,7 +460,9 @@ class OrderedModel(GenericLikelihoodModel):
             offset = np.asarray(offset)
 
         if exog is not None:
-            linpred = exog.dot(params[:-(self.k_levels - 1)])
+            _exog = np.asarray(exog)
+            _params = np.asarray(params)
+            linpred = _exog.dot(_params[:-(self.k_levels - 1)])
         else:  # means self.exog is also None
             linpred = np.zeros(self.nobs)
         if offset is not None:
@@ -584,7 +583,7 @@ class OrderedModel(GenericLikelihoodModel):
     def fit(self, start_params=None, method='nm', maxiter=500, full_output=1,
             disp=1, callback=None, retall=0, **kwargs):
 
-        fit_method = super(OrderedModel, self).fit
+        fit_method = super().fit
         mlefit = fit_method(start_params=start_params,
                             method=method, maxiter=maxiter,
                             full_output=full_output,

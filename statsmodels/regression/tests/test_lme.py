@@ -22,7 +22,7 @@ from .results import lme_r_results
 # TODO: add tests with unequal group sizes
 
 
-class R_Results(object):
+class R_Results:
     """
     A class for holding various results obtained from fitting one data
     set using lmer in R.
@@ -58,7 +58,7 @@ class R_Results(object):
         cur_dir = os.path.dirname(os.path.abspath(__file__))
         rdir = os.path.join(cur_dir, 'results')
         fname = os.path.join(rdir, "lme%02d.csv" % ds_ix)
-        with open(fname) as fid:
+        with open(fname, encoding="utf-8") as fid:
             rdr = csv.reader(fid)
             header = next(rdr)
             data = [[float(x) for x in line] for line in rdr]
@@ -85,7 +85,7 @@ def loglike_function(model, profile_fe, has_fe):
     return f
 
 
-class TestMixedLM(object):
+class TestMixedLM:
 
     # Test analytic scores and Hessian using numeric differentiation
     @pytest.mark.slow
@@ -759,7 +759,7 @@ class TestMixedLM(object):
 # ------------------------------------------------------------------
 
 
-class TestMixedLMSummary(object):
+class TestMixedLMSummary:
     # Test various aspects of the MixedLM summary
     @classmethod
     def setup_class(cls):
@@ -798,6 +798,27 @@ class TestMixedLMSummary(object):
         actual = summ.tables[
             1].index.values  # Second table is summary of params
         assert_equal(actual, desired)
+
+
+# ------------------------------------------------------------------
+
+
+class TestMixedLMSummaryRegularized(TestMixedLMSummary):
+    # Test various aspects of the MixedLM summary
+    # after fitting model with fit_regularized function
+    @classmethod
+    def setup_class(cls):
+        # Setup the model and estimate it.
+        pid = np.repeat([0, 1], 5)
+        x0 = np.repeat([1], 10)
+        x1 = [1, 5, 7, 3, 5, 1, 2, 6, 9, 8]
+        x2 = [6, 2, 1, 0, 1, 4, 3, 8, 2, 1]
+        y = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+        df = pd.DataFrame({"y": y, "pid": pid, "x0": x0, "x1": x1, "x2": x2})
+        endog = df["y"].values
+        exog = df[["x0", "x1", "x2"]].values
+        groups = df["pid"].values
+        cls.res = MixedLM(endog, exog, groups=groups).fit_regularized()
 
 
 # ------------------------------------------------------------------
@@ -987,12 +1008,12 @@ def test_handle_missing():
     re = np.kron(re, np.ones((2, 1)))
     df["y"] = re[:, 0] + re[:, 1] * df.z1 + re[:, 2] * df.c1
     df["y"] += re[:, 3] * df.c2 + np.random.normal(size=100)
-    df.loc[1, "y"] = np.NaN
-    df.loc[2, "g"] = np.NaN
-    df.loc[3, "x1"] = np.NaN
-    df.loc[4, "z1"] = np.NaN
-    df.loc[5, "c1"] = np.NaN
-    df.loc[6, "c2"] = np.NaN
+    df.loc[1, "y"] = np.nan
+    df.loc[2, "g"] = np.nan
+    df.loc[3, "x1"] = np.nan
+    df.loc[4, "z1"] = np.nan
+    df.loc[5, "c1"] = np.nan
+    df.loc[6, "c2"] = np.nan
 
     fml = "y ~ x1"
     re_formula = "1 + z1"
@@ -1055,7 +1076,11 @@ def test_summary_col():
     mod2 = MixedLM.from_formula('X ~ Y', d, groups=d['IDS'])
     results2 = mod2.fit(start_params=sp2)
 
-    out = summary_col([results1, results2], stars=True)
+    out = summary_col(
+        [results1, results2],
+        stars=True,
+        regressor_order=["Group Var", "Intercept", "X", "Y"]
+    )
     s = ('\n=============================\n              Y         X    \n'
          '-----------------------------\nGroup Var 0.1955    1.3854   \n'
          '          (0.6032)  (2.7377) \nIntercept -1.2672   3.4842*  \n'
@@ -1189,7 +1214,7 @@ def check_smw_solver(p, q, r, s):
     assert_allclose(y1, y2)
 
 
-class TestSMWSolver(object):
+class TestSMWSolver:
     @classmethod
     def setup_class(cls):
         np.random.seed(23)
@@ -1225,7 +1250,7 @@ def check_smw_logdet(p, q, r, s):
     assert_allclose(d1, d2, rtol=rtol)
 
 
-class TestSMWLogdet(object):
+class TestSMWLogdet:
     @classmethod
     def setup_class(cls):
         np.random.seed(23)

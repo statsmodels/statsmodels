@@ -96,7 +96,7 @@ def _compute_subset(class_type, data, bw, co, do, n_cvars, ix_ord,
     return sample_scale_sub, bw_sub
 
 
-class GenericKDE (object):
+class GenericKDE :
     """
     Base class for density estimation and regression KDE classes.
     """
@@ -335,7 +335,7 @@ class GenericKDE (object):
         raise NotImplementedError
 
 
-class EstimatorSettings(object):
+class EstimatorSettings:
     """
     Object to specify settings for density estimation or regression.
 
@@ -393,7 +393,7 @@ class EstimatorSettings(object):
         self.n_jobs = n_jobs
 
 
-class LeaveOneOut(object):
+class LeaveOneOut:
     """
     Generator to give leave-one-out views on X.
 

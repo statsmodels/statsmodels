@@ -115,13 +115,14 @@ Opening Windows into the Black Box', Journal of Statistical Software,
 2009.
 """
 
-import pandas as pd
-import numpy as np
-import patsy
-from statsmodels.base.model import LikelihoodModelResults
-from statsmodels.regression.linear_model import OLS
 from collections import defaultdict
 
+import numpy as np
+import pandas as pd
+
+from statsmodels.base.model import LikelihoodModelResults
+from statsmodels.formula._manager import FormulaManager
+from statsmodels.regression.linear_model import OLS
 
 _mice_data_example_1 = """
     >>> imp = mice.MICEData(data)
@@ -131,7 +132,7 @@ _mice_data_example_1 = """
     ...     imp.data.to_csv('data%02d.csv' % j)"""
 
 
-class PatsyFormula(object):
+class PatsyFormula:
     """
     A simple wrapper for a string to be interpreted as a Patsy formula.
     """
@@ -139,7 +140,7 @@ class PatsyFormula(object):
         self.formula = "0 + " + formula
 
 
-class MICEData(object):
+class MICEData:
 
     __doc__ = """\
     Wrap a data set to allow missing data handling with MICE.
@@ -178,8 +179,8 @@ class MICEData(object):
     mean structures containing main effects of all other variables in
     `data`.  The variable named `x1` has a conditional mean structure
     that includes an additional term for x2^2.
-    %(_mice_data_example_1)s
-    """ % {'_mice_data_example_1': _mice_data_example_1}
+    {_mice_data_example_1}
+    """.format(_mice_data_example_1=_mice_data_example_1)
 
     def __init__(self, data, perturbation_method='gaussian',
                  k_pmm=20, history_callback=None):
@@ -221,8 +222,8 @@ class MICEData(object):
 
         # Map from variable names to init/fit args of the conditional
         # models.
-        self.init_kwds = defaultdict(lambda: dict())
-        self.fit_kwds = defaultdict(lambda: dict())
+        self.init_kwds = defaultdict(dict)
+        self.fit_kwds = defaultdict(dict)
 
         # Map from variable names to the model class.
         self.model_class = {}
@@ -276,13 +277,15 @@ class MICEData(object):
         For each variable, missing values are imputed as the observed
         value that is closest to the mean over all observed values.
         """
-
+        # Changed for pandas 2.0 copy-on-write behavior to use a single
+        # in-place fill
+        imp_values = {}
         for col in self.data.columns:
             di = self.data[col] - self.data[col].mean()
             di = np.abs(di)
             ix = di.idxmin()
-            imp = self.data[col].loc[ix]
-            self.data[col].fillna(imp, inplace=True)
+            imp_values[col] = self.data[col].loc[ix]
+        self.data.fillna(imp_values, inplace=True)
 
     def _split_indices(self, vec):
         null = pd.isnull(vec)
@@ -436,17 +439,17 @@ class MICEData(object):
         """
 
         formula = self.conditional_formula[vname]
-        endog, exog = patsy.dmatrices(formula, self.data,
-                                      return_type="dataframe")
+        mgr = FormulaManager()
+        endog, exog = mgr.get_matrices(formula, self.data, pandas=True)
 
         # Rows with observed endog
         ixo = self.ix_obs[vname]
-        endog_obs = np.asarray(endog.iloc[ixo])
-        exog_obs = np.asarray(exog.iloc[ixo, :])
+        endog_obs = np.require(endog.iloc[ixo], requirements="W")
+        exog_obs = np.require(exog.iloc[ixo, :], requirements="W")
 
         # Rows with missing endog
         ixm = self.ix_miss[vname]
-        exog_miss = np.asarray(exog.iloc[ixm, :])
+        exog_miss = np.require(exog.iloc[ixm, :], requirements="W")
 
         predict_obs_kwds = {}
         if vname in self.predict_kwds:
@@ -466,9 +469,9 @@ class MICEData(object):
         for k in kwds:
             v = kwds[k]
             if isinstance(v, PatsyFormula):
-                mat = patsy.dmatrix(v.formula, self.data,
-                                    return_type="dataframe")
-                mat = np.asarray(mat)[ix, :]
+                mgr = FormulaManager()
+                mat = mgr.get_matrices(v.formula, self.data, pandas=True)
+                mat = np.require(mat, requirements="W")[ix, :]
                 if mat.shape[1] == 1:
                     mat = mat[:, 0]
                 kwds[k] = mat
@@ -508,11 +511,11 @@ class MICEData(object):
         ix = self.ix_obs[vname]
 
         formula = self.conditional_formula[vname]
-        endog, exog = patsy.dmatrices(formula, self.data,
-                                      return_type="dataframe")
+        mgr = FormulaManager()
+        endog, exog = mgr.get_matrices(formula, self.data, pandas=True)
 
-        endog = np.asarray(endog.iloc[ix, 0])
-        exog = np.asarray(exog.iloc[ix, :])
+        endog = np.require(endog.iloc[ix, 0], requirements="W")
+        exog = np.require(exog.iloc[ix, :], requirements="W")
 
         init_kwds = self._process_kwds(self.init_kwds[vname], ix)
         fit_kwds = self._process_kwds(self.fit_kwds[vname], ix)
@@ -595,8 +598,9 @@ class MICEData(object):
             miss = miss[:, ix]
             cols = [cols[i] for i in ix]
 
-        from statsmodels.graphics import utils as gutils
         from matplotlib.colors import LinearSegmentedColormap
+
+        from statsmodels.graphics import utils as gutils
 
         if ax is None:
             fig, ax = gutils.create_mpl_ax(ax)
@@ -681,8 +685,8 @@ class MICEData(object):
         ix_oi = np.intersect1d(ix1o, ix2i)
         ix_oo = np.intersect1d(ix1o, ix2o)
 
-        vec1 = np.asarray(self.data[col1_name])
-        vec2 = np.asarray(self.data[col2_name])
+        vec1 = np.require(self.data[col1_name], requirements="W")
+        vec2 = np.require(self.data[col2_name], requirements="W")
 
         if jitter is not None:
             if np.isscalar(jitter):
@@ -724,7 +728,7 @@ class MICEData(object):
 
         ha, la = ax.get_legend_handles_labels()
         pad = 0.0001 if plot_points else 0.5
-        leg = fig.legend(ha, la, 'center right', numpoints=1,
+        leg = fig.legend(ha, la, loc='center right', numpoints=1,
                          handletextpad=pad)
         leg.draw_frame(False)
 
@@ -779,12 +783,12 @@ class MICEData(object):
         ixi = self.ix_miss[col_name]
         ixo = self.ix_obs[col_name]
 
-        vec1 = np.asarray(self.data[col_name])
+        vec1 = np.require(self.data[col_name], requirements="W")
 
         # Fitted values
         formula = self.conditional_formula[col_name]
-        endog, exog = patsy.dmatrices(formula, self.data,
-                                      return_type="dataframe")
+        mgr = FormulaManager()
+        endog, exog = mgr.get_matrices(formula, self.data, pandas=True)
         results = self.results[col_name]
         vec2 = results.predict(exog=exog)
         vec2 = self._get_predicted(vec2)
@@ -821,7 +825,7 @@ class MICEData(object):
                     alpha=0.6, lw=4, label=lak[ky])
 
         ha, la = ax.get_legend_handles_labels()
-        leg = fig.legend(ha, la, 'center right', numpoints=1)
+        leg = fig.legend(ha, la, loc='center right', numpoints=1)
         leg.draw_frame(False)
 
         ax.set_xlabel(col_name + " observed or imputed")
@@ -892,7 +896,7 @@ class MICEData(object):
         ha.extend([h1[-1][0], h2[-1][0]])
         la.extend(["Obs", "All"])
 
-        leg = fig.legend(ha, la, 'center right', numpoints=1)
+        leg = fig.legend(ha, la, loc='center right', numpoints=1)
         leg.draw_frame(False)
 
         ax.set_xlabel(col_name)
@@ -1094,7 +1098,7 @@ _mice_example_2 = """
     """
 
 
-class MICE(object):
+class MICE:
 
     __doc__ = """\
     Multiple Imputation with Chained Equations.
@@ -1127,13 +1131,12 @@ class MICE(object):
     Examples
     --------
     Run all MICE steps and obtain results:
-    %(mice_example_1)s
+    {mice_example_1}
 
     Obtain a sequence of fitted analysis models without combining
     to obtain summary::
-    %(mice_example_2)s
-    """ % {'mice_example_1': _mice_example_1,
-           'mice_example_2': _mice_example_2}
+    {mice_example_2}
+    """.format(mice_example_1=_mice_example_1, mice_example_2=_mice_example_2)
 
     def __init__(self, model_formula, model_class, data, n_skip=3,
                  init_kwds=None, fit_kwds=None):
@@ -1268,8 +1271,7 @@ class MICEResults(LikelihoodModelResults):
 
     def __init__(self, model, params, normalized_cov_params):
 
-        super(MICEResults, self).__init__(model, params,
-                                          normalized_cov_params)
+        super().__init__(model, params, normalized_cov_params)
 
     def summary(self, title=None, alpha=.05):
         """

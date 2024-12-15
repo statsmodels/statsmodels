@@ -93,7 +93,7 @@ _hessian_docs = """
 
 def _get_epsilon(x, s, epsilon, n):
     if epsilon is None:
-        h = EPS**(1. / s) * np.maximum(np.abs(x), 0.1)
+        h = EPS**(1. / s) * np.maximum(np.abs(np.asarray(x)), 0.1)
     else:
         if np.isscalar(epsilon):
             h = np.empty(n)
@@ -103,7 +103,7 @@ def _get_epsilon(x, s, epsilon, n):
             if h.shape != x.shape:
                 raise ValueError("If h is not a scalar it must have the same"
                                  " shape as x.")
-    return h
+    return np.asarray(h)
 
 
 def approx_fprime(x, f, epsilon=None, args=(), kwargs={}, centered=False):
@@ -158,7 +158,10 @@ def approx_fprime(x, f, epsilon=None, args=(), kwargs={}, centered=False):
                           f(*((x-ei,)+args), **kwargs))/(2 * epsilon[k])
             ei[k] = 0.0
 
-    return grad.squeeze().T
+    if n == 1:
+        return grad.T
+    else:
+        return grad.squeeze().T
 
 
 def _approx_fprime_scalar(x, f, epsilon=None, args=(), kwargs={},
@@ -333,9 +336,11 @@ def approx_hess_cs(x, f, epsilon=None, args=(), kwargs={}):
 
     for i in range(n):
         for j in range(i, n):
-            hess[i, j] = (f(*((x + 1j*ee[i, :] + ee[j, :],) + args), **kwargs)
+            hess[i, j] = np.squeeze(
+                (f(*((x + 1j*ee[i, :] + ee[j, :],) + args), **kwargs)
                           - f(*((x + 1j*ee[i, :] - ee[j, :],)+args),
                               **kwargs)).imag/2./hess[i, j]
+            )
             hess[j, i] = hess[i, j]
 
     return hess
@@ -444,11 +449,13 @@ def approx_hess3(x, f, epsilon=None, args=(), kwargs={}):
 
     for i in range(n):
         for j in range(i, n):
-            hess[i, j] = (f(*((x + ee[i, :] + ee[j, :],) + args), **kwargs)
-                          - f(*((x + ee[i, :] - ee[j, :],) + args), **kwargs)
-                          - (f(*((x - ee[i, :] + ee[j, :],) + args), **kwargs)
-                          - f(*((x - ee[i, :] - ee[j, :],) + args), **kwargs))
-                          )/(4.*hess[i, j])
+            hess[i, j] = np.squeeze(
+                (f(*((x + ee[i, :] + ee[j, :],) + args), **kwargs)
+                 - f(*((x + ee[i, :] - ee[j, :],) + args), **kwargs)
+                 - (f(*((x - ee[i, :] + ee[j, :],) + args), **kwargs)
+                    - f(*((x - ee[i, :] - ee[j, :],) + args), **kwargs))
+                 )/(4.*hess[i, j])
+            )
             hess[j, i] = hess[i, j]
     return hess
 

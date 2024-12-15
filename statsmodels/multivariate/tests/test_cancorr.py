@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import pandas as pd
 from ..cancorr import CanCorr
 from numpy.testing import assert_almost_equal

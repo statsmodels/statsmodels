@@ -87,7 +87,7 @@ import numpy as np
 #from scipy import stats  # currently only uses np.random
 import matplotlib.pyplot as plt
 
-class JumpDiffusionMerton(object):
+class JumpDiffusionMerton:
     '''
 
     Example
@@ -153,7 +153,7 @@ class JumpDiffusionMerton(object):
 
         return x
 
-class JumpDiffusionKou(object):
+class JumpDiffusionKou:
 
     def __init__(self):
         pass
@@ -200,7 +200,7 @@ class JumpDiffusionKou(object):
         return x
 
 
-class VG(object):
+class VG:
     '''variance gamma process
     '''
 
@@ -231,7 +231,7 @@ class VG(object):
         x = np.cumsum(dXs,1)
         return x
 
-class IG(object):
+class IG:
     '''inverse-Gaussian ??? used by NIG
     '''
 
@@ -250,7 +250,7 @@ class IG(object):
         return X.ravel()
 
 
-class NIG(object):
+class NIG:
     '''normal-inverse-Gaussian
     '''
 
@@ -278,7 +278,7 @@ class NIG(object):
         x = np.cumsum(DXs,1)
         return x
 
-class Heston(object):
+class Heston:
     '''Heston Stochastic Volatility
     '''
 
@@ -313,7 +313,7 @@ class Heston(object):
         x = np.cumsum(dXs,1)
         return x, vts
 
-class CIRSubordinatedBrownian(object):
+class CIRSubordinatedBrownian:
     '''CIR subordinated Brownian Motion
     '''
 

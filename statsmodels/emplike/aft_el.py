@@ -169,7 +169,7 @@ class OptAFT(_OptFuncts):
         return self.test_beta([b0], [param_num])[0] - self.r0
 
 
-class emplikeAFT(object):
+class emplikeAFT:
     """
 
     Class for estimating and conducting inference in an AFT model.
@@ -321,7 +321,7 @@ class emplikeAFT(object):
         """
         nobs = self.nobs
         num = (nobs - (np.arange(nobs) + 1.))
-        denom = ((nobs - (np.arange(nobs) + 1.) + 1.))
+        denom = (nobs - (np.arange(nobs) + 1.) + 1.)
         km = (num / denom).reshape(nobs, 1)
         km = km ** np.abs(censors - 1.)
         km = np.cumprod(km)  # If no ties, this is kaplan-meier
@@ -487,7 +487,7 @@ class AFTResults(OptAFT):
 
                 llr = res[1]
                 return llr, chi2.sf(llr, len(param_nums))
-            except np.linalg.linalg.LinAlgError:
+            except np.linalg.LinAlgError:
                 return np.inf, 0
 
     def ci_beta(self, param_num, beta_high, beta_low, sig=.05):

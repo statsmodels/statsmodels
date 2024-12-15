@@ -16,7 +16,7 @@ def kernel_euclid(x,y,p=2, **kwds):
     return ssp.minkowski_distance(x[:,np.newaxis,:],y[np.newaxis,:,:],p)
 
 
-class GaussProcess(object):
+class GaussProcess:
     '''class to perform kernel ridge regression (gaussian process)
 
     Warning: this class is memory intensive, it creates nobs x nobs distance

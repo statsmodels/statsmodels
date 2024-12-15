@@ -37,7 +37,7 @@ def gen_data(dim, use_pandas):
     return out
 
 
-class TestArrayLike(object):
+class TestArrayLike:
     def test_1d(self, use_pandas):
         data = gen_data(1, use_pandas)
         a = array_like(data, "a")
@@ -124,7 +124,7 @@ class TestArrayLike(object):
         data = np.empty((2, 1, 2))
         a = array_like(data, "a", ndim=3)
         assert a.shape == (2, 1, 2)
-        data = np.empty((2))
+        data = np.empty(2)
         a = array_like(data, "a", ndim=3)
         assert a.shape == (2, 1, 1)
         data = np.empty((2, 1))

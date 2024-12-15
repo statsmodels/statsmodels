@@ -2,6 +2,7 @@
 Author: Terence L van Zyl
 Modified: Kevin Sheppard
 """
+from statsmodels.compat.pandas import MONTH_END
 from statsmodels.compat.pytest import pytest_warns
 
 import os
@@ -43,6 +44,62 @@ housing_data = housing_data.asfreq("MS")
 SEASONALS = ("add", "mul", None)
 TRENDS = ("add", "mul", None)
 
+# aust = pd.read_json(aust_json, typ='Series').sort_index()
+data = [
+    41.727457999999999,
+    24.04185,
+    32.328102999999999,
+    37.328707999999999,
+    46.213152999999998,
+    29.346326000000001,
+    36.482909999999997,
+    42.977719,
+    48.901524999999999,
+    31.180221,
+    37.717880999999998,
+    40.420211000000002,
+    51.206862999999998,
+    31.887228,
+    40.978262999999998,
+    43.772491000000002,
+    55.558566999999996,
+    33.850915000000001,
+    42.076383,
+    45.642291999999998,
+    59.766779999999997,
+    35.191876999999998,
+    44.319737000000003,
+    47.913736,
+]
+index = [
+    "2005-03-01 00:00:00",
+    "2005-06-01 00:00:00",
+    "2005-09-01 00:00:00",
+    "2005-12-01 00:00:00",
+    "2006-03-01 00:00:00",
+    "2006-06-01 00:00:00",
+    "2006-09-01 00:00:00",
+    "2006-12-01 00:00:00",
+    "2007-03-01 00:00:00",
+    "2007-06-01 00:00:00",
+    "2007-09-01 00:00:00",
+    "2007-12-01 00:00:00",
+    "2008-03-01 00:00:00",
+    "2008-06-01 00:00:00",
+    "2008-09-01 00:00:00",
+    "2008-12-01 00:00:00",
+    "2009-03-01 00:00:00",
+    "2009-06-01 00:00:00",
+    "2009-09-01 00:00:00",
+    "2009-12-01 00:00:00",
+    "2010-03-01 00:00:00",
+    "2010-06-01 00:00:00",
+    "2010-09-01 00:00:00",
+    "2010-12-01 00:00:00",
+]
+idx = pd.to_datetime(index)
+aust = pd.Series(data, index=pd.DatetimeIndex(idx, freq=pd.infer_freq(idx)))
+
 
 @pytest.fixture(scope="module")
 def ses():
@@ -52,7 +109,7 @@ def ses():
     for i in range(1, 1200):
         y[i] = y[i - 1] + e[i] - 0.2 * e[i - 1]
     y = y[200:]
-    index = pd.date_range("2000-1-1", periods=y.shape[0], freq="M")
+    index = pd.date_range("2000-1-1", periods=y.shape[0], freq=MONTH_END)
     return pd.Series(y, index=index, name="y")
 
 
@@ -82,7 +139,7 @@ def _simple_dbl_exp_smoother(x, alpha, beta, l0, b0, nforecast=0):
     return lvals, b, f, err, xhat
 
 
-class TestHoltWinters(object):
+class TestHoltWinters:
     @classmethod
     def setup_class(cls):
         # Changed for backwards compatibility with pandas
@@ -240,63 +297,6 @@ class TestHoltWinters(object):
         )
         cls.livestock2_livestock = livestock2_livestock
 
-        # aust = pd.read_json(aust_json, typ='Series').sort_index()
-        data = [
-            41.727457999999999,
-            24.04185,
-            32.328102999999999,
-            37.328707999999999,
-            46.213152999999998,
-            29.346326000000001,
-            36.482909999999997,
-            42.977719,
-            48.901524999999999,
-            31.180221,
-            37.717880999999998,
-            40.420211000000002,
-            51.206862999999998,
-            31.887228,
-            40.978262999999998,
-            43.772491000000002,
-            55.558566999999996,
-            33.850915000000001,
-            42.076383,
-            45.642291999999998,
-            59.766779999999997,
-            35.191876999999998,
-            44.319737000000003,
-            47.913736,
-        ]
-        index = [
-            "2005-03-01 00:00:00",
-            "2005-06-01 00:00:00",
-            "2005-09-01 00:00:00",
-            "2005-12-01 00:00:00",
-            "2006-03-01 00:00:00",
-            "2006-06-01 00:00:00",
-            "2006-09-01 00:00:00",
-            "2006-12-01 00:00:00",
-            "2007-03-01 00:00:00",
-            "2007-06-01 00:00:00",
-            "2007-09-01 00:00:00",
-            "2007-12-01 00:00:00",
-            "2008-03-01 00:00:00",
-            "2008-06-01 00:00:00",
-            "2008-09-01 00:00:00",
-            "2008-12-01 00:00:00",
-            "2009-03-01 00:00:00",
-            "2009-06-01 00:00:00",
-            "2009-09-01 00:00:00",
-            "2009-12-01 00:00:00",
-            "2010-03-01 00:00:00",
-            "2010-06-01 00:00:00",
-            "2010-09-01 00:00:00",
-            "2010-12-01 00:00:00",
-        ]
-        aust = pd.Series(data, index)
-        aust.index = pd.DatetimeIndex(
-            aust.index, freq=pd.infer_freq(aust.index)
-        )
         cls.aust = aust
         cls.start_params = [
             1.5520372162082909e-09,
@@ -490,10 +490,10 @@ class TestHoltWinters(object):
         fit5 = mod5.fit()
         # We accept the below values as we getting a better SSE than text book
         assert_almost_equal(fit1.params["smoothing_level"], 1.00, 2)
-        assert_almost_equal(fit1.params["smoothing_trend"], np.NaN, 2)
-        assert_almost_equal(fit1.params["damping_trend"], np.NaN, 2)
+        assert_almost_equal(fit1.params["smoothing_trend"], np.nan, 2)
+        assert_almost_equal(fit1.params["damping_trend"], np.nan, 2)
         assert_almost_equal(fit1.params["initial_level"], 263.96, 1)
-        assert_almost_equal(fit1.params["initial_trend"], np.NaN, 2)
+        assert_almost_equal(fit1.params["initial_trend"], np.nan, 2)
         assert_almost_equal(fit1.sse, 6761.35, 2)  # 6080.26
         assert isinstance(fit1.summary().as_text(), str)
 
@@ -519,7 +519,11 @@ class TestHoltWinters(object):
         # livestock2_livestock <- c(...)
         # res <- ets(livestock2_livestock, model='AAN', damped_trend=TRUE,
         #            phi=0.98)
-        mod = Holt(self.livestock2_livestock, damped_trend=True)
+        mod = Holt(
+            self.livestock2_livestock,
+            damped_trend=True,
+            initialization_method="estimated",
+        )
         params = {
             "smoothing_level": 0.97402626,
             "smoothing_trend": 0.00010006,
@@ -543,7 +547,7 @@ class TestHoltWinters(object):
         alt_params = {k: v for k, v in params.items() if "level" not in k}
         with mod.fix_params(alt_params):
             alt_fit = mod.fit(optimized=True)
-        assert not np.allclose(alt_fit.trend[0], opt_fit.trend[0])
+        assert not np.allclose(alt_fit.trend.iloc[0], opt_fit.trend.iloc[0])
         # Summary output
         # print(res$mse)
         assert_allclose(fit.sse / mod.nobs, 195.4397924865488, atol=1e-3)
@@ -944,7 +948,7 @@ def test_equivalence_cython_python(trend, seasonal):
     p[:6] = alpha, beta, gamma, l0, b0, phi
     if seasonal:
         p[6:] = params["initial_seasons"]
-    xi = np.ones_like(p).astype(int)
+    xi = np.ones_like(p).astype(np.int64)
 
     p_copy = p.copy()
 
@@ -1540,12 +1544,12 @@ def test_simulate_expected_r(
     )
 
     # set the same final state as in R
-    fit.level[-1] = state["l"]
-    fit.trend[-1] = state["b"]
-    fit.season[-1] = state["s1"]
-    fit.season[-2] = state["s2"]
-    fit.season[-3] = state["s3"]
-    fit.season[-4] = state["s4"]
+    fit._level[-1] = state["l"]
+    fit._trend[-1] = state["b"]
+    fit._season[-1] = state["s1"]
+    fit._season[-2] = state["s2"]
+    fit._season[-3] = state["s3"]
+    fit._season[-4] = state["s4"]
 
     # for MMM with damped trend the fit fails
     if np.any(np.isnan(fit.fittedvalues)):
@@ -1646,11 +1650,11 @@ def test_error_boxcox():
     with pytest.raises(TypeError, match="use_boxcox must be True"):
         ExponentialSmoothing(y, use_boxcox="a", initialization_method="known")
 
-    mod = ExponentialSmoothing(y ** 2, use_boxcox=True)
+    mod = ExponentialSmoothing(y**2, use_boxcox=True)
     assert isinstance(mod, ExponentialSmoothing)
 
     mod = ExponentialSmoothing(
-        y ** 2, use_boxcox=True, initialization_method="legacy-heuristic"
+        y**2, use_boxcox=True, initialization_method="legacy-heuristic"
     )
     with pytest.raises(ValueError, match="use_boxcox was set"):
         mod.fit(use_boxcox=False)
@@ -1755,7 +1759,7 @@ def test_to_restricted_equiv(params):
     bounds = np.array([[0.0, 1.0]] * 3)
     assert_allclose(
         to_restricted(params, sel, bounds),
-        _test_to_restricted(params, sel.astype(int), bounds),
+        _test_to_restricted(params, sel.astype(np.int64), bounds),
     )
 
 
@@ -1950,7 +1954,7 @@ def test_attributes(ses):
 
 def test_summary_boxcox(ses):
     mod = ExponentialSmoothing(
-        ses ** 2, use_boxcox=True, initialization_method="heuristic"
+        ses**2, use_boxcox=True, initialization_method="heuristic"
     )
     with pytest.raises(ValueError, match="use_boxcox was set at model"):
         mod.fit(use_boxcox=True)
@@ -1987,19 +1991,20 @@ def test_simulate(ses):
 def test_forecast_index_types(ses, index_typ):
     nobs = ses.shape[0]
     kwargs = {}
-    warning = None
+    model_warning = forecast_warning = None
     fcast_index = None
     if index_typ == "period":
         index = pd.period_range("2000-1-1", periods=nobs + 36, freq="M")
     elif index_typ == "date_range":
-        index = pd.date_range("2000-1-1", periods=nobs + 36, freq="M")
+        index = pd.date_range("2000-1-1", periods=nobs + 36, freq=MONTH_END)
     elif index_typ == "range":
         index = pd.RangeIndex(nobs + 36)
         kwargs["seasonal_periods"] = 12
     elif index_typ == "irregular":
         rs = np.random.RandomState(0)
         index = pd.Index(np.cumsum(rs.randint(0, 4, size=nobs + 36)))
-        warning = ValueWarning
+        model_warning = ValueWarning
+        forecast_warning = FutureWarning
         kwargs["seasonal_periods"] = 12
         fcast_index = pd.RangeIndex(start=1000, stop=1036, step=1)
     if fcast_index is None:
@@ -2007,7 +2012,7 @@ def test_forecast_index_types(ses, index_typ):
     ses = ses.copy()
     ses.index = index[:-36]
 
-    with pytest_warns(warning):
+    with pytest_warns(model_warning):
         res = ExponentialSmoothing(
             ses,
             trend="add",
@@ -2015,7 +2020,7 @@ def test_forecast_index_types(ses, index_typ):
             initialization_method="heuristic",
             **kwargs
         ).fit()
-    with pytest_warns(warning):
+    with pytest_warns(forecast_warning):
         fcast = res.forecast(36)
     assert isinstance(fcast, pd.Series)
     pd.testing.assert_index_equal(fcast.index, fcast_index)
@@ -2109,5 +2114,42 @@ def test_invalid_index(reset_randomstate):
             initialization_method="heuristic",
         )
     fitted = model.fit(optimized=True, use_brute=True)
-    with pytest.warns(ValueWarning, match="No supported"):
+    with pytest.warns(FutureWarning, match="No supported"):
         fitted.forecast(steps=157200)
+
+
+def test_initial_level():
+    # GH 8634
+    series = [0.0, 0.0, 0.0, 100.0, 0.0, 0.0, 0.0]
+    es = ExponentialSmoothing(
+        series, initialization_method="known", initial_level=20.0
+    )
+    es_fit = es.fit()
+    es_fit.params
+    assert_allclose(es_fit.params["initial_level"], 20.0)
+
+
+def test_all_initial_values():
+    fit1 = ExponentialSmoothing(
+        aust,
+        seasonal_periods=4,
+        trend="add",
+        seasonal="mul",
+        initialization_method="estimated",
+    ).fit()
+    lvl = np.round(fit1.params["initial_level"])
+    trend = np.round(fit1.params["initial_trend"], 1)
+    seas = np.round(fit1.params["initial_seasons"], 1)
+    fit2 = ExponentialSmoothing(
+        aust,
+        seasonal_periods=4,
+        trend="add",
+        seasonal="mul",
+        initialization_method="known",
+        initial_level=lvl,
+        initial_trend=trend,
+        initial_seasonal=seas,
+    ).fit()
+    assert_allclose(fit2.params["initial_level"], lvl)
+    assert_allclose(fit2.params["initial_trend"], trend)
+    assert_allclose(fit2.params["initial_seasons"], seas)

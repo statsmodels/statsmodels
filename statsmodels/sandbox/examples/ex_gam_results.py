@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Example results for GAM from tests
 
 Created on Mon Nov 07 13:13:15 2011

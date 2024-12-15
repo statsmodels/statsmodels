@@ -96,7 +96,7 @@ def _pinv_1d(v, eps=1e-5):
     return np.array([0 if abs(x) <= eps else 1/x for x in v], dtype=float)
 
 
-class _PSD(object):
+class _PSD:
     """
     Compute coordinated functions of a symmetric positive semidefinite matrix.
 
@@ -167,14 +167,14 @@ class _PSD(object):
         return self._pinv
 
 
-class multi_rv_generic(object):
+class multi_rv_generic:
     """
     Class which encapsulates common functionality between all multivariate
     distributions.
 
     """
     def __init__(self, seed=None):
-        super(multi_rv_generic, self).__init__()
+        super().__init__()
         self._random_state = check_random_state(seed)
 
     @property
@@ -203,7 +203,7 @@ class multi_rv_generic(object):
             return self._random_state
 
 
-class multi_rv_frozen(object):
+class multi_rv_frozen:
     """
     Class which encapsulates common functionality between all frozen
     multivariate distributions.
@@ -338,7 +338,7 @@ class multivariate_normal_gen(multi_rv_generic):
     """
 
     def __init__(self, seed=None):
-        super(multivariate_normal_gen, self).__init__(seed)
+        super().__init__(seed)
         self.__doc__ = doccer.docformat(self.__doc__, mvn_docdict_params)
 
     def __call__(self, mean=None, cov=1, allow_singular=False, seed=None):
@@ -879,7 +879,7 @@ class multivariate_t_gen(multi_rv_generic):
         seed : Random state.
 
         """
-        super(multivariate_t_gen, self).__init__(seed)
+        super().__init__(seed)
         self.__doc__ = doccer.docformat(self.__doc__, mvt_docdict_params)
         self._random_state = check_random_state(seed)
 

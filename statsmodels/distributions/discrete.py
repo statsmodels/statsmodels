@@ -61,7 +61,10 @@ class zipoisson_gen(rv_discrete):
         q_mod = (q - w) / (1 - w)
         x = poisson(mu=mu).ppf(q_mod)
         # set to zero if in the zi range
-        x[q < w] = 0
+        if isinstance(x, np.ndarray):
+            x[q < w] = 0
+        elif np.isscalar(x) and q < w:
+            return 0.0
         return x
 
     def mean(self, mu, w):
@@ -139,7 +142,10 @@ class zinegativebinomial_gen(rv_discrete):
         q_mod = (q - w) / (1 - w)
         x = nbinom.ppf(q_mod, s, p)
         # set to zero if in the zi range
-        x[q < w] = 0
+        if isinstance(x, np.ndarray):
+            x[q < w] = 0
+        elif np.isscalar(x) and q < w:
+            return 0.0
         return x
 
     def mean(self, mu, alpha, p, w):
@@ -182,7 +188,13 @@ class truncatedpoisson_gen(rv_discrete):
         for i in range(int(np.max(truncation)) + 1):
             pmf += poisson.pmf(i, mu)
 
-        logpmf_ = poisson.logpmf(x, mu) - np.log(1 - pmf)
+        # Skip pmf = 1 to avoid warnings
+        log_1_m_pmf = np.full_like(pmf, -np.inf)
+        loc = pmf > 1
+        log_1_m_pmf[loc] = np.nan
+        loc = pmf < 1
+        log_1_m_pmf[loc] = np.log(1 - pmf[loc])
+        logpmf_ = poisson.logpmf(x, mu) - log_1_m_pmf
         #logpmf_[x < truncation + 1] = - np.inf
         return logpmf_
 
@@ -207,7 +219,13 @@ class truncatednegbin_gen(rv_discrete):
         for i in range(int(np.max(truncation)) + 1):
             pmf += nbinom.pmf(i, size, prob)
 
-        logpmf_ = nbinom.logpmf(x, size, prob) - np.log(1 - pmf)
+        # Skip pmf = 1 to avoid warnings
+        log_1_m_pmf = np.full_like(pmf, -np.inf)
+        loc = pmf > 1
+        log_1_m_pmf[loc] = np.nan
+        loc = pmf < 1
+        log_1_m_pmf[loc] = np.log(1 - pmf[loc])
+        logpmf_ = nbinom.logpmf(x, size, prob) - log_1_m_pmf
         # logpmf_[x < truncation + 1] = - np.inf
         return logpmf_
 
@@ -405,7 +423,8 @@ class DiscretizedModel(GenericLikelihoodModel):
         super().__init__(endog, exog, distr=distr)
         self._init_keys.append('distr')
         self.df_resid = len(endog) - distr.k_shapes
-        self.df_model = distr.k_shapes  # no constant subtracted
+        self.df_model = 0
+        self.k_extra = distr.k_shapes  # no constant subtracted
         self.k_constant = 0
         self.nparams = distr.k_shapes  # needed for start_params
         self.start_params = 0.5 * np.ones(self.nparams)

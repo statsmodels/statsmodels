@@ -362,7 +362,7 @@ def _helper_fit_partition(self, pnum, endog, exog, fit_kwds,
     return results
 
 
-class DistributedModel(object):
+class DistributedModel:
     __doc__ = """
     Distributed model class
 
@@ -649,7 +649,7 @@ class DistributedResults(LikelihoodModelResults):
     """
 
     def __init__(self, model, params):
-        super(DistributedResults, self).__init__(model, params)
+        super().__init__(model, params)
 
     def predict(self, exog, *args, **kwargs):
         """Calls self.model.predict for the provided exog.  See

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Tue Oct  6 12:42:11 2020
 
@@ -28,7 +27,7 @@ def test_chisquare_binning(counts, expected, sort_var=None, bins=10,
         Observed frequency, i.e. counts for all choices
     expected : array_like
         Expected counts or probability. If expected are counts, then they
-        need to sum to the same total count as the sum of oberserved.
+        need to sum to the same total count as the sum of observed.
         If those sums are unequal and all expected values are smaller or equal
         to 1, then they are interpreted as probabilities and will be rescaled
         to match counts.

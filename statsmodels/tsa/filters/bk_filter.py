@@ -1,4 +1,3 @@
-
 import numpy as np
 from scipy.signal import fftconvolve
 
@@ -52,6 +51,9 @@ def bkfilter(x, low=6, high=32, K=12):
     and theta is a normalizing constant ::
 
       theta = -sum(b)/(2K+1)
+
+    See the notebook `Time Series Filters
+    <../examples/notebooks/generated/tsa_filters.html>`__ for an overview.
 
     References
     ----------

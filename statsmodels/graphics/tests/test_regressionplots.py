@@ -38,7 +38,7 @@ def close_or_save(pdf, fig):
         pdf.savefig(fig)
 
 
-class TestPlot(object):
+class TestPlot:
 
     @classmethod
     def setup_class(cls):
@@ -126,7 +126,7 @@ class TestPlot(object):
 
 
 class TestPlotPandas(TestPlot):
-    def setup(self):
+    def setup_method(self):
         nsample = 100
         sig = 0.5
         x1 = np.linspace(0, 20, nsample)
@@ -155,7 +155,7 @@ class TestPlotFormula(TestPlotPandas):
         plot_regress_exog(res, "var1")
 
 
-class TestABLine(object):
+class TestABLine:
 
     @classmethod
     def setup_class(cls):
@@ -227,7 +227,24 @@ class TestABLinePandas(TestABLine):
         cls.mod = mod
 
 
-class TestAddedVariablePlot(object):
+class TestAddedVariablePlot:
+
+    @pytest.mark.matplotlib
+    def test_added_variable_ols(self, close_figures):
+        np.random.seed(3446)
+        n = 100
+        p = 3
+        exog = np.random.normal(size=(n, p))
+        lin_pred = 4 + exog[:, 0] + 0.2 * exog[:, 1]**2
+        endog = lin_pred + np.random.normal(size=n)
+
+        model = sm.OLS(endog, exog)
+        results = model.fit()
+        fig = plot_added_variable(results, 0)
+        ax = fig.get_axes()[0]
+        ax.set_title("Added variable plot (OLS)")
+        close_or_save(pdf, fig)
+        close_figures()
 
     @pytest.mark.matplotlib
     def test_added_variable_poisson(self, close_figures):
@@ -277,7 +294,7 @@ class TestAddedVariablePlot(object):
                         close_figures()
 
 
-class TestPartialResidualPlot(object):
+class TestPartialResidualPlot:
 
     @pytest.mark.matplotlib
     def test_partial_residual_poisson(self, close_figures):
@@ -313,7 +330,7 @@ class TestPartialResidualPlot(object):
                              effect_str)
                 close_or_save(pdf, fig)
 
-class TestCERESPlot(object):
+class TestCERESPlot:
 
     @pytest.mark.matplotlib
     def test_ceres_poisson(self, close_figures):

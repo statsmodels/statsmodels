@@ -17,7 +17,7 @@ SMOOTHER_ALL = (
 )
 
 
-class _KalmanSmoother(object):
+class _KalmanSmoother:
 
     def __init__(self, model, kfilter, smoother_output):
         # Save values

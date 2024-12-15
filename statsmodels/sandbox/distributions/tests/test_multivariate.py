@@ -1,18 +1,16 @@
-# -*- coding: utf-8 -*-
 """
 Created on Sat Apr 16 15:02:13 2011
 @author: Josef Perktold
 """
 import numpy as np
-from numpy.testing import (assert_almost_equal, assert_array_almost_equal,
-                           assert_allclose)
+from numpy.testing import assert_almost_equal,  assert_allclose
 
 from statsmodels.sandbox.distributions.multivariate import (
     mvstdtprob, mvstdnormcdf)
 from statsmodels.sandbox.distributions.mv_normal import MVT, MVNormal
 
 
-class Test_MVN_MVT_prob(object):
+class Test_MVN_MVT_prob:
     #test for block integratal, cdf, of multivariate t and normal
     #comparison results from R
 
@@ -106,7 +104,7 @@ class Test_MVN_MVT_prob(object):
                                                 maxpts=100000, abseps=1e-5), 4)
 
 
-class TestMVDistributions(object):
+class TestMVDistributions:
     #this is not well organized
 
     @classmethod
@@ -128,16 +126,21 @@ class TestMVDistributions(object):
         cov3 = self.cov3
         mvn3 = self.mvn3
 
-        r_val = [-7.667977543898155, -6.917977543898155, -5.167977543898155]
-        assert_array_almost_equal(mvn3.logpdf(cov3), r_val, decimal=14)
-        # decimal 18
-        r_val = [0.000467562492721686, 0.000989829804859273,
-                 0.005696077243833402]
-        assert_array_almost_equal(mvn3.pdf(cov3), r_val, decimal=17)
+        r_val = [
+            -7.667977543898155, -6.917977543898155, -5.167977543898155
+        ]
+        assert_allclose(mvn3.logpdf(cov3), r_val, rtol=1e-13)
+
+        r_val = [
+            0.000467562492721686, 0.000989829804859273, 0.005696077243833402
+        ]
+        assert_allclose(mvn3.pdf(cov3), r_val, rtol=1e-13)
 
         mvn3b = MVNormal(np.array([0, 0, 0]), cov3)
-        r_val = [0.02914269740502042, 0.02269635555984291, 0.01767593948287269]
-        assert_array_almost_equal(mvn3b.pdf(cov3), r_val, decimal=16)
+        r_val = [
+            0.02914269740502042, 0.02269635555984291, 0.01767593948287269
+        ]
+        assert_allclose(mvn3b.pdf(cov3), r_val, rtol=1e-13)
 
     def test_mvt_pdf(self, reset_randomstate):
         cov3 = self.cov3

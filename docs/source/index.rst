@@ -1,3 +1,5 @@
+:hero: statistical models, hypothesis tests, and data exploration
+
 .. image:: images/statsmodels-logo-v2-horizontal.svg
    :width: 50%
    :alt: statsmodels

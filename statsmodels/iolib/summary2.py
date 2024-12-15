@@ -1,3 +1,4 @@
+from statsmodels.compat.pandas import FUTURE_STACK
 from statsmodels.compat.python import lzip
 
 import datetime
@@ -12,7 +13,7 @@ from .table import SimpleTable
 from .tableformatting import fmt_latex, fmt_txt
 
 
-class Summary(object):
+class Summary:
     def __init__(self):
         self.tables = []
         self.settings = []
@@ -103,7 +104,7 @@ class Summary(object):
 
     def add_text(self, string):
         """Append a note to the bottom of the summary table. In ASCII tables,
-        the note will be wrapped to table width. Notes are not indendented.
+        the note will be wrapped to table width. Notes are not indented.
         """
         self.extra_txt.append(string)
 
@@ -201,7 +202,12 @@ class Summary(object):
         tab = [x.as_html() for x in simple_tables]
         tab = '\n'.join(tab)
 
-        return tab
+        temp_txt = [st.replace('\n', '<br/>\n')for st in self.extra_txt]
+        txt = '<br/>\n'.join(temp_txt)
+
+        out = '<br/>\n'.join([tab, txt])
+
+        return out
 
     def as_latex(self, label=''):
         """Generate LaTeX Summary Table
@@ -234,8 +240,12 @@ class Summary(object):
             # create single tabular object for summary_col
             tab = re.sub(to_replace, r'\\midrule\n', tab)
 
-        out = '\\begin{table}', title, label, tab, '\\end{table}'
-        out = '\n'.join(out)
+        non_captioned = '\\begin{table}', title, label, tab, '\\end{table}'
+        non_captioned = '\n'.join(non_captioned)
+
+        txt = ' \\newline \n'.join(self.extra_txt)
+        out = non_captioned + '\n\\bigskip\n' + txt
+
         return out
 
 
@@ -386,7 +396,7 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
 
 
 # Vertical summary instance for multiple models
-def _col_params(result, float_format='%.4f', stars=True):
+def _col_params(result, float_format='%.4f', stars=True, include_r2=False):
     """Stack coefficients and standard errors in single column
     """
 
@@ -407,16 +417,19 @@ def _col_params(result, float_format='%.4f', stars=True):
         res.loc[idx, res.columns[0]] = res.loc[idx, res.columns[0]] + '*'
     # Stack Coefs and Std.Errors
     res = res.iloc[:, :2]
-    res = res.stack()
+    res = res.stack(**FUTURE_STACK)
 
-    rsquared = getattr(result, 'rsquared', np.nan)
-    rsquared_adj = getattr(result, 'rsquared_adj', np.nan)
-    r2 = pd.Series({('R-squared', ""): rsquared,
-                    ('R-squared Adj.', ""): rsquared_adj})
+    # Add R-squared
+    if include_r2:
+        rsquared = getattr(result, 'rsquared', np.nan)
+        rsquared_adj = getattr(result, 'rsquared_adj', np.nan)
+        r2 = pd.Series({('R-squared', ""): rsquared,
+                        ('R-squared Adj.', ""): rsquared_adj})
 
-    if r2.notnull().any():
-        r2 = r2.apply(lambda x: float_format % x)
-        res = pd.concat([res, r2], axis=0)
+        if r2.notnull().any():
+            r2 = r2.apply(lambda x: float_format % x)
+            res = pd.concat([res, r2], axis=0)
+
     res = pd.DataFrame(res)
     res.columns = [str(result.model.endog_names)]
     return res
@@ -457,7 +470,9 @@ def _make_unique(list_of_names):
 
 
 def summary_col(results, float_format='%.4f', model_names=(), stars=False,
-                info_dict=None, regressor_order=(), drop_omitted=False):
+                info_dict=None, regressor_order=(), drop_omitted=False,
+                include_r2=True, fixed_effects=None, fe_present='Yes',
+                fe_absent=''):
     """
     Summarize multiple results instances side-by-side (coefs and SEs)
 
@@ -488,13 +503,23 @@ def summary_col(results, float_format='%.4f', model_names=(), stars=False,
         Includes regressors that are not specified in regressor_order. If
         False, regressors not specified will be appended to end of the list.
         If True, only regressors in regressor_order will be included.
+    include_r2 : bool, optional
+        Includes R2 and adjusted R2 in the summary table.
+    fixed_effects : list[str], optional
+        List of categorical variables for which to indicate presence of
+        fixed effects.
+    fe_present : str, optional
+        String to indicate the presence of fixed effects. Default is "Yes".
+    fe_absent : str, optional
+        String to indicate the absence of fixed effects. Default is empty
+        string.
     """
 
     if not isinstance(results, list):
         results = [results]
 
-    cols = [_col_params(x, stars=stars, float_format=float_format) for x in
-            results]
+    cols = [_col_params(x, stars=stars, float_format=float_format,
+                        include_r2=include_r2) for x in results]
 
     # Unique column names (pandas has problems merging otherwise)
     if model_names:
@@ -505,10 +530,21 @@ def summary_col(results, float_format='%.4f', model_names=(), stars=False,
         cols[i].columns = [colnames[i]]
 
     def merg(x, y):
-        return x.merge(y, how='outer', right_index=True,
-                       left_index=True)
+        return x.merge(y, how='outer', right_index=True, left_index=True)
+
+    # Changes due to how pandas 2.2.0 handles merge
+    index = list(cols[0].index)
+    for col in cols[1:]:
+        for key in col.index:
+            if key not in index:
+                index.append(key)
+    for special in (('R-squared', ''), ('R-squared Adj.', '')):
+        if special in index:
+            index.remove(special)
+            index.insert(len(index), special)
 
     summ = reduce(merg, cols)
+    summ = summ.reindex(index)
 
     if regressor_order:
         varnames = summ.index.get_level_values(0).tolist()
@@ -523,7 +559,7 @@ def summary_col(results, float_format='%.4f', model_names=(), stars=False,
         if drop_omitted:
             for uo in unordered:
                 new_order.remove(uo)
-        summ = summ.loc[new_order]
+        summ = summ.reindex(new_order, level=0)
 
     idx = []
     index = summ.index.get_level_values(0)
@@ -534,6 +570,19 @@ def summary_col(results, float_format='%.4f', model_names=(), stars=False,
         else:
             idx.append(index[i + 1])
     summ.index = idx
+
+    # add fixed effects info
+    if fixed_effects:
+        if not info_dict:
+            info_dict = {}
+
+        for fe in fixed_effects:
+            info_dict[fe + ' FE'] = (
+                lambda x, fe=fe, fe_present=fe_present, fe_absent=fe_absent:
+                    fe_present
+                    if any((f'C({fe})' in param) for param in x.params.index)
+                    else fe_absent
+                )
 
     # add infos about the models.
     if info_dict:
@@ -546,10 +595,6 @@ def summary_col(results, float_format='%.4f', model_names=(), stars=False,
     for df, name in zip(cols, _make_unique([df.columns[0] for df in cols])):
         df.columns = [name]
 
-    def merg(x, y):
-        return x.merge(y, how='outer', right_index=True,
-                       left_index=True)
-
     info = reduce(merg, cols)
     dat = pd.DataFrame(np.vstack([summ, info]))  # pd.concat better, but error
     dat.columns = summ.columns
@@ -557,6 +602,21 @@ def summary_col(results, float_format='%.4f', model_names=(), stars=False,
     summ = dat
 
     summ = summ.fillna('')
+
+    # fixed effects processing
+    if fixed_effects:
+        index_series = pd.Series(summ.index, index=summ.index)
+        skip_flag = index_series.apply(
+            lambda x: any((f'C({fe})' in x) for fe in fixed_effects)
+            )
+        skip_next_flag = skip_flag.shift(fill_value=False)
+        final_skip = skip_flag | skip_next_flag
+        summ = summ[~final_skip]
+
+        r_squared_rows = summ.index[summ.index.str.contains('R-squared')]
+        r_squared_section = summ.loc[r_squared_rows]
+        summ = summ.drop(index=r_squared_rows)
+        summ = pd.concat([summ, r_squared_section])
 
     smry = Summary()
     smry._merge_latex = True
@@ -580,7 +640,10 @@ def _df_to_simpletable(df, align='r', float_format="%.4f", header=True,
                        index=True, table_dec_above='-', table_dec_below=None,
                        header_dec_below='-', pad_col=0, pad_index=0):
     dat = df.copy()
-    dat = dat.applymap(lambda x: _formatter(x, float_format))
+    try:
+        dat = dat.map(lambda x: _formatter(x, float_format))
+    except AttributeError:
+        dat = dat.applymap(lambda x: _formatter(x, float_format))
     if header:
         headers = [str(x) for x in dat.columns.tolist()]
     else:

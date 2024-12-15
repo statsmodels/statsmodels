@@ -1,16 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 Author: Josef Perktold
 License: BSD-3
 
 """
 
-from __future__ import print_function
 import numpy as np
 from scipy import stats
 
 
-class NonlinearDeltaCov(object):
+class NonlinearDeltaCov:
     '''Asymptotic covariance by Deltamethod
 
     The function is designed for 2d array, with rows equal to
@@ -151,6 +149,9 @@ class NonlinearDeltaCov(object):
         """
         g = self.grad()
         var = (np.dot(g, self.cov_params) * g).sum(-1)
+
+        if var.ndim == 2:
+            var = var.T
         return var
 
     def se_vectorized(self):

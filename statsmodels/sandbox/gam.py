@@ -96,7 +96,7 @@ def default_smoother(x, s_arg=None):
 #    s.target_df = 5
     return s
 
-class Offset(object):
+class Offset:
 
     def __init__(self, fn, offset):
         self.fn = fn
@@ -105,7 +105,7 @@ class Offset(object):
     def __call__(self, *args, **kw):
         return self.fn(*args, **kw) + self.offset
 
-class Results(object):
+class Results:
 
     def __init__(self, Y, alpha, exog, smoothers, family, offset):
         self.nobs, self.k_vars = exog.shape  #assumes exog is 2d
@@ -176,7 +176,7 @@ class Results(object):
         components_demeaned = components - means
         return components_demeaned, constant
 
-class AdditiveModel(object):
+class AdditiveModel:
     '''additive model with non-parametric, smoothed components
 
     Parameters

@@ -323,7 +323,7 @@ def test_cochranq():
     assert_equal(str(b1).startswith("df          1\npvalue      0.65"), True)
 
 
-class CheckStratifiedMixin(object):
+class CheckStratifiedMixin:
 
     @classmethod
     def initialize(cls, tables, use_arr=False):
@@ -523,7 +523,7 @@ class TestStratified3(CheckStratifiedMixin):
         cls.or_homog_adj = 18.83297
         cls.or_homog_adj_p = 0.002064786
 
-class Check2x2Mixin(object):
+class Check2x2Mixin:
     @classmethod
     def initialize(cls):
         cls.tbl_obj = ctab.Table2x2(cls.table)

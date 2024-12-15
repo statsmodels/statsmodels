@@ -16,14 +16,17 @@ jobs:
     vmImage: ${{ parameters.vmImage }}
   strategy:
     matrix:
-      python38_win_latest:
-        python.version: '3.8'
-        python.architecture: 'x64'
       python39_win_latest:
         python.version: '3.9'
         python.architecture: 'x64'
       python310_win_latest:
         python.version: '3.10'
+        python.architecture: 'x64'
+      python311_win_latest:
+        python.version: '3.11'
+        python.architecture: 'x64'
+      python312_win_latest:
+        python.version: '3.12'
         python.architecture: 'x64'
     maxParallel: 10
 
@@ -38,17 +41,12 @@ jobs:
       python -m pip install --upgrade pip setuptools wheel
     displayName: 'Update essentials'
 
+  # TODO Remove hatchling and hatch-vcs after formulaic is 1.1.0
   - script: |
-      python -m pip install "pywinpty<1.0" -r requirements.txt
-      python -m pip install "pywinpty<1.0" -r requirements-dev.txt
-    displayName: 'Install dependencies (x86)'
-    condition: eq(variables['python.architecture'], 'x86')
-
-  - script: |
+      python -m pip install hatchling hatch-vcs
       python -m pip install -r requirements.txt
       python -m pip install -r requirements-dev.txt
-    displayName: 'Install dependencies (x86_64)'
-    condition: ne(variables['python.architecture'], 'x86')
+    displayName: 'Install dependencies'
 
   - script: |
       python -m pip list

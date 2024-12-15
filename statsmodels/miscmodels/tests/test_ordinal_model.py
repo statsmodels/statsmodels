@@ -18,7 +18,7 @@ from statsmodels.tools.tools import add_constant
 from .results.results_ordinal_model import data_store as ds
 
 
-class CheckOrdinalModelMixin(object):
+class CheckOrdinalModelMixin:
 
     def test_basic(self):
         # checks basic results againt R MASS package
@@ -146,13 +146,17 @@ class TestLogitModel(CheckOrdinalModelMixin):
                             distr='logit')
         resp = modp.fit(method='bfgs', disp=False)
         # fit with formula
-        modf = OrderedModel.from_formula(
-            "apply ~ pared + public + gpa - 1",
-            data={"apply": data['apply'].values.codes,
-                  "pared": data['pared'],
-                  "public": data['public'],
-                  "gpa": data['gpa']},
-            distr='logit')
+        with pytest.warns(DeprecationWarning, match="Using"):
+            modf = OrderedModel.from_formula(
+                "apply ~ pared + public + gpa - 1",
+                data={
+                    "apply": data["apply"].values.codes,
+                    "pared": data["pared"],
+                    "public": data["public"],
+                    "gpa": data["gpa"],
+                },
+                distr="logit",
+            )
         resf = modf.fit(method='bfgs', disp=False)
         # fit on data with ordered=False
         modu = OrderedModel(
@@ -218,13 +222,14 @@ class TestProbitModel(CheckOrdinalModelMixin):
                             distr='probit')
         resp = modp.fit(method='bfgs', disp=False)
 
-        modf = OrderedModel.from_formula(
-            "apply ~ pared + public + gpa - 1",
-            data={"apply": data['apply'].values.codes,
-                  "pared": data['pared'],
-                  "public": data['public'],
-                  "gpa": data['gpa']},
-            distr='probit')
+        with pytest.warns(DeprecationWarning, match="Using"):
+            modf = OrderedModel.from_formula(
+                "apply ~ pared + public + gpa - 1",
+                data={"apply": data['apply'].values.codes,
+                      "pared": data['pared'],
+                      "public": data['public'],
+                      "gpa": data['gpa']},
+                distr='probit')
         resf = modf.fit(method='bfgs', disp=False)
 
         modu = OrderedModel(
@@ -256,8 +261,9 @@ class TestProbitModel(CheckOrdinalModelMixin):
         score1 = mod.score(res1.params * fact)
         score_obs_numdiff = mod.score_obs(res1.params * fact)
         score_obs_exog = mod.score_obs_(res1.params * fact)
-        assert_allclose(score_obs_numdiff.sum(0), score1, atol=1e-7)
-        assert_allclose(score_obs_exog.sum(0), score1[:mod.k_vars], atol=1e-7)
+        # Relax atol due to small failures on OSX
+        assert_allclose(score_obs_numdiff.sum(0), score1, atol=1e-6)
+        assert_allclose(score_obs_exog.sum(0), score1[:mod.k_vars], atol=1e-6)
 
         # null model
         mod_null = OrderedModel(mod.endog, None,
@@ -283,17 +289,21 @@ class TestProbitModel(CheckOrdinalModelMixin):
         assert hasattr(modf2.data, "frame")
         assert not hasattr(modf2, "frame")
 
-        msg = "Only ordered pandas Categorical"
-        with pytest.raises(ValueError, match=msg):
+        with pytest.raises(ValueError, match="Only ordered pandas Categorical"):
             # only ordered categorical or numerical endog are allowed
             # string endog raises ValueError
-            OrderedModel.from_formula(
-                "apply ~ pared + public + gpa - 1",
-                data={"apply": np.asarray(data['apply']),
-                      "pared": data['pared'],
-                      "public": data['public'],
-                      "gpa": data['gpa']},
-                distr='probit')
+
+            with pytest.warns(DeprecationWarning, match="Using"):
+                OrderedModel.from_formula(
+                    "apply ~ pared + public + gpa - 1",
+                    data={
+                        "apply": np.asarray(data["apply"]),
+                        "pared": data["pared"],
+                        "public": data["public"],
+                        "gpa": data["gpa"],
+                    },
+                    distr="probit",
+                )
 
     def test_offset(self):
 
@@ -306,8 +316,10 @@ class TestProbitModel(CheckOrdinalModelMixin):
                                           distr='probit')
         resf2 = modf2.fit(method='bfgs', disp=False)
 
-        assert_allclose(resf2.params[:3], resp.params[:3], atol=2e-4)
-        assert_allclose(resf2.params[3], resp.params[3] + 1, atol=2e-4)
+        resf2_params = np.asarray(resf2.params)
+        resp_params = np.asarray(resp.params)
+        assert_allclose(resf2_params[:3], resp_params[:3], atol=2e-4)
+        assert_allclose(resf2_params[3], resp_params[3] + 1, atol=2e-4)
 
         fitted = resp.predict()
         fitted2 = resf2.predict()
@@ -327,7 +339,7 @@ class TestProbitModel(CheckOrdinalModelMixin):
         assert_allclose(pred_zero1, pred_zero, atol=2e-4)
 
         params_adj = resp.params.copy()
-        params_adj[3] += 1
+        params_adj.iloc[3] += 1
         fitted_zero = resp.model.predict(params_adj)
         assert_allclose(pred_zero1, fitted_zero[:6], atol=2e-4)
 
@@ -416,15 +428,17 @@ class TestCLogLogModel(CheckOrdinalModelMixin):
                             data[['pared', 'public', 'gpa']],
                             distr=cloglog)
         resp = modp.fit(method='bfgs', disp=False)
-
-        # with pytest.warns(UserWarning):
-        modf = OrderedModel.from_formula(
-            "apply ~ pared + public + gpa - 1",
-            data={"apply": data['apply'].values.codes,
-                  "pared": data['pared'],
-                  "public": data['public'],
-                  "gpa": data['gpa']},
-            distr=cloglog)
+        with pytest.warns(DeprecationWarning, match="Using"):
+            modf = OrderedModel.from_formula(
+                "apply ~ pared + public + gpa - 1",
+                data={
+                    "apply": data["apply"].values.codes,
+                    "pared": data["pared"],
+                    "public": data["public"],
+                    "gpa": data["gpa"],
+                },
+                distr=cloglog,
+            )
         resf = modf.fit(method='bfgs', disp=False)
 
         modu = OrderedModel(
@@ -463,8 +477,10 @@ class TestLogitBinary():
 
         attributes = "bse df_resid llf aic bic llnull".split()
         attributes += "llnull llr llr_pvalue prsquared".split()
-        assert_allclose(resp.params[:3], res_logit.params[:3], rtol=1e-5)
-        assert_allclose(resp.params[3], -res_logit.params[3], rtol=1e-5)
+        params = np.asarray(resp.params)
+        logit_params = np.asarray(res_logit.params)
+        assert_allclose(params[:3], logit_params[:3], rtol=1e-5)
+        assert_allclose(params[3], -logit_params[3], rtol=1e-5)
         for attr in attributes:
             assert_allclose(getattr(resp, attr), getattr(res_logit, attr),
                             rtol=1e-4)

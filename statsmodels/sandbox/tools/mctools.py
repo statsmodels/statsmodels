@@ -29,7 +29,7 @@ import numpy as np
 from statsmodels.iolib.table import SimpleTable
 
 #copied from stattools
-class StatTestMC(object):
+class StatTestMC:
     """class to run Monte Carlo study on a statistical test'''
 
     TODO
@@ -380,7 +380,7 @@ class StatTestMC(object):
         #TODO use stub instead
         if varnames is None:
             varnames = ['var%d' % i for i in range(mmlar.shape[1]//2)]
-        headers = ['\nprob'] + ['%s\n%s' % (i, t) for i in varnames for t in ['mc', 'dist']]
+        headers = ['\nprob'] + [f'{i}\n{t}' for i in varnames for t in ['mc', 'dist']]
         return SimpleTable(mmlar,
                           txt_fmt={'data_fmts': ["%#6.3f"]+["%#10.4f"]*(mmlar.shape[1]-1)},
                           title=title,

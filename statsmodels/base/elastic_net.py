@@ -221,7 +221,7 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
     # post-estimation results.
     ii = np.flatnonzero(params)
     cov = np.zeros((k_exog, k_exog))
-    init_args = dict([(k, getattr(model, k, None)) for k in model._init_keys])
+    init_args = {k: getattr(model, k, None) for k in model._init_keys}
     if len(ii) > 0:
         model1 = model.__class__(
             model.endog, model.exog[:, ii], **init_args)
@@ -367,7 +367,7 @@ class RegularizedResults(Results):
         The estimated (regularized) parameters.
     """
     def __init__(self, model, params):
-        super(RegularizedResults, self).__init__(model, params)
+        super().__init__(model, params)
 
     @cache_readonly
     def fittedvalues(self):

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tests that use cross-checks for generic methods
 
 Should be easy to check consistency across models
@@ -10,13 +9,16 @@ Created on Wed Oct 30 14:01:27 2013
 
 Author: Josef Perktold
 """
-from statsmodels.compat.pytest import pytest_warns
+from __future__ import annotations
+
 from statsmodels.compat.pandas import assert_index_equal, assert_series_equal
 from statsmodels.compat.platform import (
     PLATFORM_LINUX32,
     PLATFORM_OSX,
     PLATFORM_WIN32,
 )
+from statsmodels.compat.pytest import pytest_warns
+from statsmodels.compat.python import PYTHON_IMPL_WASM
 from statsmodels.compat.scipy import SCIPY_GT_14
 
 import numpy as np
@@ -35,7 +37,7 @@ import statsmodels.tools._testing as smt
 from statsmodels.tools.sm_exceptions import HessianInversionWarning
 
 
-class CheckGenericMixin(object):
+class CheckGenericMixin:
 
     @classmethod
     def setup_class(cls):
@@ -56,8 +58,10 @@ class CheckGenericMixin(object):
         mat = np.eye(len(res.params))
 
         tt = res.t_test(mat[0])
-        string_confint = lambda alpha: "[%4.3F      %4.3F]" % (
-                                       alpha / 2, 1- alpha / 2)
+
+        def string_confint(alpha):
+            return f"[{(alpha / 2):4.3F}      {(1- alpha / 2):4.3F}]"
+
         summ = tt.summary()   # smoke test for #1323
         assert_allclose(tt.pvalue, res.pvalues[0], rtol=5e-10)
         assert_(string_confint(0.05) in str(summ))
@@ -161,6 +165,7 @@ class CheckGenericMixin(object):
             res = mod.fit(maxiter=500)
         return res
 
+
     def test_zero_collinear(self):
         # not completely generic yet
         if isinstance(self.results.model, (sm.GEE)):
@@ -195,9 +200,12 @@ class CheckGenericMixin(object):
             k_extra = mod.k_extra
 
         # TODO: Can we choose a test case without this issue?
-        #  If not, should we be getting this warning for all
-        #  model subclasses?
-        warn_cls = HessianInversionWarning if isinstance(mod, sm.GLM) else None
+        # If not, should we be getting this warning for all
+        # model subclasses?
+        # TODO: Investigate how to resolve unseen warnings for Pyodide
+        # Most likely coming from NumPy.linalg + lack of fp exceptions
+        # support under WASM
+        warn_cls = HessianInversionWarning if (isinstance(mod, sm.GLM) and not PYTHON_IMPL_WASM) else None
 
         cov_types = ['nonrobust', 'HC0']
 
@@ -294,18 +302,18 @@ class CheckGenericMixin(object):
 
 class TestGenericOLS(CheckGenericMixin):
 
-    def setup(self):
+    def setup_method(self):
         #fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
-        y = x.sum(1) + np.random.randn(x.shape[0])
+        y = x.sum(axis=1) + np.random.randn(x.shape[0])
         self.results = sm.OLS(y, self.exog).fit()
 
 
 class TestGenericOLSOneExog(CheckGenericMixin):
     # check with single regressor (no constant)
 
-    def setup(self):
+    def setup_method(self):
         #fit for each test, because results will be changed by test
         x = self.exog[:, 1]
         np.random.seed(987689)
@@ -320,17 +328,17 @@ class TestGenericOLSOneExog(CheckGenericMixin):
 
 class TestGenericWLS(CheckGenericMixin):
 
-    def setup(self):
+    def setup_method(self):
         #fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
-        y = x.sum(1) + np.random.randn(x.shape[0])
+        y = x.sum(axis=1) + np.random.randn(x.shape[0])
         self.results = sm.WLS(y, self.exog, weights=np.ones(len(y))).fit()
 
 
 class TestGenericPoisson(CheckGenericMixin):
 
-    def setup(self):
+    def setup_method(self):
         #fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
@@ -344,7 +352,7 @@ class TestGenericPoisson(CheckGenericMixin):
 
 class TestGenericPoissonOffset(CheckGenericMixin):
 
-    def setup(self):
+    def setup_method(self):
         #fit for each test, because results will be changed by test
         x = self.exog
         nobs = x.shape[0]
@@ -363,7 +371,7 @@ class TestGenericPoissonOffset(CheckGenericMixin):
 
 class TestGenericNegativeBinomial(CheckGenericMixin):
 
-    def setup(self):
+    def setup_method(self):
         #fit for each test, because results will be changed by test
         np.random.seed(987689)
         data = sm.datasets.randhie.load()
@@ -380,7 +388,7 @@ class TestGenericNegativeBinomial(CheckGenericMixin):
 
 class TestGenericLogit(CheckGenericMixin):
 
-    def setup(self):
+    def setup_method(self):
         #fit for each test, because results will be changed by test
         x = self.exog
         nobs = x.shape[0]
@@ -397,27 +405,27 @@ class TestGenericLogit(CheckGenericMixin):
 
 class TestGenericRLM(CheckGenericMixin):
 
-    def setup(self):
+    def setup_method(self):
         #fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
-        y = x.sum(1) + np.random.randn(x.shape[0])
+        y = x.sum(axis=1) + np.random.randn(x.shape[0])
         self.results = sm.RLM(y, self.exog).fit()
 
 
 class TestGenericGLM(CheckGenericMixin):
 
-    def setup(self):
+    def setup_method(self):
         #fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
-        y = x.sum(1) + np.random.randn(x.shape[0])
+        y = x.sum(axis=1) + np.random.randn(x.shape[0])
         self.results = sm.GLM(y, self.exog).fit()
 
 
 class TestGenericGLMPoissonOffset(CheckGenericMixin):
 
-    def setup(self):
+    def setup_method(self):
         #fit for each test, because results will be changed by test
         x = self.exog
         nobs = x.shape[0]
@@ -437,7 +445,7 @@ class TestGenericGLMPoissonOffset(CheckGenericMixin):
 
 class TestGenericGEEPoisson(CheckGenericMixin):
 
-    def setup(self):
+    def setup_method(self):
         #fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
@@ -454,7 +462,7 @@ class TestGenericGEEPoisson(CheckGenericMixin):
 
 class TestGenericGEEPoissonNaive(CheckGenericMixin):
 
-    def setup(self):
+    def setup_method(self):
         #fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
@@ -473,7 +481,7 @@ class TestGenericGEEPoissonNaive(CheckGenericMixin):
 
 class TestGenericGEEPoissonBC(CheckGenericMixin):
 
-    def setup(self):
+    def setup_method(self):
         #fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
@@ -493,7 +501,7 @@ class TestGenericGEEPoissonBC(CheckGenericMixin):
 
 # Other test classes
 
-class CheckAnovaMixin(object):
+class CheckAnovaMixin:
 
     @classmethod
     def setup_class(cls):
@@ -648,7 +656,7 @@ class TestWaldAnovaNegBin1(CheckAnovaMixin):
         cls.res = mod.fit(cov_type='HC0')
 
 
-class CheckPairwise(object):
+class CheckPairwise:
 
     def test_default(self):
         res = self.res

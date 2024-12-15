@@ -49,7 +49,16 @@ from .proportion import (
     )
 
 from .rates import (
+    # 1 sample:
+    test_poisson, confint_poisson,
+    confint_quantile_poisson, tolerance_int_poisson,
+    # 2-sample
     etest_poisson_2indep, test_poisson_2indep, tost_poisson_2indep,
+    confint_poisson_2indep, nonequivalence_poisson_2indep,
+    # power
+    power_poisson_ratio_2indep, power_poisson_diff_2indep,
+    power_equivalence_poisson_2indep,
+    power_negbin_ratio_2indep, power_equivalence_neginb_2indep
     )
 
 from .oneway import (
@@ -151,7 +160,10 @@ __all__ = [
     "confint_mvmean",
     "confint_mvmean_fromstats",
     "confint_noncentrality",
+    "confint_poisson",
+    "confint_poisson_2indep",
     "confint_proportions_2indep",
+    "confint_quantile_poisson",
     "convert_effectsize_fsqu",
     "corr_clipped",
     "corr_nearest",
@@ -200,10 +212,16 @@ __all__ = [
     "multicomp",
     "multinomial_proportions_confint",
     "multipletests",
+    "nonequivalence_poisson_2indep",
     "normal_ad",
     "omni_normtest",
     "power_binom_tost",
+    "power_equivalence_neginb_2indep",
     "power_equivalence_oneway",
+    "power_equivalence_poisson_2indep",
+    "power_negbin_ratio_2indep",
+    "power_poisson_diff_2indep",
+    "power_poisson_ratio_2indep",
     "power_proportions_2indep",
     "power_ztost_prop",
     "powerdiscrepancy",
@@ -231,9 +249,11 @@ __all__ = [
     "test_cov_spherical",
     "test_mvmean",
     "test_mvmean_2indep",
+    "test_poisson",
     "test_poisson_2indep",
     "test_proportions_2indep",
     "test_scale_oneway",
+    "tolerance_int_poisson",
     "tost_poisson_2indep",
     "tost_proportions_2indep",
     "tt_ind_solve_power",
@@ -246,5 +266,5 @@ __all__ = [
     "zconfint",
     "zt_ind_solve_power",
     "ztest",
-    "ztost"
+    "ztost",
 ]

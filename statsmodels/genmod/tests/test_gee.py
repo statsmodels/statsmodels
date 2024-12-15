@@ -87,7 +87,7 @@ def check_wrapper(results):
     assert_(isinstance(results._results.centered_resid, np.ndarray))
 
 
-class TestGEE(object):
+class TestGEE:
 
     def test_margins_gaussian(self):
         # Check marginal effects for a Gaussian GEE fit.  Marginal
@@ -1327,7 +1327,7 @@ class TestGEE(object):
         x2_new = np.random.normal(size=10)
         new_exog = pd.DataFrame({"X1": x1_new, "X2": x2_new})
         pred6 = result.predict(exog=new_exog)
-        params = result.params
+        params = np.asarray(result.params)
         pred6_correct = params[0] + params[1] * x1_new + params[2] * x2_new
         assert_allclose(pred6, pred6_correct)
 
@@ -1530,7 +1530,7 @@ class TestGEE(object):
                             [0.0, 0.5])
 
         # Regression test
-        assert_almost_equal([x.params[0] for x in ps],
+        assert_almost_equal([np.asarray(x.params)[0] for x in ps],
                             [0.1696214707458818, 0.17836097387799127])
 
     def test_equivalence(self):
@@ -1620,12 +1620,12 @@ class TestGEE(object):
             assert_allclose(sum(vl), m * (m + 1) / 2)
 
         # Check for duplicates.
-        ixs = set([])
+        ixs = set()
         for g in model1.group_labels:
             for v in eq.pairs[g].values():
                 for a, b in zip(v[0], v[1]):
                     ky = (a, b)
-                    assert(ky not in ixs)
+                    assert ky not in ixs
                     ixs.add(ky)
 
         # Smoke test  # TODO: pytest.mark.smoke?
@@ -1636,7 +1636,7 @@ class TestGEE(object):
             model1.fit(maxiter=2)
 
 
-class CheckConsistency(object):
+class CheckConsistency:
 
     start_params = None
 

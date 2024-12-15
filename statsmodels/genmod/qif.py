@@ -10,7 +10,7 @@ import statsmodels.base.wrapper as wrap
 from statsmodels.tools.decorators import cache_readonly
 
 
-class QIFCovariance(object):
+class QIFCovariance:
     """
     A covariance model for quadratic inference function regression.
 
@@ -151,8 +151,8 @@ class QIF(base.Model):
 
         groups = np.asarray(groups)
 
-        super(QIF, self).__init__(endog, exog, groups=groups,
-                                  missing=missing, **kwargs)
+        super().__init__(endog, exog, groups=groups,
+                         missing=missing, **kwargs)
 
         self.group_names = list(set(groups))
         self.nobs = len(self.endog)
@@ -216,7 +216,11 @@ class QIF(base.Model):
         cmat = np.zeros((d, d))
 
         fastvar = self.family.variance is varfuncs.constant
-        fastlink = isinstance(self.family.link, links.identity)
+        fastlink = isinstance(
+            self.family.link,
+            # TODO: Remove links.identity after deprecation final
+            (links.Identity, links.identity)
+        )
 
         for ix in self.groups_ix:
             sd = np.sqrt(va[ix])
@@ -326,7 +330,7 @@ class QIF(base.Model):
         if isinstance(groups, str):
             groups = data[groups]
 
-        model = super(QIF, cls).from_formula(
+        model = super().from_formula(
                    formula, data=data, subset=subset,
                    groups=groups, *args, **kwargs)
 
@@ -404,7 +408,7 @@ class QIFResults(base.LikelihoodModelResults):
     def __init__(self, model, params, cov_params, scale,
                  use_t=False, **kwds):
 
-        super(QIFResults, self).__init__(
+        super().__init__(
             model, params, normalized_cov_params=cov_params,
             scale=scale)
 

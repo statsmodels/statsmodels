@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Fri Dec 19 11:29:18 2014
 
@@ -8,12 +7,14 @@ License: BSD-3
 """
 
 import numpy as np
-from scipy import stats
 import pandas as pd
+from scipy import stats
+
+from statsmodels.formula._manager import FormulaManager
 
 
 # this is similar to ContrastResults after t_test, copied and adjusted
-class PredictionResults(object):
+class PredictionResults:
     """
     Results class for predictions.
 
@@ -159,11 +160,10 @@ def get_prediction(self, exog=None, transform=True, weights=None,
 
     # prepare exog and row_labels, based on base Results.predict
     if transform and hasattr(self.model, 'formula') and exog is not None:
-        from patsy import dmatrix
         if isinstance(exog, pd.Series):
             # GH-6509
             exog = pd.DataFrame(exog)
-        exog = dmatrix(self.model.data.design_info, exog)
+        exog = FormulaManager().get_matrices(self.model.data.model_spec, exog)
 
     if exog is not None:
         if row_labels is None:

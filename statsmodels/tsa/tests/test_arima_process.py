@@ -1,3 +1,5 @@
+from statsmodels.compat.pandas import QUARTER_END
+
 import datetime as dt
 
 import numpy as np
@@ -214,13 +216,13 @@ def test_spectrum(ar, ma):
         spdr,
         spdd[:nfreq],
         decimal=7,
-        err_msg="spdr spdd not equal for %s, %s" % (ar, ma),
+        err_msg=f"spdr spdd not equal for {ar}, {ma}",
     )
     assert_almost_equal(
         spdr,
         spdp,
         decimal=7,
-        err_msg="spdr spdp not equal for %s, %s" % (ar, ma),
+        err_msg=f"spdr spdp not equal for {ar}, {ma}",
     )
 
 
@@ -235,7 +237,7 @@ def test_armafft(ar, ma):
     ac1 = arma.invpowerspd(1024)[:10]
     ac2 = arma.acovf(10)[:10]
     assert_allclose(
-        ac1, ac2, atol=1e-15, err_msg="acovf not equal for %s, %s" % (ar, ma)
+        ac1, ac2, atol=1e-15, err_msg=f"acovf not equal for {ar}, {ma}"
     )
 
 
@@ -278,6 +280,39 @@ class TestArmaProcess:
         process_direct = ArmaProcess(ar_p, ma_p)
 
         process = ArmaProcess.from_roots(np.array(process_direct.maroots), np.array(process_direct.arroots))
+
+        assert_almost_equal(process.arcoefs, process_direct.arcoefs)
+        assert_almost_equal(process.macoefs, process_direct.macoefs)
+        assert_almost_equal(process.nobs, process_direct.nobs)
+        assert_almost_equal(process.maroots, process_direct.maroots)
+        assert_almost_equal(process.arroots, process_direct.arroots)
+        assert_almost_equal(process.isinvertible, process_direct.isinvertible)
+        assert_almost_equal(process.isstationary, process_direct.isstationary)
+
+        process_direct = ArmaProcess(ar=ar_p)
+        process = ArmaProcess.from_roots(arroots=np.array(process_direct.arroots))
+
+        assert_almost_equal(process.arcoefs, process_direct.arcoefs)
+        assert_almost_equal(process.macoefs, process_direct.macoefs)
+        assert_almost_equal(process.nobs, process_direct.nobs)
+        assert_almost_equal(process.maroots, process_direct.maroots)
+        assert_almost_equal(process.arroots, process_direct.arroots)
+        assert_almost_equal(process.isinvertible, process_direct.isinvertible)
+        assert_almost_equal(process.isstationary, process_direct.isstationary)
+
+        process_direct = ArmaProcess(ma=ma_p)
+        process = ArmaProcess.from_roots(maroots=np.array(process_direct.maroots))
+
+        assert_almost_equal(process.arcoefs, process_direct.arcoefs)
+        assert_almost_equal(process.macoefs, process_direct.macoefs)
+        assert_almost_equal(process.nobs, process_direct.nobs)
+        assert_almost_equal(process.maroots, process_direct.maroots)
+        assert_almost_equal(process.arroots, process_direct.arroots)
+        assert_almost_equal(process.isinvertible, process_direct.isinvertible)
+        assert_almost_equal(process.isstationary, process_direct.isstationary)
+
+        process_direct = ArmaProcess()
+        process = ArmaProcess.from_roots()
 
         assert_almost_equal(process.arcoefs, process_direct.arcoefs)
         assert_almost_equal(process.macoefs, process_direct.macoefs)
@@ -441,7 +476,7 @@ def test_from_estimation(d, seasonal):
     ar = [0.8] if not seasonal else [0.8, 0, 0, 0.2, -0.16]
     ma = [0.4] if not seasonal else [0.4, 0, 0, 0.2, -0.08]
     ap = ArmaProcess.from_coeffs(ar, ma, 500)
-    idx = pd.date_range(dt.datetime(1900, 1, 1), periods=500, freq="Q")
+    idx = pd.date_range(dt.datetime(1900, 1, 1), periods=500, freq=QUARTER_END)
     data = ap.generate_sample(500)
     if d == 1:
         data = np.cumsum(data)

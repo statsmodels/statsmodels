@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Thu Apr  2 14:34:25 2020
 
@@ -14,7 +13,7 @@ from scipy import stats
 from statsmodels.stats.base import HolderTuple
 
 
-class CombineResults(object):
+class CombineResults:
     """Results from combined estimate of means or effect sizes
 
     This currently includes intermediate results that might be removed

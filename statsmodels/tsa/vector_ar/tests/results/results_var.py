@@ -6,7 +6,7 @@ datasets/macrodata/var.do
 import numpy as np
 
 
-class MacrodataResults(object):
+class MacrodataResults:
     def __init__(self):
         params = [
             -0.2794863875, 0.0082427826, 0.6750534746, 0.2904420695,

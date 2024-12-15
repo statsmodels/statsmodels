@@ -224,7 +224,7 @@ def lowess(np.ndarray[DTYPE_t, ndim = 1] endog,
     return np.array([xvals, y_fit]).T, resid_weights
 
 
-cpdef update_neighborhood(double[::1] x,
+cpdef update_neighborhood(const double[::1] x,
                           double xval,
                           Py_ssize_t n,
                           Py_ssize_t left_end,
@@ -435,7 +435,7 @@ cdef void calculate_y_fit(np.ndarray[DTYPE_t, ndim = 1] x,
                              (x[j] - sum_weighted_x) / weighted_sqdev_x)
             y_fit[i] += p_i_j * y[j]
 
-cdef void interpolate_skipped_fits(double[::1] xvals,
+cdef void interpolate_skipped_fits(const double[::1] xvals,
                                    double[::1] y_fit,
                                    Py_ssize_t i,
                                    Py_ssize_t last_fit_i):
@@ -475,7 +475,7 @@ cdef void interpolate_skipped_fits(double[::1] xvals,
         y_fit[offset+j] = a * y_fit[i] + (1.0 - a) * y_fit[last_fit_i]
 
 
-cpdef update_indices(double[::1] xvals,
+cpdef update_indices(const double[::1] xvals,
                      double[::1] y_fit,
                      double delta,
                      Py_ssize_t i,
@@ -546,7 +546,7 @@ cpdef update_indices(double[::1] xvals,
     return i, last_fit_i
 
 
-cpdef np.ndarray calculate_residual_weights(double[::1] y, double[::1] y_fit):
+cpdef np.ndarray calculate_residual_weights(const double[::1] y, const double[::1] y_fit):
     """
     Calculate residual weights for the next `robustifying` iteration.
 
@@ -645,7 +645,7 @@ cdef void fast_array_cube(double[::1] x):
         x[j] = tmp * tmp * tmp
 
 
-cpdef np.ndarray bisquare(double[::1] x):
+cpdef np.ndarray bisquare(const double[::1] x):
     """
     The bi-square function (1 - x**2)**2.
 
@@ -663,8 +663,6 @@ cpdef np.ndarray bisquare(double[::1] x):
     A 1-D numpy array of residual weights.
     """
     cdef:
-
-
         np.npy_intp n = x.size
         np.ndarray out = <np.ndarray>np.empty(n)
         double* out_data = <double *>np.PyArray_DATA(out)

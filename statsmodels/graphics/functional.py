@@ -22,7 +22,7 @@ from . import utils
 __all__ = ['hdrboxplot', 'fboxplot', 'rainbowplot', 'banddepth']
 
 
-class HdrResults(object):
+class HdrResults:
     """Wrap results and pretty print them."""
 
     def __init__(self, kwds):

@@ -31,7 +31,7 @@ def group(X):
     uniq_dict = {}
     group = np.zeros(len(X))
     for i in range(len(X)):
-        if not X[i] in uniq_dict:
+        if X[i] not in uniq_dict:
             uniq_dict.update({X[i] : len(uniq_dict)})
         group[i] = uniq_dict[X[i]]
     return group
@@ -83,7 +83,7 @@ def repanel_cov(groups, sigmas):
 class PanelData(Panel):
     pass
 
-class PanelModel(object):
+class PanelModel:
     """
     An abstract statistical model class for panel (longitudinal) datasets.
 

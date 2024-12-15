@@ -219,7 +219,7 @@ class TestZeroInflatedModelPandas(CheckGeneric):
         assert_array_equal(model.exog_names, param_names)
 
 
-class TestZeroInflatedPoisson_predict(object):
+class TestZeroInflatedPoisson_predict:
     @classmethod
     def setup_class(cls):
         expected_params = [1, 0.5]
@@ -365,7 +365,7 @@ class TestZeroInflatedGeneralizedPoisson(CheckGeneric):
         # skip, res_bh reports converged is false but params agree
         #assert_(res_bh.mle_retvals['converged'] is True)
 
-class TestZeroInflatedGeneralizedPoisson_predict(object):
+class TestZeroInflatedGeneralizedPoisson_predict:
     @classmethod
     def setup_class(cls):
         expected_params = [1, 0.5, 0.5]
@@ -504,7 +504,7 @@ class TestZeroInflatedNegativeBinomialP(CheckGeneric):
         #assert_(res_bh.mle_retvals['converged'] is True)
 
 
-class TestZeroInflatedNegativeBinomialP_predict(object):
+class TestZeroInflatedNegativeBinomialP_predict:
     @classmethod
     def setup_class(cls):
 
@@ -641,7 +641,7 @@ class TestZeroInflatedNegativeBinomialP_predict(object):
         assert_allclose(pred_lin_unique, np.cumsum(res.params[1:3]), rtol=1e-10)
 
 
-class TestZeroInflatedNegativeBinomialP_predict2(object):
+class TestZeroInflatedNegativeBinomialP_predict2:
     @classmethod
     def setup_class(cls):
         data = sm.datasets.randhie.load()

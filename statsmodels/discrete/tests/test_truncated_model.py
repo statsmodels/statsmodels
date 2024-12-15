@@ -1,3 +1,4 @@
+import warnings
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
@@ -5,6 +6,9 @@ from numpy.testing import assert_allclose, assert_equal
 from statsmodels import datasets
 from statsmodels.tools.tools import add_constant
 from statsmodels.tools.testing import Holder
+from statsmodels.tools.sm_exceptions import (
+    ConvergenceWarning,
+    )
 
 from statsmodels.distributions.discrete import (
     truncatedpoisson,
@@ -22,7 +26,7 @@ from .results import results_truncated as results_t
 from .results import results_truncated_st as results_ts
 
 
-class CheckResults(object):
+class CheckResults:
     def test_params(self):
         assert_allclose(self.res1.params, self.res2.params,
                         atol=1e-5, rtol=1e-5)
@@ -45,9 +49,12 @@ class CheckResults(object):
 
     def test_fit_regularized(self):
         model = self.res1.model
-
         alpha = np.ones(len(self.res1.params))
-        res_reg = model.fit_regularized(alpha=alpha*0.01, disp=0)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=ConvergenceWarning)
+            # This does not catch all Convergence warnings, why?
+            res_reg = model.fit_regularized(alpha=alpha*0.01, disp=0)
 
         assert_allclose(res_reg.params, self.res1.params,
                         rtol=1e-3, atol=5e-3)
@@ -94,7 +101,7 @@ class TestZeroTruncatedNBPModel(CheckResults):
         pass
 
 
-class TestTruncatedLFPoisson_predict(object):
+class TestTruncatedLFPoisson_predict:
     @classmethod
     def setup_class(cls):
         cls.expected_params = [1, 0.5]
@@ -128,7 +135,7 @@ class TestTruncatedLFPoisson_predict(object):
         assert_allclose(pr, pr2, rtol=1e-10, atol=1e-10)
 
 
-class TestTruncatedNBP_predict(object):
+class TestTruncatedNBP_predict:
     @classmethod
     def setup_class(cls):
         cls.expected_params = [1, 0.5, 0.5]
@@ -243,7 +250,7 @@ class CheckTruncatedST():
         ex = res1.model.exog.mean(0)
         rdf = res2.margins_pr.table
         k = rdf.shape[0] - 1
-        pred = res1.get_prediction(which="prob-main", average=True)
+        pred = res1.get_prediction(which="prob-base", average=True)
         assert_allclose(pred.predicted[:k], rdf[:-1, 0], rtol=5e-5)
         assert_allclose(pred.se[:k], rdf[:-1, 1],
                         rtol=8e-4, atol=1e-10)
@@ -263,6 +270,27 @@ class TestTruncatedLFPoissonSt(CheckTruncatedST):
                                                        maxiter=300)
         cls.res2 = results_ts.results_trunc_poisson
 
+        mod_offset = TruncatedLFPoisson(endog, exog, offset=DATA["aget"])
+        cls.res_offset = mod_offset.fit(method="bfgs", maxiter=300)
+
+    def test_offset(self):
+        res1 = self.res1
+        reso = self.res_offset
+
+        paramso = np.asarray(reso.params)
+        params1 = np.asarray(res1.params)
+        assert_allclose(paramso[1:], params1[1:], rtol=1e-8)
+        assert_allclose(paramso[0], params1[0] - 1, rtol=1e-8)
+        pred1 = res1.predict()
+        predo = reso.predict()
+        assert_allclose(predo, pred1, rtol=1e-8)
+
+        ex = res1.model.exog[:5]
+        offs = reso.model.offset[:5]
+        pred1 = res1.predict(ex, transform=False)
+        predo = reso.predict(ex, offset=offs, transform=False)
+        assert_allclose(predo, pred1, rtol=1e-8)
+
 
 class TestTruncatedNegBinSt(CheckTruncatedST):
     # test against R pscl
@@ -274,6 +302,29 @@ class TestTruncatedNegBinSt(CheckTruncatedST):
         cls.res1 = TruncatedLFNegativeBinomialP(endog, exog).fit(method="bfgs",
                                                                  maxiter=300)
         cls.res2 = results_ts.results_trunc_negbin
+
+        mod_offset = TruncatedLFNegativeBinomialP(endog, exog,
+                                                  offset=DATA["aget"])
+        cls.res_offset = mod_offset.fit(method="bfgs", maxiter=300)
+
+    def test_offset(self):
+        # identical, copy of method in TestTruncatedLFPoissonSt
+        res1 = self.res1
+        reso = self.res_offset
+
+        paramso = np.asarray(reso.params)
+        params1 = np.asarray(res1.params)
+        assert_allclose(paramso[1:], params1[1:], rtol=1e-8)
+        assert_allclose(paramso[0], params1[0] - 1, rtol=1e-8)
+        pred1 = res1.predict()
+        predo = reso.predict()
+        assert_allclose(predo, pred1, rtol=1e-8)
+
+        ex = res1.model.exog[:5]
+        offs = reso.model.offset[:5]
+        pred1 = res1.predict(ex, transform=False)
+        predo = reso.predict(ex, offset=offs, transform=False)
+        assert_allclose(predo, pred1, rtol=1e-8)
 
 
 class TestTruncatedLFPoisson1St(CheckTruncatedST):
@@ -351,7 +402,7 @@ class TestHurdlePoissonR():
                         rtol=5e-4, atol=5e-4)
 
         prob_main = res1.results_count.predict(ex, which="prob")[0] * prob_nz
-        prob_main[0] = prob_zero
+        prob_main[0] = np.squeeze(prob_zero)
         assert_allclose(prob_main[:4], res2.predict_prob, rtol=5e-4, atol=5e-4)
 
         assert_allclose(mean_main * prob_nz, res2.predict_mean,

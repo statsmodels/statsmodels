@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tools for working with groups
 
 This provides several functions to work with groups and a Group class that
@@ -91,6 +90,7 @@ def group_sums(x, group, use_bincount=True):
     for comparison, simple python loop
     """
     x = np.asarray(x)
+    group = np.asarray(group).squeeze()
     if x.ndim == 1:
         x = x[:, None]
     elif x.ndim > 2 and use_bincount:
@@ -102,8 +102,12 @@ def group_sums(x, group, use_bincount=True):
         if np.max(group) > 2 * x.shape[0]:
             group = pd.factorize(group)[0]
 
-        return np.array([np.bincount(group, weights=x[:, col])
-                         for col in range(x.shape[1])])
+        return np.array(
+            [
+                np.bincount(group, weights=x[:, col])
+                for col in range(x.shape[1])
+            ]
+        )
     else:
         uniques = np.unique(group)
         result = np.zeros([len(uniques)] + list(x.shape[1:]))
@@ -180,7 +184,7 @@ def dummy_sparse(groups):
     return indi
 
 
-class Group(object):
+class Group:
 
     def __init__(self, group, name=''):
 
@@ -308,7 +312,7 @@ def _make_generic_names(index):
     return [("group{0:0"+pad+"}").format(i) for i in range(n_names)]
 
 
-class Grouping(object):
+class Grouping:
     def __init__(self, index, names=None):
         """
         index : index-like
@@ -394,8 +398,7 @@ class Grouping(object):
         """
         # TODO: refactor this
         groups = self.index.get_level_values(level).unique()
-        groups = np.array(groups)
-        groups.sort()
+        groups = np.sort(np.array(groups))
         if isinstance(self.index, MultiIndex):
             self.slices = [self.index.get_loc_level(x, level=level)[0]
                            for x in groups]
