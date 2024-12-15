@@ -947,6 +947,22 @@ class CLogLog(Logit):
             The derivative of the inverse of the CLogLog link function
         """
         return np.exp(z - np.exp(z))
+    
+    def inverse_deriv2(self, z):
+        """
+        Second derivative of the inverse of the C-Log-Log transform link function
+
+        Parameters
+        ----------
+        z : array_like
+            The value of the inverse of the CLogLog link function at `p`
+
+        Returns
+        -------
+        g^(-1)''(z) : ndarray
+            The second derivative of the inverse of the CLogLog link function
+        """
+        return self.inverse_deriv(z) * (1-np.exp(z))
 
 
 class cloglog(CLogLog):
