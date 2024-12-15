@@ -256,7 +256,7 @@ class Logit(Link):
         v = p * (1 - p)
 
         return (2 * p - 1) / v ** 2
-    
+
     def inverse_deriv2(self, z):
         """
         Second derivative of the inverse of the logit transform
@@ -607,7 +607,7 @@ class Log(Link):
             the exponential function
         """
         return np.exp(z)
-    
+
     def inverse_deriv2(self, z):
         """
         Second derivative of the inverse of the log transform link function
@@ -1084,7 +1084,7 @@ class CLogLog(Logit):
             The derivative of the inverse of the CLogLog link function
         """
         return np.exp(z - np.exp(z))
-    
+
     def inverse_deriv2(self, z):
         """
         Second derivative of the inverse of the C-Log-Log transform link function
